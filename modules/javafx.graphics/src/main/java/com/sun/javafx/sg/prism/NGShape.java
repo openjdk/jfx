@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -312,7 +312,7 @@ public abstract class NGShape extends NGNode {
 
     @Override
     protected void geometryChanged() {
-        // TODO: consider caching the stroke shape (RT-26940)
+        // TODO: consider caching the stroke shape (JDK-8090812)
         super.geometryChanged();
         if (shapeRep != null) {
             shapeRep.invalidate(LOCATION_AND_GEOMETRY);

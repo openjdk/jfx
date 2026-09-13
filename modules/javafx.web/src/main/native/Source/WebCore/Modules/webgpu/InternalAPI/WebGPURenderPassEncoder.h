@@ -25,15 +25,16 @@
 
 #pragma once
 
-#include "WebGPUColor.h"
-#include "WebGPUIndexFormat.h"
-#include "WebGPUIntegralTypes.h"
+#include <WebCore/WebGPUColor.h>
+#include <WebCore/WebGPUIndexFormat.h>
+#include <WebCore/WebGPUIntegralTypes.h>
 #include <cstdint>
 #include <functional>
 #include <optional>
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore::WebGPU {
@@ -44,7 +45,7 @@ class QuerySet;
 class RenderBundle;
 class RenderPipeline;
 
-class RenderPassEncoder : public RefCounted<RenderPassEncoder> {
+class RenderPassEncoder : public RefCountedAndCanMakeWeakPtr<RenderPassEncoder> {
 public:
     virtual ~RenderPassEncoder() = default;
 
@@ -52,14 +53,14 @@ public:
 
     void setLabel(String&& label)
     {
-        m_label = WTFMove(label);
+        m_label = WTF::move(label);
         setLabelInternal(m_label);
     }
 
     virtual void setPipeline(const RenderPipeline&) = 0;
 
     virtual void setIndexBuffer(const Buffer&, IndexFormat, std::optional<Size64> offset, std::optional<Size64>) = 0;
-    virtual void setVertexBuffer(Index32 slot, const Buffer&, std::optional<Size64> offset, std::optional<Size64>) = 0;
+    virtual void setVertexBuffer(Index32 slot, const Buffer*, std::optional<Size64> offset, std::optional<Size64>) = 0;
 
     virtual void draw(Size32 vertexCount, std::optional<Size32> instanceCount,
         std::optional<Size32> firstVertex, std::optional<Size32> firstInstance) = 0;
@@ -71,12 +72,11 @@ public:
     virtual void drawIndirect(const Buffer& indirectBuffer, Size64 indirectOffset) = 0;
     virtual void drawIndexedIndirect(const Buffer& indirectBuffer, Size64 indirectOffset) = 0;
 
-    virtual void setBindGroup(Index32, const BindGroup&,
+    virtual void setBindGroup(Index32, const BindGroup*,
         std::optional<Vector<BufferDynamicOffset>>&& dynamicOffsets) = 0;
 
-    virtual void setBindGroup(Index32, const BindGroup&,
-        const uint32_t* dynamicOffsetsArrayBuffer,
-        size_t dynamicOffsetsArrayBufferLength,
+    virtual void setBindGroup(Index32, const BindGroup*,
+        std::span<const uint32_t> dynamicOffsetsArrayBuffer,
         Size64 dynamicOffsetsDataStart,
         Size32 dynamicOffsetsDataLength) = 0;
 
@@ -97,8 +97,11 @@ public:
     virtual void beginOcclusionQuery(Size32 queryIndex) = 0;
     virtual void endOcclusionQuery() = 0;
 
-    virtual void executeBundles(Vector<std::reference_wrapper<RenderBundle>>&&) = 0;
+    virtual void executeBundles(Vector<Ref<RenderBundle>>&&) = 0;
     virtual void end() = 0;
+
+    virtual bool isRemoteRenderPassEncoderProxy() const { return false; }
+    virtual bool isRenderPassEncoderImpl() const { return false; }
 
 protected:
     RenderPassEncoder() = default;

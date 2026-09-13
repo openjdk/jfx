@@ -48,15 +48,18 @@ plugin_init (GstPlugin * plugin)
 
 #ifndef GSTREAMER_LITE
   /*Riff Type find register */
+  GST_TYPE_FIND_REGISTER (fourxm, plugin);
   GST_TYPE_FIND_REGISTER (avi, plugin);
   GST_TYPE_FIND_REGISTER (qcp, plugin);
   GST_TYPE_FIND_REGISTER (cdxa, plugin);
   GST_TYPE_FIND_REGISTER (riff_mid, plugin);
   GST_TYPE_FIND_REGISTER (wav, plugin);
   GST_TYPE_FIND_REGISTER (webp, plugin);
+  GST_TYPE_FIND_REGISTER (xwma, plugin);
 
   /*'Start with' Type find register */
   GST_TYPE_FIND_REGISTER (asf, plugin);
+  GST_TYPE_FIND_REGISTER (avs, plugin);
   GST_TYPE_FIND_REGISTER (vcd, plugin);
   GST_TYPE_FIND_REGISTER (imelody, plugin);
   GST_TYPE_FIND_REGISTER (scc, plugin);
@@ -129,6 +132,7 @@ plugin_init (GstPlugin * plugin)
   GST_TYPE_FIND_REGISTER (h263_video, plugin);
   GST_TYPE_FIND_REGISTER (h264_video, plugin);
   GST_TYPE_FIND_REGISTER (h265_video, plugin);
+  GST_TYPE_FIND_REGISTER (h266_video, plugin);
   GST_TYPE_FIND_REGISTER (nuv, plugin);
   /* ISO formats */
   GST_TYPE_FIND_REGISTER (m4a, plugin);
@@ -209,6 +213,14 @@ plugin_init (GstPlugin * plugin)
   GST_TYPE_FIND_REGISTER (pva, plugin);
   GST_TYPE_FIND_REGISTER (aa, plugin);
   GST_TYPE_FIND_REGISTER (tap, plugin);
+  GST_TYPE_FIND_REGISTER (brstm, plugin);
+  GST_TYPE_FIND_REGISTER (bfstm, plugin);
+  GST_TYPE_FIND_REGISTER (dsf, plugin);
+  GST_TYPE_FIND_REGISTER (ea, plugin);
+  GST_TYPE_FIND_REGISTER (film_cpk, plugin);
+  GST_TYPE_FIND_REGISTER (gxf, plugin);
+  GST_TYPE_FIND_REGISTER (iff, plugin);
+  GST_TYPE_FIND_REGISTER (av1, plugin);
 #endif // GSTREAMER_LITE
 
   return TRUE;

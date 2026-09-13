@@ -3,7 +3,7 @@
     Copyright (C) 2001 Dirk Mueller (mueller@kde.org)
     Copyright (C) 2002 Waldo Bastian (bastian@kde.org)
     Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
-    Copyright (C) 2004-2008, 2015 Apple Inc. All rights reserved.
+    Copyright (C) 2004-2024 Apple Inc. All rights reserved.
     Copyright (C) 2010 Google Inc. All rights reserved.
 
     This library is free software; you can redistribute it and/or
@@ -23,14 +23,17 @@
  */
 
 #include "WebResourceLoadScheduler.h"
-
+#if PLATFORM(JAVA)
+#include "LocalFrameInlines.h"
+#endif
 #include "PingHandle.h"
+#include <WebCore/ArchiveResource.h>
 #include <WebCore/CachedResource.h>
 #include <WebCore/Document.h>
 #include <WebCore/DocumentLoader.h>
 #include <WebCore/FetchOptions.h>
 #include <WebCore/FrameLoader.h>
-#include <WebCore/LocalFrame.h>
+#include <WebCore/LocalFrameInlines.h>
 #include <WebCore/NetscapePlugInStreamLoader.h>
 #include <WebCore/NetworkStateNotifier.h>
 #include <WebCore/PlatformStrategies.h>
@@ -38,11 +41,12 @@
 #include <WebCore/SubresourceLoader.h>
 #include <wtf/MainThread.h>
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
 #include <wtf/text/CString.h>
 
 #if PLATFORM(IOS_FAMILY)
-#include <WebCore/RuntimeApplicationChecks.h>
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #endif
 
 // Match the parallel connection count used by the networking layer.
@@ -58,26 +62,29 @@ using namespace WebCore;
 
 WebResourceLoadScheduler& webResourceLoadScheduler()
 {
-    return static_cast<WebResourceLoadScheduler&>(*platformStrategies()->loaderStrategy());
+    return static_cast<WebResourceLoadScheduler&>(*platformStrategies()->loaderStrategy().unsafeGet());
 }
 
-WebResourceLoadScheduler::HostInformation* WebResourceLoadScheduler::hostForURL(const URL& url, CreateHostPolicy createHostPolicy)
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebResourceLoadScheduler);
+
+auto WebResourceLoadScheduler::hostForURL(const URL& url, CreateHostPolicy createHostPolicy) -> CheckedPtr<HostInformation>
 {
     if (!url.protocolIsInHTTPFamily())
-        return m_nonHTTPProtocolHost;
+        return m_nonHTTPProtocolHost.ptr();
 
     m_hosts.checkConsistency();
     String hostName = url.host().toString();
-    HostInformation* host = m_hosts.get(hostName);
+    CheckedPtr host = m_hosts.get(hostName);
     if (!host && createHostPolicy == CreateIfNotFound) {
-        host = new HostInformation(hostName, maxRequestsInFlightPerHost);
-        m_hosts.add(hostName, host);
+        auto newHost = makeUnique<HostInformation>(hostName, maxRequestsInFlightPerHost);
+        host = newHost.get();
+        m_hosts.add(hostName, WTF::move(newHost));
     }
     return host;
 }
 
 WebResourceLoadScheduler::WebResourceLoadScheduler()
-    : m_nonHTTPProtocolHost(new HostInformation(String(), maxRequestsInFlightForNonHTTPProtocols))
+    : m_nonHTTPProtocolHost(makeUniqueRef<HostInformation>(String(), maxRequestsInFlightForNonHTTPProtocols))
     , m_requestTimer(*this, &WebResourceLoadScheduler::requestTimerFired)
     , m_suspendPendingRequestsCount(0)
     , m_isSerialLoadingEnabled(false)
@@ -85,13 +92,11 @@ WebResourceLoadScheduler::WebResourceLoadScheduler()
     maxRequestsInFlightPerHost = initializeMaximumHTTPConnectionCountPerHost();
 }
 
-WebResourceLoadScheduler::~WebResourceLoadScheduler()
-{
-}
+WebResourceLoadScheduler::~WebResourceLoadScheduler() = default;
 
 void WebResourceLoadScheduler::loadResource(LocalFrame& frame, CachedResource& resource, ResourceRequest&& request, const ResourceLoaderOptions& options, CompletionHandler<void(RefPtr<WebCore::SubresourceLoader>&&)>&& completionHandler)
 {
-    SubresourceLoader::create(frame, resource, WTFMove(request), options, [this, completionHandler = WTFMove(completionHandler)] (RefPtr<WebCore::SubresourceLoader>&& loader) mutable {
+    SubresourceLoader::create(frame, resource, WTF::move(request), options, [this, completionHandler = WTF::move(completionHandler)] (RefPtr<WebCore::SubresourceLoader>&& loader) mutable {
         if (loader)
             scheduleLoad(loader.get());
 #if PLATFORM(IOS_FAMILY)
@@ -103,7 +108,7 @@ void WebResourceLoadScheduler::loadResource(LocalFrame& frame, CachedResource& r
         if (!loader || loader->reachedTerminalState())
             return completionHandler(nullptr);
 #endif
-        completionHandler(WTFMove(loader));
+        completionHandler(WTF::move(loader));
     });
 }
 
@@ -124,10 +129,10 @@ void WebResourceLoadScheduler::browsingContextRemoved(LocalFrame&)
 
 void WebResourceLoadScheduler::schedulePluginStreamLoad(LocalFrame& frame, NetscapePlugInStreamLoaderClient& client, ResourceRequest&& request, CompletionHandler<void(RefPtr<WebCore::NetscapePlugInStreamLoader>&&)>&& completionHandler)
 {
-    NetscapePlugInStreamLoader::create(frame, client, WTFMove(request), [this, completionHandler = WTFMove(completionHandler)] (RefPtr<WebCore::NetscapePlugInStreamLoader>&& loader) mutable {
+    NetscapePlugInStreamLoader::create(frame, client, WTF::move(request), [this, completionHandler = WTF::move(completionHandler)] (RefPtr<WebCore::NetscapePlugInStreamLoader>&& loader) mutable {
         if (loader)
             scheduleLoad(loader.get());
-        completionHandler(WTFMove(loader));
+        completionHandler(WTF::move(loader));
     });
 }
 
@@ -149,9 +154,9 @@ void WebResourceLoadScheduler::scheduleLoad(ResourceLoader* resourceLoader)
 #endif
 
 #if PLATFORM(IOS_FAMILY)
-    HostInformation* host = hostForURL(resourceLoader->iOSOriginalRequest().url(), CreateIfNotFound);
+    CheckedRef host = hostForURL(resourceLoader->iOSOriginalRequest().url(), CreateIfNotFound).releaseNonNull();
 #else
-    HostInformation* host = hostForURL(resourceLoader->url(), CreateIfNotFound);
+    CheckedRef host = hostForURL(resourceLoader->url(), CreateIfNotFound).releaseNonNull();
 #endif
 
     ResourceLoadPriority priority = resourceLoader->request().priority();
@@ -163,7 +168,7 @@ void WebResourceLoadScheduler::scheduleLoad(ResourceLoader* resourceLoader)
     if (ResourceRequest::resourcePrioritiesEnabled() && !isSuspendingPendingRequests()) {
         // Serve all requests at once to keep the pipeline full at the network layer.
         // FIXME: Does this code do anything useful, given that we also set maxRequestsInFlightPerHost to effectively unlimited on these platforms?
-        servePendingRequests(host, ResourceLoadPriority::VeryLow);
+        servePendingRequests(WTF::move(host), ResourceLoadPriority::VeryLow);
         return;
     }
 #endif
@@ -171,13 +176,13 @@ void WebResourceLoadScheduler::scheduleLoad(ResourceLoader* resourceLoader)
 #if PLATFORM(IOS_FAMILY)
     if ((priority > ResourceLoadPriority::Low || !resourceLoader->iOSOriginalRequest().url().protocolIsInHTTPFamily() || (priority == ResourceLoadPriority::Low && !hadRequests)) && !isSuspendingPendingRequests()) {
         // Try to request important resources immediately.
-        servePendingRequests(host, priority);
+        servePendingRequests(WTF::move(host), priority);
         return;
     }
 #else
     if (priority > ResourceLoadPriority::Low || !resourceLoader->url().protocolIsInHTTPFamily() || (priority == ResourceLoadPriority::Low && !hadRequests)) {
         // Try to request important resources immediately.
-        servePendingRequests(host, priority);
+        servePendingRequests(WTF::move(host), priority);
         return;
     }
 #endif
@@ -191,14 +196,14 @@ void WebResourceLoadScheduler::remove(ResourceLoader* resourceLoader)
 {
     ASSERT(resourceLoader);
 
-    HostInformation* host = hostForURL(resourceLoader->url());
+    CheckedPtr host = hostForURL(resourceLoader->url());
     if (host)
         host->remove(resourceLoader);
 #if PLATFORM(IOS_FAMILY)
     // ResourceLoader::url() doesn't start returning the correct value until the load starts. If we get canceled before that, we need to look for originalRequest url instead.
     // FIXME: ResourceLoader::url() should be made to return a sensible value at all times.
     if (!resourceLoader->iOSOriginalRequest().isNull()) {
-        HostInformation* originalHost = hostForURL(resourceLoader->iOSOriginalRequest().url());
+        CheckedPtr originalHost = hostForURL(resourceLoader->iOSOriginalRequest().url());
         if (originalHost && originalHost != host)
             originalHost->remove(resourceLoader);
     }
@@ -212,7 +217,8 @@ void WebResourceLoadScheduler::isResourceLoadFinished(CachedResource& resource, 
         callback(true);
         return;
     }
-    callback(!hostForURL(resource.loader()->url()));
+    bool didFinish = !hostForURL(resource.loader()->url());
+    callback(didFinish);
 }
 
 void WebResourceLoadScheduler::setDefersLoading(ResourceLoader& loader, bool defers)
@@ -225,12 +231,12 @@ void WebResourceLoadScheduler::setDefersLoading(ResourceLoader& loader, bool def
 
 void WebResourceLoadScheduler::crossOriginRedirectReceived(ResourceLoader* resourceLoader, const URL& redirectURL)
 {
-    HostInformation* oldHost = hostForURL(resourceLoader->url());
+    CheckedPtr oldHost = hostForURL(resourceLoader->url());
     ASSERT(oldHost);
     if (!oldHost)
         return;
 
-    HostInformation* newHost = hostForURL(redirectURL, CreateIfNotFound);
+    CheckedPtr newHost = hostForURL(redirectURL, CreateIfNotFound);
 
     if (oldHost->name() == newHost->name())
         return;
@@ -246,17 +252,22 @@ void WebResourceLoadScheduler::servePendingRequests(ResourceLoadPriority minimum
 
     m_requestTimer.stop();
 
-    servePendingRequests(m_nonHTTPProtocolHost, minimumPriority);
+    servePendingRequests(m_nonHTTPProtocolHost.get(), minimumPriority);
 
-    for (auto* host : copyToVector(m_hosts.values())) {
+    auto hosts = WTF::map(m_hosts.values(), [](auto&& host) {
+        return WeakPtr { host.get() };
+    });
+    for (auto&& host : WTF::move(hosts)) {
+        if (!host)
+            continue;
         if (host->hasRequests())
-            servePendingRequests(host, minimumPriority);
+            servePendingRequests(*host, minimumPriority);
         else
-            delete m_hosts.take(host->name());
+            m_hosts.take(host->name());
     }
 }
 
-void WebResourceLoadScheduler::servePendingRequests(HostInformation* host, ResourceLoadPriority minimumPriority)
+void WebResourceLoadScheduler::servePendingRequests(CheckedRef<HostInformation>&& host, ResourceLoadPriority minimumPriority)
 {
     auto priority = ResourceLoadPriority::Highest;
     while (true) {
@@ -275,7 +286,7 @@ void WebResourceLoadScheduler::servePendingRequests(HostInformation* host, Resou
             requestsPending.removeFirst();
             host->addLoadInProgress(resourceLoader.get());
 #if PLATFORM(IOS_FAMILY)
-            if (!IOSApplication::isWebProcess()) {
+            if (!WTF::IOSApplication::isWebProcess()) {
                 resourceLoader->startLoading();
                 return;
             }
@@ -313,6 +324,8 @@ void WebResourceLoadScheduler::requestTimerFired()
 {
     servePendingRequests();
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebResourceLoadScheduler::HostInformation);
 
 WebResourceLoadScheduler::HostInformation::HostInformation(const String& name, unsigned maxRequestsInFlight)
     : m_name(name)
@@ -389,7 +402,7 @@ bool WebResourceLoadScheduler::HostInformation::limitRequests(ResourceLoadPriori
 void WebResourceLoadScheduler::startPingLoad(LocalFrame& frame, ResourceRequest& request, const HTTPHeaderMap&, const FetchOptions& options, ContentSecurityPolicyImposition, PingLoadCompletionHandler&& completionHandler)
 {
     // PingHandle manages its own lifetime, deleting itself when its purpose has been fulfilled.
-    new PingHandle(frame.loader().networkingContext(), request, options.credentials != FetchOptions::Credentials::Omit, options.redirect == FetchOptions::Redirect::Follow, WTFMove(completionHandler));
+    PingHandle::start(frame.loader().networkingContext(), request, options.credentials != FetchOptions::Credentials::Omit, options.redirect == FetchOptions::Redirect::Follow, WTF::move(completionHandler));
 }
 
 bool WebResourceLoadScheduler::isOnLine() const
@@ -399,10 +412,85 @@ bool WebResourceLoadScheduler::isOnLine() const
 
 void WebResourceLoadScheduler::addOnlineStateChangeListener(WTF::Function<void(bool)>&& listener)
 {
-    NetworkStateNotifier::singleton().addListener(WTFMove(listener));
+    NetworkStateNotifier::singleton().addListener(WTF::move(listener));
 }
 
-void WebResourceLoadScheduler::preconnectTo(FrameLoader&, const URL&, StoredCredentialsPolicy, ShouldPreconnectAsFirstParty, PreconnectCompletionHandler&&)
+void WebResourceLoadScheduler::preconnectTo(FrameLoader&, ResourceRequest&&, StoredCredentialsPolicy, ShouldPreconnectAsFirstParty, PreconnectCompletionHandler&&)
 {
 }
 
+#if PLATFORM(JAVA)
+
+enum {
+    WebKitErrorCannotShowMIMEType =                             100,
+    WebKitErrorCannotShowURL =                                  101,
+    WebKitErrorFrameLoadInterruptedByPolicyChange =             102,
+    WebKitErrorCannotUseRestrictedPort =                        103,
+    WebKitErrorCannotFindPlugIn =                               200,
+    WebKitErrorCannotLoadPlugIn =                               201,
+    WebKitErrorJavaUnavailable =                                202,
+    WebKitErrorPluginWillHandleLoad =                           203
+};
+
+WebCore::ResourceError WebResourceLoadScheduler::cancelledError(const WebCore::ResourceRequest& request) const
+{
+   return ResourceError("Error"_s, -999, request.url(), "Request cancelled"_s);
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::blockedError(const WebCore::ResourceRequest& request) const
+{
+   return ResourceError("Error"_s, WebKitErrorCannotUseRestrictedPort, request.url(),
+                         "Request blocked"_s);
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::blockedByContentBlockerError(const WebCore::ResourceRequest& request) const
+{
+    return ResourceError("Error"_s, WebKitErrorCannotShowURL, request.url(),
+                         "Cannot show URL"_s);
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::cannotShowURLError(const WebCore::ResourceRequest& request) const
+{
+    return ResourceError("Error"_s, WebKitErrorCannotShowURL, request.url(),
+                         "Cannot show URL"_s);
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::interruptedForPolicyChangeError(const WebCore::ResourceRequest& request) const
+{
+    return ResourceError("Error"_s, WebKitErrorFrameLoadInterruptedByPolicyChange,
+                         request.url(), "Frame load interrupted by policy change"_s);
+}
+
+#if ENABLE(CONTENT_FILTERING)
+WebCore::ResourceError WebResourceLoadScheduler::blockedByContentFilterError(const WebCore::ResourceRequest& request) const
+{
+}
+#endif
+
+WebCore::ResourceError WebResourceLoadScheduler::cannotShowMIMETypeError(const WebCore::ResourceResponse& response) const
+{
+   return ResourceError("Error"_s, WebKitErrorCannotShowMIMEType, response.url(),
+                         "Cannot show mimetype"_s);
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::fileDoesNotExistError(const WebCore::ResourceResponse& response) const
+{
+    return ResourceError("Error"_s, -998 /* ### */, response.url(),
+                         "File does not exist"_s);
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::httpsUpgradeRedirectLoopError(const WebCore::ResourceRequest& request) const
+{
+    return {};
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::httpNavigationWithHTTPSOnlyError(const WebCore::ResourceRequest& request) const
+{
+    return {};
+}
+
+WebCore::ResourceError WebResourceLoadScheduler::pluginWillHandleLoadError(const WebCore::ResourceResponse& response) const
+{
+    return ResourceError("Error"_s, WebKitErrorPluginWillHandleLoad, response.url(), "Loading is handled by the media engine"_s);
+}
+#endif

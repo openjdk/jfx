@@ -98,7 +98,7 @@ static void appendClassName(StringBuilder& builder, const char* className)
         c++;
     }
 
-    builder.append(result);
+    builder.append(ASCIILiteral::fromLiteralUnsafe(result));
 
     fastFree(result);
 }
@@ -116,7 +116,7 @@ const char* JavaMethod::signature() const
             if (type == JavaTypeArray)
                 appendClassName(signatureBuilder, javaClassName.data());
             else {
-                signatureBuilder.append(signatureFromJavaType(type));
+                signatureBuilder.append(ASCIILiteral::fromLiteralUnsafe(signatureFromJavaType(type)));
                 if (type == JavaTypeObject) {
                     appendClassName(signatureBuilder, javaClassName.data());
                     signatureBuilder.append(';');
@@ -129,7 +129,7 @@ const char* JavaMethod::signature() const
         if (m_returnType == JavaTypeArray)
             appendClassName(signatureBuilder, returnType);
         else {
-            signatureBuilder.append(signatureFromJavaType(m_returnType));
+            signatureBuilder.append(ASCIILiteral::fromLiteralUnsafe(signatureFromJavaType(m_returnType)));
             if (m_returnType == JavaTypeObject) {
                 appendClassName(signatureBuilder, returnType);
                 signatureBuilder.append(';');

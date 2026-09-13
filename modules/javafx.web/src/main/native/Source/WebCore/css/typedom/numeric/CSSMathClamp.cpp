@@ -26,37 +26,37 @@
 #include "config.h"
 #include "CSSMathClamp.h"
 
-#include "CSSCalcOperationNode.h"
+#include "CSSCalcTree.h"
 #include "CSSNumericValue.h"
 #include "ExceptionOr.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CSSMathClamp);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSMathClamp);
 
 ExceptionOr<Ref<CSSMathClamp>> CSSMathClamp::create(CSSNumberish&& lower, CSSNumberish&& value, CSSNumberish&& upper)
 {
-    auto rectifiedLower = rectifyNumberish(WTFMove(lower));
-    auto rectifiedValue = rectifyNumberish(WTFMove(value));
-    auto rectifiedUpper = rectifyNumberish(WTFMove(upper));
+    auto rectifiedLower = rectifyNumberish(WTF::move(lower));
+    auto rectifiedValue = rectifyNumberish(WTF::move(value));
+    auto rectifiedUpper = rectifyNumberish(WTF::move(upper));
 
     auto addedType = CSSNumericType::addTypes(rectifiedLower->type(), rectifiedValue->type());
     if (!addedType)
-        return Exception { TypeError };
+        return Exception { ExceptionCode::TypeError };
     addedType = CSSNumericType::addTypes(*addedType, rectifiedUpper->type());
     if (!addedType)
-        return Exception { TypeError };
+        return Exception { ExceptionCode::TypeError };
 
-    return adoptRef(*new CSSMathClamp(WTFMove(*addedType), WTFMove(rectifiedLower), WTFMove(rectifiedValue), WTFMove(rectifiedUpper)));
+    return adoptRef(*new CSSMathClamp(WTF::move(*addedType), WTF::move(rectifiedLower), WTF::move(rectifiedValue), WTF::move(rectifiedUpper)));
 }
 
 CSSMathClamp::CSSMathClamp(CSSNumericType&& type, Ref<CSSNumericValue>&& lower, Ref<CSSNumericValue>&& value, Ref<CSSNumericValue>&& upper)
-    : CSSMathValue(WTFMove(type))
-    , m_lower(WTFMove(lower))
-    , m_value(WTFMove(value))
-    , m_upper(WTFMove(upper))
+    : CSSMathValue(WTF::move(type))
+    , m_lower(WTF::move(lower))
+    , m_value(WTF::move(value))
+    , m_upper(WTF::move(upper))
 {
 }
 
@@ -104,16 +104,24 @@ bool CSSMathClamp::equals(const CSSNumericValue& other) const
         && m_upper->equals(otherClamp->m_upper);
 }
 
-RefPtr<CSSCalcExpressionNode> CSSMathClamp::toCalcExpressionNode() const
+std::optional<CSSCalc::Child> CSSMathClamp::toCalcTreeNode() const
 {
-    Vector<Ref<CSSCalcExpressionNode>> values;
-    for (auto& value : { m_lower, m_value, m_upper }) {
-        auto valueNode = value->toCalcExpressionNode();
-        if (!valueNode)
-            return nullptr;
-        values.append(valueNode.releaseNonNull());
-    }
-    return CSSCalcOperationNode::createMinOrMaxOrClamp(CalcOperator::Clamp, WTFMove(values), CalculationCategory::Length);
+    auto lower = m_lower->toCalcTreeNode();
+    if (!lower)
+        return std::nullopt;
+    auto value = m_value->toCalcTreeNode();
+    if (!value)
+        return std::nullopt;
+    auto upper = m_upper->toCalcTreeNode();
+    if (!upper)
+        return std::nullopt;
+
+    auto clamp = CSSCalc::Clamp { .min = WTF::move(*lower), .val = WTF::move(*value), .max = WTF::move(*upper) };
+    auto type = CSSCalc::toType(clamp);
+    if (!type)
+        return std::nullopt;
+
+    return CSSCalc::makeChild(WTF::move(clamp), *type);
 }
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,8 @@
 
 #include "Document.h"
 #include "Frame.h"
+#include "LocalFrameInlines.h"
+#include "FrameInlines.h"
 #include "Element.h"
 #include "HTMLDocument.h"
 #include "HTMLElement.h"
@@ -47,8 +49,11 @@ namespace WebCore {
 
 static void raiseDOMErrorException(JNIEnv* env, WebCore::ExceptionCode ec)
 {
-    ASSERT(ec);
-
+#if ASSERT_ENABLED
+    if (ec != ExceptionCode::TypeError) {
+        WTFLogAlways("Unexpected ExceptionCode: %d", static_cast<int>(ec));
+    }
+#endif
     auto description = DOMException::description(ec);
 
     static JGClass exceptionClass(env->FindClass("org/w3c/dom/DOMException"));
@@ -66,12 +71,12 @@ static void raiseDOMErrorException(JNIEnv* env, WebCore::ExceptionCode ec)
 
 void raiseTypeErrorException(JNIEnv* env)
 {
-    raiseDOMErrorException(env, WebCore::TypeError);
+    raiseDOMErrorException(env, ExceptionCode::TypeError);
 }
 
 void raiseNotSupportedErrorException(JNIEnv* env)
 {
-    raiseDOMErrorException(env, WebCore::NotSupportedError);
+    raiseDOMErrorException(env, ExceptionCode::NotSupportedError);
 }
 
 void raiseDOMErrorException(JNIEnv* env, Exception&& ec)

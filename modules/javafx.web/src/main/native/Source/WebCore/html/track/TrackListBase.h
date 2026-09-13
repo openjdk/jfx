@@ -38,29 +38,36 @@
 namespace WebCore {
 
 class TrackBase;
+class TrackOpaqueRoot;
+using TrackID = uint64_t;
 
 class TrackListBase : public RefCounted<TrackListBase>, public EventTarget, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(TrackListBase);
+    WTF_MAKE_TZONE_ALLOCATED(TrackListBase);
 public:
     virtual ~TrackListBase();
 
-    enum Type { BaseTrackList, TextTrackList, AudioTrackList, VideoTrackList };
-    Type type() const { return m_type; }
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     virtual unsigned length() const;
     virtual bool contains(TrackBase&) const;
+    virtual bool contains(TrackID) const;
     virtual void remove(TrackBase&, bool scheduleEvent = true);
+    virtual void remove(TrackID, bool scheduleEvent = true);
+    virtual RefPtr<TrackBase> find(TrackID) const;
 
     // EventTarget
-    EventTargetInterface eventTargetInterface() const override = 0;
-    using RefCounted<TrackListBase>::ref;
-    using RefCounted<TrackListBase>::deref;
-    ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
+    enum EventTargetInterfaceType eventTargetInterface() const override = 0;
+    ScriptExecutionContext* scriptExecutionContext() const final;
+
+    void didMoveToNewDocument(Document&);
 
     WebCoreOpaqueRoot opaqueRoot();
 
-    using OpaqueRootObserver = WTF::Observer<WebCoreOpaqueRoot()>;
-    void setOpaqueRootObserver(const OpaqueRootObserver& observer) { m_opaqueRootObserver = observer; };
+    TrackOpaqueRoot* trackOpaqueRoot() { return m_trackOpaqueRoot.get(); }
+    virtual void setOpaqueRoot(TrackOpaqueRoot&);
 
     // Needs to be public so tracks can call it
     void scheduleChangeEvent();
@@ -69,12 +76,12 @@ public:
     bool isAnyTrackEnabled() const;
 
 protected:
-    TrackListBase(ScriptExecutionContext*, Type);
+    explicit TrackListBase(ScriptExecutionContext*);
 
     void scheduleAddTrackEvent(Ref<TrackBase>&&);
     void scheduleRemoveTrackEvent(Ref<TrackBase>&&);
 
-    Vector<RefPtr<TrackBase>> m_inbandTracks;
+    Vector<Ref<TrackBase>> m_inbandTracks;
 
 private:
     void scheduleTrackEvent(const AtomString& eventName, Ref<TrackBase>&&);
@@ -83,8 +90,7 @@ private:
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
-    Type m_type;
-    WeakPtr<OpaqueRootObserver> m_opaqueRootObserver;
+    RefPtr<TrackOpaqueRoot> m_trackOpaqueRoot;
     bool m_isChangeEventScheduled { false };
 };
 

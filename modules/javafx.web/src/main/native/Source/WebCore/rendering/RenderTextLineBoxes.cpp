@@ -26,23 +26,21 @@
 #include "config.h"
 #include "RenderTextLineBoxes.h"
 
-#include "LegacyEllipsisBox.h"
 #include "LegacyInlineTextBox.h"
 #include "LegacyRootInlineBox.h"
 #include "RenderBlock.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
+#include "RenderSVGInlineText.h"
 #include "RenderView.h"
 #include "VisiblePosition.h"
 
 namespace WebCore {
 
 RenderTextLineBoxes::RenderTextLineBoxes()
-    : m_first(nullptr)
-    , m_last(nullptr)
 {
 }
 
-LegacyInlineTextBox* RenderTextLineBoxes::createAndAppendLineBox(RenderText& renderText)
+LegacyInlineTextBox* RenderTextLineBoxes::createAndAppendLineBox(RenderSVGInlineText& renderText)
 {
     auto textBox = renderText.createTextBox();
     if (!m_first) {
@@ -54,41 +52,6 @@ LegacyInlineTextBox* RenderTextLineBoxes::createAndAppendLineBox(RenderText& ren
         m_last = textBox.get();
     }
     return textBox.release();
-}
-
-void RenderTextLineBoxes::extract(LegacyInlineTextBox& box)
-{
-    checkConsistency();
-
-    m_last = box.prevTextBox();
-    if (&box == m_first)
-        m_first = nullptr;
-    if (box.prevTextBox())
-        box.prevTextBox()->setNextTextBox(nullptr);
-    box.setPreviousTextBox(nullptr);
-    for (auto* current = &box; current; current = current->nextTextBox())
-        current->setExtracted();
-
-    checkConsistency();
-}
-
-void RenderTextLineBoxes::attach(LegacyInlineTextBox& box)
-{
-    checkConsistency();
-
-    if (m_last) {
-        m_last->setNextTextBox(&box);
-        box.setPreviousTextBox(m_last);
-    } else
-        m_first = &box;
-    LegacyInlineTextBox* last = nullptr;
-    for (auto* current = &box; current; current = current->nextTextBox()) {
-        current->setExtracted(false);
-        last = current;
-    }
-    m_last = last;
-
-    checkConsistency();
 }
 
 void RenderTextLineBoxes::remove(LegacyInlineTextBox& box)
@@ -107,11 +70,11 @@ void RenderTextLineBoxes::remove(LegacyInlineTextBox& box)
     checkConsistency();
 }
 
-void RenderTextLineBoxes::removeAllFromParent(RenderText& renderer)
+void RenderTextLineBoxes::removeAllFromParent(RenderSVGInlineText& renderer)
 {
     if (!m_first) {
         if (renderer.parent())
-            renderer.parent()->dirtyLinesFromChangedChild(renderer);
+            renderer.parent()->dirtyLineFromChangedChild();
         return;
     }
     for (auto* box = m_first; box; box = box->nextTextBox())
@@ -131,110 +94,13 @@ void RenderTextLineBoxes::deleteAll()
     m_last = nullptr;
 }
 
-LegacyInlineTextBox* RenderTextLineBoxes::findNext(int offset, int& position) const
-{
-    if (!m_first)
-        return nullptr;
-    // FIXME: This looks buggy. The function is only used for debugging purposes.
-    auto current = m_first;
-    int currentOffset = current->len();
-    while (offset > currentOffset && current->nextTextBox()) {
-        current = current->nextTextBox();
-        currentOffset = current->start() + current->len();
-    }
-    // we are now in the correct text run
-    position = (offset > currentOffset ? current->len() : current->len() - (currentOffset - offset));
-    return current;
-}
-
-void RenderTextLineBoxes::dirtyAll()
+void RenderTextLineBoxes::dirtyForTextChange(RenderSVGInlineText& renderer)
 {
     for (auto* box = m_first; box; box = box->nextTextBox())
         box->dirtyLineBoxes();
-}
 
-bool RenderTextLineBoxes::dirtyRange(RenderText& renderer, unsigned start, unsigned end, int lengthDelta)
-{
-    LegacyRootInlineBox* firstRootBox = nullptr;
-    LegacyRootInlineBox* lastRootBox = nullptr;
-
-    // Verify the DOM and RenderText lengths are in sync. Certain text operations, like upper casing,
-    // may be reflected only on the Render side causing the DOM and Render lengths to differ.
-    if (!renderer.style().textTransform().isEmpty() && renderer.textNode()
-        && renderer.length() != renderer.textNode()->wholeText().length()) {
-        dirtyAll();
-        return true;
-    }
-
-    // Dirty all text boxes that include characters in between offset and offset+len.
-    bool dirtiedLines = false;
-    for (auto* current = m_first; current; current = current->nextTextBox()) {
-        // FIXME: This shouldn't rely on the end of a dirty line box. See https://bugs.webkit.org/show_bug.cgi?id=97264
-        // Text run is entirely before the affected range.
-        if (current->end() <= start)
-            continue;
-        // Text run is entirely after the affected range.
-        if (current->start() >= end) {
-            current->offsetRun(lengthDelta);
-            auto& rootBox = current->root();
-            if (!firstRootBox) {
-                firstRootBox = &rootBox;
-                if (!dirtiedLines) {
-                    // The affected area was in between two runs. Mark the root box of the run after the affected area as dirty.
-                    firstRootBox->markDirty();
-                    dirtiedLines = true;
-                }
-            }
-            lastRootBox = &rootBox;
-            continue;
-        }
-        if (current->end() > start && current->end() <= end) {
-            // Text run overlaps with the left end of the affected range.
-            current->dirtyLineBoxes();
-            dirtiedLines = true;
-            continue;
-        }
-        if (current->start() <= start && current->end() >= end) {
-            // Text run subsumes the affected range.
-            current->dirtyLineBoxes();
-            dirtiedLines = true;
-            continue;
-        }
-        if (current->start() < end && current->end() >= end) {
-            // Text run overlaps with right end of the affected range.
-            current->dirtyLineBoxes();
-            dirtiedLines = true;
-            continue;
-        }
-    }
-
-    // Now we have to walk all of the clean lines and adjust their cached line break information
-    // to reflect our updated offsets.
-    if (lastRootBox)
-        lastRootBox = lastRootBox->nextRootBox();
-    if (firstRootBox) {
-        auto previousRootBox = firstRootBox->prevRootBox();
-        if (previousRootBox)
-            firstRootBox = previousRootBox;
-    } else if (m_last) {
-        ASSERT(!lastRootBox);
-        firstRootBox = &m_last->root();
-        firstRootBox->markDirty();
-        dirtiedLines = true;
-    }
-
-    for (auto* current = firstRootBox; current && current != lastRootBox; current = current->nextRootBox()) {
-        auto lineBreakPos = current->lineBreakPos();
-        if (current->lineBreakObj() == &renderer && (lineBreakPos > end || (start != end && lineBreakPos == end)))
-            current->setLineBreakPos(current->lineBreakPos() + lengthDelta);
-    }
-
-    // If the text node is empty, dirty the line where new text will be inserted.
-    if (!m_first && renderer.parent()) {
-        renderer.parent()->dirtyLinesFromChangedChild(renderer);
-        dirtiedLines = true;
-    }
-    return dirtiedLines;
+    if (!m_first && renderer.parent())
+        renderer.parent()->dirtyLineFromChangedChild();
 }
 
 inline void RenderTextLineBoxes::checkConsistency() const

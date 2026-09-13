@@ -60,7 +60,7 @@ public:
     Plan(
         CodeBlock* codeBlockToCompile, CodeBlock* profiledDFGCodeBlock,
         JITCompilationMode, BytecodeIndex osrEntryBytecodeIndex,
-        const Operands<std::optional<JSValue>>& mustHandleValues);
+        Operands<std::optional<JSValue>>&& mustHandleValues);
     ~Plan();
 
     size_t codeSize() const final;
@@ -72,7 +72,7 @@ public:
 
     bool isKnownToBeLiveAfterGC() final;
     bool isKnownToBeLiveDuringGC(AbstractSlotVisitor&) final;
-    bool iterateCodeBlocksForGC(AbstractSlotVisitor&, const Function<void(CodeBlock*)>&) final;
+    bool iterateCodeBlocksForGC(AbstractSlotVisitor&, NOESCAPE const Function<void(CodeBlock*)>&) final;
     bool checkLivenessAndVisitChildren(AbstractSlotVisitor&) final;
 
 
@@ -85,32 +85,32 @@ public:
     Profiler::Compilation* compilation() const { return m_compilation.get(); }
 
     Finalizer* finalizer() const { return m_finalizer.get(); }
-    void setFinalizer(std::unique_ptr<Finalizer>&& finalizer) { m_finalizer = WTFMove(finalizer); }
+    void setFinalizer(std::unique_ptr<Finalizer>&& finalizer) { m_finalizer = WTF::move(finalizer); }
 
     RefPtr<InlineCallFrameSet> inlineCallFrames() const { return m_inlineCallFrames; }
     DesiredWatchpoints& watchpoints() { return m_watchpoints; }
     DesiredIdentifiers& identifiers() { return m_identifiers; }
     DesiredWeakReferences& weakReferences() { return m_weakReferences; }
     DesiredTransitions& transitions() { return m_transitions; }
-    RecordedStatuses& recordedStatuses() { return m_recordedStatuses; }
+    RecordedStatuses& recordedStatuses() { return *m_recordedStatuses.get(); }
 
     bool willTryToTierUp() const { return m_willTryToTierUp; }
     void setWillTryToTierUp(bool willTryToTierUp) { m_willTryToTierUp = willTryToTierUp; }
 
-    HashMap<BytecodeIndex, FixedVector<BytecodeIndex>>& tierUpInLoopHierarchy() { return m_tierUpInLoopHierarchy; }
+    UncheckedKeyHashMap<BytecodeIndex, FixedVector<BytecodeIndex>>& tierUpInLoopHierarchy() { return m_tierUpInLoopHierarchy; }
     Vector<BytecodeIndex>& tierUpAndOSREnterBytecodes() { return m_tierUpAndOSREnterBytecodes; }
 
     DeferredCompilationCallback* callback() const { return m_callback.get(); }
-    void setCallback(Ref<DeferredCompilationCallback>&& callback) { m_callback = WTFMove(callback); }
+    void setCallback(Ref<DeferredCompilationCallback>&& callback) { m_callback = WTF::move(callback); }
 
-    std::unique_ptr<JITData> tryFinalizeJITData(const JITCode&);
+    std::unique_ptr<JITData> tryFinalizeJITData(const DFG::JITCode&);
 
 private:
     CompilationPath compileInThreadImpl() override;
+    void finalizeInThread(Ref<JSC::JITCode>);
 
-    bool isStillValidOnMainThread();
-    bool isStillValid();
-    void reallyAdd(CommonData*);
+    bool isStillValidCodeBlock();
+    bool reallyAdd(CommonData*);
 
     // These can be raw pointers because we visit them during every GC in checkLivenessAndVisitChildren.
     CodeBlock* m_profiledDFGCodeBlock;
@@ -132,9 +132,9 @@ private:
     DesiredIdentifiers m_identifiers;
     DesiredWeakReferences m_weakReferences;
     DesiredTransitions m_transitions;
-    RecordedStatuses m_recordedStatuses;
+    std::unique_ptr<RecordedStatuses> m_recordedStatuses;
 
-    HashMap<BytecodeIndex, FixedVector<BytecodeIndex>> m_tierUpInLoopHierarchy;
+    UncheckedKeyHashMap<BytecodeIndex, FixedVector<BytecodeIndex>> m_tierUpInLoopHierarchy;
     Vector<BytecodeIndex> m_tierUpAndOSREnterBytecodes;
 
     RefPtr<DeferredCompilationCallback> m_callback;

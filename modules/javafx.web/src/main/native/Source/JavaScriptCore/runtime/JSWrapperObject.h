@@ -21,7 +21,7 @@
 
 #pragma once
 
-#include "JSInternalFieldObjectImpl.h"
+#include <JavaScriptCore/JSInternalFieldObjectImpl.h>
 
 namespace JSC {
 
@@ -51,8 +51,8 @@ public:
     JSValue internalValue() const;
     void setInternalValue(VM&, JSValue);
 
-    static ptrdiff_t internalValueOffset() { return offsetOfInternalField(static_cast<unsigned>(Field::WrappedValue)); }
-    static ptrdiff_t internalValueCellOffset()
+    static constexpr ptrdiff_t internalValueOffset() { return offsetOfInternalField(static_cast<unsigned>(Field::WrappedValue)); }
+    static constexpr ptrdiff_t internalValueCellOffset()
     {
 #if USE(JSVALUE64)
         return internalValueOffset();
@@ -61,10 +61,10 @@ public:
 #endif
     }
 
+    DECLARE_VISIT_CHILDREN_WITH_MODIFIER(JS_EXPORT_PRIVATE);
+
 protected:
     explicit JSWrapperObject(VM&, Structure*);
-
-    DECLARE_VISIT_CHILDREN_WITH_MODIFIER(JS_EXPORT_PRIVATE);
 };
 
 inline JSWrapperObject::JSWrapperObject(VM& vm, Structure* structure)

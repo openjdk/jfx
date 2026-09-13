@@ -28,9 +28,8 @@
 
 #pragma once
 
-#include "SecurityOriginData.h"
+#include <WebCore/SecurityOriginData.h>
 #include <wtf/ArgumentCoder.h>
-#include <wtf/EnumTraits.h>
 #include <wtf/Hasher.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/text/WTFString.h>
@@ -41,7 +40,7 @@ class OriginAccessPatterns;
 
 class SecurityOrigin : public ThreadSafeRefCounted<SecurityOrigin> {
 public:
-    enum Policy {
+    enum class Policy : uint8_t {
         AlwaysDeny = 0,
         AlwaysAllow,
         Ask
@@ -51,6 +50,7 @@ public:
     WEBCORE_EXPORT static Ref<SecurityOrigin> create(const URL&);
     WEBCORE_EXPORT static Ref<SecurityOrigin> createForBlobURL(const URL&);
     WEBCORE_EXPORT static Ref<SecurityOrigin> createOpaque();
+    WEBCORE_EXPORT static SecurityOrigin& opaqueOrigin();
 
     WEBCORE_EXPORT static Ref<SecurityOrigin> createFromString(const String&);
     WEBCORE_EXPORT static Ref<SecurityOrigin> create(const String& protocol, const String& host, std::optional<uint16_t> port);
@@ -146,8 +146,8 @@ public:
     // created. http://www.whatwg.org/specs/web-apps/current-work/#sandboxOrigin
     //
     // There's a subtle difference between an opaque origin and an origin that
-    // has the SandboxOrigin flag set. The latter implies the former, and, in
-    // addition, the SandboxOrigin flag is inherited by iframes.
+    // has the SandboxFlag::Origin flag set. The latter implies the former, and, in
+    // addition, the SandboxFlag::Origin flag is inherited by iframes.
     bool isOpaque() const { return m_data.isOpaque(); }
 
     // Marks a file:// origin as being in a domain defined by its path.
@@ -179,7 +179,7 @@ public:
     // For access checks, use isSameOriginDomain().
     // FIXME: If this method is really only useful for hash table keys, it
     // should be refactored into SecurityOriginHash.
-    WEBCORE_EXPORT bool equal(const SecurityOrigin*) const;
+    WEBCORE_EXPORT bool equal(const SecurityOrigin&) const;
 
     // This method checks for equality, ignoring the value of document.domain
     // (and whether it was set) but considering the host. It is used for postMessage.
@@ -201,26 +201,26 @@ public:
     void setIsPotentiallyTrustworthy(bool value) { m_isPotentiallyTrustworthy = value; }
 
     WEBCORE_EXPORT static bool isLocalHostOrLoopbackIPAddress(StringView);
+    WEBCORE_EXPORT static bool isLocalhostAddress(StringView);
 
     const SecurityOriginData& data() const { return m_data; }
 
+    // This method checks that the scheme for this origin is an HTTP-family
+    // scheme, e.g. HTTP and HTTPS.
+    bool isHTTPFamily() const { return m_data.protocol() == "http"_s || m_data.protocol() == "https"_s; }
+
 private:
-    friend struct IPC::ArgumentCoder<SecurityOrigin, void>;
+    friend struct IPC::ArgumentCoder<SecurityOrigin>;
     WEBCORE_EXPORT SecurityOrigin();
     explicit SecurityOrigin(const URL&);
     explicit SecurityOrigin(const SecurityOrigin*);
     explicit SecurityOrigin(SecurityOriginData&&);
     void initializeShared(const URL&);
 
-    // FIXME: Rename this function to something more semantic.
-    bool passesFileCheck(const SecurityOrigin&) const;
+    bool hasLocalUnseparatedPath(const SecurityOrigin&) const;
 
-    // This method checks that the scheme for this origin is an HTTP-family
-    // scheme, e.g. HTTP and HTTPS.
-    bool isHTTPFamily() const { return m_data.protocol() == "http"_s || m_data.protocol() == "https"_s; }
-
-    enum ShouldAllowFromThirdParty { AlwaysAllowFromThirdParty, MaybeAllowFromThirdParty };
-    WEBCORE_EXPORT bool canAccessStorage(const SecurityOrigin*, ShouldAllowFromThirdParty = MaybeAllowFromThirdParty) const;
+    enum class ShouldAllowFromThirdParty : uint8_t { AlwaysAllowFromThirdParty, MaybeAllowFromThirdParty };
+    WEBCORE_EXPORT bool canAccessStorage(const SecurityOrigin*, ShouldAllowFromThirdParty = ShouldAllowFromThirdParty::MaybeAllowFromThirdParty) const;
 
     SecurityOriginData m_data;
     String m_domain;

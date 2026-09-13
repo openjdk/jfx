@@ -29,6 +29,7 @@
 #include <CoreFoundation/CFURL.h>
 #include <wtf/URLParser.h>
 #include <wtf/cf/CFURLExtras.h>
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #include <wtf/text/CString.h>
 
 namespace WTF {
@@ -42,14 +43,16 @@ URL::URL(CFURLRef url)
         *this = URLParser(bytesAsString(url)).result();
 }
 
-#if !USE(FOUNDATION)
-
-RetainPtr<CFURLRef> URL::emptyCFURL()
+RetainPtr<CFURLRef> URL::createCFURL(const String& string)
 {
-    return nullptr;
+    if (string.is8Bit() && string.containsOnlyASCII()) [[likely]] {
+        auto characters = string.span8();
+        return adoptCF(CFURLCreateAbsoluteURLWithBytes(nullptr, byteCast<UInt8>(characters.data()), characters.size(), kCFStringEncodingUTF8, nullptr, true));
+    }
+    CString utf8 = string.utf8();
+    auto utf8Span = utf8.span();
+    return adoptCF(CFURLCreateAbsoluteURLWithBytes(nullptr, byteCast<UInt8>(utf8Span.data()), utf8Span.size(), kCFStringEncodingUTF8, nullptr, true));
 }
-
-#endif
 
 RetainPtr<CFURLRef> URL::createCFURL() const
 {
@@ -59,21 +62,20 @@ RetainPtr<CFURLRef> URL::createCFURL() const
     if (isEmpty())
         return emptyCFURL();
 
-    RetainPtr<CFURLRef> result;
-    if (LIKELY(m_string.is8Bit() && m_string.containsOnlyASCII()))
-        result = adoptCF(CFURLCreateAbsoluteURLWithBytes(nullptr, m_string.characters8(), m_string.length(), kCFStringEncodingUTF8, nullptr, true));
-    else {
-        CString utf8 = m_string.utf8();
-        result = adoptCF(CFURLCreateAbsoluteURLWithBytes(nullptr, utf8.dataAsUInt8Ptr(), utf8.length(), kCFStringEncodingUTF8, nullptr, true));
-    }
+    if (!isValid() && linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::ConvertsInvalidURLsToNull))
+        return nullptr;
 
-    if (protocolIsInHTTPFamily() && !isSameOrigin(result.get(), *this))
+    RetainPtr result = createCFURL(m_string);
+
+    // This additional check is only needed for invalid URLs, for which we've already returned null with new SDKs.
+    if (!linkedOnOrAfterSDKWithBehavior(SDKAlignedBehavior::ConvertsInvalidURLsToNull)
+        && protocolIsInHTTPFamily()
+        && !isSameOrigin(result.get(), *this))
         return nullptr;
 
     return result;
 }
 
-#if !PLATFORM(WIN)
 String URL::fileSystemPath() const
 {
     auto cfURL = createCFURL();
@@ -82,6 +84,5 @@ String URL::fileSystemPath() const
 
     return adoptCF(CFURLCopyFileSystemPath(cfURL.get(), kCFURLPOSIXPathStyle)).get();
 }
-#endif
 
 }

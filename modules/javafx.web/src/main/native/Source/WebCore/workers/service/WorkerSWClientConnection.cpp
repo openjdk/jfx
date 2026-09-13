@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,13 +26,13 @@
 #include "config.h"
 #include "WorkerSWClientConnection.h"
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "BackgroundFetchInformation.h"
 #include "BackgroundFetchOptions.h"
 #include "BackgroundFetchRecordInformation.h"
 #include "BackgroundFetchRequest.h"
 #include "CacheQueryOptions.h"
+#include "CookieChangeSubscription.h"
+#include "ExceptionOr.h"
 #include "NotificationData.h"
 #include "RetrieveRecordsOptions.h"
 #include "SecurityOrigin.h"
@@ -40,9 +40,11 @@
 #include "ServiceWorkerJobData.h"
 #include "ServiceWorkerProvider.h"
 #include "ServiceWorkerRegistration.h"
+#include "ServiceWorkerRoute.h"
 #include "WorkerFetchResult.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerThread.h"
+#include <wtf/Vector.h>
 
 namespace WebCore {
 
@@ -53,49 +55,51 @@ WorkerSWClientConnection::WorkerSWClientConnection(WorkerGlobalScope& scope)
 
 WorkerSWClientConnection::~WorkerSWClientConnection()
 {
-    auto matchRegistrations = WTFMove(m_matchRegistrationRequests);
+    auto matchRegistrations = WTF::move(m_matchRegistrationRequests);
     for (auto& callback : matchRegistrations.values())
         callback({ });
 
-    auto getRegistrationsRequests = WTFMove(m_getRegistrationsRequests);
+    auto getRegistrationsRequests = WTF::move(m_getRegistrationsRequests);
     for (auto& callback : getRegistrationsRequests.values())
         callback({ });
 
-    auto unregisterRequests = WTFMove(m_unregisterRequests);
+    auto unregisterRequests = WTF::move(m_unregisterRequests);
     for (auto& callback : unregisterRequests.values())
-        callback(Exception { TypeError, "context stopped"_s });
+        callback(Exception { ExceptionCode::TypeError, "context stopped"_s });
 
-    auto subscribeToPushServiceRequests = WTFMove(m_subscribeToPushServiceRequests);
+    auto subscribeToPushServiceRequests = WTF::move(m_subscribeToPushServiceRequests);
     for (auto& callback : subscribeToPushServiceRequests.values())
-        callback(Exception { AbortError, "context stopped"_s });
+        callback(Exception { ExceptionCode::AbortError, "context stopped"_s });
 
-    auto unsubscribeFromPushServiceRequests = WTFMove(m_unsubscribeFromPushServiceRequests);
+    auto unsubscribeFromPushServiceRequests = WTF::move(m_unsubscribeFromPushServiceRequests);
     for (auto& callback : unsubscribeFromPushServiceRequests.values())
-        callback(Exception { AbortError, "context stopped"_s });
+        callback(Exception { ExceptionCode::AbortError, "context stopped"_s });
 
-    auto getPushSubscriptionRequests = WTFMove(m_getPushSubscriptionRequests);
+    auto getPushSubscriptionRequests = WTF::move(m_getPushSubscriptionRequests);
     for (auto& callback : getPushSubscriptionRequests.values())
-        callback(Exception { AbortError, "context stopped"_s });
+        callback(Exception { ExceptionCode::AbortError, "context stopped"_s });
 
-    auto getPushPermissionStateCallbacks = WTFMove(m_getPushPermissionStateCallbacks);
+    auto getPushPermissionStateCallbacks = WTF::move(m_getPushPermissionStateCallbacks);
     for (auto& callback : getPushPermissionStateCallbacks.values())
-        callback(Exception { AbortError, "context stopped"_s });
+        callback(Exception { ExceptionCode::AbortError, "context stopped"_s });
 
-    auto voidCallbacks = WTFMove(m_voidCallbacks);
+    auto voidCallbacks = WTF::move(m_voidCallbacks);
     for (auto& callback : voidCallbacks.values())
-        callback(Exception { AbortError, "context stopped"_s });
+        callback(Exception { ExceptionCode::AbortError, "context stopped"_s });
 
-    auto navigationPreloadStateCallbacks = WTFMove(m_navigationPreloadStateCallbacks);
+    auto navigationPreloadStateCallbacks = WTF::move(m_navigationPreloadStateCallbacks);
     for (auto& callback : navigationPreloadStateCallbacks.values())
-        callback(Exception { AbortError, "context stopped"_s });
+        callback(Exception { ExceptionCode::AbortError, "context stopped"_s });
 
-    auto getNotificationsCallbacks = WTFMove(m_getNotificationsCallbacks);
+#if ENABLE(NOTIFICATION_EVENT)
+    auto getNotificationsCallbacks = WTF::move(m_getNotificationsCallbacks);
     for (auto& callback : getNotificationsCallbacks.values())
-        callback(Exception { AbortError, "context stopped"_s });
+        callback(Exception { ExceptionCode::AbortError, "context stopped"_s });
+#endif
 
     auto backgroundFetchInformationCallbacks = std::exchange(m_backgroundFetchInformationCallbacks, { });
     for (auto& callback : backgroundFetchInformationCallbacks.values())
-        callback(Exception { AbortError, "context stopped"_s });
+        callback(Exception { ExceptionCode::AbortError, "context stopped"_s });
 
     auto backgroundFetchIdentifiersCallbacks = std::exchange(m_backgroundFetchIdentifiersCallbacks, { });
     for (auto& callback : backgroundFetchIdentifiersCallbacks.values())
@@ -111,24 +115,28 @@ WorkerSWClientConnection::~WorkerSWClientConnection()
 
     auto retrieveRecordResponseCallbacks = std::exchange(m_retrieveRecordResponseCallbacks, { });
     for (auto& callback : retrieveRecordResponseCallbacks.values())
-        callback(Exception { AbortError, "context stopped"_s });
+        callback(Exception { ExceptionCode::AbortError, "context stopped"_s });
 
     auto retrieveRecordResponseBodyCallbacks = std::exchange(m_retrieveRecordResponseBodyCallbacks, { });
     for (auto& callback : retrieveRecordResponseBodyCallbacks.values())
         callback(makeUnexpected(ResourceError { errorDomainWebKitInternal, 0, { }, "context stopped"_s }));
+
+    auto cookieChangeSubscriptionsCallbacks = std::exchange(m_cookieChangeSubscriptionsCallback, { });
+    for (auto& callback : cookieChangeSubscriptionsCallbacks.values())
+        callback(Exception { ExceptionCode::AbortError, "context stopped"_s });
 }
 
 void WorkerSWClientConnection::matchRegistration(SecurityOriginData&& topOrigin, const URL& clientURL, RegistrationCallback&& callback)
 {
-    uint64_t requestIdentifier = ++m_lastRequestIdentifier;
-    m_matchRegistrationRequests.add(requestIdentifier, WTFMove(callback));
+    auto requestIdentifier = SWClientRequestIdentifier::generate();
+    m_matchRegistrationRequests.add(requestIdentifier, WTF::move(callback));
 
-    callOnMainThread([thread = m_thread, requestIdentifier, topOrigin = crossThreadCopy(WTFMove(topOrigin)), clientURL = crossThreadCopy(clientURL)]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.matchRegistration(WTFMove(topOrigin), clientURL, [thread = WTFMove(thread), requestIdentifier](auto&& result) mutable {
-            thread->runLoop().postTaskForMode([requestIdentifier, result = WTFMove(result)] (auto& scope) mutable {
+    callOnMainThread([thread = m_thread, requestIdentifier, topOrigin = crossThreadCopy(WTF::move(topOrigin)), clientURL = crossThreadCopy(clientURL)]() mutable {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->matchRegistration(WTF::move(topOrigin), clientURL, [thread = WTF::move(thread), requestIdentifier](std::optional<ServiceWorkerRegistrationData>&& result) mutable {
+            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTF::move(result))] (auto& scope) mutable {
                 auto callback = downcast<WorkerGlobalScope>(scope).swClientConnection().m_matchRegistrationRequests.take(requestIdentifier);
-                callback(WTFMove(result));
+                callback(WTF::move(result));
             }, WorkerRunLoop::defaultMode());
         });
     });
@@ -136,15 +144,15 @@ void WorkerSWClientConnection::matchRegistration(SecurityOriginData&& topOrigin,
 
 void WorkerSWClientConnection::getRegistrations(SecurityOriginData&& topOrigin, const URL& clientURL, GetRegistrationsCallback&& callback)
 {
-    uint64_t requestIdentifier = ++m_lastRequestIdentifier;
-    m_getRegistrationsRequests.add(requestIdentifier, WTFMove(callback));
+    auto requestIdentifier = SWClientRequestIdentifier::generate();
+    m_getRegistrationsRequests.add(requestIdentifier, WTF::move(callback));
 
-    callOnMainThread([thread = m_thread, requestIdentifier, topOrigin = crossThreadCopy(WTFMove(topOrigin)), clientURL = crossThreadCopy(clientURL)]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.getRegistrations(WTFMove(topOrigin), clientURL, [thread = WTFMove(thread), requestIdentifier](auto&& data) mutable {
-            thread->runLoop().postTaskForMode([requestIdentifier, data = crossThreadCopy(WTFMove(data))] (auto& scope) mutable {
+    callOnMainThread([thread = m_thread, requestIdentifier, topOrigin = crossThreadCopy(WTF::move(topOrigin)), clientURL = crossThreadCopy(clientURL)]() mutable {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->getRegistrations(WTF::move(topOrigin), clientURL, [thread = WTF::move(thread), requestIdentifier](Vector<ServiceWorkerRegistrationData>&& data) mutable {
+            thread->runLoop().postTaskForMode([requestIdentifier, data = crossThreadCopy(WTF::move(data))] (auto& scope) mutable {
                 auto callback = downcast<WorkerGlobalScope>(scope).swClientConnection().m_getRegistrationsRequests.take(requestIdentifier);
-                callback(WTFMove(data));
+                callback(WTF::move(data));
             }, WorkerRunLoop::defaultMode());
         });
     });
@@ -152,15 +160,15 @@ void WorkerSWClientConnection::getRegistrations(SecurityOriginData&& topOrigin, 
 
 void WorkerSWClientConnection::whenRegistrationReady(const SecurityOriginData& topOrigin, const URL& clientURL, WhenRegistrationReadyCallback&& callback)
 {
-    uint64_t requestIdentifier = ++m_lastRequestIdentifier;
-    m_whenRegistrationReadyRequests.add(requestIdentifier, WTFMove(callback));
+    auto requestIdentifier = SWClientRequestIdentifier::generate();
+    m_whenRegistrationReadyRequests.add(requestIdentifier, WTF::move(callback));
 
     callOnMainThread([thread = m_thread, requestIdentifier, topOrigin = topOrigin.isolatedCopy(), clientURL = crossThreadCopy(clientURL)]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.whenRegistrationReady(topOrigin, clientURL, [thread = WTFMove(thread), requestIdentifier](auto&& result) mutable {
-            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTFMove(result))] (auto& scope) mutable {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->whenRegistrationReady(topOrigin, clientURL, [thread = WTF::move(thread), requestIdentifier](ServiceWorkerRegistrationData&& result) mutable {
+            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTF::move(result))] (auto& scope) mutable {
                 auto callback = downcast<WorkerGlobalScope>(scope).swClientConnection().m_whenRegistrationReadyRequests.take(requestIdentifier);
-                callback(WTFMove(result));
+                callback(WTF::move(result));
             }, WorkerRunLoop::defaultMode());
         });
     });
@@ -169,43 +177,53 @@ void WorkerSWClientConnection::whenRegistrationReady(const SecurityOriginData& t
 void WorkerSWClientConnection::addServiceWorkerRegistrationInServer(ServiceWorkerRegistrationIdentifier identifier)
 {
     callOnMainThread([identifier]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.addServiceWorkerRegistrationInServer(identifier);
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->addServiceWorkerRegistrationInServer(identifier);
     });
 }
 
 void WorkerSWClientConnection::removeServiceWorkerRegistrationInServer(ServiceWorkerRegistrationIdentifier identifier)
 {
     callOnMainThread([identifier]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.removeServiceWorkerRegistrationInServer(identifier);
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->removeServiceWorkerRegistrationInServer(identifier);
     });
+}
+
+void WorkerSWClientConnection::registerServiceWorkerInServer(ServiceWorkerIdentifier)
+{
+    ASSERT_NOT_REACHED();
+}
+
+void WorkerSWClientConnection::unregisterServiceWorkerInServer(ServiceWorkerIdentifier)
+{
+    ASSERT_NOT_REACHED();
 }
 
 void WorkerSWClientConnection::didResolveRegistrationPromise(const ServiceWorkerRegistrationKey& key)
 {
     callOnMainThread([key = crossThreadCopy(key)]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.didResolveRegistrationPromise(key);
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->didResolveRegistrationPromise(key);
     });
 }
 
 void WorkerSWClientConnection::postMessageToServiceWorker(ServiceWorkerIdentifier destination, MessageWithMessagePorts&& ports, const ServiceWorkerOrClientIdentifier& source)
 {
     callOnMainThreadAndWait([&] {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.postMessageToServiceWorker(destination, WTFMove(ports), source);
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->postMessageToServiceWorker(destination, WTF::move(ports), source);
     });
 }
 
 SWServerConnectionIdentifier WorkerSWClientConnection::serverConnectionIdentifier() const
 {
-    SWServerConnectionIdentifier identifier;
+    std::optional<SWServerConnectionIdentifier> identifier;
     callOnMainThreadAndWait([&] {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        identifier = connection.serverConnectionIdentifier();
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        identifier = connection->serverConnectionIdentifier();
     });
-    return identifier;
+    return *identifier;
 }
 
 bool WorkerSWClientConnection::mayHaveServiceWorkerRegisteredForOrigin(const SecurityOriginData&) const
@@ -216,47 +234,47 @@ bool WorkerSWClientConnection::mayHaveServiceWorkerRegisteredForOrigin(const Sec
 
 void WorkerSWClientConnection::registerServiceWorkerClient(const ClientOrigin& clientOrigin, ServiceWorkerClientData&& data, const std::optional<ServiceWorkerRegistrationIdentifier>& identifier, String&& userAgent)
 {
-    callOnMainThread([clientOrigin = clientOrigin.isolatedCopy(), data = crossThreadCopy(WTFMove(data)), identifier, userAgent = crossThreadCopy(WTFMove(userAgent))]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.registerServiceWorkerClient(clientOrigin, WTFMove(data), identifier, WTFMove(userAgent));
+    callOnMainThread([clientOrigin = clientOrigin.isolatedCopy(), data = crossThreadCopy(WTF::move(data)), identifier, userAgent = crossThreadCopy(WTF::move(userAgent))]() mutable {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->registerServiceWorkerClient(clientOrigin, WTF::move(data), identifier, WTF::move(userAgent));
     });
 }
 
 void WorkerSWClientConnection::unregisterServiceWorkerClient(ScriptExecutionContextIdentifier identifier)
 {
     callOnMainThread([identifier] {
-        if (auto* serviceWorkerConnection = ServiceWorkerProvider::singleton().existingServiceWorkerConnection())
+        if (RefPtr serviceWorkerConnection = ServiceWorkerProvider::singleton().existingServiceWorkerConnection())
             serviceWorkerConnection->unregisterServiceWorkerClient(identifier);
     });
 }
 
 void WorkerSWClientConnection::finishFetchingScriptInServer(const ServiceWorkerJobDataIdentifier& jobDataIdentifier, ServiceWorkerRegistrationKey&& registrationKey, WorkerFetchResult&& result)
 {
-    callOnMainThread([jobDataIdentifier, registrationKey = crossThreadCopy(WTFMove(registrationKey)), result = crossThreadCopy(WTFMove(result))]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.finishFetchingScriptInServer(jobDataIdentifier, WTFMove(registrationKey), WTFMove(result));
+    callOnMainThread([jobDataIdentifier, registrationKey = crossThreadCopy(WTF::move(registrationKey)), result = crossThreadCopy(WTF::move(result))]() mutable {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->finishFetchingScriptInServer(jobDataIdentifier, WTF::move(registrationKey), WTF::move(result));
     });
 }
 
 void WorkerSWClientConnection::scheduleJob(ServiceWorkerOrClientIdentifier identifier, const ServiceWorkerJobData& data)
 {
     callOnMainThread([identifier, data = crossThreadCopy(data)]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.scheduleJob(identifier, data);
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->scheduleJob(identifier, data);
     });
 }
 
 void WorkerSWClientConnection::scheduleUnregisterJobInServer(ServiceWorkerRegistrationIdentifier registrationIdentifier, ServiceWorkerOrClientIdentifier contextIdentifier, CompletionHandler<void(ExceptionOr<bool>&&)>&& callback)
 {
-    uint64_t requestIdentifier = ++m_lastRequestIdentifier;
-    m_unregisterRequests.add(requestIdentifier, WTFMove(callback));
+    auto requestIdentifier = SWClientRequestIdentifier::generate();
+    m_unregisterRequests.add(requestIdentifier, WTF::move(callback));
 
     callOnMainThread([thread = m_thread, requestIdentifier, registrationIdentifier, contextIdentifier]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.scheduleUnregisterJobInServer(registrationIdentifier, contextIdentifier, [thread = WTFMove(thread), requestIdentifier](auto&& result) {
-            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTFMove(result))](auto& scope) mutable {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->scheduleUnregisterJobInServer(registrationIdentifier, contextIdentifier, [thread = WTF::move(thread), requestIdentifier](auto&& result) {
+            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTF::move(result))](auto& scope) mutable {
                 auto callback = downcast<WorkerGlobalScope>(scope).swClientConnection().m_unregisterRequests.take(requestIdentifier);
-                callback(WTFMove(result));
+                callback(WTF::move(result));
             }, WorkerRunLoop::defaultMode());
         });
     });
@@ -269,15 +287,15 @@ void WorkerSWClientConnection::scheduleJobInServer(const ServiceWorkerJobData&)
 
 void WorkerSWClientConnection::subscribeToPushService(ServiceWorkerRegistrationIdentifier registrationIdentifier, const Vector<uint8_t>& applicationServerKey, SubscribeToPushServiceCallback&& callback)
 {
-    uint64_t requestIdentifier = ++m_lastRequestIdentifier;
-    m_subscribeToPushServiceRequests.add(requestIdentifier, WTFMove(callback));
+    auto requestIdentifier = SWClientRequestIdentifier::generate();
+    m_subscribeToPushServiceRequests.add(requestIdentifier, WTF::move(callback));
 
     callOnMainThread([thread = m_thread, requestIdentifier, registrationIdentifier, applicationServerKey]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.subscribeToPushService(registrationIdentifier, applicationServerKey, [thread = WTFMove(thread), requestIdentifier](auto&& result) {
-            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTFMove(result))](auto& scope) mutable {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->subscribeToPushService(registrationIdentifier, applicationServerKey, [thread = WTF::move(thread), requestIdentifier](auto&& result) {
+            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTF::move(result))](auto& scope) mutable {
                 auto callback = downcast<WorkerGlobalScope>(scope).swClientConnection().m_subscribeToPushServiceRequests.take(requestIdentifier);
-                callback(WTFMove(result));
+                callback(WTF::move(result));
             }, WorkerRunLoop::defaultMode());
         });
     });
@@ -285,15 +303,15 @@ void WorkerSWClientConnection::subscribeToPushService(ServiceWorkerRegistrationI
 
 void WorkerSWClientConnection::unsubscribeFromPushService(ServiceWorkerRegistrationIdentifier registrationIdentifier, PushSubscriptionIdentifier subscriptionIdentifier, UnsubscribeFromPushServiceCallback&& callback)
 {
-    uint64_t requestIdentifier = ++m_lastRequestIdentifier;
-    m_unsubscribeFromPushServiceRequests.add(requestIdentifier, WTFMove(callback));
+    auto requestIdentifier = SWClientRequestIdentifier::generate();
+    m_unsubscribeFromPushServiceRequests.add(requestIdentifier, WTF::move(callback));
 
     callOnMainThread([thread = m_thread, requestIdentifier, registrationIdentifier, subscriptionIdentifier]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.unsubscribeFromPushService(registrationIdentifier, subscriptionIdentifier, [thread = WTFMove(thread), requestIdentifier](auto&& result) {
-            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTFMove(result))](auto& scope) mutable {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->unsubscribeFromPushService(registrationIdentifier, subscriptionIdentifier, [thread = WTF::move(thread), requestIdentifier](auto&& result) {
+            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTF::move(result))](auto& scope) mutable {
                 auto callback = downcast<WorkerGlobalScope>(scope).swClientConnection().m_unsubscribeFromPushServiceRequests.take(requestIdentifier);
-                callback(WTFMove(result));
+                callback(WTF::move(result));
             }, WorkerRunLoop::defaultMode());
         });
     });
@@ -301,15 +319,15 @@ void WorkerSWClientConnection::unsubscribeFromPushService(ServiceWorkerRegistrat
 
 void WorkerSWClientConnection::getPushSubscription(ServiceWorkerRegistrationIdentifier registrationIdentifier, GetPushSubscriptionCallback&& callback)
 {
-    uint64_t requestIdentifier = ++m_lastRequestIdentifier;
-    m_getPushSubscriptionRequests.add(requestIdentifier, WTFMove(callback));
+    auto requestIdentifier = SWClientRequestIdentifier::generate();
+    m_getPushSubscriptionRequests.add(requestIdentifier, WTF::move(callback));
 
     callOnMainThread([thread = m_thread, requestIdentifier, registrationIdentifier]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.getPushSubscription(registrationIdentifier, [thread = WTFMove(thread), requestIdentifier](auto&& result) {
-            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTFMove(result))](auto& scope) mutable {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->getPushSubscription(registrationIdentifier, [thread = WTF::move(thread), requestIdentifier](auto&& result) {
+            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTF::move(result))](auto& scope) mutable {
                 auto callback = downcast<WorkerGlobalScope>(scope).swClientConnection().m_getPushSubscriptionRequests.take(requestIdentifier);
-                callback(WTFMove(result));
+                callback(WTF::move(result));
             }, WorkerRunLoop::defaultMode());
         });
     });
@@ -317,47 +335,49 @@ void WorkerSWClientConnection::getPushSubscription(ServiceWorkerRegistrationIden
 
 void WorkerSWClientConnection::getPushPermissionState(ServiceWorkerRegistrationIdentifier registrationIdentifier, GetPushPermissionStateCallback&& callback)
 {
-    uint64_t requestIdentifier = ++m_lastRequestIdentifier;
-    m_getPushPermissionStateCallbacks.add(requestIdentifier, WTFMove(callback));
+    auto requestIdentifier = SWClientRequestIdentifier::generate();
+    m_getPushPermissionStateCallbacks.add(requestIdentifier, WTF::move(callback));
 
     callOnMainThread([thread = m_thread, requestIdentifier, registrationIdentifier]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.getPushPermissionState(registrationIdentifier, [thread = WTFMove(thread), requestIdentifier](auto&& result) {
-            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTFMove(result))](auto& scope) mutable {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->getPushPermissionState(registrationIdentifier, [thread = WTF::move(thread), requestIdentifier](auto&& result) {
+            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTF::move(result))](auto& scope) mutable {
                 auto callback = downcast<WorkerGlobalScope>(scope).swClientConnection().m_getPushPermissionStateCallbacks.take(requestIdentifier);
-                callback(WTFMove(result));
+                callback(WTF::move(result));
             }, WorkerRunLoop::defaultMode());
         });
     });
 }
 
+#if ENABLE(NOTIFICATION_EVENT)
 void WorkerSWClientConnection::getNotifications(const URL& serviceWorkerRegistrationURL, const String& tag, GetNotificationsCallback&& callback)
 {
-    uint64_t requestIdentifier = ++m_lastRequestIdentifier;
-    m_getNotificationsCallbacks.add(requestIdentifier, WTFMove(callback));
+    auto requestIdentifier = SWClientRequestIdentifier::generate();
+    m_getNotificationsCallbacks.add(requestIdentifier, WTF::move(callback));
 
     callOnMainThread([thread = m_thread, requestIdentifier, serviceWorkerRegistrationURL = serviceWorkerRegistrationURL.isolatedCopy(), tag = tag.isolatedCopy()]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.getNotifications(serviceWorkerRegistrationURL, tag, [thread = WTFMove(thread), requestIdentifier](auto&& result) {
-            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTFMove(result))](auto& scope) mutable {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->getNotifications(serviceWorkerRegistrationURL, tag, [thread = WTF::move(thread), requestIdentifier](auto&& result) {
+            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTF::move(result))](auto& scope) mutable {
                 auto callback = downcast<WorkerGlobalScope>(scope).swClientConnection().m_getNotificationsCallbacks.take(requestIdentifier);
-                callback(WTFMove(result));
+                callback(WTF::move(result));
             }, WorkerRunLoop::defaultMode());
         });
     });
 }
+#endif
 
 void WorkerSWClientConnection::enableNavigationPreload(ServiceWorkerRegistrationIdentifier registrationIdentifier, ExceptionOrVoidCallback&& callback)
 {
-    uint64_t requestIdentifier = ++m_lastRequestIdentifier;
-    m_voidCallbacks.add(requestIdentifier, WTFMove(callback));
+    auto requestIdentifier = SWClientRequestIdentifier::generate();
+    m_voidCallbacks.add(requestIdentifier, WTF::move(callback));
 
     callOnMainThread([thread = m_thread, requestIdentifier, registrationIdentifier]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.enableNavigationPreload(registrationIdentifier, [thread = WTFMove(thread), requestIdentifier](auto&& result) {
-            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTFMove(result))](auto& scope) mutable {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->enableNavigationPreload(registrationIdentifier, [thread = WTF::move(thread), requestIdentifier](auto&& result) {
+            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTF::move(result))](auto& scope) mutable {
                 auto callback = downcast<WorkerGlobalScope>(scope).swClientConnection().m_voidCallbacks.take(requestIdentifier);
-                callback(WTFMove(result));
+                callback(WTF::move(result));
             }, WorkerRunLoop::defaultMode());
         });
     });
@@ -365,15 +385,15 @@ void WorkerSWClientConnection::enableNavigationPreload(ServiceWorkerRegistration
 
 void WorkerSWClientConnection::disableNavigationPreload(ServiceWorkerRegistrationIdentifier registrationIdentifier, ExceptionOrVoidCallback&& callback)
 {
-    uint64_t requestIdentifier = ++m_lastRequestIdentifier;
-    m_voidCallbacks.add(requestIdentifier, WTFMove(callback));
+    auto requestIdentifier = SWClientRequestIdentifier::generate();
+    m_voidCallbacks.add(requestIdentifier, WTF::move(callback));
 
     callOnMainThread([thread = m_thread, requestIdentifier, registrationIdentifier]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.disableNavigationPreload(registrationIdentifier, [thread = WTFMove(thread), requestIdentifier](auto&& result) {
-            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTFMove(result))](auto& scope) mutable {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->disableNavigationPreload(registrationIdentifier, [thread = WTF::move(thread), requestIdentifier](auto&& result) {
+            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTF::move(result))](auto& scope) mutable {
                 auto callback = downcast<WorkerGlobalScope>(scope).swClientConnection().m_voidCallbacks.take(requestIdentifier);
-                callback(WTFMove(result));
+                callback(WTF::move(result));
             }, WorkerRunLoop::defaultMode());
         });
     });
@@ -381,15 +401,15 @@ void WorkerSWClientConnection::disableNavigationPreload(ServiceWorkerRegistratio
 
 void WorkerSWClientConnection::setNavigationPreloadHeaderValue(ServiceWorkerRegistrationIdentifier registrationIdentifier, String&& headerValue, ExceptionOrVoidCallback&& callback)
 {
-    uint64_t requestIdentifier = ++m_lastRequestIdentifier;
-    m_voidCallbacks.add(requestIdentifier, WTFMove(callback));
+    auto requestIdentifier = SWClientRequestIdentifier::generate();
+    m_voidCallbacks.add(requestIdentifier, WTF::move(callback));
 
-    callOnMainThread([thread = m_thread, requestIdentifier, registrationIdentifier, headerValue = WTFMove(headerValue).isolatedCopy()]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.setNavigationPreloadHeaderValue(registrationIdentifier, WTFMove(headerValue), [thread = WTFMove(thread), requestIdentifier](auto&& result) {
-            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTFMove(result))](auto& scope) mutable {
+    callOnMainThread([thread = m_thread, requestIdentifier, registrationIdentifier, headerValue = WTF::move(headerValue).isolatedCopy()]() mutable {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->setNavigationPreloadHeaderValue(registrationIdentifier, WTF::move(headerValue), [thread = WTF::move(thread), requestIdentifier](auto&& result) {
+            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTF::move(result))](auto& scope) mutable {
                 auto callback = downcast<WorkerGlobalScope>(scope).swClientConnection().m_voidCallbacks.take(requestIdentifier);
-                callback(WTFMove(result));
+                callback(WTF::move(result));
             }, WorkerRunLoop::defaultMode());
         });
     });
@@ -397,15 +417,15 @@ void WorkerSWClientConnection::setNavigationPreloadHeaderValue(ServiceWorkerRegi
 
 void WorkerSWClientConnection::getNavigationPreloadState(ServiceWorkerRegistrationIdentifier registrationIdentifier, ExceptionOrNavigationPreloadStateCallback&& callback)
 {
-    uint64_t requestIdentifier = ++m_lastRequestIdentifier;
-    m_navigationPreloadStateCallbacks.add(requestIdentifier, WTFMove(callback));
+    auto requestIdentifier = SWClientRequestIdentifier::generate();
+    m_navigationPreloadStateCallbacks.add(requestIdentifier, WTF::move(callback));
 
     callOnMainThread([thread = m_thread, requestIdentifier, registrationIdentifier]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.getNavigationPreloadState(registrationIdentifier, [thread = WTFMove(thread), requestIdentifier](auto&& result) {
-            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTFMove(result))](auto& scope) mutable {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->getNavigationPreloadState(registrationIdentifier, [thread = WTF::move(thread), requestIdentifier](auto&& result) {
+            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTF::move(result))](auto& scope) mutable {
                 auto callback = downcast<WorkerGlobalScope>(scope).swClientConnection().m_navigationPreloadStateCallbacks.take(requestIdentifier);
-                callback(WTFMove(result));
+                callback(WTF::move(result));
             }, WorkerRunLoop::defaultMode());
         });
     });
@@ -413,15 +433,15 @@ void WorkerSWClientConnection::getNavigationPreloadState(ServiceWorkerRegistrati
 
 void WorkerSWClientConnection::startBackgroundFetch(ServiceWorkerRegistrationIdentifier registrationIdentifier, const String& backgroundFetchIdentifier, Vector<BackgroundFetchRequest>&& requests, BackgroundFetchOptions&& options, ExceptionOrBackgroundFetchInformationCallback&& callback)
 {
-    uint64_t requestIdentifier = ++m_lastRequestIdentifier;
-    m_backgroundFetchInformationCallbacks.add(requestIdentifier, WTFMove(callback));
+    auto requestIdentifier = SWClientRequestIdentifier::generate();
+    m_backgroundFetchInformationCallbacks.add(requestIdentifier, WTF::move(callback));
 
-    callOnMainThread([thread = m_thread, requestIdentifier, registrationIdentifier, backgroundFetchIdentifier = backgroundFetchIdentifier.isolatedCopy(), requests = crossThreadCopy(WTFMove(requests)), options = WTFMove(options).isolatedCopy()]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.startBackgroundFetch(registrationIdentifier, backgroundFetchIdentifier, WTFMove(requests), WTFMove(options), [thread = WTFMove(thread), requestIdentifier](auto&& result) {
-            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTFMove(result))](auto& scope) mutable {
+    callOnMainThread([thread = m_thread, requestIdentifier, registrationIdentifier, backgroundFetchIdentifier = backgroundFetchIdentifier.isolatedCopy(), requests = crossThreadCopy(WTF::move(requests)), options = WTF::move(options).isolatedCopy()]() mutable {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->startBackgroundFetch(registrationIdentifier, backgroundFetchIdentifier, WTF::move(requests), WTF::move(options), [thread = WTF::move(thread), requestIdentifier](auto&& result) {
+            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTF::move(result))](auto& scope) mutable {
                 auto callback = downcast<WorkerGlobalScope>(scope).swClientConnection().m_backgroundFetchInformationCallbacks.take(requestIdentifier);
-                callback(WTFMove(result));
+                callback(WTF::move(result));
             }, WorkerRunLoop::defaultMode());
         });
     });
@@ -429,15 +449,15 @@ void WorkerSWClientConnection::startBackgroundFetch(ServiceWorkerRegistrationIde
 
 void WorkerSWClientConnection::backgroundFetchInformation(ServiceWorkerRegistrationIdentifier registrationIdentifier, const String& backgroundFetchIdentifier, ExceptionOrBackgroundFetchInformationCallback&& callback)
 {
-    uint64_t requestIdentifier = ++m_lastRequestIdentifier;
-    m_backgroundFetchInformationCallbacks.add(requestIdentifier, WTFMove(callback));
+    auto requestIdentifier = SWClientRequestIdentifier::generate();
+    m_backgroundFetchInformationCallbacks.add(requestIdentifier, WTF::move(callback));
 
     callOnMainThread([thread = m_thread, requestIdentifier, registrationIdentifier, backgroundFetchIdentifier = backgroundFetchIdentifier.isolatedCopy()]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.backgroundFetchInformation(registrationIdentifier, backgroundFetchIdentifier, [thread = WTFMove(thread), requestIdentifier](auto&& result) {
-            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTFMove(result))](auto& scope) mutable {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->backgroundFetchInformation(registrationIdentifier, backgroundFetchIdentifier, [thread = WTF::move(thread), requestIdentifier](auto&& result) {
+            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTF::move(result))](auto& scope) mutable {
                 auto callback = downcast<WorkerGlobalScope>(scope).swClientConnection().m_backgroundFetchInformationCallbacks.take(requestIdentifier);
-                callback(WTFMove(result));
+                callback(WTF::move(result));
             }, WorkerRunLoop::defaultMode());
         });
     });
@@ -445,15 +465,15 @@ void WorkerSWClientConnection::backgroundFetchInformation(ServiceWorkerRegistrat
 
 void WorkerSWClientConnection::backgroundFetchIdentifiers(ServiceWorkerRegistrationIdentifier registrationIdentifier, BackgroundFetchIdentifiersCallback&& callback)
 {
-    uint64_t requestIdentifier = ++m_lastRequestIdentifier;
-    m_backgroundFetchIdentifiersCallbacks.add(requestIdentifier, WTFMove(callback));
+    auto requestIdentifier = SWClientRequestIdentifier::generate();
+    m_backgroundFetchIdentifiersCallbacks.add(requestIdentifier, WTF::move(callback));
 
     callOnMainThread([thread = m_thread, requestIdentifier, registrationIdentifier]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.backgroundFetchIdentifiers(registrationIdentifier, [thread = WTFMove(thread), requestIdentifier](auto&& result) {
-            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTFMove(result))](auto& scope) mutable {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->backgroundFetchIdentifiers(registrationIdentifier, [thread = WTF::move(thread), requestIdentifier](auto&& result) {
+            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTF::move(result))](auto& scope) mutable {
                 auto callback = downcast<WorkerGlobalScope>(scope).swClientConnection().m_backgroundFetchIdentifiersCallbacks.take(requestIdentifier);
-                callback(WTFMove(result));
+                callback(WTF::move(result));
             }, WorkerRunLoop::defaultMode());
         });
     });
@@ -461,12 +481,12 @@ void WorkerSWClientConnection::backgroundFetchIdentifiers(ServiceWorkerRegistrat
 
 void WorkerSWClientConnection::abortBackgroundFetch(ServiceWorkerRegistrationIdentifier registrationIdentifier, const String& backgroundFetchIdentifier, AbortBackgroundFetchCallback&& callback)
 {
-    uint64_t requestIdentifier = ++m_lastRequestIdentifier;
-    m_abortBackgroundFetchCallbacks.add(requestIdentifier, WTFMove(callback));
+    auto requestIdentifier = SWClientRequestIdentifier::generate();
+    m_abortBackgroundFetchCallbacks.add(requestIdentifier, WTF::move(callback));
 
     callOnMainThread([thread = m_thread, requestIdentifier, registrationIdentifier, backgroundFetchIdentifier = backgroundFetchIdentifier.isolatedCopy()]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.abortBackgroundFetch(registrationIdentifier, backgroundFetchIdentifier, [thread = WTFMove(thread), requestIdentifier](bool result) {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->abortBackgroundFetch(registrationIdentifier, backgroundFetchIdentifier, [thread = WTF::move(thread), requestIdentifier](bool result) {
             thread->runLoop().postTaskForMode([requestIdentifier, result](auto& scope) mutable {
                 auto callback = downcast<WorkerGlobalScope>(scope).swClientConnection().m_abortBackgroundFetchCallbacks.take(requestIdentifier);
                 callback(result);
@@ -477,15 +497,15 @@ void WorkerSWClientConnection::abortBackgroundFetch(ServiceWorkerRegistrationIde
 
 void WorkerSWClientConnection::matchBackgroundFetch(ServiceWorkerRegistrationIdentifier registrationIdentifier, const String& backgroundFetchIdentifier, RetrieveRecordsOptions&& recordOptions, MatchBackgroundFetchCallback&& callback)
 {
-    uint64_t requestIdentifier = ++m_lastRequestIdentifier;
-    m_matchBackgroundFetchCallbacks.add(requestIdentifier, WTFMove(callback));
+    auto requestIdentifier = SWClientRequestIdentifier::generate();
+    m_matchBackgroundFetchCallbacks.add(requestIdentifier, WTF::move(callback));
 
-    callOnMainThread([thread = m_thread, requestIdentifier, registrationIdentifier, backgroundFetchIdentifier = backgroundFetchIdentifier.isolatedCopy(), recordOptions = WTFMove(recordOptions).isolatedCopy()]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.matchBackgroundFetch(registrationIdentifier, backgroundFetchIdentifier, WTFMove(recordOptions), [thread = WTFMove(thread), requestIdentifier](auto&& result) {
-            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTFMove(result))](auto& scope) mutable {
+    callOnMainThread([thread = m_thread, requestIdentifier, registrationIdentifier, backgroundFetchIdentifier = backgroundFetchIdentifier.isolatedCopy(), recordOptions = WTF::move(recordOptions).isolatedCopy()]() mutable {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->matchBackgroundFetch(registrationIdentifier, backgroundFetchIdentifier, WTF::move(recordOptions), [thread = WTF::move(thread), requestIdentifier](auto&& result) {
+            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTF::move(result))](auto& scope) mutable {
                 auto callback = downcast<WorkerGlobalScope>(scope).swClientConnection().m_matchBackgroundFetchCallbacks.take(requestIdentifier);
-                callback(WTFMove(result));
+                callback(WTF::move(result));
             }, WorkerRunLoop::defaultMode());
         });
     });
@@ -507,15 +527,15 @@ static ExceptionOr<ResourceResponse> fromCrossThreadData(ExceptionOr<ResourceRes
 
 void WorkerSWClientConnection::retrieveRecordResponse(BackgroundFetchRecordIdentifier recordIdentifier, RetrieveRecordResponseCallback&& callback)
 {
-    uint64_t requestIdentifier = ++m_lastRequestIdentifier;
-    m_retrieveRecordResponseCallbacks.add(requestIdentifier, WTFMove(callback));
+    auto requestIdentifier = SWClientRequestIdentifier::generate();
+    m_retrieveRecordResponseCallbacks.add(requestIdentifier, WTF::move(callback));
 
     callOnMainThread([thread = m_thread, requestIdentifier, recordIdentifier]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.retrieveRecordResponse(recordIdentifier, [thread = WTFMove(thread), requestIdentifier](auto&& result) {
-            thread->runLoop().postTaskForMode([requestIdentifier, result = toCrossThreadData(WTFMove(result))](auto& scope) mutable {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->retrieveRecordResponse(recordIdentifier, [thread = WTF::move(thread), requestIdentifier](ExceptionOr<ResourceResponse>&& result) {
+            thread->runLoop().postTaskForMode([requestIdentifier, result = toCrossThreadData(WTF::move(result))](auto& scope) mutable {
                 auto callback = downcast<WorkerGlobalScope>(scope).swClientConnection().m_retrieveRecordResponseCallbacks.take(requestIdentifier);
-                callback(fromCrossThreadData(WTFMove(result)));
+                callback(fromCrossThreadData(WTF::move(result)));
             }, WorkerRunLoop::defaultMode());
         });
     });
@@ -523,29 +543,29 @@ void WorkerSWClientConnection::retrieveRecordResponse(BackgroundFetchRecordIdent
 
 void WorkerSWClientConnection::retrieveRecordResponseBody(BackgroundFetchRecordIdentifier recordIdentifier, RetrieveRecordResponseBodyCallback&& callback)
 {
-    uint64_t requestIdentifier = ++m_lastRequestIdentifier;
-    m_retrieveRecordResponseBodyCallbacks.add(requestIdentifier, WTFMove(callback));
+    auto requestIdentifier = SWClientRequestIdentifier::generate();
+    m_retrieveRecordResponseBodyCallbacks.add(requestIdentifier, WTF::move(callback));
 
     callOnMainThread([thread = m_thread, requestIdentifier, recordIdentifier]() mutable {
-        auto& connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
-        connection.retrieveRecordResponseBody(recordIdentifier, [thread = WTFMove(thread), requestIdentifier](auto&& result) {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->retrieveRecordResponseBody(recordIdentifier, [thread = WTF::move(thread), requestIdentifier](auto&& result) {
             RefPtr<SharedBuffer> buffer;
             ResourceError error;
             if (!result.has_value())
-                error = WTFMove(result.error());
+                error = WTF::move(result.error());
             else
-                buffer = WTFMove(result.value());
-            thread->runLoop().postTaskForMode([requestIdentifier, buffer = WTFMove(buffer), error = WTFMove(error).isolatedCopy()](auto& scope) mutable {
+                buffer = WTF::move(result.value());
+            thread->runLoop().postTaskForMode([requestIdentifier, buffer = WTF::move(buffer), error = WTF::move(error).isolatedCopy()](auto& scope) mutable {
                 auto& callbacks = downcast<WorkerGlobalScope>(scope).swClientConnection().m_retrieveRecordResponseBodyCallbacks;
                 auto iterator = callbacks.find(requestIdentifier);
                 ASSERT(iterator != callbacks.end());
                 if (!error.isNull()) {
-                    iterator->value(makeUnexpected(WTFMove(error)));
+                    iterator->value(makeUnexpected(WTF::move(error)));
                     callbacks.remove(iterator);
                     return;
                 }
                 bool isDone = !buffer;
-                iterator->value(WTFMove(buffer));
+                iterator->value(WTF::move(buffer));
                 if (isDone)
                     callbacks.remove(iterator);
             }, WorkerRunLoop::defaultMode());
@@ -553,6 +573,63 @@ void WorkerSWClientConnection::retrieveRecordResponseBody(BackgroundFetchRecordI
     });
 }
 
-} // namespace WebCore
+void WorkerSWClientConnection::addCookieChangeSubscriptions(ServiceWorkerRegistrationIdentifier registrationIdentifier, Vector<CookieChangeSubscription>&& subscriptions, ExceptionOrVoidCallback&& callback)
+{
+    auto requestIdentifier = SWClientRequestIdentifier::generate();
+    m_voidCallbacks.add(requestIdentifier, WTF::move(callback));
 
-#endif // ENABLE(SERVICE_WORKER)
+    callOnMainThread([thread = m_thread, requestIdentifier, registrationIdentifier, subscriptions = crossThreadCopy(WTF::move(subscriptions))]() mutable {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->addCookieChangeSubscriptions(registrationIdentifier, WTF::move(subscriptions), [thread = WTF::move(thread), requestIdentifier](auto&& result) {
+            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTF::move(result))](auto& scope) mutable {
+                if (auto callback = downcast<WorkerGlobalScope>(scope).swClientConnection().m_voidCallbacks.take(requestIdentifier))
+                    callback(WTF::move(result));
+            }, WorkerRunLoop::defaultMode());
+        });
+    });
+}
+
+void WorkerSWClientConnection::removeCookieChangeSubscriptions(ServiceWorkerRegistrationIdentifier registrationIdentifier, Vector<CookieChangeSubscription>&& subscriptions, ExceptionOrVoidCallback&& callback)
+{
+    auto requestIdentifier = SWClientRequestIdentifier::generate();
+    m_voidCallbacks.add(requestIdentifier, WTF::move(callback));
+
+    callOnMainThread([thread = m_thread, requestIdentifier, registrationIdentifier, subscriptions = crossThreadCopy(WTF::move(subscriptions))]() mutable {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->removeCookieChangeSubscriptions(registrationIdentifier, WTF::move(subscriptions), [thread = WTF::move(thread), requestIdentifier](auto&& result) {
+            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTF::move(result))](auto& scope) mutable {
+                if (auto callback = downcast<WorkerGlobalScope>(scope).swClientConnection().m_voidCallbacks.take(requestIdentifier))
+                    callback(WTF::move(result));
+            }, WorkerRunLoop::defaultMode());
+        });
+    });
+}
+
+void WorkerSWClientConnection::cookieChangeSubscriptions(ServiceWorkerRegistrationIdentifier registrationIdentifier, ExceptionOrCookieChangeSubscriptionsCallback&& callback)
+{
+    auto requestIdentifier = SWClientRequestIdentifier::generate();
+    m_cookieChangeSubscriptionsCallback.add(requestIdentifier, WTF::move(callback));
+
+    callOnMainThread([thread = m_thread, requestIdentifier, registrationIdentifier]() mutable {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->cookieChangeSubscriptions(registrationIdentifier, [thread = WTF::move(thread), requestIdentifier](auto&& result) {
+            thread->runLoop().postTaskForMode([requestIdentifier, result = crossThreadCopy(WTF::move(result))](auto& scope) mutable {
+                if (auto callback = downcast<WorkerGlobalScope>(scope).swClientConnection().m_cookieChangeSubscriptionsCallback.take(requestIdentifier))
+                    callback(WTF::move(result));
+            }, WorkerRunLoop::defaultMode());
+        });
+    });
+}
+
+Ref<SWClientConnection::AddRoutePromise> WorkerSWClientConnection::addRoutes(ServiceWorkerRegistrationIdentifier identifier, Vector<ServiceWorkerRoute>&& routes)
+{
+    AddRoutePromise::Producer producer;
+    Ref promise = producer.promise();
+    callOnMainThread([producer = WTF::move(producer), identifier, routes = crossThreadCopy(WTF::move(routes))]() mutable {
+        Ref connection = ServiceWorkerProvider::singleton().serviceWorkerConnection();
+        connection->addRoutes(identifier, WTF::move(routes))->chainTo(WTF::move(producer));
+    });
+    return promise;
+}
+
+} // namespace WebCore

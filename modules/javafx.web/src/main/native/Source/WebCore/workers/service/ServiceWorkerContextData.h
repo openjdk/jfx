@@ -25,21 +25,20 @@
 
 #pragma once
 
-#include "CertificateInfo.h"
-#include "ContentSecurityPolicyResponseHeaders.h"
-#include "CrossOriginEmbedderPolicy.h"
-#include "NavigationPreloadState.h"
-#include "ScriptBuffer.h"
-#include "ScriptExecutionContextIdentifier.h"
-#include "ServiceWorkerIdentifier.h"
-#include "ServiceWorkerImportedScript.h"
-#include "ServiceWorkerJobDataIdentifier.h"
-#include "ServiceWorkerRegistrationData.h"
-#include "WorkerType.h"
+#include <WebCore/CertificateInfo.h>
+#include <WebCore/ContentSecurityPolicyResponseHeaders.h>
+#include <WebCore/CrossOriginEmbedderPolicy.h>
+#include <WebCore/NavigationPreloadState.h>
+#include <WebCore/ScriptBuffer.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/ServiceWorkerIdentifier.h>
+#include <WebCore/ServiceWorkerImportedScript.h>
+#include <WebCore/ServiceWorkerJobDataIdentifier.h>
+#include <WebCore/ServiceWorkerRegistrationData.h>
+#include <WebCore/ServiceWorkerRoute.h>
+#include <WebCore/WorkerType.h>
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/URLHash.h>
-
-#if ENABLE(SERVICE_WORKER)
 
 namespace WebCore {
 
@@ -61,13 +60,13 @@ struct ServiceWorkerContextData {
     MemoryCompactRobinHoodHashMap<URL, ServiceWorkerImportedScript> scriptResourceMap;
     std::optional<ScriptExecutionContextIdentifier> serviceWorkerPageIdentifier;
     NavigationPreloadState navigationPreloadState;
+    Vector<ServiceWorkerRoute> routes;
 
     using ImportedScript = ServiceWorkerImportedScript;
 
+    WEBCORE_EXPORT ServiceWorkerContextData copy() const;
     WEBCORE_EXPORT ServiceWorkerContextData isolatedCopy() const &;
     WEBCORE_EXPORT ServiceWorkerContextData isolatedCopy() &&;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include "JSFunction.h"
+#include <JavaScriptCore/JSFunction.h>
 
 namespace JSC {
 
@@ -47,9 +47,10 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    static JSGeneratorFunction* create(VM&, FunctionExecutable*, JSScope*);
-    static JSGeneratorFunction* create(VM&, FunctionExecutable*, JSScope*, Structure*);
-    static JSGeneratorFunction* createWithInvalidatedReallocationWatchpoint(VM&, FunctionExecutable*, JSScope*);
+    static JSGeneratorFunction* create(VM&, JSGlobalObject*, FunctionExecutable*, JSScope*);
+    static JSGeneratorFunction* create(VM&, JSGlobalObject*, FunctionExecutable*, JSScope*, Structure*);
+    static JSGeneratorFunction* createWithInvalidatedReallocationWatchpoint(VM&, JSGlobalObject*, FunctionExecutable*, JSScope*);
+    static JSGeneratorFunction* createWithInvalidatedReallocationWatchpoint(VM&, JSGlobalObject*, FunctionExecutable*, JSScope*, Structure*);
 
     static size_t allocationSize(Checked<size_t> inlineCapacity)
     {
@@ -57,11 +58,7 @@ public:
         return sizeof(JSGeneratorFunction);
     }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        ASSERT(globalObject);
-        return Structure::create(vm, globalObject, prototype, TypeInfo(JSFunctionType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
 private:
     JSGeneratorFunction(VM&, FunctionExecutable*, JSScope*, Structure*);

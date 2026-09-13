@@ -22,14 +22,16 @@
 
 #pragma once
 
-#include "Color.h"
-#include "FilterEffect.h"
+#include <WebCore/Color.h>
+#include <WebCore/FilterEffect.h>
 
 namespace WebCore {
 
-class FEFlood : public FilterEffect {
+class FEFlood final : public FilterEffect {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(FEFlood);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FEFlood);
 public:
-    WEBCORE_EXPORT static Ref<FEFlood> create(const Color& floodColor, float floodOpacity);
+    WEBCORE_EXPORT static Ref<FEFlood> create(const Color& floodColor, float floodOpacity, DestinationColorSpace = DestinationColorSpace::SRGB());
 
     bool operator==(const FEFlood&) const;
 
@@ -39,14 +41,14 @@ public:
     float floodOpacity() const { return m_floodOpacity; }
     bool setFloodOpacity(float);
 
-#if !USE(CG)
+#if !USE(CG) && !USE(SKIA)
     // feFlood does not perform color interpolation of any kind, so the result is always in the current
     // color space regardless of the value of color-interpolation-filters.
     void setOperatingColorSpace(const DestinationColorSpace&) override { }
 #endif
 
 private:
-    FEFlood(const Color& floodColor, float floodOpacity);
+    FEFlood(const Color& floodColor, float floodOpacity, DestinationColorSpace = DestinationColorSpace::SRGB());
 
     bool operator==(const FilterEffect& other) const override { return areEqual<FEFlood>(*this, other); }
 
@@ -54,6 +56,8 @@ private:
 
     FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
 
+    OptionSet<FilterRenderingMode> supportedFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) const override;
+    std::unique_ptr<FilterEffectApplier> createAcceleratedApplier() const override;
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
 
     WTF::TextStream& externalRepresentation(WTF::TextStream&, FilterRepresentation) const override;
@@ -64,4 +68,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_FILTER_EFFECT(FEFlood)
+SPECIALIZE_TYPE_TRAITS_FILTER_FUNCTION(FEFlood)

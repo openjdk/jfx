@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2003-2017 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *  Copyright (C) 2007 Eric Seidel <eric@webkit.org>
  *  Copyright (C) 2009 Acision BV. All rights reserved.
  *
@@ -27,8 +27,13 @@
 #include <wtf/BitVector.h>
 #include <wtf/PageBlock.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MachineThreads);
 
 MachineThreads::MachineThreads()
     : m_threadGroup(ThreadGroup::create())
@@ -50,22 +55,28 @@ void MachineThreads::gatherFromCurrentThread(ConservativeRoots& conservativeRoot
 static inline int osRedZoneAdjustment()
 {
     int redZoneAdjustment = 0;
-#if !OS(WINDOWS)
 #if CPU(X86_64)
     // See http://people.freebsd.org/~obrien/amd64-elf-abi.pdf Section 3.2.2.
     redZoneAdjustment = -128;
 #elif CPU(ARM64)
+#if OS(DARWIN)
     // See https://developer.apple.com/library/ios/documentation/Xcode/Conceptual/iPhoneOSABIReference/Articles/ARM64FunctionCallingConventions.html#//apple_ref/doc/uid/TP40013702-SW7
     redZoneAdjustment = -128;
+#elif OS(WINDOWS)
+    // https://devblogs.microsoft.com/oldnewthing/20220726-00/?p=106898
+    redZoneAdjustment = -16;
+#else
+    // There is no red zone.
+    // https://stackoverflow.com/questions/77908878/aarch64-is-there-a-red-zone-on-linux-if-so-16-or-128-bytes
 #endif
-#endif // !OS(WINDOWS)
+#endif
     return redZoneAdjustment;
 }
 
 static std::pair<void*, size_t> captureStack(Thread& thread, void* stackTop)
 {
     char* begin = reinterpret_cast_ptr<char*>(thread.stack().origin());
-    char* end = bitwise_cast<char*>(WTF::roundUpToMultipleOf<sizeof(void*)>(reinterpret_cast<uintptr_t>(stackTop)));
+    char* end = std::bit_cast<char*>(WTF::roundUpToMultipleOf<sizeof(void*)>(reinterpret_cast<uintptr_t>(stackTop)));
     ASSERT(begin >= end);
 
     char* endWithRedZone = end + osRedZoneAdjustment();
@@ -113,7 +124,7 @@ void MachineThreads::tryCopyOtherThreadStack(const ThreadSuspendLocker& locker, 
     // This is a workaround for <rdar://problem/27607384>. libdispatch recycles work
     // queue threads without running pthread exit destructors. This can cause us to scan a
     // thread during work queue initialization, when the stack pointer is null.
-    if (UNLIKELY(!MachineContext::stackPointer(registers))) {
+    if (!MachineContext::stackPointer(registers)) [[unlikely]] {
         *size = 0;
         return;
     }
@@ -140,7 +151,7 @@ bool MachineThreads::tryCopyOtherThreadStacks(const AbstractLocker& locker, void
 
     *size = 0;
 
-    Thread& currentThread = Thread::current();
+    auto& currentThread = Thread::currentSingleton();
     const ListHashSet<Ref<Thread>>& threads = m_threadGroup->threads(locker);
     BitVector isSuspended(threads.size());
 
@@ -226,3 +237,5 @@ NEVER_INLINE int callWithCurrentThreadState(const ScopedLambda<void(CurrentThrea
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

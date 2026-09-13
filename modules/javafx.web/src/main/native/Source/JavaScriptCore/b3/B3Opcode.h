@@ -90,6 +90,8 @@ enum Opcode : uint8_t {
     UDiv,
     Mod, // All bets are off as to what will happen when you execute this for -2^31%-1 and x%0.
     UMod,
+    MulHigh,
+    UMulHigh,
 
     // Polymorphic negation. Note that we only need this for floating point, since integer negation
     // is exactly like Sub(0, x). But that's not true for floating point. Sub(0, 0) is 0, while
@@ -111,6 +113,7 @@ enum Opcode : uint8_t {
     Abs,
     Ceil,
     Floor,
+    FTrunc,
     Sqrt,
     FMax,
     FMin,
@@ -128,6 +131,11 @@ enum Opcode : uint8_t {
     ZExt32,
     // Does a bitwise truncation of Int64->Int32 and Double->Float:
     Trunc,
+    // On JSVALUE32_64 platforms only: gets the high 32-bits of an Int64.
+    TruncHigh,
+    // On JSVALUE32_64 platforms only: puts together an Int32 from two Int32s.
+    // High bits come from the first child.
+    Stitch,
     // Takes ints and returns floating point value. Note that we don't currently provide the opposite operation,
     // because double-to-int conversions have weirdly different semantics on different platforms. Use
     // a patchpoint if you need to do that.
@@ -136,6 +144,8 @@ enum Opcode : uint8_t {
     // Convert between double and float.
     FloatToDouble,
     DoubleToFloat,
+
+    PurifyNaN,
 
     // Polymorphic comparisons, usable with any value type. Returns int32 0 or 1. Note that "Not"
     // is just Equal(x, 0), and "ToBoolean" is just NotEqual(x, 0).
@@ -285,6 +295,12 @@ enum Opcode : uint8_t {
     // We do WasmAddress(ZExt32(ptr), ...) so that we can avoid generating extraneous moves in Air.
     WasmAddress,
 
+    // This is used for Wasm bulk memory operation `memory.copy`
+    MemoryCopy,
+
+    // This is used for Wasm bulk memory operation `memory.fill`
+    MemoryFill,
+
     // This is used to represent standalone fences - i.e. fences that are not part of other
     // instructions. It's expressive enough to expose mfence on x86 and dmb ish/ishst on ARM. On
     // x86, it also acts as a compiler store-store fence in those cases where it would have been a
@@ -372,6 +388,8 @@ enum Opcode : uint8_t {
     VectorAddSat,
     VectorSubSat,
     VectorMul,
+    VectorMulHigh,
+    VectorMulLow,
     VectorDotProduct,
     VectorDiv,
     VectorMin,
@@ -423,6 +441,7 @@ enum Opcode : uint8_t {
     VectorRelaxedTruncSat,
     VectorRelaxedMAdd,
     VectorRelaxedNMAdd,
+    VectorRelaxedLaneSelect,
 
     // Currently only some architectures support this.
     // FIXME: Expand this to identical instructions for the other architectures as a macro.
@@ -625,13 +644,4 @@ inline Opcode signExtendOpcode(Width width)
 JS_EXPORT_PRIVATE Opcode storeOpcode(Bank bank, Width width);
 
 } } // namespace JSC::B3
-
-namespace WTF {
-
-class PrintStream;
-
-JS_EXPORT_PRIVATE void printInternal(PrintStream&, JSC::B3::Opcode);
-
-} // namespace WTF
-
 #endif // ENABLE(B3_JIT)

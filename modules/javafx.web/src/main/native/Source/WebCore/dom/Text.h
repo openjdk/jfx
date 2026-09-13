@@ -17,24 +17,27 @@
  * along with this library; see the file COPYING.LIB.  If not, write to
  * the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  * Boston, MA 02110-1301, USA.
- *
  */
 
 #pragma once
 
-#include "CharacterData.h"
-#include "RenderPtr.h"
+#include <WebCore/CharacterData.h>
+#include <WebCore/RenderPtr.h>
 
 namespace WebCore {
 
 class RenderText;
 
 class Text : public CharacterData {
-    WTF_MAKE_ISO_ALLOCATED(Text);
+    WTF_MAKE_TZONE_ALLOCATED(Text);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(Text);
 public:
     static const unsigned defaultLengthLimit = 1 << 16;
 
-    static Ref<Text> create(Document&, String&&);
+    static Ref<Text> create(Document& document, String&& data)
+    {
+        return adoptRef(*new Text(document, WTF::move(data), TEXT_NODE, { }));
+    }
     static Ref<Text> createEditingText(Document&, String&&);
 
     virtual ~Text();
@@ -51,6 +54,7 @@ public:
     bool canContainRangeEndPoint() const final { return true; }
 
     RenderText* renderer() const;
+    CheckedPtr<RenderText> checkedRenderer() const;
 
     void updateRendererAfterContentChange(unsigned offsetOfReplacedData, unsigned lengthOfReplacedData);
 
@@ -58,15 +62,16 @@ public:
     String debugDescription() const final;
 
 protected:
-    Text(Document& document, String&& data, ConstructionType type)
-        : CharacterData(document, WTFMove(data), type)
+    Text(Document& document, String&& data, NodeType type, OptionSet<TypeFlag> typeFlags)
+        : CharacterData(document, WTF::move(data), type, typeFlags | TypeFlag::IsText)
     {
+        ASSERT(!isContainerNode());
     }
 
 private:
     String nodeName() const override;
-    NodeType nodeType() const override;
-    Ref<Node> cloneNodeInternal(Document&, CloningOperation) override;
+    Ref<Node> cloneNodeInternal(Document&, CloningOperation, CustomElementRegistry*) const override;
+    SerializedNode serializeNode(CloningOperation) const override;
     void setDataAndUpdate(const String&, unsigned offsetOfReplacedData, unsigned oldLength, unsigned newLength, UpdateLiveRanges) final;
 
     virtual Ref<Text> virtualCreate(String&&);

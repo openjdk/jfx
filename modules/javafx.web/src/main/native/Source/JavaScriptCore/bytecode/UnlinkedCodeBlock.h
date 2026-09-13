@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2023 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,24 +25,24 @@
 
 #pragma once
 
-#include "ArithProfile.h"
-#include "ArrayProfile.h"
-#include "BytecodeConventions.h"
-#include "CodeType.h"
-#include "DFGExitProfile.h"
-#include "ExecutionCounter.h"
-#include "ExpressionRangeInfo.h"
-#include "HandlerInfo.h"
-#include "Identifier.h"
-#include "InstructionStream.h"
-#include "JSCast.h"
-#include "Opcode.h"
-#include "ParserModes.h"
-#include "RegExp.h"
-#include "UnlinkedFunctionExecutable.h"
-#include "UnlinkedMetadataTable.h"
-#include "ValueProfile.h"
-#include "VirtualRegister.h"
+#include <JavaScriptCore/ArithProfile.h>
+#include <JavaScriptCore/ArrayProfile.h>
+#include <JavaScriptCore/BytecodeConventions.h>
+#include <JavaScriptCore/CodeType.h>
+#include <JavaScriptCore/DFGExitProfile.h>
+#include <JavaScriptCore/ExecutionCounter.h>
+#include <JavaScriptCore/ExpressionInfo.h>
+#include <JavaScriptCore/HandlerInfo.h>
+#include <JavaScriptCore/Identifier.h>
+#include <JavaScriptCore/InstructionStream.h>
+#include <JavaScriptCore/JSCast.h>
+#include <JavaScriptCore/Opcode.h>
+#include <JavaScriptCore/ParserModes.h>
+#include <JavaScriptCore/RegExp.h>
+#include <JavaScriptCore/UnlinkedFunctionExecutable.h>
+#include <JavaScriptCore/UnlinkedMetadataTable.h>
+#include <JavaScriptCore/ValueProfile.h>
+#include <JavaScriptCore/VirtualRegister.h>
 #include <algorithm>
 #include <wtf/BitVector.h>
 #include <wtf/FixedVector.h>
@@ -86,12 +86,15 @@ struct UnlinkedStringJumpTable {
 
     using StringOffsetTable = MemoryCompactLookupOnlyRobinHoodHashMap<RefPtr<StringImpl>, OffsetLocation>;
     StringOffsetTable m_offsetTable;
+    unsigned m_minLength { StringImpl::MaxLength };
+    unsigned m_maxLength { 0 };
+    int32_t m_defaultOffset { 0 };
 
-    inline int32_t offsetForValue(StringImpl* value, int32_t defaultOffset) const
+    inline int32_t offsetForValue(StringImpl* value) const
     {
         auto loc = m_offsetTable.find(value);
         if (loc == m_offsetTable.end())
-            return defaultOffset;
+            return m_defaultOffset;
         return loc->value.m_branchOffset;
     }
 
@@ -102,20 +105,26 @@ struct UnlinkedStringJumpTable {
             return defaultIndex;
         return loc->value.m_indexInTable;
     }
+
+    unsigned minLength() const { return m_minLength; }
+    unsigned maxLength() const { return m_maxLength; }
+    int32_t defaultOffset() const { return m_defaultOffset; }
 };
 
 struct UnlinkedSimpleJumpTable {
     FixedVector<int32_t> m_branchOffsets;
-    int32_t m_min;
+    int32_t m_min { 0 };
+    int32_t m_defaultOffset { 0 };
+    int32_t m_isList { 0 };
 
-    inline int32_t offsetForValue(int32_t value, int32_t defaultOffset) const
+    inline int32_t offsetForValue(int32_t value) const
     {
         if (value >= m_min && static_cast<uint32_t>(value - m_min) < m_branchOffsets.size()) {
             int32_t offset = m_branchOffsets[value - m_min];
             if (offset)
                 return offset;
         }
-        return defaultOffset;
+        return m_defaultOffset;
     }
 
     void add(int32_t key, int32_t offset)
@@ -123,6 +132,11 @@ struct UnlinkedSimpleJumpTable {
         if (!m_branchOffsets[key])
             m_branchOffsets[key] = offset;
     }
+
+    int32_t defaultOffset() const { return m_defaultOffset; }
+
+    // Returns true if this is a list-style jump table (key-offset pairs), used for sparse switches.
+    bool isList() const { return !!m_isList; }
 };
 
 class UnlinkedCodeBlock : public JSCell {
@@ -130,7 +144,7 @@ public:
     typedef JSCell Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags;
 
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
 
     template<typename, SubspaceAccess>
     static void subspaceFor(VM&)
@@ -156,8 +170,7 @@ public:
     bool allowDirectEvalCache() const { return !(m_features & NoEvalCacheFeature); }
     bool usesImportMeta() const { return m_features & ImportMetaFeature; }
 
-    bool hasExpressionInfo() { return m_expressionInfo.size(); }
-    const FixedVector<ExpressionRangeInfo>& expressionInfo() { return m_expressionInfo; }
+    bool hasExpressionInfo() { return !m_expressionInfo->isEmpty(); }
 
     bool hasCheckpoints() const { return m_hasCheckpoints; }
     void setHasCheckpoints() { m_hasCheckpoints = true; }
@@ -236,8 +249,10 @@ public:
 
     UnlinkedFunctionExecutable* functionDecl(int index) { return m_functionDecls[index].get(); }
     size_t numberOfFunctionDecls() { return m_functionDecls.size(); }
+    std::span<const WriteBarrier<UnlinkedFunctionExecutable>> functionDecls() const { return m_functionDecls.span(); }
     UnlinkedFunctionExecutable* functionExpr(int index) { return m_functionExprs[index].get(); }
     size_t numberOfFunctionExprs() { return m_functionExprs.size(); }
+    std::span<const WriteBarrier<UnlinkedFunctionExecutable>> functionExprs() const { return m_functionExprs.span(); }
 
     // Exception handling support
     size_t numberOfExceptionHandlers() const { return m_rareData ? m_rareData->m_exceptionHandlers.size() : 0; }
@@ -250,17 +265,15 @@ public:
 
     bool hasRareData() const { return m_rareData.get(); }
 
-    int lineNumberForBytecodeIndex(BytecodeIndex);
-
-    void expressionRangeForBytecodeIndex(BytecodeIndex, int& divot,
-        int& startOffset, int& endOffset, unsigned& line, unsigned& column) const;
+    ExpressionInfo::Entry expressionInfoForBytecodeIndex(BytecodeIndex);
+    LineColumn lineColumnForBytecodeIndex(BytecodeIndex);
 
     bool typeProfilerExpressionInfoForBytecodeOffset(unsigned bytecodeOffset, unsigned& startDivot, unsigned& endDivot);
 
-    void recordParse(CodeFeatures features, LexicalScopeFeatures lexicalScopeFeatures, bool hasCapturedVariables, unsigned lineCount, unsigned endColumn)
+    void recordParse(CodeFeatures features, LexicallyScopedFeatures lexicallyScopedFeatures, bool hasCapturedVariables, unsigned lineCount, unsigned endColumn)
     {
         m_features = features;
-        m_lexicalScopeFeatures = lexicalScopeFeatures;
+        m_lexicallyScopedFeatures = lexicallyScopedFeatures;
         m_hasCapturedVariables = hasCapturedVariables;
         m_lineCount = lineCount;
         // For the UnlinkedCodeBlock, startColumn is always 0.
@@ -273,7 +286,7 @@ public:
     void setSourceMappingURLDirective(const String& sourceMappingURL) { m_sourceMappingURLDirective = sourceMappingURL.impl(); }
 
     CodeFeatures codeFeatures() const { return m_features; }
-    LexicalScopeFeatures lexicalScopeFeatures() const { return static_cast<LexicalScopeFeatures>(m_lexicalScopeFeatures); }
+    LexicallyScopedFeatures lexicallyScopedFeatures() const { return m_lexicallyScopedFeatures; }
     bool hasCapturedVariables() const { return m_hasCapturedVariables; }
     unsigned lineCount() const { return m_lineCount; }
     ALWAYS_INLINE unsigned startColumn() const { return 0; }
@@ -289,15 +302,15 @@ public:
         return m_rareData && !m_rareData->m_opProfileControlFlowBytecodeOffsets.isEmpty();
     }
 
-    void dumpExpressionRangeInfo(); // For debugging purpose only.
+    void dumpExpressionInfo(); // For debugging purpose only.
 
     bool wasCompiledWithDebuggingOpcodes() const { return m_codeGenerationMode.contains(CodeGenerationMode::Debugger); }
     bool wasCompiledWithTypeProfilerOpcodes() const { return m_codeGenerationMode.contains(CodeGenerationMode::TypeProfiler); }
     bool wasCompiledWithControlFlowProfilerOpcodes() const { return m_codeGenerationMode.contains(CodeGenerationMode::ControlFlowProfiler); }
     OptionSet<CodeGenerationMode> codeGenerationMode() const { return m_codeGenerationMode; }
 
-    TriState didOptimize() const { return static_cast<TriState>(m_didOptimize); }
-    void setDidOptimize(TriState didOptimize) { m_didOptimize = static_cast<unsigned>(didOptimize); }
+    TriState didOptimize() const { return m_metadata->didOptimize(); }
+    void setDidOptimize(TriState didOptimize) { m_metadata->setDidOptimize(didOptimize); }
 
     static constexpr unsigned maxAge = 7;
 
@@ -346,7 +359,7 @@ public:
 
     size_t metadataSizeInBytes()
     {
-        return m_metadata->sizeInBytes();
+        return m_metadata->sizeInBytesForGC();
     }
 
     bool loopHintsAreEligibleForFuzzingEarlyReturn()
@@ -355,8 +368,8 @@ public:
         return !isBuiltinFunction();
     }
     void allocateSharedProfiles(unsigned numBinaryArithProfiles, unsigned numUnaryArithProfiles);
-    UnlinkedValueProfile& unlinkedValueProfile(unsigned index) { return m_valueProfiles[index]; }
-    UnlinkedArrayProfile& unlinkedArrayProfile(unsigned index) { return m_arrayProfiles[index]; }
+    FixedVector<UnlinkedValueProfile>& unlinkedValueProfiles() { return m_valueProfiles; }
+    FixedVector<UnlinkedArrayProfile>& unlinkedArrayProfiles() { return m_arrayProfiles; }
     unsigned numberOfValueProfiles() const { return m_valueProfiles.size(); }
     unsigned numberOfArrayProfiles() const { return m_arrayProfiles.size(); }
 
@@ -391,9 +404,7 @@ private:
             m_rareData = makeUnique<RareData>();
     }
 
-    void getLineAndColumn(const ExpressionRangeInfo&, unsigned& line, unsigned& column) const;
     BytecodeLivenessAnalysis& livenessAnalysisSlow(CodeBlock*);
-
 
     VirtualRegister m_thisRegister;
     VirtualRegister m_scopeRegister;
@@ -414,11 +425,10 @@ private:
     unsigned m_derivedContextType : 2;
     unsigned m_evalContextType : 2;
     unsigned m_codeType : 2;
-    unsigned m_didOptimize : 2;
     unsigned m_age : 3;
     static_assert(((1U << 3) - 1) >= maxAge);
     bool m_hasCheckpoints : 1;
-    unsigned m_lexicalScopeFeatures : bitWidthOfLexicalScopeFeatures;
+    LexicallyScopedFeatures m_lexicallyScopedFeatures : bitWidthOfLexicallyScopedFeatures { 0 };
 public:
     ConcurrentJSLock m_lock;
 #if ENABLE(JIT)
@@ -436,7 +446,7 @@ private:
     PackedRefPtr<StringImpl> m_sourceMappingURLDirective;
 
     FixedVector<JSInstructionStream::Offset> m_jumpTargets;
-    Ref<UnlinkedMetadataTable> m_metadata;
+    const Ref<UnlinkedMetadataTable> m_metadata;
     std::unique_ptr<JSInstructionStream> m_instructions;
     std::unique_ptr<BytecodeLivenessAnalysis> m_liveness;
 
@@ -454,7 +464,7 @@ private:
 
 public:
     struct RareData {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(UnlinkedCodeBlock_RareData);
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(RareData, UnlinkedCodeBlock_RareData);
 
         size_t sizeInBytes(const AbstractLocker&) const;
 
@@ -464,13 +474,11 @@ public:
         FixedVector<UnlinkedSimpleJumpTable> m_unlinkedSwitchJumpTables;
         FixedVector<UnlinkedStringJumpTable> m_unlinkedStringSwitchJumpTables;
 
-        FixedVector<ExpressionRangeInfo::FatPosition> m_expressionInfoFatPositions;
-
         struct TypeProfilerExpressionRange {
             unsigned m_startDivot;
             unsigned m_endDivot;
         };
-        HashMap<unsigned, TypeProfilerExpressionRange> m_typeProfilerInfoMap;
+        UncheckedKeyHashMap<unsigned, TypeProfilerExpressionRange> m_typeProfilerInfoMap;
         FixedVector<JSInstructionStream::Offset> m_opProfileControlFlowBytecodeOffsets;
         FixedVector<BitVector> m_bitVectors;
         FixedVector<IdentifierSet> m_constantIdentifierSets;
@@ -496,11 +504,11 @@ public:
     BaselineExecutionCounter& llintExecuteCounter() { return m_llintExecuteCounter; }
 
 private:
-    using OutOfLineJumpTargets = HashMap<JSInstructionStream::Offset, int>;
+    using OutOfLineJumpTargets = UncheckedKeyHashMap<JSInstructionStream::Offset, int>;
 
     OutOfLineJumpTargets m_outOfLineJumpTargets;
     std::unique_ptr<RareData> m_rareData;
-    FixedVector<ExpressionRangeInfo> m_expressionInfo;
+    std::unique_ptr<ExpressionInfo> m_expressionInfo;
     BaselineExecutionCounter m_llintExecuteCounter;
     FixedVector<UnlinkedValueProfile> m_valueProfiles;
     FixedVector<UnlinkedArrayProfile> m_arrayProfiles;
@@ -509,15 +517,16 @@ private:
 
 #if ASSERT_ENABLED
     Lock m_cachedIdentifierUidsLock;
-    HashSet<UniquedStringImpl*> m_cachedIdentifierUids;
+    UncheckedKeyHashSet<UniquedStringImpl*> m_cachedIdentifierUids;
 #endif
 
 protected:
-    DECLARE_VISIT_CHILDREN;
     static size_t estimatedSize(JSCell*, VM&);
 
 public:
     DECLARE_INFO;
+
+    DECLARE_VISIT_CHILDREN;
 };
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,10 +25,9 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
-#include "BackgroundFetch.h"
+#include <WebCore/BackgroundFetch.h>
 #include <span>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -36,12 +35,15 @@ class BackgroundFetchStore;
 class ResourceResponse;
 class SWServer;
 
-class BackgroundFetchEngine : public CanMakeWeakPtr<BackgroundFetchEngine> {
-    WTF_MAKE_FAST_ALLOCATED;
+class BackgroundFetchEngine : public RefCountedAndCanMakeWeakPtr<BackgroundFetchEngine> {
+    WTF_MAKE_TZONE_ALLOCATED(BackgroundFetchEngine);
 public:
-    explicit BackgroundFetchEngine(SWServer&);
+    static Ref<BackgroundFetchEngine> create(SWServer& swServer)
+    {
+        return adoptRef(*new BackgroundFetchEngine(swServer));
+    }
 
-    using ExceptionOrBackgroundFetchInformationCallback = CompletionHandler<void(Expected<BackgroundFetchInformation, ExceptionData>&&)>;
+    using ExceptionOrBackgroundFetchInformationCallback = CompletionHandler<void(Expected<std::optional<BackgroundFetchInformation>, ExceptionData>&&)>;
     void startBackgroundFetch(SWServerRegistration&, const String&, Vector<BackgroundFetchRequest>&&, BackgroundFetchOptions&&, ExceptionOrBackgroundFetchInformationCallback&&);
     void backgroundFetchInformation(SWServerRegistration&, const String&, ExceptionOrBackgroundFetchInformationCallback&&);
     using BackgroundFetchIdentifiersCallback = CompletionHandler<void(Vector<String>&&)>;
@@ -66,17 +68,17 @@ public:
     WEBCORE_EXPORT void clickBackgroundFetch(const ServiceWorkerRegistrationKey&, const String&);
 
 private:
+    explicit BackgroundFetchEngine(SWServer&);
+
     void notifyBackgroundFetchUpdate(BackgroundFetch&);
 
     WeakPtr<SWServer> m_server;
-    Ref<BackgroundFetchStore> m_store;
+    const Ref<BackgroundFetchStore> m_store;
 
-    using FetchesMap = HashMap<String, std::unique_ptr<BackgroundFetch>>;
+    using FetchesMap = HashMap<String, Ref<BackgroundFetch>>;
     HashMap<ServiceWorkerRegistrationKey, FetchesMap> m_fetches;
 
     HashMap<BackgroundFetchRecordIdentifier, Ref<BackgroundFetch::Record>> m_records;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

@@ -25,16 +25,17 @@
 
 #pragma once
 
+#include <wtf/RefCountable.h>
 #include <wtf/RefPtr.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace WTF {
 
 // Box<T> is a reference-counted pointer to T that allocates T using FastMalloc and prepends a reference
-// count to it.
+// count to it. It's almost just RefPtr<RefCountable<T>>, but has convenience operators.
 template<typename T>
 class Box {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Box);
 public:
     Box() = default;
     Box(Box&&) = default;
@@ -51,29 +52,26 @@ public:
     static Box create(Arguments&&... arguments)
     {
         Box result;
-        result.m_data = adoptRef(new Data(std::forward<Arguments>(arguments)...));
+        result.m_data = RefCountable<T>::create(std::forward<Arguments>(arguments)...);
         return result;
     }
 
-    T* get() const { return &m_data->value; }
+    bool isValid() const { return static_cast<bool>(m_data); }
 
-    T& operator*() const { return m_data->value; }
-    T* operator->() const { return &m_data->value; }
+    T* get() const LIFETIME_BOUND
+    {
+        if (!isValid())
+            return nullptr;
+        return &**m_data;
+    }
 
-    explicit operator bool() const { return static_cast<bool>(m_data); }
+    T& operator*() const LIFETIME_BOUND { RELEASE_ASSERT(isValid()); return **m_data; }
+    T* operator->() const LIFETIME_BOUND { RELEASE_ASSERT(isValid()); return &**m_data; }
+
+    explicit operator bool() const { return isValid(); }
 
 private:
-    struct Data : ThreadSafeRefCounted<Data> {
-        template<typename... Arguments>
-        Data(Arguments&&... arguments)
-            : value(std::forward<Arguments>(arguments)...)
-        {
-        }
-
-        T value;
-    };
-
-    RefPtr<Data> m_data;
+    RefPtr<RefCountable<T>> m_data;
 };
 
 } // namespace WTF

@@ -29,14 +29,16 @@
 #include "CustomUndoStep.h"
 #include "Document.h"
 #include "Editor.h"
+#include "ExceptionOr.h"
 #include "FrameDestructionObserverInlines.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "UndoItem.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(UndoManager);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(UndoManager);
 
 UndoManager::UndoManager(Document& document)
     : m_document(document)
@@ -48,15 +50,15 @@ UndoManager::~UndoManager() = default;
 ExceptionOr<void> UndoManager::addItem(Ref<UndoItem>&& item)
 {
     if (item->undoManager())
-        return Exception { InvalidModificationError, "This item has already been added to an UndoManager"_s };
+        return Exception { ExceptionCode::InvalidModificationError, "This item has already been added to an UndoManager"_s };
 
-    RefPtr frame = m_document.frame();
+    RefPtr frame = m_document->frame();
     if (!frame)
-        return Exception { SecurityError, "A browsing context is required to add an UndoItem"_s };
+        return Exception { ExceptionCode::SecurityError, "A browsing context is required to add an UndoItem"_s };
 
     item->setUndoManager(this);
-    frame->editor().registerCustomUndoStep(CustomUndoStep::create(item));
-    m_items.add(WTFMove(item));
+    frame->protectedEditor()->registerCustomUndoStep(CustomUndoStep::create(item));
+    m_items.add(WTF::move(item));
     return { };
 }
 

@@ -26,12 +26,13 @@
 #pragma once
 
 #include <type_traits>
+#include <wtf/FastMalloc.h>
 
 namespace WTF {
 
 template<typename KeyTypeArg, typename ValueTypeArg>
 struct KeyValuePair {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(KeyValuePair);
 
     using KeyType = KeyTypeArg;
     using ValueType = ValueTypeArg;
@@ -41,8 +42,8 @@ struct KeyValuePair {
     }
 
     KeyValuePair(KeyTypeArg&& key, ValueTypeArg&& value)
-        : key(WTFMove(key))
-        , value(WTFMove(value))
+        : key(WTF::move(key))
+        , value(WTF::move(value))
     {
     }
 

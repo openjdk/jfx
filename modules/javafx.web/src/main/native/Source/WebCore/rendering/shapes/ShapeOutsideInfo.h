@@ -29,10 +29,11 @@
 
 #pragma once
 
-#include "LayoutSize.h"
-#include "Shape.h"
+#include <WebCore/LayoutShape.h>
+#include <WebCore/LayoutSize.h>
 #include <wtf/HashMap.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -41,9 +42,10 @@ class RenderBox;
 class StyleImage;
 class FloatingObject;
 
-Ref<const Shape> makeShapeForShapeOutside(const RenderBox&);
+Ref<const LayoutShape> makeShapeForShapeOutside(const RenderBox&);
 
 class ShapeOutsideDeltas final {
+    WTF_MAKE_TZONE_ALLOCATED(ShapeOutsideDeltas);
 public:
     ShapeOutsideDeltas()
         : m_lineOverlapsShape(false)
@@ -81,7 +83,7 @@ private:
 };
 
 class ShapeOutsideInfo final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ShapeOutsideInfo);
 public:
     ShapeOutsideInfo(const RenderBox& renderer)
         : m_renderer(renderer)
@@ -102,33 +104,15 @@ public:
     LayoutRect computedShapePhysicalBoundingBox() const;
     FloatPoint shapeToRendererPoint(const FloatPoint&) const;
 
-    const Shape& computedShape() const;
-
-    static ShapeOutsideInfo& ensureInfo(const RenderBox& key)
-    {
-        InfoMap& infoMap = ShapeOutsideInfo::infoMap();
-        if (ShapeOutsideInfo* info = infoMap.get(&key))
-            return *info;
-        auto result = infoMap.add(&key, makeUnique<ShapeOutsideInfo>(key));
-        return *result.iterator->value;
-    }
-    static void removeInfo(const RenderBox& key) { infoMap().remove(&key); }
-    static ShapeOutsideInfo* info(const RenderBox& key) { return infoMap().get(&key); }
+    const LayoutShape& computedShape() const;
 
 private:
     LayoutUnit logicalTopOffset() const;
     LayoutUnit logicalLeftOffset() const;
 
-    typedef HashMap<const RenderBox*, std::unique_ptr<ShapeOutsideInfo>> InfoMap;
-    static InfoMap& infoMap()
-    {
-        static NeverDestroyed<InfoMap> staticInfoMap;
-        return staticInfoMap;
-    }
-
     const RenderBox& m_renderer;
 
-    mutable RefPtr<const Shape> m_shape;
+    mutable RefPtr<const LayoutShape> m_shape;
     LayoutSize m_cachedShapeLogicalSize;
 
     ShapeOutsideDeltas m_shapeOutsideDeltas;

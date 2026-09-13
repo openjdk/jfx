@@ -27,8 +27,9 @@
 
 #if ENABLE(APPLE_PAY)
 
-#include "ApplePaySessionPaymentRequest.h"
-#include "ApplePaySetupFeatureWebCore.h"
+#include <WebCore/ApplePaySessionPaymentRequest.h>
+#include <WebCore/ApplePaySetupFeatureWebCore.h>
+#include <wtf/AbstractRefCounted.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 #include <wtf/Function.h>
@@ -36,6 +37,7 @@
 namespace WebCore {
 
 class Document;
+class PaymentCoordinator;
 class PaymentMerchantSession;
 struct ApplePayCouponCodeUpdate;
 struct ApplePayPaymentAuthorizationResult;
@@ -44,7 +46,7 @@ struct ApplePaySetupConfiguration;
 struct ApplePayShippingContactUpdate;
 struct ApplePayShippingMethodUpdate;
 
-class PaymentCoordinatorClient {
+class PaymentCoordinatorClient : public AbstractRefCounted {
 public:
     bool supportsVersion(unsigned version) const;
 
@@ -69,7 +71,7 @@ public:
     virtual bool isWebPaymentCoordinator() const { return false; }
 
     virtual void getSetupFeatures(const ApplePaySetupConfiguration&, const URL&, CompletionHandler<void(Vector<Ref<ApplePaySetupFeature>>&&)>&& completionHandler) { completionHandler({ }); }
-    virtual void beginApplePaySetup(const ApplePaySetupConfiguration&, const URL&, Vector<RefPtr<ApplePaySetupFeature>>&&, CompletionHandler<void(bool)>&& completionHandler) { completionHandler(false); }
+    virtual void beginApplePaySetup(const ApplePaySetupConfiguration&, const URL&, Vector<Ref<ApplePaySetupFeature>>&&, CompletionHandler<void(bool)>&& completionHandler) { completionHandler(false); }
     virtual void endApplePaySetup() { }
 
     virtual ~PaymentCoordinatorClient() = default;

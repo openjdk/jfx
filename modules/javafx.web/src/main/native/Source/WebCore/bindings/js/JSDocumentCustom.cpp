@@ -24,8 +24,8 @@
 #include "JSCSSStyleSheet.h"
 #include "JSDOMConvert.h"
 #include "JSDOMGlobalObjectInlines.h"
+#include "JSDOMWindowCustom.h"
 #include "JSHTMLDocument.h"
-#include "JSLocalDOMWindowCustom.h"
 #include "JSXMLDocument.h"
 #include "LocalFrame.h"
 #include "NodeTraversal.h"
@@ -35,32 +35,16 @@
 namespace WebCore {
 using namespace JSC;
 
-static inline JSValue createNewDocumentWrapper(JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, Ref<Document>&& passedDocument)
-{
-    auto& document = passedDocument.get();
-    JSObject* wrapper;
-    if (document.isHTMLDocument())
-        wrapper = createWrapper<HTMLDocument>(&globalObject, WTFMove(passedDocument));
-    else if (document.isXMLDocument())
-        wrapper = createWrapper<XMLDocument>(&globalObject, WTFMove(passedDocument));
-    else
-        wrapper = createWrapper<Document>(&globalObject, WTFMove(passedDocument));
-
-    reportMemoryForDocumentIfFrameless(lexicalGlobalObject, document);
-
-    return wrapper;
-}
-
 JSObject* cachedDocumentWrapper(JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, Document& document)
 {
     if (auto* wrapper = getCachedWrapper(globalObject.world(), document))
         return wrapper;
 
-    auto* window = document.domWindow();
+    RefPtr window = document.window();
     if (!window)
         return nullptr;
 
-    auto* documentGlobalObject = toJSDOMGlobalObject<JSLocalDOMWindow>(lexicalGlobalObject.vm(), toJS(&lexicalGlobalObject, *window));
+    auto* documentGlobalObject = toJSDOMGlobalObject<JSDOMWindow>(lexicalGlobalObject.vm(), toJS(&lexicalGlobalObject, *window));
     if (!documentGlobalObject)
         return nullptr;
 
@@ -76,7 +60,7 @@ void reportMemoryForDocumentIfFrameless(JSGlobalObject& lexicalGlobalObject, Doc
 
     VM& vm = lexicalGlobalObject.vm();
     size_t memoryCost = 0;
-    for (Node* node = &document; node; node = NodeTraversal::next(*node))
+    for (CheckedPtr<Node> node = &document; node; node = NodeTraversal::next(*node))
         memoryCost += node->approximateMemoryCost();
 
     // FIXME: Adopt reportExtraMemoryVisited, and switch to reportExtraMemoryAllocated.
@@ -84,27 +68,18 @@ void reportMemoryForDocumentIfFrameless(JSGlobalObject& lexicalGlobalObject, Doc
     vm.heap.deprecatedReportExtraMemory(memoryCost);
 }
 
-JSValue toJSNewlyCreated(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, Ref<Document>&& document)
-{
-    return createNewDocumentWrapper(*lexicalGlobalObject, *globalObject, WTFMove(document));
-}
-
-JSValue toJS(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject* globalObject, Document& document)
-{
-    if (auto* wrapper = cachedDocumentWrapper(*lexicalGlobalObject, *globalObject, document))
-        return wrapper;
-    return toJSNewlyCreated(lexicalGlobalObject, globalObject, Ref<Document>(document));
-}
-
 void setAdoptedStyleSheetsOnTreeScope(TreeScope& treeScope, JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
 {
     auto& vm = JSC::getVM(&lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
+
     auto nativeValue = convert<IDLFrozenArray<IDLInterface<CSSStyleSheet>>>(lexicalGlobalObject, value);
-    RETURN_IF_EXCEPTION(throwScope, void());
-    invokeFunctorPropagatingExceptionIfNecessary(lexicalGlobalObject, throwScope, [&] {
-        return treeScope.setAdoptedStyleSheets(WTFMove(nativeValue));
-    });
+    if (nativeValue.hasException(throwScope)) [[unlikely]]
+        return;
+
+    auto result = treeScope.setAdoptedStyleSheets(nativeValue.releaseReturnValue());
+    if (result.hasException()) [[unlikely]]
+        propagateException(lexicalGlobalObject, throwScope, result.releaseException());
 }
 
 void JSDocument::setAdoptedStyleSheets(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
@@ -115,7 +90,8 @@ void JSDocument::setAdoptedStyleSheets(JSC::JSGlobalObject& lexicalGlobalObject,
 template<typename Visitor>
 void JSDocument::visitAdditionalChildren(Visitor& visitor)
 {
-    addWebCoreOpaqueRoot(visitor, static_cast<ScriptExecutionContext&>(wrapped()));
+    // This may get called on the GC thread so we cannot ref this object.
+    SUPPRESS_UNCOUNTED_ARG addWebCoreOpaqueRoot(visitor, static_cast<ScriptExecutionContext&>(wrapped()));
 }
 
 DEFINE_VISIT_ADDITIONAL_CHILDREN(JSDocument);

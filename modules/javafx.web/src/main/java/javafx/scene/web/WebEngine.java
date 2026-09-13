@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,8 +66,6 @@ import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -1186,7 +1184,7 @@ final public class WebEngine {
      */
     private static final class PulseTimer {
 
-        // Used just to guarantee constant pulse activity. See RT-14433.
+        // Used just to guarantee constant pulse activity. See JDK-8114603.
         private static final AnimationTimer animation =
             new AnimationTimer() {
                 @Override public void handle(long l) {}
@@ -1395,7 +1393,7 @@ final public class WebEngine {
                     break;
                 case DOCUMENT_AVAILABLE:
                     if (this.state.get() != State.RUNNING) {
-                        // We have empty load; send a synthetic event (RT-32097)
+                        // We have empty load; send a synthetic event (JDK-8119247)
                         dispatchLoadEvent(frame, PAGE_STARTED, url, contentType, workDone, errorCode);
                     }
                     document.invalidate(true);
@@ -1571,8 +1569,6 @@ final public class WebEngine {
             this.engine = new WeakReference<>(engine);
         }
 
-
-        @SuppressWarnings("removal")
         @Override
         public boolean sendMessageToFrontend(final String message) {
             boolean result = false;
@@ -1581,10 +1577,7 @@ final public class WebEngine {
                 final Callback<String,Void> messageCallback =
                         webEngine.debugger.messageCallback;
                 if (messageCallback != null) {
-                    AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-                        messageCallback.call(message);
-                        return null;
-                    }, webEngine.page.getAccessControlContext());
+                    messageCallback.call(message);
                     result = true;
                 }
             }

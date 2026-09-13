@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -54,7 +54,7 @@ public class TransformHelper {
         double srcMaxY = src.getMaxY();
         double srcMaxZ = src.getMaxZ();
 
-        // TODO: Optimize... (RT-26884)
+        // TODO: Optimize... (JDK-8092003)
         tempV3d.set(srcMaxX, srcMaxY, srcMaxZ);
         tempV3d = tx.transform(tempV3d, tempV3d);
         double minX = tempV3d.x;

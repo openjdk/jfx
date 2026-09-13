@@ -137,7 +137,7 @@ GST_AUDIO_API
 GstAudioConverter *  gst_audio_converter_new             (GstAudioConverterFlags flags,
                                                           GstAudioInfo *in_info,
                                                           GstAudioInfo *out_info,
-                                                          GstStructure *config);
+                                                          GstStructure *config) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_AUDIO_API
 GType                gst_audio_converter_get_type        (void);

@@ -164,23 +164,13 @@ if (APPLE)
     set(WebKitLegacy_EXTERNAL_DEP "${WEBCORE_DIR}/mapfile-macosx")
 elseif (UNIX)
     set_target_properties(WebKitLegacy PROPERTIES LINK_FLAGS "-Xlinker -version-script=${WEBCORE_DIR}/mapfile-vers -Wl,--no-undefined")
+    set_property(TARGET WebKitLegacy APPEND PROPERTY LINK_DEPENDS "${WEBCORE_DIR}/mapfile-vers")
     set(WebKitLegacy_EXTERNAL_DEP "${WEBCORE_DIR}/mapfile-vers")
 elseif (WIN32)
     # Adds version information to jfxwebkit.dll created by Gradle build, see JDK-8166265
     set_target_properties(WebKitLegacy PROPERTIES LINK_FLAGS "${CMAKE_BINARY_DIR}/WebCore/obj/version.res")
     set(WebKitLegacy_EXTERNAL_DEP "${CMAKE_BINARY_DIR}/WebCore/obj/version.res")
 endif ()
-
-# Create a dummy depency c file to relink when mapfile changes
-get_filename_component(STAMP_NAME ${WebKitLegacy_EXTERNAL_DEP} NAME)
-set(WebKitLegacy_EXTERNAL_DEP_STAMP "${CMAKE_BINARY_DIR}/${STAMP_NAME}.stamp.cpp")
-add_custom_command(
-    OUTPUT "${WebKitLegacy_EXTERNAL_DEP_STAMP}"
-    DEPENDS "${WebKitLegacy_EXTERNAL_DEP}"
-    COMMAND ${CMAKE_COMMAND} -E touch "${WebKitLegacy_EXTERNAL_DEP_STAMP}"
-    VERBATIM
-)
-list(APPEND WebKitLegacy_SOURCES ${WebKitLegacy_EXTERNAL_DEP_STAMP})
 
 add_custom_command(
     OUTPUT ${WebKitLegacy_DERIVED_SOURCES_DIR}/WebKitVersion.h

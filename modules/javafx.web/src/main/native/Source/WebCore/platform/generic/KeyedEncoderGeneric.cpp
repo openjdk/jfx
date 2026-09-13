@@ -27,6 +27,7 @@
 #include "KeyedEncoderGeneric.h"
 
 #include "SharedBuffer.h"
+#include <wtf/StdLibExtras.h>
 #include <wtf/persistence/PersistentEncoder.h>
 
 namespace WebCore {
@@ -38,20 +39,20 @@ std::unique_ptr<KeyedEncoder> KeyedEncoder::encoder()
 
 void KeyedEncoderGeneric::encodeString(const String& key)
 {
-    auto result = key.tryGetUTF8([&](std::span<const char> span) -> bool {
+    auto result = key.tryGetUTF8([&](std::span<const char8_t> span) -> bool {
         m_encoder << span.size();
-        m_encoder.encodeFixedLengthData({ bitwise_cast<const uint8_t*>(span.data()), span.size() });
+        m_encoder.encodeFixedLengthData(byteCast<uint8_t>(span));
         return true;
     });
     RELEASE_ASSERT(result);
 }
 
-void KeyedEncoderGeneric::encodeBytes(const String& key, const uint8_t* bytes, size_t size)
+void KeyedEncoderGeneric::encodeBytes(const String& key, std::span<const uint8_t> bytes)
 {
     m_encoder << Type::Bytes;
     encodeString(key);
-    m_encoder << size;
-    m_encoder.encodeFixedLengthData({ bytes, size });
+    m_encoder << bytes.size();
+    m_encoder.encodeFixedLengthData(bytes);
 }
 
 void KeyedEncoderGeneric::encodeBool(const String& key, bool value)
@@ -144,7 +145,7 @@ void KeyedEncoderGeneric::endArray()
 
 RefPtr<SharedBuffer> KeyedEncoderGeneric::finishEncoding()
 {
-    return SharedBuffer::create(m_encoder.buffer(), m_encoder.bufferSize());
+    return SharedBuffer::create(m_encoder.span());
 }
 
 } // namespace WebCore

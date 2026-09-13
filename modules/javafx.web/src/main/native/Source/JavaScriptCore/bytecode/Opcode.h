@@ -29,15 +29,16 @@
 
 #pragma once
 
-#include "Bytecodes.h"
-#include "LLIntOpcode.h"
-#include "OpcodeSize.h"
+#include <JavaScriptCore/Bytecodes.h>
+#include <JavaScriptCore/LLIntOpcode.h>
+#include <JavaScriptCore/OpcodeSize.h>
 
 #include <algorithm>
 #include <string.h>
 
 #include <wtf/Assertions.h>
 #include <wtf/MathExtras.h>
+#include <wtf/text/ASCIILiteral.h>
 
 namespace JSC {
 
@@ -61,49 +62,41 @@ const int numOpcodeIDs = NUMBER_OF_BYTECODE_IDS + NUMBER_OF_CLOOP_BYTECODE_HELPE
 const int numOpcodeIDs = NUMBER_OF_BYTECODE_IDS + NUMBER_OF_BYTECODE_HELPER_IDS;
 #endif
 
-constexpr int numWasmOpcodeIDs = NUMBER_OF_WASM_IDS + NUMBER_OF_BYTECODE_HELPER_IDS;
-
 #define OPCODE_ID_ENUM(opcode, length) opcode,
     enum OpcodeID : unsigned { FOR_EACH_OPCODE_ID(OPCODE_ID_ENUM) };
-    enum WasmOpcodeID : unsigned { FOR_EACH_WASM_ID(OPCODE_ID_ENUM) };
 #undef OPCODE_ID_ENUM
 
 #if ENABLE(C_LOOP) && !HAVE(COMPUTED_GOTO)
 
 #define OPCODE_ID_ENUM(opcode, length) opcode##_wide16 = numOpcodeIDs + opcode,
     enum OpcodeIDWide16 : unsigned { FOR_EACH_OPCODE_ID(OPCODE_ID_ENUM) };
-    enum WasmOpcodeIDWide16 : unsigned { FOR_EACH_WASM_ID(OPCODE_ID_ENUM) };
 #undef OPCODE_ID_ENUM
 
 #define OPCODE_ID_ENUM(opcode, length) opcode##_wide32 = numOpcodeIDs * 2 + opcode,
     enum OpcodeIDWide32 : unsigned { FOR_EACH_OPCODE_ID(OPCODE_ID_ENUM) };
-    enum WasmOpcodeIDWide32 : unsigned { FOR_EACH_WASM_ID(OPCODE_ID_ENUM) };
 #undef OPCODE_ID_ENUM
 #endif
 
 extern const unsigned opcodeLengths[];
-extern const unsigned wasmOpcodeLengths[];
 
 #define OPCODE_ID_LENGTHS(id, length) const int id##_length = length;
     FOR_EACH_OPCODE_ID(OPCODE_ID_LENGTHS);
-    FOR_EACH_WASM_ID(OPCODE_ID_LENGTHS);
 #undef OPCODE_ID_LENGTHS
 
 static_assert(NUMBER_OF_BYTECODE_IDS < 255);
 static constexpr OpcodeSize maxJSOpcodeIDWidth = OpcodeSize::Narrow;
-static_assert(NUMBER_OF_WASM_IDS < 255);
-static constexpr OpcodeSize maxWasmOpcodeIDWidth = OpcodeSize::Narrow;
 static constexpr unsigned maxJSBytecodeStructLength = /* Opcode */ maxJSOpcodeIDWidth + /* Wide32 Opcode */ 1 + /* Operands */ MAX_LENGTH_OF_BYTECODE_IDS * 4;
-static constexpr unsigned maxWasmBytecodeStructLength = /* Opcode */ maxWasmOpcodeIDWidth + /* Wide32 Opcode */ 1 + /* Operands */ MAX_LENGTH_OF_WASM_IDS * 4;
-static constexpr unsigned maxBytecodeStructLength = std::max(maxJSBytecodeStructLength, maxWasmBytecodeStructLength);
+static constexpr unsigned maxBytecodeStructLength = maxJSBytecodeStructLength;
 static constexpr unsigned bitWidthForMaxBytecodeStructLength = WTF::getMSBSetConstexpr(maxBytecodeStructLength) + 1;
 
 #define FOR_EACH_OPCODE_WITH_VALUE_PROFILE(macro) \
     macro(OpCallVarargs) \
     macro(OpConstructVarargs) \
+    macro(OpSuperConstructVarargs) \
     macro(OpGetByVal) \
     macro(OpEnumeratorGetByVal) \
     macro(OpGetById) \
+    macro(OpGetLength) \
     macro(OpGetByIdWithThis) \
     macro(OpTryGetById) \
     macro(OpGetByIdDirect) \
@@ -117,6 +110,7 @@ static constexpr unsigned bitWidthForMaxBytecodeStructLength = WTF::getMSBSetCon
     macro(OpCall) \
     macro(OpCallDirectEval) \
     macro(OpConstruct) \
+    macro(OpSuperConstruct) \
     macro(OpGetFromScope) \
     macro(OpGetPrivateName) \
     macro(OpNewArrayWithSpecies) \
@@ -126,15 +120,18 @@ static constexpr unsigned bitWidthForMaxBytecodeStructLength = WTF::getMSBSetCon
     macro(OpTailCall) \
     macro(OpCallDirectEval) \
     macro(OpConstruct) \
+    macro(OpSuperConstruct) \
     macro(OpIteratorOpen) \
     macro(OpIteratorNext) \
     macro(OpCallVarargs) \
     macro(OpTailCallVarargs) \
     macro(OpTailCallForwardArguments) \
     macro(OpConstructVarargs) \
+    macro(OpSuperConstructVarargs) \
     macro(OpCallIgnoreResult) \
 
 #define FOR_EACH_OPCODE_WITH_SIMPLE_ARRAY_PROFILE(macro) \
+    macro(OpGetLength) \
     macro(OpGetByVal) \
     macro(OpInByVal) \
     macro(OpPutByVal) \
@@ -193,8 +190,7 @@ typedef void* Opcode;
 typedef OpcodeID Opcode;
 #endif
 
-extern const char* const opcodeNames[];
-extern const char* const wasmOpcodeNames[];
+extern ASCIILiteral const opcodeNames[];
 
 #if ENABLE(OPCODE_STATS)
 

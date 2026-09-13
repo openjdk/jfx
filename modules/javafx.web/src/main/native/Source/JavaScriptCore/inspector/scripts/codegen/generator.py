@@ -40,6 +40,8 @@ log = logging.getLogger('global')
 
 
 def ucfirst(str):
+    if str == 'webkit':
+        return 'WebKit'
     return str[:1].upper() + str[1:]
 
 
@@ -47,17 +49,27 @@ _ALWAYS_SPECIALCASED_ENUM_VALUE_SUBSTRINGS = set(['2D', 'API', 'CSS', 'DOM', 'HT
 _ALWAYS_SPECIALCASED_ENUM_VALUE_LOOKUP_TABLE = dict([(s.upper(), s) for s in _ALWAYS_SPECIALCASED_ENUM_VALUE_SUBSTRINGS])
 
 _ENUM_IDENTIFIER_RENAME_MAP = {
-    'canvas-bitmaprenderer': 'CanvasBitmapRenderer',  # Recording.Type.canvas-bitmaprenderer
-    'canvas-webgl': 'CanvasWebGL',  # Recording.Type.canvas-webgl
-    'canvas-webgl2': 'CanvasWebGL2',  # Recording.Type.canvas-webgl2
-    'webgl': 'WebGL',  # Canvas.ContextType.webgl
-    'webgl2': 'WebGL2',  # Canvas.ContextType.webgl2
-    'webgpu': 'WebGPU',  # Canvas.ContextType.webgpu
-    'bitmaprenderer': 'BitmapRenderer',  # Canvas.ContextType.bitmaprenderer
-    'mediasource': 'MediaSource',  # Console.ChannelSource.mediasource
-    'webrtc': 'WebRTC',  # Console.ChannelSource.webrtc
-    'itp-debug': 'ITPDebug',  # Console.ChannelSource.itp-debug
-    'webkit': 'WebKit',  # CPUProfiler.ThreadInfo.type
+    # Recording.Type
+    'canvas-bitmaprenderer': 'CanvasBitmapRenderer',
+    'offscreen-canvas-bitmaprenderer': 'OffscreenCanvasBitmapRenderer',
+    'canvas-webgl': 'CanvasWebGL',
+    'offscreen-canvas-webgl': 'OffscreenCanvasWebGL',
+    'canvas-webgl2': 'CanvasWebGL2',
+    'offscreen-canvas-webgl2': 'OffscreenCanvasWebGL2',
+
+    # Canvas.ContextType
+    'bitmaprenderer': 'BitmapRenderer',
+    'offscreen-bitmaprenderer': 'OffscreenBitmapRenderer',
+    'webgl': 'WebGL',
+    'offscreen-webgl': 'OffscreenWebGL',
+    'webgl2': 'WebGL2',
+    'offscreen-webgl2': 'OffscreenWebGL2',
+    'webgpu': 'WebGPU',
+
+    # Console.ChannelSource
+    'mediasource': 'MediaSource',
+    'webrtc': 'WebRTC',
+    'itp-debug': 'ITPDebug'
 }
 
 # These objects are built manually by creating and setting JSON::Value instances.
@@ -81,23 +93,12 @@ _TYPES_NEEDING_RUNTIME_CASTS = set([
 ])
 
 # FIXME: This should be converted into a property in JSON.
+# These exist for ONLY for legacy code.
+# DO NOT ADD TO THIS LIST!!!
 _TYPES_WITH_OPEN_FIELDS = {
     "Timeline.TimelineEvent": [],
     "CSS.CSSProperty": ["priority", "parsedOk", "status"],
-    "DOM.HighlightConfig": [],
-    "DOM.GridOverlayConfig": [],
-    "DOM.FlexOverlayConfig": [],
-    "DOM.RGBAColor": [],
-    "DOMStorage.StorageId": [],
-    "Debugger.BreakpointAction": [],
-    "Debugger.BreakpointOptions": [],
-    "Debugger.Location": [],
-    "IndexedDB.Key": [],
-    "IndexedDB.KeyRange": [],
     "Network.Response": ["status", "statusText", "mimeType", "source"],
-    "Page.Cookie": [],
-    "Runtime.CallArgument": ["objectId"],
-    "Runtime.TypeLocation": [],
     # For testing purposes only.
     "Test.OpenParameters": ["alpha"],
 }
@@ -137,7 +138,7 @@ class Generator:
         includes = set()
         for entry in entries:
             (allowed_framework_names, data) = entry
-            (framework_name, header_path) = data
+            (framework_name, header_path, is_system_header) = (data + (False,))[:3]
 
             allowed_frameworks = allowed_framework_names + ["Test"]
             if self.model().framework.name not in allowed_frameworks:
@@ -145,7 +146,7 @@ class Generator:
 
             if framework_name == "WTF" or framework_name == "std":
                 includes.add("#include <%s>" % header_path)
-            elif self.model().framework.name != framework_name:
+            elif (is_system_header is True and framework_name == "JavaScriptCore") or self.model().framework.name != framework_name:
                 includes.add("#include <%s/%s>" % (framework_name, os.path.basename(header_path)))
             else:
                 includes.add("#include \"%s\"" % os.path.basename(header_path))

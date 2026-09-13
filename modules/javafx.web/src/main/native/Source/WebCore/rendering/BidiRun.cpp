@@ -24,31 +24,23 @@
 #include "config.h"
 #include "BidiRun.h"
 #include "LegacyInlineBox.h"
-#include <wtf/RefCountedLeakCounter.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-DEFINE_DEBUG_ONLY_GLOBAL(WTF::RefCountedLeakCounter, bidiRunCounter, ("BidiRun"));
+WTF_MAKE_TZONE_ALLOCATED_IMPL(BidiRun);
 
 BidiRun::BidiRun(unsigned start, unsigned stop, RenderObject& renderer, BidiContext* context, UCharDirection dir)
     : BidiCharacterRun(start, stop, context, dir)
     , m_renderer(renderer)
     , m_box(nullptr)
 {
-#ifndef NDEBUG
-    bidiRunCounter.increment();
-#endif
     ASSERT(!is<RenderText>(m_renderer) || static_cast<unsigned>(stop) <= downcast<RenderText>(m_renderer).text().length());
-    // Stored in base class to save space.
-    m_hasHyphen = false;
 }
 
 BidiRun::~BidiRun()
 {
-#ifndef NDEBUG
-    bidiRunCounter.decrement();
-#endif
 }
 
 std::unique_ptr<BidiRun> BidiRun::takeNext()

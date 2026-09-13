@@ -34,10 +34,12 @@
 
 #include "BaseButtonInputType.h"
 #include "IntPoint.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class ImageInputType final : public BaseButtonInputType {
+    WTF_MAKE_TZONE_ALLOCATED(ImageInputType);
 public:
     static Ref<ImageInputType> create(HTMLInputElement& element)
     {
@@ -60,6 +62,7 @@ private:
     unsigned height() const final;
     unsigned width() const final;
     String resultForDialogSubmit() const final;
+    bool dirAutoUsesValue() const final;
 
     IntPoint m_clickLocation; // Valid only during HTMLFormElement::submitIfPossible().
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include "Exception.h"
+#include "ExceptionOr.h"
 #include "SVGLengthContext.h"
 #include "SVGValueProperty.h"
 
@@ -81,26 +83,15 @@ public:
 
     unsigned short unitType()  const
     {
+        // Per spec: https://svgwg.org/svg2-draft/types.html#__svg__SVGLength__SVG_LENGTHTYPE_UNKNOWN
+        if (m_value.lengthType() > SVGLengthType::Picas)
+            return 0;
         return static_cast<unsigned>(m_value.lengthType());
     }
 
-    ExceptionOr<float> valueForBindings()
-    {
-        return m_value.valueForBindings(SVGLengthContext { contextElement() });
-    }
+    ExceptionOr<float> valueForBindings();
 
-    ExceptionOr<void> setValueForBindings(float value)
-    {
-        if (isReadOnly())
-            return Exception { NoModificationAllowedError };
-
-        auto result = m_value.setValue(SVGLengthContext { contextElement() }, value);
-        if (result.hasException())
-            return result;
-
-        commitChange();
-        return result;
-    }
+    ExceptionOr<void> setValueForBindings(float);
 
     float valueInSpecifiedUnits()
     {
@@ -110,7 +101,7 @@ public:
     ExceptionOr<void> setValueInSpecifiedUnits(float valueInSpecifiedUnits)
     {
         if (isReadOnly())
-            return Exception { NoModificationAllowedError };
+            return Exception { ExceptionCode::NoModificationAllowedError };
 
         m_value.setValueInSpecifiedUnits(valueInSpecifiedUnits);
         commitChange();
@@ -120,7 +111,7 @@ public:
     ExceptionOr<void> setValueAsString(const String& value)
     {
         if (isReadOnly())
-            return Exception { NoModificationAllowedError };
+            return Exception { ExceptionCode::NoModificationAllowedError };
 
         auto result = m_value.setValueAsString(value);
         if (result.hasException())
@@ -133,31 +124,17 @@ public:
     ExceptionOr<void> newValueSpecifiedUnits(unsigned short unitType, float valueInSpecifiedUnits)
     {
         if (isReadOnly())
-            return Exception { NoModificationAllowedError };
+            return Exception { ExceptionCode::NoModificationAllowedError };
 
         if (unitType == SVG_LENGTHTYPE_UNKNOWN || unitType > SVG_LENGTHTYPE_PC)
-            return Exception { NotSupportedError };
+            return Exception { ExceptionCode::NotSupportedError };
 
         m_value = { valueInSpecifiedUnits, static_cast<SVGLengthType>(unitType), m_value.lengthMode() };
         commitChange();
         return { };
     }
 
-    ExceptionOr<void> convertToSpecifiedUnits(unsigned short unitType)
-    {
-        if (isReadOnly())
-            return Exception { NoModificationAllowedError };
-
-        if (unitType == SVG_LENGTHTYPE_UNKNOWN || unitType > SVG_LENGTHTYPE_PC)
-            return Exception { NotSupportedError };
-
-        auto result = m_value.convertToSpecifiedUnits(SVGLengthContext { contextElement() }, static_cast<SVGLengthType>(unitType));
-        if (result.hasException())
-            return result;
-
-        commitChange();
-        return result;
-    }
+    ExceptionOr<void> convertToSpecifiedUnits(unsigned short unitType);
 
     String valueAsString() const override
     {

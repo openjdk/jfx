@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Google Inc. All rights reserved.
+ * Copyright (c) 2010 Google Inc. All rights reserved.
  * Copyright (C) 2015 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,13 +31,14 @@
 
 #pragma once
 
-#include "FloatPoint.h"
-#include "PlatformWheelEvent.h"
-#include "ScrollingEffectsController.h"
-#include "Timer.h"
-#include "WheelEventTestMonitor.h"
-#include <wtf/FastMalloc.h>
+#include <WebCore/FloatPoint.h>
+#include <WebCore/PlatformWheelEvent.h>
+#include <WebCore/ScrollingEffectsController.h>
+#include <WebCore/Timer.h>
+#include <WebCore/WheelEventTestMonitor.h>
 #include <wtf/Forward.h>
+#include <wtf/Platform.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -54,16 +55,17 @@ struct ScrollExtents;
 class ScrollingEffectsControllerTimer;
 
 class ScrollAnimator : private ScrollingEffectsControllerClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ScrollAnimator);
 public:
     static std::unique_ptr<ScrollAnimator> create(ScrollableArea&);
 
     explicit ScrollAnimator(ScrollableArea&);
     virtual ~ScrollAnimator();
 
-    ScrollableArea& scrollableArea() const { return m_scrollableArea; }
+    ScrollableArea& scrollableArea() const { return m_scrollableArea.get(); }
+    CheckedRef<ScrollableArea> checkedScrollableArea() const { return scrollableArea(); }
 
-    KeyboardScrollingAnimator *keyboardScrollingAnimator() const final { return m_keyboardScrollingAnimator.get(); }
+    KeyboardScrollingAnimator *keyboardScrollingAnimator() const final { return m_keyboardScrollingAnimator.ptr(); }
 
     enum ScrollBehavior {
         RespectScrollSnap   = 1 << 0,
@@ -76,8 +78,8 @@ public:
     // The base class implementation always scrolls immediately, never animates.
     bool singleAxisScroll(ScrollEventAxis, float delta, OptionSet<ScrollBehavior>);
 
-    bool scrollToPositionWithoutAnimation(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped);
-    bool scrollToPositionWithAnimation(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped);
+    WEBCORE_EXPORT bool scrollToPositionWithoutAnimation(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped);
+    WEBCORE_EXPORT bool scrollToPositionWithAnimation(const FloatPoint&, ScrollClamping = ScrollClamping::Clamped);
 
     void retargetRunningAnimation(const FloatPoint& newPosition);
 
@@ -160,20 +162,21 @@ private:
     bool isPinnedOnSide(BoxSide) const final;
 #endif
 
-    void deferWheelEventTestCompletionForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason) const final;
-    void removeWheelEventTestCompletionDeferralForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason) const final;
+    void deferWheelEventTestCompletionForReason(ScrollingNodeID, WheelEventTestMonitor::DeferReason) const final;
+    void removeWheelEventTestCompletionDeferralForReason(ScrollingNodeID, WheelEventTestMonitor::DeferReason) const final;
+    ScrollingNodeID scrollingNodeIDForTesting() const final;
 
-#if PLATFORM(GTK) || USE(NICOSIA)
+#if USE(COORDINATED_GRAPHICS)
     bool scrollAnimationEnabled() const final;
 #endif
 
 protected:
-    ScrollableArea& m_scrollableArea;
+    WeakRef<ScrollableArea> m_scrollableArea;
     RefPtr<WheelEventTestMonitor> m_wheelEventTestMonitor;
     ScrollingEffectsController m_scrollController;
     FloatPoint m_currentPosition;
 
-    std::unique_ptr<KeyboardScrollingAnimator> m_keyboardScrollingAnimator;
+    const UniqueRef<KeyboardScrollingAnimator> m_keyboardScrollingAnimator;
 
 private:
     bool m_scrollAnimationScheduled { false };

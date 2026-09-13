@@ -29,9 +29,13 @@
 #if HAVE(REDESIGNED_TEXT_CURSOR)
 
 #include "FloatRoundedRect.h"
+#include "GraphicsContext.h"
 #include "VisibleSelection.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(OpacityCaretAnimator);
 
 static constexpr std::array keyframes = {
     KeyFrame { 0.0_s   , 1.00 },
@@ -117,7 +121,7 @@ void OpacityCaretAnimator::paint(GraphicsContext& context, const FloatRect& rect
     if (caretColor != Color::transparentBlack)
         caretColorWithOpacity = caretColor.colorWithAlpha(caretPresentationProperties.opacity);
 
-    context.fillRoundedRect(FloatRoundedRect { rect, FloatRoundedRect::Radii { 1.0 } }, caretColorWithOpacity);
+    context.fillRoundedRect(FloatRoundedRect { rect, CornerRadii { 1.0 } }, caretColorWithOpacity);
 }
 
 LayoutRect OpacityCaretAnimator::caretRepaintRectForLocalRect(LayoutRect repaintRect) const

@@ -29,8 +29,9 @@
 #include "DocumentOrShadowRootFullscreen.h"
 
 #include "Document.h"
+#include "DocumentFullscreen.h"
 #include "Element.h"
-#include "FullscreenManager.h"
+#include "FrameDestructionObserverInlines.h"
 #include "TreeScope.h"
 
 namespace WebCore {
@@ -38,8 +39,11 @@ namespace WebCore {
 // https://fullscreen.spec.whatwg.org/#dom-document-fullscreenelement
 Element* DocumentOrShadowRootFullscreen::fullscreenElement(TreeScope& treeScope)
 {
-    auto& document = treeScope.documentScope();
-    return treeScope.ancestorElementInThisScope(document.fullscreenManager().fullscreenElement());
+    Ref document = treeScope.documentScope();
+    RefPtr documentFullscreen = document->fullscreenIfExists();
+    if (!documentFullscreen)
+        return nullptr;
+    return treeScope.ancestorElementInThisScope(documentFullscreen->protectedFullscreenElement().get());
 }
 
 } // namespace WebCore

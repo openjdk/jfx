@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "SpellingCorrectionCommand.h"
 
 #include "AlternativeTextController.h"
+#include "BoundaryPointInlines.h"
 #include "DataTransfer.h"
 #include "Document.h"
 #include "DocumentFragment.h"
@@ -41,17 +42,17 @@
 namespace WebCore {
 
 #if USE(AUTOCORRECTION_PANEL)
-// On Mac OS X, we use this command to keep track of user undoing a correction for the first time.
+// On macOS, we use this command to keep track of user undoing a correction for the first time.
 // This information is needed by spell checking service to update user specific data.
 class SpellingCorrectionRecordUndoCommand : public SimpleEditCommand {
 public:
-    static Ref<SpellingCorrectionRecordUndoCommand> create(Document& document, const String& corrected, const String& correction)
+    static Ref<SpellingCorrectionRecordUndoCommand> create(Ref<Document>&& document, const String& corrected, const String& correction)
     {
-        return adoptRef(*new SpellingCorrectionRecordUndoCommand(document, corrected, correction));
+        return adoptRef(*new SpellingCorrectionRecordUndoCommand(WTF::move(document), corrected, correction));
     }
 private:
-    SpellingCorrectionRecordUndoCommand(Document& document, const String& corrected, const String& correction)
-        : SimpleEditCommand(document)
+    SpellingCorrectionRecordUndoCommand(Ref<Document>&& document, const String& corrected, const String& correction)
+        : SimpleEditCommand(WTF::move(document))
         , m_corrected(corrected)
         , m_correction(correction)
         , m_hasBeenUndone(false)
@@ -65,14 +66,14 @@ private:
     void doUnapply() override
     {
         if (!m_hasBeenUndone) {
-            document().editor().unappliedSpellCorrection(startingSelection(), m_corrected, m_correction);
+            document().protectedEditor()->unappliedSpellCorrection(startingSelection(), m_corrected, m_correction);
             m_hasBeenUndone = true;
         }
 
     }
 
 #ifndef NDEBUG
-    void getNodesInCommand(HashSet<Ref<Node>>&) override
+    void getNodesInCommand(NodeSet&) override
     {
     }
 #endif
@@ -108,15 +109,16 @@ void SpellingCorrectionCommand::doApply()
     if (!m_corrected.length())
         return;
 
-    if (!document().selection().shouldChangeSelection(m_selectionToBeCorrected))
+    Ref document = this->document();
+    if (!document->selection().shouldChangeSelection(m_selectionToBeCorrected))
         return;
 
     applyCommandToComposite(SetSelectionCommand::create(m_selectionToBeCorrected, FrameSelection::defaultSetSelectionOptions() | FrameSelection::SetSelectionOption::SpellCorrectionTriggered));
 #if USE(AUTOCORRECTION_PANEL)
-    applyCommandToComposite(SpellingCorrectionRecordUndoCommand::create(document(), m_corrected, m_correction));
+    applyCommandToComposite(SpellingCorrectionRecordUndoCommand::create(document.copyRef(), m_corrected, m_correction));
 #endif
 
-    applyCommandToComposite(ReplaceSelectionCommand::create(document(), WTFMove(m_correctionFragment), ReplaceSelectionCommand::MatchStyle, EditAction::Paste));
+    applyCommandToComposite(ReplaceSelectionCommand::create(WTF::move(document), protectedCorrectionFragment(), ReplaceSelectionCommand::MatchStyle, EditAction::Paste));
 }
 
 String SpellingCorrectionCommand::inputEventData() const
@@ -127,7 +129,7 @@ String SpellingCorrectionCommand::inputEventData() const
     return CompositeEditCommand::inputEventData();
 }
 
-Vector<RefPtr<StaticRange>> SpellingCorrectionCommand::targetRanges() const
+Vector<Ref<StaticRange>> SpellingCorrectionCommand::targetRanges() const
 {
     return { 1, StaticRange::create(m_rangeToBeCorrected) };
 }
@@ -135,7 +137,7 @@ Vector<RefPtr<StaticRange>> SpellingCorrectionCommand::targetRanges() const
 RefPtr<DataTransfer> SpellingCorrectionCommand::inputEventDataTransfer() const
 {
     if (!isEditingTextAreaOrTextInput())
-        return DataTransfer::createForInputEvent(m_correction, serializeFragment(*m_correctionFragment, SerializedNodes::SubtreeIncludingNode));
+        return DataTransfer::createForInputEvent(m_correction, serializeFragment(*protectedCorrectionFragment(), SerializedNodes::SubtreeIncludingNode));
 
     return CompositeEditCommand::inputEventDataTransfer();
 }

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2024-2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,27 +25,27 @@
  */
 
 #include "config.h"
-
 #include "CSSFontVariationValue.h"
-#include <wtf/text/StringConcatenateNumbers.h>
+
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
-CSSFontVariationValue::CSSFontVariationValue(FontTag tag, float value)
-    : CSSValue(FontVariationClass)
+CSSFontVariationValue::CSSFontVariationValue(FontTag tag, Ref<CSSValue>&& value)
+    : CSSValue(ClassType::FontVariation)
     , m_tag(tag)
-    , m_value(value)
+    , m_value(WTF::move(value))
 {
 }
 
-String CSSFontVariationValue::customCSSText() const
+String CSSFontVariationValue::customCSSText(const CSS::SerializationContext& context) const
 {
-    return makeString('"', m_tag[0], m_tag[1], m_tag[2], m_tag[3], "\" ", m_value);
+    return makeString('"', m_tag[0], m_tag[1], m_tag[2], m_tag[3], "\" "_s, m_value->cssText(context));
 }
 
 bool CSSFontVariationValue::equals(const CSSFontVariationValue& other) const
 {
-    return m_tag == other.m_tag && m_value == other.m_value;
+    return m_tag == other.m_tag && compareCSSValue(m_value, other.m_value);
 }
 
 }

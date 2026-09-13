@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,27 +25,30 @@
 
 package test.javafx.scene.control;
 
-import com.sun.javafx.tk.Toolkit;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.getListenerCount;
+import java.lang.ref.WeakReference;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Scene;
-import javafx.scene.control.*;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Menu;
+import javafx.scene.control.MenuBar;
+import javafx.scene.control.MenuButton;
+import javafx.scene.control.MenuItem;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
-
-import org.junit.Ignore;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.binding.ExpressionHelperUtility;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.util.memory.JMemoryBuddy;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
-import org.junit.Test;
-
-import java.lang.ref.WeakReference;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertFalse;
 public class ControlAcceleratorSupportTest {
 
     @Test
@@ -232,7 +235,7 @@ public class ControlAcceleratorSupportTest {
         menuItem.setOnAction(e -> tab.setText("Tab Renamed"));
     }
 
-    @Ignore("JDK-8283449")
+    @Disabled("JDK-8283449")
     @Test
     public void testTabWithContextMenuReferencingTabDoesntCauseMemoryLeak() {
         // JDK-8283449 Tab with context menu that references tab gets leaked
@@ -301,7 +304,7 @@ public class ControlAcceleratorSupportTest {
         sl2.dispose();
     }
 
-    @Ignore // Only the first tab's context menu gets a scene change listener right now
+    @Disabled // Only the first tab's context menu gets a scene change listener right now
     @Test
     public void testMultipleTabContextMenuGetsNewListChangeListenersWhenSceneChange() {
         Tab t = new Tab();
@@ -392,7 +395,7 @@ public class ControlAcceleratorSupportTest {
         JMemoryBuddy.assertCollectable(scene1);
     }
 
-    @Ignore("JDK-8268374")
+    @Disabled("JDK-8268374")
     @Test
     public void testContextMenuOnTabSetToNullWhenNotInSceneRemovesListeners() {
         // JDK-8268374
@@ -417,7 +420,7 @@ public class ControlAcceleratorSupportTest {
         sl1.dispose();
     }
 
-    @Ignore("JDK-8268374")
+    @Disabled("JDK-8268374")
     @Test
     public void testContextMenuOnTabSetToNullAfterTabIsRemoved() {
         // JDK-8268374

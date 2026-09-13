@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,8 +28,11 @@
 
 #include "CodeBlock.h"
 #include "InlineCallFrame.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CodeOrigin::OutOfLineCodeOrigin);
 
 unsigned CodeOrigin::inlineDepth() const
 {
@@ -132,7 +135,7 @@ int CodeOrigin::stackOffset() const
     return inlineCallFrame->stackOffset;
 }
 
-void CodeOrigin::dump(PrintStream& out) const
+void CodeOrigin::dump(PrintStream& out, bool inIonGraph) const
 {
     if (!isSet()) {
         out.print("<none>");
@@ -149,8 +152,7 @@ void CodeOrigin::dump(PrintStream& out) const
             if (frame->isClosureCall)
                 out.print("(closure) ");
         }
-
-        out.print(stack[i].bytecodeIndex());
+        stack[i].bytecodeIndex().dump(out, inIonGraph);
     }
 }
 

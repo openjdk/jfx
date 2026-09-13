@@ -26,8 +26,6 @@
 #include "config.h"
 #include "ServiceWorkerProvider.h"
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "Document.h"
 #include "FrameLoader.h"
 #include "LegacySchemeRegistry.h"
@@ -56,6 +54,9 @@ void ServiceWorkerProvider::setSharedProvider(ServiceWorkerProvider& newProvider
     sharedProvider = &newProvider;
 }
 
-} // namespace WebCore
+Ref<SWClientConnection> ServiceWorkerProvider::protectedServiceWorkerConnection()
+{
+    return serviceWorkerConnection();
+}
 
-#endif // ENABLE(SERVICE_WORKER)
+} // namespace WebCore

@@ -29,13 +29,14 @@
 
 #pragma once
 
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
 template <typename T>
 class ShapeInterval {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(ShapeInterval);
 public:
     ShapeInterval()
         : m_x1(-1)
@@ -90,7 +91,7 @@ public:
             set(std::min<T>(x1(), interval.x1()), std::max<T>(x2(), interval.x2()));
     }
 
-    bool operator==(const ShapeInterval<T>& other) const { return x1() == other.x1() && x2() == other.x2(); }
+    friend bool operator==(const ShapeInterval<T>&, const ShapeInterval<T>&) = default;
 
 private:
     T m_x1;

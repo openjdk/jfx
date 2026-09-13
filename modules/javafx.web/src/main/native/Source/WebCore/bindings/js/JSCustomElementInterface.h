@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2013 Google Inc. All rights reserved.
- * Copyright (C) 2015, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -45,6 +45,7 @@ class PrivateName;
 
 namespace WebCore {
 
+class CustomElementRegistry;
 class DOMWrapperWorld;
 class Document;
 class Element;
@@ -60,8 +61,12 @@ public:
         return adoptRef(*new JSCustomElementInterface(name, callback, globalObject));
     }
 
-    Ref<Element> constructElementWithFallback(Document&, const AtomString&, ParserConstructElementWithEmptyStack = ParserConstructElementWithEmptyStack::No);
-    Ref<Element> constructElementWithFallback(Document&, const QualifiedName&);
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
+    Ref<Element> constructElementWithFallback(Document&, CustomElementRegistry&, const AtomString&, ParserConstructElementWithEmptyStack = ParserConstructElementWithEmptyStack::No);
+    Ref<Element> constructElementWithFallback(Document&, CustomElementRegistry&, const QualifiedName&);
     Ref<HTMLElement> createElement(Document&);
 
     void upgradeElement(Element&);
@@ -107,7 +112,7 @@ public:
     bool hasFormStateRestoreCallback() const { return !!m_formStateRestoreCallback; }
     void invokeFormStateRestoreCallback(Element&, CustomElementFormValue state);
 
-    ScriptExecutionContext* scriptExecutionContext() const { return ContextDestructionObserver::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const;
     JSC::JSObject* constructor() { return m_constructor.get(); }
 
     const QualifiedName& name() const { return m_name; }
@@ -122,9 +127,10 @@ public:
 private:
     JSCustomElementInterface(const QualifiedName&, JSC::JSObject* callback, JSDOMGlobalObject*);
 
-    RefPtr<Element> tryToConstructCustomElement(Document&, const AtomString&, ParserConstructElementWithEmptyStack);
+    RefPtr<Element> tryToConstructCustomElement(Document&, CustomElementRegistry&, const AtomString&, ParserConstructElementWithEmptyStack);
 
-    void invokeCallback(Element&, JSC::JSObject* callback, const Function<void(JSC::JSGlobalObject*, JSDOMGlobalObject*, JSC::MarkedArgumentBuffer&)>& addArguments = [](JSC::JSGlobalObject*, JSDOMGlobalObject*, JSC::MarkedArgumentBuffer&) { });
+    template<typename Function>
+    void invokeCallback(Element&, JSC::JSObject* callback, NOESCAPE const Function& addArguments);
 
     QualifiedName m_name;
     JSC::Weak<JSC::JSObject> m_constructor;
@@ -136,7 +142,7 @@ private:
     JSC::Weak<JSC::JSObject> m_formResetCallback;
     JSC::Weak<JSC::JSObject> m_formDisabledCallback;
     JSC::Weak<JSC::JSObject> m_formStateRestoreCallback;
-    Ref<DOMWrapperWorld> m_isolatedWorld;
+    const Ref<DOMWrapperWorld> m_isolatedWorld;
     Vector<RefPtr<Element>, 1> m_constructionStack;
     MemoryCompactRobinHoodHashSet<AtomString> m_observedAttributes;
     bool m_isElementInternalsDisabled : 1;

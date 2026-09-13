@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, Google Inc. All rights reserved.
+ * Copyright (c) 2010 Google Inc. All rights reserved.
  * Copyright (c) 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,12 +29,35 @@
 
 #if ENABLE(WEBGL)
 
-#include "GraphicsContextGLAttributes.h"
+#include <WebCore/GraphicsContextGLAttributes.h>
 
 namespace WebCore {
 
+enum class WebGLVersion : uint8_t {
+    WebGL1,
+    WebGL2
+};
+
 using WebGLPowerPreference = GraphicsContextGLPowerPreference;
-using WebGLContextAttributes = GraphicsContextGLAttributes;
+
+using WebGLContextSimulatedCreationFailure = GraphicsContextGLSimulatedCreationFailure;
+
+struct WebGLContextAttributes {
+    bool alpha { true };
+    bool depth { true };
+    bool stencil { false };
+    bool antialias { true };
+    bool premultipliedAlpha { true };
+    bool preserveDrawingBuffer { false };
+    using PowerPreference = WebGLPowerPreference;
+    PowerPreference powerPreference { PowerPreference::Default };
+    bool failIfMajorPerformanceCaveat { false };
+#if ENABLE(WEBXR)
+    bool xrCompatible { false };
+#endif
+    using SimulatedCreationFailure = WebGLContextSimulatedCreationFailure;
+    SimulatedCreationFailure failContextCreationForTesting { SimulatedCreationFailure::None };
+};
 
 } // namespace WebCore
 

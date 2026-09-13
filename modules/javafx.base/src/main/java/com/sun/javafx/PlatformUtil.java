@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package com.sun.javafx;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
@@ -38,93 +36,37 @@ import java.util.Properties;
 
 public class PlatformUtil {
 
-    // NOTE: since this class can be initialized by application code in some
-    // cases, we must encapsulate all calls to System.getProperty("...") in
-    // a doPrivileged block except for standard JVM properties such as
-    // os.name, os.version, os.arch, java.vm.name, etc.
-
     private static final String os = System.getProperty("os.name");
-    private static final String version = System.getProperty("os.version");
     private static final boolean embedded;
     private static final String embeddedType;
     private static final boolean useEGL;
-    private static final boolean doEGLCompositing;
     // a property used to denote a non-default impl for this host
     private static String javafxPlatform;
 
     static {
-        @SuppressWarnings("removal")
-        String str1 = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("javafx.platform"));
-        javafxPlatform = str1;
+        javafxPlatform = System.getProperty("javafx.platform");
 
         loadProperties();
 
-        @SuppressWarnings("removal")
-        boolean bool1 = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("com.sun.javafx.isEmbedded"));
-        embedded = bool1;
-
-        @SuppressWarnings("removal")
-        String str2 = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("glass.platform", "").toLowerCase(Locale.ROOT));
-        embeddedType = str2;
-
-        @SuppressWarnings("removal")
-        boolean bool2 = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("use.egl"));
-        useEGL = bool2;
-
-        if (useEGL) {
-            @SuppressWarnings("removal")
-            boolean bool3 = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("doNativeComposite"));
-            doEGLCompositing = bool3;
-        } else
-            doEGLCompositing = false;
+        embedded = Boolean.getBoolean("com.sun.javafx.isEmbedded");
+        embeddedType = System.getProperty("glass.platform", "").toLowerCase(Locale.ROOT);
+        useEGL = Boolean.getBoolean("use.egl");
     }
 
     private static final boolean ANDROID = "android".equals(javafxPlatform) || "Dalvik".equals(System.getProperty("java.vm.name"));
     private static final boolean WINDOWS = os.startsWith("Windows");
-    private static final boolean WINDOWS_VISTA_OR_LATER = WINDOWS && versionNumberGreaterThanOrEqualTo(6.0f);
-    private static final boolean WINDOWS_7_OR_LATER = WINDOWS && versionNumberGreaterThanOrEqualTo(6.1f);
     private static final boolean MAC = os.startsWith("Mac");
     private static final boolean LINUX = os.startsWith("Linux") && !ANDROID;
     private static final boolean SOLARIS = os.startsWith("SunOS");
     private static final boolean IOS = os.startsWith("iOS");
     private static final boolean STATIC_BUILD = "Substrate VM".equals(System.getProperty("java.vm.name"));
-
-    /**
-     * Utility method used to determine whether the version number as
-     * reported by system properties is greater than or equal to a given
-     * value.
-     *
-     * @param value The value to test against.
-     * @return false if the version number cannot be parsed as a float,
-     *         otherwise the comparison against value.
-     */
-    private static boolean versionNumberGreaterThanOrEqualTo(float value) {
-        try {
-            return Float.parseFloat(version) >= value;
-        } catch (Exception e) {
-            return false;
-        }
-    }
+    private static final boolean HEADLESS = "headless".equals(embeddedType);
 
     /**
      * Returns true if the operating system is a form of Windows.
      */
     public static boolean isWindows(){
         return WINDOWS;
-    }
-
-    /**
-     * Returns true if the operating system is at least Windows Vista(v6.0).
-     */
-    public static boolean isWinVistaOrLater(){
-        return WINDOWS_VISTA_OR_LATER;
-    }
-
-    /**
-     * Returns true if the operating system is at least Windows 7(v6.1).
-     */
-    public static boolean isWin7OrLater(){
-        return WINDOWS_7_OR_LATER;
     }
 
     /**
@@ -143,27 +85,6 @@ public class PlatformUtil {
 
     public static boolean useEGL() {
         return useEGL;
-    }
-
-    public static boolean useEGLWindowComposition() {
-        return doEGLCompositing;
-    }
-
-    public static boolean useGLES2() {
-        @SuppressWarnings("removal")
-        String useGles2 =
-                AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("use.gles2"));
-        if ("true".equals(useGles2))
-            return true;
-        else
-            return false;
-    }
-
-    /**
-     * Returns true if the operating system is a form of Unix, including Linux.
-     */
-    public static boolean isSolaris(){
-        return SOLARIS;
     }
 
     /**
@@ -188,10 +109,21 @@ public class PlatformUtil {
     }
 
     /**
+     * Returns true if the Headless glass platform is selected
+     */
+    public static boolean isHeadless(){
+        return HEADLESS;
+    }
+
+    /**
      * Returns true if the operating system is iOS
      */
     public static boolean isIOS(){
         return IOS;
+    }
+
+    public static boolean isAndroid() {
+        return ANDROID;
     }
 
     /**
@@ -260,7 +192,6 @@ public class PlatformUtil {
         }
     }
 
-    @SuppressWarnings("removal")
     private static void loadProperties() {
         final String vmname = System.getProperty("java.vm.name");
         final String arch = System.getProperty("os.arch");
@@ -270,37 +201,30 @@ public class PlatformUtil {
                 (vmname != null && vmname.indexOf("Embedded") > 0))) {
             return;
         }
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            final File rtDir = getRTDir();
-            final String propertyFilename = "javafx.platform.properties";
-            File rtProperties = new File(rtDir, propertyFilename);
-            // First look for javafx.platform.properties in the JavaFX runtime
-            // Then in the installation directory of the JRE
-            if (rtProperties.exists()) {
-                loadPropertiesFromFile(rtProperties);
-                return null;
-            }
-            String javaHome = System.getProperty("java.home");
-            File javaHomeProperties = new File(javaHome,
-                                               "lib" + File.separator
-                                               + propertyFilename);
-            if (javaHomeProperties.exists()) {
-                loadPropertiesFromFile(javaHomeProperties);
-                return null;
-            }
 
-            String javafxRuntimePath = System.getProperty("javafx.runtime.path");
-            File javafxRuntimePathProperties = new File(javafxRuntimePath,
-                                                     File.separator + propertyFilename);
-            if (javafxRuntimePathProperties.exists()) {
-               loadPropertiesFromFile(javafxRuntimePathProperties);
-               return null;
-            }
-            return null;
-        });
-    }
+        final File rtDir = getRTDir();
+        final String propertyFilename = "javafx.platform.properties";
+        File rtProperties = new File(rtDir, propertyFilename);
+        // First look for javafx.platform.properties in the JavaFX runtime
+        // Then in the installation directory of the JRE
+        if (rtProperties.exists()) {
+            loadPropertiesFromFile(rtProperties);
+            return;
+        }
+        String javaHome = System.getProperty("java.home");
+        File javaHomeProperties = new File(javaHome,
+                                           "lib" + File.separator
+                                           + propertyFilename);
+        if (javaHomeProperties.exists()) {
+            loadPropertiesFromFile(javaHomeProperties);
+            return;
+        }
 
-    public static boolean isAndroid() {
-       return ANDROID;
+        String javafxRuntimePath = System.getProperty("javafx.runtime.path");
+        File javafxRuntimePathProperties = new File(javafxRuntimePath,
+                                                 File.separator + propertyFilename);
+        if (javafxRuntimePathProperties.exists()) {
+           loadPropertiesFromFile(javafxRuntimePathProperties);
+        }
     }
 }

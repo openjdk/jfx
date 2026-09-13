@@ -26,27 +26,38 @@
 #include "config.h"
 #include "CSSFontStyleWithAngleValue.h"
 
+#include "CSSPrimitiveNumericTypes+CSSValueVisitation.h"
+#include "CSSPrimitiveNumericTypes+Serialization.h"
+#include <wtf/text/MakeString.h>
+
 namespace WebCore {
 
-CSSFontStyleWithAngleValue::CSSFontStyleWithAngleValue(Ref<CSSPrimitiveValue>&& obliqueAngle)
-    : CSSValue(FontStyleWithAngleClass)
-    , m_obliqueAngle(WTFMove(obliqueAngle))
+CSSFontStyleWithAngleValue::CSSFontStyleWithAngleValue(ObliqueAngle&& obliqueAngle)
+    : CSSValue(ClassType::FontStyleWithAngle)
+    , m_obliqueAngle(WTF::move(obliqueAngle))
 {
 }
 
-Ref<CSSFontStyleWithAngleValue> CSSFontStyleWithAngleValue::create(Ref<CSSPrimitiveValue>&& obliqueAngle)
+Ref<CSSFontStyleWithAngleValue> CSSFontStyleWithAngleValue::create(ObliqueAngle&& obliqueAngle)
 {
-    return adoptRef(*new CSSFontStyleWithAngleValue(WTFMove(obliqueAngle)));
+    return adoptRef(*new CSSFontStyleWithAngleValue(WTF::move(obliqueAngle)));
 }
 
-String CSSFontStyleWithAngleValue::customCSSText() const
+String CSSFontStyleWithAngleValue::customCSSText(const CSS::SerializationContext& context) const
 {
-    return makeString("oblique ", m_obliqueAngle->cssText());
+    if (m_obliqueAngle.isKnownZero())
+        return nameLiteralForSerialization(CSSValueNormal);
+    return makeString(nameLiteralForSerialization(CSSValueOblique), ' ', CSS::serializationForCSS(context, m_obliqueAngle));
 }
 
 bool CSSFontStyleWithAngleValue::equals(const CSSFontStyleWithAngleValue& other) const
 {
-    return m_obliqueAngle.get() == other.m_obliqueAngle.get();
+    return m_obliqueAngle == other.m_obliqueAngle;
 }
 
+IterationStatus CSSFontStyleWithAngleValue::customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
+{
+    return CSS::visitCSSValueChildren(func, m_obliqueAngle);
 }
+
+} // namespace WebCore

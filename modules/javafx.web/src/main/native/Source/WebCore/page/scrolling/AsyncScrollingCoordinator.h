@@ -25,13 +25,17 @@
 
 #pragma once
 
-#include "pal/HysteresisActivity.h"
+#include <pal/HysteresisActivity.h>
+#include <wtf/Platform.h>
 #if ENABLE(ASYNC_SCROLLING)
 
-#include "ScrollingCoordinator.h"
-#include "ScrollingTree.h"
-#include "Timer.h"
+#include <WebCore/ScrollingCoordinator.h>
+#include <WebCore/ScrollingStateNode.h>
+#include <WebCore/ScrollingTree.h>
+#include <WebCore/Timer.h>
 #include <wtf/RefPtr.h>
+#include <wtf/SmallMap.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -44,6 +48,7 @@ class ScrollingStateTree;
 // ScrollingCoordinator subclass that maintains a ScrollingStateTree and a ScrollingTree,
 // allowing asynchronous scrolling (in another thread or process).
 class AsyncScrollingCoordinator : public ScrollingCoordinator {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(AsyncScrollingCoordinator, WEBCORE_EXPORT);
 public:
     static Ref<AsyncScrollingCoordinator> create(Page*);
     WEBCORE_EXPORT virtual ~AsyncScrollingCoordinator();
@@ -55,7 +60,7 @@ public:
 
     void applyPendingScrollUpdates();
 
-    WEBCORE_EXPORT void applyScrollUpdate(ScrollUpdate&&, ScrollType = ScrollType::User);
+    WEBCORE_EXPORT void applyScrollUpdate(ScrollUpdate&&, ScrollType = ScrollType::User) override;
 
 #if PLATFORM(COCOA)
     WEBCORE_EXPORT void handleWheelEventPhase(ScrollingNodeID, PlatformWheelEventPhase) final;
@@ -73,41 +78,58 @@ public:
 
     virtual void hasNodeWithAnimatedScrollChanged(bool) { };
 
+    WEBCORE_EXPORT void setScrollbarColor(ScrollableArea&, std::optional<ScrollbarColor>) override;
+    WEBCORE_EXPORT void setScrollbarLayoutDirection(ScrollableArea&, UserInterfaceLayoutDirection) override;
     WEBCORE_EXPORT void setMouseIsOverContentArea(ScrollableArea&, bool) override;
     WEBCORE_EXPORT void setMouseMovedInContentArea(ScrollableArea&) override;
+    WEBCORE_EXPORT void setLayerHostingContextIdentifierForFrameHostingNode(ScrollingNodeID, std::optional<LayerHostingContextIdentifier>) override;
+#if USE(COORDINATED_GRAPHICS_ASYNC_SCROLLBAR)
+    void setScrollbarOpacity(ScrollableArea&) override;
+#endif
+    LocalFrameView* frameViewForScrollingNode(LocalFrame& localMainFrame, std::optional<ScrollingNodeID>) const;
+
+    WEBCORE_EXPORT ScrollingStateTree& ensureScrollingStateTreeForRootFrameID(FrameIdentifier);
+    WEBCORE_EXPORT CheckedRef<ScrollingStateTree> ensureCheckedScrollingStateTreeForRootFrameID(FrameIdentifier);
+    const ScrollingStateTree* existingScrollingStateTreeForRootFrameID(std::optional<FrameIdentifier>) const;
+    ScrollingStateTree* stateTreeForNodeID(std::optional<ScrollingNodeID>) const;
+    std::unique_ptr<ScrollingStateTree> commitTreeStateForRootFrameID(FrameIdentifier, LayerRepresentation::Type);
+
+    WEBCORE_EXPORT void scrollableAreaWillBeDetached(ScrollableArea&) override;
 
 protected:
     WEBCORE_EXPORT AsyncScrollingCoordinator(Page*);
 
-    void setScrollingTree(Ref<ScrollingTree>&& scrollingTree) { m_scrollingTree = WTFMove(scrollingTree); }
+    void setScrollingTree(Ref<ScrollingTree>&& scrollingTree) { m_scrollingTree = WTF::move(scrollingTree); }
+    const SmallMap<FrameIdentifier, UniqueRef<ScrollingStateTree>>& scrollingStateTrees() const { return m_scrollingStateTrees; }
 
-    ScrollingStateTree* scrollingStateTree() { return m_scrollingStateTree.get(); }
-
-    RefPtr<ScrollingTree> releaseScrollingTree() { return WTFMove(m_scrollingTree); }
+    RefPtr<ScrollingTree> releaseScrollingTree() { return WTF::move(m_scrollingTree); }
 
     WEBCORE_EXPORT String scrollingStateTreeAsText(OptionSet<ScrollingStateTreeAsTextBehavior> = { }) const override;
     WEBCORE_EXPORT String scrollingTreeAsText(OptionSet<ScrollingStateTreeAsTextBehavior> = { }) const override;
     WEBCORE_EXPORT bool haveScrollingTree() const override;
 
-    WEBCORE_EXPORT void willCommitTree() override;
+    WEBCORE_EXPORT void willCommitTree(FrameIdentifier rootFrameID) override;
     void synchronizeStateFromScrollingTree();
     void scheduleRenderingUpdate();
 
     bool eventTrackingRegionsDirty() const { return m_eventTrackingRegionsDirty; }
-    WEBCORE_EXPORT LocalFrameView* frameViewForScrollingNode(ScrollingNodeID) const;
+    WEBCORE_EXPORT LocalFrameView* frameViewForScrollingNode(std::optional<ScrollingNodeID>) const;
+    RefPtr<ScrollingStateNode> stateNodeForNodeID(std::optional<ScrollingNodeID>) const;
+    RefPtr<ScrollingStateNode> stateNodeForScrollableArea(const ScrollableArea&) const;
 
 private:
     bool isAsyncScrollingCoordinator() const override { return true; }
 
     bool hasVisibleSlowRepaintViewportConstrainedObjects(const LocalFrameView&) const override { return false; }
 
-    WEBCORE_EXPORT ScrollingNodeID scrollableContainerNodeID(const RenderObject&) const override;
+    WEBCORE_EXPORT std::optional<ScrollingNodeID> scrollableContainerNodeID(const RenderObject&) const override;
 
     WEBCORE_EXPORT void frameViewLayoutUpdated(LocalFrameView&) override;
     WEBCORE_EXPORT void frameViewRootLayerDidChange(LocalFrameView&) override;
     WEBCORE_EXPORT void frameViewVisualViewportChanged(LocalFrameView&) override;
     WEBCORE_EXPORT void frameViewEventTrackingRegionsChanged(LocalFrameView&) override;
     WEBCORE_EXPORT void frameViewWillBeDetached(LocalFrameView&) override;
+    WEBCORE_EXPORT void rootFrameWasRemoved(FrameIdentifier rootFrameID) final;
 
     WEBCORE_EXPORT bool requestStartKeyboardScrollAnimation(ScrollableArea&, const KeyboardScroll&) final;
     WEBCORE_EXPORT bool requestStopKeyboardScrollAnimation(ScrollableArea&, bool) final;
@@ -117,19 +139,19 @@ private:
 
     WEBCORE_EXPORT void applyScrollingTreeLayerPositions() override;
 
-    WEBCORE_EXPORT ScrollingNodeID createNode(ScrollingNodeType, ScrollingNodeID newNodeID) override;
-    WEBCORE_EXPORT ScrollingNodeID insertNode(ScrollingNodeType, ScrollingNodeID newNodeID, ScrollingNodeID parentID, size_t childIndex) override;
+    WEBCORE_EXPORT std::optional<ScrollingNodeID> createNode(FrameIdentifier rootFrameID, ScrollingNodeType, ScrollingNodeID newNodeID) override;
+    WEBCORE_EXPORT std::optional<ScrollingNodeID> insertNode(FrameIdentifier rootFrameID, ScrollingNodeType, ScrollingNodeID newNodeID, std::optional<ScrollingNodeID> parentID, size_t childIndex) override;
     WEBCORE_EXPORT void unparentNode(ScrollingNodeID) override;
-    WEBCORE_EXPORT void unparentChildrenAndDestroyNode(ScrollingNodeID) override;
+    WEBCORE_EXPORT void unparentChildrenAndDestroyNode(std::optional<ScrollingNodeID>) override;
     WEBCORE_EXPORT void detachAndDestroySubtree(ScrollingNodeID) override;
-    WEBCORE_EXPORT void clearAllNodes() override;
+    WEBCORE_EXPORT void clearAllNodes(FrameIdentifier rootFrameID) override;
 
-    WEBCORE_EXPORT ScrollingNodeID parentOfNode(ScrollingNodeID) const override;
+    WEBCORE_EXPORT std::optional<ScrollingNodeID> parentOfNode(ScrollingNodeID) const override;
     WEBCORE_EXPORT Vector<ScrollingNodeID> childrenOfNode(ScrollingNodeID) const override;
 
     WEBCORE_EXPORT void setNodeLayers(ScrollingNodeID, const NodeLayers&) override;
 
-    WEBCORE_EXPORT void setScrollingNodeScrollableAreaGeometry(ScrollingNodeID, ScrollableArea&) override;
+    WEBCORE_EXPORT void setScrollingNodeScrollableAreaGeometry(std::optional<ScrollingNodeID>, ScrollableArea&) override;
     WEBCORE_EXPORT void setFrameScrollingNodeState(ScrollingNodeID, const LocalFrameView&) override;
     WEBCORE_EXPORT void setViewportConstraintedNodeConstraints(ScrollingNodeID, const ViewportConstraints&) override;
     WEBCORE_EXPORT void setPositionedNodeConstraints(ScrollingNodeID, const AbsolutePositionConstraints&) override;
@@ -140,29 +162,27 @@ private:
 
     WEBCORE_EXPORT void scrollBySimulatingWheelEventForTesting(ScrollingNodeID, FloatSize) final;
 
-    WEBCORE_EXPORT bool isUserScrollInProgress(ScrollingNodeID) const override;
-    WEBCORE_EXPORT bool isRubberBandInProgress(ScrollingNodeID) const override;
-
-    WEBCORE_EXPORT bool isScrollSnapInProgress(ScrollingNodeID) const override;
+    WEBCORE_EXPORT bool isUserScrollInProgress(std::optional<ScrollingNodeID>) const override;
+    WEBCORE_EXPORT bool isRubberBandInProgress(std::optional<ScrollingNodeID>) const override;
+    WEBCORE_EXPORT bool isScrollSnapInProgress(std::optional<ScrollingNodeID>) const override;
 
     WEBCORE_EXPORT void setScrollPinningBehavior(ScrollPinningBehavior) override;
 
-    WEBCORE_EXPORT void reconcileViewportConstrainedLayerPositions(ScrollingNodeID, const LayoutRect& viewportRect, ScrollingLayerPositionAction) override;
+    WEBCORE_EXPORT void reconcileViewportConstrainedLayerPositions(std::optional<ScrollingNodeID>, const LayoutRect& viewportRect, ScrollingLayerPositionAction) override;
     WEBCORE_EXPORT void scrollableAreaScrollbarLayerDidChange(ScrollableArea&, ScrollbarOrientation) override;
 
-    WEBCORE_EXPORT void setSynchronousScrollingReasons(ScrollingNodeID, OptionSet<SynchronousScrollingReason>) final;
-    WEBCORE_EXPORT OptionSet<SynchronousScrollingReason> synchronousScrollingReasons(ScrollingNodeID) const final;
+    WEBCORE_EXPORT void setSynchronousScrollingReasons(std::optional<ScrollingNodeID>, OptionSet<SynchronousScrollingReason>) final;
+    WEBCORE_EXPORT OptionSet<SynchronousScrollingReason> synchronousScrollingReasons(std::optional<ScrollingNodeID>) const final;
 
     WEBCORE_EXPORT void windowScreenDidChange(PlatformDisplayID, std::optional<FramesPerSecond> nominalFramesPerSecond) final;
 
-    WEBCORE_EXPORT bool hasSubscrollers() const final;
+    WEBCORE_EXPORT bool hasSubscrollers(FrameIdentifier) const final;
 
     virtual void scheduleTreeStateCommit() = 0;
 
     void ensureRootStateNodeForFrameView(LocalFrameView&);
 
-    void setEventTrackingRegionsDirty();
-    void updateEventTrackingRegions();
+    void updateEventTrackingRegions(FrameIdentifier rootFrameID);
 
     void applyScrollPositionUpdate(ScrollUpdate&&, ScrollType);
     void updateScrollPositionAfterAsyncScroll(ScrollingNodeID, const FloatPoint&, std::optional<FloatPoint> layoutViewportOrigin, ScrollingLayerPositionAction, ScrollType);
@@ -170,13 +190,19 @@ private:
     void animatedScrollDidEndForNode(ScrollingNodeID);
     void wheelEventScrollWillStartForNode(ScrollingNodeID);
     void wheelEventScrollDidEndForNode(ScrollingNodeID);
+    void notifyScrollableAreasForScrollEnd(ScrollingNodeID);
 
+#if USE(COORDINATED_GRAPHICS_ASYNC_SCROLLBAR)
+    void setHoveredAndPressedScrollbarParts(ScrollableArea&) override;
+#else
     WEBCORE_EXPORT void setMouseIsOverScrollbar(Scrollbar*, bool isOverScrollbar) override;
+#endif
     WEBCORE_EXPORT void setScrollbarEnabled(Scrollbar&) override;
+    WEBCORE_EXPORT void setScrollbarWidth(ScrollableArea&, ScrollbarWidth) override;
 
     void hysterisisTimerFired(PAL::HysteresisState);
 
-    std::unique_ptr<ScrollingStateTree> m_scrollingStateTree;
+    SmallMap<FrameIdentifier, UniqueRef<ScrollingStateTree>> m_scrollingStateTrees;
     RefPtr<ScrollingTree> m_scrollingTree;
 
     bool m_eventTrackingRegionsDirty { false };
@@ -189,8 +215,8 @@ class LayerTreeHitTestLocker {
 public:
     LayerTreeHitTestLocker(ScrollingCoordinator* scrollingCoordinator)
     {
-        if (is<AsyncScrollingCoordinator>(scrollingCoordinator)) {
-            m_scrollingTree = downcast<AsyncScrollingCoordinator>(*scrollingCoordinator).scrollingTree();
+        if (auto* asyncScrollingCoordinator = dynamicDowncast<AsyncScrollingCoordinator>(scrollingCoordinator)) {
+            m_scrollingTree = asyncScrollingCoordinator->scrollingTree();
             if (m_scrollingTree)
                 m_scrollingTree->lockLayersForHitTesting();
         }

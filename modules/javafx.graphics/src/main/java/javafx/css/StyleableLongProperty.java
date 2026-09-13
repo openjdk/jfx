@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,15 @@
 
 package javafx.css;
 
+import com.sun.javafx.css.StyleablePropertyHelper;
+import com.sun.javafx.css.TransitionMediator;
+import com.sun.javafx.css.TransitionDefinition;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.Utils;
 import javafx.beans.property.LongPropertyBase;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.Node;
 
 /**
  * This class extends {@code LongPropertyBase} and provides a partial
@@ -44,6 +51,15 @@ import javafx.beans.value.ObservableValue;
  */
 public abstract class StyleableLongProperty
     extends LongPropertyBase implements StyleableProperty<Number> {
+
+    static {
+        StyleablePropertyHelper.setLongAccessor(new StyleablePropertyHelper.Accessor() {
+            @Override
+            public boolean equalsEndValue(StyleableProperty<?> property, Object value) {
+                return ((StyleableLongProperty)property).equalsEndValue(value);
+            }
+        });
+    }
 
     /**
      * The constructor of the {@code StyleableLongProperty}.
@@ -65,7 +81,23 @@ public abstract class StyleableLongProperty
     /** {@inheritDoc} */
     @Override
     public void applyStyle(StyleOrigin origin, Number v) {
-        setValue(v);
+        // If the value is applied for the first time, we don't start a transition.
+        TransitionDefinition transition = getBean() instanceof Node node && !NodeHelper.isInitialCssState(node) ?
+            NodeHelper.findTransitionDefinition(node, getCssMetaData()) : null;
+
+        long newValue = v != null ? v.longValue() : 0;
+
+        if (transition == null) {
+            set(newValue);
+        } else if (mediator == null || mediator.endValue != newValue) {
+            // We only start a new transition if the new target value is different from the target
+            // value of the existing transition. This scenario can sometimes happen when a CSS value
+            // is redundantly applied, which would cause unexpected animations if we allowed the new
+            // transition to interrupt the existing transition.
+            mediator = new TransitionMediatorImpl(get(), newValue);
+            mediator.run(transition, getCssMetaData().getProperty(), Toolkit.getToolkit().getPrimaryTimer().nanos());
+        }
+
         this.origin = origin;
     }
 
@@ -73,20 +105,79 @@ public abstract class StyleableLongProperty
     @Override
     public void bind(ObservableValue<? extends Number> observable) {
         super.bind(observable);
-        origin = StyleOrigin.USER;
+        onUserChange();
     }
 
     /** {@inheritDoc} */
     @Override
     public void set(long v) {
         super.set(v);
-        origin = StyleOrigin.USER;
+        onUserChange();
     }
 
     /** {@inheritDoc} */
     @Override
     public StyleOrigin getStyleOrigin() { return origin; }
 
-    private StyleOrigin origin = null;
+    private void onUserChange() {
+        origin = StyleOrigin.USER;
 
+        if (mediator != null) {
+            mediator.cancel();
+        }
+    }
+
+    private boolean equalsEndValue(Object value) {
+        if (!(value instanceof Long longValue)) {
+            return false;
+        }
+
+        long endValue = mediator != null ? mediator.endValue : get();
+        return longValue == endValue;
+    }
+
+    private StyleOrigin origin;
+    private TransitionMediatorImpl mediator;
+
+    private final class TransitionMediatorImpl extends TransitionMediator {
+        private final long startValue;
+        private final long endValue;
+        private long reversingAdjustedStartValue;
+
+        public TransitionMediatorImpl(long startValue, long endValue) {
+            this.startValue = startValue;
+            this.endValue = endValue;
+            this.reversingAdjustedStartValue = startValue;
+        }
+
+        @Override
+        public void onUpdate(double progress) {
+            // Longs are interpolated in real number space and rounded to the nearest long.
+            long diff = endValue - startValue;
+            long result = startValue + Math.round(progress * diff);
+            StyleableLongProperty.super.set(progress != 1 ? Utils.clamp(startValue, result, endValue) : endValue);
+        }
+
+        @Override
+        public void onStop() {
+            mediator = null;
+        }
+
+        @Override
+        public StyleableProperty<?> getStyleableProperty() {
+            return StyleableLongProperty.this;
+        }
+
+        @Override
+        public boolean updateReversingAdjustedStartValue(TransitionMediator existingMediator) {
+            var mediator = (TransitionMediatorImpl)existingMediator;
+
+            if (mediator.reversingAdjustedStartValue == endValue) {
+                reversingAdjustedStartValue = mediator.endValue;
+                return true;
+            }
+
+            return false;
+        }
+    }
 }

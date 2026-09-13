@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package test.javafx.binding;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.Callable;
@@ -39,17 +41,16 @@ import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleLongProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
-import test.com.sun.javafx.binding.ErrorLoggingUtiltity;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import test.com.sun.javafx.binding.ErrorLoggingUtility;
+import test.javafx.util.OutputRedirect;
 
 /**
  */
-@RunWith(Parameterized.class)
 public class BindingsCreateBindingTest<T> {
 
     private static final float EPSILON_FLOAT = 1e-5f;
@@ -60,19 +61,29 @@ public class BindingsCreateBindingTest<T> {
         public void check(S value0, S value1);
     }
 
-    private final Property<T> p0;
-    private final Property<T> p1;
-    private final Functions<T> f;
-    private final T value0;
-    private final T value1;
-    private final T defaultValue;
+    private  Property<T> p0;
+    private  Property<T> p1;
+    private  Functions<T> f;
+    private  T value0;
+    private  T value1;
+    private  T defaultValue;
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() {
-        ErrorLoggingUtiltity.reset();
+        ErrorLoggingUtility.reset();
     }
 
-    public BindingsCreateBindingTest(Property<T> p0, Property<T> p1, Functions<T> f, T value0, T value1, T defaultValue) {
+    @BeforeEach
+    public void beforeEach() {
+        OutputRedirect.suppressStderr();
+    }
+
+    @AfterEach
+    public void afterEach() {
+        OutputRedirect.checkAndRestoreStderr();
+    }
+
+    private void setup(Property<T> p0, Property<T> p1, Functions<T> f, T value0, T value1, T defaultValue) {
         this.p0 = p0;
         this.p1 = p1;
         this.f = f;
@@ -81,9 +92,11 @@ public class BindingsCreateBindingTest<T> {
         this.defaultValue = defaultValue;
     }
 
-    @Test
-    public void testNoDependencies() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testNoDependencies(Property<T> p0, Property<T> p1, Functions<T> f, T value0, T value1, T defaultValue) {
         // func returns value0, no dependencies specified
+        setup(p0, p1, f, value0, value1, defaultValue);
         final Callable<T> func0 = () -> value0;
         final Binding<T> binding0 = f.create(func0);
 
@@ -106,13 +119,15 @@ public class BindingsCreateBindingTest<T> {
         final Binding<T> binding2 = f.create(func2, new Observable [0]);
 
         f.check(defaultValue, binding2.getValue());
-        ErrorLoggingUtiltity.checkWarning(Exception.class);
+        ErrorLoggingUtility.checkWarning(Exception.class);
         assertTrue(binding2.getDependencies().isEmpty());
         binding2.dispose();
     }
 
-    @Test
-    public void testOneDependency() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testOneDependency(Property<T> p0, Property<T> p1, Functions<T> f, T value0, T value1, T defaultValue) {
+        setup(p0, p1, f, value0, value1, defaultValue);
         final Callable<T> func = () -> p0.getValue();
         final Binding<T> binding = f.create(func, p0);
 
@@ -123,8 +138,10 @@ public class BindingsCreateBindingTest<T> {
         binding.dispose();
     }
 
-    @Test
-    public void testCreateBoolean_TwoDependencies() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testCreateBoolean_TwoDependencies(Property<T> p0, Property<T> p1, Functions<T> f, T value0, T value1, T defaultValue) {
+        setup(p0, p1, f, value0, value1, defaultValue);
         final Callable<T> func = () -> p0.getValue();
         final Binding<T> binding = f.create(func, p0, p1);
 
@@ -135,7 +152,6 @@ public class BindingsCreateBindingTest<T> {
         binding.dispose();
     }
 
-    @Parameterized.Parameters
     public static Collection<Object[]> parameters() {
         return Arrays.asList(new Object[][] {
                 {

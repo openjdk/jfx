@@ -25,23 +25,27 @@
 
 #pragma once
 
-#include "FormattingConstraints.h"
+#include <WebCore/FormattingConstraints.h>
+#include <WebCore/LayoutSize.h>
 
 namespace WebCore {
 namespace Layout {
 
 struct ConstraintsForInlineContent : public ConstraintsForInFlowContent {
-    ConstraintsForInlineContent(const ConstraintsForInFlowContent&, LayoutUnit visualLeft);
+    ConstraintsForInlineContent(const ConstraintsForInFlowContent&, LayoutUnit visualLeft, LayoutSize formattingRootBorderBoxSize);
 
     LayoutUnit visualLeft() const { return m_visualLeft; }
+    LayoutSize formattingRootBorderBoxSize() const { return m_formattingRootBorderBoxSize; }
 
 private:
     LayoutUnit m_visualLeft;
+    LayoutSize m_formattingRootBorderBoxSize;
 };
 
-inline ConstraintsForInlineContent::ConstraintsForInlineContent(const ConstraintsForInFlowContent& genericContraints, LayoutUnit visualLeft)
+inline ConstraintsForInlineContent::ConstraintsForInlineContent(const ConstraintsForInFlowContent& genericContraints, LayoutUnit visualLeft, LayoutSize formattingRootBorderBoxSize)
     : ConstraintsForInFlowContent(genericContraints.horizontal(), genericContraints.logicalTop(), InlineContent)
     , m_visualLeft(visualLeft)
+    , m_formattingRootBorderBoxSize(formattingRootBorderBoxSize)
 {
 }
 

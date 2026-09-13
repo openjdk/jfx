@@ -42,6 +42,31 @@ dictionary ScrollToOptions {
     boolean unconstrained = false;
 };
 
+dictionary TextExtractionTestOptions {
+    unsigned long wordLimit = 0;
+    boolean clipToBounds = false;
+    boolean includeRects = false;
+    boolean includeURLs = false;
+    boolean shortenURLs = false;
+    DOMString nodeIdentifierInclusion = "none";
+    boolean includeEventListeners = false;
+    boolean includeAccessibilityAttributes = false;
+    boolean includeTextInAutoFilledControls = false;
+    boolean mergeParagraphs = false;
+    boolean skipNearlyTransparentContent = false;
+    DOMString outputFormat;
+    object dataDetectorTypes;
+};
+
+dictionary TextExtractionInteractionOptions {
+    DOMString nodeIdentifier;
+    DOMString text;
+    object location;
+    object scrollDelta;
+    boolean replaceAll = false;
+    boolean scrollToVisible = false;
+};
+
 interface UIScriptController {
 
     undefined doAsyncTask(object callback); // Used to test the harness.
@@ -51,6 +76,7 @@ interface UIScriptController {
     undefined doAfterNextStablePresentationUpdate(object callback);
     undefined ensurePositionInformationIsUpToDateAt(long x, long y, object callback);
     undefined doAfterVisibleContentRectUpdate(object callback);
+    undefined doAfterNextVisibleContentRectAndStablePresentationUpdate(object callback);
 
     undefined doAfterDoubleTapDelay(object callback);
 
@@ -87,6 +113,7 @@ interface UIScriptController {
 
     readonly attribute unsigned long keyboardWillHideCount;
     readonly attribute boolean keyboardIsAutomaticallyShifted;
+    readonly attribute unsigned long keyboardUpdateForChangedSelectionCount;
 
     undefined rawKeyDown(DOMString key);
     undefined rawKeyUp(DOMString key);
@@ -247,7 +274,8 @@ interface UIScriptController {
     undefined keyboardAccessoryBarNext();
     undefined keyboardAccessoryBarPrevious();
 
-    undefined applyAutocorrection(DOMString newString, DOMString oldString, object callback);
+    undefined selectWordForReplacement();
+    undefined applyAutocorrection(DOMString newString, DOMString oldString, object callback, boolean underline);
 
     // Returned object is a dictionary with the passed in string as a key for returned object
     object contentsOfUserInterfaceItem(DOMString interfaceItem);
@@ -268,13 +296,17 @@ interface UIScriptController {
     readonly attribute boolean isShowingMenu;
     readonly attribute object menuRect;
     readonly attribute object contextMenuRect;
+    readonly attribute object contextMenuPreviewRect;
     object rectForMenuAction(DOMString action);
     undefined chooseMenuAction(DOMString action, object callback);
     undefined dismissMenu();
 
     readonly attribute boolean isShowingPopover;
+    readonly attribute boolean isShowingFormValidationBubble;
     attribute object willPresentPopoverCallback;
     attribute object didDismissPopoverCallback;
+
+    attribute object didPresentViewControllerCallback;
 
     attribute object willBeginZoomingCallback;
     attribute object didEndZoomingCallback;
@@ -289,12 +321,20 @@ interface UIScriptController {
 
     undefined setScrollViewKeyboardAvoidanceEnabled(boolean enabled);
 
+    undefined setAlwaysBounceVertical(boolean value);
+    undefined setAlwaysBounceHorizontal(boolean value);
+
+    undefined beginInteractiveObscuredInsetsChange();
+    undefined endInteractiveObscuredInsetsChange();
+    undefined setObscuredInsets(double top, double right, double bottom, double left);
+
     undefined becomeFirstResponder();
     undefined resignFirstResponder();
     readonly attribute boolean isPresentingModally;
 
     undefined copyText(DOMString text);
     undefined paste();
+    readonly attribute long long pasteboardChangeCount;
 
     readonly attribute double contentOffsetX;
     readonly attribute double contentOffsetY;
@@ -315,6 +355,7 @@ interface UIScriptController {
     readonly attribute double zoomScale;
     readonly attribute double minimumZoomScale;
     readonly attribute double maximumZoomScale;
+    readonly attribute boolean isZoomingOrScrolling;
 
     // Overides the "in stable state" behavior of WKWebView (only applies to iOS)
     // When false, content rect updates to the web process have inStableState=false, as if a scroll or zoom were in progress.
@@ -324,6 +365,7 @@ interface UIScriptController {
     readonly attribute object contentVisibleRect;
     readonly attribute object selectionStartGrabberViewRect;
     readonly attribute object selectionEndGrabberViewRect;
+    readonly attribute object selectionEndGrabberViewShapePathDescription;
     readonly attribute object selectionCaretViewRect;
     readonly attribute object selectionCaretViewRectInGlobalCoordinates;
     readonly attribute object selectionRangeViewRects;
@@ -333,18 +375,21 @@ interface UIScriptController {
     readonly attribute object inputViewBounds;
 
     undefined setKeyboardInputModeIdentifier(DOMString identifier);
+    undefined setFocusStartsInputSessionPolicy(DOMString policy);
 
     undefined replaceTextAtRange(DOMString text, long location, long length);
 
     readonly attribute DOMString scrollingTreeAsText;
     readonly attribute DOMString uiViewTreeAsText;
     readonly attribute DOMString caLayerTreeAsText;
+    DOMString caLayerTreeAsTextForLayerWithID(unsigned long long layerID);
+    DOMString uiViewTreeAsTextForViewWithLayerID(unsigned long long layerID);
 
     boolean mayContainEditableElementsInRect(unsigned long x, unsigned long y, unsigned long width, unsigned long height);
 
     object propertiesOfLayerWithID(unsigned long long layerID);
 
-    DOMString scrollbarStateForScrollingNodeID(unsigned long long scrollingNodeID, boolean isVertical);
+    DOMString scrollbarStateForScrollingNodeID(unsigned long long scrollingNodeID, unsigned long long processID, boolean isVertical);
 
     undefined retrieveSpeakSelectionContent(object callback);
     readonly attribute DOMString accessibilitySpeakSelectionContent;
@@ -361,11 +406,15 @@ interface UIScriptController {
     undefined removeViewFromWindow(object callback);
     undefined addViewToWindow(object callback);
 
+    undefined resizeWindowTo(unsigned long width, unsigned long height);
+
     undefined installTapGestureOnWindow(object callback);
 
     undefined overridePreference(DOMString preference, DOMString value);
 
     undefined setSafeAreaInsets(double top, double right, double bottom, double left);
+
+    undefined setAppAccentColor(unsigned short red, unsigned short green, unsigned short blue);
 
     undefined firstResponderSuppressionForWebView(boolean shouldSuppress);
     undefined makeWindowContentViewFirstResponder();
@@ -375,6 +424,14 @@ interface UIScriptController {
     undefined setHardwareKeyboardAttached(boolean attached);
 
     undefined setWebViewEditable(boolean editable);
+
+    readonly attribute object fixedContainerEdgeColors;
+    undefined cancelFixedColorExtensionFadeAnimations();
+
+    undefined cookiesForDomain(DOMString domain, object callback);
+
+    // Only affects macOS.
+    undefined setWebViewAllowsMagnification(boolean allowsMagnification);
 
     object attachmentInfo(DOMString attachmentIdentifier);
     undefined insertAttachmentForFilePath(DOMString filePath, DOMString contentType, object callback);
@@ -390,4 +447,26 @@ interface UIScriptController {
     readonly attribute unsigned long countOfUpdatesWithLayerChanges;
 
     readonly attribute unsigned long long currentImageAnalysisRequestID;
+    undefined installFakeMachineReadableCodeResultsForImageAnalysis();
+
+    undefined setInlinePrediction(DOMString text, unsigned long startIndex);
+    undefined acceptInlinePrediction();
+
+    undefined requestTextExtraction(object callback, TextExtractionTestOptions options);
+    undefined requestDebugText(object callback, TextExtractionTestOptions options);
+    undefined performTextExtractionInteraction(DOMString action, TextExtractionInteractionOptions options, object callback);
+
+    undefined requestRenderedTextForFrontmostTarget(long x, long y, object callback);
+    undefined adjustVisibilityForFrontmostTarget(long x, long y, object callback);
+    undefined resetVisibilityAdjustments(object callback);
+
+    DOMString frontmostViewAtPoint(long x, long y);
+
+    readonly attribute boolean didCallEnsurePositionInformationIsUpToDateSinceLastCheck;
+    undefined clearEnsurePositionInformationIsUpToDateTracking();
+
+#if defined(ENABLE_THREADED_ANIMATIONS) && ENABLE_THREADED_ANIMATIONS
+    DOMString animationStackForLayerWithID(unsigned long long layerID);
+    DOMString progressBasedTimelinesForScrollingNodeID(unsigned long long scrollingNodeID, unsigned long long processID);
+#endif
 };

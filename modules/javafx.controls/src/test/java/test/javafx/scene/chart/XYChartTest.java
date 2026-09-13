@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,35 +25,36 @@
 
 package test.javafx.scene.chart;
 
-
 import javafx.beans.property.ListProperty;
 import javafx.beans.property.SimpleListProperty;
-import org.junit.Test;
-import javafx.collections.*;
-import javafx.scene.chart.Axis.TickMark;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.css.CssParserShim;
 import javafx.css.ParsedValue;
 import javafx.css.StyleableProperty;
-import javafx.css.CssParserShim;
 import javafx.scene.Node;
 import javafx.scene.ParentShim;
 import javafx.scene.Scene;
 import javafx.scene.chart.AreaChart;
 import javafx.scene.chart.Axis;
+import javafx.scene.chart.Axis.TickMark;
 import javafx.scene.chart.AxisShim;
 import javafx.scene.chart.CategoryAxis;
 import javafx.scene.chart.Chart;
 import javafx.scene.chart.ChartShim;
 import javafx.scene.chart.NumberAxis;
 import javafx.scene.chart.XYChart;
+import javafx.scene.chart.XYChartShim;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
-
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
+import org.junit.jupiter.api.Test;
 import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
+import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class XYChartTest extends ChartTestBase {
 
@@ -61,22 +62,29 @@ public class XYChartTest extends ChartTestBase {
     AreaChart<String, Number> areachart;
 
     @Override
-    protected Chart createChart() {
+    protected void createChart() {
         yaxis = new NumberAxis();
         areachart = new AreaChart<>(new CategoryAxis(), yaxis);
+        areachart.setAnimated(false);
+    }
+
+    @Override
+    protected Chart getChart() {
         return areachart;
     }
 
     @Test
     public void testTickMarksToString() {
+        createChart();
         startApp();
         pulse();
         yaxis.getTickMarks().toString();
-        //System.out.println(" --- "+yaxis.getTickMarks().toString());
     }
 
-    // RT-22166
-    @Test public void testTickLabelFont() {
+    // JDK-8126166
+    @Test
+    public void testTickLabelFont() {
+        createChart();
         startApp();
         Font f = yaxis.getTickLabelFont();
         // default caspian value for font size = 10
@@ -101,7 +109,9 @@ public class XYChartTest extends ChartTestBase {
         assertEquals(12, Double.valueOf(AxisShim.TickMark_get_textNode(tm).getFont().getSize()).intValue());
     }
 
-    @Test public void testSetTickLabelFill() {
+    @Test
+    public void testSetTickLabelFill() {
+        createChart();
         startApp();
         pulse();
         yaxis.setTickLabelFill(Color.web("#444444"));
@@ -114,7 +124,9 @@ public class XYChartTest extends ChartTestBase {
         }
     }
 
-    @Test public void testAddAxisWithoutSpecifyingSide() {
+    @Test
+    public void testAddAxisWithoutSpecifyingSide() {
+        createChart();
         final NumberAxis axis = new NumberAxis(0, 12, 1);
         axis.setMaxWidth(Double.MAX_VALUE);
         axis.setPrefWidth(400);
@@ -129,14 +141,49 @@ public class XYChartTest extends ChartTestBase {
         pulse();
     }
 
-    @Test public void testLegendSizeWhenThereIsNoChartData() {
+    @Test
+    public void testLegendSizeWhenThereIsNoChartData() {
+        createChart();
         startApp();
         assertEquals(0, ChartShim.getLegend(areachart).prefHeight(-1), 0);
         assertEquals(0, ChartShim.getLegend(areachart).prefWidth(-1), 0);
     }
 
+    @Test
+    public void chartAnimationRespectsReducedMotionPreference() {
+        XYChart<String, Number> chart = new XYChart<>(new CategoryAxis(), new NumberAxis()) {
+            @Override protected void layoutPlotChildren() {}
+            @Override protected void dataItemChanged(Data<String, Number> item) {}
+            @Override protected void dataItemAdded(Series<String, Number> series, int itemIndex, Data<String, Number> item) {}
+            @Override protected void dataItemRemoved(Data<String, Number> item, Series<String, Number> series) {}
+            @Override protected void seriesAdded(Series<String, Number> series, int seriesIndex) {}
+            @Override protected void seriesRemoved(Series<String, Number> series) {}
+        };
 
-    @Test public void canModifySeriesWithoutChart() {
+        chart.setData(FXCollections.observableArrayList());
+        chart.getData().add(new XYChart.Series<>(FXCollections.observableArrayList(
+            new XYChart.Data<>("A", 1),
+            new XYChart.Data<>("B", 2))));
+
+        StageLoader stageLoader = new StageLoader(chart);
+
+        try {
+            Scene scene = stageLoader.getStage().getScene();
+            pulse();
+            assertTrue(XYChartShim.shouldAnimate(chart));
+
+            scene.getPreferences().setReducedMotion(true);
+            pulse();
+
+            assertFalse(XYChartShim.shouldAnimate(chart));
+        } finally {
+            stageLoader.dispose();
+        }
+    }
+
+    @Test
+    public void canModifySeriesWithoutChart() {
+        createChart();
         XYChart.Series series = new XYChart.Series();
 
         ObservableList<XYChart.Data> dataList1 = FXCollections.observableArrayList();

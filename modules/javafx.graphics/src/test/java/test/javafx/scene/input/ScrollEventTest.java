@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,12 @@
 package test.javafx.scene.input;
 
 import com.sun.javafx.scene.SceneHelper;
+import com.sun.javafx.tk.Toolkit;
+import javafx.event.EventType;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import test.com.sun.javafx.pgstub.StubScene;
+import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.test.MouseEventGenerator;
 import javafx.event.Event;
 import javafx.geometry.Point3D;
@@ -38,15 +43,35 @@ import javafx.scene.input.PickResult;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import org.junit.Assert;
-import org.junit.Test;
-import static org.junit.Assert.*;
+
+import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ScrollEventTest {
 
     private boolean scrolled;
     private boolean scrolled2;
     private PickResult pickRes;
+    private Stage stage;
+
+    @BeforeEach
+    public void setUp() {
+        stage = new Stage();
+        stage.show();
+    }
+
+    @AfterEach
+    public void tearDown() {
+        stage.hide();
+    }
 
     @Test public void testShortConstructor() {
         Rectangle node = new Rectangle();
@@ -239,10 +264,10 @@ public class ScrollEventTest {
 
         scrolled = false;
         rect.setOnScroll(event -> {
-            Assert.assertEquals(66.0, event.getDeltaX(), 0.0001);
-            Assert.assertEquals(99.0, event.getDeltaY(), 0.0001);
-            Assert.assertEquals(132.0, event.getTotalDeltaX(), 0.0001);
-            Assert.assertEquals(198.0, event.getTotalDeltaY(), 0.0001);
+            assertEquals(66.0, event.getDeltaX(), 0.0001);
+            assertEquals(99.0, event.getDeltaY(), 0.0001);
+            assertEquals(132.0, event.getTotalDeltaX(), 0.0001);
+            assertEquals(198.0, event.getTotalDeltaY(), 0.0001);
             scrolled = true;
         });
 
@@ -261,8 +286,8 @@ public class ScrollEventTest {
 
         scrolled = false;
         rect.setOnScroll(event -> {
-            Assert.assertEquals(0.0, event.getTextDeltaX(), 0.0001);
-            Assert.assertEquals(0.0, event.getTextDeltaY(), 0.0001);
+            assertEquals(0.0, event.getTextDeltaX(), 0.0001);
+            assertEquals(0.0, event.getTextDeltaY(), 0.0001);
             assertSame(ScrollEvent.HorizontalTextScrollUnits.NONE, event.getTextDeltaXUnits());
             assertSame(ScrollEvent.VerticalTextScrollUnits.NONE, event.getTextDeltaYUnits());
             scrolled = true;
@@ -274,8 +299,8 @@ public class ScrollEventTest {
 
         scrolled = false;
         rect.setOnScroll(event -> {
-            Assert.assertEquals(8.0, event.getTextDeltaX(), 0.0001);
-            Assert.assertEquals(15.0, event.getTextDeltaY(), 0.0001);
+            assertEquals(8.0, event.getTextDeltaX(), 0.0001);
+            assertEquals(15.0, event.getTextDeltaY(), 0.0001);
             assertSame(ScrollEvent.HorizontalTextScrollUnits.CHARACTERS, event.getTextDeltaXUnits());
             assertSame(ScrollEvent.VerticalTextScrollUnits.LINES, event.getTextDeltaYUnits());
             scrolled = true;
@@ -287,8 +312,8 @@ public class ScrollEventTest {
 
         scrolled = false;
         rect.setOnScroll(event -> {
-            Assert.assertEquals(0.0, event.getTextDeltaX(), 0.0001);
-            Assert.assertEquals(3.0, event.getTextDeltaY(), 0.0001);
+            assertEquals(0.0, event.getTextDeltaX(), 0.0001);
+            assertEquals(3.0, event.getTextDeltaY(), 0.0001);
             assertSame(ScrollEvent.HorizontalTextScrollUnits.NONE, event.getTextDeltaXUnits());
             assertSame(ScrollEvent.VerticalTextScrollUnits.PAGES, event.getTextDeltaYUnits());
             scrolled = true;
@@ -395,7 +420,7 @@ public class ScrollEventTest {
 
         scrolled = false;
         rect.setOnScroll(event -> {
-            Assert.assertEquals(0, event.getTouchCount());
+            assertEquals(0, event.getTouchCount());
             scrolled = true;
         });
         ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
@@ -405,7 +430,7 @@ public class ScrollEventTest {
 
         scrolled = false;
         rect.setOnScroll(event -> {
-            Assert.assertEquals(5, event.getTouchCount());
+            assertEquals(5, event.getTouchCount());
             scrolled = true;
         });
         ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
@@ -527,16 +552,16 @@ public class ScrollEventTest {
         scrolled = false;
         scrolled2 = false;
         rect.setOnScroll(event -> {
-            Assert.assertEquals(150, event.getX(), 0.00001);
-            Assert.assertEquals(150, event.getY(), 0.00001);
-            Assert.assertEquals(0, event.getZ(), 0.00001);
+            assertEquals(150, event.getX(), 0.00001);
+            assertEquals(150, event.getY(), 0.00001);
+            assertEquals(0, event.getZ(), 0.00001);
             scrolled = true;
         });
 
         scene.setOnScroll(event -> {
-            Assert.assertEquals(150, event.getX(), 0.00001);
-            Assert.assertEquals(150, event.getY(), 0.00001);
-            Assert.assertEquals(50, event.getZ(), 0.00001);
+            assertEquals(150, event.getX(), 0.00001);
+            assertEquals(150, event.getY(), 0.00001);
+            assertEquals(50, event.getZ(), 0.00001);
             scrolled2 = true;
         });
 
@@ -692,8 +717,8 @@ public class ScrollEventTest {
         scrolled = false;
         scrolled2 = false;
         rect2.setOnScrollStarted(event -> {
-            Assert.assertEquals(250.0, event.getSceneX(), 0.0001);
-            Assert.assertEquals(250.0, event.getSceneY(), 0.0001);
+            assertEquals(250.0, event.getSceneX(), 0.0001);
+            assertEquals(250.0, event.getSceneY(), 0.0001);
             scrolled2 = true;
         });
         SceneHelper.processMouseEvent(scene, generator.generateMouseEvent(
@@ -708,8 +733,8 @@ public class ScrollEventTest {
         scrolled = false;
         scrolled2 = false;
         rect2.setOnScroll(event -> {
-            Assert.assertEquals(150.0, event.getSceneX(), 0.0001);
-            Assert.assertEquals(150.0, event.getSceneY(), 0.0001);
+            assertEquals(150.0, event.getSceneX(), 0.0001);
+            assertEquals(150.0, event.getSceneY(), 0.0001);
             scrolled2 = true;
         });
         SceneHelper.processMouseEvent(scene, generator.generateMouseEvent(
@@ -724,8 +749,8 @@ public class ScrollEventTest {
         scrolled = false;
         scrolled2 = false;
         rect2.setOnScrollFinished(event -> {
-            Assert.assertEquals(150.0, event.getSceneX(), 0.0001);
-            Assert.assertEquals(150.0, event.getSceneY(), 0.0001);
+            assertEquals(150.0, event.getSceneX(), 0.0001);
+            assertEquals(150.0, event.getSceneY(), 0.0001);
             scrolled2 = true;
         });
         ((StubScene) SceneHelper.getPeer(scene)).getListener().scrollEvent(
@@ -742,8 +767,8 @@ public class ScrollEventTest {
         Rectangle rect =
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
         rect.setOnScrollFinished(event -> {
-            Assert.assertEquals(250.0, event.getSceneX(), 0.0001);
-            Assert.assertEquals(250.0, event.getSceneY(), 0.0001);
+            assertEquals(250.0, event.getSceneX(), 0.0001);
+            assertEquals(250.0, event.getSceneY(), 0.0001);
             scrolled = true;
         });
 
@@ -775,8 +800,8 @@ public class ScrollEventTest {
                 (Rectangle) scene.getRoot().getChildrenUnmodifiable().get(0);
 
         rect.setOnScroll(event -> {
-            Assert.assertEquals(150.0, event.getSceneX(), 0.0001);
-            Assert.assertEquals(150.0, event.getSceneY(), 0.0001);
+            assertEquals(150.0, event.getSceneX(), 0.0001);
+            assertEquals(150.0, event.getSceneY(), 0.0001);
             scrolled = true;
         });
 
@@ -817,6 +842,192 @@ public class ScrollEventTest {
         assertFalse(s.isEmpty());
     }
 
+    /**
+     * Verifies that scroll inertia events are retargeted to the picked node when the original gesture target node
+     * has been removed from the scene graph.
+     */
+    @Test
+    public void testInertiaScrollRetargetedToPickedNodeWhenTargetRemovedFromScene() {
+        final StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();
+
+        Rectangle background = new Rectangle(0, 0, 400, 400);
+        Rectangle scrollTarget = new Rectangle(100, 100, 200, 200);
+        Group root = new Group(background, scrollTarget);
+        Scene scene = new Scene(root, 400, 400);
+        stage.setScene(scene);
+        toolkit.firePulse();
+
+        List<ScrollEvent> receivedScrollEvents = new ArrayList<>();
+        scene.addEventFilter(ScrollEvent.SCROLL, receivedScrollEvents::add);
+
+        StubScene stub = (StubScene) SceneHelper.getPeer(scene);
+
+        // 1. Start a scroll gesture over scrollTarget.
+        scrollEvent(stub, ScrollEvent.SCROLL_STARTED, 200, 200, false);
+
+        // 2. Send a normal scroll event.
+        scrollEvent(stub, ScrollEvent.SCROLL, 200, 200, false);
+
+        assertEquals(1, receivedScrollEvents.size());
+        assertSame(scrollTarget, receivedScrollEvents.getFirst().getTarget());
+
+        // 3. Finish the scroll event.
+        scrollEvent(stub, ScrollEvent.SCROLL_FINISHED, 200, 200, false);
+
+        // 4. Remove the target.
+        root.getChildren().remove(scrollTarget);
+        toolkit.firePulse();
+        receivedScrollEvents.clear();
+
+        // 5. Inertia scroll arrives after the target has been removed.
+        scrollEvent(stub, ScrollEvent.SCROLL, 200, 200, true);
+
+        assertEquals(1, receivedScrollEvents.size(),
+                "Inertia Scroll must be delivered after the original target is removed from the Scene");
+        assertSame(background, receivedScrollEvents.getFirst().getTarget(),
+                "Inertia Scroll should be retargeted to the Node that was picked at the event coordinates");
+        assertTrue(receivedScrollEvents.getFirst().isInertia());
+    }
+
+    /**
+     * Verifies that scroll inertia events are retargeted to the Scene when the original gesture target node
+     * has been removed from the scene graph and there is no other node to pick underneath.
+     */
+    @Test
+    public void testInertiaScrollRetargetedToSceneWhenTargetRemovedFromScene() {
+        final StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();
+
+        Rectangle background = new Rectangle(0, 0, 400, 400);
+        Group root = new Group(background);
+        Scene scene = new Scene(root, 400, 400);
+        stage.setScene(scene);
+        toolkit.firePulse();
+
+        List<ScrollEvent> receivedScrollEvents = new ArrayList<>();
+        scene.addEventFilter(ScrollEvent.SCROLL, receivedScrollEvents::add);
+
+        StubScene stub = (StubScene) SceneHelper.getPeer(scene);
+
+        // 1. Start a scroll gesture over background.
+        scrollEvent(stub, ScrollEvent.SCROLL_STARTED, 200, 200, false);
+
+        // 2. Send a normal scroll event.
+        scrollEvent(stub, ScrollEvent.SCROLL, 200, 200, false);
+
+        assertEquals(1, receivedScrollEvents.size());
+        assertSame(background, receivedScrollEvents.getFirst().getTarget());
+
+        // 3. Finish the scroll event.
+        scrollEvent(stub, ScrollEvent.SCROLL_FINISHED, 200, 200, false);
+
+        // 4. Remove the target.
+        root.getChildren().remove(background);
+        toolkit.firePulse();
+        receivedScrollEvents.clear();
+
+        // 5. Inertia scroll arrives after the target has been removed.
+        scrollEvent(stub, ScrollEvent.SCROLL, 200, 200, true);
+
+        assertEquals(1, receivedScrollEvents.size(),
+                "Inertia Scroll must be delivered after the original target is removed from the Scene");
+        assertSame(scene, receivedScrollEvents.getFirst().getTarget(),
+                "Inertia Scroll should be retargeted to the Scene as there is no Node to pick");
+        assertTrue(receivedScrollEvents.getFirst().isInertia());
+    }
+
+    /**
+     * Verifies that scroll events are retargeted to the picked node when the original gesture target node
+     * has been removed from the scene graph.
+     */
+    @Test
+    public void testScrollRetargetedToPickedNodeWhenTargetRemovedFromScene() {
+        final StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();
+
+        Rectangle background = new Rectangle(0, 0, 400, 400);
+        Rectangle scrollTarget = new Rectangle(100, 100, 200, 200);
+        Group root = new Group(background, scrollTarget);
+        Scene scene = new Scene(root, 400, 400);
+        stage.setScene(scene);
+        toolkit.firePulse();
+
+        List<ScrollEvent> receivedScrollEvents = new ArrayList<>();
+        scene.addEventFilter(ScrollEvent.SCROLL, receivedScrollEvents::add);
+
+        StubScene stub = (StubScene) SceneHelper.getPeer(scene);
+
+        // 1. Start a scroll gesture over scrollTarget.
+        scrollEvent(stub, ScrollEvent.SCROLL_STARTED, 200, 200, false);
+
+        // 2. Send a normal scroll event.
+        scrollEvent(stub, ScrollEvent.SCROLL, 200, 200, false);
+
+        assertEquals(1, receivedScrollEvents.size());
+        assertSame(scrollTarget, receivedScrollEvents.getFirst().getTarget());
+
+        // 3. Remove the target.
+        root.getChildren().remove(scrollTarget);
+        toolkit.firePulse();
+        receivedScrollEvents.clear();
+
+        // 4. Send another normal scroll event.
+        scrollEvent(stub, ScrollEvent.SCROLL, 200, 200, false);
+
+        // 3. Finish the scroll event.
+        scrollEvent(stub, ScrollEvent.SCROLL_FINISHED, 200, 200, false);
+
+        assertEquals(1, receivedScrollEvents.size(),
+                "Scroll must be delivered after the original target is removed from the Scene");
+        assertSame(background, receivedScrollEvents.getFirst().getTarget(),
+                "Scroll should be retargeted to the Node that was picked at the event coordinates");
+        assertFalse(receivedScrollEvents.getFirst().isInertia());
+    }
+
+    /**
+     * Verifies that scroll events are retargeted to the Scene when the original gesture target node
+     * has been removed from the scene graph and there is no other node to pick underneath.
+     */
+    @Test
+    public void testScrollRetargetedToSceneWhenTargetRemovedFromScene() {
+        final StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();
+
+        Rectangle background = new Rectangle(0, 0, 400, 400);
+        Group root = new Group(background);
+        Scene scene = new Scene(root, 400, 400);
+        stage.setScene(scene);
+        toolkit.firePulse();
+
+        List<ScrollEvent> receivedScrollEvents = new ArrayList<>();
+        scene.addEventFilter(ScrollEvent.SCROLL, receivedScrollEvents::add);
+
+        StubScene stub = (StubScene) SceneHelper.getPeer(scene);
+
+        // 1. Start a scroll gesture over background.
+        scrollEvent(stub, ScrollEvent.SCROLL_STARTED, 200, 200, false);
+
+        // 2. Send a normal scroll event.
+        scrollEvent(stub, ScrollEvent.SCROLL, 200, 200, false);
+
+        assertEquals(1, receivedScrollEvents.size());
+        assertSame(background, receivedScrollEvents.getFirst().getTarget());
+
+        // 3. Remove the target.
+        root.getChildren().remove(background);
+        toolkit.firePulse();
+        receivedScrollEvents.clear();
+
+        // 4. Send another normal scroll event.
+        scrollEvent(stub, ScrollEvent.SCROLL, 200, 200, false);
+
+        // 3. Finish the scroll event.
+        scrollEvent(stub, ScrollEvent.SCROLL_FINISHED, 200, 200, false);
+
+        assertEquals(1, receivedScrollEvents.size(),
+                "Scroll must be delivered after the original target is removed from the Scene");
+        assertSame(scene, receivedScrollEvents.getFirst().getTarget(),
+                "Scroll should be retargeted to the Scene as there is no Node to pick");
+        assertFalse(receivedScrollEvents.getFirst().isInertia());
+    }
+
     private Scene createScene() {
         final Group root = new Group();
 
@@ -832,5 +1043,13 @@ public class ScrollEventTest {
         stage.show();
 
         return scene;
+    }
+
+    private void scrollEvent(StubScene stub, EventType<ScrollEvent> event, double x, double y, boolean inertia) {
+        stub.getListener().scrollEvent(
+                event,
+                0, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0,
+                x, y, x, y,
+                false, false, false, false, false, inertia);
     }
 }

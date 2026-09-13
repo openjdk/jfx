@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,8 +38,6 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.nio.IntBuffer;
 import java.nio.ShortBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.function.IntConsumer;
 
 class FBDevScreen implements NativeScreen {
@@ -55,10 +53,7 @@ class FBDevScreen implements NativeScreen {
     private final String fbDevPath;
 
     FBDevScreen() {
-        @SuppressWarnings("removal")
-        String tmp = AccessController.doPrivileged(
-                (PrivilegedAction<String>) () ->
-                        System.getProperty("monocle.screen.fb", "/dev/fb0"));
+        String tmp = System.getProperty("monocle.screen.fb", "/dev/fb0");
         fbDevPath = tmp;
         try {
             linuxFB = new LinuxFrameBuffer(fbDevPath);

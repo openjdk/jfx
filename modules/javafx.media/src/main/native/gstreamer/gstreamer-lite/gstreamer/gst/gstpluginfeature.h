@@ -110,7 +110,7 @@ GType           gst_plugin_feature_get_type             (void);
 
 GST_API
 GstPluginFeature *
-                gst_plugin_feature_load                 (GstPluginFeature *feature);
+                gst_plugin_feature_load                 (GstPluginFeature *feature) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void            gst_plugin_feature_set_rank             (GstPluginFeature *feature, guint rank);
@@ -119,7 +119,7 @@ GST_API
 guint           gst_plugin_feature_get_rank             (GstPluginFeature *feature);
 
 GST_API
-GstPlugin     * gst_plugin_feature_get_plugin           (GstPluginFeature *feature);
+GstPlugin     * gst_plugin_feature_get_plugin           (GstPluginFeature *feature) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 const gchar   * gst_plugin_feature_get_plugin_name      (GstPluginFeature *feature);

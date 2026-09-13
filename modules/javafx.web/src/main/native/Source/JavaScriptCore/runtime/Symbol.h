@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2015-2016 Yusuke Suzuki <utatane.tea@gmail.com>.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,8 +26,10 @@
 
 #pragma once
 
-#include "JSString.h"
-#include "PrivateName.h"
+#include <JavaScriptCore/ErrorType.h>
+#include <JavaScriptCore/JSString.h>
+#include <JavaScriptCore/PrivateName.h>
+#include <wtf/Expected.h>
 
 namespace JSC {
 
@@ -38,7 +40,7 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
 
     template<typename CellType, SubspaceAccess mode>
     static GCClient::IsoSubspace* subspaceFor(VM& vm)
@@ -46,10 +48,7 @@ public:
         return vm.symbolSpace<mode>();
     }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(SymbolType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     static Symbol* create(VM&);
     static Symbol* createWithDescription(VM&, const String&);
@@ -57,14 +56,14 @@ public:
 
     SymbolImpl& uid() const { return m_privateName.uid(); }
     PrivateName privateName() const { return m_privateName; }
-    String descriptiveString() const;
     String description() const;
+    Expected<String, ErrorTypeWithExtension> tryGetDescriptiveString() const;
 
     JSValue toPrimitive(JSGlobalObject*, PreferredPrimitiveType) const;
     JSObject* toObject(JSGlobalObject*) const;
     double toNumber(JSGlobalObject*) const;
 
-    static ptrdiff_t offsetOfSymbolImpl()
+    static constexpr ptrdiff_t offsetOfSymbolImpl()
     {
         // PrivateName is just a Ref<SymbolImpl> which can just be used as a SymbolImpl*.
         return OBJECT_OFFSETOF(Symbol, m_privateName);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -104,7 +104,7 @@ boolean D3DMesh::buildBuffers(float *vb, UINT vbSize, USHORT *ib, UINT ibSize) {
 //    cout << "D3DMesh::buildBuffers: vertexBufferSize = " << vbSize
 //            << ", indexBufferSize = " << ibSize << endl;
 
-    IDirect3DDevice9 *device = context->Get3DDevice();
+    IDirect3DDevice9Ex *device = context->Get3DDevice();
     D3DPOOL pool = context->getResourcePool();
     UINT size = vbSize * sizeof (float); // in bytes
     UINT vbCount = size / PRIMITIVE_VERTEX_SIZE; // in vertices
@@ -152,7 +152,7 @@ boolean D3DMesh::buildBuffers(float *vb, UINT vbSize, UINT *ib, UINT ibSize) {
 //    cout << "D3DMesh::buildBuffers: vertexBufferSize = " << vbSize
 //            << ", indexBufferSize = " << ibSize << endl;
 
-    IDirect3DDevice9 *device = context->Get3DDevice();
+    IDirect3DDevice9Ex *device = context->Get3DDevice();
     D3DPOOL pool = context->getResourcePool();
     UINT size = vbSize * sizeof (float); // in bytes
     UINT vbCount = size / PRIMITIVE_VERTEX_SIZE; // in vertices

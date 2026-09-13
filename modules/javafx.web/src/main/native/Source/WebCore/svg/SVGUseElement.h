@@ -1,7 +1,8 @@
 /*
  * Copyright (C) 2004, 2005, 2006, 2007, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006, 2007 Rob Buis <buis@kde.org>
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2015 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -25,21 +26,30 @@
 #include "CachedSVGDocumentClient.h"
 #include "SVGGraphicsElement.h"
 #include "SVGURIReference.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class CachedSVGDocument;
 
 class SVGUseElement final : public SVGGraphicsElement, public SVGURIReference, private CachedSVGDocumentClient {
-    WTF_MAKE_ISO_ALLOCATED(SVGUseElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGUseElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGUseElement);
 public:
     static Ref<SVGUseElement> create(const QualifiedName&, Document&);
     virtual ~SVGUseElement();
 
+    // CachedResourceClient.
+    void ref() const final { SVGGraphicsElement::ref(); }
+    void deref() const final { SVGGraphicsElement::deref(); }
+
     void invalidateShadowTree();
     void updateUserAgentShadowTree() final;
 
+    RefPtr<SVGElement> clipChild() const;
     RenderElement* rendererClipChild() const;
+
+    SVGGraphicsElement* visibleTargetGraphicsElement() const;
 
     const SVGLengthValue& x() const { return m_x->currentValue(); }
     const SVGLengthValue& y() const { return m_y->currentValue(); }
@@ -51,6 +61,8 @@ public:
     SVGAnimatedLength& widthAnimated() { return m_width; }
     SVGAnimatedLength& heightAnimated() { return m_height; }
 
+    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGUseElement, SVGGraphicsElement, SVGURIReference>;
+
 private:
     SVGUseElement(const QualifiedName&, Document&);
 
@@ -59,20 +71,20 @@ private:
     void removedFromAncestor(RemovalType, ContainerNode&) override;
     void buildPendingResource() override;
 
-    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGUseElement, SVGGraphicsElement, SVGURIReference>;
-
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;
 
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) override;
     Path toClipPath() override;
     bool selfHasRelativeLengths() const override;
-    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) final;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
 
     Document* externalDocument() const;
     void updateExternalDocument();
 
-    SVGElement* findTarget(AtomString* targetID = nullptr) const;
+    FloatRect getBBox(StyleUpdateStrategy = AllowStyleUpdate) override;
+
+    RefPtr<SVGElement> findTarget(AtomString* targetID = nullptr) const;
 
     void cloneTarget(ContainerNode&, SVGElement& target) const;
     RefPtr<SVGElement> targetClone() const;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -116,7 +116,7 @@ public class AccordionSkin extends SkinBase<Accordion> {
                 initTitledPaneListeners(c.getAddedSubList());
             }
 
-            // added to resolve RT-32787
+            // added to resolve JDK-8123268
             forceRelayout = true;
         });
 

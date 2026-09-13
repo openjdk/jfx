@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #include <wtf/FileSystem.h>
 #include <wtf/MainThread.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -60,7 +61,7 @@ String StorageSyncManager::fullDatabaseFilename(const String& databaseIdentifier
         return String();
     }
 
-    return FileSystem::pathByAppendingComponent(m_path, makeString(databaseIdentifier, ".localstorage"));
+    return FileSystem::pathByAppendingComponent(m_path, makeString(databaseIdentifier, ".localstorage"_s));
 }
 
 void StorageSyncManager::dispatch(Function<void ()>&& function)
@@ -69,7 +70,7 @@ void StorageSyncManager::dispatch(Function<void ()>&& function)
     ASSERT(m_thread);
 
     if (m_thread)
-        m_thread->dispatch(WTFMove(function));
+        m_thread->dispatch(WTF::move(function));
 }
 
 void StorageSyncManager::close()

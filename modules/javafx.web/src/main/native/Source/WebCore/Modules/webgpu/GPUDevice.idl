@@ -28,16 +28,16 @@
 [
     EnabledBySetting=WebGPUEnabled,
     ActiveDOMObject,
-    Exposed=(Window), /* https://bugs.webkit.org/show_bug.cgi?id=232542: DedicatedWorker */
+    Exposed=(Window,Worker),
     SecureContext
-]
-interface GPUDevice : EventTarget {
+] interface GPUDevice : EventTarget {
     [SameObject] readonly attribute GPUSupportedFeatures features;
     [SameObject] readonly attribute GPUSupportedLimits limits;
+    [SameObject] readonly attribute GPUAdapterInfo adapterInfo;
 
     [SameObject] readonly attribute GPUQueue queue;
 
-    undefined destroy();
+    [CallWith=CurrentScriptExecutionContext] undefined destroy();
 
     GPUBuffer createBuffer(GPUBufferDescriptor descriptor);
     GPUTexture createTexture(GPUTextureDescriptor descriptor);

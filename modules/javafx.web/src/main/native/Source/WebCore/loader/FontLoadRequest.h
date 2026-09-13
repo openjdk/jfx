@@ -26,7 +26,10 @@
 
 #pragma once
 
-#include "FontTaggedSettings.h"
+#include <WebCore/FontTaggedSettings.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
@@ -37,13 +40,14 @@ class FontDescription;
 class FontLoadRequest;
 struct FontSelectionSpecifiedCapabilities;
 
-class FontLoadRequestClient {
+class FontLoadRequestClient : public AbstractRefCountedAndCanMakeWeakPtr<FontLoadRequestClient> {
+    WTF_FORBID_HEAP_ALLOCATION_WITH_VALIDATION(FontLoadRequestClient);
 public:
     virtual ~FontLoadRequestClient() = default;
     virtual void fontLoaded(FontLoadRequest&) { }
 };
 
-class FontLoadRequest {
+class FontLoadRequest : public AbstractRefCounted {
 public:
     virtual ~FontLoadRequest() = default;
 

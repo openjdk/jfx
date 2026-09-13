@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -193,6 +193,7 @@ public final class TouchEvent extends InputEvent {
         return (EventType<TouchEvent>) super.getEventType();
     }
 
+    @SuppressWarnings("doclint:missing")
     private final int eventSetId;
 
     /**
@@ -264,6 +265,7 @@ public final class TouchEvent extends InputEvent {
         return metaDown;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final TouchPoint touchPoint;
 
     /**
@@ -274,6 +276,7 @@ public final class TouchEvent extends InputEvent {
         return touchPoint;
     }
 
+    @SuppressWarnings("doclint:missing")
     private final List<TouchPoint> touchPoints;
 
     /**

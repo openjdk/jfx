@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package com.sun.scenario.effect;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.HashSet;
 import java.util.Iterator;
 import com.sun.javafx.geom.Rectangle;
@@ -47,25 +45,21 @@ public class ImageData {
     private static HashSet<ImageData> alldatas;
 
     static {
-        @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged((PrivilegedAction) () -> {
-            if (System.getProperty("decora.showleaks") != null) {
-                alldatas = new HashSet<>();
-                Runtime.getRuntime().addShutdownHook(new Thread() {
-                    @Override
-                    public void run() {
-                        Iterator<ImageData> datas = alldatas.iterator();
-                        while (datas.hasNext()) {
-                            ImageData id = datas.next();
-                            Rectangle r = id.getUntransformedBounds();
-                            System.out.println("id["+r.width+"x"+r.height+", refcount="+id.refcount+"] leaked from:");
-                            id.fromwhere.printStackTrace(System.out);
-                        }
+        if (System.getProperty("decora.showleaks") != null) {
+            alldatas = new HashSet<>();
+            Runtime.getRuntime().addShutdownHook(new Thread() {
+                @Override
+                public void run() {
+                    Iterator<ImageData> datas = alldatas.iterator();
+                    while (datas.hasNext()) {
+                        ImageData id = datas.next();
+                        Rectangle r = id.getUntransformedBounds();
+                        System.out.println("id["+r.width+"x"+r.height+", refcount="+id.refcount+"] leaked from:");
+                        id.fromwhere.printStackTrace(System.out);
                     }
-                });
-            }
-            return null;
-        });
+                }
+            });
+        }
     }
 
     private ImageData sharedOwner;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2021 Apple Inc.  All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #pragma once
 
 #include "SVGAttributeAnimator.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -33,6 +34,7 @@ class SVGElement;
 
 template<typename AnimatedPropertyAnimator1, typename AnimatedPropertyAnimator2>
 class SVGAnimatedPropertyPairAnimator : public SVGAttributeAnimator {
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(SVGAnimatedPropertyPairAnimator);
 public:
     using AnimatedProperty1 = typename AnimatedPropertyAnimator1::AnimatorAnimatedProperty;
     using AnimatedProperty2 = typename AnimatedPropertyAnimator2::AnimatorAnimatedProperty;
@@ -74,8 +76,16 @@ protected:
         m_animatedPropertyAnimator2->stop(targetElement);
     }
 
-    Ref<AnimatedPropertyAnimator1> m_animatedPropertyAnimator1;
-    Ref<AnimatedPropertyAnimator2> m_animatedPropertyAnimator2;
+    const Ref<AnimatedPropertyAnimator1> m_animatedPropertyAnimator1;
+    const Ref<AnimatedPropertyAnimator2> m_animatedPropertyAnimator2;
 };
+
+#define TZONE_TEMPLATE_PARAMS template<typename AnimatedPropertyAnimator1, typename AnimatedPropertyAnimator2>
+#define TZONE_TYPE SVGAnimatedPropertyPairAnimator<AnimatedPropertyAnimator1, AnimatedPropertyAnimator2>
+
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL_WITH_MULTIPLE_OR_SPECIALIZED_PARAMETERS();
+
+#undef TZONE_TEMPLATE_PARAMS
+#undef TZONE_TYPE
 
 } // namespace WebCore

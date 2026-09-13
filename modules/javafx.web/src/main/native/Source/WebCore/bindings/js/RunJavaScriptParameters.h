@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,10 +25,17 @@
 
 #pragma once
 
+#include <JavaScriptCore/SourceProvider.h>
+
 #include <wtf/HashMap.h>
 #include <wtf/URL.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
+
+namespace JSC {
+class JSGlobalObject;
+class JSValue;
+}
 
 namespace WebCore {
 
@@ -36,79 +43,49 @@ enum class RunAsAsyncFunction : bool { No, Yes };
 enum class ForceUserGesture : bool { No, Yes };
 enum class RemoveTransientActivation : bool { No, Yes };
 
-using ArgumentWireBytesMap = HashMap<String, Vector<uint8_t>>;
+using ArgumentMap = HashMap<String, Function<JSC::JSValue(JSC::JSGlobalObject&)>>;
 
 struct RunJavaScriptParameters {
-    RunJavaScriptParameters(String&& source, URL&& sourceURL, RunAsAsyncFunction runAsAsyncFunction, std::optional<ArgumentWireBytesMap>&& arguments, ForceUserGesture forceUserGesture, RemoveTransientActivation removeTransientActivation)
-        : source(WTFMove(source))
-        , sourceURL(WTFMove(sourceURL))
+    RunJavaScriptParameters(String&& source, JSC::SourceTaintedOrigin taintedness, URL&& sourceURL, RunAsAsyncFunction runAsAsyncFunction, std::optional<ArgumentMap>&& arguments, ForceUserGesture forceUserGesture, RemoveTransientActivation removeTransientActivation)
+        : source(WTF::move(source))
+        , taintedness(taintedness)
+        , sourceURL(WTF::move(sourceURL))
         , runAsAsyncFunction(runAsAsyncFunction)
-        , arguments(WTFMove(arguments))
+        , arguments(WTF::move(arguments))
         , forceUserGesture(forceUserGesture)
         , removeTransientActivation(removeTransientActivation)
     {
     }
 
-    RunJavaScriptParameters(const String& source, URL&& sourceURL, bool runAsAsyncFunction, std::optional<ArgumentWireBytesMap>&& arguments, bool forceUserGesture, RemoveTransientActivation removeTransientActivation)
+    RunJavaScriptParameters(const String& source, JSC::SourceTaintedOrigin taintedness, URL&& sourceURL, bool runAsAsyncFunction, std::optional<ArgumentMap>&& arguments, bool forceUserGesture, RemoveTransientActivation removeTransientActivation)
         : source(source)
-        , sourceURL(WTFMove(sourceURL))
+        , taintedness(taintedness)
+        , sourceURL(WTF::move(sourceURL))
         , runAsAsyncFunction(runAsAsyncFunction ? RunAsAsyncFunction::Yes : RunAsAsyncFunction::No)
-        , arguments(WTFMove(arguments))
+        , arguments(WTF::move(arguments))
         , forceUserGesture(forceUserGesture ? ForceUserGesture::Yes : ForceUserGesture::No)
         , removeTransientActivation(removeTransientActivation)
     {
     }
 
-    RunJavaScriptParameters(String&& source, URL&& sourceURL, bool runAsAsyncFunction, std::optional<ArgumentWireBytesMap>&& arguments, bool forceUserGesture, RemoveTransientActivation removeTransientActivation)
-        : source(WTFMove(source))
-        , sourceURL(WTFMove(sourceURL))
+    RunJavaScriptParameters(String&& source, JSC::SourceTaintedOrigin taintedness, URL&& sourceURL, bool runAsAsyncFunction, std::optional<ArgumentMap>&& arguments, bool forceUserGesture, RemoveTransientActivation removeTransientActivation)
+        : source(WTF::move(source))
+        , taintedness(taintedness)
+        , sourceURL(WTF::move(sourceURL))
         , runAsAsyncFunction(runAsAsyncFunction ? RunAsAsyncFunction::Yes : RunAsAsyncFunction::No)
-        , arguments(WTFMove(arguments))
+        , arguments(WTF::move(arguments))
         , forceUserGesture(forceUserGesture ? ForceUserGesture::Yes : ForceUserGesture::No)
         , removeTransientActivation(removeTransientActivation)
     {
     }
 
     String source;
+    JSC::SourceTaintedOrigin taintedness;
     URL sourceURL;
     RunAsAsyncFunction runAsAsyncFunction;
-    std::optional<ArgumentWireBytesMap> arguments;
+    std::optional<ArgumentMap> arguments;
     ForceUserGesture forceUserGesture;
     RemoveTransientActivation removeTransientActivation;
-
-    template<typename Encoder> void encode(Encoder& encoder) const
-    {
-        encoder << source << sourceURL << runAsAsyncFunction << arguments << forceUserGesture << removeTransientActivation;
-    }
-
-    template<typename Decoder> static std::optional<RunJavaScriptParameters> decode(Decoder& decoder)
-    {
-        String source;
-        if (!decoder.decode(source))
-            return std::nullopt;
-
-        URL sourceURL;
-        if (!decoder.decode(sourceURL))
-            return std::nullopt;
-
-        RunAsAsyncFunction runAsAsyncFunction;
-        if (!decoder.decode(runAsAsyncFunction))
-            return std::nullopt;
-
-        std::optional<ArgumentWireBytesMap> arguments;
-        if (!decoder.decode(arguments))
-            return std::nullopt;
-
-        ForceUserGesture forceUserGesture;
-        if (!decoder.decode(forceUserGesture))
-            return std::nullopt;
-
-        RemoveTransientActivation removeTransientActivation;
-        if (!decoder.decode(removeTransientActivation))
-            return std::nullopt;
-
-        return { RunJavaScriptParameters { WTFMove(source), WTFMove(sourceURL), runAsAsyncFunction, WTFMove(arguments), forceUserGesture, removeTransientActivation } };
-    }
 };
 
 } // namespace WebCore

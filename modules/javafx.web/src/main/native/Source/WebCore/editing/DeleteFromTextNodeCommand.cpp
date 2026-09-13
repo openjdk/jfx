@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2008, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,13 +29,14 @@
 #include "CompositeEditCommand.h"
 #include "Document.h"
 #include "Editing.h"
+#include "NodeDocument.h"
 #include "Text.h"
 
 namespace WebCore {
 
 DeleteFromTextNodeCommand::DeleteFromTextNodeCommand(Ref<Text>&& node, unsigned offset, unsigned count, EditAction editingAction)
     : SimpleEditCommand(node->document(), editingAction)
-    , m_node(WTFMove(node))
+    , m_node(WTF::move(node))
     , m_offset(offset)
     , m_count(count)
 {
@@ -64,7 +65,7 @@ void DeleteFromTextNodeCommand::doUnapply()
 }
 
 #ifndef NDEBUG
-void DeleteFromTextNodeCommand::getNodesInCommand(HashSet<Ref<Node>>& nodes)
+void DeleteFromTextNodeCommand::getNodesInCommand(NodeSet& nodes)
 {
     addNodeAndDescendants(m_node.ptr(), nodes);
 }

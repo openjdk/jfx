@@ -61,7 +61,7 @@ GST_API
 void          gst_toc_setter_reset   (GstTocSetter *setter);
 
 GST_API
-GstToc *      gst_toc_setter_get_toc (GstTocSetter *setter);
+GstToc *      gst_toc_setter_get_toc (GstTocSetter *setter) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void          gst_toc_setter_set_toc (GstTocSetter *setter, GstToc *toc);

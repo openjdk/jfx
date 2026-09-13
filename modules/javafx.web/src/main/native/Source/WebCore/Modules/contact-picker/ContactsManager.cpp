@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,19 +32,20 @@
 #include "ContactsRequestData.h"
 #include "ContactsSelectOptions.h"
 #include "Document.h"
+#include "DocumentPage.h"
 #include "JSContactInfo.h"
 #include "JSDOMPromiseDeferred.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "Navigator.h"
 #include "Page.h"
 #include "UserGestureIndicator.h"
 #include <wtf/CompletionHandler.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(ContactsManager);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ContactsManager);
 
 Ref<ContactsManager> ContactsManager::create(Navigator& navigator)
 {
@@ -77,24 +78,24 @@ void ContactsManager::getProperties(Ref<DeferredPromise>&& promise)
 
 void ContactsManager::select(const Vector<ContactProperty>& properties, const ContactsSelectOptions& options, Ref<DeferredPromise>&& promise)
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame || !frame->isMainFrame() || !frame->document() || !frame->page()) {
-        promise->reject(InvalidStateError);
+        promise->reject(ExceptionCode::InvalidStateError);
         return;
     }
 
     if (!UserGestureIndicator::processingUserGesture()) {
-        promise->reject(SecurityError);
+        promise->reject(ExceptionCode::SecurityError);
         return;
     }
 
     if (m_contactPickerIsShowing) {
-        promise->reject(InvalidStateError);
+        promise->reject(ExceptionCode::InvalidStateError);
         return;
     }
 
     if (properties.isEmpty()) {
-        promise->reject(TypeError);
+        promise->reject(ExceptionCode::TypeError);
         return;
     }
 
@@ -105,7 +106,7 @@ void ContactsManager::select(const Vector<ContactProperty>& properties, const Co
 
     m_contactPickerIsShowing = true;
 
-    frame->page()->chrome().showContactPicker(requestData, [promise = WTFMove(promise), weakThis = WeakPtr { *this }] (std::optional<Vector<ContactInfo>>&& info) {
+    frame->page()->chrome().showContactPicker(WTF::move(requestData), [promise = WTF::move(promise), weakThis = WeakPtr { *this }] (std::optional<Vector<ContactInfo>>&& info) {
         if (weakThis)
             weakThis->m_contactPickerIsShowing = false;
 
@@ -114,7 +115,7 @@ void ContactsManager::select(const Vector<ContactProperty>& properties, const Co
             return;
         }
 
-        promise->reject(UnknownError);
+        promise->reject(ExceptionCode::UnknownError);
     });
 }
 

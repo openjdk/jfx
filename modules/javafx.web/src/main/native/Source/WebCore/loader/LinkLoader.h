@@ -31,12 +31,12 @@
 
 #pragma once
 
-#include "CachedResource.h"
-#include "CachedResourceClient.h"
-#include "CachedResourceHandle.h"
-#include "LinkLoaderClient.h"
-#include "LinkRelAttribute.h"
-#include "ReferrerPolicy.h"
+#include <WebCore/CachedResource.h>
+#include <WebCore/CachedResourceClient.h>
+#include <WebCore/CachedResourceHandle.h>
+#include <WebCore/LinkLoaderClient.h>
+#include <WebCore/LinkRelAttribute.h>
+#include <WebCore/ReferrerPolicy.h>
 
 namespace WebCore {
 
@@ -54,12 +54,12 @@ struct LinkLoadParameters {
     String imageSizes;
     String nonce;
     ReferrerPolicy referrerPolicy { ReferrerPolicy::EmptyString };
-    RequestPriority fetchPriorityHint { RequestPriority::Auto };
+    RequestPriority fetchPriority { RequestPriority::Auto };
 };
 
-class LinkLoader : public CachedResourceClient {
+class LinkLoader : public CachedResourceClient, public RefCounted<LinkLoader> {
 public:
-    explicit LinkLoader(LinkLoaderClient&);
+    static Ref<LinkLoader> create(LinkLoaderClient&);
     virtual ~LinkLoader();
 
     void loadLink(const LinkLoadParameters&, Document&);
@@ -74,15 +74,21 @@ public:
     void triggerError();
     void cancelLoad();
 
+    // CachedResourceClient.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
 private:
-    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) override;
+    explicit LinkLoader(LinkLoaderClient&);
+
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) override;
     static void preconnectIfNeeded(const LinkLoadParameters&, Document&);
-    static std::unique_ptr<LinkPreloadResourceClient> preloadIfNeeded(const LinkLoadParameters&, Document&, LinkLoader*);
+    static RefPtr<LinkPreloadResourceClient> preloadIfNeeded(const LinkLoadParameters&, Document&, LinkLoader*);
     void prefetchIfNeeded(const LinkLoadParameters&, Document&);
 
-    LinkLoaderClient& m_client;
+    WeakPtr<LinkLoaderClient> m_client;
     CachedResourceHandle<CachedResource> m_cachedLinkResource;
-    std::unique_ptr<LinkPreloadResourceClient> m_preloadResourceClient;
+    RefPtr<LinkPreloadResourceClient> m_preloadResourceClient;
 };
 
 }

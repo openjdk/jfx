@@ -95,16 +95,18 @@ JSC_DEFINE_HOST_FUNCTION(webAssemblyTableProtoFuncGrow, (JSGlobalObject* globalO
     RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
 
     JSValue defaultValue = jsNull();
-    if (callFrame->argumentCount() < 2)
+    if (callFrame->argumentCount() < 2) {
+        if (!table->table()->wasmType().isNullable())
+            return throwVMTypeError(globalObject, throwScope, "WebAssembly.Table.prototype.grow requires the second argument for non-defaultable table type"_s);
         defaultValue = defaultValueForReferenceType(table->table()->wasmType());
-    else
+    } else
         defaultValue = callFrame->uncheckedArgument(1);
 
-    if (table->table()->isFuncrefTable() && !defaultValue.isNull() && !isWebAssemblyHostFunction(defaultValue))
-        return throwVMTypeError(globalObject, throwScope, "WebAssembly.Table.prototype.grow expects the second argument to be null or an instance of WebAssembly.Function"_s);
     uint32_t oldLength = table->length();
+    bool didGrow = !!table->grow(globalObject, delta, defaultValue);
+    RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
 
-    if (!table->grow(delta, defaultValue))
+    if (!didGrow)
         return throwVMRangeError(globalObject, throwScope, "WebAssembly.Table.prototype.grow could not grow the table"_s);
 
     return JSValue::encode(jsNumber(oldLength));
@@ -123,7 +125,7 @@ JSC_DEFINE_HOST_FUNCTION(webAssemblyTableProtoFuncGet, (JSGlobalObject* globalOb
     if (index >= table->length())
         return throwVMRangeError(globalObject, throwScope, "WebAssembly.Table.prototype.get expects an integer less than the length of the table"_s);
 
-    return JSValue::encode(table->get(index));
+    RELEASE_AND_RETURN(throwScope, JSValue::encode(table->get(globalObject, index)));
 }
 
 JSC_DEFINE_HOST_FUNCTION(webAssemblyTableProtoFuncSet, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -141,39 +143,15 @@ JSC_DEFINE_HOST_FUNCTION(webAssemblyTableProtoFuncSet, (JSGlobalObject* globalOb
         return throwVMRangeError(globalObject, throwScope, "WebAssembly.Table.prototype.set expects an integer less than the length of the table"_s);
 
     JSValue value = callFrame->argument(1);
-    if (callFrame->argumentCount() < 2)
+    if (callFrame->argumentCount() < 2) {
         value = defaultValueForReferenceType(table->table()->wasmType());
-
-    if (table->table()->asFuncrefTable()) {
-        WebAssemblyFunction* wasmFunction = nullptr;
-        WebAssemblyWrapperFunction* wasmWrapperFunction = nullptr;
-        if (!value.isNull() && !isWebAssemblyHostFunction(value, wasmFunction, wasmWrapperFunction))
-            return throwVMTypeError(globalObject, throwScope, "WebAssembly.Table.prototype.set expects the second argument to be null or an instance of WebAssembly.Function"_s);
-
-        if (value.isNull())
-            table->clear(index);
-        else {
-            ASSERT(value.isObject() && isWebAssemblyHostFunction(jsCast<JSObject*>(value), wasmFunction, wasmWrapperFunction));
-            ASSERT(!!wasmFunction || !!wasmWrapperFunction);
-            if (wasmFunction)
-                table->set(index, wasmFunction);
-            else
-                table->set(index, wasmWrapperFunction);
-        }
-    } else {
-        // FIXME: Once non-defaultable table types are allowed, this will need to check for null if a non-null table type is used.
-        if (isExternref(table->table()->wasmType()))
-        table->set(index, value);
-        else {
-            RELEASE_ASSERT(Options::useWebAssemblyGC());
-            JSValue internalValue = Wasm::internalizeExternref(value);
-            if (!Wasm::TypeInformation::castReference(internalValue, true, table->table()->wasmType().index))
-                return throwVMTypeError(globalObject, throwScope, "WebAssembly.Table.prototype.set failed to cast the second argument to the table's element type"_s);
-            table->set(index, internalValue);
-        }
+        if (!table->table()->wasmType().isNullable())
+            return throwVMTypeError(globalObject, throwScope, "WebAssembly.Table.prototype.set requires the second argument for non-defaultable table type"_s);
     }
 
-    return JSValue::encode(jsUndefined());
+    throwScope.release();
+    table->set(globalObject, index, value);
+    return encodedJSUndefined();
 }
 
 JSC_DEFINE_HOST_FUNCTION(webAssemblyTableProtoFuncType, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -183,7 +161,10 @@ JSC_DEFINE_HOST_FUNCTION(webAssemblyTableProtoFuncType, (JSGlobalObject* globalO
 
     JSWebAssemblyTable* table = getTable(globalObject, vm, callFrame->thisValue());
     RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
-    RELEASE_AND_RETURN(throwScope, JSValue::encode(table->type(globalObject)));
+    JSObject* typeDescriptor = table->type(globalObject);
+    if (!typeDescriptor)
+        return throwVMTypeError(globalObject, throwScope, "WebAssembly.Table.prototype.type unable to produce type descriptor for the given table"_s);
+    RELEASE_AND_RETURN(throwScope, JSValue::encode(typeDescriptor));
 }
 
 WebAssemblyTablePrototype* WebAssemblyTablePrototype::create(VM& vm, JSGlobalObject*, Structure* structure)

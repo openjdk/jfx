@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,21 +27,13 @@
 #include "GenericCachedHTMLCollection.h"
 
 #include "CachedHTMLCollectionInlines.h"
-#include "HTMLFieldSetElement.h"
 #include "HTMLNames.h"
-#include "HTMLObjectElement.h"
 #include "HTMLOptionElement.h"
-#include <wtf/IsoMallocInlines.h>
+#include "Settings.h"
 
 namespace WebCore {
 
 using namespace HTMLNames;
-
-using GenericDescendantsCachedHTMLCollection = GenericCachedHTMLCollection<CollectionTraversalType::Descendants>;
-using GenericChildrenOnlyCachedHTMLCollection = GenericCachedHTMLCollection<CollectionTraversalType::ChildrenOnly>;
-
-WTF_MAKE_ISO_ALLOCATED_IMPL_TEMPLATE(GenericDescendantsCachedHTMLCollection);
-WTF_MAKE_ISO_ALLOCATED_IMPL_TEMPLATE(GenericChildrenOnlyCachedHTMLCollection);
 
 template <CollectionTraversalType traversalType>
 GenericCachedHTMLCollection<traversalType>::GenericCachedHTMLCollection(ContainerNode& base, CollectionType collectionType)
@@ -49,6 +41,11 @@ GenericCachedHTMLCollection<traversalType>::GenericCachedHTMLCollection(Containe
 { }
 template GenericCachedHTMLCollection<CollectionTraversalType::Descendants>::GenericCachedHTMLCollection(ContainerNode&, CollectionType);
 template GenericCachedHTMLCollection<CollectionTraversalType::ChildrenOnly>::GenericCachedHTMLCollection(ContainerNode&, CollectionType);
+
+template <CollectionTraversalType traversalType>
+GenericCachedHTMLCollection<traversalType>::~GenericCachedHTMLCollection() = default;
+template GenericCachedHTMLCollection<CollectionTraversalType::Descendants>::~GenericCachedHTMLCollection();
+template GenericCachedHTMLCollection<CollectionTraversalType::ChildrenOnly>::~GenericCachedHTMLCollection();
 
 template <CollectionTraversalType traversalType>
 bool GenericCachedHTMLCollection<traversalType>::elementMatches(Element& element) const
@@ -68,8 +65,14 @@ bool GenericCachedHTMLCollection<traversalType>::elementMatches(Element& element
         return element.hasTagName(tdTag) || element.hasTagName(thTag);
     case CollectionType::TSectionRows:
         return element.hasTagName(trTag);
-    case CollectionType::SelectedOptions:
-        return is<HTMLOptionElement>(element) && downcast<HTMLOptionElement>(element).selected();
+    case CollectionType::SelectedOptions: {
+        auto* optionElement = dynamicDowncast<HTMLOptionElement>(element);
+        if (!optionElement)
+            return false;
+        if (!element.document().settings().htmlEnhancedSelectParsingEnabled())
+            return optionElement->selected();
+        return optionElement->selected() && optionElement->ownerSelectElement() == &this->ownerNode();
+    }
     case CollectionType::DataListOptions:
         return is<HTMLOptionElement>(element);
     case CollectionType::MapAreas:
@@ -100,6 +103,7 @@ bool GenericCachedHTMLCollection<traversalType>::elementMatches(Element& element
     ASSERT_NOT_REACHED();
     return false;
 }
+
 template bool GenericCachedHTMLCollection<CollectionTraversalType::Descendants>::elementMatches(Element&) const;
 template bool GenericCachedHTMLCollection<CollectionTraversalType::ChildrenOnly>::elementMatches(Element&) const;
 

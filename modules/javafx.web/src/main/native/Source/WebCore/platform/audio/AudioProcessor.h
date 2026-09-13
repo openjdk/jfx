@@ -31,6 +31,8 @@
 #ifndef AudioProcessor_h
 #define AudioProcessor_h
 
+#include <wtf/TZoneMallocInlines.h>
+
 namespace WebCore {
 
 class AudioBus;
@@ -40,8 +42,8 @@ class AudioBus;
 // or as the processor for a basic (one input - one output) AudioNode.
 
 class AudioProcessor {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(AudioProcessor);
     WTF_MAKE_NONCOPYABLE(AudioProcessor);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     AudioProcessor(float sampleRate, unsigned numberOfChannels)
         : m_initialized(false)
@@ -57,7 +59,7 @@ public:
     virtual void uninitialize() = 0;
 
     // Processes the source to destination bus.  The number of channels must match in source and destination.
-    virtual void process(const AudioBus* source, AudioBus* destination, size_t framesToProcess) = 0;
+    virtual void process(const AudioBus& source, AudioBus& destination, size_t framesToProcess) = 0;
 
     // Forces all AudioParams in the processor to run the timeline, bypassing any other processing the processor
     // would do in process().
@@ -76,6 +78,9 @@ public:
     virtual double tailTime() const = 0;
     virtual double latencyTime() const = 0;
     virtual bool requiresTailProcessing() const = 0;
+
+    enum class Type : uint8_t { Biquad, Delay, IIR, WaveShaper };
+    virtual Type processorType() const = 0;
 
 protected:
     bool m_initialized;

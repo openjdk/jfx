@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2005 Alexander Kellett <lypanov@kde.org>
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2024 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,15 +20,20 @@
 
 #pragma once
 
+#include "SVGAnimatedPropertyImpl.h"
 #include "SVGElement.h"
 #include "SVGNames.h"
 #include "SVGTests.h"
 #include "SVGUnitTypes.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
+enum class RepaintRectCalculation : bool;
+
 class SVGMaskElement final : public SVGElement, public SVGTests {
-    WTF_MAKE_ISO_ALLOCATED(SVGMaskElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGMaskElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGMaskElement);
 public:
     static Ref<SVGMaskElement> create(const QualifiedName&, Document&);
 
@@ -46,10 +51,12 @@ public:
     SVGAnimatedEnumeration& maskUnitsAnimated() { return m_maskUnits; }
     SVGAnimatedEnumeration& maskContentUnitsAnimated() { return m_maskContentUnits; }
 
-private:
-    SVGMaskElement(const QualifiedName&, Document&);
+    FloatRect calculateMaskContentRepaintRect(RepaintRectCalculation);
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGMaskElement, SVGElement, SVGTests>;
+
+private:
+    SVGMaskElement(const QualifiedName&, Document&);
 
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     void svgAttributeChanged(const QualifiedName&) final;
@@ -60,6 +67,7 @@ private:
     bool isValid() const final { return SVGTests::isValid(); }
     bool needsPendingResourceHandling() const final { return false; }
     bool selfHasRelativeLengths() const final { return true; }
+    bool supportsFocus() const final { return false; }
 
     Ref<SVGAnimatedLength> m_x { SVGAnimatedLength::create(this, SVGLengthMode::Width, "-10%"_s) };
     Ref<SVGAnimatedLength> m_y { SVGAnimatedLength::create(this, SVGLengthMode::Height, "-10%"_s) };

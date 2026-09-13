@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,21 +25,24 @@
 
 #pragma once
 
-#include "EventTarget.h"
-#include "ExceptionOr.h"
-#include "IDBActiveDOMObject.h"
-#include "IDBError.h"
-#include "IDBGetAllResult.h"
-#include "IDBGetResult.h"
-#include "IDBKeyData.h"
-#include "IDBResourceIdentifier.h"
-#include "IDBValue.h"
-#include "IndexedDB.h"
-#include "JSValueInWrappedObject.h"
 #include <JavaScriptCore/Strong.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/EventTargetInterfaces.h>
+#include <WebCore/IDBActiveDOMObject.h>
+#include <WebCore/IDBError.h>
+#include <WebCore/IDBGetAllResult.h>
+#include <WebCore/IDBGetResult.h>
+#include <WebCore/IDBIndexIdentifier.h>
+#include <WebCore/IDBKeyData.h>
+#include <WebCore/IDBObjectStoreIdentifier.h>
+#include <WebCore/IDBResourceIdentifier.h>
+#include <WebCore/IDBValue.h>
+#include <WebCore/IndexedDB.h>
+#include <WebCore/JSValueInWrappedObject.h>
+#include <optional>
 #include <wtf/Function.h>
-#include <wtf/IsoMalloc.h>
 #include <wtf/Scope.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/WeakPtr.h>
 
@@ -55,6 +58,7 @@ class IDBResultData;
 class IDBTransaction;
 class ThreadSafeDataBuffer;
 class WebCoreOpaqueRoot;
+template<typename> class ExceptionOr;
 
 namespace IDBClient {
 class IDBConnectionProxy;
@@ -62,7 +66,7 @@ class IDBConnectionToServer;
 }
 
 class IDBRequest : public EventTarget, public IDBActiveDOMObject, public ThreadSafeRefCounted<IDBRequest> {
-    WTF_MAKE_ISO_ALLOCATED(IDBRequest);
+    WTF_MAKE_TZONE_ALLOCATED(IDBRequest);
 public:
     enum class NullResultType {
         Empty,
@@ -75,15 +79,17 @@ public:
     static Ref<IDBRequest> createObjectStoreGet(ScriptExecutionContext&, IDBObjectStore&, IndexedDB::ObjectStoreRecordType, IDBTransaction&);
     static Ref<IDBRequest> createIndexGet(ScriptExecutionContext&, IDBIndex&, IndexedDB::IndexRecordType, IDBTransaction&);
 
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
+
     const IDBResourceIdentifier& resourceIdentifier() const { return m_resourceIdentifier; }
 
     virtual ~IDBRequest();
 
-    using Result = std::variant<RefPtr<IDBCursor>, RefPtr<IDBDatabase>, IDBKeyData, Vector<IDBKeyData>, IDBGetResult, IDBGetAllResult, uint64_t, NullResultType>;
+    using Result = Variant<RefPtr<IDBCursor>, RefPtr<IDBDatabase>, IDBKeyData, Vector<IDBKeyData>, IDBGetResult, IDBGetAllResult, uint64_t, NullResultType>;
     ExceptionOr<Result> result() const;
     JSValueInWrappedObject& resultWrapper() { return m_resultWrapper; }
 
-    using Source = std::variant<RefPtr<IDBObjectStore>, RefPtr<IDBIndex>, RefPtr<IDBCursor>>;
+    using Source = Variant<RefPtr<IDBObjectStore>, RefPtr<IDBIndex>, RefPtr<IDBCursor>>;
     const std::optional<Source>& source() const { return m_source; }
 
     ExceptionOr<DOMException*> error() const;
@@ -95,15 +101,17 @@ public:
 
     bool isDone() const { return m_readyState == ReadyState::Done; }
 
-    uint64_t sourceObjectStoreIdentifier() const;
-    uint64_t sourceIndexIdentifier() const;
+    std::optional<IDBObjectStoreIdentifier> sourceObjectStoreIdentifier() const;
+    std::optional<IDBIndexIdentifier> sourceIndexIdentifier() const;
     IndexedDB::ObjectStoreRecordType requestedObjectStoreRecordType() const;
     IndexedDB::IndexRecordType requestedIndexRecordType() const;
 
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    using IDBActiveDOMObject::protectedScriptExecutionContext;
 
-    using ThreadSafeRefCounted::ref;
-    using ThreadSafeRefCounted::deref;
+    // ActiveDOMObject.
+    void ref() const final { ThreadSafeRefCounted::ref(); }
+    void deref() const final { ThreadSafeRefCounted::deref(); }
 
     void completeRequestAndDispatchEvent(const IDBResultData&);
 
@@ -126,6 +134,8 @@ public:
 
     void setTransactionOperationID(uint64_t transactionOperationID) { m_currentTransactionOperationID = transactionOperationID; }
     bool willAbortTransactionAfterDispatchingEvent() const;
+    void transactionTransitionedToFinishing();
+    bool isEventBeingDispatched() const { return !!m_eventBeingDispatched; }
 
 protected:
     IDBRequest(ScriptExecutionContext&, IDBClient::IDBConnectionProxy&, IndexedDB::RequestType);
@@ -147,15 +157,15 @@ private:
     IDBRequest(ScriptExecutionContext&, IDBObjectStore&, IndexedDB::ObjectStoreRecordType, IDBTransaction&);
     IDBRequest(ScriptExecutionContext&, IDBIndex&, IndexedDB::IndexRecordType, IDBTransaction&);
 
-    EventTargetInterface eventTargetInterface() const override;
+    EventTargetInterfaceType eventTargetInterface() const override;
 
     // ActiveDOMObject.
     bool virtualHasPendingActivity() const final;
-    const char* activeDOMObjectName() const final;
     void stop() final;
 
     virtual void cancelForStop();
 
+    // EventTarget
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
     void uncaughtExceptionInEventHandler() final;
@@ -168,11 +178,13 @@ private:
     void clearWrappers();
 
 protected:
+    RefPtr<IDBTransaction> protectedTransaction() const;
+
     // FIXME: Protected data members aren't great for maintainability.
     // Consider adding protected helper functions and making these private.
     RefPtr<IDBTransaction> m_transaction;
     RefPtr<DOMException> m_domError;
-    Event* m_openDatabaseSuccessEvent { nullptr };
+    WeakPtr<Event> m_openDatabaseSuccessEvent;
 
 private:
     IDBCursor* resultCursor();
@@ -188,7 +200,7 @@ private:
     std::optional<Source> m_source;
 
     RefPtr<IDBCursor> m_pendingCursor;
-    Ref<IDBClient::IDBConnectionProxy> m_connectionProxy;
+    const Ref<IDBClient::IDBConnectionProxy> m_connectionProxy;
 
     ReadyState m_readyState { ReadyState::Pending };
     IndexedDB::RequestType m_requestType { IndexedDB::RequestType::Other };
@@ -196,7 +208,8 @@ private:
     IndexedDB::IndexRecordType m_requestedIndexRecordType { IndexedDB::IndexRecordType::Key };
 
     bool m_shouldExposeTransactionToDOM { true };
-    bool m_hasPendingActivity { true };
+    enum class PendingActivityType : uint8_t { EndingEvent, CursorIteration, None };
+    PendingActivityType m_pendingActivity { PendingActivityType::EndingEvent };
     bool m_hasUncaughtException { false };
     RefPtr<Event> m_eventBeingDispatched;
 };
@@ -204,3 +217,5 @@ private:
 WebCoreOpaqueRoot root(IDBRequest*);
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(IDBRequest)

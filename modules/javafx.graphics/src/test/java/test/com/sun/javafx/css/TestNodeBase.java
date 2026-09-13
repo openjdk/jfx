@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,11 +44,12 @@ import javafx.scene.Node;
 
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.scene.AbstractNode;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
 
 /** Test Node with styleable properties and an getClassCssMetaData method */
-public class TestNodeBase extends Node {
+public class TestNodeBase extends AbstractNode {
     static {
          // This is used by classes in different packages to get access to
          // private and package private methods.

@@ -33,52 +33,51 @@
 #include "WebGPUTextureViewDescriptor.h"
 #include "WebGPUTextureViewImpl.h"
 #include <WebGPU/WebGPUExt.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore::WebGPU {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextureImpl);
 
 TextureImpl::TextureImpl(WebGPUPtr<WGPUTexture>&& texture, TextureFormat format, TextureDimension dimension, ConvertToBackingContext& convertToBackingContext)
     : m_format(format)
     , m_dimension(dimension)
-    , m_backing(WTFMove(texture))
+    , m_backing(WTF::move(texture))
     , m_convertToBackingContext(convertToBackingContext)
 {
 }
 
 TextureImpl::~TextureImpl() = default;
 
-Ref<TextureView> TextureImpl::createView(const std::optional<TextureViewDescriptor>& descriptor)
+RefPtr<TextureView> TextureImpl::createView(const std::optional<TextureViewDescriptor>& descriptor)
 {
-    CString label = descriptor ? descriptor->label.utf8() : CString("");
+    CString label = descriptor ? descriptor->label.utf8() : CString(""_s);
+
+    Ref convertToBackingContext = m_convertToBackingContext;
 
     WGPUTextureViewDescriptor backingDescriptor {
-        nullptr,
-        label.data(),
-        descriptor && descriptor->format ? m_convertToBackingContext->convertToBacking(*descriptor->format) : m_convertToBackingContext->convertToBacking(m_format),
-        ([&]() -> WGPUTextureViewDimension {
-            if (descriptor && descriptor->dimension)
-                return m_convertToBackingContext->convertToBacking(*descriptor->dimension);
-            switch (m_dimension) {
-            case TextureDimension::_1d:
-                return WGPUTextureViewDimension_1D;
-            case TextureDimension::_2d:
-                return WGPUTextureViewDimension_2D;
-            case TextureDimension::_3d:
-                return WGPUTextureViewDimension_2D;
-            }
-        })(),
-        descriptor ? descriptor->baseMipLevel : 0,
-        descriptor && descriptor->mipLevelCount ? *descriptor->mipLevelCount : static_cast<uint32_t>(WGPU_MIP_LEVEL_COUNT_UNDEFINED),
-        descriptor ? descriptor->baseArrayLayer : 0,
-        descriptor && descriptor->arrayLayerCount ? *descriptor->arrayLayerCount : static_cast<uint32_t>(WGPU_ARRAY_LAYER_COUNT_UNDEFINED),
-        descriptor ? m_convertToBackingContext->convertToBacking(descriptor->aspect) : WGPUTextureAspect_All,
+        .label = label.data(),
+        .format = descriptor && descriptor->format ? convertToBackingContext->convertToBacking(*descriptor->format) : WGPUTextureFormat_Undefined,
+        .dimension = descriptor && descriptor->dimension ? convertToBackingContext->convertToBacking(*descriptor->dimension) : WGPUTextureViewDimension_Undefined,
+        .baseMipLevel = descriptor ? descriptor->baseMipLevel : 0,
+        .mipLevelCount = descriptor && descriptor->mipLevelCount ? *descriptor->mipLevelCount : static_cast<uint32_t>(WGPU_MIP_LEVEL_COUNT_UNDEFINED),
+        .baseArrayLayer = descriptor ? descriptor->baseArrayLayer : 0,
+        .arrayLayerCount = descriptor && descriptor->arrayLayerCount ? *descriptor->arrayLayerCount : static_cast<uint32_t>(WGPU_ARRAY_LAYER_COUNT_UNDEFINED),
+        .aspect = descriptor ? convertToBackingContext->convertToBacking(descriptor->aspect) : WGPUTextureAspect_All,
+        .usage = descriptor ? convertToBackingContext->convertTextureUsageFlagsToBacking(descriptor->usage) : 0,
     };
 
-    return TextureViewImpl::create(adoptWebGPU(wgpuTextureCreateView(m_backing.get(), &backingDescriptor)), m_convertToBackingContext);
+    return TextureViewImpl::create(adoptWebGPU(wgpuTextureCreateView(m_backing.get(), &backingDescriptor)), convertToBackingContext);
 }
 
 void TextureImpl::destroy()
 {
     wgpuTextureDestroy(m_backing.get());
+}
+
+void TextureImpl::undestroy()
+{
+    wgpuTextureUndestroy(m_backing.get());
 }
 
 void TextureImpl::setLabelInternal(const String& label)

@@ -1,6 +1,6 @@
 
 /*
- * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,104 +28,162 @@
 #include "WasmFunctionIPIntMetadataGenerator.h"
 
 #include <numeric>
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(WEBASSEMBLY)
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
 namespace Wasm {
 
-unsigned FunctionIPIntMetadataGenerator::addSignature(const TypeDefinition& signature)
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FunctionIPIntMetadataGenerator);
+
+const RTT* FunctionIPIntMetadataGenerator::addSignature(const TypeDefinition& signature)
 {
-    unsigned index = m_signatures.size();
-    m_signatures.append(&signature);
-    return index;
+    // This is held by wasm module.
+    return TypeInformation::getCanonicalRTT(signature.index()).unsafePtr();
 }
 
-void FunctionIPIntMetadataGenerator::addBlankSpace(uint32_t size)
+void FunctionIPIntMetadataGenerator::setTailCall(uint32_t functionIndex, bool isImportedFunctionFromFunctionIndexSpace)
 {
-    auto s = m_metadata.size();
-    m_metadata.grow(m_metadata.size() + size);
-    std::iota(m_metadata.data() + s, m_metadata.data() + s + size, 0x41);
+    m_hasTailCallSuccessors = true;
+    m_tailCallSuccessors.set(functionIndex);
+    if (isImportedFunctionFromFunctionIndexSpace)
+        setTailCallClobbersInstance();
 }
 
-void FunctionIPIntMetadataGenerator::addRawValue(uint64_t value)
+void FunctionIPIntMetadataGenerator::addLength(size_t length)
 {
-    auto size = m_metadata.size();
-    m_metadata.grow(m_metadata.size() + 8);
-    WRITE_TO_METADATA(m_metadata.data() + size, value, uint64_t);
-}
-
-void FunctionIPIntMetadataGenerator::addLEB128ConstantInt32AndLength(uint32_t value, uint32_t length)
-{
+    IPInt::InstructionLengthMetadata instructionLength {
+        .length = safeCast<uint8_t>(length)
+    };
     size_t size = m_metadata.size();
-    m_metadata.grow(size + 8);
-    WRITE_TO_METADATA(m_metadata.data() + size, value, uint32_t);
-    WRITE_TO_METADATA(m_metadata.data() + size + 4, length, uint32_t);
+    m_metadata.grow(size + sizeof(instructionLength));
+    WRITE_TO_METADATA(m_metadata.mutableSpan().data() + size, instructionLength, IPInt::InstructionLengthMetadata);
 }
 
-void FunctionIPIntMetadataGenerator::addLEB128ConstantAndLengthForType(Type type, uint64_t value, uint32_t length)
+void FunctionIPIntMetadataGenerator::addLEB128ConstantInt32AndLength(uint32_t value, size_t length)
 {
+    IPInt::Const32Metadata mdConst {
+        .instructionLength = { .length = safeCast<uint8_t>(length) },
+        .value = value
+    };
+    size_t size = m_metadata.size();
+    m_metadata.grow(size + sizeof(mdConst));
+    WRITE_TO_METADATA(m_metadata.mutableSpan().data() + size, mdConst, IPInt::Const32Metadata);
+}
 
-    // Metadata format:
-    //      0 1 2 3 4 5 6 7  8 9 A B C D E F
-    // I32: <value> <length>
-    // I64: <    value    >  <   length   >
-    // F32: <value> <blank>
-    // F64: <    value    >
+void FunctionIPIntMetadataGenerator::addLEB128ConstantInt64AndLength(uint64_t value, size_t length)
+{
+    IPInt::Const64Metadata mdConst {
+        .value = value,
+        .instructionLength = { .length = safeCast<uint8_t>(length) }
+    };
+    size_t size = m_metadata.size();
+    m_metadata.grow(size + sizeof(mdConst));
+    WRITE_TO_METADATA(m_metadata.mutableSpan().data() + size, mdConst, IPInt::Const64Metadata);
+}
 
+void FunctionIPIntMetadataGenerator::addLEB128ConstantAndLengthForType(Type type, uint64_t value, size_t length)
+{
     if (type.isI32()) {
         size_t size = m_metadata.size();
-        m_metadata.grow(size + 8);
-        WRITE_TO_METADATA(m_metadata.data() + size, static_cast<uint32_t>(value), uint32_t);
-        WRITE_TO_METADATA(m_metadata.data() + size + 4, static_cast<uint32_t>(length), uint32_t);
+        if (length == 2) {
+            IPInt::InstructionLengthMetadata mdConst {
+                .length = safeCast<uint8_t>((value >> 7) & 1)
+            };
+            m_metadata.grow(size + sizeof(mdConst));
+            WRITE_TO_METADATA(m_metadata.mutableSpan().data() + size, mdConst, IPInt::InstructionLengthMetadata);
+        } else {
+            IPInt::Const32Metadata mdConst {
+                .instructionLength = { .length = safeCast<uint8_t>(length) },
+                .value = static_cast<uint32_t>(value)
+            };
+            m_metadata.grow(size + sizeof(mdConst));
+            WRITE_TO_METADATA(m_metadata.mutableSpan().data() + size, mdConst, IPInt::Const32Metadata);
+        }
     } else if (type.isI64()) {
         size_t size = m_metadata.size();
-        m_metadata.grow(size + 16);
-        WRITE_TO_METADATA(m_metadata.data() + size, static_cast<uint64_t>(value), uint64_t);
-        WRITE_TO_METADATA(m_metadata.data() + size + 8, static_cast<uint64_t>(length), uint64_t);
-    }  else if (type.isFuncref()) {
+        IPInt::Const64Metadata mdConst {
+            .value = static_cast<uint64_t>(value),
+            .instructionLength = { .length = safeCast<uint8_t>(length) }
+        };
+        m_metadata.grow(size + sizeof(mdConst));
+        WRITE_TO_METADATA(m_metadata.mutableSpan().data() + size, mdConst, IPInt::Const64Metadata);
+    } else if (type.isRef() || type.isRefNull() || type.isFuncref()) {
         size_t size = m_metadata.size();
-        m_metadata.grow(size + 8);
-        WRITE_TO_METADATA(m_metadata.data() + size, static_cast<uint32_t>(value), uint32_t);
-        WRITE_TO_METADATA(m_metadata.data() + size + 4, static_cast<uint32_t>(length), uint32_t);
+        IPInt::Const32Metadata mdConst {
+            .instructionLength = { .length = safeCast<uint8_t>(length) },
+            .value = static_cast<uint32_t>(value)
+        };
+        m_metadata.grow(size + sizeof(mdConst));
+        WRITE_TO_METADATA(m_metadata.mutableSpan().data() + size, mdConst, IPInt::Const32Metadata);
     } else if (!type.isF32() && !type.isF64())
         ASSERT_NOT_IMPLEMENTED_YET();
 }
 
-void FunctionIPIntMetadataGenerator::addReturnData(const Vector<Type>& types)
+void FunctionIPIntMetadataGenerator::addLEB128V128Constant(v128_t value, size_t length)
 {
+    IPInt::Const128Metadata mdConst {
+        .value = value,
+        .instructionLength = { .length = safeCast<uint8_t>(length) }
+    };
     size_t size = m_metadata.size();
-    m_returnMetadata = size;
-    // 2 bytes for count (just in case we have a lot. if you're returning more than 65k values,
-    // congratulations?) Actually is count to skip since the round up
-    // 1 byte for each value returned (bit 0 = use FPR, bit 1 = on stack, bit 2 = valid)
-    m_metadata.grow(size + roundUpToMultipleOf(8, types.size() + 2));
-    WRITE_TO_METADATA(m_metadata.data() + size, m_metadata.size() - size, uint16_t);
-    int returnRegLeft = 2;
-    int floatReturnLeft = 1;
-    for (size_t i = 0; i < types.size(); ++i) {
-        auto type = types[i];
-        if (type.isI32() || type.isI64()) {
-            if (!returnRegLeft)
-                m_metadata[size + 2 + i] = 0b110;
-            else {
-                m_metadata[size + 2 + i] = 0b100;
-                returnRegLeft--;
-            }
-        } else if (type.isF32() || type.isF64()) {
-            if (!floatReturnLeft)
-                m_metadata[size + 2 + i] = 0b111;
-            else {
-                m_metadata[size + 2 + i] = 0b101;
-                floatReturnLeft--;
-            }
-        }
-    }
-    for (size_t i = size + types.size() + 2; i < m_metadata.size(); ++i)
-        m_metadata[i] = 0;
+    m_metadata.grow(size + sizeof(mdConst));
+    WRITE_TO_METADATA(m_metadata.mutableSpan().data() + size, mdConst, IPInt::Const128Metadata);
 }
 
+void FunctionIPIntMetadataGenerator::addReturnData(const FunctionSignature& sig, const CallInformation& returnCC)
+{
+    m_uINTBytecode.reserveInitialCapacity(sig.returnCount() + 1);
+    // uINT: the interpreter smaller than mINT
+    constexpr static int NUM_UINT_GPRS = 8;
+    constexpr static int NUM_UINT_FPRS = 8;
+    ASSERT_UNUSED(NUM_UINT_GPRS, wasmCallingConvention().jsrArgs.size() <= NUM_UINT_GPRS);
+    ASSERT_UNUSED(NUM_UINT_FPRS, wasmCallingConvention().fprArgs.size() <= NUM_UINT_FPRS);
+
+    m_uINTBytecode.appendUsingFunctor(returnCC.results.size(),
+        [&](unsigned index) -> uint8_t {
+            const ArgumentLocation& argLoc = returnCC.results[index];
+            const ValueLocation& loc = argLoc.location;
+
+            if (loc.isGPR()) {
+#if USE(JSVALUE64)
+                ASSERT_UNUSED(NUM_UINT_GPRS, GPRInfo::toArgumentIndex(loc.jsr().gpr()) < NUM_UINT_GPRS);
+                return static_cast<uint8_t>(IPInt::UIntBytecode::RetGPR) + GPRInfo::toArgumentIndex(loc.jsr().gpr());
+#elif USE(JSVALUE32_64)
+                ASSERT_UNUSED(NUM_UINT_GPRS, GPRInfo::toArgumentIndex(loc.jsr().payloadGPR()) < NUM_UINT_GPRS);
+                ASSERT_UNUSED(NUM_UINT_GPRS, GPRInfo::toArgumentIndex(loc.jsr().tagGPR()) < NUM_UINT_GPRS);
+                return static_cast<uint8_t>(IPInt::UIntBytecode::RetGPR) + GPRInfo::toArgumentIndex(loc.jsr().gpr(WhichValueWord::PayloadWord));
+#endif
+            }
+
+            if (loc.isFPR()) {
+                ASSERT_UNUSED(NUM_UINT_FPRS, FPRInfo::toArgumentIndex(loc.fpr()) < NUM_UINT_FPRS);
+                return static_cast<uint8_t>(IPInt::UIntBytecode::RetFPR) + FPRInfo::toArgumentIndex(loc.fpr());
+            }
+
+            RELEASE_ASSERT(loc.isStack());
+            m_topOfReturnStackFPOffset = loc.offsetFromFP() + bytesForWidth(argLoc.width);
+            switch (argLoc.width) {
+            case Width::Width64:
+                return static_cast<uint8_t>(IPInt::UIntBytecode::Stack);
+            case Width::Width128:
+                return static_cast<uint8_t>(IPInt::UIntBytecode::StackVector);
+            default:
+                RELEASE_ASSERT_NOT_REACHED("No uINT bytecode for result width");
+            }
+        });
+
+    m_uINTBytecode.reverse();
+    m_uINTBytecode.append(static_cast<uint8_t>(IPInt::UIntBytecode::End));
+}
+
+
 } }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEBASSEMBLY)

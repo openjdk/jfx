@@ -23,8 +23,6 @@
 
 namespace WebCore {
 
-enum class AllowedBaseLine : uint8_t { FirstLine, LastLine, BothLines };
-
 static inline bool isBaselinePosition(ItemPosition position)
 {
     return position == ItemPosition::Baseline || position == ItemPosition::LastBaseline;

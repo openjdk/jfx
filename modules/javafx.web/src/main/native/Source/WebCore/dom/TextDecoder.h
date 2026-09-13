@@ -25,7 +25,6 @@
 #pragma once
 
 #include "BufferSource.h"
-#include "ExceptionOr.h"
 #include <pal/text/TextEncoding.h>
 #include <wtf/RefCounted.h>
 
@@ -34,6 +33,8 @@ class TextCodec;
 }
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 class TextDecoder final : public RefCounted<TextDecoder> {
 public:

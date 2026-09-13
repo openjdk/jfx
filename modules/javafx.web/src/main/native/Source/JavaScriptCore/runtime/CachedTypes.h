@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,18 +25,18 @@
 
 #pragma once
 
-#include "JSCast.h"
-#include "ParserModes.h"
-#include "VariableEnvironment.h"
+#include <JavaScriptCore/JSCast.h>
+#include <JavaScriptCore/ParserModes.h>
+#include <JavaScriptCore/VariableEnvironment.h>
 #include <wtf/FileSystem.h>
 #include <wtf/HashMap.h>
-#include <wtf/MallocPtr.h>
 
 namespace JSC {
 
 class BytecodeCacheError;
 class CachedBytecode;
 class SourceCodeKey;
+class SourceProvider;
 class UnlinkedCodeBlock;
 class UnlinkedFunctionCodeBlock;
 class UnlinkedFunctionExecutable;
@@ -47,7 +47,7 @@ enum class SourceCodeType;
 // cache, since this will only be filled in when we parse the function
 struct CachedFunctionExecutableMetadata {
     CodeFeatures m_features;
-    LexicalScopeFeatures m_lexicalScopeFeatures;
+    LexicallyScopedFeatures m_lexicallyScopedFeatures;
     bool m_hasCapturedVariables;
 };
 
@@ -104,22 +104,22 @@ private:
     Decoder(VM&, Ref<CachedBytecode>, RefPtr<SourceProvider>);
 
     VM& m_vm;
-    Ref<CachedBytecode> m_cachedBytecode;
-    HashMap<ptrdiff_t, void*> m_offsetToPtrMap;
+    const Ref<CachedBytecode> m_cachedBytecode;
+    UncheckedKeyHashMap<ptrdiff_t, void*> m_offsetToPtrMap;
     Vector<std::function<void()>> m_finalizers;
-    HashMap<CompactTDZEnvironment*, CompactTDZEnvironmentMap::Handle> m_environmentToHandleMap;
+    UncheckedKeyHashMap<CompactTDZEnvironment*, CompactTDZEnvironmentMap::Handle> m_environmentToHandleMap;
     RefPtr<SourceProvider> m_provider;
 };
 
 JS_EXPORT_PRIVATE RefPtr<CachedBytecode> encodeCodeBlock(VM&, const SourceCodeKey&, const UnlinkedCodeBlock*);
-JS_EXPORT_PRIVATE RefPtr<CachedBytecode> encodeCodeBlock(VM&, const SourceCodeKey&, const UnlinkedCodeBlock*, FileSystem::PlatformFileHandle fd, BytecodeCacheError&);
+JS_EXPORT_PRIVATE RefPtr<CachedBytecode> encodeCodeBlock(VM&, const SourceCodeKey&, const UnlinkedCodeBlock*, FileSystem::FileHandle&, BytecodeCacheError&);
 
 UnlinkedCodeBlock* decodeCodeBlockImpl(VM&, const SourceCodeKey&, Ref<CachedBytecode>);
 
 template<typename UnlinkedCodeBlockType>
 UnlinkedCodeBlockType* decodeCodeBlock(VM& vm, const SourceCodeKey& key, Ref<CachedBytecode> cachedBytecode)
 {
-    return jsCast<UnlinkedCodeBlockType*>(decodeCodeBlockImpl(vm, key, WTFMove(cachedBytecode)));
+    return jsCast<UnlinkedCodeBlockType*>(decodeCodeBlockImpl(vm, key, WTF::move(cachedBytecode)));
 }
 
 JS_EXPORT_PRIVATE RefPtr<CachedBytecode> encodeFunctionCodeBlock(VM&, const UnlinkedFunctionCodeBlock*, BytecodeCacheError&);

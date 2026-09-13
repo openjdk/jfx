@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,7 +62,7 @@
  * Skin the responsibility of computing the min, max, and pref sizes of the
  * Control, the baseline offset, and hit testing (containment and
  * intersection). It is also the responsibility of the Skin, or a delegate of
- * the Skin, to implement and repond to all relevant key
+ * the Skin, to implement and respond to all relevant key
  * events which occur on the Control when it contains the focus.</p>
  *
  * <h2>Control</h2>

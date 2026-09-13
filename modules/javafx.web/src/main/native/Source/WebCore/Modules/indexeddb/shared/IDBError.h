@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "DOMException.h"
-#include "ExceptionCode.h"
+#include <WebCore/DOMException.h>
+#include <WebCore/ExceptionCode.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -37,12 +37,12 @@ public:
 
     static IDBError userDeleteError()
     {
-        return IDBError { UnknownError, "Database deleted by request of the user"_s };
+        return IDBError { ExceptionCode::UnknownError, "Database deleted by request of the user"_s };
     }
 
     static IDBError serverConnectionLostError()
     {
-        return IDBError { UnknownError, "Connection to Indexed Database server lost. Refresh the page to try again"_s };
+        return IDBError { ExceptionCode::UnknownError, "Connection to Indexed Database server lost. Refresh the page to try again"_s };
     }
 
     RefPtr<DOMException> toDOMException() const;
@@ -56,7 +56,7 @@ public:
     operator bool() const { return !isNull(); }
 
     IDBError isolatedCopy() const & { return IDBError { m_code, m_message.isolatedCopy() }; }
-    IDBError isolatedCopy() && { return IDBError { m_code, WTFMove(m_message).isolatedCopy() }; }
+    IDBError isolatedCopy() && { return IDBError { m_code, WTF::move(m_message).isolatedCopy() }; }
 
 private:
     std::optional<ExceptionCode> m_code;

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
- * Copyright (C) 2020, Apple Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,8 +27,8 @@
 
 #include "AudioBufferSourceOptions.h"
 #include "AudioScheduledSourceNode.h"
+#include <wtf/FixedVector.h>
 #include <wtf/Lock.h>
-#include <wtf/UniqueArray.h>
 
 namespace WebCore {
 
@@ -39,7 +39,8 @@ struct AudioBufferSourceOptions;
 // It generally will be used for short sounds which require a high degree of scheduling flexibility (can playback in rhythmically perfect ways).
 
 class AudioBufferSourceNode final : public AudioScheduledSourceNode {
-    WTF_MAKE_ISO_ALLOCATED(AudioBufferSourceNode);
+    WTF_MAKE_TZONE_ALLOCATED(AudioBufferSourceNode);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(AudioBufferSourceNode);
 public:
     static ExceptionOr<Ref<AudioBufferSourceNode>> create(BaseAudioContext&, AudioBufferSourceOptions&& = { });
 
@@ -80,32 +81,34 @@ public:
     // If we are no longer playing, propogate silence ahead to downstream nodes.
     bool propagatesSilence() const final;
 
-    const char* activeDOMObjectName() const override { return "AudioBufferSourceNode"; }
-
 private:
     AudioBufferSourceNode(BaseAudioContext&);
 
+    void acquireBufferContent() WTF_REQUIRES_LOCK(m_processLock);
+
     double tailTime() const final { return 0; }
     double latencyTime() const final { return 0; }
+
+    float noiseInjectionMultiplier() const final;
 
     ExceptionOr<void> startPlaying(double when, double grainOffset, std::optional<double> grainDuration);
     void adjustGrainParameters() WTF_REQUIRES_LOCK(m_processLock);
 
     // Returns true on success.
-    bool renderFromBuffer(AudioBus*, unsigned destinationFrameOffset, size_t numberOfFrames, double startFrameOffset) WTF_REQUIRES_LOCK(m_processLock);
+    bool renderFromBuffer(AudioBus&, unsigned destinationFrameOffset, size_t numberOfFrames, double startFrameOffset) WTF_REQUIRES_LOCK(m_processLock);
 
     // Render silence starting from "index" frame in AudioBus.
-    inline bool renderSilenceAndFinishIfNotLooping(AudioBus*, unsigned index, size_t framesToProcess) WTF_REQUIRES_LOCK(m_processLock);
+    inline bool renderSilenceAndFinishIfNotLooping(AudioBus&, unsigned index, size_t framesToProcess) WTF_REQUIRES_LOCK(m_processLock);
 
     // m_buffer holds the sample data which this node outputs.
     RefPtr<AudioBuffer> m_buffer WTF_GUARDED_BY_LOCK(m_processLock); // Only modified on the main thread but used on the audio thread.
 
-    // Pointers for the buffer and destination.
-    UniqueArray<const float*> m_sourceChannels;
-    UniqueArray<float*> m_destinationChannels;
+    // Spans for the buffer and destination.
+    FixedVector<std::span<const float>> m_sourceChannels;
+    FixedVector<std::span<float>> m_destinationChannels;
 
-    Ref<AudioParam> m_detune;
-    Ref<AudioParam> m_playbackRate;
+    const Ref<AudioParam> m_detune;
+    const Ref<AudioParam> m_playbackRate;
 
     // If m_isLooping is false, then this node will be done playing and become inactive after it reaches the end of the sample data in the buffer.
     // If true, it will wrap around to the start of the buffer each time it reaches the end.
@@ -135,3 +138,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AudioBufferSourceNode)
+    static bool isType(const WebCore::AudioNode& node) { return node.nodeType() == WebCore::AudioNode::NodeTypeAudioBufferSource; }
+SPECIALIZE_TYPE_TRAITS_END()

@@ -48,7 +48,10 @@
 #include "CCallHelpers.h"
 #include "LinkBuffer.h"
 #include <cmath>
+#include <numeric>
 #include <wtf/BitVector.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC { namespace B3 {
 
@@ -85,6 +88,15 @@ public:
     }
 
 private:
+    template <class Fn>
+    void replaceWithBinaryCall(Fn &&function)
+    {
+        Value* functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, tagCFunction<OperationPtrTag>(function));
+        Value* result = m_insertionSet.insert<CCallValue>(m_index, m_value->type(), m_origin, Effects::none(), functionAddress, m_value->child(0), m_value->child(1));
+        m_value->replaceWithIdentity(result);
+        m_changed = true;
+    }
+
     void processCurrentBlock()
     {
         for (m_index = 0; m_index < m_block->size(); ++m_index) {
@@ -148,6 +160,11 @@ private:
                     Value* result = m_insertionSet.insert<Value>(m_index, DoubleToFloat, m_origin, doubleMod);
                     m_value->replaceWithIdentity(result);
                     m_changed = true;
+                } else if constexpr (isARM_THUMB2()) {
+                    if (m_value->type() == Int64)
+                        replaceWithBinaryCall(Math::i64_rem_s);
+                    else
+                        replaceWithBinaryCall(Math::i32_rem_s);
                 } else if (isARM64()) {
                     Value* divResult = m_insertionSet.insert<Value>(m_index, chill(Div), m_origin, m_value->child(0), m_value->child(1));
                     Value* multipliedBack = m_insertionSet.insert<Value>(m_index, Mul, m_origin, divResult, m_value->child(1));
@@ -159,6 +176,13 @@ private:
             }
 
             case UMod: {
+                if constexpr (isARM_THUMB2()) {
+                    if (m_value->child(0)->type() == Int64)
+                        replaceWithBinaryCall(Math::i64_rem_u);
+                    else
+                        replaceWithBinaryCall(Math::i32_rem_u);
+                    break;
+                }
                 if (isARM64()) {
                     Value* divResult = m_insertionSet.insert<Value>(m_index, UDiv, m_origin, m_value->child(0), m_value->child(1));
                     Value* multipliedBack = m_insertionSet.insert<Value>(m_index, Mul, m_origin, divResult, m_value->child(1));
@@ -169,9 +193,18 @@ private:
                 break;
             }
 
+            case UDiv: {
+                if constexpr (!isARM_THUMB2())
+                    break;
+                if (m_value->type() == Int64)
+                    replaceWithBinaryCall(Math::i64_div_u);
+                else
+                    replaceWithBinaryCall(Math::i32_div_u);
+                break;
+            }
             case FMax:
             case FMin: {
-                if (isX86()) {
+                if (isX86() || isARM_THUMB2()) {
                     bool isMax = m_value->opcode() == FMax;
 
                     Value* a = m_value->child(0);
@@ -237,6 +270,15 @@ private:
             case Div: {
                 if (m_value->isChill())
                     makeDivisionChill(Div);
+                else if (isARM_THUMB2() && (m_value->type() == Int64 || m_value->type() == Int32)) {
+                    BasicBlock* before = m_blockInsertionSet.splitForward(m_block, m_index);
+                    before->replaceLastWithNew<Value>(m_proc, Nop, m_origin);
+                    Value* result = callDivModHelper(before, Div, m_value->child(0), m_value->child(1));
+                    before->appendNew<Value>(m_proc, Jump, m_origin);
+                    before->setSuccessors(FrequentedBlock(m_block));
+                    m_value->replaceWithIdentity(result);
+                    m_changed = true;
+                }
                 break;
             }
 
@@ -245,11 +287,7 @@ private:
                 Vector<SwitchCase> cases;
                 for (SwitchCase switchCase : switchValue->cases(m_block))
                     cases.append(switchCase);
-                std::sort(
-                    cases.begin(), cases.end(),
-                    [] (const SwitchCase& left, const SwitchCase& right) {
-                        return left.caseValue() < right.caseValue();
-                    });
+                std::ranges::sort(cases, { }, &SwitchCase::caseValue);
                 FrequentedBlock fallThrough = m_block->fallThrough();
                 m_block->values().removeLast();
                 recursivelyBuildSwitch(cases, fallThrough, 0, false, cases.size(), m_block);
@@ -537,6 +575,30 @@ private:
         m_changed = true;
     }
 
+#if USE(JSVALUE32_64)
+    Value* callDivModHelper(BasicBlock* block, Opcode nonChillOpcode, Value* num, Value* den)
+    {
+        Type type = num->type();
+        Value* functionAddress;
+        if (nonChillOpcode == Div) {
+            if (m_value->type() == Int64)
+                functionAddress = block->appendNew<ConstPtrValue>(m_proc, m_origin, tagCFunction<OperationPtrTag>(Math::i64_div_s));
+            else
+                functionAddress = block->appendNew<ConstPtrValue>(m_proc, m_origin, tagCFunction<OperationPtrTag>(Math::i32_div_s));
+        } else {
+            if (m_value->type() == Int64)
+                functionAddress = block->appendNew<ConstPtrValue>(m_proc, m_origin, tagCFunction<OperationPtrTag>(Math::i64_rem_s));
+            else
+                functionAddress = block->appendNew<ConstPtrValue>(m_proc, m_origin, tagCFunction<OperationPtrTag>(Math::i32_rem_s));
+        }
+        return block->appendNew<CCallValue>(m_proc, type, m_origin, Effects::none(), functionAddress, num, den);
+    }
+#else
+    Value* callDivModHelper(BasicBlock*, Opcode, Value*, Value*)
+    {
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+#endif
     void makeDivisionChill(Opcode nonChillOpcode)
     {
         ASSERT(nonChillOpcode == Div || nonChillOpcode == Mod);
@@ -583,9 +645,14 @@ private:
             FrequentedBlock(normalDivCase, FrequencyClass::Normal),
             FrequentedBlock(shadyDenCase, FrequencyClass::Rare));
 
+        Value* innerResult;
+        if (isARM_THUMB2() && (m_value->type() == Int64 || m_value->type() == Int32))
+            innerResult = callDivModHelper(normalDivCase, nonChillOpcode, num, den);
+        else
+            innerResult = normalDivCase->appendNew<Value>(m_proc, nonChillOpcode, m_origin, num, den);
         UpsilonValue* normalResult = normalDivCase->appendNew<UpsilonValue>(
             m_proc, m_origin,
-            normalDivCase->appendNew<Value>(m_proc, nonChillOpcode, m_origin, num, den));
+            innerResult);
         normalDivCase->appendNew<Value>(m_proc, Jump, m_origin);
         normalDivCase->setSuccessors(FrequentedBlock(m_block));
 
@@ -792,7 +859,7 @@ private:
             return;
         }
 
-        unsigned medianIndex = (start + end) / 2;
+        unsigned medianIndex = std::midpoint(start, end);
 
         BasicBlock* left = m_blockInsertionSet.insertAfter(m_block);
         BasicBlock* right = m_blockInsertionSet.insertAfter(m_block);
@@ -825,12 +892,13 @@ private:
 
 bool lowerMacros(Procedure& proc)
 {
-    PhaseScope phaseScope(proc, "B3::lowerMacros");
+    PhaseScope phaseScope(proc, "B3::lowerMacros"_s);
     LowerMacros lowerMacros(proc);
     return lowerMacros.run();
 }
 
 } } // namespace JSC::B3
 
-#endif // ENABLE(B3_JIT)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
+#endif // ENABLE(B3_JIT)

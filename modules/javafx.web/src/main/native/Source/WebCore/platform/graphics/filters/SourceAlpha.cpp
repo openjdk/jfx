@@ -25,6 +25,10 @@
 #include "SourceAlphaSoftwareApplier.h"
 #include <wtf/text/TextStream.h>
 
+#if USE(CORE_IMAGE)
+#include "SourceAlphaCoreImageApplier.h"
+#endif
+
 namespace WebCore {
 
 Ref<SourceAlpha> SourceAlpha::create(const DestinationColorSpace& colorSpace)
@@ -32,10 +36,18 @@ Ref<SourceAlpha> SourceAlpha::create(const DestinationColorSpace& colorSpace)
     return adoptRef(*new SourceAlpha(colorSpace));
 }
 
-SourceAlpha::SourceAlpha(const DestinationColorSpace& colorSpace)
-    : FilterEffect(FilterEffect::Type::SourceAlpha)
+SourceAlpha::SourceAlpha(DestinationColorSpace colorSpace)
+    : FilterEffect(FilterEffect::Type::SourceAlpha, colorSpace)
 {
-    setOperatingColorSpace(colorSpace);
+}
+
+OptionSet<FilterRenderingMode> SourceAlpha::supportedFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) const
+{
+    OptionSet<FilterRenderingMode> modes = FilterRenderingMode::Software;
+#if USE(CORE_IMAGE)
+    modes.add(FilterRenderingMode::Accelerated);
+#endif
+    return modes & preferredFilterRenderingModes;
 }
 
 std::unique_ptr<FilterEffectApplier> SourceAlpha::createSoftwareApplier() const
@@ -43,9 +55,18 @@ std::unique_ptr<FilterEffectApplier> SourceAlpha::createSoftwareApplier() const
     return FilterEffectApplier::create<SourceAlphaSoftwareApplier>(*this);
 }
 
+std::unique_ptr<FilterEffectApplier> SourceAlpha::createAcceleratedApplier() const
+{
+#if USE(CORE_IMAGE)
+    return FilterEffectApplier::create<SourceAlphaCoreImageApplier>(*this);
+#else
+    return nullptr;
+#endif
+}
+
 TextStream& SourceAlpha::externalRepresentation(TextStream& ts, FilterRepresentation) const
 {
-    ts << indent << "[SourceAlpha]\n";
+    ts << indent << "[SourceAlpha]\n"_s;
     return ts;
 }
 

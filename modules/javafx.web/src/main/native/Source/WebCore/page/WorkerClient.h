@@ -25,17 +25,19 @@
 
 #pragma once
 
-#include "GraphicsClient.h"
-#include <wtf/FastMalloc.h>
+#include <WebCore/GraphicsClient.h>
 #include <wtf/FunctionDispatcher.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/UniqueRef.h>
 
 namespace WebCore {
 
 class WorkerClient : public GraphicsClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(WorkerClient);
 public:
 
-    virtual std::unique_ptr<WorkerClient> clone(SerialFunctionDispatcher&) = 0;
+    // Used for constructing clients for nested workers. Created on the worker thread of the outer worker, and then transferred to the nested worker.
+    virtual UniqueRef<WorkerClient> createNestedWorkerClient(SerialFunctionDispatcher&) = 0;
 
     virtual ~WorkerClient() = default;
 };

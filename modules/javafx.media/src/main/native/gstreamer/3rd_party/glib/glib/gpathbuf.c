@@ -15,15 +15,13 @@
 #include "gstrfuncs.h"
 
 /**
- * SECTION:gpathbuf
- * @Title: GPathBuf
- * @Short_description: A mutable path builder
+ * GPathBuf:
  *
  * `GPathBuf` is a helper type that allows you to easily build paths from
  * individual elements, using the platform specific conventions for path
  * separators.
  *
- * |[<!-- language="C" -->
+ * ```c
  * g_auto (GPathBuf) path;
  *
  * g_path_buf_init (&path);
@@ -34,11 +32,11 @@
  *
  * g_autofree char *echo = g_path_buf_to_path (&path);
  * g_assert_cmpstr (echo, ==, "/usr/bin/echo");
- * ]|
+ * ```
  *
  * You can also load a full path and then operate on its components:
  *
- * |[<!-- language="C" -->
+ * ```c
  * g_auto (GPathBuf) path;
  *
  * g_path_buf_init_from_path (&path, "/usr/bin/echo");
@@ -48,9 +46,9 @@
  *
  * g_autofree char *sh = g_path_buf_to_path (&path);
  * g_assert_cmpstr (sh, ==, "/usr/bin/sh");
- * ]|
+ * ```
  *
- * `GPathBuf` is available since GLib 2.76.
+ * Since: 2.76
  */
 
 typedef struct {

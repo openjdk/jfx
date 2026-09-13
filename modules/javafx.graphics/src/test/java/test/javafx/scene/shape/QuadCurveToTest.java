@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,46 +34,56 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.scene.Group;
 import test.javafx.scene.NodeTest;
 import javafx.scene.Scene;
-import org.junit.Test;
 
 import java.lang.reflect.Method;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
 import javafx.scene.shape.QuadCurveTo;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class QuadCurveToTest {
 
-    @Test public void testSetGetX() throws Exception {
+    @Test
+    public void testSetGetX() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new QuadCurveTo(), "x", 123.2, 0.0);
     }
 
-    @Test public void testSetGetControlX() throws Exception {
+    @Test
+    public void testSetGetControlX() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new QuadCurveTo(), "controlX", 123.2, 0.0);
     }
 
-    @Test public void testSetGetControlY() throws Exception {
+    @Test
+    public void testSetGetControlY() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new QuadCurveTo(), "controlY", 123.2, 0.0);
     }
 
-   @Test public void testDoublePropertySynced_X() throws Exception {
+   @Test
+   public void testDoublePropertySynced_X() throws Exception {
         checkSyncedProperty("x", Coords.X, 123.4);
     }
 
-   @Test public void testDoublePropertySynced_Y() throws Exception {
+   @Test
+   public void testDoublePropertySynced_Y() throws Exception {
         checkSyncedProperty("y", Coords.Y, 432.1);
     }
 
-   @Test public void testDoublePropertySynced_ControlX() throws Exception {
+   @Test
+   public void testDoublePropertySynced_ControlX() throws Exception {
         checkSyncedProperty("controlX", Coords.CONTROL_X, 11.1);
     }
 
-   @Test public void testDoublePropertySynced_ControlY() throws Exception {
+   @Test
+   public void testDoublePropertySynced_ControlY() throws Exception {
         checkSyncedProperty("controlY", Coords.CONTROL_Y, 22.2);
     }
 
-    @Test public void toStringShouldReturnNonEmptyString() {
+    @Test
+    public void toStringShouldReturnNonEmptyString() {
         String s = new QuadCurveTo().toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());

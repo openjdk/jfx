@@ -26,15 +26,30 @@
 
 #include "GenericMediaQueryTypes.h"
 
-namespace WebCore::CQ {
+namespace WebCore {
 
+class CSSToLengthConversionData;
+class RenderBox;
+class RenderStyle;
+class RenderView;
+
+namespace CSS {
+enum class Category : uint8_t;
+}
+
+namespace CQ {
 namespace Features {
+
 const MQ::FeatureSchema& width();
 const MQ::FeatureSchema& height();
 const MQ::FeatureSchema& inlineSize();
 const MQ::FeatureSchema& blockSize();
 const MQ::FeatureSchema& aspectRatio();
 const MQ::FeatureSchema& orientation();
-};
+const MQ::FeatureSchema& style();
 
-}
+Vector<const MQ::FeatureSchema*> allSchemas();
+
+} // namespace Features
+} // namespace CQ
+} // namespace WebCore

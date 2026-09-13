@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -77,9 +77,6 @@ import com.sun.javafx.scene.control.skin.FXVK;
 import com.sun.javafx.scene.web.behavior.HTMLEditorBehavior;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraverseListener;
-
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 import java.util.HashMap;
 import java.util.Locale;
@@ -196,7 +193,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> implements TraverseList
     private static final String INSERT_NEW_LINE_COMMAND = "insertnewline";
     private static final String INSERT_TAB_COMMAND = "inserttab";
 
-    // As per RT-16330: default format -> bold/size mappings are as follows:
+    // As per JDK-8128317: default format -> bold/size mappings are as follows:
     private static final String[][] DEFAULT_FORMAT_MAPPINGS = {
         { FORMAT_PARAGRAPH,   "",             SIZE_SMALL     },
         { FORMAT_HEADING_1,   BOLD_COMMAND,   SIZE_X_LARGE   },
@@ -207,7 +204,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> implements TraverseList
         { FORMAT_HEADING_6,   BOLD_COMMAND,   SIZE_XX_SMALL  },
     };
 
-    // As per RT-16379: default OS -> font mappings:
+    // As per JDK-8128304: default OS -> font mappings:
     private static final String[] DEFAULT_WINDOWS_7_MAPPINGS = {
         "Windows 7",       "Segoe UI",        "12px",   "",     "120"
     };
@@ -245,7 +242,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> implements TraverseList
 //                if (c.getRemovedSize() > 0) {
 //                    for (Node n : c.getList()) {
 //                        if (n instanceof WebView) {
-//                            // RT-28611 webView removed - set associated webPage to null
+//                            // JDK-8120698 webView removed - set associated webPage to null
 //                            webPage.dispose();
 //                        }
 //                    }
@@ -611,7 +608,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> implements TraverseList
                     executeCommand(FORMAT_COMMAND, formatValue);
                     updateToolbarState(false);
 
-                    // RT-16330 match the new font format with the required weight and size
+                    // JDK-8128317 match the new font format with the required weight and size
                     for (int i = 0; i < DEFAULT_FORMAT_MAPPINGS.length; i++) {
                         String[] mapping = DEFAULT_FORMAT_MAPPINGS[i];
                         if (mapping[0].equalsIgnoreCase(formatValue)) {
@@ -745,7 +742,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> implements TraverseList
 
         insertHorizontalRuleButton = addButton(toolbar2, resources.getString("insertHorizontalRuleIcon"),
             resources.getString("insertHorizontalRule"), INSERT_HORIZONTAL_RULE_COMMAND, "html-editor-hr");
-        // We override setOnAction to insert a new line.  This fixes RT-16453
+        // We override setOnAction to insert a new line.  This fixes JDK-8128749
         insertHorizontalRuleButton.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
@@ -762,11 +759,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> implements TraverseList
 
         // fgColorButton.applyCss();
         // ColorPickerSkin fgColorPickerSkin = (ColorPickerSkin) fgColorButton.getSkin();
-        // String fgIcon = AccessController.doPrivileged(new PrivilegedAction<String>() {
-            // @Override public String run() {
-                // return HTMLEditorSkin.class.getResource(resources.getString("foregroundColorIcon")).toString();
-            // }
-        // });
+        // String fgIcon = HTMLEditorSkin.class.getResource(resources.getString("foregroundColorIcon")).toString();
         // ((StyleableProperty)fgColorPickerSkin.imageUrlProperty()).applyStyle(null,fgIcon);
 
         fgColorButton.setValue(DEFAULT_FG_COLOR);
@@ -788,11 +781,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> implements TraverseList
 
         // bgColorButton.applyCss();
         // ColorPickerSkin  bgColorPickerSkin = (ColorPickerSkin) bgColorButton.getSkin();
-        // String bgIcon = AccessController.doPrivileged(new PrivilegedAction<String>() {
-            // @Override public String run() {
-                // return HTMLEditorSkin.class.getResource(resources.getString("backgroundColorIcon")).toString();
-            // }
-        // });
+        // String bgIcon = HTMLEditorSkin.class.getResource(resources.getString("backgroundColorIcon")).toString();
         // ((StyleableProperty)bgColorPickerSkin.imageUrlProperty()).applyStyle(null,bgIcon);
 
         bgColorButton.setValue(DEFAULT_BG_COLOR);
@@ -823,11 +812,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> implements TraverseList
         button.getStyleClass().add(styleClass);
         toolbar.getItems().add(button);
 
-        Image icon = AccessController.doPrivileged(new PrivilegedAction<Image>() {
-            @Override public Image run() {
-                return new Image(HTMLEditorSkin.class.getResource(iconName).toString());
-            }
-        });
+        Image icon = new Image(HTMLEditorSkin.class.getResource(iconName).toString());
 //        button.setGraphic(new ImageView(icon));
         ((StyleableProperty)button.graphicProperty()).applyStyle(null,new ImageView(icon));
         button.setTooltip(new Tooltip(tooltipText));
@@ -854,11 +839,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> implements TraverseList
             toggleButton.setToggleGroup(toggleGroup);
         }
 
-        Image icon = AccessController.doPrivileged(new PrivilegedAction<Image>() {
-            @Override public Image run() {
-                return new Image(HTMLEditorSkin.class.getResource(iconName).toString());
-            }
-        });
+        Image icon = new Image(HTMLEditorSkin.class.getResource(iconName).toString());
         ((StyleableProperty)toggleButton.graphicProperty()).applyStyle(null,new ImageView(icon));
 //        toggleButton.setGraphic(new ImageView(icon));
 
@@ -901,11 +882,7 @@ public class HTMLEditorSkin extends SkinBase<HTMLEditor> implements TraverseList
         if (orientation == RIGHT_TO_LEFT) {
             try {
                 final String iconName = resources.getString("numbersIcon-rtl");
-                Image icon = AccessController.doPrivileged(new PrivilegedAction<Image>() {
-                    @Override public Image run() {
-                        return new Image(HTMLEditorSkin.class.getResource(iconName).toString());
-                    }
-                });
+                Image icon = new Image(HTMLEditorSkin.class.getResource(iconName).toString());
                 numbersButton.setGraphic(new ImageView(icon));
             } catch (java.util.MissingResourceException ex) {
                 // ignore

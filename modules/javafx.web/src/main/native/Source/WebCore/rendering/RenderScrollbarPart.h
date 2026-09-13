@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,7 +33,8 @@ namespace WebCore {
 class RenderScrollbar;
 
 class RenderScrollbarPart final : public RenderBlock {
-    WTF_MAKE_ISO_ALLOCATED(RenderScrollbarPart);
+    WTF_MAKE_TZONE_ALLOCATED(RenderScrollbarPart);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderScrollbarPart);
 public:
     RenderScrollbarPart(Document&, RenderStyle&&, RenderScrollbar* = nullptr, ScrollbarPart = NoPart);
 
@@ -42,6 +43,8 @@ public:
     ASCIILiteral renderName() const override { return "RenderScrollbarPart"_s; }
 
     bool requiresLayer() const override { return false; }
+
+    bool isInsideEntirelyHiddenLayer() const override { return false; }
 
     void layout() override;
 
@@ -56,10 +59,8 @@ public:
     RenderBox* rendererOwningScrollbar() const;
 
 private:
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) override;
     void imageChanged(WrappedImagePtr, const IntRect* = nullptr) override;
-
-    bool isRenderScrollbarPart() const override { return true; }
 
     void layoutHorizontalPart();
     void layoutVerticalPart();
@@ -67,7 +68,7 @@ private:
     void computeScrollbarWidth();
     void computeScrollbarHeight();
 
-    RenderScrollbar* m_scrollbar;
+    SingleThreadWeakPtr<RenderScrollbar> m_scrollbar;
     ScrollbarPart m_part;
 };
 

@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY)
 
 #include "InternalFunction.h"
@@ -37,7 +39,7 @@ class WebAssemblyGlobalPrototype;
 class WebAssemblyGlobalConstructor final : public InternalFunction {
 public:
     using Base = InternalFunction;
-    static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+    static constexpr unsigned StructureFlags = Base::StructureFlags;
 
     static WebAssemblyGlobalConstructor* create(VM&, Structure*, WebAssemblyGlobalPrototype*);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);

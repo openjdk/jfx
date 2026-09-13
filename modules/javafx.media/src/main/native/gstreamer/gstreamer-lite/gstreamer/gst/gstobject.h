@@ -46,10 +46,29 @@ G_BEGIN_DECLS
 #define GST_OBJECT_CLASS_CAST(klass)    ((GstObjectClass*)(klass))
 
 /**
+ * GST_OBJECT_FLAG_CONSTRUCTED:
+ *
+ * Flag that's set when the object has been constructed. This can be used by
+ * API such as base class setters to differentiate between the case where
+ * they're called from a subclass's instance init function (and where the
+ * object isn't fully constructed yet, and so one shouldn't do anything but
+ * set values in the instance structure), and the case where the object is
+ * constructed.
+ *
+ * Since: 1.24
+ */
+
+/**
  * GstObjectFlags:
  * @GST_OBJECT_FLAG_MAY_BE_LEAKED: the object is expected to stay alive even
  * after gst_deinit() has been called and so should be ignored by leak
  * detection tools. (Since: 1.10)
+ * @GST_OBJECT_FLAG_CONSTRUCTED: flag that's set when the object has been
+ * constructed. This can be used by API such as base class setters to
+ * differentiate between the case where they're called from a subclass's
+ * instance init function (and where the object isn't fully constructed yet,
+ * and so one shouldn't do anything but set values in the instance structure),
+ * and the case where the object is constructed. (Since: 1.24)
  * @GST_OBJECT_FLAG_LAST: subclasses can add additional flags starting from this flag
  *
  * The standard flags that an gstobject may have.
@@ -57,6 +76,7 @@ G_BEGIN_DECLS
 typedef enum
 {
   GST_OBJECT_FLAG_MAY_BE_LEAKED = (1 << 0),
+  GST_OBJECT_FLAG_CONSTRUCTED = (1 << 1),
   /* padding */
   GST_OBJECT_FLAG_LAST = (1<<4)
 } GstObjectFlags;
@@ -94,6 +114,34 @@ typedef enum
  * It blocks until the lock can be obtained.
  */
 #define GST_OBJECT_LOCK(obj)                   g_mutex_lock(GST_OBJECT_GET_LOCK(obj))
+
+/**
+ * GST_OBJECT_AUTO_LOCK:
+ * @obj: a #GstObject to lock
+ * @var: a variable name to be declared
+ *
+ * Declare a #GMutexLocker variable with g_autoptr() and lock the object. The
+ * mutex will be unlocked automatically when leaving the scope.
+ *
+ * ``` c
+ * {
+ *   GST_OBJECT_AUTO_LOCK (obj, locker);
+ *
+ *   obj->stuff_with_lock();
+ *   if (cond) {
+ *     // No need to unlock
+ *     return;
+ *   }
+ *
+ *   // Unlock before end of scope
+ *   g_clear_pointer (&locker, g_mutex_locker_free);
+ *   obj->stuff_without_lock();
+ * }
+ * ```
+ * Since: 1.24.0
+ */
+#define GST_OBJECT_AUTO_LOCK(obj, var) g_autoptr(GMutexLocker) G_GNUC_UNUSED var = g_mutex_locker_new(GST_OBJECT_GET_LOCK(obj))
+
 /**
  * GST_OBJECT_TRYLOCK:
  * @obj: a #GstObject.
@@ -226,7 +274,7 @@ GST_API
 gboolean  gst_object_set_name   (GstObject *object, const gchar *name);
 
 GST_API
-gchar*    gst_object_get_name   (GstObject *object);
+gchar*    gst_object_get_name   (GstObject *object) G_GNUC_WARN_UNUSED_RESULT;
 
 /* parentage routines */
 
@@ -234,7 +282,12 @@ GST_API
 gboolean  gst_object_set_parent   (GstObject *object, GstObject *parent);
 
 GST_API
-GstObject*  gst_object_get_parent   (GstObject *object);
+GstObject*  gst_object_get_parent   (GstObject *object) G_GNUC_WARN_UNUSED_RESULT;
+
+#ifndef GSTREAMER_LITE
+GST_API
+GstObject*  gst_object_get_toplevel (GstObject *object) G_GNUC_WARN_UNUSED_RESULT;
+#endif // GSTREAMER_LITE
 
 GST_API
 void    gst_object_unparent   (GstObject *object);
@@ -275,7 +328,7 @@ gboolean        gst_object_replace    (GstObject **oldobj, GstObject *newobj);
 /* printing out the 'path' of the object */
 
 GST_API
-gchar *   gst_object_get_path_string  (GstObject *object);
+gchar *   gst_object_get_path_string  (GstObject *object) G_GNUC_WARN_UNUSED_RESULT;
 
 /* misc utils */
 
@@ -308,14 +361,14 @@ gboolean        gst_object_add_control_binding    (GstObject * object, GstContro
 
 GST_API
 GstControlBinding *
-                gst_object_get_control_binding    (GstObject *object, const gchar * property_name);
+                gst_object_get_control_binding    (GstObject *object, const gchar * property_name) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 gboolean        gst_object_remove_control_binding (GstObject * object, GstControlBinding * binding);
 
 GST_API
 GValue *        gst_object_get_value              (GstObject * object, const gchar * property_name,
-                                                   GstClockTime timestamp);
+                                                   GstClockTime timestamp) G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 gboolean        gst_object_get_value_array        (GstObject * object, const gchar * property_name,
                                                    GstClockTime timestamp, GstClockTime interval,
@@ -329,6 +382,23 @@ GstClockTime    gst_object_get_control_rate       (GstObject * object);
 
 GST_API
 void            gst_object_set_control_rate       (GstObject * object, GstClockTime control_rate);
+
+/**
+ * GstObjectCallAsyncFunc:
+ * @object: A #GstObject this function has been called against
+ * @user_data: Data passed in the function where that callback has been passed
+ *
+ * Callback prototype used in #gst_object_call_async
+ *
+ * Since: 1.28
+ */
+typedef void  (*GstObjectCallAsyncFunc)           (GstObject * object,
+                                                   gpointer user_data);
+
+GST_API
+void            gst_object_call_async             (GstObject * object,
+                                                   GstObjectCallAsyncFunc func,
+                                                   gpointer user_data);
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstObject, gst_object_unref)
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,12 +30,13 @@
 
 #include "DFGGraph.h"
 #include "JSCJSValueInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC { namespace DFG {
 
-PhiChildren::PhiChildren()
-{
-}
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_IMPL(PhiChildren);
+
+PhiChildren::PhiChildren() = default;
 
 PhiChildren::PhiChildren(Graph& graph)
 {
@@ -49,9 +50,7 @@ PhiChildren::PhiChildren(Graph& graph)
     }
 }
 
-PhiChildren::~PhiChildren()
-{
-}
+PhiChildren::~PhiChildren() = default;
 
 const PhiChildren::List& PhiChildren::upsilonsOf(Node* node) const
 {

@@ -25,13 +25,13 @@
 
 #pragma once
 
-#include "WebGPUComputePassTimestampWrites.h"
-#include "WebGPUObjectDescriptorBase.h"
+#include <WebCore/WebGPUComputePassTimestampWrites.h>
+#include <WebCore/WebGPUObjectDescriptorBase.h>
 
 namespace WebCore::WebGPU {
 
 struct ComputePassDescriptor : public ObjectDescriptorBase {
-    ComputePassTimestampWrites timestampWrites;
+    std::optional<ComputePassTimestampWrites> timestampWrites;
 };
 
 } // namespace WebCore::WebGPU

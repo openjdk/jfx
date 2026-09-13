@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,14 +23,38 @@
  * questions.
  */
 
-include "base", "graphics", "controls", "swing", "swt", "fxml", "web", "media", "systemTests"
+include "base",
+        "graphics",
+        "controls",
+        // Add an entry for each incubator module here, leaving the incubator
+        // placeholder lines as an example.
+        // BEGIN: incubator placeholder
+        //"incubator.mymod",
+        // END: incubator placeholder
+        "incubator.input",
+        "incubator.richtext",
+        "swing",
+        "swt",
+        "fxml",
+        "jsobject",
+        "web",
+        "media",
+        "systemTests"
 
 project(":base").projectDir = file("modules/javafx.base")
 project(":graphics").projectDir = file("modules/javafx.graphics")
 project(":controls").projectDir = file("modules/javafx.controls")
+// Add an entry for each incubator module here, leaving the incubator
+// placeholder lines as an example.
+// BEGIN: incubator placeholder
+//project(":incubator.mymod").projectDir = file("modules/jfx.incubator.mymod")
+// END: incubator placeholder
+project(":incubator.input").projectDir = file("modules/jfx.incubator.input")
+project(":incubator.richtext").projectDir = file("modules/jfx.incubator.richtext")
 project(":swing").projectDir = file("modules/javafx.swing")
 project(":swt").projectDir = file("modules/javafx.swt")
 project(":fxml").projectDir = file("modules/javafx.fxml")
+project(":jsobject").projectDir = file("modules/jdk.jsobject")
 project(":web").projectDir = file("modules/javafx.web")
 project(":media").projectDir = file("modules/javafx.media")
 project(":systemTests").projectDir = file("tests/system")

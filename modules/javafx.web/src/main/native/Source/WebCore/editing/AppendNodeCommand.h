@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,7 +33,7 @@ class AppendNodeCommand : public SimpleEditCommand {
 public:
     static Ref<AppendNodeCommand> create(Ref<ContainerNode>&& parent, Ref<Node>&& node, EditAction editingAction)
     {
-        return adoptRef(*new AppendNodeCommand(WTFMove(parent), WTFMove(node), editingAction));
+        return adoptRef(*new AppendNodeCommand(WTF::move(parent), WTF::move(node), editingAction));
     }
 
 private:
@@ -43,11 +43,11 @@ private:
     void doUnapply() override;
 
 #ifndef NDEBUG
-    void getNodesInCommand(HashSet<Ref<Node>>&) override;
+    void getNodesInCommand(NodeSet&) override;
 #endif
 
-    Ref<ContainerNode> m_parent;
-    Ref<Node> m_node;
+    const Ref<ContainerNode> m_parent;
+    const Ref<Node> m_node;
 };
 
 } // namespace WebCore

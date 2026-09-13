@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,10 +29,11 @@ import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.transform.GeneralTransform3D;
 import com.sun.javafx.geom.Vec3d;
 import com.sun.javafx.geom.Vec3f;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-import org.junit.BeforeClass;
-import org.junit.Test;
+
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
  * This Unit Test covers GeneralTransform3D and some of its calculations.
@@ -66,7 +67,7 @@ public class GeneralTransform3DTest {
         assertEquals(vec1.z, vec2.z, delta);
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() {
         generalTransform3D.set(mat);
     }

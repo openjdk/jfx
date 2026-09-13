@@ -39,7 +39,7 @@ namespace WTF {
 
 template<typename PassedType>
 class Range {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Range);
 public:
     typedef PassedType Type;
 
@@ -73,11 +73,7 @@ public:
         return Range(std::numeric_limits<Type>::min(), std::numeric_limits<Type>::max());
     }
 
-    bool operator==(const Range& other) const
-    {
-        return m_begin == other.m_begin
-            && m_end == other.m_end;
-    }
+    friend bool operator==(const Range&, const Range&) = default;
 
     explicit operator bool() const { return m_begin != m_end; }
 

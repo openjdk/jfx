@@ -30,6 +30,9 @@
 namespace WebCore {
 
 struct CookieStoreGetOptions {
+    CookieStoreGetOptions isolatedCopy() const & { return { name.isolatedCopy(), url.isolatedCopy() }; }
+    CookieStoreGetOptions isolatedCopy() && { return { WTF::move(name).isolatedCopy(), WTF::move(url).isolatedCopy() }; }
+
     String name;
     String url;
 };

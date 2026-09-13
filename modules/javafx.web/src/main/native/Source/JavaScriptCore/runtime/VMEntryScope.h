@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <JavaScriptCore/JSExportMacros.h>
 #include <functional>
 #include <wtf/Vector.h>
 
@@ -40,6 +41,7 @@ public:
 
     VM& vm() const { return m_vm; }
     JSGlobalObject* globalObject() const { return m_globalObject; }
+    void setGlobalObject(JSGlobalObject* globalObject) { m_globalObject = globalObject; }
 
 private:
     JS_EXPORT_PRIVATE void setUpSlow();

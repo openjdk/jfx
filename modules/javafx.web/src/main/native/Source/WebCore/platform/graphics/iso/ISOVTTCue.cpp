@@ -28,6 +28,7 @@
 
 #include "Logging.h"
 #include <JavaScriptCore/DataView.h>
+#include <wtf/CrossThreadCopier.h>
 #include <wtf/JSONValues.h>
 #include <wtf/URL.h>
 
@@ -56,13 +57,13 @@ private:
         if (characterCount > bytesRemaining)
             return false;
 
-        Vector<LChar> characters;
+        Vector<Latin1Character> characters;
         characters.reserveInitialCapacity(static_cast<size_t>(characterCount));
         while (characterCount--) {
             int8_t character = 0;
             if (!checkedRead<int8_t>(character, view, localOffset, BigEndian))
                 return false;
-            characters.uncheckedAppend(character);
+            characters.append(character);
         }
 
         m_contents = String::fromUTF8(characters);
@@ -72,11 +73,11 @@ private:
     String m_contents;
 };
 
-static FourCC vttIdBoxType() { return "iden"; }
-static FourCC vttSettingsBoxType() { return "sttg"; }
-static FourCC vttPayloadBoxType() { return "payl"; }
-static FourCC vttCurrentTimeBoxType() { return "ctim"; }
-static FourCC vttCueSourceIDBoxType() { return "vsid"; }
+static FourCC vttIdBoxType() { return std::span { "iden" }; }
+static FourCC vttSettingsBoxType() { return std::span { "sttg" }; }
+static FourCC vttPayloadBoxType() { return std::span { "payl" }; }
+static FourCC vttCurrentTimeBoxType() { return std::span { "ctim" }; }
+static FourCC vttCueSourceIDBoxType() { return std::span { "vsid" }; }
 
 ISOWebVTTCue::ISOWebVTTCue(const MediaTime& presentationTime, const MediaTime& duration)
     : m_presentationTime(presentationTime)
@@ -84,14 +85,14 @@ ISOWebVTTCue::ISOWebVTTCue(const MediaTime& presentationTime, const MediaTime& d
 {
 }
 
-ISOWebVTTCue::ISOWebVTTCue(MediaTime&& presentationTime, MediaTime&& duration, AtomString&& cueID, String&& cueText, String&& settings, String&& sourceID, String&& originalStartTime)
-    : m_presentationTime(WTFMove(presentationTime))
-    , m_duration(WTFMove(duration))
-    , m_sourceID(WTFMove(sourceID))
-    , m_identifier(WTFMove(cueID))
-    , m_originalStartTime(WTFMove(originalStartTime))
-    , m_settings(WTFMove(settings))
-    , m_cueText(WTFMove(cueText))
+ISOWebVTTCue::ISOWebVTTCue(const MediaTime& presentationTime, const MediaTime& duration, String&& cueID, String&& cueText, String&& settings, String&& sourceID, String&& originalStartTime)
+    : m_presentationTime(presentationTime)
+    , m_duration(duration)
+    , m_sourceID(WTF::move(sourceID))
+    , m_identifier(WTF::move(cueID))
+    , m_originalStartTime(WTF::move(originalStartTime))
+    , m_settings(WTF::move(settings))
+    , m_cueText(WTF::move(cueText))
 {
 }
 
@@ -138,6 +139,16 @@ String ISOWebVTTCue::toJSONString() const
     object->setDouble("duration"_s, m_duration.toDouble());
 
     return object->toJSONString();
+}
+
+ISOWebVTTCue ISOWebVTTCue::isolatedCopy() const &
+{
+    return { m_presentationTime, m_duration, crossThreadCopy(m_identifier), crossThreadCopy(m_cueText), crossThreadCopy(m_settings), crossThreadCopy(m_sourceID), crossThreadCopy(m_originalStartTime) };
+}
+
+ISOWebVTTCue ISOWebVTTCue::isolatedCopy() &&
+{
+    return { m_presentationTime, m_duration, crossThreadCopy(WTF::move(m_identifier)), crossThreadCopy(WTF::move(m_cueText)), crossThreadCopy(WTF::move(m_settings)), crossThreadCopy(WTF::move(m_sourceID)), crossThreadCopy(WTF::move(m_originalStartTime)) };
 }
 
 } // namespace WebCore

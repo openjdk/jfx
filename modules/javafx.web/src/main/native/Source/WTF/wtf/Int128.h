@@ -40,6 +40,7 @@
 #include <iosfwd>
 #include <limits>
 #include <utility>
+#include <wtf/ExportMacros.h>
 #include <wtf/Platform.h>
 
 #if COMPILER(MSVC)
@@ -233,7 +234,6 @@ class numeric_limits<WTF::UInt128Impl> {
   static constexpr bool has_infinity = false;
   static constexpr bool has_quiet_NaN = false;
   static constexpr bool has_signaling_NaN = false;
-  static constexpr float_denorm_style has_denorm = denorm_absent;
   static constexpr bool has_denorm_loss = false;
   static constexpr float_round_style round_style = round_toward_zero;
   static constexpr bool is_iec559 = false;
@@ -437,7 +437,6 @@ class numeric_limits<WTF::Int128Impl> {
   static constexpr bool has_infinity = false;
   static constexpr bool has_quiet_NaN = false;
   static constexpr bool has_signaling_NaN = false;
-  static constexpr float_denorm_style has_denorm = denorm_absent;
   static constexpr bool has_denorm_loss = false;
   static constexpr float_round_style round_style = round_toward_zero;
   static constexpr bool is_iec559 = false;
@@ -680,22 +679,17 @@ inline UInt128Impl::operator long double() const {
 
 // Comparison operators.
 
-constexpr bool operator==(UInt128Impl lhs, UInt128Impl rhs) {
-  return (UInt128Low64(lhs) == UInt128Low64(rhs) &&
-          UInt128High64(lhs) == UInt128High64(rhs));
+constexpr bool operator==(UInt128Impl lhs, UInt128Impl rhs)
+{
+    return UInt128Low64(lhs) == UInt128Low64(rhs) && UInt128High64(lhs) == UInt128High64(rhs);
 }
 
-constexpr bool operator<(UInt128Impl lhs, UInt128Impl rhs) {
-  return (UInt128High64(lhs) == UInt128High64(rhs))
-             ? (UInt128Low64(lhs) < UInt128Low64(rhs))
-             : (UInt128High64(lhs) < UInt128High64(rhs));
+constexpr std::strong_ordering operator<=>(UInt128Impl lhs, UInt128Impl rhs)
+{
+    if (auto cmp = UInt128High64(lhs) <=> UInt128High64(rhs); cmp != std::strong_ordering::equal)
+        return cmp;
+    return UInt128Low64(lhs) <=> UInt128Low64(rhs);
 }
-
-constexpr bool operator>(UInt128Impl lhs, UInt128Impl rhs) { return rhs < lhs; }
-
-constexpr bool operator<=(UInt128Impl lhs, UInt128Impl rhs) { return !(rhs < lhs); }
-
-constexpr bool operator>=(UInt128Impl lhs, UInt128Impl rhs) { return !(lhs < rhs); }
 
 // Unary operators.
 
@@ -1106,26 +1100,17 @@ inline Int128Impl::operator long double() const {
 
 // Comparison operators.
 
-constexpr bool operator==(Int128Impl lhs, Int128Impl rhs) {
-  return (Int128Low64(lhs) == Int128Low64(rhs) &&
-          Int128High64(lhs) == Int128High64(rhs));
+constexpr bool operator==(Int128Impl lhs, Int128Impl rhs)
+{
+    return Int128Low64(lhs) == Int128Low64(rhs) && Int128High64(lhs) == Int128High64(rhs);
 }
 
-constexpr bool operator<(Int128Impl lhs, Int128Impl rhs) {
-  return (Int128High64(lhs) == Int128High64(rhs))
-             ? (Int128Low64(lhs) < Int128Low64(rhs))
-             : (Int128High64(lhs) < Int128High64(rhs));
+constexpr std::strong_ordering operator<=>(Int128Impl lhs, Int128Impl rhs)
+{
+    if (auto cmp = Int128High64(lhs) <=> Int128High64(rhs); cmp != std::strong_ordering::equal)
+        return cmp;
+    return Int128Low64(lhs) <=> Int128Low64(rhs);
 }
-
-constexpr bool operator>(Int128Impl lhs, Int128Impl rhs) {
-  return (Int128High64(lhs) == Int128High64(rhs))
-             ? (Int128Low64(lhs) > Int128Low64(rhs))
-             : (Int128High64(lhs) > Int128High64(rhs));
-}
-
-constexpr bool operator<=(Int128Impl lhs, Int128Impl rhs) { return !(lhs > rhs); }
-
-constexpr bool operator>=(Int128Impl lhs, Int128Impl rhs) { return !(lhs < rhs); }
 
 // Unary operators.
 
@@ -1250,8 +1235,13 @@ constexpr Int128Impl operator>>(Int128Impl lhs, int amount) {
 }
 
 #if HAVE(INT128_T)
+#if COMPILER(MSVC) // Workaround for a clang-cl bug <https://webkit.org/b/274765>
+typedef __uint128_t UInt128 __attribute__((aligned(16)));
+typedef __int128_t Int128 __attribute__((aligned(16)));
+#else
 using UInt128 = __uint128_t;
 using Int128 = __int128_t;
+#endif
 #else
 using UInt128 = UInt128Impl;
 using Int128 = Int128Impl;

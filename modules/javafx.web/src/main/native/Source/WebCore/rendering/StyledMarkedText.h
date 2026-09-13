@@ -26,7 +26,7 @@
 #pragma once
 
 #include "MarkedText.h"
-#include "ShadowData.h"
+#include "StyleTextShadow.h"
 #include "TextDecorationPainter.h"
 #include "TextPaintStyle.h"
 
@@ -35,12 +35,15 @@ namespace WebCore {
 class RenderText;
 class RenderedDocumentMarker;
 
-struct StyledMarkedText : MarkedText {
+struct StyledMarkedText final : MarkedText {
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(StyledMarkedText);
+    WTF_STRUCT_OVERRIDE_DELETE_FOR_CHECKED_PTR(StyledMarkedText);
+
     struct Style {
         Color backgroundColor;
         TextPaintStyle textStyles;
         TextDecorationPainter::Styles textDecorationStyles;
-        std::optional<ShadowData> textShadow;
+        WebCore::Style::TextShadows textShadow { CSS::Keyword::None { } };
         float alpha { 1 };
     };
 

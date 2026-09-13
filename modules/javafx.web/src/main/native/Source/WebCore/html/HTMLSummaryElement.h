@@ -20,14 +20,15 @@
 
 #pragma once
 
-#include "HTMLElement.h"
+#include <WebCore/HTMLElement.h>
 
 namespace WebCore {
 
 class HTMLDetailsElement;
 
 class HTMLSummaryElement final : public HTMLElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLSummaryElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLSummaryElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLSummaryElement);
 public:
     static Ref<HTMLSummaryElement> create(const QualifiedName&, Document&);
 
@@ -37,10 +38,7 @@ public:
 private:
     HTMLSummaryElement(const QualifiedName&, Document&);
 
-    RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
     void defaultEventHandler(Event&) final;
-
-    void didAddUserAgentShadowRoot(ShadowRoot&) final;
 
     bool hasCustomFocusLogic() const final { return true; }
 

@@ -40,7 +40,15 @@ class SQLTransactionCallback : public ThreadSafeRefCounted<SQLTransactionCallbac
 public:
     using ActiveDOMCallback::ActiveDOMCallback;
 
-    virtual CallbackResult<void> handleEvent(SQLTransaction&) = 0;
+    // ContextDestructionObserver.
+    void ref() const final { ThreadSafeRefCounted::ref(); }
+    void deref() const final { ThreadSafeRefCounted::deref(); }
+
+    virtual CallbackResult<void> invoke(SQLTransaction&) = 0;
+    virtual CallbackResult<void> invokeRethrowingException(SQLTransaction&) = 0;
+
+private:
+    virtual bool hasCallback() const = 0;
 };
 
 } // namespace WebCore

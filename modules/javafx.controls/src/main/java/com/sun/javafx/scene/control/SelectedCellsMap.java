@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,7 +44,7 @@ import java.util.*;
  * Note that a map that contains an empty bitset is used to represent that the
  * row is selected.
  *
- * Refer to RT-33442 for more information on this issue.
+ * Refer to JDK-8123472 for more information on this issue.
  */
 // T == TablePosition<S,?>
 public abstract class SelectedCellsMap<T extends TablePositionBase> {

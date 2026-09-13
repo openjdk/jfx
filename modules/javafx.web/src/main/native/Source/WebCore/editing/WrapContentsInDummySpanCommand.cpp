@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "WrapContentsInDummySpanCommand.h"
 
 #include "ApplyStyleCommand.h"
+#include "NodeDocument.h"
 
 namespace WebCore {
 
@@ -39,13 +40,14 @@ WrapContentsInDummySpanCommand::WrapContentsInDummySpanCommand(Element& element)
 void WrapContentsInDummySpanCommand::executeApply()
 {
     Vector<Ref<Node>> children;
-    for (Node* child = m_element->firstChild(); child; child = child->nextSibling())
+    for (RefPtr child = m_element->firstChild(); child; child = child->nextSibling())
         children.append(*child);
 
+    RefPtr dummySpan = m_dummySpan;
     for (auto& child : children)
-        m_dummySpan->appendChild(child);
+        dummySpan->appendChild(child);
 
-    m_element->appendChild(*m_dummySpan);
+    m_element->appendChild(*dummySpan);
 }
 
 void WrapContentsInDummySpanCommand::doApply()
@@ -57,17 +59,21 @@ void WrapContentsInDummySpanCommand::doApply()
 
 void WrapContentsInDummySpanCommand::doUnapply()
 {
-    if (!m_dummySpan || !m_element->hasEditableStyle())
+    if (!m_dummySpan)
+        return;
+
+    if (!m_element->hasEditableStyle())
         return;
 
     Vector<Ref<Node>> children;
-    for (Node* child = m_dummySpan->firstChild(); child; child = child->nextSibling())
+    RefPtr dummySpan = m_dummySpan;
+    for (RefPtr child = dummySpan->firstChild(); child; child = child->nextSibling())
         children.append(*child);
 
     for (auto& child : children)
         m_element->appendChild(child);
 
-    m_dummySpan->remove();
+    dummySpan->remove();
 }
 
 void WrapContentsInDummySpanCommand::doReapply()
@@ -79,10 +85,10 @@ void WrapContentsInDummySpanCommand::doReapply()
 }
 
 #ifndef NDEBUG
-void WrapContentsInDummySpanCommand::getNodesInCommand(HashSet<Ref<Node>>& nodes)
+void WrapContentsInDummySpanCommand::getNodesInCommand(NodeSet& nodes)
 {
     addNodeAndDescendants(m_element.ptr(), nodes);
-    addNodeAndDescendants(m_dummySpan.get(), nodes);
+    addNodeAndDescendants(protectedDummySpan().get(), nodes);
 }
 #endif
 

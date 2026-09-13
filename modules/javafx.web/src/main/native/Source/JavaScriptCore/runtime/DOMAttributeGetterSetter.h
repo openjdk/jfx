@@ -26,8 +26,9 @@
 
 #pragma once
 
-#include "CustomGetterSetter.h"
-#include "DOMAnnotation.h"
+#include <JavaScriptCore/CustomGetterSetter.h>
+#include <JavaScriptCore/DOMAnnotation.h>
+#include <JavaScriptCore/VM.h>
 
 namespace JSC {
 namespace DOMJIT {
@@ -55,10 +56,7 @@ public:
 
     DOMAttributeAnnotation domAttribute() const { return m_domAttribute; }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(CustomGetterSetterType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_EXPORT_INFO;
 

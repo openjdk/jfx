@@ -26,10 +26,10 @@
 
 #pragma once
 
-#include "FloatPoint.h"
-#include "ScrollTypes.h"
-#include <wtf/FastMalloc.h>
+#include <WebCore/FloatPoint.h>
+#include <WebCore/ScrollTypes.h>
 #include <wtf/MonotonicTime.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -50,7 +50,7 @@ public:
 };
 
 class ScrollAnimation {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ScrollAnimation);
 public:
     enum class Type {
         Smooth,

@@ -28,9 +28,11 @@
 
 #pragma once
 
-#include "CodeBlock.h"
-#include "JSSymbolTableObject.h"
-#include "SymbolTable.h"
+#include <JavaScriptCore/CodeBlock.h>
+#include <JavaScriptCore/JSSymbolTableObject.h>
+#include <JavaScriptCore/SymbolTable.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -43,8 +45,8 @@ public:
     template<typename CellType, SubspaceAccess>
     static CompleteSubspace* subspaceFor(VM& vm)
     {
-        static_assert(!CellType::needsDestruction);
-        return &vm.variableSizedCellSpace();
+        static_assert(CellType::needsDestruction == DoesNotNeedDestruction);
+        return &vm.heap.cellSpace;
     }
 
     using Base = JSSymbolTableObject;
@@ -52,7 +54,7 @@ public:
 
     WriteBarrierBase<Unknown>* variables()
     {
-        return bitwise_cast<WriteBarrierBase<Unknown>*>(bitwise_cast<char*>(this) + offsetOfVariables());
+        return std::bit_cast<WriteBarrierBase<Unknown>*>(std::bit_cast<char*>(this) + offsetOfVariables());
     }
 
     bool isValidScopeOffset(ScopeOffset offset)
@@ -106,7 +108,7 @@ public:
     }
 
     static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
-    static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
 
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
 
@@ -114,14 +116,15 @@ public:
 
     DECLARE_INFO;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject) { return Structure::create(vm, globalObject, jsNull(), TypeInfo(LexicalEnvironmentType, StructureFlags), info()); }
+    DECLARE_VISIT_CHILDREN;
+
+    inline static Structure* createStructure(VM&, JSGlobalObject*);
 
 protected:
     JSLexicalEnvironment(VM&, Structure*, JSScope*, SymbolTable*, JSValue initialValue);
 
     DECLARE_DEFAULT_FINISH_CREATION;
 
-    DECLARE_VISIT_CHILDREN;
     static void analyzeHeap(JSCell*, HeapAnalyzer&);
 };
 
@@ -136,3 +139,5 @@ inline JSLexicalEnvironment::JSLexicalEnvironment(VM& vm, Structure* structure, 
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

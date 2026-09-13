@@ -25,13 +25,15 @@
 
 #pragma once
 
+#include <wtf/DebugHeap.h>
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore::WebGPU {
 
-class BindGroupLayout : public RefCounted<BindGroupLayout> {
+class BindGroupLayout : public RefCountedAndCanMakeWeakPtr<BindGroupLayout> {
 public:
     virtual ~BindGroupLayout() = default;
 
@@ -39,9 +41,12 @@ public:
 
     void setLabel(String&& label)
     {
-        m_label = WTFMove(label);
+        m_label = WTF::move(label);
         setLabelInternal(m_label);
     }
+
+    virtual bool isRemoteBindGroupLayoutProxy() const { return false; }
+    virtual bool isBindGroupLayoutImpl() const { return false; }
 
 protected:
     BindGroupLayout() = default;

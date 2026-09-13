@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,6 +55,7 @@ import com.sun.javafx.scene.control.ListenerHelper;
  * {@link Skin skin}.
  * A user interface control is abstracted behind the {@link Skinnable} interface.
  *
+ * @param <C> the type of the control
  * @since JavaFX 8.0
  */
 public abstract class SkinBase<C extends Control> implements Skin<C> {
@@ -108,7 +109,7 @@ public abstract class SkinBase<C extends Control> implements Skin<C> {
         /*
         ** we used to consume mouse wheel rotations here,
         ** be we've switched to ScrollEvents, and only consume those which we use.
-        ** See RT-13995 & RT-14480
+        ** See JDK-8113240 & JDK-8092752
         */
         event.consume();
     };

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,37 +25,37 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
-#include "Position.h"
-#include "StaticRange.h"
-#include <wtf/RefCounted.h>
+#include <WebCore/Position.h>
+#include <WebCore/Range.h>
+#include <WebCore/StaticRange.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
-class CSSStyleDeclaration;
 class DOMSetAdapter;
-class PropertySetCSSStyleDeclaration;
 
-class HighlightRangeData : public RefCounted<HighlightRangeData>, public CanMakeWeakPtr<HighlightRangeData> {
+class HighlightRange : public RefCountedAndCanMakeWeakPtr<HighlightRange> {
 public:
-    static Ref<HighlightRangeData> create(Ref<AbstractRange>&& range)
+    static Ref<HighlightRange> create(Ref<AbstractRange>&& range)
     {
-        return adoptRef(*new HighlightRangeData(WTFMove(range)));
+        return adoptRef(*new HighlightRange(WTF::move(range)));
     }
 
     AbstractRange& range() const { return m_range.get(); }
     const Position& startPosition() const { return m_startPosition; }
-    void setStartPosition(Position&& startPosition) { m_startPosition = WTFMove(startPosition); }
+    void setStartPosition(Position&& startPosition) { m_startPosition = WTF::move(startPosition); }
     const Position& endPosition() const { return m_endPosition; }
-    void setEndPosition(Position&& endPosition) { m_endPosition = WTFMove(endPosition); }
+    void setEndPosition(Position&& endPosition) { m_endPosition = WTF::move(endPosition); }
 
 private:
-    explicit HighlightRangeData(Ref<AbstractRange>&& range)
-        : m_range(WTFMove(range))
+    explicit HighlightRange(Ref<AbstractRange>&& range)
+        : m_range(WTF::move(range))
     {
+        if (RefPtr liveRange = dynamicDowncast<Range>(m_range))
+            liveRange->didAssociateWithHighlight();
     }
 
-    Ref<AbstractRange> m_range;
+    const Ref<AbstractRange> m_range;
     Position m_startPosition;
     Position m_endPosition;
 };
@@ -63,6 +63,7 @@ private:
 class Highlight : public RefCounted<Highlight> {
 public:
     WEBCORE_EXPORT static Ref<Highlight> create(FixedVector<std::reference_wrapper<AbstractRange>>&&);
+    static void repaintRange(const AbstractRange&);
     void clearFromSetLike();
     bool addToSetLike(AbstractRange&);
     bool removeFromSetLike(const AbstractRange&);
@@ -76,13 +77,12 @@ public:
     void setPriority(int);
 
     void repaint();
-    const Vector<Ref<HighlightRangeData>>& rangesData() const { return m_rangesData; }
+    const Vector<Ref<HighlightRange>>& highlightRanges() const { return m_highlightRanges; }
 
-    // FIXME: Add WEBCORE_EXPORT CSSStyleDeclaration& style();
 private:
     explicit Highlight(FixedVector<std::reference_wrapper<AbstractRange>>&&);
 
-    Vector<Ref<HighlightRangeData>> m_rangesData;
+    Vector<Ref<HighlightRange>> m_highlightRanges;
     Type m_type { Type::Highlight };
     int m_priority { 0 };
 };

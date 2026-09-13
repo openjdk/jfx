@@ -25,9 +25,13 @@
 
 #pragma once
 
+#include <JavaScriptCore/JSExportMacros.h>
+#include <wtf/Compiler.h>
+#include <wtf/MathExtras.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/PrintStream.h>
-#include <wtf/StdLibExtras.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -42,7 +46,7 @@ struct FreeCell {
 
     static ALWAYS_INLINE std::tuple<int32_t, uint32_t> descramble(uint64_t scrambledBits, uint64_t secret)
     {
-        static_assert(WTF::isPowerOfTwo(sizeof(FreeCell))); // Make sure this division isn't super costly.
+        static_assert(isPowerOfTwo(sizeof(FreeCell))); // Make sure this division isn't super costly.
         uint64_t descrambledBits = scrambledBits ^ secret;
         return { static_cast<int32_t>(static_cast<uint32_t>(descrambledBits)), static_cast<uint32_t>(descrambledBits >> 32u) };
     }
@@ -65,12 +69,12 @@ struct FreeCell {
     static ALWAYS_INLINE void advance(uint64_t secret, FreeCell*& interval, char*& intervalStart, char*& intervalEnd)
     {
         auto [offsetToNext, lengthInBytes] = interval->decode(secret);
-        intervalStart = bitwise_cast<char*>(interval);
+        intervalStart = std::bit_cast<char*>(interval);
         intervalEnd = intervalStart + lengthInBytes;
-        interval = bitwise_cast<FreeCell*>(intervalStart + offsetToNext);
+        interval = std::bit_cast<FreeCell*>(intervalStart + offsetToNext);
     }
 
-    static ALWAYS_INLINE ptrdiff_t offsetOfScrambledBits() { return OBJECT_OFFSETOF(FreeCell, scrambledBits); }
+    static constexpr ptrdiff_t offsetOfScrambledBits() { return OBJECT_OFFSETOF(FreeCell, scrambledBits); }
 
     uint64_t preservedBitsForCrashAnalysis;
     uint64_t scrambledBits;
@@ -91,20 +95,18 @@ public:
     template<typename Func>
     HeapCell* allocateWithCellSize(const Func& slowPath, size_t cellSize);
 
-    bool contains(HeapCell*) const;
-
     template<typename Func>
     void forEach(const Func&) const;
 
     unsigned originalSize() const { return m_originalSize; }
 
-    static bool isSentinel(FreeCell* cell) { return bitwise_cast<uintptr_t>(cell) & 1; }
-    static ptrdiff_t offsetOfNextInterval() { return OBJECT_OFFSETOF(FreeList, m_nextInterval); }
-    static ptrdiff_t offsetOfSecret() { return OBJECT_OFFSETOF(FreeList, m_secret); }
-    static ptrdiff_t offsetOfIntervalStart() { return OBJECT_OFFSETOF(FreeList, m_intervalStart); }
-    static ptrdiff_t offsetOfIntervalEnd() { return OBJECT_OFFSETOF(FreeList, m_intervalEnd); }
-    static ptrdiff_t offsetOfOriginalSize() { return OBJECT_OFFSETOF(FreeList, m_originalSize); }
-    static ptrdiff_t offsetOfCellSize() { return OBJECT_OFFSETOF(FreeList, m_cellSize); }
+    static bool isSentinel(FreeCell* cell) { return std::bit_cast<uintptr_t>(cell) & 1; }
+    static constexpr ptrdiff_t offsetOfNextInterval() { return OBJECT_OFFSETOF(FreeList, m_nextInterval); }
+    static constexpr ptrdiff_t offsetOfSecret() { return OBJECT_OFFSETOF(FreeList, m_secret); }
+    static constexpr ptrdiff_t offsetOfIntervalStart() { return OBJECT_OFFSETOF(FreeList, m_intervalStart); }
+    static constexpr ptrdiff_t offsetOfIntervalEnd() { return OBJECT_OFFSETOF(FreeList, m_intervalEnd); }
+    static constexpr ptrdiff_t offsetOfOriginalSize() { return OBJECT_OFFSETOF(FreeList, m_originalSize); }
+    static constexpr ptrdiff_t offsetOfCellSize() { return OBJECT_OFFSETOF(FreeList, m_cellSize); }
 
     JS_EXPORT_PRIVATE void dump(PrintStream&) const;
 
@@ -115,7 +117,7 @@ private:
 
     char* m_intervalStart { nullptr };
     char* m_intervalEnd { nullptr };
-    FreeCell* m_nextInterval { bitwise_cast<FreeCell*>(static_cast<uintptr_t>(1)) };
+    FreeCell* m_nextInterval { std::bit_cast<FreeCell*>(static_cast<uintptr_t>(1)) };
     uint64_t m_secret { 0 };
     unsigned m_originalSize { 0 };
     unsigned m_cellSize { 0 };
@@ -123,3 +125,4 @@ private:
 
 } // namespace JSC
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

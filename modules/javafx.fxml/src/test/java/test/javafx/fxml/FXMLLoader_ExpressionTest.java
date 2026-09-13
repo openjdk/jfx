@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,7 @@ package test.javafx.fxml;
 import com.sun.javafx.fxml.expression.Expression;
 import com.sun.javafx.fxml.expression.KeyPath;
 import javafx.collections.ObservableList;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -37,7 +37,7 @@ import javafx.fxml.FXMLLoader;
 import static com.sun.javafx.fxml.expression.Expression.*;
 import static com.sun.javafx.fxml.expression.Expression.set;
 import static com.sun.javafx.fxml.expression.Expression.valueOf;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class FXMLLoader_ExpressionTest {
 

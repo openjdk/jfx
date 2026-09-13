@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,24 +33,32 @@
 #include "CompiledContentExtension.h"
 #include "ContentExtension.h"
 #include "ContentExtensionsDebugging.h"
+#include "ContentRuleListMatchedRule.h"
 #include "ContentRuleListResults.h"
 #include "DFABytecodeInterpreter.h"
-#include "Document.h"
+#include "DocumentInlines.h"
 #include "DocumentLoader.h"
+#include "DocumentPage.h"
 #include "ExtensionStyleSheets.h"
-#include "LocalFrame.h"
+#include "FrameDestructionObserverInlines.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameLoaderClient.h"
-#include "Page.h"
+#include "RegistrableDomain.h"
 #include "ResourceLoadInfo.h"
 #include "ScriptController.h"
 #include "ScriptSourceCode.h"
 #include "Settings.h"
-#include <wtf/URL.h>
 #include "UserContentController.h"
+#include <ranges>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/URL.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore::ContentExtensions {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ContentExtensionsBackend);
 
 #if USE(APPLE_INTERNAL_SDK)
 #import <WebKitAdditions/ContentRuleListAdditions.mm>
@@ -82,8 +90,8 @@ void ContentExtensionsBackend::addContentExtension(const String& identifier, Ref
     if (identifier.isEmpty())
         return;
 
-    auto contentExtension = ContentExtension::create(identifier, WTFMove(compiledContentExtension), WTFMove(extensionBaseURL), shouldCompileCSS);
-    m_contentExtensions.set(identifier, WTFMove(contentExtension));
+    auto contentExtension = ContentExtension::create(identifier, WTF::move(compiledContentExtension), WTF::move(extensionBaseURL), shouldCompileCSS);
+    m_contentExtensions.set(identifier, WTF::move(contentExtension));
 }
 
 void ContentExtensionsBackend::removeContentExtension(const String& identifier)
@@ -120,6 +128,8 @@ auto ContentExtensionsBackend::actionsFromContentRuleList(const ContentExtension
             return topURLActions.contains(actionAndFlags);
         case ActionCondition::IfFrameURL:
             return !frameURLActions.contains(actionAndFlags);
+        case ActionCondition::UnlessFrameURL:
+            return frameURLActions.contains(actionAndFlags);
         }
         ASSERT_NOT_REACHED();
         return false;
@@ -131,20 +141,30 @@ auto ContentExtensionsBackend::actionsFromContentRuleList(const ContentExtension
     if (auto totalActionCount = actionLocations.size() + universalActions.size()) {
         Vector<uint32_t> vector;
         vector.reserveInitialCapacity(totalActionCount);
-        for (uint64_t actionLocation : actionLocations)
-            vector.uncheckedAppend(static_cast<uint32_t>(actionLocation));
-        for (uint64_t actionLocation : universalActions)
-            vector.uncheckedAppend(static_cast<uint32_t>(actionLocation));
-        std::sort(vector.begin(), vector.end());
+        vector.appendContainerWithMapping(actionLocations, [](uint64_t actionLocation) {
+            return static_cast<uint32_t>(actionLocation);
+        });
+        vector.appendContainerWithMapping(universalActions, [](uint64_t actionLocation) {
+            return static_cast<uint32_t>(actionLocation);
+        });
+        std::ranges::sort(vector);
 
-        // Add actions in reverse order to properly deal with IgnorePreviousRules.
-        for (auto i = vector.size(); i; i--) {
-            auto action = DeserializedAction::deserialize(serializedActions, vector[i - 1]);
+        // We need to handle IgnoreFollowingRules...
+        for (size_t i = 0; i < vector.size(); i++) {
+            auto action = DeserializedAction::deserialize(serializedActions, vector[i]);
+            if (std::holds_alternative<IgnoreFollowingRulesAction>(action.data()))
+                break;
+            actionsStruct.actions.append(WTF::move(action));
+        }
+
+        // ...and iterate in reverse order to properly deal with IgnorePreviousRules.
+        for (auto i = actionsStruct.actions.size(); i; i--) {
+            auto action = actionsStruct.actions[i - 1];
             if (std::holds_alternative<IgnorePreviousRulesAction>(action.data())) {
                 actionsStruct.sawIgnorePreviousRules = true;
+                actionsStruct.actions.removeAt(0, i);
                 break;
             }
-            actionsStruct.actions.append(WTFMove(action));
         }
     }
     return actionsStruct;
@@ -163,15 +183,15 @@ auto ContentExtensionsBackend::actionsForResourceLoad(const ResourceLoadInfo& re
     const String& urlString = resourceLoadInfo.resourceURL.string();
     ASSERT_WITH_MESSAGE(urlString.containsOnlyASCII(), "A decoded URL should only contain ASCII characters. The matching algorithm assumes the input is ASCII.");
 
-    Vector<ActionsFromContentRuleList> actionsVector;
-    actionsVector.reserveInitialCapacity(m_contentExtensions.size());
     ASSERT(!(resourceLoadInfo.getResourceFlags() & ActionConditionMask));
     const ResourceFlags flags = resourceLoadInfo.getResourceFlags() | ActionConditionMask;
-    for (auto& [identifier, contentExtension] : m_contentExtensions) {
+    Vector<ActionsFromContentRuleList> actionsVector = WTF::compactMap(m_contentExtensions, [&](auto& entry) -> std::optional<ActionsFromContentRuleList> {
+        auto& [identifier, contentExtension] = entry;
         if (ruleListFilter(identifier) == ShouldSkipRuleList::Yes)
-            continue;
-        actionsVector.uncheckedAppend(actionsFromContentRuleList(contentExtension.get(), urlString, resourceLoadInfo, flags));
-    }
+            return std::nullopt;
+        return actionsFromContentRuleList(contentExtension.get(), urlString, resourceLoadInfo, flags);
+    });
+
 #if CONTENT_EXTENSIONS_PERFORMANCE_REPORTING
     MonotonicTime addedTimeEnd = MonotonicTime::now();
     dataLogF("Time added: %f microseconds %s \n", (addedTimeEnd - addedTimeStart).microseconds(), resourceLoadInfo.resourceURL.string().utf8().data());
@@ -179,7 +199,7 @@ auto ContentExtensionsBackend::actionsForResourceLoad(const ResourceLoadInfo& re
     return actionsVector;
 }
 
-void ContentExtensionsBackend::forEach(const Function<void(const String&, ContentExtension&)>& apply)
+void ContentExtensionsBackend::forEach(NOESCAPE const Function<void(const String&, ContentExtension&)>& apply) const
 {
     for (auto& pair : m_contentExtensions)
         apply(pair.key, pair.value);
@@ -220,32 +240,37 @@ std::optional<String> customTrackerBlockingMessageForConsole(const ContentRuleLi
 #endif
 }
 
-ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(Page& page, const URL& url, OptionSet<ResourceType> resourceType, DocumentLoader& initiatingDocumentLoader, const URL& redirectFrom, const RuleListFilter& ruleListFilter)
+ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(Page& page, const URL& url, OptionSet<ResourceType> resourceType, DocumentLoader& initiatingDocumentLoader, const URL& redirectFrom, const RuleListFilter& ruleListFilter) const
 {
     Document* currentDocument = nullptr;
     URL mainDocumentURL;
     URL frameURL;
     bool mainFrameContext = false;
+    RequestMethod requestMethod = readRequestMethod(initiatingDocumentLoader.request().httpMethod()).value_or(RequestMethod::None);
+    auto requestId = WTF::UUID::createVersion4Weak().toString();
+    double frameId;
+    double parentFrameId;
 
     if (auto* frame = initiatingDocumentLoader.frame()) {
         mainFrameContext = frame->isMainFrame();
         currentDocument = frame->document();
+        frameId = mainFrameContext ? 0 : static_cast<double>(frame->frameID().toUInt64());
+        parentFrameId = !mainFrameContext && frame->tree().parent() ? static_cast<double>(frame->tree().parent()->frameID().toUInt64()) : -1;
 
         if (initiatingDocumentLoader.isLoadingMainResource()
             && frame->isMainFrame()
-            && resourceType == ResourceType::Document)
+            && resourceType.containsAny({ ResourceType::TopDocument, ResourceType::ChildDocument }))
             mainDocumentURL = url;
-        else if (auto* localFrame = dynamicDowncast<LocalFrame>(frame->mainFrame())) {
-            if (auto* mainDocument = localFrame->document())
-            mainDocumentURL = mainDocument->url();
+        else if (auto* page = frame->page())
+            mainDocumentURL = page->mainFrameURL();
     }
-    }
-    if (currentDocument)
+
+    if (currentDocument && currentDocument->url().isValid())
         frameURL = currentDocument->url();
     else
         frameURL = url;
 
-    ResourceLoadInfo resourceLoadInfo { url, mainDocumentURL, frameURL, resourceType, mainFrameContext };
+    ResourceLoadInfo resourceLoadInfo { url, mainDocumentURL, frameURL, resourceType, mainFrameContext, requestMethod };
     auto actions = actionsForResourceLoad(resourceLoadInfo, ruleListFilter);
 
     ContentRuleListResults results;
@@ -256,14 +281,17 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
         const String& contentRuleListIdentifier = actionsFromContentRuleList.contentRuleListIdentifier;
         ContentRuleListResults::Result result;
         for (const auto& action : actionsFromContentRuleList.actions) {
-            std::visit(WTF::makeVisitor([&](const BlockLoadAction&) {
+            WTF::visit(WTF::makeVisitor([&](const BlockLoadAction&) {
+                if (results.summary.redirected)
+                    return;
+
                 results.summary.blockedLoad = true;
                 result.blockedLoad = true;
             }, [&](const BlockCookiesAction&) {
                 results.summary.blockedCookies = true;
                 result.blockedCookies = true;
             }, [&](const CSSDisplayNoneSelectorAction& actionData) {
-                if (resourceType == ResourceType::Document)
+                if (resourceType.containsAny({ ResourceType::TopDocument, ResourceType::ChildDocument }))
                     initiatingDocumentLoader.addPendingContentExtensionDisplayNoneSelector(contentRuleListIdentifier, actionData.string, action.actionID());
                 else if (currentDocument)
                     currentDocument->extensionStyleSheets().addDisplayNoneSelector(contentRuleListIdentifier, actionData.string, action.actionID());
@@ -278,6 +306,8 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
                 }
             }, [&](const IgnorePreviousRulesAction&) {
                 RELEASE_ASSERT_NOT_REACHED();
+            }, [&](const IgnoreFollowingRulesAction&) {
+                RELEASE_ASSERT_NOT_REACHED();
             }, [&] (const ModifyHeadersAction& action) {
                 if (initiatingDocumentLoader.allowsActiveContentRuleListActionsForURL(contentRuleListIdentifier, url)) {
                     result.modifiedHeaders = true;
@@ -285,37 +315,67 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
                 }
             }, [&] (const RedirectAction& redirectAction) {
                 if (initiatingDocumentLoader.allowsActiveContentRuleListActionsForURL(contentRuleListIdentifier, url)) {
+                    if (results.summary.blockedLoad)
+                        return;
+
                     result.redirected = true;
+                    results.summary.redirected = true;
                     results.summary.redirectActions.append({ redirectAction, m_contentExtensions.get(contentRuleListIdentifier)->extensionBaseURL() });
                 }
+            }, [&] (const ReportIdentifierAction& reportIdentifierAction) {
+                std::optional<String> initiator;
+                std::optional<String> documentId;
+                std::optional<String> frameType;
+
+                // FIXME: <rdar://159289161> Include the parentDocumentId parameter once we can make it work with site isolation
+                if (currentDocument && resourceType.containsAny({ ResourceType::TopDocument, ResourceType::ChildDocument }))
+                    documentId = currentDocument->identifier().toString();
+
+                if (resourceType == ResourceType::TopDocument)
+                    frameType = "outermost_frame"_s;
+                else if (resourceType == ResourceType::ChildDocument)
+                    frameType = "sub_frame"_s;
+
+                if (currentDocument && currentDocument->url().isValid()) {
+                    auto domain = RegistrableDomain { frameURL };
+
+                    if (!domain.isEmpty())
+                        initiator = domain.string();
+                }
+
+                // We set the tabId to -1 because it will be filled in by the web extension context.
+                // We create a requestId here since ResourceRequest objects don't have one, and it's a non-optional parameter.
+                // We set documentLifecycle to null because that will require Safari API to be implemented.
+                page.chrome().client().contentRuleListMatchedRule({ { reportIdentifierAction.identifier, reportIdentifierAction.string, contentRuleListIdentifier }, { frameId, parentFrameId, initiatingDocumentLoader.request().httpMethod(), requestId, -1, resourceTypeToStringForMatchedRule(resourceType), url.string(), initiator, documentId, std::nullopt, frameType, std::nullopt } });
             }), action.data());
         }
 
         if (!actionsFromContentRuleList.sawIgnorePreviousRules) {
             if (auto* styleSheetContents = globalDisplayNoneStyleSheet(contentRuleListIdentifier)) {
-                if (resourceType == ResourceType::Document)
+                if (resourceType.containsAny({ ResourceType::TopDocument, ResourceType::ChildDocument }))
                     initiatingDocumentLoader.addPendingContentExtensionSheet(contentRuleListIdentifier, *styleSheetContents);
                 else if (currentDocument)
                     currentDocument->extensionStyleSheets().maybeAddContentExtensionSheet(contentRuleListIdentifier, *styleSheetContents);
             }
         }
 
-        results.results.uncheckedAppend({ contentRuleListIdentifier, WTFMove(result) });
+        results.results.append({ contentRuleListIdentifier, WTF::move(result) });
     }
 
     if (currentDocument) {
         if (results.summary.madeHTTPS) {
             ASSERT(url.protocolIs("http"_s) || url.protocolIs("ws"_s));
             String newProtocol = url.protocolIs("http"_s) ? "https"_s : "wss"_s;
-            currentDocument->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Info, makeString("Promoted URL from ", url.string(), " to ", newProtocol));
+            currentDocument->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Info, makeString("Promoted URL from "_s, url.string(), " to "_s, newProtocol));
         }
-        if (results.summary.blockedLoad) {
+
+        if (results.shouldBlock()) {
             String consoleMessage;
             if (auto message = customTrackerBlockingMessageForConsole(results, url, mainDocumentURL))
-                consoleMessage = WTFMove(*message);
+                consoleMessage = WTF::move(*message);
             else
-                consoleMessage = makeString("Content blocker prevented frame displaying ", mainDocumentURL.string(), " from loading a resource from ", url.string());
-            currentDocument->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Info, WTFMove(consoleMessage));
+                consoleMessage = makeString("Content blocker prevented frame displaying "_s, mainDocumentURL.string(), " from loading a resource from "_s, url.string());
+            currentDocument->addConsoleMessage(MessageSource::ContentBlocker, MessageLevel::Info, WTF::move(consoleMessage));
 
             // Quirk for content-blocker interference with Google's anti-flicker optimization (rdar://problem/45968770).
             // https://developers.google.com/optimize/
@@ -323,7 +383,7 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
                 && ((equalLettersIgnoringASCIICase(url.host(), "www.google-analytics.com"_s) && equalLettersIgnoringASCIICase(url.path(), "/analytics.js"_s))
                     || (equalLettersIgnoringASCIICase(url.host(), "www.googletagmanager.com"_s) && equalLettersIgnoringASCIICase(url.path(), "/gtm.js"_s)))) {
                 if (auto* frame = currentDocument->frame())
-                    frame->script().evaluateIgnoringException(ScriptSourceCode { "try { window.dataLayer.hide.end(); console.log('Called window.dataLayer.hide.end() in frame ' + document.URL + ' because the content blocker blocked the load of the https://www.google-analytics.com/analytics.js script'); } catch (e) { }"_s });
+                    frame->script().evaluateIgnoringException(ScriptSourceCode { "try { window.dataLayer.hide.end(); console.log('Called window.dataLayer.hide.end() in frame ' + document.URL + ' because the content blocker blocked the load of the https://www.google-analytics.com/analytics.js script'); } catch (e) { }"_s, JSC::SourceTaintedOrigin::Untainted });
             }
         }
     }
@@ -331,16 +391,17 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForLoad(
     return results;
 }
 
-ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForPingLoad(const URL& url, const URL& mainDocumentURL, const URL& frameURL)
+ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForPingLoad(const URL& url, const URL& mainDocumentURL, const URL& frameURL, const String& httpMethod)
 {
-    ResourceLoadInfo resourceLoadInfo { url, mainDocumentURL, frameURL, ResourceType::Ping };
+    RequestMethod requestMethod = readRequestMethod(httpMethod).value_or(RequestMethod::None);
+    ResourceLoadInfo resourceLoadInfo { url, mainDocumentURL, frameURL, ResourceType::Ping, false, requestMethod };
     auto actions = actionsForResourceLoad(resourceLoadInfo);
 
     ContentRuleListResults results;
     makeSecureIfNecessary(results, url);
     for (const auto& actionsFromContentRuleList : actions) {
         for (const auto& action : actionsFromContentRuleList.actions) {
-            std::visit(WTF::makeVisitor([&](const BlockLoadAction&) {
+            WTF::visit(WTF::makeVisitor([&](const BlockLoadAction&) {
                 results.summary.blockedLoad = true;
             }, [&](const BlockCookiesAction&) {
                 results.summary.blockedCookies = true;
@@ -352,15 +413,47 @@ ContentRuleListResults ContentExtensionsBackend::processContentRuleListsForPingL
                     results.summary.madeHTTPS = true;
             }, [&](const IgnorePreviousRulesAction&) {
                 RELEASE_ASSERT_NOT_REACHED();
+            }, [&](const IgnoreFollowingRulesAction&) {
+                RELEASE_ASSERT_NOT_REACHED();
             }, [&] (const ModifyHeadersAction&) {
                 // We currently have not implemented active actions from the network process (CORS preflight).
             }, [&] (const RedirectAction&) {
                 // We currently have not implemented active actions from the network process (CORS preflight).
+            }, [&] (const ReportIdentifierAction&) {
+                // We currently have not implemented notifications from the NetworkProcess to the UIProcess.
             }), action.data());
         }
     }
 
     return results;
+}
+
+bool ContentExtensionsBackend::processContentRuleListsForResourceMonitoring(const URL& url, const URL& mainDocumentURL, const URL& frameURL, OptionSet<ResourceType> resourceType)
+{
+    ResourceLoadInfo resourceLoadInfo { url, mainDocumentURL, frameURL, resourceType };
+    auto actions = actionsForResourceLoad(resourceLoadInfo);
+
+    bool matched = false;
+    for (const auto& actionsFromContentRuleList : actions) {
+        for (const auto& action : actionsFromContentRuleList.actions) {
+            WTF::visit(WTF::makeVisitor([&](const BlockLoadAction&) {
+                matched = true;
+            }, [&](const BlockCookiesAction&) {
+            }, [&](const CSSDisplayNoneSelectorAction&) {
+            }, [&](const NotifyAction&) {
+            }, [&](const MakeHTTPSAction&) {
+            }, [&](const IgnorePreviousRulesAction&) {
+                RELEASE_ASSERT_NOT_REACHED();
+            }, [&](const IgnoreFollowingRulesAction&) {
+                RELEASE_ASSERT_NOT_REACHED();
+            }, [&] (const ModifyHeadersAction&) {
+            }, [&] (const RedirectAction&) {
+            }, [&] (const ReportIdentifierAction&) {
+            }), action.data());
+        }
+    }
+
+    return matched;
 }
 
 const String& ContentExtensionsBackend::displayNoneCSSRule()
@@ -369,27 +462,42 @@ const String& ContentExtensionsBackend::displayNoneCSSRule()
     return rule;
 }
 
-void applyResultsToRequest(ContentRuleListResults&& results, Page* page, ResourceRequest& request)
+void applyResultsToRequestIfCrossOriginRedirect(ContentRuleListResults&& results, Page* page, ResourceRequest& request)
+{
+    if (!results.summary.redirected)
+        return;
+
+    URL url = request.url();
+    for (auto& pair : results.summary.redirectActions)
+        pair.first.modifyURL(url, pair.second);
+
+    if (RegistrableDomain { request.url() } == RegistrableDomain { url })
+        return;
+
+    applyResultsToRequest(WTF::move(results), page, request, url);
+}
+
+void applyResultsToRequest(ContentRuleListResults&& results, Page* page, ResourceRequest& request, const URL& redirectURL)
 {
     if (results.summary.blockedCookies)
         request.setAllowCookies(false);
 
     if (results.summary.madeHTTPS) {
         ASSERT(!request.url().port() || WTF::isDefaultPortForProtocol(request.url().port().value(), request.url().protocol()));
-        request.upgradeToHTTPS();
+        request.upgradeInsecureRequest();
     }
 
-    std::sort(results.summary.modifyHeadersActions.begin(), results.summary.modifyHeadersActions.end(),
-        [] (const ModifyHeadersAction& a, const ModifyHeadersAction& b) {
-        return a.priority > b.priority;
-    });
+    std::ranges::sort(results.summary.modifyHeadersActions, std::ranges::greater { }, &ModifyHeadersAction::priority);
 
     HashMap<String, ModifyHeadersAction::ModifyHeadersOperationType> headerNameToFirstOperationApplied;
     for (auto& action : results.summary.modifyHeadersActions)
         action.applyToRequest(request, headerNameToFirstOperationApplied);
 
+    if (redirectURL.isEmpty()) {
     for (auto& pair : results.summary.redirectActions)
         pair.first.applyToRequest(request, pair.second);
+    } else
+        request.setURL(URL { redirectURL });
 
     if (page && results.shouldNotifyApplication()) {
         results.results.removeAllMatching([](const auto& pair) {

@@ -45,12 +45,14 @@ public:
     ~LayerOverlapMap();
 
     struct LayerAndBounds {
-        RenderLayer& layer;
+        CheckedRef<RenderLayer> layer;
         LayoutRect bounds;
     };
 
-    void add(const RenderLayer&, const LayoutRect&, const Vector<LayerAndBounds>& enclosingClippingLayers);
-    bool overlapsLayers(const RenderLayer&, const LayoutRect&, const Vector<LayerAndBounds>& enclosingClippingLayers) const;
+    using LayerAndBoundsVector = Vector<LayerAndBounds, 2>;
+
+    void add(const RenderLayer&, const LayoutRect&, const LayerAndBoundsVector& enclosingClippingLayers);
+    bool overlapsLayers(const RenderLayer&, const LayoutRect&, const LayerAndBoundsVector& enclosingClippingLayers) const;
     bool isEmpty() const { return m_isEmpty; }
 
     void pushCompositingContainer(const RenderLayer&);
@@ -69,7 +71,7 @@ private:
     Vector<std::unique_ptr<OverlapMapContainer>> m_overlapStack;
     Vector<std::unique_ptr<OverlapMapContainer>> m_speculativeOverlapStack;
     RenderGeometryMap m_geometryMap;
-    const RenderLayer& m_rootLayer;
+    const CheckedRef<const RenderLayer> m_rootLayer;
     bool m_isEmpty { true };
 };
 

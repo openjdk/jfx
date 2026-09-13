@@ -36,7 +36,7 @@ class WeakMapConstructor final : public InternalFunction {
 public:
     typedef InternalFunction Base;
 
-    static WeakMapConstructor* create(VM& vm, Structure* structure, WeakMapPrototype* prototype, GetterSetter*)
+    static WeakMapConstructor* create(VM& vm, Structure* structure, WeakMapPrototype* prototype)
     {
         WeakMapConstructor* constructor = new (NotNull, allocateCell<WeakMapConstructor>(vm)) WeakMapConstructor(vm, structure);
         constructor->finishCreation(vm, prototype);
@@ -45,10 +45,7 @@ public:
 
     DECLARE_INFO;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(InternalFunctionType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
 private:
     WeakMapConstructor(VM&, Structure*);

@@ -26,8 +26,8 @@
 
 #pragma once
 
-#include "JSObject.h"
-#include "ScriptFetcher.h"
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/ScriptFetcher.h>
 #include <wtf/RefPtr.h>
 
 namespace JSC {
@@ -37,7 +37,7 @@ public:
     using Base = JSCell;
 
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
 
     DECLARE_EXPORT_INFO;
 
@@ -47,21 +47,18 @@ public:
         return vm.scriptFetcherSpace<mode>();
     }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(JSScriptFetcherType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     static JSScriptFetcher* create(VM& vm, Structure* structure, RefPtr<ScriptFetcher>&& scriptFetcher)
     {
-        auto* result = new (NotNull, allocateCell<JSScriptFetcher>(vm)) JSScriptFetcher(vm, structure, WTFMove(scriptFetcher));
+        auto* result = new (NotNull, allocateCell<JSScriptFetcher>(vm)) JSScriptFetcher(vm, structure, WTF::move(scriptFetcher));
         result->finishCreation(vm);
         return result;
     }
 
     static JSScriptFetcher* create(VM& vm, RefPtr<ScriptFetcher>&& scriptFetcher)
     {
-        return create(vm, vm.scriptFetcherStructure.get(), WTFMove(scriptFetcher));
+        return create(vm, vm.scriptFetcherStructure.get(), WTF::move(scriptFetcher));
     }
 
     ScriptFetcher* fetcher() const
@@ -74,7 +71,7 @@ public:
 private:
     JSScriptFetcher(VM& vm, Structure* structure, RefPtr<ScriptFetcher>&& scriptFetcher)
         : Base(vm, structure)
-        , m_fetcher(WTFMove(scriptFetcher))
+        , m_fetcher(WTF::move(scriptFetcher))
     {
     }
 

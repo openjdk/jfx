@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,29 +25,24 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
+import java.util.Collection;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import com.sun.glass.ui.monocle.TestLogShim;
-import test.robot.com.sun.glass.ui.monocle.ParameterizedTestBase;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
-import org.junit.Test;
-import org.junit.runners.Parameterized;
-
-import java.util.Collection;
 
 /** Multitouch tests with two points */
-public class MultiTouch2Test extends ParameterizedTestBase {
+public final class MultiTouch2Test extends ParameterizedTestBase {
 
-    public MultiTouch2Test(TestTouchDevice device) {
-        super(device);
-    }
-
-    @Parameterized.Parameters
-    public static Collection<Object[]> data() {
+    private static Collection<TestTouchDevice> parameters() {
         return TestTouchDevices.getTouchDeviceParameters(2);
     }
 
-    @Test
-    public void twoFingerTap() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void twoFingerTap(TestTouchDevice device) throws Exception {
+        createDevice(device, null);
         final int x1 = (int) Math.round(width * 0.5f);
         final int y1 = (int) Math.round(height * 0.5f);
         final int x2 = (int) Math.round(width * 0.75f);
@@ -73,8 +68,10 @@ public class MultiTouch2Test extends ParameterizedTestBase {
     /**
      * Touch down two fingers, release first, release second
      */
-    @Test
-    public void pressTwoFingersReleaseOne() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void pressTwoFingersReleaseOne(TestTouchDevice device) throws Exception {
+        createDevice(device, null);
         final int x1 = (int) Math.round(width / 8.0);
         final int y1 = (int) Math.round(height / 8.0);
         final int x2 = (int) Math.round(width / 5.0);
@@ -115,9 +112,10 @@ public class MultiTouch2Test extends ParameterizedTestBase {
         TestLogShim.waitForLogContaining("TouchPoint: RELEASED " + x3 + ", " + y3, 3000l);
     }
 
-    @Test
-//    @Ignore("RT-35546")
-    public void twoFingerDrag() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void twoFingerDrag(TestTouchDevice device) throws Exception {
+        createDevice(device, null);
         final int x1 = (int) Math.round(width * 0.5f);
         final int y1 = (int) Math.round(height * 0.5f);
         final int x2 = (int) Math.round(width * 0.75f);
@@ -182,8 +180,10 @@ public class MultiTouch2Test extends ParameterizedTestBase {
      * Touch down two fingers, release both,
      * touch down two fingers again and release them
      */
-    @Test
-    public void pressReleasePressTest() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void pressReleasePressTest(TestTouchDevice device) throws Exception {
+        createDevice(device, null);
         int x1 = (int) Math.round(width / 2);
         int y1 = (int) Math.round(height * 0.3);
         int x2 = (int) Math.round(width / 2);
@@ -228,8 +228,10 @@ public class MultiTouch2Test extends ParameterizedTestBase {
         TestLogShim.waitForLogContaining("TouchPoint: RELEASED %d, %d", x2, y2);
     }
 
-    @Test
-    public void twoFingerDragSingleFingerTap() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void twoFingerDragSingleFingerTap(TestTouchDevice device) throws Exception {
+        createDevice(device, null);
         final int x1 = (int) Math.round(width * 0.5f);
         final int y1 = (int) Math.round(height * 0.5f);
         final int x2 = (int) Math.round(width * 0.75f);
@@ -276,8 +278,10 @@ public class MultiTouch2Test extends ParameterizedTestBase {
         TestLogShim.waitForLogContaining("TouchPoint: RELEASED %d, %d", x1, y1 + dy);
     }
 
-    @Test
-    public void twoFingersPressDragOne() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void twoFingersPressDragOne(TestTouchDevice device) throws Exception {
+        createDevice(device, null);
         int delta = device.getTapRadius() + 1;
         TestLogShim.reset();
         int x1 = (int) Math.round(width * 0.2);

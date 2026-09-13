@@ -24,19 +24,23 @@
 
 #pragma once
 
-#include "HTMLDocument.h"
+#include <WebCore/DocumentSettingsValues.h>
+#include <WebCore/HTMLDocument.h>
+#include <wtf/Platform.h>
 
 namespace WebCore {
 
 class ImageDocumentElement;
 class HTMLImageElement;
+class LayoutSize;
 
 class ImageDocument final : public HTMLDocument {
-    WTF_MAKE_ISO_ALLOCATED(ImageDocument);
+    WTF_MAKE_TZONE_ALLOCATED(ImageDocument);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ImageDocument);
 public:
     static Ref<ImageDocument> create(LocalFrame& frame, const URL& url)
     {
-        auto document = adoptRef(*new ImageDocument(frame, url));
+        Ref document = adoptRef(*new ImageDocument(frame, url));
         document->addToContextsMap();
         return document;
     }
@@ -88,5 +92,9 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ImageDocument)
     static bool isType(const WebCore::Document& document) { return document.isImageDocument(); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::Document>(node) && isType(downcast<WebCore::Document>(node)); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* document = dynamicDowncast<WebCore::Document>(node);
+        return document && isType(*document);
+    }
 SPECIALIZE_TYPE_TRAITS_END()

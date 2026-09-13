@@ -25,9 +25,9 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
 #include <wtf/FileSystem.h>
 #include <wtf/Forward.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -36,7 +36,7 @@ class ServiceWorkerRegistrationKey;
 class ScriptBuffer;
 
 class SWScriptStorage {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(SWScriptStorage);
 public:
     explicit SWScriptStorage(const String& directory);
 
@@ -56,5 +56,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

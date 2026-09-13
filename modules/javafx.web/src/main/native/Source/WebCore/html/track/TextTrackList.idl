@@ -23,6 +23,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
+ // https://html.spec.whatwg.org/#texttracklist
+
 [
     ActiveDOMObject,
     Conditional=VIDEO,
@@ -31,11 +33,11 @@
     Exposed=Window
 ] interface TextTrackList : EventTarget {
     readonly attribute unsigned long length;
-    getter TextTrack item(unsigned long index);
-    TextTrack getTrackById([AtomString] DOMString id);
+    // FIXME: Remove item() and make non-nullable. See: https://bugs.webkit.org/show_bug.cgi?id=260763
+    getter TextTrack? item(unsigned long index);
+    TextTrack? getTrackById([AtomString] DOMString id);
 
     attribute EventHandler onaddtrack;
     attribute EventHandler onchange;
     attribute EventHandler onremovetrack;
 };
-

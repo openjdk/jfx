@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -205,7 +205,7 @@
         case AVKeyValueStatusFailed:
             [ErrorHandler logMsg: LOGGER_WARNING
                          message: "Media metadata loading failed"];
-            // http://javafx-jira.kenai.com/browse/RT-27005
+            // JDK-8096014
             // TODO: deal with errors
             break;
         case AVKeyValueStatusCancelled:
@@ -227,13 +227,13 @@
         case AVKeyValueStatusLoaded:
             [ErrorHandler logMsg: LOGGER_INFO
                          message: "Media playable status loaded"];
-            // http://javafx-jira.kenai.com/browse/RT-27005
+            // JDK-8096014
             // TODO: we've got playable content
             break;
         case AVKeyValueStatusFailed:
             [ErrorHandler logMsg: LOGGER_WARNING
                          message: "Media playable status loading failed"];
-            // http://javafx-jira.kenai.com/browse/RT-27005
+            // JDK-8096014
             // TODO: deal with errors
             break;
         case AVKeyValueStatusCancelled:
@@ -267,7 +267,7 @@
 
 - (BOOL) isM3UFile: (NSString *) fileName {
 
-    // http://javafx-jira.kenai.com/browse/RT-27005
+    // JDK-8096014
     // TODO: don't rely on file extension, analyze the file
     //       check the file header for '#EXTM3U'
 
@@ -331,7 +331,7 @@
 }
 
 - (void) dispose {
-    // TODO: http://javafx-jira.kenai.com/browse/RT-27005
+    // TODO: JDK-8096014
 }
 
 - (void) dealloc {

@@ -28,11 +28,12 @@
 
 #if ENABLE(ASYNC_SCROLLING)
 
+#include "Logging.h"
 #include "PlatformWheelEvent.h"
 #include "ScrollingTree.h"
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
-
 
 ScrollingTreeGestureState::ScrollingTreeGestureState(ScrollingTree& scrollingTree)
     : m_scrollingTree(scrollingTree)
@@ -51,7 +52,7 @@ bool ScrollingTreeGestureState::handleGestureCancel(const PlatformWheelEvent& ev
 {
     if (event.isGestureCancel()) {
         if (m_mayBeginNodeID)
-            m_scrollingTree.handleWheelEventPhase(*m_mayBeginNodeID, PlatformWheelEventPhase::Cancelled);
+            m_scrollingTree.get()->handleWheelEventPhase(*m_mayBeginNodeID, PlatformWheelEventPhase::Cancelled);
         return true;
     }
 
@@ -60,10 +61,11 @@ bool ScrollingTreeGestureState::handleGestureCancel(const PlatformWheelEvent& ev
 
 void ScrollingTreeGestureState::nodeDidHandleEvent(ScrollingNodeID nodeID, const PlatformWheelEvent& event)
 {
+    LOG_WITH_STREAM(OverlayScrollbars, stream << "ScrollingTreeGestureState::nodeDidHandleEvent " << nodeID << " " << event.phase());
     switch (event.phase()) {
     case PlatformWheelEventPhase::MayBegin:
         m_mayBeginNodeID = nodeID;
-        m_scrollingTree.handleWheelEventPhase(nodeID, event.phase());
+        m_scrollingTree.get()->handleWheelEventPhase(nodeID, event.phase());
         break;
     case PlatformWheelEventPhase::Cancelled:
         // We can get here for via handleWheelEventAfterMainThread(), in which case handleGestureCancel() was not called first.
@@ -71,15 +73,16 @@ void ScrollingTreeGestureState::nodeDidHandleEvent(ScrollingNodeID nodeID, const
         break;
     case PlatformWheelEventPhase::Began:
         m_activeNodeID = nodeID;
-        m_scrollingTree.handleWheelEventPhase(nodeID, event.phase());
+        m_scrollingTree.get()->handleWheelEventPhase(nodeID, event.phase());
         break;
     case PlatformWheelEventPhase::Ended:
         if (m_activeNodeID)
-            m_scrollingTree.handleWheelEventPhase(*m_activeNodeID, event.phase());
+            m_scrollingTree.get()->handleWheelEventPhase(*m_activeNodeID, event.phase());
         break;
     case PlatformWheelEventPhase::Changed:
     case PlatformWheelEventPhase::Stationary:
     case PlatformWheelEventPhase::None:
+    case PlatformWheelEventPhase::WillBegin:
         break;
     }
 
@@ -90,23 +93,24 @@ void ScrollingTreeGestureState::nodeDidHandleEvent(ScrollingNodeID nodeID, const
         break;
     case PlatformWheelEventPhase::Began:
         m_activeNodeID = nodeID;
-        m_scrollingTree.handleWheelEventPhase(nodeID, event.momentumPhase());
+        m_scrollingTree.get()->handleWheelEventPhase(nodeID, event.momentumPhase());
         break;
     case PlatformWheelEventPhase::Ended:
         if (m_activeNodeID)
-            m_scrollingTree.handleWheelEventPhase(*m_activeNodeID, event.momentumPhase());
+            m_scrollingTree.get()->handleWheelEventPhase(*m_activeNodeID, event.momentumPhase());
         break;
     case PlatformWheelEventPhase::Changed:
     case PlatformWheelEventPhase::Stationary:
     case PlatformWheelEventPhase::None:
+    case PlatformWheelEventPhase::WillBegin:
         break;
     }
 }
 
 void ScrollingTreeGestureState::clearAllNodes()
 {
-    m_mayBeginNodeID = 0;
-    m_activeNodeID = 0;
+    m_mayBeginNodeID = std::nullopt;
+    m_activeNodeID = std::nullopt;
 }
 
 };

@@ -33,11 +33,12 @@
 #include "AudioNodeInput.h"
 #include "AudioNodeOutput.h"
 #include "AudioUtilities.h"
-#include <wtf/IsoMallocInlines.h>
+#include "ExceptionOr.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(StereoPannerNode);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(StereoPannerNode);
 
 ExceptionOr<Ref<StereoPannerNode>> StereoPannerNode::create(BaseAudioContext& context, const StereoPannerOptions& options)
 {
@@ -68,23 +69,21 @@ StereoPannerNode::~StereoPannerNode()
 
 void StereoPannerNode::process(size_t framesToProcess)
 {
-    AudioBus* destination = output(0)->bus();
+    CheckedPtr firstOutput = output(0);
+    AudioBus& destination = firstOutput->bus();
 
-    if (!isInitialized() || !input(0)->isConnected()) {
-        destination->zero();
+    CheckedPtr firstInput = input(0);
+    if (!isInitialized() || !firstInput->isConnected()) {
+        destination.zero();
         return;
     }
 
-    AudioBus* source = input(0)->bus();
-    if (!source) {
-        destination->zero();
-        return;
-    }
+    AudioBus& source = firstInput->bus();
 
     if (m_pan->hasSampleAccurateValues() && m_pan->automationRate() == AutomationRate::ARate) {
-        float* panValues = m_sampleAccurateValues.data();
-        m_pan->calculateSampleAccurateValues(panValues, framesToProcess);
-        StereoPanner::panWithSampleAccurateValues(source, destination, panValues, framesToProcess);
+        auto panValues = m_sampleAccurateValues.span().first(framesToProcess);
+        m_pan->calculateSampleAccurateValues(panValues);
+        StereoPanner::panWithSampleAccurateValues(source, destination, panValues);
         return;
     }
 
@@ -97,16 +96,16 @@ void StereoPannerNode::process(size_t framesToProcess)
 
 void StereoPannerNode::processOnlyAudioParams(size_t framesToProcess)
 {
-    float values[AudioUtilities::renderQuantumSize];
+    std::array<float, AudioUtilities::renderQuantumSize> values;
     ASSERT(framesToProcess <= AudioUtilities::renderQuantumSize);
 
-    m_pan->calculateSampleAccurateValues(values, framesToProcess);
+    m_pan->calculateSampleAccurateValues(std::span { values }.first(framesToProcess));
 }
 
 ExceptionOr<void> StereoPannerNode::setChannelCount(unsigned channelCount)
 {
     if (channelCount > 2)
-        return Exception { NotSupportedError, "StereoPannerNode's channelCount cannot be greater than 2."_s };
+        return Exception { ExceptionCode::NotSupportedError, "StereoPannerNode's channelCount cannot be greater than 2."_s };
 
     return AudioNode::setChannelCount(channelCount);
 }
@@ -114,7 +113,7 @@ ExceptionOr<void> StereoPannerNode::setChannelCount(unsigned channelCount)
 ExceptionOr<void> StereoPannerNode::setChannelCountMode(ChannelCountMode mode)
 {
     if (mode == ChannelCountMode::Max)
-        return Exception { NotSupportedError, "StereoPannerNode's channelCountMode cannot be max."_s };
+        return Exception { ExceptionCode::NotSupportedError, "StereoPannerNode's channelCountMode cannot be max."_s };
 
     return AudioNode::setChannelCountMode(mode);
 }

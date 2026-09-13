@@ -31,76 +31,79 @@
 #include "CSSPropertyParser.h"
 #include "CSSRegisteredCustomProperty.h"
 #include "CSSTokenizer.h"
-#include "CustomPropertyRegistry.h"
 #include "DOMCSSNamespace.h"
 #include "Document.h"
+#include "ExceptionOr.h"
 #include "StyleBuilder.h"
-#include "StyleBuilderConverter.h"
+#include "StyleCustomPropertyRegistry.h"
 #include "StyleResolver.h"
 #include "StyleScope.h"
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DOMCSSRegisterCustomProperty);
+
+using namespace Style;
 
 ExceptionOr<void> DOMCSSRegisterCustomProperty::registerProperty(Document& document, const DOMCSSCustomPropertyDescriptor& descriptor)
 {
     if (!isCustomPropertyName(descriptor.name))
-        return Exception { SyntaxError, "The name of this property is not a custom property name."_s };
+        return Exception { ExceptionCode::SyntaxError, "The name of this property is not a custom property name."_s };
 
     auto syntax = CSSCustomPropertySyntax::parse(descriptor.syntax);
     if (!syntax)
-        return Exception { SyntaxError, "Invalid property syntax definition."_s };
+        return Exception { ExceptionCode::SyntaxError, "Invalid property syntax definition."_s };
 
     if (!syntax->isUniversal() && descriptor.initialValue.isNull())
-        return Exception { SyntaxError, "An initial value is mandatory except for the '*' syntax."_s };
+        return Exception { ExceptionCode::SyntaxError, "An initial value is mandatory except for the '*' syntax."_s };
 
-    RefPtr<CSSCustomPropertyValue> initialValue;
+    RefPtr<const Style::CustomProperty> initialValue;
+    RefPtr<CSSVariableData> initialValueTokensForViewportUnits;
+
     if (!descriptor.initialValue.isNull()) {
         CSSTokenizer tokenizer(descriptor.initialValue);
 
-        auto dependencies = CSSPropertyParser::collectParsedCustomPropertyValueDependencies(*syntax, tokenizer.tokenRange(), strictCSSParserContext());
+        auto parsedInitialValue = CustomPropertyRegistry::parseInitialValue(document, descriptor.name, *syntax, tokenizer.tokenRange());
 
-        if (!dependencies.isEmpty())
-            return Exception { SyntaxError, "The given initial value must be computationally independent."_s };
+        if (!parsedInitialValue) {
+            if (parsedInitialValue.error() == CustomPropertyRegistry::ParseInitialValueError::NotComputationallyIndependent)
+                return Exception { ExceptionCode::SyntaxError, "The given initial value must be computationally independent."_s };
 
-        // We don't need to provide a real context style since only computationally independent values are allowed (no 'em' etc).
-        auto placeholderStyle = RenderStyle::create();
-        Style::Builder builder { placeholderStyle, { document, RenderStyle::defaultStyle() }, { }, { } };
+            ASSERT(parsedInitialValue.error() == CustomPropertyRegistry::ParseInitialValueError::DidNotParse);
+            return Exception { ExceptionCode::SyntaxError, "The given initial value does not parse for the given syntax."_s };
+        }
 
-        initialValue = CSSPropertyParser::parseTypedCustomPropertyInitialValue(descriptor.name, *syntax, tokenizer.tokenRange(), builder.state(), { document });
-
-        if (!initialValue)
-            return Exception { SyntaxError, "The given initial value does not parse for the given syntax."_s };
+        initialValue = parsedInitialValue->first;
+        if (parsedInitialValue->second == CustomPropertyRegistry::ViewportUnitDependency::Yes) {
+            initialValueTokensForViewportUnits = CSSVariableData::create(tokenizer.tokenRange());
+            document.setHasStyleWithViewportUnits();
+    }
     }
 
     auto property = CSSRegisteredCustomProperty {
         descriptor.name,
         *syntax,
         descriptor.inherits,
-        WTFMove(initialValue)
+        WTF::move(initialValue),
+        WTF::move(initialValueTokensForViewportUnits)
     };
 
     auto& registry = document.styleScope().customPropertyRegistry();
-    if (!registry.registerFromAPI(WTFMove(property)))
-        return Exception { InvalidModificationError, "This property has already been registered."_s };
+    if (!registry.registerFromAPI(WTF::move(property)))
+        return Exception { ExceptionCode::InvalidModificationError, "This property has already been registered."_s };
 
     return { };
 }
 
 DOMCSSRegisterCustomProperty* DOMCSSRegisterCustomProperty::from(DOMCSSNamespace& css)
 {
-    auto* supplement = static_cast<DOMCSSRegisterCustomProperty*>(Supplement<DOMCSSNamespace>::from(&css, supplementName()));
+    auto* supplement = downcast<DOMCSSRegisterCustomProperty>(Supplement<DOMCSSNamespace>::from(&css, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<DOMCSSRegisterCustomProperty>(css);
         supplement = newSupplement.get();
-        provideTo(&css, supplementName(), WTFMove(newSupplement));
+        provideTo(&css, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }
 
-const char* DOMCSSRegisterCustomProperty::supplementName()
-{
-    return "DOMCSSRegisterCustomProperty";
-}
-
-}
+} // namespace WebCore

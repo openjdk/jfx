@@ -28,6 +28,8 @@
 #include "GeometryUtilities.h"
 
 #include "FloatQuad.h"
+#include <numbers>
+#include <numeric>
 #include <wtf/MathExtras.h>
 #include <wtf/Vector.h>
 
@@ -41,17 +43,6 @@ float euclidianDistance(const FloatSize& delta)
 float euclidianDistance(const FloatPoint& p1, const FloatPoint& p2)
 {
     return euclidianDistance(p1 - p2);
-}
-
-float findSlope(const FloatPoint& p1, const FloatPoint& p2, float& c)
-{
-    if (p2.x() == p1.x())
-        return std::numeric_limits<float>::infinity();
-
-    // y = mx + c
-    float slope = (p2.y() - p1.y()) / (p2.x() - p1.x());
-    c = p1.y() - slope * p1.x();
-    return slope;
 }
 
 bool findIntersection(const FloatPoint& p1, const FloatPoint& p2, const FloatPoint& d1, const FloatPoint& d2, FloatPoint& intersection)
@@ -208,7 +199,7 @@ bool ellipseContainsPoint(const FloatPoint& center, const FloatSize& radii, cons
 
 FloatPoint midPoint(const FloatPoint& first, const FloatPoint& second)
 {
-    return { (first.x() + second.x()) / 2, (first.y() + second.y()) / 2 };
+    return { std::midpoint(first.x(), second.x()), std::midpoint(first.y(), second.y()) };
 }
 
 static float dotProduct(const FloatSize& u, const FloatSize& v)
@@ -224,7 +215,7 @@ static float angleBetweenVectors(const FloatSize& u, const FloatSize& v)
 
 RotatedRect rotatedBoundingRectWithMinimumAngleOfRotation(const FloatQuad& quad, std::optional<float> minRotationInRadians)
 {
-    constexpr auto twoPiFloat = 2 * piFloat;
+    constexpr auto twoPiFloat = 2 * std::numbers::pi_v<float>;
 
     auto minRotationAmount = minRotationInRadians.value_or(std::numeric_limits<float>::epsilon());
 
@@ -274,9 +265,8 @@ float toRelatedAcuteAngle(float angle)
     angle = toPositiveAngle(angle);
     if (angle < 90)
         return angle;
-    if (angle > 90 || angle < 180)
+    // FIXME: webkit.org/b/298890 toRelatedAcuteAngle in GeometryUtilities.cpp doesn't handle an angle greater than 270 degrees
         return std::abs(180 - angle);
-    return std::abs(360 - angle);
 }
 
 RectEdges<double> distanceOfPointToSidesOfRect(const FloatRect& box, const FloatPoint& position)
@@ -287,6 +277,56 @@ RectEdges<double> distanceOfPointToSidesOfRect(const FloatRect& box, const Float
     double left = std::abs(position.x());
     double right = std::abs(position.x() - box.width());
     return RectEdges<double>(top, right, bottom, left);
+}
+
+float distanceToClosestSide(FloatPoint p, FloatSize size)
+{
+    float widthDelta = std::abs(size.width() - p.x());
+    float heightDelta = std::abs(size.height() - p.y());
+
+    return min4(std::abs(p.x()), widthDelta, std::abs(p.y()), heightDelta);
+}
+
+float distanceToFarthestSide(FloatPoint p, FloatSize size)
+{
+    float widthDelta = std::abs(size.width() - p.x());
+    float heightDelta = std::abs(size.height() - p.y());
+
+    return max4(std::abs(p.x()), widthDelta, std::abs(p.y()), heightDelta);
+}
+
+float distanceToClosestCorner(FloatPoint p, FloatSize size)
+{
+    FloatPoint topLeft;
+    float topLeftDistance = FloatSize(p - topLeft).diagonalLength();
+
+    FloatPoint topRight(size.width(), 0);
+    float topRightDistance = FloatSize(p - topRight).diagonalLength();
+
+    FloatPoint bottomLeft(0, size.height());
+    float bottomLeftDistance = FloatSize(p - bottomLeft).diagonalLength();
+
+    FloatPoint bottomRight(size.width(), size.height());
+    float bottomRightDistance = FloatSize(p - bottomRight).diagonalLength();
+
+    return min4(topLeftDistance, topRightDistance, bottomLeftDistance, bottomRightDistance);
+}
+
+float distanceToFarthestCorner(FloatPoint p, FloatSize size)
+{
+    FloatPoint topLeft;
+    float topLeftDistance = FloatSize(p - topLeft).diagonalLength();
+
+    FloatPoint topRight(size.width(), 0);
+    float topRightDistance = FloatSize(p - topRight).diagonalLength();
+
+    FloatPoint bottomLeft(0, size.height());
+    float bottomLeftDistance = FloatSize(p - bottomLeft).diagonalLength();
+
+    FloatPoint bottomRight(size.width(), size.height());
+    float bottomRightDistance = FloatSize(p - bottomRight).diagonalLength();
+
+    return max4(topLeftDistance, topRightDistance, bottomLeftDistance, bottomRightDistance);
 }
 
 std::array<FloatPoint, 4> verticesForBox(const FloatRect& box, const FloatPoint position)
@@ -334,7 +374,7 @@ float angleOfPointToSideOfIntersection(const FloatRect& boundingRect, const std:
 {
     auto angle = ray.second;
     auto side = intersectionSide(boundingRect, ray);
-    angle = toRelatedAcuteAngle(toPositiveAngle(angle));
+    angle = toRelatedAcuteAngle(angle);
     return side == BoxSide::Top || side == BoxSide::Bottom ? angle : 90 - angle;
 }
 
@@ -342,6 +382,11 @@ float normalizeAngleInRadians(float radians)
 {
     float circles = radians / radiansPerTurnFloat;
     return radiansPerTurnFloat * (circles - floor(circles));
+}
+
+FloatRect scaledRectAtOrigin(const FloatRect& rect, float scale, const FloatPoint& origin)
+{
+    return { origin + (rect.location() - origin) * scale, rect.size() * scale };
 }
 
 }

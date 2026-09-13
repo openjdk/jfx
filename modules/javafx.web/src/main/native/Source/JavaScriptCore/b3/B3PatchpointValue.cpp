@@ -30,25 +30,23 @@
 
 namespace JSC { namespace B3 {
 
-PatchpointValue::~PatchpointValue()
-{
-}
+PatchpointValue::~PatchpointValue() = default;
 
 void PatchpointValue::dumpMeta(CommaPrinter& comma, PrintStream& out) const
 {
     Base::dumpMeta(comma, out);
-    out.print(comma, "resultConstraints = ");
-    out.print(resultConstraints.size() > 1 ? "[" : "");
+    out.print(comma, "resultConstraints = "_s);
+    out.print(resultConstraints.size() > 1 ? "["_s : ""_s);
 
     CommaPrinter constraintComma;
     for (const auto& constraint : resultConstraints)
         out.print(constraintComma, constraint);
-    out.print(resultConstraints.size() > 1 ? "]" : "");
+    out.print(resultConstraints.size() > 1 ? "]"_s : ""_s);
 
     if (numGPScratchRegisters)
-        out.print(comma, "numGPScratchRegisters = ", numGPScratchRegisters);
+        out.print(comma, "numGPScratchRegisters = "_s, numGPScratchRegisters);
     if (numFPScratchRegisters)
-        out.print(comma, "numFPScratchRegisters = ", numFPScratchRegisters);
+        out.print(comma, "numFPScratchRegisters = "_s, numFPScratchRegisters);
 }
 
 PatchpointValue::PatchpointValue(Type type, Origin origin, Kind kind)

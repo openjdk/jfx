@@ -28,15 +28,15 @@
 
 #pragma once
 
-#include "ConcurrentJSLock.h"
-#include "ConstantMode.h"
-#include "InferredValue.h"
-#include "JSObject.h"
-#include "ScopedArgumentsTable.h"
-#include "TypeLocation.h"
-#include "VarOffset.h"
-#include "VariableEnvironment.h"
-#include "Watchpoint.h"
+#include <JavaScriptCore/ConcurrentJSLock.h>
+#include <JavaScriptCore/ConstantMode.h>
+#include <JavaScriptCore/InferredValue.h>
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/ScopedArgumentsTable.h>
+#include <JavaScriptCore/TypeLocation.h>
+#include <JavaScriptCore/VarOffset.h>
+#include <JavaScriptCore/VariableEnvironment.h>
+#include <JavaScriptCore/Watchpoint.h>
 #include <memory>
 #include <wtf/HashTraits.h>
 #include <wtf/text/SymbolImpl.h>
@@ -196,7 +196,7 @@ public:
 
     SymbolTableEntry& operator=(const SymbolTableEntry& other)
     {
-        if (UNLIKELY(other.isFat()))
+        if (other.isFat()) [[unlikely]]
             return copySlow(other);
         freeFatEntry();
         m_bits = other.m_bits;
@@ -335,7 +335,7 @@ private:
     static const intptr_t FlagBits = 6;
 
     class FatEntry {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(SymbolTableEntryFatEntry);
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FatEntry, SymbolTableEntryFatEntry);
     public:
         FatEntry(intptr_t bits)
             : m_bits(bits & ~SlimFlag)
@@ -357,18 +357,18 @@ private:
     const FatEntry* fatEntry() const
     {
         ASSERT(isFat());
-        return bitwise_cast<const FatEntry*>(m_bits);
+        return std::bit_cast<const FatEntry*>(m_bits);
     }
 
     FatEntry* fatEntry()
     {
         ASSERT(isFat());
-        return bitwise_cast<FatEntry*>(m_bits);
+        return std::bit_cast<FatEntry*>(m_bits);
     }
 
     FatEntry* inflate()
     {
-        if (LIKELY(isFat()))
+        if (isFat()) [[likely]]
             return fatEntry();
         return inflateSlow();
     }
@@ -391,7 +391,7 @@ private:
 
     void freeFatEntry()
     {
-        if (LIKELY(!isFat()))
+        if (!isFat()) [[likely]]
             return;
         freeFatEntrySlow();
     }
@@ -436,7 +436,7 @@ private:
 };
 
 struct SymbolTableIndexHashTraits : HashTraits<SymbolTableEntry> {
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
 };
 
 class SymbolTable final : public JSCell {
@@ -446,10 +446,10 @@ public:
     typedef JSCell Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
-    typedef HashMap<RefPtr<UniquedStringImpl>, SymbolTableEntry, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>, SymbolTableIndexHashTraits> Map;
-    typedef HashMap<RefPtr<UniquedStringImpl>, GlobalVariableID, IdentifierRepHash> UniqueIDMap;
-    typedef HashMap<RefPtr<UniquedStringImpl>, RefPtr<TypeSet>, IdentifierRepHash> UniqueTypeSetMap;
-    typedef HashMap<VarOffset, RefPtr<UniquedStringImpl>> OffsetToVariableMap;
+    typedef UncheckedKeyHashMap<RefPtr<UniquedStringImpl>, SymbolTableEntry, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>, SymbolTableIndexHashTraits> Map;
+    typedef UncheckedKeyHashMap<RefPtr<UniquedStringImpl>, GlobalVariableID, IdentifierRepHash> UniqueIDMap;
+    typedef UncheckedKeyHashMap<RefPtr<UniquedStringImpl>, RefPtr<TypeSet>, IdentifierRepHash> UniqueTypeSetMap;
+    typedef UncheckedKeyHashMap<VarOffset, RefPtr<UniquedStringImpl>> OffsetToVariableMap;
     typedef Vector<SymbolTableEntry*> LocalToEntryVec;
     typedef WTF::IteratorRange<typename PrivateNameEnvironment::iterator> PrivateNameIteratorRange;
 
@@ -466,13 +466,10 @@ public:
         return symbolTable;
     }
 
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
     static void destroy(JSCell*);
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(CellType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     // You must hold the lock until after you're done with the iterator.
     Map::iterator find(const ConcurrentJSLocker&, UniquedStringImpl* key)
@@ -669,14 +666,14 @@ public:
 
     bool trySetArgumentsLength(VM& vm, uint32_t length)
     {
-        if (UNLIKELY(!m_arguments)) {
+        if (!m_arguments) [[unlikely]] {
             ScopedArgumentsTable* table = ScopedArgumentsTable::tryCreate(vm, length);
-            if (UNLIKELY(!table))
+            if (!table) [[unlikely]]
                 return false;
             m_arguments.set(vm, this, table);
         } else {
             ScopedArgumentsTable* table = m_arguments->trySetLength(vm, length);
-            if (UNLIKELY(!table))
+            if (!table) [[unlikely]]
                 return false;
             m_arguments.set(vm, this, table);
         }
@@ -692,7 +689,7 @@ public:
 
     bool trySetArgumentOffset(VM& vm, uint32_t i, ScopeOffset offset)
     {
-        RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(m_arguments);
+        ASSERT_WITH_SECURITY_IMPLICATION(m_arguments);
         auto* maybeCloned = m_arguments->trySet(vm, i, offset);
         if (!maybeCloned)
             return false;
@@ -761,11 +758,15 @@ public:
 
     DECLARE_EXPORT_INFO;
 
+#if ASSERT_ENABLED
+    bool hasScopedWatchpointSet(WatchpointSet*);
+#endif
+
     void finalizeUnconditionally(VM&, CollectionScope);
     void dump(PrintStream&) const;
 
     struct SymbolTableRareData {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(SymbolTableRareData);
         UniqueIDMap m_uniqueIDMap;
         OffsetToVariableMap m_offsetToVariableMap;
         UniqueTypeSetMap m_uniqueTypeSetMap;
@@ -778,7 +779,7 @@ private:
     ~SymbolTable();
     SymbolTableRareData& ensureRareData()
     {
-        if (LIKELY(m_rareData))
+        if (m_rareData) [[likely]]
             return *m_rareData;
         return ensureRareDataSlow();
     }

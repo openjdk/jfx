@@ -25,11 +25,14 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "JSDOMGuardedObject.h"
 #include <JavaScriptCore/JSObject.h>
 
 namespace WebCore {
+
+class Exception;
+template<typename> class ExceptionOr;
+
 class InternalWritableStream final : public DOMGuarded<JSC::JSObject> {
 public:
     static ExceptionOr<Ref<InternalWritableStream>> createFromUnderlyingSink(JSDOMGlobalObject&, JSC::JSValue underlyingSink, JSC::JSValue strategy);
@@ -39,9 +42,20 @@ public:
 
     bool locked() const;
     void lock();
-    JSC::JSValue abort(JSC::JSGlobalObject&, JSC::JSValue);
-    JSC::JSValue close(JSC::JSGlobalObject&);
+    JSC::JSValue abortForBindings(JSC::JSGlobalObject&, JSC::JSValue);
+    JSC::JSValue closeForBindings(JSC::JSGlobalObject&);
+    ExceptionOr<JSC::JSValue> writeChunkForBingings(JSC::JSGlobalObject&, JSC::JSValue);
     JSC::JSValue getWriter(JSC::JSGlobalObject&);
+
+    void closeIfPossible();
+    void errorIfPossible(Exception&&);
+    JSC::JSValue errorIfPossible(JSC::JSGlobalObject&, JSC::JSValue);
+
+    JSC::JSValue abort(JSC::JSGlobalObject&, JSC::JSValue);
+    String state(JSC::JSGlobalObject& globalObject) const;
+    bool closeQueuedOrInFlight();
+
+    ExceptionOr<JSC::JSValue> storedError() const;
 
 private:
     InternalWritableStream(JSDOMGlobalObject& globalObject, JSC::JSObject& jsObject)

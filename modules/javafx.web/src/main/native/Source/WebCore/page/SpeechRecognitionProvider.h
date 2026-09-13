@@ -25,13 +25,14 @@
 
 #pragma once
 
-#include "SpeechRecognitionConnection.h"
+#include <WebCore/SpeechRecognitionConnection.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 class SpeechRecognitionProvider {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(SpeechRecognitionProvider);
 public:
     SpeechRecognitionProvider() = default;
     virtual ~SpeechRecognitionProvider() = default;

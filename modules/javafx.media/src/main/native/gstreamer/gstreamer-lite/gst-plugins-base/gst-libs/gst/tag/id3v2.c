@@ -29,7 +29,7 @@
 
 #define HANDLE_INVALID_SYNCSAFE
 
-static gboolean id3v2_frames_to_tag_list (ID3TagsWorking * work, guint size);
+static gboolean id3v2_frames_to_tag_list (ID3TagsWorking * work);
 
 #ifndef GST_DISABLE_GST_DEBUG
 
@@ -75,7 +75,7 @@ id3v2_read_synch_uint (const guint8 * data, guint size)
         "- using the actual value instead");
     result = 0;
     for (i = 0; i <= size; i++) {
-      result |= data[i] << ((size - i) * 8);
+      result |= ((guint32) data[i]) << ((size - i) * 8);
     }
   }
 #endif
@@ -121,7 +121,7 @@ gst_tag_get_id3v2_tag_size (GstBuffer * buffer)
 
   /* Expand the read size to include a footer if there is one */
   if ((flags & ID3V2_HDR_FLAG_FOOTER))
-    result += 10;
+    result += ID3V2_FOOTER_SIZE;
 
   GST_DEBUG ("ID3v2 tag, size: %u bytes", result);
 
@@ -148,31 +148,45 @@ empty:
   }
 }
 
+/*
+ * id3v2_ununsync_data:
+ * @unsync_data: Input unsynchronized data
+ * @size: Input data size, updated to output size on return
+ *
+ * Removes unsynchronisation from ID3v2 data by replacing 0xff 0x00 sequences
+ * with 0xff bytes. This is necessary when ID3v2 tags use data unsynchronisation
+ * to prevent accidental detection of 0xff 0x00 sync bytes.
+ *
+ * Returns: Newly allocated ununsync'd data, or NULL on error. The caller is
+ * responsible for freeing the returned buffer.  On error, @size is set to 0.
+ */
 guint8 *
 id3v2_ununsync_data (const guint8 * unsync_data, guint32 * size)
 {
-  const guint8 *end;
-  guint8 *out, *uu;
-  guint out_size;
+  gsize in_pos, out_pos;
+  guint8 *out;
 
-  uu = out = g_malloc (*size);
+  g_return_val_if_fail (unsync_data != NULL, NULL);
+  g_return_val_if_fail (size != NULL, NULL);
+  g_return_val_if_fail (*size != 0, NULL);
 
-  for (end = unsync_data + *size; unsync_data < end - 1; ++unsync_data, ++uu) {
-    *uu = *unsync_data;
-    if (G_UNLIKELY (*unsync_data == 0xff && *(unsync_data + 1) == 0x00))
-      ++unsync_data;
+  out = g_malloc (*size);
+  /* Replace any 0xff 0x00 sequence by 0xff */
+  for (in_pos = 0, out_pos = 0; in_pos < *size;) {
+    if ((*size - in_pos > 1) && unsync_data[in_pos] == 0xff
+        && unsync_data[in_pos + 1] == 0x00) {
+      out[out_pos++] = unsync_data[in_pos++];
+      /* Skip escape 0x00 byte */
+      in_pos += 1;
+    } else {
+      out[out_pos++] = unsync_data[in_pos++];
+    }
   }
 
-  /* take care of last byte (if last two bytes weren't 0xff 0x00) */
-  if (unsync_data < end) {
-    *uu = *unsync_data;
-    ++uu;
-  }
+  GST_DEBUG ("size after un-unsyncing: %" G_GSIZE_FORMAT " (before: %u)",
+      out_pos, *size);
 
-  out_size = uu - out;
-  GST_DEBUG ("size after un-unsyncing: %u (before: %u)", out_size, *size);
-
-  *size = out_size;
+  *size = out_pos;
   return out;
 }
 
@@ -201,7 +215,7 @@ gst_tag_list_from_id3v2_tag (GstBuffer * buffer)
   read_size = gst_tag_get_id3v2_tag_size (buffer);
 
   /* Ignore tag if it has no frames attached, but skip the header then */
-  if (read_size < ID3V2_HDR_SIZE)
+  if (read_size <= ID3V2_HDR_SIZE)
     return NULL;
 
   gst_buffer_map (buffer, &info, GST_MAP_READ);
@@ -225,6 +239,9 @@ gst_tag_list_from_id3v2_tag (GstBuffer * buffer)
   /* This shouldn't really happen! Caller should have checked first */
   if (info.size < read_size)
     goto not_enough_data;
+  if (flags & ID3V2_HDR_FLAG_FOOTER
+      && read_size <= (ID3V2_HDR_SIZE + ID3V2_FOOTER_SIZE))
+    goto invalid_tag_size;
 
   GST_DEBUG ("Reading ID3v2 tag with revision 2.%d.%d of size %u", version >> 8,
       version & 0xff, read_size);
@@ -239,9 +256,8 @@ gst_tag_list_from_id3v2_tag (GstBuffer * buffer)
   work.hdr.frame_data = info.data + ID3V2_HDR_SIZE;
 
   if (flags & ID3V2_HDR_FLAG_FOOTER) {
-    if (read_size < ID3V2_HDR_SIZE + 10)
-      goto not_enough_data;     /* Invalid frame size */
-    work.hdr.frame_data_size = read_size - ID3V2_HDR_SIZE - 10;
+    g_assert (read_size >= (ID3V2_HDR_SIZE + ID3V2_FOOTER_SIZE));       /* checked above */
+    work.hdr.frame_data_size = read_size - ID3V2_HDR_SIZE - ID3V2_FOOTER_SIZE;
   } else {
     g_assert (read_size >= ID3V2_HDR_SIZE);     /* checked above */
     work.hdr.frame_data_size = read_size - ID3V2_HDR_SIZE;
@@ -258,7 +274,7 @@ gst_tag_list_from_id3v2_tag (GstBuffer * buffer)
     GST_MEMDUMP ("ID3v2 tag (un-unsyced)", uu_data, work.hdr.frame_data_size);
   }
 
-  id3v2_frames_to_tag_list (&work, work.hdr.frame_data_size);
+  id3v2_frames_to_tag_list (&work);
 
   g_free (uu_data);
 
@@ -272,6 +288,12 @@ wrong_version:
     GST_WARNING ("ID3v2 tag is from revision 2.%d.%d, "
         "but decoder only supports 2.%d.%d. Ignoring as per spec.",
         version >> 8, version & 0xff, ID3V2_VERSION >> 8, ID3V2_VERSION & 0xff);
+    gst_buffer_unmap (buffer, &info);
+    return NULL;
+  }
+invalid_tag_size:
+  {
+    GST_WARNING ("ID3v2 tag is too small to contain any frames");
     gst_buffer_unmap (buffer, &info);
     return NULL;
   }
@@ -313,67 +335,67 @@ static const struct ID3v2FrameIDConvert
 } frame_id_conversions[] = {
   /* 2.3.x frames */
   {
-  "TORY", "TDOR"}, {
-  "TYER", "TDRC"},
-      /* 2.2.x frames */
+      "TORY", "TDOR"}, {
+      "TYER", "TDRC"},
+  /* 2.2.x frames */
   {
-  "BUF", "RBUF"}, {
-  "CNT", "PCNT"}, {
-  "COM", "COMM"}, {
-  "CRA", "AENC"}, {
-  "ETC", "ETCO"}, {
-  "GEO", "GEOB"}, {
-  "IPL", "TIPL"}, {
-  "MCI", "MCDI"}, {
-  "MLL", "MLLT"}, {
-  "PIC", "APIC"}, {
-  "POP", "POPM"}, {
-  "REV", "RVRB"}, {
-  "SLT", "SYLT"}, {
-  "STC", "SYTC"}, {
-  "TAL", "TALB"}, {
-  "TBP", "TBPM"}, {
-  "TCM", "TCOM"}, {
-  "TCO", "TCON"}, {
-  "TCR", "TCOP"}, {
-  "TDA", "TDAT"}, {             /* obsolete, but we need to parse it anyway */
-  "TDY", "TDLY"}, {
-  "TEN", "TENC"}, {
-  "TFT", "TFLT"}, {
-  "TKE", "TKEY"}, {
-  "TLA", "TLAN"}, {
-  "TLE", "TLEN"}, {
-  "TMT", "TMED"}, {
-  "TOA", "TOAL"}, {
-  "TOF", "TOFN"}, {
-  "TOL", "TOLY"}, {
-  "TOR", "TDOR"}, {
-  "TOT", "TOAL"}, {
-  "TP1", "TPE1"}, {
-  "TP2", "TPE2"}, {
-  "TP3", "TPE3"}, {
-  "TP4", "TPE4"}, {
-  "TPA", "TPOS"}, {
-  "TPB", "TPUB"}, {
-  "TRC", "TSRC"}, {
-  "TRD", "TDRC"}, {
-  "TRK", "TRCK"}, {
-  "TSS", "TSSE"}, {
-  "TT1", "TIT1"}, {
-  "TT2", "TIT2"}, {
-  "TT3", "TIT3"}, {
-  "TXT", "TOLY"}, {
-  "TXX", "TXXX"}, {
-  "TYE", "TDRC"}, {
-  "UFI", "UFID"}, {
-  "ULT", "USLT"}, {
-  "WAF", "WOAF"}, {
-  "WAR", "WOAR"}, {
-  "WAS", "WOAS"}, {
-  "WCM", "WCOM"}, {
-  "WCP", "WCOP"}, {
-  "WPB", "WPUB"}, {
-  "WXX", "WXXX"}
+      "BUF", "RBUF"}, {
+      "CNT", "PCNT"}, {
+      "COM", "COMM"}, {
+      "CRA", "AENC"}, {
+      "ETC", "ETCO"}, {
+      "GEO", "GEOB"}, {
+      "IPL", "TIPL"}, {
+      "MCI", "MCDI"}, {
+      "MLL", "MLLT"}, {
+      "PIC", "APIC"}, {
+      "POP", "POPM"}, {
+      "REV", "RVRB"}, {
+      "SLT", "SYLT"}, {
+      "STC", "SYTC"}, {
+      "TAL", "TALB"}, {
+      "TBP", "TBPM"}, {
+      "TCM", "TCOM"}, {
+      "TCO", "TCON"}, {
+      "TCR", "TCOP"}, {
+      "TDA", "TDAT"}, {         /* obsolete, but we need to parse it anyway */
+      "TDY", "TDLY"}, {
+      "TEN", "TENC"}, {
+      "TFT", "TFLT"}, {
+      "TKE", "TKEY"}, {
+      "TLA", "TLAN"}, {
+      "TLE", "TLEN"}, {
+      "TMT", "TMED"}, {
+      "TOA", "TOAL"}, {
+      "TOF", "TOFN"}, {
+      "TOL", "TOLY"}, {
+      "TOR", "TDOR"}, {
+      "TOT", "TOAL"}, {
+      "TP1", "TPE1"}, {
+      "TP2", "TPE2"}, {
+      "TP3", "TPE3"}, {
+      "TP4", "TPE4"}, {
+      "TPA", "TPOS"}, {
+      "TPB", "TPUB"}, {
+      "TRC", "TSRC"}, {
+      "TRD", "TDRC"}, {
+      "TRK", "TRCK"}, {
+      "TSS", "TSSE"}, {
+      "TT1", "TIT1"}, {
+      "TT2", "TIT2"}, {
+      "TT3", "TIT3"}, {
+      "TXT", "TOLY"}, {
+      "TXX", "TXXX"}, {
+      "TYE", "TDRC"}, {
+      "UFI", "UFID"}, {
+      "ULT", "USLT"}, {
+      "WAF", "WOAF"}, {
+      "WAR", "WOAR"}, {
+      "WAS", "WOAS"}, {
+      "WCM", "WCOM"}, {
+      "WCP", "WCOP"}, {
+      "WPB", "WPUB"}, {
+      "WXX", "WXXX"}
 };
 
 static gboolean
@@ -440,12 +462,17 @@ id3v2_add_id3v2_frame_blob_to_taglist (ID3TagsWorking * work,
 }
 
 static gboolean
-id3v2_frames_to_tag_list (ID3TagsWorking * work, guint size)
+id3v2_frames_to_tag_list (ID3TagsWorking * work)
 {
   guint frame_hdr_size;
 
   /* Extended header if present */
   if (work->hdr.flags & ID3V2_HDR_FLAG_EXTHDR) {
+    if (work->hdr.frame_data_size < 4) {
+      GST_DEBUG ("Tag has no extended header data. Broken tag");
+      return FALSE;
+    }
+
     work->hdr.ext_hdr_size = id3v2_read_synch_uint (work->hdr.frame_data, 4);
 
     /* In id3v2.4.x the header size is the size of the *whole*
@@ -520,6 +547,7 @@ id3v2_frames_to_tag_list (ID3TagsWorking * work, guint size)
         break;
       case 3:
         read_synch_size = FALSE;        /* 2.3 frame size is not synch-safe */
+        /* FALLTHROUGH */
       case 4:
       default:
         frame_id[0] = work->hdr.frame_data[0];

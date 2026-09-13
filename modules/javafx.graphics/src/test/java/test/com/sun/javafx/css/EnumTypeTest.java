@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,14 +26,14 @@
 package test.com.sun.javafx.css;
 
 import com.sun.javafx.css.ParsedValueImpl;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 import javafx.css.ParsedValue;
 import javafx.css.SizeUnits;
 import javafx.css.StyleConverter;
 import javafx.scene.text.Font;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import javafx.css.converter.EnumConverter;
 

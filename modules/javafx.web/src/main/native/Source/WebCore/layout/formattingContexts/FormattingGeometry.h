@@ -26,8 +26,19 @@
 #pragma once
 
 #include "FormattingContext.h"
+#include "LayoutBoxGeometry.h"
+#include "StylePrimitiveNumericTypes+Evaluation.h"
+#include "StyleZoomPrimitives.h"
 
 namespace WebCore {
+
+namespace Style {
+struct InsetEdge;
+struct MarginEdge;
+struct PaddingEdge;
+struct PreferredSize;
+}
+
 namespace Layout {
 
 struct ComputedHorizontalMargin;
@@ -35,7 +46,6 @@ struct ComputedVerticalMargin;
 class ElementBox;
 struct ContentHeightAndMargin;
 struct ContentWidthAndMargin;
-struct Edges;
 struct HorizontalGeometry;
 class LayoutState;
 struct OverriddenHorizontalValues;
@@ -61,14 +71,17 @@ public:
     ContentHeightAndMargin complicatedCases(const Box&, const HorizontalConstraints&, const OverriddenVerticalValues&) const;
     LayoutUnit shrinkToFitWidth(const Box&, LayoutUnit availableWidth) const;
 
-    Edges computedBorder(const Box&) const;
-    std::optional<Edges> computedPadding(const Box&, LayoutUnit containingBlockWidth) const;
+    BoxGeometry::Edges computedBorder(const Box&) const;
+    BoxGeometry::Edges computedPadding(const Box&, LayoutUnit containingBlockWidth) const;
 
     ComputedHorizontalMargin computedHorizontalMargin(const Box&, const HorizontalConstraints&) const;
     ComputedVerticalMargin computedVerticalMargin(const Box&, const HorizontalConstraints&) const;
 
-    std::optional<LayoutUnit> computedValue(const Length& geometryProperty, LayoutUnit containingBlockWidth) const;
-    std::optional<LayoutUnit> fixedValue(const Length& geometryProperty) const;
+    std::optional<LayoutUnit> computedValue(const auto&, LayoutUnit containingBlockWidth) const;
+    std::optional<LayoutUnit> computedValue(const auto&, LayoutUnit containingBlockWidth, const Style::ZoomFactor&) const;
+
+    std::optional<LayoutUnit> fixedValue(const auto&, const Style::ZoomFactor&) const;
+    std::optional<LayoutUnit> fixedValue(const auto&) const;
 
     std::optional<LayoutUnit> computedMinHeight(const Box&, std::optional<LayoutUnit> containingBlockHeight = std::nullopt) const;
     std::optional<LayoutUnit> computedMaxHeight(const Box&, std::optional<LayoutUnit> containingBlockHeight = std::nullopt) const;
@@ -87,8 +100,6 @@ public:
     std::optional<LayoutUnit> computedWidth(const Box&, LayoutUnit containingBlockWidth) const;
 
     bool isBlockFormattingGeometry() const { return formattingContext().isBlockFormattingContext(); }
-    bool isInlineFormattingGeometry() const { return formattingContext().isInlineFormattingContext(); }
-    bool isFlexFormattingGeometry() const { return formattingContext().isFlexFormattingContext(); }
     bool isTableFormattingGeometry() const { return formattingContext().isTableFormattingContext(); }
 
 protected:
@@ -111,13 +122,43 @@ private:
     LayoutUnit staticHorizontalPositionForOutOfFlowPositioned(const Box&, const HorizontalConstraints&) const;
 
     enum class HeightType { Min, Max, Normal };
-    std::optional<LayoutUnit> computedHeightValue(const Box&, HeightType, std::optional<LayoutUnit> containingBlockHeight) const;
+    template<HeightType> std::optional<LayoutUnit> computedHeightValue(const Box&, std::optional<LayoutUnit> containingBlockHeight) const;
 
     enum class WidthType { Min, Max, Normal };
-    std::optional<LayoutUnit> computedWidthValue(const Box&, WidthType, LayoutUnit containingBlockWidth) const;
+    template<WidthType> std::optional<LayoutUnit> computedWidthValue(const Box&, LayoutUnit containingBlockWidth) const;
 
     const FormattingContext& m_formattingContext;
 };
+
+std::optional<LayoutUnit> FormattingGeometry::computedValue(const auto& geometryProperty, LayoutUnit containingBlockWidth) const
+{
+    // In general, the computed value resolves the specified value as far as possible without laying out the content.
+    if (geometryProperty.isSpecified())
+        return Style::evaluate<LayoutUnit>(geometryProperty, containingBlockWidth, Style::ZoomNeeded { });
+    return { };
+}
+
+std::optional<LayoutUnit> FormattingGeometry::computedValue(const auto& geometryProperty, LayoutUnit containingBlockWidth, const Style::ZoomFactor& zoomFactor) const
+{
+    // In general, the computed value resolves the specified value as far as possible without laying out the content.
+    if (geometryProperty.isSpecified())
+        return Style::evaluate<LayoutUnit>(geometryProperty, containingBlockWidth, zoomFactor);
+    return { };
+}
+
+std::optional<LayoutUnit> FormattingGeometry::fixedValue(const auto& geometryProperty) const
+{
+    if (auto fixed = geometryProperty.tryFixed())
+        return LayoutUnit(fixed->resolveZoom(Style::ZoomNeeded { }));
+    return { };
+}
+
+std::optional<LayoutUnit> FormattingGeometry::fixedValue(const auto& geometryProperty, const Style::ZoomFactor& zoomFactor) const
+{
+    if (auto fixed = geometryProperty.tryFixed())
+        return LayoutUnit(fixed->resolveZoom(zoomFactor));
+    return { };
+}
 
 }
 }

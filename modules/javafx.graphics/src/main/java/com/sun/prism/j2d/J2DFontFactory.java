@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,8 +28,6 @@ package com.sun.prism.j2d;
 import java.lang.reflect.Method;
 import java.lang.reflect.InvocationTargetException;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.awt.Font;
 import java.io.File;
 import java.io.FileInputStream;
@@ -92,11 +90,6 @@ final class J2DFontFactory implements FontFactory {
         return prismFontFactory.isPlatformFont(name);
     }
 
-    @Override
-    public final boolean hasPermission() {
-        return prismFontFactory.hasPermission();
-    }
-
     /* This is an important but tricky one. We need to copy the
      * stream. I don't want to have to manage the temp file deletion here,
      * so although its non-optimal I will create a temp file, provide
@@ -108,12 +101,6 @@ final class J2DFontFactory implements FontFactory {
                                      float size,
                                      boolean register,
                                      boolean loadAll) {
-
-        if (!hasPermission()) {
-            PGFont[] fonts = new PGFont[1];
-            fonts[0] = createFont(DEFAULT_FULLNAME, size);
-            return fonts;
-        }
 
         PGFont[] fonts =
           prismFontFactory.loadEmbeddedFont(name, fontStream,
@@ -132,28 +119,23 @@ final class J2DFontFactory implements FontFactory {
      * printing begins, so grabs a copy of the file holding an
      * embedded font to 2D on first use.
      */
-    @SuppressWarnings("removal")
     public static void registerFont(final FontResource fr) {
-
-        AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
-            InputStream stream = null;
-            try {
-                File file = new File(fr.getFileName());
-                stream = new FileInputStream(file);
-                Font font = Font.createFont(Font.TRUETYPE_FONT, stream);
-                fr.setPeer(font);
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                if (stream != null) {
-                    try {
-                        stream.close();
-                    } catch (Exception e2) {
-                    }
+        InputStream stream = null;
+        try {
+            File file = new File(fr.getFileName());
+            stream = new FileInputStream(file);
+            Font font = Font.createFont(Font.TRUETYPE_FONT, stream);
+            fr.setPeer(font);
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (stream != null) {
+                try {
+                    stream.close();
+                } catch (Exception e2) {
                 }
             }
-            return null;
-        });
+        }
     }
 
     @Override
@@ -161,12 +143,6 @@ final class J2DFontFactory implements FontFactory {
                                      float size,
                                      boolean register,
                                      boolean loadAll) {
-
-        if (!hasPermission()) {
-            PGFont[] fonts = new PGFont[1];
-            fonts[0] = createFont(DEFAULT_FULLNAME, size);
-            return fonts;
-        }
 
         PGFont[] fonts =
             prismFontFactory.loadEmbeddedFont(name, path,
@@ -176,20 +152,13 @@ final class J2DFontFactory implements FontFactory {
         // REMIND: this needs to be upgraded to use JDK9 createFont
         // which can handle a collection.
         final FontResource fr = fonts[0].getFontResource();
-        @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged(new PrivilegedAction<Object>() {
-            @Override
-            public Object run() {
-                try {
-                    File file = new File(fr.getFileName());
-                    Font font = Font.createFont(Font.TRUETYPE_FONT, file);
-                    fr.setPeer(font);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                return null;
-            }
-        });
+        try {
+            File file = new File(fr.getFileName());
+            Font font = Font.createFont(Font.TRUETYPE_FONT, file);
+            fr.setPeer(font);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return fonts;
     }
 
@@ -208,35 +177,29 @@ final class J2DFontFactory implements FontFactory {
         }
         synchronized (J2DFontFactory.class) {
             if (!compositeFontMethodsInitialized) {
-                @SuppressWarnings("removal")
-                var dummy = AccessController.doPrivileged(
-                        (PrivilegedAction<Void>) () -> {
-                            compositeFontMethodsInitialized = true;
-                            Class<?> fontMgrCls;
-                            try {
-                                // JDK7
-                                fontMgrCls = Class.forName(
-                                        "sun.font.FontUtilities", true, null);
-                            } catch (ClassNotFoundException cnfe) {
-                                try {
-                                    // JDK5/6
-                                    fontMgrCls = Class.forName(
-                                       "sun.font.FontManager", true, null);
-                                } catch (ClassNotFoundException cnfe2) {
-                                    return null;
-                                }
-                            }
+                compositeFontMethodsInitialized = true;
+                Class<?> fontMgrCls;
+                try {
+                    // JDK7
+                    fontMgrCls = Class.forName(
+                            "sun.font.FontUtilities", true, null);
+                } catch (ClassNotFoundException cnfe) {
+                    try {
+                        // JDK5/6
+                        fontMgrCls = Class.forName(
+                            "sun.font.FontManager", true, null);
+                    } catch (ClassNotFoundException cnfe2) {
+                        return null;
+                    }
+                }
 
-                            try {
-                                getCompositeFontUIResource =
-                                    fontMgrCls.getMethod(
-                                    "getCompositeFontUIResource",
-                                    Font.class);
-                            } catch (NoSuchMethodException nsme) {
-                            }
-                            return null;
-                        }
-                );
+                try {
+                    getCompositeFontUIResource =
+                        fontMgrCls.getMethod(
+                        "getCompositeFontUIResource",
+                        Font.class);
+                } catch (NoSuchMethodException nsme) {
+                }
             }
         }
 

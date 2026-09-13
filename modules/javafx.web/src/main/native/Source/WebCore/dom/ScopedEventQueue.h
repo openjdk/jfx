@@ -34,6 +34,7 @@
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/Ref.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -42,19 +43,20 @@ class Event;
 class EventQueueScope;
 
 class ScopedEventQueue {
-    WTF_MAKE_NONCOPYABLE(ScopedEventQueue); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ScopedEventQueue);
+    WTF_MAKE_NONCOPYABLE(ScopedEventQueue);
 public:
     static ScopedEventQueue& singleton();
-    void enqueueEvent(Ref<Event>&&);
-
-private:
-    ScopedEventQueue() = default;
-    ~ScopedEventQueue() = delete;
 
     struct ScopedEvent {
         Ref<Event> event;
         GCReachableRef<Node> target;
     };
+    void enqueueEvent(ScopedEvent&&);
+
+private:
+    ScopedEventQueue() = default;
+    ~ScopedEventQueue() = delete;
 
     void dispatchEvent(const ScopedEvent&) const;
     void dispatchAllEvents();

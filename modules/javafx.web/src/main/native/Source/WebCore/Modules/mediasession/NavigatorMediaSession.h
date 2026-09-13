@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,8 +27,10 @@
 
 #if ENABLE(MEDIA_SESSION)
 
-#include "Supplementable.h"
+#include <WebCore/Supplementable.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -36,22 +38,29 @@ class MediaSession;
 class Navigator;
 
 class NavigatorMediaSession final : public Supplement<Navigator> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(NavigatorMediaSession);
 public:
     explicit NavigatorMediaSession(Navigator&);
     ~NavigatorMediaSession();
 
     WEBCORE_EXPORT static MediaSession& mediaSession(Navigator&);
+    WEBCORE_EXPORT static RefPtr<MediaSession> mediaSessionIfExists(Navigator&);
     MediaSession& mediaSession();
+    RefPtr<MediaSession> mediaSessionIfExists();
 
 private:
     static NavigatorMediaSession* from(Navigator&);
-    static const char* supplementName();
+    static ASCIILiteral supplementName() { return "NavigatorMediaSession"_s; }
+    bool isNavigatorMediaSession() const final { return true; }
 
-    RefPtr<MediaSession> m_mediaSession;
-    Navigator& m_navigator;
+    const RefPtr<MediaSession> m_mediaSession;
+    const CheckedRef<Navigator> m_navigator;
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::NavigatorMediaSession)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isNavigatorMediaSession(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(MEDIA_SESSION)

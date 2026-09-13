@@ -27,8 +27,9 @@
 
 #if ENABLE(VIDEO)
 
-#include "Color.h"
-#include "InbandGenericCueIdentifier.h"
+#include <WebCore/Color.h>
+#include <WebCore/InbandGenericCueIdentifier.h>
+#include <wtf/Markable.h>
 #include <wtf/MediaTime.h>
 
 namespace WebCore {
@@ -39,7 +40,7 @@ struct GenericCueData {
     enum class Status : uint8_t { Uninitialized, Partial, Complete };
 
     GenericCueData() = default;
-    GenericCueData(InbandGenericCueIdentifier uniqueId, const MediaTime& startTime, const MediaTime& endTime, const AtomString& id, const String& content, const String& fontName, double line, double position, double size, double baseFontSize, double relativeFontSize, const Color& foregroundColor, const Color& backgroundColor, const Color& highlightColor, GenericCueData::Alignment align, GenericCueData::Status status)
+    GenericCueData(Markable<InbandGenericCueIdentifier> uniqueId, const MediaTime& startTime, const MediaTime& endTime, const AtomString& id, const String& content, const String& fontName, double line, double position, double size, double baseFontSize, double relativeFontSize, const Color& foregroundColor, const Color& backgroundColor, const Color& highlightColor, GenericCueData::Alignment positionAlign, GenericCueData::Alignment align, GenericCueData::Status status)
         : m_uniqueId(uniqueId)
         , m_startTime(startTime)
         , m_endTime(endTime)
@@ -54,6 +55,7 @@ struct GenericCueData {
         , m_foregroundColor(foregroundColor)
         , m_backgroundColor(backgroundColor)
         , m_highlightColor(highlightColor)
+        , m_positionAlign(positionAlign)
         , m_align(align)
         , m_status(status)
     {
@@ -63,7 +65,7 @@ struct GenericCueData {
     bool isValid() const { return !!m_uniqueId; }
     bool equalNotConsideringTimesOrId(const GenericCueData&) const;
 
-    InbandGenericCueIdentifier m_uniqueId;
+    Markable<InbandGenericCueIdentifier> m_uniqueId;
     MediaTime m_startTime;
     MediaTime m_endTime;
     AtomString m_id;
@@ -77,6 +79,7 @@ struct GenericCueData {
     Color m_foregroundColor;
     Color m_backgroundColor;
     Color m_highlightColor;
+    Alignment m_positionAlign { Alignment::None };
     Alignment m_align { Alignment::None };
     Status m_status { Status::Uninitialized };
 };
@@ -84,9 +87,9 @@ struct GenericCueData {
 class InbandGenericCue : public RefCounted<InbandGenericCue> {
 public:
     static Ref<InbandGenericCue> create() { return adoptRef(*new InbandGenericCue); }
-    static Ref<InbandGenericCue> create(GenericCueData&& cueData) { return adoptRef(*new InbandGenericCue(WTFMove(cueData))); }
+    static Ref<InbandGenericCue> create(GenericCueData&& cueData) { return adoptRef(*new InbandGenericCue(WTF::move(cueData))); }
 
-    InbandGenericCueIdentifier uniqueId() const { return m_cueData.m_uniqueId; }
+    InbandGenericCueIdentifier uniqueId() const { return *m_cueData.m_uniqueId; }
 
     MediaTime startTime() const { return m_cueData.m_startTime; }
     void setStartTime(const MediaTime& startTime) { m_cueData.m_startTime = startTime; }
@@ -105,6 +108,9 @@ public:
 
     double position() const { return m_cueData.m_position; }
     void setPosition(double position) { m_cueData.m_position = position; }
+
+    GenericCueData::Alignment positionAlign() const { return m_cueData.m_positionAlign; }
+    void setPositionAlign(GenericCueData::Alignment align) { m_cueData.m_positionAlign = align; }
 
     double size() const { return m_cueData.m_size; }
     void setSize(double size) { m_cueData.m_size = size; }
@@ -142,7 +148,7 @@ public:
 private:
     InbandGenericCue();
     explicit InbandGenericCue(GenericCueData&& cueData)
-        : m_cueData(WTFMove(cueData))
+        : m_cueData(WTF::move(cueData))
     {
         ASSERT(m_cueData.isValid());
     }

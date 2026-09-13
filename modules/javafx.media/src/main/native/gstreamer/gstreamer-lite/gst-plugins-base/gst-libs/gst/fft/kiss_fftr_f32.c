@@ -20,7 +20,7 @@ struct kiss_fftr_f32_state
 };
 
 kiss_fftr_f32_cfg
-kiss_fftr_f32_alloc (int nfft, int inverse_fft, void *mem, size_t * lenmem)
+kiss_fftr_f32_alloc (int nfft, int inverse_fft, void *mem, size_t *lenmem)
 {
   int i;
   kiss_fftr_f32_cfg st = NULL;

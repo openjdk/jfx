@@ -27,25 +27,21 @@
 
 #if ENABLE(WEB_RTC)
 
-#include "RTCDtxStatus.h"
 #include "RTCPriorityType.h"
 #include "RTCRtpCodingParameters.h"
-#include "RTCRtpFecParameters.h"
-#include "RTCRtpRtxParameters.h"
 
 namespace WebCore {
 
 struct RTCRtpEncodingParameters : RTCRtpCodingParameters {
     unsigned long ssrc { 0 };
-    RTCRtpRtxParameters rtx;
-    RTCRtpFecParameters fec;
-    std::optional<RTCDtxStatus> dtx;
+
     bool active { false};
+    std::optional<unsigned long> maxBitrate;
+    std::optional<unsigned long> maxFramerate;
+    std::optional<double> scaleResolutionDownBy;
+
     RTCPriorityType priority { RTCPriorityType::Low };
     std::optional<RTCPriorityType> networkPriority;
-    unsigned long maxBitrate { 0 };
-    unsigned long maxFramerate { 0 };
-    double scaleResolutionDownBy { 1 };
 };
 
 } // namespace WebCore

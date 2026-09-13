@@ -30,6 +30,8 @@
 #include "ContentSecurityPolicyHash.h"
 #include "ContentSecurityPolicyMediaListDirective.h"
 #include "ContentSecurityPolicySourceListDirective.h"
+#include "ContentSecurityPolicyTrustedTypesDirective.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/URL.h>
 
 namespace WebCore {
@@ -37,7 +39,7 @@ namespace WebCore {
 class LocalFrame;
 
 class ContentSecurityPolicyDirectiveList {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ContentSecurityPolicyDirectiveList);
 public:
     static std::unique_ptr<ContentSecurityPolicyDirectiveList> create(ContentSecurityPolicy&, const String&, ContentSecurityPolicyHeaderType, ContentSecurityPolicy::PolicyFrom);
     ContentSecurityPolicyDirectiveList(ContentSecurityPolicy&, ContentSecurityPolicyHeaderType);
@@ -49,7 +51,7 @@ public:
     const ContentSecurityPolicyDirective* violatedDirectiveForInlineJavascriptURL(const Vector<ContentSecurityPolicyHash>&) const;
     const ContentSecurityPolicyDirective* violatedDirectiveForInlineEventHandlers(const Vector<ContentSecurityPolicyHash>&) const;
     const ContentSecurityPolicyDirective* violatedDirectiveForUnsafeInlineScriptElement(const String&, const Vector<ContentSecurityPolicyHash>&) const;
-    const ContentSecurityPolicyDirective* violatedDirectiveForNonParserInsertedScripts(const String&, const Vector<ContentSecurityPolicyHash>&, const URL&, ParserInserted) const;
+    const ContentSecurityPolicyDirective* violatedDirectiveForNonParserInsertedScripts(const String&, const Vector<ContentSecurityPolicyHash>&, const Vector<ResourceCryptographicDigest>&, const URL&, ParserInserted) const;
     const ContentSecurityPolicyDirective* violatedDirectiveForUnsafeInlineStyleElement(const String&, const Vector<ContentSecurityPolicyHash>&) const;
     const ContentSecurityPolicyDirective* violatedDirectiveForUnsafeInlineStyleAttribute(const String&, const Vector<ContentSecurityPolicyHash>&) const;
 
@@ -63,7 +65,7 @@ public:
     const ContentSecurityPolicyDirective* violatedDirectiveForFormAction(const URL&, bool didReceiveRedirectResponse) const;
     const ContentSecurityPolicyDirective* violatedDirectiveForFrame(const URL&, bool didReceiveRedirectResponse) const;
     const ContentSecurityPolicyDirective* violatedDirectiveForFrameAncestor(const LocalFrame&) const;
-    const ContentSecurityPolicyDirective* violatedDirectiveForFrameAncestorOrigins(const Vector<RefPtr<SecurityOrigin>>&) const;
+    const ContentSecurityPolicyDirective* violatedDirectiveForFrameAncestorOrigins(const Vector<Ref<SecurityOrigin>>&) const;
     const ContentSecurityPolicyDirective* violatedDirectiveForImage(const URL&, bool didReceiveRedirectResponse) const;
     const ContentSecurityPolicyDirective* violatedDirectiveForPrefetch(const URL&, bool didReceiveRedirectResponse) const;
 #if ENABLE(APPLICATION_MANIFEST)
@@ -75,16 +77,20 @@ public:
     const ContentSecurityPolicyDirective* violatedDirectiveForScript(const URL&, bool didReceiveRedirectResponse, const Vector<ResourceCryptographicDigest>&, const String&) const;
     const ContentSecurityPolicyDirective* violatedDirectiveForStyle(const URL&, bool didReceiveRedirectResponse, const String&) const;
     const ContentSecurityPolicyDirective* violatedDirectiveForWorker(const URL&, bool didReceiveRedirectResponse);
+    const ContentSecurityPolicyDirective* violatedDirectiveForTrustedTypesPolicy(const String&, bool isDuplicate, AllowTrustedTypePolicy&) const;
 
     const ContentSecurityPolicyDirective* defaultSrc() const { return m_defaultSrc.get(); }
 
     bool hasBlockAllMixedContentDirective() const { return m_hasBlockAllMixedContentDirective; }
     bool hasFrameAncestorsDirective() const { return !!m_frameAncestors; }
+    bool requiresTrustedTypesForScript() const { return m_requireTrustedTypesForScript; }
+    bool trustedEvalEnabled() const { return m_trustedEvalEnabled; }
 
     const String& evalDisabledErrorMessage() const { return m_evalDisabledErrorMessage; }
     const String& webAssemblyDisabledErrorMessage() const { return m_webAssemblyDisabledErrorMessage; }
     bool isReportOnly() const { return m_reportOnly; }
     bool shouldReportSample(const String&) const;
+    HashAlgorithmSet reportHash() const;
     const Vector<String>& reportToTokens() const { return m_reportToTokens; }
     const Vector<String>& reportURIs() const { return m_reportURIs; }
 
@@ -100,13 +106,16 @@ private:
         String name;
         String value;
     };
-    template<typename CharacterType> std::optional<ParsedDirective> parseDirective(StringParsingBuffer<CharacterType>);
+    template<typename CharacterType> std::optional<ParsedDirective> parseDirective(std::span<const CharacterType>);
     void parseReportTo(ParsedDirective&&);
     void parseReportURI(ParsedDirective&&);
+    void parseRequireTrustedTypesFor(ParsedDirective&&);
     void addDirective(ParsedDirective&&);
     void applySandboxPolicy(ParsedDirective&&);
     void setUpgradeInsecureRequests(ParsedDirective&&);
     void setBlockAllMixedContentEnabled(ParsedDirective&&);
+
+    const ContentSecurityPolicySourceListDirective* hashReportDirectiveForScript() const;
 
     template <class CSPDirectiveType>
     void setCSPDirective(ParsedDirective&&, std::unique_ptr<CSPDirectiveType>&);
@@ -118,9 +127,10 @@ private:
 
     void setEvalDisabledErrorMessage(const String& errorMessage) { m_evalDisabledErrorMessage = errorMessage; }
     void setWebAssemblyDisabledErrorMessage(const String& errorMessage) { m_webAssemblyDisabledErrorMessage = errorMessage; }
+    void setTrustedEvalEnabled(const bool& enabled) { m_trustedEvalEnabled = enabled; }
 
     // FIXME: Make this a const reference once we teach applySandboxPolicy() to store its policy as opposed to applying it directly onto ContentSecurityPolicy.
-    ContentSecurityPolicy& m_policy;
+    const CheckedRef<ContentSecurityPolicy> m_policy;
 
     String m_header;
     ContentSecurityPolicyHeaderType m_headerType;
@@ -129,6 +139,8 @@ private:
     bool m_haveSandboxPolicy { false };
     bool m_upgradeInsecureRequests { false };
     bool m_hasBlockAllMixedContentDirective { false };
+    bool m_requireTrustedTypesForScript { false };
+    bool m_trustedEvalEnabled { false };
 
     std::unique_ptr<ContentSecurityPolicyMediaListDirective> m_pluginTypes;
     std::unique_ptr<ContentSecurityPolicySourceListDirective> m_baseURI;
@@ -152,6 +164,7 @@ private:
     std::unique_ptr<ContentSecurityPolicySourceListDirective> m_scriptSrcAttr;
     std::unique_ptr<ContentSecurityPolicySourceListDirective> m_styleSrcElem;
     std::unique_ptr<ContentSecurityPolicySourceListDirective> m_styleSrcAttr;
+    std::unique_ptr<ContentSecurityPolicyTrustedTypesDirective> m_trustedTypes;
     std::unique_ptr<ContentSecurityPolicySourceListDirective> m_workerSrc;
 
     Vector<String> m_reportToTokens;

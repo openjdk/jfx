@@ -48,14 +48,20 @@ typedef double DOMHighResTimeStamp;
     readonly attribute DOMHighResTimeStamp connectEnd;
     readonly attribute DOMHighResTimeStamp secureConnectionStart;
     readonly attribute DOMHighResTimeStamp requestStart;
+    // https://github.com/w3c/resource-timing/pull/408
+    readonly attribute DOMHighResTimeStamp finalResponseHeadersStart;
+    readonly attribute DOMHighResTimeStamp firstInterimResponseStart;
     readonly attribute DOMHighResTimeStamp responseStart;
     readonly attribute DOMHighResTimeStamp responseEnd;
-    [EnabledBySetting=PerformanceResourceTimingSensitivePropertiesEnabled] readonly attribute unsigned long long transferSize;
-    [EnabledBySetting=PerformanceResourceTimingSensitivePropertiesEnabled] readonly attribute unsigned long long encodedBodySize;
-    [EnabledBySetting=PerformanceResourceTimingSensitivePropertiesEnabled] readonly attribute unsigned long long decodedBodySize;
+    readonly attribute unsigned long long transferSize;
+    readonly attribute unsigned long long encodedBodySize;
+    readonly attribute unsigned long long decodedBodySize;
+
+    // https://w3c.github.io/resource-timing/#dfn-delivery-type
+    readonly attribute DOMString deliveryType;
 
     // https://www.w3.org/TR/server-timing/#extension-to-the-performanceresourcetiming-interface
-    [EnabledByDeprecatedGlobalSetting=ServerTimingEnabled] readonly attribute FrozenArray<PerformanceServerTiming> serverTiming;
+    readonly attribute FrozenArray<PerformanceServerTiming> serverTiming;
 
     [Default] object toJSON();
 };

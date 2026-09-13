@@ -28,23 +28,26 @@
 
 #pragma once
 
-#include "DeferTermination.h"
-#include "ErrorInstance.h"
-#include "Exception.h"
-#include "JSObject.h"
-#include "ThrowScope.h"
+#include <JavaScriptCore/DeferTermination.h>
+#include <JavaScriptCore/ErrorInstance.h>
+#include <JavaScriptCore/Exception.h>
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/ThrowScope.h>
 
 namespace JSC {
 
 typedef JSObject* (*ErrorFactory)(JSGlobalObject*, const String&, ErrorInstance::SourceAppender);
 
 String defaultSourceAppender(const String&, StringView, RuntimeType, ErrorInstance::SourceTextWhereErrorOccurred);
+String notAFunctionSourceAppender(const String&, StringView, RuntimeType, ErrorInstance::SourceTextWhereErrorOccurred);
 
+String constructErrorMessage(JSGlobalObject*, JSValue, const String&);
 JS_EXPORT_PRIVATE JSObject* createError(JSGlobalObject*, JSValue, const String&, ErrorInstance::SourceAppender);
 JS_EXPORT_PRIVATE JSObject* createStackOverflowError(JSGlobalObject*);
 JSObject* createUndefinedVariableError(JSGlobalObject*, const Identifier&);
+JSObject* createTDZError(JSGlobalObject*, StringView);
 JSObject* createTDZError(JSGlobalObject*);
-JSObject* createNotAnObjectError(JSGlobalObject*, JSValue);
+JS_EXPORT_PRIVATE JSObject* createNotAnObjectError(JSGlobalObject*, JSValue);
 JSObject* createInvalidFunctionApplyParameterError(JSGlobalObject*, JSValue);
 JSObject* createInvalidInParameterError(JSGlobalObject*, JSValue);
 JSObject* createInvalidInstanceofParameterErrorNotFunction(JSGlobalObject*, JSValue);
@@ -52,7 +55,9 @@ JSObject* createInvalidInstanceofParameterErrorHasInstanceValueNotFunction(JSGlo
 JSObject* createNotAConstructorError(JSGlobalObject*, JSValue);
 JSObject* createNotAFunctionError(JSGlobalObject*, JSValue);
 JSObject* createInvalidPrototypeError(JSGlobalObject*, JSValue);
-JSObject* createErrorForInvalidGlobalAssignment(JSGlobalObject*, const String&);
+JSObject* createErrorForDuplicateGlobalVariableDeclaration(JSGlobalObject*, UniquedStringImpl*);
+JSObject* createErrorForInvalidGlobalFunctionDeclaration(JSGlobalObject*, const Identifier&);
+JSObject* createErrorForInvalidGlobalVarDeclaration(JSGlobalObject*, const Identifier&);
 JSObject* createInvalidPrivateNameError(JSGlobalObject*);
 JSObject* createRedefinedPrivateNameError(JSGlobalObject*);
 String errorDescriptionForValue(JSGlobalObject*, JSValue);

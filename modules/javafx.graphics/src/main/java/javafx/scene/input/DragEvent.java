@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,7 +44,7 @@ import java.io.IOException;
  * <p>
  * Drag and drop gesture can be started by calling {@code startDragAndDrop()}
  * (on a node or scene) inside of a {@link MouseEvent#DRAG_DETECTED DRAG_DETECTED} event handler.
- * The data to be transfered to drop target are placed to a {@code dragBoard}
+ * The data to be transferred to drop target are placed to a {@code dragBoard}
  * at this moment.
  * <p>
  * Drag entered/exited events behave similarly to mouse entered/exited
@@ -70,7 +70,7 @@ import java.io.IOException;
  * Inside a {@code DRAG_DETECTED} event handler, if the
  * {@code startDragAndDrop()} method is called on a node or scene and a dragged
  * data is made available to the returned {@code Dragboard}, the object on which
- * {@code startDragAndDrop()} has been called is considred a gesture source
+ * {@code startDragAndDrop()} has been called is considered a gesture source
  * and the drag and drop gesture is started. The {@code Dragboard} has system
  * clipboard functionality but is specifically used for drag and drop data
  * transfer.
@@ -133,7 +133,7 @@ rect.setOnDragDetected(new EventHandler&lt;MouseEvent&gt;() {
  * {@code DragBoard.getTransferModes()} (set of transfer modes supported by
  * the gesture source) and {@code DragEvent.getTransferMode()} (default
  * transfer mode issued by platform, driven by key modifiers) can be used.
- * It is poosible to pass more transfer modes into the
+ * It is possible to pass more transfer modes into the
  * {@code acceptTransferModes(TransferMode...)} method. In this case
  * it makes the decision in behalf of the
  * application (it chooses the default mode if it's supported by gesture source
@@ -238,7 +238,7 @@ public final class DragEvent extends InputEvent {
     /**
      * This event occurs when drag gesture exits a node. It's the
      * bubbling variant, which is delivered also to all parents of the
-     * eixited node (unless it was consumed). When notifications about
+     * exited node (unless it was consumed). When notifications about
      * exiting some of node's children are not desired,
      * {@code DRAG_EXITED} event handler should be used.
      *
@@ -590,6 +590,7 @@ public final class DragEvent extends InputEvent {
      * @return the source object of the drag and drop gesture
      */
     public final Object getGestureSource() { return gestureSource; }
+    @SuppressWarnings("doclint:missing")
     private Object gestureSource;
 
     /**
@@ -601,6 +602,7 @@ public final class DragEvent extends InputEvent {
      * @return the target object of the drag and drop gesture
      */
     public final Object getGestureTarget() { return gestureTarget; }
+    @SuppressWarnings("doclint:missing")
     private Object gestureTarget;
 
     /**
@@ -614,8 +616,10 @@ public final class DragEvent extends InputEvent {
      * @return the data transfer mode
      */
     public final TransferMode getTransferMode() { return transferMode; }
+    @SuppressWarnings("doclint:missing")
     private TransferMode transferMode;
 
+    @SuppressWarnings("doclint:missing")
     private final State state = new State();
 
     /**
@@ -748,6 +752,7 @@ public final class DragEvent extends InputEvent {
         return state.dropCompleted;
     }
 
+    @SuppressWarnings("doclint:missing")
     private void readObject(java.io.ObjectInputStream in)
             throws IOException, ClassNotFoundException {
         in.defaultReadObject();

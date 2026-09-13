@@ -29,7 +29,9 @@
 [
     Conditional=WEB_AUDIO,
     EnabledBySetting=WebAudioEnabled,
-    JSGenerateToJSObject
+    JSGenerateToJSObject,
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary AudioWorkletNodeOptions : AudioNodeOptions {
     unsigned long numberOfInputs = 1;
     unsigned long numberOfOutputs = 1;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,16 +26,20 @@
 
 #pragma once
 
-#include "CacheValidation.h"
-#include "CertificateInfo.h"
-#include "HTTPHeaderMap.h"
-#include "NetworkLoadMetrics.h"
-#include "ParsedContentRange.h"
+#include <WebCore/CacheValidation.h>
+#include <WebCore/CertificateInfo.h>
+#include <WebCore/HTTPHeaderMap.h>
+#include <WebCore/IPAddressSpace.h>
+#include <WebCore/NetworkLoadMetrics.h>
+#include <WebCore/ParsedContentRange.h>
+#include <optional>
 #include <span>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/Box.h>
 #include <wtf/EnumTraits.h>
 #include <wtf/Markable.h>
+#include <wtf/Seconds.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/URL.h>
 #include <wtf/WallTime.h>
 #include <wtf/persistence/PersistentCoders.h>
@@ -47,6 +51,7 @@ struct Result;
 }
 
 class ResourceResponse;
+struct ResourceResponseData;
 
 bool isScriptAllowedByNosniff(const ResourceResponse&);
 
@@ -58,89 +63,27 @@ enum class WasPrivateRelayed : bool { No, Yes };
 static constexpr unsigned bitWidthOfWasPrivateRelayed = 1;
 static_assert(static_cast<unsigned>(WasPrivateRelayed::Yes) <= ((1U << bitWidthOfWasPrivateRelayed) - 1));
 
+static constexpr unsigned bitWidthOfIPAddressSpace = 1;
+static_assert(static_cast<unsigned>(IPAddressSpace::Local) <= ((1U << bitWidthOfIPAddressSpace) - 1));
+
+enum class ResourceResponseBaseType : uint8_t { Basic, Cors, Default, Error, Opaque, Opaqueredirect };
+enum class ResourceResponseBaseTainting : uint8_t { Basic, Cors, Opaque, Opaqueredirect };
+enum class ResourceResponseSource : uint8_t { Unknown, Network, DiskCache, DiskCacheAfterValidation, MemoryCache, MemoryCacheAfterValidation, ServiceWorker, LegacyApplicationCachePlaceholder, DOMCache, InspectorOverride };
+
 // Do not use this class directly, use the class ResourceResponse instead
 class ResourceResponseBase {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(ResourceResponseBase, WEBCORE_EXPORT);
 public:
-    enum class Type : uint8_t { Basic, Cors, Default, Error, Opaque, Opaqueredirect };
+    using Type = ResourceResponseBaseType;
     static constexpr unsigned bitWidthOfType = 3;
-    enum class Tainting : uint8_t { Basic, Cors, Opaque, Opaqueredirect };
+    using Tainting = ResourceResponseBaseTainting;
     static constexpr unsigned bitWidthOfTainting = 2;
-    enum class Source : uint8_t { Unknown, Network, DiskCache, DiskCacheAfterValidation, MemoryCache, MemoryCacheAfterValidation, ServiceWorker, ApplicationCache, DOMCache, InspectorOverride };
+    using Source = ResourceResponseSource;
     static constexpr unsigned bitWidthOfSource = 4;
 
     static bool isRedirectionStatusCode(int code) { return code == 301 || code == 302 || code == 303 || code == 307 || code == 308; }
 
-    struct CrossThreadData {
-        CrossThreadData(const CrossThreadData&) = delete;
-        CrossThreadData& operator=(const CrossThreadData&) = delete;
-        CrossThreadData() = default;
-        CrossThreadData(CrossThreadData&&) = default;
-        CrossThreadData& operator=(CrossThreadData&&) = default;
-        CrossThreadData(URL&& url, String&& mimeType, long long expectedContentLength, String&& textEncodingName, int httpStatusCode, String&& httpStatusText, String&& httpVersion, HTTPHeaderMap&& httpHeaderFields, std::optional<NetworkLoadMetrics>&& networkLoadMetrics, Source source, Type type, Tainting tainting, bool isRedirected, UsedLegacyTLS usedLegacyTLS, WasPrivateRelayed wasPrivateRelayed, bool isRangeRequested, std::optional<CertificateInfo> certificateInfo)
-            : url(WTFMove(url))
-            , mimeType(WTFMove(mimeType))
-            , expectedContentLength(expectedContentLength)
-            , textEncodingName(WTFMove(textEncodingName))
-            , httpStatusCode(httpStatusCode)
-            , httpStatusText(WTFMove(httpStatusText))
-            , httpVersion(WTFMove(httpVersion))
-            , httpHeaderFields(WTFMove(httpHeaderFields))
-            , networkLoadMetrics(WTFMove(networkLoadMetrics))
-            , source(source)
-            , type(type)
-            , tainting(tainting)
-            , isRedirected(isRedirected)
-            , usedLegacyTLS(usedLegacyTLS)
-            , wasPrivateRelayed(wasPrivateRelayed)
-            , isRangeRequested(isRangeRequested)
-            , certificateInfo(certificateInfo)
-        {
-        }
-
-        WEBCORE_EXPORT CrossThreadData isolatedCopy() const;
-
-        URL url;
-        String mimeType;
-        long long expectedContentLength;
-        String textEncodingName;
-        short httpStatusCode;
-        String httpStatusText;
-        String httpVersion;
-        HTTPHeaderMap httpHeaderFields;
-        std::optional<NetworkLoadMetrics> networkLoadMetrics;
-        Source source;
-        Type type;
-        Tainting tainting;
-        bool isRedirected;
-        UsedLegacyTLS usedLegacyTLS;
-        WasPrivateRelayed wasPrivateRelayed;
-        bool isRangeRequested;
-        std::optional<CertificateInfo> certificateInfo;
-    };
-
-    struct ResponseData {
-        URL m_url;
-        AtomString m_mimeType;
-        long long m_expectedContentLength;
-        AtomString m_textEncodingName;
-        AtomString m_httpStatusText;
-        AtomString m_httpVersion;
-        HTTPHeaderMap m_httpHeaderFields;
-        Box<WebCore::NetworkLoadMetrics> m_networkLoadMetrics;
-
-        short m_httpStatusCode;
-        std::optional<CertificateInfo> m_certificateInfo;
-
-        ResourceResponseBase::Source m_source;
-        ResourceResponseBase::Type m_type;
-        ResourceResponseBase::Tainting m_tainting;
-
-        bool m_isRedirected;
-        UsedLegacyTLS m_usedLegacyTLS;
-        WasPrivateRelayed m_wasPrivateRelayed;
-        bool m_isRangeRequested;
-    };
+    using CrossThreadData = ResourceResponseData;
 
     WEBCORE_EXPORT CrossThreadData crossThreadData() const;
     WEBCORE_EXPORT static ResourceResponse fromCrossThreadData(CrossThreadData&&);
@@ -150,26 +93,26 @@ public:
     WEBCORE_EXPORT bool isSuccessful() const;
 
     WEBCORE_EXPORT const URL& url() const;
-    WEBCORE_EXPORT void setURL(const URL&);
+    WEBCORE_EXPORT void setURL(URL&&);
 
-    WEBCORE_EXPORT const AtomString& mimeType() const;
-    WEBCORE_EXPORT void setMimeType(const AtomString&);
+    WEBCORE_EXPORT const String& mimeType() const;
+    WEBCORE_EXPORT void setMimeType(String&&);
 
     WEBCORE_EXPORT long long expectedContentLength() const;
     WEBCORE_EXPORT void setExpectedContentLength(long long expectedContentLength);
 
-    WEBCORE_EXPORT const AtomString& textEncodingName() const;
-    WEBCORE_EXPORT void setTextEncodingName(AtomString&&);
+    WEBCORE_EXPORT const String& textEncodingName() const;
+    WEBCORE_EXPORT void setTextEncodingName(String&&);
 
     WEBCORE_EXPORT int httpStatusCode() const;
     WEBCORE_EXPORT void setHTTPStatusCode(int);
     WEBCORE_EXPORT bool isRedirection() const;
 
-    WEBCORE_EXPORT const AtomString& httpStatusText() const;
-    WEBCORE_EXPORT void setHTTPStatusText(const AtomString&);
+    WEBCORE_EXPORT const String& httpStatusText() const;
+    WEBCORE_EXPORT void setHTTPStatusText(String&&);
 
-    WEBCORE_EXPORT const AtomString& httpVersion() const;
-    WEBCORE_EXPORT void setHTTPVersion(const AtomString&);
+    WEBCORE_EXPORT const String& httpVersion() const;
+    WEBCORE_EXPORT void setHTTPVersion(String&&);
     WEBCORE_EXPORT bool isHTTP09() const;
 
     WEBCORE_EXPORT const HTTPHeaderMap& httpHeaderFields() const;
@@ -200,13 +143,20 @@ public:
     WEBCORE_EXPORT String suggestedFilename() const;
     WEBCORE_EXPORT static String sanitizeSuggestedFilename(const String&);
 
+    bool isNosniff() const;
+
     WEBCORE_EXPORT void includeCertificateInfo(std::span<const std::byte> = { }) const;
-    void setCertificateInfo(CertificateInfo&& info) { m_certificateInfo = WTFMove(info); }
+    void setCertificateInfo(CertificateInfo&& info) { m_certificateInfo = WTF::move(info); }
     const std::optional<CertificateInfo>& certificateInfo() const { return m_certificateInfo; };
     bool usedLegacyTLS() const { return m_usedLegacyTLS == UsedLegacyTLS::Yes; }
     void setUsedLegacyTLS(UsedLegacyTLS used) { m_usedLegacyTLS = used; }
     bool wasPrivateRelayed() const { return m_wasPrivateRelayed == WasPrivateRelayed::Yes; }
     void setWasPrivateRelayed(WasPrivateRelayed privateRelayed) { m_wasPrivateRelayed = privateRelayed; }
+    void setProxyName(String&& proxyName) { m_proxyName = WTF::move(proxyName); }
+    const String& proxyName() const { return m_proxyName; }
+
+    IPAddressSpace ipAddressSpace() { return m_ipAddressSpace; }
+    void setIPAddressSpace(IPAddressSpace ipAddressSpace) { m_ipAddressSpace = ipAddressSpace; }
 
     // These functions return parsed values of the corresponding response headers.
     WEBCORE_EXPORT bool cacheControlContainsNoCache() const;
@@ -242,7 +192,7 @@ public:
     }
     void setDeprecatedNetworkLoadMetrics(Box<NetworkLoadMetrics>&& metrics)
     {
-        m_networkLoadMetrics = WTFMove(metrics);
+        m_networkLoadMetrics = WTF::move(metrics);
     }
     Box<NetworkLoadMetrics> takeNetworkLoadMetrics()
     {
@@ -272,21 +222,16 @@ public:
 
     static bool equalForWebKitLegacyChallengeComparison(const ResourceResponse&, const ResourceResponse&);
 
-    template<class Encoder, typename = std::enable_if_t<!std::is_same_v<Encoder, IPC::Encoder>>>
-    void encode(Encoder&) const;
-    template<class Decoder, typename = std::enable_if_t<!std::is_same_v<Decoder, IPC::Decoder>>>
-    static WARN_UNUSED_RETURN bool decode(Decoder&, ResourceResponseBase&);
-
     bool isRangeRequested() const { return m_isRangeRequested; }
     void setAsRangeRequested() { m_isRangeRequested = true; }
 
-    bool containsInvalidHTTPHeaders() const;
+    WEBCORE_EXPORT bool containsInvalidHTTPHeaders() const;
 
     WEBCORE_EXPORT static ResourceResponse dataURLResponse(const URL&, const DataURLDecoder::Result&);
 
-    WEBCORE_EXPORT ResourceResponseBase(std::optional<ResponseData>);
+    WEBCORE_EXPORT ResourceResponseBase(std::optional<ResourceResponseData>&&);
 
-    WEBCORE_EXPORT std::optional<ResponseData> getResponseData() const;
+    WEBCORE_EXPORT std::optional<ResourceResponseData> getResponseData() const;
 
 protected:
     enum InitLevel {
@@ -296,7 +241,7 @@ protected:
     };
 
     WEBCORE_EXPORT ResourceResponseBase();
-    WEBCORE_EXPORT ResourceResponseBase(const URL&, const String& mimeType, long long expectedLength, const String& textEncodingName);
+    WEBCORE_EXPORT ResourceResponseBase(URL&&, String&& mimeType, long long expectedLength, String&& textEncodingName);
 
     WEBCORE_EXPORT void lazyInit(InitLevel) const;
 
@@ -314,11 +259,11 @@ private:
 
 protected:
     URL m_url;
-    AtomString m_mimeType;
+    String m_mimeType;
     long long m_expectedContentLength { 0 };
-    AtomString m_textEncodingName;
-    AtomString m_httpStatusText;
-    AtomString m_httpVersion;
+    String m_textEncodingName;
+    String m_httpStatusText;
+    String m_httpVersion;
     HTTPHeaderMap m_httpHeaderFields;
     Box<NetworkLoadMetrics> m_networkLoadMetrics;
 
@@ -330,9 +275,11 @@ protected:
     unsigned m_initLevel : 3; // Controlled by ResourceResponse.
     mutable UsedLegacyTLS m_usedLegacyTLS : bitWidthOfUsedLegacyTLS { UsedLegacyTLS::No };
     mutable WasPrivateRelayed m_wasPrivateRelayed : bitWidthOfWasPrivateRelayed { WasPrivateRelayed::No };
+    String m_proxyName;
 
 private:
-    mutable Markable<Seconds, Seconds::MarkableTraits> m_age;
+    friend struct WTF::Persistence::Coder<ResourceResponse>;
+    mutable Markable<Seconds> m_age;
     mutable Markable<WallTime> m_date;
     mutable Markable<WallTime> m_expires;
     mutable Markable<WallTime> m_lastModified;
@@ -351,148 +298,61 @@ private:
     Tainting m_tainting : bitWidthOfTainting { Tainting::Basic };
     Source m_source : bitWidthOfSource { Source::Unknown };
     Type m_type : bitWidthOfType { Type::Default };
+    IPAddressSpace m_ipAddressSpace : bitWidthOfIPAddressSpace { IPAddressSpace::Public };
+
 };
 
-template<class Encoder, typename>
-void ResourceResponseBase::encode(Encoder& encoder) const
-{
-    encoder << m_isNull;
-    if (m_isNull)
-        return;
-    lazyInit(AllFields);
+struct ResourceResponseData {
+    ResourceResponseData(const ResourceResponseData&) = delete;
+    ResourceResponseData& operator=(const ResourceResponseData&) = delete;
+    ResourceResponseData() = default;
+    ResourceResponseData(ResourceResponseData&&) = default;
+    ResourceResponseData& operator=(ResourceResponseData&&) = default;
+    ResourceResponseData(URL&& url, String&& mimeType, long long expectedContentLength, String&& textEncodingName, int httpStatusCode, String&& httpStatusText, String&& httpVersion, HTTPHeaderMap&& httpHeaderFields, std::optional<NetworkLoadMetrics>&& networkLoadMetrics, ResourceResponseSource source, ResourceResponseBaseType type, ResourceResponseBaseTainting tainting, bool isRedirected, UsedLegacyTLS usedLegacyTLS, WasPrivateRelayed wasPrivateRelayed, String&& proxyName, bool isRangeRequested, std::optional<CertificateInfo> certificateInfo, IPAddressSpace ipAddressSpace)
+        : url(WTF::move(url))
+        , mimeType(WTF::move(mimeType))
+        , expectedContentLength(expectedContentLength)
+        , textEncodingName(WTF::move(textEncodingName))
+        , httpStatusCode(httpStatusCode)
+        , httpStatusText(WTF::move(httpStatusText))
+        , httpVersion(WTF::move(httpVersion))
+        , httpHeaderFields(WTF::move(httpHeaderFields))
+        , networkLoadMetrics(WTF::move(networkLoadMetrics))
+        , source(source)
+        , type(type)
+        , tainting(tainting)
+        , isRedirected(isRedirected)
+        , usedLegacyTLS(usedLegacyTLS)
+        , wasPrivateRelayed(wasPrivateRelayed)
+        , proxyName(WTF::move(proxyName))
+        , isRangeRequested(isRangeRequested)
+        , certificateInfo(certificateInfo)
+        , ipAddressSpace(ipAddressSpace)
+    {
+    }
 
-    encoder << m_url;
-    encoder << m_mimeType;
-    encoder << static_cast<int64_t>(m_expectedContentLength);
-    encoder << m_textEncodingName;
-    encoder << m_httpStatusText;
-    encoder << m_httpVersion;
-    encoder << m_httpHeaderFields;
+    WEBCORE_EXPORT ResourceResponseData isolatedCopy() const;
 
-    encoder << m_httpStatusCode;
-    encoder << m_certificateInfo;
-    encoder << m_source;
-    encoder << m_type;
-    encoder << m_tainting;
-    encoder << m_isRedirected;
-    UsedLegacyTLS usedLegacyTLS = m_usedLegacyTLS;
-    encoder << usedLegacyTLS;
-    WasPrivateRelayed wasPrivateRelayed = m_wasPrivateRelayed;
-    encoder << wasPrivateRelayed;
-    encoder << m_isRangeRequested;
-}
-
-template<class Decoder, typename>
-bool ResourceResponseBase::decode(Decoder& decoder, ResourceResponseBase& response)
-{
-    ASSERT(response.m_isNull);
-    std::optional<bool> responseIsNull;
-    decoder >> responseIsNull;
-    if (!responseIsNull)
-        return false;
-    if (*responseIsNull)
-        return true;
-
-    response.m_isNull = false;
-
-    std::optional<URL> url;
-    decoder >> url;
-    if (!url)
-        return false;
-    response.m_url = WTFMove(*url);
-
-    std::optional<AtomString> mimeType;
-    decoder >> mimeType;
-    if (!mimeType)
-        return false;
-    response.m_mimeType = WTFMove(*mimeType);
-
-    std::optional<int64_t> expectedContentLength;
-    decoder >> expectedContentLength;
-    if (!expectedContentLength)
-        return false;
-    response.m_expectedContentLength = *expectedContentLength;
-
-    std::optional<AtomString> textEncodingName;
-    decoder >> textEncodingName;
-    if (!textEncodingName)
-        return false;
-    response.m_textEncodingName = WTFMove(*textEncodingName);
-
-    std::optional<AtomString> httpStatusText;
-    decoder >> httpStatusText;
-    if (!httpStatusText)
-        return false;
-    response.m_httpStatusText = WTFMove(*httpStatusText);
-
-    std::optional<AtomString> httpVersion;
-    decoder >> httpVersion;
-    if (!httpVersion)
-        return false;
-    response.m_httpVersion = WTFMove(*httpVersion);
-
-    std::optional<HTTPHeaderMap> httpHeaderFields;
-    decoder >> httpHeaderFields;
-    if (!httpHeaderFields)
-        return false;
-    response.m_httpHeaderFields = WTFMove(*httpHeaderFields);
-
-    std::optional<short> httpStatusCode;
-    decoder >> httpStatusCode;
-    if (!httpStatusCode)
-        return false;
-    response.m_httpStatusCode = WTFMove(*httpStatusCode);
-
-    std::optional<std::optional<CertificateInfo>> certificateInfo;
-    decoder >> certificateInfo;
-    if (!certificateInfo)
-        return false;
-    response.m_certificateInfo = WTFMove(*certificateInfo);
-
-    std::optional<Source> source;
-    decoder >> source;
-    if (!source)
-        return false;
-    response.m_source = WTFMove(*source);
-
-    std::optional<Type> type;
-    decoder >> type;
-    if (!type)
-        return false;
-    response.m_type = WTFMove(*type);
-
-    std::optional<Tainting> tainting;
-    decoder >> tainting;
-    if (!tainting)
-        return false;
-    response.m_tainting = WTFMove(*tainting);
-
-    std::optional<bool> isRedirected;
-    decoder >> isRedirected;
-    if (!isRedirected)
-        return false;
-    response.m_isRedirected = WTFMove(*isRedirected);
-
-    std::optional<UsedLegacyTLS> usedLegacyTLS;
-    decoder >> usedLegacyTLS;
-    if (!usedLegacyTLS)
-        return false;
-    response.m_usedLegacyTLS = WTFMove(*usedLegacyTLS);
-
-    std::optional<WasPrivateRelayed> wasPrivateRelayed;
-    decoder >> wasPrivateRelayed;
-    if (!wasPrivateRelayed)
-        return false;
-    response.m_wasPrivateRelayed = WTFMove(*wasPrivateRelayed);
-
-    std::optional<bool> isRangeRequested;
-    decoder >> isRangeRequested;
-    if (!isRangeRequested)
-        return false;
-    response.m_isRangeRequested = WTFMove(*isRangeRequested);
-
-    return true;
-}
+    URL url;
+    String mimeType;
+    long long expectedContentLength;
+    String textEncodingName;
+    short httpStatusCode;
+    String httpStatusText;
+    String httpVersion;
+    HTTPHeaderMap httpHeaderFields;
+    std::optional<NetworkLoadMetrics> networkLoadMetrics;
+    ResourceResponseBase::Source source;
+    ResourceResponseBase::Type type;
+    ResourceResponseBase::Tainting tainting;
+    bool isRedirected;
+    UsedLegacyTLS usedLegacyTLS;
+    WasPrivateRelayed wasPrivateRelayed;
+    String proxyName;
+    bool isRangeRequested;
+    std::optional<CertificateInfo> certificateInfo;
+    IPAddressSpace ipAddressSpace;
+};
 
 } // namespace WebCore
 
@@ -530,7 +390,7 @@ template<> struct EnumTraitsForPersistence<WebCore::ResourceResponseBase::Source
         WebCore::ResourceResponseBase::Source::MemoryCache,
         WebCore::ResourceResponseBase::Source::MemoryCacheAfterValidation,
         WebCore::ResourceResponseBase::Source::ServiceWorker,
-        WebCore::ResourceResponseBase::Source::ApplicationCache,
+        WebCore::ResourceResponseBase::Source::LegacyApplicationCachePlaceholder,
         WebCore::ResourceResponseBase::Source::DOMCache,
         WebCore::ResourceResponseBase::Source::InspectorOverride
     >;
@@ -541,9 +401,9 @@ namespace Persistence {
 class Decoder;
 class Encoder;
 
-template<> struct Coder<WebCore::ResourceResponseBase::CrossThreadData> {
-    WEBCORE_EXPORT static void encode(Encoder&, const WebCore::ResourceResponseBase::CrossThreadData&);
-    WEBCORE_EXPORT static std::optional<WebCore::ResourceResponseBase::CrossThreadData> decode(Decoder&);
+template<> struct Coder<WebCore::ResourceResponseData> {
+    WEBCORE_EXPORT static void encodeForPersistence(Encoder&, const WebCore::ResourceResponseData&);
+    WEBCORE_EXPORT static std::optional<WebCore::ResourceResponseData> decodeForPersistence(Decoder&);
 };
 
 } // namespace Persistence

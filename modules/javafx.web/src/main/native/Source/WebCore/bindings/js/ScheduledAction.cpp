@@ -30,9 +30,9 @@
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
 #include "JSDOMExceptionHandling.h"
+#include "JSDOMWindow.h"
 #include "JSExecState.h"
 #include "JSExecStateInstrumentation.h"
-#include "JSLocalDOMWindow.h"
 #include "JSWorkerGlobalScope.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
@@ -42,30 +42,36 @@
 #include "WorkerGlobalScope.h"
 #include "WorkerThread.h"
 #include <JavaScriptCore/JSLock.h>
+#include <JavaScriptCore/SourceProvider.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 using namespace JSC;
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScheduledAction);
+
 std::unique_ptr<ScheduledAction> ScheduledAction::create(DOMWrapperWorld& isolatedWorld, Strong<JSObject>&& function)
 {
-    return std::unique_ptr<ScheduledAction>(new ScheduledAction(isolatedWorld, WTFMove(function)));
+    return std::unique_ptr<ScheduledAction>(new ScheduledAction(isolatedWorld, WTF::move(function)));
 }
 
 std::unique_ptr<ScheduledAction> ScheduledAction::create(DOMWrapperWorld& isolatedWorld, String&& code)
 {
-    return std::unique_ptr<ScheduledAction>(new ScheduledAction(isolatedWorld, WTFMove(code)));
+    return std::unique_ptr<ScheduledAction>(new ScheduledAction(isolatedWorld, WTF::move(code)));
 }
 
 ScheduledAction::ScheduledAction(DOMWrapperWorld& isolatedWorld, Strong<JSObject>&& function)
     : m_isolatedWorld(isolatedWorld)
-    , m_function(WTFMove(function))
+    , m_function(WTF::move(function))
+    , m_sourceTaintedOrigin(JSC::SourceTaintedOrigin::Untainted)
 {
 }
 
 ScheduledAction::ScheduledAction(DOMWrapperWorld& isolatedWorld, String&& code)
     : m_isolatedWorld(isolatedWorld)
     , m_function(isolatedWorld.vm())
-    , m_code(WTFMove(code))
+    , m_code(WTF::move(code))
+    , m_sourceTaintedOrigin(JSC::computeNewSourceTaintedOriginFromStack(isolatedWorld.vm(), isolatedWorld.vm().topCallFrame))
 {
 }
 
@@ -73,7 +79,7 @@ ScheduledAction::~ScheduledAction() = default;
 
 void ScheduledAction::addArguments(FixedVector<JSC::Strong<JSC::Unknown>>&& arguments)
 {
-    m_arguments = WTFMove(arguments);
+    m_arguments = WTF::move(arguments);
 }
 
 auto ScheduledAction::type() const -> Type
@@ -83,8 +89,8 @@ auto ScheduledAction::type() const -> Type
 
 void ScheduledAction::execute(ScriptExecutionContext& context)
 {
-    if (is<Document>(context))
-        execute(downcast<Document>(context));
+    if (auto* document = dynamicDowncast<Document>(context))
+        execute(*document);
     else
         execute(downcast<WorkerGlobalScope>(context));
 }
@@ -106,9 +112,10 @@ void ScheduledAction::executeFunctionInContext(JSGlobalObject* globalObject, JSV
     JSGlobalObject* lexicalGlobalObject = globalObject;
 
     MarkedArgumentBuffer arguments;
+    arguments.ensureCapacity(m_arguments.size());
     for (auto& argument : m_arguments)
         arguments.append(argument.get());
-    if (UNLIKELY(arguments.hasOverflowed())) {
+    if (arguments.hasOverflowed()) [[unlikely]] {
         reportException(jsFunctionGlobalObject, JSC::Exception::create(vm, createOutOfMemoryError(lexicalGlobalObject)));
         return;
     }
@@ -127,32 +134,32 @@ void ScheduledAction::executeFunctionInContext(JSGlobalObject* globalObject, JSV
 
 void ScheduledAction::execute(Document& document)
 {
-    auto* window = toJSLocalDOMWindow(document.frame(), m_isolatedWorld);
+    auto* window = toJSDOMWindow(document.frame(), m_isolatedWorld);
     if (!window)
         return;
 
-    RefPtr frame = window->wrapped().frame();
+    RefPtr frame = dynamicDowncast<LocalFrame>(window->wrapped().frame());
     if (!frame || !frame->script().canExecuteScripts(ReasonForCallingCanExecuteScripts::AboutToExecuteScript))
         return;
 
     if (m_function)
         executeFunctionInContext(window, &window->proxy(), document);
     else
-        frame->script().executeScriptInWorldIgnoringException(m_isolatedWorld, m_code);
+        frame->script().executeScriptInWorldIgnoringException(m_isolatedWorld, m_code, m_sourceTaintedOrigin);
 }
 
 void ScheduledAction::execute(WorkerGlobalScope& workerGlobalScope)
 {
     // In a Worker, the execution should always happen on a worker thread.
-    ASSERT(workerGlobalScope.thread().thread() == &Thread::current());
+    ASSERT(workerGlobalScope.thread()->thread() == &Thread::currentSingleton());
 
-    auto* scriptController = workerGlobalScope.script();
+    CheckedPtr scriptController = workerGlobalScope.script();
 
     if (m_function) {
         auto* contextWrapper = scriptController->globalScopeWrapper();
         executeFunctionInContext(contextWrapper, contextWrapper, workerGlobalScope);
     } else {
-        ScriptSourceCode code(m_code, URL(workerGlobalScope.url()));
+        ScriptSourceCode code(m_code, m_sourceTaintedOrigin, URL(workerGlobalScope.url()));
         scriptController->evaluate(code);
     }
 }

@@ -31,6 +31,8 @@
 
 #include <wtf/PrintStream.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DirectJITCode);
@@ -42,9 +44,7 @@ JITCode::JITCode(JITType jitType, CodePtr<JSEntryPtrTag> code, ShareAttribute sh
 {
 }
 
-JITCode::~JITCode()
-{
-}
+JITCode::~JITCode() = default;
 
 ASCIILiteral JITCode::typeName(JITType jitType)
 {
@@ -101,6 +101,12 @@ DFG::CommonData* JITCode::dfgCommon()
     return nullptr;
 }
 
+const DFG::CommonData* JITCode::dfgCommon() const
+{
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
+}
+
 DFG::JITCode* JITCode::dfg()
 {
     RELEASE_ASSERT_NOT_REACHED();
@@ -119,7 +125,7 @@ FTL::ForOSREntryJITCode* JITCode::ftlForOSREntry()
     return nullptr;
 }
 
-void JITCode::shrinkToFit(const ConcurrentJSLocker&)
+void JITCode::shrinkToFit()
 {
 }
 
@@ -158,7 +164,7 @@ JITCodeWithCodeRef::JITCodeWithCodeRef(CodeRef<JSEntryPtrTag> ref, JITType jitTy
 
 JITCodeWithCodeRef::~JITCodeWithCodeRef()
 {
-    if ((Options::dumpDisassembly() || (isOptimizingJIT(jitType()) && Options::dumpDFGDisassembly()))
+    if ((Options::dumpDisassembly() || ((jitType() == JITType::BaselineJIT) && Options::dumpBaselineDisassembly()) || (isOptimizingJIT(jitType()) && Options::dumpDFGDisassembly()))
         && m_executableMemory)
         dataLog("Destroying JIT code at ", pointerDump(m_executableMemory.get()), "\n");
 }
@@ -191,8 +197,9 @@ unsigned JITCodeWithCodeRef::offsetOf(void* pointerIntoCode)
 
 size_t JITCodeWithCodeRef::size()
 {
-    RELEASE_ASSERT(m_executableMemory);
-    return m_executableMemory->sizeInBytes();
+    if (RefPtr memory = m_executableMemory)
+        return memory->sizeInBytes();
+    return 0;
 }
 
 bool JITCodeWithCodeRef::contains(void* address)
@@ -235,9 +242,7 @@ DirectJITCode::DirectJITCode(JITCode::CodeRef<JSEntryPtrTag> ref, CodePtr<JSEntr
     ASSERT(m_withArityCheck);
 }
 
-DirectJITCode::~DirectJITCode()
-{
-}
+DirectJITCode::~DirectJITCode() = default;
 
 void DirectJITCode::initializeCodeRefForDFG(JITCode::CodeRef<JSEntryPtrTag> ref, CodePtr<JSEntryPtrTag> withArityCheck)
 {
@@ -252,10 +257,10 @@ void DirectJITCode::initializeCodeRefForDFG(JITCode::CodeRef<JSEntryPtrTag> ref,
 CodePtr<JSEntryPtrTag> DirectJITCode::addressForCall(ArityCheckMode arity)
 {
     switch (arity) {
-    case ArityCheckNotRequired:
+    case ArityCheckMode::ArityCheckNotRequired:
         RELEASE_ASSERT(m_addressForCall);
         return m_addressForCall;
-    case MustCheckArity:
+    case ArityCheckMode::MustCheckArity:
         RELEASE_ASSERT(m_withArityCheck);
         return m_withArityCheck;
     }
@@ -274,14 +279,12 @@ NativeJITCode::NativeJITCode(CodeRef<JSEntryPtrTag> ref, JITType jitType, Intrin
     m_intrinsic = intrinsic;
 }
 
-NativeJITCode::~NativeJITCode()
-{
-}
+NativeJITCode::~NativeJITCode() = default;
 
 CodePtr<JSEntryPtrTag> NativeJITCode::addressForCall(ArityCheckMode arity)
 {
     RELEASE_ASSERT(m_addressForCall);
-    ASSERT_UNUSED(arity, arity == ArityCheckNotRequired || arity == MustCheckArity);
+    ASSERT_UNUSED(arity, arity == ArityCheckMode::ArityCheckNotRequired || arity == ArityCheckMode::MustCheckArity);
     return m_addressForCall;
 }
 
@@ -309,3 +312,4 @@ void printInternal(PrintStream& out, JSC::JITType type)
 
 } // namespace WTF
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

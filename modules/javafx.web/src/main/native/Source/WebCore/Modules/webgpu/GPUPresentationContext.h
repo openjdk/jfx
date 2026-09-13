@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #pragma once
 
 #include "GPUTexture.h"
+#include "GPUTextureDescriptor.h"
 #include "WebGPUPresentationContext.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/Ref.h>
@@ -38,32 +39,35 @@
 namespace WebCore {
 
 struct GPUCanvasConfiguration;
+class GPUDevice;
 class GPUTexture;
 
 class GPUPresentationContext : public RefCounted<GPUPresentationContext> {
 public:
     static Ref<GPUPresentationContext> create(Ref<WebGPU::PresentationContext>&& backing)
     {
-        return adoptRef(*new GPUPresentationContext(WTFMove(backing)));
+        return adoptRef(*new GPUPresentationContext(WTF::move(backing)));
     }
 
-    void configure(const GPUCanvasConfiguration&);
+    [[nodiscard]] bool configure(const GPUCanvasConfiguration&, GPUIntegerCoordinate, GPUIntegerCoordinate, bool);
     void unconfigure();
 
-    RefPtr<GPUTexture> getCurrentTexture();
-    void present();
+    RefPtr<GPUTexture> getCurrentTexture(uint32_t);
+    void present(uint32_t frameIndex, bool presentBacking = false);
 
     WebGPU::PresentationContext& backing() { return m_backing; }
     const WebGPU::PresentationContext& backing() const { return m_backing; }
 
 private:
     GPUPresentationContext(Ref<WebGPU::PresentationContext>&& backing)
-        : m_backing(WTFMove(backing))
+        : m_backing(WTF::move(backing))
     {
     }
 
-    Ref<WebGPU::PresentationContext> m_backing;
+    const Ref<WebGPU::PresentationContext> m_backing;
     RefPtr<GPUTexture> m_currentTexture;
+    RefPtr<const GPUDevice> m_device;
+    GPUTextureDescriptor m_textureDescriptor;
 };
 
 }

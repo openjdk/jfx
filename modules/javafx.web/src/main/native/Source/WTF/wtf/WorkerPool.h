@@ -26,15 +26,19 @@
 #pragma once
 
 #include <wtf/AutomaticThread.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Deque.h>
 #include <wtf/Function.h>
 #include <wtf/NumberOfCores.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTF {
 
-class WorkerPool : public ThreadSafeRefCounted<WorkerPool> {
+class WorkerPool final : public ThreadSafeRefCounted<WorkerPool>, public CanMakeThreadSafeCheckedPtr<WorkerPool> {
+    WTF_MAKE_TZONE_ALLOCATED(WorkerPool);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WorkerPool);
 public:
     WTF_EXPORT_PRIVATE void postTask(Function<void()>&&);
 
@@ -49,6 +53,8 @@ public:
 
     ASCIILiteral name() const { return m_name; }
 
+    WTF_EXPORT_PRIVATE unsigned numberOfTasks() const;
+
 private:
     class Worker;
     friend class Worker;
@@ -58,7 +64,7 @@ private:
     bool shouldSleep(const AbstractLocker&);
 
     Box<Lock> m_lock;
-    Ref<AutomaticThreadCondition> m_condition;
+    const Ref<AutomaticThreadCondition> m_condition;
     Seconds m_timeout;
     MonotonicTime m_lastTimeoutTime { MonotonicTime::nan() };
     unsigned m_numberOfActiveWorkers { 0 };

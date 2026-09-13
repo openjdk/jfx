@@ -25,6 +25,12 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
+#if !BUSE(TZONE)
+
 #include "IsoHeapImpl.h"
 #include "IsoTLSDeallocatorEntry.h"
 #include "IsoSharedHeapInlines.h"
@@ -269,7 +275,7 @@ AllocationMode IsoHeapImpl<Config>::updateAllocationMode()
             //     }
             if (m_numberOfAllocationsFromSharedInOneCycle <= IsoPage<Config>::numObjects)
                 return AllocationMode::Shared;
-            BFALLTHROUGH;
+            [[fallthrough]];
 
         case AllocationMode::Fast: {
             // The allocation pattern may change. We should check the allocation rate and decide which mode is more appropriate.
@@ -318,7 +324,7 @@ void* IsoHeapImpl<Config>::allocateFromShared(const LockHolder&, bool abortOnFai
             fprintf(stderr, "%p: allocated %p from shared of size %u\n", this, result, Config::objectSize);
         BASSERT(index < IsoHeapImplBase::maxAllocationFromShared);
         *indexSlotFor<Config>(result) = index;
-        m_sharedCells[index] = bitwise_cast<uint8_t*>(result);
+        m_sharedCells[index] = std::bit_cast<uint8_t*>(result);
     }
     BASSERT(result);
     m_availableShared &= ~(1U << index);
@@ -329,3 +335,6 @@ void* IsoHeapImpl<Config>::allocateFromShared(const LockHolder&, bool abortOnFai
 } // namespace bmalloc
 
 #endif
+#endif // !BUSE(TZONE)
+
+#endif // __cplusplus

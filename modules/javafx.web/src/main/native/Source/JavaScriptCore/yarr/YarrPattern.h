@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009, 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Peter Varga (pvarga@inf.u-szeged.hu), University of Szeged
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,13 +26,14 @@
 
 #pragma once
 
-#include "YarrErrorCode.h"
-#include "YarrFlags.h"
-#include "YarrUnicodeProperties.h"
+#include <JavaScriptCore/YarrErrorCode.h>
+#include <JavaScriptCore/YarrFlags.h>
+#include <JavaScriptCore/YarrUnicodeProperties.h>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/HashMap.h>
 #include <wtf/OptionSet.h>
 #include <wtf/PrintStream.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/text/StringHash.h>
 
@@ -48,10 +49,10 @@ enum class CompileMode : uint8_t {
 };
 
 struct CharacterRange {
-    UChar32 begin { 0 };
-    UChar32 end { UCHAR_MAX_VALUE };
+    char32_t begin { 0 };
+    char32_t end { UCHAR_MAX_VALUE };
 
-    CharacterRange(UChar32 begin, UChar32 end)
+    CharacterRange(char32_t begin, char32_t end)
         : begin(begin)
         , end(end)
     {
@@ -82,8 +83,11 @@ inline CharacterClassWidths& operator|=(CharacterClassWidths& lhs, CharacterClas
 }
 
 struct CharacterClass {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(CharacterClass);
 public:
+    using Table = const char*;
+    static constexpr unsigned tableSize = 65536;
+
     // All CharacterClass instances have to have the full set of matches and ranges,
     // they may have an optional m_table for faster lookups (which must match the
     // specified matches and ranges)
@@ -94,7 +98,7 @@ public:
     {
     }
 
-    CharacterClass(const char* table, bool inverted)
+    CharacterClass(Table table, bool inverted)
         : m_table(table)
         , m_characterWidths(CharacterClassWidths::Unknown)
         , m_tableInverted(inverted)
@@ -102,7 +106,7 @@ public:
     {
     }
 
-    CharacterClass(std::initializer_list<UChar32> matches, std::initializer_list<CharacterRange> ranges, std::initializer_list<UChar32> matchesUnicode, std::initializer_list<CharacterRange> rangesUnicode, CharacterClassWidths widths)
+    CharacterClass(std::initializer_list<char32_t> matches, std::initializer_list<CharacterRange> ranges, std::initializer_list<char32_t> matchesUnicode, std::initializer_list<CharacterRange> rangesUnicode, CharacterClassWidths widths)
         : m_matches(matches)
         , m_ranges(ranges)
         , m_matchesUnicode(matchesUnicode)
@@ -114,7 +118,7 @@ public:
     {
     }
 
-    CharacterClass(std::initializer_list<Vector<UChar32>> strings, std::initializer_list<UChar32> matches, std::initializer_list<CharacterRange> ranges, std::initializer_list<UChar32> matchesUnicode, std::initializer_list<CharacterRange> rangesUnicode, CharacterClassWidths widths, bool inCanonicalForm)
+    CharacterClass(std::initializer_list<Vector<char32_t>> strings, std::initializer_list<char32_t> matches, std::initializer_list<CharacterRange> ranges, std::initializer_list<char32_t> matchesUnicode, std::initializer_list<CharacterRange> rangesUnicode, CharacterClassWidths widths, bool inCanonicalForm)
         : m_strings(strings)
         , m_matches(matches)
         , m_ranges(ranges)
@@ -128,6 +132,8 @@ public:
     {
     }
 
+    void copyOnly8BitCharacterData(const CharacterClass& other);
+
     bool hasNonBMPCharacters() const { return m_characterWidths & CharacterClassWidths::HasNonBMPChars; }
 
     bool hasOneCharacterSize() const { return m_characterWidths == CharacterClassWidths::HasBMPChars || m_characterWidths == CharacterClassWidths::HasNonBMPChars; }
@@ -135,13 +141,13 @@ public:
     bool hasStrings() const { return !m_strings.isEmpty(); }
     bool hasSingleCharacters() const { return !m_matches.isEmpty() || !m_ranges.isEmpty() || !m_matchesUnicode.isEmpty() || !m_rangesUnicode.isEmpty(); }
 
-    Vector<Vector<UChar32>> m_strings;
-    Vector<UChar32> m_matches;
+    Vector<Vector<char32_t>> m_strings;
+    Vector<char32_t> m_matches;
     Vector<CharacterRange> m_ranges;
-    Vector<UChar32> m_matchesUnicode;
+    Vector<char32_t> m_matchesUnicode;
     Vector<CharacterRange> m_rangesUnicode;
 
-    const char* m_table;
+    Table m_table;
     CharacterClassWidths m_characterWidths;
     bool m_tableInverted : 1;
     bool m_anyCharacter : 1;
@@ -149,7 +155,7 @@ public:
 };
 
 struct ClassSet : public CharacterClass {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ClassSet);
 public:
     ClassSet()
         : CharacterClass()
@@ -163,26 +169,26 @@ public:
     {
     }
 
-    ClassSet(std::initializer_list<UChar32> matches, std::initializer_list<CharacterRange> ranges, std::initializer_list<UChar32> matchesUnicode, std::initializer_list<CharacterRange> rangesUnicode, CharacterClassWidths widths)
+    ClassSet(std::initializer_list<char32_t> matches, std::initializer_list<CharacterRange> ranges, std::initializer_list<char32_t> matchesUnicode, std::initializer_list<CharacterRange> rangesUnicode, CharacterClassWidths widths)
         : CharacterClass(matches, ranges, matchesUnicode, rangesUnicode, widths)
         , m_inCanonicalForm(true)
     {
     }
 
-    ClassSet(std::initializer_list<Vector<UChar32>> strings, std::initializer_list<UChar32> matches, std::initializer_list<CharacterRange> ranges, std::initializer_list<UChar32> matchesUnicode, std::initializer_list<CharacterRange> rangesUnicode, CharacterClassWidths widths)
+    ClassSet(std::initializer_list<Vector<char32_t>> strings, std::initializer_list<char32_t> matches, std::initializer_list<CharacterRange> ranges, std::initializer_list<char32_t> matchesUnicode, std::initializer_list<CharacterRange> rangesUnicode, CharacterClassWidths widths)
         : CharacterClass(matches, ranges, matchesUnicode, rangesUnicode, widths)
         , m_strings(strings)
         , m_inCanonicalForm(true)
     {
     }
 
-    ClassSet(std::initializer_list<Vector<UChar32>> strings, bool inCanonicalForm)
+    ClassSet(std::initializer_list<Vector<char32_t>> strings, bool inCanonicalForm)
         : m_strings(strings)
         , m_inCanonicalForm(inCanonicalForm)
     {
     }
 
-    Vector<Vector<UChar32>> m_strings;
+    Vector<Vector<char32_t>> m_strings;
     bool m_inCanonicalForm : 1;
 };
 
@@ -205,13 +211,16 @@ struct PatternTerm {
         AssertionWordBoundary,
         PatternCharacter,
         CharacterClass,
-        BackReference,
-        ForwardReference,
+        NumberedBackReference,
+        NamedBackReference,
+        NumberedForwardReference,
+        NamedForwardReference,
         ParenthesesSubpattern,
         ParentheticalAssertion,
         DotStarEnclosure,
     };
     Type type;
+    OptionSet<Flags> m_currentFlags;
     bool m_capture : 1;
     bool m_invert : 1;
     MatchDirection m_matchDirection : 1;
@@ -219,7 +228,7 @@ struct PatternTerm {
     Checked<unsigned> quantityMinCount;
     Checked<unsigned> quantityMaxCount;
     union {
-        UChar32 patternCharacter;
+        char32_t patternCharacter;
         CharacterClass* characterClass;
         unsigned backReferenceSubpatternId;
         struct {
@@ -228,6 +237,8 @@ struct PatternTerm {
             unsigned lastSubpatternId;
             bool isCopy : 1;
             bool isTerminal : 1;
+            bool isStringList : 1;
+            bool isEOLStringList: 1;
         } parentheses;
         struct {
             bool bolAnchor : 1;
@@ -237,8 +248,9 @@ struct PatternTerm {
     unsigned inputPosition;
     unsigned frameLocation;
 
-    PatternTerm(UChar32 ch, MatchDirection matchDirection = Forward)
+    PatternTerm(char32_t ch, OptionSet<Flags> currFlags, MatchDirection matchDirection = Forward)
         : type(PatternTerm::Type::PatternCharacter)
+        , m_currentFlags(currFlags)
         , m_capture(false)
         , m_invert(false)
         , m_matchDirection(matchDirection)
@@ -248,8 +260,9 @@ struct PatternTerm {
         quantityMinCount = quantityMaxCount = 1;
     }
 
-    PatternTerm(CharacterClass* charClass, bool invert, MatchDirection matchDirection = Forward)
+    PatternTerm(CharacterClass* charClass, bool invert, OptionSet<Flags> currFlags, MatchDirection matchDirection = Forward)
         : type(PatternTerm::Type::CharacterClass)
+        , m_currentFlags(currFlags)
         , m_capture(false)
         , m_invert(invert)
         , m_matchDirection(matchDirection)
@@ -259,8 +272,9 @@ struct PatternTerm {
         quantityMinCount = quantityMaxCount = 1;
     }
 
-    PatternTerm(Type type, unsigned subpatternId, PatternDisjunction* disjunction, bool capture = false, bool invert = false, MatchDirection matchDirection = Forward)
+    PatternTerm(Type type, unsigned subpatternId, PatternDisjunction* disjunction, OptionSet<Flags> currFlags, bool capture = false, bool invert = false, MatchDirection matchDirection = Forward)
         : type(type)
+        , m_currentFlags(currFlags)
         , m_capture(capture)
         , m_invert(invert)
         , m_matchDirection(matchDirection)
@@ -269,12 +283,15 @@ struct PatternTerm {
         parentheses.subpatternId = subpatternId;
         parentheses.isCopy = false;
         parentheses.isTerminal = false;
+        parentheses.isStringList = false;
+        parentheses.isEOLStringList = false;
         quantityType = QuantifierType::FixedCount;
         quantityMinCount = quantityMaxCount = 1;
     }
 
-    PatternTerm(Type type, bool invert = false)
+    PatternTerm(Type type, OptionSet<Flags> currFlags, bool invert = false)
         : type(type)
+        , m_currentFlags(currFlags)
         , m_capture(false)
         , m_invert(invert)
         , m_matchDirection(Forward)
@@ -283,8 +300,9 @@ struct PatternTerm {
         quantityMinCount = quantityMaxCount = 1;
     }
 
-    PatternTerm(unsigned spatternId)
-        : type(Type::BackReference)
+    PatternTerm(unsigned spatternId, OptionSet<Flags> currFlags)
+        : type(Type::NumberedBackReference)
+        , m_currentFlags(currFlags)
         , m_capture(false)
         , m_invert(false)
         , m_matchDirection(Forward)
@@ -294,8 +312,9 @@ struct PatternTerm {
         quantityMinCount = quantityMaxCount = 1;
     }
 
-    PatternTerm(bool bolAnchor, bool eolAnchor)
+    PatternTerm(bool bolAnchor, bool eolAnchor, OptionSet<Flags> currFlags)
         : type(Type::DotStarEnclosure)
+        , m_currentFlags(currFlags)
         , m_capture(false)
         , m_invert(false)
         , m_matchDirection(Forward)
@@ -306,32 +325,53 @@ struct PatternTerm {
         quantityMinCount = quantityMaxCount = 1;
     }
 
-    static PatternTerm ForwardReference()
+    static PatternTerm NamedBackReference(unsigned subpatternId, OptionSet<Flags> currFlags)
     {
-        auto term = PatternTerm(Type::ForwardReference);
+        PatternTerm term(subpatternId, currFlags);
+        ASSERT(term.type == Type::NumberedBackReference);
+        term.type = Type::NamedBackReference;
+        return term;
+    }
+
+    static PatternTerm NumberedForwardReference(OptionSet<Flags> currFlags)
+    {
+        auto term = PatternTerm(Type::NumberedForwardReference, currFlags);
         term.backReferenceSubpatternId = 0;
         return term;
     }
 
-    static PatternTerm BOL()
+    static PatternTerm NamedForwardReference(OptionSet<Flags> currFlags)
     {
-        return PatternTerm(Type::AssertionBOL);
+        auto term = PatternTerm(Type::NamedForwardReference, currFlags);
+        term.backReferenceSubpatternId = 0;
+        return term;
     }
 
-    static PatternTerm EOL()
+    static PatternTerm BOL(OptionSet<Flags> currFlags)
     {
-        return PatternTerm(Type::AssertionEOL);
+        return PatternTerm(Type::AssertionBOL, currFlags);
     }
 
-    static PatternTerm WordBoundary(bool invert)
+    static PatternTerm EOL(OptionSet<Flags> currFlags)
     {
-        return PatternTerm(Type::AssertionWordBoundary, invert);
+        return PatternTerm(Type::AssertionEOL, currFlags);
     }
 
-    void convertToBackreference()
+    static PatternTerm WordBoundary(bool invert, OptionSet<Flags> currFlags)
     {
-        ASSERT(type == Type::ForwardReference);
-        type = Type::BackReference;
+        return PatternTerm(Type::AssertionWordBoundary, currFlags, invert);
+    }
+
+    void convertToNumberedBackreference()
+    {
+        ASSERT(type == Type::NumberedForwardReference);
+        type = Type::NumberedBackReference;
+    }
+
+    void convertToNamedBackreference()
+    {
+        ASSERT(type == Type::NamedForwardReference);
+        type = Type::NamedBackReference;
     }
 
     bool invert() const
@@ -354,6 +394,21 @@ struct PatternTerm {
         return m_capture;
     }
 
+    bool ignoreCase()
+    {
+        return m_currentFlags.contains(Flags::IgnoreCase);
+    }
+
+    bool multiline()
+    {
+        return m_currentFlags.contains(Flags::Multiline);
+    }
+
+    bool dotAll()
+    {
+        return m_currentFlags.contains(Flags::DotAll);
+    }
+
     bool isFixedWidthCharacterClass() const
     {
         return type == Type::CharacterClass && characterClass->hasOneCharacterSize() && !invert();
@@ -363,7 +418,7 @@ struct PatternTerm {
     {
         ASSERT(this->type == Type::ParenthesesSubpattern
             || this->type == Type::ParentheticalAssertion);
-        return parentheses.lastSubpatternId >= parentheses.subpatternId;
+        return parentheses.lastSubpatternId && parentheses.lastSubpatternId >= parentheses.subpatternId;
     }
 
     void quantify(unsigned count, QuantifierType type)
@@ -388,7 +443,7 @@ struct PatternTerm {
 };
 
 struct PatternAlternative {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PatternAlternative);
 public:
     PatternAlternative(PatternDisjunction* disjunction, unsigned firstSubpatternId, MatchDirection matchDirection = Forward)
         : m_parent(disjunction)
@@ -399,6 +454,7 @@ public:
         , m_hasFixedSize(false)
         , m_startsWithBOL(false)
         , m_containsBOL(false)
+        , m_isLastAlternative(false)
     {
     }
 
@@ -464,10 +520,11 @@ public:
     bool m_hasFixedSize : 1;
     bool m_startsWithBOL : 1;
     bool m_containsBOL : 1;
+    bool m_isLastAlternative : 1;
 };
 
 struct PatternDisjunction {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PatternDisjunction);
 public:
     PatternDisjunction(PatternAlternative* parent = nullptr)
         : m_parent(parent)
@@ -700,10 +757,12 @@ struct YarrPattern {
     bool m_containsBOL : 1;
     bool m_containsLookbehinds : 1;
     bool m_containsUnsignedLengthPattern : 1;
+    bool m_containsModifiers : 1;
     bool m_hasCopiedParenSubexpressions : 1;
     bool m_hasNamedCaptureGroups : 1;
     bool m_saveInitialStartValue : 1;
     OptionSet<Flags> m_flags;
+    SpecificPattern m_specificPattern { SpecificPattern::None };
     unsigned m_numSubpatterns { 0 };
     unsigned m_initialStartValueFrameLocation { 0 };
     unsigned m_numDuplicateNamedCaptureGroups { 0 };
@@ -717,8 +776,9 @@ struct YarrPattern {
     // is the subpatterenId for a non-duplicate named group.
     // For a duplicate named group, the size will be greater than 2. The first vector entry it is the
     // duplicateNamedGroupId. Subsequent vector entries are the subpatternId's for that duplicateNamedGroupId.
-    HashMap<String, Vector<unsigned>> m_namedGroupToParenIndices;
+    UncheckedKeyHashMap<String, Vector<unsigned>> m_namedGroupToParenIndices;
     Vector<unsigned> m_duplicateNamedGroupForSubpatternId;
+    String m_atom;
 
 private:
     ErrorCode compile(StringView patternString);
@@ -733,11 +793,11 @@ private:
     CharacterClass* nonspacesCached { nullptr };
     CharacterClass* nonwordcharCached { nullptr };
     CharacterClass* nonwordUnicodeIgnoreCasecharCached { nullptr };
-    HashMap<unsigned, CharacterClass*> unicodePropertiesCached;
+    UncheckedKeyHashMap<unsigned, CharacterClass*> unicodePropertiesCached;
 };
 
     void indentForNestingLevel(PrintStream&, unsigned);
-    void dumpUChar32(PrintStream&, UChar32);
+    void dumpChar32(PrintStream&, char32_t);
     void dumpCharacterClass(PrintStream&, YarrPattern*, CharacterClass*);
 
     struct BackTrackInfoPatternCharacter {

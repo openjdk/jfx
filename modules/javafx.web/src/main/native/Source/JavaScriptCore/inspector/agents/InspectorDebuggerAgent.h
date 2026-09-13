@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, 2013, 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2010, 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,19 +29,21 @@
 
 #pragma once
 
-#include "Breakpoint.h"
-#include "Debugger.h"
-#include "DebuggerPrimitives.h"
-#include "InspectorAgentBase.h"
-#include "InspectorBackendDispatchers.h"
-#include "InspectorFrontendDispatchers.h"
-#include "Microtask.h"
-#include "RegularExpression.h"
+#include <JavaScriptCore/Breakpoint.h>
+#include <JavaScriptCore/ContentSearchUtilities.h>
+#include <JavaScriptCore/Debugger.h>
+#include <JavaScriptCore/DebuggerPrimitives.h>
+#include <JavaScriptCore/InspectorAgentBase.h>
+#include <JavaScriptCore/InspectorBackendDispatchers.h>
+#include <JavaScriptCore/InspectorFrontendDispatchers.h>
+#include <JavaScriptCore/Microtask.h>
+#include <JavaScriptCore/RegularExpression.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 namespace Inspector {
@@ -56,7 +58,7 @@ class JS_EXPORT_PRIVATE InspectorDebuggerAgent
     , public JSC::Debugger::Client
     , public JSC::Debugger::Observer {
     WTF_MAKE_NONCOPYABLE(InspectorDebuggerAgent);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(InspectorDebuggerAgent);
 public:
     ~InspectorDebuggerAgent() override;
 
@@ -65,7 +67,7 @@ public:
     static const ASCIILiteral backtraceObjectGroup;
 
     // InspectorAgentBase
-    void didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*) final;
+    void didCreateFrontendAndBackend() final;
     void willDestroyFrontendAndBackend(DisconnectReason) final;
     virtual bool enabled() const { return m_enabled; }
 
@@ -97,7 +99,7 @@ public:
     Protocol::ErrorStringOr<void> setPauseOnMicrotasks(bool enabled, RefPtr<JSON::Object>&& options) final;
     Protocol::ErrorStringOr<void> setPauseForInternalScripts(bool shouldPause) final;
     Protocol::ErrorStringOr<std::tuple<Ref<Protocol::Runtime::RemoteObject>, std::optional<bool> /* wasThrown */, std::optional<int> /* savedResultIndex */>> evaluateOnCallFrame(const Protocol::Debugger::CallFrameId&, const String& expression, const String& objectGroup, std::optional<bool>&& includeCommandLineAPI, std::optional<bool>&& doNotPauseOnExceptionsAndMuteConsole, std::optional<bool>&& returnByValue, std::optional<bool>&& generatePreview, std::optional<bool>&& saveResult, std::optional<bool>&& emulateUserGesture) override;
-    Protocol::ErrorStringOr<void> setShouldBlackboxURL(const String& url, bool shouldBlackbox, std::optional<bool>&& caseSensitive, std::optional<bool>&& isRegex) final;
+    Protocol::ErrorStringOr<void> setShouldBlackboxURL(const String& url, bool shouldBlackbox, std::optional<bool>&& caseSensitive, std::optional<bool>&& isRegex, RefPtr<JSON::Array>&& sourceRanges) final;
     Protocol::ErrorStringOr<void> setBlackboxBreakpointEvaluations(bool) final;
 
     // JSC::Debugger::Client
@@ -181,12 +183,12 @@ protected:
     virtual void didClearAsyncStackTraceData();
 
 private:
-    bool shouldBlackboxURL(const String&) const;
+    void setBlackboxConfiguration(JSC::SourceID, const JSC::Debugger::Script&);
 
     Ref<JSON::ArrayOf<Protocol::Debugger::CallFrame>> currentCallFrames(const InjectedScript&);
 
     class ProtocolBreakpoint {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_TZONE_ALLOCATED(ProtocolBreakpoint);
     public:
         static std::optional<ProtocolBreakpoint> fromPayload(Protocol::ErrorString&, JSC::SourceID, unsigned lineNumber, unsigned columnNumber, RefPtr<JSON::Object>&& options = nullptr);
         static std::optional<ProtocolBreakpoint> fromPayload(Protocol::ErrorString&, const String& url, bool isRegex, unsigned lineNumber, unsigned columnNumber, RefPtr<JSON::Object>&& options = nullptr);
@@ -244,34 +246,43 @@ private:
     using AsyncCallIdentifier = std::pair<unsigned, uint64_t>;
     static AsyncCallIdentifier asyncCallIdentifier(AsyncCallType, uint64_t callbackId);
 
-    std::unique_ptr<DebuggerFrontendDispatcher> m_frontendDispatcher;
-    RefPtr<DebuggerBackendDispatcher> m_backendDispatcher;
+    const UniqueRef<DebuggerFrontendDispatcher> m_frontendDispatcher;
+    const Ref<DebuggerBackendDispatcher> m_backendDispatcher;
 
     JSC::Debugger& m_debugger;
     InjectedScriptManager& m_injectedScriptManager;
-    HashMap<JSC::SourceID, JSC::Debugger::Script> m_scripts;
+    UncheckedKeyHashMap<JSC::SourceID, JSC::Debugger::Script> m_scripts;
 
-    struct BlackboxConfig {
+    struct BlackboxedScript {
         String url;
-        bool caseSensitive { false };
+        bool caseSensitive { true };
         bool isRegex { false };
 
-        inline bool operator==(const BlackboxConfig& other) const
+        // This is only used to restrict where within the script to ignore pausing.
+        // Put another way, it doesn't change whether the script is blackboxed.
+        UncheckedKeyHashSet<JSC::Debugger::BlackboxRange> ranges;
+
+        inline bool operator==(const BlackboxedScript& other) const
         {
             return url == other.url
                 && caseSensitive == other.caseSensitive
                 && isRegex == other.isRegex;
         }
-    };
-    Vector<BlackboxConfig> m_blackboxedURLs;
 
-    HashSet<Listener*> m_listeners;
+        bool matches(const String& url);
+
+    private:
+        std::optional<ContentSearchUtilities::Searcher> m_urlSearcher;
+    };
+    Vector<BlackboxedScript> m_blackboxedScripts;
+
+    UncheckedKeyHashSet<Listener*> m_listeners;
 
     JSC::JSGlobalObject* m_pausedGlobalObject { nullptr };
     JSC::Strong<JSC::Unknown> m_currentCallStack;
 
-    HashMap<Protocol::Debugger::BreakpointId, ProtocolBreakpoint> m_protocolBreakpointForProtocolBreakpointID;
-    HashMap<Protocol::Debugger::BreakpointId, JSC::BreakpointsVector> m_debuggerBreakpointsForProtocolBreakpointID;
+    UncheckedKeyHashMap<Protocol::Debugger::BreakpointId, ProtocolBreakpoint> m_protocolBreakpointForProtocolBreakpointID;
+    UncheckedKeyHashMap<Protocol::Debugger::BreakpointId, JSC::BreakpointsVector> m_debuggerBreakpointsForProtocolBreakpointID;
     JSC::BreakpointID m_nextDebuggerBreakpointID { JSC::noBreakpointID + 1 };
 
     RefPtr<JSC::Breakpoint> m_continueToLocationDebuggerBreakpoint;
@@ -281,10 +292,10 @@ private:
     DebuggerFrontendDispatcher::Reason m_pauseReason;
     RefPtr<JSON::Object> m_pauseData;
 
-    DebuggerFrontendDispatcher::Reason m_preBlackboxPauseReason;
-    RefPtr<JSON::Object> m_preBlackboxPauseData;
+    DebuggerFrontendDispatcher::Reason m_lastPauseReason;
+    RefPtr<JSON::Object> m_lastPauseData;
 
-    HashMap<AsyncCallIdentifier, RefPtr<AsyncStackTrace>> m_pendingAsyncCalls;
+    UncheckedKeyHashMap<AsyncCallIdentifier, RefPtr<AsyncStackTrace>> m_pendingAsyncCalls;
     Vector<AsyncCallIdentifier> m_currentAsyncCallIdentifierStack;
     int m_asyncStackTraceDepth { 0 };
 
@@ -299,8 +310,8 @@ private:
         // This is only used for the breakpoint configuration (i.e. it's irrelevant when comparing).
         RefPtr<JSC::Breakpoint> specialBreakpoint;
 
-        // Avoid having to (re)match the regex each time a function as called.
-        HashSet<String> knownMatchingSymbols;
+        // Avoid having to (re)match the searcher each time a function as called.
+        UncheckedKeyHashSet<String> knownMatchingSymbols;
 
         inline bool operator==(const SymbolicBreakpoint& other) const
         {
@@ -312,7 +323,7 @@ private:
         bool matches(const String&);
 
     private:
-        std::optional<JSC::Yarr::RegularExpression> m_symbolMatchRegex;
+        std::optional<ContentSearchUtilities::Searcher> m_symbolSearcher;
     };
     Vector<SymbolicBreakpoint> m_symbolicBreakpoints;
 

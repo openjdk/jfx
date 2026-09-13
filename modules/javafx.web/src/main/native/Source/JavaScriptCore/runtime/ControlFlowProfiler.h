@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2014 Saam Barati. <saambarati1@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,9 +26,10 @@
 
 #pragma once
 
-#include "BasicBlockLocation.h"
-#include "SourceID.h"
+#include <JavaScriptCore/BasicBlockLocation.h>
+#include <JavaScriptCore/SourceID.h>
 #include <wtf/HashMap.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
@@ -51,25 +52,17 @@ struct BasicBlockKey {
     { }
 
     bool isHashTableDeletedValue() const { return m_startOffset == -2 && m_endOffset == -2; }
-    bool operator==(const BasicBlockKey& other) const { return m_startOffset == other.m_startOffset && m_endOffset == other.m_endOffset; }
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+    friend bool operator==(const BasicBlockKey&, const BasicBlockKey&) = default;
     unsigned hash() const { return m_startOffset + m_endOffset + 1; }
 
     int m_startOffset;
     int m_endOffset;
 };
 
-struct BasicBlockKeyHash {
-    static unsigned hash(const BasicBlockKey& key) { return key.hash(); }
-    static bool equal(const BasicBlockKey& a, const BasicBlockKey& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } // namespace JSC
 
 namespace WTF {
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::BasicBlockKey> : JSC::BasicBlockKeyHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::BasicBlockKey> : SimpleClassHashTraits<JSC::BasicBlockKey> {
@@ -88,7 +81,7 @@ struct BasicBlockRange {
 };
 
 class ControlFlowProfiler {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ControlFlowProfiler);
 public:
     ControlFlowProfiler();
     ~ControlFlowProfiler();
@@ -100,8 +93,8 @@ public:
     JS_EXPORT_PRIVATE size_t basicBlockExecutionCountAtTextOffset(int, SourceID, VM&); // This function exists for testing.
 
 private:
-    typedef HashMap<BasicBlockKey, BasicBlockLocation*> BlockLocationCache;
-    typedef HashMap<SourceID, BlockLocationCache> SourceIDBuckets;
+    typedef UncheckedKeyHashMap<BasicBlockKey, BasicBlockLocation*> BlockLocationCache;
+    typedef UncheckedKeyHashMap<SourceID, BlockLocationCache> SourceIDBuckets;
 
     SourceIDBuckets m_sourceIDBuckets;
     BasicBlockLocation m_dummyBasicBlock;

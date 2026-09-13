@@ -36,8 +36,8 @@
 namespace WebCore {
 
 ChangeVersionWrapper::ChangeVersionWrapper(String&& oldVersion, String&& newVersion)
-    : m_oldVersion(WTFMove(oldVersion).isolatedCopy())
-    , m_newVersion(WTFMove(newVersion).isolatedCopy())
+    : m_oldVersion(WTF::move(oldVersion).isolatedCopy())
+    , m_newVersion(WTF::move(newVersion).isolatedCopy())
 {
 }
 
@@ -48,7 +48,7 @@ bool ChangeVersionWrapper::performPreflight(SQLTransaction& transaction)
     String actualVersion;
     if (!database.getVersionFromDatabase(actualVersion)) {
         int sqliteError = database.sqliteDatabase().lastError();
-        m_sqlError = SQLError::create(SQLError::UNKNOWN_ERR, "unable to read the current version", sqliteError, database.sqliteDatabase().lastErrorMsg());
+        m_sqlError = SQLError::create(SQLError::UNKNOWN_ERR, "unable to read the current version"_s, sqliteError, database.sqliteDatabase().lastErrorMsg());
         return false;
     }
 
@@ -66,7 +66,7 @@ bool ChangeVersionWrapper::performPostflight(SQLTransaction& transaction)
 
     if (!database.setVersionInDatabase(m_newVersion)) {
         int sqliteError = database.sqliteDatabase().lastError();
-        m_sqlError = SQLError::create(SQLError::UNKNOWN_ERR, "unable to set new version in database", sqliteError, database.sqliteDatabase().lastErrorMsg());
+        m_sqlError = SQLError::create(SQLError::UNKNOWN_ERR, "unable to set new version in database"_s, sqliteError, database.sqliteDatabase().lastErrorMsg());
         return false;
     }
 

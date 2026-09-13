@@ -25,18 +25,19 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "Supplementable.h"
 #include <wtf/Forward.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
 class BackgroundFetchManager;
 class ServiceWorkerRegistration;
+class WeakPtrImplWithEventTargetData;
 
 class ServiceWorkerRegistrationBackgroundFetchAPI : public Supplement<ServiceWorkerRegistration> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ServiceWorkerRegistrationBackgroundFetchAPI);
 public:
     explicit ServiceWorkerRegistrationBackgroundFetchAPI(ServiceWorkerRegistration&);
     ~ServiceWorkerRegistrationBackgroundFetchAPI();
@@ -48,12 +49,16 @@ public:
 
 private:
     static ServiceWorkerRegistrationBackgroundFetchAPI& from(ServiceWorkerRegistration&);
-    static const char* supplementName();
+    static ASCIILiteral supplementName();
 
-    ServiceWorkerRegistration& m_serviceWorkerRegistration;
-    RefPtr<BackgroundFetchManager> m_backgroundFetchManager;
+    bool isServiceWorkerRegistrationBackgroundFetchAPI() const final { return true; }
+
+    WeakRef<ServiceWorkerRegistration, WeakPtrImplWithEventTargetData> m_serviceWorkerRegistration;
+    const RefPtr<BackgroundFetchManager> m_backgroundFetchManager;
 };
 
-}
+} // namespace WebCore
 
-#endif // ENABLE(SERVICE_WORKER)
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ServiceWorkerRegistrationBackgroundFetchAPI)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isServiceWorkerRegistrationBackgroundFetchAPI(); }
+SPECIALIZE_TYPE_TRAITS_END()

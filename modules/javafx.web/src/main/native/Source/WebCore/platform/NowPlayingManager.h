@@ -25,9 +25,11 @@
 
 #pragma once
 
-#include "NowPlayingInfo.h"
-#include "PlatformMediaSession.h"
-#include "RemoteCommandListener.h"
+#include <WebCore/NowPlayingInfo.h>
+#include <WebCore/PlatformMediaSession.h>
+#include <WebCore/RemoteCommandListener.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -35,26 +37,26 @@ namespace WebCore {
 class Image;
 struct NowPlayingInfo;
 
+class NowPlayingManagerClient : public AbstractRefCountedAndCanMakeWeakPtr<NowPlayingManagerClient> {
+public:
+    virtual ~NowPlayingManagerClient() = default;
+    virtual void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument&) = 0;
+};
+
 class WEBCORE_EXPORT NowPlayingManager : public RemoteCommandListenerClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(NowPlayingManager, WEBCORE_EXPORT);
 public:
     NowPlayingManager();
     ~NowPlayingManager();
 
     void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument&) final;
 
-    class Client : public CanMakeWeakPtr<Client> {
-    public:
-        virtual ~Client() = default;
-        virtual void didReceiveRemoteControlCommand(PlatformMediaSession::RemoteControlCommandType, const PlatformMediaSession::RemoteCommandArgument&) = 0;
-    };
-
     void addSupportedCommand(PlatformMediaSession::RemoteControlCommandType);
     void removeSupportedCommand(PlatformMediaSession::RemoteControlCommandType);
     RemoteCommandListener::RemoteCommandsSet supportedCommands() const;
 
-    void addClient(Client&);
-    void removeClient(Client&);
+    void addClient(NowPlayingManagerClient&);
+    void removeClient(NowPlayingManagerClient&);
 
     void clearNowPlayingInfo();
     bool setNowPlayingInfo(const NowPlayingInfo&);
@@ -64,10 +66,10 @@ public:
 
 private:
     virtual void clearNowPlayingInfoPrivate();
-    virtual void setNowPlayingInfoPrivate(const NowPlayingInfo&);
+    virtual void setNowPlayingInfoPrivate(const NowPlayingInfo&, bool shouldUpdateNowPlayingSuppression);
     void ensureRemoteCommandListenerCreated();
     RefPtr<RemoteCommandListener> m_remoteCommandListener;
-    WeakPtr<Client> m_client;
+    WeakPtr<NowPlayingManagerClient> m_client;
     std::optional<NowPlayingInfo> m_nowPlayingInfo;
     struct ArtworkCache {
         String src;

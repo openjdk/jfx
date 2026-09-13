@@ -31,23 +31,24 @@
 #include "CSSUnparsedValue.h"
 
 #include "CSSOMVariableReferenceValue.h"
+#include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
 #include "CSSTokenizer.h"
 #include "CSSVariableReferenceValue.h"
 #include "ExceptionOr.h"
-#include <variant>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringView.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CSSUnparsedValue);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSUnparsedValue);
 
 Ref<CSSUnparsedValue> CSSUnparsedValue::create(Vector<CSSUnparsedSegment>&& segments)
 {
-    return adoptRef(*new CSSUnparsedValue(WTFMove(segments)));
+    return adoptRef(*new CSSUnparsedValue(WTF::move(segments)));
 }
 
 Ref<CSSUnparsedValue> CSSUnparsedValue::create(CSSParserTokenRange tokens)
@@ -110,18 +111,20 @@ Ref<CSSUnparsedValue> CSSUnparsedValue::create(CSSParserTokenRange tokens)
     if (!builder.isEmpty())
         segmentStack.last().append(builder.toString());
 
-    return CSSUnparsedValue::create(WTFMove(segmentStack.last()));
+    return CSSUnparsedValue::create(WTF::move(segmentStack.last()));
 }
 
 CSSUnparsedValue::CSSUnparsedValue(Vector<CSSUnparsedSegment>&& segments)
-    : m_segments(WTFMove(segments))
+    : m_segments(WTF::move(segments))
 {
 }
+
+CSSUnparsedValue::~CSSUnparsedValue() = default;
 
 void CSSUnparsedValue::serialize(StringBuilder& builder, OptionSet<SerializationArguments> arguments) const
 {
     for (auto& segment : m_segments) {
-        std::visit(WTF::makeVisitor([&] (const String& value) {
+        WTF::visit(WTF::makeVisitor([&] (const String& value) {
             builder.append(value);
         }, [&] (const RefPtr<CSSOMVariableReferenceValue>& value) {
             value->serialize(builder, arguments);
@@ -139,11 +142,11 @@ std::optional<CSSUnparsedSegment> CSSUnparsedValue::item(size_t index)
 ExceptionOr<CSSUnparsedSegment> CSSUnparsedValue::setItem(size_t index, CSSUnparsedSegment&& val)
 {
     if (index > m_segments.size())
-        return Exception { RangeError, makeString("Index ", index, " exceeds index range for unparsed segments.") };
+        return Exception { ExceptionCode::RangeError, makeString("Index "_s, index, " exceeds index range for unparsed segments."_s) };
     if (index == m_segments.size())
-        m_segments.append(WTFMove(val));
+        m_segments.append(WTF::move(val));
     else
-    m_segments[index] = WTFMove(val);
+        m_segments[index] = WTF::move(val);
     return CSSUnparsedSegment { m_segments[index] };
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #include "Heap.h"
 #include <wtf/MonotonicTime.h>
 #include <wtf/ScopedLambda.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueArray.h>
 
 namespace JSC {
@@ -37,7 +38,7 @@ class JSCell;
 class MarkedBlock;
 
 class HeapVerifier {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(HeapVerifier);
 public:
     enum class Phase {
         BeforeGC,
@@ -66,7 +67,7 @@ public:
 
 private:
     struct GCCycle {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(GCCycle);
 
         GCCycle()
             : before("Before Marking")
@@ -87,7 +88,12 @@ private:
     };
 
     void incrementCycle() { m_currentCycle = (m_currentCycle + 1) % m_numberOfCycles; }
-    GCCycle& currentCycle() { return m_cycles[m_currentCycle]; }
+    GCCycle& currentCycle()
+    {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+        return m_cycles[m_currentCycle];
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    }
     GCCycle& cycleForIndex(int cycleIndex)
     {
         ASSERT(cycleIndex <= 0 && cycleIndex > -m_numberOfCycles);
@@ -95,7 +101,9 @@ private:
         if (cycleIndex < 0)
             cycleIndex += m_numberOfCycles;
         ASSERT(cycleIndex < m_numberOfCycles);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         return m_cycles[cycleIndex];
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     }
 
     CellList* cellListForGathering(Phase);

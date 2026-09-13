@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -399,13 +399,21 @@ public class TreeCell<T> extends IndexedCell<T> {
         // out of the editing state.
         // This MUST come before the updateItem call below, otherwise it will
         // call cancelEdit(), resulting in both commit and cancel events being
-        // fired (as identified in RT-29650)
+        // fired (as identified in JDK-8124615)
         super.commitEdit(newValue);
 
         final TreeItem<T> treeItem = getTreeItem();
         final TreeView<T> tree = getTreeView();
+        boolean treeShouldRequestFocus = false;
+
         // JDK-8187307: fire the commit after updating cell's editing state
         if (tree != null) {
+            // The cell is going to be updated, and the current focus owner might be removed from it.
+            // Before that happens, check if it has the tree as a parent (otherwise the user might have
+            // clicked out of the tree entirely and given focus to something else), so the tree can
+            // request the focus back, once the edit commit ends.
+            treeShouldRequestFocus = ControlUtils.controlShouldRequestFocusIfCurrentFocusOwnerIsChild(tree);
+
             // Inform the TreeView of the edit being ready to be committed.
             tree.fireEvent(new TreeView.EditEvent<>(tree,
                     TreeView.<T>editCommitEvent(),
@@ -418,14 +426,15 @@ public class TreeCell<T> extends IndexedCell<T> {
         updateItem(-1);
 
         if (tree != null) {
-            // reset the editing item in the TreetView
+            // reset the editing item in the TreeView
             tree.edit(null);
 
             // request focus back onto the tree, only if the current focus
-            // owner has the tree as a parent (otherwise the user might have
-            // clicked out of the tree entirely and given focus to something else.
+            // owner had the tree as a parent.
             // It would be rude of us to request it back again.
-            ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(tree);
+            if (treeShouldRequestFocus) {
+                tree.requestFocus();
+            }
         }
         treeItemAtStartEdit = null;
     }
@@ -447,7 +456,7 @@ public class TreeCell<T> extends IndexedCell<T> {
 
             // request focus back onto the tree, only if the current focus
             // owner has the tree as a parent (otherwise the user might have
-            // clicked out of the tree entirely and given focus to something else.
+            // clicked out of the tree entirely and given focus to something else).
             // It would be rude of us to request it back again.
             ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(tree);
 
@@ -479,7 +488,7 @@ public class TreeCell<T> extends IndexedCell<T> {
         // changing state to be selected and/or focused.
         if (isEditing() && newIndex == oldIndex) {
             // no-op
-            // Fix for RT-31165 - if we (needlessly) update the index whilst the
+            // Fix for JDK-8123482 - if we (needlessly) update the index whilst the
             // cell is being edited it will no longer be in an editing state.
             // This means that in certain (common) circumstances that it will
             // appear that a cell is uneditable as, despite being clicked, it
@@ -512,17 +521,17 @@ public class TreeCell<T> extends IndexedCell<T> {
             T newValue = newTreeItem == null ? null : newTreeItem.getValue();
             T oldValue = oldTreeItem == null ? null : oldTreeItem.getValue();
 
-            // For the sake of RT-14279, it is important that the order of these
+            // For the sake of JDK-8113226, it is important that the order of these
             // method calls is as shown below. If the order is switched, it is
             // likely that events will be fired where the item is null, even
             // though calling cell.getTreeItem().getValue() returns the value
             // as expected
 
-            // RT-35864 - if the index didn't change, then avoid calling updateItem
+            // JDK-8092593 - if the index didn't change, then avoid calling updateItem
             // unless the item has changed.
             if (oldIndex == index) {
                 if (!isItemChanged(oldValue, newValue)) {
-                    // RT-37054:  we break out of the if/else code here and
+                    // JDK-8096969:  we break out of the if/else code here and
                     // proceed with the code following this, so that we may
                     // still update references, listeners, etc as required.
                     break outer;
@@ -531,9 +540,9 @@ public class TreeCell<T> extends IndexedCell<T> {
             updateTreeItem(newTreeItem);
             updateItem(newValue, false);
         } else {
-            // RT-30484 We need to allow a first run to be special-cased to allow
+            // JDK-8116529 We need to allow a first run to be special-cased to allow
             // for the updateItem method to be called at least once to allow for
-            // the correct visual state to be set up. In particular, in RT-30484
+            // the correct visual state to be set up. In particular, in JDK-8116529
             // refer to Ensemble8PopUpTree.png - in this case the arrows are being
             // shown as the new cells are instantiated with the arrows in the
             // children list, and are only hidden in updateItem.

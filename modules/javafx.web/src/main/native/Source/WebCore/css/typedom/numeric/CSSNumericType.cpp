@@ -25,8 +25,10 @@
 
 #include "config.h"
 #include "CSSNumericType.h"
+
 #include "CSSNumericValue.h"
 #include "CSSUnits.h"
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -36,30 +38,30 @@ std::optional<CSSNumericType> CSSNumericType::create(CSSUnitType unit, int expon
     CSSNumericType type;
     switch (unitCategory(unit)) {
     case CSSUnitCategory::Number:
-        return { WTFMove(type) };
+        return { WTF::move(type) };
     case CSSUnitCategory::Percent:
         type.percent = exponent;
-        return { WTFMove(type) };
+        return { WTF::move(type) };
     case CSSUnitCategory::AbsoluteLength:
     case CSSUnitCategory::FontRelativeLength:
     case CSSUnitCategory::ViewportPercentageLength:
         type.length = exponent;
-        return { WTFMove(type) };
+        return { WTF::move(type) };
     case CSSUnitCategory::Angle:
         type.angle = exponent;
-        return { WTFMove(type) };
+        return { WTF::move(type) };
     case CSSUnitCategory::Time:
         type.time = exponent;
-        return { WTFMove(type) };
+        return { WTF::move(type) };
     case CSSUnitCategory::Frequency:
         type.frequency = exponent;
-        return { WTFMove(type) };
+        return { WTF::move(type) };
     case CSSUnitCategory::Resolution:
         type.resolution = exponent;
-        return { WTFMove(type) };
+        return { WTF::move(type) };
     case CSSUnitCategory::Flex:
             type.flex = exponent;
-            return { WTFMove(type) };
+        return { WTF::move(type) };
     case CSSUnitCategory::Other:
         break;
     }
@@ -79,7 +81,7 @@ std::optional<CSSNumericType> CSSNumericType::addTypes(CSSNumericType a, CSSNume
         a.applyPercentHint(*b.percentHint);
 
     if (a == b)
-        return { WTFMove(a) };
+        return { WTF::move(a) };
 
     for (auto type : eachBaseType()) {
         if (type == CSSNumericBaseType::Percent)
@@ -92,7 +94,7 @@ std::optional<CSSNumericType> CSSNumericType::addTypes(CSSNumericType a, CSSNume
             return std::nullopt;
     }
 
-    return { WTFMove(a) };
+    return { WTF::move(a) };
 }
 
 template<typename Argument> std::optional<CSSNumericType> typeFromVector(const Vector<Ref<CSSNumericValue>>& values, std::optional<CSSNumericType>(*function)(Argument, Argument))
@@ -146,16 +148,16 @@ std::optional<CSSNumericType> CSSNumericType::multiplyTypes(const Vector<Ref<CSS
 
 String CSSNumericType::debugString() const
 {
-    return makeString("{",
-        length ? makeString(" length:", *length) : String(),
-        angle ? makeString(" angle:", *angle) : String(),
-        time ? makeString(" time:", *time) : String(),
-        frequency ? makeString(" frequency:", *frequency) : String(),
-        resolution ? makeString(" resolution:", *resolution) : String(),
-        flex ? makeString(" flex:", *flex) : String(),
-        percent ? makeString(" percent:", *percent) : String(),
-        percentHint ? makeString(" percentHint:", WebCore::debugString(*percentHint)) : String(),
-    " }");
+    return makeString('{',
+        length ? makeString(" length:"_s, *length) : String(),
+        angle ? makeString(" angle:"_s, *angle) : String(),
+        time ? makeString(" time:"_s, *time) : String(),
+        frequency ? makeString(" frequency:"_s, *frequency) : String(),
+        resolution ? makeString(" resolution:"_s, *resolution) : String(),
+        flex ? makeString(" flex:"_s, *flex) : String(),
+        percent ? makeString(" percent:"_s, *percent) : String(),
+        percentHint ? makeString(" percentHint:"_s, WebCore::debugString(*percentHint)) : String(),
+    " }"_s);
 }
 
 auto CSSNumericType::valueForType(CSSNumericBaseType type) -> BaseTypeStorage&
@@ -177,18 +179,6 @@ auto CSSNumericType::valueForType(CSSNumericBaseType type) -> BaseTypeStorage&
         return percent;
     }
     RELEASE_ASSERT_NOT_REACHED();
-}
-
-bool CSSNumericType::operator==(const CSSNumericType& other) const
-{
-    return length == other.length
-        && angle == other.angle
-        && time == other.time
-        && frequency == other.frequency
-        && resolution == other.resolution
-        && flex == other.flex
-        && percent == other.percent
-        && percentHint == other.percentHint;
 }
 
 void CSSNumericType::applyPercentHint(CSSNumericBaseType hint)

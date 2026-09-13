@@ -31,6 +31,8 @@
 #include "DFGGraph.h"
 #include "JSCJSValueInlines.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC { namespace DFG {
 
 #if ASSERT_ENABLED
@@ -63,9 +65,8 @@ void StructureAbstractValue::clobber()
         return;
     }
 
-    RegisteredStructureSet::OutOfLineList* list = m_set.list();
-    for (unsigned i = list->m_length; i--;) {
-        if (!list->list()[i]->dfgShouldWatch()) {
+    for (auto& item : m_set.list()->lengthSpan() | std::views::reverse) {
+        if (!item->dfgShouldWatch()) {
             makeTop();
             return;
         }
@@ -398,5 +399,6 @@ void StructureAbstractValue::validateReferences(const TrackedReferences& tracked
 
 } } // namespace JSC::DFG
 
-#endif // ENABLE(DFG_JIT)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
+#endif // ENABLE(DFG_JIT)

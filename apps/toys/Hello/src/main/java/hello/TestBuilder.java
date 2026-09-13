@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -309,6 +309,7 @@ public class TestBuilder {
         final MenuBar menuBar = new MenuBar();
         final String os = System.getProperty("os.name");
         final EventHandler actionHandler = new EventHandler<ActionEvent>() {
+            @Override
             public void handle(ActionEvent t) {
                 if (t.getTarget() instanceof MenuItem) {
                     System.out.println(((MenuItem)t.getTarget()).
@@ -331,6 +332,7 @@ public class TestBuilder {
                            new ImageView(new Image("hello/about_16.png")));
         MenuItem menu15 = new MenuItem("E_xit");
         menu15.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
             public void handle(ActionEvent t) {
                 actionHandler.handle(t);
                 System.exit(0);
@@ -341,6 +343,7 @@ public class TestBuilder {
         final boolean toggle = false;
         menu16.setAccelerator(KeyCombination.keyCombination("Shortcut+C"));
         menu16.setOnAction(new EventHandler<ActionEvent>() {
+            @Override
             public void handle(ActionEvent t) {
                 actionHandler.handle(t);
                 menu16.setText((menu16.getText().equals(
@@ -701,6 +704,7 @@ public class TestBuilder {
     }
 
     private EventHandler showHideHandler = new EventHandler<Event>() {
+        @Override
         public void handle(Event t) {
             Menu menu = (Menu)t.getSource();
             if (t.getEventType() == Menu.ON_SHOWING &&
@@ -840,6 +844,7 @@ public class TestBuilder {
                 ToggleButton tb = new ToggleButton("Show scroll arrows");
                 tb.setSelected(showScrollArrows);
                 tb.selectedProperty().addListener(new InvalidationListener() {
+                    @Override
                     public void invalidated(Observable ov) {
                         showScrollArrows = !showScrollArrows;
                     }
@@ -850,6 +855,7 @@ public class TestBuilder {
                 ToggleButton tb = new ToggleButton("Show Tab Menu Button");
                 tb.setSelected(showTabMenu);
                 tb.selectedProperty().addListener(new InvalidationListener() {
+                    @Override
                     public void invalidated(Observable ov) {
                         showTabMenu = !showTabMenu;
                     }
@@ -885,6 +891,7 @@ public class TestBuilder {
                 final ToggleButton button = new ToggleButton(policy.name());
                 button.setToggleGroup(closingPolicy);
                 button.selectedProperty().addListener(new InvalidationListener() {
+                    @Override
                     public void invalidated(Observable ov) {
                         tabPane.setTabClosingPolicy(TabPane.TabClosingPolicy.
                                                     valueOf(button.getText()));
@@ -895,6 +902,7 @@ public class TestBuilder {
 
             final ToggleButton rotateGraphics = new ToggleButton("Rotate Graphics");
             rotateGraphics.selectedProperty().addListener(new InvalidationListener() {
+                    @Override
                     public void invalidated(Observable ov) {
                     tabPane.setRotateGraphic(rotateGraphics.isSelected());
                 }
@@ -918,6 +926,7 @@ public class TestBuilder {
                 final ToggleButton tb = new ToggleButton("Show Labels");
                 tb.setSelected(true);
                 tb.selectedProperty().addListener(new InvalidationListener() {
+                    @Override
                     public void invalidated(Observable ov) {
                         if (tb.isSelected()) {
                             tab1.setText("Tab 1");
@@ -935,6 +944,7 @@ public class TestBuilder {
             {
                 final ToggleButton tb = new ToggleButton("Big Graphic 1");
                 tb.selectedProperty().addListener(new InvalidationListener() {
+                    @Override
                     public void invalidated(Observable ov) {
                         Image image;
                         if (tb.isSelected()) {
@@ -952,6 +962,7 @@ public class TestBuilder {
             {
                 final ToggleButton tb = new ToggleButton("Big Graphic 2");
                 tb.selectedProperty().addListener(new InvalidationListener() {
+                    @Override
                     public void invalidated(Observable ov) {
                         Image image;
                         if (tb.isSelected()) {
@@ -969,6 +980,7 @@ public class TestBuilder {
             {
                 final ToggleButton tb = new ToggleButton("Big Graphic 3");
                 tb.selectedProperty().addListener(new InvalidationListener() {
+                    @Override
                     public void invalidated(Observable ov) {
                         Image image;
                         if (tb.isSelected()) {
@@ -992,12 +1004,14 @@ public class TestBuilder {
         tabPane.getTabs().add(emptyTab);
 
         emptyTab.setOnSelectionChanged(new EventHandler<Event>() {
+            @Override
             public void handle(Event t) {
                 System.out.println("Empty tab selected");
             }
         });
 
         emptyTab.setOnClosed(new EventHandler<Event>() {
+            @Override
             public void handle(Event t) {
                 System.out.println("Empty tab closed");
             }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,6 @@
 
 package com.sun.glass.ui.monocle;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
 /** Implementation of NativePlatformFactory for X11 platform
  *
  */
@@ -35,9 +32,7 @@ class X11PlatformFactory extends NativePlatformFactory {
 
     @Override
     protected boolean matches() {
-        @SuppressWarnings("removal")
-        String display = AccessController.doPrivileged(
-                (PrivilegedAction<String>) () -> System.getenv("DISPLAY"));
+        String display = System.getenv("DISPLAY");
         return display != null;
     }
 

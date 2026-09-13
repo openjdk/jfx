@@ -96,6 +96,10 @@ def isBinary(op):
     return isNormal(op) and len(op["parameter"]) == 2
 
 
+def isCompare(op):
+    return op["category"] == "comparison"
+
+
 def isAtomic(op):
     return op["category"].startswith("atomic")
 
@@ -136,5 +140,5 @@ def memoryLog2Alignment(op):
         if not match:
             print(op["name"])
         memoryBits = int(match.group(2) if match.group(2) else match.group(1))
-    assert 2 ** math.log(memoryBits, 2) == memoryBits
+    assert 2 ** int(math.log(memoryBits, 2)) == memoryBits
     return str(int(math.log(memoryBits / 8, 2)))

@@ -73,7 +73,7 @@
 #endif
 #include <sys/types.h>
 
-#include "gstatomicqueue.h"
+#include "gstvecdeque.h"
 #include "gstinfo.h"
 #include "gstpoll.h"
 
@@ -97,6 +97,7 @@ enum
 };
 
 #define DEFAULT_ENABLE_ASYNC (TRUE)
+#define WARN_QUEUE_SIZE 1024
 
 enum
 {
@@ -139,8 +140,8 @@ sync_handler_unref (SyncHandler * handler)
 
 struct _GstBusPrivate
 {
-  GstAtomicQueue *queue;
   GMutex queue_lock;
+  GstVecDeque *queue;
 
   SyncHandler *sync_handler;
 
@@ -251,7 +252,7 @@ gst_bus_init (GstBus * bus)
   bus->priv = gst_bus_get_instance_private (bus);
   bus->priv->enable_async = DEFAULT_ENABLE_ASYNC;
   g_mutex_init (&bus->priv->queue_lock);
-  bus->priv->queue = gst_atomic_queue_new (32);
+  bus->priv->queue = gst_vec_deque_new (32);
 
   GST_DEBUG_OBJECT (bus, "created");
 }
@@ -266,11 +267,11 @@ gst_bus_dispose (GObject * object)
 
     g_mutex_lock (&bus->priv->queue_lock);
     do {
-      message = gst_atomic_queue_pop (bus->priv->queue);
+      message = gst_vec_deque_pop_head (bus->priv->queue);
       if (message)
         gst_message_unref (message);
     } while (message != NULL);
-    gst_atomic_queue_unref (bus->priv->queue);
+    gst_vec_deque_free (bus->priv->queue);
     bus->priv->queue = NULL;
     g_mutex_unlock (&bus->priv->queue_lock);
     g_mutex_clear (&bus->priv->queue_lock);
@@ -365,10 +366,13 @@ gst_bus_post (GstBus * bus, GstMessage * message)
 
   g_clear_pointer (&sync_handler, sync_handler_unref);
 
-  /* If this is a bus without async message delivery
-   * always drop the message */
-  if (!bus->priv->poll)
+  /* If this is a bus without async message delivery always drop the message.
+   * If the sync handler returned GST_BUS_DROP it is responsible of unreffing
+   * the message, otherwise do it ourself. */
+  if (!bus->priv->poll && reply != GST_BUS_DROP) {
     reply = GST_BUS_DROP;
+    gst_message_unref (message);
+  }
 
   /* now see what we should do with the message */
   switch (reply) {
@@ -376,14 +380,25 @@ gst_bus_post (GstBus * bus, GstMessage * message)
       /* drop the message */
       GST_DEBUG_OBJECT (bus, "[msg %p] dropped", message);
       break;
-    case GST_BUS_PASS:
+    case GST_BUS_PASS:{
+      g_mutex_lock (&bus->priv->queue_lock);
+      gsize length = gst_vec_deque_get_length (bus->priv->queue);
+      if (G_UNLIKELY (length > 0 && length % WARN_QUEUE_SIZE == 0)) {
+        GST_WARNING_OBJECT (bus,
+            "queue overflows with %" G_GSIZE_FORMAT " messages. "
+            "Application is too slow or is not handling messages. "
+            "Please add a message handler, otherwise the queue will grow "
+            "infinitely.", length);
+      }
       /* pass the message to the async queue, refcount passed in the queue */
       GST_DEBUG_OBJECT (bus, "[msg %p] pushing on async queue", message);
-      gst_atomic_queue_push (bus->priv->queue, message);
+      gst_vec_deque_push_tail (bus->priv->queue, message);
       gst_poll_write_control (bus->priv->poll);
       GST_DEBUG_OBJECT (bus, "[msg %p] pushed on async queue", message);
+      g_mutex_unlock (&bus->priv->queue_lock);
 
       break;
+    }
     case GST_BUS_ASYNC:
     {
       /* async delivery, we need a mutex and a cond to block
@@ -403,8 +418,10 @@ gst_bus_post (GstBus * bus, GstMessage * message)
        * the cond will be signalled and we can continue */
       g_mutex_lock (lock);
 
-      gst_atomic_queue_push (bus->priv->queue, message);
+      g_mutex_lock (&bus->priv->queue_lock);
+      gst_vec_deque_push_tail (bus->priv->queue, message);
       gst_poll_write_control (bus->priv->poll);
+      g_mutex_unlock (&bus->priv->queue_lock);
 
       /* now block till the message is freed */
       g_cond_wait (cond, lock);
@@ -424,6 +441,7 @@ gst_bus_post (GstBus * bus, GstMessage * message)
     }
     default:
       g_warning ("invalid return from bus sync handler");
+      gst_message_unref (message);
       break;
   }
   return TRUE;
@@ -457,7 +475,9 @@ gst_bus_have_pending (GstBus * bus)
   g_return_val_if_fail (GST_IS_BUS (bus), FALSE);
 
   /* see if there is a message on the bus */
-  result = gst_atomic_queue_length (bus->priv->queue) != 0;
+  g_mutex_lock (&bus->priv->queue_lock);
+  result = gst_vec_deque_get_length (bus->priv->queue) != 0;
+  g_mutex_unlock (&bus->priv->queue_lock);
 
   return result;
 }
@@ -534,10 +554,10 @@ gst_bus_timed_pop_filtered (GstBus * bus, GstClockTime timeout,
   while (TRUE) {
     gint ret;
 
-    GST_LOG_OBJECT (bus, "have %d messages",
-        gst_atomic_queue_length (bus->priv->queue));
+    GST_LOG_OBJECT (bus, "have %" G_GSIZE_FORMAT " messages",
+        gst_vec_deque_get_length (bus->priv->queue));
 
-    while ((message = gst_atomic_queue_pop (bus->priv->queue))) {
+    while ((message = gst_vec_deque_pop_head (bus->priv->queue))) {
       if (bus->priv->poll) {
         while (!gst_poll_read_control (bus->priv->poll)) {
           if (errno == EWOULDBLOCK) {
@@ -697,7 +717,7 @@ gst_bus_peek (GstBus * bus)
   g_return_val_if_fail (GST_IS_BUS (bus), NULL);
 
   g_mutex_lock (&bus->priv->queue_lock);
-  message = gst_atomic_queue_peek (bus->priv->queue);
+  message = gst_vec_deque_peek_head (bus->priv->queue);
   if (message)
     gst_message_ref (message);
   g_mutex_unlock (&bus->priv->queue_lock);
@@ -834,7 +854,6 @@ no_handler:
   }
 }
 
-#if GLIB_CHECK_VERSION(2,63,3)
 static void
 gst_bus_source_dispose (GSource * source)
 {
@@ -850,22 +869,17 @@ gst_bus_source_dispose (GSource * source)
     bus->priv->gsource = NULL;
   GST_OBJECT_UNLOCK (bus);
 }
-#endif
 
 static void
 gst_bus_source_finalize (GSource * source)
 {
   GstBusSource *bsource = (GstBusSource *) source;
-#if !GLIB_CHECK_VERSION(2,63,3)
-  GstBus *bus = bsource->bus;
 
-  GST_DEBUG_OBJECT (bus, "finalize source %p", source);
-
-  GST_OBJECT_LOCK (bus);
-  if (bus->priv->gsource == source)
-    bus->priv->gsource = NULL;
-  GST_OBJECT_UNLOCK (bus);
-#endif
+#ifdef GSTREAMER_LITE
+  // Use g_source_set_dispose_function() instead, once
+  // we no longer need to support older GLib.
+  gst_bus_source_dispose(source);
+#endif // GSTREAMER_LITE
 
   gst_clear_object (&bsource->bus);
 }
@@ -894,9 +908,12 @@ gst_bus_create_watch_unlocked (GstBus * bus)
   source = (GstBusSource *) bus->priv->gsource;
 
   g_source_set_name ((GSource *) source, "GStreamer message bus watch");
-#if GLIB_CHECK_VERSION(2,63,3)
+#ifndef GSTREAMER_LITE
+  // Remove usage of g_source_set_dispose_function(), so we can run on
+  // older GLib.
+  // https://gitlab.freedesktop.org/gstreamer/gstreamer/-/commit/654f3370a01dfe96f962fbbadba34b865d123a90
   g_source_set_dispose_function ((GSource *) source, gst_bus_source_dispose);
-#endif
+#endif // GSTREAMER_LITE
 
   source->bus = gst_object_ref (bus);
   g_source_add_poll ((GSource *) source, &bus->priv->pollfd);
@@ -1149,7 +1166,7 @@ poll_destroy (GstBusPollData * poll_data, gpointer unused)
   poll_data->source_running = FALSE;
   if (!poll_data->timeout_id) {
     g_main_loop_unref (poll_data->loop);
-    g_slice_free (GstBusPollData, poll_data);
+    g_free (poll_data);
   }
 }
 
@@ -1159,7 +1176,7 @@ poll_destroy_timeout (GstBusPollData * poll_data)
   poll_data->timeout_id = 0;
   if (!poll_data->source_running) {
     g_main_loop_unref (poll_data->loop);
-    g_slice_free (GstBusPollData, poll_data);
+    g_free (poll_data);
   }
 }
 
@@ -1217,7 +1234,7 @@ gst_bus_poll (GstBus * bus, GstMessageType events, GstClockTime timeout)
 
   g_return_val_if_fail (GST_IS_BUS (bus), NULL);
 
-  poll_data = g_slice_new (GstBusPollData);
+  poll_data = g_new (GstBusPollData, 1);
   poll_data->source_running = TRUE;
   poll_data->loop = g_main_loop_new (NULL, FALSE);
   poll_data->events = events;

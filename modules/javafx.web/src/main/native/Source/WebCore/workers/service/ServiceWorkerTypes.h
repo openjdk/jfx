@@ -25,14 +25,13 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
-#include "ProcessIdentifier.h"
-#include "ProcessQualified.h"
-#include "ScriptBuffer.h"
-#include "ScriptExecutionContextIdentifier.h"
-#include "ServiceWorkerIdentifier.h"
-#include <variant>
+#include <WebCore/ProcessIdentifier.h>
+#include <WebCore/ProcessQualified.h>
+#include <WebCore/ScriptBuffer.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/ServiceWorkerIdentifier.h>
+#include <wtf/HashIterators.h>
+#include <wtf/KeyValuePair.h>
 #include <wtf/ObjectIdentifier.h>
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/URLHash.h>
@@ -64,24 +63,25 @@ enum class ServiceWorkerClientFrameType : uint8_t {
     None
 };
 
+enum class ServiceWorkerIsInspectable : bool { No, Yes };
 enum class ShouldNotifyWhenResolved : bool { No, Yes };
 
-enum ServiceWorkerRegistrationIdentifierType { };
+struct ServiceWorkerRegistrationIdentifierType;
 using ServiceWorkerRegistrationIdentifier = AtomicObjectIdentifier<ServiceWorkerRegistrationIdentifierType>;
 
-enum ServiceWorkerJobIdentifierType { };
+struct ServiceWorkerJobIdentifierType;
 using ServiceWorkerJobIdentifier = AtomicObjectIdentifier<ServiceWorkerJobIdentifierType>;
 
-enum SWServerToContextConnectionIdentifierType { };
+enum class SWServerToContextConnectionIdentifierType { };
 using SWServerToContextConnectionIdentifier = ObjectIdentifier<SWServerToContextConnectionIdentifierType>;
 
 using SWServerConnectionIdentifierType = ProcessIdentifierType;
 using SWServerConnectionIdentifier = ObjectIdentifier<SWServerConnectionIdentifierType>;
 
-using ServiceWorkerOrClientData = std::variant<ServiceWorkerData, ServiceWorkerClientData>;
+using ServiceWorkerOrClientData = Variant<ServiceWorkerData, ServiceWorkerClientData>;
 
 // FIXME: It should be possible to replace ServiceWorkerOrClientIdentifier with ScriptExecutionContextIdentifier entirely.
-using ServiceWorkerOrClientIdentifier = std::variant<ServiceWorkerIdentifier, ScriptExecutionContextIdentifier>;
+using ServiceWorkerOrClientIdentifier = Variant<ScriptExecutionContextIdentifier, ServiceWorkerIdentifier>;
 
 struct ServiceWorkerScripts {
     ServiceWorkerScripts isolatedCopy() const
@@ -89,7 +89,7 @@ struct ServiceWorkerScripts {
         MemoryCompactRobinHoodHashMap<WTF::URL, ScriptBuffer> isolatedImportedScripts;
         for (auto& [url, script] : importedScripts)
             isolatedImportedScripts.add(url.isolatedCopy(), script.isolatedCopy());
-        return { identifier, mainScript.isolatedCopy(), WTFMove(isolatedImportedScripts) };
+        return { identifier, mainScript.isolatedCopy(), WTF::move(isolatedImportedScripts) };
     }
 
     ServiceWorkerIdentifier identifier;
@@ -98,5 +98,3 @@ struct ServiceWorkerScripts {
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

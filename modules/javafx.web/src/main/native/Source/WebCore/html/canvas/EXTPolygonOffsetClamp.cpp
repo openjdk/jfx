@@ -28,37 +28,30 @@
 #if ENABLE(WEBGL)
 #include "EXTPolygonOffsetClamp.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(EXTPolygonOffsetClamp);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EXTPolygonOffsetClamp);
 
 EXTPolygonOffsetClamp::EXTPolygonOffsetClamp(WebGLRenderingContextBase& context)
-    : WebGLExtension(context)
+    : WebGLExtension(context, WebGLExtensionName::EXTPolygonOffsetClamp)
 {
-    context.graphicsContextGL()->ensureExtensionEnabled("GL_EXT_polygon_offset_clamp"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::EXT_polygon_offset_clamp);
 }
 
 EXTPolygonOffsetClamp::~EXTPolygonOffsetClamp() = default;
 
-WebGLExtension::ExtensionName EXTPolygonOffsetClamp::getName() const
-{
-    return EXTPolygonOffsetClampName;
-}
-
 bool EXTPolygonOffsetClamp::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_EXT_polygon_offset_clamp"_s);
+    return context.supportsExtension(GCGLExtension::EXT_polygon_offset_clamp);
 }
 
 void EXTPolygonOffsetClamp::polygonOffsetClampEXT(GCGLfloat factor, GCGLfloat units, GCGLfloat clamp)
 {
-    auto context = WebGLExtensionScopedContext(this);
-    if (context.isLost())
+    if (isContextLost())
         return;
-
-    context->graphicsContextGL()->polygonOffsetClampEXT(factor, units, clamp);
+    context()->graphicsContextGL()->polygonOffsetClampEXT(factor, units, clamp);
 }
 
 } // namespace WebCore

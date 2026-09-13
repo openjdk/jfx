@@ -25,49 +25,31 @@
 
 #pragma once
 
-#include "ExceptionHelpers.h"
-#include "JSFunction.h"
-#include "Interpreter.h"
-#include "ProtoCallFrame.h"
-#include "VMEntryScope.h"
-#include "VMInlines.h"
+#include <JavaScriptCore/ArgList.h>
+#include <JavaScriptCore/CallLinkInfoBase.h>
+#include <JavaScriptCore/ExceptionHelpers.h>
+#include <JavaScriptCore/Interpreter.h>
+#include <JavaScriptCore/JSFunction.h>
+#include <JavaScriptCore/JSFunctionInlines.h>
+#include <JavaScriptCore/ProtoCallFrameInlines.h>
+#include <JavaScriptCore/VMEntryScope.h>
+#include <JavaScriptCore/VMEntryScopeInlines.h>
+#include <JavaScriptCore/VMInlines.h>
 #include <wtf/ForbidHeapAllocation.h>
 #include <wtf/Scope.h>
 
 namespace JSC {
 
-class CachedCall {
+class CachedCall : public CallLinkInfoBase {
         WTF_MAKE_NONCOPYABLE(CachedCall);
         WTF_FORBID_HEAP_ALLOCATION;
 public:
-        CachedCall(JSGlobalObject* globalObject, JSFunction* function, int argumentCount)
-            : m_vm(globalObject->vm())
-            , m_entryScope(m_vm, function->scope()->globalObject())
-        , m_functionExecutable(function->jsExecutable())
-        , m_scope(function->scope())
-        {
-        VM& vm = m_vm;
-            auto scope = DECLARE_THROW_SCOPE(vm);
-#if ASSERT_ENABLED
-        auto updateValidStatus = makeScopeExit([&] {
-            m_valid = !scope.exception();
-        });
-#endif
-        ASSERT(!function->isHostFunctionNonInline());
-        if (UNLIKELY(!vm.isSafeToRecurseSoft())) {
-            throwStackOverflowError(globalObject, scope);
-            return;
-        }
+    JS_EXPORT_PRIVATE CachedCall(JSGlobalObject*, JSFunction*, int argumentCount);
 
-        m_arguments.ensureCapacity(argumentCount);
-        if (UNLIKELY(m_arguments.hasOverflowed())) {
-            throwOutOfMemoryError(globalObject, scope);
-            return;
-        }
-
-        scope.release();
-        m_vm.interpreter.prepareForCachedCall(*this, function, argumentCount + 1, m_arguments);
-        }
+    ~CachedCall()
+    {
+        m_addressForCall = nullptr;
+    }
 
         ALWAYS_INLINE JSValue call()
         {
@@ -90,6 +72,27 @@ public:
         void appendArgument(JSValue v) { m_arguments.append(v); }
         bool hasOverflowedArguments() { return m_arguments.hasOverflowed(); }
 
+    void unlinkOrUpgradeImpl(VM&, CodeBlock* oldCodeBlock, CodeBlock* newCodeBlock)
+    {
+        if (isOnList())
+            remove();
+
+        if (newCodeBlock && m_protoCallFrame.codeBlock() == oldCodeBlock) {
+            newCodeBlock->m_shouldAlwaysBeInlined = false;
+            m_addressForCall = newCodeBlock->jitCode()->addressForCall();
+            m_protoCallFrame.setCodeBlock(newCodeBlock);
+            newCodeBlock->linkIncomingCall(nullptr, this);
+            return;
+        }
+        m_addressForCall = nullptr;
+    }
+
+    void relink();
+
+
+    template<typename... Args> requires (std::is_convertible_v<Args, JSValue> && ...)
+    JSValue callWithArguments(JSGlobalObject*, JSValue thisValue, Args...);
+
 private:
         VM& m_vm;
         VMEntryScope m_entryScope;
@@ -98,7 +101,8 @@ private:
 
     FunctionExecutable* m_functionExecutable;
     JSScope* m_scope;
-    void* m_addressForCall;
+    void* m_addressForCall { nullptr };
+    unsigned m_numParameters { 0 };
 #if ASSERT_ENABLED
     bool m_valid { false };
 #endif

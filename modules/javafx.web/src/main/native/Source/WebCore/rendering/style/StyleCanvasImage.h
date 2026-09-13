@@ -27,19 +27,24 @@
 #pragma once
 
 #include "CanvasObserver.h"
+#include "HTMLCanvasElement.h"
 #include "StyleGeneratedImage.h"
+#include <wtf/CheckedRef.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class Document;
-class HTMLCanvasElement;
 
-class StyleCanvasImage final : public StyleGeneratedImage, public CanvasObserver {
+class StyleCanvasImage final : public StyleGeneratedImage, public CanvasObserver, public CanMakeCheckedPtr<StyleCanvasImage> {
+    WTF_MAKE_TZONE_ALLOCATED(StyleCanvasImage);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(StyleCanvasImage);
 public:
     static Ref<StyleCanvasImage> create(String name)
     {
-        return adoptRef(*new StyleCanvasImage(WTFMove(name)));
+        return adoptRef(*new StyleCanvasImage(WTF::move(name)));
     }
     virtual ~StyleCanvasImage();
 
@@ -48,13 +53,15 @@ public:
 
     static constexpr bool isFixedSize = true;
 
+    OVERRIDE_ABSTRACT_CAN_MAKE_CHECKEDPTR(CanMakeCheckedPtr);
+
 private:
     explicit StyleCanvasImage(String&&);
 
     Ref<CSSValue> computedStyleValue(const RenderStyle&) const final;
     bool isPending() const final;
     void load(CachedResourceLoader&, const ResourceLoaderOptions&) final;
-    RefPtr<Image> image(const RenderElement*, const FloatSize&) const final;
+    RefPtr<Image> image(const RenderElement*, const FloatSize&, const GraphicsContext& destinationContext, bool isForFirstLine) const final;
     bool knownToBeOpaque(const RenderElement&) const final;
     FloatSize fixedSize(const RenderElement&) const final;
     void didAddClient(RenderElement&) final;
@@ -62,7 +69,7 @@ private:
 
     // CanvasObserver.
     bool isStyleCanvasImage() const final { return true; }
-    void canvasChanged(CanvasBase&, const std::optional<FloatRect>& changedRect) final;
+    void canvasChanged(CanvasBase&, const FloatRect&) final;
     void canvasResized(CanvasBase&) final;
     void canvasDestroyed(CanvasBase&) final;
 
@@ -71,7 +78,7 @@ private:
     // The name of the canvas.
     String m_name;
     // The document supplies the element and owns it.
-    mutable HTMLCanvasElement* m_element;
+    mutable WeakPtr<HTMLCanvasElement, WeakPtrImplWithEventTargetData> m_element;
 };
 
 } // namespace WebCore

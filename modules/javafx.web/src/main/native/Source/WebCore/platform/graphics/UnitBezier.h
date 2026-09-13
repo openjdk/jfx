@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #ifndef UnitBezier_h
 #define UnitBezier_h
 
+#include <array>
 #include <math.h>
 
 namespace WebCore {
@@ -178,7 +179,8 @@ namespace WebCore {
         double startGradient;
         double endGradient;
 
-        double splineSamples[CUBIC_BEZIER_SPLINE_SAMPLES];
+        std::array<double, CUBIC_BEZIER_SPLINE_SAMPLES> splineSamples;
     };
 }
+
 #endif

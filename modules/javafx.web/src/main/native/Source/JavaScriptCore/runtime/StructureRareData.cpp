@@ -29,7 +29,7 @@
 #include "AdaptiveInferredPropertyValueWatchpointBase.h"
 #include "CacheableIdentifierInlines.h"
 #include "CachedSpecialPropertyAdaptiveStructureWatchpoint.h"
-#include "JSImmutableButterfly.h"
+#include "JSCellButterfly.h"
 #include "JSObjectInlines.h"
 #include "JSPropertyNameEnumerator.h"
 #include "JSString.h"
@@ -37,6 +37,10 @@
 #include "StructureChain.h"
 #include "StructureInlines.h"
 #include "StructureRareDataInlines.h"
+#include <wtf/TZoneMalloc.h>
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -92,6 +96,7 @@ DEFINE_VISIT_CHILDREN(StructureRareData);
 // ----------- Cached special properties helper watchpoint classes -----------
 
 class CachedSpecialPropertyAdaptiveInferredPropertyValueWatchpoint final : public AdaptiveInferredPropertyValueWatchpointBase {
+    WTF_MAKE_TZONE_ALLOCATED(CachedSpecialPropertyAdaptiveInferredPropertyValueWatchpoint);
 public:
     typedef AdaptiveInferredPropertyValueWatchpointBase Base;
     CachedSpecialPropertyAdaptiveInferredPropertyValueWatchpoint(const ObjectPropertyCondition&, StructureRareData*);
@@ -111,7 +116,7 @@ SpecialPropertyCache& StructureRareData::ensureSpecialPropertyCacheSlow()
     ASSERT(!m_specialPropertyCache);
     auto cache = makeUnique<SpecialPropertyCache>();
     WTF::storeStoreFence(); // Expose valid struct for concurrent threads including concurrent compilers.
-    m_specialPropertyCache = WTFMove(cache);
+    m_specialPropertyCache = WTF::move(cache);
     return *m_specialPropertyCache.get();
 }
 
@@ -251,6 +256,8 @@ void StructureRareData::finalizeUnconditionally(VM& vm, CollectionScope)
 
 // ------------- Methods for Object.prototype.toString() helper watchpoint classes --------------
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CachedSpecialPropertyAdaptiveInferredPropertyValueWatchpoint);
+
 CachedSpecialPropertyAdaptiveInferredPropertyValueWatchpoint::CachedSpecialPropertyAdaptiveInferredPropertyValueWatchpoint(const ObjectPropertyCondition& key, StructureRareData* structureRareData)
     : Base(key)
     , m_structureRareData(structureRareData)
@@ -259,7 +266,7 @@ CachedSpecialPropertyAdaptiveInferredPropertyValueWatchpoint::CachedSpecialPrope
 
 bool CachedSpecialPropertyAdaptiveInferredPropertyValueWatchpoint::isValid() const
 {
-    return m_structureRareData->isLive();
+    return !m_structureRareData->isPendingDestruction();
 }
 
 void CachedSpecialPropertyAdaptiveInferredPropertyValueWatchpoint::handleFire(VM& vm, const FireDetail&)
@@ -281,3 +288,5 @@ void CachedSpecialPropertyAdaptiveInferredPropertyValueWatchpoint::handleFire(VM
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

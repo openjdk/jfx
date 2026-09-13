@@ -26,17 +26,24 @@
 #include "config.h"
 #include "CodeBlockJettisoningWatchpoint.h"
 
-#include "CodeBlock.h"
+#include "CodeBlockInlines.h"
 #include "DFGCommon.h"
 
 namespace JSC {
 
 void CodeBlockJettisoningWatchpoint::fireInternal(VM&, const FireDetail& detail)
 {
-    if (DFG::shouldDumpDisassembly())
-        dataLog("Firing watchpoint ", RawPointer(this), " on ", *m_codeBlock, "\n");
+    ASSERT(!m_owner->wasDestructed());
+    // If CodeBlock is no longer live, we do not fire it.
+    // This works since CodeBlock is the owner of this watchpoint. When it gets destroyed, then this watchpoint also gets destroyed.
+    // Only problematic case is, (1) CodeBlock is dead, but (2) destructor is not called yet.
+    if (m_owner->isPendingDestruction())
+        return;
 
-    m_codeBlock->jettison(Profiler::JettisonDueToUnprofiledWatchpoint, CountReoptimization, &detail);
+    if (DFG::shouldDumpDisassembly())
+        dataLog("Firing watchpoint ", RawPointer(this), " on ", *m_owner, "\n");
+
+    m_owner->jettison(Profiler::JettisonDueToUnprofiledWatchpoint, CountReoptimization, &detail);
 }
 
 } // namespace JSC

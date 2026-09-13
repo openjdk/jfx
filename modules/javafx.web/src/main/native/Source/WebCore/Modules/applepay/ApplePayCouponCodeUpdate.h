@@ -27,16 +27,16 @@
 
 #if ENABLE(APPLE_PAY_COUPON_CODE)
 
-#include "ApplePayDetailsUpdateBase.h"
-#include "ApplePayError.h"
-#include "ApplePayShippingMethod.h"
+#include <WebCore/ApplePayDetailsUpdateBase.h>
+#include <WebCore/ApplePayError.h>
+#include <WebCore/ApplePayShippingMethod.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
 struct ApplePayCouponCodeUpdate final : public ApplePayDetailsUpdateBase {
-    Vector<RefPtr<ApplePayError>> errors;
+    Vector<Ref<ApplePayError>> errors;
     Vector<ApplePayShippingMethod> newShippingMethods;
 };
 

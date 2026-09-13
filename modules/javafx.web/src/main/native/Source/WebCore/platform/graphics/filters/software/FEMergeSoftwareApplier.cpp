@@ -26,21 +26,24 @@
 #include "FEMerge.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-bool FEMergeSoftwareApplier::apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const
-{
-    ASSERT(inputs.size() == m_effect.numberOfEffectInputs());
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FEMergeSoftwareApplier);
 
-    auto resultImage = result.imageBuffer();
+bool FEMergeSoftwareApplier::apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const
+{
+    ASSERT(inputs.size() == m_effect->numberOfEffectInputs());
+
+    RefPtr resultImage = result.imageBuffer();
     if (!resultImage)
         return false;
 
     auto& filterContext = resultImage->context();
 
     for (auto& input : inputs) {
-        auto inputImage = input->imageBuffer();
+        RefPtr inputImage = input->imageBuffer();
         if (!inputImage)
             continue;
 

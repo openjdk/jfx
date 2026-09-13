@@ -28,6 +28,8 @@
 #include "Color.h"
 #include "LayoutRect.h"
 #include "PageOverlay.h"
+#include <wtf/OptionSet.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 
@@ -40,6 +42,8 @@ namespace WebCore {
 class Document;
 class Element;
 class GraphicsContext;
+class GraphicsLayer;
+class GraphicsLayerClient;
 class HTMLElement;
 class IntRect;
 class FloatQuad;
@@ -47,19 +51,29 @@ class LocalFrame;
 class Page;
 class RenderElement;
 class WeakPtrImplWithEventTargetData;
+enum class RenderingUpdateStep : uint32_t;
 struct GapRects;
 
-class ImageOverlayController final : private PageOverlay::Client
+class ImageOverlayController final : private PageOverlayClient
 #if PLATFORM(MAC)
     , DataDetectorHighlightClient
 #endif
 {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ImageOverlayController);
 public:
     explicit ImageOverlayController(Page&);
 
     void selectionQuadsDidChange(LocalFrame&, const Vector<FloatQuad>&);
     void elementUnderMouseDidChange(LocalFrame&, Element*);
+
+#if PLATFORM(MAC)
+    // DataDetectorHighlightClient.
+    void ref() const final;
+    void deref() const final;
+#else
+    void ref() const;
+    void deref() const;
+#endif
 
 #if ENABLE(DATA_DETECTION)
     WEBCORE_EXPORT bool hasActiveDataDetectorHighlightForTesting() const;
@@ -85,13 +99,22 @@ private:
     void clearDataDetectorHighlights();
     bool handleDataDetectorAction(const HTMLElement&, const IntPoint&);
 
+    // DataDetectorHighlightClient
+#if ENABLE(DATA_DETECTION)
     DataDetectorHighlight* activeHighlight() const final { return m_activeDataDetectorHighlight.get(); }
+    void scheduleRenderingUpdate(OptionSet<RenderingUpdateStep>) final;
+    float deviceScaleFactor() const final;
+    RefPtr<GraphicsLayer> createGraphicsLayer(GraphicsLayerClient&) final;
+#endif
 #endif
 
     void platformUpdateElementUnderMouse(LocalFrame&, Element* elementUnderMouse);
     bool platformHandleMouseEvent(const PlatformMouseEvent&);
 
-    WeakPtr<Page> m_page;
+    Ref<Page> protectedPage() const;
+    RefPtr<PageOverlay> protectedOverlay() const { return m_overlay; }
+
+    WeakRef<Page> m_page;
     RefPtr<PageOverlay> m_overlay;
     WeakPtr<HTMLElement, WeakPtrImplWithEventTargetData> m_hostElementForSelection;
     Vector<FloatQuad> m_selectionQuads;

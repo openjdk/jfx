@@ -31,6 +31,7 @@
 #include "WebGPUPtr.h"
 #include <WebGPU/WebGPU.h>
 #include <wtf/HashMap.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore::WebGPU {
 
@@ -38,11 +39,11 @@ class BindGroupLayoutImpl;
 class ConvertToBackingContext;
 
 class ComputePipelineImpl final : public ComputePipeline {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ComputePipelineImpl);
 public:
     static Ref<ComputePipelineImpl> create(WebGPUPtr<WGPUComputePipeline>&& computePipeline, ConvertToBackingContext& convertToBackingContext)
     {
-        return adoptRef(*new ComputePipelineImpl(WTFMove(computePipeline), convertToBackingContext));
+        return adoptRef(*new ComputePipelineImpl(WTF::move(computePipeline), convertToBackingContext));
     }
 
     virtual ~ComputePipelineImpl();
@@ -58,15 +59,20 @@ private:
     ComputePipelineImpl& operator=(ComputePipelineImpl&&) = delete;
 
     WGPUComputePipeline backing() const { return m_backing.get(); }
+    bool isComputePipelineImpl() const final { return true; }
 
     Ref<BindGroupLayout> getBindGroupLayout(uint32_t index) final;
 
     void setLabelInternal(const String&) final;
 
     WebGPUPtr<WGPUComputePipeline> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebGPU::ComputePipelineImpl)
+    static bool isType(const WebCore::WebGPU::ComputePipeline& pipeline) { return pipeline.isComputePipelineImpl(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

@@ -46,6 +46,7 @@
 #include "ApplePayShippingContactUpdate.h"
 #include "ApplePayShippingMethod.h"
 #include "ApplePayShippingMethodUpdate.h"
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
 #include "EventNames.h"
 #include "JSApplePayCouponCodeDetails.h"
@@ -72,6 +73,7 @@
 #include "PaymentValidationErrors.h"
 #include "Settings.h"
 #include <JavaScriptCore/JSONObject.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -84,14 +86,16 @@ static inline PaymentCoordinator& paymentCoordinator(Document& document)
 static ExceptionOr<ApplePayRequest> convertAndValidateApplePayRequest(Document& document, JSC::JSValue data)
 {
     if (data.isEmpty())
-        return Exception { TypeError, "Missing payment method data."_s };
+        return Exception { ExceptionCode::TypeError, "Missing payment method data."_s };
 
     auto throwScope = DECLARE_THROW_SCOPE(document.vm());
-    auto applePayRequest = convertDictionary<ApplePayRequest>(*document.globalObject(), data);
-    if (throwScope.exception())
-        return Exception { ExistingExceptionError };
 
-    auto validatedRequest = convertAndValidate(document, applePayRequest.version, applePayRequest, paymentCoordinator(document));
+    auto applePayRequestConversion = convertDictionary<ApplePayRequest>(*document.globalObject(), data);
+    if (applePayRequestConversion.hasException(throwScope))
+        return Exception { ExceptionCode::ExistingExceptionError };
+    auto applePayRequest = applePayRequestConversion.releaseReturnValue();
+
+    auto validatedRequest = convertAndValidate(document, applePayRequest.version, applePayRequest, Ref { paymentCoordinator(document) }.get());
     if (validatedRequest.hasException())
         return validatedRequest.releaseException();
 
@@ -104,7 +108,7 @@ static ExceptionOr<ApplePayRequest> convertAndValidateApplePayRequest(Document& 
     if (exception.hasException())
         return exception.releaseException();
 
-    return WTFMove(applePayRequest);
+    return WTF::move(applePayRequest);
 }
 
 ExceptionOr<void> ApplePayPaymentHandler::validateData(Document& document, JSC::JSValue data)
@@ -143,7 +147,17 @@ Document& ApplePayPaymentHandler::document() const
     return downcast<Document>(*scriptExecutionContext());
 }
 
+Ref<Document> ApplePayPaymentHandler::protectedDocument() const
+{
+    return document();
+}
+
 PaymentCoordinator& ApplePayPaymentHandler::paymentCoordinator() const
+{
+    return WebCore::paymentCoordinator(document());
+}
+
+Ref<PaymentCoordinator> ApplePayPaymentHandler::protectedPaymentCoordinator() const
 {
     return WebCore::paymentCoordinator(document());
 }
@@ -151,7 +165,7 @@ PaymentCoordinator& ApplePayPaymentHandler::paymentCoordinator() const
 static ExceptionOr<void> validate(const PaymentCurrencyAmount& amount, const String& expectedCurrency)
 {
     if (amount.currency != expectedCurrency)
-        return Exception { TypeError, makeString("\"", amount.currency, "\" does not match the expected currency of \"", expectedCurrency, "\". Apple Pay requires all PaymentCurrencyAmounts to use the same currency code.") };
+        return Exception { ExceptionCode::TypeError, makeString("\""_s, amount.currency, "\" does not match the expected currency of \""_s, expectedCurrency, "\". Apple Pay requires all PaymentCurrencyAmounts to use the same currency code."_s) };
     return { };
 }
 
@@ -166,7 +180,7 @@ static ExceptionOr<ApplePayLineItem> convertAndValidate(const PaymentItem& item,
     lineItem.amount = item.amount.value;
     lineItem.type = item.pending ? ApplePayLineItem::Type::Pending : ApplePayLineItem::Type::Final;
     lineItem.label = item.label;
-    return { WTFMove(lineItem) };
+    return { WTF::move(lineItem) };
 }
 
 static ExceptionOr<Vector<ApplePayLineItem>> convertAndValidate(const Vector<PaymentItem>& lineItems, const String& expectedCurrency)
@@ -177,9 +191,9 @@ static ExceptionOr<Vector<ApplePayLineItem>> convertAndValidate(const Vector<Pay
         auto convertedLineItem = convertAndValidate(lineItem, expectedCurrency);
         if (convertedLineItem.hasException())
             return convertedLineItem.releaseException();
-        result.uncheckedAppend(convertedLineItem.releaseReturnValue());
+        result.append(convertedLineItem.releaseReturnValue());
     }
-    return { WTFMove(result) };
+    return { WTF::move(result) };
 }
 
 static ApplePaySessionPaymentRequest::ShippingType convert(PaymentShippingType type)
@@ -207,7 +221,7 @@ static ExceptionOr<ApplePayShippingMethod> convertAndValidate(const PaymentShipp
     result.amount = shippingOption.amount.value;
     result.label = shippingOption.label;
     result.identifier = shippingOption.id;
-    return { WTFMove(result) };
+    return { WTF::move(result) };
 }
 
 ExceptionOr<void> ApplePayPaymentHandler::convertData(Document& document, JSC::JSValue data)
@@ -239,7 +253,8 @@ static void mergePaymentOptions(const PaymentOptions& options, ApplePaySessionPa
 
 ExceptionOr<void> ApplePayPaymentHandler::show(Document& document)
 {
-    auto validatedRequest = convertAndValidate(document, m_applePayRequest->version, *m_applePayRequest, paymentCoordinator());
+    Ref paymentCoordinator = this->paymentCoordinator();
+    auto validatedRequest = convertAndValidate(document, m_applePayRequest->version, *m_applePayRequest, paymentCoordinator.get());
     if (validatedRequest.hasException())
         return validatedRequest.releaseException();
 
@@ -255,12 +270,25 @@ ExceptionOr<void> ApplePayPaymentHandler::show(Document& document)
     ASSERT(!total.hasException());
     request.setTotal(total.releaseReturnValue());
 
+    auto modifierException = firstApplicableModifier();
+    if (modifierException.hasException())
+        return modifierException.releaseException();
+    auto modifierData = modifierException.releaseReturnValue();
+    std::optional<ApplePayModifier> applePayModifier;
+    if (modifierData)
+        applePayModifier = WTF::move(std::get<1>(*modifierData));
+
     if (details.displayItems) {
         auto convertedLineItems = convertAndValidate(*details.displayItems, expectedCurrency);
         if (convertedLineItems.hasException())
             return convertedLineItems.releaseException();
-        request.setLineItems(convertedLineItems.releaseReturnValue());
-    }
+        Vector<ApplePayLineItem>  lineItems = convertedLineItems.releaseReturnValue();
+        if (applePayModifier)
+            lineItems.appendVector(applePayModifier->additionalLineItems);
+
+        request.setLineItems(lineItems);
+    } else if (applePayModifier)
+        request.setLineItems(applePayModifier->additionalLineItems);
 
     mergePaymentOptions(m_paymentRequest->paymentOptions(), request);
 
@@ -269,27 +297,28 @@ ExceptionOr<void> ApplePayPaymentHandler::show(Document& document)
         return shippingMethods.releaseException();
     request.setShippingMethods(shippingMethods.releaseReturnValue());
 
-    auto modifierException = firstApplicableModifier();
     if (modifierException.hasException())
         return modifierException.releaseException();
-    if (auto modifierData = modifierException.releaseReturnValue()) {
-        auto applePayModifier = WTFMove(std::get<1>(*modifierData));
-        UNUSED_VARIABLE(applePayModifier);
+    if (applePayModifier) {
 
 #if ENABLE(APPLE_PAY_RECURRING_PAYMENTS)
-        request.setRecurringPaymentRequest(WTFMove(applePayModifier.recurringPaymentRequest));
+        request.setRecurringPaymentRequest(WTF::move(applePayModifier->recurringPaymentRequest));
 #endif
 
 #if ENABLE(APPLE_PAY_AUTOMATIC_RELOAD_PAYMENTS)
-        request.setAutomaticReloadPaymentRequest(WTFMove(applePayModifier.automaticReloadPaymentRequest));
+        request.setAutomaticReloadPaymentRequest(WTF::move(applePayModifier->automaticReloadPaymentRequest));
 #endif
 
 #if ENABLE(APPLE_PAY_MULTI_MERCHANT_PAYMENTS)
-        request.setMultiTokenContexts(WTFMove(applePayModifier.multiTokenContexts));
+        request.setMultiTokenContexts(WTF::move(applePayModifier->multiTokenContexts));
 #endif
 
 #if ENABLE(APPLE_PAY_DEFERRED_PAYMENTS)
-        request.setDeferredPaymentRequest(WTFMove(applePayModifier.deferredPaymentRequest));
+        request.setDeferredPaymentRequest(WTF::move(applePayModifier->deferredPaymentRequest));
+#endif
+
+#if ENABLE(APPLE_PAY_DISBURSEMENTS)
+        request.setDisbursementRequest(WTF::move(applePayModifier->disbursementRequest));
 #endif
     }
 
@@ -302,20 +331,20 @@ ExceptionOr<void> ApplePayPaymentHandler::show(Document& document)
     if (exception.hasException())
         return exception.releaseException();
 
-    if (!paymentCoordinator().beginPaymentSession(document, *this, request))
-        return Exception { AbortError };
+    if (!paymentCoordinator->beginPaymentSession(document, *this, request))
+        return Exception { ExceptionCode::AbortError };
 
     return { };
 }
 
 void ApplePayPaymentHandler::hide()
 {
-    paymentCoordinator().abortPaymentSession();
+    protectedPaymentCoordinator()->abortPaymentSession();
 }
 
 void ApplePayPaymentHandler::canMakePayment(Document&, Function<void(bool)>&& completionHandler)
 {
-    completionHandler(paymentCoordinator().canMakePayments());
+    completionHandler(protectedPaymentCoordinator()->canMakePayments());
 }
 
 ExceptionOr<Vector<ApplePayShippingMethod>> ApplePayPaymentHandler::computeShippingMethods() const
@@ -339,7 +368,7 @@ ExceptionOr<Vector<ApplePayShippingMethod>> ApplePayPaymentHandler::computeShipp
                 shippingMethod.selected = true;
 #endif
 
-            shippingOptions.uncheckedAppend(WTFMove(shippingMethod));
+            shippingOptions.append(WTF::move(shippingMethod));
         }
     }
 
@@ -348,13 +377,13 @@ ExceptionOr<Vector<ApplePayShippingMethod>> ApplePayPaymentHandler::computeShipp
     if (modifierException.hasException())
         return modifierException.releaseException();
     if (auto modifierData = modifierException.releaseReturnValue()) {
-        auto applePayModifier = WTFMove(std::get<1>(*modifierData));
+        auto applePayModifier = WTF::move(std::get<1>(*modifierData));
 
-        shippingOptions.appendVector(WTFMove(applePayModifier.additionalShippingMethods));
+        shippingOptions.appendVector(WTF::move(applePayModifier.additionalShippingMethods));
     }
 #endif
 
-    return WTFMove(shippingOptions);
+    return WTF::move(shippingOptions);
 }
 
 ExceptionOr<std::tuple<ApplePayLineItem, Vector<ApplePayLineItem>>> ApplePayPaymentHandler::computeTotalAndLineItems() const
@@ -399,95 +428,89 @@ ExceptionOr<std::tuple<ApplePayLineItem, Vector<ApplePayLineItem>>> ApplePayPaym
         lineItems.appendVector(applePayModifier.additionalLineItems);
     }
 
-    return {{ WTFMove(total), WTFMove(lineItems) }};
+    return {{ WTF::move(total), WTF::move(lineItems) }};
 }
 
-static inline void appendShippingContactInvalidError(String&& message, std::optional<ApplePayErrorContactField> contactField, Vector<RefPtr<ApplePayError>>& errors)
+static inline void appendShippingContactInvalidError(String&& message, std::optional<ApplePayErrorContactField> contactField, Vector<Ref<ApplePayError>>& errors)
 {
     if (!message.isNull())
-        errors.append(ApplePayError::create(ApplePayErrorCode::ShippingContactInvalid, WTFMove(contactField), WTFMove(message)));
+        errors.append(ApplePayError::create(ApplePayErrorCode::ShippingContactInvalid, WTF::move(contactField), WTF::move(message), { }));
 }
 
-Vector<RefPtr<ApplePayError>> ApplePayPaymentHandler::computeErrors(String&& error, AddressErrors&& addressErrors, PayerErrorFields&& payerErrors, JSC::JSObject* paymentMethodErrors) const
+Vector<Ref<ApplePayError>> ApplePayPaymentHandler::computeErrors(String&& error, AddressErrors&& addressErrors, PayerErrorFields&& payerErrors, JSC::JSObject* paymentMethodErrors) const
 {
-    Vector<RefPtr<ApplePayError>> errors;
+    Vector<Ref<ApplePayError>> errors;
 
     auto& details = m_paymentRequest->paymentDetails();
 
     if (!details.shippingOptions || details.shippingOptions->isEmpty())
-        computeAddressErrors(WTFMove(error), WTFMove(addressErrors), errors);
+        computeAddressErrors(WTF::move(error), WTF::move(addressErrors), errors);
 
-    computePayerErrors(WTFMove(payerErrors), errors);
+    computePayerErrors(WTF::move(payerErrors), errors);
 
-    auto scope = DECLARE_CATCH_SCOPE(scriptExecutionContext()->vm());
+    auto scope = DECLARE_THROW_SCOPE(protectedScriptExecutionContext()->protectedVM().get());
     auto exception = computePaymentMethodErrors(paymentMethodErrors, errors);
-    if (exception.hasException()) {
-        ASSERT(scope.exception());
-        scope.clearException();
-    }
+    if (exception.hasException())
+        TRY_CLEAR_EXCEPTION(scope, errors);
 
     return errors;
 }
 
-Vector<RefPtr<ApplePayError>> ApplePayPaymentHandler::computeErrors(JSC::JSObject* paymentMethodErrors) const
+Vector<Ref<ApplePayError>> ApplePayPaymentHandler::computeErrors(JSC::JSObject* paymentMethodErrors) const
 {
-    Vector<RefPtr<ApplePayError>> errors;
+    Vector<Ref<ApplePayError>> errors;
 
-    auto scope = DECLARE_CATCH_SCOPE(scriptExecutionContext()->vm());
+    auto scope = DECLARE_THROW_SCOPE(protectedScriptExecutionContext()->protectedVM().get());
     auto exception = computePaymentMethodErrors(paymentMethodErrors, errors);
-    if (exception.hasException()) {
-        ASSERT(scope.exception());
-        scope.clearException();
-    }
+    if (exception.hasException())
+        TRY_CLEAR_EXCEPTION(scope, errors);
 
     return errors;
 }
 
-void ApplePayPaymentHandler::computeAddressErrors(String&& error, AddressErrors&& addressErrors, Vector<RefPtr<ApplePayError>>& errors) const
+void ApplePayPaymentHandler::computeAddressErrors(String&& error, AddressErrors&& addressErrors, Vector<Ref<ApplePayError>>& errors) const
 {
     if (!m_paymentRequest->paymentOptions().requestShipping)
         return;
 
-    appendShippingContactInvalidError(WTFMove(error), std::nullopt, errors);
-    appendShippingContactInvalidError(WTFMove(addressErrors.addressLine), ApplePayErrorContactField::AddressLines, errors);
-    appendShippingContactInvalidError(WTFMove(addressErrors.city), ApplePayErrorContactField::Locality, errors);
-    appendShippingContactInvalidError(WTFMove(addressErrors.country), ApplePayErrorContactField::Country, errors);
-    appendShippingContactInvalidError(WTFMove(addressErrors.dependentLocality), ApplePayErrorContactField::SubLocality, errors);
-    appendShippingContactInvalidError(WTFMove(addressErrors.phone), ApplePayErrorContactField::PhoneNumber, errors);
-    appendShippingContactInvalidError(WTFMove(addressErrors.postalCode), ApplePayErrorContactField::PostalCode, errors);
-    appendShippingContactInvalidError(WTFMove(addressErrors.recipient), ApplePayErrorContactField::Name, errors);
-    appendShippingContactInvalidError(WTFMove(addressErrors.region), ApplePayErrorContactField::AdministrativeArea, errors);
+    appendShippingContactInvalidError(WTF::move(error), std::nullopt, errors);
+    appendShippingContactInvalidError(WTF::move(addressErrors.addressLine), ApplePayErrorContactField::AddressLines, errors);
+    appendShippingContactInvalidError(WTF::move(addressErrors.city), ApplePayErrorContactField::Locality, errors);
+    appendShippingContactInvalidError(WTF::move(addressErrors.country), ApplePayErrorContactField::Country, errors);
+    appendShippingContactInvalidError(WTF::move(addressErrors.dependentLocality), ApplePayErrorContactField::SubLocality, errors);
+    appendShippingContactInvalidError(WTF::move(addressErrors.phone), ApplePayErrorContactField::PhoneNumber, errors);
+    appendShippingContactInvalidError(WTF::move(addressErrors.postalCode), ApplePayErrorContactField::PostalCode, errors);
+    appendShippingContactInvalidError(WTF::move(addressErrors.recipient), ApplePayErrorContactField::Name, errors);
+    appendShippingContactInvalidError(WTF::move(addressErrors.region), ApplePayErrorContactField::AdministrativeArea, errors);
 }
 
-void ApplePayPaymentHandler::computePayerErrors(PayerErrorFields&& payerErrors, Vector<RefPtr<ApplePayError>>& errors) const
+void ApplePayPaymentHandler::computePayerErrors(PayerErrorFields&& payerErrors, Vector<Ref<ApplePayError>>& errors) const
 {
     auto& options = m_paymentRequest->paymentOptions();
 
     if (options.requestPayerName)
-        appendShippingContactInvalidError(WTFMove(payerErrors.name), ApplePayErrorContactField::Name, errors);
+        appendShippingContactInvalidError(WTF::move(payerErrors.name), ApplePayErrorContactField::Name, errors);
 
     if (options.requestPayerEmail)
-        appendShippingContactInvalidError(WTFMove(payerErrors.email), ApplePayErrorContactField::EmailAddress, errors);
+        appendShippingContactInvalidError(WTF::move(payerErrors.email), ApplePayErrorContactField::EmailAddress, errors);
 
     if (options.requestPayerPhone)
-        appendShippingContactInvalidError(WTFMove(payerErrors.phone), ApplePayErrorContactField::PhoneNumber, errors);
+        appendShippingContactInvalidError(WTF::move(payerErrors.phone), ApplePayErrorContactField::PhoneNumber, errors);
 }
 
-ExceptionOr<void> ApplePayPaymentHandler::computePaymentMethodErrors(JSC::JSObject* paymentMethodErrors, Vector<RefPtr<ApplePayError>>& errors) const
+ExceptionOr<void> ApplePayPaymentHandler::computePaymentMethodErrors(JSC::JSObject* paymentMethodErrors, Vector<Ref<ApplePayError>>& errors) const
 {
     if (!paymentMethodErrors)
         return { };
 
-    auto& context = *scriptExecutionContext();
-    auto throwScope = DECLARE_THROW_SCOPE(context.vm());
-    auto applePayErrors = convert<IDLSequence<IDLInterface<ApplePayError>>>(*context.globalObject(), paymentMethodErrors);
-    if (throwScope.exception())
-        return Exception { ExistingExceptionError };
+    Ref context = *scriptExecutionContext();
+    auto scope = DECLARE_THROW_SCOPE(context->vm());
 
-    for (auto&& applePayError : WTFMove(applePayErrors)) {
-        if (applePayError)
-            errors.append(WTFMove(applePayError));
-    }
+    auto applePayErrors = convert<IDLSequence<IDLInterface<ApplePayError>>>(*context->globalObject(), paymentMethodErrors);
+    if (applePayErrors.hasException(scope)) [[unlikely]]
+        return Exception { ExceptionCode::ExistingExceptionError };
+
+    errors.appendVector(applePayErrors.releaseReturnValue());
 
     return { };
 }
@@ -498,26 +521,26 @@ static ExceptionOr<void> validate(const ApplePayModifier& applePayModifier)
     if (auto& recurringPaymentRequest = applePayModifier.recurringPaymentRequest) {
         auto& regularBilling = recurringPaymentRequest->regularBilling;
         if (regularBilling.paymentTiming != ApplePayPaymentTiming::Recurring)
-            return Exception(TypeError, "'regularBilling' must be a 'recurring' line item."_s);
+            return Exception(ExceptionCode::TypeError, "'regularBilling' must be a 'recurring' line item."_s);
         if (!regularBilling.label)
-            return Exception(TypeError, "Missing label for 'regularBilling'."_s);
+            return Exception(ExceptionCode::TypeError, "Missing label for 'regularBilling'."_s);
         if (!isValidDecimalMonetaryValue(regularBilling.amount) && regularBilling.type != ApplePayLineItem::Type::Pending)
-            return Exception(TypeError, makeString('"', regularBilling.amount, "\" is not a valid amount."));
+            return Exception(ExceptionCode::TypeError, makeString('"', regularBilling.amount, "\" is not a valid amount."_s));
 
         if (auto& trialBilling = recurringPaymentRequest->trialBilling) {
             if (trialBilling->paymentTiming != ApplePayPaymentTiming::Recurring)
-                return Exception(TypeError, "'trialBilling' must be a 'recurring' line item."_s);
+                return Exception(ExceptionCode::TypeError, "'trialBilling' must be a 'recurring' line item."_s);
             if (!trialBilling->label)
-                return Exception(TypeError, "Missing label for 'trialBilling'."_s);
+                return Exception(ExceptionCode::TypeError, "Missing label for 'trialBilling'."_s);
             if (!isValidDecimalMonetaryValue(trialBilling->amount) && trialBilling->type != ApplePayLineItem::Type::Pending)
-                return Exception(TypeError, makeString('"', trialBilling->amount, "\" is not a valid amount."));
+                return Exception(ExceptionCode::TypeError, makeString('"', trialBilling->amount, "\" is not a valid amount."_s));
         }
 
         if (auto& managementURL = recurringPaymentRequest->managementURL; !URL { managementURL }.isValid())
-            return Exception(TypeError, makeString('"', managementURL, "\" is not a valid URL."));
+            return Exception(ExceptionCode::TypeError, makeString('"', managementURL, "\" is not a valid URL."_s));
 
         if (auto& tokenNotificationURL = recurringPaymentRequest->tokenNotificationURL; !tokenNotificationURL.isNull() && !URL { tokenNotificationURL }.isValid())
-            return Exception(TypeError, makeString('"', tokenNotificationURL, "\" is not a valid URL."));
+            return Exception(ExceptionCode::TypeError, makeString('"', tokenNotificationURL, "\" is not a valid URL."_s));
     }
 #endif
 
@@ -525,19 +548,19 @@ static ExceptionOr<void> validate(const ApplePayModifier& applePayModifier)
     if (auto& automaticReloadPaymentRequest = applePayModifier.automaticReloadPaymentRequest) {
         auto& automaticReloadBilling = automaticReloadPaymentRequest->automaticReloadBilling;
         if (automaticReloadBilling.paymentTiming != ApplePayPaymentTiming::AutomaticReload)
-            return Exception(TypeError, "'automaticReloadBilling' must be an 'automaticReload' line item."_s);
+            return Exception(ExceptionCode::TypeError, "'automaticReloadBilling' must be an 'automaticReload' line item."_s);
         if (!automaticReloadBilling.label)
-            return Exception(TypeError, "Missing label for 'automaticReloadBilling'."_s);
+            return Exception(ExceptionCode::TypeError, "Missing label for 'automaticReloadBilling'."_s);
         if (!isValidDecimalMonetaryValue(automaticReloadBilling.amount) && automaticReloadBilling.type != ApplePayLineItem::Type::Pending)
-            return Exception(TypeError, makeString('"', automaticReloadBilling.amount, "\" is not a valid amount."));
+            return Exception(ExceptionCode::TypeError, makeString('"', automaticReloadBilling.amount, "\" is not a valid amount."_s));
         if (!isValidDecimalMonetaryValue(automaticReloadBilling.automaticReloadPaymentThresholdAmount))
-            return Exception(TypeError, makeString('"', automaticReloadBilling.automaticReloadPaymentThresholdAmount, "\" is not a valid automaticReloadPaymentThresholdAmount."));
+            return Exception(ExceptionCode::TypeError, makeString('"', automaticReloadBilling.automaticReloadPaymentThresholdAmount, "\" is not a valid automaticReloadPaymentThresholdAmount."_s));
 
         if (auto& managementURL = automaticReloadPaymentRequest->managementURL; !URL { managementURL }.isValid())
-            return Exception(TypeError, makeString('"', managementURL, "\" is not a valid URL."));
+            return Exception(ExceptionCode::TypeError, makeString('"', managementURL, "\" is not a valid URL."_s));
 
         if (auto& tokenNotificationURL = automaticReloadPaymentRequest->tokenNotificationURL; !tokenNotificationURL.isNull() && !URL { tokenNotificationURL }.isValid())
-            return Exception(TypeError, makeString('"', tokenNotificationURL, "\" is not a valid URL."));
+            return Exception(ExceptionCode::TypeError, makeString('"', tokenNotificationURL, "\" is not a valid URL."_s));
     }
 #endif
 
@@ -545,7 +568,7 @@ static ExceptionOr<void> validate(const ApplePayModifier& applePayModifier)
     if (auto& multiTokenContexts = applePayModifier.multiTokenContexts) {
         for (auto& tokenContext : *multiTokenContexts) {
             if (!isValidDecimalMonetaryValue(tokenContext.amount))
-                return Exception(TypeError, makeString('"', tokenContext.amount, "\" is not a valid amount."));
+                return Exception(ExceptionCode::TypeError, makeString('"', tokenContext.amount, "\" is not a valid amount."_s));
         }
     }
 #endif
@@ -567,7 +590,7 @@ ExceptionOr<std::optional<std::tuple<PaymentDetailsModifier, ApplePayModifier>>>
     if (!details.modifiers)
         return { std::nullopt };
 
-    auto& lexicalGlobalObject = *document().globalObject();
+    auto& lexicalGlobalObject = *protectedDocument()->globalObject();
 
     auto& serializedModifierData = m_paymentRequest->serializedModifierData();
     ASSERT(details.modifiers->size() == serializedModifierData.size());
@@ -587,12 +610,13 @@ ExceptionOr<std::optional<std::tuple<PaymentDetailsModifier, ApplePayModifier>>>
             JSC::JSLockHolder lock(&lexicalGlobalObject);
             data = JSONParse(&lexicalGlobalObject, serializedModifierData[i]);
             if (scope.exception())
-                return Exception(ExistingExceptionError);
+                return Exception(ExceptionCode::ExistingExceptionError);
         }
 
-        auto applePayModifier = convertDictionary<ApplePayModifier>(lexicalGlobalObject, WTFMove(data));
-        if (scope.exception())
-            return Exception(ExistingExceptionError);
+        auto applePayModifierConversionResult = convertDictionary<ApplePayModifier>(lexicalGlobalObject, WTF::move(data));
+        if (applePayModifierConversionResult.hasException(scope))
+            return Exception(ExceptionCode::ExistingExceptionError);
+        auto applePayModifier = applePayModifierConversionResult.releaseReturnValue();
 
         auto validateApplePayModifierResult = validate(applePayModifier);
         if (validateApplePayModifierResult.hasException())
@@ -601,7 +625,7 @@ ExceptionOr<std::optional<std::tuple<PaymentDetailsModifier, ApplePayModifier>>>
         if (applePayModifier.paymentMethodType && *applePayModifier.paymentMethodType != m_selectedPaymentMethodType)
             continue;
 
-        return { { { modifier, WTFMove(applePayModifier) } } };
+        return { { { modifier, WTF::move(applePayModifier) } } };
     }
 
     return { std::nullopt };
@@ -614,22 +638,22 @@ ExceptionOr<void> ApplePayPaymentHandler::detailsUpdated(PaymentRequest::UpdateR
     case Reason::ShowDetailsResolved:
         return { };
     case Reason::ShippingAddressChanged: {
-        auto errors = computeErrors(WTFMove(error), WTFMove(addressErrors), WTFMove(payerErrors), paymentMethodErrors);
+        auto errors = computeErrors(WTF::move(error), WTF::move(addressErrors), WTF::move(payerErrors), paymentMethodErrors);
         // computeErrors() may run JavaScript, which may abort the request, so we need to make sure
         // sure we still have an active session.
         if (!paymentCoordinator().hasActiveSession())
-            return Exception { InvalidStateError };
-        return shippingAddressUpdated(WTFMove(errors));
+            return Exception { ExceptionCode::InvalidStateError };
+        return shippingAddressUpdated(WTF::move(errors));
     }
     case Reason::ShippingOptionChanged:
         return shippingOptionUpdated();
     case Reason::PaymentMethodChanged: {
-        auto errors = computeErrors(WTFMove(error), WTFMove(addressErrors), WTFMove(payerErrors), paymentMethodErrors);
+        auto errors = computeErrors(WTF::move(error), WTF::move(addressErrors), WTF::move(payerErrors), paymentMethodErrors);
         // computeErrors() may run JavaScript, which may abort the request, so we need to make sure
         // sure we still have an active session.
         if (!paymentCoordinator().hasActiveSession())
-            return Exception { InvalidStateError };
-        return paymentMethodUpdated(WTFMove(errors));
+            return Exception { ExceptionCode::InvalidStateError };
+        return paymentMethodUpdated(WTF::move(errors));
     }
     }
 
@@ -639,33 +663,34 @@ ExceptionOr<void> ApplePayPaymentHandler::detailsUpdated(PaymentRequest::UpdateR
 
 ExceptionOr<void> ApplePayPaymentHandler::merchantValidationCompleted(JSC::JSValue&& merchantSessionValue)
 {
-    if (!paymentCoordinator().hasActiveSession())
-        return Exception { InvalidStateError };
+    Ref paymentCoordinator = this->paymentCoordinator();
+    if (!paymentCoordinator->hasActiveSession())
+        return Exception { ExceptionCode::InvalidStateError };
 
     if (!merchantSessionValue.isObject())
-        return Exception { TypeError };
+        return Exception { ExceptionCode::TypeError };
 
     String errorMessage;
-    auto merchantSession = PaymentMerchantSession::fromJS(*document().globalObject(), asObject(merchantSessionValue), errorMessage);
+    auto merchantSession = PaymentMerchantSession::fromJS(*protectedDocument()->globalObject(), asObject(merchantSessionValue), errorMessage);
     if (!merchantSession)
-        return Exception { TypeError, WTFMove(errorMessage) };
+        return Exception { ExceptionCode::TypeError, WTF::move(errorMessage) };
 
     // PaymentMerchantSession::fromJS() may run JS, which may abort the request so we need to
     // check again if there is an active session.
-    if (!paymentCoordinator().hasActiveSession())
-        return Exception { InvalidStateError };
+    if (!paymentCoordinator->hasActiveSession())
+        return Exception { ExceptionCode::InvalidStateError };
 
-    paymentCoordinator().completeMerchantValidation(*merchantSession);
+    paymentCoordinator->completeMerchantValidation(*merchantSession);
     return { };
 }
 
-ExceptionOr<void> ApplePayPaymentHandler::shippingAddressUpdated(Vector<RefPtr<ApplePayError>>&& errors)
+ExceptionOr<void> ApplePayPaymentHandler::shippingAddressUpdated(Vector<Ref<ApplePayError>>&& errors)
 {
     ASSERT(m_updateState == UpdateState::ShippingAddress);
     m_updateState = UpdateState::None;
 
     ApplePayShippingContactUpdate update;
-    update.errors = WTFMove(errors);
+    update.errors = WTF::move(errors);
 
     auto newShippingMethods = computeShippingMethods();
     if (newShippingMethods.hasException())
@@ -681,27 +706,30 @@ ExceptionOr<void> ApplePayPaymentHandler::shippingAddressUpdated(Vector<RefPtr<A
     if (modifierException.hasException())
         return modifierException.releaseException();
     if (auto modifierData = modifierException.releaseReturnValue()) {
-        auto applePayModifier = WTFMove(std::get<1>(*modifierData));
+        auto applePayModifier = WTF::move(std::get<1>(*modifierData));
         UNUSED_VARIABLE(applePayModifier);
 
 #if ENABLE(APPLE_PAY_RECURRING_PAYMENTS)
-        update.newRecurringPaymentRequest = WTFMove(applePayModifier.recurringPaymentRequest);
+        update.newRecurringPaymentRequest = WTF::move(applePayModifier.recurringPaymentRequest);
 #endif
 
 #if ENABLE(APPLE_PAY_AUTOMATIC_RELOAD_PAYMENTS)
-        update.newAutomaticReloadPaymentRequest = WTFMove(applePayModifier.automaticReloadPaymentRequest);
+        update.newAutomaticReloadPaymentRequest = WTF::move(applePayModifier.automaticReloadPaymentRequest);
 #endif
 
 #if ENABLE(APPLE_PAY_MULTI_MERCHANT_PAYMENTS)
-        update.newMultiTokenContexts = WTFMove(applePayModifier.multiTokenContexts);
+        update.newMultiTokenContexts = WTF::move(applePayModifier.multiTokenContexts);
 #endif
 
 #if ENABLE(APPLE_PAY_DEFERRED_PAYMENTS)
-        update.newDeferredPaymentRequest = WTFMove(applePayModifier.deferredPaymentRequest);
+        update.newDeferredPaymentRequest = WTF::move(applePayModifier.deferredPaymentRequest);
+#endif
+#if ENABLE(APPLE_PAY_DISBURSEMENTS)
+        update.newDisbursementRequest = WTF::move(applePayModifier.disbursementRequest);
 #endif
     }
 
-    paymentCoordinator().completeShippingContactSelection(WTFMove(update));
+    protectedPaymentCoordinator()->completeShippingContactSelection(WTF::move(update));
     return { };
 }
 
@@ -728,38 +756,41 @@ ExceptionOr<void> ApplePayPaymentHandler::shippingOptionUpdated()
     if (modifierException.hasException())
         return modifierException.releaseException();
     if (auto modifierData = modifierException.releaseReturnValue()) {
-        auto applePayModifier = WTFMove(std::get<1>(*modifierData));
+        auto applePayModifier = WTF::move(std::get<1>(*modifierData));
         UNUSED_VARIABLE(applePayModifier);
 
 #if ENABLE(APPLE_PAY_RECURRING_PAYMENTS)
-        update.newRecurringPaymentRequest = WTFMove(applePayModifier.recurringPaymentRequest);
+        update.newRecurringPaymentRequest = WTF::move(applePayModifier.recurringPaymentRequest);
 #endif
 
 #if ENABLE(APPLE_PAY_AUTOMATIC_RELOAD_PAYMENTS)
-        update.newAutomaticReloadPaymentRequest = WTFMove(applePayModifier.automaticReloadPaymentRequest);
+        update.newAutomaticReloadPaymentRequest = WTF::move(applePayModifier.automaticReloadPaymentRequest);
 #endif
 
 #if ENABLE(APPLE_PAY_MULTI_MERCHANT_PAYMENTS)
-        update.newMultiTokenContexts = WTFMove(applePayModifier.multiTokenContexts);
+        update.newMultiTokenContexts = WTF::move(applePayModifier.multiTokenContexts);
 #endif
 
 #if ENABLE(APPLE_PAY_DEFERRED_PAYMENTS)
-        update.newDeferredPaymentRequest = WTFMove(applePayModifier.deferredPaymentRequest);
+        update.newDeferredPaymentRequest = WTF::move(applePayModifier.deferredPaymentRequest);
+#endif
+#if ENABLE(APPLE_PAY_DISBURSEMENTS)
+        update.newDisbursementRequest = WTF::move(applePayModifier.disbursementRequest);
 #endif
     }
 
-    paymentCoordinator().completeShippingMethodSelection(WTFMove(update));
+    protectedPaymentCoordinator()->completeShippingMethodSelection(WTF::move(update));
     return { };
 }
 
-ExceptionOr<void> ApplePayPaymentHandler::paymentMethodUpdated(Vector<RefPtr<ApplePayError>>&& errors)
+ExceptionOr<void> ApplePayPaymentHandler::paymentMethodUpdated(Vector<Ref<ApplePayError>>&& errors)
 {
 #if ENABLE(APPLE_PAY_COUPON_CODE)
     if (m_updateState == UpdateState::CouponCode) {
         m_updateState = UpdateState::None;
 
         ApplePayCouponCodeUpdate update;
-        update.errors = WTFMove(errors);
+        update.errors = WTF::move(errors);
 
         auto newShippingMethods = computeShippingMethods();
         if (newShippingMethods.hasException())
@@ -775,27 +806,30 @@ ExceptionOr<void> ApplePayPaymentHandler::paymentMethodUpdated(Vector<RefPtr<App
         if (modifierException.hasException())
             return modifierException.releaseException();
         if (auto modifierData = modifierException.releaseReturnValue()) {
-            auto applePayModifier = WTFMove(std::get<1>(*modifierData));
+            auto applePayModifier = WTF::move(std::get<1>(*modifierData));
             UNUSED_VARIABLE(applePayModifier);
 
 #if ENABLE(APPLE_PAY_RECURRING_PAYMENTS)
-            update.newRecurringPaymentRequest = WTFMove(applePayModifier.recurringPaymentRequest);
+            update.newRecurringPaymentRequest = WTF::move(applePayModifier.recurringPaymentRequest);
 #endif
 
 #if ENABLE(APPLE_PAY_AUTOMATIC_RELOAD_PAYMENTS)
-            update.newAutomaticReloadPaymentRequest = WTFMove(applePayModifier.automaticReloadPaymentRequest);
+            update.newAutomaticReloadPaymentRequest = WTF::move(applePayModifier.automaticReloadPaymentRequest);
 #endif
 
 #if ENABLE(APPLE_PAY_MULTI_MERCHANT_PAYMENTS)
-            update.newMultiTokenContexts = WTFMove(applePayModifier.multiTokenContexts);
+            update.newMultiTokenContexts = WTF::move(applePayModifier.multiTokenContexts);
 #endif
 
 #if ENABLE(APPLE_PAY_DEFERRED_PAYMENTS)
-            update.newDeferredPaymentRequest = WTFMove(applePayModifier.deferredPaymentRequest);
+            update.newDeferredPaymentRequest = WTF::move(applePayModifier.deferredPaymentRequest);
+#endif
+#if ENABLE(APPLE_PAY_DISBURSEMENTS)
+            update.newDisbursementRequest = WTF::move(applePayModifier.disbursementRequest);
 #endif
         }
 
-        paymentCoordinator().completeCouponCodeChange(WTFMove(update));
+        protectedPaymentCoordinator()->completeCouponCodeChange(WTF::move(update));
         return { };
     }
 #endif // ENABLE(APPLE_PAY_COUPON_CODE)
@@ -806,7 +840,7 @@ ExceptionOr<void> ApplePayPaymentHandler::paymentMethodUpdated(Vector<RefPtr<App
     ApplePayPaymentMethodUpdate update;
 
 #if ENABLE(APPLE_PAY_UPDATE_SHIPPING_METHODS_WHEN_CHANGING_LINE_ITEMS)
-    update.errors = WTFMove(errors);
+    update.errors = WTF::move(errors);
 
     auto newShippingMethods = computeShippingMethods();
     if (newShippingMethods.hasException())
@@ -825,27 +859,30 @@ ExceptionOr<void> ApplePayPaymentHandler::paymentMethodUpdated(Vector<RefPtr<App
     if (modifierException.hasException())
         return modifierException.releaseException();
     if (auto modifierData = modifierException.releaseReturnValue()) {
-        auto applePayModifier = WTFMove(std::get<1>(*modifierData));
+        auto applePayModifier = WTF::move(std::get<1>(*modifierData));
         UNUSED_VARIABLE(applePayModifier);
 
 #if ENABLE(APPLE_PAY_RECURRING_PAYMENTS)
-        update.newRecurringPaymentRequest = WTFMove(applePayModifier.recurringPaymentRequest);
+        update.newRecurringPaymentRequest = WTF::move(applePayModifier.recurringPaymentRequest);
 #endif
 
 #if ENABLE(APPLE_PAY_AUTOMATIC_RELOAD_PAYMENTS)
-        update.newAutomaticReloadPaymentRequest = WTFMove(applePayModifier.automaticReloadPaymentRequest);
+        update.newAutomaticReloadPaymentRequest = WTF::move(applePayModifier.automaticReloadPaymentRequest);
 #endif
 
 #if ENABLE(APPLE_PAY_MULTI_MERCHANT_PAYMENTS)
-        update.newMultiTokenContexts = WTFMove(applePayModifier.multiTokenContexts);
+        update.newMultiTokenContexts = WTF::move(applePayModifier.multiTokenContexts);
 #endif
 
 #if ENABLE(APPLE_PAY_DEFERRED_PAYMENTS)
-        update.newDeferredPaymentRequest = WTFMove(applePayModifier.deferredPaymentRequest);
+        update.newDeferredPaymentRequest = WTF::move(applePayModifier.deferredPaymentRequest);
+#endif
+#if ENABLE(APPLE_PAY_DISBURSEMENTS)
+        update.newDisbursementRequest = WTF::move(applePayModifier.disbursementRequest);
 #endif
     }
 
-    paymentCoordinator().completePaymentMethodSelection(WTFMove(update));
+    protectedPaymentCoordinator()->completePaymentMethodSelection(WTF::move(update));
     return { };
 }
 
@@ -854,9 +891,9 @@ ExceptionOr<void> ApplePayPaymentHandler::paymentMethodUpdated(Vector<RefPtr<App
 static ExceptionOr<ApplePayPaymentOrderDetails> convertAndValidate(ApplePayPaymentOrderDetails&& orderDetails)
 {
     if (auto& webServiceURL = orderDetails.webServiceURL; !URL { webServiceURL }.isValid())
-        return Exception(TypeError, makeString('"', webServiceURL, "\" is not a valid URL."));
+        return Exception(ExceptionCode::TypeError, makeString('"', webServiceURL, "\" is not a valid URL."_s));
 
-    return WTFMove(orderDetails);
+    return WTF::move(orderDetails);
 }
 
 #endif // ENABLE(APPLE_PAY_PAYMENT_ORDER_DETAILS)
@@ -864,15 +901,15 @@ static ExceptionOr<ApplePayPaymentOrderDetails> convertAndValidate(ApplePayPayme
 static ExceptionOr<ApplePayPaymentCompleteDetails> convertAndValidate(ApplePayPaymentCompleteDetails&& details)
 {
 #if ENABLE(APPLE_PAY_PAYMENT_ORDER_DETAILS)
-    if (auto orderDetails = WTFMove(details.orderDetails)) {
-        auto convertedOrderDetails = convertAndValidate(WTFMove(*orderDetails));
+    if (auto orderDetails = WTF::move(details.orderDetails)) {
+        auto convertedOrderDetails = convertAndValidate(WTF::move(*orderDetails));
         if (convertedOrderDetails.hasException())
             return convertedOrderDetails.releaseException();
         details.orderDetails = convertedOrderDetails.releaseReturnValue();
     }
 #endif
 
-    return WTFMove(details);
+    return WTF::move(details);
 }
 
 ExceptionOr<void> ApplePayPaymentHandler::complete(Document& document, std::optional<PaymentComplete>&& result, String&& serializedData)
@@ -893,15 +930,16 @@ ExceptionOr<void> ApplePayPaymentHandler::complete(Document& document, std::opti
     if (!serializedData.isEmpty()) {
         auto throwScope = DECLARE_THROW_SCOPE(document.vm());
 
-        auto parsedData = JSONParse(document.globalObject(), WTFMove(serializedData));
+        auto parsedData = JSONParse(document.globalObject(), WTF::move(serializedData));
         if (throwScope.exception())
-            return Exception { ExistingExceptionError };
+            return Exception { ExceptionCode::ExistingExceptionError };
 
-        auto details = convertDictionary<ApplePayPaymentCompleteDetails>(*document.globalObject(), WTFMove(parsedData));
-        if (throwScope.exception())
-            return Exception { ExistingExceptionError };
+        auto detailsConversionResult = convertDictionary<ApplePayPaymentCompleteDetails>(*document.globalObject(), WTF::move(parsedData));
+        if (detailsConversionResult.hasException(throwScope))
+            return Exception { ExceptionCode::ExistingExceptionError };
+        auto details = detailsConversionResult.releaseReturnValue();
 
-        auto convertedDetails = convertAndValidate(WTFMove(details));
+        auto convertedDetails = convertAndValidate(WTF::move(details));
         if (convertedDetails.hasException())
             return convertedDetails.releaseException();
 
@@ -913,16 +951,16 @@ ExceptionOr<void> ApplePayPaymentHandler::complete(Document& document, std::opti
     }
 
     ASSERT(authorizationResult.isFinalState());
-    paymentCoordinator().completePaymentSession(WTFMove(authorizationResult));
+    protectedPaymentCoordinator()->completePaymentSession(WTF::move(authorizationResult));
     return { };
 }
 
 ExceptionOr<void> ApplePayPaymentHandler::retry(PaymentValidationErrors&& validationErrors)
 {
-    Vector<RefPtr<ApplePayError>> errors;
+    Vector<Ref<ApplePayError>> errors;
 
-    computeAddressErrors(WTFMove(validationErrors.error), WTFMove(validationErrors.shippingAddress), errors);
-    computePayerErrors(WTFMove(validationErrors.payer), errors);
+    computeAddressErrors(WTF::move(validationErrors.error), WTF::move(validationErrors.shippingAddress), errors);
+    computePayerErrors(WTF::move(validationErrors.payer), errors);
 
     auto exception = computePaymentMethodErrors(validationErrors.paymentMethod.get(), errors);
     if (exception.hasException())
@@ -930,18 +968,19 @@ ExceptionOr<void> ApplePayPaymentHandler::retry(PaymentValidationErrors&& valida
 
     // computePaymentMethodErrors() may run JS, which may abort the request so we need to
     // make sure we still have an active session.
-    if (!paymentCoordinator().hasActiveSession())
-        return Exception { AbortError };
+    Ref paymentCoordinator = this->paymentCoordinator();
+    if (!paymentCoordinator->hasActiveSession())
+        return Exception { ExceptionCode::AbortError };
 
     // Ensure there is always at least one error to avoid having a final result.
     if (errors.isEmpty())
-        errors.append(ApplePayError::create(ApplePayErrorCode::Unknown, std::nullopt, nullString()));
+        errors.append(ApplePayError::create(ApplePayErrorCode::Unknown, std::nullopt, nullString(), { }));
 
     ApplePayPaymentAuthorizationResult authorizationResult;
     authorizationResult.status = ApplePayPaymentAuthorizationResult::Failure;
-    authorizationResult.errors = WTFMove(errors);
+    authorizationResult.errors = WTF::move(errors);
     ASSERT(!authorizationResult.isFinalState());
-    paymentCoordinator().completePaymentSession(WTFMove(authorizationResult));
+    paymentCoordinator->completePaymentSession(WTF::move(authorizationResult));
     return { };
 }
 
@@ -953,7 +992,7 @@ unsigned ApplePayPaymentHandler::version() const
 void ApplePayPaymentHandler::validateMerchant(URL&& validationURL)
 {
     if (validationURL.isValid())
-        m_paymentRequest->dispatchEvent(MerchantValidationEvent::create(eventNames().merchantvalidationEvent, std::get<URL>(m_identifier).string(), WTFMove(validationURL)).get());
+        m_paymentRequest->dispatchEvent(MerchantValidationEvent::create(eventNames().merchantvalidationEvent, std::get<URL>(m_identifier).string(), WTF::move(validationURL)).get());
 }
 
 static Ref<PaymentAddress> convert(const ApplePayPaymentContact& contact)
@@ -974,11 +1013,11 @@ void ApplePayPaymentHandler::didAuthorizePayment(const Payment& payment)
 
     auto applePayPayment = payment.toApplePayPayment(version());
     auto shippingContact = valueOrDefault(applePayPayment.shippingContact);
-    auto detailsFunction = [applePayPayment = WTFMove(applePayPayment)](JSC::JSGlobalObject& lexicalGlobalObject) {
+    auto detailsFunction = [applePayPayment = WTF::move(applePayPayment)](JSC::JSGlobalObject& lexicalGlobalObject) {
         return toJSDictionary(lexicalGlobalObject, applePayPayment);
     };
 
-    m_paymentRequest->accept(std::get<URL>(m_identifier).string(), WTFMove(detailsFunction), convert(shippingContact), shippingContact.localizedName, shippingContact.emailAddress, shippingContact.phoneNumber);
+    m_paymentRequest->accept(std::get<URL>(m_identifier).string(), WTF::move(detailsFunction), convert(shippingContact), shippingContact.localizedName, shippingContact.emailAddress, shippingContact.phoneNumber);
 }
 
 void ApplePayPaymentHandler::didSelectShippingMethod(const ApplePayShippingMethod& shippingMethod)
@@ -1004,7 +1043,7 @@ void ApplePayPaymentHandler::didSelectPaymentMethod(const PaymentMethod& payment
 
     auto applePayPaymentMethod = paymentMethod.toApplePayPaymentMethod();
     m_selectedPaymentMethodType = applePayPaymentMethod.type;
-    m_paymentRequest->paymentMethodChanged(std::get<URL>(m_identifier).string(), [applePayPaymentMethod = WTFMove(applePayPaymentMethod)](JSC::JSGlobalObject& lexicalGlobalObject) {
+    m_paymentRequest->paymentMethodChanged(std::get<URL>(m_identifier).string(), [applePayPaymentMethod = WTF::move(applePayPaymentMethod)](JSC::JSGlobalObject& lexicalGlobalObject) {
         return toJSDictionary(lexicalGlobalObject, applePayPaymentMethod);
     });
 }
@@ -1016,8 +1055,8 @@ void ApplePayPaymentHandler::didChangeCouponCode(String&& couponCode)
     ASSERT(m_updateState == UpdateState::None);
     m_updateState = UpdateState::CouponCode;
 
-    ApplePayCouponCodeDetails applePayCouponCodeDetails { WTFMove(couponCode) };
-    m_paymentRequest->paymentMethodChanged(std::get<URL>(m_identifier).string(), [applePayCouponCodeDetails = WTFMove(applePayCouponCodeDetails)] (JSC::JSGlobalObject& lexicalGlobalObject) {
+    ApplePayCouponCodeDetails applePayCouponCodeDetails { WTF::move(couponCode) };
+    m_paymentRequest->paymentMethodChanged(std::get<URL>(m_identifier).string(), [applePayCouponCodeDetails = WTF::move(applePayCouponCodeDetails)] (JSC::JSGlobalObject& lexicalGlobalObject) {
         return toJSDictionary(lexicalGlobalObject, applePayCouponCodeDetails);
     });
 }

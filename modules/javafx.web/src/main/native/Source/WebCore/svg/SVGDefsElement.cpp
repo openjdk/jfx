@@ -23,13 +23,16 @@
 #include "SVGDefsElement.h"
 
 #include "LegacyRenderSVGHiddenContainer.h"
+#include "NodeDocument.h"
 #include "RenderSVGHiddenContainer.h"
 #include "SVGNames.h"
-#include <wtf/IsoMallocInlines.h>
+#include "SVGPropertyOwnerRegistry.h"
+#include "Settings.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGDefsElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGDefsElement);
 
 inline SVGDefsElement::SVGDefsElement(const QualifiedName& tagName, Document& document)
     : SVGGraphicsElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -49,11 +52,9 @@ bool SVGDefsElement::isValid() const
 
 RenderPtr<RenderElement> SVGDefsElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (document().settings().layerBasedSVGEngineEnabled())
-    return createRenderer<RenderSVGHiddenContainer>(*this, WTFMove(style));
-#endif
-    return createRenderer<LegacyRenderSVGHiddenContainer>(*this, WTFMove(style));
+        return createRenderer<RenderSVGHiddenContainer>(RenderObject::Type::SVGHiddenContainer, *this, WTF::move(style));
+    return createRenderer<LegacyRenderSVGHiddenContainer>(RenderObject::Type::LegacySVGHiddenContainer, *this, WTF::move(style));
 }
 
 }

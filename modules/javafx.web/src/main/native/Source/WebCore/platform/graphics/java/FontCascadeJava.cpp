@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,10 +37,11 @@
 
 namespace WebCore {
 
-void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const GlyphBufferGlyph* glyphs,
-    const GlyphBufferAdvance* advances, unsigned numGlyphs, const FloatPoint& point, FontSmoothingMode)
+void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, std::span<const GlyphBufferGlyph> glyphs, std::span<const GlyphBufferAdvance> advances,
+const FloatPoint& point, FontSmoothingMode)
 {
-    // we need to call freeSpace() before refIntArr() and refFloatArr(), see RT-19695.
+    const unsigned numGlyphs = glyphs.size();
+    // we need to call freeSpace() before refIntArr() and refFloatArr(), see JDK-8127455.
     RenderingQueue& rq = context.platformContext()->rq().freeSpace(24);
 
     JNIEnv* env = WTF::GetJavaEnv();
@@ -51,7 +52,8 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
     {
         jint *bufArray = (jint*)env->GetPrimitiveArrayCritical(jGlyphs, NULL);
         ASSERT(bufArray);
-        memcpy(bufArray, glyphs, sizeof(jint)*numGlyphs);
+        for (unsigned i = 0; i < numGlyphs; ++i)
+            bufArray[i] = static_cast<jint>(glyphs[i]); // glyphs[i] is a GlyphBufferGlyph
         env->ReleasePrimitiveArrayCritical(jGlyphs, bufArray, 0);
     }
     static jmethodID refIntArr_mID = env->GetMethodID(
@@ -73,10 +75,8 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
     {
         jfloat *bufArray = env->GetFloatArrayElements(jAdvance, NULL);
         ASSERT(bufArray);
-        for (unsigned i = 0; i < numGlyphs; ++i) {
-            auto pAdvance = advances[i];
-            bufArray[i] = jfloat(pAdvance.width());
-        }
+        for (unsigned i = 0; i < numGlyphs; ++i)
+            bufArray[i] = static_cast<jfloat>(advances[i].width());
         env->ReleaseFloatArrayElements(jAdvance, bufArray, 0);
     }
     static jmethodID refFloatArr_mID = env->GetMethodID(
@@ -90,12 +90,12 @@ void FontCascade::drawGlyphs(GraphicsContext& context, const Font& font, const G
         (jfloatArray)jAdvance);
     WTF::CheckAndClearException(env);
 
-    rq  << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWSTRING_FAST
-        << font.platformData().nativeFontData()
-        << sid
-        << aid
-        << (jfloat)point.x()
-        << (jfloat)point.y();
+    rq << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWSTRING_FAST
+       << font.platformData().nativeFontData()
+       << sid
+       << aid
+       << static_cast<jfloat>(point.x())
+       << static_cast<jfloat>(point.y());
 }
 
 bool FontCascade::canReturnFallbackFontsForComplexText()
@@ -108,4 +108,8 @@ bool FontCascade::canExpandAroundIdeographsInComplexText()
     return false;
 }
 
+bool FontCascade::canUseGlyphDisplayList(const RenderStyle&)
+{
+    return true;
+}
 }

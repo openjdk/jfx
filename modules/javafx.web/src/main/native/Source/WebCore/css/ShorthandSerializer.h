@@ -32,6 +32,15 @@ class StyleProperties;
 
 enum CSSPropertyID : uint16_t;
 
-String serializeShorthandValue(const StyleProperties&, CSSPropertyID);
-
+namespace CSS {
+struct SerializationContext;
 }
+
+namespace Style {
+class Extractor;
+}
+
+String serializeShorthandValue(const CSS::SerializationContext&, const Style::Extractor&, CSSPropertyID);
+String serializeShorthandValue(const CSS::SerializationContext&, const StyleProperties&, CSSPropertyID);
+
+} // namespace WebCore

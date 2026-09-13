@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,10 +35,11 @@ import javafx.scene.input.Mnemonic;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 /*
@@ -49,7 +50,7 @@ public final class KeyboardShortcutsTest {
     private Stage stage;
     private Scene scene;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         stage = new Stage();
         scene = new Scene(new Group(), 500, 500);
@@ -58,7 +59,7 @@ public final class KeyboardShortcutsTest {
         stage.show();
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         stage = null;
         scene = null;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024 Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,9 @@
 
 package test.javafx.scene.control.skin;
 
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.collections.FXCollections;
 import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
@@ -40,9 +42,11 @@ import javafx.scene.layout.Pane;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import test.com.sun.javafx.binding.ExpressionHelperUtility;
 import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
+import test.util.memory.JMemoryBuddy;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -145,6 +149,7 @@ public class TableViewTableHeaderRowTest {
 
         firstColumn.setVisible(false);
 
+        firstMenuItem = (CheckMenuItem) columnPopupMenu.getItems().get(0);
         assertEquals(firstColumn.isVisible(), firstMenuItem.isSelected());
         assertFalse(firstMenuItem.isSelected());
 
@@ -223,6 +228,122 @@ public class TableViewTableHeaderRowTest {
         // Since the showColumnMenu() is overridden, the column popup menu should not be created.
         columnPopupMenu = TableHeaderRowShim.getColumnPopupMenu(tableHeaderRow);
         assertNull(columnPopupMenu);
+    }
+
+    /**
+     * Tests that re-setting the same columns does not cause excessive listener registrations.
+     * See also: <a href="https://bugs.openjdk.org/browse/JDK-8341687">JDK-8341687</a>.
+     */
+    @Test
+    void testReSettingColumnsDoesNotCauseExcessiveListeners() {
+        for (TableColumn<String, ?> column : tableView.getColumns()) {
+            assertEquals(2, getVisibilityListenerCount(column));
+        }
+
+        // Trigger the menu once so that it will start listening to column changes.
+        MouseEventFirer mouseEventFirer = new MouseEventFirer(cornerRegion);
+        mouseEventFirer.fireMousePressed();
+
+        // Now the table menu is listening for changes as well.
+        for (TableColumn<String, ?> column : tableView.getColumns()) {
+            assertEquals(3, getVisibilityListenerCount(column));
+        }
+
+        tableView.getColumns().setAll(FXCollections.observableArrayList(tableView.getColumns()));
+        tableView.getColumns().setAll(FXCollections.observableArrayList(tableView.getColumns()));
+
+        // The count should be the same still.
+        for (TableColumn<String, ?> column : tableView.getColumns()) {
+            assertEquals(3, getVisibilityListenerCount(column));
+        }
+    }
+
+    /**
+     * Tests that toggling the column visibility does not cause excessive listener registrations.
+     * See also: <a href="https://bugs.openjdk.org/browse/JDK-8341687">JDK-8341687</a>.
+     */
+    @Test
+    void testTogglingColumnVisibilityDoesNotCauseExcessiveListeners() {
+        for (TableColumn<String, ?> column : tableView.getColumns()) {
+            assertEquals(2, getVisibilityListenerCount(column));
+        }
+
+        // Trigger the menu once so that it will start listening to column changes.
+        MouseEventFirer mouseEventFirer = new MouseEventFirer(cornerRegion);
+        mouseEventFirer.fireMousePressed();
+
+        // Now the table menu logic is listening for changes as well.
+        for (TableColumn<String, ?> column : tableView.getColumns()) {
+            assertEquals(3, getVisibilityListenerCount(column));
+        }
+
+        for (TableColumn<String, ?> column : tableView.getColumns()) {
+            column.setVisible(false);
+            column.setVisible(true);
+            column.setVisible(false);
+            column.setVisible(true);
+        }
+
+        // The count should be the same still.
+        for (TableColumn<String, ?> column : tableView.getColumns()) {
+            assertEquals(3, getVisibilityListenerCount(column));
+        }
+    }
+
+    /**
+     * Tests that re-setting the same columns does not cause memory leaks.
+     * See also: <a href="https://bugs.openjdk.org/browse/JDK-8341687">JDK-8341687</a>.
+     */
+    @Test
+    void testReSettingColumnsDoesNotCauseMemoryLeaks() {
+        JMemoryBuddy.memoryTest((mem) -> {
+            mem.assertCollectable(tableHeaderRow);
+
+            // Trigger the menu once so that it will start listening to column changes.
+            MouseEventFirer mouseEventFirer = new MouseEventFirer(cornerRegion);
+            mouseEventFirer.fireMousePressed();
+
+            cornerRegion = null;
+            tableHeaderRow = null;
+
+            tableView.getColumns().setAll(FXCollections.observableArrayList(tableView.getColumns()));
+            tableView.getColumns().setAll(FXCollections.observableArrayList(tableView.getColumns()));
+
+            tableView.setSkin(new TableViewSkin<>(tableView));
+            Toolkit.getToolkit().firePulse();
+        });
+    }
+
+    /**
+     * Tests that toggling the column visibility does not cause memory leaks.
+     * See also: <a href="https://bugs.openjdk.org/browse/JDK-8341687">JDK-8341687</a>.
+     */
+    @Test
+    void testTogglingColumnVisibilityDoesNotCauseMemoryLeaks() {
+        JMemoryBuddy.memoryTest((mem) -> {
+            mem.assertCollectable(tableHeaderRow);
+
+            // Trigger the menu once so that it will start listening to column changes.
+            MouseEventFirer mouseEventFirer = new MouseEventFirer(cornerRegion);
+            mouseEventFirer.fireMousePressed();
+
+            cornerRegion = null;
+            tableHeaderRow = null;
+
+            for (TableColumn<String, ?> column : tableView.getColumns()) {
+                column.setVisible(false);
+                column.setVisible(true);
+                column.setVisible(false);
+                column.setVisible(true);
+            }
+
+            tableView.setSkin(new TableViewSkin<>(tableView));
+            Toolkit.getToolkit().firePulse();
+        });
+    }
+
+    private int getVisibilityListenerCount(TableColumn<String, ?> column) {
+        return ExpressionHelperUtility.getInvalidationListeners(column.visibleProperty()).size();
     }
 
     private static class CustomTableViewSkin<S> extends TableViewSkin<S> {

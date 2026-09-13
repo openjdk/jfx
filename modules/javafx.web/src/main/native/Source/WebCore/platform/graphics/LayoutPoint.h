@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, Google Inc. All rights reserved.
+ * Copyright (c) 2012-2013 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,21 +30,26 @@
 
 #pragma once
 
-#include "FloatPoint.h"
-#include "LayoutSize.h"
+#include <WebCore/DoublePoint.h>
+#include <WebCore/FloatPoint.h>
+#include <WebCore/LayoutSize.h>
 
 namespace WebCore {
 
 class LayoutPoint {
 public:
-    LayoutPoint() { }
+    constexpr LayoutPoint() = default;
     template<typename T, typename U> LayoutPoint(T x, U y) : m_x(x), m_y(y) { }
     LayoutPoint(const IntPoint& point) : m_x(point.x()), m_y(point.y()) { }
-    explicit LayoutPoint(const FloatPoint& size) : m_x(size.x()), m_y(size.y()) { }
-    explicit LayoutPoint(const LayoutSize& size) : m_x(size.width()), m_y(size.height()) { }
+    explicit LayoutPoint(const FloatPoint& size)
+        : m_x(size.x()), m_y(size.y()) { }
+    explicit LayoutPoint(const DoublePoint& size)
+        : m_x(size.x()), m_y(size.y()) { }
+    explicit LayoutPoint(const LayoutSize& size)
+        : m_x(size.width()), m_y(size.height()) { }
 
-    static LayoutPoint zero() { return LayoutPoint(); }
-    bool isZero() const { return !m_x && !m_y; }
+    static constexpr LayoutPoint zero() { return LayoutPoint(); }
+    constexpr bool isZero() const { return !m_x && !m_y; }
 
     LayoutUnit x() const { return m_x; }
     LayoutUnit y() const { return m_y; }
@@ -55,6 +60,8 @@ public:
     void move(const LayoutSize& s) { move(s.width(), s.height()); }
     void moveBy(const LayoutPoint& offset) { move(offset.x(), offset.y()); }
     template<typename T, typename U> void move(T dx, U dy) { m_x += dx; m_y += dy; }
+
+    friend bool operator==(const LayoutPoint&, const LayoutPoint&) = default;
 
     void scale(float s)
     {
@@ -106,6 +113,7 @@ public:
     }
 
     operator FloatPoint() const { return { m_x, m_y }; }
+    operator DoublePoint() const { return { m_x, m_y }; }
 
 private:
     LayoutUnit m_x, m_y;
@@ -146,11 +154,6 @@ inline LayoutPoint operator-(const LayoutPoint& a, const LayoutSize& b)
 inline LayoutPoint operator-(const LayoutPoint& point)
 {
     return LayoutPoint(-point.x(), -point.y());
-}
-
-inline bool operator==(const LayoutPoint& a, const LayoutPoint& b)
-{
-    return a.x() == b.x() && a.y() == b.y();
 }
 
 inline LayoutPoint toLayoutPoint(const LayoutSize& size)
@@ -227,6 +230,14 @@ inline FloatSize snapSizeToDevicePixel(const LayoutSize& size, const LayoutPoint
 }
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const LayoutPoint&);
+
+struct LayoutPointLimits {
+    LayoutPoint m_min;
+    LayoutPoint m_max;
+    LayoutPoint clamp(const LayoutPoint& point) { return point.constrainedBetween(m_min, m_max); }
+    bool fits(const LayoutPoint& point) { return point == clamp(point); }
+    LayoutSize distance(const LayoutPoint& point) { return point - clamp(point); }
+};
 
 } // namespace WebCore
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,7 +27,9 @@
 #include "RemoveNodeCommand.h"
 
 #include "CompositeEditCommand.h"
+#include "ContainerNodeInlines.h"
 #include "Editing.h"
+#include "NodeDocument.h"
 #include "RenderElement.h"
 #include <wtf/Assertions.h>
 
@@ -35,7 +37,7 @@ namespace WebCore {
 
 RemoveNodeCommand::RemoveNodeCommand(Ref<Node>&& node, ShouldAssumeContentIsAlwaysEditable shouldAssumeContentIsAlwaysEditable, EditAction editingAction)
     : SimpleEditCommand(node->document(), editingAction)
-    , m_node(WTFMove(node))
+    , m_node(WTF::move(node))
     , m_shouldAssumeContentIsAlwaysEditable(shouldAssumeContentIsAlwaysEditable)
 {
     ASSERT(m_node->parentNode());
@@ -43,13 +45,13 @@ RemoveNodeCommand::RemoveNodeCommand(Ref<Node>&& node, ShouldAssumeContentIsAlwa
 
 void RemoveNodeCommand::doApply()
 {
-    ContainerNode* parent = m_node->parentNode();
+    RefPtr parent = m_node->parentNode();
     if (!parent || (m_shouldAssumeContentIsAlwaysEditable == DoNotAssumeContentIsAlwaysEditable
         && !isEditableNode(*parent) && parent->renderer()))
         return;
     ASSERT(isEditableNode(*parent) || !parent->renderer());
 
-    m_parent = parent;
+    m_parent = WTF::move(parent);
     m_refChild = m_node->nextSibling();
 
     m_node->remove();
@@ -57,16 +59,16 @@ void RemoveNodeCommand::doApply()
 
 void RemoveNodeCommand::doUnapply()
 {
-    RefPtr<ContainerNode> parent = WTFMove(m_parent);
-    RefPtr<Node> refChild = WTFMove(m_refChild);
+    RefPtr<ContainerNode> parent = WTF::move(m_parent);
+    RefPtr<Node> refChild = WTF::move(m_refChild);
     if (!parent || !parent->hasEditableStyle())
         return;
 
-    parent->insertBefore(m_node, refChild.get());
+    parent->insertBefore(m_node, WTF::move(refChild));
 }
 
 #ifndef NDEBUG
-void RemoveNodeCommand::getNodesInCommand(HashSet<Ref<Node>>& nodes)
+void RemoveNodeCommand::getNodesInCommand(NodeSet& nodes)
 {
     addNodeAndDescendants(m_parent.get(), nodes);
     addNodeAndDescendants(m_refChild.get(), nodes);

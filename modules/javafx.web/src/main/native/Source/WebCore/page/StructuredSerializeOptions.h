@@ -27,6 +27,7 @@
 
 #include <JavaScriptCore/JSObject.h>
 #include <JavaScriptCore/Strong.h>
+#include <wtf/Compiler.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -34,7 +35,7 @@ namespace WebCore {
 struct StructuredSerializeOptions {
     StructuredSerializeOptions() = default;
     StructuredSerializeOptions(Vector<JSC::Strong<JSC::JSObject>>&& transfer)
-        : transfer(WTFMove(transfer))
+        : transfer(WTF::move(transfer))
     { }
 
     Vector<JSC::Strong<JSC::JSObject>> transfer;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,7 +34,7 @@
  * <h2>Contents</h2>
  * <ol>
  * <li><a href="#SupportedMediaTypes">Supported Media Types</a></li>
- * <li><a href="#SupportedProtocols">Supported Protocols</a></li>
+ * <li><a href="#SupportedProtocols">Supported Schemes / Protocols</a></li>
  * <li><a href="#SupportedMetadataTags">Supported Metadata Tags</a></li>
  * <li><a href="#PlayingMediaInJavaFX">Playing Media in Java FX</a></li>
  * </ol>
@@ -112,41 +112,52 @@
  * aggregate similar attributes.
  *
  * <a id="SupportedProtocols"></a>
- * <h3>Supported Protocols</h3>
+ * <h3>Supported Schemes / Protocols</h3>
  *
  * <table border="1">
- * <caption>Supported Protocols Table</caption>
+ * <caption>Supported URL Protocols</caption>
  * <tr><th scope="col">Protocol</th><th scope="col">Description</th><th scope="col">Reference</th></tr>
  * <tr>
- *     <th scope="row">FILE</th>
+ *     <th scope="row"><code>file</code></th>
  *     <td>Protocol for URI representation of local files</td>
- *     <td><a href="https://docs.oracle.com/javase/8/docs/api/java/net/URI.html">java.net.URI</a></td>
+ *     <td>{@link java.net.URI}</td>
  * </tr>
  * <tr>
- *     <th scope="row">HTTP</th>
+ *     <th scope="row"><code>http</code></th>
  *     <td>Hypertext transfer protocol for representation of remote files</td>
- *     <td><a href="https://docs.oracle.com/javase/8/docs/api/java/net/URI.html">java.net.URI</a></td>
+ *     <td>{@link java.net.URI}</td>
  * </tr>
  * <tr>
- *     <th scope="row">HTTPS</th>
+ *     <th scope="row"><code>https</code></th>
  *     <td>Hypertext transfer protocol secure for representation of remote files</td>
- *     <td><a href="https://docs.oracle.com/javase/8/docs/api/java/net/URI.html">java.net.URI</a></td>
+ *     <td>{@link java.net.URI}</td>
  * </tr>
  * <tr>
- *     <th scope="row">JAR</th>
- *     <td>Representation of media entries in files accessible via the FILE, HTTP or HTTPS protocols</td>
- *     <td><a href="https://docs.oracle.com/javase/8/docs/api/java/net/JarURLConnection.html">java.net.JarURLConnection</a></td>
+ *     <th scope="row"><code>jar</code></th>
+ *     <td>Representation of media resources packaged in JAR files accessible via the <code>file</code>,
+ *     <code>http</code>, or <code>https</code> protocols</td>
+ *     <td>{@link java.net.JarURLConnection}</td>
+ * </tr>
+ * <tr>
+ *     <th scope="row"><code>jrt</code></th>
+ *     <td>Representation of media resources in the Java run-time image</td>
+ *     <td><a href="https://openjdk.org/jeps/220">JEP 220: Modular Run-Time Images</a></td>
+ * </tr>
+ * <tr>
+ *     <th scope="row"><code>resource</code></th>
+ *     <td>Representation of media resources bundled in a GraalVM Native Image executable</td>
+ *     <td><a href="https://www.graalvm.org/latest/reference-manual/native-image/dynamic-features/URLProtocols/">URL Protocols in Native Image</a></td>
  * </tr>
  * <tr>
  *     <th scope="row">HTTP Live Streaming (HLS)</th>
- *     <td>Playlist-based media streaming via HTTP or HTTPS</td>
- *     <td><a href="http://tools.ietf.org/html/draft-pantos-http-live-streaming">Internet-Draft: HTTP Live Streaming</a></td>
+ *     <td>Playlist-based media streaming via <code>http</code> or <code>https</code></td>
+ *     <td><a href="https://datatracker.ietf.org/doc/html/rfc8216">HTTP Live Streaming (RFC 8216)</a></td>
  * </tr>
  * </table>
  * <br>
- * <h4>MPEG-4 Playback via HTTP</h4>
+ * <h4>MPEG-4 Playback via <code>http</code> or <code>https</code></h4>
  * <p>
- * It is recommended that MPEG-4 media to be played over HTTP or HTTPS be formatted such that the
+ * It is recommended that MPEG-4 media to be played over <code>http</code> or <code>https</code> be formatted such that the
  * headers required to decode the stream appear at the beginning of the file. Otherwise,
  * playback might stall until the entire file is downloaded.
  * </p>
@@ -156,9 +167,17 @@
  * </p>
  * <ul>
  *     <li>On-demand and live playlists.</li>
- *     <li>Elementary MP3 audio streams (audio/mpegurl) and multiplexed MP2T streams
- *         (application/vnd.apple.mpegurl) with one AAC audio and one H.264/AVC video track.</li>
+ *     <li>Elementary MP3 and AAC audio streams (audio/mpegurl).</li>
+ *     <li>Multiplexed MP2T streams (application/vnd.apple.mpegurl) with one AAC audio and one H.264/AVC video track.</li>
+ *     <li>Multiplexed fMP4 streams (application/vnd.apple.mpegurl) with one AAC audio and one H.264/AVC or H.265/HEVC video track.</li>
  *     <li>Playlists with integer or float duration.</li>
+ *     <li>Additional audio renditions via #EXT-X-MEDIA tag:
+ *         <ul>
+ *             <li>MP2T streams with one H.264/AVC video track and elementary AAC audio stream via #EXT-X-MEDIA tag.</li>
+ *             <li>fMP4 streams with one H.264/AVC or H.265/HEVC video track and elementary AAC audio stream via #EXT-X-MEDIA tag.</li>
+ *             <li>fMP4 streams with one H.264/AVC or H.265/HEVC video track and fMP4 streams with one AAC audio track via #EXT-X-MEDIA tag.</li>
+ *         </ul>
+ *     </li>
  * </ul>
  * <p>
  * Sources which do not conform to this basic profile are not guaranteed to be handled.
@@ -216,7 +235,7 @@
  * class documentation. Some things which should be noted are:
  * <ul>
  *     <li>One <code>Media</code> object may be shared among multiple <code>MediaPlayer</code>s.
- *     <li>One <code>MediaPlayer</code> may be shared amoung multiple <code>MediaView</code>s.
+ *     <li>One <code>MediaPlayer</code> may be shared among multiple <code>MediaView</code>s.
  *     <li>Media may be played directly by a <code>MediaPlayer</code>
  *         without creating a <code>MediaView</code> although a view is required for display.</li>
  *     <li>Instead of <code>MediaPlayer.play()</code>,

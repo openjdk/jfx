@@ -23,19 +23,18 @@
 
 #pragma once
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "FloatRect.h"
 #include "RenderReplaced.h"
 #include "SVGBoundingBoxComputation.h"
 
 namespace WebCore {
 
-class RenderSVGResourceContainer;
 class RenderSVGViewportContainer;
 class SVGSVGElement;
 
 class RenderSVGRoot final : public RenderReplaced {
-    WTF_MAKE_ISO_ALLOCATED(RenderSVGRoot);
+    WTF_MAKE_TZONE_ALLOCATED(RenderSVGRoot);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGRoot);
 public:
     RenderSVGRoot(SVGSVGElement&, RenderStyle&&);
     virtual ~RenderSVGRoot();
@@ -46,7 +45,8 @@ public:
     bool isEmbeddedThroughSVGImage() const;
     bool isEmbeddedThroughFrameContainingSVGDocument() const;
 
-    void computeIntrinsicRatioInformation(FloatSize& intrinsicSize, FloatSize& intrinsicRatio) const final;
+    FloatSize computeIntrinsicSize() const final;
+    FloatSize preferredAspectRatio() const final;
     bool hasIntrinsicAspectRatio() const final;
 
     bool isLayoutSizeChanged() const { return m_isLayoutSizeChanged; }
@@ -58,25 +58,22 @@ public:
 
     bool hasRelativeDimensions() const final;
 
-    // The flag is cleared at the beginning of each layout() pass. Elements then call this
-    // method during layout when they are invalidated by a filter.
-    static void addResourceForClientInvalidation(RenderSVGResourceContainer*);
-
     bool shouldApplyViewportClip() const;
 
     FloatRect objectBoundingBox() const final { return m_objectBoundingBox; }
     FloatRect objectBoundingBoxWithoutTransformations() const final { return m_objectBoundingBoxWithoutTransformations; }
-    FloatRect strokeBoundingBox() const final { return m_strokeBoundingBox; }
-    FloatRect repaintRectInLocalCoordinates() const final { return SVGBoundingBoxComputation::computeRepaintBoundingBox(*this); }
+    FloatRect strokeBoundingBox() const final;
+    FloatRect repaintRectInLocalCoordinates(RepaintRectCalculation = RepaintRectCalculation::Fast) const final { return SVGBoundingBoxComputation::computeRepaintBoundingBox(*this); }
+    FloatRect decoratedBoundingBox() const final { return SVGBoundingBoxComputation::computeDecoratedBoundingBox(*this); }
 
     LayoutRect visualOverflowRectEquivalent() const { return SVGBoundingBoxComputation::computeVisualOverflowRect(*this); }
 
     RenderSVGViewportContainer* viewportContainer() const;
+    CheckedPtr<RenderSVGViewportContainer> checkedViewportContainer() const;
 
 private:
     void element() const = delete;
 
-    bool isSVGRoot() const final { return true; }
     ASCIILiteral renderName() const final { return "RenderSVGRoot"_s; }
     bool requiresLayer() const final { return true; }
 
@@ -84,9 +81,9 @@ private:
     bool paintingAffectedByExternalOffset() const;
 
     // To prevent certain legacy code paths to hit assertions in debug builds, when switching off LBSE (during the teardown of the LBSE tree).
-    std::optional<FloatRect> computeFloatVisibleRectInContainer(const FloatRect&, const RenderLayerModelObject*, VisibleRectContext) const final { return std::nullopt; }
+    std::optional<FloatRect> computeFloatVisibleRectInContainer(const FloatRect&, const RenderLayerModelObject*, VisibleRectContext) const final;
 
-    LayoutUnit computeReplacedLogicalWidth(ShouldComputePreferred  = ComputeActual) const final;
+    LayoutUnit computeReplacedLogicalWidth(ShouldComputePreferred  = ShouldComputePreferred::ComputeActual) const final;
     LayoutUnit computeReplacedLogicalHeight(std::optional<LayoutUnit> estimatedUsedWidth = std::nullopt) const final;
     void layout() final;
     void layoutChildren();
@@ -96,20 +93,13 @@ private:
 
     void willBeDestroyed() final;
 
-    void insertedIntoTree(IsInternalMove) final;
-    void willBeRemovedFromTree(IsInternalMove) final;
-
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
     void updateFromStyle() final;
     bool needsHasSVGTransformFlags() const final;
     void updateLayerTransform() final;
 
-    FloatSize calculateIntrinsicSize() const;
-
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) final;
 
-    LayoutRect overflowClipRect(const LayoutPoint& location, RenderFragmentContainer* = nullptr, OverlayScrollbarSizeRelevancy = IgnoreOverlayScrollbarSize, PaintPhase = PaintPhase::BlockBackground) const final;
-    LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const final;
+    LayoutRect overflowClipRect(const LayoutPoint& location, OverlayScrollbarSizeRelevancy = OverlayScrollbarSizeRelevancy::IgnoreOverlayScrollbarSize, PaintPhase = PaintPhase::BlockBackground) const final;
 
     void mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const final;
 
@@ -126,12 +116,9 @@ private:
     IntSize m_containerSize;
     FloatRect m_objectBoundingBox;
     FloatRect m_objectBoundingBoxWithoutTransformations;
-    FloatRect m_strokeBoundingBox;
-    WeakHashSet<RenderSVGResourceContainer> m_resourcesNeedingToInvalidateClients;
+    mutable Markable<FloatRect> m_strokeBoundingBox;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGRoot, isSVGRoot())
-
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGRoot, isRenderSVGRoot())

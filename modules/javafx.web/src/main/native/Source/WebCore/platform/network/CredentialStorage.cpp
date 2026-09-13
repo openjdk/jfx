@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2009 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,7 @@
 
 #include "NetworkStorageSession.h"
 #include <wtf/URL.h>
+#include <wtf/text/MakeString.h>
 
 #if PLATFORM(IOS_FAMILY)
 #include "WebCoreThread.h"
@@ -37,7 +38,7 @@ namespace WebCore {
 
 static String originStringFromURL(const URL& url)
 {
-    return makeString(url.protocol(), "://", url.hostAndPort(), '/');
+    return makeString(url.protocol(), "://"_s, url.hostAndPort(), '/');
 }
 
 static String protectionSpaceMapKeyFromURL(const URL& url)
@@ -129,7 +130,7 @@ HashSet<SecurityOriginData> CredentialStorage::originsWithCredentials() const
         }
 
         SecurityOriginData origin { protocol, protectionSpace.host(), static_cast<uint16_t>(protectionSpace.port())};
-        origins.add(WTFMove(origin));
+        origins.add(WTF::move(origin));
     }
     return origins;
 }

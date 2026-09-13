@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,26 +25,30 @@
 
 package test.robot.javafx.embed.swing;
 
+import static org.junit.jupiter.api.Assertions.fail;
 import java.awt.Dimension;
+import java.util.concurrent.TimeUnit;
+import javax.swing.JLabel;
+import javax.swing.JMenuItem;
+import javax.swing.JPopupMenu;
+import javax.swing.SwingUtilities;
 import javafx.embed.swing.SwingNode;
 import javafx.scene.Group;
 import javafx.scene.Scene;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
-import javax.swing.JLabel;
-import javax.swing.JMenuItem;
-import javax.swing.JPopupMenu;
-import javax.swing.SwingUtilities;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.robot.testharness.VisualTestBase;
 
 /**
  * Tests that a JPopupMenu shown from inside of SwingNode second and
  * all subsequent times is repainted.
  *
- * https://javafx-jira.kenai.com/browse/RT-32570
+ * JDK-8088697
  */
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class RT32570Test extends VisualTestBase {
 
     private static final double TOLERANCE = 0.07;
@@ -58,8 +62,8 @@ public class RT32570Test extends VisualTestBase {
 
     private volatile boolean popped;
 
-    @Ignore("JDK-8153542")
-    @Test(timeout = 15000)
+    @Disabled("JDK-8153542")
+    @Test
     public void test() throws Exception {
         runAndWait(() -> {
             swingNode = new SwingNode();
@@ -100,7 +104,11 @@ public class RT32570Test extends VisualTestBase {
                 Color color = getColor(testScene, WIDTH / 2, HEIGHT / 2);
                 popped = !testColorEquals(Color.GREEN, color, TOLERANCE);
             });
-            try { Thread.sleep(100); } catch(Exception e) {}
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                fail(e);
+            }
         }
 
         // Verify the popup content is painted:
@@ -110,4 +118,3 @@ public class RT32570Test extends VisualTestBase {
         });
     }
 }
-

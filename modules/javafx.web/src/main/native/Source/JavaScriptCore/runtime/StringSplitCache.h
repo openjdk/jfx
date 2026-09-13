@@ -27,15 +27,20 @@
 #pragma once
 
 #include <array>
+#include <wtf/DebugHeap.h>
+#include <wtf/FastMalloc.h>
+#include <wtf/Noncopyable.h>
+#include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
-DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StringSplitCache);
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER_AND_EXPORT(StringSplitCache, WTF_INTERNAL);
 
-class JSImmutableButterfly;
+class JSCellButterfly;
 
 class StringSplitCache {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(StringSplitCache);
     WTF_MAKE_NONCOPYABLE(StringSplitCache);
 public:
     static constexpr unsigned cacheSize = 64;
@@ -45,11 +50,11 @@ public:
     struct Entry {
         RefPtr<AtomStringImpl> m_subject { nullptr };
         RefPtr<AtomStringImpl> m_separator { nullptr };
-        JSImmutableButterfly* m_butterfly { nullptr };
+        JSCellButterfly* m_butterfly { nullptr };
     };
 
-    JSImmutableButterfly* get(const String& subject, const String& separator);
-    void set(const String& subject, const String& separator, JSImmutableButterfly*);
+    JSCellButterfly* get(const String& subject, const String& separator);
+    void set(const String& subject, const String& separator, JSCellButterfly*);
 
     void clear()
     {

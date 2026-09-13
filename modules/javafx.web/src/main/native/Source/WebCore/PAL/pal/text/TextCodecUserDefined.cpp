@@ -27,32 +27,33 @@
 #include "TextCodecUserDefined.h"
 
 #include <array>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 
 namespace PAL {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextCodecUserDefined);
+
 void TextCodecUserDefined::registerEncodingNames(EncodingNameRegistrar registrar)
 {
-    registrar("x-user-defined", "x-user-defined");
+    registrar("x-user-defined"_s, "x-user-defined"_s);
 }
 
 void TextCodecUserDefined::registerCodecs(TextCodecRegistrar registrar)
 {
-    registrar("x-user-defined", [] {
+    registrar("x-user-defined"_s, [] {
         return makeUnique<TextCodecUserDefined>();
     });
 }
 
-String TextCodecUserDefined::decode(const char* bytes, size_t length, bool, bool, bool&)
+String TextCodecUserDefined::decode(std::span<const uint8_t> bytes, bool, bool, bool&)
 {
     StringBuilder result;
-    result.reserveCapacity(length);
-    for (size_t i = 0; i < length; ++i) {
-        signed char c = bytes[i];
-        result.append(static_cast<UChar>(c & 0xF7FF));
-    }
+    result.reserveCapacity(bytes.size());
+    for (char byte : bytes)
+        result.append(static_cast<char16_t>(byte & 0xF7FF));
     return result.toString();
 }
 
@@ -67,8 +68,7 @@ static Vector<uint8_t> encodeComplexUserDefined(StringView string, UnencodableHa
         else {
             // No way to encode this character with x-user-defined.
             UnencodableReplacementArray replacement;
-            int replacementLength = TextCodec::getUnencodableReplacement(character, handling, replacement);
-            result.append(replacement.data(), replacementLength);
+            result.append(TextCodec::getUnencodableReplacement(character, handling, replacement));
         }
     }
 
@@ -79,12 +79,12 @@ Vector<uint8_t> TextCodecUserDefined::encode(StringView string, UnencodableHandl
 {
     {
         Vector<uint8_t> result(string.length());
-        auto* bytes = result.data();
+        size_t index = 0;
 
         // Convert and simultaneously do a check to see if it's all ASCII.
-        UChar ored = 0;
+        char16_t ored = 0;
         for (auto character : string.codeUnits()) {
-            *bytes++ = character;
+            result[index++] = character;
             ored |= character;
         }
 

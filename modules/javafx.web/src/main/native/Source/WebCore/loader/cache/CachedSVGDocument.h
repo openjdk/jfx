@@ -22,9 +22,9 @@
 
 #pragma once
 
-#include "CachedResource.h"
-#include "SVGDocument.h"
-#include "TextResourceDecoder.h"
+#include <WebCore/CachedResource.h>
+#include <WebCore/SVGDocument.h>
+#include <WebCore/TextResourceDecoder.h>
 
 namespace WebCore {
 
@@ -41,8 +41,9 @@ public:
 private:
     bool mayTryReplaceEncodedData() const override { return true; }
     void setEncoding(const String&) override;
-    String encoding() const override;
+    ASCIILiteral encoding() const override;
     const TextResourceDecoder* textResourceDecoder() const override { return m_decoder.get(); }
+    RefPtr<TextResourceDecoder> protectedDecoder() const;
     void finishLoading(const FragmentedSharedBuffer*, const NetworkLoadMetrics&) override;
 
     RefPtr<SVGDocument> m_document;

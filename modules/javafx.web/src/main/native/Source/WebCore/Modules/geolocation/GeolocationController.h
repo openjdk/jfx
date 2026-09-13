@@ -27,13 +27,14 @@
 
 #if ENABLE(GEOLOCATION)
 
-#include "ActivityStateChangeObserver.h"
-#include "Geolocation.h"
-#include "Page.h"
-#include "RegistrableDomain.h"
+#include <WebCore/ActivityStateChangeObserver.h>
+#include <WebCore/Geolocation.h>
+#include <WebCore/Page.h>
+#include <WebCore/RegistrableDomain.h>
 #include <wtf/HashSet.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -41,9 +42,10 @@ class GeolocationClient;
 class GeolocationError;
 class GeolocationPositionData;
 
-class GeolocationController : public Supplement<Page>, private ActivityStateChangeObserver {
-    WTF_MAKE_FAST_ALLOCATED;
+class GeolocationController final : public Supplement<Page>, public ActivityStateChangeObserver {
+    WTF_MAKE_TZONE_ALLOCATED(GeolocationController);
     WTF_MAKE_NONCOPYABLE(GeolocationController);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(GeolocationController);
 public:
     GeolocationController(Page&, GeolocationClient&);
     ~GeolocationController();
@@ -59,18 +61,22 @@ public:
 
     std::optional<GeolocationPositionData> lastPosition();
 
-    GeolocationClient& client() { return m_client; }
+    GeolocationClient& client();
+    Ref<GeolocationClient> protectedClient();
 
-    WEBCORE_EXPORT static const char* supplementName();
-    static GeolocationController* from(Page* page) { return static_cast<GeolocationController*>(Supplement<Page>::from(page, supplementName())); }
+    WEBCORE_EXPORT static ASCIILiteral supplementName();
+    static GeolocationController* from(Page* page) { return downcast<GeolocationController>(Supplement<Page>::from(page, supplementName())); }
+    static CheckedPtr<GeolocationController> checkedFrom(Page* page) { return from(page); }
 
     void revokeAuthorizationToken(const String&);
 
     void didNavigatePage();
 
 private:
-    Page& m_page;
-    GeolocationClient& m_client;
+    bool isGeolocationController() const final { return true; }
+
+    WeakRef<Page> m_page;
+    RefPtr<GeolocationClient> m_client; // Only becomes null in the class destructor
 
     void activityStateDidChange(OptionSet<ActivityState> oldActivityState, OptionSet<ActivityState> newActivityState) override;
 
@@ -94,5 +100,9 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::GeolocationController)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isGeolocationController(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(GEOLOCATION)

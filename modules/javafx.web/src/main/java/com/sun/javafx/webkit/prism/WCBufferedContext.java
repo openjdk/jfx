@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,7 +71,7 @@ final class WCBufferedContext extends WCGraphicsPrismContext {
     // The shouldRender* methods below are used to figure out whether a
     // primitive being rendered is clipped out. In case it is, nothing is rendered
     // saving us a graphics/texture creation.
-    // See RT-34443.
+    // See JDK-8097381.
     //
 
     private final RectBounds TEMP_BOUNDS = new RectBounds();

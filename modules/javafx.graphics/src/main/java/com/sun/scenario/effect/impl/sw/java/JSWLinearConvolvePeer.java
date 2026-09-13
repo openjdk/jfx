@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -98,7 +98,7 @@ public class JSWLinearConvolvePeer extends JSWEffectPeer<LinearConvolveRenderSta
         if (!src0Transform.isIdentity() ||
             !dstBounds.contains(dstRawBounds.x, dstRawBounds.y))
         {
-            // RT-27387
+            // JDK-8092042
             // TODO: Fix the optimized loops to deal with non-zero srcxy0
             // and transforms...
             type = PassType.GENERAL_VECTOR;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,14 @@
 
 package test.javafx.scene.control;
 
-import javafx.css.CssMetaData;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -40,24 +47,23 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableValue;
-import javafx.scene.Group;
-import javafx.scene.Node;
-import javafx.scene.shape.Rectangle;
-import com.sun.javafx.scene.control.Logging;
+import javafx.css.CssMetaData;
 import javafx.css.Styleable;
 import javafx.css.StyleableProperty;
+import javafx.scene.Group;
+import javafx.scene.Node;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Control;
 import javafx.scene.control.ControlShim;
 import javafx.scene.control.Skin;
 import javafx.scene.control.Tooltip;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import javafx.scene.shape.Rectangle;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
-
-import static org.junit.Assert.*;
+import com.sun.javafx.scene.control.Logging;
 
 /**
  * Things every Control needs to test:
@@ -86,10 +92,10 @@ public class ControlTest {
     private ControlStub c;
     private SkinStub<ControlStub> s;
     private ResizableRectangle skinNode;
-
     private Level originalLogLevel = null;
 
-    @Before public void setUp() {
+    @BeforeEach
+    public void setUp() {
         c = new ControlStub();
         s = new SkinStub<>(c);
         skinNode = new ResizableRectangle();
@@ -624,7 +630,7 @@ public class ControlTest {
         assertEquals(0, c.prefWidth(-1), 0.0);
     }
 
-    @Ignore ("What should happen when the pref width is set to USE_PREF_SIZE? Seems it should be an exception")
+    @Disabled("What should happen when the pref width is set to USE_PREF_SIZE? Seems it should be an exception")
     @Test public void resettingPrefWidthTo_USE_PREF_SIZE_ThrowsExceptionWhenThereIsASkin() {
         c.setSkin(s);
         c.setPrefWidth(80);
@@ -709,7 +715,7 @@ public class ControlTest {
         assertEquals(0, c.prefHeight(-1), 0.0);
     }
 
-    @Ignore ("What should happen when the pref width is set to USE_PREF_SIZE? Seems it should be an exception")
+    @Disabled("What should happen when the pref width is set to USE_PREF_SIZE? Seems it should be an exception")
     @Test public void resettingPrefHeightTo_USE_PREF_SIZE_ThrowsExceptionWhenThereIsASkin() {
         c.setSkin(s);
         c.setPrefHeight(92);
@@ -805,7 +811,7 @@ public class ControlTest {
 
         SkinWithInstall skin = new SkinWithInstall(c);
         c.setSkin(skin);
-        assertTrue("Control.setSkin() must call Skin.install()", skin.installed);
+        assertTrue(skin.installed, "Control.setSkin() must call Skin.install()");
     }
 
     /** Verifies that an IllegalArgumentException is thrown when setting skin for an unrelated control JDK-8290844 */
@@ -1032,8 +1038,7 @@ public class ControlTest {
                 URL base = cl.getResource("test/javafx/../javafx");
                 f = new File(base.toURI());
             }
-            //System.err.println(f.getPath());
-            assertTrue("" + f.getCanonicalPath() + " is not a directory", f.isDirectory());
+            assertTrue(f.isDirectory(), f.getCanonicalPath() + " is not a directory");
             recursiveCheck(f, f.getPath().length() - 7);
         } catch (Exception ex) {
             ex.printStackTrace(System.err);
@@ -1058,7 +1063,7 @@ public class ControlTest {
 
                     what = someClass.getName() + " " + styleable.getProperty();
                     WritableValue writable = styleable.getStyleableProperty(node);
-                    assertNotNull(what, writable);
+                    assertNotNull(writable, what);
 
                     Object defaultValue = writable.getValue();
                     Object initialValue = styleable.getInitialValue((Node) someClass.getDeclaredConstructor().newInstance());
@@ -1069,26 +1074,23 @@ public class ControlTest {
                         assert(initialValue instanceof Number);
                         double d1 = ((Number)defaultValue).doubleValue();
                         double d2 = ((Number)initialValue).doubleValue();
-                        assertEquals(what, d1, d2, .001);
-
+                        assertEquals(d1, d2, .001, what);
                     } else if (defaultValue != null && defaultValue.getClass().isArray()) {
-                        assertTrue(what, Arrays.equals((Object[])defaultValue, (Object[])initialValue));
+                        assertTrue(Arrays.equals((Object[])defaultValue, (Object[])initialValue), what);
                     } else {
-                        assertEquals(what, defaultValue, initialValue);
+                        assertEquals(defaultValue, initialValue, what);
                     }
-
                 }
-
             } catch (NoSuchMethodException ex) {
-                fail("NoSuchMethodException: RT-18097 cannot be tested on " + what);
+                fail("NoSuchMethodException: JDK-8128808 cannot be tested on " + what);
             } catch (IllegalAccessException ex) {
-                System.err.println("IllegalAccessException:  RT-18097 cannot be tested on " + what);
+                System.err.println("IllegalAccessException:  JDK-8128808 cannot be tested on " + what);
             } catch (IllegalArgumentException ex) {
-                fail("IllegalArgumentException:  RT-18097 cannot be tested on " + what);
+                fail("IllegalArgumentException:  JDK-8128808 cannot be tested on " + what);
             } catch (InvocationTargetException ex) {
-                fail("InvocationTargetException:  RT-18097 cannot be tested on " + what);
+                fail("InvocationTargetException:  JDK-8128808 cannot be tested on " + what);
             } catch (InstantiationException ex) {
-                fail("InstantiationException:  RT-18097 cannot be tested on " + what);
+                fail("InstantiationException:  JDK-8128808 cannot be tested on " + what);
             }
         }
     }

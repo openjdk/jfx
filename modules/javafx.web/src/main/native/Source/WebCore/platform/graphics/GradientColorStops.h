@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include "GradientColorStop.h"
+#include <WebCore/GradientColorStop.h>
 #include <algorithm>
 #include <optional>
+#include <ranges>
 #include <wtf/Forward.h>
 #include <wtf/Vector.h>
 
@@ -47,13 +48,13 @@ public:
     }
 
     GradientColorStops(StopVector stops)
-        : m_stops { WTFMove(stops) }
+        : m_stops { WTF::move(stops) }
         , m_isSorted { false }
     {
     }
 
     GradientColorStops(Sorted sortedStops)
-        : m_stops { WTFMove(sortedStops.stops) }
+        : m_stops { WTF::move(sortedStops.stops) }
         , m_isSorted { true }
     {
         ASSERT(validateIsSorted());
@@ -63,7 +64,7 @@ public:
     {
         if (!m_stops.isEmpty() && m_stops.last().offset > stop.offset)
             m_isSorted = false;
-        m_stops.append(WTFMove(stop));
+        m_stops.append(WTF::move(stop));
     }
 
     void sort()
@@ -71,9 +72,7 @@ public:
         if (m_isSorted)
             return;
 
-        std::stable_sort(m_stops.begin(), m_stops.end(), [] (auto& a, auto& b) {
-            return a.offset < b.offset;
-        });
+        std::ranges::stable_sort(m_stops, { }, &GradientColorStop::offset);
         m_isSorted = true;
     }
 
@@ -86,8 +85,8 @@ public:
     size_t size() const { return m_stops.size(); }
     bool isEmpty() const { return m_stops.isEmpty(); }
 
-    StopVector::const_iterator begin() const { return m_stops.begin(); }
-    StopVector::const_iterator end() const { return m_stops.end(); }
+    StopVector::const_iterator begin() const LIFETIME_BOUND { return m_stops.begin(); }
+    StopVector::const_iterator end() const LIFETIME_BOUND { return m_stops.end(); }
 
     template<typename MapFunction> GradientColorStops mapColors(MapFunction&& mapFunction) const
     {
@@ -103,7 +102,7 @@ public:
 
 private:
     GradientColorStops(StopVector stops, bool isSorted)
-        : m_stops { WTFMove(stops) }
+        : m_stops { WTF::move(stops) }
         , m_isSorted { isSorted }
     {
     }
@@ -111,9 +110,7 @@ private:
 #if ASSERT_ENABLED
     bool validateIsSorted() const
     {
-        return std::is_sorted(m_stops.begin(), m_stops.end(), [] (auto& a, auto& b) {
-            return a.offset < b.offset;
-        });
+        return std::ranges::is_sorted(m_stops, { }, &GradientColorStop::offset);
     }
 #endif
 

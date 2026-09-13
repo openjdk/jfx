@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,27 @@
 
 package test.shutdowntest;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+import static test.shutdowntest.Constants.ERROR_NONE;
+import static test.shutdowntest.Constants.ERROR_SOCKET;
+import static test.shutdowntest.Constants.SOCKET_HANDSHAKE;
+import static test.shutdowntest.Constants.STATUS_ILLEGAL_STATE;
+import static test.shutdowntest.Constants.STATUS_OK;
+import static test.shutdowntest.Constants.STATUS_RUNNABLE_EXECUTED;
+import static test.shutdowntest.Constants.STATUS_UNEXPECTED_EXCEPTION;
 import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
-import org.junit.Test;
-
-import static org.junit.Assert.*;
-import static test.shutdowntest.Constants.*;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Unit test for calling Platform runLater from a ShutdownHook.
  */
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class ShutdownHookTest {
 
     private static final String className = ShutdownHookTest.class.getName();
@@ -44,7 +53,7 @@ public class ShutdownHookTest {
 
     private final String testAppName = pkgName + "." + "ShutdownHookApp";
 
-    @Test (timeout = 15000)
+    @Test
     public void testShutdownHook() throws Exception {
         // Initilaize the socket
         final ServerSocket service = new ServerSocket(0);
@@ -54,7 +63,6 @@ public class ShutdownHookTest {
         final ArrayList<String> cmd
                 = test.util.Util.createApplicationLaunchCommand(
                         testAppName,
-                        null,
                         null
                 );
         // and add our argument
@@ -71,7 +79,7 @@ public class ShutdownHookTest {
 
         // Read the "handshake" token
         int handshake = in.read();
-        assertEquals("Socket handshake failed,", SOCKET_HANDSHAKE, handshake);
+        assertEquals(SOCKET_HANDSHAKE, handshake, "Socket handshake failed,");
 
         // Read the status code from the shutdown hook
         int status = in.read();

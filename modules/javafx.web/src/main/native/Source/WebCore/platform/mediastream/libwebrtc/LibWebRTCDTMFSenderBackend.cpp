@@ -28,17 +28,21 @@
 
 #if USE(LIBWEBRTC)
 
+#include <wtf/CheckedPtr.h>
 #include <wtf/MainThread.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LibWebRTCDTMFSenderBackend);
+
 static inline String toWTFString(const std::string& value)
 {
-    return String::fromUTF8(value.data(), value.length());
+    return String::fromUTF8(value);
 }
 
-LibWebRTCDTMFSenderBackend::LibWebRTCDTMFSenderBackend(rtc::scoped_refptr<webrtc::DtmfSenderInterface>&& sender)
-    : m_sender(WTFMove(sender))
+LibWebRTCDTMFSenderBackend::LibWebRTCDTMFSenderBackend(Ref<webrtc::DtmfSenderInterface>&& sender)
+    : m_sender(WTF::move(sender))
 {
     m_sender->RegisterObserver(this);
 }
@@ -79,15 +83,16 @@ void LibWebRTCDTMFSenderBackend::OnToneChange(const std::string& tone, const std
     // We are just interested in notifying the end of the tone, which corresponds to the empty string.
     if (!tone.empty())
         return;
-    callOnMainThread([this, weakThis = WeakPtr { *this }] {
-        if (weakThis && m_onTonePlayed)
-            m_onTonePlayed();
+    callOnMainThread([weakThis = WeakPtr { *this }] {
+        CheckedPtr checkedThis = weakThis.get();
+        if (checkedThis && checkedThis->m_onTonePlayed)
+            checkedThis->m_onTonePlayed();
     });
 }
 
 void LibWebRTCDTMFSenderBackend::onTonePlayed(Function<void()>&& onTonePlayed)
 {
-    m_onTonePlayed = WTFMove(onTonePlayed);
+    m_onTonePlayed = WTF::move(onTonePlayed);
 }
 
 } // namespace WebCore

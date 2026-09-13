@@ -32,36 +32,35 @@
 
 #include "FontCache.h"
 #include "FontCascade.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SystemFallbackFontCache);
+
 SystemFallbackFontCache& SystemFallbackFontCache::forCurrentThread()
 {
-    return FontCache::forCurrentThread().systemFallbackFontCache();
+    return FontCache::forCurrentThread()->systemFallbackFontCache();
 }
 
-RefPtr<Font> SystemFallbackFontCache::systemFallbackFontForCharacter(const Font* font, UChar32 character, const FontDescription& description, ResolvedEmojiPolicy resolvedEmojiPolicy, IsForPlatformFont isForPlatformFont)
+SystemFallbackFontCache* SystemFallbackFontCache::forCurrentThreadIfExists()
+{
+    CheckedPtr cache = FontCache::forCurrentThreadIfExists();
+    if (!cache)
+        return nullptr;
+
+    return &cache->systemFallbackFontCache();
+}
+
+RefPtr<Font> SystemFallbackFontCache::systemFallbackFontForCharacterCluster(const Font* font, StringView characterCluster, const FontDescription& description, ResolvedEmojiPolicy resolvedEmojiPolicy, IsForPlatformFont isForPlatformFont)
 {
     auto fontAddResult = m_characterFallbackMaps.add(font, CharacterFallbackMap());
 
-    if (!character) {
-        UChar codeUnit = 0;
-        return FontCache::forCurrentThread().systemFallbackForCharacters(description, *font, isForPlatformFont, FontCache::PreferColoredFont::No, &codeUnit, 1);
-    }
-
-    auto key = CharacterFallbackMapKey { description.computedLocale(), character, isForPlatformFont != IsForPlatformFont::No, resolvedEmojiPolicy };
-    return fontAddResult.iterator->value.ensure(WTFMove(key), [&] {
-        UChar codeUnits[3];
-        unsigned codeUnitsLength;
-        if (U_IS_BMP(character)) {
-            codeUnits[0] = FontCascade::normalizeSpaces(character);
-            codeUnitsLength = 1;
-        } else {
-            codeUnits[0] = U16_LEAD(character);
-            codeUnits[1] = U16_TRAIL(character);
-            codeUnitsLength = 2;
-        }
+    auto key = CharacterFallbackMapKey { description.computedLocale(), characterCluster.toString(), isForPlatformFont != IsForPlatformFont::No, resolvedEmojiPolicy };
+    return fontAddResult.iterator->value.ensure(WTF::move(key), [&] {
+        StringBuilder stringBuilder;
+        stringBuilder.append(FontCascade::normalizeSpaces(characterCluster));
 
         // FIXME: Is this the right place to add the variation selectors?
         // Should this be done in platform-specific code instead?
@@ -73,17 +72,17 @@ RefPtr<Font> SystemFallbackFontCache::systemFallbackFontForCharacter(const Font*
         case ResolvedEmojiPolicy::NoPreference:
             break;
         case ResolvedEmojiPolicy::RequireText:
-            codeUnits[codeUnitsLength++] = textVariationSelector;
+            stringBuilder.append(textVariationSelector);
             break;
         case ResolvedEmojiPolicy::RequireEmoji:
-            codeUnits[codeUnitsLength++] = emojiVariationSelector;
+            stringBuilder.append(emojiVariationSelector);
             break;
         }
 
-        auto fallbackFont = FontCache::forCurrentThread().systemFallbackForCharacters(description, *font, isForPlatformFont, FontCache::PreferColoredFont::No, codeUnits, codeUnitsLength).get();
+        RefPtr fallbackFont = FontCache::forCurrentThread()->systemFallbackForCharacterCluster(description, *font, isForPlatformFont, FontCache::PreferColoredFont::No, stringBuilder);
         if (fallbackFont)
             fallbackFont->setIsUsedInSystemFallbackFontCache();
-        return fallbackFont;
+        return fallbackFont.unsafeGet();
     }).iterator->value;
 }
 

@@ -19,7 +19,6 @@
 
 #pragma once
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderLayerModelObject.h"
 
 #include <functional>
@@ -44,15 +43,11 @@ public:
     static bool transformToRootChanged(const RenderObject* ancestor);
 
 private:
-    void layoutDifferentRootIfNeeded(const RenderElement&);
-    void invalidateResourcesOfChildren(RenderElement&);
-
     bool layoutSizeOfNearestViewportChanged() const;
 
-    RenderLayerModelObject& m_container;
+    SingleThreadWeakRef<RenderLayerModelObject> m_container;
     Vector<std::reference_wrapper<RenderLayerModelObject>> m_positionedChildren;
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

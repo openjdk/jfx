@@ -25,10 +25,9 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
-#include "FetchOptions.h"
-#include "ServiceWorkerTypes.h"
+#include <WebCore/FetchOptions.h>
+#include <WebCore/ServiceWorkerTypes.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
@@ -42,7 +41,7 @@ struct CrossOriginEmbedderPolicy;
 struct ServiceWorkerRegistrationData;
 struct WorkerFetchResult;
 
-class ServiceWorkerJobClient {
+class ServiceWorkerJobClient : public AbstractRefCountedAndCanMakeWeakPtr<ServiceWorkerJobClient> {
 public:
     virtual ~ServiceWorkerJobClient() = default;
 
@@ -58,5 +57,3 @@ public:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2023 Apple Inc. All Rights Reserved.
+ *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -34,7 +34,7 @@ static JSC_DECLARE_CUSTOM_SETTER(regExpObjectSetLastIndexSloppy);
 
 RegExpObject::RegExpObject(VM& vm, Structure* structure, RegExp* regExp, bool areLegacyFeaturesEnabled)
     : JSNonFinalObject(vm, structure)
-    , m_regExpAndFlags(bitwise_cast<uintptr_t>(regExp) | (areLegacyFeaturesEnabled ? 0 : legacyFeaturesDisabledFlag)) // lastIndexIsNotWritableFlag is not set.
+    , m_regExpAndFlags(std::bit_cast<uintptr_t>(regExp) | (areLegacyFeaturesEnabled ? 0 : legacyFeaturesDisabledFlag)) // lastIndexIsNotWritableFlag is not set.
 {
     m_lastIndex.setWithoutWriteBarrier(jsNumber(0));
 }
@@ -80,7 +80,7 @@ bool RegExpObject::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, Pr
     return Base::deleteProperty(cell, globalObject, propertyName, slot);
 }
 
-void RegExpObject::getOwnSpecialPropertyNames(JSObject*, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, DontEnumPropertiesMode mode)
+void RegExpObject::getOwnSpecialPropertyNames(JSObject*, JSGlobalObject* globalObject, PropertyNameArrayBuilder& propertyNames, DontEnumPropertiesMode mode)
 {
     VM& vm = globalObject->vm();
     if (mode == DontEnumPropertiesMode::Include)
@@ -143,7 +143,7 @@ bool RegExpObject::put(JSCell* cell, JSGlobalObject* globalObject, PropertyName 
         if (!thisObject->lastIndexIsWritable())
             return typeError(globalObject, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
 
-        if (UNLIKELY(slot.thisValue() != thisObject))
+        if (slot.thisValue() != thisObject) [[unlikely]]
             RELEASE_AND_RETURN(scope, JSObject::definePropertyOnReceiver(globalObject, propertyName, value, slot));
 
         bool result = thisObject->setLastIndex(globalObject, value, slot.isStrictMode());
@@ -178,22 +178,30 @@ JSValue RegExpObject::matchGlobal(JSGlobalObject* globalObject, JSString* string
     setLastIndex(globalObject, 0);
     RETURN_IF_EXCEPTION(scope, { });
 
-    String s = string->value(globalObject);
+    if (regExp->hasValidAtom()) {
+        if (string->isSubstring()) {
+            auto& cache = globalObject->regExpGlobalData().substringGlobalAtomCache();
+            RELEASE_AND_RETURN(scope, cache.collectMatches(globalObject, string->asRope(), regExp));
+        }
+        RELEASE_AND_RETURN(scope, collectGlobalAtomMatches(globalObject, string, regExp));
+    }
+
+    auto s = string->view(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
-    ASSERT(!s.isNull());
+    ASSERT(!s->isNull());
     if (regExp->eitherUnicode()) {
-        unsigned stringLength = s.length();
+        unsigned stringLength = s->length();
         RELEASE_AND_RETURN(scope, collectMatches(
             vm, globalObject, string, s, regExp,
-            [&] (size_t end) -> size_t {
+            [&](size_t end) ALWAYS_INLINE_LAMBDA {
                 return advanceStringUnicode(s, stringLength, end);
             }));
     }
 
     RELEASE_AND_RETURN(scope, collectMatches(
         vm, globalObject, string, s, regExp,
-        [&] (size_t end) -> size_t {
+        [](size_t end) ALWAYS_INLINE_LAMBDA {
             return end + 1;
         }));
 }

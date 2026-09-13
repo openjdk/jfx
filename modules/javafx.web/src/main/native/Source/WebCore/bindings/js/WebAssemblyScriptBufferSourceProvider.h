@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2022 Igalia S.L. All rights reserved.
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,11 +34,11 @@
 namespace WebCore {
 
 class WebAssemblyScriptBufferSourceProvider final : public JSC::BaseWebAssemblySourceProvider, public AbstractScriptBufferHolder {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WebAssemblyScriptBufferSourceProvider);
 public:
     static Ref<WebAssemblyScriptBufferSourceProvider> create(const ScriptBuffer& scriptBuffer, URL&& sourceURL, Ref<JSC::ScriptFetcher>&& scriptFetcher)
     {
-        return adoptRef(*new WebAssemblyScriptBufferSourceProvider(scriptBuffer, JSC::SourceOrigin { WTFMove(sourceURL), WTFMove(scriptFetcher) }, sourceURL.string()));
+        return adoptRef(*new WebAssemblyScriptBufferSourceProvider(scriptBuffer, JSC::SourceOrigin { WTF::move(sourceURL), WTF::move(scriptFetcher) }, sourceURL.string()));
     }
 
     unsigned hash() const final
@@ -57,23 +58,17 @@ public:
         if (!m_buffer)
             return nullptr;
 
-        ASSERT(m_buffer->isContiguous());
-        return downcast<SharedBuffer>(*m_buffer).data();
+        return m_buffer->span().data();
     }
 
-    void lockUnderlyingBuffer() final
+    void lockUnderlyingBufferImpl() final
     {
         ASSERT(!m_buffer);
-        m_buffer = m_scriptBuffer.buffer();
-
-        if (!m_buffer)
-            return;
-
-        if (!m_buffer->isContiguous())
-            m_buffer = m_buffer->makeContiguous();
+        if (RefPtr buffer = m_scriptBuffer.buffer())
+            m_buffer = buffer->makeContiguous();
     }
 
-    void unlockUnderlyingBuffer() final
+    void unlockUnderlyingBufferImpl() final
     {
         ASSERT(m_buffer);
         m_buffer = nullptr;
@@ -91,7 +86,7 @@ public:
 
 private:
     WebAssemblyScriptBufferSourceProvider(const ScriptBuffer& scriptBuffer, const JSC::SourceOrigin& sourceOrigin, String sourceURL)
-        : BaseWebAssemblySourceProvider(sourceOrigin, WTFMove(sourceURL))
+        : BaseWebAssemblySourceProvider(sourceOrigin, WTF::move(sourceURL))
         , m_scriptBuffer(scriptBuffer)
         , m_buffer(nullptr)
         , m_source("[WebAssembly source]"_s)
@@ -99,7 +94,7 @@ private:
     }
 
     ScriptBuffer m_scriptBuffer;
-    RefPtr<const FragmentedSharedBuffer> m_buffer;
+    RefPtr<const SharedBuffer> m_buffer;
     String m_source;
 };
 

@@ -33,24 +33,26 @@ class EditingStyle;
 
 class InsertParagraphSeparatorCommand : public CompositeEditCommand {
 public:
-    static Ref<InsertParagraphSeparatorCommand> create(Document& document, bool useDefaultParagraphElement = false, bool pasteBlockqutoeIntoUnquotedArea = false, EditAction editingAction = EditAction::Insert)
+    static Ref<InsertParagraphSeparatorCommand> create(Ref<Document>&& document, bool useDefaultParagraphElement = false, bool pasteBlockqutoeIntoUnquotedArea = false, EditAction editingAction = EditAction::Insert)
     {
-        return adoptRef(*new InsertParagraphSeparatorCommand(document, useDefaultParagraphElement, pasteBlockqutoeIntoUnquotedArea, editingAction));
+        return adoptRef(*new InsertParagraphSeparatorCommand(WTF::move(document), useDefaultParagraphElement, pasteBlockqutoeIntoUnquotedArea, editingAction));
     }
 
 private:
-    InsertParagraphSeparatorCommand(Document&, bool useDefaultParagraphElement, bool pasteBlockqutoeIntoUnquotedArea, EditAction);
+    InsertParagraphSeparatorCommand(Ref<Document>&&, bool useDefaultParagraphElement, bool pasteBlockqutoeIntoUnquotedArea, EditAction);
 
     void doApply() override;
 
     void calculateStyleBeforeInsertion(const Position&);
     void applyStyleAfterInsertion(Node* originalEnclosingBlock);
-    void getAncestorsInsideBlock(const Node* insertionNode, Element* outerBlock, Vector<RefPtr<Element>>& ancestors);
-    Ref<Element> cloneHierarchyUnderNewBlock(const Vector<RefPtr<Element>>& ancestors, Ref<Element>&& blockToInsert);
+    void getAncestorsInsideBlock(const Node* insertionNode, Element* outerBlock, Vector<Ref<Element>>& ancestors);
+    Ref<Element> cloneHierarchyUnderNewBlock(const Vector<Ref<Element>>& ancestors, Ref<Element>&& blockToInsert);
 
     bool shouldUseDefaultParagraphElement(Node*) const;
 
     bool preservesTypingStyle() const override;
+
+    RefPtr<EditingStyle> protectedStyle() const { return m_style; }
 
     RefPtr<EditingStyle> m_style;
 

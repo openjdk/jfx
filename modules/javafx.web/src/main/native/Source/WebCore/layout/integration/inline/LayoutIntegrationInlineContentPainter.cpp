@@ -28,21 +28,25 @@
 
 #include "EllipsisBoxPainter.h"
 #include "InlineBoxPainter.h"
+#include "InlineDisplayBoxInlines.h"
+#include "OutlinePainter.h"
 #include "PaintInfo.h"
 #include "RenderBox.h"
 #include "RenderInline.h"
-#include "RenderStyleInlines.h"
+#include "RenderLineBreak.h"
+#include "RenderStyle+GettersInlines.h"
 #include "TextBoxPainter.h"
+#include <wtf/Assertions.h>
 
 namespace WebCore {
 namespace LayoutIntegration {
 
-InlineContentPainter::InlineContentPainter(PaintInfo& paintInfo, const LayoutPoint& paintOffset, const RenderInline* layerRenderer, const InlineContent& inlineContent, const BoxTree& boxTree)
+InlineContentPainter::InlineContentPainter(PaintInfo& paintInfo, const LayoutPoint& paintOffset, const RenderInline* inlineBoxWithLayer, const InlineContent& inlineContent, const RenderBlockFlow& root)
     : m_paintInfo(paintInfo)
     , m_paintOffset(paintOffset)
-    , m_layerRenderer(layerRenderer)
+    , m_inlineBoxWithLayer(inlineBoxWithLayer)
     , m_inlineContent(inlineContent)
-    , m_boxTree(boxTree)
+    , m_root(root)
 {
     m_damageRect = m_paintInfo.rect;
     m_damageRect.moveBy(-m_paintOffset);
@@ -50,7 +54,7 @@ InlineContentPainter::InlineContentPainter(PaintInfo& paintInfo, const LayoutPoi
 
 void InlineContentPainter::paintEllipsis(size_t lineIndex)
 {
-    if (m_paintInfo.phase != PaintPhase::Foreground || root().style().visibility() != Visibility::Visible)
+    if ((m_paintInfo.phase != PaintPhase::Foreground && m_paintInfo.phase != PaintPhase::TextClip) || root().style().usedVisibility() != Visibility::Visible)
         return;
 
     auto lineBox = InlineIterator::LineBox { InlineIterator::LineBoxIteratorModernPath { m_inlineContent, lineIndex } };
@@ -73,11 +77,34 @@ void InlineContentPainter::paintDisplayBox(const InlineDisplay::Box& box)
         return;
     }
 
-    if (box.isLineBreak())
+    if (box.isLineBreak()) {
+        if (m_paintInfo.phase == PaintPhase::Accessibility) {
+            auto* renderLineBreak = dynamicDowncast<RenderLineBreak>(box.layoutBox().rendererForIntegration());
+            m_paintInfo.accessibilityRegionContext()->takeBounds(renderLineBreak, m_paintOffset);
+        }
         return;
+    }
 
     if (box.isInlineBox()) {
         if (!box.isVisible() || !hasDamage(box))
+            return;
+        // Don't paint inline boxes wrapping block-in-inline.
+        if (m_inlineContent.isInlineBoxWrapperForBlockLevelBox(box))
+            return;
+
+        auto canSkipInlineBoxPainting = [&]() {
+            if (m_paintInfo.phase != PaintPhase::Foreground)
+                return false;
+
+            // The root inline box only has to paint a background for ::first-line style.
+            bool isFirstLineBox = !box.lineIndex();
+            if (box.isRootInlineBox() && (!isFirstLineBox || &box.style() == &box.layoutBox().style()))
+                return true;
+
+            return false;
+        }();
+
+        if (canSkipInlineBoxPainting)
             return;
 
         auto inlineBoxPaintInfo = PaintInfo { m_paintInfo };
@@ -93,71 +120,101 @@ void InlineContentPainter::paintDisplayBox(const InlineDisplay::Box& box)
         if (!hasVisibleDamage)
             return;
 
-        ModernTextBoxPainter { m_inlineContent, box, m_paintInfo, m_paintOffset }.paint();
+        TextBoxPainter { m_inlineContent, box, box.style(), m_paintInfo, m_paintOffset }.paint();
         return;
     }
 
-    if (auto* renderer = dynamicDowncast<RenderBox>(m_boxTree.rendererForLayoutBox(box.layoutBox())); renderer && renderer->isReplacedOrInlineBlock()) {
+    if (auto* renderer = dynamicDowncast<RenderBox>(box.layoutBox().rendererForIntegration()); renderer) {
         if (m_paintInfo.shouldPaintWithinRoot(*renderer)) {
             // FIXME: Painting should not require a non-const renderer.
-            const_cast<RenderBox*>(renderer)->paintAsInlineBlock(m_paintInfo, flippedContentOffsetIfNeeded(*renderer));
+            CheckedRef paintRenderer = const_cast<RenderBox&>(*renderer);
+            auto flippedOffset = flippedContentOffsetIfNeeded(*renderer);
+            if (box.isBlockLevelBox()) {
+                // Blocks-in-inline.
+                auto paintInfoForChild = m_root.paintInfoForBlockChildren(m_paintInfo);
+                paintRenderer->paint(paintInfoForChild, flippedOffset);
+            } else
+                paintRenderer->paintAsInlineBlock(m_paintInfo, flippedOffset);
         }
     }
 }
 
 void InlineContentPainter::paint()
 {
-    auto layerPaintScope = LayerPaintScope { m_boxTree, m_layerRenderer };
+    auto layerPaintScope = LayerPaintScope { m_inlineBoxWithLayer };
     auto lastBoxLineIndex = std::optional<size_t> { };
 
+    auto paintLineEndingEllipsisIfApplicable = [&](std::optional<size_t> currentLineIndex) {
+        // Since line ending ellipsis belongs to the line structure but we don't have the concept of painting the line itself
+        // let's paint it when we are either at the end of the content or finished painting a line with ellipsis.
+        // While normally ellipsis is on the last line, -webkit-line-clamp can make us put ellipsis on any line.
+        if (m_inlineBoxWithLayer) {
+            // Line ending ellipsis is never on the inline box (with layer).
+            return;
+        }
+        if (lastBoxLineIndex && (!currentLineIndex || *lastBoxLineIndex != currentLineIndex))
+            paintEllipsis(*lastBoxLineIndex);
+    };
+
     for (auto& box : m_inlineContent.boxesForRect(m_damageRect)) {
+        if (!box.layoutBox().rendererForIntegration()) {
+            // No renderer means damaged content, and we should have bailed out earlier at LineLayout::paint.
+            ASSERT_NOT_REACHED();
+            return;
+        }
+
         auto shouldPaintBoxForPhase = [&] {
             switch (m_paintInfo.phase) {
             case PaintPhase::ChildOutlines:
-                return box.isNonRootInlineBox();
+                return box.isNonRootInlineBox() || box.isBlockLevelBox();
             case PaintPhase::SelfOutline:
                 return box.isRootInlineBox();
             case PaintPhase::Outline:
-                return box.isInlineBox();
+                return box.isInlineBox() || box.isBlockLevelBox();
             case PaintPhase::Mask:
                 return box.isInlineBox();
+            case PaintPhase::Float:
+            case PaintPhase::ChildBlockBackground:
+            case PaintPhase::ChildBlockBackgrounds:
+                return box.isBlockLevelBox();
             default:
                 return true;
             }
         };
 
-        if (shouldPaintBoxForPhase() && layerPaintScope.includes(box)) {
-            auto finishedPaintingLine = lastBoxLineIndex && *lastBoxLineIndex != box.lineIndex();
-            if (finishedPaintingLine) {
-                // Paint the ellipsis as the line item on the previous line.
-                paintEllipsis(*lastBoxLineIndex);
-            }
+        bool includedInPaintScope = layerPaintScope.testIsIncludesAndUpdate(box);
+
+        if (includedInPaintScope && shouldPaintBoxForPhase()) {
+            paintLineEndingEllipsisIfApplicable(box.lineIndex());
             paintDisplayBox(box);
         }
         lastBoxLineIndex = box.lineIndex();
     }
+    paintLineEndingEllipsisIfApplicable({ });
 
-    if (lastBoxLineIndex)
-        paintEllipsis(*lastBoxLineIndex);
-
-    for (auto* renderInline : m_outlineObjects)
-        renderInline->paintOutline(m_paintInfo, m_paintOffset);
+    OutlinePainter outlinePainter { m_paintInfo };
+    for (auto& renderInline : m_outlineObjects)
+        outlinePainter.paintOutline(renderInline, m_paintOffset);
 }
 
 LayoutPoint InlineContentPainter::flippedContentOffsetIfNeeded(const RenderBox& childRenderer) const
 {
-    if (root().style().isFlippedBlocksWritingMode())
+    if (root().writingMode().isBlockFlipped())
         return root().flipForWritingModeForChild(childRenderer, m_paintOffset);
     return m_paintOffset;
 }
 
-LayerPaintScope::LayerPaintScope(const BoxTree& boxTree, const RenderInline* layerRenderer)
-    : m_boxTree(boxTree)
-    , m_layerInlineBox(layerRenderer ? &boxTree.layoutBoxForRenderer(*layerRenderer) : nullptr)
+const RenderBlock& InlineContentPainter::root() const
+{
+    return m_root;
+}
+
+LayerPaintScope::LayerPaintScope(const RenderInline* inlineBoxWithLayer)
+    : m_inlineBoxWithLayer(inlineBoxWithLayer ? inlineBoxWithLayer->layoutBox() : nullptr)
 {
 }
 
-bool LayerPaintScope::includes(const InlineDisplay::Box& box)
+bool LayerPaintScope::testIsIncludesAndUpdate(const InlineDisplay::Box& box)
 {
     auto isInside = [](auto& displayBox, auto& inlineBox)
     {
@@ -173,19 +230,22 @@ bool LayerPaintScope::includes(const InlineDisplay::Box& box)
         return false;
     };
 
-    if (m_layerInlineBox == &box.layoutBox())
+    if (m_inlineBoxWithLayer == &box.layoutBox())
         return true;
-    if (m_layerInlineBox && !isInside(box, *m_layerInlineBox))
+    if (m_inlineBoxWithLayer && !isInside(box, *m_inlineBoxWithLayer))
         return false;
     if (m_currentExcludedInlineBox && isInside(box, *m_currentExcludedInlineBox))
         return false;
 
-    m_currentExcludedInlineBox = nullptr;
-
-    if (box.isRootInlineBox() || box.isText() || box.isLineBreak())
+    if (box.isRootInlineBox())
         return true;
 
-    auto* renderer = dynamicDowncast<RenderLayerModelObject>(m_boxTree.rendererForLayoutBox(box.layoutBox()));
+    m_currentExcludedInlineBox = nullptr;
+
+    if (box.isText() || box.isLineBreak())
+        return true;
+
+    auto* renderer = dynamicDowncast<RenderLayerModelObject>(box.layoutBox().rendererForIntegration());
     bool hasSelfPaintingLayer = renderer && renderer->hasSelfPaintingLayer();
 
     if (hasSelfPaintingLayer && box.isNonRootInlineBox())

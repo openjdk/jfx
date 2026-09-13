@@ -24,8 +24,10 @@
 
 #pragma once
 
+#include "FontCascade.h"
 #include "LegacyInlineIterator.h"
 #include "LineInfo.h"
+#include <wtf/CheckedPtr.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -34,10 +36,10 @@ class RenderText;
 class TextLayout;
 
 struct RenderTextInfo {
-    RenderText* text { nullptr };
+    CheckedPtr<RenderText> text;
     std::unique_ptr<TextLayout, TextLayoutDeleter> layout;
     CachedLineBreakIteratorFactory lineBreakIteratorFactory;
-    const FontCascade* font { nullptr };
+    CheckedPtr<const FontCascade> font;
 };
 
 class LineBreaker {
@@ -47,31 +49,15 @@ public:
     explicit LineBreaker(RenderBlockFlow& block)
         : m_block(block)
     {
-        reset();
     }
 
-    LegacyInlineIterator nextLineBreak(InlineBidiResolver&, LineInfo&, RenderTextInfo&, FloatingObject* lastFloatFromPreviousLine, unsigned consecutiveHyphenatedLines, WordMeasurements&);
-
-    bool lineWasHyphenated() { return m_hyphenated; }
-    const Vector<RenderBox*>& positionedObjects() { return m_positionedObjects; }
-    UsedClear usedClear() { return m_clear; }
+    LegacyInlineIterator nextLineBreak(InlineBidiResolver&, LineInfo&, RenderTextInfo&);
 
 private:
-    void reset();
-
     void skipTrailingWhitespace(LegacyInlineIterator&, const LineInfo&);
-    void skipLeadingWhitespace(InlineBidiResolver&, LineInfo&, FloatingObject* lastFloatFromPreviousLine, LineWidth&);
+    void skipLeadingWhitespace(InlineBidiResolver&, LineInfo&);
 
-    FloatingObject* insertFloatingObject(RenderBox& floatBox) { return m_block.insertFloatingObject(floatBox); }
-    bool positionNewFloatOnLine(const FloatingObject& newFloat, FloatingObject* lastFloatFromPreviousLine, LineInfo& lineInfo, LineWidth& width)
-    {
-        return m_block.legacyLineLayout()->positionNewFloatOnLine(newFloat, lastFloatFromPreviousLine, lineInfo, width);
-    }
-
-    RenderBlockFlow& m_block;
-    bool m_hyphenated;
-    UsedClear m_clear;
-    Vector<RenderBox*> m_positionedObjects;
+    CheckedRef<RenderBlockFlow> m_block;
 };
 
 } // namespace WebCore

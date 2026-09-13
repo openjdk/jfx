@@ -24,11 +24,13 @@
 #include "BuiltinNames.h"
 #include "JSArray.h"
 #include "JSCInlines.h"
-#include "JSImmutableButterfly.h"
+#include "JSCellButterfly.h"
 #include "ObjectConstructorInlines.h"
 #include "PropertyDescriptor.h"
 #include "PropertyNameArray.h"
 #include "Symbol.h"
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -107,10 +109,8 @@ void ObjectConstructor::finishCreation(VM& vm, JSGlobalObject* globalObject, Obj
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().definePropertyPrivateName(), objectConstructorDefineProperty, static_cast<unsigned>(PropertyAttribute::DontEnum), 3, ImplementationVisibility::Public);
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().createPrivateName(), objectConstructorCreate, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public);
     JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().valuesPrivateName(), objectConstructorValues, static_cast<unsigned>(PropertyAttribute::DontEnum), 1, ImplementationVisibility::Public);
-        JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->hasOwn, objectConstructorHasOwn, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public);
-        JSC_NATIVE_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().hasOwnPrivateName(), objectConstructorHasOwn, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public);
-
-    if (Options::useArrayGroupMethod())
+    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->hasOwn, objectConstructorHasOwn, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public, ObjectHasOwnIntrinsic);
+    JSC_NATIVE_INTRINSIC_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().hasOwnPrivateName(), objectConstructorHasOwn, static_cast<unsigned>(PropertyAttribute::DontEnum), 2, ImplementationVisibility::Public, ObjectHasOwnIntrinsic);
         JSC_BUILTIN_FUNCTION_WITHOUT_TRANSITION(vm.propertyNames->builtinNames().groupByPublicName(), objectConstructorGroupByCodeGenerator, static_cast<unsigned>(PropertyAttribute::DontEnum));
 }
 
@@ -200,7 +200,7 @@ JSValue objectConstructorGetOwnPropertyDescriptors(JSGlobalObject* globalObject,
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    PropertyNameArray properties(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
+    PropertyNameArrayBuilder properties(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
     object->methodTable()->getOwnPropertyNames(object, globalObject, properties, DontEnumPropertiesMode::Include);
     RETURN_IF_EXCEPTION(scope, { });
 
@@ -221,7 +221,6 @@ JSValue objectConstructorGetOwnPropertyDescriptors(JSGlobalObject* globalObject,
 
         PutPropertySlot slot(descriptors);
         descriptors->putOwnDataPropertyMayBeIndex(globalObject, propertyName, fromDescriptor, slot);
-        scope.assertNoExceptionExceptTermination();
         RETURN_IF_EXCEPTION(scope, { });
     }
 
@@ -282,7 +281,7 @@ void objectAssignGeneric(JSGlobalObject* globalObject, VM& vm, JSObject* target,
     // [[GetOwnPropertyNames]], [[Get]] etc. could modify target object and invalidate this assumption.
     // For example, [[Get]] of source object could configure setter to target object. So disable the fast path.
 
-    PropertyNameArray properties(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
+    PropertyNameArrayBuilder properties(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
     source->methodTable()->getOwnPropertyNames(source, globalObject, properties, DontEnumPropertiesMode::Include);
     RETURN_IF_EXCEPTION(scope, void());
 
@@ -300,7 +299,7 @@ void objectAssignGeneric(JSGlobalObject* globalObject, VM& vm, JSObject* target,
             continue;
 
         JSValue value;
-        if (LIKELY(!slot.isTaintedByOpaqueObject()))
+        if (!slot.isTaintedByOpaqueObject()) [[likely]]
             value = slot.getValue(globalObject, propertyName);
         else
             value = source->get(globalObject, propertyName);
@@ -325,7 +324,8 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorAssign, (JSGlobalObject* globalObject,
 
     // FIXME: Extend this for non JSFinalObject. For example, we would like to use this fast path for function objects too.
     // https://bugs.webkit.org/show_bug.cgi?id=185358
-    bool targetCanPerformFastPut = jsDynamicCast<JSFinalObject*>(target) && target->canPerformFastPutInlineExcludingProto() && target->isStructureExtensible();
+    JSFinalObject* targetObject = jsDynamicCast<JSFinalObject*>(target);
+    bool targetCanPerformFastPut = targetObject && targetObject->canPerformFastPutInlineExcludingProto() && targetObject->isStructureExtensible();
     unsigned argsCount = callFrame->argumentCount();
 
     // argsCount == 2 case does not need to use arguments' batching.
@@ -339,18 +339,21 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorAssign, (JSGlobalObject* globalObject,
                 break;
             }
             JSObject* source = asObject(sourceValue);
-            if (!source->staticPropertiesReified() || !source->structure()->canPerformFastPropertyEnumeration()) {
+            if (!source->staticPropertiesReified() || !source->structure()->canPerformFastPropertyEnumerationCommon() || source->canHaveExistingOwnIndexedProperties() || source == target) {
                 willBatch = false;
                 break;
             }
         }
         if (willBatch) {
-            Vector<RefPtr<UniquedStringImpl>, 16> properties;
-            MarkedArgumentBufferWithSize<16> values;
+            Vector<UniquedStringImpl*, 32> properties; // structures ensures the lifetimes of these strings.
+            MarkedArgumentBufferWithSize<32> values;
+            MarkedArgumentBuffer structures;
             for (unsigned i = 1; i < argsCount; ++i) {
                 JSValue sourceValue = callFrame->uncheckedArgument(i);
                 JSObject* source = asObject(sourceValue);
-                source->structure()->forEachProperty(vm, [&](const PropertyTableEntry& entry) -> bool {
+                auto sourceStructure = source->structure();
+                structures.append(sourceStructure);
+                sourceStructure->forEachProperty(vm, [&](const PropertyTableEntry& entry) -> bool {
                     if (entry.attributes() & PropertyAttribute::DontEnum)
                         return true;
 
@@ -366,13 +369,14 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorAssign, (JSGlobalObject* globalObject,
             }
 
             // Actually, assigning with empty object (option for example) is common. (`Object.assign(defaultOptions, passedOptions)` where `passedOptions` is empty object.)
-            if (properties.size())
-                target->putOwnDataPropertyBatching(vm, properties.data(), values.data(), properties.size());
+            if (!properties.isEmpty())
+                target->putOwnDataPropertyBatching(vm, properties.mutableSpan().data(), values.data(), properties.size());
+
             return JSValue::encode(target);
         }
     }
 
-    Vector<RefPtr<UniquedStringImpl>, 8> properties;
+    Vector<UniquedStringImpl*, 8> properties;
     MarkedArgumentBuffer values;
     for (unsigned i = 1; i < argsCount; ++i) {
         JSValue sourceValue = callFrame->uncheckedArgument(i);
@@ -387,7 +391,9 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorAssign, (JSGlobalObject* globalObject,
                 RETURN_IF_EXCEPTION(scope, { });
             }
 
-            if (objectAssignFast(vm, target, source, properties, values))
+            bool objectAssignFastSucceeded = objectAssignFast(globalObject, targetObject, source, properties, values);
+            RETURN_IF_EXCEPTION(scope, { });
+            if (objectAssignFastSucceeded)
                 continue;
             }
 
@@ -417,7 +423,12 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorEntries, (JSGlobalObject* globalObject
     {
         Vector<RefPtr<UniquedStringImpl>, 8> properties;
         MarkedArgumentBuffer values;
-        bool canUseFastPath = target->fastForEachPropertyWithSideEffectFreeFunctor(vm, [&](const PropertyTableEntry& entry) -> bool {
+        bool canUseFastPath = false;
+        if (!target->canHaveExistingOwnIndexedProperties() && !target->hasNonReifiedStaticProperties()) {
+            Structure* targetStructure = target->structure();
+            if (targetStructure->canPerformFastPropertyEnumerationCommon()) {
+                canUseFastPath = true;
+                targetStructure->forEachProperty(vm, [&](const PropertyTableEntry& entry) -> bool {
             if (entry.attributes() & PropertyAttribute::DontEnum)
                 return true;
 
@@ -429,18 +440,20 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorEntries, (JSGlobalObject* globalObject
 
             return true;
         });
+            }
+        }
 
         if (canUseFastPath) {
             Structure* arrayStructure = globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous);
             JSArray* entries = JSArray::tryCreate(vm, arrayStructure, properties.size());
-            if (UNLIKELY(!entries)) {
+            if (!entries) [[unlikely]] {
                 throwOutOfMemoryError(globalObject, scope);
                 return { };
             }
 
             Structure* targetStructure = target->structure();
-            JSImmutableButterfly* cachedButterfly = nullptr;
-            if (LIKELY(!globalObject->isHavingABadTime())) {
+            JSCellButterfly* cachedButterfly = nullptr;
+            if (!globalObject->isHavingABadTime()) [[likely]] {
                 auto* butterfly = targetStructure->cachedPropertyNames(CachedPropertyNamesKind::EnumerableStrings);
                 if (butterfly) {
                     ASSERT(butterfly->length() == properties.size());
@@ -453,7 +466,7 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorEntries, (JSGlobalObject* globalObject
                 auto* canSentinel = targetStructure->cachedPropertyNamesIgnoringSentinel(CachedPropertyNamesKind::EnumerableStrings);
                 if (canSentinel == StructureRareData::cachedPropertyNamesSentinel()) {
                     size_t numProperties = properties.size();
-                    auto* newButterfly = JSImmutableButterfly::create(vm, CopyOnWriteArrayWithContiguous, numProperties);
+                    auto* newButterfly = JSCellButterfly::create(vm, CopyOnWriteArrayWithContiguous, numProperties);
                     for (size_t i = 0; i < numProperties; i++) {
                         const auto& identifier = properties[i];
                         newButterfly->setIndex(vm, i, jsOwnedString(vm, identifier.get()));
@@ -479,12 +492,12 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorEntries, (JSGlobalObject* globalObject
                 JSArray* entry = nullptr;
                 {
                     ObjectInitializationScope initializationScope(vm);
-                    if (LIKELY(entry = JSArray::tryCreateUninitializedRestricted(initializationScope, nullptr, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous), 2))) {
+                    if ((entry = JSArray::tryCreateUninitializedRestricted(initializationScope, nullptr, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous), 2))) [[likely]] {
                         entry->initializeIndex(initializationScope, 0, key);
                         entry->initializeIndex(initializationScope, 1, values.at(i));
                     }
                 }
-                if (UNLIKELY(!entry)) {
+                if (!entry) [[unlikely]] {
                     throwOutOfMemoryError(globalObject, scope);
                     return { };
                 }
@@ -499,7 +512,7 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorEntries, (JSGlobalObject* globalObject
     JSArray* entries = constructEmptyArray(globalObject, nullptr);
     RETURN_IF_EXCEPTION(scope, { });
 
-    PropertyNameArray properties(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
+    PropertyNameArrayBuilder properties(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
     target->methodTable()->getOwnPropertyNames(target, globalObject, properties, DontEnumPropertiesMode::Include);
     RETURN_IF_EXCEPTION(scope, { });
 
@@ -514,7 +527,7 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorEntries, (JSGlobalObject* globalObject
             return;
 
         JSValue value;
-        if (LIKELY(!slot.isTaintedByOpaqueObject()))
+        if (!slot.isTaintedByOpaqueObject()) [[likely]]
             value = slot.getValue(globalObject, propertyName);
         else
             value = target->get(globalObject, propertyName);
@@ -524,12 +537,12 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorEntries, (JSGlobalObject* globalObject
         JSArray* entry = nullptr;
         {
             ObjectInitializationScope initializationScope(vm);
-            if (LIKELY(entry = JSArray::tryCreateUninitializedRestricted(initializationScope, nullptr, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous), 2))) {
+            if ((entry = JSArray::tryCreateUninitializedRestricted(initializationScope, nullptr, globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous), 2))) [[likely]] {
                 entry->initializeIndex(initializationScope, 0, key);
                 entry->initializeIndex(initializationScope, 1, value);
             }
         }
-        if (UNLIKELY(!entry)) {
+        if (!entry) [[unlikely]] {
             throwOutOfMemoryError(globalObject, scope);
             return;
         }
@@ -561,26 +574,44 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorValues, (JSGlobalObject* globalObject,
     }
 
     {
-        MarkedArgumentBuffer values;
-        bool canUseFastPath = target->fastForEachPropertyWithSideEffectFreeFunctor(vm, [&](const PropertyTableEntry& entry) -> bool {
+        MarkedArgumentBuffer namedPropertyValues;
+        bool canUseFastPath = false;
+        if (!target->canHaveExistingOwnIndexedGetterSetterProperties() && !target->hasNonReifiedStaticProperties()) {
+            Structure* targetStructure = target->structure();
+            if (targetStructure->canPerformFastPropertyEnumerationCommon()) {
+                canUseFastPath = true;
+                targetStructure->forEachProperty(vm, [&](const PropertyTableEntry& entry) -> bool {
             if (entry.attributes() & PropertyAttribute::DontEnum)
                 return true;
 
             if (entry.key()->isSymbol())
                 return true;
 
-            values.appendWithCrashOnOverflow(target->getDirect(entry.offset()));
+                    namedPropertyValues.appendWithCrashOnOverflow(target->getDirect(entry.offset()));
             return true;
         });
+            }
+        }
 
         if (canUseFastPath) {
             Structure* arrayStructure = globalObject->arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous);
+            MarkedArgumentBuffer indexedPropertyValues;
+            if (target->canHaveExistingOwnIndexedProperties()) {
+                target->forEachOwnIndexedProperty<JSObject::SortMode::Ascending>(globalObject, [&](unsigned, JSValue value) {
+                    indexedPropertyValues.appendWithCrashOnOverflow(value);
+                    return IterationStatus::Continue;
+                });
+            }
+            RETURN_IF_EXCEPTION(scope, { });
+
             {
                 ObjectInitializationScope initializationScope(vm);
                 JSArray* result = nullptr;
-                if (LIKELY(result = JSArray::tryCreateUninitializedRestricted(initializationScope, nullptr, arrayStructure, values.size()))) {
-                    for (unsigned i = 0; i < values.size(); ++i)
-                        result->initializeIndex(initializationScope, i, values.at(i));
+                if ((result = JSArray::tryCreateUninitializedRestricted(initializationScope, nullptr, arrayStructure, indexedPropertyValues.size() + namedPropertyValues.size()))) [[likely]] {
+                    for (unsigned i = 0; i < indexedPropertyValues.size(); ++i)
+                        result->initializeIndex(initializationScope, i, indexedPropertyValues.at(i));
+                    for (unsigned i = 0; i < namedPropertyValues.size(); ++i)
+                        result->initializeIndex(initializationScope, indexedPropertyValues.size() + i, namedPropertyValues.at(i));
                     return JSValue::encode(result);
                 }
             }
@@ -592,7 +623,7 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorValues, (JSGlobalObject* globalObject,
     JSArray* values = constructEmptyArray(globalObject, nullptr);
     RETURN_IF_EXCEPTION(scope, { });
 
-    PropertyNameArray properties(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
+    PropertyNameArrayBuilder properties(vm, PropertyNameMode::Strings, PrivateSymbolMode::Exclude);
     target->methodTable()->getOwnPropertyNames(target, globalObject, properties, DontEnumPropertiesMode::Include);
     RETURN_IF_EXCEPTION(scope, { });
 
@@ -607,7 +638,7 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorValues, (JSGlobalObject* globalObject,
             return;
 
         JSValue value;
-        if (LIKELY(!slot.isTaintedByOpaqueObject()))
+        if (!slot.isTaintedByOpaqueObject()) [[likely]]
             value = slot.getValue(globalObject, propertyName);
         else
             value = target->get(globalObject, propertyName);
@@ -625,39 +656,99 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorValues, (JSGlobalObject* globalObject,
 }
 
 // https://tc39.github.io/ecma262/#sec-topropertydescriptor
-bool toPropertyDescriptor(JSGlobalObject* globalObject, JSValue in, PropertyDescriptor& desc)
+inline bool toPropertyDescriptor(JSGlobalObject* globalObject, JSValue in, PropertyDescriptor& desc, bool& withoutSideEffect)
 {
     ASSERT(desc.isEmpty());
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(!in.isObject())) {
+    if (!in.isObject()) [[unlikely]] {
         throwTypeError(globalObject, scope, "Property description must be an object."_s);
         return false;
     }
     JSObject* description = asObject(in);
 
-    JSValue enumerable = description->getIfPropertyExists(globalObject, vm.propertyNames->enumerable);
+    JSValue enumerable;
+    JSValue configurable;
+    JSValue value;
+    JSValue writable;
+    JSValue get;
+    JSValue set;
+
+    if (globalObject->propertyDescriptorFastPathWatchpointSet().state() == ClearWatchpoint)
+        globalObject->tryInstallPropertyDescriptorFastPathWatchpoint();
+
+
+    bool canUseFastPath = false;
+    if (globalObject->propertyDescriptorFastPathWatchpointSet().isStillValid() && globalObject->objectPrototypeChainIsSane() && description->inherits<JSFinalObject>() && description->getPrototypeDirect() == globalObject->objectPrototype() && !description->hasNonReifiedStaticProperties()) {
+        Structure* descriptionStructure = description->structure();
+        if (descriptionStructure->canPerformFastPropertyEnumeration()) {
+            canUseFastPath = true;
+            descriptionStructure->forEachProperty(vm, [&](const PropertyTableEntry& entry) -> bool {
+                PropertyName propertyName(entry.key());
+                if (propertyName == vm.propertyNames->enumerable)
+                    enumerable = description->getDirect(entry.offset());
+                else if (propertyName == vm.propertyNames->configurable)
+                    configurable = description->getDirect(entry.offset());
+                else if (propertyName == vm.propertyNames->value)
+                    value = description->getDirect(entry.offset());
+                else if (propertyName == vm.propertyNames->writable)
+                    writable = description->getDirect(entry.offset());
+                else if (propertyName == vm.propertyNames->get)
+                    get = description->getDirect(entry.offset());
+                else if (propertyName == vm.propertyNames->set)
+                    set = description->getDirect(entry.offset());
+                return true;
+            });
+
+            if (enumerable)
+                desc.setEnumerable(enumerable.toBoolean(globalObject));
+            if (configurable)
+                desc.setConfigurable(configurable.toBoolean(globalObject));
+            if (value)
+                desc.setValue(value);
+            if (writable)
+                desc.setWritable(writable.toBoolean(globalObject));
+            if (get) {
+                if (!get.isUndefined() && !get.isCallable()) {
+                    throwTypeError(globalObject, scope, "Getter must be a function."_s);
+                    return false;
+                }
+                desc.setGetter(get);
+            }
+            if (set) {
+                if (!set.isUndefined() && !set.isCallable()) {
+                    throwTypeError(globalObject, scope, "Setter must be a function."_s);
+                    return false;
+                }
+                desc.setSetter(set);
+            }
+            withoutSideEffect = true;
+        }
+    }
+
+    if (!canUseFastPath) {
+        enumerable = description->getIfPropertyExists(globalObject, vm.propertyNames->enumerable);
         RETURN_IF_EXCEPTION(scope, false);
     if (enumerable)
         desc.setEnumerable(enumerable.toBoolean(globalObject));
 
-    JSValue configurable = description->getIfPropertyExists(globalObject, vm.propertyNames->configurable);
+        configurable = description->getIfPropertyExists(globalObject, vm.propertyNames->configurable);
         RETURN_IF_EXCEPTION(scope, false);
     if (configurable)
         desc.setConfigurable(configurable.toBoolean(globalObject));
 
-    JSValue value = description->getIfPropertyExists(globalObject, vm.propertyNames->value);
+        value = description->getIfPropertyExists(globalObject, vm.propertyNames->value);
         RETURN_IF_EXCEPTION(scope, false);
     if (value)
         desc.setValue(value);
 
-    JSValue writable = description->getIfPropertyExists(globalObject, vm.propertyNames->writable);
+        writable = description->getIfPropertyExists(globalObject, vm.propertyNames->writable);
         RETURN_IF_EXCEPTION(scope, false);
     if (writable)
         desc.setWritable(writable.toBoolean(globalObject));
 
-    JSValue get = description->getIfPropertyExists(globalObject, vm.propertyNames->get);
+        get = description->getIfPropertyExists(globalObject, vm.propertyNames->get);
         RETURN_IF_EXCEPTION(scope, false);
     if (get) {
         if (!get.isUndefined() && !get.isCallable()) {
@@ -667,7 +758,7 @@ bool toPropertyDescriptor(JSGlobalObject* globalObject, JSValue in, PropertyDesc
         desc.setGetter(get);
     }
 
-    JSValue set = description->getIfPropertyExists(globalObject, vm.propertyNames->set);
+        set = description->getIfPropertyExists(globalObject, vm.propertyNames->set);
         RETURN_IF_EXCEPTION(scope, false);
     if (set) {
         if (!set.isUndefined() && !set.isCallable()) {
@@ -675,6 +766,7 @@ bool toPropertyDescriptor(JSGlobalObject* globalObject, JSValue in, PropertyDesc
             return false;
         }
         desc.setSetter(set);
+    }
     }
 
     if (!desc.isAccessorDescriptor())
@@ -691,6 +783,12 @@ bool toPropertyDescriptor(JSGlobalObject* globalObject, JSValue in, PropertyDesc
     }
 
     return true;
+}
+
+bool toPropertyDescriptor(JSGlobalObject* globalObject, JSValue value, PropertyDescriptor& desc)
+{
+    bool withoutSideEffect = false;
+    return toPropertyDescriptor(globalObject, value, desc, withoutSideEffect);
 }
 
 JSC_DEFINE_HOST_FUNCTION(objectConstructorDefineProperty, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -714,19 +812,19 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorDefineProperty, (JSGlobalObject* globa
     RELEASE_AND_RETURN(scope, JSValue::encode(obj));
 }
 
-static JSValue defineProperties(JSGlobalObject* globalObject, JSObject* object, JSObject* properties)
+static JSValue definePropertiesSlow(JSGlobalObject* globalObject, JSObject* object, JSObject* properties)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    PropertyNameArray propertyNames(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
+    PropertyNameArrayBuilder propertyNames(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
     asObject(properties)->methodTable()->getOwnPropertyNames(asObject(properties), globalObject, propertyNames, DontEnumPropertiesMode::Exclude);
     RETURN_IF_EXCEPTION(scope, { });
     size_t numProperties = propertyNames.size();
     Vector<PropertyDescriptor> descriptors;
     MarkedArgumentBuffer markBuffer;
 #define RETURN_IF_EXCEPTION_CLEARING_OVERFLOW(value) do { \
-    if (scope.exception()) { \
+    if (scope.exception()) [[unlikely]] { \
         markBuffer.overflowCheckNotNeeded(); \
         return value; \
     } \
@@ -760,6 +858,129 @@ static JSValue defineProperties(JSGlobalObject* globalObject, JSObject* object, 
     return object;
 }
 
+static JSValue defineProperties(JSGlobalObject* globalObject, JSObject* object, JSObject* properties)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    Vector<RefPtr<UniquedStringImpl>, 8> propertyNames;
+    MarkedArgumentBuffer values;
+    bool canUseFastPath = false;
+    if (!hasIndexedProperties(properties->indexingType())) {
+        Structure* propertiesStructure = properties->structure();
+        if (!properties->hasNonReifiedStaticProperties() && propertiesStructure->canPerformFastPropertyEnumerationCommon()) {
+            bool hasSymbol = false;
+            canUseFastPath = true;
+            propertiesStructure->forEachProperty(vm, [&](const PropertyTableEntry& entry) -> bool {
+                if (entry.attributes() & PropertyAttribute::DontEnum)
+                    return true;
+
+                PropertyName propertyName(entry.key());
+                if (propertyName.isPrivateName())
+                    return true;
+
+                if (propertyName.isSymbol()) {
+                    hasSymbol = true;
+                    return true;
+                }
+
+                propertyNames.append(entry.key());
+                values.appendWithCrashOnOverflow(properties->getDirect(entry.offset()));
+
+                return true;
+            });
+
+            // https://tc39.es/ecma262/#sec-ordinaryownpropertykeys
+            // symbol should come last in the order
+            if (hasSymbol) {
+                propertiesStructure->forEachProperty(vm, [&](const PropertyTableEntry& entry) -> bool {
+                    if (entry.attributes() & PropertyAttribute::DontEnum)
+                        return true;
+
+                    PropertyName propertyName(entry.key());
+                    if (propertyName.isPrivateName() || !propertyName.isSymbol())
+                        return true;
+
+                    propertyNames.append(entry.key());
+                    values.appendWithCrashOnOverflow(properties->getDirect(entry.offset()));
+
+                    return true;
+                });
+            }
+        }
+    }
+    if (!canUseFastPath) [[unlikely]]
+        RELEASE_AND_RETURN(scope, definePropertiesSlow(globalObject, object, properties));
+
+    unsigned index = 0;
+    unsigned numProperties = propertyNames.size();
+    Vector<PropertyDescriptor, 16> descriptors;
+    MarkedArgumentBuffer markBuffer;
+
+    descriptors.reserveInitialCapacity(numProperties);
+
+#define RETURN_IF_EXCEPTION_CLEARING_OVERFLOW(value) do { \
+    if (scope.exception()) [[unlikely]] { \
+        markBuffer.overflowCheckNotNeeded(); \
+        return value; \
+    } \
+} while (false)
+
+    for (; index < numProperties; ++index) {
+        JSValue prop = values.at(index);
+        bool withoutSideEffect = false;
+        PropertyDescriptor descriptor;
+        toPropertyDescriptor(globalObject, prop, descriptor, withoutSideEffect);
+        RETURN_IF_EXCEPTION_CLEARING_OVERFLOW({ });
+        descriptors.append(descriptor);
+        // Ensure we mark all the values that we're accumulating
+        if (descriptor.isDataDescriptor() && descriptor.value())
+            markBuffer.append(descriptor.value());
+        if (descriptor.isAccessorDescriptor()) {
+            if (descriptor.getter())
+                markBuffer.append(descriptor.getter());
+            if (descriptor.setter())
+                markBuffer.append(descriptor.setter());
+        }
+        if (!withoutSideEffect) [[unlikely]] {
+            // Bail out to the slow code.
+            ++index;
+            break;
+        }
+    }
+
+    if (index < numProperties) [[unlikely]] {
+        for (; index < numProperties; ++index) {
+            JSValue prop = properties->get(globalObject, propertyNames[index].get());
+            RETURN_IF_EXCEPTION_CLEARING_OVERFLOW({ });
+            PropertyDescriptor descriptor;
+            toPropertyDescriptor(globalObject, prop, descriptor);
+            RETURN_IF_EXCEPTION_CLEARING_OVERFLOW({ });
+            descriptors.append(descriptor);
+            // Ensure we mark all the values that we're accumulating
+            if (descriptor.isDataDescriptor() && descriptor.value())
+                markBuffer.append(descriptor.value());
+            if (descriptor.isAccessorDescriptor()) {
+                if (descriptor.getter())
+                    markBuffer.append(descriptor.getter());
+                if (descriptor.setter())
+                    markBuffer.append(descriptor.setter());
+            }
+        }
+    }
+
+    RELEASE_ASSERT(!markBuffer.hasOverflowed());
+#undef RETURN_IF_EXCEPTION_CLEARING_OVERFLOW
+
+    for (unsigned index = 0; index < numProperties; index++) {
+        PropertyName propertyName(propertyNames[index].get());
+        ASSERT(!propertyName.isPrivateName());
+        object->methodTable()->defineOwnProperty(object, globalObject, propertyName, descriptors[index], true);
+        RETURN_IF_EXCEPTION(scope, { });
+    }
+    return object;
+}
+
 JSC_DEFINE_HOST_FUNCTION(objectConstructorDefineProperties, (JSGlobalObject* globalObject, CallFrame* callFrame))
 {
     VM& vm = globalObject->vm();
@@ -770,7 +991,7 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorDefineProperties, (JSGlobalObject* glo
     JSObject* targetObj = asObject(callFrame->argument(0));
     JSObject* props = callFrame->argument(1).toObject(globalObject);
     EXCEPTION_ASSERT(!!scope.exception() == !props);
-    if (UNLIKELY(!props))
+    if (!props) [[unlikely]]
         return encodedJSValue();
     RELEASE_AND_RETURN(scope, JSValue::encode(defineProperties(globalObject, targetObj, props)));
 }
@@ -807,15 +1028,15 @@ bool setIntegrityLevel(JSGlobalObject* globalObject, VM& vm, JSObject* object)
 
     bool success = object->methodTable()->preventExtensions(object, globalObject);
     RETURN_IF_EXCEPTION(scope, false);
-    if (UNLIKELY(!success))
+    if (!success) [[unlikely]]
         return false;
 
-    PropertyNameArray properties(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
+    PropertyNameArrayBuilder properties(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
     object->methodTable()->getOwnPropertyNames(object, globalObject, properties, DontEnumPropertiesMode::Include);
     RETURN_IF_EXCEPTION(scope, false);
 
-    PropertyNameArray::const_iterator end = properties.end();
-    for (PropertyNameArray::const_iterator iter = properties.begin(); iter != end; ++iter) {
+    PropertyNameArrayBuilder::const_iterator end = properties.end();
+    for (PropertyNameArrayBuilder::const_iterator iter = properties.begin(); iter != end; ++iter) {
         auto& propertyName = *iter;
         ASSERT(!propertyName.isPrivateName());
 
@@ -858,13 +1079,13 @@ bool testIntegrityLevel(JSGlobalObject* globalObject, VM& vm, JSObject* object)
         return false;
 
     // 6. Let keys be ? O.[[OwnPropertyKeys]]().
-    PropertyNameArray keys(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
+    PropertyNameArrayBuilder keys(vm, PropertyNameMode::StringsAndSymbols, PrivateSymbolMode::Exclude);
     object->methodTable()->getOwnPropertyNames(object, globalObject, keys, DontEnumPropertiesMode::Include);
     RETURN_IF_EXCEPTION(scope, { });
 
     // 7. For each element k of keys, do
-    PropertyNameArray::const_iterator end = keys.end();
-    for (PropertyNameArray::const_iterator iter = keys.begin(); iter != end; ++iter) {
+    PropertyNameArrayBuilder::const_iterator end = keys.end();
+    for (PropertyNameArrayBuilder::const_iterator iter = keys.begin(); iter != end; ++iter) {
         auto& propertyName = *iter;
         ASSERT(!propertyName.isPrivateName());
 
@@ -902,7 +1123,7 @@ JSObject* objectConstructorSeal(JSGlobalObject* globalObject, JSObject* object)
 
     bool success = setIntegrityLevel<IntegrityLevel::Sealed>(globalObject, vm, object);
     RETURN_IF_EXCEPTION(scope, nullptr);
-    if (UNLIKELY(!success)) {
+    if (!success) [[unlikely]] {
         throwTypeError(globalObject, scope, "Unable to prevent extension in Object.seal"_s);
         return nullptr;
     }
@@ -935,7 +1156,7 @@ JSObject* objectConstructorFreeze(JSGlobalObject* globalObject, JSObject* object
 
     bool success = setIntegrityLevel<IntegrityLevel::Frozen>(globalObject, vm, object);
     RETURN_IF_EXCEPTION(scope, nullptr);
-    if (UNLIKELY(!success)) {
+    if (!success) [[unlikely]] {
         throwTypeError(globalObject, scope, "Unable to prevent extension in Object.freeze"_s);
         return nullptr;
     }
@@ -966,7 +1187,7 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorPreventExtensions, (JSGlobalObject* gl
     JSObject* object = asObject(argument);
     bool status = object->methodTable()->preventExtensions(object, globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    if (UNLIKELY(!status))
+    if (!status) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "Unable to prevent extension in Object.preventExtensions"_s);
     return JSValue::encode(object);
 }
@@ -1054,19 +1275,20 @@ JSArray* ownPropertyKeys(JSGlobalObject* globalObject, JSObject* object, Propert
     }
 
     // We attempt to look up own property keys cache in Object.keys / Object.getOwnPropertyNames cases.
-        if (LIKELY(!globalObject->isHavingABadTime())) {
+    if (!globalObject->isHavingABadTime()) [[likely]] {
         if (auto* immutableButterfly = object->structure()->cachedPropertyNames(kind)) {
                 Structure* arrayStructure = globalObject->originalArrayStructureForIndexingType(immutableButterfly->indexingMode());
                 return JSArray::createWithButterfly(vm, nullptr, arrayStructure, immutableButterfly->toButterfly());
             }
         }
 
-    PropertyNameArray properties(vm, propertyNameMode, PrivateSymbolMode::Exclude);
+    PropertyNameArrayBuilder properties(vm, propertyNameMode, PrivateSymbolMode::Exclude);
     object->methodTable()->getOwnPropertyNames(object, globalObject, properties, dontEnumPropertiesMode);
     RETURN_IF_EXCEPTION(scope, nullptr);
 
                             size_t numProperties = properties.size();
-    if (LIKELY(numProperties < MIN_SPARSE_ARRAY_INDEX) && !globalObject->isHavingABadTime()) {
+    if (numProperties < MIN_SPARSE_ARRAY_INDEX)  [[likely]] {
+        if (!globalObject->isHavingABadTime()) {
         auto copyPropertiesToBuffer = [&](WriteBarrier<Unknown>* buffer, JSCell* owner) {
                             for (size_t i = 0; i < numProperties; i++) {
                                 const auto& identifier = properties[i];
@@ -1082,7 +1304,11 @@ JSArray* ownPropertyKeys(JSGlobalObject* globalObject, JSObject* object, Propert
         if (structure->canCacheOwnPropertyNames()) {
             auto* cachedButterfly = structure->cachedPropertyNamesIgnoringSentinel(kind);
             if (cachedButterfly == StructureRareData::cachedPropertyNamesSentinel()) {
-                auto* newButterfly = JSImmutableButterfly::create(vm, CopyOnWriteArrayWithContiguous, numProperties);
+                    auto* newButterfly = JSCellButterfly::tryCreate(vm, CopyOnWriteArrayWithContiguous, numProperties);
+                    if (!newButterfly) [[unlikely]] {
+                    throwOutOfMemoryError(globalObject, scope);
+                    return { };
+                }
                 copyPropertiesToBuffer(newButterfly->toButterfly()->contiguous().data(), newButterfly);
 
                 structure->setCachedPropertyNames(vm, kind, newButterfly);
@@ -1094,12 +1320,15 @@ JSArray* ownPropertyKeys(JSGlobalObject* globalObject, JSObject* object, Propert
                 structure->setCachedPropertyNames(vm, kind, StructureRareData::cachedPropertyNamesSentinel());
                 }
 
-                // FIXME: We should probably be calling tryCreate here:
-                // https://bugs.webkit.org/show_bug.cgi?id=221984
-                JSArray* keys = JSArray::create(vm, globalObject->originalArrayStructureForIndexingType(ArrayWithContiguous), numProperties);
+        JSArray* keys = JSArray::tryCreate(vm, globalObject->originalArrayStructureForIndexingType(ArrayWithContiguous), numProperties);
+            if (!keys) [[unlikely]] {
+            throwOutOfMemoryError(globalObject, scope);
+            return { };
+        }
         copyPropertiesToBuffer(keys->butterfly()->contiguous().data(), keys);
 
                 return keys;
+        }
             }
 
     JSArray* keys = constructEmptyArray(globalObject, nullptr);
@@ -1183,3 +1412,5 @@ JSC_DEFINE_HOST_FUNCTION(objectConstructorHasOwn, (JSGlobalObject* globalObject,
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

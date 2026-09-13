@@ -28,18 +28,16 @@
 
 #include <functional>
 #include <sqlite3.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Expected.h>
 #include <wtf/Lock.h>
 #include <wtf/OptionSet.h>
+#include <wtf/Platform.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Threading.h>
 #include <wtf/UniqueRef.h>
-#include <wtf/WeakPtr.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/WTFString.h>
-
-#if COMPILER(MSVC)
-#pragma warning(disable: 4800)
-#endif
 
 struct sqlite3;
 
@@ -49,9 +47,11 @@ class DatabaseAuthorizer;
 class SQLiteStatement;
 class SQLiteTransaction;
 
-class SQLiteDatabase : public CanMakeWeakPtr<SQLiteDatabase> {
-    WTF_MAKE_FAST_ALLOCATED;
+class SQLiteDatabase final : public CanMakeThreadSafeCheckedPtr<SQLiteDatabase> {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(SQLiteDatabase, WEBCORE_EXPORT);
     WTF_MAKE_NONCOPYABLE(SQLiteDatabase);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SQLiteDatabase);
+
     friend class SQLiteTransaction;
 public:
     WEBCORE_EXPORT SQLiteDatabase();
@@ -74,6 +74,7 @@ public:
     WEBCORE_EXPORT bool executeCommand(ASCIILiteral);
 
     WEBCORE_EXPORT bool tableExists(StringView);
+    WEBCORE_EXPORT bool indexExists(StringView);
     WEBCORE_EXPORT String tableSQL(StringView);
     WEBCORE_EXPORT String indexSQL(StringView);
     WEBCORE_EXPORT void clearAllTables();
@@ -82,10 +83,8 @@ public:
 
     bool transactionInProgress() const { return m_transactionInProgress; }
 
-    WEBCORE_EXPORT Expected<SQLiteStatement, int> prepareStatementSlow(StringView query);
-    WEBCORE_EXPORT Expected<SQLiteStatement, int> prepareStatement(ASCIILiteral query);
-    WEBCORE_EXPORT Expected<UniqueRef<SQLiteStatement>, int> prepareHeapStatementSlow(StringView query);
-    WEBCORE_EXPORT Expected<UniqueRef<SQLiteStatement>, int> prepareHeapStatement(ASCIILiteral query);
+    WEBCORE_EXPORT std::unique_ptr<SQLiteStatement> prepareStatementSlow(StringView query);
+    WEBCORE_EXPORT std::unique_ptr<SQLiteStatement> prepareStatement(ASCIILiteral query);
 
     // Aborts the current database operation. This is thread safe.
     WEBCORE_EXPORT void interrupt();
@@ -132,7 +131,7 @@ public:
     sqlite3* sqlite3Handle() const
     {
 #if !PLATFORM(IOS_FAMILY)
-        ASSERT(m_sharable || m_openingThread == &Thread::current() || !m_db);
+        ASSERT(m_sharable || m_openingThread == &Thread::currentSingleton() || !m_db);
 #endif
         return m_db;
     }
@@ -165,8 +164,6 @@ public:
 #endif
 
     WEBCORE_EXPORT static void useFastMalloc();
-
-    WEBCORE_EXPORT static void setIsDatabaseOpeningForbidden(bool);
 
     WEBCORE_EXPORT void releaseMemory();
 

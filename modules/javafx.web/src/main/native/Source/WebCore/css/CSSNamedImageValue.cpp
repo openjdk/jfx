@@ -27,20 +27,21 @@
 #include "CSSNamedImageValue.h"
 
 #include "StyleNamedImage.h"
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
 CSSNamedImageValue::CSSNamedImageValue(String&& name)
-    : CSSValue { NamedImageClass }
-    , m_name { WTFMove(name) }
+    : CSSValue { ClassType::NamedImage }
+    , m_name { WTF::move(name) }
 {
 }
 
 CSSNamedImageValue::~CSSNamedImageValue() = default;
 
-String CSSNamedImageValue::customCSSText() const
+String CSSNamedImageValue::customCSSText(const CSS::SerializationContext&) const
 {
-    return makeString("-webkit-named-image(", m_name, ')');
+    return makeString("-webkit-named-image("_s, m_name, ')');
 }
 
 bool CSSNamedImageValue::equals(const CSSNamedImageValue& other) const
@@ -48,7 +49,7 @@ bool CSSNamedImageValue::equals(const CSSNamedImageValue& other) const
     return m_name == other.m_name;
 }
 
-RefPtr<StyleImage> CSSNamedImageValue::createStyleImage(Style::BuilderState&) const
+RefPtr<StyleImage> CSSNamedImageValue::createStyleImage(const Style::BuilderState&) const
 {
     if (m_cachedStyleImage)
         return m_cachedStyleImage;

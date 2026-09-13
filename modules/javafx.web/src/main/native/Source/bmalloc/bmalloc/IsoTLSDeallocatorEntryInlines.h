@@ -25,7 +25,14 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
+#if !BUSE(TZONE)
 #if !BUSE(LIBPAS)
+
+#include "IsoTLSDeallocatorEntry.h"
 
 namespace bmalloc {
 
@@ -35,9 +42,7 @@ IsoTLSDeallocatorEntry<Config>::IsoTLSDeallocatorEntry(const LockHolder&)
 }
 
 template<typename Config>
-IsoTLSDeallocatorEntry<Config>::~IsoTLSDeallocatorEntry()
-{
-}
+IsoTLSDeallocatorEntry<Config>::~IsoTLSDeallocatorEntry() = default;
 
 template<typename Config>
 void IsoTLSDeallocatorEntry<Config>::construct(void* entry)
@@ -54,3 +59,6 @@ void IsoTLSDeallocatorEntry<Config>::scavenge(void* entry)
 } // namespace bmalloc
 
 #endif
+#endif // !BUSE(TZONE)
+
+#endif // __cplusplus

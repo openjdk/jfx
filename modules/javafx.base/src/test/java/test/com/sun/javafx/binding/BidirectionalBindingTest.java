@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,21 +25,36 @@
 
 package test.com.sun.javafx.binding;
 
-import com.sun.javafx.binding.BidirectionalBinding;
-import javafx.beans.binding.Bindings;
-import javafx.beans.property.*;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Arrays;
 import java.util.Collection;
+import javafx.beans.binding.Bindings;
+import javafx.beans.property.Property;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.beans.property.ReadOnlyDoubleWrapper;
+import javafx.beans.property.ReadOnlyFloatWrapper;
+import javafx.beans.property.ReadOnlyIntegerWrapper;
+import javafx.beans.property.ReadOnlyLongWrapper;
+import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.ReadOnlyStringWrapper;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleDoubleProperty;
+import javafx.beans.property.SimpleFloatProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.property.SimpleLongProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ObservableValue;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import com.sun.javafx.binding.BidirectionalBinding;
+import test.javafx.util.OutputRedirect;
 
-import static org.junit.Assert.*;
-
-@RunWith(Parameterized.class)
 public class BidirectionalBindingTest<T> {
 
     @FunctionalInterface
@@ -70,12 +85,18 @@ public class BidirectionalBindingTest<T> {
     private Property<T> op4;
     private T[] v;
 
-    public BidirectionalBindingTest(Factory<T> factory) {
-        this.factory = factory;
+    @BeforeEach
+    public void beforeEach() {
+        OutputRedirect.suppressStderr();
     }
 
-    @Before
-    public void setUp() {
+    @AfterEach
+    public void afterEach() {
+        OutputRedirect.checkAndRestoreStderr();
+    }
+
+    private void setUp(Factory<T> factory) {
+        this.factory = factory;
         op1 = factory.createProperty();
         op2 = factory.createProperty();
         op3 = factory.createProperty();
@@ -85,8 +106,10 @@ public class BidirectionalBindingTest<T> {
         op2.setValue(v[1]);
     }
 
-    @Test
-    public void testBind() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testBind(Factory<T> factory) {
+        setUp(factory);
         Bindings.bindBidirectional(op1, op2);
         Bindings.bindBidirectional(op1, op2);
         System.gc(); // making sure we did not not overdo weak references
@@ -102,8 +125,10 @@ public class BidirectionalBindingTest<T> {
         assertEquals(v[3], op2.getValue());
     }
 
-    @Test
-    public void testUnbind() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testUnbind(Factory<T> factory) {
+        setUp(factory);
         // unbind non-existing binding => no-op
         Bindings.unbindBidirectional(op1, op2);
 
@@ -127,8 +152,10 @@ public class BidirectionalBindingTest<T> {
         assertEquals(v[3], op2.getValue());
     }
 
-    @Test
-    public void testChaining() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testChaining(Factory<T> factory) {
+        setUp(factory);
         op3.setValue(v[2]);
         Bindings.bindBidirectional(op1, op2);
         Bindings.bindBidirectional(op2, op3);
@@ -179,8 +206,10 @@ public class BidirectionalBindingTest<T> {
         return ExpressionHelperUtility.getInvalidationListeners(v).size();
     }
 
-    @Test
-    public void testWeakReferencing() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testWeakReferencing(Factory<T> factory) {
+        setUp(factory);
         Bindings.bindBidirectional(op1, op2);
 
         assertEquals(1, getListenerCount(op1));
@@ -201,16 +230,20 @@ public class BidirectionalBindingTest<T> {
         assertEquals(0, getListenerCount(op2));
     }
 
-    @Test
-    public void testHashCode() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testHashCode(Factory<T> factory) {
+        setUp(factory);
         final int hc1 = BidirectionalBinding.bind(op1, op2).hashCode();
         final int hc2 = BidirectionalBinding.bind(op2, op1).hashCode();
         assertEquals(hc1, hc2);
     }
 
     @SuppressWarnings("unlikely-arg-type")
-    @Test
-    public void testEquals() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testEquals(Factory<T> factory) {
+        setUp(factory);
         final BidirectionalBinding golden = BidirectionalBinding.bind(op1, op2);
 
         assertTrue(golden.equals(golden));
@@ -224,8 +257,10 @@ public class BidirectionalBindingTest<T> {
         assertFalse(golden.equals(BidirectionalBinding.bind(op2, op3)));
     }
 
-    @Test
-    public void testEqualsWithGCedProperty() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testEqualsWithGCedProperty(Factory<T> factory) {
+        setUp(factory);
         final BidirectionalBinding binding1 = BidirectionalBinding.bind(op1, op2);
         final BidirectionalBinding binding2 = BidirectionalBinding.bind(op1, op2);
         final BidirectionalBinding binding3 = BidirectionalBinding.bind(op2, op1);
@@ -242,38 +277,52 @@ public class BidirectionalBindingTest<T> {
         assertFalse(binding3.equals(binding4));
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testBind_Null_X() {
-        Bindings.bindBidirectional(null, op2);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testBind_Null_X(Factory<T> factory) {
+        setUp(factory);
+        assertThrows(NullPointerException.class, () -> Bindings.bindBidirectional(null, op2));
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testBind_X_Null() {
-        Bindings.bindBidirectional(op1, null);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testBind_X_Null(Factory<T> factory) {
+        setUp(factory);
+        assertThrows(NullPointerException.class, () -> Bindings.bindBidirectional(op1, null));
     }
 
-    @Test(expected=IllegalArgumentException.class)
-    public void testBind_X_Self() {
-        Bindings.bindBidirectional(op1, op1);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testBind_X_Self(Factory<T> factory) {
+        setUp(factory);
+        assertThrows(IllegalArgumentException.class, () -> Bindings.bindBidirectional(op1, op1));
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testUnbind_Null_X() {
-        Bindings.unbindBidirectional(null, op2);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testUnbind_Null_X(Factory<T> factory) {
+        setUp(factory);
+        assertThrows(NullPointerException.class, () -> Bindings.unbindBidirectional(null, op2));
     }
 
-    @Test(expected=NullPointerException.class)
-    public void testUnbind_X_Null() {
-        Bindings.unbindBidirectional(op1, null);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testUnbind_X_Null(Factory<T> factory) {
+        setUp(factory);
+        assertThrows(NullPointerException.class, () -> Bindings.unbindBidirectional(op1, null));
     }
 
-    @Test(expected=IllegalArgumentException.class)
-    public void testUnbind_X_Self() {
-        Bindings.unbindBidirectional(op1, op1);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testUnbind_X_Self(Factory<T> factory) {
+        setUp(factory);
+        assertThrows(IllegalArgumentException.class, () -> Bindings.unbindBidirectional(op1, op1));
     }
 
-    @Test
-    public void testBrokenBind() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testBrokenBind(Factory<T> factory) {
+        setUp(factory);
         Bindings.bindBidirectional(op1, op2);
         op1.bind(op3);
         assertEquals(op3.getValue(), op1.getValue());
@@ -282,10 +331,14 @@ public class BidirectionalBindingTest<T> {
         op2.setValue(v[2]);
         assertEquals(op3.getValue(), op1.getValue());
         assertEquals(op2.getValue(), op1.getValue());
+
+        OutputRedirect.checkAndRestoreStderr(RuntimeException.class);
     }
 
-    @Test
-    public void testDoubleBrokenBind() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testDoubleBrokenBind(Factory<T> factory) {
+        setUp(factory);
         Bindings.bindBidirectional(op1, op2);
         op1.bind(op3);
         op4.setValue(v[0]);
@@ -300,10 +353,14 @@ public class BidirectionalBindingTest<T> {
         assertEquals(op3.getValue(), op1.getValue());
         assertEquals(v[0], op1.getValue());
         assertEquals(v[1], op2.getValue());
+
+        OutputRedirect.checkAndRestoreStderr(RuntimeException.class);
     }
 
-    @Test
-    public void testSetValueWithoutIntermediateValidation() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSetValueWithoutIntermediateValidation(Factory<T> factory) {
+        setUp(factory);
         BidirectionalBinding.bind(op1, op2);
         op1.setValue(v[0]);
         op2.setValue(v[1]);
@@ -311,7 +368,6 @@ public class BidirectionalBindingTest<T> {
         assertEquals(v[1], op2.getValue());
     }
 
-    @Parameterized.Parameters
     public static Collection<Object[]> parameters() {
         final Boolean[] booleanData = new Boolean[] {true, false, true, false};
         final Double[] doubleData = new Double[] {2348.2345, -92.214, -214.0214, -908.214};

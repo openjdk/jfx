@@ -40,8 +40,9 @@ Vector<ServerTiming> parseServerTiming(const String& headerValue)
     auto entries = Vector<ServerTiming>();
     if (headerValue.isNull())
         return entries;
-
+#if !PLATFORM(JAVA)
     ASSERT(headerValue.is8Bit());
+#endif
 
     HeaderFieldTokenizer tokenizer(headerValue);
     while (!tokenizer.isConsumed()) {
@@ -49,7 +50,7 @@ Vector<ServerTiming> parseServerTiming(const String& headerValue)
         if (name.isNull())
             break;
 
-        ServerTiming entry(WTFMove(name));
+        ServerTiming entry(WTF::move(name));
 
         while (tokenizer.consume(';')) {
             String parameterName = tokenizer.consumeToken();
@@ -64,7 +65,7 @@ Vector<ServerTiming> parseServerTiming(const String& headerValue)
             entry.setParameter(parameterName, value);
         }
 
-        entries.append(WTFMove(entry));
+        entries.append(WTF::move(entry));
 
         if (!tokenizer.consume(','))
             break;

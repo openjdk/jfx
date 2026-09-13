@@ -22,14 +22,16 @@
 #include "config.h"
 #include "CSSPageRule.h"
 
-#include "CSSParser.h"
-#include "CSSSelector.h"
+#include "CSSPageDescriptors.h"
+#include "CSSSelectorParser.h"
+#include "CSSSerializationContext.h"
 #include "CSSStyleSheet.h"
 #include "CommonAtomStrings.h"
 #include "Document.h"
-#include "PropertySetCSSStyleDeclaration.h"
 #include "StyleProperties.h"
 #include "StyleRule.h"
+#include "StyleSheetContents.h"
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -45,41 +47,40 @@ CSSPageRule::~CSSPageRule()
         m_propertiesCSSOMWrapper->clearParentRule();
 }
 
-CSSStyleDeclaration& CSSPageRule::style()
+CSSPageDescriptors& CSSPageRule::style()
 {
     if (!m_propertiesCSSOMWrapper)
-        m_propertiesCSSOMWrapper = StyleRuleCSSStyleDeclaration::create(m_pageRule->mutableProperties(), *this);
+        m_propertiesCSSOMWrapper = CSSPageDescriptors::create(m_pageRule->mutableProperties(), *this);
     return *m_propertiesCSSOMWrapper;
 }
 
 String CSSPageRule::selectorText() const
 {
-    if (auto* selector = m_pageRule->selector()) {
-        String pageSpecification = selector->selectorText();
-        if (!pageSpecification.isEmpty() && pageSpecification != starAtom())
-            return makeString("@page ", pageSpecification);
-    }
-    return "@page"_s;
+    if (auto& selector = m_pageRule->selector(); !selector.selectorText().isEmpty())
+        return selector.selectorText();
+    return emptyString();
 }
 
 void CSSPageRule::setSelectorText(const String& selectorText)
 {
-    CSSParser parser(parserContext());
-    auto* sheet = parentStyleSheet();
-    auto selectorList = parser.parseSelector(selectorText, sheet ? &sheet->contents() : nullptr);
+    RefPtr sheet = parentStyleSheet();
+    RefPtr sheetContents = sheet ? &sheet->contents() : nullptr;
+    auto selectorList = CSSSelectorParser::parseSelectorList(selectorText, parserContext(), sheetContents.get());
     if (!selectorList)
         return;
 
     CSSStyleSheet::RuleMutationScope mutationScope(this);
 
-    m_pageRule->wrapperAdoptSelectorList(WTFMove(*selectorList));
+    m_pageRule->wrapperAdoptSelectorList(WTF::move(*selectorList));
 }
 
 String CSSPageRule::cssText() const
 {
-    if (auto declarations = m_pageRule->properties().asText(); !declarations.isEmpty())
-        return makeString(selectorText(), " { ", declarations, " }");
-    return makeString(selectorText(), " { }");
+    auto selector = selectorText();
+    auto optionalSpace = selector.isEmpty() ? ""_s : " "_s;
+    if (auto declarations = m_pageRule->properties().asText(CSS::defaultSerializationContext()); !declarations.isEmpty())
+        return makeString("@page"_s, optionalSpace, selector, " { "_s, declarations, " }"_s);
+    return makeString("@page"_s, optionalSpace, selector, " { }"_s);
 }
 
 void CSSPageRule::reattach(StyleRuleBase& rule)

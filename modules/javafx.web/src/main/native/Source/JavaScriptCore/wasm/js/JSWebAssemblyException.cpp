@@ -26,6 +26,9 @@
 
 #include "config.h"
 #include "JSWebAssemblyException.h"
+#include "WasmExceptionType.h"
+#include "WasmOps.h"
+#include "WasmTypeDefinition.h"
 
 #if ENABLE(WEBASSEMBLY)
 
@@ -40,11 +43,23 @@ namespace JSC {
 
 const ClassInfo JSWebAssemblyException::s_info = { "WebAssembly.Exception"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWebAssemblyException) };
 
-JSWebAssemblyException::JSWebAssemblyException(VM& vm, Structure* structure, const Wasm::Tag& tag, FixedVector<uint64_t>&& payload)
-    : Base(vm, structure)
-    , m_tag(Ref { tag })
-    , m_payload(WTFMove(payload))
+Structure* JSWebAssemblyException::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
 {
+    return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
+}
+
+JSWebAssemblyException::JSWebAssemblyException(VM& vm, Structure* structure, Ref<const Wasm::Tag>&& tag, FixedVector<uint64_t>&& payload)
+    : Base(vm, structure)
+    , m_tag(WTF::move(tag))
+    , m_payload(WTF::move(payload))
+{
+}
+
+void JSWebAssemblyException::finishCreation(VM& vm)
+{
+    Base::finishCreation(vm);
+    ASSERT(inherits(info()));
+    vm.heap.reportExtraMemoryAllocated(this, payload().byteSize());
 }
 
 template<typename Visitor>
@@ -53,11 +68,14 @@ void JSWebAssemblyException::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     Base::visitChildren(cell, visitor);
 
     auto* exception = jsCast<JSWebAssemblyException*>(cell);
-    const auto& tagType = exception->tag().type();
+    SUPPRESS_UNCOUNTED_LOCAL const auto& tagType = exception->tag().type();
+    unsigned offset = 0;
     for (unsigned i = 0; i < tagType.argumentCount(); ++i) {
         if (isRefType(tagType.argumentType(i)))
-            visitor.append(bitwise_cast<WriteBarrier<Unknown>>(exception->payload()[i]));
+            visitor.append(std::bit_cast<WriteBarrier<Unknown>>(exception->payload()[offset]));
+        offset += tagType.argumentType(i).kind == Wasm::TypeKind::V128 ? 2 : 1;
     }
+    visitor.reportExtraMemoryVisited(exception->payload().size());
 }
 
 DEFINE_VISIT_CHILDREN(JSWebAssemblyException);
@@ -69,8 +87,22 @@ void JSWebAssemblyException::destroy(JSCell* cell)
 
 JSValue JSWebAssemblyException::getArg(JSGlobalObject* globalObject, unsigned i) const
 {
-    ASSERT(i < tag().type().argumentCount());
-    return toJSValue(globalObject, tag().type().argumentType(i), payload()[i]);
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    SUPPRESS_UNCOUNTED_LOCAL const auto& tagType = tag().type();
+    ASSERT(i < tagType.argumentCount());
+
+    auto argTypeKind = tagType.argumentType(i).kind;
+    if (argTypeKind == Wasm::TypeKind::V128 || argTypeKind == Wasm::TypeKind::Exnref) {
+        throwTypeError(globalObject, scope, "argument type cannot be a V128 or exnref");
+        return { };
+    }
+
+    unsigned offset = 0;
+    for (unsigned j = 0; j < i; ++j)
+        offset += tagType.argumentType(j).kind == Wasm::TypeKind::V128 ? 2 : 1;
+    RELEASE_AND_RETURN(scope, toJSValue(globalObject, tagType.argumentType(i), payload()[offset]));
 }
 
 } // namespace JSC

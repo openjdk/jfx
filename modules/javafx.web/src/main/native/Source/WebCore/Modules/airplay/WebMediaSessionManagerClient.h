@@ -27,10 +27,10 @@
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
 
-#include "MediaPlaybackTarget.h"
-#include "MediaProducer.h"
-#include "PlatformView.h"
-#include "PlaybackTargetClientContextIdentifier.h"
+#include <WebCore/CocoaView.h>
+#include <WebCore/MediaPlaybackTarget.h>
+#include <WebCore/MediaProducer.h>
+#include <WebCore/PlaybackTargetClientContextIdentifier.h>
 #include <wtf/Ref.h>
 #include <wtf/RetainPtr.h>
 
@@ -45,7 +45,7 @@ public:
     virtual void setShouldPlayToPlaybackTarget(PlaybackTargetClientContextIdentifier, bool) = 0;
     virtual void playbackTargetPickerWasDismissed(PlaybackTargetClientContextIdentifier) = 0;
     virtual bool alwaysOnLoggingAllowed() const { return false; }
-    virtual RetainPtr<PlatformView> platformView() const = 0;
+    virtual RetainPtr<CocoaView> platformView() const = 0;
 };
 
 } // namespace WebCore

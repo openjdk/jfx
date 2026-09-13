@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2002, 2003 The Karbon Developers
  * Copyright (C) 2006, 2007 Rob Buis <buis@kde.org>
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2024 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,10 +21,10 @@
 
 #pragma once
 
-#include "ParsingUtilities.h"
 #include <wtf/Forward.h>
+#include <wtf/text/ParsingUtilities.h>
 
-typedef std::pair<UChar32, UChar32> UnicodeRange;
+typedef std::pair<char32_t, char32_t> UnicodeRange;
 typedef Vector<UnicodeRange> UnicodeRanges;
 
 namespace WebCore {
@@ -37,52 +37,44 @@ enum class SuffixSkippingPolicy {
     Skip
 };
 
-std::optional<float> parseNumber(StringParsingBuffer<LChar>&, SuffixSkippingPolicy = SuffixSkippingPolicy::Skip);
-std::optional<float> parseNumber(StringParsingBuffer<UChar>&, SuffixSkippingPolicy = SuffixSkippingPolicy::Skip);
+std::optional<float> parseNumber(StringParsingBuffer<Latin1Character>&, SuffixSkippingPolicy = SuffixSkippingPolicy::Skip);
+std::optional<float> parseNumber(StringParsingBuffer<char16_t>&, SuffixSkippingPolicy = SuffixSkippingPolicy::Skip);
 std::optional<float> parseNumber(StringView, SuffixSkippingPolicy = SuffixSkippingPolicy::Skip);
 
 std::optional<std::pair<float, float>> parseNumberOptionalNumber(StringView);
 
-std::optional<bool> parseArcFlag(StringParsingBuffer<LChar>&);
-std::optional<bool> parseArcFlag(StringParsingBuffer<UChar>&);
+std::optional<bool> parseArcFlag(StringParsingBuffer<Latin1Character>&);
+std::optional<bool> parseArcFlag(StringParsingBuffer<char16_t>&);
 
 std::optional<FloatPoint> parsePoint(StringView);
 std::optional<FloatRect> parseRect(StringView);
 
-std::optional<FloatPoint> parseFloatPoint(StringParsingBuffer<LChar>&);
-std::optional<FloatPoint> parseFloatPoint(StringParsingBuffer<UChar>&);
+std::optional<FloatPoint> parseFloatPoint(StringParsingBuffer<Latin1Character>&);
+std::optional<FloatPoint> parseFloatPoint(StringParsingBuffer<char16_t>&);
 
 std::optional<std::pair<UnicodeRanges, HashSet<String>>> parseKerningUnicodeString(StringView);
 std::optional<HashSet<String>> parseGlyphName(StringView);
 
-
-// SVG allows several different whitespace characters:
-// http://www.w3.org/TR/SVG/paths.html#PathDataBNF
-template<typename CharacterType> constexpr bool isSVGSpace(CharacterType c)
-{
-    return c == ' ' || c == '\t' || c == '\n' || c == '\r';
-}
-
 template<typename CharacterType> constexpr bool isSVGSpaceOrComma(CharacterType c)
 {
-    return isSVGSpace(c) || c == ',';
+    return isASCIIWhitespace(c) || c == ',';
 }
 
 template<typename CharacterType> constexpr bool skipOptionalSVGSpaces(const CharacterType*& ptr, const CharacterType* end)
 {
-    skipWhile<isSVGSpace>(ptr, end);
+    skipWhile<isASCIIWhitespace>(ptr, end);
     return ptr < end;
 }
 
 template<typename CharacterType> constexpr bool skipOptionalSVGSpaces(StringParsingBuffer<CharacterType>& characters)
 {
-    skipWhile<isSVGSpace>(characters);
+    skipWhile<isASCIIWhitespace>(characters);
     return characters.hasCharactersRemaining();
 }
 
 template<typename CharacterType> constexpr bool skipOptionalSVGSpacesOrDelimiter(const CharacterType*& ptr, const CharacterType* end, char delimiter = ',')
 {
-    if (ptr < end && !isSVGSpace(*ptr) && *ptr != delimiter)
+    if (ptr < end && !isASCIIWhitespace(*ptr) && *ptr != delimiter)
         return false;
     if (skipOptionalSVGSpaces(ptr, end)) {
         if (ptr < end && *ptr == delimiter) {
@@ -95,15 +87,21 @@ template<typename CharacterType> constexpr bool skipOptionalSVGSpacesOrDelimiter
 
 template<typename CharacterType> constexpr bool skipOptionalSVGSpacesOrDelimiter(StringParsingBuffer<CharacterType>& characters, char delimiter = ',')
 {
-    if (characters.hasCharactersRemaining() && !isSVGSpace(*characters) && *characters != delimiter)
+    if (!characters.hasCharactersRemaining())
         return false;
-    if (skipOptionalSVGSpaces(characters)) {
-        if (characters.hasCharactersRemaining() && *characters == delimiter) {
-            characters++;
-            skipOptionalSVGSpaces(characters);
-        }
-    }
-    return characters.hasCharactersRemaining();
+
+    if (!isASCIIWhitespace(*characters) && *characters != delimiter)
+        return false;
+
+    // There are only spaces in the remaining characters.
+    if (!skipOptionalSVGSpaces(characters))
+        return false;
+
+    if (*characters != delimiter)
+        return true;
+
+    // A delimiter is hit. Skip the following spaces also e.g. " , ".
+    return skipOptionalSVGSpaces(++characters);
 }
 
 } // namespace WebCore

@@ -23,7 +23,11 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-dictionary AnimationPlaybackEventInit : EventInit {
-    double? currentTime = null;
-    double? timelineTime = null;
+typedef (double or CSSNumericValue) CSSNumberish;
+
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary AnimationPlaybackEventInit : EventInit {
+    CSSNumberish? currentTime = null;
+    CSSNumberish? timelineTime = null;
 };

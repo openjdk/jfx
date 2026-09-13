@@ -35,11 +35,13 @@
 
 namespace WebCore {
 
-class HTMLFormElement;
+class CustomStateSet;
 class FormAssociatedCustomElement;
+class HTMLFormElement;
 
 class ElementInternals final : public ScriptWrappable, public RefCounted<ElementInternals> {
-    WTF_MAKE_ISO_ALLOCATED(ElementInternals);
+    WTF_MAKE_TZONE_ALLOCATED(ElementInternals);
+
 public:
     static Ref<ElementInternals> create(HTMLElement& element)
     {
@@ -47,7 +49,7 @@ public:
     }
 
     Element* element() const { return m_element.get(); }
-    ShadowRoot* shadowRoot() const;
+    RefPtr<ShadowRoot> shadowRoot() const;
 
     ExceptionOr<RefPtr<HTMLFormElement>> form() const;
 
@@ -55,7 +57,7 @@ public:
 
     ExceptionOr<void> setValidity(ValidityStateFlags, String&& message, HTMLElement* validationAnchor);
     ExceptionOr<bool> willValidate() const;
-    ExceptionOr<RefPtr<ValidityState>> validity();
+    ExceptionOr<ValidityState&> validity();
     ExceptionOr<String> validationMessage() const;
     ExceptionOr<bool> reportValidity();
     ExceptionOr<bool> checkValidity();
@@ -66,10 +68,12 @@ public:
     const AtomString& attributeWithoutSynchronization(const QualifiedName&) const;
     void setAttributeWithoutSynchronization(const QualifiedName&, const AtomString& value);
 
-    Element* getElementAttribute(const QualifiedName&) const;
+    RefPtr<Element> getElementAttributeForBindings(const QualifiedName&) const;
     void setElementAttribute(const QualifiedName&, Element*);
-    std::optional<Vector<RefPtr<Element>>> getElementsArrayAttribute(const QualifiedName&) const;
-    void setElementsArrayAttribute(const QualifiedName&, std::optional<Vector<RefPtr<Element>>>&&);
+    std::optional<Vector<Ref<Element>>> getElementsArrayAttributeForBindings(const QualifiedName&) const;
+    void setElementsArrayAttribute(const QualifiedName&, std::optional<Vector<Ref<Element>>>&&);
+
+    CustomStateSet& states();
 
 private:
     ElementInternals(HTMLElement& element)

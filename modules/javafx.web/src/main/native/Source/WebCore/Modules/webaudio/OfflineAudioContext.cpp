@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2012, Google Inc. All rights reserved.
- * Copyright (C) 2020-2021, Apple Inc. All rights reserved.
+ * Copyright (C) 2012 Google Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,42 +30,46 @@
 #include "OfflineAudioContext.h"
 
 #include "AudioBuffer.h"
+#include "AudioNodeOutput.h"
 #include "AudioUtilities.h"
 #include "Document.h"
 #include "JSAudioBuffer.h"
 #include "JSDOMPromiseDeferred.h"
 #include "OfflineAudioCompletionEvent.h"
 #include "OfflineAudioContextOptions.h"
-#include <wtf/IsoMallocInlines.h>
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/Scope.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(OfflineAudioContext);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(OfflineAudioContext);
 
 OfflineAudioContext::OfflineAudioContext(Document& document, const OfflineAudioContextOptions& options)
     : BaseAudioContext(document)
-    , m_destinationNode(makeUniqueRef<OfflineAudioDestinationNode>(*this, options.numberOfChannels, options.sampleRate, AudioBuffer::create(options.numberOfChannels, options.length, options.sampleRate)))
+    , m_destinationNode(makeUniqueRefWithoutRefCountedCheck<OfflineAudioDestinationNode>(*this, options.numberOfChannels, options.sampleRate, AudioBuffer::create(options.numberOfChannels, options.length, options.sampleRate)))
     , m_length(options.length)
 {
     if (!renderTarget())
-        document.addConsoleMessage(MessageSource::JS, MessageLevel::Warning, makeString("Failed to construct internal AudioBuffer with ", options.numberOfChannels, " channel(s), a sample rate of ", options.sampleRate, " and a length of ", options.length, "."));
-    else if (noiseInjectionPolicy() == NoiseInjectionPolicy::Minimal)
-        renderTarget()->setNeedsAdditionalNoise();
+        document.addConsoleMessage(MessageSource::JS, MessageLevel::Warning, makeString("Failed to construct internal AudioBuffer with "_s, options.numberOfChannels, " channel(s), a sample rate of "_s, options.sampleRate, " and a length of "_s, options.length, '.'));
+    else if (noiseInjectionPolicies().contains(NoiseInjectionPolicy::Minimal))
+        renderTarget()->increaseNoiseInjectionMultiplier();
 }
 
 ExceptionOr<Ref<OfflineAudioContext>> OfflineAudioContext::create(ScriptExecutionContext& context, const OfflineAudioContextOptions& options)
 {
-    if (!is<Document>(context))
-        return Exception { NotSupportedError, "OfflineAudioContext is only supported in Document contexts"_s };
+    auto* document = dynamicDowncast<Document>(context);
+    if (!document)
+        return Exception { ExceptionCode::NotSupportedError, "OfflineAudioContext is only supported in Document contexts"_s };
     if (!options.numberOfChannels || options.numberOfChannels > maxNumberOfChannels)
-        return Exception { NotSupportedError, "Number of channels is not in range"_s };
+        return Exception { ExceptionCode::NotSupportedError, "Number of channels is not in range"_s };
     if (!options.length)
-        return Exception { NotSupportedError, "length cannot be 0"_s };
+        return Exception { ExceptionCode::NotSupportedError, "length cannot be 0"_s };
     if (!isSupportedSampleRate(options.sampleRate))
-        return Exception { NotSupportedError, "sampleRate is not in range"_s };
+        return Exception { ExceptionCode::NotSupportedError, "sampleRate is not in range"_s };
 
-    auto audioContext = adoptRef(*new OfflineAudioContext(downcast<Document>(context), options));
+    Ref audioContext = adoptRef(*new OfflineAudioContext(*document, options));
     audioContext->suspendIfNeeded();
     return audioContext;
 }
@@ -73,6 +77,43 @@ ExceptionOr<Ref<OfflineAudioContext>> OfflineAudioContext::create(ScriptExecutio
 ExceptionOr<Ref<OfflineAudioContext>> OfflineAudioContext::create(ScriptExecutionContext& context, unsigned numberOfChannels, unsigned length, float sampleRate)
 {
     return create(context, { numberOfChannels, length, sampleRate });
+}
+
+void OfflineAudioContext::lazyInitialize()
+{
+    BaseAudioContext::lazyInitialize();
+
+    increaseNoiseMultiplierIfNeeded();
+}
+
+void OfflineAudioContext::increaseNoiseMultiplierIfNeeded()
+{
+    if (!noiseInjectionPolicies())
+        return;
+
+    Locker locker { graphLock() };
+
+    RefPtr target = renderTarget();
+    if (!target)
+        return;
+
+    Vector<AudioConnectionRef<AudioNode>, 1> remainingNodes;
+    for (auto& node : referencedSourceNodes())
+        remainingNodes.append(node.copyRef());
+
+    while (!remainingNodes.isEmpty()) {
+        auto node = remainingNodes.takeLast();
+        target->increaseNoiseInjectionMultiplier(node->noiseInjectionMultiplier());
+        for (unsigned i = 0; i < node->numberOfOutputs(); ++i) {
+            CheckedPtr output = node->output(i);
+            if (!output)
+                continue;
+
+            output->forEachInputNode([&](auto& inputNode) {
+                remainingNodes.append(inputNode);
+            });
+        }
+    }
 }
 
 void OfflineAudioContext::uninitialize()
@@ -83,74 +124,69 @@ void OfflineAudioContext::uninitialize()
     BaseAudioContext::uninitialize();
 
     if (auto promise = std::exchange(m_pendingRenderingPromise, nullptr); promise && !isContextStopped())
-        promise->reject(Exception { InvalidStateError, "Context is going away"_s });
-}
-
-const char* OfflineAudioContext::activeDOMObjectName() const
-{
-    return "OfflineAudioContext";
+        promise->reject(Exception { ExceptionCode::InvalidStateError, "Context is going away"_s });
 }
 
 void OfflineAudioContext::startRendering(Ref<DeferredPromise>&& promise)
 {
     if (isStopped()) {
-        promise->reject(Exception { InvalidStateError, "Context is stopped"_s });
+        promise->reject(Exception { ExceptionCode::InvalidStateError, "Context is stopped"_s });
         return;
     }
 
     if (m_didStartRendering) {
-        promise->reject(Exception { InvalidStateError, "Rendering was already started"_s });
+        promise->reject(Exception { ExceptionCode::InvalidStateError, "Rendering was already started"_s });
         return;
     }
 
     if (!renderTarget()) {
-        promise->reject(Exception { NotSupportedError, "Failed to create audio buffer"_s });
+        promise->reject(Exception { ExceptionCode::NotSupportedError, "Failed to create audio buffer"_s });
         return;
     }
 
     lazyInitialize();
 
-    destination().startRendering([this, promise = WTFMove(promise), pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) mutable {
+    protectedDestination()->startRendering([promise = WTF::move(promise), pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) mutable {
         if (exception) {
-            promise->reject(WTFMove(*exception));
+            promise->reject(WTF::move(*exception));
             return;
         }
 
-        m_pendingRenderingPromise = WTFMove(promise);
-        m_didStartRendering = true;
-        setState(State::Running);
+        pendingActivity->object().m_pendingRenderingPromise = WTF::move(promise);
+        pendingActivity->object().m_didStartRendering = true;
+        pendingActivity->object().setState(State::Running);
     });
 }
 
 void OfflineAudioContext::suspendRendering(double suspendTime, Ref<DeferredPromise>&& promise)
 {
     if (isStopped()) {
-        promise->reject(Exception { InvalidStateError, "Context is stopped"_s });
+        promise->reject(Exception { ExceptionCode::InvalidStateError, "Context is stopped"_s });
         return;
     }
 
     if (suspendTime < 0) {
-        promise->reject(Exception { InvalidStateError, "suspendTime cannot be negative"_s });
+        promise->reject(Exception { ExceptionCode::InvalidStateError, "suspendTime cannot be negative"_s });
         return;
     }
 
     double totalRenderDuration = length() / sampleRate();
     if (totalRenderDuration <= suspendTime) {
-        promise->reject(Exception { InvalidStateError, "suspendTime cannot be greater than total rendering duration"_s });
+        promise->reject(Exception { ExceptionCode::InvalidStateError, "suspendTime cannot be greater than total rendering duration"_s });
         return;
     }
 
     size_t frame = AudioUtilities::timeToSampleFrame(suspendTime, sampleRate());
     frame = AudioUtilities::renderQuantumSize * ((frame + AudioUtilities::renderQuantumSize - 1) / AudioUtilities::renderQuantumSize);
     if (frame < currentSampleFrame()) {
-        promise->reject(Exception { InvalidStateError, "Suspension frame is earlier than current frame"_s });
+        promise->reject(Exception { ExceptionCode::InvalidStateError, "Suspension frame is earlier than current frame"_s });
         return;
     }
 
     Locker locker { graphLock() };
-    auto addResult = m_suspendRequests.add(frame, promise.ptr());
+    auto addResult = m_suspendRequests.add(frame, promise);
     if (!addResult.isNewEntry) {
-        promise->reject(Exception { InvalidStateError, "There is already a pending suspend request at this frame"_s });
+        promise->reject(Exception { ExceptionCode::InvalidStateError, "There is already a pending suspend request at this frame"_s });
         return;
     }
 }
@@ -158,11 +194,11 @@ void OfflineAudioContext::suspendRendering(double suspendTime, Ref<DeferredPromi
 void OfflineAudioContext::resumeRendering(Ref<DeferredPromise>&& promise)
 {
     if (!m_didStartRendering) {
-        promise->reject(Exception { InvalidStateError, "Cannot resume an offline audio context that has not started"_s });
+        promise->reject(Exception { ExceptionCode::InvalidStateError, "Cannot resume an offline audio context that has not started"_s });
         return;
     }
     if (isClosed()) {
-        promise->reject(Exception { InvalidStateError, "Cannot resume an offline audio context that is closed"_s });
+        promise->reject(Exception { ExceptionCode::InvalidStateError, "Cannot resume an offline audio context that is closed"_s });
         return;
     }
     if (state() == AudioContextState::Running) {
@@ -171,13 +207,13 @@ void OfflineAudioContext::resumeRendering(Ref<DeferredPromise>&& promise)
     }
     ASSERT(state() == AudioContextState::Suspended);
 
-    destination().startRendering([this, promise = WTFMove(promise), pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) mutable {
+    protectedDestination()->startRendering([promise = WTF::move(promise), pendingActivity = makePendingActivity(*this)](std::optional<Exception>&& exception) mutable {
         if (exception) {
-            promise->reject(WTFMove(*exception));
+            promise->reject(WTF::move(*exception));
             return;
         }
 
-        setState(State::Running);
+        pendingActivity->object().setState(State::Running);
         promise->resolve();
     });
 }
@@ -232,7 +268,7 @@ void OfflineAudioContext::finishedRendering(bool didRendering)
         queueTaskToDispatchEvent(*this, TaskSource::MediaElement, OfflineAudioCompletionEvent::create(*renderedBuffer));
         settleRenderingPromise(renderedBuffer.releaseNonNull());
     } else
-        settleRenderingPromise(Exception { InvalidStateError, "Offline rendering failed"_s });
+        settleRenderingPromise(Exception { ExceptionCode::InvalidStateError, "Offline rendering failed"_s });
 }
 
 void OfflineAudioContext::settleRenderingPromise(ExceptionOr<Ref<AudioBuffer>>&& result)

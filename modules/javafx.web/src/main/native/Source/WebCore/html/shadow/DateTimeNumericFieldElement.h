@@ -26,8 +26,6 @@
 
 #pragma once
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-
 #include "DateTimeFieldElement.h"
 #include <wtf/MonotonicTime.h>
 #include <wtf/text/StringBuilder.h>
@@ -35,7 +33,7 @@
 namespace WebCore {
 
 class DateTimeNumericFieldElement : public DateTimeFieldElement {
-    WTF_MAKE_ISO_ALLOCATED(DateTimeNumericFieldElement);
+    WTF_MAKE_TZONE_ALLOCATED(DateTimeNumericFieldElement);
 public:
     struct Range {
         Range(int minimum, int maximum)
@@ -48,23 +46,24 @@ public:
     };
 
 protected:
-    DateTimeNumericFieldElement(Document&, FieldOwner&, const Range&, int placeholder);
+    DateTimeNumericFieldElement(Document&, DateTimeFieldElementFieldOwner&, const Range&, int placeholder);
 
     int maximum() const;
 
     // DateTimeFieldElement functions:
     bool hasValue() const final;
-    void initialize(const AtomString&);
     void setEmptyValue(EventBehavior = DispatchNoEvent) final;
     void setValueAsInteger(int, EventBehavior = DispatchNoEvent) final;
-    void stepDown() final;
-    void stepUp() final;
-    int valueAsInteger() const final;
+    void stepDown() override;
+    void stepUp() override;
+    int valueAsInteger() const final { return m_hasValue ? m_value : -1; }
+    int placeholderValueAsInteger() const final { return m_placeholderValue; }
+
 
 private:
     // DateTimeFieldElement functions:
     void adjustMinInlineSize(RenderStyle&) const final;
-    String value() const final;
+    ValueOrReference<String> value() const final;
     String placeholderValue() const final;
     void handleKeyboardEvent(KeyboardEvent&) final;
     void handleBlurEvent(Event&) final;
@@ -75,6 +74,7 @@ private:
 
     const Range m_range;
     const String m_placeholder;
+    int m_placeholderValue { 0 };
     int m_value { 0 };
     bool m_hasValue { false };
     StringBuilder m_typeAheadBuffer;
@@ -82,5 +82,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(DATE_AND_TIME_INPUT_TYPES)

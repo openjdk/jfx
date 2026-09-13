@@ -33,6 +33,7 @@
 #include <memory>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -40,12 +41,12 @@ namespace WebCore {
 // HRTFElevation contains all of the HRTFKernels (one left ear and one right ear per azimuth angle) for a particular elevation.
 
 class HRTFElevation final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(HRTFElevation);
     WTF_MAKE_NONCOPYABLE(HRTFElevation);
 public:
     HRTFElevation(std::unique_ptr<HRTFKernelList> kernelListL, std::unique_ptr<HRTFKernelList> kernelListR, int elevation, float sampleRate)
-        : m_kernelListL(WTFMove(kernelListL))
-        , m_kernelListR(WTFMove(kernelListR))
+        : m_kernelListL(WTF::move(kernelListL))
+        , m_kernelListR(WTF::move(kernelListR))
         , m_elevationAngle(elevation)
         , m_sampleRate(sampleRate)
     {
@@ -92,12 +93,6 @@ public:
     // Returns true on success.
     static bool calculateKernelsForAzimuthElevation(int azimuth, int elevation, float sampleRate, const String& subjectName,
                                                     RefPtr<HRTFKernel>& kernelL, RefPtr<HRTFKernel>& kernelR);
-
-    // Given a specific azimuth and elevation angle, returns the left and right HRTFKernel in kernelL and kernelR.
-    // This method averages the measured response using symmetry of azimuth (for example by averaging the -30.0 and +30.0 azimuth responses).
-    // Returns true on success.
-    static bool calculateSymmetricKernelsForAzimuthElevation(int azimuth, int elevation, float sampleRate, const String& subjectName,
-                                                             RefPtr<HRTFKernel>& kernelL, RefPtr<HRTFKernel>& kernelR);
 
 private:
     std::unique_ptr<HRTFKernelList> m_kernelListL;

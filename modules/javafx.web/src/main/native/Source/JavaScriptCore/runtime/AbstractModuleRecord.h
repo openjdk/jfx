@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "Identifier.h"
-#include "JSGenerator.h"
-#include "JSInternalFieldObjectImpl.h"
-#include "ScriptFetchParameters.h"
+#include <JavaScriptCore/Identifier.h>
+#include <JavaScriptCore/JSGenerator.h>
+#include <JavaScriptCore/JSInternalFieldObjectImpl.h>
+#include <JavaScriptCore/ScriptFetchParameters.h>
 #include <wtf/ListHashSet.h>
 
 namespace JSC {
@@ -44,7 +44,7 @@ class AbstractModuleRecord : public JSInternalFieldObjectImpl<2> {
 public:
     using Base = JSInternalFieldObjectImpl<2>;
 
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
 
     template<typename CellType, SubspaceAccess>
     static void subspaceFor(VM&)
@@ -98,12 +98,12 @@ public:
     };
 
     typedef WTF::ListHashSet<RefPtr<UniquedStringImpl>, IdentifierRepHash> OrderedIdentifierSet;
-    typedef HashMap<RefPtr<UniquedStringImpl>, ImportEntry, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>> ImportEntries;
-    typedef HashMap<RefPtr<UniquedStringImpl>, ExportEntry, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>> ExportEntries;
+    typedef UncheckedKeyHashMap<RefPtr<UniquedStringImpl>, ImportEntry, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>> ImportEntries;
+    typedef UncheckedKeyHashMap<RefPtr<UniquedStringImpl>, ExportEntry, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>> ExportEntries;
 
     struct ModuleRequest {
         RefPtr<UniquedStringImpl> m_specifier;
-        RefPtr<ScriptFetchParameters> m_assertions;
+        RefPtr<ScriptFetchParameters> m_attributes;
     };
 
     DECLARE_EXPORT_INFO;
@@ -159,11 +159,11 @@ public:
     WriteBarrier<Unknown>& internalField(Field field) { return Base::internalField(static_cast<uint32_t>(field)); }
     WriteBarrier<Unknown> internalField(Field field) const { return Base::internalField(static_cast<uint32_t>(field)); }
 
+    DECLARE_VISIT_CHILDREN;
+
 protected:
     AbstractModuleRecord(VM&, Structure*, const Identifier&);
     void finishCreation(JSGlobalObject*, VM&);
-
-    DECLARE_VISIT_CHILDREN;
 
     void setModuleEnvironment(JSGlobalObject*, JSModuleEnvironment*);
 
@@ -212,7 +212,7 @@ private:
     // So here, we don't visit each object for GC. The resolution cache map caches the once
     // looked up correctly resolved resolution, since (1) we rarely looked up the non-resolved one,
     // and (2) if we cache all the attempts the size of the map becomes infinitely large.
-    typedef HashMap<RefPtr<UniquedStringImpl>, Resolution, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>> Resolutions;
+    typedef UncheckedKeyHashMap<RefPtr<UniquedStringImpl>, Resolution, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>> Resolutions;
     Resolutions m_resolutionCache;
 };
 

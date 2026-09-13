@@ -25,16 +25,17 @@
 
 #pragma once
 
-#include "JSCJSValueInlines.h"
-#include "PerGlobalObjectWrapperWorld.h"
+#include <JavaScriptCore/JSCJSValueInlines.h>
+#include <JavaScriptCore/PerGlobalObjectWrapperWorld.h>
 #include <wtf/RefCounted.h>
 
 namespace Inspector {
 
-class JS_EXPORT_PRIVATE InjectedScriptHost : public RefCounted<InjectedScriptHost> {
+class InjectedScriptHost : public RefCounted<InjectedScriptHost> {
 public:
     static Ref<InjectedScriptHost> create() { return adoptRef(*new InjectedScriptHost); }
-    virtual ~InjectedScriptHost();
+    JS_EXPORT_PRIVATE InjectedScriptHost();
+    JS_EXPORT_PRIVATE virtual ~InjectedScriptHost();
 
     virtual JSC::JSValue subtype(JSC::JSGlobalObject*, JSC::JSValue) { return JSC::jsUndefined(); }
     virtual JSC::JSValue getInternalProperties(JSC::VM&, JSC::JSGlobalObject*, JSC::JSValue) { return { }; }

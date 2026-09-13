@@ -32,6 +32,7 @@
 
 #include "garray.h"
 #include "gmem.h"
+#include "gmessages.h"
 #include "gstring.h"
 #include "gstrfuncs.h"
 #include "glibintl.h"
@@ -57,6 +58,24 @@
  * ASCII-Compatible Encoding of any given Unicode name, which can be
  * used with non-IDN-aware applications and protocols. (For example,
  * ".org" maps to "xn--4wa8awb4637h.org".)
+ **/
+
+/**
+ * SECTION:ghostutils
+ * @short_description: Internet hostname utilities
+ *
+ * Functions for manipulating internet hostnames; in particular, for
+ * converting between Unicode and ASCII-encoded forms of
+ * Internationalized Domain Names (IDNs).
+ *
+ * The
+ * [Internationalized Domain Names for Applications (IDNA)](http://www.ietf.org/rfc/rfc3490.txt)
+ * standards allow for the use
+ * of Unicode domain names in applications, while providing
+ * backward-compatibility with the old ASCII-only DNS, by defining an
+ * ASCII-Compatible Encoding of any given Unicode name, which can be
+ * used with non-IDN-aware applications and protocols. (For example,
+ * "Παν語.org" maps to "xn--4wa8awb4637h.org".)
  **/
 
 #define IDNA_ACE_PREFIX     "xn--"
@@ -252,6 +271,7 @@ remove_junk (const gchar *str,
     return NULL;
 }
 
+#ifndef GSTREAMER_LITE
 static inline gboolean
 contains_uppercase_letters (const gchar *str,
                             gint         len)
@@ -265,6 +285,7 @@ contains_uppercase_letters (const gchar *str,
     }
   return FALSE;
 }
+#endif // GSTREAMER_LITE
 
 static inline gboolean
 contains_non_ascii (const gchar *str,
@@ -280,6 +301,7 @@ contains_non_ascii (const gchar *str,
   return FALSE;
 }
 
+#ifndef GSTREAMER_LITE
 /* RFC 3454, Appendix C. ish. */
 static inline gboolean
 idna_is_prohibited (gunichar ch)
@@ -685,6 +707,8 @@ g_hostname_to_unicode (const gchar *hostname)
   gssize llen;
   gsize hostname_max_length_bytes = get_hostname_max_length_bytes ();
 
+  g_return_val_if_fail (hostname != NULL, NULL);
+
   /* See the comment at the top of g_hostname_to_ascii(). */
   if (hostname_max_length_bytes <= G_MAXSIZE / 4 &&
       strlen_greater_than (hostname, 4 * MAX (255, hostname_max_length_bytes)))
@@ -888,3 +912,4 @@ g_hostname_is_ip_address (const gchar *hostname)
   /* If there's nothing left to parse, then it's ok. */
   return !*p;
 }
+#endif // GSTREAMER_LITE

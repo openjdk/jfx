@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,12 +28,17 @@ class LayoutTraits
 
     constructor(mode)
     {
-        this.mode = mode
+        this._mode = mode
+    }
+    
+    get mode()
+    {
+        return this._mode;
     }
 
     get isFullscreen()
     {
-        return this.mode == LayoutTraits.Mode.Fullscreen;
+        return this._mode == LayoutTraits.Mode.Fullscreen || this._mode == LayoutTraits.Mode.NarrowViewer;
     }
 
     mediaControlsClass()
@@ -41,17 +46,12 @@ class LayoutTraits
         throw "Derived class must implement this function.";
     }
 
-    overridenSupportingObjectClasses()
+    supportingObjectClasses()
     {
-        throw "Derived class must implement this function.";
+        return [AirplaySupport, AudioSupport, CloseSupport, ControlsVisibilitySupport, FullscreenSupport, MuteSupport, OverflowSupport, PiPSupport, PlacardSupport, PlaybackSupport, ScrubbingSupport, SeekBackwardSupport, SeekForwardSupport, SkipBackSupport, SkipForwardSupport, StartSupport, StatusSupport, TimeControlSupport, TracksSupport, VolumeSupport];
     }
 
     resourceDirectory()
-    {
-        throw "Derived class must implement this function.";
-    }
-
-    controlsAlwaysAvailable()
     {
         throw "Derived class must implement this function.";
     }
@@ -111,7 +111,8 @@ class LayoutTraits
 
 LayoutTraits.Mode = {
     Inline     : 0,
-    Fullscreen : 1
+    Fullscreen : 1,
+    NarrowViewer : 2
 };
 
 // LayoutTraits subclasses should "register" themselves by adding themselves to this map.

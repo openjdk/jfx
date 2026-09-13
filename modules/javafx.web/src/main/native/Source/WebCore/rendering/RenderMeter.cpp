@@ -26,17 +26,18 @@
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderTheme.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMeter);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderMeter);
 
 RenderMeter::RenderMeter(HTMLElement& element, RenderStyle&& style)
-    : RenderBlockFlow(element, WTFMove(style))
+    : RenderBlockFlow(Type::Meter, element, WTF::move(style))
 {
+    ASSERT(isRenderMeter());
 }
 
 RenderMeter::~RenderMeter() = default;
@@ -45,11 +46,11 @@ HTMLMeterElement* RenderMeter::meterElement() const
 {
     ASSERT(element());
 
-    if (is<HTMLMeterElement>(*element()))
-        return downcast<HTMLMeterElement>(element());
+    if (auto* meterElement = dynamicDowncast<HTMLMeterElement>(*element()))
+        return meterElement;
 
-    ASSERT(element()->shadowHost());
-    return downcast<HTMLMeterElement>(element()->shadowHost());
+    ASSERT(protectedElement()->shadowHost());
+    return downcast<HTMLMeterElement>(protectedElement()->shadowHost());
 }
 
 void RenderMeter::updateLogicalWidth()
@@ -65,11 +66,11 @@ RenderBox::LogicalExtentComputedValues RenderMeter::computeLogicalHeight(LayoutU
     auto computedValues = RenderBox::computeLogicalHeight(logicalHeight, logicalTop);
     LayoutRect frame = frameRect();
     if (isHorizontalWritingMode())
-        frame.setHeight(computedValues.m_extent);
+        frame.setHeight(computedValues.extent);
     else
-        frame.setWidth(computedValues.m_extent);
+        frame.setWidth(computedValues.extent);
     auto frameSize = theme().meterSizeForBounds(*this, snappedIntRect(frame));
-    computedValues.m_extent = isHorizontalWritingMode() ? frameSize.height() : frameSize.width();
+    computedValues.extent = isHorizontalWritingMode() ? frameSize.height() : frameSize.width();
     return computedValues;
 }
 

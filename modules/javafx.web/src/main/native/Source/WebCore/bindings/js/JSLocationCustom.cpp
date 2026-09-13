@@ -26,11 +26,11 @@
 #include "JSDOMBinding.h"
 #include "JSDOMBindingSecurity.h"
 #include "JSDOMExceptionHandling.h"
-#include "JSLocalDOMWindowCustom.h"
-#include "RuntimeApplicationChecks.h"
+#include "JSDOMWindowCustom.h"
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/JSFunction.h>
 #include <JavaScriptCore/Lookup.h>
+#include <wtf/RuntimeApplicationChecks.h>
 
 namespace WebCore {
 using namespace JSC;
@@ -43,7 +43,7 @@ static bool getOwnPropertySlotCommon(JSLocation& thisObject, JSGlobalObject& lex
     auto* window = thisObject.wrapped().window();
 
     // When accessing Location cross-domain, functions are always the native built-in ones.
-    // See JSLocalDOMWindow::getOwnPropertySlotDelegate for additional details.
+    // See JSDOMWindow::getOwnPropertySlotDelegate for additional details.
 
     // Our custom code is only needed to implement the Window cross-domain scheme, so if access is
     // allowed, return false so the normal lookup will take place.
@@ -163,7 +163,7 @@ bool JSLocation::deletePropertyByIndex(JSCell* cell, JSGlobalObject* lexicalGlob
     return Base::deletePropertyByIndex(thisObject, lexicalGlobalObject, propertyName);
 }
 
-void JSLocation::getOwnPropertyNames(JSObject* object, JSGlobalObject* lexicalGlobalObject, PropertyNameArray& propertyNames, DontEnumPropertiesMode mode)
+void JSLocation::getOwnPropertyNames(JSObject* object, JSGlobalObject* lexicalGlobalObject, PropertyNameArrayBuilder& propertyNames, DontEnumPropertiesMode mode)
 {
     JSLocation* thisObject = jsCast<JSLocation*>(object);
     if (!BindingSecurity::shouldAllowAccessToDOMWindow(lexicalGlobalObject, thisObject->wrapped().window(), DoNotReportSecurityError)) {

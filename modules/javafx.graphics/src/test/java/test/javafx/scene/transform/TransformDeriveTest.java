@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,8 +30,7 @@ import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.geom.transform.Identity;
 import com.sun.javafx.geom.transform.Translate2D;
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 import test.com.sun.javafx.test.TransformHelper;
 import javafx.geometry.Point3D;
 import javafx.scene.transform.Affine;
@@ -40,14 +39,12 @@ import javafx.scene.transform.Scale;
 import javafx.scene.transform.Shear;
 import javafx.scene.transform.Transform;
 import javafx.scene.transform.Translate;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
-@RunWith(Parameterized.class)
 public class TransformDeriveTest {
 
     private static final Identity identity = new Identity();
@@ -93,126 +90,118 @@ public class TransformDeriveTest {
     private static final Affine affine_affine3d = new Affine();
     static { affine_affine3d.appendRotation(45, 10, 20, 30, 1, 1, 1); }
 
-    @Parameters
-    public static Collection getParams() {
-        return Arrays.asList(new Object[][] {
-            { identity, translate_identity, Identity.class },           //  0
-            { identity, translate_translate2d, Translate2D.class },
-            { identity, translate_translate3d, Affine3D.class },
-            { identity, scale_identity, Identity.class },
-            { identity, scale_pivotedidentity, Identity.class },
-            { identity, scale_scale2d, Affine2D.class },
-            { identity, scale_pivotedscale2d, Affine2D.class },
-            { identity, scale_scale3d, Affine3D.class },
-            { identity, scale_pivotedscale3d, Affine3D.class },
-            { identity, rotate_identity, Identity.class },
-            { identity, rotate_pivotedidentity, Identity.class },       // 10
-            { identity, rotate_rotate2d, Affine2D.class },
-            { identity, rotate_negative2d, Affine2D.class },
-            { identity, rotate_pivotedrotate2d, Affine2D.class },
-            { identity, rotate_rotate3d, Affine3D.class },
-            { identity, rotate_pivotedrotate3d, Affine3D.class },
-            { identity, shear_identity, Identity.class },
-            { identity, shear_shear, Affine2D.class },
-            { identity, affine_identity, Identity.class },
-            { identity, affine_translate2d, Translate2D.class },
-            { identity, affine_translate3d, Affine3D.class },           // 20
-            { identity, affine_scale2d, Affine2D.class },
-            { identity, affine_scale3d, Affine3D.class },
-            { identity, affine_affine2d, Affine2D.class },
-            { identity, affine_affine3d, Affine3D.class },
+    public static Stream<Arguments> getParams() {
+        return Stream.of(
+            Arguments.of( identity, translate_identity, Identity.class ),           //  0
+            Arguments.of( identity, translate_translate2d, Translate2D.class ),
+            Arguments.of( identity, translate_translate3d, Affine3D.class ),
+            Arguments.of( identity, scale_identity, Identity.class ),
+            Arguments.of( identity, scale_pivotedidentity, Identity.class ),
+            Arguments.of( identity, scale_scale2d, Affine2D.class ),
+            Arguments.of( identity, scale_pivotedscale2d, Affine2D.class ),
+            Arguments.of( identity, scale_scale3d, Affine3D.class ),
+            Arguments.of( identity, scale_pivotedscale3d, Affine3D.class ),
+            Arguments.of( identity, rotate_identity, Identity.class ),
+            Arguments.of( identity, rotate_pivotedidentity, Identity.class ),       // 10
+            Arguments.of( identity, rotate_rotate2d, Affine2D.class ),
+            Arguments.of( identity, rotate_negative2d, Affine2D.class ),
+            Arguments.of( identity, rotate_pivotedrotate2d, Affine2D.class ),
+            Arguments.of( identity, rotate_rotate3d, Affine3D.class ),
+            Arguments.of( identity, rotate_pivotedrotate3d, Affine3D.class ),
+            Arguments.of( identity, shear_identity, Identity.class ),
+            Arguments.of( identity, shear_shear, Affine2D.class ),
+            Arguments.of( identity, affine_identity, Identity.class ),
+            Arguments.of( identity, affine_translate2d, Translate2D.class ),
+            Arguments.of( identity, affine_translate3d, Affine3D.class ),           // 20
+            Arguments.of( identity, affine_scale2d, Affine2D.class ),
+            Arguments.of( identity, affine_scale3d, Affine3D.class ),
+            Arguments.of( identity, affine_affine2d, Affine2D.class ),
+            Arguments.of( identity, affine_affine3d, Affine3D.class ),
 
-            { translate2d, translate_identity, Translate2D.class },
-            { translate2d, translate_translate2d, Translate2D.class },
-            { translate2d, translate_translate3d, Affine3D.class },
-            { translate2d, scale_identity, Translate2D.class },
-            { translate2d, scale_pivotedidentity, Translate2D.class },
-            { translate2d, scale_scale2d, Affine2D.class },             // 30
-            { translate2d, scale_pivotedscale2d, Affine2D.class },
-            { translate2d, scale_scale3d, Affine3D.class },
-            { translate2d, scale_pivotedscale3d, Affine3D.class },
-            { translate2d, rotate_identity, Translate2D.class },
-            { translate2d, rotate_pivotedidentity, Translate2D.class },
-            { translate2d, rotate_rotate2d, Affine2D.class },
-            { translate2d, rotate_negative2d, Affine2D.class },
-            { translate2d, rotate_pivotedrotate2d, Affine2D.class },
-            { translate2d, rotate_rotate3d, Affine3D.class },
-            { translate2d, rotate_pivotedrotate3d, Affine3D.class },    // 40
-            { translate2d, shear_identity, Translate2D.class },
-            { translate2d, shear_shear, Affine2D.class },
-            { translate2d, affine_identity, Translate2D.class },
-            { translate2d, affine_translate2d, Translate2D.class },
-            { translate2d, affine_translate3d, Affine3D.class },
-            { translate2d, affine_scale2d, Affine2D.class },
-            { translate2d, affine_scale3d, Affine3D.class },
-            { translate2d, affine_affine2d, Affine2D.class },
-            { translate2d, affine_affine3d, Affine3D.class },
+            Arguments.of( translate2d, translate_identity, Translate2D.class ),
+            Arguments.of( translate2d, translate_translate2d, Translate2D.class ),
+            Arguments.of( translate2d, translate_translate3d, Affine3D.class ),
+            Arguments.of( translate2d, scale_identity, Translate2D.class ),
+            Arguments.of( translate2d, scale_pivotedidentity, Translate2D.class ),
+            Arguments.of( translate2d, scale_scale2d, Affine2D.class ),             // 30
+            Arguments.of( translate2d, scale_pivotedscale2d, Affine2D.class ),
+            Arguments.of( translate2d, scale_scale3d, Affine3D.class ),
+            Arguments.of( translate2d, scale_pivotedscale3d, Affine3D.class ),
+            Arguments.of( translate2d, rotate_identity, Translate2D.class ),
+            Arguments.of( translate2d, rotate_pivotedidentity, Translate2D.class ),
+            Arguments.of( translate2d, rotate_rotate2d, Affine2D.class ),
+            Arguments.of( translate2d, rotate_negative2d, Affine2D.class ),
+            Arguments.of( translate2d, rotate_pivotedrotate2d, Affine2D.class ),
+            Arguments.of( translate2d, rotate_rotate3d, Affine3D.class ),
+            Arguments.of( translate2d, rotate_pivotedrotate3d, Affine3D.class ),    // 40
+            Arguments.of( translate2d, shear_identity, Translate2D.class ),
+            Arguments.of( translate2d, shear_shear, Affine2D.class ),
+            Arguments.of( translate2d, affine_identity, Translate2D.class ),
+            Arguments.of( translate2d, affine_translate2d, Translate2D.class ),
+            Arguments.of( translate2d, affine_translate3d, Affine3D.class ),
+            Arguments.of( translate2d, affine_scale2d, Affine2D.class ),
+            Arguments.of( translate2d, affine_scale3d, Affine3D.class ),
+            Arguments.of( translate2d, affine_affine2d, Affine2D.class ),
+            Arguments.of( translate2d, affine_affine3d, Affine3D.class ),
 
-            { affine2d, translate_identity, Affine2D.class },           // 50
-            { affine2d, translate_translate2d, Affine2D.class },
-            { affine2d, translate_translate3d, Affine3D.class },
-            { affine2d, scale_identity, Affine2D.class },
-            { affine2d, scale_pivotedidentity, Affine2D.class },
-            { affine2d, scale_scale2d, Affine2D.class },
-            { affine2d, scale_pivotedscale2d, Affine2D.class },
-            { affine2d, scale_scale3d, Affine3D.class },
-            { affine2d, scale_pivotedscale3d, Affine3D.class },
-            { affine2d, rotate_identity, Affine2D.class },
-            { affine2d, rotate_pivotedidentity, Affine2D.class },       // 60
-            { affine2d, rotate_rotate2d, Affine2D.class },
-            { affine2d, rotate_negative2d, Affine2D.class },
-            { affine2d, rotate_pivotedrotate2d, Affine2D.class },
-            { affine2d, rotate_rotate3d, Affine3D.class },
-            { affine2d, rotate_pivotedrotate3d, Affine3D.class },
-            { affine2d, shear_identity, Affine2D.class },
-            { affine2d, shear_shear, Affine2D.class },
-            { affine2d, affine_identity, Affine2D.class },
-            { affine2d, affine_translate2d, Affine2D.class },
-            { affine2d, affine_translate3d, Affine3D.class },           // 70
-            { affine2d, affine_scale2d, Affine2D.class },
-            { affine2d, affine_scale3d, Affine3D.class },
-            { affine2d, affine_affine2d, Affine2D.class },
-            { affine2d, affine_affine3d, Affine3D.class },
+            Arguments.of( affine2d, translate_identity, Affine2D.class ),           // 50
+            Arguments.of( affine2d, translate_translate2d, Affine2D.class ),
+            Arguments.of( affine2d, translate_translate3d, Affine3D.class ),
+            Arguments.of( affine2d, scale_identity, Affine2D.class ),
+            Arguments.of( affine2d, scale_pivotedidentity, Affine2D.class ),
+            Arguments.of( affine2d, scale_scale2d, Affine2D.class ),
+            Arguments.of( affine2d, scale_pivotedscale2d, Affine2D.class ),
+            Arguments.of( affine2d, scale_scale3d, Affine3D.class ),
+            Arguments.of( affine2d, scale_pivotedscale3d, Affine3D.class ),
+            Arguments.of( affine2d, rotate_identity, Affine2D.class ),
+            Arguments.of( affine2d, rotate_pivotedidentity, Affine2D.class ),       // 60
+            Arguments.of( affine2d, rotate_rotate2d, Affine2D.class ),
+            Arguments.of( affine2d, rotate_negative2d, Affine2D.class ),
+            Arguments.of( affine2d, rotate_pivotedrotate2d, Affine2D.class ),
+            Arguments.of( affine2d, rotate_rotate3d, Affine3D.class ),
+            Arguments.of( affine2d, rotate_pivotedrotate3d, Affine3D.class ),
+            Arguments.of( affine2d, shear_identity, Affine2D.class ),
+            Arguments.of( affine2d, shear_shear, Affine2D.class ),
+            Arguments.of( affine2d, affine_identity, Affine2D.class ),
+            Arguments.of( affine2d, affine_translate2d, Affine2D.class ),
+            Arguments.of( affine2d, affine_translate3d, Affine3D.class ),           // 70
+            Arguments.of( affine2d, affine_scale2d, Affine2D.class ),
+            Arguments.of( affine2d, affine_scale3d, Affine3D.class ),
+            Arguments.of( affine2d, affine_affine2d, Affine2D.class ),
+            Arguments.of( affine2d, affine_affine3d, Affine3D.class ),
 
-            { affine3d, translate_identity, Affine3D.class },
-            { affine3d, translate_translate2d, Affine3D.class },
-            { affine3d, translate_translate3d, Affine3D.class },
-            { affine3d, scale_identity, Affine3D.class },
-            { affine3d, scale_pivotedidentity, Affine3D.class },
-            { affine3d, scale_scale2d, Affine3D.class },                // 80
-            { affine3d, scale_pivotedscale2d, Affine3D.class },
-            { affine3d, scale_scale3d, Affine3D.class },
-            { affine3d, scale_pivotedscale3d, Affine3D.class },
-            { affine3d, rotate_identity, Affine3D.class },
-            { affine3d, rotate_pivotedidentity, Affine3D.class },
-            { affine3d, rotate_rotate2d, Affine3D.class },
-            { affine3d, rotate_negative2d, Affine3D.class },
-            { affine3d, rotate_pivotedrotate2d, Affine3D.class },
-            { affine3d, rotate_rotate3d, Affine3D.class },
-            { affine3d, rotate_pivotedrotate3d, Affine3D.class },       // 90
-            { affine3d, shear_identity, Affine3D.class },
-            { affine3d, shear_shear, Affine3D.class },
-            { affine3d, affine_identity, Affine3D.class },
-            { affine3d, affine_translate2d, Affine3D.class },
-            { affine3d, affine_translate3d, Affine3D.class },
-            { affine3d, affine_scale2d, Affine3D.class },
-            { affine3d, affine_scale3d, Affine3D.class },
-            { affine3d, affine_affine2d, Affine3D.class },
-            { affine3d, affine_affine3d, Affine3D.class },              // 99
-        });
+            Arguments.of( affine3d, translate_identity, Affine3D.class ),
+            Arguments.of( affine3d, translate_translate2d, Affine3D.class ),
+            Arguments.of( affine3d, translate_translate3d, Affine3D.class ),
+            Arguments.of( affine3d, scale_identity, Affine3D.class ),
+            Arguments.of( affine3d, scale_pivotedidentity, Affine3D.class ),
+            Arguments.of( affine3d, scale_scale2d, Affine3D.class ),                // 80
+            Arguments.of( affine3d, scale_pivotedscale2d, Affine3D.class ),
+            Arguments.of( affine3d, scale_scale3d, Affine3D.class ),
+            Arguments.of( affine3d, scale_pivotedscale3d, Affine3D.class ),
+            Arguments.of( affine3d, rotate_identity, Affine3D.class ),
+            Arguments.of( affine3d, rotate_pivotedidentity, Affine3D.class ),
+            Arguments.of( affine3d, rotate_rotate2d, Affine3D.class ),
+            Arguments.of( affine3d, rotate_negative2d, Affine3D.class ),
+            Arguments.of( affine3d, rotate_pivotedrotate2d, Affine3D.class ),
+            Arguments.of( affine3d, rotate_rotate3d, Affine3D.class ),
+            Arguments.of( affine3d, rotate_pivotedrotate3d, Affine3D.class ),       // 90
+            Arguments.of( affine3d, shear_identity, Affine3D.class ),
+            Arguments.of( affine3d, shear_shear, Affine3D.class ),
+            Arguments.of( affine3d, affine_identity, Affine3D.class ),
+            Arguments.of( affine3d, affine_translate2d, Affine3D.class ),
+            Arguments.of( affine3d, affine_translate3d, Affine3D.class ),
+            Arguments.of( affine3d, affine_scale2d, Affine3D.class ),
+            Arguments.of( affine3d, affine_scale3d, Affine3D.class ),
+            Arguments.of( affine3d, affine_affine2d, Affine3D.class ),
+            Arguments.of( affine3d, affine_affine3d, Affine3D.class )              // 99
+        );
     }
 
-    private BaseTransform from;
-    private Transform deriver;
-    private Class deriveType;
-
-    public TransformDeriveTest(BaseTransform from, Transform deriver, Class deriveType) {
-        this.from = from.copy();
-        this.deriver = deriver;
-        this.deriveType = deriveType;
-    }
-
-    @Test public void testDerive() {
+    @ParameterizedTest
+    @MethodSource("getParams")
+    public void testDerive(BaseTransform f, Transform deriver, Class deriveType) {
+        BaseTransform from = f.copy();
         Transform conc = TransformHelper.concatenate(from, deriver);
 
         BaseTransform res = com.sun.javafx.scene.transform.TransformHelper.derive(deriver, from);

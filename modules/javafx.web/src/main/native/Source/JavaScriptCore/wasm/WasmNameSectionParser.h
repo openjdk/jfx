@@ -35,13 +35,13 @@ namespace JSC { namespace Wasm {
 
 class NameSectionParser : public Parser<Ref<NameSection>> {
 public:
-    NameSectionParser(const uint8_t* sourceBuffer, size_t sourceLength, const ModuleInformation& info)
-        : Parser(sourceBuffer, sourceLength)
+    NameSectionParser(std::span<const uint8_t> source, const ModuleInformation& info)
+        : Parser(source)
         , m_info(info)
     {
     }
 
-    Result WARN_UNUSED_RETURN parse();
+    [[nodiscard]] Result parse();
 
 private:
     const ModuleInformation& m_info;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011,2012 Google Inc. All rights reserved.
+ * Copyright (C) 2011-2016 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -34,11 +34,12 @@
 #include "DateComponents.h"
 #include "DateTimeFormat.h"
 #include "LocalizedStrings.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Locale);
 
 class DateTimeStringBuilder : private DateTimeFormat::TokenHandler {
     WTF_MAKE_NONCOPYABLE(DateTimeStringBuilder);
@@ -53,7 +54,7 @@ public:
 private:
     // DateTimeFormat::TokenHandler functions.
     void visitField(DateTimeFormat::FieldType, int) final;
-    void visitLiteral(String&&) final;
+    void visitLiteral(const String&) final;
 
     String zeroPadString(const String&, size_t width);
     void appendNumber(int number, size_t width);
@@ -168,18 +169,16 @@ void DateTimeStringBuilder::visitField(DateTimeFormat::FieldType fieldType, int 
     }
 }
 
-void DateTimeStringBuilder::visitLiteral(String&& text)
+void DateTimeStringBuilder::visitLiteral(const String& text)
 {
     ASSERT(text.length());
-    m_builder.append(WTFMove(text));
+    m_builder.append(text);
 }
 
 String DateTimeStringBuilder::toString()
 {
     return m_builder.toString();
 }
-
-#endif
 
 Locale::~Locale() = default;
 
@@ -307,6 +306,10 @@ String Locale::convertFromLocalizedNumber(const String& localized)
     if (!detectSignAndGetDigitRange(input, isNegative, startIndex, endIndex))
         return input;
 
+    // Ignore leading '+', but will reject '+'-only string later.
+    if (!isNegative && endIndex - startIndex >= 2 && input[startIndex] == '+')
+        ++startIndex;
+
     StringBuilder builder;
     builder.reserveCapacity(input.length());
     if (isNegative)
@@ -320,12 +323,20 @@ String Locale::convertFromLocalizedNumber(const String& localized)
         else if (symbolIndex == GroupSeparatorIndex)
             return input;
         else
-            builder.append(static_cast<UChar>('0' + symbolIndex));
+            builder.append(static_cast<char16_t>('0' + symbolIndex));
     }
-    return builder.toString();
+    String converted = builder.toString();
+    // Ignore trailing '.', but will reject '.'-only string later.
+    if (converted.length() >= 2 && converted[converted.length() - 1] == '.')
+        converted = converted.left(converted.length() - 1);
+    return converted;
 }
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
+Locale::WritingDirection Locale::defaultWritingDirection() const
+{
+    return WritingDirection::Default;
+}
+
 String Locale::formatDateTime(const DateComponents& date, FormatType formatType)
 {
     if (date.type() == DateComponentsType::Invalid)
@@ -355,11 +366,30 @@ String Locale::formatDateTime(const DateComponents& date, FormatType formatType)
     return builder.toString();
 }
 
-String Locale::localizedDecimalSeparator()
+const String& Locale::localizedDecimalSeparator()
 {
     initializeLocaleData();
     return m_decimalSymbols[DecimalSeparatorIndex];
 }
-#endif
+
+String Locale::localizeNumberCharacters(const String& input)
+{
+    initializeLocaleData();
+    if (!m_hasLocaleData || input.isEmpty())
+        return input;
+
+    StringBuilder builder;
+    builder.reserveCapacity(input.length());
+    for (unsigned i = 0; i < input.length(); ++i) {
+        auto character = input[i];
+        if (character >= '0' && character <= '9')
+            builder.append(m_decimalSymbols[character - '0']);
+        else if (character == '.')
+            builder.append(m_decimalSymbols[DecimalSeparatorIndex]);
+        else
+            builder.append(character);
+    }
+    return builder.toString();
+}
 
 }

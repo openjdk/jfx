@@ -25,7 +25,8 @@
 
 #pragma once
 
-#include "SVGPreserveAspectRatioValue.h"
+#include <WebCore/ExceptionOr.h>
+#include <WebCore/SVGPreserveAspectRatioValue.h>
 #include "SVGValueProperty.h"
 
 namespace WebCore {
@@ -54,7 +55,7 @@ public:
     ExceptionOr<void> setAlign(float value)
     {
         if (isReadOnly())
-            return Exception { NoModificationAllowedError };
+            return Exception { ExceptionCode::NoModificationAllowedError };
 
         auto result = m_value.setAlign(value);
         if (result.hasException())
@@ -69,7 +70,7 @@ public:
     ExceptionOr<void> setMeetOrSlice(float value)
     {
         if (isReadOnly())
-            return Exception { NoModificationAllowedError };
+            return Exception { ExceptionCode::NoModificationAllowedError };
 
         auto result = m_value.setMeetOrSlice(value);
         if (result.hasException())

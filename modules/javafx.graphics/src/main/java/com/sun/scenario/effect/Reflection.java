@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -248,7 +248,7 @@ public class Reflection extends CoreEffect<RenderState> {
                                       Object renderHelper,
                                       Effect defaultInput)
     {
-        // RT-27405
+        // JDK-8091422
         // TODO: We could calculate which parts are needed based on the two
         // ways that the input is rendered into this ouput rectangle. For now,
         // we will just use the stock object that requests unclipped inputs.

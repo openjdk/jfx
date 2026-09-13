@@ -34,6 +34,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 
@@ -43,34 +44,36 @@ class SourceBuffer;
 class WebCoreOpaqueRoot;
 
 class SourceBufferList final : public RefCounted<SourceBufferList>, public EventTarget, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(SourceBufferList);
+    WTF_MAKE_TZONE_ALLOCATED(SourceBufferList);
 public:
     static Ref<SourceBufferList> create(ScriptExecutionContext*);
     virtual ~SourceBufferList();
 
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
+
     bool isSupportedPropertyIndex(unsigned index) const { return index < length(); }
     unsigned length() const { return m_list.size(); }
 
-    SourceBuffer* item(unsigned index) const { return (index < m_list.size()) ? m_list[index].get() : nullptr; }
+    RefPtr<SourceBuffer> item(unsigned index) const;
 
     void add(Ref<SourceBuffer>&&);
     void remove(SourceBuffer&);
-    bool contains(SourceBuffer& buffer) { return m_list.find(&buffer) != notFound; }
+    bool contains(SourceBuffer&) const;
     void clear();
-    void swap(Vector<RefPtr<SourceBuffer>>&);
+    void replaceWith(Vector<Ref<SourceBuffer>>&&);
 
-    auto begin() { return m_list.begin(); }
-    auto end() { return m_list.end(); }
-    auto begin() const { return m_list.begin(); }
-    auto end() const { return m_list.end(); }
+    auto begin() LIFETIME_BOUND { return m_list.begin(); }
+    auto end() LIFETIME_BOUND { return m_list.end(); }
+    auto begin() const LIFETIME_BOUND { return m_list.begin(); }
+    auto end() const LIFETIME_BOUND { return m_list.end(); }
     size_t size() const { return m_list.size(); }
 
     // EventTarget interface
-    EventTargetInterface eventTargetInterface() const final { return SourceBufferListEventTargetInterfaceType; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
-
-    using RefCounted<SourceBufferList>::ref;
-    using RefCounted<SourceBufferList>::deref;
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::SourceBufferList; }
+    ScriptExecutionContext* scriptExecutionContext() const final;
 
 private:
     explicit SourceBufferList(ScriptExecutionContext*);
@@ -80,13 +83,13 @@ private:
     void refEventTarget() override { ref(); }
     void derefEventTarget() override { deref(); }
 
-    const char* activeDOMObjectName() const final;
-
-    Vector<RefPtr<SourceBuffer>> m_list;
+    Vector<Ref<SourceBuffer>> m_list;
 };
 
 WebCoreOpaqueRoot root(SourceBufferList*);
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(SourceBufferList)
 
 #endif // ENABLE(MEDIA_SOURCE)

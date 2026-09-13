@@ -48,7 +48,7 @@ sub applyPreprocessor
     if (!$preprocessor) {
         if ($Config::Config{"osname"} eq "MSWin32") {
             $preprocessor = $ENV{CC} || "cl";
-            push(@args, qw(/EP));
+            push(@args, qw(/nologo /EP /TP));
         } else {
             $preprocessor = $ENV{CC} || (-x "/usr/bin/clang" ? "/usr/bin/clang" : "/usr/bin/gcc");
             push(@args, qw(-E -P -x c++));
@@ -63,12 +63,15 @@ sub applyPreprocessor
         push(@args, "-isysroot", $ENV{SDKROOT}) if $ENV{SDKROOT};
     }
 
+    my @macros;
+    if ($defines) {
     # Remove double quotations from $defines and extract macros.
     # For example, if $defines is ' "A=1" "B=1" C=1 ""    D  ',
     # then it is converted into four macros -DA=1, -DB=1, -DC=1 and -DD.
     $defines =~ s/\"//g;
-    my @macros = grep { $_ } split(/\s+/, $defines); # grep skips empty macros.
+        @macros = grep { $_ } split(/\s+/, $defines); # grep skips empty macros.
     @macros = map { "-D$_" } @macros;
+    }
 
     my $pid = 0;
     if ($Config{osname} eq "cygwin") {

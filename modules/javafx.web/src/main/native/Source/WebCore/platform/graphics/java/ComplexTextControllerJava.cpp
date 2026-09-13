@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,6 +30,7 @@
 #include "FontCascade.h"
 
 #include "PlatformJavaClasses.h"
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -157,7 +158,7 @@ FloatSize jGetInitialAdvance(JLObject jRun)
 ComplexTextController::ComplexTextRun::ComplexTextRun(JLObject jRun, const Font& font, const UChar* characters, unsigned stringLocation, unsigned stringLength)
     : m_initialAdvance(jGetInitialAdvance(jRun))
     , m_font(font)
-    , m_characters(characters)
+    , m_characters(characters, stringLength)
     , m_stringLength(stringLength)
     , m_indexBegin(jGetStart(jRun))
     , m_indexEnd(jGetEnd(jRun))
@@ -165,11 +166,22 @@ ComplexTextController::ComplexTextRun::ComplexTextRun(JLObject jRun, const Font&
     , m_stringLocation(stringLocation)
     , m_isLTR(jIsLTR(jobject(jRun)))
 {
-    if (!m_glyphCount) {
-        // There won't be any glyph when TextRun contains a line break or a soft break.
-        // However WebCore expects us to return a empty value for all of it's query,
-        // Setting m_glyphCount to 1 does the job.
-        m_glyphCount = 1;
+    // Handle empty string runs (line breaks, etc.)
+    if (m_stringLength == 0) {
+        m_glyphCount = 0;
+        return;
+    }
+   // Fallback run if no glyphs were generated
+   if (m_glyphCount == 0) {
+       m_glyphCount = 1;
+       m_glyphs.grow(m_glyphCount);
+       m_baseAdvances.grow(m_glyphCount);
+       m_coreTextIndices.grow(m_glyphCount);
+
+       m_glyphs[0] = 0;
+       m_baseAdvances[0] = m_initialAdvance;
+       m_coreTextIndices[0] = m_stringLocation;
+       return;
     }
 
     m_glyphs.grow(m_glyphCount);
@@ -186,7 +198,7 @@ ComplexTextController::ComplexTextRun::ComplexTextRun(JLObject jRun, const Font&
         m_coreTextIndices[i] = m_indexBegin + jGetCharOffset(jRun, i);
 
         m_glyphs[i]= jGetGlyph(jRun, i);
-        if (m_font.isZeroWidthSpaceGlyph(m_glyphs[i])) {
+        if (m_font->isZeroWidthSpaceGlyph(m_glyphs[i])) {
             m_baseAdvances[i] = { };
             continue;
         }
@@ -196,12 +208,12 @@ ComplexTextController::ComplexTextRun::ComplexTextRun(JLObject jRun, const Font&
     }
 }
 
-void ComplexTextController::collectComplexTextRunsForCharacters(const UChar* characters, unsigned length, unsigned stringLocation, const Font* font)
+void ComplexTextController::collectComplexTextRunsForCharacters(std::span<const UChar> characters, unsigned stringLocation, const Font* font)
 {
     auto jFont = font ? font->platformData().nativeFontData() : nullptr;
     if (!font) {
         // Create a run of missing glyphs from the primary font.
-        m_complexTextRuns.append(ComplexTextRun::create(m_font.primaryFont(), characters, stringLocation, length, 0, length, m_run.ltr()));
+        m_complexTextRuns.append(ComplexTextRun::create(m_fontCascade->primaryFont(), std::span<const UChar>(characters.data(), characters.size()), stringLocation, 0, characters.size(), m_run->ltr()));
         return;
     }
 
@@ -215,18 +227,18 @@ void ComplexTextController::collectComplexTextRunsForCharacters(const UChar* cha
     JLocalRef<jobjectArray> jRuns = static_cast<jobjectArray> (env->CallObjectMethod(
                                                                   *jFont,
                                                                   getTextRuns_mID,
-                                                                  jstring(String(characters, length).toJavaString(env))));
+                                                                  jstring(makeString(characters, characters.size()).toJavaString(env))));
     WTF::CheckAndClearException(env);
 
     if (!jRuns) {
         // Create a run of missing glyphs from the primary font.
-        m_complexTextRuns.append(ComplexTextRun::create(m_font.primaryFont(), characters, stringLocation, length, 0, length, m_run.ltr()));
+        m_complexTextRuns.append(ComplexTextRun::create(m_fontCascade->primaryFont(), std::span<const UChar>(characters.data(), characters.size()), stringLocation, 0, characters.size(), m_run->ltr()));
         return;
     }
 
     for (auto i = 0; i < env->GetArrayLength(jobjectArray(jRuns)); i++) {
         auto jRun = env->GetObjectArrayElement(jobjectArray(jRuns), i);
-        m_complexTextRuns.append(ComplexTextRun::create(jRun, *font, characters, stringLocation, length));
+        m_complexTextRuns.append(ComplexTextRun::create(jRun, *font, characters.data(), stringLocation, characters.size()));
     }
 }
 

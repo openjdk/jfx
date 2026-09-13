@@ -28,7 +28,6 @@ typedef (USVString or CSSOMVariableReferenceValue) CSSUnparsedSegment;
 // https://drafts.css-houdini.org/css-typed-om/#cssunparsedvalue
 [
     InterfaceName=CSSUnparsedValue,
-    EnabledBySetting=CSSTypedOMEnabled,
     Exposed=(Window,Worker,PaintWorklet),
     JSGenerateToNativeObject
 ] interface CSSUnparsedValue : CSSStyleValue {
@@ -37,5 +36,5 @@ typedef (USVString or CSSOMVariableReferenceValue) CSSUnparsedSegment;
     iterable<CSSUnparsedSegment>;
     readonly attribute unsigned long length;
     getter CSSUnparsedSegment? (unsigned long index);
-    setter CSSUnparsedSegment (unsigned long index, CSSUnparsedSegment val);
+    setter undefined (unsigned long index, CSSUnparsedSegment val);
 };

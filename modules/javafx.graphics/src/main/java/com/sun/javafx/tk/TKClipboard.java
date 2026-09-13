@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package com.sun.javafx.tk;
 
-import java.security.AccessControlContext;
 import java.util.Set;
 import javafx.scene.image.Image;
 
@@ -39,11 +38,6 @@ import javafx.util.Pair;
  * callers (and so forth).
  */
 public interface TKClipboard {
-
-    /**
-     * This method is used to set security context of the Stage.
-     */
-    public void setSecurityContext(@SuppressWarnings("removal") AccessControlContext ctx);
 
     /**
      * Gets the set of DataFormat types on this Clipboard instance which have

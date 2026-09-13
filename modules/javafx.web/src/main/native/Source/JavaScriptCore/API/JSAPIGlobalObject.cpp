@@ -28,6 +28,7 @@
 
 #include "GlobalObjectMethodTable.h"
 #include "JSCellInlines.h"
+#include "StructureInlines.h"
 
 namespace JSC {
 
@@ -41,14 +42,14 @@ const GlobalObjectMethodTable* JSAPIGlobalObject::globalObjectMethodTable()
     &supportsRichSourceInfo,
     &shouldInterruptScript,
     &javaScriptRuntimeFlags,
-    nullptr, // queueMicrotaskToEventLoop
+        &queueMicrotaskToEventLoop,
     &shouldInterruptScriptBeforeTimeout,
     nullptr, // moduleLoaderImportModule
     nullptr, // moduleLoaderResolve
     nullptr, // moduleLoaderFetch
     nullptr, // moduleLoaderCreateImportMetaProperties
     nullptr, // moduleLoaderEvaluate
-    nullptr, // promiseRejectionTracker
+        &promiseRejectionTracker,
     &reportUncaughtExceptionAtEventLoop,
     &currentScriptExecutionOwner,
     &scriptExecutionStatus,
@@ -57,6 +58,9 @@ const GlobalObjectMethodTable* JSAPIGlobalObject::globalObjectMethodTable()
     nullptr, // compileStreaming
     nullptr, // instantiateStreaming
     nullptr, // deriveShadowRealmGlobalObject
+        &codeForEval,
+        &canCompileStrings,
+        &trustedScriptStructure,
     };
     return &table;
 }

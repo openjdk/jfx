@@ -25,19 +25,15 @@
 
 #pragma once
 
-#include "MessageWithMessagePorts.h"
-#include "ServiceWorkerData.h"
-
-#if ENABLE(SERVICE_WORKER)
+#include <WebCore/MessageWithMessagePorts.h>
+#include <WebCore/ServiceWorkerData.h>
 
 namespace WebCore {
 
 struct ServiceWorkerClientPendingMessage {
     MessageWithMessagePorts message;
     ServiceWorkerData sourceData;
-    String sourceOrigin;
+    SecurityOriginData sourceOrigin;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

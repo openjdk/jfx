@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,10 +29,8 @@
 #include <string.h>
 #include <math.h>
 
-#include "PrismES2Defs.h"
+#include "../PrismES2Defs.h"
 #include "com_sun_prism_es2_IOSGLDrawable.h"
-
-extern void initializeDrawableInfo(DrawableInfo* dInfo);
 
 /*
  * Class:     com_sun_prism_es2_IOSGLDrawable
@@ -52,7 +50,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_IOSGLDrawable_nCreateDrawable
     }
 
     /* initialize the structure */
-    initializeDrawableInfo(dInfo);
+    memset(dInfo, 0, sizeof(DrawableInfo));
 
     dInfo->win = nativeWindow;
     dInfo->onScreen = JNI_TRUE;
@@ -84,7 +82,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_IOSGLDrawable_nGetDummyDrawable
     }
 
     /* initialize the structure */
-    initializeDrawableInfo(dInfo);
+    memset(dInfo, 0, sizeof(DrawableInfo));
 
     dInfo->win = win;
     dInfo->onScreen = JNI_FALSE;
@@ -107,4 +105,20 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_IOSGLDrawable_nSwapBuffers
 
     flushBuffer((void *) (intptr_t) ctxInfo->context);
     return JNI_TRUE;
+}
+
+
+/*
+ * Class:     com_sun_prism_es2_IOSGLDrawable
+ * Method:    nReleaseDrawable
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_prism_es2_IOSGLDrawable_nReleaseDrawable
+(JNIEnv *env, jclass class, jlong nativeDInfo) {
+    DrawableInfo *dInfo = (DrawableInfo *) jlong_to_ptr(nativeDInfo);
+    if (dInfo == NULL) {
+        return;
+    }
+
+    free(dInfo);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,10 +41,10 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.MapChangeListener;
 import javafx.collections.SetChangeListener;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
-import org.junit.Before;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.BeforeEach;
 
 public class ExpressionHelperUtilityTest {
 
@@ -64,7 +64,7 @@ public class ExpressionHelperUtilityTest {
     private SetChangeListener setChangeListener1;
     private SetChangeListener setChangeListener2;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         observableValue = new SimpleStringProperty();
         observableList = new SimpleListProperty();
@@ -163,7 +163,7 @@ public class ExpressionHelperUtilityTest {
         assertEquals(Collections.singletonList(invalidationListener1), ExpressionHelperUtility.getInvalidationListeners(observableList));
         observableList.addListener(invalidationListener2);
         assertTrue(Arrays.asList(invalidationListener1, invalidationListener2).equals(ExpressionHelperUtility.getInvalidationListeners(observableList))
-                           || Arrays.asList(invalidationListener2, invalidationListener1).equals(ExpressionHelperUtility.getInvalidationListeners(observableList)));
+                || Arrays.asList(invalidationListener2, invalidationListener1).equals(ExpressionHelperUtility.getInvalidationListeners(observableList)));
     }
 
     @Test
@@ -194,7 +194,7 @@ public class ExpressionHelperUtilityTest {
         assertEquals(Collections.singletonList(changeListener1), ExpressionHelperUtility.getChangeListeners(observableList));
         observableList.addListener(changeListener2);
         assertTrue(Arrays.asList(changeListener1, changeListener2).equals(ExpressionHelperUtility.getChangeListeners(observableList))
-                           || Arrays.asList(changeListener2, changeListener1).equals(ExpressionHelperUtility.getChangeListeners(observableList)));
+                || Arrays.asList(changeListener2, changeListener1).equals(ExpressionHelperUtility.getChangeListeners(observableList)));
     }
 
     @Test
@@ -225,7 +225,7 @@ public class ExpressionHelperUtilityTest {
         assertEquals(Collections.singletonList(listChangeListener1), ExpressionHelperUtility.getListChangeListeners(observableList));
         observableList.addListener(listChangeListener2);
         assertTrue(Arrays.asList(listChangeListener1, listChangeListener2).equals(ExpressionHelperUtility.getListChangeListeners(observableList))
-                           || Arrays.asList(listChangeListener2, listChangeListener1).equals(ExpressionHelperUtility.getListChangeListeners(observableList)));
+                || Arrays.asList(listChangeListener2, listChangeListener1).equals(ExpressionHelperUtility.getListChangeListeners(observableList)));
     }
 
     @Test
@@ -256,7 +256,7 @@ public class ExpressionHelperUtilityTest {
         assertEquals(Collections.singletonList(invalidationListener1), ExpressionHelperUtility.getInvalidationListeners(observableMap));
         observableMap.addListener(invalidationListener2);
         assertTrue(Arrays.asList(invalidationListener1, invalidationListener2).equals(ExpressionHelperUtility.getInvalidationListeners(observableMap))
-                           || Arrays.asList(invalidationListener2, invalidationListener1).equals(ExpressionHelperUtility.getInvalidationListeners(observableMap)));
+                || Arrays.asList(invalidationListener2, invalidationListener1).equals(ExpressionHelperUtility.getInvalidationListeners(observableMap)));
     }
 
     @Test
@@ -287,7 +287,7 @@ public class ExpressionHelperUtilityTest {
         assertEquals(Collections.singletonList(changeListener1), ExpressionHelperUtility.getChangeListeners(observableMap));
         observableMap.addListener(changeListener2);
         assertTrue(Arrays.asList(changeListener1, changeListener2).equals(ExpressionHelperUtility.getChangeListeners(observableMap))
-                           || Arrays.asList(changeListener2, changeListener1).equals(ExpressionHelperUtility.getChangeListeners(observableMap)));
+                || Arrays.asList(changeListener2, changeListener1).equals(ExpressionHelperUtility.getChangeListeners(observableMap)));
     }
 
     @Test
@@ -318,7 +318,7 @@ public class ExpressionHelperUtilityTest {
         assertEquals(Collections.singletonList(mapChangeListener1), ExpressionHelperUtility.getMapChangeListeners(observableMap));
         observableMap.addListener(mapChangeListener2);
         assertTrue(Arrays.asList(mapChangeListener1, mapChangeListener2).equals(ExpressionHelperUtility.getMapChangeListeners(observableMap))
-                           || Arrays.asList(mapChangeListener2, mapChangeListener1).equals(ExpressionHelperUtility.getMapChangeListeners(observableMap)));
+                || Arrays.asList(mapChangeListener2, mapChangeListener1).equals(ExpressionHelperUtility.getMapChangeListeners(observableMap)));
     }
 
     @Test
@@ -349,7 +349,7 @@ public class ExpressionHelperUtilityTest {
         assertEquals(Collections.singletonList(invalidationListener1), ExpressionHelperUtility.getInvalidationListeners(observableSet));
         observableSet.addListener(invalidationListener2);
         assertTrue(Arrays.asList(invalidationListener1, invalidationListener2).equals(ExpressionHelperUtility.getInvalidationListeners(observableSet))
-                           || Arrays.asList(invalidationListener2, invalidationListener1).equals(ExpressionHelperUtility.getInvalidationListeners(observableSet)));
+                || Arrays.asList(invalidationListener2, invalidationListener1).equals(ExpressionHelperUtility.getInvalidationListeners(observableSet)));
     }
 
     @Test
@@ -380,7 +380,7 @@ public class ExpressionHelperUtilityTest {
         assertEquals(Collections.singletonList(changeListener1), ExpressionHelperUtility.getChangeListeners(observableSet));
         observableSet.addListener(changeListener2);
         assertTrue(Arrays.asList(changeListener1, changeListener2).equals(ExpressionHelperUtility.getChangeListeners(observableSet))
-                           || Arrays.asList(changeListener2, changeListener1).equals(ExpressionHelperUtility.getChangeListeners(observableSet)));
+                || Arrays.asList(changeListener2, changeListener1).equals(ExpressionHelperUtility.getChangeListeners(observableSet)));
     }
 
     @Test
@@ -411,7 +411,7 @@ public class ExpressionHelperUtilityTest {
         assertEquals(Collections.singletonList(setChangeListener1), ExpressionHelperUtility.getSetChangeListeners(observableSet));
         observableSet.addListener(setChangeListener2);
         assertTrue(Arrays.asList(setChangeListener1, setChangeListener2).equals(ExpressionHelperUtility.getSetChangeListeners(observableSet))
-                           || Arrays.asList(setChangeListener2, setChangeListener1).equals(ExpressionHelperUtility.getSetChangeListeners(observableSet)));
+                || Arrays.asList(setChangeListener2, setChangeListener1).equals(ExpressionHelperUtility.getSetChangeListeners(observableSet)));
     }
 
     private static class EmptyInvalidationListener implements InvalidationListener {

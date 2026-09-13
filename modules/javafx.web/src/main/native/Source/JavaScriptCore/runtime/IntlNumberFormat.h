@@ -31,26 +31,8 @@
 #include "MathCommon.h"
 #include "TemporalObject.h"
 #include <unicode/unum.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/unicode/icu/ICUHelpers.h>
-
-#if !defined(HAVE_ICU_U_NUMBER_FORMATTER)
-// UNUM_COMPACT_FIELD and UNUM_MEASURE_UNIT_FIELD are available after ICU 64.
-#if U_ICU_VERSION_MAJOR_NUM >= 64
-#define HAVE_ICU_U_NUMBER_FORMATTER 1
-#endif
-#endif
-
-#if !defined(HAVE_ICU_U_NUMBER_RANGE_FORMATTER)
-#if U_ICU_VERSION_MAJOR_NUM >= 68
-#define HAVE_ICU_U_NUMBER_RANGE_FORMATTER 1
-#endif
-#endif
-
-#if !defined(HAVE_ICU_U_NUMBER_RANGE_FORMATTER_FORMAT_RANGE_TO_PARTS)
-#if U_ICU_VERSION_MAJOR_NUM >= 69
-#define HAVE_ICU_U_NUMBER_RANGE_FORMATTER_FORMAT_RANGE_TO_PARTS 1
-#endif
-#endif
 
 struct UFormattedValue;
 struct UNumberFormatter;
@@ -64,27 +46,25 @@ enum class RelevantExtensionKey : uint8_t;
 
 enum class IntlRoundingType : uint8_t { FractionDigits, SignificantDigits, MorePrecision, LessPrecision };
 enum class IntlRoundingPriority : uint8_t { Auto, MorePrecision, LessPrecision };
+enum class IntlTrailingZeroDisplay : uint8_t { Auto, StripIfInteger };
 enum class IntlNotation : uint8_t { Standard, Scientific, Engineering, Compact };
 template<typename IntlType> void setNumberFormatDigitOptions(JSGlobalObject*, IntlType*, JSObject*, unsigned minimumFractionDigitsDefault, unsigned maximumFractionDigitsDefault, IntlNotation);
 template<typename IntlType> void appendNumberFormatDigitOptionsToSkeleton(IntlType*, StringBuilder&);
+template<typename IntlType> void appendNumberFormatNotationOptionsToSkeleton(IntlType*, StringBuilder&);
 
-#if HAVE(ICU_U_NUMBER_FORMATTER)
 struct UNumberFormatterDeleter {
     JS_EXPORT_PRIVATE void operator()(UNumberFormatter*);
 };
-#endif
 
-#if HAVE(ICU_U_NUMBER_RANGE_FORMATTER)
 struct UNumberRangeFormatterDeleter {
     JS_EXPORT_PRIVATE void operator()(UNumberRangeFormatter*);
 };
-#endif
 
 class IntlMathematicalValue {
-    WTF_MAKE_FAST_ALLOCATED(IntlMathematicalValue);
+    WTF_MAKE_TZONE_ALLOCATED(IntlMathematicalValue);
 public:
     enum class NumberType { Integer, Infinity, NaN, };
-    using Value = std::variant<double, CString>;
+    using Value = Variant<double, CString>;
 
     IntlMathematicalValue() = default;
 
@@ -101,6 +81,8 @@ public:
     {
     }
 
+    static IntlMathematicalValue parseString(JSGlobalObject*, StringView);
+
     void ensureNonDouble()
     {
         if (std::holds_alternative<double>(m_value)) {
@@ -108,16 +90,16 @@ public:
             case NumberType::Integer: {
                 double value = std::get<double>(m_value);
                 if (isNegativeZero(value))
-                    m_value = CString("-0");
+                    m_value = CString("-0"_s);
                 else
                     m_value = String::number(value).ascii();
                 break;
             }
             case NumberType::NaN:
-                m_value = CString("nan");
+                m_value = CString("nan"_s);
                 break;
             case NumberType::Infinity:
-                m_value = CString(m_sign ? "-infinity" : "infinity");
+                m_value = CString(m_sign ? "-infinity"_s : "infinity"_s);
                 break;
             }
         }
@@ -156,7 +138,7 @@ class IntlNumberFormat final : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
 
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
 
     static void destroy(JSCell* cell)
     {
@@ -174,24 +156,20 @@ public:
 
     DECLARE_INFO;
 
+    DECLARE_VISIT_CHILDREN;
+
     void initializeNumberFormat(JSGlobalObject*, JSValue locales, JSValue optionsValue);
     JSValue format(JSGlobalObject*, double) const;
     JSValue format(JSGlobalObject*, IntlMathematicalValue&&) const;
     JSValue formatToParts(JSGlobalObject*, double, JSString* sourceType = nullptr) const;
-#if HAVE(ICU_U_NUMBER_FORMATTER)
     JSValue formatToParts(JSGlobalObject*, IntlMathematicalValue&&, JSString* sourceType = nullptr) const;
-#endif
     JSObject* resolvedOptions(JSGlobalObject*) const;
 
-#if HAVE(ICU_U_NUMBER_RANGE_FORMATTER)
     JSValue formatRange(JSGlobalObject*, double, double) const;
     JSValue formatRange(JSGlobalObject*, IntlMathematicalValue&&, IntlMathematicalValue&&) const;
-#endif
 
-#if HAVE(ICU_U_NUMBER_RANGE_FORMATTER_FORMAT_RANGE_TO_PARTS)
     JSValue formatRangeToParts(JSGlobalObject*, double, double) const;
     JSValue formatRangeToParts(JSGlobalObject*, IntlMathematicalValue&&, IntlMathematicalValue&&) const;
-#endif
 
     JSBoundFunction* boundFormat() const { return m_boundFormat.get(); }
     void setBoundFormat(VM&, JSBoundFunction*);
@@ -205,26 +183,28 @@ public:
     friend void setNumberFormatDigitOptions(JSGlobalObject*, IntlType*, JSObject*, unsigned minimumFractionDigitsDefault, unsigned maximumFractionDigitsDefault, IntlNotation);
     template<typename IntlType>
     friend void appendNumberFormatDigitOptionsToSkeleton(IntlType*, StringBuilder&);
+    template<typename IntlType>
+    friend void appendNumberFormatNotationOptionsToSkeleton(IntlType*, StringBuilder&);
 
     static ASCIILiteral notationString(IntlNotation);
 
     static IntlNumberFormat* unwrapForOldFunctions(JSGlobalObject*, JSValue);
 
+    static ASCIILiteral roundingModeString(RoundingMode);
     static ASCIILiteral roundingPriorityString(IntlRoundingType);
+    static ASCIILiteral trailingZeroDisplayString(IntlTrailingZeroDisplay);
 
 private:
     IntlNumberFormat(VM&, Structure*);
     DECLARE_DEFAULT_FINISH_CREATION;
-    DECLARE_VISIT_CHILDREN;
 
     static Vector<String> localeData(const String&, RelevantExtensionKey);
 
-    enum class CurrencyDisplay : uint8_t { Code, Symbol, NarrowSymbol, Name };
+    enum class CurrencyDisplay : uint8_t { Code, Symbol, FormalSymbol, NarrowSymbol, Name, Never };
     enum class CurrencySign : uint8_t { Standard, Accounting };
     enum class UnitDisplay : uint8_t { Short, Narrow, Long };
     enum class CompactDisplay : uint8_t { Short, Long };
     enum class SignDisplay : uint8_t { Auto, Never, Always, ExceptZero, Negative };
-    enum class TrailingZeroDisplay : uint8_t { Auto, StripIfInteger };
     enum class UseGrouping : uint8_t { False, Min2, Auto, Always };
 
     static ASCIILiteral styleString(Style);
@@ -233,19 +213,11 @@ private:
     static ASCIILiteral unitDisplayString(UnitDisplay);
     static ASCIILiteral compactDisplayString(CompactDisplay);
     static ASCIILiteral signDisplayString(SignDisplay);
-    static ASCIILiteral roundingModeString(RoundingMode);
-    static ASCIILiteral trailingZeroDisplayString(TrailingZeroDisplay);
     static JSValue useGroupingValue(VM&, UseGrouping);
 
     WriteBarrier<JSBoundFunction> m_boundFormat;
-#if HAVE(ICU_U_NUMBER_FORMATTER)
     std::unique_ptr<UNumberFormatter, UNumberFormatterDeleter> m_numberFormatter;
-#if HAVE(ICU_U_NUMBER_RANGE_FORMATTER)
     std::unique_ptr<UNumberRangeFormatter, UNumberRangeFormatterDeleter> m_numberRangeFormatter;
-#endif
-#else
-    std::unique_ptr<UNumberFormat, ICUDeleter<unum_close>> m_numberFormat;
-#endif
 
     String m_locale;
     String m_numberingSystem;
@@ -264,7 +236,7 @@ private:
     CompactDisplay m_compactDisplay;
     IntlNotation m_notation { IntlNotation::Standard };
     SignDisplay m_signDisplay;
-    TrailingZeroDisplay m_trailingZeroDisplay { TrailingZeroDisplay::Auto };
+    IntlTrailingZeroDisplay m_trailingZeroDisplay { IntlTrailingZeroDisplay::Auto };
     UseGrouping m_useGrouping { UseGrouping::Always };
     RoundingMode m_roundingMode { RoundingMode::HalfExpand };
     IntlRoundingType m_roundingType { IntlRoundingType::FractionDigits };

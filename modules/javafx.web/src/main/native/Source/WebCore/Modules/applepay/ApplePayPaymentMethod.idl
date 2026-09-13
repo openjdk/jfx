@@ -26,7 +26,9 @@
 [
     Conditional=APPLE_PAY,
     ExportMacro=WEBCORE_EXPORT,
-    JSGenerateToJSObject
+    JSGenerateToJSObject,
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ApplePayPaymentMethod {
     DOMString displayName;
     DOMString network;

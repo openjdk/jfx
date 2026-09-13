@@ -31,14 +31,21 @@ class SVGTextMetrics {
 public:
     enum MetricsType { SkippedSpaceMetrics };
 
-    SVGTextMetrics();
-    explicit SVGTextMetrics(MetricsType);
-    SVGTextMetrics(RenderSVGInlineText&, unsigned length, float width);
+    SVGTextMetrics() = default;
+    explicit SVGTextMetrics(MetricsType)
+        : m_length(1)
+    { }
+    SVGTextMetrics(const RenderSVGInlineText&, unsigned length, float width);
+    SVGTextMetrics(unsigned length, float scaledWidth, float scaledHeight)
+        : m_width(scaledWidth)
+        , m_height(scaledHeight)
+        , m_length(length)
+    { }
 
-    static SVGTextMetrics measureCharacterRange(RenderSVGInlineText&, unsigned position, unsigned length);
-    static TextRun constructTextRun(RenderSVGInlineText&, unsigned position = 0, unsigned length = std::numeric_limits<unsigned>::max());
+    static SVGTextMetrics measureCharacterRange(const RenderSVGInlineText&, unsigned position, unsigned length);
+    static TextRun constructTextRun(const RenderSVGInlineText&, unsigned position = 0, unsigned length = std::numeric_limits<unsigned>::max());
 
-    bool isEmpty() const { return !m_width && !m_height && !m_glyph.isValid && m_length == 1; }
+    bool isEmpty() const { return !m_width && !m_height && m_length == 1; }
 
     float width() const { return m_width; }
     void setWidth(float width) { m_width = width; }
@@ -46,27 +53,12 @@ public:
     float height() const { return m_height; }
     unsigned length() const { return m_length; }
 
-    struct Glyph {
-        Glyph()
-            : isValid(false)
-        {
-        }
-
-        bool isValid;
-        String name;
-        String unicodeString;
-    };
-
-    // Only useful when measuring individual characters, to lookup ligatures.
-    const Glyph& glyph() const { return m_glyph; }
-
 private:
-    SVGTextMetrics(RenderSVGInlineText&, const TextRun&);
+    SVGTextMetrics(const RenderSVGInlineText&, const TextRun&);
 
-    float m_width;
-    float m_height;
-    unsigned m_length;
-    Glyph m_glyph;
+    float m_width { 0 };
+    float m_height { 0 };
+    unsigned m_length { 0 };
 };
 
 } // namespace WebCore

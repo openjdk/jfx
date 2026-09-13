@@ -26,9 +26,11 @@
 #pragma once
 
 #include "IdleRequestCallback.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/Deque.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/Seconds.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -36,28 +38,29 @@ namespace WebCore {
 class Document;
 class WeakPtrImplWithEventTargetData;
 
-class IdleCallbackController {
-    WTF_MAKE_FAST_ALLOCATED;
-
+class IdleCallbackController final : public CanMakeWeakPtr<IdleCallbackController>, public CanMakeCheckedPtr<IdleCallbackController> {
+    WTF_MAKE_TZONE_ALLOCATED(IdleCallbackController);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(IdleCallbackController);
 public:
-    IdleCallbackController(Document&);
+    explicit IdleCallbackController(Document&);
 
     int queueIdleCallback(Ref<IdleRequestCallback>&&, Seconds timeout);
     void removeIdleCallback(int);
 
     void startIdlePeriod();
+    bool isEmpty() const { return m_idleRequestCallbacks.isEmpty() && m_runnableIdleCallbacks.isEmpty(); }
 
 private:
-    void queueTaskToStartIdlePeriod();
-    void queueTaskToInvokeIdleCallbacks(MonotonicTime deadline);
-    void invokeIdleCallbacks(MonotonicTime deadline);
+    void queueTaskToInvokeIdleCallbacks();
+    bool invokeIdleCallbacks();
+    void invokeIdleCallbackTimeout(unsigned identifier);
 
     unsigned m_idleCallbackIdentifier { 0 };
-    MonotonicTime m_lastDeadline;
 
     struct IdleRequest {
         unsigned identifier { 0 };
         Ref<IdleRequestCallback> callback;
+        std::optional<MonotonicTime> timeout;
     };
 
     Deque<IdleRequest> m_idleRequestCallbacks;

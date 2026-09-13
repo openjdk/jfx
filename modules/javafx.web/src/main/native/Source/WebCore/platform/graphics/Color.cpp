@@ -30,54 +30,64 @@
 #include "ColorSerialization.h"
 #include <cmath>
 #include <wtf/Assertions.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Color);
+
 static constexpr auto lightenedBlack = SRGBA<uint8_t> { 84, 84, 84 };
 static constexpr auto darkenedWhite = SRGBA<uint8_t> { 171, 171, 171 };
 
-Color::Color(const Color& other)
-    : m_colorAndFlags(other.m_colorAndFlags)
+Color::Color(std::optional<ColorDataForIPC>&& colorData)
 {
-    if (isOutOfLine())
-        asOutOfLine().ref();
+    if (colorData) {
+        OptionSet<FlagsIncludingPrivate> flags;
+        if (colorData->isSemantic)
+            flags.add(FlagsIncludingPrivate::Semantic);
+        if (colorData->usesFunctionSerialization)
+            flags.add(FlagsIncludingPrivate::UseColorFunctionSerialization);
+
+        WTF::switchOn(colorData->data,
+            [&] (const PackedColor::RGBA& d) { setColor(asSRGBA(d), flags); },
+            [&] (const OutOfLineColorDataForIPC& d) {
+                setOutOfLineComponents(OutOfLineComponents::create({ d.c1, d.c2, d.c3, d.alpha }), d.colorSpace, flags);
+            }
+        );
+    }
 }
 
-Color::Color(Color&& other)
+std::optional<ColorDataForIPC> Color::data() const
 {
-    *this = WTFMove(other);
-}
+    if (!isValid())
+        return std::nullopt;
 
-Color& Color::operator=(const Color& other)
-{
-    if (*this == other)
-        return *this;
+    if (isOutOfLine()) {
+        auto [c1, c2, c3, alpha] = asOutOfLine().unresolvedComponents();
 
-    if (isOutOfLine())
-        asOutOfLine().deref();
+        OutOfLineColorDataForIPC oolcd = {
+            .colorSpace = colorSpace(),
+            .c1 = c1,
+            .c2 = c2,
+            .c3 = c3,
+            .alpha = alpha
+        };
 
-    m_colorAndFlags = other.m_colorAndFlags;
+        return { {
+            .isSemantic = flags().contains(FlagsIncludingPrivate::Semantic),
+            .usesFunctionSerialization = flags().contains(FlagsIncludingPrivate::UseColorFunctionSerialization),
+            .data = oolcd
+        } };
 
-    if (isOutOfLine())
-        asOutOfLine().ref();
-
-    return *this;
-}
-
-Color& Color::operator=(Color&& other)
-{
-    if (*this == other)
-        return *this;
-
-    if (isOutOfLine())
-        asOutOfLine().deref();
-
-    m_colorAndFlags = other.m_colorAndFlags;
-    other.m_colorAndFlags = invalidColorAndFlags;
-
-    return *this;
-}
+    } else {
+        return { {
+            .isSemantic = flags().contains(FlagsIncludingPrivate::Semantic),
+            .usesFunctionSerialization = flags().contains(FlagsIncludingPrivate::UseColorFunctionSerialization),
+            .data = asPackedInline()
+        } };
+    };
+};
 
 Color Color::lightened() const
 {
@@ -120,22 +130,16 @@ double Color::lightness() const
 
 double Color::luminance() const
 {
-    return callOnUnderlyingType([&] (const auto& underlyingColor) {
-        return WebCore::relativeLuminance(underlyingColor);
-    });
+    return WebCore::relativeLuminance(*this);
 }
 
 bool Color::anyComponentIsNone() const
 {
-    return callOnUnderlyingType([&] (const auto& underlyingColor) {
-        using ColorType = std::decay_t<decltype(underlyingColor)>;
-
-        if constexpr (std::is_same_v<ColorType, SRGBA<uint8_t>>) {
+    return callOnUnderlyingType([&]<typename ColorType> (const ColorType& underlyingColor) {
+        if constexpr (std::is_same_v<ColorType, SRGBA<uint8_t>>)
             return false;
-        } else {
-            auto [c1, c2, c3, alpha] = underlyingColor.unresolved();
-            return std::isnan(c1) || std::isnan(c2) || std::isnan(c3) || std::isnan(alpha);
-        }
+        else
+            return underlyingColor.unresolved().anyComponentIsNone();
     });
 }
 
@@ -154,9 +158,7 @@ Color Color::colorWithAlpha(float alpha) const
 
 Color Color::invertedColorWithAlpha(float alpha) const
 {
-    return callOnUnderlyingType([&] (const auto& underlyingColor) -> Color {
-        using ColorType = std::decay_t<decltype(underlyingColor)>;
-
+    return callOnUnderlyingType([&]<typename ColorType> (const ColorType& underlyingColor) -> Color {
         // FIXME: Determine if there is a meaningful understanding of inversion that works
         // better for non-invertible color types like Lab or consider removing this in favor
         // of alternatives.
@@ -173,7 +175,7 @@ Color Color::semanticColor() const
         return *this;
 
     if (isOutOfLine())
-        return { asOutOfLineRef(), colorSpace(), Flags::Semantic };
+        return { protectedAsOutOfLine(), colorSpace(), Flags::Semantic };
     return { asInline(), Flags::Semantic };
 }
 
@@ -192,7 +194,7 @@ ColorComponents<float, 4> Color::toResolvedColorComponentsInColorSpace(const Des
 std::pair<ColorSpace, ColorComponents<float, 4>> Color::colorSpaceAndResolvedColorComponents() const
 {
     if (isOutOfLine())
-        return { colorSpace(), resolveColorComponents(asOutOfLine().resolvedComponents()) };
+        return { colorSpace(), resolveColorComponents(protectedAsOutOfLine()->resolvedComponents()) };
     return { ColorSpace::SRGB, asColorComponents(convertColor<SRGBA<float>>(asInline()).resolved()) };
 }
 

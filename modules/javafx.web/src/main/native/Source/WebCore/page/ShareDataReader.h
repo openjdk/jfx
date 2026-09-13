@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "ShareData.h"
 #include <wtf/CompletionHandler.h>
 
@@ -35,10 +34,11 @@ class Blob;
 class BlobLoader;
 class Document;
 class ScriptExecutionContext;
+template<typename> class ExceptionOr;
 
 class ShareDataReader : public RefCounted<ShareDataReader> {
 public:
-    static Ref<ShareDataReader> create(CompletionHandler<void(ExceptionOr<ShareDataWithParsedURL&>)>&& completionHandler) { return adoptRef(*new ShareDataReader(WTFMove(completionHandler))); }
+    static Ref<ShareDataReader> create(CompletionHandler<void(ExceptionOr<ShareDataWithParsedURL&>)>&& completionHandler) { return adoptRef(*new ShareDataReader(WTF::move(completionHandler))); }
     ~ShareDataReader();
     void start(Document*, ShareDataWithParsedURL&&);
     void cancel();
@@ -50,7 +50,7 @@ private:
     CompletionHandler<void(ExceptionOr<ShareDataWithParsedURL&>)> m_completionHandler;
     ShareDataWithParsedURL m_shareData;
     int m_filesReadSoFar;
-    Vector<UniqueRef<BlobLoader>> m_pendingFileLoads;
+    Vector<Ref<BlobLoader>> m_pendingFileLoads;
 };
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,11 +30,14 @@
 #include "CSSCustomPropertyValue.h"
 #include "CSSParserTokenRange.h"
 #include "CSSVariableData.h"
-#include "Document.h"
-#include "Page.h"
+#include "DocumentPage.h"
+#include "StyleCustomProperty.h"
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ConstantPropertyMap);
 
 ConstantPropertyMap::ConstantPropertyMap(Document& document)
     : m_document(document)
@@ -90,7 +93,7 @@ void ConstantPropertyMap::setValueForProperty(ConstantProperty property, Ref<CSS
         buildValues();
 
     auto& name = nameForProperty(property);
-    m_values->set(name, CSSCustomPropertyValue::createSyntaxAll(name, WTFMove(data)));
+    m_values->set(name, Style::CustomProperty::createForVariableData(name, WTF::move(data)));
 }
 
 void ConstantPropertyMap::buildValues()
@@ -125,9 +128,15 @@ static Ref<CSSVariableData> variableDataForPositiveDuration(Seconds durationInSe
     return CSSVariableData::create(tokenRange);
 }
 
+Ref<Document> ConstantPropertyMap::protectedDocument() const
+{
+    return m_document.get();
+}
+
 void ConstantPropertyMap::updateConstantsForSafeAreaInsets()
 {
-    FloatBoxExtent unobscuredSafeAreaInsets = m_document.page() ? m_document.page()->unobscuredSafeAreaInsets() : FloatBoxExtent();
+    RefPtr page = m_document->page();
+    FloatBoxExtent unobscuredSafeAreaInsets = page ? page->unobscuredSafeAreaInsets() : FloatBoxExtent();
     setValueForProperty(ConstantProperty::SafeAreaInsetTop, variableDataForPositivePixelLength(unobscuredSafeAreaInsets.top()));
     setValueForProperty(ConstantProperty::SafeAreaInsetRight, variableDataForPositivePixelLength(unobscuredSafeAreaInsets.right()));
     setValueForProperty(ConstantProperty::SafeAreaInsetBottom, variableDataForPositivePixelLength(unobscuredSafeAreaInsets.bottom()));
@@ -137,31 +146,32 @@ void ConstantPropertyMap::updateConstantsForSafeAreaInsets()
 void ConstantPropertyMap::didChangeSafeAreaInsets()
 {
     updateConstantsForSafeAreaInsets();
-    m_document.invalidateMatchedPropertiesCacheAndForceStyleRecalc();
+    protectedDocument()->invalidateMatchedPropertiesCacheAndForceStyleRecalc();
 }
 
 void ConstantPropertyMap::updateConstantsForFullscreen()
 {
-    FloatBoxExtent fullscreenInsets = m_document.page() ? m_document.page()->fullscreenInsets() : FloatBoxExtent();
+    RefPtr page = m_document->page();
+    FloatBoxExtent fullscreenInsets = page ? page->fullscreenInsets() : FloatBoxExtent();
     setValueForProperty(ConstantProperty::FullscreenInsetTop, variableDataForPositivePixelLength(fullscreenInsets.top()));
     setValueForProperty(ConstantProperty::FullscreenInsetRight, variableDataForPositivePixelLength(fullscreenInsets.right()));
     setValueForProperty(ConstantProperty::FullscreenInsetBottom, variableDataForPositivePixelLength(fullscreenInsets.bottom()));
     setValueForProperty(ConstantProperty::FullscreenInsetLeft, variableDataForPositivePixelLength(fullscreenInsets.left()));
 
-    Seconds fullscreenAutoHideDuration = m_document.page() ? m_document.page()->fullscreenAutoHideDuration() : 0_s;
+    Seconds fullscreenAutoHideDuration = page ? page->fullscreenAutoHideDuration() : 0_s;
     setValueForProperty(ConstantProperty::FullscreenAutoHideDuration, variableDataForPositiveDuration(fullscreenAutoHideDuration));
 }
 
 void ConstantPropertyMap::didChangeFullscreenInsets()
 {
     updateConstantsForFullscreen();
-    m_document.invalidateMatchedPropertiesCacheAndForceStyleRecalc();
+    protectedDocument()->invalidateMatchedPropertiesCacheAndForceStyleRecalc();
 }
 
 void ConstantPropertyMap::setFullscreenAutoHideDuration(Seconds duration)
 {
     setValueForProperty(ConstantProperty::FullscreenAutoHideDuration, variableDataForPositiveDuration(duration));
-    m_document.invalidateMatchedPropertiesCacheAndForceStyleRecalc();
+    protectedDocument()->invalidateMatchedPropertiesCacheAndForceStyleRecalc();
 }
 
 }

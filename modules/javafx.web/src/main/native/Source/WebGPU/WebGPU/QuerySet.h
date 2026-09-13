@@ -25,31 +25,44 @@
 
 #pragma once
 
+#import "BindableResource.h"
+#import <WebGPU/WGPUQuerySetImpl.h>
+#import <WebGPU/WebGPU.h>
+#import <WebGPU/WebGPUExt.h>
 #import <optional>
 #import <wtf/FastMalloc.h>
+#import <wtf/Range.h>
+#import <wtf/RangeSet.h>
 #import <wtf/Ref.h>
-#import <wtf/RefCounted.h>
+#import <wtf/RefCountedAndCanMakeWeakPtr.h>
+#import <wtf/RetainReleaseSwift.h>
+#import <wtf/TZoneMalloc.h>
 #import <wtf/Vector.h>
-
-struct WGPUQuerySetImpl {
-};
+#import <wtf/WeakHashSet.h>
+#import <wtf/WeakPtr.h>
 
 namespace WebGPU {
 
 class Buffer;
+class CommandEncoder;
 class Device;
 
 // https://gpuweb.github.io/gpuweb/#gpuqueryset
-class QuerySet : public WGPUQuerySetImpl, public RefCounted<QuerySet> {
-    WTF_MAKE_FAST_ALLOCATED;
+class QuerySet : public WGPUQuerySetImpl, public RefCountedAndCanMakeWeakPtr<QuerySet>, public TrackedResource {
+    WTF_MAKE_TZONE_ALLOCATED(QuerySet);
 public:
+    struct CounterSampleBuffer {
+        id<MTLCounterSampleBuffer> buffer { nil }; // Safety: ARC retains this pointer
+        uint32_t offset { 0 };
+    } SWIFT_ESCAPABLE;
+
     static Ref<QuerySet> create(id<MTLBuffer> visibilityBuffer, uint32_t count, WGPUQueryType type, Device& device)
     {
         return adoptRef(*new QuerySet(visibilityBuffer, count, type, device));
     }
-    static Ref<QuerySet> create(id<MTLCounterSampleBuffer> counterSampleBuffer, uint32_t count, WGPUQueryType type, Device& device)
+    static Ref<QuerySet> create(CounterSampleBuffer&& counterSampleBuffer, uint32_t count, WGPUQueryType type, Device& device)
     {
-        return adoptRef(*new QuerySet(counterSampleBuffer, count, type, device));
+        return adoptRef(*new QuerySet(WTF::move(counterSampleBuffer), count, type, device));
     }
     static Ref<QuerySet> createInvalid(Device& device)
     {
@@ -61,28 +74,32 @@ public:
     void destroy();
     void setLabel(String&&);
 
-    bool isValid() const { return static_cast<bool>(m_visibilityBuffer) || static_cast<bool>(m_visibilityBuffer); }
+    bool isValid() const;
 
-    void setOverrideLocation(uint32_t myIndex, QuerySet& otherQuerySet, uint32_t otherIndex);
-    void encodeResolveCommands(id<MTLBlitCommandEncoder>, uint32_t firstQuery, uint32_t queryCount, const Buffer& destination, uint64_t destinationOffset) const;
+    void setOverrideLocation(QuerySet& otherQuerySet, uint32_t beginningOfPassIndex, uint32_t endOfPassIndex);
 
     Device& device() const { return m_device; }
     uint32_t count() const { return m_count; }
     WGPUQueryType type() const { return m_type; }
     id<MTLBuffer> visibilityBuffer() const { return m_visibilityBuffer; }
-    id<MTLCounterSampleBuffer> counterSampleBuffer() const { return m_timestampBuffer; }
+    CounterSampleBuffer counterSampleBufferWithOffset() const;
+
+    void setCommandEncoder(CommandEncoder&) const;
+    bool isDestroyed() const;
+    static void destroyQuerySet(const QuerySet&);
+    static CounterSampleBuffer counterSampleBufferWithOffsetForDevice(size_t, const Device&);
+    static void createContainersIfNeeded();
 
 private:
     QuerySet(id<MTLBuffer>, uint32_t, WGPUQueryType, Device&);
-    QuerySet(id<MTLCounterSampleBuffer>, uint32_t, WGPUQueryType, Device&);
+    QuerySet(CounterSampleBuffer&&, uint32_t, WGPUQueryType, Device&);
     QuerySet(Device&);
 
     const Ref<Device> m_device;
-    // FIXME: Can we use a variant for these two resources?
     id<MTLBuffer> m_visibilityBuffer { nil };
-    id<MTLCounterSampleBuffer> m_timestampBuffer { nil };
+    CounterSampleBuffer m_timestampBufferWithOffset;
     uint32_t m_count { 0 };
-    WGPUQueryType m_type { WGPUQueryType_Occlusion };
+    const WGPUQueryType m_type { WGPUQueryType_Force32 };
 
     // rdar://91371495 is about how we can't just naively transform PassDescriptor.timestampWrites into MTLComputePassDescriptor.sampleBufferAttachments.
     // Instead, we can resolve all the information to a dummy counter sample buffer, and then internally remember that the data
@@ -94,7 +111,23 @@ private:
         Ref<QuerySet> other;
         uint32_t otherIndex;
     };
-    Vector<std::optional<OverrideLocation>> m_overrideLocations;
-};
+    bool m_destroyed { false };
+
+    // static is intentional here as the limit is per process
+    static constexpr uint32_t maxCounterSampleBuffers = 32;
+    static Lock querySetLock;
+    static std::unique_ptr<Vector<id<MTLCounterSampleBuffer>>> m_counterSampleBuffers WTF_GUARDED_BY_LOCK(querySetLock);
+    static std::unique_ptr<Vector<RangeSet<Range<uint32_t>>>> m_counterSampleBufferFreeRanges WTF_GUARDED_BY_LOCK(querySetLock);
+} SWIFT_SHARED_REFERENCE(refQuerySet, derefQuerySet);
 
 } // namespace WebGPU
+
+inline void refQuerySet(WebGPU::QuerySet* obj)
+{
+    WTF::ref(obj);
+}
+
+inline void derefQuerySet(WebGPU::QuerySet* obj)
+{
+    WTF::deref(obj);
+}

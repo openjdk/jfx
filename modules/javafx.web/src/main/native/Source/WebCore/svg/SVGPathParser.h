@@ -43,7 +43,7 @@ private:
     SVGPathParser(SVGPathConsumer&, SVGPathSource&, PathParsingMode);
     bool parsePathData(bool checkForInitialMoveTo);
 
-    bool decomposeArcToCubic(float angle, float rx, float ry, FloatPoint&, FloatPoint&, bool largeArcFlag, bool sweepFlag);
+    bool decomposeArcToCubic(float angle, float rx, float ry, const FloatPoint&, const FloatPoint&, bool largeArcFlag, bool sweepFlag);
     void parseClosePathSegment();
     bool parseMoveToSegment();
     bool parseLineToSegment();
@@ -55,14 +55,14 @@ private:
     bool parseCurveToQuadraticSmoothSegment();
     bool parseArcToSegment();
 
-    SVGPathSource& m_source;
-    SVGPathConsumer& m_consumer;
+    SingleThreadWeakRef<SVGPathSource> m_source;
+    SingleThreadWeakRef<SVGPathConsumer> m_consumer;
     FloatPoint m_controlPoint;
     FloatPoint m_currentPoint;
     FloatPoint m_subPathPoint;
     PathCoordinateMode m_mode { AbsoluteCoordinates };
     const PathParsingMode m_pathParsingMode { NormalizedParsing };
-    SVGPathSegType m_lastCommand { PathSegUnknown };
+    SVGPathSegType m_lastCommand { SVGPathSegType::Unknown };
     bool m_closePath { true };
 };
 

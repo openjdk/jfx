@@ -26,7 +26,11 @@
 #pragma once
 
 #include <atomic>
+#include <cstdint>
 #include <utility>
+#include <wtf/Assertions.h>
+#include <wtf/ExportMacros.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/ThreadSafetyAnalysis.h>
 
 namespace WTF {
@@ -60,6 +64,7 @@ public:
     WTF_EXPORT_PRIVATE static uint32_t currentSequence();
 
 protected:
+    static constexpr uint32_t mainThreadID { 1 };
     static std::atomic<uint32_t> s_uid;
     static ThreadLikeAssertion createThreadLikeAssertion(uint32_t);
 };
@@ -99,9 +104,9 @@ public:
     ThreadLikeAssertion& operator=(ThreadLikeAssertion&&);
 
     void reset() { *this = currentThreadLike; }
+    bool isCurrent() const; // Public as used in API tests.
 private:
     constexpr ThreadLikeAssertion(uint32_t uid);
-    bool isCurrent() const;
 #if ASSERT_ENABLED
     uint32_t m_uid;
 #endif
@@ -118,7 +123,7 @@ inline ThreadLikeAssertion::ThreadLikeAssertion(CurrentThreadLike)
 
 inline ThreadLikeAssertion::ThreadLikeAssertion(ThreadLikeAssertion&& other)
 {
-    *this = WTFMove(other);
+    *this = WTF::move(other);
 }
 
 inline ThreadLikeAssertion& ThreadLikeAssertion::operator=(ThreadLikeAssertion&& other)

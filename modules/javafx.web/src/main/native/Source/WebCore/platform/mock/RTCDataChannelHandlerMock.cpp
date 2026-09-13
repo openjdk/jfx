@@ -32,8 +32,11 @@
 #include "ProcessQualified.h"
 #include "RTCDataChannelHandlerClient.h"
 #include "RTCNotifiersMock.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RTCDataChannelHandlerMock);
 
 RTCDataChannelHandlerMock::RTCDataChannelHandlerMock(const String& label, const RTCDataChannelInit& init)
     : m_label(label)
@@ -41,30 +44,36 @@ RTCDataChannelHandlerMock::RTCDataChannelHandlerMock(const String& label, const 
 {
 }
 
-void RTCDataChannelHandlerMock::setClient(RTCDataChannelHandlerClient& client, ScriptExecutionContextIdentifier)
+void RTCDataChannelHandlerMock::setClient(RTCDataChannelHandlerClient& client, std::optional<ScriptExecutionContextIdentifier>)
 {
     ASSERT(!m_client);
-    m_client = &client;
-    auto notifier = adoptRef(*new DataChannelStateNotifier(m_client, RTCDataChannelState::Open));
-    m_timerEvents.append(adoptRef(new TimerEvent(this, WTFMove(notifier))));
+    m_client = client;
+    Ref notifier = adoptRef(*new DataChannelStateNotifier(&client, RTCDataChannelState::Open));
+    m_timerEvents.append(adoptRef(*new TimerEvent(this, WTF::move(notifier))));
 }
 
 bool RTCDataChannelHandlerMock::sendStringData(const CString& string)
 {
-    m_client->didReceiveStringData(String::fromUTF8(string));
+    if (RefPtr client = m_client.get())
+        client->didReceiveStringData(String::fromUTF8(string.span()));
     return true;
 }
 
-bool RTCDataChannelHandlerMock::sendRawData(const uint8_t* data, size_t size)
+bool RTCDataChannelHandlerMock::sendRawData(std::span<const uint8_t> data)
 {
-    m_client->didReceiveRawData(data, size);
+    if (RefPtr client = m_client.get())
+        client->didReceiveRawData(data);
     return true;
 }
 
 void RTCDataChannelHandlerMock::close()
 {
-    auto notifier = adoptRef(*new DataChannelStateNotifier(m_client, RTCDataChannelState::Closed));
-    m_timerEvents.append(adoptRef(new TimerEvent(this, WTFMove(notifier))));
+    RefPtr client = m_client.get();
+    if (!client)
+        return;
+
+    Ref notifier = adoptRef(*new DataChannelStateNotifier(client.get(), RTCDataChannelState::Closed));
+    m_timerEvents.append(adoptRef(*new TimerEvent(this, WTF::move(notifier))));
 }
 
 } // namespace WebCore

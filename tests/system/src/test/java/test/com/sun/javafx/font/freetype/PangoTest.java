@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,11 @@
 
 package test.com.sun.javafx.font.freetype;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static test.util.Util.TIMEOUT;
-
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -40,11 +38,9 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 /**
@@ -81,13 +77,13 @@ public class PangoTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() throws Exception {
         Util.launch(launchLatch, MyApp.class);
         assertEquals(0, launchLatch.getCount());
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
         Util.shutdown();
     }
@@ -100,7 +96,7 @@ public class PangoTest {
             });
             pane.getChildren().add(text);
         });
-        assertTrue("Timeout waiting for runLater", rDone.await(TIMEOUT, TimeUnit.MILLISECONDS));
+        assertTrue(rDone.await(TIMEOUT, TimeUnit.MILLISECONDS), "Timeout waiting for runLater");
     }
 
     @Test

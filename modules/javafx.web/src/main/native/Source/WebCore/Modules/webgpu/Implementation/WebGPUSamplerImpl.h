@@ -30,17 +30,18 @@
 #include "WebGPUPtr.h"
 #include "WebGPUSampler.h"
 #include <WebGPU/WebGPU.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore::WebGPU {
 
 class ConvertToBackingContext;
 
 class SamplerImpl final : public Sampler {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(SamplerImpl);
 public:
     static Ref<SamplerImpl> create(WebGPUPtr<WGPUSampler>&& sampler, ConvertToBackingContext& convertToBackingContext)
     {
-        return adoptRef(*new SamplerImpl(WTFMove(sampler), convertToBackingContext));
+        return adoptRef(*new SamplerImpl(WTF::move(sampler), convertToBackingContext));
     }
 
     virtual ~SamplerImpl();
@@ -56,13 +57,18 @@ private:
     SamplerImpl& operator=(SamplerImpl&&) = delete;
 
     WGPUSampler backing() const { return m_backing.get(); }
+    bool isSamplerImpl() const final { return true; }
 
     void setLabelInternal(const String&) final;
 
     WebGPUPtr<WGPUSampler> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebGPU::SamplerImpl)
+    static bool isType(const WebCore::WebGPU::Sampler& sampler) { return sampler.isSamplerImpl(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

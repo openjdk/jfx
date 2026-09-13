@@ -36,11 +36,12 @@
 #include <wtf/FileSystem.h>
 #include <wtf/MainThread.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 #include <wtf/text/CString.h>
 
-#if PLATFORM(IOS_FAMILY)
-#include <pal/spi/ios/SQLite3SPI.h>
+#if PLATFORM(COCOA)
+#include <pal/spi/cocoa/SQLite3SPI.h>
 #endif
 
 using namespace WebCore;
@@ -52,6 +53,8 @@ static StorageTracker* storageTracker = nullptr;
 // If there is no document referencing a storage database, close the underlying database
 // after it has been idle for m_StorageDatabaseIdleInterval seconds.
 static const Seconds defaultStorageDatabaseIdleInterval { 300_s };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(StorageTracker);
 
 void StorageTracker::initializeTracker(const String& storagePath, StorageTrackerClient* client)
 {
@@ -97,7 +100,7 @@ StorageTracker& StorageTracker::tracker()
 StorageTracker::StorageTracker(const String& storagePath)
     : m_storageDirectoryPath(storagePath.isolatedCopy())
     , m_client(0)
-    , m_thread(makeUnique<StorageThread>())
+    , m_thread(makeUniqueRef<StorageThread>())
     , m_isActive(false)
     , m_needsInitialization(false)
     , m_StorageDatabaseIdleInterval(defaultStorageDatabaseIdleInterval)
@@ -157,7 +160,6 @@ void StorageTracker::importOriginIdentifiers()
         return;
 
     ASSERT(isMainThread());
-    ASSERT(m_thread);
 
     m_thread->dispatch([this] {
         syncImportOriginIdentifiers();
@@ -298,8 +300,8 @@ void StorageTracker::setOriginDetails(const String& originIdentifier, const Stri
     };
 
     // FIXME: This weird ping-ponging was done to fix a deadlock. We should figure out a cleaner way to avoid it instead.
-    ensureOnMainThread([this, function = WTFMove(function)]() mutable {
-        m_thread->dispatch(WTFMove(function));
+    ensureOnMainThread([this, function = WTF::move(function)]() mutable {
+        m_thread->dispatch(WTF::move(function));
     });
 }
 
@@ -358,7 +360,7 @@ Vector<SecurityOriginData> StorageTracker::origins()
             ASSERT_NOT_REACHED();
             continue;
         }
-        result.uncheckedAppend(origin.value());
+        result.append(origin.value());
     }
     return result;
 }
@@ -367,7 +369,6 @@ void StorageTracker::deleteAllOrigins()
 {
     ASSERT(m_isActive);
     ASSERT(isMainThread());
-    ASSERT(m_thread);
 
     if (!m_isActive)
         return;
@@ -469,7 +470,6 @@ void StorageTracker::deleteOrigin(const SecurityOriginData& origin)
 {
     ASSERT(m_isActive);
     ASSERT(isMainThread());
-    ASSERT(m_thread);
 
     if (!m_isActive)
         return;
@@ -490,7 +490,7 @@ void StorageTracker::deleteOrigin(const SecurityOriginData& origin)
         m_originSet.remove(originId);
     }
 
-    m_thread->dispatch([this, originId = WTFMove(originId).isolatedCopy()] {
+    m_thread->dispatch([this, originId = WTF::move(originId).isolatedCopy()] {
         syncDeleteOrigin(originId);
     });
 }

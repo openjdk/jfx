@@ -27,16 +27,17 @@
 #include "ServerOpenDBRequest.h"
 
 #include "IDBResultData.h"
+#include "UniqueIDBDatabaseTransaction.h"
 
 namespace WebCore {
 namespace IDBServer {
 
-Ref<ServerOpenDBRequest> ServerOpenDBRequest::create(IDBConnectionToClient& connection, const IDBRequestData& requestData)
+Ref<ServerOpenDBRequest> ServerOpenDBRequest::create(IDBConnectionToClient& connection, const IDBOpenRequestData& requestData)
 {
     return adoptRef(*new ServerOpenDBRequest(connection, requestData));
 }
 
-ServerOpenDBRequest::ServerOpenDBRequest(IDBConnectionToClient& connection, const IDBRequestData& requestData)
+ServerOpenDBRequest::ServerOpenDBRequest(IDBConnectionToClient& connection, const IDBOpenRequestData& requestData)
     : m_connection(connection)
     , m_requestData(requestData)
 {
@@ -63,24 +64,35 @@ void ServerOpenDBRequest::maybeNotifyRequestBlocked(uint64_t currentVersion)
     m_notifiedBlocked = true;
 }
 
-void ServerOpenDBRequest::notifyDidDeleteDatabase(const IDBDatabaseInfo& info)
-{
-    ASSERT(isDeleteRequest());
-
-    m_connection->didDeleteDatabase(IDBResultData::deleteDatabaseSuccess(m_requestData.requestIdentifier(), info));
-}
-
-void ServerOpenDBRequest::notifiedConnectionsOfVersionChange(HashSet<uint64_t>&& connectionIdentifiers)
+void ServerOpenDBRequest::notifiedConnectionsOfVersionChange(HashSet<IDBDatabaseConnectionIdentifier>&& connectionIdentifiers)
 {
     ASSERT(!m_notifiedConnectionsOfVersionChange);
 
     m_notifiedConnectionsOfVersionChange = true;
-    m_connectionsPendingVersionChangeEvent = WTFMove(connectionIdentifiers);
+    m_connectionsPendingVersionChangeEvent = WTF::move(connectionIdentifiers);
 }
 
-void ServerOpenDBRequest::connectionClosedOrFiredVersionChangeEvent(uint64_t connectionIdentifier)
+void ServerOpenDBRequest::connectionClosedOrFiredVersionChangeEvent(IDBDatabaseConnectionIdentifier connectionIdentifier)
 {
     m_connectionsPendingVersionChangeEvent.remove(connectionIdentifier);
+}
+
+void ServerOpenDBRequest::setVersionChangeTransaction(UniqueIDBDatabaseTransaction& transaction)
+{
+    m_versionChangeTransaction = &transaction;
+}
+
+void ServerOpenDBRequest::didDeleteDatabase(const IDBResultData& result)
+{
+    m_connection->didDeleteDatabase(result);
+}
+
+void ServerOpenDBRequest::didOpenDatabase(const IDBResultData& result)
+{
+    m_connection->didOpenDatabase(result);
+
+    if (RefPtr transaction = m_versionChangeTransaction)
+        transaction->addOpenRequestResult(result.error());
 }
 
 } // namespace IDBServer

@@ -27,8 +27,13 @@
 #include "CryptoKey.h"
 
 #if ENABLE(WEB_CRYPTO)
-
 #include "CryptoAlgorithmRegistry.h"
+#include "CryptoKeyAES.h"
+#include "CryptoKeyEC.h"
+#include "CryptoKeyHMAC.h"
+#include "CryptoKeyOKP.h"
+#include "CryptoKeyRSA.h"
+#include "CryptoKeyRaw.h"
 #include "WebCoreOpaqueRoot.h"
 #include <wtf/CryptographicallyRandomNumber.h>
 
@@ -76,11 +81,47 @@ WebCoreOpaqueRoot root(CryptoKey* key)
 Vector<uint8_t> CryptoKey::randomData(size_t size)
 {
     Vector<uint8_t> result(size);
-    cryptographicallyRandomValues(result.data(), result.size());
+    cryptographicallyRandomValues(result.mutableSpan());
     return result;
 }
 #endif
 
-} // namespace WebCore
+RefPtr<CryptoKey> CryptoKey::create(CryptoKey::Data&& data)
+{
+    switch (data.keyClass) {
+    case CryptoKeyClass::AES: {
+        if (data.jwk)
+            return CryptoKeyAES::importJwk(data.algorithmIdentifier, WTF::move(*data.jwk), data.extractable, data.usages, [](auto, auto) { return true; });
+        break;
+    }
+    case CryptoKeyClass::EC: {
+        if (data.namedCurveString && data.jwk)
+            return CryptoKeyEC::importJwk(data.algorithmIdentifier, *data.namedCurveString, WTF::move(*data.jwk), data.extractable, data.usages);
+        break;
+    }
+    case CryptoKeyClass::HMAC:
+        if (data.hashAlgorithmIdentifier && data.lengthBits && data.jwk)
+            return CryptoKeyHMAC::importJwk(*data.lengthBits, *data.hashAlgorithmIdentifier, WTF::move(*data.jwk), data.extractable, data.usages, [](auto, auto) { return true; });
+        break;
+    case CryptoKeyClass::OKP:
+        if (data.namedCurveString && data.key && data.type) {
+            if (auto namedCurve = CryptoKeyOKP::namedCurveFromString(*data.namedCurveString))
+                return CryptoKeyOKP::create(data.algorithmIdentifier, *namedCurve, *data.type, WTF::move(*data.key), data.extractable, data.usages);
+        }
+        break;
+    case CryptoKeyClass::RSA: {
+        if (data.jwk)
+            return CryptoKeyRSA::importJwk(data.algorithmIdentifier, data.hashAlgorithmIdentifier, WTF::move(*data.jwk), data.extractable, data.usages);
+        break;
+    }
+    case CryptoKeyClass::Raw:
+        if (data.key)
+            return CryptoKeyRaw::create(data.algorithmIdentifier, WTF::move(*data.key), data.usages);
+        break;
+    }
 
+    return nullptr;
+}
+
+} // namespace WebCore
 #endif // ENABLE(WEB_CRYPTO)

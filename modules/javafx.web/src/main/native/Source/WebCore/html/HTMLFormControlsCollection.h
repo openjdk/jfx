@@ -35,13 +35,13 @@ class HTMLImageElement;
 // The famous <table><tr><form><td> problem.
 
 class HTMLFormControlsCollection final : public CachedHTMLCollection<HTMLFormControlsCollection, CollectionTypeTraits<CollectionType::FormControls>::traversalType> {
-    WTF_MAKE_ISO_ALLOCATED(HTMLFormControlsCollection);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLFormControlsCollection);
 public:
     static Ref<HTMLFormControlsCollection> create(ContainerNode&, CollectionType);
     virtual ~HTMLFormControlsCollection();
 
     HTMLElement* item(unsigned offset) const override;
-    std::optional<std::variant<RefPtr<RadioNodeList>, RefPtr<Element>>> namedItemOrItems(const AtomString&) const;
+    std::optional<Variant<RefPtr<RadioNodeList>, RefPtr<Element>>> namedItemOrItems(const AtomString&) const;
 
     HTMLFormElement& ownerNode() const;
 
@@ -54,8 +54,8 @@ private:
     void invalidateCacheForDocument(Document&) override;
     void updateNamedElementCache() const override;
 
-    mutable Element* m_cachedElement;
-    mutable unsigned m_cachedElementOffsetInArray;
+    mutable CheckedPtr<Element> m_cachedElement;
+    mutable unsigned m_cachedElementOffsetInArray { 0 };
 };
 
 } // namespace WebCore

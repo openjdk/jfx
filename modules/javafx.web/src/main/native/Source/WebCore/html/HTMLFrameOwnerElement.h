@@ -21,10 +21,11 @@
 
 #pragma once
 
-#include "Frame.h"
-#include "HTMLElement.h"
-#include "ReferrerPolicy.h"
-#include "SecurityContext.h"
+#include <WebCore/Document.h>
+#include <WebCore/Frame.h>
+#include <WebCore/HTMLElement.h>
+#include <WebCore/ReferrerPolicy.h>
+#include <WebCore/SecurityContext.h>
 #include <wtf/HashCountedSet.h>
 #include <wtf/NeverDestroyed.h>
 
@@ -33,13 +34,16 @@ namespace WebCore {
 class RenderWidget;
 
 class HTMLFrameOwnerElement : public HTMLElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLFrameOwnerElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLFrameOwnerElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLFrameOwnerElement);
 public:
     virtual ~HTMLFrameOwnerElement();
 
     Frame* contentFrame() const { return m_contentFrame.get(); }
+    RefPtr<Frame> protectedContentFrame() const;
     WEBCORE_EXPORT WindowProxy* contentWindow() const;
     WEBCORE_EXPORT Document* contentDocument() const;
+    RefPtr<Document> protectedContentDocument() const { return contentDocument(); }
 
     WEBCORE_EXPORT void setContentFrame(Frame&);
     void clearContentFrame();
@@ -67,17 +71,16 @@ public:
     virtual bool isLazyLoadObserverActive() const { return false; }
 
 protected:
-    constexpr static auto CreateHTMLFrameOwnerElement = CreateHTMLElement;
-    HTMLFrameOwnerElement(const QualifiedName& tagName, Document&, ConstructionType = CreateHTMLFrameOwnerElement);
+    HTMLFrameOwnerElement(const QualifiedName& tagName, Document&, OptionSet<TypeFlag> = { });
     void setSandboxFlags(SandboxFlags);
     bool isProhibitedSelfReference(const URL&) const;
-    bool isKeyboardFocusable(KeyboardEvent*) const override;
+    bool isKeyboardFocusable(const FocusEventData&) const override;
 
 private:
-    bool isFrameOwnerElement() const final { return true; }
+    bool isHTMLFrameOwnerElement() const final { return true; }
 
     WeakPtr<Frame> m_contentFrame;
-    SandboxFlags m_sandboxFlags { SandboxNone };
+    SandboxFlags m_sandboxFlags;
 };
 
 class SubframeLoadingDisabler {
@@ -86,13 +89,13 @@ public:
         : m_root(root)
     {
         if (m_root)
-            disabledSubtreeRoots().add(m_root);
+            disabledSubtreeRoots().add(m_root.get());
     }
 
     ~SubframeLoadingDisabler()
     {
         if (m_root)
-            disabledSubtreeRoots().remove(m_root);
+            disabledSubtreeRoots().remove(m_root.get());
     }
 
     static bool canLoadFrame(HTMLFrameOwnerElement&);
@@ -104,16 +107,11 @@ private:
         return nodes;
     }
 
-    ContainerNode* m_root;
+    WeakPtr<ContainerNode, WeakPtrImplWithEventTargetData> m_root;
 };
-
-inline HTMLFrameOwnerElement* Frame::ownerElement() const
-{
-    return m_ownerElement.get();
-}
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::HTMLFrameOwnerElement)
-    static bool isType(const WebCore::Node& node) { return node.isFrameOwnerElement(); }
+    static bool isType(const WebCore::Node& node) { return node.isHTMLFrameOwnerElement(); }
 SPECIALIZE_TYPE_TRAITS_END()

@@ -19,11 +19,12 @@
 
 #pragma once
 
-#include "DOMWrapperWorld.h"
-#include "EventListener.h"
-#include "EventNames.h"
-#include "HTMLElement.h"
-#include "LocalDOMWindow.h"
+#include <WebCore/DOMWrapperWorld.h>
+#include <WebCore/EventListener.h>
+#include <WebCore/EventNames.h>
+#include <WebCore/HTMLElement.h>
+#include <WebCore/LocalDOMWindow.h>
+#include <WebCore/NodeDocument.h>
 #include "WebCoreJSClientData.h"
 #include <JavaScriptCore/StrongInlines.h>
 #include <JavaScriptCore/Weak.h>
@@ -35,11 +36,14 @@
 
 namespace WebCore {
 
-class JSEventListener : public EventListener, public JSVMClientData::Client {
+class JSEventListener : public EventListener, public JSVMClientDataClient {
 public:
     WEBCORE_EXPORT static Ref<JSEventListener> create(JSC::JSObject& listener, JSC::JSObject& wrapper, bool isAttribute, DOMWrapperWorld&);
 
     virtual ~JSEventListener();
+
+    void ref() const final { EventListener::ref(); }
+    void deref() const final { EventListener::deref(); }
 
     bool operator==(const EventListener&) const final;
 
@@ -62,7 +66,8 @@ public:
     void replaceJSFunctionForAttributeListener(JSC::JSObject* function, JSC::JSObject* wrapper);
     static bool wasCreatedFromMarkup(const EventListener& listener)
     {
-        return is<JSEventListener>(listener) && downcast<JSEventListener>(listener).wasCreatedFromMarkup();
+        auto* jsEventListener = dynamicDowncast<JSEventListener>(listener);
+        return jsEventListener && jsEventListener->wasCreatedFromMarkup();
     }
 
 private:
@@ -73,7 +78,7 @@ private:
     void visitJSFunction(JSC::SlotVisitor&) final;
     virtual String code() const { return String(); }
 
-    // JSVMClientData::Client
+    // JSVMClientDataClient
     void willDestroyVM() final;
 
 protected:
@@ -104,20 +109,20 @@ inline void setEventHandlerAttribute(EventTarget& eventTarget, const AtomString&
 }
 
 // Like the functions above, but for attributes that forward event handlers to the window object rather than setting them on the target.
-inline JSC::JSValue windowEventHandlerAttribute(LocalDOMWindow& window, const AtomString& eventType, DOMWrapperWorld& isolatedWorld)
+inline JSC::JSValue windowEventHandlerAttribute(DOMWindow& window, const AtomString& eventType, DOMWrapperWorld& isolatedWorld)
 {
     return eventHandlerAttribute(window, eventType, isolatedWorld);
 }
 
 inline JSC::JSValue windowEventHandlerAttribute(HTMLElement& element, const AtomString& eventType, DOMWrapperWorld& isolatedWorld)
 {
-    if (auto* domWindow = element.document().domWindow())
-        return eventHandlerAttribute(*domWindow, eventType, isolatedWorld);
+    if (RefPtr window = element.document().window())
+        return eventHandlerAttribute(*window, eventType, isolatedWorld);
     return JSC::jsNull();
 }
 
 template<typename JSMaybeErrorEventListener>
-inline void setWindowEventHandlerAttribute(LocalDOMWindow& window, const AtomString& eventType, JSC::JSValue listener, JSC::JSObject& jsEventTarget)
+inline void setWindowEventHandlerAttribute(DOMWindow& window, const AtomString& eventType, JSC::JSValue listener, JSC::JSObject& jsEventTarget)
 {
     window.setAttributeEventListener<JSMaybeErrorEventListener>(eventType, listener, *jsEventTarget.globalObject());
 }
@@ -125,15 +130,15 @@ inline void setWindowEventHandlerAttribute(LocalDOMWindow& window, const AtomStr
 template<typename JSMaybeErrorEventListener>
 inline void setWindowEventHandlerAttribute(HTMLElement& element, const AtomString& eventType, JSC::JSValue listener, JSC::JSObject& jsEventTarget)
 {
-    if (auto* domWindow = element.document().domWindow())
-        domWindow->setAttributeEventListener<JSMaybeErrorEventListener>(eventType, listener, *jsEventTarget.globalObject());
+    if (RefPtr window = element.document().window())
+        window->setAttributeEventListener<JSMaybeErrorEventListener>(eventType, listener, *jsEventTarget.globalObject());
 }
 
 inline JSC::JSObject* JSEventListener::ensureJSFunction(ScriptExecutionContext& scriptExecutionContext) const
 {
     // initializeJSFunction can trigger code that deletes this event listener
     // before we're done. It should always return null in this case.
-    if (UNLIKELY(!m_isolatedWorld))
+    if (!m_isolatedWorld) [[unlikely]]
         return nullptr;
 
     JSC::VM& vm = m_isolatedWorld->vm();

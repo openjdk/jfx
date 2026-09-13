@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2003, 2004, 2005, 2006, 2007, 2009, 2010, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,11 +21,12 @@
 
 #pragma once
 
-#include "HitTestRequest.h"
-#include "RenderBoxModelObject.h"
-#include "RenderText.h"
-#include "TextFlags.h"
-#include <wtf/IsoMalloc.h>
+#include <WebCore/HitTestRequest.h>
+#include <WebCore/RenderBoxModelObject.h>
+#include <WebCore/RenderStyle+GettersInlines.h>
+#include <WebCore/RenderText.h>
+#include <WebCore/TextFlags.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/WeakPtr.h>
 
@@ -37,17 +39,15 @@ class LegacyRootInlineBox;
 // LegacyInlineBox represents a rectangle that occurs on a line. It corresponds to
 // some RenderObject (i.e., it represents a portion of that RenderObject).
 class LegacyInlineBox {
-    WTF_MAKE_ISO_ALLOCATED(LegacyInlineBox);
+    WTF_MAKE_TZONE_ALLOCATED(LegacyInlineBox);
 public:
     virtual ~LegacyInlineBox();
 
     void assertNotDeleted() const;
 
     virtual void deleteLine() = 0;
-    virtual void extractLine() = 0;
-    virtual void attachLine() = 0;
 
-    virtual bool isLineBreak() const { return renderer().isLineBreak(); }
+    virtual bool isLineBreak() const { return renderer().isRenderLineBreak(); }
 
     WEBCORE_EXPORT virtual void adjustPosition(float dx, float dy);
     void adjustLogicalPosition(float deltaLogicalLeft, float deltaLogicalTop)
@@ -72,25 +72,17 @@ public:
             adjustPosition(delta, 0);
     }
 
-    virtual void paint(PaintInfo&, const LayoutPoint&, LayoutUnit lineTop, LayoutUnit lineBottom) = 0;
-    virtual bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, LayoutUnit lineTop, LayoutUnit lineBottom, HitTestAction) = 0;
-
 #if ENABLE(TREE_DEBUGGING)
     void showNodeTreeForThis() const;
     void showLineTreeForThis() const;
 
     WEBCORE_EXPORT virtual void outputLineTreeAndMark(WTF::TextStream&, const LegacyInlineBox* markedBox, int depth) const;
     WEBCORE_EXPORT virtual void outputLineBox(WTF::TextStream&, bool mark, int depth) const;
-    WEBCORE_EXPORT virtual const char* boxName() const;
+    WEBCORE_EXPORT virtual ASCIILiteral boxName() const;
 #endif
 
-    bool behavesLikeText() const { return m_bitfields.behavesLikeText(); }
-    void setBehavesLikeText(bool behavesLikeText) { m_bitfields.setBehavesLikeText(behavesLikeText); }
-
-    virtual bool isInlineElementBox() const { return false; }
     virtual bool isInlineFlowBox() const { return false; }
     virtual bool isInlineTextBox() const { return false; }
-    virtual bool isEllipsisBox() const { return false; }
     virtual bool isRootInlineBox() const { return false; }
     virtual bool isSVGInlineTextBox() const { return false; }
     virtual bool isSVGInlineFlowBox() const { return false; }
@@ -201,9 +193,6 @@ public:
     FloatRect logicalFrameRect() const { return isHorizontal() ? FloatRect(m_topLeft.x(), m_topLeft.y(), m_logicalWidth, logicalHeight()) : FloatRect(m_topLeft.y(), m_topLeft.x(), m_logicalWidth, logicalHeight()); }
     FloatRect frameRect() const { return FloatRect(topLeft(), size()); }
 
-    WEBCORE_EXPORT virtual LayoutUnit baselinePosition(FontBaseline baselineType) const;
-    WEBCORE_EXPORT virtual LayoutUnit lineHeight() const;
-
     WEBCORE_EXPORT virtual int caretMinOffset() const;
     WEBCORE_EXPORT virtual int caretMaxOffset() const;
 
@@ -214,8 +203,6 @@ public:
     int caretLeftmostOffset() const { return isLeftToRightDirection() ? caretMinOffset() : caretMaxOffset(); }
     int caretRightmostOffset() const { return isLeftToRightDirection() ? caretMaxOffset() : caretMinOffset(); }
 
-    virtual void clearTruncation() { }
-
     bool isDirty() const { return m_bitfields.dirty(); }
     virtual void markDirty(bool dirty = true) { m_bitfields.setDirty(dirty); }
 
@@ -223,18 +210,14 @@ public:
 
     WEBCORE_EXPORT virtual RenderObject::HighlightState selectionState() const;
 
-    WEBCORE_EXPORT virtual bool canAccommodateEllipsis(bool ltr, int blockEdge, int ellipsisWidth) const;
-    // visibleLeftEdge, visibleRightEdge are in the parent's coordinate system.
-    WEBCORE_EXPORT virtual float placeEllipsisBox(bool ltr, float visibleLeftEdge, float visibleRightEdge, float ellipsisWidth, float &truncatedWidth, bool&);
-
 #if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
     void setHasBadParent();
     void invalidateParentChildList();
 #endif
 
-    const RenderStyle& lineStyle() const { return m_bitfields.firstLine() ? renderer().firstLineStyle() : renderer().style(); }
+    const RenderStyle& lineStyle() const;
 
-    VerticalAlign verticalAlign() const { return lineStyle().verticalAlign(); }
+    const Style::VerticalAlign& verticalAlign() const { return lineStyle().verticalAlign(); }
 
     // Use with caution! The type is not checked!
     RenderBoxModelObject* boxModelObject() const
@@ -253,24 +236,9 @@ public:
     bool knownToHaveNoOverflow() const { return m_bitfields.knownToHaveNoOverflow(); }
     void clearKnownToHaveNoOverflow();
 
-    void setExpansion(float newExpansion)
-    {
-        m_logicalWidth -= m_expansion;
-        m_expansion = newExpansion;
-        m_logicalWidth += m_expansion;
-    }
-    void setExpansionWithoutGrowing(float newExpansion)
-    {
-        ASSERT(!m_expansion);
-        m_expansion = newExpansion;
-    }
-    float expansion() const { return m_expansion; }
-
-    void setHasHyphen(bool hasHyphen) { m_bitfields.setHasEllipsisBoxOrHyphen(hasHyphen); }
-    void setCanHaveLeftExpansion(bool canHaveLeftExpansion) { m_bitfields.setCanHaveLeftExpansion(canHaveLeftExpansion); }
-    void setCanHaveRightExpansion(bool canHaveRightExpansion) { m_bitfields.setCanHaveRightExpansion(canHaveRightExpansion); }
-    void setForceRightExpansion() { m_bitfields.setForceRightExpansion(true); }
-    void setForceLeftExpansion() { m_bitfields.setForceLeftExpansion(true); }
+    // For LegacyInlineTextBox
+    bool isInGlyphDisplayListCache() const { return m_bitfields.isInGlyphDisplayListCache(); }
+    void setIsInGlyphDisplayListCache(bool inCache = true) { m_bitfields.setIsInGlyphDisplayListCache(inCache); }
 
 private:
     LegacyInlineBox* m_nextOnLine { nullptr }; // The next element on the same line as us.
@@ -278,11 +246,10 @@ private:
 
     LegacyInlineFlowBox* m_parent { nullptr }; // The box that contains us.
 
-    WeakPtr<RenderObject> m_renderer;
+    SingleThreadWeakPtr<RenderObject> m_renderer;
 
 private:
     float m_logicalWidth { 0 };
-    float m_expansion { 0 };
     FloatPoint m_topLeft;
 
 #define ADD_BOOLEAN_BITFIELD(name, Name) \
@@ -302,14 +269,7 @@ private:
             , m_extracted(extracted)
             , m_hasVirtualLogicalHeight(false)
             , m_isHorizontal(isHorizontal)
-            , m_endsWithBreak(false)
-            , m_canHaveLeftExpansion(false)
-            , m_canHaveRightExpansion(false)
             , m_knownToHaveNoOverflow(true)
-            , m_hasEllipsisBoxOrHyphen(false)
-            , m_behavesLikeText(false)
-            , m_forceRightExpansion(false)
-            , m_forceLeftExpansion(false)
             , m_determinedIfNextOnLineExists(false)
             , m_nextOnLineExists(false)
         {
@@ -334,14 +294,9 @@ private:
         // for RootInlineBox
         ADD_BOOLEAN_BITFIELD(endsWithBreak, EndsWithBreak); // Whether the line ends with a <br>.
         // shared between RootInlineBox and LegacyInlineTextBox
-        ADD_BOOLEAN_BITFIELD(canHaveLeftExpansion, CanHaveLeftExpansion);
-        ADD_BOOLEAN_BITFIELD(canHaveRightExpansion, CanHaveRightExpansion);
         ADD_BOOLEAN_BITFIELD(knownToHaveNoOverflow, KnownToHaveNoOverflow);
-        ADD_BOOLEAN_BITFIELD(hasEllipsisBoxOrHyphen, HasEllipsisBoxOrHyphen);
         // for LegacyInlineTextBox
-        ADD_BOOLEAN_BITFIELD(behavesLikeText, BehavesLikeText); // Whether or not this object represents text with a non-zero height. Includes non-image list markers, text boxes, br.
-        ADD_BOOLEAN_BITFIELD(forceRightExpansion, ForceRightExpansion);
-        ADD_BOOLEAN_BITFIELD(forceLeftExpansion, ForceLeftExpansion);
+        ADD_BOOLEAN_BITFIELD(isInGlyphDisplayListCache, IsInGlyphDisplayListCache);
 
     private:
         mutable unsigned m_determinedIfNextOnLineExists : 1;
@@ -381,15 +336,6 @@ protected:
     // For RootInlineBox
     bool endsWithBreak() const { return m_bitfields.endsWithBreak(); }
     void setEndsWithBreak(bool endsWithBreak) { m_bitfields.setEndsWithBreak(endsWithBreak); }
-    bool hasEllipsisBox() const { return m_bitfields.hasEllipsisBoxOrHyphen(); }
-    void setHasEllipsisBox(bool hasEllipsisBox) { m_bitfields.setHasEllipsisBoxOrHyphen(hasEllipsisBox); }
-
-    // For LegacyInlineTextBox
-    bool hasHyphen() const { return m_bitfields.hasEllipsisBoxOrHyphen(); }
-    bool canHaveLeftExpansion() const { return m_bitfields.canHaveLeftExpansion(); }
-    bool canHaveRightExpansion() const { return m_bitfields.canHaveRightExpansion(); }
-    bool forceRightExpansion() const { return m_bitfields.forceRightExpansion(); }
-    bool forceLeftExpansion() const { return m_bitfields.forceLeftExpansion(); }
 
     // For LegacyInlineFlowBox and LegacyInlineTextBox
     bool extracted() const { return m_bitfields.extracted(); }

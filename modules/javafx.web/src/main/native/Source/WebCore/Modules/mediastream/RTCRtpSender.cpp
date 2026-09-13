@@ -33,14 +33,17 @@
 
 #if ENABLE(WEB_RTC)
 
+#include "ContextDestructionObserverInlines.h"
 #include "JSDOMPromiseDeferred.h"
 #include "Logging.h"
 #include "RTCDTMFSender.h"
 #include "RTCDTMFSenderBackend.h"
+#include "RTCEncodedStreamProducer.h"
 #include "RTCPeerConnection.h"
 #include "RTCRtpCapabilities.h"
 #include "RTCRtpTransceiver.h"
-#include <wtf/IsoMallocInlines.h>
+#include "ScriptWrappableInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -50,23 +53,23 @@ namespace WebCore {
 #define LOGIDENTIFIER_SENDER
 #endif
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RTCRtpSender);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RTCRtpSender);
 
-Ref<RTCRtpSender> RTCRtpSender::create(RTCPeerConnection& connection, Ref<MediaStreamTrack>&& track, std::unique_ptr<RTCRtpSenderBackend>&& backend)
+Ref<RTCRtpSender> RTCRtpSender::create(RTCPeerConnection& connection, Ref<MediaStreamTrack>&& track, Ref<RTCRtpSenderBackend>&& backend)
 {
-    auto sender = adoptRef(*new RTCRtpSender(connection, String(track->kind()), WTFMove(backend)));
-    sender->setTrack(WTFMove(track));
+    auto sender = adoptRef(*new RTCRtpSender(connection, String(track->kind()), WTF::move(backend)));
+    sender->setTrack(WTF::move(track));
     return sender;
 }
 
-Ref<RTCRtpSender> RTCRtpSender::create(RTCPeerConnection& connection, String&& trackKind, std::unique_ptr<RTCRtpSenderBackend>&& backend)
+Ref<RTCRtpSender> RTCRtpSender::create(RTCPeerConnection& connection, String&& trackKind, Ref<RTCRtpSenderBackend>&& backend)
 {
-    return adoptRef(*new RTCRtpSender(connection, WTFMove(trackKind), WTFMove(backend)));
+    return adoptRef(*new RTCRtpSender(connection, WTF::move(trackKind), WTF::move(backend)));
 }
 
-RTCRtpSender::RTCRtpSender(RTCPeerConnection& connection, String&& trackKind, std::unique_ptr<RTCRtpSenderBackend>&& backend)
-    : m_trackKind(WTFMove(trackKind))
-    , m_backend(WTFMove(backend))
+RTCRtpSender::RTCRtpSender(RTCPeerConnection& connection, String&& trackKind, Ref<RTCRtpSenderBackend>&& backend)
+    : m_trackKind(WTF::move(trackKind))
+    , m_backend(WTF::move(backend))
     , m_connection(connection)
 #if !RELEASE_LOG_DISABLED
     , m_logger(connection.logger())
@@ -104,43 +107,45 @@ void RTCRtpSender::setTrack(Ref<MediaStreamTrack>&& track)
     ASSERT(!isStopped());
     if (!m_track)
         m_trackId = track->id();
-    m_track = WTFMove(track);
+    m_track = WTF::move(track);
 }
 
 void RTCRtpSender::replaceTrack(RefPtr<MediaStreamTrack>&& withTrack, Ref<DeferredPromise>&& promise)
 {
+    ALWAYS_LOG_IF(m_connection, LOGIDENTIFIER_SENDER, " with track: ", !!withTrack);
+
     if (withTrack && m_trackKind != withTrack->kind()) {
-        promise->reject(TypeError);
+        promise->reject(ExceptionCode::TypeError);
         return;
     }
 
     if (!m_connection) {
-        promise->reject(InvalidStateError);
+        promise->reject(ExceptionCode::InvalidStateError);
         return;
     }
 
-    m_connection->chainOperation(WTFMove(promise), [this, weakThis = WeakPtr { *this }, withTrack = WTFMove(withTrack)](auto&& promise) mutable {
+    m_connection->chainOperation(WTF::move(promise), [this, weakThis = WeakPtr { *this }, withTrack = WTF::move(withTrack)](Ref<DeferredPromise>&& promise) mutable {
         if (!weakThis)
             return;
         if (isStopped()) {
-            promise->reject(InvalidStateError);
+            promise->reject(ExceptionCode::InvalidStateError);
             return;
         }
 
         if (!m_backend->replaceTrack(*this, withTrack.get())) {
-            promise->reject(InvalidModificationError);
+            promise->reject(ExceptionCode::InvalidModificationError);
             return;
         }
 
-        auto* context = m_connection->scriptExecutionContext();
+        RefPtr context = m_connection->scriptExecutionContext();
         if (!context)
             return;
 
-        context->postTask([this, protectedThis = Ref { *this }, withTrack = WTFMove(withTrack), promise = WTFMove(promise)](auto&) mutable {
+        context->postTask([this, protectedThis = Ref { *this }, withTrack = WTF::move(withTrack), promise = WTF::move(promise)](auto&) mutable {
             if (!m_connection || m_connection->isClosed())
                 return;
 
-            m_track = WTFMove(withTrack);
+            m_track = WTF::move(withTrack);
             promise->resolve();
         });
     });
@@ -156,10 +161,10 @@ RTCRtpSendParameters RTCRtpSender::getParameters()
 void RTCRtpSender::setParameters(const RTCRtpSendParameters& parameters, DOMPromiseDeferred<void>&& promise)
 {
     if (isStopped()) {
-        promise.reject(InvalidStateError);
+        promise.reject(ExceptionCode::InvalidStateError);
         return;
     }
-    return m_backend->setParameters(parameters, WTFMove(promise));
+    return m_backend->setParameters(parameters, WTF::move(promise));
 }
 
 ExceptionOr<void> RTCRtpSender::setStreams(const FixedVector<std::reference_wrapper<MediaStream>>& streams)
@@ -172,7 +177,7 @@ ExceptionOr<void> RTCRtpSender::setStreams(const FixedVector<std::reference_wrap
 ExceptionOr<void> RTCRtpSender::setMediaStreamIds(const FixedVector<String>& streamIds)
 {
     if (!m_connection || m_connection->isClosed() || !m_backend)
-        return Exception { InvalidStateError, "connection is closed"_s };
+        return Exception { ExceptionCode::InvalidStateError, "connection is closed"_s };
     m_backend->setMediaStreamIds(streamIds);
     return { };
 }
@@ -180,10 +185,10 @@ ExceptionOr<void> RTCRtpSender::setMediaStreamIds(const FixedVector<String>& str
 void RTCRtpSender::getStats(Ref<DeferredPromise>&& promise)
 {
     if (!m_connection) {
-        promise->reject(InvalidStateError);
+        promise->reject(ExceptionCode::InvalidStateError);
         return;
     }
-    m_connection->getStats(*this, WTFMove(promise));
+    m_connection->getStats(*this, WTF::move(promise));
 }
 
 bool RTCRtpSender::isCreatedBy(const RTCPeerConnection& connection) const
@@ -199,7 +204,7 @@ std::optional<RTCRtpCapabilities> RTCRtpSender::getCapabilities(ScriptExecutionC
 RTCDTMFSender* RTCRtpSender::dtmf()
 {
     if (!m_dtmfSender && m_connection && m_connection->scriptExecutionContext() && m_backend && m_trackKind == "audio"_s)
-        m_dtmfSender = RTCDTMFSender::create(*m_connection->scriptExecutionContext(), *this, m_backend->createDTMFBackend());
+        m_dtmfSender = RTCDTMFSender::create(*m_connection->protectedScriptExecutionContext(), *this, m_backend->createDTMFBackend());
 
     return m_dtmfSender.get();
 }
@@ -212,7 +217,7 @@ std::optional<RTCRtpTransceiverDirection> RTCRtpSender::currentTransceiverDirect
     RTCRtpTransceiver* senderTransceiver = nullptr;
     for (auto& transceiver : m_connection->currentTransceivers()) {
         if (&transceiver->sender() == this) {
-            senderTransceiver = transceiver.get();
+            senderTransceiver = transceiver.ptr();
             break;
         }
     }
@@ -238,10 +243,10 @@ ExceptionOr<void> RTCRtpSender::setTransform(std::unique_ptr<RTCRtpTransform>&& 
     }
 
     if (transform->isAttached())
-        return Exception { InvalidStateError, "transform is already in use"_s };
+        return Exception { ExceptionCode::InvalidStateError, "transform is already in use"_s };
 
     transform->attachToSender(*this, m_transform.get());
-    m_transform = WTFMove(transform);
+    m_transform = WTF::move(transform);
 
     return { };
 }
@@ -251,6 +256,23 @@ std::optional<RTCRtpTransform::Internal> RTCRtpSender::transform()
     if (!m_transform)
         return { };
     return m_transform->internalTransform();
+}
+
+ExceptionOr<RTCEncodedStreams> RTCRtpSender::createEncodedStreams(ScriptExecutionContext& context)
+{
+    if (!m_backend)
+        return Exception { ExceptionCode::InvalidStateError };
+
+    if (!m_encodedStreamProducer) {
+        auto producerOrException = RTCEncodedStreamProducer::create(context);
+        if (producerOrException.hasException())
+            return producerOrException.releaseException();
+
+        lazyInitialize(m_encodedStreamProducer, producerOrException.releaseReturnValue());
+        m_encodedStreamProducer->start(m_backend->rtcRtpTransformBackend(), m_trackKind == "video"_s);
+    }
+
+    return m_encodedStreamProducer->streams();
 }
 
 #if !RELEASE_LOG_DISABLED

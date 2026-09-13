@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "InlineDisplayContent.h"
 #include "InlineFormattingContext.h"
+#include <WebCore/InlineDisplayContent.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -35,22 +35,21 @@ class RenderBlockFlow;
 
 namespace LayoutIntegration {
 
-class BoxTree;
-struct InlineContent;
+class InlineContent;
 
 class InlineContentBuilder {
 public:
-    InlineContentBuilder(const RenderBlockFlow&, BoxTree&);
+    InlineContentBuilder(const RenderBlockFlow&);
 
-    FloatRect build(Layout::InlineLayoutResult&&, InlineContent&, const Layout::InlineDamage*) const;
+    FloatRect build(std::unique_ptr<Layout::InlineLayoutResult>&&, InlineContent&, const Layout::InlineDamage*) const;
     void updateLineOverflow(InlineContent&) const;
 
 private:
-    void adjustDisplayLines(InlineContent&) const;
-    void computeIsFirstIsLastBoxForInlineContent(InlineContent&) const;
+    void adjustDisplayLines(InlineContent&, size_t startIndex) const;
+    void computeIsFirstIsLastBoxAndBidiReorderingForInlineContent(InlineDisplay::Boxes&) const;
+    FloatRect handlePartialDisplayContentUpdate(Layout::InlineLayoutResult&&, InlineContent&, const Layout::InlineDamage*) const;
 
     const RenderBlockFlow& m_blockFlow;
-    BoxTree& m_boxTree;
 };
 
 }

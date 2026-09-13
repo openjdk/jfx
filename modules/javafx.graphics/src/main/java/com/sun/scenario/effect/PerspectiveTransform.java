@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -110,7 +110,7 @@ public class PerspectiveTransform extends CoreEffect<RenderState> {
 
         tx[2][2] = 1.0F;
 
-        if ((dx3 == 0.0F) && (dy3 == 0.0F)) { // TODO: use tolerance (RT-27402)
+        if ((dx3 == 0.0F) && (dy3 == 0.0F)) { // TODO: use tolerance (JDK-8091598)
             tx[0][0] = urx - ulx;
             tx[0][1] = lrx - urx;
             tx[0][2] = ulx;
@@ -264,7 +264,7 @@ public class PerspectiveTransform extends CoreEffect<RenderState> {
                                       Object renderHelper,
                                       Effect defaultInput)
     {
-        // RT-27402
+        // JDK-8091598
         // TODO: We could inverse map the output bounds through the perspective
         // transform to see what portions of the input contribute to the result,
         // but until we implement such a process we will just use the stock
@@ -281,7 +281,7 @@ public class PerspectiveTransform extends CoreEffect<RenderState> {
     public DirtyRegionContainer getDirtyRegions(Effect defaultInput, DirtyRegionPool regionPool) {
         DirtyRegionContainer drc = regionPool.checkOut();
 
-        //RT-28197 - Dirty regions could be computed in more efficient way
+        //JDK-8090678 - Dirty regions could be computed in more efficient way
         drc.deriveWithNewRegion(getBounds(BaseTransform.IDENTITY_TRANSFORM, defaultInput));
 
         return drc;

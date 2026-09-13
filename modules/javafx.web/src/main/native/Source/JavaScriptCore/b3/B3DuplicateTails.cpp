@@ -129,7 +129,7 @@ public:
 
             block->removeLast(m_proc);
 
-            HashMap<Value*, Value*> map;
+            UncheckedKeyHashMap<Value*, Value*> map;
             for (Value* value : *tail) {
                 Value* clone = m_proc.clone(value);
                 for (Value*& child : clone->children()) {
@@ -159,7 +159,7 @@ private:
 
 void duplicateTails(Procedure& proc)
 {
-    PhaseScope phaseScope(proc, "duplicateTails");
+    PhaseScope phaseScope(proc, "duplicateTails"_s);
     DuplicateTails duplicateTails(proc);
     duplicateTails.run();
 }

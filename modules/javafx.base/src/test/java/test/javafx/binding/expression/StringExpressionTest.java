@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,9 @@
 
 package test.javafx.binding.expression;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import javafx.beans.binding.BooleanBinding;
 import javafx.beans.binding.IntegerBinding;
 import javafx.beans.binding.StringBinding;
@@ -37,8 +37,9 @@ import javafx.beans.property.StringProperty;
 import javafx.beans.value.ObservableIntegerValueStub;
 import test.javafx.binding.DependencyUtils;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class StringExpressionTest {
 
@@ -48,7 +49,7 @@ public class StringExpressionTest {
     private StringProperty op1;
     private StringProperty op2;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         data1 = "Hello";
         data1_ic = "HeLlO";
@@ -288,9 +289,12 @@ public class StringExpressionTest {
         assertEquals(op1, StringExpression.stringExpression(op1));
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testFactory_Null() {
-        StringExpression.stringExpression(null);
+        assertThrows(NullPointerException.class, () -> {
+            StringExpression.stringExpression(null);
+        });
     }
+
 
 }

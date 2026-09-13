@@ -26,10 +26,10 @@
 #include "config.h"
 #include "CloseEvent.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CloseEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CloseEvent);
 
 } // namespace WebCore

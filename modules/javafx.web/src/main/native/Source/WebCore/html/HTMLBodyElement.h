@@ -23,12 +23,13 @@
 
 #pragma once
 
-#include "HTMLElement.h"
+#include <WebCore/HTMLElement.h>
 
 namespace WebCore {
 
 class HTMLBodyElement final : public HTMLElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLBodyElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLBodyElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLBodyElement);
 public:
     WEBCORE_EXPORT static Ref<HTMLBodyElement> create(Document&);
     static Ref<HTMLBodyElement> create(const QualifiedName&, Document&);

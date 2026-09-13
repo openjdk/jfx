@@ -33,6 +33,7 @@
 #include "SyntaxChecker.h"
 #include "VariableEnvironment.h"
 #include <utility>
+#include <wtf/MathExtras.h>
 
 namespace JSC {
 
@@ -112,7 +113,7 @@ public:
     typedef ModuleNameNode* ModuleName;
     typedef ImportSpecifierNode* ImportSpecifier;
     typedef ImportSpecifierListNode* ImportSpecifierList;
-    typedef ImportAssertionListNode* ImportAssertionList;
+    typedef ImportAttributesListNode* ImportAttributesList;
     typedef ExportSpecifierNode* ExportSpecifier;
     typedef ExportSpecifierListNode* ExportSpecifierList;
     typedef StatementNode* Statement;
@@ -142,7 +143,7 @@ public:
     ExpressionNode* makeAssignNode(const JSTokenLocation&, ExpressionNode* left, Operator, ExpressionNode* right, bool leftHasAssignments, bool rightHasAssignments, const JSTextPosition& start, const JSTextPosition& divot, const JSTextPosition& end);
     ExpressionNode* makePrefixNode(const JSTokenLocation&, ExpressionNode*, Operator, const JSTextPosition& start, const JSTextPosition& divot, const JSTextPosition& end);
     ExpressionNode* makePostfixNode(const JSTokenLocation&, ExpressionNode*, Operator, const JSTextPosition& start, const JSTextPosition& divot, const JSTextPosition& end);
-    ExpressionNode* makeTypeOfNode(const JSTokenLocation&, ExpressionNode*);
+    ExpressionNode* makeTypeOfNode(const JSTokenLocation&, ExpressionNode*, const JSTextPosition& start, const JSTextPosition& divot, const JSTextPosition& end);
     ExpressionNode* makeDeleteNode(const JSTokenLocation&, ExpressionNode*, const JSTextPosition& start, const JSTextPosition& divot, const JSTextPosition& end);
     ExpressionNode* makeNegateNode(const JSTokenLocation&, ExpressionNode*);
     ExpressionNode* makeBitwiseNotNode(const JSTokenLocation&, ExpressionNode*);
@@ -197,9 +198,9 @@ public:
     bool isMetaProperty(ExpressionNode* node) { return node->isMetaProperty(); }
     bool isNewTarget(ExpressionNode* node) { return node->isNewTarget(); }
     bool isImportMeta(ExpressionNode* node) { return node->isImportMeta(); }
-    ExpressionNode* createResolve(const JSTokenLocation& location, const Identifier& ident, const JSTextPosition& start, const JSTextPosition& end)
+    ExpressionNode* createResolve(const JSTokenLocation& location, const Identifier& ident, const JSTextPosition& start, const JSTextPosition& end, const bool needToCheckUsesArguments = true)
     {
-        if (m_vm.propertyNames->arguments == ident)
+        if (needToCheckUsesArguments && m_vm.propertyNames->arguments == ident)
             usesArguments();
 
         if (ident.isSymbol()) {
@@ -362,10 +363,10 @@ public:
         return node;
     }
 
-    ExpressionNode* createNewExpr(const JSTokenLocation& location, ExpressionNode* expr, const JSTextPosition& start, const JSTextPosition& end)
+    ExpressionNode* createNewExpr(const JSTokenLocation& location, ExpressionNode* expr, const JSTextPosition& start, const JSTextPosition& divot, const JSTextPosition& end)
     {
         NewExprNode* node = new (m_parserArena) NewExprNode(location, expr);
-        setExceptionLocation(node, start, end, end);
+        setExceptionLocation(node, start, divot, end);
         return node;
     }
 
@@ -414,7 +415,7 @@ public:
         return node;
     }
 
-    DefineFieldNode* createDefineField(const JSTokenLocation& location, const Identifier* ident, ExpressionNode* initializer, DefineFieldNode::Type type)
+    DefineFieldNode* createDefineField(const JSTokenLocation& location, const Identifier& ident, ExpressionNode* initializer, DefineFieldNode::Type type)
     {
         return new (m_parserArena) DefineFieldNode(location, ident, initializer, type);
     }
@@ -423,7 +424,7 @@ public:
         ExpressionNode* parentClass, PropertyListNode* classElements, const JSTextPosition& start, const JSTextPosition& divot, const JSTextPosition& end)
     {
         SourceCode source = m_sourceCode->subExpression(classInfo.startOffset, classInfo.endOffset, classInfo.startLine, classInfo.startColumn);
-        ClassExprNode* node = new (m_parserArena) ClassExprNode(location, *classInfo.className, source, WTFMove(classHeadEnvironment), WTFMove(classEnvironment), constructor, parentClass, classElements);
+        ClassExprNode* node = new (m_parserArena) ClassExprNode(location, *classInfo.className, source, WTF::move(classHeadEnvironment), WTF::move(classEnvironment), constructor, parentClass, classElements);
         setExceptionLocation(node, start, divot, end);
         return node;
     }
@@ -444,15 +445,20 @@ public:
         return result;
     }
 
-    ExpressionNode* createAsyncFunctionBody(const JSTokenLocation& location, const ParserFunctionInfo<ASTBuilder>& functionInfo, SourceParseMode parseMode)
+    ExpressionNode* createAsyncFunctionBody(const JSTokenLocation& location, const ParserFunctionInfo<ASTBuilder>& functionInfo, SourceParseMode parseMode, const Identifier& name)
     {
         if (parseMode == SourceParseMode::AsyncArrowFunctionBodyMode) {
             SourceCode source = m_sourceCode->subExpression(functionInfo.startOffset, functionInfo.body->isArrowFunctionBodyExpression() ? functionInfo.endOffset - 1 : functionInfo.endOffset, functionInfo.startLine, functionInfo.parametersStartColumn);
             FuncExprNode* result = new (m_parserArena) FuncExprNode(location, *functionInfo.name, functionInfo.body, source);
+            if (!name.isNull())
+                result->metadata()->setEcmaName(name);
             functionInfo.body->setLoc(functionInfo.startLine, functionInfo.endLine, location.startOffset, location.lineStartOffset);
             return result;
         }
-        return createFunctionExpr(location, functionInfo);
+        FuncExprNode* result =  static_cast<FuncExprNode*>(createFunctionExpr(location, functionInfo));
+        if (!name.isNull())
+            result->metadata()->setEcmaName(name);
+        return result;
     }
 
     ExpressionNode* createMethodDefinition(const JSTokenLocation& location, const ParserFunctionInfo<ASTBuilder>& functionInfo)
@@ -466,7 +472,7 @@ public:
     FunctionMetadataNode* createFunctionMetadata(
         const JSTokenLocation& startLocation, const JSTokenLocation& endLocation,
         unsigned startColumn, unsigned endColumn, unsigned functionStart, int functionNameStart,
-        int parametersStart, ImplementationVisibility implementationVisibility, LexicalScopeFeatures lexicalScopeFeatures,
+        int parametersStart, ImplementationVisibility implementationVisibility, LexicallyScopedFeatures lexicallyScopedFeatures,
         ConstructorKind constructorKind, SuperBinding superBinding,
         unsigned parameterCount,
         SourceParseMode mode, bool isArrowFunctionBodyExpression)
@@ -474,7 +480,7 @@ public:
         return new (m_parserArena) FunctionMetadataNode(
             m_parserArena, startLocation, endLocation, startColumn, endColumn, functionStart,
             functionNameStart, parametersStart, implementationVisibility,
-            lexicalScopeFeatures, constructorKind, superBinding,
+            lexicallyScopedFeatures, constructorKind, superBinding,
             parameterCount, mode, isArrowFunctionBodyExpression);
     }
 
@@ -598,7 +604,7 @@ public:
 
     StatementNode* createBlockStatement(const JSTokenLocation& location, JSC::SourceElements* elements, int startLine, int endLine, VariableEnvironment&& lexicalVariables, DeclarationStacks::FunctionStack&& functionStack)
     {
-        BlockNode* block = new (m_parserArena) BlockNode(location, elements, WTFMove(lexicalVariables), WTFMove(functionStack));
+        BlockNode* block = new (m_parserArena) BlockNode(location, elements, WTF::move(lexicalVariables), WTF::move(functionStack));
         block->setLoc(startLine, endLine, location.startOffset, location.lineStartOffset);
         return block;
     }
@@ -617,16 +623,16 @@ public:
         return result;
     }
 
-    StatementNode* createForLoop(const JSTokenLocation& location, ExpressionNode* initializer, ExpressionNode* condition, ExpressionNode* iter, StatementNode* statements, int start, int end, VariableEnvironment&& lexicalVariables)
+    StatementNode* createForLoop(const JSTokenLocation& location, ExpressionNode* initializer, ExpressionNode* condition, ExpressionNode* iter, StatementNode* statements, int start, int end, VariableEnvironment&& lexicalVariables, bool initializerContainsClosure)
     {
-        ForNode* result = new (m_parserArena) ForNode(location, initializer, condition, iter, statements, WTFMove(lexicalVariables));
+        ForNode* result = new (m_parserArena) ForNode(location, initializer, condition, iter, statements, WTF::move(lexicalVariables), initializerContainsClosure);
         result->setLoc(start, end, location.startOffset, location.lineStartOffset);
         return result;
     }
 
     StatementNode* createForInLoop(const JSTokenLocation& location, ExpressionNode* lhs, ExpressionNode* iter, StatementNode* statements, const JSTokenLocation&, const JSTextPosition& eStart, const JSTextPosition& eDivot, const JSTextPosition& eEnd, int start, int end, VariableEnvironment&& lexicalVariables)
     {
-        ForInNode* result = new (m_parserArena) ForInNode(location, lhs, iter, statements, WTFMove(lexicalVariables));
+        ForInNode* result = new (m_parserArena) ForInNode(location, lhs, iter, statements, WTF::move(lexicalVariables));
         result->setLoc(start, end, location.startOffset, location.lineStartOffset);
         setExceptionLocation(result, eStart, eDivot, eEnd);
         return result;
@@ -635,12 +641,12 @@ public:
     StatementNode* createForInLoop(const JSTokenLocation& location, DestructuringPatternNode* pattern, ExpressionNode* iter, StatementNode* statements, const JSTokenLocation& declLocation, const JSTextPosition& eStart, const JSTextPosition& eDivot, const JSTextPosition& eEnd, int start, int end, VariableEnvironment&& lexicalVariables)
     {
         auto lexpr = new (m_parserArena) DestructuringAssignmentNode(declLocation, pattern, nullptr);
-        return createForInLoop(location, lexpr, iter, statements, declLocation, eStart, eDivot, eEnd, start, end, WTFMove(lexicalVariables));
+        return createForInLoop(location, lexpr, iter, statements, declLocation, eStart, eDivot, eEnd, start, end, WTF::move(lexicalVariables));
     }
 
     StatementNode* createForOfLoop(bool isForAwait, const JSTokenLocation& location, ExpressionNode* lhs, ExpressionNode* iter, StatementNode* statements, const JSTokenLocation&, const JSTextPosition& eStart, const JSTextPosition& eDivot, const JSTextPosition& eEnd, int start, int end, VariableEnvironment&& lexicalVariables)
     {
-        ForOfNode* result = new (m_parserArena) ForOfNode(isForAwait, location, lhs, iter, statements, WTFMove(lexicalVariables));
+        ForOfNode* result = new (m_parserArena) ForOfNode(isForAwait, location, lhs, iter, statements, WTF::move(lexicalVariables));
         result->setLoc(start, end, location.startOffset, location.lineStartOffset);
         setExceptionLocation(result, eStart, eDivot, eEnd);
         if (isForAwait)
@@ -651,7 +657,7 @@ public:
     StatementNode* createForOfLoop(bool isForAwait, const JSTokenLocation& location, DestructuringPatternNode* pattern, ExpressionNode* iter, StatementNode* statements, const JSTokenLocation& declLocation, const JSTextPosition& eStart, const JSTextPosition& eDivot, const JSTextPosition& eEnd, int start, int end, VariableEnvironment&& lexicalVariables)
     {
         auto lexpr = new (m_parserArena) DestructuringAssignmentNode(declLocation, pattern, nullptr);
-        return createForOfLoop(isForAwait, location, lexpr, iter, statements, declLocation, eStart, eDivot, eEnd, start, end, WTFMove(lexicalVariables));
+        return createForOfLoop(isForAwait, location, lexpr, iter, statements, declLocation, eStart, eDivot, eEnd, start, end, WTF::move(lexicalVariables));
     }
 
     bool isBindingNode(const DestructuringPattern& pattern)
@@ -745,7 +751,7 @@ public:
 
     StatementNode* createTryStatement(const JSTokenLocation& location, StatementNode* tryBlock, DestructuringPatternNode* catchPattern, StatementNode* catchBlock, StatementNode* finallyBlock, int startLine, int endLine, VariableEnvironment&& catchEnvironment)
     {
-        TryNode* result = new (m_parserArena) TryNode(location, tryBlock, catchPattern, catchBlock, WTFMove(catchEnvironment), finallyBlock);
+        TryNode* result = new (m_parserArena) TryNode(location, tryBlock, catchPattern, catchBlock, WTF::move(catchEnvironment), finallyBlock);
         result->setLoc(startLine, endLine, location.startOffset, location.lineStartOffset);
         return result;
     }
@@ -753,7 +759,7 @@ public:
     StatementNode* createSwitchStatement(const JSTokenLocation& location, ExpressionNode* expr, ClauseListNode* firstClauses, CaseClauseNode* defaultClause, ClauseListNode* secondClauses, int startLine, int endLine, VariableEnvironment&& lexicalVariables, DeclarationStacks::FunctionStack&& functionStack)
     {
         CaseBlockNode* cases = new (m_parserArena) CaseBlockNode(firstClauses, defaultClause, secondClauses);
-        SwitchNode* result = new (m_parserArena) SwitchNode(location, expr, cases, WTFMove(lexicalVariables), WTFMove(functionStack));
+        SwitchNode* result = new (m_parserArena) SwitchNode(location, expr, cases, WTF::move(lexicalVariables), WTF::move(functionStack));
         result->setLoc(startLine, endLine, location.startOffset, location.lineStartOffset);
         return result;
     }
@@ -822,24 +828,24 @@ public:
         specifierList->append(specifier);
     }
 
-    ImportAssertionListNode* createImportAssertionList()
+    ImportAttributesListNode* createImportAttributesList()
     {
-        return new (m_parserArena) ImportAssertionListNode();
+        return new (m_parserArena) ImportAttributesListNode();
     }
 
-    void appendImportAssertion(ImportAssertionListNode* assertionList, const Identifier& key, const Identifier& value)
+    void appendImportAttribute(ImportAttributesListNode* attributesList, const Identifier& key, const Identifier& value)
     {
-        assertionList->append(key, value);
+        attributesList->append(key, value);
     }
 
-    StatementNode* createImportDeclaration(const JSTokenLocation& location, ImportSpecifierListNode* importSpecifierList, ModuleNameNode* moduleName, ImportAssertionListNode* importAssertionList)
+    StatementNode* createImportDeclaration(const JSTokenLocation& location, ImportDeclarationNode::ImportType type, ImportSpecifierListNode* importSpecifierList, ModuleNameNode* moduleName, ImportAttributesListNode* importAttributesList)
     {
-        return new (m_parserArena) ImportDeclarationNode(location, importSpecifierList, moduleName, importAssertionList);
+        return new (m_parserArena) ImportDeclarationNode(location, type, importSpecifierList, moduleName, importAttributesList);
     }
 
-    StatementNode* createExportAllDeclaration(const JSTokenLocation& location, ModuleNameNode* moduleName, ImportAssertionListNode* importAssertionList)
+    StatementNode* createExportAllDeclaration(const JSTokenLocation& location, ModuleNameNode* moduleName, ImportAttributesListNode* importAttributesList)
     {
-        return new (m_parserArena) ExportAllDeclarationNode(location, moduleName, importAssertionList);
+        return new (m_parserArena) ExportAllDeclarationNode(location, moduleName, importAttributesList);
     }
 
     StatementNode* createExportDefaultDeclaration(const JSTokenLocation& location, StatementNode* declaration, const Identifier& localName)
@@ -852,9 +858,9 @@ public:
         return new (m_parserArena) ExportLocalDeclarationNode(location, declaration);
     }
 
-    StatementNode* createExportNamedDeclaration(const JSTokenLocation& location, ExportSpecifierListNode* exportSpecifierList, ModuleNameNode* moduleName, ImportAssertionListNode* importAssertionList)
+    StatementNode* createExportNamedDeclaration(const JSTokenLocation& location, ExportSpecifierListNode* exportSpecifierList, ModuleNameNode* moduleName, ImportAttributesListNode* importAttributesList)
     {
-        return new (m_parserArena) ExportNamedDeclarationNode(location, exportSpecifierList, moduleName, importAssertionList);
+        return new (m_parserArena) ExportNamedDeclarationNode(location, exportSpecifierList, moduleName, importAttributesList);
     }
 
     ExportSpecifierNode* createExportSpecifier(const JSTokenLocation& location, const Identifier& localName, const Identifier& exportedName)
@@ -882,7 +888,7 @@ public:
         return new (m_parserArena) CommaNode(location, node);
     }
 
-    CommaNode* appendToCommaExpr(const JSTokenLocation& location, ExpressionNode*, ExpressionNode* tail, ExpressionNode* next)
+    CommaNode* appendToCommaExpr(const JSTokenLocation& location, ExpressionNode* tail, ExpressionNode* next)
     {
         ASSERT(tail->isCommaNode());
         ASSERT(next);
@@ -981,6 +987,7 @@ public:
     ExpressionNode* createAssignment(const JSTokenLocation& location, int& assignmentStackDepth, ExpressionNode* rhs, int initialAssignmentCount, int currentAssignmentCount, const JSTextPosition& lastTokenEnd)
     {
         AssignmentInfo& info = m_assignmentInfoStack.last();
+        checkArgumentsLengthModification(info.m_node);
         ExpressionNode* result = makeAssignNode(location, info.m_node, info.m_op, rhs, info.m_initAssignments != initialAssignmentCount, info.m_initAssignments != currentAssignmentCount, info.m_start, info.m_divot + 1, lastTokenEnd);
         m_assignmentInfoStack.removeLast();
         assignmentStackDepth--;
@@ -1054,6 +1061,11 @@ public:
         node->setContainsComputedProperty(containsComputedProperty);
     }
 
+    void finishObjectPattern(ObjectPattern node, const JSTextPosition& divotStart, const JSTextPosition& divot, const JSTextPosition& divotEnd)
+    {
+        setExceptionLocation(node, divotStart, divot, divotEnd);
+    }
+
     BindingPattern createBindingLocation(const JSTokenLocation&, const Identifier& boundProperty, const JSTextPosition& start, const JSTextPosition& end, AssignmentContext context)
     {
         return new (m_parserArena) BindingNode(boundProperty, start, end, context);
@@ -1066,6 +1078,7 @@ public:
 
     AssignmentElement createAssignmentElement(const Expression& assignmentTarget, const JSTextPosition& start, const JSTextPosition& end)
     {
+        checkArgumentsLengthModification(assignmentTarget);
         return new (m_parserArena) AssignmentElementNode(assignmentTarget, start, end);
     }
 
@@ -1097,6 +1110,8 @@ public:
 
     void propagateArgumentsUse() { usesArguments(); }
 
+    bool hasArgumentsFeature() const { return m_scope.m_features & ArgumentsFeature; }
+
 private:
     struct Scope {
         Scope()
@@ -1108,8 +1123,17 @@ private:
         int m_numConstants;
     };
 
+    void checkArgumentsLengthModification(const ExpressionNode* node)
+    {
+        // Since we exclude pattern `arguments.length` to enable ArgumentsFeature,
+        // we need re-enable ArgumentsFeature for `arguments.length` modification.
+        if (node && node->isArgumentsLengthAccess(m_vm))
+            usesArguments();
+    }
+
     static void setExceptionLocation(ThrowableExpressionData* node, const JSTextPosition& divotStart, const JSTextPosition& divot, const JSTextPosition& divotEnd)
     {
+        ASSERT(divot && divotStart && divotEnd);
         ASSERT(divot.offset >= divot.lineStartOffset);
         node->setExceptionSourceCode(divot, divotStart, divotEnd);
     }
@@ -1194,11 +1218,11 @@ private:
     int m_evalCount;
 };
 
-ExpressionNode* ASTBuilder::makeTypeOfNode(const JSTokenLocation& location, ExpressionNode* expr)
+ExpressionNode* ASTBuilder::makeTypeOfNode(const JSTokenLocation& location, ExpressionNode* expr, const JSTextPosition& start, const JSTextPosition& divot, const JSTextPosition& end)
 {
     if (expr->isResolveNode()) {
         ResolveNode* resolve = static_cast<ResolveNode*>(expr);
-        return new (m_parserArena) TypeOfResolveNode(location, resolve->identifier());
+        return new (m_parserArena) TypeOfResolveNode(location, resolve->identifier(), start, divot, end);
     }
     return new (m_parserArena) TypeOfValueNode(location, expr);
 }
@@ -1225,6 +1249,7 @@ ExpressionNode* ASTBuilder::makeDeleteNode(const JSTokenLocation& location, Expr
         return new (m_parserArena) DeleteBracketNode(location, bracket->base(), bracket->subscript(), divot, start, end);
     }
     ASSERT(expr->isDotAccessorNode());
+    checkArgumentsLengthModification(expr);
     DotAccessorNode* dot = static_cast<DotAccessorNode*>(expr);
     return new (m_parserArena) DeleteDotNode(location, dot->base(), dot->identifier(), divot, start, end);
 }
@@ -1303,7 +1328,7 @@ ExpressionNode* ASTBuilder::makeDivNode(const JSTokenLocation& location, Express
         const NumberNode& numberExpr1 = static_cast<NumberNode&>(*expr1);
         const NumberNode& numberExpr2 = static_cast<NumberNode&>(*expr2);
         double result = numberExpr1.value() / numberExpr2.value();
-        if (static_cast<int64_t>(result) == result)
+        if (truncateDoubleToInt64(result) == result)
             return createNumberFromBinaryOperation(location, result, numberExpr1, numberExpr2);
         return createDoubleLikeNumber(location, result);
     }
@@ -1593,7 +1618,7 @@ ExpressionNode* ASTBuilder::makeAssignNode(const JSTokenLocation& location, Expr
 {
     if (!loc->isLocation()) {
         ASSERT(loc->isFunctionCall());
-        return new (m_parserArena) AssignErrorNode(location, divot, start, end);
+        return new (m_parserArena) AssignErrorNode(location, loc, divot, start, end);
     }
 
     if (loc->isResolveNode()) {
@@ -1658,11 +1683,13 @@ ExpressionNode* ASTBuilder::makeAssignNode(const JSTokenLocation& location, Expr
 
 ExpressionNode* ASTBuilder::makePrefixNode(const JSTokenLocation& location, ExpressionNode* expr, Operator op, const JSTextPosition& start, const JSTextPosition& divot, const JSTextPosition& end)
 {
+    checkArgumentsLengthModification(expr);
     return new (m_parserArena) PrefixNode(location, expr, op, divot, start, end);
 }
 
 ExpressionNode* ASTBuilder::makePostfixNode(const JSTokenLocation& location, ExpressionNode* expr, Operator op, const JSTextPosition& start, const JSTextPosition& divot, const JSTextPosition& end)
 {
+    checkArgumentsLengthModification(expr);
     return new (m_parserArena) PostfixNode(location, expr, op, divot, start, end);
 }
 

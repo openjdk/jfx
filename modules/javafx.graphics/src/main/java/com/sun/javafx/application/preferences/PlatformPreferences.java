@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,7 @@ import com.sun.javafx.binding.MapExpressionHelper;
 import javafx.application.ColorScheme;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
+import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.collections.MapChangeListener;
 import javafx.scene.paint.Color;
@@ -50,20 +51,20 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * When the operating system signals that a preference has changed, the mappings are updated
  * by calling the {@link #update(Map)} method.
  */
-public class PlatformPreferences extends AbstractMap<String, Object> implements Platform.Preferences {
+public final class PlatformPreferences extends AbstractMap<String, Object> implements Platform.Preferences {
 
     /**
      * Contains mappings from platform-specific keys to their types. This information is
      * used to catch misuse of typed getters even if the preferences map doesn't contain
      * the preference mapping at runtime.
      */
-    private final Map<String, Class<?>> platformKeys;
+    private final Map<String, Class<?>> platformKeys = new HashMap<>();
 
     /**
      * Contains mappings from platform-specific keys to well-known keys, which are used
      * in the implementation of the property-based API in {@link PreferenceProperties}.
      */
-    private final Map<String, String> platformKeyMappings;
+    private final Map<String, PreferenceMapping<?, ?>> platformKeyMappings = new HashMap<>();
 
     /**
      * Contains the current set of effective preferences, i.e. the set of preferences that
@@ -79,16 +80,17 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
     private final List<MapChangeListener<? super String, Object>> mapChangeListeners = new CopyOnWriteArrayList<>();
 
     /**
-     * Initializes a new {@code PlatformPreferences} instance with the given platform-specific keys and key mappings.
+     * Initializes this {@code PlatformPreferences} instance with the given platform-specific keys and key mappings.
      *
      * @param platformKeys the platform-specific keys and the types of their values
      * @param platformKeyMappings the platform-specific key mappings
      * @throws NullPointerException if {@code platformKeys} or {@code platformKeyMappings} is {@code null} or
      *                              contains {@code null} keys or values
      */
-    public PlatformPreferences(Map<String, Class<?>> platformKeys, Map<String, String> platformKeyMappings) {
-        this.platformKeys = Map.copyOf(platformKeys);
-        this.platformKeyMappings = Map.copyOf(platformKeyMappings);
+    public void initialize(Map<String, Class<?>> platformKeys,
+                           Map<String, PreferenceMapping<?, ?>> platformKeyMappings) {
+        this.platformKeys.putAll(platformKeys);
+        this.platformKeyMappings.putAll(platformKeyMappings);
     }
 
     @Override
@@ -199,6 +201,46 @@ public class PlatformPreferences extends AbstractMap<String, Object> implements 
     @Override
     public Optional<Color> getColor(String key) {
         return getValue(key, Color.class);
+    }
+
+    @Override
+    public ReadOnlyBooleanProperty reducedMotionProperty() {
+        return properties.reducedMotionProperty();
+    }
+
+    @Override
+    public boolean isReducedMotion() {
+        return properties.isReducedMotion();
+    }
+
+    @Override
+    public ReadOnlyBooleanProperty reducedTransparencyProperty() {
+        return properties.reducedTransparencyProperty();
+    }
+
+    @Override
+    public boolean isReducedTransparency() {
+        return properties.isReducedTransparency();
+    }
+
+    @Override
+    public ReadOnlyBooleanProperty reducedDataProperty() {
+        return properties.reducedDataProperty();
+    }
+
+    @Override
+    public boolean isReducedData() {
+        return properties.isReducedData();
+    }
+
+    @Override
+    public ReadOnlyBooleanProperty persistentScrollBarsProperty() {
+        return properties.persistentScrollBarsProperty();
+    }
+
+    @Override
+    public boolean isPersistentScrollBars() {
+        return properties.isPersistentScrollBars();
     }
 
     @Override

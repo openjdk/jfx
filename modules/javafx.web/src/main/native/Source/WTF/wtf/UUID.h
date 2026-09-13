@@ -33,6 +33,9 @@
 #include <wtf/Hasher.h>
 #include <wtf/HexNumber.h>
 #include <wtf/Int128.h>
+#include <wtf/SHA1.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/text/StringConcatenate.h>
 #include <wtf/text/WTFString.h>
 
 #ifdef __OBJC__
@@ -44,7 +47,7 @@ namespace WTF {
 class StringView;
 
 class UUID {
-WTF_MAKE_FAST_ALLOCATED;
+WTF_DEPRECATED_MAKE_FAST_ALLOCATED(UUID);
 public:
     static constexpr UInt128 emptyValue = 0;
     static constexpr UInt128 deletedValue = 1;
@@ -59,8 +62,11 @@ public:
         return UUID { generateWeakRandomUUIDVersion4() };
     }
 
+    WTF_EXPORT_PRIVATE static UUID createVersion5(const SHA1::Digest&);
+    WTF_EXPORT_PRIVATE static UUID createVersion5(UUID, std::span<const uint8_t>);
+
 #ifdef __OBJC__
-    WTF_EXPORT_PRIVATE operator NSUUID *() const;
+    WTF_EXPORT_PRIVATE RetainPtr<NSUUID> createNSUUID() const;
     WTF_EXPORT_PRIVATE static std::optional<UUID> fromNSUUID(NSUUID *);
 #endif
 
@@ -69,7 +75,13 @@ public:
 
     explicit UUID(std::span<const uint8_t, 16> span)
     {
-        memcpy(&m_data, span.data(), 16);
+        memcpySpan(asMutableByteSpan(m_data), span);
+    }
+
+    explicit UUID(std::span<const uint8_t> span)
+    {
+        RELEASE_ASSERT(span.size() == 16);
+        memcpySpan(asMutableByteSpan(m_data), span);
     }
 
     explicit constexpr UUID(UInt128 data)
@@ -77,15 +89,18 @@ public:
     {
     }
 
-    std::span<const uint8_t, 16> toSpan() const
+    explicit UUID(uint64_t high, uint64_t low)
+        : m_data((static_cast<UInt128>(high) << 64) | low)
     {
-        return std::span<const uint8_t, 16> { reinterpret_cast<const uint8_t*>(&m_data), 16 };
+        RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!isHashTableDeletedValue());
     }
 
-    bool operator==(const UUID& other) const { return m_data == other.m_data; }
+    std::span<const uint8_t, 16> span() const LIFETIME_BOUND
+    {
+        return asByteSpan<UInt128, 16>(m_data);
+    }
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<UUID> decode(Decoder&);
+    friend bool operator==(const UUID&, const UUID&) = default;
 
     explicit constexpr UUID(HashTableDeletedValueType)
         : m_data(deletedValue)
@@ -97,18 +112,24 @@ public:
     {
     }
 
-    bool isHashTableDeletedValue() const { return m_data == deletedValue; }
+    static bool isValid(uint64_t high, uint64_t low)
+    {
+        auto data = (static_cast<UInt128>(high) << 64) | low;
+        return data != deletedValue && data != emptyValue;
+    }
+
+    constexpr bool isHashTableDeletedValue() const { return m_data == deletedValue; }
+    constexpr bool isHashTableEmptyValue() const { return m_data == emptyValue; }
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
     WTF_EXPORT_PRIVATE String toString() const;
 
-    operator bool() const { return !!m_data; }
+    constexpr operator bool() const { return !!m_data; }
     bool isValid() const { return m_data != emptyValue && m_data != deletedValue; }
 
     UInt128 data() const { return m_data; }
 
-    struct MarkableTraits {
-        static bool isEmptyValue(const UUID& uuid) { return !uuid; }
-        static UUID emptyValue() { return UUID { UInt128 { 0 } }; }
-    };
+    uint64_t low() const { return static_cast<uint64_t>(m_data); }
+    uint64_t high() const { return static_cast<uint64_t>(m_data >> 64);  }
 
 private:
     WTF_EXPORT_PRIVATE UUID();
@@ -119,49 +140,23 @@ private:
     UInt128 m_data;
 };
 
+template<>
+struct MarkableTraits<UUID> {
+    static bool isEmptyValue(const UUID& uuid) { return !uuid; }
+    static UUID emptyValue() { return UUID { UInt128 { 0 } }; }
+};
+
 inline void add(Hasher& hasher, UUID uuid)
 {
     add(hasher, uuid.m_data);
 }
 
-struct UUIDHash {
-    static unsigned hash(const UUID& key) { return computeHash(key); }
-    static bool equal(const UUID& a, const UUID& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
-};
-
 template<> struct HashTraits<UUID> : GenericHashTraits<UUID> {
     static UUID emptyValue() { return UUID { HashTableEmptyValue }; }
+    static bool isEmptyValue(const UUID& value) { return value.isHashTableEmptyValue(); }
     static void constructDeletedValue(UUID& slot) { slot = UUID { HashTableDeletedValue }; }
     static bool isDeletedValue(const UUID& value) { return value.isHashTableDeletedValue(); }
 };
-template<> struct DefaultHash<UUID> : UUIDHash { };
-
-template<class Encoder>
-void UUID::encode(Encoder& encoder) const
-{
-    encoder << static_cast<uint64_t>(m_data >> 64) << static_cast<uint64_t>(m_data);
-}
-
-template<class Decoder>
-std::optional<UUID> UUID::decode(Decoder& decoder)
-{
-    std::optional<uint64_t> high;
-    decoder >> high;
-    if (!high)
-        return std::nullopt;
-
-    std::optional<uint64_t> low;
-    decoder >> low;
-    if (!low)
-        return std::nullopt;
-
-    auto result = (static_cast<UInt128>(*high) << 64) | *low;
-    if (result == deletedValue)
-        return { };
-
-    return UUID { result };
-}
 
 // Creates a UUID that consists of 32 hexadecimal digits and returns its canonical form.
 // The canonical form is displayed in 5 groups separated by hyphens, in the form 8-4-4-4-12 for a total of 36 characters.
@@ -173,6 +168,7 @@ std::optional<UUID> UUID::decode(Decoder& decoder)
 // 9, A, or B for y.
 
 WTF_EXPORT_PRIVATE String createVersion4UUIDString();
+WTF_EXPORT_PRIVATE String createVersion4UUIDStringWeak();
 
 WTF_EXPORT_PRIVATE String bootSessionUUIDString();
 WTF_EXPORT_PRIVATE bool isVersion4UUID(StringView);
@@ -216,7 +212,7 @@ public:
     bool is8Bit() const { return true; }
 
     template<typename CharacterType>
-    void writeTo(CharacterType* destination) const
+    void writeTo(std::span<CharacterType> destination) const
     {
         handle([&](auto&&... adapters) {
             stringTypeAdapterAccumulator(destination, std::forward<decltype(adapters)>(adapters)...);
@@ -230,4 +226,5 @@ private:
 }
 
 using WTF::createVersion4UUIDString;
+using WTF::createVersion4UUIDStringWeak;
 using WTF::bootSessionUUIDString;

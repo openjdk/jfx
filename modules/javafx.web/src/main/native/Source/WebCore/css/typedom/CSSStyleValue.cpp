@@ -32,19 +32,23 @@
 
 #include "CSSParser.h"
 #include "CSSPropertyParser.h"
+#include "CSSSerializationContext.h"
 #include "CSSStyleValueFactory.h"
 #include "CSSUnitValue.h"
-#include <wtf/IsoMallocInlines.h>
+#include "ExceptionOr.h"
+#include "ScriptWrappableInlines.h"
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringView.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CSSStyleValue);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSStyleValue);
 
-ExceptionOr<Ref<CSSStyleValue>> CSSStyleValue::parse(const Document& document, const AtomString& property, const String& cssText)
+ExceptionOr<Ref<CSSStyleValue>> CSSStyleValue::parse(Document& document, const AtomString& property, const String& cssText)
 {
     constexpr bool parseMultiple = false;
-    auto parseResult = CSSStyleValueFactory::parseStyleValue(property, cssText, parseMultiple, { document });
+    auto parseResult = CSSStyleValueFactory::parseStyleValue(document, property, cssText, parseMultiple);
     if (parseResult.hasException())
         return parseResult.releaseException();
 
@@ -52,20 +56,20 @@ ExceptionOr<Ref<CSSStyleValue>> CSSStyleValue::parse(const Document& document, c
 
     // Returned vector should not be empty. If parsing failed, an exception should be returned.
     if (returnValue.isEmpty())
-        return Exception { SyntaxError, makeString(cssText, " cannot be parsed as a ", property) };
+        return Exception { ExceptionCode::SyntaxError, makeString(cssText, " cannot be parsed as a "_s, property) };
 
-    return WTFMove(returnValue.at(0));
+    return WTF::move(returnValue.at(0));
 }
 
-ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValue::parseAll(const Document& document, const AtomString& property, const String& cssText)
+ExceptionOr<Vector<Ref<CSSStyleValue>>> CSSStyleValue::parseAll(Document& document, const AtomString& property, const String& cssText)
 {
     constexpr bool parseMultiple = true;
-    return CSSStyleValueFactory::parseStyleValue(property, cssText, parseMultiple, { document });
+    return CSSStyleValueFactory::parseStyleValue(document, property, cssText, parseMultiple);
 }
 
 Ref<CSSStyleValue> CSSStyleValue::create(RefPtr<CSSValue>&& cssValue, String&& property)
 {
-    return adoptRef(*new CSSStyleValue(WTFMove(cssValue), WTFMove(property)));
+    return adoptRef(*new CSSStyleValue(WTF::move(cssValue), WTF::move(property)));
 }
 
 Ref<CSSStyleValue> CSSStyleValue::create()
@@ -74,8 +78,8 @@ Ref<CSSStyleValue> CSSStyleValue::create()
 }
 
 CSSStyleValue::CSSStyleValue(RefPtr<CSSValue>&& cssValue, String&& property)
-    : m_customPropertyName(WTFMove(property))
-    , m_propertyValue(WTFMove(cssValue))
+    : m_customPropertyName(WTF::move(property))
+    , m_propertyValue(WTF::move(cssValue))
 {
 }
 
@@ -89,7 +93,9 @@ String CSSStyleValue::toString() const
 void CSSStyleValue::serialize(StringBuilder& builder, OptionSet<SerializationArguments>) const
 {
     if (m_propertyValue)
-        builder.append(m_propertyValue->cssText());
+        builder.append(m_propertyValue->cssText(CSS::defaultSerializationContext()));
 }
+
+CSSStyleValue::~CSSStyleValue() = default;
 
 } // namespace WebCore

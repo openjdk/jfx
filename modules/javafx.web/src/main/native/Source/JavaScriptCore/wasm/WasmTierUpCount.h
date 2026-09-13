@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,15 +25,18 @@
 
 #pragma once
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#include <wtf/Platform.h>
 
-#include "CompilationResult.h"
-#include "ExecutionCounter.h"
-#include "Options.h"
-#include "WasmOSREntryData.h"
+#if ENABLE(WEBASSEMBLY_OMGJIT) || ENABLE(WEBASSEMBLY_BBQJIT)
+
+#include <JavaScriptCore/CompilationResult.h>
+#include <JavaScriptCore/ExecutionCounter.h>
+#include <JavaScriptCore/Options.h>
+#include <JavaScriptCore/WasmOSREntryData.h>
 #include <wtf/Atomics.h>
 #include <wtf/SegmentedVector.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC { namespace Wasm {
 
@@ -45,6 +48,7 @@ class OSREntryData;
 // don't care too much if the countdown is slightly off. The tier up trigger is atomic, however,
 // so tier up will be triggered exactly once.
 class TierUpCount : public UpperTierExecutionCounter {
+    WTF_MAKE_TZONE_ALLOCATED(TierUpCount);
     WTF_MAKE_NONCOPYABLE(TierUpCount);
 public:
     enum class TriggerReason : uint8_t {
@@ -69,12 +73,12 @@ public:
     Vector<uint32_t>& outerLoops() { return m_outerLoops; }
     Lock& getLock() { return m_lock; }
 
-    OSREntryData& addOSREntryData(uint32_t functionIndex, uint32_t loopIndex, StackMap&&);
+    OSREntryData& addOSREntryData(FunctionCodeIndex functionIndex, uint32_t loopIndex, StackMap&&);
     OSREntryData& osrEntryData(uint32_t loopIndex);
 
-    void optimizeAfterWarmUp(uint32_t functionIndex)
+    void optimizeAfterWarmUp(FunctionCodeIndex functionIndex)
     {
-        dataLogLnIf(Options::verboseOSR(), functionIndex, ": OMG-optimizing after warm-up.");
+        dataLogLnIf(Options::verboseOSR(), "\t[", functionIndex, "] OMG-optimizing after warm-up.");
         setNewThreshold(Options::thresholdForOMGOptimizeAfterWarmUp());
     }
 
@@ -83,38 +87,38 @@ public:
         return checkIfThresholdCrossedAndSet(nullptr);
     }
 
-    void dontOptimizeAnytimeSoon(uint32_t functionIndex)
+    void dontOptimizeAnytimeSoon(FunctionCodeIndex functionIndex)
     {
         dataLogLnIf(Options::verboseOSR(), functionIndex, ": Not OMG-optimizing anytime soon.");
         deferIndefinitely();
     }
 
-    void optimizeNextInvocation(uint32_t functionIndex)
+    void optimizeNextInvocation(FunctionCodeIndex functionIndex)
     {
         dataLogLnIf(Options::verboseOSR(), functionIndex, ": OMG-optimizing next invocation.");
         setNewThreshold(0);
     }
 
-    void optimizeSoon(uint32_t functionIndex)
+    void optimizeSoon(FunctionCodeIndex functionIndex)
     {
         dataLogLnIf(Options::verboseOSR(), functionIndex, ": OMG-optimizing soon.");
         // FIXME: Need adjustment once we get more information about wasm functions.
         setNewThreshold(Options::thresholdForOMGOptimizeSoon());
     }
 
-    void setOptimizationThresholdBasedOnCompilationResult(uint32_t functionIndex, CompilationResult result)
+    void setOptimizationThresholdBasedOnCompilationResult(FunctionCodeIndex functionIndex, CompilationResult result)
     {
         switch (result) {
-        case CompilationSuccessful:
+        case CompilationResult::CompilationSuccessful:
             optimizeNextInvocation(functionIndex);
             return;
-        case CompilationFailed:
+        case CompilationResult::CompilationFailed:
             dontOptimizeAnytimeSoon(functionIndex);
             return;
-        case CompilationDeferred:
+        case CompilationResult::CompilationDeferred:
             optimizeAfterWarmUp(functionIndex);
             return;
-        case CompilationInvalidated:
+        case CompilationResult::CompilationInvalidated:
             // This is weird - it will only happen in cases when the DFG code block (i.e.
             // the code block that this JITCode belongs to) is also invalidated. So it
             // doesn't really matter what we do. But, we do the right thing anyway. Note
@@ -127,9 +131,15 @@ public:
         RELEASE_ASSERT_NOT_REACHED();
     }
 
+    ALWAYS_INLINE CompilationStatus compilationStatusForOMG(MemoryMode mode) { return m_compilationStatusForOMG[static_cast<MemoryModeType>(mode)]; }
+    ALWAYS_INLINE void setCompilationStatusForOMG(MemoryMode mode, CompilationStatus status) { m_compilationStatusForOMG[static_cast<MemoryModeType>(mode)] = status; }
+
+    ALWAYS_INLINE CompilationStatus compilationStatusForOMGForOSREntry(MemoryMode mode) { return m_compilationStatusForOMGForOSREntry[static_cast<MemoryModeType>(mode)]; }
+    ALWAYS_INLINE void setCompilationStatusForOMGForOSREntry(MemoryMode mode, CompilationStatus status) { m_compilationStatusForOMGForOSREntry[static_cast<MemoryModeType>(mode)] = status; }
+
     Lock m_lock;
-    CompilationStatus m_compilationStatusForOMG { CompilationStatus::NotCompiled };
-    CompilationStatus m_compilationStatusForOMGForOSREntry { CompilationStatus::NotCompiled };
+    std::array<CompilationStatus, numberOfMemoryModes> m_compilationStatusForOMG;
+    std::array<CompilationStatus, numberOfMemoryModes> m_compilationStatusForOMGForOSREntry;
     SegmentedVector<TriggerReason, 16> m_osrEntryTriggers;
     Vector<uint32_t> m_outerLoops;
     Vector<std::unique_ptr<OSREntryData>> m_osrEntryData;
@@ -137,4 +147,4 @@ public:
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY_B3JIT)
+#endif // ENABLE(WEBASSEMBLY_OMGJIT) || ENABLE(WEBASSEMBLY_BBQJIT)

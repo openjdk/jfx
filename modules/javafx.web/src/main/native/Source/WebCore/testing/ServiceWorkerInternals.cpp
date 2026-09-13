@@ -26,12 +26,11 @@
 #include "config.h"
 #include "ServiceWorkerInternals.h"
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "FetchEvent.h"
 #include "FetchRequest.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSFetchResponse.h"
+#include "NotificationPayload.h"
 #include "PushSubscription.h"
 #include "PushSubscriptionData.h"
 #include "SWContextManager.h"
@@ -52,8 +51,8 @@ ServiceWorkerInternals::~ServiceWorkerInternals() = default;
 
 void ServiceWorkerInternals::setOnline(bool isOnline)
 {
-    callOnMainThread([identifier = m_identifier, isOnline] () {
-        if (auto* proxy = SWContextManager::singleton().serviceWorkerThreadProxy(identifier))
+    callOnMainThread([identifier = m_identifier, isOnline] {
+        if (RefPtr proxy = SWContextManager::singleton().serviceWorkerThreadProxy(identifier))
             proxy->notifyNetworkStateChange(isOnline);
     });
 }
@@ -65,23 +64,21 @@ void ServiceWorkerInternals::terminate()
     });
 }
 
-void ServiceWorkerInternals::schedulePushEvent(const String& message, RefPtr<DeferredPromise>&& promise)
+void ServiceWorkerInternals::schedulePushEvent(const String& message, Ref<DeferredPromise>&& promise)
 {
     auto counter = ++m_pushEventCounter;
-    m_pushEventPromises.add(counter, WTFMove(promise));
+    m_pushEventPromises.add(counter, WTF::move(promise));
 
     std::optional<Vector<uint8_t>> data;
-    if (!message.isNull()) {
-        auto utf8 = message.utf8();
-        data = Vector<uint8_t> { reinterpret_cast<const uint8_t*>(utf8.data()), utf8.length()};
-    }
-    callOnMainThread([identifier = m_identifier, data = WTFMove(data), weakThis = WeakPtr { *this }, counter]() mutable {
-        SWContextManager::singleton().firePushEvent(identifier, WTFMove(data), [identifier, weakThis = WTFMove(weakThis), counter](bool result) mutable {
-            if (auto* proxy = SWContextManager::singleton().serviceWorkerThreadProxy(identifier)) {
-                proxy->thread().runLoop().postTaskForMode([weakThis = WTFMove(weakThis), counter, result](auto&) {
+    if (!message.isNull())
+        data = Vector(byteCast<uint8_t>(message.utf8().span()));
+    callOnMainThread([identifier = m_identifier, data = WTF::move(data), weakThis = WeakPtr { *this }, counter]() mutable {
+        SWContextManager::singleton().firePushEvent(identifier, WTF::move(data), std::nullopt, [identifier, weakThis = WTF::move(weakThis), counter](bool result, std::optional<NotificationPayload>&&) mutable {
+            if (RefPtr proxy = SWContextManager::singleton().serviceWorkerThreadProxy(identifier)) {
+                proxy->thread().runLoop().postTaskForMode([weakThis = WTF::move(weakThis), counter, result](auto&) {
                     if (!weakThis)
                         return;
-                    if (auto promise = weakThis->m_pushEventPromises.take(counter))
+                    if (RefPtr promise = weakThis->m_pushEventPromises.take(counter))
                         promise->resolve<IDLBoolean>(result);
                 }, WorkerRunLoop::defaultMode());
             }
@@ -99,22 +96,22 @@ void ServiceWorkerInternals::schedulePushSubscriptionChangeEvent(PushSubscriptio
     if (oldSubscription)
         oldSubscriptionData = oldSubscription->data().isolatedCopy();
 
-    callOnMainThread([identifier = m_identifier, newSubscriptionData = WTFMove(newSubscriptionData), oldSubscriptionData = WTFMove(oldSubscriptionData)]() mutable {
-        SWContextManager::singleton().firePushSubscriptionChangeEvent(identifier, WTFMove(newSubscriptionData), WTFMove(oldSubscriptionData));
+    callOnMainThread([identifier = m_identifier, newSubscriptionData = WTF::move(newSubscriptionData), oldSubscriptionData = WTF::move(oldSubscriptionData)]() mutable {
+        SWContextManager::singleton().firePushSubscriptionChangeEvent(identifier, WTF::move(newSubscriptionData), WTF::move(oldSubscriptionData));
     });
 }
 
 void ServiceWorkerInternals::waitForFetchEventToFinish(FetchEvent& event, DOMPromiseDeferred<IDLInterface<FetchResponse>>&& promise)
 {
-    event.onResponse([promise = WTFMove(promise), event = Ref { event }] (auto&& result) mutable {
+    event.onResponse([promise = WTF::move(promise), event = Ref { event }] (auto&& result) mutable {
         if (!result.has_value()) {
             String description;
             if (auto& error = result.error())
                 description = error->localizedDescription();
-            promise.reject(TypeError, description);
+            promise.reject(ExceptionCode::TypeError, description);
             return;
         }
-        promise.resolve(WTFMove(result.value()));
+        promise.resolve(WTF::move(result.value()));
     });
 }
 
@@ -134,18 +131,16 @@ Ref<FetchResponse> ServiceWorkerInternals::createOpaqueWithBlobBodyResponse(Scri
     ResourceResponse response;
     response.setType(ResourceResponse::Type::Cors);
     response.setTainting(ResourceResponse::Tainting::Opaque);
-    auto fetchResponse = FetchResponse::create(&context, FetchBody::fromFormData(context, WTFMove(formData)), FetchHeaders::Guard::Response, WTFMove(response));
+    auto fetchResponse = FetchResponse::create(&context, FetchBody::fromFormData(context, WTF::move(formData)), FetchHeaders::Guard::Response, WTF::move(response));
     fetchResponse->initializeOpaqueLoadIdentifierForTesting();
     return fetchResponse;
 }
 
 Vector<String> ServiceWorkerInternals::fetchResponseHeaderList(FetchResponse& response)
 {
-    Vector<String> headerNames;
-    headerNames.reserveInitialCapacity(response.internalResponseHeaders().size());
-    for (auto keyValue : response.internalResponseHeaders())
-        headerNames.uncheckedAppend(keyValue.key);
-    return headerNames;
+    return WTF::map(response.internalResponseHeaders(), [](auto& keyValue) {
+        return keyValue.key;
+    });
 }
 
 #if !PLATFORM(MAC)
@@ -157,7 +152,7 @@ String ServiceWorkerInternals::processName() const
 
 bool ServiceWorkerInternals::isThrottleable() const
 {
-    auto* connection = SWContextManager::singleton().connection();
+    RefPtr connection = SWContextManager::singleton().connection();
     return connection ? connection->isThrottleable() : true;
 }
 
@@ -169,15 +164,16 @@ int ServiceWorkerInternals::processIdentifier() const
 void ServiceWorkerInternals::lastNavigationWasAppInitiated(Ref<DeferredPromise>&& promise)
 {
     ASSERT(!m_lastNavigationWasAppInitiatedPromise);
-    m_lastNavigationWasAppInitiatedPromise = WTFMove(promise);
-    callOnMainThread([identifier = m_identifier, weakThis = WeakPtr { *this }]() mutable {
-        if (auto* proxy = SWContextManager::singleton().serviceWorkerThreadProxy(identifier)) {
-            proxy->thread().runLoop().postTaskForMode([weakThis = WTFMove(weakThis), appInitiated = proxy->lastNavigationWasAppInitiated()](auto&) {
-                if (!weakThis || !weakThis->m_lastNavigationWasAppInitiatedPromise)
+    m_lastNavigationWasAppInitiatedPromise = WTF::move(promise);
+    callOnMainThread([identifier = m_identifier, weakThis = WeakPtr { *this }] mutable {
+        if (RefPtr proxy = SWContextManager::singleton().serviceWorkerThreadProxy(identifier)) {
+            proxy->thread().runLoop().postTaskForMode([weakThis = WTF::move(weakThis), appInitiated = proxy->lastNavigationWasAppInitiated()](auto&) {
+                RefPtr protectedThis = weakThis.get();
+                if (!protectedThis || !protectedThis->m_lastNavigationWasAppInitiatedPromise)
                     return;
 
-                weakThis->m_lastNavigationWasAppInitiatedPromise->resolve<IDLBoolean>(appInitiated);
-                weakThis->m_lastNavigationWasAppInitiatedPromise = nullptr;
+                protectedThis->m_lastNavigationWasAppInitiatedPromise->resolve<IDLBoolean>(appInitiated);
+                protectedThis->m_lastNavigationWasAppInitiatedPromise = nullptr;
             }, WorkerRunLoop::defaultMode());
         }
     });
@@ -185,12 +181,7 @@ void ServiceWorkerInternals::lastNavigationWasAppInitiated(Ref<DeferredPromise>&
 
 RefPtr<PushSubscription> ServiceWorkerInternals::createPushSubscription(const String& endpoint, std::optional<EpochTimeStamp> expirationTime, const ArrayBuffer& serverVAPIDPublicKey, const ArrayBuffer& clientECDHPublicKey, const ArrayBuffer& auth)
 {
-    auto myEndpoint = endpoint;
-    Vector<uint8_t> myServerVAPIDPublicKey { static_cast<const uint8_t*>(serverVAPIDPublicKey.data()), serverVAPIDPublicKey.byteLength() };
-    Vector<uint8_t> myClientECDHPublicKey { static_cast<const uint8_t*>(clientECDHPublicKey.data()), clientECDHPublicKey.byteLength() };
-    Vector<uint8_t> myAuth { static_cast<const uint8_t*>(auth.data()), auth.byteLength() };
-
-    return PushSubscription::create(PushSubscriptionData { { }, WTFMove(myEndpoint), expirationTime, WTFMove(myServerVAPIDPublicKey), WTFMove(myClientECDHPublicKey), WTFMove(myAuth) });
+    return PushSubscription::create(PushSubscriptionData { std::nullopt, { endpoint }, expirationTime, serverVAPIDPublicKey.toVector(), clientECDHPublicKey.toVector(), auth.toVector() });
 }
 
 bool ServiceWorkerInternals::fetchEventIsSameSite(FetchEvent& event)
@@ -219,5 +210,3 @@ void ServiceWorkerInternals:: logReportedConsoleMessage(ScriptExecutionContext& 
 }
 
 } // namespace WebCore
-
-#endif

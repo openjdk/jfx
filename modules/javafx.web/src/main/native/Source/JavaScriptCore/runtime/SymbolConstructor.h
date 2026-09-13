@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include "InternalFunction.h"
+#include <JavaScriptCore/InternalFunction.h>
 
 namespace JSC {
 
@@ -38,7 +38,7 @@ public:
     typedef InternalFunction Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
-    static SymbolConstructor* create(VM& vm, Structure* structure, SymbolPrototype* prototype, GetterSetter*)
+    static SymbolConstructor* create(VM& vm, Structure* structure, SymbolPrototype* prototype)
     {
         SymbolConstructor* constructor = new (NotNull, allocateCell<SymbolConstructor>(vm)) SymbolConstructor(vm, structure);
         constructor->finishCreation(vm, prototype);
@@ -47,10 +47,7 @@ public:
 
     DECLARE_INFO;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(InternalFunctionType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
 private:
     SymbolConstructor(VM&, Structure*);

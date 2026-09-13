@@ -32,6 +32,8 @@
 #include <wtf/Assertions.h>
 #include <wtf/Logging.h>
 #include <wtf/RetainPtr.h>
+#include <wtf/cf/NotificationCenterCF.h>
+#include <wtf/cf/TypeCastsCF.h>
 #include <wtf/spi/cf/CFBundleSPI.h>
 #include <wtf/text/TextStream.h>
 #include <wtf/text/WTFString.h>
@@ -54,7 +56,7 @@ static String httpStyleLanguageCode(CFStringRef language, ShouldMinimizeLanguage
         preferredLanguageCode = adoptCF(CFLocaleCreateCanonicalLanguageIdentifierFromString(kCFAllocatorDefault, language));
     else {
 #endif
-        UNUSED_PARAM(shouldMinimizeLanguages);
+
         SInt32 languageCode;
         SInt32 regionCode;
         SInt32 scriptCode;
@@ -86,7 +88,7 @@ void listenForLanguageChangeNotifications()
 #if PLATFORM(MAC)
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
-        CFNotificationCenterAddObserver(CFNotificationCenterGetDistributedCenter(), nullptr, &languagePreferencesDidChange, CFSTR("AppleLanguagePreferencesChangedNotification"), nullptr, CFNotificationSuspensionBehaviorCoalesce);
+        CFNotificationCenterAddObserver(CFNotificationCenterGetDistributedCenterSingleton(), nullptr, &languagePreferencesDidChange, CFSTR("AppleLanguagePreferencesChangedNotification"), nullptr, CFNotificationSuspensionBehaviorCoalesce);
     });
 #endif
 }
@@ -95,25 +97,24 @@ Vector<String> platformUserPreferredLanguages(ShouldMinimizeLanguages shouldMini
 {
     auto platformLanguages = adoptCF(CFLocaleCopyPreferredLanguages());
 
-    LOG_WITH_STREAM(Language, stream << "CFLocaleCopyPreferredLanguages() returned: " << reinterpret_cast<id>(const_cast<CFMutableArrayRef>(platformLanguages.get())));
+    LOG_WITH_STREAM(Language, stream << "CFLocaleCopyPreferredLanguages() returned: "_s << reinterpret_cast<id>(const_cast<CFMutableArrayRef>(platformLanguages.get())));
 #if !PLATFORM(JAVA)
     if (shouldMinimizeLanguages == ShouldMinimizeLanguages::Yes)
         platformLanguages = minimizedLanguagesFromLanguages(platformLanguages.get());
-    LOG_WITH_STREAM(Language, stream << "Minimized languages: " << reinterpret_cast<id>(const_cast<CFMutableArrayRef>(platformLanguages.get())));
+
+    LOG_WITH_STREAM(Language, stream << "Minimized languages: "_s << reinterpret_cast<id>(const_cast<CFMutableArrayRef>(platformLanguages.get())));
 #endif
 
     CFIndex platformLanguagesCount = CFArrayGetCount(platformLanguages.get());
     if (!platformLanguagesCount)
         return { "en"_s };
 
-    Vector<String> languages;
-    languages.reserveInitialCapacity(platformLanguagesCount);
-    for (CFIndex i = 0; i < platformLanguagesCount; i++) {
-        auto platformLanguage = static_cast<CFStringRef>(CFArrayGetValueAtIndex(platformLanguages.get(), i));
-        languages.uncheckedAppend(httpStyleLanguageCode(platformLanguage, shouldMinimizeLanguages));
-    }
+    Vector<String> languages(platformLanguagesCount, [&](size_t i) {
+        RetainPtr platformLanguage = checked_cf_cast<CFStringRef>(CFArrayGetValueAtIndex(platformLanguages.get(), i));
+        return httpStyleLanguageCode(platformLanguage.get(), shouldMinimizeLanguages);
+    });
 
-    LOG_WITH_STREAM(Language, stream << "After passing through httpStyleLanguageCode: " << languages);
+    LOG_WITH_STREAM(Language, stream << "After passing through httpStyleLanguageCode: "_s << languages);
 
     return languages;
 }

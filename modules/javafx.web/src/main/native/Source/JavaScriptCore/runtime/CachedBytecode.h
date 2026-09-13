@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "CacheUpdate.h"
-#include "LeafExecutable.h"
-#include "ParserModes.h"
-#include <wtf/MallocPtr.h>
+#include <JavaScriptCore/CacheUpdate.h>
+#include <JavaScriptCore/LeafExecutable.h>
+#include <JavaScriptCore/ParserModes.h>
+#include <wtf/MallocSpan.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
@@ -48,12 +48,12 @@ public:
 
     static Ref<CachedBytecode> create(FileSystem::MappedFileData&& data, LeafExecutableMap&& leafExecutables = { })
     {
-        return adoptRef(*new CachedBytecode(CachePayload::makeMappedPayload(WTFMove(data)), WTFMove(leafExecutables)));
+        return adoptRef(*new CachedBytecode(CachePayload::makeMappedPayload(WTF::move(data)), WTF::move(leafExecutables)));
     }
 
-    static Ref<CachedBytecode> create(MallocPtr<uint8_t, VMMalloc>&& data, size_t size, LeafExecutableMap&& leafExecutables)
+    static Ref<CachedBytecode> create(MallocSpan<uint8_t, VMMalloc>&& data, LeafExecutableMap&& leafExecutables)
     {
-        return adoptRef(*new CachedBytecode(CachePayload::makeMallocPayload(WTFMove(data), size), WTFMove(leafExecutables)));
+        return adoptRef(*new CachedBytecode(CachePayload::makeMallocPayload(WTF::move(data)), WTF::move(leafExecutables)));
     }
 
     LeafExecutableMap& leafExecutables() { return m_leafExecutables; }
@@ -61,10 +61,10 @@ public:
     JS_EXPORT_PRIVATE void addGlobalUpdate(Ref<CachedBytecode>);
     JS_EXPORT_PRIVATE void addFunctionUpdate(const UnlinkedFunctionExecutable*, CodeSpecializationKind, Ref<CachedBytecode>);
 
-    using ForEachUpdateCallback = Function<void(off_t, const void*, size_t)>;
+    using ForEachUpdateCallback = Function<void(off_t, std::span<const uint8_t>)>;
     JS_EXPORT_PRIVATE void commitUpdates(const ForEachUpdateCallback&) const;
 
-    const uint8_t* data() const { return m_payload.data(); }
+    std::span<const uint8_t> span() const LIFETIME_BOUND { return m_payload.span(); }
     size_t size() const { return m_payload.size(); }
     bool hasUpdates() const { return !m_updates.isEmpty(); }
     size_t sizeForUpdate() const { return m_size; }
@@ -72,8 +72,8 @@ public:
 private:
     CachedBytecode(CachePayload&& payload, LeafExecutableMap&& leafExecutables = { })
         : m_size(payload.size())
-        , m_payload(WTFMove(payload))
-        , m_leafExecutables(WTFMove(leafExecutables))
+        , m_payload(WTF::move(payload))
+        , m_leafExecutables(WTF::move(leafExecutables))
     {
     }
 

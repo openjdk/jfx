@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Google, Inc. All Rights Reserved.
+ * Copyright (C) 2010 Google, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,7 @@
 #include "config.h"
 #include "ScriptableDocumentParser.h"
 
+#include "CSSPrimitiveValue.h"
 #include "Document.h"
 #include "Settings.h"
 #include "StyleScope.h"
@@ -38,9 +39,6 @@ ScriptableDocumentParser::ScriptableDocumentParser(Document& document, OptionSet
     , m_parserContentPolicy(parserContentPolicy)
     , m_scriptsWaitingForStylesheetsExecutionTimer(*this, &ScriptableDocumentParser::scriptsWaitingForStylesheetsExecutionTimerFired)
 {
-    if (!pluginContentIsAllowed(m_parserContentPolicy))
-        m_parserContentPolicy = allowPluginContent(m_parserContentPolicy);
-
     if (scriptingContentIsAllowed(m_parserContentPolicy) && !document.allowsContentJavaScript())
         m_parserContentPolicy = disallowScriptingContent(m_parserContentPolicy);
 }
@@ -61,13 +59,12 @@ void ScriptableDocumentParser::scriptsWaitingForStylesheetsExecutionTimerFired()
 {
     ASSERT(!isDetached());
 
-    Ref<ScriptableDocumentParser> protectedThis(*this);
-
-    if (!document()->styleScope().hasPendingSheets())
+    RefPtr document = this->document();
+    if (!document->styleScope().hasPendingSheets())
         executeScriptsWaitingForStylesheets();
 
     if (!isDetached())
-        document()->checkCompleted();
+        document->checkCompleted();
 }
 
 void ScriptableDocumentParser::detach()

@@ -33,8 +33,11 @@
 
 #include "config.h"
 #include <wtf/ApproximateTime.h>
+#include <wtf/ContinuousApproximateTime.h>
+#include <wtf/ContinuousTime.h>
+#include <wtf/MathExtras.h>
 #include <wtf/MonotonicTime.h>
-
+#include <wtf/StdLibExtras.h>
 #include <wtf/WallTime.h>
 
 #if OS(DARWIN)
@@ -54,6 +57,10 @@
 
 #if OS(FUCHSIA)
 #include <zircon/syscalls.h>
+#endif
+
+#if OS(HAIKU)
+#include <OS.h>
 #endif
 
 #if USE(GLIB)
@@ -79,7 +86,8 @@ static double lowResUTCTime()
     // prevent alignment faults on 64-bit Windows).
 
     ULARGE_INTEGER dateTime;
-    memcpy(&dateTime, &fileTime, sizeof(dateTime));
+    static_assert(sizeof(dateTime) == sizeof(fileTime));
+    memcpySpan(asMutableByteSpan(dateTime), asByteSpan(fileTime));
 
     // Windows file times are in 100s of nanoseconds.
     return (dateTime.QuadPart - epochBias) / hundredsOfNanosecondsPerMillisecond;
@@ -113,11 +121,7 @@ static double highResUpTime()
         if (tickCount >= tickCountLast)
             tickCountElapsed = (tickCount - tickCountLast);
         else {
-#if COMPILER(MINGW)
-            __int64 tickCountLarge = tickCount + 0x100000000ULL;
-#else
             __int64 tickCountLarge = tickCount + 0x100000000I64;
-#endif
             tickCountElapsed = tickCountLarge - tickCountLast;
         }
 
@@ -196,6 +200,18 @@ Int128 currentTimeInNanoseconds()
     return static_cast<Int128>(currentTime() * 1'000'000'000);
 }
 
+#elif OS(HAIKU)
+
+Int128 currentTimeInNanoseconds()
+{
+    return static_cast<Int128>(real_time_clock_usecs() * 1000.0);
+}
+
+double currentTime()
+{
+    return (double)real_time_clock_usecs() / 1'000'000.0;
+}
+
 #else
 
 Int128 currentTimeInNanoseconds()
@@ -223,13 +239,13 @@ WallTime WallTime::now()
 static mach_timebase_info_data_t& machTimebaseInfo()
 {
     // Based on listing #2 from Apple QA 1398, but modified to be thread-safe.
-    static mach_timebase_info_data_t timebaseInfo;
-    static std::once_flag initializeTimerOnceFlag;
-    std::call_once(initializeTimerOnceFlag, [] {
+    static mach_timebase_info_data_t timebaseInfo = [] {
+        mach_timebase_info_data_t timebaseInfo;
         kern_return_t kr = mach_timebase_info(&timebaseInfo);
         ASSERT_UNUSED(kr, kr == KERN_SUCCESS);
         ASSERT(timebaseInfo.denom);
-    });
+        return timebaseInfo;
+    }();
     return timebaseInfo;
 }
 
@@ -242,7 +258,7 @@ MonotonicTime MonotonicTime::fromMachAbsoluteTime(uint64_t machAbsoluteTime)
 uint64_t MonotonicTime::toMachAbsoluteTime() const
 {
     auto& info = machTimebaseInfo();
-    return static_cast<uint64_t>((m_value * 1.0e9 * info.denom) / info.numer);
+    return truncateDoubleToUint64((m_value * 1.0e9 * info.denom) / info.numer);
 }
 
 ApproximateTime ApproximateTime::fromMachApproximateTime(uint64_t machApproximateTime)
@@ -254,7 +270,31 @@ ApproximateTime ApproximateTime::fromMachApproximateTime(uint64_t machApproximat
 uint64_t ApproximateTime::toMachApproximateTime() const
 {
     auto& info = machTimebaseInfo();
-    return static_cast<uint64_t>((m_value * 1.0e9 * info.denom) / info.numer);
+    return truncateDoubleToUint64((m_value * 1.0e9 * info.denom) / info.numer);
+}
+
+ContinuousTime ContinuousTime::fromMachContinuousTime(uint64_t machContinuousTime)
+{
+    auto& info = machTimebaseInfo();
+    return fromRawSeconds((machContinuousTime * info.numer) / (1.0e9 * info.denom));
+}
+
+uint64_t ContinuousTime::toMachContinuousTime() const
+{
+    auto& info = machTimebaseInfo();
+    return truncateDoubleToUint64((m_value * 1.0e9 * info.denom) / info.numer);
+}
+
+ContinuousApproximateTime ContinuousApproximateTime::fromMachContinuousApproximateTime(uint64_t machContinuousApproximateTime)
+{
+    auto& info = machTimebaseInfo();
+    return fromRawSeconds((machContinuousApproximateTime * info.numer) / (1.0e9 * info.denom));
+}
+
+uint64_t ContinuousApproximateTime::toMachContinuousApproximateTime() const
+{
+    auto& info = machTimebaseInfo();
+    return truncateDoubleToUint64((m_value * 1.0e9 * info.denom) / info.numer);
 }
 #endif
 
@@ -270,6 +310,8 @@ MonotonicTime MonotonicTime::now()
     struct timespec ts { };
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return fromRawSeconds(static_cast<double>(ts.tv_sec) + ts.tv_nsec / 1.0e9);
+#elif OS(HAIKU)
+    return fromRawSeconds(static_cast<double>(system_time_nsecs() / 1.0e9));
 #else
     static double lastTime = 0;
     double currentTimeNow = currentTime();
@@ -292,8 +334,46 @@ ApproximateTime ApproximateTime::now()
     struct timespec ts { };
     clock_gettime(CLOCK_MONOTONIC_FAST, &ts);
     return fromRawSeconds(static_cast<double>(ts.tv_sec) + ts.tv_nsec / 1.0e9);
+#elif OS(HAIKU)
+    return fromRawSeconds(static_cast<double>(system_time() / 1.0e6));
 #else
     return ApproximateTime::fromRawSeconds(MonotonicTime::now().secondsSinceEpoch().value());
+#endif
+}
+
+ContinuousTime ContinuousTime::now()
+{
+#if OS(DARWIN)
+    return fromMachContinuousTime(mach_continuous_time());
+#elif (OS(LINUX) || OS(OPENBSD)) && !PLATFORM(JAVA)
+    struct timespec ts { };
+    clock_gettime(CLOCK_BOOTTIME, &ts);
+    return fromRawSeconds(static_cast<double>(ts.tv_sec) + ts.tv_nsec / 1.0e9);
+#else
+    static double lastTime = 0;
+    double currentTimeNow = currentTime();
+    if (currentTimeNow < lastTime)
+        return lastTime;
+    lastTime = currentTimeNow;
+    return fromRawSeconds(currentTimeNow);
+#endif
+}
+
+ContinuousApproximateTime ContinuousApproximateTime::now()
+{
+#if OS(DARWIN)
+    return fromMachContinuousApproximateTime(mach_continuous_approximate_time());
+#elif (OS(LINUX) || OS(OPENBSD)) && !PLATFORM(JAVA)
+    struct timespec ts { };
+    clock_gettime(CLOCK_BOOTTIME, &ts);
+    return fromRawSeconds(static_cast<double>(ts.tv_sec) + ts.tv_nsec / 1.0e9);
+#else
+    static double lastTime = 0;
+    double currentTimeNow = currentTime();
+    if (currentTimeNow < lastTime)
+        return lastTime;
+    lastTime = currentTimeNow;
+    return fromRawSeconds(currentTimeNow);
 #endif
 }
 

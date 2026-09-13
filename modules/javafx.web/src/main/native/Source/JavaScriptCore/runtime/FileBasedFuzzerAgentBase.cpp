@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,9 @@
 
 #include "CodeBlock.h"
 #include "JSCellInlines.h"
-#include <wtf/text/StringBuilder.h>
+#include <wtf/text/MakeString.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -38,15 +40,9 @@ FileBasedFuzzerAgentBase::FileBasedFuzzerAgentBase(VM&)
 
 String FileBasedFuzzerAgentBase::createLookupKey(const String& sourceFilename, OpcodeID opcodeId, int startLocation, int endLocation)
 {
-    StringBuilder lookupKey;
-    lookupKey.append(sourceFilename);
-    lookupKey.append("|");
-    lookupKey.append(opcodeNames[opcodeAliasForLookupKey(opcodeId)]);
-    lookupKey.append("|");
-    lookupKey.append(startLocation);
-    lookupKey.append("|");
-    lookupKey.append(endLocation);
-    return lookupKey.toString();
+    return makeString(sourceFilename, '|',
+        opcodeNames[opcodeAliasForLookupKey(opcodeId)],
+        '|', startLocation, '|', endLocation);
 }
 
 OpcodeID FileBasedFuzzerAgentBase::opcodeAliasForLookupKey(const OpcodeID& opcodeId)
@@ -57,6 +53,8 @@ OpcodeID FileBasedFuzzerAgentBase::opcodeAliasForLookupKey(const OpcodeID& opcod
         return op_get_by_val;
     if (opcodeId == op_construct_varargs)
         return op_construct;
+    if (opcodeId == op_super_construct_varargs)
+        return op_super_construct;
     return opcodeId;
 }
 
@@ -71,7 +69,7 @@ SpeculatedType FileBasedFuzzerAgentBase::getPrediction(CodeBlock* codeBlock, con
 
     PredictionTarget predictionTarget;
     BytecodeIndex bytecodeIndex = codeOrigin.bytecodeIndex();
-    codeBlock->expressionRangeForBytecodeIndex(bytecodeIndex, predictionTarget.divot, predictionTarget.startOffset, predictionTarget.endOffset, predictionTarget.line, predictionTarget.column);
+    predictionTarget.info = codeBlock->expressionInfoForBytecodeIndex(bytecodeIndex);
 
     Vector<String> urlParts = sourceURL.split('/');
     predictionTarget.sourceFilename = urlParts.isEmpty() ? sourceURL : urlParts.last();
@@ -80,10 +78,12 @@ SpeculatedType FileBasedFuzzerAgentBase::getPrediction(CodeBlock* codeBlock, con
     const auto* anInstruction = instructions.at(bytecodeIndex).ptr();
     predictionTarget.opcodeId = anInstruction->opcodeID();
 
-    int startLocation = predictionTarget.divot - predictionTarget.startOffset;
-    int endLocation = predictionTarget.divot + predictionTarget.endOffset;
+    int startLocation = predictionTarget.info.divot - predictionTarget.info.startOffset;
+    int endLocation = predictionTarget.info.divot + predictionTarget.info.endOffset;
     predictionTarget.lookupKey = createLookupKey(predictionTarget.sourceFilename, predictionTarget.opcodeId, startLocation, endLocation);
     return getPredictionInternal(codeBlock, predictionTarget, original);
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

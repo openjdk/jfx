@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,10 +25,11 @@
 
 #pragma once
 
-#include "InstructionStream.h"
-#include "Opcode.h"
+#include <JavaScriptCore/InstructionStream.h>
+#include <JavaScriptCore/Opcode.h>
 #include <limits.h>
 #include <wtf/FastBitVector.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
@@ -43,7 +44,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(BytecodeBasicBlock);
 
 template<typename OpcodeTraits>
 class BytecodeBasicBlock {
-    WTF_MAKE_FAST_ALLOCATED(BytecodeBasicBlock);
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(BytecodeBasicBlock);
     WTF_MAKE_NONCOPYABLE(BytecodeBasicBlock);
     friend class BytecodeGraph;
 public:
@@ -99,7 +100,8 @@ private:
     FastBitVector m_out;
 };
 
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<typename OpcodeTraits>, BytecodeBasicBlock<OpcodeTraits>);
+
 using JSBytecodeBasicBlock = BytecodeBasicBlock<JSOpcodeTraits>;
-using WasmBytecodeBasicBlock = BytecodeBasicBlock<WasmOpcodeTraits>;
 
 } // namespace JSC

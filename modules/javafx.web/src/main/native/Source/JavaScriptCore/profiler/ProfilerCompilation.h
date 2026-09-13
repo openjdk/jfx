@@ -25,17 +25,18 @@
 
 #pragma once
 
-#include "ExitKind.h"
-#include "JSCJSValue.h"
-#include "ProfilerCompilationKind.h"
-#include "ProfilerCompiledBytecode.h"
-#include "ProfilerExecutionCounter.h"
-#include "ProfilerJettisonReason.h"
-#include "ProfilerOSRExit.h"
-#include "ProfilerOSRExitSite.h"
-#include "ProfilerOriginStack.h"
-#include "ProfilerProfiledBytecodes.h"
-#include "ProfilerUID.h"
+#include <JavaScriptCore/ExitKind.h>
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/ProfilerCompilationKind.h>
+#include <JavaScriptCore/ProfilerCompiledBytecode.h>
+#include <JavaScriptCore/ProfilerExecutionCounter.h>
+#include <JavaScriptCore/ProfilerJettisonReason.h>
+#include <JavaScriptCore/ProfilerOSRExit.h>
+#include <JavaScriptCore/ProfilerOSRExitSite.h>
+#include <JavaScriptCore/ProfilerOriginStack.h>
+#include <JavaScriptCore/ProfilerProfiledBytecodes.h>
+#include <JavaScriptCore/ProfilerUID.h>
+#include <wtf/ObjectIdentifier.h>
 #include <wtf/RefCounted.h>
 #include <wtf/SegmentedVector.h>
 
@@ -86,7 +87,7 @@ private:
     Bytecodes* m_bytecodes;
     Vector<ProfiledBytecodes> m_profiledBytecodes;
     Vector<CompiledBytecode> m_descriptions;
-    HashMap<OriginStack, std::unique_ptr<ExecutionCounter>> m_counters;
+    UncheckedKeyHashMap<OriginStack, std::unique_ptr<ExecutionCounter>> m_counters;
     Vector<OSRExitSite> m_osrExitSites;
     SegmentedVector<OSRExit> m_osrExits;
     unsigned m_numInlinedGetByIds;

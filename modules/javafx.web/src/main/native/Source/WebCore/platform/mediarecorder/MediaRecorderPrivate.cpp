@@ -29,8 +29,11 @@
 #if ENABLE(MEDIA_RECORDER)
 
 #include "MediaStreamPrivate.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaRecorderPrivate);
 
 constexpr unsigned SmallAudioBitRate = 8000;
 constexpr unsigned SmallVideoBitRate = 80000;
@@ -61,11 +64,11 @@ MediaRecorderPrivate::AudioVideoSelectedTracks MediaRecorderPrivate::selectTrack
 
 void MediaRecorderPrivate::checkTrackState(const MediaStreamTrackPrivate& track)
 {
-    if (&track.source() == m_audioSource.get()) {
+    if (track.hasSource(m_audioSource.get())) {
         m_shouldMuteAudio = track.muted() || !track.enabled();
         return;
     }
-    if (&track.source() == m_videoSource.get())
+    if (track.hasSource(m_videoSource.get()))
         m_shouldMuteVideo = track.muted() || !track.enabled();
 }
 
@@ -73,7 +76,7 @@ void MediaRecorderPrivate::stop(CompletionHandler<void()>&& completionHandler)
 {
     setAudioSource(nullptr);
     setVideoSource(nullptr);
-    stopRecording(WTFMove(completionHandler));
+    stopRecording(WTF::move(completionHandler));
 }
 
 void MediaRecorderPrivate::pause(CompletionHandler<void()>&& completionHandler)
@@ -87,17 +90,17 @@ void MediaRecorderPrivate::pause(CompletionHandler<void()>&& completionHandler)
     setAudioSource(nullptr);
     setVideoSource(nullptr);
 
-    pauseRecording(WTFMove(completionHandler));
+    pauseRecording(WTF::move(completionHandler));
 }
 
 void MediaRecorderPrivate::resume(CompletionHandler<void()>&& completionHandler)
 {
     ASSERT(m_pausedAudioSource || m_pausedVideoSource);
 
-    setAudioSource(WTFMove(m_pausedAudioSource));
-    setVideoSource(WTFMove(m_pausedVideoSource));
+    setAudioSource(WTF::move(m_pausedAudioSource));
+    setVideoSource(WTF::move(m_pausedVideoSource));
 
-    resumeRecording(WTFMove(completionHandler));
+    resumeRecording(WTF::move(completionHandler));
 }
 
 MediaRecorderPrivate::BitRates MediaRecorderPrivate::computeBitRates(const MediaRecorderPrivateOptions& options, const MediaStreamPrivate* stream)

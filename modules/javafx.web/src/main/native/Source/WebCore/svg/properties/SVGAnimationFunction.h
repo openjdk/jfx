@@ -39,7 +39,7 @@ public:
 
     virtual void setFromAndToValues(SVGElement& targetElement, const String&, const String&) = 0;
     virtual void setFromAndByValues(SVGElement& targetElement, const String&, const String&) = 0;
-    virtual void setToAtEndOfDurationValue(const String&) = 0;
+    virtual void setToAtEndOfDurationValue(SVGElement& targetElement, const String&) = 0;
 
     virtual std::optional<float> calculateDistance(SVGElement&, const String&, const String&) const { return { }; }
 protected:

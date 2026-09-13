@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,24 +25,22 @@
 
 package test.com.sun.glass.ui.mac;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static test.util.Util.runAndWait;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import javafx.application.Platform;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import com.sun.glass.ui.Clipboard;
 import com.sun.glass.ui.Pixels;
 import com.sun.glass.ui.mac.MacPasteboardShim;
 import com.sun.javafx.PlatformUtil;
-import javafx.application.Platform;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.CountDownLatch;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
-import static test.util.Util.runAndWait;
 
 public class MacPasteboardTest {
 
@@ -50,9 +48,9 @@ public class MacPasteboardTest {
 
     private static MacPasteboardShim macPasteboardShim;
 
-    @BeforeClass
+    @BeforeAll
     public static void setup() throws Exception {
-        if (PlatformUtil.isMac()) {
+        if (PlatformUtil.isMac() && !PlatformUtil.isHeadless()) {
             Platform.startup(() -> {
                 macPasteboardShim = new MacPasteboardShim();
                 startupLatch.countDown();
@@ -60,48 +58,48 @@ public class MacPasteboardTest {
         }
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardown() {
-        if (PlatformUtil.isMac()) {
+        if (PlatformUtil.isMac() && !PlatformUtil.isHeadless()) {
             Platform.exit();
         }
     }
 
     @Test
     public void testValidLocalImageURLMacPasteboard() throws Exception {
-        assumeTrue(PlatformUtil.isMac());
+        assumeTrue(PlatformUtil.isMac() && !PlatformUtil.isHeadless());
         final String localImage = getClass().getResource("blue.png").toURI().toURL().toString();
         runAndWait(() -> {
             macPasteboardShim.pushMacPasteboard(new HashMap<>(Map.of(Clipboard.URI_TYPE, localImage)));
             Object content = macPasteboardShim.popMacPasteboard(Clipboard.RAW_IMAGE_TYPE);
-            assertTrue("The content was not a raw image", content instanceof Pixels);
+            assertTrue(content instanceof Pixels, "The content was not a raw image");
 
             Pixels pixels = (Pixels) content;
-            assertEquals("The raw image width", 64, pixels.getWidth());
-            assertEquals("The raw image height", 64, pixels.getHeight());
+            assertEquals(64, pixels.getWidth(), "The raw image width");
+            assertEquals(64, pixels.getHeight(), "The raw image height");
         });
     }
 
     @Test
     public void testDataBase64ImageMacPasteboard() {
-        assumeTrue(PlatformUtil.isMac());
+        assumeTrue(PlatformUtil.isMac() && !PlatformUtil.isHeadless());
         final String encodedImage = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABQAAAAKCAIAAAA7N+mxAAAAAXNSR0IArs4c6QAAAAR"
                 + "nQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAcSURBVChTY/jPwADBZACyNMHAqGYSwZDU/P8/ABieT81GAGKoAAAAAElFTkSuQmCC";
         runAndWait(() -> {
             macPasteboardShim.pushMacPasteboard(new HashMap<>(Map.of(Clipboard.URI_TYPE, encodedImage)));
             Object content = macPasteboardShim.popMacPasteboard(Clipboard.RAW_IMAGE_TYPE);
-            assertNull("The content was not null", content);
+            assertNull(content, "The content was not null");
         });
     }
 
     @Test
     public void testNotAnImageURLMacPasteboard() {
-        assumeTrue(PlatformUtil.isMac());
+        assumeTrue(PlatformUtil.isMac() && !PlatformUtil.isHeadless());
         final String invalidImage = "not.an.image.url";
         runAndWait(() -> {
             macPasteboardShim.pushMacPasteboard(new HashMap<>(Map.of(Clipboard.URI_TYPE, invalidImage)));
             Object content = macPasteboardShim.popMacPasteboard(Clipboard.RAW_IMAGE_TYPE);
-            assertNull("The content was not null", content);
+            assertNull(content, "The content was not null");
         });
     }
 }

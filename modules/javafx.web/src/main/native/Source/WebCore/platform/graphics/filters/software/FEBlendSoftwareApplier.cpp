@@ -32,29 +32,32 @@
 #include "FloatPoint.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-bool FEBlendSoftwareApplier::apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const
-{
-    auto& input = inputs[0].get();
-    auto& input2 = inputs[1].get();
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FEBlendSoftwareApplier);
 
-    auto resultImage = result.imageBuffer();
+bool FEBlendSoftwareApplier::apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const
+{
+    Ref input = inputs[0];
+    Ref input2 = inputs[1];
+
+    RefPtr resultImage = result.imageBuffer();
     if (!resultImage)
         return false;
 
-    auto inputImage = input.imageBuffer();
-    auto inputImage2 = input2.imageBuffer();
+    RefPtr inputImage = input->imageBuffer();
+    RefPtr inputImage2 = input2->imageBuffer();
     if (!inputImage || !inputImage2)
         return false;
 
     auto& filterContext = resultImage->context();
-    auto inputImageRect = input.absoluteImageRectRelativeTo(result);
-    auto inputImageRect2 = input2.absoluteImageRectRelativeTo(result);
+    auto inputImageRect = input->absoluteImageRectRelativeTo(result);
+    auto inputImageRect2 = input2->absoluteImageRectRelativeTo(result);
 
     filterContext.drawImageBuffer(*inputImage2, inputImageRect2);
-    filterContext.drawImageBuffer(*inputImage, inputImageRect, { { }, inputImage->logicalSize() }, { CompositeOperator::SourceOver, m_effect.blendMode() });
+    filterContext.drawImageBuffer(*inputImage, inputImageRect, { { }, inputImage->logicalSize() }, { CompositeOperator::SourceOver, m_effect->blendMode() });
     return true;
 }
 

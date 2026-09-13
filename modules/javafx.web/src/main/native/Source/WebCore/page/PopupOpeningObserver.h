@@ -25,9 +25,11 @@
 
 #pragma once
 
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
+
 namespace WebCore {
 
-class PopupOpeningObserver {
+class PopupOpeningObserver : public AbstractRefCountedAndCanMakeWeakPtr<PopupOpeningObserver> {
 public:
     virtual void willOpenPopup() = 0;
 

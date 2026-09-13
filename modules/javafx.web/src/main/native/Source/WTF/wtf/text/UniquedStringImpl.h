@@ -35,10 +35,22 @@ class UniquedStringImpl : public StringImpl {
 private:
     UniquedStringImpl() = delete;
 protected:
-    UniquedStringImpl(CreateSymbolTag, const LChar* characters, unsigned length) : StringImpl(CreateSymbol, characters, length) { }
-    UniquedStringImpl(CreateSymbolTag, const UChar* characters, unsigned length) : StringImpl(CreateSymbol, characters, length) { }
-    UniquedStringImpl(CreateSymbolTag) : StringImpl(CreateSymbol) { }
+    inline UniquedStringImpl(CreateSymbolTag, std::span<const Latin1Character>);
+    inline UniquedStringImpl(CreateSymbolTag, std::span<const char16_t>);
+    inline UniquedStringImpl(CreateSymbolTag);
 };
+
+inline UniquedStringImpl::UniquedStringImpl(CreateSymbolTag, std::span<const Latin1Character> characters)
+    : StringImpl(CreateSymbol, characters)
+{ }
+
+inline UniquedStringImpl::UniquedStringImpl(CreateSymbolTag, std::span<const char16_t> characters)
+    : StringImpl(CreateSymbol, characters)
+{ }
+
+inline UniquedStringImpl::UniquedStringImpl(CreateSymbolTag)
+    : StringImpl(CreateSymbol)
+{ }
 
 #if ASSERT_ENABLED
 // UniquedStringImpls created from StaticStringImpl will ASSERT
@@ -56,6 +68,11 @@ ValueCheck<const UniquedStringImpl*> {
     static void checkConsistency(const UniquedStringImpl*) { }
 };
 #endif // ASSERT_ENABLED
+
+inline void printInternal(PrintStream& out, const UniquedStringImpl* value) { printInternal(out, std::bit_cast<const StringImpl*>(value)); }
+inline void printInternal(PrintStream& out, const UniquedStringImpl& value) { printInternal(out, &value); }
+inline void printInternal(PrintStream& out, UniquedStringImpl* value) { printInternal(out, static_cast<const UniquedStringImpl*>(value)); }
+inline void printInternal(PrintStream& out, UniquedStringImpl& value) { printInternal(out, &value); }
 
 } // namespace WTF
 

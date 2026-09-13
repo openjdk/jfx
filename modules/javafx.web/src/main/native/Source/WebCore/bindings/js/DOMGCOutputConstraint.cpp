@@ -34,13 +34,16 @@
 #include <JavaScriptCore/SlotVisitorInlines.h>
 #include <JavaScriptCore/SubspaceInlines.h>
 #include <JavaScriptCore/VM.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace JSC;
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DOMGCOutputConstraint);
+
 DOMGCOutputConstraint::DOMGCOutputConstraint(VM& vm, JSHeapData& heapData)
-    : MarkingConstraint("Domo", "DOM Output", ConstraintVolatility::SeldomGreyed, ConstraintConcurrency::Concurrent, ConstraintParallelism::Parallel)
+    : MarkingConstraint("Domo"_s, "DOM Output"_s, ConstraintVolatility::SeldomGreyed, ConstraintConcurrency::Concurrent, ConstraintParallelism::Parallel)
     , m_vm(vm)
     , m_heapData(heapData)
     , m_lastExecutionVersion(vm.heap.mutatorExecutionVersion())

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -75,12 +75,9 @@ public class TestTouchDevices {
                 .collect(Collectors.toList());
     }
 
-    public static Collection<Object[]> getTouchDeviceParameters(int minPoints) {
-        Collection c = getTouchDevices().stream()
+    public static Collection<TestTouchDevice> getTouchDeviceParameters(int minPoints) {
+        return getTouchDevices().stream()
                 .filter(d -> d.points.length >= minPoints)
-                .map(d -> new Object[] { d })
                 .collect(Collectors.toList());
-        return c;
     }
-
 }

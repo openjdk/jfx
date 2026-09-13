@@ -24,29 +24,13 @@
  */
 
 #pragma once
-
+#if !PLATFORM(JAVA)
+#include "GLDisplay.h"
+#endif
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/text/WTFString.h>
-
-#if USE(EGL)
-typedef intptr_t EGLAttrib;
-typedef void *EGLClientBuffer;
-typedef void *EGLContext;
-typedef void *EGLDisplay;
-typedef void *EGLImage;
-typedef unsigned EGLenum;
-#if USE(GBM)
-typedef void *EGLDeviceEXT;
-struct gbm_device;
-#endif
-#endif
-
-#if PLATFORM(GTK)
-#include <wtf/glib/GRefPtr.h>
-
-typedef struct _GdkDisplay GdkDisplay;
-#endif
 
 #if ENABLE(VIDEO) && USE(GSTREAMER_GL)
 #include "GRefPtrGStreamer.h"
@@ -55,163 +39,118 @@ typedef struct _GstGLContext GstGLContext;
 typedef struct _GstGLDisplay GstGLDisplay;
 #endif // ENABLE(VIDEO) && USE(GSTREAMER_GL)
 
-#if USE(LCMS)
-#include "LCMSUniquePtr.h"
+#if USE(SKIA)
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
+#include <skia/gpu/ganesh/GrDirectContext.h>
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
+#include <wtf/ThreadSafeWeakHashSet.h>
 #endif
 
 namespace WebCore {
 
 class GLContext;
+#if USE(SKIA)
+class SkiaGLContext;
+#endif
 
 class PlatformDisplay {
-    WTF_MAKE_NONCOPYABLE(PlatformDisplay); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PlatformDisplay);
+    WTF_MAKE_NONCOPYABLE(PlatformDisplay);
 public:
     WEBCORE_EXPORT static PlatformDisplay& sharedDisplay();
-    WEBCORE_EXPORT static PlatformDisplay& sharedDisplayForCompositing();
+#if !PLATFORM(WIN)
+    WEBCORE_EXPORT static void setSharedDisplay(std::unique_ptr<PlatformDisplay>&&);
+    WEBCORE_EXPORT static PlatformDisplay* sharedDisplayIfExists();
+#endif
     virtual ~PlatformDisplay();
 
     enum class Type {
-#if PLATFORM(X11)
-        X11,
-#endif
-#if PLATFORM(WAYLAND)
-        Wayland,
-#endif
 #if PLATFORM(WIN)
         Windows,
 #endif
 #if USE(WPE_RENDERER)
         WPE,
 #endif
-#if USE(EGL)
         Surfaceless,
 #if USE(GBM)
         GBM,
 #endif
+#if OS(ANDROID)
+        Android,
+#endif
+#if PLATFORM(GTK) || OS(ANDROID)
+        Default,
 #endif
     };
 
     virtual Type type() const = 0;
-
-#if USE(EGL)
+#if !PLATFORM(JAVA)
     WEBCORE_EXPORT GLContext* sharingGLContext();
-    void clearSharingGLContext();
-#endif
-
-#if USE(EGL)
+    void clearGLContexts();
     EGLDisplay eglDisplay() const;
+    GLDisplay& glDisplay() const { return m_eglDisplay.get(); }
     bool eglCheckVersion(int major, int minor) const;
 
-    struct EGLExtensions {
-        bool KHR_image_base { false };
-        bool KHR_surfaceless_context { false };
-        bool EXT_image_dma_buf_import { false };
-        bool EXT_image_dma_buf_import_modifiers { false };
-        bool MESA_image_dma_buf_export { false };
-    };
-    const EGLExtensions& eglExtensions() const;
+    const GLDisplay::Extensions& eglExtensions() const;
 
     EGLImage createEGLImage(EGLContext, EGLenum target, EGLClientBuffer, const Vector<EGLAttrib>&) const;
     bool destroyEGLImage(EGLImage) const;
-#if USE(GBM)
-    const String& drmDeviceFile();
-    const String& drmRenderNodeFile();
-    struct gbm_device* gbmDevice();
 #endif
-
-#if PLATFORM(GTK)
-    virtual EGLDisplay gtkEGLDisplay() { return nullptr; }
+#if USE(GBM)
+    const Vector<GLDisplay::DMABufFormat>& dmabufFormats();
+#if USE(GSTREAMER)
+    const Vector<GLDisplay::DMABufFormat>& dmabufFormatsForVideo();
+#endif
 #endif
 
 #if ENABLE(WEBGL)
     EGLDisplay angleEGLDisplay() const;
     EGLContext angleSharingGLContext();
 #endif
-#endif
 
 #if ENABLE(VIDEO) && USE(GSTREAMER_GL)
     GstGLDisplay* gstGLDisplay() const;
     GstGLContext* gstGLContext() const;
+    void clearGStreamerGLState();
 #endif
 
-#if USE(LCMS)
-    virtual cmsHPROFILE colorProfile() const;
-#endif
-
-#if USE(ATSPI)
-    const String& accessibilityBusAddress() const;
+#if USE(SKIA)
+    GLContext* skiaGLContext();
+    GrDirectContext* skiaGrContext() const;
+    unsigned msaaSampleCount() const;
 #endif
 
 protected:
-    PlatformDisplay();
-#if PLATFORM(GTK)
-    explicit PlatformDisplay(GdkDisplay*);
-#endif
+#if !PLATFORM(JAVA)
+    explicit PlatformDisplay(Ref<GLDisplay>&&);
 
-    static void setSharedDisplayForCompositing(PlatformDisplay&);
-
-#if PLATFORM(GTK)
-    virtual void sharedDisplayDidClose();
-
-    GRefPtr<GdkDisplay> m_sharedDisplay;
-#endif
-
-#if USE(EGL)
-    virtual void initializeEGLDisplay();
-
-    EGLDisplay m_eglDisplay;
-    bool m_eglDisplayOwned { true };
+    Ref<GLDisplay> m_eglDisplay;
     std::unique_ptr<GLContext> m_sharingGLContext;
-
-#if USE(GBM)
-    std::optional<String> m_drmDeviceFile;
-    std::optional<String> m_drmRenderNodeFile;
 #endif
 
 #if ENABLE(WEBGL) && !PLATFORM(WIN)
     std::optional<int> m_anglePlatform;
     void* m_angleNativeDisplay { nullptr };
 #endif
-#endif
-
-#if USE(LCMS)
-    mutable LCMSProfilePtr m_iccProfile;
-#endif
-
-#if USE(ATSPI)
-    virtual String platformAccessibilityBusAddress() const { return { }; }
-
-    mutable std::optional<String> m_accessibilityBusAddress;
-#endif
 
 private:
-    static std::unique_ptr<PlatformDisplay> createPlatformDisplay();
-
-#if ENABLE(WEBGL) && !PLATFORM(WIN)
-    void clearANGLESharingGLContext();
+#if USE(SKIA)
+    void clearSkiaGLContext();
 #endif
 
-#if USE(EGL)
     void terminateEGLDisplay();
-#if USE(GBM)
-    EGLDeviceEXT eglDevice();
-#endif
 
-    bool m_eglDisplayInitialized { false };
-    int m_eglMajorVersion { 0 };
-    int m_eglMinorVersion { 0 };
-    EGLExtensions m_eglExtensions;
-#if ENABLE(WEBGL) && !PLATFORM(WIN)
+#if ENABLE(WEBGL) && !PLATFORM(WIN) && !PLATFORM(JAVA)
     mutable EGLDisplay m_angleEGLDisplay { nullptr };
-    EGLContext m_angleSharingGLContext { nullptr };
-#endif
 #endif
 
 #if ENABLE(VIDEO) && USE(GSTREAMER_GL)
-    bool tryEnsureGstGLContext() const;
-
     mutable GRefPtr<GstGLDisplay> m_gstGLDisplay;
     mutable GRefPtr<GstGLContext> m_gstGLContext;
+#endif
+
+#if USE(SKIA)
+    ThreadSafeWeakHashSet<SkiaGLContext> m_skiaGLContexts;
 #endif
 };
 

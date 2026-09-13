@@ -31,22 +31,24 @@
 #include "config.h"
 #include "FileReader.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "DOMException.h"
 #include "EventLoop.h"
 #include "EventNames.h"
 #include "Exception.h"
 #include "ExceptionCode.h"
+#include "ExceptionOr.h"
 #include "File.h"
 #include "Logging.h"
 #include "ProgressEvent.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/ArrayBuffer.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(FileReader);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FileReader);
 
 // Fire the progress event at least every 50ms.
 static const auto progressNotificationInterval = 50_ms;
@@ -65,20 +67,15 @@ FileReader::FileReader(ScriptExecutionContext& context)
 
 FileReader::~FileReader()
 {
-    if (m_loader)
-        m_loader->cancel();
-}
-
-const char* FileReader::activeDOMObjectName() const
-{
-    return "FileReader";
+    if (RefPtr loader = m_loader)
+        loader->cancel();
 }
 
 void FileReader::stop()
 {
     m_pendingTasks.clear();
-    if (m_loader) {
-        m_loader->cancel();
+    if (RefPtr loader = m_loader) {
+        loader->cancel();
         m_loader = nullptr;
     }
     m_state = DONE;
@@ -87,6 +84,11 @@ void FileReader::stop()
 bool FileReader::virtualHasPendingActivity() const
 {
     return m_state == LOADING;
+}
+
+ScriptExecutionContext* FileReader::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
 }
 
 ExceptionOr<void> FileReader::readAsArrayBuffer(Blob& blob)
@@ -122,17 +124,18 @@ ExceptionOr<void> FileReader::readInternal(Blob& blob, FileReaderLoader::ReadTyp
 {
     // If multiple concurrent read methods are called on the same FileReader, InvalidStateError should be thrown when the state is LOADING.
     if (m_state == LOADING)
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
 
-    m_blob = &blob;
+    m_blob = blob;
     m_readType = type;
     m_state = LOADING;
     m_error = nullptr;
 
-    m_loader = makeUnique<FileReaderLoader>(m_readType, static_cast<FileReaderLoaderClient*>(this));
-    m_loader->setEncoding(m_encoding);
-    m_loader->setDataType(m_blob->type());
-    m_loader->start(scriptExecutionContext(), blob);
+    Ref loader = FileReaderLoader::create(m_readType, static_cast<FileReaderLoaderClient*>(this));
+    m_loader = loader.copyRef();
+    loader->setEncoding(m_encoding);
+    loader->setDataType(m_blob->type());
+    loader->start(protectedScriptExecutionContext().get(), blob);
 
     return { };
 }
@@ -145,7 +148,7 @@ void FileReader::abort()
 
     m_pendingTasks.clear();
     stop();
-    m_error = DOMException::create(Exception { AbortError });
+    m_error = DOMException::create(Exception { ExceptionCode::AbortError });
 
     Ref protectedThis { *this };
     fireEvent(eventNames().abortEvent);
@@ -154,53 +157,53 @@ void FileReader::abort()
 
 void FileReader::didStartLoading()
 {
-    enqueueTask([this] {
-        fireEvent(eventNames().loadstartEvent);
+    enqueueTask([](auto& reader) {
+        reader.fireEvent(eventNames().loadstartEvent);
     });
 }
 
 void FileReader::didReceiveData()
 {
-    enqueueTask([this] {
+    enqueueTask([](auto& reader) {
         auto now = MonotonicTime::now();
-        if (std::isnan(m_lastProgressNotificationTime)) {
-            m_lastProgressNotificationTime = now;
+        if (reader.m_lastProgressNotificationTime.isNaN()) {
+            reader.m_lastProgressNotificationTime = now;
             return;
         }
-        if (now - m_lastProgressNotificationTime > progressNotificationInterval) {
-            fireEvent(eventNames().progressEvent);
-            m_lastProgressNotificationTime = now;
+        if (now - reader.m_lastProgressNotificationTime > progressNotificationInterval) {
+            reader.fireEvent(eventNames().progressEvent);
+            reader.m_lastProgressNotificationTime = now;
         }
     });
 }
 
 void FileReader::didFinishLoading()
 {
-    enqueueTask([this] {
-        if (m_state == DONE)
+    enqueueTask([](auto& reader) {
+        if (reader.m_state == DONE)
             return;
-        m_finishedLoading = true;
-        if (m_loader->bytesLoaded())
-            fireEvent(eventNames().progressEvent);
-        if (m_state == DONE)
+        reader.m_finishedLoading = true;
+        if (reader.m_loader->bytesLoaded())
+            reader.fireEvent(eventNames().progressEvent);
+        if (reader.m_state == DONE)
             return;
-        m_state = DONE;
-        fireEvent(eventNames().loadEvent);
-        fireEvent(eventNames().loadendEvent);
+        reader.m_state = DONE;
+        reader.fireEvent(eventNames().loadEvent);
+        reader.fireEvent(eventNames().loadendEvent);
     });
 }
 
 void FileReader::didFail(ExceptionCode errorCode)
 {
-    enqueueTask([this, errorCode] {
-        if (m_state == DONE)
+    enqueueTask([errorCode](auto& reader) {
+        if (reader.m_state == DONE)
             return;
-        m_state = DONE;
+        reader.m_state = DONE;
 
-        m_error = DOMException::create(Exception { errorCode });
+        reader.m_error = DOMException::create(Exception { errorCode });
 
-        fireEvent(eventNames().errorEvent);
-        fireEvent(eventNames().loadendEvent);
+        reader.fireEvent(eventNames().errorEvent);
+        reader.fireEvent(eventNames().loadendEvent);
     });
 }
 
@@ -210,34 +213,35 @@ void FileReader::fireEvent(const AtomString& type)
     dispatchEvent(ProgressEvent::create(type, true, m_loader ? m_loader->bytesLoaded() : 0, m_loader ? m_loader->totalBytes() : 0));
 }
 
-std::optional<std::variant<String, RefPtr<JSC::ArrayBuffer>>> FileReader::result() const
+std::optional<Variant<String, RefPtr<JSC::ArrayBuffer>>> FileReader::result() const
 {
-    if (!m_loader || m_error || m_state != DONE)
+    RefPtr loader = m_loader;
+    if (!loader || m_error || m_state != DONE)
         return std::nullopt;
     if (m_readType == FileReaderLoader::ReadAsArrayBuffer) {
-        auto result = m_loader->arrayBufferResult();
+        auto result = loader->arrayBufferResult();
         if (!result)
             return std::nullopt;
         return { result };
     }
-    String result = m_loader->stringResult();
+    String result = loader->stringResult();
     if (result.isNull())
         return std::nullopt;
-    return { WTFMove(result) };
+    return { WTF::move(result) };
 }
 
-void FileReader::enqueueTask(Function<void()>&& task)
+void FileReader::enqueueTask(Function<void(FileReader&)>&& task)
 {
     if (!scriptExecutionContext())
         return;
 
     static uint64_t taskIdentifierSeed = 0;
     uint64_t taskIdentifier = ++taskIdentifierSeed;
-    m_pendingTasks.add(taskIdentifier, WTFMove(task));
-    queueTaskKeepingObjectAlive(*this, TaskSource::FileReading, [this, pendingActivity = makePendingActivity(*this), taskIdentifier] {
-        auto task = m_pendingTasks.take(taskIdentifier);
-        if (task && !isContextStopped())
-            task();
+    m_pendingTasks.add(taskIdentifier, WTF::move(task));
+    queueTaskKeepingObjectAlive(*this, TaskSource::FileReading, [taskIdentifier](auto& reader) {
+        auto task = reader.m_pendingTasks.take(taskIdentifier);
+        if (task && !reader.isContextStopped())
+            task(reader);
     });
 }
 

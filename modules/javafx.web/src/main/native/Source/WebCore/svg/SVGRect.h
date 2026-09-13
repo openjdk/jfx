@@ -1,6 +1,6 @@
 /*
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2024 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "ExceptionOr.h"
 #include "SVGPropertyTraits.h"
 #include "SVGValueProperty.h"
 
@@ -54,7 +55,7 @@ public:
     ExceptionOr<void> setX(float xValue)
     {
         if (isReadOnly())
-            return Exception { NoModificationAllowedError };
+            return Exception { ExceptionCode::NoModificationAllowedError };
 
         m_value.setX(xValue);
         commitChange();
@@ -63,12 +64,12 @@ public:
 
     float y() { return m_value.y(); }
 
-    ExceptionOr<void> setY(float xValue)
+    ExceptionOr<void> setY(float yValue)
     {
         if (isReadOnly())
-            return Exception { NoModificationAllowedError };
+            return Exception { ExceptionCode::NoModificationAllowedError };
 
-        m_value.setY(xValue);
+        m_value.setY(yValue);
         commitChange();
         return { };
     }
@@ -78,7 +79,7 @@ public:
     ExceptionOr<void> setWidth(float widthValue)
     {
         if (isReadOnly())
-            return Exception { NoModificationAllowedError };
+            return Exception { ExceptionCode::NoModificationAllowedError };
 
         m_value.setWidth(widthValue);
         commitChange();
@@ -90,7 +91,7 @@ public:
     ExceptionOr<void> setHeight(float heightValue)
     {
         if (isReadOnly())
-            return Exception { NoModificationAllowedError };
+            return Exception { ExceptionCode::NoModificationAllowedError };
 
         m_value.setHeight(heightValue);
         commitChange();

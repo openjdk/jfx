@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include "CSSFilter.h"
 #include "CSSValue.h"
 #include <wtf/Function.h>
 
@@ -40,24 +41,25 @@ class StyleImage;
 
 class CSSFilterImageValue final : public CSSValue {
 public:
-    static Ref<CSSFilterImageValue> create(Ref<CSSValue>&& imageValueOrNone, Ref<CSSValue>&& filterValue)
+    static Ref<CSSFilterImageValue> create(Ref<CSSValue>&& imageValueOrNone, CSS::Filter&& filter)
     {
-        return adoptRef(*new CSSFilterImageValue(WTFMove(imageValueOrNone), WTFMove(filterValue)));
+        return adoptRef(*new CSSFilterImageValue(WTF::move(imageValueOrNone), WTF::move(filter)));
     }
     ~CSSFilterImageValue();
 
     bool equals(const CSSFilterImageValue&) const;
     bool equalInputImages(const CSSFilterImageValue&) const;
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const;
 
-    RefPtr<StyleImage> createStyleImage(Style::BuilderState&) const;
+    RefPtr<StyleImage> createStyleImage(const Style::BuilderState&) const;
 
 private:
-    explicit CSSFilterImageValue(Ref<CSSValue>&& imageValueOrNone, Ref<CSSValue>&& filterValue);
+    explicit CSSFilterImageValue(Ref<CSSValue>&& imageValueOrNone, CSS::Filter&&);
 
-    Ref<CSSValue> m_imageValueOrNone;
-    Ref<CSSValue> m_filterValue;
+    const Ref<CSSValue> m_imageValueOrNone;
+    CSS::Filter m_filter;
 };
 
 } // namespace WebCore

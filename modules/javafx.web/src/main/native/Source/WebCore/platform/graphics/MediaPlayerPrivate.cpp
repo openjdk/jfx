@@ -28,8 +28,10 @@
 
 #if ENABLE(VIDEO)
 
+#include "MediaPlaybackTarget.h"
 #include "VideoFrame.h"
 #include "VideoFrameMetadata.h"
+#include <wtf/NativePromise.h>
 
 namespace WebCore {
 
@@ -48,13 +50,37 @@ std::optional<VideoFrameMetadata> MediaPlayerPrivateInterface::videoFrameMetadat
 
 const PlatformTimeRanges& MediaPlayerPrivateInterface::seekable() const
 {
-    if (maxMediaTimeSeekable() == MediaTime::zeroTime())
+    auto maxTimeSeekable = this->maxTimeSeekable();
+    if (maxTimeSeekable == MediaTime::zeroTime())
         return PlatformTimeRanges::emptyRanges();
-    m_seekable = { minMediaTimeSeekable(), maxMediaTimeSeekable() };
+    ASSERT(maxTimeSeekable.isValid());
+    m_seekable = { minTimeSeekable(), maxTimeSeekable };
     return m_seekable;
 }
 
+auto MediaPlayerPrivateInterface::asyncVideoPlaybackQualityMetrics() -> Ref<VideoPlaybackQualityMetricsPromise>
+{
+    if (auto metrics = videoPlaybackQualityMetrics())
+        return VideoPlaybackQualityMetricsPromise::createAndResolve(WTF::move(*metrics));
+    return VideoPlaybackQualityMetricsPromise::createAndReject(PlatformMediaError::NotSupportedError);
 }
+
+MediaTime MediaPlayerPrivateInterface::currentOrPendingSeekTime() const
+{
+    auto pendingSeekTime = this->pendingSeekTime();
+    if (pendingSeekTime.isValid())
+        return pendingSeekTime;
+    return currentTime();
+}
+
+#if ENABLE(WIRELESS_PLAYBACK_TARGET)
+OptionSet<MediaPlaybackTargetType> MediaPlayerPrivateInterface::supportedPlaybackTargetTypes() const
+{
+    return { };
+}
+#endif
+
+} // namespace WebCore
 
 #endif
 

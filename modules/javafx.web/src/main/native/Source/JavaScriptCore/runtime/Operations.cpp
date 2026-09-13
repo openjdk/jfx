@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- * Copyright (C) 2008-2020 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2020 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -94,7 +94,7 @@ JSString* jsTypeStringForValueWithConcurrency(VM& vm, JSGlobalObject* globalObje
         // as null when doing comparisons.
         if (object->structure()->masqueradesAsUndefined(globalObject))
             return vm.smallStrings.undefinedString();
-        if (LIKELY(concurrency == Concurrency::MainThread)) {
+        if (concurrency == Concurrency::MainThread) [[likely]] {
             if (object->isCallable())
                 return vm.smallStrings.functionString();
             return vm.smallStrings.objectString();
@@ -109,6 +109,9 @@ JSString* jsTypeStringForValueWithConcurrency(VM& vm, JSGlobalObject* globalObje
             return nullptr;
         }
     }
+    // This case can happen for internal objects like GetterSetter, that
+    // can be exposed to this function by transformations like LICM blind hoisting.
+    // The actual result shouldn't matter, as long as it matches buildTypeOf.
     return vm.smallStrings.objectString();
 }
 

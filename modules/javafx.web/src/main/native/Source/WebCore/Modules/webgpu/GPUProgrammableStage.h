@@ -30,6 +30,7 @@
 #include <wtf/KeyValuePair.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -46,8 +47,8 @@ struct GPUProgrammableStage {
         };
     }
 
-    GPUShaderModule* module { nullptr };
-    String entryPoint;
+    WeakPtr<GPUShaderModule> module;
+    std::optional<String> entryPoint;
     Vector<KeyValuePair<String, GPUPipelineConstantValue>> constants;
 };
 

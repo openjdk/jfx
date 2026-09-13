@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -726,7 +726,7 @@ public class Region extends Parent {
                 // we can repaint the region.
                 if (b != null) {
                     for (BackgroundImage i : b.getImages()) {
-                        final Image image = i.image;
+                        final Image image = i.getImage();
                         final Toolkit.ImageAccessor acc = Toolkit.getImageAccessor();
                         if (acc.isAnimation(image) || image.getProgress() < 1) {
                             addImageListener(image);
@@ -737,7 +737,7 @@ public class Region extends Parent {
                 // And we must remove this listener from any old images
                 if (old != null) {
                     for (BackgroundImage i : old.getImages()) {
-                        removeImageListener(i.image);
+                        removeImageListener(i.getImage());
                     }
                 }
 
@@ -785,7 +785,7 @@ public class Region extends Parent {
                 // we can repaint the region.
                 if (b != null) {
                     for (BorderImage i : b.getImages()) {
-                        final Image image = i.image;
+                        final Image image = i.getImage();
                         final Toolkit.ImageAccessor acc = Toolkit.getImageAccessor();
                         if (acc.isAnimation(image) || image.getProgress() < 1) {
                             addImageListener(image);
@@ -796,7 +796,7 @@ public class Region extends Parent {
                 // And we must remove this listener from any old images
                 if (old != null) {
                     for (BorderImage i : old.getImages()) {
-                        removeImageListener(i.image);
+                        removeImageListener(i.getImage());
                     }
                 }
 
@@ -1184,7 +1184,7 @@ public class Region extends Parent {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getPrefWidth(forHeight)</code> will return the region's internally
+     * <code>prefWidth(forHeight)</code> will return the region's internally
      * computed preferred width.
      */
     private DoubleProperty prefWidth;
@@ -1209,7 +1209,7 @@ public class Region extends Parent {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getPrefHeight(forWidth)</code> will return the region's internally
+     * <code>prefHeight(forWidth)</code> will return the region's internally
      * computed preferred width.
      */
     private DoubleProperty prefHeight;
@@ -1249,11 +1249,11 @@ public class Region extends Parent {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getMaxWidth(forHeight)</code> will return the region's internally
+     * <code>maxWidth(forHeight)</code> will return the region's internally
      * computed maximum width.
      * <p>
      * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
-     * <code>getMaxWidth(forHeight)</code> to return the region's preferred width,
+     * <code>maxWidth(forHeight)</code> to return the region's preferred width,
      * enabling applications to easily restrict the resizability of the region.
      */
     private DoubleProperty maxWidth;
@@ -1278,11 +1278,11 @@ public class Region extends Parent {
      * doesn't meet the application's layout needs.
      * <p>
      * Defaults to the <code>USE_COMPUTED_SIZE</code> flag, which means that
-     * <code>getMaxHeight(forWidth)</code> will return the region's internally
+     * <code>maxHeight(forWidth)</code> will return the region's internally
      * computed maximum height.
      * <p>
      * Setting this value to the <code>USE_PREF_SIZE</code> flag will cause
-     * <code>getMaxHeight(forWidth)</code> to return the region's preferred height,
+     * <code>maxHeight(forWidth)</code> to return the region's preferred height,
      * enabling applications to easily restrict the resizability of the region.
      */
     private DoubleProperty maxHeight;
@@ -1591,41 +1591,61 @@ public class Region extends Parent {
     }
 
     /**
-     * Computes the minimum width of this region.
-     * Returns the sum of the left and right insets by default.
-     * region subclasses should override this method to return an appropriate
-     * value based on their content and layout strategy.  If the subclass
-     * doesn't have a VERTICAL content bias, then the height parameter can be
-     * ignored.
+     * Computes the minimum width of this region for the specified height.
+     * <p>
+     * This method supplies the value used by {@link #minWidth(double)} when the {@link #minWidth}
+     * property is set to {@link #USE_COMPUTED_SIZE}.
+     * <p>
+     * Subclasses should override this method when their content or layout policy requires a different
+     * minimum width. If {@link #getContentBias()} is {@link Orientation#VERTICAL}, the computation should
+     * use {@code height}; otherwise {@code height} can be ignored. An overriding implementation should be
+     * consistent with its {@link #layoutChildren()} implementation, including its pixel-snapping decisions.
      *
-     * @return the computed minimum width of this region
+     * @implNote The default implementation returns the sum of the left and right {@linkplain #getInsets() insets}.
+     * @param height the height on which to base the minimum width, or {@code -1} if no height is specified
+     * @return the computed minimum width
+     * @see <a href="package-summary.html#pixel-snapping">Pixel Snapping</a>
      */
     @Override protected double computeMinWidth(double height) {
         return getInsets().getLeft() + getInsets().getRight();
     }
 
     /**
-     * Computes the minimum height of this region.
-     * Returns the sum of the top and bottom insets by default.
-     * Region subclasses should override this method to return an appropriate
-     * value based on their content and layout strategy.  If the subclass
-     * doesn't have a HORIZONTAL content bias, then the width parameter can be
-     * ignored.
+     * Computes the minimum height of this region for the specified width.
+     * <p>
+     * This method supplies the value used by {@link #minHeight(double)} when the {@link #minHeight}
+     * property is set to {@link #USE_COMPUTED_SIZE}.
+     * <p>
+     * Subclasses should override this method when their content or layout policy requires a different
+     * minimum height. If {@link #getContentBias()} is {@link Orientation#HORIZONTAL}, the computation should
+     * use {@code width}; otherwise {@code width} can be ignored. An overriding implementation should be
+     * consistent with its {@link #layoutChildren()} implementation, including its pixel-snapping decisions.
      *
-     * @return the computed minimum height for this region
+     * @implNote The default implementation returns the sum of the top and bottom {@linkplain #getInsets() insets}.
+     * @param width the width on which to base the minimum height, or {@code -1} if no width is specified
+     * @return the computed minimum height
+     * @see <a href="package-summary.html#pixel-snapping">Pixel Snapping</a>
      */
     @Override protected double computeMinHeight(double width) {
         return getInsets().getTop() + getInsets().getBottom();
     }
 
     /**
-     * Computes the preferred width of this region for the given height.
-     * Region subclasses should override this method to return an appropriate
-     * value based on their content and layout strategy.  If the subclass
-     * doesn't have a VERTICAL content bias, then the height parameter can be
-     * ignored.
+     * Computes the preferred width of this region for the specified height.
+     * <p>
+     * This method supplies the value used by {@link #prefWidth(double)} when the {@link #prefWidth}
+     * property is set to {@link #USE_COMPUTED_SIZE}.
+     * <p>
+     * Subclasses that implement a custom layout policy should override this method to compute the width
+     * needed by that policy. If {@link #getContentBias()} is {@link Orientation#VERTICAL}, the computation
+     * should use {@code height}; otherwise {@code height} can be ignored. An overriding implementation should
+     * be consistent with its {@link #layoutChildren()} implementation, including its pixel-snapping decisions.
      *
-     * @return the computed preferred width for this region
+     * @implNote The default implementation adds the left and right {@linkplain #getInsets() insets} to the preferred
+     *           width computed by the {@link Parent#computePrefWidth(double) superclass implementation}.
+     * @param height the height on which to base the preferred width, or {@code -1} if no height is specified
+     * @return the computed preferred width
+     * @see <a href="package-summary.html#pixel-snapping">Pixel Snapping</a>
      */
     @Override protected double computePrefWidth(double height) {
         final double w = super.computePrefWidth(height);
@@ -1633,13 +1653,21 @@ public class Region extends Parent {
     }
 
     /**
-     * Computes the preferred height of this region for the given width;
-     * Region subclasses should override this method to return an appropriate
-     * value based on their content and layout strategy.  If the subclass
-     * doesn't have a HORIZONTAL content bias, then the width parameter can be
-     * ignored.
+     * Computes the preferred height of this region for the specified width.
+     * <p>
+     * This method supplies the value used by {@link #prefHeight(double)} when the {@link #prefHeight}
+     * property is set to {@link #USE_COMPUTED_SIZE}.
+     * <p>
+     * Subclasses that implement a custom layout policy should override this method to compute the height
+     * needed by that policy. If {@link #getContentBias()} is {@link Orientation#HORIZONTAL}, the computation
+     * should use {@code width}; otherwise {@code width} can be ignored. An overriding implementation should
+     * be consistent with its {@link #layoutChildren()} implementation, including its pixel-snapping decisions.
      *
-     * @return the computed preferred height for this region
+     * @implNote The default implementation adds the top and bottom {@linkplain #getInsets() insets} to the preferred
+     *           height computed by the {@link Parent#computePrefHeight(double) superclass implementation}.
+     * @param width the width on which to base the preferred height, or {@code -1} if no width is specified
+     * @return the computed preferred height
+     * @see <a href="package-summary.html#pixel-snapping">Pixel Snapping</a>
      */
     @Override protected double computePrefHeight(double width) {
         final double h = super.computePrefHeight(width);
@@ -1647,32 +1675,42 @@ public class Region extends Parent {
     }
 
     /**
-     * Computes the maximum width for this region.
-     * Returns Double.MAX_VALUE by default.
-     * Region subclasses may override this method to return an different
-     * value based on their content and layout strategy.  If the subclass
-     * doesn't have a VERTICAL content bias, then the height parameter can be
-     * ignored.
+     * Computes the maximum width of this region for the specified height.
+     * <p>
+     * This method supplies the value used by {@link #maxWidth(double)} when the {@link #maxWidth}
+     * property is set to {@link #USE_COMPUTED_SIZE}.
+     * <p>
+     * Subclasses may override this method to impose an upper bound based on their content or layout policy.
+     * If {@link #getContentBias()} is {@link Orientation#VERTICAL}, the computation should use {@code height};
+     * otherwise {@code height} can be ignored. A finite maximum derived from layout geometry should be consistent
+     * with the calculations and pixel-snapping decisions used by {@link #layoutChildren()}.
      *
-     * @param height The height of the Region, in case this value might dictate
-     * the maximum width
-     * @return the computed maximum width for this region
+     * @implNote The default implementation returns {@link Double#MAX_VALUE}, indicating that
+     *           the region has no finite maximum width.
+     * @param height the height on which to base the maximum width, or {@code -1} if no height is specified
+     * @return the computed maximum width; {@link Double#MAX_VALUE} indicates no finite maximum
+     * @see <a href="package-summary.html#pixel-snapping">Pixel Snapping</a>
      */
     protected double computeMaxWidth(double height) {
         return Double.MAX_VALUE;
     }
 
     /**
-     * Computes the maximum height of this region.
-     * Returns Double.MAX_VALUE by default.
-     * Region subclasses may override this method to return a different
-     * value based on their content and layout strategy.  If the subclass
-     * doesn't have a HORIZONTAL content bias, then the width parameter can be
-     * ignored.
+     * Computes the maximum height of this region for the specified width.
+     * <p>
+     * This method supplies the value used by {@link #maxHeight(double)} when the {@link #maxHeight}
+     * property is set to {@link #USE_COMPUTED_SIZE}.
+     * <p>
+     * Subclasses may override this method to impose an upper bound based on their content or layout policy.
+     * If {@link #getContentBias()} is {@link Orientation#HORIZONTAL}, the computation should use {@code width};
+     * otherwise {@code width} can be ignored. A finite maximum derived from layout geometry should be consistent
+     * with the calculations and pixel-snapping decisions used by {@link #layoutChildren()}.
      *
-     * @param width The width of the Region, in case this value might dictate
-     * the maximum height
-     * @return the computed maximum height for this region
+     * @implNote The default implementation returns {@link Double#MAX_VALUE}, indicating that
+     *           the region has no finite maximum height.
+     * @param width the width on which to base the maximum height, or {@code -1} if no width is specified
+     * @return the computed maximum height; {@link Double#MAX_VALUE} indicates no finite maximum
+     * @see <a href="package-summary.html#pixel-snapping">Pixel Snapping</a>
      */
     protected double computeMaxHeight(double width) {
         return Double.MAX_VALUE;
@@ -1688,7 +1726,7 @@ public class Region extends Parent {
      * @return value rounded to nearest pixel
      * @deprecated replaced by {@code snapSpaceX()} and {@code snapSpaceY()}
      */
-    @Deprecated(since="9")
+    @Deprecated(since = "9", forRemoval = true)
     protected double snapSpace(double value) {
         return snapSpaceX(value, isSnapToPixel());
     }
@@ -1727,7 +1765,7 @@ public class Region extends Parent {
      * @return value ceiled to nearest pixel
      * @deprecated replaced by {@code snapSizeX()} and {@code snapSizeY()}
      */
-    @Deprecated(since="9")
+    @Deprecated(since = "9", forRemoval = true)
     protected double snapSize(double value) {
         return snapSizeX(value, isSnapToPixel());
     }
@@ -1766,7 +1804,7 @@ public class Region extends Parent {
      * @return value rounded to nearest pixel
      * @deprecated replaced by {@code snapPositionX()} and {@code snapPositionY()}
      */
-    @Deprecated(since="9")
+    @Deprecated(since = "9", forRemoval = true)
     protected double snapPosition(double value) {
         return snapPositionX(value, isSnapToPixel());
     }
@@ -1872,47 +1910,37 @@ public class Region extends Parent {
         return computeChildMinAreaWidth(child, -1, margin, -1, false);
     }
 
-    double computeChildMinAreaWidth(Node child, double baselineComplement, Insets margin, double height, boolean fillHeight) {
+    double computeChildMinAreaWidth(Node child, double baselineComplement, Insets margin, double availableHeight, boolean fillHeight) {
         final boolean snap = isSnapToPixel();
         double left = margin != null? snapSpaceX(margin.getLeft(), snap) : 0;
         double right = margin != null? snapSpaceX(margin.getRight(), snap) : 0;
         double alt = -1;
-        if (height != -1 && child.isResizable() && child.getContentBias() == Orientation.VERTICAL) { // width depends on height
+        if (availableHeight != -1 && child.isResizable() && child.getContentBias() == Orientation.VERTICAL) { // width depends on height
             double top = margin != null? snapSpaceY(margin.getTop(), snap) : 0;
             double bottom = (margin != null? snapSpaceY(margin.getBottom(), snap) : 0);
             double bo = child.getBaselineOffset();
             final double contentHeight = bo == BASELINE_OFFSET_SAME_AS_HEIGHT && baselineComplement != -1 ?
-                    height - top - bottom - baselineComplement :
-                     height - top - bottom;
-            if (fillHeight) {
-                alt = snapSizeY(boundedSize(
-                        child.minHeight(-1), contentHeight,
-                        child.maxHeight(-1)));
-            } else {
-                alt = snapSizeY(boundedSize(
-                        child.minHeight(-1),
-                        child.prefHeight(-1),
-                        Math.min(child.maxHeight(-1), contentHeight)));
-            }
+                    availableHeight - top - bottom - baselineComplement :
+                    availableHeight - top - bottom;
+            alt = computedBoundedHeight(child, fillHeight, contentHeight);
         }
         return left + snapSizeX(child.minWidth(alt)) + right;
     }
 
     double computeChildMinAreaHeight(Node child, Insets margin) {
-        return computeChildMinAreaHeight(child, -1, margin, -1);
+        return computeChildMinAreaHeight(child, -1, margin, -1, false);
     }
 
-    double computeChildMinAreaHeight(Node child, double minBaselineComplement, Insets margin, double width) {
+    double computeChildMinAreaHeight(Node child, double minBaselineComplement, Insets margin, double availableWidth, boolean fillWidth) {
         final boolean snap = isSnapToPixel();
         double top =margin != null? snapSpaceY(margin.getTop(), snap) : 0;
         double bottom = margin != null? snapSpaceY(margin.getBottom(), snap) : 0;
 
         double alt = -1;
-        if (child.isResizable() && child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
-            double left = margin != null? snapSpaceX(margin.getLeft(), snap) : 0;
-            double right = margin != null? snapSpaceX(margin.getRight(), snap) : 0;
-            alt = snapSizeX(width != -1? boundedSize(child.minWidth(-1), width - left - right, child.maxWidth(-1)) :
-                    child.maxWidth(-1));
+        if (availableWidth != -1 && child.isResizable() && child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
+            double contentWidth = computeContentWidth(margin, availableWidth);
+
+            alt = computeBoundedWidth(child, fillWidth, contentWidth);
         }
 
         // For explanation, see computeChildPrefAreaHeight
@@ -1933,48 +1961,37 @@ public class Region extends Parent {
         return computeChildPrefAreaWidth(child, -1, margin, -1, false);
     }
 
-    double computeChildPrefAreaWidth(Node child, double baselineComplement, Insets margin, double height, boolean fillHeight) {
+    double computeChildPrefAreaWidth(Node child, double baselineComplement, Insets margin, double availableHeight, boolean fillHeight) {
         final boolean snap = isSnapToPixel();
         double left = margin != null? snapSpaceX(margin.getLeft(), snap) : 0;
         double right = margin != null? snapSpaceX(margin.getRight(), snap) : 0;
         double alt = -1;
-        if (height != -1 && child.isResizable() && child.getContentBias() == Orientation.VERTICAL) { // width depends on height
+        if (availableHeight != -1 && child.isResizable() && child.getContentBias() == Orientation.VERTICAL) { // width depends on height
             double top = margin != null? snapSpaceY(margin.getTop(), snap) : 0;
             double bottom = margin != null? snapSpaceY(margin.getBottom(), snap) : 0;
             double bo = child.getBaselineOffset();
             final double contentHeight = bo == BASELINE_OFFSET_SAME_AS_HEIGHT && baselineComplement != -1 ?
-                    height - top - bottom - baselineComplement :
-                     height - top - bottom;
-            if (fillHeight) {
-                alt = snapSizeY(boundedSize(
-                        child.minHeight(-1), contentHeight,
-                        child.maxHeight(-1)));
-            } else {
-                alt = snapSizeY(boundedSize(
-                        child.minHeight(-1),
-                        child.prefHeight(-1),
-                        Math.min(child.maxHeight(-1), contentHeight)));
-            }
+                    availableHeight - top - bottom - baselineComplement :
+                    availableHeight - top - bottom;
+            alt = computedBoundedHeight(child, fillHeight, contentHeight);
         }
         return left + snapSizeX(boundedSize(child.minWidth(alt), child.prefWidth(alt), child.maxWidth(alt))) + right;
     }
 
     double computeChildPrefAreaHeight(Node child, Insets margin) {
-        return computeChildPrefAreaHeight(child, -1, margin, -1);
+        return computeChildPrefAreaHeight(child, -1, margin, -1, false);
     }
 
-    double computeChildPrefAreaHeight(Node child, double prefBaselineComplement, Insets margin, double width) {
+    double computeChildPrefAreaHeight(Node child, double prefBaselineComplement, Insets margin, double availableWidth, boolean fillWidth) {
         final boolean snap = isSnapToPixel();
         double top = margin != null? snapSpaceY(margin.getTop(), snap) : 0;
         double bottom = margin != null? snapSpaceY(margin.getBottom(), snap) : 0;
 
         double alt = -1;
-        if (child.isResizable() && child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
-            double left = margin != null ? snapSpaceX(margin.getLeft(), snap) : 0;
-            double right = margin != null ? snapSpaceX(margin.getRight(), snap) : 0;
-            alt = snapSizeX(boundedSize(
-                    child.minWidth(-1), width != -1 ? width - left - right
-                    : child.prefWidth(-1), child.maxWidth(-1)));
+        if (availableWidth != -1 && child.isResizable() && child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
+            double contentWidth = computeContentWidth(margin, availableWidth);
+
+            alt = computeBoundedWidth(child, fillWidth, contentWidth);
         }
 
         if (prefBaselineComplement != -1) {
@@ -1994,7 +2011,7 @@ public class Region extends Parent {
         }
     }
 
-    double computeChildMaxAreaWidth(Node child, double baselineComplement, Insets margin, double height, boolean fillHeight) {
+    double computeChildMaxAreaWidth(Node child, double baselineComplement, Insets margin, double availableHeight, boolean fillHeight) {
         double max = child.maxWidth(-1);
         if (max == Double.MAX_VALUE) {
             return max;
@@ -2003,30 +2020,22 @@ public class Region extends Parent {
         double left = margin != null? snapSpaceX(margin.getLeft(), snap) : 0;
         double right = margin != null? snapSpaceX(margin.getRight(), snap) : 0;
         double alt = -1;
-        if (height != -1 && child.isResizable() && child.getContentBias() == Orientation.VERTICAL) { // width depends on height
+        if (availableHeight != -1 && child.isResizable() && child.getContentBias() == Orientation.VERTICAL) { // width depends on height
             double top = margin != null? snapSpaceY(margin.getTop(), snap) : 0;
             double bottom = (margin != null? snapSpaceY(margin.getBottom(), snap) : 0);
             double bo = child.getBaselineOffset();
             final double contentHeight = bo == BASELINE_OFFSET_SAME_AS_HEIGHT && baselineComplement != -1 ?
-                    height - top - bottom - baselineComplement :
-                     height - top - bottom;
-            if (fillHeight) {
-                alt = snapSizeY(boundedSize(
-                        child.minHeight(-1), contentHeight,
-                        child.maxHeight(-1)));
-            } else {
-                alt = snapSizeY(boundedSize(
-                        child.minHeight(-1),
-                        child.prefHeight(-1),
-                        Math.min(child.maxHeight(-1), contentHeight)));
-            }
+                    availableHeight - top - bottom - baselineComplement :
+                    availableHeight - top - bottom;
+
+            alt = computedBoundedHeight(child, fillHeight, contentHeight);
             max = child.maxWidth(alt);
         }
         // if min > max, min wins, so still need to call boundedSize()
         return left + snapSizeX(boundedSize(child.minWidth(alt), max, Double.MAX_VALUE)) + right;
     }
 
-    double computeChildMaxAreaHeight(Node child, double maxBaselineComplement, Insets margin, double width) {
+    double computeChildMaxAreaHeight(Node child, double maxBaselineComplement, Insets margin, double availableWidth, boolean fillWidth) {
         double max = child.maxHeight(-1);
         if (max == Double.MAX_VALUE) {
             return max;
@@ -2036,18 +2045,17 @@ public class Region extends Parent {
         double top = margin != null? snapSpaceY(margin.getTop(), snap) : 0;
         double bottom = margin != null? snapSpaceY(margin.getBottom(), snap) : 0;
         double alt = -1;
-        if (child.isResizable() && child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
-            double left = margin != null? snapSpaceX(margin.getLeft(), snap) : 0;
-            double right = margin != null? snapSpaceX(margin.getRight(), snap) : 0;
-            alt = snapSizeX(width != -1? boundedSize(child.minWidth(-1), width - left - right, child.maxWidth(-1)) :
-                child.minWidth(-1));
+        if (availableWidth != -1 && child.isResizable() && child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
+            double contentWidth = computeContentWidth(margin, availableWidth);
+
+            alt = computeBoundedWidth(child, fillWidth, contentWidth);
             max = child.maxHeight(alt);
         }
         // For explanation, see computeChildPrefAreaHeight
         if (maxBaselineComplement != -1) {
             double baseline = child.getBaselineOffset();
             if (child.isResizable() && baseline == BASELINE_OFFSET_SAME_AS_HEIGHT) {
-                return top + snapSizeY(boundedSize(child.minHeight(alt), child.maxHeight(alt), Double.MAX_VALUE)) + bottom
+                return top + snapSizeY(boundedSize(child.minHeight(alt), max, Double.MAX_VALUE)) + bottom
                         + maxBaselineComplement;
             } else {
                 return top + baseline + maxBaselineComplement + bottom;
@@ -2058,62 +2066,135 @@ public class Region extends Parent {
         }
     }
 
+    /*
+     * Definition of used terms:
+     *
+     * # available width/heights:
+     *
+     * Sizes provided by the container that may be used as a dependent value when
+     * calculating sizes for biased controls. These may be set to -1 to indicate
+     * no such information is available. If given, the sizes include the Margin
+     * of the child. As such the Margin must be removed before passing these
+     * values as a dependent value to min/pref/max width/height functions.
+     *
+     * # content width/heights:
+     *
+     * The space allocated to a child, minus its margins. A content size is
+     * always a real value (not NaN) and never negative.
+     *
+     * # bounded width/heights:
+     *
+     * The space allocated to a child, minus its margins, adjusted according to
+     * its constraints (min <= X <= max). A bounded size is always a real value
+     * (not NaN) and never negative.
+     */
+
+    /*
+     * Given a content width, limits it by the child's constraints. The fill boolean
+     * controls whether the content width or the child's preferred width is used to compute
+     * the bounded width.
+     */
+    private double computeBoundedWidth(Node child, boolean fill, double contentWidth) {
+        double min = child.minWidth(-1);
+        double max = child.maxWidth(-1);
+
+        if (fill) {
+            return snapSizeX(boundedSize(min, contentWidth, max));
+        }
+
+        return snapSizeX(boundedSize(min, child.prefWidth(-1), Math.min(max, contentWidth)));
+    }
+
+    /*
+     * Given a content height, limits it by the child's constraints. The fill boolean
+     * controls whether the content height or the child's preferred height is used to compute
+     * the bounded height.
+     */
+    private double computedBoundedHeight(Node child, boolean fill, double contentHeight) {
+        double min = child.minHeight(-1);
+        double max = child.maxHeight(-1);
+
+        if (fill) {
+            return snapSizeY(boundedSize(min, contentHeight, max));
+        }
+
+        return snapSizeY(boundedSize(min, child.prefHeight(-1), Math.min(max, contentHeight)));
+    }
+
+    /*
+     * Removes the given Margin (if any) from a width which still includes margins
+     * to create a content width.
+     */
+    private double computeContentWidth(Insets margin, double width) {
+        boolean snap = isSnapToPixel();
+        double left = margin != null ? snapSpaceX(margin.getLeft(), snap) : 0;
+        double right = margin != null ? snapSpaceX(margin.getRight(), snap) : 0;
+
+        return width - left - right;
+    }
+
     /* Max of children's minimum area widths */
 
     double computeMaxMinAreaWidth(List<Node> children, Callback<Node, Insets> margins) {
         return getMaxAreaWidth(children, margins, new double[] { -1 }, false, true);
     }
 
-    double computeMaxMinAreaWidth(List<Node> children, Callback<Node, Insets> margins, double height, boolean fillHeight) {
+    double computeMaxMinAreaWidth(List<Node> children, Callback<Node, Insets> margins, double height,
+            boolean fillHeight) {
         return getMaxAreaWidth(children, margins, new double[] { height }, fillHeight, true);
     }
 
-    double computeMaxMinAreaWidth(List<Node> children, Callback<Node, Insets> childMargins, double childHeights[], boolean fillHeight) {
+    double computeMaxMinAreaWidth(List<Node> children, Callback<Node, Insets> childMargins,
+            double[] childHeights, boolean fillHeight) {
         return getMaxAreaWidth(children, childMargins, childHeights, fillHeight, true);
     }
 
     /* Max of children's minimum area heights */
 
-    double computeMaxMinAreaHeight(List<Node>children, Callback<Node, Insets> margins, VPos valignment) {
-        return getMaxAreaHeight(children, margins, null, valignment, true);
+    double computeMaxMinAreaHeight(List<Node> children, Callback<Node, Insets> margins, VPos valignment) {
+        return getMaxAreaHeight(children, margins, null, false, true, valignment);
     }
 
-    double computeMaxMinAreaHeight(List<Node>children, Callback<Node, Insets> margins, VPos valignment, double width) {
-        return getMaxAreaHeight(children, margins, new double[] { width }, valignment, true);
+    double computeMaxMinAreaHeight(List<Node> children, Callback<Node, Insets> margins, double width,
+            boolean fillWidth, VPos valignment) {
+        return getMaxAreaHeight(children, margins, new double[] { width }, fillWidth, true, valignment);
     }
 
-    double computeMaxMinAreaHeight(List<Node>children, Callback<Node, Insets> childMargins, double childWidths[], VPos valignment) {
-        return getMaxAreaHeight(children, childMargins, childWidths, valignment, true);
+    double computeMaxMinAreaHeight(List<Node> children, Callback<Node, Insets> childMargins,
+            double[] childWidths, boolean fillWidth, VPos valignment) {
+        return getMaxAreaHeight(children, childMargins, childWidths, fillWidth, true, valignment);
     }
 
     /* Max of children's pref area widths */
 
-    double computeMaxPrefAreaWidth(List<Node>children, Callback<Node, Insets> margins) {
+    double computeMaxPrefAreaWidth(List<Node> children, Callback<Node, Insets> margins) {
         return getMaxAreaWidth(children, margins, new double[] { -1 }, false, false);
     }
 
-    double computeMaxPrefAreaWidth(List<Node>children, Callback<Node, Insets> margins, double height,
+    double computeMaxPrefAreaWidth(List<Node> children, Callback<Node, Insets> margins, double height,
             boolean fillHeight) {
         return getMaxAreaWidth(children, margins, new double[] { height }, fillHeight, false);
     }
 
-    double computeMaxPrefAreaWidth(List<Node>children, Callback<Node, Insets> childMargins,
-            double childHeights[], boolean fillHeight) {
+    double computeMaxPrefAreaWidth(List<Node> children, Callback<Node, Insets> childMargins,
+            double[] childHeights, boolean fillHeight) {
         return getMaxAreaWidth(children, childMargins, childHeights, fillHeight, false);
     }
 
     /* Max of children's pref area heights */
 
-    double computeMaxPrefAreaHeight(List<Node>children, Callback<Node, Insets> margins, VPos valignment) {
-        return getMaxAreaHeight(children, margins, null, valignment, false);
+    double computeMaxPrefAreaHeight(List<Node> children, Callback<Node, Insets> margins, VPos valignment) {
+        return getMaxAreaHeight(children, margins, null, false, false, valignment);
     }
 
-    double computeMaxPrefAreaHeight(List<Node>children, Callback<Node, Insets> margins, double width, VPos valignment) {
-        return getMaxAreaHeight(children, margins, new double[] { width }, valignment, false);
+    double computeMaxPrefAreaHeight(List<Node> children, Callback<Node, Insets> margins, double width,
+            boolean fillWidth, VPos valignment) {
+        return getMaxAreaHeight(children, margins, new double[] { width }, fillWidth, false, valignment);
     }
 
-    double computeMaxPrefAreaHeight(List<Node>children, Callback<Node, Insets> childMargins, double childWidths[], VPos valignment) {
-        return getMaxAreaHeight(children, childMargins, childWidths, valignment, false);
+    double computeMaxPrefAreaHeight(List<Node> children, Callback<Node, Insets> childMargins,
+            double[] childWidths, boolean fillWidth, VPos valignment) {
+        return getMaxAreaHeight(children, childMargins, childWidths, fillWidth, false, valignment);
     }
 
     /**
@@ -2125,11 +2206,16 @@ public class Region extends Parent {
      * @param areaHeight the height of the bounding area where the node is going to be placed
      * @param fillWidth if Node should try to fill the area width
      * @param fillHeight if Node should try to fill the area height
+     * @param isSnapToPixel whether to snap size to pixels
+     * @param snapScaleX the horizontal scale to use when snapping
+     * @param snapScaleY the vertical scale to use when snapping
      * @param result Vec2d object for the result or null if new one should be created
-     * @return Vec2d object with width(x parameter) and height (y parameter)
+     * @return Vec2d object with width(x parameter) and height (y parameter), both snapped if
+     *               {@code isSnapToPixel} is {@code true}
      */
     static Vec2d boundedNodeSizeWithBias(Node node, double areaWidth, double areaHeight,
-            boolean fillWidth, boolean fillHeight, Vec2d result) {
+            boolean fillWidth, boolean fillHeight, boolean isSnapToPixel,
+            double snapScaleX, double snapScaleY, Vec2d result) {
         if (result == null) {
             result = new Vec2d();
         }
@@ -2140,34 +2226,34 @@ public class Region extends Parent {
         double childHeight = 0;
 
         if (bias == null) {
-            childWidth = boundedSize(
+            childWidth = snapSize(boundedSize(
                     node.minWidth(-1), fillWidth ? areaWidth
                     : Math.min(areaWidth, node.prefWidth(-1)),
-                    node.maxWidth(-1));
-            childHeight = boundedSize(
+                    node.maxWidth(-1)), isSnapToPixel, snapScaleX);
+            childHeight = snapSize(boundedSize(
                     node.minHeight(-1), fillHeight ? areaHeight
                     : Math.min(areaHeight, node.prefHeight(-1)),
-                    node.maxHeight(-1));
+                    node.maxHeight(-1)), isSnapToPixel, snapScaleY);
 
         } else if (bias == Orientation.HORIZONTAL) {
-            childWidth = boundedSize(
+            childWidth = snapSize(boundedSize(
                     node.minWidth(-1), fillWidth ? areaWidth
                     : Math.min(areaWidth, node.prefWidth(-1)),
-                    node.maxWidth(-1));
-            childHeight = boundedSize(
+                    node.maxWidth(-1)), isSnapToPixel, snapScaleX);
+            childHeight = snapSize(boundedSize(
                     node.minHeight(childWidth), fillHeight ? areaHeight
                     : Math.min(areaHeight, node.prefHeight(childWidth)),
-                    node.maxHeight(childWidth));
+                    node.maxHeight(childWidth)), isSnapToPixel, snapScaleY);
 
         } else { // bias == VERTICAL
-            childHeight = boundedSize(
+            childHeight = snapSize(boundedSize(
                     node.minHeight(-1), fillHeight ? areaHeight
                     : Math.min(areaHeight, node.prefHeight(-1)),
-                    node.maxHeight(-1));
-            childWidth = boundedSize(
+                    node.maxHeight(-1)), isSnapToPixel, snapScaleY);
+            childWidth = snapSize(boundedSize(
                     node.minWidth(childHeight), fillWidth ? areaWidth
                     : Math.min(areaWidth, node.prefWidth(childHeight)),
-                    node.maxWidth(childHeight));
+                    node.maxWidth(childHeight)), isSnapToPixel, snapScaleX);
         }
 
         result.set(childWidth, childHeight);
@@ -2175,7 +2261,10 @@ public class Region extends Parent {
     }
 
     /* utility method for computing the max of children's min or pref heights, taking into account baseline alignment */
-    private double getMaxAreaHeight(List<Node> children, Callback<Node,Insets> childMargins,  double childWidths[], VPos valignment, boolean minimum) {
+    private double getMaxAreaHeight(
+        List<Node> children, Callback<Node, Insets> childMargins, double[] childWidths,
+        boolean fillWidth, boolean minimum, VPos valignment
+    ) {
         final double singleChildWidth = childWidths == null ? -1 : childWidths.length == 1 ? childWidths[0] : Double.NaN;
         if (valignment == VPos.BASELINE) {
             double maxAbove = 0;
@@ -2206,16 +2295,16 @@ public class Region extends Parent {
                 Insets margin = childMargins.call(child);
                 final double childWidth = Double.isNaN(singleChildWidth) ? childWidths[i] : singleChildWidth;
                 max = Math.max(max, minimum?
-                    computeChildMinAreaHeight(child, -1, margin, childWidth) :
-                        computeChildPrefAreaHeight(child, -1, margin, childWidth));
+                    computeChildMinAreaHeight(child, -1, margin, childWidth, fillWidth) :
+                        computeChildPrefAreaHeight(child, -1, margin, childWidth, fillWidth));
             }
             return max;
         }
     }
 
     /* utility method for computing the max of children's min or pref width, horizontal alignment is ignored for now */
-    private double getMaxAreaWidth(List<javafx.scene.Node> children,
-            Callback<Node, Insets> childMargins, double childHeights[], boolean fillHeight, boolean minimum) {
+    private double getMaxAreaWidth(List<Node> children,
+            Callback<Node, Insets> childMargins, double[] childHeights, boolean fillHeight, boolean minimum) {
         final double singleChildHeight = childHeights == null ? -1 : childHeights.length == 1 ? childHeights[0] : Double.NaN;
 
         double max = 0;
@@ -2224,7 +2313,7 @@ public class Region extends Parent {
             final Insets margin = childMargins.call(child);
             final double childHeight = Double.isNaN(singleChildHeight) ? childHeights[i] : singleChildHeight;
             max = Math.max(max, minimum?
-                computeChildMinAreaWidth(children.get(i), -1, margin, childHeight, fillHeight) :
+                computeChildMinAreaWidth(child, -1, margin, childHeight, fillHeight) :
                     computeChildPrefAreaWidth(child, -1, margin, childHeight, fillHeight));
         }
         return max;
@@ -2556,9 +2645,8 @@ public class Region extends Parent {
 
         if (child.isResizable()) {
             Vec2d size = boundedNodeSizeWithBias(child, areaWidth - left - right, areaHeight - top - bottom,
-                    fillWidth, fillHeight, TEMP_VEC2D);
-            child.resize(snapSize(size.x, isSnapToPixel, snapScaleX),
-                         snapSize(size.y, isSnapToPixel, snapScaleY));
+                    fillWidth, fillHeight, isSnapToPixel, snapScaleX, snapScaleY, TEMP_VEC2D);
+            child.resize(size.x, size.y);
         }
         position(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset,
                 top, right, bottom, left, halignment, valignment, isSnapToPixel);
@@ -3229,7 +3317,7 @@ public class Region extends Parent {
                 }
 
                 final StrokeType type = bss.getType();
-                double sw = Math.max(bs.getWidths().top, 0d);
+                double sw = Math.max(bs.getWidths().getTop(), 0d);
                 StrokeLineCap cap = bss.getLineCap();
                 StrokeLineJoin join = bss.getLineJoin();
                 float miterlimit = (float) Math.max(bss.getMiterLimit(), 1d);
@@ -3300,9 +3388,9 @@ public class Region extends Parent {
         // since Parent's computeGeomBounds does handle 3D correctly.
         BaseBounds cb = RegionHelper.superComputeGeomBounds(this, bounds, tx);
         /*
-         * This is a work around for RT-7680. Parent returns invalid bounds from
+         * This is a work around for JDK-8109407. Parent returns invalid bounds from
          * computeGeomBoundsImpl when it has no children or if all its children
-         * have invalid bounds. If RT-7680 were fixed, then we could omit this
+         * have invalid bounds. If JDK-8109407 were fixed, then we could omit this
          * first branch of the if and only use the else since the correct value
          * would be computed.
          */

@@ -40,9 +40,10 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    static JSAsyncGeneratorFunction* create(VM&, FunctionExecutable*, JSScope*);
-    static JSAsyncGeneratorFunction* create(VM&, FunctionExecutable*, JSScope*, Structure*);
-    static JSAsyncGeneratorFunction* createWithInvalidatedReallocationWatchpoint(VM&, FunctionExecutable*, JSScope*);
+    static JSAsyncGeneratorFunction* create(VM&, JSGlobalObject*, FunctionExecutable*, JSScope*);
+    static JSAsyncGeneratorFunction* create(VM&, JSGlobalObject*, FunctionExecutable*, JSScope*, Structure*);
+    static JSAsyncGeneratorFunction* createWithInvalidatedReallocationWatchpoint(VM&, JSGlobalObject*, FunctionExecutable*, JSScope*);
+    static JSAsyncGeneratorFunction* createWithInvalidatedReallocationWatchpoint(VM&, JSGlobalObject*, FunctionExecutable*, JSScope*, Structure*);
 
     static size_t allocationSize(size_t inlineCapacity)
     {
@@ -50,11 +51,7 @@ public:
         return sizeof(JSAsyncGeneratorFunction);
     }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        ASSERT(globalObject);
-        return Structure::create(vm, globalObject, prototype, TypeInfo(JSFunctionType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
 private:
     JSAsyncGeneratorFunction(VM&, FunctionExecutable*, JSScope*, Structure*);

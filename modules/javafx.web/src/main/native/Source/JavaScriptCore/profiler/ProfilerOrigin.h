@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "BytecodeIndex.h"
-#include "CodeBlockHash.h"
-#include "JSCJSValue.h"
+#include <JavaScriptCore/BytecodeIndex.h>
+#include <JavaScriptCore/CodeBlockHash.h>
+#include <JavaScriptCore/JSCJSValue.h>
 #include <wtf/PrintStream.h>
 
 namespace JSC {
@@ -61,10 +61,11 @@ public:
     Bytecodes* bytecodes() const { return m_bytecodes; }
     BytecodeIndex bytecodeIndex() const { return m_bytecodeIndex; }
 
-    bool operator==(const Origin&) const;
+    friend bool operator==(const Origin&, const Origin&) = default;
     unsigned hash() const;
 
     bool isHashTableDeletedValue() const;
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
 
     void dump(PrintStream&) const;
     Ref<JSON::Value> toJSON(Dumper&) const;
@@ -73,12 +74,6 @@ private:
     Bytecodes* m_bytecodes;
     BytecodeIndex m_bytecodeIndex;
 };
-
-inline bool Origin::operator==(const Origin& other) const
-{
-    return m_bytecodes == other.m_bytecodes
-        && m_bytecodeIndex == other.m_bytecodeIndex;
-}
 
 inline unsigned Origin::hash() const
 {
@@ -90,18 +85,9 @@ inline bool Origin::isHashTableDeletedValue() const
     return m_bytecodeIndex.isHashTableDeletedValue();
 }
 
-struct OriginHash {
-    static unsigned hash(const Origin& key) { return key.hash(); }
-    static bool equal(const Origin& a, const Origin& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } } // namespace JSC::Profiler
 
 namespace WTF {
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::Profiler::Origin> : JSC::Profiler::OriginHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::Profiler::Origin> : SimpleClassHashTraits<JSC::Profiler::Origin> { };

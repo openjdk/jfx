@@ -27,44 +27,65 @@
 
 #if ENABLE(GAMEPAD)
 
-#include "Supplementable.h"
+#include <WebCore/Navigator.h>
+#include <WebCore/Supplementable.h>
+#include <wtf/CheckedRef.h>
+#include <wtf/MonotonicTime.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
-#include <wtf/WeakPtr.h>
+
+namespace WebCore {
+class NavigatorGamepad;
+}
 
 namespace WebCore {
 
 class Gamepad;
-class Navigator;
+class Page;
 class PlatformGamepad;
+template<typename> class ExceptionOr;
 
-class NavigatorGamepad : public Supplement<Navigator>, public CanMakeWeakPtr<NavigatorGamepad> {
-    WTF_MAKE_FAST_ALLOCATED;
+class NavigatorGamepad : public Supplement<Navigator> {
+    WTF_MAKE_TZONE_ALLOCATED(NavigatorGamepad);
 public:
     explicit NavigatorGamepad(Navigator&);
     virtual ~NavigatorGamepad();
 
-    static NavigatorGamepad* from(Navigator&);
+    static NavigatorGamepad& from(Navigator&);
+
+    Navigator& navigator() const { return m_navigator; }
 
     // The array of Gamepads might be sparse.
     // Null checking each entry is necessary.
-    static const Vector<RefPtr<Gamepad>>& getGamepads(Navigator&);
+    static ExceptionOr<const Vector<RefPtr<Gamepad>>&> getGamepads(Navigator&);
 
     void gamepadConnected(PlatformGamepad&);
     void gamepadDisconnected(PlatformGamepad&);
 
     Ref<Gamepad> gamepadFromPlatformGamepad(PlatformGamepad&);
 
+    WEBCORE_EXPORT static void setGamepadsRecentlyAccessedThreshold(Seconds);
+    static Seconds gamepadsRecentlyAccessedThreshold();
+
+    RefPtr<Page> protectedPage() const;
+
 private:
-    static const char* supplementName();
+    static ASCIILiteral supplementName() { return "NavigatorGamepad"_s; }
+    bool isNavigatorGamepad() const final { return true; }
 
     void gamepadsBecameVisible();
+    void maybeNotifyRecentAccess();
 
     const Vector<RefPtr<Gamepad>>& gamepads();
 
-    Navigator& m_navigator;
+    const CheckedRef<Navigator> m_navigator;
     Vector<RefPtr<Gamepad>> m_gamepads;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::NavigatorGamepad)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isNavigatorGamepad(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(GAMEPAD)

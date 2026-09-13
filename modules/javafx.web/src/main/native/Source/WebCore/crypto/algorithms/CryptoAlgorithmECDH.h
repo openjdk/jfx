@@ -25,10 +25,9 @@
 
 #pragma once
 
-#include "CryptoAlgorithm.h"
+#include <WebCore/CryptoAlgorithm.h>
 
 #if ENABLE(WEB_CRYPTO)
-
 namespace WebCore {
 
 class CryptoKeyEC;
@@ -47,11 +46,10 @@ private:
     CryptoAlgorithmIdentifier identifier() const final;
 
     void generateKey(const CryptoAlgorithmParameters&, bool extractable, CryptoKeyUsageBitmap, KeyOrKeyPairCallback&&, ExceptionCallback&&, ScriptExecutionContext&) final;
-    void deriveBits(const CryptoAlgorithmParameters&, Ref<CryptoKey>&&, size_t length, VectorCallback&&, ExceptionCallback&&, ScriptExecutionContext&, WorkQueue&) final;
+    void deriveBits(const CryptoAlgorithmParameters&, Ref<CryptoKey>&&, std::optional<size_t> length, VectorCallback&&, ExceptionCallback&&, ScriptExecutionContext&, WorkQueue&) final;
     void importKey(CryptoKeyFormat, KeyData&&, const CryptoAlgorithmParameters&, bool extractable, CryptoKeyUsageBitmap, KeyCallback&&, ExceptionCallback&&) final;
     void exportKey(CryptoKeyFormat, Ref<CryptoKey>&&, KeyDataCallback&&, ExceptionCallback&&) final;
 };
 
 } // namespace WebCore
-
 #endif // ENABLE(WEB_CRYPTO)

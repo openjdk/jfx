@@ -46,7 +46,7 @@ static inline const char* pas_segregated_size_directory_creation_mode_get_string
     case pas_segregated_size_directory_full_creation_mode:
         return "full";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

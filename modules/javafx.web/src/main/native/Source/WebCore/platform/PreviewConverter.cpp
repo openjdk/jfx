@@ -32,8 +32,11 @@
 #include "PreviewConverterProvider.h"
 #include <wtf/RunLoop.h>
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PreviewConverter);
 
 PreviewConverter::~PreviewConverter() = default;
 
@@ -64,7 +67,7 @@ const ResourceError& PreviewConverter::previewError() const
 
 const FragmentedSharedBuffer& PreviewConverter::previewData() const
 {
-    return *m_previewData.get();
+    return *m_previewData.buffer();
 }
 
 void PreviewConverter::updateMainResource()
@@ -75,14 +78,14 @@ void PreviewConverter::updateMainResource()
     if (m_state != State::Updating)
         return;
 
-    auto provider = m_provider.get();
+    RefPtr provider = m_provider.get();
     if (!provider) {
         didFailUpdating();
         return;
     }
 
-    provider->provideMainResourceForPreviewConverter(*this, [this, protectedThis = Ref { *this }](auto&& buffer) {
-        appendFromBuffer(WTFMove(buffer));
+    provider->provideMainResourceForPreviewConverter(*this, [this, protectedThis = Ref { *this }](Ref<FragmentedSharedBuffer>&& buffer) {
+        appendFromBuffer(WTF::move(buffer));
     });
 }
 
@@ -171,7 +174,7 @@ void PreviewConverter::iterateClients(T&& callback)
 
 void PreviewConverter::didAddClient(PreviewConverterClient& client)
 {
-    RunLoop::current().dispatch([this, protectedThis = Ref { *this }, weakClient = WeakPtr { client }]() {
+    RunLoop::currentSingleton().dispatch([this, protectedThis = Ref { *this }, weakClient = WeakPtr { client }]() {
         if (auto client = weakClient.get())
             replayToClient(*client);
     });
@@ -218,7 +221,7 @@ void PreviewConverter::replayToClient(PreviewConverterClient& client)
     client.previewConverterDidStartConverting(*this);
 
     if (!m_previewData.isEmpty() && hasClient(client))
-        client.previewConverterDidReceiveData(*this, *m_previewData.get());
+        client.previewConverterDidReceiveData(*this, *m_previewData.buffer());
 
     if (m_state == State::Converting || !hasClient(client))
         return;
@@ -277,7 +280,7 @@ void PreviewConverter::delegateDidFailWithError(const ResourceError& error)
     }
 
     ASSERT(m_state == State::Updating);
-    auto provider = m_provider.get();
+    RefPtr provider = m_provider.get();
     if (!provider) {
         didFailConvertingWithError(error);
         return;

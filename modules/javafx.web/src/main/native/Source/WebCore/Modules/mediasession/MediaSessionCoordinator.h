@@ -27,12 +27,14 @@
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
 
-#include "ActiveDOMObject.h"
-#include "EventTarget.h"
-#include "MediaSession.h"
-#include "MediaSessionCoordinatorPrivate.h"
-#include "MediaSessionCoordinatorState.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/EventTargetInterfaces.h>
+#include <WebCore/MediaSession.h>
+#include <WebCore/MediaSessionCoordinatorPrivate.h>
+#include <WebCore/MediaSessionCoordinatorState.h>
 #include <wtf/Logger.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
@@ -42,11 +44,14 @@ template<typename> class DOMPromiseDeferred;
 class MediaSessionCoordinator
     : public RefCounted<MediaSessionCoordinator>
     , public MediaSessionCoordinatorClient
-    , public MediaSession::Observer
+    , public MediaSessionObserver
     , public ActiveDOMObject
     , public EventTarget  {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(MediaSessionCoordinator, WEBCORE_EXPORT);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     WEBCORE_EXPORT static Ref<MediaSessionCoordinator> create(ScriptExecutionContext*);
     WEBCORE_EXPORT ~MediaSessionCoordinator();
     WEBCORE_EXPORT void setMediaSessionCoordinatorPrivate(Ref<MediaSessionCoordinatorPrivate>&&);
@@ -55,7 +60,7 @@ public:
     ExceptionOr<void> leave();
     void close();
 
-    String identifier() const { return m_privateCoordinator ? m_privateCoordinator->identifier() : String(); }
+    String identifier() const { return m_privateCoordinator ? protectedPrivateCoordinator()->identifier() : String(); }
     MediaSessionCoordinatorState state() const { return m_state; }
 
     void seekTo(double, DOMPromiseDeferred<void>&&);
@@ -65,17 +70,13 @@ public:
 
     void setMediaSession(MediaSession*);
 
-    using MediaSessionCoordinatorClient::weakPtrFactory;
-    using MediaSessionCoordinatorClient::WeakValueType;
-    using MediaSessionCoordinatorClient::WeakPtrImplType;
-    using RefCounted::ref;
-    using RefCounted::deref;
+    USING_CAN_MAKE_WEAKPTR(MediaSessionCoordinatorClient);
 
     struct PlaySessionCommand {
         std::optional<double> atTime;
         std::optional<MonotonicTime> hostTime;
     };
-    std::optional<PlaySessionCommand> takeCurrentPlaySessionCommand() { return WTFMove(m_currentPlaySessionCommand); }
+    std::optional<PlaySessionCommand> takeCurrentPlaySessionCommand() { return WTF::move(m_currentPlaySessionCommand); }
 
 private:
     MediaSessionCoordinator(ScriptExecutionContext*);
@@ -83,15 +84,14 @@ private:
     // EventTarget
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
-    EventTargetInterface eventTargetInterface() const final { return MediaSessionCoordinatorEventTargetInterfaceType; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::MediaSessionCoordinator; }
+        ScriptExecutionContext* scriptExecutionContext() const final;
     void eventListenersDidChange() final;
 
-    // ActiveDOMObject
-    const char* activeDOMObjectName() const final { return "MediaSessionCoordinator"; }
+    // ActiveDOMObject.
     bool virtualHasPendingActivity() const final;
 
-    // MediaSession::Observer
+    // MediaSessionObserver
     void metadataChanged(const RefPtr<MediaMetadata>&) final;
     void positionStateChanged(const std::optional<MediaPositionState>&) final;
     void playbackStateChanged(MediaSessionPlaybackState) final;
@@ -107,20 +107,24 @@ private:
     bool currentPositionApproximatelyEqualTo(double) const;
 
     const Logger& logger() const { return m_logger; }
-    const void* logIdentifier() const { return m_logIdentifier; }
+    uint64_t logIdentifier() const { return m_logIdentifier; }
     static WTFLogChannel& logChannel();
-    static const char* logClassName() { return "MediaSessionCoordinator"; }
+    static ASCIILiteral logClassName() { return "MediaSessionCoordinator"_s; }
     bool shouldFireEvents() const;
+
+    RefPtr<MediaSessionCoordinatorPrivate> protectedPrivateCoordinator() const { return m_privateCoordinator; }
 
     WeakPtr<MediaSession> m_session;
     RefPtr<MediaSessionCoordinatorPrivate> m_privateCoordinator;
     const Ref<const Logger> m_logger;
-    const void* m_logIdentifier;
+    const uint64_t m_logIdentifier;
     MediaSessionCoordinatorState m_state { MediaSessionCoordinatorState::Closed };
     bool m_hasCoordinatorsStateChangeEventListener { false };
     std::optional<PlaySessionCommand> m_currentPlaySessionCommand;
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(MediaSessionCoordinator)
 
 #endif // ENABLE(MEDIA_SESSION_COORDINATOR)

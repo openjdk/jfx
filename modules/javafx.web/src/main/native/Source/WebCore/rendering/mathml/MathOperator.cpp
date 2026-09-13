@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Igalia S.L. All rights reserved.
- * Copyright (C) 2016-2021 Apple Inc.  All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,8 +29,8 @@
 
 #if ENABLE(MATHML)
 
-#include "RenderStyleInlines.h"
-#include "StyleInheritedData.h"
+#include "RenderStyle+GettersInlines.h"
+#include <wtf/StdLibExtras.h>
 
 static const unsigned kRadicalOperator = 0x221A;
 static const unsigned kMaximumExtensionCount = 128;
@@ -61,29 +61,28 @@ static inline float advanceWidthForGlyph(const GlyphData& data)
 
 // FIXME: This hardcoded data can be removed when OpenType MATH font are widely available (http://wkbug/156837).
 struct StretchyCharacter {
-    UChar32 character;
-    UChar topChar;
-    UChar extensionChar;
-    UChar bottomChar;
-    UChar middleChar;
+    char32_t character;
+    char16_t topChar;
+    char16_t extensionChar;
+    char16_t bottomChar;
+    char16_t middleChar;
 };
-// The first leftRightPairsCount pairs correspond to left/right fences that can easily be mirrored in RTL.
-static const short leftRightPairsCount = 5;
-static const StretchyCharacter stretchyCharacters[14] = {
-    { 0x28  , 0x239b, 0x239c, 0x239d, 0x0    }, // left parenthesis
-    { 0x29  , 0x239e, 0x239f, 0x23a0, 0x0    }, // right parenthesis
-    { 0x5b  , 0x23a1, 0x23a2, 0x23a3, 0x0    }, // left square bracket
-    { 0x5d  , 0x23a4, 0x23a5, 0x23a6, 0x0    }, // right square bracket
-    { 0x7b  , 0x23a7, 0x23aa, 0x23a9, 0x23a8 }, // left curly bracket
-    { 0x7d  , 0x23ab, 0x23aa, 0x23ad, 0x23ac }, // right curly bracket
-    { 0x2308, 0x23a1, 0x23a2, 0x23a2, 0x0    }, // left ceiling
-    { 0x2309, 0x23a4, 0x23a5, 0x23a5, 0x0    }, // right ceiling
-    { 0x230a, 0x23a2, 0x23a2, 0x23a3, 0x0    }, // left floor
-    { 0x230b, 0x23a5, 0x23a5, 0x23a6, 0x0    }, // right floor
-    { 0x7c  , 0x7c,   0x7c,   0x7c,   0x0    }, // vertical bar
-    { 0x2016, 0x2016, 0x2016, 0x2016, 0x0    }, // double vertical line
-    { 0x2225, 0x2225, 0x2225, 0x2225, 0x0    }, // parallel to
-    { 0x222b, 0x2320, 0x23ae, 0x2321, 0x0    } // integral sign
+
+static constexpr std::array stretchyCharacters {
+    StretchyCharacter { 0x28  , 0x239b, 0x239c, 0x239d, 0x0    }, // left parenthesis
+    StretchyCharacter { 0x29  , 0x239e, 0x239f, 0x23a0, 0x0    }, // right parenthesis
+    StretchyCharacter { 0x5b  , 0x23a1, 0x23a2, 0x23a3, 0x0    }, // left square bracket
+    StretchyCharacter { 0x5d  , 0x23a4, 0x23a5, 0x23a6, 0x0    }, // right square bracket
+    StretchyCharacter { 0x7b  , 0x23a7, 0x23aa, 0x23a9, 0x23a8 }, // left curly bracket
+    StretchyCharacter { 0x7d  , 0x23ab, 0x23aa, 0x23ad, 0x23ac }, // right curly bracket
+    StretchyCharacter { 0x2308, 0x23a1, 0x23a2, 0x23a2, 0x0    }, // left ceiling
+    StretchyCharacter { 0x2309, 0x23a4, 0x23a5, 0x23a5, 0x0    }, // right ceiling
+    StretchyCharacter { 0x230a, 0x23a2, 0x23a2, 0x23a3, 0x0    }, // left floor
+    StretchyCharacter { 0x230b, 0x23a5, 0x23a5, 0x23a6, 0x0    }, // right floor
+    StretchyCharacter { 0x7c  , 0x7c,   0x7c,   0x7c,   0x0    }, // vertical bar
+    StretchyCharacter { 0x2016, 0x2016, 0x2016, 0x2016, 0x0    }, // double vertical line
+    StretchyCharacter { 0x2225, 0x2225, 0x2225, 0x2225, 0x0    }, // parallel to
+    StretchyCharacter { 0x222b, 0x2320, 0x23ae, 0x2321, 0x0    } // integral sign
 };
 
 MathOperator::MathOperator()
@@ -91,7 +90,7 @@ MathOperator::MathOperator()
     m_variantGlyph = 0;
 }
 
-void MathOperator::setOperator(const RenderStyle& style, UChar32 baseCharacter, Type operatorType)
+void MathOperator::setOperator(const RenderStyle& style, char32_t baseCharacter, Type operatorType)
 {
     m_baseCharacter = baseCharacter;
     m_operatorType = operatorType;
@@ -127,10 +126,10 @@ LayoutUnit MathOperator::stretchSize() const
     return m_operatorType == Type::VerticalOperator ? m_ascent + m_descent : m_width;
 }
 
-bool MathOperator::getGlyph(const RenderStyle& style, UChar32 character, GlyphData& glyph) const
+bool MathOperator::getGlyph(const RenderStyle& style, char32_t character, GlyphData& glyph) const
 {
-    glyph = style.fontCascade().glyphDataForCharacter(character, !style.isLeftToRightDirection());
-    return glyph.font && glyph.font == &style.fontCascade().primaryFont();
+    glyph = style.fontCascade().glyphDataForCharacter(character, style.writingMode().isBidiRTL());
+    return glyph.font && glyph.font == style.fontCascade().primaryFont().ptr();
 }
 
 void MathOperator::setSizeVariant(const GlyphData& sizeVariant)
@@ -143,7 +142,7 @@ void MathOperator::setSizeVariant(const GlyphData& sizeVariant)
     getAscentAndDescentForGlyph(sizeVariant, m_ascent, m_descent);
 }
 
-static GlyphData glyphDataForCodePointOrFallbackGlyph(const RenderStyle& style, UChar32 codePoint, Glyph fallbackGlyph)
+static GlyphData glyphDataForCodePointOrFallbackGlyph(const RenderStyle& style, char32_t codePoint, Glyph fallbackGlyph)
 {
     if (codePoint)
         return style.fontCascade().glyphDataForCharacter(codePoint, false);
@@ -152,7 +151,7 @@ static GlyphData glyphDataForCodePointOrFallbackGlyph(const RenderStyle& style, 
 
     if (fallbackGlyph) {
         fallback.glyph = fallbackGlyph;
-        fallback.font = &style.fontCascade().primaryFont();
+        fallback.font = style.fontCascade().primaryFont().ptr();
     }
 
     return fallback;
@@ -197,16 +196,14 @@ void MathOperator::setGlyphAssembly(const RenderStyle& style, const GlyphAssembl
 // The MathML specification recommends avoiding combining characters.
 // See https://www.w3.org/TR/MathML/chapter7.html#chars.comb-chars
 // However, many math fonts do not provide constructions for the non-combining equivalent.
-const unsigned maxFallbackPerCharacter = 3;
-static const UChar32 characterFallback[][maxFallbackPerCharacter] = {
-    { 0x005E, 0x0302, 0 }, // CIRCUMFLEX ACCENT
-    { 0x005F, 0x0332, 0 }, // LOW LINE
-    { 0x007E, 0x0303, 0 }, // TILDE
-    { 0x00AF, 0x0304, 0x0305 }, // MACRON
-    { 0x02C6, 0x0302, 0 }, // MODIFIER LETTER CIRCUMFLEX ACCENT
-    { 0x02C7, 0x030C, 0 } // CARON
+static constexpr std::array characterFallback {
+    std::array<char32_t, 3> { 0x005E, 0x0302, 0 }, // CIRCUMFLEX ACCENT
+    std::array<char32_t, 3> { 0x005F, 0x0332, 0 }, // LOW LINE
+    std::array<char32_t, 3> { 0x007E, 0x0303, 0 }, // TILDE
+    std::array<char32_t, 3> { 0x00AF, 0x0304, 0x0305 }, // MACRON
+    std::array<char32_t, 3> { 0x02C6, 0x0302, 0 }, // MODIFIER LETTER CIRCUMFLEX ACCENT
+    std::array<char32_t, 3> { 0x02C7, 0x030C, 0 } // CARON
 };
-const unsigned characterFallbackSize = std::size(characterFallback);
 
 void MathOperator::getMathVariantsWithFallback(const RenderStyle& style, bool isVertical, Vector<Glyph>& sizeVariants, Vector<OpenTypeMathData::AssemblyPart>& assemblyParts)
 {
@@ -219,12 +216,12 @@ void MathOperator::getMathVariantsWithFallback(const RenderStyle& style, bool is
         return;
 
     // Otherwise, we try and find fallback constructions using similar characters.
-    for (unsigned i = 0; i < characterFallbackSize; i++) {
+    for (auto& fallbacks : characterFallback) {
         unsigned j = 0;
-        if (characterFallback[i][j] == m_baseCharacter) {
-            for (j++; j < maxFallbackPerCharacter && characterFallback[i][j]; j++) {
+        if (fallbacks[j] == m_baseCharacter) {
+            for (j++; j < fallbacks.size() && fallbacks[j]; j++) {
                 GlyphData glyphData;
-                if (!getGlyph(style, characterFallback[i][j], glyphData))
+                if (!getGlyph(style, fallbacks[j], glyphData))
                     continue;
                 glyphData.font->mathData()->getMathVariants(glyphData.glyph, isVertical, sizeVariants, assemblyParts);
                 if (!sizeVariants.isEmpty() || !assemblyParts.isEmpty())
@@ -243,8 +240,7 @@ void MathOperator::calculateDisplayStyleLargeOperator(const RenderStyle& style)
     if (!getBaseGlyph(style, baseGlyph) || !baseGlyph.font->mathData())
         return;
 
-    // The value of displayOperatorMinHeight is sometimes too small, so we ensure that it is at least \sqrt{2} times the size of the base glyph.
-    float displayOperatorMinHeight = std::max(heightForGlyph(baseGlyph) * sqrtOfTwoFloat, baseGlyph.font->mathData()->getMathConstant(*baseGlyph.font, OpenTypeMathData::DisplayOperatorMinHeight));
+    float displayOperatorMinHeight = baseGlyph.font->mathData()->getMathConstant(*baseGlyph.font, OpenTypeMathData::DisplayOperatorMinHeight);
 
     Vector<Glyph> sizeVariants;
     Vector<OpenTypeMathData::AssemblyPart> assemblyParts;
@@ -252,7 +248,7 @@ void MathOperator::calculateDisplayStyleLargeOperator(const RenderStyle& style)
 
     // We choose the first size variant that is larger than the expected displayOperatorMinHeight and otherwise fallback to the largest variant.
     for (auto& sizeVariant : sizeVariants) {
-        GlyphData glyphData(sizeVariant, baseGlyph.font);
+        GlyphData glyphData(sizeVariant, baseGlyph.font.get());
         setSizeVariant(glyphData);
         m_maxPreferredWidth = m_width;
         m_italicCorrection = glyphData.font->mathData()->getItalicCorrection(*glyphData.font, glyphData.glyph);
@@ -386,7 +382,7 @@ void MathOperator::calculateStretchyData(const RenderStyle& style, bool calculat
         getMathVariantsWithFallback(style, isVertical, sizeVariants, assemblyParts);
         // We verify the size variants.
         for (auto& sizeVariant : sizeVariants) {
-            GlyphData glyphData(sizeVariant, baseGlyph.font);
+            GlyphData glyphData(sizeVariant, baseGlyph.font.get());
             if (calculateMaxPreferredWidth)
                 m_maxPreferredWidth = std::max(m_maxPreferredWidth, LayoutUnit(advanceWidthForGlyph(glyphData)));
             else {
@@ -406,14 +402,9 @@ void MathOperator::calculateStretchyData(const RenderStyle& style, bool calculat
 
         // If the font does not have a MATH table, we fallback to the Unicode-only constructions.
         const StretchyCharacter* stretchyCharacter = nullptr;
-        const unsigned maxIndex = std::size(stretchyCharacters);
-        for (unsigned index = 0; index < maxIndex; ++index) {
-            if (stretchyCharacters[index].character == m_baseCharacter) {
-                stretchyCharacter = &stretchyCharacters[index];
-                if (!style.isLeftToRightDirection() && index < leftRightPairsCount * 2) {
-                    // If we are in right-to-left direction we select the mirrored form by adding -1 or +1 according to the parity of index.
-                    index += index % 2 ? -1 : 1;
-                }
+        for (auto& character : stretchyCharacters) {
+            if (character.character == m_baseCharacter) {
+                stretchyCharacter = &character;
                 break;
             }
         }
@@ -526,7 +517,7 @@ LayoutRect MathOperator::paintGlyph(const RenderStyle& style, PaintInfo& info, c
 
     // FIXME: If we're just drawing a single glyph, why do we need to compute an advance?
     auto advance = makeGlyphBufferAdvance(advanceWidthForGlyph(data));
-    info.context().drawGlyphs(*data.font, &data.glyph, &advance, 1, origin, style.fontCascade().fontDescription().usedFontSmoothing());
+    info.context().drawGlyphs(*data.font, singleElementSpan(data.glyph), singleElementSpan(advance), origin, style.fontCascade().fontDescription().usedFontSmoothing());
 
     return glyphPaintRect;
 }
@@ -693,19 +684,19 @@ void MathOperator::paintHorizontalGlyphAssembly(const RenderStyle& style, PaintI
         fillWithHorizontalExtensionGlyph(style, info, LayoutPoint(leftGlyphPaintRect.maxX(), baselineY), LayoutPoint(rightGlyphPaintRect.x(), baselineY));
 }
 
-void MathOperator::paint(const RenderStyle& style, PaintInfo& info, const LayoutPoint& paintOffset)
+void MathOperator::paint(const RenderStyle& style, PaintInfo& info, const LayoutPoint& paintOffset, float deviceScaleFactor)
 {
-    if (info.context().paintingDisabled() || info.phase != PaintPhase::Foreground || style.visibility() != Visibility::Visible)
+    if (info.context().paintingDisabled() || info.phase != PaintPhase::Foreground || style.usedVisibility() != Visibility::Visible)
         return;
 
     // Make a copy of the PaintInfo because applyTransform will modify its rect.
     PaintInfo paintInfo(info);
     GraphicsContextStateSaver stateSaver(paintInfo.context());
-    paintInfo.context().setFillColor(style.visitedDependentColorWithColorFilter(CSSPropertyColor));
+    paintInfo.context().setFillColor(style.visitedDependentColorApplyingColorFilter());
 
     // For a radical character, we may need some scale transform to stretch it vertically or mirror it.
     if (m_baseCharacter == kRadicalOperator) {
-        float radicalHorizontalScale = style.isLeftToRightDirection() ? 1 : -1;
+        float radicalHorizontalScale = style.writingMode().isBidiLTR() ? 1 : -1;
         if (radicalHorizontalScale == -1 || m_radicalVerticalScale > 1) {
             LayoutPoint scaleOrigin = paintOffset;
             scaleOrigin.move(m_width / 2, 0_lu);
@@ -728,12 +719,18 @@ void MathOperator::paint(const RenderStyle& style, PaintInfo& info, const Layout
     if (m_stretchType == StretchType::SizeVariant)
         glyphData.glyph = m_variantGlyph;
 
-    LayoutPoint operatorTopLeft = paintOffset;
-    FloatRect glyphBounds = boundsForGlyph(glyphData);
-    LayoutPoint operatorOrigin { operatorTopLeft.x(), LayoutUnit(operatorTopLeft.y() - glyphBounds.y()) };
+    auto operatorTopLeft = paintOffset;
+    auto glyphBounds = boundsForGlyph(glyphData);
+    auto operatorOrigin = LayoutPoint { operatorTopLeft.x(), LayoutUnit(operatorTopLeft.y() - glyphBounds.y()) };
+
+    if (style.writingMode().isHorizontal())
+        operatorOrigin.setY(roundToDevicePixel(LayoutUnit { operatorOrigin.y() }, deviceScaleFactor));
+    else
+        operatorOrigin.setX(roundToDevicePixel(LayoutUnit { operatorOrigin.x() }, deviceScaleFactor));
+
     // FIXME: If we're just drawing a single glyph, why do we need to compute an advance?
     auto advance = makeGlyphBufferAdvance(advanceWidthForGlyph(glyphData));
-    paintInfo.context().drawGlyphs(*glyphData.font, &glyphData.glyph, &advance, 1, operatorOrigin, style.fontCascade().fontDescription().usedFontSmoothing());
+    paintInfo.context().drawGlyphs(*glyphData.font, singleElementSpan(glyphData.glyph), singleElementSpan(advance), operatorOrigin, style.fontCascade().fontDescription().usedFontSmoothing());
 }
 
 }

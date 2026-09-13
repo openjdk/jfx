@@ -25,20 +25,19 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
-#include "BackgroundFetchInformation.h"
-#include "NotificationClient.h"
-#include "NotificationEventType.h"
-#include "PushSubscriptionData.h"
-#include "ScriptExecutionContextIdentifier.h"
-#include "ServiceWorkerContextData.h"
-#include "ServiceWorkerFetch.h"
-#include "ServiceWorkerIdentifier.h"
-#include "Settings.h"
-#include "Timer.h"
-#include "WorkerThread.h"
-#include <wtf/WeakPtr.h>
+#include <WebCore/BackgroundFetchInformation.h>
+#include <WebCore/NotificationClient.h>
+#include <WebCore/NotificationEventType.h>
+#include <WebCore/PushSubscriptionData.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/ServiceWorkerContextData.h>
+#include <WebCore/ServiceWorkerFetch.h>
+#include <WebCore/ServiceWorkerIdentifier.h>
+#include <WebCore/Settings.h>
+#include <WebCore/Timer.h>
+#include <WebCore/WorkerThread.h>
+#include <wtf/CheckedRef.h>
+#include <wtf/OptionSet.h>
 
 namespace WebCore {
 
@@ -50,16 +49,16 @@ class SerializedScriptValue;
 class WorkerObjectProxy;
 struct MessageWithMessagePorts;
 struct NotificationData;
+struct NotificationPayload;
 
-class ServiceWorkerThread : public WorkerThread, public CanMakeWeakPtr<ServiceWorkerThread, WeakPtrFactoryInitialization::Eager> {
+enum class AdvancedPrivacyProtections : uint16_t;
+
+class ServiceWorkerThread final : public WorkerThread {
 public:
-    template<typename... Args> static Ref<ServiceWorkerThread> create(Args&&... args)
-    {
-        return adoptRef(*new ServiceWorkerThread(std::forward<Args>(args)...));
-    }
+    static Ref<ServiceWorkerThread> create(ServiceWorkerContextData&&, ServiceWorkerData&&, String&& userAgent, WorkerThreadMode, const SettingsValues&, WorkerLoaderProxy&, WorkerDebuggerProxy&, WorkerBadgeProxy&, IDBClient::IDBConnectionProxy*, SocketProvider*, std::unique_ptr<NotificationClient>&&, PAL::SessionID, std::optional<uint64_t>, OptionSet<AdvancedPrivacyProtections>);
     virtual ~ServiceWorkerThread();
 
-    WorkerObjectProxy& workerObjectProxy() const { return m_workerObjectProxy; }
+    WorkerObjectProxy& workerObjectProxy() const;
 
     void start(Function<void(const String&, bool)>&&);
 
@@ -68,11 +67,14 @@ public:
     void willPostTaskToFireMessageEvent();
     void willPostTaskToFirePushSubscriptionChangeEvent();
 
-    void queueTaskToFireFetchEvent(Ref<ServiceWorkerFetch::Client>&&, ResourceRequest&&, String&& referrer, FetchOptions&&, FetchIdentifier, bool isServiceWorkerNavigationPreloadEnabled, String&& clientIdentifier, String&& resultingClientIdentifier);
+    void queueTaskToFireFetchEvent(Ref<ServiceWorkerFetch::Client>&&, ResourceRequest&&, String&& referrer, FetchOptions&&, SWServerConnectionIdentifier, FetchIdentifier, bool isServiceWorkerNavigationPreloadEnabled, String&& clientIdentifier, String&& resultingClientIdentifier);
     void queueTaskToPostMessage(MessageWithMessagePorts&&, ServiceWorkerOrClientData&& sourceData);
     void queueTaskToFireInstallEvent();
     void queueTaskToFireActivateEvent();
-    void queueTaskToFirePushEvent(std::optional<Vector<uint8_t>>&&, Function<void(bool)>&&);
+    void queueTaskToFirePushEvent(std::optional<Vector<uint8_t>>&&, std::optional<NotificationPayload>&&, Function<void(bool, std::optional<NotificationPayload>&&)>&&);
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    void queueTaskToFireDeclarativePushEvent(NotificationPayload&&, Function<void(bool, std::optional<NotificationPayload>&&)>&&);
+#endif
     void queueTaskToFirePushSubscriptionChangeEvent(std::optional<PushSubscriptionData>&& newSubscriptionData, std::optional<PushSubscriptionData>&& oldSubscriptionData);
 #if ENABLE(NOTIFICATION_EVENT)
     void queueTaskToFireNotificationEvent(NotificationData&&, NotificationEventType, Function<void(bool)>&&);
@@ -88,16 +90,19 @@ public:
     void stopFetchEventMonitoring() { m_isHandlingFetchEvent = false; }
     void startFunctionalEventMonitoring();
     void stopFunctionalEventMonitoring() { m_isHandlingFunctionalEvent = false; }
+    void startNotificationPayloadFunctionalEventMonitoring();
+    void stopNotificationPayloadFunctionalEventMonitoring() { m_isHandlingNotificationPayloadFunctionalEvent = false; }
 
 protected:
     Ref<WorkerGlobalScope> createWorkerGlobalScope(const WorkerParameters&, Ref<SecurityOrigin>&&, Ref<SecurityOrigin>&& topOrigin) final;
     void runEventLoop() override;
 
 private:
-    WEBCORE_EXPORT ServiceWorkerThread(ServiceWorkerContextData&&, ServiceWorkerData&&, String&& userAgent, WorkerThreadMode, const Settings::Values&, WorkerLoaderProxy&, WorkerDebuggerProxy&, WorkerBadgeProxy&, IDBClient::IDBConnectionProxy*, SocketProvider*, std::unique_ptr<NotificationClient>&&, PAL::SessionID, std::optional<uint64_t>);
+    WEBCORE_EXPORT ServiceWorkerThread(ServiceWorkerContextData&&, ServiceWorkerData&&, String&& userAgent, WorkerThreadMode, const SettingsValues&, WorkerLoaderProxy&, WorkerDebuggerProxy&, WorkerBadgeProxy&, IDBClient::IDBConnectionProxy*, SocketProvider*, std::unique_ptr<NotificationClient>&&, PAL::SessionID, std::optional<uint64_t>, OptionSet<AdvancedPrivacyProtections>);
 
     ASCIILiteral threadName() const final { return "WebCore: ServiceWorker"_s; }
     void finishedEvaluatingScript() final;
+    bool isServiceWorkerThread() const final { return true; }
 
     void finishedFiringInstallEvent(bool hasRejectedAnyPromise);
     void finishedFiringActivateEvent();
@@ -113,11 +118,12 @@ private:
     std::optional<ServiceWorkerJobDataIdentifier> m_jobDataIdentifier;
     std::optional<ServiceWorkerContextData> m_contextData; // Becomes std::nullopt after the ServiceWorkerGlobalScope has been created.
     std::optional<ServiceWorkerData> m_workerData; // Becomes std::nullopt after the ServiceWorkerGlobalScope has been created.
-    WorkerObjectProxy& m_workerObjectProxy;
+    const CheckedRef<WorkerObjectProxy> m_workerObjectProxy;
     bool m_doesHandleFetch { false };
 
     bool m_isHandlingFetchEvent { false };
     bool m_isHandlingFunctionalEvent { false };
+    bool m_isHandlingNotificationPayloadFunctionalEvent { false };
     uint64_t m_pushSubscriptionChangeEventCount { 0 };
     uint64_t m_messageEventCount { 0 };
     enum class State { Idle, Starting, Installing, Activating };
@@ -133,4 +139,6 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(SERVICE_WORKER)
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ServiceWorkerThread)
+    static bool isType(const WebCore::WorkerOrWorkletThread& thread) { return thread.isServiceWorkerThread(); }
+SPECIALIZE_TYPE_TRAITS_END()

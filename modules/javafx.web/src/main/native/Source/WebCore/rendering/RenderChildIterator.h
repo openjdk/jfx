@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -55,7 +55,7 @@ public:
     T* last();
 
 private:
-    RenderElement& m_parent;
+    const CheckedRef<RenderElement> m_parent;
 };
 
 template <typename T>
@@ -68,7 +68,7 @@ public:
     const T* last() const;
 
 private:
-    const RenderElement& m_parent;
+    const CheckedRef<const RenderElement> m_parent;
 };
 
 template <typename T> RenderChildIteratorAdapter<T> childrenOfType(RenderElement&);
@@ -125,25 +125,25 @@ inline RenderChildIteratorAdapter<T>::RenderChildIteratorAdapter(RenderElement& 
 template <typename T>
 inline RenderChildIterator<T> RenderChildIteratorAdapter<T>::begin()
 {
-    return RenderChildIterator<T>(m_parent, RenderTraversal::firstChild<T>(m_parent));
+    return RenderChildIterator<T>(m_parent, RenderTraversal::firstChild<T>(m_parent.get()));
 }
 
 template <typename T>
 inline RenderChildIterator<T> RenderChildIteratorAdapter<T>::end()
 {
-    return RenderChildIterator<T>(m_parent);
+    return RenderChildIterator<T>(m_parent.get());
 }
 
 template <typename T>
 inline T* RenderChildIteratorAdapter<T>::first()
 {
-    return RenderTraversal::firstChild<T>(m_parent);
+    return RenderTraversal::firstChild<T>(m_parent.get());
 }
 
 template <typename T>
 inline T* RenderChildIteratorAdapter<T>::last()
 {
-    return RenderTraversal::lastChild<T>(m_parent);
+    return RenderTraversal::lastChild<T>(m_parent.get());
 }
 
 // RenderChildConstIteratorAdapter
@@ -157,25 +157,25 @@ inline RenderChildConstIteratorAdapter<T>::RenderChildConstIteratorAdapter(const
 template <typename T>
 inline RenderChildConstIterator<T> RenderChildConstIteratorAdapter<T>::begin() const
 {
-    return RenderChildConstIterator<T>(m_parent, RenderTraversal::firstChild<T>(m_parent));
+    return RenderChildConstIterator<T>(m_parent.get(), RenderTraversal::firstChild<T>(m_parent.get()));
 }
 
 template <typename T>
 inline RenderChildConstIterator<T> RenderChildConstIteratorAdapter<T>::end() const
 {
-    return RenderChildConstIterator<T>(m_parent);
+    return RenderChildConstIterator<T>(m_parent.get());
 }
 
 template <typename T>
 inline const T* RenderChildConstIteratorAdapter<T>::first() const
 {
-    return RenderTraversal::firstChild<T>(m_parent);
+    return RenderTraversal::firstChild<T>(m_parent.get());
 }
 
 template <typename T>
 inline const T* RenderChildConstIteratorAdapter<T>::last() const
 {
-    return RenderTraversal::lastChild<T>(m_parent);
+    return RenderTraversal::lastChild<T>(m_parent.get());
 }
 
 // Standalone functions

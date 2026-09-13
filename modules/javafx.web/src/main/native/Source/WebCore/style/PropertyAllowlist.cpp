@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,9 +29,9 @@
 namespace WebCore {
 namespace Style {
 
-PropertyAllowlist propertyAllowlistForPseudoId(PseudoId pseudoId)
+PropertyAllowlist propertyAllowlistForPseudoElement(PseudoElementType type)
 {
-    if (pseudoId == PseudoId::Marker)
+    if (type == PseudoElementType::Marker)
         return PropertyAllowlist::Marker;
     return PropertyAllowlist::None;
 }
@@ -44,6 +44,7 @@ bool isValidMarkerStyleProperty(CSSPropertyID id)
     case CSSPropertyColor:
     case CSSPropertyContent:
     case CSSPropertyCustom:
+    case CSSPropertyCursor:
     case CSSPropertyDirection:
     case CSSPropertyFont:
     case CSSPropertyFontFamily:
@@ -51,7 +52,7 @@ bool isValidMarkerStyleProperty(CSSPropertyID id)
     case CSSPropertyFontKerning:
     case CSSPropertyFontSize:
     case CSSPropertyFontSizeAdjust:
-    case CSSPropertyFontStretch:
+    case CSSPropertyFontWidth:
     case CSSPropertyFontStyle:
     case CSSPropertyFontSynthesis:
     case CSSPropertyFontSynthesisWeight:
@@ -81,10 +82,14 @@ bool isValidMarkerStyleProperty(CSSPropertyID id)
     case CSSPropertyTextEmphasisColor:
     case CSSPropertyTextEmphasisPosition:
     case CSSPropertyTextEmphasisStyle:
+    case CSSPropertyTextIndent:
+    case CSSPropertyTextOrientation:
     case CSSPropertyTextShadow:
     case CSSPropertyTextTransform:
-    case CSSPropertyTextWrap:
+    case CSSPropertyTextWrapMode:
+    case CSSPropertyTextWrapStyle:
     case CSSPropertyUnicodeBidi:
+    case CSSPropertyWebkitTextOrientation:
     case CSSPropertyWordBreak:
     case CSSPropertyWordSpacing:
     case CSSPropertyWhiteSpace:
@@ -98,6 +103,10 @@ bool isValidMarkerStyleProperty(CSSPropertyID id)
     case CSSPropertyAnimationPlayState:
     case CSSPropertyAnimationComposition:
     case CSSPropertyAnimationName:
+    case CSSPropertyAnimationRangeEnd:
+    case CSSPropertyAnimationRangeStart:
+    case CSSPropertyAnimationTimeline:
+    case CSSPropertyTransitionBehavior:
     case CSSPropertyTransitionDuration:
     case CSSPropertyTransitionTimingFunction:
     case CSSPropertyTransitionDelay:
@@ -111,6 +120,47 @@ bool isValidMarkerStyleProperty(CSSPropertyID id)
 
 #if ENABLE(VIDEO)
 bool isValidCueStyleProperty(CSSPropertyID id)
+{
+    switch (id) {
+    case CSSPropertyColor:
+    case CSSPropertyCustom:
+    case CSSPropertyFont:
+    case CSSPropertyFontFamily:
+    case CSSPropertyFontSize:
+    case CSSPropertyFontStyle:
+    case CSSPropertyFontVariantCaps:
+    case CSSPropertyFontWeight:
+    case CSSPropertyLineHeight:
+    case CSSPropertyOpacity:
+    case CSSPropertyOutline:
+    case CSSPropertyOutlineColor:
+    case CSSPropertyOutlineOffset:
+    case CSSPropertyOutlineStyle:
+    case CSSPropertyOutlineWidth:
+    case CSSPropertyVisibility:
+    case CSSPropertyWhiteSpace:
+    case CSSPropertyWhiteSpaceCollapse:
+    case CSSPropertyTextCombineUpright:
+    case CSSPropertyTextDecorationLine:
+    case CSSPropertyTextShadow:
+    case CSSPropertyTextWrapMode:
+    case CSSPropertyTextWrapStyle:
+    case CSSPropertyBorderStyle:
+    case CSSPropertyPaintOrder:
+    case CSSPropertyStrokeLinejoin:
+    case CSSPropertyStrokeLinecap:
+    case CSSPropertyStrokeColor:
+    case CSSPropertyStrokeWidth:
+        return true;
+    default:
+        break;
+    }
+    return false;
+}
+#endif
+
+#if ENABLE(VIDEO)
+bool isValidCueSelectorStyleProperty(CSSPropertyID id)
 {
     switch (id) {
     case CSSPropertyBackground:
@@ -142,15 +192,38 @@ bool isValidCueStyleProperty(CSSPropertyID id)
     case CSSPropertyVisibility:
     case CSSPropertyWhiteSpace:
     case CSSPropertyWhiteSpaceCollapse:
+    case CSSPropertyTextCombineUpright:
     case CSSPropertyTextDecorationLine:
     case CSSPropertyTextShadow:
-    case CSSPropertyTextWrap:
+    case CSSPropertyTextWrapMode:
+    case CSSPropertyTextWrapStyle:
     case CSSPropertyBorderStyle:
     case CSSPropertyPaintOrder:
     case CSSPropertyStrokeLinejoin:
     case CSSPropertyStrokeLinecap:
     case CSSPropertyStrokeColor:
     case CSSPropertyStrokeWidth:
+        return true;
+    default:
+        break;
+    }
+    return false;
+}
+
+bool isValidCueBackgroundStyleProperty(CSSPropertyID id)
+{
+    switch (id) {
+    case CSSPropertyBackground:
+    case CSSPropertyBackgroundAttachment:
+    case CSSPropertyBackgroundClip:
+    case CSSPropertyBackgroundColor:
+    case CSSPropertyBackgroundImage:
+    case CSSPropertyBackgroundOrigin:
+    case CSSPropertyBackgroundPosition:
+    case CSSPropertyBackgroundPositionX:
+    case CSSPropertyBackgroundPositionY:
+    case CSSPropertyBackgroundRepeat:
+    case CSSPropertyBackgroundSize:
         return true;
     default:
         break;

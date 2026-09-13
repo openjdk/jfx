@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,13 +26,19 @@
 #include "config.h"
 #include "RenderTreeBuilderTable.h"
 
+#include "RenderElementInlines.h"
+#include "RenderObjectStyle.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderTableCaption.h"
 #include "RenderTableCell.h"
 #include "RenderTableCol.h"
 #include "RenderTableRow.h"
 #include "RenderTreeBuilder.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTreeBuilder::Table);
 
 RenderTreeBuilder::Table::Table(RenderTreeBuilder& builder)
     : m_builder(builder)
@@ -46,26 +52,26 @@ RenderElement& RenderTreeBuilder::Table::findOrCreateParentForChild(RenderTableR
 
     if (beforeChild && !beforeChild->isAnonymous() && beforeChild->parent() == &parent) {
         auto* previousSibling = beforeChild->previousSibling();
-        if (is<RenderTableCell>(previousSibling) && previousSibling->isAnonymous()) {
+        if (auto* tableCell = dynamicDowncast<RenderTableCell>(previousSibling); tableCell && tableCell->isAnonymous()) {
             beforeChild = nullptr;
-            return downcast<RenderElement>(*previousSibling);
+            return *tableCell;
         }
     }
 
     auto createAnonymousTableCell = [&] (auto& parent) -> RenderTableCell& {
-        auto newCell = RenderTableCell::createAnonymousWithParentRenderer(parent);
+        auto newCell = createAnonymousTableCellWithStyle(parent.protectedDocument(), parent.style());
         auto& cell = *newCell;
-        m_builder.attach(parent, WTFMove(newCell), beforeChild);
+        m_builder.attach(parent, WTF::move(newCell), beforeChild);
         beforeChild = nullptr;
         return cell;
     };
 
     auto* lastChild = beforeChild ? beforeChild : parent.lastCell();
     if (lastChild) {
-        if (is<RenderTableCell>(*lastChild) && lastChild->isAnonymous() && !lastChild->isBeforeOrAfterContent()) {
+        if (auto* tableCell = dynamicDowncast<RenderTableCell>(*lastChild); tableCell && tableCell->isAnonymous() && !tableCell->isBeforeOrAfterContent()) {
             if (beforeChild == lastChild)
-                beforeChild = downcast<RenderElement>(*lastChild).firstChild();
-            return downcast<RenderElement>(*lastChild);
+                beforeChild = tableCell->firstChild();
+            return *tableCell;
         }
 
         // Try to find an anonymous container for the child.
@@ -78,8 +84,8 @@ RenderElement& RenderTreeBuilder::Table::findOrCreateParentForChild(RenderTableR
                 if (!is<RenderTableCell>(*lastChild))
                     return *lastChildParent;
                 // If beforeChild is inside an anonymous row, insert into the row.
-                if (is<RenderTableRow>(*lastChildParent))
-                    return createAnonymousTableCell(downcast<RenderTableRow>(*lastChildParent));
+                if (auto* tableRow = dynamicDowncast<RenderTableRow>(*lastChildParent))
+                    return createAnonymousTableCell(*tableRow);
             }
         }
     }
@@ -92,17 +98,17 @@ RenderElement& RenderTreeBuilder::Table::findOrCreateParentForChild(RenderTableS
         return parent;
 
     auto* lastChild = beforeChild ? beforeChild : parent.lastRow();
-    if (is<RenderTableRow>(lastChild) && lastChild->isAnonymous() && !lastChild->isBeforeOrAfterContent()) {
+    if (auto* tableRow = dynamicDowncast<RenderTableRow>(lastChild); tableRow && tableRow->isAnonymous() && !tableRow->isBeforeOrAfterContent()) {
         if (beforeChild == lastChild)
-            beforeChild = downcast<RenderTableRow>(*lastChild).firstCell();
-        return downcast<RenderElement>(*lastChild);
+            beforeChild = tableRow->firstCell();
+        return *tableRow;
     }
 
     if (beforeChild && !beforeChild->isAnonymous() && beforeChild->parent() == &parent) {
         auto* row = beforeChild->previousSibling();
-        if (is<RenderTableRow>(row) && row->isAnonymous()) {
+        if (auto* tableRow = dynamicDowncast<RenderTableRow>(row); tableRow && tableRow->isAnonymous()) {
             beforeChild = nullptr;
-            return downcast<RenderElement>(*row);
+            return *tableRow;
         }
     }
 
@@ -111,12 +117,12 @@ RenderElement& RenderTreeBuilder::Table::findOrCreateParentForChild(RenderTableS
     auto* parentCandidate = lastChild;
     while (parentCandidate && parentCandidate->parent() && parentCandidate->parent()->isAnonymous() && !is<RenderTableRow>(*parentCandidate))
         parentCandidate = parentCandidate->parent();
-    if (is<RenderTableRow>(parentCandidate) && parentCandidate->isAnonymous() && !parentCandidate->isBeforeOrAfterContent())
-        return downcast<RenderElement>(*parentCandidate);
+    if (auto* tableRow = dynamicDowncast<RenderTableRow>(parentCandidate); tableRow && tableRow->isAnonymous() && !tableRow->isBeforeOrAfterContent())
+        return *tableRow;
 
-    auto newRow = RenderTableRow::createAnonymousWithParentRenderer(parent);
+    auto newRow = createAnonymousTableRowWithStyle(parent.protectedDocument(), parent.style());
     auto& row = *newRow;
-    m_builder.attach(parent, WTFMove(newRow), beforeChild);
+    m_builder.attach(parent, WTF::move(newRow), beforeChild);
     beforeChild = nullptr;
     return row;
 }
@@ -126,28 +132,28 @@ RenderElement& RenderTreeBuilder::Table::findOrCreateParentForChild(RenderTable&
     if (is<RenderTableCaption>(child) || is<RenderTableSection>(child))
         return parent;
 
-    if (is<RenderTableCol>(child)) {
-        if (!child.node() || child.style().display() == DisplayType::TableColumnGroup) {
+    if (CheckedPtr tableColumn = dynamicDowncast<RenderTableCol>(child)) {
+        if (!tableColumn->element() || tableColumn->style().display() == DisplayType::TableColumnGroup) {
             // COLGROUPs and anonymous RenderTableCols (generated wrappers for COLs) are direct children of the table renderer.
             return parent;
         }
         auto newColGroup = createRenderer<RenderTableCol>(parent.document(), RenderStyle::createAnonymousStyleWithDisplay(parent.style(), DisplayType::TableColumnGroup));
         newColGroup->initializeStyle();
         auto& colGroup = *newColGroup;
-        m_builder.attach(parent, WTFMove(newColGroup), beforeChild);
+        m_builder.attach(parent, WTF::move(newColGroup), beforeChild);
         beforeChild = nullptr;
         return colGroup;
     }
 
     auto* lastChild = parent.lastChild();
-    if (!beforeChild && is<RenderTableSection>(lastChild) && lastChild->isAnonymous() && !lastChild->isBeforeContent())
-        return downcast<RenderElement>(*lastChild);
+    if (auto* tableSection = dynamicDowncast<RenderTableSection>(lastChild); !beforeChild && tableSection && tableSection->isAnonymous() && !tableSection->isBeforeContent())
+        return *tableSection;
 
     if (beforeChild && !beforeChild->isAnonymous() && beforeChild->parent() == &parent) {
         auto* section = beforeChild->previousSibling();
-        if (is<RenderTableSection>(section) && section->isAnonymous()) {
+        if (auto* tableSection = dynamicDowncast<RenderTableSection>(section); tableSection && tableSection->isAnonymous()) {
             beforeChild = nullptr;
-            return downcast<RenderElement>(*section);
+            return *tableSection;
         }
     }
 
@@ -161,16 +167,16 @@ RenderElement& RenderTreeBuilder::Table::findOrCreateParentForChild(RenderTable&
     if (parentCandidate) {
         if (beforeChild && !beforeChild->isAnonymous() && parentCandidate->parent() == &parent) {
             auto* section = parentCandidate->previousSibling();
-            if (is<RenderTableSection>(section) && section->isAnonymous()) {
+            if (auto* tableSection = dynamicDowncast<RenderTableSection>(section); tableSection && tableSection->isAnonymous()) {
                 beforeChild = nullptr;
-                return downcast<RenderElement>(*section);
+                return *tableSection;
             }
         }
 
-        if (is<RenderTableSection>(*parentCandidate) && parentCandidate->isAnonymous() && !parent.isAfterContent(parentCandidate)) {
+        if (auto* parentTableSection = dynamicDowncast<RenderTableSection>(*parentCandidate); parentTableSection && parentTableSection->isAnonymous() && !parent.isAfterContent(parentTableSection)) {
             if (beforeChild == parentCandidate)
-                beforeChild = downcast<RenderTableSection>(*parentCandidate).firstRow();
-            return downcast<RenderElement>(*parentCandidate);
+                beforeChild = parentTableSection->firstRow();
+            return *parentTableSection;
         }
     }
 
@@ -179,9 +185,9 @@ RenderElement& RenderTreeBuilder::Table::findOrCreateParentForChild(RenderTable&
         && beforeChild->style().display() != DisplayType::TableColumnGroup)
         beforeChild = nullptr;
 
-    auto newSection = RenderTableSection::createAnonymousWithParentRenderer(parent);
+    auto newSection = createAnonymousTableSectionWithStyle(parent.protectedDocument(), parent.style());
     auto& section = *newSection;
-    m_builder.attach(parent, WTFMove(newSection), beforeChild);
+    m_builder.attach(parent, WTF::move(newSection), beforeChild);
     beforeChild = nullptr;
     return section;
 }
@@ -193,10 +199,10 @@ void RenderTreeBuilder::Table::attach(RenderTableRow& parent, RenderPtr<RenderOb
 
     auto& newChild = *child.get();
     ASSERT(!beforeChild || is<RenderTableCell>(*beforeChild));
-    m_builder.attachToRenderElement(parent, WTFMove(child), beforeChild);
+    m_builder.attachToRenderElement(parent, WTF::move(child), beforeChild);
     // FIXME: child should always be a RenderTableCell at this point.
-    if (is<RenderTableCell>(newChild))
-        parent.didInsertTableCell(downcast<RenderTableCell>(newChild), beforeChild);
+    if (auto* renderTableCell = dynamicDowncast<RenderTableCell>(newChild))
+        parent.didInsertTableCell(*renderTableCell, beforeChild);
 }
 
 void RenderTreeBuilder::Table::attach(RenderTableSection& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild)
@@ -205,10 +211,10 @@ void RenderTreeBuilder::Table::attach(RenderTableSection& parent, RenderPtr<Rend
         beforeChild = m_builder.splitAnonymousBoxesAroundChild(parent, *beforeChild);
 
     // FIXME: child should always be a RenderTableRow at this point.
-    if (is<RenderTableRow>(child))
-        parent.willInsertTableRow(downcast<RenderTableRow>(*child.get()), beforeChild);
+    if (auto* renderTableRow = dynamicDowncast<RenderTableRow>(child.get()))
+        parent.willInsertTableRow(*renderTableRow, beforeChild);
     ASSERT(!beforeChild || is<RenderTableRow>(*beforeChild));
-    m_builder.attachToRenderElement(parent, WTFMove(child), beforeChild);
+    m_builder.attachToRenderElement(parent, WTF::move(child), beforeChild);
 }
 
 void RenderTreeBuilder::Table::attach(RenderTable& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild)
@@ -217,19 +223,18 @@ void RenderTreeBuilder::Table::attach(RenderTable& parent, RenderPtr<RenderObjec
         beforeChild = m_builder.splitAnonymousBoxesAroundChild(parent, *beforeChild);
 
     auto& newChild = *child.get();
-    if (is<RenderTableSection>(newChild))
-        parent.willInsertTableSection(downcast<RenderTableSection>(newChild), beforeChild);
-    else if (is<RenderTableCol>(newChild))
-        parent.willInsertTableColumn(downcast<RenderTableCol>(newChild), beforeChild);
+    if (auto* renderTableSection = dynamicDowncast<RenderTableSection>(newChild))
+        parent.willInsertTableSection(*renderTableSection, beforeChild);
+    else if (auto* renderTableCol = dynamicDowncast<RenderTableCol>(newChild))
+        parent.willInsertTableColumn(*renderTableCol, beforeChild);
 
-    m_builder.attachToRenderElement(parent, WTFMove(child), beforeChild);
+    m_builder.attachToRenderElement(parent, WTF::move(child), beforeChild);
 }
 
 bool RenderTreeBuilder::Table::childRequiresTable(const RenderElement& parent, const RenderObject& child)
 {
-    if (is<RenderTableCol>(child)) {
-        const RenderTableCol& newTableColumn = downcast<RenderTableCol>(child);
-        bool isColumnInColumnGroup = newTableColumn.isTableColumn() && is<RenderTableCol>(parent);
+    if (auto* newTableColumn = dynamicDowncast<RenderTableCol>(child)) {
+        bool isColumnInColumnGroup = newTableColumn->isTableColumn() && is<RenderTableCol>(parent);
         return !is<RenderTable>(parent) && !isColumnInColumnGroup;
     }
     if (is<RenderTableCaption>(child))
@@ -266,18 +271,46 @@ RenderPtr<RenderObject> RenderTreeBuilder::Table::collapseAndDetachAnonymousNext
         return { };
     m_builder.moveAllChildren(*nextSibling, *previousSibling, RenderTreeBuilder::NormalizeAfterInsertion::No);
     previousSibling->setChildrenInline(!previousSibling->firstInFlowChild() || previousSibling->firstInFlowChild()->isInline());
-    return m_builder.detach(*parent, *nextSibling);
+    return m_builder.detach(*parent, *nextSibling, WillBeDestroyed::Yes);
 }
 
 void RenderTreeBuilder::Table::collapseAndDestroyAnonymousSiblingCells(const RenderTableCell& willBeDestroyed)
 {
     if (auto nextCellToDestroy = collapseAndDetachAnonymousNextSibling(willBeDestroyed.row(), willBeDestroyed.previousCell(), willBeDestroyed.nextCell()))
-        downcast<RenderTableCell>(*nextCellToDestroy).deleteLines();
+        downcast<RenderTableCell>(*nextCellToDestroy).invalidateLineLayout(RenderBlockFlow::InvalidationReason::InternalMove);
 }
 
 void RenderTreeBuilder::Table::collapseAndDestroyAnonymousSiblingRows(const RenderTableRow& willBeDestroyed)
 {
     auto toDestroy = collapseAndDetachAnonymousNextSibling(willBeDestroyed.section(), willBeDestroyed.previousRow(), willBeDestroyed.nextRow());
+}
+
+RenderPtr<RenderTable> RenderTreeBuilder::Table::createAnonymousTableWithStyle(Document& document, const RenderStyle& style)
+{
+    auto table = createRenderer<RenderTable>(RenderObject::Type::Table, document, RenderStyle::createAnonymousStyleWithDisplay(style, style.display() == DisplayType::Inline ? DisplayType::InlineTable : DisplayType::Table));
+    table->initializeStyle();
+    return table;
+}
+
+RenderPtr<RenderTableCell> RenderTreeBuilder::Table::createAnonymousTableCellWithStyle(Document& document, const RenderStyle& style)
+{
+    auto cell = createRenderer<RenderTableCell>(document, RenderStyle::createAnonymousStyleWithDisplay(style, DisplayType::TableCell));
+    cell->initializeStyle();
+    return cell;
+}
+
+RenderPtr<RenderTableRow> RenderTreeBuilder::Table::createAnonymousTableRowWithStyle(Document& document, const RenderStyle& style)
+{
+    auto row = createRenderer<RenderTableRow>(document, RenderStyle::createAnonymousStyleWithDisplay(style, DisplayType::TableRow));
+    row->initializeStyle();
+    return row;
+}
+
+RenderPtr<RenderTableSection> RenderTreeBuilder::Table::createAnonymousTableSectionWithStyle(Document& document, const RenderStyle& style)
+{
+    auto section = createRenderer<RenderTableSection>(document, RenderStyle::createAnonymousStyleWithDisplay(style, DisplayType::TableRowGroup));
+    section->initializeStyle();
+    return section;
 }
 
 }

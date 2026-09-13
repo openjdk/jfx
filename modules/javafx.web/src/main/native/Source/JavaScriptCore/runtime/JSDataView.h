@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "DataView.h"
-#include "JSArrayBufferView.h"
+#include <JavaScriptCore/DataView.h>
+#include <JavaScriptCore/JSArrayBufferView.h>
 
 namespace JSC {
 
@@ -60,10 +60,10 @@ public:
     {
         // https://tc39.es/proposal-resizablearraybuffer/#sec-isviewoutofbounds
         // https://tc39.es/proposal-resizablearraybuffer/#sec-getviewbytelength
-        if (UNLIKELY(isDetached()))
+        if (isDetached()) [[unlikely]]
             return std::nullopt;
 
-        if (LIKELY(canUseRawFieldsDirectly()))
+        if (canUseRawFieldsDirectly()) [[likely]]
             return byteLengthRaw();
 
         RefPtr<ArrayBuffer> buffer = possiblySharedBuffer();
@@ -86,7 +86,7 @@ public:
         RELEASE_ASSERT(!m_buffer->isShared());
         return m_buffer;
     }
-    static ptrdiff_t offsetOfBuffer() { return OBJECT_OFFSETOF(JSDataView, m_buffer); }
+    static constexpr ptrdiff_t offsetOfBuffer() { return OBJECT_OFFSETOF(JSDataView, m_buffer); }
 
     RefPtr<DataView> possiblySharedTypedImpl();
     RefPtr<DataView> unsharedTypedImpl();

@@ -30,15 +30,15 @@
 
 #if ENABLE(ENCRYPTED_MEDIA)
 
-#include <wtf/Forward.h>
-#include <wtf/WeakPtr.h>
+#include <WebCore/CDMTypesForward.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
 class CDMInstance;
 class SharedBuffer;
 
-class CDMClient : public CanMakeWeakPtr<CDMClient> {
+class CDMClient : public AbstractRefCountedAndCanMakeWeakPtr<CDMClient> {
 public:
     virtual ~CDMClient() = default;
 

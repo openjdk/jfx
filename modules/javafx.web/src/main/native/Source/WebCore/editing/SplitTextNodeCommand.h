@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@ class SplitTextNodeCommand : public SimpleEditCommand {
 public:
     static Ref<SplitTextNodeCommand> create(Ref<Text>&& node, int offset)
     {
-        return adoptRef(*new SplitTextNodeCommand(WTFMove(node), offset));
+        return adoptRef(*new SplitTextNodeCommand(WTF::move(node), offset));
     }
 
 private:
@@ -47,11 +47,13 @@ private:
     void insertText1AndTrimText2();
 
 #ifndef NDEBUG
-    void getNodesInCommand(HashSet<Ref<Node>>&) override;
+    void getNodesInCommand(NodeSet&) override;
 #endif
 
+    RefPtr<Text> protectedText1() const { return m_text1; }
+
     RefPtr<Text> m_text1;
-    Ref<Text> m_text2;
+    const Ref<Text> m_text2;
     unsigned m_offset;
 };
 

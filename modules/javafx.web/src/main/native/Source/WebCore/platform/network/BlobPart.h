@@ -25,63 +25,83 @@
 
 #pragma once
 
+#include <WebCore/SharedBuffer.h>
 #include <wtf/URL.h>
+
+namespace IPC {
+template<typename> struct ArgumentCoder;
+}
 
 namespace WebCore {
 
 class BlobPart {
+private:
+    friend struct IPC::ArgumentCoder<BlobPart>;
 public:
+    using VariantType = Variant<Vector<uint8_t>, Ref<SharedBuffer>, URL>;
+
     enum class Type : bool {
         Data,
         Blob
     };
 
     BlobPart()
-        : m_type(Type::Data)
+        : m_dataOrURL(Vector<uint8_t> { })
     {
     }
 
-    BlobPart(Vector<uint8_t>&& data)
-        : m_type(Type::Data)
-        , m_data(WTFMove(data))
+    explicit BlobPart(Vector<uint8_t>&& data)
+        : m_dataOrURL(WTF::move(data))
     {
     }
 
-    BlobPart(const URL& url)
-        : m_type(Type::Blob)
-        , m_url(url)
+    explicit BlobPart(Ref<SharedBuffer>&& data)
+        : m_dataOrURL(WTF::move(data))
     {
     }
 
-    Type type() const { return m_type; }
-
-    const Vector<uint8_t>& data() const
+    explicit BlobPart(const URL& url)
+        : m_dataOrURL(url)
     {
-        ASSERT(m_type == Type::Data);
-        return m_data;
     }
 
-    Vector<uint8_t> moveData()
+    Type type() const
     {
-        ASSERT(m_type == Type::Data);
-        return WTFMove(m_data);
+        return std::holds_alternative<URL>(m_dataOrURL) ? Type::Blob : Type::Data;
+    }
+
+    Vector<uint8_t> takeData()
+    {
+        auto blobPartVariant = std::exchange(m_dataOrURL, Vector<uint8_t> { });
+        return switchOn(WTF::move(blobPartVariant), [](Ref<SharedBuffer>&& buffer) {
+            return buffer->extractData();
+        }, [](Vector<uint8_t>&& vector) {
+            return WTF::move(vector);
+        }, [](URL&&) {
+            ASSERT_NOT_REACHED();
+            return Vector<uint8_t> { };
+        });
     }
 
     const URL& url() const
     {
-        ASSERT(m_type == Type::Blob);
-        return m_url;
+        ASSERT(std::holds_alternative<URL>(m_dataOrURL));
+        return std::get<URL>(m_dataOrURL);
     }
 
     void detachFromCurrentThread()
     {
-        m_url = m_url.isolatedCopy();
+        if (std::holds_alternative<URL>(m_dataOrURL))
+            m_dataOrURL = std::get<URL>(m_dataOrURL).isolatedCopy();
     }
 
 private:
-    Type m_type;
-    Vector<uint8_t> m_data;
-    URL m_url;
+    explicit BlobPart(VariantType&& dataOrURL)
+        : m_dataOrURL(WTF::move(dataOrURL))
+    {
+    }
+
+    VariantType m_dataOrURL;
 };
 
 } // namespace WebCore

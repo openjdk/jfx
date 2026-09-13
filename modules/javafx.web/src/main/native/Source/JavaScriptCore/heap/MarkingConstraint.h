@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,14 +25,15 @@
 
 #pragma once
 
-#include "ConstraintConcurrency.h"
-#include "ConstraintParallelism.h"
-#include "ConstraintVolatility.h"
+#include <JavaScriptCore/ConstraintConcurrency.h>
+#include <JavaScriptCore/ConstraintParallelism.h>
+#include <JavaScriptCore/ConstraintVolatility.h>
+#include <JavaScriptCore/JSExportMacros.h>
 #include <limits.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/Lock.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/SharedTask.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/CString.h>
 
 namespace JSC {
@@ -43,7 +44,7 @@ class SlotVisitor;
 
 class MarkingConstraint {
     WTF_MAKE_NONCOPYABLE(MarkingConstraint);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(MarkingConstraint);
 public:
     JS_EXPORT_PRIVATE MarkingConstraint(
         CString abbreviatedName, CString name, ConstraintVolatility,
@@ -54,8 +55,8 @@ public:
 
     unsigned index() const { return m_index; }
 
-    const char* abbreviatedName() const { return m_abbreviatedName.data(); }
-    const char* name() const { return m_name.data(); }
+    const char* abbreviatedName() const LIFETIME_BOUND { return m_abbreviatedName.data(); }
+    const char* name() const LIFETIME_BOUND { return m_name.data(); }
 
     void resetStats();
 

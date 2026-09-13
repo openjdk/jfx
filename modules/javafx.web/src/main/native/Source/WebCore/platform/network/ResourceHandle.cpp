@@ -27,6 +27,7 @@
 #include "ResourceHandle.h"
 #include "ResourceHandleInternal.h"
 
+#include "DNS.h"
 #include "Logging.h"
 #include "NetworkingContext.h"
 #include "NotImplemented.h"
@@ -40,6 +41,7 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/AtomStringHash.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -78,14 +80,14 @@ void ResourceHandle::registerBuiltinSynchronousLoader(const AtomString& protocol
 }
 
 ResourceHandle::ResourceHandle(NetworkingContext* context, const ResourceRequest& request, ResourceHandleClient* client, bool defersLoading, bool shouldContentSniff, ContentEncodingSniffingPolicy contentEncodingSniffingPolicy, RefPtr<SecurityOrigin>&& sourceOrigin, bool isMainFrameNavigation)
-    : d(makeUnique<ResourceHandleInternal>(this, context, request, client, defersLoading, shouldContentSniff && shouldContentSniffURL(request.url()), contentEncodingSniffingPolicy, WTFMove(sourceOrigin), isMainFrameNavigation))
+    : d(makeUnique<ResourceHandleInternal>(this, context, request, client, defersLoading, shouldContentSniff && shouldContentSniffURL(request.url()), contentEncodingSniffingPolicy, WTF::move(sourceOrigin), isMainFrameNavigation))
 {
     if (!request.url().isValid()) {
         scheduleFailure(InvalidURLFailure);
         return;
     }
 
-    if (!portAllowed(request.url())) {
+    if (!portAllowed(request.url()) || isIPAddressDisallowed(request.url())) {
         scheduleFailure(BlockedFailure);
         return;
     }
@@ -98,7 +100,7 @@ RefPtr<ResourceHandle> ResourceHandle::create(NetworkingContext* context, const 
             return constructor(request, client);
     }
 
-    auto newHandle = adoptRef(*new ResourceHandle(context, request, client, defersLoading, shouldContentSniff, contentEncodingSniffingPolicy, WTFMove(sourceOrigin), isMainFrameNavigation));
+    auto newHandle = adoptRef(*new ResourceHandle(context, request, client, defersLoading, shouldContentSniff, contentEncodingSniffingPolicy, WTF::move(sourceOrigin), isMainFrameNavigation));
 
     if (newHandle->d->m_scheduledFailureType != NoFailure)
         return newHandle;
@@ -166,16 +168,21 @@ void ResourceHandle::didReceiveResponse(ResourceResponse&& response, CompletionH
         std::optional<uint16_t> port = url.port();
         if (port && !WTF::isDefaultPortForProtocol(port.value(), url.protocol())) {
             cancel();
-            String message = "Cancelled load from '" + url.stringCenterEllipsizedToLength() + "' because it is using HTTP/0.9.";
+            auto message = makeString("Cancelled load from '"_s, url.stringCenterEllipsizedToLength(), "' because it is using HTTP/0.9."_s);
             d->m_client->didFail(this, { String(), 0, url, message });
             completionHandler();
             return;
         }
     }
-    client()->didReceiveResponseAsync(this, WTFMove(response), WTFMove(completionHandler));
+    client()->didReceiveResponseAsync(this, WTF::move(response), WTF::move(completionHandler));
 }
 
 ResourceRequest& ResourceHandle::firstRequest()
+{
+    return d->m_firstRequest;
+}
+
+const ResourceRequest& ResourceHandle::firstRequest() const
 {
     return d->m_firstRequest;
 }
@@ -255,7 +262,7 @@ NetworkLoadMetrics* ResourceHandle::networkLoadMetrics()
 
 void ResourceHandle::setNetworkLoadMetrics(Box<NetworkLoadMetrics>&& metrics)
 {
-    d->m_networkLoadMetrics = WTFMove(metrics);
+    d->m_networkLoadMetrics = WTF::move(metrics);
 }
 
 bool ResourceHandle::shouldContentSniff() const

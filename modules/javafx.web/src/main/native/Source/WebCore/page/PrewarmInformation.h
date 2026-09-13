@@ -25,35 +25,16 @@
 
 #pragma once
 
-#include "FontCache.h"
+#include <WebCore/FontCache.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 struct WEBCORE_EXPORT PrewarmInformation {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_MAKE_STRUCT_TZONE_ALLOCATED_EXPORT(PrewarmInformation, WEBCORE_EXPORT);
     FontCache::PrewarmInformation fontCache;
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<PrewarmInformation> decode(Decoder&);
 };
-
-template<class Encoder>
-void PrewarmInformation::encode(Encoder& encoder) const
-{
-    encoder << fontCache;
-}
-
-template<class Decoder>
-std::optional<PrewarmInformation> PrewarmInformation::decode(Decoder& decoder)
-{
-    std::optional<FontCache::PrewarmInformation> fontCachePrewarmInformation;
-    decoder >> fontCachePrewarmInformation;
-    if (!fontCachePrewarmInformation)
-        return { };
-
-    return PrewarmInformation { WTFMove(*fontCachePrewarmInformation) };
-}
 
 }

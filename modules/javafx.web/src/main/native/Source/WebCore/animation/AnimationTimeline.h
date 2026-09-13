@@ -26,40 +26,87 @@
 
 #pragma once
 
-#include "WebAnimationTypes.h"
+#include <WebCore/WebAnimationTypes.h>
 #include <wtf/Forward.h>
-#include <wtf/RefCounted.h>
-#include <wtf/Seconds.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
+
+#if ENABLE(THREADED_ANIMATIONS)
+#include <WebCore/AcceleratedTimeline.h>
+#include <WebCore/TimelineIdentifier.h>
+#endif
 
 namespace WebCore {
 
+class AnimationTimelinesController;
 class WebAnimation;
 
-class AnimationTimeline : public RefCounted<AnimationTimeline>, public CanMakeWeakPtr<AnimationTimeline> {
+namespace Style {
+struct SingleAnimationRange;
+}
+
+class AnimationTimeline : public RefCountedAndCanMakeWeakPtr<AnimationTimeline> {
 public:
     virtual ~AnimationTimeline();
 
-    // DocumentTimeline is currently the only subclass of AnimationTimeline.
-    constexpr static bool isDocumentTimeline() { return true; }
+    virtual bool isDocumentTimeline() const { return false; }
+    virtual bool isScrollTimeline() const { return false; }
+    virtual bool isViewTimeline() const { return false; }
+
+    bool isMonotonic() const { return !m_duration; }
+    bool isProgressBased() const { return !isMonotonic(); }
 
     const AnimationCollection& relevantAnimations() const { return m_animations; }
 
     virtual void animationTimingDidChange(WebAnimation&);
     virtual void removeAnimation(WebAnimation&);
 
-    std::optional<double> bindingsCurrentTime();
-    virtual std::optional<Seconds> currentTime() { return m_currentTime; }
+    virtual std::optional<WebAnimationTime> currentTime(UseCachedCurrentTime = UseCachedCurrentTime::Yes) { return m_currentTime; }
+    virtual std::optional<WebAnimationTime> duration() const { return m_duration; }
+
+    virtual void detachFromDocument();
+
+    enum class ShouldUpdateAnimationsAndSendEvents : bool { No, Yes };
+    virtual ShouldUpdateAnimationsAndSendEvents documentWillUpdateAnimationsAndSendEvents() { return ShouldUpdateAnimationsAndSendEvents::No; }
+
+    virtual void suspendAnimations();
+    virtual void resumeAnimations();
+    bool animationsAreSuspended() const;
+
+    virtual AnimationTimelinesController* controller() const { return nullptr; }
+
+    virtual Style::SingleAnimationRange defaultRange() const;
+
+    static void updateGlobalPosition(WebAnimation&);
+
+#if ENABLE(THREADED_ANIMATIONS)
+    bool canBeAccelerated() const { return m_canBeAccelerated; }
+    virtual bool computeCanBeAccelerated() const { return false; }
+    Ref<AcceleratedTimeline> acceleratedRepresentation();
+    void runPostRenderingUpdateTasks();
+    const TimelineIdentifier& acceleratedTimelineIdentifier() const { return m_acceleratedTimelineIdentifier; }
+#endif
 
 protected:
-    AnimationTimeline();
+    AnimationTimeline(std::optional<WebAnimationTime> = std::nullopt);
+
+#if ENABLE(THREADED_ANIMATIONS)
+    WeakPtr<AcceleratedTimeline> m_acceleratedRepresentation;
+    virtual Ref<AcceleratedTimeline> createAcceleratedRepresentation() const;
+#endif
 
     AnimationCollection m_animations;
 
-private:
-    void updateGlobalPosition(WebAnimation&);
+#if ENABLE(THREADED_ANIMATIONS)
+    TimelineIdentifier m_acceleratedTimelineIdentifier;
+#endif
 
-    Markable<Seconds, Seconds::MarkableTraits> m_currentTime;
+private:
+#if ENABLE(THREADED_ANIMATIONS)
+    bool m_canBeAccelerated { false };
+#endif
+    std::optional<WebAnimationTime> m_currentTime;
+    std::optional<WebAnimationTime> m_duration;
 };
 
 } // namespace WebCore

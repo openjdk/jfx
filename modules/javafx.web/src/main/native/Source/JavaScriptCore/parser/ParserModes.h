@@ -25,13 +25,13 @@
 
 #pragma once
 
-#include "ConstructAbility.h"
-#include "ConstructorKind.h"
-#include "Identifier.h"
+#include <JavaScriptCore/ConstructAbility.h>
+#include <JavaScriptCore/ConstructorKind.h>
+#include <JavaScriptCore/Identifier.h>
+#include <JavaScriptCore/InlineAttribute.h>
 
 namespace JSC {
 
-enum class JSParserStrictMode { NotStrict, Strict };
 enum class JSParserBuiltinMode { NotBuiltin, Builtin };
 enum class JSParserScriptMode { Classic, Module };
 
@@ -45,7 +45,14 @@ enum class CodeGenerationMode : uint8_t {
     ControlFlowProfiler = 1 << 2,
 };
 
-enum class FunctionMode { FunctionExpression, FunctionDeclaration, MethodDefinition };
+enum class FunctionMode { None, FunctionExpression, FunctionDeclaration, MethodDefinition };
+
+enum class FunctionConstructionMode : uint8_t {
+    Function,
+    Generator,
+    Async,
+    AsyncGenerator,
+};
 
 // Keep it less than 32, it means this should be within 5 bits.
 enum class SourceParseMode : uint8_t {
@@ -233,6 +240,15 @@ ALWAYS_INLINE bool isGeneratorOrAsyncFunctionWrapperParseMode(SourceParseMode pa
         SourceParseMode::AsyncGeneratorWrapperMethodMode).contains(parseMode);
 }
 
+ALWAYS_INLINE bool isGeneratorOrAsyncGeneratorWrapperParseMode(SourceParseMode parseMode)
+{
+    return SourceParseModeSet(
+        SourceParseMode::GeneratorWrapperFunctionMode,
+        SourceParseMode::GeneratorWrapperMethodMode,
+        SourceParseMode::AsyncGeneratorWrapperFunctionMode,
+        SourceParseMode::AsyncGeneratorWrapperMethodMode).contains(parseMode);
+}
+
 ALWAYS_INLINE bool isGeneratorParseMode(SourceParseMode parseMode)
 {
     return SourceParseModeSet(
@@ -309,14 +325,15 @@ inline bool functionNameScopeIsDynamic(bool usesEval, bool isStrictMode)
     return true;
 }
 
-typedef uint8_t LexicalScopeFeatures;
+typedef uint8_t LexicallyScopedFeatures;
 
-const LexicalScopeFeatures NoLexicalFeatures                           = 0;
-const LexicalScopeFeatures StrictModeLexicalFeature               = 1 << 0;
+const LexicallyScopedFeatures NoLexicallyScopedFeatures                     = 0;
+const LexicallyScopedFeatures StrictModeLexicallyScopedFeature         = 1 << 0;
+const LexicallyScopedFeatures TaintedByWithScopeLexicallyScopedFeature = 1 << 1;
 
-const LexicalScopeFeatures AllLexicalFeatures = NoLexicalFeatures | StrictModeLexicalFeature;
-static constexpr unsigned bitWidthOfLexicalScopeFeatures = 2;
-static_assert(AllLexicalFeatures <= (1 << bitWidthOfLexicalScopeFeatures) - 1, "LexicalScopeFeatures must be 2bits");
+const LexicallyScopedFeatures AllLexicallyScopedFeatures = NoLexicallyScopedFeatures | StrictModeLexicallyScopedFeature | TaintedByWithScopeLexicallyScopedFeature;
+static constexpr unsigned bitWidthOfLexicallyScopedFeatures = 2;
+static_assert(AllLexicallyScopedFeatures <= (1 << bitWidthOfLexicallyScopedFeatures) - 1, "LexicallyScopedFeatures must be 2bits");
 
 typedef uint16_t CodeFeatures;
 
@@ -334,8 +351,9 @@ const CodeFeatures SuperPropertyFeature =          1 << 9;
 const CodeFeatures NewTargetFeature =              1 << 10;
 const CodeFeatures NoEvalCacheFeature =            1 << 11;
 const CodeFeatures ImportMetaFeature =             1 << 12;
+const CodeFeatures AsyncFunctionWithoutAwaitFeature = 1 << 13;
 
-const CodeFeatures AllFeatures = EvalFeature | ArgumentsFeature | WithFeature | ThisFeature | NonSimpleParameterListFeature | ShadowsArgumentsFeature | ArrowFunctionFeature | AwaitFeature | SuperCallFeature | SuperPropertyFeature | NewTargetFeature | NoEvalCacheFeature | ImportMetaFeature;
+const CodeFeatures AllFeatures = EvalFeature | ArgumentsFeature | WithFeature | ThisFeature | NonSimpleParameterListFeature | ShadowsArgumentsFeature | ArrowFunctionFeature | AwaitFeature | SuperCallFeature | SuperPropertyFeature | NewTargetFeature | NoEvalCacheFeature | ImportMetaFeature | AsyncFunctionWithoutAwaitFeature;
 static constexpr unsigned bitWidthOfCodeFeatures = 14;
 static_assert(AllFeatures <= (1 << bitWidthOfCodeFeatures) - 1, "CodeFeatures must fit within 14 bits");
 

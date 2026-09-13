@@ -22,27 +22,22 @@
 
 #pragma once
 
-#include "HTMLElement.h"
+#include <WebCore/HTMLElement.h>
 
 namespace WebCore {
 
 class HTMLLIElement final : public HTMLElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLLIElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLLIElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLLIElement);
 public:
     static Ref<HTMLLIElement> create(Document&);
     static Ref<HTMLLIElement> create(const QualifiedName&, Document&);
 
 private:
-    constexpr static auto CreateHTMLLIElement = CreateHTMLElement | NodeFlag::HasCustomStyleResolveCallbacks;
     HTMLLIElement(const QualifiedName&, Document&);
 
-    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
-
-    void didAttachRenderers() final;
-
-    void parseValue(const AtomString&);
 };
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,10 +25,8 @@
 
 #pragma once
 
-#if ENABLE(INPUT_TYPE_COLOR)
-
-#include "ControlFactory.h"
-#include "ControlPart.h"
+#include <WebCore/ControlFactory.h>
+#include <WebCore/ControlPart.h>
 
 namespace WebCore {
 
@@ -53,4 +51,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(INPUT_TYPE_COLOR)
+SPECIALIZE_TYPE_TRAITS_CONTROL_PART(ColorWell)

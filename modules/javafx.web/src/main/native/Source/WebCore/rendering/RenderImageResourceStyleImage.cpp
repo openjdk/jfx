@@ -29,14 +29,15 @@
 #include "RenderImageResourceStyleImage.h"
 
 #include "CachedImage.h"
+#include "NullGraphicsContext.h"
 #include "RenderElement.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "StyleCachedImage.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderImageResourceStyleImage);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderImageResourceStyleImage);
 
 RenderImageResourceStyleImage::RenderImageResourceStyleImage(StyleImage& styleImage)
     : m_styleImage(styleImage)
@@ -61,7 +62,7 @@ RefPtr<Image> RenderImageResourceStyleImage::image(const IntSize& size) const
     // Generated content may trigger calls to image() while we're still pending, don't assert but gracefully exit.
     if (m_styleImage->isPending())
         return &Image::nullImage();
-    if (auto image = m_styleImage->image(renderer(), size))
+    if (auto image = m_styleImage->image(renderer(), size, NullGraphicsContext()))
         return image;
     return &Image::nullImage();
 }
@@ -69,7 +70,7 @@ RefPtr<Image> RenderImageResourceStyleImage::image(const IntSize& size) const
 void RenderImageResourceStyleImage::setContainerContext(const IntSize& size, const URL&)
 {
     if (auto renderer = this->renderer())
-        m_styleImage->setContainerContextForRenderer(*renderer, size, renderer->style().effectiveZoom());
+        m_styleImage->setContainerContextForRenderer(*renderer, size, renderer->style().usedZoom());
 }
 
 } // namespace WebCore

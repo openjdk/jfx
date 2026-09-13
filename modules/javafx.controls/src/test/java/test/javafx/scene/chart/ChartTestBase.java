@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,33 +25,33 @@
 
 package test.javafx.scene.chart;
 
-import org.junit.Before;
-
-import test.com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.tk.Toolkit;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Arrays;
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.chart.Chart;
-import javafx.stage.Stage;
 import javafx.scene.layout.Region;
-import javafx.scene.shape.*;
-import static org.junit.Assert.assertTrue;
+import javafx.scene.shape.LineTo;
+import javafx.scene.shape.Path;
+import javafx.scene.shape.PathElement;
+import javafx.stage.Stage;
+import com.sun.javafx.tk.Toolkit;
+import test.com.sun.javafx.pgstub.StubToolkit;
 
 public abstract class ChartTestBase {
+
+    /** creates the chart instance, not animated, (as a part of each test setup) */
+    protected abstract void createChart();
+
+    /** returns the chart instance created by initChart() */
+    protected abstract Chart getChart();
+
     private Scene scene;
     private Stage stage;
     StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();
-    private Chart chart;
-
-    @Before
-    public void setUp() {
-        chart = createChart();
-        chart.setAnimated(false);
-    }
 
     protected void startApp() {
-        scene = new Scene(chart,800,600);
+        scene = new Scene(getChart(), 800, 600);
         stage = new Stage();
         stage.setScene(scene);
         stage.show();
@@ -78,8 +78,6 @@ public abstract class ChartTestBase {
     protected void setTestStage(Stage stage) {
         this.stage = stage;
     }
-
-    protected abstract Chart createChart();
 
     String computeSVGPath(Path line) {
         StringBuilder str = new StringBuilder();
@@ -110,8 +108,6 @@ public abstract class ChartTestBase {
     }
 
     void checkStyleClass(Node item, String... styleClass) {
-        assertTrue("\"" + item.getStyleClass() + "\" doesn't contain all of the " +
-                Arrays.toString(styleClass),
-                item.getStyleClass().containsAll(Arrays.asList(styleClass)));
+        assertTrue(item.getStyleClass().containsAll(Arrays.asList(styleClass)), "\"" + item.getStyleClass() + "\" doesn't contain all of the " + Arrays.toString(styleClass));
     }
 }

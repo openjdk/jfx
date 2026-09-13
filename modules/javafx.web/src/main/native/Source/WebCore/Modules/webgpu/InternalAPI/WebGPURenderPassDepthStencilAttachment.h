@@ -25,18 +25,22 @@
 
 #pragma once
 
-#include "WebGPUIntegralTypes.h"
-#include "WebGPULoadOp.h"
-#include "WebGPUStoreOp.h"
-#include <variant>
+#include <WebCore/WebGPUIntegralTypes.h>
+#include <WebCore/WebGPULoadOp.h>
+#include <WebCore/WebGPUStoreOp.h>
+#include <WebCore/WebGPUTextureView.h>
 #include <wtf/Ref.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore::WebGPU {
 
 class TextureView;
+class Texture;
+
+using RenderPassDepthAttachmentView = Variant<const WeakRef<Texture>, const WeakRef<TextureView>>;
 
 struct RenderPassDepthStencilAttachment {
-    TextureView& view;
+    RenderPassDepthAttachmentView view;
 
     float depthClearValue { 0 };
     std::optional<LoadOp> depthLoadOp;
@@ -47,6 +51,23 @@ struct RenderPassDepthStencilAttachment {
     std::optional<LoadOp> stencilLoadOp;
     std::optional<StoreOp> stencilStoreOp;
     bool stencilReadOnly { false };
+
+    RefPtr<Texture> protectedTexture() const
+    {
+        return WTF::switchOn(view, [&](const WeakRef<Texture>& texture) -> const RefPtr<Texture> {
+            return texture.ptr();
+        }, [&](const WeakRef<TextureView>&) -> const RefPtr<Texture> {
+            return nullptr;
+        });
+    }
+    RefPtr<TextureView> protectedView() const
+    {
+        return WTF::switchOn(view, [&](const WeakRef<Texture>&) -> const RefPtr<TextureView> {
+            return nullptr;
+        }, [&](const WeakRef<TextureView>& view) -> const RefPtr<TextureView> {
+            return view.ptr();
+        });
+    }
 };
 
 } // namespace WebCore::WebGPU

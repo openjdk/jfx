@@ -29,22 +29,25 @@
 #include "CSSToLengthConversionData.h"
 #include "CSSValueList.h"
 #include "ComposedTreeAncestorIterator.h"
+#include "ContainerNodeInlines.h"
 #include "ContainerQueryFeatures.h"
 #include "Document.h"
 #include "MediaList.h"
+#include "NodeDocument.h"
 #include "NodeRenderStyle.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderView.h"
 #include "StyleRule.h"
 #include "StyleScope.h"
+#include <ranges>
 
 namespace WebCore::Style {
 
-ContainerQueryEvaluator::ContainerQueryEvaluator(const Element& element, SelectionMode selectionMode, ScopeOrdinal scopeOrdinal, SelectorMatchingState* selectorMatchingState)
+ContainerQueryEvaluator::ContainerQueryEvaluator(const Element& element, SelectionMode selectionMode, ScopeOrdinal scopeOrdinal, ContainerQueryEvaluationState* evaluationState)
     : m_element(element)
     , m_selectionMode(selectionMode)
     , m_scopeOrdinal(scopeOrdinal)
-    , m_selectorMatchingState(selectorMatchingState)
+    , m_evaluationState(evaluationState)
 {
 }
 
@@ -54,7 +57,20 @@ bool ContainerQueryEvaluator::evaluate(const CQ::ContainerQuery& containerQuery)
     if (!context)
         return false;
 
+    if (containerQuery.condition.queries.isEmpty() && !containerQuery.name.isEmpty())
+        return true;
+
     return evaluateCondition(containerQuery.condition, *context) == MQ::EvaluationResult::True;
+}
+
+static const RenderStyle* styleForContainer(const Element& container, OptionSet<CQ::Axis> requiredAxes, const ContainerQueryEvaluationState* evaluationState)
+{
+    // Any element can be a style container and we haven't necessarily committed the style to render tree yet.
+    // Look it up from the currently computed style update instead.
+    if (requiredAxes.isEmpty() && evaluationState && evaluationState->styleUpdate)
+        return evaluationState->styleUpdate->elementStyle(container);
+
+    return container.existingComputedStyle();
 }
 
 auto ContainerQueryEvaluator::featureEvaluationContextForQuery(const CQ::ContainerQuery& containerQuery) const -> std::optional<MQ::FeatureEvaluationContext>
@@ -65,25 +81,33 @@ auto ContainerQueryEvaluator::featureEvaluationContextForQuery(const CQ::Contain
     // considered to just those with a matching query container name."
     // https://drafts.csswg.org/css-contain-3/#container-rule
 
-    auto* cachedQueryContainers = m_selectorMatchingState ? &m_selectorMatchingState->queryContainers : nullptr;
+    // "If the <container-query> contains unknown or unsupported container features, no query container will be selected."
+    if (containerQuery.containsUnknownFeature == CQ::ContainsUnknownFeature::Yes)
+        return { };
 
-    auto* container = selectContainer(containerQuery.axisFilter, containerQuery.name, m_element.get(), m_selectionMode, m_scopeOrdinal, cachedQueryContainers);
+    Ref element = m_element;
+    RefPtr container = selectContainer(containerQuery.requiredAxes, containerQuery.name, element.get(), m_selectionMode, m_scopeOrdinal, m_evaluationState);
     if (!container)
         return { };
 
-    if (!container->renderer())
-        return MQ::FeatureEvaluationContext { m_element->document() };
+    CheckedPtr containerStyle = styleForContainer(*container.get(), containerQuery.requiredAxes, m_evaluationState);
+    if (!containerStyle)
+        return { };
 
-    auto& renderer = *container->renderer();
+    RefPtr containerParent = container->parentElementInComposedTree();
+    CheckedPtr containerParentStyle = containerParent ? CheckedPtr { styleForContainer(*containerParent, containerQuery.requiredAxes, m_evaluationState) } : containerStyle;
+
+    Ref document = element->document();
+    CheckedPtr rootStyle = document->documentElement()->renderStyle();
 
     return MQ::FeatureEvaluationContext {
-        m_element->document(),
-        CSSToLengthConversionData { renderer.style(), m_element->document().documentElement()->renderStyle(), nullptr, &renderer.view(), container },
-        &renderer
+        document.get(),
+        CSSToLengthConversionData { *containerStyle, rootStyle.get(), containerParentStyle.get(), document->renderView(), container.get() },
+        container->renderer()
     };
 }
 
-const Element* ContainerQueryEvaluator::selectContainer(OptionSet<CQ::Axis> axes, const String& name, const Element& element, SelectionMode selectionMode, ScopeOrdinal scopeOrdinal, const CachedQueryContainers* cachedQueryContainers)
+RefPtr<const Element> ContainerQueryEvaluator::selectContainer(OptionSet<CQ::Axis> requiredAxes, const String& name, const Element& element, SelectionMode selectionMode, ScopeOrdinal scopeOrdinal, const ContainerQueryEvaluationState* evaluationState)
 {
     // "For each element, the query container to be queried is selected from among the element’s
     // ancestor query containers that have a valid container-type for all the container features
@@ -92,6 +116,10 @@ const Element* ContainerQueryEvaluator::selectContainer(OptionSet<CQ::Axis> axes
     // https://drafts.csswg.org/css-contain-3/#container-rule
 
     auto isValidContainerForRequiredAxes = [&](ContainerType containerType, const RenderElement* principalBox) {
+        // Any container is valid for style queries.
+        if (requiredAxes.isEmpty())
+            return true;
+
         switch (containerType) {
         case ContainerType::Size:
             return true;
@@ -99,60 +127,78 @@ const Element* ContainerQueryEvaluator::selectContainer(OptionSet<CQ::Axis> axes
             // Without a principal box the container matches but the query against it will evaluate to Unknown.
             if (!principalBox)
                 return true;
-            if (axes.contains(CQ::Axis::Block))
+            if (requiredAxes.contains(CQ::Axis::Block))
                 return false;
-            return !axes.contains(principalBox->isHorizontalWritingMode() ? CQ::Axis::Height : CQ::Axis::Width);
+            return !requiredAxes.contains(principalBox->isHorizontalWritingMode() ? CQ::Axis::Height : CQ::Axis::Width);
         case ContainerType::Normal:
             return false;
         }
         RELEASE_ASSERT_NOT_REACHED();
     };
 
-    auto isContainerForQuery = [&](const Element& element) {
-        auto* style = element.existingComputedStyle();
+    auto isContainerForQuery = [&](const Element& candidateElement, const Element* originatingElement = nullptr) {
+        auto style = styleForContainer(candidateElement, requiredAxes, evaluationState);
         if (!style)
             return false;
-        if (!isValidContainerForRequiredAxes(style->containerType(), element.renderer()))
+        if (!isValidContainerForRequiredAxes(style->containerType(), candidateElement.renderer()))
             return false;
         if (name.isEmpty())
             return true;
-        return style->containerNames().contains(name);
+
+        return style->containerNames().containsIf([&](auto& scopedName) {
+            auto isNameFromAllowedScope = [&](auto& scopedName) {
+                // Names from :host rules are allowed when the candidate is the host element.
+                RefPtr host = originatingElement ? originatingElement->shadowHost() : element.shadowHost();
+                auto isHost = host == &candidateElement;
+                if (scopedName.scopeOrdinal == ScopeOrdinal::Shadow && isHost)
+                    return true;
+                // Otherwise names from the inner scopes are ignored.
+                return scopedName.scopeOrdinal <= ScopeOrdinal::Element;
+    };
+            return isNameFromAllowedScope(scopedName) && scopedName.name == name;
+        });
     };
 
-    auto findOriginatingElement = [&]() -> const Element* {
-        // ::part() selectors can query its originating host, but not internal query containers inside the shadow tree.
-        if (scopeOrdinal <= ScopeOrdinal::ContainingHost)
-            return hostForScopeOrdinal(element, scopeOrdinal);
+    auto findOriginatingElement = [&]() -> RefPtr<const Element> {
+        if (selectionMode == SelectionMode::PseudoElement)
+            return &element;
+
+        // ::part() selectors query the composed tree
+        if (selectionMode == SelectionMode::PartPseudoElement)
+            return element.assignedSlot();
+
         // ::slotted() selectors can query containers inside the shadow tree, including the slot itself.
         if (scopeOrdinal >= ScopeOrdinal::FirstSlot && scopeOrdinal <= ScopeOrdinal::SlotLimit)
             return assignedSlotForScopeOrdinal(element, scopeOrdinal);
+
+        if (scopeOrdinal == ScopeOrdinal::Element && element.assignedSlot())
+            return element.assignedSlot();
+
         return nullptr;
     };
 
-    if (auto* originatingElement = findOriginatingElement()) {
-        // For selectors with pseudo elements, query containers can be established by the shadow-including inclusive ancestors of the ultimate originating element.
-        for (auto* ancestor = originatingElement; ancestor; ancestor = ancestor->parentOrShadowHostElement()) {
-            if (isContainerForQuery(*ancestor))
+    if (RefPtr originatingElement = findOriginatingElement()) {
+        // For the ::part() and ::slotted() pseudo-element selectors, which represent real elements in the DOM tree,
+        // query containers can be established by flat tree ancestors of those elements.
+        // For other pseudo-elements, query containers can be established by inclusive flat tree ancestors of their originating element.
+        // https://drafts.csswg.org/css-conditional-5/#container-queries
+        for (RefPtr ancestor = originatingElement; ancestor; ancestor = ancestor->parentElementInComposedTree()) {
+            if (isContainerForQuery(*ancestor.get(), originatingElement.get()))
                 return ancestor;
         }
         return nullptr;
     }
 
-    if (selectionMode == SelectionMode::PseudoElement) {
-        if (isContainerForQuery(element))
-            return &element;
-    }
-
-    if (cachedQueryContainers) {
-        for (auto& container : makeReversedRange(*cachedQueryContainers)) {
+    if (evaluationState && !requiredAxes.isEmpty()) {
+        for (auto& container : evaluationState->sizeQueryContainers | std::views::reverse) {
             if (isContainerForQuery(container))
                 return container.ptr();
         }
         return { };
     }
 
-    for (auto* ancestor = element.parentOrShadowHostElement(); ancestor; ancestor = ancestor->parentOrShadowHostElement()) {
-        if (isContainerForQuery(*ancestor))
+    for (RefPtr ancestor = element.parentElementInComposedTree(); ancestor; ancestor = ancestor->parentElementInComposedTree()) {
+        if (isContainerForQuery(*ancestor.get()))
             return ancestor;
     }
     return { };

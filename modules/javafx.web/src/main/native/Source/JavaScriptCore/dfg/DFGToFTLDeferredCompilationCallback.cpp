@@ -33,11 +33,9 @@
 
 namespace JSC { namespace DFG {
 
-ToFTLDeferredCompilationCallback::ToFTLDeferredCompilationCallback()
-{
-}
+ToFTLDeferredCompilationCallback::ToFTLDeferredCompilationCallback() = default;
 
-ToFTLDeferredCompilationCallback::~ToFTLDeferredCompilationCallback() { }
+ToFTLDeferredCompilationCallback::~ToFTLDeferredCompilationCallback() = default;
 
 Ref<ToFTLDeferredCompilationCallback> ToFTLDeferredCompilationCallback::create()
 {
@@ -69,7 +67,7 @@ void ToFTLDeferredCompilationCallback::compilationDidComplete(
         return;
     }
 
-    if (result == CompilationSuccessful)
+    if (result == CompilationResult::CompilationSuccessful)
         codeBlock->ownerExecutable()->installCode(codeBlock);
 
     profiledDFGCodeBlock->jitCode()->dfg()->setOptimizationThresholdBasedOnCompilationResult(

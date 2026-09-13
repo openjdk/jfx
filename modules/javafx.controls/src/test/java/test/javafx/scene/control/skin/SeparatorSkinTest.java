@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,9 @@
 
 package test.javafx.scene.control.skin;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
@@ -38,10 +37,9 @@ import javafx.scene.control.Separator;
 import javafx.scene.control.SkinBaseShim;
 import javafx.scene.control.skin.SeparatorSkin;
 import javafx.scene.layout.Region;
-
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 /**
  */
@@ -50,7 +48,8 @@ public class SeparatorSkinTest {
     private SeparatorSkinMock skin;
     private Region line;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         separator = new Separator();
         skin = new SeparatorSkinMock(separator);
         // Set some padding so that any places where padding was being
@@ -136,7 +135,7 @@ public class SeparatorSkinTest {
                 separator.minWidth(-1), 0);
     }
 
-    @Ignore
+    @Disabled
     @Test public void minWidthWhenHorizontalShouldBePositiveNonZeroPlusPadding() {
         separator.setOrientation(Orientation.HORIZONTAL);
         final Insets linePadding = line.getInsets();
@@ -153,7 +152,7 @@ public class SeparatorSkinTest {
      *                                                                          *
      ***************************************************************************/
 
-    @Ignore
+    @Disabled
     @Test public void minHeightWhenVerticalShouldBePositiveNonZeroPlusPadding() {
         separator.setOrientation(Orientation.VERTICAL);
         final Insets linePadding = line.getInsets();

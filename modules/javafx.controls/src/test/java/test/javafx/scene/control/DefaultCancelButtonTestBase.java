@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,23 +25,16 @@
 
 package test.javafx.scene.control;
 
+import static javafx.scene.input.KeyCode.ENTER;
+import static javafx.scene.input.KeyCode.ESCAPE;
+import static javafx.scene.input.KeyEvent.KEY_PRESSED;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.function.Consumer;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import com.sun.javafx.tk.Toolkit;
-
-import static javafx.scene.input.KeyCode.*;
-import static javafx.scene.input.KeyEvent.*;
-import static org.junit.Assert.*;
-
+import java.util.stream.Stream;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
@@ -51,6 +44,11 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 
@@ -72,7 +70,6 @@ import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
  * The test parameterized on all combination of the first 3 bullets, handling
  * the last by 4 test methods.
  */
-@RunWith(Parameterized.class)
 public abstract class DefaultCancelButtonTestBase<C extends Control> {
     /**
      * State of default/cancel button.
@@ -159,8 +156,6 @@ public abstract class DefaultCancelButtonTestBase<C extends Control> {
         public String toString() {
             return "" + type;
         }
-
-
     }
 
     private Stage stage;
@@ -169,62 +164,56 @@ public abstract class DefaultCancelButtonTestBase<C extends Control> {
     private Button fallback;
     private Scene scene;
 
-    private ButtonType buttonType;
-    private boolean consume;
-    private boolean registerAfterShowing;
-
-    // TODO name doesn't compile with gradle :controls:test
-    // because the junit version is 4.8.2 - name was introduced in 4.11
-    // commenting for now until upgrade to newer junit
-    @Parameterized.Parameters //( name = "{index}: Button {0}, consuming {1}, registerAfterShowing {2} " )
-    public static Collection<Object[]> data() {
-        Object[][] data = new Object[][] {
-            // buttonType, consuming, registerAfterShowing
-            {new ButtonType(ButtonState.DEFAULT), true, true},
-            {new ButtonType(ButtonState.DEFAULT), true, false},
-            {new ButtonType(ButtonState.DEFAULT), false, true},
-            {new ButtonType(ButtonState.DEFAULT), false, false},
-            {new ButtonType(ButtonState.CANCEL), true, true},
-            {new ButtonType(ButtonState.CANCEL), true, false},
-            {new ButtonType(ButtonState.CANCEL), false, true},
-            {new ButtonType(ButtonState.CANCEL), false, false},
-        };
-        return Arrays.asList(data);
+    //( name = "{index}: Button {0}, consuming {1}, registerAfterShowing {2} " )
+    static Stream<Arguments> parameters() {
+        return Stream.of(
+                Arguments.of(new ButtonType(ButtonState.DEFAULT), true, true),
+                Arguments.of(new ButtonType(ButtonState.DEFAULT), true, false),
+                Arguments.of(new ButtonType(ButtonState.DEFAULT), false, true),
+                Arguments.of(new ButtonType(ButtonState.DEFAULT), false, false),
+                Arguments.of(new ButtonType(ButtonState.CANCEL), true, true),
+                Arguments.of(new ButtonType(ButtonState.CANCEL), true, false),
+                Arguments.of(new ButtonType(ButtonState.CANCEL), false, true),
+                Arguments.of(new ButtonType(ButtonState.CANCEL), false, false)
+        );
     }
 
-    public DefaultCancelButtonTestBase(ButtonType buttonType, boolean consume,
-            boolean registerAfterShowing) {
-        this.buttonType = buttonType;
-        this.consume = consume;
-        this.registerAfterShowing = registerAfterShowing;
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testFallbackFilter(ButtonType buttonType, boolean consume, boolean registerAfterShowing) {
+        setup(buttonType);
+        registerHandlerAndAssertFallbackNotification(buttonType, consume, registerAfterShowing, this::addEventFilter);
     }
 
-
-    @Test
-    public void testFallbackFilter() {
-        registerHandlerAndAssertFallbackNotification(this::addEventFilter);
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testFallbackHandler(ButtonType buttonType, boolean consume, boolean registerAfterShowing) {
+        setup(buttonType);
+        registerHandlerAndAssertFallbackNotification(buttonType, consume, registerAfterShowing, this::addEventHandler);
     }
 
-    @Test
-    public void testFallbackHandler() {
-        registerHandlerAndAssertFallbackNotification(this::addEventHandler);
-
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testFallbackSingletonHandler(ButtonType buttonType, boolean consume, boolean registerAfterShowing) {
+        setup(buttonType);
+        registerHandlerAndAssertFallbackNotification(buttonType, consume, registerAfterShowing, this::setOnKeyPressed);
     }
 
-    @Test
-    public void testFallbackSingletonHandler() {
-        registerHandlerAndAssertFallbackNotification(this::setOnKeyPressed);
-
-    }
-
-    @Test
-    public void testFallbackNoHandler() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testFallbackNoHandler(ButtonType buttonType, boolean consume, boolean registerAfterShowing) {
         if (consume) return;
+        setup(buttonType);
         show();
         assertTargetNotification(buttonType.getCode(), buttonType.getButton(), 1);
     }
 
-    protected void registerHandlerAndAssertFallbackNotification(Consumer<EventHandler<KeyEvent>> consumer) {
+    protected void registerHandlerAndAssertFallbackNotification(
+        ButtonType buttonType,
+        boolean consume,
+        boolean registerAfterShowing,
+        Consumer<EventHandler<KeyEvent>> consumer
+    ) {
         if (registerAfterShowing) {
             show();
         }
@@ -278,23 +267,24 @@ public abstract class DefaultCancelButtonTestBase<C extends Control> {
         KeyEventFirer keyFirer = new KeyEventFirer(control);
         keyFirer.doKeyPress(key);
         String exp = expected > 0 ? " must " : " must not ";
-        assertEquals(key + exp + " trigger ", expected, actions.size());
+        assertEquals(expected, actions.size(), key + exp + " trigger ");
     }
 
 
     /**
      * sanity test of initial state and test assumptions
      */
-    @Test
-    public void testInitial() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testInitial(ButtonType buttonType, boolean consume, boolean registerAfterShowing) {
+        setup(buttonType);
         show();
         assertTrue(control.isFocused());
         assertSame(root, control.getParent());
         assertSame(root, fallback.getParent());
     }
 
-
-    protected boolean isEnter() {
+    protected boolean isEnter(ButtonType buttonType) {
         return buttonType.getCode() == ENTER;
     }
 
@@ -320,21 +310,19 @@ public abstract class DefaultCancelButtonTestBase<C extends Control> {
         stage.setScene(scene);
     }
 
-    @Before
-    public void setup() {
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    protected void setup(ButtonType buttonType) {
         initStage();
         control = createControl();
-
         fallback = buttonType.getButton();
         root.getChildren().addAll(control, fallback);
-
     }
 
-    @After
+    @AfterEach
     public void cleanup() {
         if (stage != null) {
             stage.hide();
         }
     }
-
 }

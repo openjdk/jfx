@@ -32,37 +32,27 @@
 #include <wtf/unicode/UTF8Conversion.h>
 
 using namespace JSC;
-using namespace WTF::Unicode;
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 JSStringRef JSStringCreateWithCharacters(const JSChar* chars, size_t numChars)
 {
     JSC::initialize();
-    return &OpaqueJSString::create(reinterpret_cast<const UChar*>(chars), numChars).leakRef();
+    return &OpaqueJSString::create({ reinterpret_cast<const char16_t*>(chars), numChars }).leakRef();
 }
 
 JSStringRef JSStringCreateWithUTF8CString(const char* string)
 {
     JSC::initialize();
-    if (string) {
-        size_t length = strlen(string);
-        Vector<UChar, 1024> buffer(length);
-        UChar* p = buffer.data();
-        bool sourceContainsOnlyASCII;
-        const LChar* stringStart = reinterpret_cast<const LChar*>(string);
-        if (convertUTF8ToUTF16(string, string + length, &p, p + length, &sourceContainsOnlyASCII)) {
-            if (sourceContainsOnlyASCII)
-                return &OpaqueJSString::create(stringStart, length).leakRef();
-            return &OpaqueJSString::create(buffer.data(), p - buffer.data()).leakRef();
-        }
-    }
-
+    if (auto result = OpaqueJSString::tryCreate(byteCast<char8_t>(unsafeSpan(string))))
+        return result.leakRef();
     return &OpaqueJSString::create().leakRef();
 }
 
 JSStringRef JSStringCreateWithCharactersNoCopy(const JSChar* chars, size_t numChars)
 {
     JSC::initialize();
-    return OpaqueJSString::tryCreate(StringImpl::createWithoutCopying(reinterpret_cast<const UChar*>(chars), numChars)).leakRef();
+    return OpaqueJSString::tryCreate(StringImpl::createWithoutCopying({ reinterpret_cast<const char16_t*>(chars), numChars })).leakRef();
 }
 
 JSStringRef JSStringRetain(JSStringRef string)
@@ -101,19 +91,14 @@ size_t JSStringGetUTF8CString(JSStringRef string, char* buffer, size_t bufferSiz
     if (!string || !buffer || !bufferSize)
         return 0;
 
-    char* destination = buffer;
-    bool failed = false;
-    if (string->is8Bit()) {
-        const LChar* source = string->characters8();
-        convertLatin1ToUTF8(&source, source + string->length(), &destination, destination + bufferSize - 1);
-    } else {
-        const UChar* source = string->characters16();
-        auto result = convertUTF16ToUTF8(&source, source + string->length(), &destination, destination + bufferSize - 1);
-        failed = result != ConversionResult::Success && result != ConversionResult::TargetExhausted;
-    }
-
-    *destination++ = '\0';
-    return failed ? 0 : destination - buffer;
+    std::span<char8_t> target { byteCast<char8_t>(buffer), bufferSize - 1 };
+    WTF::Unicode::ConversionResult<char8_t> result;
+    if (string->is8Bit())
+        result = WTF::Unicode::convert(string->span8(), target);
+    else
+        result = WTF::Unicode::convert(string->span16(), target);
+    buffer[result.buffer.size()] = '\0';
+    return result.buffer.size() + 1;
 }
 
 bool JSStringIsEqual(JSStringRef a, JSStringRef b)
@@ -125,3 +110,5 @@ bool JSStringIsEqualToUTF8CString(JSStringRef a, const char* b)
 {
     return JSStringIsEqual(a, adoptRef(JSStringCreateWithUTF8CString(b)).get());
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

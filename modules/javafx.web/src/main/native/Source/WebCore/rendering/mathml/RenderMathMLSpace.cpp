@@ -31,38 +31,52 @@
 #include "GraphicsContext.h"
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
-#include <wtf/IsoMallocInlines.h>
+#include "RenderObjectInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMathMLSpace);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderMathMLSpace);
 
 RenderMathMLSpace::RenderMathMLSpace(MathMLSpaceElement& element, RenderStyle&& style)
-    : RenderMathMLBlock(element, WTFMove(style))
+    : RenderMathMLBlock(Type::MathMLSpace, element, WTF::move(style))
 {
+    ASSERT(isRenderMathMLSpace());
+}
+
+RenderMathMLSpace::~RenderMathMLSpace() = default;
+
+MathMLSpaceElement& RenderMathMLSpace::element() const
+{
+    return static_cast<MathMLSpaceElement&>(nodeForNonAnonymous());
 }
 
 void RenderMathMLSpace::computePreferredLogicalWidths()
 {
-    ASSERT(preferredLogicalWidthsDirty());
+    ASSERT(needsPreferredLogicalWidthsUpdate());
 
     m_minPreferredLogicalWidth = m_maxPreferredLogicalWidth = spaceWidth();
 
-    setPreferredLogicalWidthsDirty(false);
+    auto sizes = sizeAppliedToMathContent(LayoutPhase::CalculatePreferredLogicalWidth);
+    applySizeToMathContent(LayoutPhase::CalculatePreferredLogicalWidth, sizes);
+
+    adjustPreferredLogicalWidthsForBorderAndPadding();
+
+    clearNeedsPreferredWidthsUpdate();
 }
 
 LayoutUnit RenderMathMLSpace::spaceWidth() const
 {
-    auto& spaceElement = element();
+    Ref spaceElement = element();
     // FIXME: Negative width values are not supported yet.
-    return std::max<LayoutUnit>(0, toUserUnits(spaceElement.width(), style(), 0));
+    return std::max<LayoutUnit>(0, toUserUnits(spaceElement->width(), style(), 0));
 }
 
 void RenderMathMLSpace::getSpaceHeightAndDepth(LayoutUnit& height, LayoutUnit& depth) const
 {
-    auto& spaceElement = element();
-    height = toUserUnits(spaceElement.height(), style(), 0);
-    depth = toUserUnits(spaceElement.depth(), style(), 0);
+    Ref spaceElement = element();
+    height = toUserUnits(spaceElement->height(), style(), 0);
+    depth = toUserUnits(spaceElement->depth(), style(), 0);
 
     // If the total height is negative, set vertical dimensions to 0.
     if (height + depth < 0) {
@@ -71,28 +85,35 @@ void RenderMathMLSpace::getSpaceHeightAndDepth(LayoutUnit& height, LayoutUnit& d
     }
 }
 
-void RenderMathMLSpace::layoutBlock(bool relayoutChildren, LayoutUnit)
+void RenderMathMLSpace::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit)
 {
     ASSERT(needsLayout());
 
-    if (!relayoutChildren && simplifiedLayout())
+    insertPositionedChildrenIntoContainingBlock();
+
+    if (relayoutChildren == RelayoutChildren::No && simplifiedLayout())
         return;
+
+    layoutFloatingChildren();
+
+    recomputeLogicalWidth();
 
     setLogicalWidth(spaceWidth());
     LayoutUnit height, depth;
     getSpaceHeightAndDepth(height, depth);
     setLogicalHeight(height + depth);
 
-    updateScrollInfoAfterLayout();
+    auto sizes = sizeAppliedToMathContent(LayoutPhase::Layout);
+    applySizeToMathContent(LayoutPhase::Layout, sizes);
 
-    clearNeedsLayout();
+    adjustLayoutForBorderAndPadding();
 }
 
 std::optional<LayoutUnit> RenderMathMLSpace::firstLineBaseline() const
 {
     LayoutUnit height, depth;
     getSpaceHeightAndDepth(height, depth);
-    return height;
+    return height + borderAndPaddingBefore();
 }
 
 }

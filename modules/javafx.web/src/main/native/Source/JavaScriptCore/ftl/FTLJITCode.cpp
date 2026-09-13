@@ -31,6 +31,8 @@
 #include "FTLState.h"
 #include "JSCPtrTag.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC { namespace FTL {
 
 using namespace B3;
@@ -44,15 +46,8 @@ JITCode::JITCode()
 JITCode::~JITCode()
 {
     if (FTL::shouldDumpDisassembly()) {
-        if (m_b3Code || m_arityCheckEntrypoint) {
-            dataLog("Destroying FTL JIT code at ");
-            CommaPrinter comma;
             if (m_b3Code)
-                dataLog(comma, m_b3Code);
-            if (m_arityCheckEntrypoint)
-                dataLog(comma, m_arityCheckEntrypoint);
-            dataLog("\n");
-        }
+            dataLogLn("Destroying FTL JIT code at ", m_b3Code);
     }
 }
 
@@ -63,7 +58,7 @@ void JITCode::initializeB3Code(CodeRef<JSEntryPtrTag> b3Code)
 
 void JITCode::initializeB3Byproducts(std::unique_ptr<OpaqueByproducts> byproducts)
 {
-    m_b3Byproducts = WTFMove(byproducts);
+    m_b3Byproducts = WTF::move(byproducts);
 }
 
 void JITCode::initializeAddressForCall(CodePtr<JSEntryPtrTag> address)
@@ -71,18 +66,18 @@ void JITCode::initializeAddressForCall(CodePtr<JSEntryPtrTag> address)
     m_addressForCall = address;
 }
 
-void JITCode::initializeArityCheckEntrypoint(CodeRef<JSEntryPtrTag> entrypoint)
+void JITCode::initializeAddressForArityCheck(CodePtr<JSEntryPtrTag> entrypoint)
 {
-    m_arityCheckEntrypoint = entrypoint;
+    m_addressForArityCheck = entrypoint;
 }
 
 CodePtr<JSEntryPtrTag> JITCode::addressForCall(ArityCheckMode arityCheck)
 {
     switch (arityCheck) {
-    case ArityCheckNotRequired:
+    case ArityCheckMode::ArityCheckNotRequired:
         return m_addressForCall;
-    case MustCheckArity:
-        return m_arityCheckEntrypoint.code();
+    case ArityCheckMode::MustCheckArity:
+        return m_addressForArityCheck;
     }
     RELEASE_ASSERT_NOT_REACHED();
     return CodePtr<JSEntryPtrTag>();
@@ -116,7 +111,7 @@ size_t JITCode::size()
 {
     // We don't know the size of FTL code, yet. Make a wild guess. This is mostly used for
     // GC load estimates.
-    return 1000;
+    return m_size;
 }
 
 bool JITCode::contains(void*)
@@ -136,7 +131,12 @@ DFG::CommonData* JITCode::dfgCommon()
     return &common;
 }
 
-void JITCode::shrinkToFit(const ConcurrentJSLocker&)
+const DFG::CommonData* JITCode::dfgCommon() const
+{
+    return &common;
+}
+
+void JITCode::shrinkToFit()
 {
     common.shrinkToFit();
     m_osrExit.shrinkToFit();
@@ -185,5 +185,6 @@ std::optional<CodeOrigin> JITCode::findPC(CodeBlock* codeBlock, void* pc)
 
 } } // namespace JSC::FTL
 
-#endif // ENABLE(FTL_JIT)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
+#endif // ENABLE(FTL_JIT)

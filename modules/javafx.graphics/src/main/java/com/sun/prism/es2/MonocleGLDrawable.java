@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,14 +27,10 @@ package com.sun.prism.es2;
 
 import com.sun.glass.ui.monocle.AcceleratedScreen;
 import com.sun.prism.paint.Color;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 class MonocleGLDrawable extends GLDrawable {
 
-    @SuppressWarnings("removal")
-    private static final boolean transparentFramebuffer =
-            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("com.sun.javafx.transparentFramebuffer"));
+    private static final boolean transparentFramebuffer = Boolean.getBoolean("com.sun.javafx.transparentFramebuffer");
 
     AcceleratedScreen accScreen;
 
@@ -66,5 +62,10 @@ class MonocleGLDrawable extends GLDrawable {
                 true, true, true);
         return retval;
 
+    }
+
+    @Override
+    public void dispose() {
+        //empty
     }
 }

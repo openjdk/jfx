@@ -85,6 +85,10 @@ class RegisterID
             "pc"
         when "t5"
             "t5"
+        when "t6"
+            "t6"
+        when "t7"
+            "t7"
         when "csr0"
             "pcBase"
         when "csr1"
@@ -702,7 +706,12 @@ class Instruction
             $asm.putc "#{operands[1].clLValue(:double)} = #{operands[0].dblMemRef};"
         when "stored"
             $asm.putc "#{operands[1].dblMemRef} = #{operands[0].clValue(:double)};"
-
+        when "transferi"
+            $asm.putc "#{operands[1].uint32MemRef} = #{operands[0].uint32MemRef}"
+        when "transferq"
+            $asm.putc "#{operands[1].uint64MemRef} = #{operands[0].uint64MemRef}"
+        when "transferp"
+            $asm.putc "#{operands[1].uintptrMemRef} = #{operands[0].uintptrMemRef}"
         when "addd"
             cloopEmitOperation(operands, :double, "+")
         when "divd"
@@ -764,7 +773,7 @@ class Instruction
             $asm.putc "#{operands[1].clLValue(:int32)} = #{operands[0].clValue(:int8)};"
         when "sxh2i"
             $asm.putc "#{operands[1].clLValue(:int32)} = #{operands[0].clValue(:int16)};"
-        when "sxb2q"
+        when "sxb2q", "sxb2p"
             $asm.putc "#{operands[1].clLValue(:int64)} = #{operands[0].clValue(:int8)};"
         when "sxh2q"
             $asm.putc "#{operands[1].clLValue(:int64)} = #{operands[0].clValue(:int16)};"
@@ -1166,7 +1175,7 @@ class Instruction
             $asm.putc "lr = getOpcode(llint_cloop_did_return_from_js_#{uid});"
             $asm.putc "opcode = #{operands[0].clValue(:opcode)};"
             $asm.putc "DISPATCH_OPCODE();"
-            $asm.putsLabel("llint_cloop_did_return_from_js_#{uid}", false, false)
+            $asm.putsLabel("llint_cloop_did_return_from_js_#{uid}", false, false, false, false)
 
         # We can't do generic function calls with an arbitrary set of args, but
         # fortunately we don't have to here. All native function calls always
@@ -1206,10 +1215,6 @@ class Instruction
         else
             lowerDefault
         end
-    end
-
-    def lowerC_LOOP_WIN
-        lowerC_LOOP
     end
 
     def recordMetaDataC_LOOP

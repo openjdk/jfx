@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,29 +25,26 @@
 
 package test.robot.javafx.scene;
 
-import java.util.concurrent.CountDownLatch;
 import java.time.LocalDate;
-
+import java.util.concurrent.CountDownLatch;
 import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.DatePicker;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.MouseButton;
-import javafx.application.Platform;
 import javafx.scene.robot.Robot;
-import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 /*
@@ -146,7 +143,7 @@ public class DatePickerUpdateOnAlertCloseTest {
         LocalDate newDate = datePicker.getValue();
 
         Thread.sleep(400); // Wait for date to be selected.
-        Assert.assertNotEquals(oldDate, newDate);
+        Assertions.assertNotEquals(oldDate, newDate);
     }
 
     @Test
@@ -158,10 +155,10 @@ public class DatePickerUpdateOnAlertCloseTest {
         selectNextDate();
 
         Thread.sleep(400); // Wait for date to be selected.
-        Assert.assertFalse(LocalDate.now().isEqual(datePicker.getValue()));
+        Assertions.assertFalse(LocalDate.now().isEqual(datePicker.getValue()));
     }
 
-    @After
+    @AfterEach
     public void resetUI() {
         Util.runAndWait(() -> {
             datePicker.setOnShown(null);
@@ -172,7 +169,7 @@ public class DatePickerUpdateOnAlertCloseTest {
         });
     }
 
-    @Before
+    @BeforeEach
     public void setupUI() {
         Util.runAndWait(() -> {
             datePicker = new DatePicker(LocalDate.now());
@@ -201,14 +198,14 @@ public class DatePickerUpdateOnAlertCloseTest {
         });
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void exit() {
-        Util.shutdown(stage);
+        Util.shutdown();
     }
 
     public static class TestApp extends Application {

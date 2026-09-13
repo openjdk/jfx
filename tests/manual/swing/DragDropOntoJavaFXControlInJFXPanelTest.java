@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,25 +31,24 @@ import java.awt.dnd.DnDConstants;
 import java.awt.dnd.DragSource;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-
+import javax.swing.JComponent;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JRootPane;
+import javax.swing.SwingUtilities;
+import javax.swing.TransferHandler;
+import javax.swing.WindowConstants;
 import javafx.application.Platform;
 import javafx.embed.swing.JFXPanel;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.TransferMode;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
-
-import javax.swing.JComponent;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JRootPane;
-import javax.swing.JTextField;
-import javax.swing.SwingUtilities;
-import javax.swing.TransferHandler;
-import javax.swing.WindowConstants;
 
 public class DragDropOntoJavaFXControlInJFXPanelTest {
 
@@ -128,6 +127,28 @@ public class DragDropOntoJavaFXControlInJFXPanelTest {
                         new HBox(10, passButton, failButton));
                         Scene scene = new Scene(rootNode);
                         panel.setScene(scene);
+
+                        textField.setOnDragOver(event -> {
+                            if (event.getGestureSource() != textField &&
+                                    event.getDragboard().hasString()) {
+                                event.acceptTransferModes(TransferMode.COPY_OR_MOVE);
+                            }
+
+                            event.consume();
+                        });
+
+                        textField.setOnDragDropped(event -> {
+                            Dragboard db = event.getDragboard();
+                            boolean success = false;
+                            if (db.hasString()) {
+                                textField.setText(db.getString());
+                                success = true;
+                            }
+                            event.setDropCompleted(success);
+
+                            event.consume();
+                        });
+
                     }
                 });
 

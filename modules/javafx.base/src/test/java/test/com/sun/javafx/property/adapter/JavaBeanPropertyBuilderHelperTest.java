@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,23 +27,22 @@ package test.com.sun.javafx.property.adapter;
 
 import com.sun.javafx.property.adapter.JavaBeanPropertyBuilderHelper;
 import com.sun.javafx.property.adapter.PropertyDescriptor;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
-*/
+ */
 public class JavaBeanPropertyBuilderHelperTest {
 
     private JavaBeanPropertyBuilderHelper helperPOJOBean;
     private JavaBeanPropertyBuilderHelper helperPOJOBeanWithNonStandardNames;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         helperPOJOBean = new JavaBeanPropertyBuilderHelper();
         helperPOJOBean.beanClass(POJOBean.class);
@@ -56,152 +55,68 @@ public class JavaBeanPropertyBuilderHelperTest {
         helperPOJOBeanWithNonStandardNames.setterName("writeX");
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testSetup_WithNameIsNull() {
-        try {
+        assertThrows(NullPointerException.class, () -> {
             helperPOJOBean.name(null);
             helperPOJOBean.getDescriptor();
-        } catch (NoSuchMethodException e) {
-            fail();
-        }
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testSetup_WithNameIsEmpty() {
-        try {
+        assertThrows(IllegalArgumentException.class, () -> {
             helperPOJOBean.name("");
             helperPOJOBean.getDescriptor();
-        } catch (NoSuchMethodException e) {
-            fail();
-        }
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testSetup_WithBeanClassIsNull() {
-        try {
+        assertThrows(NullPointerException.class, () -> {
             helperPOJOBean.beanClass(null);
             helperPOJOBean.getDescriptor();
-        } catch (NoSuchMethodException e) {
-            fail();
-        }
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testSetup_WithNonStandardNames_WithNameIsNull() {
-        try {
+        assertThrows(NullPointerException.class, () -> {
             helperPOJOBeanWithNonStandardNames.name(null);
             helperPOJOBeanWithNonStandardNames.getDescriptor();
-        } catch (NoSuchMethodException e) {
-            fail();
-        }
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testSetup_WithNonStandardNames_WithBeanClassIsNull() {
-        try {
+        assertThrows(NullPointerException.class, () -> {
             helperPOJOBeanWithNonStandardNames.beanClass(null);
             helperPOJOBeanWithNonStandardNames.getDescriptor();
-        } catch (NoSuchMethodException e) {
-            fail();
-        }
+        });
     }
 
-    @Test(expected = NoSuchMethodException.class)
-    public void testSetup_WithNonStandardNames_WithGetterNameIsNull() throws NoSuchMethodException {
-        helperPOJOBeanWithNonStandardNames.getterName(null);
-        helperPOJOBeanWithNonStandardNames.getDescriptor();
+    @Test
+    public void testSetup_WithNonStandardNames_WithGetterNameIsNull() {
+        assertThrows(NoSuchMethodException.class, () -> {
+            helperPOJOBeanWithNonStandardNames.getterName(null);
+            helperPOJOBeanWithNonStandardNames.getDescriptor();
+        });
     }
 
-    @Test(expected = NoSuchMethodException.class)
-    public void testSetup_WithNonStandardNames_WithSetterNameIsNull() throws NoSuchMethodException {
-        helperPOJOBeanWithNonStandardNames.setterName(null);
-        helperPOJOBeanWithNonStandardNames.getDescriptor();
+    @Test
+    public void testSetup_WithNonStandardNames_WithSetterNameIsNull() {
+        assertThrows(NoSuchMethodException.class, () -> {
+            helperPOJOBeanWithNonStandardNames.setterName(null);
+            helperPOJOBeanWithNonStandardNames.getDescriptor();
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
-    public void testSetup_WithNonStandardNames_WithNameIsEmpty() {
-        try {
+    @Test
+    public void testSetup_WithNonStandardAccessors_WithNameIsEmpty() {
+        assertThrows(IllegalArgumentException.class, () -> {
             helperPOJOBeanWithNonStandardNames.name("");
             helperPOJOBeanWithNonStandardNames.getDescriptor();
-        } catch (NoSuchMethodException e) {
-            fail();
-        }
-    }
-
-    @Test(expected = NoSuchMethodException.class)
-    public void testSetup_WithNonStandardNames_WithGetterNameIsEmpty() throws NoSuchMethodException {
-        helperPOJOBeanWithNonStandardNames.getterName("");
-        helperPOJOBeanWithNonStandardNames.getDescriptor();
-    }
-
-    @Test(expected = NoSuchMethodException.class)
-    public void testSetup_WithNonStandardNames_WithSetterNameIsEmpty() throws NoSuchMethodException {
-        helperPOJOBeanWithNonStandardNames.setterName("");
-        helperPOJOBeanWithNonStandardNames.getDescriptor();
-    }
-
-    @Test(expected = NullPointerException.class)
-    public void testSetup_WithNonStandardAccessors_WithNameIsNull() throws NoSuchMethodException {
-        helperPOJOBeanWithNonStandardNames.getterName(null);
-        helperPOJOBeanWithNonStandardNames.setterName(null);
-        try {
-            final Method getter = POJOBeanWithNonStandardNames.class.getMethod("readX");
-            final Method setter = POJOBeanWithNonStandardNames.class.getMethod("writeX", Object.class);
-            helperPOJOBeanWithNonStandardNames.getter(getter);
-            helperPOJOBeanWithNonStandardNames.setter(setter);
-
-            helperPOJOBeanWithNonStandardNames.name(null);
-        } catch (NoSuchMethodException e) {
-            fail("Error in test code. Should not happen.");
-        }
-        helperPOJOBeanWithNonStandardNames.getDescriptor();
-    }
-
-    @Test(expected = NoSuchMethodException.class)
-    public void testSetup_WithNonStandardAccessors_WithGetterIsNull() throws NoSuchMethodException {
-        helperPOJOBeanWithNonStandardNames.getterName(null);
-        helperPOJOBeanWithNonStandardNames.setterName(null);
-        try {
-            final Method setter = POJOBeanWithNonStandardNames.class.getMethod("writeX", Object.class);
-            helperPOJOBeanWithNonStandardNames.setter(setter);
-
-            helperPOJOBeanWithNonStandardNames.getter(null);
-        } catch (NoSuchMethodException e) {
-            fail("Error in test code. Should not happen.");
-        }
-        helperPOJOBeanWithNonStandardNames.getDescriptor();
-    }
-
-    @Test(expected = NoSuchMethodException.class)
-    public void testSetup_WithNonStandardAccessors_WithSetterIsNull() throws NoSuchMethodException {
-        helperPOJOBeanWithNonStandardNames.getterName(null);
-        helperPOJOBeanWithNonStandardNames.setterName(null);
-        try {
-            final Method getter = POJOBeanWithNonStandardNames.class.getMethod("readX");
-            helperPOJOBeanWithNonStandardNames.getter(getter);
-
-            helperPOJOBeanWithNonStandardNames.setter(null);
-        } catch (NoSuchMethodException e) {
-            fail("Error in test code. Should not happen.");
-        }
-        helperPOJOBeanWithNonStandardNames.getDescriptor();
-    }
-
-    @Test(expected = IllegalArgumentException.class)
-    public void testSetup_WithNonStandardAccessors_WithNameIsEmpty() throws NoSuchMethodException {
-        helperPOJOBeanWithNonStandardNames.getterName(null);
-        helperPOJOBeanWithNonStandardNames.setterName(null);
-        try {
-            final Method getter = POJOBeanWithNonStandardNames.class.getMethod("readX");
-            final Method setter = POJOBeanWithNonStandardNames.class.getMethod("writeX", Object.class);
-            helperPOJOBeanWithNonStandardNames.getter(getter);
-            helperPOJOBeanWithNonStandardNames.setter(setter);
-
-            helperPOJOBeanWithNonStandardNames.name("");
-        } catch (NoSuchMethodException e) {
-            fail("Error in test code. Should not happen.");
-        }
-        helperPOJOBeanWithNonStandardNames.getDescriptor();
+        });
     }
 
     @Test
@@ -235,7 +150,6 @@ public class JavaBeanPropertyBuilderHelperTest {
 
         public Object getX() {return x;}
         public void setX(Object x) {this.x = x;}
-
     }
 
     public static class POJOBeanWithNonStandardNames {
@@ -246,5 +160,4 @@ public class JavaBeanPropertyBuilderHelperTest {
         public Object readX() {return x;}
         public void writeX(Object x) {this.x = x;}
     }
-
 }

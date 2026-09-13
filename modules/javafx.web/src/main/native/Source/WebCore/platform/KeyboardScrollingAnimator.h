@@ -25,10 +25,12 @@
 
 #pragma once
 
-#include "KeyboardEvent.h"
-#include "KeyboardScroll.h" // FIXME: This is a layering violation.
-#include "RectEdges.h"
-#include "ScrollableArea.h"
+#include <WebCore/KeyboardEvent.h>
+#include <WebCore/KeyboardScroll.h> // FIXME: This is a layering violation.
+#include <WebCore/RectEdges.h>
+#include <WebCore/ScrollableArea.h>
+#include <wtf/CheckedPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -50,22 +52,24 @@ const std::optional<KeyboardScrollingKey> keyboardScrollingKeyForKeyboardEvent(c
 const std::optional<ScrollDirection> scrollDirectionForKeyboardEvent(const KeyboardEvent&);
 const std::optional<ScrollGranularity> scrollGranularityForKeyboardEvent(const KeyboardEvent&);
 
-class KeyboardScrollingAnimator : public CanMakeWeakPtr<KeyboardScrollingAnimator> {
+class KeyboardScrollingAnimator final : public CanMakeWeakPtr<KeyboardScrollingAnimator>, public CanMakeCheckedPtr<KeyboardScrollingAnimator> {
+    WTF_MAKE_TZONE_ALLOCATED(KeyboardScrollingAnimator);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(KeyboardScrollingAnimator);
     WTF_MAKE_NONCOPYABLE(KeyboardScrollingAnimator);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     KeyboardScrollingAnimator(ScrollableArea&);
 
-    bool beginKeyboardScrollGesture(ScrollDirection, ScrollGranularity, bool isKeyRepeat);
-    void handleKeyUpEvent();
+    WEBCORE_EXPORT bool beginKeyboardScrollGesture(ScrollDirection, ScrollGranularity, bool isKeyRepeat);
+    WEBCORE_EXPORT void handleKeyUpEvent();
     WEBCORE_EXPORT void stopScrollingImmediately();
 
 private:
     std::optional<KeyboardScroll> makeKeyboardScroll(ScrollDirection, ScrollGranularity) const;
     float scrollDistance(ScrollDirection, ScrollGranularity) const;
-    RectEdges<bool> rubberbandableDirections() const;
+    RectEdges<bool> scrollingDirections() const;
+    CheckedRef<ScrollableArea> checkedScrollableArea() const;
 
-    ScrollableArea& m_scrollableArea;
+    WeakRef<ScrollableArea> m_scrollableArea;
     bool m_scrollTriggeringKeyIsPressed { false };
 };
 

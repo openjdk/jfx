@@ -26,19 +26,18 @@
 #include "config.h"
 #include "ServiceWorkerRegistrationKey.h"
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "ClientOrigin.h"
 #include "RegistrableDomain.h"
 #include "SecurityOrigin.h"
 #include <wtf/URLHash.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
 ServiceWorkerRegistrationKey::ServiceWorkerRegistrationKey(SecurityOriginData&& topOrigin, URL&& scope)
-    : m_topOrigin(WTFMove(topOrigin))
-    , m_scope(WTFMove(scope))
+    : m_topOrigin(WTF::move(topOrigin))
+    , m_scope(WTF::move(scope))
 {
     ASSERT(!m_scope.hasFragmentIdentifier());
 }
@@ -48,11 +47,6 @@ ServiceWorkerRegistrationKey ServiceWorkerRegistrationKey::emptyKey()
     return { };
 }
 
-bool ServiceWorkerRegistrationKey::operator==(const ServiceWorkerRegistrationKey& other) const
-{
-    return m_topOrigin == other.m_topOrigin && m_scope == other.m_scope;
-}
-
 ServiceWorkerRegistrationKey ServiceWorkerRegistrationKey::isolatedCopy() const &
 {
     return { m_topOrigin.isolatedCopy(), m_scope.isolatedCopy() };
@@ -60,7 +54,7 @@ ServiceWorkerRegistrationKey ServiceWorkerRegistrationKey::isolatedCopy() const 
 
 ServiceWorkerRegistrationKey ServiceWorkerRegistrationKey::isolatedCopy() &&
 {
-    return { WTFMove(m_topOrigin).isolatedCopy(), WTFMove(m_scope).isolatedCopy() };
+    return { WTF::move(m_topOrigin).isolatedCopy(), WTF::move(m_scope).isolatedCopy() };
 }
 
 bool ServiceWorkerRegistrationKey::isMatching(const SecurityOriginData& topOrigin, const URL& clientURL) const
@@ -124,7 +118,7 @@ std::optional<ServiceWorkerRegistrationKey> ServiceWorkerRegistrationKey::fromDa
     auto scheme = StringView(key).left(first);
     auto host = StringView(key).substring(first + 1, second - first - 1);
 
-    URL topOriginURL { makeString(scheme, "://", host) };
+    URL topOriginURL { makeString(scheme, "://"_s, host) };
     if (!topOriginURL.isValid())
         return std::nullopt;
 
@@ -133,7 +127,7 @@ std::optional<ServiceWorkerRegistrationKey> ServiceWorkerRegistrationKey::fromDa
         return std::nullopt;
 
     SecurityOriginData topOrigin { scheme.toString(), host.toString(), shortPort };
-    return ServiceWorkerRegistrationKey { WTFMove(topOrigin), WTFMove(scope) };
+    return ServiceWorkerRegistrationKey { WTF::move(topOrigin), WTF::move(scope) };
 }
 
 ClientOrigin ServiceWorkerRegistrationKey::clientOrigin() const
@@ -144,10 +138,8 @@ ClientOrigin ServiceWorkerRegistrationKey::clientOrigin() const
 #if !LOG_DISABLED
 String ServiceWorkerRegistrationKey::loggingString() const
 {
-    return makeString(m_topOrigin.debugString(), "-", m_scope.string());
+    return makeString(m_topOrigin.debugString(), '-', m_scope.string());
 }
 #endif
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

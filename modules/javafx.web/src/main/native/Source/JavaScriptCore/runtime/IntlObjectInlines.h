@@ -33,6 +33,8 @@
 #include "ObjectConstructor.h"
 #include <unicode/ucol.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 template<typename StringType>
@@ -99,11 +101,11 @@ InstanceType* unwrapForLegacyIntlConstructor(JSGlobalObject* globalObject, JSVal
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSObject* thisObject = jsDynamicCast<JSObject*>(thisValue);
-    if (UNLIKELY(!thisObject))
+    if (!thisObject) [[unlikely]]
         return nullptr;
 
     auto* instance = jsDynamicCast<InstanceType*>(thisObject);
-    if (LIKELY(instance))
+    if (instance) [[likely]]
         return instance;
 
     ASSERT(!constructor->template inherits<JSBoundFunction>());
@@ -196,35 +198,38 @@ ResultType intlStringOrBooleanOption(JSGlobalObject* globalObject, JSObject* opt
     return { };
 }
 
-ALWAYS_INLINE bool canUseASCIIUCADUCETComparison(UChar character)
+ALWAYS_INLINE bool canUseASCIIUCADUCETComparison(char16_t character)
 {
     return isASCII(character) && ducetLevel1Weights[character];
 }
 
-ALWAYS_INLINE bool canUseASCIIUCADUCETComparison(LChar character)
+ALWAYS_INLINE bool canUseASCIIUCADUCETComparison(Latin1Character character)
 {
     return ducetLevel1Weights[character];
 }
 
-ALWAYS_INLINE bool followedByNonLatinCharacter(const UChar* characters, unsigned length, unsigned index)
+ALWAYS_INLINE bool followedByNonLatinCharacter(std::span<const char16_t> characters, size_t index)
 {
-    unsigned nextIndex = index + 1;
-    if (length > nextIndex)
+    size_t nextIndex = index + 1;
+    if (characters.size() > nextIndex)
         return !isLatin1(characters[nextIndex]);
     return false;
 }
 
-ALWAYS_INLINE bool followedByNonLatinCharacter(const LChar*, unsigned, unsigned)
+ALWAYS_INLINE bool followedByNonLatinCharacter(std::span<const Latin1Character>, size_t)
 {
     return false;
 }
 
 template<typename CharacterType1, typename CharacterType2>
-UCollationResult compareASCIIWithUCADUCETLevel3(const CharacterType1* characters1, const CharacterType2* characters2, unsigned length)
+UCollationResult compareASCIIWithUCADUCETLevel3(std::span<const CharacterType1> characters1, std::span<const CharacterType2> characters2)
 {
-    for (unsigned position = 0; position < length; ++position) {
-        auto lhs = characters1[position];
-        auto rhs = characters2[position];
+    auto* data1 = characters1.data();
+    auto* data2 = characters2.data();
+    ASSERT(characters1.size() == characters2.size());
+    for (size_t position = 0; position < characters1.size(); ++position) {
+        auto lhs = data1[position];
+        auto rhs = data2[position];
         uint8_t leftWeight = ducetLevel3Weights[lhs];
         uint8_t rightWeight = ducetLevel3Weights[rhs];
         if (leftWeight == rightWeight)
@@ -235,17 +240,19 @@ UCollationResult compareASCIIWithUCADUCETLevel3(const CharacterType1* characters
 }
 
 template<typename CharacterType1, typename CharacterType2>
-inline std::optional<UCollationResult> compareASCIIWithUCADUCET(const CharacterType1* characters1, unsigned length1, const CharacterType2* characters2, unsigned length2)
+inline std::optional<UCollationResult> compareASCIIWithUCADUCET(std::span<const CharacterType1> characters1, std::span<const CharacterType2> characters2)
 {
-    if (length1 == length2) {
-        if (equal(characters1, characters2, length1))
+    if (characters1.size() == characters2.size()) {
+        if (equal(characters1.data(), characters2))
             return UCOL_EQUAL;
     }
 
-    unsigned commonLength = std::min(length1, length2);
+    auto* data1 = characters1.data();
+    auto* data2 = characters2.data();
+    size_t commonLength = std::min(characters1.size(), characters2.size());
     for (unsigned position = 0; position < commonLength; ++position) {
-        auto lhs = characters1[position];
-        auto rhs = characters2[position];
+        auto lhs = data1[position];
+        auto rhs = data2[position];
 
         if (!canUseASCIIUCADUCETComparison(lhs) || !canUseASCIIUCADUCETComparison(rhs))
             return std::nullopt;
@@ -256,24 +263,24 @@ inline std::optional<UCollationResult> compareASCIIWithUCADUCET(const CharacterT
             continue;
 
         // If the following character is a non-latin, then it is possible that current and next characters can be combined into different character.
-        if (followedByNonLatinCharacter(characters1, length1, position) || followedByNonLatinCharacter(characters2, length2, position))
+        if (followedByNonLatinCharacter(characters1, position) || followedByNonLatinCharacter(characters2, position))
             return std::nullopt;
 
         return leftWeight > rightWeight ? UCOL_GREATER : UCOL_LESS;
     }
 
-    if (length1 == length2)
-            return compareASCIIWithUCADUCETLevel3(characters1, characters2, length1);
+    if (characters1.size() == characters2.size())
+        return compareASCIIWithUCADUCETLevel3(characters1, characters2);
 
     // If the next character is valid, then we do not need to look into the rest of characters.
-    if (length1 > length2) {
-        auto lhs = characters1[length2];
+    if (characters1.size() > characters2.size()) {
+        auto lhs = data1[characters2.size()];
         if (!canUseASCIIUCADUCETComparison(lhs))
             return std::nullopt;
         return UCOL_GREATER;
     }
 
-    auto rhs = characters2[length1];
+    auto rhs = data2[characters1.size()];
     if (!canUseASCIIUCADUCETComparison(rhs))
         return std::nullopt;
     return UCOL_LESS;
@@ -286,7 +293,7 @@ inline JSObject* intlGetOptionsObject(JSGlobalObject* globalObject, JSValue opti
     auto scope = DECLARE_THROW_SCOPE(vm);
     if (options.isUndefined())
         return nullptr;
-    if (LIKELY(options.isObject()))
+    if (options.isObject()) [[likely]]
         return asObject(options);
     throwTypeError(globalObject, scope, "options argument is not an object or undefined"_s);
     return nullptr;
@@ -344,25 +351,27 @@ class ListFormatInput {
     WTF_MAKE_NONCOPYABLE(ListFormatInput);
 public:
     ListFormatInput(Vector<String, 4>&& strings)
-        : m_strings(WTFMove(strings))
+        : m_strings(WTF::move(strings))
     {
         m_stringPointers.reserveInitialCapacity(m_strings.size());
         m_stringLengths.reserveInitialCapacity(m_strings.size());
         for (auto& string : m_strings) {
             string.convertTo16Bit();
-            m_stringPointers.append(string.characters16());
+            m_stringPointers.append(string.span16().data());
             m_stringLengths.append(string.length());
         }
     }
 
     int32_t size() const { return m_stringPointers.size(); }
-    const UChar* const* stringPointers() const { return m_stringPointers.data(); }
-    const int32_t* stringLengths() const { return m_stringLengths.data(); }
+    const char16_t* const* stringPointers() const { return m_stringPointers.span().data(); }
+    const int32_t* stringLengths() const { return m_stringLengths.span().data(); }
 
 private:
     Vector<String, 4> m_strings;
-    Vector<const UChar*, 4> m_stringPointers;
+    Vector<const char16_t*, 4> m_stringPointers;
     Vector<int32_t, 4> m_stringLengths;
 };
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

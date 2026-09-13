@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2013-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -26,15 +27,12 @@
 
 #pragma once
 
-#include "Document.h"
-#include "DocumentFragment.h"
-#include "Element.h"
-#include "StyleScopeOrdinal.h"
-#if ENABLE(PICTURE_IN_PICTURE_API)
-#include "HTMLVideoElement.h"
-#endif
-#include "ShadowRootMode.h"
-#include "SlotAssignmentMode.h"
+#include <WebCore/DocumentFragment.h>
+#include <WebCore/Element.h>
+#include <WebCore/ShadowRootMode.h>
+#include <WebCore/SlotAssignmentMode.h>
+#include <WebCore/StyleScopeOrdinal.h>
+#include <WebCore/TreeScope.h>
 #include <wtf/HashMap.h>
 
 namespace WebCore {
@@ -42,43 +40,56 @@ namespace WebCore {
 class HTMLSlotElement;
 class SlotAssignment;
 class StyleSheetList;
+class TrustedHTML;
 class WebAnimation;
 
+enum class ParserContentPolicy : uint8_t;
+enum class ShadowRootAvailableToElementInternals : bool { No, Yes };
+enum class ShadowRootScopedCustomElementRegistry : bool { No, Yes };
+
+struct GetHTMLOptions;
+
+namespace Style {
+class Scope;
+}
+
 class ShadowRoot final : public DocumentFragment, public TreeScope {
-    WTF_MAKE_ISO_ALLOCATED(ShadowRoot);
+    WTF_MAKE_TZONE_ALLOCATED(ShadowRoot);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ShadowRoot);
 public:
 
-    enum class DelegatesFocus : bool { No, Yes };
-    enum class Cloneable : bool { No, Yes };
-    enum class AvailableToElementInternals : bool { No, Yes };
+    enum class Clonable : bool { No, Yes };
 
     static Ref<ShadowRoot> create(Document& document, ShadowRootMode type, SlotAssignmentMode assignmentMode = SlotAssignmentMode::Named,
-        DelegatesFocus delegatesFocus = DelegatesFocus::No, Cloneable cloneable = Cloneable::No, AvailableToElementInternals availableToElementInternals = AvailableToElementInternals::No)
+        ShadowRootDelegatesFocus delegatesFocus = ShadowRootDelegatesFocus::No, Clonable clonable = Clonable::No, ShadowRootSerializable serializable = ShadowRootSerializable::No, ShadowRootAvailableToElementInternals availableToElementInternals = ShadowRootAvailableToElementInternals::No,
+        RefPtr<CustomElementRegistry>&& registry = nullptr, ShadowRootScopedCustomElementRegistry scopedRegistry = ShadowRootScopedCustomElementRegistry::No, const AtomString& referenceTarget = nullAtom())
     {
-        return adoptRef(*new ShadowRoot(document, type, assignmentMode, delegatesFocus, cloneable, availableToElementInternals));
+        return adoptRef(*new ShadowRoot(document, type, assignmentMode, delegatesFocus, clonable, serializable, availableToElementInternals, WTF::move(registry), scopedRegistry, referenceTarget));
     }
 
     static Ref<ShadowRoot> create(Document& document, std::unique_ptr<SlotAssignment>&& assignment)
     {
-        return adoptRef(*new ShadowRoot(document, WTFMove(assignment)));
+        return adoptRef(*new ShadowRoot(document, WTF::move(assignment)));
     }
 
     virtual ~ShadowRoot();
 
+    using DocumentFragment::ref;
+    using DocumentFragment::deref;
+
     using TreeScope::getElementById;
     using TreeScope::rootNode;
 
-    WEBCORE_EXPORT Style::Scope& styleScope();
+    Style::Scope& styleScope() { return *m_styleScope; }
+    CheckedRef<Style::Scope> checkedStyleScope() const;
     StyleSheetList& styleSheets();
-
-    bool resetStyleInheritance() const { return m_resetStyleInheritance; }
-    void setResetStyleInheritance(bool);
 
     bool delegatesFocus() const { return m_delegatesFocus; }
     bool containsFocusedElement() const { return m_containsFocusedElement; }
     void setContainsFocusedElement(bool flag) { m_containsFocusedElement = flag; }
 
-    bool isCloneable() const { return m_isCloneable; }
+    bool isClonable() const { return m_isClonable; }
+    bool serializable() const { return m_serializable; }
 
     bool isAvailableToElementInternals() const { return m_availableToElementInternals; }
     void setIsAvailableToElementInternals(bool flag) { m_availableToElementInternals = flag; }
@@ -86,12 +97,24 @@ public:
     void setIsDeclarativeShadowRoot(bool flag) { m_isDeclarativeShadowRoot = flag; }
 
     Element* host() const { return m_host.get(); }
-    void setHost(WeakPtr<Element, WeakPtrImplWithEventTargetData>&& host) { m_host = WTFMove(host); }
+    inline void setHost(Element*); // Defined and only used in Element.cpp
+    RefPtr<Element> protectedHost() const { return m_host.get(); }
+    void setHost(WeakPtr<Element, WeakPtrImplWithEventTargetData>&& host) { m_host = WTF::move(host); }
+
+    Node* shadowIncludingRoot() const { return m_shadowIncludingRoot; }
+    inline void setShadowIncludingRoot(Node* root) { m_shadowIncludingRoot = root; }
+
+    bool hasScopedCustomElementRegistry() const { return m_hasScopedCustomElementRegistry; }
+    CustomElementRegistry* registryForBindings() const;
+
+    ExceptionOr<void> setHTMLUnsafe(Variant<RefPtr<TrustedHTML>, String>&&);
+    String getHTML(GetHTMLOptions&&) const;
 
     String innerHTML() const;
-    ExceptionOr<void> setInnerHTML(const String&);
+    ExceptionOr<void> setInnerHTML(Variant<RefPtr<TrustedHTML>, String>&&);
 
-    Ref<Node> cloneNodeInternal(Document&, CloningOperation) override;
+    Ref<Node> cloneNodeInternal(Document&, CloningOperation, CustomElementRegistry*) const override;
+    SerializedNode serializeNode(CloningOperation) const override;
 
     Element* activeElement() const;
 
@@ -111,7 +134,7 @@ public:
     void slotFallbackDidChange(HTMLSlotElement&);
     void resolveSlotsBeforeNodeInsertionOrRemoval();
     void willRemoveAllChildren(ContainerNode&);
-    void willRemoveAssignedNode(const Node&);
+    void willRemoveAssignedNode(Node&);
 
     void didRemoveAllChildrenOfShadowHost();
     void didMutateTextNodesOfShadowHost();
@@ -127,14 +150,18 @@ public:
     const PartMappings& partMappings() const;
     void invalidatePartMappings();
 
-#if ENABLE(PICTURE_IN_PICTURE_API)
-    HTMLVideoElement* pictureInPictureElement() const;
-#endif
+    Vector<Ref<WebAnimation>> getAnimations();
 
-    Vector<RefPtr<WebAnimation>> getAnimations();
+    bool hasReferenceTarget() const { return !m_referenceTarget.isNull(); }
+    const AtomString& referenceTarget() const { return m_referenceTarget; }
+    void setReferenceTarget(const AtomString&);
+    RefPtr<Element> referenceTargetElement() const
+    {
+        return m_referenceTarget.isNull() ? nullptr : getElementById(m_referenceTarget);
+    }
 
 private:
-    ShadowRoot(Document&, ShadowRootMode, SlotAssignmentMode, DelegatesFocus, Cloneable, AvailableToElementInternals);
+    ShadowRoot(Document&, ShadowRootMode, SlotAssignmentMode, ShadowRootDelegatesFocus, Clonable, ShadowRootSerializable, ShadowRootAvailableToElementInternals, RefPtr<CustomElementRegistry>&&, ShadowRootScopedCustomElementRegistry, const AtomString& referenceTarget);
     ShadowRoot(Document&, std::unique_ptr<SlotAssignment>&&);
 
     bool childTypeAllowed(NodeType) const override;
@@ -144,22 +171,28 @@ private:
 
     void childrenChanged(const ChildChange&) override;
 
-    bool m_resetStyleInheritance : 1 { false };
+    ExceptionOr<void> replaceChildrenWithMarkup(const String&, OptionSet<ParserContentPolicy>);
+
     bool m_hasBegunDeletingDetachedChildren : 1 { false };
     bool m_delegatesFocus : 1 { false };
-    bool m_isCloneable : 1 { false };
+    bool m_isClonable : 1 { false };
+    bool m_serializable : 1 { false };
     bool m_containsFocusedElement : 1 { false };
     bool m_availableToElementInternals : 1 { false };
     bool m_isDeclarativeShadowRoot : 1 { false };
+    bool m_hasScopedCustomElementRegistry : 1 { false };
     ShadowRootMode m_mode { ShadowRootMode::UserAgent };
     SlotAssignmentMode m_slotAssignmentMode { SlotAssignmentMode::Named };
 
     WeakPtr<Element, WeakPtrImplWithEventTargetData> m_host;
+    Node* m_shadowIncludingRoot { nullptr };
     RefPtr<StyleSheetList> m_styleSheetList;
 
     std::unique_ptr<Style::Scope> m_styleScope;
     std::unique_ptr<SlotAssignment> m_slotAssignment;
     mutable std::optional<PartMappings> m_partMappings;
+
+    AtomString m_referenceTarget;
 };
 
 inline Element* ShadowRoot::activeElement() const
@@ -167,25 +200,12 @@ inline Element* ShadowRoot::activeElement() const
     return treeScope().focusedElementInScope();
 }
 
-inline bool Node::isUserAgentShadowRoot() const
-{
-    return isShadowRoot() && downcast<ShadowRoot>(*this).mode() == ShadowRootMode::UserAgent;
-}
-
-inline ContainerNode* Node::parentOrShadowHostNode() const
-{
-    ASSERT(isMainThreadOrGCThread());
-    if (is<ShadowRoot>(*this))
-        return downcast<ShadowRoot>(*this).host();
-    return parentNode();
-}
-
 inline bool hasShadowRootParent(const Node& node)
 {
     return node.parentNode() && node.parentNode()->isShadowRoot();
 }
 
-Vector<ShadowRoot*> assignedShadowRootsIfSlotted(const Node&);
+Vector<Ref<ShadowRoot>> assignedShadowRootsIfSlotted(const Node&);
 
 } // namespace WebCore
 

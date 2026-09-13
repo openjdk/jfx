@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,34 +25,29 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLogShim;
-import test.robot.com.sun.glass.ui.monocle.TestApplication;
-import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
-import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
-import javafx.animation.AnimationTimer;
-import javafx.application.Platform;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runners.Parameterized;
-
 import java.util.Collection;
 import java.util.concurrent.CountDownLatch;
+import javafx.animation.AnimationTimer;
+import javafx.application.Platform;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.com.sun.glass.ui.monocle.TestRunnable;
+import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
+import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
 
-public class RapidTapTest extends ParameterizedTestBase {
+public final class RapidTapTest extends ParameterizedTestBase {
 
-    public RapidTapTest(TestTouchDevice device) {
-        super(device);
-    }
-
-    @Parameterized.Parameters
-    public static Collection<Object[]> data() {
+    private static Collection<TestTouchDevice> parameters() {
         return TestTouchDevices.getTouchDeviceParameters(1);
     }
 
     /** 20 quick taps */
-    @Test
-    public void tapTwentyTimes() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void tapTwentyTimes(TestTouchDevice device) throws Exception {
+        createDevice(device, null);
         for (int i = 0; i < 20; i++) {
             int p = device.addPoint(width / 2, height / 2);
             device.sync();
@@ -62,22 +57,24 @@ public class RapidTapTest extends ParameterizedTestBase {
             device.sync();
         }
         TestRunnable.invokeAndWaitUntilSuccess(() -> {
-            Assert.assertEquals(20, TestLogShim.countLogContaining(
+            Assertions.assertEquals(20, TestLogShim.countLogContaining(
                     "TouchPoint: PRESSED"));
-            Assert.assertEquals(20, TestLogShim.countLogContaining(
+            Assertions.assertEquals(20, TestLogShim.countLogContaining(
                     "TouchPoint: RELEASED"));
-            Assert.assertEquals(20,
+            Assertions.assertEquals(20,
                                 TestLogShim.countLogContaining("Mouse pressed"));
-            Assert.assertEquals(20,
+            Assertions.assertEquals(20,
                                 TestLogShim.countLogContaining("Mouse released"));
-            Assert.assertEquals(20,
+            Assertions.assertEquals(20,
                                 TestLogShim.countLogContaining("Mouse clicked"));
         }, 3000);
     }
 
     /** 20 quick taps while the application thread is busy */
-    @Test
-    public void tapTwentyTimesUnderStress() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void tapTwentyTimesUnderStress(TestTouchDevice device) throws Exception {
+        createDevice(device, null);
         final CountDownLatch latch = new CountDownLatch(1);
         // throttle the application thread
         final AnimationTimer a = new AnimationTimer() {
@@ -102,11 +99,11 @@ public class RapidTapTest extends ParameterizedTestBase {
                 device.sync();
             }
             TestRunnable.invokeAndWaitUntilSuccess(() -> {
-                Assert.assertEquals(20, TestLogShim.countLogContaining("TouchPoint: PRESSED"));
-                Assert.assertEquals(20, TestLogShim.countLogContaining("TouchPoint: RELEASED"));
-                Assert.assertEquals(20, TestLogShim.countLogContaining("Mouse pressed"));
-                Assert.assertEquals(20, TestLogShim.countLogContaining("Mouse released"));
-                Assert.assertEquals(20, TestLogShim.countLogContaining("Mouse clicked"));
+                Assertions.assertEquals(20, TestLogShim.countLogContaining("TouchPoint: PRESSED"));
+                Assertions.assertEquals(20, TestLogShim.countLogContaining("TouchPoint: RELEASED"));
+                Assertions.assertEquals(20, TestLogShim.countLogContaining("Mouse pressed"));
+                Assertions.assertEquals(20, TestLogShim.countLogContaining("Mouse released"));
+                Assertions.assertEquals(20, TestLogShim.countLogContaining("Mouse clicked"));
             }, 10000);
         } finally {
             Platform.runLater(a::stop);

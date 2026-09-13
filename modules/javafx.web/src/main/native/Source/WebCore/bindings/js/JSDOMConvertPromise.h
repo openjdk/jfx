@@ -25,41 +25,41 @@
 
 #pragma once
 
-#include "IDLTypes.h"
-#include "JSDOMConvertBase.h"
-#include "JSDOMPromise.h"
-#include "WorkerGlobalScope.h"
+#include <WebCore/IDLTypes.h>
+#include <WebCore/JSDOMConvertBase.h>
+#include <WebCore/JSDOMPromise.h>
+#include <WebCore/WorkerGlobalScope.h>
 
 namespace WebCore {
 
 template<typename T> struct Converter<IDLPromise<T>> : DefaultConverter<IDLPromise<T>> {
-    using ReturnType = RefPtr<DOMPromise>;
+    using ReturnType = Ref<DOMPromise>;
+    using Result = ConversionResult<IDLPromise<T>>;
 
     // https://webidl.spec.whatwg.org/#es-promise
     template<typename ExceptionThrower = DefaultExceptionThrower>
-    static ReturnType convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, ExceptionThrower&& exceptionThrower = ExceptionThrower())
+    static Result convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, ExceptionThrower&& exceptionThrower = ExceptionThrower())
     {
         JSC::VM& vm = JSC::getVM(&lexicalGlobalObject);
         auto scope = DECLARE_THROW_SCOPE(vm);
         auto* globalObject = JSC::jsDynamicCast<JSDOMGlobalObject*>(&lexicalGlobalObject);
-        if (!globalObject)
-            return nullptr;
+        RELEASE_ASSERT(globalObject);
 
         // 1. Let resolve be the original value of %Promise%.resolve.
         // 2. Let promise be the result of calling resolve with %Promise% as the this value and V as the single argument value.
         auto* promise = JSC::JSPromise::resolvedPromise(globalObject, value);
         if (scope.exception()) {
-            auto* scriptExecutionContext = globalObject->scriptExecutionContext();
-            if (is<WorkerGlobalScope>(scriptExecutionContext)) {
-                auto* scriptController = downcast<WorkerGlobalScope>(*scriptExecutionContext).script();
+            CheckedPtr scriptExecutionContext = globalObject->scriptExecutionContext();
+            if (RefPtr globalScope = dynamicDowncast<WorkerGlobalScope>(scriptExecutionContext.get())) {
+                CheckedPtr scriptController = globalScope->script();
                 bool terminatorCausedException = vm.isTerminationException(scope.exception());
                 if (terminatorCausedException || (scriptController && scriptController->isTerminatingExecution())) {
                     scriptController->forbidExecution();
-                    return nullptr;
+                    return Result::exception();
                 }
             }
             exceptionThrower(lexicalGlobalObject, scope);
-            return nullptr;
+            return Result::exception();
         }
         ASSERT(promise);
 
@@ -68,19 +68,38 @@ template<typename T> struct Converter<IDLPromise<T>> : DefaultConverter<IDLPromi
     }
 };
 
+template<typename T> struct Converter<IDLPromiseIgnoringSuspension<T>> : public Converter<IDLPromise<T>> { };
+
 template<typename T> struct JSConverter<IDLPromise<T>> {
     static constexpr bool needsState = true;
     static constexpr bool needsGlobalObject = true;
 
-    static JSC::JSValue convert(JSC::JSGlobalObject&, JSDOMGlobalObject&, DOMPromise& promise)
+    static JSC::JSValue convert(JSC::JSGlobalObject&, JSDOMGlobalObject&, const DOMPromise& promise)
     {
-        return promise.promise();
+        return promise.guardedObject();
+    }
+
+    static JSC::JSValue convert(JSC::JSGlobalObject&, JSDOMGlobalObject&, const Ref<DOMPromise>& promise)
+    {
+        return promise->guardedObject();
     }
 
     template<template<typename> class U>
     static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& globalObject, U<T>& promiseProxy)
     {
         return promiseProxy.promise(lexicalGlobalObject, globalObject);
+    }
+};
+
+template<typename T> struct JSConverter<IDLPromiseIgnoringSuspension<T>> : public JSConverter<IDLPromise<T>> {
+    static JSC::JSValue convert(JSC::JSGlobalObject&, JSDOMGlobalObject&, const DOMPromise& promise)
+    {
+        return promise.guardedObject();
+    }
+
+    static JSC::JSValue convert(JSC::JSGlobalObject&, JSDOMGlobalObject&, const Ref<DOMPromise>& promise)
+    {
+        return promise->guardedObject();
     }
 };
 

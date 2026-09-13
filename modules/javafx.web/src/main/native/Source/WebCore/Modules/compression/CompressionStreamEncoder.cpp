@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,64 +36,30 @@ namespace WebCore {
 
 ExceptionOr<RefPtr<Uint8Array>> CompressionStreamEncoder::encode(const BufferSource&& input)
 {
-    auto* data = input.data();
-    if (!data)
-        return Exception { TypeError, "No data provided"_s };
-
-    auto compressedDataCheck = compress(data, input.length());
+    auto compressedDataCheck = compress(input.span());
     if (compressedDataCheck.hasException())
         return compressedDataCheck.releaseException();
 
-    auto compressedData = compressedDataCheck.returnValue();
+    Ref compressedData = compressedDataCheck.releaseReturnValue();
     if (!compressedData->byteLength())
         return nullptr;
 
-    return Uint8Array::tryCreate(static_cast<uint8_t *>(compressedData->data()), compressedData->byteLength());
+    return RefPtr { Uint8Array::create(WTF::move(compressedData)) };
 }
 
 ExceptionOr<RefPtr<Uint8Array>> CompressionStreamEncoder::flush()
 {
     m_didFinish = true;
 
-    auto compressedDataCheck = compress(0, 0);
+    auto compressedDataCheck = compress({ });
     if (compressedDataCheck.hasException())
         return compressedDataCheck.releaseException();
 
-    auto compressedData = compressedDataCheck.returnValue();
+    Ref compressedData = compressedDataCheck.releaseReturnValue();
     if (!compressedData->byteLength())
         return nullptr;
 
-    return Uint8Array::tryCreate(static_cast<uint8_t *>(compressedData->data()), compressedData->byteLength());
-}
-
-ExceptionOr<bool> CompressionStreamEncoder::initialize()
-{
-#if !PLATFORM(JAVA)
-    int result = Z_OK;
-
-    m_initialized = true;
-
-    switch (m_format) {
-    // Values chosen here are based off
-    // https://developer.apple.com/documentation/compression/compression_algorithm/compression_zlib?language=objc
-    case Formats::CompressionFormat::Deflate:
-        result = deflateInit2(&m_zstream, 5, Z_DEFLATED, -15, 8, Z_DEFAULT_STRATEGY);
-        break;
-    case Formats::CompressionFormat::Zlib:
-        result = deflateInit2(&m_zstream, 5, Z_DEFLATED, 15, 8, Z_DEFAULT_STRATEGY);
-        break;
-    case Formats::CompressionFormat::Gzip:
-        result = deflateInit2(&m_zstream, 5, Z_DEFLATED, 15 + 16, 8, Z_DEFAULT_STRATEGY);
-        break;
-    default:
-        RELEASE_ASSERT_NOT_REACHED();
-        break;
-    }
-
-    if (result != Z_OK)
-        return Exception { TypeError, "Initialization Failed."_s };
-#endif
-    return true;
+    return RefPtr { Uint8Array::create(WTF::move(compressedData)) };
 }
 
 // The compression algorithm is broken up into 2 steps.
@@ -105,7 +71,7 @@ ExceptionOr<bool> CompressionStreamEncoder::initialize()
 bool CompressionStreamEncoder::didDeflateFinish(int result) const
 {
 #if !PLATFORM(JAVA)
-    return !m_zstream.avail_in && (!m_didFinish || (m_didFinish && result == Z_STREAM_END));
+    return !m_zstream.getPlatformStream().avail_in && (!m_didFinish || (m_didFinish && result == Z_STREAM_END));
 #endif
     return true;
 }
@@ -119,48 +85,69 @@ static bool didDeflateFail(int result)
     return true;
 }
 
-ExceptionOr<RefPtr<JSC::ArrayBuffer>> CompressionStreamEncoder::compress(const uint8_t* input, const size_t inputLength)
+ExceptionOr<Ref<JSC::ArrayBuffer>> CompressionStreamEncoder::compress(std::span<const uint8_t> input)
+{
+#if PLATFORM(COCOA)
+    if (m_format == Formats::CompressionFormat::Brotli)
+        return compressAppleCompressionFramework(input);
+#endif
+    return compressZlib(input);
+}
+
+static ZStream::Algorithm compressionAlgorithm(Formats::CompressionFormat format)
+{
+    switch (format) {
+    case Formats::CompressionFormat::Brotli:
+        RELEASE_ASSERT_NOT_REACHED();
+    case Formats::CompressionFormat::Gzip:
+        return ZStream::Algorithm::Gzip;
+    case Formats::CompressionFormat::Zlib:
+        return ZStream::Algorithm::Zlib;
+    case Formats::CompressionFormat::Deflate:
+        return ZStream::Algorithm::Deflate;
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+ExceptionOr<Ref<JSC::ArrayBuffer>> CompressionStreamEncoder::compressZlib(std::span<const uint8_t> input)
 {
 #if !PLATFORM(JAVA)
-    size_t allocateSize = (inputLength < startingAllocationSize) ? startingAllocationSize : inputLength;
+    size_t allocateSize = std::max(input.size(), startingAllocationSize);
     auto storage = SharedBufferBuilder();
 
     int result;
     bool shouldCompress = true;
 
-    m_zstream.next_in = const_cast<z_const Bytef*>(input);
-    m_zstream.avail_in = inputLength;
+    if (!m_zstream.initializeIfNecessary(compressionAlgorithm(m_format), ZStream::Operation::Compression))
+        return Exception { ExceptionCode::TypeError, "Initialization Failed."_s };
 
-    if (!m_initialized) {
-        auto initializeResult = initialize();
-        if (initializeResult.hasException())
-            return initializeResult.releaseException();
-    }
+    m_zstream.getPlatformStream().next_in = const_cast<z_const Bytef*>(input.data());
+    m_zstream.getPlatformStream().avail_in = input.size();
 
     while (shouldCompress) {
-        auto output = Vector<uint8_t>();
+        Vector<uint8_t> output;
         if (!output.tryReserveInitialCapacity(allocateSize)) {
             allocateSize /= 4;
 
             if (allocateSize < startingAllocationSize)
-                return Exception { OutOfMemoryError };
+                return Exception { ExceptionCode::OutOfMemoryError };
 
             continue;
         }
 
-        output.resize(allocateSize);
+        output.grow(allocateSize);
 
-        m_zstream.next_out = output.data();
-        m_zstream.avail_out = output.size();
+        m_zstream.getPlatformStream().next_out = output.mutableSpan().data();
+        m_zstream.getPlatformStream().avail_out = output.size();
 
-        result = deflate(&m_zstream, m_didFinish ? Z_FINISH : Z_NO_FLUSH);
+        result = deflate(&m_zstream.getPlatformStream(), m_didFinish ? Z_FINISH : Z_NO_FLUSH);
 
         if (didDeflateFail(result))
-            return Exception { TypeError, "Failed to compress data."_s };
+            return Exception { ExceptionCode::TypeError, "Failed to compress data."_s };
 
         if (didDeflateFinish(result)) {
             shouldCompress = false;
-            output.resize(allocateSize - m_zstream.avail_out);
+            output.shrink(allocateSize - m_zstream.getPlatformStream().avail_out);
         }
         else {
             if (allocateSize < maxAllocationSize)
@@ -170,19 +157,12 @@ ExceptionOr<RefPtr<JSC::ArrayBuffer>> CompressionStreamEncoder::compress(const u
         storage.append(output);
     }
 
-    auto compressedData = storage.takeAsArrayBuffer();
+    RefPtr compressedData = storage.takeBufferAsArrayBuffer();
     if (!compressedData)
-        return Exception { OutOfMemoryError };
+        return Exception { ExceptionCode::OutOfMemoryError };
 
-    return compressedData;
+    return compressedData.releaseNonNull();
 #endif
-    UNUSED_PARAM(input);
-        UNUSED_PARAM(inputLength);
-        auto storage = SharedBufferBuilder();
-    auto compressedData = storage.takeAsArrayBuffer();
-    if (!compressedData)
-        return Exception { OutOfMemoryError };
-
-    return compressedData;
 }
+
 } // namespace WebCore

@@ -26,7 +26,7 @@
 #pragma once
 
 #include "FormattingContext.h"
-#include "LayoutElementBox.h"
+#include <WebCore/LayoutElementBox.h>
 
 namespace WebCore {
 namespace Layout {
@@ -39,7 +39,7 @@ public:
     const ElementBox* operator->() const { return m_current; }
 
     LayoutContainingBlockChainIterator& operator++();
-    bool operator==(const LayoutContainingBlockChainIterator& other) const { return m_current == other.m_current; }
+    friend bool operator==(LayoutContainingBlockChainIterator, LayoutContainingBlockChainIterator) = default;
 
 private:
     const ElementBox* m_current { nullptr };

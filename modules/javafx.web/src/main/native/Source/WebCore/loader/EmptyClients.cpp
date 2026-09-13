@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Eric Seidel <eric@webkit.org>
- * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,7 +29,6 @@
 #include "EmptyClients.h"
 
 #include "AppHighlight.h"
-#include "ApplicationCacheStorage.h"
 #include "BackForwardClient.h"
 #include "BadgeClient.h"
 #include "BroadcastChannelRegistry.h"
@@ -38,13 +37,17 @@
 #include "ContextMenuClient.h"
 #include "CookieConsentDecisionResult.h"
 #include "CookieJar.h"
+#include "CredentialRequestCoordinatorClient.h"
 #include "DOMPasteAccess.h"
 #include "DataListSuggestionPicker.h"
 #include "DatabaseProvider.h"
+#include "DateTimeChooser.h"
 #include "DiagnosticLoggingClient.h"
+#include "DisplayRefreshMonitor.h"
 #include "DisplayRefreshMonitorFactory.h"
 #include "DocumentFragment.h"
 #include "DocumentLoader.h"
+#include "DocumentSyncClient.h"
 #include "DragClient.h"
 #include "DummyModelPlayerProvider.h"
 #include "DummySpeechRecognitionProvider.h"
@@ -58,19 +61,22 @@
 #include "HTMLFormElement.h"
 #include "HistoryItem.h"
 #include "IDBConnectionToServer.h"
-#include "InspectorClient.h"
+#include "IDBIndexIdentifier.h"
+#include "IDBObjectStoreIdentifier.h"
+#include "Icon.h"
+#include "InspectorBackendClient.h"
 #include "LocalFrame.h"
 #include "LocalFrameLoaderClient.h"
-#include "MediaRecorderPrivate.h"
-#include "MediaRecorderProvider.h"
 #include "ModalContainerTypes.h"
 #include "NetworkStorageSession.h"
 #include "Page.h"
 #include "PageConfiguration.h"
 #include "PaymentCoordinatorClient.h"
 #include "PluginInfoProvider.h"
+#include "PopupMenu.h"
 #include "ProgressTrackerClient.h"
 #include "RemoteFrameClient.h"
+#include "SearchPopupMenu.h"
 #include "SecurityOriginData.h"
 #include "SocketProvider.h"
 #include "StorageArea.h"
@@ -82,9 +88,12 @@
 #include "UserContentProvider.h"
 #include "VisitedLinkStore.h"
 #include "WebRTCProvider.h"
+#include "WebTransportSession.h"
 #include <JavaScriptCore/HeapInlines.h>
 #include <pal/SessionID.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/Unexpected.h>
 
 #if ENABLE(CONTENT_EXTENSIONS)
 #include "CompiledContentExtension.h"
@@ -94,18 +103,34 @@
 #include "LegacyPreviewLoaderClient.h"
 #endif
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-#include "DateTimeChooser.h"
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+#include "DigitalCredentialsRequestData.h"
+#include "DigitalCredentialsResponseData.h"
+#include "ExceptionData.h"
+#endif
+
+#if USE(GSTREAMER_WEBRTC) && USE(LIBRICE)
+#include "GStreamerIceAgent.h"
 #endif
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DummyStorageProvider);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EmptyChromeClient);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EmptyCryptoClient);
 
 class UserMessageHandlerDescriptor;
 
 class EmptyBackForwardClient final : public BackForwardClient {
     void addItem(Ref<HistoryItem>&&) final { }
+    void setChildItem(BackForwardFrameItemIdentifier, Ref<HistoryItem>&&) final { }
     void goToItem(HistoryItem&) final { }
-    RefPtr<HistoryItem> itemAtIndex(int) final { return nullptr; }
+#if PLATFORM(JAVA)
+    void goToProvisionalItem(const HistoryItem&) final { }
+    void clearProvisionalItem(const HistoryItem&) final { }
+#endif
+    Vector<Ref<HistoryItem>> allItems(FrameIdentifier) { return { }; }
+    RefPtr<HistoryItem> itemAtIndex(int, FrameIdentifier) final { return nullptr; }
     unsigned backListCount() const final { return 0; }
     unsigned forwardListCount() const final { return 0; }
     bool containsItem(const HistoryItem&) const final { return false; }
@@ -115,7 +140,7 @@ class EmptyBackForwardClient final : public BackForwardClient {
 #if ENABLE(CONTEXT_MENUS)
 
 class EmptyContextMenuClient final : public ContextMenuClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(EmptyContextMenuClient);
 
     void downloadURL(const URL&) final { }
     void searchWithGoogle(const LocalFrame*) final { }
@@ -123,10 +148,6 @@ class EmptyContextMenuClient final : public ContextMenuClient {
     bool isSpeaking() const final { return false; }
     void speak(const String&) final { }
     void stopSpeaking() final { }
-
-#if PLATFORM(COCOA)
-    void searchWithSpotlight() final { }
-#endif
 
 #if HAVE(TRANSLATION_UI_SERVICES)
     void handleTranslation(const TranslationContextMenuInfo&) final { }
@@ -148,6 +169,8 @@ class EmptyContextMenuClient final : public ContextMenuClient {
     bool supportsCopySubject() final { return false; }
 #endif
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EmptyContextMenuClient);
 
 #endif // ENABLE(CONTEXT_MENUS)
 
@@ -188,46 +211,56 @@ private:
 };
 
 class EmptyDatabaseProvider final : public DatabaseProvider {
-    struct EmptyIDBConnectionToServerDeletegate final : public IDBClient::IDBConnectionToServerDelegate {
-        IDBConnectionIdentifier identifier() const final { return { }; }
-        void deleteDatabase(const IDBRequestData&) final { }
-        void openDatabase(const IDBRequestData&) final { }
+    struct EmptyIDBConnectionToServerDeletegate final : public IDBClient::IDBConnectionToServerDelegate, public RefCounted<EmptyIDBConnectionToServerDeletegate> {
+        static Ref<EmptyIDBConnectionToServerDeletegate> create() { return adoptRef(*new EmptyIDBConnectionToServerDeletegate); }
+
+        void ref() const final { RefCounted::ref(); }
+        void deref() const final { RefCounted::deref(); }
+
+        std::optional<IDBConnectionIdentifier> identifier() const final { return std::nullopt; }
+        void deleteDatabase(const IDBOpenRequestData&) final { }
+        void openDatabase(const IDBOpenRequestData&) final { }
         void abortTransaction(const IDBResourceIdentifier&) final { }
         void commitTransaction(const IDBResourceIdentifier&, uint64_t) final { }
-        void didFinishHandlingVersionChangeTransaction(uint64_t, const IDBResourceIdentifier&) final { }
+        void didFinishHandlingVersionChangeTransaction(IDBDatabaseConnectionIdentifier, const IDBResourceIdentifier&) final { }
         void createObjectStore(const IDBRequestData&, const IDBObjectStoreInfo&) final { }
         void deleteObjectStore(const IDBRequestData&, const String&) final { }
-        void renameObjectStore(const IDBRequestData&, uint64_t, const String&) final { }
-        void clearObjectStore(const IDBRequestData&, uint64_t) final { }
+        void renameObjectStore(const IDBRequestData&, IDBObjectStoreIdentifier, const String&) final { }
+        void clearObjectStore(const IDBRequestData&, IDBObjectStoreIdentifier) final { }
         void createIndex(const IDBRequestData&, const IDBIndexInfo&) final { }
-        void deleteIndex(const IDBRequestData&, uint64_t, const String&) final { }
-        void renameIndex(const IDBRequestData&, uint64_t, uint64_t, const String&) final { }
-        void putOrAdd(const IDBRequestData&, const IDBKeyData&, const IDBValue&, const IndexedDB::ObjectStoreOverwriteMode) final { }
+        void deleteIndex(const IDBRequestData&, IDBObjectStoreIdentifier, const String&) final { }
+        void renameIndex(const IDBRequestData&, IDBObjectStoreIdentifier, IDBIndexIdentifier, const String&) final { }
+        void putOrAdd(const IDBRequestData&, const IDBKeyData&, const IDBValue&, const IndexIDToIndexKeyMap&, const IndexedDB::ObjectStoreOverwriteMode) final { }
         void getRecord(const IDBRequestData&, const IDBGetRecordData&) final { }
         void getAllRecords(const IDBRequestData&, const IDBGetAllRecordsData&) final { }
         void getCount(const IDBRequestData&, const IDBKeyRangeData&) final { }
         void deleteRecord(const IDBRequestData&, const IDBKeyRangeData&) final { }
         void openCursor(const IDBRequestData&, const IDBCursorInfo&) final { }
         void iterateCursor(const IDBRequestData&, const IDBIterateCursorData&) final { }
-        void establishTransaction(uint64_t, const IDBTransactionInfo&) final { }
-        void databaseConnectionPendingClose(uint64_t) final { }
-        void databaseConnectionClosed(uint64_t) final { }
-        void abortOpenAndUpgradeNeeded(uint64_t, const std::optional<IDBResourceIdentifier>&) final { }
-        void didFireVersionChangeEvent(uint64_t, const IDBResourceIdentifier&, const IndexedDB::ConnectionClosedOnBehalfOfServer) final { }
-        void openDBRequestCancelled(const IDBRequestData&) final { }
+        void establishTransaction(IDBDatabaseConnectionIdentifier, const IDBTransactionInfo&) final { }
+        void databaseConnectionPendingClose(IDBDatabaseConnectionIdentifier) final { }
+        void databaseConnectionClosed(IDBDatabaseConnectionIdentifier) final { }
+        void abortOpenAndUpgradeNeeded(IDBDatabaseConnectionIdentifier, const std::optional<IDBResourceIdentifier>&) final { }
+        void didFireVersionChangeEvent(IDBDatabaseConnectionIdentifier, const IDBResourceIdentifier&, const IndexedDB::ConnectionClosedOnBehalfOfServer) final { }
+        void openDBRequestCancelled(const IDBOpenRequestData&) final { }
         void getAllDatabaseNamesAndVersions(const IDBResourceIdentifier&, const ClientOrigin&) final { }
-        ~EmptyIDBConnectionToServerDeletegate() { }
+        void didGenerateIndexKeyForRecord(const IDBResourceIdentifier&, const IDBResourceIdentifier&, const IDBIndexInfo&, const IDBKeyData&, const IndexKey&, std::optional<int64_t>) { }
+    private:
+        EmptyIDBConnectionToServerDeletegate() = default;
     };
 
-    IDBClient::IDBConnectionToServer& idbConnectionToServerForSession(PAL::SessionID) final
+    IDBClient::IDBConnectionToServer& idbConnectionToServerForSession(PAL::SessionID sessionID) final
     {
-        static NeverDestroyed<EmptyIDBConnectionToServerDeletegate> emptyDelegate;
-        static auto& emptyConnection = IDBClient::IDBConnectionToServer::create(emptyDelegate.get()).leakRef();
-        return emptyConnection;
+        static NeverDestroyed<Ref<EmptyIDBConnectionToServerDeletegate>> emptyDelegate = EmptyIDBConnectionToServerDeletegate::create();
+        static NeverDestroyed<Ref<IDBClient::IDBConnectionToServer>> emptyConnection = IDBClient::IDBConnectionToServer::create(emptyDelegate.get(), sessionID).leakRef();
+        return emptyConnection->get();
     }
 };
 
 class EmptyDiagnosticLoggingClient final : public DiagnosticLoggingClient {
+    WTF_MAKE_TZONE_ALLOCATED(EmptyDiagnosticLoggingClient);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(EmptyDiagnosticLoggingClient);
+
     void logDiagnosticMessage(const String&, const String&, ShouldSample) final { }
     void logDiagnosticMessageWithResult(const String&, const String&, DiagnosticLoggingResultType, ShouldSample) final { }
     void logDiagnosticMessageWithValue(const String&, const String&, double, unsigned, ShouldSample) final { }
@@ -236,23 +269,22 @@ class EmptyDiagnosticLoggingClient final : public DiagnosticLoggingClient {
     void logDiagnosticMessageWithDomain(const String&, DiagnosticLoggingDomain) final { };
 };
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EmptyDiagnosticLoggingClient);
+
 #if ENABLE(DRAG_SUPPORT)
 
 class EmptyDragClient final : public DragClient {
     void willPerformDragDestinationAction(DragDestinationAction, const DragData&) final { }
     void willPerformDragSourceAction(DragSourceAction, const IntPoint&, DataTransfer&) final { }
     OptionSet<DragSourceAction> dragSourceActionMaskForPoint(const IntPoint&) final { return { }; }
-    void startDrag(DragItem, DataTransfer&, LocalFrame&) final { }
+    void startDrag(DragItem, DataTransfer&, Frame&, const std::optional<NodeIdentifier>&) final { }
 };
 
 #endif // ENABLE(DRAG_SUPPORT)
 
 class EmptyEditorClient final : public EditorClient {
-    WTF_MAKE_FAST_ALLOCATED;
-
-public:
-    EmptyEditorClient() = default;
-
+    WTF_MAKE_TZONE_ALLOCATED(EmptyEditorClient);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(EmptyEditorClient);
 private:
     bool shouldDeleteRange(const std::optional<SimpleRange>&) final { return false; }
     bool smartInsertDeleteEnabled() final { return false; }
@@ -284,7 +316,7 @@ private:
     void didEndUserTriggeredSelectionChanges() final { }
     void willWriteSelectionToPasteboard(const std::optional<SimpleRange>&) final { }
     void didWriteSelectionToPasteboard() final { }
-    void getClientPasteboardData(const std::optional<SimpleRange>&, Vector<String>&, Vector<RefPtr<SharedBuffer>>&) final { }
+    void getClientPasteboardData(const std::optional<SimpleRange>&, Vector<std::pair<String, RefPtr<SharedBuffer>>>&) final { }
     void requestCandidatesForSelection(const VisibleSelection&) final { }
     void handleAcceptedCandidateWithSoftSpaces(TextCheckingResult) final { }
 
@@ -292,7 +324,7 @@ private:
     void registerRedoStep(UndoStep&) final;
     void clearUndoRedoOperations() final { }
 
-    DOMPasteAccessResponse requestDOMPasteAccess(DOMPasteAccessCategory, const String&) final { return DOMPasteAccessResponse::DeniedForGesture; }
+    DOMPasteAccessResponse requestDOMPasteAccess(DOMPasteAccessCategory, FrameIdentifier, const String&) final { return DOMPasteAccessResponse::DeniedForGesture; }
 
     bool canCopyCut(LocalFrame*, bool defaultValue) const final { return defaultValue; }
     bool canPaste(LocalFrame*, bool defaultValue) const final { return defaultValue; }
@@ -350,6 +382,8 @@ private:
     void toggleAutomaticTextReplacement() final { }
     bool isAutomaticSpellingCorrectionEnabled() final { return false; }
     void toggleAutomaticSpellingCorrection() final { }
+    bool isSmartListsEnabled() final { return false; }
+    void toggleSmartLists() { }
 #endif
 
 #if PLATFORM(GTK)
@@ -363,7 +397,6 @@ private:
     void showSpellingUI(bool) final { }
     bool spellingUIIsShowing() final { return false; }
 
-    void willSetInputMethodState() final { }
     void setInputMethodState(Element*) final { }
 
     class EmptyTextCheckerClient final : public TextCheckerClient {
@@ -379,10 +412,13 @@ private:
 
         void getGuessesForWord(const String&, const String&, const VisibleSelection&, Vector<String>&) final { }
         void requestCheckingOfString(TextCheckingRequest&, const VisibleSelection&) final;
+        void requestExtendedCheckingOfString(TextCheckingRequest&, const VisibleSelection&) final;
     };
 
     EmptyTextCheckerClient m_textCheckerClient;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EmptyEditorClient);
 
 class EmptyFrameNetworkingContext final : public FrameNetworkingContext {
 public:
@@ -405,23 +441,37 @@ private:
 #endif
 };
 
-class EmptyInspectorClient final : public InspectorClient {
-    WTF_MAKE_FAST_ALLOCATED;
+class EmptyInspectorBackendClient final : public InspectorBackendClient {
+    WTF_MAKE_TZONE_ALLOCATED(EmptyInspectorBackendClient);
     void inspectedPageDestroyed() final { }
-    Inspector::FrontendChannel* openLocalFrontend(InspectorController*) final { return nullptr; }
+    Inspector::FrontendChannel* openLocalFrontend(PageInspectorController*) final { return nullptr; }
     void bringFrontendToFront() final { }
     void highlight() final { }
     void hideHighlight() final { }
 };
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EmptyInspectorBackendClient);
+
 #if ENABLE(APPLE_PAY)
 
-class EmptyPaymentCoordinatorClient final : public PaymentCoordinatorClient {
-    WTF_MAKE_FAST_ALLOCATED;
+class EmptyPaymentCoordinatorClient final : public PaymentCoordinatorClient, public RefCounted<EmptyPaymentCoordinatorClient> {
+    WTF_MAKE_TZONE_ALLOCATED(EmptyPaymentCoordinatorClient);
+public:
+    static Ref<EmptyPaymentCoordinatorClient> create()
+    {
+        return adoptRef(*new EmptyPaymentCoordinatorClient);
+    }
+
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
+private:
+    EmptyPaymentCoordinatorClient() = default;
+
     std::optional<String> validatedPaymentNetwork(const String&) const final { return std::nullopt; }
     bool canMakePayments() final { return false; }
-    void canMakePaymentsWithActiveCard(const String&, const String&, CompletionHandler<void(bool)>&& completionHandler) final { callOnMainThread([completionHandler = WTFMove(completionHandler)]() mutable { completionHandler(false); }); }
-    void openPaymentSetup(const String&, const String&, CompletionHandler<void(bool)>&& completionHandler) final { callOnMainThread([completionHandler = WTFMove(completionHandler)]() mutable { completionHandler(false); }); }
+    void canMakePaymentsWithActiveCard(const String&, const String&, CompletionHandler<void(bool)>&& completionHandler) final { callOnMainThread([completionHandler = WTF::move(completionHandler)]() mutable { completionHandler(false); }); }
+    void openPaymentSetup(const String&, const String&, CompletionHandler<void(bool)>&& completionHandler) final { callOnMainThread([completionHandler = WTF::move(completionHandler)]() mutable { completionHandler(false); }); }
     bool showPaymentUI(const URL&, const Vector<URL>&, const ApplePaySessionPaymentRequest&) final { return false; }
     void completeMerchantValidation(const PaymentMerchantSession&) final { }
     void completeShippingMethodSelection(std::optional<ApplePayShippingMethodUpdate>&&) final { }
@@ -435,6 +485,42 @@ class EmptyPaymentCoordinatorClient final : public PaymentCoordinatorClient {
     void abortPaymentSession() final { }
 };
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EmptyPaymentCoordinatorClient);
+
+#endif
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+class EmptyCredentialRequestCoordinatorClient final : public CredentialRequestCoordinatorClient {
+    WTF_MAKE_TZONE_ALLOCATED(EmptyCredentialRequestCoordinatorClient);
+public:
+    static Ref<EmptyCredentialRequestCoordinatorClient> create()
+    {
+        return adoptRef(*new EmptyCredentialRequestCoordinatorClient);
+    }
+
+    void showDigitalCredentialsPicker(Vector<WebCore::UnvalidatedDigitalCredentialRequest>&&, const DigitalCredentialsRequestData&, CompletionHandler<void(Expected<DigitalCredentialsResponseData, ExceptionData>&&)>&& completionHandler)
+    {
+        callOnMainThread([completionHandler = WTF::move(completionHandler)]() mutable {
+            completionHandler(makeUnexpected(ExceptionData { ExceptionCode::NotSupportedError, "Empty client."_s }));
+        });
+    }
+
+    void dismissDigitalCredentialsPicker(CompletionHandler<void(bool)>&& completionHandler) final
+    {
+        callOnMainThread([completionHandler = WTF::move(completionHandler)]() mutable {
+            completionHandler(false);
+        });
+    }
+
+    ExceptionOr<Vector<ValidatedDigitalCredentialRequest>> validateAndParseDigitalCredentialRequests(const SecurityOrigin&, const Document&, const Vector<UnvalidatedDigitalCredentialRequest>&)
+    {
+        return Exception { ExceptionCode::InvalidStateError };
+    }
+
+private:
+    EmptyCredentialRequestCoordinatorClient() = default;
+};
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EmptyCredentialRequestCoordinatorClient);
 #endif
 
 class EmptyPluginInfoProvider final : public PluginInfoProvider {
@@ -444,10 +530,8 @@ class EmptyPluginInfoProvider final : public PluginInfoProvider {
 };
 
 class EmptyPopupMenu : public PopupMenu {
-public:
-    EmptyPopupMenu() = default;
 private:
-    void show(const IntRect&, LocalFrameView*, int) final { }
+    void show(const IntRect&, LocalFrameView&, int) final { }
     void hide() final { }
     void updateFromElement() final { }
     void disconnectClient() final { }
@@ -474,7 +558,7 @@ private:
     void loadRecentSearches(const AtomString&, Vector<RecentSearch>&) final { }
     bool enabled() final { return false; }
 
-    Ref<EmptyPopupMenu> m_popup;
+    const Ref<EmptyPopupMenu> m_popup;
 };
 
 class EmptyStorageNamespaceProvider final : public StorageNamespaceProvider {
@@ -509,19 +593,19 @@ class EmptyStorageNamespaceProvider final : public StorageNamespaceProvider {
 
     Ref<StorageNamespace> createLocalStorageNamespace(unsigned, PAL::SessionID) final;
     Ref<StorageNamespace> createTransientLocalStorageNamespace(SecurityOrigin&, unsigned, PAL::SessionID) final;
-
-    void copySessionStorageNamespace(Page&, Page&) final { };
     RefPtr<StorageNamespace> sessionStorageNamespace(const SecurityOrigin&, Page&, ShouldCreateNamespace) final;
 };
 
 class EmptyUserContentProvider final : public UserContentProvider {
-    void forEachUserScript(Function<void(DOMWrapperWorld&, const UserScript&)>&&) const final { }
-    void forEachUserStyleSheet(Function<void(const UserStyleSheet&)>&&) const final { }
+    void forEachUserScript(NOESCAPE const Function<void(DOMWrapperWorld&, const UserScript&)>&) const final { }
+    void forEachUserStyleSheet(NOESCAPE const Function<void(const UserStyleSheet&)>&) const final { }
 #if ENABLE(USER_MESSAGE_HANDLERS)
-    void forEachUserMessageHandler(Function<void(const UserMessageHandlerDescriptor&)>&&) const final { }
+    void forEachUserMessageHandler(NOESCAPE const Function<void(const UserMessageHandlerDescriptor&)>&) const final { }
 #endif
+    bool hasBuffersForWorld(const DOMWrapperWorld&) const final { return false; }
+    WebKitBuffer* buffer(const DOMWrapperWorld&, const String&) const final { return nullptr; }
 #if ENABLE(CONTENT_EXTENSIONS)
-    ContentExtensions::ContentExtensionsBackend& userContentExtensionBackend() final { static NeverDestroyed<ContentExtensions::ContentExtensionsBackend> backend; return backend.get(); };
+    const ContentExtensions::ContentExtensionsBackend& userContentExtensionBackend() const final { static NeverDestroyed<ContentExtensions::ContentExtensionsBackend> backend; return backend.get(); };
 #endif
 };
 
@@ -540,42 +624,26 @@ RefPtr<SearchPopupMenu> EmptyChromeClient::createSearchPopupMenu(PopupMenuClient
     return adoptRef(*new EmptySearchPopupMenu);
 }
 
-#if ENABLE(INPUT_TYPE_COLOR)
-
-std::unique_ptr<ColorChooser> EmptyChromeClient::createColorChooser(ColorChooserClient&, const Color&)
+RefPtr<ColorChooser> EmptyChromeClient::createColorChooser(ColorChooserClient&, const Color&)
 {
     return nullptr;
 }
 
-#endif
-
-#if ENABLE(DATALIST_ELEMENT)
-
-std::unique_ptr<DataListSuggestionPicker> EmptyChromeClient::createDataListSuggestionPicker(DataListSuggestionsClient&)
+RefPtr<DataListSuggestionPicker> EmptyChromeClient::createDataListSuggestionPicker(DataListSuggestionsClient&)
 {
     return nullptr;
 }
 
-#endif
-
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-
-std::unique_ptr<DateTimeChooser> EmptyChromeClient::createDateTimeChooser(DateTimeChooserClient&)
+RefPtr<DateTimeChooser> EmptyChromeClient::createDateTimeChooser(DateTimeChooserClient&)
 {
     return nullptr;
 }
 
-#endif
-
-#if ENABLE(APP_HIGHLIGHTS)
-
-void EmptyChromeClient::storeAppHighlight(AppHighlight&&) const
+void EmptyChromeClient::setTextIndicator(RefPtr<TextIndicator>&&) const
 {
 }
 
-#endif
-
-void EmptyChromeClient::setTextIndicator(const TextIndicatorData&) const
+void EmptyChromeClient::updateTextIndicator(RefPtr<TextIndicator>&&) const
 {
 }
 
@@ -588,7 +656,7 @@ void EmptyChromeClient::runOpenPanel(LocalFrame&, FileChooser&)
 {
 }
 
-void EmptyChromeClient::showShareSheet(ShareDataWithParsedURL&, CompletionHandler<void(bool)>&&)
+void EmptyChromeClient::showShareSheet(ShareDataWithParsedURL&&, CompletionHandler<void(bool)>&&)
 {
 }
 
@@ -597,15 +665,30 @@ void EmptyChromeClient::requestCookieConsent(CompletionHandler<void(CookieConsen
     completion(CookieConsentDecisionResult::NotSupported);
 }
 
-void EmptyFrameLoaderClient::dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, FormState*, const String&, PolicyCheckIdentifier, FramePolicyFunction&&)
+RefPtr<Icon> EmptyChromeClient::createIconForFiles(const Vector<String>& /* filenames */)
+{
+    return nullptr;
+}
+
+// MARK: -
+
+void EmptyFrameLoaderClient::dispatchDecidePolicyForNewWindowAction(const NavigationAction&, const ResourceRequest&, FormState*, const String&, std::optional<HitTestResult>&&, FramePolicyFunction&&)
 {
 }
 
-void EmptyFrameLoaderClient::dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, const ResourceResponse&, FormState*, PolicyDecisionMode, PolicyCheckIdentifier, FramePolicyFunction&&)
+void EmptyFrameLoaderClient::dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, const ResourceResponse&, FormState*, const String&, std::optional<NavigationIdentifier>, std::optional<HitTestResult>&&, bool, NavigationUpgradeToHTTPSBehavior, SandboxFlags, PolicyDecisionMode, FramePolicyFunction&&)
 {
 }
 
-void EmptyFrameLoaderClient::broadcastFrameRemovalToOtherProcesses()
+void EmptyFrameLoaderClient::updateSandboxFlags(SandboxFlags)
+{
+}
+
+void EmptyFrameLoaderClient::updateOpener(std::optional<FrameIdentifier>)
+{
+}
+
+void EmptyFrameLoaderClient::setPrinting(bool, FloatSize, FloatSize, float, AdjustViewSize)
 {
 }
 
@@ -613,14 +696,14 @@ void EmptyFrameLoaderClient::dispatchWillSendSubmitEvent(Ref<FormState>&&)
 {
 }
 
-void EmptyFrameLoaderClient::dispatchWillSubmitForm(FormState&, CompletionHandler<void()>&& completionHandler)
+void EmptyFrameLoaderClient::dispatchWillSubmitForm(FormState&, URL&&, String&&, CompletionHandler<void()>&& completionHandler)
 {
     completionHandler();
 }
 
-Ref<DocumentLoader> EmptyFrameLoaderClient::createDocumentLoader(const ResourceRequest& request, const SubstituteData& substituteData)
+Ref<DocumentLoader> EmptyFrameLoaderClient::createDocumentLoader(ResourceRequest&& request, SubstituteData&& substituteData)
 {
-    return DocumentLoader::create(request, substituteData);
+    return DocumentLoader::create(WTF::move(request), WTF::move(substituteData));
 }
 
 RefPtr<LocalFrame> EmptyFrameLoaderClient::createFrame(const AtomString&, HTMLFrameOwnerElement&)
@@ -628,7 +711,7 @@ RefPtr<LocalFrame> EmptyFrameLoaderClient::createFrame(const AtomString&, HTMLFr
     return nullptr;
 }
 
-RefPtr<Widget> EmptyFrameLoaderClient::createPlugin(const IntSize&, HTMLPlugInElement&, const URL&, const Vector<AtomString>&, const Vector<AtomString>&, const String&, bool)
+RefPtr<Widget> EmptyFrameLoaderClient::createPlugin(HTMLPlugInElement&, const URL&, const Vector<AtomString>&, const Vector<AtomString>&, const String&, bool)
 {
     return nullptr;
 }
@@ -816,7 +899,7 @@ void EmptyFrameLoaderClient::dispatchShow()
 {
 }
 
-void EmptyFrameLoaderClient::dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, PolicyCheckIdentifier, const String&, FramePolicyFunction&&)
+void EmptyFrameLoaderClient::dispatchDecidePolicyForResponse(const ResourceResponse&, const ResourceRequest&, const String&, FramePolicyFunction&&)
 {
 }
 
@@ -840,7 +923,7 @@ void EmptyFrameLoaderClient::setMainFrameDocumentReady(bool)
 {
 }
 
-void EmptyFrameLoaderClient::startDownload(const ResourceRequest&, const String&)
+void EmptyFrameLoaderClient::startDownload(const ResourceRequest&, const String&, FromDownloadAttribute)
 {
 }
 
@@ -868,63 +951,13 @@ void EmptyFrameLoaderClient::finishedLoading(DocumentLoader*)
 {
 }
 
-ResourceError EmptyFrameLoaderClient::cancelledError(const ResourceRequest&) const
-{
-    return { ResourceError::Type::Cancellation };
-}
-
-ResourceError EmptyFrameLoaderClient::blockedError(const ResourceRequest&) const
-{
-    return { };
-}
-
-ResourceError EmptyFrameLoaderClient::blockedByContentBlockerError(const ResourceRequest&) const
-{
-    return { };
-}
-
-ResourceError EmptyFrameLoaderClient::cannotShowURLError(const ResourceRequest&) const
-{
-    return { };
-}
-
-ResourceError EmptyFrameLoaderClient::interruptedForPolicyChangeError(const ResourceRequest&) const
-{
-    return { };
-}
-
-#if ENABLE(CONTENT_FILTERING)
-
-ResourceError EmptyFrameLoaderClient::blockedByContentFilterError(const ResourceRequest&) const
-{
-    return { };
-}
-
-#endif
-
-ResourceError EmptyFrameLoaderClient::cannotShowMIMETypeError(const ResourceResponse&) const
-{
-    return { };
-}
-
-ResourceError EmptyFrameLoaderClient::fileDoesNotExistError(const ResourceResponse&) const
-{
-    return { };
-}
-
-ResourceError EmptyFrameLoaderClient::httpsUpgradeRedirectLoopError(const ResourceRequest&) const
-{
-    return { };
-}
-
-ResourceError EmptyFrameLoaderClient::pluginWillHandleLoadError(const ResourceResponse&) const
-{
-    return { };
-}
-
 bool EmptyFrameLoaderClient::shouldFallBack(const ResourceError&) const
 {
     return false;
+}
+
+void EmptyFrameLoaderClient::loadStorageAccessQuirksIfNeeded()
+{
 }
 
 bool EmptyFrameLoaderClient::canHandleRequest(const ResourceRequest&) const
@@ -1001,15 +1034,13 @@ void EmptyFrameLoaderClient::didRestoreFrameHierarchyForCachedFrame()
 
 #endif
 
-void EmptyFrameLoaderClient::transitionToCommittedForNewPage()
+void EmptyFrameLoaderClient::transitionToCommittedForNewPage(InitializingIframe)
 {
 }
-
 
 void EmptyFrameLoaderClient::didRestoreFromBackForwardCache()
 {
 }
-
 
 void EmptyFrameLoaderClient::updateGlobalHistory()
 {
@@ -1019,9 +1050,19 @@ void EmptyFrameLoaderClient::updateGlobalHistoryRedirectLinks()
 {
 }
 
-bool EmptyFrameLoaderClient::shouldGoToHistoryItem(HistoryItem&) const
+ShouldGoToHistoryItem EmptyFrameLoaderClient::shouldGoToHistoryItem(HistoryItem&, IsSameDocumentNavigation, ProcessSwapDisposition) const
+{
+    return ShouldGoToHistoryItem::No;
+}
+
+bool EmptyFrameLoaderClient::supportsAsyncShouldGoToHistoryItem() const
 {
     return false;
+}
+
+void EmptyFrameLoaderClient::shouldGoToHistoryItemAsync(HistoryItem&, CompletionHandler<void(ShouldGoToHistoryItem)>&&) const
+{
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 void EmptyFrameLoaderClient::saveViewStateToItem(HistoryItem&)
@@ -1032,15 +1073,6 @@ bool EmptyFrameLoaderClient::canCachePage() const
 {
     return false;
 }
-
-void EmptyFrameLoaderClient::didDisplayInsecureContent()
-{
-}
-
-void EmptyFrameLoaderClient::didRunInsecureContent(SecurityOrigin&, const URL&)
-{
-}
-
 
 ObjectContentType EmptyFrameLoaderClient::objectContentType(const URL&, const String&)
 {
@@ -1067,9 +1099,19 @@ RemoteAXObjectRef EmptyFrameLoaderClient::accessibilityRemoteObject()
     return nullptr;
 }
 
-#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
-void EmptyFrameLoaderClient::setAXIsolatedTreeRoot(WebCore::AXCoreObject*)
+IntPoint EmptyFrameLoaderClient::accessibilityRemoteFrameOffset()
 {
+    return { };
+}
+
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+void EmptyFrameLoaderClient::setIsolatedTree(Ref<WebCore::AXIsolatedTree>&&)
+{
+}
+
+RefPtr<WebCore::AXIsolatedTree> EmptyFrameLoaderClient::isolatedTree() const
+{
+    return nullptr;
 }
 #endif
 
@@ -1089,6 +1131,11 @@ void EmptyFrameLoaderClient::prefetchDNS(const String&)
 {
 }
 
+RefPtr<HistoryItem> EmptyFrameLoaderClient::createHistoryItemTree(bool, BackForwardItemIdentifier) const
+{
+    return nullptr;
+}
+
 #if USE(QUICK_LOOK)
 
 RefPtr<LegacyPreviewLoaderClient> EmptyFrameLoaderClient::createPreviewLoaderClient(const String&, const String&)
@@ -1098,14 +1145,18 @@ RefPtr<LegacyPreviewLoaderClient> EmptyFrameLoaderClient::createPreviewLoaderCli
 
 #endif
 
-#if ENABLE(TRACKING_PREVENTION)
-
 bool EmptyFrameLoaderClient::hasFrameSpecificStorageAccess()
 {
     return false;
 }
 
-#endif
+void EmptyFrameLoaderClient::revokeFrameSpecificStorageAccess()
+{
+}
+
+void EmptyFrameLoaderClient::dispatchLoadEventToOwnerElementInAnotherProcess()
+{
+}
 
 inline EmptyFrameNetworkingContext::EmptyFrameNetworkingContext()
     : FrameNetworkingContext { nullptr }
@@ -1124,6 +1175,10 @@ void EmptyFrameLoaderClient::sendH2Ping(const URL& url, CompletionHandler<void(E
 }
 
 void EmptyEditorClient::EmptyTextCheckerClient::requestCheckingOfString(TextCheckingRequest&, const VisibleSelection&)
+{
+}
+
+void EmptyEditorClient::EmptyTextCheckerClient::requestExtendedCheckingOfString(TextCheckingRequest&, const VisibleSelection&)
 {
 }
 
@@ -1154,15 +1209,6 @@ class EmptyStorageSessionProvider final : public StorageSessionProvider {
     NetworkStorageSession* storageSession() const final { return nullptr; }
 };
 
-class EmptyMediaRecorderProvider final : public MediaRecorderProvider {
-public:
-    EmptyMediaRecorderProvider() = default;
-private:
-#if ENABLE(MEDIA_RECORDER)
-    RefPtr<MediaRecorderPrivate> createMediaRecorderPrivate(MediaStreamPrivate&, const MediaRecorderPrivateOptions&) final { return nullptr; }
-#endif
-};
-
 class EmptyBroadcastChannelRegistry final : public BroadcastChannelRegistry {
 public:
     static Ref<EmptyBroadcastChannelRegistry> create()
@@ -1180,6 +1226,20 @@ private:
 class EmptySocketProvider final : public SocketProvider {
 public:
     RefPtr<ThreadableWebSocketChannel> createWebSocketChannel(Document&, WebSocketChannelClient&) final { return nullptr; }
+
+    std::pair<RefPtr<WebTransportSession>, Ref<WebTransportSessionPromise>> initializeWebTransportSession(ScriptExecutionContext&, WebTransportSessionClient&, const URL&, const WebTransportOptions&) { return { nullptr, WebTransportSessionPromise::createAndReject() }; }
+
+#if USE(LIBRICE)
+    RefPtr<WebCore::RiceBackend> createRiceBackend(WebCore::RiceBackendClient&) final { return nullptr; }
+#endif
+};
+
+class EmptyHistoryItemClient final : public HistoryItemClient {
+public:
+    static Ref<EmptyHistoryItemClient> create() { return adoptRef(*new EmptyHistoryItemClient); }
+private:
+    void historyItemChanged(const HistoryItem&) { }
+    void clearChildren(const HistoryItem&) const { }
 };
 
 PageConfiguration pageConfigurationWithEmptyClients(std::optional<PageIdentifier> identifier, PAL::SessionID sessionID)
@@ -1195,32 +1255,43 @@ PageConfiguration pageConfigurationWithEmptyClients(std::optional<PageIdentifier
         adoptRef(*new EmptyBackForwardClient),
         CookieJar::create(adoptRef(*new EmptyStorageSessionProvider)),
         makeUniqueRef<EmptyProgressTrackerClient>(),
-        UniqueRef<LocalFrameLoaderClient>(makeUniqueRef<EmptyFrameLoaderClient>()),
-        FrameIdentifier::generate(),
+        PageConfiguration::LocalMainFrameCreationParameters {
+            CompletionHandler<UniqueRef<LocalFrameLoaderClient>(LocalFrame&, FrameLoader&)> { [] (auto&, auto& frameLoader) {
+                return makeUniqueRefWithoutRefCountedCheck<EmptyFrameLoaderClient>(frameLoader);
+        } },
+            SandboxFlags::all(),
+            ReferrerPolicy::EmptyString
+        },
+        generateFrameIdentifier(),
+        nullptr,
         makeUniqueRef<DummySpeechRecognitionProvider>(),
-        makeUniqueRef<EmptyMediaRecorderProvider>(),
         EmptyBroadcastChannelRegistry::create(),
         makeUniqueRef<DummyStorageProvider>(),
-        makeUniqueRef<DummyModelPlayerProvider>(),
+        DummyModelPlayerProvider::create(),
         EmptyBadgeClient::create(),
+        EmptyHistoryItemClient::create(),
 #if ENABLE(CONTEXT_MENUS)
         makeUniqueRef<EmptyContextMenuClient>(),
 #endif
 #if ENABLE(APPLE_PAY)
-        makeUniqueRef<EmptyPaymentCoordinatorClient>(),
+        EmptyPaymentCoordinatorClient::create(),
 #endif
-        makeUniqueRef<EmptyChromeClient>()
+        makeUniqueRef<EmptyChromeClient>(),
+        makeUniqueRef<EmptyCryptoClient>(),
+        makeUniqueRef<DocumentSyncClient>()
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+        , EmptyCredentialRequestCoordinatorClient::create()
+#endif
     };
 
 #if ENABLE(DRAG_SUPPORT)
     pageConfiguration.dragClient = makeUnique<EmptyDragClient>();
 #endif
 
-    pageConfiguration.inspectorClient = makeUnique<EmptyInspectorClient>();
+    pageConfiguration.inspectorBackendClient = makeUnique<EmptyInspectorBackendClient>();
 
     pageConfiguration.diagnosticLoggingClient = makeUnique<EmptyDiagnosticLoggingClient>();
 
-    pageConfiguration.applicationCacheStorage = ApplicationCacheStorage::create({ }, { });
     pageConfiguration.databaseProvider = adoptRef(*new EmptyDatabaseProvider);
     pageConfiguration.pluginInfoProvider = adoptRef(*new EmptyPluginInfoProvider);
     pageConfiguration.storageNamespaceProvider = adoptRef(*new EmptyStorageNamespaceProvider);

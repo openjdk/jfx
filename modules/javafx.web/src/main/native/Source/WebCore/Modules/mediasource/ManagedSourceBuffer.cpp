@@ -26,24 +26,24 @@
 #include "config.h"
 #include "ManagedSourceBuffer.h"
 
-#if ENABLE(MANAGED_MEDIA_SOURCE)
+#if ENABLE(MEDIA_SOURCE)
 
 #include "ManagedMediaSource.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(ManagedSourceBuffer);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ManagedSourceBuffer);
 
 Ref<ManagedSourceBuffer> ManagedSourceBuffer::create(Ref<SourceBufferPrivate>&& sourceBufferPrivate, ManagedMediaSource& source)
 {
-    auto sourceBuffer = adoptRef(*new ManagedSourceBuffer(WTFMove(sourceBufferPrivate), source));
+    auto sourceBuffer = adoptRef(*new ManagedSourceBuffer(WTF::move(sourceBufferPrivate), source));
     sourceBuffer->suspendIfNeeded();
     return sourceBuffer;
 }
 
 ManagedSourceBuffer::ManagedSourceBuffer(Ref<SourceBufferPrivate>&& sourceBufferPrivate, ManagedMediaSource& source)
-    : SourceBuffer(WTFMove(sourceBufferPrivate), source)
+    : SourceBuffer(WTF::move(sourceBufferPrivate), source)
 {
 }
 
@@ -51,4 +51,4 @@ ManagedSourceBuffer::~ManagedSourceBuffer() = default;
 
 }
 
-#endif
+#endif // ENABLE(MEDIA_SOURCE)

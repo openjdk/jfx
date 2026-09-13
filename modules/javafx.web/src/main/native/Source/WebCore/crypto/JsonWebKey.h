@@ -25,15 +25,38 @@
 
 #pragma once
 
-#include "CryptoKeyUsage.h"
-#include "RsaOtherPrimesInfo.h"
+#include <WebCore/CryptoKeyUsage.h>
+#include <WebCore/RsaOtherPrimesInfo.h>
 #include <wtf/Vector.h>
 
 #if ENABLE(WEB_CRYPTO)
-
 namespace WebCore {
 
 struct JsonWebKey {
+    JsonWebKey isolatedCopy() && {
+        return {
+            crossThreadCopy(WTF::move(kty)),
+            crossThreadCopy(WTF::move(use)),
+            key_ops,
+            usages,
+            crossThreadCopy(WTF::move(alg)),
+            ext,
+            crossThreadCopy(WTF::move(crv)),
+            crossThreadCopy(WTF::move(x)),
+            crossThreadCopy(WTF::move(y)),
+            crossThreadCopy(WTF::move(d)),
+            crossThreadCopy(WTF::move(n)),
+            crossThreadCopy(WTF::move(e)),
+            crossThreadCopy(WTF::move(p)),
+            crossThreadCopy(WTF::move(q)),
+            crossThreadCopy(WTF::move(dp)),
+            crossThreadCopy(WTF::move(dq)),
+            crossThreadCopy(WTF::move(qi)),
+            crossThreadCopy(WTF::move(oth)),
+            crossThreadCopy(WTF::move(k))
+        };
+    }
+
     String kty;
     String use;
     // FIXME: Consider merging key_ops and usages.
@@ -59,5 +82,4 @@ struct JsonWebKey {
 };
 
 } // namespace WebCore
-
 #endif // ENABLE(WEB_CRYPTO)

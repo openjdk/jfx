@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2018 Apple Inc.  All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,14 +25,16 @@
 
 #pragma once
 
-#include "Page.h"
-#include "ResourceLoaderIdentifier.h"
-#include "Timer.h"
+#include <WebCore/Page.h>
+#include <WebCore/ResourceLoaderIdentifier.h>
+#include <WebCore/Timer.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/RefPtr.h>
 #include <wtf/UniqueRef.h>
+#include <wtf/WeakPtr.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
@@ -41,16 +43,17 @@ class ResourceResponse;
 class ProgressTrackerClient;
 struct ProgressItem;
 
-class ProgressTracker {
+class ProgressTracker final : public CanMakeCheckedPtr<ProgressTracker> {
     WTF_MAKE_NONCOPYABLE(ProgressTracker);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ProgressTracker, Loader);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ProgressTracker);
 public:
     explicit ProgressTracker(Page&, UniqueRef<ProgressTrackerClient>&&);
     ~ProgressTracker();
 
     ProgressTrackerClient& client() { return m_client.get(); }
 
-    WEBCORE_EXPORT double estimatedProgress() const;
+    double estimatedProgress() const { return m_progressValue; }
 
     void progressStarted(LocalFrame&);
     void progressCompleted(LocalFrame&);
@@ -70,10 +73,11 @@ private:
     void progressEstimateChanged(LocalFrame&);
 
     void progressHeartbeatTimerFired();
+    Ref<Page> protectedPage() const;
 
-    Page& m_page;
-    UniqueRef<ProgressTrackerClient> m_client;
-    RefPtr<LocalFrame> m_originatingProgressFrame;
+    WeakRef<Page> m_page;
+    const UniqueRef<ProgressTrackerClient> m_client;
+    WeakPtr<LocalFrame> m_originatingProgressFrame;
     HashMap<ResourceLoaderIdentifier, std::unique_ptr<ProgressItem>> m_progressItems;
     Timer m_progressHeartbeatTimer;
 

@@ -29,18 +29,21 @@
 #include "config.h"
 #include "Archive.h"
 
+#include <wtf/RunLoop.h>
+#include <wtf/Scope.h>
+
 namespace WebCore {
 
 Archive::~Archive() = default;
 
 void Archive::clearAllSubframeArchives()
 {
-    HashSet<Archive*> clearedArchives;
+    HashSet<RefPtr<Archive>> clearedArchives;
     clearedArchives.add(this);
     clearAllSubframeArchives(clearedArchives);
 }
 
-void Archive::clearAllSubframeArchives(HashSet<Archive*>& clearedArchives)
+void Archive::clearAllSubframeArchives(HashSet<RefPtr<Archive>>& clearedArchives)
 {
     ASSERT(clearedArchives.contains(this));
     for (auto& archive : m_subframeArchives) {
@@ -48,6 +51,51 @@ void Archive::clearAllSubframeArchives(HashSet<Archive*>& clearedArchives)
             archive->clearAllSubframeArchives(clearedArchives);
     }
     m_subframeArchives.clear();
+}
+
+Expected<Vector<String>, ArchiveError> Archive::saveResourcesToDisk(const String& directory)
+{
+    ASSERT(!RunLoop::isMain());
+
+    Vector<String> filePaths;
+    RefPtr mainResource = m_mainResource;
+    if (!mainResource)
+        return makeUnexpected(ArchiveError::EmptyResource);
+
+    bool hasError = false;
+    auto cleanup = makeScopeExit([&] {
+        if (hasError) {
+            for (auto filePath : filePaths)
+                FileSystem::deleteFile(filePath);
+        }
+    });
+
+    auto mainResourceResult = mainResource->saveToDisk(directory);
+    if (!mainResourceResult) {
+        hasError = true;
+        return makeUnexpected(mainResourceResult.error());
+    }
+    filePaths.append(mainResourceResult.value());
+
+    for (auto subresource : m_subresources) {
+        auto result = subresource->saveToDisk(directory);
+        if (!result) {
+            hasError = true;
+            return makeUnexpected(result.error());
+        }
+        filePaths.append(result.value());
+    }
+
+    for (auto subframeArchive : m_subframeArchives) {
+        auto result = subframeArchive->saveResourcesToDisk(directory);
+        if (!result) {
+            hasError = true;
+            return makeUnexpected(result.error());
+        }
+        filePaths.appendVector(result.value());
+    }
+
+    return filePaths;
 }
 
 }

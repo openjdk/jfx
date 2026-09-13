@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "DirectArgumentsOffset.h"
-#include "ScopeOffset.h"
-#include "VirtualRegister.h"
+#include <JavaScriptCore/DirectArgumentsOffset.h>
+#include <JavaScriptCore/ScopeOffset.h>
+#include <JavaScriptCore/VirtualRegister.h>
 #include <wtf/HashMap.h>
 
 namespace JSC {
@@ -190,11 +190,7 @@ public:
         ASSERT_NOT_REACHED();
     }
 
-    bool operator==(const VarOffset& other) const
-    {
-        return m_kind == other.m_kind
-            && m_offset == other.m_offset;
-    }
+    friend bool operator==(const VarOffset&, const VarOffset&) = default;
 
     unsigned hash() const
     {
@@ -206,6 +202,8 @@ public:
         return m_kind == VarKind::Invalid && !m_offset;
     }
 
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
     void dump(PrintStream&) const;
 
 private:
@@ -213,20 +211,11 @@ private:
     unsigned m_offset;
 };
 
-struct VarOffsetHash {
-    static unsigned hash(const VarOffset& key) { return key.hash(); }
-    static bool equal(const VarOffset& a, const VarOffset& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } // namespace JSC
 
 namespace WTF {
 
 void printInternal(PrintStream&, JSC::VarKind);
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::VarOffset> : JSC::VarOffsetHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::VarOffset> : SimpleClassHashTraits<JSC::VarOffset> {

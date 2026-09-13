@@ -29,10 +29,10 @@
 
 #pragma once
 
-#include "FloatPoint.h"
-#include "FloatRect.h"
-#include "PODIntervalTree.h"
-#include "WindRule.h"
+#include <WebCore/FloatPoint.h>
+#include <WebCore/FloatRect.h>
+#include <WebCore/PODIntervalTree.h>
+#include <WebCore/WindRule.h>
 #include <memory>
 #include <wtf/Vector.h>
 
@@ -40,14 +40,14 @@ namespace WebCore {
 
 class FloatPolygonEdge;
 
+typedef PODIntervalTree<float, FloatPolygonEdge*> EdgeIntervalTree;
+
 class FloatPolygon {
 public:
-    FloatPolygon(Vector<FloatPoint>&& vertices, WindRule fillRule);
+    FloatPolygon(Vector<FloatPoint>&& vertices);
 
     const FloatPoint& vertexAt(unsigned index) const { return m_vertices[index]; }
     unsigned numberOfVertices() const { return m_vertices.size(); }
-
-    WindRule fillRule() const { return m_fillRule; }
 
     const FloatPolygonEdge& edgeAt(unsigned index) const { return m_edges[index]; }
     unsigned numberOfEdges() const { return m_edges.size(); }
@@ -58,13 +58,7 @@ public:
     bool isEmpty() const { return m_empty; }
 
 private:
-    using EdgeIntervalTree = PODIntervalTree<float, FloatPolygonEdge*>;
-
-    bool containsNonZero(const FloatPoint&) const;
-    bool containsEvenOdd(const FloatPoint&) const;
-
     Vector<FloatPoint> m_vertices;
-    WindRule m_fillRule;
     FloatRect m_boundingBox;
     bool m_empty;
     Vector<FloatPolygonEdge> m_edges;
@@ -84,7 +78,6 @@ public:
     float maxX() const { return std::max(vertex1().x(), vertex2().x()); }
     float maxY() const { return std::max(vertex1().y(), vertex2().y()); }
 
-    bool overlapsRect(const FloatRect&) const;
     bool intersection(const VertexPair&, FloatPoint&) const;
 };
 

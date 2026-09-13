@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -614,11 +614,11 @@
             }
             else if ([itemValue isKindOfClass: [NSNumber class]]) {
                 // TODO: distinguish long/int/double, now passing all numbers as double
-                // http://javafx-jira.kenai.com/browse/RT-27005
+                // JDK-8096014
                 jValue = [self createDouble: [(NSNumber *) itemValue doubleValue]];
             }
             // TODO: handle duration as Duration object
-            // http://javafx-jira.kenai.com/browse/RT-27005
+            // JDK-8096014
             else {
                 [ErrorHandler logMsg: LOGGER_WARNING message: "Metadata conversion failed. Unrecognized value type"];
             }

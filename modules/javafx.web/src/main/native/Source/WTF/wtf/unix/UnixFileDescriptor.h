@@ -34,8 +34,11 @@
 namespace WTF {
 
 class UnixFileDescriptor {
-    WTF_MAKE_NONCOPYABLE(UnixFileDescriptor);
 public:
+    // This class is noncopyable because otherwise it's very hard to avoid accidental file
+    // descriptor duplication. If you intentionally want a dup, call the duplicate method.
+    WTF_MAKE_NONCOPYABLE(UnixFileDescriptor);
+
     UnixFileDescriptor() = default;
 
     enum AdoptionTag { Adopt };
@@ -61,7 +64,7 @@ public:
             return *this;
 
         this->~UnixFileDescriptor();
-        new (this) UnixFileDescriptor(WTFMove(o));
+        new (this) UnixFileDescriptor(WTF::move(o));
         return *this;
     }
 
@@ -80,7 +83,7 @@ public:
         return UnixFileDescriptor { m_value, Duplicate };
     }
 
-    int release() WARN_UNUSED_RETURN { return std::exchange(m_value, -1); }
+    [[nodiscard]] int release() { return std::exchange(m_value, -1); }
 
 private:
     int m_value { -1 };

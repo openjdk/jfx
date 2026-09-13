@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,8 +27,13 @@
 #include "AdaptiveInferredPropertyValueWatchpointBase.h"
 
 #include "JSCInlines.h"
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AdaptiveInferredPropertyValueWatchpointBase);
 
 AdaptiveInferredPropertyValueWatchpointBase::AdaptiveInferredPropertyValueWatchpointBase(const ObjectPropertyCondition& key)
     : m_key(key)
@@ -44,7 +49,7 @@ void AdaptiveInferredPropertyValueWatchpointBase::initialize(const ObjectPropert
 
 void AdaptiveInferredPropertyValueWatchpointBase::install(VM& vm)
 {
-    RELEASE_ASSERT(m_key.isWatchable(PropertyCondition::MakeNoChanges));
+    ASSERT(m_key.isWatchable(PropertyCondition::MakeNoChanges)); // This is really costly.
 
     Structure* structure = m_key.object()->structure();
 
@@ -85,7 +90,7 @@ void AdaptiveInferredPropertyValueWatchpointBase::StructureWatchpoint::fireInter
 {
     ptrdiff_t myOffset = OBJECT_OFFSETOF(AdaptiveInferredPropertyValueWatchpointBase, m_structureWatchpoint);
 
-    AdaptiveInferredPropertyValueWatchpointBase* parent = bitwise_cast<AdaptiveInferredPropertyValueWatchpointBase*>(bitwise_cast<char*>(this) - myOffset);
+    AdaptiveInferredPropertyValueWatchpointBase* parent = std::bit_cast<AdaptiveInferredPropertyValueWatchpointBase*>(std::bit_cast<char*>(this) - myOffset);
 
     parent->fire(vm, detail);
 }
@@ -94,9 +99,11 @@ void AdaptiveInferredPropertyValueWatchpointBase::PropertyWatchpoint::fireIntern
 {
     ptrdiff_t myOffset = OBJECT_OFFSETOF(AdaptiveInferredPropertyValueWatchpointBase, m_propertyWatchpoint);
 
-    AdaptiveInferredPropertyValueWatchpointBase* parent = bitwise_cast<AdaptiveInferredPropertyValueWatchpointBase*>(bitwise_cast<char*>(this) - myOffset);
+    AdaptiveInferredPropertyValueWatchpointBase* parent = std::bit_cast<AdaptiveInferredPropertyValueWatchpointBase*>(std::bit_cast<char*>(this) - myOffset);
 
     parent->fire(vm, detail);
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

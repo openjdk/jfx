@@ -48,22 +48,23 @@ static QualifiedNameComponents makeComponents(const AtomString& prefix, const At
 }
 
 QualifiedName::QualifiedName(const AtomString& prefix, const AtomString& localName, const AtomString& namespaceURI)
-    : m_impl(threadGlobalData().qualifiedNameCache().getOrCreate(makeComponents(prefix, localName, namespaceURI)))
+    : m_impl(threadGlobalDataSingleton().qualifiedNameCache().getOrCreate(makeComponents(prefix, localName, namespaceURI)))
 {
 }
 
 QualifiedName::QualifiedName(const AtomString& prefix, const AtomString& localName, const AtomString& namespaceURI, Namespace nodeNamespace, NodeName nodeName)
-    : m_impl(threadGlobalData().qualifiedNameCache().getOrCreate(makeComponents(prefix, localName, namespaceURI), nodeNamespace, nodeName))
+    : m_impl(threadGlobalDataSingleton().qualifiedNameCache().getOrCreate(makeComponents(prefix, localName, namespaceURI), nodeNamespace, nodeName))
 {
 }
 
 QualifiedName::QualifiedNameImpl::~QualifiedNameImpl()
 {
-    threadGlobalData().qualifiedNameCache().remove(*this);
+    threadGlobalDataSingleton().qualifiedNameCache().remove(*this);
 }
 
 // Global init routines
 LazyNeverDestroyed<const QualifiedName> anyName;
+LazyNeverDestroyed<const QualifiedName> nullName;
 
 void QualifiedName::init()
 {
@@ -72,13 +73,8 @@ void QualifiedName::init()
         return;
 
     anyName.construct(nullAtom(), starAtom(), starAtom(), Namespace::Unknown, NodeName::Unknown);
+    nullName.construct(nullAtom(), nullAtom(), nullAtom(), Namespace::None, NodeName::Unknown);
     initialized = true;
-}
-
-const QualifiedName& nullQName()
-{
-    static NeverDestroyed<QualifiedName> nullName(nullAtom(), nullAtom(), nullAtom(), Namespace::None, NodeName::Unknown);
-    return nullName;
 }
 
 const AtomString& QualifiedName::localNameUppercase() const

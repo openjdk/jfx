@@ -4,7 +4,8 @@
  *           (C) 1998 Waldo Bastian (bastian@kde.org)
  *           (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2003, 2004, 2005, 2006, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2016 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -25,6 +26,7 @@
 #pragma once
 
 #include "RenderTable.h"
+#include "StylePreferredSize.h"
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -53,7 +55,8 @@ public:
 };
 
 class RenderTableSection final : public RenderBox {
-    WTF_MAKE_ISO_ALLOCATED(RenderTableSection);
+    WTF_MAKE_TZONE_ALLOCATED(RenderTableSection);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderTableSection);
 public:
     RenderTableSection(Element&, RenderStyle&&);
     RenderTableSection(Document&, RenderStyle&&);
@@ -83,21 +86,18 @@ public:
         bool hasCells() const { return cells.size() > 0; }
     };
 
-    typedef Vector<CellStruct> Row;
+    using Row = Vector<CellStruct>;
     struct RowStruct {
         Row row;
         RenderTableRow* rowRenderer { nullptr };
         LayoutUnit baseline;
-        Length logicalHeight;
+        Style::PreferredSize logicalHeight { CSS::Keyword::Auto { } };
     };
 
     inline const BorderValue& borderAdjoiningTableStart() const;
     inline const BorderValue& borderAdjoiningTableEnd() const;
     const BorderValue& borderAdjoiningStartCell(const RenderTableCell&) const;
     const BorderValue& borderAdjoiningEndCell(const RenderTableCell&) const;
-
-    const RenderTableCell* firstRowCellAdjoiningTableStart() const;
-    const RenderTableCell* firstRowCellAdjoiningTableEnd() const;
 
     CellStruct& cellAt(unsigned row,  unsigned col);
     const CellStruct& cellAt(unsigned row, unsigned col) const;
@@ -107,10 +107,10 @@ public:
     void appendColumn(unsigned pos);
     void splitColumn(unsigned pos, unsigned first);
 
-    LayoutUnit calcOuterBorderBefore() const;
-    LayoutUnit calcOuterBorderAfter() const;
-    LayoutUnit calcOuterBorderStart() const;
-    LayoutUnit calcOuterBorderEnd() const;
+    enum class BlockBorderSide { BorderBefore, BorderAfter };
+    LayoutUnit calcBlockDirectionOuterBorder(BlockBorderSide) const;
+    enum class InlineBorderSide { BorderStart, BorderEnd };
+    LayoutUnit calcInlineDirectionOuterBorder(InlineBorderSide) const;
     void recalcOuterBorder();
 
     LayoutUnit outerBorderBefore() const { return m_outerBorderBefore; }
@@ -118,10 +118,10 @@ public:
     LayoutUnit outerBorderStart() const { return m_outerBorderStart; }
     LayoutUnit outerBorderEnd() const { return m_outerBorderEnd; }
 
-    inline LayoutUnit outerBorderLeft(const RenderStyle* styleForCellFlow) const;
-    inline LayoutUnit outerBorderRight(const RenderStyle* styleForCellFlow) const;
-    inline LayoutUnit outerBorderTop(const RenderStyle* styleForCellFlow) const;
-    inline LayoutUnit outerBorderBottom(const RenderStyle* styleForCellFlow) const;
+    inline LayoutUnit outerBorderLeft(const WritingMode) const;
+    inline LayoutUnit outerBorderRight(const WritingMode) const;
+    inline LayoutUnit outerBorderTop(const WritingMode) const;
+    inline LayoutUnit outerBorderBottom(const WritingMode) const;
 
     unsigned numRows() const;
     unsigned numColumns() const;
@@ -144,15 +144,17 @@ public:
     // FIXME: We may want to introduce a structure holding the in-flux layout information.
     LayoutUnit distributeExtraLogicalHeightToRows(LayoutUnit extraLogicalHeight);
 
-    static RenderPtr<RenderTableSection> createAnonymousWithParentRenderer(const RenderTable&);
-    RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const override;
-
     void paint(PaintInfo&, const LayoutPoint&) override;
 
     void willInsertTableRow(RenderTableRow& child, RenderObject* beforeChild);
 
+    // Whether a row has opaque background depends on many factors, e.g. border spacing, border collapsing, missing cells, etc.
+    // For simplicity, just conservatively assume all table rows are not opaque.
+    bool foregroundIsKnownToBeOpaqueInRect(const LayoutRect&, unsigned) const override { return false; }
+    bool backgroundIsKnownToBeOpaqueInRect(const LayoutRect&) const override { return false; }
+
 private:
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) override;
 
     static RenderPtr<RenderTableSection> createTableSectionWithStyle(Document&, const RenderStyle&);
 
@@ -161,18 +163,17 @@ private:
         DoNotIncludeAllIntersectingCells
     };
 
-    ASCIILiteral renderName() const override { return (isAnonymous() || isPseudoElement()) ? "RenderTableSection (anonymous)"_s : "RenderTableSection"_s; }
+    ASCIILiteral renderName() const override;
 
     bool canHaveChildren() const override { return true; }
 
-    bool isTableSection() const override { return true; }
-
-    void willBeRemovedFromTree(IsInternalMove) override;
+    void willBeRemovedFromTree() override;
 
     void layout() override;
 
     void paintCell(RenderTableCell*, PaintInfo&, const LayoutPoint&);
     void paintObject(PaintInfo&, const LayoutPoint&) override;
+    Color rowGroupBorderColor(CSSPropertyID borderColor) const;
     void paintRowGroupBorder(const PaintInfo&, bool antialias, LayoutRect, BoxSide, CSSPropertyID borderColor, BorderStyle, BorderStyle tableBorderStyle);
     void paintRowGroupBorderIfRequired(const PaintInfo&, const LayoutPoint& paintOffset, unsigned row, unsigned col, BoxSide, RenderTableCell* = 0);
     LayoutUnit offsetLeftForRowGroupBorder(RenderTableCell*, const LayoutRect& rowGroupRect, unsigned row);
@@ -180,6 +181,8 @@ private:
     LayoutUnit offsetTopForRowGroupBorder(RenderTableCell*, BoxSide borderSide, unsigned row);
     LayoutUnit verticalRowGroupBorderHeight(RenderTableCell*, const LayoutRect& rowGroupRect, unsigned row);
     LayoutUnit horizontalRowGroupBorderWidth(RenderTableCell*, const LayoutRect& rowGroupRect, unsigned row, unsigned column);
+
+    void computeIntrinsicLogicalWidths(LayoutUnit&, LayoutUnit&) const override { }
 
     void imageChanged(WrappedImagePtr, const IntRect* = 0) override;
 
@@ -193,7 +196,7 @@ private:
     void distributeExtraLogicalHeightToAutoRows(LayoutUnit& extraLogicalHeight, unsigned autoRowsCount);
     void distributeRemainingExtraLogicalHeight(LayoutUnit& extraLogicalHeight);
 
-    bool hasOverflowingCell() const { return m_overflowingCells.size() || m_forceSlowPaintPathWithOverflowingCell; }
+    bool hasOverflowingCell() const;
     void computeOverflowFromCells(unsigned totalRows, unsigned nEffCols);
 
     CellSpan fullTableRowSpan() const;
@@ -216,6 +219,8 @@ private:
 
     void setLogicalPositionForCell(RenderTableCell*, unsigned effectiveColumn) const;
 
+    LayoutUnit cellLogicalWidthInTableDirectionIncludingColumnSpan(const RenderTableCell&, size_t startColumn, size_t numberOfColumns) const;
+
     void firstChild() const = delete;
     void lastChild() const = delete;
 
@@ -234,7 +239,7 @@ private:
     // This HashSet holds the overflowing cells for faster painting.
     // If we have more than gMaxAllowedOverflowingCellRatio * total cells, it will be empty
     // and m_forceSlowPaintPathWithOverflowingCell will be set to save memory.
-    HashSet<RenderTableCell*> m_overflowingCells;
+    SingleThreadWeakHashSet<RenderTableCell> m_overflowingCells;
 
     // This map holds the collapsed border values for cells with collapsed borders.
     // It is held at RenderTableSection level to spare memory consumption by table cells.
@@ -294,11 +299,6 @@ inline CellSpan RenderTableSection::fullTableRowSpan() const
     return CellSpan(0, m_grid.size());
 }
 
-inline RenderPtr<RenderBox> RenderTableSection::createAnonymousBoxWithSameTypeAs(const RenderBox& renderer) const
-{
-    return RenderTableSection::createTableSectionWithStyle(renderer.document(), renderer.style());
-}
-
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTableSection, isTableSection())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTableSection, isRenderTableSection())

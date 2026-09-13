@@ -37,43 +37,6 @@
 #include "gtimer.h"
 #include "gutils.h"
 
-/**
- * SECTION:thread_pools
- * @title: Thread Pools
- * @short_description: pools of threads to execute work concurrently
- * @see_also: #GThread
- *
- * Sometimes you wish to asynchronously fork out the execution of work
- * and continue working in your own thread. If that will happen often,
- * the overhead of starting and destroying a thread each time might be
- * too high. In such cases reusing already started threads seems like a
- * good idea. And it indeed is, but implementing this can be tedious
- * and error-prone.
- *
- * Therefore GLib provides thread pools for your convenience. An added
- * advantage is, that the threads can be shared between the different
- * subsystems of your program, when they are using GLib.
- *
- * To create a new thread pool, you use g_thread_pool_new().
- * It is destroyed by g_thread_pool_free().
- *
- * If you want to execute a certain task within a thread pool,
- * you call g_thread_pool_push().
- *
- * To get the current number of running threads you call
- * g_thread_pool_get_num_threads(). To get the number of still
- * unprocessed tasks you call g_thread_pool_unprocessed(). To control
- * the maximal number of threads for a thread pool, you use
- * g_thread_pool_get_max_threads() and g_thread_pool_set_max_threads().
- *
- * Finally you can control the number of unused threads, that are kept
- * alive by GLib for future use. The current number can be fetched with
- * g_thread_pool_get_num_unused_threads(). The maximal number can be
- * controlled by g_thread_pool_get_max_unused_threads() and
- * g_thread_pool_set_max_unused_threads(). All currently unused threads
- * can be stopped by calling g_thread_pool_stop_unused_threads().
- */
-
 #define DEBUG_MSG(x)
 /* #define DEBUG_MSG(args) g_printerr args ; g_printerr ("\n");    */
 
@@ -85,9 +48,32 @@ typedef struct _GRealThreadPool GRealThreadPool;
  * @user_data: the user data for the threads of this pool
  * @exclusive: are all threads exclusive to this pool
  *
- * The #GThreadPool struct represents a thread pool. It has three
- * public read-only members, but the underlying struct is bigger,
- * so you must not copy this struct.
+ * The `GThreadPool` struct represents a thread pool.
+ *
+ * A thread pool is useful when you wish to asynchronously fork out the execution of work
+ * and continue working in your own thread. If that will happen often, the overhead of starting
+ * and destroying a thread each time might be too high. In such cases reusing already started
+ * threads seems like a good idea. And it indeed is, but implementing this can be tedious
+ * and error-prone.
+ *
+ * Therefore GLib provides thread pools for your convenience. An added advantage is, that the
+ * threads can be shared between the different subsystems of your program, when they are using GLib.
+ *
+ * To create a new thread pool, you use [func@GLib.ThreadPool.new].
+ * It is destroyed by [method@GLib.ThreadPool.free].
+ *
+ * If you want to execute a certain task within a thread pool, use [method@GLib.ThreadPool.push].
+ *
+ * To get the current number of running threads you call [method@GLib.ThreadPool.get_num_threads].
+ * To get the number of still unprocessed tasks you call [method@GLib.ThreadPool.unprocessed].
+ * To control the maximum number of threads for a thread pool, you use
+ * [method@GLib.ThreadPool.get_max_threads]. and [method@GLib.ThreadPool.set_max_threads].
+ *
+ * Finally you can control the number of unused threads, that are kept alive by GLib for future use.
+ * The current number can be fetched with [func@GLib.ThreadPool.get_num_unused_threads].
+ * The maximum number can be controlled by [func@GLib.ThreadPool.get_max_unused_threads] and
+ * [func@GLib.ThreadPool.set_max_unused_threads]. All currently unused threads
+ * can be stopped by calling [func@GLib.ThreadPool.stop_unused_threads].
  */
 struct _GRealThreadPool
 {
@@ -113,9 +99,11 @@ static gint wakeup_thread_serial = 0;
 /* Here all unused threads are waiting  */
 static GAsyncQueue *unused_thread_queue = NULL;
 static gint unused_threads = 0;
-static gint max_unused_threads = 2;
+static gint max_unused_threads = 8;
 static gint kill_unused_threads = 0;
 static guint max_idle_time = 15 * 1000;
+
+static int thread_counter = 0;
 
 typedef struct
 {
@@ -297,11 +285,9 @@ g_thread_pool_spawn_thread (gpointer data)
       SpawnThreadData *spawn_thread_data;
       GThread *thread = NULL;
       GError *error = NULL;
-      const gchar *prgname = g_get_prgname ();
-      gchar name[16] = "pool";
+      gchar name[16];
 
-      if (prgname)
-        g_snprintf (name, sizeof (name), "pool-%s", prgname);
+      g_snprintf (name, sizeof (name), "pool-%d", g_atomic_int_add (&thread_counter, 1));
 
       g_async_queue_lock (spawn_thread_queue);
       /* Spawn a new thread for the given pool and wake the requesting thread
@@ -448,12 +434,7 @@ g_thread_pool_start_thread (GRealThreadPool  *pool,
 
   if (!success)
     {
-      const gchar *prgname = g_get_prgname ();
-      gchar name[16] = "pool";
       GThread *thread;
-
-      if (prgname)
-        g_snprintf (name, sizeof (name), "pool-%s", prgname);
 
       /* No thread was found, we have to start a new one */
       if (pool->pool.exclusive)
@@ -462,6 +443,10 @@ g_thread_pool_start_thread (GRealThreadPool  *pool,
            * we simply start new threads that inherit the scheduler settings
            * from the current thread.
            */
+          char name[16];
+
+          g_snprintf (name, sizeof (name), "pool-%d", g_atomic_int_add (&thread_counter, 1));
+
           thread = g_thread_try_new (name, g_thread_pool_thread_proxy, pool, error);
         }
       else
@@ -999,7 +984,7 @@ g_thread_pool_wakeup_and_stop_all (GRealThreadPool *pool)
  * If @max_threads is -1, no limit is imposed on the number
  * of unused threads.
  *
- * The default value is 2.
+ * The default value is 8 since GLib 2.84. Previously the default value was 2.
  */
 void
 g_thread_pool_set_max_unused_threads (gint max_threads)

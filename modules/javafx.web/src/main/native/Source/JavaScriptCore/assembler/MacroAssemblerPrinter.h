@@ -25,10 +25,11 @@
 
 #pragma once
 
-#include "JSCPtrTag.h"
-#include "MacroAssembler.h"
-#include "Printer.h"
-#include "ProbeContext.h"
+#include <JavaScriptCore/JSCPtrTag.h>
+#include <JavaScriptCore/MacroAssembler.h>
+#include <JavaScriptCore/Printer.h>
+#include <JavaScriptCore/ProbeContext.h>
+#include <wtf/Platform.h>
 
 namespace JSC {
 
@@ -90,6 +91,7 @@ namespace JSC {
 //   Note: print() does not automatically insert a '\n' at the end of the line.
 //   If you want a '\n', you'll have to add it explicitly (as in the examples above).
 
+namespace Printer {
 
 struct AllRegisters {
     explicit AllRegisters(unsigned charsToIndent = 0)
@@ -164,8 +166,6 @@ struct MemWord : public Memory {
     { }
 };
 
-namespace Printer {
-
 // Add some specialized printers.
 
 void printAllRegisters(PrintStream&, Context&);
@@ -224,7 +224,7 @@ struct Printer<MemWord<IntType>> : public Printer<Memory> {
     { }
 };
 
-void printCallback(Probe::Context&);
+void SYSV_ABI printCallback(Probe::Context&);
 
 } // namespace Printer
 
@@ -233,6 +233,12 @@ inline void MacroAssembler::print(Arguments&&... arguments)
 {
     auto printRecordList = Printer::makePrintRecordList(std::forward<Arguments>(arguments)...);
     probe(tagCFunction<JITProbePtrTag>(Printer::printCallback), printRecordList);
+}
+
+template<typename... Arguments>
+inline void MacroAssembler::println(Arguments&&... arguments)
+{
+    print(std::forward<Arguments>(arguments)..., "\n");
 }
 
 inline void MacroAssembler::print(Printer::PrintRecordList* printRecordList)

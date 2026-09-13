@@ -27,26 +27,29 @@
 #include "PermissionStatus.h"
 
 #include "ClientOrigin.h"
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
-#include "DocumentInlines.h"
+#include "Event.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "MainThreadPermissionObserver.h"
 #include "PermissionController.h"
 #include "PermissionState.h"
 #include "Permissions.h"
+#include "RegistrableDomain.h"
 #include "ScriptExecutionContext.h"
 #include "SecurityOrigin.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerLoaderProxy.h"
 #include "WorkerThread.h"
 #include <wtf/HashMap.h>
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(PermissionStatus);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PermissionStatus);
 
 static HashMap<MainThreadPermissionObserverIdentifier, std::unique_ptr<MainThreadPermissionObserver>>& allMainThreadPermissionObservers()
 {
@@ -56,7 +59,7 @@ static HashMap<MainThreadPermissionObserverIdentifier, std::unique_ptr<MainThrea
 
 Ref<PermissionStatus> PermissionStatus::create(ScriptExecutionContext& context, PermissionState state, PermissionDescriptor descriptor, PermissionQuerySource source, WeakPtr<Page>&& page)
 {
-    auto status = adoptRef(*new PermissionStatus(context, state, descriptor, source, WTFMove(page)));
+    auto status = adoptRef(*new PermissionStatus(context, state, descriptor, source, WTF::move(page)));
     status->suspendIfNeeded();
     return status;
 }
@@ -65,24 +68,20 @@ PermissionStatus::PermissionStatus(ScriptExecutionContext& context, PermissionSt
     : ActiveDOMObject(&context)
     , m_state(state)
     , m_descriptor(descriptor)
+    , m_mainThreadPermissionObserverIdentifier(MainThreadPermissionObserverIdentifier::generate())
 {
-    auto* origin = context.securityOrigin();
+    RefPtr origin = context.securityOrigin();
     auto originData = origin ? origin->data() : SecurityOriginData { };
-    ClientOrigin clientOrigin { context.topOrigin().data(), WTFMove(originData) };
+    ClientOrigin clientOrigin { context.topOrigin().data(), WTF::move(originData) };
 
-    m_mainThreadPermissionObserverIdentifier = MainThreadPermissionObserverIdentifier::generate();
-
-    ensureOnMainThread([weakThis = WeakPtr { *this }, contextIdentifier = context.identifier(), state = m_state, descriptor = m_descriptor, source, page = WTFMove(page), origin = WTFMove(clientOrigin).isolatedCopy(), identifier = m_mainThreadPermissionObserverIdentifier]() mutable {
-        auto mainThreadPermissionObserver = makeUnique<MainThreadPermissionObserver>(WTFMove(weakThis), contextIdentifier, state, descriptor, source, WTFMove(page), WTFMove(origin));
-        allMainThreadPermissionObservers().add(identifier, WTFMove(mainThreadPermissionObserver));
+    ensureOnMainThread([weakThis = ThreadSafeWeakPtr { *this }, contextIdentifier = context.identifier(), state = m_state, descriptor = m_descriptor, source, page = WTF::move(page), origin = WTF::move(clientOrigin).isolatedCopy(), identifier = m_mainThreadPermissionObserverIdentifier]() mutable {
+        auto mainThreadPermissionObserver = makeUnique<MainThreadPermissionObserver>(WTF::move(weakThis), contextIdentifier, state, descriptor, source, WTF::move(page), WTF::move(origin));
+        allMainThreadPermissionObservers().add(identifier, WTF::move(mainThreadPermissionObserver));
     });
 }
 
 PermissionStatus::~PermissionStatus()
 {
-    if (!m_mainThreadPermissionObserverIdentifier)
-        return;
-
     callOnMainThread([identifier = m_mainThreadPermissionObserverIdentifier] {
         allMainThreadPermissionObservers().remove(identifier);
     });
@@ -93,11 +92,11 @@ void PermissionStatus::stateChanged(PermissionState newState)
     if (m_state == newState)
         return;
 
-    auto* context = scriptExecutionContext();
+    RefPtr context = scriptExecutionContext();
     if (!context)
         return;
 
-    auto* document = dynamicDowncast<Document>(context);
+    RefPtr document = dynamicDowncast<Document>(context.get());
     if (document && !document->isFullyActive())
         return;
 
@@ -105,26 +104,37 @@ void PermissionStatus::stateChanged(PermissionState newState)
     queueTaskToDispatchEvent(*this, TaskSource::Permission, Event::create(eventNames().changeEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
-const char* PermissionStatus::activeDOMObjectName() const
-{
-    return "PermissionStatus";
-}
-
 bool PermissionStatus::virtualHasPendingActivity() const
 {
     if (!m_hasChangeEventListener)
         return false;
 
-    auto* context = scriptExecutionContext();
-    if (is<Document>(context))
-        return downcast<Document>(*context).hasBrowsingContext();
+    if (auto* document = dynamicDowncast<Document>(scriptExecutionContext()))
+        return document->hasBrowsingContext();
 
     return true;
 }
 
+ScriptExecutionContext* PermissionStatus::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
+}
+
 void PermissionStatus::eventListenersDidChange()
 {
-    m_hasChangeEventListener = hasEventListeners(eventNames().changeEvent);
+    RefPtr context = scriptExecutionContext();
+    if (!context)
+        return;
+
+    bool hasChangeEventListener = hasEventListeners(eventNames().changeEvent);
+    if (hasChangeEventListener != m_hasChangeEventListener) {
+        auto changeListenerAction = hasChangeEventListener ? &MainThreadPermissionObserver::addChangeListener : &MainThreadPermissionObserver::removeChangeListener;
+        callOnMainThread([identifier = m_mainThreadPermissionObserverIdentifier, topFrameDomain = RegistrableDomain { context->topOrigin().data() }.isolatedCopy(), subFrameDomain = RegistrableDomain { context->url() }.isolatedCopy(), changeListenerAction] {
+            if (CheckedPtr mainThreadPermissionObserver = allMainThreadPermissionObservers().get(identifier))
+                (mainThreadPermissionObserver.get()->*changeListenerAction)(topFrameDomain, subFrameDomain);
+        });
+    }
+    m_hasChangeEventListener = hasChangeEventListener;
 }
 
 } // namespace WebCore

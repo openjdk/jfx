@@ -25,17 +25,17 @@
 
 #pragma once
 
-#include "IDBKeyPath.h"
-#include "SharedBuffer.h"
+#include <WebCore/IDBKeyPath.h>
+#include <WebCore/SharedBuffer.h>
 
 namespace WebCore {
 
 class IDBKeyData;
 
 RefPtr<SharedBuffer> serializeIDBKeyPath(const std::optional<IDBKeyPath>&);
-bool deserializeIDBKeyPath(const uint8_t* buffer, size_t bufferSize, std::optional<IDBKeyPath>&);
+bool deserializeIDBKeyPath(std::span<const uint8_t> buffer, std::optional<IDBKeyPath>&);
 
 RefPtr<SharedBuffer> serializeIDBKeyData(const IDBKeyData&);
-bool deserializeIDBKeyData(const uint8_t* buffer, size_t bufferSize, IDBKeyData&);
+WEBCORE_EXPORT bool deserializeIDBKeyData(std::span<const uint8_t> buffer, IDBKeyData&);
 
 } // namespace WebCore

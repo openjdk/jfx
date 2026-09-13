@@ -28,10 +28,11 @@
 
 #if ENABLE(VIDEO)
 
-#include "ContextDestructionObserver.h"
-#include "PlatformTimeRanges.h"
-#include "TextTrackCue.h"
-#include "TrackBase.h"
+#include <WebCore/EventTargetInterfaces.h>
+#include <WebCore/PlatformTimeRanges.h>
+#include <WebCore/TextTrackCue.h>
+#include <WebCore/TrackBase.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/WeakHashSet.h>
 
 namespace WebCore {
@@ -41,17 +42,26 @@ class TextTrack;
 class TextTrackList;
 class TextTrackClient;
 class TextTrackCueList;
-class VTTRegion;
 class VTTRegionList;
 
-class TextTrack : public TrackBase, public EventTarget, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(TextTrack);
+class TextTrack : public TrackBase, public EventTarget, public ActiveDOMObject, public CanMakeCheckedPtr<TextTrack> {
+    WTF_MAKE_TZONE_ALLOCATED(TextTrack);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(TextTrack);
 public:
-    static Ref<TextTrack> create(Document*, const AtomString& kind, const AtomString& id, const AtomString& label, const AtomString& language);
+    static Ref<TextTrack> create(ScriptExecutionContext*, const AtomString& kind, TrackID, const AtomString& label, const AtomString& language);
+    static Ref<TextTrack> create(ScriptExecutionContext*, const AtomString& kind, const AtomString& id, const AtomString& label, const AtomString& language);
     virtual ~TextTrack();
 
-    static TextTrack& captionMenuOffItem();
-    static TextTrack& captionMenuAutomaticItem();
+    // ContextDestructionObserver.
+    void ref() const override { TrackBase::ref(); }
+    void deref() const override { TrackBase::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
+
+    void didMoveToNewDocument(Document& newDocument) final;
+
+    static TextTrack& captionMenuOffItemSingleton();
+    static TextTrack& captionMenuOnItemSingleton();
+    static TextTrack& captionMenuAutomaticItemSingleton();
 
     static bool isValidKindKeyword(const AtomString&);
 
@@ -66,7 +76,7 @@ public:
     const AtomString& kindKeyword() const;
     void setKindKeywordIgnoringASCIICase(StringView);
 
-    virtual AtomString inBandMetadataTrackDispatchType() const { return emptyAtom(); }
+    virtual String inBandMetadataTrackDispatchType() const { return emptyString(); }
 
     enum class Mode { Disabled, Hidden, Showing };
     Mode mode() const;
@@ -77,9 +87,11 @@ public:
     void setReadinessState(ReadinessState state) { m_readinessState = state; }
 
     TextTrackCueList* cues();
-    TextTrackCueList* activeCues() const;
+    RefPtr<TextTrackCueList> protectedCues();
+    TextTrackCueList* activeCues() const LIFETIME_BOUND;
 
     TextTrackCueList* cuesInternal() const { return m_cues.get(); }
+    inline RefPtr<TextTrackCueList> protectedCues() const;
 
     void addClient(TextTrackClient&);
     void clearClient(TextTrackClient&);
@@ -88,11 +100,10 @@ public:
     virtual ExceptionOr<void> removeCue(TextTrackCue&);
 
     VTTRegionList* regions();
-    void addRegion(Ref<VTTRegion>&&);
-    ExceptionOr<void> removeRegion(VTTRegion&);
+    RefPtr<VTTRegionList> protectedRegions();
 
     void cueWillChange(TextTrackCue&);
-    void cueDidChange(TextTrackCue&);
+    void cueDidChange(TextTrackCue&, bool);
 
     enum TextTrackType { TrackElement, AddTrack, InBand };
     TextTrackType trackType() const { return m_trackType; }
@@ -104,7 +115,11 @@ public:
     virtual bool isEasyToRead() const { return false; }
 
     int trackIndex();
-    void invalidateTrackIndex();
+    void invalidateTrackIndex()
+    {
+        m_trackIndex = std::nullopt;
+        m_renderedTrackIndex = std::nullopt;
+    }
 
     bool isRendered();
     bool isSpoken();
@@ -119,24 +134,23 @@ public:
 
     void setLanguage(const AtomString&) final;
 
-    void setId(const AtomString&) override;
+    void setId(TrackID) override;
     void setLabel(const AtomString&) override;
 
     virtual bool isInband() const { return false; }
 
     virtual MediaTime startTimeVariance() const { return MediaTime::zeroTime(); }
 
-    using RefCounted::ref;
-    using RefCounted::deref;
-
     const std::optional<Vector<String>>& styleSheets() const { return m_styleSheets; }
 
     virtual bool shouldPurgeCuesFromUnbufferedRanges() const { return false; }
     virtual void removeCuesNotInTimeRanges(const PlatformTimeRanges&);
 
-    Document& document() const;
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    RefPtr<ScriptExecutionContext> protectedScriptExecutionContext() const;
 
 protected:
+    TextTrack(ScriptExecutionContext*, const AtomString& kind, TrackID, const AtomString& label, const AtomString& language, TextTrackType);
     TextTrack(ScriptExecutionContext*, const AtomString& kind, const AtomString& id, const AtomString& label, const AtomString& language, TextTrackType);
 
     RefPtr<TextTrackCue> matchCue(TextTrackCue&, TextTrackCue::CueMatchRules = TextTrackCue::MatchAllFields);
@@ -145,33 +159,31 @@ protected:
 
     void newCuesAvailable(const TextTrackCueList&);
 
-    RefPtr<TextTrackCueList> m_cues;
+    const RefPtr<TextTrackCueList> m_cues;
     std::optional<Vector<String>> m_styleSheets;
     WeakHashSet<TextTrackClient> m_clients;
 
 private:
-    EventTargetInterface eventTargetInterface() const final { return TextTrackEventTargetInterfaceType; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::TextTrack; }
 
     bool enabled() const override;
 
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
-    // ActiveDOMObject
-    const char* activeDOMObjectName() const final;
-
 #if !RELEASE_LOG_DISABLED
-    const char* logClassName() const override { return "TextTrack"; }
+    ASCIILiteral logClassName() const override { return "TextTrack"_s; }
 #endif
 
     VTTRegionList& ensureVTTRegionList();
     RefPtr<VTTRegionList> m_regions;
 
     TextTrackCueList& ensureTextTrackCueList();
+    Ref<TextTrackCueList> ensureProtectedTextTrackCueList();
+    Kind convertKind(const AtomString&);
 
     Mode m_mode { Mode::Disabled };
-    Kind m_kind { Kind::Subtitles };
+    Kind m_kind;
     TextTrackType m_trackType;
     ReadinessState m_readinessState { NotLoaded };
     std::optional<int> m_trackIndex;
@@ -245,6 +257,7 @@ template<> struct HashTraits<WebCore::TextTrack::Kind> : StrongEnumHashTraits<We
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::TextTrack)
     static bool isType(const WebCore::TrackBase& track) { return track.type() == WebCore::TrackBase::TextTrack; }
+    static bool isType(const WebCore::EventTarget& context) { return context.eventTargetInterface() == WebCore::EventTargetInterfaceType::TextTrack; }
 SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

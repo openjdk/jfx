@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,12 +29,13 @@ import javafx.scene.DepthTest;
 import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.NodeShim;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+
 import javafx.scene.shape.Rectangle;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for depth test features.
@@ -45,7 +46,8 @@ public class DepthTestTest {
     /**
      * Tests the default value for a single node with no parent
      */
-    @Test public void testDepthTestSingleDefault() {
+    @Test
+    public void testDepthTestSingleDefault() {
         Node node = new Rectangle();
         assertEquals(node.getDepthTest(), DepthTest.INHERIT);
         assertTrue(NodeShim.isDerivedDepthTest(node));
@@ -54,7 +56,8 @@ public class DepthTestTest {
     /**
      * Tests the default values for a group node with a child node
      */
-    @Test public void testDepthTestParentChildDefaults() {
+    @Test
+    public void testDepthTestParentChildDefaults() {
         Group group = new Group();
         Node node = new Rectangle();
         group.getChildren().add(node);
@@ -68,7 +71,8 @@ public class DepthTestTest {
     /**
      * Tests setting the value for a single node with no parent
      */
-    @Test public void testDepthTestSingleSet() {
+    @Test
+    public void testDepthTestSingleSet() {
         Node node = new Rectangle();
         assertEquals(node.getDepthTest(), DepthTest.INHERIT);
         assertTrue(NodeShim.isDerivedDepthTest(node));
@@ -89,7 +93,8 @@ public class DepthTestTest {
     /**
      * Tests setting values for a group node with a child node
      */
-    @Test public void testDepthTestParentChildSet() {
+    @Test
+    public void testDepthTestParentChildSet() {
         Group group = new Group();
         Node node = new Rectangle();
         group.getChildren().add(node);
@@ -195,7 +200,8 @@ public class DepthTestTest {
      * Tests setting values for a group node with a child node, and ensures
      * that the state is correct when adding and removing the child node.
      */
-    @Test public void testDepthTestParentChildRemove() {
+    @Test
+    public void testDepthTestParentChildRemove() {
         Group group = new Group();
         Node node = new Rectangle();
         group.getChildren().add(node);
@@ -269,7 +275,8 @@ public class DepthTestTest {
      * Tests two levels of children and ensures that the state is correct when
      * adding and removing the second group.
      */
-    @Test public void testDepthTestMutliParentChildRemove() {
+    @Test
+    public void testDepthTestMutliParentChildRemove() {
         Group root = new Group();
         Group group = new Group();
         root.getChildren().add(group);
@@ -319,7 +326,8 @@ public class DepthTestTest {
      * Tests two levels of children and ensures that the state is correct when
      * reparenting a group of nodes.
      */
-    @Test public void testDepthTestReparent() {
+    @Test
+    public void testDepthTestReparent() {
         Group root1 = new Group();
         Group root2 = new Group();
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,8 +32,8 @@ import javafx.beans.value.ObservableObjectValueStub;
 import javafx.collections.FXCollections;
 import test.javafx.collections.MockListObserver;
 import javafx.collections.ObservableList;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import java.util.List;
@@ -43,7 +43,7 @@ import javafx.beans.property.ListPropertyBase;
 import javafx.beans.property.SimpleListProperty;
 import test.javafx.collections.Person;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ListPropertyBaseTest {
 
@@ -61,7 +61,7 @@ public class ListPropertyBaseTest {
     private ChangeListenerMock<ObservableList<Object>> changeListener;
     private MockListObserver<Object> listChangeListener;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         property = new ListPropertyMock();
         invalidationListener = new InvalidationListenerMock();
@@ -476,12 +476,15 @@ public class ListPropertyBaseTest {
         listChangeListener.check1AddRemove(property, VALUE_1a, 0, 1);
     }
 
-    @Test(expected = RuntimeException.class)
+    @Test
     public void testSetBoundValue() {
-        final ListProperty<Object> v = new SimpleListProperty<>(VALUE_1a);
-        property.bind(v);
-        property.set(VALUE_1a);
+        assertThrows(RuntimeException.class, () -> {
+            final ListProperty<Object> v = new SimpleListProperty<>(VALUE_1a);
+            property.bind(v);
+            property.set(VALUE_1a);
+        });
     }
+
 
     @Test
     public void testBind_Invalidation() {
@@ -582,10 +585,13 @@ public class ListPropertyBaseTest {
         listChangeListener.check0();
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testBindToNull() {
-        property.bind(null);
+        assertThrows(NullPointerException.class, () -> {
+            property.bind(null);
+        });
     }
+
 
     @Test
     public void testRebind() {

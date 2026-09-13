@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -44,7 +44,7 @@ public abstract class PresentableState {
     protected View view;
 
     // Captured state
-    protected int nativeFrameBuffer;
+    protected long nativeFrameBuffer;
     protected int windowX, windowY;
     protected float windowAlpha;
     protected long nativeWindowHandle;
@@ -271,7 +271,7 @@ public abstract class PresentableState {
      *
      * May be called on any thread.
      */
-    public int getNativeFrameBuffer() {
+    public long getNativeFrameBuffer() {
         return nativeFrameBuffer;
     }
 

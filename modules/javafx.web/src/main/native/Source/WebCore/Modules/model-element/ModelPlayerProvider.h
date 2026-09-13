@@ -26,20 +26,23 @@
 #pragma once
 
 #include <wtf/Forward.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class ModelPlayer;
 class ModelPlayerClient;
 
-class WEBCORE_EXPORT ModelPlayerProvider {
-    WTF_MAKE_FAST_ALLOCATED;
+class WEBCORE_EXPORT ModelPlayerProvider : public RefCountedAndCanMakeWeakPtr<ModelPlayerProvider> {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(ModelPlayerProvider, WEBCORE_EXPORT);
 public:
     virtual ~ModelPlayerProvider();
 
     // FIXME: Once all clients have adopted ModelPlayerProvider, this should
     // be changed to return a Ref<ModelPlayer>
     virtual RefPtr<ModelPlayer> createModelPlayer(ModelPlayerClient&) = 0;
+    virtual void deleteModelPlayer(ModelPlayer&) = 0;
 };
 
 }

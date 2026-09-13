@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2013 Google, Inc. All Rights Reserved.
- * Copyright (C) 2015 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2013 Google, Inc. All rights reserved.
+ * Copyright (C) 2015 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -66,11 +66,12 @@ public:
 
     TagName tagName() const;
     bool selfClosing() const;
+    void setSelfClosingToFalse();
     const Vector<Attribute>& attributes() const;
 
     // Characters
 
-    std::span<const UChar> characters() const;
+    std::span<const char16_t> characters() const;
     bool charactersIsAll8BitData() const;
 
     // Comment
@@ -91,7 +92,7 @@ private:
     // We don't want to copy the characters out of the HTMLToken, so we keep a pointer to its buffer instead.
     // This buffer is owned by the HTMLToken and causes a lifetime dependence between these objects.
     // FIXME: Add a mechanism for "internalizing" the characters when the HTMLToken is destroyed.
-    std::span<const UChar> m_externalCharacters; // Character
+    std::span<const char16_t> m_externalCharacters; // Character
 
     Type m_type;
     TagName m_tagName; // StartTag, EndTag.
@@ -138,6 +139,14 @@ inline bool AtomHTMLToken::selfClosing() const
     return m_selfClosing;
 }
 
+inline void AtomHTMLToken::setSelfClosingToFalse()
+{
+    ASSERT(m_selfClosing);
+    ASSERT(m_type == Type::StartTag);
+    ASSERT(m_tagName == TagName::script);
+    m_selfClosing = false;
+}
+
 inline Vector<Attribute>& AtomHTMLToken::attributes()
 {
     ASSERT(m_type == Type::StartTag || m_type == Type::EndTag);
@@ -150,7 +159,7 @@ inline const Vector<Attribute>& AtomHTMLToken::attributes() const
     return m_attributes;
 }
 
-inline std::span<const UChar> AtomHTMLToken::characters() const
+inline std::span<const char16_t> AtomHTMLToken::characters() const
 {
     ASSERT(m_type == Type::Character);
     return m_externalCharacters;
@@ -219,20 +228,21 @@ inline void AtomHTMLToken::initializeAttributes(const HTMLToken::AttributeList& 
     if (!size)
         return;
 
-    HashSet<AtomString> addedAttributes;
+    Vector<AtomStringImpl*, 8> addedAttributes;
     addedAttributes.reserveInitialCapacity(size);
-    m_attributes.reserveInitialCapacity(size);
-    for (auto& attribute : attributes) {
+
+    m_attributes = WTF::compactMap(attributes, [&](auto& attribute) -> std::optional<Attribute> {
         if (attribute.name.isEmpty())
-            continue;
+            return std::nullopt;
 
         auto qualifiedName = HTMLNameCache::makeAttributeQualifiedName(attribute.name);
-
-        if (addedAttributes.add(qualifiedName.localName()).isNewEntry)
-            m_attributes.uncheckedAppend(Attribute(WTFMove(qualifiedName), HTMLNameCache::makeAttributeValue(attribute.value)));
-        else
+        if (!insertInUniquedSortedVector(addedAttributes, qualifiedName.localName().impl())) [[unlikely]] {
             m_hasDuplicateAttribute = true;
-    }
+        return std::nullopt;
+        }
+
+        return Attribute(WTF::move(qualifiedName), HTMLNameCache::makeAttributeValue(attribute.value));
+    });
 }
 
 inline AtomHTMLToken::AtomHTMLToken(HTMLToken& token)
@@ -243,10 +253,10 @@ inline AtomHTMLToken::AtomHTMLToken(HTMLToken& token)
         ASSERT_NOT_REACHED();
         return;
     case Type::DOCTYPE:
-        if (LIKELY(token.name().size() == 4 && equal(HTMLNames::htmlTag->localName().impl(), token.name().data(), 4)))
+        if (token.name().size() == 4 && equal(HTMLNames::htmlTag->localName().impl(), token.name().span())) [[likely]]
             m_name = HTMLNames::htmlTag->localName();
         else
-            m_name = AtomString(token.name().data(), token.name().size());
+            m_name = AtomString(token.name().span());
         m_doctypeData = token.releaseDoctypeData();
         return;
     case Type::EndOfFile:
@@ -255,15 +265,15 @@ inline AtomHTMLToken::AtomHTMLToken(HTMLToken& token)
     case Type::EndTag:
         m_selfClosing = token.selfClosing();
         m_tagName = findTagName(token.name());
-        if (UNLIKELY(m_tagName == TagName::Unknown))
-            m_name = AtomString(token.name().data(), token.name().size());
+        if (m_tagName == TagName::Unknown) [[unlikely]]
+            m_name = AtomString(token.name().span());
         initializeAttributes(token.attributes());
         return;
     case Type::Comment: {
         if (token.commentIsAll8BitData())
-            m_data = String::make8Bit(token.comment().data(), token.comment().size());
+            m_data = String::make8Bit(token.comment().span());
         else
-            m_data = String(token.comment().data(), token.comment().size());
+            m_data = token.comment().span();
         return;
     }
     case Type::Character:
@@ -276,7 +286,7 @@ inline AtomHTMLToken::AtomHTMLToken(HTMLToken& token)
 
 inline AtomHTMLToken::AtomHTMLToken(HTMLToken::Type type, TagName tagName, const AtomString& name, Vector<Attribute>&& attributes)
     : m_name(name)
-    , m_attributes(WTFMove(attributes))
+    , m_attributes(WTF::move(attributes))
     , m_type(type)
     , m_tagName(tagName)
 {
@@ -285,7 +295,7 @@ inline AtomHTMLToken::AtomHTMLToken(HTMLToken::Type type, TagName tagName, const
 }
 
 inline AtomHTMLToken::AtomHTMLToken(HTMLToken::Type type, TagName tagName, Vector<Attribute>&& attributes)
-    : m_attributes(WTFMove(attributes))
+    : m_attributes(WTF::move(attributes))
     , m_type(type)
     , m_tagName(tagName)
 {

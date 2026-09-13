@@ -29,14 +29,20 @@
 
 #include "DeviceClient.h"
 #include "Document.h"
+#include "NodeInlines.h"
+#include "SecurityOrigin.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-DeviceController::DeviceController(DeviceClient& client)
-    : m_client(client)
-    , m_timer(*this, &DeviceController::fireDeviceEvent)
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DeviceController);
+
+DeviceController::DeviceController()
+    : m_timer(*this, &DeviceController::fireDeviceEvent)
 {
 }
+
+DeviceController::~DeviceController() = default;
 
 void DeviceController::addDeviceEventListener(LocalDOMWindow& window)
 {
@@ -50,7 +56,7 @@ void DeviceController::addDeviceEventListener(LocalDOMWindow& window)
     }
 
     if (wasEmpty)
-        m_client.startUpdating();
+        checkedClient()->startUpdating();
 }
 
 void DeviceController::removeDeviceEventListener(LocalDOMWindow& window)
@@ -58,7 +64,7 @@ void DeviceController::removeDeviceEventListener(LocalDOMWindow& window)
     m_listeners.remove(&window);
     m_lastEventListeners.remove(&window);
     if (m_listeners.isEmpty())
-        m_client.stopUpdating();
+        checkedClient()->stopUpdating();
 }
 
 void DeviceController::removeAllDeviceEventListeners(LocalDOMWindow& window)
@@ -66,7 +72,7 @@ void DeviceController::removeAllDeviceEventListeners(LocalDOMWindow& window)
     m_listeners.removeAll(&window);
     m_lastEventListeners.removeAll(&window);
     if (m_listeners.isEmpty())
-        m_client.stopUpdating();
+        checkedClient()->stopUpdating();
 }
 
 bool DeviceController::hasDeviceEventListener(LocalDOMWindow& window) const
@@ -77,7 +83,7 @@ bool DeviceController::hasDeviceEventListener(LocalDOMWindow& window) const
 void DeviceController::dispatchDeviceEvent(Event& event)
 {
     for (auto& listener : copyToVector(m_listeners.values())) {
-        auto document = listener->document();
+        RefPtr document = listener->document();
         if (document && !document->activeDOMObjectsAreSuspended() && !document->activeDOMObjectsAreStopped())
             listener->dispatchEvent(event);
     }
@@ -91,12 +97,17 @@ void DeviceController::fireDeviceEvent()
     auto listenerVector = copyToVector(m_lastEventListeners.values());
     m_lastEventListeners.clear();
     for (auto& listener : listenerVector) {
-        auto document = listener->document();
+        RefPtr document = listener->document();
         if (document && !document->activeDOMObjectsAreSuspended() && !document->activeDOMObjectsAreStopped()) {
-            if (auto lastEvent = getLastEvent())
+            if (RefPtr lastEvent = getLastEvent())
                 listener->dispatchEvent(*lastEvent);
         }
     }
+}
+
+CheckedRef<DeviceClient> DeviceController::checkedClient()
+{
+    return client();
 }
 
 } // namespace WebCore

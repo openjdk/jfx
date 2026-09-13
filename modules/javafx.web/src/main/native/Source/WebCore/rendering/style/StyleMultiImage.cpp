@@ -42,8 +42,11 @@
 #include "StyleGradientImage.h"
 #include "StyleNamedImage.h"
 #include "StylePaintImage.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(StyleMultiImage);
 
 StyleMultiImage::StyleMultiImage(Type type)
     : StyleImage { type }
@@ -54,7 +57,7 @@ StyleMultiImage::~StyleMultiImage() = default;
 
 bool StyleMultiImage::equals(const StyleMultiImage& other) const
 {
-    return (!m_isPending && !other.m_isPending && m_selectedImage.get() == other.m_selectedImage.get());
+    return !m_isPending && !other.m_isPending && arePointingToEqualData(m_selectedImage, other.m_selectedImage);
 }
 
 void StyleMultiImage::load(CachedResourceLoader& loader, const ResourceLoaderOptions& options)
@@ -74,11 +77,11 @@ void StyleMultiImage::load(CachedResourceLoader& loader, const ResourceLoaderOpt
         return;
     }
 
-    if (is<StyleCachedImage>(bestFitImage.image)) {
-        if (downcast<StyleCachedImage>(*bestFitImage.image).imageScaleFactor() == bestFitImage.scaleFactor)
-            m_selectedImage = bestFitImage.image;
+    if (RefPtr styleCachedImage = dynamicDowncast<StyleCachedImage>(bestFitImage.image)) {
+        if (styleCachedImage->imageScaleFactor() == bestFitImage.scaleFactor)
+            m_selectedImage = WTF::move(styleCachedImage);
         else
-            m_selectedImage = StyleCachedImage::copyOverridingScaleFactor(downcast<StyleCachedImage>(*bestFitImage.image), bestFitImage.scaleFactor);
+            m_selectedImage = StyleCachedImage::copyOverridingScaleFactor(*styleCachedImage, bestFitImage.scaleFactor);
 
         if (m_selectedImage->isPending())
             m_selectedImage->load(loader, options);
@@ -110,9 +113,9 @@ bool StyleMultiImage::isPending() const
     return m_isPending;
 }
 
-bool StyleMultiImage::isLoaded() const
+bool StyleMultiImage::isLoaded(const RenderElement* renderer) const
 {
-    return m_selectedImage && m_selectedImage->isLoaded();
+    return m_selectedImage && m_selectedImage->isLoaded(renderer);
 }
 
 bool StyleMultiImage::errorOccurred() const
@@ -137,7 +140,7 @@ bool StyleMultiImage::imageHasRelativeHeight() const
     return m_selectedImage && m_selectedImage->imageHasRelativeHeight();
 }
 
-void StyleMultiImage::computeIntrinsicDimensions(const RenderElement* element, Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio)
+void StyleMultiImage::computeIntrinsicDimensions(const RenderElement* element, float& intrinsicWidth, float& intrinsicHeight, FloatSize& intrinsicRatio)
 {
     if (!m_selectedImage)
         return;
@@ -177,11 +180,11 @@ bool StyleMultiImage::hasClient(RenderElement& renderer) const
     return m_selectedImage->hasClient(renderer);
 }
 
-RefPtr<Image> StyleMultiImage::image(const RenderElement* renderer, const FloatSize& size) const
+RefPtr<Image> StyleMultiImage::image(const RenderElement* renderer, const FloatSize& size, const GraphicsContext& destinationContext, bool isForFirstLine) const
 {
     if (!m_selectedImage)
         return nullptr;
-    return m_selectedImage->image(renderer, size);
+    return m_selectedImage->image(renderer, size, destinationContext, isForFirstLine);
 }
 
 float StyleMultiImage::imageScaleFactor() const

@@ -31,9 +31,11 @@
 
 #pragma once
 
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
+
 namespace WebCore {
 
-class LinkLoaderClient {
+class LinkLoaderClient : public AbstractRefCountedAndCanMakeWeakPtr<LinkLoaderClient> {
 public:
     virtual ~LinkLoaderClient() = default;
 

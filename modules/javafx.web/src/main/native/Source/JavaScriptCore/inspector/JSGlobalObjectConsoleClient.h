@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,9 @@
 #pragma once
 
 #include "ConsoleClient.h"
+#include "InspectorHeapAgent.h"
+#include <wtf/CheckedPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -38,7 +41,8 @@ class InspectorDebuggerAgent;
 class InspectorScriptProfilerAgent;
 
 class JSGlobalObjectConsoleClient final : public JSC::ConsoleClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(JSGlobalObjectConsoleClient);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(JSGlobalObjectConsoleClient);
 public:
     explicit JSGlobalObjectConsoleClient(InspectorConsoleAgent*);
     ~JSGlobalObjectConsoleClient() final { }
@@ -48,6 +52,7 @@ public:
 
     void setDebuggerAgent(InspectorDebuggerAgent* agent) { m_debuggerAgent = agent; }
     void setPersistentScriptProfilerAgent(InspectorScriptProfilerAgent* agent) { m_scriptProfilerAgent = agent; }
+    void setPersistentHeapAgent(InspectorHeapAgent* agent) { m_heapAgent = agent; }
 
 private:
     void messageWithTypeAndLevel(MessageType, MessageLevel, JSC::JSGlobalObject*, Ref<ScriptArguments>&&) final;
@@ -72,6 +77,7 @@ private:
 
     InspectorConsoleAgent* m_consoleAgent;
     InspectorDebuggerAgent* m_debuggerAgent { nullptr };
+    CheckedPtr<InspectorHeapAgent> m_heapAgent;
     InspectorScriptProfilerAgent* m_scriptProfilerAgent { nullptr };
     Vector<String> m_profiles;
     bool m_profileRestoreBreakpointActiveValue { false };

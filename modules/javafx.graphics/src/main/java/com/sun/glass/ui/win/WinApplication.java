@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package com.sun.glass.ui.win;
 import com.sun.glass.ui.*;
 import com.sun.glass.ui.CommonDialogs.ExtensionFilter;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
+import com.sun.javafx.application.preferences.PreferenceMapping;
 import com.sun.prism.impl.PrismSettings;
 import com.sun.javafx.tk.Toolkit;
 import javafx.scene.paint.Color;
@@ -34,13 +35,16 @@ import javafx.scene.paint.Color;
 import java.io.File;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 final class WinApplication extends Application implements InvokeLaterDispatcher.InvokeLaterSubmitter {
 
     static float overrideUIScale;
+
+    private static native String _getDefaultBrowser();
 
     private static boolean getBoolean(String propname, boolean defval, String description) {
         String str = System.getProperty(propname);
@@ -82,31 +86,24 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     private static native void initIDs(float overrideUIScale);
     static {
-        @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
-                verbose = Boolean.getBoolean("javafx.verbose");
-                if (PrismSettings.allowHiDPIScaling) {
-                    overrideUIScale = getFloat("glass.win.uiScale", -1.0f, "Forcing UI scaling factor: ");
-                    // We only parse these if verbose, to inform the user...
-                    if (PrismSettings.verbose) {
-                        getFloat("glass.win.renderScale", -1.0f,
-                                 "(No longer supported) Rendering scaling factor: ");
-                        getFloat("glass.win.minHiDPI", 1.5f,
-                                 "(No longer supported) UI scaling threshold: ");
-                        getBoolean("glass.win.forceIntegerRenderScale", true,
-                                   "(No longer supported) force integer rendering scale");
-                    }
-                } else {
-                    overrideUIScale = 1.0f;
-                }
-                // Load required Microsoft runtime DLLs on Windows platforms
-                Toolkit.loadMSWindowsLibraries();
-                Application.loadNativeLibrary();
-                return null;
+        verbose = Boolean.getBoolean("javafx.verbose");
+        if (PrismSettings.allowHiDPIScaling) {
+            overrideUIScale = getFloat("glass.win.uiScale", -1.0f, "Forcing UI scaling factor: ");
+            // We only parse these if verbose, to inform the user...
+            if (PrismSettings.verbose) {
+                getFloat("glass.win.renderScale", -1.0f,
+                         "(No longer supported) Rendering scaling factor: ");
+                getFloat("glass.win.minHiDPI", 1.5f,
+                         "(No longer supported) UI scaling threshold: ");
+                getBoolean("glass.win.forceIntegerRenderScale", true,
+                           "(No longer supported) force integer rendering scale");
             }
-        });
+        } else {
+            overrideUIScale = 1.0f;
+        }
+        // Load required Microsoft runtime DLLs on Windows platforms
+        Toolkit.loadMSWindowsLibraries();
+        Application.loadNativeLibrary();
         initIDs(overrideUIScale);
     }
 
@@ -114,9 +111,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     WinApplication() {
         // Embedded in SWT, with shared event thread
-        @SuppressWarnings("removal")
-        boolean isEventThread = AccessController
-                .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
+        boolean isEventThread = Boolean.getBoolean("javafx.embed.isEventThread");
         if (!isEventThread) {
             invokeLaterDispatcher = new InvokeLaterDispatcher(this);
             invokeLaterDispatcher.start();
@@ -141,10 +136,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
         if (!PrismSettings.allowHiDPIScaling) {
             return Process_DPI_Unaware;
         }
-        @SuppressWarnings("removal")
-        String awareRequested = AccessController
-            .doPrivileged((PrivilegedAction<String>) () ->
-                          System.getProperty("javafx.glass.winDPIawareness"));
+        String awareRequested = System.getProperty("javafx.glass.winDPIawareness");
         if (awareRequested != null) {
             awareRequested = awareRequested.toLowerCase();
             if (awareRequested.equals("aware")) {
@@ -163,9 +155,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     @Override
     protected void runLoop(final Runnable launchable) {
-        @SuppressWarnings("removal")
-        boolean isEventThread = AccessController
-            .doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.embed.isEventThread"));
+        boolean isEventThread = Boolean.getBoolean("javafx.embed.isEventThread");
         int awareness = getDesiredAwarenesslevel();
 
         ClassLoader classLoader = WinApplication.class.getClassLoader();
@@ -177,12 +167,11 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
             launchable.run();
             return;
         }
-        @SuppressWarnings("removal")
         final Thread toolkitThread =
-            AccessController.doPrivileged((PrivilegedAction<Thread>) () -> new Thread(() -> {
+            new Thread(() -> {
                 _init(awareness);
                 _runLoop(launchable);
-            }, "WindowsNativeRunloopThread"));
+            }, "WindowsNativeRunloopThread");
         setEventThread(toolkitThread);
         toolkitThread.start();
     }
@@ -312,6 +301,40 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
         return WinCommonDialogs.showFolderChooser_impl(owner, folder, title);
     }
 
+    @Override
+    protected void _showDocument(String uri) {
+        String browser = _getDefaultBrowser();
+        if (browser == null) {
+            System.err.println("Could not retrieve default browser");
+            return;
+        }
+
+        if (browser.contains("%1")) {
+            browser = browser.replace("%1", uri);
+        } else {
+            browser = browser + " " + uri;
+        }
+
+        List<String> command = new ArrayList<>();
+        int firstIndex = browser.indexOf("\"");
+        int secondIndex = browser.indexOf("\"", firstIndex + 1);
+
+        if (firstIndex == 0 && secondIndex != firstIndex) {
+            command.add(browser.substring(firstIndex, secondIndex + 1));
+            browser = browser.substring(secondIndex + 1).trim();
+        }
+        command.addAll(Arrays.asList(browser.split(" ")));
+
+        try {
+            ProcessBuilder pb = new ProcessBuilder(command);
+            pb.start();
+        }  catch (Exception e) {
+            System.err.println("Error opening URI : " + uri + " : " +
+                    e.getLocalizedMessage());
+        }
+
+    }
+
     @Override protected long staticView_getMultiClickTime() {
         return WinView.getMultiClickTime_impl();
     }
@@ -353,10 +376,14 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     @Override native protected boolean _supportsUnifiedWindows();
 
     @Override
+    protected boolean _supportsExtendedWindows() {
+        return true;
+    }
+
+    @Override
     public String getDataDirectory() {
         checkEventThread();
-        @SuppressWarnings("removal")
-        String baseDirectory = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getenv("APPDATA"));
+        String baseDirectory = System.getenv("APPDATA");
         if (baseDirectory == null || baseDirectory.length() == 0) {
             return super.getDataDirectory();
         }
@@ -364,7 +391,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
     }
 
     @Override
-    protected native int _getKeyCodeForChar(char c);
+    protected native int _getKeyCodeForChar(char c, int hint);
 
     @Override
     protected native int _isKeyLocked(int keyCode);
@@ -374,11 +401,19 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
 
     // This list needs to be kept in sync with PlatformSupport.cpp in the Glass toolkit for Windows.
     @Override
-    public Map<String, String> getPlatformKeyMappings() {
+    public Map<String, PreferenceMapping<?, ?>> getPlatformKeyMappings() {
         return Map.of(
-            "Windows.UIColor.Foreground", "foregroundColor",
-            "Windows.UIColor.Background", "backgroundColor",
-            "Windows.UIColor.Accent", "accentColor"
+            "Windows.UIColor.Foreground", new PreferenceMapping<>("foregroundColor", Color.class),
+            "Windows.UIColor.Background", new PreferenceMapping<>("backgroundColor", Color.class),
+            "Windows.UIColor.Accent", new PreferenceMapping<>("accentColor", Color.class),
+            "Windows.UISettings.AdvancedEffectsEnabled", new PreferenceMapping<>("reducedTransparency", Boolean.class, b -> !b),
+            "Windows.UISettings.AutoHideScrollBars", new PreferenceMapping<>("persistentScrollBars", Boolean.class, b -> !b),
+            "Windows.SPI.ClientAreaAnimation", new PreferenceMapping<>("reducedMotion", Boolean.class, b -> !b),
+            "Windows.NetworkInformation.InternetCostType", new PreferenceMapping<>(
+                "reducedData", String.class, v -> switch (v) {
+                    case "Unknown", "Unrestricted" -> false;
+                    default -> true;
+                })
         );
     }
 
@@ -388,6 +423,7 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
         return Map.ofEntries(
             Map.entry("Windows.SPI.HighContrast", Boolean.class),
             Map.entry("Windows.SPI.HighContrastColorScheme", String.class),
+            Map.entry("Windows.SPI.ClientAreaAnimation", Boolean.class),
             Map.entry("Windows.SysColor.COLOR_3DFACE", Color.class),
             Map.entry("Windows.SysColor.COLOR_BTNTEXT", Color.class),
             Map.entry("Windows.SysColor.COLOR_GRAYTEXT", Color.class),
@@ -404,7 +440,10 @@ final class WinApplication extends Application implements InvokeLaterDispatcher.
             Map.entry("Windows.UIColor.Accent", Color.class),
             Map.entry("Windows.UIColor.AccentLight1", Color.class),
             Map.entry("Windows.UIColor.AccentLight2", Color.class),
-            Map.entry("Windows.UIColor.AccentLight3", Color.class)
+            Map.entry("Windows.UIColor.AccentLight3", Color.class),
+            Map.entry("Windows.UISettings.AdvancedEffectsEnabled", Boolean.class),
+            Map.entry("Windows.UISettings.AutoHideScrollBars", Boolean.class),
+            Map.entry("Windows.NetworkInformation.InternetCostType", String.class)
         );
     }
 }

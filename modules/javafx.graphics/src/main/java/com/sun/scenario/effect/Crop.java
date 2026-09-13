@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,7 +38,7 @@ import com.sun.scenario.effect.impl.state.RenderState;
  */
 public class Crop extends CoreEffect<RenderState> {
 
-    // TODO: This class should go away once we fix RT-1347...
+    // TODO: This class should go away once we fix JDK-8090967...
 
     /**
      * Constructs a new {@code Crop} effect which crops the output of
@@ -190,7 +190,7 @@ public class Crop extends CoreEffect<RenderState> {
                                       Object renderHelper,
                                       Effect defaultInput)
     {
-        // RT-27564
+        // JDK-8091630
         // TODO: Since we also crop to the "crop input" and since cropping
         // is a form of clipping, we could further restrict the bounds we
         // ask from the content input here, but for now we will use the stock

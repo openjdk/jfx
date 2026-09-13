@@ -35,7 +35,7 @@ DeleteByVariant::DeleteByVariant(CacheableIdentifier identifier, bool result, St
     , m_oldStructure(oldStructure)
     , m_newStructure(newStructure)
     , m_offset(offset)
-    , m_identifier(WTFMove(identifier))
+    , m_identifier(WTF::move(identifier))
 {
     ASSERT(oldStructure);
     if (m_offset == invalidOffset)
@@ -44,7 +44,7 @@ DeleteByVariant::DeleteByVariant(CacheableIdentifier identifier, bool result, St
         ASSERT(newStructure);
 }
 
-DeleteByVariant::~DeleteByVariant() { }
+DeleteByVariant::~DeleteByVariant() = default;
 
 DeleteByVariant::DeleteByVariant(const DeleteByVariant& other)
 {

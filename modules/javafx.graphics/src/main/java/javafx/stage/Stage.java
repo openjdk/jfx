@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,26 +28,38 @@ package javafx.stage;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.sun.javafx.beans.property.NullCoalescingPropertyBase;
+import com.sun.javafx.stage.ExtendedStageProperties;
+import javafx.application.ColorScheme;
 import javafx.application.Platform;
+import javafx.beans.binding.ObjectBinding;
 import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ReadOnlyDoubleProperty;
+import javafx.beans.property.ReadOnlyDoubleWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.StringProperty;
 import javafx.beans.property.StringPropertyBase;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import javafx.geometry.Dimension2D;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.Scene;
 import javafx.scene.image.Image;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.layout.HeaderBar;
 
+import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.collections.VetoableListDecorator;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.scene.SceneHelper;
+import com.sun.javafx.stage.HeaderButtonMetrics;
 import com.sun.javafx.stage.StageHelper;
 import com.sun.javafx.stage.StagePeerListener;
 import com.sun.javafx.tk.TKStage;
 import com.sun.javafx.tk.Toolkit;
-import static com.sun.javafx.FXPermissions.CREATE_TRANSPARENT_WINDOW_PERMISSION;
 import javafx.beans.NamedArg;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.DoublePropertyBase;
@@ -56,6 +68,7 @@ import javafx.beans.property.ReadOnlyBooleanProperty;
 import javafx.beans.property.ReadOnlyBooleanWrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ObservableValue;
+import javafx.util.Subscription;
 
 /**
  * The JavaFX {@code Stage} class is the top level JavaFX container.
@@ -93,6 +106,7 @@ import javafx.beans.value.ObservableValue;
  * and no decorations.</li>
  * <li>{@link StageStyle#UTILITY} - a stage with a solid white background and
  * minimal platform decorations.</li>
+ * <li>{@link StageStyle#EXTENDED} - a decorated stage with a custom {@link HeaderBar}.</li>
  * </ul>
  * <p>The style must be initialized before the stage is made visible.</p>
  * <p>On some platforms decorations might not be available. For example, on
@@ -190,10 +204,6 @@ public class Stage extends Window {
                 ((Stage) window).doVisibleChanged(visible);
             }
 
-            @Override public void initSecurityDialog(Stage stage, boolean securityDialog) {
-                stage.initSecurityDialog(securityDialog);
-            }
-
             @Override
             public void setPrimary(Stage stage, boolean primary) {
                 stage.setPrimary(primary);
@@ -202,6 +212,11 @@ public class Stage extends Window {
             @Override
             public void setImportant(Stage stage, boolean important) {
                 stage.setImportant(important);
+            }
+
+            @Override
+            public ExtendedStageProperties getExtendedProperties(Stage stage) {
+                return stage.getExtendedProperties();
             }
         });
     }
@@ -231,6 +246,11 @@ public class Stage extends Window {
         @Override
         public void setAlwaysOnTop(Stage stage, boolean aot) {
             stage.alwaysOnTopPropertyImpl().set(aot);
+        }
+
+        @Override
+        public void setHeaderButtonMetrics(Stage stage, HeaderButtonMetrics metrics) {
+            stage.getExtendedProperties().setHeaderButtonMetrics(metrics);
         }
     };
 
@@ -279,42 +299,7 @@ public class Stage extends Window {
 
     private boolean primary = false;
 
-    ////////////////////////////////////////////////////////////////////
-
-    // Flag indicating that this stage is being used to show a security dialog
-    private boolean securityDialog = false;
-
-    /**
-     * Sets a flag indicating that this stage is used for a security dialog and
-     * must always be on top. If set, this will cause the window to be always
-     * on top, regardless of the setting of the alwaysOnTop property, and
-     * whether or not permissions are granted when the dialog is shown.
-     * NOTE: this flag must be set prior to showing the stage the first time.
-     *
-     * @param securityDialog flag indicating that this Stage is being used to
-     * show a security dialog that should be always-on-top
-     *
-     * @throws IllegalStateException if this property is set after the stage
-     * has ever been made visible.
-     *
-     * @defaultValue false
-     */
-    final void initSecurityDialog(boolean securityDialog) {
-        if (hasBeenVisible) {
-            throw new IllegalStateException("Cannot set securityDialog once stage has been set visible");
-        }
-
-        this.securityDialog = securityDialog;
-    }
-
-    /**
-     * Returns the state of the securityDialog flag.
-     *
-     * @return a flag indicating whether or not this is a security dialog
-     */
-    final boolean isSecurityDialog() {
-        return securityDialog;
-    }
+    //------------------------------------------------------------------
 
     /*
      * Sets this stage to be the primary stage.
@@ -438,6 +423,8 @@ public class Stage extends Window {
      *     other than the JavaFX Application Thread.
      * @throws IllegalStateException if this method is called during
      *     animation or layout processing.
+     * @throws IllegalStateException if this call would exceed the maximum
+     *      number of nested event loops.
      * @throws IllegalStateException if this method is called on the
      *     primary stage.
      * @throws IllegalStateException if this stage is already showing.
@@ -472,9 +459,7 @@ public class Stage extends Window {
     private StageStyle style; // default is set in constructor
 
     /**
-     * Specifies the style for this stage. This must be done prior to making
-     * the stage visible. The style is one of: StageStyle.DECORATED,
-     * StageStyle.UNDECORATED, StageStyle.TRANSPARENT, or StageStyle.UTILITY.
+     * Specifies the style for this stage. This must be done prior to making the stage visible.
      *
      * @param style the style for this stage.
      *
@@ -623,35 +608,10 @@ public class Stage extends Window {
      * Further, setting this property might be ignored on some platforms.
      * </p>
      *
+     * <p>
      * The user can unconditionally exit full-screen mode
      * at any time by pressing {@code ESC}.
-     * <p>
-     * If a security manager is present, the application must have the
-     * {@link javafx.util.FXPermission} "unrestrictedFullScreen" in order
-     * to enter full-screen mode with no restrictions. Applications without
-     * permission will have the following restrictions:
-     * </p>
-     * <ul>
-     *  <li>Applications can only enter full-screen mode in response
-     *   to user input. More specifically, entering is allowed from mouse
-     *   ({@code Node.mousePressed/mouseReleased/mouseClicked}) or keyboard
-     *   ({@code Node.keyPressed/keyReleased/keyTyped}) event handlers. It is
-     *   not allowed to enter full-screen mode in response to {@code ESC}
-     *   key. Attempting to enter full-screen mode from any other context will
-     *   be ignored.
-     *   <p>
-     *   If {@code Stage} was constructed as full-screen but not visible
-     *   it will enter full-screen mode upon becoming visible, with the same
-     *   limitations to when this is allowed to happen as when setting
-     *   {@code fullScreen} to {@code true}.
-     *   </p>
-     *  </li>
-     *  <li> If the application was allowed to enter full-screen mode
-     *   it will have limited keyboard input. It will only receive KEY_PRESSED
-     *   and KEY_RELEASED events from the following keys:
-     *   {@code UP, DOWN, LEFT, RIGHT, SPACE, TAB, PAGE_UP, PAGE_DOWN, HOME, END, ENTER}
-     *  </li>
-     * </ul>
+     *
      * @defaultValue false
      */
     private ReadOnlyBooleanWrapper fullScreen;
@@ -823,6 +783,16 @@ public class Stage extends Window {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * If this Stage is {@code maximized} or in {@code fullScreen}, size to scene is not allowed.
+     */
+    @Override
+    boolean isSizeToSceneAllowed() {
+        return !isMaximized() && !isFullScreen();
+    }
+
     public final boolean isMaximized() {
         return maximized == null ? false : maximized.get();
     }
@@ -844,13 +814,6 @@ public class Stage extends Window {
      * If some other window is already always-on-top then the
      * relative order between these windows is unspecified (depends on
      * platform).
-     * </p>
-     * <p>
-     * If a security manager is present, the application must have the
-     * {@link javafx.util.FXPermission} "setWindowAlwaysOnTop" in order for
-     * this property to have any effect. If the application does not have
-     * permission, attempting to set this property will be ignored
-     * and the property value will be restored to {@code false}.
      * </p>
      * <p>
      * This property is read-only because it can be changed externally
@@ -887,7 +850,7 @@ public class Stage extends Window {
 
     /**
      * Defines whether the {@code Stage} is resizable or not by the user.
-     * Programatically you may still change the size of the Stage. This is
+     * Programmatically you may still change the size of the Stage. This is
      * a hint which allows the implementation to optionally make the Stage
      * resizable by the user.
      * <p>
@@ -1146,26 +1109,24 @@ public class Stage extends Window {
             TKStage tkStage = (window == null ? null : window.getPeer());
             Scene scene = getScene();
             boolean rtl = scene != null && scene.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT;
+            ColorScheme colorScheme = scene != null
+                ? scene.getPreferences().getColorScheme()
+                : PlatformImpl.getPlatformPreferences().getColorScheme();
 
             StageStyle stageStyle = getStyle();
-            if (stageStyle == StageStyle.TRANSPARENT) {
-                @SuppressWarnings("removal")
-                final SecurityManager securityManager =
-                        System.getSecurityManager();
-                if (securityManager != null) {
-                    try {
-                        securityManager.checkPermission(CREATE_TRANSPARENT_WINDOW_PERMISSION);
-                    } catch (final SecurityException e) {
-                        stageStyle = StageStyle.UNDECORATED;
-                    }
-                }
-            }
-            setPeer(toolkit.createTKStage(this, isSecurityDialog(),
-                    stageStyle, isPrimary(), getModality(), tkStage, rtl, acc));
+            setPeer(toolkit.createTKStage(this, stageStyle, isPrimary(),
+                    getModality(), tkStage, rtl, colorScheme == ColorScheme.DARK));
             getPeer().setMinimumSize((int) Math.ceil(getMinWidth()),
                     (int) Math.ceil(getMinHeight()));
             getPeer().setMaximumSize((int) Math.floor(getMaxWidth()),
                     (int) Math.floor(getMaxHeight()));
+
+            if (style == StageStyle.EXTENDED) {
+                var extendedProperties = getExtendedProperties();
+                getPeer().setHeaderButtonHeight(extendedProperties.systemButtonHeightProperty().get());
+                getPeer().setHeaderButtonDarkStyle(extendedProperties.systemColorSchemeProperty().get() == ColorScheme.DARK);
+            }
+
             setPeerListener(new StagePeerListener(this, STAGE_ACCESSOR));
         }
     }
@@ -1257,6 +1218,9 @@ public class Stage extends Window {
     /**
      * Closes this {@code Stage}.
      * This call is equivalent to {@code hide()}.
+     *
+     * @throws IllegalStateException if this method is called on a thread
+     *     other than the JavaFX Application Thread.
      */
     public void close() {
         hide();
@@ -1280,11 +1244,6 @@ public class Stage extends Window {
      * <p>
      * An internal copy of this value is made when entering full-screen mode and will be
      * used to trigger the exit from the mode.
-     * If a security manager is present, the application must have the
-     * {@link javafx.util.FXPermission} "unrestrictedFullScreen" to modify the
-     * exit key combination. If the application does not have permission, the
-     * value of this property will be ignored, in which case the
-     * default key combination will be used.
      * </p>
      * @param keyCombination the key combination to exit on
      * @since JavaFX 8.0
@@ -1317,13 +1276,6 @@ public class Stage extends Window {
      * screen mode. A value of null will result in the default per-locale
      * message being displayed.
      * If set to the empty string, then no message will be displayed.
-     * <p>
-     * If a security manager is present, the application must have the
-     * {@link javafx.util.FXPermission} "unrestrictedFullScreen" to modify the
-     * exit hint. If the application does not have permission, the
-     * value of this property will be ignored, in which case the
-     * default message will be displayed.
-     * </p>
      * @since JavaFX 8.0
      */
     private final ObjectProperty<String> fullScreenExitHint =
@@ -1339,5 +1291,181 @@ public class Stage extends Window {
 
     public final ObjectProperty<String> fullScreenExitHintProperty() {
         return fullScreenExitHint;
+    }
+
+    private ExtendedPropertiesImpl extendedProperties;
+
+    private ExtendedPropertiesImpl getExtendedProperties() {
+        if (extendedProperties == null) {
+            extendedProperties = new ExtendedPropertiesImpl(this);
+        }
+
+        return extendedProperties;
+    }
+
+    /**
+     * This class holds attached properties for the {@link StageStyle#EXTENDED} style that are defined on
+     * {@code HeaderBar}, but associated with and stored per {@code Stage}. {@code HeaderBar} uses these
+     * properties for layout purposes, and also subscribes to invalidation notifications that cause
+     * {@code HeaderBar} to request a new layout pass.
+     */
+    private static final class ExtendedPropertiesImpl implements ExtendedStageProperties {
+
+        private static final Dimension2D EMPTY = new Dimension2D(0, 0);
+
+        private final Stage stage;
+        private final ReadOnlyObjectWrapper<Dimension2D> leftSystemInset;
+        private final ReadOnlyObjectWrapper<Dimension2D> rightSystemInset;
+        private final ReadOnlyDoubleWrapper systemMinHeight;
+        private final DoubleProperty systemButtonHeight;
+        private final NullCoalescingPropertyBase<ColorScheme> systemColorScheme;
+        private final List<Runnable> layoutInvalidatedListeners = new ArrayList<>();
+
+        private boolean currentFullScreen;
+        private HeaderButtonMetrics currentMetrics;
+
+        public ExtendedPropertiesImpl(Stage stage) {
+            this.stage = stage;
+            this.leftSystemInset = new ReadOnlyObjectWrapper<>(stage, "leftSystemInset", EMPTY);
+            this.rightSystemInset = new ReadOnlyObjectWrapper<>(stage, "rightSystemInset", EMPTY);
+            this.systemMinHeight = new ReadOnlyDoubleWrapper(stage, "systemMinHeight");
+
+            this.systemButtonHeight = new SimpleDoubleProperty(
+                    stage, "systemButtonHeight", HeaderBar.USE_DEFAULT_SIZE) {
+                @Override
+                protected void invalidated() {
+                    if (stage.getPeer() instanceof TKStage peer) {
+                        peer.setHeaderButtonHeight(get());
+                    }
+                }
+            };
+
+            this.systemColorScheme = new NullCoalescingPropertyBase<>(new ColorSchemeBinding(stage)) {
+                {
+                    connect();
+                }
+
+                @Override
+                public Object getBean() {
+                    return stage;
+                }
+
+                @Override
+                public String getName() {
+                    return "systemColorScheme";
+                }
+
+                @Override
+                protected void onInvalidated() {
+                    if (stage.getPeer() instanceof TKStage peer) {
+                        peer.setHeaderButtonDarkStyle(get() == ColorScheme.DARK);
+                    }
+                }
+            };
+
+            stage.fullScreenProperty().subscribe(this::onFullScreenChanged);
+            stage.sceneProperty().flatMap(Scene::effectiveNodeOrientationProperty).subscribe(this::updateInsets);
+        }
+
+        @Override
+        public ReadOnlyObjectProperty<Dimension2D> leftSystemInsetProperty() {
+            return leftSystemInset.getReadOnlyProperty();
+        }
+
+        @Override
+        public ReadOnlyObjectProperty<Dimension2D> rightSystemInsetProperty() {
+            return rightSystemInset.getReadOnlyProperty();
+        }
+
+        @Override
+        public ReadOnlyDoubleProperty systemMinHeightProperty() {
+            return systemMinHeight.getReadOnlyProperty();
+        }
+
+        @Override
+        public DoubleProperty systemButtonHeightProperty() {
+            return systemButtonHeight;
+        }
+
+        @Override
+        public ObjectProperty<ColorScheme> systemColorSchemeProperty() {
+            return systemColorScheme;
+        }
+
+        @Override
+        public Subscription subscribeLayoutInvalidated(Runnable listener) {
+            layoutInvalidatedListeners.add(listener);
+            return () -> layoutInvalidatedListeners.remove(listener);
+        }
+
+        private void setHeaderButtonMetrics(HeaderButtonMetrics metrics) {
+            currentMetrics = metrics;
+
+            updateInsets(stage.getScene() instanceof Scene scene
+                ? scene.getEffectiveNodeOrientation()
+                : NodeOrientation.LEFT_TO_RIGHT);
+        }
+
+        private void onFullScreenChanged(boolean fullScreen) {
+            currentFullScreen = fullScreen;
+
+            updateInsets(stage.getScene() instanceof Scene scene
+                ? scene.getEffectiveNodeOrientation()
+                : NodeOrientation.LEFT_TO_RIGHT);
+        }
+
+        private void updateInsets(NodeOrientation orientation) {
+            if (currentFullScreen || currentMetrics == null) {
+                leftSystemInset.set(EMPTY);
+                rightSystemInset.set(EMPTY);
+                systemMinHeight.set(0);
+            } else if (orientation == NodeOrientation.LEFT_TO_RIGHT) {
+                leftSystemInset.set(currentMetrics.leftInset());
+                rightSystemInset.set(currentMetrics.rightInset());
+                systemMinHeight.set(currentMetrics.minHeight());
+            } else {
+                leftSystemInset.set(currentMetrics.rightInset());
+                rightSystemInset.set(currentMetrics.leftInset());
+                systemMinHeight.set(currentMetrics.minHeight());
+            }
+
+            for (Runnable listener : layoutInvalidatedListeners) {
+                try {
+                    listener.run();
+                } catch (Throwable ex) {
+                    Thread currentThread = Thread.currentThread();
+                    currentThread.getUncaughtExceptionHandler().uncaughtException(currentThread, ex);
+                }
+            }
+        }
+
+        private static final class ColorSchemeBinding extends ObjectBinding<ColorScheme> {
+            private final Stage stage;
+            private ObservableValue<? extends ColorScheme> source;
+
+            ColorSchemeBinding(Stage stage) {
+                this.stage = stage;
+                bind(stage.sceneProperty());
+            }
+
+            @Override
+            protected ColorScheme computeValue() {
+                ObservableValue<? extends ColorScheme> newSource =
+                    stage.getScene() instanceof Scene scene
+                        ? scene.getPreferences().colorSchemeProperty()
+                        : PlatformImpl.getPlatformPreferences().colorSchemeProperty();
+
+                if (source != newSource) {
+                    if (source != null) {
+                        unbind(source);
+                    }
+
+                    source = newSource;
+                    bind(source);
+                }
+
+                return source.getValue();
+            }
+        }
     }
 }

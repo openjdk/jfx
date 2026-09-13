@@ -51,9 +51,25 @@ struct WebCodecsVideoEncoderConfig {
     LatencyMode latencyMode { LatencyMode::Quality };
     std::optional<AvcEncoderConfig> avc;
 
-    WebCodecsVideoEncoderConfig isolatedCopy() && { return { WTFMove(codec).isolatedCopy(), width, height, displayWidth, displayHeight, bitrate, framerate, hardwareAcceleration, alpha, WTFMove(scalabilityMode).isolatedCopy(), bitrateMode, latencyMode, avc }; }
+    WebCodecsVideoEncoderConfig isolatedCopy() && { return { WTF::move(codec).isolatedCopy(), width, height, displayWidth, displayHeight, bitrate, framerate, hardwareAcceleration, alpha, WTF::move(scalabilityMode).isolatedCopy(), bitrateMode, latencyMode, avc }; }
     WebCodecsVideoEncoderConfig isolatedCopy() const & { return { codec.isolatedCopy(), width, height, displayWidth, displayHeight, bitrate, framerate, hardwareAcceleration, alpha, scalabilityMode.isolatedCopy(), bitrateMode, latencyMode, avc }; }
 };
+
+inline bool isSameConfigurationExceptBitrateAndFramerate(const WebCodecsVideoEncoderConfig& a, const WebCodecsVideoEncoderConfig& b)
+{
+    return a.codec == b.codec
+        && a.width == b.width
+        && a.height == b.height
+        && a.displayWidth == b.displayWidth
+        && a.displayHeight == b.displayHeight
+        && a.hardwareAcceleration == b.hardwareAcceleration
+        && a.alpha == b.alpha
+        && a.scalabilityMode == b.scalabilityMode
+        && a.bitrateMode == b.bitrateMode
+        && a.latencyMode == b.latencyMode
+        && (!!a.avc == !!b.avc)
+        && (!a.avc || (a.avc->format == b.avc->format));
+}
 
 }
 

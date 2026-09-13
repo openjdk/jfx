@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.javafx.text;
 
+import java.util.concurrent.atomic.AtomicBoolean;
 import com.sun.javafx.font.CharToGlyphMapper;
 import com.sun.javafx.geom.Point2D;
 import com.sun.javafx.geom.RectBounds;
@@ -41,7 +42,7 @@ public class TextRun implements GlyphList {
     byte level;
     int script;
     TextSpan span;
-    TextLine line;
+    com.sun.javafx.scene.text.TextLine line;
     Point2D location;
     private float ascent, descent, leading;
     int flags = 0;
@@ -78,6 +79,7 @@ public class TextRun implements GlyphList {
         if (canonical) flags |= FLAGS_CANONICAL;
     }
 
+    @Override
     public int getStart() {
         return start;
     }
@@ -98,7 +100,7 @@ public class TextRun implements GlyphList {
         return line.getBounds();
     }
 
-    public void setLine(TextLine line) {
+    public void setLine(com.sun.javafx.scene.text.TextLine line) {
         this.line = line;
     }
 
@@ -114,6 +116,7 @@ public class TextRun implements GlyphList {
         return slot;
     }
 
+    @Override
     public boolean isLinebreak() {
         return (flags & FLAGS_LINEBREAK) != 0;
     }
@@ -329,6 +332,17 @@ public class TextRun implements GlyphList {
                 cacheWidth = x;
                 return x;
             }
+
+            if (isComplex()) {
+                if (glyphIndex == glyphCount) {
+                    return getWidth();
+                }
+                float x = 0;
+                for (int i = 0; i < glyphIndex; i++) {
+                    x += getAdvance(i);
+                }
+                return x;
+            }
             return positions[glyphIndex<<1];
         }
         return glyphIndex == 0 ? 0 : getWidth();
@@ -343,6 +357,19 @@ public class TextRun implements GlyphList {
     }
 
     public float getAdvance(int glyphIndex) {
+
+        /*
+         * When positions is null it means that the TextRun only contains
+         * a line break, assuming that the class is used correctly ("shape"
+         * must be called before calling this method, unless the class user is
+         * sure that the run is empty). This class could benefit from better
+         * encapsulation to make it easier to reason about.
+         */
+
+        if (positions == null) {
+            return 0;
+        }
+
         if ((flags & FLAGS_COMPACT) != 0) {
             return positions[start + glyphIndex];
         } else {
@@ -378,7 +405,7 @@ public class TextRun implements GlyphList {
                 return getPosX(glyphIndex + (leading ? 1 : 0));
             }
         }
-        if (isTab()) {
+        if (isTab() || isEmbedded()) {
             if (ltr) {
                 return leading ? 0 : getWidth();
             } else {
@@ -388,39 +415,36 @@ public class TextRun implements GlyphList {
         return 0; //line break
     }
 
-    public int getGlyphAtX(float x, int[] trailing) {
+    public int getGlyphAtX(float x, AtomicBoolean trailing) {
         boolean ltr = isLeftToRight();
         float runX = 0;
         for (int i = 0; i < glyphCount; i++) {
             float advance = getAdvance(i);
             if (runX + advance >= x) {
-                if (trailing != null) {
-                    //TODO handle clusters
-                    if (x - runX > advance / 2) {
-                        trailing[0] = ltr ? 1 : 0;
-                    } else {
-                        trailing[0] = ltr ? 0 : 1;
-                    }
+                //TODO handle clusters
+                if (x - runX > advance / 2) {
+                    trailing.set(ltr ? true : false);
+                } else {
+                    trailing.set(ltr ? false : true);
                 }
                 return i;
             }
             runX += advance;
         }
-        if (trailing != null) trailing[0] = ltr ? 1 : 0;
+        trailing.set(ltr ? true : false);
         return Math.max(0, glyphCount - 1);
     }
 
-    public int getOffsetAtX(float x, int[] trailing) {
+    @Override
+    public int getOffsetAtX(float x, AtomicBoolean trailing) {
         if (glyphCount > 0) {
             int glyphIndex = getGlyphAtX(x, trailing);
             return getCharOffset(glyphIndex);
         }
         /* tab */
         if (width != -1 && length > 0) {
-            if (trailing != null) {
-                if (x > width / 2) {
-                    trailing[0] = 1;
-                }
+            if (x > width / 2) {
+                trailing.set(true);
             }
         }
         return 0;

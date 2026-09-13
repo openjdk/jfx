@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,8 +32,8 @@ import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.stage.Screen;
 import javafx.stage.Stage;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 import netscape.javascript.*;
 
 public class ScreenAndWindowTest extends TestBase {
@@ -47,15 +47,15 @@ public class ScreenAndWindowTest extends TestBase {
         int availWidth = (Integer) screen.getMember("availWidth");
         int availHeight = (Integer) screen.getMember("availHeight");
 
-        assertEquals("screen.width", (int)screenSize.getWidth(), width);
-        assertEquals("screen.height", (int)screenSize.getHeight(), height);
-        assertEquals("screen.availWidth", (int)availSize.getWidth(), availWidth);
-        assertEquals("screen.availHeight", (int)availSize.getHeight(), availHeight);
+        assertEquals((int)screenSize.getWidth(), width, "screen.width");
+        assertEquals((int)screenSize.getHeight(), height, "screen.height");
+        assertEquals((int)availSize.getWidth(), availWidth, "screen.availWidth");
+        assertEquals((int)availSize.getHeight(), availHeight, "screen.availHeight");
 
         // do some basic checking, too
-        assertTrue("screen.depth >= 0", depth >= 0);
-        assertTrue("screen.width >= screen.availWidth", width >= availWidth);
-        assertTrue("screen.height >= screen.availHeight", height >= availHeight);
+        assertTrue(depth >= 0, "screen.depth >= 0");
+        assertTrue(width >= availWidth, "screen.width >= screen.availWidth");
+        assertTrue(height >= availHeight, "screen.height >= screen.availHeight");
     }
 
     // called on FX thread
@@ -67,20 +67,20 @@ public class ScreenAndWindowTest extends TestBase {
         int outerHeight = (Integer)window.getMember("outerHeight");
 
         if (windowWidth >= 0) {
-            assertEquals("window.outerWidth", windowWidth, outerWidth);
+            assertEquals(windowWidth, outerWidth, "window.outerWidth");
         }
         if (windowHeight >= 0) {
-            assertEquals("window.outerHeight", windowHeight, outerHeight);
+            assertEquals(windowHeight, outerHeight, "window.outerHeight");
         }
 
         // do some sanity checks
-        assertTrue("window.outerWidth >= window.innerWidth", outerWidth >= innerWidth);
-        assertTrue("window.outerHeight >= window.innerHeight", outerHeight >= innerHeight);
+        assertTrue(outerWidth >= innerWidth, "window.outerWidth >= window.innerWidth");
+        assertTrue(outerHeight >= innerHeight, "window.outerHeight >= window.innerHeight");
     }
 
     // called on FX thread
     private void checkProperties(Rectangle2D screenSize, Rectangle2D availSize,
-                                int windowWidth, int windowHeight) {
+                                 int windowWidth, int windowHeight) {
         checkScreenProperties(screenSize, availSize);
         checkWindowProperties(windowWidth, windowHeight);
     }

@@ -26,6 +26,7 @@
 #pragma once
 
 #include <wtf/HashSet.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
@@ -38,11 +39,11 @@ struct TypeExtensionPair {
 WEBCORE_EXPORT const std::initializer_list<TypeExtensionPair>& commonMediaTypes();
 
 struct MIMETypeRegistryThreadGlobalData {
+    WTF_MAKE_TZONE_ALLOCATED(MIMETypeRegistryThreadGlobalData);
     WTF_MAKE_NONCOPYABLE(MIMETypeRegistryThreadGlobalData);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     MIMETypeRegistryThreadGlobalData(HashSet<String, ASCIICaseInsensitiveHash>&& supportedImageMIMETypesForEncoding)
-        : m_supportedImageMIMETypesForEncoding(WTFMove(supportedImageMIMETypesForEncoding))
+        : m_supportedImageMIMETypesForEncoding(WTF::move(supportedImageMIMETypesForEncoding))
     { }
 
     const HashSet<String, ASCIICaseInsensitiveHash>& supportedImageMIMETypesForEncoding() const { return m_supportedImageMIMETypesForEncoding; }
@@ -103,10 +104,10 @@ public:
 
     // Check to see if a MIME type is one of the common PDF/PS types.
     WEBCORE_EXPORT static bool isPDFMIMEType(const String& mimeType);
-    static bool isPostScriptMIMEType(const String& mimeType);
-    WEBCORE_EXPORT static bool isPDFOrPostScriptMIMEType(const String& mimeType);
 
     WEBCORE_EXPORT static bool isUSDMIMEType(const String& mimeType);
+
+    WEBCORE_EXPORT static bool isGLTFMIMEType(const String& mimeType);
 
     WEBCORE_EXPORT static bool isSupportedModelMIMEType(const String& mimeType);
 
@@ -132,10 +133,11 @@ public:
     WEBCORE_EXPORT static FixedVector<ASCIILiteral> supportedImageMIMETypes();
     static HashSet<String, ASCIICaseInsensitiveHash>& additionalSupportedImageMIMETypes();
     WEBCORE_EXPORT static HashSet<String, ASCIICaseInsensitiveHash>& supportedNonImageMIMETypes();
-    WEBCORE_EXPORT static const HashSet<String, ASCIICaseInsensitiveHash>& supportedMediaMIMETypes();
+    WEBCORE_EXPORT static const HashSet<String>& supportedMediaMIMETypes();
     WEBCORE_EXPORT static FixedVector<ASCIILiteral> pdfMIMETypes();
     WEBCORE_EXPORT static FixedVector<ASCIILiteral> unsupportedTextMIMETypes();
     WEBCORE_EXPORT static FixedVector<ASCIILiteral> usdMIMETypes();
+    WEBCORE_EXPORT static FixedVector<ASCIILiteral> gltfMIMETypes();
 
     WEBCORE_EXPORT static String appendFileExtensionIfNecessary(const String& filename, const String& mimeType);
 
@@ -144,6 +146,7 @@ public:
     WEBCORE_EXPORT static Vector<String> allowedMIMETypes(const Vector<String>& mimeTypes, const Vector<String>& extensions);
     WEBCORE_EXPORT static Vector<String> allowedFileExtensions(const Vector<String>& mimeTypes, const Vector<String>& extensions);
     WEBCORE_EXPORT static bool isJPEGMIMEType(const String& mimeType);
+    WEBCORE_EXPORT static bool isWebArchiveMIMEType(const String& mimeType);
 private:
     // Check to see if the MIME type is not suitable for being loaded as a text
     // document in a frame. Only valid for MIME types begining with "text/".

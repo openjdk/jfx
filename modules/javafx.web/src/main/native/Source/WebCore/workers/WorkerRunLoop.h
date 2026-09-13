@@ -31,9 +31,11 @@
 
 #pragma once
 
-#include "ScriptExecutionContext.h"
+#include <WebCore/ScriptExecutionContext.h>
 #include <memory>
+#include <wtf/CheckedRef.h>
 #include <wtf/MessageQueue.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -43,7 +45,7 @@ class WorkerOrWorkletGlobalScope;
 class WorkerSharedTimer;
 
 class WorkerRunLoop {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WorkerRunLoop);
 public:
     enum class Type : bool { WorkerDedicatedRunLoop, WorkerMainRunLoop };
 
@@ -68,6 +70,7 @@ private:
 };
 
 class WorkerDedicatedRunLoop final : public WorkerRunLoop {
+    WTF_MAKE_TZONE_ALLOCATED(WorkerDedicatedRunLoop);
 public:
     WorkerDedicatedRunLoop();
     ~WorkerDedicatedRunLoop();
@@ -87,7 +90,8 @@ public:
     WEBCORE_EXPORT void postTaskForMode(ScriptExecutionContext::Task&&, const String& mode) final;
 
     class Task {
-        WTF_MAKE_NONCOPYABLE(Task); WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_TZONE_ALLOCATED(Task);
+        WTF_MAKE_NONCOPYABLE(Task);
     public:
         Task(ScriptExecutionContext::Task&&, const String& mode);
         const String& mode() const { return m_mode; }
@@ -103,7 +107,15 @@ public:
 
 private:
     friend class RunLoopSetup;
-    MessageQueueWaitResult runInMode(WorkerOrWorkletGlobalScope*, const ModePredicate&);
+
+    struct RunInModeResult {
+        MessageQueueWaitResult messageQueueResult;
+        bool firedSharedTimer { false };
+        bool firedRunLoopTimer { false };
+        String activeRunLoopTimersBeforeFiring;
+        String activeRunLoopTimersAfterFiring;
+    };
+    RunInModeResult runInMode(WorkerOrWorkletGlobalScope*, const ModePredicate&);
 
     // Runs any clean up tasks that are currently in the queue and returns.
     // This should only be called when the context is closed or loop has been terminated.
@@ -117,7 +129,9 @@ private:
     int m_debugCount { 0 };
 };
 
-class WorkerMainRunLoop final : public WorkerRunLoop, public CanMakeWeakPtr<WorkerMainRunLoop> {
+class WorkerMainRunLoop final : public WorkerRunLoop, public CanMakeWeakPtr<WorkerMainRunLoop, WeakPtrFactoryInitialization::Eager>, public CanMakeCheckedPtr<WorkerMainRunLoop> {
+    WTF_MAKE_TZONE_ALLOCATED(WorkerMainRunLoop);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WorkerMainRunLoop);
 public:
     WorkerMainRunLoop();
 

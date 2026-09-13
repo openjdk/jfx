@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "Event.h"
-#include "SecurityPolicyViolationEventDisposition.h"
+#include <WebCore/Event.h>
+#include <WebCore/SecurityPolicyViolationEventDisposition.h>
 
 namespace WebCore {
 
@@ -49,7 +49,7 @@ struct SecurityPolicyViolationEventInit : EventInit {
 };
 
 class SecurityPolicyViolationEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(SecurityPolicyViolationEvent);
+    WTF_MAKE_TZONE_ALLOCATED(SecurityPolicyViolationEvent);
 public:
     using Disposition = SecurityPolicyViolationEventDisposition;
     using Init = SecurityPolicyViolationEventInit;
@@ -72,15 +72,14 @@ public:
     unsigned lineNumber() const { return m_lineNumber; }
     unsigned columnNumber() const { return m_columnNumber; }
 
-    EventInterface eventInterface() const final { return SecurityPolicyViolationEventInterfaceType; }
-
 private:
     SecurityPolicyViolationEvent()
+        : Event(EventInterfaceType::SecurityPolicyViolationEvent)
     {
     }
 
     SecurityPolicyViolationEvent(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
-        : Event(type, initializer, isTrusted)
+        : Event(EventInterfaceType::SecurityPolicyViolationEvent, type, initializer, isTrusted)
         , m_documentURI(initializer.documentURI)
         , m_referrer(initializer.referrer)
         , m_blockedURI(initializer.blockedURI)

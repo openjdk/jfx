@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,32 +25,33 @@
 
 package test.javafx.scene.control;
 
-import javafx.css.CssMetaData;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassExists;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.css.CssMetaData;
 import javafx.css.StyleableProperty;
 import javafx.geometry.HPos;
 import javafx.geometry.Orientation;
 import javafx.geometry.VPos;
 import javafx.scene.control.Separator;
-
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 /**
  */
 public class SeparatorTest {
 
     private Separator separator;
-    @Before public void setup() {
+
+    @BeforeEach
+    public void setup() {
         separator = new Separator();
     }
 
@@ -155,9 +156,7 @@ public class SeparatorTest {
         assertSame(Orientation.VERTICAL, separator.getOrientation());
     }
 
-    @Ignore("This is an unreliable test because it uses the string version " +
-            "of the function instead of the other, and no check is made " +
-            "for bits set")
+    @Disabled("This is an unreliable test because it uses the string version of the function instead of the other, and no check is made for bits set")
     @Test public void whenSettingOrientationToItsExistingValue_CssMetaData_isSettable_ReturnsFalse() {
         CssMetaData styleable = ((StyleableProperty)separator.orientationProperty()).getCssMetaData();
         assertTrue(styleable.isSettable(separator));

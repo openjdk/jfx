@@ -31,8 +31,11 @@
 #include "FileIconLoader.h"
 
 #include "Icon.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FileIconLoader);
 
 void FileIconLoader::invalidate()
 {
@@ -43,7 +46,7 @@ void FileIconLoader::invalidate()
 void FileIconLoader::iconLoaded(RefPtr<Icon>&& icon)
 {
     if (m_client)
-        m_client->iconLoaded(WTFMove(icon));
+        m_client->iconLoaded(WTF::move(icon));
 }
 
 FileIconLoader::FileIconLoader(FileIconLoaderClient& client)

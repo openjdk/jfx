@@ -484,6 +484,7 @@ gst_child_proxy_set_valist (GstChildProxy * object,
     if (!gst_child_proxy_lookup (object, name, &target, &pspec))
       goto not_found;
 
+    memset (&value, 0, sizeof (value));
     G_VALUE_COLLECT_INIT (&value, pspec->value_type, var_args,
         G_VALUE_NOCOPY_CONTENTS, &error);
 

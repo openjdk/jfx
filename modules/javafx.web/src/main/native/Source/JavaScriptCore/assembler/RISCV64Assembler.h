@@ -25,9 +25,12 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(ASSEMBLER) && CPU(RISCV64)
 
 #include "AssemblerBuffer.h"
+#include "AssemblerCommon.h"
 #include "RISCV64Registers.h"
 #include <tuple>
 
@@ -131,8 +134,8 @@ using RegisterID = RISCV64Registers::RegisterID;
 using FPRegisterID = RISCV64Registers::FPRegisterID;
 
 template<typename T>
-auto registerValue(T registerID)
-    -> std::enable_if_t<(std::is_same_v<T, RegisterID> || std::is_same_v<T, FPRegisterID>), unsigned>
+    requires (std::same_as<T, RegisterID> || std::same_as<T, FPRegisterID>)
+unsigned registerValue(T registerID)
 {
     return unsigned(registerID) & ((1 << 5) - 1);
 }
@@ -185,8 +188,8 @@ struct ImmediateBase {
     }
 
     template<typename T>
-    static auto isValid(T immValue)
-        -> std::enable_if_t<(std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t>), bool>
+        requires (std::same_as<T, int32_t> || std::same_as<T, int64_t>)
+    static bool isValid(T immValue)
     {
         constexpr unsigned shift = sizeof(T) * 8 - immediateSize;
         return immValue == ((immValue << shift) >> shift);
@@ -310,7 +313,8 @@ struct JImmediate : ImmediateBase<21> {
 };
 
 struct ImmediateDecomposition {
-    template<typename T, typename = std::enable_if_t<(std::is_same_v<T, int32_t> || std::is_same_v<T, int64_t>)>>
+    template<typename T>
+        requires (std::same_as<T, int32_t> || std::same_as<T, int64_t>)
     explicit ImmediateDecomposition(T immediate)
         : upper(UImmediate(0))
         , lower(IImmediate(0))
@@ -1489,10 +1493,10 @@ public:
     static constexpr FPRegisterID lastFPRegister() { return RISCV64Registers::f31; }
     static constexpr unsigned numberOfFPRegisters() { return lastFPRegister() - firstFPRegister() + 1; }
 
-    static const char* gprName(RegisterID id)
+    static ASCIILiteral gprName(RegisterID id)
     {
         ASSERT(id >= firstRegister() && id <= lastRegister());
-        static const char* const nameForRegister[numberOfRegisters()] = {
+        static constexpr ASCIILiteral nameForRegister[numberOfRegisters()] = {
 #define REGISTER_NAME(id, name, r, cs) name,
             FOR_EACH_GP_REGISTER(REGISTER_NAME)
 #undef REGISTER_NAME
@@ -1500,10 +1504,10 @@ public:
         return nameForRegister[id];
     }
 
-    static const char* sprName(SPRegisterID id)
+    static ASCIILiteral sprName(SPRegisterID id)
     {
         ASSERT(id >= firstSPRegister() && id <= lastSPRegister());
-        static const char* const nameForRegister[numberOfSPRegisters()] = {
+        static constexpr ASCIILiteral nameForRegister[numberOfSPRegisters()] = {
 #define REGISTER_NAME(id, name) name,
             FOR_EACH_SP_REGISTER(REGISTER_NAME)
 #undef REGISTER_NAME
@@ -1511,10 +1515,10 @@ public:
         return nameForRegister[id];
     }
 
-    static const char* fprName(FPRegisterID id)
+    static ASCIILiteral fprName(FPRegisterID id)
     {
         ASSERT(id >= firstFPRegister() && id <= lastFPRegister());
-        static const char* const nameForRegister[numberOfFPRegisters()] = {
+        static constexpr ASCIILiteral nameForRegister[numberOfFPRegisters()] = {
 #define REGISTER_NAME(id, name, r, cs) name,
             FOR_EACH_FP_REGISTER(REGISTER_NAME)
 #undef REGISTER_NAME
@@ -1563,7 +1567,7 @@ public:
     AssemblerLabel label()
     {
         AssemblerLabel result = m_buffer.label();
-        while (UNLIKELY(static_cast<int>(result.offset()) < m_indexOfTailOfLastWatchpoint)) {
+        while (static_cast<int>(result.offset()) < m_indexOfTailOfLastWatchpoint) [[unlikely]] {
             nop();
             result = m_buffer.label();
         }
@@ -1611,7 +1615,7 @@ public:
         linkJump(m_buffer.data(), from, location);
     }
 
-    static ptrdiff_t maxJumpReplacementSize()
+    static constexpr ptrdiff_t maxJumpReplacementSize()
     {
         return sizeof(uint32_t) * 8;
     }
@@ -1623,21 +1627,21 @@ public:
 
     static void repatchPointer(void* where, void* valuePtr)
     {
-        uint32_t* location = reinterpret_cast<uint32_t*>(where);
+        uint32_t* location = static_cast<uint32_t*>(where);
         PatchPointerImpl::apply(location, valuePtr);
         cacheFlush(location, sizeof(uint32_t) * 8);
     }
 
     static void relinkJump(void* from, void* to)
     {
-        uint32_t* location = reinterpret_cast<uint32_t*>(from);
+        uint32_t* location = static_cast<uint32_t*>(from);
         LinkJumpImpl::apply(location, to);
         cacheFlush(location, sizeof(uint32_t) * 2);
     }
 
     static void relinkCall(void* from, void* to)
     {
-        uint32_t* location = reinterpret_cast<uint32_t*>(from);
+        uint32_t* location = static_cast<uint32_t*>(from);
         LinkCallImpl::apply(location, to);
         cacheFlush(location, sizeof(uint32_t) * 2);
     }
@@ -1649,14 +1653,14 @@ public:
 
     static void replaceWithVMHalt(void* where)
     {
-        uint32_t* location = reinterpret_cast<uint32_t*>(where);
+        uint32_t* location = static_cast<uint32_t*>(where);
         location[0] = RISCV64Instructions::SD::construct(RISCV64Registers::zero, RISCV64Registers::zero, SImmediate::v<SImmediate, 0>());
         cacheFlush(location, sizeof(uint32_t));
     }
 
     static void replaceWithJump(void* from, void* to)
     {
-        uint32_t* location = reinterpret_cast<uint32_t*>(from);
+        uint32_t* location = static_cast<uint32_t*>(from);
         intptr_t offset = uintptr_t(to) - uintptr_t(from);
 
         if (JImmediate::isValid(offset)) {
@@ -1673,16 +1677,22 @@ public:
         cacheFlush(from, sizeof(uint32_t) * 2);
     }
 
+    static void replaceWithNops(void* from, size_t memoryToFillWithNopsInBytes)
+    {
+        fillNops(from, memoryToFillWithNopsInBytes);
+        cacheFlush(from, memoryToFillWithNopsInBytes);
+    }
+
     static void revertJumpReplacementToPatch(void* from, void* valuePtr)
     {
-        uint32_t* location = reinterpret_cast<uint32_t*>(from);
+        uint32_t* location = static_cast<uint32_t*>(from);
         PatchPointerImpl::apply(location, RISCV64Registers::x30, valuePtr);
         cacheFlush(location, sizeof(uint32_t) * 8);
     }
 
     static void* readCallTarget(void* from)
     {
-        uint32_t* location = reinterpret_cast<uint32_t*>(from);
+        uint32_t* location = static_cast<uint32_t*>(from);
         return PatchPointerImpl::read(location);
     }
 
@@ -1691,20 +1701,18 @@ public:
     static void cacheFlush(void* code, size_t size)
     {
         intptr_t end = reinterpret_cast<intptr_t>(code) + size;
-        __builtin___clear_cache(reinterpret_cast<char*>(code), reinterpret_cast<char*>(end));
+        __builtin___clear_cache(static_cast<char*>(code), reinterpret_cast<char*>(end));
     }
 
-    using CopyFunction = void*(&)(void*, const void*, size_t);
-    template <CopyFunction copy>
     static void fillNops(void* base, size_t size)
     {
-        uint32_t* ptr = reinterpret_cast<uint32_t*>(base);
+        uint32_t* ptr = static_cast<uint32_t*>(base);
         RELEASE_ASSERT(roundUpToMultipleOf<sizeof(uint32_t)>(ptr) == ptr);
         RELEASE_ASSERT(!(size % sizeof(uint32_t)));
 
         uint32_t nop = RISCV64Instructions::ADDI::construct(RISCV64Registers::zero, RISCV64Registers::zero, IImmediate::v<IImmediate, 0>());
         for (size_t i = 0, n = size / sizeof(uint32_t); i < n; ++i)
-            copy(&ptr[i], &nop, sizeof(uint32_t));
+            machineCodeCopy<memcpyRepatch>(&ptr[i], &nop, sizeof(uint32_t));
     }
 
     typedef enum {
@@ -1947,8 +1955,8 @@ public:
     {
         using FCVTType = RISCV64Instructions::FCVTBase<ToType, FromType>;
         static_assert(FCVTType::valid);
-        static_assert(std::is_same_v<std::decay_t<RDType>, typename FCVTType::RDType>);
-        static_assert(std::is_same_v<std::decay_t<RS1Type>, typename FCVTType::RS1Type>);
+        static_assert(std::same_as<std::decay_t<RDType>, typename FCVTType::RDType>);
+        static_assert(std::same_as<std::decay_t<RS1Type>, typename FCVTType::RS1Type>);
 
         insn(FCVTType::construct(rd, rs1, RM));
     }
@@ -1964,8 +1972,8 @@ public:
     {
         using FMVType = RISCV64Instructions::FMVBase<ToType, FromType>;
         static_assert(FMVType::valid);
-        static_assert(std::is_same_v<std::decay_t<RDType>, typename FMVType::RDType>);
-        static_assert(std::is_same_v<std::decay_t<RS1Type>, typename FMVType::RS1Type>);
+        static_assert(std::same_as<std::decay_t<RDType>, typename FMVType::RDType>);
+        static_assert(std::same_as<std::decay_t<RS1Type>, typename FMVType::RS1Type>);
 
         insn(FMVType::construct(rd, rs1));
     }
@@ -2120,7 +2128,8 @@ public:
         signExtend<bitSize>(rd, rd);
     }
 
-    template<unsigned bitSize, typename = std::enable_if_t<bitSize == 8 || bitSize == 16 || bitSize == 32 || bitSize == 64>>
+    template<unsigned bitSize>
+        requires (bitSize == 8 || bitSize == 16 || bitSize == 32 || bitSize == 64)
     void signExtend(RegisterID rd, RegisterID rs)
     {
         if constexpr (bitSize == 64)
@@ -2141,7 +2150,8 @@ public:
         zeroExtend<bitSize>(rd, rd);
     }
 
-    template<unsigned bitSize, typename = std::enable_if_t<bitSize == 8 || bitSize == 16 || bitSize == 32 || bitSize == 64>>
+    template<unsigned bitSize>
+        requires (bitSize == 8 || bitSize == 16 || bitSize == 32 || bitSize == 64)
     void zeroExtend(RegisterID rd, RegisterID rs)
     {
         if constexpr (bitSize == 64)

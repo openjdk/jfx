@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,14 +33,16 @@ import com.sun.scenario.effect.compiler.tree.LiteralExpr;
 import com.sun.scenario.effect.compiler.tree.SelectStmt;
 import com.sun.scenario.effect.compiler.tree.Stmt;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SelectionStatementTest extends ParserBase {
 
     @Test
-    public void ifOnly() throws Exception {
+    public void ifOnly() {
         Stmt tree = parseTreeFor("if (foo >= 3) foo += 12;");
         assertTrue(tree instanceof SelectStmt);
         SelectStmt s = (SelectStmt)tree;
@@ -50,7 +52,7 @@ public class SelectionStatementTest extends ParserBase {
     }
 
     @Test
-    public void ifAndElse() throws Exception {
+    public void ifAndElse() {
         Stmt tree = parseTreeFor("if (true) foo+=5; else --foo;");
         assertTrue(tree instanceof SelectStmt);
         SelectStmt s = (SelectStmt)tree;
@@ -59,12 +61,14 @@ public class SelectionStatementTest extends ParserBase {
         assertTrue(s.getElseStmt() instanceof ExprStmt);
     }
 
-    @Test(expected = ParseCancellationException.class)
-    public void notASelect() throws Exception {
-        parseTreeFor("then (so) { bobs yer uncle }");
+    @Test
+    public void notASelect() {
+        assertThrows(ParseCancellationException.class, () -> {
+            parseTreeFor("then (so) { bobs yer uncle }");
+        });
     }
 
-    private Stmt parseTreeFor(String text) throws Exception {
+    private Stmt parseTreeFor(String text) {
         JSLParser parser = parserOver(text);
         JSLVisitor visitor = new JSLVisitor();
         visitor.getSymbolTable().declareVariable("foo", Type.INT, null);

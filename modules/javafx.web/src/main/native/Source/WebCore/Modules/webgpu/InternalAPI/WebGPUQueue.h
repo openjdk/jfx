@@ -25,27 +25,33 @@
 
 #pragma once
 
-#include "WebGPUCommandBuffer.h"
-#include "WebGPUExtent3D.h"
-#include "WebGPUImageCopyExternalImage.h"
-#include "WebGPUImageCopyTexture.h"
-#include "WebGPUImageCopyTextureTagged.h"
-#include "WebGPUImageDataLayout.h"
-#include "WebGPUIntegralTypes.h"
+#include <WebCore/WebGPUCommandBuffer.h>
+#include <WebCore/WebGPUExtent3D.h>
+#include <WebCore/WebGPUImageCopyExternalImage.h>
+#include <WebCore/WebGPUImageCopyTexture.h>
+#include <WebCore/WebGPUImageCopyTextureTagged.h>
+#include <WebCore/WebGPUImageDataLayout.h>
+#include <WebCore/WebGPUIntegralTypes.h>
 #include <cstdint>
 #include <functional>
 #include <optional>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
+
+namespace WebCore {
+class NativeImage;
+class VideoFrame;
+}
 
 namespace WebCore::WebGPU {
 
 class Buffer;
 
-class Queue : public RefCounted<Queue> {
+class Queue : public RefCountedAndCanMakeWeakPtr<Queue> {
 public:
     virtual ~Queue() = default;
 
@@ -53,26 +59,37 @@ public:
 
     void setLabel(String&& label)
     {
-        m_label = WTFMove(label);
+        m_label = WTF::move(label);
         setLabelInternal(m_label);
     }
 
-    virtual void submit(Vector<std::reference_wrapper<CommandBuffer>>&&) = 0;
+    virtual void submit(Vector<Ref<WebGPU::CommandBuffer>>&&) = 0;
 
     virtual void onSubmittedWorkDone(CompletionHandler<void()>&&) = 0;
 
     virtual void writeBuffer(
         const Buffer&,
         Size64 bufferOffset,
-        const void* source,
-        size_t byteLength,
+        std::span<const uint8_t> source,
         Size64 dataOffset = 0,
         std::optional<Size64> = std::nullopt) = 0;
 
     virtual void writeTexture(
         const ImageCopyTexture& destination,
-        const void* source,
-        size_t byteLength,
+        std::span<const uint8_t> source,
+        const ImageDataLayout&,
+        const Extent3D& size) = 0;
+
+    virtual void writeBufferNoCopy(
+        const Buffer&,
+        Size64 bufferOffset,
+        std::span<uint8_t> source,
+        Size64 dataOffset = 0,
+        std::optional<Size64> = std::nullopt) = 0;
+
+    virtual void writeTexture(
+        const ImageCopyTexture& destination,
+        std::span<uint8_t> source,
         const ImageDataLayout&,
         const Extent3D& size) = 0;
 
@@ -80,6 +97,10 @@ public:
         const ImageCopyExternalImage& source,
         const ImageCopyTextureTagged& destination,
         const Extent3D& copySize) = 0;
+
+    virtual RefPtr<WebCore::NativeImage> getNativeImage(WebCore::VideoFrame&) = 0;
+    virtual bool isRemoteQueueProxy() const { return false; }
+    virtual bool isQueueImpl() const { return false; }
 
 protected:
     Queue() = default;

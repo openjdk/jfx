@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include <optional>
 #include <wtf/text/WTFString.h>
 
@@ -36,12 +34,10 @@ struct NavigationPreloadState {
     static NavigationPreloadState defaultValue() { return { false, "true"_s }; }
 
     NavigationPreloadState isolatedCopy() const & { return { enabled, headerValue.isolatedCopy() }; }
-    NavigationPreloadState isolatedCopy() && { return { enabled, WTFMove(headerValue).isolatedCopy() }; }
+    NavigationPreloadState isolatedCopy() && { return { enabled, WTF::move(headerValue).isolatedCopy() }; }
 
     bool enabled { false };
     String headerValue;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

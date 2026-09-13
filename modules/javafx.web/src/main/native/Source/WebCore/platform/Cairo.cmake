@@ -7,12 +7,10 @@ list(APPEND WebCore_UNIFIED_SOURCE_LIST_FILES
 )
 
 list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
-    platform/graphics/cairo/BackingStoreBackendCairo.h
-    platform/graphics/cairo/BackingStoreBackendCairoImpl.h
-    platform/graphics/cairo/BackingStoreBackendCairoX11.h
     platform/graphics/cairo/CairoUniquePtr.h
     platform/graphics/cairo/CairoOperations.h
     platform/graphics/cairo/CairoUtilities.h
+    platform/graphics/cairo/FontCascadeCairoInlines.h
     platform/graphics/cairo/GraphicsContextCairo.h
     platform/graphics/cairo/ImageBufferCairoBackend.h
     platform/graphics/cairo/ImageBufferCairoImageSurfaceBackend.h

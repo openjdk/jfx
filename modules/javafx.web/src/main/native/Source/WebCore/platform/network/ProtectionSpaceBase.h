@@ -25,41 +25,53 @@
 
 #pragma once
 
-#include <wtf/EnumTraits.h>
+#include <wtf/Platform.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class ProtectionSpace;
 
+enum class ProtectionSpaceBaseServerType : uint8_t {
+    HTTP = 1, // NOLINT
+    HTTPS, // NOLINT
+    FTP, // NOLINT
+    FTPS, // NOLINT
+    ProxyHTTP,
+    ProxyHTTPS,
+    ProxyFTP,
+    ProxySOCKS
+};
+
+enum class ProtectionSpaceBaseAuthenticationScheme : uint8_t {
+        Default = 1,
+    HTTPBasic,
+    HTTPDigest,
+    HTMLForm,
+    NTLM, // NOLINT
+    Negotiate,
+    ClientCertificateRequested,
+    ServerTrustEvaluationRequested,
+#if PLATFORM(COCOA)
+    XMobileMeAuthToken,
+#endif
+    OAuth,
+#if PLATFORM(COCOA)
+    PrivateAccessToken,
+    OAuthBearerToken,
+#endif
+#if USE(GLIB)
+    ClientCertificatePINRequested,
+#endif
+#if !PLATFORM(COCOA)
+        Unknown = 100
+#endif
+};
+
 class ProtectionSpaceBase {
 public:
-    enum class ServerType : uint8_t {
-        HTTP = 1,
-        HTTPS = 2,
-        FTP = 3,
-        FTPS = 4,
-        ProxyHTTP = 5,
-        ProxyHTTPS = 6,
-        ProxyFTP = 7,
-        ProxySOCKS = 8
-    };
-
-    enum class AuthenticationScheme : uint8_t {
-        Default = 1,
-        HTTPBasic = 2,
-        HTTPDigest = 3,
-        HTMLForm = 4,
-        NTLM = 5,
-        Negotiate = 6,
-        ClientCertificateRequested = 7,
-        ServerTrustEvaluationRequested = 8,
-        OAuth = 9,
-#if USE(GLIB)
-        ClientCertificatePINRequested = 10,
-#endif
-        Unknown = 100
-    };
+    using ServerType = ProtectionSpaceBaseServerType;
+    using AuthenticationScheme = ProtectionSpaceBaseAuthenticationScheme;
 
     bool isHashTableDeletedValue() const { return m_isHashTableDeletedValue; }
 
@@ -102,36 +114,3 @@ inline bool operator==(const ProtectionSpace& a, const ProtectionSpace& b) { ret
 
 } // namespace WebCore
 
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::ProtectionSpaceBase::AuthenticationScheme> {
-    using values = EnumValues<
-        WebCore::ProtectionSpaceBase::AuthenticationScheme,
-        WebCore::ProtectionSpaceBase::AuthenticationScheme::Default,
-        WebCore::ProtectionSpaceBase::AuthenticationScheme::HTTPBasic,
-        WebCore::ProtectionSpaceBase::AuthenticationScheme::HTTPDigest,
-        WebCore::ProtectionSpaceBase::AuthenticationScheme::HTMLForm,
-        WebCore::ProtectionSpaceBase::AuthenticationScheme::NTLM,
-        WebCore::ProtectionSpaceBase::AuthenticationScheme::Negotiate,
-        WebCore::ProtectionSpaceBase::AuthenticationScheme::ClientCertificateRequested,
-        WebCore::ProtectionSpaceBase::AuthenticationScheme::ServerTrustEvaluationRequested,
-        WebCore::ProtectionSpaceBase::AuthenticationScheme::OAuth,
-        WebCore::ProtectionSpaceBase::AuthenticationScheme::Unknown
-    >;
-};
-
-template<> struct EnumTraits<WebCore::ProtectionSpaceBase::ServerType> {
-    using values = EnumValues<
-        WebCore::ProtectionSpaceBase::ServerType,
-        WebCore::ProtectionSpaceBase::ServerType::HTTP,
-        WebCore::ProtectionSpaceBase::ServerType::HTTPS,
-        WebCore::ProtectionSpaceBase::ServerType::FTP,
-        WebCore::ProtectionSpaceBase::ServerType::FTPS,
-        WebCore::ProtectionSpaceBase::ServerType::ProxyHTTP,
-        WebCore::ProtectionSpaceBase::ServerType::ProxyHTTPS,
-        WebCore::ProtectionSpaceBase::ServerType::ProxyFTP,
-        WebCore::ProtectionSpaceBase::ServerType::ProxySOCKS
-    >;
-};
-
-} // namespace WTF

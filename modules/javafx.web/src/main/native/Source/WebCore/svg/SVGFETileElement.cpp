@@ -24,21 +24,23 @@
 
 #include "FETile.h"
 #include "SVGNames.h"
-#include <wtf/IsoMallocInlines.h>
+#include "SVGPropertyOwnerRegistry.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFETileElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGFETileElement);
 
 inline SVGFETileElement::SVGFETileElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::feTileTag));
 
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::inAttr, &SVGFETileElement::m_in1>();
-    });
+    }
 }
 
 Ref<SVGFETileElement> SVGFETileElement::create(const QualifiedName& tagName, Document& document)
@@ -49,7 +51,7 @@ Ref<SVGFETileElement> SVGFETileElement::create(const QualifiedName& tagName, Doc
 void SVGFETileElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     if (name == SVGNames::inAttr)
-        m_in1->setBaseValInternal(newValue);
+        Ref { m_in1 }->setBaseValInternal(newValue);
 
     SVGFilterPrimitiveStandardAttributes::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }

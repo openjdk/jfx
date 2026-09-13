@@ -25,34 +25,37 @@
 
 #pragma once
 
-#include "RenderingResourceIdentifier.h"
-#include <wtf/HashSet.h>
+#include <WebCore/RenderingResourceIdentifier.h>
+#include <wtf/AbstractCanMakeCheckedPtr.h>
 #include <wtf/ThreadSafeWeakPtr.h>
+#include <wtf/WeakHashSet.h>
 
 namespace WebCore {
+namespace DisplayList {
+class DisplayList;
+}
+class Gradient;
+class NativeImage;
+
+class RenderingResourceObserver : public AbstractCanMakeCheckedPtr {
+public:
+    using WeakValueType = RenderingResourceObserver;
+    virtual ~RenderingResourceObserver() = default;
+
+    virtual void willDestroyNativeImage(const NativeImage&) = 0;
+    virtual void willDestroyGradient(const Gradient&) = 0;
+    virtual void willDestroyFilter(RenderingResourceIdentifier) = 0;
+    virtual void willDestroyDisplayList(const DisplayList::DisplayList&) = 0;
+
+protected:
+    RenderingResourceObserver() = default;
+};
 
 class RenderingResource
     : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<RenderingResource> {
 public:
-    class Observer {
-    public:
-        virtual ~Observer() = default;
-        virtual void releaseRenderingResource(RenderingResourceIdentifier) = 0;
-    protected:
-        Observer() = default;
-    };
+    virtual ~RenderingResource() = default;
 
-    virtual ~RenderingResource()
-    {
-        if (!hasValidRenderingResourceIdentifier())
-            return;
-        for (auto observer : m_observers)
-            observer->releaseRenderingResource(renderingResourceIdentifier());
-    }
-
-    virtual bool isNativeImage() const { return false; }
-    virtual bool isGradient() const { return false; }
-    virtual bool isDecomposedGlyphs() const { return false; }
     virtual bool isFilter() const { return false; }
 
     bool hasValidRenderingResourceIdentifier() const
@@ -71,16 +74,10 @@ public:
         return m_renderingResourceIdentifier;
     }
 
-    void addObserver(Observer& observer)
+    void addObserver(WeakRef<RenderingResourceObserver>&& observer)
     {
         ASSERT(hasValidRenderingResourceIdentifier());
-        m_observers.add(&observer);
-    }
-
-    void removeObserver(Observer& observer)
-    {
-        ASSERT(hasValidRenderingResourceIdentifier());
-        m_observers.remove(&observer);
+        m_observers.add(WTF::move(observer));
     }
 
 protected:
@@ -89,7 +86,7 @@ protected:
     {
     }
 
-    HashSet<Observer*> m_observers;
+    WeakHashSet<RenderingResourceObserver> m_observers;
     std::optional<RenderingResourceIdentifier> m_renderingResourceIdentifier;
 };
 

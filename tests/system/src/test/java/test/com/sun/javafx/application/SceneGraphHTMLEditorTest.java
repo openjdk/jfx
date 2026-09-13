@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,8 @@
 
 package test.com.sun.javafx.application;
 
-import com.sun.javafx.application.PlatformImpl;
+import static org.junit.jupiter.api.Assertions.fail;
+import static test.util.Util.TIMEOUT;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -36,14 +37,12 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.StackPane;
 import javafx.scene.web.HTMLEditor;
 import javafx.stage.Stage;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.application.PlatformImpl;
 import test.util.Util;
-
-import static org.junit.Assert.*;
-import static test.util.Util.TIMEOUT;
 
 /**
  * Unit tests for HTMLEditor SceneGraph.
@@ -53,7 +52,7 @@ public class SceneGraphHTMLEditorTest {
     private static final CountDownLatch launchLatch = new CountDownLatch(1);
     private Stage stage;
 
-    @BeforeClass
+    @BeforeAll
     public static void setupOnce() throws Exception {
         Platform.setImplicitExit(false);
         PlatformImpl.startup(() -> {
@@ -65,12 +64,12 @@ public class SceneGraphHTMLEditorTest {
         }
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
         Platform.exit();
     }
 
-    @After
+    @AfterEach
     public void cleanup() {
         Thread.setDefaultUncaughtExceptionHandler(null);
         if (stage != null) {

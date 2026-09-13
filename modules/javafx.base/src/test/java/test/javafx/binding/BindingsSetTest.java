@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,10 +30,10 @@ import javafx.beans.property.SetProperty;
 import javafx.beans.property.SimpleSetProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableSet;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class BindingsSetTest {
 
@@ -44,7 +44,7 @@ public class BindingsSetTest {
     private ObservableSet<Object> set1;
     private ObservableSet<Object> set2;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         property = new SimpleSetProperty<>();
         set1 = FXCollections.observableSet(data1, data2);
@@ -70,10 +70,13 @@ public class BindingsSetTest {
         assertEquals(0, size.get());
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testSize_Null() {
-        Bindings.size((ObservableSet<Object>) null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.size((ObservableSet<Object>) null);
+        });
     }
+
 
     @Test
     public void testIsEmpty() {
@@ -94,10 +97,13 @@ public class BindingsSetTest {
         assertTrue(empty.get());
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testIsEmpty_Null() {
-        Bindings.isEmpty((ObservableSet<Object>) null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.isEmpty((ObservableSet<Object>) null);
+        });
     }
+
 
     @Test
     public void testIsNotEmpty() {
@@ -118,8 +124,11 @@ public class BindingsSetTest {
         assertFalse(notEmpty.get());
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testIsNotEmpty_Null() {
-        Bindings.isNotEmpty((ObservableSet<Object>) null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.isNotEmpty((ObservableSet<Object>) null);
+        });
     }
+
 }

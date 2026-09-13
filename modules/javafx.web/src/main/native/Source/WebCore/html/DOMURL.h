@@ -28,6 +28,7 @@
 
 #include "ExceptionOr.h"
 #include "URLDecomposition.h"
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/URL.h>
 #include <wtf/WeakPtr.h>
 
@@ -38,11 +39,12 @@ class ScriptExecutionContext;
 class URLRegistrable;
 class URLSearchParams;
 
-class DOMURL final : public RefCounted<DOMURL>, public CanMakeWeakPtr<DOMURL>, public URLDecomposition {
+class DOMURL final : public RefCountedAndCanMakeWeakPtr<DOMURL>, public URLDecomposition {
 public:
     static ExceptionOr<Ref<DOMURL>> create(const String& url, const String& base);
-    ~DOMURL();
+    WEBCORE_EXPORT ~DOMURL();
 
+    static RefPtr<DOMURL> parse(const String& url, const String& base);
     static bool canParse(const String& url, const String& base);
 
     const URL& href() const { return m_url; }
@@ -59,12 +61,11 @@ public:
 
 private:
     static ExceptionOr<Ref<DOMURL>> create(const String& url, const URL& base);
-    DOMURL(URL&& completeURL, const URL& baseURL);
+    DOMURL(URL&& completeURL);
 
     URL fullURL() const final { return m_url; }
     void setFullURL(const URL& fullURL) final { setHref(fullURL.string()); }
 
-    URL m_baseURL;
     URL m_url;
     RefPtr<URLSearchParams> m_searchParams;
 };

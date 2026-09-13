@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,12 @@
 
 package test.robot.javafx.scene;
 
-import static org.junit.Assert.fail;
-
+import static org.junit.jupiter.api.Assertions.fail;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.IntBuffer;
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Rectangle2D;
@@ -48,14 +46,12 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
 import javafx.util.Callback;
-
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 /*
@@ -187,10 +183,10 @@ public class PixelBufferDrawTest {
 
     private void compareColor(Color exp, Color act) {
         final double COMPARE_DELTA = 0.01;
-        Assert.assertEquals(exp.getRed(), act.getRed(), COMPARE_DELTA);
-        Assert.assertEquals(exp.getBlue(), act.getBlue(), COMPARE_DELTA);
-        Assert.assertEquals(exp.getGreen(), act.getGreen(), COMPARE_DELTA);
-        Assert.assertEquals(exp.getOpacity(), act.getOpacity(), COMPARE_DELTA);
+        Assertions.assertEquals(exp.getRed(), act.getRed(), COMPARE_DELTA);
+        Assertions.assertEquals(exp.getBlue(), act.getBlue(), COMPARE_DELTA);
+        Assertions.assertEquals(exp.getGreen(), act.getGreen(), COMPARE_DELTA);
+        Assertions.assertEquals(exp.getOpacity(), act.getOpacity(), COMPARE_DELTA);
     }
 
     private void verifyColor(Color color1, Color color2) {
@@ -286,22 +282,22 @@ public class PixelBufferDrawTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void exit() {
-        Util.shutdown(stage);
+        Util.shutdown();
     }
 
-    @Before
+    @BeforeEach
     public void before() {
         Util.parkCursor(robot);
     }
 
-    @After
+    @AfterEach
     public void cleanupTest() {
         Util.runAndWait(() -> {
             root = new HBox(1);

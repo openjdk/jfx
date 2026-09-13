@@ -37,41 +37,42 @@
 #include "CSSUnitValue.h"
 #include "DOMMatrix.h"
 #include "ExceptionOr.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CSSSkew);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSSkew);
 
 ExceptionOr<Ref<CSSSkew>> CSSSkew::create(Ref<CSSNumericValue> ax, Ref<CSSNumericValue> ay)
 {
     if (!ax->type().matches<CSSNumericBaseType::Angle>()
         || !ay->type().matches<CSSNumericBaseType::Angle>())
-        return Exception { TypeError };
-    return adoptRef(*new CSSSkew(WTFMove(ax), WTFMove(ay)));
+        return Exception { ExceptionCode::TypeError };
+    return adoptRef(*new CSSSkew(WTF::move(ax), WTF::move(ay)));
 }
 
-ExceptionOr<Ref<CSSSkew>> CSSSkew::create(CSSFunctionValue& cssFunctionValue)
+ExceptionOr<Ref<CSSSkew>> CSSSkew::create(Ref<const CSSFunctionValue> cssFunctionValue, Document& document)
 {
-    if (cssFunctionValue.name() != CSSValueSkew) {
+    if (cssFunctionValue->name() != CSSValueSkew) {
         ASSERT_NOT_REACHED();
         return CSSSkew::create(CSSNumericFactory::deg(0), CSSNumericFactory::deg(0));
     }
 
     Vector<Ref<CSSNumericValue>> components;
-    for (auto& componentCSSValue : cssFunctionValue) {
-        auto valueOrException = CSSStyleValueFactory::reifyValue(componentCSSValue, std::nullopt);
+    for (Ref componentCSSValue : cssFunctionValue.get()) {
+        auto valueOrException = CSSStyleValueFactory::reifyValue(document, componentCSSValue, std::nullopt);
         if (valueOrException.hasException())
             return valueOrException.releaseException();
-        if (!is<CSSNumericValue>(valueOrException.returnValue()))
-            return Exception { TypeError, "Expected a CSSNumericValue."_s };
-        components.append(downcast<CSSNumericValue>(valueOrException.releaseReturnValue().get()));
+        RefPtr numericValue = dynamicDowncast<CSSNumericValue>(valueOrException.releaseReturnValue());
+        if (!numericValue)
+            return Exception { ExceptionCode::TypeError, "Expected a CSSNumericValue."_s };
+        components.append(numericValue.releaseNonNull());
     }
 
     auto numberOfComponents = components.size();
     if (numberOfComponents < 1 || numberOfComponents > 2) {
         ASSERT_NOT_REACHED();
-        return Exception { TypeError, "Unexpected number of values."_s };
+        return Exception { ExceptionCode::TypeError, "Unexpected number of values."_s };
     }
 
     if (components.size() == 2)
@@ -81,36 +82,36 @@ ExceptionOr<Ref<CSSSkew>> CSSSkew::create(CSSFunctionValue& cssFunctionValue)
 
 CSSSkew::CSSSkew(Ref<CSSNumericValue> ax, Ref<CSSNumericValue> ay)
     : CSSTransformComponent(Is2D::Yes)
-    , m_ax(WTFMove(ax))
-    , m_ay(WTFMove(ay))
+    , m_ax(WTF::move(ax))
+    , m_ay(WTF::move(ay))
 {
 }
 
 ExceptionOr<void> CSSSkew::setAx(Ref<CSSNumericValue> ax)
 {
     if (!ax->type().matches<CSSNumericBaseType::Angle>())
-        return Exception { TypeError };
+        return Exception { ExceptionCode::TypeError };
 
-    m_ax = WTFMove(ax);
+    m_ax = WTF::move(ax);
     return { };
 }
 
 ExceptionOr<void> CSSSkew::setAy(Ref<CSSNumericValue> ay)
 {
     if (!ay->type().matches<CSSNumericBaseType::Angle>())
-        return Exception { TypeError };
+        return Exception { ExceptionCode::TypeError };
 
-    m_ay = WTFMove(ay);
+    m_ay = WTF::move(ay);
     return { };
 }
 
 void CSSSkew::serialize(StringBuilder& builder) const
 {
     // https://drafts.css-houdini.org/css-typed-om/#serialize-a-cssskew
-    builder.append("skew(");
+    builder.append("skew("_s);
     m_ax->serialize(builder);
-    if (!is<CSSUnitValue>(m_ay) || downcast<CSSUnitValue>(m_ay.get()).value()) {
-        builder.append(", ");
+    if (RefPtr ayUnitValue = dynamicDowncast<CSSUnitValue>(m_ay); !ayUnitValue || ayUnitValue->value()) {
+        builder.append(", "_s);
         m_ay->serialize(builder);
     }
     builder.append(')');
@@ -118,28 +119,30 @@ void CSSSkew::serialize(StringBuilder& builder) const
 
 ExceptionOr<Ref<DOMMatrix>> CSSSkew::toMatrix()
 {
-    if (!is<CSSUnitValue>(m_ax) || !is<CSSUnitValue>(m_ay))
-        return Exception { TypeError };
+    RefPtr ax = dynamicDowncast<CSSUnitValue>(m_ax);
+    RefPtr ay = dynamicDowncast<CSSUnitValue>(m_ay);
+    if (!ax || !ay)
+        return Exception { ExceptionCode::TypeError };
 
-    auto x = downcast<CSSUnitValue>(m_ax.get()).convertTo(CSSUnitType::CSS_DEG);
-    auto y = downcast<CSSUnitValue>(m_ay.get()).convertTo(CSSUnitType::CSS_DEG);
+    auto x = ax->convertTo(CSSUnitType::CSS_DEG);
+    auto y = ay->convertTo(CSSUnitType::CSS_DEG);
 
     if (!x || !y)
-        return Exception { TypeError };
+        return Exception { ExceptionCode::TypeError };
 
     TransformationMatrix matrix { };
     matrix.skew(x->value(), y->value());
 
-    return { DOMMatrix::create(WTFMove(matrix), DOMMatrixReadOnly::Is2D::Yes) };
+    return { DOMMatrix::create(WTF::move(matrix), DOMMatrixReadOnly::Is2D::Yes) };
 }
 
 RefPtr<CSSValue> CSSSkew::toCSSValue() const
 {
-    auto ax = m_ax->toCSSValue();
-    auto ay = m_ay->toCSSValue();
+    RefPtr ax = m_ax->toCSSValue();
+    RefPtr ay = m_ay->toCSSValue();
     if (!ax || !ay)
         return nullptr;
-    if (is<CSSUnitValue>(m_ay.get()) && !downcast<CSSUnitValue>(m_ay.get()).value())
+    if (RefPtr ayUnitValue = dynamicDowncast<CSSUnitValue>(m_ay); ayUnitValue && !ayUnitValue->value())
         return CSSFunctionValue::create(CSSValueSkew, ax.releaseNonNull());
     return CSSFunctionValue::create(CSSValueSkew, ax.releaseNonNull(), ay.releaseNonNull());
 }

@@ -30,17 +30,18 @@
 #include "WebGPUPtr.h"
 #include "WebGPUTextureView.h"
 #include <WebGPU/WebGPU.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore::WebGPU {
 
 class ConvertToBackingContext;
 
 class TextureViewImpl final : public TextureView {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(TextureViewImpl);
 public:
     static Ref<TextureViewImpl> create(WebGPUPtr<WGPUTextureView>&& textureView, ConvertToBackingContext& convertToBackingContext)
     {
-        return adoptRef(*new TextureViewImpl(WTFMove(textureView), convertToBackingContext));
+        return adoptRef(*new TextureViewImpl(WTF::move(textureView), convertToBackingContext));
     }
 
     virtual ~TextureViewImpl();
@@ -56,13 +57,18 @@ private:
     TextureViewImpl& operator=(TextureViewImpl&&) = delete;
 
     WGPUTextureView backing() const { return m_backing.get(); }
+    bool isTextureViewImpl() const final { return true; }
 
     void setLabelInternal(const String&) final;
 
     WebGPUPtr<WGPUTextureView> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebGPU::TextureViewImpl)
+    static bool isType(const WebCore::WebGPU::TextureView& textureView) { return textureView.isTextureViewImpl(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

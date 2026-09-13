@@ -110,9 +110,9 @@
 #include "gstregistry.h"
 #ifndef GSTREAMER_LITE
 #include "gstdeviceproviderfactory.h"
-#endif // GSTREAMER_LITE
 
 #include "gstpluginloader.h"
+#endif // GSTREAMER_LITE
 
 #include <glib/gi18n-lib.h>
 
@@ -146,7 +146,7 @@ static const int AVCODEC_LIBAV_EXPLICIT_VERSIONS[] = { 54, 56 };
 // For ffmpeg (libavcodec-ffmpeg.so)
 static const int AVCODEC_FFMPEG_EXPLICIT_VERSIONS[] = { 56 };
 // For libav or ffmpeg (libavcodec.so)
-static const int AVCODEC_EXPLICIT_VERSIONS[] = { 57, 58, 59, 60 };
+static const int AVCODEC_EXPLICIT_VERSIONS[] = { 57, 58, 59, 60, 61, 62 };
 
 /*
  * Callback passed to dl_iterate_phdr(): finds the path of
@@ -186,6 +186,15 @@ static int dl_callback (struct dl_phdr_info *info, size_t size, void *data)
 # define GST_REGISTRY_FILE_SUFFIX TARGET_CPU
 #endif
 #define GST_REGISTRY_FILE_NAME "registry." GST_REGISTRY_FILE_SUFFIX ".bin"
+
+#ifdef G_OS_WIN32
+#define GST_MODULE_SUFFIX ".dll"
+#else
+#define GST_MODULE_SUFFIX ".so"
+#ifdef __APPLE__
+#define GST_EXTRA_MODULE_SUFFIX ".dylib"
+#endif
+#endif
 
 
 #define GST_CAT_DEFAULT GST_CAT_REGISTRY
@@ -717,9 +726,9 @@ gst_registry_remove_feature (GstRegistry * registry, GstPluginFeature * feature)
 /**
  * gst_registry_plugin_filter:
  * @registry: registry to query
- * @filter: (scope call): the filter to use
+ * @filter: (scope call) (closure user_data): the filter to use
  * @first: only return first match
- * @user_data: (closure): user data passed to the filter function
+ * @user_data: user data passed to the filter function
  *
  * Runs a filter against all plugins in the registry and returns a #GList with
  * the results. If the first flag is set, only the first match is
@@ -897,9 +906,9 @@ gst_registry_get_device_provider_factory_list (GstRegistry * registry)
 /**
  * gst_registry_feature_filter:
  * @registry: registry to query
- * @filter: (scope call): the filter to use
+ * @filter: (scope call) (closure user_data): the filter to use
  * @first: only return first match
- * @user_data: (closure): user data passed to the filter function
+ * @user_data: user data passed to the filter function
  *
  * Runs a filter against all features of the plugins in the registry
  * and returns a GList with the results.
@@ -1182,7 +1191,9 @@ typedef struct
 {
   GstRegistry *registry;
   GstRegistryScanHelperState helper_state;
+#ifndef GSTREAMER_LITE
   GstPluginLoader *helper;
+#endif // GSTREAMER_LITE
   gboolean changed;
 } GstRegistryScanContext;
 
@@ -1210,17 +1221,21 @@ init_scan_context (GstRegistryScanContext * context, GstRegistry * registry)
   else
     context->helper_state = REGISTRY_SCAN_HELPER_DISABLED;
 
+#ifndef GSTREAMER_LITE
   context->helper = NULL;
+#endif // GSTREAMER_LITE
   context->changed = FALSE;
 }
 
 static void
 clear_scan_context (GstRegistryScanContext * context)
 {
+#ifndef GSTREAMER_LITE
   if (context->helper) {
     context->changed |= _priv_gst_plugin_loader_funcs.destroy (context->helper);
     context->helper = NULL;
   }
+#endif // GSTREAMER_LITE
 }
 
 static gboolean
@@ -1230,12 +1245,7 @@ gst_registry_scan_plugin_file (GstRegistryScanContext * context,
   gboolean changed = FALSE;
   GstPlugin *newplugin = NULL;
 
-#ifdef G_OS_WIN32
-  /* Disable external plugin loader on Windows until it is ported properly. */
-  context->helper_state = REGISTRY_SCAN_HELPER_DISABLED;
-#endif
-
-
+#ifndef GSTREAMER_LITE
   /* Have a plugin to load - see if the scan-helper needs starting */
   if (context->helper_state == REGISTRY_SCAN_HELPER_NOT_STARTED) {
     GST_DEBUG ("Starting plugin scanner for file %s", filename);
@@ -1260,6 +1270,9 @@ gst_registry_scan_plugin_file (GstRegistryScanContext * context,
       context->helper_state = REGISTRY_SCAN_HELPER_DISABLED;
     }
   }
+#else // GSTREAMER_LITE
+  context->helper_state = REGISTRY_SCAN_HELPER_DISABLED;
+#endif // GSTREAMER_LITE
 
   /* Check if the helper is disabled (or just got disabled above) */
   if (context->helper_state == REGISTRY_SCAN_HELPER_DISABLED) {
@@ -1304,6 +1317,15 @@ skip_directory (const gchar * parent_path, const gchar * dirent)
   if (strcmp (dirent, "gst-integration-testsuites") == 0)
     return TRUE;
 
+  /* skip the directories ending in .dSYM, these contain mach-o files with
+   * only debugging sections */
+  if (g_str_has_suffix (dirent, ".dSYM"))
+    return TRUE;
+
+  /* skip any stray directories when its parent is a .dSYM bundle */
+  if (parent_path != NULL && g_str_has_suffix (parent_path, ".dSYM"))
+    return TRUE;
+
   /* Rust build dirs which may contain artefacts we should skip, can be
    * /target/{debug,release} or /target/{arch}/{debug,release} */
   target = strstr (parent_path, "/target/");
@@ -1330,6 +1352,7 @@ skip_directory (const gchar * parent_path, const gchar * dirent)
     }
   }
 
+  /* Any non-dot directories can be indexed now */
   if (G_LIKELY (dirent[0] != '.'))
     return FALSE;
 
@@ -1441,7 +1464,7 @@ gst_registry_scan_path_level (GstRegistryScanContext * context,
       g_free (filename);
       continue;
     }
-    if (!g_str_has_suffix (dirent, "." G_MODULE_SUFFIX)
+    if (!g_str_has_suffix (dirent, GST_MODULE_SUFFIX)
 #ifdef GST_EXTRA_MODULE_SUFFIX
         && !g_str_has_suffix (dirent, GST_EXTRA_MODULE_SUFFIX)
 #endif
@@ -1842,6 +1865,8 @@ priv_gst_get_relocated_libgstreamer (void)
 #elif defined(HAVE_DLADDR)
   {
     Dl_info info;
+    char *real_fname = NULL;
+    long path_max = 0;
 
     GST_DEBUG ("attempting to retrieve libgstreamer-1.0 location using "
         "dladdr()");
@@ -1852,8 +1877,25 @@ priv_gst_get_relocated_libgstreamer (void)
       if (!info.dli_fname) {
         return NULL;
       }
+#ifdef PATH_MAX
+      path_max = PATH_MAX;
+#else
+      path_max = pathconf (info.dli_fname, _PC_PATH_MAX);
+      if (path_max <= 0)
+        path_max = 4096;
+#endif
 
-      dir = g_path_get_dirname (info.dli_fname);
+      real_fname = g_malloc (path_max);
+      if (realpath (info.dli_fname, real_fname)) {
+        dir = g_path_get_dirname (real_fname);
+        GST_DEBUG ("real directory location: %s", dir);
+      } else {
+        GST_ERROR ("could not canonicalize path %s: %s", info.dli_fname,
+            g_strerror (errno));
+        dir = g_path_get_dirname (info.dli_fname);
+      }
+      g_free (real_fname);
+
     } else {
       GST_LOG ("dladdr() failed");
       return NULL;
@@ -1869,6 +1911,75 @@ priv_gst_get_relocated_libgstreamer (void)
   return dir;
 }
 #endif // GSTREAMER_LITE
+
+int
+priv_gst_count_directories (const char *filepath)
+{
+  int i = 0;
+  char *tmp;
+  gsize len;
+
+  g_return_val_if_fail (!g_path_is_absolute (filepath), 0);
+
+  tmp = g_strdup (filepath);
+  len = strlen (tmp);
+
+  /* ignore UNC share paths entirely */
+  if (len >= 3 && G_IS_DIR_SEPARATOR (tmp[0]) && G_IS_DIR_SEPARATOR (tmp[1])
+      && !G_IS_DIR_SEPARATOR (tmp[2])) {
+    GST_WARNING ("found a UNC share path, ignoring");
+    g_clear_pointer (&tmp, g_free);
+    return 0;
+  }
+
+  /* remove trailing slashes if they exist */
+  while (
+      /* don't remove the trailing slash for C:\.
+       * UNC paths are at least \\s\s */
+      len > 3 && G_IS_DIR_SEPARATOR (tmp[len - 1])) {
+    tmp[len - 1] = '\0';
+    len--;
+  }
+
+  while (tmp) {
+    char *dirname, *basename;
+    len = strlen (tmp);
+
+    if (g_strcmp0 (tmp, ".") == 0)
+      break;
+    if (g_strcmp0 (tmp, "/") == 0)
+      break;
+
+    /* g_path_get_dirname() may return something of the form 'C:.', where C is
+     * a drive letter */
+    if (len == 3 && g_ascii_isalpha (tmp[0]) && tmp[1] == ':' && tmp[2] == '.')
+      break;
+
+    basename = g_path_get_basename (tmp);
+    dirname = g_path_get_dirname (tmp);
+
+    if (g_strcmp0 (basename, "..") == 0) {
+      i--;
+    } else if (g_strcmp0 (basename, ".") == 0) {
+      /* nothing to do */
+    } else {
+      i++;
+    }
+
+    g_clear_pointer (&basename, g_free);
+    g_clear_pointer (&tmp, g_free);
+    tmp = dirname;
+  }
+
+  g_clear_pointer (&tmp, g_free);
+
+  if (i < 0) {
+    g_critical ("path counting resulted in a negative directory count!");
+    return 0;
+  }
+
+  return i;
+}
 
 #ifndef GST_DISABLE_REGISTRY
 /* Unref all plugins marked 'cached', to clear old plugins that no

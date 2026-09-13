@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include <wtf/EnumTraits.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -42,6 +41,6 @@ enum class EnterKeyHint : uint8_t {
 };
 
 EnterKeyHint enterKeyHintForAttributeValue(StringView);
-String attributeValueForEnterKeyHint(EnterKeyHint);
+WEBCORE_EXPORT String attributeValueForEnterKeyHint(EnterKeyHint);
 
 } // namespace WebCore

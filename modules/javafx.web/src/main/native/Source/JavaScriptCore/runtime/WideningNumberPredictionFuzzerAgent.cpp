@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,8 +27,11 @@
 #include "WideningNumberPredictionFuzzerAgent.h"
 
 #include "CodeBlock.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WideningNumberPredictionFuzzerAgent);
 
 WideningNumberPredictionFuzzerAgent::WideningNumberPredictionFuzzerAgent(VM& vm)
     : NumberPredictionFuzzerAgent(vm)
@@ -59,11 +62,11 @@ SpeculatedType WideningNumberPredictionFuzzerAgent::getPrediction(CodeBlock* cod
     for (unsigned i = 0; i < numberOfTypesToAdd; i++) {
         unsigned indexOfNewType = m_random.getUint32(numberTypesNotIncludedInSpeculation.size());
         mergeSpeculation(generated, numberTypesNotIncludedInSpeculation[indexOfNewType]);
-        numberTypesNotIncludedInSpeculation.remove(indexOfNewType);
+        numberTypesNotIncludedInSpeculation.removeAt(indexOfNewType);
     }
 
     if (Options::dumpFuzzerAgentPredictions())
-        dataLogLn("WideningNumberPredictionFuzzerAgent::getPrediction name:(", codeBlock->inferredName(), "#", codeBlock->hashAsStringIfPossible(), "),bytecodeIndex:(", codeOrigin.bytecodeIndex(), "),original:(", SpeculationDump(original), "),generated:(", SpeculationDump(generated), ")");
+        dataLogLn("WideningNumberPredictionFuzzerAgent::getPrediction name:(", codeBlock->inferredNameWithHash(), "),bytecodeIndex:(", codeOrigin.bytecodeIndex(), "),original:(", SpeculationDump(original), "),generated:(", SpeculationDump(generated), ")");
 
     return generated;
 }

@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if ENABLE(CONTEXT_MENUS)
 
 #include <wtf/Forward.h>
@@ -60,10 +61,6 @@ public:
 
 #if HAVE(TRANSLATION_UI_SERVICES)
     virtual void handleTranslation(const TranslationContextMenuInfo&) = 0;
-#endif
-
-#if PLATFORM(COCOA)
-    virtual void searchWithSpotlight() = 0;
 #endif
 
 #if PLATFORM(GTK)

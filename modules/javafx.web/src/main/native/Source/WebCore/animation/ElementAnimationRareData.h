@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include "KeyframeEffectStack.h"
-#include "WebAnimationTypes.h"
+#include <WebCore/KeyframeEffectStack.h>
+#include <WebCore/PseudoElementIdentifier.h>
+#include <WebCore/WebAnimationTypes.h>
 
 namespace WebCore {
 
@@ -35,14 +36,13 @@ class CSSTransition;
 class RenderStyle;
 class WebAnimation;
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ElementAnimationRareData);
 class ElementAnimationRareData {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ElementAnimationRareData, ElementAnimationRareData);
     WTF_MAKE_NONCOPYABLE(ElementAnimationRareData);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
-    explicit ElementAnimationRareData(PseudoId);
+    explicit ElementAnimationRareData();
     ~ElementAnimationRareData();
-
-    PseudoId pseudoId() const { return m_pseudoId; }
 
     KeyframeEffectStack* keyframeEffectStack() { return m_keyframeEffectStack.get(); }
     KeyframeEffectStack& ensureKeyframeEffectStack();
@@ -50,24 +50,26 @@ public:
     AnimationCollection& animations() { return m_animations; }
     CSSAnimationCollection& animationsCreatedByMarkup() { return m_animationsCreatedByMarkup; }
     void setAnimationsCreatedByMarkup(CSSAnimationCollection&&);
-    AnimatablePropertyToTransitionMap& completedTransitionsByProperty() { return m_completedTransitionsByProperty; }
-    AnimatablePropertyToTransitionMap& runningTransitionsByProperty() { return m_runningTransitionsByProperty; }
+    AnimatableCSSPropertyToTransitionMap& completedTransitionsByProperty() { return m_completedTransitionsByProperty; }
+    AnimatableCSSPropertyToTransitionMap& runningTransitionsByProperty() { return m_runningTransitionsByProperty; }
     const RenderStyle* lastStyleChangeEventStyle() const { return m_lastStyleChangeEventStyle.get(); }
     void setLastStyleChangeEventStyle(std::unique_ptr<const RenderStyle>&&);
     void cssAnimationsDidUpdate() { m_hasPendingKeyframesUpdate = false; }
     void keyframesRuleDidChange() { m_hasPendingKeyframesUpdate = true; }
     bool hasPendingKeyframesUpdate() const { return m_hasPendingKeyframesUpdate; }
+    bool hasPropertiesOverridenAfterAnimation() const { return m_hasPropertiesOverridenAfterAnimation; }
+    void setHasPropertiesOverridenAfterAnimation(bool value) { m_hasPropertiesOverridenAfterAnimation = value; }
 
 private:
-
     std::unique_ptr<KeyframeEffectStack> m_keyframeEffectStack;
     std::unique_ptr<const RenderStyle> m_lastStyleChangeEventStyle;
     AnimationCollection m_animations;
     CSSAnimationCollection m_animationsCreatedByMarkup;
-    AnimatablePropertyToTransitionMap m_completedTransitionsByProperty;
-    AnimatablePropertyToTransitionMap m_runningTransitionsByProperty;
-    PseudoId m_pseudoId;
+    AnimatableCSSPropertyToTransitionMap m_completedTransitionsByProperty;
+    AnimatableCSSPropertyToTransitionMap m_runningTransitionsByProperty;
     bool m_hasPendingKeyframesUpdate { false };
+    bool m_hasPropertiesOverridenAfterAnimation { false };
 };
 
 } // namespace WebCore
+

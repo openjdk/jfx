@@ -114,7 +114,7 @@ bool DebuggerScope::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, P
     return thisObject->methodTable()->deleteProperty(thisObject, globalObject, propertyName, slot);
 }
 
-void DebuggerScope::getOwnPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, DontEnumPropertiesMode mode)
+void DebuggerScope::getOwnPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArrayBuilder& propertyNames, DontEnumPropertiesMode mode)
 {
     DebuggerScope* scope = jsCast<DebuggerScope*>(object);
     ASSERT(scope->isValid());
@@ -207,7 +207,7 @@ String DebuggerScope::name() const
     if (!codeBlock)
         return String();
 
-    return String::fromUTF8(codeBlock->inferredName());
+    return String::fromUTF8(codeBlock->inferredName().span());
 }
 
 DebuggerLocation DebuggerScope::location() const

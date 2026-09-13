@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "CSSValue.h"
+#include <WebCore/CSSValue.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -40,14 +40,14 @@ class CSSNamedImageValue final : public CSSValue {
 public:
     static Ref<CSSNamedImageValue> create(String name)
     {
-        return adoptRef(*new CSSNamedImageValue(WTFMove(name)));
+        return adoptRef(*new CSSNamedImageValue(WTF::move(name)));
     }
     ~CSSNamedImageValue();
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
     bool equals(const CSSNamedImageValue&) const;
 
-    RefPtr<StyleImage> createStyleImage(Style::BuilderState&) const;
+    RefPtr<StyleImage> createStyleImage(const Style::BuilderState&) const;
 
 private:
     explicit CSSNamedImageValue(String&&);

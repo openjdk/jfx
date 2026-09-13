@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,6 @@
 
 package test.javafx.binding;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import java.util.Arrays;
-import java.util.Collection;
-
 import javafx.beans.binding.Binding;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.BooleanExpression;
@@ -48,23 +42,28 @@ import javafx.beans.property.SimpleFloatProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleLongProperty;
 import javafx.beans.value.ObservableNumberValue;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import java.util.Arrays;
+import java.util.stream.Stream;
 
-@RunWith(Parameterized.class)
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class BindingsNumberCastTest {
 
-    public static interface Functions {
+    public interface Functions {
         Binding generateExpression(ObservableNumberValue op1, ObservableNumberValue op2);
+
         void check(double op1, double op2, Binding binding);
     }
 
     private static final double EPSILON = 1e-5;
 
-    private final Functions func;
+    private Functions func;
 
     private Double double0;
     private Float float0;
@@ -76,12 +75,8 @@ public class BindingsNumberCastTest {
     private LongProperty long1;
     private IntegerProperty integer1;
 
-    public BindingsNumberCastTest(Functions func) {
+    private void setUp(Functions func) {
         this.func = func;
-    }
-
-    @Before
-    public void setUp() {
         double0 = Double.valueOf(3.1415);
         float0 = Float.valueOf(2.71f);
         long0 = Long.valueOf(111L);
@@ -93,8 +88,12 @@ public class BindingsNumberCastTest {
         integer1 = new SimpleIntegerProperty(integer0);
     }
 
-    @Test
-    public void testDouble() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    void testBindings(Functions func) {
+        setUp(func);
+
+        // Test Double
         Binding binding = func.generateExpression(double1, double1);
         assertTrue(binding instanceof DoubleExpression || binding instanceof BooleanExpression);
         func.check(double0, double0, binding);
@@ -110,11 +109,9 @@ public class BindingsNumberCastTest {
         binding = func.generateExpression(double1, integer1);
         assertTrue(binding instanceof DoubleExpression || binding instanceof BooleanExpression);
         func.check(double0, integer0, binding);
-    }
 
-    @Test
-    public void testFloat() {
-        Binding binding = func.generateExpression(float1, double1);
+        // Test Float
+        binding = func.generateExpression(float1, double1);
         assertTrue(binding instanceof DoubleExpression || binding instanceof BooleanExpression);
         func.check(float0, double0, binding);
 
@@ -129,11 +126,9 @@ public class BindingsNumberCastTest {
         binding = func.generateExpression(float1, integer1);
         assertTrue(binding instanceof FloatExpression || binding instanceof BooleanExpression);
         func.check(float0, integer0, binding);
-    }
 
-    @Test
-    public void testLong() {
-        Binding binding = func.generateExpression(long1, double1);
+        // Test Long
+        binding = func.generateExpression(long1, double1);
         assertTrue(binding instanceof DoubleExpression || binding instanceof BooleanExpression);
         func.check(long0, double0, binding);
 
@@ -148,11 +143,9 @@ public class BindingsNumberCastTest {
         binding = func.generateExpression(long1, integer1);
         assertTrue(binding instanceof LongExpression || binding instanceof BooleanExpression);
         func.check(long0, integer0, binding);
-    }
 
-    @Test
-    public void testInteger() {
-        Binding binding = func.generateExpression(integer1, double1);
+        // Test Integer
+        binding = func.generateExpression(integer1, double1);
         assertTrue(binding instanceof DoubleExpression || binding instanceof BooleanExpression);
         func.check(integer0, double0, binding);
 
@@ -169,10 +162,8 @@ public class BindingsNumberCastTest {
         func.check(integer0, integer0, binding);
     }
 
-    @Parameterized.Parameters
-    public static Collection<Object[]> parameters() {
-        return Arrays.asList(new Object[][] {
-            {
+    static Stream<Arguments> parameters() {
+        return Arrays.asList(
                 new Functions() {
                     @Override
                     public Binding generateExpression(ObservableNumberValue op1, ObservableNumberValue op2) {
@@ -182,12 +173,9 @@ public class BindingsNumberCastTest {
                     @Override
                     public void check(double op1, double op2, Binding binding) {
                         assertTrue(binding instanceof NumberExpression);
-                        assertEquals(op1 + op2, ((NumberExpression)binding).doubleValue(), EPSILON);
+                        assertEquals(op1 + op2, ((NumberExpression) binding).doubleValue(), EPSILON);
                     }
-
-                }
-            },
-            {
+                },
                 new Functions() {
                     @Override
                     public Binding generateExpression(ObservableNumberValue op1, ObservableNumberValue op2) {
@@ -197,12 +185,9 @@ public class BindingsNumberCastTest {
                     @Override
                     public void check(double op1, double op2, Binding binding) {
                         assertTrue(binding instanceof NumberExpression);
-                        assertEquals(op1 * op2, ((NumberExpression)binding).doubleValue(), EPSILON);
+                        assertEquals(op1 * op2, ((NumberExpression) binding).doubleValue(), EPSILON);
                     }
-
-                }
-            },
-            {
+                },
                 new Functions() {
                     @Override
                     public Binding generateExpression(ObservableNumberValue op1, ObservableNumberValue op2) {
@@ -213,15 +198,12 @@ public class BindingsNumberCastTest {
                     public void check(double op1, double op2, Binding binding) {
                         assertTrue(binding instanceof NumberExpression);
                         if ((binding instanceof DoubleExpression) || (binding instanceof FloatExpression)) {
-                            assertEquals(op1 / op2, ((NumberExpression)binding).doubleValue(), EPSILON);
+                            assertEquals(op1 / op2, ((NumberExpression) binding).doubleValue(), EPSILON);
                         } else {
-                            assertEquals((long)op1 / (long)op2, ((NumberExpression)binding).longValue());
+                            assertEquals((long) op1 / (long) op2, ((NumberExpression) binding).longValue());
                         }
                     }
-
-                }
-            },
-            {
+                },
                 new Functions() {
                     @Override
                     public Binding generateExpression(ObservableNumberValue op1, ObservableNumberValue op2) {
@@ -231,12 +213,9 @@ public class BindingsNumberCastTest {
                     @Override
                     public void check(double op1, double op2, Binding binding) {
                         assertTrue(binding instanceof NumberExpression);
-                        assertEquals(Math.min(op1, op2), ((NumberExpression)binding).doubleValue(), EPSILON);
+                        assertEquals(Math.min(op1, op2), ((NumberExpression) binding).doubleValue(), EPSILON);
                     }
-
-                }
-            },
-            {
+                },
                 new Functions() {
                     @Override
                     public Binding generateExpression(ObservableNumberValue op1, ObservableNumberValue op2) {
@@ -246,12 +225,9 @@ public class BindingsNumberCastTest {
                     @Override
                     public void check(double op1, double op2, Binding binding) {
                         assertTrue(binding instanceof NumberExpression);
-                        assertEquals(Math.max(op1, op2), ((NumberExpression)binding).doubleValue(), EPSILON);
+                        assertEquals(Math.max(op1, op2), ((NumberExpression) binding).doubleValue(), EPSILON);
                     }
-
-                }
-            },
-            {
+                },
                 new Functions() {
                     @Override
                     public Binding generateExpression(ObservableNumberValue op1, ObservableNumberValue op2) {
@@ -261,12 +237,9 @@ public class BindingsNumberCastTest {
                     @Override
                     public void check(double op1, double op2, Binding binding) {
                         assertTrue(binding instanceof BooleanExpression);
-                        assertEquals(Math.abs(op1 - op2) < EPSILON, ((BooleanExpression)binding).get());
+                        assertEquals(Math.abs(op1 - op2) < EPSILON, ((BooleanExpression) binding).get());
                     }
-
-                }
-            },
-            {
+                },
                 new Functions() {
                     @Override
                     public Binding generateExpression(ObservableNumberValue op1, ObservableNumberValue op2) {
@@ -276,12 +249,9 @@ public class BindingsNumberCastTest {
                     @Override
                     public void check(double op1, double op2, Binding binding) {
                         assertTrue(binding instanceof BooleanExpression);
-                        assertEquals(op1 > op2, ((BooleanExpression)binding).get());
+                        assertEquals(op1 > op2, ((BooleanExpression) binding).get());
                     }
-
                 }
-            },
-        });
+        ).stream().map(Arguments::of);
     }
-
 }

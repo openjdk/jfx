@@ -28,12 +28,14 @@
 #if ENABLE(GAMEPAD)
 #include "GamepadHapticActuator.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
 #include "EventLoop.h"
 #include "Gamepad.h"
 #include "GamepadEffectParameters.h"
 #include "GamepadProvider.h"
 #include "JSDOMPromiseDeferred.h"
+#include "Settings.h"
 #include <wtf/CompletionHandler.h>
 
 namespace WebCore {
@@ -83,34 +85,34 @@ bool GamepadHapticActuator::canPlayEffectType(EffectType effectType) const
 void GamepadHapticActuator::playEffect(EffectType effectType, GamepadEffectParameters&& effectParameters, Ref<DeferredPromise>&& promise)
 {
     if (!areEffectParametersValid(effectType, effectParameters)) {
-        promise->reject(Exception { TypeError, "Invalid effect parameter"_s });
+        promise->reject(Exception { ExceptionCode::TypeError, "Invalid effect parameter"_s });
         return;
     }
 
-    auto document = this->document();
+    RefPtr document = this->document();
     if (!document || !document->isFullyActive() || document->hidden() || !m_gamepad) {
         promise->resolve<IDLEnumeration<Result>>(Result::Preempted);
         return;
     }
     auto& currentEffectPromise = promiseForEffectType(effectType);
     if (auto playingEffectPromise = std::exchange(currentEffectPromise, nullptr)) {
-        queueTaskKeepingObjectAlive(*this, TaskSource::Gamepad, [playingEffectPromise = WTFMove(playingEffectPromise)] {
+        queueTaskKeepingObjectAlive(*this, TaskSource::Gamepad, [playingEffectPromise = WTF::move(playingEffectPromise)](auto&) {
             playingEffectPromise->resolve<IDLEnumeration<Result>>(Result::Preempted);
         });
     }
     if (!canPlayEffectType(effectType)) {
-        promise->reject(Exception { NotSupportedError, "This gamepad doesn't support playing such effect"_s });
+        promise->reject(Exception { ExceptionCode::NotSupportedError, "This gamepad doesn't support playing such effect"_s });
         return;
     }
 
     effectParameters.duration = std::min(effectParameters.duration, GamepadEffectParameters::maximumDuration.milliseconds());
 
-    currentEffectPromise = WTFMove(promise);
-    GamepadProvider::singleton().playEffect(m_gamepad->index(), m_gamepad->id(), effectType, effectParameters, [this, protectedThis = makePendingActivity(*this), playingEffectPromise = currentEffectPromise, effectType](bool success) mutable {
-        auto& currentEffectPromise = promiseForEffectType(effectType);
+    currentEffectPromise = WTF::move(promise);
+    GamepadProvider::singleton().playEffect(m_gamepad->index(), m_gamepad->id(), effectType, effectParameters, [pendingActivity = makePendingActivity(*this), playingEffectPromise = currentEffectPromise, effectType](bool success) mutable {
+        auto& currentEffectPromise = pendingActivity->object().promiseForEffectType(effectType);
         if (playingEffectPromise != currentEffectPromise)
             return; // Was already pre-empted.
-        queueTaskKeepingObjectAlive(*this, TaskSource::Gamepad, [playingEffectPromise = std::exchange(currentEffectPromise, nullptr), success] {
+        pendingActivity->object().queueTaskKeepingObjectAlive(pendingActivity->object(), TaskSource::Gamepad, [playingEffectPromise = std::exchange(currentEffectPromise, nullptr), success](auto&) {
             playingEffectPromise->resolve<IDLEnumeration<Result>>(success ? Result::Complete : Result::Preempted);
         });
     });
@@ -118,13 +120,13 @@ void GamepadHapticActuator::playEffect(EffectType effectType, GamepadEffectParam
 
 void GamepadHapticActuator::reset(Ref<DeferredPromise>&& promise)
 {
-    auto document = this->document();
+    RefPtr document = this->document();
     if (!document || !document->isFullyActive() || document->hidden() || !m_gamepad) {
         promise->resolve<IDLEnumeration<Result>>(Result::Preempted);
         return;
     }
-    stopEffects([this, protectedThis = makePendingActivity(*this), promise = WTFMove(promise)]() mutable {
-        queueTaskKeepingObjectAlive(*this, TaskSource::Gamepad, [promise = WTFMove(promise)] {
+    stopEffects([pendingActivity = makePendingActivity(*this), promise = WTF::move(promise)]() mutable {
+        pendingActivity->object().queueTaskKeepingObjectAlive(pendingActivity->object(), TaskSource::Gamepad, [promise = WTF::move(promise)](auto&) {
             promise->resolve<IDLEnumeration<Result>>(Result::Complete);
         });
     });
@@ -137,13 +139,13 @@ void GamepadHapticActuator::stopEffects(CompletionHandler<void()>&& completionHa
 
     auto dualRumbleEffectPromise = std::exchange(m_dualRumbleEffectPromise, nullptr);
     auto triggerRumbleEffectPromise = std::exchange(m_triggerRumbleEffectPromise, nullptr);
-    queueTaskKeepingObjectAlive(*this, TaskSource::Gamepad, [dualRumbleEffectPromise = WTFMove(dualRumbleEffectPromise), triggerRumbleEffectPromise = WTFMove(triggerRumbleEffectPromise)] {
+    queueTaskKeepingObjectAlive(*this, TaskSource::Gamepad, [dualRumbleEffectPromise = WTF::move(dualRumbleEffectPromise), triggerRumbleEffectPromise = WTF::move(triggerRumbleEffectPromise)](auto&) {
         if (dualRumbleEffectPromise)
             dualRumbleEffectPromise->resolve<IDLEnumeration<Result>>(Result::Preempted);
         if (triggerRumbleEffectPromise)
             triggerRumbleEffectPromise->resolve<IDLEnumeration<Result>>(Result::Preempted);
     });
-    GamepadProvider::singleton().stopEffects(m_gamepad->index(), m_gamepad->id(), WTFMove(completionHandler));
+    GamepadProvider::singleton().stopEffects(m_gamepad->index(), m_gamepad->id(), WTF::move(completionHandler));
 }
 
 Document* GamepadHapticActuator::document()
@@ -154,11 +156,6 @@ Document* GamepadHapticActuator::document()
 const Document* GamepadHapticActuator::document() const
 {
     return downcast<Document>(scriptExecutionContext());
-}
-
-const char* GamepadHapticActuator::activeDOMObjectName() const
-{
-    return "GamepadHapticActuator";
 }
 
 void GamepadHapticActuator::suspend(ReasonForSuspension)
@@ -173,7 +170,7 @@ void GamepadHapticActuator::stop()
 
 void GamepadHapticActuator::visibilityStateChanged()
 {
-    auto* document = this->document();
+    RefPtr document = this->document();
     if (!document || !document->hidden())
         return;
     stopEffects([] { });

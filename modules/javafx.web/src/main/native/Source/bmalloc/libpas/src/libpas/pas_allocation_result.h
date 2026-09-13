@@ -28,7 +28,9 @@
 
 #include <errno.h>
 #include "pas_internal_config.h"
+#include "pas_mte.h"
 #include "pas_utils.h"
+#include "pas_zero_memory.h"
 #include "pas_zero_mode.h"
 
 PAS_BEGIN_EXTERN_C;
@@ -93,7 +95,14 @@ pas_allocation_result_zero(pas_allocation_result result,
     if (size >= (1ULL << PAS_VA_BASED_ZERO_MEMORY_SHIFT))
         return pas_allocation_result_zero_large_slow(result, size);
 
-    pas_zero_memory((void*)result.begin, size);
+    PAS_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    PAS_PROFILE(ZERO_ALLOCATION_RESULT, result.begin);
+    PAS_MTE_HANDLE(ZERO_ALLOCATION_RESULT, result.begin);
+    PAS_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+    void* memory = (void*)result.begin;
+    pas_zero_memory(memory, size);
+
     return pas_allocation_result_create_success_with_zero_mode(result.begin, pas_zero_mode_is_all_zero);
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,6 @@ package test.robot.javafx.scene.canvas;
 import java.io.FileInputStream;
 import java.net.URL;
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -40,13 +39,11 @@ import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
-
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 // 1. An image, half white half black sized 10 X 10 is used in test.
@@ -85,8 +82,8 @@ public class ImageSmoothingDrawTest {
         imageCanvas.setImageSmoothing(true);
         Util.sleep(1000); // Wait for image to be drawn
         getPixelColors();
-        Assert.assertEquals(Color.WHITE, whitePixelColor);
-        Assert.assertFalse(whitePixelColor.equals(lastWhitePixelColor));
+        Assertions.assertEquals(Color.WHITE, whitePixelColor);
+        Assertions.assertFalse(whitePixelColor.equals(lastWhitePixelColor));
     }
 
     // 6. When image smoothing is disabled, filtering is NOT applied
@@ -99,21 +96,21 @@ public class ImageSmoothingDrawTest {
         imageCanvas.setImageSmoothing(false);
         Util.sleep(1000); // Wait for image to be drawn
         getPixelColors();
-        Assert.assertEquals(Color.WHITE, whitePixelColor);
-        Assert.assertEquals(whitePixelColor, lastWhitePixelColor);
+        Assertions.assertEquals(Color.WHITE, whitePixelColor);
+        Assertions.assertEquals(whitePixelColor, lastWhitePixelColor);
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void exit() {
-        Util.shutdown(stage);
+        Util.shutdown();
     }
 
-    @Before
+    @BeforeEach
     public void before() {
         Util.parkCursor(robot);
     }

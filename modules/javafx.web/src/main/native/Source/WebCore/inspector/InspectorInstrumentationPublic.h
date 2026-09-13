@@ -29,7 +29,7 @@
 namespace WebCore {
 
 #define FAST_RETURN_IF_NO_FRONTENDS(value)                       \
-    if (LIKELY(!InspectorInstrumentationPublic::hasFrontends())) \
+    if (!InspectorInstrumentationPublic::hasFrontends()) [[likely]] \
         return value;
 
 class WEBCORE_EXPORT InspectorInstrumentationPublic {

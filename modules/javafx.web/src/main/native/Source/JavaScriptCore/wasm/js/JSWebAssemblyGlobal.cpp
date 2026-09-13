@@ -35,16 +35,9 @@ namespace JSC {
 
 const ClassInfo JSWebAssemblyGlobal::s_info = { "WebAssembly.Global"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWebAssemblyGlobal) };
 
-JSWebAssemblyGlobal* JSWebAssemblyGlobal::tryCreate(JSGlobalObject* globalObject, VM& vm, Structure* structure, Ref<Wasm::Global>&& global)
+JSWebAssemblyGlobal* JSWebAssemblyGlobal::create(VM& vm, Structure* structure, Ref<Wasm::Global>&& global)
 {
-    auto throwScope = DECLARE_THROW_SCOPE(vm);
-
-    if (!globalObject->webAssemblyEnabled()) {
-        throwException(globalObject, throwScope, createEvalError(globalObject, globalObject->webAssemblyDisabledErrorMessage()));
-        return nullptr;
-    }
-
-    auto* instance = new (NotNull, allocateCell<JSWebAssemblyGlobal>(vm)) JSWebAssemblyGlobal(vm, structure, WTFMove(global));
+    auto* instance = new (NotNull, allocateCell<JSWebAssemblyGlobal>(vm)) JSWebAssemblyGlobal(vm, structure, WTF::move(global));
     instance->global()->setOwner(instance);
     instance->finishCreation(vm);
     return instance;
@@ -57,7 +50,7 @@ Structure* JSWebAssemblyGlobal::createStructure(VM& vm, JSGlobalObject* globalOb
 
 JSWebAssemblyGlobal::JSWebAssemblyGlobal(VM& vm, Structure* structure, Ref<Wasm::Global>&& global)
     : Base(vm, structure)
-    , m_global(WTFMove(global))
+    , m_global(WTF::move(global))
 {
 }
 
@@ -85,32 +78,9 @@ JSObject* JSWebAssemblyGlobal::type(JSGlobalObject* globalObject)
     result->putDirect(vm, Identifier::fromString(vm, "mutable"_s), jsBoolean(m_global->mutability() == Wasm::Mutable));
 
     Wasm::Type valueType = m_global->type();
-    JSString* valueString = nullptr;
-    switch (valueType.kind) {
-    case Wasm::TypeKind::I32:
-        valueString = jsNontrivialString(vm, "i32"_s);
-        break;
-    case Wasm::TypeKind::I64:
-        valueString = jsNontrivialString(vm, "i64"_s);
-        break;
-    case Wasm::TypeKind::F32:
-        valueString = jsNontrivialString(vm, "f32"_s);
-        break;
-    case Wasm::TypeKind::F64:
-        valueString = jsNontrivialString(vm, "f64"_s);
-        break;
-    case Wasm::TypeKind::V128:
-        valueString = jsNontrivialString(vm, "v128"_s);
-        break;
-    default: {
-        if (Wasm::isFuncref(valueType))
-            valueString = jsNontrivialString(vm, "funcref"_s);
-        else if (Wasm::isExternref(valueType))
-            valueString = jsNontrivialString(vm, "externref"_s);
-        else
-            RELEASE_ASSERT_NOT_REACHED();
-    }
-    }
+    JSString* valueString = typeToJSAPIString(vm, valueType);
+    if (!valueString)
+        return nullptr;
     result->putDirect(vm, Identifier::fromString(vm, "value"_s), valueString);
 
     return result;

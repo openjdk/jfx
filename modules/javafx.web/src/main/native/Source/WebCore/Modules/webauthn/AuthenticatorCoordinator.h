@@ -27,13 +27,21 @@
 
 #if ENABLE(WEB_AUTHN)
 
-#include "IDLTypes.h"
+#include <WebCore/IDLTypes.h>
+#include <WebCore/PublicKeyCredential.h>
+#include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebAuthn {
 enum class Scope;
+}
+
+namespace WebCore {
+class AuthenticatorCoordinator;
+class Page;
 }
 
 namespace WebCore {
@@ -42,9 +50,11 @@ class AbortSignal;
 class AuthenticatorCoordinatorClient;
 class BasicCredential;
 class Document;
+typedef IDLRecord<IDLDOMString, IDLBoolean> PublicKeyCredentialClientCapabilities;
 
 struct PublicKeyCredentialCreationOptions;
 struct PublicKeyCredentialRequestOptions;
+struct CredentialCreationOptions;
 struct CredentialRequestOptions;
 class SecurityOriginData;
 
@@ -54,24 +64,33 @@ using CredentialPromise = DOMPromiseDeferred<IDLNullable<IDLInterface<BasicCrede
 using ScopeAndCrossOriginParent = std::pair<WebAuthn::Scope, std::optional<SecurityOriginData>>;
 
 class AuthenticatorCoordinator final : public CanMakeWeakPtr<AuthenticatorCoordinator> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(AuthenticatorCoordinator, WEBCORE_EXPORT);
     WTF_MAKE_NONCOPYABLE(AuthenticatorCoordinator);
 public:
-    WEBCORE_EXPORT explicit AuthenticatorCoordinator(std::unique_ptr<AuthenticatorCoordinatorClient>&&);
+    WEBCORE_EXPORT AuthenticatorCoordinator(Page&, std::unique_ptr<AuthenticatorCoordinatorClient>&&);
     WEBCORE_EXPORT void setClient(std::unique_ptr<AuthenticatorCoordinatorClient>&&);
+    ~AuthenticatorCoordinator();
+
+    void ref() const;
+    void deref() const;
 
     // The following methods implement static methods of PublicKeyCredential.
-    void create(const Document&, const PublicKeyCredentialCreationOptions&, WebAuthn::Scope, RefPtr<AbortSignal>&&, CredentialPromise&&);
-    void discoverFromExternalSource(const Document&, CredentialRequestOptions&&, const ScopeAndCrossOriginParent&, CredentialPromise&&);
+    void create(const Document&, CredentialCreationOptions&&, RefPtr<AbortSignal>&&, CredentialPromise&&);
+    void discoverFromExternalSource(const Document&, CredentialRequestOptions&&, CredentialPromise&&);
     void isUserVerifyingPlatformAuthenticatorAvailable(const Document&, DOMPromiseDeferred<IDLBoolean>&&) const;
     void isConditionalMediationAvailable(const Document&, DOMPromiseDeferred<IDLBoolean>&&) const;
 
-    void resetUserGestureRequirement();
+    void getClientCapabilities(const Document&, DOMPromiseDeferred<PublicKeyCredentialClientCapabilities>&&) const;
+
+    void signalUnknownCredential(const Document&, UnknownCredentialOptions&&, DOMPromiseDeferred<void>&&);
+    void signalAllAcceptedCredentials(const Document&, AllAcceptedCredentialsOptions&&, DOMPromiseDeferred<void>&&);
+    void signalCurrentUserDetails(const Document&, CurrentUserDetailsOptions&&, DOMPromiseDeferred<void>&&);
 
 private:
-    AuthenticatorCoordinator() = default;
-
+    WeakRef<Page> m_page;
     std::unique_ptr<AuthenticatorCoordinatorClient> m_client;
+    bool m_isCancelling = false;
+    CompletionHandler<void()> m_queuedRequest;
 };
 
 } // namespace WebCore

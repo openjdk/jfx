@@ -27,16 +27,20 @@
 
 #if HAVE(WEBGPU_IMPLEMENTATION)
 
-#include "WebGPU.h"
+#include <WebCore/WebGPU.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Function.h>
 #include <wtf/RefPtr.h>
 
+namespace WebCore {
+class ProcessIdentity;
+}
+
 namespace WebCore::WebGPU {
 
-using WorkItem = CompletionHandler<void(void)>;
+using WorkItem = Function<void()>;
 using ScheduleWorkFunction = Function<void(WorkItem&&)>;
-WEBCORE_EXPORT RefPtr<GPU> create(ScheduleWorkFunction&&);
+WEBCORE_EXPORT RefPtr<GPU> create(ScheduleWorkFunction&&, const WebCore::ProcessIdentity*);
 
 } // namespace WebCore::WebGPU
 

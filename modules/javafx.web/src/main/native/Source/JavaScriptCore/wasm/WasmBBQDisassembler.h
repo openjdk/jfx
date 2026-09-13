@@ -25,11 +25,13 @@
 
 #pragma once
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#if ENABLE(WEBASSEMBLY_BBQJIT)
 
 #include "BytecodeIndex.h"
 #include "MacroAssembler.h"
 #include "WasmOpcodeOrigin.h"
+#include "WasmOps.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/text/CString.h>
 
@@ -42,15 +44,15 @@ namespace Wasm {
 class BBQCallee;
 
 class BBQDisassembler {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(BBQDisassembler);
 public:
     BBQDisassembler();
     ~BBQDisassembler();
 
     void setStartOfCode(MacroAssembler::Label label) { m_startOfCode = label; }
-    void setOpcode(MacroAssembler::Label label, OpType opcode, size_t offset)
+    void setOpcode(MacroAssembler::Label label, OpcodeOrigin origin)
     {
-        m_labels.append(std::tuple { label, opcode, offset });
+        m_labels.append(std::tuple { label, origin });
     }
     void setEndOfOpcode(MacroAssembler::Label label) { m_endOfOpcode = label; }
     void setEndOfCode(MacroAssembler::Label label) { m_endOfCode = label; }
@@ -64,13 +66,13 @@ private:
     struct DumpedOp {
         CString disassembly;
     };
-    Vector<DumpedOp> dumpVectorForInstructions(LinkBuffer&, const char* prefix, Vector<std::tuple<MacroAssembler::Label, OpType, size_t>>& labels, MacroAssembler::Label endLabel);
+    Vector<DumpedOp> dumpVectorForInstructions(LinkBuffer&, const char* prefix, Vector<std::tuple<MacroAssembler::Label, OpcodeOrigin>>& labels, MacroAssembler::Label endLabel);
 
-    void dumpForInstructions(PrintStream&, LinkBuffer&, const char* prefix, Vector<std::tuple<MacroAssembler::Label, OpType, size_t>>& labels, MacroAssembler::Label endLabel);
+    void dumpForInstructions(PrintStream&, LinkBuffer&, const char* prefix, Vector<std::tuple<MacroAssembler::Label, OpcodeOrigin>>& labels, MacroAssembler::Label endLabel);
     void dumpDisassembly(PrintStream&, LinkBuffer&, MacroAssembler::Label from, MacroAssembler::Label to);
 
     MacroAssembler::Label m_startOfCode;
-    Vector<std::tuple<MacroAssembler::Label, OpType, size_t>> m_labels;
+    Vector<std::tuple<MacroAssembler::Label, OpcodeOrigin>> m_labels;
     MacroAssembler::Label m_endOfOpcode;
     MacroAssembler::Label m_endOfCode;
     void* m_codeStart { nullptr };
@@ -80,4 +82,4 @@ private:
 } // namespace Wasm
 } // namespace JSC
 
-#endif // ENABLE(WEBASSEMBLY_B3JIT)
+#endif // ENABLE(WEBASSEMBLY_BBQJIT)

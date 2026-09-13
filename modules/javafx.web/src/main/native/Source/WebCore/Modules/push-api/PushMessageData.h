@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,12 +25,10 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
-#include "ExceptionOr.h"
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <JavaScriptCore/JSCJSValue.h>
-#include <wtf/IsoMalloc.h>
+#include <JavaScriptCore/Uint8Array.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -38,14 +36,16 @@ namespace WebCore {
 class Blob;
 class JSDOMGlobalObject;
 class ScriptExecutionContext;
+template<typename> class ExceptionOr;
 
 class PushMessageData final : public RefCounted<PushMessageData> {
-    WTF_MAKE_ISO_ALLOCATED(PushMessageData);
+    WTF_MAKE_TZONE_ALLOCATED(PushMessageData);
 public:
-    static Ref<PushMessageData> create(Vector<uint8_t>&& data) { return adoptRef(*new PushMessageData(WTFMove(data))); }
+    static Ref<PushMessageData> create(Vector<uint8_t>&& data) { return adoptRef(*new PushMessageData(WTF::move(data))); }
 
-    ExceptionOr<RefPtr<JSC::ArrayBuffer>> arrayBuffer();
-    RefPtr<Blob> blob(ScriptExecutionContext&);
+    ExceptionOr<Ref<JSC::ArrayBuffer>> arrayBuffer();
+    Ref<Blob> blob(ScriptExecutionContext&);
+    ExceptionOr<Ref<JSC::Uint8Array>> bytes();
     ExceptionOr<JSC::JSValue> json(JSDOMGlobalObject&);
     String text();
 
@@ -56,10 +56,8 @@ private:
 };
 
 inline PushMessageData::PushMessageData(Vector<uint8_t>&& data)
-    : m_data(WTFMove(data))
+    : m_data(WTF::move(data))
 {
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

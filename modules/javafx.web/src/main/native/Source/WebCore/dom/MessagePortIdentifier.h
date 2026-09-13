@@ -25,16 +25,19 @@
 
 #pragma once
 
-#include "PortIdentifier.h"
-#include "ProcessIdentifier.h"
+#include <WebCore/PortIdentifier.h>
+#include <WebCore/ProcessIdentifier.h>
 #include <wtf/Hasher.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
 struct MessagePortIdentifier {
     ProcessIdentifier processIdentifier;
     PortIdentifier portIdentifier;
+
+    friend bool operator==(const MessagePortIdentifier&, const MessagePortIdentifier&) = default;
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
 
 #if !LOG_DISABLED
     String logString() const;
@@ -44,11 +47,6 @@ struct MessagePortIdentifier {
 inline void add(Hasher& hasher, const MessagePortIdentifier& identifier)
 {
     add(hasher, identifier.processIdentifier, identifier.portIdentifier);
-}
-
-inline bool operator==(const MessagePortIdentifier& a, const MessagePortIdentifier& b)
-{
-    return a.processIdentifier == b.processIdentifier &&  a.portIdentifier == b.portIdentifier;
 }
 
 #if !LOG_DISABLED
@@ -64,20 +62,13 @@ inline String MessagePortIdentifier::logString() const
 
 namespace WTF {
 
-struct MessagePortIdentifierHash {
-    static unsigned hash(const WebCore::MessagePortIdentifier& key) { return computeHash(key); }
-    static bool equal(const WebCore::MessagePortIdentifier& a, const WebCore::MessagePortIdentifier& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
-};
-
 template<> struct HashTraits<WebCore::MessagePortIdentifier> : GenericHashTraits<WebCore::MessagePortIdentifier> {
-    static WebCore::MessagePortIdentifier emptyValue() { return { }; }
+    static WebCore::MessagePortIdentifier emptyValue() { return { HashTraits<WebCore::ProcessIdentifier>::emptyValue(), HashTraits<WebCore::PortIdentifier>::emptyValue() }; }
+    static bool isEmptyValue(const WebCore::MessagePortIdentifier& value) { return value.portIdentifier.isHashTableEmptyValue(); }
 
     static void constructDeletedValue(WebCore::MessagePortIdentifier& slot) { new (NotNull, &slot.processIdentifier) WebCore::ProcessIdentifier(WTF::HashTableDeletedValue); }
 
     static bool isDeletedValue(const WebCore::MessagePortIdentifier& slot) { return slot.processIdentifier.isHashTableDeletedValue(); }
 };
-
-template<> struct DefaultHash<WebCore::MessagePortIdentifier> : MessagePortIdentifierHash { };
 
 } // namespace WTF

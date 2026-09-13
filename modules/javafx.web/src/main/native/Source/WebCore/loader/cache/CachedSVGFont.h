@@ -32,11 +32,13 @@ namespace WebCore {
 class FontCreationContext;
 class SVGFontFaceElement;
 class Settings;
+class WeakPtrImplWithEventTargetData;
 
 class CachedSVGFont final : public CachedFont {
 public:
     CachedSVGFont(CachedResourceRequest&&, PAL::SessionID, const CookieJar*, const Settings&);
     CachedSVGFont(CachedResourceRequest&&, CachedSVGFont&);
+    virtual ~CachedSVGFont();
 
     bool ensureCustomFontData() final;
     RefPtr<Font> createFont(const FontDescription&, bool syntheticBold, bool syntheticItalic, const FontCreationContext&) final;
@@ -51,7 +53,7 @@ private:
 
     RefPtr<SharedBuffer> m_convertedFont;
     RefPtr<SVGDocument> m_externalSVGDocument;
-    SVGFontElement* m_externalSVGFontElement;
+    WeakPtr<SVGFontElement, WeakPtrImplWithEventTargetData> m_externalSVGFontElement;
     const Ref<const Settings> m_settings;
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,13 +33,14 @@
 namespace JSC { namespace DFG {
 
 struct AvailabilityMap {
-    void pruneHeap();
+    AvailabilityMap() = default;
+
     void pruneByLiveness(Graph&, CodeOrigin);
     void clear();
 
     void dump(PrintStream& out) const;
 
-    bool operator==(const AvailabilityMap& other) const;
+    friend bool operator==(const AvailabilityMap&, const AvailabilityMap&) = default;
 
     void merge(const AvailabilityMap& other);
 
@@ -78,8 +79,12 @@ struct AvailabilityMap {
         closeOverNodes(has, add);
     }
 
+    AvailabilityMap filterByLiveness(Graph&, CodeOrigin);
+
+    void validateAvailability(Graph& graph, Node* where) const;
+
     Operands<Availability> m_locals;
-    HashMap<PromotedHeapLocation, Availability> m_heap;
+    UncheckedKeyHashMap<PromotedHeapLocation, Availability> m_heap;
 };
 
 } } // namespace JSC::DFG

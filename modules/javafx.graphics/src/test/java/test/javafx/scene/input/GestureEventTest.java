@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,16 +31,18 @@ import javafx.scene.input.GestureEvent;
 import javafx.scene.input.GestureEventShim;
 import javafx.scene.input.PickResult;
 import javafx.scene.shape.Rectangle;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class GestureEventTest {
 
-    @Test public void testShortConstructor() {
+    @Test
+    public void testShortConstructor() {
         Rectangle node = new Rectangle();
         node.setTranslateX(3);
         node.setTranslateY(2);
@@ -81,7 +83,8 @@ public class GestureEventTest {
         assertFalse(e.isInertia());
     }
 
-    @Test public void testShortConstructorWithoutPickResult() {
+    @Test
+    public void testShortConstructorWithoutPickResult() {
         GestureEvent e = GestureEventShim.getGestureEvent(
                 GestureEvent.ANY, 10, 20, 30, 40,
                 false, true, false, true, false, true, null);
@@ -102,7 +105,8 @@ public class GestureEventTest {
         assertSame(Event.NULL_SOURCE_TARGET, e.getTarget());
     }
 
-    @Test public void testLongConstructor() {
+    @Test
+    public void testLongConstructor() {
         Rectangle node = new Rectangle(10, 10);
         node.setTranslateX(3);
         node.setTranslateY(2);
@@ -147,7 +151,8 @@ public class GestureEventTest {
     }
 
 
-    @Test public void testLongConstructorWithoutPickResult() {
+    @Test
+    public void testLongConstructorWithoutPickResult() {
         Rectangle n1 = new Rectangle(10, 10);
         Rectangle n2 = new Rectangle(10, 10);
         GestureEvent e = GestureEventShim.getGestureEvent(

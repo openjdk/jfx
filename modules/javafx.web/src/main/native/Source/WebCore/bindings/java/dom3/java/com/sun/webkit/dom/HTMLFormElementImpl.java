@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,21 +39,25 @@ public class HTMLFormElementImpl extends HTMLElementImpl implements HTMLFormElem
 
 
 // Attributes
+    @Override
     public String getAcceptCharset() {
         return getAcceptCharsetImpl(getPeer());
     }
     native static String getAcceptCharsetImpl(long peer);
 
+    @Override
     public void setAcceptCharset(String value) {
         setAcceptCharsetImpl(getPeer(), value);
     }
     native static void setAcceptCharsetImpl(long peer, String value);
 
+    @Override
     public String getAction() {
         return getActionImpl(getPeer());
     }
     native static String getActionImpl(long peer);
 
+    @Override
     public void setAction(String value) {
         setActionImpl(getPeer(), value);
     }
@@ -69,11 +73,13 @@ public class HTMLFormElementImpl extends HTMLElementImpl implements HTMLFormElem
     }
     native static void setAutocompleteImpl(long peer, String value);
 
+    @Override
     public String getEnctype() {
         return getEnctypeImpl(getPeer());
     }
     native static String getEnctypeImpl(long peer);
 
+    @Override
     public void setEnctype(String value) {
         setEnctypeImpl(getPeer(), value);
     }
@@ -89,21 +95,25 @@ public class HTMLFormElementImpl extends HTMLElementImpl implements HTMLFormElem
     }
     native static void setEncodingImpl(long peer, String value);
 
+    @Override
     public String getMethod() {
         return getMethodImpl(getPeer());
     }
     native static String getMethodImpl(long peer);
 
+    @Override
     public void setMethod(String value) {
         setMethodImpl(getPeer(), value);
     }
     native static void setMethodImpl(long peer, String value);
 
+    @Override
     public String getName() {
         return getNameImpl(getPeer());
     }
     native static String getNameImpl(long peer);
 
+    @Override
     public void setName(String value) {
         setNameImpl(getPeer(), value);
     }
@@ -119,21 +129,25 @@ public class HTMLFormElementImpl extends HTMLElementImpl implements HTMLFormElem
     }
     native static void setNoValidateImpl(long peer, boolean value);
 
+    @Override
     public String getTarget() {
         return getTargetImpl(getPeer());
     }
     native static String getTargetImpl(long peer);
 
+    @Override
     public void setTarget(String value) {
         setTargetImpl(getPeer(), value);
     }
     native static void setTargetImpl(long peer, String value);
 
+    @Override
     public HTMLCollection getElements() {
         return HTMLCollectionImpl.getImpl(getElementsImpl(getPeer()));
     }
     native static long getElementsImpl(long peer);
 
+    @Override
     public int getLength() {
         return getLengthImpl(getPeer());
     }
@@ -141,6 +155,7 @@ public class HTMLFormElementImpl extends HTMLElementImpl implements HTMLFormElem
 
 
 // Functions
+    @Override
     public void submit()
     {
         submitImpl(getPeer());
@@ -148,6 +163,7 @@ public class HTMLFormElementImpl extends HTMLElementImpl implements HTMLFormElem
     native static void submitImpl(long peer);
 
 
+    @Override
     public void reset()
     {
         resetImpl(getPeer());

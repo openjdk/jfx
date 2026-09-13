@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2011, Google Inc. All rights reserved.
- * Copyright (C) 2020-2021, Apple Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,24 +35,26 @@
 #include "AudioUtilities.h"
 #include "AudioWorklet.h"
 #include "AudioWorkletMessagingProxy.h"
+#include "Exception.h"
 #include "HRTFDatabaseLoader.h"
 #include "OfflineAudioContext.h"
 #include "WorkerRunLoop.h"
 #include <JavaScriptCore/GenericTypedArrayViewInlines.h>
 #include <JavaScriptCore/JSGenericTypedArrayViewInlines.h>
 #include <algorithm>
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/MainThread.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/threads/BinarySemaphore.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(OfflineAudioDestinationNode);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(OfflineAudioDestinationNode);
 
 OfflineAudioDestinationNode::OfflineAudioDestinationNode(OfflineAudioContext& context, unsigned numberOfChannels, float sampleRate, RefPtr<AudioBuffer>&& renderTarget)
     : AudioDestinationNode(context, sampleRate)
     , m_numberOfChannels(numberOfChannels)
-    , m_renderTarget(WTFMove(renderTarget))
+    , m_renderTarget(WTF::move(renderTarget))
     , m_renderBus(AudioBus::create(numberOfChannels, AudioUtilities::renderQuantumSize))
     , m_framesToProcess(m_renderTarget ? m_renderTarget->length() : 0)
 {
@@ -87,12 +89,13 @@ void OfflineAudioDestinationNode::uninitialize()
     if (!isInitialized())
         return;
 
-    if (m_startedRendering) {
         if (m_renderThread) {
             m_renderThread->waitForCompletion();
             m_renderThread = nullptr;
         }
-        if (auto* workletProxy = context().audioWorklet().proxy()) {
+
+    if (m_startedRendering) {
+        if (RefPtr workletProxy = context().audioWorklet().proxy()) {
             BinarySemaphore semaphore;
             workletProxy->postTaskForModeToWorkletGlobalScope([&semaphore](ScriptExecutionContext&) mutable {
                 semaphore.signal();
@@ -111,18 +114,18 @@ void OfflineAudioDestinationNode::startRendering(CompletionHandler<void(std::opt
     ASSERT(isMainThread());
     ASSERT(m_renderTarget.get());
     if (!m_renderTarget.get())
-        return completionHandler(Exception { InvalidStateError, "OfflineAudioContextNode has no rendering buffer"_s });
+        return completionHandler(Exception { ExceptionCode::InvalidStateError, "OfflineAudioContextNode has no rendering buffer"_s });
 
     if (m_startedRendering)
-        return completionHandler(Exception { InvalidStateError, "Already started rendering"_s });
+        return completionHandler(Exception { ExceptionCode::InvalidStateError, "Already started rendering"_s });
 
     m_startedRendering = true;
     Ref protectedThis { *this };
 
-    auto offThreadRendering = [this, protectedThis = WTFMove(protectedThis)]() mutable {
+    auto offThreadRendering = [this, protectedThis = WTF::move(protectedThis)]() mutable {
         auto result = renderOnAudioThread();
-        callOnMainThread([this, result, currentSampleFrame = this->currentSampleFrame(), protectedThis = WTFMove(protectedThis)]() mutable {
-            context().postTask([this, protectedThis = WTFMove(protectedThis), result, currentSampleFrame]() mutable {
+        callOnMainThread([this, result, currentSampleFrame = this->currentSampleFrame(), protectedThis = WTF::move(protectedThis)]() mutable {
+            context().postTask([this, protectedThis = WTF::move(protectedThis), result, currentSampleFrame]() mutable {
                 m_startedRendering = false;
                 switch (result) {
                 case RenderResult::Failure:
@@ -139,25 +142,21 @@ void OfflineAudioDestinationNode::startRendering(CompletionHandler<void(std::opt
         });
     };
 
-    if (auto* workletProxy = context().audioWorklet().proxy()) {
-        workletProxy->postTaskForModeToWorkletGlobalScope([offThreadRendering = WTFMove(offThreadRendering)](ScriptExecutionContext&) mutable {
+    if (RefPtr workletProxy = context().audioWorklet().proxy()) {
+        workletProxy->postTaskForModeToWorkletGlobalScope([offThreadRendering = WTF::move(offThreadRendering)](ScriptExecutionContext&) mutable {
             offThreadRendering();
         }, WorkerRunLoop::defaultMode());
         return completionHandler(std::nullopt);
     }
 
     // FIXME: We should probably limit the number of threads we create for offline audio.
-    m_renderThread = Thread::create("offline renderer", WTFMove(offThreadRendering), ThreadType::Audio, Thread::QOS::Default);
+    m_renderThread = Thread::create("offline renderer"_s, WTF::move(offThreadRendering), ThreadType::Audio, Thread::QOS::Default);
     completionHandler(std::nullopt);
 }
 
 auto OfflineAudioDestinationNode::renderOnAudioThread() -> RenderResult
 {
     ASSERT(!isMainThread());
-    ASSERT(m_renderBus.get());
-
-    if (!m_renderBus.get())
-        return RenderResult::Failure;
 
     RELEASE_ASSERT(context().isInitialized());
 
@@ -180,14 +179,14 @@ auto OfflineAudioDestinationNode::renderOnAudioThread() -> RenderResult
             return RenderResult::Suspended;
 
         // Render one render quantum.
-        renderQuantum(m_renderBus.get(), AudioUtilities::renderQuantumSize, { });
+        renderQuantum(m_renderBus, AudioUtilities::renderQuantumSize, { });
 
         size_t framesAvailableToCopy = std::min(m_framesToProcess, AudioUtilities::renderQuantumSize);
 
         for (unsigned channelIndex = 0; channelIndex < numberOfChannels; ++channelIndex) {
-            const float* source = m_renderBus->channel(channelIndex)->data();
-            float* destination = m_renderTarget->channelData(channelIndex)->data();
-            memcpy(destination + m_destinationOffset, source, sizeof(float) * framesAvailableToCopy);
+            auto source = m_renderBus->channel(channelIndex)->span().first(framesAvailableToCopy);
+            auto destination = m_renderTarget->channelData(channelIndex)->typedMutableSpan();
+            memcpySpan(destination.subspan(m_destinationOffset), source);
         }
 
         m_destinationOffset += framesAvailableToCopy;

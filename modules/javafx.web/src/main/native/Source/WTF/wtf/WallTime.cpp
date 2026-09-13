@@ -31,9 +31,21 @@
 
 namespace WTF {
 
+#if !PLATFORM(JAVA)
+WallTime WallTime::fromSecondsSinceEpoch(Seconds seconds)
+{
+    return WallTime { seconds.value() };
+}
+
+Seconds WallTime::secondsSinceEpoch() const
+{
+    return Seconds { m_value };
+}
+#endif
+
 MonotonicTime WallTime::approximateMonotonicTime() const
 {
-    if (std::isinf(*this))
+    if (isInfinity())
         return MonotonicTime::fromRawSeconds(m_value);
     return *this - now() + MonotonicTime::now();
 }

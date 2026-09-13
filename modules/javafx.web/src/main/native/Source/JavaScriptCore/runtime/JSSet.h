@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,13 +25,12 @@
 
 #pragma once
 
-#include "HashMapImpl.h"
-#include "JSObject.h"
+#include <JavaScriptCore/OrderedHashTable.h>
 
 namespace JSC {
 
-class JSSet final : public HashMapImpl<HashMapBucket<HashMapBucketDataKey>> {
-    using Base = HashMapImpl<HashMapBucket<HashMapBucketDataKey>>;
+class JSSet final : public OrderedHashSet {
+    using Base = OrderedHashSet;
 public:
 
     DECLARE_EXPORT_INFO;
@@ -42,10 +41,13 @@ public:
         return vm.setSpace<mode>();
     }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
+    static size_t allocationSize(Checked<size_t> inlineCapacity)
     {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(JSSetType, StructureFlags), info());
+        ASSERT_UNUSED(inlineCapacity, !inlineCapacity);
+        return sizeof(JSSet);
     }
+
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     static JSSet* create(VM& vm, Structure* structure)
     {
@@ -55,7 +57,7 @@ public:
     }
 
     static bool isAddFastAndNonObservable(Structure*);
-    bool isIteratorProtocolFastAndNonObservable();
+    ALWAYS_INLINE bool isIteratorProtocolFastAndNonObservable();
     JSSet* clone(JSGlobalObject*, VM&, Structure*);
 
 private:

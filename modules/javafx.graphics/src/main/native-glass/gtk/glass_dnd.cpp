@@ -424,7 +424,7 @@ static jobject dnd_target_get_image(JNIEnv *env)
     GdkAtom *cur_target = targets;
     selection_data_ctx ctx;
 
-    while(*cur_target != 0 && result == NULL) {
+    for (; *cur_target != 0 && result == NULL; ++cur_target) {
         if (dnd_target_receive_data(env, *cur_target, &ctx)) {
             const gint fmtDiv8 = ctx.format / 8;
             if (ctx.length <= 0 || fmtDiv8 <= 0 || ctx.length >= INT_MAX / fmtDiv8) {
@@ -461,6 +461,12 @@ static jobject dnd_target_get_image(JNIEnv *env)
 
                 //Actually, we are converting RGBA to BGRA, but that's the same operation
                 data = (guchar*) convert_BGRA_to_RGBA((int*) data, stride, h);
+                if (!data) {
+                    g_object_unref(buf);
+                    g_object_unref(stream);
+                    continue;
+                }
+
                 data_array = env->NewByteArray(stride * h);
                 EXCEPTION_OCCURED(env);
                 env->SetByteArrayRegion(data_array, 0, stride*h, (jbyte*) data);
@@ -476,7 +482,6 @@ static jobject dnd_target_get_image(JNIEnv *env)
             }
             g_object_unref(stream);
         }
-        ++cur_target;
     }
     return result;
 }
@@ -940,8 +945,10 @@ GdkPixbuf* DragView::get_drag_image(GtkWidget *widget, gboolean* is_raw_image, g
                             g_free(origdata);
                         }
 
-                        pixbuf = gdk_pixbuf_new_from_data(data, GDK_COLORSPACE_RGB, TRUE, 8,
-                                                          w, h, w * 4, pixbufDestroyNotifyFunc, NULL);
+                        if (data) {
+                            pixbuf = gdk_pixbuf_new_from_data(data, GDK_COLORSPACE_RGB, TRUE, 8,
+                                                              w, h, w * 4, pixbufDestroyNotifyFunc, NULL);
+                        }
                     }
                 }
             }

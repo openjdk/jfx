@@ -20,11 +20,11 @@
 
 #pragma once
 
-#include <wtf/Ref.h>
-#include <wtf/RefPtr.h>
-#include <utility>
 #include <memory>
 #include <type_traits>
+#include <utility>
+#include <wtf/RefPtr.h>
+#include <wtf/UniqueRef.h>
 
 namespace WTF {
 
@@ -55,8 +55,10 @@ namespace WTF {
         static constexpr bool canCompareWithMemcmp = true;
     };
 
+    // Requiring std::has_unique_object_representations_v<T> to make sure the type doesn't have padding and can
+    // be used with memcmp().
     template<typename T>
-    struct VectorTraits : VectorTraitsBase<std::is_standard_layout_v<T> && std::is_trivial_v<T>, T> { };
+    struct VectorTraits : VectorTraitsBase<std::is_standard_layout_v<T> && std::is_trivial_v<T> && std::has_unique_object_representations_v<T>, T> { };
 
     struct SimpleClassVectorTraits : VectorTraitsBase<false, void>
     {
@@ -70,6 +72,7 @@ namespace WTF {
 
     template<typename P> struct VectorTraits<RefPtr<P>> : SimpleClassVectorTraits { };
     template<typename P> struct VectorTraits<std::unique_ptr<P>> : SimpleClassVectorTraits { };
+    template<typename P> struct VectorTraits<UniqueRef<P>> : SimpleClassVectorTraits { };
     template<typename P> struct VectorTraits<std::reference_wrapper<P>> : SimpleClassVectorTraits { };
     template<typename P> struct VectorTraits<Ref<P>> : SimpleClassVectorTraits { };
     template<> struct VectorTraits<AtomString> : SimpleClassVectorTraits { };

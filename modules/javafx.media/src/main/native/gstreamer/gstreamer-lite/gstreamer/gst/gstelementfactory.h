@@ -63,7 +63,7 @@ GST_API
 const gchar *           gst_element_factory_get_metadata        (GstElementFactory *factory, const gchar *key);
 
 GST_API
-gchar **                gst_element_factory_get_metadata_keys   (GstElementFactory *factory);
+gchar **                gst_element_factory_get_metadata_keys   (GstElementFactory *factory) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 guint                   gst_element_factory_get_num_pad_templates (GstElementFactory *factory);
@@ -169,6 +169,14 @@ typedef guint64 GstElementFactoryListType;
 #define  GST_ELEMENT_FACTORY_TYPE_DECRYPTOR      ((GstElementFactoryListType)(G_GUINT64_CONSTANT (1) << 10))
 #define  GST_ELEMENT_FACTORY_TYPE_ENCRYPTOR      ((GstElementFactoryListType)(G_GUINT64_CONSTANT (1) << 11))
 #define  GST_ELEMENT_FACTORY_TYPE_HARDWARE      ((GstElementFactoryListType)(G_GUINT64_CONSTANT (1) << 12))
+/**
+ * GST_ELEMENT_FACTORY_TYPE_TIMESTAMPER:
+ *
+ * Timestamp correcting elements
+ *
+ * Since: 1.24
+ */
+#define  GST_ELEMENT_FACTORY_TYPE_TIMESTAMPER    ((GstElementFactoryListType)(G_GUINT64_CONSTANT (1) << 13))
 
 #define  GST_ELEMENT_FACTORY_TYPE_MAX_ELEMENTS   ((GstElementFactoryListType)(G_GUINT64_CONSTANT (1) << 48))
 

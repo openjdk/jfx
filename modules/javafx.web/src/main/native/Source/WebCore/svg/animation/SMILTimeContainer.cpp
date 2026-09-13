@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2013 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +27,7 @@
 #include "config.h"
 #include "SMILTimeContainer.h"
 
-#include "Document.h"
+#include "DocumentPage.h"
 #include "ElementIterator.h"
 #include "Page.h"
 #include "SVGElementTypeHelpers.h"
@@ -34,6 +35,7 @@
 #include "SVGSVGElement.h"
 #include "ScopedEventQueue.h"
 #include "TypedElementDescendantIteratorInlines.h"
+#include <ranges>
 
 namespace WebCore {
 
@@ -56,8 +58,8 @@ void SMILTimeContainer::schedule(SVGSMILElement* animation, SVGElement* target, 
 
     ElementAttributePair key(target, attributeName);
     auto& animations = m_scheduledAnimations.add(key, AnimationsVector()).iterator->value;
-    ASSERT(!animations.contains(animation));
-    animations.append(animation);
+    ASSERT(!animations.containsIf([&](auto& item) { return item.ptr() == animation; }));
+    animations.append(*animation);
 
     SMILTime nextFireTime = animation->nextProgressTime();
     if (nextFireTime.isFinite())
@@ -70,8 +72,8 @@ void SMILTimeContainer::unschedule(SVGSMILElement* animation, SVGElement* target
 
     ElementAttributePair key(target, attributeName);
     auto& animations = m_scheduledAnimations.find(key)->value;
-    ASSERT(animations.contains(animation));
-    animations.removeFirst(animation);
+    bool wasRemoved = animations.removeFirstMatching([&](auto& item) { return item.ptr() == animation; });
+    ASSERT_UNUSED(wasRemoved, wasRemoved);
 }
 
 void SMILTimeContainer::notifyIntervalsChanged()
@@ -83,10 +85,10 @@ void SMILTimeContainer::notifyIntervalsChanged()
 
 Seconds SMILTimeContainer::animationFrameDelay() const
 {
-    auto* page = m_ownerSVGElement.document().page();
+    RefPtr page = m_ownerSVGElement->document().page();
     if (!page)
         return SMILAnimationFrameDelay;
-    return page->isLowPowerModeEnabled() ? SMILAnimationFrameThrottledDelay : SMILAnimationFrameDelay;
+    return (page->isLowPowerModeEnabled() || page->isAggressiveThermalMitigationEnabled()) ? SMILAnimationFrameThrottledDelay : SMILAnimationFrameDelay;
 }
 
 SMILTime SMILTimeContainer::elapsed() const
@@ -95,7 +97,7 @@ SMILTime SMILTimeContainer::elapsed() const
         return 0_s;
     if (isPaused())
         return m_accumulatedActiveTime;
-    return MonotonicTime::now() + m_accumulatedActiveTime - m_resumeTime;
+    return MonotonicTime::now() + m_accumulatedActiveTime - lastResumeTime();
 }
 
 bool SMILTimeContainer::isActive() const
@@ -142,7 +144,7 @@ void SMILTimeContainer::pause()
 
     m_pauseTime = MonotonicTime::now();
     if (m_beginTime) {
-        m_accumulatedActiveTime += m_pauseTime - m_resumeTime;
+        m_accumulatedActiveTime += m_pauseTime - lastResumeTime();
         m_timer.stop();
     }
 }
@@ -177,11 +179,12 @@ void SMILTimeContainer::setElapsed(SMILTime time)
     MonotonicTime now = MonotonicTime::now();
     m_beginTime = now - Seconds { time.value() };
 
+    m_resumeTime = MonotonicTime();
     if (m_pauseTime) {
-        m_resumeTime = m_pauseTime = now;
+        m_pauseTime = now;
         m_accumulatedActiveTime = Seconds(time.value());
     } else
-        m_resumeTime = m_beginTime;
+        m_accumulatedActiveTime = 0_s;
 
     processScheduledAnimations([](auto& animation) {
         animation.reset();
@@ -217,15 +220,15 @@ void SMILTimeContainer::updateDocumentOrderIndexes()
 {
     unsigned timingElementCount = 0;
 
-    for (auto& smilElement : descendantsOfType<SVGSMILElement>(m_ownerSVGElement))
-        smilElement.setDocumentOrderIndex(timingElementCount++);
+    for (Ref smilElement : descendantsOfType<SVGSMILElement>(Ref { m_ownerSVGElement.get() }))
+        smilElement->setDocumentOrderIndex(timingElementCount++);
 
     m_documentOrderIndexesDirty = false;
 }
 
 struct PriorityCompare {
     PriorityCompare(SMILTime elapsed) : m_elapsed(elapsed) {}
-    bool operator()(SVGSMILElement* a, SVGSMILElement* b)
+    bool operator()(auto& a, auto& b)
     {
         // FIXME: This should also consider possible timing relations between the elements.
         SMILTime aBegin = a->intervalBegin();
@@ -244,14 +247,14 @@ void SMILTimeContainer::sortByPriority(AnimationsVector& animations, SMILTime el
 {
     if (m_documentOrderIndexesDirty)
         updateDocumentOrderIndexes();
-    std::sort(animations.begin(), animations.end(), PriorityCompare(elapsed));
+    std::ranges::sort(animations, PriorityCompare(elapsed));
 }
 
-void SMILTimeContainer::processScheduledAnimations(const Function<void(SVGSMILElement&)>& callback)
+void SMILTimeContainer::processScheduledAnimations(NOESCAPE const Function<void(SVGSMILElement&)>& callback)
 {
     for (auto& animations : copyToVector(m_scheduledAnimations.values())) {
-        for (auto* animation : animations)
-            callback(*animation);
+        for (auto& weakAnimation : animations)
+            callback(Ref { weakAnimation.get() });
     }
 }
 
@@ -269,7 +272,7 @@ void SMILTimeContainer::updateAnimations(SMILTime elapsed, bool seekToTime)
             animation.connectConditions();
     });
 
-    AnimationsVector animationsToApply;
+    Vector<Ref<SVGSMILElement>> animationsToApply;
     SMILTime earliestFireTime = SMILTime::unresolved();
 
     for (auto& animations : copyToVector(m_scheduledAnimations.values())) {
@@ -280,7 +283,8 @@ void SMILTimeContainer::updateAnimations(SMILTime elapsed, bool seekToTime)
         sortByPriority(animations, elapsed);
 
         RefPtr<SVGSMILElement> firstAnimation;
-        for (auto* animation : animations) {
+        for (auto& weakAnimation : animations) {
+            Ref animation = weakAnimation.get();
             ASSERT(animation->timeContainer() == this);
             ASSERT(animation->targetElement());
             ASSERT(animation->hasValidAttributeName());
@@ -289,11 +293,11 @@ void SMILTimeContainer::updateAnimations(SMILTime elapsed, bool seekToTime)
             if (!firstAnimation) {
                 if (!animation->hasValidAttributeType())
                     return;
-                firstAnimation = animation;
+                firstAnimation = animation.copyRef();
             }
 
             // This will calculate the contribution from the animation and add it to the resultsElement.
-            if (!animation->progress(elapsed, *firstAnimation, seekToTime) && firstAnimation == animation)
+            if (!animation->progress(elapsed, *firstAnimation, seekToTime) && firstAnimation == animation.ptr())
                 firstAnimation = nullptr;
 
             SMILTime nextFireTime = animation->nextProgressTime();
@@ -302,7 +306,7 @@ void SMILTimeContainer::updateAnimations(SMILTime elapsed, bool seekToTime)
         }
 
         if (firstAnimation)
-            animationsToApply.append(firstAnimation.get());
+            animationsToApply.append(firstAnimation.releaseNonNull());
     }
 
     // Apply results to target elements.

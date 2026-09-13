@@ -74,7 +74,7 @@ JSValue JSJavaScriptCallFrame::evaluateWithScopeExtension(JSGlobalObject* global
     if (!scriptValue.isString())
         return throwTypeError(globalObject, scope, "JSJavaScriptCallFrame.evaluateWithScopeExtension first argument must be a string."_s);
 
-    String script = asString(scriptValue)->value(globalObject);
+    auto script = asString(scriptValue)->value(globalObject);
     RETURN_IF_EXCEPTION(scope, JSValue());
 
     NakedPtr<Exception> exception;
@@ -191,7 +191,7 @@ JSValue JSJavaScriptCallFrame::scopeChain(JSGlobalObject* globalObject) const
         list.append(iter.get());
         ++iter;
     } while (iter != end);
-    if (UNLIKELY(list.hasOverflowed())) {
+    if (list.hasOverflowed()) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return { };
     }

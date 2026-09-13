@@ -33,6 +33,7 @@
 
 #include "InspectorWebAgentBase.h"
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/WTFString.h>
 
 namespace Inspector {
@@ -44,14 +45,14 @@ namespace WebCore {
 class Page;
 
 class InspectorIndexedDBAgent final : public InspectorAgentBase, public Inspector::IndexedDBBackendDispatcherHandler {
+    WTF_MAKE_TZONE_ALLOCATED(InspectorIndexedDBAgent);
     WTF_MAKE_NONCOPYABLE(InspectorIndexedDBAgent);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     InspectorIndexedDBAgent(PageAgentContext&);
     ~InspectorIndexedDBAgent();
 
     // InspectorAgentBase
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*);
+    void didCreateFrontendAndBackend();
     void willDestroyFrontendAndBackend(Inspector::DisconnectReason);
 
     // IndexedDBBackendDispatcherHandler
@@ -63,10 +64,12 @@ public:
     void clearObjectStore(const String& securityOrigin, const String& databaseName, const String& objectStoreName, Ref<ClearObjectStoreCallback>&&);
 
 private:
-    Inspector::InjectedScriptManager& m_injectedScriptManager;
-    RefPtr<Inspector::IndexedDBBackendDispatcher> m_backendDispatcher;
+    Ref<Page> protectedInspectedPage() const;
 
-    Page& m_inspectedPage;
+    Inspector::InjectedScriptManager& m_injectedScriptManager;
+    const Ref<Inspector::IndexedDBBackendDispatcher> m_backendDispatcher;
+
+    WeakRef<Page> m_inspectedPage;
 };
 
 } // namespace WebCore

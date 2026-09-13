@@ -25,6 +25,7 @@
 
 [
     EnabledBySetting=SpeechRecognitionEnabled,
+    SecureContext,
     Exposed=Window
 ] interface SpeechRecognitionErrorEvent : Event {
     constructor([AtomString] DOMString type, SpeechRecognitionErrorEventInit eventInitDict);
@@ -32,7 +33,9 @@
     readonly attribute DOMString message;
 };
 
-dictionary SpeechRecognitionErrorEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary SpeechRecognitionErrorEventInit : EventInit {
     required SpeechRecognitionErrorCode error;
     DOMString message = "";
 };

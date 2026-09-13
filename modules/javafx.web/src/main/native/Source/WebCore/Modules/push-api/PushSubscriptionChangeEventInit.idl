@@ -26,7 +26,7 @@
 typedef (BufferSource or USVString) PushMessageDataInit;
 
 [
-    Conditional=SERVICE_WORKER
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary PushSubscriptionChangeEventInit : ExtendableEventInit {
     PushSubscription? newSubscription;
     PushSubscription? oldSubscription;

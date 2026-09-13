@@ -25,15 +25,15 @@
 
 #pragma once
 
-#include "ArrayStorage.h"
-#include "IndexingHeader.h"
-#include "Structure.h"
+#include <JavaScriptCore/ArrayStorage.h>
+#include <JavaScriptCore/IndexingHeader.h>
+#include <JavaScriptCore/Structure.h>
 
 namespace JSC {
 
 inline size_t IndexingHeader::preCapacity(Structure* structure)
 {
-    if (LIKELY(!hasAnyArrayStorage(structure->indexingType())))
+    if (!hasAnyArrayStorage(structure->indexingType())) [[likely]]
         return 0;
 
     return arrayStorage()->m_indexBias;

@@ -25,18 +25,18 @@
 
 #pragma once
 
-#include "FileSystemHandleIdentifier.h"
+#include <WebCore/FileSystemHandleIdentifier.h>
+#include <WebCore/StorageEstimate.h>
 #include <wtf/CompletionHandler.h>
-#include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 
 namespace WebCore {
 
 class FileSystemStorageConnection;
 template<typename> class ExceptionOr;
 struct ClientOrigin;
-struct StorageEstimate;
 
-class StorageConnection : public ThreadSafeRefCounted<StorageConnection> {
+class StorageConnection : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<StorageConnection> {
 public:
     virtual ~StorageConnection() = default;
     using PersistCallback = CompletionHandler<void(bool)>;

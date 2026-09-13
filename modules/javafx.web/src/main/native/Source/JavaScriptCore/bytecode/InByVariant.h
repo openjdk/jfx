@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2018 Yusuke Suzuki <utatane.tea@gmail.com>.
- * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,22 +27,29 @@
 #pragma once
 
 #include "CacheableIdentifier.h"
+#include "CallLinkStatus.h"
 #include "ObjectPropertyConditionSet.h"
 #include "PropertyOffset.h"
 #include "StructureSet.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 namespace DOMJIT {
 class GetterSetter;
 }
 
+class CallLinkStatus;
 class InByStatus;
 struct DumpContext;
 
 class InByVariant {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(InByVariant);
 public:
-    InByVariant(CacheableIdentifier, const StructureSet& = StructureSet(), PropertyOffset = invalidOffset, const ObjectPropertyConditionSet& = ObjectPropertyConditionSet());
+    InByVariant(CacheableIdentifier, const StructureSet& = StructureSet(), PropertyOffset = invalidOffset, const ObjectPropertyConditionSet& = ObjectPropertyConditionSet(), std::unique_ptr<CallLinkStatus> = nullptr);
+    ~InByVariant();
+
+    InByVariant(const InByVariant&);
+    InByVariant& operator=(const InByVariant&);
 
     bool isSet() const { return !!m_structureSet.size(); }
     explicit operator bool() const { return isSet(); }
@@ -53,6 +60,7 @@ public:
     const ObjectPropertyConditionSet& conditionSet() const { return m_conditionSet; }
 
     PropertyOffset offset() const { return m_offset; }
+    CallLinkStatus* callLinkStatus() const { return m_callLinkStatus.get(); }
 
     bool isHit() const { return offset() != invalidOffset; }
 
@@ -85,6 +93,7 @@ private:
     ObjectPropertyConditionSet m_conditionSet;
     PropertyOffset m_offset;
     CacheableIdentifier m_identifier;
+    std::unique_ptr<CallLinkStatus> m_callLinkStatus;
 };
 
 } // namespace JSC

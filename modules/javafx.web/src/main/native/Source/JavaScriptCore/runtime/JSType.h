@@ -1,5 +1,7 @@
 /*
- *  Copyright (C) 2006-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2006-2024 Apple Inc. All rights reserved.
+ *  Copyright (C) 2024 Sosuke Suzuki <aosukeke@gmail.com>.
+ *  Copyright (C) 2024 Tetsuharu Ohzeki <tetsuharu.ohzeki@gmail.com>.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -20,6 +22,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace JSC {
 
 // macro(JSType, DirectSpeculatedType)
@@ -29,6 +33,8 @@ namespace JSC {
     macro(StructureType, SpecCellOther) \
     macro(StringType, SpecString) \
     macro(HeapBigIntType, SpecHeapBigInt) \
+    macro(HeapDoubleType, SpecCellOther) \
+    macro(HeapInt32Type, SpecCellOther) \
     macro(SymbolType, SpecSymbol) \
     \
     macro(GetterSetterType, SpecCellOther) \
@@ -51,10 +57,13 @@ namespace JSC {
     \
     macro(CodeBlockType, SpecCellOther) \
     \
-    macro(JSImmutableButterflyType, SpecCellOther) \
+    macro(JSCellButterflyType, SpecCellOther) \
     macro(JSSourceCodeType, SpecCellOther) \
     macro(JSScriptFetcherType, SpecCellOther) \
     macro(JSScriptFetchParametersType, SpecCellOther) \
+    macro(JSPromiseReactionType, SpecCellOther) \
+    macro(JSPromiseCombinatorsContextType, SpecCellOther) \
+    macro(JSPromiseCombinatorsGlobalContextType, SpecCellOther) \
     \
     /* The ObjectType value must come before any JSType that is a subclass of JSObject. */ \
     macro(ObjectType, SpecObjectOther) \
@@ -66,7 +75,7 @@ namespace JSC {
     macro(BooleanObjectType, SpecObjectOther) \
     macro(NumberObjectType, SpecObjectOther) \
     macro(ErrorInstanceType, SpecObjectOther) \
-    macro(GlobalProxyType, SpecObjectOther) \
+    macro(GlobalProxyType, SpecGlobalProxy) \
     macro(DirectArgumentsType, SpecDirectArguments) \
     macro(ScopedArgumentsType, SpecScopedArguments) \
     macro(ClonedArgumentsType, SpecObjectOther) \
@@ -86,6 +95,7 @@ namespace JSC {
     macro(Uint16ArrayType, SpecUint16Array) \
     macro(Int32ArrayType, SpecInt32Array) \
     macro(Uint32ArrayType, SpecUint32Array) \
+    macro(Float16ArrayType, SpecFloat16Array) \
     macro(Float32ArrayType, SpecFloat32Array) \
     macro(Float64ArrayType, SpecFloat64Array) \
     macro(BigInt64ArrayType, SpecBigInt64Array) \
@@ -109,6 +119,8 @@ namespace JSC {
     macro(WithScopeType, SpecObjectOther) \
     /* End JSScope types. */ \
     \
+    macro(AsyncDisposableStackType, SpecObjectOther) \
+    macro(DisposableStackType, SpecObjectOther) \
     macro(ModuleNamespaceObjectType, SpecObjectOther) \
     macro(ShadowRealmType, SpecObjectOther) \
     macro(RegExpObjectType, SpecRegExpObject) \
@@ -117,9 +129,14 @@ namespace JSC {
     macro(JSGeneratorType, SpecObjectOther) \
     macro(JSAsyncGeneratorType, SpecObjectOther) \
     macro(JSArrayIteratorType, SpecObjectOther) \
-    macro(JSMapIteratorType, SpecObjectOther) \
-    macro(JSSetIteratorType, SpecObjectOther) \
+    macro(JSIteratorType, SpecObjectOther) \
+    macro(JSIteratorHelperType, SpecObjectOther) \
+    macro(JSMapIteratorType, SpecMapIteratorObject) \
+    macro(JSSetIteratorType, SpecSetIteratorObject) \
     macro(JSStringIteratorType, SpecObjectOther) \
+    macro(JSWrapForValidIteratorType, SpecObjectOther) \
+    macro(JSRegExpStringIteratorType, SpecObjectOther) \
+    macro(JSAsyncFromSyncIteratorType, SpecObjectOther) \
     macro(JSPromiseType, SpecPromiseObject) \
     macro(JSMapType, SpecMapObject) \
     macro(JSSetType, SpecSetObject) \

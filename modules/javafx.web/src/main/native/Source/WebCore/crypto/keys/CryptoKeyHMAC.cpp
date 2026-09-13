@@ -37,19 +37,19 @@
 
 namespace WebCore {
 
-static size_t getKeyLengthFromHash(CryptoAlgorithmIdentifier hash)
+static std::optional<size_t> getKeyLengthFromHash(CryptoAlgorithmIdentifier hash)
 {
     switch (hash) {
     case CryptoAlgorithmIdentifier::SHA_1:
-    case CryptoAlgorithmIdentifier::SHA_224:
+    case CryptoAlgorithmIdentifier::DEPRECATED_SHA_224:
     case CryptoAlgorithmIdentifier::SHA_256:
         return 512;
     case CryptoAlgorithmIdentifier::SHA_384:
     case CryptoAlgorithmIdentifier::SHA_512:
         return 1024;
     default:
-        ASSERT_NOT_REACHED();
-        return 0;
+        RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE("Invalid Hash Algorithm");
+        return { };
     }
 }
 
@@ -63,7 +63,7 @@ CryptoKeyHMAC::CryptoKeyHMAC(const Vector<uint8_t>& key, CryptoAlgorithmIdentifi
 CryptoKeyHMAC::CryptoKeyHMAC(Vector<uint8_t>&& key, CryptoAlgorithmIdentifier hash, bool extractable, CryptoKeyUsageBitmap usage)
     : CryptoKey(CryptoAlgorithmIdentifier::HMAC, CryptoKeyType::Secret, extractable, usage)
     , m_hash(hash)
-    , m_key(WTFMove(key))
+    , m_key(WTF::move(key))
 {
 }
 
@@ -72,9 +72,10 @@ CryptoKeyHMAC::~CryptoKeyHMAC() = default;
 RefPtr<CryptoKeyHMAC> CryptoKeyHMAC::generate(size_t lengthBits, CryptoAlgorithmIdentifier hash, bool extractable, CryptoKeyUsageBitmap usages)
 {
     if (!lengthBits) {
-        lengthBits = getKeyLengthFromHash(hash);
-        if (!lengthBits)
+        auto length = getKeyLengthFromHash(hash);
+        if (!length.value_or(0))
             return nullptr;
+        lengthBits = *length;
     }
     // CommonHMAC only supports key length that is a multiple of 8. Therefore, here we are a little bit different
     // from the spec as of 11 December 2014: https://www.w3.org/TR/WebCryptoAPI/#hmac-operations
@@ -94,7 +95,7 @@ RefPtr<CryptoKeyHMAC> CryptoKeyHMAC::importRaw(size_t lengthBits, CryptoAlgorith
     if (lengthBits && lengthBits != length)
         return nullptr;
 
-    return adoptRef(new CryptoKeyHMAC(WTFMove(keyData), hash, extractable, usages));
+    return adoptRef(new CryptoKeyHMAC(WTF::move(keyData), hash, extractable, usages));
 }
 
 RefPtr<CryptoKeyHMAC> CryptoKeyHMAC::importJwk(size_t lengthBits, CryptoAlgorithmIdentifier hash, JsonWebKey&& keyData, bool extractable, CryptoKeyUsageBitmap usages, CheckAlgCallback&& callback)
@@ -115,7 +116,7 @@ RefPtr<CryptoKeyHMAC> CryptoKeyHMAC::importJwk(size_t lengthBits, CryptoAlgorith
     if (keyData.ext && !keyData.ext.value() && extractable)
         return nullptr;
 
-    return CryptoKeyHMAC::importRaw(lengthBits, hash, WTFMove(*octetSequence), extractable, usages);
+    return CryptoKeyHMAC::importRaw(lengthBits, hash, WTF::move(*octetSequence), extractable, usages);
 }
 
 JsonWebKey CryptoKeyHMAC::exportJwk() const
@@ -124,19 +125,19 @@ JsonWebKey CryptoKeyHMAC::exportJwk() const
     result.kty = "oct"_s;
     result.k = base64URLEncodeToString(m_key);
     result.key_ops = usages();
+    result.usages = usagesBitmap();
     result.ext = extractable();
     return result;
 }
 
-ExceptionOr<size_t> CryptoKeyHMAC::getKeyLength(const CryptoAlgorithmParameters& parameters)
+ExceptionOr<std::optional<size_t>> CryptoKeyHMAC::getKeyLength(const CryptoAlgorithmParameters& parameters)
 {
     auto& aesParameters = downcast<CryptoAlgorithmHmacKeyParams>(parameters);
 
-    size_t result = aesParameters.length ? *(aesParameters.length) : getKeyLengthFromHash(aesParameters.hashIdentifier);
-    if (result)
-        return result;
-
-    return Exception { TypeError };
+    auto length = aesParameters.length ? *(aesParameters.length) : getKeyLengthFromHash(aesParameters.hashIdentifier);
+    if (!length.value_or(0))
+    return Exception { ExceptionCode::TypeError };
+    return length;
 }
 
 auto CryptoKeyHMAC::algorithm() const -> KeyAlgorithm
@@ -146,6 +147,22 @@ auto CryptoKeyHMAC::algorithm() const -> KeyAlgorithm
     result.hash.name = CryptoAlgorithmRegistry::singleton().name(m_hash);
     result.length = m_key.size() * 8;
     return result;
+}
+
+CryptoKey::Data CryptoKeyHMAC::data() const
+{
+    auto keyData = key();
+    return CryptoKey::Data {
+        CryptoKeyClass::HMAC,
+        algorithmIdentifier(),
+        extractable(),
+        usagesBitmap(),
+        std::nullopt,
+        exportJwk(),
+        hashAlgorithmIdentifier(),
+        std::nullopt,
+        key().size() * CHAR_BIT, // Size in bits.
+    };
 }
 
 } // namespace WebCore

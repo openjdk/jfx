@@ -25,11 +25,17 @@
 
 #pragma once
 
-#include "ContextDestructionObserver.h"
-#include "QualifiedName.h"
+#include <WebCore/ContextDestructionObserver.h>
+#include <WebCore/Element.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/QualifiedName.h>
+#include <WebCore/TreeScope.h>
 #include <wtf/Lock.h>
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/RobinHoodHashSet.h>
+#include <wtf/WeakHashMap.h>
+#include <wtf/WeakListHashSet.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/AtomStringHash.h>
 
@@ -54,10 +60,41 @@ class QualifiedName;
 
 class CustomElementRegistry : public RefCounted<CustomElementRegistry>, public ContextDestructionObserver {
 public:
-    static Ref<CustomElementRegistry> create(LocalDOMWindow&, ScriptExecutionContext*);
+    static Ref<CustomElementRegistry> create(ScriptExecutionContext&, LocalDOMWindow&);
+    static Ref<CustomElementRegistry> create(ScriptExecutionContext&);
     ~CustomElementRegistry();
 
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
+    bool isScoped() const { return !m_window; }
     Document* document() const;
+
+    static CustomElementRegistry* registryForElement(const Element& element)
+    {
+        if (element.usesNullCustomElementRegistry())
+            return nullptr;
+        if (element.usesScopedCustomElementRegistryMap()) [[unlikely]]
+            return scopedCustomElementRegistryMap().get(element);
+        return element.treeScope().customElementRegistry();
+    }
+
+    static CustomElementRegistry* registryForNodeOrTreeScope(const Node& node, const TreeScope& treeScope)
+    {
+        if (node.usesNullCustomElementRegistry()) {
+            ASSERT(is<Element>(node) || node.isTreeScope() || node.isDocumentFragment());
+            return nullptr;
+        }
+        if (auto* element = dynamicDowncast<Element>(node); element && element->usesScopedCustomElementRegistryMap()) [[unlikely]]
+            return scopedCustomElementRegistryMap().get(*element);
+        return treeScope.customElementRegistry();
+    }
+
+    static void addToScopedCustomElementRegistryMap(Element&, CustomElementRegistry&);
+    static void removeFromScopedCustomElementRegistryMap(Element&);
+
+    void didAssociateWithDocument(Document&);
 
     RefPtr<DeferredPromise> addElementDefinition(Ref<JSCustomElementInterface>&&);
 
@@ -66,25 +103,31 @@ public:
     JSCustomElementInterface* findInterface(const Element&) const;
     JSCustomElementInterface* findInterface(const QualifiedName&) const;
     JSCustomElementInterface* findInterface(const AtomString&) const;
-    JSCustomElementInterface* findInterface(const JSC::JSObject*) const;
+    RefPtr<JSCustomElementInterface> findInterface(const JSC::JSObject*) const;
     bool containsConstructor(const JSC::JSObject*) const;
 
     JSC::JSValue get(const AtomString&);
     String getName(JSC::JSValue);
     void upgrade(Node& root);
+    ExceptionOr<void> initialize(Node& root);
 
     MemoryCompactRobinHoodHashMap<AtomString, Ref<DeferredPromise>>& promiseMap() { return m_promiseMap; }
     bool isShadowDisabled(const AtomString& name) const { return m_disabledShadowSet.contains(name); }
 
     template<typename Visitor> void visitJSCustomElementInterfaces(Visitor&) const;
-private:
-    CustomElementRegistry(LocalDOMWindow&, ScriptExecutionContext*);
 
-    LocalDOMWindow& m_window;
+private:
+    CustomElementRegistry(ScriptExecutionContext&, LocalDOMWindow&);
+    CustomElementRegistry(ScriptExecutionContext&);
+
+    static WeakHashMap<Element, Ref<CustomElementRegistry>, WeakPtrImplWithEventTargetData>& scopedCustomElementRegistryMap();
+
+    WeakPtr<LocalDOMWindow, WeakPtrImplWithEventTargetData> m_window;
     HashMap<AtomString, Ref<JSCustomElementInterface>> m_nameMap;
     HashMap<const JSC::JSObject*, JSCustomElementInterface*> m_constructorMap WTF_GUARDED_BY_LOCK(m_constructorMapLock);
     MemoryCompactRobinHoodHashMap<AtomString, Ref<DeferredPromise>> m_promiseMap;
     MemoryCompactRobinHoodHashSet<AtomString> m_disabledShadowSet;
+    WeakListHashSet<Document, WeakPtrImplWithEventTargetData> m_associatedDocuments;
 
     bool m_elementDefinitionIsRunning { false };
     mutable Lock m_constructorMapLock;

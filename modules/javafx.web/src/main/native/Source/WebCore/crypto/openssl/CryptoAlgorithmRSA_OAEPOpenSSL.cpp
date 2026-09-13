@@ -30,7 +30,9 @@
 
 #include "CryptoAlgorithmRsaOaepParams.h"
 #include "CryptoKeyRSA.h"
+#include "ExceptionOr.h"
 #include "OpenSSLUtilities.h"
+#include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 
@@ -39,47 +41,47 @@ ExceptionOr<Vector<uint8_t>> CryptoAlgorithmRSA_OAEP::platformEncrypt(const Cryp
 #if defined(EVP_PKEY_CTX_set_rsa_oaep_md) && defined(EVP_PKEY_CTX_set_rsa_mgf1_md) && defined(EVP_PKEY_CTX_set0_rsa_oaep_label)
     const EVP_MD* md = digestAlgorithm(key.hashAlgorithmIdentifier());
     if (!md)
-        return Exception { NotSupportedError };
+        return Exception { ExceptionCode::NotSupportedError };
 
     auto ctx = EvpPKeyCtxPtr(EVP_PKEY_CTX_new(key.platformKey(), nullptr));
     if (!ctx)
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
 
     if (EVP_PKEY_encrypt_init(ctx.get()) <= 0)
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
 
     if (EVP_PKEY_CTX_set_rsa_padding(ctx.get(), RSA_PKCS1_OAEP_PADDING) <= 0)
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
 
     if (EVP_PKEY_CTX_set_rsa_oaep_md(ctx.get(), md) <= 0)
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
 
     if (EVP_PKEY_CTX_set_rsa_mgf1_md(ctx.get(), md) <= 0)
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
 
     if (!parameters.labelVector().isEmpty()) {
         size_t labelSize = parameters.labelVector().size();
         // The library takes ownership of the label so the caller should not free the original memory pointed to by label.
-        auto label = OPENSSL_malloc(labelSize);
-        memcpy(label, parameters.labelVector().data(), labelSize);
+        auto label = static_cast<uint8_t*>(OPENSSL_malloc(labelSize));
+        memcpySpan(std::span(label, labelSize), parameters.labelVector().span());
         if (EVP_PKEY_CTX_set0_rsa_oaep_label(ctx.get(), label, labelSize) <= 0) {
             OPENSSL_free(label);
-            return Exception { OperationError };
+            return Exception { ExceptionCode::OperationError };
         }
     }
 
     size_t cipherTextLen;
-    if (EVP_PKEY_encrypt(ctx.get(), nullptr, &cipherTextLen, plainText.data(), plainText.size()) <= 0)
-        return Exception { OperationError };
+    if (EVP_PKEY_encrypt(ctx.get(), nullptr, &cipherTextLen, plainText.span().data(), plainText.size()) <= 0)
+        return Exception { ExceptionCode::OperationError };
 
     Vector<uint8_t> cipherText(cipherTextLen);
-    if (EVP_PKEY_encrypt(ctx.get(), cipherText.data(), &cipherTextLen, plainText.data(), plainText.size()) <= 0)
-        return Exception { OperationError };
+    if (EVP_PKEY_encrypt(ctx.get(), cipherText.mutableSpan().data(), &cipherTextLen, plainText.span().data(), plainText.size()) <= 0)
+        return Exception { ExceptionCode::OperationError };
     cipherText.shrink(cipherTextLen);
 
     return cipherText;
 #else
-    return Exception { NotSupportedError };
+    return Exception { ExceptionCode::NotSupportedError };
 #endif
 }
 
@@ -88,47 +90,47 @@ ExceptionOr<Vector<uint8_t>> CryptoAlgorithmRSA_OAEP::platformDecrypt(const Cryp
 #if defined(EVP_PKEY_CTX_set_rsa_oaep_md) && defined(EVP_PKEY_CTX_set_rsa_mgf1_md) && defined(EVP_PKEY_CTX_set0_rsa_oaep_label)
     const EVP_MD* md = digestAlgorithm(key.hashAlgorithmIdentifier());
     if (!md)
-        return Exception { NotSupportedError };
+        return Exception { ExceptionCode::NotSupportedError };
 
     auto ctx = EvpPKeyCtxPtr(EVP_PKEY_CTX_new(key.platformKey(), nullptr));
     if (!ctx)
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
 
     if (EVP_PKEY_decrypt_init(ctx.get()) <= 0)
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
 
     if (EVP_PKEY_CTX_set_rsa_padding(ctx.get(), RSA_PKCS1_OAEP_PADDING) <= 0)
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
 
     if (EVP_PKEY_CTX_set_rsa_oaep_md(ctx.get(), md) <= 0)
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
 
     if (EVP_PKEY_CTX_set_rsa_mgf1_md(ctx.get(), md) <= 0)
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
 
     if (!parameters.labelVector().isEmpty()) {
         size_t labelSize = parameters.labelVector().size();
         // The library takes ownership of the label so the caller should not free the original memory pointed to by label.
-        auto label = OPENSSL_malloc(labelSize);
-        memcpy(label, parameters.labelVector().data(), labelSize);
+        auto label = static_cast<uint8_t*>(OPENSSL_malloc(labelSize));
+        memcpySpan(std::span(label, labelSize), parameters.labelVector().span());
         if (EVP_PKEY_CTX_set0_rsa_oaep_label(ctx.get(), label, labelSize) <= 0) {
             OPENSSL_free(label);
-            return Exception { OperationError };
+            return Exception { ExceptionCode::OperationError };
         }
     }
 
     size_t plainTextLen;
-    if (EVP_PKEY_decrypt(ctx.get(), nullptr, &plainTextLen, cipherText.data(), cipherText.size()) <= 0)
-        return Exception { OperationError };
+    if (EVP_PKEY_decrypt(ctx.get(), nullptr, &plainTextLen, cipherText.span().data(), cipherText.size()) <= 0)
+        return Exception { ExceptionCode::OperationError };
 
     Vector<uint8_t> plainText(plainTextLen);
-    if (EVP_PKEY_decrypt(ctx.get(), plainText.data(), &plainTextLen, cipherText.data(), cipherText.size()) <= 0)
-        return Exception { OperationError };
+    if (EVP_PKEY_decrypt(ctx.get(), plainText.mutableSpan().data(), &plainTextLen, cipherText.span().data(), cipherText.size()) <= 0)
+        return Exception { ExceptionCode::OperationError };
     plainText.shrink(plainTextLen);
 
     return plainText;
 #else
-    return Exception { NotSupportedError };
+    return Exception { ExceptionCode::NotSupportedError };
 #endif
 }
 

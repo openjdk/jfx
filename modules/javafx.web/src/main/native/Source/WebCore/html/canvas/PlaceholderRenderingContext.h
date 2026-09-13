@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,29 +28,64 @@
 #if ENABLE(OFFSCREEN_CANVAS)
 
 #include "CanvasRenderingContext.h"
+#include <wtf/TZoneMalloc.h>
+#include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-class ImageBufferPipe;
-class OffscreenCanvas;
+class PlaceholderRenderingContext;
 
-class PlaceholderRenderingContext final : public CanvasRenderingContext {
-    WTF_MAKE_ISO_ALLOCATED(PlaceholderRenderingContext);
+// Thread-safe interface to submit frames from worker to the placeholder rendering context.
+class PlaceholderRenderingContextSource : public ThreadSafeRefCounted<PlaceholderRenderingContextSource> {
+    WTF_MAKE_TZONE_ALLOCATED(PlaceholderRenderingContextSource);
+    WTF_MAKE_NONCOPYABLE(PlaceholderRenderingContextSource);
 public:
-    PlaceholderRenderingContext(CanvasBase&);
+    static Ref<PlaceholderRenderingContextSource> create(PlaceholderRenderingContext&);
+    virtual ~PlaceholderRenderingContextSource() = default;
 
-    HTMLCanvasElement* canvas() const;
+    // Called by the offscreen context to submit the frame.
+    void setPlaceholderBuffer(ImageBuffer&, bool originClean, bool opaque);
 
-    const RefPtr<ImageBufferPipe>& imageBufferPipe() const { return m_imageBufferPipe; }
+    // Called by the placeholder context to attach to compositor layer.
+    void setContentsToLayer(GraphicsLayer&, ImageBuffer*, bool opaque);
 
 private:
-    bool isPlaceholder() const final { return true; }
+    explicit PlaceholderRenderingContextSource(PlaceholderRenderingContext&);
 
-    bool isAccelerated() const final { return !!m_imageBufferPipe; }
-    bool isGPUBased() const final { return !!m_imageBufferPipe; }
-    void setContentsToLayer(GraphicsLayer&);
+    WeakPtr<PlaceholderRenderingContext> m_placeholder; // For main thread use.
+    Lock m_lock;
+    RefPtr<GraphicsLayerAsyncContentsDisplayDelegate> m_delegate WTF_GUARDED_BY_LOCK(m_lock);
+    unsigned m_bufferVersion { 0 }; // For OffscreenCanvas holder thread use (main or worker).
+    unsigned m_delegateBufferVersion WTF_GUARDED_BY_LOCK(m_lock) { 0 };
+    unsigned m_placeholderBufferVersion WTF_GUARDED_BY_CAPABILITY(mainThread) { 0 };
+};
 
-    RefPtr<ImageBufferPipe> m_imageBufferPipe;
+class PlaceholderRenderingContext final : public CanvasRenderingContext {
+    WTF_MAKE_TZONE_ALLOCATED(PlaceholderRenderingContext);
+public:
+    static std::unique_ptr<PlaceholderRenderingContext> create(HTMLCanvasElement&);
+
+    HTMLCanvasElement& canvas() const;
+    Ref<HTMLCanvasElement> protectedCanvas() const { return canvas(); }
+    IntSize size() const;
+    void setPlaceholderBuffer(Ref<ImageBuffer>&&, bool originClean, bool opaque);
+
+    PlaceholderRenderingContextSource& source() const { return m_source; }
+
+    RefPtr<ImageBuffer> surfaceBufferToImageBuffer(SurfaceBuffer) final;
+    bool isSurfaceBufferTransparentBlack(SurfaceBuffer) const final;
+    void didUpdateCanvasSizeProperties(bool) final;
+
+private:
+    PlaceholderRenderingContext(HTMLCanvasElement&);
+    void setContentsToLayer(GraphicsLayer&) final;
+    PixelFormat pixelFormat() const final;
+    bool isOpaque() const final { return m_opaque; }
+
+    const Ref<PlaceholderRenderingContextSource> m_source;
+    RefPtr<ImageBuffer> m_buffer;
+    bool m_opaque { false };
 };
 
 }

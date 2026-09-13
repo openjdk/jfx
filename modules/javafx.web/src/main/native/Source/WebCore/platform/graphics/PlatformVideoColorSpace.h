@@ -25,29 +25,22 @@
 
 #pragma once
 
-#include "PlatformVideoColorPrimaries.h"
-#include "PlatformVideoMatrixCoefficients.h"
-#include "PlatformVideoTransferCharacteristics.h"
+#include <WebCore/PlatformVideoColorPrimaries.h>
+#include <WebCore/PlatformVideoMatrixCoefficients.h>
+#include <WebCore/PlatformVideoTransferCharacteristics.h>
 #include <optional>
 #include <wtf/FastMalloc.h>
 
 namespace WebCore {
 
 struct PlatformVideoColorSpace {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(PlatformVideoColorSpace);
     std::optional<PlatformVideoColorPrimaries> primaries;
     std::optional<PlatformVideoTransferCharacteristics> transfer;
     std::optional<PlatformVideoMatrixCoefficients> matrix;
     std::optional<bool> fullRange;
+
+    friend bool operator==(const PlatformVideoColorSpace&, const PlatformVideoColorSpace&) = default;
 };
-
-inline bool operator==(const PlatformVideoColorSpace& a, const PlatformVideoColorSpace& b)
-{
-    return a.primaries == b.primaries
-        && a.transfer == b.transfer
-        && a.matrix == b.matrix
-        && a.fullRange == b.fullRange;
-}
-
 
 }

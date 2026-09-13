@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple, Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,16 +32,16 @@
 #include "WebXRJointSpace.h"
 #include "WebXRSession.h"
 #include "XRHandJoint.h"
-#include <wtf/IsoMalloc.h>
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-class WebXRHand : public RefCounted<WebXRHand>, public CanMakeWeakPtr<WebXRHand> {
-    WTF_MAKE_ISO_ALLOCATED(WebXRHand);
+class WebXRHand : public RefCountedAndCanMakeWeakPtr<WebXRHand> {
+    WTF_MAKE_TZONE_ALLOCATED(WebXRHand);
 public:
 
     static Ref<WebXRHand> create(const WebXRInputSource&);
@@ -57,7 +57,7 @@ public:
         std::optional<KeyValuePair<XRHandJoint, RefPtr<WebXRJointSpace>>> next();
 
     private:
-        Ref<WebXRHand> m_hand;
+        const Ref<WebXRHand> m_hand;
         size_t m_index { 0 };
     };
     Iterator createIterator(ScriptExecutionContext*) { return Iterator(*this); }
@@ -66,7 +66,7 @@ public:
     WebXRSession* session();
 
     bool hasMissingPoses() const { return m_hasMissingPoses; }
-    void updateFromInputSource(const PlatformXR::Device::FrameData::InputSource&);
+    void updateFromInputSource(const PlatformXR::FrameData::InputSource&);
 
 private:
     WebXRHand(const WebXRInputSource&);

@@ -20,18 +20,9 @@
 
 #pragma once
 
-#include <wtf/Assertions.h>
-#include <wtf/FastMalloc.h>
-#include <wtf/MainThread.h>
-#include <wtf/Noncopyable.h>
+#include <wtf/RefCountDebugger.h>
 
 namespace WTF {
-
-#if ASSERT_ENABLED || ENABLE(SECURITY_ASSERTIONS)
-#define CHECK_REF_COUNTED_LIFECYCLE 1
-#else
-#define CHECK_REF_COUNTED_LIFECYCLE 0
-#endif
 
 // This base class holds the non-template methods and attributes.
 // The RefCounted class inherits from it reducing the template bloat
@@ -40,162 +31,81 @@ class RefCountedBase {
 public:
     void ref() const
     {
-        applyRefDerefThreadingCheck();
-
-#if CHECK_REF_COUNTED_LIFECYCLE
-        ASSERT_WITH_SECURITY_IMPLICATION(!m_deletionHasBegun);
-        ASSERT(!m_adoptionIsRequired);
-#endif
+        m_refCountDebugger.willRef(m_refCount);
         ++m_refCount;
     }
 
-    bool hasOneRef() const
-    {
-#if CHECK_REF_COUNTED_LIFECYCLE
-        ASSERT(!m_deletionHasBegun);
-#endif
-        return m_refCount == 1;
-    }
+    bool hasOneRef() const { return m_refCount == 1; }
+    uint32_t refCount() const { return m_refCount; }
 
-    unsigned refCount() const
-    {
-        return m_refCount;
-    }
-
-    void relaxAdoptionRequirement()
-    {
-#if CHECK_REF_COUNTED_LIFECYCLE
-        ASSERT_WITH_SECURITY_IMPLICATION(!m_deletionHasBegun);
-        ASSERT(m_adoptionIsRequired);
-        m_adoptionIsRequired = false;
-#endif
-    }
-
-    // Please only call this method if you really know that what you're doing is safe (e.g.
-    // locking at call sites).
-    void disableThreadingChecks()
-    {
-#if ASSERT_ENABLED
-        m_areThreadingChecksEnabled = false;
-#endif
-    }
-
-    static void enableThreadingChecksGlobally()
-    {
-#if ASSERT_ENABLED
-        areThreadingChecksEnabledGlobally = true;
-#endif
-    }
+    // Debug APIs
+    void adopted() { m_refCountDebugger.adopted(); }
+    void relaxAdoptionRequirement() { m_refCountDebugger.relaxAdoptionRequirement(); }
+    void disableThreadingChecks() { m_refCountDebugger.disableThreadingChecks(); }
+    RefCountDebugger& refCountDebugger() { return m_refCountDebugger; }
 
 protected:
-    RefCountedBase()
-        : m_refCount(1)
-#if ASSERT_ENABLED
-        , m_isOwnedByMainThread(isMainThread())
-#endif
-#if CHECK_REF_COUNTED_LIFECYCLE
-        , m_deletionHasBegun(false)
-        , m_adoptionIsRequired(true)
-#endif
-    {
-    }
-
-    void applyRefDerefThreadingCheck() const
-    {
-#if ASSERT_ENABLED
-        if (hasOneRef()) {
-            // Likely an ownership transfer across threads that may be safe.
-            m_isOwnedByMainThread = isMainThread();
-        } else if (areThreadingChecksEnabledGlobally && m_areThreadingChecksEnabled) {
-            // If you hit this assertion, it means that the RefCounted object was ref/deref'd
-            // from both the main thread and another in a way that is likely concurrent and unsafe.
-            // Derive from ThreadSafeRefCounted and make sure the destructor is safe on threads
-            // that call deref, or ref/deref from a single thread.
-            ASSERT_WITH_MESSAGE(m_isOwnedByMainThread == isMainThread(), "Unsafe to ref/deref from different threads");
-        }
-#endif
-    }
+    RefCountedBase() = default;
 
     ~RefCountedBase()
     {
-#if CHECK_REF_COUNTED_LIFECYCLE
-        ASSERT(m_deletionHasBegun);
-        ASSERT(!m_adoptionIsRequired);
-#endif
+        m_refCountDebugger.willDestroy(m_refCount);
+        RELEASE_ASSERT(m_refCount == 1);
     }
 
-    // Returns whether the pointer should be freed or not.
+    // Returns true if the pointer should be deleted.
     bool derefBase() const
     {
-        applyRefDerefThreadingCheck();
+        m_refCountDebugger.willDeref(m_refCount);
 
-#if CHECK_REF_COUNTED_LIFECYCLE
-        ASSERT_WITH_SECURITY_IMPLICATION(!m_deletionHasBegun);
-        ASSERT(!m_adoptionIsRequired);
-#endif
-
-        ASSERT(m_refCount);
-        unsigned tempRefCount = m_refCount - 1;
+        auto tempRefCount = m_refCount - 1;
         if (!tempRefCount) {
-#if CHECK_REF_COUNTED_LIFECYCLE
-            m_deletionHasBegun = true;
-#endif
+            m_refCountDebugger.willDelete();
             return true;
         }
+
         m_refCount = tempRefCount;
         return false;
     }
 
-#if CHECK_REF_COUNTED_LIFECYCLE
-    bool deletionHasBegun() const
-    {
-        return m_deletionHasBegun;
-    }
-#endif
-
 private:
-
-#if CHECK_REF_COUNTED_LIFECYCLE
-    friend void adopted(RefCountedBase*);
-#endif
-
-    mutable unsigned m_refCount;
-#if ASSERT_ENABLED
-    mutable bool m_isOwnedByMainThread;
-    bool m_areThreadingChecksEnabled { true };
-#endif
-    WTF_EXPORT_PRIVATE static bool areThreadingChecksEnabledGlobally;
-#if CHECK_REF_COUNTED_LIFECYCLE
-    mutable bool m_deletionHasBegun;
-    mutable bool m_adoptionIsRequired;
-#endif
+    mutable uint32_t m_refCount { 1 };
+    NO_UNIQUE_ADDRESS RefCountDebugger m_refCountDebugger;
 };
 
-#if CHECK_REF_COUNTED_LIFECYCLE
-inline void adopted(RefCountedBase* object)
-{
-    if (!object)
-        return;
-    ASSERT_WITH_SECURITY_IMPLICATION(!object->m_deletionHasBegun);
-    object->m_adoptionIsRequired = false;
-}
-#endif
-
-template<typename T, typename Deleter = std::default_delete<T>> class RefCounted : public RefCountedBase {
-    WTF_MAKE_NONCOPYABLE(RefCounted); WTF_MAKE_FAST_ALLOCATED;
+template<typename T> class RefCounted : public RefCountedBase {
+    WTF_MAKE_NONCOPYABLE(RefCounted);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(RefCounted);
 public:
     void deref() const
     {
         if (derefBase())
-            Deleter()(const_cast<T*>(static_cast<const T*>(this)));
+            delete const_cast<T*>(static_cast<const T*>(this));
     }
 
 protected:
-    RefCounted() { }
-    ~RefCounted()
-    {
-    }
-};
+    RefCounted() = default;
+    ~RefCounted() = default;
+} SWIFT_RETURNED_AS_UNRETAINED_BY_DEFAULT;
+
+template<typename T>
+inline void ref(T* obj)
+{
+    obj->ref();
+}
+
+template<typename T>
+inline void deref(T* obj)
+{
+    obj->deref();
+}
+
+inline void adopted(RefCountedBase* object)
+{
+    if (!object)
+        return;
+    object->adopted();
+}
 
 } // namespace WTF
 

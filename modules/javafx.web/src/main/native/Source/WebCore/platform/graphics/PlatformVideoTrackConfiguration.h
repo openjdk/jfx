@@ -27,8 +27,10 @@
 
 #if ENABLE(VIDEO)
 
-#include "PlatformTrackConfiguration.h"
-#include "PlatformVideoColorSpace.h"
+#include <WebCore/ImmersiveVideoMetadata.h>
+#include <WebCore/PlatformTrackConfiguration.h>
+#include <WebCore/PlatformVideoColorSpace.h>
+#include <optional>
 
 namespace WebCore {
 
@@ -38,17 +40,11 @@ struct PlatformVideoTrackConfiguration : PlatformTrackConfiguration {
     PlatformVideoColorSpace colorSpace;
     double framerate { 0 };
     uint64_t bitrate { 0 };
-};
+    std::optional<ImmersiveVideoMetadata> immersiveVideoMetadata;
+    bool isProtected { false };
 
-inline bool operator==(const PlatformVideoTrackConfiguration& a, const PlatformVideoTrackConfiguration& b)
-{
-    return a.codec == b.codec
-        && a.width == b.width
-        && a.height == b.height
-        && a.colorSpace == b.colorSpace
-        && a.framerate == b.framerate
-        && a.bitrate == b.bitrate;
-}
+    friend bool operator==(const PlatformVideoTrackConfiguration&, const PlatformVideoTrackConfiguration&) = default;
+};
 
 }
 

@@ -38,27 +38,32 @@ namespace WebCore {
 
 namespace FormDataBuilder {
 
-static inline void append(Vector<char>& buffer, char string)
+static inline void append(Vector<uint8_t>& buffer, char string)
 {
     buffer.append(string);
 }
 
-static inline void append(Vector<char>& buffer, const char* string)
+static inline void append(Vector<uint8_t>& buffer, std::span<const uint8_t> bytes)
 {
-    buffer.append(string, strlen(string));
+    buffer.append(bytes);
 }
 
-static inline void append(Vector<char>& buffer, const CString& string)
+static inline void append(Vector<uint8_t>& buffer, ASCIILiteral string)
 {
-    buffer.append(string.data(), string.length());
+    buffer.append(string.span8());
 }
 
-static inline void append(Vector<char>& buffer, const Vector<uint8_t>& string)
+static inline void append(Vector<uint8_t>& buffer, const CString& string)
+{
+    buffer.append(string.span());
+}
+
+static inline void append(Vector<uint8_t>& buffer, const Vector<uint8_t>& string)
 {
     buffer.appendVector(string);
 }
 
-static void appendQuoted(Vector<char>& buffer, const Vector<uint8_t>& string)
+static void appendQuoted(Vector<uint8_t>& buffer, const Vector<uint8_t>& string)
 {
     // Append a string as a quoted value, escaping quotes and line breaks.
     // FIXME: Is it correct to use percent escaping here? When this code was originally written,
@@ -70,13 +75,13 @@ static void appendQuoted(Vector<char>& buffer, const Vector<uint8_t>& string)
         auto character = string[i];
         switch (character) {
         case 0xA:
-            append(buffer, "%0A");
+            append(buffer, "%0A"_s);
             break;
         case 0xD:
-            append(buffer, "%0D");
+            append(buffer, "%0D"_s);
             break;
         case '"':
-            append(buffer, "%22");
+            append(buffer, "%22"_s);
             break;
         default:
             append(buffer, character);
@@ -85,35 +90,35 @@ static void appendQuoted(Vector<char>& buffer, const Vector<uint8_t>& string)
 }
 
 // https://url.spec.whatwg.org/#concept-urlencoded-byte-serializer
-static void appendFormURLEncoded(Vector<char>& buffer, const uint8_t* string, size_t length)
+static void appendFormURLEncoded(Vector<uint8_t>& buffer, std::span<const uint8_t> string)
 {
-    static const char safeCharacters[] = "-._*";
-    for (size_t i = 0; i < length; ++i) {
+    static constexpr auto safeCharacters = "-._*"_span;
+    for (size_t i = 0; i < string.size(); ++i) {
         auto character = string[i];
-        if (isASCIIAlphanumeric(character)
-            || (character != '\0' && strchr(safeCharacters, character)))
+        if (isASCIIAlphanumeric(character) || (character != '\0' && WTF::contains(safeCharacters, character)))
             append(buffer, character);
         else if (character == ' ')
             append(buffer, '+');
-        else if (character == '\n' || (character == '\r' && (i + 1 >= length || string[i + 1] != '\n')))
-            append(buffer, "%0D%0A"); // FIXME: Unclear exactly where this rule about normalizing line endings to CRLF comes from.
+        else if (character == '\n' || (character == '\r' && (i + 1 >= string.size() || string[i + 1] != '\n')))
+            append(buffer, "%0D%0A"_s); // FIXME: Unclear exactly where this rule about normalizing line endings to CRLF comes from.
         else if (character != '\r') {
             append(buffer, '%');
             auto hexBuffer = hex(character, 2);
-            append(buffer, hexBuffer.characters()[0]);
-            append(buffer, hexBuffer.characters()[1]);
+            auto hexSpan = hexBuffer.span();
+            append(buffer, hexSpan[0]);
+            append(buffer, hexSpan[1]);
         }
     }
 }
 
-static void appendFormURLEncoded(Vector<char>& buffer, const Vector<uint8_t>& string)
+static void appendFormURLEncoded(Vector<uint8_t>& buffer, const Vector<uint8_t>& string)
 {
-    appendFormURLEncoded(buffer, string.data(), string.size());
+    appendFormURLEncoded(buffer, string.span());
 }
 
-Vector<char> generateUniqueBoundaryString()
+Vector<uint8_t> generateUniqueBoundaryString()
 {
-    Vector<char> boundary;
+    Vector<uint8_t> boundary;
 
     // The RFC 2046 spec says the alphanumeric characters plus the
     // following characters are legal for boundaries:  '()+_,-./:=?
@@ -122,7 +127,7 @@ Vector<char> generateUniqueBoundaryString()
     // Note that our algorithm makes it twice as much likely for 'A' or 'B'
     // to appear in the boundary string, because 0x41 and 0x42 are present in
     // the below array twice.
-    static const char alphaNumericEncodingMap[64] = {
+    static constexpr std::array<char, 64> alphaNumericEncodingMap {
         0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48,
         0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F, 0x50,
         0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58,
@@ -134,7 +139,7 @@ Vector<char> generateUniqueBoundaryString()
     };
 
     // Start with an informative prefix.
-    append(boundary, "----WebKitFormBoundary");
+    append(boundary, "----WebKitFormBoundary"_s);
 
     // Append 16 random 7-bit ASCII alphanumeric characters.
     for (unsigned i = 0; i < 4; ++i) {
@@ -145,58 +150,57 @@ Vector<char> generateUniqueBoundaryString()
         boundary.append(alphaNumericEncodingMap[randomness & 0x3F]);
     }
 
-    boundary.append(0); // Add a 0 at the end so we can use this as a C-style string.
     return boundary;
 }
 
-void beginMultiPartHeader(Vector<char>& buffer, const CString& boundary, const Vector<uint8_t>& name)
+void beginMultiPartHeader(Vector<uint8_t>& buffer, std::span<const uint8_t> boundary, const Vector<uint8_t>& name)
 {
     addBoundaryToMultiPartHeader(buffer, boundary);
 
     // FIXME: This loses data irreversibly if the input name includes characters you can't encode
     // in the website's character set.
-    append(buffer, "Content-Disposition: form-data; name=\"");
+    append(buffer, "Content-Disposition: form-data; name=\""_s);
     appendQuoted(buffer, name);
     append(buffer, '"');
 }
 
-void addBoundaryToMultiPartHeader(Vector<char>& buffer, const CString& boundary, bool isLastBoundary)
+void addBoundaryToMultiPartHeader(Vector<uint8_t>& buffer, std::span<const uint8_t> boundary, bool isLastBoundary)
 {
-    append(buffer, "--");
+    append(buffer, "--"_s);
     append(buffer, boundary);
 
     if (isLastBoundary)
-        append(buffer, "--");
+        append(buffer, "--"_s);
 
-    append(buffer, "\r\n");
+    append(buffer, "\r\n"_s);
 }
 
-void addFilenameToMultiPartHeader(Vector<char>& buffer, const PAL::TextEncoding& encoding, const String& filename)
+void addFilenameToMultiPartHeader(Vector<uint8_t>& buffer, const PAL::TextEncoding& encoding, const String& filename)
 {
-    append(buffer, "; filename=\"");
+    append(buffer, "; filename=\""_s);
     appendQuoted(buffer, encoding.encode(filename, PAL::UnencodableHandling::Entities));
     append(buffer, '"');
 }
 
-void addContentTypeToMultiPartHeader(Vector<char>& buffer, const CString& mimeType)
+void addContentTypeToMultiPartHeader(Vector<uint8_t>& buffer, const CString& mimeType)
 {
     ASSERT(Blob::isNormalizedContentType(mimeType));
-    append(buffer, "\r\nContent-Type: ");
+    append(buffer, "\r\nContent-Type: "_s);
     append(buffer, mimeType);
 }
 
-void finishMultiPartHeader(Vector<char>& buffer)
+void finishMultiPartHeader(Vector<uint8_t>& buffer)
 {
-    append(buffer, "\r\n\r\n");
+    append(buffer, "\r\n\r\n"_s);
 }
 
-void addKeyValuePairAsFormData(Vector<char>& buffer, const Vector<uint8_t>& key, const Vector<uint8_t>& value, FormData::EncodingType encodingType)
+void addKeyValuePairAsFormData(Vector<uint8_t>& buffer, const Vector<uint8_t>& key, const Vector<uint8_t>& value, FormData::EncodingType encodingType)
 {
     if (encodingType == FormData::EncodingType::TextPlain) {
         append(buffer, key);
         append(buffer, '=');
         append(buffer, value);
-        append(buffer, "\r\n");
+        append(buffer, "\r\n"_s);
     } else {
         if (!buffer.isEmpty())
             append(buffer, '&');
@@ -206,9 +210,9 @@ void addKeyValuePairAsFormData(Vector<char>& buffer, const Vector<uint8_t>& key,
     }
 }
 
-void encodeStringAsFormData(Vector<char>& buffer, const CString& string)
+void encodeStringAsFormData(Vector<uint8_t>& buffer, const CString& string)
 {
-    appendFormURLEncoded(buffer, string.dataAsUInt8Ptr(), string.length());
+    appendFormURLEncoded(buffer, string.span());
 }
 
 }

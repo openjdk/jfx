@@ -42,12 +42,12 @@ class MediaStreamTrack;
 class RTCRtpReceiver;
 class RTCRtpTransceiver;
 
-typedef Vector<RefPtr<MediaStream>> MediaStreamArray;
+typedef Vector<Ref<MediaStream>> MediaStreamArray;
 
 class RTCTrackEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(RTCTrackEvent);
+    WTF_MAKE_TZONE_ALLOCATED(RTCTrackEvent);
 public:
-    static Ref<RTCTrackEvent> create(const AtomString& type, CanBubble, IsCancelable, RefPtr<RTCRtpReceiver>&&, RefPtr<MediaStreamTrack>&&, MediaStreamArray&&, RefPtr<RTCRtpTransceiver>&&);
+    static Ref<RTCTrackEvent> create(const AtomString& type, CanBubble, IsCancelable, Ref<RTCRtpReceiver>&&, Ref<MediaStreamTrack>&&, MediaStreamArray&&, Ref<RTCRtpTransceiver>&&);
 
     struct Init : EventInit {
         RefPtr<RTCRtpReceiver> receiver;
@@ -55,23 +55,21 @@ public:
         MediaStreamArray streams;
         RefPtr<RTCRtpTransceiver> transceiver;
     };
-    static Ref<RTCTrackEvent> create(const AtomString& type, const Init&, IsTrusted = IsTrusted::No);
+    static Ref<RTCTrackEvent> create(const AtomString& type, Init&&, IsTrusted = IsTrusted::No);
 
-    RTCRtpReceiver* receiver() const { return m_receiver.get(); }
-    MediaStreamTrack* track() const  { return m_track.get(); }
+    RTCRtpReceiver& receiver() const { return m_receiver; }
+    MediaStreamTrack& track() const  { return m_track; }
     const MediaStreamArray& streams() const  { return m_streams; }
-    RTCRtpTransceiver* transceiver() const  { return m_transceiver.get(); }
-
-    virtual EventInterface eventInterface() const { return RTCTrackEventInterfaceType; }
+    RTCRtpTransceiver& transceiver() const  { return m_transceiver; }
 
 private:
-    RTCTrackEvent(const AtomString& type, CanBubble, IsCancelable, RefPtr<RTCRtpReceiver>&&, RefPtr<MediaStreamTrack>&&, MediaStreamArray&&, RefPtr<RTCRtpTransceiver>&&);
-    RTCTrackEvent(const AtomString& type, const Init&, IsTrusted);
+    RTCTrackEvent(const AtomString& type, CanBubble, IsCancelable, Ref<RTCRtpReceiver>&&, Ref<MediaStreamTrack>&&, MediaStreamArray&&, Ref<RTCRtpTransceiver>&&);
+    RTCTrackEvent(const AtomString& type, Init&&, IsTrusted);
 
-    RefPtr<RTCRtpReceiver> m_receiver;
-    RefPtr<MediaStreamTrack> m_track;
+    const Ref<RTCRtpReceiver> m_receiver;
+    const Ref<MediaStreamTrack> m_track;
     MediaStreamArray m_streams;
-    RefPtr<RTCRtpTransceiver> m_transceiver;
+    const Ref<RTCRtpTransceiver> m_transceiver;
 };
 
 } // namespace WebCore

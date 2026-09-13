@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -142,7 +142,7 @@ public class SliderBehavior extends BehaviorBase<Slider> {
     public void thumbReleased(MouseEvent e) {
         final Slider slider = getNode();
         slider.setValueChanging(false);
-        // RT-15207 When snapToTicks is true, slider value calculated in drag
+        // JDK-8114134 When snapToTicks is true, slider value calculated in drag
         // is then snapped to the nearest tick on mouse release.
         slider.adjustValue(slider.getValue());
     }
@@ -154,7 +154,7 @@ public class SliderBehavior extends BehaviorBase<Slider> {
 
     void decrementValue() {
         final Slider slider = getNode();
-        // RT-8634 If snapToTicks is true and block increment is less than
+        // JDK-8109702 If snapToTicks is true and block increment is less than
         // tick spacing, tick spacing is used as the decrement value.
         if (slider.isSnapToTicks()) {
             slider.adjustValue(slider.getValue() - computeIncrement());
@@ -171,7 +171,7 @@ public class SliderBehavior extends BehaviorBase<Slider> {
 
     void incrementValue() {
         final Slider slider = getNode();
-        // RT-8634 If snapToTicks is true and block increment is less than
+        // JDK-8109702 If snapToTicks is true and block increment is less than
         // tick spacing, tick spacing is used as the increment value.
         if (slider.isSnapToTicks()) {
             slider.adjustValue(slider.getValue()+ computeIncrement());

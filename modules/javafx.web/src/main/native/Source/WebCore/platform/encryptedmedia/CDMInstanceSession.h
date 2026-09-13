@@ -27,13 +27,13 @@
 
 #if ENABLE(ENCRYPTED_MEDIA)
 
-#include "CDMKeyStatus.h"
-#include "CDMMessageType.h"
-#include "CDMSessionType.h"
+#include <WebCore/CDMKeyStatus.h>
+#include <WebCore/CDMMessageType.h>
+#include <WebCore/CDMSessionType.h>
+#include <WebCore/CDMTypesForward.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/CompletionHandler.h>
-#include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
-#include <wtf/WeakPtr.h>
 
 #if !RELEASE_LOG_DISABLED
 namespace WTF {
@@ -45,12 +45,22 @@ namespace WebCore {
 
 class SharedBuffer;
 
-class CDMInstanceSessionClient : public CanMakeWeakPtr<CDMInstanceSessionClient> {
+enum class CDMKeyGroupingStrategy : bool;
+
+enum class CDMInstanceSessionLoadFailure : uint8_t {
+    None,
+    NoSessionData,
+    MismatchedSessionType,
+    QuotaExceeded,
+    Other,
+};
+
+class CDMInstanceSessionClient : public AbstractRefCountedAndCanMakeWeakPtr<CDMInstanceSessionClient> {
 public:
     virtual ~CDMInstanceSessionClient() = default;
 
     using KeyStatus = CDMKeyStatus;
-    using KeyStatusVector = Vector<std::pair<Ref<SharedBuffer>, KeyStatus>>;
+    using KeyStatusVector = Vector<std::pair<CDMKeyID, KeyStatus>>;
     virtual void updateKeyStatuses(KeyStatusVector&&) = 0;
     virtual void sendMessage(CDMMessageType, Ref<SharedBuffer>&& message) = 0;
     virtual void sessionIdChanged(const String&) = 0;
@@ -62,12 +72,13 @@ class CDMInstanceSession : public RefCounted<CDMInstanceSession> {
 public:
     virtual ~CDMInstanceSession() = default;
 
+    using KeyGroupingStrategy = CDMKeyGroupingStrategy;
     using KeyStatus = CDMKeyStatus;
     using LicenseType = CDMSessionType;
     using MessageType = CDMMessageType;
 
 #if !RELEASE_LOG_DISABLED
-    virtual void setLogIdentifier(const void*) { }
+    virtual void setLogIdentifier(uint64_t) { }
 #endif
 
     virtual void setClient(WeakPtr<CDMInstanceSessionClient>&&) { }
@@ -79,20 +90,14 @@ public:
     };
 
     using LicenseCallback = CompletionHandler<void(Ref<SharedBuffer>&& message, const String& sessionId, bool needsIndividualization, SuccessValue succeeded)>;
-    virtual void requestLicense(LicenseType, const AtomString& initDataType, Ref<SharedBuffer>&& initData, LicenseCallback&&) = 0;
+    virtual void requestLicense(LicenseType, KeyGroupingStrategy, const String& initDataType, Ref<SharedBuffer>&& initData, LicenseCallback&&) = 0;
 
     using KeyStatusVector = CDMInstanceSessionClient::KeyStatusVector;
     using Message = std::pair<MessageType, Ref<SharedBuffer>>;
     using LicenseUpdateCallback = CompletionHandler<void(bool sessionWasClosed, std::optional<KeyStatusVector>&& changedKeys, std::optional<double>&& changedExpiration, std::optional<Message>&& message, SuccessValue succeeded)>;
     virtual void updateLicense(const String& sessionId, LicenseType, Ref<SharedBuffer>&& response, LicenseUpdateCallback&&) = 0;
 
-    enum class SessionLoadFailure : uint8_t {
-        None,
-        NoSessionData,
-        MismatchedSessionType,
-        QuotaExceeded,
-        Other,
-    };
+    using SessionLoadFailure = CDMInstanceSessionLoadFailure;
 
     using LoadSessionCallback = CompletionHandler<void(std::optional<KeyStatusVector>&&, std::optional<double>&&, std::optional<Message>&&, SuccessValue, SessionLoadFailure)>;
     virtual void loadSession(LicenseType, const String& sessionId, const String& origin, LoadSessionCallback&&) = 0;

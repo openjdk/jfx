@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,9 +29,9 @@ import javafx.event.ActionEvent;
 import javafx.event.Event;
 import javafx.event.EventTarget;
 import javafx.scene.transform.TransformChangedEvent;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 public class TransformChangedEventTest {
 
@@ -55,7 +55,7 @@ public class TransformChangedEventTest {
         assertSame(trg, e.getTarget());
     }
 
-    // RT-28932
+    // JDK-8124701
     @Test
     public void canCreateActionEventToo() {
         TransformChangedEvent event = new TransformChangedEvent(null, null);

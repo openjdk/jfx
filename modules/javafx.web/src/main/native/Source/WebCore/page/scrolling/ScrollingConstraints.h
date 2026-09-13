@@ -25,22 +25,19 @@
 
 #pragma once
 
-#include "FloatRect.h"
-#include "ScrollTypes.h"
+#include <WebCore/FloatRect.h>
+#include <WebCore/ScrollTypes.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class AbsolutePositionConstraints {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(AbsolutePositionConstraints);
 public:
     AbsolutePositionConstraints() = default;
     WEBCORE_EXPORT AbsolutePositionConstraints(const FloatSize&, const FloatPoint&);
 
-    bool operator==(const AbsolutePositionConstraints& other) const
-    {
-        return alignmentOffset() == other.alignmentOffset()
-            && layerPositionAtLastLayout() == other.layerPositionAtLastLayout();
-    }
+    friend bool operator==(const AbsolutePositionConstraints&, const AbsolutePositionConstraints&) = default;
 
     FloatSize alignmentOffset() const { return m_alignmentOffset; }
     void setAlignmentOffset(FloatSize offset) { m_alignmentOffset = offset; }
@@ -56,7 +53,7 @@ private:
 // ViewportConstraints classes encapsulate data and logic required to reposition elements whose layout
 // depends on the viewport rect (positions fixed and sticky), when scrolling and zooming.
 class ViewportConstraints {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(ViewportConstraints, WEBCORE_EXPORT);
 public:
     enum ConstraintType {
         FixedPositionConstraint,
@@ -83,13 +80,32 @@ public:
     FloatSize alignmentOffset() const { return m_alignmentOffset; }
     void setAlignmentOffset(FloatSize offset) { m_alignmentOffset = offset; }
 
+    WEBCORE_EXPORT FloatPoint viewportRelativeLayerPosition(const FloatRect& viewportRect) const;
+
+    const FloatRect& viewportRectAtLastLayout() const { return m_viewportRectAtLastLayout; }
+    void setViewportRectAtLastLayout(const FloatRect& rect) { m_viewportRectAtLastLayout = rect; }
+
+    const FloatPoint& layerPositionAtLastLayout() const { return m_layerPositionAtLastLayout; }
+    void setLayerPositionAtLastLayout(FloatPoint position) { m_layerPositionAtLastLayout = position; }
+
+    friend bool operator==(const ViewportConstraints&, const ViewportConstraints&) = default;
+
 protected:
     ViewportConstraints()
         : m_anchorEdges(0)
     { }
 
+    ViewportConstraints(FloatSize&& alignmentOffset, AnchorEdges&& anchorEdges, FloatRect&& viewportRectAtLastLayout, FloatPoint&& layerPositionAtLastLayout)
+        : m_alignmentOffset(WTF::move(alignmentOffset))
+        , m_anchorEdges(WTF::move(anchorEdges))
+        , m_viewportRectAtLastLayout(WTF::move(viewportRectAtLastLayout))
+        , m_layerPositionAtLastLayout(WTF::move(layerPositionAtLastLayout))
+    { }
+
     FloatSize m_alignmentOffset;
     AnchorEdges m_anchorEdges;
+    FloatRect m_viewportRectAtLastLayout;
+    FloatPoint m_layerPositionAtLastLayout;
 };
 
 class FixedPositionViewportConstraints : public ViewportConstraints {
@@ -98,27 +114,13 @@ public:
         : ViewportConstraints()
     { }
 
-    WEBCORE_EXPORT FloatPoint layerPositionForViewportRect(const FloatRect& viewportRect) const;
-
-    const FloatRect& viewportRectAtLastLayout() const { return m_viewportRectAtLastLayout; }
-    void setViewportRectAtLastLayout(const FloatRect& rect) { m_viewportRectAtLastLayout = rect; }
-
-    const FloatPoint& layerPositionAtLastLayout() const { return m_layerPositionAtLastLayout; }
-    void setLayerPositionAtLastLayout(FloatPoint position) { m_layerPositionAtLastLayout = position; }
-
-    bool operator==(const FixedPositionViewportConstraints& other) const
+    FixedPositionViewportConstraints(FloatSize&& alignmentOffset, AnchorEdges&& anchorEdges, FloatRect&& viewportRectAtLastLayout, FloatPoint&& layerPositionAtLastLayout)
+        : ViewportConstraints { WTF::move(alignmentOffset), WTF::move(anchorEdges), WTF::move(viewportRectAtLastLayout), WTF::move(layerPositionAtLastLayout) }
     {
-        return m_alignmentOffset == other.m_alignmentOffset
-            && m_anchorEdges == other.m_anchorEdges
-            && m_viewportRectAtLastLayout == other.m_viewportRectAtLastLayout
-            && m_layerPositionAtLastLayout == other.m_layerPositionAtLastLayout;
     }
 
 private:
     ConstraintType constraintType() const override { return FixedPositionConstraint; };
-
-    FloatRect m_viewportRectAtLastLayout;
-    FloatPoint m_layerPositionAtLastLayout;
 };
 
 class StickyPositionViewportConstraints : public ViewportConstraints {
@@ -130,15 +132,29 @@ public:
         , m_bottomOffset(0)
     { }
 
+    StickyPositionViewportConstraints(FloatSize&& alignmentOffset, AnchorEdges&& anchorEdges, float leftOffset, float rightOffset, float topOffset, float bottomOffset, FloatRect&& constrainingRectAtLastLayout, FloatRect&& containingBlockRect, FloatRect&& stickyBoxRect, FloatSize&& stickyOffsetAtLastLayout, FloatSize&& anchorLayerOffsetAtLastLayout, FloatRect&& viewportRectAtLastLayout, FloatPoint&& layerPositionAtLastLayout)
+        : ViewportConstraints { WTF::move(alignmentOffset), WTF::move(anchorEdges), WTF::move(viewportRectAtLastLayout), WTF::move(layerPositionAtLastLayout) }
+        , m_leftOffset(leftOffset)
+        , m_rightOffset(rightOffset)
+        , m_topOffset(topOffset)
+        , m_bottomOffset(bottomOffset)
+        , m_constrainingRectAtLastLayout(WTF::move(constrainingRectAtLastLayout))
+        , m_containingBlockRect(WTF::move(containingBlockRect))
+        , m_stickyBoxRect(WTF::move(stickyBoxRect))
+        , m_stickyOffsetAtLastLayout(WTF::move(stickyOffsetAtLastLayout))
+        , m_anchorLayerOffsetAtLastLayout(WTF::move(anchorLayerOffsetAtLastLayout))
+    { }
+
     FloatSize computeStickyOffset(const FloatRect& constrainingRect) const;
+
+    const FloatSize& anchorLayerOffsetAtLastLayout() const { return m_anchorLayerOffsetAtLastLayout; }
+    void setAnchorLayerOffsetAtLastLayout(FloatSize offset) { m_anchorLayerOffsetAtLastLayout = offset; }
 
     const FloatSize stickyOffsetAtLastLayout() const { return m_stickyOffsetAtLastLayout; }
     void setStickyOffsetAtLastLayout(FloatSize offset) { m_stickyOffsetAtLastLayout = offset; }
 
-    WEBCORE_EXPORT FloatPoint layerPositionForConstrainingRect(const FloatRect& constrainingRect) const;
-
-    const FloatPoint& layerPositionAtLastLayout() const { return m_layerPositionAtLastLayout; }
-    void setLayerPositionAtLastLayout(FloatPoint position) { m_layerPositionAtLastLayout = position; }
+    WEBCORE_EXPORT FloatPoint anchorLayerPositionForConstrainingRect(const FloatRect& constrainingRect) const;
+    FloatPoint anchorLayerPositionAtLastLayout() const;
 
     float leftOffset() const { return m_leftOffset; }
     float rightOffset() const { return m_rightOffset; }
@@ -163,20 +179,11 @@ public:
     FloatRect stickyBoxRect() const { return m_stickyBoxRect; }
     void setStickyBoxRect(const FloatRect& rect) { m_stickyBoxRect = rect; }
 
-    bool operator==(const StickyPositionViewportConstraints& other) const
-    {
-        return m_alignmentOffset == other.m_alignmentOffset
-            && m_anchorEdges == other.m_anchorEdges
-            && m_leftOffset == other.m_leftOffset
-            && m_rightOffset == other.m_rightOffset
-            && m_topOffset == other.m_topOffset
-            && m_bottomOffset == other.m_bottomOffset
-            && m_constrainingRectAtLastLayout == other.m_constrainingRectAtLastLayout
-            && m_containingBlockRect == other.m_containingBlockRect
-            && m_stickyBoxRect == other.m_stickyBoxRect
-            && m_stickyOffsetAtLastLayout == other.m_stickyOffsetAtLastLayout
-            && m_layerPositionAtLastLayout == other.m_layerPositionAtLastLayout;
-    }
+    // Sticky extent is the smallest rectangle, in the scrolling ancestor's coordinate space, that encloses
+    // the sticky box at every permissible position during its sticky travel.
+    FloatRect computeStickyExtent() const;
+
+    friend bool operator==(const StickyPositionViewportConstraints&, const StickyPositionViewportConstraints&) = default;
 
 private:
     ConstraintType constraintType() const override { return StickyPositionConstraint; };
@@ -189,7 +196,7 @@ private:
     FloatRect m_containingBlockRect;
     FloatRect m_stickyBoxRect;
     FloatSize m_stickyOffsetAtLastLayout;
-    FloatPoint m_layerPositionAtLastLayout;
+    FloatSize m_anchorLayerOffsetAtLastLayout;
 };
 
 
@@ -199,3 +206,11 @@ WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const FixedPosition
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const StickyPositionViewportConstraints&);
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::FixedPositionViewportConstraints)
+    static bool isType(const WebCore::ViewportConstraints& constraints) { return constraints.constraintType() == WebCore::ViewportConstraints::ConstraintType::FixedPositionConstraint; }
+SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::StickyPositionViewportConstraints)
+    static bool isType(const WebCore::ViewportConstraints& constraints) { return constraints.constraintType() == WebCore::ViewportConstraints::ConstraintType::StickyPositionConstraint; }
+SPECIALIZE_TYPE_TRAITS_END()

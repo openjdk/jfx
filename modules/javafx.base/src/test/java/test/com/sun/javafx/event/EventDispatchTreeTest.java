@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,8 +28,9 @@ package test.com.sun.javafx.event;
 import com.sun.javafx.event.EventDispatchTree;
 import com.sun.javafx.event.EventDispatchTreeImpl;
 import javafx.event.EventDispatcher;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public final class EventDispatchTreeTest {
     @Test
@@ -44,9 +45,9 @@ public final class EventDispatchTreeTest {
         ((EventDispatchTreeImpl) eventDispatchTree).reset();
 
         eventDispatchTree = eventDispatchTree.append(dispatcherB)
-                                             .append(dispatcherC);
+                .append(dispatcherC);
 
-        Assert.assertEquals("(B->(C))", eventDispatchTree.toString());
+        assertEquals("(B->(C))", eventDispatchTree.toString());
     }
 
     @Test
@@ -62,40 +63,40 @@ public final class EventDispatchTreeTest {
 
         eventDispatchTree =
                 eventDispatchTree.mergeTree(
-                    eventDispatchTree.createTree()
-                                     .append(dispatchers[0])
-                                     .append(dispatchers[1])
-                                     .append(dispatchers[2])
-                                     .append(dispatchers[3]));
+                                 eventDispatchTree.createTree()
+                                .append(dispatchers[0])
+                                .append(dispatchers[1])
+                                .append(dispatchers[2])
+                                .append(dispatchers[3]));
 
         eventDispatchTree =
                 eventDispatchTree.mergeTree(
-                    eventDispatchTree.createTree()
-                                     .append(dispatchers[4])
-                                     .append(dispatchers[6])
-                                     .prepend(dispatchers[2])
-                                     .prepend(dispatchers[1])
-                                     .prepend(dispatchers[0]));
+                                 eventDispatchTree.createTree()
+                                .append(dispatchers[4])
+                                .append(dispatchers[6])
+                                .prepend(dispatchers[2])
+                                .prepend(dispatchers[1])
+                                .prepend(dispatchers[0]));
 
         eventDispatchTree =
                 eventDispatchTree.mergeTree(
-                    eventDispatchTree.createTree()
-                                     .prepend(dispatchers[7])
-                                     .prepend(dispatchers[5])
-                                     .prepend(dispatchers[4])
-                                     .prepend(dispatchers[2])
-                                     .prepend(dispatchers[1])
-                                     .prepend(dispatchers[0]));
+                                 eventDispatchTree.createTree()
+                                .prepend(dispatchers[7])
+                                .prepend(dispatchers[5])
+                                .prepend(dispatchers[4])
+                                .prepend(dispatchers[2])
+                                .prepend(dispatchers[1])
+                                .prepend(dispatchers[0]));
 
         eventDispatchTree =
                 eventDispatchTree.mergeTree(
-                    eventDispatchTree.createTree()
-                                     .prepend(dispatchers[2])
-                                     .prepend(dispatchers[1])
-                                     .prepend(dispatchers[0])
-                                     .append(dispatchers[4])
-                                     .append(dispatchers[5])
-                                     .append(dispatchers[8]));
+                                 eventDispatchTree.createTree()
+                                .prepend(dispatchers[2])
+                                .prepend(dispatchers[1])
+                                .prepend(dispatchers[0])
+                                .append(dispatchers[4])
+                                .append(dispatchers[5])
+                                .append(dispatchers[8]));
 
 
         eventDispatchTree = eventDispatchTree.prepend(dispatchers[9]);
@@ -104,25 +105,25 @@ public final class EventDispatchTreeTest {
 
         eventDispatchTree =
                 eventDispatchTree.mergeTree(
-                    eventDispatchTree.createTree()
-                                     .append(dispatchers[0])
-                                     .append(dispatchers[1])
-                                     .append(dispatchers[2])
-                                     .append(dispatchers[4])
-                                     .append(dispatchers[6])
-                                     .append(dispatchers[10])
-                                     .append(dispatchers[11]));
+                                 eventDispatchTree.createTree()
+                                .append(dispatchers[0])
+                                .append(dispatchers[1])
+                                .append(dispatchers[2])
+                                .append(dispatchers[4])
+                                .append(dispatchers[6])
+                                .append(dispatchers[10])
+                                .append(dispatchers[11]));
         eventDispatchTree =
                 eventDispatchTree.mergeTree(
-                    eventDispatchTree.createTree()
-                                     .append(dispatchers[9])
-                                     .append(dispatchers[0])
-                                     .append(dispatchers[1])
-                                     .append(dispatchers[2])
-                                     .append(dispatchers[4])
-                                     .append(dispatchers[6])
-                                     .append(dispatchers[10])
-                                     .append(dispatchers[11]));
+                                 eventDispatchTree.createTree()
+                                .append(dispatchers[9])
+                                .append(dispatchers[0])
+                                .append(dispatchers[1])
+                                .append(dispatchers[2])
+                                .append(dispatchers[4])
+                                .append(dispatchers[6])
+                                .append(dispatchers[10])
+                                .append(dispatchers[11]));
 
         //             /|
         //            9 0
@@ -141,10 +142,10 @@ public final class EventDispatchTreeTest {
         //    |   |   |
         //   11  10   10
 
-        Assert.assertEquals(
+        assertEquals(
                 "(9->(0->(1->(2->(3->(10),4->(6->(10->(11)),5->"
-                    + "(7->(10),8->(10))))))),"
-                    + "0->(1->(2->(4->(6->(10->(11)))))))",
+                        + "(7->(10),8->(10))))))),"
+                        + "0->(1->(2->(4->(6->(10->(11)))))))",
                 eventDispatchTree.toString());
     }
 
@@ -163,19 +164,19 @@ public final class EventDispatchTreeTest {
 
         eventDispatchTree =
                 eventDispatchTree.mergeTree(
-                    eventDispatchTree.createTree().append(dispatchers[2])
-                                                  .append(dispatchers[4]));
+                        eventDispatchTree.createTree().append(dispatchers[2])
+                                .append(dispatchers[4]));
 
         eventDispatchTree =
                 eventDispatchTree.mergeTree(
-                    eventDispatchTree.createTree().append(dispatchers[2])
-                                                  .append(dispatchers[5])
-                                                  .append(dispatchers[7]));
+                        eventDispatchTree.createTree().append(dispatchers[2])
+                                .append(dispatchers[5])
+                                .append(dispatchers[7]));
 
         eventDispatchTree =
                 eventDispatchTree.mergeTree(
-                    eventDispatchTree.createTree().append(dispatchers[3])
-                                                  .append(dispatchers[6]));
+                        eventDispatchTree.createTree().append(dispatchers[3])
+                                .append(dispatchers[6]));
 
         eventDispatchTree = eventDispatchTree.prepend(dispatchers[0]);
 
@@ -219,7 +220,7 @@ public final class EventDispatchTreeTest {
             final EventCountingDispatcher[] dispatchers,
             final int... counters) {
         for (int i = 0; i < dispatchers.length; ++i) {
-            Assert.assertEquals(
+            assertEquals(
                     counters[i],
                     dispatchers[i].getCapturingEventCount());
         }
@@ -229,7 +230,7 @@ public final class EventDispatchTreeTest {
             final EventCountingDispatcher[] dispatchers,
             final int... counters) {
         for (int i = 0; i < dispatchers.length; ++i) {
-            Assert.assertEquals(
+            assertEquals(
                     counters[i],
                     dispatchers[i].getBubblingEventCount());
         }

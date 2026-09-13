@@ -27,12 +27,14 @@
 
 #include "AXObjectCache.h"
 #include "Autofill.h"
-#include "ControlStates.h"
+#include "ContainerNodeInlines.h"
+#include "DocumentQuirks.h"
 #include "ElementInlines.h"
 #include "Event.h"
 #include "EventHandler.h"
 #include "EventNames.h"
 #include "FormAssociatedElement.h"
+#include "FrameDestructionObserverInlines.h"
 #include "HTMLButtonElement.h"
 #include "HTMLFormElement.h"
 #include "HTMLInputElement.h"
@@ -40,30 +42,32 @@
 #include "LocalFrameView.h"
 #include "PopoverData.h"
 #include "PseudoClassChangeInvalidation.h"
-#include "Quirks.h"
 #include "RenderBox.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderTheme.h"
+#include "ScriptTrackingPrivacyCategory.h"
 #include "SelectionRestorationMode.h"
 #include "Settings.h"
 #include "StyleTreeResolver.h"
 #include "ValidationMessage.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLFormControlElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLFormControlElement);
 
 using namespace HTMLNames;
 
 HTMLFormControlElement::HTMLFormControlElement(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
-    : HTMLElement(tagName, document, CreateHTMLFormControlElement)
+    : HTMLElement(tagName, document, { TypeFlag::IsShadowRootOrFormControlElement, TypeFlag::HasCustomStyleResolveCallbacks, TypeFlag::HasDidMoveToNewDocument } )
     , ValidatedFormListedElement(form)
     , m_isRequired(false)
     , m_valueMatchesRenderer(false)
     , m_wasChangedSinceLastFormControlChangeEvent(false)
+    , m_wasCreatedByTaintedScript(document.requiresScriptTrackingPrivacyProtection(ScriptTrackingPrivacyCategory::FormControls, ScriptExecutionContext::IncludeConsoleLog::No))
 {
 }
 
@@ -80,23 +84,12 @@ String HTMLFormControlElement::formEnctype() const
     return FormSubmission::Attributes::parseEncodingType(formEnctypeAttr);
 }
 
-void HTMLFormControlElement::setFormEnctype(const AtomString& value)
-{
-    setAttributeWithoutSynchronization(formenctypeAttr, value);
-}
-
 String HTMLFormControlElement::formMethod() const
 {
     auto& formMethodAttr = attributeWithoutSynchronization(formmethodAttr);
     if (formMethodAttr.isNull())
         return emptyString();
-    bool dialogElementEnabled = document().settings().dialogElementEnabled();
-    return FormSubmission::Attributes::methodString(FormSubmission::Attributes::parseMethodType(formMethodAttr, dialogElementEnabled), dialogElementEnabled);
-}
-
-void HTMLFormControlElement::setFormMethod(const AtomString& value)
-{
-    setAttributeWithoutSynchronization(formmethodAttr, value);
+    return FormSubmission::Attributes::methodString(FormSubmission::Attributes::parseMethodType(formMethodAttr));
 }
 
 bool HTMLFormControlElement::formNoValidate() const
@@ -107,14 +100,10 @@ bool HTMLFormControlElement::formNoValidate() const
 String HTMLFormControlElement::formAction() const
 {
     const AtomString& value = attributeWithoutSynchronization(formactionAttr);
+    Ref document = this->document();
     if (value.isEmpty())
-        return document().url().string();
-    return document().completeURL(value).string();
-}
-
-void HTMLFormControlElement::setFormAction(const AtomString& value)
-{
-    setAttributeWithoutSynchronization(formactionAttr, value);
+        return document->url().string();
+    return document->completeURL(value).string();
 }
 
 Node::InsertedIntoAncestorResult HTMLFormControlElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
@@ -122,6 +111,8 @@ Node::InsertedIntoAncestorResult HTMLFormControlElement::insertedIntoAncestor(In
     HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
     ValidatedFormListedElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
 
+    if (!insertionType.connectedToDocument)
+        return InsertedIntoAncestorResult::Done;
     return InsertedIntoAncestorResult::NeedsPostInsertionCallback;
 }
 
@@ -148,7 +139,7 @@ void HTMLFormControlElement::attributeChanged(const QualifiedName& name, const A
     if (name == requiredAttr) {
         bool newRequired = !newValue.isNull();
         if (m_isRequired != newRequired) {
-            Style::PseudoClassChangeInvalidation requiredInvalidation(*this, { { CSSSelector::PseudoClassType::Required, newRequired }, { CSSSelector::PseudoClassType::Optional, !newRequired } });
+            Style::PseudoClassChangeInvalidation requiredInvalidation(*this, { { CSSSelector::PseudoClass::Required, newRequired }, { CSSSelector::PseudoClass::Optional, !newRequired } });
             m_isRequired = newRequired;
             requiredStateChanged();
         }
@@ -168,8 +159,8 @@ void HTMLFormControlElement::finishParsingChildren()
 void HTMLFormControlElement::disabledStateChanged()
 {
     ValidatedFormListedElement::disabledStateChanged();
-    if (renderer() && renderer()->style().hasEffectiveAppearance())
-        renderer()->theme().stateChanged(*renderer(), ControlStates::States::Enabled);
+    if (CheckedPtr renderer = this->renderer(); renderer && renderer->style().hasUsedAppearance())
+        renderer->repaint();
 }
 
 void HTMLFormControlElement::readOnlyStateChanged()
@@ -191,8 +182,8 @@ void HTMLFormControlElement::didAttachRenderers()
     // The call to updateFromElement() needs to go after the call through
     // to the base class's attach() because that can sometimes do a close
     // on the renderer.
-    if (renderer())
-        renderer()->updateFromElement();
+    if (CheckedPtr renderer = this->renderer())
+        renderer->updateFromElement();
 }
 
 void HTMLFormControlElement::setChangedSinceLastFormControlChangeEvent(bool changed)
@@ -223,26 +214,26 @@ void HTMLFormControlElement::dispatchFormControlInputEvent()
     dispatchInputEvent();
 }
 
-void HTMLFormControlElement::didRecalcStyle(Style::Change)
+void HTMLFormControlElement::didRecalcStyle(OptionSet<Style::Change>)
 {
     // updateFromElement() can cause the selection to change, and in turn
     // trigger synchronous layout, so it must not be called during style recalc.
     if (renderer()) {
         RefPtr<HTMLFormControlElement> element = this;
         Style::deprecatedQueuePostResolutionCallback([element] {
-            if (auto* renderer = element->renderer())
+            if (CheckedPtr renderer = element->renderer())
                 renderer->updateFromElement();
         });
     }
 }
 
-bool HTMLFormControlElement::isKeyboardFocusable(KeyboardEvent* event) const
+bool HTMLFormControlElement::isKeyboardFocusable(const FocusEventData& focusEventData) const
 {
     if (!!tabIndexSetExplicitly())
-        return Element::isKeyboardFocusable(event);
+        return Element::isKeyboardFocusable(focusEventData);
     return isFocusable()
         && document().frame()
-        && document().frame()->eventHandler().tabsToAllFormControls(event);
+        && document().frame()->eventHandler().tabsToAllFormControls(focusEventData);
 }
 
 bool HTMLFormControlElement::isMouseFocusable() const
@@ -250,7 +241,9 @@ bool HTMLFormControlElement::isMouseFocusable() const
 #if (PLATFORM(GTK) || PLATFORM(WPE))
     return HTMLElement::isMouseFocusable();
 #else
-    if (!!tabIndexSetExplicitly() || needsMouseFocusableQuirk())
+    // FIXME: We can remove needsFormControlToBeMouseFocusable if there are no more quirks
+    // or if we decide to change the default behavior and make form control elements focusable
+    if (!!tabIndexSetExplicitly() || protectedDocument()->quirks().needsFormControlToBeMouseFocusable())
         return HTMLElement::isMouseFocusable();
     return false;
 #endif
@@ -263,7 +256,7 @@ void HTMLFormControlElement::runFocusingStepsForAutofocus()
 
 void HTMLFormControlElement::dispatchBlurEvent(RefPtr<Element>&& newFocusedElement)
 {
-    HTMLElement::dispatchBlurEvent(WTFMove(newFocusedElement));
+    HTMLElement::dispatchBlurEvent(WTF::move(newFocusedElement));
     hideVisibleValidationMessage();
 }
 
@@ -271,8 +264,12 @@ void HTMLFormControlElement::dispatchBlurEvent(RefPtr<Element>&& newFocusedEleme
 
 bool HTMLFormControlElement::shouldAutocorrect() const
 {
+    if (RefPtr input = dynamicDowncast<HTMLInputElement>(*this); input
+        && (input->isPasswordField() || input->isEmailField() || input->isURLField())) {
+        return false;
+    }
     const AtomString& autocorrectValue = attributeWithoutSynchronization(autocorrectAttr);
-    if (!autocorrectValue.isEmpty())
+    if (!autocorrectValue.isNull())
         return !equalLettersIgnoringASCIICase(autocorrectValue, "off"_s);
     if (RefPtr<HTMLFormElement> form = this->form())
         return form->shouldAutocorrect();
@@ -300,14 +297,10 @@ String HTMLFormControlElement::autocomplete() const
     return autofillData().idlExposedValue;
 }
 
-void HTMLFormControlElement::setAutocomplete(const AtomString& value)
-{
-    setAttributeWithoutSynchronization(autocompleteAttr, value);
-}
-
 AutofillMantle HTMLFormControlElement::autofillMantle() const
 {
-    return is<HTMLInputElement>(*this) && downcast<HTMLInputElement>(this)->isInputTypeHidden() ? AutofillMantle::Anchor : AutofillMantle::Expectation;
+    auto* input = dynamicDowncast<HTMLInputElement>(this);
+    return input && input->isInputTypeHidden() ? AutofillMantle::Anchor : AutofillMantle::Expectation;
 }
 
 AutofillData HTMLFormControlElement::autofillData() const
@@ -343,10 +336,10 @@ static const AtomString& hideAtom()
 }
 
 // https://html.spec.whatwg.org/#popover-target-element
-HTMLElement* HTMLFormControlElement::popoverTargetElement() const
+RefPtr<HTMLElement> HTMLFormControlElement::popoverTargetElement() const
 {
     auto canInvokePopovers = [](const HTMLFormControlElement& element) -> bool {
-        if (!element.document().settings().popoverAttributeEnabled() || element.document().quirks().shouldDisablePopoverAttributeQuirk())
+        if (!element.document().settings().popoverAttributeEnabled())
             return false;
         if (auto* inputElement = dynamicDowncast<HTMLInputElement>(element))
             return inputElement->isTextButton() || inputElement->isImageButton();
@@ -362,7 +355,7 @@ HTMLElement* HTMLFormControlElement::popoverTargetElement() const
     if (form() && isSubmitButton())
         return nullptr;
 
-    auto* element = dynamicDowncast<HTMLElement>(getElementAttribute(popovertargetAttr));
+    RefPtr element = dynamicDowncast<HTMLElement>(elementForAttributeInternal(popovertargetAttr));
     if (element && element->popoverState() != PopoverState::None)
         return element;
     return nullptr;
@@ -380,42 +373,30 @@ const AtomString& HTMLFormControlElement::popoverTargetAction() const
     return toggleAtom();
 }
 
-void HTMLFormControlElement::setPopoverTargetAction(const AtomString& value)
-{
-    setAttributeWithoutSynchronization(HTMLNames::popovertargetactionAttr, value);
-}
-
 // https://html.spec.whatwg.org/#popover-target-attribute-activation-behavior
-void HTMLFormControlElement::handlePopoverTargetAction() const
+void HTMLFormControlElement::handlePopoverTargetAction(const EventTarget* eventTarget)
 {
-    RefPtr target = popoverTargetElement();
-    if (!target)
+    RefPtr popover = popoverTargetElement();
+    if (!popover)
         return;
 
-    ASSERT(target->popoverData());
+    ASSERT(popover->popoverData());
+
+    if (RefPtr eventTargetNode = dynamicDowncast<Node>(eventTarget)) {
+        if (popover->isShadowIncludingInclusiveAncestorOf(eventTargetNode.get()) && popover->isShadowIncludingDescendantOf(this))
+            return;
+    }
 
     auto action = popoverTargetAction();
     bool canHide = action == hideAtom() || action == toggleAtom();
-    bool shouldHide = canHide && target->popoverData()->visibilityState() == PopoverVisibilityState::Showing;
+    bool shouldHide = canHide && popover->popoverData()->visibilityState() == PopoverVisibilityState::Showing;
     bool canShow = action == showAtom() || action == toggleAtom();
-    bool shouldShow = canShow && target->popoverData()->visibilityState() == PopoverVisibilityState::Hidden;
+    bool shouldShow = canShow && popover->popoverData()->visibilityState() == PopoverVisibilityState::Hidden;
 
     if (shouldHide)
-        target->hidePopover();
+        popover->hidePopover();
     else if (shouldShow)
-        target->showPopover(this);
-
-    if (shouldHide || shouldShow) {
-        // Accessibility needs to know that the invoker (this) toggled popover visibility state.
-        if (auto* cache = document().existingAXObjectCache())
-            cache->onPopoverTargetToggle(*this);
-    }
-}
-
-// FIXME: We should remove the quirk once <rdar://problem/47334655> is fixed.
-bool HTMLFormControlElement::needsMouseFocusableQuirk() const
-{
-    return document().quirks().needsFormControlToBeMouseFocusable();
+        popover->showPopoverInternal(this);
 }
 
 } // namespace Webcore

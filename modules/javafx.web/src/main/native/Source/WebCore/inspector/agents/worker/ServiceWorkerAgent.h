@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,10 +25,9 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "InspectorWebAgentBase.h"
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -36,23 +35,21 @@ class ServiceWorkerGlobalScope;
 
 class ServiceWorkerAgent final : public InspectorAgentBase, public Inspector::ServiceWorkerBackendDispatcherHandler {
     WTF_MAKE_NONCOPYABLE(ServiceWorkerAgent);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ServiceWorkerAgent);
 public:
     ServiceWorkerAgent(WorkerAgentContext&);
     ~ServiceWorkerAgent();
 
     // InspectorAgentBase
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*);
+    void didCreateFrontendAndBackend();
     void willDestroyFrontendAndBackend(Inspector::DisconnectReason);
 
     // ServiceWorkerBackendDispatcherHandler
     Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::ServiceWorker::Configuration>> getInitializationInfo();
 
 private:
-    ServiceWorkerGlobalScope& m_serviceWorkerGlobalScope;
-    RefPtr<Inspector::ServiceWorkerBackendDispatcher> m_backendDispatcher;
+    WeakRef<ServiceWorkerGlobalScope, WeakPtrImplWithEventTargetData> m_serviceWorkerGlobalScope;
+    const Ref<Inspector::ServiceWorkerBackendDispatcher> m_backendDispatcher;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,7 +47,7 @@ public abstract class TraversalEngine{
     /**
      * This is the default algorithm for the running platform. It's the algorithm that's used in TopMostTraversalEngine
      */
-    static final Algorithm DEFAULT_ALGORITHM = PlatformImpl.isContextual2DNavigation() ? new Hueristic2D() : new ContainerTabOrder();
+    static final Algorithm DEFAULT_ALGORITHM = PlatformImpl.isContextual2DNavigation() ? new Heuristic2D() : new ContainerTabOrder();
 
     private final TraversalContext context = new EngineContext(); // This is the context used in calls to this engine's algorithm
     // This is a special context that's used when invoking select "callbacks" to default algorithm in other contexts

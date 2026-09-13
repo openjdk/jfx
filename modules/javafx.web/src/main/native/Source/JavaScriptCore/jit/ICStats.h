@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,14 +25,15 @@
 
 #pragma once
 
+#include "CacheableIdentifierInlines.h"
 #include "ClassInfo.h"
 #include "Identifier.h"
 #include <wtf/Condition.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/Lock.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/PrintStream.h>
 #include <wtf/Spectrum.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
@@ -102,18 +103,18 @@ public:
     {
     }
 
-    ICEvent(Kind kind, const ClassInfo* classInfo, const Identifier propertyName)
+    ICEvent(VM& vm, Kind kind, const ClassInfo* classInfo, PropertyName propertyName)
         : m_kind(kind)
         , m_classInfo(classInfo)
-        , m_propertyName(propertyName)
+        , m_propertyName(Identifier::fromUid(vm, propertyName.uid()))
         , m_propertyLocation(Unknown)
     {
     }
 
-    ICEvent(Kind kind, const ClassInfo* classInfo, const Identifier propertyName, bool isBaseProperty)
+    ICEvent(VM& vm, Kind kind, const ClassInfo* classInfo, PropertyName propertyName, bool isBaseProperty)
         : m_kind(kind)
         , m_classInfo(classInfo)
-        , m_propertyName(propertyName)
+        , m_propertyName(Identifier::fromUid(vm, propertyName.uid()))
         , m_propertyLocation(isBaseProperty ? BaseObject : ProtoLookup)
     {
     }
@@ -156,6 +157,8 @@ public:
         return *this == ICEvent(WTF::HashTableDeletedValue);
     }
 
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
     void dump(PrintStream&) const;
 
     void log() const;
@@ -168,20 +171,11 @@ private:
     PropertyLocation m_propertyLocation;
 };
 
-struct ICEventHash {
-    static unsigned hash(const ICEvent& key) { return key.hash(); }
-    static bool equal(const ICEvent& a, const ICEvent& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } // namespace JSC
 
 namespace WTF {
 
 void printInternal(PrintStream&, JSC::ICEvent::Kind);
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::ICEvent> : JSC::ICEventHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::ICEvent> : SimpleClassHashTraits<JSC::ICEvent> {
@@ -194,14 +188,14 @@ namespace JSC {
 
 class ICStats {
     WTF_MAKE_NONCOPYABLE(ICStats);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ICStats);
 public:
     ICStats();
     ~ICStats();
 
     void add(const ICEvent& event);
 
-    static ICStats& instance();
+    static ICStats& singleton();
 
 private:
 

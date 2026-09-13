@@ -28,9 +28,12 @@
 
 #include <wtf/Lock.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(URLRegistry);
 
 static Lock allRegistriesLock;
 static Vector<URLRegistry*>& allRegistries() WTF_REQUIRES_LOCK(allRegistriesLock)
@@ -39,7 +42,7 @@ static Vector<URLRegistry*>& allRegistries() WTF_REQUIRES_LOCK(allRegistriesLock
     return list;
 }
 
-void URLRegistry::forEach(const Function<void(URLRegistry&)>& apply)
+void URLRegistry::forEach(NOESCAPE const Function<void(URLRegistry&)>& apply)
 {
     Vector<URLRegistry*> registries;
     {

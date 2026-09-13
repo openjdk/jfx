@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,6 +50,9 @@
 #include <WebCore/ScriptController.h>
 #include <WebCore/Settings.h>
 #include <WebCore/WindowFeatures.h>
+#include <WebCore/HistoryController.h>
+#include "DocumentPage.h"
+#include "FrameDestructionObserverInlines.h"
 
 #include "com_sun_webkit_LoadListenerClient.h"
 
@@ -140,15 +143,9 @@ static void initRefs(JNIEnv* env)
     }
 }
 // This was copied from file "WebKit/Source/WebKit/mac/Misc/WebKitErrors.h".
-enum {
-    WebKitErrorCannotShowMIMEType =                             100,
-    WebKitErrorCannotShowURL =                                  101,
-    WebKitErrorFrameLoadInterruptedByPolicyChange =             102,
-    WebKitErrorCannotUseRestrictedPort =                        103,
-    WebKitErrorCannotFindPlugIn =                               200,
-    WebKitErrorCannotLoadPlugIn =                               201,
-    WebKitErrorJavaUnavailable =                                202,
-    WebKitErrorPluginWillHandleLoad =                           203
+enum
+{
+    WebKitErrorFrameLoadInterruptedByPolicyChangeJava =             102,
 };
 
 enum ContentDispositionType {
@@ -190,9 +187,12 @@ ContentDispositionType contentDispositionType(const String& contentDisposition)
 }
 } // namespace
 
-FrameLoaderClientJava::FrameLoaderClientJava(const JLObject &webPage)
-    : m_page(nullptr)
+FrameLoaderClientJava::FrameLoaderClientJava(FrameLoader& loader, const JLObject &webPage)
+    : LocalFrameLoaderClient(loader)
+    , m_page(nullptr)
     , m_frame(nullptr)
+    , m_mainResourceRequestID(ResourceLoaderIdentifier::generate())
+    , m_mainResourceRequestIDSet(false)
     , m_isPageRedirected(false)
     , m_hasRepresentation(false)
     , m_webPage(webPage)
@@ -332,7 +332,7 @@ void FrameLoaderClientJava::transitionToCommittedFromCachedFrame(CachedFrame*)
     notImplemented();
 }
 
-void FrameLoaderClientJava::transitionToCommittedForNewPage()
+void FrameLoaderClientJava::transitionToCommittedForNewPage(InitializingIframe initializingIframe)
 {
     FloatRect pageRect = frame()->page()->chrome().pageRect();
     Color bkColor(Color::white);
@@ -346,12 +346,12 @@ void FrameLoaderClientJava::transitionToCommittedForNewPage()
     localFrame->createView(IntRect(pageRect).size(), backgroundColor, /* fixedLayoutSize */ { }, /* fixedVisibleContentRect */ { });
 }
 
-WTF::Ref<WebCore::DocumentLoader> FrameLoaderClientJava::createDocumentLoader(const WebCore::ResourceRequest& request, const SubstituteData& substituteData)
+WTF::Ref<WebCore::DocumentLoader> FrameLoaderClientJava::createDocumentLoader(WebCore::ResourceRequest&& request, SubstituteData&& substituteData)
 {
-    return DocumentLoader::create(request, substituteData);
+    return DocumentLoader::create(WTF::move(request), WTF::move(substituteData));
 }
 
-void FrameLoaderClientJava::dispatchWillSubmitForm(FormState&, CompletionHandler<void()>&& function)
+void FrameLoaderClientJava::dispatchWillSubmitForm(FormState&, URL&& requestURL, String&& method, CompletionHandler<void()>&& function)
 {
     // FIXME: This is surely too simple
     if (!frame() || !function) {
@@ -366,7 +366,7 @@ void FrameLoaderClientJava::committedLoad(DocumentLoader* loader, const SharedBu
     loader->commitData(data);
 }
 
-void FrameLoaderClientJava::dispatchDecidePolicyForResponse(const ResourceResponse& response, const ResourceRequest&, PolicyCheckIdentifier identifier, const String&, FramePolicyFunction&& policyFunction)
+void FrameLoaderClientJava::dispatchDecidePolicyForResponse(const ResourceResponse& response, const ResourceRequest&, const String&, FramePolicyFunction&& policyFunction)
 {
     using namespace FrameLoaderClientJavaInternal;
     PolicyAction action;
@@ -389,7 +389,7 @@ void FrameLoaderClientJava::dispatchDecidePolicyForResponse(const ResourceRespon
     }
 
     // NOTE: PolicyChangeError will be generated when action is not PolicyUse.
-    policyFunction(action, identifier);
+    policyFunction(action);
 }
 
 void FrameLoaderClientJava::dispatchDidReceiveResponse(DocumentLoader*, ResourceLoaderIdentifier identifier, const ResourceResponse& response)
@@ -410,7 +410,7 @@ void FrameLoaderClientJava::dispatchDecidePolicyForNewWindowAction(const Navigat
                                                                    const ResourceRequest& req,
                                                                    FormState*,
                                                                    const String&,
-                                                                   PolicyCheckIdentifier identifier,
+                                                                   std::optional<HitTestResult>&&,
                                                                    FramePolicyFunction&& policyFunction)
 {
     using namespace FrameLoaderClientJavaInternal;
@@ -429,15 +429,21 @@ void FrameLoaderClientJava::dispatchDecidePolicyForNewWindowAction(const Navigat
 
     // FIXME: I think Qt version marshals this to another thread so when we
     // have multi-threaded download, we might need to do the same
-    policyFunction(permit ? PolicyAction::Use : PolicyAction::Ignore, identifier);
+    policyFunction(permit ? PolicyAction::Use : PolicyAction::Ignore);
 }
+
 
 void FrameLoaderClientJava::dispatchDecidePolicyForNavigationAction(const NavigationAction& action,
                                                                     const ResourceRequest& req,
-                                                                    const ResourceResponse& /*didReceiveRedirectResponse*/,
-                                                                    FormState*,
-                                                                    PolicyDecisionMode,
-                                                                    PolicyCheckIdentifier identifier,
+                                                                    const ResourceResponse& redirectResponse,  // Use the correct name
+                                                                    FormState* formState,
+                                                                    const String& clientRedirectSourceForHistory,  // Use the correct name
+                                                                    std::optional<NavigationIdentifier> navigationID,  // Use a name for the optional identifier
+                                                                    std::optional<HitTestResult>&& hitTestResult,  // Match argument names
+                                                                    bool hasOpener,
+                                                                    NavigationUpgradeToHTTPSBehavior,
+                                                                    SandboxFlags sandboxFlags,
+                                                                    PolicyDecisionMode decisionMode,
                                                                     FramePolicyFunction&& policyFunction)
 {
     using namespace FrameLoaderClientJavaInternal;
@@ -476,17 +482,16 @@ void FrameLoaderClientJava::dispatchDecidePolicyForNavigationAction(const Naviga
         WTF::CheckAndClearException(env);
     }
 
-    policyFunction(permit ? PolicyAction::Use : PolicyAction::Ignore, identifier);
+    policyFunction(permit ? PolicyAction::Use : PolicyAction::Ignore);
 }
 
-RefPtr<Widget> FrameLoaderClientJava::createPlugin(const IntSize& size, HTMLPlugInElement& element,
+RefPtr<Widget> FrameLoaderClientJava::createPlugin(HTMLPlugInElement& element,
                                      const URL& url, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues, const String& mimeType, bool loadManually)
 
 {
     return adoptRef(new PluginWidgetJava(
         m_webPage,
         &element,
-        size,
         url.string(),
         mimeType,
         paramNames,
@@ -500,7 +505,16 @@ RefPtr<LocalFrame> FrameLoaderClientJava::createFrame(const AtomString& name, HT
     initRefs(env);
 
     auto* localFrame = dynamicDowncast<LocalFrame>(m_frame);
-    RefPtr<LocalFrame> childFrame(LocalFrame::createSubframe(*page(), makeUniqueRef<FrameLoaderClientJava>(m_webPage),localFrame->loader().frameID(),ownerElement));
+
+    auto clientCreator = [this](auto& localFrame, WebCore::FrameLoader& loader) -> WTF::UniqueRef<WebCore::LocalFrameLoaderClient> {
+        return makeUniqueRefWithoutRefCountedCheck<FrameLoaderClientJava>(loader, m_webPage);  // Use only m_webPage
+    };
+
+    SandboxFlags sandboxFlags = ownerElement.sandboxFlags();
+    Ref<FrameTreeSyncData> frameTreeSyncData = FrameTreeSyncData::create();
+    auto policy = ownerElement.referrerPolicy();
+    RefPtr<LocalFrame> childFrame = LocalFrame::createSubframe(*page(), std::move(clientCreator), FrameIdentifier::generate(), sandboxFlags, policy, ownerElement,WTF::move(frameTreeSyncData));
+
     static_cast<FrameLoaderClientJava&>(childFrame->loader().client()).setFrame(childFrame.get());
 
     childFrame->tree().setSpecifiedName(name);
@@ -595,7 +609,11 @@ void FrameLoaderClientJava::updateCachedDocumentLoader(DocumentLoader&)
 
 void FrameLoaderClientJava::dispatchDidStartProvisionalLoad()
 {
-    m_mainResourceRequestID = { };
+     //FrameLoaderClientJava constructor is already assigning
+     // In recent code base 0 value for ResourceLoaderIdentifier is now release assert
+     // Track whether the main resource request has been seen.
+     // First request → PAGE_STARTED, same again → PAGE_REDIRECTED, others → subresources.
+     m_mainResourceRequestIDSet = false;
 }
 
 void FrameLoaderClientJava::dispatchWillSendRequest(DocumentLoader* l, ResourceLoaderIdentifier identifier, ResourceRequest& req, const ResourceResponse& res)
@@ -612,8 +630,9 @@ void FrameLoaderClientJava::dispatchWillSendRequest(DocumentLoader* l, ResourceL
     double progress = 0.0;
     progress = page()->progress().estimatedProgress();
 
-    if (!m_mainResourceRequestID) {
+    if (!m_mainResourceRequestIDSet) {
         m_mainResourceRequestID = identifier;
+        m_mainResourceRequestIDSet = true;
         postLoadEvent(f,
                       com_sun_webkit_LoadListenerClient_PAGE_STARTED,
                       req.url().string(),
@@ -819,7 +838,7 @@ LocalFrame* FrameLoaderClientJava::dispatchCreatePage(const NavigationAction& ac
         return nullptr;
     Frame *f = frame();
     auto* localFrame = dynamicDowncast<LocalFrame>(f);
-    Page* newPage = webPage->chrome().createWindow(*localFrame, { }, action);
+    RefPtr<Page> newPage = webPage->chrome().createWindow(*localFrame, ""_s, { }, action);
 
     // createWindow can return null (e.g., popup blocker denies the window).
     if (!newPage)
@@ -829,23 +848,25 @@ LocalFrame* FrameLoaderClientJava::dispatchCreatePage(const NavigationAction& ac
     return frame;
 }
 
-bool FrameLoaderClientJava::shouldGoToHistoryItem(HistoryItem&) const
+WebCore::ShouldGoToHistoryItem FrameLoaderClientJava::shouldGoToHistoryItem(HistoryItem&, WebCore::IsSameDocumentNavigation,ProcessSwapDisposition processSwapDisposition) const
 {
     // FIXME: This is a very simple implementation. More sophisticated
     // implementation would delegate the decision to a PolicyDelegate.
     // See mac implementation for example.
-    return true;
+    return WebCore::ShouldGoToHistoryItem::Yes;
 }
 
-void FrameLoaderClientJava::didDisplayInsecureContent()
+void FrameLoaderClientJava::shouldGoToHistoryItemAsync(HistoryItem&, CompletionHandler<void(ShouldGoToHistoryItem)>&&) const
 {
     notImplemented();
 }
 
-void FrameLoaderClientJava::didRunInsecureContent(SecurityOrigin&, const URL&)
+RefPtr<HistoryItem> FrameLoaderClientJava::createHistoryItemTree(bool clipAtTarget, BackForwardItemIdentifier itemID) const
 {
-    notImplemented();
+    auto* localFrame = dynamicDowncast<LocalFrame>(m_frame);
+    return localFrame->loader().history().createItemTree(*localFrame, clipAtTarget, itemID);
 }
+
 
 void FrameLoaderClientJava::makeRepresentation(DocumentLoader*)
 {
@@ -969,70 +990,11 @@ bool FrameLoaderClientJava::dispatchDidLoadResourceFromMemoryCache(
     return false;
 }
 
-ResourceError FrameLoaderClientJava::cancelledError(const ResourceRequest& request) const
-{
-    return ResourceError("Error"_s, -999, request.url(), "Request cancelled"_s);
-}
-
-ResourceError FrameLoaderClientJava::blockedError(const ResourceRequest& request) const
-{
-    using namespace FrameLoaderClientJavaInternal;
-    return ResourceError("Error"_s, WebKitErrorCannotUseRestrictedPort, request.url(),
-                         "Request blocked"_s);
-}
-
-ResourceError FrameLoaderClientJava::blockedByContentBlockerError(const ResourceRequest& request) const
-{
-    using namespace FrameLoaderClientJavaInternal;
-    RELEASE_ASSERT_NOT_REACHED(); // Content Blockers are not enabled for WK1.
-    return ResourceError("Error"_s, WebKitErrorCannotShowURL, request.url(),
-                         "Cannot show URL"_s);
-}
-
-ResourceError FrameLoaderClientJava::cannotShowURLError(const ResourceRequest& request) const
-{
-    using namespace FrameLoaderClientJavaInternal;
-    return ResourceError("Error"_s, WebKitErrorCannotShowURL, request.url(),
-                         "Cannot show URL"_s);
-}
-
-ResourceError FrameLoaderClientJava::interruptedForPolicyChangeError(const ResourceRequest& request) const
-{
-    using namespace FrameLoaderClientJavaInternal;
-    return ResourceError("Error"_s, WebKitErrorFrameLoadInterruptedByPolicyChange,
-                         request.url(), "Frame load interrupted by policy change"_s);
-}
-
-ResourceError FrameLoaderClientJava::cannotShowMIMETypeError(const ResourceResponse& response) const
-{
-    using namespace FrameLoaderClientJavaInternal;
-    return ResourceError("Error"_s, WebKitErrorCannotShowMIMEType, response.url(),
-                         "Cannot show mimetype"_s);
-}
-
-ResourceError FrameLoaderClientJava::fileDoesNotExistError(const ResourceResponse& response) const
-{
-    return ResourceError("Error"_s, -998 /* ### */, response.url(),
-                         "File does not exist"_s);
-}
-
-ResourceError FrameLoaderClientJava::httpsUpgradeRedirectLoopError(const ResourceRequest&) const
-{
-    ASSERT_NOT_REACHED();
-    return {};
-}
-
-ResourceError FrameLoaderClientJava::pluginWillHandleLoadError(const ResourceResponse& response) const
-{
-    using namespace FrameLoaderClientJavaInternal;
-    return ResourceError("Error"_s, WebKitErrorPluginWillHandleLoad, response.url(), "Loading is handled by the media engine"_s);
-}
-
 bool FrameLoaderClientJava::shouldFallBack(const ResourceError& error) const
 {
     using namespace FrameLoaderClientJavaInternal;
     //Font fallback supported by Java Fonts internaly
-    return !(error.isCancellation() || (error.errorCode() == WebKitErrorFrameLoadInterruptedByPolicyChange));
+    return !(error.isCancellation() || (error.errorCode() == WebKitErrorFrameLoadInterruptedByPolicyChangeJava));
 }
 
 void FrameLoaderClientJava::didRestoreFromBackForwardCache()
@@ -1060,7 +1022,8 @@ void FrameLoaderClientJava::setMainDocumentError(
     notImplemented();
 }
 
-void FrameLoaderClientJava::startDownload(const ResourceRequest&, const String&)
+void FrameLoaderClientJava::startDownload(const ResourceRequest&, const String& suggestedName, FromDownloadAttribute fromDownloadAttribute)
+
 {
     notImplemented();
 }
@@ -1082,14 +1045,14 @@ void FrameLoaderClientJava::dispatchDidClearWindowObjectInWorld(
     JNIEnv* env = WTF::GetJavaEnv();
     initRefs(env);
 
-    if (&world != &mainThreadNormalWorld()) {
+    if (&world != &mainThreadNormalWorldSingleton()) {
         return;
     }
 
     Frame *f = frame();
     auto* localFrame = dynamicDowncast<LocalFrame>(f);
     JSGlobalContextRef context = toGlobalRef(localFrame->script().globalObject(
-            mainThreadNormalWorld()));
+            mainThreadNormalWorldSingleton()));
     JSObjectRef windowObject = JSContextGetGlobalObject(context);
 
     env->CallVoidMethod(m_webPage, didClearWindowObjectMID,
@@ -1143,14 +1106,31 @@ void FrameLoaderClientJava::sendH2Ping(const URL& url,
     completionHandler(makeUnexpected(WebCore::internalError(url)));
 }
 
-/*std::optional<PageIdentifier> FrameLoaderClientJava::pageID() const
-{
-    return std::nullopt;
-}*/
-
-void FrameLoaderClientJava::broadcastFrameRemovalToOtherProcesses()
+void FrameLoaderClientJava::dispatchLoadEventToOwnerElementInAnotherProcess()
 {
     notImplemented();
+}
+ void FrameLoaderClientJava::loadStorageAccessQuirksIfNeeded()
+ {
+    notImplemented();
+ }
+
+void FrameLoaderClientJava::updateSandboxFlags(SandboxFlags)
+{
+    notImplemented();
+}
+void FrameLoaderClientJava::updateOpener(std::optional<FrameIdentifier> idf)
+{
+    notImplemented();
+}
+
+bool FrameLoaderClientJava::supportsAsyncShouldGoToHistoryItem() const
+{
+     return false;
+}
+
+void FrameLoaderClientJava::setPrinting(bool printing, FloatSize pageSize, FloatSize originalPageSize, float maximumShrinkRatio, AdjustViewSize)
+{
 }
 
 }

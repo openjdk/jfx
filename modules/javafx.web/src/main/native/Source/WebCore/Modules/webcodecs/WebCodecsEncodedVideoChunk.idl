@@ -26,7 +26,7 @@
 // FIXME: Support Serializable and Transferable.
 [
     Conditional=WEB_CODECS,
-    EnabledBySetting=WebCodecsEnabled,
+    EnabledBySetting=WebCodecsVideoEnabled,
     Exposed=(Window,DedicatedWorker),
     InterfaceName=EncodedVideoChunk,
 ] interface WebCodecsEncodedVideoChunk {
@@ -43,7 +43,8 @@ typedef [EnforceRange] long long WebCodecsEncodedVideoChunkInitTimestamp;
 typedef [EnforceRange] unsigned long long WebCodecsEncodedVideoChunkInitDuration;
 
 [
-    Conditional=WEB_CODECS
+    Conditional=WEB_CODECS,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary WebCodecsEncodedVideoChunkInit {
   required WebCodecsEncodedVideoChunkType type;
   WebCodecsEncodedVideoChunkInitTimestamp timestamp;

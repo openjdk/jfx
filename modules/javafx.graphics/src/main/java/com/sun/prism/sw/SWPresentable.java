@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,7 +53,7 @@ final class SWPresentable extends SWRTTexture implements Presentable {
     public boolean prepare(Rectangle dirtyregion) {
         if (!pState.isViewClosed()) {
             /*
-             * RT-27374
+             * JDK-8092310
              * TODO: make sure the imgrep matches the Pixels.getNativeFormat()
              * TODO: dirty region support
              */

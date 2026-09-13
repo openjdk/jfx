@@ -34,21 +34,22 @@ class RenderMultiColumnSet;
 class RenderMultiColumnSpannerPlaceholder;
 
 class RenderMultiColumnFlow final : public RenderFragmentedFlow {
-    WTF_MAKE_ISO_ALLOCATED(RenderMultiColumnFlow);
+    WTF_MAKE_TZONE_ALLOCATED(RenderMultiColumnFlow);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMultiColumnFlow);
 public:
     RenderMultiColumnFlow(Document&, RenderStyle&&);
-    ~RenderMultiColumnFlow();
+    virtual ~RenderMultiColumnFlow();
 
     RenderBlockFlow* multiColumnBlockFlow() const { return downcast<RenderBlockFlow>(parent()); }
 
     RenderMultiColumnSet* firstMultiColumnSet() const;
     RenderMultiColumnSet* lastMultiColumnSet() const;
     RenderBox* firstColumnSetOrSpanner() const;
-    bool hasColumnSpanner() const { return !m_spannerMap->isEmpty(); }
+    bool hasColumnSpanner() const { return !m_spannerMap.isEmptyIgnoringNullReferences(); }
     static RenderBox* nextColumnSetOrSpannerSiblingOf(const RenderBox*);
     static RenderBox* previousColumnSetOrSpannerSiblingOf(const RenderBox*);
 
-    RenderMultiColumnSpannerPlaceholder* findColumnSpannerPlaceholder(const RenderBox* spanner) const;
+    RenderMultiColumnSpannerPlaceholder* findColumnSpannerPlaceholder(const RenderBox& spanner) const;
 
     void layout() override;
 
@@ -90,19 +91,18 @@ public:
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) override;
 
     void mapAbsoluteToLocalPoint(OptionSet<MapCoordinatesMode>, TransformState&) const override;
-    LayoutSize offsetFromContainer(RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const override;
+    LayoutSize offsetFromContainer(const RenderElement&, const LayoutPoint&, bool* offsetDependsOnPoint = nullptr) const override;
 
     // FIXME: Eventually as column and fragment flow threads start nesting, this will end up changing.
     bool shouldCheckColumnBreaks() const override;
 
-    typedef HashMap<const RenderBox*, WeakPtr<RenderMultiColumnSpannerPlaceholder>> SpannerMap;
-    SpannerMap& spannerMap() { return *m_spannerMap; }
+    using SpannerMap = SingleThreadWeakHashMap<const RenderBox, SingleThreadWeakPtr<RenderMultiColumnSpannerPlaceholder>>;
+    SpannerMap& spannerMap() { return m_spannerMap; }
 
 private:
-    bool isRenderMultiColumnFlow() const override { return true; }
     ASCIILiteral renderName() const override;
     void addFragmentToThread(RenderFragmentContainer*) override;
-    void willBeRemovedFromTree(IsInternalMove) override;
+    void willBeRemovedFromTree() override;
     void fragmentedFlowDescendantBoxLaidOut(RenderBox*) override;
     LogicalExtentComputedValues computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop) const override;
     LayoutUnit initialLogicalWidth() const override;
@@ -115,12 +115,12 @@ private:
     bool isPageLogicalHeightKnown() const override;
 
 private:
-    std::unique_ptr<SpannerMap> m_spannerMap;
+    SpannerMap m_spannerMap;
 
     // The last set we worked on. It's not to be used as the "current set". The concept of a
     // "current set" is difficult, since layout may jump back and forth in the tree, due to wrong
     // top location estimates (due to e.g. margin collapsing), and possibly for other reasons.
-    mutable WeakPtr<RenderMultiColumnSet> m_lastSetWorkedOn { nullptr };
+    mutable SingleThreadWeakPtr<RenderMultiColumnSet> m_lastSetWorkedOn { nullptr };
 
     unsigned m_columnCount { 1 }; // The default column count/width that are based off our containing block width. These values represent only the default,
     LayoutUnit m_columnWidth { 0 }; // A multi-column block that is split across variable width pages or fragments will have different column counts and widths in each. These values will be cached (eventually) for multi-column blocks.

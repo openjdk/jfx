@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include "ArgumentsMode.h"
-#include "JSObject.h"
+#include <JavaScriptCore/ArgumentsMode.h>
+#include <JavaScriptCore/CommonIdentifiers.h>
+#include <JavaScriptCore/JSObject.h>
 
 namespace JSC {
 
@@ -48,7 +49,7 @@ public:
     template<typename CellType, SubspaceAccess mode>
     static GCClient::IsoSubspace* subspaceFor(VM& vm)
     {
-        static_assert(!CellType::needsDestruction);
+        static_assert(CellType::needsDestruction == DoesNotNeedDestruction);
         return &vm.clonedArgumentsSpace();
     }
 
@@ -58,9 +59,9 @@ public:
         auto scope = DECLARE_THROW_SCOPE(vm);
 
         JSValue lengthValue;
-        if (LIKELY(!structure()->didTransition())) {
+        if (!structure()->didTransition()) [[likely]] {
             lengthValue = getDirect(clonedArgumentsLengthPropertyOffset);
-            if (LIKELY(lengthValue.isInt32()))
+            if (lengthValue.isInt32()) [[likely]]
                 return std::max(lengthValue.asInt32(), 0);
         } else {
             lengthValue = get(globalObject, vm.propertyNames->length);
@@ -77,7 +78,7 @@ private:
     ClonedArguments(VM&, Structure*, Butterfly*);
 
 public:
-    static ClonedArguments* createEmpty(VM&, Structure*, JSFunction* callee, unsigned length, Butterfly*);
+    static ClonedArguments* createEmpty(VM&, JSGlobalObject* nullOrGlobalObjectForOOM, Structure*, JSFunction* callee, unsigned length, Butterfly*);
     static ClonedArguments* createWithInlineFrame(JSGlobalObject*, CallFrame* targetFrame, InlineCallFrame*, ArgumentsMode);
     static ClonedArguments* createWithMachineFrame(JSGlobalObject*, CallFrame* targetFrame, ArgumentsMode);
     static ClonedArguments* createByCopyingFrom(JSGlobalObject*, Structure*, Register* argumentsStart, unsigned length, JSFunction* callee, Butterfly*);
@@ -85,7 +86,7 @@ public:
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
     static Structure* createSlowPutStructure(VM&, JSGlobalObject*, JSValue prototype);
 
-    static ptrdiff_t offsetOfCallee()
+    static constexpr ptrdiff_t offsetOfCallee()
     {
         return OBJECT_OFFSETOF(ClonedArguments, m_callee);
     }
@@ -104,7 +105,7 @@ private:
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype, IndexingType);
 
     static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
-    static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
     static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
     static bool defineOwnProperty(JSObject*, JSGlobalObject*, PropertyName, const PropertyDescriptor&, bool shouldThrow);

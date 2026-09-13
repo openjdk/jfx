@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include <wtf/EnumTraits.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/WTFString.h>
 
@@ -96,7 +95,10 @@ enum class AutofillFieldName : uint8_t {
     TelExtension,
     Email,
     Impp,
-    WebAuthn
+    WebAuthn,
+    OneTimeCode,
+    DeviceEID,
+    DeviceIMEI,
 };
 
 WEBCORE_EXPORT AutofillFieldName toAutofillFieldName(const AtomString&);

@@ -24,6 +24,6 @@
  */
 
 partial interface GPUDevice {
-    [Exposed=(Window, DedicatedWorker)]
+    [Exposed=(Window, Worker)]
     attribute EventHandler onuncapturederror;
 };

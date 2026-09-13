@@ -35,7 +35,6 @@ public:
 
 private:
     void initializeLocaleData() final;
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
     String dateFormat() override;
     String monthFormat() override;
     String shortMonthFormat() override;
@@ -52,7 +51,6 @@ private:
     Vector<String> m_timeAMPMLabels;
     Vector<String> m_shortMonthLabels;
     Vector<String> m_monthLabels;
-#endif
 };
 
 std::unique_ptr<Locale> Locale::create(const AtomString&)
@@ -66,15 +64,20 @@ void LocaleNone::initializeLocaleData()
 {
 }
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
 const Vector<String>& LocaleNone::monthLabels()
 {
     if (!m_monthLabels.isEmpty())
         return m_monthLabels;
-    m_monthLabels.reserveCapacity(std::size(WTF::monthFullName));
-    for (unsigned i = 0; i < std::size(WTF::monthFullName); ++i)
-        m_monthLabels.uncheckedAppend(WTF::monthFullName[i]);
+#if !PLATFORM(JAVA) // overload operattor issue with Vector.h ,error: no viable overloaded '='
+    m_monthLabels = { WTF::monthFullName, std::size(WTF::monthFullName) };
+        return m_monthLabels;
+#else
+    Vector<String> m_monthLabels;
+    m_monthLabels.reserveCapacity(WTF::monthFullName.size());
+    for (const auto& literal : WTF::monthFullName)
+        m_monthLabels.append(String(literal));
     return m_monthLabels;
+#endif
 }
 
 String LocaleNone::dateFormat()
@@ -116,10 +119,16 @@ const Vector<String>& LocaleNone::shortMonthLabels()
 {
     if (!m_shortMonthLabels.isEmpty())
         return m_shortMonthLabels;
-    m_shortMonthLabels.reserveCapacity(std::size(WTF::monthName));
-    for (auto* monthName : WTF::monthName)
-        m_shortMonthLabels.uncheckedAppend(monthName);
+#if !PLATFORM(JAVA)
+    m_shortMonthLabels = { WTF::monthName, std::size(WTF::monthName) };
     return m_shortMonthLabels;
+#else
+    Vector<String> m_shortMonthLabels;
+    m_monthLabels.reserveCapacity(WTF::monthName.size());
+    for (const auto& literal : WTF::monthName)
+        m_monthLabels.append(String(literal));
+    return m_shortMonthLabels;
+#endif
 }
 
 const Vector<String>& LocaleNone::shortStandAloneMonthLabels()
@@ -136,12 +145,8 @@ const Vector<String>& LocaleNone::timeAMPMLabels()
 {
     if (!m_timeAMPMLabels.isEmpty())
         return m_timeAMPMLabels;
-    m_timeAMPMLabels.reserveCapacity(2);
-    m_timeAMPMLabels.uncheckedAppend("AM");
-    m_timeAMPMLabels.uncheckedAppend("PM");
+    m_timeAMPMLabels.appendList({ "AM"_s, "PM"_s });
     return m_timeAMPMLabels;
 }
-
-#endif
 
 } // namespace WebCore

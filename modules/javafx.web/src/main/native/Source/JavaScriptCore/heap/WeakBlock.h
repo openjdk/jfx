@@ -25,10 +25,13 @@
 
 #pragma once
 
-#include "CellContainer.h"
-#include "WeakImpl.h"
+#include <JavaScriptCore/CellContainer.h>
+#include <JavaScriptCore/WeakImpl.h>
+#include <wtf/DebugHeap.h>
 #include <wtf/DoublyLinkedList.h>
 #include <wtf/StdLibExtras.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -148,3 +151,5 @@ inline bool WeakBlock::isLogicallyEmptyButNotFree() const
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

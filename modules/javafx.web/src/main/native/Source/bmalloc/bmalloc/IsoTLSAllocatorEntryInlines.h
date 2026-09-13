@@ -25,6 +25,12 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
+#if !BUSE(TZONE)
+
 #include "IsoHeapImpl.h"
 
 #if !BUSE(LIBPAS)
@@ -38,9 +44,7 @@ IsoTLSAllocatorEntry<Config>::IsoTLSAllocatorEntry(IsoHeapImpl<Config>& heap)
 }
 
 template<typename Config>
-IsoTLSAllocatorEntry<Config>::~IsoTLSAllocatorEntry()
-{
-}
+IsoTLSAllocatorEntry<Config>::~IsoTLSAllocatorEntry() = default;
 
 template<typename Config>
 void IsoTLSAllocatorEntry<Config>::construct(void* dst)
@@ -57,3 +61,6 @@ void IsoTLSAllocatorEntry<Config>::scavenge(void* entry)
 } // namespace bmalloc
 
 #endif
+#endif // !BUSE(TZONE)
+
+#endif // __cplusplus

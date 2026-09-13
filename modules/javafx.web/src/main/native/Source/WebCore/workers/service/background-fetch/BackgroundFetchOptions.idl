@@ -24,7 +24,7 @@
  */
 
 [
-    Conditional=SERVICE_WORKER,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary BackgroundFetchOptions : BackgroundFetchUIOptions {
     unsigned long long downloadTotal = 0;
 };

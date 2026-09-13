@@ -30,6 +30,15 @@
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
+class MainThreadDeferrableTask;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::MainThreadDeferrableTask> : std::true_type { };
+}
+
+namespace WebCore {
 
 class MainThreadDeferrableTask : public CanMakeWeakPtr<MainThreadDeferrableTask> {
 public:
@@ -57,7 +66,7 @@ public:
         cancelTask();
 
         m_isPending = true;
-        callOnMainThread([weakThis = WeakPtr { *this }, task = WTFMove(task)] {
+        callOnMainThread([weakThis = WeakPtr { *this }, task = WTF::move(task)] {
             if (!weakThis)
                 return;
             ASSERT(weakThis->isPending());

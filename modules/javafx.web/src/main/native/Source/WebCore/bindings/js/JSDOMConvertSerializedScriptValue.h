@@ -25,15 +25,21 @@
 
 #pragma once
 
-#include "IDLTypes.h"
-#include "JSDOMConvertStrings.h"
+#include <WebCore/IDLTypes.h>
+#include <WebCore/JSDOMConvertStrings.h>
 
 namespace WebCore {
 
 template<typename T> struct Converter<IDLSerializedScriptValue<T>> : DefaultConverter<IDLSerializedScriptValue<T>> {
-    static RefPtr<T> convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
+    using Result = ConversionResult<IDLSerializedScriptValue<T>>;
+
+    static Result convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
     {
-        return T::convert(lexicalGlobalObject, value);
+        auto result = T::convert(lexicalGlobalObject, value);
+        if (!result)
+            return Result::exception();
+
+        return Result { result.releaseNonNull() };
     }
 };
 

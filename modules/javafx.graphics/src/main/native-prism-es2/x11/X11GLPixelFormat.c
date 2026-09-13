@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -67,7 +67,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLPixelFormat_nCreatePixelForm
     setGLXAttrs(attrs, glxAttrs);
     (*env)->ReleaseIntArrayElements(env, attrArr, attrs, JNI_ABORT);
 
-    // RT-27386
+    // JDK-8091981
     // TODO: Need to use nativeScreen to create this requested pixelformat
     // currently hack to work on a single monitor system
     display = XOpenDisplay(0);

@@ -32,7 +32,7 @@
 	<classpathentry combineaccessrules="false" kind="src" path="/base">
 		<attributes>
 			<attribute name="module" value="true"/>
-			<attribute name="add-exports" value="javafx.base/com.sun.javafx.collections=javafx.fxml"/>
+			<attribute name="add-exports" value="javafx.base/com.sun.javafx.collections=javafx.fxml:javafx.base/test.javafx.util=javafx.fxml"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="con" path="org.eclipse.jdt.junit.JUNIT_CONTAINER/5">

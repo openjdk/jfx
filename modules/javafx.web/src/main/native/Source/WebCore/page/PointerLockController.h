@@ -26,13 +26,21 @@
 
 #if ENABLE(POINTER_LOCK)
 
+#include <WebCore/ExceptionCode.h>
+#include <WebCore/PointerLockOptions.h>
+
+#include <optional>
+#include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
 class Element;
+class DeferredPromise;
 class Document;
 class Page;
 class PlatformMouseEvent;
@@ -40,12 +48,22 @@ class PlatformWheelEvent;
 class VoidCallback;
 class WeakPtrImplWithEventTargetData;
 
+enum class PointerLockRequestResult : uint8_t {
+    Success,
+    Failure,
+    Unsupported
+};
+
 class PointerLockController {
     WTF_MAKE_NONCOPYABLE(PointerLockController);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PointerLockController);
 public:
     explicit PointerLockController(Page&);
-    void requestPointerLock(Element* target);
+    ~PointerLockController();
+    void requestPointerLock(Element* target, std::optional<PointerLockOptions>&& = std::nullopt, RefPtr<DeferredPromise> = nullptr);
+
+    void ref() const;
+    void deref() const;
 
     void requestPointerUnlock();
     void requestPointerUnlockAndForceCursorVisible();
@@ -65,13 +83,19 @@ private:
     void clearElement();
     void enqueueEvent(const AtomString& type, Element*);
     void enqueueEvent(const AtomString& type, Document*);
+    void resolvePromises();
+    void rejectPromises(ExceptionCode, const String&);
     void elementWasRemovedInternal();
 
-    Page& m_page;
+    bool supportsUnadjustedMovement() const;
+
+    WeakRef<Page> m_page;
     bool m_lockPending { false };
     bool m_unlockPending { false };
     bool m_forceCursorVisibleUponUnlock { false };
+    std::optional<PointerLockOptions> m_options;
     RefPtr<Element> m_element;
+    Vector<Ref<DeferredPromise>> m_promises;
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_documentOfRemovedElementWhileWaitingForUnlock;
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_documentAllowedToRelockWithoutUserGesture;
 };

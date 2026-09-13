@@ -1022,6 +1022,94 @@ orl t2, r, g
 orl t2, t2, b
 select1lw rgb15, t2
 
+.function video_orc_unpack_RBGA_le
+.dest 4 argb guint8
+.source 4 rbga guint8
+.temp 4 t
+.temp 4 a
+.temp 4 r
+.temp 4 g
+.temp 4 b
+.temp 4 t2
+
+loadl t, rbga
+andl a, t, 0xff000000
+andl r, t, 0xff
+andl g, t, 0xff0000
+andl b, t, 0xff00
+shrul a, a, 24
+shll r, r, 8
+shll b, b, 16
+orl t2, a, r
+orl t2, t2, g
+orl argb, t2, b
+
+.function video_orc_unpack_RBGA_be
+.dest 4 argb guint8
+.source 4 rbga guint8
+.temp 4 t
+.temp 4 a
+.temp 4 r
+.temp 4 g
+.temp 4 b
+.temp 4 t2
+
+loadl t, rbga
+andl a, t, 0xff
+andl r, t, 0xff000000
+andl g, t, 0xff00
+andl b, t, 0xff0000
+shll a, a, 24
+shrul r, r, 8
+shrul b, b, 16
+orl t2, a, r
+orl t2, t2, g
+orl argb, t2, b
+
+.function video_orc_pack_RBGA_le
+.dest 4 rbga guint8
+.source 4 argb guint8
+.temp 4 t
+.temp 4 a
+.temp 4 r
+.temp 4 g
+.temp 4 b
+.temp 4 t2
+
+loadl t, argb
+andl a, t, 0xff
+andl r, t, 0xff00
+andl g, t, 0xff0000
+andl b, t, 0xff000000
+shll a, a, 24
+shrul r, r, 8
+shrul b, b, 16
+orl t2, a, r
+orl t2, t2, g
+orl rbga, t2, b
+
+.function video_orc_pack_RBGA_be
+.dest 4 rbga guint8
+.source 4 argb guint8
+.temp 4 t
+.temp 4 a
+.temp 4 r
+.temp 4 g
+.temp 4 b
+.temp 4 t2
+
+loadl t, argb
+andl a, t, 0xff000000
+andl r, t, 0xff0000
+andl g, t, 0xff00
+andl b, t, 0xff
+shrul a, a, 24
+shll r, r, 8
+shll b, b, 16
+orl t2, a, r
+orl t2, t2, g
+orl rbga, t2, b
+
 .function video_orc_resample_bilinear_u32
 .dest 4 d1 guint8
 .source 4 s1 guint8

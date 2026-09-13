@@ -27,7 +27,7 @@
 
 #if ENABLE(APPLICATION_MANIFEST)
 
-#include "ApplicationManifest.h"
+#include <WebCore/ApplicationManifest.h>
 #include <optional>
 #include <wtf/JSONValues.h>
 
@@ -40,19 +40,24 @@ class ApplicationManifestParser {
 public:
     WEBCORE_EXPORT static ApplicationManifest parse(Document&, const String&, const URL& manifestURL, const URL& documentURL);
     WEBCORE_EXPORT static ApplicationManifest parse(const String&, const URL& manifestURL, const URL& documentURL);
+    WEBCORE_EXPORT static std::optional<ApplicationManifest> parseWithValidation(const String&, const URL& manifestURL, const URL& documentURL);
 
 private:
-    ApplicationManifestParser(RefPtr<Document>);
-    ApplicationManifest parseManifest(const String&, const URL&, const URL&);
+    ApplicationManifestParser(RefPtr<Document>&&);
+    ApplicationManifest parseManifest(const JSON::Object&, const String&, const URL&, const URL&);
 
+    RefPtr<JSON::Object> createJSONObject(const String&);
     URL parseStartURL(const JSON::Object&, const URL&);
+    ApplicationManifest::Direction parseDir(const JSON::Object&);
     ApplicationManifest::Display parseDisplay(const JSON::Object&);
     const std::optional<ScreenOrientationLockType> parseOrientation(const JSON::Object&);
     String parseName(const JSON::Object&);
     String parseDescription(const JSON::Object&);
     String parseShortName(const JSON::Object&);
-    URL parseScope(const JSON::Object&, const URL&, const URL&);
+    std::optional<URL> parseScope(const JSON::Object&, const URL&, const URL&);
+    Vector<String> parseCategories(const JSON::Object&);
     Vector<ApplicationManifest::Icon> parseIcons(const JSON::Object&);
+    Vector<ApplicationManifest::Shortcut> parseShortcuts(const JSON::Object&);
     URL parseId(const JSON::Object&, const URL&);
 
     Color parseColor(const JSON::Object&, const String& propertyName);
@@ -62,7 +67,7 @@ private:
     void logManifestPropertyInvalidURL(const String&);
     void logDeveloperWarning(const String& message);
 
-    RefPtr<Document> m_document;
+    const RefPtr<Document> m_document;
     URL m_manifestURL;
 };
 

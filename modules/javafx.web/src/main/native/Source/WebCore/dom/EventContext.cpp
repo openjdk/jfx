@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Google Inc. All Rights Reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  * Copyright (C) 2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,24 +30,26 @@
 
 #include "Document.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "FocusEvent.h"
 #include "HTMLFieldSetElement.h"
 #include "HTMLFormElement.h"
 #include "LocalDOMWindow.h"
 #include "MouseEvent.h"
 #include "TouchEvent.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-EventContext::~EventContext() = default;
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EventContext);
 
 void EventContext::handleLocalEvents(Event& event, EventInvokePhase phase) const
 {
-    event.setTarget(m_target.get());
-    event.setCurrentTarget(m_currentTarget.get(), m_currentTargetIsInShadowTree);
+    event.setTarget(m_target.copyRef());
+    event.setCurrentTarget(m_currentTarget.copyRef(), m_currentTargetIsInShadowTree);
 
     if (m_relatedTargetIsSet) {
-        ASSERT(!m_relatedTarget || m_type == Type::MouseOrFocus);
+        ASSERT(!m_relatedTarget || isMouseOrFocusEventContext() || isWindowContext());
         event.setRelatedTarget(m_relatedTarget.copyRef());
     }
 
@@ -72,12 +74,17 @@ void EventContext::handleLocalEvents(Event& event, EventInvokePhase phase) const
     }
 #endif
 
-    if (!m_node || UNLIKELY(m_type == Type::Window)) {
-        m_currentTarget->fireEventListeners(event, phase);
+    if (!m_node) {
+        protectedCurrentTarget()->fireEventListeners(event, phase);
         return;
     }
 
-    if (UNLIKELY(m_contextNodeIsFormElement)) {
+    if (m_type == Type::Window) [[unlikely]] {
+        protectedCurrentTarget()->fireEventListeners(event, phase);
+        return;
+    }
+
+    if (m_contextNodeIsFormElement) [[unlikely]] {
         ASSERT(is<HTMLFormElement>(*m_node));
         auto& eventNames = WebCore::eventNames();
         if ((event.type() == eventNames.submitEvent || event.type() == eventNames.resetEvent)
@@ -90,10 +97,7 @@ void EventContext::handleLocalEvents(Event& event, EventInvokePhase phase) const
     if (!m_node->hasEventTargetData())
         return;
 
-    if (event.isTrusted() && is<Element>(m_node) && downcast<Element>(*m_node).isDisabledFormControl() && event.isMouseEvent() && !event.isWheelEvent() && !m_node->document().settings().sendMouseEventsToDisabledFormControlsEnabled())
-        return;
-
-    m_node->fireEventListeners(event, phase);
+    protectedNode()->fireEventListeners(event, phase);
 }
 
 #if ENABLE(TOUCH_EVENTS)
@@ -112,7 +116,8 @@ void EventContext::initializeTouchLists()
 bool EventContext::isUnreachableNode(EventTarget* target) const
 {
     // FIXME: Checks also for SVG elements.
-    return is<Node>(target) && !downcast<Node>(*target).isSVGElement() && m_node && m_node->isClosedShadowHidden(downcast<Node>(*target));
+    auto* node = dynamicDowncast<Node>(target);
+    return node && !node->isSVGElement() && m_node && m_node->isClosedShadowHidden(*node);
 }
 
 #endif

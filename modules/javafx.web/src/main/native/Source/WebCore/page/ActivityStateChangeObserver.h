@@ -25,16 +25,18 @@
 
 #pragma once
 
-#include "ActivityState.h"
+#include <WebCore/ActivityState.h>
+#include <wtf/CheckedPtr.h>
 #include <wtf/WeakPtr.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-class ActivityStateChangeObserver : public CanMakeWeakPtr<ActivityStateChangeObserver> {
+class ActivityStateChangeObserver : public CanMakeWeakPtr<ActivityStateChangeObserver>, public CanMakeCheckedPtr<ActivityStateChangeObserver> {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(ActivityStateChangeObserver);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ActivityStateChangeObserver);
 public:
-    virtual ~ActivityStateChangeObserver()
-    {
-    }
+    virtual ~ActivityStateChangeObserver() = default;
 
     virtual void activityStateDidChange(OptionSet<ActivityState> oldActivityState, OptionSet<ActivityState> newActivityState) = 0;
 };

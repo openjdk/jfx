@@ -25,14 +25,12 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
-#include "FrameIdentifier.h"
-#include "PageIdentifier.h"
-#include "ProcessQualified.h"
-#include "ScriptExecutionContextIdentifier.h"
-#include "ServiceWorkerClientType.h"
-#include "ServiceWorkerTypes.h"
+#include <WebCore/FrameIdentifier.h>
+#include <WebCore/PageIdentifier.h>
+#include <WebCore/ProcessQualified.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/ServiceWorkerClientType.h>
+#include <WebCore/ServiceWorkerTypes.h>
 #include <wtf/URL.h>
 
 namespace WebCore {
@@ -40,10 +38,11 @@ namespace WebCore {
 class SWClientConnection;
 class ScriptExecutionContext;
 
+enum class AdvancedPrivacyProtections : uint16_t;
 enum class LastNavigationWasAppInitiated : bool { No, Yes };
 
 struct ServiceWorkerClientData {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(ServiceWorkerClientData);
 
     ScriptExecutionContextIdentifier identifier;
     ServiceWorkerClientType type;
@@ -53,6 +52,7 @@ struct ServiceWorkerClientData {
     std::optional<PageIdentifier> pageIdentifier;
     std::optional<FrameIdentifier> frameIdentifier;
     LastNavigationWasAppInitiated lastNavigationWasAppInitiated;
+    OptionSet<WebCore::AdvancedPrivacyProtections> advancedPrivacyProtections;
     bool isVisible { false };
     bool isFocused { false };
     uint64_t focusOrder { 0 };
@@ -67,5 +67,3 @@ struct ServiceWorkerClientData {
 using ServiceWorkerClientsMatchAllCallback = CompletionHandler<void(Vector<ServiceWorkerClientData>&&)>;
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

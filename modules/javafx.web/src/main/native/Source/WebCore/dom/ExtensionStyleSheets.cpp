@@ -3,7 +3,7 @@
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
  *           (C) 2001 Dirk Mueller (mueller@kde.org)
  *           (C) 2006 Alexey Proskuryakov (ap@webkit.org)
- * Copyright (C) 2004-2009, 2011-2012, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008, 2009 Torch Mobile Inc. All rights reserved. (http://www.torchmobile.com/)
  * Copyright (C) 2008, 2009, 2011, 2012 Google Inc. All rights reserved.
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies)
@@ -29,10 +29,11 @@
 #include "ExtensionStyleSheets.h"
 
 #include "CSSStyleSheet.h"
+#include "DocumentPage.h"
 #include "Element.h"
+#include "FrameDestructionObserverInlines.h"
 #include "HTMLLinkElement.h"
 #include "HTMLStyleElement.h"
-#include "Page.h"
 #include "ProcessingInstruction.h"
 #include "SVGStyleElement.h"
 #include "Settings.h"
@@ -44,8 +45,11 @@
 #include "UserContentController.h"
 #include "UserContentURLPattern.h"
 #include "UserStyleSheet.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ExtensionStyleSheets);
 
 #if ENABLE(CONTENT_EXTENSIONS)
 using namespace ContentExtensions;
@@ -57,12 +61,19 @@ ExtensionStyleSheets::ExtensionStyleSheets(Document& document)
 {
 }
 
+ExtensionStyleSheets::~ExtensionStyleSheets() = default;
+
+Ref<Document> ExtensionStyleSheets::protectedDocument() const
+{
+    return const_cast<Document&>(m_document.get());
+}
+
 static Ref<CSSStyleSheet> createExtensionsStyleSheet(Document& document, URL url, const String& text, UserStyleLevel level)
 {
     auto contents = StyleSheetContents::create(url.string(), CSSParserContext(document, url));
     auto styleSheet = CSSStyleSheet::create(contents.get(), document, true);
 
-    contents->setIsUserStyleSheet(level == UserStyleUserLevel);
+    contents->setIsUserStyleSheet(level == UserStyleLevel::User);
     contents->parseString(text);
 
     return styleSheet;
@@ -73,15 +84,15 @@ CSSStyleSheet* ExtensionStyleSheets::pageUserSheet()
     if (m_pageUserSheet)
         return m_pageUserSheet.get();
 
-    Page* owningPage = m_document.page();
+    RefPtr owningPage = m_document->page();
     if (!owningPage)
-        return 0;
+        return nullptr;
 
     String userSheetText = owningPage->userStyleSheet();
     if (userSheetText.isEmpty())
-        return 0;
+        return nullptr;
 
-    m_pageUserSheet = createExtensionsStyleSheet(m_document, m_document.settings().userStyleSheetLocation(), userSheetText, UserStyleUserLevel);
+    m_pageUserSheet = createExtensionsStyleSheet(protectedDocument().get(), m_document->settings().userStyleSheetLocation(), userSheetText, UserStyleLevel::User);
 
     return m_pageUserSheet.get();
 }
@@ -90,7 +101,7 @@ void ExtensionStyleSheets::clearPageUserSheet()
 {
     if (m_pageUserSheet) {
         m_pageUserSheet = nullptr;
-        m_document.styleScope().didChangeStyleSheetEnvironment();
+        protectedDocument()->styleScope().didChangeExtensionStyleSheets();
     }
 }
 
@@ -98,16 +109,16 @@ void ExtensionStyleSheets::updatePageUserSheet()
 {
     clearPageUserSheet();
     if (pageUserSheet())
-        m_document.styleScope().didChangeStyleSheetEnvironment();
+        protectedDocument()->styleScope().didChangeExtensionStyleSheets();
 }
 
-const Vector<RefPtr<CSSStyleSheet>>& ExtensionStyleSheets::injectedUserStyleSheets() const
+const Vector<Ref<CSSStyleSheet>>& ExtensionStyleSheets::injectedUserStyleSheets() const
 {
     updateInjectedStyleSheetCache();
     return m_injectedUserStyleSheets;
 }
 
-const Vector<RefPtr<CSSStyleSheet>>& ExtensionStyleSheets::injectedAuthorStyleSheets() const
+const Vector<Ref<CSSStyleSheet>>& ExtensionStyleSheets::injectedAuthorStyleSheets() const
 {
     updateInjectedStyleSheetCache();
     return m_injectedAuthorStyleSheets;
@@ -123,32 +134,54 @@ void ExtensionStyleSheets::updateInjectedStyleSheetCache() const
     m_injectedAuthorStyleSheets.clear();
     m_injectedStyleSheetToSource.clear();
 
-    Page* owningPage = m_document.page();
+    RefPtr owningPage = m_document->page();
     if (!owningPage)
         return;
 
     auto addStyleSheet = [&](const UserStyleSheet& userStyleSheet) {
-        auto sheet = createExtensionsStyleSheet(const_cast<Document&>(m_document), userStyleSheet.url(), userStyleSheet.source(), userStyleSheet.level());
+        Ref sheet = createExtensionsStyleSheet(protectedDocument().get(), userStyleSheet.url(), userStyleSheet.source(), userStyleSheet.level());
 
         m_injectedStyleSheetToSource.set(sheet.copyRef(), userStyleSheet.source());
 
         if (sheet->contents().isUserStyleSheet())
-            m_injectedUserStyleSheets.append(WTFMove(sheet));
+            m_injectedUserStyleSheets.append(WTF::move(sheet));
         else
-            m_injectedAuthorStyleSheets.append(WTFMove(sheet));
+            m_injectedAuthorStyleSheets.append(WTF::move(sheet));
     };
 
     for (const auto& userStyleSheet : m_pageSpecificStyleSheets)
         addStyleSheet(userStyleSheet);
 
-    owningPage->userContentProvider().forEachUserStyleSheet([&](const UserStyleSheet& userStyleSheet) {
+    RefPtr frame = m_document->frame();
+    RefPtr userContentProvider = frame ? frame->userContentProvider() : nullptr;
+
+    userContentProvider->forEachUserStyleSheet([&](const UserStyleSheet& userStyleSheet) {
         if (userStyleSheet.pageID())
             return;
 
-        if (userStyleSheet.injectedFrames() == UserContentInjectedFrames::InjectInTopFrameOnly && m_document.ownerElement())
+        if (userStyleSheet.injectedFrames() == UserContentInjectedFrames::InjectInTopFrameOnly && m_document->ownerElement())
             return;
 
-        if (!UserContentURLPattern::matchesPatterns(m_document.url(), userStyleSheet.allowlist(), userStyleSheet.blocklist()))
+        auto url = m_document->url();
+
+        if (RefPtr parentDocument = m_document->parentDocument()) {
+            switch (userStyleSheet.matchParentFrame()) {
+            case UserContentMatchParentFrame::ForOpaqueOrigins:
+                if (url.protocolIsAbout() || url.protocolIsBlob() || url.protocolIsData())
+                    url = parentDocument->url();
+                break;
+
+            case UserContentMatchParentFrame::ForAboutBlank:
+                if (url.isAboutBlank())
+                    url = parentDocument->url();
+                break;
+
+            case UserContentMatchParentFrame::Never:
+                break;
+            }
+        }
+
+        if (!UserContentURLPattern::matchesPatterns(url, userStyleSheet.allowlist(), userStyleSheet.blocklist()))
             return;
 
         addStyleSheet(userStyleSheet);
@@ -171,24 +204,31 @@ void ExtensionStyleSheets::removePageSpecificUserStyleSheet(const UserStyleSheet
         invalidateInjectedStyleSheetCache();
 }
 
+bool ExtensionStyleSheets::hasCachedInjectedStyleSheets() const
+{
+    return !m_injectedUserStyleSheets.isEmpty()
+        || !m_injectedAuthorStyleSheets.isEmpty()
+        || !m_injectedStyleSheetToSource.isEmpty();
+}
+
 void ExtensionStyleSheets::invalidateInjectedStyleSheetCache()
 {
     m_injectedStyleSheetCacheValid = false;
-    m_document.styleScope().didChangeStyleSheetEnvironment();
+    protectedDocument()->styleScope().didChangeExtensionStyleSheets();
 }
 
 void ExtensionStyleSheets::addUserStyleSheet(Ref<StyleSheetContents>&& userSheet)
 {
     ASSERT(userSheet.get().isUserStyleSheet());
-    m_userStyleSheets.append(CSSStyleSheet::create(WTFMove(userSheet), m_document));
-    m_document.styleScope().didChangeStyleSheetEnvironment();
+    m_userStyleSheets.append(CSSStyleSheet::create(WTF::move(userSheet), protectedDocument().get()));
+    protectedDocument()->styleScope().didChangeExtensionStyleSheets();
 }
 
 void ExtensionStyleSheets::addAuthorStyleSheetForTesting(Ref<StyleSheetContents>&& authorSheet)
 {
     ASSERT(!authorSheet.get().isUserStyleSheet());
-    m_authorStyleSheetsForTesting.append(CSSStyleSheet::create(WTFMove(authorSheet), m_document));
-    m_document.styleScope().didChangeStyleSheetEnvironment();
+    m_authorStyleSheetsForTesting.append(CSSStyleSheet::create(WTF::move(authorSheet), protectedDocument().get()));
+    protectedDocument()->styleScope().didChangeExtensionStyleSheets();
 }
 
 #if ENABLE(CONTENT_EXTENSIONS)
@@ -196,12 +236,12 @@ void ExtensionStyleSheets::addDisplayNoneSelector(const String& identifier, cons
 {
     auto result = m_contentExtensionSelectorSheets.add(identifier, nullptr);
     if (result.isNewEntry) {
-        result.iterator->value = ContentExtensionStyleSheet::create(m_document);
-        m_userStyleSheets.append(&result.iterator->value->styleSheet());
+        result.iterator->value = ContentExtensionStyleSheet::create(protectedDocument().get());
+        m_userStyleSheets.append(result.iterator->value->styleSheet());
     }
 
     if (result.iterator->value->addDisplayNoneSelector(selector, selectorID))
-        m_document.styleScope().didChangeStyleSheetEnvironment();
+        protectedDocument()->styleScope().didChangeExtensionStyleSheets();
 }
 
 void ExtensionStyleSheets::maybeAddContentExtensionSheet(const String& identifier, StyleSheetContents& sheet)
@@ -211,15 +251,15 @@ void ExtensionStyleSheets::maybeAddContentExtensionSheet(const String& identifie
     if (m_contentExtensionSheets.contains(identifier))
         return;
 
-    Ref<CSSStyleSheet> cssSheet = CSSStyleSheet::create(sheet, m_document);
-    m_contentExtensionSheets.set(identifier, &cssSheet.get());
-    m_userStyleSheets.append(adoptRef(cssSheet.leakRef()));
-    m_document.styleScope().didChangeStyleSheetEnvironment();
+    Ref cssSheet = CSSStyleSheet::create(sheet, protectedDocument().get());
+    m_contentExtensionSheets.set(identifier, cssSheet.copyRef());
+    m_userStyleSheets.append(WTF::move(cssSheet));
+    protectedDocument()->styleScope().didChangeExtensionStyleSheets();
 
 }
 #endif // ENABLE(CONTENT_EXTENSIONS)
 
-String ExtensionStyleSheets::contentForInjectedStyleSheet(const RefPtr<CSSStyleSheet>& styleSheet) const
+String ExtensionStyleSheets::contentForInjectedStyleSheet(CSSStyleSheet& styleSheet) const
 {
     return m_injectedStyleSheetToSource.get(styleSheet);
 }

@@ -33,7 +33,7 @@
 #include "HTMLElement.h"
 #include "HTMLOListElement.h"
 #include "HTMLUListElement.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
@@ -47,8 +47,8 @@ static std::optional<std::pair<ChangeListTypeCommand::Type, Ref<HTMLElement>>> l
     auto commonAncestor = commonInclusiveAncestor<ComposedTree>(*startNode, *endNode);
 
     RefPtr<HTMLElement> listToReplace;
-    if (is<HTMLUListElement>(commonAncestor) || is<HTMLOListElement>(commonAncestor))
-        listToReplace = downcast<HTMLElement>(commonAncestor);
+    if (auto* htmlElement = dynamicDowncast<HTMLElement>(commonAncestor); is<HTMLUListElement>(htmlElement) || is<HTMLOListElement>(htmlElement))
+        listToReplace = htmlElement;
     else
         listToReplace = enclosingList(commonAncestor);
 
@@ -87,10 +87,10 @@ void ChangeListTypeCommand::doApply()
     if (!typeAndElement || typeAndElement->first != m_type)
         return;
 
-    auto listToReplace = WTFMove(typeAndElement->second);
-    auto newList = createNewList(listToReplace);
+    Ref listToReplace = WTF::move(typeAndElement->second);
+    Ref newList = createNewList(listToReplace);
     insertNodeBefore(newList.copyRef(), listToReplace);
-    moveRemainingSiblingsToNewParent(listToReplace->firstChild(), nullptr, newList);
+    moveRemainingSiblingsToNewParent(listToReplace->protectedFirstChild().get(), nullptr, newList);
     removeNode(listToReplace);
     setEndingSelection({ Position { newList.ptr(), Position::PositionIsAfterChildren }});
 }

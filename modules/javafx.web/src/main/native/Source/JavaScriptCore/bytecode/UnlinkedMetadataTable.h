@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,15 +25,21 @@
 
 #pragma once
 
-#include "Opcode.h"
+#include <JavaScriptCore/Opcode.h>
+#include <JavaScriptCore/ValueProfile.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
+
+#include <wtf/SystemMalloc.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
 class VM;
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(MetadataTable);
+// using MetadataTableMalloc = SystemMalloc;
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(UnlinkedMetadataTable);
 
 class MetadataTable;
@@ -52,8 +58,8 @@ struct MetadataStatistics {
 #endif
 
 
-class UnlinkedMetadataTable : public RefCounted<UnlinkedMetadataTable> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(UnlinkedMetadataTable);
+class UnlinkedMetadataTable : public ThreadSafeRefCounted<UnlinkedMetadataTable> {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(UnlinkedMetadataTable, UnlinkedMetadataTable);
     friend class LLIntOffsetsExtractor;
     friend class MetadataTable;
     friend class CachedMetadataTable;
@@ -65,14 +71,15 @@ public:
 
     struct LinkingData {
         Ref<UnlinkedMetadataTable> unlinkedMetadata;
-        unsigned refCount;
+        std::atomic<unsigned> refCount;
     };
 
     ~UnlinkedMetadataTable();
 
     unsigned addEntry(OpcodeID);
+    unsigned addValueProfile();
 
-    size_t sizeInBytes();
+    size_t sizeInBytesForGC();
 
     void finalize();
 
@@ -89,16 +96,21 @@ public:
     bool isFinalized() { return m_isFinalized; }
     bool hasMetadata() { return m_hasMetadata; }
 
+    unsigned numValueProfiles() const { return m_numValueProfiles; }
+
+    TriState didOptimize() const { return m_didOptimize; }
+    void setDidOptimize(TriState didOptimize) { m_didOptimize = didOptimize; }
+
 private:
     enum EmptyTag { Empty };
 
     UnlinkedMetadataTable();
-    UnlinkedMetadataTable(bool is32Bit);
+    UnlinkedMetadataTable(bool is32Bit, unsigned numValueProfiles, unsigned lastOffset);
     UnlinkedMetadataTable(EmptyTag);
 
-    static Ref<UnlinkedMetadataTable> create(bool is32Bit)
+    static Ref<UnlinkedMetadataTable> create(bool is32Bit, unsigned numValueProfiles, unsigned lastOffset)
     {
-        return adoptRef(*new UnlinkedMetadataTable(is32Bit));
+        return adoptRef(*new UnlinkedMetadataTable(is32Bit, numValueProfiles, lastOffset));
     }
 
     static Ref<UnlinkedMetadataTable> empty()
@@ -108,14 +120,15 @@ private:
 
     void unlink(MetadataTable&);
 
-    size_t sizeInBytes(MetadataTable&);
+    size_t sizeInBytesForGC(MetadataTable&);
 
     unsigned totalSize() const
     {
         ASSERT(m_isFinalized);
+        unsigned valueProfileSize = m_numValueProfiles * sizeof(ValueProfile);
         if (m_is32Bit)
-            return offsetTable32()[s_offsetTableEntries - 1];
-        return offsetTable16()[s_offsetTableEntries - 1];
+            return valueProfileSize + offsetTable32()[s_offsetTableEntries - 1];
+        return valueProfileSize + offsetTable16()[s_offsetTableEntries - 1];
     }
 
     unsigned offsetTableSize() const
@@ -138,25 +151,29 @@ private:
     // Then, s_offset16TableSize and s_offset16TableSize + s_offset32TableSize offer the same alignment characteristics for subsequent Metadata.
     static constexpr unsigned s_offset32TableSize = roundUpToMultipleOf<s_maxMetadataAlignment>(s_offsetTableEntries * sizeof(Offset32));
 
-    Offset32* preprocessBuffer() const { return bitwise_cast<Offset32*>(m_rawBuffer + sizeof(LinkingData)); }
-    void* buffer() const { return m_rawBuffer + sizeof(LinkingData); }
+    void* buffer() const { return m_rawBuffer + m_numValueProfiles * sizeof(ValueProfile) + sizeof(LinkingData); }
+    Offset32* preprocessBuffer() const { return std::bit_cast<Offset32*>(m_rawBuffer); }
 
     Offset16* offsetTable16() const
     {
         ASSERT(!m_is32Bit);
-        return bitwise_cast<Offset16*>(m_rawBuffer + sizeof(LinkingData));
+        return std::bit_cast<Offset16*>(m_rawBuffer + m_numValueProfiles * sizeof(ValueProfile) + sizeof(LinkingData));
     }
     Offset32* offsetTable32() const
     {
         ASSERT(m_is32Bit);
-        return bitwise_cast<Offset32*>(m_rawBuffer + sizeof(LinkingData) + s_offset16TableSize);
+        return std::bit_cast<Offset32*>(m_rawBuffer + m_numValueProfiles * sizeof(ValueProfile) + sizeof(LinkingData) + s_offset16TableSize);
     }
 
     bool m_hasMetadata : 1;
     bool m_isFinalized : 1;
     bool m_isLinked : 1;
     bool m_is32Bit : 1;
+    TriState m_didOptimize : 2 { TriState::Indeterminate };
+    unsigned m_numValueProfiles { 0 };
     uint8_t* m_rawBuffer;
 };
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

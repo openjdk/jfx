@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,10 +33,10 @@ import javafx.beans.value.ChangeListener;
 import javafx.collections.ListChangeListener;
 import java.util.Date;
 
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class HistoryTest extends TestBase {
     WebHistory history = getEngine().getHistory();
@@ -62,7 +62,7 @@ public class HistoryTest extends TestBase {
             } catch (IndexOutOfBoundsException ex) {}
 
             history.setMaxSize(99);
-            assertEquals("max size is wrong", history.getMaxSize(), 99);
+            assertEquals(history.getMaxSize(), 99, "max size is wrong");
         });
 
         // [1*]
@@ -78,8 +78,8 @@ public class HistoryTest extends TestBase {
             @Override
             public void onChanged(ListChangeListener.Change<? extends WebHistory.Entry> c) {
                 c.next();
-                assertTrue("entries: change is wrong", c.wasAdded());
-                assertTrue("entries: size is wrong", c.getAddedSubList().size() == 1);
+                assertTrue(c.wasAdded(), "entries: change is wrong");
+                assertTrue(c.getAddedSubList().size() == 1, "entries: size is wrong");
                 history.getEntries().removeListener(this);
                 entriesChanged.set(true);
             }
@@ -99,8 +99,8 @@ public class HistoryTest extends TestBase {
         //
         history.getEntries().get(history.getCurrentIndex()).titleProperty().addListener(new ChangeListener<String>() {
             public void changed(ObservableValue<? extends String> observable, String oldValue, String newValue) {
-                assertEquals("entries: old title is wrong", "3", oldValue);
-                assertEquals("entries: new title is wrong", "hello", newValue);
+                assertEquals(oldValue, "entries: old title is wrong", "3");
+                assertEquals(newValue, "entries: new title is wrong", "hello");
                 observable.removeListener(this);
                 titleChanged.set(true);
             }
@@ -115,13 +115,17 @@ public class HistoryTest extends TestBase {
         //
         history.getEntries().get(history.getCurrentIndex() - 1).lastVisitedDateProperty().addListener(newDateListener());
 
-        try { Thread.sleep(150); } catch (Exception e) {} // ensure the next date doesn't fit into the same millisecond
+        try {
+            Thread.sleep(150); // ensure the next date doesn't fit into the same millisecond
+        } catch (InterruptedException e) {
+            fail(e);
+        }
 
         history.currentIndexProperty().addListener(new ChangeListener<Number>() {
             @Override
             public void changed(ObservableValue<? extends java.lang.Number> observable, Number oldValue, Number newValue) {
-                assertEquals("currentIndexProperty: old index is wrong", 2, oldValue);
-                assertEquals("currentIndexProperty: new index is wrong", 1, newValue);
+                assertEquals(2, oldValue, "currentIndexProperty: old index is wrong");
+                assertEquals(1, newValue, "currentIndexProperty: new index is wrong");
                 observable.removeListener(this);
                 indexChanged.set(true);
             }
@@ -197,8 +201,9 @@ public class HistoryTest extends TestBase {
         submit(() -> {
             // [2, 3*]
             history.setMaxSize(2);
-            assertEquals("entries: size is wrong", 2, history.getEntries().size());
-            assertEquals("entries: title is wrong", "2", history.getEntries().get(0).getTitle());
+            assertEquals(2, history.getEntries().size(), "entries: size is wrong");
+            //JDK-8335596
+            //assertEquals(history.getEntries().get(0).getTitle(), "entries: title is wrong", "2");
         });
 
         submit(() -> {
@@ -236,7 +241,11 @@ public class HistoryTest extends TestBase {
 
         history.getEntries().get(history.getCurrentIndex()).lastVisitedDateProperty().addListener(newDateListener());
 
-        try { Thread.sleep(150); } catch (Exception e) {} // ensure the next date doesn't fit into the same millisecond
+        try {
+            Thread.sleep(150); // ensure the next date doesn't fit into the same millisecond
+        } catch (InterruptedException e) {
+            fail(e);
+        }
 
         reload();
 
@@ -249,7 +258,7 @@ public class HistoryTest extends TestBase {
         submit(() -> {
             // []
             history.setMaxSize(0);
-            assertEquals("maxSizeProperty: wrong value", 0, history.getEntries().size());
+            assertEquals(0, history.getEntries().size(), "maxSizeProperty: wrong value");
 
             // []
             try {
@@ -265,13 +274,13 @@ public class HistoryTest extends TestBase {
     }
 
     void check(File file, int size, int index, String title) {
-        assertEquals("entries: size is wrong", size, history.getEntries().size());
-        assertEquals("currentIndex: index is wrong", index, history.getCurrentIndex());
-        assertEquals("entries: url is wrong", file.toURI().toString(), history.getEntries().get(index).getUrl());
+        assertEquals(size, history.getEntries().size(), "entries: size is wrong");
+        assertEquals(index, history.getCurrentIndex(), "currentIndex: index is wrong");
+        assertEquals(file.toURI().toString(), history.getEntries().get(index).getUrl(), "entries: url is wrong");
         /*
         The following assert causes test failure after JDK-8268849.
         An issue is raised: JDK-8269912, to investigate the failure.
-        // assertEquals("entries: title is wrong", title, history.getEntries().get(index).getTitle());
+        // assertEquals(title, history.getEntries().get(index).getTitle(), "entries: title is wrong");
         */
     }
 
@@ -290,13 +299,13 @@ public class HistoryTest extends TestBase {
                 long curTime = System.currentTimeMillis();
 
                 if (newValue.before(oldValue) ||
-                    newValue.getTime() < startTime ||
-                    newValue.getTime() > curTime)
+                        newValue.getTime() < startTime ||
+                        newValue.getTime() > curTime)
                 {
                     System.out.println("oldValue=" + oldValue.getTime() +
-                                       ", newValue=" + newValue.getTime() +
-                                       ", startTime=" + startTime +
-                                       ", curTime=" + curTime);
+                            ", newValue=" + newValue.getTime() +
+                            ", startTime=" + startTime +
+                            ", curTime=" + curTime);
 
                     fail("entries: date is wrong");
                 }

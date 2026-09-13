@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,9 @@
 
 #pragma once
 
-#include "StoredCredentialsPolicy.h"
+#include <WebCore/ClientOrigin.h>
+#include <WebCore/LoaderMalloc.h>
+#include <WebCore/StoredCredentialsPolicy.h>
 #include <pal/SessionID.h>
 #include <wtf/Expected.h>
 #include <wtf/HashMap.h>
@@ -41,7 +43,7 @@ class HTTPHeaderMap;
 class ResourceResponse;
 
 class CrossOriginPreflightResultCacheItem {
-    WTF_MAKE_NONCOPYABLE(CrossOriginPreflightResultCacheItem); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(CrossOriginPreflightResultCacheItem); WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CrossOriginPreflightResultCacheItem, Loader);
 public:
     static Expected<UniqueRef<CrossOriginPreflightResultCacheItem>, String> create(StoredCredentialsPolicy, const ResourceResponse&);
 
@@ -64,25 +66,25 @@ private:
 };
 
 class CrossOriginPreflightResultCache {
-    WTF_MAKE_NONCOPYABLE(CrossOriginPreflightResultCache); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(CrossOriginPreflightResultCache); WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CrossOriginPreflightResultCache, Loader);
 public:
     WEBCORE_EXPORT static CrossOriginPreflightResultCache& singleton();
-    WEBCORE_EXPORT void appendEntry(PAL::SessionID, const String& origin, const URL&, std::unique_ptr<CrossOriginPreflightResultCacheItem>);
-    WEBCORE_EXPORT bool canSkipPreflight(PAL::SessionID, const String& origin, const URL&, StoredCredentialsPolicy, const String& method, const HTTPHeaderMap& requestHeaders);
+    WEBCORE_EXPORT void appendEntry(PAL::SessionID, const ClientOrigin&, const URL&, std::unique_ptr<CrossOriginPreflightResultCacheItem>);
+    WEBCORE_EXPORT bool canSkipPreflight(PAL::SessionID, const ClientOrigin&, const URL&, StoredCredentialsPolicy, const String& method, const HTTPHeaderMap& requestHeaders);
     WEBCORE_EXPORT void clear();
 
 private:
     friend NeverDestroyed<CrossOriginPreflightResultCache>;
     CrossOriginPreflightResultCache();
 
-    HashMap<std::tuple<PAL::SessionID, String, URL>, std::unique_ptr<CrossOriginPreflightResultCacheItem>> m_preflightHashMap;
+    HashMap<std::tuple<PAL::SessionID, ClientOrigin, URL>, std::unique_ptr<CrossOriginPreflightResultCacheItem>> m_preflightHashMap;
 };
 
 inline CrossOriginPreflightResultCacheItem::CrossOriginPreflightResultCacheItem(MonotonicTime absoluteExpiryTime, StoredCredentialsPolicy  storedCredentialsPolicy, HashSet<String>&& methods, HashSet<String, ASCIICaseInsensitiveHash>&& headers)
     : m_absoluteExpiryTime(absoluteExpiryTime)
     , m_storedCredentialsPolicy(storedCredentialsPolicy)
-    , m_methods(WTFMove(methods))
-    , m_headers(WTFMove(headers))
+    , m_methods(WTF::move(methods))
+    , m_headers(WTF::move(headers))
 {
 }
 

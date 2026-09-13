@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,13 +34,10 @@ import javafx.scene.paint.CycleMethod;
 import javafx.scene.paint.RadialGradient;
 import javafx.scene.paint.Stop;
 import javafx.scene.Scene;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class RadialGradientTest {
 
@@ -82,13 +79,15 @@ public class RadialGradientTest {
         assertEquals(normalizedTwoStops, gradient.getStops());
     }
 
-    @Test(expected=UnsupportedOperationException.class)
+    @Test
     public void testGetStopsCannotChangeGradient() {
-        RadialGradient gradient = new RadialGradient(0, 0, 1, 1, 2, true,
-                CycleMethod.NO_CYCLE, twoStops);
+        assertThrows(UnsupportedOperationException.class, () -> {
+            RadialGradient gradient = new RadialGradient(0, 0, 1, 1, 2, true,
+                    CycleMethod.NO_CYCLE, twoStops);
 
-        List<Stop> returned = gradient.getStops();
-        returned.set(0, stop2);
+            List<Stop> returned = gradient.getStops();
+            returned.set(0, stop2);
+        });
     }
 
     @SuppressWarnings("unlikely-arg-type")
@@ -210,14 +209,18 @@ public class RadialGradientTest {
         assertEquals(1.0, gradient.getStops().get(1).getOffset(), 0);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testValueOfNullValue() {
-        RadialGradient.valueOf(null);
+        assertThrows(NullPointerException.class, () -> {
+            RadialGradient.valueOf(null);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testValueOfEmpty() {
-        RadialGradient.valueOf("");
+        assertThrows(IllegalArgumentException.class, () -> {
+            RadialGradient.valueOf("");
+        });
     }
 
     @Test
@@ -280,6 +283,22 @@ public class RadialGradientTest {
             fail("IllegalArgument should have been thrown.");
         } catch (IllegalArgumentException iae) {
             // expected
+        }
+
+        // radius can't be negative
+        try {
+            RadialGradient.valueOf("radial-gradient(radius -100, red 0%, blue 30%, black 100%)");
+            fail("IllegalArgument should have been thrown.");
+        } catch (IllegalArgumentException iae) {
+            assertTrue(iae.getMessage().contains("radius cannot be negative"));
+        }
+
+        // focusDistance can't be negative
+        try {
+            RadialGradient.valueOf("radial-gradient(focus-distance -100%, red 0%, blue 30%, black 100%)");
+            fail("IllegalArgument should have been thrown.");
+        } catch (IllegalArgumentException iae) {
+            assertTrue(iae.getMessage().contains("focus-distance cannot be negative"));
         }
     }
 
@@ -487,5 +506,144 @@ public class RadialGradientTest {
         region.applyCss();
         rGradient = (RadialGradient) region.backgroundProperty().get().getFills().get(0).getFill();
         assertEquals(CycleMethod.REPEAT, rGradient.getCycleMethod());
+    }
+
+    @Nested
+    class InterpolationTest {
+        @Test
+        public void interpolateBetweenDifferentValuesReturnsNewInstance() {
+            var startValue = new RadialGradient(
+                10, 20, 30, 40, 50,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.BLACK), new Stop(1, Color.WHITE)));
+
+            var endValue = new RadialGradient(
+                20, 40, 60, 80, 100,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.WHITE), new Stop(1, Color.BLACK)));
+
+            var expected = new RadialGradient(
+                15, 30, 45, 60, 75,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.gray(0.5)), new Stop(1, Color.gray(0.5))));
+
+            assertEquals(expected, startValue.interpolate(endValue, 0.5));
+        }
+
+        @Test
+        public void interpolateBetweenProportionalAndNonProportionalReturnsStartInstanceOrEndInstance() {
+            var startValue = new RadialGradient(
+                10, 20, 30, 40, 50,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.BLUE)));
+
+            var endValue = new RadialGradient(
+                10, 20, 30, 40, 50,
+                false, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.BLUE)));
+
+            assertSame(startValue, startValue.interpolate(endValue, 0.25));
+            assertSame(endValue, startValue.interpolate(endValue, 0.5));
+            assertSame(endValue, startValue.interpolate(endValue, 0.75));
+        }
+
+        @Test
+        public void interpolateBetweenTwoEqualValuesReturnsStartInstance() {
+            var startValue = new RadialGradient(
+                10, 20, 30, 40, 50,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.BLUE)));
+
+            var endValue = new RadialGradient(
+                10, 20, 30, 40, 50,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.BLUE)));
+
+            assertSame(startValue, startValue.interpolate(endValue, 0.5));
+        }
+
+        @Test
+        public void interpolationFactorZeroReturnsStartInstance() {
+            var startValue = new RadialGradient(
+                10, 20, 30, 40, 50,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.BLUE)));
+
+            var endValue = new RadialGradient(
+                10, 20, 30, 40, 50,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.RED)));
+
+            assertSame(startValue, startValue.interpolate(endValue, 0));
+        }
+
+        @Test
+        public void interpolationFactorOneReturnsEndInstance() {
+            var startValue = new RadialGradient(
+                10, 20, 30, 40, 50,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.BLUE)));
+
+            var endValue = new RadialGradient(
+                10, 20, 30, 40, 50,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.RED)));
+
+            assertSame(endValue, startValue.interpolate(endValue, 1));
+        }
+
+        @Test
+        public void interpolationFactorLessThanZero() {
+            var startValue = new RadialGradient(
+                10, 20, 30, 40, 20,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.BLUE)));
+
+            var endValue = new RadialGradient(
+                20, 40, 40, 50, 40,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.RED)));
+
+            assertEquals(
+                new RadialGradient(
+                    0, 0, 20, 30, 0,
+                    true, CycleMethod.NO_CYCLE,
+                    List.of(new Stop(0, Color.BLUE.interpolate(Color.RED, -1)))),
+                startValue.interpolate(endValue, -1));
+
+            assertEquals(
+                new RadialGradient(
+                    -10, 0, 10, 20, 0,
+                    true, CycleMethod.NO_CYCLE,
+                    List.of(new Stop(0, Color.BLUE.interpolate(Color.RED, -2)))),
+                startValue.interpolate(endValue, -2));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOne() {
+            var startValue = new RadialGradient(
+                10, 20, 30, 40, 50,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.BLUE)));
+
+            var endValue = new RadialGradient(
+                20, 30, 40, 50, 60,
+                true, CycleMethod.NO_CYCLE,
+                List.of(new Stop(0, Color.RED)));
+
+            assertEquals(
+                new RadialGradient(
+                    30, 40, 50, 60, 70,
+                    true, CycleMethod.NO_CYCLE,
+                    List.of(new Stop(0, Color.BLUE.interpolate(Color.RED, 2)))),
+                startValue.interpolate(endValue, 2));
+
+            assertEquals(
+                new RadialGradient(
+                    40, 50, 60, 70, 80,
+                    true, CycleMethod.NO_CYCLE,
+                    List.of(new Stop(0, Color.BLUE.interpolate(Color.RED, 3)))),
+                startValue.interpolate(endValue, 3));
+        }
     }
 }

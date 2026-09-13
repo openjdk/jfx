@@ -26,7 +26,6 @@
 #include "config.h"
 #include "ControlPart.h"
 
-#include "ControlFactory.h"
 #include "FloatRoundedRect.h"
 #include "GraphicsContext.h"
 
@@ -39,7 +38,12 @@ ControlPart::ControlPart(StyleAppearance type)
 
 ControlFactory& ControlPart::controlFactory() const
 {
-    return m_controlFactory ? *m_controlFactory : ControlFactory::sharedControlFactory();
+    return m_overrideControlFactory ? *m_overrideControlFactory : ControlFactory::singleton();
+}
+
+Ref<ControlFactory> ControlPart::protectedControlFactory() const
+{
+    return controlFactory();
 }
 
 PlatformControl* ControlPart::platformControl() const
@@ -56,7 +60,7 @@ FloatSize ControlPart::sizeForBounds(const FloatRect& bounds, const ControlStyle
         return bounds.size();
 
     platformControl->updateCellStates(bounds, style);
-    return platformControl->sizeForBounds(bounds);
+    return platformControl->sizeForBounds(bounds, style);
 }
 
 FloatRect ControlPart::rectForBounds(const FloatRect& bounds, const ControlStyle& style)

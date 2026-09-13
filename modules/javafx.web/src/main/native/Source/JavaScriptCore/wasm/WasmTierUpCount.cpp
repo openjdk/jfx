@@ -26,22 +26,27 @@
 #include "config.h"
 #include "WasmTierUpCount.h"
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#if ENABLE(WEBASSEMBLY_OMGJIT) || ENABLE(WEBASSEMBLY_BBQJIT)
 
 #include "WasmOSREntryData.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC { namespace Wasm {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TierUpCount);
 
 TierUpCount::TierUpCount()
 {
     setNewThreshold(Options::thresholdForOMGOptimizeAfterWarmUp());
+    m_compilationStatusForOMG.fill(CompilationStatus::NotCompiled);
+    m_compilationStatusForOMGForOSREntry.fill(CompilationStatus::NotCompiled);
 }
 
 TierUpCount::~TierUpCount() = default;
 
-OSREntryData& TierUpCount::addOSREntryData(uint32_t functionIndex, uint32_t loopIndex, StackMap&& stackMap)
+OSREntryData& TierUpCount::addOSREntryData(FunctionCodeIndex functionIndex, uint32_t loopIndex, StackMap&& stackMap)
 {
-    m_osrEntryData.append(makeUnique<OSREntryData>(functionIndex, loopIndex, WTFMove(stackMap)));
+    m_osrEntryData.append(makeUnique<OSREntryData>(functionIndex, loopIndex, WTF::move(stackMap)));
     return *m_osrEntryData.last().get();
 }
 
@@ -52,4 +57,4 @@ OSREntryData& TierUpCount::osrEntryData(uint32_t loopIndex)
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY_B3JIT)
+#endif // ENABLE(WEBASSEMBLY_OMGJIT) || ENABLE(WEBASSEMBLY_BBQJIT)

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,7 +33,7 @@ class MergeIdenticalElementsCommand : public SimpleEditCommand {
 public:
     static Ref<MergeIdenticalElementsCommand> create(Ref<Element>&& element1, Ref<Element>&& element2)
     {
-        return adoptRef(*new MergeIdenticalElementsCommand(WTFMove(element1), WTFMove(element2)));
+        return adoptRef(*new MergeIdenticalElementsCommand(WTF::move(element1), WTF::move(element2)));
     }
 
 private:
@@ -43,11 +43,11 @@ private:
     void doUnapply() override;
 
 #ifndef NDEBUG
-    void getNodesInCommand(HashSet<Ref<Node>>&) override;
+    void getNodesInCommand(NodeSet&) override;
 #endif
 
-    Ref<Element> m_element1;
-    Ref<Element> m_element2;
+    const Ref<Element> m_element1;
+    const Ref<Element> m_element2;
     RefPtr<Node> m_atChild;
 };
 

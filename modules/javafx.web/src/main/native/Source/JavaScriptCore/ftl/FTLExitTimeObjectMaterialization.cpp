@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,19 +34,18 @@ namespace JSC { namespace FTL {
 
 using namespace JSC::DFG;
 
-ExitTimeObjectMaterialization::ExitTimeObjectMaterialization(NodeType type, CodeOrigin codeOrigin)
-    : m_type(type)
+ExitTimeObjectMaterialization::ExitTimeObjectMaterialization(Node* node, CodeOrigin codeOrigin)
+    : m_type(node->op())
+    , m_indexingType(node->hasIndexingType() ? node->indexingType() : NoIndexingShape)
     , m_origin(codeOrigin)
-{
-}
+{ }
 
-ExitTimeObjectMaterialization::~ExitTimeObjectMaterialization()
-{
-}
+ExitTimeObjectMaterialization::~ExitTimeObjectMaterialization() = default;
 
 void ExitTimeObjectMaterialization::add(
     PromotedLocationDescriptor location, const ExitValue& value)
 {
+    // FIXME: We should probably do some validation here that any values stored a Butterfly are correct for the indexing type.
     m_properties.append(ExitPropertyValue(location, value));
 }
 

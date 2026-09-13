@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,8 +29,8 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ChangeListener;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyVetoException;
@@ -38,10 +38,10 @@ import java.beans.VetoableChangeListener;
 import java.lang.reflect.UndeclaredThrowableException;
 import javafx.beans.property.adapter.ReadOnlyJavaBeanProperty;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
-*/
+ */
 public abstract class ReadOnlyJavaBeanPropertyTestBase<T> {
     private BeanStub<T> bean;
     private ReadOnlyJavaBeanProperty<T> property;
@@ -51,7 +51,7 @@ public abstract class ReadOnlyJavaBeanPropertyTestBase<T> {
     protected abstract T getValue(int index);
     protected abstract ReadOnlyJavaBeanProperty<T> extractProperty(Object bean) throws NoSuchMethodException;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         this.bean = createBean(getValue(0));
         try {
@@ -61,13 +61,15 @@ public abstract class ReadOnlyJavaBeanPropertyTestBase<T> {
         }
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testSetup_WithNull() {
-        try {
-            this.property = extractProperty(null);
-        } catch (NoSuchMethodException e) {
-            fail();
-        }
+        assertThrows(NullPointerException.class, () -> {
+            try {
+                this.property = extractProperty(null);
+            } catch (NoSuchMethodException e) {
+                fail();
+            }
+        });
     }
 
     @Test
@@ -88,11 +90,14 @@ public abstract class ReadOnlyJavaBeanPropertyTestBase<T> {
         }
     }
 
-    @Test(expected = UndeclaredThrowableException.class)
+    @Test
     public void testGet_Exception() {
-        bean.setFailureMode(true);
-        property.getValue();
+        assertThrows(UndeclaredThrowableException.class, () -> {
+            bean.setFailureMode(true);
+            property.getValue();
+        });
     }
+
 
     @Test
     public void testInvalidationListener() {

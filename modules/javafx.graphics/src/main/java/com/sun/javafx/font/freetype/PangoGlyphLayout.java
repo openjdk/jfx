@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,9 @@
 
 package com.sun.javafx.font.freetype;
 
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import com.sun.javafx.font.CompositeFontResource;
 import com.sun.javafx.font.CompositeGlyphMapper;
 import com.sun.javafx.font.FontResource;
@@ -32,11 +35,8 @@ import com.sun.javafx.font.FontStrike;
 import com.sun.javafx.font.PGFont;
 import com.sun.javafx.font.PrismFontFactory;
 import com.sun.javafx.text.GlyphLayout;
+import com.sun.javafx.text.GlyphLayoutManager;
 import com.sun.javafx.text.TextRun;
-
-import java.util.Arrays;
-import java.util.LinkedHashMap;
-import java.util.Map;
 
 class PangoGlyphLayout extends GlyphLayout {
     private static final long fontmap;
@@ -205,7 +205,8 @@ class PangoGlyphLayout extends GlyphLayout {
 
     @Override
     public void dispose() {
-        super.dispose();
+        GlyphLayoutManager.dispose(this);
+
         for (Long str: runUtf8.values()) {
             OSPango.g_free(str);
         }

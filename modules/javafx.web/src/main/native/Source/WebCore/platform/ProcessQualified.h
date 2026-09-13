@@ -25,10 +25,12 @@
 
 #pragma once
 
-#include "ProcessIdentifier.h"
+#include <WebCore/ProcessIdentifier.h>
+#include <wtf/GetPtr.h>
 #include <wtf/Hasher.h>
 #include <wtf/Markable.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/IntegerToStringConversion.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
@@ -42,10 +44,8 @@ public:
     // process, the single process should distinguish between them by augmenting the objects with the
     // ProcessIdentifier of the process which created them.
 
-    ProcessQualified() = default;
-
     ProcessQualified(T&& object, ProcessIdentifier processIdentifier)
-        : m_object(WTFMove(object))
+        : m_object(WTF::move(object))
         , m_processIdentifier(processIdentifier)
     {
     }
@@ -57,7 +57,8 @@ public:
     }
 
     ProcessQualified(WTF::HashTableDeletedValueType)
-        : m_processIdentifier(WTF::HashTableDeletedValue)
+        : m_object(WTF::HashTableDeletedValue)
+        , m_processIdentifier(WTF::HashTableDeletedValue)
     {
     }
 
@@ -80,48 +81,61 @@ public:
     {
         return m_processIdentifier.isHashTableDeletedValue();
     }
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = DefaultHash<T>::safeToCompareToEmptyOrDeleted;
 
-    bool operator==(const ProcessQualified& other) const
-    {
-        return m_object == other.m_object
-            && m_processIdentifier == other.m_processIdentifier;
-    }
+    friend bool operator==(const ProcessQualified&, const ProcessQualified&) = default;
 
     static ProcessQualified generate() { return { T::generate(), Process::identifier() }; }
 
+    // MonotonicObjectIdentifier support
+    static ProcessQualified generateMonotonic() { return { T(), Process::identifier() }; }
+    ProcessQualified next() const { return { m_object.next(), m_processIdentifier }; }
+    ProcessQualified& increment() { m_object.increment(); return *this; }
+
     String toString() const { return makeString(m_processIdentifier.toUInt64(), '-', m_object.toUInt64()); }
+    String loggingString() const { return toString(); }
 
-    template<typename Encoder> void encode(Encoder& encoder) const { encoder << m_object << m_processIdentifier; }
-    template<typename Decoder> static std::optional<ProcessQualified> decode(Decoder&);
-
-    struct MarkableTraits {
-        static bool isEmptyValue(const ProcessQualified& identifier) { return !identifier; }
-        static constexpr ProcessQualified emptyValue() { return { }; }
-    };
+    // Comparison operators for callers that have already verified that
+    // the objects originate from the same process.
+    bool lessThanSameProcess(const ProcessQualified& other) const
+    {
+        ASSERT(processIdentifier() == other.processIdentifier());
+        return object() < other.object();
+    }
+    bool lessThanOrEqualSameProcess(const ProcessQualified& other) const
+    {
+        ASSERT(processIdentifier() == other.processIdentifier());
+        return object() <= other.object();
+    }
+    bool greaterThanSameProcess(const ProcessQualified& other) const
+    {
+        ASSERT(processIdentifier() == other.processIdentifier());
+        return object() > other.object();
+    }
+    bool greaterThanOrEqualSameProcess(const ProcessQualified& other) const
+    {
+        ASSERT(processIdentifier() == other.processIdentifier());
+        return object() >= other.object();
+    }
 
 private:
     T m_object;
     ProcessIdentifier m_processIdentifier;
 };
 
-template <typename T>
-template<typename Decoder> std::optional<ProcessQualified<T>> ProcessQualified<T>::decode(Decoder& decoder)
-{
-    std::optional<T> object;
-    decoder >> object;
-    if (!object)
-        return std::nullopt;
-    std::optional<ProcessIdentifier> processIdentifier;
-    decoder >> processIdentifier;
-    if (!processIdentifier)
-        return std::nullopt;
-    return { { *object, *processIdentifier } };
-}
+template<typename T>
+bool operator>(const ProcessQualified<T>&, const ProcessQualified<T>&) = delete;
+template<typename T>
+bool operator>=(const ProcessQualified<T>&, const ProcessQualified<T>&) = delete;
+template<typename T>
+bool operator<(const ProcessQualified<T>&, const ProcessQualified<T>&) = delete;
+template<typename T>
+bool operator<=(const ProcessQualified<T>&, const ProcessQualified<T>&) = delete;
 
 template <typename T>
 inline TextStream& operator<<(TextStream& ts, const ProcessQualified<T>& processQualified)
 {
-    ts << "ProcessQualified(" << processQualified.object() << ", " << processQualified.processIdentifier() << ')';
+    ts << "ProcessQualified("_s << processQualified.object() << ", "_s << processQualified.processIdentifier() << ')';
     return ts;
 }
 
@@ -136,35 +150,22 @@ inline void add(Hasher& hasher, const ProcessQualified<T>& processQualified)
 
 namespace WTF {
 
-template<typename T> struct DefaultHash;
-template<typename T> struct DefaultHash<WebCore::ProcessQualified<T>> {
-    static unsigned hash(const WebCore::ProcessQualified<T>& processQualified)
-    {
-        return computeHash(processQualified);
-    }
-
-    static bool equal(const WebCore::ProcessQualified<T>& a, const WebCore::ProcessQualified<T>& b)
-    {
-        return a == b;
-    }
-
-    static const bool safeToCompareToEmptyOrDeleted = DefaultHash<T>::safeToCompareToEmptyOrDeleted;
-};
-
 template<typename T> struct HashTraits<WebCore::ProcessQualified<T>> : SimpleClassHashTraits<WebCore::ProcessQualified<T>> {
     static constexpr bool emptyValueIsZero = HashTraits<T>::emptyValueIsZero;
+    static WebCore::ProcessQualified<T> emptyValue() { return { HashTraits<T>::emptyValue(), HashTraits<WebCore::ProcessIdentifier>::emptyValue() }; }
+    static bool isEmptyValue(const WebCore::ProcessQualified<T>& value) { return value.object().isHashTableEmptyValue(); }
 };
 
 class ProcessQualifiedStringTypeAdapter {
 public:
     unsigned length() const { return lengthOfIntegerAsString(m_processIdentifier) + lengthOfIntegerAsString(m_objectIdentifier) + 1; }
     bool is8Bit() const { return true; }
-    template<typename CharacterType> void writeTo(CharacterType* destination) const
+    template<typename CharacterType> void writeTo(std::span<CharacterType> destination) const
     {
         auto processIdentifierLength = lengthOfIntegerAsString(m_processIdentifier);
         writeIntegerToBuffer(m_processIdentifier, destination);
-        *(destination + processIdentifierLength) = '-';
-        writeIntegerToBuffer(m_objectIdentifier, destination + processIdentifierLength + 1);
+        destination[processIdentifierLength] = '-';
+        writeIntegerToBuffer(m_objectIdentifier, destination.subspan(processIdentifierLength + 1));
     }
 protected:
     explicit ProcessQualifiedStringTypeAdapter(uint64_t processIdentifier, uint64_t objectIdentifier)
@@ -177,10 +178,16 @@ private:
 };
 
 template<typename T>
-class StringTypeAdapter<WebCore::ProcessQualified<T>, void> : public ProcessQualifiedStringTypeAdapter {
+class StringTypeAdapter<WebCore::ProcessQualified<T>> : public ProcessQualifiedStringTypeAdapter {
 public:
     explicit StringTypeAdapter(const WebCore::ProcessQualified<T>& processQualified)
         : ProcessQualifiedStringTypeAdapter(processQualified.processIdentifier().toUInt64(), processQualified.object().toUInt64()) { }
+};
+
+template<typename T>
+struct MarkableTraits<WebCore::ProcessQualified<T>> {
+    static bool isEmptyValue(const WebCore::ProcessQualified<T>& identifier) { return MarkableTraits<T>::isEmptyValue(identifier.object()); }
+    static constexpr WebCore::ProcessQualified<T> emptyValue() { return { MarkableTraits<T>::emptyValue(), MarkableTraits<WebCore::ProcessIdentifier>::emptyValue() }; }
 };
 
 } // namespace WTF

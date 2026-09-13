@@ -1,6 +1,6 @@
 /*
    Copyright (C) 2000 Simon Hausmann <hausmann@kde.org>
-   Copyright (C) 2006 Apple Inc.
+   Copyright (C) 2006 Apple Inc. All rights reserved.
 
    This library is free software; you can redistribute it and/or
    modify it under the terms of the GNU Library General Public
@@ -38,6 +38,7 @@ public:
     bool isOverLink() const;
     bool isOverWidget() const { return m_hitTestResult.isOverWidget(); }
     Node* targetNode() const { return m_hitTestResult.targetNode(); }
+    RefPtr<Node> protectedTargetNode() const  { return m_hitTestResult.protectedTargetNode(); }
 
 private:
     PlatformMouseEvent m_event;

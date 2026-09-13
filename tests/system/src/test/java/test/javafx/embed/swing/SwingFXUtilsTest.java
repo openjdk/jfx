@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,25 +25,24 @@
 
 package test.javafx.embed.swing;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.io.ByteArrayOutputStream;
 import java.awt.image.BufferedImage;
+import javax.imageio.ImageIO;
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelFormat;
 import javafx.scene.image.PixelReader;
+import javafx.scene.image.WritableImage;
 import javafx.stage.Stage;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 public class SwingFXUtilsTest {
@@ -65,13 +64,13 @@ public class SwingFXUtilsTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void doSetupOnce() {
         Util.launch(launchLatch, MyApp.class);
         assertEquals(0, launchLatch.getCount());
     }
 
-    @AfterClass
+    @AfterAll
     public static void doTeardownOnce() {
         Util.shutdown();
     }
@@ -83,6 +82,19 @@ public class SwingFXUtilsTest {
         testFromFXImg("opaque.jpg");
         testFromFXImg("opaque.png");
         testFromFXImg("trans.gif");
+    }
+
+    @Test
+    public void testOpaqueArgbImageCanBeWrittenAsJpeg() throws Exception {
+        WritableImage image = new WritableImage(2, 1);
+        image.getPixelWriter().setArgb(0, 0, 0xff112233);
+        image.getPixelWriter().setArgb(1, 0, 0xff445566);
+
+        BufferedImage bimg = SwingFXUtils.fromFXImage(image, null);
+
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ImageIO.write(bimg, "jpg", out);
+        assertTrue(out.size() > 0, "0-length JPEG image created");
     }
 
     static void testFromFXImg(String imgfilename) {

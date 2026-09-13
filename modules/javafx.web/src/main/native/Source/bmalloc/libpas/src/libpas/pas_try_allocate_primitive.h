@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 Apple Inc. All rights reserved.
+ * Copyright (c) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,9 @@
 #include "pas_local_allocator_inlines.h"
 #include "pas_physical_memory_transaction.h"
 #include "pas_primitive_heap_ref.h"
+#include "pas_try_allocate_common.h"
+
+#if LIBPAS_ENABLED
 
 PAS_BEGIN_EXTERN_C;
 
@@ -59,6 +62,7 @@ static PAS_ALWAYS_INLINE pas_allocation_result
 pas_try_allocate_primitive_impl_casual_case(pas_primitive_heap_ref* heap_ref,
                                             size_t size,
                                             size_t alignment,
+                                            pas_allocation_mode allocation_mode,
                                             pas_heap_config config,
                                             pas_heap_runtime_config* runtime_config,
                                             pas_try_allocate_common try_allocate_common)
@@ -124,7 +128,7 @@ pas_try_allocate_primitive_impl_casual_case(pas_primitive_heap_ref* heap_ref,
         && alignment > pas_local_allocator_alignment((pas_local_allocator*)allocator.allocator))
         allocator.did_succeed = false;
 
-    return try_allocate_common(&heap_ref->base, aligned_size, alignment, allocator);
+    return try_allocate_common(&heap_ref->base, aligned_size, alignment, allocation_mode, allocator);
 }
 
 static PAS_ALWAYS_INLINE pas_allocation_result
@@ -132,6 +136,7 @@ pas_try_allocate_primitive_impl_inline_only(
     pas_primitive_heap_ref* heap_ref,
     size_t size,
     size_t alignment,
+    pas_allocation_mode allocation_mode,
     pas_heap_config config,
     pas_try_allocate_common_fast_inline_only try_allocate_common_fast_inline_only)
 {
@@ -197,7 +202,7 @@ pas_try_allocate_primitive_impl_inline_only(
             && alignment > pas_local_allocator_alignment((pas_local_allocator*)allocator.allocator)))
         return pas_allocation_result_create_failure();
 
-    return try_allocate_common_fast_inline_only((pas_local_allocator*)allocator.allocator);
+    return try_allocate_common_fast_inline_only((pas_local_allocator*)allocator.allocator, allocation_mode);
 }
 
 #define PAS_CREATE_TRY_ALLOCATE_PRIMITIVE(name, heap_config, runtime_config, allocator_counts, result_filter) \
@@ -213,48 +218,51 @@ pas_try_allocate_primitive_impl_inline_only(
     static PAS_NEVER_INLINE pas_allocation_result name ## _casual_case( \
         pas_primitive_heap_ref* heap_ref, \
         size_t size, \
-        size_t alignment) \
+        size_t alignment, \
+        pas_allocation_mode allocation_mode) \
     { \
         return pas_try_allocate_primitive_impl_casual_case( \
-            heap_ref, size, alignment, (heap_config), (runtime_config), name ## _impl); \
+            heap_ref, size, alignment, allocation_mode, (heap_config), (runtime_config), name ## _impl); \
     } \
     \
     static PAS_ALWAYS_INLINE pas_allocation_result name ## _inline_only( \
         pas_primitive_heap_ref* heap_ref, \
         size_t size, \
-        size_t alignment) \
+        size_t alignment, \
+        pas_allocation_mode allocation_mode) \
     { \
         return pas_try_allocate_primitive_impl_inline_only( \
-            heap_ref, size, alignment, (heap_config), name ## _impl_fast_inline_only); \
+            heap_ref, size, alignment, allocation_mode, (heap_config), name ## _impl_fast_inline_only); \
     } \
     \
     static PAS_ALWAYS_INLINE pas_allocation_result name( \
         pas_primitive_heap_ref* heap_ref, \
         size_t size, \
-        size_t alignment) \
+        size_t alignment, \
+        pas_allocation_mode allocation_mode) \
     { \
         pas_allocation_result result; \
-        result = name ## _inline_only(heap_ref, size, alignment); \
+        result = name ## _inline_only(heap_ref, size, alignment, allocation_mode); \
         if (PAS_LIKELY(result.did_succeed)) \
             return result; \
-        return name ## _casual_case(heap_ref, size, alignment); \
+        return name ## _casual_case(heap_ref, size, alignment, allocation_mode); \
     } \
     \
     static PAS_UNUSED PAS_NEVER_INLINE pas_allocation_result name ## _for_realloc( \
-        pas_primitive_heap_ref* heap_ref, size_t size) \
+        pas_primitive_heap_ref* heap_ref, size_t size, pas_allocation_mode allocation_mode) \
     { \
-        return name(heap_ref, size, 1); \
+        return name(heap_ref, size, 1, allocation_mode); \
     } \
     \
     struct pas_dummy
 
 typedef pas_allocation_result (*pas_try_allocate_primitive)(
-    pas_primitive_heap_ref* heap_ref, size_t size, size_t alignment);
+    pas_primitive_heap_ref* heap_ref, size_t size, size_t alignment, pas_allocation_mode allocation_mode);
 
 typedef pas_allocation_result (*pas_try_allocate_primitive_for_realloc)(
-    pas_primitive_heap_ref* heap_ref, size_t size);
+    pas_primitive_heap_ref* heap_ref, size_t size, pas_allocation_mode allocation_mode);
 
 PAS_END_EXTERN_C;
 
+#endif /* LIBPAS_ENABLED */
 #endif /* PAS_TRY_ALLOCATE_PRIMITIVE_H */
-

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007, 2009, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Samuel Weinig <sam.weinig@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
@@ -32,18 +32,20 @@
     readonly attribute DOMString tagName;
 
     [CEReactions=Needed, Reflect] attribute DOMString id;
-    [CEReactions=Needed, Reflect=class] attribute DOMString className;
+    [CEReactions=Needed, Reflect="class"] attribute DOMString className;
     [SameObject, PutForwards=value] readonly attribute DOMTokenList classList;
     [CEReactions=Needed, Reflect, Unscopable] attribute DOMString slot;
     [SameObject, PutForwards=value] readonly attribute DOMTokenList part;
 
+    [EnabledBySetting=ScopedCustomElementRegistryEnabled] readonly attribute CustomElementRegistry? customElementRegistry;
+
     [DOMJIT=ReadDOM] boolean hasAttributes();
-    [SameObject] readonly attribute NamedNodeMap attributes;
+    [SameObject, ImplementedAs=attributesMap] readonly attribute NamedNodeMap attributes;
     sequence<DOMString> getAttributeNames();
     [DOMJIT=ReadDOM, ImplementedAs=getAttributeForBindings] DOMString? getAttribute([AtomString] DOMString qualifiedName);
     [ImplementedAs=getAttributeNSForBindings] DOMString? getAttributeNS([AtomString] DOMString? namespaceURI, [AtomString] DOMString localName);
-    [CEReactions=Needed] undefined setAttribute([AtomString] DOMString qualifiedName, [AtomString] DOMString value);
-    [CEReactions=Needed] undefined setAttributeNS([AtomString] DOMString? namespaceURI, [AtomString] DOMString qualifiedName, [AtomString] DOMString value);
+    [CEReactions=Needed] undefined setAttribute([AtomString] DOMString qualifiedName, (TrustedType or [AtomString] DOMString) value);
+    [CEReactions=Needed] undefined setAttributeNS([AtomString] DOMString? namespaceURI, [AtomString] DOMString qualifiedName, (TrustedType or [AtomString] DOMString) value);
     [CEReactions=Needed, ImplementedAs=removeAttributeForBindings] undefined removeAttribute([AtomString] DOMString qualifiedName);
     [CEReactions=Needed, ImplementedAs=removeAttributeNSForBindings] undefined removeAttributeNS([AtomString] DOMString? namespaceURI, [AtomString] DOMString localName);
     [CEReactions=Needed] boolean toggleAttribute([AtomString] DOMString qualifiedName, optional boolean force);
@@ -58,6 +60,7 @@
 
     ShadowRoot attachShadow(ShadowRootInit init);
     [ImplementedAs=shadowRootForBindings, CallWith=CurrentGlobalObject] readonly attribute ShadowRoot? shadowRoot;
+    [EnabledForWorld=closedShadowRootIsExposedForExtensions] readonly attribute ShadowRoot? openOrClosedShadowRoot;
 
     Element? closest(DOMString selectors);
     boolean matches(DOMString selectors);
@@ -96,6 +99,12 @@
 
     // Non-standard: https://developer.apple.com/reference/webkitjs/element/1629580-onwebkitplaybacktargetavailabili.
     [NotEnumerable, Conditional=WIRELESS_PLAYBACK_TARGET] attribute EventHandler onwebkitplaybacktargetavailabilitychanged;
+
+    // WebKit extension for DOM wrapper worlds.
+    [EnabledForWorld=allowElementUserInfo, CallWith=CurrentGlobalObject] undefined setUserInfo(any userInfo);
+
+    [EnabledBySetting=IsARIANotifyEnabled] undefined ariaNotify(DOMString announcement);
+    [EnabledBySetting=IsARIANotifyEnabled] undefined ariaNotify(DOMString announcement, AriaNotifyOptions options);
 };
 
 Element includes AccessibilityRole;
@@ -106,3 +115,5 @@ Element includes NonDocumentTypeChildNode;
 Element includes ParentNode;
 Element includes Slotable;
 Element includes InnerHTML;
+
+typedef (TrustedHTML or TrustedScript or TrustedScriptURL) TrustedType;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "EpochTimeStamp.h"
-#include "GeolocationCoordinates.h"
+#include <WebCore/EpochTimeStamp.h>
+#include <WebCore/GeolocationCoordinates.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 
@@ -36,7 +36,7 @@ class GeolocationPosition : public RefCounted<GeolocationPosition> {
 public:
     static Ref<GeolocationPosition> create(Ref<GeolocationCoordinates>&& coordinates, EpochTimeStamp timestamp)
     {
-        return adoptRef(*new GeolocationPosition(WTFMove(coordinates), timestamp));
+        return adoptRef(*new GeolocationPosition(WTF::move(coordinates), timestamp));
     }
 
     Ref<GeolocationPosition> isolatedCopy() const
@@ -49,12 +49,12 @@ public:
 
 private:
     GeolocationPosition(Ref<GeolocationCoordinates>&& coordinates, EpochTimeStamp timestamp)
-        : m_coordinates(WTFMove(coordinates))
+        : m_coordinates(WTF::move(coordinates))
         , m_timestamp(timestamp)
     {
     }
 
-    Ref<GeolocationCoordinates> m_coordinates;
+    const Ref<GeolocationCoordinates> m_coordinates;
     EpochTimeStamp m_timestamp;
 };
 

@@ -28,10 +28,10 @@
 typedef [EnforceRange] unsigned long GPUTextureUsageFlags;
 [
     EnabledBySetting=WebGPUEnabled,
-    Exposed=(Window), /* https://bugs.webkit.org/show_bug.cgi?id=232542: DedicatedWorker */
+    Exposed=(Window,Worker),
     SecureContext
 ]
-interface GPUTextureUsage {
+namespace GPUTextureUsage {
     const GPUFlagsConstant COPY_SRC          = 0x01;
     const GPUFlagsConstant COPY_DST          = 0x02;
     const GPUFlagsConstant TEXTURE_BINDING   = 0x04;

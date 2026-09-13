@@ -68,11 +68,19 @@ class VisionSlider extends SliderBase
     {
         super.commit();
 
-        const margin = this._recessedMargin;
         const height = this._effectiveSliderHeight;
+        const margin = this._recessedMargin;
         const fillX = margin;
-        const fillWidth = this.value * (this.width - (margin * 2) - height) + height;
         this._primaryFill.element.style.left = `${fillX}px`;
+
+        // FIXME: rdar://163561019 - Use flexbox for layout like in the default Slider class.
+        // Could be hosted in a flex context and have no width set.
+        if (this.width) {
+            const fillWidth = this.value * (this.width - (margin * 2) - height) + height;
         this._primaryFill.element.style.width = `${fillWidth}px`;
+        } else {
+            const fillWidth = `${this.value} * (100% - (${margin}px * 2) - ${height}px) + ${height}px`;
+            this._primaryFill.element.style.width = `calc(${fillWidth})`;
+        }
     }
 }

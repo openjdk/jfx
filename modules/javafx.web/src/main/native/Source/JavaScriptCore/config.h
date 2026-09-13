@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Samuel Weinig <sam.weinig@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
@@ -27,24 +27,12 @@
 #define JSC_CLASS_AVAILABLE(...) JS_EXPORT
 #define JSC_API_DEPRECATED(...)
 #define JSC_API_DEPRECATED_WITH_REPLACEMENT(...)
-// Use zero since it will be less than any possible version number.
-#define JSC_MAC_VERSION_TBA 0
-#define JSC_IOS_VERSION_TBA 0
 
-#include "JSExportMacros.h"
+#include <JavaScriptCore/JSExportMacros.h>
 
 #ifdef __cplusplus
 #undef new
 #undef delete
 #include <wtf/FastMalloc.h>
-#endif
-
-#include <wtf/DisallowCType.h>
-
-/* Disabling warning C4206: nonstandard extension used: translation unit is empty.
-   By design, we rely on #define flags to make some translation units empty.
-   Make sure this warning does not turn into an error.
-*/
-#if COMPILER(MSVC)
-#pragma warning(disable:4206)
+#include <wtf/TZoneMalloc.h>
 #endif

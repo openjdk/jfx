@@ -28,7 +28,9 @@
 
 [
     Conditional=ENCRYPTED_MEDIA,
-    JSGenerateToJSObject
+    JSGenerateToJSObject,
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary MediaKeySystemConfiguration {
     DOMString label = "";
     sequence<[AtomString] DOMString> initDataTypes = [];

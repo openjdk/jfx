@@ -49,6 +49,11 @@ void                     g_dir_rewind         (GDir         *dir);
 GLIB_AVAILABLE_IN_ALL
 void                     g_dir_close          (GDir         *dir);
 
+GLIB_AVAILABLE_IN_2_80
+GDir *                   g_dir_ref             (GDir        *dir);
+GLIB_AVAILABLE_IN_2_80
+void                     g_dir_unref           (GDir        *dir);
+
 G_END_DECLS
 
 #endif /* __G_DIR_H__ */

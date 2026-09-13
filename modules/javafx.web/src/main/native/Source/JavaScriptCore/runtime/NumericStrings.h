@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2009 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,16 +27,19 @@
 
 #include <array>
 #include <wtf/HashFunctions.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/WTFString.h>
 
 namespace JSC {
 
 class JSString;
 class SmallStrings;
+class VM;
 
 class NumericStrings {
 public:
-    static const size_t cacheSize = 256;
+    static const size_t cacheSize = 1024;
+    static const size_t doubleCacheSize = 4096;
 
     template<typename T>
     struct CacheEntry {
@@ -55,16 +58,25 @@ public:
         String value;
         JSString* jsString { nullptr };
 
-        static ptrdiff_t offsetOfJSString() { return OBJECT_OFFSETOF(StringWithJSString, jsString); }
+        static constexpr ptrdiff_t offsetOfJSString() { return OBJECT_OFFSETOF(StringWithJSString, jsString); }
+    };
+
+    struct DoubleCache {
+        WTF_MAKE_TZONE_ALLOCATED(DoubleCache);
+    public:
+        std::array<CacheEntryWithJSString<double>, doubleCacheSize> m_doubleCache { };
     };
 
     ALWAYS_INLINE const String& add(double d)
     {
+        if (!m_doubleCache) [[unlikely]]
+            initializeDoubleCache();
         auto& entry = lookup(d);
         if (d == entry.key && !entry.value.isNull())
             return entry.value;
         entry.key = d;
         entry.value = String::number(d);
+        entry.jsString = nullptr;
         return entry.value;
     }
 
@@ -94,11 +106,16 @@ public:
     }
 
     JSString* addJSString(VM&, int);
+    JSString* addJSString(VM&, double);
 
     void clearOnGarbageCollection()
     {
         for (auto& entry : m_intCache)
             entry.jsString = nullptr;
+        if (m_doubleCache) {
+            for (auto& entry : m_doubleCache->m_doubleCache)
+            entry.jsString = nullptr;
+        }
         // 0-9 are managed by SmallStrings. They never die.
         for (unsigned i = 10; i < m_smallIntCache.size(); ++i)
             m_smallIntCache[i].jsString = nullptr;
@@ -109,6 +126,10 @@ public:
     {
         for (auto& entry : m_intCache)
             visitor.appendUnbarriered(entry.jsString);
+        if (m_doubleCache) {
+            for (auto& entry : m_doubleCache->m_doubleCache)
+            visitor.appendUnbarriered(entry.jsString);
+        }
         // 0-9 are managed by SmallStrings. They never die.
         for (unsigned i = 10; i < m_smallIntCache.size(); ++i)
             visitor.appendUnbarriered(m_smallIntCache[i].jsString);
@@ -119,7 +140,13 @@ public:
     void initializeSmallIntCache(VM&);
 
 private:
-    CacheEntry<double>& lookup(double d) { return m_doubleCache[WTF::FloatHash<double>::hash(d) & (cacheSize - 1)]; }
+    CacheEntryWithJSString<double>& lookup(double d)
+    {
+        ASSERT(m_doubleCache);
+        uint64_t bits = std::bit_cast<uint64_t>(d);
+        uint32_t hash = static_cast<uint32_t>(bits) ^ static_cast<uint32_t>(bits >> 32);
+        return m_doubleCache->m_doubleCache[hash & (doubleCacheSize - 1)];
+    }
     CacheEntryWithJSString<int>& lookup(int i) { return m_intCache[WTF::IntHash<int>::hash(i) & (cacheSize - 1)]; }
     CacheEntry<unsigned>& lookup(unsigned i) { return m_unsignedCache[WTF::IntHash<unsigned>::hash(i) & (cacheSize - 1)]; }
     ALWAYS_INLINE StringWithJSString& lookupSmallString(unsigned i)
@@ -130,10 +157,12 @@ private:
         return m_smallIntCache[i];
     }
 
+    void initializeDoubleCache();
+
     std::array<StringWithJSString, cacheSize> m_smallIntCache { };
     std::array<CacheEntryWithJSString<int>, cacheSize> m_intCache { };
-    std::array<CacheEntry<double>, cacheSize> m_doubleCache { };
     std::array<CacheEntry<unsigned>, cacheSize> m_unsignedCache { };
+    std::unique_ptr<DoubleCache> m_doubleCache;
 };
 
 } // namespace JSC

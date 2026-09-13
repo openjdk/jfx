@@ -52,7 +52,7 @@ struct Relation {
         FirstChild,
         LastChild,
         NthChildIndex,
-        Unique,
+        AffectedByHasWithPositionalPseudoClass,
     };
     const Element* element;
     Type type;
@@ -68,6 +68,7 @@ struct Relation {
 using Relations = Vector<Relation, 8>;
 
 std::unique_ptr<Relations> commitRelationsToRenderStyle(RenderStyle&, const Element&, const Relations&);
+void copyRelations(RenderStyle&, const RenderStyle&);
 void commitRelations(std::unique_ptr<Relations>, Update&);
 
 }

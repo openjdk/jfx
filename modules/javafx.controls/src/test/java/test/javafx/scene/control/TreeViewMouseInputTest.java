@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,13 @@
 
 package test.javafx.scene.control;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
-import com.sun.javafx.tk.Toolkit;
 import javafx.collections.ListChangeListener;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -41,20 +42,16 @@ import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeView;
 import javafx.scene.layout.VBox;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.behavior.TreeViewAnchorRetriever;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
+import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 
-import static org.junit.Assert.*;
-import static org.junit.Assert.assertNotNull;
-
-//@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class TreeViewMouseInputTest {
     private TreeView<String> treeView;
     private MultipleSelectionModel<TreeItem<String>> sm;
@@ -75,7 +72,10 @@ public class TreeViewMouseInputTest {
         private TreeItem<String> child9;            // 12
         private TreeItem<String> child10;           // 13
 
-    @Before public void setup() {
+    private StageLoader stageLoader;
+
+    @BeforeEach
+    public void setup() {
         root = new TreeItem<>("Root");             // 0
         child1 = new TreeItem<>("Child 1");        // 1
         child2 = new TreeItem<>("Child 2");        // 2
@@ -123,9 +123,15 @@ public class TreeViewMouseInputTest {
         sm = treeView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         fm = treeView.getFocusModel();
+
+        stageLoader = new StageLoader(treeView);
     }
 
-    @After public void tearDown() {
+    @AfterEach
+    public void tearDown() {
+        if (stageLoader != null) {
+            stageLoader.dispose();
+        }
         treeView.getSkin().dispose();
     }
 
@@ -186,13 +192,15 @@ public class TreeViewMouseInputTest {
 
         sm.clearAndSelect(9);
 
+        stageLoader = new StageLoader(treeView);
+
         // select all from 9 - 7
         VirtualFlowTestUtils.clickOnRow(treeView, 7, KeyModifier.SHIFT);
-        assertTrue(debug(), isSelected(7,8,9));
+        assertTrue(isSelected(7,8,9), debug());
 
         // select all from 9 - 7 - 5
         VirtualFlowTestUtils.clickOnRow(treeView, 5, KeyModifier.SHIFT);
-        assertTrue(debug(),isSelected(5,6,7,8,9));
+        assertTrue(isSelected(5,6,7,8,9), debug());
     }
 
     @Test public void test_rt29833_mouse_select_downwards() {
@@ -200,13 +208,15 @@ public class TreeViewMouseInputTest {
 
         sm.clearAndSelect(5);
 
+        stageLoader = new StageLoader(treeView);
+
         // select all from 5 - 7
         VirtualFlowTestUtils.clickOnRow(treeView, 7, KeyModifier.SHIFT);
-        assertTrue(debug(), isSelected(5,6,7));
+        assertTrue(isSelected(5,6,7), debug());
 
         // select all from 5 - 7 - 9
         VirtualFlowTestUtils.clickOnRow(treeView, 9, KeyModifier.SHIFT);
-        assertTrue(debug(),isSelected(5,6,7,8,9));
+        assertTrue(isSelected(5,6,7,8,9), debug());
     }
 
     private int rt30394_count = 0;
@@ -226,6 +236,8 @@ public class TreeViewMouseInputTest {
         assertEquals(0,rt30394_count);
         assertFalse(fm.isFocused(0));
 
+        stageLoader = new StageLoader(treeView);
+
         // select the first row with the shift key held down. The focus event
         // should only fire once - for focus on 0 (never -1 as this bug shows).
         VirtualFlowTestUtils.clickOnRow(treeView, 0, KeyModifier.SHIFT);
@@ -236,6 +248,8 @@ public class TreeViewMouseInputTest {
     @Test public void test_rt32119() {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.clearSelection();
+
+        stageLoader = new StageLoader(treeView);
 
         // select rows 2, 3, and 4
         VirtualFlowTestUtils.clickOnRow(treeView, 2);
@@ -336,8 +350,10 @@ public class TreeViewMouseInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
         treeView.setRoot(root);
-
         treeView.setShowRoot(true);
+
+        stageLoader = new StageLoader(treeView);
+
         final MultipleSelectionModel sm = treeView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.clearAndSelect(0);
@@ -350,10 +366,10 @@ public class TreeViewMouseInputTest {
         assertEquals(1, sm.getSelectedItems().size());
 
         VirtualFlowTestUtils.clickOnRow(treeView, 5, KeyModifier.SHIFT);
-        assertEquals("Actual selected index: " + sm.getSelectedIndex(), 5, sm.getSelectedIndex());
-        assertEquals("Actual focused index: " + fm.getFocusedIndex(), 5, fm.getFocusedIndex());
-        assertTrue("Selected indices: " + sm.getSelectedIndices(), sm.getSelectedIndices().contains(0));
-        assertTrue("Selected items: " + sm.getSelectedItems(), sm.getSelectedItems().contains(root));
+        assertEquals(5, sm.getSelectedIndex(), "Actual selected index: " + sm.getSelectedIndex());
+        assertEquals(5, fm.getFocusedIndex(), "Actual focused index: " + fm.getFocusedIndex());
+        assertTrue(sm.getSelectedIndices().contains(0), "Selected indices: " + sm.getSelectedIndices());
+        assertTrue(sm.getSelectedItems().contains(root), "Selected items: " + sm.getSelectedItems());
         assertEquals(6, sm.getSelectedItems().size());
     }
 
@@ -366,8 +382,10 @@ public class TreeViewMouseInputTest {
             root.getChildren().add(new TreeItem<>("Row " + i));
         }
         treeView.setRoot(root);
-
         treeView.setShowRoot(true);
+
+        stageLoader = new StageLoader(treeView);
+
         final MultipleSelectionModel sm = treeView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.clearAndSelect(0);
@@ -395,6 +413,8 @@ public class TreeViewMouseInputTest {
         }
         treeView.setRoot(root);
 
+        stageLoader = new StageLoader(treeView);
+
         final MultipleSelectionModel sm = treeView.getSelectionModel();
         final FocusModel fm = treeView.getFocusModel();
         sm.setSelectionMode(SelectionMode.SINGLE);
@@ -419,6 +439,8 @@ public class TreeViewMouseInputTest {
         }
         treeView.setRoot(root);
 
+        stageLoader = new StageLoader(treeView);
+
         // expand
         assertFalse(root.isExpanded());
         VirtualFlowTestUtils.clickOnRow(treeView, 0, 2);
@@ -435,7 +457,8 @@ public class TreeViewMouseInputTest {
 
     @Test public void test_rt_37069() {
         final int items = 8;
-        root.getChildren().clear();
+        treeView = new TreeView<>(new TreeItem<>());
+        root = treeView.getRoot();
         root.setExpanded(false);
         for (int i = 0; i < items; i++) {
             root.getChildren().add(new TreeItem<>("Row " + i));
@@ -446,11 +469,10 @@ public class TreeViewMouseInputTest {
         Button btn = new Button("Button");
         VBox vbox = new VBox(btn, treeView);
 
-        StageLoader sl = new StageLoader(vbox);
-        sl.getStage().requestFocus();
+        stageLoader= new StageLoader(vbox);
+        stageLoader.getStage().requestFocus();
         btn.requestFocus();
         Toolkit.getToolkit().firePulse();
-        Scene scene = sl.getStage().getScene();
 
         assertTrue(btn.isFocused());
         assertFalse(treeView.isFocused());
@@ -461,8 +483,6 @@ public class TreeViewMouseInputTest {
 
         assertTrue(btn.isFocused());
         assertFalse(treeView.isFocused());
-
-        sl.dispose();
     }
 
     @Test public void test_jdk_8147823() {
@@ -486,6 +506,8 @@ public class TreeViewMouseInputTest {
             List<TreeItem<String>> copy = new ArrayList<>(sm.getSelectedItems());
             assertFalse(copy.contains(null));
         });
+
+        stageLoader = new StageLoader(treeView);
 
         // select all
         VirtualFlowTestUtils.clickOnRow(treeView, 0, KeyModifier.getShortcutKey());

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,19 +28,23 @@
 
 #pragma once
 
-#include "ResourceHandleClient.h"
-#include "ResourceLoadTiming.h"
-#include "ResourceLoaderIdentifier.h"
-#include "ResourceLoaderOptions.h"
-#include "ResourceLoaderTypes.h"
-#include "ResourceRequest.h"
-#include "ResourceResponse.h"
-#include "SharedBuffer.h"
+#include <WebCore/CachedResourceHandle.h>
+#include <WebCore/FrameLoaderTypes.h>
+#include <WebCore/ResourceHandleClient.h>
+#include <WebCore/ResourceLoadTiming.h>
+#include <WebCore/ResourceLoaderIdentifier.h>
+#include <WebCore/ResourceLoaderOptions.h>
+#include <WebCore/ResourceLoaderTypes.h>
+#include <WebCore/ResourceRequest.h>
+#include <WebCore/ResourceResponse.h>
+#include <WebCore/SharedBuffer.h>
 #include <wtf/Forward.h>
+#include <wtf/Platform.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 
 #if ENABLE(CONTENT_EXTENSIONS)
-#include "ResourceLoadInfo.h"
+#include <WebCore/ResourceLoadInfo.h>
 #endif
 
 namespace WTF {
@@ -57,9 +61,13 @@ class LegacyPreviewLoader;
 class LocalFrame;
 class NetworkLoadMetrics;
 
-DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ResourceLoader);
-class ResourceLoader : public CanMakeWeakPtr<ResourceLoader>, public RefCounted<ResourceLoader>, protected ResourceHandleClient {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ResourceLoader);
+#if ENABLE(CONTENT_EXTENSIONS)
+class ResourceMonitor;
+#endif
+
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CoreResourceLoader);
+class ResourceLoader : public RefCountedAndCanMakeWeakPtr<ResourceLoader>, protected ResourceHandleClient {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ResourceLoader, CoreResourceLoader);
 public:
     virtual ~ResourceLoader() = 0;
 
@@ -67,7 +75,7 @@ public:
 
     virtual void init(ResourceRequest&&, CompletionHandler<void(bool)>&&);
 
-    void deliverResponseAndData(const ResourceResponse&, RefPtr<FragmentedSharedBuffer>&&);
+    void deliverResponseAndData(ResourceResponse&&, RefPtr<FragmentedSharedBuffer>&&);
 
 #if PLATFORM(IOS_FAMILY)
     virtual void startLoading()
@@ -79,21 +87,25 @@ public:
 #endif
 
     WEBCORE_EXPORT FrameLoader* frameLoader() const;
+    WEBCORE_EXPORT RefPtr<FrameLoader> protectedFrameLoader() const;
     DocumentLoader* documentLoader() const { return m_documentLoader.get(); }
+    WEBCORE_EXPORT RefPtr<DocumentLoader> protectedDocumentLoader() const;
     const ResourceRequest& originalRequest() const { return m_originalRequest; }
 
     WEBCORE_EXPORT void start();
-    WEBCORE_EXPORT void cancel(const ResourceError&);
+    WEBCORE_EXPORT void cancel(const ResourceError&, LoadWillContinueInAnotherProcess = LoadWillContinueInAnotherProcess::No);
     WEBCORE_EXPORT ResourceError cancelledError();
     WEBCORE_EXPORT ResourceError blockedError();
     ResourceError blockedByContentBlockerError();
     ResourceError cannotShowURLError();
     ResourceError httpsUpgradeRedirectLoopError();
 
+    static bool isPortAllowed(const URL&);
+
     virtual void setDefersLoading(bool);
     bool defersLoading() const { return m_defersLoading; }
 
-    ResourceLoaderIdentifier identifier() const { return m_identifier; }
+    std::optional<ResourceLoaderIdentifier> identifier() const { return m_identifier; }
 
     bool wasAuthenticationChallengeBlocked() const { return m_wasAuthenticationChallengeBlocked; }
 
@@ -101,13 +113,14 @@ public:
     const ResourceResponse& response() const { return m_response; }
 
     const FragmentedSharedBuffer* resourceData() const;
+    RefPtr<const FragmentedSharedBuffer> protectedResourceData() const;
     void clearResourceData();
 
     virtual bool isSubresourceLoader() const;
 
     virtual void willSendRequest(ResourceRequest&&, const ResourceResponse& redirectResponse, CompletionHandler<void(ResourceRequest&&)>&& callback);
     virtual void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent);
-    virtual void didReceiveResponse(const ResourceResponse&, CompletionHandler<void()>&& policyCompletionHandler);
+    virtual void didReceiveResponse(ResourceResponse&&, CompletionHandler<void()>&& policyCompletionHandler);
     virtual void didReceiveData(const SharedBuffer&, long long encodedDataLength, DataPayloadType);
     virtual void didReceiveBuffer(const FragmentedSharedBuffer&, long long encodedDataLength, DataPayloadType);
     virtual void didFinishLoading(const NetworkLoadMetrics&);
@@ -123,7 +136,7 @@ public:
 
 #if USE(QUICK_LOOK)
     bool isQuickLookResource() const;
-    virtual void didReceivePreviewResponse(const ResourceResponse&) { };
+    virtual void didReceivePreviewResponse(ResourceResponse&&) { };
 #endif
 
     const URL& url() const { return m_request.url(); }
@@ -136,11 +149,12 @@ public:
     WEBCORE_EXPORT bool shouldIncludeCertificateInfo() const;
 
     virtual CachedResource* cachedResource() const { return nullptr; }
+    CachedResourceHandle<CachedResource> protectedCachedResource() const { return cachedResource(); }
 
     bool reachedTerminalState() const { return m_reachedTerminalState; }
 
     const ResourceRequest& request() const { return m_request; }
-    void setRequest(ResourceRequest&& request) { m_request = WTFMove(request); }
+    void setRequest(ResourceRequest&& request) { m_request = WTF::move(request); }
 
     void setDataBufferingPolicy(DataBufferingPolicy);
 
@@ -153,7 +167,8 @@ public:
     void unschedule(WTF::SchedulePair&);
 #endif
 
-    const LocalFrame* frame() const { return m_frame.get(); }
+    WEBCORE_EXPORT LocalFrame* frame() const;
+    RefPtr<LocalFrame> protectedFrame() const;
 
     const ResourceLoaderOptions& options() const { return m_options; }
 
@@ -161,6 +176,10 @@ public:
     ResourceRequest takeDeferredRequest() { return std::exchange(m_deferredRequest, { }); }
 
     bool isPDFJSResourceLoad() const;
+
+#if ENABLE(CONTENT_EXTENSIONS)
+    WEBCORE_EXPORT ResourceMonitor* resourceMonitorIfExists();
+#endif
 
 protected:
     ResourceLoader(LocalFrame&, ResourceLoaderOptions);
@@ -180,18 +199,18 @@ protected:
     virtual void willSendRequestInternal(ResourceRequest&&, const ResourceResponse& redirectResponse, CompletionHandler<void(ResourceRequest&&)>&&);
 
     RefPtr<ResourceHandle> m_handle;
-    RefPtr<LocalFrame> m_frame;
+    WeakPtr<LocalFrame> m_frame;
     RefPtr<DocumentLoader> m_documentLoader;
     ResourceResponse m_response;
     ResourceLoadTiming m_loadTiming;
 #if USE(QUICK_LOOK)
-    std::unique_ptr<LegacyPreviewLoader> m_previewLoader;
+    const RefPtr<LegacyPreviewLoader> m_previewLoader;
 #endif
     bool m_canCrossOriginRequestsAskUserForCredentials { true };
 
 private:
     virtual void willCancel(const ResourceError&) = 0;
-    virtual void didCancel(const ResourceError&) = 0;
+    virtual void didCancel(LoadWillContinueInAnotherProcess = LoadWillContinueInAnotherProcess::No) = 0;
 
     void addBuffer(const FragmentedSharedBuffer&, DataPayloadType);
     void loadDataURL();
@@ -227,7 +246,7 @@ private:
     ResourceRequest m_originalRequest; // Before redirects.
     SharedBufferBuilder m_resourceData;
 
-    ResourceLoaderIdentifier m_identifier;
+    Markable<ResourceLoaderIdentifier> m_identifier;
 
     bool m_reachedTerminalState { false };
     bool m_notifiedLoadComplete { false };

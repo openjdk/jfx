@@ -47,24 +47,22 @@ public:
         RebalanceAllWhitespaces
     };
 
-    static Ref<InsertTextCommand> create(Document& document, const String& text, bool selectInsertedText = false,
-        RebalanceType rebalanceType = RebalanceLeadingAndTrailingWhitespaces, EditAction editingAction = EditAction::Insert)
+    static Ref<InsertTextCommand> create(Ref<Document>&& document, const String& text, AllowPasswordEcho allowPasswordEcho
+        , bool selectInsertedText = false, RebalanceType rebalanceType = RebalanceLeadingAndTrailingWhitespaces, EditAction editingAction = EditAction::Insert)
     {
-        return adoptRef(*new InsertTextCommand(document, text, selectInsertedText, rebalanceType, editingAction));
+        return adoptRef(*new InsertTextCommand(WTF::move(document), text, allowPasswordEcho, selectInsertedText, rebalanceType, editingAction));
     }
 
-    static Ref<InsertTextCommand> createWithMarkerSupplier(Document& document, const String& text, Ref<TextInsertionMarkerSupplier>&& markerSupplier, EditAction editingAction = EditAction::Insert)
+    static Ref<InsertTextCommand> createWithMarkerSupplier(Ref<Document>&& document, const String& text, Ref<TextInsertionMarkerSupplier>&& markerSupplier, EditAction editingAction = EditAction::Insert)
     {
-        return adoptRef(*new InsertTextCommand(document, text, WTFMove(markerSupplier), editingAction));
+        return adoptRef(*new InsertTextCommand(WTF::move(document), text, WTF::move(markerSupplier), editingAction));
     }
 
 protected:
-    InsertTextCommand(Document&, const String& text, Ref<TextInsertionMarkerSupplier>&&, EditAction);
-    InsertTextCommand(Document&, const String& text, bool selectInsertedText, RebalanceType, EditAction);
+    InsertTextCommand(Ref<Document>&&, const String& text, Ref<TextInsertionMarkerSupplier>&&, EditAction);
+    InsertTextCommand(Ref<Document>&&, const String& text, AllowPasswordEcho, bool selectInsertedText, RebalanceType, EditAction);
 
 private:
-
-    void deleteCharacter();
 
     void doApply() override;
 
@@ -77,9 +75,12 @@ private:
     bool performOverwrite(const String&, bool selectInsertedText);
     void setEndingSelectionWithoutValidation(const Position& startPosition, const Position& endPosition);
 
+    bool applySmartListsIfNeeded();
+
     friend class TypingCommand;
 
     String m_text;
+    AllowPasswordEcho m_allowPasswordEcho { AllowPasswordEcho::Yes };
     bool m_selectInsertedText;
     RebalanceType m_rebalanceType;
     RefPtr<TextInsertionMarkerSupplier> m_markerSupplier;

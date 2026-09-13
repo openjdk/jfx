@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "LayoutElementBox.h"
-#include <wtf/IsoMalloc.h>
+#include <WebCore/LayoutElementBox.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -43,10 +43,9 @@ class InitialContainingBlock;
 class LayoutState;
 
 class LayoutTree {
-    WTF_MAKE_ISO_ALLOCATED(LayoutTree);
+    WTF_MAKE_TZONE_ALLOCATED(LayoutTree);
 public:
     LayoutTree(std::unique_ptr<ElementBox>);
-    ~LayoutTree() = default;
 
     const ElementBox& root() const { return *m_root; }
 
@@ -66,7 +65,7 @@ private:
     std::unique_ptr<Box> createLayoutBox(const ElementBox& parentContainer, const RenderObject& childRenderer);
 
     std::unique_ptr<Box> createReplacedBox(Box::ElementAttributes, ElementBox::ReplacedAttributes&&, RenderStyle&&);
-    std::unique_ptr<Box> createTextBox(String text, bool isCombined, bool canUseSimplifiedTextMeasuring, bool canUseSimpleFontCodePath, RenderStyle&&);
+    std::unique_ptr<Box> createTextBox(String text, bool isCombined, bool canUseSimplifiedTextMeasuring, bool canUseSimpleFontCodePath, bool hasPositionDependentContentWidth, bool hasStrongDirectionalityContent, RenderStyle&&);
     std::unique_ptr<ElementBox> createContainer(Box::ElementAttributes, RenderStyle&&);
 };
 

@@ -25,28 +25,51 @@
 
 #pragma once
 
-#include "FloatPoint.h"
-#include "LocalFrameView.h"
+#include <WebCore/Document.h>
+#include <WebCore/Element.h>
+#include <WebCore/FloatPoint.h>
+#include <WebCore/ScrollTypes.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class Element;
+class ScrollableArea;
+class WeakPtrImplWithEventTargetData;
 
-class ScrollAnchoringController final {
-    WTF_MAKE_FAST_ALLOCATED;
+enum class CandidateExaminationResult {
+    Exclude, Select, Descend, Skip
+};
+
+class ScrollAnchoringController {
+    WTF_MAKE_TZONE_ALLOCATED(ScrollAnchoringController);
 public:
-    explicit ScrollAnchoringController(LocalFrameView& frameView)
-        : m_frameView(frameView)
-    { }
+    explicit ScrollAnchoringController(ScrollableArea&);
+    ~ScrollAnchoringController();
     void invalidateAnchorElement();
-    void updateScrollPosition();
-    void selectAnchorElement();
-    LocalFrameView& frameView() { return m_frameView; }
+    void adjustScrollPositionForAnchoring();
+    void chooseAnchorElement(Document&);
+    CandidateExaminationResult examineAnchorCandidate(Element&);
+    void updateAnchorElement();
+    void notifyChildHadSuppressingStyleChange();
+    bool isInScrollAnchoringAncestorChain(const RenderObject&);
+
+    Element* anchorElement() const { return m_anchorElement.get(); }
+
 
 private:
-    LocalFrameView& m_frameView;
+    Element* findAnchorElementRecursive(Element*);
+    bool didFindPriorityCandidate(Document&);
+    FloatPoint computeOffsetFromOwningScroller(RenderObject&);
+    LocalFrameView& frameView();
+
+    CheckedRef<ScrollableArea> m_owningScrollableArea;
     WeakPtr<Element, WeakPtrImplWithEventTargetData> m_anchorElement;
-    FloatPoint m_lastPositionForAnchorElement;
+    FloatPoint m_lastOffsetForAnchorElement;
+    bool m_midUpdatingScrollPositionForAnchorElement { false };
+    bool m_isQueuedForScrollPositionUpdate { false };
+    bool m_shouldSuppressScrollPositionUpdate { false };
 };
 
 } // namespace WebCore

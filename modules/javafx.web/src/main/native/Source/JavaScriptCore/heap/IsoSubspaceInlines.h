@@ -25,7 +25,15 @@
 
 #pragma once
 
+#include <JavaScriptCore/AllocationFailureMode.h>
+#include <JavaScriptCore/IsoSubspace.h>
+#include <JavaScriptCore/VM.h>
+#include <cstdint>
+#include <wtf/Compiler.h>
+
 namespace JSC {
+
+class GCDeferralContext;
 
 namespace GCClient {
 
@@ -38,10 +46,10 @@ ALWAYS_INLINE void* IsoSubspace::allocate(VM& vm, size_t cellSize, GCDeferralCon
 
 inline void IsoSubspace::clearIsoCellSetBit(PreciseAllocation* preciseAllocation)
 {
-    unsigned lowerTierIndex = preciseAllocation->lowerTierIndex();
+    unsigned lowerTierPreciseIndex = preciseAllocation->lowerTierPreciseIndex();
     m_cellSets.forEach(
         [&](IsoCellSet* set) {
-            set->clearLowerTierCell(lowerTierIndex);
+            set->clearLowerTierPreciseCell(lowerTierPreciseIndex);
         });
 }
 
@@ -56,9 +64,9 @@ inline void IsoSubspace::sweep()
 }
 
 template<typename Func>
-void IsoSubspace::forEachLowerTierFreeListedPreciseAllocation(const Func& func)
+void IsoSubspace::forEachLowerTierPreciseFreeListedPreciseAllocation(const Func& func)
 {
-    m_lowerTierFreeList.forEach(func);
+    m_lowerTierPreciseFreeList.forEach(func);
 }
 
 } // namespace JSC

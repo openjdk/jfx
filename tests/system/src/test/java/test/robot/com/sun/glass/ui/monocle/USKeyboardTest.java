@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,11 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import com.sun.glass.ui.monocle.TestLogShim;
-import test.robot.com.sun.glass.ui.monocle.TestApplication;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
 
 
 public class USKeyboardTest {
@@ -44,13 +43,13 @@ public class USKeyboardTest {
     private Character [] signsShift;
     private String [] signsKeyNames;
 
-    @Before
+    @BeforeEach
     public void initDevice() {
         TestLogShim.reset();
         ui = new UInput();
     }
 
-    @After
+    @AfterEach
     public void destroyDevice() throws InterruptedException {
         ui.waitForQuiet();
         try {
@@ -115,7 +114,7 @@ public class USKeyboardTest {
             ui.processLine("EV_SYN");
             TestLogShim.waitForLog("Key released: SHIFT");
         }
-        TestLogShim.waitForLog("Key typed: %0$c", new Object[] { c });
+        TestLogShim.waitForLog("Key typed: %1$c", new Object[] { c });
     }
 
     /**
@@ -172,7 +171,7 @@ public class USKeyboardTest {
         TestLogShim.waitForLog("Key released: CAPS");
     }
 
-    /** Key presses and releases are allowed to overlap. RT-37425. */
+    /** Key presses and releases are allowed to overlap. JDK-8090306. */
     @Test
     public void testPressReleaseOrder() throws Exception {
         TestApplication.showFullScreenScene();
@@ -237,7 +236,7 @@ public class USKeyboardTest {
         ui.processLine("EV_KEY KEY_BACKSPACE 0");
         ui.processLine("EV_SYN");
         TestLogShim.waitForLog("Key released: BACK_SPACE");
-        Assert.assertEquals(0l, TestLogShim.countLogContaining("Key typed"));
+        Assertions.assertEquals(0l, TestLogShim.countLogContaining("Key typed"));
 
         TestLogShim.reset();
         ui.processLine("EV_KEY KEY_LEFTSHIFT 1");
@@ -250,7 +249,7 @@ public class USKeyboardTest {
         ui.processLine("EV_KEY KEY_LEFTSHIFT 0");
         ui.processLine("EV_SYN");
         TestLogShim.waitForLog("Key released: BACK_SPACE");
-        Assert.assertEquals(0l, TestLogShim.countLogContaining("Key typed"));
+        Assertions.assertEquals(0l, TestLogShim.countLogContaining("Key typed"));
 
         TestLogShim.reset();
         ui.processLine("EV_KEY KEY_CAPSLOCK 1");
@@ -267,7 +266,7 @@ public class USKeyboardTest {
         ui.processLine("EV_KEY KEY_CAPSLOCK 0");
         ui.processLine("EV_SYN");
         TestLogShim.waitForLog("Key released: BACK_SPACE");
-        Assert.assertEquals(0l, TestLogShim.countLogContaining("Key typed"));
+        Assertions.assertEquals(0l, TestLogShim.countLogContaining("Key typed"));
 
         TestLogShim.reset();
         ui.processLine("EV_KEY KEY_CAPSLOCK 1");
@@ -288,6 +287,6 @@ public class USKeyboardTest {
         ui.processLine("EV_KEY KEY_CAPSLOCK 0");
         ui.processLine("EV_SYN");
         TestLogShim.waitForLog("Key released: BACK_SPACE");
-        Assert.assertEquals(0l, TestLogShim.countLogContaining("Key typed"));
+        Assertions.assertEquals(0l, TestLogShim.countLogContaining("Key typed"));
     }
 }

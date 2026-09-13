@@ -25,9 +25,9 @@
 
 #pragma once
 
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
-#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -35,7 +35,7 @@ class PreviewConverter;
 class ResourceError;
 class FragmentedSharedBuffer;
 
-struct PreviewConverterClient : CanMakeWeakPtr<PreviewConverterClient> {
+struct PreviewConverterClient : AbstractRefCountedAndCanMakeWeakPtr<PreviewConverterClient> {
     virtual ~PreviewConverterClient() = default;
 
     virtual void previewConverterDidStartUpdating(PreviewConverter&) = 0;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 package com.sun.glass.ui.monocle;
 
 import com.sun.glass.ui.monocle.TouchState.Point;
-import java.security.AllPermission;
 import javafx.application.Platform;
 
 
@@ -132,11 +131,6 @@ public class AndroidInputDeviceRegistry extends InputDeviceRegistry {
     }
 
     void removeDevice(AndroidInputDevice device) {
-        @SuppressWarnings("removal")
-        SecurityManager security = System.getSecurityManager();
-        if (security != null) {
-            security.checkPermission(new AllPermission());
-        }
         devices.remove(device);
     }
 

@@ -96,6 +96,37 @@ GST_PBUTILS_API
 gboolean      gst_codec_utils_h265_caps_set_level_tier_and_profile (GstCaps      * caps,
                                                                     const guint8 * profile_tier_level,
                                                                     guint          len);
+
+/* H.266 */
+
+GST_PBUTILS_API
+const gchar * gst_codec_utils_h266_get_profile                     (const guint8 * ptl_record,
+                                                                    guint len);
+
+GST_PBUTILS_API
+const gchar * gst_codec_utils_h266_get_tier                        (const guint8 * ptl_record,
+                                                                    guint len);
+
+GST_PBUTILS_API
+const gchar * gst_codec_utils_h266_get_level                       (const guint8 * ptl_record,
+                                                                    guint len);
+
+GST_PBUTILS_API
+guint8        gst_codec_utils_h266_get_level_idc                   (const gchar  * level);
+
+GST_PBUTILS_API
+gboolean      gst_codec_utils_h266_caps_set_level_tier_and_profile (GstCaps      * caps,
+                                                                    const guint8 * decoder_configuration,
+                                                                    guint          len);
+
+/* AV1 */
+
+GST_PBUTILS_API
+guint8        gst_codec_utils_av1_get_seq_level_idx                (const gchar  * level);
+
+GST_PBUTILS_API
+const gchar * gst_codec_utils_av1_get_level                        (guint8 seq_level_idx);
+
 /* MPEG-4 part 2 */
 
 GST_PBUTILS_API
@@ -152,6 +183,13 @@ gboolean  gst_codec_utils_opus_parse_header (GstBuffer * header,
                                              guint16   * pre_skip,
                                              gint16    * output_gain);
 #endif // GSTREAMER_LITE
+
+/* AV1 */
+GST_PBUTILS_API
+GstCaps * gst_codec_utils_av1_create_caps_from_av1c (GstBuffer *av1c);
+
+GST_PBUTILS_API
+GstBuffer * gst_codec_utils_av1_create_av1c_from_caps (GstCaps *caps);
 
 /* General */
 GST_PBUTILS_API

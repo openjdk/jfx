@@ -25,7 +25,8 @@
 
 #pragma once
 
-#include "ColorTypes.h"
+#include <WebCore/ColorTypes.h>
+#include <numeric>
 #include <wtf/MathExtras.h>
 
 namespace WebCore {
@@ -36,6 +37,10 @@ enum class ColorSpace : uint8_t;
 
 // Conversion function for typed colors.
 template<typename Output, typename Input> Output convertColor(const Input& color);
+
+// Conversion function for typed colors that carries forward missing component values
+// from analogous components in the input type.
+template<typename Output, typename Input> Output convertColorCarryingForwardMissing(const Input& color);
 
 // Conversion functions for raw color components with associated color spaces.
 ColorComponents<float, 4> convertAndResolveColorComponents(ColorSpace inputColorSpace, ColorComponents<float, 4> inputColorComponents, ColorSpace outputColorSpace);
@@ -56,47 +61,160 @@ ColorComponents<float, 4> convertAndResolveColorComponents(ColorSpace inputColor
 
 template<typename Output, typename Input, typename = void> struct ColorConversion;
 
-template<typename Output, typename Input> inline Output convertColor(const Input& color)
+template<typename Output, typename Input> Output convertColor(const Input& color)
 {
     return ColorConversion<CanonicalColorType<Output>, CanonicalColorType<Input>>::convert(color);
 }
 
+// MARK: Specialized converters
+
+// Looks for a an analogous component in `Output` of `Input[IndexInInput]`.
+// For example, take the following:
+//
+//   auto result = analogousComponentIndex<LCHA<float>, HSLA<float>, 0>;
+//
+// This returns "2", because the input component specified (the hue in HSLA)
+// is analogous to component "2" in the output (the hue in LCHA).
+//
+// If there is no analogous component, `std::nullopt` is returned.
+template<typename Output, typename Input, unsigned IndexInInput>
+constexpr std::optional<unsigned> analogousComponentIndex()
+{
+    if constexpr (IndexInInput == 3)
+        return 3; // Special case alpha, it always should carry forward.
+    else {
+        constexpr auto inputCategory = Input::Model::componentInfo[IndexInInput].category;
+        if constexpr (!inputCategory)
+            return std::nullopt;
+        else if constexpr (*inputCategory == Output::Model::componentInfo[0].category)
+            return 0;
+        else if constexpr (*inputCategory == Output::Model::componentInfo[1].category)
+            return 1;
+        else if constexpr (*inputCategory == Output::Model::componentInfo[2].category)
+            return 2;
+        else
+            return std::nullopt;
+    }
+}
+
+// Utility to update appropriate component in `output` if an analogous component
+// in `input` is missing (which is encoded as NaN in color types).
+template<typename Output, typename Input, unsigned IndexInInput>
+constexpr void tryToCarryForwardComponentIfMissing(const ColorComponents<float, 4>& input, ColorComponents<float, 4>& output)
+{
+    constexpr auto analogousComponentIndexInOutput = analogousComponentIndex<Output, Input, IndexInInput>();
+    if constexpr (analogousComponentIndexInOutput) {
+        if (std::isnan(input[IndexInInput]))
+            output[*analogousComponentIndexInOutput] = std::numeric_limits<float>::quiet_NaN();
+    }
+}
+
+// Performs color space conversion followed by carrying forward missing components
+// from `Input` for analogous components in `Output` as described by CSS Color 4
+// § 12. Color Interpolation, https://drafts.csswg.org/css-color-4/#interpolation.
+template<typename Output, typename Input> Output convertColorCarryingForwardMissing(const Input& color)
+{
+    if constexpr (std::is_same_v<Input, Output>)
+        return convertColor<Output>(color);
+    else if constexpr (std::is_same_v<typename Input::ComponentType, uint8_t> || std::is_same_v<typename Output::ComponentType, uint8_t>)
+        return convertColor<Output>(color);
+    else {
+        auto input = asColorComponents(color.unresolved());
+        auto output = asColorComponents(convertColor<Output>(color).unresolved());
+
+        tryToCarryForwardComponentIfMissing<Output, Input, 0>(input, output);
+        tryToCarryForwardComponentIfMissing<Output, Input, 1>(input, output);
+        tryToCarryForwardComponentIfMissing<Output, Input, 2>(input, output);
+        tryToCarryForwardComponentIfMissing<Output, Input, 3>(input, output);
+
+        return makeFromComponents<Output>(output);
+    }
+}
+
+// MARK: White Point.
+
+constexpr std::array<float, 3> D50WhitePoint { 0.3457 / 0.3585, 1.0, (1.0 - 0.3457 - 0.3585) / 0.3585 };
+constexpr std::array<float, 3> D65WhitePoint { 0.3127 / 0.3290, 1.0, (1.0 - 0.3127 - 0.3290) / 0.3290 };
 
 // MARK: Chromatic Adaptation conversions.
 
-// http://www.brucelindbloom.com/index.html?Eqn_ChromAdapt.html
-template<WhitePoint From, WhitePoint To> struct ChromaticAdapation;
+template<WhitePoint From, WhitePoint To> struct ChromaticAdaptation;
 
-template<> struct ChromaticAdapation<WhitePoint::D65, WhitePoint::D50> {
+// Chromatic Adaptation allows conversion from one white point to another.
+//
+// The values we use are pre-calculated for the two white points we support, D50
+// and D65 using the Bradford method's chromatic adaptation transform (CAT), but
+// can be extended to any pair of white points.
+//
+// The process to compute new ones is:
+//
+//  1. Choose a CAT and lookup its values (these are not derivable).
+//     We currently use the Bradford CAT
+//
+//     let toCone =
+//         [  0.8951000,  0.2664000, -0.1614000 ],
+//         [ -0.7502000,  1.7135000,  0.0367000 ],
+//         [  0.0389000, -0.0685000,  1.0296000 ]
+//
+//  2. In addition, you will need the inverse
+//
+//     let fromCone = toCone ^ -1
+//
+//  3. Choose source and destination XYZ white points
+//
+//     let whitePoint_src = [ ... , ... , ... ]
+//     let whitePoint_dst = [ ... , ... , ... ]
+//
+//  4. Convert the white points into the cone response domain (denoted ρ, γ, β)
+//
+//     let [ ρ_src, γ_src, β_src ] = toCone * whitePoint_src
+//     let [ ρ_dst, γ_dst, β_dst ] = toCone * whitePoint_dst
+//
+//  5. Compute a scale transform
+//
+//     let scale =
+//         [ ρ_dst / ρ_src, 0,             0             ],
+//         [ 0,             γ_dst / γ_src, 0             ],
+//         [ 0,             0,             β_dst / β_src ]
+//
+//  6. Finally, use the scale to compute the adaptation transform
+//     (what is stored ChromaticAdaptation.matrix) as the concatenation
+//     of the toCone, scale and fromCone transforms.
+//
+//     let adaptation = fromCone * scale * toCone
+//
+// Additional details and more CATs / white point values can be found at: http://www.brucelindbloom.com/index.html?Eqn_ChromAdapt.html
+
+template<> struct ChromaticAdaptation<WhitePoint::D65, WhitePoint::D50> {
     static constexpr ColorMatrix<3, 3> matrix {
-         1.0478112f, 0.0228866f, -0.0501270f,
-         0.0295424f, 0.9904844f, -0.0170491f,
-        -0.0092345f, 0.0150436f,  0.7521316f
+         1.0479297925449969,    0.022946870601609652, -0.05019226628920524,
+         0.02962780877005599,   0.9904344267538799,   -0.017073799063418826,
+        -0.009243040646204504,  0.015055191490298152,  0.7518742814281371
     };
 };
 
-template<> struct ChromaticAdapation<WhitePoint::D50, WhitePoint::D65> {
+template<> struct ChromaticAdaptation<WhitePoint::D50, WhitePoint::D65> {
     static constexpr ColorMatrix<3, 3> matrix {
-         0.9555766f, -0.0230393f, 0.0631636f,
-        -0.0282895f,  1.0099416f, 0.0210077f,
-         0.0122982f, -0.0204830f, 1.3299098f
+         0.955473421488075,    -0.02309845494876471,   0.06325924320057072,
+        -0.0283697093338637,    1.0099953980813041,    0.021041441191917323,
+         0.012314014864481998, -0.020507649298898964,  1.330365926242124
     };
 };
 
 // MARK: HSLA
-template<> struct ColorConversion<SRGBA<float>, HSLA<float>> {
-    WEBCORE_EXPORT static SRGBA<float> convert(const HSLA<float>&);
+template<> struct ColorConversion<ExtendedSRGBA<float>, HSLA<float>> {
+    WEBCORE_EXPORT static ExtendedSRGBA<float> convert(const HSLA<float>&);
 };
-template<> struct ColorConversion<HSLA<float>, SRGBA<float>> {
-    WEBCORE_EXPORT static HSLA<float> convert(const SRGBA<float>&);
+template<> struct ColorConversion<HSLA<float>, ExtendedSRGBA<float>> {
+    WEBCORE_EXPORT static HSLA<float> convert(const ExtendedSRGBA<float>&);
 };
 
 // MARK: HWBA
-template<> struct ColorConversion<SRGBA<float>, HWBA<float>> {
-    WEBCORE_EXPORT static SRGBA<float> convert(const HWBA<float>&);
+template<> struct ColorConversion<ExtendedSRGBA<float>, HWBA<float>> {
+    WEBCORE_EXPORT static ExtendedSRGBA<float> convert(const HWBA<float>&);
 };
-template<> struct ColorConversion<HWBA<float>, SRGBA<float>> {
-    WEBCORE_EXPORT static HWBA<float> convert(const SRGBA<float>&);
+template<> struct ColorConversion<HWBA<float>, ExtendedSRGBA<float>> {
+    WEBCORE_EXPORT static HWBA<float> convert(const ExtendedSRGBA<float>&);
 };
 
 // MARK: LCHA
@@ -142,7 +260,7 @@ template<typename ColorType> struct ColorConversion<ColorType, ColorType> {
 
 // MARK: DeltaE color difference algorithms.
 
-template<typename ColorType1, typename ColorType2> inline constexpr float computeDeltaEOK(ColorType1 color1, ColorType2 color2)
+template<typename ColorType1, typename ColorType2> constexpr float computeDeltaEOK(ColorType1 color1, ColorType2 color2)
 {
     // https://drafts.csswg.org/css-color/#color-difference-OK
 
@@ -162,65 +280,6 @@ struct ClipGamutMapping {
     template<typename ColorType> static auto mapToBoundedGamut(const ColorType& color) -> typename ColorType::BoundedCounterpart
     {
         return clipToGamut<typename ColorType::BoundedCounterpart>(color);
-    }
-};
-
-struct CSSGamutMapping {
-    // This implements the CSS gamut mapping algorithm (https://drafts.csswg.org/css-color/#css-gamut-mapping) for RGB
-    // colors that are out of gamut for a particular RGB color space. It implements a relative colorimetric intent mapping
-    // for colors that are outside the destionation gamut and leaves colors inside the destination gamut unchanged.
-
-    // A simple optimization over the psuedocode in the specification has been made to avoid unnecessary work in the
-    // main bisection loop by checking the gamut using the extended linear color space of the RGB family regardless of
-    // of whether the final type is gamma encoded or not. This avoids unnecessary gamma encoding for non final loops.
-
-    // FIXME: This is a naive iterative solution that works for any bounded RGB color space. This can be optimized by
-    // using an analytical solution that computes the exact intersection.
-
-    static constexpr float JND = 0.02f;
-
-    template<typename ColorType> static auto mapToBoundedGamut(const ColorType& color) -> typename ColorType::BoundedCounterpart
-    {
-        using BoundedColorType = typename ColorType::BoundedCounterpart;
-        using ExtendedLinearColorType = ExtendedLinearEncoded<typename BoundedColorType::ComponentType, typename BoundedColorType::Descriptor>;
-        using BoundedLinearColorType = BoundedLinearEncoded<typename BoundedColorType::ComponentType, typename BoundedColorType::Descriptor>;
-
-        auto resolvedColor = color.resolved();
-
-        if (auto result = colorIfInGamut<BoundedColorType>(resolvedColor))
-            return *result;
-
-        auto colorInOKLCHColorSpace = convertColor<OKLCHA<float>>(resolvedColor).resolved();
-
-        if (WTF::areEssentiallyEqual(colorInOKLCHColorSpace.lightness, 100.0f) || colorInOKLCHColorSpace.lightness > 100.0f)
-            return { 1.0, 1.0, 1.0, resolvedColor.alpha };
-        else if (WTF::areEssentiallyEqual(colorInOKLCHColorSpace.lightness, 0.0f))
-            return { 0.0f, 0.0f, 0.0f, resolvedColor.alpha };
-
-        float min = 0.0f;
-        float max = colorInOKLCHColorSpace.chroma;
-
-        while (true) {
-            auto chroma = (min + max) / 2.0f;
-
-            auto current = colorInOKLCHColorSpace;
-            current.chroma = chroma;
-
-            auto currentInExtendedLinearColorSpace = convertColor<ExtendedLinearColorType>(current).resolved();
-
-            if (inGamut<BoundedLinearColorType>(currentInExtendedLinearColorSpace)) {
-                min = chroma;
-                continue;
-            }
-
-            auto currentClippedToBoundedLinearColorSpace = clipToGamut<BoundedLinearColorType>(currentInExtendedLinearColorSpace);
-
-            auto deltaE = computeDeltaEOK(currentClippedToBoundedLinearColorSpace, current);
-            if (deltaE < JND)
-                return convertColor<BoundedColorType>(currentClippedToBoundedLinearColorSpace);
-
-            max = chroma;
-        }
     }
 };
 
@@ -265,7 +324,7 @@ public:
             return handleToByteConversion(color);
 
         // 2. Handle all color types that are not IsRGBType<T> or IsXYZA<T> for Input and Output. For all
-        //    these other color types, we can uncondtionally convert them to their "reference" color, as
+        //    these other color types, we can unconditionally convert them to their "reference" color, as
         //    either they have already been handled by a ColorConversion specialization or this will
         //    get us closer to the final conversion.
         else if constexpr (!IsRGBType<Input> && !IsXYZA<Input>)
@@ -289,14 +348,14 @@ public:
         else if constexpr (IsRGBBoundedType<Output>)
             return convertColor<Output>(convertColor<typename Output::ExtendedCounterpart>(color));
 
-        // 6. At this point, Input and Output are each either ExtendedLinear-RGB types (of different familes) or XYZA
+        // 6. At this point, Input and Output are each either ExtendedLinear-RGB types (of different families) or XYZA
         //    and therefore all additional conversion can happen via matrix transformation.
         else
             return handleMatrixConversion(color);
     }
 
 private:
-    static inline constexpr Output handleToFloatConversion(const Input& color)
+    static constexpr Output handleToFloatConversion(const Input& color)
     {
         static_assert(IsRGBBoundedType<Input>, "Only bounded ([0..1]) RGB color types support conversion to/from bytes.");
 
@@ -307,7 +366,7 @@ private:
             return convertColor<Output>(convertColor<InputWithReplacement>(color));
     }
 
-    static inline constexpr Output handleToByteConversion(const Input& color)
+    static constexpr Output handleToByteConversion(const Input& color)
     {
         static_assert(IsRGBBoundedType<Output>, "Only bounded ([0..1]) RGB color types support conversion to/from bytes.");
 
@@ -318,29 +377,29 @@ private:
             return convertColor<Output>(convertColor<OutputWithReplacement>(color));
     }
 
-    template<typename ColorType> static inline constexpr auto toLinearEncoded(const ColorType& color) -> typename ColorType::LinearCounterpart
+    template<typename ColorType> static constexpr auto toLinearEncoded(const ColorType& color) -> typename ColorType::LinearCounterpart
     {
         auto [c1, c2, c3, alpha] = color.resolved();
         return { ColorType::TransferFunction::toLinear(c1), ColorType::TransferFunction::toLinear(c2), ColorType::TransferFunction::toLinear(c3), alpha };
     }
 
-    template<typename ColorType> static inline constexpr auto toGammaEncoded(const ColorType& color) -> typename ColorType::GammaEncodedCounterpart
+    template<typename ColorType> static constexpr auto toGammaEncoded(const ColorType& color) -> typename ColorType::GammaEncodedCounterpart
     {
         auto [c1, c2, c3, alpha] = color.resolved();
         return { ColorType::TransferFunction::toGammaEncoded(c1), ColorType::TransferFunction::toGammaEncoded(c2), ColorType::TransferFunction::toGammaEncoded(c3), alpha };
     }
 
-    template<typename ColorType> static inline constexpr auto toExtended(const ColorType& color) -> typename ColorType::ExtendedCounterpart
+    template<typename ColorType> static constexpr auto toExtended(const ColorType& color) -> typename ColorType::ExtendedCounterpart
     {
         return makeFromComponents<typename ColorType::ExtendedCounterpart>(asColorComponents(color.resolved()));
     }
 
-    template<typename ColorType> static inline constexpr auto toBounded(const ColorType& color) -> typename ColorType::BoundedCounterpart
+    template<typename ColorType> static constexpr auto toBounded(const ColorType& color) -> typename ColorType::BoundedCounterpart
     {
-        return CSSGamutMapping::mapToBoundedGamut(color);
+        return ClipGamutMapping::mapToBoundedGamut(color);
     }
 
-    static inline constexpr Output handleRGBFamilyConversion(const Input& color)
+    static constexpr Output handleRGBFamilyConversion(const Input& color)
     {
         static_assert(IsSameRGBTypeFamily<Output, Input>);
 
@@ -382,7 +441,7 @@ private:
         return boundsConversion(gammaConversion(color));
     }
 
-    static inline constexpr Output handleMatrixConversion(const Input& color)
+    static constexpr Output handleMatrixConversion(const Input& color)
     {
         static_assert((IsRGBLinearEncodedType<Input> && IsRGBExtendedType<Input>) || IsXYZA<Input>);
         static_assert((IsRGBLinearEncodedType<Output> && IsRGBExtendedType<Output>) || IsXYZA<Output>);
@@ -423,13 +482,13 @@ private:
                 return applyMatrices(color, Input::linearToXYZ, Output::xyzToLinear);
         } else {
             if constexpr (IsXYZA<Input> && IsXYZA<Output>)
-                return applyMatrices(color, ChromaticAdapation<Input::whitePoint, Output::whitePoint>::matrix);
+                return applyMatrices(color, ChromaticAdaptation<Input::whitePoint, Output::whitePoint>::matrix);
             else if constexpr (IsXYZA<Input>)
-                return applyMatrices(color, ChromaticAdapation<Input::whitePoint, Output::whitePoint>::matrix, Output::xyzToLinear);
+                return applyMatrices(color, ChromaticAdaptation<Input::whitePoint, Output::whitePoint>::matrix, Output::xyzToLinear);
             else if constexpr (IsXYZA<Output>)
-                return applyMatrices(color, Input::linearToXYZ, ChromaticAdapation<Input::whitePoint, Output::whitePoint>::matrix);
+                return applyMatrices(color, Input::linearToXYZ, ChromaticAdaptation<Input::whitePoint, Output::whitePoint>::matrix);
             else
-                return applyMatrices(color, Input::linearToXYZ, ChromaticAdapation<Input::whitePoint, Output::whitePoint>::matrix, Output::xyzToLinear);
+                return applyMatrices(color, Input::linearToXYZ, ChromaticAdaptation<Input::whitePoint, Output::whitePoint>::matrix, Output::xyzToLinear);
         }
     }
 };

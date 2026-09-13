@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package test.javafx.css;
 
-import static org.junit.Assert.*;
-
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.PlatformUtil;
 
@@ -38,14 +36,18 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontSmoothingType;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import static org.junit.Assume.assumeTrue;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * AKA: RT-7401. Tests that the pattern used works by testing opacity
+ * AKA: JDK-8109200. Tests that the pattern used works by testing opacity
  * specifically. Tests for font and text-fill should be done in the tests
  * for Label and Labeled.
  */
@@ -65,19 +67,19 @@ public class HonorDeveloperSettingsTest {
         sm.hasDefaultUserAgentStylesheet = false;
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() {
         if (PlatformUtil.isUnix()) {
             assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8267425
         }
     }
 
-    @After
+    @AfterEach
     public void cleanup() {
         resetStyleManager();
     }
 
-    @Before
+    @BeforeEach
     public void setUp() {
         rect = new Rectangle();
         rect.setId("rectangle");
@@ -261,7 +263,7 @@ public class HonorDeveloperSettingsTest {
         scene.getRoot().applyCss();
         //
         // Stroke width is set to 1em in the author stylesheet. If
-        // RT-20145 is not working, then the code will pick up the 20px
+        // JDK-8127344 is not working, then the code will pick up the 20px
         // font size.
         //
         assertEquals(14, text.getStrokeWidth(), 0.00001);
@@ -280,7 +282,7 @@ public class HonorDeveloperSettingsTest {
         scene.getRoot().applyCss();
 
         //
-        // If RT-20513 is not working, then the code will _not_
+        // If JDK-8120245 is not working, then the code will _not_
         // pick up the inline style
         //
         assertEquals(18, text.getStrokeWidth(), 0.00001);

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "JSFunction.h"
+#include <JavaScriptCore/JSFunction.h>
 
 namespace JSC {
 
@@ -38,7 +38,7 @@ public:
     using Base = JSFunction;
 
     static constexpr unsigned StructureFlags = Base::StructureFlags;
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
     static void destroy(JSCell* cell)
     {
         static_cast<JSNativeStdFunction*>(cell)->JSNativeStdFunction::~JSNativeStdFunction();
@@ -52,20 +52,17 @@ public:
 
     DECLARE_EXPORT_INFO;
 
+    DECLARE_VISIT_CHILDREN;
+
     JS_EXPORT_PRIVATE static JSNativeStdFunction* create(VM&, JSGlobalObject*, unsigned length, const String& name, NativeStdFunction&&, Intrinsic = NoIntrinsic, NativeFunction nativeConstructor = callHostFunctionAsConstructor);
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        ASSERT(globalObject);
-        return Structure::create(vm, globalObject, prototype, TypeInfo(JSFunctionType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     const NativeStdFunction& function() { return m_function; }
 
 private:
     JSNativeStdFunction(VM&, NativeExecutable*, JSGlobalObject*, Structure*, NativeStdFunction&&);
     void finishCreation(VM&, NativeExecutable*, unsigned length, const String& name);
-    DECLARE_VISIT_CHILDREN;
 
     NativeStdFunction m_function;
 };

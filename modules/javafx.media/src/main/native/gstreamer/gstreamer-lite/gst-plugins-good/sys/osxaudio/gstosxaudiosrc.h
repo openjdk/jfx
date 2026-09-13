@@ -73,6 +73,11 @@ struct _GstOsxAudioSrc
   GstAudioBaseSrc src;
 
   AudioDeviceID device_id;
+  char *unique_id;
+
+#if !TARGET_OS_OSX
+  gboolean configure_session;
+#endif
 };
 
 struct _GstOsxAudioSrcClass
@@ -81,6 +86,8 @@ struct _GstOsxAudioSrcClass
 };
 
 GType gst_osx_audio_src_get_type (void);
+
+GST_ELEMENT_REGISTER_DECLARE (osxaudiosrc);
 
 G_END_DECLS
 

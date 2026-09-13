@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +36,7 @@ namespace WTF {
 // An iterator for ConcurrentVector. It supports only the pre ++ operator
 template <typename T, size_t SegmentSize = 8> class ConcurrentVector;
 template <typename T, size_t SegmentSize = 8> class ConcurrentVectorIterator {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ConcurrentVectorIterator);
 private:
     friend class ConcurrentVector<T, SegmentSize>;
 public:
@@ -81,7 +81,8 @@ private:
 // elements and another thread continues to access elements at lower indices. Only one thread can
 // append at a time, so that activity still needs locking. size() and last() are racy with append(),
 // in the sense that last() may crash if an append() is running concurrently because size()-1 does yet
-// have a segment.
+// have a segment. If you want size() to be safe with additions use appendConcurrently() but note
+// appendConcurrently() is not multi-writer safe.
 //
 // Typical users of ConcurrentVector already have some way of ensuring that by the time someone is
 // trying to use an index, some synchronization has happened to ensure that this index contains fully
@@ -93,16 +94,12 @@ template <typename T, size_t SegmentSize>
 class ConcurrentVector final {
     friend class ConcurrentVectorIterator<T, SegmentSize>;
     WTF_MAKE_NONCOPYABLE(ConcurrentVector);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ConcurrentVector);
 
 public:
     typedef ConcurrentVectorIterator<T, SegmentSize> Iterator;
 
     ConcurrentVector() = default;
-
-    ~ConcurrentVector()
-    {
-    }
 
     // This may return a size that is bigger than the underlying storage, since this does not fence
     // manipulations of size. So if you access at size()-1, you may crash because this hasn't
@@ -111,46 +108,46 @@ public:
 
     bool isEmpty() const { return !size(); }
 
-    T& at(size_t index)
+    T& at(size_t index) LIFETIME_BOUND
     {
         ASSERT_WITH_SECURITY_IMPLICATION(index < m_size);
         return segmentFor(index)->entries[subscriptFor(index)];
     }
 
-    const T& at(size_t index) const
+    const T& at(size_t index) const LIFETIME_BOUND
     {
         return const_cast<ConcurrentVector<T, SegmentSize>*>(this)->at(index);
     }
 
-    T& operator[](size_t index)
+    T& operator[](size_t index) LIFETIME_BOUND
     {
         return at(index);
     }
 
-    const T& operator[](size_t index) const
+    const T& operator[](size_t index) const LIFETIME_BOUND
     {
         return at(index);
     }
 
-    T& first()
+    T& first() LIFETIME_BOUND
     {
         ASSERT_WITH_SECURITY_IMPLICATION(!isEmpty());
         return at(0);
     }
-    const T& first() const
+    const T& first() const LIFETIME_BOUND
     {
         ASSERT_WITH_SECURITY_IMPLICATION(!isEmpty());
         return at(0);
     }
 
     // This may crash if run concurrently to append(). If you want to accurately track the size of
-    // this vector, you'll have to do it yourself, with your own fencing.
-    T& last()
+    // this vector, use appendConcurrently().
+    T& last() LIFETIME_BOUND
     {
         ASSERT_WITH_SECURITY_IMPLICATION(!isEmpty());
         return at(size() - 1);
     }
-    const T& last() const
+    const T& last() const LIFETIME_BOUND
     {
         ASSERT_WITH_SECURITY_IMPLICATION(!isEmpty());
         return at(size() - 1);
@@ -159,7 +156,7 @@ public:
     T takeLast()
     {
         ASSERT_WITH_SECURITY_IMPLICATION(!isEmpty());
-        T result = WTFMove(last());
+        T result = WTF::move(last());
         --m_size;
         return result;
     }
@@ -174,10 +171,22 @@ public:
     }
 
     template<typename... Args>
-    T& alloc(Args&&... args)
+    T& alloc(Args&&... args) LIFETIME_BOUND
     {
         append(std::forward<Args>(args)...);
         return last();
+    }
+
+    // Note, appendConcurrently() assumes only one thread can append at a time and is not safe with removeLast()/takeLast().
+    template<typename... Args>
+    void appendConcurrently(Args&&... args)
+    {
+        if (!segmentExistsFor(m_size))
+            allocateSegment();
+        T* slot = &segmentFor(m_size)->entries[subscriptFor(m_size)];
+        new (NotNull, slot) T(std::forward<Args>(args)...);
+        WTF::storeStoreFence();
+        ++m_size;
     }
 
     void removeLast()
@@ -198,21 +207,21 @@ public:
             new (NotNull, &at(i)) T();
     }
 
-    Iterator begin()
+    Iterator begin() LIFETIME_BOUND
     {
         return Iterator(*this, 0);
     }
 
-    Iterator end()
+    Iterator end() LIFETIME_BOUND
     {
         return Iterator(*this, m_size);
     }
 
 private:
     struct Segment {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Segment);
 
-        T entries[SegmentSize];
+        std::array<T, SegmentSize> entries;
     };
 
     bool segmentExistsFor(size_t index)

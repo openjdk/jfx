@@ -43,10 +43,10 @@ public:
 
     virtual ApplePayPayment toApplePayPayment(unsigned version) const;
 
-    PKPayment *pkPayment() const;
+    RetainPtr<PKPayment> pkPayment() const;
 
 private:
-    RetainPtr<PKPayment> m_pkPayment;
+    const RetainPtr<PKPayment> m_pkPayment;
 };
 
 }

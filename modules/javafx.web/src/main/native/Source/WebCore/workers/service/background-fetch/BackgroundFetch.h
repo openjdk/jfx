@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,20 +25,20 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
-#include "BackgroundFetchFailureReason.h"
-#include "BackgroundFetchOptions.h"
-#include "BackgroundFetchRecordIdentifier.h"
-#include "BackgroundFetchRecordLoader.h"
-#include "BackgroundFetchRequest.h"
-#include "BackgroundFetchResult.h"
-#include "BackgroundFetchStore.h"
-#include "ClientOrigin.h"
-#include "ResourceResponse.h"
-#include "ServiceWorkerRegistrationKey.h"
-#include "ServiceWorkerTypes.h"
-#include <wtf/WeakPtr.h>
+#include <WebCore/BackgroundFetchFailureReason.h>
+#include <WebCore/BackgroundFetchOptions.h>
+#include <WebCore/BackgroundFetchRecordIdentifier.h>
+#include <WebCore/BackgroundFetchRecordLoader.h>
+#include <WebCore/BackgroundFetchRequest.h>
+#include <WebCore/BackgroundFetchResult.h>
+#include <WebCore/BackgroundFetchStore.h>
+#include <WebCore/ClientOrigin.h>
+#include <WebCore/ResourceResponse.h>
+#include <WebCore/ServiceWorkerRegistrationKey.h>
+#include <WebCore/ServiceWorkerTypes.h>
+#include <wtf/Identified.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -49,15 +49,24 @@ class SharedBuffer;
 struct BackgroundFetchRequest;
 struct CacheQueryOptions;
 
-class BackgroundFetch : public CanMakeWeakPtr<BackgroundFetch> {
-    WTF_MAKE_FAST_ALLOCATED;
+class BackgroundFetch : public RefCountedAndCanMakeWeakPtr<BackgroundFetch> {
+    WTF_MAKE_TZONE_ALLOCATED(BackgroundFetch);
 public:
     using NotificationCallback = Function<void(BackgroundFetch&)>;
-    BackgroundFetch(SWServerRegistration&, const String&, Vector<BackgroundFetchRequest>&&, BackgroundFetchOptions&&, Ref<BackgroundFetchStore>&&, NotificationCallback&&);
-    BackgroundFetch(SWServerRegistration&, String&&, BackgroundFetchOptions&&, Ref<BackgroundFetchStore>&&, NotificationCallback&&, bool pausedFlag);
+
+    static Ref<BackgroundFetch> create(SWServerRegistration& sWServerRegistration, const String& identifier, Vector<BackgroundFetchRequest>&& requests, BackgroundFetchOptions&& options, Ref<BackgroundFetchStore>&& store, NotificationCallback&& notificationCallback)
+    {
+        return adoptRef(*new BackgroundFetch(sWServerRegistration, identifier, WTF::move(requests), WTF::move(options), WTF::move(store), WTF::move(notificationCallback)));
+    }
+
+    static Ref<BackgroundFetch> create(SWServerRegistration& swServerRegistration, String&& identifier, BackgroundFetchOptions&& options, Ref<BackgroundFetchStore>&& store, NotificationCallback&& notificationCallback, bool pausedFlag)
+    {
+        return adoptRef(*new BackgroundFetch(swServerRegistration, WTF::move(identifier), WTF::move(options), WTF::move(store), WTF::move(notificationCallback), pausedFlag));
+    }
+
     ~BackgroundFetch();
 
-    static std::unique_ptr<BackgroundFetch> createFromStore(std::span<const uint8_t>, SWServer&, Ref<BackgroundFetchStore>&&, NotificationCallback&&);
+    static RefPtr<BackgroundFetch> createFromStore(std::span<const uint8_t>, SWServer&, Ref<BackgroundFetchStore>&&, NotificationCallback&&);
 
     String identifier() const { return m_identifier; }
     WEBCORE_EXPORT BackgroundFetchInformation information() const;
@@ -66,16 +75,19 @@ public:
 
     using RetrieveRecordResponseCallback = CompletionHandler<void(Expected<ResourceResponse, ExceptionData>&&)>;
     using RetrieveRecordResponseBodyCallback = Function<void(Expected<RefPtr<SharedBuffer>, ResourceError>&&)>;
-    using CreateLoaderCallback = Function<std::unique_ptr<BackgroundFetchRecordLoader>(BackgroundFetchRecordLoader::Client&, const BackgroundFetchRequest&, size_t responseDataSize, const ClientOrigin&)>;
+    using CreateLoaderCallback = Function<RefPtr<BackgroundFetchRecordLoader>(BackgroundFetchRecordLoaderClient&, const BackgroundFetchRequest&, size_t responseDataSize, const ClientOrigin&)>;
 
     bool pausedFlagIsSet() const { return m_pausedFlag; }
     void pause();
     void resume(const CreateLoaderCallback&);
 
-    class Record final : public BackgroundFetchRecordLoader::Client, public RefCounted<Record> {
-        WTF_MAKE_FAST_ALLOCATED;
+    class Record final : public BackgroundFetchRecordLoaderClient, public RefCounted<Record>, private Identified<BackgroundFetchRecordIdentifier> {
+        WTF_MAKE_TZONE_ALLOCATED(Record);
     public:
-        static Ref<Record> create(BackgroundFetch& fetch, BackgroundFetchRequest&& request, size_t size) { return adoptRef(*new Record(fetch, WTFMove(request), size)); }
+        void ref() const final { RefCounted::ref(); }
+        void deref() const final { RefCounted::deref(); }
+
+        static Ref<Record> create(BackgroundFetch& fetch, BackgroundFetchRequest&& request, size_t size) { return adoptRef(*new Record(fetch, WTF::move(request), size)); }
         ~Record();
 
         void complete(const CreateLoaderCallback&);
@@ -105,13 +117,12 @@ public:
         void didFinish(const ResourceError&) final;
 
         WeakPtr<BackgroundFetch> m_fetch;
-        BackgroundFetchRecordIdentifier m_identifier;
         String m_fetchIdentifier;
         ServiceWorkerRegistrationKey m_registrationKey;
         BackgroundFetchRequest m_request;
         size_t m_index { 0 };
         ResourceResponse m_response;
-        std::unique_ptr<BackgroundFetchRecordLoader> m_loader;
+        RefPtr<BackgroundFetchRecordLoader> m_loader;
         uint64_t m_responseDataSize { 0 };
         bool m_isCompleted { false };
         bool m_isAborted { false };
@@ -135,6 +146,9 @@ public:
     void unsetRecordsAvailableFlag();
 
 private:
+    BackgroundFetch(SWServerRegistration&, const String&, Vector<BackgroundFetchRequest>&&, BackgroundFetchOptions&&, Ref<BackgroundFetchStore>&&, NotificationCallback&&);
+    BackgroundFetch(SWServerRegistration&, String&&, BackgroundFetchOptions&&, Ref<BackgroundFetchStore>&&, NotificationCallback&&, bool pausedFlag);
+
     void didSendData(uint64_t);
     void storeResponse(size_t, bool shouldClearResponseBody, ResourceResponse&&);
     void storeResponseBodyChunk(size_t, const SharedBuffer&);
@@ -164,11 +178,9 @@ private:
     uint64_t m_currentDownloadSize { 0 };
     uint64_t m_currentUploadSize { 0 };
 
-    Ref<BackgroundFetchStore> m_store;
+    const Ref<BackgroundFetchStore> m_store;
     NotificationCallback m_notificationCallback;
     ClientOrigin m_origin;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

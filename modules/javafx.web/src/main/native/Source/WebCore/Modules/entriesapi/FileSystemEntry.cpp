@@ -26,20 +26,22 @@
 #include "config.h"
 #include "FileSystemEntry.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "DOMException.h"
 #include "DOMFileSystem.h"
-#include "Document.h"
+#include "DocumentEventLoop.h"
 #include "ErrorCallback.h"
 #include "FileSystemDirectoryEntry.h"
 #include "FileSystemEntryCallback.h"
 #include "ScriptExecutionContext.h"
+#include "ScriptWrappableInlines.h"
 #include "WindowEventLoop.h"
 #include <wtf/FileSystem.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(FileSystemEntry);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FileSystemEntry);
 
 FileSystemEntry::FileSystemEntry(ScriptExecutionContext& context, DOMFileSystem& filesystem, const String& virtualPath)
     : ActiveDOMObject(&context)
@@ -56,11 +58,6 @@ DOMFileSystem& FileSystemEntry::filesystem() const
     return m_filesystem.get();
 }
 
-const char* FileSystemEntry::activeDOMObjectName() const
-{
-    return "FileSystemEntry";
-}
-
 Document* FileSystemEntry::document() const
 {
     return downcast<Document>(scriptExecutionContext());
@@ -71,19 +68,19 @@ void FileSystemEntry::getParent(ScriptExecutionContext& context, RefPtr<FileSyst
     if (!successCallback && !errorCallback)
         return;
 
-    filesystem().getParent(context, *this, [this, pendingActivity = makePendingActivity(*this), successCallback = WTFMove(successCallback), errorCallback = WTFMove(errorCallback)](auto&& result) mutable {
-        auto* document = this->document();
+    filesystem().getParent(context, *this, [pendingActivity = makePendingActivity(*this), successCallback = WTF::move(successCallback), errorCallback = WTF::move(errorCallback)]<typename Result> (Result&& result) mutable {
+        RefPtr document = pendingActivity->object().document();
         if (!document)
             return;
 
-        document->eventLoop().queueTask(TaskSource::Networking, [successCallback = WTFMove(successCallback), errorCallback = WTFMove(errorCallback), result = WTFMove(result), pendingActivity = WTFMove(pendingActivity)]() mutable {
+        document->checkedEventLoop()->queueTask(TaskSource::Networking, [successCallback = WTF::move(successCallback), errorCallback = WTF::move(errorCallback), result = std::forward<Result>(result), pendingActivity = WTF::move(pendingActivity)] () mutable {
             if (result.hasException()) {
                 if (errorCallback)
-                    errorCallback->handleEvent(DOMException::create(result.releaseException()));
+                    errorCallback->invoke(DOMException::create(result.releaseException()));
                 return;
             }
             if (successCallback)
-                successCallback->handleEvent(result.releaseReturnValue());
+                successCallback->invoke(result.releaseReturnValue());
         });
     });
 }

@@ -32,8 +32,8 @@
 
 namespace JSC {
 
-JITToDFGDeferredCompilationCallback::JITToDFGDeferredCompilationCallback() { }
-JITToDFGDeferredCompilationCallback::~JITToDFGDeferredCompilationCallback() { }
+JITToDFGDeferredCompilationCallback::JITToDFGDeferredCompilationCallback() = default;
+JITToDFGDeferredCompilationCallback::~JITToDFGDeferredCompilationCallback() = default;
 
 Ref<JITToDFGDeferredCompilationCallback> JITToDFGDeferredCompilationCallback::create()
 {
@@ -59,7 +59,7 @@ void JITToDFGDeferredCompilationCallback::compilationDidComplete(
 
     dataLogLnIf(Options::verboseOSR(), "Optimizing compilation of ", *codeBlock, " result: ", result);
 
-    if (result == CompilationSuccessful)
+    if (result == CompilationResult::CompilationSuccessful)
         codeBlock->ownerExecutable()->installCode(codeBlock);
 
     codeBlock->alternative()->setOptimizationThresholdBasedOnCompilationResult(result);

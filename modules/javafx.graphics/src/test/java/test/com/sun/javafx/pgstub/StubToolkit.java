@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,12 +23,45 @@
  * questions.
  */
 
-/*
- * StubToolkit.java
- */
-
 package test.com.sun.javafx.pgstub;
 
+import java.io.File;
+import java.io.InputStream;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.Future;
+
+import com.sun.javafx.util.Utils;
+import javafx.application.ConditionalFeature;
+import javafx.geometry.Dimension2D;
+import javafx.scene.image.Image;
+import javafx.scene.input.DataFormat;
+import javafx.scene.input.DragEvent;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.InputMethodRequests;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyEvent;
+import javafx.scene.input.TransferMode;
+import javafx.scene.paint.Color;
+import javafx.scene.paint.ImagePattern;
+import javafx.scene.paint.LinearGradient;
+import javafx.scene.paint.RadialGradient;
+import javafx.scene.shape.FillRule;
+import javafx.scene.shape.PathElement;
+import javafx.scene.shape.SVGPath;
+import javafx.scene.shape.StrokeLineCap;
+import javafx.scene.shape.StrokeLineJoin;
+import javafx.scene.shape.StrokeType;
+import javafx.stage.FileChooser.ExtensionFilter;
+import javafx.stage.Modality;
+import javafx.stage.StageStyle;
+import javafx.stage.Window;
+import javafx.util.Pair;
 import com.sun.glass.ui.CommonDialogs.FileChooserResult;
 import com.sun.glass.ui.GlassRobot;
 import com.sun.javafx.application.PlatformImpl;
@@ -42,32 +75,26 @@ import com.sun.javafx.runtime.async.AsyncOperation;
 import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.scene.text.TextLayoutFactory;
-import com.sun.javafx.tk.*;
+import com.sun.javafx.tk.FileChooserType;
+import com.sun.javafx.tk.FontLoader;
+import com.sun.javafx.tk.ImageLoader;
+import com.sun.javafx.tk.PlatformImage;
+import com.sun.javafx.tk.RenderJob;
+import com.sun.javafx.tk.ScreenConfigurationAccessor;
+import com.sun.javafx.tk.TKClipboard;
+import com.sun.javafx.tk.TKDragGestureListener;
+import com.sun.javafx.tk.TKDragSourceListener;
+import com.sun.javafx.tk.TKDropTargetListener;
+import com.sun.javafx.tk.TKScene;
+import com.sun.javafx.tk.TKScreenConfigurationListener;
+import com.sun.javafx.tk.TKStage;
+import com.sun.javafx.tk.TKSystemMenu;
+import com.sun.javafx.tk.Toolkit;
 import com.sun.prism.BasicStroke;
 import com.sun.scenario.DelayedRunnable;
 import com.sun.scenario.animation.AbstractPrimaryTimer;
 import com.sun.scenario.effect.FilterContext;
 import com.sun.scenario.effect.Filterable;
-import javafx.application.ConditionalFeature;
-import javafx.geometry.Dimension2D;
-import javafx.scene.image.Image;
-import javafx.scene.input.*;
-import javafx.scene.paint.Color;
-import javafx.scene.paint.ImagePattern;
-import javafx.scene.paint.LinearGradient;
-import javafx.scene.paint.RadialGradient;
-import javafx.scene.shape.*;
-import javafx.stage.FileChooser.ExtensionFilter;
-import javafx.stage.Modality;
-import javafx.stage.StageStyle;
-import javafx.stage.Window;
-import javafx.util.Pair;
-
-import java.io.File;
-import java.io.InputStream;
-import java.security.AccessControlContext;
-import java.util.*;
-import java.util.concurrent.Future;
 
 /**
  * A Toolkit implementation for use with Testing.
@@ -120,18 +147,19 @@ public class StubToolkit extends Toolkit {
     }
 
     @Override
-    public TKStage createTKStage(Window peerWindow, boolean securityDialog, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl, @SuppressWarnings("removal") AccessControlContext acc) {
+    public TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary,
+                                 Modality modality, TKStage owner, boolean rtl, boolean darkFrame) {
 
         return new StubStage();
     }
 
     @Override
-    public TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner, @SuppressWarnings("removal") AccessControlContext acc) {
+    public TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner) {
         return new StubPopupStage();
     }
 
     @Override
-    public TKStage createTKEmbeddedStage(HostInterface host, @SuppressWarnings("removal") AccessControlContext acc) {
+    public TKStage createTKEmbeddedStage(HostInterface host) {
         return new StubStage();
     }
 
@@ -376,19 +404,15 @@ public class StubToolkit extends Toolkit {
         private double offsetX;
         private double offsetY;
 
-        @Override
-        public void setSecurityContext(@SuppressWarnings("removal") AccessControlContext ctx) {
-        }
-
         @Override public Set<DataFormat> getContentTypes() {
             return map.keySet();
         }
 
-        @Override public boolean putContent(Pair<DataFormat, Object>... content) {
-            boolean good;
+        @Override
+        public boolean putContent(Pair<DataFormat, Object>... content) {
+            map.clear();
             for (Pair<DataFormat,Object> pair : content) {
-                good = map.put(pair.getKey(), pair.getValue()) == pair.getValue();
-                if (!good) return false;
+                map.put(pair.getKey(), pair.getValue());
             }
             return true;
         }
@@ -581,10 +605,18 @@ public class StubToolkit extends Toolkit {
 
     @Override
     public AsyncOperation loadImageAsync(
-            AsyncOperationListener listener, String url, double width, double height,
+            AsyncOperationListener<ImageLoader> listener, String url, double width, double height,
             boolean preserveRatio, boolean smooth) {
         return imageLoaderFactory.createAsyncImageLoader(
                 listener, url, width, height, preserveRatio, smooth);
+    }
+
+    @Override
+    public AsyncOperation loadImageAsync(
+            AsyncOperationListener<ImageLoader> listener, InputStream stream, double width, double height,
+            boolean preserveRatio, boolean smooth) {
+        return imageLoaderFactory.createAsyncImageLoader(
+                listener, stream, width, height, preserveRatio, smooth);
     }
 
     @Override
@@ -606,7 +638,7 @@ public class StubToolkit extends Toolkit {
     }
 
     @Override
-    public int getKeyCodeForChar(String character) {
+    public int getKeyCodeForChar(String character, int hint) {
         if (charToKeyCodeMap != null) {
             final KeyCode keyCode = charToKeyCodeMap.get(character);
             if (keyCode != null) {
@@ -668,8 +700,22 @@ public class StubToolkit extends Toolkit {
                                           .contains((int) x, (int) y);
     }
 
+    /**
+     * Sets the current time of the {@link StubPrimaryTimer}.
+     *
+     * @param millis the time in milliseconds
+     */
     public void setCurrentTime(long millis) {
         primaryTimer.setCurrentTime(millis);
+    }
+
+    /**
+     * Returns the current time of the {@link StubPrimaryTimer}.
+     *
+     * @return the time in milliseconds
+     */
+    public long getCurrentTime() {
+        return primaryTimer.getCurrentTime();
     }
 
     public void handleAnimation() {
@@ -686,6 +732,12 @@ public class StubToolkit extends Toolkit {
         return imageLoaderFactory;
     }
 
+    /**
+     * Sets the current time of the {@link StubPrimaryTimer} and handles all pending animations.
+     * Useful for unit-testing things that involves animations (e.g. Timeline).
+     *
+     * @param millis the time in milliseconds
+     */
     public void setAnimationTime(final long millis) {
         setCurrentTime(millis);
         handleAnimation();
@@ -729,7 +781,7 @@ public class StubToolkit extends Toolkit {
         return false;
     }
 
-    private KeyCode platformShortcutKey = KeyCode.SHORTCUT;
+    private KeyCode platformShortcutKey;
 
     public void setPlatformShortcutKey(final KeyCode platformShortcutKey) {
         this.platformShortcutKey = platformShortcutKey;
@@ -737,6 +789,10 @@ public class StubToolkit extends Toolkit {
 
     @Override
     public KeyCode getPlatformShortcutKey() {
+        if (platformShortcutKey == null) {
+            return Utils.isMac() ? KeyCode.META : KeyCode.CONTROL;
+        }
+
         return platformShortcutKey;
     }
 

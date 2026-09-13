@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -93,7 +93,7 @@ public class HelloLaunchOnNewThread extends Application {
                 + Thread.currentThread().getName());
         new Thread(() -> {
             // Sleep for a very short time to ensure main thread exits,
-            // since that will provoke RT-9824
+            // since that will provoke JDK-8109685
             try {
                 Thread.sleep(100);
             } catch (InterruptedException ex) {}

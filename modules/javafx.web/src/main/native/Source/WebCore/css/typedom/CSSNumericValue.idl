@@ -28,7 +28,6 @@ typedef (double or CSSNumericValue) CSSNumberish;
 // https://drafts.css-houdini.org/css-typed-om/#cssnumericvalue
 [
     InterfaceName=CSSNumericValue,
-    EnabledBySetting=CSSTypedOMEnabled,
     JSGenerateToNativeObject,
     Exposed=(Window,Worker,PaintWorklet)
 ] interface CSSNumericValue : CSSStyleValue {
@@ -45,5 +44,5 @@ typedef (double or CSSNumericValue) CSSNumberish;
     CSSMathSum toSum(USVString... units);
     CSSNumericType type();
 
-    [Exposed=Window] static CSSNumericValue parse(USVString cssText);
+    [Exposed=Window, CallWith=CurrentDocument] static CSSNumericValue parse(USVString cssText);
 };

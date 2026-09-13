@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -41,7 +41,7 @@ class OSRAvailabilityAnalysisPhase : public Phase {
     static constexpr bool verbose = false;
 public:
     OSRAvailabilityAnalysisPhase(Graph& graph, HeadFunctor& availabilityAtHead, TailFunctor& availabilityAtTail)
-        : Phase(graph, "OSR availability analysis")
+        : Phase(graph, "OSR availability analysis"_s)
         , availabilityAtHead(availabilityAtHead)
         , availabilityAtTail(availabilityAtTail)
     {
@@ -95,8 +95,13 @@ public:
 
                 calculator.m_availability = availabilityAtHead(block);
 
-                for (unsigned nodeIndex = 0; nodeIndex < block->size(); ++nodeIndex)
-                    calculator.executeNode(block->at(nodeIndex));
+                for (unsigned nodeIndex = 0; nodeIndex < block->size(); ++nodeIndex) {
+                    Node* node = block->at(nodeIndex);
+                    calculator.executeNode(node);
+
+                    if (Options::validateFTLOSRExitLiveness()) [[unlikely]]
+                        calculator.m_availability.validateAvailability(m_graph, node);
+                }
 
                 if (calculator.m_availability == availabilityAtTail(block))
                     continue;
@@ -134,6 +139,18 @@ public:
 
                 for (unsigned nodeIndex = 0; nodeIndex < block->size(); ++nodeIndex) {
                     Node* node = block->at(nodeIndex);
+
+                    validateNode(node, calculator);
+                    calculator.executeNode(node);
+                }
+            }
+        }
+
+        return true;
+    }
+
+    void validateNode(Node* node, LocalOSRAvailabilityCalculator& calculator)
+    {
                     if (node->origin.exitOK) {
                         // If we're allowed to exit here, the heap must be in a state
                         // where exiting wouldn't crash. These particular fields are
@@ -142,9 +159,7 @@ public:
                         // to be dead.
 
                         CodeOrigin exitOrigin = node->origin.forExit;
-                        // FIXME: availabilityMap seems like it should be able to be a reference to the calculator's map. https://bugs.webkit.org/show_bug.cgi?id=215675
-                        AvailabilityMap availabilityMap = calculator.m_availability;
-                        availabilityMap.pruneByLiveness(m_graph, exitOrigin);
+                        AvailabilityMap availabilityMap = calculator.m_availability.filterByLiveness(m_graph, exitOrigin);
 
                         for (auto heapPair : availabilityMap.m_heap) {
                             switch (heapPair.key.kind()) {
@@ -154,8 +169,10 @@ public:
                             case FunctionExecutablePLoc:
                             case StructurePLoc:
                                 if (heapPair.value.isDead()) {
+                                    WTF::dataFile().atomically([&](auto&) {
                                     dataLogLn("PromotedHeapLocation is dead, but should not be: ", heapPair.key);
                                     availabilityMap.dump(WTF::dataFile());
+                                    });
                                     CRASH();
                                 }
                                 break;
@@ -184,12 +201,47 @@ public:
                         }
                     }
 
-                    calculator.executeNode(block->at(nodeIndex));
+        switch (node->op()) {
+        case PhantomCreateRest:
+        case PhantomDirectArguments:
+        case PhantomClonedArguments: {
+            InlineCallFrame* inlineCallFrame = node->origin.semantic.inlineCallFrame();
+            if (!inlineCallFrame) {
+                // We don't need to record anything about how the arguments are to be recovered. It's just a
+                // given that we can read them from the stack.
+                break;
                 }
+
+            unsigned numberOfArgumentsToSkip = 0;
+            if (node->op() == PhantomCreateRest)
+                numberOfArgumentsToSkip = node->numberOfArgumentsToSkip();
+
+            if (inlineCallFrame->isVarargs()) {
+                // Record how to read each argument and the argument count.
+                Availability argumentCount =
+                    calculator.m_availability.m_locals.operand(VirtualRegister(inlineCallFrame->stackOffset + CallFrameSlot::argumentCountIncludingThis));
+
+                RELEASE_ASSERT(!argumentCount.isDead());
             }
+
+            if (inlineCallFrame->isClosureCall) {
+                Availability callee = calculator.m_availability.m_locals.operand(
+                    VirtualRegister(inlineCallFrame->stackOffset + CallFrameSlot::callee));
+
+                RELEASE_ASSERT(!callee.isDead());
         }
 
-        return true;
+            for (unsigned i = numberOfArgumentsToSkip; i < static_cast<unsigned>(inlineCallFrame->argumentCountIncludingThis - 1); ++i) {
+                Availability argument = calculator.m_availability.m_locals.operand(
+                    VirtualRegister(inlineCallFrame->stackOffset + CallFrame::argumentOffset(i)));
+
+                RELEASE_ASSERT(!argument.isDead());
+            }
+            break;
+        }
+        default:
+            break;
+        }
     }
 
     HeadFunctor& availabilityAtHead;
@@ -224,9 +276,7 @@ LocalOSRAvailabilityCalculator::LocalOSRAvailabilityCalculator(Graph& graph)
 {
 }
 
-LocalOSRAvailabilityCalculator::~LocalOSRAvailabilityCalculator()
-{
-}
+LocalOSRAvailabilityCalculator::~LocalOSRAvailabilityCalculator() = default;
 
 void LocalOSRAvailabilityCalculator::beginBlock(BasicBlock* block)
 {
@@ -240,6 +290,19 @@ void LocalOSRAvailabilityCalculator::endBlock(BasicBlock* block)
 
 void LocalOSRAvailabilityCalculator::executeNode(Node* node)
 {
+    auto killHeaps = [&] (Operand killedOperand) {
+        Availability localAvailability = m_availability.m_locals.operand(killedOperand);
+        // Our heap's FlushedAt should already be pruned if the flush isn't useful. We'll assert this after executeNode returns.
+        if (!localAvailability.isFlushUseful() || localAvailability.flushedAt().virtualRegister() == VirtualRegister())
+            return;
+
+        // In theory this is O(n) and we could have a seperate HashMap tracking Operand -> AbstractHeap's with relevant flushes. In practice, the availability heap is small (there's not usually a lot of phantom objects) so the O(n) search isn't bad.
+        for (auto& heapPair : m_availability.m_heap) {
+            if (heapPair.value.flushedAt().virtualRegister() == localAvailability.flushedAt().virtualRegister())
+                heapPair.value.setFlush(FlushedAt(ConflictingFlush));
+        }
+    };
+
     switch (node->op()) {
 
     // It's somewhat subtle why we cannot use the node for the GetStack itself in the Availability's node field. The reason is that if we did we would need to make any phase that converts nodes to GetStack availability aware. For instance a place where this could come up is if you had a graph like:
@@ -261,11 +324,14 @@ void LocalOSRAvailabilityCalculator::executeNode(Node* node)
     case GetStack:
     case PutStack: {
         StackAccessData* data = node->stackAccessData();
+        if (node->op() == PutStack)
+            killHeaps(data->operand);
         m_availability.m_locals.operand(data->operand).setFlush(data->flushedAt());
         break;
     }
 
     case KillStack: {
+        killHeaps(node->unlinkedOperand());
         m_availability.m_locals.operand(node->unlinkedOperand()).setFlush(FlushedAt(ConflictingFlush));
         break;
     }
@@ -326,6 +392,7 @@ void LocalOSRAvailabilityCalculator::executeNode(Node* node)
         if (inlineCallFrame->isClosureCall) {
             Availability callee = m_availability.m_locals.operand(
                 VirtualRegister(inlineCallFrame->stackOffset + CallFrameSlot::callee));
+
             m_availability.m_heap.set(PromotedHeapLocation(ArgumentsCalleePLoc, node), callee);
         }
 

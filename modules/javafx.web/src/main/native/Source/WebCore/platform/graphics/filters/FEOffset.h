@@ -22,13 +22,15 @@
 
 #pragma once
 
-#include "FilterEffect.h"
+#include <WebCore/FilterEffect.h>
 
 namespace WebCore {
 
-class FEOffset : public FilterEffect {
+class FEOffset final : public FilterEffect {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(FEOffset);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FEOffset);
 public:
-    WEBCORE_EXPORT static Ref<FEOffset> create(float dx, float dy);
+    WEBCORE_EXPORT static Ref<FEOffset> create(float dx, float dy, DestinationColorSpace = DestinationColorSpace::SRGB());
 
     bool operator==(const FEOffset&) const;
 
@@ -41,14 +43,16 @@ public:
     static IntOutsets calculateOutsets(const FloatSize& offset);
 
 private:
-    FEOffset(float dx, float dy);
+    FEOffset(float dx, float dy, DestinationColorSpace);
 
     bool operator==(const FilterEffect& other) const override { return areEqual<FEOffset>(*this, other); }
 
     FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
 
-    bool resultIsAlphaImage(const FilterImageVector& inputs) const override;
+    bool resultIsAlphaImage(std::span<const Ref<FilterImage>> inputs) const override;
 
+    OptionSet<FilterRenderingMode> supportedFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) const override;
+    std::unique_ptr<FilterEffectApplier> createAcceleratedApplier() const override;
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
 
     WTF::TextStream& externalRepresentation(WTF::TextStream&, FilterRepresentation) const override;
@@ -59,4 +63,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_FILTER_EFFECT(FEOffset)
+SPECIALIZE_TYPE_TRAITS_FILTER_FUNCTION(FEOffset)

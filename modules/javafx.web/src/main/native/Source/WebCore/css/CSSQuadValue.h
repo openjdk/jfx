@@ -29,24 +29,49 @@
 
 namespace WebCore {
 
-class CSSQuadValue : public CSSValue {
+class CSSQuadValue final : public CSSValue {
 public:
     static Ref<CSSQuadValue> create(Quad);
+    static Ref<CSSQuadValue> create(Ref<CSSValue>);
+    static Ref<CSSQuadValue> create(Ref<CSSValue>, Ref<CSSValue>);
+    static Ref<CSSQuadValue> create(Ref<CSSValue>, Ref<CSSValue>, Ref<CSSValue>);
+    static Ref<CSSQuadValue> create(Ref<CSSValue>, Ref<CSSValue>, Ref<CSSValue>, Ref<CSSValue>);
 
     const Quad& quad() const { return m_quad; }
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
     bool equals(const CSSQuadValue&) const;
+    bool canBeCoalesced() const;
 
 private:
     explicit CSSQuadValue(Quad);
-
+    bool m_coalesceIdenticalValues { true };
     Quad m_quad;
 };
 
 inline const Quad& CSSValue::quad() const
 {
     return downcast<CSSQuadValue>(*this).quad();
+}
+
+inline Ref<CSSQuadValue> CSSQuadValue::create(Ref<CSSValue> a)
+{
+    return CSSQuadValue::create(Quad { a, a, a, a });
+}
+
+inline Ref<CSSQuadValue> CSSQuadValue::create(Ref<CSSValue> a, Ref<CSSValue> b)
+{
+    return CSSQuadValue::create(Quad { a, b, a, b });
+}
+
+inline Ref<CSSQuadValue> CSSQuadValue::create(Ref<CSSValue> a, Ref<CSSValue> b, Ref<CSSValue> c)
+{
+    return CSSQuadValue::create(Quad { a, b, c, b });
+}
+
+inline Ref<CSSQuadValue> CSSQuadValue::create(Ref<CSSValue> a, Ref<CSSValue> b, Ref<CSSValue> c, Ref<CSSValue> d)
+{
+    return CSSQuadValue::create(Quad { WTF::move(a), WTF::move(b), WTF::move(c), WTF::move(d) });
 }
 
 } // namespace WebCore

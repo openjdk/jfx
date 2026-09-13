@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,13 +37,16 @@ import javafx.scene.Node;
 import test.javafx.scene.NodeTest;
 import javafx.scene.shape.FillRule;
 import javafx.scene.shape.SVGPath;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class SVGPathTest {
 
-    @Test public void testBoundPropertySync_Content() throws Exception {
+    @Test
+    public void testBoundPropertySync_Content() throws Exception {
         StubSVGPath svgPath = new StubSVGPath();
         svgPath.setContent("M40,60 C42,48 44,30 25,32");
 
@@ -66,7 +69,8 @@ public class SVGPathTest {
         assertEquals(FillRule.NON_ZERO, svgPath.fillRuleProperty().get());
     }
 
-    @Test public void testFillRuleSync() {
+    @Test
+    public void testFillRuleSync() {
         StubSVGPath svgPath = new StubSVGPath();
         svgPath.setContent("M40,60 C42,48 44,30 25,32");
         svgPath.setFillRule(FillRule.EVEN_ODD);
@@ -84,7 +88,8 @@ public class SVGPathTest {
         assertEquals(Path2D.WIND_NON_ZERO, path.getWindingRule());
     }
 
-    @Test public void toStringShouldReturnNonEmptyString() {
+    @Test
+    public void toStringShouldReturnNonEmptyString() {
         String s = new StubSVGPath().toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());

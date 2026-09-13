@@ -23,12 +23,14 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
+ // https://html.spec.whatwg.org/#texttrackcuelist
+
 [
     Conditional=VIDEO,
     Exposed=Window
 ] interface TextTrackCueList {
     readonly attribute unsigned long length;
-    getter TextTrackCue item(unsigned long index);
-    TextTrackCue getCueById(DOMString id);
+    // FIXME: Remove item() and make non-nullable. See: https://bugs.webkit.org/show_bug.cgi?id=260763
+    getter TextTrackCue? item(unsigned long index);
+    TextTrackCue? getCueById(DOMString id);
 };
-

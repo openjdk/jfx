@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,13 +29,13 @@ import com.sun.javafx.binding.ContentBinding;
 import javafx.beans.binding.Bindings;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableSet;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
 import java.util.Set;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ContentBindingSetTest {
 
@@ -46,7 +46,7 @@ public class ContentBindingSetTest {
     private Set<Integer> set1;
     private Set<Integer> set2;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         set0 = new HashSet<>();
         set1 = new HashSet<>();
@@ -83,19 +83,25 @@ public class ContentBindingSetTest {
         assertEquals(set2, op2);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testBind_Null_X() {
-        Bindings.bindContent(null, op2);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.bindContent(null, op2);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testBind_X_Null() {
-        Bindings.bindContent(op1, null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.bindContent(op1, null);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testBind_X_Self() {
-        Bindings.bindContent(op2, op2);
+        assertThrows(IllegalArgumentException.class, () -> {
+            Bindings.bindContent(op2, op2);
+        });
     }
 
     @Test
@@ -123,19 +129,25 @@ public class ContentBindingSetTest {
         assertEquals(set1, op2);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testUnbind_Null_X() {
-        Bindings.unbindContent(null, op2);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.unbindContent(null, op2);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testUnbind_X_Null() {
-        Bindings.unbindContent(op1, null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.unbindContent(op1, null);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testUnbind_X_Self() {
-        Bindings.unbindContent(op2, op2);
+        assertThrows(IllegalArgumentException.class, () -> {
+            Bindings.unbindContent(op2, op2);
+        });
     }
 
     @Test

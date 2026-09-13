@@ -54,9 +54,7 @@ RefPtr<PatchpointExceptionHandle> PatchpointExceptionHandle::defaultHandle(State
     return state.defaultExceptionHandle;
 }
 
-PatchpointExceptionHandle::~PatchpointExceptionHandle()
-{
-}
+PatchpointExceptionHandle::~PatchpointExceptionHandle() = default;
 
 RefPtr<ExceptionTarget> PatchpointExceptionHandle::scheduleExitCreation(
     const B3::StackmapGenerationParams& params)
@@ -83,15 +81,16 @@ void PatchpointExceptionHandle::scheduleExitCreationForUnwind(
     handle->m_jitCode->m_osrExit[handle->m_index].m_exceptionHandlerCallSiteIndex = callSiteIndex;
 
     HandlerInfo handler = m_handler;
+    auto* plan = &m_state.graph.m_plan;
     params.addLatePath(
-        [handle, handler, callSiteIndex] (CCallHelpers& jit) {
+        [handle, handler, callSiteIndex, plan] (CCallHelpers& jit) {
             CodeBlock* codeBlock = jit.codeBlock();
             jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
                 HandlerInfo newHandler = handler;
                 newHandler.start = callSiteIndex.bits();
                 newHandler.end = callSiteIndex.bits() + 1;
                 newHandler.nativeCode = linkBuffer.locationOf<ExceptionHandlerPtrTag>(handle->label);
-                linkBuffer.addMainThreadFinalizationTask([=] {
+                plan->addMainThreadFinalizationTask([=] {
                     codeBlock->appendExceptionHandler(newHandler);
                 });
             });

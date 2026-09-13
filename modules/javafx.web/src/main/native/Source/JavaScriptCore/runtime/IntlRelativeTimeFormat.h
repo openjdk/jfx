@@ -38,7 +38,7 @@ class IntlRelativeTimeFormat final : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
 
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
 
     static void destroy(JSCell* cell)
     {
@@ -56,6 +56,8 @@ public:
 
     DECLARE_INFO;
 
+    DECLARE_VISIT_CHILDREN;
+
     void initializeRelativeTimeFormat(JSGlobalObject*, JSValue locales, JSValue options);
     JSValue format(JSGlobalObject*, double, StringView unitString) const;
     JSValue formatToParts(JSGlobalObject*, double, StringView unitString) const;
@@ -64,7 +66,6 @@ public:
 private:
     IntlRelativeTimeFormat(VM&, Structure*);
     DECLARE_DEFAULT_FINISH_CREATION;
-    DECLARE_VISIT_CHILDREN;
 
     static Vector<String> localeData(const String&, RelevantExtensionKey);
 

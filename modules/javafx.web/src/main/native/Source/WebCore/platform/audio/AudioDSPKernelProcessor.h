@@ -33,6 +33,8 @@
 
 #include "AudioBus.h"
 #include "AudioProcessor.h"
+#include <wtf/CheckedPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -45,10 +47,13 @@ class AudioProcessor;
 // It uses one AudioDSPKernel object per channel to do the processing, thus there is no cross-channel processing.
 // Despite this limitation it turns out to be a very common and useful type of processor.
 
-class AudioDSPKernelProcessor : public AudioProcessor {
+class AudioDSPKernelProcessor : public AudioProcessor, public CanMakeThreadSafeCheckedPtr<AudioDSPKernelProcessor> {
+    WTF_MAKE_TZONE_ALLOCATED(AudioDSPKernelProcessor);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(AudioDSPKernelProcessor);
 public:
     // numberOfChannels may be later changed if object is not yet in an "initialized" state
     AudioDSPKernelProcessor(float sampleRate, unsigned numberOfChannels);
+    virtual ~AudioDSPKernelProcessor();
 
     // Subclasses create the appropriate type of processing kernel here.
     // We'll call this to create a kernel for each channel.
@@ -57,7 +62,7 @@ public:
     // AudioProcessor methods
     void initialize() override;
     void uninitialize() override;
-    void process(const AudioBus* source, AudioBus* destination, size_t framesToProcess) override;
+    void process(const AudioBus& source, AudioBus& destination, size_t framesToProcess) override;
     void processOnlyAudioParams(size_t framesToProcess) override;
     void reset() override;
     void setNumberOfChannels(unsigned) override;

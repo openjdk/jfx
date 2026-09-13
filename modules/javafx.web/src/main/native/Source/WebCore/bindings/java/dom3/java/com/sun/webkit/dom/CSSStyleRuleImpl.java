@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,16 +39,19 @@ public class CSSStyleRuleImpl extends CSSRuleImpl implements CSSStyleRule {
 
 
 // Attributes
+    @Override
     public String getSelectorText() {
         return getSelectorTextImpl(getPeer());
     }
     native static String getSelectorTextImpl(long peer);
 
+    @Override
     public void setSelectorText(String value) {
         setSelectorTextImpl(getPeer(), value);
     }
     native static void setSelectorTextImpl(long peer, String value);
 
+    @Override
     public CSSStyleDeclaration getStyle() {
         return CSSStyleDeclarationImpl.getImpl(getStyleImpl(getPeer()));
     }

@@ -40,7 +40,7 @@ String GPURenderBundleEncoder::label() const
 
 void GPURenderBundleEncoder::setLabel(String&& label)
 {
-    m_backing->setLabel(WTFMove(label));
+    m_backing->setLabel(WTF::move(label));
 }
 
 void GPURenderBundleEncoder::setPipeline(const GPURenderPipeline& renderPipeline)
@@ -53,9 +53,9 @@ void GPURenderBundleEncoder::setIndexBuffer(const GPUBuffer& buffer, GPUIndexFor
     m_backing->setIndexBuffer(buffer.backing(), convertToBacking(indexFormat), offset, size);
 }
 
-void GPURenderBundleEncoder::setVertexBuffer(GPUIndex32 slot, const GPUBuffer& buffer, std::optional<GPUSize64> offset, std::optional<GPUSize64> size)
+void GPURenderBundleEncoder::setVertexBuffer(GPUIndex32 slot, const GPUBuffer* buffer, std::optional<GPUSize64> offset, std::optional<GPUSize64> size)
 {
-    m_backing->setVertexBuffer(slot, buffer.backing(), offset, size);
+    m_backing->setVertexBuffer(slot, buffer ? &buffer->backing() : nullptr, offset, size);
 }
 
 void GPURenderBundleEncoder::draw(GPUSize32 vertexCount,
@@ -84,23 +84,28 @@ void GPURenderBundleEncoder::drawIndexedIndirect(const GPUBuffer& indirectBuffer
     m_backing->drawIndexedIndirect(indirectBuffer.backing(), indirectOffset);
 }
 
-void GPURenderBundleEncoder::setBindGroup(GPUIndex32 index, const GPUBindGroup& bindGroup,
+void GPURenderBundleEncoder::setBindGroup(GPUIndex32 index, const GPUBindGroup* bindGroup,
     std::optional<Vector<GPUBufferDynamicOffset>>&& dynamicOffsets)
 {
-    m_backing->setBindGroup(index, bindGroup.backing(), WTFMove(dynamicOffsets));
+    m_backing->setBindGroup(index, bindGroup ? &bindGroup->backing() : nullptr, WTF::move(dynamicOffsets));
 }
 
-void GPURenderBundleEncoder::setBindGroup(GPUIndex32 index, const GPUBindGroup& bindGroup,
+ExceptionOr<void> GPURenderBundleEncoder::setBindGroup(GPUIndex32 index, const GPUBindGroup* bindGroup,
     const Uint32Array& dynamicOffsetsData,
     GPUSize64 dynamicOffsetsDataStart,
     GPUSize32 dynamicOffsetsDataLength)
 {
-    m_backing->setBindGroup(index, bindGroup.backing(), dynamicOffsetsData.data(), dynamicOffsetsData.length(), dynamicOffsetsDataStart, dynamicOffsetsDataLength);
+    auto offset = checkedSum<uint64_t>(dynamicOffsetsDataStart, dynamicOffsetsDataLength);
+    if (offset.hasOverflowed() || offset > dynamicOffsetsData.length())
+        return Exception { ExceptionCode::RangeError, "dynamic offsets overflowed"_s };
+
+    m_backing->setBindGroup(index, bindGroup ? &bindGroup->backing() : nullptr, dynamicOffsetsData.typedSpan(), dynamicOffsetsDataStart, dynamicOffsetsDataLength);
+    return { };
 }
 
 void GPURenderBundleEncoder::pushDebugGroup(String&& groupLabel)
 {
-    m_backing->pushDebugGroup(WTFMove(groupLabel));
+    m_backing->pushDebugGroup(WTF::move(groupLabel));
 }
 
 void GPURenderBundleEncoder::popDebugGroup()
@@ -110,7 +115,7 @@ void GPURenderBundleEncoder::popDebugGroup()
 
 void GPURenderBundleEncoder::insertDebugMarker(String&& markerLabel)
 {
-    m_backing->insertDebugMarker(WTFMove(markerLabel));
+    m_backing->insertDebugMarker(WTF::move(markerLabel));
 }
 
 static WebGPU::RenderBundleDescriptor convertToBacking(const std::optional<GPURenderBundleDescriptor>& renderBundleDescriptor)
@@ -120,9 +125,12 @@ static WebGPU::RenderBundleDescriptor convertToBacking(const std::optional<GPURe
     return renderBundleDescriptor->convertToBacking();
 }
 
-Ref<GPURenderBundle> GPURenderBundleEncoder::finish(const std::optional<GPURenderBundleDescriptor>& renderBundleDescriptor)
+ExceptionOr<Ref<GPURenderBundle>> GPURenderBundleEncoder::finish(const std::optional<GPURenderBundleDescriptor>& renderBundleDescriptor)
 {
-    return GPURenderBundle::create(m_backing->finish(convertToBacking(renderBundleDescriptor)));
+    RefPtr bundle = m_backing->finish(convertToBacking(renderBundleDescriptor));
+    if (!bundle)
+        return Exception { ExceptionCode::InvalidStateError, "dynamic offsets overflowed"_s };
+    return GPURenderBundle::create(bundle.releaseNonNull());
 }
 
 }

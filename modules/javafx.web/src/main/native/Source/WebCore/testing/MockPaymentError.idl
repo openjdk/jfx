@@ -26,6 +26,7 @@
 [
     Conditional=APPLE_PAY,
     JSGenerateToJSObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary MockPaymentError {
     required ApplePayErrorCode code;
     required DOMString message;

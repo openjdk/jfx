@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,19 +29,19 @@
 
 #if ENABLE(FTL_JIT)
 
+#include "B3AbstractHeapRepository.h"
 #include "B3BasicBlockInlines.h"
 #include "B3CCallValue.h"
 #include "B3FrequentedBlock.h"
 #include "B3Procedure.h"
 #include "B3SwitchValue.h"
+#include "B3TypedPointer.h"
 #include "B3Width.h"
 #include "FTLAbbreviatedTypes.h"
-#include "FTLAbstractHeapRepository.h"
 #include "FTLCommonValues.h"
 #include "FTLSelectPredictability.h"
 #include "FTLState.h"
 #include "FTLSwitchCase.h"
-#include "FTLTypedPointer.h"
 #include "FTLValueFromBlock.h"
 #include "FTLWeight.h"
 #include "FTLWeightedTarget.h"
@@ -110,29 +110,31 @@ public:
     {
         ASSERT(graph.m_plan.weakReferences().contains(cell));
 
-        return constIntPtr(bitwise_cast<intptr_t>(cell));
+        return constIntPtr(std::bit_cast<intptr_t>(cell));
     }
 
     LValue alreadyRegisteredFrozenPointer(DFG::FrozenValue* value)
     {
         RELEASE_ASSERT(value->value().isCell());
 
-        return constIntPtr(bitwise_cast<intptr_t>(value->cell()));
+        return constIntPtr(std::bit_cast<intptr_t>(value->cell()));
     }
 
     template<typename T>
     LValue constIntPtr(T* value)
     {
-        static_assert(!std::is_base_of<HeapCell, T>::value, "To use a GC pointer, the graph must be aware of it. Use gcPointer instead and make sure the graph is aware of this reference.");
-        if (sizeof(void*) == 8)
-            return constInt64(bitwise_cast<intptr_t>(value));
-        return constInt32(bitwise_cast<intptr_t>(value));
+        static_assert(!std::derived_from<T, HeapCell>, "To use a GC pointer, the graph must be aware of it. Use gcPointer instead and make sure the graph is aware of this reference.");
+        if constexpr (sizeof(void*) == 8)
+            return constInt64(std::bit_cast<intptr_t>(value));
+        else
+        return constInt32(std::bit_cast<intptr_t>(value));
     }
     template<typename T>
     LValue constIntPtr(T value)
     {
-        if (sizeof(void*) == 8)
+        if constexpr (sizeof(void*) == 8)
             return constInt64(static_cast<intptr_t>(value));
+        else
         return constInt32(static_cast<intptr_t>(value));
     }
     LValue constInt64(int64_t value);
@@ -160,6 +162,7 @@ public:
     LValue mod(LValue, LValue);
     LValue chillMod(LValue, LValue);
     LValue neg(LValue);
+    LValue purifyNaN(LValue);
 
     LValue doubleAdd(LValue, LValue);
     LValue doubleSub(LValue, LValue);
@@ -190,11 +193,12 @@ public:
 
     LValue doubleSqrt(LValue);
 
-    LValue doubleLog(LValue);
+    LValue doubleMax(LValue, LValue);
+    LValue doubleMin(LValue, LValue);
 
-    LValue doubleToInt(LValue);
+    LValue doubleToInt32(LValue);
     LValue doubleToInt64(LValue);
-    LValue doubleToUInt(LValue);
+    LValue doubleToUInt32(LValue);
 
     LValue signExt32To64(LValue);
     LValue signExt32ToPtr(LValue);
@@ -207,6 +211,7 @@ public:
     LValue floatToDouble(LValue);
     LValue bitCast(LValue, LType);
     LValue fround(LValue);
+    LValue f16round(LValue);
 
     LValue load(TypedPointer, LType);
     LValue store(LValue, TypedPointer);
@@ -221,6 +226,7 @@ public:
     LValue loadPtr(TypedPointer pointer) { return load(pointer, B3::pointerType()); }
     LValue loadFloat(TypedPointer pointer) { return load(pointer, B3::Float); }
     LValue loadDouble(TypedPointer pointer) { return load(pointer, B3::Double); }
+    LValue loadFloat16AsDouble(TypedPointer);
     LValue store32As8(LValue, TypedPointer);
     LValue store32As16(LValue, TypedPointer);
     LValue store32(LValue value, TypedPointer pointer)
@@ -248,6 +254,7 @@ public:
         ASSERT(value->type() == B3::Double);
         return store(value, pointer);
     }
+    LValue storeDoubleAsFloat16(LValue, TypedPointer);
 
     enum LoadType {
         Load8SignExt32,
@@ -302,10 +309,7 @@ public:
     {
         return TypedPointer(heap, baseIndex(base, index, scale, offset));
     }
-    TypedPointer baseIndex(IndexedAbstractHeap& heap, LValue base, LValue index, JSValue indexAsConstant = JSValue(), ptrdiff_t offset = 0, LValue mask = nullptr)
-    {
-        return heap.baseIndex(*this, base, index, indexAsConstant, offset, mask);
-    }
+    TypedPointer baseIndex(IndexedAbstractHeap&, LValue base, LValue index, JSValue indexAsConstant = JSValue(), ptrdiff_t offset = 0, LValue mask = nullptr);
 
     TypedPointer absolute(const void* address);
 
@@ -393,9 +397,11 @@ public:
     LValue call(LType type, LValue function) { return m_block->appendNew<B3::CCallValue>(m_proc, type, origin(), function); }
     LValue call(LType type, LValue function, LValue arg1) { return m_block->appendNew<B3::CCallValue>(m_proc, type, origin(), function, arg1); }
     template<typename... Args>
+    requires (std::is_convertible_v<Args, LValue> && ...)
     LValue call(LType type, LValue function, LValue arg1, Args... args) { return m_block->appendNew<B3::CCallValue>(m_proc, type, origin(), function, arg1, args...); }
 
     template<typename Function, typename... Args>
+    requires (std::is_convertible_v<Args, LValue> && ...)
     LValue callWithoutSideEffects(B3::Type type, Function function, LValue arg1, Args... args)
     {
         static_assert(!std::is_same<Function, LValue>::value);
@@ -439,6 +445,7 @@ public:
 
     void ret(LValue);
 
+    void verify(LValue);
     void unreachable();
 
     void appendSuccessor(WeightedTarget);

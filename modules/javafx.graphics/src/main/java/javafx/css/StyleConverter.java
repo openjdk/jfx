@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -494,7 +494,7 @@ public class StyleConverter<F, T> {
         case "com.sun.javafx.scene.layout.region.Margins$SequenceConverter" :
             styleConverter = com.sun.javafx.scene.layout.region.Margins.SequenceConverter.getInstance();
             break;
-        case "javafx.scene.layout.CornerRadiiConverter" :  // Fix for RT-39665
+        case "javafx.scene.layout.CornerRadiiConverter" :  // Fix for JDK-8096129
         case "com.sun.javafx.scene.layout.region.CornerRadiiConverter" :
             styleConverter = CornerRadiiConverter.getInstance();
             break;

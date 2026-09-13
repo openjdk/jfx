@@ -26,7 +26,11 @@
 #include "config.h"
 #include "SVGTransformList.h"
 
+#include "ExceptionOr.h"
 #include "SVGParserUtilities.h"
+#include "SVGTransform.h"
+#include "SVGTransformable.h"
+#include "SVGTransformableInlines.h"
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringParsingBuffer.h>
 
@@ -49,7 +53,7 @@ ExceptionOr<RefPtr<SVGTransform>> SVGTransformList::consolidate()
     auto newItem = SVGTransform::create(concatenate());
     clearItems();
 
-    auto item = append(WTFMove(newItem));
+    auto item = append(WTF::move(newItem));
     commitChange();
     return RefPtr { item.ptr() };
 }
@@ -58,14 +62,17 @@ AffineTransform SVGTransformList::concatenate() const
 {
     AffineTransform result;
     for (auto& transform : m_items)
-        result *= transform->matrix()->value();
+        result *= transform->matrix().value();
     return result;
 }
 
-template<typename CharacterType> bool SVGTransformList::parseGeneric(StringParsingBuffer<CharacterType>& buffer)
+template<typename CharacterType> bool SVGTransformList::parseGeneric(StringParsingBuffer<CharacterType>& buffer, ListReplacement listReplacement)
 {
     bool delimParsed = false;
     skipOptionalSVGSpaces(buffer);
+
+    size_t itemIndex = 0;
+    auto currentListReplacement = listReplacement;
 
     while (buffer.hasCharactersRemaining()) {
         delimParsed = false;
@@ -74,11 +81,22 @@ template<typename CharacterType> bool SVGTransformList::parseGeneric(StringParsi
         if (!parsedTransformType)
             return false;
 
-        auto parsedTransformValue = SVGTransformable::parseTransformValue(*parsedTransformType, buffer);
-        if (!parsedTransformValue)
+        if (currentListReplacement == ListReplacement::Replace && itemIndex < m_items.size() && parsedTransformType == m_items[itemIndex]->type()) {
+            if (!SVGTransformable::parseAndReplaceTransform(*parsedTransformType, buffer, m_items[itemIndex]))
+            return false;
+        } else {
+            // Switch to `Append` mode and remove the existing SVGTransforms starting from `itemIndex`.
+            if (currentListReplacement == ListReplacement::Replace) {
+                currentListReplacement = ListReplacement::Append;
+                resize(itemIndex);
+            }
+
+            RefPtr parsedTransform = SVGTransformable::parseTransform(*parsedTransformType, buffer);
+            if (!parsedTransform)
             return false;
 
-        append(SVGTransform::create(WTFMove(*parsedTransformValue)));
+            append(parsedTransform.releaseNonNull());
+        }
 
         skipOptionalSVGSpaces(buffer);
 
@@ -86,42 +104,49 @@ template<typename CharacterType> bool SVGTransformList::parseGeneric(StringParsi
             delimParsed = true;
 
         skipOptionalSVGSpaces(buffer);
+
+        ++itemIndex;
     }
+
+    if (itemIndex < m_items.size()) {
+        ASSERT(currentListReplacement == ListReplacement::Replace);
+        resize(itemIndex);
+    }
+
     return !delimParsed;
 }
 
 void SVGTransformList::parse(StringView value)
 {
-    clearItems();
-
     bool parsingSucceeded = readCharactersForParsing(value, [&](auto buffer) {
-        return parseGeneric(buffer);
+        return parseGeneric(buffer, ListReplacement::Replace);
     });
 
     if (!parsingSucceeded)
         clearItems();
 }
 
-bool SVGTransformList::parse(StringParsingBuffer<LChar>& buffer)
+bool SVGTransformList::parse(StringParsingBuffer<Latin1Character>& buffer)
 {
-    return parseGeneric(buffer);
+    return parseGeneric(buffer, ListReplacement::Append);
 }
 
-bool SVGTransformList::parse(StringParsingBuffer<UChar>& buffer)
+bool SVGTransformList::parse(StringParsingBuffer<char16_t>& buffer)
 {
-    return parseGeneric(buffer);
+    return parseGeneric(buffer, ListReplacement::Append);
 }
 
 String SVGTransformList::valueAsString() const
 {
     StringBuilder builder;
-    for (const auto& transfrom : m_items) {
+    for (const auto& transform : m_items) {
         if (builder.length())
             builder.append(' ');
 
-        builder.append(transfrom->value().valueAsString());
+        builder.append(transform->value().valueAsString());
     }
     return builder.toString();
 }
 
 }
+

@@ -23,20 +23,24 @@
 #include "config.h"
 #include "StyleProperties.h"
 
+#include "CSSColorValue.h"
 #include "CSSCustomPropertyValue.h"
-#include "CSSParser.h"
 #include "CSSPendingSubstitutionValue.h"
 #include "CSSPrimitiveValue.h"
+#include "CSSPropertyInitialValues.h"
 #include "CSSPropertyNames.h"
-#include "CSSPropertyParserHelpers.h"
+#include "CSSPropertyParserConsumer+Color.h"
+#include "CSSPropertyParserConsumer+Font.h"
+#include "CSSSerializationContext.h"
+#include "CSSStyleProperties.h"
 #include "CSSValueKeywords.h"
 #include "CSSValueList.h"
 #include "Color.h"
-#include "PropertySetCSSStyleDeclaration.h"
 #include "ShorthandSerializer.h"
 #include "StylePropertiesInlines.h"
 #include "StylePropertyShorthand.h"
 #include <bitset>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 #ifndef NDEBUG
@@ -52,28 +56,13 @@ constexpr unsigned maxShorthandsForLonghand = 4; // FIXME: Generate this from CS
 
 Ref<ImmutableStyleProperties> StyleProperties::immutableCopyIfNeeded() const
 {
-    if (is<ImmutableStyleProperties>(*this))
-        return downcast<ImmutableStyleProperties>(const_cast<StyleProperties&>(*this));
-    const MutableStyleProperties& mutableThis = downcast<MutableStyleProperties>(*this);
-    return ImmutableStyleProperties::create(mutableThis.m_propertyVector.data(), mutableThis.m_propertyVector.size(), cssParserMode());
+    if (m_isMutable)
+        return uncheckedDowncast<MutableStyleProperties>(*this).immutableDeduplicatedCopy();
+    return const_cast<ImmutableStyleProperties&>(uncheckedDowncast<ImmutableStyleProperties>(*this));
 }
 
-String serializeLonghandValue(CSSPropertyID property, const CSSValue& value)
+String serializeLonghandValue(const CSS::SerializationContext& context, CSSPropertyID property, const CSSValue& value)
 {
-    switch (property) {
-        case CSSPropertyFillOpacity:
-        case CSSPropertyFloodOpacity:
-        case CSSPropertyOpacity:
-        case CSSPropertyStopOpacity:
-        case CSSPropertyStrokeOpacity:
-        // FIXME: Handle this when creating the CSSValue for opacity, to be consistent with other CSS value serialization quirks.
-            // Opacity percentage values serialize as a fraction in the range 0-1, not "%".
-        if (is<CSSPrimitiveValue>(value) && downcast<CSSPrimitiveValue>(value).isPercentage())
-            return makeString(downcast<CSSPrimitiveValue>(value).doubleValue() / 100);
-        break;
-    default:
-        break;
-    }
     // Longhands set by mask and background shorthands can have comma-separated lists with implicit initial values in them.
     // We need to serialize those lists with the actual values, not as "initial".
     // Doing this for all CSSValueList with comma separators is better than checking the property is one of those longhands.
@@ -82,25 +71,26 @@ String serializeLonghandValue(CSSPropertyID property, const CSSValue& value)
     StringBuilder result;
         auto separator = ""_s;
         for (auto& individualValue : *list)
-            result.append(std::exchange(separator, ", "_s), serializeLonghandValue(property, individualValue));
+            result.append(std::exchange(separator, ", "_s), serializeLonghandValue(context, property, individualValue));
         return result.toString();
     }
-    return value.isImplicitInitialValue() ? initialValueTextForLonghand(property) : value.cssText();
+
+    return value.isImplicitInitialValue() ? initialValueTextForLonghand(property) : value.cssText(context);
 }
 
-inline String StyleProperties::serializeLonghandValue(CSSPropertyID propertyID) const
+inline String StyleProperties::serializeLonghandValue(const CSS::SerializationContext& context, CSSPropertyID propertyID) const
 {
-    return WebCore::serializeLonghandValue(propertyID, getPropertyCSSValue(propertyID).get());
+    return WebCore::serializeLonghandValue(context, propertyID, getPropertyCSSValue(propertyID).get());
 }
 
-inline String StyleProperties::serializeShorthandValue(CSSPropertyID propertyID) const
+inline String StyleProperties::serializeShorthandValue(const CSS::SerializationContext& context, CSSPropertyID propertyID) const
 {
-    return WebCore::serializeShorthandValue(*this, propertyID);
+    return WebCore::serializeShorthandValue(context, *this, propertyID);
 }
 
 String StyleProperties::getPropertyValue(CSSPropertyID propertyID) const
 {
-    return isLonghand(propertyID) ? serializeLonghandValue(propertyID) : serializeShorthandValue(propertyID);
+    return isLonghand(propertyID) ? serializeLonghandValue(CSS::defaultSerializationContext(), propertyID) : serializeShorthandValue(CSS::defaultSerializationContext(), propertyID);
 }
 
 std::optional<Color> StyleProperties::propertyAsColor(CSSPropertyID property) const
@@ -108,8 +98,12 @@ std::optional<Color> StyleProperties::propertyAsColor(CSSPropertyID property) co
     auto value = getPropertyCSSValue(property);
         if (!value)
         return std::nullopt;
-    return value->isColor() ? value->color()
-        : CSSParser::parseColorWithoutContext(WebCore::serializeLonghandValue(property, *value));
+
+    if (value->isColor())
+        return CSSColorValue::absoluteColor(*value);
+
+    auto serializationString = WebCore::serializeLonghandValue(CSS::defaultSerializationContext(), property, *value);
+    return CSSPropertyParserHelpers::deprecatedParseColorRawWithoutContext(serializationString);
 }
 
 std::optional<CSSValueID> StyleProperties::propertyAsValueID(CSSPropertyID property) const
@@ -121,7 +115,7 @@ String StyleProperties::getCustomPropertyValue(const String& propertyName) const
 {
     RefPtr<CSSValue> value = getCustomPropertyCSSValue(propertyName);
     if (value)
-        return value->cssText();
+        return value->cssText(CSS::defaultSerializationContext());
         return String();
 }
 
@@ -188,14 +182,14 @@ bool StyleProperties::isPropertyImplicit(CSSPropertyID propertyID) const
     return propertyAt(foundPropertyIndex).isImplicit();
 }
 
-String StyleProperties::asText() const
+String StyleProperties::asText(const CSS::SerializationContext& context) const
 {
-    return asTextInternal().toString();
+    return asTextInternal(context).toString();
 }
 
-AtomString StyleProperties::asTextAtom() const
+AtomString StyleProperties::asTextAtom(const CSS::SerializationContext& context) const
 {
-    return asTextInternal().toAtomString();
+    return asTextInternal(context).toAtomString();
 }
 
 static constexpr bool canUseShorthandForLonghand(CSSPropertyID shorthandID, CSSPropertyID longhandID)
@@ -218,7 +212,6 @@ static constexpr bool canUseShorthandForLonghand(CSSPropertyID shorthandID, CSSP
     case CSSPropertyWebkitColumnBreakInside:
     case CSSPropertyWebkitMaskPosition:
     case CSSPropertyWebkitPerspective:
-    case CSSPropertyWebkitTextDecoration:
     case CSSPropertyWebkitTextOrientation:
                 return false;
 
@@ -239,27 +232,15 @@ static constexpr bool canUseShorthandForLonghand(CSSPropertyID shorthandID, CSSP
     // FIXME: If font-variant-ligatures is none, this depends on the value of the longhand.
     case CSSPropertyFontVariant:
     // FIXME: These shorthands are avoided for unknown legacy reasons, probably shouldn't be avoided.
-    case CSSPropertyBorderBlockEnd:
-    case CSSPropertyBorderBlockStart:
-    case CSSPropertyBorderBottom:
-    case CSSPropertyBorderInlineEnd:
-    case CSSPropertyBorderInlineStart:
-    case CSSPropertyBorderLeft:
-    case CSSPropertyBorderRight:
-    case CSSPropertyBorderTop:
     case CSSPropertyColumnRule:
     case CSSPropertyColumns:
     case CSSPropertyContainer:
     case CSSPropertyFontSynthesis:
-    case CSSPropertyGap:
     case CSSPropertyGridArea:
     case CSSPropertyGridColumn:
     case CSSPropertyGridRow:
     case CSSPropertyMaskPosition:
     case CSSPropertyOffset:
-    case CSSPropertyPlaceContent:
-    case CSSPropertyPlaceItems:
-    case CSSPropertyPlaceSelf:
     case CSSPropertyTextEmphasis:
     case CSSPropertyWebkitTextStroke:
         return false;
@@ -269,7 +250,7 @@ static constexpr bool canUseShorthandForLonghand(CSSPropertyID shorthandID, CSSP
     }
 }
 
-StringBuilder StyleProperties::asTextInternal() const
+StringBuilder StyleProperties::asTextInternal(const CSS::SerializationContext& context) const
 {
     StringBuilder result;
 
@@ -283,10 +264,9 @@ StringBuilder StyleProperties::asTextInternal() const
         ASSERT(isLonghand(propertyID) || propertyID == CSSPropertyCustom);
         Vector<CSSPropertyID, maxShorthandsForLonghand> shorthands;
 
-        if (is<CSSPendingSubstitutionValue>(property.value())) {
-            auto& substitutionValue = downcast<CSSPendingSubstitutionValue>(*property.value());
-            shorthands.append(substitutionValue.shorthandPropertyId());
-        } else {
+        if (auto* substitutionValue = dynamicDowncast<CSSPendingSubstitutionValue>(property.value()))
+            shorthands.append(substitutionValue->shorthandPropertyId());
+        else {
             for (auto& shorthand : matchingShorthandsForLonghand(propertyID)) {
                 if (canUseShorthandForLonghand(shorthand.id(), propertyID))
                     shorthands.append(shorthand.id());
@@ -308,7 +288,7 @@ StringBuilder StyleProperties::asTextInternal() const
                 continue;
             shorthandPropertyAppeared.set(shorthandPropertyIndex);
 
-            value = serializeShorthandValue(shorthandPropertyID);
+            value = serializeShorthandValue(context, shorthandPropertyID);
             if (!value.isNull()) {
                 propertyID = shorthandPropertyID;
                 shorthandPropertyUsed.set(shorthandPropertyIndex);
@@ -319,7 +299,7 @@ StringBuilder StyleProperties::asTextInternal() const
             continue;
 
         if (value.isNull())
-            value = WebCore::serializeLonghandValue(propertyID, *property.value());
+            value = WebCore::serializeLonghandValue(context, propertyID, *property.value());
 
         if (numDecls++)
             result.append(' ');
@@ -329,7 +309,7 @@ StringBuilder StyleProperties::asTextInternal() const
         else
             result.append(nameLiteral(propertyID));
 
-        result.append(": ", value, property.isImportant() ? " !important" : "", ';');
+        result.append(": "_s, value, property.isImportant() ? " !important"_s : ""_s, ';');
     }
 
     ASSERT(!numDecls ^ !result.isEmpty());
@@ -338,14 +318,33 @@ StringBuilder StyleProperties::asTextInternal() const
 
 bool StyleProperties::hasCSSOMWrapper() const
 {
-    return is<MutableStyleProperties>(*this) && downcast<MutableStyleProperties>(*this).m_cssomWrapper;
+    auto* mutableProperties = dynamicDowncast<MutableStyleProperties>(*this);
+    return mutableProperties && mutableProperties->m_cssomWrapper;
 }
 
-bool StyleProperties::traverseSubresources(const Function<bool(const CachedResource&)>& handler) const
+bool StyleProperties::traverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>& handler) const
 {
     for (auto property : *this) {
         if (property.value()->traverseSubresources(handler))
             return true;
+    }
+    return false;
+}
+
+bool StyleProperties::mayDependOnBaseURL() const
+{
+    bool result = false;
+    Function<IterationStatus(CSSValue&)> func = [&](CSSValue& value) -> IterationStatus {
+        if (value.mayDependOnBaseURL()) {
+            result = true;
+            return IterationStatus::Done;
+        }
+        return value.visitChildren(func);
+    };
+
+    for (auto property : *this) {
+        if (func(*property.value()) == IterationStatus::Done)
+            return result;
     }
     return false;
 }
@@ -365,29 +364,27 @@ Ref<MutableStyleProperties> StyleProperties::mutableCopy() const
 
 Ref<MutableStyleProperties> StyleProperties::copyProperties(std::span<const CSSPropertyID> properties) const
 {
-    Vector<CSSProperty> vector;
-    vector.reserveInitialCapacity(properties.size());
-    for (auto property : properties) {
+    auto vector = WTF::compactMap(properties, [&](auto& property) -> std::optional<CSSProperty> {
         if (auto value = getPropertyCSSValue(property))
-            vector.uncheckedAppend(CSSProperty(property, WTFMove(value), false));
-    }
-    vector.shrinkToFit();
-    return MutableStyleProperties::create(WTFMove(vector));
+            return CSSProperty(property, value.releaseNonNull());
+        return std::nullopt;
+    });
+    return MutableStyleProperties::create(WTF::move(vector));
 }
 
-PropertySetCSSStyleDeclaration* MutableStyleProperties::cssStyleDeclaration()
+CSSStyleProperties* MutableStyleProperties::cssStyleProperties()
 {
     return m_cssomWrapper.get();
 }
 
-CSSStyleDeclaration& MutableStyleProperties::ensureCSSStyleDeclaration()
+CSSStyleProperties& MutableStyleProperties::ensureCSSStyleProperties()
 {
     if (m_cssomWrapper) {
-        ASSERT(!static_cast<CSSStyleDeclaration*>(m_cssomWrapper.get())->parentRule());
+        ASSERT(!static_cast<CSSStyleProperties*>(m_cssomWrapper.get())->parentRule());
         ASSERT(!m_cssomWrapper->parentElement());
         return *m_cssomWrapper;
     }
-    m_cssomWrapper = makeUnique<PropertySetCSSStyleDeclaration>(*this);
+    lazyInitialize(m_cssomWrapper, makeUniqueWithoutRefCountedCheck<PropertySetCSSStyleProperties>(*this));
     return *m_cssomWrapper;
 }
 
@@ -406,7 +403,7 @@ static_assert(sizeof(StyleProperties) == sizeof(SameSizeAsStyleProperties), "sty
 #ifndef NDEBUG
 void StyleProperties::showStyle()
 {
-    fprintf(stderr, "%s\n", asText().ascii().data());
+    SAFE_FPRINTF(stderr, "%s\n", asText(CSS::defaultSerializationContext()).ascii());
 }
 #endif
 
@@ -417,9 +414,9 @@ String StyleProperties::PropertyReference::cssName() const
     return nameString(id());
 }
 
-String StyleProperties::PropertyReference::cssText() const
+String StyleProperties::PropertyReference::cssText(const CSS::SerializationContext& context) const
 {
-    return makeString(cssName(), ": ", WebCore::serializeLonghandValue(id(), *m_value), isImportant() ? " !important;" : ";");
+    return makeString(cssName(), ": "_s, WebCore::serializeLonghandValue(context, id(), *m_value), isImportant() ? " !important;"_s : ";"_s);
 }
 
 } // namespace WebCore

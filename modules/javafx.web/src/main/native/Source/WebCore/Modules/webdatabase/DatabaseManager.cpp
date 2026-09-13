@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,14 +31,17 @@
 #include "DatabaseContext.h"
 #include "DatabaseTask.h"
 #include "DatabaseTracker.h"
-#include "Document.h"
-#include "InspectorInstrumentation.h"
+#include "DocumentEventLoop.h"
+#include "DocumentPage.h"
+#include "ExceptionOr.h"
 #include "Logging.h"
+#include "Page.h"
 #include "PlatformStrategies.h"
 #include "ScriptController.h"
 #include "SecurityOrigin.h"
 #include "SecurityOriginData.h"
 #include "WindowEventLoop.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
@@ -53,7 +56,7 @@ public:
 
 private:
     DatabaseManager& m_manager;
-    Ref<SecurityOrigin> m_origin;
+    const Ref<SecurityOrigin> m_origin;
     DatabaseDetails m_details;
 };
 
@@ -100,9 +103,9 @@ void DatabaseManager::setIsAvailable(bool available)
 
 Ref<DatabaseContext> DatabaseManager::databaseContext(Document& document)
 {
-    if (auto databaseContext = document.databaseContext())
-        return *databaseContext;
-    auto context = adoptRef(*new DatabaseContext(document));
+    if (RefPtr databaseContext = document.databaseContext())
+        return databaseContext.releaseNonNull();
+    Ref context = adoptRef(*new DatabaseContext(document));
     context->suspendIfNeeded();
     return context;
 }
@@ -127,7 +130,7 @@ ExceptionOr<Ref<Database>> DatabaseManager::openDatabaseBackend(Document& docume
     auto backend = tryToOpenDatabaseBackend(document, name, expectedVersion, displayName, estimatedSize, setVersionInNewDatabase, FirstTryToOpenDatabase);
 
     if (backend.hasException()) {
-        if (backend.exception().code() == QuotaExceededError) {
+        if (backend.exception().code() == ExceptionCode::QuotaExceededError) {
             // Notify the client that we've exceeded the database quota.
             // The client may want to increase the quota, and we'll give it
             // one more try after if that is the case.
@@ -140,7 +143,7 @@ ExceptionOr<Ref<Database>> DatabaseManager::openDatabaseBackend(Document& docume
     }
 
     if (backend.hasException()) {
-        if (backend.exception().code() == InvalidStateError)
+        if (backend.exception().code() == ExceptionCode::InvalidStateError)
             logErrorMessage(document, backend.exception().message());
         else
             logOpenDatabaseError(document, name);
@@ -152,9 +155,9 @@ ExceptionOr<Ref<Database>> DatabaseManager::openDatabaseBackend(Document& docume
 ExceptionOr<Ref<Database>> DatabaseManager::tryToOpenDatabaseBackend(Document& document, const String& name, const String& expectedVersion, const String& displayName, unsigned estimatedSize, bool setVersionInNewDatabase,
     OpenAttempt attempt)
 {
-    auto* page = document.page();
+    RefPtr page = document.page();
     if (!page || page->usesEphemeralSession())
-        return Exception { SecurityError };
+        return Exception { ExceptionCode::SecurityError };
 
     auto backendContext = this->databaseContext(document);
 
@@ -211,13 +214,12 @@ ExceptionOr<Ref<Database>> DatabaseManager::openDatabase(Document& document, con
 
     auto databaseContext = this->databaseContext(document);
     databaseContext->setHasOpenDatabases();
-    InspectorInstrumentation::didOpenDatabase(*database);
 
     if (database->isNew() && creationCallback.get()) {
         LOG(StorageAPI, "Scheduling DatabaseCreationCallbackTask for database %p\n", database.get());
         database->setHasPendingCreationEvent(true);
-        database->m_document->eventLoop().queueTask(TaskSource::Networking, [creationCallback, database]() {
-            creationCallback->handleEvent(*database);
+        database->m_document->checkedEventLoop()->queueTask(TaskSource::Networking, [creationCallback, database] {
+            creationCallback->invoke(*database);
             database->setHasPendingCreationEvent(false);
         });
     }
@@ -233,7 +235,7 @@ bool DatabaseManager::hasOpenDatabases(Document& document)
 
 void DatabaseManager::stopDatabases(Document& document, DatabaseTaskSynchronizer* synchronizer)
 {
-    auto databaseContext = document.databaseContext();
+    RefPtr databaseContext = document.databaseContext();
     if (!databaseContext || !databaseContext->stopDatabases(synchronizer)) {
         if (synchronizer)
             synchronizer->taskCompleted();
@@ -245,7 +247,7 @@ String DatabaseManager::fullPathForDatabase(SecurityOrigin& origin, const String
     {
         Locker locker { m_proposedDatabasesLock };
         for (auto* proposedDatabase : m_proposedDatabases) {
-            if (proposedDatabase->details().name() == name && proposedDatabase->origin().equal(&origin))
+            if (proposedDatabase->details().name() == name && proposedDatabase->origin().equal(origin))
                 return String();
         }
     }
@@ -257,8 +259,8 @@ DatabaseDetails DatabaseManager::detailsForNameAndOrigin(const String& name, Sec
     {
         Locker locker { m_proposedDatabasesLock };
         for (auto* proposedDatabase : m_proposedDatabases) {
-            if (proposedDatabase->details().name() == name && proposedDatabase->origin().equal(&origin)) {
-                ASSERT(&proposedDatabase->details().thread() == &Thread::current() || isMainThread());
+            if (proposedDatabase->details().name() == name && proposedDatabase->origin().equal(origin)) {
+                ASSERT(&proposedDatabase->details().thread() == &Thread::currentSingleton() || isMainThread());
                 return proposedDatabase->details();
             }
         }

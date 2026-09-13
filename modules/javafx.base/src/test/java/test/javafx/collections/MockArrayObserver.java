@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,7 @@ package test.javafx.collections;
 
 import javafx.collections.ArrayChangeListener;
 import javafx.collections.ObservableArray;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * A mock observer that tracks calls to its onChanged() method,
@@ -61,12 +61,12 @@ public class MockArrayObserver<T extends ObservableArray<T>> implements ArrayCha
             call.to = to;
 
             // Check generic change assertions
-            assertFalse("Negative from index", from < 0);
-            assertFalse("Negative to index", to < 0);
-            assertFalse("from index is greater then to index", from > to);
-            assertFalse("No change in both elements and size", from == to && sizeChanged == false);
-            assertFalse("from index is greater than array size", from < to && from >= observableArray.size());
-            assertFalse("to index is greater than array size", from < to && to > observableArray.size());
+            assertFalse(from < 0, "Negative from index");
+            assertFalse(to < 0, "Negative to index");
+            assertFalse(from > to, "from index is greater then to index");
+            assertFalse(from == to && sizeChanged == false, "No change in both elements and size");
+            assertFalse(from < to && from >= observableArray.size(), "from index is greater than array size");
+            assertFalse(from < to && to > observableArray.size(), "to index is greater than array size");
         } else {
             tooManyCalls = true;
         }
@@ -77,15 +77,15 @@ public class MockArrayObserver<T extends ObservableArray<T>> implements ArrayCha
     }
 
     public void checkOnlySizeChanged(T array) {
-        assertFalse("Too many array change events", tooManyCalls);
+        assertFalse(tooManyCalls, "Too many array change events");
         assertSame(array, call.array);
         assertEquals(true, call.sizeChanged);
     }
 
     public void checkOnlyElementsChanged(T array,
-                       int from,
-                       int to) {
-        assertFalse("Too many array change events", tooManyCalls);
+                                         int from,
+                                         int to) {
+        assertFalse(tooManyCalls, "Too many array change events");
         assertSame(array, call.array);
         assertEquals(false, call.sizeChanged);
         assertEquals(from, call.from);
@@ -93,10 +93,10 @@ public class MockArrayObserver<T extends ObservableArray<T>> implements ArrayCha
     }
 
     public void check(T array,
-                       boolean sizeChanged,
-                       int from,
-                       int to) {
-        assertFalse("Too many array change events", tooManyCalls);
+                      boolean sizeChanged,
+                      int from,
+                      int to) {
+        assertFalse(tooManyCalls, "Too many array change events");
         assertSame(array, call.array);
         assertEquals(sizeChanged, call.sizeChanged);
         assertEquals(from, call.from);
@@ -104,7 +104,7 @@ public class MockArrayObserver<T extends ObservableArray<T>> implements ArrayCha
     }
 
     public void check1() {
-        assertFalse("Too many array change events", tooManyCalls);
+        assertFalse(tooManyCalls, "Too many array change events");
         assertNotNull(call);
     }
 

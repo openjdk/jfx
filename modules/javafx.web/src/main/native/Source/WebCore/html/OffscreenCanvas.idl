@@ -28,10 +28,13 @@ typedef (
     WebGLRenderingContext or
     WebGL2RenderingContext or
 #endif
+    GPUCanvasContext or
     ImageBitmapRenderingContext or
     OffscreenCanvasRenderingContext2D) OffscreenRenderingContext;
 
-dictionary ImageEncodeOptions
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary ImageEncodeOptions
 {
    DOMString type = "image/png";
    unrestricted double quality = 1.0;
@@ -42,7 +45,8 @@ enum OffscreenRenderingContextType
    "2d",
    "webgl",
    "webgl2",
-   "bitmaprenderer"
+   "bitmaprenderer",
+   "webgpu"
 };
 
 [
@@ -60,7 +64,8 @@ enum OffscreenRenderingContextType
     [CallTracer=InspectorCanvasCallTracer] attribute [EnforceRange] unsigned long height;
 
     [CallWith=CurrentGlobalObject] OffscreenRenderingContext? getContext(OffscreenRenderingContextType contextType, any... arguments);
-    ImageBitmap transferToImageBitmap();
+    // FIXME: `transferToImageBitmap` should not return a nullable type.
+    ImageBitmap? transferToImageBitmap();
     Promise<Blob> convertToBlob(optional ImageEncodeOptions options);
 
 };

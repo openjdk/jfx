@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,9 +25,8 @@
 
 #pragma once
 
-#include "JSArrayBufferView.h"
-#include "ThrowScope.h"
-#include "ToNativeFromValue.h"
+#include <JavaScriptCore/JSArrayBufferView.h>
+#include <JavaScriptCore/ThrowScope.h>
 #include <wtf/CheckedArithmetic.h>
 
 namespace JSC {
@@ -98,6 +97,7 @@ public:
     static JSGenericTypedArrayView* create(JSGlobalObject*, Structure*, RefPtr<ArrayBuffer>&&, size_t byteOffset, std::optional<size_t> length);
     static JSGenericTypedArrayView* create(VM&, Structure*, RefPtr<typename Adaptor::ViewType>&& impl);
     static JSGenericTypedArrayView* create(Structure*, JSGlobalObject*, RefPtr<typename Adaptor::ViewType>&& impl);
+    static JSGenericTypedArrayView* tryCreate(JSGlobalObject*, Structure*, RefPtr<typename Adaptor::ViewType>&& impl);
 
     inline size_t byteLength() const;
     inline size_t byteLengthRaw() const;
@@ -105,7 +105,10 @@ public:
     inline const typename Adaptor::Type* typedVector() const;
     inline typename Adaptor::Type* typedVector();
 
-    inline bool inBounds(size_t) const;
+    std::span<const typename Adaptor::Type> typedSpan() const { return unsafeMakeSpan(typedVector(), length()); }
+    std::span<typename Adaptor::Type> typedSpan() { return unsafeMakeSpan(typedVector(), length()); }
+
+    inline bool inBounds(uint64_t) const;
 
     // These methods are meant to match indexed access methods that JSObject
     // supports - hence the slight redundancy.
@@ -120,7 +123,8 @@ public:
     static inline ElementType toAdaptorNativeFromValue(JSGlobalObject*, JSValue);
     static inline std::optional<ElementType> toAdaptorNativeFromValueWithoutCoercion(JSValue);
 
-    inline bool sort();
+    enum class SortResult { Success, OutOfMemory, Failed };
+    inline SortResult sort();
 
     inline bool canAccessRangeQuickly(size_t offset, size_t length);
 
@@ -157,6 +161,8 @@ public:
     inline void copyFromInt32ShapeArray(size_t offset, JSArray*, size_t objectOffset, size_t length);
     inline void copyFromDoubleShapeArray(size_t offset, JSArray*, size_t objectOffset, size_t length);
 
+    DECLARE_VISIT_CHILDREN;
+
 protected:
     friend struct TypedArrayClassInfos;
 
@@ -171,10 +177,9 @@ protected:
     static bool putByIndex(JSCell*, JSGlobalObject*, unsigned propertyName, JSValue, bool shouldThrow);
     static bool deletePropertyByIndex(JSCell*, JSGlobalObject*, unsigned propertyName);
 
-    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
 
     static size_t estimatedSize(JSCell*, VM&);
-    DECLARE_VISIT_CHILDREN;
 
     // Returns true if successful, and false on error; it will throw on error.
     template<typename OtherAdaptor>
@@ -207,7 +212,7 @@ protected:
     // For NaN, we normalize the NaN to a peticular representation; the sign bit is 0, all exponential bits
     // are 1 and only the MSB of the mantissa is 1. So, NaN is recognized as the largest integral numbers.
 
-    template<typename IntegralType> inline bool sortFloat();
+    template<typename IntegralType> inline void sortFloat(ElementType* begin, ElementType* end);
 };
 
 template<typename PassedAdaptor>
@@ -222,6 +227,8 @@ public:
 
     static inline const ClassInfo* info();
     static inline Structure* createStructure(VM&, JSGlobalObject*, JSValue prototype);
+
+    static bool preventExtensions(JSObject*, JSGlobalObject*);
 };
 
 template<typename Adaptor> inline RefPtr<typename Adaptor::ViewType> toPossiblySharedNativeTypedView(VM&, JSValue);

@@ -28,10 +28,10 @@
 typedef [EnforceRange] unsigned long GPUShaderStageFlags;
 [
     EnabledBySetting=WebGPUEnabled,
-    Exposed=(Window), /* https://bugs.webkit.org/show_bug.cgi?id=232542: DedicatedWorker */
+    Exposed=(Window,Worker),
     SecureContext
 ]
-interface GPUShaderStage {
+namespace GPUShaderStage {
     const GPUFlagsConstant VERTEX   = 0x1;
     const GPUFlagsConstant FRAGMENT = 0x2;
     const GPUFlagsConstant COMPUTE  = 0x4;

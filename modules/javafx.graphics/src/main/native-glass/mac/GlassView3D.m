@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,8 @@
 #import "GlassKey.h"
 #import "GlassMacros.h"
 #import "GlassView3D.h"
-#import "GlassLayer3D.h"
+#import "GlassViewCGL.h"
+#import "GlassViewMTL.h"
 #import "GlassApplication.h"
 
 //#define VERBOSE
@@ -78,120 +79,38 @@
 
 @implementation GlassView3D
 
-- (CGLPixelFormatObj)_createPixelFormatWithDepth:(CGLPixelFormatAttribute)depth
+- (id)initWithFrame:(NSRect)frame withJview:(jobject)jView withJproperties:(jobject)jproperties
 {
-    CGLPixelFormatObj pix = NULL;
-    {
-        const CGLPixelFormatAttribute attributes[] =
-        {
-            kCGLPFAAccelerated,
-            kCGLPFAColorSize, 32,
-            kCGLPFAAlphaSize, 8,
-            kCGLPFADepthSize, depth,
-            kCGLPFAAllowOfflineRenderers, // lets OpenGL know this context is offline renderer aware
-            (CGLPixelFormatAttribute)0
-        };
-        GLint npix = 0;
-        CGLError err = CGLChoosePixelFormat(attributes, &pix, &npix);
-        if (pix == NULL)
-        {
-            NSLog(@"CGLChoosePixelFormat: No matching pixel format exists for the requested attributes, trying again with limited capabilities");
-            const CGLPixelFormatAttribute attributes2[] =
-            {
-                kCGLPFAAllowOfflineRenderers,
-                (CGLPixelFormatAttribute)0
-            };
-            err = CGLChoosePixelFormat(attributes2, &pix, &npix);
-        }
-        if (err != kCGLNoError)
-        {
-            NSLog(@"CGLChoosePixelFormat error: %d", err);
-        }
-    }
-    return pix;
-}
+    LOG("GlassView3D initWithFrame:withJview:withJproperties");
 
-- (CGLContextObj)_createContextWithShared:(CGLContextObj)share withFormat:(CGLPixelFormatObj)format
-{
-    CGLContextObj ctx = NULL;
-    {
-        CGLError err = CGLCreateContext(format, share, &ctx);
-        if (err != kCGLNoError)
-        {
-            NSLog(@"CGLCreateContext error: %d", err);
-        }
-    }
-    return ctx;
-}
-
-- (void)_initialize3dWithJproperties:(jobject)jproperties
-{
     GET_MAIN_JENV;
-
-    int depthBits = 0;
+    long mtlCommandQueuePtr = 0l;
     if (jproperties != NULL)
     {
-        jobject k3dDepthKey = (*env)->NewObject(env, jIntegerClass, jIntegerInitMethod, com_sun_glass_ui_View_Capability_k3dDepthKeyValue);
+        jobject mtlCommandQueueKey = (*env)->NewStringUTF(env, "mtlCommandQueue");
+        jobject mtlCommandQueueValue = (*env)->CallObjectMethod(env, jproperties, jMapGetMethod, mtlCommandQueueKey);
+        // NSLog(@"---- mtlCommandQueueKey = %p", mtlCommandQueueKey);
+        // NSLog(@"---- mtlCommandQueueValue = %p", mtlCommandQueueValue);
         GLASS_CHECK_EXCEPTION(env);
-        jobject k3dDepthKeyValue = (*env)->CallObjectMethod(env, jproperties, jMapGetMethod, k3dDepthKey);
-        GLASS_CHECK_EXCEPTION(env);
-        if (k3dDepthKeyValue != NULL)
+        if (mtlCommandQueueValue != NULL)
         {
-            depthBits = (*env)->CallIntMethod(env, k3dDepthKeyValue, jIntegerValueMethod);
+            jlong jmtlQueuePtr = (*env)->CallLongMethod(env, mtlCommandQueueValue, jLongValueMethod);
             GLASS_CHECK_EXCEPTION(env);
-        }
-    }
-
-    CGLContextObj sharedCGL = NULL;
-    if (jproperties != NULL)
-    {
-        jobject sharedContextPtrKey = (*env)->NewStringUTF(env, "shareContextPtr");
-        jobject sharedContextPtrValue = (*env)->CallObjectMethod(env, jproperties, jMapGetMethod, sharedContextPtrKey);
-        GLASS_CHECK_EXCEPTION(env);
-        if (sharedContextPtrValue != NULL)
-        {
-            jlong jsharedContextPtr = (*env)->CallLongMethod(env, sharedContextPtrValue, jLongValueMethod);
-            GLASS_CHECK_EXCEPTION(env);
-            if (jsharedContextPtr != 0)
+            if (jmtlQueuePtr != 0)
             {
-                NSOpenGLContext *sharedContextNS = (NSOpenGLContext*)jlong_to_ptr(jsharedContextPtr);
-                sharedCGL = [sharedContextNS CGLContextObj];
+                // NSLog(@"--- GLASS metal command queue ptr = %ld", jmtlQueuePtr);
+
+                // This enables sharing of MTLCommandQueue between PRISM and GLASS, if needed.
+                // Note : Currently, PRISM and GLASS create their own dedicated MTLCommandQueue
+                mtlCommandQueuePtr = jmtlQueuePtr;
             }
         }
     }
 
-    CGLContextObj clientCGL = NULL;
-    BOOL isSwPipe = NO;
-
-    if (jproperties != NULL)
-    {
-        jobject contextPtrKey = (*env)->NewStringUTF(env, "contextPtr");
-        jobject contextPtrValue = (*env)->CallObjectMethod(env, jproperties, jMapGetMethod, contextPtrKey);
-        GLASS_CHECK_EXCEPTION(env);
-        if (contextPtrValue != NULL)
-        {
-            jlong jcontextPtr = (*env)->CallLongMethod(env, contextPtrValue, jLongValueMethod);
-            GLASS_CHECK_EXCEPTION(env);
-            if (jcontextPtr != 0)
-            {
-                NSOpenGLContext *clientContextNS = (NSOpenGLContext*)jlong_to_ptr(jcontextPtr);
-                clientCGL = [clientContextNS CGLContextObj];
-            }
-        }
-    }
-    if (clientCGL == NULL)
-    {
-        CGLPixelFormatObj clientPixelFormat = [self _createPixelFormatWithDepth:(CGLPixelFormatAttribute)depthBits];
-        clientCGL = [self _createContextWithShared:sharedCGL withFormat:clientPixelFormat];
-    }
-    if (sharedCGL == NULL)
-    {
-        // this can happen in Rain or clients other than Prism (ie. device details do not have the shared context set)
-        sharedCGL = clientCGL;
-        isSwPipe = YES;
-    }
-
+    // TODO : We again fetch isHiDPIAware in GlassViewCGL
+    // Try to merge it
     self->isHiDPIAware = NO;
+    BOOL mtlForSW = NO;
     if (jproperties != NULL)
     {
         jobject kHiDPIAwareKey = (*env)->NewObject(env, jIntegerClass, jIntegerInitMethod, com_sun_glass_ui_View_Capability_kHiDPIAwareKeyValue);
@@ -203,76 +122,62 @@
             self->isHiDPIAware = (*env)->CallBooleanMethod(env, kHiDPIAwareValue, jBooleanValueMethod) ? YES : NO;
             GLASS_CHECK_EXCEPTION(env);
         }
+        jobject mtlForSWKey = (*env)->NewStringUTF(env, "useMTLInGlassForSW");
+        jobject mtlForSWValue = (*env)->CallObjectMethod(env, jproperties, jMapGetMethod, mtlForSWKey);
+        GLASS_CHECK_EXCEPTION(env);
+        if (mtlForSWValue != NULL)
+        {
+            mtlForSW = (*env)->CallBooleanMethod(env, mtlForSWValue, jBooleanValueMethod) ? YES : NO;
+            GLASS_CHECK_EXCEPTION(env);
+        }
     }
 
-    GlassLayer3D *layer = [[GlassLayer3D alloc] initWithSharedContext:sharedCGL andClientContext:clientCGL withHiDPIAware:self->isHiDPIAware withIsSwPipe:isSwPipe];
-
-    // https://developer.apple.com/library/mac/documentation/Cocoa/Reference/ApplicationKit/Classes/nsview_Class/Reference/NSView.html#//apple_ref/occ/instm/NSView/setWantsLayer:
-    // the order of the following 2 calls is important: here we indicate we want a layer-hosting view
-    {
-        [self setLayer:layer];
-        [self setWantsLayer:YES];
-    }
-}
-
-- (id)initWithFrame:(NSRect)frame withJview:(jobject)jView withJproperties:(jobject)jproperties
-{
-    LOG("GlassView3D initWithFrame:withJview:withJproperties");
-
-    NSOpenGLPixelFormatAttribute pixelFormatAttributes[] =
-    {
-        NSOpenGLPFAAllowOfflineRenderers, // Lets OpenGL know this context is offline renderer aware
-        (NSOpenGLPixelFormatAttribute)0
-    };
-    NSOpenGLPixelFormat *pFormat = [[[NSOpenGLPixelFormat alloc] initWithAttributes:pixelFormatAttributes] autorelease];
-    if (!pFormat)
-    {
-        pFormat = [NSOpenGLView defaultPixelFormat];
-        LOG("GlassView3D initWithFrame: initWithAttributes failed! Set pixel format to default pixel format");
-    }
-    self = [super initWithFrame:frame pixelFormat:pFormat];
-    if (self != nil)
-    {
-        [self _initialize3dWithJproperties:jproperties];
-
+    self = [super initWithFrame:frame];
+    if (self != nil) {
+        if (mtlCommandQueuePtr != 0l || mtlForSW) {
+            LOG("GlassView3D initWithFrame using MTLView");
+            GlassViewMTL* mtlSubView;
+            subView = mtlSubView = [[GlassViewMTL alloc] initWithFrame:frame withJview:jView withJproperties:jproperties useMTLForSW:mtlForSW];
+            self->layer = [mtlSubView getLayer];
+            self->isHiDPIAware = YES;
+        } else {
+            LOG("GlassView3D initWithFrame using CGLView");
+            GlassViewCGL* cglSubView;
+            subView = cglSubView = [[GlassViewCGL alloc] initWithFrame:frame withJview:jView withJproperties:jproperties useMTLForSW:mtlForSW];
+            self->layer = [cglSubView getLayer];
+        }
+        [subView setAutoresizingMask:(NSViewWidthSizable|NSViewHeightSizable)];
+        [self addSubview:subView];
         self->_delegate = [[GlassViewDelegate alloc] initWithView:self withJview:jView];
-        self->_drawCounter = 0;
-        self->_texture = 0;
-
         self->_trackingArea = [[NSTrackingArea alloc] initWithRect:frame
                                                            options:(NSTrackingMouseMoved | NSTrackingActiveAlways | NSTrackingInVisibleRect)
                                                              owner:self userInfo:nil];
         [self addTrackingArea: self->_trackingArea];
         self->nsAttrBuffer = [[NSAttributedString alloc] initWithString:@""];
         self->imEnabled = NO;
-        self->shouldProcessKeyEvent = YES;
+        self->handlingKeyEvent = NO;
+        self->didCommitText = NO;
+        lastKeyEvent = nil;
+
+        keymanActive = NO;
+        sendKeyEvent = NO;
+        insertTextChar = 0;
     }
+    //self->_delegate = [[GlassViewDelegate alloc] initWithView:view withJview:jView];
     return self;
 }
 
 - (void)dealloc
 {
-    if (self->_texture != 0)
-    {
-        GlassLayer3D *layer = (GlassLayer3D*)[self layer];
-        [[layer getPainterOffscreen] bindForWidth:(GLuint)[self bounds].size.width andHeight:(GLuint)[self bounds].size.height];
-        {
-            glDeleteTextures(1, &self->_texture);
-        }
-        [[layer getPainterOffscreen] unbind];
-    }
-
-    [[self layer] release];
-    [self->_delegate release];
-    self->_delegate = nil;
-
     [self removeTrackingArea: self->_trackingArea];
     [self->_trackingArea release];
     self->_trackingArea = nil;
-
+    [self->_delegate release];
+    self->_delegate = nil;
     [self->nsAttrBuffer release];
     self->nsAttrBuffer = nil;
-
+    [lastKeyEvent release];
+    lastKeyEvent = nil;
     [super dealloc];
 }
 
@@ -324,12 +229,7 @@
 // also called when closing window, when [self window] == nil
 - (void)viewDidMoveToWindow
 {
-    if ([self window] != nil)
-    {
-        GlassLayer3D *layer = (GlassLayer3D*)[self layer];
-        [[layer getPainterOffscreen] setBackgroundColor:[[[self window] backgroundColor] colorUsingColorSpaceName:NSDeviceRGBColorSpace]];
-    }
-
+    [subView viewDidMoveToWindow];
     [self->_delegate viewDidMoveToWindow];
 }
 
@@ -378,12 +278,9 @@
 - (void)mouseDown:(NSEvent *)theEvent
 {
     MOUSELOG("mouseDown");
-    // First check if system Input Method Engine needs to handle this event
-    NSInputManager *inputManager = [NSInputManager currentInputManager];
-    if ([inputManager wantsToHandleMouseEvents]) {
-        if ([inputManager handleMouseEvent:theEvent]) {
-            return;
-        }
+    // First check if system Input Context needs to handle this event
+    if ([self.inputContext handleEvent:theEvent]) {
+        return;
     }
     [self->_delegate sendJavaMouseEvent:theEvent];
 }
@@ -463,65 +360,92 @@
 - (BOOL)performKeyEquivalent:(NSEvent *)theEvent
 {
     KEYLOG("performKeyEquivalent");
-    [GlassApplication registerKeyEvent:theEvent];
 
-    // Crash if the FS window is released while performing a key equivalent
-    // Local copy of the id keeps the retain/release calls balanced.
-    id fsWindow = [self->_delegate->fullscreenWindow retain];
-
-    // RT-37093, RT-37399 Command-EQUALS and Command-DOT needs special casing on Mac
+    // JDK-8093711, JDK-8094601 Command-EQUALS and Command-DOT needs special casing on Mac
     // as it is passed through as two calls to performKeyEquivalent, which in turn
     // create extra KeyEvents.
     //
-    NSString *chars = [theEvent charactersIgnoringModifiers];
-    if ([theEvent type] == NSKeyDown && [chars length] > 0)
-    {
-        unichar uch = [chars characterAtIndex:0];
-        if ([theEvent modifierFlags] & NSCommandKeyMask &&
-            (uch == com_sun_glass_events_KeyEvent_VK_PERIOD ||
-             uch == com_sun_glass_events_KeyEvent_VK_EQUALS))
-        {
-            GET_MAIN_JENV;
-
-            jcharArray jKeyChars = GetJavaKeyChars(env, theEvent);
-            jint jModifiers = GetJavaModifiers(theEvent);
-
-            (*env)->CallVoidMethod(env, self->_delegate->jView, jViewNotifyKey,
-                                   com_sun_glass_events_KeyEvent_PRESS,
-                                   uch, jKeyChars, jModifiers);
-            (*env)->CallVoidMethod(env, self->_delegate->jView, jViewNotifyKey,
-                                   com_sun_glass_events_KeyEvent_TYPED,
-                                   uch, jKeyChars, jModifiers);
-            (*env)->CallVoidMethod(env, self->_delegate->jView, jViewNotifyKey,
-                                   com_sun_glass_events_KeyEvent_RELEASE,
-                                   uch, jKeyChars, jModifiers);
-            (*env)->DeleteLocalRef(env, jKeyChars);
-
-            GLASS_CHECK_EXCEPTION(env);
-            [fsWindow release];
-            return YES;
-        }
+    // If the user presses Command-"=" on a US keyboard the OS will send that
+    // to performKeyEquivalent. If it isn't handled it will then send
+    // Command-"+". This allows a user to invoke Command-"+" without using
+    // the Shift key. The OS does this for any key where + is the shifted
+    // character above =. It does something similar with the period key;
+    // Command-"." leads to Escape for dismissing dialogs. Here we detect and
+    // ignore the second key event.
+    if (theEvent != NSApp.currentEvent && NSApp.currentEvent == lastKeyEvent) {
+        return YES;
     }
-    [self->_delegate sendJavaKeyEvent:theEvent isDown:YES];
-    [fsWindow release];
-    return NO; // return NO to allow system-default processing of Cmd+Q, etc.
+
+    BOOL result = [self handleKeyDown: theEvent];
+    return result;
 }
 
-- (void)keyDown:(NSEvent *)theEvent
+- (BOOL)handleKeyDown:(NSEvent *)theEvent
+{
+    if (theEvent == lastKeyEvent) return NO;
+
+    [lastKeyEvent release];
+    lastKeyEvent = [theEvent retain];
+
+    handlingKeyEvent = YES;
+    didCommitText = NO;
+
+    // The Keyman input method expects us to ignore key events that don't lead
+    // to NSTextInputClient calls. For Keyman the NSEvent refers to some
+    // internal Roman layout and not the chosen Keyman layout. The correct
+    // Keyman character will be passed to insertText. We detect this input
+    // method using the same method as AWT.
+    keymanActive = [self.inputContext.selectedKeyboardInputSource containsString: @"keyman"];
+    sendKeyEvent = NO;
+    insertTextChar = 0;
+
+    BOOL hadMarkedText = (nsAttrBuffer.length > 0);
+    BOOL inputContextHandledEvent = (imEnabled && [self.inputContext handleEvent:theEvent]);
+    handlingKeyEvent = NO;
+
+    // Returns YES if the event triggered some sort of InputMethod action or
+    // if the PRESSED event was consumed by the scene graph.
+    BOOL wasConsumed = YES;
+
+    if (didCommitText) {
+        // Exit composition mode
+        didCommitText = NO;
+        nsAttrBuffer = [nsAttrBuffer initWithString: @""];
+    } else if (hadMarkedText) {
+        // Either we still have marked text or the keystroke removed it
+        // (ESC can do that). In either case we don't want to generate a key
+        // event.
+        ;
+    }
+    else if (keymanActive) {
+        // We do not call registerKeyEvent: for keyman which means shortcuts
+        // based on symbols and punctuation (like Cmd++) will not work
+        // correctly. We don't see changes to the Keyman layout so
+        // registerKeyEvent: would accumulate stale information. Keyman does
+        // not set marked text so we don't need to check nsAttrBuffer.
+        if (sendKeyEvent) {
+            wasConsumed = [self->_delegate sendJavaKeyEvent:theEvent isDown:YES character:insertTextChar];
+        }
+    } else if (!inputContextHandledEvent || (nsAttrBuffer.length == 0)) {
+        [GlassApplication registerKeyEvent:theEvent];
+        wasConsumed = [self->_delegate sendJavaKeyEvent:theEvent isDown:YES character:0];
+    }
+
+    keymanActive = NO;
+
+    return wasConsumed;
+}
+
+- (void)keyDown:(NSEvent*)theEvent
 {
     KEYLOG("keyDown");
-
-    if (![[self inputContext] handleEvent:theEvent] || shouldProcessKeyEvent) {
-        [GlassApplication registerKeyEvent:theEvent];
-        [self->_delegate sendJavaKeyEvent:theEvent isDown:YES];
-    }
-    shouldProcessKeyEvent = YES;
+    [self handleKeyDown: theEvent];
 }
 
 - (void)keyUp:(NSEvent *)theEvent
 {
     KEYLOG("keyUp");
-    [self->_delegate sendJavaKeyEvent:theEvent isDown:NO];
+    [self->_delegate sendJavaKeyEvent:theEvent isDown:NO character:insertTextChar];
 }
 
 - (void)flagsChanged:(NSEvent *)theEvent
@@ -570,13 +494,17 @@
 - (void)draggingEnded:(id <NSDraggingInfo>)sender
 {
     DNDLOG("draggingEnded");
-    [self->_delegate draggingEnded];
 }
 
 - (void)draggingExited:(id <NSDraggingInfo>)sender
 {
     DNDLOG("draggingExited");
     [self->_delegate sendJavaDndEvent:sender type:com_sun_glass_events_DndEvent_EXIT];
+}
+
+- (void)drawRect:(NSRect)dirtyRect
+{
+    [self->_delegate drawRect:dirtyRect];
 }
 
 #pragma mark --- Callbacks
@@ -594,134 +522,50 @@
 - (void)begin
 {
     LOG("begin");
-    assert(self->_drawCounter >= 0);
-
-    if (self->_drawCounter == 0)
-    {
-        GlassLayer3D *layer = (GlassLayer3D*)[self layer];
-        NSRect bounds = (self->isHiDPIAware && [self respondsToSelector:@selector(convertRectToBacking:)]) ?
-            [self convertRectToBacking:[self bounds]] : [self bounds];
-        [[layer getPainterOffscreen] bindForWidth:(GLuint)bounds.size.width andHeight:(GLuint)bounds.size.height];
-    }
-    self->_drawCounter++;
+    NSRect bounds = (self->isHiDPIAware && [subView respondsToSelector:@selector(convertRectToBacking:)]) ?
+            [subView convertRectToBacking:[subView bounds]] : [subView bounds];
+    [self->layer bindForWidth:bounds.size.width andHeight:bounds.size.height];
 }
 
 - (void)end
 {
-    assert(self->_drawCounter > 0);
-
-    self->_drawCounter--;
-    if (self->_drawCounter == 0)
-    {
-        GlassLayer3D *layer = (GlassLayer3D*)[self layer];
-        [[layer getPainterOffscreen] unbind];
-        [layer flush];
-    }
-    LOG("end");
+    [self->layer end];
 }
 
-- (void)drawRect:(NSRect)dirtyRect
+- (void)pushPixels:(void*)pixels withWidth:(unsigned int)width withHeight:(unsigned int)height withScaleX:(float)scalex withScaleY:(float)scaley withEnv:(JNIEnv *)env
 {
-    [self->_delegate drawRect:dirtyRect];
-}
-
-- (void)pushPixels:(void*)pixels withWidth:(GLuint)width withHeight:(GLuint)height withScaleX:(GLfloat)scalex withScaleY:(GLfloat)scaley withEnv:(JNIEnv *)env
-{
-    assert(self->_drawCounter > 0);
-
-    if (self->_texture == 0)
-    {
-        glGenTextures(1, &self->_texture);
-    }
-
-    BOOL uploaded = NO;
-    if ((self->_textureWidth != width) || (self->_textureHeight != height))
-    {
-        uploaded = YES;
-
-        self->_textureWidth = width;
-        self->_textureHeight = height;
-
-        // GL_EXT_texture_rectangle is defined in OS X 10.6 GL headers, so we can depend on GL_TEXTURE_RECTANGLE_EXT being available
-        glBindTexture(GL_TEXTURE_RECTANGLE_EXT, self->_texture);
-        glTexParameteri(GL_TEXTURE_RECTANGLE_EXT, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_RECTANGLE_EXT, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-        glTexParameteri(GL_TEXTURE_RECTANGLE_EXT, GL_TEXTURE_WRAP_S, GL_CLAMP);
-        glTexParameteri(GL_TEXTURE_RECTANGLE_EXT, GL_TEXTURE_WRAP_T, GL_CLAMP);
-        glTexImage2D(GL_TEXTURE_RECTANGLE_EXT, 0, GL_RGBA8, (GLsizei)self->_textureWidth, (GLsizei)self->_textureHeight, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, pixels);
-    }
-
-    glEnable(GL_TEXTURE_RECTANGLE_EXT);
-    glBindTexture(GL_TEXTURE_RECTANGLE_EXT, self->_texture);
-    {
-        if (uploaded == NO)
-        {
-            glTexSubImage2D(GL_TEXTURE_RECTANGLE_EXT, 0, 0, 0, (GLsizei)self->_textureWidth, (GLsizei)self->_textureHeight, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, pixels);
-        }
-
-        GLfloat w = self->_textureWidth;
-        GLfloat h = self->_textureHeight;
-
-        NSSize size = [self bounds].size;
-        size.width *= scalex;
-        size.height *= scaley;
-        if ((size.width != w) || (size.height != h))
-        {
-            // This could happen on live resize, clear the FBO to avoid rendering garbage
-            glClear(GL_COLOR_BUFFER_BIT);
-        }
-
-        glMatrixMode(GL_PROJECTION);
-        glPushMatrix();
-        glLoadIdentity();
-        glOrtho(0.0f, size.width, size.height, 0.0f, -1.0f, 1.0f);
-        {
-            glMatrixMode(GL_MODELVIEW);
-            glPushMatrix();
-            glLoadIdentity();
-            {
-                glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE); // copy
-
-                glBegin(GL_QUADS);
-                {
-                    glTexCoord2f(0.0f, 0.0f); glVertex2f(0.0f, 0.0f);
-                    glTexCoord2f(   w, 0.0f); glVertex2f(   w, 0.0f);
-                    glTexCoord2f(   w,    h); glVertex2f(   w,    h);
-                    glTexCoord2f(0.0f,    h); glVertex2f(0.0f,    h);
-                }
-                glEnd();
-            }
-            glMatrixMode(GL_MODELVIEW);
-            glPopMatrix();
-        }
-        glMatrixMode(GL_PROJECTION);
-        glPopMatrix();
-    }
-    glBindTexture(GL_TEXTURE_RECTANGLE_EXT, 0);
-    glDisable(GL_TEXTURE_RECTANGLE_EXT);
-
-    glFinish();
-
-    // The layer will be notified about redraw in _end()
-}
-
-- (GlassViewDelegate*)delegate
-{
-    return self->_delegate;
+    [self->layer pushPixels:pixels withWidth:width withHeight:height withScaleX:scalex withScaleY:scaley ofView:self];
 }
 
 - (void)setInputMethodEnabled:(BOOL)enabled
 {
     IMLOG("setInputMethodEnabled called with arg is %s", (enabled ? "YES" : "NO") );
-    [self unmarkText];
-    self->imEnabled = enabled;
+    if (enabled != imEnabled) {
+        // If enabled is false this has nowhere to go. If enabled is true this
+        // wasn't intended for the newly focused node.
+        if (nsAttrBuffer.length) {
+            nsAttrBuffer = [nsAttrBuffer initWithString:@""];
+        }
+        [self.inputContext discardMarkedText];
+        imEnabled = enabled;
+    }
 }
 
 - (void)finishInputMethodComposition
 {
     IMLOG("finishInputMethodComposition called");
     [self unmarkText];
-    [self.inputContext discardMarkedText];
+    // If we call discardMarkedText on an input context that is not
+    // the current one the IM will get into a persistent state where
+    // it will not call setMarkedText or firstRectForCharacterRange.
+    if (self.inputContext == NSTextInputContext.currentInputContext) {
+        [self.inputContext discardMarkedText];
+    }
+}
+
+- (void)notifyScaleFactorChanged:(CGFloat)scale
+{
+    [self->layer notifyScaleFactorChanged:scale];
 }
 
 /*
@@ -729,7 +573,7 @@
  */
 
 // Utility function, not part of protocol
-- (void)commitString:(NSString*)aString
+- (void)commitString:(id)aString
 {
     [self->_delegate notifyInputMethod:aString attr:4 length:(int)[aString length] cursor:(int)[aString length] selectedRange: NSMakeRange(NSNotFound, 0)];
 }
@@ -737,27 +581,49 @@
 - (void)doCommandBySelector:(SEL)aSelector
 {
     IMLOG("doCommandBySelector called ");
-    // In case the IM was stopped with a mouse and the next typed key
-    // is a special command key (backspace, tab, etc.)
-    self->shouldProcessKeyEvent = YES;
+    // According to Apple an NSResponder will send this up the responder chain
+    // but a text input client should not. So we ignore this which avoids an
+    // annoying beep.
+    if (keymanActive) {
+        sendKeyEvent = YES;
+    }
 }
 
 - (void) insertText:(id)aString replacementRange:(NSRange)replacementRange
 {
     IMLOG("insertText called with string: %s", [aString UTF8String]);
     if ([self->nsAttrBuffer length] > 0 || [aString length] > 1) {
+        self->didCommitText = YES;
         [self commitString: aString];
-        self->shouldProcessKeyEvent = NO;
-    } else {
-        self->shouldProcessKeyEvent = YES;
     }
-    self->nsAttrBuffer = [self->nsAttrBuffer initWithString:@""];
+
+    if (keymanActive) {
+        if ([aString isKindOfClass: [NSString class]]) {
+            NSString* nsString = (NSString*)aString;
+            // A longer string would be sent out above as an InputMethod
+            // commit rather than a multi-unit KeyEvent.
+            if (nsString.length == 1) {
+                insertTextChar = [nsString characterAtIndex: 0];
+                sendKeyEvent = YES;
+            }
+        }
+    }
+
+    // If a user tries to enter an invalid character using a dead key
+    // combination (like, say, a q with a grave accent) insertText will be
+    // called twice on the last keystroke, first with the accent and then
+    // with the letter. We want both inserts to be handled as committed text
+    // so we defer exiting composition mode until the keystroke is processed.
+    // We only defer on keystrokes because sometimes insertText is called
+    // when a mouse event dismisses the IM window.
+    if (!self->handlingKeyEvent) {
+        self->nsAttrBuffer = [self->nsAttrBuffer initWithString:@""];
+    }
 }
 
 - (void) setMarkedText:(id)aString selectedRange:(NSRange)selectionRange replacementRange:(NSRange)replacementRange
 {
     if (!self->imEnabled) {
-        self->shouldProcessKeyEvent = YES;
         return;
     }
     BOOL isAttributedString = [aString isKindOfClass:[NSAttributedString class]];
@@ -767,7 +633,6 @@
     [self->_delegate notifyInputMethod:incomingString attr:1 length:0 cursor:(int)[incomingString length] selectedRange:selectionRange ];
     self->nsAttrBuffer = (attrString == nil ? [self->nsAttrBuffer initWithString:incomingString]
                                             : [self->nsAttrBuffer initWithAttributedString: attrString]);
-    self->shouldProcessKeyEvent = NO;
 }
 
 - (void) unmarkText
@@ -777,7 +642,6 @@
         [self commitString: nsAttrBuffer.string];
         nsAttrBuffer = [nsAttrBuffer initWithString:@""];
     }
-    self->shouldProcessKeyEvent = YES;
 }
 
 - (BOOL) hasMarkedText
@@ -839,12 +703,6 @@
 - (NSArray*) validAttributesForMarkedText
 {
     return [NSArray array];
-}
-
-- (void)notifyScaleFactorChanged:(CGFloat)scale
-{
-    GlassLayer3D *layer = (GlassLayer3D*)[self layer];
-    [layer notifyScaleFactorChanged:scale];
 }
 
 /* Accessibility support */
@@ -911,5 +769,14 @@
     return value;
 }
 
+- (GlassLayer*)getLayer
+{
+    return self->layer;
+}
+
+- (GlassViewDelegate*)delegate
+{
+    return self->_delegate;
+}
 
 @end

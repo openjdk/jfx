@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,10 +27,15 @@
 
 #if ENABLE(WEB_AUTHN)
 
-#include "AuthenticatorCoordinator.h"
-#include "ExceptionData.h"
+#include <WebCore/AuthenticatorCoordinator.h>
+#include <WebCore/ExceptionData.h>
+#include <WebCore/PublicKeyCredential.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/WeakPtr.h>
+
+namespace WebCore {
+class AuthenticatorCoordinatorClient;
+}
 
 namespace WebAuthn {
 enum class Scope;
@@ -50,23 +55,26 @@ struct PublicKeyCredentialCreationOptions;
 struct PublicKeyCredentialRequestOptions;
 class SecurityOriginData;
 
+using CapabilitiesCompletionHandler = CompletionHandler<void(Vector<KeyValuePair<String, bool>>&&)>;
 using RequestCompletionHandler = CompletionHandler<void(WebCore::AuthenticatorResponseData&&, WebCore::AuthenticatorAttachment, WebCore::ExceptionData&&)>;
 using QueryCompletionHandler = CompletionHandler<void(bool)>;
 
-class AuthenticatorCoordinatorClient : public CanMakeWeakPtr<AuthenticatorCoordinatorClient> {
-    WTF_MAKE_FAST_ALLOCATED;
+class AuthenticatorCoordinatorClient {
+    WTF_MAKE_TZONE_ALLOCATED(AuthenticatorCoordinatorClient);
     WTF_MAKE_NONCOPYABLE(AuthenticatorCoordinatorClient);
 public:
     AuthenticatorCoordinatorClient() = default;
     virtual ~AuthenticatorCoordinatorClient() = default;
 
-    virtual void makeCredential(const LocalFrame&, const SecurityOrigin&, const Vector<uint8_t>&, const PublicKeyCredentialCreationOptions&, RequestCompletionHandler&&) = 0;
-    virtual void getAssertion(const LocalFrame&, const SecurityOrigin&, const Vector<uint8_t>&, const PublicKeyCredentialRequestOptions&, MediationRequirement, const ScopeAndCrossOriginParent&, RequestCompletionHandler&&) = 0;
+    virtual void makeCredential(const LocalFrame&, const PublicKeyCredentialCreationOptions&, MediationRequirement, RequestCompletionHandler&&) = 0;
+    virtual void getAssertion(const LocalFrame&, const PublicKeyCredentialRequestOptions&, MediationRequirement, const ScopeAndCrossOriginParent&, RequestCompletionHandler&&) = 0;
     virtual void isConditionalMediationAvailable(const SecurityOrigin&, QueryCompletionHandler&&) = 0;
     virtual void isUserVerifyingPlatformAuthenticatorAvailable(const SecurityOrigin&, QueryCompletionHandler&&) = 0;
-    virtual void cancel() = 0;
-
-    virtual void resetUserGestureRequirement() { }
+    virtual void getClientCapabilities(const SecurityOrigin&, CapabilitiesCompletionHandler&&) = 0;
+    virtual void signalUnknownCredential(const SecurityOrigin&, UnknownCredentialOptions&&, CompletionHandler<void(std::optional<WebCore::ExceptionData>)>&&) = 0;
+    virtual void signalAllAcceptedCredentials(const SecurityOrigin&, AllAcceptedCredentialsOptions&&, CompletionHandler<void(std::optional<WebCore::ExceptionData>)>&&) = 0;
+    virtual void signalCurrentUserDetails(const SecurityOrigin&, CurrentUserDetailsOptions&&, CompletionHandler<void(std::optional<WebCore::ExceptionData>)>&&) = 0;
+    virtual void cancel(CompletionHandler<void()>&&) = 0;
 };
 
 } // namespace WebCore

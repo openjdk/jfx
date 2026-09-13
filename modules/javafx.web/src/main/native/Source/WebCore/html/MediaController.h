@@ -27,11 +27,12 @@
 
 #if ENABLE(VIDEO)
 
-#include "ContextDestructionObserver.h"
-#include "Event.h"
-#include "EventTarget.h"
-#include "MediaControllerInterface.h"
-#include "Timer.h"
+#include <WebCore/ContextDestructionObserver.h>
+#include <WebCore/Event.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/EventTargetInterfaces.h>
+#include <WebCore/MediaControllerInterface.h>
+#include <WebCore/Timer.h>
 #include <wtf/Vector.h>
 
 namespace PAL {
@@ -47,10 +48,15 @@ class MediaController final
     , public MediaControllerInterface
     , public ContextDestructionObserver
     , public EventTarget {
-    WTF_MAKE_ISO_ALLOCATED(MediaController);
+    WTF_MAKE_TZONE_ALLOCATED(MediaController);
 public:
     static Ref<MediaController> create(ScriptExecutionContext&);
     virtual ~MediaController();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     Ref<TimeRanges> buffered() const final;
     Ref<TimeRanges> seekable() const final;
@@ -79,9 +85,6 @@ public:
 
     const AtomString& playbackState() const;
 
-    using RefCounted::ref;
-    using RefCounted::deref;
-
 private:
     explicit MediaController(ScriptExecutionContext&);
 
@@ -99,14 +102,11 @@ private:
 
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
-    EventTargetInterface eventTargetInterface() const final { return MediaControllerEventTargetInterfaceType; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); };
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::MediaController; }
+    ScriptExecutionContext* scriptExecutionContext() const final;
 
     void addMediaElement(HTMLMediaElement&);
     void removeMediaElement(HTMLMediaElement&);
-    bool containsMediaElement(HTMLMediaElement&) const;
-
-    const String& mediaGroup() const { return m_mediaGroup; }
 
     bool supportsFullscreen(HTMLMediaElementEnums::VideoFullscreenMode) const final { return false; }
     bool isFullscreen() const final { return false; }
@@ -133,12 +133,16 @@ private:
 
     ReadyState readyState() const final { return m_readyState; }
 
+    void forEachElement(Function<void(Ref<HTMLMediaElement>&&)>&&) const;
+    bool anyElement(Function<bool(Ref<HTMLMediaElement>&&)>&&) const;
+    bool everyElement(Function<bool(Ref<HTMLMediaElement>&&)>&&) const;
+
     enum PlaybackState { WAITING, PLAYING, ENDED };
 
     friend class HTMLMediaElement;
     friend class MediaControllerEventListener;
 
-    Vector<HTMLMediaElement*> m_mediaElements;
+    Vector<CheckedPtr<HTMLMediaElement>> m_mediaElements;
     bool m_paused;
     double m_defaultPlaybackRate;
     double m_volume;
@@ -149,7 +153,6 @@ private:
     Vector<Ref<Event>> m_pendingEvents;
     Timer m_asyncEventTimer;
     mutable Timer m_clearPositionTimer;
-    String m_mediaGroup;
     bool m_closedCaptionsVisible;
     std::unique_ptr<PAL::Clock> m_clock;
     Timer m_timeupdateTimer;
@@ -158,5 +161,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(MediaController)
 
 #endif

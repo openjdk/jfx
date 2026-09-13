@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,63 +25,91 @@
 
 #pragma once
 
-#include "JSCast.h"
-#include "JSRunLoopTimer.h"
-#include "Strong.h"
+#include <JavaScriptCore/JSRunLoopTimer.h>
+#include <JavaScriptCore/WeakInlines.h>
 
 #include <wtf/Deque.h>
 #include <wtf/FixedVector.h>
 #include <wtf/HashSet.h>
-#include <wtf/Lock.h>
+#include <wtf/RefPtr.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
 
-class JSPromise;
 class VM;
 class JSCell;
+class JSObject;
+class JSGlobalObject;
 
-class JS_EXPORT_PRIVATE DeferredWorkTimer final : public JSRunLoopTimer {
+class DeferredWorkTimer final : public JSRunLoopTimer {
 public:
     using Base = JSRunLoopTimer;
 
-    struct TicketData {
-    private:
-        WTF_MAKE_FAST_ALLOCATED;
-    public:
-        inline TicketData(VM&, JSObject* scriptExecutionOwner, Vector<Strong<JSCell>>&& dependencies);
-
-        inline VM& vm();
-        JSObject* target();
-
-        inline void cancel();
-        bool isCancelled() const { return !scriptExecutionOwner.get(); }
-
-        FixedVector<Strong<JSCell>> dependencies;
-        Strong<JSObject> scriptExecutionOwner;
+    enum class WorkType : uint8_t {
+        ImminentlyScheduled,
+        AtSomePoint,
     };
 
-    using Ticket = TicketData*;
+    class Ticket : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<Ticket>  {
+    private:
+        WTF_MAKE_TZONE_ALLOCATED(Ticket);
+        WTF_MAKE_NONCOPYABLE(Ticket);
+    public:
+        inline static Ref<Ticket> create(WorkType, JSObject* scriptExecutionOwner, Vector<JSCell*>&& dependencies);
+
+        WorkType type() const { return m_type; }
+        inline VM& vm();
+        JSObject* target();
+        JS_EXPORT_PRIVATE bool isTargetObject();
+        inline const FixedVector<JSCell*>& dependencies(bool mayBeCancelled = false);
+        inline JSObject* scriptExecutionOwner();
+
+        inline void cancel();
+        // We should not modify dependencies unless it is legitimate to do so during the end of GC.
+        inline void cancelAndClear();
+        bool isCancelled() const { return m_isCancelled; }
+
+    private:
+        inline Ticket(WorkType, JSObject* scriptExecutionOwner, Vector<JSCell*>&& dependencies);
+
+        WorkType m_type;
+        FixedVector<JSCell*> m_dependencies;
+        JSObject* m_scriptExecutionOwner { nullptr };
+        bool m_isCancelled { false };
+    };
+
+    using WeakTicket = ThreadSafeWeakPtr<Ticket>;
 
     void doWork(VM&) final;
 
-    Ticket addPendingWork(VM&, JSObject* target, Vector<Strong<JSCell>>&& dependencies);
-    bool hasAnyPendingWork() const;
-    bool hasPendingWork(Ticket);
-    bool hasDependancyInPendingWork(Ticket, JSCell* dependency);
-    bool cancelPendingWork(Ticket);
+    // Tickets are strongly held by the timer and should be weakly held by the caller and global object.
+    // This allows detached global objects, most commonly iframes / Workers, to cancel tickets without leaking memory.
+    JS_EXPORT_PRIVATE WeakTicket addPendingWork(WorkType, VM&, JSObject* target, Vector<JSCell*>&& dependencies);
+    void cancelPendingWork(VM&);
+
+    JS_EXPORT_PRIVATE bool hasAnyPendingWork() const;
+    JS_EXPORT_PRIVATE bool hasImminentlyScheduledWork() const;
+    bool hasPendingWork(Ticket&);
+    bool hasDependencyInPendingWork(Ticket&, JSCell* dependency);
+    bool cancelPendingWork(Ticket&);
+    void cancelPendingWorkSafe(JSGlobalObject*);
 
     // If the script execution owner your ticket is associated with gets canceled
     // the Task will not be called and will be deallocated. So it's important
     // to make sure your memory ownership model won't leak memory when
     // this occurs. The easiest way is to make sure everything is either owned
     // by a GC'd value in dependencies or by the Task lambda.
-    using Task = Function<void(Ticket)>;
-    void scheduleWorkSoon(Ticket, Task&&);
-    void didResumeScriptExecutionOwner();
+    // The Ticket& passed into the task is valid for the duration of the call:
+    // m_tasks holds a Ref<Ticket> until the task runs. Queue via
+    // scheduleWorkSoonIfActive — the API internally promotes the WeakTicket
+    // and drops the request if the ticket is gone or cancelled.
+    using Task = Function<void(Ticket&)>;
+    JS_EXPORT_PRIVATE bool scheduleWorkSoonIfActive(const WeakTicket&, Task&&);
+    JS_EXPORT_PRIVATE void didResumeScriptExecutionOwner();
 
     void stopRunningTasks() { m_runTasks = false; }
-    void runRunLoop();
+    JS_EXPORT_PRIVATE void runRunLoop();
 
     static Ref<DeferredWorkTimer> create(VM& vm) { return adoptRef(*new DeferredWorkTimer(vm)); }
 private:
@@ -91,14 +119,32 @@ private:
     bool m_runTasks { true };
     bool m_shouldStopRunLoopWhenAllTicketsFinish { false };
     bool m_currentlyRunningTask { false };
-    Deque<std::tuple<Ticket, Task>> m_tasks WTF_GUARDED_BY_LOCK(m_taskLock);
-    HashSet<std::unique_ptr<TicketData>> m_pendingTickets;
+    Deque<std::tuple<Ref<Ticket>, Task>> m_tasks WTF_GUARDED_BY_LOCK(m_taskLock);
+    UncheckedKeyHashSet<Ref<Ticket>> m_pendingTickets;
 };
 
-inline JSObject* DeferredWorkTimer::TicketData::target()
+// target() reads m_dependencies, which cancelAndClear() can free concurrently.
+// Safe only when: (1) holding m_taskLock, (2) inside a scheduleWorkSoonIfActive task lambda
+// (ticket already removed from m_pendingTickets), or (3) GC End phase is prevented from running.
+// Never call from a foreign VM's thread.
+inline JSObject* DeferredWorkTimer::Ticket::target()
+{
+    ASSERT(!isCancelled() && isTargetObject());
+    // This function can be triggered on the main thread with a GC end phase
+    // and a sweeping state. So, jsCast is not wanted here.
+    return std::bit_cast<JSObject*>(m_dependencies.last());
+}
+
+inline const FixedVector<JSCell*>& DeferredWorkTimer::Ticket::dependencies(bool mayBeCancelled)
+{
+    ASSERT_UNUSED(mayBeCancelled, mayBeCancelled || !isCancelled());
+    return m_dependencies;
+}
+
+inline JSObject* DeferredWorkTimer::Ticket::scriptExecutionOwner()
 {
     ASSERT(!isCancelled());
-    return jsCast<JSObject*>(dependencies.last().get());
+    return m_scriptExecutionOwner;
 }
 
 } // namespace JSC

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Apple Inc.  All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,6 +28,7 @@
 #include "RemoveFormatCommand.h"
 
 #include "ApplyStyleCommand.h"
+#include "EditingStyle.h"
 #include "Element.h"
 #include "FrameSelection.h"
 #include "HTMLNames.h"
@@ -41,8 +42,8 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-RemoveFormatCommand::RemoveFormatCommand(Document& document)
-    : CompositeEditCommand(document)
+RemoveFormatCommand::RemoveFormatCommand(Ref<Document>&& document)
+    : CompositeEditCommand(WTF::move(document))
 {
 }
 
@@ -89,8 +90,7 @@ void RemoveFormatCommand::doApply()
 
     // Get the default style for this editable root, it's the style that we'll give the
     // content that we're operating on.
-    Node* root = endingSelection().rootEditableElement();
-    auto defaultStyle = EditingStyle::create(root);
+    auto defaultStyle = EditingStyle::create(endingSelection().rootEditableElement());
 
     // We want to remove everything but transparent background.
     // FIXME: We shouldn't access style().

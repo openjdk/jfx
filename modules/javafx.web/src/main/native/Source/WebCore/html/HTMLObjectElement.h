@@ -22,16 +22,19 @@
 
 #pragma once
 
-#include "FormListedElement.h"
-#include "HTMLPlugInImageElement.h"
+#include <WebCore/FormListedElement.h>
+#include <WebCore/HTMLPlugInElement.h>
 
 namespace WebCore {
 
 class HTMLFormElement;
 
-class HTMLObjectElement final : public HTMLPlugInImageElement, public FormListedElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLObjectElement);
+class HTMLObjectElement final : public HTMLPlugInElement, public FormListedElement {
+    WTF_MAKE_TZONE_ALLOCATED(HTMLObjectElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLObjectElement);
 public:
+    USING_CAN_MAKE_WEAKPTR(HTMLPlugInElement);
+
     static Ref<HTMLObjectElement> create(const QualifiedName&, Document&, HTMLFormElement*);
 
     bool isExposed() const { return m_isExposed; }
@@ -47,8 +50,8 @@ public:
     static bool checkValidity() { return true; }
     static bool reportValidity() { return true; }
 
-    using HTMLPlugInImageElement::ref;
-    using HTMLPlugInImageElement::deref;
+    using HTMLPlugInElement::ref;
+    using HTMLPlugInElement::deref;
 
 private:
     HTMLObjectElement(const QualifiedName&, Document&, HTMLFormElement*);
@@ -76,9 +79,8 @@ private:
     void updateWidget(CreatePlugins) final;
     void updateExposedState();
 
-    // FIXME: This function should not deal with url or serviceType
-    // so that we can better share code between <object> and <embed>.
-    void parametersForPlugin(Vector<AtomString>& paramNames, Vector<AtomString>& paramValues, String& url, String& serviceType);
+    // FIXME: Better share code between <object> and <embed>.
+    void parametersForPlugin(Vector<AtomString>& paramNames, Vector<AtomString>& paramValues);
 
     void refFormAssociatedElement() const final { ref(); }
     void derefFormAssociatedElement() const final { deref(); }
@@ -93,7 +95,6 @@ private:
 
     bool isFormListedElement() const final { return true; }
     bool isValidatedFormListedElement() const final { return false; }
-    bool isFormControlElement() const final { return false; }
 
     bool isEnumeratable() const final { return true; }
 

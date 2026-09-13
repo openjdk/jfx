@@ -1,6 +1,6 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
- *  Copyright (C) 2003-2021 Apple Inc. All Rights Reserved.
+ *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include "CommonIdentifiers.h"
 #include "InternalFunction.h"
 #include "RegExp.h"
 #include "RegExpCachedResult.h"
@@ -35,23 +36,20 @@ public:
     typedef InternalFunction Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
-    static RegExpConstructor* create(VM& vm, Structure* structure, RegExpPrototype* regExpPrototype, GetterSetter* species)
+    static RegExpConstructor* create(VM& vm, Structure* structure, RegExpPrototype* regExpPrototype)
     {
         RegExpConstructor* constructor = new (NotNull, allocateCell<RegExpConstructor>(vm)) RegExpConstructor(vm, structure);
-        constructor->finishCreation(vm, regExpPrototype, species);
+        constructor->finishCreation(vm, regExpPrototype);
         return constructor;
     }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(InternalFunctionType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_INFO;
 
 private:
     RegExpConstructor(VM&, Structure*);
-    void finishCreation(VM&, RegExpPrototype*, GetterSetter* species);
+    void finishCreation(VM&, RegExpPrototype*);
 };
 STATIC_ASSERT_ISO_SUBSPACE_SHARABLE(RegExpConstructor, InternalFunction);
 

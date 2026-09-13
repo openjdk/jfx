@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -440,7 +440,7 @@ public final class NumberAxis extends ValueAxis<Number> {
             reqLength = (count-1) * maxReqTickGap;
             tickUnit = tickUnitRounded;
 
-            // fix for RT-35600 where a massive tick unit was being selected
+            // fix for JDK-8094132 where a massive tick unit was being selected
             // unnecessarily. There is probably a better solution, but this works
             // well enough for now.
             if (numOfTickMarks == 2 && reqLength > length) {

@@ -27,6 +27,38 @@
 #include "glibintl.h"
 #include "gspawn.h"
 
+/* Platform-specific implementation functions. */
+gboolean g_spawn_sync_impl (const gchar           *working_directory,
+                            gchar                **argv,
+                            gchar                **envp,
+                            GSpawnFlags            flags,
+                            GSpawnChildSetupFunc   child_setup,
+                            gpointer               user_data,
+                            gchar                **standard_output,
+                            gchar                **standard_error,
+                            gint                  *wait_status,
+                            GError               **error);
+gboolean g_spawn_async_with_pipes_and_fds_impl (const gchar           *working_directory,
+                                                const gchar * const   *argv,
+                                                const gchar * const   *envp,
+                                                GSpawnFlags            flags,
+                                                GSpawnChildSetupFunc   child_setup,
+                                                gpointer               user_data,
+                                                gint                   stdin_fd,
+                                                gint                   stdout_fd,
+                                                gint                   stderr_fd,
+                                                const gint            *source_fds,
+                                                const gint            *target_fds,
+                                                gsize                  n_fds,
+                                                GPid                  *child_pid_out,
+                                                gint                  *stdin_pipe_out,
+                                                gint                  *stdout_pipe_out,
+                                                gint                  *stderr_pipe_out,
+                                                GError               **error);
+gboolean g_spawn_check_wait_status_impl (gint     wait_status,
+                                         GError **error);
+void g_spawn_close_pid_impl (GPid pid);
+
 static inline gint
 _g_spawn_exec_err_to_g_error (gint en)
 {

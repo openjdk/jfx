@@ -25,6 +25,12 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
+#if !BUSE(TZONE)
+
 #include "Bits.h"
 #include "DeferredTrigger.h"
 #include "FreeList.h"
@@ -131,3 +137,6 @@ private:
 } // namespace bmalloc
 
 #endif
+#endif // !BUSE(TZONE)
+
+#endif // __cplusplus

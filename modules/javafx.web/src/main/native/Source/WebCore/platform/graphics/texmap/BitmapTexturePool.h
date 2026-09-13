@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies)
- * Copyright (C) 2014 Igalia S.L.
+ * Copyright (C) 2014, 2026 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,54 +24,76 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BitmapTexturePool_h
-#define BitmapTexturePool_h
+#pragma once
+
+#if USE(TEXTURE_MAPPER)
 
 #include "BitmapTexture.h"
-#include "TextureMapperContextAttributes.h"
+#include <wtf/CheckedPtr.h>
+#include <wtf/Lock.h>
+#include <wtf/MonotonicTime.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/RunLoop.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/Vector.h>
+
+typedef void *EGLImage;
 
 namespace WebCore {
-
 class IntSize;
 
-class BitmapTexturePool {
-    WTF_MAKE_NONCOPYABLE(BitmapTexturePool);
-    WTF_MAKE_FAST_ALLOCATED;
+// Thread safe singleton to create textures for any GL context created with the shared PlatformDisplay sharing context.
+// It should be used with a current GL context to be able to create the textures.
+// Unused textures are automatically deleted in the main thread using a timer.
+class BitmapTexturePool final : public CanMakeThreadSafeCheckedPtr<BitmapTexturePool> {
+    WTF_MAKE_TZONE_ALLOCATED(BitmapTexturePool);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(BitmapTexturePool);
 public:
-#if USE(TEXTURE_MAPPER_GL)
-    explicit BitmapTexturePool(const TextureMapperContextAttributes&);
-#else
-    BitmapTexturePool();
+    WEBCORE_EXPORT static BitmapTexturePool& singleton();
+    ~BitmapTexturePool() = default;
+
+    WEBCORE_EXPORT Ref<BitmapTexture> acquireTexture(const IntSize&, OptionSet<BitmapTexture::Flags>);
+#if USE(GBM)
+    Ref<BitmapTexture> createTextureForImage(EGLImage, OptionSet<BitmapTexture::Flags>);
 #endif
 
-    RefPtr<BitmapTexture> acquireTexture(const IntSize&, const BitmapTexture::Flags);
-    void releaseUnusedTexturesTimerFired();
+#if USE(GRAPHICS_LAYER_WC)
+    void releaseUnusedTexturesNow() { releaseUnusedTexturesTimerFired(); }
+#endif
 
 private:
+    friend class NeverDestroyed<BitmapTexturePool>;
+    BitmapTexturePool();
+
     struct Entry {
-        explicit Entry(RefPtr<BitmapTexture>&& texture)
-            : m_texture(WTFMove(texture))
+        explicit Entry(Ref<BitmapTexture>&& texture)
+            : texture(WTF::move(texture))
         { }
 
-        void markIsInUse() { m_lastUsedTime = MonotonicTime::now(); }
-        bool canBeReleased (MonotonicTime minUsedTime) const { return m_lastUsedTime < minUsedTime && m_texture->refCount() == 1; }
+        void markIsInUse() { lastUsedTime = MonotonicTime::now(); }
+        bool canBeReleased (MonotonicTime minUsedTime) const { return lastUsedTime < minUsedTime && texture->refCount() == 1; }
 
-        RefPtr<BitmapTexture> m_texture;
-        MonotonicTime m_lastUsedTime;
+        const Ref<BitmapTexture> texture;
+        MonotonicTime lastUsedTime;
     };
 
     void scheduleReleaseUnusedTextures();
-    RefPtr<BitmapTexture> createTexture(const BitmapTexture::Flags);
+    void enterLimitExceededModeIfNeeded();
+    void exitLimitExceededModeIfNeeded();
+    void releaseUnusedTexturesTimerFired();
 
-#if USE(TEXTURE_MAPPER_GL)
-    TextureMapperContextAttributes m_contextAttributes;
+    Lock m_lock;
+    Vector<Entry> m_textures WTF_GUARDED_BY_LOCK(m_lock);
+#if USE(GBM)
+    Vector<Ref<BitmapTexture>> m_imageTextures WTF_GUARDED_BY_LOCK(m_lock);
 #endif
-
-    Vector<Entry> m_textures;
-    RunLoop::Timer m_releaseUnusedTexturesTimer;
+    RunLoop::Timer m_releaseUnusedTexturesTimer WTF_GUARDED_BY_LOCK(m_lock);
+    uint64_t m_poolSizeInBytes WTF_GUARDED_BY_LOCK(m_lock) { 0 };
+    bool m_onLimitExceededMode WTF_GUARDED_BY_LOCK(m_lock) { false };
+    Seconds m_releaseUnusedSecondsTolerance WTF_GUARDED_BY_LOCK(m_lock);
+    Seconds m_releaseUnusedTexturesTimerInterval WTF_GUARDED_BY_LOCK(m_lock);
 };
 
 } // namespace WebCore
 
-#endif // BitmapTexturePool_h
+#endif // USE(TEXTURE_MAPPER)

@@ -25,24 +25,27 @@
 
 #pragma once
 
-#include "JSObject.h"
-#include "PropertySlot.h"
-#include "Structure.h"
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/PropertySlot.h>
+#include <JavaScriptCore/Structure.h>
+#include <wtf/UniqueRef.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HasOwnPropertyCache);
 
-class HasOwnPropertyCache {
+class alignas(8) HasOwnPropertyCache {
     static const uint32_t size = 2 * 1024;
     static_assert(hasOneBitSet(size), "size should be a power of two.");
 public:
     static const uint32_t mask = size - 1;
 
     struct Entry {
-        static ptrdiff_t offsetOfStructureID() { return OBJECT_OFFSETOF(Entry, structureID); }
-        static ptrdiff_t offsetOfImpl() { return OBJECT_OFFSETOF(Entry, impl); }
-        static ptrdiff_t offsetOfResult() { return OBJECT_OFFSETOF(Entry, result); }
+        static constexpr ptrdiff_t offsetOfStructureID() { return OBJECT_OFFSETOF(Entry, structureID); }
+        static constexpr ptrdiff_t offsetOfImpl() { return OBJECT_OFFSETOF(Entry, impl); }
+        static constexpr ptrdiff_t offsetOfResult() { return OBJECT_OFFSETOF(Entry, result); }
 
         RefPtr<UniquedStringImpl> impl;
         StructureID structureID;
@@ -57,17 +60,17 @@ public:
         HasOwnPropertyCacheMalloc::free(cache);
     }
 
-    static HasOwnPropertyCache* create()
+    static UniqueRef<HasOwnPropertyCache> create()
     {
         size_t allocationSize = sizeof(Entry) * size;
         HasOwnPropertyCache* result = static_cast<HasOwnPropertyCache*>(HasOwnPropertyCacheMalloc::malloc(allocationSize));
         result->clearBuffer();
-        return result;
+        return UniqueRef { *result };
     }
 
     ALWAYS_INLINE static uint32_t hash(StructureID structureID, UniquedStringImpl* impl)
     {
-        return bitwise_cast<uint32_t>(structureID) + impl->hash();
+        return std::bit_cast<uint32_t>(structureID) + impl->hash();
     }
 
     ALWAYS_INLINE std::optional<bool> get(Structure* structure, PropertyName propName)
@@ -75,7 +78,7 @@ public:
         UniquedStringImpl* impl = propName.uid();
         StructureID id = structure->id();
         uint32_t index = HasOwnPropertyCache::hash(id, impl) & mask;
-        Entry& entry = bitwise_cast<Entry*>(this)[index];
+        Entry& entry = std::bit_cast<Entry*>(this)[index];
         if (entry.structureID == id && entry.impl.get() == impl)
             return entry.result;
         return std::nullopt;
@@ -107,13 +110,13 @@ public:
             UniquedStringImpl* impl = propName.uid();
             StructureID id = structure->id();
             uint32_t index = HasOwnPropertyCache::hash(id, impl) & mask;
-            bitwise_cast<Entry*>(this)[index] = Entry { RefPtr<UniquedStringImpl>(impl), id, result };
+            std::bit_cast<Entry*>(this)[index] = Entry { RefPtr<UniquedStringImpl>(impl), id, result };
         }
     }
 
     void clear()
     {
-        Entry* buffer = bitwise_cast<Entry*>(this);
+        Entry* buffer = std::bit_cast<Entry*>(this);
         for (uint32_t i = 0; i < size; ++i)
             buffer[i].Entry::~Entry();
 
@@ -123,17 +126,12 @@ public:
 private:
     void clearBuffer()
     {
-        Entry* buffer = bitwise_cast<Entry*>(this);
+        Entry* buffer = std::bit_cast<Entry*>(this);
         for (uint32_t i = 0; i < size; ++i)
             new (&buffer[i]) Entry();
     }
 };
 
-ALWAYS_INLINE HasOwnPropertyCache& VM::ensureHasOwnPropertyCache()
-{
-    if (UNLIKELY(!m_hasOwnPropertyCache))
-        m_hasOwnPropertyCache = std::unique_ptr<HasOwnPropertyCache>(HasOwnPropertyCache::create());
-    return *m_hasOwnPropertyCache;
-}
-
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

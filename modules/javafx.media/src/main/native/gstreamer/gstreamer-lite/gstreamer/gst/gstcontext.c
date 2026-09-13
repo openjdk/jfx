@@ -64,7 +64,6 @@
 #include "gst_private.h"
 #include <string.h>
 #include "gstcontext.h"
-#include "gstquark.h"
 
 struct _GstContext
 {
@@ -114,7 +113,7 @@ _gst_context_free (GstContext * context)
   memset (context, 0xff, sizeof (GstContext));
 #endif
 
-  g_slice_free1 (sizeof (GstContext), context);
+  g_free (context);
 }
 
 static void gst_context_init (GstContext * context);
@@ -128,7 +127,7 @@ _gst_context_copy (GstContext * context)
   GST_CAT_LOG (GST_CAT_CONTEXT, "copy context %p: %" GST_PTR_FORMAT, context,
       GST_CONTEXT_STRUCTURE (context));
 
-  copy = g_slice_new0 (GstContext);
+  copy = g_new0 (GstContext, 1);
 
   gst_context_init (copy);
 
@@ -171,11 +170,11 @@ gst_context_new (const gchar * context_type, gboolean persistent)
 
   g_return_val_if_fail (context_type != NULL, NULL);
 
-  context = g_slice_new0 (GstContext);
+  context = g_new0 (GstContext, 1);
 
   GST_CAT_LOG (GST_CAT_CONTEXT, "creating new context %p", context);
 
-  structure = gst_structure_new_id_empty (GST_QUARK (CONTEXT));
+  structure = gst_structure_new_static_str_empty ("context");
   gst_structure_set_parent_refcount (structure, &context->mini_object.refcount);
   gst_context_init (context);
 
@@ -317,6 +316,25 @@ gst_context_unref (GstContext * context)
 }
 
 /**
+ * gst_clear_context: (skip)
+ * @context_ptr: a pointer to a #GstContext reference
+ *
+ * Clears a reference to a #GstContext.
+ *
+ * @context_ptr must not be `NULL`.
+ *
+ * If the reference is `NULL` then this function does nothing. Otherwise, the
+ * reference count of the context is decreased and the pointer is set to `NULL`.
+ *
+ * Since: 1.24
+ */
+void
+gst_clear_context (GstContext ** context_ptr)
+{
+  gst_clear_mini_object ((GstMiniObject **) context_ptr);
+}
+
+/**
  * gst_context_copy:
  * @context: the context to copy
  *
@@ -359,4 +377,44 @@ gst_context_replace (GstContext ** old_context, GstContext * new_context)
 {
   return gst_mini_object_replace ((GstMiniObject **) old_context,
       (GstMiniObject *) new_context);
+}
+
+/**
+ * gst_context_is_writable:
+ * @context: a #GstContext
+ *
+ * Tests if you can safely modify @context. It is only safe to modify context when
+ * there is only one owner of the context - ie, the object is writable.
+ */
+gboolean
+gst_context_is_writable (const GstContext * context)
+{
+  return gst_mini_object_is_writable (GST_MINI_OBJECT_CONST_CAST (context));
+}
+
+/**
+ * gst_context_make_writable:
+ * @context: (transfer full): a #GstContext
+ *
+ * Returns a writable copy of @context.
+ *
+ * If there is only one reference count on @context, the caller must be the owner,
+ * and so this function will return the context object unchanged. If on the other
+ * hand there is more than one reference on the object, a new context object will
+ * be returned. The caller's reference on @context will be removed, and instead the
+ * caller will own a reference to the returned object.
+ *
+ * In short, this function unrefs the context in the argument and refs the context
+ * that it returns. Don't access the argument after calling this function. See
+ * also: gst_context_ref().
+ *
+ * Returns: (transfer full): a writable context which may or may not be the
+ *     same as @context
+ */
+GstContext *
+gst_context_make_writable (GstContext * context)
+{
+  return
+      GST_CONTEXT_CAST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST
+          (context)));
 }

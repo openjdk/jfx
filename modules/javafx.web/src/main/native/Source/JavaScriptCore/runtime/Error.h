@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2024 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -22,12 +22,13 @@
 
 #pragma once
 
-#include "ErrorInstance.h"
-#include "ErrorType.h"
-#include "Exception.h"
-#include "InternalFunction.h"
-#include "JSObject.h"
-#include "ThrowScope.h"
+#include <JavaScriptCore/ErrorInstance.h>
+#include <JavaScriptCore/ErrorType.h>
+#include <JavaScriptCore/Exception.h>
+#include <JavaScriptCore/InternalFunction.h>
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/LineColumn.h>
+#include <JavaScriptCore/ThrowScope.h>
 #include <stdint.h>
 
 
@@ -65,9 +66,9 @@ JS_EXPORT_PRIVATE JSObject* createOutOfMemoryError(JSGlobalObject*, const String
 JS_EXPORT_PRIVATE JSObject* createError(JSGlobalObject*, ErrorType, const String&);
 JS_EXPORT_PRIVATE JSObject* createError(JSGlobalObject*, ErrorTypeWithExtension, const String&);
 
-std::unique_ptr<Vector<StackFrame>> getStackTrace(JSGlobalObject*, VM&, JSObject*, bool useCurrentFrame);
+std::unique_ptr<Vector<StackFrame>> getStackTrace(VM&, JSObject*, bool useCurrentFrame, JSCell* ownerOfCallLinkInfo = nullptr, CallLinkInfo* = nullptr, JSCell* subclassCaller = nullptr);
 std::tuple<CodeBlock*, BytecodeIndex> getBytecodeIndex(VM&, CallFrame*);
-bool getLineColumnAndSource(VM&, Vector<StackFrame>* stackTrace, unsigned& line, unsigned& column, String& sourceURL);
+bool getLineColumnAndSource(VM&, Vector<StackFrame>* stackTrace, LineColumn&, String& sourceURL);
 bool addErrorInfo(VM&, Vector<StackFrame>*, JSObject*);
 JS_EXPORT_PRIVATE void addErrorInfo(JSGlobalObject*, JSObject*, bool);
 JSObject* addErrorInfo(VM&, JSObject* error, int line, const SourceCode&);
@@ -83,7 +84,7 @@ JSObject* createTypeErrorCopy(JSGlobalObject*, JSValue error);
 // Methods to throw Errors.
 
 // Convenience wrappers, create an throw an exception with a default message.
-JS_EXPORT_PRIVATE Exception* throwConstructorCannotBeCalledAsFunctionTypeError(JSGlobalObject*, ThrowScope&, const char* constructorName);
+JS_EXPORT_PRIVATE Exception* throwConstructorCannotBeCalledAsFunctionTypeError(JSGlobalObject*, ThrowScope&, ASCIILiteral constructorName);
 JS_EXPORT_PRIVATE Exception* throwTypeError(JSGlobalObject*, ThrowScope&);
 JS_EXPORT_PRIVATE Exception* throwTypeError(JSGlobalObject*, ThrowScope&, ASCIILiteral errorMessage);
 JS_EXPORT_PRIVATE Exception* throwTypeError(JSGlobalObject*, ThrowScope&, const String& errorMessage);

@@ -34,7 +34,6 @@ enum UserInterfaceDirectionPolicy { "Content", "System" };
 
 [
     LegacyNoInterfaceObject,
-    JSGenerateToJSObject,
     ExportMacro=WEBCORE_TESTSUPPORT_EXPORT,
 ] interface InternalSettings : InternalSettingsGenerated {
     // Settings
@@ -61,11 +60,9 @@ enum UserInterfaceDirectionPolicy { "Content", "System" };
     attribute ForcedAccessibilityValue forcedSupportsHighDynamicRangeValue;
 
     // DeprecatedGlobalSettings.
-    undefined setFetchAPIKeepAliveEnabled(boolean enabled);
     undefined setCustomPasteboardDataEnabled(boolean enabled);
 
     readonly attribute boolean vp9DecoderEnabled;
-    readonly attribute boolean mediaSourceInlinePaintingEnabled;
 
     undefined setShouldManageAudioSessionCategory(boolean should);
 

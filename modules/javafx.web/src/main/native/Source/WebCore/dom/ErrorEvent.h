@@ -40,7 +40,7 @@
 namespace WebCore {
 
 class ErrorEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(ErrorEvent);
+    WTF_MAKE_TZONE_ALLOCATED(ErrorEvent);
 public:
     static Ref<ErrorEvent> create(const String& message, const String& fileName, unsigned lineNumber, unsigned columnNumber, JSC::Strong<JSC::Unknown> error)
     {
@@ -76,8 +76,6 @@ public:
     const JSValueInWrappedObject& originalError() const { return m_error; }
     SerializedScriptValue* serializedError() const { return m_serializedError.get(); }
 
-    EventInterface eventInterface() const override;
-
     RefPtr<SerializedScriptValue> trySerializeError(JSC::JSGlobalObject&);
 
 private:
@@ -85,14 +83,12 @@ private:
     ErrorEvent(const String& message, const String& fileName, unsigned lineNumber, unsigned columnNumber, JSC::Strong<JSC::Unknown> error);
     ErrorEvent(const AtomString&, const Init&, IsTrusted);
 
-    bool isErrorEvent() const override;
-
     String m_message;
     String m_fileName;
     unsigned m_lineNumber;
     unsigned m_columnNumber;
     JSValueInWrappedObject m_error;
-    RefPtr<SerializedScriptValue> m_serializedError;
+    const RefPtr<SerializedScriptValue> m_serializedError;
     bool m_triedToSerialize { false };
 };
 

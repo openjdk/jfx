@@ -25,23 +25,25 @@
 
 #pragma once
 
-#include "BlockDirectory.h"
-#include "FreeListInlines.h"
-#include "VM.h"
+#include <JavaScriptCore/BlockDirectory.h>
+#include <JavaScriptCore/FreeListInlines.h>
+#include <JavaScriptCore/VM.h>
 
 namespace JSC {
 
-template <typename Functor> inline void BlockDirectory::forEachBlock(const Functor& functor)
+inline void BlockDirectory::forEachBlock(const std::invocable<MarkedBlock::Handle*> auto& functor)
 {
-    m_bits.live().forEachSetBit(
+    assertIsMutatorOrMutatorIsStopped();
+    liveBitsView().forEachSetBit(
         [&] (size_t index) {
             functor(m_blocks[index]);
         });
 }
 
-template <typename Functor> inline void BlockDirectory::forEachNotEmptyBlock(const Functor& functor)
+inline void BlockDirectory::forEachNotEmptyBlock(const std::invocable<MarkedBlock::Handle*> auto& functor)
 {
-    m_bits.markingNotEmpty().forEachSetBit(
+    assertIsMutatorOrMutatorIsStopped();
+    markingNotEmptyBitsView().forEachSetBit(
         [&] (size_t index) {
             functor(m_blocks[index]);
         });

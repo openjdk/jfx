@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,7 @@
 #include "ContextMenuJava.h"
 #include "DragClientJava.h"
 #include "EditorClientJava.h"
+#include "GarbageCollectionController.h"
 #include "FrameLoaderClientJava.h"
 #include "InspectorClientJava.h"
 #include "PageStorageSessionProvider.h"
@@ -77,11 +78,10 @@
 #include <WebCore/FrameLoadRequest.h>
 #include <WebCore/FrameTree.h>
 #include <WebCore/FrameView.h>
-#include <WebCore/GCController.h>
 #include <WebCore/GeolocationClientMock.h>
 #include <WebCore/GraphicsContext.h>
 #include <WebCore/GraphicsLayerTextureMapper.h>
-#include <WebCore/InspectorController.h>
+#include <WebCore/PageInspectorController.h>
 #include <WebCore/KeyboardEvent.h>
 #include <WebCore/LogInitialization.h>
 #include <WebCore/NodeTraversal.h>
@@ -98,6 +98,7 @@
 #include <WebCore/RenderView.h>
 #include <WebCore/ResourceRequest.h>
 #include <WebCore/ScriptController.h>
+#include <WebCore/ScrollingCoordinatorTypes.h>
 #include <WebCore/SecurityPolicy.h>
 #include <WebCore/Settings.h>
 #include <WebCore/StorageNamespaceProvider.h>
@@ -110,7 +111,13 @@
 #include <wtf/RunLoop.h>
 #include <wtf/java/JavaRef.h>
 #include <wtf/text/WTFString.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
+#include "LocalDOMWindow.h"
+#include "DocumentView.h"
+#include "LocalFrameInlines.h"
+#include "DocumentPage.h"
+#include "NodeDocument.h"
 
 // FIXME: Move dependency of runtime_root to BridgeUtils
 #include <WebCore/runtime_root.h>
@@ -134,8 +141,9 @@
 
 namespace WebCore {
 
-WebPage::WebPage(std::unique_ptr<Page> page)
-    : m_page(WTFMove(page))
+WebPage::WebPage(RefPtr<Page> page)
+    : m_page(WTF::move(page))
+    , m_printContext(PrintContext::create(m_page->localMainFrame()))
 {
 #if ENABLE(NOTIFICATIONS) || ENABLE(LEGACY_NOTIFICATIONS)
     if(!NotificationController::from(m_page.get())) {
@@ -230,13 +238,13 @@ void WebPage::prePaint() {
         return;
     }
 
-    Frame* mainFrame = (Frame*)&m_page->mainFrame();
-        auto* localFrame = dynamicDowncast<LocalFrame>(mainFrame);
-    LocalFrameView* frameView = localFrame->view();
-    if (frameView) {
-        // Updating layout & styles precedes normal painting.
-        frameView->updateLayoutAndStyleIfNeededRecursive();
-    }
+   if(!m_page) return;
+   auto* localFrame = dynamicDowncast<LocalFrame>(&m_page->mainFrame());
+   if (!localFrame)
+       return;
+
+   if (auto* frameView = localFrame->view())
+       frameView->updateLayoutAndStyleIfNeededRecursive();
 }
 
 RefPtr<RQRef> WebPage::jRenderTheme()
@@ -269,7 +277,7 @@ void WebPage::paint(jobject rq, jint x, jint y, jint w, jint h)
     GraphicsContextJava gc(ppgc);
 
     // TODO: Following JS synchronization is not necessary for single thread model
-    JSGlobalContextRef globalContext = toGlobalRef(localFrame->script().globalObject(mainThreadNormalWorld()));
+    JSGlobalContextRef globalContext = toGlobalRef(localFrame->script().globalObject(mainThreadNormalWorldSingleton()));
     JSC::JSLockHolder sw(toJS(globalContext)); // TODO-java: was JSC::APIEntryShim sw( toJS(globalContext) );
 
     frameView->paint(gc, IntRect(x, y, w, h));
@@ -380,7 +388,7 @@ void WebPage::setRootChildLayer(GraphicsLayer* layer)
         m_rootLayer->setNeedsDisplay();
         m_rootLayer->addChild(*layer);
 
-        m_textureMapper = TextureMapper::create();
+        m_textureMapper = std::make_unique<TextureMapperJavaAdapter>();
     } else {
         m_rootLayer = nullptr;
         m_textureMapper.reset();
@@ -441,7 +449,9 @@ void WebPage::renderCompositedLayers(GraphicsContext& context, const IntRect& cl
 
     TextureMapperLayer& rootTextureMapperLayer = downcast<GraphicsLayerTextureMapper>(*m_rootLayer).layer();
 
-    static_cast<TextureMapperJava&>(*m_textureMapper).setGraphicsContext(&context);
+    if (m_textureMapper)
+        static_cast<TextureMapperJavaAdapter*>(m_textureMapper.get())->setGraphicsContext(&context);
+
     TransformationMatrix matrix;
     m_textureMapper->beginPainting();
     m_textureMapper->beginClip(matrix, FloatRoundedRect(clip));
@@ -462,7 +472,7 @@ void WebPage::notifyFlushRequired(const GraphicsLayer*)
     markForSync();
 }
 
-void WebPage::paintContents(const GraphicsLayer*, GraphicsContext& context, const FloatRect& inClip, OptionSet<GraphicsLayerPaintBehavior>)
+void WebPage::paintContents(const GraphicsLayer& glc, GraphicsContext& context, const FloatRect& inClip, OptionSet<GraphicsLayerPaintBehavior>)
 {
     context.save();
     context.clip(inClip);
@@ -523,7 +533,7 @@ bool WebPage::keyEvent(const PlatformKeyboardEvent& event)
             // handle non-US keyboards.)
             Node* node = focusedWebCoreNode();
             if (!node || !node->renderer()
-                    || !node->renderer()->isEmbeddedObject())
+                    || !node->renderer()->isRenderEmbeddedObject())
                 m_suppressNextKeypressEvent = true;
         }
         return true;
@@ -615,35 +625,35 @@ bool WebPage::mapKeyCodeForScroll(int keyCode,
 {
     switch (keyCode) {
     case VKEY_LEFT:
-        *scrollDirection = ScrollLeft;
+        *scrollDirection = ScrollDirection::ScrollLeft;
         *scrollGranularity = ScrollGranularity::Line;
         break;
     case VKEY_RIGHT:
-        *scrollDirection = ScrollRight;
+        *scrollDirection = ScrollDirection::ScrollRight;
         *scrollGranularity = ScrollGranularity::Line;
         break;
     case VKEY_UP:
-        *scrollDirection = ScrollUp;
+        *scrollDirection = ScrollDirection::ScrollUp;
         *scrollGranularity = ScrollGranularity::Line;
         break;
     case VKEY_DOWN:
-        *scrollDirection = ScrollDown;
+        *scrollDirection = ScrollDirection::ScrollDown;
         *scrollGranularity = ScrollGranularity::Line;
         break;
     case VKEY_HOME:
-        *scrollDirection = ScrollUp;
+        *scrollDirection = ScrollDirection::ScrollUp;
         *scrollGranularity = ScrollGranularity::Document;
         break;
     case VKEY_END:
-        *scrollDirection = ScrollDown;
+        *scrollDirection = ScrollDirection::ScrollDown;
         *scrollGranularity = ScrollGranularity::Document;
         break;
     case VKEY_PRIOR:  // page up
-        *scrollDirection = ScrollUp;
+        *scrollDirection = ScrollDirection::ScrollUp;
         *scrollGranularity = ScrollGranularity::Page;
         break;
     case VKEY_NEXT:  // page down
-        *scrollDirection = ScrollDown;
+        *scrollDirection = ScrollDirection::ScrollDown;
         *scrollGranularity = ScrollGranularity::Page;
         break;
     default:
@@ -674,15 +684,14 @@ bool WebPage::propagateScroll(ScrollDirection scrollDirection,
 
 LocalFrame* WebPage::focusedWebCoreFrame()
 {
-    return &m_page->focusController().focusedOrMainFrame();
+    return m_page->focusController().focusedOrMainFrame();
 }
 
 Node* WebPage::focusedWebCoreNode()
 {
-    LocalFrame* frame = m_page->focusController().focusedFrame();
+    LocalFrame* frame = m_page->focusController().focusedLocalFrame();
     if (!frame)
         return 0;
-
     Document* document = frame->document();
     if (!document)
         return 0;
@@ -703,8 +712,18 @@ static String agentOS()
 #endif
 #elif OS(UNIX)
     struct utsname name;
-    if (uname(&name) != -1)
-        return makeString(name.sysname, ' ', name.machine);
+    if (uname(&name) != -1) {
+    const char* sysname = name.sysname;
+        const char* machine = name.machine;
+        // Convert to std::span<const char8_t>
+        auto sysnameSpan = std::span<const char8_t>(reinterpret_cast<const char8_t*>(sysname), std::strlen(sysname));
+        auto machineSpan = std::span<const char8_t>(reinterpret_cast<const char8_t*>(machine), std::strlen(machine));
+
+        // Use fromUTF8 to convert to String
+        String sysnameString = String::fromUTF8(sysnameSpan);
+        String machineString = String::fromUTF8(machineSpan);
+        return makeString(sysnameString, ' ', machineString);
+    }
 #elif OS(WINDOWS)
     return windowsVersionForUAString();
 #else
@@ -717,10 +736,11 @@ static String defaultUserAgent()
 {
     static const NeverDestroyed userAgentString = [] {
         String wkVersion = makeString(
-                              WEBKIT_MAJOR_VERSION, ".", WEBKIT_MINOR_VERSION,
-                              " (KHTML, like Gecko) JavaFX/", JAVAFX_RELEASE_VERSION,
-                              " Safari/", WEBKIT_MAJOR_VERSION, ".",  WEBKIT_MINOR_VERSION);
-        return makeString("Mozilla/5.0 (", agentOS(), ") AppleWebKit/", wkVersion);
+                              WTF::String::number(WEBKIT_MAJOR_VERSION), WTF::String::fromLatin1("."), WTF::String::number(WEBKIT_MINOR_VERSION),
+                              WTF::String::fromLatin1(" (KHTML, like Gecko) JavaFX/"), WTF::String::fromLatin1(JAVAFX_RELEASE_VERSION),
+                              WTF::String::fromLatin1(" Version/"), WTF::String::fromLatin1(WEBVIEW_BROWSER_VERSION),
+                              WTF::String::fromLatin1(" Safari/"), WTF::String::number(WEBKIT_MAJOR_VERSION), WTF::String::fromLatin1("."),  WTF::String::number(WEBKIT_MINOR_VERSION));
+        return makeString(WTF::String::fromLatin1("Mozilla/5.0 ("), agentOS(), WTF::String::fromLatin1(") AppleWebKit/"), wkVersion);
     }();
     return userAgentString;
 }
@@ -733,8 +753,6 @@ int WebPage::beginPrinting(float width, float height)
         return 0;
     frame->document()->updateLayout();
 
-    ASSERT(!m_printContext);
-    m_printContext = std::unique_ptr<PrintContext>(new PrintContext(frame));
     m_printContext->begin(width, height);
     m_printContext->computePageRects(FloatRect(0, 0, width, height), 0, 0, 1, height);
     return m_printContext->pageCount();
@@ -747,7 +765,6 @@ void WebPage::endPrinting()
         return;
 
     m_printContext->end();
-    m_printContext.reset();
 }
 
 void WebPage::print(GraphicsContext& gc, int pageIndex, float pageWidth)
@@ -785,14 +802,14 @@ void WebPage::debugEnded() {
 }
 void WebPage::enableWatchdog() {
     if (globalDebugSessionCounter == 0) {
-        JSContextGroupRef contextGroup = toRef(&mainThreadNormalWorld().vm());
+        JSContextGroupRef contextGroup = toRef(&mainThreadNormalWorldSingleton().vm());
         JSContextGroupSetExecutionTimeLimit(contextGroup, 10, 0, 0);
     }
 }
 
 void WebPage::disableWatchdog() {
     if (globalDebugSessionCounter > 0) {
-        JSContextGroupRef contextGroup = toRef(&(mainThreadNormalWorld().vm()));
+        JSContextGroupRef contextGroup = toRef(&(mainThreadNormalWorldSingleton().vm()));
         JSContextGroupClearExecutionTimeLimit(contextGroup);
     }
 }
@@ -802,13 +819,18 @@ void WebPage::disableWatchdog() {
 using namespace WebCore;
 using namespace WTF;
 
+extern "C" JNIEXPORT void WebPage_doJSCGarbageCollection()
+{
+    WebCore::GarbageCollectionController::singleton().garbageCollectNow();
+}
+
 class WebStorageNamespaceProviderJava final : public WebCore::StorageNamespaceProvider {
 public:
     void setLocalStorageDatabasePath(const String& path) {
-        m_localStorageDatabasePath = path;
+        m_localStorageDatabasePath = path.isNull() ? emptyString() : path;
     }
 private:
-    String m_localStorageDatabasePath;
+    String m_localStorageDatabasePath { emptyString() };
         WeakHashMap<WebCore::Page, HashMap<WebCore::SecurityOriginData, RefPtr<WebCore::StorageNamespace>>> m_sessionStorageNamespaces;
 
         RefPtr<StorageNamespace> sessionStorageNamespace(const SecurityOrigin& topLevelOrigin, Page& page, ShouldCreateNamespace shouldCreate) override{
@@ -826,22 +848,23 @@ private:
             return nullptr;
         return sessionStorageNamespaces.add(topLevelOrigin.data(), WebKit::StorageNamespaceImpl::createSessionStorageNamespace(sessionStorageQuota(), page.sessionID())).iterator->value;
     }
-    return sessionStorageNamespaceIt->value;
-        }
+        return sessionStorageNamespaceIt->value;
+    }
 
-    void copySessionStorageNamespace(WebCore::Page& srcPage, WebCore::Page& dstPage) override{
+    void cloneSessionStorageNamespaceForPage(WebCore::Page& srcPage, WebCore::Page& dstPage) override
+    {
         auto& srcSessionStorageNamespaces = static_cast<WebStorageNamespaceProviderJava&>(srcPage.storageNamespaceProvider()).m_sessionStorageNamespaces;
-    auto srcPageIt = srcSessionStorageNamespaces.find(srcPage);
-    if (srcPageIt == srcSessionStorageNamespaces.end())
-        return;
+        auto srcPageIt = srcSessionStorageNamespaces.find(srcPage);
+        if (srcPageIt == srcSessionStorageNamespaces.end())
+            return;
 
-    auto& srcPageSessionStorageNamespaces = srcPageIt->value;
-    HashMap<SecurityOriginData, RefPtr<StorageNamespace>> dstPageSessionStorageNamespaces;
-    for (auto& [origin, srcNamespace] : srcPageSessionStorageNamespaces)
+        auto& srcPageSessionStorageNamespaces = srcPageIt->value;
+        HashMap<SecurityOriginData, RefPtr<StorageNamespace>> dstPageSessionStorageNamespaces;
+        for (auto& [origin, srcNamespace] : srcPageSessionStorageNamespaces)
         dstPageSessionStorageNamespaces.set(origin, srcNamespace->copy(dstPage));
 
-    auto& dstSessionStorageNamespaces = static_cast<WebStorageNamespaceProviderJava&>(dstPage.storageNamespaceProvider()).m_sessionStorageNamespaces;
-        }
+        auto& dstSessionStorageNamespaces = static_cast<WebStorageNamespaceProviderJava&>(dstPage.storageNamespaceProvider()).m_sessionStorageNamespaces;
+    }
 
     Ref<StorageNamespace> createLocalStorageNamespace(unsigned quota, PAL::SessionID sessionID) override
     {
@@ -880,7 +903,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     // initialization flow.
     JSC::initialize();
     WTF::initializeMainThread();
-    // RT-17330: Allow local loads for substitute data, that is,
+    // JDK-8128763: Allow local loads for substitute data, that is,
     // for content loaded with twkLoad
     WebCore::SecurityPolicy::setLocalLoadPolicy(
             WebCore::SecurityPolicy::AllowLocalLoadsForLocalAndSubstituteData);
@@ -904,32 +927,40 @@ JNIEXPORT jlong JNICALL Java_com_sun_webkit_WebPage_twkCreatePage
     JLObject jlself(self, true);
 
     //utaTODO: history agent implementation
-
-    auto pc = pageConfigurationWithEmptyClients(std::nullopt,PAL::SessionID::defaultSessionID());
+    auto identifier = PageIdentifier::generate();
+    auto pc = pageConfigurationWithEmptyClients(identifier, PAL::SessionID::defaultSessionID());
     auto pageStorageSessionProvider = PageStorageSessionProvider::create();
     pc.cookieJar = CookieJar::create(pageStorageSessionProvider.copyRef());
     pc.chromeClient = makeUniqueRef<ChromeClientJava>(jlself);
     pc.contextMenuClient = makeUniqueRef<ContextMenuClientJava>(jlself);
     pc.editorClient = makeUniqueRef<EditorClientJava>(jlself);
     pc.dragClient = makeUnique<DragClientJava>(jlself);
-    pc.inspectorClient = makeUnique<InspectorClientJava>(jlself);
+    pc.inspectorBackendClient = makeUnique<InspectorClientJava>(jlself);
     pc.databaseProvider = &WebDatabaseProvider::singleton();
     pc.storageNamespaceProvider = adoptRef(new WebStorageNamespaceProviderJava());
     pc.visitedLinkStore = VisitedLinkStoreJava::create();
 
-    pc.clientForMainFrame = UniqueRef<LocalFrameLoaderClient>(makeUniqueRef<FrameLoaderClientJava>(jlself));
+    pc.mainFrameCreationParameters = PageConfiguration::LocalMainFrameCreationParameters {
+        CompletionHandler<UniqueRef<LocalFrameLoaderClient>(LocalFrame&, FrameLoader&)>(
+            [jlself](LocalFrame& frame, FrameLoader& loader) -> UniqueRef<LocalFrameLoaderClient> {
+                return makeUniqueRefWithoutRefCountedCheck<FrameLoaderClientJava>(loader, jlself);
+            }
+        ),
+        SandboxFlags { }
+    };
 
     pc.progressTrackerClient = makeUniqueRef<ProgressTrackerClientJava>(jlself);
 
     pc.backForwardClient = BackForwardList::create();
-    auto page = std::make_unique<Page>(WTFMove(pc));
+    auto page = Page::create(WTF::move(pc));
+
     // Associate PageSupplementJava instance which has WebPage java object.
     page->provideSupplement(PageSupplementJava::supplementName(), std::make_unique<PageSupplementJava>(self));
-    pageStorageSessionProvider->setPage(*page);
+    pageStorageSessionProvider->setPage(page);
 #if ENABLE(GEOLOCATION)
-    WebCore::provideGeolocationTo(page.get(), *new GeolocationClientMock());
+    WebCore::provideGeolocationTo(&page.get(), GeolocationClientMock::create());
 #endif
-    return ptr_to_jlong(new WebPage(WTFMove(page)));
+    return ptr_to_jlong(new WebPage(WTF::move(page)));
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
@@ -946,11 +977,12 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
     settings.setAcceleratedCompositingEnabled(s_useCSS3D);
     settings.setScriptEnabled(true);
     settings.setJavaScriptCanOpenWindowsAutomatically(true);
-    settings.setPluginsEnabled(usePlugins);
     settings.setDefaultFixedFontSize(13);
     settings.setDefaultFontSize(16);
     settings.setContextMenuEnabled(true);
     settings.setInputTypeColorEnabled(true);
+    settings.setLocalStorageEnabled(true);
+    settings.setSessionStorageEnabled(true);
     settings.setUserAgent(defaultUserAgent());
     settings.setMaximumHTMLParserDOMTreeDepth(180);
     //settings.setXSSAuditorEnabled(true);
@@ -973,7 +1005,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkInit
 
     frame->init();
 
-    JSContextGroupRef contextGroup = toRef(&(mainThreadNormalWorld().vm()));
+    JSContextGroupRef contextGroup = toRef(&(mainThreadNormalWorldSingleton().vm()));
     JSContextGroupSetExecutionTimeLimit(contextGroup, 10, 0, 0);
 
     WebPage::webPageFromJLong(pPage)->enableWatchdog();
@@ -1172,7 +1204,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOpen
     FrameLoadRequest frameLoadRequest(
         *frame, ResourceRequest(URL(emptyParent, String(env, url))));
     frameLoadRequest.setIsRequestFromClientOrUserInput();
-    frame->loader().load(WTFMove(frameLoadRequest));
+    frame->loader().load(WTF::move(frameLoadRequest));
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkLoad
@@ -1186,21 +1218,21 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkLoad
 
     const char* stringChars = env->GetStringUTFChars(text, JNI_FALSE);
     size_t stringLen = (size_t)env->GetStringUTFLength(text);
-    RefPtr<SharedBuffer> buffer = SharedBuffer::create(stringChars, (int)stringLen);
+    std::span<const uint8_t> byteSpan(reinterpret_cast<const uint8_t*>(stringChars), stringLen);
+    RefPtr<SharedBuffer> buffer = SharedBuffer::create(byteSpan);
 
-    static const URL emptyUrl({ }, ""_s);
     ResourceResponse response(URL(), String(env, contentType), stringLen, "UTF-8"_s);
     FrameLoadRequest frameLoadRequest(
         *frame,
-        ResourceRequest(emptyUrl),
+        ResourceRequest(URL({ }, ""_s)),
         SubstituteData(
-            WTFMove(buffer),
+            WTF::move(buffer),
             URL(),
-            response,
+            WTF::move(response),
             SubstituteData::SessionHistoryVisibility::Visible) // TODO-java: or Hidden?
     );
     frameLoadRequest.setIsRequestFromClientOrUserInput();
-    frame->loader().load(WTFMove(frameLoadRequest));
+    frame->loader().load(WTF::move(frameLoadRequest));
 
     env->ReleaseStringUTFChars(text, stringChars);
 }
@@ -1292,12 +1324,15 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkFindInPage
     if (page) {
         FindOptions opts;
         if (!matchCase)
-            opts.add(CaseInsensitive);
+            opts.add(FindOption::CaseInsensitive);
         if (!forward)
-            opts.add(Backwards);
+            opts.add(FindOption::Backwards);
         if (wrap)
-            opts.add(WrapAround);
-        return bool_to_jbool(page->findString(String(env, toFind), opts));
+            opts.add(FindOption::WrapAround);
+
+        auto findResult = page->findString(String(env, toFind), opts);
+        bool found = findResult.range.has_value();
+        return bool_to_jbool(found);
     }
     return JNI_FALSE;
 }
@@ -1312,13 +1347,14 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkFindInFrame
         //utatodo: support for the rest of FindOptionFlag
         FindOptions opts;
         if (!matchCase)
-            opts.add(CaseInsensitive);
+            opts.add(FindOption::CaseInsensitive);
         if (!forward)
-            opts.add(Backwards);
+            opts.add(FindOption::Backwards);
         if (wrap)
-            opts.add(WrapAround);
-        return bool_to_jbool(frame->page()->findString(
-            String(env, toFind), opts | StartInSelection));
+            opts.add(FindOption::WrapAround);
+        auto result = frame->page()->findString(
+            String(env, toFind), opts | FindOption::StartInSelection);
+        return bool_to_jbool(result.range.has_value());
     }
     return JNI_FALSE;
 }
@@ -1336,15 +1372,10 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOverridePreference
     String nativePropertyValue(env, propertyValue);
     StringView nativePropertyString(nativePropertyValue);
 
-    if (nativePropertyName == "CSSCounterStyleAtRulesEnabled"_s) {
-        settings.setCSSCounterStyleAtRulesEnabled(nativePropertyValue == "true"_s);
-    } else if (nativePropertyName == "CSSCounterStyleAtRuleImageSymbolsEnabled"_s) {
+    if (nativePropertyName == "CSSCounterStyleAtRuleImageSymbolsEnabled"_s) {
         settings.setCSSCounterStyleAtRuleImageSymbolsEnabled(nativePropertyValue == "true"_s);
-    } else if (nativePropertyName == "CSSIndividualTransformPropertiesEnabled"_s) {
-        settings.setCSSIndividualTransformPropertiesEnabled(nativePropertyValue == "true"_s);
-    } else if (nativePropertyName == "CSSColorContrastEnabled"_s) {
-        settings.setCSSColorContrastEnabled(nativePropertyValue == "true"_s);
-    } else if (nativePropertyName == "WebKitTextAreasAreResizable"_s) {
+    }
+    else if (nativePropertyName == "WebKitTextAreasAreResizable"_s) {
         settings.setTextAreasAreResizable(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitLoadsImagesAutomatically"_s) {
         settings.setLoadsImagesAutomatically(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
@@ -1358,8 +1389,6 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOverridePreference
         settings.setScriptEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitJavaScriptCanOpenWindowsAutomatically"_s) {
         settings.setJavaScriptCanOpenWindowsAutomatically(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
-    } else if (nativePropertyName == "WebKitPluginsEnabled"_s) {
-        settings.setPluginsEnabled(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitDefaultFixedFontSize"_s) {
         settings.setDefaultFixedFontSize(parseIntegerAllowingTrailingJunk<int>(nativePropertyString).value());
     } else if (nativePropertyName == "WebKitContextMenuEnabled"_s) {
@@ -1391,11 +1420,11 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOverridePreference
         // removed from Chrome, Firefox, and the HTML specification in 2017.
         // https://trac.webkit.org/changeset/248960/webkit
         DeprecatedGlobalSettings::setKeygenElementEnabled(nativePropertyValue == "true"_s);
-    } */else if (nativePropertyName == "CSSCustomPropertiesAndValuesEnabled"_s) {
+    } else if (nativePropertyName == "CSSCustomPropertiesAndValuesEnabled"_s) {
         settings.setCSSCustomPropertiesAndValuesEnabled(nativePropertyValue == "true"_s);
     } else if (nativePropertyName == "experimental:CSSCustomPropertiesAndValuesEnabled"_s) {
         settings.setCSSCustomPropertiesAndValuesEnabled(nativePropertyValue == "true"_s);
-    } else if (nativePropertyName == "IntersectionObserverEnabled"_s) {
+    } */else if (nativePropertyName == "IntersectionObserverEnabled"_s) {
 #if ENABLE(INTERSECTION_OBSERVER)
         settings.setIntersectionObserverEnabled(nativePropertyValue == "true"_s);
 #endif
@@ -1409,6 +1438,8 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkOverridePreference
 #endif
     } else if (nativePropertyName == "RequestIdleCallbackEnabled"_s) {
         settings.setRequestIdleCallbackEnabled(nativePropertyValue == "true"_s);
+    } else if (nativePropertyName == "FontFaceSetConstructorEnabled"_s) {
+        settings.setFontFaceSetConstructorEnabled(nativePropertyValue == "true"_s);
     } else if (nativePropertyName == "ContactPickerAPIEnabled"_s) {
         settings.setContactPickerAPIEnabled(nativePropertyValue == "true"_s);
     } else if (nativePropertyName == "AttachmentElementEnabled"_s) {
@@ -1452,11 +1483,11 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkResetToConsistentStateBefo
     settings.setShouldPrintBackgrounds(true);
     // settings.setCacheModel(WebCacheModelDocumentBrowser);
     //settings.setXSSAuditorEnabled(false); //
-    settings.setPluginsEnabled(true);
+   // settings.setPluginsEnabled(true);
     settings.setTextAreasAreResizable(true);
     settings.setUsesBackForwardCache(false);
-    settings.setCSSOMViewScrollingAPIEnabled(true);
     settings.setRequestIdleCallbackEnabled(true);
+    settings.setFontFaceSetConstructorEnabled(false);
 
     // settings.setPrivateBrowsingEnabled(false);
     settings.setAllowTopNavigationToDataURLs(true);
@@ -1464,14 +1495,14 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkResetToConsistentStateBefo
     // Shrinks standalone images to fit: YES
     settings.setJavaScriptCanOpenWindowsAutomatically(true);
     settings.setJavaScriptCanAccessClipboard(true);
-    settings.setOfflineWebApplicationCacheEnabled(true);
+   // settings.setOfflineWebApplicationCacheEnabled(true);
     settings.setDataTransferItemsEnabled(true);
     // settings.setDeveloperExtrasEnabled(false);
     settings.setJavaScriptRuntimeFlags(JSC::RuntimeFlags(0));
     // Set JS experiments enabled: YES
     //settings.setLoadsImagesAutomatically(true);
     //settings.setLoadsSiteIconsIgnoringImageLoadingSetting(false);
-    settings.setFrameFlattening(FrameFlattening::Disabled);
+    //settings.setFrameFlattening(FrameFlattening::Disabled);
     //settings.setFontRenderingMode(FontRenderingMode::Normal);
     // Doesn't work well with DRT
     settings.setScrollAnimatorEnabled(false);
@@ -1483,14 +1514,14 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkResetToConsistentStateBefo
     // Async spellcheck: NO
     DeprecatedGlobalSettings::setMockScrollbarsEnabled(true);
 
-    DeprecatedGlobalSettings::setHighlightAPIEnabled(true);
+    //DeprecatedGlobalSettings::setHighlightAPIEnabled(true);
     // RuntimeEnabledFeatures::sharedFeatures().setModernMediaControlsEnabled(false);
     //DeprecatedGlobalSettings::setInspectorAdditionsEnabled(true); // deprecated and not enable
     // RuntimeEnabledFeatures::sharedFeatures().clearNetworkLoaderSession();
 
         Frame* mainFrame = (Frame*)&page->mainFrame();
     auto* coreFrame = dynamicDowncast<LocalFrame>(mainFrame);
-    auto globalContext = toGlobalRef(coreFrame->script().globalObject(mainThreadNormalWorld()));
+    auto globalContext = toGlobalRef(coreFrame->script().globalObject(mainThreadNormalWorldSingleton()));
     WebCoreTestSupport::resetInternalsObject(globalContext);
 }
 
@@ -1757,7 +1788,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetEncoding
 
     auto* frame = dynamicDowncast<LocalFrame>(mainFrame);
 
-    return frame->document()->charset().toJavaString(env).releaseLocal();
+    return String::fromUTF8(frame->document()->charset().span()).toJavaString(env).releaseLocal();
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkSetEncoding
@@ -1782,7 +1813,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkProcessFocusEvent
 
     FocusController& focusController = page->focusController();
 
-    LocalFrame* focusedFrame = focusController.focusedFrame();
+    LocalFrame* focusedFrame = focusController.focusedLocalFrame();
     switch (id) {
         case com_sun_webkit_event_WCFocusEvent_FOCUS_GAINED:
             focusController.setActive(true); // window activation
@@ -1857,19 +1888,19 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseEvent
                                                        getWebCoreMouseEventType(id),
                                                        clickCount,
                                                        shift, ctrl, alt, meta,
-                                                       WallTime::fromRawSeconds(timestamp), ForceAtClick, SyntheticClickType::NoTap); // TODO-java: handle force?
+                                                       MonotonicTime::fromRawSeconds(timestamp), ForceAtClick, SyntheticClickType::NoTap); // TODO-java: handle force?
     switch (id) {
     case com_sun_webkit_event_WCMouseEvent_MOUSE_PRESSED:
         //frame->focusWindow();
         page->chrome().focus();
-        consumeEvent = eventHandler.handleMousePressEvent(mouseEvent);
+        consumeEvent = eventHandler.handleMousePressEvent(mouseEvent).wasHandled();
         break;
     case com_sun_webkit_event_WCMouseEvent_MOUSE_RELEASED:
-        consumeEvent = eventHandler.handleMouseReleaseEvent(mouseEvent);
+        consumeEvent = eventHandler.handleMouseReleaseEvent(mouseEvent).wasHandled();
         break;
     case com_sun_webkit_event_WCMouseEvent_MOUSE_MOVED:
     case com_sun_webkit_event_WCMouseEvent_MOUSE_DRAGGED:
-        consumeEvent = eventHandler.mouseMoved(mouseEvent);
+        consumeEvent = eventHandler.mouseMoved(mouseEvent).wasHandled();
         break;
     }
 
@@ -1924,7 +1955,8 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessMouseWheelEvent
         WheelEventProcessingSteps::SynchronousScrolling,
         WheelEventProcessingSteps::BlockingDOMEventDispatch
     };
-    bool consumeEvent = frame->eventHandler().handleWheelEvent(wheelEvent, processingSteps);
+
+    bool consumeEvent = frame->eventHandler().handleWheelEvent(wheelEvent, processingSteps).first.wasHandled();
 
     return bool_to_jbool(consumeEvent);
 }
@@ -1955,7 +1987,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessInputTextChange
 {
     Page* page = WebPage::pageFromJLong(pPage);
 
-    LocalFrame* frame = (LocalFrame*)&page->focusController().focusedOrMainFrame();
+    LocalFrame* frame = page->focusController().focusedOrMainFrame();
     ASSERT(frame);
 
     if (!frame || !frame->editor().canEdit()) {
@@ -2000,7 +2032,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkProcessCaretPositionCh
 {
     Page* page = WebPage::pageFromJLong(pPage);
 
-    LocalFrame* frame = (LocalFrame*)&page->focusController().focusedOrMainFrame();
+    LocalFrame* frame = page->focusController().focusedOrMainFrame();
 
     ASSERT(frame);
 
@@ -2067,7 +2099,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetLocationOffset
             RenderObject* renderer = node->renderer();
             IntRect content = renderer->absoluteBoundingBoxRect();
             VisiblePosition targetPosition(renderer->positionForPoint(LayoutPoint(point.x() - content.x(),
-                                                                            point.y() - content.y()), nullptr)); // TODO-java: recheck nullptr
+                                                                            point.y() - content.y()), HitTestSource::User)); // TODO-java: recheck nullptr
             offset = targetPosition.deepEquivalent().offsetInContainerNode();
             if (offset >= (jint)editor.compositionStart() && offset < (jint)editor.compositionEnd()) {
                 offset -= editor.compositionStart();
@@ -2116,7 +2148,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetCommittedTextLength
     jint length = 0;
     Editor &editor = frame->editor();
     if (editor.canEdit()) {
-        SimpleRange range = makeRangeSelectingNodeContents(*(Node*)frame->selection().selection().start().element());
+        SimpleRange range = makeRangeSelectingNodeContents(*(Node*)frame->selection().selection().start().anchorElementAncestor().get());
         for (auto& node : intersectingNodes(range)) {
             if (node.nodeType() == Node::TEXT_NODE || node.nodeType() == Node::CDATA_SECTION_NODE) {
                 length += downcast<CharacterData>(node).data().length();
@@ -2143,7 +2175,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetCommittedText
 
     Editor &editor = frame->editor();
     if (editor.canEdit()) {
-        auto range = makeRangeSelectingNodeContents(*(Node*)frame->selection().selection().start().element());
+        auto range = makeRangeSelectingNodeContents(*(Node*)frame->selection().selection().start().anchorElementAncestor().get());
         if (!range.collapsed()) {
             String t = plainText(range);
             // Exclude the composition text if any
@@ -2158,7 +2190,7 @@ JNIEXPORT jstring JNICALL Java_com_sun_webkit_WebPage_twkGetCommittedText
                 if (s.length() == length) {
                     t = s;
                 } else {
-                    t = s + t.substring(end, length - start);
+                    t = makeString(s, t.substring(end, length - start));
                 }
             }
             text = t.toJavaString(env).releaseLocal();
@@ -2243,20 +2275,21 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
             IntPoint(screenX, screenY),
             keyStateToDragOperation(javaAction));
         DragController& dc = WebPage::pageFromJLong(pPage)->dragController();
-
+        RefPtr localMainFrame = dynamicDowncast<WebCore::LocalFrame>(WebPage::pageFromJLong(pPage)->mainFrame());
+        if (!localMainFrame)
+        return 0;
         setCopyKeyState(ACTION_COPY == javaAction);
         switch(actionId){
         case com_sun_webkit_WebPage_DND_DST_EXIT:
-            dc.dragExited(WTFMove(dragData));
+            dc.dragExited(*localMainFrame,WTF::move(dragData));
             return 0;
         case com_sun_webkit_WebPage_DND_DST_ENTER:
-            return dragOperationToDragCursor(dc.dragEntered(WTFMove(dragData)));
         case com_sun_webkit_WebPage_DND_DST_OVER:
         case com_sun_webkit_WebPage_DND_DST_CHANGE:
-            return dragOperationToDragCursor(dc.dragUpdated(WTFMove(dragData)));
+            return dragOperationToDragCursor(std::get<std::optional<WebCore::DragOperation>>(dc.dragEnteredOrUpdated(*localMainFrame, WTF::move(dragData))));
         case com_sun_webkit_WebPage_DND_DST_DROP:
             {
-                int ret = dc.performDragOperation(WTFMove(dragData)) ? 1 : 0;
+                int ret = dc.performDragOperation(WTF::move(dragData)) ? 1 : 0;
                 WebPage::pageFromJLong(pPage)->dragController().dragEnded();
                 return ret;
             }
@@ -2272,11 +2305,11 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
             IntPoint(x, y),
             IntPoint(screenX, screenY),
             com_sun_webkit_WebPage_DND_SRC_DROP!=actionId
-                ? LeftButton
-                : NoButton,
+                ? MouseButton::Left
+                : MouseButton::None,
             PlatformEvent::Type::MouseMoved,
             0,
-            { }, WallTime {}, ForceAtClick, SyntheticClickType::NoTap); // TODO-java: handle force?
+            { }, MonotonicTime {}, ForceAtClick, SyntheticClickType::NoTap); // TODO-java: handle force?
         switch(actionId){
         case com_sun_webkit_WebPage_DND_SRC_EXIT:
         case com_sun_webkit_WebPage_DND_SRC_ENTER:
@@ -2295,8 +2328,13 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkProcessDrag
 
 static Editor* getEditor(Page* page) {
     ASSERT(page);
-    LocalFrame& frame = page->focusController().focusedOrMainFrame();
-    return &frame.editor();
+    LocalFrame* framePtr = page->focusController().focusedOrMainFrame();
+    ASSERT(framePtr);
+
+    if (framePtr) {
+        return &framePtr->editor();
+    }
+    return nullptr;
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_WebPage_twkExecuteCommand
@@ -2529,7 +2567,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkGetUnloadEventListenersCou
         ASSERT(mainFrame);
         auto* frame = dynamicDowncast<LocalFrame>(mainFrame);
 
-    return (jint)frame->document()->domWindow()->pendingUnloadEventListeners();
+    return (jint)frame->document()->window()->pendingUnloadEventListeners();
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkConnectInspectorFrontend
@@ -2537,8 +2575,8 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkConnectInspectorFrontend
 {
     Page *page = WebPage::pageFromJLong(pPage);
     if (page) {
-        InspectorController& ic = page->inspectorController();
-        InspectorClientJava* icj = static_cast<InspectorClientJava*>(ic.inspectorClient());
+        PageInspectorController& ic = page->inspectorController();
+        InspectorClientJava* icj = static_cast<InspectorClientJava*>(ic.inspectorBackendClient());
         if (icj) {
             ic.connectFrontend(*icj, false);
         }
@@ -2555,8 +2593,8 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkDisconnectInspectorFronten
         return;
     }
 
-    InspectorController& ic = page->inspectorController();
-    InspectorClientJava* icj = static_cast<InspectorClientJava*>(ic.inspectorClient());
+    PageInspectorController& ic = page->inspectorController();
+    InspectorClientJava* icj = static_cast<InspectorClientJava*>(ic.inspectorBackendClient());
     if (icj) {
         ic.disconnectFrontend(*icj);
     }
@@ -2571,8 +2609,8 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkDispatchInspectorMessageFr
     if (!page) {
         return;
     }
-    //utatodo: seems that RT-21428 will back again
-    //JSDOMWindowBase::commonVM()->timeoutChecker.reset(); // RT-21428
+    //utatodo: seems that JDK-8126646 will back again
+    //JSDOMWindowBase::commonVM()->timeoutChecker.reset(); // JDK-8126646
     page->inspectorController().dispatchMessageFromFrontend(
             String(env, message));
 }
@@ -2586,7 +2624,7 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_WebPage_twkWorkerThreadCount
 JNIEXPORT void JNICALL Java_com_sun_webkit_WebPage_twkDoJSCGarbageCollection
   (JNIEnv*, jclass)
 {
-    GCController::singleton().garbageCollectNow();
+    WebPage_doJSCGarbageCollection();
 }
 
 }

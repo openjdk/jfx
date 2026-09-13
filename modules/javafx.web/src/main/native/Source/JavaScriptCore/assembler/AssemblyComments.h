@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,18 +25,19 @@
 
 #pragma once
 
-#include "Options.h"
+#include <JavaScriptCore/Options.h>
 
 #include <optional>
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
 #include <wtf/StdMap.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/WTFString.h>
 
 namespace JSC {
 
 class AssemblyCommentRegistry {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(AssemblyCommentRegistry);
     WTF_MAKE_NONCOPYABLE(AssemblyCommentRegistry);
 public:
     static AssemblyCommentRegistry& singleton();
@@ -44,16 +45,19 @@ public:
 
     Lock& getLock() WTF_RETURNS_LOCK(m_lock) { return m_lock; }
 
-    using CommentMap = HashMap<uintptr_t, String>;
+    using CommentMap = UncheckedKeyHashMap<uintptr_t, String>;
 
     void registerCodeRange(void* start, void* end, CommentMap&& map)
     {
-        if (LIKELY(!Options::needDisassemblySupport()) || !map.size())
+        if (!Options::needDisassemblySupport()) [[likely]]
             return;
+        if (!map.size())
+            return;
+
         Locker locker { m_lock };
 
-        auto newStart = bitwise_cast<uintptr_t>(start);
-        auto newEnd = bitwise_cast<uintptr_t>(end);
+        auto newStart = std::bit_cast<uintptr_t>(start);
+        auto newEnd = std::bit_cast<uintptr_t>(end);
         RELEASE_ASSERT(newStart < newEnd);
 
 #if ASSERT_ENABLED
@@ -68,12 +72,12 @@ public:
         (void) newStart;
 #endif
 
-        m_comments.emplace(orderedKey(start), std::pair { newEnd, WTFMove(map) });
+        m_comments.emplace(orderedKey(start), std::pair { newEnd, WTF::move(map) });
     }
 
     void unregisterCodeRange(void* start, void* end)
     {
-        if (LIKELY(!Options::needDisassemblySupport()))
+        if (!Options::needDisassemblySupport()) [[likely]]
             return;
         Locker locker { m_lock };
 
@@ -82,13 +86,13 @@ public:
             return;
 
         auto& [foundEnd, _] = it->second;
-        RELEASE_ASSERT(foundEnd == bitwise_cast<uintptr_t>(end));
+        RELEASE_ASSERT(foundEnd == std::bit_cast<uintptr_t>(end));
         m_comments.erase(it);
     }
 
     inline std::optional<String> comment(void* in)
     {
-        if (LIKELY(!Options::needDisassemblySupport()))
+        if (!Options::needDisassemblySupport()) [[likely]]
             return { };
         Locker locker { m_lock };
         auto it = m_comments.lower_bound(orderedKey(in));
@@ -97,10 +101,10 @@ public:
             return { };
 
         auto& [end, map] = it->second;
-        if (bitwise_cast<uintptr_t>(in) > bitwise_cast<uintptr_t>(end))
+        if (std::bit_cast<uintptr_t>(in) > std::bit_cast<uintptr_t>(end))
             return { };
 
-        auto it2 = map.find(bitwise_cast<uintptr_t>(in));
+        auto it2 = map.find(std::bit_cast<uintptr_t>(in));
 
         if (it2 == map.end())
             return { };
@@ -113,7 +117,7 @@ public:
 private:
 
     // Flip ordering for lower_bound comparator to work.
-    inline uintptr_t orderedKey(void* in) { return std::numeric_limits<uintptr_t>::max() - bitwise_cast<uintptr_t>(in); }
+    inline uintptr_t orderedKey(void* in) { return std::numeric_limits<uintptr_t>::max() - std::bit_cast<uintptr_t>(in); }
     inline uintptr_t orderedKeyInverse(uintptr_t in) { return std::numeric_limits<uintptr_t>::max() - in; }
 
     Lock m_lock;

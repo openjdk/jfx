@@ -25,35 +25,35 @@
 
 #pragma once
 
-#include "FloatSize.h"
-#include "ImageOrientation.h"
-#include "IntSize.h"
-#include "Path.h"
-#include "TextFlags.h"
-#include "TextIndicator.h"
+#include <WebCore/FloatSize.h>
+#include <WebCore/ImageOrientation.h>
+#include <WebCore/IntSize.h>
+#include <WebCore/Path.h>
+#include <WebCore/TextFlags.h>
+#include <WebCore/TextIndicator.h>
 #include <wtf/Forward.h>
 
+#include <wtf/Platform.h>
 #if PLATFORM(IOS_FAMILY)
 #include <wtf/RetainPtr.h>
 typedef struct CGImage *CGImageRef;
 #elif PLATFORM(MAC)
 #include <wtf/RetainPtr.h>
 OBJC_CLASS NSImage;
-#elif PLATFORM(WIN)
-typedef struct HBITMAP__* HBITMAP;
 #elif USE(CAIRO)
+#if PLATFORM(WIN)
+typedef struct HBITMAP__* HBITMAP;
+#endif
 #include "RefPtrCairo.h"
 #elif PLATFORM(JAVA)
 #include "Image.h"
 #include <wtf/RefPtr.h>
 #endif
 
-// We need to #define YOffset as it needs to be shared with WebKit
-#define DragLabelBorderYOffset 2
-
 namespace WebCore {
 
 class Element;
+class GraphicsClient;
 class Image;
 class IntRect;
 class LocalFrame;
@@ -63,7 +63,7 @@ class Node;
 typedef RetainPtr<CGImageRef> DragImageRef;
 #elif PLATFORM(MAC)
 typedef RetainPtr<NSImage> DragImageRef;
-#elif PLATFORM(WIN)
+#elif USE(CAIRO) && PLATFORM(WIN)
 typedef HBITMAP DragImageRef;
 #elif USE(CAIRO)
 typedef RefPtr<cairo_surface_t> DragImageRef;
@@ -87,15 +87,21 @@ DragImageRef scaleDragImage(DragImageRef, FloatSize scale);
 DragImageRef platformAdjustDragImageForDeviceScaleFactor(DragImageRef, float deviceScaleFactor);
 DragImageRef dissolveDragImageToFraction(DragImageRef, float delta);
 
-DragImageRef createDragImageFromImage(Image*, ImageOrientation);
+DragImageRef createDragImageFromImage(Image*, ImageOrientation, GraphicsClient* = nullptr, float deviceScaleFactor = 1);
 DragImageRef createDragImageIconForCachedImageFilename(const String&);
 
+struct DragImageData {
+    DragImageRef dragImageRef;
+    RefPtr<TextIndicator> textIndicator;
+};
+// FIXME: These platform helpers should be refactored to avoid using `LocalFrame` and `Node`.
 WEBCORE_EXPORT DragImageRef createDragImageForNode(LocalFrame&, Node&);
-WEBCORE_EXPORT DragImageRef createDragImageForSelection(LocalFrame&, TextIndicatorData&, bool forceBlackText = false);
+WEBCORE_EXPORT DragImageData createDragImageForSelection(LocalFrame&, bool forceBlackText = false);
 WEBCORE_EXPORT DragImageRef createDragImageForRange(LocalFrame&, const SimpleRange&, bool forceBlackText = false);
 DragImageRef createDragImageForColor(const Color&, const FloatRect&, float, Path&);
 DragImageRef createDragImageForImage(LocalFrame&, Node&, IntRect& imageRect, IntRect& elementRect);
-DragImageRef createDragImageForLink(Element&, URL&, const String& label, TextIndicatorData&, float deviceScaleFactor);
+
+DragImageData createDragImageForLink(Element&, URL&, const String& label, float deviceScaleFactor);
 void deleteDragImage(DragImageRef);
 
 IntPoint dragOffsetForLinkDragImage(DragImageRef);
@@ -108,22 +114,27 @@ public:
     WEBCORE_EXPORT DragImage(DragImage&&);
     WEBCORE_EXPORT ~DragImage();
 
+    DragImage(RefPtr<TextIndicator> textIndicator, std::optional<Path>&& visiblePath)
+        : m_textIndicator(WTF::move(textIndicator))
+        , m_visiblePath(WTF::move(visiblePath))
+    { }
+
     WEBCORE_EXPORT DragImage& operator=(DragImage&&);
 
-    void setIndicatorData(const TextIndicatorData& data) { m_indicatorData = data; }
-    bool hasIndicatorData() const { return !!m_indicatorData; }
-    std::optional<TextIndicatorData> indicatorData() const { return m_indicatorData; }
+    void setTextIndicator(const RefPtr<TextIndicator> textIndicator) { m_textIndicator = textIndicator; }
+    bool hasTextIndicator() const { return !!m_textIndicator; }
+    const RefPtr<TextIndicator> textIndicator() const { return m_textIndicator; }
 
     void setVisiblePath(const Path& path) { m_visiblePath = path; }
     bool hasVisiblePath() const { return !!m_visiblePath; }
-    std::optional<Path> visiblePath() const { return m_visiblePath; }
+    const std::optional<Path>& visiblePath() const { return m_visiblePath; }
 
     explicit operator bool() const { return !!m_dragImageRef; }
     DragImageRef get() const { return m_dragImageRef; }
 
 private:
     DragImageRef m_dragImageRef;
-    std::optional<TextIndicatorData> m_indicatorData;
+    RefPtr<TextIndicator> m_textIndicator;
     std::optional<Path> m_visiblePath;
 };
 

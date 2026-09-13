@@ -22,10 +22,11 @@
 
 #pragma once
 
-#include "DestinationColorSpace.h"
-#include "FilterEffectApplier.h"
-#include "FilterFunction.h"
-#include "FilterImageVector.h"
+#include <WebCore/DestinationColorSpace.h>
+#include <WebCore/FilterEffectApplier.h>
+#include <WebCore/FilterFunction.h>
+#include <WebCore/FilterImageVector.h>
+#include <wtf/CheckedPtr.h>
 
 namespace WTF {
 class TextStream;
@@ -37,9 +38,10 @@ class Filter;
 class FilterEffectGeometry;
 class FilterResults;
 
-class FilterEffect : public FilterFunction {
+class FilterEffect : public FilterFunction, public CanMakeThreadSafeCheckedPtr<FilterEffect> {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(FilterEffect);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FilterEffect);
     using FilterFunction::apply;
-
 public:
     virtual bool operator==(const FilterEffect&) const;
 
@@ -49,20 +51,19 @@ public:
     unsigned numberOfImageInputs() const { return filterType() == FilterEffect::Type::SourceGraphic ? 1 : numberOfEffectInputs(); }
     FilterImageVector takeImageInputs(FilterImageVector& stack) const;
 
-    RefPtr<FilterImage> apply(const Filter&, const FilterImageVector& inputs, FilterResults&, const std::optional<FilterEffectGeometry>& = std::nullopt);
-    FilterStyle createFilterStyle(const Filter&, const FilterStyle& input, const std::optional<FilterEffectGeometry>& = std::nullopt) const;
+    RefPtr<FilterImage> apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterResults&, const std::optional<FilterEffectGeometry>& = std::nullopt);
+    FilterStyle createFilterStyle(GraphicsContext&, const Filter&, const FilterStyle& input, const std::optional<FilterEffectGeometry>& = std::nullopt) const;
 
     WTF::TextStream& externalRepresentation(WTF::TextStream&, FilterRepresentation) const override;
 
 protected:
-    using FilterFunction::FilterFunction;
+    explicit FilterEffect(Type, DestinationColorSpace = DestinationColorSpace::SRGB(), std::optional<RenderingResourceIdentifier> = std::nullopt);
 
     template<typename FilterEffectType>
     static bool areEqual(const FilterEffectType& a, const FilterEffect& b)
     {
-        if (!is<FilterEffectType>(b))
-            return false;
-        return a.operator==(downcast<FilterEffectType>(b));
+        auto* bType = dynamicDowncast<FilterEffectType>(b);
+        return bType && a.operator==(*bType);
     }
 
     virtual unsigned numberOfEffectInputs() const { return 1; }
@@ -72,24 +73,24 @@ protected:
     virtual FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const;
 
     // Solid black image with different alpha values.
-    virtual bool resultIsAlphaImage(const FilterImageVector&) const { return false; }
+    virtual bool resultIsAlphaImage(std::span<const Ref<FilterImage>>) const { return false; }
 
     virtual bool resultIsValidPremultiplied() const { return true; }
 
-    virtual const DestinationColorSpace& resultColorSpace(const FilterImageVector&) const { return m_operatingColorSpace; }
+    virtual const DestinationColorSpace& resultColorSpace(std::span<const Ref<FilterImage>>) const { return m_operatingColorSpace; }
 
-    virtual void transformInputsColorSpace(const FilterImageVector& inputs) const;
+    virtual void transformInputsColorSpace(std::span<const Ref<FilterImage>> inputs) const;
 
-    void correctPremultipliedInputs(const FilterImageVector& inputs) const;
+    void correctPremultipliedInputs(std::span<const Ref<FilterImage>> inputs) const;
 
     std::unique_ptr<FilterEffectApplier> createApplier(const Filter&) const;
 
     virtual std::unique_ptr<FilterEffectApplier> createAcceleratedApplier() const { return nullptr; }
     virtual std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const = 0;
-    virtual std::optional<GraphicsStyle> createGraphicsStyle(const Filter&) const { return std::nullopt; }
+    virtual std::optional<GraphicsStyle> createGraphicsStyle(GraphicsContext&, const Filter&) const { return std::nullopt; }
 
     RefPtr<FilterImage> apply(const Filter&, FilterImage& input, FilterResults&) override;
-    FilterStyleVector createFilterStyles(const Filter&, const FilterStyle& input) const override;
+    FilterStyleVector createFilterStyles(GraphicsContext&, const Filter&, const FilterStyle& input) const override;
 
     DestinationColorSpace m_operatingColorSpace { DestinationColorSpace::SRGB() };
 };
@@ -100,9 +101,4 @@ WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const FilterEffect&
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::FilterEffect)
     static bool isType(const WebCore::FilterFunction& function) { return function.isFilterEffect(); }
-SPECIALIZE_TYPE_TRAITS_END()
-
-#define SPECIALIZE_TYPE_TRAITS_FILTER_EFFECT(ClassName) \
-SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ClassName) \
-    static bool isType(const WebCore::FilterEffect& effect) { return effect.filterType() == WebCore::FilterEffect::Type::ClassName; } \
 SPECIALIZE_TYPE_TRAITS_END()

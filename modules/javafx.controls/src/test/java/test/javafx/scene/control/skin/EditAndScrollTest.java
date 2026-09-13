@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,13 @@
 
 package test.javafx.scene.control.skin;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import static test.com.sun.javafx.scene.control.infrastructure.VirtualizedControlTestUtils.*;
-import static org.junit.Assert.*;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static test.com.sun.javafx.scene.control.infrastructure.VirtualizedControlTestUtils.fireMouseOnHorizontalTrack;
+import static test.com.sun.javafx.scene.control.infrastructure.VirtualizedControlTestUtils.fireMouseOnVerticalTrack;
+import static test.com.sun.javafx.scene.control.infrastructure.VirtualizedControlTestUtils.getHorizontalScrollBar;
+import static test.com.sun.javafx.scene.control.infrastructure.VirtualizedControlTestUtils.getVerticalScrollBar;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Orientation;
@@ -58,6 +58,9 @@ import javafx.scene.layout.Pane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.converter.DefaultStringConverter;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test scrolling while editing, mainly fix for JDK-8272118 - do not cancel edit on mouse click.
@@ -127,12 +130,10 @@ public class EditAndScrollTest {
         assertEquals(rows + 1, control.getExpandedItemCount());
         assertEquals(100, scene.getWidth(), 1);
         assertEquals(330, scene.getHeight(), 1);
-        assertTrue("sanity: vertical scrollbar visible for list " ,
-                getHorizontalScrollBar(control).isVisible());
-        assertTrue("sanity: vertical scrollbar visible for list " ,
-                getVerticalScrollBar(control).isVisible());
+        assertTrue(getHorizontalScrollBar(control).isVisible(), "sanity: vertical scrollbar visible for list ");
+        assertTrue(getVerticalScrollBar(control).isVisible(), "sanity: vertical scrollbar visible for list ");
         TreeTablePosition<?, ?> editingItem = new TreeTablePosition(control, editingRow, control.getColumns().get(0));
-        assertEquals("control must be editing at", editingItem, control.getEditingCell());
+        assertEquals(editingItem, control.getEditingCell(), "control must be editing at");
     }
 
     /**
@@ -206,12 +207,10 @@ public class EditAndScrollTest {
         assertEquals(rows, control.getItems().size());
         assertEquals(100, scene.getWidth(), 1);
         assertEquals(330, scene.getHeight(), 1);
-        assertTrue("sanity: vertical scrollbar visible for list " ,
-                getHorizontalScrollBar(control).isVisible());
-        assertTrue("sanity: vertical scrollbar visible for list " ,
-                getVerticalScrollBar(control).isVisible());
+        assertTrue(getHorizontalScrollBar(control).isVisible(), "sanity: vertical scrollbar visible for list ");
+        assertTrue(getVerticalScrollBar(control).isVisible(), "sanity: vertical scrollbar visible for list ");
         TablePosition<?, ?> editingItem = new TablePosition(control, editingRow, control.getColumns().get(0));
-        assertEquals("control must be editing at", editingItem, control.getEditingCell());
+        assertEquals(editingItem, control.getEditingCell(), "control must be editing at");
     }
 
     /**
@@ -282,12 +281,10 @@ public class EditAndScrollTest {
         assertEquals(rows + 1, control.getExpandedItemCount());
         assertEquals(100, scene.getWidth(), 1);
         assertEquals(330, scene.getHeight(), 1);
-        assertTrue("sanity: vertical scrollbar visible for list " ,
-                getHorizontalScrollBar(control).isVisible());
-        assertTrue("sanity: vertical scrollbar visible for list " ,
-                getVerticalScrollBar(control).isVisible());
+        assertTrue(getHorizontalScrollBar(control).isVisible(), "sanity: vertical scrollbar visible for list ");
+        assertTrue(getVerticalScrollBar(control).isVisible(), "sanity: vertical scrollbar visible for list ");
         TreeItem<?> editingItem = control.getTreeItem(editingRow);
-        assertEquals("control must be editing at", editingItem, control.getEditingItem());
+        assertEquals(editingItem, control.getEditingItem(), "control must be editing at");
     }
 
     /**
@@ -349,11 +346,9 @@ public class EditAndScrollTest {
         assertEquals(rows, control.getItems().size());
         assertEquals(100, scene.getWidth(), 1);
         assertEquals(330, scene.getHeight(), 1);
-        assertTrue("sanity: vertical scrollbar visible for list " ,
-                getHorizontalScrollBar(control).isVisible());
-        assertTrue("sanity: vertical scrollbar visible for list " ,
-                getVerticalScrollBar(control).isVisible());
-        assertEquals("control must be editing at", editingRow, control.getEditingIndex());
+        assertTrue(getHorizontalScrollBar(control).isVisible(), "sanity: vertical scrollbar visible for list ");
+        assertTrue(getVerticalScrollBar(control).isVisible(), "sanity: vertical scrollbar visible for list ");
+        assertEquals(editingRow, control.getEditingIndex(), "control must be editing at");
     }
 
     /**
@@ -393,8 +388,7 @@ public class EditAndScrollTest {
         } else {
             fireMouseOnVerticalTrack(control);
         }
-        assertEquals("virtualized control must be focusOwner after mouse on scrollbar",
-                control, scene.getFocusOwner());
+        assertEquals(control, scene.getFocusOwner(), "virtualized control must be focusOwner after mouse on scrollbar");
     }
 
 
@@ -456,7 +450,8 @@ public class EditAndScrollTest {
         }
     }
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
             if (throwable instanceof RuntimeException) {
                 throw (RuntimeException)throwable;
@@ -468,7 +463,8 @@ public class EditAndScrollTest {
         rows = 60;
     }
 
-    @After public void cleanup() {
+    @AfterEach
+    public void cleanup() {
         if (stage != null) stage.hide();
         Thread.currentThread().setUncaughtExceptionHandler(null);
     }

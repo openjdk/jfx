@@ -38,6 +38,8 @@ public:
     Expression* maybeTest() { return m_test; }
     Statement* maybeUpdate() { return m_update; }
     CompoundStatement& body() { return m_body; }
+    bool isInternallyGenerated() const { return m_isInternallyGenerated; }
+    void setInternallyGenerated() { m_isInternallyGenerated = true; }
 
 private:
     ForStatement(SourceSpan span, Statement::Ptr initializer, Expression::Ptr test, Statement::Ptr update, CompoundStatement::Ref&& body)
@@ -45,13 +47,14 @@ private:
         , m_initializer(initializer)
         , m_test(test)
         , m_update(update)
-        , m_body(WTFMove(body))
+        , m_body(WTF::move(body))
     { }
 
     Statement::Ptr m_initializer;
     Expression::Ptr m_test;
     Statement::Ptr m_update;
     CompoundStatement::Ref m_body;
+    bool m_isInternallyGenerated { false };
 };
 
 } // namespace WGSL::AST

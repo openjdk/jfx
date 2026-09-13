@@ -21,11 +21,12 @@
 #include "AccessibilityObjectAtspi.h"
 
 #if USE(ATSPI)
+#include "AXCoreObject.h"
 #include "AXObjectCache.h"
 #include "AccessibilityAtspiInterfaces.h"
-#include "AccessibilityObjectInterface.h"
+#include "AccessibilityObjectInlines.h"
+#include "AccessibilityNodeObject.h"
 #include "AccessibilityRootAtspi.h"
-#include "AccessibilityTableCell.h"
 #include "ElementInlines.h"
 #include "HTMLSpanElement.h"
 #include "RenderAncestorIterator.h"
@@ -53,28 +54,27 @@ static inline bool roleIsTextType(AccessibilityRole role)
         || role == AccessibilityRole::Generic
         || role == AccessibilityRole::Cell
         || role == AccessibilityRole::Link
-        || role == AccessibilityRole::WebCoreLink
         || role == AccessibilityRole::ListItem
         || role == AccessibilityRole::Pre
         || role == AccessibilityRole::GridCell
         || role == AccessibilityRole::TextGroup
-        || role == AccessibilityRole::ApplicationTextGroup
-        || role == AccessibilityRole::ApplicationGroup;
+        || role == AccessibilityRole::Group;
 }
 
 OptionSet<AccessibilityObjectAtspi::Interface> AccessibilityObjectAtspi::interfacesForObject(AXCoreObject& coreObject)
 {
     OptionSet<Interface> interfaces = { Interface::Accessible, Interface::Component, Interface::Action, Interface::Collection };
 
+    auto* axObject = dynamicDowncast<AccessibilityObject>(coreObject);
     RenderObject* renderer = coreObject.isAccessibilityRenderObject() ? coreObject.renderer() : nullptr;
-    if (coreObject.roleValue() == AccessibilityRole::StaticText || coreObject.roleValue() == AccessibilityRole::ColorWell)
+    if (coreObject.role() == AccessibilityRole::StaticText || coreObject.role() == AccessibilityRole::ColorWell)
         interfaces.add(Interface::Text);
     else if (coreObject.isTextControl() || coreObject.isNonNativeTextControl())
         interfaces.add(Interface::Text);
     else if (!coreObject.isWebArea()) {
-        if (coreObject.roleValue() != AccessibilityRole::Table) {
+        if (coreObject.role() != AccessibilityRole::Table) {
             interfaces.add(Interface::Hypertext);
-            if ((renderer && renderer->childrenInline()) || roleIsTextType(coreObject.roleValue()) || coreObject.isMathToken())
+            if ((renderer && renderer->childrenInline()) || roleIsTextType(coreObject.role()) || coreObject.isMathToken())
                 interfaces.add(Interface::Text);
         }
     }
@@ -85,25 +85,25 @@ OptionSet<AccessibilityObjectAtspi::Interface> AccessibilityObjectAtspi::interfa
     if (coreObject.isLink() || (isRendererReplacedElement(renderer)))
         interfaces.add(Interface::Hyperlink);
 
-    if (coreObject.roleValue() == AccessibilityRole::WebArea)
+    if (coreObject.role() == AccessibilityRole::WebArea)
         interfaces.add(Interface::Document);
 
     if (coreObject.isImage())
         interfaces.add(Interface::Image);
 
-    if (coreObject.canHaveSelectedChildren())
+    if (axObject && axObject->canHaveSelectedChildren())
         interfaces.add(Interface::Selection);
 
     if (coreObject.isTable())
         interfaces.add(Interface::Table);
 
-    if (coreObject.roleValue() == AccessibilityRole::Cell
-        || coreObject.roleValue() == AccessibilityRole::GridCell
-        || coreObject.roleValue() == AccessibilityRole::ColumnHeader
-        || coreObject.roleValue() == AccessibilityRole::RowHeader)
+    if (coreObject.role() == AccessibilityRole::Cell
+        || coreObject.role() == AccessibilityRole::GridCell
+        || coreObject.role() == AccessibilityRole::ColumnHeader
+        || coreObject.role() == AccessibilityRole::RowHeader)
         interfaces.add(Interface::TableCell);
 
-    if (coreObject.roleValue() == AccessibilityRole::ListMarker && renderer) {
+    if (coreObject.role() == AccessibilityRole::ListMarker && renderer) {
         if (renderer->isImage())
             interfaces.add(Interface::Image);
         else
@@ -152,7 +152,6 @@ void AccessibilityObjectAtspi::elementDestroyed()
 static Atspi::Role atspiRole(AccessibilityRole role)
 {
     switch (role) {
-    case AccessibilityRole::Annotation:
     case AccessibilityRole::ApplicationAlert:
         return Atspi::Role::Notification;
     case AccessibilityRole::ApplicationAlertDialog:
@@ -174,7 +173,7 @@ static Atspi::Role atspiRole(AccessibilityRole role)
         return Atspi::Role::ToggleButton;
     case AccessibilityRole::RadioButton:
         return Atspi::Role::RadioButton;
-    case AccessibilityRole::CheckBox:
+    case AccessibilityRole::Checkbox:
         return Atspi::Role::CheckBox;
     case AccessibilityRole::Slider:
         return Atspi::Role::Slider;
@@ -187,7 +186,6 @@ static Atspi::Role atspiRole(AccessibilityRole role)
         return Atspi::Role::Entry;
     case AccessibilityRole::StaticText:
         return Atspi::Role::Static;
-    case AccessibilityRole::Outline:
     case AccessibilityRole::Tree:
         return Atspi::Role::Tree;
     case AccessibilityRole::TreeItem:
@@ -199,7 +197,6 @@ static Atspi::Role atspiRole(AccessibilityRole role)
         return Atspi::Role::Menu;
     case AccessibilityRole::MenuListOption:
     case AccessibilityRole::MenuItem:
-    case AccessibilityRole::MenuButton:
         return Atspi::Role::MenuItem;
     case AccessibilityRole::MenuItemCheckbox:
         return Atspi::Role::CheckMenuItem;
@@ -213,16 +210,11 @@ static Atspi::Role atspiRole(AccessibilityRole role)
         return Atspi::Role::ToolBar;
     case AccessibilityRole::Meter:
         return Atspi::Role::LevelBar;
-    case AccessibilityRole::BusyIndicator:
     case AccessibilityRole::ProgressIndicator:
         return Atspi::Role::ProgressBar;
-    case AccessibilityRole::Window:
-        return Atspi::Role::Window;
     case AccessibilityRole::PopUpButton:
     case AccessibilityRole::ComboBox:
         return Atspi::Role::ComboBox;
-    case AccessibilityRole::SplitGroup:
-        return Atspi::Role::SplitPane;
     case AccessibilityRole::Splitter:
         return Atspi::Role::Separator;
     case AccessibilityRole::ColorWell:
@@ -241,7 +233,6 @@ static Atspi::Role atspiRole(AccessibilityRole role)
         return Atspi::Role::TreeTable;
     case AccessibilityRole::Application:
         return Atspi::Role::Application;
-    case AccessibilityRole::ApplicationGroup:
     case AccessibilityRole::Feed:
     case AccessibilityRole::Figure:
     case AccessibilityRole::GraphicsObject:
@@ -259,8 +250,6 @@ static Atspi::Role atspiRole(AccessibilityRole role)
     case AccessibilityRole::GridCell:
         return Atspi::Role::TableCell;
     case AccessibilityRole::Link:
-    case AccessibilityRole::WebCoreLink:
-    case AccessibilityRole::ImageMapLink:
         return Atspi::Role::Link;
     case AccessibilityRole::ImageMap:
         return Atspi::Role::ImageMap;
@@ -290,21 +279,20 @@ static Atspi::Role atspiRole(AccessibilityRole role)
         return Atspi::Role::BlockQuote;
     case AccessibilityRole::Footnote:
         return Atspi::Role::Footnote;
-    case AccessibilityRole::ApplicationTextGroup:
     case AccessibilityRole::Code:
     case AccessibilityRole::Generic:
     case AccessibilityRole::Pre:
     case AccessibilityRole::SVGText:
     case AccessibilityRole::TextGroup:
         return Atspi::Role::Section;
-    case AccessibilityRole::Footer:
-        return Atspi::Role::Footer;
     case AccessibilityRole::Form:
         return Atspi::Role::Form;
     case AccessibilityRole::Canvas:
         return Atspi::Role::Canvas;
     case AccessibilityRole::HorizontalRule:
         return Atspi::Role::Separator;
+    case AccessibilityRole::DateTime:
+        return Atspi::Role::Entry;
     case AccessibilityRole::SpinButton:
         return Atspi::Role::SpinButton;
     case AccessibilityRole::Tab:
@@ -334,6 +322,10 @@ static Atspi::Role atspiRole(AccessibilityRole role)
     case AccessibilityRole::LandmarkRegion:
     case AccessibilityRole::LandmarkSearch:
         return Atspi::Role::Landmark;
+    case AccessibilityRole::SectionFooter:
+        return Atspi::Role::Footer;
+    case AccessibilityRole::SectionHeader:
+        return Atspi::Role::Header;
     case AccessibilityRole::DescriptionList:
         return Atspi::Role::DescriptionList;
     case AccessibilityRole::Term:
@@ -358,34 +350,24 @@ static Atspi::Role atspiRole(AccessibilityRole role)
         return Atspi::Role::DirectoryPane;
     case AccessibilityRole::Mark:
         return Atspi::Role::Mark;
-    case AccessibilityRole::Browser:
     case AccessibilityRole::Details:
-    case AccessibilityRole::DisclosureTriangle:
-    case AccessibilityRole::Drawer:
-    case AccessibilityRole::EditableText:
-    case AccessibilityRole::GrowArea:
-    case AccessibilityRole::HelpTag:
+    case AccessibilityRole::Emphasis:
     case AccessibilityRole::Ignored:
-    case AccessibilityRole::Incrementor:
-    case AccessibilityRole::Matte:
+    case AccessibilityRole::LineBreak:
     case AccessibilityRole::Model:
     case AccessibilityRole::Presentational:
     case AccessibilityRole::RowGroup:
-    case AccessibilityRole::RubyBase:
-    case AccessibilityRole::RubyBlock:
     case AccessibilityRole::RubyInline:
-    case AccessibilityRole::RubyRun:
     case AccessibilityRole::RubyText:
-    case AccessibilityRole::Ruler:
-    case AccessibilityRole::RulerMarker:
-    case AccessibilityRole::Sheet:
     case AccessibilityRole::SliderThumb:
     case AccessibilityRole::SpinButtonPart:
+    case AccessibilityRole::Strong:
     case AccessibilityRole::Summary:
-    case AccessibilityRole::SystemWide:
     case AccessibilityRole::TableHeaderContainer:
-    case AccessibilityRole::ValueIndicator:
     case AccessibilityRole::Suggestion:
+    case AccessibilityRole::RemoteFrame:
+    case AccessibilityRole::LocalFrame:
+    case AccessibilityRole::FrameHost:
         return Atspi::Role::Unknown;
     // Add most new roles above. The release assert is for roles that are handled specially.
     case AccessibilityRole::ListMarker:
@@ -459,8 +441,10 @@ GDBusInterfaceVTable AccessibilityObjectAtspi::s_accessibleFunctions = {
             return g_variant_new_string(atspiObject->description().data());
         if (!g_strcmp0(propertyName, "Locale"))
             return g_variant_new_string(atspiObject->locale().utf8().data());
-        if (!g_strcmp0(propertyName, "AccessibleId"))
-            return g_variant_new_string(atspiObject->m_coreObject ? String::number(atspiObject->m_coreObject->objectID().toUInt64()).utf8().data() : "");
+        if (!g_strcmp0(propertyName, "AccessibleId")) {
+            auto objectID = atspiObject->m_coreObject->objectID();
+            return g_variant_new_string(atspiObject->m_coreObject ? String::number(objectID.toUInt64()).utf8().data() : "");
+        }
         if (!g_strcmp0(propertyName, "Parent"))
             return atspiObject->parentReference();
         if (!g_strcmp0(propertyName, "ChildCount"))
@@ -509,7 +493,7 @@ bool AccessibilityObjectAtspi::registerObject()
     if (m_interfaces.contains(Interface::Collection))
         interfaces.append({ const_cast<GDBusInterfaceInfo*>(&webkit_collection_interface), &s_collectionFunctions });
 
-    m_path = AccessibilityAtspi::singleton().registerObject(*this, WTFMove(interfaces));
+    m_path = AccessibilityAtspi::singleton().registerObject(*this, WTF::move(interfaces));
     return true;
 }
 
@@ -546,7 +530,7 @@ void AccessibilityObjectAtspi::setParent(std::optional<AccessibilityObjectAtspi*
         return;
 
     m_parent = atspiParent;
-    if (!m_coreObject || m_coreObject->accessibilityIsIgnored())
+    if (!m_coreObject || m_coreObject->isIgnored())
         return;
 
     AccessibilityAtspi::singleton().parentChanged(*this);
@@ -603,18 +587,16 @@ AccessibilityObjectAtspi* AccessibilityObjectAtspi::childAt(unsigned index) cons
     return children[index]->wrapper();
 }
 
-Vector<RefPtr<AccessibilityObjectAtspi>> AccessibilityObjectAtspi::wrapperVector(const Vector<RefPtr<AXCoreObject>>& elements) const
+Vector<Ref<AccessibilityObjectAtspi>> AccessibilityObjectAtspi::wrapperVector(const Vector<Ref<AXCoreObject>>& elements) const
 {
-    Vector<RefPtr<AccessibilityObjectAtspi>> wrappers;
-    wrappers.reserveInitialCapacity(elements.size());
-    for (const auto& element : elements) {
-        if (auto* wrapper = element->wrapper())
-            wrappers.uncheckedAppend(wrapper);
-    }
-    return wrappers;
+    return WTF::compactMap(elements, [&](auto& element) -> std::optional<Ref<AccessibilityObjectAtspi>> {
+        if (RefPtr wrapper = element->wrapper())
+            return wrapper.releaseNonNull();
+        return std::nullopt;
+    });
 }
 
-Vector<RefPtr<AccessibilityObjectAtspi>> AccessibilityObjectAtspi::children() const
+Vector<Ref<AccessibilityObjectAtspi>> AccessibilityObjectAtspi::children() const
 {
     if (!m_coreObject)
         return { };
@@ -638,7 +620,7 @@ int AccessibilityObjectAtspi::indexInParent() const
     const auto& children = axParent->children();
     unsigned index = 0;
     for (const auto& child : children) {
-        if (child.get() == m_coreObject) {
+        if (child.ptr() == m_coreObject) {
             m_indexInParent = index;
             return m_indexInParent;
         }
@@ -663,7 +645,7 @@ CString AccessibilityObjectAtspi::name() const
     if (!m_coreObject)
         return "";
 
-    if (m_coreObject->roleValue() == AccessibilityRole::ListBoxOption || m_coreObject->roleValue() == AccessibilityRole::MenuListOption) {
+    if (m_coreObject->role() == AccessibilityRole::ListBoxOption || m_coreObject->role() == AccessibilityRole::MenuListOption) {
         auto value = m_coreObject->stringValue();
         if (!value.isEmpty())
             return value.utf8();
@@ -718,7 +700,7 @@ CString AccessibilityObjectAtspi::description() const
 
 String AccessibilityObjectAtspi::locale() const
 {
-    return m_coreObject ? m_coreObject->language() : String();
+    return m_coreObject ? m_coreObject->languageIncludingAncestors() : String();
 }
 
 static bool shouldIncludeOrientationState(const AXCoreObject& coreObject)
@@ -746,7 +728,7 @@ OptionSet<Atspi::State> AccessibilityObjectAtspi::states() const
         return states;
     }
 
-    auto* liveObject = dynamicDowncast<AccessibilityObject>(m_coreObject);
+    auto* liveObject = dynamicDowncast<AccessibilityObject>(m_coreObject.get());
 
     if (m_coreObject->isEnabled()) {
         states.add(Atspi::State::Enabled);
@@ -790,9 +772,9 @@ OptionSet<Atspi::State> AccessibilityObjectAtspi::states() const
     if (m_coreObject->isRequired())
         states.add(Atspi::State::Required);
 
-    if (m_coreObject->roleValue() == AccessibilityRole::TextArea || m_coreObject->ariaIsMultiline())
+    if (m_coreObject->role() == AccessibilityRole::TextArea || (liveObject && liveObject->ariaIsMultiline()))
         states.add(Atspi::State::MultiLine);
-    else if (m_coreObject->roleValue() == AccessibilityRole::TextField || m_coreObject->roleValue() == AccessibilityRole::SearchField)
+    else if (m_coreObject->role() == AccessibilityRole::TextField || m_coreObject->role() == AccessibilityRole::SearchField)
         states.add(Atspi::State::SingleLine);
 
     if (m_coreObject->isTextControl())
@@ -813,7 +795,7 @@ OptionSet<Atspi::State> AccessibilityObjectAtspi::states() const
     if (m_coreObject->isExpanded())
         states.add(Atspi::State::Expanded);
 
-    if (m_coreObject->hasPopup())
+    if (m_coreObject->selfOrAncestorLinkHasPopup())
         states.add(Atspi::State::HasPopup);
 
     if (shouldIncludeOrientationState(*m_coreObject)) {
@@ -878,9 +860,9 @@ HashMap<String, String> AccessibilityObjectAtspi::attributes() const
 
     RefPtr liveObject = dynamicDowncast<AccessibilityObject>(m_coreObject);
 
-    String tagName = m_coreObject->tagName();
-    if (!tagName.isEmpty())
-        map.add("tag"_s, tagName);
+    auto tagName = tagNameForElementName(liveObject->elementName());
+    if (tagName != TagName::Unknown)
+        map.add("tag"_s, tagNameAsString(tagName));
 
     if (auto* element = m_coreObject->element()) {
         String id = element->getIdAttribute().string();
@@ -900,21 +882,18 @@ HashMap<String, String> AccessibilityObjectAtspi::attributes() const
     if (columnCount)
         map.add("colcount"_s, String::number(columnCount));
 
-    int rowIndex = m_coreObject->axRowIndex();
-    if (rowIndex != -1)
-        map.add("rowindex"_s, String::number(rowIndex));
+    if (std::optional rowIndex = m_coreObject->axRowIndex())
+        map.add("rowindex"_s, String::number(*rowIndex));
 
-    int columnIndex = m_coreObject->axColumnIndex();
-    if (columnIndex != -1)
-        map.add("colindex"_s, String::number(columnIndex));
+    if (std::optional columnIndex = m_coreObject->axColumnIndex())
+        map.add("colindex"_s, String::number(*columnIndex));
 
-    if (is<AccessibilityTableCell>(m_coreObject)) {
-        auto& cell = downcast<AccessibilityTableCell>(*m_coreObject);
-        int rowSpan = cell.axRowSpan();
+    if (auto* cell = dynamicDowncast<AccessibilityNodeObject>(m_coreObject.get()); cell && cell->isTableCell()) {
+        int rowSpan = cell->axRowSpan();
         if (rowSpan != -1)
             map.add("rowspan"_s, String::number(rowSpan));
 
-        int columnSpan = cell.axColumnSpan();
+        int columnSpan = cell->axColumnSpan();
         if (columnSpan != -1)
             map.add("colspan"_s, String::number(columnSpan));
     }
@@ -939,8 +918,8 @@ HashMap<String, String> AccessibilityObjectAtspi::attributes() const
         map.add("setsize"_s, String::number(m_coreObject->setSize()));
 
     // The Core AAM states that an explicitly-set value should be exposed, including "none".
-    if (static_cast<AccessibilityObject*>(m_coreObject)->hasAttribute(HTMLNames::aria_sortAttr)) {
-        switch (m_coreObject->sortDirection()) {
+    if (static_cast<AccessibilityObject*>(m_coreObject.get())->hasAttribute(HTMLNames::aria_sortAttr)) {
+        switch (m_coreObject->sortDirectionIncludingAncestors()) {
         case AccessibilitySortDirection::Invalid:
             break;
         case AccessibilitySortDirection::Ascending:
@@ -958,7 +937,7 @@ HashMap<String, String> AccessibilityObjectAtspi::attributes() const
         }
     }
 
-    String isReadOnly = m_coreObject->readOnlyValue();
+    String isReadOnly = liveObject ? liveObject->readOnlyValue() : String();
     if (!isReadOnly.isEmpty())
         map.add("readonly"_s, isReadOnly);
 
@@ -971,7 +950,7 @@ HashMap<String, String> AccessibilityObjectAtspi::attributes() const
     // In the case of ATSPI, the mechanism to do so is an object attribute pair (xml-roles:"string").
     // We cannot use the computedRoleString for this purpose because it is not limited to elements
     // with ARIA roles, and it might not contain the actual ARIA role value (e.g. DPub ARIA).
-    String roleString = static_cast<AccessibilityObject*>(m_coreObject)->getAttribute(HTMLNames::roleAttr);
+    String roleString = static_cast<AccessibilityObject*>(m_coreObject.get())->getAttribute(HTMLNames::roleAttr);
     if (!roleString.isEmpty())
         map.add("xml-roles"_s, roleString);
 
@@ -991,7 +970,7 @@ HashMap<String, String> AccessibilityObjectAtspi::attributes() const
     if (!roleDescription.isEmpty())
         map.add("roledescription"_s, roleDescription);
 
-    String dropEffect = static_cast<AccessibilityObject*>(m_coreObject)->getAttribute(HTMLNames::aria_dropeffectAttr);
+    String dropEffect = static_cast<AccessibilityObject*>(m_coreObject.get())->getAttribute(HTMLNames::aria_dropeffectAttr);
     if (!dropEffect.isEmpty())
         map.add("dropeffect"_s, dropEffect);
 
@@ -1045,38 +1024,32 @@ RelationMap AccessibilityObjectAtspi::relationMap() const
         return map;
 
     auto addRelation = [&](Atspi::Relation relation, const AccessibilityObject::AccessibilityChildrenVector& children) {
-        Vector<RefPtr<AccessibilityObjectAtspi>> wrappers;
+        Vector<Ref<AccessibilityObjectAtspi>> wrappers;
         for (const auto& child : children) {
             if (auto* wrapper = child->wrapper())
-                wrappers.append(wrapper);
+                wrappers.append(*wrapper);
         }
         if (!wrappers.isEmpty())
-            map.add(relation, WTFMove(wrappers));
+            map.add(relation, WTF::move(wrappers));
     };
 
     AccessibilityObject::AccessibilityChildrenVector ariaLabelledByElements;
-    if (m_coreObject->isControl()) {
-        if (auto* label = m_coreObject->correspondingLabelForControlElement())
-            ariaLabelledByElements.append(label);
-    } else if (m_coreObject->isFieldset()) {
+    if (m_coreObject->isControl() || m_coreObject->isFieldset()) {
         if (auto* label = m_coreObject->titleUIElement())
-            ariaLabelledByElements.append(label);
-    } else if (m_coreObject->roleValue() == AccessibilityRole::Legend) {
+            ariaLabelledByElements.append(*label);
+    } else if (m_coreObject->role() == AccessibilityRole::Legend) {
         if (auto* renderFieldset = ancestorsOfType<RenderBlock>(*m_coreObject->renderer()).first()) {
             if (renderFieldset->isFieldset())
-                ariaLabelledByElements.append(m_coreObject->axObjectCache()->getOrCreate(renderFieldset));
+                ariaLabelledByElements.append(*downcast<AccessibilityObject>(m_coreObject)->axObjectCache()->getOrCreate(renderFieldset));
         }
-    } else if (!m_coreObject->correspondingControlForLabelElement())
-        ariaLabelledByElements = m_coreObject->labelledByObjects();
+    } else {
+        auto* liveObject = dynamicDowncast<AccessibilityObject>(m_coreObject.get());
+        if (liveObject && !liveObject->controlForLabelElement())
+            ariaLabelledByElements = m_coreObject->labeledByObjects();
+    }
     addRelation(Atspi::Relation::LabelledBy, ariaLabelledByElements);
 
-    AccessibilityObject::AccessibilityChildrenVector labelForObjects;
-    if (auto* control = m_coreObject->correspondingControlForLabelElement())
-        labelForObjects.append(control);
-    else
-        labelForObjects = m_coreObject->labelForObjects();
-    addRelation(Atspi::Relation::LabelFor, labelForObjects);
-
+    addRelation(Atspi::Relation::LabelFor, m_coreObject->labelForObjects());
     addRelation(Atspi::Relation::FlowsTo, m_coreObject->flowToObjects());
     addRelation(Atspi::Relation::FlowsFrom, m_coreObject->flowFromObjects());
 
@@ -1175,7 +1148,7 @@ void AccessibilityObjectAtspi::childAdded(AccessibilityObjectAtspi& child)
     if (!m_isRegistered)
         return;
 
-    if (!m_coreObject || m_coreObject->accessibilityIsIgnored())
+    if (!m_coreObject || m_coreObject->isIgnored())
         return;
 
     AccessibilityAtspi::singleton().childrenChanged(*this, child, AccessibilityAtspi::ChildrenChanged::Added);
@@ -1206,7 +1179,7 @@ std::optional<Atspi::Role> AccessibilityObjectAtspi::effectiveRole() const
 
     RefPtr liveObject = dynamicDowncast<AccessibilityObject>(m_coreObject);
 
-    switch (m_coreObject->roleValue()) {
+    switch (m_coreObject->role()) {
     case AccessibilityRole::Form:
         if (liveObject && liveObject->ariaRoleAttribute() != AccessibilityRole::Unknown)
             return Atspi::Role::Landmark;
@@ -1246,6 +1219,13 @@ std::optional<Atspi::Role> AccessibilityObjectAtspi::effectiveRole() const
             return Atspi::Role::Section;
         break;
     }
+    case AccessibilityRole::Cell:
+    case AccessibilityRole::GridCell: {
+        if (m_coreObject->isColumnHeader())
+            return Atspi::Role::ColumnHeader;
+        if (m_coreObject->isRowHeader())
+            return Atspi::Role::RowHeader;
+    }
     default:
         break;
     }
@@ -1261,7 +1241,7 @@ Atspi::Role AccessibilityObjectAtspi::role() const
     if (auto effective = effectiveRole())
         return *effective;
 
-    return atspiRole(m_coreObject->roleValue());
+    return atspiRole(m_coreObject->role());
 }
 
 String AccessibilityObjectAtspi::effectiveRoleName() const
@@ -1370,7 +1350,7 @@ const char* AccessibilityObjectAtspi::localizedRoleName() const
     if (const auto* effective = effectiveLocalizedRoleName())
         return effective;
 
-    return AccessibilityAtspi::localizedRoleName(m_coreObject->roleValue());
+    return AccessibilityAtspi::localizedRoleName(m_coreObject->role());
 }
 
 void AccessibilityObjectAtspi::updateBackingStore()
@@ -1381,7 +1361,7 @@ void AccessibilityObjectAtspi::updateBackingStore()
 
 bool AccessibilityObjectAtspi::isIgnored() const
 {
-    return m_coreObject ? m_coreObject->accessibilityIsIgnored() : true;
+    return m_coreObject ? m_coreObject->isIgnored() : true;
 }
 
 void AccessibilityObject::detachPlatformWrapper(AccessibilityDetachmentType detachmentType)
@@ -1416,11 +1396,11 @@ AccessibilityObjectInclusion AccessibilityObject::accessibilityPlatformIncludesO
 
     // Never expose an unknown object, since AT's won't know what to
     // do with them. This is what is done on the Mac as well.
-    if (roleValue() == AccessibilityRole::Unknown)
+    if (role() == AccessibilityRole::Unknown)
         return AccessibilityObjectInclusion::IgnoreObject;
 
     // The object containing the text should implement org.a11y.atspi.Text itself.
-    if (roleValue() == AccessibilityRole::StaticText)
+    if (role() == AccessibilityRole::StaticText)
         return AccessibilityObjectInclusion::IgnoreObject;
 
     // Entries and password fields have extraneous children which we want to ignore.
@@ -1428,13 +1408,13 @@ AccessibilityObjectInclusion AccessibilityObject::accessibilityPlatformIncludesO
         return AccessibilityObjectInclusion::IgnoreObject;
 
     // We expose the slider as a whole but not its value indicator.
-    if (roleValue() == AccessibilityRole::SliderThumb)
+    if (role() == AccessibilityRole::SliderThumb)
         return AccessibilityObjectInclusion::IgnoreObject;
 
     // List items inheriting presentational are ignored, but their content exposed.
     // Since we expose text in the parent, we need to expose presentational list items
     // with a different role (section).
-    if (roleValue() == AccessibilityRole::ListItem && inheritsPresentationalRole())
+    if (role() == AccessibilityRole::ListItem && inheritsPresentationalRole())
         return AccessibilityObjectInclusion::IncludeObject;
 
     RenderObject* renderObject = renderer();
@@ -1443,7 +1423,7 @@ AccessibilityObjectInclusion AccessibilityObject::accessibilityPlatformIncludesO
 
     // We always want to include paragraphs that have rendered content.
     // WebCore Accessibility does so unless there is a RenderBlock child.
-    if (roleValue() == AccessibilityRole::Paragraph) {
+    if (role() == AccessibilityRole::Paragraph) {
         auto child = childrenOfType<RenderBlock>(downcast<RenderElement>(*renderObject)).first();
         return child ? AccessibilityObjectInclusion::IncludeObject : AccessibilityObjectInclusion::DefaultBehavior;
     }
@@ -1457,7 +1437,7 @@ AccessibilityObjectInclusion AccessibilityObject::accessibilityPlatformIncludesO
         return AccessibilityObjectInclusion::DefaultBehavior;
     }
 
-    if (renderObject->isAnonymousBlock()) {
+    if (auto* renderBlock = dynamicDowncast<RenderBlock>(renderObject); renderBlock && renderBlock->isAnonymousBlock()) {
         // The text displayed by an ARIA menu item is exposed through the accessible name.
         if (parent->isMenuItem())
             return AccessibilityObjectInclusion::IgnoreObject;
@@ -1477,7 +1457,7 @@ AccessibilityObjectInclusion AccessibilityObject::accessibilityPlatformIncludesO
         // FIXME: This next one needs some further consideration. But paragraphs are not
         // typically huge (like divs). And ignoring anonymous block children of paragraphs
         // will preserve existing behavior.
-        if (parent->roleValue() == AccessibilityRole::Paragraph)
+        if (parent->role() == AccessibilityRole::Paragraph)
             return AccessibilityObjectInclusion::IgnoreObject;
 
         return AccessibilityObjectInclusion::DefaultBehavior;

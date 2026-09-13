@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,7 +38,7 @@ class GPUSupportedFeatures : public RefCounted<GPUSupportedFeatures> {
 public:
     static Ref<GPUSupportedFeatures> create(Ref<WebGPU::SupportedFeatures>&& backing)
     {
-        return adoptRef(*new GPUSupportedFeatures(WTFMove(backing)));
+        return adoptRef(*new GPUSupportedFeatures(WTF::move(backing)));
     }
 
     void initializeSetLike(DOMSetAdapter&) const;
@@ -48,11 +48,11 @@ public:
 
 private:
     GPUSupportedFeatures(Ref<WebGPU::SupportedFeatures>&& backing)
-        : m_backing(WTFMove(backing))
+        : m_backing(WTF::move(backing))
     {
     }
 
-    Ref<WebGPU::SupportedFeatures> m_backing;
+    const Ref<WebGPU::SupportedFeatures> m_backing;
 };
 
 }

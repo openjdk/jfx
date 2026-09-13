@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,12 +29,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+
+import com.sun.javafx.collections.ObservableListWrapper;
 import javafx.collections.ListChangeBuilderShim;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableListWrapperShim;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ListChangeBuilderTest {
 
@@ -43,7 +45,7 @@ public class ListChangeBuilderTest {
     private ArrayList<String> list;
     private MockListObserver<String> observer;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         observer = new MockListObserver<>();
         list = new ArrayList<>(Arrays.asList("a", "b", "c", "d"));
@@ -137,7 +139,7 @@ public class ListChangeBuilderTest {
         observer.checkAddRemove(1, observableList, Collections.EMPTY_LIST, 4, 5);
     }
 
-    //RT-37089
+    //JDK-8095966
     @Test
     public void testAddRemove_5() {
         builder.beginChange();
@@ -344,7 +346,7 @@ public class ListChangeBuilderTest {
         builder.nextPermutation(0, 3, new int[] { 2, 0, 1}); // new order is "b", "c", "a", "d"
 
         builder.endChange();
-         // "c", "a", "d" before "b" was added
+        // "c", "a", "d" before "b" was added
         observer.checkPermutation(0, observableList, 0, 3, new int[] {1, 0, 2});
 
         observer.checkAddRemove(1, observableList, Collections.EMPTY_LIST, 0, 1);
@@ -429,35 +431,53 @@ public class ListChangeBuilderTest {
         observer.checkAddRemove(1, observableList, removed, 0, 2);
     }
 
-    @Test(expected=IllegalStateException.class)
+    @Test
     public void testNextAddWithoutBegin() {
-        builder.nextAdd(0, 1);
+        assertThrows(IllegalStateException.class, () -> {
+            builder.nextAdd(0, 1);
+        });
     }
 
-    @Test(expected=IllegalStateException.class)
+
+    @Test
     public void testNextRemoveWithoutBegin() {
-        builder.nextRemove(0, (String)null);
+        assertThrows(IllegalStateException.class, () -> {
+            builder.nextRemove(0, (String)null);
+        });
     }
 
-    @Test(expected=IllegalStateException.class)
+
+    @Test
     public void testNextRemove2WithoutBegin() {
-        builder.nextRemove(0, Collections.EMPTY_LIST);
+        assertThrows(IllegalStateException.class, () -> {
+            builder.nextRemove(0, Collections.EMPTY_LIST);
+        });
     }
 
-    @Test(expected=IllegalStateException.class)
+
+    @Test
     public void testNextUpdateWithoutBegin() {
-        builder.nextUpdate(0);
+        assertThrows(IllegalStateException.class, () -> {
+            builder.nextUpdate(0);
+        });
     }
 
-    @Test(expected=IllegalStateException.class)
+
+    @Test
     public void testNextSetWithoutBegin() {
-        builder.nextSet(0, null);
+        assertThrows(IllegalStateException.class, () -> {
+            builder.nextSet(0, null);
+        });
     }
 
-    @Test(expected=IllegalStateException.class)
+
+    @Test
     public void testNextReplaceWithoutBegin() {
-        builder.nextReplace(0, 1, Collections.EMPTY_LIST);
+        assertThrows(IllegalStateException.class, () -> {
+            builder.nextReplace(0, 1, Collections.EMPTY_LIST);
+        });
     }
+
 
     @Test
     public void testEmpty() {
@@ -534,4 +554,205 @@ public class ListChangeBuilderTest {
         builder.endChange();
     }
 
+    /**
+     * <ul>
+     *     <li>An element is added on index 0</li>
+     *     <li>An element is removed on index 2</li>
+     *     <li>The element on index 0 is removed again</li>
+     * </ul>
+     * A change event should not be fired for the add-remove at the same index,
+     * because no 'real' change was made to the list.
+     * Further, the change should have the correct calculated index (from).
+     */
+    @Test
+    public void testAddRemoveOnSameIndexWithRemove() {
+        var list = new ExposedObservableList<>(new ArrayList<>(List.of(1, 2)));
+
+        list.addListener((ListChangeListener<? super Integer>) change -> {
+            change.next();
+            assertEquals(1, change.getFrom());
+            assertEquals(1, change.getRemovedSize());
+            assertEquals(List.of(2), change.getRemoved());
+
+            assertFalse(change.wasAdded());
+            assertFalse(change.next());
+        });
+
+        list.doBeginChange();
+
+        // [0, 1, 2]
+        list.addFirst(0);
+        // [0, 1]
+        list.remove(2);
+        // [1]
+        list.remove(0);
+
+        list.doEndChange();
+    }
+
+    /**
+     * <ul>
+     *     <li>An element is added on index 0</li>
+     *     <li>An element is added on index 3</li>
+     *     <li>The element on index 0 is removed again</li>
+     * </ul>
+     * A change event should not be fired for the add-remove at the same index,
+     * because no 'real' change was made to the list.
+     * Further, the change should have the correct calculated index (from).
+     */
+    @Test
+    public void testAddRemoveOnSameIndexWithAdd() {
+        var list = new ExposedObservableList<>(new ArrayList<>(List.of(1, 2)));
+
+        list.addListener((ListChangeListener<? super Integer>) change -> {
+            change.next();
+            assertEquals(2, change.getFrom());
+            assertEquals(1, change.getAddedSize());
+            assertEquals(List.of(3), change.getAddedSubList());
+
+            assertFalse(change.wasRemoved());
+            assertFalse(change.next());
+        });
+
+        list.doBeginChange();
+
+        // [0, 1, 2]
+        list.addFirst(0);
+        // [0, 1, 2, 3]
+        list.add(3);
+        // [1, 2, 3]
+        list.removeFirst();
+
+        list.doEndChange();
+    }
+
+    /**
+     * <ul>
+     *     <li>An element is added on index 2</li>
+     *     <li>An element is removed on index 4</li>
+     *     <li>An element is removed on index 0</li>
+     *     <li>The first added element (index 2) is now removed on index 1</li>
+     * </ul>
+     * A change event should not be fired for the add-remove at the same index,
+     * because no 'real' change was made to the list.
+     * Further, the second change should have the correct calculated index (from).
+     */
+    @Test
+    public void testIndirectAddRemoveOnSameIndexWithRemoved() {
+        var list = new ExposedObservableList<>(new ArrayList<>(List.of(1, 2, 3, 4)));
+
+        list.addListener((ListChangeListener.Change<? extends Integer> change) -> {
+            change.next();
+            assertEquals(0, change.getFrom());
+            assertEquals(1, change.getRemovedSize());
+            assertEquals(List.of(1), change.getRemoved());
+
+            assertFalse(change.wasAdded());
+
+            change.next();
+            assertEquals(2, change.getFrom());
+            assertEquals(1, change.getRemovedSize());
+            assertEquals(List.of(4), change.getRemoved());
+
+            assertFalse(change.wasAdded());
+
+            assertFalse(change.next());
+        });
+
+        list.doBeginChange();
+
+        // [1, 2, 6, 3, 4]
+        list.add(2, 6);
+        // [1, 2, 6, 3]
+        list.remove(4);
+        // [2, 6, 3]
+        list.remove(0);
+        // [2, 3]
+        list.remove(1);
+
+        list.doEndChange();
+    }
+
+    /**
+     * <ul>
+     *     <li>An element is added on index 2</li>
+     *     <li>An element is added on index 4</li>
+     *     <li>An element is removed on index 0</li>
+     *     <li>The first added element (index 2) is now removed on index 1</li>
+     * </ul>
+     * A change event should not be fired for the add-remove at the same index,
+     * because no 'real' change was made to the list.
+     * Further, the second change should have the correct calculated index (from).
+     */
+    @Test
+    public void testIndirectAddRemoveOnSameIndexWithAdded() {
+        var list = new ExposedObservableList<>(new ArrayList<>(List.of(1, 2, 3, 4)));
+
+        list.addListener((ListChangeListener.Change<? extends Integer> change) -> {
+            change.next();
+            assertEquals(0, change.getFrom());
+            assertEquals(1, change.getRemovedSize());
+            assertEquals(List.of(1), change.getRemoved());
+
+            assertFalse(change.wasAdded());
+
+            change.next();
+            assertEquals(2, change.getFrom());
+            assertEquals(1, change.getAddedSize());
+            assertEquals(List.of(5), change.getAddedSubList());
+
+            assertFalse(change.wasRemoved());
+
+            assertFalse(change.next());
+        });
+
+        list.doBeginChange();
+
+        // [1, 2, 6, 3, 4]
+        list.add(2, 6);
+        // [1, 2, 6, 3, 5, 4]
+        list.add(4, 5);
+        // [2, 6, 3, 5, 4]
+        list.remove(0);
+        // [2, 3, 5, 4]
+        list.remove(1);
+
+        list.doEndChange();
+    }
+
+    @Test
+    public void testRemoveDisjointFirstThenGaps() {
+        var list = new ExposedObservableList<>(new ArrayList<>(List.of("A", "B", "C", "D", "E", "F")));
+
+        list.addListener((ListChangeListener.Change<? extends String> change) -> {
+            assertEquals(1, change.getList().size());
+            change.next();
+
+            assertEquals(List.of("B", "C", "D", "E", "F"), change.getRemoved());
+
+            assertFalse(change.next());
+        });
+
+        list.doBeginChange();
+
+        list.remove("D");
+        list.remove("F");
+        list.remove("B");
+        list.remove("E");
+        list.remove("C");
+
+        list.doEndChange();
+    }
+
+    private static class ExposedObservableList<E> extends ObservableListWrapper<E> {
+        ExposedObservableList(List<E> list) {
+            super(list);
+        }
+        public void doBeginChange() {
+            beginChange();
+        }
+        public void doEndChange() {
+            endChange();
+        }
+    }
 }

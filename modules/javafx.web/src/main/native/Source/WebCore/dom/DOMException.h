@@ -28,7 +28,7 @@
 
 #pragma once
 
-#include "ExceptionCode.h"
+#include <WebCore/ExceptionCode.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -42,6 +42,8 @@ public:
 
     // For DOM bindings.
     static Ref<DOMException> create(const String& message, const String& name);
+
+    virtual ~DOMException() { }
 
     using LegacyCode = uint8_t;
     LegacyCode legacyCode() const { return m_legacyCode; }
@@ -60,13 +62,17 @@ public:
     static ASCIILiteral name(ExceptionCode ec) { return description(ec).name; }
     static ASCIILiteral message(ExceptionCode ec) { return description(ec).message; }
 
+    enum class Type : uint8_t { Default, WebTransportError, GPUPipelineError, RTCError };
+    Type type() const { return m_type; }
+
 protected:
-    DOMException(LegacyCode, const String& name, const String& message);
+    DOMException(LegacyCode, const String& name, const String& message, Type = Type::Default);
 
 private:
-    LegacyCode m_legacyCode;
-    String m_name;
-    String m_message;
+    const Type m_type;
+    const LegacyCode m_legacyCode;
+    const String m_name;
+    const String m_message;
 };
 
 } // namespace WebCore

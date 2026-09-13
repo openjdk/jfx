@@ -23,14 +23,14 @@
 
 #pragma once
 
-#include "EventModifierInit.h"
-#include "PlatformEvent.h"
-#include "UIEvent.h"
+#include <WebCore/EventModifierInit.h>
+#include <WebCore/PlatformEvent.h>
+#include <WebCore/UIEvent.h>
 
 namespace WebCore {
 
 class UIEventWithKeyState : public UIEvent {
-    WTF_MAKE_ISO_ALLOCATED(UIEventWithKeyState);
+    WTF_MAKE_TZONE_ALLOCATED(UIEventWithKeyState);
 public:
     using Modifier = PlatformEvent::Modifier;
 
@@ -38,7 +38,6 @@ public:
     bool shiftKey() const { return m_modifiers.contains(Modifier::ShiftKey); }
     bool altKey() const { return m_modifiers.contains(Modifier::AltKey); }
     bool metaKey() const { return m_modifiers.contains(Modifier::MetaKey); }
-    bool altGraphKey() const { return m_modifiers.contains(Modifier::AltGraphKey); }
     bool capsLockKey() const { return m_modifiers.contains(Modifier::CapsLockKey); }
 
     OptionSet<Modifier> modifierKeys() const { return m_modifiers; }
@@ -46,36 +45,43 @@ public:
     WEBCORE_EXPORT bool getModifierState(const String& keyIdentifier) const;
 
 protected:
-    UIEventWithKeyState() = default;
+    explicit UIEventWithKeyState(enum EventInterfaceType eventInterface)
+        : UIEvent(eventInterface)
+    {
+    }
 
-    UIEventWithKeyState(const AtomString& type, CanBubble canBubble, IsCancelable cancelable, IsComposed isComposed,
+    UIEventWithKeyState(enum EventInterfaceType eventInterface, const AtomString& type, CanBubble canBubble, IsCancelable cancelable, IsComposed isComposed,
         RefPtr<WindowProxy>&& view, int detail, OptionSet<Modifier> modifiers)
-        : UIEvent(type, canBubble, cancelable, isComposed, WTFMove(view), detail)
+        : UIEvent(eventInterface, type, canBubble, cancelable, isComposed, WTF::move(view), detail)
         , m_modifiers(modifiers)
     {
     }
 
-    UIEventWithKeyState(const AtomString& type, CanBubble canBubble, IsCancelable cancelable, IsComposed isComposed,
+    UIEventWithKeyState(enum EventInterfaceType eventInterface, const AtomString& type, CanBubble canBubble, IsCancelable cancelable, IsComposed isComposed,
         MonotonicTime timestamp, RefPtr<WindowProxy>&& view, int detail, OptionSet<Modifier> modifiers, IsTrusted isTrusted)
-        : UIEvent(type, canBubble, cancelable, isComposed, timestamp, WTFMove(view), detail, isTrusted)
+        : UIEvent(eventInterface, type, canBubble, cancelable, isComposed, timestamp, WTF::move(view), detail, isTrusted)
         , m_modifiers(modifiers)
     {
     }
 
-    UIEventWithKeyState(const AtomString& type, const EventModifierInit& initializer, IsTrusted isTrusted = IsTrusted::No)
-        : UIEvent(type, initializer, isTrusted)
+    UIEventWithKeyState(enum EventInterfaceType eventInterface, const AtomString& type, const EventModifierInit& initializer, IsTrusted isTrusted = IsTrusted::No)
+        : UIEvent(eventInterface, type, initializer, isTrusted)
         , m_modifiers(modifiersFromInitializer(initializer))
     {
     }
 
-    void setModifierKeys(bool ctrlKey, bool altKey, bool shiftKey, bool metaKey, bool altGraphKey = false);
+    void setModifierKeys(bool ctrlKey, bool altKey, bool shiftKey, bool metaKey);
 
 private:
-    OptionSet<Modifier> m_modifiers;
-
     static OptionSet<Modifier> modifiersFromInitializer(const EventModifierInit& initializer);
+
+    bool isUIEventWithKeyState() const final { return true; }
+
+    OptionSet<Modifier> m_modifiers;
 };
 
-UIEventWithKeyState* findEventWithKeyState(Event*);
+RefPtr<UIEventWithKeyState> findEventWithKeyState(Event*);
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENT_POLYMORPHIC(UIEventWithKeyState)

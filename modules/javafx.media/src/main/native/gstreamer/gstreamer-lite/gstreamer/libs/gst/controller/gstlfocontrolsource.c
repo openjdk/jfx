@@ -352,16 +352,16 @@ static struct
   GstControlSourceGetValueArray get_value_array;
 } waveforms[] = {
   {
-  (GstControlSourceGetValue) waveform_sine_get,
-        (GstControlSourceGetValueArray) waveform_sine_get_value_array}, {
-  (GstControlSourceGetValue) waveform_square_get,
-        (GstControlSourceGetValueArray) waveform_square_get_value_array}, {
-  (GstControlSourceGetValue) waveform_saw_get,
-        (GstControlSourceGetValueArray) waveform_saw_get_value_array}, {
-  (GstControlSourceGetValue) waveform_rsaw_get,
-        (GstControlSourceGetValueArray) waveform_rsaw_get_value_array}, {
-  (GstControlSourceGetValue) waveform_triangle_get,
-        (GstControlSourceGetValueArray) waveform_triangle_get_value_array}
+        (GstControlSourceGetValue) waveform_sine_get,
+      (GstControlSourceGetValueArray) waveform_sine_get_value_array}, {
+        (GstControlSourceGetValue) waveform_square_get,
+      (GstControlSourceGetValueArray) waveform_square_get_value_array}, {
+        (GstControlSourceGetValue) waveform_saw_get,
+      (GstControlSourceGetValueArray) waveform_saw_get_value_array}, {
+        (GstControlSourceGetValue) waveform_rsaw_get,
+      (GstControlSourceGetValueArray) waveform_rsaw_get_value_array}, {
+        (GstControlSourceGetValue) waveform_triangle_get,
+      (GstControlSourceGetValueArray) waveform_triangle_get_value_array}
 };
 
 static const guint num_waveforms = G_N_ELEMENTS (waveforms);

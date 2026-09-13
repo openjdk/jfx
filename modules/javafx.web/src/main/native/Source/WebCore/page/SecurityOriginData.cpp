@@ -30,11 +30,16 @@
 #include "Document.h"
 #include "LegacySchemeRegistry.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "SecurityOrigin.h"
 #include <wtf/FileSystem.h>
 #include <wtf/text/CString.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
+
+#if PLATFORM(COCOA)
+#include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
+#endif
 
 namespace WebCore {
 
@@ -50,8 +55,8 @@ String SecurityOriginData::toString() const
 
     auto port = this->port();
     if (!port)
-        return makeString(protocol, "://", host);
-    return makeString(protocol, "://", host, ':', static_cast<uint32_t>(*port));
+        return makeString(protocol, "://"_s, host);
+    return makeString(protocol, "://"_s, host, ':', static_cast<uint32_t>(*port));
 }
 
 URL SecurityOriginData::toURL() const
@@ -64,7 +69,7 @@ SecurityOriginData SecurityOriginData::fromFrame(LocalFrame* frame)
     if (!frame)
         return SecurityOriginData { };
 
-    auto* document = frame->document();
+    RefPtr document = frame->document();
     if (!document)
         return SecurityOriginData { };
 
@@ -112,6 +117,15 @@ String SecurityOriginData::databaseIdentifier() const
     return makeString(protocol, separatorCharacter, FileSystem::encodeForFileName(host()), separatorCharacter, port().value_or(0));
 }
 
+String SecurityOriginData::optionalDatabaseIdentifier() const
+{
+    auto url = toURL();
+    if (!url.isValid())
+        return { };
+
+    return databaseIdentifier();
+}
+
 std::optional<SecurityOriginData> SecurityOriginData::fromDatabaseIdentifier(StringView databaseIdentifier)
 {
     // Make sure there's a first separator
@@ -153,7 +167,7 @@ SecurityOriginData SecurityOriginData::isolatedCopy() const &
 
 SecurityOriginData SecurityOriginData::isolatedCopy() &&
 {
-    return SecurityOriginData { crossThreadCopy(WTFMove(m_data)) };
+    return SecurityOriginData { crossThreadCopy(WTF::move(m_data)) };
 }
 
 bool operator==(const SecurityOriginData& a, const SecurityOriginData& b)
@@ -201,6 +215,9 @@ bool SecurityOriginData::shouldTreatAsOpaqueOrigin(const URL& url)
 #endif
 #if PLATFORM(GTK) || PLATFORM(WPE)
         || url.protocolIs("resource"_s)
+#endif
+#if PLATFORM(JAVA)
+        || url.protocolIs("jar:file"_s)
 #endif
 #if ENABLE(PDFJS)
         || url.protocolIs("webkit-pdfjs-viewer"_s)

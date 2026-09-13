@@ -31,11 +31,12 @@
 
 #pragma once
 
-#include "CookieRequestHeaderFieldProxy.h"
+#include <WebCore/CookieRequestHeaderFieldProxy.h>
+#include <WebCore/ResourceResponse.h>
+#include <WebCore/WebSocketExtensionDispatcher.h>
+#include <WebCore/WebSocketExtensionProcessor.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/URL.h>
-#include "ResourceResponse.h"
-#include "WebSocketExtensionDispatcher.h"
-#include "WebSocketExtensionProcessor.h"
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -44,7 +45,8 @@ namespace WebCore {
 class ResourceRequest;
 
 class WebSocketHandshake {
-    WTF_MAKE_NONCOPYABLE(WebSocketHandshake); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(WebSocketHandshake, WEBCORE_EXPORT);
+    WTF_MAKE_NONCOPYABLE(WebSocketHandshake);
 public:
     enum Mode {
         Incomplete, Normal, Failed, Connected
@@ -65,11 +67,11 @@ public:
     String clientLocation() const;
 
     WEBCORE_EXPORT CString clientHandshakeMessage() const;
-    WEBCORE_EXPORT ResourceRequest clientHandshakeRequest(const Function<String(const URL&)>& cookieRequestHeaderFieldValue) const;
+    WEBCORE_EXPORT ResourceRequest clientHandshakeRequest(NOESCAPE const Function<String(const URL&)>& cookieRequestHeaderFieldValue) const;
 
     WEBCORE_EXPORT void reset();
 
-    WEBCORE_EXPORT int readServerHandshake(const uint8_t* header, size_t len);
+    WEBCORE_EXPORT int readServerHandshake(std::span<const uint8_t> header);
     WEBCORE_EXPORT Mode mode() const;
     WEBCORE_EXPORT String failureReason() const; // Returns a string indicating the reason of failure if mode() == Failed.
 
@@ -88,10 +90,10 @@ public:
 
 private:
 
-    int readStatusLine(const uint8_t* header, size_t headerLength, int& statusCode, AtomString& statusText);
+    int readStatusLine(std::span<const uint8_t> header, int& statusCode, String& statusText);
 
     // Reads all headers except for the two predefined ones.
-    const uint8_t* readHTTPHeaders(const uint8_t* start, const uint8_t* end);
+    std::span<const uint8_t> readHTTPHeaders(std::span<const uint8_t>);
     void processHeaders();
     bool checkResponseHeaders();
 

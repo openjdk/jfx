@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,8 +27,10 @@
 #include "InsertNodeBeforeCommand.h"
 
 #include "CompositeEditCommand.h"
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "Editing.h"
+#include "NodeDocument.h"
 #include "RenderElement.h"
 #include "Text.h"
 
@@ -36,7 +38,7 @@ namespace WebCore {
 
 InsertNodeBeforeCommand::InsertNodeBeforeCommand(Ref<Node>&& insertChild, Node& refChild, ShouldAssumeContentIsAlwaysEditable shouldAssumeContentIsAlwaysEditable, EditAction editingAction)
     : SimpleEditCommand(refChild.document(), editingAction)
-    , m_insertChild(WTFMove(insertChild))
+    , m_insertChild(WTF::move(insertChild))
     , m_refChild(refChild)
     , m_shouldAssumeContentIsAlwaysEditable(shouldAssumeContentIsAlwaysEditable)
 {
@@ -48,12 +50,12 @@ InsertNodeBeforeCommand::InsertNodeBeforeCommand(Ref<Node>&& insertChild, Node& 
 
 void InsertNodeBeforeCommand::doApply()
 {
-    ContainerNode* parent = m_refChild->parentNode();
+    RefPtr parent = m_refChild->parentNode();
     if (!parent || (m_shouldAssumeContentIsAlwaysEditable == DoNotAssumeContentIsAlwaysEditable && !isEditableNode(*parent)))
         return;
     ASSERT(isEditableNode(*parent));
 
-    parent->insertBefore(m_insertChild, m_refChild.ptr());
+    parent->insertBefore(m_insertChild, m_refChild.copyRef());
 }
 
 void InsertNodeBeforeCommand::doUnapply()
@@ -65,7 +67,7 @@ void InsertNodeBeforeCommand::doUnapply()
 }
 
 #ifndef NDEBUG
-void InsertNodeBeforeCommand::getNodesInCommand(HashSet<Ref<Node>>& nodes)
+void InsertNodeBeforeCommand::getNodesInCommand(NodeSet& nodes)
 {
     addNodeAndDescendants(m_insertChild.ptr(), nodes);
     addNodeAndDescendants(m_refChild.ptr(), nodes);

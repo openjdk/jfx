@@ -1,7 +1,7 @@
 /*
    Copyright (C) 2000-2001 Dawit Alemayehu <adawit@kde.org>
    Copyright (C) 2006 Alexey Proskuryakov <ap@webkit.org>
-   Copyright (C) 2007-2021, 2023 Apple Inc. All rights reserved.
+   Copyright (C) 2007-2024 Apple Inc. All rights reserved.
    Copyright (C) 2010 Patrick Gansterer <paroga@paroga.com>
 
    This program is free software; you can redistribute it and/or modify
@@ -25,6 +25,10 @@
 #include <wtf/text/Base64.h>
 
 #include <limits.h>
+#include <wtf/SIMDUTF.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/text/MakeString.h>
+#include <wtf/text/StringCommon.h>
 
 namespace WTF {
 
@@ -33,7 +37,7 @@ constexpr const char nonAlphabet = -1;
 constexpr unsigned encodeMapSize = 64;
 constexpr unsigned decodeMapSize = 128;
 
-static const char base64EncMap[encodeMapSize] = {
+static constexpr std::array<char, encodeMapSize> base64EncMap {
     0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48,
     0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F, 0x50,
     0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58,
@@ -44,7 +48,7 @@ static const char base64EncMap[encodeMapSize] = {
     0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x2B, 0x2F
 };
 
-static const char base64DecMap[decodeMapSize] = {
+static constexpr std::array<char, decodeMapSize> base64DecMap {
     nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet,
     nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet,
     nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet,
@@ -63,7 +67,7 @@ static const char base64DecMap[decodeMapSize] = {
     0x31, 0x32, 0x33, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet
 };
 
-static const char base64URLEncMap[encodeMapSize] = {
+static constexpr std::array<char, encodeMapSize> base64URLEncMap {
     0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48,
     0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F, 0x50,
     0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58,
@@ -74,7 +78,7 @@ static const char base64URLEncMap[encodeMapSize] = {
     0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x2D, 0x5F
 };
 
-static const char base64URLDecMap[decodeMapSize] = {
+static constexpr std::array<char, decodeMapSize> base64URLDecMap {
     nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet,
     nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet,
     nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet,
@@ -93,12 +97,30 @@ static const char base64URLDecMap[decodeMapSize] = {
     0x31, 0x32, 0x33, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet, nonAlphabet
 };
 
-template<typename CharacterType> static void base64EncodeInternal(std::span<const uint8_t> inputDataBuffer, std::span<CharacterType> destinationDataBuffer, Base64EncodeMode mode)
+static inline simdutf::base64_options toSIMDUTFEncodeOptions(OptionSet<Base64EncodeOption> options)
+{
+    if (options.contains(Base64EncodeOption::URL)) {
+        if (options.contains(Base64EncodeOption::OmitPadding))
+            return simdutf::base64_url;
+        return simdutf::base64_url_with_padding;
+    }
+    if (options.contains(Base64EncodeOption::OmitPadding))
+        return simdutf::base64_default_no_padding;
+    return simdutf::base64_default;
+}
+
+template<typename CharacterType> static void base64EncodeInternal(std::span<const uint8_t> inputDataBuffer, std::span<CharacterType> destinationDataBuffer, OptionSet<Base64EncodeOption> options)
 {
     ASSERT(destinationDataBuffer.size() > 0);
-    ASSERT(calculateBase64EncodedSize(inputDataBuffer.size(), mode) == destinationDataBuffer.size());
+    ASSERT(calculateBase64EncodedSize(inputDataBuffer.size(), options) == destinationDataBuffer.size());
 
-    auto encodeMap = (mode == Base64EncodeMode::URL) ? base64URLEncMap : base64EncMap;
+    if constexpr (sizeof(CharacterType) == 1) {
+        size_t bytesWritten = simdutf::binary_to_base64(std::bit_cast<const char*>(inputDataBuffer.data()), inputDataBuffer.size(), std::bit_cast<char*>(destinationDataBuffer.data()), toSIMDUTFEncodeOptions(options));
+        ASSERT_UNUSED(bytesWritten, bytesWritten == destinationDataBuffer.size());
+        return;
+    }
+
+    auto encodeMap = options.contains(Base64EncodeOption::URL) ? base64URLEncMap : base64EncMap;
 
     unsigned sidx = 0;
     unsigned didx = 0;
@@ -122,65 +144,76 @@ template<typename CharacterType> static void base64EncodeInternal(std::span<cons
             destinationDataBuffer[didx++] = encodeMap[ (inputDataBuffer[sidx    ] << 4) & 077];
     }
 
-    ASSERT(mode != Base64EncodeMode::URL || didx == destinationDataBuffer.size());
-
+    if (!options.contains(Base64EncodeOption::OmitPadding)) {
     while (didx < destinationDataBuffer.size())
         destinationDataBuffer[didx++] = '=';
+    }
+
+    ASSERT(didx == destinationDataBuffer.size());
 }
 
-template<typename CharacterType> static void base64EncodeInternal(std::span<const std::byte> input, std::span<CharacterType> destinationDataBuffer, Base64EncodeMode mode)
+template<typename CharacterType> static void base64EncodeInternal(std::span<const std::byte> input, std::span<CharacterType> destinationDataBuffer, OptionSet<Base64EncodeOption> options)
 {
-    base64EncodeInternal(std::span(reinterpret_cast<const uint8_t*>(input.data()), input.size()), destinationDataBuffer, mode);
+    base64EncodeInternal(asBytes(input), destinationDataBuffer, options);
 }
 
-static Vector<uint8_t> base64EncodeInternal(std::span<const std::byte> input, Base64EncodeMode mode)
+static Vector<uint8_t> base64EncodeInternal(std::span<const std::byte> input, OptionSet<Base64EncodeOption> options)
 {
-    auto destinationLength = calculateBase64EncodedSize(input.size(), mode);
+    auto destinationLength = calculateBase64EncodedSize(input.size(), options);
     if (!destinationLength)
         return { };
 
     Vector<uint8_t> destinationVector(destinationLength);
-    base64EncodeInternal(input, std::span(destinationVector), mode);
+    base64EncodeInternal(input, std::span(destinationVector), options);
     return destinationVector;
 }
 
-void base64Encode(std::span<const std::byte> input, std::span<UChar> destination, Base64EncodeMode mode)
+void base64Encode(std::span<const std::byte> input, std::span<char16_t> destination, OptionSet<Base64EncodeOption> options)
 {
     if (!destination.size())
         return;
-    base64EncodeInternal(input, destination, mode);
+    base64EncodeInternal(input, destination, options);
 }
 
-void base64Encode(std::span<const std::byte> input, std::span<LChar> destination, Base64EncodeMode mode)
+void base64Encode(std::span<const std::byte> input, std::span<Latin1Character> destination, OptionSet<Base64EncodeOption> options)
 {
     if (!destination.size())
         return;
-    base64EncodeInternal(input, destination, mode);
+    base64EncodeInternal(input, destination, options);
 }
 
-Vector<uint8_t> base64EncodeToVector(std::span<const std::byte> input, Base64EncodeMode mode)
+Vector<uint8_t> base64EncodeToVector(std::span<const std::byte> input, OptionSet<Base64EncodeOption> options)
 {
-    return base64EncodeInternal(input, mode);
+    return base64EncodeInternal(input, options);
 }
 
-String base64EncodeToString(std::span<const std::byte> input, Base64EncodeMode mode)
+String base64EncodeToString(std::span<const std::byte> input, OptionSet<Base64EncodeOption> options)
 {
-    return makeString(base64Encoded(input, mode));
+    return makeString(base64Encoded(input, options));
 }
 
-String base64EncodeToStringReturnNullIfOverflow(std::span<const std::byte> input, Base64EncodeMode mode)
+String base64EncodeToStringReturnNullIfOverflow(std::span<const std::byte> input, OptionSet<Base64EncodeOption> options)
 {
-    return tryMakeString(base64Encoded(input, mode));
+    return tryMakeString(base64Encoded(input, options));
+}
+
+unsigned calculateBase64EncodedSize(unsigned inputLength, OptionSet<Base64EncodeOption> options)
+{
+    if (inputLength > maximumBase64EncoderInputBufferSize)
+        return 0;
+
+    return simdutf::base64_length_from_binary(inputLength, toSIMDUTFEncodeOptions(options));
 }
 
 template<typename T, typename Malloc = VectorBufferMalloc>
-static std::optional<Vector<uint8_t, 0, CrashOnOverflow, 16, Malloc>> base64DecodeInternal(std::span<const T> inputDataBuffer, Base64DecodeMode mode)
+static std::optional<Vector<uint8_t, 0, CrashOnOverflow, 16, Malloc>> base64DecodeInternal(std::span<const T> inputDataBuffer, OptionSet<Base64DecodeOption> options)
 {
     if (!inputDataBuffer.size())
         return Vector<uint8_t, 0, CrashOnOverflow, 16, Malloc> { };
 
-    auto decodeMap = (mode == Base64DecodeMode::URL) ? base64URLDecMap : base64DecMap;
-    auto validatePadding = mode == Base64DecodeMode::DefaultValidatePadding || mode == Base64DecodeMode::DefaultValidatePaddingAndIgnoreWhitespace;
+    auto decodeMap = options.contains(Base64DecodeOption::URL) ? base64URLDecMap : base64DecMap;
+    auto validatePadding = options.contains(Base64DecodeOption::ValidatePadding);
+    auto ignoreWhitespace = options.contains(Base64DecodeOption::IgnoreWhitespace);
 
     Vector<uint8_t, 0, CrashOnOverflow, 16, Malloc> destination(inputDataBuffer.size());
 
@@ -200,7 +233,7 @@ static std::optional<Vector<uint8_t, 0, CrashOnOverflow, 16, Malloc>> base64Deco
                 if (equalsSignCount)
                     return std::nullopt;
                 destination[destinationLength++] = decodedCharacter;
-            } else if (mode != Base64DecodeMode::DefaultValidatePaddingAndIgnoreWhitespace || !isASCIIWhitespace(ch))
+            } else if (!ignoreWhitespace || !isASCIIWhitespace(ch))
                 return std::nullopt;
             }
         }
@@ -253,33 +286,88 @@ static std::optional<Vector<uint8_t, 0, CrashOnOverflow, 16, Malloc>> base64Deco
     return destination;
 }
 
-std::optional<Vector<uint8_t>> base64Decode(std::span<const std::byte> input, Base64DecodeMode mode)
+std::optional<Vector<uint8_t>> base64Decode(std::span<const std::byte> input, OptionSet<Base64DecodeOption> options)
 {
     if (input.size() > std::numeric_limits<unsigned>::max())
         return std::nullopt;
-    return base64DecodeInternal(std::span(reinterpret_cast<const uint8_t*>(input.data()), input.size()), mode);
+    return base64DecodeInternal(asBytes(input), options);
 }
 
-std::optional<Vector<uint8_t>> base64Decode(StringView input, Base64DecodeMode mode)
+std::optional<Vector<uint8_t>> base64Decode(StringView input, OptionSet<Base64DecodeOption> options)
 {
-    unsigned length = input.length();
-    if (!length || input.is8Bit())
-        return base64DecodeInternal(std::span(input.characters8(), length), mode);
-    return base64DecodeInternal(std::span(input.characters16(), length), mode);
+    if (input.is8Bit())
+        return base64DecodeInternal(input.span8(), options);
+    return base64DecodeInternal(input.span16(), options);
 }
 
-String base64DecodeToString(StringView input, Base64DecodeMode mode)\
+String base64DecodeToString(StringView input, OptionSet<Base64DecodeOption> options)
 {
     auto toString = [&] (auto optionalBuffer) {
         if (!optionalBuffer)
             return nullString();
-        return String::adopt(WTFMove(*optionalBuffer));
+        return String::adopt(WTF::move(*optionalBuffer));
     };
 
-    unsigned length = input.length();
-    if (!length || input.is8Bit())
-        return toString(base64DecodeInternal<LChar, StringImplMalloc>(std::span(input.characters8(), length), mode));
-    return toString(base64DecodeInternal<UChar, StringImplMalloc>(std::span(input.characters16(), length), mode));
+    if (input.is8Bit())
+        return toString(base64DecodeInternal<Latin1Character, StringImplMalloc>(input.span8(), options));
+    return toString(base64DecodeInternal<char16_t, StringImplMalloc>(input.span16(), options));
+}
+
+static inline simdutf::base64_options toSIMDUTFDecodeOptions(Alphabet alphabet)
+{
+    switch (alphabet) {
+    case Alphabet::Base64:
+        return simdutf::base64_default;
+    case Alphabet::Base64URL:
+        return simdutf::base64_url;
+                }
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+static inline simdutf::last_chunk_handling_options toSIMDUTFLastChunkHandling(LastChunkHandling lastChunkHandling)
+{
+    switch (lastChunkHandling) {
+    case LastChunkHandling::Loose:
+        return simdutf::last_chunk_handling_options::loose;
+    case LastChunkHandling::Strict:
+        return simdutf::last_chunk_handling_options::strict;
+    case LastChunkHandling::StopBeforePartial:
+        return simdutf::last_chunk_handling_options::stop_before_partial;
+            }
+    RELEASE_ASSERT_NOT_REACHED();
+}
+
+template<typename CharacterType>
+static std::tuple<FromBase64ShouldThrowError, size_t, size_t> fromBase64Impl(std::span<const CharacterType> span, std::span<uint8_t> output, Alphabet alphabet, LastChunkHandling lastChunkHandling)
+{
+    using UTFType = std::conditional_t<sizeof(CharacterType) == 1, char, char16_t>;
+
+    size_t outputLength = output.size();
+    constexpr bool decodeUpToBadChar = true;
+    auto result = simdutf::base64_to_binary_safe(std::bit_cast<const UTFType*>(span.data()), span.size(), std::bit_cast<char*>(output.data()), outputLength, toSIMDUTFDecodeOptions(alphabet), toSIMDUTFLastChunkHandling(lastChunkHandling), decodeUpToBadChar);
+    switch (result.error) {
+    case simdutf::error_code::OUTPUT_BUFFER_TOO_SMALL:
+    case simdutf::error_code::SUCCESS:
+        return { FromBase64ShouldThrowError::No, result.count, outputLength };
+
+    default:
+        return { FromBase64ShouldThrowError::Yes, result.count, outputLength };
+    }
+}
+
+std::tuple<FromBase64ShouldThrowError, size_t, size_t> fromBase64(StringView string, std::span<uint8_t> output, Alphabet alphabet, LastChunkHandling lastChunkHandling)
+{
+    if (string.is8Bit())
+        return fromBase64Impl(string.span8(), output, alphabet, lastChunkHandling);
+    return fromBase64Impl(string.span16(), output, alphabet, lastChunkHandling);
+}
+
+size_t maxLengthFromBase64(StringView string)
+{
+    size_t length = string.length();
+    if (string.is8Bit())
+        return simdutf::maximal_binary_length_from_base64(std::bit_cast<const char*>(string.span8().data()), length);
+    return simdutf::maximal_binary_length_from_base64(std::bit_cast<const char16_t*>(string.span16().data()), length);
 }
 
 } // namespace WTF

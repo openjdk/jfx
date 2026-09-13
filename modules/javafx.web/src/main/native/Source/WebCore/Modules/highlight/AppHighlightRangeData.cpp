@@ -39,24 +39,26 @@
 #include "StaticRange.h"
 #include "TextIterator.h"
 #include "WebCorePersistentCoders.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/persistence/PersistentCoders.h>
 
 namespace WebCore {
 
-std::optional<AppHighlightRangeData> AppHighlightRangeData::create(const FragmentedSharedBuffer& buffer)
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AppHighlightRangeData);
+
+std::optional<AppHighlightRangeData> AppHighlightRangeData::create(const SharedBuffer& buffer)
 {
-    auto contiguousBuffer = buffer.makeContiguous();
-    auto decoder = contiguousBuffer->decoder();
+    auto decoder = buffer.decoder();
     std::optional<AppHighlightRangeData> data;
     decoder >> data;
     return data;
 }
 
-Ref<FragmentedSharedBuffer> AppHighlightRangeData::toSharedBuffer() const
+Ref<SharedBuffer> AppHighlightRangeData::toSharedBuffer() const
 {
     WTF::Persistence::Encoder encoder;
     encoder << *this;
-    return SharedBuffer::create(encoder.buffer(), encoder.bufferSize());
+    return SharedBuffer::create(encoder.span());
 }
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,13 +27,14 @@
 
 #include <limits.h>
 #include <wtf/Assertions.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
 // A mixin for creating the various kinds of variable offsets that our engine supports.
 template<typename T>
 class GenericOffset {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(GenericOffset);
 public:
     static constexpr unsigned invalidOffset = UINT_MAX;
 
@@ -60,26 +61,7 @@ public:
         return m_offset;
     }
 
-    bool operator==(const GenericOffset& other) const
-    {
-        return m_offset == other.m_offset;
-    }
-    bool operator<(const GenericOffset& other) const
-    {
-        return m_offset < other.m_offset;
-    }
-    bool operator>(const GenericOffset& other) const
-    {
-        return m_offset > other.m_offset;
-    }
-    bool operator<=(const GenericOffset& other) const
-    {
-        return m_offset <= other.m_offset;
-    }
-    bool operator>=(const GenericOffset& other) const
-    {
-        return m_offset >= other.m_offset;
-    }
+    friend auto operator<=>(const GenericOffset&, const GenericOffset&) = default;
 
     T operator+(int value) const
     {
@@ -101,5 +83,7 @@ public:
 private:
     unsigned m_offset;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<typename T>, GenericOffset<T>);
 
 } // namespace JSC

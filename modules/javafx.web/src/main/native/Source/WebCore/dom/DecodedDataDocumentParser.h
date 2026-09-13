@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Google, Inc. All Rights Reserved.
+ * Copyright (C) 2010 Google, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,7 +43,7 @@ private:
     void append(RefPtr<StringImpl>&&) override = 0;
 
     // appendBytes and flush are used by DocumentWriter (the loader).
-    void appendBytes(DocumentWriter&, const uint8_t* bytes, size_t length) override;
+    void appendBytes(DocumentWriter&, std::span<const uint8_t>) override;
     void flush(DocumentWriter&) override;
 };
 

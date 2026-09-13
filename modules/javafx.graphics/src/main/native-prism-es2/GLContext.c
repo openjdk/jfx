@@ -1011,6 +1011,11 @@ jboolean doReadPixels(JNIEnv *env, jlong nativeCtxInfo, jint length, jobject buf
         return JNI_FALSE;
     }
 
+    if (width <= 0 || height <= 0) {
+        fprintf(stderr, "doReadPixels: width or height is <= 0\n");
+        return JNI_FALSE;
+    }
+
     // sanity check, do we have enough memory
     // length, width and height are non-negative
     if ((length / 4 / width) < height) {

@@ -24,70 +24,121 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef BitmapTexture_h
-#define BitmapTexture_h
+#pragma once
 
+#include "ClipStack.h"
+#include "FilterOperation.h"
 #include "IntPoint.h"
 #include "IntRect.h"
 #include "IntSize.h"
+#include "PixelFormat.h"
+#include "TextureMapperGLHeaders.h"
+#include <wtf/OptionSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
 
+#if USE(GBM)
+#include "MemoryMappedGPUBuffer.h"
+#endif
+
+typedef void *EGLImage;
+
 namespace WebCore {
 
-class FilterOperations;
 class GraphicsLayer;
-class Image;
+class NativeImage;
 class TextureMapper;
+enum class TextureMapperFlags : uint16_t;
 
-// A 2D texture that can be the target of software or GL rendering.
-class BitmapTexture : public RefCounted<BitmapTexture> {
+class BitmapTexture final : public ThreadSafeRefCounted<BitmapTexture> {
 public:
-    enum Flag {
-        NoFlag = 0,
+    enum class Flags : uint8_t {
         SupportsAlpha = 1 << 0,
         DepthBuffer = 1 << 1,
+#if USE(GBM)
+        BackedByDMABuf = 1 << 2,
+        ForceLinearBuffer = 1 << 3,
+        ForceVivanteSuperTiledBuffer = 1 << 4,
+#endif
     };
 
-    typedef unsigned Flags;
-
-    BitmapTexture()
-        : m_flags(0)
+    static Ref<BitmapTexture> create(const IntSize& size, OptionSet<Flags> flags = { })
     {
+        return adoptRef(*new BitmapTexture(size, flags));
     }
 
-    virtual ~BitmapTexture() = default;
-    virtual bool isBackedByOpenGL() const { return false; }
+#if USE(GBM)
+    static Ref<BitmapTexture> create(EGLImage image, OptionSet<Flags> flags = { })
+    {
+        return adoptRef(*new BitmapTexture(image, flags));
+    }
+#endif
 
-    virtual IntSize size() const = 0;
-    virtual void updateContents(Image*, const IntRect&, const IntPoint& offset) = 0;
+    WEBCORE_EXPORT ~BitmapTexture();
+
+    const IntSize& size() const { return m_size; };
+    size_t sizeInBytes() const;
+    OptionSet<Flags> flags() const { return m_flags; }
+    bool isOpaque() const { return !m_flags.contains(Flags::SupportsAlpha); }
+
+    void bindAsSurface();
+    void initializeStencil();
+    void initializeDepthBuffer();
+    uint32_t id() const { return m_id; }
+
+    void updateContents(NativeImage*, const IntRect&, const IntPoint& offset);
     void updateContents(GraphicsLayer*, const IntRect& target, const IntPoint& offset, float scale = 1);
-    virtual void updateContents(const void*, const IntRect& target, const IntPoint& offset, int bytesPerLine) = 0;
-    virtual bool isValid() const = 0;
-    inline Flags flags() const { return m_flags; }
+    void updateContents(const void* srcData, const IntRect& targetRect, const IntPoint& sourceOffset, int bytesPerLine, PixelFormat);
 
-    virtual int bpp() const { return 32; }
-    void reset(const IntSize& size, Flags flags = 0)
-    {
-        m_flags = flags;
-        m_contentSize = size;
-        didReset();
-    }
-    virtual void didReset() { }
+    void swapTexture(BitmapTexture&);
+    void reset(const IntSize&, OptionSet<Flags> = { });
 
-    inline IntSize contentSize() const { return m_contentSize; }
-    inline int numberOfBytes() const { return size().width() * size().height() * bpp() >> 3; }
-    inline bool isOpaque() const { return !(m_flags & SupportsAlpha); }
+    RefPtr<const FilterOperation> filterOperation() const { return m_filterOperation; }
+    void setFilterOperation(RefPtr<const FilterOperation>&& filterOperation) { m_filterOperation = WTF::move(filterOperation); }
 
-    virtual RefPtr<BitmapTexture> applyFilters(TextureMapper&, const FilterOperations&, bool) { return this; }
+    ClipStack& clipStack() { return m_clipStack; }
 
-protected:
-    IntSize m_contentSize;
+    void copyFromExternalTexture(GLuint sourceTextureID, const IntRect& targetRect, const IntSize& sourceOffset);
+
+    OptionSet<TextureMapperFlags> colorConvertFlags() const;
+
+#if USE(GBM)
+    MemoryMappedGPUBuffer* memoryMappedGPUBuffer() const { return m_memoryMappedGPUBuffer.get(); }
+    IntSize allocatedSize() const;
+#else
+    IntSize allocatedSize() const { return m_size; }
+#endif
 
 private:
-    Flags m_flags;
+    BitmapTexture(const IntSize&, OptionSet<Flags>);
+#if USE(GBM)
+    BitmapTexture(EGLImage, OptionSet<Flags>);
+#endif
+
+    void clearIfNeeded();
+    void createFboIfNeeded();
+
+    void createTexture();
+    void allocateTexture();
+#if USE(GBM)
+    bool allocateTextureFromMemoryMappedGPUBuffer();
+#endif
+
+    OptionSet<Flags> m_flags;
+    IntSize m_size;
+    GLuint m_id { 0 };
+    GLuint m_fbo { 0 };
+    GLuint m_depthBufferObject { 0 };
+    GLuint m_stencilBufferObject { 0 };
+    bool m_stencilBound { false };
+    bool m_shouldClear { true };
+    ClipStack m_clipStack;
+    RefPtr<const FilterOperation> m_filterOperation;
+    PixelFormat m_pixelFormat { PixelFormat::RGBA8 };
+
+#if USE(GBM)
+    std::unique_ptr<MemoryMappedGPUBuffer> m_memoryMappedGPUBuffer;
+#endif
 };
 
-}
-
-#endif // BitmapTexture_h
+} // namespace WebCore

@@ -28,29 +28,24 @@
 #if ENABLE(WEBGL)
 #include "EXTColorBufferHalfFloat.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(EXTColorBufferHalfFloat);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EXTColorBufferHalfFloat);
 
 EXTColorBufferHalfFloat::EXTColorBufferHalfFloat(WebGLRenderingContextBase& context)
-    : WebGLExtension(context)
+    : WebGLExtension(context, WebGLExtensionName::EXTColorBufferHalfFloat)
 {
-    context.graphicsContextGL()->ensureExtensionEnabled("GL_EXT_color_buffer_half_float"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::EXT_color_buffer_half_float);
 }
 
 EXTColorBufferHalfFloat::~EXTColorBufferHalfFloat() = default;
 
-WebGLExtension::ExtensionName EXTColorBufferHalfFloat::getName() const
-{
-    return EXTColorBufferHalfFloatName;
-}
-
 bool EXTColorBufferHalfFloat::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_OES_texture_half_float"_s)
-        && context.supportsExtension("GL_EXT_color_buffer_half_float"_s);
+    return context.supportsExtension(GCGLExtension::OES_texture_half_float)
+        && context.supportsExtension(GCGLExtension::EXT_color_buffer_half_float);
 }
 
 } // namespace WebCore

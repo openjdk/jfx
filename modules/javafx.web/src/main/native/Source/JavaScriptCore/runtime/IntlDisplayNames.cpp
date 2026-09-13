@@ -34,6 +34,8 @@
 #include <unicode/uloc.h>
 #include <wtf/unicode/icu/ICUHelpers.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 const ClassInfo IntlDisplayNames::s_info = { "Object"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(IntlDisplayNames) };
@@ -154,19 +156,19 @@ JSValue IntlDisplayNames::of(JSGlobalObject* globalObject, JSValue codeValue) co
         case Type::Region: {
             // Let code be the result of mapping code to upper case as described in 6.1.
             auto result = code.ascii();
-            char* mutableData = result.mutableData();
-            for (unsigned index = 0; index < result.length(); ++index)
-                mutableData[index] = toASCIIUpper(mutableData[index]);
+            for (auto& character : result.mutableSpan())
+                character = toASCIIUpper(character);
             return result;
         }
         case Type::Script: {
             // Let code be the result of mapping the first character in code to upper case, and mapping the second, third and fourth character in code to lower case, as described in 6.1.
             auto result = code.ascii();
-            char* mutableData = result.mutableData();
-            if (result.length() >= 1)
+            auto mutableData = result.mutableSpan();
+            if (mutableData.size() >= 1) {
                 mutableData[0] = toASCIIUpper(mutableData[0]);
-            for (unsigned index = 1; index < result.length(); ++index)
-                mutableData[index] = toASCIILower(mutableData[index]);
+                for (auto& character : mutableData.subspan(1))
+                    character = toASCIILower(character);
+            }
             return result;
         }
         case Type::Currency:
@@ -176,7 +178,7 @@ JSValue IntlDisplayNames::of(JSGlobalObject* globalObject, JSValue codeValue) co
             // Let code be the result of mapping code to lower case as described in 6.1.
             String lowered = code.convertToASCIILowercase();
             if (auto mapped = mapBCP47ToICUCalendarKeyword(lowered))
-                lowered = WTFMove(mapped.value());
+                lowered = WTF::move(mapped.value());
             return lowered.ascii();
         }
         case Type::DateTimeField: {
@@ -187,7 +189,7 @@ JSValue IntlDisplayNames::of(JSGlobalObject* globalObject, JSValue codeValue) co
         return { };
     };
 
-    Vector<UChar, 32> buffer;
+    Vector<char16_t, 32> buffer;
     UErrorCode status = U_ZERO_ERROR;
     CString canonicalCode;
     switch (m_type) {
@@ -196,7 +198,7 @@ JSValue IntlDisplayNames::of(JSGlobalObject* globalObject, JSValue codeValue) co
             throwRangeError(globalObject, scope, "argument is not a language id"_s);
             return { };
         }
-        canonicalCode = canonicalizeCodeForDisplayNames(m_type, WTFMove(code));
+        canonicalCode = canonicalizeCodeForDisplayNames(m_type, WTF::move(code));
         // Do not use uldn_languageDisplayName since it is not expected one for this "language" type. It returns "en-US" for "en-US" code, instead of "American English".
         status = callBufferProducingFunction(uldn_localeDisplayName, m_displayNames.get(), canonicalCode.data(), buffer);
         break;
@@ -206,7 +208,7 @@ JSValue IntlDisplayNames::of(JSGlobalObject* globalObject, JSValue codeValue) co
             throwRangeError(globalObject, scope, "argument is not a region subtag"_s);
             return { };
         }
-        canonicalCode = canonicalizeCodeForDisplayNames(m_type, WTFMove(code));
+        canonicalCode = canonicalizeCodeForDisplayNames(m_type, WTF::move(code));
         status = callBufferProducingFunction(uldn_regionDisplayName, m_displayNames.get(), canonicalCode.data(), buffer);
         break;
     }
@@ -215,7 +217,7 @@ JSValue IntlDisplayNames::of(JSGlobalObject* globalObject, JSValue codeValue) co
             throwRangeError(globalObject, scope, "argument is not a script subtag"_s);
             return { };
         }
-        canonicalCode = canonicalizeCodeForDisplayNames(m_type, WTFMove(code));
+        canonicalCode = canonicalizeCodeForDisplayNames(m_type, WTF::move(code));
         status = callBufferProducingFunction(uldn_scriptDisplayName, m_displayNames.get(), canonicalCode.data(), buffer);
         break;
     }
@@ -247,7 +249,7 @@ JSValue IntlDisplayNames::of(JSGlobalObject* globalObject, JSValue codeValue) co
         }
 
         // 6. Let code be the result of mapping code to upper case as described in 6.1.
-        const UChar currency[4] = {
+        const char16_t currency[4] = {
             toASCIIUpper(code[0]),
             toASCIIUpper(code[1]),
             toASCIIUpper(code[2]),
@@ -256,17 +258,17 @@ JSValue IntlDisplayNames::of(JSGlobalObject* globalObject, JSValue codeValue) co
         // The result of ucurr_getName is static string so that we do not need to free the result.
         int32_t length = 0;
         UBool isChoiceFormat = false; // We need to pass this, otherwise, we will see crash in ICU 64.
-        const UChar* result = ucurr_getName(currency, m_localeCString.data(), style, &isChoiceFormat, &length, &status);
+        const char16_t* result = ucurr_getName(currency, m_localeCString.data(), style, &isChoiceFormat, &length, &status);
         if (U_FAILURE(status))
             return throwTypeError(globalObject, scope, "Failed to query a display name."_s);
         // ucurr_getName returns U_USING_DEFAULT_WARNING if the display-name is not found. But U_USING_DEFAULT_WARNING is returned even if
         // narrow and short results are the same: narrow "USD" is "$" with U_USING_DEFAULT_WARNING since short "USD" is also "$". We need to check
         // result == currency to check whether ICU actually failed to find the corresponding display-name. This pointer comparison is ensured by
         // ICU API document.
-        // > Returns pointer to display string of 'len' UChars. If the resource data contains no entry for 'currency', then 'currency' itself is returned.
+        // > Returns pointer to display string of 'len' char16_ts. If the resource data contains no entry for 'currency', then 'currency' itself is returned.
         if (status == U_USING_DEFAULT_WARNING && result == currency)
-            return (m_fallback == Fallback::None) ? jsUndefined() : jsString(vm, String(currency, 3));
-        return jsString(vm, String(result, length));
+            return (m_fallback == Fallback::None) ? jsUndefined() : jsString(vm, StringView({ currency, 3 }));
+        return jsString(vm, String({ result, static_cast<size_t>(length) }));
     }
     case Type::Calendar: {
         // a. If code does not match the Unicode Locale Identifier type nonterminal, throw a RangeError exception.
@@ -274,7 +276,7 @@ JSValue IntlDisplayNames::of(JSGlobalObject* globalObject, JSValue codeValue) co
             throwRangeError(globalObject, scope, "argument is not a calendar code"_s);
             return { };
         }
-        canonicalCode = canonicalizeCodeForDisplayNames(m_type, WTFMove(code));
+        canonicalCode = canonicalizeCodeForDisplayNames(m_type, WTF::move(code));
         status = callBufferProducingFunction(uldn_keyValueDisplayName, m_displayNames.get(), "calendar", canonicalCode.data(), buffer);
         break;
     }
@@ -330,20 +332,20 @@ JSValue IntlDisplayNames::of(JSGlobalObject* globalObject, JSValue codeValue) co
             break;
         }
 
-        buffer = vm.intlCache().getFieldDisplayName(m_localeCString.data(), field.value(), style, status);
+        buffer = vm.intlCache().getFieldDisplayName(m_localeCString, field.value(), style, status);
         if (U_FAILURE(status))
-            return (m_fallback == Fallback::None) ? jsUndefined() : jsString(vm, WTFMove(code));
-        return jsString(vm, String(WTFMove(buffer)));
+            return (m_fallback == Fallback::None) ? jsUndefined() : jsString(vm, WTF::move(code));
+        return jsString(vm, String(WTF::move(buffer)));
     }
     }
     if (U_FAILURE(status)) {
         // uldn_localeDisplayName, uldn_regionDisplayName, and uldn_scriptDisplayName return U_ILLEGAL_ARGUMENT_ERROR if the display-name is not found.
         // We should return undefined if fallback is "none". Otherwise, we should return input value.
         if (status == U_ILLEGAL_ARGUMENT_ERROR)
-            return (m_fallback == Fallback::None) ? jsUndefined() : jsString(vm, String(canonicalCode.data(), canonicalCode.length()));
+            return (m_fallback == Fallback::None) ? jsUndefined() : jsString(vm, String(canonicalCode.span()));
         return throwTypeError(globalObject, scope, "Failed to query a display name."_s);
     }
-    return jsString(vm, String(WTFMove(buffer)));
+    return jsString(vm, String(WTF::move(buffer)));
 }
 
 // https://tc39.es/proposal-intl-displaynames/#sec-Intl.DisplayNames.prototype.resolvedOptions
@@ -419,3 +421,5 @@ ASCIILiteral IntlDisplayNames::languageDisplayString(LanguageDisplay languageDis
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

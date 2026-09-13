@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,30 +25,25 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
+import java.util.Collection;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import com.sun.glass.ui.monocle.TestLogShim;
-import test.robot.com.sun.glass.ui.monocle.ParameterizedTestBase;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runners.Parameterized;
 
-import java.util.Collection;
+public final class FuzzyTapTest extends ParameterizedTestBase {
 
-public class FuzzyTapTest extends ParameterizedTestBase {
-
-    public FuzzyTapTest(TestTouchDevice device) {
-        super(device);
-    }
-
-    @Parameterized.Parameters
-    public static Collection<Object[]> data() {
+    private static Collection<TestTouchDevice> parameters() {
         return TestTouchDevices.getTouchDeviceParameters(1);
     }
 
     /** Touch down, touch up at a slightly different location*/
-    @Test
-    public void tap1() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void tap1(TestTouchDevice device) throws Exception {
+        createDevice(device, null);
         final int x = (int) width / 2;
         final int y = (int) height / 2;
         final int tapRadius = device.getTapRadius();
@@ -61,13 +56,15 @@ public class FuzzyTapTest extends ParameterizedTestBase {
         TestLogShim.waitForLog("Mouse pressed: " + x + ", " + y, 3000);
         TestLogShim.waitForLog("Mouse clicked: " + x + ", " + y, 3000);
         TestLogShim.waitForLog("Mouse released: " + x + ", " + y, 3000);
-        Assert.assertEquals(0, TestLogShim.countLogContaining("Mouse dragged:"));
-        Assert.assertEquals(0, TestLogShim.countLogContaining("Touch moved:"));
+        Assertions.assertEquals(0, TestLogShim.countLogContaining("Mouse dragged:"));
+        Assertions.assertEquals(0, TestLogShim.countLogContaining("Touch moved:"));
     }
 
     /** Touch down, small move, touch up */
-    @Test
-    public void tap1a() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void tap1a(TestTouchDevice device) throws Exception {
+        createDevice(device, null);
         final int x = (int) width / 2;
         final int y = (int) height / 2;
         final int tapRadius = device.getTapRadius();
@@ -81,13 +78,15 @@ public class FuzzyTapTest extends ParameterizedTestBase {
         device.sync();
         TestLogShim.waitForLog("Mouse clicked: " + x + ", " + y, 3000);
         TestLogShim.waitForLog("Mouse released: " + x + ", " + y, 3000);
-        Assert.assertEquals(0, TestLogShim.countLogContaining("Mouse dragged:"));
-        Assert.assertEquals(0, TestLogShim.countLogContaining("Touch moved:"));
+        Assertions.assertEquals(0, TestLogShim.countLogContaining("Mouse dragged:"));
+        Assertions.assertEquals(0, TestLogShim.countLogContaining("Touch moved:"));
     }
 
     /** Touch down, touch up outside the tap radius */
-    @Test
-    public void tap2() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void tap2(TestTouchDevice device) throws Exception {
+        createDevice(device, null);
         final int x = (int) width / 2;
         final int y = (int) height / 2;
         final int tapRadius = device.getTapRadius();
@@ -102,12 +101,14 @@ public class FuzzyTapTest extends ParameterizedTestBase {
         TestLogShim.waitForLog("Mouse clicked: " + x + ", " + y, 3000);
         TestLogShim.waitForLog("Touch pressed: " + x + ", " + y, 3000);
         TestLogShim.waitForLog("Touch released: " + x + ", " + y, 3000);
-        Assert.assertEquals(1, TestLogShim.countLogContaining("Mouse clicked:"));
+        Assertions.assertEquals(1, TestLogShim.countLogContaining("Mouse clicked:"));
     }
 
     /** Touch down, move outside touch radius, touch up */
-    @Test
-    public void tap2a() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void tap2a(TestTouchDevice device) throws Exception {
+        createDevice(device, null);
         final int x = (int) width / 2;
         final int y = (int) height / 2;
         final int tapRadius = device.getTapRadius();
@@ -126,12 +127,14 @@ public class FuzzyTapTest extends ParameterizedTestBase {
         TestLogShim.waitForLog("Touch pressed: " + x + ", " + y, 3000);
         TestLogShim.waitForLog("Touch moved: " + x1 + ", " + y1, 3000);
         TestLogShim.waitForLog("Touch released: " + x1 + ", " + y1, 3000);
-        Assert.assertEquals(1, TestLogShim.countLogContaining("Mouse clicked: " + x1 + ", " + y1));
+        Assertions.assertEquals(1, TestLogShim.countLogContaining("Mouse clicked: " + x1 + ", " + y1));
     }
 
     /** Touch down, drift outside touch radius, touch up */
-    @Test
-    public void tap3b() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void tap3b(TestTouchDevice device) throws Exception {
+        createDevice(device, null);
         final int x = (int) width / 2;
         final int y = (int) height / 2;
         final int tapRadius = device.getTapRadius();
@@ -161,6 +164,6 @@ public class FuzzyTapTest extends ParameterizedTestBase {
         TestLogShim.waitForLog("Touch pressed: " + x + ", " + y, 3000);
         TestLogShim.waitForLog("Touch moved: " + x2 + ", " + y2, 3000);
         TestLogShim.waitForLog("Touch released: " + x2 + ", " + y2, 3000);
-        Assert.assertEquals(1, TestLogShim.countLogContaining("Mouse clicked: " + x2 + ", " + y2));
+        Assertions.assertEquals(1, TestLogShim.countLogContaining("Mouse clicked: " + x2 + ", " + y2));
     }
 }

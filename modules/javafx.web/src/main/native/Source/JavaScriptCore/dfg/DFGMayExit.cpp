@@ -71,7 +71,9 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case BottomValue:
     case PutHint:
     case PhantomNewObject:
+    case PhantomNewArrayWithButterfly:
     case PhantomNewInternalFieldObject:
+    case PhantomNewButterflyWithSize:
     case PutStack:
     case KillStack:
     case GetStack:
@@ -81,6 +83,7 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case SetArgumentCountIncludingThis:
     case GetRestLength:
     case GetScope:
+    case GetEvalScope:
     case PhantomLocal:
     case CountExecution:
     case SuperSamplerBegin:
@@ -90,8 +93,8 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case Branch:
     case Unreachable:
     case DoubleRep:
-    case Int52Rep:
     case ValueRep:
+    case PurifyNaN:
     case ExtractOSREntryLocal:
     case ExtractCatchLocal:
     case ClearCatchLocals:
@@ -105,11 +108,7 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case PutClosureVar:
     case PutInternalField:
     case PutGlobalVariable:
-    case GetByOffset:
-    case GetClosureVar:
     case GetInternalField:
-    case GetGlobalLexicalVariable:
-    case GetGlobalVar:
     case RecordRegExpCachedResult:
     case NukeStructureAndSetButterfly:
     case GetButterfly:
@@ -125,7 +124,59 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case CompareBelow:
     case CompareBelowEq:
     case CompareEqPtr:
+    case MapIteratorNext:
+    case MapIteratorKey:
+    case MapIteratorValue:
+    case MapStorage:
         break;
+
+    case Switch: {
+        auto* data = node->switchData();
+        switch (data->kind) {
+        case SwitchImm:
+        case SwitchCell:
+            break;
+        case SwitchChar:
+        case SwitchString:
+            result = ExitsForExceptions;
+            break;
+        }
+        break;
+    }
+
+    case Int52Rep:
+        switch (node->child1().useKind()) {
+        case AnyIntUse:
+        case RealNumberUse:
+        case DoubleRepAnyIntUse:
+        case DoubleRepRealUse:
+            return Exits;
+        default:
+            break;
+        }
+        break;
+
+    case GetByOffset:
+    case GetClosureVar:
+    case GetGlobalLexicalVariable:
+    case GetGlobalVar: {
+        if (node->hasDoubleResult())
+            return Exits;
+        break;
+    }
+
+    case PutByValDirectResolved: {
+        // PutByValDirectResolved is only used when we know the slot we're storing to exists
+        // i.e. it would be a direct store and is within the PublicLength. Thus,
+        // it can only exit if and edge speculation fails.
+
+        // FIXME: Support making this non-exiting for TypedArrays, which is mostly
+        // blocked on cleaning up our clobberize/CSE rules for
+        // Resizeable/GrowableSharedArrayBuffers when a put aliases some other access.
+        if (node->arrayMode().isSomeTypedArrayView())
+            return Exits;
+        break;
+    }
 
     case EnumeratorNextUpdatePropertyName:
     case StrCat:
@@ -139,6 +190,7 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case CreateActivation:
     case MaterializeCreateActivation:
     case MaterializeNewObject:
+    case MaterializeNewArrayWithButterfly:
     case MaterializeNewInternalFieldObject:
     case NewFunction:
     case NewGeneratorFunction:
@@ -147,18 +199,32 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case NewBoundFunction:
     case NewStringObject:
     case NewInternalFieldObject:
-    case NewRegexp:
-    case NewArrayWithConstantSize:
+    case NewRegExp:
+    case NewMap:
+    case NewSet:
+    case NewArrayWithButterfly:
+    case NewButterflyWithSize:
     case ToNumber:
     case ToNumeric:
     case ToObject:
     case RegExpExecNonGlobalOrSticky:
     case RegExpMatchFastGlobal:
     case CallWasm:
+    case TailCallInlinedCallerWasm:
+    case CallCustomAccessorGetter:
+    case CallCustomAccessorSetter:
     case AllocatePropertyStorage:
     case ReallocatePropertyStorage:
         result = ExitsForExceptions;
         break;
+
+    case NewRegExpUntyped: {
+        if (node->child1().useKind() == StringUse && node->child2().useKind() == StringUse) {
+            result = ExitsForExceptions; // SyntaxError can happen.
+            break;
+        }
+        return Exits;
+    }
 
     case SetRegExpObjectLastIndex:
         if (node->ignoreLastIndexIsWritable())
@@ -166,18 +232,18 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
         return Exits;
 
     case ArithBitNot:
-        if (node->child1().useKind() == Int32Use)
+        if (isInt32(node->child1().useKind()))
             break;
         return Exits;
 
     case ArithAbs:
-        if (node->arithMode() == Arith::Mode::Unchecked && node->child1().useKind() == Int32Use)
+        if (node->arithMode() == Arith::Mode::Unchecked && isInt32(node->child1().useKind()))
             break;
         return Exits;
 
     case ArithMin:
     case ArithMax:
-        if (graph.child(node, 0).useKind() == Int32Use)
+        if (isInt32(graph.child(node, 0).useKind()))
             break;
         if (graph.child(node, 0).useKind() == DoubleRepUse)
             break;
@@ -185,30 +251,40 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
 
     case ArithBitRShift:
     case ArithBitLShift:
-    case BitURShift:
+    case ArithBitURShift:
     case ArithBitAnd:
     case ArithBitOr:
     case ArithBitXor:
-        if (node->isBinaryUseKind(Int32Use))
+        if (node->isBinaryInt32UseKind())
             break;
         return Exits;
 
     case ArithClz32:
-        if (node->child1().useKind() == Int32Use || node->child1().useKind() == KnownInt32Use)
+        if (isInt32(node->child1().useKind()))
             break;
         return Exits;
 
     case ArithAdd:
     case ArithSub:
+        if (node->arithMode() == Arith::Mode::Unchecked) {
+            if (node->isBinaryInt32UseKind())
+                break;
+            if (node->isBinaryUseKind(Int52RepUse))
+                break;
+        }
+        if (node->isBinaryUseKind(DoubleRepUse))
+            break;
+        return Exits;
+
     case ArithMul:
-        if (node->arithMode() == Arith::Mode::Unchecked && node->isBinaryUseKind(Int32Use))
+        if (node->arithMode() == Arith::Mode::Unchecked && node->isBinaryInt32UseKind())
             break;
         if (node->isBinaryUseKind(DoubleRepUse))
             break;
         return Exits;
 
     case ArithNegate:
-        if (node->arithMode() == Arith::Mode::Unchecked && node->child1().useKind() == Int32Use)
+        if (node->arithMode() == Arith::Mode::Unchecked && isInt32(node->child1().useKind()))
             break;
         if (node->child1().useKind() == DoubleRepUse)
             break;
@@ -220,22 +296,39 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
             break;
         return Exits;
 
-    case CompareEq:
+    case BooleanToNumber:
+        if (node->child1().useKind() == BooleanUse)
+            break;
+        return Exits;
+
+    case ValueToInt32:
+        break;
+
     case CompareStrictEq:
+        if (node->isBinaryUseKind(BooleanUse) || node->isSymmetricBinaryUseKind(BooleanUse, UntypedUse))
+            break;
+        if (node->isBinaryUseKind(MiscUse) || node->isSymmetricBinaryUseKind(MiscUse, UntypedUse))
+            break;
+        if (node->isBinaryUseKind(OtherUse) || node->isSymmetricBinaryUseKind(OtherUse, UntypedUse))
+            break;
+        [[fallthrough]];
+    case CompareEq:
     case CompareLess:
     case CompareLessEq:
     case CompareGreater:
     case CompareGreaterEq:
-        if (node->isBinaryUseKind(Int32Use))
+        if (node->isBinaryInt32UseKind())
             break;
         if (node->isBinaryUseKind(DoubleRepUse))
             break;
         if (node->isBinaryUseKind(Int52RepUse))
             break;
+        if (node->isBinaryUseKind(SymbolUse))
+            break;
         return Exits;
 
     case ArithPow:
-        if (node->isBinaryUseKind(Int32Use))
+        if (node->isBinaryInt32UseKind())
             break;
         if (node->isBinaryUseKind(DoubleRepUse))
             break;
@@ -252,6 +345,7 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
     case ArithSqrt:
     case ArithUnary:
     case ArithFRound:
+    case ArithF16Round:
         if (node->child1().useKind() == DoubleRepUse)
             break;
         return Exits;
@@ -280,13 +374,68 @@ ExitMode mayExitImpl(Graph& graph, Node* node, StateType& state)
         case DoubleRepUse:
         case NotCellUse:
         case StringObjectUse:
-        case StringOrStringObjectUse:
             result = ExitsForExceptions;
+            break;
+        case StringOrOtherUse:
+        case StringOrStringObjectUse:
             break;
         default:
             return Exits;
         }
         break;
+
+    case MakeRope: {
+        result = ExitsForExceptions;
+        break;
+    }
+
+    case GetArrayLength: {
+        switch (node->arrayMode().type()) {
+        case Array::Undecided:
+        case Array::Int32:
+        case Array::Double:
+        case Array::Contiguous:
+        case Array::String:
+            break;
+        default:
+            return Exits;
+        }
+        break;
+    }
+
+    case StringReplaceString: {
+        if (node->child3().useKind() == StringUse) {
+            result = ExitsForExceptions;
+            break;
+        }
+        return Exits;
+    }
+
+    case PutByVal: {
+        if (graph.m_form != SSA)
+            return Exits;
+
+        ArrayMode arrayMode = node->arrayMode().modeForPut();
+        if (!arrayMode.isInBounds())
+            return Exits;
+
+        switch (arrayMode.type()) {
+        case Array::Int8Array:
+        case Array::Int16Array:
+        case Array::Int32Array:
+        case Array::Uint8Array:
+        case Array::Uint8ClampedArray:
+        case Array::Uint16Array:
+        case Array::Uint32Array:
+        case Array::Float16Array:
+        case Array::Float32Array:
+        case Array::Float64Array:
+            break;
+        default:
+            return Exits;
+        }
+        break;
+    }
 
     default:
         // If in doubt, return true.

@@ -30,9 +30,12 @@
 
 #include "DOMPointReadOnly.h"
 #include "Document.h"
+#include "Exception.h"
+#include "ExceptionOr.h"
+#include "ScriptWrappableInlines.h"
 #include "WebXRRigidTransform.h"
 #include "WebXRSession.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -42,7 +45,7 @@ static constexpr float BoundsPrecisionInMeters = 0.05;
 // A valid polygon has at least 3 vertices.
 static constexpr int MinimumBoundsVertices = 3;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WebXRBoundedReferenceSpace);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebXRBoundedReferenceSpace);
 
 Ref<WebXRBoundedReferenceSpace> WebXRBoundedReferenceSpace::create(Document& document, WebXRSession& session, XRReferenceSpaceType type)
 {
@@ -51,11 +54,11 @@ Ref<WebXRBoundedReferenceSpace> WebXRBoundedReferenceSpace::create(Document& doc
 
 Ref<WebXRBoundedReferenceSpace> WebXRBoundedReferenceSpace::create(Document& document, WebXRSession& session, Ref<WebXRRigidTransform>&& offset, XRReferenceSpaceType type)
 {
-    return adoptRef(*new WebXRBoundedReferenceSpace(document, session, WTFMove(offset), type));
+    return adoptRef(*new WebXRBoundedReferenceSpace(document, session, WTF::move(offset), type));
 }
 
 WebXRBoundedReferenceSpace::WebXRBoundedReferenceSpace(Document& document, WebXRSession& session, Ref<WebXRRigidTransform>&& offset, XRReferenceSpaceType type)
-    : WebXRReferenceSpace(document, session, WTFMove(offset), type)
+    : WebXRReferenceSpace(document, session, WTF::move(offset), type)
 {
 }
 
@@ -77,17 +80,17 @@ const Vector<Ref<DOMPointReadOnly>>& WebXRBoundedReferenceSpace::boundsGeometry(
 ExceptionOr<Ref<WebXRReferenceSpace>> WebXRBoundedReferenceSpace::getOffsetReferenceSpace(const WebXRRigidTransform& offsetTransform)
 {
     if (!m_session)
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
 
-    auto* document = downcast<Document>(scriptExecutionContext());
+    RefPtr document = downcast<Document>(scriptExecutionContext());
     if (!document)
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
 
     // https://immersive-web.github.io/webxr/#dom-xrreferencespace-getoffsetreferencespace
     // Set offsetSpace’s origin offset to the result of multiplying base’s origin offset by originOffset in the relevant realm of base.
     auto offset = WebXRRigidTransform::create(originOffset().rawTransform() * offsetTransform.rawTransform());
 
-    return { create(*document, *m_session.get(), WTFMove(offset), m_type) };
+    return { create(*document, *m_session.get(), WTF::move(offset), m_type) };
 }
 
 // https://immersive-web.github.io/webxr/#dom-xrboundedreferencespace-boundsgeometry

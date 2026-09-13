@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,15 @@
 
 package com.sun.javafx.scene.layout.region;
 
+import com.sun.javafx.util.InterpolationUtils;
+import javafx.animation.Interpolatable;
 import javafx.scene.layout.BorderWidths;
+import java.util.Objects;
 
 /**
  * A helper class during the conversion process.
  */
-public class BorderImageSlices {
+public final class BorderImageSlices implements Interpolatable<BorderImageSlices> {
 
     /**
      * Using EMPTY results in no border-image being drawn since the slices are zero. You probably
@@ -50,5 +53,36 @@ public class BorderImageSlices {
     public BorderImageSlices(BorderWidths widths, boolean filled) {
         this.widths = widths;
         this.filled = filled;
+    }
+
+    @Override
+    public BorderImageSlices interpolate(BorderImageSlices endValue, double t) {
+        Objects.requireNonNull(endValue, "endValue cannot be null");
+
+        if (t == 0 || equals(endValue)) {
+            return this;
+        }
+
+        if (t == 1) {
+            return endValue;
+        }
+
+        return new BorderImageSlices(
+            widths.interpolate(endValue.widths, t),
+            InterpolationUtils.interpolateDiscrete(filled, endValue.filled, t));
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof BorderImageSlices that)) return false;
+        return filled == that.filled && Objects.equals(widths, that.widths);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = Objects.hashCode(widths);
+        result = 31 * result + Boolean.hashCode(filled);
+        return result;
     }
 }

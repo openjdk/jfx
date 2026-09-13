@@ -29,6 +29,7 @@
 #if ENABLE(DFG_JIT)
 
 #include "DFGArgumentsEliminationPhase.h"
+#include "DFGBackwardsPropagationPhase.h"
 #include "DFGByteCodeParser.h"
 #include "DFGCFAPhase.h"
 #include "DFGCFGSimplificationPhase.h"
@@ -50,6 +51,7 @@
 #include "DFGLiveCatchVariablePreservationPhase.h"
 #include "DFGLivenessAnalysisPhase.h"
 #include "DFGLoopPreHeaderCreationPhase.h"
+#include "DFGLoopUnrollingPhase.h"
 #include "DFGMovHintRemovalPhase.h"
 #include "DFGOSRAvailabilityAnalysisPhase.h"
 #include "DFGOSREntrypointCreationPhase.h"
@@ -78,6 +80,7 @@
 #include "JSCJSValueInlines.h"
 #include "OperandsInlines.h"
 #include "ProfilerDatabase.h"
+#include "StructureID.h"
 #include "TrackedReferences.h"
 #include "VMInlines.h"
 
@@ -98,8 +101,7 @@ void dumpAndVerifyGraph(Graph& graph, const char* text, bool forceDump = false)
 {
     GraphDumpMode modeForFinalValidate = DumpGraph;
     if (verboseCompilationEnabled(graph.m_plan.mode()) || forceDump) {
-        dataLog(text, "\n");
-        graph.dump();
+        dataLog(text, "\n", graph);
         modeForFinalValidate = DontDumpGraph;
     }
     if (validationEnabled())
@@ -130,24 +132,21 @@ Profiler::CompilationKind profilerCompilationKindForMode(JITCompilationMode mode
 
 Plan::Plan(CodeBlock* passedCodeBlock, CodeBlock* profiledDFGCodeBlock,
     JITCompilationMode mode, BytecodeIndex osrEntryBytecodeIndex,
-    const Operands<std::optional<JSValue>>& mustHandleValues)
+    Operands<std::optional<JSValue>>&& mustHandleValues)
         : Base(mode, passedCodeBlock)
         , m_profiledDFGCodeBlock(profiledDFGCodeBlock)
-        , m_mustHandleValues(mustHandleValues)
+        , m_mustHandleValues(WTF::move(mustHandleValues))
         , m_osrEntryBytecodeIndex(osrEntryBytecodeIndex)
-        , m_compilation(UNLIKELY(m_vm->m_perBytecodeProfiler) ? adoptRef(new Profiler::Compilation(m_vm->m_perBytecodeProfiler->ensureBytecodesFor(m_codeBlock), profilerCompilationKindForMode(mode))) : nullptr)
+        , m_compilation(m_vm->m_perBytecodeProfiler ? adoptRef(new Profiler::Compilation(m_vm->m_perBytecodeProfiler->ensureBytecodesFor(m_codeBlock), profilerCompilationKindForMode(mode))) : nullptr)
         , m_inlineCallFrames(adoptRef(new InlineCallFrameSet()))
         , m_identifiers(m_codeBlock)
-        , m_weakReferences(m_codeBlock)
         , m_transitions(m_codeBlock)
 {
     RELEASE_ASSERT(m_codeBlock->alternative()->jitCode());
     m_inlineCallFrames->disableThreadingChecks();
 }
 
-Plan::~Plan()
-{
-}
+Plan::~Plan() = default;
 
 size_t Plan::codeSize() const
 {
@@ -159,7 +158,8 @@ size_t Plan::codeSize() const
 void Plan::finalizeInGC()
 {
     ASSERT(m_vm);
-    m_recordedStatuses.finalizeWithoutDeleting(*m_vm);
+    if (m_recordedStatuses)
+        m_recordedStatuses->finalizeWithoutDeleting(*m_vm);
 }
 
 void Plan::notifyReady()
@@ -186,21 +186,21 @@ void Plan::cancel()
 Plan::CompilationPath Plan::compileInThreadImpl()
 {
     {
-        CompilerTimingScope timingScope("DFG", "clean must handle values");
+        CompilerTimingScope timingScope("DFG"_s, "initialize"_s);
+        m_recordedStatuses = makeUnique<RecordedStatuses>();
         cleanMustHandleValuesIfNecessary();
     }
 
-    if (verboseCompilationEnabled(m_mode) && m_osrEntryBytecodeIndex) {
-        dataLog("\n");
-        dataLog("Compiler must handle OSR entry from ", m_osrEntryBytecodeIndex, " with values: ", m_mustHandleValues, "\n");
-        dataLog("\n");
-    }
+    dataLogLnIf(verboseCompilationEnabled(m_mode) && m_osrEntryBytecodeIndex,
+        "\n",
+        "Compiler must handle OSR entry from ", m_osrEntryBytecodeIndex, " with values: ", m_mustHandleValues, "\n");
 
     Graph dfg(*m_vm, *this);
 
     {
-        CompilerTimingScope timingScope("DFG", "bytecode parser");
-        parse(dfg);
+        CompilerTimingScope timingScope("DFG"_s, "bytecode parser"_s);
+        if (!parse(dfg))
+            return CancelPath;
     }
 
     bool changed = false;
@@ -232,10 +232,7 @@ Plan::CompilationPath Plan::compileInThreadImpl()
     if (validationEnabled())
         validate(dfg);
 
-    if (Options::dumpGraphAfterParsing()) {
-        dataLog("Graph after parsing:\n");
-        dfg.dump();
-    }
+    dataLogIf(Options::dumpGraphAfterParsing(), "Graph after parsing:\n", dfg);
 
     RUN_PHASE(performCPSRethreading);
     RUN_PHASE(performUnification);
@@ -270,6 +267,7 @@ Plan::CompilationPath Plan::compileInThreadImpl()
     if (validationEnabled())
         validate(dfg);
 
+    RUN_PHASE(performBackwardsPropagation);
     RUN_PHASE(performStrengthReduction);
     RUN_PHASE(performCPSRethreading);
     RUN_PHASE(performCFA);
@@ -341,13 +339,18 @@ Plan::CompilationPath Plan::compileInThreadImpl()
         dumpAndVerifyGraph(dfg, "Graph after optimization:");
 
         {
-            CompilerTimingScope timingScope("DFG", "machine code generation");
+            CompilerTimingScope timingScope("DFG"_s, "machine code generation"_s);
 
             SpeculativeJIT speculativeJIT(dfg);
             if (m_codeBlock->codeType() == FunctionCode)
                 speculativeJIT.compileFunction();
             else
                 speculativeJIT.compile();
+        }
+
+        if (m_finalizer) {
+            if (auto jitCode = m_finalizer->jitCode())
+                finalizeInThread(jitCode.releaseNonNull());
         }
 
         return DFGPath;
@@ -360,12 +363,16 @@ Plan::CompilationPath Plan::compileInThreadImpl()
             m_finalizer = makeUnique<FailedFinalizer>(*this);
             return FailPath;
         }
-
         RUN_PHASE(performCleanUp); // Reduce the graph size a bit.
         RUN_PHASE(performCriticalEdgeBreaking);
         if (Options::createPreHeaders())
             RUN_PHASE(performLoopPreHeaderCreation);
         RUN_PHASE(performCPSRethreading);
+        if (Options::useLoopUnrolling()) {
+            SetForScope fixAvailabilityScope(dfg.m_shouldFixAvailability, true);
+            RUN_PHASE(performLoopUnrolling);
+            RUN_PHASE(performCriticalEdgeBreaking);
+        }
         RUN_PHASE(performSSAConversion);
         RUN_PHASE(performSSALowering);
 
@@ -389,11 +396,14 @@ Plan::CompilationPath Plan::compileInThreadImpl()
             RUN_PHASE(performCriticalEdgeBreaking);
             RUN_PHASE(performObjectAllocationSinking);
         }
-        if (Options::useValueRepElimination())
+        if (Options::useValueRepElimination()) {
             RUN_PHASE(performValueRepReduction);
+            RUN_PHASE(performStrengthReduction);
+        }
         if (changed) {
             // State-at-tail and state-at-head will be invalid if we did strength reduction since
             // it might increase live ranges.
+            RUN_PHASE(performGlobalCSE);
             RUN_PHASE(performGraphPackingAndLivenessAnalysis);
             RUN_PHASE(performCFA);
             RUN_PHASE(performConstantFolding);
@@ -463,10 +473,10 @@ Plan::CompilationPath Plan::compileInThreadImpl()
         FTL::State state(dfg);
         FTL::lowerDFGToB3(state);
 
-        if (UNLIKELY(computeCompileTimes()))
+        if (computeCompileTimes()) [[unlikely]]
             m_timeBeforeFTL = MonotonicTime::now();
 
-        if (UNLIKELY(Options::b3AlwaysFailsBeforeCompile())) {
+        if (Options::b3AlwaysFailsBeforeCompile()) [[unlikely]] {
             FTL::fail(state);
             return FTLPath;
         }
@@ -475,7 +485,7 @@ Plan::CompilationPath Plan::compileInThreadImpl()
         if (safepointResult.didGetCancelled())
             return CancelPath;
 
-        if (UNLIKELY(Options::b3AlwaysFailsBeforeLink())) {
+        if (Options::b3AlwaysFailsBeforeLink()) [[unlikely]] {
             FTL::fail(state);
             return FTLPath;
         }
@@ -490,6 +500,11 @@ Plan::CompilationPath Plan::compileInThreadImpl()
         if (state.allocationFailed) {
             FTL::fail(state);
             return FTLPath;
+        }
+
+        if (m_finalizer) {
+            if (auto jitCode = m_finalizer->jitCode())
+                finalizeInThread(jitCode.releaseNonNull());
         }
 
         return FTLPath;
@@ -507,7 +522,16 @@ Plan::CompilationPath Plan::compileInThreadImpl()
 #undef RUN_PHASE
 }
 
-bool Plan::isStillValid()
+void Plan::finalizeInThread(Ref<JSC::JITCode> jitCode)
+{
+    m_watchpoints.countWatchpoints(m_codeBlock, m_identifiers, jitCode->dfgCommon());
+    m_weakReferences.finalize();
+    jitCode->shrinkToFit();
+    if (m_recordedStatuses)
+        m_recordedStatuses->shrinkToFit();
+}
+
+bool Plan::isStillValidCodeBlock()
 {
     CodeBlock* replacement = m_codeBlock->replacement();
     if (!replacement)
@@ -518,27 +542,29 @@ bool Plan::isStillValid()
     // https://bugs.webkit.org/show_bug.cgi?id=132707
     if (m_codeBlock->alternative() != replacement->baselineVersion())
         return false;
-    if (!m_watchpoints.areStillValid())
-        return false;
+
     return true;
 }
 
-void Plan::reallyAdd(CommonData* commonData)
+bool Plan::reallyAdd(CommonData* commonData)
 {
+    if (!m_watchpoints.areStillValidOnMainThread(*m_vm, m_identifiers))
+        return false;
+
     ASSERT(m_vm->heap.isDeferred());
     m_identifiers.reallyAdd(*m_vm, commonData);
     m_weakReferences.reallyAdd(*m_vm, commonData);
     m_transitions.reallyAdd(*m_vm, commonData);
-    m_watchpoints.reallyAdd(m_codeBlock, m_identifiers, commonData);
-    {
-        ConcurrentJSLocker locker(m_codeBlock->m_lock);
-        commonData->recordedStatuses = WTFMove(m_recordedStatuses);
-    }
-}
+    if (!m_watchpoints.reallyAdd(m_codeBlock, m_identifiers, commonData))
+        return false;
 
-bool Plan::isStillValidOnMainThread()
-{
-    return m_watchpoints.areStillValidOnMainThread(*m_vm, m_identifiers);
+    commonData->recordedStatuses = WTF::move(m_recordedStatuses);
+
+    ASSERT(m_vm->heap.isDeferred());
+    for (auto* callLinkInfo : commonData->m_directCallLinkInfos)
+        callLinkInfo->validateSpeculativeRepatchOnMainThread(*m_vm);
+
+    return true;
 }
 
 CompilationResult Plan::finalize()
@@ -550,24 +576,27 @@ CompilationResult Plan::finalize()
     CompilationResult result = [&] {
         if (m_finalizer->isFailed()) {
             CODEBLOCK_LOG_EVENT(m_codeBlock, "dfgFinalize", ("failed"));
-            return CompilationFailed;
+            return CompilationResult::CompilationFailed;
         }
 
-        if (!isStillValidOnMainThread() || !isStillValid()) {
+        if (!isStillValidCodeBlock()) {
             CODEBLOCK_LOG_EVENT(m_codeBlock, "dfgFinalize", ("invalidated"));
-            return CompilationInvalidated;
+            return CompilationResult::CompilationInvalidated;
         }
 
         bool result = m_finalizer->finalize();
         if (!result) {
             CODEBLOCK_LOG_EVENT(m_codeBlock, "dfgFinalize", ("failed"));
-            return CompilationFailed;
+            return CompilationResult::CompilationFailed;
         }
 
-        reallyAdd(m_codeBlock->jitCode()->dfgCommon());
+        if (!reallyAdd(m_codeBlock->jitCode()->dfgCommon())) {
+            CODEBLOCK_LOG_EVENT(m_codeBlock, "dfgFinalize", ("invalidated"));
+            return CompilationResult::CompilationInvalidated;
+        }
+
         {
             ConcurrentJSLocker locker(m_codeBlock->m_lock);
-            m_codeBlock->jitCode()->shrinkToFit(locker);
             m_codeBlock->shrinkToFit(locker, CodeBlock::ShrinkMode::LateShrink);
         }
 
@@ -575,10 +604,10 @@ CompilationResult Plan::finalize()
         // it is possible that the current CodeBlock is now invalidated & jettisoned.
         if (m_codeBlock->isJettisoned()) {
             CODEBLOCK_LOG_EVENT(m_codeBlock, "dfgFinalize", ("invalidated"));
-            return CompilationInvalidated;
+            return CompilationResult::CompilationInvalidated;
         }
 
-        if (validationEnabled()) {
+        if (validationEnabled()) [[unlikely]] {
             TrackedReferences trackedReferences;
 
             for (WriteBarrier<JSCell>& reference : m_codeBlock->jitCode()->dfgCommon()->m_weakReferences)
@@ -599,7 +628,7 @@ CompilationResult Plan::finalize()
         }
 
         CODEBLOCK_LOG_EVENT(m_codeBlock, "dfgFinalize", ("succeeded"));
-        return CompilationSuccessful;
+        return CompilationResult::CompilationSuccessful;
     }();
 
     // We will establish new references from the code block to things. So, we need a barrier.
@@ -610,7 +639,7 @@ CompilationResult Plan::finalize()
     return result;
 }
 
-bool Plan::iterateCodeBlocksForGC(AbstractSlotVisitor& visitor, const Function<void(CodeBlock*)>& func)
+bool Plan::iterateCodeBlocksForGC(AbstractSlotVisitor& visitor, NOESCAPE const Function<void(CodeBlock*)>& func)
 {
     if (!Base::iterateCodeBlocksForGC(visitor, func))
         return false;
@@ -636,8 +665,10 @@ bool Plan::checkLivenessAndVisitChildren(AbstractSlotVisitor& visitor)
             visitor.appendUnbarriered(value.value());
     }
 
-    m_recordedStatuses.visitAggregate(visitor);
-    m_recordedStatuses.markIfCheap(visitor);
+    if (m_recordedStatuses) {
+        m_recordedStatuses->visitAggregate(visitor);
+        m_recordedStatuses->markIfCheap(visitor);
+    }
 
     visitor.appendUnbarriered(m_codeBlock->alternative());
     visitor.appendUnbarriered(m_profiledDFGCodeBlock);
@@ -656,6 +687,9 @@ bool Plan::checkLivenessAndVisitChildren(AbstractSlotVisitor& visitor)
 
 bool Plan::isKnownToBeLiveDuringGC(AbstractSlotVisitor& visitor)
 {
+    if (safepointKeepsDependenciesLive())
+        return true;
+
     if (!Base::isKnownToBeLiveDuringGC(visitor))
         return false;
     if (!visitor.isMarked(m_codeBlock->alternative()))
@@ -667,6 +701,9 @@ bool Plan::isKnownToBeLiveDuringGC(AbstractSlotVisitor& visitor)
 
 bool Plan::isKnownToBeLiveAfterGC()
 {
+    if (safepointKeepsDependenciesLive())
+        return true;
+
     if (!Base::isKnownToBeLiveAfterGC())
         return false;
     if (!m_vm->heap.isMarked(m_codeBlock->alternative()))
@@ -700,11 +737,11 @@ void Plan::cleanMustHandleValuesIfNecessary()
     }
 }
 
-std::unique_ptr<JITData> Plan::tryFinalizeJITData(const JITCode& jitCode)
+std::unique_ptr<JITData> Plan::tryFinalizeJITData(const DFG::JITCode& jitCode)
 {
     auto osrExitThunk = m_vm->getCTIStub(osrExitGenerationThunkGenerator).retagged<OSRExitPtrTag>();
     auto exits = JITData::ExitVector::createWithSizeAndConstructorArguments(jitCode.m_osrExit.size(), osrExitThunk);
-    return JITData::tryCreate(*m_vm, m_codeBlock, jitCode, WTFMove(exits));
+    return JITData::tryCreate(*m_vm, m_codeBlock, jitCode, WTF::move(exits));
 }
 
 } } // namespace JSC::DFG

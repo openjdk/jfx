@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,19 +24,18 @@
  */
 package test.javafx.scene.control;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import javafx.scene.control.CheckBoxTreeItem;
 import javafx.scene.control.TreeItem;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 public class CheckBoxTreeItemTest {
 
@@ -49,7 +48,8 @@ public class CheckBoxTreeItemTest {
             private CheckBoxTreeItem<String> subchild2;
         private CheckBoxTreeItem<String> child3;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         treeItem = new CheckBoxTreeItem<>();
 
         root = new CheckBoxTreeItem<>("root");
@@ -63,7 +63,8 @@ public class CheckBoxTreeItemTest {
         root.getChildren().addAll(child1, child2, child3);
     }
 
-    @After public void cleanup() {
+    @AfterEach
+    public void cleanup() {
         treeItem = null;
         root = null;
         child1 = null;

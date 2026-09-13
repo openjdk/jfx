@@ -36,6 +36,9 @@ class JITWorklist;
 class Safepoint;
 
 class JITWorklistThread final : public AutomaticThread {
+    WTF_MAKE_TZONE_ALLOCATED(JITWorklistThread);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(JITWorklistThread);
+
     class WorkScope;
 
     friend class Safepoint;
@@ -45,7 +48,9 @@ class JITWorklistThread final : public AutomaticThread {
 public:
     JITWorklistThread(const AbstractLocker&, JITWorklist&);
 
-    const char* name() const final;
+    ASCIILiteral name() const final;
+
+    const Safepoint* safepoint() const { return m_safepoint; }
 
 private:
     PollResult poll(const AbstractLocker&) final;
@@ -58,6 +63,7 @@ private:
     Lock m_rightToRun;
     JITWorklist& m_worklist;
     RefPtr<JITPlan> m_plan { nullptr };
+    unsigned m_planLoad { 0 };
     Safepoint* m_safepoint { nullptr };
 };
 

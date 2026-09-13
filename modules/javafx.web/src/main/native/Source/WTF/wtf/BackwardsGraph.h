@@ -37,7 +37,7 @@ namespace WTF {
 template<typename Graph>
 class BackwardsGraph {
     WTF_MAKE_NONCOPYABLE(BackwardsGraph);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(BackwardsGraph);
 public:
     using Node = SingleRootGraphNode<Graph>;
     using Set = SingleRootGraphSet<Graph>;
@@ -161,17 +161,17 @@ public:
             Node node = this->node(i);
             if (!node)
                 continue;
-            out.print(dump(node), ":\n");
-            out.print("    Preds: ");
+            out.print(dump(node), ":\n"_s);
+            out.print("    Preds: "_s);
             CommaPrinter comma;
             for (Node predecessor : predecessors(node))
                 out.print(comma, dump(predecessor));
-            out.print("\n");
-            out.print("    Succs: ");
+            out.print("\n"_s);
+            out.print("    Succs: "_s);
             comma = CommaPrinter();
             for (Node successor : successors(node))
                 out.print(comma, dump(successor));
-            out.print("\n");
+            out.print("\n"_s);
         }
     }
 

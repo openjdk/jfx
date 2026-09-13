@@ -25,24 +25,55 @@
 
 #include "config.h"
 
-#if ENABLE(SERVICE_WORKER)
 #include "ExtendableMessageEvent.h"
 
 #include "EventNames.h"
-#include <wtf/IsoMallocInlines.h>
+#include "JSDOMConvert.h"
+#include "JSExtendableMessageEvent.h"
+#include "SecurityOrigin.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(ExtendableMessageEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ExtendableMessageEvent);
 
-Ref<ExtendableMessageEvent> ExtendableMessageEvent::create(Vector<RefPtr<MessagePort>>&& ports, RefPtr<SerializedScriptValue>&& data, const String& origin, const String& lastEventId, std::optional<ExtendableMessageEventSource>&& source)
+static JSC::Strong<JSC::JSObject> createWrapperAndSetData(JSC::JSGlobalObject& globalObject, ExtendableMessageEvent& event, JSC::JSValue value)
 {
-    return adoptRef(*new ExtendableMessageEvent(WTFMove(data), origin, lastEventId, WTFMove(source), WTFMove(ports)));
+    auto& vm = globalObject.vm();
+    JSC::Strong<JSC::Unknown> strongData(vm, value);
+
+    Locker<JSC::JSLock> locker(vm.apiLock());
+    JSC::Strong<JSC::JSObject> strongWrapper(vm, JSC::jsCast<JSC::JSObject*>(toJSNewlyCreated<IDLInterface<ExtendableMessageEvent>>(globalObject,  *JSC::jsCast<JSDOMGlobalObject*>(&globalObject), Ref { event })));
+    event.data().set(vm, strongWrapper.get(), value);
+
+    return strongWrapper;
 }
 
-ExtendableMessageEvent::ExtendableMessageEvent(JSC::JSGlobalObject& state, const AtomString& type, const Init& init, IsTrusted isTrusted)
-    : ExtendableEvent(type, init, isTrusted)
-    , m_data(SerializedScriptValue::create(state, init.data, SerializationForStorage::No, SerializationErrorMode::NonThrowing))
+auto ExtendableMessageEvent::create(JSC::JSGlobalObject& globalObject, const AtomString& type, const Init& initializer, IsTrusted isTrusted) -> ExtendableMessageEventWithStrongData
+{
+    Ref event = adoptRef(*new ExtendableMessageEvent(type, initializer, isTrusted));
+    auto strongWrapper = createWrapperAndSetData(globalObject, event.get(), initializer.data);
+
+    return { WTF::move(event), WTF::move(strongWrapper) };
+}
+
+auto ExtendableMessageEvent::create(JSC::JSGlobalObject& globalObject, Vector<Ref<MessagePort>>&& ports, Ref<SerializedScriptValue>&& data, Ref<SecurityOrigin>&& origin, const String& lastEventId, std::optional<ExtendableMessageEventSource>&& source) -> ExtendableMessageEventWithStrongData
+{
+    auto& vm = globalObject.vm();
+    Locker<JSC::JSLock> locker(vm.apiLock());
+
+    bool didFail = false;
+
+    auto deserialized = data->deserialize(globalObject, &globalObject, ports, SerializationErrorMode::NonThrowing, &didFail);
+
+    Ref event = adoptRef(*new ExtendableMessageEvent(didFail ? eventNames().messageerrorEvent : eventNames().messageEvent, WTF::move(origin), lastEventId, WTF::move(source), WTF::move(ports)));
+    auto strongWrapper = createWrapperAndSetData(globalObject, event.get(), deserialized);
+
+    return { WTF::move(event), WTF::move(strongWrapper) };
+}
+
+ExtendableMessageEvent::ExtendableMessageEvent(const AtomString& type, const Init& init, IsTrusted isTrusted)
+    : ExtendableEvent(EventInterfaceType::ExtendableMessageEvent, type, init, isTrusted)
     , m_origin(init.origin)
     , m_lastEventId(init.lastEventId)
     , m_source(init.source)
@@ -50,13 +81,12 @@ ExtendableMessageEvent::ExtendableMessageEvent(JSC::JSGlobalObject& state, const
 {
 }
 
-ExtendableMessageEvent::ExtendableMessageEvent(RefPtr<SerializedScriptValue>&& data, const String& origin, const String& lastEventId, std::optional<ExtendableMessageEventSource>&& source, Vector<RefPtr<MessagePort>>&& ports)
-    : ExtendableEvent(eventNames().messageEvent, CanBubble::No, IsCancelable::No)
-    , m_data(WTFMove(data))
-    , m_origin(origin)
+ExtendableMessageEvent::ExtendableMessageEvent(const AtomString& type, Ref<SecurityOrigin>&& origin, const String& lastEventId, std::optional<ExtendableMessageEventSource>&& source, Vector<Ref<MessagePort>>&& ports)
+    : ExtendableEvent(EventInterfaceType::ExtendableMessageEvent, type, CanBubble::No, IsCancelable::No)
+    , m_origin(WTF::move(origin))
     , m_lastEventId(lastEventId)
-    , m_source(WTFMove(source))
-    , m_ports(WTFMove(ports))
+    , m_source(WTF::move(source))
+    , m_ports(WTF::move(ports))
 {
 }
 
@@ -64,6 +94,20 @@ ExtendableMessageEvent::~ExtendableMessageEvent()
 {
 }
 
-} // namespace WebCore
+String ExtendableMessageEvent::origin() const
+{
+    return WTF::switchOn(m_origin, [](const Ref<SecurityOrigin>& origin) {
+        return origin->toString();
+    },
+    [](const String& origin) {
+        return origin;
+    });
+}
 
-#endif // ENABLE(SERVICE_WORKER)
+const RefPtr<SecurityOrigin> ExtendableMessageEvent::securityOrigin() const
+{
+    auto* origin = std::get_if<Ref<SecurityOrigin>>(&m_origin);
+    return origin ? origin->ptr() : nullptr;
+}
+
+} // namespace WebCore

@@ -29,9 +29,13 @@
 #include "Chrome.h"
 #include "DetectedFace.h"
 #include "Document.h"
+#include "DocumentPage.h"
 #include "FaceDetectorOptions.h"
 #include "ImageBitmap.h"
 #include "ImageBitmapOptions.h"
+#include "ImageBuffer.h"
+#include "JSDOMConvertDictionary.h"
+#include "JSDOMConvertSequences.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSDetectedFace.h"
 #include "Page.h"
@@ -42,27 +46,26 @@ namespace WebCore {
 
 ExceptionOr<Ref<FaceDetector>> FaceDetector::create(ScriptExecutionContext& scriptExecutionContext, const FaceDetectorOptions& faceDetectorOptions)
 {
-    if (is<Document>(scriptExecutionContext)) {
-        const auto& document = downcast<Document>(scriptExecutionContext);
-        const auto* page = document.page();
+    if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext)) {
+        RefPtr page = document->page();
         if (!page)
-            return Exception { AbortError };
+            return Exception { ExceptionCode::AbortError };
         auto backing = page->chrome().createFaceDetector(faceDetectorOptions.convertToBacking());
         if (!backing)
-            return Exception { AbortError };
+            return Exception { ExceptionCode::AbortError };
         return adoptRef(*new FaceDetector(backing.releaseNonNull()));
     }
 
     if (is<WorkerGlobalScope>(scriptExecutionContext)) {
         // FIXME: https://bugs.webkit.org/show_bug.cgi?id=255380 Make the Shape Detection API work in Workers
-        return Exception { AbortError };
+        return Exception { ExceptionCode::AbortError };
     }
 
-    return Exception { AbortError };
+    return Exception { ExceptionCode::AbortError };
 }
 
 FaceDetector::FaceDetector(Ref<ShapeDetection::FaceDetector>&& backing)
-    : m_backing(WTFMove(backing))
+    : m_backing(WTF::move(backing))
 {
 }
 
@@ -70,19 +73,21 @@ FaceDetector::~FaceDetector() = default;
 
 void FaceDetector::detect(ScriptExecutionContext& scriptExecutionContext, ImageBitmap::Source&& source, DetectPromise&& promise)
 {
-    ImageBitmap::createCompletionHandler(scriptExecutionContext, WTFMove(source), { }, [backing = m_backing.copyRef(), promise = WTFMove(promise)](ExceptionOr<Ref<ImageBitmap>>&& imageBitmap) mutable {
+    ImageBitmap::createCompletionHandler(scriptExecutionContext, WTF::move(source), { }, [backing = m_backing.copyRef(), promise = WTF::move(promise)](ExceptionOr<Ref<ImageBitmap>>&& imageBitmap) mutable {
         if (imageBitmap.hasException()) {
             promise.resolve({ });
             return;
         }
 
-        auto imageBuffer = imageBitmap.releaseReturnValue()->takeImageBuffer();
-        if (!imageBuffer) {
+        // FIXME: This is a safer cpp false positive (rdar://160082559).
+        SUPPRESS_UNCOUNTED_ARG RefPtr imageBuffer = imageBitmap.releaseReturnValue()->takeImageBuffer();
+        RefPtr<NativeImage> image = imageBuffer ? imageBuffer->copyNativeImage() : nullptr;
+        if (!image) {
             promise.resolve({ });
             return;
         }
 
-        backing->detect(imageBuffer.releaseNonNull(), [promise = WTFMove(promise)](Vector<ShapeDetection::DetectedFace>&& detectedFaces) mutable {
+        backing->detect(*image, [promise = WTF::move(promise)](Vector<ShapeDetection::DetectedFace>&& detectedFaces) mutable {
             promise.resolve(detectedFaces.map([](const auto& detectedFace) {
                 return convertFromBacking(detectedFace);
             }));

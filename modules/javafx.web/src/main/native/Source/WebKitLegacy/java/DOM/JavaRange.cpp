@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,6 +31,7 @@
 #include <WebCore/DocumentFragment.h>
 #include <WebCore/Node.h>
 #include <WebCore/Range.h>
+#include "BoundaryPointInlines.h"
 #include <WebCore/SimpleRange.h>
 #include <WebCore/TextIterator.h>
 #include <WebCore/JSExecState.h>
@@ -45,7 +46,7 @@ using namespace WebCore;
 
 extern "C" {
 
-#define IMPL (static_cast<Range*>(jlong_to_ptr(peer)))
+#define IMPL (static_cast<WebCore::Range*>(jlong_to_ptr(peer)))
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_RangeImpl_dispose(JNIEnv*, jclass, jlong peer)
 {
@@ -217,7 +218,7 @@ JNIEXPORT jshort JNICALL Java_com_sun_webkit_dom_RangeImpl_compareBoundaryPoints
         raiseTypeErrorException(env);
         return 0;
     }
-    return raiseOnDOMError(env, IMPL->compareBoundaryPoints(static_cast<Range::CompareHow>(how), *static_cast<Range*>(jlong_to_ptr(sourceRange))));
+    return raiseOnDOMError(env, IMPL->compareBoundaryPoints(static_cast<WebCore::Range::CompareHow>(how), *static_cast<WebCore::Range*>(jlong_to_ptr(sourceRange))));
 }
 
 
@@ -269,7 +270,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_RangeImpl_surroundContentsImpl(JN
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_RangeImpl_cloneRangeImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<Range>(env, WTF::getPtr(IMPL->cloneRange()));
+    return JavaReturn<WebCore::Range>(env, WTF::getPtr(IMPL->cloneRange()));
 }
 
 

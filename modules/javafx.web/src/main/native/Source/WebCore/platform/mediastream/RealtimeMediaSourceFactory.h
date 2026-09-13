@@ -27,7 +27,7 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "PageIdentifier.h"
+#include <WebCore/PageIdentifier.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
@@ -45,14 +45,13 @@ struct MediaConstraints;
 class AudioCaptureFactory {
 public:
     virtual ~AudioCaptureFactory() = default;
-    virtual CaptureSourceOrError createAudioCaptureSource(const CaptureDevice&, MediaDeviceHashSalts&&, const MediaConstraints*, PageIdentifier) = 0;
+    virtual CaptureSourceOrError createAudioCaptureSource(const CaptureDevice&, MediaDeviceHashSalts&&, const MediaConstraints*, std::optional<PageIdentifier>) = 0;
     virtual CaptureDeviceManager& audioCaptureDeviceManager() = 0;
     virtual const Vector<CaptureDevice>& speakerDevices() const = 0;
     virtual void computeSpeakerDevices(CompletionHandler<void()>&& callback) const { callback(); }
 
-    class ExtensiveObserver : public CanMakeWeakPtr<ExtensiveObserver> { };
-    virtual void addExtensiveObserver(ExtensiveObserver&) { };
-    virtual void removeExtensiveObserver(ExtensiveObserver&) { };
+    WEBCORE_EXPORT virtual void enableMutedSpeechActivityEventListener(Function<void()>&&) { }
+    WEBCORE_EXPORT virtual void disableMutedSpeechActivityEventListener() { }
 
 protected:
     AudioCaptureFactory() = default;
@@ -61,7 +60,7 @@ protected:
 class VideoCaptureFactory {
 public:
     virtual ~VideoCaptureFactory() = default;
-    virtual CaptureSourceOrError createVideoCaptureSource(const CaptureDevice&, MediaDeviceHashSalts&&, const MediaConstraints*, PageIdentifier) = 0;
+    virtual CaptureSourceOrError createVideoCaptureSource(const CaptureDevice&, MediaDeviceHashSalts&&, const MediaConstraints*, std::optional<PageIdentifier>) = 0;
     virtual CaptureDeviceManager& videoCaptureDeviceManager() = 0;
 
 protected:
@@ -71,7 +70,7 @@ protected:
 class DisplayCaptureFactory {
 public:
     virtual ~DisplayCaptureFactory() = default;
-    virtual CaptureSourceOrError createDisplayCaptureSource(const CaptureDevice&, MediaDeviceHashSalts&&, const MediaConstraints*, PageIdentifier) = 0;
+    virtual CaptureSourceOrError createDisplayCaptureSource(const CaptureDevice&, MediaDeviceHashSalts&&, const MediaConstraints*, std::optional<PageIdentifier>) = 0;
     virtual DisplayCaptureManager& displayCaptureDeviceManager() = 0;
 
 protected:

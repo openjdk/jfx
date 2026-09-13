@@ -26,7 +26,6 @@
 #pragma once
 
 #include <limits.h>
-#include <wtf/EnumTraits.h>
 #include <wtf/Forward.h>
 #include <wtf/OptionSet.h>
 
@@ -53,9 +52,7 @@ enum class DragSourceAction : uint8_t {
 #if ENABLE(ATTACHMENT_ELEMENT)
     Attachment = 1 << 4,
 #endif
-#if ENABLE(INPUT_TYPE_COLOR)
     Color      = 1 << 5,
-#endif
 #if ENABLE(MODEL_ELEMENT)
     Model      = 1 << 6,
 #endif
@@ -71,9 +68,7 @@ constexpr OptionSet<DragSourceAction> anyDragSourceAction()
 #if ENABLE(ATTACHMENT_ELEMENT)
         , DragSourceAction::Attachment
 #endif
-#if ENABLE(INPUT_TYPE_COLOR)
         , DragSourceAction::Color
-#endif
 #if ENABLE(MODEL_ELEMENT)
         , DragSourceAction::Model
 #endif
@@ -100,60 +95,3 @@ enum class HasNonDefaultPasteboardData : bool { No, Yes };
 enum class DragHandlingMethod : uint8_t { None, EditPlainText, EditRichText, UploadFile, PageLoad, SetColor, NonDefault };
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::DragDestinationAction> {
-    using values = EnumValues<
-        WebCore::DragDestinationAction,
-        WebCore::DragDestinationAction::DHTML,
-        WebCore::DragDestinationAction::Edit,
-        WebCore::DragDestinationAction::Load
-    >;
-};
-
-template<> struct EnumTraits<WebCore::DragHandlingMethod> {
-    using values = EnumValues<
-        WebCore::DragHandlingMethod,
-        WebCore::DragHandlingMethod::None,
-        WebCore::DragHandlingMethod::EditPlainText,
-        WebCore::DragHandlingMethod::EditRichText,
-        WebCore::DragHandlingMethod::UploadFile,
-        WebCore::DragHandlingMethod::PageLoad,
-        WebCore::DragHandlingMethod::SetColor,
-        WebCore::DragHandlingMethod::NonDefault
-    >;
-};
-
-template<> struct EnumTraits<WebCore::DragOperation> {
-    using values = EnumValues<
-        WebCore::DragOperation,
-        WebCore::DragOperation::Copy,
-        WebCore::DragOperation::Link,
-        WebCore::DragOperation::Generic,
-        WebCore::DragOperation::Private,
-        WebCore::DragOperation::Move,
-        WebCore::DragOperation::Delete
-    >;
-};
-
-template<> struct EnumTraits<WebCore::DragSourceAction> {
-    using values = EnumValues<
-        WebCore::DragSourceAction,
-        WebCore::DragSourceAction::DHTML,
-        WebCore::DragSourceAction::Image,
-        WebCore::DragSourceAction::Link,
-        WebCore::DragSourceAction::Selection
-#if ENABLE(ATTACHMENT_ELEMENT)
-        , WebCore::DragSourceAction::Attachment
-#endif
-#if ENABLE(INPUT_TYPE_COLOR)
-        , WebCore::DragSourceAction::Color
-#endif
-#if ENABLE(MODEL_ELEMENT)
-        , WebCore::DragSourceAction::Model
-#endif
-    >;
-};
-
-} // namespace WTF

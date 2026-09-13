@@ -25,7 +25,9 @@
 
 #pragma once
 
+#include <wtf/CheckedPtr.h>
 #include <wtf/Hasher.h>
+#include <wtf/Platform.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -35,18 +37,26 @@ class RenderBoxModelObject;
 class RenderText;
 class RenderedDocumentMarker;
 struct TextBoxSelectableRange;
+enum class DocumentMarkerType : uint32_t;
 
-struct MarkedText {
+struct MarkedText : public CanMakeCheckedPtr<MarkedText, WTF::DefaultedOperatorEqual::Yes, WTF::CheckedPtrDeleteCheckException::Yes> {
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(MarkedText);
+    WTF_STRUCT_OVERRIDE_DELETE_FOR_CHECKED_PTR(MarkedText);
+
     // Sorted by paint order
     enum class Type : uint8_t {
         Unmarked,
         GrammarError,
         Correction,
+#if ENABLE(WRITING_TOOLS)
+        WritingToolsTextSuggestion,
+#endif
         SpellingError,
         TextMatch,
         DictationAlternatives,
         Highlight,
         FragmentHighlight,
+        TextExtractionHighlight,
 #if ENABLE(APP_HIGHLIGHTS)
         AppHighlight,
 #endif
@@ -56,6 +66,7 @@ struct MarkedText {
 #endif
         Selection,
         DraggedContent,
+        TransparentContent,
     };
 
     enum class PaintPhase {
@@ -75,13 +86,14 @@ struct MarkedText {
 
     bool isEmpty() const { return endOffset <= startOffset; }
     bool isHashTableDeletedValue() const { return startOffset == std::numeric_limits<unsigned>::max(); }
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
     bool operator==(const MarkedText& other) const = default;
 
     WEBCORE_EXPORT static Vector<MarkedText> subdivide(const Vector<MarkedText>&, OverlapStrategy = OverlapStrategy::None);
 
     static Vector<MarkedText> collectForDocumentMarkers(const RenderText&, const TextBoxSelectableRange&, PaintPhase);
     static Vector<MarkedText> collectForHighlights(const RenderText&, const TextBoxSelectableRange&, PaintPhase);
-    static Vector<MarkedText> collectForDraggedContent(const RenderText&, const TextBoxSelectableRange&);
+    static Vector<MarkedText> collectForDraggedAndTransparentContent(const DocumentMarkerType, const RenderText& renderer, const TextBoxSelectableRange&);
 
     unsigned startOffset { 0 };
     unsigned endOffset { 0 };
@@ -104,18 +116,5 @@ template<> struct HashTraits<WebCore::MarkedText> : public GenericHashTraits<Web
     static bool isDeletedValue(const WebCore::MarkedText& slot) { return slot.isHashTableDeletedValue(); }
 };
 
-template<> struct DefaultHash<WebCore::MarkedText> {
-    static unsigned hash(const WebCore::MarkedText& key)
-    {
-        return computeHash(key);
-    }
-
-    static bool equal(const WebCore::MarkedText& a, const WebCore::MarkedText& b)
-    {
-        return a == b;
-    }
-
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
 } // namespace WTF
 

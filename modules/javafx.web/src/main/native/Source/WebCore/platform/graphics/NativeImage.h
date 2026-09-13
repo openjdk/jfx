@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2023 Apple Inc.  All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2008 Torch Mobile, Inc.
  * Copyright (C) 2012 Company 100 Inc.
  *
@@ -27,55 +27,90 @@
 
 #pragma once
 
-#include "Color.h"
-#include "ImagePaintingOptions.h"
-#include "IntSize.h"
-#include "PlatformImage.h"
-#include "RenderingResource.h"
+#include <WebCore/ImageTypes.h>
+#include <WebCore/PlatformExportMacros.h>
+#include <WebCore/PlatformImage.h>
+#include <WebCore/RenderingResource.h>
+#include <wtf/CheckedRef.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/UniqueRef.h>
 
-#if USE(CAIRO)
-#include "PixelBuffer.h"
+#if USE(SKIA)
+class GrDirectContext;
 #endif
 
 namespace WebCore {
 
+class Color;
+class DestinationColorSpace;
+class FloatRect;
 class GraphicsContext;
+class IntSize;
+class NativeImageBackend;
+struct ImagePaintingOptions;
 
-class NativeImage final : public RenderingResource {
-    WTF_MAKE_FAST_ALLOCATED;
+class NativeImage : public ThreadSafeRefCounted<NativeImage>, public CanMakeThreadSafeCheckedPtr<NativeImage> {
+    WTF_MAKE_TZONE_ALLOCATED(NativeImage);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(NativeImage);
 public:
-    static WEBCORE_EXPORT RefPtr<NativeImage> create(PlatformImagePtr&&, RenderingResourceIdentifier = RenderingResourceIdentifier::generate());
-#if USE(CAIRO)
-    static RefPtr<NativeImage> create(Ref<PixelBuffer>&&, bool premultipliedAlpha);
+#if USE(SKIA)
+    static WEBCORE_EXPORT RefPtr<NativeImage> create(PlatformImagePtr&&, GrDirectContext* = nullptr);
+    // Creates a NativeImage that is intended to be drawn once or only few times. Signals the platform to avoid generating any caches for the image.
+    static WEBCORE_EXPORT RefPtr<NativeImage> createTransient(PlatformImagePtr&&, GrDirectContext* = nullptr);
+#else
+    static WEBCORE_EXPORT RefPtr<NativeImage> create(PlatformImagePtr&&);
+    // Creates a NativeImage that is intended to be drawn once or only few times. Signals the platform to avoid generating any caches for the image.
+    static WEBCORE_EXPORT RefPtr<NativeImage> createTransient(PlatformImagePtr&&);
 #endif
 
-    WEBCORE_EXPORT void setPlatformImage(PlatformImagePtr&&);
-    const PlatformImagePtr& platformImage() const { return m_platformImage; }
+    WEBCORE_EXPORT virtual ~NativeImage();
 
-    WEBCORE_EXPORT IntSize size() const;
-    bool hasAlpha() const;
-    Color singlePixelSolidColor() const;
-    WEBCORE_EXPORT DestinationColorSpace colorSpace() const;
+    WEBCORE_EXPORT virtual const PlatformImagePtr& platformImage() const;
+    WEBCORE_EXPORT virtual IntSize size() const;
+    WEBCORE_EXPORT virtual bool hasAlpha() const;
+    std::optional<Color> singlePixelSolidColor() const;
+    WEBCORE_EXPORT virtual DestinationColorSpace colorSpace() const;
+    WEBCORE_EXPORT bool hasHDRContent() const;
+    WEBCORE_EXPORT Headroom headroom() const;
 
-    void draw(GraphicsContext&, const FloatSize& imageSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions&);
     void clearSubimages();
 
-private:
-    NativeImage(PlatformImagePtr&&, RenderingResourceIdentifier);
-#if USE(CAIRO)
-    NativeImage(PlatformImagePtr&&, RenderingResourceIdentifier, Ref<PixelBuffer>&&);
+    WEBCORE_EXPORT void replacePlatformImage(PlatformImagePtr&&);
+
+#if USE(COORDINATED_GRAPHICS)
+    uint64_t uniqueID() const;
 #endif
 
-    bool isNativeImage() const final { return true; }
+#if USE(SKIA)
+    GrDirectContext* grContext() const { return m_grContext; }
+#endif
 
-    PlatformImagePtr m_platformImage;
-#if USE(CAIRO)
-    RefPtr<PixelBuffer> m_pixelBuffer;
+    void addObserver(WeakRef<RenderingResourceObserver>&& observer)
+    {
+        m_observers.add(WTF::move(observer));
+    }
+
+    RenderingResourceIdentifier renderingResourceIdentifier() const
+    {
+        return m_renderingResourceIdentifier;
+    }
+
+protected:
+#if USE(SKIA)
+    WEBCORE_EXPORT NativeImage(PlatformImagePtr&&, GrDirectContext* = nullptr);
+#else
+    WEBCORE_EXPORT NativeImage(PlatformImagePtr&&);
+#endif
+
+    void computeHeadroom();
+
+    mutable PlatformImagePtr m_platformImage;
+    mutable Headroom m_headroom { Headroom::None };
+    mutable WeakHashSet<RenderingResourceObserver> m_observers;
+    RenderingResourceIdentifier m_renderingResourceIdentifier { RenderingResourceIdentifier::generate() };
+#if USE(SKIA)
+    GrDirectContext* m_grContext { nullptr };
 #endif
 };
 
 } // namespace WebCore
-
-SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::NativeImage)
-    static bool isType(const WebCore::RenderingResource& renderingResource) { return renderingResource.isNativeImage(); }
-SPECIALIZE_TYPE_TRAITS_END()

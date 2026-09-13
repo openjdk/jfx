@@ -29,8 +29,12 @@
 #include "StyleFontSizeFunctions.h"
 
 #include <wtf/SortedArrayMap.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/Vector.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FontPlatformData);
 
 FontPlatformData::FontPlatformData(WTF::HashTableDeletedValueType)
     : m_isHashTableDeletedValue(true)
@@ -52,7 +56,10 @@ FontPlatformData::FontPlatformData(float size, bool syntheticBold, bool syntheti
 {
 }
 
+#if !USE(SKIA)
 FontPlatformData::~FontPlatformData() = default;
+#endif
+
 FontPlatformData::FontPlatformData(const FontPlatformData&) = default;
 FontPlatformData& FontPlatformData::operator=(const FontPlatformData&) = default;
 
@@ -81,10 +88,12 @@ FontPlatformData FontPlatformData::cloneWithSize(const FontPlatformData& source,
     return copy;
 }
 
+#if !USE(SKIA)
 void FontPlatformData::updateSize(float size)
 {
     m_size = size;
 }
+#endif
 #endif
 
 void FontPlatformData::updateSizeWithFontSizeAdjust(const FontSizeAdjust& fontSizeAdjust, float computedSize)
@@ -92,7 +101,12 @@ void FontPlatformData::updateSizeWithFontSizeAdjust(const FontSizeAdjust& fontSi
     if (!fontSizeAdjust.value)
         return;
 
-    auto tmpFont = FontCache::forCurrentThread().fontForPlatformData(*this);
+    if (!*fontSizeAdjust.value) {
+        updateSize(0);
+        return;
+    }
+
+    auto tmpFont = FontCache::forCurrentThread()->fontForPlatformData(*this);
     auto adjustedFontSize = Style::adjustedFontSize(computedSize, fontSizeAdjust, tmpFont->fontMetrics());
 
     if (adjustedFontSize == size())
@@ -111,7 +125,7 @@ const FontPlatformData::CreationData* FontPlatformData::creationData() const
 #endif
 }
 
-#if !PLATFORM(COCOA) && !USE(FREETYPE)
+#if !PLATFORM(COCOA) && !USE(FREETYPE) && !USE(SKIA)
 Vector<FontPlatformData::FontVariationAxis> FontPlatformData::variationAxes(ShouldLocalizeAxisNames) const
 {
     // FIXME: <webkit.org/b/219614> Not implemented yet.

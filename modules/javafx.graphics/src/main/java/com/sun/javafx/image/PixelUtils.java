@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,15 +25,20 @@
 
 package com.sun.javafx.image;
 
+import com.sun.javafx.image.impl.ByteAbgr;
+import com.sun.javafx.image.impl.ByteArgb;
 import com.sun.javafx.image.impl.ByteBgr;
 import com.sun.javafx.image.impl.ByteBgra;
 import com.sun.javafx.image.impl.ByteBgraPre;
 import com.sun.javafx.image.impl.ByteGray;
 import com.sun.javafx.image.impl.ByteIndexed;
 import com.sun.javafx.image.impl.ByteRgb;
+import com.sun.javafx.image.impl.ByteRgba;
 import com.sun.javafx.image.impl.General;
 import com.sun.javafx.image.impl.IntArgb;
 import com.sun.javafx.image.impl.IntArgbPre;
+import com.sun.javafx.image.impl.IntBgr;
+import com.sun.javafx.image.impl.IntRgb;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
@@ -207,7 +212,21 @@ public class PixelUtils {
     public static ByteToBytePixelConverter
         getB2BConverter(PixelGetter<ByteBuffer> src, PixelSetter<ByteBuffer> dst)
     {
-        if (src ==        ByteBgra.getter) {
+        if (src ==        ByteRgba.getter) {
+            if (dst ==               ByteRgba.setter) {
+                return    ByteRgba.ToByteRgbaConverter();
+            } else if (dst ==        ByteBgra.setter) {
+                return    ByteRgba.ToByteBgraConverter();
+            } else if (dst ==        ByteBgraPre.setter) {
+                return    ByteRgba.ToByteBgraPreConverter();
+            }
+        } else if (src == ByteAbgr.getter) {
+            if (dst ==               ByteBgra.setter) {
+                return    ByteAbgr.ToByteBgraConverter();
+            } else if (dst ==        ByteBgraPre.setter) {
+                return    ByteAbgr.ToByteBgraPreConverter();
+            }
+        } else if (src == ByteBgra.getter) {
             if (dst ==               ByteBgra.setter) {
                 return    ByteBgra.ToByteBgraConverter();
             } else if (dst ==        ByteBgraPre.setter) {
@@ -226,14 +245,20 @@ public class PixelUtils {
                 return    ByteRgb.ToByteBgraPreConverter();
             } else if (dst ==       ByteBgr.setter) {
                 return    ByteRgb.ToByteBgrConverter();
+            } else if (dst ==       ByteArgb.setter) {
+                return    ByteRgb.ToByteArgbConverter();
             }
         } else if (src == ByteBgr.getter) {
-            if (dst ==              ByteBgr.setter) {
+            if (dst ==              ByteRgb.setter) {
+                return    ByteBgr.ToByteRgbConverter();
+            } else if (dst ==       ByteBgr.setter) {
                 return    ByteBgr.ToByteBgrConverter();
             } else if (dst ==       ByteBgra.setter) {
                 return    ByteBgr.ToByteBgraConverter();
             } else if (dst ==       ByteBgraPre.setter) {
                 return    ByteBgr.ToByteBgraPreConverter();
+            } else if (dst ==       ByteArgb.setter) {
+                return    ByteBgr.ToByteArgbConverter();
             }
         } else if (src == ByteGray.getter) {
             if (dst ==               ByteGray.setter) {
@@ -339,7 +364,15 @@ public class PixelUtils {
     public static IntToIntPixelConverter
         getI2IConverter(PixelGetter<IntBuffer> src, PixelSetter<IntBuffer> dst)
     {
-        if (src ==        IntArgb.getter) {
+        if (src ==        IntRgb.getter) {
+            if (dst ==              IntArgbPre.setter) {
+                return    IntRgb.ToIntArgbPreConverter();
+            }
+        } else if (src == IntBgr.getter) {
+            if (dst ==              IntArgbPre.setter) {
+                return    IntBgr.ToIntArgbPreConverter();
+            }
+        } else if (src == IntArgb.getter) {
             if (dst ==              IntArgb.setter) {
                 return    IntArgb.ToIntArgbConverter();
             } else if (dst ==       IntArgbPre.setter) {

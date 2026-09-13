@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,7 @@
 
 package test.javafx.scene;
 
-import static org.junit.Assert.assertEquals;
-
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 
 import javafx.event.Event;
 import javafx.event.EventHandler;
@@ -41,113 +38,124 @@ import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.shape.Rectangle;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import test.com.sun.javafx.test.PropertyReference;
 import test.com.sun.javafx.test.MouseEventGenerator;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.SwipeEvent;
 
-@RunWith(Parameterized.class)
 public final class Scenegraph_eventHandlers_Test {
-    private final EventType<?> eventType;
-    private final PropertyReference sceneOnHandlerPropRef;
-    private final PropertyReference nodeOnHandlerPropRef;
-    private final Event triggeringEvent;
 
-    @Parameters
-    public static Collection data() {
+    public static Stream<Arguments> data() {
         final MouseEventGenerator mouseEventGenerator =
                 new MouseEventGenerator();
-        return Arrays.asList(new Object[][] {
-            {
+        return Stream.of(
+            config(
                 KeyEvent.KEY_PRESSED,
                 "onKeyPressed",
                 createTestKeyEvent(KeyEvent.KEY_PRESSED)
-            }, {
+            ),
+            config(
                 KeyEvent.KEY_RELEASED,
                 "onKeyReleased",
                 createTestKeyEvent(KeyEvent.KEY_RELEASED)
-            }, {
+            ),
+            config(
                 KeyEvent.KEY_TYPED,
                 "onKeyTyped",
                 createTestKeyEvent(KeyEvent.KEY_TYPED)
-            }, {
+            ),
+            config(
                 MouseEvent.MOUSE_PRESSED,
                 "onMousePressed",
                 mouseEventGenerator.generateMouseEvent(
                         MouseEvent.MOUSE_PRESSED, 0, 0)
-            }, {
+            ),
+            config(
                 MouseEvent.MOUSE_RELEASED,
                 "onMouseReleased",
                 mouseEventGenerator.generateMouseEvent(
                         MouseEvent.MOUSE_RELEASED, 0, 0)
-            }, {
+            ),
+            config(
                 MouseEvent.MOUSE_CLICKED,
                 "onMouseClicked",
                 mouseEventGenerator.generateMouseEvent(
                         MouseEvent.MOUSE_CLICKED, 0, 0)
-            }, {
+            ),
+            config(
                 MouseEvent.MOUSE_ENTERED,
                 "onMouseEntered",
                 mouseEventGenerator.generateMouseEvent(
                         MouseEvent.MOUSE_ENTERED, 0, 0)
-            }, {
+            ),
+            config(
                 MouseEvent.MOUSE_EXITED,
                 "onMouseExited",
                 mouseEventGenerator.generateMouseEvent(
                         MouseEvent.MOUSE_EXITED, 0, 0)
-            }, {
+            ),
+            config(
                 MouseEvent.MOUSE_MOVED,
                 "onMouseMoved",
                 mouseEventGenerator.generateMouseEvent(
                         MouseEvent.MOUSE_MOVED, 0, 0)
-            }, {
+            ),
+            config(
                 MouseEvent.MOUSE_DRAGGED,
                 "onMouseDragged",
                 mouseEventGenerator.generateMouseEvent(
                         MouseEvent.MOUSE_DRAGGED, 0, 0)
-            }, {
+            ),
+            config(
                 SwipeEvent.SWIPE_LEFT,
                 "onSwipeLeft",
                 createSwipeEvent(SwipeEvent.SWIPE_LEFT)
-            }, {
+            ),
+            config(
                 SwipeEvent.SWIPE_RIGHT,
                 "onSwipeRight",
                 createSwipeEvent(SwipeEvent.SWIPE_RIGHT)
-            }, {
+            ),
+            config(
                 SwipeEvent.SWIPE_UP,
                 "onSwipeUp",
                 createSwipeEvent(SwipeEvent.SWIPE_UP)
-            }, {
+            ),
+            config(
                 SwipeEvent.SWIPE_DOWN,
                 "onSwipeDown",
                 createSwipeEvent(SwipeEvent.SWIPE_DOWN)
-            }, {
+            ),
+            config(
                 ContextMenuEvent.CONTEXT_MENU_REQUESTED,
                 "onContextMenuRequested",
                 createContextMenuEvent()
-            }
-        });
+            )
+        );
     }
 
-    public Scenegraph_eventHandlers_Test(
-            final EventType<?> eventType,
-            final String onHandlerName,
-            final Event triggeringEvent) {
-        this.eventType = eventType;
-        this.sceneOnHandlerPropRef =
-                PropertyReference.createForBean(Scene.class, onHandlerName);
-        this.nodeOnHandlerPropRef =
-                PropertyReference.createForBean(Node.class, onHandlerName);
-        this.triggeringEvent = triggeringEvent;
+    private static Arguments config(final EventType<?> eventType,
+                                    final String onHandlerName,
+                                    final Event triggeringEvent) {
+        return Arguments.of(
+            eventType,
+            PropertyReference.createForBean(Scene.class, onHandlerName),
+            PropertyReference.createForBean(Node.class, onHandlerName),
+            triggeringEvent
+        );
     }
 
-    @Test
-    public void shouldCallRegisteredHandlers() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void shouldCallRegisteredHandlers(EventType<?> eventType,
+                                             PropertyReference sceneOnHandlerPropRef,
+                                             PropertyReference nodeOnHandlerPropRef,
+                                             Event triggeringEvent) {
         final EventCountingHandler sceneHandler = new EventCountingHandler();
         final EventCountingHandler lNodeHandler = new EventCountingHandler();
         final EventCountingHandler rNodeHandler = new EventCountingHandler();
@@ -206,8 +214,12 @@ public final class Scenegraph_eventHandlers_Test {
         assertEquals(1, rlNodeHandler.getCounter());
     }
 
-    @Test
-    public void shouldNotCallHandlersWithoutDispatcher() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void shouldNotCallHandlersWithoutDispatcher(EventType<?> eventType,
+                                                       PropertyReference sceneOnHandlerPropRef,
+                                                       PropertyReference nodeOnHandlerPropRef,
+                                                       Event triggeringEvent) {
         final EventCountingHandler sceneHandler = new EventCountingHandler();
         final EventCountingHandler rootHandler = new EventCountingHandler();
         final EventCountingHandler leafHandler = new EventCountingHandler();
@@ -242,8 +254,12 @@ public final class Scenegraph_eventHandlers_Test {
         assertEquals(1, leafHandler.getCounter());
     }
 
-    @Test
-    public void shouldNotPropagateConsumedCapturingEvents() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void shouldNotPropagateConsumedCapturingEvents(EventType<?> eventType,
+                                                          PropertyReference sceneOnHandlerPropRef,
+                                                          PropertyReference nodeOnHandlerPropRef,
+                                                          Event triggeringEvent) {
         final EventCountingHandler sceneHandler = new EventCountingHandler();
         final EventCountingHandler rlNodeHandler = new EventCountingHandler();
 
@@ -278,8 +294,12 @@ public final class Scenegraph_eventHandlers_Test {
         setEventHandler(TEST_RL_NODE, nodeOnHandlerPropRef, null);
     }
 
-    @Test
-    public void shouldNotPropagateConsumedBubblingEvents() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void shouldNotPropagateConsumedBubblingEvents(EventType<?> eventType,
+                                                         PropertyReference sceneOnHandlerPropRef,
+                                                         PropertyReference nodeOnHandlerPropRef,
+                                                         Event triggeringEvent) {
         final EventCountingHandler sceneHandler = new EventCountingHandler();
         final EventCountingHandler rootNodeHandler = new EventCountingHandler();
         final EventCountingHandler rlNodeHandler = new EventCountingHandler();

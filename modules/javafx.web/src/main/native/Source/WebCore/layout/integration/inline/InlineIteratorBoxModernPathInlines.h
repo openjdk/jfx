@@ -27,6 +27,7 @@
 
 #include "InlineDisplayBoxInlines.h"
 #include "InlineIteratorBoxModernPath.h"
+#include "StyleTabSize.h"
 
 namespace WebCore {
 namespace InlineIterator {
@@ -38,13 +39,13 @@ inline TextRun BoxModernPath::textRun(TextRunMode mode) const
     auto& style = box().style();
     auto expansion = box().expansion();
     auto logicalLeft = [&] {
-        if (style.isLeftToRightDirection())
+        if (style.writingMode().isBidiLTR())
             return visualRectIgnoringBlockDirection().x() - (line().lineBoxLeft() + line().contentLogicalLeft());
         return line().lineBoxRight() - (visualRectIgnoringBlockDirection().maxX() + line().contentLogicalLeft());
     };
     auto characterScanForCodePath = isText() && !renderText().canUseSimpleFontCodePath();
     auto textRun = TextRun { mode == TextRunMode::Editing ? originalText() : box().text().renderedContent(), logicalLeft(), expansion.horizontalExpansion, expansion.behavior, direction(), style.rtlOrdering() == Order::Visual, characterScanForCodePath };
-    textRun.setTabSize(!style.collapseWhiteSpace(), style.tabSize());
+    textRun.setTabSize(!style.collapseWhiteSpace(), Style::toPlatform(style.tabSize()));
     return textRun;
 }
 

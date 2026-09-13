@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,10 +24,10 @@
  */
 package test.com.sun.glass.ui.monocle;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import com.sun.glass.ui.monocle.EPDSettingsShim;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
 
 /**
  * Provides test cases for the {@code EPDSettings} class.
@@ -52,7 +52,7 @@ public class EPDSettingsTest {
      * Removes all of the EPD system properties. This method runs before each of
      * the test cases.
      */
-    @Before
+    @BeforeEach
     public void initialize() {
         System.clearProperty(BITS_PER_PIXEL);
         System.clearProperty(ROTATE);
@@ -72,20 +72,20 @@ public class EPDSettingsTest {
     public void testBitsPerPixel() {
         System.setProperty(BITS_PER_PIXEL, "8");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(8, settings.bitsPerPixel);
+        assertEquals(8, settings.bitsPerPixel);
 
         System.setProperty(BITS_PER_PIXEL, "16");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(16, settings.bitsPerPixel);
+        assertEquals(16, settings.bitsPerPixel);
 
         System.setProperty(BITS_PER_PIXEL, "32");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(32, settings.bitsPerPixel);
+        assertEquals(32, settings.bitsPerPixel);
 
         System.err.println(String.format(VERIFY_ERROR, BITS_PER_PIXEL, 64));
         System.setProperty(BITS_PER_PIXEL, "64");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(32, settings.bitsPerPixel);
+        assertEquals(32, settings.bitsPerPixel);
     }
 
     /**
@@ -95,24 +95,24 @@ public class EPDSettingsTest {
     public void testRotate() {
         System.setProperty(ROTATE, "0");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(0, settings.rotate);
+        assertEquals(0, settings.rotate);
 
         System.setProperty(ROTATE, "1");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(1, settings.rotate);
+        assertEquals(1, settings.rotate);
 
         System.setProperty(ROTATE, "2");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(2, settings.rotate);
+        assertEquals(2, settings.rotate);
 
         System.setProperty(ROTATE, "3");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(3, settings.rotate);
+        assertEquals(3, settings.rotate);
 
         System.err.println(String.format(VERIFY_ERROR, ROTATE, 4));
         System.setProperty(ROTATE, "4");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(0, settings.rotate);
+        assertEquals(0, settings.rotate);
     }
 
     /**
@@ -124,21 +124,21 @@ public class EPDSettingsTest {
     public void testY8Inverted() {
         System.setProperty(Y8_INVERTED, "false");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(0, settings.grayscale);
+        assertEquals(0, settings.grayscale);
 
         System.setProperty(Y8_INVERTED, "true");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(0, settings.grayscale);
+        assertEquals(0, settings.grayscale);
 
         System.setProperty(BITS_PER_PIXEL, "8");
 
         System.setProperty(Y8_INVERTED, "false");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(0x1, settings.grayscale);
+        assertEquals(0x1, settings.grayscale);
 
         System.setProperty(Y8_INVERTED, "true");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(0x2, settings.grayscale);
+        assertEquals(0x2, settings.grayscale);
     }
 
     /**
@@ -149,11 +149,11 @@ public class EPDSettingsTest {
     public void testNoWait() {
         System.setProperty(NO_WAIT, "false");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(false, settings.noWait);
+        assertEquals(false, settings.noWait);
 
         System.setProperty(NO_WAIT, "true");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(true, settings.noWait);
+        assertEquals(true, settings.noWait);
     }
 
     /**
@@ -163,28 +163,28 @@ public class EPDSettingsTest {
     public void testWaveformMode() {
         System.setProperty(WAVEFORM_MODE, "1");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(1, settings.waveformMode);
+        assertEquals(1, settings.waveformMode);
 
         System.setProperty(WAVEFORM_MODE, "2");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(2, settings.waveformMode);
+        assertEquals(2, settings.waveformMode);
 
         System.setProperty(WAVEFORM_MODE, "3");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(3, settings.waveformMode);
+        assertEquals(3, settings.waveformMode);
 
         System.setProperty(WAVEFORM_MODE, "4");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(4, settings.waveformMode);
+        assertEquals(4, settings.waveformMode);
 
         System.err.println(String.format(VERIFY_ERROR, WAVEFORM_MODE, 5));
         System.setProperty(WAVEFORM_MODE, "5");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(257, settings.waveformMode);
+        assertEquals(257, settings.waveformMode);
 
         System.setProperty(WAVEFORM_MODE, "257");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(257, settings.waveformMode);
+        assertEquals(257, settings.waveformMode);
     }
 
     /**
@@ -195,11 +195,11 @@ public class EPDSettingsTest {
     public void testFlagEnableInversion() {
         System.setProperty(FLAG_ENABLE_INVERSION, "false");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(0, settings.flags);
+        assertEquals(0, settings.flags);
 
         System.setProperty(FLAG_ENABLE_INVERSION, "true");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(0x01, settings.flags);
+        assertEquals(0x01, settings.flags);
     }
 
     /**
@@ -210,11 +210,11 @@ public class EPDSettingsTest {
     public void testFlagForceMonochrome() {
         System.setProperty(FLAG_FORCE_MONOCHROME, "false");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(0, settings.flags);
+        assertEquals(0, settings.flags);
 
         System.setProperty(FLAG_FORCE_MONOCHROME, "true");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(0x02, settings.flags);
+        assertEquals(0x02, settings.flags);
     }
 
     /**
@@ -225,11 +225,11 @@ public class EPDSettingsTest {
     public void testFlagUseDitheringY1() {
         System.setProperty(FLAG_USE_DITHERING_Y1, "false");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(0, settings.flags);
+        assertEquals(0, settings.flags);
 
         System.setProperty(FLAG_USE_DITHERING_Y1, "true");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(0x2000, settings.flags);
+        assertEquals(0x2000, settings.flags);
     }
 
     /**
@@ -240,11 +240,11 @@ public class EPDSettingsTest {
     public void testFlagUseDitheringY4() {
         System.setProperty(FLAG_USE_DITHERING_Y4, "false");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(0, settings.flags);
+        assertEquals(0, settings.flags);
 
         System.setProperty(FLAG_USE_DITHERING_Y4, "true");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(0x4000, settings.flags);
+        assertEquals(0x4000, settings.flags);
     }
 
     /**
@@ -257,6 +257,6 @@ public class EPDSettingsTest {
         System.setProperty(FLAG_USE_DITHERING_Y1, "true");
         System.setProperty(FLAG_USE_DITHERING_Y4, "true");
         settings = EPDSettingsShim.newInstance();
-        Assert.assertEquals(0x01 | 0x02 | 0x2000 | 0x4000, settings.flags);
+        assertEquals(0x01 | 0x02 | 0x2000 | 0x4000, settings.flags);
     }
 }

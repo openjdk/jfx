@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -60,12 +60,6 @@ JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLOListElementImpl_getStartImpl
 {
     WebCore::JSMainThreadNullState state;
     return IMPL->start();
-}
-
-JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLOListElementImpl_setStartImpl(JNIEnv*, jclass, jlong peer, jint value)
-{
-    WebCore::JSMainThreadNullState state;
-    IMPL->setStartForBindings(value);
 }
 
 JNIEXPORT jboolean JNICALL Java_com_sun_webkit_dom_HTMLOListElementImpl_getReversedImpl(JNIEnv*, jclass, jlong peer)

@@ -26,10 +26,9 @@
 
 #include "GenericMediaQueryEvaluator.h"
 #include "MediaQuery.h"
+#include "RenderStyle.h"
 
 namespace WebCore {
-
-class RenderStyle;
 
 namespace MQ {
 
@@ -50,8 +49,8 @@ public:
 
 private:
     AtomString m_mediaType;
-    const Document* m_document { nullptr };
-    const RenderStyle* m_rootElementStyle { nullptr };
+    WeakPtr<const Document, WeakPtrImplWithEventTargetData> m_document;
+    CheckedPtr<const RenderStyle> m_rootElementStyle;
     EvaluationResult m_staticMediaConditionResult { EvaluationResult::Unknown };
 };
 

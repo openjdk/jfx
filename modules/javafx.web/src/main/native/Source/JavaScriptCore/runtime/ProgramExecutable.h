@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "GlobalExecutable.h"
+#include <JavaScriptCore/GlobalExecutable.h>
 
 namespace JSC {
 
@@ -57,25 +57,24 @@ public:
 
     ProgramCodeBlock* codeBlock() const
     {
-        return bitwise_cast<ProgramCodeBlock*>(Base::codeBlock());
+        return std::bit_cast<ProgramCodeBlock*>(Base::codeBlock());
     }
 
     UnlinkedProgramCodeBlock* unlinkedCodeBlock() const
     {
-        return bitwise_cast<UnlinkedProgramCodeBlock*>(Base::unlinkedCodeBlock());
+        return std::bit_cast<UnlinkedProgramCodeBlock*>(Base::unlinkedCodeBlock());
     }
 
-    Ref<JITCode> generatedJITCode()
+    Ref<JSC::JITCode> generatedJITCode()
     {
         return generatedJITCodeForCall();
     }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
-    {
-        return Structure::create(vm, globalObject, proto, TypeInfo(ProgramExecutableType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_INFO;
+
+    DECLARE_VISIT_CHILDREN;
 
     TemplateObjectMap& ensureTemplateObjectMap(VM&);
 
@@ -84,8 +83,6 @@ private:
     friend class ScriptExecutable;
 
     ProgramExecutable(JSGlobalObject*, const SourceCode&);
-
-    DECLARE_VISIT_CHILDREN;
 
     std::unique_ptr<TemplateObjectMap> m_templateObjectMap;
 };

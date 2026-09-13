@@ -27,13 +27,13 @@
 
 #if ENABLE(PICTURE_IN_PICTURE_API)
 
-#include <wtf/WeakPtr.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
 class IntSize;
 
-class PictureInPictureObserver : public CanMakeWeakPtr<PictureInPictureObserver> {
+class PictureInPictureObserver : public AbstractRefCountedAndCanMakeWeakPtr<PictureInPictureObserver> {
 public:
     virtual ~PictureInPictureObserver() { };
     virtual void didEnterPictureInPicture(const IntSize&) = 0;

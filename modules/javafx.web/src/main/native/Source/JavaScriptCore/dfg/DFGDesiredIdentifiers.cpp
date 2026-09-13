@@ -46,9 +46,7 @@ DesiredIdentifiers::DesiredIdentifiers(CodeBlock* codeBlock)
 {
 }
 
-DesiredIdentifiers::~DesiredIdentifiers()
-{
-}
+DesiredIdentifiers::~DesiredIdentifiers() = default;
 
 unsigned DesiredIdentifiers::numberOfIdentifiers()
 {
@@ -96,7 +94,7 @@ void DesiredIdentifiers::reallyAdd(VM& vm, CommonData* commonData)
     if (!identifiers.isEmpty()) {
         ConcurrentJSLocker locker(m_codeBlock->m_lock);
         ASSERT(commonData->m_dfgIdentifiers.isEmpty());
-        commonData->m_dfgIdentifiers = WTFMove(identifiers);
+        commonData->m_dfgIdentifiers = WTF::move(identifiers);
     }
 }
 

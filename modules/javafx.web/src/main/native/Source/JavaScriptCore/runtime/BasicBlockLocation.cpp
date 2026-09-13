@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2014 Saam Barati. <saambarati1@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,8 +30,11 @@
 #include "CCallHelpers.h"
 #include <climits>
 #include <wtf/DataLog.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(BasicBlockLocation);
 
 BasicBlockLocation::BasicBlockLocation(int startOffset, int endOffset)
     : m_startOffset(startOffset)
@@ -64,7 +67,7 @@ Vector<std::pair<int, int>> BasicBlockLocation::getExecutedRanges() const
         }
         result.append(Gap(nextRangeStart, minGap.first - 1));
         nextRangeStart = minGap.second + 1;
-        gaps.remove(minIdx);
+        gaps.removeAt(minIdx);
     }
 
     result.append(Gap(nextRangeStart, m_endOffset));
@@ -93,7 +96,7 @@ void BasicBlockLocation::emitExecuteCode(CCallHelpers& jit, MacroAssembler::Regi
     static_assert(sizeof(size_t) == 4, "Assuming size_t is 32 bits on 32 bit platforms.");
     jit.load32(&m_executionCount, scratch);
     CCallHelpers::Jump done = jit.branchAdd32(CCallHelpers::Zero, scratch, CCallHelpers::TrustedImm32(1), scratch);
-    jit.store32(scratch, bitwise_cast<void*>(&m_executionCount));
+    jit.store32(scratch, std::bit_cast<void*>(&m_executionCount));
     done.link(&jit);
 }
 #endif // USE(JSVALUE64)

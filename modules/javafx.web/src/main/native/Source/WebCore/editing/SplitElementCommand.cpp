@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,8 +36,8 @@ namespace WebCore {
 
 SplitElementCommand::SplitElementCommand(Ref<Element>&& element, Ref<Node>&& atChild)
     : SimpleEditCommand(element->document())
-    , m_element2(WTFMove(element))
-    , m_atChild(WTFMove(atChild))
+    , m_element2(WTF::move(element))
+    , m_atChild(WTF::move(atChild))
 {
     ASSERT(m_atChild->parentNode() == m_element2.ptr());
 }
@@ -47,50 +47,54 @@ void SplitElementCommand::executeApply()
     if (m_atChild->parentNode() != m_element2.ptr())
         return;
 
+    Ref element2 = m_element2;
     Vector<Ref<Node>> children;
-    for (Node* node = m_element2->firstChild(); node != m_atChild.ptr(); node = node->nextSibling())
+    for (RefPtr node = element2->firstChild(); node != m_atChild.ptr(); node = node->nextSibling())
         children.append(*node);
 
-    auto* parent = m_element2->parentNode();
+    RefPtr parent = element2->parentNode();
     if (!parent || !parent->hasEditableStyle())
         return;
-    if (parent->insertBefore(*m_element1, m_element2.ptr()).hasException())
+    RefPtr element1 = m_element1;
+    if (parent->insertBefore(*element1, element2.copyRef()).hasException())
         return;
 
     // Delete id attribute from the second element because the same id cannot be used for more than one element
-    m_element2->removeAttribute(HTMLNames::idAttr);
+    element2->removeAttribute(HTMLNames::idAttr);
 
     for (auto& child : children)
-        m_element1->appendChild(child);
+        element1->appendChild(child);
 }
 
 void SplitElementCommand::doApply()
 {
-    m_element1 = m_element2->cloneElementWithoutChildren(document());
+    m_element1 = m_element2->cloneElementWithoutChildren(document(), nullptr);
 
     executeApply();
 }
 
 void SplitElementCommand::doUnapply()
 {
-    if (!m_element1 || !m_element1->hasEditableStyle() || !m_element2->hasEditableStyle())
+    RefPtr element1 = m_element1;
+    Ref element2 = m_element2;
+    if (!element1 || !element1->hasEditableStyle() || !element2->hasEditableStyle())
         return;
 
     Vector<Ref<Node>> children;
-    for (Node* node = m_element1->firstChild(); node; node = node->nextSibling())
+    for (RefPtr node = element1->firstChild(); node; node = node->nextSibling())
         children.append(*node);
 
-    RefPtr<Node> refChild = m_element2->firstChild();
+    RefPtr<Node> refChild = element2->firstChild();
 
     for (auto& child : children)
-        m_element2->insertBefore(child, refChild.get());
+        element2->insertBefore(child, refChild.copyRef());
 
     // Recover the id attribute of the original element.
-    const AtomString& id = m_element1->getIdAttribute();
+    const AtomString& id = element1->getIdAttribute();
     if (!id.isNull())
-        m_element2->setIdAttribute(id);
+        element2->setIdAttribute(id);
 
-    m_element1->remove();
+    element1->remove();
 }
 
 void SplitElementCommand::doReapply()
@@ -102,11 +106,11 @@ void SplitElementCommand::doReapply()
 }
 
 #ifndef NDEBUG
-void SplitElementCommand::getNodesInCommand(HashSet<Ref<Node>>& nodes)
+void SplitElementCommand::getNodesInCommand(NodeSet& nodes)
 {
-    addNodeAndDescendants(m_element1.get(), nodes);
+    addNodeAndDescendants(protectedElement1().get(), nodes);
     addNodeAndDescendants(m_element2.ptr(), nodes);
-    addNodeAndDescendants(m_atChild.ptr(), nodes);
+    addNodeAndDescendants(Ref { m_atChild }.ptr(), nodes);
 }
 #endif
 

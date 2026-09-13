@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-enum FetchIdentifierType { };
+struct FetchIdentifierType;
 using FetchIdentifier = ObjectIdentifier<FetchIdentifierType>;
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,28 +26,20 @@
 package test.robot.javafx.scene;
 
 import java.util.concurrent.CountDownLatch;
-
-import com.sun.javafx.PlatformUtil;
-
 import javafx.application.Application;
-import javafx.scene.input.MouseButton;
 import javafx.application.Platform;
-import javafx.scene.robot.Robot;
 import javafx.scene.Scene;
 import javafx.scene.control.Slider;
+import javafx.scene.control.Tooltip;
+import javafx.scene.input.MouseButton;
+import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import javafx.scene.control.Tooltip;
-import javafx.stage.WindowEvent;
-
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
-
-import static org.junit.Assume.assumeTrue;
 
 /*
  * Test for verifying Slider NPE error.
@@ -78,13 +70,13 @@ public class SliderTooltipNPETest {
 
     @Test
     public void testSliderTooltipNPE() throws Throwable {
-        Assert.assertTrue(slider.getTooltip().getConsumeAutoHidingEvents());
+        Assertions.assertTrue(slider.getTooltip().getConsumeAutoHidingEvents());
         dragSliderAfterTooltipDisplayed(DRAG_DISTANCE);
         if (exception != null) {
             exception.printStackTrace();
             throw exception;
         }
-        Assert.assertTrue(slider.getTooltip().getConsumeAutoHidingEvents());
+        Assertions.assertTrue(slider.getTooltip().getConsumeAutoHidingEvents());
     }
 
     private void dragSliderAfterTooltipDisplayed(int dragDistance) throws Exception {
@@ -165,13 +157,13 @@ public class SliderTooltipNPETest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void exit() {
-        Util.shutdown(stage);
+        Util.shutdown();
     }
 }

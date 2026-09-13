@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,10 +34,10 @@
 /*
  * Class:     com_sun_glass_ui_ios_IosApplication
  * Method:    _getKeyCodeForChar
- * Signature: (C)I
+ * Signature: (CI)I
  */
 JNIEXPORT jint JNICALL Java_com_sun_glass_ui_ios_IosApplication__1getKeyCodeForChar
-(JNIEnv * env, jobject jApplication, jchar c)
+(JNIEnv * env, jobject jApplication, jchar c, jint hint)
 {
     GLASS_LOG("Java_com_sun_glass_ui_ios_IosApplication__1getKeyCodeForChar");
 

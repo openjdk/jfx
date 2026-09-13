@@ -31,16 +31,27 @@
 
 #if ENABLE(WEB_AUTHN)
 
-#include "PublicKeyCredentialType.h"
+#include <WebCore/PublicKeyCredentialType.h>
 #include <wtf/text/ASCIILiteral.h>
 
 namespace fido {
 
+enum class PINUVAuthProtocol : uint8_t {
+    kPinProtocol1 = 1,
+    kPinProtocol2 = 2,
+};
+
 enum class ProtocolVersion {
-    kCtap,
+    kCtap2,
+    kCtap21,
+    kCtap21Pre,
     kU2f,
     kUnknown,
 };
+
+WEBCORE_EXPORT bool isCtap2Protocol(ProtocolVersion);
+
+WEBCORE_EXPORT String toString(ProtocolVersion);
 
 // Length of the U2F challenge/application parameter:
 // https://fidoalliance.org/specs/fido-u2f-v1.2-ps-20170411/fido-u2f-raw-message-formats-v1.2-ps-20170411.html#registration-request-message---u2f_register
@@ -109,7 +120,7 @@ enum class CtapDeviceResponseCode : uint8_t {
 
 bool isCtapDeviceResponseCode(CtapDeviceResponseCode);
 
-const size_t kResponseCodeLength = 1;
+constexpr size_t kResponseCodeLength = 1;
 
 // Commands supported by CTAPHID device as specified in
 // https://fidoalliance.org/specs/fido-v2.0-ps-20170927/fido-client-to-authenticator-protocol-v2.0-ps-20170927.html#ctaphid-commands
@@ -128,13 +139,13 @@ enum class FidoHidDeviceCommand : uint8_t {
 bool isFidoHidDeviceCommand(FidoHidDeviceCommand);
 
 // Parameters for fake U2F registration used to check for user presence.
-const uint8_t kBogusAppParam[] = {
+constexpr std::array<uint8_t, 32> kBogusAppParam {
     0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41,
     0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41,
     0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41
 };
 
-const uint8_t kBogusChallenge[] = {
+constexpr std::array<uint8_t, 32> kBogusChallenge {
     0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42,
     0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42,
     0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42
@@ -142,39 +153,45 @@ const uint8_t kBogusChallenge[] = {
 
 // String key values for CTAP request optional parameters and
 // AuthenticatorGetInfo response.
-const char kResidentKeyMapKey[] = "rk";
-const char kUserVerificationMapKey[] = "uv";
-const char kUserPresenceMapKey[] = "up";
-const char kClientPinMapKey[] = "clientPin";
-const char kPlatformDeviceMapKey[] = "plat";
-const char kEntityIdMapKey[] = "id";
+constexpr auto kResidentKeyMapKey = "rk"_s;
+constexpr auto kUserVerificationMapKey = "uv"_s;
+constexpr auto kUserPresenceMapKey = "up"_s;
+constexpr auto kClientPinMapKey = "clientPin"_s;
+constexpr auto kPlatformDeviceMapKey = "plat"_s;
+constexpr auto kEntityIdMapKey = "id"_s;
 constexpr auto kEntityNameMapKey = "name"_s;
 constexpr auto kDisplayNameMapKey = "displayName"_s;
-const char kIconUrlMapKey[] = "icon";
-const char kCredentialTypeMapKey[] = "type";
-const char kCredentialAlgorithmMapKey[] = "alg";
+constexpr auto kIconUrlMapKey = "icon"_s;
+constexpr auto kCredentialTypeMapKey = "type"_s;
+constexpr auto kCredentialAlgorithmMapKey = "alg"_s;
 // Keys for storing credential descriptor information in CBOR map.
-const char kCredentialIdKey[] = "id";
-const char kCredentialTypeKey[] = "type";
+constexpr auto kCredentialIdKey = "id"_s;
+constexpr auto kCredentialTypeKey = "type"_s;
 
 // HID transport specific constants.
-const size_t kHidPacketSize = 64;
-const uint32_t kHidBroadcastChannel = 0xffffffff;
-const size_t kHidInitPacketHeaderSize = 7;
-const size_t kHidContinuationPacketHeader = 5;
-const size_t kHidMaxPacketSize = 64;
-const size_t kHidInitPacketDataSize = kHidMaxPacketSize - kHidInitPacketHeaderSize;
-const size_t kHidContinuationPacketDataSize = kHidMaxPacketSize - kHidContinuationPacketHeader;
-const size_t kHidInitResponseSize = 17;
-const size_t kHidInitNonceLength = 8;
+constexpr size_t kHidPacketSize = 64;
+constexpr uint32_t kHidBroadcastChannel = 0xffffffff;
+constexpr size_t kHidInitPacketHeaderSize = 7;
+constexpr size_t kHidContinuationPacketHeader = 5;
+constexpr size_t kHidMaxPacketSize = 64;
+constexpr size_t kHidInitPacketDataSize = kHidMaxPacketSize - kHidInitPacketHeaderSize;
+constexpr size_t kHidContinuationPacketDataSize = kHidMaxPacketSize - kHidContinuationPacketHeader;
+constexpr size_t kHidInitResponseSize = 17;
+constexpr size_t kHidInitNonceLength = 8;
 
-const uint8_t kHidMaxLockSeconds = 10;
+constexpr uint8_t kHidMaxLockSeconds = 10;
+
+constexpr size_t kPINMaxSizeInBytes = 63;
+
+// HKDF info strings for PIN/UV Auth Protocol 2 key derivation (CTAP 2.1 spec 6.5.7)
+constexpr std::array<uint8_t, 14> kHKDFInfoHMACKey { 'C', 'T', 'A', 'P', '2', ' ', 'H', 'M', 'A', 'C', ' ', 'k', 'e', 'y' };
+constexpr std::array<uint8_t, 13> kHKDFInfoAESKey { 'C', 'T', 'A', 'P', '2', ' ', 'A', 'E', 'S', ' ', 'k', 'e', 'y' };
 
 // Messages are limited to an initiation packet and 128 continuation packets.
-const size_t kHidMaxMessageSize = 7609;
+constexpr size_t kHidMaxMessageSize = 7609;
 
 // CTAP/U2F devices only provide a single report so specify a report ID of 0 here.
-const uint8_t kHidReportId = 0x00;
+constexpr uint8_t kHidReportId = 0x00;
 
 // U2F APDU encoding constants, as specified in
 // https://fidoalliance.org/specs/fido-u2f-v1.2-ps-20170411/fido-u2f-raw-message-formats-v1.2-ps-20170411.html#authentication-messages
@@ -194,6 +211,7 @@ enum class CtapRequestCommand : uint8_t {
     kAuthenticatorGetInfo = 0x04,
     kAuthenticatorClientPin = 0x06,
     kAuthenticatorReset = 0x07,
+    kAuthenticatorAuthenticatorSelection = 0x0B,
 };
 
 // APDU instruction code for U2F request encoding.
@@ -208,74 +226,124 @@ enum class U2fApduInstruction : uint8_t {
 
 // String key values for attestation object as a response to MakeCredential
 // request.
-const char kFormatKey[] = "fmt";
-const char kAttestationStatementKey[] = "attStmt";
-const char kAuthDataKey[] = "authData";
+constexpr auto kFormatKey = "fmt"_s;
+constexpr auto kAttestationStatementKey = "attStmt"_s;
+constexpr auto kAuthDataKey = "authData"_s;
 
 // String representation of public key credential enum.
 // https://w3c.github.io/webauthn/#credentialType
-const char kPublicKey[] = "public-key";
+constexpr auto kPublicKey = "public-key"_s;
 
-const char* publicKeyCredentialTypeToString(WebCore::PublicKeyCredentialType);
+ASCIILiteral publicKeyCredentialTypeToString(WebCore::PublicKeyCredentialType);
 
 // FIXME: Add url to the official spec once it's standardized.
 constexpr auto kCtap2Version = "FIDO_2_0"_s;
+constexpr auto kCtap21Version = "FIDO_2_1"_s;
+constexpr auto kCtap21PreVersion = "FIDO_2_1_PRE"_s;
 constexpr auto kU2fVersion = "U2F_V2"_s;
 
 // CTAPHID Usage Page and Usage
 // https://fidoalliance.org/specs/fido-v2.0-ps-20170927/fido-client-to-authenticator-protocol-v2.0-ps-20170927.html#hid-report-descriptor-and-device-discovery
-const uint32_t kCtapHidUsagePage = 0xF1D0;
-const uint32_t kCtapHidUsage = 0x01;
+constexpr uint32_t kCtapHidUsagePage = 0xF1D0;
+constexpr uint32_t kCtapHidUsage = 0x01;
 
 // U2F_VERSION command
 // https://fidoalliance.org/specs/fido-u2f-v1.2-ps-20170411/fido-u2f-raw-message-formats-v1.2-ps-20170411.html#getversion-request-and-response---u2f_version
-const uint8_t kCtapNfcU2fVersionCommand[] = {
+constexpr std::array<uint8_t, 5> kCtapNfcU2fVersionCommand {
     0x00, 0x03, 0x00, 0x00, // CLA, INS, P1, P2
     0x00, // L
 };
 
 // CTAPNFC Applet selection command and responses
 // https://fidoalliance.org/specs/fido-v2.0-ps-20190130/fido-client-to-authenticator-protocol-v2.0-ps-20190130.html#nfc-applet-selection
-const uint8_t kCtapNfcAppletSelectionCommand[] = {
+constexpr std::array<uint8_t, 13> kCtapNfcAppletSelectionCommand {
     0x00, 0xA4, 0x04, 0x00, // CLA, INS, P1, P2
     0x08, // L
     0xA0, 0x00, 0x00, 0x06, 0x47, // RID
     0x2F, 0x00, 0x01 // PIX
 };
 
-const uint8_t kCtapNfcAppletSelectionU2f[] = {
+constexpr std::array<uint8_t, 8> kCtapNfcAppletSelectionU2f {
     0x55, 0x32, 0x46, 0x5F, 0x56, 0x32, // Version
     0x90, 0x00 // APDU response code
 };
 
-const uint8_t kCtapNfcAppletSelectionCtap[] = {
+constexpr std::array<uint8_t, 10> kCtapNfcAppletSelectionCtap {
     0x46, 0x49, 0x44, 0x4f, 0x5f, 0x32, 0x5f, 0x30, // Version
     0x90, 0x00 // APDU response code
 };
 
 // https://fidoalliance.org/specs/fido-v2.0-ps-20190130/fido-client-to-authenticator-protocol-v2.0-ps-20190130.html#nfc-command-framing
-const uint8_t kCtapNfcApduCla = 0x80;
-const uint8_t kCtapNfcApduIns = 0x10;
+constexpr uint8_t kCtapNfcApduCla = 0x80;
+constexpr uint8_t kCtapNfcApduIns = 0x10;
 
 // https://fidoalliance.org/specs/fido-v2.0-ps-20170927/fido-client-to-authenticator-protocol-v2.0-ps-20170927.html#mandatory-commands
-const size_t kCtapChannelIdSize = 4;
-const uint8_t kCtapKeepAliveStatusProcessing = 1;
+constexpr size_t kCtapChannelIdSize = 4;
+constexpr uint8_t kCtapKeepAliveStatusProcessing = 1;
 // https://fidoalliance.org/specs/fido-v2.0-ps-20170927/fido-client-to-authenticator-protocol-v2.0-ps-20170927.html#commands
-const int64_t kCtapMakeCredentialClientDataHashKey = 1;
-const int64_t kCtapMakeCredentialRpKey = 2;
-const int64_t kCtapMakeCredentialUserKey = 3;
-const int64_t kCtapMakeCredentialPubKeyCredParamsKey = 4;
-const int64_t kCtapMakeCredentialExcludeListKey = 5;
-const int64_t kCtapMakeCredentialExtensionsKey = 6;
-const int64_t kCtapMakeCredentialRequestOptionsKey = 7;
+constexpr int64_t kCtapMakeCredentialClientDataHashKey = 1;
+constexpr int64_t kCtapMakeCredentialRpKey = 2;
+constexpr int64_t kCtapMakeCredentialUserKey = 3;
+constexpr int64_t kCtapMakeCredentialPubKeyCredParamsKey = 4;
+constexpr int64_t kCtapMakeCredentialExcludeListKey = 5;
+constexpr int64_t kCtapMakeCredentialExtensionsKey = 6;
+constexpr int64_t kCtapMakeCredentialRequestOptionsKey = 7;
+constexpr int64_t kCtapMakeCredentialPinUvAuthParamKey = 8;
+constexpr int64_t kCtapMakeCredentialPinUvAuthProtocolKey = 9;
 
-const int64_t kCtapGetAssertionRpIdKey = 1;
-const int64_t kCtapGetAssertionClientDataHashKey = 2;
-const int64_t kCtapGetAssertionAllowListKey = 3;
-const int64_t kCtapGetAssertionExtensionsKey = 4;
-const int64_t kCtapGetAssertionRequestOptionsKey = 5;
-const int64_t kCtapGetAssertionPinUvAuthParamKey = 6;
-const int64_t kCtapGetAssertionPinUvAuthProtocolKey = 7;
+constexpr int64_t kCtapGetAssertionRpIdKey = 1;
+constexpr int64_t kCtapGetAssertionClientDataHashKey = 2;
+constexpr int64_t kCtapGetAssertionAllowListKey = 3;
+constexpr int64_t kCtapGetAssertionExtensionsKey = 4;
+constexpr int64_t kCtapGetAssertionRequestOptionsKey = 5;
+constexpr int64_t kCtapGetAssertionPinUvAuthParamKey = 6;
+constexpr int64_t kCtapGetAssertionPinUvAuthProtocolKey = 7;
+
+// CTAP2 authenticatorMakeCredential response keys
+constexpr int64_t kCtapMakeCredentialResponseFormatKey = 1;
+constexpr int64_t kCtapMakeCredentialResponseAuthDataKey = 2;
+constexpr int64_t kCtapMakeCredentialResponseAttStmtKey = 3;
+constexpr int64_t kCtapMakeCredentialResponseUnsignedExtensionOutputsKey = 6;
+
+// CTAP2 authenticatorGetAssertion response keys
+constexpr int64_t kCtapGetAssertionResponseCredentialKey = 1;
+constexpr int64_t kCtapGetAssertionResponseAuthDataKey = 2;
+constexpr int64_t kCtapGetAssertionResponseSignatureKey = 3;
+constexpr int64_t kCtapGetAssertionResponseUserKey = 4;
+constexpr int64_t kCtapGetAssertionResponseNumberOfCredentialsKey = 5;
+constexpr int64_t kCtapGetAssertionResponseUnsignedExtensionOutputsKey = 8;
+
+constexpr int64_t kCtapAuthenticatorGetInfoVersionsKey = 0x01;
+constexpr int64_t kCtapAuthenticatorGetInfoExtensionsKey = 0x02;
+constexpr int64_t kCtapAuthenticatorGetInfoAAGUIDKey = 0x03;
+constexpr int64_t kCtapAuthenticatorGetInfoOptionsKey = 0x04;
+constexpr int64_t kCtapAuthenticatorGetInfoMaxMsgSizeKey = 0x05;
+constexpr int64_t kCtapAuthenticatorGetInfoPinUVAuthProtocolsKey = 0x06;
+constexpr int64_t kCtapAuthenticatorGetInfoMaxCredentialCountInListKey = 0x07;
+constexpr int64_t kCtapAuthenticatorGetInfoMaxCredentialIdLengthKey = 0x08;
+constexpr int64_t kCtapAuthenticatorGetInfoTransportsKey = 0x09;
+constexpr int64_t kCtapAuthenticatorGetInfoAlgorithmsKey = 0x0a;
+constexpr int64_t kCtapAuthenticatorGetInfoMaxSerializedLargeBlobArrayKey = 0x0b;
+constexpr int64_t kCtapAuthenticatorGetInfoForcePINChangeKey = 0x0c;
+constexpr int64_t kCtapAuthenticatorGetInfoMinPINLengthKey = 0x0d;
+constexpr int64_t kCtapAuthenticatorGetInfoFirmwareVersionKey = 0x0e;
+constexpr int64_t kCtapAuthenticatorGetInfoMaxCredBlobLengthKey = 0x0f;
+constexpr int64_t kCtapAuthenticatorGetInfoMaxRPIDsForSetMinPINLengthKey = 0x10;
+constexpr int64_t kCtapAuthenticatorGetInfoPreferredPlatformUvAttemptsKey = 0x11;
+constexpr int64_t kCtapAuthenticatorGetInfoUVModalitysKey = 0x12;
+constexpr int64_t kCtapAuthenticatorGetInfoCertificationsKey = 0x13;
+constexpr int64_t kCtapAuthenticatorGetInfoRemainingDiscoverableCredentialsKey = 0x14;
+constexpr int64_t kCtapAuthenticatorGetInfoVendorPrototypeConfigCommandsKey = 0x15;
+
+// Extension constants
+constexpr auto kExtensionHmacSecret = "hmac-secret"_s;
+constexpr auto kExtensionHmacSecretMc = "hmac-secret-mc"_s;
+
+// hmac-secret extension CBOR map keys (used in hmac-secret and hmac-secret-mc)
+constexpr int64_t kHmacSecretKeyAgreementKey = 0x01;
+constexpr int64_t kHmacSecretSaltEncKey = 0x02;
+constexpr int64_t kHmacSecretSaltAuthKey = 0x03;
+constexpr int64_t kHmacSecretPinUvAuthProtocolKey = 0x04;
 
 } // namespace fido
 

@@ -38,9 +38,6 @@ enum CSSParserMode : uint8_t {
     HTMLQuirksMode,
     // SVG attributes are parsed in quirks mode but rules differ slightly.
     SVGAttributeMode,
-    // @viewport rules are parsed in standards mode but CSSOM modifications (via StylePropertySet)
-    // must call parseViewportProperties so needs a special mode.
-    CSSViewportRuleMode,
     // User agent stylesheets are parsed in standards mode but also allows internal properties and values.
     UASheetMode,
     // WebVTT places limitations on external resources.
@@ -57,14 +54,9 @@ inline bool isUASheetBehavior(CSSParserMode mode)
     return mode == UASheetMode;
 }
 
-inline bool isUnitlessValueParsingEnabledForMode(CSSParserMode mode)
+inline bool isUnitlessValueParsingForcedForMode(CSSParserMode mode)
 {
     return mode == SVGAttributeMode;
-}
-
-inline bool isCSSViewportParsingEnabledForMode(CSSParserMode mode)
-{
-    return mode == CSSViewportRuleMode;
 }
 
 // FIXME-NEWPARSER: Next two functions should be removed eventually.
@@ -82,7 +74,6 @@ inline bool isStrictParserMode(CSSParserMode cssParserMode)
     case WebVTTMode:
         return true;
     case HTMLQuirksMode:
-    case CSSViewportRuleMode:
         return false;
     }
     ASSERT_NOT_REACHED();

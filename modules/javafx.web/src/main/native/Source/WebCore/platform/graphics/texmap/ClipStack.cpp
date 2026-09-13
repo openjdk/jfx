@@ -22,6 +22,8 @@
 #include "config.h"
 #include "ClipStack.h"
 
+#include <array>
+#include <wtf/StdLibExtras.h>
 #include "TextureMapperGLHeaders.h"
 
 namespace WebCore {
@@ -88,13 +90,14 @@ void ClipStack::addRoundedRect(const FloatRoundedRect& roundedRect, const Transf
 
     // Copy the TransformationMatrix components to the appropriate position in the array.
     basePosition = clipState.roundedRectCount * s_roundedRectInverseTransformComponentsPerRect;
-    memcpy(m_roundedRectInverseTransformComponents.data() + basePosition, matrix.toColumnMajorFloatArray().data(), s_roundedRectInverseTransformComponentsPerRect * sizeof(float));
+    memcpySpan(m_roundedRectInverseTransformComponents.mutableSpan().subspan(basePosition), std::span<const float, 16> { matrix.toColumnMajorFloatArray() }.first(s_roundedRectInverseTransformComponentsPerRect));
 
     clipState.roundedRectCount++;
 }
 
 void ClipStack::apply()
 {
+#if !PLATFORM(JAVA)
     if (clipState.scissorBox.isEmpty())
         return;
 
@@ -107,6 +110,7 @@ void ClipStack::apply()
         glDisable(GL_STENCIL_TEST);
     else
         glEnable(GL_STENCIL_TEST);
+#endif
 }
 
 void ClipStack::applyIfNeeded()

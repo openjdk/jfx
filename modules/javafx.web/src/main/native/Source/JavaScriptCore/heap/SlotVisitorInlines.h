@@ -25,10 +25,13 @@
 
 #pragma once
 
-#include "AbstractSlotVisitorInlines.h"
-#include "MarkedBlock.h"
-#include "PreciseAllocation.h"
-#include "SlotVisitor.h"
+#include <JavaScriptCore/AbstractSlotVisitorInlines.h>
+#include <JavaScriptCore/HeapCellInlines.h>
+#include <JavaScriptCore/MarkedBlock.h>
+#include <JavaScriptCore/PreciseAllocation.h>
+#include <JavaScriptCore/SlotVisitor.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -47,16 +50,16 @@ ALWAYS_INLINE void SlotVisitor::appendUnbarriered(JSCell* cell)
         return;
 
     Dependency dependency;
-    if (UNLIKELY(cell->isPreciseAllocation())) {
-        if (LIKELY(cell->preciseAllocation().isMarked())) {
-            if (LIKELY(!m_heapAnalyzer))
+    if (cell->isPreciseAllocation()) [[unlikely]] {
+        if (cell->preciseAllocation().isMarked()) [[likely]] {
+            if (!m_heapAnalyzer) [[likely]]
                 return;
         }
     } else {
         MarkedBlock& block = cell->markedBlock();
-        dependency = block.aboutToMark(m_markingVersion);
-        if (LIKELY(block.isMarked(cell, dependency))) {
-            if (LIKELY(!m_heapAnalyzer))
+        dependency = block.aboutToMark(m_markingVersion, cell);
+        if (block.isMarked(cell, dependency)) [[likely]] {
+            if (!m_heapAnalyzer) [[likely]]
                 return;
         }
     }
@@ -85,13 +88,13 @@ ALWAYS_INLINE void SlotVisitor::appendHiddenUnbarriered(JSCell* cell)
         return;
 
     Dependency dependency;
-    if (UNLIKELY(cell->isPreciseAllocation())) {
-        if (LIKELY(cell->preciseAllocation().isMarked()))
+    if (cell->isPreciseAllocation()) [[unlikely]] {
+        if (cell->preciseAllocation().isMarked()) [[likely]]
             return;
     } else {
         MarkedBlock& block = cell->markedBlock();
-        dependency = block.aboutToMark(m_markingVersion);
-        if (LIKELY(block.isMarked(cell, dependency)))
+        dependency = block.aboutToMark(m_markingVersion, cell);
+        if (block.isMarked(cell, dependency)) [[likely]]
             return;
     }
 
@@ -131,6 +134,12 @@ ALWAYS_INLINE void SlotVisitor::append(Iterator begin, Iterator end)
 {
     for (auto it = begin; it != end; ++it)
         append(*it);
+}
+
+ALWAYS_INLINE void SlotVisitor::appendValues(std::span<const WriteBarrier<Unknown>> barriers)
+{
+    for (auto& barrier : barriers)
+        append(barrier);
 }
 
 ALWAYS_INLINE void SlotVisitor::appendValues(const WriteBarrierBase<Unknown>* barriers, size_t count)
@@ -189,3 +198,5 @@ IterationStatus SlotVisitor::forEachMarkStack(const Func& func)
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

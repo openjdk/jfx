@@ -25,11 +25,13 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY)
 
-#include "AbstractModuleRecord.h"
-#include "WasmCreationMode.h"
-#include "WasmModuleInformation.h"
+#include <JavaScriptCore/AbstractModuleRecord.h>
+#include <JavaScriptCore/WasmCreationMode.h>
+#include <JavaScriptCore/WasmModuleInformation.h>
 
 namespace JSC {
 
@@ -44,7 +46,7 @@ class WebAssemblyModuleRecord final : public AbstractModuleRecord {
 public:
     using Base = AbstractModuleRecord;
 
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
     static void destroy(JSCell*);
 
     template<typename CellType, SubspaceAccess mode>
@@ -54,6 +56,8 @@ public:
     }
 
     DECLARE_EXPORT_INFO;
+
+    DECLARE_VISIT_CHILDREN;
 
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
     static WebAssemblyModuleRecord* create(JSGlobalObject*, VM&, Structure*, const Identifier&, const Wasm::ModuleInformation&);
@@ -66,14 +70,13 @@ public:
 
     JSObject* exportsObject() const { return m_exportsObject.get(); }
 
-    static ptrdiff_t offsetOfExportsObject() { return OBJECT_OFFSETOF(WebAssemblyModuleRecord, m_exportsObject); }
+    static constexpr ptrdiff_t offsetOfExportsObject() { return OBJECT_OFFSETOF(WebAssemblyModuleRecord, m_exportsObject); }
 
 private:
     WebAssemblyModuleRecord(VM&, Structure*, const Identifier&);
 
     void finishCreation(JSGlobalObject*, VM&, const Wasm::ModuleInformation&);
-
-    DECLARE_VISIT_CHILDREN;
+    JSValue evaluateConstantExpression(JSGlobalObject*, const Wasm::ModuleInformation::ConstantExpressionAndSourceOffset&, const Wasm::ModuleInformation&, Wasm::Type, uint64_t&);
 
     WriteBarrier<JSWebAssemblyInstance> m_instance;
     WriteBarrier<JSObject> m_startFunction;

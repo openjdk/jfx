@@ -22,23 +22,27 @@
 
 #pragma once
 
-#include "FilterEffect.h"
+#include <WebCore/FilterEffect.h>
 
 namespace WebCore {
 
-class FEMerge : public FilterEffect {
+class FEMerge final : public FilterEffect {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(FEMerge);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FEMerge);
 public:
-    WEBCORE_EXPORT static Ref<FEMerge> create(unsigned numberOfEffectInputs);
+    WEBCORE_EXPORT static Ref<FEMerge> create(unsigned numberOfEffectInputs, DestinationColorSpace = DestinationColorSpace::SRGB());
 
     bool operator==(const FEMerge&) const;
 
     unsigned numberOfEffectInputs() const override { return m_numberOfEffectInputs; }
 
 private:
-    FEMerge(unsigned numberOfEffectInputs);
+    FEMerge(unsigned numberOfEffectInputs, DestinationColorSpace);
 
     bool operator==(const FilterEffect& other) const override { return areEqual<FEMerge>(*this, other); }
 
+    OptionSet<FilterRenderingMode> supportedFilterRenderingModes(OptionSet<FilterRenderingMode>) const override;
+    std::unique_ptr<FilterEffectApplier> createAcceleratedApplier() const override;
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
 
     WTF::TextStream& externalRepresentation(WTF::TextStream&, FilterRepresentation) const override;
@@ -48,4 +52,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_FILTER_EFFECT(FEMerge)
+SPECIALIZE_TYPE_TRAITS_FILTER_FUNCTION(FEMerge)

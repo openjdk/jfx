@@ -25,6 +25,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "BAssert.h"
 #include "BInline.h"
 #include "Gigacage.h"
@@ -34,10 +36,9 @@ namespace bmalloc {
 enum class HeapKind {
     Primary,
     PrimitiveGigacage,
-    JSValueGigacage
 };
 
-static constexpr unsigned numHeaps = 3;
+static constexpr unsigned numHeaps = 2;
 
 BINLINE bool isGigacage(HeapKind heapKind)
 {
@@ -45,7 +46,6 @@ BINLINE bool isGigacage(HeapKind heapKind)
     case HeapKind::Primary:
         return false;
     case HeapKind::PrimitiveGigacage:
-    case HeapKind::JSValueGigacage:
         return true;
     }
     BCRASH();
@@ -60,8 +60,6 @@ BINLINE Gigacage::Kind gigacageKind(HeapKind kind)
         return Gigacage::Primitive;
     case HeapKind::PrimitiveGigacage:
         return Gigacage::Primitive;
-    case HeapKind::JSValueGigacage:
-        return Gigacage::JSValue;
     }
     BCRASH();
     return Gigacage::Primitive;
@@ -72,8 +70,6 @@ BINLINE HeapKind heapKind(Gigacage::Kind kind)
     switch (kind) {
     case Gigacage::Primitive:
         return HeapKind::PrimitiveGigacage;
-    case Gigacage::JSValue:
-        return HeapKind::JSValueGigacage;
     case Gigacage::NumberOfKinds:
         break;
     }
@@ -85,7 +81,6 @@ BINLINE bool isActiveHeapKindAfterEnsuringGigacage(HeapKind kind)
 {
     switch (kind) {
     case HeapKind::PrimitiveGigacage:
-    case HeapKind::JSValueGigacage:
         if (Gigacage::isEnabled())
             return true;
         return false;
@@ -100,7 +95,6 @@ BINLINE HeapKind mapToActiveHeapKindAfterEnsuringGigacage(HeapKind kind)
 {
     switch (kind) {
     case HeapKind::PrimitiveGigacage:
-    case HeapKind::JSValueGigacage:
         if (Gigacage::isEnabled())
             return kind;
         return HeapKind::Primary;
@@ -113,3 +107,4 @@ BEXPORT HeapKind mapToActiveHeapKind(HeapKind);
 
 } // namespace bmalloc
 
+#endif // __cplusplus

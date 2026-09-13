@@ -52,10 +52,10 @@ public:
     Ref<ListType>& baseVal() { return m_baseVal; }
 
     // Used by the DOM.
-    const RefPtr<ListType>& animVal() const { return const_cast<SVGAnimatedPropertyList*>(this)->ensureAnimVal(); }
+    const ListType& animVal() const { return const_cast<SVGAnimatedPropertyList*>(this)->ensureAnimVal(); }
 
     // Called by SVGAnimatedPropertyAnimator to pass the animVal to the SVGAnimationFunction::progress.
-    RefPtr<ListType>& animVal() { return ensureAnimVal(); }
+    ListType& animVal() { return ensureAnimVal(); }
 
     // Used when committing a change from the SVGAnimatedProperty to the attribute.
     String baseValAsString() const override { return m_baseVal->valueAsString(); }
@@ -111,11 +111,7 @@ public:
             m_animVal = nullptr;
     }
 
-    // Visual Studio doesn't seem to see these private constructors from subclasses.
-    // FIXME: See what it takes to remove this hack.
-#if !COMPILER(MSVC)
 protected:
-#endif
     template<typename... Arguments>
     SVGAnimatedPropertyList(SVGElement* contextElement, Arguments&&... arguments)
         : SVGAnimatedProperty(contextElement)
@@ -123,11 +119,11 @@ protected:
     {
     }
 
-    RefPtr<ListType>& ensureAnimVal()
+    ListType& ensureAnimVal()
     {
         if (!m_animVal)
             m_animVal = ListType::create(m_baseVal, SVGPropertyAccess::ReadOnly);
-        return m_animVal;
+        return *m_animVal;
     }
 
     // Called when m_baseVal changes or an item in m_baseVal changes.

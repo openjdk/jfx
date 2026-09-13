@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,7 +30,6 @@ import static test.com.sun.javafx.test.TestHelper.assertBoundsEqual;
 import static test.com.sun.javafx.test.TestHelper.assertGroupBounds;
 import static test.com.sun.javafx.test.TestHelper.box;
 import static test.com.sun.javafx.test.TestHelper.formatBounds;
-import static junit.framework.Assert.assertEquals;
 
 import java.util.LinkedList;
 
@@ -38,7 +37,8 @@ import javafx.geometry.Bounds;
 import javafx.scene.Group;
 import javafx.scene.shape.Rectangle;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class GroupBoundsTest {
 
@@ -48,14 +48,14 @@ public class GroupBoundsTest {
      **************************************************************************/
 
     // test that an empty group has empty bounds
-    public @Test
-    void testGroupBounds_Empty() {
+    @Test
+    public void testGroupBounds_Empty() {
         assertGroupBounds(new Group());
     }
 
     // test that adding a node to a group updates the Groups bounds
-    public @Test
-    void testGroupBounds_AddRect() {
+    @Test
+    public void testGroupBounds_AddRect() {
         Group g = new Group();
         assertGroupBounds(g);
 
@@ -67,8 +67,8 @@ public class GroupBoundsTest {
     }
 
     // test that changing a node in a group updates the groups bounds
-    public @Test
-    void testGroupBounds_ChangeRect() {
+    @Test
+    public void testGroupBounds_ChangeRect() {
         Rectangle r1 = new Rectangle(20, 20, 50, 50);
         Rectangle r2 = new Rectangle(90, 20, 50, 50);
         Group g = new Group(r1, r2);
@@ -82,8 +82,8 @@ public class GroupBoundsTest {
     }
 
     // test that removing a node from the group updates the Groups bounds
-    public @Test
-    void testGroupBounds_RemoveRect() {
+    @Test
+    public void testGroupBounds_RemoveRect() {
         Rectangle r1 = new Rectangle(20, 20, 50, 50);
         Rectangle r2 = new Rectangle(90, 20, 50, 50);
         Group g = new Group(r1, r2);
@@ -96,8 +96,8 @@ public class GroupBoundsTest {
         assertGroupBounds(g);
     }
 
-    public @Test
-    void testGroupBounds_RemoveAllChildNodesAndAddOneBack() {
+    @Test
+    public void testGroupBounds_RemoveAllChildNodesAndAddOneBack() {
         Rectangle r1 = new Rectangle(20, 20, 50, 50);
         Rectangle r2 = new Rectangle(90, 20, 50, 50);
         Group g = new Group(r1, r2);
@@ -111,8 +111,8 @@ public class GroupBoundsTest {
 
     // test that adding the first node to a Group, which node is an invisible
     // node, gets the right answer for the Group's bounds.
-    public @Test
-    void testGroupBounds_InitialNodeInvisible() {
+    @Test
+    public void testGroupBounds_InitialNodeInvisible() {
         Rectangle r1 = new Rectangle(20, 20, 50, 50);
         r1.setVisible(false);
         Group g = new Group(r1);
@@ -121,8 +121,8 @@ public class GroupBoundsTest {
     }
 
     // test that adding invisible nodes to a group doesn't update the bounds
-    public @Test
-    void testGroupBounds_InvisibleNodes() {
+    @Test
+    public void testGroupBounds_InvisibleNodes() {
         Rectangle r1 = new Rectangle(20, 20, 50, 50);
         Rectangle r2 = new Rectangle(90, 20, 50, 50);
         Group g = new Group(r1, r2);
@@ -135,8 +135,8 @@ public class GroupBoundsTest {
     }
 
     // test that adding zero sized nodes does update a Groups bounds
-    public @Test
-    void testGroupBounds_ZeroSizedNodes() {
+    @Test
+    public void testGroupBounds_ZeroSizedNodes() {
         Rectangle r1 = new Rectangle(20, 20, 50, 50);
         Rectangle r2 = new Rectangle(90, 20, 50, 50);
         Group g = new Group(r1, r2);
@@ -148,8 +148,8 @@ public class GroupBoundsTest {
     }
 
     // test that making a node invisible updates the groups bounds
-    public @Test
-    void testGroupBounds_NodeMadeInvisible() {
+    @Test
+    public void testGroupBounds_NodeMadeInvisible() {
         Rectangle r1 = new Rectangle(20, 20, 50, 50);
         Rectangle r2 = new Rectangle(90, 20, 50, 50);
         Group g = new Group(r1, r2);
@@ -159,8 +159,8 @@ public class GroupBoundsTest {
         assertGroupBounds(g);
     }
 
-    public @Test
-    void testGroupBounds_NodeWithNoWidthMadeInvisible() {
+    @Test
+    public void testGroupBounds_NodeWithNoWidthMadeInvisible() {
         Rectangle r1 = new Rectangle(20, 20, 50, 50);
         Rectangle r2 = new Rectangle(90, 20, 0, 50);
         Group g = new Group(r1, r2);
@@ -170,16 +170,16 @@ public class GroupBoundsTest {
         assertGroupBounds(g);
     }
 
-    public @Test
-    void testGroupBounds_FirstNodeHasNoWidthSecondNodeDoes() {
+    @Test
+    public void testGroupBounds_FirstNodeHasNoWidthSecondNodeDoes() {
         Rectangle r1 = new Rectangle(20, 20, 0, 50);
         Rectangle r2 = new Rectangle(90, 20, 50, 50);
         Group g = new Group(r1, r2);
         assertGroupBounds(g);
     }
 
-    public @Test
-    void testGroupBounds_FirstNodeHasNoWidthSecondNodeDoes_Added() {
+    @Test
+    public void testGroupBounds_FirstNodeHasNoWidthSecondNodeDoes_Added() {
         Rectangle r1 = new Rectangle(20, 20, 0, 50);
         Rectangle r2 = new Rectangle(90, 20, 50, 50);
         Group g = new Group();
@@ -190,8 +190,8 @@ public class GroupBoundsTest {
         assertGroupBounds(g);
     }
 
-    public @Test
-    void testGroupBounds_FirstNodeHasNoWidthSecondNodeDoes_ClearedThenAdded() {
+    @Test
+    public void testGroupBounds_FirstNodeHasNoWidthSecondNodeDoes_ClearedThenAdded() {
         Rectangle r1 = new Rectangle(20, 20, 0, 50);
         Rectangle r2 = new Rectangle(90, 20, 50, 50);
         Rectangle r3 = new Rectangle(10, 15, 75, 20);
@@ -206,8 +206,8 @@ public class GroupBoundsTest {
     // this test uncovered a bug when using the GroupBoundsHelper. It needs
     // two invisible nodes to tickle it You also have to ask assert the bounds
     // after each change or it may not fail
-    public @Test
-    void testGroupBounds_TwoNodesMadeInvisible_ThenNodeAdded() {
+    @Test
+    public void testGroupBounds_TwoNodesMadeInvisible_ThenNodeAdded() {
         Rectangle r1 = new Rectangle(20, 20, 50, 50);
         Rectangle r2 = new Rectangle(90, 20, 50, 50);
         Rectangle r3 = new Rectangle(10, 15, 75, 20);
@@ -226,8 +226,8 @@ public class GroupBoundsTest {
         assertGroupBounds(g);
     }
 
-    public @Test
-    void testGroupBounds_TogglingVisiblityToFalseAndTrueWhileExpandingBounds() {
+    @Test
+    public void testGroupBounds_TogglingVisiblityToFalseAndTrueWhileExpandingBounds() {
         Rectangle r1 = new Rectangle(20, 20, 50, 50);
         Rectangle r2 = new Rectangle(90, 20, 50, 50);
         Rectangle r3 = new Rectangle(10, 15, 75, 20);
@@ -264,8 +264,8 @@ public class GroupBoundsTest {
 
     // Started out as a simple test and now pretty well covers all the use
     // cases. Oops. Bad Richard.
-    public @Test
-    void testMovingNodesTowardCenterOfGroupAndOther() {
+    @Test
+    public void testMovingNodesTowardCenterOfGroupAndOther() {
         Group group = createGroupWithRects();
 
         // move the 1, 3, 5, 7 nodes in towards the center. Doing so should not
@@ -314,8 +314,8 @@ public class GroupBoundsTest {
         assertEquals(box(300, 300, 50, 50), group.getBoundsInLocal());
     }
 
-    public @Test
-    void testMovingNodesAwayFromCenterOfGroup() {
+    @Test
+    public void testMovingNodesAwayFromCenterOfGroup() {
         Group group = createGroupWithRects();
 
         ((Rectangle) group.getChildren().get(4)).setX(600);
@@ -323,8 +323,8 @@ public class GroupBoundsTest {
         assertEquals(box(100, 100, 550, 550), group.getBoundsInLocal());
     }
 
-    public @Test
-    void testMovingNodesWithinInteriorOfGroup() {
+    @Test
+    public void testMovingNodesWithinInteriorOfGroup() {
         Group group = createGroupWithRects();
 
         ((Rectangle) group.getChildren().get(4)).setX(250);
@@ -332,8 +332,8 @@ public class GroupBoundsTest {
         assertEquals(box(100, 100, 250, 250), group.getBoundsInLocal());
     }
 
-    public @Test
-    void testMovingExteriorNodesOnExterior() {
+    @Test
+    public void testMovingExteriorNodesOnExterior() {
         Group group = createGroupWithRects();
 
         ((Rectangle) group.getChildren().get(0)).setY(150);
@@ -348,16 +348,16 @@ public class GroupBoundsTest {
         assertEquals(box(100, 100, 250, 250), group.getBoundsInLocal());
     }
 
-    public @Test
-    void testRemovingInteriorNodes() {
+    @Test
+    public void testRemovingInteriorNodes() {
         Group group = createGroupWithRects();
 
         group.getChildren().remove(4);
         assertEquals(box(100, 100, 250, 250), group.getBoundsInLocal());
     }
 
-    public @Test
-    void testRemovingExteriorNodes() {
+    @Test
+    public void testRemovingExteriorNodes() {
         Group group = createGroupWithRects();
 
         group.getChildren().remove(7);
@@ -384,8 +384,8 @@ public class GroupBoundsTest {
     // rectangles to the Group, and check the groups bounds at each stage.
     // Also randomly make some invisible, some visible, remove some, toggle
     // visibility, and so forth.
-    public @Test
-    void testGroupBounds_Stress() {
+    @Test
+    public void testGroupBounds_Stress() {
         boolean fullTest = Boolean.getBoolean("test.everything");
         if (fullTest) {
             Group g = new Group();
@@ -470,8 +470,8 @@ public class GroupBoundsTest {
     }
 
     // here is a special test for getPivotX and getPivotY
-    @Test
-    public void testPivotXAndPivotY() {
+ @Test
+ public void testPivotXAndPivotY() {
         Rectangle rect = new Rectangle(100, 100);
         assertEquals(50.0f, (float) NodeHelper.getPivotX(rect));
         assertEquals(50.0f, (float) NodeHelper.getPivotY(rect));
@@ -491,8 +491,8 @@ public class GroupBoundsTest {
      * case. * *
      **************************************************************************/
 
-    public @Test
-    void testBoundsForGroup() {
+    @Test
+    public void testBoundsForGroup() {
         Rectangle r1 = new Rectangle(20, 20, 50, 50);
         Rectangle r2 = new Rectangle(90, 20, 50, 50);
         Group group = new Group(r1, r2);
@@ -505,8 +505,8 @@ public class GroupBoundsTest {
     /**
      * Just a basic test to make sure basic group node bounds calculation works
      */
-    public @Test
-    void testBoundsForGroup_childGeomChanging() {
+    @Test
+    public void testBoundsForGroup_childGeomChanging() {
         Rectangle rect = new Rectangle();
         rect.setId("rect");
         Rectangle square = new Rectangle();
@@ -537,8 +537,8 @@ public class GroupBoundsTest {
         assertBoundsEqual(box(25, 25, 125, 55), group.getBoundsInLocal());
     }
 
-    public @Test
-    void testBoundsInParentOfGroup() {
+    @Test
+    public void testBoundsInParentOfGroup() {
         Rectangle rect = new Rectangle(50, 50, 100, 30);
         rect.setId("rect");
         Group group = new Group(rect);
@@ -554,8 +554,8 @@ public class GroupBoundsTest {
      * bounds change, and then I ask for the new bounds, that the bounds are
      * valid.
      */
-    public @Test
-    void testRequestingBoundsOnGroupWithNoListenersWorks() {
+    @Test
+    public void testRequestingBoundsOnGroupWithNoListenersWorks() {
         Group group = new Group(new Rectangle(50, 50, 100, 30));
 
         assertBoundsEqual(box(50, 50, 100, 30), group.getBoundsInLocal());

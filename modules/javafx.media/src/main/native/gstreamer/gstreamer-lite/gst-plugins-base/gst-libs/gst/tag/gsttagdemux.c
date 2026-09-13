@@ -639,7 +639,7 @@ gst_tag_demux_chain_buffer (GstTagDemux * demux, GstBuffer * buf,
       gst_tag_demux_chain_parse_tag (demux);
       if (demux->priv->state != GST_TAG_DEMUX_TYPEFINDING)
         break;
-      /* Fall-through */
+      /* FALLTHROUGH */
     case GST_TAG_DEMUX_TYPEFINDING:{
       GstTypeFindProbability probability = 0;
       GstBuffer *typefind_buf = NULL;
@@ -696,8 +696,8 @@ gst_tag_demux_chain_buffer (GstTagDemux * demux, GstBuffer * buf,
       /* Move onto streaming and fall-through to push out existing
        * data */
       demux->priv->state = GST_TAG_DEMUX_STREAMING;
-      /* fall-through */
     }
+      /* FALLTHROUGH */
     case GST_TAG_DEMUX_STREAMING:{
       GstBuffer *outbuf = NULL;
       gsize outbuf_size;
@@ -892,7 +892,7 @@ gst_tag_demux_seek_pull (GstTagDemux * tagdemux, GstEvent * event)
   gst_segment_do_seek (&seeksegment, rate, format, flags,
       start_type, start, stop_type, stop, NULL);
 
-  flush = ! !(flags & GST_SEEK_FLAG_FLUSH);
+  flush = !!(flags & GST_SEEK_FLAG_FLUSH);
 
   GST_DEBUG_OBJECT (tagdemux, "New segment %" GST_SEGMENT_FORMAT, &seeksegment);
 
@@ -1001,6 +1001,7 @@ gst_tag_demux_seek_push (GstTagDemux * tagdemux, GstEvent * event)
     }
     upstream = gst_event_new_seek (rate, format, flags,
         start_type, start, stop_type, stop);
+    gst_event_set_seqnum (upstream, gst_event_get_seqnum (event));
     res = gst_pad_push_event (tagdemux->priv->sinkpad, upstream);
   } else if (format == GST_FORMAT_TIME &&
       tagdemux->priv->state == GST_TAG_DEMUX_STREAMING &&

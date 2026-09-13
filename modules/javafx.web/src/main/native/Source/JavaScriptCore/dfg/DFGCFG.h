@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,12 +32,13 @@
 #include "DFGBlockSet.h"
 #include "DFGGraph.h"
 #include <wtf/SingleRootGraph.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC { namespace DFG {
 
 class CFG {
     WTF_MAKE_NONCOPYABLE(CFG);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(CFG);
 public:
     typedef BasicBlock* Node;
     typedef BlockSet Set;
@@ -95,17 +96,29 @@ public:
 
 using SSACFG = CFG;
 
-template <typename T, typename = typename std::enable_if<std::is_same<T, CPSCFG>::value>::type>
-CPSCFG& selectCFG(Graph& graph)
-{
-    return graph.ensureCPSCFG();
-}
+template<typename> struct CFGSelection;
 
-template <typename T, typename = typename std::enable_if<std::is_same<T, SSACFG>::value>::type>
-SSACFG& selectCFG(Graph& graph)
-{
+template<>
+struct CFGSelection<CPSCFG> {
+    static CPSCFG& select(Graph& graph LIFETIME_BOUND)
+    {
+    return graph.ensureCPSCFG();
+    }
+};
+
+template<>
+struct CFGSelection<SSACFG> {
+    static SSACFG& select(Graph& graph LIFETIME_BOUND)
+    {
     RELEASE_ASSERT(graph.m_ssaCFG);
     return *graph.m_ssaCFG;
+    }
+};
+
+template<typename T>
+auto& selectCFG(Graph& graph LIFETIME_BOUND)
+{
+    return CFGSelection<T>::select(graph);
 }
 
 } } // namespace JSC::DFG

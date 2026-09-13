@@ -35,18 +35,14 @@ namespace WebCore {
 // Conversion to/from Position is O(n) in the offset.
 class PositionIterator {
 public:
-    PositionIterator(const Position& pos)
-        : m_anchorNode(pos.anchorNode())
-        , m_nodeAfterPositionInAnchor(m_anchorNode->traverseToChildAt(pos.deprecatedEditingOffset()))
-        , m_offsetInAnchor(m_nodeAfterPositionInAnchor ? 0 : pos.deprecatedEditingOffset())
-    {
-    }
+    PositionIterator(const Position&);
     operator Position() const;
 
     void increment();
     void decrement();
 
     Node* node() const { return m_anchorNode.get(); }
+    RefPtr<Node> protectedNode() const { return m_anchorNode; }
     int offsetInLeafNode() const { return m_offsetInAnchor; }
 
     bool atStart() const;

@@ -36,8 +36,10 @@
 #endif
 #include "SharedBuffer.h"
 
+#include <array>
+#include <wtf/IndexedRange.h>
+
 namespace WebCore {
-using namespace std;
 
 #if ENABLE(OPENTYPE_MATH)
 namespace OpenType {
@@ -56,9 +58,9 @@ struct MathValueRecord {
 };
 
 struct MathConstants {
-    OpenType::Int16 intConstants[OpenTypeMathData::ScriptScriptPercentScaleDown - OpenTypeMathData::ScriptPercentScaleDown + 1];
-    OpenType::UInt16 uIntConstants[OpenTypeMathData::DisplayOperatorMinHeight - OpenTypeMathData::DelimitedSubFormulaMinHeight + 1];
-    OpenType::MathValueRecord mathValuesConstants[OpenTypeMathData::RadicalKernAfterDegree - OpenTypeMathData::MathLeading + 1];
+    std::array<OpenType::Int16, OpenTypeMathData::ScriptScriptPercentScaleDown - OpenTypeMathData::ScriptPercentScaleDown + 1> intConstants;
+    std::array<OpenType::UInt16, OpenTypeMathData::DisplayOperatorMinHeight - OpenTypeMathData::DelimitedSubFormulaMinHeight + 1> uIntConstants;
+    std::array<OpenType::MathValueRecord, OpenTypeMathData::RadicalKernAfterDegree - OpenTypeMathData::MathLeading + 1> mathValuesConstants;
     OpenType::UInt16 radicalDegreeBottomRaisePercent;
 };
 
@@ -67,10 +69,12 @@ struct MathItalicsCorrectionInfo : TableWithCoverage {
     OpenType::UInt16 italicsCorrectionCount;
     OpenType::MathValueRecord italicsCorrection[1]; // There are italicsCorrectionCount italic correction values.
 
+    std::span<const OpenType::MathValueRecord> italicsCorrections() const { return unsafeMakeSpan(italicsCorrection, static_cast<size_t>(italicsCorrectionCount)); }
+
     int16_t getItalicCorrection(const SharedBuffer& buffer, Glyph glyph) const
     {
-        uint16_t count = uint16_t(italicsCorrectionCount);
-        if (!isValidEnd(buffer, &italicsCorrection[count]))
+        auto italicsCorrections = this->italicsCorrections();
+        if (!buffer.isSpanWithinBounds(italicsCorrections))
             return 0;
 
         uint16_t offset = coverageOffset;
@@ -82,10 +86,10 @@ struct MathItalicsCorrectionInfo : TableWithCoverage {
 
         // We determine the index in the italicsCorrection table.
         uint32_t i;
-        if (!getCoverageIndex(buffer, coverage, glyph, i) || i >= count)
+        if (!getCoverageIndex(buffer, coverage, glyph, i) || i >= italicsCorrections.size())
             return 0;
 
-        return int16_t(italicsCorrection[i].value);
+        return int16_t(italicsCorrections[i].value);
     }
 };
 
@@ -115,6 +119,8 @@ struct GlyphAssembly : TableBase {
         OpenType::UInt16 partFlags;
     } partRecords[1]; // There are partCount GlyphPartRecord's.
 
+    std::span<const GlyphPartRecord> parts() const { return unsafeMakeSpan(partRecords, static_cast<size_t>(partCount)); }
+
     // PartFlags enumeration currently uses only one bit:
     // 0x0001 If set, the part can be skipped or repeated.
     // 0xFFFE Reserved.
@@ -124,17 +130,16 @@ struct GlyphAssembly : TableBase {
 
     void getAssemblyParts(const SharedBuffer& buffer, Vector<OpenTypeMathData::AssemblyPart>& assemblyParts) const
     {
-        uint16_t count = partCount;
-        if (!isValidEnd(buffer, &partRecords[count]))
+        auto parts = this->parts();
+        if (!buffer.isSpanWithinBounds(parts))
             return;
-        assemblyParts.resize(count);
-        for (uint16_t i = 0; i < count; i++) {
-            assemblyParts[i].glyph = partRecords[i].glyph;
-            uint16_t flag = partRecords[i].partFlags;
+        assemblyParts.resize(parts.size());
+        for (auto [i, part] : indexedRange(parts)) {
+            assemblyParts[i].glyph = part.glyph;
+            uint16_t flag = part.partFlags;
             assemblyParts[i].isExtender = flag & PartFlagsExtender;
         }
     }
-
 };
 
 struct MathGlyphConstruction : TableBase {
@@ -145,14 +150,16 @@ struct MathGlyphConstruction : TableBase {
         OpenType::UInt16 advanceMeasurement;
     } mathGlyphVariantRecords[1]; // There are variantCount MathGlyphVariantRecord's.
 
+    std::span<const MathGlyphVariantRecord> variantRecords() const { return unsafeMakeSpan(mathGlyphVariantRecords, static_cast<size_t>(variantCount)); }
+
     void getSizeVariants(const SharedBuffer& buffer, Vector<Glyph>& variants) const
     {
-        uint16_t count = variantCount;
-        if (!isValidEnd(buffer, &mathGlyphVariantRecords[count]))
+        auto variantRecords = this->variantRecords();
+        if (!buffer.isSpanWithinBounds(variantRecords))
             return;
-        variants.resize(count);
-        for (uint16_t i = 0; i < count; i++)
-            variants[i] = mathGlyphVariantRecords[i].variantGlyph;
+        variants.resize(variantRecords.size());
+        for (auto [i, variantRecord] : indexedRange(variantRecords))
+            variants[i] = variantRecord.variantGlyph;
     }
 
     void getAssemblyParts(const SharedBuffer& buffer, Vector<OpenTypeMathData::AssemblyPart>& assemblyParts) const
@@ -172,10 +179,12 @@ struct MathVariants : TableWithCoverage {
     OpenType::UInt16 horizontalGlyphCount;
     OpenType::Offset mathGlyphConstructionsOffset[1]; // There are verticalGlyphCount vertical glyph contructions and horizontalGlyphCount vertical glyph contructions.
 
+    std::span<const OpenType::Offset> mathGlyphConstructionsOffsets() const { return unsafeMakeSpan(mathGlyphConstructionsOffset, static_cast<size_t>(verticalGlyphCount) + static_cast<size_t>(horizontalGlyphCount)); }
+
     const MathGlyphConstruction* mathGlyphConstruction(const SharedBuffer& buffer, Glyph glyph, bool isVertical) const
     {
-        uint32_t count = uint16_t(verticalGlyphCount) + uint16_t(horizontalGlyphCount);
-        if (!isValidEnd(buffer, &mathGlyphConstructionsOffset[count]))
+        auto mathGlyphConstructionsOffsets = this->mathGlyphConstructionsOffsets();
+        if (!buffer.isSpanWithinBounds(mathGlyphConstructionsOffsets))
             return nullptr;
 
         // We determine the coverage table for the specified glyph.
@@ -190,13 +199,13 @@ struct MathVariants : TableWithCoverage {
         uint32_t i;
         if (!getCoverageIndex(buffer, coverage, glyph, i))
             return nullptr;
-        count = isVertical ? verticalGlyphCount : horizontalGlyphCount;
+        auto count = isVertical ? verticalGlyphCount : horizontalGlyphCount;
         if (i >= count)
             return nullptr;
         if (!isVertical)
             i += uint16_t(verticalGlyphCount);
 
-        return validateOffset<MathGlyphConstruction>(buffer, mathGlyphConstructionsOffset[i]);
+        return validateOffset<MathGlyphConstruction>(buffer, mathGlyphConstructionsOffsets[i]);
     }
 };
 
@@ -240,7 +249,7 @@ struct MATHTable : TableBase {
 OpenTypeMathData::OpenTypeMathData(const FontPlatformData& font)
 {
     m_mathBuffer = font.openTypeTable(OpenType::MATHTag);
-    const OpenType::MATHTable* math = OpenType::validateTable<OpenType::MATHTable>(m_mathBuffer);
+    auto* math = OpenType::validateTableSingle<OpenType::MATHTable>(m_mathBuffer);
     if (!math) {
         m_mathBuffer = nullptr;
         return;
@@ -277,7 +286,7 @@ float OpenTypeMathData::getMathConstant(const Font& font, MathConstant constant)
 {
     int32_t value = 0;
 
-    const OpenType::MATHTable* math = OpenType::validateTable<OpenType::MATHTable>(m_mathBuffer);
+    auto* math = OpenType::validateTableSingle<OpenType::MATHTable>(m_mathBuffer);
     ASSERT(math);
     const OpenType::MathConstants* mathConstants = math->mathConstants(*m_mathBuffer);
     ASSERT(mathConstants);
@@ -314,7 +323,7 @@ float OpenTypeMathData::getMathConstant(const Font&, MathConstant) const
 #if ENABLE(OPENTYPE_MATH)
 float OpenTypeMathData::getItalicCorrection(const Font& font, Glyph glyph) const
 {
-    const OpenType::MATHTable* math = OpenType::validateTable<OpenType::MATHTable>(m_mathBuffer);
+    auto* math = OpenType::validateTableSingle<OpenType::MATHTable>(m_mathBuffer);
     ASSERT(math);
     const OpenType::MathGlyphInfo* mathGlyphInfo = math->mathGlyphInfo(*m_mathBuffer);
     if (!mathGlyphInfo)
@@ -342,7 +351,7 @@ void OpenTypeMathData::getMathVariants(Glyph glyph, bool isVertical, Vector<Glyp
 {
     sizeVariants.clear();
     assemblyParts.clear();
-    const OpenType::MATHTable* math = OpenType::validateTable<OpenType::MATHTable>(m_mathBuffer);
+    auto* math = OpenType::validateTableSingle<OpenType::MATHTable>(m_mathBuffer);
     ASSERT(math);
     const OpenType::MathVariants* mathVariants = math->mathVariants(*m_mathBuffer);
     ASSERT(mathVariants);
@@ -359,25 +368,25 @@ void OpenTypeMathData::getMathVariants(Glyph glyph, bool isVertical, Vector<Glyp
     hb_direction_t direction = isVertical ? HB_DIRECTION_BTT : HB_DIRECTION_LTR;
 
     sizeVariants.clear();
-    hb_ot_math_glyph_variant_t variants[10];
+    std::array<hb_ot_math_glyph_variant_t, 10> variants;
     unsigned variantsSize = std::size(variants);
     unsigned count;
     unsigned offset = 0;
     do {
         count = variantsSize;
-        hb_ot_math_get_glyph_variants(m_mathFont.get(), glyph, direction, offset, &count, variants);
+        hb_ot_math_get_glyph_variants(m_mathFont.get(), glyph, direction, offset, &count, variants.data());
         offset += count;
         for (unsigned i = 0; i < count; i++)
             sizeVariants.append(variants[i].glyph);
     } while (count == variantsSize);
 
     assemblyParts.clear();
-    hb_ot_math_glyph_part_t parts[10];
+    std::array<hb_ot_math_glyph_part_t, 10> parts;
     unsigned partsSize = std::size(parts);
     offset = 0;
     do {
         count = partsSize;
-        hb_ot_math_get_glyph_assembly(m_mathFont.get(), glyph, direction, offset, &count, parts, nullptr);
+        hb_ot_math_get_glyph_assembly(m_mathFont.get(), glyph, direction, offset, &count, parts.data(), nullptr);
         offset += count;
         for (unsigned i = 0; i < count; i++) {
             AssemblyPart assemblyPart;

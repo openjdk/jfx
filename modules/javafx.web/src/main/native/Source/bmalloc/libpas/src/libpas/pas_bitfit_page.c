@@ -33,12 +33,13 @@
 #include "pas_bitfit_view.h"
 #include "pas_epoch.h"
 #include "pas_log.h"
+#include "pas_zero_memory.h"
 
 void pas_bitfit_page_construct(pas_bitfit_page* page,
                                pas_bitfit_view* view,
                                const pas_bitfit_page_config* config_ptr)
 {
-    static const bool verbose = false;
+    static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_BITFIT_HEAPS);
 
     pas_bitfit_page_config config;
 

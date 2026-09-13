@@ -29,9 +29,13 @@
 
 #include "CachedResourceClient.h"
 #include "CachedResourceHandle.h"
+#include "LoaderMalloc.h"
 #include "Timer.h"
 #include "WebVTTParser.h"
 #include <memory>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
+#include <wtf/CheckedPtr.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -41,7 +45,7 @@ class HTMLTrackElement;
 class TextTrackLoader;
 class VTTCue;
 
-class TextTrackLoaderClient {
+class TextTrackLoaderClient : public AbstractRefCountedAndCanMakeWeakPtr<TextTrackLoaderClient> {
 public:
     virtual ~TextTrackLoaderClient() = default;
 
@@ -51,11 +55,11 @@ public:
     virtual void newStyleSheetsAvailable(TextTrackLoader&) = 0;
 };
 
-class TextTrackLoader final : public CachedResourceClient, private WebVTTParserClient {
+class TextTrackLoader final : public CachedResourceClient, private WebVTTParserClient, public RefCounted<TextTrackLoader> {
     WTF_MAKE_NONCOPYABLE(TextTrackLoader);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(TextTrackLoader, Loader);
 public:
-    TextTrackLoader(TextTrackLoaderClient&, Document&);
+    static Ref<TextTrackLoader> create(TextTrackLoaderClient&, Document&);
     virtual ~TextTrackLoader();
 
     bool load(const URL&, HTMLTrackElement&);
@@ -65,9 +69,15 @@ public:
     Vector<Ref<VTTRegion>> getNewRegions();
     Vector<String> getNewStyleSheets();
 
+    // CachedResourceClient.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
 private:
+    TextTrackLoader(TextTrackLoaderClient&, Document&);
+
     // CachedResourceClient
-    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) final;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
     void deprecatedDidReceiveCachedResource(CachedResource&) final;
 
     // WebVTTParserClient
@@ -80,12 +90,14 @@ private:
     void cueLoadTimerFired();
     void corsPolicyPreventedLoad();
 
+    CachedResourceHandle<CachedTextTrack> protectedResource() const;
+
     enum State { Idle, Loading, Finished, Failed };
 
-    TextTrackLoaderClient& m_client;
+    WeakPtr<TextTrackLoaderClient> m_client;
     std::unique_ptr<WebVTTParser> m_cueParser;
     CachedResourceHandle<CachedTextTrack> m_resource;
-    Document& m_document;
+    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
     Timer m_cueLoadTimer;
     State m_state { Idle };
     unsigned m_parseOffset { 0 };

@@ -41,13 +41,11 @@ JSValue JSKeyframeEffect::getKeyframes(JSGlobalObject& lexicalGlobalObject, Call
 {
     auto lock = JSLockHolder { &lexicalGlobalObject };
 
-    auto* context = jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject)->scriptExecutionContext();
-    if (UNLIKELY(!context))
+    if (!jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject)->scriptExecutionContext()) [[unlikely]]
         return jsUndefined();
-    ASSERT(context->isDocument());
 
     auto& domGlobalObject = *jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject);
-    auto computedKeyframes = wrapped().getKeyframes(downcast<Document>(*context));
+    auto computedKeyframes = wrapped().getKeyframes();
     auto keyframeObjects = computedKeyframes.map([&](auto& computedKeyframe) -> Strong<JSObject> {
         auto keyframeObject = convertDictionaryToJS(lexicalGlobalObject, domGlobalObject, { computedKeyframe });
         for (auto& [customProperty, propertyValue] : computedKeyframe.customStyleStrings) {

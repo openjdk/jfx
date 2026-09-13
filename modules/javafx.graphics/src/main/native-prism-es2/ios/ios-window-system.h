@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,9 +27,6 @@
    EAGLContext creation and manipulation to occur from Java
 */
 #import <jni.h>
-
-#define jlong_to_ptr(value) ((void*)((long)value))
-#define ptr_to_jlong(value) (jlong)((long)(value))
 
 void* createPixelFormat(jint* ivalues);
 void deletePixelFormat(void* pixelFormat);

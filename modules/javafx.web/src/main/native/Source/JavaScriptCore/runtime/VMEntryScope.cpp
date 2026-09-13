@@ -41,19 +41,18 @@ void VMEntryScope::setUpSlow()
 {
     m_vm.entryScope = this;
 
-        auto& thread = Thread::current();
-        if (UNLIKELY(!thread.isJSThread())) {
+    auto& thread = Thread::currentSingleton();
+    if (!thread.isJSThread()) [[unlikely]] {
             Thread::registerJSThread(thread);
 
                 if (Wasm::isSupported())
                     Wasm::startTrackingCurrentThread();
 #if HAVE(MACH_EXCEPTIONS)
-        if (g_wtfConfig.signalHandlers.initState == WTF::SignalHandlers::InitState::AddedHandlers)
                 registerThreadForMachExceptionHandling(thread);
 #endif
         }
 
-    if (UNLIKELY(m_vm.hasAnyEntryScopeServiceRequest() || m_vm.hasTimeZoneChange()))
+    if (m_vm.hasAnyEntryScopeServiceRequest() || m_vm.hasTimeZoneChange()) [[unlikely]]
         m_vm.executeEntryScopeServicesOnEntry();
 }
 
@@ -63,7 +62,7 @@ void VMEntryScope::tearDownSlow()
 
     m_vm.entryScope = nullptr;
 
-    if (UNLIKELY(m_vm.hasAnyEntryScopeServiceRequest()))
+    if (m_vm.hasAnyEntryScopeServiceRequest()) [[unlikely]]
         m_vm.executeEntryScopeServicesOnExit();
 }
 

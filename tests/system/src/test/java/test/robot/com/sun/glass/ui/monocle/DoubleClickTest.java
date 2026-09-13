@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,30 +25,25 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
+import java.util.Collection;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import com.sun.glass.ui.monocle.TestLogShim;
-import test.robot.com.sun.glass.ui.monocle.TestApplication;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
-import org.junit.Test;
-import org.junit.runners.Parameterized;
 
-import java.util.Collection;
+public final class DoubleClickTest extends ParameterizedTestBase {
 
-public class DoubleClickTest extends ParameterizedTestBase {
-
-    public DoubleClickTest(TestTouchDevice device) {
-        super(device);
-    }
-
-    @Parameterized.Parameters
-    public static Collection<Object[]> data() {
+    private static Collection<TestTouchDevice> parameters() {
         return TestTouchDevices.getTouchDeviceParameters(1);
     }
 
     /** Test that double taps in the same area generate synthesized
      * multi-click mouse events. */
-    @Test
-    public void testDoubleClick1() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testDoubleClick1(TestTouchDevice device) throws Exception {
+        createDevice(device, null);
         int x = (int) Math.round(width / 2.0);
         int y = (int) Math.round(height / 2.0);
         TestApplication.getStage().getScene().setOnMouseClicked((e) -> TestLogShim.format("Mouse clicked: %d, %d: clickCount %d",
@@ -67,8 +62,10 @@ public class DoubleClickTest extends ParameterizedTestBase {
         TestLogShim.waitForLog("Mouse clicked: " + x + ", " + y + ": clickCount 2", 3000l);
     }
 
-    @Test
-    public void testDoubleClick2() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testDoubleClick2(TestTouchDevice device) throws Exception {
+        createDevice(device, null);
         int x1 = (int) Math.round(width / 2.0);
         int y1 = (int) Math.round(height / 2.0);
         int x2 = x1 + device.getTapRadius();
@@ -89,5 +86,4 @@ public class DoubleClickTest extends ParameterizedTestBase {
         TestLogShim.waitForLog("Mouse clicked: " + x1 + ", " + y1 + ": clickCount 1", 3000l);
         TestLogShim.waitForLog("Mouse clicked: " + x2 + ", " + y2 + ": clickCount 2", 3000l);
     }
-
 }

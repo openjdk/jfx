@@ -31,7 +31,7 @@
 #include "ApplePayPaymentAuthorizationResult.h"
 #include "ApplePayPaymentRequest.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
+#include "EventTargetInterfaces.h"
 #include "PaymentSession.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -57,12 +57,18 @@ struct ApplePayShippingMethod;
 struct ApplePayPaymentMethodUpdate;
 struct ApplePayShippingContactUpdate;
 struct ApplePayShippingMethodUpdate;
+template<typename> class ExceptionOr;
 
 class ApplePaySession final : public PaymentSession, public ActiveDOMObject, public EventTarget {
-    WTF_MAKE_ISO_ALLOCATED(ApplePaySession);
+    WTF_MAKE_TZONE_ALLOCATED(ApplePaySession);
 public:
     static ExceptionOr<Ref<ApplePaySession>> create(Document&, unsigned version, ApplePayPaymentRequest&&);
     virtual ~ApplePaySession();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     static constexpr auto STATUS_SUCCESS = ApplePayPaymentAuthorizationResult::Success;
     static constexpr auto STATUS_FAILURE = ApplePayPaymentAuthorizationResult::Failure;
@@ -97,21 +103,17 @@ public:
 
     const ApplePaySessionPaymentRequest& paymentRequest() const { return m_paymentRequest; }
 
-    using PaymentSession::ref;
-    using PaymentSession::deref;
-
 private:
     ApplePaySession(Document&, unsigned version, ApplePaySessionPaymentRequest&&);
 
     // ActiveDOMObject.
-    const char* activeDOMObjectName() const override;
     void stop() override;
     void suspend(ReasonForSuspension) override;
     bool virtualHasPendingActivity() const final;
 
     // EventTarget.
-    EventTargetInterface eventTargetInterface() const override { return ApplePaySessionEventTargetInterfaceType; }
-    ScriptExecutionContext* scriptExecutionContext() const override { return ActiveDOMObject::scriptExecutionContext(); }
+    enum EventTargetInterfaceType eventTargetInterface() const override { return EventTargetInterfaceType::ApplePaySession; }
+    ScriptExecutionContext* scriptExecutionContext() const override;
     void refEventTarget() override { ref(); }
     void derefEventTarget() override { deref(); }
 
@@ -128,6 +130,7 @@ private:
     void didCancelPaymentSession(PaymentSessionError&&) override;
 
     PaymentCoordinator& paymentCoordinator() const;
+    Ref<PaymentCoordinator> protectedPaymentCoordinator() const;
 
     bool canBegin() const;
     bool canAbort() const;
@@ -172,6 +175,8 @@ private:
     unsigned m_version;
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(ApplePaySession)
 
 #endif

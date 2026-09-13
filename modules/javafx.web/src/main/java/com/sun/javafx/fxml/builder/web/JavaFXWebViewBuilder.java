@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,7 +35,7 @@ import javafx.util.Builder;
 /**
  * JavaFX WebView builder.
  *
- * TODO: Implement this to fix RT-40037.
+ * TODO: Implement this to fix JDK-8089907.
  *
  * This should be implemented using the pattern from
  * JavaFXBuilderFactory$ObjectBuilderWrapper$ObjectBuilder modified to use

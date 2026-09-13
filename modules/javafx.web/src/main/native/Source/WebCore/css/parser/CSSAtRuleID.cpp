@@ -36,31 +36,34 @@ namespace WebCore {
 
 CSSAtRuleID cssAtRuleID(StringView name)
 {
-    static constexpr std::pair<ComparableLettersLiteral, CSSAtRuleID> mappings[] = {
-        { "-webkit-keyframes", CSSAtRuleWebkitKeyframes },
-        { "annotation", CSSAtRuleAnnotation },
-        { "character-variant", CSSAtRuleCharacterVariant },
-        { "charset", CSSAtRuleCharset },
-        { "container", CSSAtRuleContainer },
-        { "counter-style", CSSAtRuleCounterStyle },
-        { "font-face", CSSAtRuleFontFace },
-        { "font-feature-values", CSSAtRuleFontFeatureValues },
-        { "font-palette-values", CSSAtRuleFontPaletteValues },
-        { "import", CSSAtRuleImport },
-        { "keyframes", CSSAtRuleKeyframes },
-        { "layer", CSSAtRuleLayer },
-        { "media", CSSAtRuleMedia },
-        { "namespace", CSSAtRuleNamespace },
-        { "ornaments", CSSAtRuleOrnaments },
-        { "page", CSSAtRulePage },
-        { "property", CSSAtRuleProperty },
-        { "styleset", CSSAtRuleStyleset },
-        { "stylistic", CSSAtRuleStylistic },
-        { "supports", CSSAtRuleSupports },
-        { "swash", CSSAtRuleSwash },
-        { "viewport", CSSAtRuleViewport },
-    };
-    static constexpr SortedArrayMap cssAtRules { mappings };
+    static constexpr SortedArrayMap cssAtRules { std::to_array<std::pair<ComparableLettersLiteral, CSSAtRuleID>>({
+        { "-webkit-keyframes"_s,     CSSAtRuleWebkitKeyframes },
+        { "annotation"_s,            CSSAtRuleAnnotation },
+        { "character-variant"_s,     CSSAtRuleCharacterVariant },
+        { "charset"_s,               CSSAtRuleCharset },
+        { "container"_s,             CSSAtRuleContainer },
+        { "counter-style"_s,         CSSAtRuleCounterStyle },
+        { "font-face"_s,             CSSAtRuleFontFace },
+        { "font-feature-values"_s,   CSSAtRuleFontFeatureValues },
+        { "font-palette-values"_s,   CSSAtRuleFontPaletteValues },
+        { "function"_s,              CSSAtRuleFunction },
+        { "import"_s,                CSSAtRuleImport },
+        { "keyframes"_s,             CSSAtRuleKeyframes },
+        { "layer"_s,                 CSSAtRuleLayer },
+        { "media"_s,                 CSSAtRuleMedia },
+        { "namespace"_s,             CSSAtRuleNamespace },
+        { "ornaments"_s,             CSSAtRuleOrnaments },
+        { "page"_s,                  CSSAtRulePage },
+        { "position-try"_s,          CSSAtRulePositionTry },
+        { "property"_s,              CSSAtRuleProperty },
+        { "scope"_s,                 CSSAtRuleScope },
+        { "starting-style"_s,        CSSAtRuleStartingStyle },
+        { "styleset"_s,              CSSAtRuleStyleset },
+        { "stylistic"_s,             CSSAtRuleStylistic },
+        { "supports"_s,              CSSAtRuleSupports },
+        { "swash"_s,                 CSSAtRuleSwash },
+        { "view-transition"_s,       CSSAtRuleViewTransition },
+    }) };
     return cssAtRules.get(name, CSSAtRuleInvalid);
 }
 

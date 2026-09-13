@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,8 +31,8 @@ import java.util.Arrays;
 import java.util.List;
 import javafx.collections.SetChangeListener;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MockSetObserver<E> implements SetChangeListener<E> {
 
@@ -60,21 +60,21 @@ public class MockSetObserver<E> implements SetChangeListener<E> {
     }
 
     public void assertAdded(int call, Tuple<E> tuple) {
-        assertTrue("Missing call to the observer # " + call, call < calls.size());
+        assertTrue(call < calls.size(), "Missing call to the observer # " + call);
         assertEquals(calls.get(call).added, tuple.val);
     }
 
     public void assertMultipleCalls(Call<E>... calls) {
         assertEquals(this.calls.size(), calls.length);
         for (Call<E> c : calls) {
-            assertTrue(Arrays.toString(calls) + " doesn't contain "  + c, this.calls.contains(c));
+            assertTrue(this.calls.contains(c), () -> Arrays.toString(calls) + " doesn't contain " + c);
         }
     }
 
     public void assertMultipleRemove(Tuple<E>... tuples) {
         assertEquals(this.calls.size(), tuples.length);
         for (Tuple<E> t : tuples) {
-            assertTrue(calls + " doesn't contain "  + t, this.calls.contains(new Call<>(t.val, null)));
+            assertTrue(this.calls.contains(new Call<>(t.val, null)), () -> calls + " doesn't contain " + t);
         }
     }
 
@@ -83,7 +83,7 @@ public class MockSetObserver<E> implements SetChangeListener<E> {
     }
 
     public void assertRemoved(int call, Tuple<E> tuple) {
-        assertTrue("Missing call to the observer # " + call, call < calls.size());
+        assertTrue(call < calls.size(), "Missing call to the observer # " + call);
         assertEquals(calls.get(call).removed, tuple.val);
     }
 

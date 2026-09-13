@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,6 +50,8 @@ import javafx.util.StringConverter;
 /**
  * An axis whose data is defined as Numbers. It can also draw minor
  * tick-marks between the major ones.
+ *
+ * @param <T> the axis value type
  * @since JavaFX 2.0
  */
 public abstract class ValueAxis<T extends Number> extends Axis<T> {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,9 +26,10 @@
 #pragma once
 
 #include "Supplementable.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
-#include <wtf/IsoMalloc.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -38,7 +39,7 @@ class Navigator;
 struct RequestCookieConsentOptions;
 
 class NavigatorCookieConsent final : public Supplement<Navigator> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(NavigatorCookieConsent);
 public:
     explicit NavigatorCookieConsent(Navigator& navigator)
         : m_navigator(navigator)
@@ -49,11 +50,16 @@ public:
 
 private:
     static NavigatorCookieConsent& from(Navigator&);
-    static const char* supplementName() { return "NavigatorCookieConsent"; }
+    static ASCIILiteral supplementName() { return "NavigatorCookieConsent"_s; }
+    bool isNavigatorCookieConsent() const final { return true; }
 
     void requestCookieConsent(RequestCookieConsentOptions&&, Ref<DeferredPromise>&&);
 
-    Navigator& m_navigator;
+    const CheckedRef<Navigator> m_navigator;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::NavigatorCookieConsent)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isNavigatorCookieConsent(); }
+SPECIALIZE_TYPE_TRAITS_END()

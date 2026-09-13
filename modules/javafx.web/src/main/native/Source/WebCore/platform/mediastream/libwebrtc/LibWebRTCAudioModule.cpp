@@ -30,7 +30,6 @@
 
 #include "LibWebRTCAudioFormat.h"
 #include "Logging.h"
-#include <wtf/FastMalloc.h>
 
 #if PLATFORM(COCOA)
 #include "IncomingAudioMediaStreamTrackRendererUnit.h"
@@ -39,17 +38,14 @@
 namespace WebCore {
 
 LibWebRTCAudioModule::LibWebRTCAudioModule()
-    : m_queue(WorkQueue::create("WebKitWebRTCAudioModule", WorkQueue::QOS::UserInteractive))
-    , m_logTimer(makeUnique<Timer>(*this, &LibWebRTCAudioModule::logTimerFired))
+    : m_queue(WorkQueue::create("WebKitWebRTCAudioModule"_s, WorkQueue::QOS::UserInteractive))
+    , m_logTimer(*this, &LibWebRTCAudioModule::logTimerFired)
 {
     ASSERT(isMainThread());
 }
 
 LibWebRTCAudioModule::~LibWebRTCAudioModule()
 {
-    callOnMainThreadAndWait([&] {
-        m_logTimer = nullptr;
-    });
 }
 
 int32_t LibWebRTCAudioModule::RegisterAudioCallback(webrtc::AudioTransport* audioTransport)
@@ -68,11 +64,11 @@ int32_t LibWebRTCAudioModule::StartPlayout()
         return 0;
 
     m_isPlaying = true;
-    callOnMainThread([this, protectedThis = rtc::scoped_refptr<webrtc::AudioDeviceModule>(this)] {
-        m_logTimer->startRepeating(logTimerInterval);
+    callOnMainThread([this, protectedThis = Ref { *this }] {
+        m_logTimer.startRepeating(logTimerInterval);
     });
 
-    m_queue->dispatch([this, protectedThis = rtc::scoped_refptr<webrtc::AudioDeviceModule>(this)] {
+    m_queue->dispatch([this, protectedThis = Ref { *this }] {
         m_pollingTime = MonotonicTime::now();
 #if PLATFORM(COCOA)
         m_currentAudioSampleCount = 0;
@@ -87,8 +83,8 @@ int32_t LibWebRTCAudioModule::StopPlayout()
     RELEASE_LOG(WebRTC, "LibWebRTCAudioModule::StopPlayout %d", m_isPlaying);
 
     m_isPlaying = false;
-    callOnMainThread([this, protectedThis = rtc::scoped_refptr<webrtc::AudioDeviceModule>(this)] {
-        m_logTimer->stop();
+    callOnMainThread([this, protectedThis = Ref { *this }] {
+        m_logTimer.stop();
     });
     return 0;
 }
@@ -121,7 +117,7 @@ void LibWebRTCAudioModule::pollAudioData()
     if (!m_isPlaying)
         return;
 
-    Function<void()> nextPollFunction = [this, protectedThis = rtc::scoped_refptr<webrtc::AudioDeviceModule>(this)] {
+    Function<void()> nextPollFunction = [this, protectedThis = Ref { *this }] {
         pollAudioData();
     };
 
@@ -131,7 +127,7 @@ void LibWebRTCAudioModule::pollAudioData()
 
         pollFromSource();
     }
-    m_queue->dispatchAfter(computeDelayUntilNextPolling(), WTFMove(nextPollFunction));
+    m_queue->dispatchAfter(computeDelayUntilNextPolling(), WTF::move(nextPollFunction));
 }
 
 void LibWebRTCAudioModule::pollFromSource()
@@ -145,7 +141,7 @@ void LibWebRTCAudioModule::pollFromSource()
         char data[LibWebRTCAudioFormat::sampleByteSize * channels * LibWebRTCAudioFormat::chunkSampleCount];
         m_audioTransport->PullRenderData(LibWebRTCAudioFormat::sampleByteSize * 8, LibWebRTCAudioFormat::sampleRate, channels, LibWebRTCAudioFormat::chunkSampleCount, data, &elapsedTime, &ntpTime);
 #if PLATFORM(COCOA)
-        if (m_isRenderingIncomingAudio)
+        if (m_isRenderingIncomingAudioCounter)
             m_incomingAudioMediaStreamTrackRendererUnit->newAudioChunkPushed(m_currentAudioSampleCount);
         m_currentAudioSampleCount += LibWebRTCAudioFormat::chunkSampleCount;
 #endif
@@ -156,7 +152,7 @@ void LibWebRTCAudioModule::pollFromSource()
 BaseAudioMediaStreamTrackRendererUnit& LibWebRTCAudioModule::incomingAudioMediaStreamTrackRendererUnit()
 {
     if (!m_incomingAudioMediaStreamTrackRendererUnit)
-        m_incomingAudioMediaStreamTrackRendererUnit = makeUnique<IncomingAudioMediaStreamTrackRendererUnit>(*this);
+        lazyInitialize(m_incomingAudioMediaStreamTrackRendererUnit, makeUniqueWithoutRefCountedCheck<IncomingAudioMediaStreamTrackRendererUnit>(*this));
     return *m_incomingAudioMediaStreamTrackRendererUnit;
 }
 #endif

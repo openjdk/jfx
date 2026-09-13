@@ -45,7 +45,7 @@ static inline const char* pas_size_lookup_mode_get_string(pas_size_lookup_mode m
     case pas_force_size_lookup:
         return "force_size_lookup";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

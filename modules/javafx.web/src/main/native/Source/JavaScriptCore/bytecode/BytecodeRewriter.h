@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2016 Yusuke Suzuki <utatane.tea@gmail.com>
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,8 @@
 #include "Opcode.h"
 #include "UnlinkedCodeBlock.h"
 #include <wtf/Insertion.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -82,7 +84,7 @@ class BytecodeRewriter {
 WTF_MAKE_NONCOPYABLE(BytecodeRewriter);
 public:
     enum class Position : int8_t {
-        EntryPoint = -2,
+        Entrypoint = -2,
         Before = -1,
         LabelPoint = 0,
         After = 1,
@@ -111,10 +113,7 @@ public:
             return bytecodeOffset < other.bytecodeOffset;
         }
 
-        bool operator==(const InsertionPoint& other) const
-        {
-            return bytecodeOffset == other.bytecodeOffset && position == other.position;
-        }
+        friend bool operator==(const InsertionPoint&, const InsertionPoint&) = default;
     };
 
 private:
@@ -191,7 +190,7 @@ public:
         Fragment fragment(m_bytecodeGenerator, writer, includeBranch);
         function(fragment);
         fragment.align();
-        insertImpl(InsertionPoint(instruction.offset(), Position::Before), includeBranch, WTFMove(writer));
+        insertImpl(InsertionPoint(instruction.offset(), Position::Before), includeBranch, WTF::move(writer));
     }
 
     template<class Function>
@@ -202,7 +201,7 @@ public:
         Fragment fragment(m_bytecodeGenerator, writer, includeBranch);
         function(fragment);
         fragment.align(alignCongruent);
-        insertImpl(InsertionPoint(instruction.offset(), Position::After), includeBranch, WTFMove(writer));
+        insertImpl(InsertionPoint(instruction.offset(), Position::After), includeBranch, WTF::move(writer));
     }
 
     template<class Function>
@@ -219,7 +218,7 @@ public:
 
     int32_t adjustAbsoluteOffset(JSInstructionStream::Offset absoluteOffset)
     {
-        return adjustJumpTarget(InsertionPoint(0, Position::EntryPoint), InsertionPoint(absoluteOffset, Position::LabelPoint));
+        return adjustJumpTarget(InsertionPoint(0, Position::Entrypoint), InsertionPoint(absoluteOffset, Position::LabelPoint));
     }
 
     int32_t adjustJumpTarget(JSInstructionStream::Offset originalBytecodeOffset, int32_t originalJumpTarget)
@@ -228,6 +227,9 @@ public:
     }
 
     void adjustJumpTargets();
+
+    template<typename Func>
+    void forEachLabelPoint(Func);
 
 private:
     void insertImpl(InsertionPoint, IncludeBranch, JSInstructionStreamWriter&& fragment);
@@ -259,4 +261,20 @@ inline int BytecodeRewriter::calculateDifference(Iterator begin, Iterator end)
     return result;
 }
 
+template<typename Func>
+void BytecodeRewriter::forEachLabelPoint(Func func)
+{
+    int32_t previousBytecodeOffset = -1;
+    for (size_t i = 0; i < m_insertions.size(); ++i) {
+        Insertion& insertion = m_insertions[i];
+        int32_t bytecodeOffset = insertion.index.bytecodeOffset;
+        if (bytecodeOffset == previousBytecodeOffset)
+            continue;
+        previousBytecodeOffset = bytecodeOffset;
+        func(bytecodeOffset);
+    }
+}
+
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

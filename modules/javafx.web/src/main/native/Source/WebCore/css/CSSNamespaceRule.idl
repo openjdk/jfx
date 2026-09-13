@@ -23,11 +23,13 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-// https://drafts.csswg.org/cssom/#the-cssnamespacerule-interface
+// https://drafts.csswg.org/cssom/#cssnamespacerule
+
+typedef USVString CSSOMString;
 
 [
     Exposed=Window
 ] interface CSSNamespaceRule : CSSRule {
-    readonly attribute DOMString namespaceURI;
-    readonly attribute DOMString prefix;
+    readonly attribute CSSOMString namespaceURI;
+    readonly attribute CSSOMString prefix;
 };

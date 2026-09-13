@@ -73,7 +73,7 @@ SparseArrayValueMap::AddResult SparseArrayValueMap::add(JSObject* array, unsigne
         }
     }
     if (increasedCapacity)
-        Heap::heap(array)->reportExtraMemoryAllocated(increasedCapacity * sizeof(Map::KeyValuePairType));
+        Heap::heap(array)->reportExtraMemoryAllocated(array, increasedCapacity * sizeof(Map::KeyValuePairType));
     return result;
 }
 
@@ -149,7 +149,7 @@ void SparseArrayEntry::get(JSObject* thisObject, PropertySlot& slot) const
     JSValue value = Base::get();
     ASSERT(value);
 
-    if (LIKELY(!value.isGetterSetter())) {
+    if (!value.isGetterSetter()) [[likely]] {
         slot.setValue(thisObject, m_attributes, value);
         return;
     }
@@ -202,6 +202,11 @@ bool SparseArrayEntry::put(JSGlobalObject* globalObject, JSValue thisValue, Spar
 JSValue SparseArrayEntry::getNonSparseMode() const
 {
     ASSERT(!m_attributes);
+    return Base::get();
+}
+
+JSValue SparseArrayEntry::get() const
+{
     return Base::get();
 }
 

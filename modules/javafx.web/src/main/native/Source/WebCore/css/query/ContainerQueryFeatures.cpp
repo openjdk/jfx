@@ -25,155 +25,299 @@
 #include "config.h"
 #include "ContainerQueryFeatures.h"
 
+#include "BoxSides.h"
+#include "CSSCustomPropertyValue.h"
+#include "CSSPrimitiveNumericCategory.h"
+#include "ComputedStyleDependencies.h"
 #include "ContainerQueryEvaluator.h"
 #include "RenderBoxInlines.h"
 #include "RenderElementInlines.h"
+#include "RenderObjectInlines.h"
+#include "StyleBuilder.h"
+#include "StyleCustomProperty.h"
+#include "StyleCustomPropertyRegistry.h"
 #include <wtf/NeverDestroyed.h>
 
-namespace WebCore::CQ::Features {
+namespace WebCore::CQ {
 
 using namespace MQ;
 
-struct SizeFeatureSchema : public FeatureSchema {
-    SizeFeatureSchema(const AtomString& name, Type type, ValueType valueType, FixedVector<CSSValueID>&& valueIdentifiers = { })
-        : FeatureSchema(name, type, valueType, WTFMove(valueIdentifiers))
-    { }
+static LayoutUnit unscaledSizeForPrincipleBox(const Style::PreferredSize& computedSize, LayoutUnit usedSize, UsesSVGZoomRulesForLength usesSVGZoomRulesForLength, float usedZoom)
+{
+    if (usesSVGZoomRulesForLength == UsesSVGZoomRulesForLength::Yes || !computedSize.isFixed())
+        return usedSize;
+    return LayoutUnit { usedSize / usedZoom };
+}
 
-    EvaluationResult evaluate(const MQ::Feature& feature, const FeatureEvaluationContext& context) const override
+struct SizeFeatureSchema : public FeatureSchema {
+    SizeFeatureSchema(const AtomString& name, Type type, ValueType valueType, OptionSet<MediaQueryDynamicDependency> dependencies, FixedVector<CSSValueID>&& valueIdentifiers = { })
+        : FeatureSchema(name, type, valueType, dependencies, WTF::move(valueIdentifiers))
+    {
+    }
+
+    EvaluationResult evaluate(const Feature& feature, const FeatureEvaluationContext& context) const
     {
         // "If the query container does not have a principal box, or the principal box is not a layout containment box,
         // or the query container does not support container size queries on the relevant axes, then the result of
         // evaluating the size feature is unknown."
         // https://drafts.csswg.org/css-contain-3/#size-container
-        if (!is<RenderBox>(context.renderer))
-            return MQ::EvaluationResult::Unknown;
+        CheckedPtr renderer = dynamicDowncast<RenderBox>(context.renderer.get());
+        if (!renderer)
+            return EvaluationResult::Unknown;
 
-        auto& renderer = downcast<RenderBox>(*context.renderer);
+        if (!renderer->hasEligibleContainmentForSizeQuery())
+            return EvaluationResult::Unknown;
 
-        auto hasEligibleContainment = [&] {
-            if (!renderer.shouldApplyLayoutContainment())
-                return false;
-            switch (renderer.style().containerType()) {
-            case ContainerType::InlineSize:
-                return renderer.shouldApplyInlineSizeContainment();
-            case ContainerType::Size:
-                return renderer.shouldApplySizeContainment();
-            case ContainerType::Normal:
-                return true;
-            }
-            RELEASE_ASSERT_NOT_REACHED();
-        };
-
-        if (!hasEligibleContainment())
-            return MQ::EvaluationResult::Unknown;
-
-        return evaluate(feature, renderer, context.conversionData);
+        return evaluate(feature, *renderer, context.conversionData);
     }
 
-    virtual EvaluationResult evaluate(const MQ::Feature&, const RenderBox&, const CSSToLengthConversionData&) const = 0;
+    virtual EvaluationResult evaluate(const Feature&, const RenderBox&, const CSSToLengthConversionData&) const = 0;
 };
 
-const FeatureSchema& width()
-{
-    struct Schema : public SizeFeatureSchema {
-        Schema()
-            : SizeFeatureSchema("width"_s, FeatureSchema::Type::Range, FeatureSchema::ValueType::Length)
-        { }
+namespace Features {
+
+struct WidthFeatureSchema : public SizeFeatureSchema {
+    WidthFeatureSchema()
+        : SizeFeatureSchema("width"_s, FeatureSchema::Type::Range, FeatureSchema::ValueType::Length, MediaQueryDynamicDependency::Viewport)
+    {
+    }
+
+    // SizeFeatureSchema conformance
 
         EvaluationResult evaluate(const MQ::Feature& feature, const RenderBox& renderer, const CSSToLengthConversionData& conversionData) const override
         {
-            return evaluateLengthFeature(feature, renderer.contentWidth(), conversionData);
+        CheckedRef renderStyle = renderer.style();
+        auto usesSVGZoomRulesForLength = renderStyle->useSVGZoomRulesForLength() ? UsesSVGZoomRulesForLength::Yes : UsesSVGZoomRulesForLength::No;
+
+        auto width = unscaledSizeForPrincipleBox(renderStyle->width(), renderer.contentBoxWidth(), usesSVGZoomRulesForLength, renderStyle->usedZoom());
+        return evaluateLengthFeature(feature, width, conversionData);
         }
-    };
+};
 
-    static MainThreadNeverDestroyed<Schema> schema;
-    return schema;
-}
+struct HeightFeatureSchema : public SizeFeatureSchema {
+    HeightFeatureSchema()
+        : SizeFeatureSchema("height"_s, FeatureSchema::Type::Range, FeatureSchema::ValueType::Length, MediaQueryDynamicDependency::Viewport)
+    {
+    }
 
-const FeatureSchema& height()
-{
-    struct Schema : public SizeFeatureSchema {
-        Schema()
-            : SizeFeatureSchema("height"_s, FeatureSchema::Type::Range, FeatureSchema::ValueType::Length)
-        { }
+    // SizeFeatureSchema conformance
 
         EvaluationResult evaluate(const MQ::Feature& feature, const RenderBox& renderer, const CSSToLengthConversionData& conversionData) const override
         {
-            return evaluateLengthFeature(feature, renderer.contentHeight(), conversionData);
+        CheckedRef renderStyle = renderer.style();
+        auto usesSVGZoomRulesForLength = renderStyle->useSVGZoomRulesForLength() ? UsesSVGZoomRulesForLength::Yes : UsesSVGZoomRulesForLength::No;
+
+        auto height = unscaledSizeForPrincipleBox(renderStyle->height(), renderer.contentBoxHeight(), usesSVGZoomRulesForLength, renderStyle->usedZoom());
+        return evaluateLengthFeature(feature, height, conversionData);
         }
-    };
+};
 
-    static MainThreadNeverDestroyed<Schema> schema;
-    return schema;
-}
+struct InlineSizeFeatureSchema : public SizeFeatureSchema {
+    InlineSizeFeatureSchema()
+        : SizeFeatureSchema("inline-size"_s, FeatureSchema::Type::Range, FeatureSchema::ValueType::Length, MediaQueryDynamicDependency::Viewport)
+    {
+    }
 
-const FeatureSchema& inlineSize()
-{
-    struct Schema : public SizeFeatureSchema {
-        Schema()
-            : SizeFeatureSchema("inline-size"_s, FeatureSchema::Type::Range, FeatureSchema::ValueType::Length)
-        { }
+    // SizeFeatureSchema conformance
 
         EvaluationResult evaluate(const MQ::Feature& feature, const RenderBox& renderer, const CSSToLengthConversionData& conversionData) const override
         {
-            return evaluateLengthFeature(feature, renderer.contentLogicalWidth(), conversionData);
+        CheckedRef renderStyle = renderer.style();
+        auto usesSVGZoomRulesForLength = renderStyle->useSVGZoomRulesForLength() ? UsesSVGZoomRulesForLength::Yes : UsesSVGZoomRulesForLength::No;
+
+        auto logicalWidth = unscaledSizeForPrincipleBox(renderStyle->logicalWidth(), renderer.contentBoxLogicalWidth(), usesSVGZoomRulesForLength, renderStyle->usedZoom());
+        return evaluateLengthFeature(feature, logicalWidth, conversionData);
         }
-    };
+};
 
-    static MainThreadNeverDestroyed<Schema> schema;
-    return schema;
-}
+struct BlockSizeFeatureSchema : public SizeFeatureSchema {
+    BlockSizeFeatureSchema()
+        : SizeFeatureSchema("block-size"_s, FeatureSchema::Type::Range, FeatureSchema::ValueType::Length, MediaQueryDynamicDependency::Viewport)
+    {
+    }
 
-const FeatureSchema& blockSize()
-{
-    struct Schema : public SizeFeatureSchema {
-        Schema()
-            : SizeFeatureSchema("block-size"_s, FeatureSchema::Type::Range, FeatureSchema::ValueType::Length)
-        { }
+    // SizeFeatureSchema conformance
 
         EvaluationResult evaluate(const MQ::Feature& feature, const RenderBox& renderer, const CSSToLengthConversionData& conversionData) const override
         {
-            return evaluateLengthFeature(feature, renderer.contentLogicalHeight(), conversionData);
+        CheckedRef renderStyle = renderer.style();
+        auto usesSVGZoomRulesForLength = renderStyle->useSVGZoomRulesForLength() ? UsesSVGZoomRulesForLength::Yes : UsesSVGZoomRulesForLength::No;
+
+        auto logicalHeight = unscaledSizeForPrincipleBox(renderStyle->logicalHeight(), renderer.contentBoxLogicalHeight(), usesSVGZoomRulesForLength, renderStyle->usedZoom());
+        return evaluateLengthFeature(feature, logicalHeight, conversionData);
         }
-    };
+};
 
-    static MainThreadNeverDestroyed<Schema> schema;
-    return schema;
-}
+struct AspectRatioFeatureSchema : public SizeFeatureSchema {
+    AspectRatioFeatureSchema()
+        : SizeFeatureSchema("aspect-ratio"_s, FeatureSchema::Type::Range, FeatureSchema::ValueType::Ratio, MediaQueryDynamicDependency::Viewport)
+    {
+    }
 
-const FeatureSchema& aspectRatio()
+    // SizeFeatureSchema conformance
+
+    EvaluationResult evaluate(const MQ::Feature& feature, const RenderBox& renderer, const CSSToLengthConversionData& conversionData) const override
+    {
+        return evaluateRatioFeature(feature, renderer.contentBoxSize(), conversionData);
+    }
+};
+
+struct OrientationFeatureSchema : public SizeFeatureSchema {
+    OrientationFeatureSchema()
+        : SizeFeatureSchema("orientation"_s, FeatureSchema::Type::Discrete, FeatureSchema::ValueType::Identifier, MediaQueryDynamicDependency::Viewport, { CSSValuePortrait, CSSValueLandscape })
+    {
+    }
+
+    // SizeFeatureSchema conformance
+
+    EvaluationResult evaluate(const MQ::Feature& feature, const RenderBox& renderer, const CSSToLengthConversionData& conversionData) const override
+    {
+        bool isPortrait = renderer.contentBoxHeight() >= renderer.contentBoxWidth();
+        return evaluateIdentifierFeature(feature, isPortrait ? CSSValuePortrait : CSSValueLandscape, conversionData);
+    }
+};
+
+struct StyleFeatureSchema : public FeatureSchema {
+    StyleFeatureSchema()
+        : FeatureSchema("style"_s, FeatureSchema::Type::Discrete, FeatureSchema::ValueType::CustomProperty, { })
+    {
+    }
+
+    // FeatureSchema conformance
+
+    EvaluationResult evaluate(const MQ::Feature& feature, const FeatureEvaluationContext& context) const override
+    {
+        CheckedPtr style = context.conversionData.style();
+        if (!style || !context.conversionData.parentStyle())
+            return EvaluationResult::False;
+
+        RefPtr customPropertyValue = style->customPropertyValue(feature.name);
+        if (!feature.rightComparison)
+            return toEvaluationResult(customPropertyValue && !customPropertyValue->isGuaranteedInvalid());
+
+        auto resolvedFeatureValue = [&] -> RefPtr<const Style::CustomProperty> {
+            auto featureValue = dynamicDowncast<CSSCustomPropertyValue>(feature.rightComparison->value);
+            ASSERT(featureValue);
+
+            // Resolve the queried custom property value for var() references, css-wide keywords and registered properties.
+            auto builderContext = Style::BuilderContext {
+                context.document.get(),
+                context.conversionData.parentStyle(),
+                context.conversionData.rootStyle(),
+                context.conversionData.elementForContainerUnitResolution()
+            };
+
+            auto dummyStyle = RenderStyle::clone(*style);
+            auto dummyMatchResult = Style::MatchResult::create();
+
+            auto styleBuilder = Style::Builder { dummyStyle, WTF::move(builderContext), dummyMatchResult };
+            return styleBuilder.resolveCustomPropertyForContainerQueries(*featureValue);
+        }();
+
+        if (!resolvedFeatureValue)
+            return EvaluationResult::False;
+
+        // Guaranteed-invalid values match guaranteed-invalid values.
+        if (resolvedFeatureValue->isGuaranteedInvalid())
+            return toEvaluationResult(!customPropertyValue || customPropertyValue->isGuaranteedInvalid());
+
+        ASSERT(feature.rightComparison->op == ComparisonOperator::Equal);
+        return toEvaluationResult(customPropertyValue && *customPropertyValue == *resolvedFeatureValue);
+    }
+};
+
+// MARK: - Singleton readonly instances of FeatureSchemas
+
+static const WidthFeatureSchema& widthFeatureSchema()
 {
-    struct Schema : public SizeFeatureSchema {
-        Schema()
-            : SizeFeatureSchema("aspect-ratio"_s, FeatureSchema::Type::Range, FeatureSchema::ValueType::Ratio)
-        { }
-
-        EvaluationResult evaluate(const MQ::Feature& feature, const RenderBox& renderer, const CSSToLengthConversionData&) const override
-        {
-            return evaluateRatioFeature(feature, renderer.contentSize());
-        }
-    };
-
-    static MainThreadNeverDestroyed<Schema> schema;
+    static MainThreadNeverDestroyed<WidthFeatureSchema> schema;
     return schema;
 }
 
-const FeatureSchema& orientation()
+static const HeightFeatureSchema& heightFeatureSchema()
 {
-    struct Schema : public SizeFeatureSchema {
-        Schema()
-            : SizeFeatureSchema("orientation"_s, FeatureSchema::Type::Discrete, FeatureSchema::ValueType::Identifier, { CSSValuePortrait, CSSValueLandscape })
-        { }
-
-        EvaluationResult evaluate(const MQ::Feature& feature, const RenderBox& renderer, const CSSToLengthConversionData&) const override
-        {
-            bool isPortrait = renderer.contentHeight() >= renderer.contentWidth();
-            return evaluateIdentifierFeature(feature, isPortrait ? CSSValuePortrait : CSSValueLandscape);
-        }
-    };
-
-    static MainThreadNeverDestroyed<Schema> schema;
+    static MainThreadNeverDestroyed<HeightFeatureSchema> schema;
     return schema;
 }
 
+static const InlineSizeFeatureSchema& inlineSizeFeatureSchema()
+{
+    static MainThreadNeverDestroyed<InlineSizeFeatureSchema> schema;
+    return schema;
 }
+
+static const BlockSizeFeatureSchema& blockSizeFeatureSchema()
+{
+    static MainThreadNeverDestroyed<BlockSizeFeatureSchema> schema;
+    return schema;
+}
+
+static const AspectRatioFeatureSchema& aspectRatioFeatureSchema()
+{
+    static MainThreadNeverDestroyed<AspectRatioFeatureSchema> schema;
+    return schema;
+}
+
+static const OrientationFeatureSchema& orientationFeatureSchema()
+{
+    static MainThreadNeverDestroyed<OrientationFeatureSchema> schema;
+    return schema;
+}
+
+static const StyleFeatureSchema& styleFeatureSchema()
+{
+    static MainThreadNeverDestroyed<StyleFeatureSchema> schema;
+    return schema;
+}
+
+// MARK: - Type erased exposed schemas
+
+const MQ::FeatureSchema& width()
+{
+    return widthFeatureSchema();
+}
+
+const MQ::FeatureSchema& height()
+{
+    return heightFeatureSchema();
+}
+
+const MQ::FeatureSchema& inlineSize()
+{
+    return inlineSizeFeatureSchema();
+}
+
+const MQ::FeatureSchema& blockSize()
+{
+    return blockSizeFeatureSchema();
+}
+
+const MQ::FeatureSchema& aspectRatio()
+{
+    return aspectRatioFeatureSchema();
+}
+
+const MQ::FeatureSchema& orientation()
+{
+    return orientationFeatureSchema();
+}
+
+const MQ::FeatureSchema& style()
+{
+    return styleFeatureSchema();
+}
+
+Vector<const MQ::FeatureSchema*> allSchemas()
+{
+    return {
+        &Features::width(),
+        &Features::height(),
+        &Features::inlineSize(),
+        &Features::blockSize(),
+        &Features::aspectRatio(),
+        &Features::orientation(),
+    };
+}
+
+} // namespace Features
+} // namespace WebCore::CQ

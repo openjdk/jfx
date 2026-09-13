@@ -31,8 +31,11 @@
 #include "LinkBuffer.h"
 #include "MaxFrameExtentForSlowPathCall.h"
 #include "ShadowChicken.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CCallHelpers);
 
 void CCallHelpers::logShadowChickenProloguePacket(GPRReg shadowPacket, GPRReg scratch1, GPRReg scope)
 {
@@ -48,7 +51,7 @@ void CCallHelpers::ensureShadowChickenPacket(VM& vm, GPRReg shadowPacket, GPRReg
 {
     ShadowChicken* shadowChicken = vm.shadowChicken();
     RELEASE_ASSERT(shadowChicken);
-    ASSERT(!RegisterSetBuilder::argumentGPRS().contains(scratch1NonArgGPR, IgnoreVectors));
+    ASSERT(!RegisterSetBuilder::argumentGPRs().contains(scratch1NonArgGPR, IgnoreVectors));
     move(TrustedImmPtr(shadowChicken->addressOfLogCursor()), scratch1NonArgGPR);
     loadPtr(Address(scratch1NonArgGPR), shadowPacket);
     Jump ok = branchPtr(Below, shadowPacket, TrustedImmPtr(shadowChicken->logEnd()));
@@ -80,16 +83,6 @@ void CCallHelpers::logShadowChickenTailPacket(GPRReg shadowPacket, JSValueRegs t
     logShadowChickenTailPacketImpl(shadowPacket, thisRegs, scope, codeBlock, callSiteIndex);
 }
 
-void CCallHelpers::emitJITCodeOver(CodePtr<JSInternalPtrTag> where, ScopedLambda<void(CCallHelpers&)> emitCode, const char* description)
-{
-    CCallHelpers jit;
-    emitCode(jit);
-
-    constexpr bool needsBranchCompaction = false;
-    LinkBuffer linkBuffer(jit, where, jit.m_assembler.buffer().codeSize(), LinkBuffer::Profile::InlineCache, JITCompilationMustSucceed, needsBranchCompaction);
-    FINALIZE_CODE(linkBuffer, NoPtrTag, description);
-}
-
 static_assert(!((maxFrameExtentForSlowPathCall + 2 * sizeof(CPURegister)) % 16), "Stack must be aligned after CTI thunk entry");
 
 void CCallHelpers::emitCTIThunkPrologue(bool returnAddressAlreadyTagged)
@@ -101,8 +94,6 @@ void CCallHelpers::emitCTIThunkPrologue(bool returnAddressAlreadyTagged)
     push(X86Registers::ebp); // return address pushed by the call instruction
 #elif CPU(ARM64) || CPU(ARM_THUMB2) || CPU(RISCV64)
     pushPair(framePointerRegister, linkRegister);
-#elif CPU(MIPS)
-    pushPair(framePointerRegister, returnAddressRegister);
 #else
 #   error "Not implemented on platform"
 #endif
@@ -121,8 +112,6 @@ void CCallHelpers::emitCTIThunkEpilogue()
     pop(X86Registers::ebp); // Return address left on stack
 #elif CPU(ARM64) || CPU(ARM_THUMB2) || CPU(RISCV64)
     popPair(framePointerRegister, linkRegister);
-#elif CPU(MIPS)
-    popPair(framePointerRegister, returnAddressRegister);
 #else
 #   error "Not implemented on platform"
 #endif

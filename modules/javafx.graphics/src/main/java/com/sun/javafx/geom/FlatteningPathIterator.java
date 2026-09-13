@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1997, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 1997, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -45,7 +45,7 @@ public class FlatteningPathIterator implements PathIterator {
 
     int limit;              // Maximum number of recursion levels
 
-    // hold field must be volatile to work around a Mac runtime bug (see RT-12386)
+    // hold field must be volatile to work around a Mac runtime bug (see JDK-8111925)
     volatile float hold[] = new float[14];   // The cache of interpolated coords
                     // Note that this must be long enough
                     // to store a full cubic segment and

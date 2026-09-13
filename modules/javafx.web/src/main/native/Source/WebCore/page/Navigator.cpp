@@ -2,7 +2,7 @@
  *  Copyright (C) 2000 Harri Porten (porten@kde.org)
  *  Copyright (c) 2000 Daniel Molkentin (molkentin@kde.org)
  *  Copyright (c) 2000 Stefan Schimanski (schimmi@kde.org)
- *  Copyright (C) 2003-2023 Apple Inc.
+ *  Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *  Copyright (C) 2008 Nokia Corporation and/or its subsidiary(-ies)
  *
  *  This library is free software; you can redistribute it and/or
@@ -30,36 +30,43 @@
 #include "DOMMimeTypeArray.h"
 #include "DOMPlugin.h"
 #include "DOMPluginArray.h"
-#include "Document.h"
-#include "FeaturePolicy.h"
+#include "DocumentPage.h"
+#include "DocumentQuirks.h"
+#include "FrameInlines.h"
 #include "FrameLoader.h"
 #include "GPU.h"
 #include "Geolocation.h"
 #include "JSDOMPromiseDeferred.h"
 #include "LoaderStrategy.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameLoaderClient.h"
 #include "LocalizedStrings.h"
-#include "Page.h"
+#include "NavigatorUAData.h"
+#include "PermissionsPolicy.h"
 #include "PlatformStrategies.h"
 #include "PluginData.h"
-#include "Quirks.h"
 #include "ResourceLoadObserver.h"
 #include "ScriptController.h"
+#include "ScriptWrappableInlines.h"
 #include "SecurityOrigin.h"
 #include "Settings.h"
 #include "ShareData.h"
 #include "ShareDataReader.h"
 #include "SharedBuffer.h"
-#include <wtf/IsoMallocInlines.h>
+#include "UserAgentStringData.h"
+#include "UserAgentStringParser.h"
+#include "inspector/InspectorInstrumentation.h"
+#include <JavaScriptCore/ConsoleTypes.h>
+#include <optional>
 #include <wtf/Language.h>
 #include <wtf/RunLoop.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(Navigator);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Navigator);
 
 Navigator::Navigator(ScriptExecutionContext* context, LocalDOMWindow& window)
     : NavigatorBase(context)
@@ -71,21 +78,29 @@ Navigator::~Navigator() = default;
 
 String Navigator::appVersion() const
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame)
         return String();
     if (frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), NavigatorAPIsAccessed::AppVersion);
+        ResourceLoadObserver::singleton().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::AppVersion);
     return NavigatorBase::appVersion();
 }
 
 const String& Navigator::userAgent() const
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame || !frame->page())
         return m_userAgent;
     if (frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), NavigatorAPIsAccessed::UserAgent);
+        ResourceLoadObserver::singleton().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::UserAgent);
+
+#if PLATFORM(IOS_FAMILY)
+    if (RefPtr document = frame->document(); document && document->quirks().needsChromeOSNavigatorUserAgentQuirk(*document)) {
+        static NeverDestroyed<String> chromeOSUserAgent = "Mozilla/5.0 (X11; CrOS x86_64 15917.71.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/127.0.0.0 Safari/537.36"_s;
+        return chromeOSUserAgent.get();
+    }
+#endif
+
     if (m_userAgent.isNull())
         m_userAgent = frame->loader().userAgent(frame->document()->url());
     return m_userAgent;
@@ -93,7 +108,7 @@ const String& Navigator::userAgent() const
 
 String Navigator::platform() const
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame || !frame->page())
         return m_platform;
 
@@ -131,7 +146,7 @@ static std::optional<URL> shareableURLForShareData(ScriptExecutionContext& conte
 
 static bool validateWebSharePolicy(Document& document)
 {
-    return isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::WebShare, document, LogFeaturePolicyFailure::Yes);
+    return PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::WebShare, document);
 }
 
 bool Navigator::canShare(Document& document, const ShareData& data)
@@ -139,11 +154,7 @@ bool Navigator::canShare(Document& document, const ShareData& data)
     if (!document.isFullyActive() || !validateWebSharePolicy(document))
         return false;
 
-#if ENABLE(FILE_SHARE)
     bool hasShareableFiles = document.settings().webShareFileAPIEnabled() && !data.files.isEmpty();
-#else
-    bool hasShareableFiles = false;
-#endif
 
     if (data.title.isNull() && data.text.isNull() && data.url.isNull() && !hasShareableFiles)
         return false;
@@ -154,28 +165,28 @@ bool Navigator::canShare(Document& document, const ShareData& data)
 void Navigator::share(Document& document, const ShareData& data, Ref<DeferredPromise>&& promise)
 {
     if (!document.isFullyActive()) {
-        promise->reject(InvalidStateError);
+        promise->reject(ExceptionCode::InvalidStateError);
         return;
     }
 
     if (!validateWebSharePolicy(document)) {
-        promise->reject(NotAllowedError, "Third-party iframes are not allowed to call share() unless explicitly allowed via Feature-Policy (web-share)"_s);
+        promise->reject(ExceptionCode::NotAllowedError, "Third-party iframes are not allowed to call share() unless explicitly allowed via Feature-Policy (web-share)"_s);
         return;
     }
 
     if (m_hasPendingShare) {
-        promise->reject(InvalidStateError, "share() is already in progress"_s);
+        promise->reject(ExceptionCode::InvalidStateError, "share() is already in progress"_s);
         return;
     }
 
-    auto* window = this->window();
+    RefPtr window = this->window();
     if (!window || !window->consumeTransientActivation()) {
-        promise->reject(NotAllowedError);
+        promise->reject(ExceptionCode::NotAllowedError);
         return;
     }
 
     if (!canShare(document, data)) {
-        promise->reject(TypeError);
+        promise->reject(ExceptionCode::TypeError);
         return;
     }
 
@@ -186,19 +197,19 @@ void Navigator::share(Document& document, const ShareData& data, Ref<DeferredPro
         { },
         ShareDataOriginator::Web,
     };
-#if ENABLE(FILE_SHARE)
     if (document.settings().webShareFileAPIEnabled() && !data.files.isEmpty()) {
-        if (m_loader)
-            m_loader->cancel();
+        RefPtr loader = m_loader;
+        if (loader)
+            loader->cancel();
 
-        m_loader = ShareDataReader::create([this, promise = WTFMove(promise)] (ExceptionOr<ShareDataWithParsedURL&> readData) mutable {
-            showShareData(readData, WTFMove(promise));
+        loader = ShareDataReader::create([this, protectedThis = Ref { *this }, promise = WTF::move(promise)](ExceptionOr<ShareDataWithParsedURL&> readData) mutable {
+            showShareData(readData, WTF::move(promise));
         });
-        m_loader->start(&document, WTFMove(shareData));
+        m_loader = loader.copyRef();
+        loader->start(&document, WTF::move(shareData));
         return;
     }
-#endif
-    this->showShareData(shareData, WTFMove(promise));
+    this->showShareData(shareData, WTF::move(promise));
 }
 
 void Navigator::showShareData(ExceptionOr<ShareDataWithParsedURL&> readData, Ref<DeferredPromise>&& promise)
@@ -208,14 +219,14 @@ void Navigator::showShareData(ExceptionOr<ShareDataWithParsedURL&> readData, Ref
         return;
     }
 
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame || !frame->page())
         return;
 
     m_hasPendingShare = true;
 
     if (frame->page()->isControlledByAutomation()) {
-        RunLoop::main().dispatch([promise = WTFMove(promise), weakThis = WeakPtr { *this }] {
+        RunLoop::mainSingleton().dispatch([promise = WTF::move(promise), weakThis = WeakPtr { *this }] {
             if (weakThis)
                 weakThis->m_hasPendingShare = false;
         promise->resolve();
@@ -225,14 +236,14 @@ void Navigator::showShareData(ExceptionOr<ShareDataWithParsedURL&> readData, Ref
 
     auto shareData = readData.returnValue();
 
-    frame->page()->chrome().showShareSheet(shareData, [promise = WTFMove(promise), weakThis = WeakPtr { *this }] (bool completed) {
+    frame->page()->chrome().showShareSheet(WTF::move(shareData), [promise = WTF::move(promise), weakThis = WeakPtr { *this }](bool completed) {
         if (weakThis)
             weakThis->m_hasPendingShare = false;
         if (completed) {
             promise->resolve();
             return;
         }
-        promise->reject(Exception { AbortError, "Abort due to cancellation of share."_s });
+        promise->reject(Exception { ExceptionCode::AbortError, "Abort due to cancellation of share."_s });
     });
 }
 
@@ -258,11 +269,11 @@ void Navigator::initializePluginAndMimeTypeArrays()
     if (m_plugins)
         return;
 
-    auto* frame = this->frame();
-    bool needsEmptyNavigatorPluginsQuirk = frame && frame->document() && frame->document()->quirks().shouldNavigatorPluginsBeEmpty();
+    RefPtr frame = this->frame();
+    bool needsEmptyNavigatorPluginsQuirk = frame && frame->document() && frame->protectedDocument()->quirks().shouldNavigatorPluginsBeEmpty();
     if (!frame || !frame->page() || needsEmptyNavigatorPluginsQuirk) {
         if (needsEmptyNavigatorPluginsQuirk)
-            frame->document()->addConsoleMessage(MessageSource::Other, MessageLevel::Info, "QUIRK: Navigator plugins / mimeTypes empty on marcus.com. More information at https://bugs.webkit.org/show_bug.cgi?id=248798"_s);
+            frame->protectedDocument()->addConsoleMessage(MessageSource::Other, MessageLevel::Info, "QUIRK: Navigator plugins / mimeTypes empty on marcus.com. More information at https://bugs.webkit.org/show_bug.cgi?id=248798"_s);
         m_plugins = DOMPluginArray::create(*this);
         m_mimeTypes = DOMMimeTypeArray::create(*this);
         return;
@@ -277,7 +288,7 @@ void Navigator::initializePluginAndMimeTypeArrays()
 
     // macOS uses a PDF Plugin (which may be disabled). Other ports handle PDF's through native
     // platform views outside the engine, or use pdf.js.
-    PluginInfo pdfPluginInfo = frame->page()->pluginData().builtInPDFPlugin().value_or(PluginData::dummyPDFPluginInfo());
+    PluginInfo pdfPluginInfo = frame->protectedPage()->pluginData().builtInPDFPlugin().value_or(PluginData::dummyPDFPluginInfo());
 
     Vector<Ref<DOMPlugin>> domPlugins;
     Vector<Ref<DOMMimeType>> domMimeTypes;
@@ -298,14 +309,14 @@ void Navigator::initializePluginAndMimeTypeArrays()
             domMimeTypes.appendVector(domPlugins.last()->mimeTypes());
     }
 
-    m_plugins = DOMPluginArray::create(*this, WTFMove(domPlugins));
-    m_mimeTypes = DOMMimeTypeArray::create(*this, WTFMove(domMimeTypes));
+    m_plugins = DOMPluginArray::create(*this, WTF::move(domPlugins));
+    m_mimeTypes = DOMMimeTypeArray::create(*this, WTF::move(domMimeTypes));
 }
 
 DOMPluginArray& Navigator::plugins()
 {
-    if (auto* frame = this->frame(); frame && frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), NavigatorAPIsAccessed::Plugins);
+    if (RefPtr frame = this->frame(); frame && frame->settings().webAPIStatisticsEnabled())
+        ResourceLoadObserver::singleton().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::Plugins);
 
     initializePluginAndMimeTypeArrays();
     return *m_plugins;
@@ -313,8 +324,8 @@ DOMPluginArray& Navigator::plugins()
 
 DOMMimeTypeArray& Navigator::mimeTypes()
 {
-    if (auto* frame = this->frame(); frame && frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), NavigatorAPIsAccessed::MimeTypes);
+    if (RefPtr frame = this->frame(); frame && frame->settings().webAPIStatisticsEnabled())
+        ResourceLoadObserver::singleton().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::MimeTypes);
 
     initializePluginAndMimeTypeArrays();
     return *m_mimeTypes;
@@ -329,21 +340,21 @@ bool Navigator::pdfViewerEnabled()
 
 bool Navigator::cookieEnabled() const
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame)
         return false;
 
     if (frame->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logNavigatorAPIAccessed(*frame->document(), NavigatorAPIsAccessed::CookieEnabled);
+        ResourceLoadObserver::singleton().logNavigatorAPIAccessed(*frame->protectedDocument(), NavigatorAPIsAccessed::CookieEnabled);
 
-    auto* page = frame->page();
+    RefPtr page = frame->page();
     if (!page)
         return false;
 
     if (!page->settings().cookieEnabled())
         return false;
 
-    auto* document = frame->document();
+    RefPtr document = frame->document();
     if (!document)
         return false;
 
@@ -354,7 +365,7 @@ bool Navigator::cookieEnabled() const
 
 bool Navigator::standalone() const
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     return frame && frame->settings().standalone();
 }
 
@@ -362,85 +373,113 @@ bool Navigator::standalone() const
 
 GPU* Navigator::gpu()
 {
+#if HAVE(WEBGPU_IMPLEMENTATION)
     if (!m_gpuForWebGPU) {
-        auto* frame = this->frame();
+        RefPtr frame = this->frame();
         if (!frame)
             return nullptr;
         if (!frame->settings().webGPUEnabled())
             return nullptr;
-        auto* page = frame->page();
+        RefPtr page = frame->page();
         if (!page)
             return nullptr;
-        auto gpu = page->chrome().createGPUForWebGPU();
+        RefPtr gpu = page->chrome().createGPUForWebGPU();
         if (!gpu)
             return nullptr;
 
         m_gpuForWebGPU = GPU::create(*gpu);
     }
+#endif
 
     return m_gpuForWebGPU.get();
 }
 
-Document* Navigator::document()
+Page* Navigator::page()
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
+    return frame ? frame->page() : nullptr;
+}
+
+RefPtr<Page> Navigator::protectedPage()
+{
+    return page();
+}
+
+const Document* Navigator::document() const
+{
+    RefPtr frame = this->frame();
     return frame ? frame->document() : nullptr;
 }
 
-#if ENABLE(BADGING)
+Document* Navigator::document()
+{
+    RefPtr frame = this->frame();
+    return frame ? frame->document() : nullptr;
+}
+
+RefPtr<Document> Navigator::protectedDocument()
+{
+    return document();
+}
 
 void Navigator::setAppBadge(std::optional<unsigned long long> badge, Ref<DeferredPromise>&& promise)
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame) {
-        promise->reject(InvalidStateError);
+        promise->reject(ExceptionCode::InvalidStateError);
         return;
     }
 
-    auto* page = frame->page();
+    RefPtr page = frame->page();
     if (!page) {
-        promise->reject(InvalidStateError);
+        promise->reject(ExceptionCode::InvalidStateError);
         return;
     }
 
-    auto* document = frame->document();
+    RefPtr document = frame->document();
     if (document && !document->isFullyActive()) {
-        promise->reject(InvalidStateError);
+        promise->reject(ExceptionCode::InvalidStateError);
         return;
     }
 
-    page->badgeClient().setAppBadge(page, SecurityOriginData::fromFrame(frame), badge);
+    page->badgeClient().setAppBadge(frame.get(), SecurityOriginData::fromFrame(frame.get()), badge);
     promise->resolve();
 }
 
 void Navigator::clearAppBadge(Ref<DeferredPromise>&& promise)
 {
-    setAppBadge(0, WTFMove(promise));
+    setAppBadge(0, WTF::move(promise));
 }
 
-void Navigator::setClientBadge(std::optional<unsigned long long> badge, Ref<DeferredPromise>&& promise)
+int Navigator::maxTouchPoints() const
 {
-    auto* frame = this->frame();
-    if (!frame) {
-        promise->reject();
-        return;
-    }
-
-    auto* page = frame->page();
-    if (!page) {
-        promise->reject();
-        return;
-    }
-
-    page->badgeClient().setClientBadge(*page, SecurityOriginData::fromFrame(frame), badge);
-    promise->resolve();
-}
-
-void Navigator::clearClientBadge(Ref<DeferredPromise>&& promise)
-{
-    setClientBadge(0, WTFMove(promise));
-}
-
+#if ENABLE(IOS_TOUCH_EVENTS) && !PLATFORM(MACCATALYST)
+    RefPtr document = this->document();
+    if (!document || !document->quirks().needsZeroMaxTouchPointsQuirk())
+        return 5;
 #endif
+
+    return 0;
+}
+
+NavigatorUAData& Navigator::userAgentData() const
+{
+    RefPtr frame = this->frame();
+    if (frame && frame->page()) {
+        RefPtr client = frame->loader().client();
+        if (client->hasCustomUserAgent() || (frame->document() && frame->protectedDocument()->quirks().needsCustomUserAgentData())) {
+            auto userAgentString = frame->loader().userAgent({ });
+            Ref parser = UserAgentStringParser::create(userAgentString);
+            std::optional userAgentStringData = parser->parse();
+            if (userAgentStringData) {
+                m_navigatorUAData = NavigatorUAData::create(WTF::move(*userAgentStringData));
+                return *m_navigatorUAData;
+            }
+        }
+    }
+
+    m_navigatorUAData = NavigatorUAData::create();
+    return *m_navigatorUAData;
+};
 
 } // namespace WebCore

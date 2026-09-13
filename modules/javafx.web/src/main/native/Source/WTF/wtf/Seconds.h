@@ -32,14 +32,15 @@
 namespace WTF {
 
 class ApproximateTime;
+class ContinuousApproximateTime;
+class ContinuousTime;
 class MonotonicTime;
 class PrintStream;
-class TextStream;
 class TimeWithDynamicClockType;
 class WallTime;
 
 class Seconds final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Seconds);
 public:
     constexpr Seconds() { }
 
@@ -97,6 +98,15 @@ public:
     {
         return Seconds(std::numeric_limits<double>::quiet_NaN());
     }
+
+    static constexpr Seconds highTimePrecision()
+    {
+        return Seconds::fromMicroseconds(20);
+    }
+
+    bool isNaN() const { return std::isnan(m_value); }
+    bool isInfinity() const { return std::isinf(m_value); }
+    bool isFinite() const { return std::isfinite(m_value); }
 
     explicit constexpr operator bool() const { return !!m_value; }
 
@@ -181,37 +191,18 @@ public:
     WTF_EXPORT_PRIVATE WallTime operator+(WallTime) const;
     WTF_EXPORT_PRIVATE MonotonicTime operator+(MonotonicTime) const;
     WTF_EXPORT_PRIVATE ApproximateTime operator+(ApproximateTime) const;
+    WTF_EXPORT_PRIVATE ContinuousTime operator+(ContinuousTime) const;
+    WTF_EXPORT_PRIVATE ContinuousApproximateTime operator+(ContinuousApproximateTime) const;
     WTF_EXPORT_PRIVATE TimeWithDynamicClockType operator+(const TimeWithDynamicClockType&) const;
 
     WTF_EXPORT_PRIVATE WallTime operator-(WallTime) const;
     WTF_EXPORT_PRIVATE MonotonicTime operator-(MonotonicTime) const;
     WTF_EXPORT_PRIVATE ApproximateTime operator-(ApproximateTime) const;
+    WTF_EXPORT_PRIVATE ContinuousTime operator-(ContinuousTime) const;
+    WTF_EXPORT_PRIVATE ContinuousApproximateTime operator-(ContinuousApproximateTime) const;
     WTF_EXPORT_PRIVATE TimeWithDynamicClockType operator-(const TimeWithDynamicClockType&) const;
 
-    constexpr bool operator==(Seconds other) const
-    {
-        return m_value == other.m_value;
-    }
-
-    constexpr bool operator<(Seconds other) const
-    {
-        return m_value < other.m_value;
-    }
-
-    constexpr bool operator>(Seconds other) const
-    {
-        return m_value > other.m_value;
-    }
-
-    constexpr bool operator<=(Seconds other) const
-    {
-        return m_value <= other.m_value;
-    }
-
-    constexpr bool operator>=(Seconds other) const
-    {
-        return m_value >= other.m_value;
-    }
+    friend constexpr auto operator<=>(Seconds, Seconds) = default;
 
     WTF_EXPORT_PRIVATE void dump(PrintStream&) const;
 
@@ -220,7 +211,11 @@ public:
         return *this;
     }
 
-    struct MarkableTraits;
+    constexpr Seconds reduceTimeResolution(Seconds resolution)
+    {
+        double reduced = std::floor(seconds() / resolution.seconds()) * resolution.seconds();
+        return Seconds(reduced);
+    }
 
 private:
     double m_value { 0 };
@@ -228,10 +223,11 @@ private:
 
 WTF_EXPORT_PRIVATE void sleep(Seconds);
 
-struct Seconds::MarkableTraits {
+template<>
+struct MarkableTraits<Seconds> {
     static bool isEmptyValue(Seconds seconds)
     {
-        return std::isnan(seconds.value());
+        return seconds.isNaN();
     }
 
     static constexpr Seconds emptyValue()
@@ -242,102 +238,81 @@ struct Seconds::MarkableTraits {
 
 inline namespace seconds_literals {
 
-constexpr Seconds operator"" _min(long double minutes)
+constexpr Seconds operator""_min(long double minutes)
 {
     return Seconds::fromMinutes(minutes);
 }
 
-constexpr Seconds operator"" _h(long double hours)
+constexpr Seconds operator""_h(long double hours)
 {
     return Seconds::fromHours(hours);
 }
 
-constexpr Seconds operator"" _s(long double seconds)
+constexpr Seconds operator""_s(long double seconds)
 {
     return Seconds(seconds);
 }
 
-constexpr Seconds operator"" _ms(long double milliseconds)
+constexpr Seconds operator""_ms(long double milliseconds)
 {
     return Seconds::fromMilliseconds(milliseconds);
 }
 
-constexpr Seconds operator"" _us(long double microseconds)
+constexpr Seconds operator""_us(long double microseconds)
 {
     return Seconds::fromMicroseconds(microseconds);
 }
 
-constexpr Seconds operator"" _ns(long double nanoseconds)
+constexpr Seconds operator""_ns(long double nanoseconds)
 {
     return Seconds::fromNanoseconds(nanoseconds);
 }
 
-constexpr Seconds operator"" _min(unsigned long long minutes)
+constexpr Seconds operator""_min(unsigned long long minutes)
 {
     return Seconds::fromMinutes(minutes);
 }
 
-constexpr Seconds operator"" _h(unsigned long long hours)
+constexpr Seconds operator""_h(unsigned long long hours)
 {
     return Seconds::fromHours(hours);
 }
 
-constexpr Seconds operator"" _s(unsigned long long seconds)
+constexpr Seconds operator""_s(unsigned long long seconds)
 {
     return Seconds(seconds);
 }
 
-constexpr Seconds operator"" _ms(unsigned long long milliseconds)
+constexpr Seconds operator""_ms(unsigned long long milliseconds)
 {
     return Seconds::fromMilliseconds(milliseconds);
 }
 
-constexpr Seconds operator"" _us(unsigned long long microseconds)
+constexpr Seconds operator""_us(unsigned long long microseconds)
 {
     return Seconds::fromMicroseconds(microseconds);
 }
 
-constexpr Seconds operator"" _ns(unsigned long long nanoseconds)
+constexpr Seconds operator""_ns(unsigned long long nanoseconds)
 {
     return Seconds::fromNanoseconds(nanoseconds);
 }
 
 } // inline seconds_literals
 
-inline Seconds operator*(double scalar, Seconds seconds)
+inline constexpr Seconds operator*(double scalar, Seconds seconds)
 {
     return Seconds(scalar * seconds.value());
 }
 
-inline Seconds operator/(double scalar, Seconds seconds)
+inline constexpr Seconds operator/(double scalar, Seconds seconds)
 {
     return Seconds(scalar / seconds.value());
 }
 
-WTF_EXPORT_PRIVATE TextStream& operator<<(TextStream&, Seconds);
-
 } // namespace WTF
 
 using WTF::sleep;
-
-namespace std {
-
-inline bool isnan(WTF::Seconds seconds)
-{
-    return std::isnan(seconds.value());
-}
-
-inline bool isinf(WTF::Seconds seconds)
-{
-    return std::isinf(seconds.value());
-}
-
-inline bool isfinite(WTF::Seconds seconds)
-{
-    return std::isfinite(seconds.value());
-}
-
-} // namespace std
 
 using namespace WTF::seconds_literals;
 using WTF::Seconds;

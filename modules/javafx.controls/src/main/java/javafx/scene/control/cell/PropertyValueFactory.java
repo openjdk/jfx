@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -165,7 +165,7 @@ public class PropertyValueFactory<S,T> implements Callback<CellDataFeatures<S,T>
         try {
             // we attempt to cache the property reference here, as otherwise
             // performance suffers when working in large data models. For
-            // a bit of reference, refer to RT-13937.
+            // a bit of reference, refer to JDK-8112885.
             if (columnClass == null || previousProperty == null ||
                     ! columnClass.equals(rowData.getClass()) ||
                     ! previousProperty.equals(getProperty())) {

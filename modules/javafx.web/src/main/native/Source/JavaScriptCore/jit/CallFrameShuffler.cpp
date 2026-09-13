@@ -87,6 +87,7 @@ CallFrameShuffler::CallFrameShuffler(CCallHelpers& jit, const CallFrameShuffleDa
 #endif
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 void CallFrameShuffler::dump(PrintStream& out) const
 {
     static const char* delimiter             = " +-------------------------------+ ";
@@ -222,6 +223,7 @@ void CallFrameShuffler::dump(PrintStream& out) const
         out.print("   NumberTag is currently in ", m_numberTagRegister, "\n");
 #endif
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 CachedRecovery* CallFrameShuffler::getCachedRecovery(ValueRecovery recovery)
 {
@@ -379,7 +381,7 @@ void CallFrameShuffler::prepareForTailCall()
     m_oldFrameBase = MacroAssembler::stackPointerRegister;
     m_oldFrameOffset = numLocals();
     m_newFrameBase = acquireGPR();
-#if CPU(ARM_THUMB2) || CPU(MIPS)
+#if CPU(ARM_THUMB2)
     // We load the frame pointer and link register
     // manually. We could ask the algorithm to load them for us,
     // and it would allow us to use the link register as an extra
@@ -451,9 +453,6 @@ void CallFrameShuffler::prepareForTailCall()
     m_jit.validateUntaggedPtr(MacroAssembler::linkRegister);
 #endif
 
-#elif CPU(MIPS)
-    m_jit.loadPtr(MacroAssembler::Address(MacroAssembler::framePointerRegister, sizeof(void*)),
-        MacroAssembler::returnAddressRegister);
 #endif
 
     // We want the frame pointer to always point to a valid frame, and
@@ -591,7 +590,7 @@ bool CallFrameShuffler::performSafeWrites()
                 if (!tryWrites(*cachedRecovery))
                     stillFailing.append(failed);
             }
-            failures = WTFMove(stillFailing);
+            failures = WTF::move(stillFailing);
         }
         if (verbose && firstSafe != dangerFrontier() + 1)
             dataLog("  We freed up danger slots!\n");

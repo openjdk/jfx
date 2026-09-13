@@ -49,22 +49,25 @@ typedef struct {
         \
         switch (name ## _header_placement_mode) { \
         case pas_page_header_at_head_of_page: { \
-            return (pas_page_base*)boundary; \
+            uintptr_t ptr = (uintptr_t)boundary; \
+            return (pas_page_base*)ptr; \
         } \
         \
         case pas_page_header_in_table: { \
             pas_basic_heap_config_enumerator_data* data; \
             pas_heap_config_kind kind; \
+            uintptr_t page_base; \
             \
             kind = arguments.page_config.heap_config_ptr->kind; \
             PAS_ASSERT((unsigned)kind < (unsigned)pas_heap_config_kind_num_kinds); \
             data = (pas_basic_heap_config_enumerator_data*)enumerator->heap_config_datas[kind]; \
             PAS_ASSERT(data); \
             \
-            return (pas_page_base*)pas_ptr_hash_map_get(&data->page_header_table, boundary).value; \
+            page_base = (uintptr_t)pas_ptr_hash_map_get(&data->page_header_table, boundary).value; \
+            return (pas_page_base*)page_base; \
         } } \
         \
-        PAS_ASSERT(!"Should not be reached"); \
+        PAS_ASSERT_NOT_REACHED(); \
         return NULL; \
     } \
     \
@@ -93,7 +96,7 @@ typedef struct {
             return result; \
         } } \
         \
-        PAS_ASSERT(!"Should not be reached"); \
+        PAS_ASSERT_NOT_REACHED(); \
         return NULL; \
     } \
     \
@@ -118,7 +121,7 @@ typedef struct {
             return; \
         } \
         \
-        PAS_ASSERT(!"Should not be reached"); \
+        PAS_ASSERT_NOT_REACHED(); \
         return; \
     } \
     \

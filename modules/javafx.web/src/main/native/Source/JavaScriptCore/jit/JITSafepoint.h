@@ -61,12 +61,13 @@ public:
 
     void add(Scannable*);
 
-    void begin();
+    void begin(bool keepDependenciesLive);
 
     template<typename Visitor> void checkLivenessAndVisitChildren(Visitor&);
     template<typename Visitor> bool isKnownToBeLiveDuringGC(Visitor&);
     bool isKnownToBeLiveAfterGC();
     void cancel();
+    bool keepDependenciesLive() const;
 
     VM* vm() const; // May return null if we've been cancelled.
 
@@ -75,6 +76,7 @@ private:
     JITPlan& m_plan;
     Vector<Scannable*> m_scannables;
     bool m_didCallBegin;
+    bool m_keepDependenciesLive;
     Result& m_result;
 };
 

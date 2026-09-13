@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,9 @@
 
 #pragma once
 
+#include "RenderSVGModelObjectInlines.h"
 #include "RenderSVGResourceFilter.h"
+#include "SVGElementTypeHelpers.h"
 #include "SVGFilterElement.h"
 
 namespace WebCore {
@@ -33,6 +35,11 @@ namespace WebCore {
 inline SVGFilterElement& RenderSVGResourceFilter::filterElement() const
 {
     return downcast<SVGFilterElement>(RenderSVGResourceContainer::element());
+}
+
+inline Ref<SVGFilterElement> RenderSVGResourceFilter::protectedFilterElement() const
+{
+    return filterElement();
 }
 
 inline SVGUnitTypes::SVGUnitType RenderSVGResourceFilter::filterUnits() const
@@ -46,4 +53,3 @@ inline SVGUnitTypes::SVGUnitType RenderSVGResourceFilter::primitiveUnits() const
 }
 
 } // namespace WebCore
-

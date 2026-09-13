@@ -28,6 +28,7 @@
 
 #include "ActiveDOMObject.h"
 #include "ErrorEvent.h"
+#include "EventNames.h"
 #include "Logging.h"
 #include "ScriptBuffer.h"
 #include "SharedWorker.h"
@@ -51,44 +52,57 @@ void SharedWorkerObjectConnection::fetchScriptInClient(URL&& url, WebCore::Share
 {
     ASSERT(isMainThread());
 
-    auto* workerObject = SharedWorker::fromIdentifier(sharedWorkerObjectIdentifier);
-    CONNECTION_RELEASE_LOG("fetchScriptInClient: sharedWorkerObjectIdentifier=%" PUBLIC_LOG_STRING ", worker=%p", sharedWorkerObjectIdentifier.toString().utf8().data(), workerObject);
+    RefPtr workerObject = SharedWorker::fromIdentifier(sharedWorkerObjectIdentifier);
+    CONNECTION_RELEASE_LOG("fetchScriptInClient: sharedWorkerObjectIdentifier=%" PUBLIC_LOG_STRING ", worker=%p", sharedWorkerObjectIdentifier.toString().utf8().data(), workerObject.get());
     if (!workerObject)
         return completionHandler(workerFetchError(ResourceError { ResourceError::Type::Cancellation }), { });
 
     auto loaderIdentifier = ++loaderIdentifierSeed;
-    auto loader = makeUniqueRef<SharedWorkerScriptLoader>(WTFMove(url), *workerObject, WTFMove(workerOptions));
-    auto loaderPtr = loader.ptr();
-    m_loaders.add(loaderIdentifier, WTFMove(loader));
+    Ref loader = SharedWorkerScriptLoader::create(WTF::move(url), *workerObject, WTF::move(workerOptions));
+    m_loaders.add(loaderIdentifier, loader.copyRef());
 
-    loaderPtr->load([this, loaderIdentifier, completionHandler = WTFMove(completionHandler)](auto&& fetchResult, auto&& initializationData) mutable {
+    loader->load([this, loaderIdentifier, completionHandler = WTF::move(completionHandler)](WorkerFetchResult&& fetchResult, WorkerInitializationData&& initializationData) mutable {
         CONNECTION_RELEASE_LOG("fetchScriptInClient: finished script load, success=%d", fetchResult.error.isNull());
-        auto loader = m_loaders.take(loaderIdentifier);
+        RefPtr loader = m_loaders.take(loaderIdentifier);
         ASSERT(loader);
-        completionHandler(WTFMove(fetchResult), WTFMove(initializationData));
+        completionHandler(WTF::move(fetchResult), WTF::move(initializationData));
     });
 }
 
 void SharedWorkerObjectConnection::notifyWorkerObjectOfLoadCompletion(WebCore::SharedWorkerObjectIdentifier sharedWorkerObjectIdentifier, const ResourceError& error)
 {
     ASSERT(isMainThread());
-    auto* workerObject = SharedWorker::fromIdentifier(sharedWorkerObjectIdentifier);
+    RefPtr workerObject = SharedWorker::fromIdentifier(sharedWorkerObjectIdentifier);
     if (error.isNull())
-        CONNECTION_RELEASE_LOG("notifyWorkerObjectOfLoadCompletion: sharedWorkerObjectIdentifier=%" PUBLIC_LOG_STRING ", worker=%p, load succeeded", sharedWorkerObjectIdentifier.toString().utf8().data(), workerObject);
+        CONNECTION_RELEASE_LOG("notifyWorkerObjectOfLoadCompletion: sharedWorkerObjectIdentifier=%" PUBLIC_LOG_STRING ", worker=%p, load succeeded", sharedWorkerObjectIdentifier.toString().utf8().data(), workerObject.get());
     else
-        CONNECTION_RELEASE_LOG_ERROR("notifyWorkerObjectOfLoadCompletion: sharedWorkerObjectIdentifier=%" PUBLIC_LOG_STRING ", worker=%p, load failed", sharedWorkerObjectIdentifier.toString().utf8().data(), workerObject);
+        CONNECTION_RELEASE_LOG_ERROR("notifyWorkerObjectOfLoadCompletion: sharedWorkerObjectIdentifier=%" PUBLIC_LOG_STRING ", worker=%p, load failed", sharedWorkerObjectIdentifier.toString().utf8().data(), workerObject.get());
     if (workerObject)
         workerObject->didFinishLoading(error);
 }
 
-void SharedWorkerObjectConnection::postExceptionToWorkerObject(SharedWorkerObjectIdentifier sharedWorkerObjectIdentifier, const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL)
+void SharedWorkerObjectConnection::postErrorToWorkerObject(SharedWorkerObjectIdentifier sharedWorkerObjectIdentifier, const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL, bool isErrorEvent)
 {
     ASSERT(isMainThread());
-    auto* workerObject = SharedWorker::fromIdentifier(sharedWorkerObjectIdentifier);
-    CONNECTION_RELEASE_LOG_ERROR("postExceptionToWorkerObject: sharedWorkerObjectIdentifier=%" PUBLIC_LOG_STRING ", worker=%p", sharedWorkerObjectIdentifier.toString().utf8().data(), workerObject);
-    if (workerObject)
-        ActiveDOMObject::queueTaskToDispatchEvent(*workerObject, TaskSource::DOMManipulation, ErrorEvent::create(errorMessage, sourceURL, lineNumber, columnNumber, { }));
+    RefPtr workerObject = SharedWorker::fromIdentifier(sharedWorkerObjectIdentifier);
+    CONNECTION_RELEASE_LOG_ERROR("postErrorToWorkerObject: sharedWorkerObjectIdentifier=%" PUBLIC_LOG_STRING ", worker=%p", sharedWorkerObjectIdentifier.toString().utf8().data(), workerObject.get());
+    if (!workerObject)
+        return;
+
+    auto event = isErrorEvent ? Ref<Event> { ErrorEvent::create(errorMessage, sourceURL, lineNumber, columnNumber, { }) } : Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No);
+    ActiveDOMObject::queueTaskToDispatchEvent(*workerObject, TaskSource::DOMManipulation, WTF::move(event));
 }
+
+#if ENABLE(CONTENT_EXTENSIONS)
+void SharedWorkerObjectConnection::reportNetworkUsageToWorkerObject(SharedWorkerObjectIdentifier sharedWorkerObjectIdentifier, uint64_t bytesTransferredOverNetworkDelta)
+{
+    ASSERT(isMainThread());
+    RefPtr workerObject = SharedWorker::fromIdentifier(sharedWorkerObjectIdentifier);
+    CONNECTION_RELEASE_LOG("reportNetworkUsageToWorkerObject: sharedWorkerObjectIdentifier=%" PUBLIC_LOG_STRING ", worker=%p, bytesTransferredOverNetworkDelta=%" PRIu64, sharedWorkerObjectIdentifier.toString().utf8().data(), workerObject.get(), bytesTransferredOverNetworkDelta);
+    if (workerObject)
+        workerObject->reportNetworkUsage(bytesTransferredOverNetworkDelta);
+}
+#endif
 
 #undef CONNECTION_RELEASE_LOG
 #undef CONNECTION_RELEASE_LOG_ERROR

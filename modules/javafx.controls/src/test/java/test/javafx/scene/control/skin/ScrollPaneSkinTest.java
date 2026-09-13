@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,11 @@
 
 package test.javafx.scene.control.skin;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-
 import javafx.beans.value.ObservableValue;
 import javafx.event.Event;
 import javafx.event.EventType;
@@ -54,28 +53,25 @@ import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.tk.Toolkit;
-
 import test.util.memory.JMemoryBuddy;
-
 
 public class ScrollPaneSkinTest {
     private ScrollPane scrollPane;
     private ScrollPaneSkinMock skin;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         scrollPane = new ScrollPane();
         skin = new ScrollPaneSkinMock(scrollPane);
         scrollPane.setSkin(skin);
     }
 
     /*
-    ** RT-16641 : root cause, you shouldn't be able to drag
+    ** JDK-8128277 : root cause, you shouldn't be able to drag
     ** contents if they don't fill the scrollpane
     */
     @Test public void shouldntDragContentSmallerThanViewport() {
@@ -148,6 +144,67 @@ public class ScrollPaneSkinTest {
         assertTrue(originalValue < scrollPane.getVvalue());
     }
 
+    @Test
+    public void fitToHeight() {
+        StackPane content = new StackPane();
+        content.setPrefWidth(100);
+        content.setPrefHeight(100);
+
+        scrollPane.setContent(content);
+        scrollPane.setPrefWidth(200);
+        scrollPane.setPrefHeight(200);
+        scrollPane.setFitToHeight(false);
+
+        Scene scene = new Scene(new Group(), 400, 400);
+        ((Group) scene.getRoot()).getChildren().clear();
+        ((Group) scene.getRoot()).getChildren().add(scrollPane);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
+        assertTrue(content.getHeight() == 100);
+
+        scrollPane.setFitToHeight(true);
+        Toolkit.getToolkit().firePulse();
+
+        assertTrue(content.getHeight() > 150);
+
+        scrollPane.setFitToHeight(false);
+        Toolkit.getToolkit().firePulse();
+
+        assertTrue(content.getHeight() == 100);
+    }
+
+    @Test
+    public void fitToWidth() {
+        StackPane content = new StackPane();
+        content.setPrefWidth(100);
+        content.setPrefHeight(100);
+
+        scrollPane.setContent(content);
+        scrollPane.setPrefWidth(200);
+        scrollPane.setPrefHeight(200);
+        scrollPane.setFitToWidth(false);
+
+        Scene scene = new Scene(new Group(), 400, 400);
+        ((Group) scene.getRoot()).getChildren().clear();
+        ((Group) scene.getRoot()).getChildren().add(scrollPane);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
+        assertTrue(content.getWidth() == 100);
+
+        scrollPane.setFitToWidth(true);
+        Toolkit.getToolkit().firePulse();
+
+        assertTrue(content.getWidth() > 150);
+
+        scrollPane.setFitToWidth(false);
+        Toolkit.getToolkit().firePulse();
+
+        assertTrue(content.getWidth() == 100);
+    }
 
     boolean continueTest;
     class myPane extends Pane {
@@ -197,8 +254,9 @@ public class ScrollPaneSkinTest {
         while (continueTest == false && count < 10) {
             try {
                 Thread.sleep(100);
+            } catch (InterruptedException e) {
+                fail(e);
             }
-            catch (Exception e) {}
             count++;
         }
 
@@ -246,8 +304,9 @@ public class ScrollPaneSkinTest {
         while (continueTest == false && count < 10) {
             try {
                 Thread.sleep(100);
+            } catch (InterruptedException e) {
+                fail(e);
             }
-            catch (Exception e) {}
             count++;
         }
 
@@ -624,12 +683,12 @@ public class ScrollPaneSkinTest {
 
         double skinWidth = scrollPane.getWidth();
         double right = scrollPane.getPadding().getRight();
-        // 1 px of padding is on the outside - see RT-21251
+        // 1 px of padding is on the outside - see JDK-8127431
         double vsbPosAndWidth = (right >= 1 ? 1 : 0) + skin.getVsbX()+skin.getVsbWidth()+(scrollPane.getInsets().getRight() - right);
         assertEquals(skinWidth,  vsbPosAndWidth, 0.1);
 
         double skinHeight = scrollPane.getHeight();
-        // 1 px of padding is on the outside - see RT-21251
+        // 1 px of padding is on the outside - see JDK-8127431
         double bottom = scrollPane.getPadding().getBottom();
         double hsbPosAndHeight = (bottom >= 1 ? 1 : 0) + skin.getHsbY()+skin.getHsbHeight()+(scrollPane.getInsets().getBottom() - bottom);
         assertEquals(skinHeight,  hsbPosAndHeight, 0.1);
@@ -640,7 +699,7 @@ public class ScrollPaneSkinTest {
     ** check if scrollPane content Horizontal position compensates for content size change
     ** ignored, as we do swipe through ScrollEvents.
     */
-    @Ignore
+    @Disabled
     @Test public void checkIfSwipeDownEventsChangeAnything() {
 
         scrolled = false;
@@ -700,7 +759,7 @@ public class ScrollPaneSkinTest {
     ** check if scrollPane content Horizontal position compensates for content size change
     ** ignored, as we do swipe through ScrollEvents.
     */
-    @Ignore
+    @Disabled
     @Test public void checkIfSwipeRightEventsChangeAnything() {
 
         scrolled = false;
@@ -909,7 +968,7 @@ public class ScrollPaneSkinTest {
         }
 
         // one instance is still held by the 'content' label
-        assertEquals("One instance should be held by the 'content' label", 1, ct);
+        assertEquals(1, ct, "One instance should be held by the 'content' label");
 
         // releasing the last instance
         content = null;
@@ -921,6 +980,6 @@ public class ScrollPaneSkinTest {
                 ct++;
             }
         }
-        assertEquals(ct + " references of ScrollPane are not freed.", 0, ct);
+        assertEquals(0, ct, ct + " references of ScrollPane are not freed.");
     }
 }

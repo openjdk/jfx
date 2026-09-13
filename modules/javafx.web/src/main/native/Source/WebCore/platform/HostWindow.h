@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2020 Apple Inc.  All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,14 @@
 
 #pragma once
 
-#include "GraphicsClient.h"
-#include "Widget.h"
+#include <WebCore/GraphicsClient.h>
+#include <WebCore/Widget.h>
+#include <wtf/Platform.h>
+#include <wtf/TZoneMallocInlines.h>
+
+#if PLATFORM(IOS_FAMILY)
+OBJC_CLASS NSData;
+#endif
 
 namespace WebCore {
 
@@ -35,7 +41,8 @@ class Cursor;
 using FramesPerSecond = unsigned;
 
 class HostWindow : public GraphicsClient {
-    WTF_MAKE_NONCOPYABLE(HostWindow); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(HostWindow);
+    WTF_MAKE_NONCOPYABLE(HostWindow);
 public:
     HostWindow() = default;
     virtual ~HostWindow() = default;
@@ -54,9 +61,13 @@ public:
 
     // Methods for doing coordinate conversions to and from screen coordinates.
     virtual IntPoint screenToRootView(const IntPoint&) const = 0;
+    virtual IntPoint rootViewToScreen(const IntPoint&) const = 0;
     virtual IntRect rootViewToScreen(const IntRect&) const = 0;
     virtual IntPoint accessibilityScreenToRootView(const IntPoint&) const = 0;
     virtual IntRect rootViewToAccessibilityScreen(const IntRect&) const = 0;
+#if PLATFORM(IOS_FAMILY)
+    virtual void relayAccessibilityNotification(String&&, RetainPtr<NSData>&&) const = 0;
+#endif
 
     // Method for retrieving the native client of the page.
     virtual PlatformPageClient platformPageClient() const = 0;
@@ -71,6 +82,7 @@ public:
     virtual FloatSize screenSize() const = 0;
     virtual FloatSize availableScreenSize() const = 0;
     virtual FloatSize overrideScreenSize() const = 0;
+    virtual FloatSize overrideAvailableScreenSize() const = 0;
 };
 
 } // namespace WebCore

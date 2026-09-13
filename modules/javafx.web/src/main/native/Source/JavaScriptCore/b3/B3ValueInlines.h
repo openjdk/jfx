@@ -30,6 +30,7 @@
 #include "B3ArgumentRegValue.h"
 #include "B3AtomicValue.h"
 #include "B3BottomTupleValue.h"
+#include "B3BulkMemoryValue.h"
 #include "B3CCallValue.h"
 #include "B3CheckValue.h"
 #include "B3Const128Value.h"
@@ -67,14 +68,18 @@ namespace JSC { namespace B3 {
     case Identity: \
     case Opaque: \
     case Neg: \
+    case PurifyNaN: \
     case Clz: \
     case Abs: \
     case Ceil: \
     case Floor: \
+    case FTrunc: \
     case Sqrt: \
     case SExt8: \
     case SExt16: \
     case Trunc: \
+    case TruncHigh: \
+    case Stitch: \
     case SExt8To64: \
     case SExt16To64: \
     case SExt32: \
@@ -89,6 +94,8 @@ namespace JSC { namespace B3 {
     case Add: \
     case Sub: \
     case Mul: \
+    case MulHigh: \
+    case UMulHigh: \
     case Div: \
     case UDiv: \
     case Mod: \
@@ -146,6 +153,9 @@ namespace JSC { namespace B3 {
     case Store16: \
     case Store: \
         return MACRO(MemoryValue); \
+    case MemoryCopy: \
+    case MemoryFill: \
+        return MACRO(BulkMemoryValue); \
     case Switch: \
         return MACRO(SwitchValue); \
     case Upsilon: \
@@ -192,6 +202,8 @@ namespace JSC { namespace B3 {
     case VectorAddSat: \
     case VectorSubSat: \
     case VectorMul: \
+    case VectorMulHigh: \
+    case VectorMulLow: \
     case VectorDotProduct: \
     case VectorDiv: \
     case VectorMin: \
@@ -236,12 +248,13 @@ namespace JSC { namespace B3 {
     case VectorShiftByVector: \
     case VectorRelaxedMAdd: \
     case VectorRelaxedNMAdd: \
+    case VectorRelaxedLaneSelect: \
         return MACRO(SIMDValue); \
     default: \
         RELEASE_ASSERT_NOT_REACHED(); \
     }
 
-ALWAYS_INLINE size_t Value::adjacencyListOffset() const
+ALWAYS_INLINE size_t Value::computeAdjacencyListOffset() const
 {
 #define VALUE_TYPE_SIZE(ValueType) sizeof(ValueType)
     DISPATCH_ON_KIND(VALUE_TYPE_SIZE);
@@ -421,13 +434,13 @@ inline bool Value::isRepresentableAs() const
 {
     switch (opcode()) {
     case Const32:
-        return B3::isRepresentableAs<T>(asInt32());
+        return WTF::isRepresentableAs<T>(asInt32());
     case Const64:
-        return B3::isRepresentableAs<T>(asInt64());
+        return WTF::isRepresentableAs<T>(asInt64());
     case ConstDouble:
-        return B3::isRepresentableAs<T>(asDouble());
+        return WTF::isRepresentableAs<T>(asDouble());
     case ConstFloat:
-        return B3::isRepresentableAs<T>(asFloat());
+        return WTF::isRepresentableAs<T>(asFloat());
     default:
         return false;
     }

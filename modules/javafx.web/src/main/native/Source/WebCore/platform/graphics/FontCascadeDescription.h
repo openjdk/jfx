@@ -24,16 +24,20 @@
 
 #pragma once
 
-#include "CSSValueKeywords.h"
-#include "FontDescription.h"
-#include <variant>
+#include <WebCore/CSSValueKeywords.h>
+#include <WebCore/FontDescription.h>
+#include <wtf/Platform.h>
 #include <wtf/RefCountedFixedVector.h>
 
 #if PLATFORM(COCOA)
-#include "FontFamilySpecificationCoreText.h"
+#include <WebCore/FontFamilySpecificationCoreText.h>
 #else
 #include "FontFamilySpecificationNull.h"
 #endif
+
+namespace WTF {
+class TextStream;
+}
 
 namespace WebCore {
 
@@ -43,7 +47,9 @@ typedef FontFamilySpecificationCoreText FontFamilyPlatformSpecification;
 typedef FontFamilySpecificationNull FontFamilyPlatformSpecification;
 #endif
 
-typedef std::variant<AtomString, FontFamilyPlatformSpecification> FontFamilySpecification;
+typedef Variant<AtomString, FontFamilyPlatformSpecification> FontFamilySpecification;
+
+class Font;
 
 class FontCascadeDescription : public FontDescription {
 public:
@@ -88,6 +94,7 @@ public:
     void setOneFamily(const AtomString& family) { ASSERT(m_families->size() == 1); m_families.get()[0] = family; }
     void setFamilies(const Vector<AtomString>& families) { m_families = RefCountedFixedVector<AtomString>::createFromVector(families); }
     void setFamilies(RefCountedFixedVector<AtomString>& families) { m_families = families; }
+    void setFamilies(Ref<RefCountedFixedVector<AtomString>>&& families) { m_families = WTF::move(families); }
     void setSpecifiedSize(float s) { m_specifiedSize = clampToFloat(s); }
     void setIsAbsoluteSize(bool s) { m_isAbsoluteSize = s; }
     void setKerning(Kerning kerning) { m_kerning = static_cast<unsigned>(kerning); }
@@ -118,25 +125,7 @@ public:
     }
 #endif
 
-    // Initial values for font properties.
-    static std::optional<FontSelectionValue> initialItalic() { return std::nullopt; }
-    static FontStyleAxis initialFontStyleAxis() { return FontStyleAxis::slnt; }
-    static FontSelectionValue initialWeight() { return normalWeightValue(); }
-    static FontSelectionValue initialStretch() { return normalStretchValue(); }
-    static FontSmallCaps initialSmallCaps() { return FontSmallCaps::Off; }
-    static Kerning initialKerning() { return Kerning::Auto; }
-    static FontSmoothingMode initialFontSmoothing() { return FontSmoothingMode::AutoSmoothing; }
-    static TextRenderingMode initialTextRenderingMode() { return TextRenderingMode::AutoTextRendering; }
-    static FontSynthesisLonghandValue initialFontSynthesisWeight() { return FontSynthesisLonghandValue::Auto; }
-    static FontSynthesisLonghandValue initialFontSynthesisStyle() { return FontSynthesisLonghandValue::Auto; }
-    static FontSynthesisLonghandValue initialFontSynthesisSmallCaps() { return FontSynthesisLonghandValue::Auto; }
-    static FontVariantPosition initialVariantPosition() { return FontVariantPosition::Normal; }
-    static FontVariantCaps initialVariantCaps() { return FontVariantCaps::Normal; }
-    static FontVariantAlternates initialVariantAlternates() { return FontVariantAlternates::Normal(); }
-    static FontOpticalSizing initialOpticalSizing() { return FontOpticalSizing::Enabled; }
-    static const AtomString& initialSpecifiedLocale() { return nullAtom(); }
-    static FontPalette initialFontPalette() { return { FontPalette::Type::Normal, nullAtom() }; }
-    static FontSizeAdjust initialFontSizeAdjust() { return { FontSizeAdjust::Metric::ExHeight }; }
+    WEBCORE_EXPORT void resolveFontSizeAdjustFromFontIfNeeded(const Font&);
 
 private:
     Ref<RefCountedFixedVector<AtomString>> m_families;
@@ -157,8 +146,8 @@ private:
 
 inline bool FontCascadeDescription::operator==(const FontCascadeDescription& other) const
 {
-    return FontDescription::operator==(other)
-        && m_families.get() == other.m_families.get()
+    return static_cast<const FontDescription&>(*this) == static_cast<const FontDescription&>(other)
+        && arePointingToEqualData(m_families, other.m_families)
         && m_specifiedSize == other.m_specifiedSize
         && m_isAbsoluteSize == other.m_isAbsoluteSize
         && m_kerning == other.m_kerning
@@ -166,5 +155,7 @@ inline bool FontCascadeDescription::operator==(const FontCascadeDescription& oth
         && m_fontSmoothing == other.m_fontSmoothing
         && m_isSpecifiedFont == other.m_isSpecifiedFont;
 }
+
+WTF::TextStream& operator<<(WTF::TextStream&, const FontCascadeDescription&);
 
 }

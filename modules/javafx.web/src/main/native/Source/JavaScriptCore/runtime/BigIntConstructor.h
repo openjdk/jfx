@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include "InternalFunction.h"
+#include <JavaScriptCore/InternalFunction.h>
 
 namespace JSC {
 
@@ -38,7 +38,7 @@ public:
     using Base = InternalFunction;
     static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
-    static BigIntConstructor* create(VM& vm, Structure* structure, BigIntPrototype* bigIntPrototype, GetterSetter*)
+    static BigIntConstructor* create(VM& vm, Structure* structure, BigIntPrototype* bigIntPrototype)
     {
         BigIntConstructor* constructor = new (NotNull, allocateCell<BigIntConstructor>(vm)) BigIntConstructor(vm, structure);
         constructor->finishCreation(vm, bigIntPrototype);
@@ -47,10 +47,7 @@ public:
 
     DECLARE_INFO;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
-    {
-        return Structure::create(vm, globalObject, proto, TypeInfo(InternalFunctionType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
 private:
     BigIntConstructor(VM&, Structure*);

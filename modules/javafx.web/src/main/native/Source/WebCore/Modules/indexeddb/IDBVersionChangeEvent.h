@@ -31,11 +31,11 @@
 namespace WebCore {
 
 class IDBVersionChangeEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(IDBVersionChangeEvent);
+    WTF_MAKE_TZONE_ALLOCATED(IDBVersionChangeEvent);
 public:
     static Ref<IDBVersionChangeEvent> create(uint64_t oldVersion, uint64_t newVersion, const AtomString& eventType)
     {
-        return adoptRef(*new IDBVersionChangeEvent(IDBResourceIdentifier::emptyValue(), oldVersion, newVersion, eventType));
+        return adoptRef(*new IDBVersionChangeEvent(std::nullopt, oldVersion, newVersion, eventType));
     }
 
     static Ref<IDBVersionChangeEvent> create(const IDBResourceIdentifier& requestIdentifier, uint64_t oldVersion, uint64_t newVersion, const AtomString& eventType)
@@ -53,26 +53,20 @@ public:
         return adoptRef(*new IDBVersionChangeEvent(type, initializer, isTrusted));
     }
 
-    const IDBResourceIdentifier& requestIdentifier() const { return m_requestIdentifier; }
-
-    bool isVersionChangeEvent() const final { return true; }
+    std::optional<IDBResourceIdentifier> requestIdentifier() const { return m_requestIdentifier; }
 
     uint64_t oldVersion() const { return m_oldVersion; }
     std::optional<uint64_t> newVersion() const { return m_newVersion; }
 
 private:
-    IDBVersionChangeEvent(const IDBResourceIdentifier& requestIdentifier, uint64_t oldVersion, uint64_t newVersion, const AtomString& eventType);
+    IDBVersionChangeEvent(std::optional<IDBResourceIdentifier> requestIdentifier, uint64_t oldVersion, uint64_t newVersion, const AtomString& eventType);
     IDBVersionChangeEvent(const AtomString&, const Init&, IsTrusted);
 
-    EventInterface eventInterface() const;
-
-    IDBResourceIdentifier m_requestIdentifier;
+    std::optional<IDBResourceIdentifier> m_requestIdentifier;
     uint64_t m_oldVersion;
     std::optional<uint64_t> m_newVersion;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::IDBVersionChangeEvent)
-    static bool isType(const WebCore::Event& event) { return event.isVersionChangeEvent(); }
-SPECIALIZE_TYPE_TRAITS_END()
+SPECIALIZE_TYPE_TRAITS_EVENT(IDBVersionChangeEvent)

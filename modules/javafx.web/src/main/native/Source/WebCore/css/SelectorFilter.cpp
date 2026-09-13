@@ -55,15 +55,14 @@ void SelectorFilter::collectElementIdentifierHashes(const Element& element, Vect
         identifierHashes.append(id.impl()->existingHash() * IdSalt);
 
     if (element.hasClass()) {
-        const SpaceSplitString& classNames = element.classNames();
-        size_t count = classNames.size();
-        for (size_t i = 0; i < count; ++i)
-            identifierHashes.append(classNames[i].impl()->existingHash() * ClassSalt);
+        identifierHashes.appendContainerWithMapping(element.classNames(), [](auto& className) {
+            return className.impl()->existingHash() * ClassSalt;
+        });
     }
 
     if (element.hasAttributesWithoutUpdate()) {
-        for (auto& attribute : element.attributesIterator()) {
-            auto attributeName = element.isHTMLElement() ? attribute.localName() : attribute.localNameLowercase();
+        for (auto& attribute : element.attributes()) {
+            auto& attributeName = element.isHTMLElement() ? attribute.localName() : attribute.localNameLowercase();
             if (isExcludedAttribute(attributeName))
                 continue;
             identifierHashes.append(attributeName.impl()->existingHash() * AttributeSalt);
@@ -105,7 +104,7 @@ void SelectorFilter::pushParent(Element* parent)
 
 void SelectorFilter::pushParentInitializingIfNeeded(Element& parent)
 {
-    if (UNLIKELY(m_parentStack.isEmpty())) {
+    if (m_parentStack.isEmpty()) [[unlikely]] {
         initializeParentStack(parent);
         return;
     }
@@ -165,13 +164,13 @@ void SelectorFilter::collectSimpleSelectorHash(CollectedSelectorHashes& collecte
         break;
     }
     case CSSSelector::Match::PseudoClass:
-        switch (selector.pseudoClassType()) {
-        case CSSSelector::PseudoClassType::Is:
-        case CSSSelector::PseudoClassType::Where:
+        switch (selector.pseudoClass()) {
+        case CSSSelector::PseudoClass::Is:
+        case CSSSelector::PseudoClass::Where:
             // We can use the filter in the trivial case of single argument :is()/:where().
             // Supporting the multiargument case would require more than one hash.
-            if (selector.selectorList()->listSize() == 1)
-                collectSelectorHashes(collectedHashes, *selector.selectorList()->first(), IncludeRightmost::Yes);
+            if (selector.selectorList()->size() == 1)
+                collectSelectorHashes(collectedHashes, selector.selectorList()->first(), IncludeRightmost::Yes);
             break;
         default:
             break;
@@ -186,27 +185,27 @@ void SelectorFilter::collectSelectorHashes(CollectedSelectorHashes& collectedHas
 {
     auto [selector, relation, skipOverSubselectors] = [&] {
         if (includeRightmost == IncludeRightmost::No)
-            return std::tuple { rightmostSelector.tagHistory(), rightmostSelector.relation(), true };
+            return std::tuple { rightmostSelector.precedingInComplexSelector(), rightmostSelector.relation(), true };
 
-        return std::tuple { &rightmostSelector, CSSSelector::RelationType::Subselector, false };
+        return std::tuple { &rightmostSelector, CSSSelector::Relation::Subselector, false };
     }();
 
-    for (; selector; selector = selector->tagHistory()) {
+    for (; selector; selector = selector->precedingInComplexSelector()) {
         // Only collect identifiers that match ancestors.
         switch (relation) {
-        case CSSSelector::RelationType::Subselector:
+        case CSSSelector::Relation::Subselector:
             if (!skipOverSubselectors)
                 collectSimpleSelectorHash(collectedHashes, *selector);
             break;
-        case CSSSelector::RelationType::DirectAdjacent:
-        case CSSSelector::RelationType::IndirectAdjacent:
-        case CSSSelector::RelationType::ShadowDescendant:
-        case CSSSelector::RelationType::ShadowPartDescendant:
-        case CSSSelector::RelationType::ShadowSlotted:
+        case CSSSelector::Relation::DirectAdjacent:
+        case CSSSelector::Relation::IndirectAdjacent:
+        case CSSSelector::Relation::ShadowDescendant:
+        case CSSSelector::Relation::ShadowPartDescendant:
+        case CSSSelector::Relation::ShadowSlotted:
             skipOverSubselectors = true;
             break;
-        case CSSSelector::RelationType::DescendantSpace:
-        case CSSSelector::RelationType::Child:
+        case CSSSelector::Relation::DescendantSpace:
+        case CSSSelector::Relation::Child:
             skipOverSubselectors = false;
             collectSimpleSelectorHash(collectedHashes, *selector);
             break;

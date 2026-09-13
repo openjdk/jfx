@@ -33,7 +33,8 @@
 namespace WebCore {
 
 class RenderReplica final : public RenderBox {
-    WTF_MAKE_ISO_ALLOCATED(RenderReplica);
+    WTF_MAKE_TZONE_ALLOCATED(RenderReplica);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderReplica);
 public:
     RenderReplica(Document&, RenderStyle&&);
     virtual ~RenderReplica();
@@ -47,9 +48,11 @@ public:
     void paint(PaintInfo&, const LayoutPoint&) override;
 
 private:
-    bool isReplica() const override { return true; }
     bool canHaveChildren() const override { return false; }
     void computePreferredLogicalWidths() override;
+    void computeIntrinsicLogicalWidths(LayoutUnit&, LayoutUnit&) const override { ASSERT_NOT_REACHED(); }
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderReplica, isRenderReplica())

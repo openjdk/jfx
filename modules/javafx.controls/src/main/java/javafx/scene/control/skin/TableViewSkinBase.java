@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,8 +26,6 @@
 package javafx.scene.control.skin;
 
 import java.lang.ref.WeakReference;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.List;
 
 import javafx.application.Platform;
@@ -97,16 +95,12 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
     private static final double GOLDEN_RATIO_MULTIPLIER = 0.618033987;
 
-    // RT-34744 : IS_PANNABLE will be false unless
+    // JDK-8094803 : IS_PANNABLE will be false unless
     // javafx.scene.control.skin.TableViewSkin.pannable
     // is set to true. This is done in order to make TableView functional
     // on embedded systems with touch screens which do not generate scroll
     // events for touch drag gestures.
-    @SuppressWarnings("removal")
-    private static final boolean IS_PANNABLE =
-            AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.scene.control.skin.TableViewSkin.pannable"));
-
-
+    private static final boolean IS_PANNABLE = Boolean.getBoolean("javafx.scene.control.skin.TableViewSkin.pannable");
 
     /* *************************************************************************
      *                                                                         *
@@ -158,7 +152,6 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
     private int visibleColCount;
 
-    boolean needCellsRecreated = true;
     boolean needCellsReconfigured = false;
 
     private int itemCount = -1;
@@ -174,12 +167,12 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
     private ListChangeListener<S> rowCountListener = c -> {
         while (c.next()) {
             if (c.wasReplaced()) {
-                // RT-28397: Support for when an item is replaced with itself (but
+                // JDK-8118897: Support for when an item is replaced with itself (but
                 // updated internal values that should be shown visually).
 
                 // The ListViewSkin equivalent code here was updated to use the
                 // flow.setDirtyCell(int) API, but it was left alone here, otherwise
-                // our unit test for RT-36220 fails as we do not handle the case
+                // our unit test for JDK-8093027 fails as we do not handle the case
                 // where the TableCell gets updated (only the TableRow does).
                 // Ideally we would use the dirtyCell API:
                 //
@@ -189,7 +182,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
                 itemCount = 0;
                 break;
             } else if (c.getRemovedSize() == itemCount) {
-                // RT-22463: If the user clears out an items list then we
+                // JDK-8098235: If the user clears out an items list then we
                 // should reset all cells (in particular their contained
                 // items) such that a subsequent addition to the list of
                 // an item which equals the old item (but is rendered
@@ -200,7 +193,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
             }
         }
 
-        // fix for RT-37853
+        // fix for JDK-8094887
         if (getSkinnable() instanceof TableView) {
             ((TableView)getSkinnable()).edit(-1, null);
         }
@@ -214,7 +207,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         // resizing occurs. It is not ideal, but will work for now.
 
         // using 'needCellsReconfigured' here rather than 'needCellsRebuilt'
-        // as otherwise performance suffers massively (RT-27831)
+        // as otherwise performance suffers massively (JDK-8124403)
         needCellsReconfigured = true;
         if (getSkinnable() != null) {
             getSkinnable().requestLayout();
@@ -255,7 +248,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
             horizontalScroll();
         });
 
-        // RT-37152
+        // JDK-8095370
         flow.getHbar().setUnitIncrement(15);
         flow.getHbar().setBlockIncrement(TableColumnHeader.DEFAULT_COLUMN_WIDTH);
 
@@ -303,19 +296,18 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         });
 
         final ObservableMap<Object, Object> properties = control.getProperties();
-        properties.remove(Properties.REFRESH);
         properties.remove(Properties.RECREATE);
+        properties.remove(Properties.REBUILD);
         lh.addMapChangeListener(properties, (c) -> {
             if (!c.wasAdded()) {
                 return;
             }
-            if (Properties.REFRESH.equals(c.getKey())) {
-                refreshView();
-                getSkinnable().getProperties().remove(Properties.REFRESH);
-            } else if (Properties.RECREATE.equals(c.getKey())) {
-                needCellsRecreated = true;
-                refreshView();
+            if (Properties.RECREATE.equals(c.getKey())) {
+                requestRecreateCells();
                 getSkinnable().getProperties().remove(Properties.RECREATE);
+            } else if (Properties.REBUILD.equals(c.getKey())) {
+                requestRebuildCells();
+                getSkinnable().getProperties().remove(Properties.REBUILD);
             }
         });
 
@@ -338,7 +330,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
             Callback<C, I> oldFactory = rowFactory;
             rowFactory = rowFactoryProperty.get();
             if (oldFactory != rowFactory) {
-                requestRebuildCells();
+                flow.recreateCells();
             }
         });
 
@@ -431,13 +423,10 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
         super.layoutChildren(x, y, w, h);
 
-        if (needCellsRecreated) {
-            flow.recreateCells();
-        } else if (needCellsReconfigured) {
+        if (needCellsReconfigured) {
             flow.reconfigureCells();
         }
 
-        needCellsRecreated = false;
         needCellsReconfigured = false;
 
         final double baselineOffset = table.getLayoutBounds().getHeight() / 2;
@@ -452,7 +441,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
         // let the virtual flow take up all remaining space
         // TODO this calculation is to ensure the bottom border is visible when
         // placed in a Pane. It is not ideal, but will suffice for now. See
-        // RT-14335 for more information.
+        // JDK-8112896 for more information.
         double flowHeight = Math.floor(h - tableHeaderRowHeight);
         if (getItemCount() == 0 || visibleColCount == 0) {
             // show message overlay instead of empty table
@@ -587,7 +576,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
     }
 
     private void checkContentWidthState() {
-        // we test for item count here to resolve RT-14855, where the column
+        // we test for item count here to resolve JDK-8113886, where the column
         // widths weren't being resized properly when in constrained layout mode
         // if there were no items.
         if (contentWidthDirty || getItemCount() == 0) {
@@ -755,7 +744,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
         // we include this test here as the virtual flow will return cells that
         // exceed past the item count, so we need to clamp here (and further down
-        // in this method also). See RT-19053 for more information.
+        // in this method also). See JDK-8127405 for more information.
         lastVisibleCellIndex = lastVisibleCellIndex >= itemCount ? itemCount - 1 : lastVisibleCellIndex;
 
         // isSelected represents focus OR selection
@@ -914,7 +903,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
         contentWidth = Math.max(0.0, contentWidth);
 
-        // this isn't perfect, but it prevents RT-14885/JDK-8089280, which results in
+        // this isn't perfect, but it prevents JDK-8089280/JDK-8089280, which results in
         // undesired horizontal scrollbars when in constrained resize mode
         getSkinnable().getProperties().put("TableView.contentWidth", Math.floor(contentWidth));
     }
@@ -961,7 +950,7 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
 
         final Control control = getSkinnable();
 
-        // RT-37060 - if we are trying to scroll to a column that has not
+        // JDK-8096491 - if we are trying to scroll to a column that has not
         // yet even been rendered, we must wait until the layout pass has
         // happened and then do the scroll. The laziest way to do this is to
         // queue up the task to run later, at which point we will have hopefully
@@ -1076,6 +1065,15 @@ public abstract class TableViewSkinBase<M, S, C extends Control, I extends Index
                 /* Not sure how this is used by Accessibility, but without this VoiceOver will not
                  * look for column headers */
                 return getTableHeaderRow();
+            }
+            case VISIBLE_ITEM_RANGE: {
+                I firstVisibleCell = flow.getFirstVisibleCellWithinViewport();
+                I lastVisibleCell = flow.getLastVisibleCellWithinViewport();
+                if (firstVisibleCell == null || lastVisibleCell == null) {
+                    return new int[] { 0, 0 };
+                }
+                int firstIndex = firstVisibleCell.getIndex();
+                return new int[] { firstIndex, lastVisibleCell.getIndex() - firstIndex + 1 };
             }
             case VERTICAL_SCROLLBAR: return flow.getVbar();
             case HORIZONTAL_SCROLLBAR: return flow.getHbar();

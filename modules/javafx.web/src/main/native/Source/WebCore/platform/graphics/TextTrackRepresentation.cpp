@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "TextTrackRepresentation.h"
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(VIDEO)
 
@@ -33,11 +34,13 @@
 namespace WebCore {
 
 class NullTextTrackRepresentation : public TextTrackRepresentation {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(NullTextTrackRepresentation);
 public:
     virtual ~NullTextTrackRepresentation() = default;
     void update() final { }
     PlatformLayer* platformLayer() final { return nullptr; }
     void setContentScale(float) final { }
+    void setBounds(const IntRect&) final { }
     IntRect bounds() const final { return IntRect(); }
     void setHidden(bool) const final { }
 };

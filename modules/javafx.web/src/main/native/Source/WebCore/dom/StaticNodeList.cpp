@@ -29,12 +29,18 @@
 #include "config.h"
 #include "StaticNodeList.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(StaticNodeList);
-WTF_MAKE_ISO_ALLOCATED_IMPL(StaticElementList);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(StaticNodeList);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(StaticWrapperNodeList);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(StaticElementList);
+
+StaticNodeList::StaticNodeList(Vector<Ref<Node>>&& nodes)
+    : m_nodes(WTF::move(nodes))
+{
+}
 
 unsigned StaticNodeList::length() const
 {
@@ -46,6 +52,16 @@ Node* StaticNodeList::item(unsigned index) const
     if (index < m_nodes.size())
         return const_cast<Node*>(m_nodes[index].ptr());
     return nullptr;
+}
+
+unsigned StaticWrapperNodeList::length() const
+{
+    return m_nodeList->length();
+}
+
+Node* StaticWrapperNodeList::item(unsigned index) const
+{
+    return m_nodeList->item(index);
 }
 
 unsigned StaticElementList::length() const

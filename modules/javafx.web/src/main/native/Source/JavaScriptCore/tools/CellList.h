@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,11 +28,12 @@
 #include "CellProfile.h"
 #include <wtf/HashMap.h>
 #include <wtf/SegmentedVector.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
 class CellList {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(CellList);
 public:
     CellList(const char* name)
         : m_name(name)
@@ -47,7 +48,7 @@ public:
 
     void add(CellProfile&& profile)
     {
-        m_cells.append(WTFMove(profile));
+        m_cells.append(WTF::move(profile));
         m_mapIsUpToDate = false;
     }
 
@@ -60,7 +61,7 @@ private:
     CellProfileVector m_cells;
 
     bool m_mapIsUpToDate { false };
-    HashMap<HeapCell*, CellProfile*> m_map;
+    UncheckedKeyHashMap<HeapCell*, CellProfile*> m_map;
 };
 
 } // namespace JSC

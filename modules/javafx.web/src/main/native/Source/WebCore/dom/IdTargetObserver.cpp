@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Google Inc. All Rights Reserved.
+ * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,20 +27,23 @@
 #include "IdTargetObserver.h"
 
 #include "IdTargetObserverRegistry.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(IdTargetObserver);
 
 IdTargetObserver::IdTargetObserver(IdTargetObserverRegistry& registry, const AtomString& id)
     : m_registry(&registry)
     , m_id(id)
 {
-    m_registry->addObserver(m_id, this);
+    m_registry->addObserver(m_id, *this);
 }
 
 IdTargetObserver::~IdTargetObserver()
 {
     if (m_registry)
-        m_registry->removeObserver(m_id, this);
+        m_registry->removeObserver(m_id, *this);
 }
 
 } // namespace WebCore

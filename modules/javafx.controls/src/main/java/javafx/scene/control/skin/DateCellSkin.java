@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -137,7 +137,7 @@ public class DateCellSkin extends CellSkinBase<DateCell> {
 
     /* *************************************************************************
      *                                                                         *
-     * Pirvate implementation                                                  *
+     * Private implementation                                                  *
      *                                                                         *
      **************************************************************************/
 
@@ -145,7 +145,7 @@ public class DateCellSkin extends CellSkinBase<DateCell> {
         double cellSize = getCellSize();
         Text secondaryText = (Text)getSkinnable().getProperties().get("DateCell.secondaryText");
         if (secondaryText != null && cellSize == DEFAULT_CELL_SIZE) {
-            // Workaround for RT-31643. The cellSize property was not yet set from CSS.
+            // Workaround for JDK-8116318. The cellSize property was not yet set from CSS.
             cellSize = 36;
         }
         return cellSize;

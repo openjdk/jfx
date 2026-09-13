@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -435,7 +435,7 @@ public final class BasicStroke {
             return;
         }
         if ((tx.getType() & ~SAFE_ACCUMULATE_MASK) != 0) {
-            // This is a work-around for RT-15648.  That bug still applies here
+            // This is a work-around for JDK-8090884.  That bug still applies here
             // since we should be optimizing that case, but at least with this
             // work-around, someone who calls this method, and is not aware of
             // that bug, will not be bitten by a bad answer.
@@ -711,7 +711,7 @@ public final class BasicStroke {
             }
         } else {
             if (aw < ah * 0.9f || ah < aw * 0.9f) {
-                // RT-27416
+                // JDK-8092165
                 // TODO: Need to check these multipliers and
                 // optimize this case...
                 return null;

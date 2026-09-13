@@ -28,19 +28,19 @@
 
 namespace JSC {
 
-DeferredCompilationCallback::DeferredCompilationCallback() { }
-DeferredCompilationCallback::~DeferredCompilationCallback() { }
+DeferredCompilationCallback::DeferredCompilationCallback() = default;
+DeferredCompilationCallback::~DeferredCompilationCallback() = default;
 
 void DeferredCompilationCallback::compilationDidComplete(CodeBlock*, CodeBlock*, CompilationResult result)
 {
     dumpCompiledSourcesIfNeeded();
 
     switch (result) {
-    case CompilationFailed:
-    case CompilationInvalidated:
-    case CompilationSuccessful:
+    case CompilationResult::CompilationFailed:
+    case CompilationResult::CompilationInvalidated:
+    case CompilationResult::CompilationSuccessful:
         break;
-    case CompilationDeferred:
+    case CompilationResult::CompilationDeferred:
         RELEASE_ASSERT_NOT_REACHED();
     }
 }

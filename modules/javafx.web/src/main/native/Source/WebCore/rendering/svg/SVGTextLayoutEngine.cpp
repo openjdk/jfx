@@ -1,6 +1,6 @@
 /*
  * Copyright (C) Research In Motion Limited 2010-2012. All rights reserved.
- * Copyright (C) Apple 2023. All rights reserved.
+ * Copyright (C) Apple 2023-2024. All rights reserved.
  * Copyright (C) Google 2014-2017. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -23,8 +23,9 @@
 #include "SVGTextLayoutEngine.h"
 
 #include "PathTraversalState.h"
+#include "RenderElementInlines.h"
 #include "RenderSVGTextPath.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "SVGElement.h"
 #include "SVGGeometryElement.h"
 #include "SVGInlineTextBoxInlines.h"
@@ -44,17 +45,17 @@ SVGTextLayoutEngine::SVGTextLayoutEngine(Vector<SVGTextLayoutAttributes*>& layou
     ASSERT(!m_layoutAttributes.isEmpty());
 }
 
-void SVGTextLayoutEngine::updateCharacerPositionIfNeeded(float& x, float& y)
+void SVGTextLayoutEngine::updateCharacterPositionIfNeeded(float& x, float& y)
 {
     if (m_inPathLayout)
         return;
 
     // Replace characters x/y position, with the current text position plus any
     // relative adjustments, if it doesn't specify an absolute position itself.
-    if (x == SVGTextLayoutAttributes::emptyValue())
+    if (SVGTextLayoutAttributes::isEmptyValue(x))
         x = m_x + m_dx;
 
-    if (y == SVGTextLayoutAttributes::emptyValue())
+    if (SVGTextLayoutAttributes::isEmptyValue(y))
         y = m_y + m_dy;
 
     m_dx = 0;
@@ -76,12 +77,12 @@ void SVGTextLayoutEngine::updateCurrentTextPosition(float x, float y, float glyp
 void SVGTextLayoutEngine::updateRelativePositionAdjustmentsIfNeeded(float dx, float dy)
 {
     // Update relative positioning information.
-    if (dx == SVGTextLayoutAttributes::emptyValue() && dy == SVGTextLayoutAttributes::emptyValue())
+    if (SVGTextLayoutAttributes::isEmptyValue(dx) && SVGTextLayoutAttributes::isEmptyValue(dy))
         return;
 
-    if (dx == SVGTextLayoutAttributes::emptyValue())
+    if (SVGTextLayoutAttributes::isEmptyValue(dx))
         dx = 0;
-    if (dy == SVGTextLayoutAttributes::emptyValue())
+    if (SVGTextLayoutAttributes::isEmptyValue(dy))
         dy = 0;
 
     if (m_inPathLayout) {
@@ -100,7 +101,7 @@ void SVGTextLayoutEngine::updateRelativePositionAdjustmentsIfNeeded(float dx, fl
     m_dy = dy;
 }
 
-void SVGTextLayoutEngine::recordTextFragment(SVGInlineTextBox& textBox, Vector<SVGTextMetrics>& textMetricsValues)
+void SVGTextLayoutEngine::recordTextFragment(InlineIterator::SVGTextBoxIterator textBox, const Vector<SVGTextMetrics>& textMetricsValues)
 {
     ASSERT(!m_currentTextFragment.length);
     ASSERT(m_visualMetricsListOffset > 0);
@@ -109,7 +110,7 @@ void SVGTextLayoutEngine::recordTextFragment(SVGInlineTextBox& textBox, Vector<S
     m_currentTextFragment.length = m_visualCharacterOffset - m_currentTextFragment.characterOffset;
 
     // Figure out fragment metrics.
-    SVGTextMetrics& lastCharacterMetrics = textMetricsValues.at(m_visualMetricsListOffset - 1);
+    auto& lastCharacterMetrics = textMetricsValues.at(m_visualMetricsListOffset - 1);
     m_currentTextFragment.width = lastCharacterMetrics.width();
     m_currentTextFragment.height = lastCharacterMetrics.height();
 
@@ -127,7 +128,11 @@ void SVGTextLayoutEngine::recordTextFragment(SVGInlineTextBox& textBox, Vector<S
         }
     }
 
-    textBox.textFragments().append(m_currentTextFragment);
+    auto& fragments = m_fragmentMap.ensure(makeKey(*textBox), [&] {
+        return Vector<SVGTextFragment> { };
+    }).iterator->value;
+
+    fragments.append(m_currentTextFragment);
     m_currentTextFragment = SVGTextFragment();
 }
 
@@ -135,13 +140,13 @@ bool SVGTextLayoutEngine::parentDefinesTextLength(RenderObject* parent) const
 {
     RenderObject* currentParent = parent;
     while (currentParent) {
-        if (SVGTextContentElement* textContentElement = SVGTextContentElement::elementFromRenderer(currentParent)) {
-            SVGLengthContext lengthContext(textContentElement);
+        if (RefPtr textContentElement = SVGTextContentElement::elementFromRenderer(currentParent)) {
+            SVGLengthContext lengthContext(textContentElement.get());
             if (textContentElement->lengthAdjust() == SVGLengthAdjustSpacing && textContentElement->specifiedTextLength().value(lengthContext) > 0)
                 return true;
         }
 
-        if (currentParent->isSVGText())
+        if (currentParent->isRenderSVGText())
             return false;
 
         currentParent = currentParent->parent();
@@ -151,7 +156,7 @@ bool SVGTextLayoutEngine::parentDefinesTextLength(RenderObject* parent) const
     return false;
 }
 
-void SVGTextLayoutEngine::beginTextPathLayout(RenderSVGTextPath& textPath, SVGTextLayoutEngine& lineLayout)
+void SVGTextLayoutEngine::beginTextPathLayout(const RenderSVGTextPath& textPath, SVGTextLayoutEngine& lineLayout)
 {
     m_inPathLayout = true;
 
@@ -166,25 +171,25 @@ void SVGTextLayoutEngine::beginTextPathLayout(RenderSVGTextPath& textPath, SVGTe
         m_textPathStartOffset = startOffset.valueAsPercentage() * m_textPathLength;
     else {
         m_textPathStartOffset = startOffset.valueInSpecifiedUnits();
-        if (auto* tragetElement = textPath.targetElement()) {
+        if (RefPtr targetElement = textPath.targetElement()) {
             // FIXME: A value of zero is valid. Need to differentiate this case from being unspecified.
-            if (float pathLength = tragetElement->pathLength())
+            if (float pathLength = targetElement->pathLength())
                 m_textPathStartOffset *= m_textPathLength / pathLength;
         }
     }
 
-    lineLayout.m_chunkLayoutBuilder.buildTextChunks(lineLayout.m_lineLayoutBoxes);
+    lineLayout.m_chunkLayoutBuilder.buildTextChunks(lineLayout.m_lineLayoutBoxes, lineLayout.m_lineLayoutChunkStarts, lineLayout.m_fragmentMap);
 
     // Handle text-anchor as additional start offset for text paths.
     m_textPathStartOffset += lineLayout.m_chunkLayoutBuilder.totalAnchorShift();
     m_textPathCurrentOffset = m_textPathStartOffset;
 
     // Eventually handle textLength adjustments.
-    auto* textContentElement = SVGTextContentElement::elementFromRenderer(&textPath);
+    RefPtr textContentElement = SVGTextContentElement::elementFromRenderer(&textPath);
     if (!textContentElement)
         return;
 
-    SVGLengthContext lengthContext(textContentElement);
+    SVGLengthContext lengthContext(textContentElement.get());
     float desiredTextLength = textContentElement->specifiedTextLength().value(lengthContext);
     if (!desiredTextLength)
         return;
@@ -210,41 +215,40 @@ void SVGTextLayoutEngine::endTextPathLayout()
     m_textPathScaling = 1;
 }
 
-void SVGTextLayoutEngine::layoutInlineTextBox(SVGInlineTextBox& textBox)
+void SVGTextLayoutEngine::layoutInlineTextBox(InlineIterator::SVGTextBoxIterator textBox)
 {
-    RenderSVGInlineText& text = textBox.renderer();
+    auto& text = textBox->renderer();
     ASSERT(text.parent());
     ASSERT(text.parent()->element());
     ASSERT(text.parent()->element()->isSVGElement());
 
     const RenderStyle& style = text.style();
 
-    textBox.clearTextFragments();
-    m_isVerticalText = style.isVerticalWritingMode();
+    m_isVerticalText = style.writingMode().isVertical();
     layoutTextOnLineOrPath(textBox, text, style);
 
     if (m_inPathLayout) {
-        m_pathLayoutBoxes.append(&textBox);
+        m_pathLayoutBoxes.append(textBox);
         return;
     }
 
-    m_lineLayoutBoxes.append(&textBox);
+    m_lineLayoutBoxes.append(textBox);
 }
 
 #if DUMP_SVG_TEXT_LAYOUT_FRAGMENTS > 0
-static inline void dumpTextBoxes(Vector<SVGInlineTextBox*>& boxes)
+static inline void dumpTextBoxes(Vector<InlineIterator::SVGTextBoxIterator>& boxes)
 {
     auto boxCount = boxes.size();
     fprintf(stderr, "Dumping all text fragments in text sub tree, %ld boxes\n", boxCount);
 
     for (unsigned boxPosition = 0; boxPosition < boxCount; ++boxPosition) {
-        SVGInlineTextBox* textBox = boxes.at(boxPosition);
+        auto textBox = boxes.at(boxPosition);
         Vector<SVGTextFragment>& fragments = textBox->textFragments();
         fprintf(stderr, "-> Box %d: Dumping text fragments for SVGInlineTextBox, textBox=%p, textRenderer=%p\n", boxPosition, textBox, &textBox->renderer());
         fprintf(stderr, "        textBox properties, start=%d, len=%d, box direction=%d\n", textBox->start(), textBox->len(), (int)textBox->direction());
         fprintf(stderr, "   textRenderer properties, textLength=%d\n", textBox->renderer().text().length());
 
-        const auto* characters = textBox->renderer().text().characters<UChar>();
+        const auto* characters = textBox->renderer().text().characters<char16_t>();
 
         unsigned fragmentCount = fragments.size();
         for (unsigned i = 0; i < fragmentCount; ++i) {
@@ -257,7 +261,7 @@ static inline void dumpTextBoxes(Vector<SVGInlineTextBox*>& boxes)
 }
 #endif
 
-void SVGTextLayoutEngine::finalizeTransformMatrices(Vector<SVGInlineTextBox*>& textBoxes)
+void SVGTextLayoutEngine::finalizeTransformMatrices(Vector<InlineIterator::SVGTextBoxIterator>& textBoxes)
 {
     if (textBoxes.isEmpty())
         return;
@@ -267,20 +271,23 @@ void SVGTextLayoutEngine::finalizeTransformMatrices(Vector<SVGInlineTextBox*>& t
             if (textBoxTransformation.isIdentity())
                 continue;
 
-        for (auto& fragment : textBox->textFragments()) {
+        auto it = m_fragmentMap.find(makeKey(*textBox));
+        if (it != m_fragmentMap.end()) {
+            for (auto& fragment : it->value) {
             ASSERT(fragment.lengthAdjustTransform.isIdentity());
             fragment.lengthAdjustTransform = textBoxTransformation;
         }
+    }
     }
 
     textBoxes.clear();
 }
 
-void SVGTextLayoutEngine::finishLayout()
+SVGTextFragmentMap SVGTextLayoutEngine::finishLayout()
 {
     // After all text fragments are stored in their correpsonding SVGInlineTextBoxes, we can layout individual text chunks.
     // Chunk layouting is only performed for line layout boxes, not for path layout, where it has already been done.
-    m_chunkLayoutBuilder.layoutTextChunks(m_lineLayoutBoxes);
+    m_chunkLayoutBuilder.layoutTextChunks(m_lineLayoutBoxes, m_lineLayoutChunkStarts, m_fragmentMap);
 
     // Finalize transform matrices, after the chunk layout corrections have been applied, and all fragment x/y positions are finalized.
     if (!m_lineLayoutBoxes.isEmpty()) {
@@ -300,6 +307,8 @@ void SVGTextLayoutEngine::finishLayout()
 
         finalizeTransformMatrices(m_pathLayoutBoxes);
     }
+
+    return WTF::move(m_fragmentMap);
 }
 
 bool SVGTextLayoutEngine::currentLogicalCharacterAttributes(SVGTextLayoutAttributes*& logicalAttributes)
@@ -353,15 +362,12 @@ bool SVGTextLayoutEngine::currentLogicalCharacterMetrics(SVGTextLayoutAttributes
     return true;
 }
 
-bool SVGTextLayoutEngine::currentVisualCharacterMetrics(const SVGInlineTextBox& textBox, Vector<SVGTextMetrics>& visualMetricsValues, SVGTextMetrics& visualMetrics)
+bool SVGTextLayoutEngine::currentVisualCharacterMetrics(const InlineIterator::SVGTextBox& textBox, const Vector<SVGTextMetrics>& visualMetricsValues, SVGTextMetrics& visualMetrics)
 {
     ASSERT(!visualMetricsValues.isEmpty());
     unsigned textMetricsSize = visualMetricsValues.size();
     unsigned boxStart = textBox.start();
-    unsigned boxLength = textBox.len();
-
-    if (m_visualMetricsListOffset == textMetricsSize)
-        return false;
+    unsigned boxLength = textBox.length();
 
     while (m_visualMetricsListOffset < textMetricsSize) {
         // Advance to text box start location.
@@ -393,27 +399,25 @@ void SVGTextLayoutEngine::advanceToNextVisualCharacter(const SVGTextMetrics& vis
     m_visualCharacterOffset += visualMetrics.length();
 }
 
-void SVGTextLayoutEngine::layoutTextOnLineOrPath(SVGInlineTextBox& textBox, RenderSVGInlineText& text, const RenderStyle& style)
+void SVGTextLayoutEngine::layoutTextOnLineOrPath(InlineIterator::SVGTextBoxIterator textBox, const RenderSVGInlineText& text, const RenderStyle& style)
 {
     if (m_inPathLayout && m_textPath.isEmpty())
         return;
 
     RenderElement* textParent = text.parent();
     ASSERT(textParent);
-    SVGElement* lengthContext = downcast<SVGElement>(textParent->element());
+    RefPtr lengthContext = downcast<SVGElement>(textParent->element());
 
     bool definesTextLength = parentDefinesTextLength(textParent);
-
-    const SVGRenderStyle& svgStyle = style.svgStyle();
 
     m_visualMetricsListOffset = 0;
     m_visualCharacterOffset = 0;
 
-    Vector<SVGTextMetrics>& visualMetricsValues = text.layoutAttributes()->textMetricsValues();
+    auto& visualMetricsValues = text.layoutAttributes()->textMetricsValues();
     ASSERT(!visualMetricsValues.isEmpty());
 
     auto upconvertedCharacters = StringView(text.text()).upconvertedCharacters();
-    const UChar* characters = upconvertedCharacters;
+    auto characters = upconvertedCharacters.span();
     const FontCascade& font = style.fontCascade();
 
     SVGTextLayoutEngineSpacing spacingLayout(font);
@@ -423,14 +427,14 @@ void SVGTextLayoutEngine::layoutTextOnLineOrPath(SVGInlineTextBox& textBox, Rend
     bool applySpacingToNextCharacter = false;
 
     float lastAngle = 0;
-    float baselineShift = baselineLayout.calculateBaselineShift(svgStyle, lengthContext);
+    float baselineShift = baselineLayout.calculateBaselineShift(style);
     baselineShift -= baselineLayout.calculateAlignmentBaselineShift(m_isVerticalText, text);
 
     // Main layout algorithm.
     while (true) {
         // Find the start of the current text box in this list, respecting ligatures.
         SVGTextMetrics visualMetrics(SVGTextMetrics::SkippedSpaceMetrics);
-        if (!currentVisualCharacterMetrics(textBox, visualMetricsValues, visualMetrics))
+        if (!currentVisualCharacterMetrics(*textBox, visualMetricsValues, visualMetrics))
             break;
 
         if (visualMetrics.isEmpty()) {
@@ -455,55 +459,71 @@ void SVGTextLayoutEngine::layoutTextOnLineOrPath(SVGInlineTextBox& textBox, Rend
 
         float x = data.x;
         float y = data.y;
+        auto previousBoxOnLine = textBox->nextLineLeftwardOnLine();
 
-        // When we've advanced to the box start offset, determine using the original x/y values
-        // whether this character starts a new text chunk before doing any further processing.
-        bool startsNewTextChunk = false;
-        if (m_visualCharacterOffset == textBox.start()) {
+        bool hasXOrY = !SVGTextLayoutAttributes::isEmptyValue(x) || !SVGTextLayoutAttributes::isEmptyValue(y);
+
+        // If we start a new chunk following an chunk that had a textLength set, use that
+        // textLength to determine the chunk start position, instead of glyph advance values.
+        auto moveToExpectedChunkStartPositionIfNeeded = [&]() {
+            if (m_inPathLayout || !m_lastChunkHasTextLength || !previousBoxOnLine)
+                return;
+
+            if (m_isVerticalText) {
+                if (!SVGTextLayoutAttributes::isEmptyValue(y))
+                    return;
+            } else {
+                if (!SVGTextLayoutAttributes::isEmptyValue(x))
+                    return;
+            }
+
+            RefPtr textContentElement = SVGTextContentElement::elementFromRenderer(&previousBoxOnLine->renderer());
+            if (!textContentElement)
+                return;
+
+            SVGLengthContext lengthContext(textContentElement.get());
+            auto specifiedTextLength = textContentElement->specifiedTextLength().value(lengthContext);
+
+            if (m_lastChunkIsVerticalText)
+                y = m_lastChunkStartPosition + specifiedTextLength;
+            else
+                x = m_lastChunkStartPosition + specifiedTextLength;
+        };
+
+        bool startsNewTextChunk = [&]() {
             // If we're at a position that could start a new text chunk, but doesn't for intrinsic reasons (no x/y information specified for the
             // current character), check further if there are other conditions met that enforce a new text chunk -- e.g. previous sibiling on the
             // same line specified 'textLength' (consider: <text><tspan textLength="100">AB</tspan> <tspan dy="1em">...
             // The space character is not allowed to be part of the 'AB' text chunk -- there is not explicit x/y given for the space character
             // but because of the textLength attribute, we have to keep the space in a separated chunk, and position it such that it renders
             // after the user-specified textLength.
-            startsNewTextChunk = logicalAttributes->context().characterStartsNewTextChunk(m_logicalCharacterOffset);
-
-            auto currentBoxOnLineHasAbsolutePosition = [&]() {
-                if (m_isVerticalText)
-                    return y != SVGTextLayoutAttributes::emptyValue();
-                return x != SVGTextLayoutAttributes::emptyValue();
-            };
+            if (logicalAttributes->context().characterStartsNewTextChunk(m_logicalCharacterOffset))
+                return true;
 
             // If we encounter an InlineTextBox that follows an InlineFlowBox with specified textLength,
             // and if the InlineTextBox content is not positioned by explicit x/y attributes, then we have
             // to correct the position of the InlineTextBox, to account for the textLength adjustments
             // that will be applied on chunk-level in the next SVG text layout phase. Failing to do so,
             // will lay out the remaining content at the nominal position, as if no textLength was given.
-            auto* previousBoxOnLine = textBox.previousOnLine();
-            if (m_lastChunkHasTextLength && previousBoxOnLine) {
-                startsNewTextChunk = true;
+            if (m_lastChunkHasTextLength && previousBoxOnLine)
+                return true;
 
-                if (!currentBoxOnLineHasAbsolutePosition()) {
-                    if (auto* textContentElement = SVGTextContentElement::elementFromRenderer(&previousBoxOnLine->renderer())) {
-                        SVGLengthContext lengthContext(textContentElement);
-                        auto specifiedTextLength = textContentElement->specifiedTextLength().value(lengthContext);
+            return false;
+        }();
 
-                        if (m_lastChunkIsVerticalText)
-                            y = m_lastChunkStartPosition + specifiedTextLength;
-                        else
-                            x = m_lastChunkStartPosition + specifiedTextLength;
-                    }
-                }
-            }
-
-            textBox.setStartsNewTextChunk(startsNewTextChunk);
+        // When we've advanced to the box start offset, determine using the original x/y values
+        // whether this character starts a new text chunk before doing any further processing.
+        if (m_visualCharacterOffset == textBox->start()) {
+            moveToExpectedChunkStartPositionIfNeeded();
+            if (startsNewTextChunk)
+                m_lineLayoutChunkStarts.add(makeKey(*textBox));
         }
 
-        float angle = data.rotate == SVGTextLayoutAttributes::emptyValue() ? 0 : data.rotate;
+        float angle = SVGTextLayoutAttributes::isEmptyValue(data.rotate) ? 0 : data.rotate;
 
         // Calculate glyph orientation angle.
-        const UChar* currentCharacter = characters + m_visualCharacterOffset;
-        float orientationAngle = baselineLayout.calculateGlyphOrientationAngle(m_isVerticalText, svgStyle, *currentCharacter);
+        const char16_t* currentCharacter = characters.subspan(m_visualCharacterOffset).data();
+        float orientationAngle = baselineLayout.calculateGlyphOrientationAngle(m_isVerticalText, style, *currentCharacter);
 
         // Calculate glyph advance & x/y orientation shifts.
         float xOrientationShift = 0;
@@ -511,20 +531,20 @@ void SVGTextLayoutEngine::layoutTextOnLineOrPath(SVGInlineTextBox& textBox, Rend
         float glyphAdvance = baselineLayout.calculateGlyphAdvanceAndOrientation(m_isVerticalText, visualMetrics, orientationAngle, xOrientationShift, yOrientationShift);
 
         // Assign current text position to x/y values, if needed.
-        updateCharacerPositionIfNeeded(x, y);
+        updateCharacterPositionIfNeeded(x, y);
 
         // Apply dx/dy value adjustments to current text position, if needed.
         updateRelativePositionAdjustmentsIfNeeded(data.dx, data.dy);
 
-        // Calculate CSS 'kerning', 'letter-spacing' and 'word-spacing' for next character, if needed.
-        float spacing = spacingLayout.calculateCSSKerningAndSpacing(&svgStyle, lengthContext, currentCharacter);
+        // Calculate CSS 'letter-spacing' and 'word-spacing' for next character, if needed.
+        float spacing = spacingLayout.calculateCSSSpacing(currentCharacter ? *currentCharacter : '\0');
 
         float textPathOffset = 0;
         if (m_inPathLayout) {
             float scaledGlyphAdvance = glyphAdvance * m_textPathScaling;
             if (m_isVerticalText) {
                 // If there's an absolute y position available, it marks the beginning of a new position along the path.
-                if (y != SVGTextLayoutAttributes::emptyValue())
+                if (!SVGTextLayoutAttributes::isEmptyValue(y))
                     m_textPathCurrentOffset = y + m_textPathStartOffset;
 
                 m_textPathCurrentOffset += m_dy;
@@ -535,7 +555,7 @@ void SVGTextLayoutEngine::layoutTextOnLineOrPath(SVGInlineTextBox& textBox, Rend
                 yOrientationShift -= scaledGlyphAdvance / 2;
             } else {
                 // If there's an absolute x position available, it marks the beginning of a new position along the path.
-                if (x != SVGTextLayoutAttributes::emptyValue())
+                if (!SVGTextLayoutAttributes::isEmptyValue(x))
                     m_textPathCurrentOffset = x + m_textPathStartOffset;
 
                 m_textPathCurrentOffset += m_dx;
@@ -594,7 +614,7 @@ void SVGTextLayoutEngine::layoutTextOnLineOrPath(SVGInlineTextBox& textBox, Rend
         }
 
         // Determine whether we have to start a new fragment.
-        bool shouldStartNewFragment = m_dx || m_dy || m_isVerticalText || m_inPathLayout || angle || angle != lastAngle
+        bool shouldStartNewFragment = hasXOrY || m_dx || m_dy || m_isVerticalText || m_inPathLayout || angle || angle != lastAngle
             || orientationAngle || applySpacingToNextCharacter || definesTextLength;
 
         // If we already started a fragment, close it now.
@@ -637,7 +657,7 @@ void SVGTextLayoutEngine::layoutTextOnLineOrPath(SVGInlineTextBox& textBox, Rend
         if (m_inPathLayout)
             updateCurrentTextPosition(x, y, glyphAdvance);
         else {
-            // Apply CSS 'kerning', 'letter-spacing' and 'word-spacing' to next character, if needed.
+            // Apply CSS 'letter-spacing' and 'word-spacing' to next character, if needed.
             if (spacing)
                 applySpacingToNextCharacter = true;
 

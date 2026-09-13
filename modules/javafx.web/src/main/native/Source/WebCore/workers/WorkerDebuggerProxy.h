@@ -30,11 +30,12 @@
 
 #pragma once
 
+#include <wtf/AbstractCanMakeCheckedPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-class WorkerDebuggerProxy {
+class WorkerDebuggerProxy : public AbstractCanMakeCheckedPtr {
 public:
     virtual ~WorkerDebuggerProxy() = default;
     virtual void postMessageToDebugger(const String&) = 0;

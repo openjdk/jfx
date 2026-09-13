@@ -28,6 +28,7 @@
 
 #include "pas_aligned_allocation_result.h"
 #include "pas_alignment.h"
+#include "pas_allocation_mode.h"
 #include "pas_allocation_result.h"
 #include "pas_bitfit_page_config.h"
 #include "pas_bitvector.h"
@@ -36,6 +37,7 @@
 #include "pas_deallocator.h"
 #include "pas_fast_megapage_table.h"
 #include "pas_heap_config_kind.h"
+#include "pas_heap_lock.h"
 #include "pas_heap_ref.h"
 #include "pas_heap_ref_kind.h"
 #include "pas_mmap_capability.h"
@@ -91,17 +93,19 @@ typedef void (*pas_heap_config_dump_shared_page_directory_arg)(
 typedef pas_allocation_result
 (*pas_heap_config_specialized_local_allocator_try_allocate_small_segregated_slow)(
     pas_local_allocator* allocator,
+    pas_allocation_mode allocation_mode,
     pas_allocator_counts* counts,
     pas_allocation_result_filter result_filter);
 typedef pas_allocation_result
 (*pas_heap_config_specialized_local_allocator_try_allocate_medium_segregated_with_free_bits)(
-    pas_local_allocator* allocator);
+    pas_local_allocator* allocator, pas_allocation_mode allocation_mode);
 typedef pas_allocation_result (*pas_heap_config_specialized_local_allocator_try_allocate_inline_cases)(
-    pas_local_allocator* allocator);
+    pas_local_allocator* allocator, pas_allocation_mode allocation_mode);
 typedef pas_allocation_result (*pas_heap_config_specialized_local_allocator_try_allocate_slow)(
     pas_local_allocator* allocator,
     size_t size,
     size_t alignment,
+    pas_allocation_mode allocation_mode,
     pas_allocator_counts* counts,
     pas_allocation_result_filter result_filter);
 typedef pas_allocation_result (*pas_heap_config_specialized_try_allocate_common_impl_slow)(
@@ -109,6 +113,7 @@ typedef pas_allocation_result (*pas_heap_config_specialized_try_allocate_common_
     pas_heap_ref_kind heap_ref_kind,
     size_t size,
     size_t alignment,
+    pas_allocation_mode allocation_mode,
     pas_heap_runtime_config* runtime_config,
     pas_allocator_counts* allocator_counts,
     pas_size_lookup_mode size_lookup_mode);
@@ -198,7 +203,30 @@ struct pas_heap_config {
 
     /* Configure whether probabilistic guard malloc may be called or not during allocation. */
     bool pgm_enabled;
+
+    /* If true, user allocations too large to be MTE-tagged will instead be
+     * allocated through the system allocator, which provides additional
+     * memory protection guarantees. */
+    bool delegate_large_user_allocations;
 };
+
+/*
+ * This is called on every heap_config at activation time,
+ * always after activate_callback is called (if present).
+ *
+ * Must be called with the heap lock held.
+ */
+static PAS_ALWAYS_INLINE void
+pas_heap_config_assert_global_invariants(pas_heap_config config)
+{
+    pas_heap_lock_assert_held();
+
+    /*
+     * Heaps that want special attributes on their memory cannot
+     * be delegated to the system allocator.
+     */
+    PAS_ASSERT(config.mmap_capability == pas_may_mmap || !config.delegate_large_user_allocations);
+}
 
 #define PAS_HEAP_CONFIG_SPECIALIZATIONS(lower_case_heap_config_name) \
     .specialized_local_allocator_try_allocate_small_segregated_slow = \
@@ -217,19 +245,23 @@ struct pas_heap_config {
 #define PAS_HEAP_CONFIG_SPECIALIZATION_DECLARATIONS(lower_case_heap_config_name) \
     PAS_API pas_allocation_result \
     lower_case_heap_config_name ## _specialized_local_allocator_try_allocate_small_segregated_slow( \
-        pas_local_allocator* allocator, pas_allocator_counts* count, \
+        pas_local_allocator* allocator, \
+        pas_allocation_mode allocation_mode, pas_allocator_counts* count, \
         pas_allocation_result_filter result_filter); \
     PAS_API pas_allocation_result \
     lower_case_heap_config_name ## _specialized_local_allocator_try_allocate_medium_segregated_with_free_bits( \
-        pas_local_allocator* allocator); \
+        pas_local_allocator* allocator, \
+        pas_allocation_mode allocation_mode); \
     PAS_API pas_allocation_result \
     lower_case_heap_config_name ## _specialized_local_allocator_try_allocate_inline_cases( \
-        pas_local_allocator* allocator); \
+        pas_local_allocator* allocator, \
+        pas_allocation_mode allocation_mode); \
     PAS_API pas_allocation_result \
     lower_case_heap_config_name ## _specialized_local_allocator_try_allocate_slow( \
         pas_local_allocator* allocator, \
         size_t size, \
         size_t alignment, \
+        pas_allocation_mode allocation_mode, \
         pas_allocator_counts* counts, \
         pas_allocation_result_filter result_filter); \
     PAS_API pas_allocation_result \
@@ -238,6 +270,7 @@ struct pas_heap_config {
         pas_heap_ref_kind heap_ref_kind, \
         size_t size, \
         size_t alignment, \
+        pas_allocation_mode allocation_mode, \
         pas_heap_runtime_config* runtime_config, \
         pas_allocator_counts* allocator_counts, \
         pas_size_lookup_mode size_lookup_mode); \

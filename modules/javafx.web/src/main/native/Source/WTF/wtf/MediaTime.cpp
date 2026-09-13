@@ -37,7 +37,7 @@
 #include <wtf/JSONValues.h>
 #include <wtf/MathExtras.h>
 #include <wtf/PrintStream.h>
-#include <wtf/text/TextStream.h>
+#include <wtf/text/MakeString.h>
 
 namespace WTF {
 
@@ -48,6 +48,9 @@ static uint32_t greatestCommonDivisor(uint32_t a, uint32_t b)
     ASSERT(a);
     ASSERT(b);
 
+    if (a == b)
+        return a;
+
     // Euclid's Algorithm
     while (b)
         b = std::exchange(a, b) % b;
@@ -56,8 +59,12 @@ static uint32_t greatestCommonDivisor(uint32_t a, uint32_t b)
     return a;
 }
 
-static uint32_t leastCommonMultiple(uint32_t a, uint32_t b, uint32_t &result)
+static bool leastCommonMultiple(uint32_t a, uint32_t b, uint32_t& result)
 {
+    if (a == b) {
+        result = a;
+        return true;
+    }
     return safeMultiply(a, b / greatestCommonDivisor(a, b), result);
 }
 
@@ -67,11 +74,6 @@ static int64_t signum(int64_t val)
 }
 
 const uint32_t MediaTime::MaximumTimeScale = 1000000000;
-
-MediaTime::MediaTime(const MediaTime& rhs)
-{
-    *this = rhs;
-}
 
 MediaTime MediaTime::createWithFloat(float floatTime)
 {
@@ -159,12 +161,20 @@ double MediaTime::toDouble() const
     return static_cast<double>(m_timeValue) / m_timeScale;
 }
 
-MediaTime& MediaTime::operator=(const MediaTime& rhs)
+int64_t MediaTime::toMicroseconds() const
 {
-    m_timeValue = rhs.m_timeValue;
-    m_timeScale = rhs.m_timeScale;
-    m_timeFlags = rhs.m_timeFlags;
-    return *this;
+    if (isInvalid() || isIndefinite())
+        return std::numeric_limits<int64_t>::quiet_NaN();
+    if (isPositiveInfinite())
+        return std::numeric_limits<int64_t>::max();
+    if (isNegativeInfinite())
+        return std::numeric_limits<int64_t>::min();
+    if (hasDoubleValue())
+        return m_timeValueAsDouble * 1000000.0;
+    auto result = CheckedInt64(m_timeValue / m_timeScale) * 1000000LL + CheckedInt64(m_timeValue % static_cast<int64_t>(m_timeScale) * 1000000LL) / static_cast<int64_t>(m_timeScale);
+    if (result.hasOverflowed())
+        return m_timeValue < 0 ? std::numeric_limits<int64_t>::min() : std::numeric_limits<int64_t>::max();
+    return result.value();
 }
 
 MediaTime MediaTime::operator+(const MediaTime& rhs) const
@@ -201,6 +211,7 @@ MediaTime MediaTime::operator+(const MediaTime& rhs) const
         commonTimeScale = MaximumTimeScale;
     a.setTimeScale(commonTimeScale);
     b.setTimeScale(commonTimeScale);
+
     while (!safeAdd(a.m_timeValue, b.m_timeValue, a.m_timeValue)) {
         if (commonTimeScale == 1)
             return a.m_timeValue > 0 ? positiveInfiniteTime() : negativeInfiniteTime();
@@ -245,6 +256,7 @@ MediaTime MediaTime::operator-(const MediaTime& rhs) const
         commonTimeScale = MaximumTimeScale;
     a.setTimeScale(commonTimeScale);
     b.setTimeScale(commonTimeScale);
+
     while (!safeSub(a.m_timeValue, b.m_timeValue, a.m_timeValue)) {
         if (commonTimeScale == 1)
             return a.m_timeValue > 0 ? positiveInfiniteTime() : negativeInfiniteTime();
@@ -327,98 +339,76 @@ MediaTime::operator bool() const
         && !isInvalid();
 }
 
-MediaTime::ComparisonFlags MediaTime::compare(const MediaTime& rhs) const
+std::partial_ordering operator<=>(const MediaTime& a, const MediaTime& b)
 {
-    auto andFlags = m_timeFlags & rhs.m_timeFlags;
-    if (andFlags & (PositiveInfinite | NegativeInfinite | Indefinite))
-        return EqualTo;
+    auto andFlags = a.m_timeFlags & b.m_timeFlags;
+    if (andFlags & (MediaTime::PositiveInfinite | MediaTime::NegativeInfinite | MediaTime::Indefinite))
+        return std::partial_ordering::equivalent;
 
-    auto orFlags = m_timeFlags | rhs.m_timeFlags;
-    if (!(orFlags & Valid))
-        return EqualTo;
+    auto orFlags = a.m_timeFlags | b.m_timeFlags;
+    if (!(orFlags & MediaTime::Valid))
+        return std::partial_ordering::equivalent;
 
-    if (!(andFlags & Valid))
-        return isInvalid() ? GreaterThan : LessThan;
+    if (!(andFlags & MediaTime::Valid))
+        return std::partial_ordering::unordered;
 
-    if (orFlags & NegativeInfinite)
-        return isNegativeInfinite() ? LessThan : GreaterThan;
+    if (orFlags & MediaTime::NegativeInfinite)
+        return a.isNegativeInfinite() ? std::partial_ordering::less : std::partial_ordering::greater;
 
-    if (orFlags & PositiveInfinite)
-        return isPositiveInfinite() ? GreaterThan : LessThan;
+    if (orFlags & MediaTime::PositiveInfinite)
+        return a.isPositiveInfinite() ? std::partial_ordering::greater : std::partial_ordering::less;
 
-    if (orFlags & Indefinite)
-        return isIndefinite() ? GreaterThan : LessThan;
+    if (orFlags & MediaTime::Indefinite)
+        return a.isIndefinite() ? std::partial_ordering::greater : std::partial_ordering::less;
 
-    if (andFlags & DoubleValue) {
-        if (m_timeValueAsDouble == rhs.m_timeValueAsDouble)
-            return EqualTo;
+    if (andFlags & MediaTime::DoubleValue)
+        return a.m_timeValueAsDouble <=> b.m_timeValueAsDouble;
 
-        return m_timeValueAsDouble < rhs.m_timeValueAsDouble ? LessThan : GreaterThan;
-    }
+    if (orFlags & MediaTime::DoubleValue)
+        return a.toDouble() <=> b.toDouble();
 
-    if (orFlags & DoubleValue) {
-        double a = toDouble();
-        double b = rhs.toDouble();
-        if (a > b)
-            return GreaterThan;
-        if (a < b)
-            return LessThan;
-        return EqualTo;
-    }
+    if ((a.m_timeValue < 0) != (b.m_timeValue < 0))
+        return a.m_timeValue < 0 ? std::weak_ordering::less : std::partial_ordering::greater;
 
-    if ((m_timeValue < 0) != (rhs.m_timeValue < 0))
-        return m_timeValue < 0 ? LessThan : GreaterThan;
+    if (!a.m_timeValue && !b.m_timeValue)
+        return std::partial_ordering::equivalent;
 
-    if (!m_timeValue && !rhs.m_timeValue)
-        return EqualTo;
+    if (a.m_timeScale == b.m_timeScale)
+        return a.m_timeValue <=> b.m_timeValue;
 
-    if (m_timeScale == rhs.m_timeScale) {
-        if (m_timeValue == rhs.m_timeValue)
-            return EqualTo;
-        return m_timeValue < rhs.m_timeValue ? LessThan : GreaterThan;
-    }
+    if (a.m_timeValue == b.m_timeValue)
+        return b.m_timeScale <=> a.m_timeScale;
 
-    if (m_timeValue == rhs.m_timeValue)
-        return m_timeScale < rhs.m_timeScale ? GreaterThan : LessThan;
+    if (a.m_timeValue >= 0) {
+        if (a.m_timeValue < b.m_timeValue && a.m_timeScale > b.m_timeScale)
+            return std::partial_ordering::less;
 
-    if (m_timeValue >= 0) {
-        if (m_timeValue < rhs.m_timeValue && m_timeScale > rhs.m_timeScale)
-            return LessThan;
-
-        if (m_timeValue > rhs.m_timeValue && m_timeScale < rhs.m_timeScale)
-            return GreaterThan;
+        if (a.m_timeValue > b.m_timeValue && a.m_timeScale < b.m_timeScale)
+            return std::partial_ordering::greater;
     } else {
-        if (m_timeValue < rhs.m_timeValue && m_timeScale < rhs.m_timeScale)
-            return LessThan;
+        if (a.m_timeValue < b.m_timeValue && a.m_timeScale < b.m_timeScale)
+            return std::partial_ordering::less;
 
-        if (m_timeValue > rhs.m_timeValue && m_timeScale > rhs.m_timeScale)
-            return GreaterThan;
+        if (a.m_timeValue > b.m_timeValue && a.m_timeScale > b.m_timeScale)
+            return std::partial_ordering::greater;
     }
 
-    int64_t lhsFactor;
-    int64_t rhsFactor;
-    if (safeMultiply(m_timeValue, static_cast<int64_t>(rhs.m_timeScale), lhsFactor)
-        && safeMultiply(rhs.m_timeValue, static_cast<int64_t>(m_timeScale), rhsFactor)) {
-        if (lhsFactor == rhsFactor)
-            return EqualTo;
-        return lhsFactor < rhsFactor ? LessThan : GreaterThan;
-    }
+    int64_t aFactor;
+    int64_t bFactor;
+    if (safeMultiply(a.m_timeValue, static_cast<int64_t>(b.m_timeScale), aFactor) && safeMultiply(b.m_timeValue, static_cast<int64_t>(a.m_timeScale), bFactor))
+        return aFactor <=> bFactor;
 
-    int64_t rhsWhole = rhs.m_timeValue / rhs.m_timeScale;
-    int64_t lhsWhole = m_timeValue / m_timeScale;
-    if (lhsWhole > rhsWhole)
-        return GreaterThan;
-    if (lhsWhole < rhsWhole)
-        return LessThan;
+    int64_t bWhole = b.m_timeValue / b.m_timeScale;
+    int64_t aWhole = a.m_timeValue / a.m_timeScale;
+    if (auto result = aWhole <=> bWhole; is_neq(result))
+        return result;
 
-    int64_t rhsRemain = rhs.m_timeValue % rhs.m_timeScale;
-    int64_t lhsRemain = m_timeValue % m_timeScale;
-    lhsFactor = lhsRemain * rhs.m_timeScale;
-    rhsFactor = rhsRemain * m_timeScale;
+    int64_t bRemain = b.m_timeValue % b.m_timeScale;
+    int64_t aRemain = a.m_timeValue % a.m_timeScale;
+    aFactor = aRemain * b.m_timeScale;
+    bFactor = bRemain * a.m_timeScale;
 
-    if (lhsFactor == rhsFactor)
-        return EqualTo;
-    return lhsFactor > rhsFactor ? GreaterThan : LessThan;
+    return aFactor <=> bFactor;
 }
 
 bool MediaTime::isBetween(const MediaTime& a, const MediaTime& b) const
@@ -481,7 +471,6 @@ void MediaTime::setTimeScale(uint32_t timeScale, RoundingFlags flags)
         return;
 
     timeScale = std::min(MaximumTimeScale, timeScale);
-
     Int128 newValue = static_cast<Int128>(m_timeValue) * timeScale;
     int64_t remainder = static_cast<int64_t>(newValue % m_timeScale);
     newValue = newValue / m_timeScale;
@@ -608,9 +597,9 @@ String MediaTimeRange::toJSONString() const
     return object->toJSONString();
 }
 
-TextStream& operator<<(TextStream& stream, const MediaTime& time)
+MediaTime MediaTime::isolatedCopy() const
 {
-    return stream << time.toJSONString();
+    return *this;
 }
 
 }

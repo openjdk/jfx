@@ -32,6 +32,7 @@
 #include "config.h"
 #include "CSSPropertySourceData.h"
 
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringHash.h>
 
@@ -84,7 +85,7 @@ String CSSPropertySourceData::toString() const
 {
     if (!name && value == "e"_s)
         return String();
-    return makeString(name, ": ", value, important ? " !important" : "", ';');
+    return makeString(name, ": "_s, value, important ? " !important"_s : ""_s, ';');
 }
 
 unsigned CSSPropertySourceData::hash() const

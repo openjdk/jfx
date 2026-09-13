@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,27 +46,31 @@ public:
     RenderTreeUpdater(Document&, Style::PostResolutionCallbackDisabler&);
     ~RenderTreeUpdater();
 
-    void commit(std::unique_ptr<const Style::Update>);
+    void commit(std::unique_ptr<Style::Update>);
 
     static void tearDownRenderers(Element&);
+    static void tearDownRenderersForShadowRootInsertion(Element&);
     static void tearDownRenderersAfterSlotChange(Element& host);
     static void tearDownRenderer(Text&);
 
 private:
     class GeneratedContent;
+    class ViewTransition;
 
     void updateRenderTree(ContainerNode& root);
-    void updateTextRenderer(Text&, const Style::TextUpdate*);
+    void updateTextRenderer(Text&, const Style::TextUpdate*, const ContainerNode* root = nullptr);
     void createTextRenderer(Text&, const Style::TextUpdate*);
     void updateElementRenderer(Element&, const Style::ElementUpdate&);
     void updateSVGRenderer(Element&);
-    void updateRendererStyle(RenderElement&, RenderStyle&&, StyleDifference);
+    void updateRendererStyle(RenderElement&, RenderStyle&&, Style::DifferenceResult);
     void updateRenderViewStyle();
     void createRenderer(Element&, RenderStyle&&);
     void updateBeforeDescendants(Element&, const Style::ElementUpdate*);
     void updateAfterDescendants(Element&, const Style::ElementUpdate*);
     bool textRendererIsNeeded(const Text& textNode);
     void storePreviousRenderer(Node&);
+
+    void destroyAndCancelAnimationsForSubtree(RenderElement&);
 
     struct Parent {
         Element* element { nullptr };
@@ -75,6 +79,7 @@ private:
 
         bool didCreateOrDestroyChildRenderer { false };
         RenderObject* previousChildRenderer { nullptr };
+        bool hasPrecedingInFlowChild { false };
 
         Parent(ContainerNode& root);
         Parent(Element&, const Style::ElementUpdate*);
@@ -83,27 +88,33 @@ private:
     Parent& renderingParent();
     RenderTreePosition& renderTreePosition();
 
-    GeneratedContent& generatedContent() { return *m_generatedContent; }
+    GeneratedContent& generatedContent() { return m_generatedContent; }
+    ViewTransition& viewTransition() { return m_viewTransition; }
 
     void pushParent(Element&, const Style::ElementUpdate*);
     void popParent();
     void popParentsToDepth(unsigned depth);
 
     // FIXME: Use OptionSet.
-    enum class TeardownType { Full, FullAfterSlotChange, RendererUpdate, RendererUpdateCancelingAnimations };
+    enum class TeardownType { Full, FullAfterSlotOrShadowRootChange, RendererUpdate, RendererUpdateCancelingAnimations };
+    static void tearDownRenderers(Element&, TeardownType);
     static void tearDownRenderers(Element&, TeardownType, RenderTreeBuilder&);
-    static void tearDownTextRenderer(Text&, RenderTreeBuilder&);
+    enum class NeedsRepaintAndLayout : bool { No, Yes };
+    static void tearDownTextRenderer(Text&, const ContainerNode* root, RenderTreeBuilder&, NeedsRepaintAndLayout = NeedsRepaintAndLayout::Yes);
     static void tearDownLeftoverChildrenOfComposedTree(Element&, RenderTreeBuilder&);
     static void tearDownLeftoverPaginationRenderersIfNeeded(Element&, RenderTreeBuilder&);
 
+    void updateRebuildRoots();
+
     RenderView& renderView();
 
-    Document& m_document;
-    std::unique_ptr<const Style::Update> m_styleUpdate;
+    const Ref<Document> m_document;
+    std::unique_ptr<Style::Update> m_styleUpdate;
 
     Vector<Parent> m_parentStack;
 
-    std::unique_ptr<GeneratedContent> m_generatedContent;
+    const UniqueRef<GeneratedContent> m_generatedContent;
+    const UniqueRef<ViewTransition> m_viewTransition;
 
     RenderTreeBuilder m_builder;
 };

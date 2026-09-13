@@ -31,11 +31,11 @@
 #pragma once
 
 #include <wtf/Forward.h>
-#include <wtf/WeakPtr.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 
 namespace WebCore {
 
-class WebSocketChannelClient : public CanMakeWeakPtr<WebSocketChannelClient> {
+class WebSocketChannelClient : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<WebSocketChannelClient, WTF::DestructionThread::Main> {
 public:
     virtual ~WebSocketChannelClient() = default;
     virtual void didConnect() = 0;

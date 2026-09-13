@@ -59,7 +59,7 @@ pas_segregated_page_config_variant_get_string(pas_segregated_page_config_variant
     case pas_medium_segregated_page_config_variant:
         return "medium";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

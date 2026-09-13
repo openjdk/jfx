@@ -28,9 +28,10 @@
 
 #pragma once
 
-#include "FloatRect.h"
-#include "IntRect.h"
+#include <WebCore/FloatRect.h>
+#include <WebCore/IntRect.h>
 #include <wtf/Forward.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WTF {
 class TextStream;
@@ -44,7 +45,7 @@ namespace WebCore {
 // mapping a rectangle through transforms. When initialized from a rect, the
 // points are in clockwise order from top left.
 class FloatQuad {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(FloatQuad);
 public:
     FloatQuad()
     {
@@ -150,6 +151,8 @@ public:
     // Note that output is undefined when all points are colinear.
     bool isCounterclockwise() const;
 
+    friend bool operator==(const FloatQuad&, const FloatQuad&) = default;
+
 private:
     FloatPoint m_p1;
     FloatPoint m_p2;
@@ -167,11 +170,6 @@ inline FloatQuad& operator-=(FloatQuad& a, const FloatSize& b)
 {
     a.move(-b.width(), -b.height());
     return a;
-}
-
-inline bool operator==(const FloatQuad& a, const FloatQuad& b)
-{
-    return a.p1() == b.p1() && a.p2() == b.p2() && a.p3() == b.p3() && a.p4() == b.p4();
 }
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const FloatQuad&);

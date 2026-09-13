@@ -25,8 +25,13 @@
 
 #pragma once
 
-#include "DestructionMode.h"
-#include "EnsureStillAliveHere.h"
+#include <JavaScriptCore/DestructionMode.h>
+#include <JavaScriptCore/EnsureStillAliveHere.h>
+#include <bit>
+#include <cstdint>
+#include <wtf/Compiler.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -53,19 +58,23 @@ public:
     enum ZapReason : int8_t { Unspecified, Destruction, StopAllocating };
     void zap(ZapReason reason)
     {
-        uint32_t* cellWords = bitwise_cast<uint32_t*>(this);
+        uint32_t* cellWords = std::bit_cast<uint32_t*>(this);
         cellWords[0] = 0;
         // Leaving cellWords[1] alone for crash analysis if needed.
         cellWords[2] = reason;
     }
-    bool isZapped() const { return !*bitwise_cast<const uint32_t*>(this); }
+    bool isZapped() const { return !*std::bit_cast<const uint32_t*>(this); }
 
-    bool isLive();
+    void notifyNeedsDestruction() const;
 
-    bool isPreciseAllocation() const;
+    // isPendingDestruction returns true iff the cell is no longer alive but has not yet
+    // been swept and therefore its destructor (if it has one) has not yet run.
+    bool isPendingDestruction();
+
+    ALWAYS_INLINE bool isPreciseAllocation() const;
     CellContainer cellContainer() const;
-    MarkedBlock& markedBlock() const;
-    PreciseAllocation& preciseAllocation() const;
+    ALWAYS_INLINE MarkedBlock& markedBlock() const;
+    ALWAYS_INLINE PreciseAllocation& preciseAllocation() const;
 
     // If you want performance and you know that your cell is small, you can do this instead:
     // ASSERT(!cell->isPreciseAllocation());
@@ -73,7 +82,7 @@ public:
     // We currently only use this hack for callees to make CallFrame::vm() fast. It's not
     // recommended to use it for too many other things, since the large allocation cutoff is
     // a runtime option and its default value is small (400 bytes).
-    Heap* heap() const;
+    JSC::Heap* heap() const;
     VM& vm() const;
 
     size_t cellSize() const;
@@ -111,3 +120,4 @@ void printInternal(PrintStream&, JSC::HeapCell::Kind);
 
 } // namespace WTF
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

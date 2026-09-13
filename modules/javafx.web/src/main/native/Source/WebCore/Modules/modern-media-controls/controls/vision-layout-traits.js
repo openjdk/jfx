@@ -27,24 +27,12 @@ class VisionLayoutTraits extends LayoutTraits
 {
     mediaControlsClass()
     {
-        if (this.isFullscreen)
-            return VisionFullscreenMediaControls;
         return VisionInlineMediaControls;
-    }
-
-    overridenSupportingObjectClasses()
-    {
-        return null;
     }
 
     resourceDirectory()
     {
         return "iOS";
-    }
-
-    controlsAlwaysAvailable()
-    {
-        return this.isFullscreen;
     }
 
     controlsNeverAvailable()

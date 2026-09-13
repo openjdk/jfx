@@ -88,12 +88,30 @@ struct _GstAllocationParams {
 /**
  * GstAllocatorFlags:
  * @GST_ALLOCATOR_FLAG_CUSTOM_ALLOC: The allocator has a custom alloc function.
+ *    Only elements designed to work with this allocator should be using it,
+ *    other elements should ignore it from allocation propositions.
+ *    This implies %GST_ALLOCATOR_FLAG_NO_COPY.
+ * @GST_ALLOCATOR_FLAG_NO_COPY: When copying a #GstMemory allocated with this
+ *    allocator, the copy will instead be allocated using the default allocator.
+ *    Use this when allocating a new memory is an heavy opperation that should
+ *    only be done with a #GstBufferPool for example. (Since: 1.24)
  * @GST_ALLOCATOR_FLAG_LAST: first flag that can be used for custom purposes
  *
  * Flags for allocators.
  */
+/**
+ * GST_ALLOCATOR_FLAG_NO_COPY:
+ *
+ * When copying a #GstMemory allocated with this allocator, the copy will
+ * instead be allocated using the default allocator. Use this when allocating a
+ * new memory is an heavy opperation that should only be done with a
+ * #GstBufferPool for example.
+ *
+ * Since: 1.24
+ */
 typedef enum {
   GST_ALLOCATOR_FLAG_CUSTOM_ALLOC  = (GST_OBJECT_FLAG_LAST << 0),
+  GST_ALLOCATOR_FLAG_NO_COPY       = (GST_OBJECT_FLAG_LAST << 1),
 
   GST_ALLOCATOR_FLAG_LAST          = (GST_OBJECT_FLAG_LAST << 16)
 } GstAllocatorFlags;
@@ -172,14 +190,14 @@ void           gst_allocator_set_default     (GstAllocator * allocator);
 /* allocation parameters */
 
 GST_API
-GstAllocationParams * gst_allocation_params_new (void) G_GNUC_MALLOC;
+GstAllocationParams * gst_allocation_params_new (void) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void           gst_allocation_params_init    (GstAllocationParams *params);
 
 GST_API
 GstAllocationParams *
-               gst_allocation_params_copy    (const GstAllocationParams *params) G_GNUC_MALLOC;
+               gst_allocation_params_copy    (const GstAllocationParams *params) G_GNUC_MALLOC G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void           gst_allocation_params_free    (GstAllocationParams *params);
@@ -188,7 +206,7 @@ void           gst_allocation_params_free    (GstAllocationParams *params);
 
 GST_API
 GstMemory *    gst_allocator_alloc           (GstAllocator * allocator, gsize size,
-                                              GstAllocationParams *params);
+                                              GstAllocationParams *params) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void           gst_allocator_free            (GstAllocator * allocator, GstMemory *memory);
@@ -196,7 +214,7 @@ void           gst_allocator_free            (GstAllocator * allocator, GstMemor
 GST_API
 GstMemory *    gst_memory_new_wrapped  (GstMemoryFlags flags, gpointer data, gsize maxsize,
                                         gsize offset, gsize size, gpointer user_data,
-                                        GDestroyNotify notify);
+                                        GDestroyNotify notify) G_GNUC_WARN_UNUSED_RESULT;
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstAllocationParams, gst_allocation_params_free)
 

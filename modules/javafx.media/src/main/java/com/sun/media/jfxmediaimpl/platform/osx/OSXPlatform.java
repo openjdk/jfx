@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,8 +32,6 @@ import com.sun.media.jfxmedia.MediaPlayer;
 import com.sun.media.jfxmedia.locator.Locator;
 import com.sun.media.jfxmedia.logging.Logger;
 import com.sun.media.jfxmediaimpl.platform.Platform;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Arrays;
 
 /**
@@ -72,20 +70,10 @@ public final class OSXPlatform extends Platform {
             // Do this early so we can report the correct content types
             boolean isLoaded = false;
             try {
-                @SuppressWarnings("removal")
-                boolean tmp = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-                    boolean avf = false;
-                    try {
-                        NativeLibLoader.loadLibrary("jfxmedia_avf");
-                        avf = true;
-                    } catch (UnsatisfiedLinkError ule) {}
+                NativeLibLoader.loadLibrary("jfxmedia_avf");
+                isLoaded = true;
+            } catch (UnsatisfiedLinkError ule) { }
 
-                    return avf;
-                });
-                isLoaded = tmp;
-            } catch (Exception e) {
-                // Ignore
-            }
             if (isLoaded) {
                 globalInstance = new OSXPlatform();
             } else {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 #include "config.h"
 
 #include "FontPlatformData.h"
+#include "FontCustomPlatformData.h"
 #include "FontDescription.h"
 #include "GraphicsContextJava.h"
 #include "NotImplemented.h"
@@ -70,7 +71,7 @@ std::unique_ptr<FontPlatformData> FontPlatformData::create(
     RefPtr<RQRef> wcFont = getJavaFont(
             family,
             fontDescription.computedSize(),
-            isItalic(fontDescription.italic()),
+            isItalic(fontDescription.fontStyleSlope()),
             fontDescription.weight() >= boldWeightValue());
     return !wcFont ? nullptr : std::make_unique<FontPlatformData>(wcFont, fontDescription.computedSize());
 }

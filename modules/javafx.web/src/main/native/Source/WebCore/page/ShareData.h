@@ -24,8 +24,9 @@
  */
 
 #pragma once
-#include "File.h"
-#include "SharedBuffer.h"
+
+#include <WebCore/File.h>
+#include <WebCore/SharedBuffer.h>
 #include <wtf/URL.h>
 
 namespace WebCore {
@@ -36,7 +37,7 @@ struct ShareData {
     String title;
     String text;
     String url;
-    Vector<RefPtr<File>> files { };
+    Vector<Ref<File>> files { };
 };
 
 struct RawFile {

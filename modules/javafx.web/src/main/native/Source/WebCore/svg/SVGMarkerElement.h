@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2006, 2007, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006 Rob Buis <buis@kde.org>
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2024 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,23 +24,26 @@
 #include "SVGElement.h"
 #include "SVGFitToViewBox.h"
 #include "SVGMarkerTypes.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class SVGMarkerElement final : public SVGElement, public SVGFitToViewBox {
-    WTF_MAKE_ISO_ALLOCATED(SVGMarkerElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGMarkerElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGMarkerElement);
 public:
     // Forward declare enumerations in the W3C naming scheme, for IDL generation.
     enum {
-        SVG_MARKERUNITS_UNKNOWN = SVGMarkerUnitsUnknown,
-        SVG_MARKERUNITS_USERSPACEONUSE = SVGMarkerUnitsUserSpaceOnUse,
-        SVG_MARKERUNITS_STROKEWIDTH = SVGMarkerUnitsStrokeWidth
+        SVG_MARKERUNITS_UNKNOWN = std::underlying_type_t<SVGMarkerUnitsType>(SVGMarkerUnitsType::Unknown),
+        SVG_MARKERUNITS_USERSPACEONUSE = std::underlying_type_t<SVGMarkerUnitsType>(SVGMarkerUnitsType::UserSpaceOnUse),
+        SVG_MARKERUNITS_STROKEWIDTH = std::underlying_type_t<SVGMarkerUnitsType>(SVGMarkerUnitsType::StrokeWidth)
     };
 
     enum {
         SVG_MARKER_ORIENT_UNKNOWN = SVGMarkerOrientUnknown,
         SVG_MARKER_ORIENT_AUTO = SVGMarkerOrientAuto,
-        SVG_MARKER_ORIENT_ANGLE = SVGMarkerOrientAngle
+        SVG_MARKER_ORIENT_ANGLE = SVGMarkerOrientAngle,
+        SVG_MARKER_ORIENT_AUTO_START_REVERSE = SVGMarkerOrientAutoStartReverse
     };
 
     static Ref<SVGMarkerElement> create(const QualifiedName&, Document&);
@@ -68,6 +71,7 @@ public:
 
     void setOrientToAuto();
     void setOrientToAngle(const SVGAngle&);
+    void setOrientToAutoStartReverse();
 
 private:
     SVGMarkerElement(const QualifiedName&, Document&);
@@ -85,11 +89,15 @@ private:
 
     bool selfHasRelativeLengths() const override;
 
+    bool supportsFocus() const final { return false; }
+
+    void invalidateMarkerResource();
+
     Ref<SVGAnimatedLength> m_refX { SVGAnimatedLength::create(this, SVGLengthMode::Width) };
     Ref<SVGAnimatedLength> m_refY { SVGAnimatedLength::create(this, SVGLengthMode::Height) };
     Ref<SVGAnimatedLength> m_markerWidth { SVGAnimatedLength::create(this, SVGLengthMode::Width, "3"_s) };
     Ref<SVGAnimatedLength> m_markerHeight { SVGAnimatedLength::create(this, SVGLengthMode::Height, "3"_s) };
-    Ref<SVGAnimatedEnumeration> m_markerUnits { SVGAnimatedEnumeration::create(this, SVGMarkerUnitsStrokeWidth) };
+    Ref<SVGAnimatedEnumeration> m_markerUnits { SVGAnimatedEnumeration::create(this, SVGMarkerUnitsType::StrokeWidth) };
     Ref<SVGAnimatedAngle> m_orientAngle { SVGAnimatedAngle::create(this) };
     Ref<SVGAnimatedOrientType> m_orientType { SVGAnimatedOrientType::create(this, SVGMarkerOrientAngle) };
 };

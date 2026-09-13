@@ -119,7 +119,7 @@ Expected<JSValue, NakedPtr<Exception>> ScriptFunctionCall::call()
 
     JSValue function = thisObject->get(m_globalObject, Identifier::fromString(vm, m_name));
     Exception* exception = scope.exception();
-    if (UNLIKELY(exception)) {
+    if (exception) [[unlikely]] {
         scope.clearException();
         return makeExceptionResult(exception);
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,52 +25,51 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import test.robot.com.sun.glass.ui.monocle.TestApplication;
-import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
-import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
+import java.util.Collection;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
-import junit.framework.Assert;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runners.Parameterized;
-
-import java.util.Collection;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import test.com.sun.glass.ui.monocle.TestRunnable;
+import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
+import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
 
-public class InputDevicePropertyTest  extends ParameterizedTestBase {
+public final class InputDevicePropertyTest extends ParameterizedTestBase {
 
-    public InputDevicePropertyTest(TestTouchDevice device) {
-        super(device);
-    }
-
-    @Parameterized.Parameters
-    public static Collection<Object[]> data() {
+    private static Collection<TestTouchDevice> parameters() {
         return TestTouchDevices.getTouchDeviceParameters(1);
     }
 
-    @Before
-    public void checkPlatform() throws Exception {
-        Assume.assumeTrue(TestApplication.isMonocle() || TestApplication.isLens());
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    public void checkPlatform(TestTouchDevice device) throws Exception {
+        createDevice(device, null);
+        Assumptions.assumeTrue(TestApplication.isMonocle() || TestApplication.isLens());
     }
 
-    @Test
-    public void testTouch() throws Exception {
-        TestRunnable.invokeAndWait(() -> Assert.assertTrue(Platform.isSupported(ConditionalFeature.INPUT_TOUCH)));
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testTouch(TestTouchDevice device) throws Exception {
+        checkPlatform(device);
+        TestRunnable.invokeAndWait(() -> Assertions.assertTrue(Platform.isSupported(ConditionalFeature.INPUT_TOUCH)));
     }
 
-    @Test
-    public void testMultiTouch() throws Exception {
-        TestRunnable.invokeAndWait(() -> Assert.assertEquals(device.getPointCount() > 1,
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testMultiTouch(TestTouchDevice device) throws Exception {
+        checkPlatform(device);
+        TestRunnable.invokeAndWait(() -> Assertions.assertEquals(device.getPointCount() > 1,
                             Platform.isSupported(
                                     ConditionalFeature.INPUT_MULTITOUCH)));
     }
 
-    @Test
-    public void testPointer() throws Exception {
-        TestRunnable.invokeAndWait(() -> Assert.assertFalse(
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testPointer(TestTouchDevice device) throws Exception {
+        checkPlatform(device);
+        TestRunnable.invokeAndWait(() -> Assertions.assertFalse(
                 Platform.isSupported(ConditionalFeature.INPUT_POINTER)));
     }
-
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,11 +32,11 @@ import javafx.beans.property.SimpleFloatProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
-import test.com.sun.javafx.binding.ErrorLoggingUtiltity;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import test.com.sun.javafx.binding.ErrorLoggingUtility;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class FloatPropertyTest {
 
@@ -48,9 +48,9 @@ public class FloatPropertyTest {
     private static final float DEFAULT = 0.0f;
     private static final float EPSILON = 1e-6f;
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() {
-        ErrorLoggingUtiltity.reset();
+        ErrorLoggingUtility.reset();
     }
 
     @Test
@@ -58,7 +58,7 @@ public class FloatPropertyTest {
         final FloatProperty p = new SimpleFloatProperty(VALUE_1);
         p.setValue(null);
         assertEquals(DEFAULT, p.get(), EPSILON);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
+        ErrorLoggingUtility.checkFine(NullPointerException.class);
     }
 
     @Test

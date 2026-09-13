@@ -32,12 +32,8 @@
 
 namespace JSC {
 
-namespace GetterSetterAccessCaseInternal {
-static constexpr bool verbose = false;
-}
-
 GetterSetterAccessCase::GetterSetterAccessCase(VM& vm, JSCell* owner, AccessType accessType, CacheableIdentifier identifier, PropertyOffset offset, Structure* structure, const ObjectPropertyConditionSet& conditionSet, bool viaGlobalProxy, WatchpointSet* additionalSet, JSObject* customSlotBase, RefPtr<PolyProtoAccessChain>&& prototypeAccessChain)
-    : Base(vm, owner, accessType, identifier, offset, structure, conditionSet, viaGlobalProxy, additionalSet, WTFMove(prototypeAccessChain))
+    : Base(vm, owner, accessType, identifier, offset, structure, conditionSet, viaGlobalProxy, additionalSet, WTF::move(prototypeAccessChain))
 {
     m_customSlotBase.setMayBeNull(vm, owner, customSlotBase);
 }
@@ -48,7 +44,7 @@ Ref<AccessCase> GetterSetterAccessCase::create(
     std::optional<DOMAttributeAnnotation> domAttribute, RefPtr<PolyProtoAccessChain>&& prototypeAccessChain)
 {
     ASSERT(type == Getter || type == CustomValueGetter || type == CustomAccessorGetter);
-    auto result = adoptRef(*new GetterSetterAccessCase(vm, owner, type, identifier, offset, structure, conditionSet, viaGlobalProxy, additionalSet, customSlotBase, WTFMove(prototypeAccessChain)));
+    auto result = adoptRef(*new GetterSetterAccessCase(vm, owner, type, identifier, offset, structure, conditionSet, viaGlobalProxy, additionalSet, customSlotBase, WTF::move(prototypeAccessChain)));
     result->m_domAttribute = domAttribute;
     if (customGetter)
         result->m_customAccessor = customGetter;
@@ -60,7 +56,7 @@ Ref<AccessCase> GetterSetterAccessCase::create(VM& vm, JSCell* owner, AccessType
     CodePtr<CustomAccessorPtrTag> customSetter, JSObject* customSlotBase)
 {
     ASSERT(type == Setter || type == CustomValueSetter || type == CustomAccessorSetter);
-    auto result = adoptRef(*new GetterSetterAccessCase(vm, owner, type, identifier, offset, structure, conditionSet, viaGlobalProxy, nullptr, customSlotBase, WTFMove(prototypeAccessChain)));
+    auto result = adoptRef(*new GetterSetterAccessCase(vm, owner, type, identifier, offset, structure, conditionSet, viaGlobalProxy, nullptr, customSlotBase, WTF::move(prototypeAccessChain)));
     if (customSetter)
         result->m_customAccessor = customSetter;
     return result;
@@ -74,33 +70,17 @@ GetterSetterAccessCase::GetterSetterAccessCase(const GetterSetterAccessCase& oth
     m_domAttribute = other.m_domAttribute;
 }
 
-Ref<AccessCase> GetterSetterAccessCase::cloneImpl() const
+JSObject* GetterSetterAccessCase::tryGetAlternateBaseImpl() const
 {
-    auto result = adoptRef(*new GetterSetterAccessCase(*this));
-    result->resetState();
-    return result;
-}
-
-bool GetterSetterAccessCase::hasAlternateBaseImpl() const
-{
-    if (customSlotBase())
-        return true;
-    return Base::hasAlternateBaseImpl();
-}
-
-JSObject* GetterSetterAccessCase::alternateBaseImpl() const
-{
-    if (customSlotBase())
-        return customSlotBase();
-    return Base::alternateBaseImpl();
+    if (auto* object = customSlotBase())
+        return object;
+    return Base::tryGetAlternateBaseImpl();
 }
 
 void GetterSetterAccessCase::dumpImpl(PrintStream& out, CommaPrinter& comma, Indenter& indent) const
 {
     Base::dumpImpl(out, comma, indent);
     out.print(comma, "customSlotBase = ", RawPointer(customSlotBase()));
-    if (callLinkInfo())
-        out.print(comma, "callLinkInfo = ", RawPointer(callLinkInfo()));
     out.print(comma, "customAccessor = ", RawPointer(m_customAccessor.taggedPtr()));
 }
 

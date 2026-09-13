@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2004-2023 Apple Inc. All rights reserved.
- * Copyright (C) 2015 Google Inc. All rights reserved.
+ * Copyright (C) 2015-2018 Google Inc. All rights reserved.
  * Copyright (C) 2005 Alexey Proskuryakov.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,15 +28,18 @@
 #include "config.h"
 #include "TextIterator.h"
 
+#include "BoundaryPointInlines.h"
 #include "ComposedTreeIterator.h"
 #include "Document.h"
 #include "Editing.h"
 #include "ElementInlines.h"
 #include "ElementRareData.h"
 #include "FontCascade.h"
+#include "HTMLAttachmentElement.h"
 #include "HTMLBodyElement.h"
 #include "HTMLElement.h"
 #include "HTMLFrameOwnerElement.h"
+#include "HTMLImageElement.h"
 #include "HTMLInputElement.h"
 #include "HTMLLegendElement.h"
 #include "HTMLMeterElement.h"
@@ -48,11 +51,14 @@
 #include "HTMLTextFormControlElement.h"
 #include "ImageOverlay.h"
 #include "LocalFrame.h"
+#include "NodeInlines.h"
 #include "NodeTraversal.h"
 #include "Range.h"
 #include "RenderBoxInlines.h"
+#include "RenderElementInlines.h"
 #include "RenderImage.h"
 #include "RenderIterator.h"
+#include "RenderObjectInlines.h"
 #include "RenderTableCell.h"
 #include "RenderTableRow.h"
 #include "RenderTextControl.h"
@@ -65,7 +71,11 @@
 #include "VisibleUnits.h"
 #include <unicode/unorm2.h>
 #include <wtf/Function.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/MakeString.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextBreakIterator.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -77,6 +87,8 @@
 #endif
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextIterator);
 
 using namespace WTF::Unicode;
 using namespace HTMLNames;
@@ -107,7 +119,7 @@ public:
 #if !UCONFIG_NO_COLLATION
 
 private:
-    bool isBadMatch(const UChar*, size_t length) const;
+    bool isBadMatch(const char16_t*, size_t length) const;
     bool isWordStartMatch(size_t start, size_t length) const;
     bool isWordEndMatch(size_t start, size_t length) const;
 
@@ -115,26 +127,26 @@ private:
     const StringView::UpconvertedCharacters m_targetCharacters;
     FindOptions m_options;
 
-    Vector<UChar> m_buffer;
+    Vector<char16_t> m_buffer;
     size_t m_overlap;
     size_t m_prefixLength;
     bool m_atBreak;
     bool m_needsMoreContext;
 
     const bool m_targetRequiresKanaWorkaround;
-    Vector<UChar> m_normalizedTarget;
-    mutable Vector<UChar> m_normalizedMatch;
+    Vector<char16_t> m_normalizedTarget;
+    mutable Vector<char16_t> m_normalizedMatch;
 
 #else
 
 private:
-    void append(UChar, bool isCharacterStart);
+    void append(char16_t, bool isCharacterStart);
     size_t length() const;
 
     String m_target;
     FindOptions m_options;
 
-    Vector<UChar> m_buffer;
+    Vector<char16_t> m_buffer;
     Vector<bool> m_isCharacterStartBuffer;
     bool m_isBufferFull;
     size_t m_cursor;
@@ -182,68 +194,70 @@ bool BitStack::top() const
 // --------
 
 // This function is like Range::pastLastNode, except for the fact that it can climb up out of shadow trees.
-static Node* nextInPreOrderCrossingShadowBoundaries(Node& rangeEndContainer, int rangeEndOffset)
+static RefPtr<Node> nextInPreOrderCrossingShadowBoundaries(Node& rangeEndContainer, int rangeEndOffset)
 {
     if (rangeEndOffset >= 0 && !rangeEndContainer.isCharacterDataNode()) {
-        if (Node* next = rangeEndContainer.traverseToChildAt(rangeEndOffset))
+        if (RefPtr next = rangeEndContainer.traverseToChildAt(rangeEndOffset))
             return next;
     }
-    for (Node* node = &rangeEndContainer; node; node = node->parentOrShadowHostNode()) {
-        if (Node* next = node->nextSibling())
+    for (RefPtr node = rangeEndContainer; node; node = node->parentOrShadowHostNode()) {
+        if (RefPtr next = node->nextSibling())
             return next;
     }
     return nullptr;
 }
 
-static inline bool fullyClipsContents(Node& node)
+static inline bool fullyClipsContents(const Node& node, TextIteratorBehaviors behaviors)
 {
-    auto* renderer = node.renderer();
+    CheckedPtr renderer = node.renderer();
     if (!renderer) {
-        if (!is<Element>(node))
-            return false;
-        return !downcast<Element>(node).hasDisplayContents();
+        RefPtr element = dynamicDowncast<Element>(node);
+        return element && !element->hasDisplayContents();
     }
-    if (!is<RenderBox>(*renderer))
-        return false;
-    auto& box = downcast<RenderBox>(*renderer);
-    if (!box.hasNonVisibleOverflow())
+    CheckedPtr box = dynamicDowncast<RenderBox>(*renderer);
+    if (!box || !box->hasNonVisibleOverflow())
         return false;
 
     // Quirk to keep copy/paste in the CodeMirror editor version used in Jenkins working.
     if (is<HTMLTextAreaElement>(node))
-        return box.size().isEmpty();
+        return box->size().isEmpty();
 
-    return box.contentSize().isEmpty();
-}
-
-static inline bool ignoresContainerClip(Node& node)
-{
-    auto* renderer = node.renderer();
-    if (!renderer || renderer->isTextOrLineBreak())
+    if (behaviors.contains(TextIteratorBehavior::EntersSkippedContentRelevantToUser) && isSkippedContentRoot(*box)) {
+        // This may reveal collapsed content to find-in-page, but it's uncommon (and highly redundant) to have computed block height 0px while applying c-v: hidden.
         return false;
-    return renderer->style().hasOutOfFlowPosition();
+    }
+
+    return box->contentBoxSize().isEmpty();
 }
 
-static void pushFullyClippedState(BitStack& stack, Node& node)
+static inline bool ignoresContainerClip(const Node& node)
+{
+    CheckedPtr renderer = node.renderer();
+    if (!renderer || renderer->isRenderTextOrLineBreak())
+        return false;
+    return renderer->isOutOfFlowPositioned();
+}
+
+static void pushFullyClippedState(BitStack& stack, Node& node, TextIteratorBehaviors behaviors)
 {
     // Push true if this node full clips its contents, or if a parent already has fully
     // clipped and this is not a node that ignores its container's clip.
-    stack.push(fullyClipsContents(node) || (stack.top() && !ignoresContainerClip(node)));
+    stack.push(fullyClipsContents(node, behaviors) || (stack.top() && !ignoresContainerClip(node)));
 }
 
-static void setUpFullyClippedStack(BitStack& stack, Node& node)
+static void setUpFullyClippedStack(BitStack& stack, Node& node, TextIteratorBehaviors behaviors)
 {
     // Put the nodes in a vector so we can iterate in reverse order.
     // FIXME: This (and TextIterator in general) should use ComposedTreeIterator.
-    Vector<Node*, 100> ancestry;
-    for (Node* parent = node.parentOrShadowHostNode(); parent; parent = parent->parentOrShadowHostNode())
-        ancestry.append(parent);
+    Vector<Ref<Node>, 100> ancestry;
+    for (RefPtr parent = node.parentOrShadowHostNode(); parent; parent = parent->parentOrShadowHostNode())
+        ancestry.append(*parent);
 
     // Call pushFullyClippedState on each node starting with the earliest ancestor.
     size_t size = ancestry.size();
     for (size_t i = 0; i < size; ++i)
-        pushFullyClippedState(stack, *ancestry[size - i - 1]);
-    pushFullyClippedState(stack, node);
+        pushFullyClippedState(stack, ancestry[size - i - 1], behaviors);
+    pushFullyClippedState(stack, node, behaviors);
 }
 
 static bool isClippedByFrameAncestor(const Document& document, TextIteratorBehaviors behaviors)
@@ -251,9 +265,9 @@ static bool isClippedByFrameAncestor(const Document& document, TextIteratorBehav
     if (!behaviors.contains(TextIteratorBehavior::ClipsToFrameAncestors))
         return false;
 
-    for (auto* owner = document.ownerElement(); owner; owner = owner->document().ownerElement()) {
+    for (RefPtr owner = document.ownerElement(); owner; owner = owner->document().ownerElement()) {
         BitStack ownerClipStack;
-        setUpFullyClippedStack(ownerClipStack, *owner);
+        setUpFullyClippedStack(ownerClipStack, *owner, behaviors);
         if (ownerClipStack.top())
             return true;
     }
@@ -269,20 +283,19 @@ bool isRendererReplacedElement(RenderObject* renderer, TextIteratorBehaviors beh
 
     bool isAttachment = false;
 #if ENABLE(ATTACHMENT_ELEMENT)
-    isAttachment = renderer->isAttachment();
+    isAttachment = renderer->isRenderAttachment();
 #endif
-    if (renderer->isImage() || renderer->isWidget() || renderer->isMedia() || isAttachment)
+    if (renderer->isImage() || renderer->isRenderWidget() || renderer->isRenderMedia() || isAttachment)
         return true;
 
-    if (is<Element>(renderer->node())) {
-        Element& element = downcast<Element>(*renderer->node());
-        if (is<HTMLFormControlElement>(element) || is<HTMLLegendElement>(element) || is<HTMLProgressElement>(element) || element.hasTagName(meterTag))
+    if (RefPtr element = dynamicDowncast<Element>(renderer->node())) {
+        if (is<HTMLFormControlElement>(*element) || is<HTMLLegendElement>(*element) || is<HTMLProgressElement>(*element) || element->hasTagName(meterTag))
             return true;
-        if (equalLettersIgnoringASCIICase(element.attributeWithoutSynchronization(roleAttr), "img"_s))
+        if (equalLettersIgnoringASCIICase(element->attributeWithoutSynchronization(roleAttr), "img"_s))
             return true;
 #if USE(ATSPI)
         // Links are also replaced with object replacement character in ATSPI.
-        if (behaviors.contains(TextIteratorBehavior::EmitsObjectReplacementCharacters) && element.isLink())
+        if (behaviors.contains(TextIteratorBehavior::EmitsObjectReplacementCharacters) && element->isLink())
             return true;
 #else
         UNUSED_PARAM(behaviors);
@@ -305,7 +318,7 @@ inline void TextIteratorCopyableText::reset()
 inline void TextIteratorCopyableText::set(String&& string)
 {
     m_singleCharacter = 0;
-    m_string = WTFMove(string);
+    m_string = WTF::move(string);
     m_offset = 0;
     m_length = m_string.length();
 }
@@ -317,12 +330,12 @@ inline void TextIteratorCopyableText::set(String&& string, unsigned offset, unsi
     ASSERT(length <= string.length() - offset);
 
     m_singleCharacter = 0;
-    m_string = WTFMove(string);
+    m_string = WTF::move(string);
     m_offset = offset;
     m_length = length;
 }
 
-inline void TextIteratorCopyableText::set(UChar singleCharacter)
+inline void TextIteratorCopyableText::set(char16_t singleCharacter)
 {
     m_singleCharacter = singleCharacter;
     m_string = String();
@@ -344,7 +357,7 @@ static Node* firstNode(const BoundaryPoint& point)
 {
     if (point.container->isCharacterDataNode())
         return point.container.ptr();
-    if (Node* child = point.container->traverseToChildAt(point.offset))
+    if (auto* child = point.container->traverseToChildAt(point.offset))
         return child;
     if (!point.offset)
         return point.container.ptr();
@@ -354,15 +367,17 @@ static Node* firstNode(const BoundaryPoint& point)
 TextIterator::TextIterator(const SimpleRange& range, TextIteratorBehaviors behaviors)
     : m_behaviors(behaviors)
 {
-    range.start.document().updateLayoutIgnorePendingStylesheets();
+    ASSERT(!m_behaviors.contains(TextIteratorBehavior::EmitsObjectReplacementCharacters) || !m_behaviors.contains(TextIteratorBehavior::EmitsObjectReplacementCharactersForImages));
+
+    range.start.protectedDocument()->updateLayoutIgnorePendingStylesheets();
 
     m_startContainer = range.start.container.ptr();
     m_startOffset = range.start.offset;
     m_endContainer = range.end.container.ptr();
     m_endOffset = range.end.offset;
 
-    m_node = firstNode(range.start);
-    if (!m_node)
+    m_currentNode = firstNode(range.start);
+    if (!m_currentNode)
         return;
 
     init();
@@ -370,16 +385,17 @@ TextIterator::TextIterator(const SimpleRange& range, TextIteratorBehaviors behav
 
 void TextIterator::init()
 {
-    if (isClippedByFrameAncestor(m_node->document(), m_behaviors))
+    RefPtr currentNode = m_currentNode;
+    if (isClippedByFrameAncestor(currentNode->protectedDocument(), m_behaviors))
         return;
 
-    setUpFullyClippedStack(m_fullyClippedStack, *m_node);
+    setUpFullyClippedStack(m_fullyClippedStack, *currentNode, m_behaviors);
 
-    m_offset = m_node == m_startContainer ? m_startOffset : 0;
+    m_offset = currentNode == m_startContainer.get() ? m_startOffset : 0;
 
     m_pastEndNode = nextInPreOrderCrossingShadowBoundaries(*m_endContainer, m_endOffset);
 
-    m_positionNode = m_node;
+    m_positionNode = currentNode.get();
 
     advance();
 }
@@ -389,47 +405,72 @@ TextIterator::~TextIterator() = default;
 // FIXME: Use ComposedTreeIterator instead. These functions are more expensive because they might do O(n) work.
 static inline Node* firstChild(TextIteratorBehaviors options, Node& node)
 {
-    if (UNLIKELY(options.contains(TextIteratorBehavior::TraversesFlatTree)))
+    if (options.contains(TextIteratorBehavior::TraversesFlatTree)) [[unlikely]]
         return firstChildInComposedTreeIgnoringUserAgentShadow(node);
     return node.firstChild();
 }
 
 static inline Node* nextSibling(TextIteratorBehaviors options, Node& node)
 {
-    if (UNLIKELY(options.contains(TextIteratorBehavior::TraversesFlatTree)))
+    if (options.contains(TextIteratorBehavior::TraversesFlatTree)) [[unlikely]]
         return nextSiblingInComposedTreeIgnoringUserAgentShadow(node);
     return node.nextSibling();
 }
 
 static inline Node* nextNode(TextIteratorBehaviors options, Node& node)
 {
-    if (UNLIKELY(options.contains(TextIteratorBehavior::TraversesFlatTree)))
+    if (options.contains(TextIteratorBehavior::TraversesFlatTree)) [[unlikely]]
         return nextInComposedTreeIgnoringUserAgentShadow(node);
     return NodeTraversal::next(node);
 }
 
 static inline bool isDescendantOf(TextIteratorBehaviors options, Node& node, Node& possibleAncestor)
 {
-    if (UNLIKELY(options.contains(TextIteratorBehavior::TraversesFlatTree)))
-        return node.isDescendantOrShadowDescendantOf(&possibleAncestor);
+    if (options.contains(TextIteratorBehavior::TraversesFlatTree)) [[unlikely]]
+        return node.isShadowIncludingDescendantOf(&possibleAncestor);
     return node.isDescendantOf(&possibleAncestor);
 }
 
 static inline Node* parentNodeOrShadowHost(TextIteratorBehaviors options, Node& node)
 {
-    if (UNLIKELY(options.contains(TextIteratorBehavior::TraversesFlatTree)))
+    if (options.contains(TextIteratorBehavior::TraversesFlatTree)) [[unlikely]]
         return node.parentInComposedTree();
     return node.parentOrShadowHostNode();
 }
 
 static inline bool hasDisplayContents(Node& node)
 {
-    return is<Element>(node) && downcast<Element>(node).hasDisplayContents();
+    RefPtr element = dynamicDowncast<Element>(node);
+    return element && element->hasDisplayContents();
 }
 
-static bool isRendererVisible(const RenderObject* renderer, TextIteratorBehaviors behaviors)
+static bool isRendererAccessible(const RenderObject* renderer, TextIteratorBehaviors behaviors)
 {
-    return renderer && !(renderer->style().effectiveUserSelect() == UserSelect::None && behaviors.contains(TextIteratorBehavior::IgnoresUserSelectNone));
+    if (!renderer)
+        return false;
+
+    auto& style = renderer->style();
+    if (style.usedUserSelect() == UserSelect::None && behaviors.contains(TextIteratorBehavior::IgnoresUserSelectNone))
+        return false;
+
+    if (renderer->isSkippedContent()) {
+        if (!behaviors.contains(TextIteratorBehavior::EntersSkippedContentRelevantToUser))
+            return false;
+        return style.usedContentVisibility() == ContentVisibility::Auto || style.autoRevealsWhenFound();
+    }
+
+    return true;
+}
+
+static bool isConsideredSkippedContent(const RenderBox* renderBox, TextIteratorBehaviors behaviors)
+{
+    if (!renderBox || !isSkippedContentRoot(*renderBox))
+        return false;
+
+    if (behaviors.contains(TextIteratorBehavior::EntersSkippedContentRelevantToUser))
+        return renderBox->style().usedContentVisibility() == ContentVisibility::Hidden && !renderBox->style().autoRevealsWhenFound();
+
+    return true;
 }
 
 void TextIterator::advance()
@@ -442,15 +483,15 @@ void TextIterator::advance()
     m_text = StringView();
 
     // handle remembered node that needed a newline after the text node's newline
-    if (m_nodeForAdditionalNewline) {
+    if (RefPtr nodeForAdditionalNewline = std::exchange(m_nodeForAdditionalNewline, nullptr).get()) {
         // Emit the extra newline, and position it *inside* m_node, after m_node's
         // contents, in case it's a block, in the same way that we position the first
         // newline. The range for the emitted newline should start where the line
         // break begins.
         // FIXME: It would be cleaner if we emitted two newlines during the last
         // iteration, instead of using m_needsAnotherNewline.
-        emitCharacter('\n', *m_nodeForAdditionalNewline->parentNode(), m_nodeForAdditionalNewline, 1, 1);
-        m_nodeForAdditionalNewline = nullptr;
+        RefPtr parentNode = nodeForAdditionalNewline->parentNode();
+        emitCharacter('\n', WTF::move(parentNode), WTF::move(nodeForAdditionalNewline), 1, 1);
         return;
     }
 
@@ -464,29 +505,28 @@ void TextIterator::advance()
             return;
     }
 
-    while (m_node && m_node != m_pastEndNode) {
+    while (m_currentNode && m_currentNode != m_pastEndNode) {
         // if the range ends at offset 0 of an element, represent the
         // position, but not the content, of that element e.g. if the
         // node is a blockflow element, emit a newline that
         // precedes the element
-        if (m_node == m_endContainer && !m_endOffset) {
+        if (m_currentNode == m_endContainer && !m_endOffset) {
             representNodeOffsetZero();
-            m_node = nullptr;
+            m_currentNode = nullptr;
             return;
         }
 
-        auto* renderer = m_node->renderer();
+        CheckedPtr renderer = m_currentNode->renderer();
         if (!m_handledNode) {
-            if (!isRendererVisible(renderer, m_behaviors)) {
+            if (!isRendererAccessible(renderer.get(), m_behaviors)) {
                 m_handledNode = true;
-                m_handledChildren = !hasDisplayContents(*m_node) && !renderer;
-            } else if (is<Element>(m_node) && renderer->isSkippedContentRoot()) {
-                m_handledChildren = true;
+                m_handledChildren = !hasDisplayContents(*protectedCurrentNode()) && !renderer;
             } else {
-                // handle current node according to its type
-                if (renderer->isText() && m_node->isTextNode())
+                if (isConsideredSkippedContent(dynamicDowncast<RenderBox>(renderer.get()), m_behaviors))
+                m_handledChildren = true;
+                else if (renderer->isRenderText() && m_currentNode->isTextNode())
                     m_handledNode = handleTextNode();
-                else if (isRendererReplacedElement(renderer, m_behaviors))
+                else if (isRendererReplacedElement(renderer.get(), m_behaviors))
                     m_handledNode = handleReplacedElement();
                 else
                     m_handledNode = handleNonTextNode();
@@ -497,40 +537,43 @@ void TextIterator::advance()
 
         // find a new current node to handle in depth-first manner,
         // calling exitNode() as we come back thru a parent node
-        Node* next = m_handledChildren ? nullptr : firstChild(m_behaviors, *m_node);
+
+        RefPtr next = m_handledChildren ? nullptr : firstChild(m_behaviors, *protectedCurrentNode());
         m_offset = 0;
         if (!next) {
-            next = nextSibling(m_behaviors, *m_node);
+            RefPtr currentNode = m_currentNode;
+            next = nextSibling(m_behaviors, *currentNode);
             if (!next) {
-                bool pastEnd = nextNode(m_behaviors, *m_node) == m_pastEndNode;
-                Node* parentNode = parentNodeOrShadowHost(m_behaviors, *m_node);
+                bool pastEnd = nextNode(m_behaviors, *currentNode) == m_pastEndNode;
+                RefPtr parentNode = parentNodeOrShadowHost(m_behaviors, *currentNode);
                 while (!next && parentNode) {
-                    if ((pastEnd && parentNode == m_endContainer) || isDescendantOf(m_behaviors, *m_endContainer, *parentNode))
+                    if ((pastEnd && parentNode == m_endContainer.get()) || isDescendantOf(m_behaviors, *m_endContainer, *parentNode))
                         return;
-                    bool haveRenderer = isRendererVisible(m_node->renderer(), m_behaviors);
-                    Node* exitedNode = m_node;
-                    m_node = parentNode;
+                    bool haveRenderer = isRendererAccessible(currentNode->renderer(), m_behaviors);
+                    RefPtr exitedNode = WTF::move(currentNode);
+                    m_currentNode = WTF::move(parentNode);
+                    currentNode = m_currentNode;
                     m_fullyClippedStack.pop();
-                    parentNode = parentNodeOrShadowHost(m_behaviors, *m_node);
+                    parentNode = parentNodeOrShadowHost(m_behaviors, *currentNode);
                     if (haveRenderer)
-                        exitNode(exitedNode);
+                        exitNode(exitedNode.get());
                     if (m_positionNode) {
                         m_handledNode = true;
                         m_handledChildren = true;
                         return;
                     }
-                    next = nextSibling(m_behaviors, *m_node);
-                    if (next && isRendererVisible(m_node->renderer(), m_behaviors))
-                        exitNode(m_node);
+                    next = nextSibling(m_behaviors, *currentNode);
+                    if (next && isRendererAccessible(currentNode->renderer(), m_behaviors))
+                        exitNode(currentNode.get());
                 }
             }
             m_fullyClippedStack.pop();
         }
 
         // set the new current node
-        m_node = next;
-        if (m_node)
-            pushFullyClippedState(m_fullyClippedStack, *m_node);
+        m_currentNode = WTF::move(next);
+        if (RefPtr currentNode = m_currentNode)
+            pushFullyClippedState(m_fullyClippedStack, *currentNode, m_behaviors);
         m_handledNode = false;
         m_handledChildren = false;
         m_handledFirstLetter = false;
@@ -546,8 +589,8 @@ static bool hasVisibleTextNode(RenderText& renderer)
 {
     if (renderer.style().visibility() == Visibility::Visible)
         return true;
-    if (is<RenderTextFragment>(renderer)) {
-        if (auto firstLetter = downcast<RenderTextFragment>(renderer).firstLetter()) {
+    if (CheckedPtr renderTextFragment = dynamicDowncast<RenderTextFragment>(renderer)) {
+        if (auto firstLetter = renderTextFragment->firstLetter()) {
             if (firstLetter->style().visibility() == Visibility::Visible)
                 return true;
         }
@@ -557,24 +600,24 @@ static bool hasVisibleTextNode(RenderText& renderer)
 
 bool TextIterator::handleTextNode()
 {
-    Text& textNode = downcast<Text>(*m_node);
+    Ref textNode = downcast<Text>(protectedCurrentNode().releaseNonNull());
 
     if (m_fullyClippedStack.top() && !m_behaviors.contains(TextIteratorBehavior::IgnoresStyleVisibility))
         return false;
 
-    auto& renderer = *textNode.renderer();
-    m_lastTextNode = &textNode;
-    String rendererText = renderer.text();
+    CheckedRef renderer = *textNode->renderer();
+    m_lastTextNode = textNode.ptr();
+    auto rendererText = rendererTextForBehavior(renderer.get());
 
     // handle pre-formatted text
-    if (!renderer.style().collapseWhiteSpace()) {
+    if (!renderer->style().collapseWhiteSpace()) {
         int runStart = m_offset;
         if (m_lastTextNodeEndedWithCollapsedSpace && hasVisibleTextNode(renderer)) {
-            emitCharacter(' ', textNode, nullptr, runStart, runStart);
+            emitCharacter(' ', WTF::move(textNode), nullptr, runStart, runStart);
             return false;
         }
-        if (!m_handledFirstLetter && is<RenderTextFragment>(renderer) && !m_offset) {
-            handleTextNodeFirstLetter(downcast<RenderTextFragment>(renderer));
+        if (CheckedPtr renderTextFragment = dynamicDowncast<RenderTextFragment>(renderer); renderTextFragment && !m_handledFirstLetter && !m_offset) {
+            handleTextNodeFirstLetter(*renderTextFragment);
             if (m_firstLetterText) {
                 String firstLetter = m_firstLetterText->text();
                 emitText(textNode, *m_firstLetterText, m_offset, m_offset + firstLetter.length());
@@ -583,10 +626,10 @@ bool TextIterator::handleTextNode()
                 return false;
             }
         }
-        if (renderer.style().visibility() != Visibility::Visible && !m_behaviors.contains(TextIteratorBehavior::IgnoresStyleVisibility))
+        if (renderer->style().visibility() != Visibility::Visible && !m_behaviors.contains(TextIteratorBehavior::IgnoresStyleVisibility))
             return false;
         int rendererTextLength = rendererText.length();
-        int end = (&textNode == m_endContainer) ? m_endOffset : INT_MAX;
+        int end = (textNode.ptr() == m_endContainer) ? m_endOffset : INT_MAX;
         int runEnd = std::min(rendererTextLength, end);
 
         if (runStart >= runEnd)
@@ -596,14 +639,12 @@ bool TextIterator::handleTextNode()
         return true;
     }
 
-    std::tie(m_textRun, m_textRunLogicalOrderCache) = InlineIterator::firstTextBoxInLogicalOrderFor(renderer);
+    std::tie(m_textRun, m_textRunLogicalOrderCache) = InlineIterator::firstTextBoxInLogicalOrderFor(renderer.get());
 
-    bool shouldHandleFirstLetter = !m_handledFirstLetter && is<RenderTextFragment>(renderer) && !m_offset;
-    if (shouldHandleFirstLetter)
-        handleTextNodeFirstLetter(downcast<RenderTextFragment>(renderer));
-
-    if (!m_textRun && rendererText.length() && !shouldHandleFirstLetter) {
-        if (renderer.style().visibility() != Visibility::Visible && !m_behaviors.contains(TextIteratorBehavior::IgnoresStyleVisibility))
+    if (CheckedPtr renderTextFragment = dynamicDowncast<RenderTextFragment>(renderer); renderTextFragment && !m_handledFirstLetter && !m_offset)
+        handleTextNodeFirstLetter(*renderTextFragment);
+    else if (!m_textRun && rendererText.length()) {
+        if (renderer->style().visibility() != Visibility::Visible && !m_behaviors.contains(TextIteratorBehavior::IgnoresStyleVisibility))
             return false;
         m_lastTextNodeEndedWithCollapsedSpace = true; // entire block is collapsed space
         return true;
@@ -615,56 +656,55 @@ bool TextIterator::handleTextNode()
 
 void TextIterator::handleTextRun()
 {
-    Text& textNode = downcast<Text>(*m_node);
+    Ref textNode = downcast<Text>(protectedCurrentNode().releaseNonNull());
 
-    auto& renderer = m_firstLetterText ? *m_firstLetterText : *textNode.renderer();
-    if (renderer.style().visibility() != Visibility::Visible && !m_behaviors.contains(TextIteratorBehavior::IgnoresStyleVisibility)) {
+    CheckedRef renderer = m_firstLetterText ? *m_firstLetterText : *textNode->renderer();
+    if (renderer->style().visibility() != Visibility::Visible && !m_behaviors.contains(TextIteratorBehavior::IgnoresStyleVisibility)) {
         m_textRun = { };
         return;
     }
 
     auto [firstTextRun, orderCache] = InlineIterator::firstTextBoxInLogicalOrderFor(renderer);
 
-    String rendererText = renderer.text();
-    unsigned start = m_offset;
-    unsigned end = (&textNode == m_endContainer) ? static_cast<unsigned>(m_endOffset) : UINT_MAX;
+    auto rendererText = rendererTextForBehavior(renderer.get());
+    unsigned rangeStart = m_offset;
+    auto rangeEnd = std::optional<unsigned> { };
+    if (textNode.ptr() == m_endContainer)
+        rangeEnd = m_endOffset;
+
     while (m_textRun) {
-        unsigned textRunStart = m_textRun->start();
-        unsigned runStart = std::max(textRunStart, start);
+        auto textRunStart = m_textRun->start();
+        auto textRunEnd = textRunStart + m_textRun->length();
 
-        unsigned textRunEnd = textRunStart + m_textRun->length();
-        unsigned runEnd = std::min(textRunEnd, end);
+        auto runStart = std::max(textRunStart, rangeStart);
+        auto runEnd = std::min(textRunEnd, rangeEnd.value_or(textRunEnd));
 
-        // Determine what the next text run will be, but don't advance yet
-        auto nextTextRun = InlineIterator::nextTextBoxInLogicalOrder(m_textRun, m_textRunLogicalOrderCache);
-
-        // Check for collapsed space at the start of this run.
-        bool needSpace = m_lastTextNodeEndedWithCollapsedSpace || (m_textRun == firstTextRun && textRunStart == runStart && runStart);
-        if (needSpace && !renderer.style().isCollapsibleWhiteSpace(m_lastCharacter) && m_lastCharacter) {
-            if (runStart >= runEnd && m_behaviors.contains(TextIteratorBehavior::IgnoresWhiteSpaceAtEndOfRun)) {
-                m_textRun = nextTextRun;
-                continue;
-            }
-
-            if (m_lastTextNode == &textNode && runStart && rendererText[runStart - 1] == ' ') {
+        // Check if we need to emit (previously) collapsed whitespace at the start of this run.
+        auto isAfterRangeEnd = rangeEnd ? runStart > *rangeEnd : false;
+        auto hasPrecedingCollapsedWhitespace = m_lastTextNodeEndedWithCollapsedSpace || (m_textRun == firstTextRun && textRunStart == runStart && runStart);
+        auto shouldEmitWhitespace = !isAfterRangeEnd && hasPrecedingCollapsedWhitespace && m_lastCharacter && !renderer->style().isCollapsibleWhiteSpace(m_lastCharacter);
+        if (shouldEmitWhitespace) {
+            if (m_lastTextNode == textNode.ptr() && runStart && renderer->style().isCollapsibleWhiteSpace(rendererText[runStart - 1])) {
                 unsigned spaceRunStart = runStart - 1;
-                while (spaceRunStart && rendererText[spaceRunStart - 1] == ' ')
+                while (spaceRunStart && renderer->style().isCollapsibleWhiteSpace(rendererText[spaceRunStart - 1]))
                     --spaceRunStart;
-                emitText(textNode, renderer, spaceRunStart, spaceRunStart + 1);
+                emitCharacter(' ', WTF::move(textNode), nullptr, spaceRunStart, spaceRunStart + 1);
             } else
-                emitCharacter(' ', textNode, nullptr, runStart, runStart);
+                emitCharacter(' ', WTF::move(textNode), nullptr, runStart, runStart);
             return;
         }
 
+        // Determine what the next text run will be, but don't advance yet
+        auto nextTextRun = InlineIterator::nextTextBoxInLogicalOrder(m_textRun, m_textRunLogicalOrderCache);
         if (runStart < runEnd) {
-            auto isNewlineOrTab = [&](UChar character) {
+            auto isNewlineOrTab = [&](char16_t character) {
                 return character == '\n' || character == '\t';
             };
             // Handle either a single newline or tab character (which becomes a space),
             // or a run of characters that does not include newlines or tabs.
             // This effectively translates newlines and tabs to spaces without copying the text.
             if (isNewlineOrTab(rendererText[runStart])) {
-                emitCharacter(' ', textNode, nullptr, runStart, runStart + 1);
+                emitCharacter(' ', textNode.copyRef(), nullptr, runStart, runStart + 1);
                 m_offset = runStart + 1;
             } else {
                 auto subrunEnd = runStart + 1;
@@ -724,15 +764,15 @@ static inline RenderText* firstRenderTextInFirstLetter(RenderBoxModelObject* fir
 
 void TextIterator::handleTextNodeFirstLetter(RenderTextFragment& renderer)
 {
-    if (auto* firstLetter = renderer.firstLetter()) {
+    if (CheckedPtr firstLetter = renderer.firstLetter()) {
         if (firstLetter->style().visibility() != Visibility::Visible && !m_behaviors.contains(TextIteratorBehavior::IgnoresStyleVisibility))
             return;
-        if (auto* firstLetterText = firstRenderTextInFirstLetter(firstLetter)) {
+        if (CheckedPtr firstLetterText = firstRenderTextInFirstLetter(firstLetter.get())) {
             m_handledFirstLetter = true;
             m_remainingTextRun = m_textRun;
             m_remainingTextRunLogicalOrderCache = std::exchange(m_textRunLogicalOrderCache, { });
             std::tie(m_textRun, m_textRunLogicalOrderCache) = InlineIterator::firstTextBoxInLogicalOrderFor(*firstLetterText);
-            m_firstLetterText = firstLetterText;
+            m_firstLetterText = firstLetterText.get();
         }
     }
     m_handledFirstLetter = true;
@@ -743,28 +783,35 @@ bool TextIterator::handleReplacedElement()
     if (m_fullyClippedStack.top())
         return false;
 
-    auto& renderer = *m_node->renderer();
-    if (renderer.style().visibility() != Visibility::Visible && !m_behaviors.contains(TextIteratorBehavior::IgnoresStyleVisibility))
-        return false;
-
-    if (m_lastTextNodeEndedWithCollapsedSpace) {
-        emitCharacter(' ', *m_lastTextNode->parentNode(), m_lastTextNode, 1, 1);
+    // Note that RenderInlines can get passed in as replaced elements.
+    CheckedPtr renderer = dynamicDowncast<RenderElement>(m_currentNode->renderer());
+    if (!renderer) {
+        ASSERT_NOT_REACHED();
         return false;
     }
 
-    if (m_behaviors.contains(TextIteratorBehavior::EntersTextControls) && is<RenderTextControl>(renderer)) {
-        if (auto innerTextElement = downcast<RenderTextControl>(renderer).textFormControlElement().innerTextElement()) {
-            m_node = innerTextElement->containingShadowRoot();
-            pushFullyClippedState(m_fullyClippedStack, *m_node);
+    if (renderer->style().visibility() != Visibility::Visible && !m_behaviors.contains(TextIteratorBehavior::IgnoresStyleVisibility))
+        return false;
+
+    if (m_lastTextNodeEndedWithCollapsedSpace) {
+        emitCharacter(' ', m_lastTextNode->protectedParentNode(), m_lastTextNode.copyRef(), 1, 1);
+        return false;
+    }
+
+    if (CheckedPtr renderTextControl = dynamicDowncast<RenderTextControl>(*renderer); renderTextControl && m_behaviors.contains(TextIteratorBehavior::EntersTextControls)) {
+        if (auto innerTextElement = renderTextControl->textFormControlElement().innerTextElement()) {
+            m_currentNode = innerTextElement->containingShadowRoot();
+            pushFullyClippedState(m_fullyClippedStack, *protectedCurrentNode(), m_behaviors);
             m_offset = 0;
             return false;
         }
     }
 
-    if (m_behaviors.contains(TextIteratorBehavior::EntersImageOverlays) && is<HTMLElement>(m_node) && ImageOverlay::hasOverlay(downcast<HTMLElement>(*m_node))) {
-        if (RefPtr shadowRoot = m_node->shadowRoot()) {
-            m_node = shadowRoot.get();
-            pushFullyClippedState(m_fullyClippedStack, *m_node);
+    RefPtr currentElement = dynamicDowncast<HTMLElement>(m_currentNode.get());
+    if (m_behaviors.contains(TextIteratorBehavior::EntersImageOverlays) && currentElement && ImageOverlay::hasOverlay(*currentElement)) {
+        if (RefPtr shadowRoot = m_currentNode->shadowRoot()) {
+            m_currentNode = WTF::move(shadowRoot);
+            pushFullyClippedState(m_fullyClippedStack, *protectedCurrentNode(), m_behaviors);
             m_offset = 0;
             return false;
         }
@@ -773,8 +820,23 @@ bool TextIterator::handleReplacedElement()
 
     m_hasEmitted = true;
 
-    if (m_behaviors.contains(TextIteratorBehavior::EmitsObjectReplacementCharacters)) {
-        emitCharacter(objectReplacementCharacter, *m_node->parentNode(), m_node, 0, 1);
+    auto shouldEmitObjectReplacementCharacter = [&] {
+        if (m_behaviors.contains(TextIteratorBehavior::EmitsObjectReplacementCharacters))
+            return true;
+
+        if (m_behaviors.contains(TextIteratorBehavior::EmitsObjectReplacementCharactersForImages) && is<HTMLImageElement>(m_currentNode.get()))
+            return true;
+
+#if ENABLE(ATTACHMENT_ELEMENT)
+        if (m_behaviors.contains(TextIteratorBehavior::EmitsObjectReplacementCharactersForAttachments) && is<HTMLAttachmentElement>(m_currentNode.get()))
+            return true;
+#endif
+
+        return false;
+    }();
+
+    if (shouldEmitObjectReplacementCharacter) {
+        emitCharacter(objectReplacementCharacter, m_currentNode->protectedParentNode(), protectedCurrentNode(), 0, 1);
         // Don't process subtrees for embedded objects. If the text there is required,
         // it must be explicitly asked by specifying a range falling inside its boundaries.
         m_handledChildren = true;
@@ -785,20 +847,20 @@ bool TextIterator::handleReplacedElement()
         // We want replaced elements to behave like punctuation for boundary
         // finding, and to simply take up space for the selection preservation
         // code in moveParagraphs, so we use a comma.
-        emitCharacter(',', *m_node->parentNode(), m_node, 0, 1);
+        emitCharacter(',', m_currentNode->protectedParentNode(), protectedCurrentNode(), 0, 1);
         return true;
     }
 
-    m_positionNode = m_node->parentNode();
-    m_positionOffsetBaseNode = m_node;
+    m_positionNode = m_currentNode->parentNode();
+    m_positionOffsetBaseNode = m_currentNode;
     m_positionStartOffset = 0;
     m_positionEndOffset = 1;
 
-    if (m_behaviors.contains(TextIteratorBehavior::EmitsImageAltText) && is<RenderImage>(renderer)) {
-        String altText = downcast<RenderImage>(renderer).altText();
+    if (CheckedPtr renderImage = dynamicDowncast<RenderImage>(*renderer); renderImage && m_behaviors.contains(TextIteratorBehavior::EmitsImageAltText)) {
+        auto altText = renderImage->altText();
         if (unsigned length = altText.length()) {
             m_lastCharacter = altText[length - 1];
-            m_copyableText.set(WTFMove(altText));
+            m_copyableText.set(WTF::move(altText));
             m_text = m_copyableText.text();
             return true;
         }
@@ -812,21 +874,20 @@ bool TextIterator::handleReplacedElement()
 
 static bool shouldEmitTabBeforeNode(Node& node)
 {
-    auto* renderer = node.renderer();
+    CheckedPtr cell = dynamicDowncast<RenderTableCell>(node.renderer());
 
     // Table cells are delimited by tabs.
-    if (!renderer || !isTableCell(&node))
+    if (!cell)
         return false;
 
     // Want a tab before every cell other than the first one.
-    RenderTableCell& cell = downcast<RenderTableCell>(*renderer);
-    RenderTable* table = cell.table();
-    return table && (table->cellBefore(&cell) || table->cellAbove(&cell));
+    CheckedPtr table = cell->table();
+    return table && (table->cellBefore(cell.get()) || table->cellAbove(cell.get()));
 }
 
 static bool shouldEmitNewlineForNode(Node* node, bool emitsOriginalText)
 {
-    auto* renderer = node->renderer();
+    CheckedPtr renderer = node->renderer();
     if (!(renderer ? renderer->isBR() : node->hasTagName(brTag)))
         return false;
     return emitsOriginalText || !(node->isInShadowTree() && is<HTMLInputElement>(*node->shadowHost()));
@@ -849,40 +910,40 @@ static bool shouldEmitReplacementInsteadOfNode(const Node& node)
     return is<TextPlaceholderElement>(node);
 }
 
-static bool shouldEmitNewlinesBeforeAndAfterNode(Node& node)
+bool shouldEmitNewlinesBeforeAndAfterNode(Node& node)
 {
     // Block flow (versus inline flow) is represented by having
     // a newline both before and after the element.
-    auto* renderer = node.renderer();
+    CheckedPtr renderer = node.renderer();
     if (!renderer) {
-        if (!is<HTMLElement>(node))
+        if (hasDisplayContents(node))
             return false;
-        auto& element = downcast<HTMLElement>(node);
-        return hasHeaderTag(element)
-            || element.hasTagName(blockquoteTag)
-            || element.hasTagName(ddTag)
-            || element.hasTagName(divTag)
-            || element.hasTagName(dlTag)
-            || element.hasTagName(dtTag)
-            || element.hasTagName(hrTag)
-            || element.hasTagName(liTag)
-            || element.hasTagName(listingTag)
-            || element.hasTagName(olTag)
-            || element.hasTagName(pTag)
-            || element.hasTagName(preTag)
-            || element.hasTagName(trTag)
-            || element.hasTagName(ulTag);
+        RefPtr element = dynamicDowncast<HTMLElement>(node);
+        return element && (hasHeaderTag(*element)
+            || element->hasTagName(blockquoteTag)
+            || element->hasTagName(ddTag)
+            || element->hasTagName(divTag)
+            || element->hasTagName(dlTag)
+            || element->hasTagName(dtTag)
+            || element->hasTagName(hrTag)
+            || element->hasTagName(liTag)
+            || element->hasTagName(listingTag)
+            || element->hasTagName(olTag)
+            || element->hasTagName(pTag)
+            || element->hasTagName(preTag)
+            || element->hasTagName(trTag)
+            || element->hasTagName(ulTag));
     }
 
     // Need to make an exception for table cells, because they are blocks, but we
     // want them tab-delimited rather than having newlines before and after.
-    if (isTableCell(&node))
+    if (isTableCell(node))
         return false;
 
     // Need to make an exception for table row elements, because they are neither
     // "inline" or "RenderBlock", but we want newlines for them.
-    if (is<RenderTableRow>(*renderer)) {
-        RenderTable* table = downcast<RenderTableRow>(*renderer).table();
+    if (CheckedPtr tableRow = dynamicDowncast<RenderTableRow>(*renderer)) {
+        CheckedPtr table = tableRow->table();
         if (table && !table->isInline())
             return true;
     }
@@ -893,8 +954,7 @@ static bool shouldEmitNewlinesBeforeAndAfterNode(Node& node)
     return !renderer->isInline()
         && is<RenderBlock>(*renderer)
         && !renderer->isFloatingOrOutOfFlowPositioned()
-        && !renderer->isBody()
-        && !renderer->isRubyText();
+        && !renderer->isBody();
 }
 
 static bool shouldEmitNewlineAfterNode(Node& node, bool emitsCharactersBetweenAllVisiblePositions = false)
@@ -906,7 +966,7 @@ static bool shouldEmitNewlineAfterNode(Node& node, bool emitsCharactersBetweenAl
     // Don't emit a new line at the end of the document unless we're matching the behavior of VisiblePosition.
     if (emitsCharactersBetweenAllVisiblePositions)
         return true;
-    Node* subsequentNode = &node;
+    RefPtr subsequentNode = node;
     while ((subsequentNode = NodeTraversal::nextSkippingChildren(*subsequentNode))) {
         if (subsequentNode->renderer())
             return true;
@@ -926,30 +986,23 @@ static bool shouldEmitExtraNewlineForNode(Node& node)
     // result even without margin collapsing. For example: <div><p>text</p></div>
     // will work right even if both the <div> and the <p> have bottom margins.
 
-    auto* renderer = node.renderer();
-    if (!is<RenderBox>(renderer))
+    CheckedPtr renderBox = dynamicDowncast<RenderBox>(node.renderer());
+    if (!renderBox || !renderBox->height())
         return false;
 
     // NOTE: We only do this for a select set of nodes, and WinIE appears not to do this at all.
-    if (!is<HTMLElement>(node))
+    RefPtr element = dynamicDowncast<HTMLElement>(node);
+    if (!element || (!hasHeaderTag(*element) && !is<HTMLParagraphElement>(*element)))
         return false;
 
-    HTMLElement& element = downcast<HTMLElement>(node);
-    if (!hasHeaderTag(element) && !is<HTMLParagraphElement>(element))
-        return false;
-
-    auto& renderBox = downcast<RenderBox>(*renderer);
-    if (!renderBox.height())
-        return false;
-
-    auto bottomMargin = renderBox.collapsedMarginAfter();
-    auto fontSize = renderBox.style().fontDescription().computedSize();
+    auto bottomMargin = renderBox->collapsedMarginAfter();
+    auto fontSize = renderBox->style().fontDescription().computedSize();
     return bottomMargin * 2 >= fontSize;
 }
 
 static int collapsedSpaceLength(RenderText& renderer, int textEnd)
 {
-    StringImpl& text = renderer.text();
+    auto text = renderer.text();
     unsigned length = text.length();
     for (unsigned i = textEnd; i < length; ++i) {
         if (!renderer.style().isCollapsibleWhiteSpace(text[i]))
@@ -961,18 +1014,16 @@ static int collapsedSpaceLength(RenderText& renderer, int textEnd)
 static int maxOffsetIncludingCollapsedSpaces(Node& node)
 {
     int offset = caretMaxOffset(node);
-    if (auto* renderer = node.renderer()) {
-        if (is<RenderText>(*renderer))
-            offset += collapsedSpaceLength(downcast<RenderText>(*renderer), offset);
-    }
+    if (CheckedPtr renderText = dynamicDowncast<RenderText>(node.renderer()))
+        offset += collapsedSpaceLength(*renderText, offset);
     return offset;
 }
 
-// Whether or not we should emit a character as we enter m_node (if it's a container) or as we hit it (if it's atomic).
+// Whether or not we should emit a character as we enter m_currentNode (if it's a container) or as we hit it (if it's atomic).
 bool TextIterator::shouldRepresentNodeOffsetZero()
 {
     if (m_behaviors.contains(TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions)) {
-        if (auto* renderer = m_node->renderer(); renderer && renderer->isTable())
+        if (CheckedPtr renderer = m_currentNode->renderer(); renderer && renderer->isRenderTable())
             return true;
     }
 
@@ -994,19 +1045,20 @@ bool TextIterator::shouldRepresentNodeOffsetZero()
     // I think we're already in a special enough case that that won't be needed, tho.
 
     // No character needed if this is the first node in the range.
-    if (m_node == m_startContainer)
+    if (m_currentNode == m_startContainer)
         return false;
 
     // If we are outside the start container's subtree, assume we need to emit.
     // FIXME: m_startContainer could be an inline block
-    if (!m_node->isDescendantOf(m_startContainer))
+    Ref currentNode = *m_currentNode;
+    if (!currentNode->isDescendantOf(m_startContainer.get()))
         return true;
 
     // If we started as m_startContainer offset 0 and the current node is a descendant of
     // the start container, we already had enough context to correctly decide whether to
     // emit after a preceding block. We chose not to emit (m_hasEmitted is false),
     // so don't second guess that now.
-    // NOTE: Is this really correct when m_node is not a leftmost descendant? Probably
+    // NOTE: Is this really correct when m_currentNode is not a leftmost descendant? Probably
     // immaterial since we likely would have already emitted something by now.
     if (m_startOffset == 0)
         return false;
@@ -1014,54 +1066,70 @@ bool TextIterator::shouldRepresentNodeOffsetZero()
     // If this node is unrendered or invisible the VisiblePosition checks below won't have much meaning.
     // Additionally, if the range we are iterating over contains huge sections of unrendered content,
     // we would create VisiblePositions on every call to this function without this check.
-    if (!m_node->renderer() || m_node->renderer()->style().visibility() != Visibility::Visible
-        || (is<RenderBlockFlow>(*m_node->renderer()) && !downcast<RenderBlockFlow>(*m_node->renderer()).height() && !is<HTMLBodyElement>(*m_node)))
+    if (!currentNode->renderer() || currentNode->renderer()->style().visibility() != Visibility::Visible)
         return false;
+
+    if (CheckedPtr renderBlockFlow = dynamicDowncast<RenderBlockFlow>(*currentNode->renderer())) {
+        if (!renderBlockFlow->height() && !is<HTMLBodyElement>(currentNode))
+            return false;
+    }
 
     // The startPos.isNotNull() check is needed because the start could be before the body,
     // and in that case we'll get null. We don't want to put in newlines at the start in that case.
     // The currPos.isNotNull() check is needed because positions in non-HTML content
     // (like SVG) do not have visible positions, and we don't want to emit for them either.
-    VisiblePosition startPos = VisiblePosition(Position(m_startContainer, m_startOffset, Position::PositionIsOffsetInAnchor));
-    VisiblePosition currPos = VisiblePosition(positionBeforeNode(m_node));
+    VisiblePosition startPos = VisiblePosition(Position(protectedStartContainer(), m_startOffset, Position::PositionIsOffsetInAnchor));
+    VisiblePosition currPos = VisiblePosition(positionBeforeNode(currentNode.ptr()));
     return startPos.isNotNull() && currPos.isNotNull() && !inSameLine(startPos, currPos);
 }
 
 bool TextIterator::shouldEmitSpaceBeforeAndAfterNode(Node& node)
 {
-    return node.renderer() && node.renderer()->isTable() && (node.renderer()->isInline() || m_behaviors.contains(TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions));
+    return node.renderer() && node.renderer()->isRenderTable() && (node.renderer()->isInline() || m_behaviors.contains(TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions));
 }
 
 void TextIterator::representNodeOffsetZero()
 {
-    // Emit a character to show the positioning of m_node.
+    // Emit a character to show the positioning of m_currentNode.
 
     // When we haven't been emitting any characters, shouldRepresentNodeOffsetZero() can
     // create VisiblePositions, which is expensive. So, we perform the inexpensive checks
-    // on m_node to see if it necessitates emitting a character first and will early return
+    // on m_currentNode to see if it necessitates emitting a character first and will early return
     // before encountering shouldRepresentNodeOffsetZero()s worse case behavior.
-    if (shouldEmitTabBeforeNode(*m_node)) {
-        if (shouldRepresentNodeOffsetZero())
-            emitCharacter('\t', *m_node->parentNode(), m_node, 0, 0);
-    } else if (shouldEmitNewlineBeforeNode(*m_node)) {
-        if (shouldRepresentNodeOffsetZero())
-            emitCharacter('\n', *m_node->parentNode(), m_node, 0, 0);
-    } else if (shouldEmitSpaceBeforeAndAfterNode(*m_node)) {
-        if (shouldRepresentNodeOffsetZero())
-            emitCharacter(' ', *m_node->parentNode(), m_node, 0, 0);
-    } else if (shouldEmitReplacementInsteadOfNode(*m_node)) {
-        if (shouldRepresentNodeOffsetZero())
-            emitCharacter(objectReplacementCharacter, *m_node->parentNode(), m_node, 0, 0);
+    RefPtr currentNode = m_currentNode;
+    if (shouldEmitTabBeforeNode(*currentNode)) {
+        if (shouldRepresentNodeOffsetZero()) {
+            RefPtr parentNode = currentNode->parentNode();
+            emitCharacter('\t', WTF::move(parentNode), WTF::move(currentNode), 0, 0);
+    }
+    } else if (shouldEmitNewlineBeforeNode(*currentNode)) {
+        if (shouldRepresentNodeOffsetZero()) {
+            RefPtr parentNode = currentNode->parentNode();
+            emitCharacter('\n', WTF::move(parentNode), WTF::move(currentNode), 0, 0);
+        }
+    } else if (shouldEmitSpaceBeforeAndAfterNode(*currentNode)) {
+        if (shouldRepresentNodeOffsetZero()) {
+            RefPtr parentNode = currentNode->parentNode();
+            emitCharacter(' ', WTF::move(parentNode), WTF::move(currentNode), 0, 0);
+        }
+    } else if (shouldEmitReplacementInsteadOfNode(*currentNode)) {
+        if (shouldRepresentNodeOffsetZero()) {
+            RefPtr parentNode = currentNode->parentNode();
+            emitCharacter(objectReplacementCharacter, WTF::move(parentNode), WTF::move(currentNode), 0, 0);
+        }
     }
 }
 
 bool TextIterator::handleNonTextNode()
 {
-    if (shouldEmitNewlineForNode(m_node, m_behaviors.contains(TextIteratorBehavior::EmitsOriginalText)))
-        emitCharacter('\n', *m_node->parentNode(), m_node, 0, 1);
-    else if (m_behaviors.contains(TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions) && m_node->renderer() && m_node->renderer()->isHR())
-        emitCharacter(' ', *m_node->parentNode(), m_node, 0, 1);
-    else
+    RefPtr currentNode = m_currentNode;
+    if (shouldEmitNewlineForNode(currentNode.get(), m_behaviors.contains(TextIteratorBehavior::EmitsOriginalText))) {
+        RefPtr parentNode = currentNode->parentNode();
+        emitCharacter('\n', WTF::move(parentNode), WTF::move(currentNode), 0, 1);
+    } else if (m_behaviors.contains(TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions) && currentNode->renderer() && currentNode->renderer()->isHR()) {
+        RefPtr parentNode = currentNode->parentNode();
+        emitCharacter(' ', WTF::move(parentNode), WTF::move(currentNode), 0, 1);
+    } else
         representNodeOffsetZero();
 
     return true;
@@ -1076,44 +1144,47 @@ void TextIterator::exitNode(Node* exitedNode)
     if (!m_hasEmitted)
         return;
 
-    // Emit with a position *inside* m_node, after m_node's contents, in
+    // Emit with a position *inside* m_currentNode, after m_currentNode's contents, in
     // case it is a block, because the run should start where the
     // emitted character is positioned visually.
-    Node* baseNode = exitedNode;
+    RefPtr baseNode = exitedNode;
     // FIXME: This shouldn't require the m_lastTextNode to be true, but we can't change that without making
     // the logic in _web_attributedStringFromRange match. We'll get that for free when we switch to use
     // TextIterator in _web_attributedStringFromRange.
     // See <rdar://problem/5428427> for an example of how this mismatch will cause problems.
-    if (m_lastTextNode && shouldEmitNewlineAfterNode(*m_node, m_behaviors.contains(TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions))) {
+    if (m_lastTextNode && shouldEmitNewlineAfterNode(*protectedCurrentNode(), m_behaviors.contains(TextIteratorBehavior::EmitsCharactersBetweenAllVisiblePositions))) {
         // use extra newline to represent margin bottom, as needed
-        bool addNewline = shouldEmitExtraNewlineForNode(*m_node);
+        bool addNewline = shouldEmitExtraNewlineForNode(*protectedCurrentNode());
 
         // FIXME: We need to emit a '\n' as we leave an empty block(s) that
         // contain a VisiblePosition when doing selection preservation.
         if (m_lastCharacter != '\n') {
             // insert a newline with a position following this block's contents.
-            emitCharacter('\n', *baseNode->parentNode(), baseNode, 1, 1);
+            emitCharacter('\n', baseNode->protectedParentNode(), baseNode.copyRef(), 1, 1);
             // remember whether to later add a newline for the current node
             ASSERT(!m_nodeForAdditionalNewline);
             if (addNewline)
-                m_nodeForAdditionalNewline = baseNode;
+                m_nodeForAdditionalNewline = baseNode.get();
         } else if (addNewline)
             // insert a newline with a position following this block's contents.
-            emitCharacter('\n', *baseNode->parentNode(), baseNode, 1, 1);
+            emitCharacter('\n', baseNode->protectedParentNode(), baseNode.copyRef(), 1, 1);
     }
 
     // If nothing was emitted, see if we need to emit a space.
-    if (!m_positionNode && shouldEmitSpaceBeforeAndAfterNode(*m_node))
-        emitCharacter(' ', *baseNode->parentNode(), baseNode, 1, 1);
+    if (!m_positionNode && shouldEmitSpaceBeforeAndAfterNode(*protectedCurrentNode())) {
+        RefPtr parentNode = baseNode->parentNode();
+        emitCharacter(' ', WTF::move(parentNode), WTF::move(baseNode), 1, 1);
+    }
 }
 
-void TextIterator::emitCharacter(UChar character, Node& characterNode, Node* offsetBaseNode, int textStartOffset, int textEndOffset)
+void TextIterator::emitCharacter(char16_t character, RefPtr<Node>&& characterNode, RefPtr<Node>&& offsetBaseNode, int textStartOffset, int textEndOffset)
 {
+    ASSERT(characterNode);
     m_hasEmitted = true;
 
     // remember information with which to construct the TextIterator::range()
-    m_positionNode = &characterNode;
-    m_positionOffsetBaseNode = offsetBaseNode;
+    m_positionNode = WTF::move(characterNode);
+    m_positionOffsetBaseNode = WTF::move(offsetBaseNode);
     m_positionStartOffset = textStartOffset;
     m_positionEndOffset = textEndOffset;
 
@@ -1129,19 +1200,23 @@ void TextIterator::emitText(Text& textNode, RenderText& renderer, int textStartO
     ASSERT(textEndOffset >= 0);
     ASSERT(textStartOffset <= textEndOffset);
 
+    bool shouldIgnoreFullSizeKana = m_behaviors.contains(TextIteratorBehavior::IgnoresFullSizeKana) && renderer.style().textTransform().contains(Style::TextTransformValue::FullSizeKana);
+
     // FIXME: This probably yields the wrong offsets when text-transform: lowercase turns a single character into two characters.
-    String string = m_behaviors.contains(TextIteratorBehavior::EmitsOriginalText) ? renderer.originalText()
+    String string = m_behaviors.contains(TextIteratorBehavior::EmitsOriginalText) || shouldIgnoreFullSizeKana ? renderer.originalText()
         : (m_behaviors.contains(TextIteratorBehavior::EmitsTextsWithoutTranscoding) ? renderer.textWithoutConvertingBackslashToYenSymbol() : renderer.text());
 
-    ASSERT(string.length() >= static_cast<unsigned>(textEndOffset));
+    ASSERT(m_behaviors.contains(TextIteratorBehavior::EmitsOriginalText) || string.length() >= static_cast<unsigned>(textEndOffset));
 
-    m_positionNode = &textNode;
+    textEndOffset = std::min(string.length(), static_cast<unsigned>(textEndOffset));
+
+    m_positionNode = textNode;
     m_positionOffsetBaseNode = nullptr;
     m_positionStartOffset = textStartOffset;
     m_positionEndOffset = textEndOffset;
 
     m_lastCharacter = string[textEndOffset - 1];
-    m_copyableText.set(WTFMove(string), textStartOffset, textEndOffset - textStartOffset);
+    m_copyableText.set(WTF::move(string), textStartOffset, textEndOffset - textStartOffset);
     m_text = m_copyableText.text();
 
     m_lastTextNodeEndedWithCollapsedSpace = false;
@@ -1165,18 +1240,32 @@ Node* TextIterator::node() const
 {
     auto start = this->range().start;
     if (start.container->isCharacterDataNode())
-        return start.container.ptr();
+        return start.container.unsafePtr();
     return start.container->traverseToChildAt(start.offset);
 }
+
+RefPtr<Node> TextIterator::protectedCurrentNode() const
+{
+    return m_currentNode;
+}
+
+#if ENABLE(TREE_DEBUGGING)
+void TextIterator::showTreeForThis() const
+{
+    if (m_currentNode)
+        m_currentNode->showTreeForThis();
+    fprintf(stderr, "offset: %d\n", m_offset);
+}
+#endif
 
 // --------
 
 SimplifiedBackwardsTextIterator::SimplifiedBackwardsTextIterator(const SimpleRange& range)
 {
-    range.start.document().updateLayoutIgnorePendingStylesheets();
+    range.start.protectedDocument()->updateLayoutIgnorePendingStylesheets();
 
-    Node* startNode = range.start.container.ptr();
-    Node* endNode = range.end.container.ptr();
+    RefPtr startNode = range.start.container.ptr();
+    RefPtr endNode = range.end.container.ptr();
     unsigned startOffset = range.start.offset;
     unsigned endOffset = range.end.offset;
 
@@ -1194,17 +1283,17 @@ SimplifiedBackwardsTextIterator::SimplifiedBackwardsTextIterator(const SimpleRan
     }
 
     m_node = endNode;
-    setUpFullyClippedStack(m_fullyClippedStack, *m_node);
+    setUpFullyClippedStack(m_fullyClippedStack, *m_node, m_behaviors);
     m_offset = endOffset;
     m_handledNode = false;
     m_handledChildren = endOffset == 0;
 
-    m_startContainer = startNode;
+    m_startContainer = WTF::move(startNode);
     m_startOffset = startOffset;
     m_endContainer = endNode;
     m_endOffset = endOffset;
 
-    m_positionNode = endNode;
+    m_positionNode = WTF::move(endNode);
 
     m_lastTextNode = nullptr;
     m_lastCharacter = '\n';
@@ -1225,12 +1314,12 @@ void SimplifiedBackwardsTextIterator::advance()
     while (m_node && !m_havePassedStartContainer) {
         // Don't handle node if we start iterating at [node, 0].
         if (!m_handledNode && !(m_node == m_endContainer && !m_endOffset)) {
-            auto* renderer = m_node->renderer();
-            if (renderer && renderer->isText() && m_node->isTextNode()) {
-                if (renderer->style().visibility() == Visibility::Visible && m_offset > 0)
+            CheckedPtr renderer = m_node->renderer();
+            if (auto* renderText = dynamicDowncast<RenderText>(renderer.get())) {
+                if (renderText->style().visibility() == Visibility::Visible && m_offset > 0)
                     m_handledNode = handleTextNode();
-            } else if (isRendererReplacedElement(renderer, m_behaviors)) {
-                if (renderer->style().visibility() == Visibility::Visible && m_offset > 0)
+            } else if (isRendererReplacedElement(renderer.get(), m_behaviors)) {
+                if (downcast<RenderElement>(*renderer).style().visibility() == Visibility::Visible && m_offset > 0)
                     m_handledNode = handleReplacedElement();
             } else
                 m_handledNode = handleNonTextNode();
@@ -1240,11 +1329,11 @@ void SimplifiedBackwardsTextIterator::advance()
 
         if (!m_handledChildren && m_node->hasChildNodes()) {
             m_node = m_node->lastChild();
-            pushFullyClippedState(m_fullyClippedStack, *m_node);
+            pushFullyClippedState(m_fullyClippedStack, *protectedNode(), m_behaviors);
         } else {
             // Exit empty containers as we pass over them or containers
             // where [container, 0] is where we started iterating.
-            if (!m_handledNode && canHaveChildrenForEditing(*m_node) && m_node->parentNode() && (!m_node->lastChild() || (m_node == m_endContainer && !m_endOffset))) {
+            if (!m_handledNode && canHaveChildrenForEditing(*protectedNode()) && m_node->parentNode() && (!m_node->lastChild() || (m_node == m_endContainer && !m_endOffset))) {
                 exitNode();
                 if (m_positionNode) {
                     m_handledNode = true;
@@ -1255,7 +1344,7 @@ void SimplifiedBackwardsTextIterator::advance()
 
             // Exit all other containers.
             while (!m_node->previousSibling()) {
-                if (!advanceRespectingRange(m_node->parentOrShadowHostNode()))
+                if (!advanceRespectingRange(m_node->protectedParentOrShadowHostNode().get()))
                     break;
                 m_fullyClippedStack.pop();
                 exitNode();
@@ -1267,15 +1356,15 @@ void SimplifiedBackwardsTextIterator::advance()
             }
 
             m_fullyClippedStack.pop();
-            if (advanceRespectingRange(m_node->previousSibling()))
-                pushFullyClippedState(m_fullyClippedStack, *m_node);
+            if (advanceRespectingRange(m_node->protectedPreviousSibling().get()))
+                pushFullyClippedState(m_fullyClippedStack, *protectedNode(), m_behaviors);
             else
                 m_node = nullptr;
         }
 
         // For the purpose of word boundary detection,
         // we should iterate all visible text and trailing (collapsed) whitespaces.
-        m_offset = m_node ? maxOffsetIncludingCollapsedSpaces(*m_node) : 0;
+        m_offset = m_node ? maxOffsetIncludingCollapsedSpaces(*protectedNode()) : 0;
         m_handledNode = false;
         m_handledChildren = false;
 
@@ -1286,13 +1375,11 @@ void SimplifiedBackwardsTextIterator::advance()
 
 bool SimplifiedBackwardsTextIterator::handleTextNode()
 {
-    Text& textNode = downcast<Text>(*m_node);
-
-    m_lastTextNode = &textNode;
+    m_lastTextNode = downcast<Text>(m_node.get());
 
     int startOffset;
     int offsetInNode;
-    RenderText* renderer = handleFirstLetter(startOffset, offsetInNode);
+    CheckedPtr renderer = handleFirstLetter(startOffset, offsetInNode);
     if (!renderer)
         return true;
 
@@ -1316,7 +1403,7 @@ bool SimplifiedBackwardsTextIterator::handleTextNode()
     ASSERT(m_positionEndOffset - offsetInNode <= static_cast<int>(text.length()));
 
     m_lastCharacter = text[m_positionEndOffset - offsetInNode - 1];
-    m_copyableText.set(WTFMove(text), m_positionStartOffset - offsetInNode, m_positionEndOffset - m_positionStartOffset);
+    m_copyableText.set(WTF::move(text), m_positionStartOffset - offsetInNode, m_positionEndOffset - m_positionStartOffset);
     m_text = m_copyableText.text();
 
     return !m_shouldHandleFirstLetter;
@@ -1324,36 +1411,36 @@ bool SimplifiedBackwardsTextIterator::handleTextNode()
 
 RenderText* SimplifiedBackwardsTextIterator::handleFirstLetter(int& startOffset, int& offsetInNode)
 {
-    RenderText& renderer = downcast<RenderText>(*m_node->renderer());
+    CheckedRef renderer = downcast<RenderText>(*m_node->renderer());
     startOffset = (m_node == m_startContainer) ? m_startOffset : 0;
 
-    if (!is<RenderTextFragment>(renderer)) {
+    CheckedPtr fragment = dynamicDowncast<RenderTextFragment>(renderer);
+    if (!fragment) {
         offsetInNode = 0;
-        return &renderer;
+        return renderer.ptr();
     }
 
-    RenderTextFragment& fragment = downcast<RenderTextFragment>(renderer);
-    int offsetAfterFirstLetter = fragment.start();
+    int offsetAfterFirstLetter = fragment->start();
     if (startOffset >= offsetAfterFirstLetter) {
         ASSERT(!m_shouldHandleFirstLetter);
         offsetInNode = offsetAfterFirstLetter;
-        return &renderer;
+        return renderer.ptr();
     }
 
     if (!m_shouldHandleFirstLetter && startOffset + offsetAfterFirstLetter < m_offset) {
         m_shouldHandleFirstLetter = true;
         offsetInNode = offsetAfterFirstLetter;
-        return &renderer;
+        return renderer.ptr();
     }
 
     m_shouldHandleFirstLetter = false;
     offsetInNode = 0;
-    RenderText* firstLetterRenderer = firstRenderTextInFirstLetter(fragment.firstLetter());
+    CheckedPtr firstLetterRenderer = firstRenderTextInFirstLetter(fragment->firstLetter());
 
     m_offset = firstLetterRenderer->caretMaxOffset();
     m_offset += collapsedSpaceLength(*firstLetterRenderer, m_offset);
 
-    return firstLetterRenderer;
+    return firstLetterRenderer.unsafeGet();
 }
 
 bool SimplifiedBackwardsTextIterator::handleReplacedElement()
@@ -1363,22 +1450,23 @@ bool SimplifiedBackwardsTextIterator::handleReplacedElement()
     // finding, and to simply take up space for the selection preservation
     // code in moveParagraphs, so we use a comma. Unconditionally emit
     // here because this iterator is only used for boundary finding.
-    emitCharacter(',', *m_node->parentNode(), index, index + 1);
+    emitCharacter(',', m_node->protectedParentNode(), index, index + 1);
     return true;
 }
 
 bool SimplifiedBackwardsTextIterator::handleNonTextNode()
 {
-    if (shouldEmitTabBeforeNode(*m_node)) {
-        unsigned index = m_node->computeNodeIndex();
-        emitCharacter('\t', *m_node->parentNode(), index + 1, index + 1);
-    } else if (shouldEmitNewlineForNode(m_node, m_behaviors.contains(TextIteratorBehavior::EmitsOriginalText)) || shouldEmitNewlineAfterNode(*m_node)) {
+    RefPtr currentNode = m_node;
+    if (shouldEmitTabBeforeNode(*currentNode)) {
+        unsigned index = currentNode->computeNodeIndex();
+        emitCharacter('\t', currentNode->protectedParentNode(), index + 1, index + 1);
+    } else if (shouldEmitNewlineForNode(currentNode.get(), m_behaviors.contains(TextIteratorBehavior::EmitsOriginalText)) || shouldEmitNewlineAfterNode(*m_node)) {
         if (m_lastCharacter != '\n') {
             // Corresponds to the same check in TextIterator::exitNode.
-            unsigned index = m_node->computeNodeIndex();
+            unsigned index = currentNode->computeNodeIndex();
             // The start of this emitted range is wrong. Ensuring correctness would require
             // VisiblePositions and so would be slow. previousBoundary expects this.
-            emitCharacter('\n', *m_node->parentNode(), index + 1, index + 1);
+            emitCharacter('\n', currentNode->protectedParentNode(), index + 1, index + 1);
         }
     }
     return true;
@@ -1386,18 +1474,20 @@ bool SimplifiedBackwardsTextIterator::handleNonTextNode()
 
 void SimplifiedBackwardsTextIterator::exitNode()
 {
-    if (shouldEmitTabBeforeNode(*m_node))
-        emitCharacter('\t', *m_node, 0, 0);
-    else if (shouldEmitNewlineForNode(m_node, m_behaviors.contains(TextIteratorBehavior::EmitsOriginalText)) || shouldEmitNewlineBeforeNode(*m_node)) {
+    RefPtr node = m_node;
+    if (shouldEmitTabBeforeNode(*node))
+        emitCharacter('\t', WTF::move(node), 0, 0);
+    else if (shouldEmitNewlineForNode(node.get(), m_behaviors.contains(TextIteratorBehavior::EmitsOriginalText)) || shouldEmitNewlineBeforeNode(*m_node)) {
         // The start of this emitted range is wrong. Ensuring correctness would require
         // VisiblePositions and so would be slow. previousBoundary expects this.
-        emitCharacter('\n', *m_node, 0, 0);
+        emitCharacter('\n', WTF::move(node), 0, 0);
     }
 }
 
-void SimplifiedBackwardsTextIterator::emitCharacter(UChar c, Node& node, int startOffset, int endOffset)
+void SimplifiedBackwardsTextIterator::emitCharacter(char16_t c, RefPtr<Node>&& node, int startOffset, int endOffset)
 {
-    m_positionNode = &node;
+    ASSERT(node);
+    m_positionNode = WTF::move(node);
     m_positionStartOffset = startOffset;
     m_positionEndOffset = endOffset;
     m_copyableText.set(c);
@@ -1420,7 +1510,8 @@ SimpleRange SimplifiedBackwardsTextIterator::range() const
 {
     ASSERT(!atEnd());
 
-    return { { *m_positionNode, static_cast<unsigned>(m_positionStartOffset) }, { *m_positionNode, static_cast<unsigned>(m_positionEndOffset) } };
+    Ref positionNode = *m_positionNode;
+    return { { positionNode.copyRef(), static_cast<unsigned>(m_positionStartOffset) }, { positionNode.copyRef(), static_cast<unsigned>(m_positionEndOffset) } };
 }
 
 // --------
@@ -1439,9 +1530,8 @@ SimpleRange CharacterIterator::range() const
         if (m_underlyingIterator.text().length() <= 1)
             ASSERT(m_runOffset == 0);
         else {
-            Node& node = range.start.container;
             unsigned offset = range.startOffset() + m_runOffset;
-            range = { { node, offset }, { node, offset + 1 } };
+            range = { { range.start.container.copyRef(), offset }, { range.start.container.copyRef(), offset + 1 } };
         }
     }
     return range;
@@ -1506,9 +1596,8 @@ SimpleRange BackwardsCharacterIterator::range() const
         if (m_underlyingIterator.text().length() <= 1)
             ASSERT(m_runOffset == 0);
         else {
-            Node& node = range.start.container;
             unsigned offset = range.end.offset - m_runOffset;
-            range = { { node, offset - 1 }, { node, offset } };
+            range = { { range.start.container.copyRef(), offset - 1 }, { range.start.container.copyRef(), offset } };
         }
     }
     return range;
@@ -1613,10 +1702,10 @@ void WordAwareIterator::advance()
     }
 }
 
-StringView WordAwareIterator::text() const
+StringView WordAwareIterator::text() const LIFETIME_BOUND
 {
     if (!m_buffer.isEmpty())
-        return StringView(m_buffer.data(), m_buffer.size());
+        return m_buffer.span();
     if (m_previousText.text().length())
         return m_previousText.text();
     return m_underlyingIterator.text();
@@ -1624,7 +1713,7 @@ StringView WordAwareIterator::text() const
 
 // --------
 
-static inline UChar foldQuoteMark(UChar c)
+static inline char16_t foldQuoteMarkAndReplaceNoBreakSpace(char16_t c)
 {
     switch (c) {
         case hebrewPunctuationGershayim:
@@ -1659,6 +1748,8 @@ static inline UChar foldQuoteMark(UChar c)
         case halfwidthLeftCornerBracket:
         case halfwidthRightCornerBracket:
             return '\'';
+    case noBreakSpace:
+        return ' ';
         default:
             return c;
     }
@@ -1715,7 +1806,7 @@ static UStringSearch* createSearcher()
     // but it doesn't matter exactly what it is, since we don't perform any searches
     // without setting both the pattern and the text.
     UErrorCode status = U_ZERO_ERROR;
-    auto searchCollatorName = makeString(currentSearchLocaleID(), "@collation=search");
+    auto searchCollatorName = makeString(unsafeSpan(currentSearchLocaleID()), "@collation=search"_s);
     UStringSearch* searcher = usearch_open(&newlineCharacter, 1, &newlineCharacter, 1, searchCollatorName.utf8().data(), 0, &status);
     ASSERT(U_SUCCESS(status) || status == U_USING_FALLBACK_WARNING || status == U_USING_DEFAULT_WARNING);
     return searcher;
@@ -1756,7 +1847,7 @@ static inline void unlockSearcher()
 // We refer to the above technique as the "kana workaround". The next few
 // functions are helper functinos for the kana workaround.
 
-static inline bool isKanaLetter(UChar character)
+static inline bool isKanaLetter(char16_t character)
 {
     // Hiragana letters.
     if (character >= 0x3041 && character <= 0x3096)
@@ -1775,7 +1866,7 @@ static inline bool isKanaLetter(UChar character)
     return false;
 }
 
-static inline bool isSmallKanaLetter(UChar character)
+static inline bool isSmallKanaLetter(char16_t character)
 {
     ASSERT(isKanaLetter(character));
 
@@ -1836,7 +1927,7 @@ static inline bool isSmallKanaLetter(UChar character)
 
 enum VoicedSoundMarkType { NoVoicedSoundMark, VoicedSoundMark, SemiVoicedSoundMark };
 
-static inline VoicedSoundMarkType composedVoicedSoundMark(UChar character)
+static inline VoicedSoundMarkType composedVoicedSoundMark(char16_t character)
 {
     ASSERT(isKanaLetter(character));
 
@@ -1903,7 +1994,7 @@ static inline VoicedSoundMarkType composedVoicedSoundMark(UChar character)
     return NoVoicedSoundMark;
 }
 
-static inline bool isCombiningVoicedSoundMark(UChar character)
+static inline bool isCombiningVoicedSoundMark(char16_t character)
 {
     switch (character) {
     case 0x3099: // COMBINING KATAKANA-HIRAGANA VOICED SOUND MARK
@@ -1917,16 +2008,14 @@ static inline bool containsKanaLetters(const String& pattern)
 {
     if (pattern.is8Bit())
         return false;
-    const UChar* characters = pattern.characters16();
-    unsigned length = pattern.length();
-    for (unsigned i = 0; i < length; ++i) {
-        if (isKanaLetter(characters[i]))
+    for (auto character : pattern.span16()) {
+        if (isKanaLetter(character))
             return true;
     }
     return false;
 }
 
-static void normalizeCharacters(const UChar* characters, unsigned length, Vector<UChar>& buffer)
+static void normalizeCharacters(const char16_t* characters, unsigned length, Vector<char16_t>& buffer)
 {
     UErrorCode status = U_ZERO_ERROR;
     auto* normalizer = unorm2_getNFCInstance(&status);
@@ -1938,16 +2027,16 @@ static void normalizeCharacters(const UChar* characters, unsigned length, Vector
     ASSERT(U_SUCCESS(status));
 }
 
-static bool isNonLatin1Separator(UChar32 character)
+static bool isNonLatin1Separator(char32_t character)
 {
     ASSERT_ARG(character, !isLatin1(character));
 
     return U_GET_GC_MASK(character) & (U_GC_S_MASK | U_GC_P_MASK | U_GC_Z_MASK | U_GC_CF_MASK);
 }
 
-static inline bool isSeparator(UChar32 character)
+static inline bool isSeparator(char32_t character)
 {
-    static constexpr bool latin1SeparatorTable[256] = {
+    static constexpr std::array<bool, 256> latin1SeparatorTable {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // space ! " # $ % & ' ( ) * + , - . /
@@ -1978,7 +2067,7 @@ inline SearchBuffer::SearchBuffer(const String& target, FindOptions options)
     , m_options(options)
     , m_prefixLength(0)
     , m_atBreak(true)
-    , m_needsMoreContext(options.contains(AtWordStarts))
+    , m_needsMoreContext(options.contains(FindOption::AtWordStarts))
     , m_targetRequiresKanaWorkaround(containsKanaLetters(m_target))
 {
     ASSERT(!m_target.isEmpty());
@@ -1987,13 +2076,13 @@ inline SearchBuffer::SearchBuffer(const String& target, FindOptions options)
     m_buffer.reserveInitialCapacity(std::max(targetLength * 8, minimumSearchBufferSize));
     m_overlap = m_buffer.capacity() / 4;
 
-    if (m_options.contains(AtWordStarts) && targetLength) {
-        UChar32 targetFirstCharacter;
+    if (m_options.contains(FindOption::AtWordStarts) && targetLength) {
+        char32_t targetFirstCharacter;
         U16_GET(m_target, 0, 0u, targetLength, targetFirstCharacter);
         // Characters in the separator category never really occur at the beginning of a word,
         // so if the target begins with such a character, we just ignore the AtWordStart option.
         if (isSeparator(targetFirstCharacter)) {
-            m_options.remove(AtWordStarts);
+            m_options.remove(FindOption::AtWordStarts);
             m_needsMoreContext = false;
         }
     }
@@ -2008,7 +2097,7 @@ inline SearchBuffer::SearchBuffer(const String& target, FindOptions options)
 
     UCollationStrength strength;
     USearchAttributeValue comparator;
-    if (m_options.contains(CaseInsensitive)) {
+    if (m_options.contains(FindOption::CaseInsensitive)) {
         // Without loss of generality, have 'e' match {'e', 'E', 'é', 'É'} and 'é' match {'é', 'É'}.
         strength = UCOL_SECONDARY;
         comparator = USEARCH_PATTERN_BASE_WEIGHT_IS_WILDCARD;
@@ -2055,7 +2144,7 @@ inline size_t SearchBuffer::append(StringView text)
         m_prefixLength = 0;
         m_atBreak = false;
     } else if (m_buffer.size() == m_buffer.capacity()) {
-        memcpy(m_buffer.data(), m_buffer.data() + m_buffer.size() - m_overlap, m_overlap * sizeof(UChar));
+        memcpySpan(m_buffer.mutableSpan(), m_buffer.span().last(m_overlap));
         m_prefixLength -= std::min(m_prefixLength, m_buffer.size() - m_overlap);
         m_buffer.shrink(m_overlap);
     }
@@ -2065,7 +2154,7 @@ inline size_t SearchBuffer::append(StringView text)
     ASSERT(usableLength);
     m_buffer.grow(oldLength + usableLength);
     for (unsigned i = 0; i < usableLength; ++i)
-        m_buffer[oldLength + i] = foldQuoteMark(text[i]);
+        m_buffer[oldLength + i] = foldQuoteMarkAndReplaceNoBreakSpace(text[i]);
     return usableLength;
 }
 
@@ -2108,7 +2197,7 @@ inline void SearchBuffer::reachedBreak()
     m_atBreak = true;
 }
 
-inline bool SearchBuffer::isBadMatch(const UChar* match, size_t matchLength) const
+inline bool SearchBuffer::isBadMatch(const char16_t* match, size_t matchLength) const
 {
     // This function implements the kana workaround. If usearch treats
     // it as a match, but we do not want to, then it's a "bad match".
@@ -2119,51 +2208,46 @@ inline bool SearchBuffer::isBadMatch(const UChar* match, size_t matchLength) con
     // creating a new one each time.
     normalizeCharacters(match, matchLength, m_normalizedMatch);
 
-    const UChar* a = m_normalizedTarget.begin();
-    const UChar* aEnd = m_normalizedTarget.end();
-
-    const UChar* b = m_normalizedMatch.begin();
-    const UChar* bEnd = m_normalizedMatch.end();
+    auto a = m_normalizedTarget.span();
+    auto b = m_normalizedMatch.span();
 
     while (true) {
         // Skip runs of non-kana-letter characters. This is necessary so we can
         // correctly handle strings where the target and match have different-length
         // runs of characters that match, while still double checking the correctness
         // of matches of kana letters with other kana letters.
-        while (a != aEnd && !isKanaLetter(*a))
-            ++a;
-        while (b != bEnd && !isKanaLetter(*b))
-            ++b;
+        skipUntil<isKanaLetter>(a);
+        skipUntil<isKanaLetter>(b);
 
         // If we reached the end of either the target or the match, we should have
         // reached the end of both; both should have the same number of kana letters.
-        if (a == aEnd || b == bEnd) {
-            ASSERT(a == aEnd);
-            ASSERT(b == bEnd);
+        if (a.empty() || b.empty()) {
+            ASSERT(a.empty());
+            ASSERT(b.empty());
             return false;
         }
 
         // Check for differences in the kana letter character itself.
-        if (isSmallKanaLetter(*a) != isSmallKanaLetter(*b))
+        if (isSmallKanaLetter(a.front()) != isSmallKanaLetter(b.front()))
             return true;
-        if (composedVoicedSoundMark(*a) != composedVoicedSoundMark(*b))
+        if (composedVoicedSoundMark(a.front()) != composedVoicedSoundMark(b.front()))
             return true;
-        ++a;
-        ++b;
+        skip(a, 1);
+        skip(b, 1);
 
         // Check for differences in combining voiced sound marks found after the letter.
         while (1) {
-            if (!(a != aEnd && isCombiningVoicedSoundMark(*a))) {
-                if (b != bEnd && isCombiningVoicedSoundMark(*b))
+            if (!(!a.empty() && isCombiningVoicedSoundMark(a.front()))) {
+                if (!b.empty() && isCombiningVoicedSoundMark(b.front()))
                     return true;
                 break;
             }
-            if (!(b != bEnd && isCombiningVoicedSoundMark(*b)))
+            if (!(!b.empty() && isCombiningVoicedSoundMark(b.front())))
                 return true;
-            if (*a != *b)
+            if (a.front() != b.front())
                 return true;
-            ++a;
-            ++b;
+            skip(a, 1);
+            skip(b, 1);
         }
     }
 }
@@ -2171,29 +2255,30 @@ inline bool SearchBuffer::isBadMatch(const UChar* match, size_t matchLength) con
 inline bool SearchBuffer::isWordEndMatch(size_t start, size_t length) const
 {
     ASSERT(length);
-    ASSERT(m_options.contains(AtWordEnds));
+    ASSERT(m_options.contains(FindOption::AtWordEnds));
 
     // Start searching at the end of matched search, so that multiple word matches succeed.
     int endWord;
-    findEndWordBoundary(StringView(m_buffer.data(), m_buffer.size()), start + length - 1, &endWord);
+    findEndWordBoundary(m_buffer.span(), start + length - 1, &endWord);
     return static_cast<size_t>(endWord) == start + length;
 }
 
 inline bool SearchBuffer::isWordStartMatch(size_t start, size_t length) const
 {
-    ASSERT(m_options.contains(AtWordStarts));
+    ASSERT(m_options.contains(FindOption::AtWordStarts));
 
     if (!start)
         return true;
 
     int size = m_buffer.size();
     int offset = start;
-    UChar32 firstCharacter;
-    U16_GET(m_buffer.data(), 0, offset, size, firstCharacter);
+    char32_t firstCharacter;
+    auto buffer = m_buffer.span();
+    U16_GET(buffer, 0, offset, size, firstCharacter);
 
-    if (m_options.contains(TreatMedialCapitalAsWordStart)) {
-        UChar32 previousCharacter;
-        U16_PREV(m_buffer.data(), 0, offset, previousCharacter);
+    if (m_options.contains(FindOption::TreatMedialCapitalAsWordStart)) {
+        char32_t previousCharacter;
+        U16_PREV(buffer, 0, offset, previousCharacter);
 
         if (isSeparator(firstCharacter)) {
             // The start of a separator run is a word start (".org" in "webkit.org").
@@ -2206,10 +2291,10 @@ inline bool SearchBuffer::isWordStartMatch(size_t start, size_t length) const
             // The last character of an uppercase run followed by a non-separator, non-digit
             // is a word start ("Request" in "XMLHTTPRequest").
             offset = start;
-            U16_FWD_1(m_buffer.data(), offset, size);
-            UChar32 nextCharacter = 0;
+            U16_FWD_1(buffer, offset, size);
+            char32_t nextCharacter = 0;
             if (offset < size)
-                U16_GET(m_buffer.data(), 0, offset, size, nextCharacter);
+                U16_GET(buffer, 0, offset, size, nextCharacter);
             if (!isASCIIUpper(nextCharacter) && !isASCIIDigit(nextCharacter) && !isSeparator(nextCharacter))
                 return true;
         } else if (isASCIIDigit(firstCharacter)) {
@@ -2230,7 +2315,7 @@ inline bool SearchBuffer::isWordStartMatch(size_t start, size_t length) const
 
     size_t wordBreakSearchStart = start + length;
     while (wordBreakSearchStart > start)
-        wordBreakSearchStart = findNextWordFromIndex(StringView(m_buffer.data(), m_buffer.size()), wordBreakSearchStart, false /* backwards */);
+        wordBreakSearchStart = findNextWordFromIndex(buffer, wordBreakSearchStart, false /* backwards */);
     return wordBreakSearchStart == start;
 }
 
@@ -2248,7 +2333,7 @@ inline size_t SearchBuffer::search(size_t& start)
     UStringSearch* searcher = WebCore::searcher();
 
     UErrorCode status = U_ZERO_ERROR;
-    usearch_setText(searcher, m_buffer.data(), size, &status);
+    usearch_setText(searcher, m_buffer.span().data(), size, &status);
     ASSERT(U_SUCCESS(status));
 
     usearch_setOffset(searcher, m_prefixLength, &status);
@@ -2268,15 +2353,15 @@ nextMatch:
     // possibly including a combining character that's not yet in the buffer.
     if (!m_atBreak && static_cast<size_t>(matchStart) >= size - m_overlap) {
         size_t overlap = m_overlap;
-        if (m_options.contains(AtWordStarts)) {
+        if (m_options.contains(FindOption::AtWordStarts)) {
             // Ensure that there is sufficient context before matchStart the next time around for
             // determining if it is at a word boundary.
             unsigned wordBoundaryContextStart = matchStart;
-            U16_BACK_1(m_buffer.data(), 0, wordBoundaryContextStart);
-            wordBoundaryContextStart = startOfLastWordBoundaryContext(StringView(m_buffer.data(), wordBoundaryContextStart));
+            U16_BACK_1(m_buffer.span(), 0, wordBoundaryContextStart);
+            wordBoundaryContextStart = startOfLastWordBoundaryContext(m_buffer.subspan(0, wordBoundaryContextStart));
             overlap = std::min(size - 1, std::max(overlap, size - wordBoundaryContextStart));
         }
-        memcpy(m_buffer.data(), m_buffer.data() + size - overlap, overlap * sizeof(UChar));
+        memcpySpan(m_buffer.mutableSpan(), m_buffer.span().last(overlap));
         m_prefixLength -= std::min(m_prefixLength, size - overlap);
         m_buffer.shrink(overlap);
         return 0;
@@ -2286,16 +2371,16 @@ nextMatch:
     ASSERT_WITH_SECURITY_IMPLICATION(matchStart + matchedLength <= size);
 
     // If this match is "bad", move on to the next match.
-    if (isBadMatch(m_buffer.data() + matchStart, matchedLength)
-        || (m_options.contains(AtWordStarts) && !isWordStartMatch(matchStart, matchedLength))
-        || (m_options.contains(AtWordEnds) && !isWordEndMatch(matchStart, matchedLength))) {
+    if (isBadMatch(m_buffer.subspan(matchStart).data(), matchedLength)
+        || (m_options.contains(FindOption::AtWordStarts) && !isWordStartMatch(matchStart, matchedLength))
+        || (m_options.contains(FindOption::AtWordEnds) && !isWordEndMatch(matchStart, matchedLength))) {
         matchStart = usearch_next(searcher, &status);
         ASSERT(U_SUCCESS(status));
         goto nextMatch;
     }
 
     size_t newSize = size - (matchStart + 1);
-    memmove(m_buffer.data(), m_buffer.data() + matchStart + 1, newSize * sizeof(UChar));
+    memmoveSpan(m_buffer.mutableSpan(), m_buffer.subspan(matchStart + 1, newSize));
     m_prefixLength -= std::min<size_t>(m_prefixLength, matchStart + 1);
     m_buffer.shrink(newSize);
 
@@ -2330,9 +2415,9 @@ inline bool SearchBuffer::atBreak() const
     return !m_cursor && !m_isBufferFull;
 }
 
-inline void SearchBuffer::append(UChar c, bool isStart)
+inline void SearchBuffer::append(char16_t c, bool isStart)
 {
-    m_buffer[m_cursor] = c == noBreakSpace ? ' ' : foldQuoteMark(c);
+    m_buffer[m_cursor] = foldQuoteMarkAndReplaceNoBreakSpace(c);
     m_isCharacterStartBuffer[m_cursor] = isStart;
     if (++m_cursor == m_target.length()) {
         m_cursor = 0;
@@ -2340,7 +2425,7 @@ inline void SearchBuffer::append(UChar c, bool isStart)
     }
 }
 
-inline size_t SearchBuffer::append(const UChar* characters, size_t length)
+inline size_t SearchBuffer::append(const char16_t* characters, size_t length)
 {
     ASSERT(length);
     if (!(m_options & CaseInsensitive)) {
@@ -2348,7 +2433,7 @@ inline size_t SearchBuffer::append(const UChar* characters, size_t length)
         return 1;
     }
     constexpr int maxFoldedCharacters = 16; // sensible maximum is 3, this should be more than enough
-    UChar foldedCharacters[maxFoldedCharacters];
+    char16_t foldedCharacters[maxFoldedCharacters];
     UErrorCode status = U_ZERO_ERROR;
     int numFoldedCharacters = u_strFoldCase(foldedCharacters, maxFoldedCharacters, characters, 1, U_FOLD_CASE_DEFAULT, &status);
     ASSERT(U_SUCCESS(status));
@@ -2368,7 +2453,7 @@ inline bool SearchBuffer::needsMoreContext() const
     return false;
 }
 
-void SearchBuffer::prependContext(const UChar*, size_t)
+void SearchBuffer::prependContext(const char16_t*, size_t)
 {
     ASSERT_NOT_REACHED();
 }
@@ -2381,9 +2466,9 @@ inline size_t SearchBuffer::search(size_t& start)
         return 0;
 
     size_t tailSpace = m_target.length() - m_cursor;
-    if (memcmp(&m_buffer[m_cursor], m_target.characters(), tailSpace * sizeof(UChar)) != 0)
+    if (memcmp(&m_buffer[m_cursor], m_target.characters(), tailSpace * sizeof(char16_t)) != 0)
         return 0;
-    if (memcmp(&m_buffer[0], m_target.characters() + tailSpace, m_cursor * sizeof(UChar)) != 0)
+    if (memcmp(&m_buffer[0], m_target.characters() + tailSpace, m_cursor * sizeof(char16_t)) != 0)
         return 0;
 
     start = length();
@@ -2432,7 +2517,7 @@ static inline bool isInsideReplacedElement(TextIterator& iterator, TextIteratorB
 {
     ASSERT(!iterator.atEnd());
     ASSERT(iterator.text().length() == 1);
-    Node* node = iterator.node();
+    RefPtr node = iterator.node();
     return node && isRendererReplacedElement(node->renderer(), behaviors);
 }
 
@@ -2472,10 +2557,10 @@ SimpleRange resolveCharacterRange(const SimpleRange& scope, CharacterRange range
         }
 
         auto boundary = [&] (uint64_t targetLocation) -> BoundaryPoint {
-            if (is<Text>(textRunRange.start.container)) {
-                ASSERT(targetLocation - location <= downcast<Text>(textRunRange.start.container.get()).length());
+            if (RefPtr textNode = dynamicDowncast<Text>(textRunRange.start.container)) {
+                ASSERT(targetLocation - location <= textNode->length());
                 unsigned offset = textRunRange.start.offset + targetLocation - location;
-                return { textRunRange.start.container.copyRef(), offset };
+                return { textNode.releaseNonNull(), offset };
             }
             return targetLocation == location ? textRunRange.start : textRunRange.end;
         };
@@ -2494,9 +2579,12 @@ SimpleRange resolveCharacterRange(const SimpleRange& scope, CharacterRange range
 
 // --------
 
-bool hasAnyPlainText(const SimpleRange& range, TextIteratorBehaviors behaviors)
+bool hasAnyPlainText(const SimpleRange& range, TextIteratorBehaviors behaviors, IgnoreCollapsedRanges ignoreCollapsedRanges)
 {
     for (TextIterator iterator { range, behaviors }; !iterator.atEnd(); iterator.advance()) {
+        if (ignoreCollapsedRanges == IgnoreCollapsedRanges::Yes && iterator.range().collapsed())
+            continue;
+
         if (!iterator.text().isEmpty())
             return true;
     }
@@ -2510,19 +2598,22 @@ String plainText(const SimpleRange& range, TextIteratorBehaviors defaultBehavior
 
     Ref document = range.start.document();
 
-    unsigned bufferLength = 0;
-    StringBuilder builder;
-    builder.reserveCapacity(initialCapacity);
     TextIteratorBehaviors behaviors = defaultBehavior;
     if (!isDisplayString)
         behaviors.add(TextIteratorBehavior::EmitsTextsWithoutTranscoding);
 
-    for (TextIterator it(range, behaviors); !it.atEnd(); it.advance()) {
+    TextIterator it(range, behaviors);
+    if (it.atEnd())
+        return emptyString();
+
+    StringBuilder builder;
+    builder.reserveCapacity(initialCapacity);
+
+    for (; !it.atEnd(); it.advance()) {
         it.appendTextToStringBuilder(builder);
-        bufferLength += it.text().length();
     }
 
-    if (!bufferLength)
+    if (builder.isEmpty())
         return emptyString();
 
     String result = builder.toString();
@@ -2538,7 +2629,7 @@ String plainTextReplacingNoBreakSpace(const SimpleRange& range, TextIteratorBeha
     return makeStringByReplacingAll(plainText(range, defaultBehaviors, isDisplayString), noBreakSpace, ' ');
 }
 
-static void forEachMatch(const SimpleRange& range, const String& target, FindOptions options, const Function<bool(CharacterRange)>& match)
+static void forEachMatch(const SimpleRange& range, const String& target, FindOptions options, NOESCAPE const Function<bool(CharacterRange)>& match)
 {
     SearchBuffer buffer(target, options);
     if (buffer.needsMoreContext()) {
@@ -2574,7 +2665,7 @@ static void forEachMatch(const SimpleRange& range, const String& target, FindOpt
 static SimpleRange rangeForMatch(const SimpleRange& range, FindOptions options, CharacterRange match)
 {
     auto noMatchResult = [&] () {
-        auto& boundary = options.contains(Backwards) ? range.start : range.end;
+        auto& boundary = options.contains(FindOption::Backwards) ? range.start : range.end;
         return SimpleRange { boundary, boundary };
     };
 
@@ -2592,7 +2683,7 @@ static SimpleRange rangeForMatch(const SimpleRange& range, FindOptions options, 
     if (it.atEnd())
         return noMatchResult();
 
-    return { WTFMove(start), it.range().end };
+    return { WTF::move(start), it.range().end };
 }
 
 SimpleRange findClosestPlainText(const SimpleRange& range, const String& target, FindOptions options, uint64_t targetOffset)
@@ -2606,10 +2697,10 @@ SimpleRange findClosestPlainText(const SimpleRange& range, const String& target,
         auto matchDistance = std::min(distance(match.location, targetOffset), distance(match.location + match.length, targetOffset));
         if (matchDistance > closestMatchDistance)
             return false;
-        if (matchDistance == closestMatchDistance && !options.contains(Backwards))
+        if (matchDistance == closestMatchDistance && !options.contains(FindOption::Backwards))
             return false;
         closestMatch = match;
-        if (!matchDistance && !options.contains(Backwards))
+        if (!matchDistance && !options.contains(FindOption::Backwards))
             return true;
         closestMatchDistance = matchDistance;
         return false;
@@ -2617,11 +2708,53 @@ SimpleRange findClosestPlainText(const SimpleRange& range, const String& target,
     return rangeForMatch(range, options, closestMatch);
 }
 
+Vector<SimpleRange> findAllPlainText(const SimpleRange& range, const String& target, FindOptions options, unsigned limit)
+{
+    Vector<SimpleRange> matches;
+    CharacterIterator it(range, findIteratorOptions(options));
+    size_t currentCharacterIndex = 0;
+
+    auto extractRange = [&](const CharacterRange& match) -> std::optional<SimpleRange> {
+        if (it.atEnd())
+            return std::nullopt;
+        auto start = it.range().start;
+        if (match.length > 1) {
+            // Advance to the last character of the match. We subtract 1 because
+            // it.range().end gives us the boundary *after* the current character,
+            it.advance(match.length - 1);
+            currentCharacterIndex += match.length - 1;
+        }
+        if (it.atEnd())
+            return std::nullopt;
+        auto end = it.range().end;
+        return { { WTF::move(start), WTF::move(end) } };
+    };
+
+    forEachMatch(range, target, options, [&] (CharacterRange match) {
+        // Advance iterator to match start position
+        if (currentCharacterIndex < match.location) {
+            it.advance(match.location - currentCharacterIndex);
+            currentCharacterIndex = match.location;
+        }
+
+        auto foundRange = extractRange(match);
+        if (!foundRange)
+            return true;
+
+        matches.append(WTF::move(*foundRange));
+
+        return limit > 0 && matches.size() >= limit;
+    });
+
+    return matches;
+}
+
+// FIXME: Do not iterate over the entire range if we are searching backwards.
 SimpleRange findPlainText(const SimpleRange& range, const String& target, FindOptions options)
 {
     // When searching forward stop since we want the first match.
     // When searching backward keep going since we want the last match.
-    bool stopAfterFindingMatch = !options.contains(Backwards);
+    bool stopAfterFindingMatch = !options.contains(FindOption::Backwards);
     CharacterRange lastMatchFound;
     forEachMatch(range, target, options, [&] (CharacterRange match) {
         lastMatchFound = match;
@@ -2647,3 +2780,18 @@ bool containsPlainText(const String& document, const String& target, FindOptions
 }
 
 }
+
+#if ENABLE(TREE_DEBUGGING)
+
+void showTree(const WebCore::TextIterator& pos)
+{
+    pos.showTreeForThis();
+}
+
+void showTree(const WebCore::TextIterator* pos)
+{
+    if (pos)
+        pos->showTreeForThis();
+}
+
+#endif

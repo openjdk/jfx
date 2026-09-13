@@ -109,7 +109,7 @@ gst_type_find_register (GstPlugin * plugin, const gchar * name, guint rank,
  * gst_type_find_peek:
  * @find: The #GstTypeFind object the function was called with
  * @offset: The offset
- * @size: The number of bytes to return
+ * @size: (in): The number of bytes to return
  *
  * Returns the @size bytes of the stream to identify beginning at offset. If
  * offset is a positive number, the offset is relative to the beginning of the
@@ -117,7 +117,7 @@ gst_type_find_register (GstPlugin * plugin, const gchar * name, guint rank,
  * the stream. The returned memory is valid until the typefinding function
  * returns and must not be freed.
  *
- * Returns: (transfer none) (nullable): the
+ * Returns: (transfer none) (nullable) (array length=size): the
  *     requested data, or %NULL if that data is not available.
  */
 const guint8 *

@@ -95,7 +95,7 @@ G_DEFINE_BOXED_TYPE_WITH_CODE (GstFlowCombiner, gst_flow_combiner,
 GstFlowCombiner *
 gst_flow_combiner_new (void)
 {
-  GstFlowCombiner *combiner = g_slice_new (GstFlowCombiner);
+  GstFlowCombiner *combiner = g_new (GstFlowCombiner, 1);
 
   g_queue_init (&combiner->pads);
   combiner->last_ret = GST_FLOW_OK;
@@ -161,7 +161,7 @@ gst_flow_combiner_unref (GstFlowCombiner * combiner)
     while ((pad = g_queue_pop_head (&combiner->pads)))
       gst_object_unref (pad);
 
-    g_slice_free (GstFlowCombiner, combiner);
+    g_free (combiner);
   }
 }
 

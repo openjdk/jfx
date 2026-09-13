@@ -19,10 +19,11 @@
 
 #pragma once
 
-#if USE(EGL)
+#include "GLContextWrapper.h"
 #include "IntSize.h"
-#include "PlatformDisplay.h"
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 
 #if !PLATFORM(GTK) && !PLATFORM(WPE)
 #include <EGL/eglplatform.h>
@@ -31,13 +32,8 @@ typedef EGLNativeWindowType GLNativeWindowType;
 typedef uint64_t GLNativeWindowType;
 #endif
 
-#if PLATFORM(X11)
-#include "XUniqueResource.h"
-#endif
-
-#if PLATFORM(WAYLAND)
-#include "WlUniquePtr.h"
-struct wl_egl_window;
+#if ENABLE(MEDIA_TELEMETRY)
+#include "MediaTelemetry.h"
 #endif
 
 #if USE(WPE_RENDERER)
@@ -50,78 +46,63 @@ typedef void* EGLContext;
 typedef void* EGLDisplay;
 typedef void* EGLSurface;
 
-// X11 headers define a bunch of macros with common terms, interfering with WebCore and WTF enum values.
-// As a workaround, we explicitly undef them here.
-#if defined(None)
-#undef None
-#endif
-#if defined(Above)
-#undef Above
-#endif
-#if defined(Below)
-#undef Below
-#endif
-#if defined(Success)
-#undef Success
-#endif
-#if defined(False)
-#undef False
-#endif
-#if defined(True)
-#undef True
-#endif
-#if defined(Bool)
-#undef Bool
-#endif
-#if defined(Always)
-#undef Always
-#endif
-#if defined(Status)
-#undef Status
-#endif
-#if defined(Continue)
-#undef Continue
-#endif
-#if defined(Region)
-#undef Region
-#endif
-
 namespace WebCore {
+class GLDisplay;
+class PlatformDisplay;
 
-class GLContext {
-    WTF_MAKE_NONCOPYABLE(GLContext); WTF_MAKE_FAST_ALLOCATED;
+class GLContext final : public GLContextWrapper
+#if ENABLE(MEDIA_TELEMETRY)
+    , public MediaTelemetryWaylandInfoGetter
+#endif
+{
+    WTF_MAKE_TZONE_ALLOCATED(GLContext);
+    WTF_MAKE_NONCOPYABLE(GLContext);
 public:
-    WEBCORE_EXPORT static std::unique_ptr<GLContext> create(GLNativeWindowType, PlatformDisplay&);
+    enum class Target : uint8_t {
+        Default,
+        Surfaceless,
+#if USE(GBM)
+        GBM,
+#endif
+#if USE(WPE_RENDERER)
+        WPE,
+#endif
+    };
+    WEBCORE_EXPORT static std::unique_ptr<GLContext> create(GLDisplay&, Target, GLContext* = nullptr, GLNativeWindowType = 0);
+
+    WEBCORE_EXPORT static std::unique_ptr<GLContext> create(PlatformDisplay&, GLNativeWindowType);
     static std::unique_ptr<GLContext> createOffscreen(PlatformDisplay&);
     static std::unique_ptr<GLContext> createSharing(PlatformDisplay&);
 
     static GLContext* current();
     static bool isExtensionSupported(const char* extensionList, const char* extension);
+    static unsigned versionFromString(const char* versionString);
 
     static const char* errorString(int statusCode);
     static const char* lastErrorString();
 
-    enum EGLSurfaceType { PbufferSurface, WindowSurface, PixmapSurface, Surfaceless };
-    GLContext(PlatformDisplay&, EGLContext, EGLSurface, EGLConfig, EGLSurfaceType);
-#if PLATFORM(X11)
-    GLContext(PlatformDisplay&, EGLContext, EGLSurface, EGLConfig, XUniquePixmap&&);
-#endif
-#if PLATFORM(WAYLAND)
-    GLContext(PlatformDisplay&, EGLContext, EGLSurface, EGLConfig, WlUniquePtr<struct wl_surface>&&, struct wl_egl_window*);
-#endif
+    GLContext(GLDisplay&, EGLContext, EGLSurface, EGLConfig);
 #if USE(WPE_RENDERER)
-    GLContext(PlatformDisplay&, EGLContext, EGLSurface, EGLConfig, struct wpe_renderer_backend_egl_offscreen_target*);
+    GLContext(GLDisplay&, EGLContext, EGLSurface, EGLConfig, struct wpe_renderer_backend_egl_offscreen_target*);
 #endif
     WEBCORE_EXPORT ~GLContext();
 
-    PlatformDisplay& display() const { return m_display; }
-    unsigned version();
+    RefPtr<GLDisplay> display() const;
+    unsigned version() const;
     EGLConfig config() const { return m_config; }
 
     WEBCORE_EXPORT bool makeContextCurrent();
     bool unmakeContextCurrent();
     WEBCORE_EXPORT void swapBuffers();
     GCGLContext platformContext() const;
+
+    struct GLExtensions {
+        bool OES_texture_npot { false };
+        bool EXT_unpack_subimage { false };
+        bool APPLE_sync { false };
+        bool OES_packed_depth_stencil { false };
+    };
+    const GLExtensions& glExtensions() const;
 
     class ScopedGLContext {
         WTF_MAKE_NONCOPYABLE(ScopedGLContext);
@@ -130,6 +111,7 @@ public:
         ~ScopedGLContext();
     private:
         struct {
+            GLContext* glContext { nullptr };
             EGLDisplay display { nullptr };
             EGLContext context { nullptr };
             EGLSurface readSurface { nullptr };
@@ -155,46 +137,45 @@ public:
     };
 
 private:
-    static EGLContext createContextForEGLVersion(PlatformDisplay&, EGLConfig, EGLContext);
+    static EGLContext createContextForEGLVersion(EGLDisplay, EGLConfig, EGLContext);
 
-    static std::unique_ptr<GLContext> createWindowContext(GLNativeWindowType, PlatformDisplay&, EGLContext sharingContext = nullptr);
-    static std::unique_ptr<GLContext> createPbufferContext(PlatformDisplay&, EGLContext sharingContext = nullptr);
-    static std::unique_ptr<GLContext> createSurfacelessContext(PlatformDisplay&, EGLContext sharingContext = nullptr);
-#if PLATFORM(X11)
-    static std::unique_ptr<GLContext> createPixmapContext(PlatformDisplay&, EGLContext sharingContext = nullptr);
-    static EGLSurface createWindowSurfaceX11(EGLDisplay, EGLConfig, GLNativeWindowType);
-#endif
-#if PLATFORM(WAYLAND)
-    static std::unique_ptr<GLContext> createWaylandContext(PlatformDisplay&, EGLContext sharingContext = nullptr);
-    static EGLSurface createWindowSurfaceWayland(EGLDisplay, EGLConfig, GLNativeWindowType);
-    void destroyWaylandWindow();
-#endif
+    static std::unique_ptr<GLContext> createWindowContext(GLDisplay&, Target, GLNativeWindowType, EGLContext sharingContext);
+    static std::unique_ptr<GLContext> createSurfacelessContext(GLDisplay&, Target, EGLContext sharingContext);
+    static std::unique_ptr<GLContext> createPbufferContext(GLDisplay&, EGLContext sharingContext);
+    static std::unique_ptr<GLContext> createOffscreenContext(GLDisplay&, Target, EGLContext sharingContext);
+
 #if USE(WPE_RENDERER)
-    static std::unique_ptr<GLContext> createWPEContext(PlatformDisplay&, EGLContext sharingContext = nullptr);
+    static std::unique_ptr<GLContext> createWPEContext(GLDisplay&, EGLContext sharingContext = nullptr);
     static EGLSurface createWindowSurfaceWPE(EGLDisplay, EGLConfig, GLNativeWindowType);
     void destroyWPETarget();
 #endif
 
-    static bool getEGLConfig(PlatformDisplay&, EGLConfig*, EGLSurfaceType, Function<bool(int)>&& = nullptr);
+    static bool getEGLConfig(EGLDisplay, EGLConfig*, int);
 
-    PlatformDisplay& m_display;
-    unsigned m_version { 0 };
+    // GLContextWrapper
+    GLContextWrapper::Type type() const override { return GLContextWrapper::Type::Native; }
+    bool makeCurrentImpl() override;
+    bool unmakeCurrentImpl() override;
+    unsigned glVersion() const override;
+
+#if ENABLE(MEDIA_TELEMETRY)
+    EGLDisplay eglDisplay() const final;
+    EGLConfig eglConfig() const final;
+    EGLSurface eglSurface() const final;
+    EGLContext eglContext() const final;
+    unsigned windowWidth() const final;
+    unsigned windowHeight() const final;
+#endif
+
+    ThreadSafeWeakPtr<GLDisplay> m_display;
+    mutable unsigned m_version { 0 };
     EGLContext m_context { nullptr };
     EGLSurface m_surface { nullptr };
     EGLConfig m_config { nullptr };
-    EGLSurfaceType m_type;
-#if PLATFORM(X11)
-    XUniquePixmap m_pixmap;
-#endif
-#if PLATFORM(WAYLAND)
-    WlUniquePtr<struct wl_surface> m_wlSurface;
-    struct wl_egl_window* m_wlWindow { nullptr };
-#endif
 #if USE(WPE_RENDERER)
     struct wpe_renderer_backend_egl_offscreen_target* m_wpeTarget { nullptr };
 #endif
+    mutable GLExtensions m_glExtensions;
 };
 
 } // namespace WebCore
-
-#endif // USE(EGL)

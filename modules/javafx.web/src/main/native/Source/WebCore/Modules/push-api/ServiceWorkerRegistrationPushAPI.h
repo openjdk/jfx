@@ -25,18 +25,19 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "Supplementable.h"
 #include <wtf/Forward.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
 class PushManager;
 class ServiceWorkerRegistration;
+class WeakPtrImplWithEventTargetData;
 
 class ServiceWorkerRegistrationPushAPI : public Supplement<ServiceWorkerRegistration> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ServiceWorkerRegistrationPushAPI);
 public:
     explicit ServiceWorkerRegistrationPushAPI(ServiceWorkerRegistration&);
     ~ServiceWorkerRegistrationPushAPI();
@@ -46,12 +47,15 @@ public:
 
 private:
     static ServiceWorkerRegistrationPushAPI* from(ServiceWorkerRegistration&);
-    static const char* supplementName();
+    static ASCIILiteral supplementName() { return "ServiceWorkerRegistrationPushAPI"_s; }
+    bool isServiceWorkerRegistrationPushAPI() const final { return true; }
 
-    ServiceWorkerRegistration& m_serviceWorkerRegistration;
-    std::unique_ptr<PushManager> m_pushManager;
+    WeakRef<ServiceWorkerRegistration, WeakPtrImplWithEventTargetData> m_serviceWorkerRegistration;
+    const std::unique_ptr<PushManager> m_pushManager;
 };
 
-}
+} // namespace WebCore
 
-#endif // ENABLE(SERVICE_WORKER)
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ServiceWorkerRegistrationPushAPI)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isServiceWorkerRegistrationPushAPI(); }
+SPECIALIZE_TYPE_TRAITS_END()

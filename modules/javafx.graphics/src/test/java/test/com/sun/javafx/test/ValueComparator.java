@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,7 @@
 
 package test.com.sun.javafx.test;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public abstract class ValueComparator {
     public static final ValueComparator DEFAULT =
@@ -42,8 +42,8 @@ public abstract class ValueComparator {
 
     public final void assertEquals(final Object expected,
                                    final Object actual) {
-        assertTrue("expected=" + expected + " actual=" + actual,
-                   equals(expected, actual));
+        assertTrue(equals(expected, actual),
+            "expected=" + expected + " actual=" + actual);
 
     }
 }

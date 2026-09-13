@@ -25,7 +25,8 @@
 
 #pragma once
 
-#include "TrackPrivateBaseClient.h"
+#include <WebCore/TrackPrivateBaseClient.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(VIDEO)
 
@@ -35,11 +36,17 @@ class AudioTrackPrivate;
 struct PlatformAudioTrackConfiguration;
 
 class AudioTrackPrivateClient : public TrackPrivateBaseClient {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(AudioTrackPrivateClient);
 public:
+    constexpr Type type() const final { return Type::Audio; }
     virtual void enabledChanged(bool) = 0;
     virtual void configurationChanged(const PlatformAudioTrackConfiguration&) = 0;
 };
 
 }
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AudioTrackPrivateClient)
+static bool isType(const WebCore::TrackPrivateBaseClient& track) { return track.type() == WebCore::TrackPrivateBaseClient::Type::Audio; }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

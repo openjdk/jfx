@@ -36,15 +36,19 @@ enum class PropertyAllowlist : uint8_t {
     None,
     Marker,
 #if ENABLE(VIDEO)
-    Cue
+    Cue,
+    CueSelector,
+    CueBackground,
 #endif
 };
 
-PropertyAllowlist propertyAllowlistForPseudoId(PseudoId);
+PropertyAllowlist propertyAllowlistForPseudoElement(PseudoElementType);
 
 bool isValidMarkerStyleProperty(CSSPropertyID);
 #if ENABLE(VIDEO)
 bool isValidCueStyleProperty(CSSPropertyID);
+bool isValidCueSelectorStyleProperty(CSSPropertyID);
+bool isValidCueBackgroundStyleProperty(CSSPropertyID);
 #endif
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,6 +36,7 @@ namespace JSC { namespace DFG {
 
 // This calls operationCreateDirectArguments but then restores the value of lengthGPR.
 class CallCreateDirectArgumentsSlowPathGenerator final : public JumpingSlowPathGenerator<MacroAssembler::JumpList> {
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(CallCreateDirectArgumentsSlowPathGenerator);
 public:
     CallCreateDirectArgumentsSlowPathGenerator(
         MacroAssembler::JumpList from, SpeculativeJIT* jit, GPRReg resultGPR, RegisteredStructure structure,
@@ -53,13 +54,7 @@ private:
     void generateInternal(SpeculativeJIT* jit) final
     {
         linkFrom(jit);
-        for (unsigned i = 0; i < m_plans.size(); ++i)
-            jit->silentSpill(m_plans[i]);
-        jit->callOperation(
-            operationCreateDirectArguments, m_resultGPR, SpeculativeJIT::TrustedImmPtr(&jit->vm()), m_structure, m_lengthGPR, m_minCapacity);
-        for (unsigned i = m_plans.size(); i--;)
-            jit->silentFill(m_plans[i]);
-        jit->exceptionCheck();
+        jit->callOperationWithSilentSpill(m_plans.span(), operationCreateDirectArguments, m_resultGPR, SpeculativeJIT::TrustedImmPtr(&jit->vm()), m_structure, m_lengthGPR, m_minCapacity);
         jit->loadPtr(
             MacroAssembler::Address(m_resultGPR, DirectArguments::offsetOfLength()), m_lengthGPR);
         jumpTo(jit);

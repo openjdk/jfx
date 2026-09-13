@@ -45,12 +45,13 @@
 #include <wtf/linux/CurrentProcessMemoryStatus.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
-#if USE(NICOSIA)
-#include "NicosiaBuffer.h"
+#if USE(COORDINATED_GRAPHICS)
+#include "CoordinatedTileBuffer.h"
 #endif
 
 namespace WebCore {
 
+IGNORE_CLANG_WARNINGS_BEGIN("unsafe-buffer-usage")
 static float cpuPeriod()
 {
     FILE* file = fopen("/proc/stat", "r");
@@ -58,8 +59,10 @@ static float cpuPeriod()
         return 0;
 
     static const unsigned statMaxLineLength = 512;
-    char buffer[statMaxLineLength + 1];
-    char* line = fgets(buffer, statMaxLineLength, file);
+    std::array<char, statMaxLineLength + 1> buffer;
+    std::span bufferSpan { buffer };
+    char* line = fgets(bufferSpan.data(), statMaxLineLength, file);
+
     if (!line) {
         fclose(file);
         return 0;
@@ -68,7 +71,7 @@ static float cpuPeriod()
     unsigned long long userTime, niceTime, systemTime, idleTime;
     unsigned long long ioWait, irq, softIrq, steal, guest, guestnice;
     ioWait = irq = softIrq = steal = guest = guestnice = 0;
-    int retVal = sscanf(buffer, "cpu  %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu",
+    int retVal = sscanf(bufferSpan.data(), "cpu  %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu %16llu",
         &userTime, &niceTime, &systemTime, &idleTime, &ioWait, &irq, &softIrq, &steal, &guest, &guestnice);
     // We expect 10 values to be matched by sscanf
     if (retVal != 10) {
@@ -80,7 +83,7 @@ static float cpuPeriod()
     // Keep parsing if we still don't know cpuCount.
     static unsigned cpuCount = 0;
     if (!cpuCount) {
-        while ((line = fgets(buffer, statMaxLineLength, file))) {
+        while ((line = fgets(bufferSpan.data(), statMaxLineLength, file))) {
             if (strlen(line) > 4 && line[0] == 'c' && line[1] == 'p' && line[2] == 'u')
                 cpuCount++;
             else
@@ -98,6 +101,7 @@ static float cpuPeriod()
     previousTotalTime = totalTime;
     return static_cast<float>(period) / cpuCount;
 }
+IGNORE_CLANG_WARNINGS_END
 
 void ResourceUsageThread::platformSaveStateBeforeStarting()
 {
@@ -109,8 +113,8 @@ void ResourceUsageThread::platformSaveStateBeforeStarting()
             m_samplingProfilerThreadID = thread->id();
     }
 #endif
-#if USE(NICOSIA)
-    Nicosia::Buffer::resetMemoryUsage();
+#if USE(COORDINATED_GRAPHICS)
+    CoordinatedTileBuffer::resetMemoryUsage();
 #endif
 }
 
@@ -123,28 +127,26 @@ struct ThreadInfo {
 
 static HashMap<pid_t, ThreadInfo>& threadInfoMap()
 {
-    static LazyNeverDestroyed<HashMap<pid_t, ThreadInfo>> map;
-    static std::once_flag flag;
-    std::call_once(flag, [&] {
-        map.construct();
-    });
+    static NeverDestroyed<HashMap<pid_t, ThreadInfo>> map;
     return map;
 }
 
+IGNORE_CLANG_WARNINGS_BEGIN("unsafe-buffer-usage-in-libc-call")
 static bool threadCPUUsage(pid_t id, float period, ThreadInfo& info)
 {
-    String path = makeString("/proc/self/task/", id, "/stat");
+    String path = makeString("/proc/self/task/"_s, id, "/stat"_s);
     int fd = open(path.utf8().data(), O_RDONLY);
     if (fd < 0)
         return false;
 
     static const ssize_t maxBufferLength = BUFSIZ - 1;
-    char buffer[BUFSIZ];
-    buffer[0] = '\0';
+    std::array<char, BUFSIZ> buffer;
+    std::span bufferSpan { buffer };
+    bufferSpan[0] = '\0';
 
     ssize_t totalBytesRead = 0;
     while (totalBytesRead < maxBufferLength) {
-        ssize_t bytesRead = read(fd, buffer + totalBytesRead, maxBufferLength - totalBytesRead);
+        ssize_t bytesRead = read(fd, bufferSpan.subspan(totalBytesRead).data(), maxBufferLength - totalBytesRead);
         if (bytesRead < 0) {
             if (errno != EINTR) {
                 close(fd);
@@ -162,16 +164,18 @@ static bool threadCPUUsage(pid_t id, float period, ThreadInfo& info)
     buffer[totalBytesRead] = '\0';
 
     // Skip tid and name.
-    char* position = strchr(buffer, ')');
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // GLib port
+    // FIXME: Use `find(std::span { buffer }, ')')` instead of `strchr()`.
+    char* position = strchr(bufferSpan.data(), ')');
     if (!position)
         return false;
 
     if (!info.name) {
-        char* name = strchr(buffer, '(');
+        char* name = strchr(bufferSpan.data(), '(');
         if (!name)
             return false;
         name++;
-        info.name = String::fromUTF8(name, position - name);
+        info.name = String::fromUTF8({ name, position });
     }
 
     // Move after state.
@@ -184,6 +188,7 @@ static bool threadCPUUsage(pid_t id, float period, ThreadInfo& info)
             position++;
         position++;
     }
+    WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     unsigned long long utime = strtoull(position, &position, 10);
     unsigned long long stime = strtoull(position, &position, 10);
@@ -194,6 +199,7 @@ static bool threadCPUUsage(pid_t id, float period, ThreadInfo& info)
     info.cpuUsage = clampTo<float>(usage, 0, 100);
     return true;
 }
+IGNORE_CLANG_WARNINGS_END
 
 static void collectCPUUsage(float period)
 {
@@ -241,23 +247,21 @@ void ResourceUsageThread::platformCollectCPUData(JSC::VM*, ResourceUsageData& da
 
     HashSet<pid_t> knownWebKitThreads;
     {
-        Locker locker { Thread::allThreadsLock() };
-        for (auto* thread : Thread::allThreads()) {
-            if (auto id = thread->id())
+        for (auto& thread : Thread::allThreads()) {
+            if (auto id = thread.id())
                 knownWebKitThreads.add(id);
         }
     }
 
     HashMap<pid_t, String> knownWorkerThreads;
     {
-        Locker locker { WorkerOrWorkletThread::workerOrWorkletThreadsLock() };
-        for (auto* thread : WorkerOrWorkletThread::workerOrWorkletThreads()) {
+        for (auto& thread : WorkerOrWorkletThread::workerOrWorkletThreads()) {
             // Ignore worker threads that have not been fully started yet.
-            if (!thread->thread())
+            if (!thread.thread())
                 continue;
 
-            if (auto id = thread->thread()->id())
-                knownWorkerThreads.set(id, thread->inspectorIdentifier().isolatedCopy());
+            if (auto id = thread.thread()->id())
+                knownWorkerThreads.set(id, thread.inspectorIdentifier().isolatedCopy());
         }
     }
 
@@ -327,8 +331,8 @@ void ResourceUsageThread::platformCollectMemoryData(JSC::VM* vm, ResourceUsageDa
     });
     data.categories[MemoryCategory::Images].dirtySize = imagesDecodedSize;
 
-#if USE(NICOSIA)
-    data.categories[MemoryCategory::Layers].dirtySize = Nicosia::Buffer::getMemoryUsage();
+#if USE(COORDINATED_GRAPHICS)
+    data.categories[MemoryCategory::Layers].dirtySize = CoordinatedTileBuffer::getMemoryUsage();
 #endif
 
     size_t categoriesTotalSize = 0;

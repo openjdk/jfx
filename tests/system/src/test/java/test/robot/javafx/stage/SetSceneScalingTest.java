@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,6 @@ package test.robot.javafx.stage;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.geometry.Pos;
@@ -37,14 +36,11 @@ import javafx.scene.layout.VBox;
 import javafx.scene.robot.Robot;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-import javafx.stage.WindowEvent;
-
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 public class SetSceneScalingTest {
@@ -87,8 +83,8 @@ public class SetSceneScalingTest {
         public void runTest() throws Exception {
             start();
 
-            Assert.assertNotNull(stage);
-            Assert.assertNotNull(button);
+            Assertions.assertNotNull(stage);
+            Assertions.assertNotNull(button);
 
             test();
         }
@@ -116,7 +112,7 @@ public class SetSceneScalingTest {
         @Override
         protected void test() throws Exception {
             Platform.runLater(() -> testButtonClick());
-            Assert.assertTrue(buttonLatch.await(3, TimeUnit.SECONDS));
+            Assertions.assertTrue(buttonLatch.await(3, TimeUnit.SECONDS));
         }
 
         @Override
@@ -130,7 +126,7 @@ public class SetSceneScalingTest {
         @Override
         protected void test() throws Exception {
             Platform.runLater(() -> testButtonClick());
-            Assert.assertTrue(buttonLatch.await(3, TimeUnit.SECONDS));
+            Assertions.assertTrue(buttonLatch.await(3, TimeUnit.SECONDS));
         }
 
         @Override
@@ -145,7 +141,7 @@ public class SetSceneScalingTest {
         protected void test() throws Exception {
             // Test that everything is okay for start
             Platform.runLater(() -> testButtonClick());
-            Assert.assertTrue(buttonLatch.await(3, TimeUnit.SECONDS));
+            Assertions.assertTrue(buttonLatch.await(3, TimeUnit.SECONDS));
 
             // Recreate scene and set it
             Util.runAndWait(() -> stage.setScene(createTestScene()));
@@ -153,7 +149,7 @@ public class SetSceneScalingTest {
             // retest - if DPI scaling is mishandled the button should
             // NOT be where it was (and thus, the test fails)
             Platform.runLater(() -> testButtonClick());
-            Assert.assertTrue(buttonLatch.await(3, TimeUnit.SECONDS));
+            Assertions.assertTrue(buttonLatch.await(3, TimeUnit.SECONDS));
         }
 
         @Override
@@ -164,7 +160,7 @@ public class SetSceneScalingTest {
     }
 
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() {
         Platform.setImplicitExit(false);
         Util.startup(startupLatch, startupLatch::countDown);
@@ -172,14 +168,14 @@ public class SetSceneScalingTest {
         Util.runAndWait(() -> robot = new Robot());
     }
 
-    @After
+    @AfterEach
     public void cleanupTest() {
         if (app != null) {
             Platform.runLater(() -> app.hideStage());
         }
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownFX() {
         Util.shutdown();
     }

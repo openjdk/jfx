@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,9 +25,11 @@
 
 #pragma once
 
-#include "CallFrame.h"
-#include "JSCallee.h"
-#include "RegisterInlines.h"
+#include <JavaScriptCore/CallFrame.h>
+#include <JavaScriptCore/JSCalleeInlines.h>
+#include <JavaScriptCore/RegisterInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -46,19 +48,19 @@ inline Register& CallFrame::uncheckedR(VirtualRegister reg)
 
 inline JSValue CallFrame::guaranteedJSValueCallee() const
 {
-    ASSERT(!callee().isWasm());
+    ASSERT(!callee().isNativeCallee());
     return this[static_cast<int>(CallFrameSlot::callee)].jsValue();
 }
 
 inline JSObject* CallFrame::jsCallee() const
 {
-    ASSERT(!callee().isWasm());
+    ASSERT(!callee().isNativeCallee());
     return this[static_cast<int>(CallFrameSlot::callee)].object();
 }
 
 inline CodeBlock* CallFrame::codeBlock() const
 {
-    ASSERT(!callee().isWasm());
+    ASSERT(!callee().isNativeCallee());
     return this[static_cast<int>(CallFrameSlot::codeBlock)].Register::codeBlock();
 }
 
@@ -69,37 +71,38 @@ inline SUPPRESS_ASAN CodeBlock* CallFrame::unsafeCodeBlock() const
 
 inline JSGlobalObject* CallFrame::lexicalGlobalObject(VM& vm) const
 {
-    UNUSED_PARAM(vm);
-#if ENABLE(WEBASSEMBLY)
-    if (callee().isWasm())
-        return lexicalGlobalObjectFromWasmCallee(vm);
-#endif
+    if (callee().isNativeCallee())
+        return lexicalGlobalObjectFromNativeCallee(vm);
     return jsCallee()->globalObject();
 }
 
-#if ENABLE(WEBASSEMBLY)
-inline Wasm::Instance* CallFrame::wasmInstance() const
+inline JSCell* CallFrame::codeOwnerCell() const
 {
-    ASSERT(callee().isWasm());
-    return bitwise_cast<Wasm::Instance*>(const_cast<CallFrame*>(this)->uncheckedR(CallFrameSlot::codeBlock).asanUnsafePointer());
+    if (callee().isNativeCallee())
+        return codeOwnerCellSlow();
+    return codeBlock();
 }
-#endif
 
-inline bool CallFrame::isStackOverflowFrame() const
+inline bool CallFrame::isZombieFrame() const
 {
-    if (callee().isWasm())
+    if (callee().isNativeCallee())
         return false;
-    return jsCallee() == jsCallee()->globalObject()->stackOverflowFrameCallee();
+    return jsCallee() == jsCallee()->globalObject()->zombieFrameCallee();
 }
 
-inline bool CallFrame::isWasmFrame() const
+inline bool CallFrame::isNativeCalleeFrame() const
 {
-    return callee().isWasm();
+    return callee().isNativeCallee();
 }
 
 inline void CallFrame::setCallee(JSObject* callee)
 {
     static_cast<Register*>(this)[static_cast<int>(CallFrameSlot::callee)] = callee;
+}
+
+inline void CallFrame::setCallee(NativeCallee* callee)
+{
+    reinterpret_cast<uint64_t*>(this)[static_cast<int>(CallFrameSlot::callee)] = CalleeBits::encodeNativeCallee(callee);
 }
 
 inline void CallFrame::setCodeBlock(CodeBlock* codeBlock)
@@ -125,4 +128,11 @@ inline Register* CallFrame::topOfFrame()
     return topOfFrameInternal();
 }
 
+SUPPRESS_ASAN ALWAYS_INLINE void CallFrame::setCallSiteIndex(CallSiteIndex callSiteIndex)
+{
+    this[static_cast<int>(CallFrameSlot::argumentCountIncludingThis)].tag() = callSiteIndex.bits();
+}
+
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

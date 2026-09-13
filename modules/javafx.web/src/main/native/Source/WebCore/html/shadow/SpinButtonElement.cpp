@@ -28,29 +28,33 @@
 #include "SpinButtonElement.h"
 
 #include "Chrome.h"
+#include "ContainerNodeInlines.h"
+#include "DocumentPage.h"
 #include "EventHandler.h"
 #include "EventNames.h"
+#include "FrameDestructionObserverInlines.h"
 #include "HTMLNames.h"
 #include "LocalFrame.h"
 #include "MouseEvent.h"
+#include "NodeDocument.h"
+#include "NodeInlines.h"
 #include "Page.h"
 #include "RenderBox.h"
 #include "RenderTheme.h"
 #include "ScriptDisallowedScope.h"
 #include "ScrollbarTheme.h"
-#include "ShadowPseudoIds.h"
-#include "WheelEvent.h"
-#include <wtf/IsoMallocInlines.h>
+#include "UserAgentParts.h"
 #include <wtf/Ref.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SpinButtonElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SpinButtonElement);
 
 using namespace HTMLNames;
 
 inline SpinButtonElement::SpinButtonElement(Document& document, SpinButtonOwner& spinButtonOwner)
-    : HTMLDivElement(divTag, document, CreateSpinButtonElement)
+    : HTMLDivElement(divTag, document, TypeFlag::HasCustomStyleResolveCallbacks)
     , m_spinButtonOwner(spinButtonOwner)
     , m_capturing(false)
     , m_upDownState(Indeterminate)
@@ -63,7 +67,7 @@ Ref<SpinButtonElement> SpinButtonElement::create(Document& document, SpinButtonO
 {
     auto element = adoptRef(*new SpinButtonElement(document, spinButtonOwner));
     ScriptDisallowedScope::EventAllowedScope eventAllowedScope { element };
-    element->setPseudo(ShadowPseudoIds::webkitInnerSpinButton());
+    element->setUserAgentPart(UserAgentParts::webkitInnerSpinButton());
     return element;
 }
 
@@ -72,15 +76,22 @@ void SpinButtonElement::willDetachRenderers()
     releaseCapture();
 }
 
+bool SpinButtonElement::isDisabledFormControl() const
+{
+    RefPtr host = shadowHost();
+    return host && host->isDisabledFormControl();
+}
+
 void SpinButtonElement::defaultEventHandler(Event& event)
 {
-    if (!is<MouseEvent>(event)) {
+    auto* mouseEvent = dynamicDowncast<MouseEvent>(event);
+    if (!mouseEvent) {
         if (!event.defaultHandled())
             HTMLDivElement::defaultEventHandler(event);
         return;
     }
 
-    RenderBox* box = renderBox();
+    CheckedPtr box = renderBox();
     if (!box) {
         if (!event.defaultHandled())
             HTMLDivElement::defaultEventHandler(event);
@@ -93,9 +104,8 @@ void SpinButtonElement::defaultEventHandler(Event& event)
         return;
     }
 
-    MouseEvent& mouseEvent = downcast<MouseEvent>(event);
-    IntPoint local = roundedIntPoint(box->absoluteToLocal(mouseEvent.absoluteLocation(), UseTransforms));
-    if (mouseEvent.type() == eventNames().mousedownEvent && mouseEvent.button() == LeftButton) {
+    IntPoint local = roundedIntPoint(box->absoluteToLocal(mouseEvent->absoluteLocation(), UseTransforms));
+    if (mouseEvent->type() == eventNames().mousedownEvent && mouseEvent->button() == MouseButton::Left) {
         if (box->borderBoxRect().contains(local)) {
             // The following functions of HTMLInputElement may run JavaScript
             // code which detaches this shadow node. We need to take a reference
@@ -114,22 +124,23 @@ void SpinButtonElement::defaultEventHandler(Event& event)
                     doStepAction(m_upDownState == Up ? 1 : -1);
                 }
             }
-            mouseEvent.setDefaultHandled();
+            mouseEvent->setDefaultHandled();
         }
-    } else if (mouseEvent.type() == eventNames().mouseupEvent && mouseEvent.button() == LeftButton)
+    } else if (mouseEvent->type() == eventNames().mouseupEvent && mouseEvent->button() == MouseButton::Left)
         stopRepeatingTimer();
-    else if (mouseEvent.type() == eventNames().mousemoveEvent) {
+    else if (mouseEvent->type() == eventNames().mousemoveEvent) {
         if (box->borderBoxRect().contains(local)) {
             if (!m_capturing) {
                 if (RefPtr frame = document().frame()) {
                     frame->eventHandler().setCapturingMouseEventsElement(this);
                     m_capturing = true;
-                    if (Page* page = document().page())
+                    if (RefPtr page = document().page())
                         page->chrome().registerPopupOpeningObserver(*this);
                 }
             }
             UpDownState oldUpDownState = m_upDownState;
-            switch (renderer()->theme().innerSpinButtonLayout(*renderer())) {
+            CheckedRef renderer = *this->renderer();
+            switch (renderer->theme().innerSpinButtonLayout(renderer.get())) {
             case RenderTheme::InnerSpinButtonLayout::Vertical:
                 m_upDownState = local.y() < box->height() / 2 ? Up : Down;
                 break;
@@ -141,36 +152,21 @@ void SpinButtonElement::defaultEventHandler(Event& event)
                 break;
             }
             if (m_upDownState != oldUpDownState)
-                renderer()->repaint();
+                renderer->repaint();
         } else {
             releaseCapture();
             m_upDownState = Indeterminate;
         }
     }
 
-    if (!mouseEvent.defaultHandled())
-        HTMLDivElement::defaultEventHandler(mouseEvent);
+    if (!mouseEvent->defaultHandled())
+        HTMLDivElement::defaultEventHandler(*mouseEvent);
 }
 
 void SpinButtonElement::willOpenPopup()
 {
     releaseCapture();
     m_upDownState = Indeterminate;
-}
-
-void SpinButtonElement::forwardEvent(Event& event)
-{
-    if (!is<WheelEvent>(event))
-        return;
-
-    if (!m_spinButtonOwner)
-        return;
-
-    if (!m_spinButtonOwner->shouldSpinButtonRespondToWheelEvents())
-        return;
-
-    doStepAction(downcast<WheelEvent>(event).wheelDeltaY());
-    event.setDefaultHandled();
 }
 
 bool SpinButtonElement::willRespondToMouseMoveEvents() const
@@ -207,7 +203,7 @@ void SpinButtonElement::releaseCapture()
         if (RefPtr frame = document().frame()) {
             frame->eventHandler().setCapturingMouseEventsElement(nullptr);
             m_capturing = false;
-            if (Page* page = document().page())
+            if (RefPtr page = document().page())
                 page->chrome().unregisterPopupOpeningObserver(*this);
         }
     }
@@ -215,7 +211,7 @@ void SpinButtonElement::releaseCapture()
 
 bool SpinButtonElement::matchesReadWritePseudoClass() const
 {
-    return shadowHost()->matchesReadWritePseudoClass();
+    return protectedShadowHost()->matchesReadWritePseudoClass();
 }
 
 void SpinButtonElement::startRepeatingTimer()

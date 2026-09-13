@@ -2,6 +2,7 @@
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 2000 Simon Hausmann <hausmann@kde.org>
  * Copyright (C) 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -30,6 +31,8 @@ class HTMLFrameSetElement;
 class MouseEvent;
 class RenderFrame;
 
+struct HTMLDimensionsListValue;
+
 enum FrameEdge { LeftFrameEdge, RightFrameEdge, TopFrameEdge, BottomFrameEdge };
 
 struct FrameEdgeInfo {
@@ -51,7 +54,8 @@ private:
 };
 
 class RenderFrameSet final : public RenderBox {
-    WTF_MAKE_ISO_ALLOCATED(RenderFrameSet);
+    WTF_MAKE_TZONE_ALLOCATED(RenderFrameSet);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderFrameSet);
 public:
     RenderFrameSet(HTMLFrameSetElement&, RenderStyle&&);
     virtual ~RenderFrameSet();
@@ -69,6 +73,7 @@ public:
 
 private:
     void element() const = delete;
+    void computeIntrinsicLogicalWidths(LayoutUnit&, LayoutUnit&) const override { }
 
     static const int noSplit = -1;
 
@@ -87,7 +92,6 @@ private:
     };
 
     ASCIILiteral renderName() const override { return "RenderFrameSet"_s; }
-    bool isFrameSet() const override { return true; }
 
     void layout() override;
     void paint(PaintInfo&, const LayoutPoint&) override;
@@ -97,7 +101,7 @@ private:
 
     void setIsResizing(bool);
 
-    void layOutAxis(GridAxis&, const Length*, int availableSpace);
+    void layOutAxis(GridAxis&, std::span<const HTMLDimensionsListValue>, int availableSpace);
     void computeEdgeInfo();
     void fillFromEdgeInfo(const FrameEdgeInfo& edgeInfo, int r, int c);
     void positionFrames();
@@ -119,4 +123,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderFrameSet, isFrameSet())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderFrameSet, isRenderFrameSet())

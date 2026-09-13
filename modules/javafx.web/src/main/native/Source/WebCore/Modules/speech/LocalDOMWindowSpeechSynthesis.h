@@ -30,27 +30,34 @@
 #include "LocalDOMWindowProperty.h"
 #include "SpeechSynthesis.h"
 #include "Supplementable.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
+class DOMWindow;
 class LocalDOMWindow;
 
 class LocalDOMWindowSpeechSynthesis : public Supplement<LocalDOMWindow>, public LocalDOMWindowProperty {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(LocalDOMWindowSpeechSynthesis, WEBCORE_EXPORT);
 public:
-    explicit LocalDOMWindowSpeechSynthesis(LocalDOMWindow*);
+    explicit LocalDOMWindowSpeechSynthesis(DOMWindow*);
     virtual ~LocalDOMWindowSpeechSynthesis();
 
-    WEBCORE_EXPORT static SpeechSynthesis* speechSynthesis(LocalDOMWindow&);
-    static LocalDOMWindowSpeechSynthesis* from(LocalDOMWindow*);
+    WEBCORE_EXPORT static SpeechSynthesis* speechSynthesis(DOMWindow&);
+    static LocalDOMWindowSpeechSynthesis* from(DOMWindow*);
 
 private:
     SpeechSynthesis* speechSynthesis();
-    static const char* supplementName();
+    static ASCIILiteral supplementName() { return "LocalDOMWindowSpeechSynthesis"_s; }
+    bool isLocalDOMWindowSpeechSynthesis() const final { return true; }
 
     RefPtr<SpeechSynthesis> m_speechSynthesis;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::LocalDOMWindowSpeechSynthesis)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isLocalDOMWindowSpeechSynthesis(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(SPEECH_SYNTHESIS)

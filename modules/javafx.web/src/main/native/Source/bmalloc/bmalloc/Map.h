@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,17 +25,24 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BCompiler.h"
+
+BALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 #include "BInline.h"
 #include "Sizes.h"
 #include "Vector.h"
-
-#if !BUSE(LIBPAS)
+#include <optional>
 
 namespace bmalloc {
 
 class SmallPage;
 
-template<typename Key, typename Value, typename Hash> class Map {
+enum class AllowDeleting { DeletingAllowed, DeletingNotAllowed };
+
+template<typename Key, typename Value, typename Hash, AllowDeleting allowDeleting = AllowDeleting::DeletingNotAllowed> class Map {
     static_assert(std::is_trivially_destructible<Key>::value, "Map must have a trivial destructor.");
     static_assert(std::is_trivially_destructible<Value>::value, "Map must have a trivial destructor.");
 public:
@@ -43,6 +50,8 @@ public:
         Key key;
         Value value;
     };
+
+    Map();
 
     size_t size() { return m_keyCount; }
     size_t capacity() { return m_table.size(); }
@@ -54,12 +63,28 @@ public:
         return bucket.value;
     }
 
+    std::optional<Value> getOptional(const Key& key)
+    {
+        if (!size())
+            return std::nullopt;
+
+        auto& bucket = find(key, [&](const Bucket& bucket) {
+            return allowDeleting == AllowDeleting::DeletingAllowed ? bucket.key == key : !bucket.key || bucket.key == key;
+        });
+
+        if (bucket.key)
+            return bucket.value;
+        return std::nullopt;
+    }
+
     void set(const Key& key, const Value& value)
     {
         if (shouldGrow())
             rehash();
 
-        auto& bucket = find(key, [&](const Bucket& bucket) { return !bucket.key || bucket.key == key; });
+        auto& bucket = find(key, [&](const Bucket& bucket) {
+            return allowDeleting == AllowDeleting::DeletingAllowed ? bucket.key == key : !bucket.key || bucket.key == key;
+        });
         if (!bucket.key) {
             bucket.key = key;
             ++m_keyCount;
@@ -67,9 +92,23 @@ public:
         bucket.value = value;
     }
 
+    bool contains(const Key& key)
+    {
+        if (!size())
+            return false;
+
+        auto& bucket = find(key, [&](const Bucket& bucket) {
+            return allowDeleting == AllowDeleting::DeletingAllowed ? bucket.key == key : !bucket.key || bucket.key == key;
+        });
+
+        return !!bucket.key;
+    }
+
     // key must be in the map.
     Value remove(const Key& key)
     {
+        RELEASE_BASSERT(allowDeleting == AllowDeleting::DeletingAllowed);
+
         if (shouldShrink())
             rehash();
 
@@ -94,12 +133,30 @@ private:
     template<typename Predicate>
     Bucket& find(const Key& key, const Predicate& predicate)
     {
+        unsigned keysChecked = 0;
+        Bucket* firstEmptyBucket = nullptr;
+
         for (unsigned h = Hash::hash(key); ; ++h) {
             unsigned i = h & m_tableMask;
 
             Bucket& bucket = m_table[i];
             if (predicate(bucket))
                 return bucket;
+            if (allowDeleting == AllowDeleting::DeletingAllowed) {
+                if (bucket.key)
+                    ++keysChecked;
+                else {
+                    if (!firstEmptyBucket)
+                        firstEmptyBucket = &bucket;
+
+                    if (keysChecked >= m_keyCount) {
+                        if (firstEmptyBucket)
+                            return *firstEmptyBucket;
+                        BASSERT(!bucket.key);
+                        return bucket;
+                    }
+                }
+            }
         }
     }
 
@@ -108,8 +165,15 @@ private:
     Vector<Bucket> m_table;
 };
 
-template<typename Key, typename Value, typename Hash>
-void Map<Key, Value, Hash>::rehash()
+template<typename Key, typename Value, typename Hash, enum AllowDeleting allowDeleting>
+inline Map<Key, Value, Hash, allowDeleting>::Map()
+    : m_keyCount(0)
+    , m_tableMask(0)
+{
+}
+
+template<typename Key, typename Value, typename Hash, enum AllowDeleting allowDeleting>
+void Map<Key, Value, Hash, allowDeleting>::rehash()
 {
     auto oldTable = std::move(m_table);
 
@@ -128,8 +192,10 @@ void Map<Key, Value, Hash>::rehash()
     }
 }
 
-template<typename Key, typename Value, typename Hash> const unsigned Map<Key, Value, Hash>::minCapacity;
+template<typename Key, typename Value, typename Hash, enum AllowDeleting allowDeleting> const unsigned Map<Key, Value, Hash, allowDeleting>::minCapacity;
 
 } // namespace bmalloc
 
-#endif
+BALLOW_UNSAFE_BUFFER_USAGE_END
+
+#endif // __cplusplus

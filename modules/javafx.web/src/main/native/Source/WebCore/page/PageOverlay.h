@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,12 +25,14 @@
 
 #pragma once
 
-#include "Color.h"
-#include "FloatPoint.h"
-#include "IntRect.h"
-#include "Timer.h"
-#include <wtf/RefCounted.h>
+#include <WebCore/Color.h>
+#include <WebCore/FloatPoint.h>
+#include <WebCore/IntRect.h>
+#include <WebCore/Timer.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WallTime.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -39,18 +41,15 @@ class GraphicsContext;
 class GraphicsLayer;
 class LocalFrame;
 class Page;
+class PageOverlay;
 class PageOverlayController;
 class PlatformMouseEvent;
 
-class PageOverlay final : public RefCounted<PageOverlay> {
-    WTF_MAKE_NONCOPYABLE(PageOverlay);
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-    class Client {
-    protected:
-        virtual ~Client() = default;
+class PageOverlayClient {
+protected:
+    virtual ~PageOverlayClient() = default;
 
-    public:
+public:
         virtual void willMoveToPage(PageOverlay&, Page*) = 0;
         virtual void didMoveToPage(PageOverlay&, Page*) = 0;
         virtual void drawRect(PageOverlay&, GraphicsContext&, const IntRect& dirtyRect) = 0;
@@ -60,9 +59,13 @@ public:
         virtual bool copyAccessibilityAttributeStringValueForPoint(PageOverlay&, String /* attribute */, FloatPoint, String&) { return false; }
         virtual bool copyAccessibilityAttributeBoolValueForPoint(PageOverlay&, String /* attribute */, FloatPoint, bool&)  { return false; }
         virtual Vector<String> copyAccessibilityAttributeNames(PageOverlay&, bool /* parameterizedNames */)  { return { }; }
-    };
+};
 
-    enum class OverlayType {
+class PageOverlay final : public RefCountedAndCanMakeWeakPtr<PageOverlay> {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(PageOverlay, WEBCORE_EXPORT);
+    WTF_MAKE_NONCOPYABLE(PageOverlay);
+public:
+    enum class OverlayType : bool {
         View, // Fixed to the view size; does not scale or scroll with the document, repaints on scroll.
         Document, // Scales and scrolls with the document.
     };
@@ -72,13 +75,13 @@ public:
         No,
     };
 
-    WEBCORE_EXPORT static Ref<PageOverlay> create(Client&, OverlayType = OverlayType::View, AlwaysTileOverlayLayer = AlwaysTileOverlayLayer::No);
-    WEBCORE_EXPORT virtual ~PageOverlay();
+    WEBCORE_EXPORT static Ref<PageOverlay> create(PageOverlayClient&, OverlayType = OverlayType::View, AlwaysTileOverlayLayer = AlwaysTileOverlayLayer::No);
+    WEBCORE_EXPORT ~PageOverlay();
 
     WEBCORE_EXPORT PageOverlayController* controller() const;
 
     typedef uint64_t PageOverlayID;
-    virtual PageOverlayID pageOverlayID() const { return m_pageOverlayID; }
+    PageOverlayID pageOverlayID() const { return m_pageOverlayID; }
 
     void setPage(Page*);
     WEBCORE_EXPORT Page* page() const;
@@ -99,9 +102,9 @@ public:
 
     WEBCORE_EXPORT void clear();
 
-    Client& client() const { return m_client; }
+    PageOverlayClient& client() const { return m_client; }
 
-    enum class FadeMode { DoNotFade, Fade };
+    enum class FadeMode : bool { DoNotFade, Fade };
 
     OverlayType overlayType() { return m_overlayType; }
     AlwaysTileOverlayLayer alwaysTileOverlayLayer() { return m_alwaysTileOverlayLayer; }
@@ -118,18 +121,19 @@ public:
     void setShouldIgnoreMouseEventsOutsideBounds(bool flag) { m_shouldIgnoreMouseEventsOutsideBounds = flag; }
 
     // FIXME: PageOverlay should own its layer, instead of PageOverlayController.
-    WEBCORE_EXPORT GraphicsLayer& layer();
+    WEBCORE_EXPORT GraphicsLayer& layer() const;
+    WEBCORE_EXPORT Ref<GraphicsLayer> protectedLayer() const;
 
     bool needsSynchronousScrolling() const { return m_needsSynchronousScrolling; }
     void setNeedsSynchronousScrolling(bool needsSynchronousScrolling) { m_needsSynchronousScrolling = needsSynchronousScrolling; }
 
 private:
-    explicit PageOverlay(Client&, OverlayType, AlwaysTileOverlayLayer);
+    explicit PageOverlay(PageOverlayClient&, OverlayType, AlwaysTileOverlayLayer);
 
     void startFadeAnimation();
     void fadeAnimationTimerFired();
 
-    Client& m_client;
+    PageOverlayClient& m_client;
     WeakPtr<Page> m_page;
 
     Timer m_fadeAnimationTimer;

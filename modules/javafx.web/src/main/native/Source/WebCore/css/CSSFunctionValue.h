@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "CSSValueList.h"
+#include <WebCore/CSSValueList.h>
 
 namespace WebCore {
 
@@ -42,16 +42,20 @@ public:
 
     CSSValueID name() const { return m_name; }
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
     bool equals(const CSSFunctionValue& other) const { return m_name == other.m_name && itemsEqual(other); }
 
 private:
+    friend bool CSSValue::addHash(Hasher&) const;
+
     CSSFunctionValue(CSSValueID name, CSSValueListBuilder);
     explicit CSSFunctionValue(CSSValueID name);
     CSSFunctionValue(CSSValueID name, Ref<CSSValue>);
     CSSFunctionValue(CSSValueID name, Ref<CSSValue>, Ref<CSSValue>);
     CSSFunctionValue(CSSValueID name, Ref<CSSValue>, Ref<CSSValue>, Ref<CSSValue>);
     CSSFunctionValue(CSSValueID name, Ref<CSSValue>, Ref<CSSValue>, Ref<CSSValue>, Ref<CSSValue>);
+
+    bool addDerivedHash(Hasher&) const;
 
     CSSValueID m_name { };
 };

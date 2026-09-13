@@ -33,7 +33,7 @@ typedef (sequence<GPUIntegerCoordinate> or GPUExtent3DDict) GPUExtent3D;
 
 [
     EnabledBySetting=WebGPUEnabled,
-    Exposed=(Window), /* https://bugs.webkit.org/show_bug.cgi?id=232542: DedicatedWorker */
+    Exposed=(Window,Worker),
     SecureContext
 ]
 interface GPUCommandEncoder {
@@ -42,10 +42,15 @@ interface GPUCommandEncoder {
 
     undefined copyBufferToBuffer(
         GPUBuffer source,
+        GPUBuffer destination,
+        optional GPUSize64 size);
+
+    undefined copyBufferToBuffer(
+        GPUBuffer source,
         GPUSize64 sourceOffset,
         GPUBuffer destination,
         GPUSize64 destinationOffset,
-        GPUSize64 size);
+        optional GPUSize64 size);
 
     undefined copyBufferToTexture(
         GPUImageCopyBuffer source,
@@ -67,8 +72,6 @@ interface GPUCommandEncoder {
         GPUBuffer buffer,
         optional GPUSize64 offset,
         optional GPUSize64 size);
-
-    undefined writeTimestamp(GPUQuerySet querySet, GPUSize32 queryIndex);
 
     undefined resolveQuerySet(
         GPUQuerySet querySet,

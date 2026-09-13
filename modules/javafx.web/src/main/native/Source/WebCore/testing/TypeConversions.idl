@@ -87,14 +87,18 @@
 };
 
 [
-    JSGenerateToJSObject
+    JSGenerateToJSObject,
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary TypeConversionsOtherDictionary {
     long longValue = 0;
     DOMString stringValue = "";
 };
 
 [
-    JSGenerateToJSObject
+    JSGenerateToJSObject,
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary TypeConversionsDictionary {
     long longValue = 0;
     DOMString stringValue = "";

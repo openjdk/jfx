@@ -1,9 +1,21 @@
 # http://userguide.icu-project.org/howtouseicu#TOC-C-With-Your-Own-Build-System
+if(WIN32)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}" CACHE STRING "Preserve and pass flags" FORCE)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+  add_compile_options(/FS)
+endif()
+
 set(ICU_PUBLIC_DEFINES
     "U_ENABLE_DYLOAD=0"
     "U_STATIC_IMPLEMENTATION"
     "ICU_UTIL_DATA_IMPL=ICU_UTIL_DATA_STATIC"
 )
+
+if(WIN32)
+list(APPEND ICU_PUBLIC_DEFINES
+    "_DISABLE_CONSTEXPR_MUTEX_CONSTRUCTOR"
+)
+endif()
 
 set(ICU_PRIVATE_DEFINES
     "HAVE_DLOPEN=0"
@@ -202,6 +214,8 @@ set(ICU_COMMON_SOURCES
     source/common/uloc.cpp
     source/common/uloc_keytype.cpp
     source/common/uloc_tag.cpp
+    source/common/ulocale.cpp
+    source/common/ulocbuilder.cpp
     source/common/umapfile.cpp
     source/common/umath.cpp
     source/common/umutablecptrie.cpp
@@ -373,6 +387,17 @@ set(ICU_I18N_SOURCES
     source/i18n/measunit.cpp
     source/i18n/measunit_extra.cpp
     source/i18n/measure.cpp
+    source/i18n/messageformat2.cpp
+    source/i18n/messageformat2_arguments.cpp
+    source/i18n/messageformat2_checker.cpp
+    source/i18n/messageformat2_data_model.cpp
+    source/i18n/messageformat2_errors.cpp
+    source/i18n/messageformat2_evaluation.cpp
+    source/i18n/messageformat2_formatter.cpp
+    source/i18n/messageformat2_formattable.cpp
+    source/i18n/messageformat2_function_registry.cpp
+    source/i18n/messageformat2_parser.cpp
+    source/i18n/messageformat2_serializer.cpp
     source/i18n/msgfmt.cpp
     source/i18n/name2uni.cpp
     source/i18n/nfrs.cpp
@@ -588,7 +613,7 @@ target_link_libraries(data_as_asm icuuc icui18n)
 file(GLOB ICU_DATA_ZIP_FILE "${CMAKE_BINARY_DIR}/icu/data/icu4c-*.zip")
 
 # Get just file name without extension
-set(ICU_DATA_FILE_NAME "icudt73l")
+set(ICU_DATA_FILE_NAME "icudt77l")
 
 # Use jar instead of unzip, it will be helpful to get rid of cygwin dependency
 find_package(Java)
@@ -602,7 +627,19 @@ add_custom_command(
 if (MSVC)
     # On Windows, data_as_asm could generates .obj file directly.
     set(ICU_DATA_SYMBOL_FILE "${CMAKE_BINARY_DIR}/icu/data/${ICU_DATA_FILE_NAME}_dat.obj")
+    message(STATUS "ICU_DATA_SYMBOL_FILE = ${ICU_DATA_SYMBOL_FILE}")
     set_source_files_properties(${ICU_DATA_SYMBOL_FILE} PROPERTIES EXTERNAL_OBJECT TRUE GENERATED TRUE)
+    if (COMPILER_IS_CLANG_CL)
+        if (WTF_CPU_X86_64)
+            set(ICU_DATA_CPU_ARCH x64)
+        elseif (WTF_CPU_X86)
+            set(ICU_DATA_CPU_ARCH x86)
+        elseif (WTF_CPU_ARM64)
+            set(ICU_DATA_CPU_ARCH arm64)
+        else ()
+            message(FATAL_ERROR "Unsupported ICU data object architecture for clang-cl")
+        endif ()
+    endif ()
 else ()
     set(ICU_DATA_SYMBOL_FILE "${CMAKE_BINARY_DIR}/icu/data/${ICU_DATA_FILE_NAME}_dat.S")
     enable_language(ASM)
@@ -622,7 +659,7 @@ else ()
 endif ()
 
 add_custom_command(
-    COMMAND $<TARGET_FILE:data_as_asm> ${ICU_DATA_ASSEMBLER_TYPE} "${CMAKE_BINARY_DIR}/icu/data/${ICU_DATA_FILE_NAME}.dat" ${CMAKE_BINARY_DIR}/icu/data ${ICU_DATA_ENTRY_POINT}
+    COMMAND $<TARGET_FILE:data_as_asm> ${ICU_DATA_ASSEMBLER_TYPE} "${CMAKE_BINARY_DIR}/icu/data/${ICU_DATA_FILE_NAME}.dat" ${CMAKE_BINARY_DIR}/icu/data ${ICU_DATA_ENTRY_POINT} ${ICU_DATA_CPU_ARCH}
     OUTPUT ${ICU_DATA_SYMBOL_FILE}
     DEPENDS "${CMAKE_BINARY_DIR}/icu/data/${ICU_DATA_FILE_NAME}.dat"
     VERBATIM
@@ -635,5 +672,4 @@ add_library(icudata STATIC ${ICU_DATA_SYMBOL_FILE})
 # Be explicit about the which linker to use, otherwise fails on Windows
 # when creating icudata.lib.
 set_target_properties(icudata PROPERTIES LINKER_LANGUAGE C)
-
 ###### data END ####

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 Adobe Systems Incorporated. All rights reserved.
- * Copyright (C) 2013-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,34 +34,41 @@
 #include "CachedSVGDocumentClient.h"
 #include "FilterRenderingMode.h"
 #include "RenderLayer.h"
+#include <wtf/InlineWeakPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
+class CSSFilterRenderer;
 class CachedSVGDocument;
 class Element;
 class FilterOperations;
-class FilterTargetSwitcher;
+class GraphicsContextSwitcher;
 
-class RenderLayerFilters final : private CachedSVGDocumentClient {
-    WTF_MAKE_FAST_ALLOCATED;
+class RenderLayerFilters final : public RefCounted<RenderLayerFilters>, private CachedSVGDocumentClient {
+    WTF_MAKE_TZONE_ALLOCATED(RenderLayerFilters);
 public:
-    explicit RenderLayerFilters(RenderLayer&);
+    static Ref<RenderLayerFilters> create(RenderLayer&, FloatSize scale);
     virtual ~RenderLayerFilters();
+
+    void detachFromLayer() { m_layer = nullptr; }
+
+    // CachedResourceClient.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     const LayoutRect& dirtySourceRect() const { return m_dirtySourceRect; }
     void expandDirtySourceRect(const LayoutRect& rect) { m_dirtySourceRect.unite(rect); }
 
-    CSSFilter* filter() const { return m_filter.get(); }
+    CSSFilterRenderer* filter() const { return m_filter.get(); }
     void clearFilter() { m_filter = nullptr; }
 
     bool hasFilterThatMovesPixels() const;
     bool hasFilterThatShouldBeRestrictedBySecurityOrigin() const;
+    bool hasSourceImage() const;
 
-    void updateReferenceFilterClients(const FilterOperations&);
+    void updateReferenceFilterClients(const Style::Filter&);
     void removeReferenceFilterClients();
-
-    void setPreferredFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) { m_preferredFilterRenderingModes = preferredFilterRenderingModes; }
-    void setFilterScale(const FloatSize& filterScale) { m_filterScale = filterScale; }
 
     static bool isIdentity(RenderElement&);
     static IntOutsets calculateOutsets(RenderElement&, const FloatRect& targetBoundingBox);
@@ -69,27 +76,28 @@ public:
     // Per render
     LayoutRect repaintRect() const { return m_repaintRect; }
 
-    GraphicsContext* beginFilterEffect(RenderElement&, GraphicsContext&, const LayoutRect& filterBoxRect, const LayoutRect& dirtyRect, const LayoutRect& layerRepaintRect);
+    GraphicsContext* beginFilterEffect(RenderElement&, GraphicsContext&, const LayoutRect& filterBoxRect, const LayoutRect& dirtyRect, const LayoutRect& layerRepaintRect, const LayoutRect& clipRect, NOESCAPE const Function<void(GraphicsContext&)>& applyAdditionalDestinationClip = { });
     void applyFilterEffect(GraphicsContext& destinationContext);
 
 private:
-    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) final;
+    explicit RenderLayerFilters(RenderLayer&, FloatSize scale);
+
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
     void resetDirtySourceRect() { m_dirtySourceRect = LayoutRect(); }
 
-    RenderLayer& m_layer;
-    Vector<RefPtr<Element>> m_internalSVGReferences;
+    InlineWeakPtr<RenderLayer> m_layer;
+    Vector<Ref<Element>> m_internalSVGReferences;
     Vector<CachedResourceHandle<CachedSVGDocument>> m_externalSVGReferences;
 
-    LayoutRect m_targetBoundingBox;
     LayoutRect m_dirtySourceRect;
     LayoutRect m_repaintRect;
 
-    OptionSet<FilterRenderingMode> m_preferredFilterRenderingModes { FilterRenderingMode::Software };
     FloatSize m_filterScale { 1, 1 };
-    FloatRect m_filterRegion;
 
-    RefPtr<CSSFilter> m_filter;
-    std::unique_ptr<FilterTargetSwitcher> m_targetSwitcher;
+    OptionSet<FilterRenderingMode> m_preferredFilterRenderingModes { FilterRenderingMode::Software };
+
+    RefPtr<CSSFilterRenderer> m_filter;
+    std::unique_ptr<GraphicsContextSwitcher> m_targetSwitcher;
 };
 
 } // namespace WebCore

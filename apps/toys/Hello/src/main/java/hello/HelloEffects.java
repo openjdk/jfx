@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,29 +63,29 @@ public class HelloEffects extends Application {
         scene = new Scene(new Group(), 840, 680);
         ObservableList<Node> content = ((Group)scene.getRoot()).getChildren();
 
-        /// Perspective
+        // Perspective
         content.add(perspective());
-        /// DropShadow
+        // DropShadow
         content.add(dropShadow());
-        /// BlendMode
+        // BlendMode
         content.add(blendMode());
-        /// Bloom
+        // Bloom
         content.add(bloom());
-        /// BoxBlur
+        // BoxBlur
         content.add(boxBlur());
-        /// DisplacementMap
+        // DisplacementMap
         content.add(displacementMap());
-        /// InnerShadow
+        // InnerShadow
         content.add(innerShadow());
-        /// Lighting
+        // Lighting
         content.add(lighting());
-        /// MotionBlur
+        // MotionBlur
         content.add(motionBlur());
-        /// Reflection
+        // Reflection
         content.add(reflection());
-        /// GaussianBlur
+        // GaussianBlur
         content.add(gaussianBlur());
-        /// DistantLight
+        // DistantLight
         content.add(distantLight());
         stage.setScene(scene);
     }

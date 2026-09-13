@@ -26,19 +26,19 @@
 #include "config.h"
 #include "CSSMathInvert.h"
 
-#include "CSSCalcInvertNode.h"
+#include "CSSCalcTree.h"
 #include "CSSNumericValue.h"
 #include "CSSPrimitiveValue.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CSSMathInvert);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSMathInvert);
 
 Ref<CSSMathInvert> CSSMathInvert::create(CSSNumberish&& numberish)
 {
-    return adoptRef(*new CSSMathInvert(WTFMove(numberish)));
+    return adoptRef(*new CSSMathInvert(WTF::move(numberish)));
 }
 
 static CSSNumericType negatedType(const CSSNumberish& numberish)
@@ -68,7 +68,7 @@ static CSSNumericType negatedType(const CSSNumberish& numberish)
 
 CSSMathInvert::CSSMathInvert(CSSNumberish&& numberish)
     : CSSMathValue(negatedType(numberish))
-    , m_value(rectifyNumberish(WTFMove(numberish)))
+    , m_value(rectifyNumberish(WTF::move(numberish)))
 {
 }
 
@@ -76,8 +76,8 @@ void CSSMathInvert::serialize(StringBuilder& builder, OptionSet<SerializationArg
 {
     // https://drafts.css-houdini.org/css-typed-om/#calc-serialization
     if (!arguments.contains(SerializationArguments::WithoutParentheses))
-        builder.append(arguments.contains(SerializationArguments::Nested) ? "(" : "calc(");
-    builder.append("1 / ");
+        builder.append(arguments.contains(SerializationArguments::Nested) ? "("_s : "calc("_s);
+    builder.append("1 / "_s);
     m_value->serialize(builder, arguments);
     if (!arguments.contains(SerializationArguments::WithoutParentheses))
         builder.append(')');
@@ -99,7 +99,7 @@ auto CSSMathInvert::toSumValue() const -> std::optional<SumValue>
     UnitMap negatedExponents;
     for (auto& pair : value.units)
         negatedExponents.add(pair.key, -1 * pair.value);
-    value.units = WTFMove(negatedExponents);
+    value.units = WTF::move(negatedExponents);
 
     return values;
 }
@@ -113,11 +113,18 @@ bool CSSMathInvert::equals(const CSSNumericValue& other) const
     return m_value->equals(otherInvert->value());
 }
 
-RefPtr<CSSCalcExpressionNode> CSSMathInvert::toCalcExpressionNode() const
+std::optional<CSSCalc::Child> CSSMathInvert::toCalcTreeNode() const
 {
-    if (auto value = m_value->toCalcExpressionNode())
-        return CSSCalcInvertNode::create(value.releaseNonNull());
-    return nullptr;
+    auto child = m_value->toCalcTreeNode();
+    if (!child)
+        return std::nullopt;
+
+    auto invert = CSSCalc::Invert { .a = WTF::move(*child) };
+    auto type = CSSCalc::toType(invert);
+    if (!type)
+        return std::nullopt;
+
+    return CSSCalc::makeChild(WTF::move(invert), *type);
 }
 
 } // namespace WebCore

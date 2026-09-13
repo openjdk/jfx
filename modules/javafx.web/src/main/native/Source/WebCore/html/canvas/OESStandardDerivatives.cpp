@@ -28,28 +28,23 @@
 #if ENABLE(WEBGL)
 #include "OESStandardDerivatives.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(OESStandardDerivatives);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(OESStandardDerivatives);
 
 OESStandardDerivatives::OESStandardDerivatives(WebGLRenderingContextBase& context)
-    : WebGLExtension(context)
+    : WebGLExtension(context, WebGLExtensionName::OESStandardDerivatives)
 {
-    context.graphicsContextGL()->ensureExtensionEnabled("GL_OES_standard_derivatives"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::OES_standard_derivatives);
 }
 
 OESStandardDerivatives::~OESStandardDerivatives() = default;
 
-WebGLExtension::ExtensionName OESStandardDerivatives::getName() const
-{
-    return OESStandardDerivativesName;
-}
-
 bool OESStandardDerivatives::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_OES_standard_derivatives"_s);
+    return context.supportsExtension(GCGLExtension::OES_standard_derivatives);
 }
 
 } // namespace WebCore

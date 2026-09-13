@@ -33,17 +33,18 @@
 
 namespace WebCore {
 
-constexpr LChar kEndOfFileMarker = 0;
+constexpr Latin1Character kEndOfFileMarker = 0;
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSTokenizerInputStream);
 class CSSTokenizerInputStream {
     WTF_MAKE_NONCOPYABLE(CSSTokenizerInputStream);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CSSTokenizerInputStream, CSSTokenizerInputStream);
 public:
     explicit CSSTokenizerInputStream(const String& input);
 
     // Gets the char in the stream. Will return (NUL) kEndOfFileMarker when at the
     // end of the stream.
-    UChar nextInputChar() const
+    char16_t nextInputChar() const
     {
         if (m_offset >= m_stringLength)
             return kEndOfFileMarker;
@@ -52,7 +53,7 @@ public:
 
     // Gets the char at lookaheadOffset from the current stream position. Will
     // return NUL (kEndOfFileMarker) if the stream position is at the end.
-    UChar peek(unsigned lookaheadOffset) const
+    char16_t peek(unsigned lookaheadOffset) const
     {
         if ((m_offset + lookaheadOffset) >= m_stringLength)
             return kEndOfFileMarker;
@@ -60,7 +61,7 @@ public:
     }
 
     void advance(unsigned offset = 1) { m_offset += offset; }
-    void pushBack(UChar cc)
+    void pushBack(char16_t cc)
     {
         --m_offset;
         ASSERT_UNUSED(cc, nextInputChar() == cc);
@@ -68,15 +69,15 @@ public:
 
     double getDouble(unsigned start, unsigned end) const;
 
-    template<bool characterPredicate(UChar)>
+    template<bool characterPredicate(char16_t)>
     unsigned skipWhilePredicate(unsigned offset)
     {
         if (m_string->is8Bit()) {
-            const LChar* characters8 = m_string->characters8();
+            auto characters8 = m_string->span8();
             while ((m_offset + offset) < m_stringLength && characterPredicate(characters8[m_offset + offset]))
                 ++offset;
         } else {
-            const UChar* characters16 = m_string->characters16();
+            auto characters16 = m_string->span16();
             while ((m_offset + offset) < m_stringLength && characterPredicate(characters16[m_offset + offset]))
                 ++offset;
         }
@@ -84,6 +85,7 @@ public:
     }
 
     void advanceUntilNonWhitespace();
+    void advanceUntilNewlineOrNonWhitespace();
 
     unsigned length() const { return m_stringLength; }
     unsigned offset() const { return std::min(m_offset, m_stringLength); }

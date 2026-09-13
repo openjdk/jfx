@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "InternalFunction.h"
+#include <JavaScriptCore/InternalFunction.h>
 
 namespace JSC {
 
@@ -36,7 +36,7 @@ class WeakSetConstructor final : public InternalFunction {
 public:
     typedef InternalFunction Base;
 
-    static WeakSetConstructor* create(VM& vm, Structure* structure, WeakSetPrototype* prototype, GetterSetter*)
+    static WeakSetConstructor* create(VM& vm, Structure* structure, WeakSetPrototype* prototype)
     {
         WeakSetConstructor* constructor = new (NotNull, allocateCell<WeakSetConstructor>(vm)) WeakSetConstructor(vm, structure);
         constructor->finishCreation(vm, prototype);
@@ -45,10 +45,7 @@ public:
 
     DECLARE_INFO;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(InternalFunctionType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
 private:
     WeakSetConstructor(VM&, Structure*);

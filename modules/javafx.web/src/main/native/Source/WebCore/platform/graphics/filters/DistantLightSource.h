@@ -22,14 +22,14 @@
 
 #pragma once
 
-#include "LightSource.h"
+#include <WebCore/LightSource.h>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/Ref.h>
 
 namespace WebCore {
 
 class DistantLightSource : public LightSource {
-    friend struct IPC::ArgumentCoder<DistantLightSource, void>;
+    friend struct IPC::ArgumentCoder<DistantLightSource>;
 
 public:
     WEBCORE_EXPORT static Ref<DistantLightSource> create(float azimuth, float elevation);
@@ -59,4 +59,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_LIGHTSOURCE(DistantLightSource, LS_DISTANT)
+SPECIALIZE_TYPE_TRAITS_LIGHTSOURCE(DistantLightSource, LightType::LS_DISTANT)

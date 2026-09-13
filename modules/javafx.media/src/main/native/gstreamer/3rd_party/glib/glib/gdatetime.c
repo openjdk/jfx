@@ -5,6 +5,7 @@
  * Copyright (C) 2010 Emmanuele Bassi <ebassi@linux.intel.com>
  * Copyright (C) 2010 Codethink Limited
  * Copyright (C) 2018 Tomasz Miasko
+ * Copyright 2023 GNOME Foundation Inc.
  *
  * SPDX-License-Identifier: LGPL-2.1-or-later
  *
@@ -26,6 +27,7 @@
  *          Emmanuele Bassi <ebassi@linux.intel.com>
  *          Ryan Lortie <desrt@desrt.ca>
  *          Robert Ancell <robert.ancell@canonical.com>
+ *          Philip Withnall <pwithnall@gnome.org>
  */
 
 /* Algorithms within this file are based on the Calendar FAQ by
@@ -54,6 +56,7 @@
 #define _GNU_SOURCE 1
 #endif
 
+#include <locale.h>
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
@@ -68,6 +71,7 @@
 #include "gconvert.h"
 #include "gconvertprivate.h"
 #include "gdatetime.h"
+#include "gdatetime-private.h"
 #include "gfileutils.h"
 #include "ghash.h"
 #include "glibintl.h"
@@ -78,49 +82,12 @@
 #include "gtestutils.h"
 #include "gthread.h"
 #include "gtimezone.h"
+#include "gutilsprivate.h"
 
 #ifndef G_OS_WIN32
 #include <sys/time.h>
 #include <time.h>
-#else
-#if defined (_MSC_VER) && (_MSC_VER < 1800)
-/* fallback implementation for isnan() on VS2012 and earlier */
-#define isnan _isnan
-#endif
 #endif /* !G_OS_WIN32 */
-
-/**
- * SECTION:date-time
- * @title: GDateTime
- * @short_description: a structure representing Date and Time
- * @see_also: #GTimeZone
- *
- * #GDateTime is a structure that combines a Gregorian date and time
- * into a single structure.  It provides many conversion and methods to
- * manipulate dates and times.  Time precision is provided down to
- * microseconds and the time can range (proleptically) from 0001-01-01
- * 00:00:00 to 9999-12-31 23:59:59.999999.  #GDateTime follows POSIX
- * time in the sense that it is oblivious to leap seconds.
- *
- * #GDateTime is an immutable object; once it has been created it cannot
- * be modified further.  All modifiers will create a new #GDateTime.
- * Nearly all such functions can fail due to the date or time going out
- * of range, in which case %NULL will be returned.
- *
- * #GDateTime is reference counted: the reference count is increased by calling
- * g_date_time_ref() and decreased by calling g_date_time_unref(). When the
- * reference count drops to 0, the resources allocated by the #GDateTime
- * structure are released.
- *
- * Many parts of the API may produce non-obvious results.  As an
- * example, adding two months to January 31st will yield March 31st
- * whereas adding one month and then one month again will yield either
- * March 28th or March 29th.  Also note that adding 24 hours is not
- * always the same as adding one day (since days containing daylight
- * savings time transitions are either 23 or 25 hours in length).
- *
- * #GDateTime is available since GLib 2.26.
- */
 
 struct _GDateTime
 {
@@ -587,6 +554,31 @@ get_month_name_abbr_with_day (gint month)
 
 #endif  /* HAVE_LANGINFO_ABALTMON */
 
+/* FIXME: It doesn’t seem to be possible to use ERA on 64-bit big-endian platforms with glibc
+ * in a POSIX-compliant way right now.
+ * See https://gitlab.gnome.org/GNOME/glib/-/issues/3225 */
+#if defined(HAVE_LANGINFO_ERA) && (G_BYTE_ORDER == G_LITTLE_ENDIAN || GLIB_SIZEOF_VOID_P == 4)
+
+#define PREFERRED_ERA_DATE_TIME_FMT nl_langinfo (ERA_D_T_FMT)
+#define PREFERRED_ERA_DATE_FMT nl_langinfo (ERA_D_FMT)
+#define PREFERRED_ERA_TIME_FMT nl_langinfo (ERA_T_FMT)
+
+#define ERA_DESCRIPTION nl_langinfo (ERA)
+#define ERA_DESCRIPTION_IS_LOCALE TRUE
+#define ERA_DESCRIPTION_N_SEGMENTS (int) (gintptr) nl_langinfo (_NL_TIME_ERA_NUM_ENTRIES)
+
+#else  /* if !HAVE_LANGINFO_ERA */
+
+#define PREFERRED_ERA_DATE_TIME_FMT PREFERRED_DATE_TIME_FMT
+#define PREFERRED_ERA_DATE_FMT PREFERRED_DATE_FMT
+#define PREFERRED_ERA_TIME_FMT PREFERRED_TIME_FMT
+
+#define ERA_DESCRIPTION NULL
+#define ERA_DESCRIPTION_IS_LOCALE FALSE
+#define ERA_DESCRIPTION_N_SEGMENTS 0
+
+#endif  /* !HAVE_LANGINFO_ERA */
+
 /* Format AM/PM indicator if the locale does not have a localized version. */
 static const gchar *
 get_fallback_ampm (gint hour)
@@ -1040,15 +1032,41 @@ g_date_time_new_now_utc (void)
 GDateTime *
 g_date_time_new_from_unix_local (gint64 t)
 {
-  GDateTime *datetime;
-  GTimeZone *local;
-
   if (t > G_MAXINT64 / USEC_PER_SECOND ||
       t < G_MININT64 / USEC_PER_SECOND)
     return NULL;
 
+  return g_date_time_new_from_unix_local_usec (t * USEC_PER_SECOND);
+}
+
+/**
+ * g_date_time_new_from_unix_local_usec: (constructor)
+ * @usecs: the Unix time in microseconds
+ *
+ * Creates a [struct@GLib.DateTime] corresponding to the given Unix time @t in the
+ * local time zone.
+ *
+ * Unix time is the number of microseconds that have elapsed since 1970-01-01
+ * 00:00:00 UTC, regardless of the local time offset.
+ *
+ * This call can fail (returning `NULL`) if @t represents a time outside
+ * of the supported range of #GDateTime.
+ *
+ * You should release the return value by calling [method@GLib.DateTime.unref]
+ * when you are done with it.
+ *
+ * Returns: (transfer full) (nullable): a new [struct@GLib.DateTime], or `NULL`
+ *
+ * Since: 2.80
+ **/
+GDateTime *
+g_date_time_new_from_unix_local_usec (gint64 usecs)
+{
+  GDateTime *datetime;
+  GTimeZone *local;
+
   local = g_time_zone_new_local ();
-  datetime = g_date_time_new_from_unix (local, t * USEC_PER_SECOND);
+  datetime = g_date_time_new_from_unix (local, usecs);
   g_time_zone_unref (local);
 
   return datetime;
@@ -1076,15 +1094,40 @@ g_date_time_new_from_unix_local (gint64 t)
 GDateTime *
 g_date_time_new_from_unix_utc (gint64 t)
 {
-  GDateTime *datetime;
-  GTimeZone *utc;
-
   if (t > G_MAXINT64 / USEC_PER_SECOND ||
       t < G_MININT64 / USEC_PER_SECOND)
     return NULL;
 
+  return g_date_time_new_from_unix_utc_usec (t * USEC_PER_SECOND);
+}
+
+/**
+ * g_date_time_new_from_unix_utc_usec: (constructor)
+ * @usecs: the Unix time in microseconds
+ *
+ * Creates a [struct@GLib.DateTime] corresponding to the given Unix time @t in UTC.
+ *
+ * Unix time is the number of microseconds that have elapsed since 1970-01-01
+ * 00:00:00 UTC.
+ *
+ * This call can fail (returning `NULL`) if @t represents a time outside
+ * of the supported range of #GDateTime.
+ *
+ * You should release the return value by calling [method@GLib.DateTime.unref]
+ * when you are done with it.
+ *
+ * Returns: (transfer full) (nullable): a new [struct@GLib.DateTime], or `NULL`
+ *
+ * Since: 2.80
+ **/
+GDateTime *
+g_date_time_new_from_unix_utc_usec (gint64 usecs)
+{
+  GDateTime *datetime;
+  GTimeZone *utc;
+
   utc = g_time_zone_new_utc ();
-  datetime = g_date_time_new_from_unix (utc, t * USEC_PER_SECOND);
+  datetime = g_date_time_new_from_unix (utc, usecs);
   g_time_zone_unref (utc);
 
   return datetime;
@@ -1346,12 +1389,16 @@ parse_iso8601_date (const gchar *text, gsize length,
     return FALSE;
 }
 
+/* Value returned in tz_offset is valid if and only if the function return value
+ * is non-NULL. */
 static GTimeZone *
-parse_iso8601_timezone (const gchar *text, gsize length, gssize *tz_offset)
+parse_iso8601_timezone (const gchar *text, gsize length, size_t *tz_offset)
 {
-  gint i, tz_length, offset_hours, offset_minutes;
+  size_t tz_length;
+  gint offset_hours, offset_minutes;
   gint offset_sign = 1;
   GTimeZone *tz;
+  const char *tz_start;
 
   /* UTC uses Z suffix  */
   if (length > 0 && text[length - 1] == 'Z')
@@ -1361,42 +1408,42 @@ parse_iso8601_timezone (const gchar *text, gsize length, gssize *tz_offset)
     }
 
   /* Look for '+' or '-' of offset */
-  for (i = length - 1; i >= 0; i--)
-    if (text[i] == '+' || text[i] == '-')
+  for (tz_length = 1; tz_length <= length; tz_length++)
+    if (text[length - tz_length] == '+' || text[length - tz_length] == '-')
       {
-        offset_sign = text[i] == '-' ? -1 : 1;
+        offset_sign = text[length - tz_length] == '-' ? -1 : 1;
         break;
       }
-  if (i < 0)
+  if (tz_length > length)
     return NULL;
-  tz_length = length - i;
+  tz_start = text + length - tz_length;
 
   /* +hh:mm or -hh:mm */
-  if (tz_length == 6 && text[i+3] == ':')
+  if (tz_length == 6 && tz_start[3] == ':')
     {
-      if (!get_iso8601_int (text + i + 1, 2, &offset_hours) ||
-          !get_iso8601_int (text + i + 4, 2, &offset_minutes))
+      if (!get_iso8601_int (tz_start + 1, 2, &offset_hours) ||
+          !get_iso8601_int (tz_start + 4, 2, &offset_minutes))
         return NULL;
     }
   /* +hhmm or -hhmm */
   else if (tz_length == 5)
     {
-      if (!get_iso8601_int (text + i + 1, 2, &offset_hours) ||
-          !get_iso8601_int (text + i + 3, 2, &offset_minutes))
+      if (!get_iso8601_int (tz_start + 1, 2, &offset_hours) ||
+          !get_iso8601_int (tz_start + 3, 2, &offset_minutes))
         return NULL;
     }
   /* +hh or -hh */
   else if (tz_length == 3)
     {
-      if (!get_iso8601_int (text + i + 1, 2, &offset_hours))
+      if (!get_iso8601_int (tz_start + 1, 2, &offset_hours))
         return NULL;
       offset_minutes = 0;
     }
   else
     return NULL;
 
-  *tz_offset = i;
-  tz = g_time_zone_new_identifier (text + i);
+  *tz_offset = tz_start - text;
+  tz = g_time_zone_new_identifier (tz_start);
 
   /* Double-check that the GTimeZone matches our interpretation of the timezone.
    * This can fail because our interpretation is less strict than (for example)
@@ -1415,11 +1462,11 @@ static gboolean
 parse_iso8601_time (const gchar *text, gsize length,
                     gint *hour, gint *minute, gdouble *seconds, GTimeZone **tz)
 {
-  gssize tz_offset = -1;
+  size_t tz_offset = 0;
 
   /* Check for timezone suffix */
   *tz = parse_iso8601_timezone (text, length, &tz_offset);
-  if (tz_offset >= 0)
+  if (*tz != NULL)
     length = tz_offset;
 
   /* hh:mm:ss(.sss) */
@@ -1448,7 +1495,7 @@ parse_iso8601_time (const gchar *text, gsize length,
  *
  * Creates a #GDateTime corresponding to the given
  * [ISO 8601 formatted string](https://en.wikipedia.org/wiki/ISO_8601)
- * @text. ISO 8601 strings of the form <date><sep><time><tz> are supported, with
+ * @text. ISO 8601 strings of the form `<date><sep><time><tz>` are supported, with
  * some extensions from [RFC 3339](https://tools.ietf.org/html/rfc3339) as
  * mentioned below.
  *
@@ -1456,11 +1503,11 @@ parse_iso8601_time (const gchar *text, gsize length,
  * in an ISO-8601 string will be ignored, so a `23:59:60` time would be parsed as
  * `23:59:59`.
  *
- * <sep> is the separator and can be either 'T', 't' or ' '. The latter two
+ * `<sep>` is the separator and can be either 'T', 't' or ' '. The latter two
  * separators are an extension from
  * [RFC 3339](https://tools.ietf.org/html/rfc3339#section-5.6).
  *
- * <date> is in the form:
+ * `<date>` is in the form:
  *
  * - `YYYY-MM-DD` - Year/month/day, e.g. 2016-08-24.
  * - `YYYYMMDD` - Same as above without dividers.
@@ -1470,12 +1517,12 @@ parse_iso8601_time (const gchar *text, gsize length,
  *   e.g. 2016-W34-3.
  * - `YYYYWwwD` - Same as above without dividers.
  *
- * <time> is in the form:
+ * `<time>` is in the form:
  *
  * - `hh:mm:ss(.sss)` - Hours, minutes, seconds (subseconds), e.g. 22:10:42.123.
  * - `hhmmss(.sss)` - Same as above without dividers.
  *
- * <tz> is an optional timezone suffix of the form:
+ * `<tz>` is an optional timezone suffix of the form:
  *
  * - `Z` - UTC.
  * - `+hh:mm` or `-hh:mm` - Offset from UTC in hours and minutes, e.g. +12:00.
@@ -1497,7 +1544,8 @@ parse_iso8601_time (const gchar *text, gsize length,
 GDateTime *
 g_date_time_new_from_iso8601 (const gchar *text, GTimeZone *default_tz)
 {
-  gint length, date_length = -1;
+  size_t length, date_length = 0;
+  gboolean date_length_set = FALSE;
   gint hour = 0, minute = 0;
   gdouble seconds = 0.0;
   GTimeZone *tz = NULL;
@@ -1508,11 +1556,14 @@ g_date_time_new_from_iso8601 (const gchar *text, GTimeZone *default_tz)
   /* Count length of string and find date / time separator ('T', 't', or ' ') */
   for (length = 0; text[length] != '\0'; length++)
     {
-      if (date_length < 0 && (text[length] == 'T' || text[length] == 't' || text[length] == ' '))
-        date_length = length;
+      if (!date_length_set && (text[length] == 'T' || text[length] == 't' || text[length] == ' '))
+        {
+          date_length = length;
+          date_length_set = TRUE;
+        }
     }
 
-  if (date_length < 0)
+  if (!date_length_set)
     return NULL;
 
   if (!parse_iso8601_time (text + date_length + 1, length - (date_length + 1),
@@ -1598,7 +1649,7 @@ g_date_time_new (GTimeZone *tz,
       day < 1 || day > days_in_months[GREGORIAN_LEAP (year)][month] ||
       hour < 0 || hour > 23 ||
       minute < 0 || minute > 59 ||
-      isnan (seconds) ||
+      g_isnan (seconds) ||
       seconds < 0.0 || seconds >= 60.0)
     return NULL;
 
@@ -1623,7 +1674,7 @@ g_date_time_new (GTimeZone *tz,
    * is 1000000.  This is not a problem with precision, it's just how
    * FP numbers work.
    * See https://bugzilla.gnome.org/show_bug.cgi?id=697715. */
-  usec = seconds * USEC_PER_SECOND;
+  usec = (gint64) (seconds * USEC_PER_SECOND);
   usecd = (usec + 1) * 1e-6;
   if (usecd <= seconds) {
     usec++;
@@ -1926,7 +1977,7 @@ GDateTime*
 g_date_time_add_seconds (GDateTime *datetime,
                          gdouble    seconds)
 {
-  return g_date_time_add (datetime, seconds * USEC_PER_SECOND);
+  return g_date_time_add (datetime, (GTimeSpan) (seconds * USEC_PER_SECOND));
 }
 
 /**
@@ -2579,6 +2630,27 @@ g_date_time_to_unix (GDateTime *datetime)
 }
 
 /**
+ * g_date_time_to_unix_usec:
+ * @datetime: a #GDateTime
+ *
+ * Gives the Unix time corresponding to @datetime, in microseconds.
+ *
+ * Unix time is the number of microseconds that have elapsed since 1970-01-01
+ * 00:00:00 UTC, regardless of the time zone associated with @datetime.
+ *
+ * Returns: the Unix time corresponding to @datetime
+ *
+ * Since: 2.80
+ **/
+gint64
+g_date_time_to_unix_usec (GDateTime *datetime)
+{
+  g_return_val_if_fail (datetime != NULL, 0);
+
+  return INSTANT_TO_UNIX_USECS (g_date_time_to_instant (datetime));
+}
+
+/**
  * g_date_time_to_timeval:
  * @datetime: a #GDateTime
  * @tv: a #GTimeVal to modify
@@ -2858,6 +2930,9 @@ format_z (GString *outstr,
 /* Initializes the array with UTF-8 encoded alternate digits suitable for use
  * in current locale. Returns NULL when current locale does not use alternate
  * digits or there was an error converting them to UTF-8.
+ *
+ * This needs external locking, so must only be called from within
+ * format_number().
  */
 static const gchar * const *
 initialize_alt_digits (void)
@@ -2899,6 +2974,134 @@ initialize_alt_digits (void)
 }
 #endif /* HAVE_LANGINFO_OUTDIGIT */
 
+/* Look up the era which contains @datetime, in the ERA description from libc
+ * which corresponds to the currently set LC_TIME locale. The ERA is parsed and
+ * cached the first time this function is called (or when LC_TIME changes).
+ * See nl_langinfo(3).
+ *
+ * The return value is (transfer full). */
+static GEraDescriptionSegment *
+date_time_lookup_era (GDateTime *datetime,
+                      gboolean   locale_is_utf8)
+{
+  static GMutex era_mutex;
+  static GPtrArray *static_era_description = NULL;  /* (mutex era_mutex) (element-type GEraDescriptionSegment) */
+  static const char *static_era_description_locale = NULL;  /* (mutex era_mutex) */
+  const char *current_lc_time = setlocale (LC_TIME, NULL);
+  GPtrArray *local_era_description;  /* (element-type GEraDescriptionSegment) */
+  GEraDate datetime_date;
+
+  g_mutex_lock (&era_mutex);
+
+  if (static_era_description_locale != current_lc_time)
+    {
+      const char *era_description_str;
+      size_t era_description_str_len;
+      char *tmp = NULL;
+
+      era_description_str = ERA_DESCRIPTION;
+      if (era_description_str != NULL)
+        {
+          /* FIXME: glibc 2.37 seems to return the era segments nul-separated rather
+           * than semicolon-separated (which is what nl_langinfo(3) specifies).
+           * Fix that up before sending it to the parsing code.
+           * See https://sourceware.org/bugzilla/show_bug.cgi?id=31030*/
+            {
+              /* Work out the length of the whole description string, regardless
+               * of whether it uses nuls or semicolons as separators. */
+              int n_entries = ERA_DESCRIPTION_N_SEGMENTS;
+              const char *s = era_description_str;
+
+              for (int i = 1; i < n_entries; i++)
+                {
+                  const char *next_semicolon = strchr (s, ';');
+                  const char *next_nul = strchr (s, '\0');
+
+                  if (next_semicolon != NULL && next_semicolon < next_nul)
+                    s = next_semicolon + 1;
+                  else
+                    s = next_nul + 1;
+                }
+
+              era_description_str_len = strlen (s) + (s - era_description_str);
+
+              /* Replace all the nuls with semicolons. */
+              era_description_str = tmp = g_memdup2 (era_description_str, era_description_str_len + 1);
+              s = era_description_str;
+
+              for (int i = 1; i < n_entries; i++)
+                {
+                  char *next_nul = strchr (s, '\0');
+
+                  if ((size_t) (next_nul - era_description_str) >= era_description_str_len)
+                    break;
+
+                  *next_nul = ';';
+                  s = next_nul + 1;
+                }
+            }
+
+          /* Convert from the LC_TIME encoding to UTF-8 if needed. */
+          if (!locale_is_utf8 && ERA_DESCRIPTION_IS_LOCALE)
+            {
+              char *tmp2 = NULL;
+              era_description_str = tmp2 = g_locale_to_utf8 (era_description_str, -1, NULL, NULL, NULL);
+              g_free (tmp);
+              tmp = g_steal_pointer (&tmp2);
+            }
+
+          g_clear_pointer (&static_era_description, g_ptr_array_unref);
+
+          if (era_description_str != NULL)
+            static_era_description = _g_era_description_parse (era_description_str);
+          if (static_era_description == NULL)
+            g_warning ("Could not parse ERA description: %s", era_description_str);
+        }
+      else
+        {
+          g_clear_pointer (&static_era_description, g_ptr_array_unref);
+        }
+
+      g_free (tmp);
+
+      static_era_description_locale = current_lc_time;
+    }
+
+  if (static_era_description == NULL)
+    {
+      g_mutex_unlock (&era_mutex);
+      return NULL;
+    }
+
+  local_era_description = g_ptr_array_ref (static_era_description);
+  g_mutex_unlock (&era_mutex);
+
+  /* Search through the eras and see if one matches. */
+  datetime_date.type = G_ERA_DATE_SET;
+  datetime_date.year = g_date_time_get_year (datetime);
+  datetime_date.month = g_date_time_get_month (datetime);
+  datetime_date.day = g_date_time_get_day_of_month (datetime);
+
+  for (unsigned int i = 0; i < local_era_description->len; i++)
+    {
+      GEraDescriptionSegment *segment = g_ptr_array_index (local_era_description, i);
+
+      if ((_g_era_date_compare (&segment->start_date, &datetime_date) <= 0 &&
+           _g_era_date_compare (&datetime_date, &segment->end_date) <= 0) ||
+          (_g_era_date_compare (&segment->end_date, &datetime_date) <= 0 &&
+           _g_era_date_compare (&datetime_date, &segment->start_date) <= 0))
+        {
+          /* @datetime is within this era segment. */
+          g_ptr_array_unref (local_era_description);
+          return _g_era_description_segment_ref (segment);
+        }
+    }
+
+  g_ptr_array_unref (local_era_description);
+
+  return NULL;
+}
+
 static void
 format_number (GString     *str,
                gboolean     use_alt_digits,
@@ -2910,8 +3113,11 @@ format_number (GString     *str,
     "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"
   };
   const gchar * const *digits = ascii_digits;
-  const gchar *tmp[10];
+  const gchar *tmp[10] = { NULL, };
   gint i = 0;
+#ifdef HAVE_LANGINFO_OUTDIGIT
+  static GMutex alt_digits_mutex;
+#endif
 
   g_return_if_fail (width <= 10);
 
@@ -2919,16 +3125,22 @@ format_number (GString     *str,
   if (use_alt_digits)
     {
       static const gchar * const *alt_digits = NULL;
-      static gsize initialised;
+      static char *alt_digits_locale = NULL;
+      const char *current_ctype_locale = setlocale (LC_CTYPE, NULL);
 
-      if G_UNLIKELY (g_once_init_enter (&initialised))
+      /* Lock so we can initialise (or re-initialise, if the locale has changed)
+       * and hold access to the digits buffer until done formatting. */
+      g_mutex_lock (&alt_digits_mutex);
+
+      if (g_strcmp0 (alt_digits_locale, current_ctype_locale) != 0)
         {
           alt_digits = initialize_alt_digits ();
 
           if (alt_digits == NULL)
             alt_digits = ascii_digits;
 
-          g_once_init_leave (&initialised, TRUE);
+          g_free (alt_digits_locale);
+          alt_digits_locale = g_strdup (current_ctype_locale);
         }
 
       digits = alt_digits;
@@ -2945,6 +3157,11 @@ format_number (GString     *str,
   while (pad && i < width)
     tmp[i++] = *pad == '0' ? digits[0] : pad;
 
+#ifdef HAVE_LANGINFO_OUTDIGIT
+  if (use_alt_digits)
+    g_mutex_unlock (&alt_digits_mutex);
+#endif
+
   /* should really be impossible */
   g_assert (i <= 10);
 
@@ -2952,6 +3169,7 @@ format_number (GString     *str,
     g_string_append (str, tmp[--i]);
 }
 
+#ifndef GSTREAMER_LITE
 static gboolean
 format_ampm (GDateTime *datetime,
              GString   *outstr,
@@ -3018,13 +3236,17 @@ g_date_time_format_locale (GDateTime   *datetime,
 static inline gboolean
 string_append (GString     *string,
                const gchar *s,
+               gboolean     do_strup,
                gboolean     s_is_utf8)
 {
   gchar *utf8;
   gsize  utf8_len;
+  char *tmp = NULL;
 
   if (s_is_utf8)
     {
+      if (do_strup)
+        s = tmp = g_utf8_strup (s, -1);
       g_string_append (string, s);
     }
   else
@@ -3032,9 +3254,17 @@ string_append (GString     *string,
       utf8 = _g_time_locale_to_utf8 (s, -1, NULL, &utf8_len, NULL);
       if (utf8 == NULL)
         return FALSE;
+      if (do_strup)
+        {
+          tmp = g_utf8_strup (utf8, utf8_len);
+          g_free (utf8);
+          utf8 = g_steal_pointer (&tmp);
+        }
       g_string_append_len (string, utf8, utf8_len);
       g_free (utf8);
     }
+
+  g_free (tmp);
 
   return TRUE;
 }
@@ -3048,15 +3278,19 @@ g_date_time_format_utf8 (GDateTime   *datetime,
        GString     *outstr,
        gboolean     locale_is_utf8)
 {
-  guint     len;
+  size_t len;
   guint     colons;
   gunichar  c;
   gboolean  alt_digits = FALSE;
+  gboolean alt_era = FALSE;
   gboolean  pad_set = FALSE;
+  gboolean mod_case = FALSE;
   gboolean  name_is_utf8;
   const gchar *pad = "";
+  const gchar *mod = "";
   const gchar *name;
   const gchar *tz;
+  char *tmp = NULL;
 
   while (*utf8_format)
     {
@@ -3075,7 +3309,9 @@ g_date_time_format_utf8 (GDateTime   *datetime,
 
       colons = 0;
       alt_digits = FALSE;
+      alt_era = FALSE;
       pad_set = FALSE;
+      mod_case = FALSE;
 
     next_mod:
       c = g_utf8_get_char (utf8_format);
@@ -3089,7 +3325,7 @@ g_date_time_format_utf8 (GDateTime   *datetime,
 
           name_is_utf8 = locale_is_utf8 || !WEEKDAY_ABBR_IS_LOCALE;
 
-          if (!string_append (outstr, name, name_is_utf8))
+          if (!string_append (outstr, name, mod_case, name_is_utf8))
             return FALSE;
 
     break;
@@ -3100,7 +3336,7 @@ g_date_time_format_utf8 (GDateTime   *datetime,
 
           name_is_utf8 = locale_is_utf8 || !WEEKDAY_FULL_IS_LOCALE;
 
-          if (!string_append (outstr, name, name_is_utf8))
+          if (!string_append (outstr, name, mod_case, name_is_utf8))
             return FALSE;
 
     break;
@@ -3114,7 +3350,7 @@ g_date_time_format_utf8 (GDateTime   *datetime,
             ((alt_digits && !MONTH_ABBR_STANDALONE_IS_LOCALE) ||
              (!alt_digits && !MONTH_ABBR_WITH_DAY_IS_LOCALE));
 
-          if (!string_append (outstr, name, name_is_utf8))
+          if (!string_append (outstr, name, mod_case, name_is_utf8))
             return FALSE;
 
     break;
@@ -3128,20 +3364,37 @@ g_date_time_format_utf8 (GDateTime   *datetime,
             ((alt_digits && !MONTH_FULL_STANDALONE_IS_LOCALE) ||
              (!alt_digits && !MONTH_FULL_WITH_DAY_IS_LOCALE));
 
-          if (!string_append (outstr, name, name_is_utf8))
+          if (!string_append (outstr, name, mod_case, name_is_utf8))
               return FALSE;
 
     break;
   case 'c':
     {
-            if (g_strcmp0 (PREFERRED_DATE_TIME_FMT, "") == 0)
+            const char *subformat = alt_era ? PREFERRED_ERA_DATE_TIME_FMT : PREFERRED_DATE_TIME_FMT;
+
+            /* Fallback */
+            if (alt_era && g_strcmp0 (subformat, "") == 0)
+              subformat = PREFERRED_DATE_TIME_FMT;
+
+            if (g_strcmp0 (subformat, "") == 0)
               return FALSE;
-            if (!g_date_time_format_locale (datetime, PREFERRED_DATE_TIME_FMT,
+            if (!g_date_time_format_locale (datetime, subformat,
                                             outstr, locale_is_utf8))
               return FALSE;
     }
     break;
   case 'C':
+          if (alt_era)
+            {
+              GEraDescriptionSegment *era = date_time_lookup_era (datetime, locale_is_utf8);
+              if (era != NULL)
+                {
+                  g_string_append (outstr, era->era_name);
+                  _g_era_description_segment_unref (era);
+                  break;
+                }
+            }
+
     format_number (outstr, alt_digits, pad_set ? pad : "0", 2,
        g_date_time_get_year (datetime) / 100);
     break;
@@ -3181,7 +3434,7 @@ g_date_time_format_utf8 (GDateTime   *datetime,
             ((alt_digits && !MONTH_ABBR_STANDALONE_IS_LOCALE) ||
              (!alt_digits && !MONTH_ABBR_WITH_DAY_IS_LOCALE));
 
-          if (!string_append (outstr, name, name_is_utf8))
+          if (!string_append (outstr, name, mod_case, name_is_utf8))
             return FALSE;
 
     break;
@@ -3219,12 +3472,19 @@ g_date_time_format_utf8 (GDateTime   *datetime,
   case 'O':
     alt_digits = TRUE;
     goto next_mod;
+        case 'E':
+          alt_era = TRUE;
+    goto next_mod;
   case 'p':
-          if (!format_ampm (datetime, outstr, locale_is_utf8, TRUE))
+          if (!format_ampm (datetime, outstr, locale_is_utf8,
+                            mod_case && g_strcmp0 (mod, "#") == 0 ? FALSE
+                                                                  : TRUE))
             return FALSE;
           break;
   case 'P':
-          if (!format_ampm (datetime, outstr, locale_is_utf8, FALSE))
+          if (!format_ampm (datetime, outstr, locale_is_utf8,
+                            mod_case && g_strcmp0 (mod, "^") == 0 ? TRUE
+                                                                  : FALSE))
             return FALSE;
     break;
   case 'r':
@@ -3271,27 +3531,76 @@ g_date_time_format_utf8 (GDateTime   *datetime,
     break;
   case 'x':
     {
-            if (g_strcmp0 (PREFERRED_DATE_FMT, "") == 0)
+            const char *subformat = alt_era ? PREFERRED_ERA_DATE_FMT : PREFERRED_DATE_FMT;
+
+            /* Fallback */
+            if (alt_era && g_strcmp0 (subformat, "") == 0)
+              subformat = PREFERRED_DATE_FMT;
+
+            if (g_strcmp0 (subformat, "") == 0)
               return FALSE;
-      if (!g_date_time_format_locale (datetime, PREFERRED_DATE_FMT,
+      if (!g_date_time_format_locale (datetime, subformat,
               outstr, locale_is_utf8))
         return FALSE;
     }
     break;
   case 'X':
     {
-            if (g_strcmp0 (PREFERRED_TIME_FMT, "") == 0)
+            const char *subformat = alt_era ? PREFERRED_ERA_TIME_FMT : PREFERRED_TIME_FMT;
+
+            /* Fallback */
+            if (alt_era && g_strcmp0 (subformat, "") == 0)
+              subformat = PREFERRED_TIME_FMT;
+
+            if (g_strcmp0 (subformat, "") == 0)
               return FALSE;
-      if (!g_date_time_format_locale (datetime, PREFERRED_TIME_FMT,
+      if (!g_date_time_format_locale (datetime, subformat,
               outstr, locale_is_utf8))
         return FALSE;
     }
     break;
   case 'y':
+          if (alt_era)
+            {
+              GEraDescriptionSegment *era = date_time_lookup_era (datetime, locale_is_utf8);
+              if (era != NULL)
+                {
+                  int delta = g_date_time_get_year (datetime) - era->start_date.year;
+
+                  /* Both these years are in the Gregorian calendar (CE/BCE),
+                   * which has no year zero. So take one from the delta if they
+                   * cross across where year zero would be. */
+                  if ((g_date_time_get_year (datetime) < 0) != (era->start_date.year < 0))
+                    delta -= 1;
+
+                  format_number (outstr, alt_digits, pad_set ? pad : "0", 2,
+                                 era->offset + delta * era->direction_multiplier);
+                  _g_era_description_segment_unref (era);
+                  break;
+                }
+            }
+
     format_number (outstr, alt_digits, pad_set ? pad : "0", 2,
        g_date_time_get_year (datetime) % 100);
     break;
   case 'Y':
+          if (alt_era)
+            {
+              GEraDescriptionSegment *era = date_time_lookup_era (datetime, locale_is_utf8);
+              if (era != NULL)
+                {
+                  if (!g_date_time_format_utf8 (datetime, era->era_format,
+                                                outstr, locale_is_utf8))
+                    {
+                      _g_era_description_segment_unref (era);
+                      return FALSE;
+                    }
+
+                  _g_era_description_segment_unref (era);
+                  break;
+                }
+            }
+
     format_number (outstr, alt_digits, 0, 0,
        g_date_time_get_year (datetime));
     break;
@@ -3305,7 +3614,10 @@ g_date_time_format_utf8 (GDateTime   *datetime,
     break;
   case 'Z':
     tz = g_date_time_get_timezone_abbreviation (datetime);
+          if (mod_case && g_strcmp0 (mod, "#") == 0)
+            tz = tmp = g_utf8_strdown (tz, -1);
           g_string_append (outstr, tz);
+          g_clear_pointer (&tmp, g_free);
     break;
   case '%':
     g_string_append_c (outstr, '%');
@@ -3327,6 +3639,14 @@ g_date_time_format_utf8 (GDateTime   *datetime,
     if (*utf8_format && *utf8_format != 'z' && *utf8_format != ':')
       return FALSE;
     colons++;
+    goto next_mod;
+        case '^':
+          mod_case = TRUE;
+          mod = "^";
+          goto next_mod;
+        case '#':
+          mod_case = TRUE;
+          mod = "#";
     goto next_mod;
   default:
     return FALSE;
@@ -3423,8 +3743,9 @@ g_date_time_format_utf8 (GDateTime   *datetime,
  * - `%%`: a literal `%` character
  *
  * Some conversion specifications can be modified by preceding the
- * conversion specifier by one or more modifier characters. The
- * following modifiers are supported for many of the numeric
+ * conversion specifier by one or more modifier characters.
+ *
+ * The following modifiers are supported for many of the numeric
  * conversions:
  *
  * - `O`: Use alternative numeric symbols, if the current locale supports those.
@@ -3435,6 +3756,13 @@ g_date_time_format_utf8 (GDateTime   *datetime,
  * - `0`: Pad a numeric result with zeros. This overrides the default padding
  *   for the specifier.
  *
+ * The following modifiers are supported for many of the alphabetic conversions:
+ *
+ * - `^`: Use upper case if possible. This is a gnulib `strftime()` extension.
+ *   Since: 2.80
+ * - `#`: Use opposite case if possible. This is a gnulib `strftime()`
+ *   extension. Since: 2.80
+ *
  * Additionally, when `O` is used with `B`, `b`, or `h`, it produces the alternative
  * form of a month name. The alternative form should be used when the month
  * name is used without a day number (e.g., standalone). It is required in
@@ -3442,6 +3770,22 @@ g_date_time_format_utf8 (GDateTime   *datetime,
  * rules. For other languages there is no difference. `%OB` is a GNU and BSD
  * `strftime()` extension expected to be added to the future POSIX specification,
  * `%Ob` and `%Oh` are GNU `strftime()` extensions. Since: 2.56
+ *
+ * Since GLib 2.80, when `E` is used with `%c`, `%C`, `%x`, `%X`, `%y` or `%Y`,
+ * the date is formatted using an alternate era representation specific to the
+ * locale. This is typically used for the Thai solar calendar or Japanese era
+ * names, for example.
+ *
+ * - `%Ec`: the preferred date and time representation for the current locale,
+ *   using the alternate era representation
+ * - `%EC`: the name of the era
+ * - `%Ex`: the preferred date representation for the current locale without
+ *   the time, using the alternate era representation
+ * - `%EX`: the preferred time representation for the current locale without
+ *   the date, using the alternate era representation
+ * - `%Ey`: the year since the beginning of the era denoted by the `%EC`
+ *   specifier
+ * - `%EY`: the full alternative year representation
  *
  * Returns: (transfer full) (nullable): a newly allocated string formatted to
  *    the requested format or %NULL in the case that there was an error (such
@@ -3533,6 +3877,7 @@ g_date_time_format_iso8601 (GDateTime *datetime)
 
   return g_string_free (outstr, FALSE);
 }
+#endif // GSTREAMER_LITE
 
 
 /* Epilogue {{{1 */

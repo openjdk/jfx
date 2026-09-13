@@ -25,7 +25,6 @@
 
 #include "config.h"
 
-#if ENABLE(SERVICE_WORKER)
 #include "ServiceWorkerData.h"
 
 namespace WebCore {
@@ -46,12 +45,10 @@ ServiceWorkerData ServiceWorkerData::isolatedCopy() &&
     return {
         identifier,
         registrationIdentifier,
-        WTFMove(scriptURL).isolatedCopy(),
+        WTF::move(scriptURL).isolatedCopy(),
         state,
         type,
     };
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

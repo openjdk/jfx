@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,7 @@
 #include <WebCore/StorageArea.h>
 #include <WebCore/StorageNamespace.h>
 #include <pal/SessionID.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/HashMap.h>
 #include <wtf/RefPtr.h>
 #include <wtf/text/WTFString.h>
@@ -37,7 +38,7 @@ namespace WebKit {
 
 class StorageAreaImpl;
 
-class StorageNamespaceImpl final : public WebCore::StorageNamespace {
+class StorageNamespaceImpl final : public WebCore::StorageNamespace, public CanMakeWeakPtr<StorageNamespaceImpl> {
 public:
     static Ref<StorageNamespaceImpl> createSessionStorageNamespace(unsigned quota, PAL::SessionID);
     static Ref<StorageNamespaceImpl> getOrCreateLocalStorageNamespace(const String& databasePath, unsigned quota, PAL::SessionID);

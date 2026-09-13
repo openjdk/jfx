@@ -45,10 +45,10 @@ public:
             return iter->value;
 
         for (unsigned hashValue = toCString(*value).hash(); ; hashValue++) {
-            CString fullHash = integerToSixCharacterHashString(hashValue).data();
+            CString fullHash = std::span<const char> { integerToSixCharacterHashString(hashValue) };
 
             for (unsigned length = 2; length < 6; ++length) {
-                CString shortHash = CString(fullHash.data(), length);
+                CString shortHash { fullHash.span().first(length) };
                 if (!m_backwardMap.contains(shortHash)) {
                     m_forwardMap.add(value, shortHash);
                     m_backwardMap.add(shortHash, value);
@@ -76,7 +76,7 @@ public:
     {
         out.print(prefix);
         T::dumpContextHeader(out);
-        out.print("\n");
+        out.print("\n"_s);
 
         Vector<CString> keys;
         unsigned maxKeySize = 0;
@@ -92,12 +92,12 @@ public:
 
         for (unsigned i = 0; i < keys.size(); ++i) {
             const T* value = m_backwardMap.get(keys[i]);
-            out.print(prefix, "    ");
+            out.print(prefix, "    "_s);
             CString briefString = brief(value, keys[i]);
             out.print(briefString);
             for (unsigned n = briefString.length(); n < maxKeySize; ++n)
-                out.print(" ");
-            out.print(" = ", *value, "\n");
+                out.print(" "_s);
+            out.print(" = "_s, *value, "\n"_s);
         }
     }
 

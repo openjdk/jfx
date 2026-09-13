@@ -25,13 +25,17 @@
 #include "SVGPreserveAspectRatioValue.h"
 
 #include "AffineTransform.h"
+#include "ExceptionOr.h"
 #include "FloatRect.h"
 #include "SVGParserUtilities.h"
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringParsingBuffer.h>
 #include <wtf/text/StringView.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGPreserveAspectRatioValue);
 
 SVGPreserveAspectRatioValue::SVGPreserveAspectRatioValue(StringView value)
 {
@@ -47,7 +51,7 @@ SVGPreserveAspectRatioValue::SVGPreserveAspectRatioValue(SVGPreserveAspectRatioT
 ExceptionOr<void> SVGPreserveAspectRatioValue::setAlign(unsigned short align)
 {
     if (align == SVG_PRESERVEASPECTRATIO_UNKNOWN || align > SVG_PRESERVEASPECTRATIO_XMAXYMAX)
-        return Exception { NotSupportedError };
+        return Exception { ExceptionCode::NotSupportedError };
 
     m_align = static_cast<SVGPreserveAspectRatioType>(align);
     return { };
@@ -56,7 +60,7 @@ ExceptionOr<void> SVGPreserveAspectRatioValue::setAlign(unsigned short align)
 ExceptionOr<void> SVGPreserveAspectRatioValue::setMeetOrSlice(unsigned short meetOrSlice)
 {
     if (meetOrSlice == SVG_MEETORSLICE_UNKNOWN || meetOrSlice > SVG_MEETORSLICE_SLICE)
-        return Exception { NotSupportedError };
+        return Exception { ExceptionCode::NotSupportedError };
 
     m_meetOrSlice = static_cast<SVGMeetOrSliceType>(meetOrSlice);
     return { };
@@ -69,19 +73,19 @@ bool SVGPreserveAspectRatioValue::parse(StringView value)
     });
 }
 
-bool SVGPreserveAspectRatioValue::parse(StringParsingBuffer<LChar>& buffer, bool validate)
+bool SVGPreserveAspectRatioValue::parse(StringParsingBuffer<Latin1Character>& buffer, bool validate)
 {
     return parseInternal(buffer, validate);
 }
 
-bool SVGPreserveAspectRatioValue::parse(StringParsingBuffer<UChar>& buffer, bool validate)
+bool SVGPreserveAspectRatioValue::parse(StringParsingBuffer<char16_t>& buffer, bool validate)
 {
     return parseInternal(buffer, validate);
 }
 
-template<typename CharacterType> static constexpr CharacterType noneDesc[] =  {'n', 'o', 'n', 'e'};
-template<typename CharacterType> static constexpr CharacterType meetDesc[] =  {'m', 'e', 'e', 't'};
-template<typename CharacterType> static constexpr CharacterType sliceDesc[] =  {'s', 'l', 'i', 'c', 'e'};
+template<typename CharacterType> static constexpr std::array<CharacterType, 4> noneDesc  { 'n', 'o', 'n', 'e' };
+template<typename CharacterType> static constexpr std::array<CharacterType, 4> meetDesc  { 'm', 'e', 'e', 't' };
+template<typename CharacterType> static constexpr std::array<CharacterType, 5> sliceDesc  { 's', 'l', 'i', 'c', 'e' };
 
 template<typename CharacterType> bool SVGPreserveAspectRatioValue::parseInternal(StringParsingBuffer<CharacterType>& buffer, bool validate)
 {
@@ -95,7 +99,7 @@ template<typename CharacterType> bool SVGPreserveAspectRatioValue::parseInternal
         return false;
 
     if (*buffer == 'n') {
-        if (!skipCharactersExactly(buffer, noneDesc<CharacterType>)) {
+        if (!skipCharactersExactly(buffer, std::span { noneDesc<CharacterType> })) {
             LOG_ERROR("Skipped to parse except for *none* value.");
             return false;
         }
@@ -154,13 +158,13 @@ template<typename CharacterType> bool SVGPreserveAspectRatioValue::parseInternal
 
     if (buffer.hasCharactersRemaining()) {
         if (*buffer == 'm') {
-            if (!skipCharactersExactly(buffer, meetDesc<CharacterType>)) {
+            if (!skipCharactersExactly(buffer, std::span { meetDesc<CharacterType> })) {
                 LOG_ERROR("Skipped to parse except for *meet* or *slice* value.");
                 return false;
             }
             skipOptionalSVGSpaces(buffer);
         } else if (*buffer == 's') {
-            if (!skipCharactersExactly(buffer, sliceDesc<CharacterType>)) {
+            if (!skipCharactersExactly(buffer, std::span { sliceDesc<CharacterType> })) {
                 LOG_ERROR("Skipped to parse except for *meet* or *slice* value.");
                 return false;
             }
@@ -361,9 +365,9 @@ String SVGPreserveAspectRatioValue::valueAsString() const
     case SVG_MEETORSLICE_UNKNOWN:
         return alignType();
     case SVG_MEETORSLICE_MEET:
-        return makeString(alignType(), " meet");
+        return makeString(alignType(), " meet"_s);
     case SVG_MEETORSLICE_SLICE:
-        return makeString(alignType(), " slice");
+        return makeString(alignType(), " slice"_s);
     }
 }
 

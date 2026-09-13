@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,17 +25,17 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
+import java.util.Collection;
+import javafx.scene.input.GestureEvent;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import com.sun.glass.ui.monocle.TestLogShim;
-import test.robot.com.sun.glass.ui.monocle.TestApplication;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
-import javafx.scene.input.GestureEvent;
-import org.junit.*;
-import org.junit.runners.Parameterized;
 
-import java.util.Collection;
-
-public class SwipeSimpleTest extends ParameterizedTestBase {
+public final class SwipeSimpleTest extends ParameterizedTestBase {
 
     private final int SWIPE_THRESHOLD = 10;
     int startPointX;
@@ -45,12 +45,7 @@ public class SwipeSimpleTest extends ParameterizedTestBase {
         System.setProperty("com.sun.javafx.isEmbedded", "true");
     }
 
-    public SwipeSimpleTest(TestTouchDevice device) {
-        super(device);
-    }
-
-    @Parameterized.Parameters
-    public static Collection<Object[]> data() {
+    private static Collection<TestTouchDevice> parameters() {
         return TestTouchDevices.getTouchDeviceParameters(1);
     }
 
@@ -59,13 +54,15 @@ public class SwipeSimpleTest extends ParameterizedTestBase {
         return max + 1;
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void beforeInit() {
         System.setProperty("com.sun.javafx.gestures.swipe.maxduration", "1200");
     }
 
-    @Before
-    public void addListener() throws Exception {
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    public void init(TestTouchDevice device) throws Exception {
+        createDevice(device, null);
         TestApplication.getStage().getScene().addEventHandler(
                 GestureEvent.ANY,
                 e -> TestLogShim.format("%s at %.0f, %.0f",
@@ -77,7 +74,7 @@ public class SwipeSimpleTest extends ParameterizedTestBase {
     }
 
     private void swipe(Point[] points, String expectedSwipe) throws Exception {
-        Assert.assertTrue(points.length > 1);
+        Assertions.assertTrue(points.length > 1);
         int x = points[0].getX();
         int y = points[0].getY();
         TestLogShim.reset();
@@ -97,124 +94,158 @@ public class SwipeSimpleTest extends ParameterizedTestBase {
         if (expectedSwipe != null) {
             TestLogShim.waitForLogContaining(expectedSwipe);
         } else {
-            Assert.assertEquals(0, TestLogShim.countLogContaining("SWIPE"));
+            Assertions.assertEquals(0, TestLogShim.countLogContaining("SWIPE"));
         }
     }
 
-    @Test
-    public void testSwipeRight1() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSwipeRight1(TestTouchDevice device) throws Exception {
+        init(device);
         Point[] path = {new Point(startPointX, startPointY),
                 new Point(startPointX + getDelta(), startPointY)};
         swipe(path, "SWIPE_RIGHT");
     }
 
-    @Test
-    public void testSwipeRight2() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSwipeRight2(TestTouchDevice device) throws Exception {
+        init(device);
         Point[] path = {new Point(startPointX, startPointY), new Point(65,
                 getDelta(), startPointX, startPointY)};
         swipe(path, "SWIPE_RIGHT");
     }
 
-    @Test
-    public void testSwipeRight3() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSwipeRight3(TestTouchDevice device) throws Exception {
+        init(device);
         Point[] path = {new Point(startPointX, startPointY), new Point(80,
                 getDelta(), startPointX, startPointY)};
         swipe(path, "SWIPE_RIGHT");
     }
 
-    @Test
-    public void testSwipeRight4() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSwipeRight4(TestTouchDevice device) throws Exception {
+        init(device);
         Point[] path = {new Point(startPointX, startPointY), new Point(115,
                 getDelta(), startPointX, startPointY)};
         swipe(path, "SWIPE_RIGHT");
     }
 
-    @Test
-    public void testSwipeLeft1() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSwipeLeft1(TestTouchDevice device) throws Exception {
+        init(device);
         Point[] path = {new Point(startPointX, startPointY),
                 new Point(startPointX - getDelta(), startPointY)};
         swipe(path, "SWIPE_LEFT");
     }
 
-    @Test
-    public void testSwipeLeft2() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSwipeLeft2(TestTouchDevice device) throws Exception {
+        init(device);
         Point[] path = {new Point(startPointX, startPointY), new Point(-65,
                 getDelta(), startPointX, startPointY)};
         swipe(path, "SWIPE_LEFT");
     }
 
-    @Test
-    public void testSwipeLeft3() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSwipeLeft3(TestTouchDevice device) throws Exception {
+        init(device);
         Point[] path = {new Point(startPointX, startPointY), new Point(-80,
                 getDelta(), startPointX, startPointY)};
         swipe(path, "SWIPE_LEFT");
     }
 
-    @Test
-    public void testSwipeLeft4() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSwipeLeft4(TestTouchDevice device) throws Exception {
+        init(device);
         Point[] path = {new Point(startPointX, startPointY), new Point(-115,
                 getDelta(), startPointX, startPointY)};
         swipe(path, "SWIPE_LEFT");
     }
 
-    @Test
-    public void testSwipeUp1() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSwipeUp1(TestTouchDevice device) throws Exception {
+        init(device);
         Point[] path = {new Point(startPointX, startPointY),
                 new Point(startPointX, startPointY - getDelta())};
         swipe(path, "SWIPE_UP");
     }
 
-    @Test
-    public void testSwipeUp2() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSwipeUp2(TestTouchDevice device) throws Exception {
+        init(device);
         Point[] path = {new Point(startPointX, startPointY), new Point(25,
                 getDelta(), startPointX, startPointY)};
         swipe(path, "SWIPE_UP");
     }
 
-    @Test
-    public void testSwipeUp3() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSwipeUp3(TestTouchDevice device) throws Exception {
+        init(device);
         Point[] path = {new Point(startPointX, startPointY), new Point(-25,
                 getDelta(), startPointX, startPointY)};
         swipe(path, "SWIPE_UP");
     }
 
-    @Test
-    public void testSwipeDown1() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSwipeDown1(TestTouchDevice device) throws Exception {
+        init(device);
         Point[] path = {new Point(startPointX, startPointY),
                 new Point(startPointX, startPointY + getDelta())};
         swipe(path, "SWIPE_DOWN");
     }
 
-    @Test
-    public void testSwipeDown2() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSwipeDown2(TestTouchDevice device) throws Exception {
+        init(device);
         Point[] path = {new Point(startPointX, startPointY), new Point(155,
                 getDelta(), startPointX, startPointY)};
         swipe(path, "SWIPE_DOWN");
     }
 
-    @Test
-    public void testSwipeDown3() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSwipeDown3(TestTouchDevice device) throws Exception {
+        init(device);
         Point[] path = {new Point(startPointX, startPointY), new Point(-155,
                 getDelta(), startPointX, startPointY)};
         swipe(path, "SWIPE_DOWN");
     }
 
-    @Test
-    public void testNoSwipeUp() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testNoSwipeUp(TestTouchDevice device) throws Exception {
+        init(device);
         Point[] path = {new Point(startPointX, startPointY), new Point(31,
                 getDelta(), startPointX, startPointY)};
         swipe(path, null);
     }
 
-    @Test
-    public void testNoSwipeRight() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testNoSwipeRight(TestTouchDevice device) throws Exception {
+        init(device);
         Point[] path = {new Point(startPointX, startPointY), new Point(59,
                 getDelta(), startPointX, startPointY)};
         swipe(path, null);
     }
 
-    @Test
-    public void testSwipeUp4Points() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSwipeUp4Points(TestTouchDevice device) throws Exception {
+        init(device);
         int delta = getDelta();
         Point p1 = new Point(startPointX, startPointY);
         Point p2 = new Point(45, delta, p1);

@@ -39,20 +39,25 @@
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderLayer.h"
-#include "RenderStyleInlines.h"
+#include "RenderLayerBacking.h"
+#include "RenderObjectInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderView.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderHTMLCanvas);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderHTMLCanvas);
 
 RenderHTMLCanvas::RenderHTMLCanvas(HTMLCanvasElement& element, RenderStyle&& style)
-    : RenderReplaced(element, WTFMove(style), element.size())
+    : RenderReplaced(Type::HTMLCanvas, element, WTF::move(style), element.size())
 {
+    ASSERT(isRenderHTMLCanvas());
 }
+
+RenderHTMLCanvas::~RenderHTMLCanvas() = default;
 
 HTMLCanvasElement& RenderHTMLCanvas::canvasElement() const
 {
@@ -64,14 +69,13 @@ bool RenderHTMLCanvas::requiresLayer() const
     if (RenderReplaced::requiresLayer())
         return true;
 
-    if (CanvasRenderingContext* context = canvasElement().renderingContext())
-        return context->isAccelerated();
-
-    return false;
+    return canvasCompositingStrategy(*this) != CanvasPaintedToEnclosingLayer;
 }
 
 void RenderHTMLCanvas::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
 {
+    ASSERT(!isSkippedContentRoot(*this));
+
     GraphicsContext& context = paintInfo.context();
 
     LayoutRect contentBoxRect = this->contentBoxRect();
@@ -93,7 +97,7 @@ void RenderHTMLCanvas::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& pa
         paintInfo.context().clip(snappedIntRect(contentBoxRect));
 
     if (paintInfo.phase == PaintPhase::Foreground)
-        page().addRelevantRepaintedObject(this, intersection(replacedContentRect, contentBoxRect));
+        page().addRelevantRepaintedObject(*this, intersection(replacedContentRect, contentBoxRect));
 
     InterpolationQualityMaintainer interpolationMaintainer(context, ImageQualityController::interpolationQualityFromStyle(style()));
 
@@ -105,7 +109,7 @@ void RenderHTMLCanvas::paintReplaced(PaintInfo& paintInfo, const LayoutPoint& pa
 void RenderHTMLCanvas::canvasSizeChanged()
 {
     IntSize canvasSize = canvasElement().size();
-    LayoutSize zoomedSize(canvasSize.width() * style().effectiveZoom(), canvasSize.height() * style().effectiveZoom());
+    LayoutSize zoomedSize(canvasSize.width() * style().usedZoom(), canvasSize.height() * style().usedZoom());
 
     if (zoomedSize == intrinsicSize())
         return;
@@ -115,6 +119,14 @@ void RenderHTMLCanvas::canvasSizeChanged()
     if (!parent())
         return;
     setNeedsLayoutIfNeededAfterIntrinsicSizeChange();
+}
+
+void RenderHTMLCanvas::styleDidChange(Style::Difference difference, const RenderStyle* oldStyle)
+{
+    RenderReplaced::styleDidChange(difference, oldStyle);
+
+    if (!oldStyle || style().dynamicRangeLimit() != oldStyle->dynamicRangeLimit())
+        canvasElement().dynamicRangeLimitDidChange(style().dynamicRangeLimit().toPlatformDynamicRangeLimit());
 }
 
 } // namespace WebCore

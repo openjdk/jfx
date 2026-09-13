@@ -147,35 +147,6 @@ public:
         m_traps = traps;
     }
 
-    static constexpr bool hasIsSensitiveToNaN(Opcode opcode)
-    {
-        switch (opcode) {
-        case Add:
-        case Sub:
-        case Mul:
-        case Div:
-        case Mod:
-        case DoubleToFloat:
-        case FloatToDouble:
-            return true;
-        default:
-            return false;
-        }
-    }
-    bool hasIsSensitiveToNaN() const
-    {
-        return hasIsSensitiveToNaN(m_opcode);
-    }
-    bool isSensitiveToNaN() const
-    {
-        return m_isSensitiveToNaN;
-    }
-    void setIsSensitiveToNaN(bool isSensitiveToNaN)
-    {
-        ASSERT(hasIsSensitiveToNaN());
-        m_isSensitiveToNaN = isSensitiveToNaN;
-    }
-
     static constexpr bool hasCloningForbidden(Opcode opcode)
     {
         switch (opcode) {
@@ -207,14 +178,7 @@ public:
     // - Try not to increase the size of Kind too much. But it wouldn't be the end of the
     //   world if it bloated to 64 bits.
 
-    bool operator==(const Kind& other) const
-    {
-        return m_opcode == other.m_opcode
-            && m_isChill == other.m_isChill
-            && m_traps == other.m_traps
-            && m_isSensitiveToNaN == other.m_isSensitiveToNaN
-            && m_cloningForbidden == other.m_cloningForbidden;
-    }
+    friend bool operator==(const Kind&, const Kind&) = default;
 
     void dump(PrintStream&) const;
 
@@ -222,7 +186,7 @@ public:
     {
         // It's almost certainly more important that this hash function is cheap to compute than
         // anything else. We can live with some kind hash collisions.
-        return m_opcode + (static_cast<unsigned>(m_isChill) << 16) + (static_cast<unsigned>(m_traps) << 7) + (static_cast<unsigned>(m_isSensitiveToNaN) << 24) + (static_cast<unsigned>(m_cloningForbidden) << 13);
+        return m_opcode + (static_cast<unsigned>(m_isChill) << 16) + (static_cast<unsigned>(m_traps) << 7) + (static_cast<unsigned>(m_cloningForbidden) << 8);
     }
 
     Kind(WTF::HashTableDeletedValueType)
@@ -236,11 +200,12 @@ public:
         return *this == Kind(WTF::HashTableDeletedValue);
     }
 
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
 private:
     Opcode m_opcode;
     bool m_isChill : 1 { false };
     bool m_traps : 1 { false };
-    bool m_isSensitiveToNaN : 1 { false };
     bool m_cloningForbidden : 1 { false };
 };
 
@@ -264,30 +229,15 @@ inline Kind trapping(Kind kind)
     return kind;
 }
 
-inline Kind sensitiveToNaN(Kind kind)
-{
-    kind.setIsSensitiveToNaN(true);
-    return kind;
-}
-
 inline Kind cloningForbidden(Kind kind)
 {
     kind.setIsCloningForbidden(true);
     return kind;
 }
 
-struct KindHash {
-    static unsigned hash(const Kind& key) { return key.hash(); }
-    static bool equal(const Kind& a, const Kind& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } } // namespace JSC::B3
 
 namespace WTF {
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::B3::Kind> : JSC::B3::KindHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::B3::Kind> : public SimpleClassHashTraits<JSC::B3::Kind> {

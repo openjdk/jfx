@@ -25,7 +25,8 @@
 
 #pragma once
 
-#include "VM.h"
+#include <JavaScriptCore/VM.h>
+#include <JavaScriptCore/VMTrapsInlines.h>
 #include <wtf/ForbidHeapAllocation.h>
 #include <wtf/Noncopyable.h>
 

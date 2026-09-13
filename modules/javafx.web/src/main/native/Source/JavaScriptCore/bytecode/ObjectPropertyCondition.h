@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "JSObject.h"
-#include "PropertyCondition.h"
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/PropertyCondition.h>
 #include <wtf/HashMap.h>
 
 namespace JSC {
@@ -204,16 +204,14 @@ public:
         return WTF::PtrHash<JSObject*>::hash(m_object) ^ m_condition.hash();
     }
 
-    bool operator==(const ObjectPropertyCondition& other) const
-    {
-        return m_object == other.m_object
-            && m_condition == other.m_condition;
-    }
+    friend bool operator==(const ObjectPropertyCondition&, const ObjectPropertyCondition&) = default;
 
     bool isHashTableDeletedValue() const
     {
         return !m_object && m_condition.isHashTableDeletedValue();
     }
+
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
 
     // Two conditions are compatible if they are identical or if they speak of different uids or
     // different objects. If false is returned, you have to decide how to resolve the conflict -
@@ -261,19 +259,16 @@ public:
 
     // This means that it's still valid and we could enforce validity by setting a transition
     // watchpoint on the structure and possibly an impure property watchpoint.
-    bool isWatchableAssumingImpurePropertyWatchpoint(
-        Structure*,
-        PropertyCondition::WatchabilityEffort) const;
-    bool isWatchableAssumingImpurePropertyWatchpoint(
-        PropertyCondition::WatchabilityEffort) const;
+    bool isWatchableAssumingImpurePropertyWatchpoint(Structure*, PropertyCondition::WatchabilityEffort, Concurrency) const;
+    bool isWatchableAssumingImpurePropertyWatchpoint(PropertyCondition::WatchabilityEffort, Concurrency) const;
+    bool isWatchableAssumingImpurePropertyWatchpoint(Structure*, PropertyCondition::WatchabilityEffort) const;
+    bool isWatchableAssumingImpurePropertyWatchpoint(PropertyCondition::WatchabilityEffort) const;
 
     // This means that it's still valid and we could enforce validity by setting a transition
     // watchpoint on the structure, and a value change watchpoint if we're Equivalence.
-    bool isWatchable(
-        Structure*,
-        PropertyCondition::WatchabilityEffort) const;
-    bool isWatchable(
-        PropertyCondition::WatchabilityEffort) const;
+    bool isWatchable(Structure*, PropertyCondition::WatchabilityEffort) const;
+    bool isWatchable(PropertyCondition::WatchabilityEffort) const;
+    bool isWatchable(PropertyCondition::WatchabilityEffort, Concurrency) const;
 
     bool watchingRequiresStructureTransitionWatchpoint() const
     {
@@ -309,22 +304,10 @@ private:
     PropertyCondition m_condition;
 };
 
-struct ObjectPropertyConditionHash {
-    static unsigned hash(const ObjectPropertyCondition& key) { return key.hash(); }
-    static bool equal(
-        const ObjectPropertyCondition& a, const ObjectPropertyCondition& b)
-    {
-        return a == b;
-    }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
 
 } // namespace JSC
 
 namespace WTF {
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::ObjectPropertyCondition> : JSC::ObjectPropertyConditionHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::ObjectPropertyCondition> : SimpleClassHashTraits<JSC::ObjectPropertyCondition> { };

@@ -71,7 +71,7 @@ void FunctionPrototype::addFunctionProperties(VM& vm, JSGlobalObject* globalObje
     putDirectCustomGetterSetterWithoutTransition(vm, vm.propertyNames->arguments, CustomGetterSetter::create(vm, argumentsGetter, callerAndArgumentsSetter), PropertyAttribute::DontEnum | PropertyAttribute::CustomAccessor);
     putDirectCustomGetterSetterWithoutTransition(vm, vm.propertyNames->caller, CustomGetterSetter::create(vm, callerGetter, callerAndArgumentsSetter), PropertyAttribute::DontEnum | PropertyAttribute::CustomAccessor);
 
-    *hasInstanceSymbolFunction = JSFunction::create(vm, functionPrototypeSymbolHasInstanceCodeGenerator(vm), globalObject);
+    *hasInstanceSymbolFunction = JSFunction::create(vm, globalObject, functionPrototypeSymbolHasInstanceCodeGenerator(vm), globalObject);
     putDirectWithoutTransition(vm, vm.propertyNames->hasInstanceSymbol, *hasInstanceSymbolFunction, PropertyAttribute::DontDelete | PropertyAttribute::ReadOnly | PropertyAttribute::DontEnum);
 }
 
@@ -90,14 +90,14 @@ JSC_DEFINE_HOST_FUNCTION(functionProtoFuncToString, (JSGlobalObject* globalObjec
     if (thisValue.inherits<InternalFunction>()) {
         InternalFunction* function = jsCast<InternalFunction*>(thisValue);
         Integrity::auditStructureID(function->structureID());
-        RELEASE_AND_RETURN(scope, JSValue::encode(jsMakeNontrivialString(globalObject, "function ", function->name(), "() {\n    [native code]\n}")));
+        RELEASE_AND_RETURN(scope, JSValue::encode(jsMakeNontrivialString(globalObject, "function "_s, function->name(), "() {\n    [native code]\n}"_s)));
     }
 
     if (thisValue.isObject()) {
         JSObject* object = asObject(thisValue);
         Integrity::auditStructureID(object->structureID());
         if (object->isCallable())
-            RELEASE_AND_RETURN(scope, JSValue::encode(jsMakeNontrivialString(globalObject, "function ", object->classInfo()->className, "() {\n    [native code]\n}")));
+            RELEASE_AND_RETURN(scope, JSValue::encode(jsMakeNontrivialString(globalObject, "function "_s, object->classInfo()->className, "() {\n    [native code]\n}"_s)));
     }
 
     return throwVMTypeError(globalObject, scope);
@@ -109,7 +109,7 @@ JSC_DEFINE_HOST_FUNCTION(functionProtoFuncBind, (JSGlobalObject* globalObject, C
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue thisValue = callFrame->thisValue();
-    if (UNLIKELY(!thisValue.isCallable()))
+    if (!thisValue.isCallable()) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "|this| is not a function inside Function.prototype.bind"_s);
     JSObject* target = asObject(thisValue);
 
@@ -129,7 +129,7 @@ JSC_DEFINE_HOST_FUNCTION(functionProtoFuncBind, (JSGlobalObject* globalObject, C
     double length = 0;
     JSString* name = nullptr;
     JSFunction* function = jsDynamicCast<JSFunction*>(target);
-    if (LIKELY(function && function->canAssumeNameAndLengthAreOriginal(vm))) {
+    if (function && function->canAssumeNameAndLengthAreOriginal(vm)) [[likely]] {
         // Do nothing! 'length' and 'name' computation are lazily done.
         // And this is totally OK since we know that wrapped functions have canAssumeNameAndLengthAreOriginal condition
         // at the time of creation of JSBoundFunction.
@@ -157,7 +157,9 @@ JSC_DEFINE_HOST_FUNCTION(functionProtoFuncBind, (JSGlobalObject* globalObject, C
             name = jsEmptyString(vm);
     }
 
-    RELEASE_AND_RETURN(scope, JSValue::encode(JSBoundFunction::create(vm, globalObject, target, boundThis, boundArgs, length, name)));
+    auto [taintedness, url] = sourceTaintedOriginFromStack(vm, callFrame);
+    SourceCode source = makeSource("[bound function]"_s, SourceOrigin(url), taintedness);
+    RELEASE_AND_RETURN(scope, JSValue::encode(JSBoundFunction::create(vm, globalObject, target, boundThis, boundArgs, length, name, source)));
 }
 
 // https://github.com/claudepache/es-legacy-function-reflection/blob/master/spec.md#isallowedreceiverfunctionforcallerandargumentsfunc-expectedrealm (except step 3)
@@ -220,7 +222,9 @@ JSC_DEFINE_CUSTOM_GETTER(argumentsGetter, (JSGlobalObject* globalObject, Encoded
     if (!thisObj || !isAllowedReceiverFunctionForCallerAndArguments(thisObj))
         return throwVMTypeError(globalObject, scope, RestrictedPropertyAccessError);
 
-    return JSValue::encode(retrieveArguments(vm, vm.topCallFrame, thisObj));
+    JSValue result = retrieveArguments(vm, vm.topCallFrame, thisObj);
+    EXCEPTION_ASSERT(scope.exception() || result);
+    return JSValue::encode(result);
 }
 
 class RetrieveCallerFunctionFunctor {

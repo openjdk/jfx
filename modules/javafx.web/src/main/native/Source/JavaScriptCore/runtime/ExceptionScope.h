@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,14 @@
 
 #pragma once
 
-#include "VM.h"
+#include <wtf/Compiler.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
+#include <JavaScriptCore/VM.h>
 #include <wtf/StackPointer.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 namespace JSC {
 
@@ -40,7 +46,7 @@ class Exception;
 
 #if ENABLE(C_LOOP)
 #define EXCEPTION_SCOPE_POSITION_FOR_ASAN(vm__) (vm__).currentCLoopStackPointer()
-#elif ASAN_ENABLED && COMPILER(GCC_COMPATIBLE)
+#elif ASAN_ENABLED
 #define EXCEPTION_SCOPE_POSITION_FOR_ASAN(vm__) currentStackPointer()
 #else
 #define EXCEPTION_SCOPE_POSITION_FOR_ASAN(vm__) nullptr
@@ -50,7 +56,7 @@ class ExceptionScope {
 public:
     VM& vm() const { return m_vm; }
     unsigned recursionDepth() const { return m_recursionDepth; }
-    Exception* exception() const { return m_vm.exception(); }
+    ALWAYS_INLINE Exception* exception() const { return m_vm.exception(); }
 
     ALWAYS_INLINE void assertNoException() { RELEASE_ASSERT_WITH_MESSAGE(!exception(), "%s", unexpectedExceptionMessage().data()); }
     ALWAYS_INLINE void releaseAssertNoException() { RELEASE_ASSERT_WITH_MESSAGE(!exception(), "%s", unexpectedExceptionMessage().data()); }
@@ -62,6 +68,8 @@ public:
 #else
     const void* stackPosition() const {  return this; }
 #endif
+
+    [[nodiscard]] inline bool tryClearException();
 
 protected:
     ExceptionScope(VM&, ExceptionEventLocation);
@@ -93,6 +101,8 @@ public:
     ALWAYS_INLINE void assertNoExceptionExceptTermination() { ASSERT(!exception() || m_vm.hasPendingTerminationException()); }
     ALWAYS_INLINE void releaseAssertNoExceptionExceptTermination() { RELEASE_ASSERT(!exception() || m_vm.hasPendingTerminationException()); }
 
+    [[nodiscard]] ALWAYS_INLINE bool tryClearException();
+
 protected:
     ALWAYS_INLINE ExceptionScope(VM& vm)
         : m_vm(vm)
@@ -107,17 +117,34 @@ protected:
 
 #endif // ENABLE(EXCEPTION_SCOPE_VERIFICATION)
 
+bool ExceptionScope::tryClearException()
+{
+    SUPPRESS_FORWARD_DECL_ARG Exception* exception = this->exception();
+
+    SUPPRESS_FORWARD_DECL_ARG if (exception && m_vm.isTerminationException(exception)) [[unlikely]]
+        return false;
+
+    m_vm.clearException();
+    return true;
+}
+
 #define RETURN_IF_EXCEPTION(scope__, value__) do { \
-        JSC::VM& vm = (scope__).vm(); \
-        ASSERT(!!(scope__).exception() == vm.traps().needHandling(JSC::VMTraps::NeedExceptionHandling)); \
-        if (UNLIKELY(vm.traps().maybeNeedHandling())) { \
+        SUPPRESS_UNCOUNTED_LOCAL JSC::VM& vm = (scope__).vm(); \
+        EXCEPTION_ASSERT(!!(scope__).exception() == vm.traps().needHandling(JSC::VMTraps::NeedExceptionHandling)); \
+        if (vm.traps().maybeNeedHandling()) [[unlikely]] { \
             if (vm.hasExceptionsAfterHandlingTraps()) \
                 return value__; \
         } \
     } while (false)
 
+
+#define TRY_CLEAR_EXCEPTION(scope__, value__) do { \
+        if (!(scope__).tryClearException()) [[unlikely]] \
+            return value__; \
+    } while (false)
+
 #define RETURN_IF_EXCEPTION_WITH_TRAPS_DEFERRED(scope__, value__) do { \
-        if (UNLIKELY((scope__).exception())) \
+        if ((scope__).exception()) [[unlikely]] \
             return value__; \
     } while (false)
 

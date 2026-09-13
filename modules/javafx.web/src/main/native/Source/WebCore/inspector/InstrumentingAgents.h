@@ -32,9 +32,10 @@
 #pragma once
 
 #include <JavaScriptCore/InspectorEnvironment.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/Noncopyable.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/WeakPtr.h>
 
 namespace Inspector {
 class InspectorAgent;
@@ -44,40 +45,41 @@ class InspectorScriptProfilerAgent;
 namespace WebCore {
 
 class InspectorAnimationAgent;
-class InspectorApplicationCacheAgent;
 class InspectorCPUProfilerAgent;
 class InspectorCSSAgent;
 class InspectorCanvasAgent;
 class InspectorDOMAgent;
 class InspectorDOMDebuggerAgent;
 class InspectorDOMStorageAgent;
-class InspectorDatabaseAgent;
 class InspectorLayerTreeAgent;
 class InspectorMemoryAgent;
 class InspectorNetworkAgent;
 class InspectorPageAgent;
 class InspectorTimelineAgent;
 class InspectorWorkerAgent;
+class PageCanvasAgent;
 class PageDOMDebuggerAgent;
 class PageDebuggerAgent;
 class PageHeapAgent;
 class PageRuntimeAgent;
+class PageTimelineAgent;
 class WebConsoleAgent;
 class WebDebuggerAgent;
+class WebHeapAgent;
 
 #define DEFINE_INSPECTOR_AGENT(macro, Class, Name, Getter, Setter) macro(Class, Name, Getter, Setter)
 
 #define DEFINE_INSPECTOR_AGENT_Animation(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, InspectorAnimationAgent, AnimationAgent, Getter, Setter)
-#define DEFINE_INSPECTOR_AGENT_ApplicationCache(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, InspectorApplicationCacheAgent, ApplicationCacheAgent, Getter, Setter)
 #define DEFINE_INSPECTOR_AGENT_Canvas(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, InspectorCanvasAgent, CanvasAgent, Getter, Setter)
+#define DEFINE_INSPECTOR_AGENT_Canvas_Page(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, PageCanvasAgent, PageCanvasAgent, Getter, Setter)
 #define DEFINE_INSPECTOR_AGENT_CSS(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, InspectorCSSAgent, CSSAgent, Getter, Setter)
 #define DEFINE_INSPECTOR_AGENT_DOM(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, InspectorDOMAgent, DOMAgent, Getter, Setter)
 #define DEFINE_INSPECTOR_AGENT_DOMDebugger(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, InspectorDOMDebuggerAgent, DOMDebuggerAgent, Getter, Setter)
 #define DEFINE_INSPECTOR_AGENT_DOMDebugger_Page(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, PageDOMDebuggerAgent, PageDOMDebuggerAgent, Getter, Setter)
 #define DEFINE_INSPECTOR_AGENT_DOMStorage(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, InspectorDOMStorageAgent, DOMStorageAgent, Getter, Setter)
-#define DEFINE_INSPECTOR_AGENT_Database(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, InspectorDatabaseAgent, DatabaseAgent, Getter, Setter)
 #define DEFINE_INSPECTOR_AGENT_Debugger_Web(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, WebDebuggerAgent, WebDebuggerAgent, Getter, Setter)
 #define DEFINE_INSPECTOR_AGENT_Debugger_Page(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, PageDebuggerAgent, PageDebuggerAgent, Getter, Setter)
+#define DEFINE_INSPECTOR_AGENT_Heap_Web(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, WebHeapAgent, WebHeapAgent, Getter, Setter)
 #define DEFINE_INSPECTOR_AGENT_Heap_Page(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, PageHeapAgent, PageHeapAgent, Getter, Setter)
 #define DEFINE_INSPECTOR_AGENT_Inspector(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, Inspector::InspectorAgent, InspectorAgent, Getter, Setter)
 #define DEFINE_INSPECTOR_AGENT_LayerTree(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, InspectorLayerTreeAgent, LayerTreeAgent, Getter, Setter)
@@ -86,6 +88,7 @@ class WebDebuggerAgent;
 #define DEFINE_INSPECTOR_AGENT_Runtime_Page(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, PageRuntimeAgent, PageRuntimeAgent, Getter, Setter)
 #define DEFINE_INSPECTOR_AGENT_ScriptProfiler(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, Inspector::InspectorScriptProfilerAgent, ScriptProfilerAgent, Getter, Setter)
 #define DEFINE_INSPECTOR_AGENT_Timeline(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, InspectorTimelineAgent, TimelineAgent, Getter, Setter)
+#define DEFINE_INSPECTOR_AGENT_Timeline_Page(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, PageTimelineAgent, PageTimelineAgent, Getter, Setter)
 #define DEFINE_INSPECTOR_AGENT_Worker(macro, Getter, Setter) DEFINE_INSPECTOR_AGENT(macro, InspectorWorkerAgent, WorkerAgent, Getter, Setter)
 
 #if ENABLE(RESOURCE_USAGE)
@@ -110,15 +113,15 @@ class WebDebuggerAgent;
     DEFINE_PERSISTENT_INSPECTOR_AGENT(macro, Animation) \
     DEFINE_PERSISTENT_INSPECTOR_AGENT(macro, CPUProfiler) \
     DEFINE_PERSISTENT_INSPECTOR_AGENT(macro, DOM) \
+    DEFINE_PERSISTENT_INSPECTOR_AGENT(macro, Heap_Web) \
     DEFINE_PERSISTENT_INSPECTOR_AGENT(macro, Inspector) \
     DEFINE_PERSISTENT_INSPECTOR_AGENT(macro, Memory) \
     DEFINE_PERSISTENT_INSPECTOR_AGENT(macro, ScriptProfiler) \
     DEFINE_PERSISTENT_INSPECTOR_AGENT(macro, Worker) \
     DEFINE_ENABLED_INSPECTOR_AGENT(macro, Animation) \
-    DEFINE_ENABLED_INSPECTOR_AGENT(macro, ApplicationCache) \
     DEFINE_ENABLED_INSPECTOR_AGENT(macro, Canvas) \
+    DEFINE_ENABLED_INSPECTOR_AGENT(macro, Canvas_Page) \
     DEFINE_ENABLED_INSPECTOR_AGENT(macro, CSS) \
-    DEFINE_ENABLED_INSPECTOR_AGENT(macro, Database) \
     DEFINE_ENABLED_INSPECTOR_AGENT(macro, Debugger_Page) \
     DEFINE_ENABLED_INSPECTOR_AGENT(macro, Debugger_Web) \
     DEFINE_ENABLED_INSPECTOR_AGENT(macro, DOMDebugger) \
@@ -131,35 +134,37 @@ class WebDebuggerAgent;
     DEFINE_ENABLED_INSPECTOR_AGENT(macro, Page) \
     DEFINE_ENABLED_INSPECTOR_AGENT(macro, Runtime_Page) \
     DEFINE_ENABLED_INSPECTOR_AGENT(macro, Timeline) \
+    DEFINE_ENABLED_INSPECTOR_AGENT(macro, Timeline_Page) \
     DEFINE_TRACKING_INSPECTOR_AGENT(macro, Animation) \
     DEFINE_TRACKING_INSPECTOR_AGENT(macro, Timeline) \
+    DEFINE_TRACKING_INSPECTOR_AGENT(macro, Timeline_Page) \
 
-class InstrumentingAgents : public RefCounted<InstrumentingAgents> {
+class InstrumentingAgents : public WTF::RefCountedAndCanMakeWeakPtr<InstrumentingAgents> {
     WTF_MAKE_NONCOPYABLE(InstrumentingAgents);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(InstrumentingAgents);
 public:
-    // FIXME: InstrumentingAgents could be uniquely owned by InspectorController if instrumentation
-    // cookies kept only a weak reference to InstrumentingAgents. Then, reset() would be unnecessary.
-    static Ref<InstrumentingAgents> create(Inspector::InspectorEnvironment& environment)
-    {
-        return adoptRef(*new InstrumentingAgents(environment));
-    }
+    static Ref<InstrumentingAgents> create(Inspector::InspectorEnvironment&);
+    static Ref<InstrumentingAgents> create(Inspector::InspectorEnvironment&, InstrumentingAgents& fallbackAgents);
+
     ~InstrumentingAgents() = default;
     void reset();
 
-    Inspector::InspectorEnvironment& inspectorEnvironment() const { return m_environment; }
+    bool developerExtrasEnabled() const;
 
 #define DECLARE_GETTER_SETTER_FOR_INSPECTOR_AGENT(Class, Name, Getter, Setter) \
-    Class* Getter##Name() const { return m_##Getter##Name; } \
-    void set##Setter##Name(Class* agent) { m_##Getter##Name = agent; } \
+    Class* Getter##Name() const; \
+    void set##Setter##Name(Class* agent); \
 
 FOR_EACH_INSPECTOR_AGENT(DECLARE_GETTER_SETTER_FOR_INSPECTOR_AGENT)
 #undef DECLARE_GETTER_SETTER_FOR_INSPECTOR_AGENT
 
 private:
-    InstrumentingAgents(Inspector::InspectorEnvironment&);
+    InstrumentingAgents(Inspector::InspectorEnvironment&, InstrumentingAgents* fallbackAgents);
 
-    Inspector::InspectorEnvironment& m_environment;
+    CheckedRef<const Inspector::InspectorEnvironment> checkedEnvironment() const { return m_environment.get(); }
+
+    WeakRef<Inspector::InspectorEnvironment> m_environment;
+    const WeakPtr<InstrumentingAgents> m_fallbackAgents;
 
 #define DECLARE_MEMBER_VARIABLE_FOR_INSPECTOR_AGENT(Class, Name, Getter, Setter) \
     Class* m_##Getter##Name { nullptr }; \

@@ -35,12 +35,16 @@ namespace WTF {
 enum class ThreadGroupAddResult { NewlyAdded, AlreadyAdded, NotAdded };
 
 class ThreadGroup final : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<ThreadGroup> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ThreadGroup);
     WTF_MAKE_NONCOPYABLE(ThreadGroup);
 public:
     friend class Thread;
 
-    WTF_EXPORT_PRIVATE static Ref<ThreadGroup> create();
+    static Ref<ThreadGroup> create()
+    {
+        return adoptRef(*new ThreadGroup());
+    }
+
     WTF_EXPORT_PRIVATE ThreadGroupAddResult add(Thread&);
     WTF_EXPORT_PRIVATE ThreadGroupAddResult add(const AbstractLocker&, Thread&);
     WTF_EXPORT_PRIVATE ThreadGroupAddResult addCurrentThread();

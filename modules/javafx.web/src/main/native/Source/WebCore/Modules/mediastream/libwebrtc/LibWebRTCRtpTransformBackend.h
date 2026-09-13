@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc.
+ * Copyright (C) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,19 +27,11 @@
 #if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
 #include "LibWebRTCMacros.h"
+#include "LibWebRTCRefWrappers.h"
 #include "RTCRtpTransformBackend.h"
 #include <webrtc/api/scoped_refptr.h>
 #include <wtf/Lock.h>
-
-ALLOW_UNUSED_PARAMETERS_BEGIN
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-ALLOW_COMMA_BEGIN
-
-#include <webrtc/api/frame_transformer_interface.h>
-
-ALLOW_DEPRECATED_DECLARATIONS_END
-ALLOW_UNUSED_PARAMETERS_END
-ALLOW_COMMA_END
+#include <wtf/StdUnorderedMap.h>
 
 namespace WebCore {
 
@@ -52,7 +44,9 @@ protected:
     MediaType mediaType() const final { return m_mediaType; }
 
 private:
-    void setOutputCallback(rtc::scoped_refptr<webrtc::TransformedFrameCallback>&&);
+    void sendFrameToOutput(std::unique_ptr<webrtc::TransformableFrameInterface>&&);
+    void addOutputCallback(Ref<webrtc::TransformedFrameCallback>&&, uint32_t ssrc);
+    void removeOutputCallback(uint32_t ssrc);
 
     // RTCRtpTransformBackend
     void processTransformedFrame(RTCRtpTransformableFrame&) final;
@@ -61,12 +55,12 @@ private:
 
     // webrtc::FrameTransformerInterface
     void Transform(std::unique_ptr<webrtc::TransformableFrameInterface>) final;
-    void RegisterTransformedFrameCallback(rtc::scoped_refptr<webrtc::TransformedFrameCallback>) final;
-    void RegisterTransformedFrameSinkCallback(rtc::scoped_refptr<webrtc::TransformedFrameCallback>, uint32_t ssrc) final;
+    void RegisterTransformedFrameCallback(webrtc::scoped_refptr<webrtc::TransformedFrameCallback>) final;
+    void RegisterTransformedFrameSinkCallback(webrtc::scoped_refptr<webrtc::TransformedFrameCallback>, uint32_t ssrc) final;
     void UnregisterTransformedFrameCallback() final;
     void UnregisterTransformedFrameSinkCallback(uint32_t ssrc) final;
     void AddRef() const final { ref(); }
-    rtc::RefCountReleaseStatus Release() const final;
+    webrtc::RefCountReleaseStatus Release() const final;
 
     MediaType m_mediaType;
     Side m_side;
@@ -74,8 +68,8 @@ private:
     Lock m_inputCallbackLock;
     Callback m_inputCallback WTF_GUARDED_BY_LOCK(m_inputCallbackLock);
 
-    Lock m_outputCallbackLock;
-    rtc::scoped_refptr<webrtc::TransformedFrameCallback> m_outputCallback WTF_GUARDED_BY_LOCK(m_outputCallbackLock);
+    Lock m_outputCallbacksLock;
+    StdUnorderedMap<uint32_t, Ref<webrtc::TransformedFrameCallback>> m_outputCallbacks WTF_GUARDED_BY_LOCK(m_outputCallbacksLock);
 };
 
 inline LibWebRTCRtpTransformBackend::LibWebRTCRtpTransformBackend(MediaType mediaType, Side side)
@@ -84,10 +78,10 @@ inline LibWebRTCRtpTransformBackend::LibWebRTCRtpTransformBackend(MediaType medi
 {
 }
 
-inline rtc::RefCountReleaseStatus LibWebRTCRtpTransformBackend::Release() const
+inline webrtc::RefCountReleaseStatus LibWebRTCRtpTransformBackend::Release() const
 {
     deref();
-    return rtc::RefCountReleaseStatus::kOtherRefsRemained;
+    return webrtc::RefCountReleaseStatus::kOtherRefsRemained;
 }
 
 } // namespace WebCore

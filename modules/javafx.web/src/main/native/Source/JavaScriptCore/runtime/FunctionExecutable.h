@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "JSFunction.h"
-#include "ScriptExecutable.h"
-#include "SourceCode.h"
+#include <JavaScriptCore/JSFunction.h>
+#include <JavaScriptCore/ScriptExecutable.h>
+#include <JavaScriptCore/SourceCode.h>
 #include <wtf/Box.h>
 #include <wtf/Markable.h>
 
@@ -54,9 +54,7 @@ public:
         executable->finishCreation(vm);
         return executable;
     }
-    static FunctionExecutable* fromGlobalCode(
-        const Identifier& name, JSGlobalObject*, const SourceCode&,
-        JSObject*& exception, int overrideLineNumber, std::optional<int> functionConstructorParametersEndPosition);
+    static FunctionExecutable* fromGlobalCode(const Identifier& name, JSGlobalObject*, String&& program, const SourceOrigin&, SourceTaintedOrigin, const String& sourceURL, const TextPosition&, LexicallyScopedFeatures, JSObject*& exception, int overrideLineNumber, std::optional<int> functionConstructorParametersEndPosition, FunctionConstructionMode);
 
     static void destroy(JSCell*);
 
@@ -82,7 +80,7 @@ public:
 
     FunctionCodeBlock* codeBlockForCall() const
     {
-        return bitwise_cast<FunctionCodeBlock*>(m_codeBlockForCall.get());
+        return std::bit_cast<FunctionCodeBlock*>(m_codeBlockForCall.get());
     }
 
     bool isGeneratedForConstruct() const
@@ -92,22 +90,22 @@ public:
 
     FunctionCodeBlock* codeBlockForConstruct() const
     {
-        return bitwise_cast<FunctionCodeBlock*>(m_codeBlockForConstruct.get());
+        return std::bit_cast<FunctionCodeBlock*>(m_codeBlockForConstruct.get());
     }
 
     bool isGeneratedFor(CodeSpecializationKind kind)
     {
-        if (kind == CodeForCall)
+        if (kind == CodeSpecializationKind::CodeForCall)
             return isGeneratedForCall();
-        ASSERT(kind == CodeForConstruct);
+        ASSERT(kind == CodeSpecializationKind::CodeForConstruct);
         return isGeneratedForConstruct();
     }
 
     FunctionCodeBlock* codeBlockFor(CodeSpecializationKind kind)
     {
-        if (kind == CodeForCall)
+        if (kind == CodeSpecializationKind::CodeForCall)
             return codeBlockForCall();
-        ASSERT(kind == CodeForConstruct);
+        ASSERT(kind == CodeSpecializationKind::CodeForConstruct);
         return codeBlockForConstruct();
     }
 
@@ -132,6 +130,7 @@ public:
     ImplementationVisibility implementationVisibility() const { return m_unlinkedExecutable->implementationVisibility(); }
     bool isBuiltinFunction() const { return m_unlinkedExecutable->isBuiltinFunction(); }
     ConstructAbility constructAbility() const { return m_unlinkedExecutable->constructAbility(); }
+    InlineAttribute inlineAttribute() const { return m_unlinkedExecutable->inlineAttribute(); }
     bool isClass() const { return m_unlinkedExecutable->isClass(); }
     bool isArrowFunction() const { return parseMode() == SourceParseMode::ArrowFunctionMode; }
     bool isGetter() const { return parseMode() == SourceParseMode::GetterMode; }
@@ -162,15 +161,13 @@ public:
 
     DECLARE_VISIT_CHILDREN;
     DECLARE_VISIT_OUTPUT_CONSTRAINTS;
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
-    {
-        return Structure::create(vm, globalObject, proto, TypeInfo(FunctionExecutableType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
+    static constexpr int overrideLineNumberNotFound = -1;
     void setOverrideLineNumber(int overrideLineNumber)
     {
-        if (overrideLineNumber == -1) {
-            if (UNLIKELY(m_rareData))
+        if (overrideLineNumber == overrideLineNumberNotFound) {
+            if (m_rareData) [[unlikely]]
                 m_rareData->m_overrideLineNumber = std::nullopt;
             return;
         }
@@ -179,21 +176,21 @@ public:
 
     std::optional<int> overrideLineNumber() const
     {
-        if (UNLIKELY(m_rareData))
+        if (m_rareData) [[unlikely]]
             return m_rareData->m_overrideLineNumber;
         return std::nullopt;
     }
 
     int lineCount() const
     {
-        if (UNLIKELY(m_rareData))
+        if (m_rareData) [[unlikely]]
             return m_rareData->m_lineCount;
         return m_unlinkedExecutable->lineCount();
     }
 
     int endColumn() const
     {
-        if (UNLIKELY(m_rareData))
+        if (m_rareData) [[unlikely]]
             return m_rareData->m_endColumn;
         return m_unlinkedExecutable->linkedEndColumn(m_source.startColumn().oneBasedInt());
     }
@@ -210,28 +207,28 @@ public:
 
     unsigned functionEnd() const
     {
-        if (UNLIKELY(m_rareData))
+        if (m_rareData) [[unlikely]]
             return m_rareData->m_functionEnd;
         return m_unlinkedExecutable->unlinkedFunctionEnd();
     }
 
     unsigned functionStart() const
     {
-        if (UNLIKELY(m_rareData))
+        if (m_rareData) [[unlikely]]
             return m_rareData->m_functionStart;
         return m_unlinkedExecutable->unlinkedFunctionStart();
     }
 
     unsigned parametersStartOffset() const
     {
-        if (UNLIKELY(m_rareData))
+        if (m_rareData) [[unlikely]]
             return m_rareData->m_parametersStartOffset;
         return m_unlinkedExecutable->parametersStartOffset();
     }
 
     void overrideInfo(const FunctionOverrideInfo&);
 
-    DECLARE_INFO;
+    DECLARE_EXPORT_INFO;
 
     InferredValue<JSFunction>& singleton()
     {
@@ -246,7 +243,7 @@ public:
     // Cached poly proto structure for the result of constructing this executable.
     Structure* cachedPolyProtoStructure()
     {
-        if (UNLIKELY(m_rareData))
+        if (m_rareData) [[unlikely]]
             return m_rareData->m_cachedPolyProtoStructureID.get();
         return nullptr;
     }
@@ -278,16 +275,16 @@ public:
         return m_rareData->m_asString.get();
     }
 
-    static inline ptrdiff_t offsetOfRareData() { return OBJECT_OFFSETOF(FunctionExecutable, m_rareData); }
-    static inline ptrdiff_t offsetOfCodeBlockForCall() { return OBJECT_OFFSETOF(FunctionExecutable, m_codeBlockForCall); }
-    static inline ptrdiff_t offsetOfCodeBlockForConstruct() { return OBJECT_OFFSETOF(FunctionExecutable, m_codeBlockForConstruct); }
+    static constexpr ptrdiff_t offsetOfRareData() { return OBJECT_OFFSETOF(FunctionExecutable, m_rareData); }
+    static constexpr ptrdiff_t offsetOfCodeBlockForCall() { return OBJECT_OFFSETOF(FunctionExecutable, m_codeBlockForCall); }
+    static constexpr ptrdiff_t offsetOfCodeBlockForConstruct() { return OBJECT_OFFSETOF(FunctionExecutable, m_codeBlockForConstruct); }
 
-    static ptrdiff_t offsetOfCodeBlockFor(CodeSpecializationKind kind)
+    static constexpr ptrdiff_t offsetOfCodeBlockFor(CodeSpecializationKind kind)
     {
         switch (kind) {
-        case CodeForCall:
+        case CodeSpecializationKind::CodeForCall:
             return OBJECT_OFFSETOF(FunctionExecutable, m_codeBlockForCall);
-        case CodeForConstruct:
+        case CodeSpecializationKind::CodeForConstruct:
             return OBJECT_OFFSETOF(FunctionExecutable, m_codeBlockForConstruct);
         }
         RELEASE_ASSERT_NOT_REACHED();
@@ -295,14 +292,14 @@ public:
     }
 
     struct RareData {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(RareData);
 
-        static inline ptrdiff_t offsetOfAsString() { return OBJECT_OFFSETOF(RareData, m_asString); }
+        static constexpr ptrdiff_t offsetOfAsString() { return OBJECT_OFFSETOF(RareData, m_asString); }
 
         RefPtr<TypeSet> m_returnStatementTypeSet;
         unsigned m_lineCount;
         unsigned m_endColumn;
-        Markable<int, IntegralMarkableTraits<int, -1>> m_overrideLineNumber;
+        Markable<int> m_overrideLineNumber;
         unsigned m_parametersStartOffset { 0 };
         WriteBarrierStructureID m_cachedPolyProtoStructureID;
         std::unique_ptr<TemplateObjectMap> m_templateObjectMap;
@@ -321,7 +318,7 @@ private:
 
     RareData& ensureRareData()
     {
-        if (LIKELY(m_rareData))
+        if (m_rareData) [[likely]]
             return *m_rareData;
         return ensureRareDataSlow();
     }

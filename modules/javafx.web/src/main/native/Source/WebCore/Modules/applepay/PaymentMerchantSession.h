@@ -44,16 +44,16 @@ class PaymentMerchantSession {
 public:
     PaymentMerchantSession() = default;
     explicit PaymentMerchantSession(RetainPtr<PKPaymentMerchantSession>&& pkPaymentMerchantSession)
-        : m_pkPaymentMerchantSession { WTFMove(pkPaymentMerchantSession) }
+        : m_pkPaymentMerchantSession { WTF::move(pkPaymentMerchantSession) }
     {
     }
 
     static std::optional<PaymentMerchantSession> fromJS(JSC::JSGlobalObject&, JSC::JSValue, String& errorMessage);
 
-    PKPaymentMerchantSession *pkPaymentMerchantSession() const { return m_pkPaymentMerchantSession.get(); }
+    RetainPtr<PKPaymentMerchantSession> pkPaymentMerchantSession() const { return m_pkPaymentMerchantSession; }
 
 private:
-    RetainPtr<PKPaymentMerchantSession> m_pkPaymentMerchantSession;
+    const RetainPtr<PKPaymentMerchantSession> m_pkPaymentMerchantSession;
 };
 
 }

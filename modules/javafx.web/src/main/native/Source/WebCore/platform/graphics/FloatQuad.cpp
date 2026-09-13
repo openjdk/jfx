@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2021 Google Inc. All rights reserved.
  * Copyright (C) 2012 Nokia Corporation and/or its subsidiary(-ies)
  * Copyright (C) 2013 Xidorn Quan (quanxunzhen@gmail.com)
  *
@@ -31,22 +32,17 @@
 #include "config.h"
 #include "FloatQuad.h"
 
+#include "GeometryUtilities.h"
 #include <algorithm>
+#include <cmath>
 #include <limits>
 #include <wtf/MathExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
-static inline float min4(float a, float b, float c, float d)
-{
-    return std::min(std::min(a, b), std::min(c, d));
-}
-
-static inline float max4(float a, float b, float c, float d)
-{
-    return std::max(std::max(a, b), std::max(c, d));
-}
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FloatQuad);
 
 inline float dot(const FloatSize& a, const FloatSize& b)
 {
@@ -81,13 +77,21 @@ inline bool isPointInTriangle(const FloatPoint& p, const FloatPoint& t1, const F
     return (u >= 0) && (v >= 0) && (u + v <= 1);
 }
 
+static inline float clampToIntRange(float value)
+{
+    if (std::isinf(value) || std::abs(value) > (static_cast<float>(std::numeric_limits<int>::max()))) [[unlikely]]
+        return std::signbit(value) ? std::numeric_limits<int>::min() : (static_cast<float>(std::numeric_limits<int>::max()));
+
+    return value;
+}
+
 FloatRect FloatQuad::boundingBox() const
 {
-    float left   = min4(m_p1.x(), m_p2.x(), m_p3.x(), m_p4.x());
-    float top    = min4(m_p1.y(), m_p2.y(), m_p3.y(), m_p4.y());
+    float left   = clampToIntRange(min4(m_p1.x(), m_p2.x(), m_p3.x(), m_p4.x()));
+    float top    = clampToIntRange(min4(m_p1.y(), m_p2.y(), m_p3.y(), m_p4.y()));
 
-    float right  = max4(m_p1.x(), m_p2.x(), m_p3.x(), m_p4.x());
-    float bottom = max4(m_p1.y(), m_p2.y(), m_p3.y(), m_p4.y());
+    float right  = clampToIntRange(max4(m_p1.x(), m_p2.x(), m_p3.x(), m_p4.x()));
+    float bottom = clampToIntRange(max4(m_p1.y(), m_p2.y(), m_p3.y(), m_p4.y()));
 
     return FloatRect(left, top, right - left, bottom - top);
 }
@@ -291,7 +295,7 @@ FloatRect unitedBoundingBoxes(const Vector<FloatQuad>& quads)
 
 TextStream& operator<<(TextStream& ts, const FloatQuad& quad)
 {
-    ts << "p1 " << quad.p1() << " p2 " << quad.p2() << " p3 " << quad.p3() << " p4 " << quad.p4();
+    ts << "p1 "_s << quad.p1() << " p2 "_s << quad.p2() << " p3 "_s << quad.p3() << " p4 "_s << quad.p4();
     return ts;
 }
 

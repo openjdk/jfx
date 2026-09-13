@@ -82,10 +82,8 @@ public:
         return *this;
     }
 
-    bool operator!() const
-    {
-        return !get();
-    }
+    bool operator!() const { return !get(); }
+    explicit operator bool() const { return !!get(); }
 
     RetainPtr<ValueType> get() const;
 
@@ -109,6 +107,8 @@ private:
 #endif
 };
 
+template<typename T> WeakObjCPtr(T) -> WeakObjCPtr<std::remove_pointer_t<T>>;
+
 #ifdef __OBJC__
 template<typename T>
 RetainPtr<typename WeakObjCPtr<T>::ValueType> WeakObjCPtr<T>::get() const
@@ -116,7 +116,7 @@ RetainPtr<typename WeakObjCPtr<T>::ValueType> WeakObjCPtr<T>::get() const
 #if __has_feature(objc_arc)
     return static_cast<typename WeakObjCPtr<T>::ValueType *>(m_weakReference);
 #else
-    return adoptNS(objc_loadWeakRetained(&m_weakReference));
+    SUPPRESS_RETAINPTR_CTOR_ADOPT return adoptNS(objc_loadWeakRetained(&m_weakReference));
 #endif
 }
 #endif

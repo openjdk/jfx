@@ -52,21 +52,21 @@ String CSSLayerBlockRule::cssText() const
 {
     StringBuilder builder;
 
-    builder.append("@layer");
+    builder.append("@layer"_s);
     if (auto name = this->name(); !name.isEmpty())
-        builder.append(" ", name);
+        builder.append(' ', name);
     appendCSSTextForItems(builder);
     return builder.toString();
 }
 
 String CSSLayerBlockRule::name() const
 {
-    auto& layer = downcast<StyleRuleLayer>(groupRule());
+    Ref layer = downcast<StyleRuleLayer>(groupRule());
 
-    if (layer.name().isEmpty())
+    if (layer->name().isEmpty())
         return emptyString();
 
-    return stringFromCascadeLayerName(layer.name());
+    return stringFromCascadeLayerName(layer->name());
 }
 
 String stringFromCascadeLayerName(const CascadeLayerName& name)

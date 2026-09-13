@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2021 Apple Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,6 +37,8 @@
 #include "pas_thread_local_cache.h"
 #include "pas_try_allocate_common.h"
 
+#if LIBPAS_ENABLED
+
 PAS_BEGIN_EXTERN_C;
 
 /* This is for heaps that hold typed objects. These objects have a certain size. We may allocate
@@ -50,6 +52,7 @@ PAS_BEGIN_EXTERN_C;
 
 static PAS_ALWAYS_INLINE pas_allocation_result
 pas_try_allocate_impl_casual_case(pas_heap_ref* heap_ref,
+                                  pas_allocation_mode allocation_mode,
                                   pas_heap_config config,
                                   pas_try_allocate_common try_allocate_common)
 {
@@ -65,16 +68,17 @@ pas_try_allocate_impl_casual_case(pas_heap_ref* heap_ref,
     allocator = pas_thread_local_cache_get_local_allocator_if_can_set_cache_for_possibly_uninitialized_index(
         allocator_index, config.config_ptr);
 
-    return try_allocate_common(heap_ref, type_size, 1, allocator);
+    return try_allocate_common(heap_ref, type_size, 1, allocation_mode, allocator);
 }
 
 static PAS_ALWAYS_INLINE pas_allocation_result
 pas_try_allocate_impl_inline_only(
     pas_heap_ref* heap_ref,
+    pas_allocation_mode allocation_mode,
     pas_heap_config config,
     pas_try_allocate_common_fast_inline_only try_allocate_common_fast_inline_only)
 {
-    static const bool verbose = false;
+    static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_OTHER);
 
     pas_local_allocator_result allocator;
     unsigned allocator_index;
@@ -101,7 +105,7 @@ pas_try_allocate_impl_inline_only(
         return pas_allocation_result_create_failure();
     }
 
-    result = try_allocate_common_fast_inline_only((pas_local_allocator*)allocator.allocator);
+    result = try_allocate_common_fast_inline_only((pas_local_allocator*)allocator.allocator, allocation_mode);
 
     if (verbose) {
         pas_log("Returning from try_allocate_impl_inline_only for type_size = %zu, did_succeed = %s\n",
@@ -121,37 +125,37 @@ pas_try_allocate_impl_inline_only(
         pas_avoid_size_lookup, \
         (result_filter)); \
     \
-    static PAS_NEVER_INLINE pas_allocation_result name ## _casual_case(pas_heap_ref* heap_ref) \
+    static PAS_NEVER_INLINE pas_allocation_result name ## _casual_case(pas_heap_ref* heap_ref, pas_allocation_mode allocation_mode) \
     { \
         return pas_try_allocate_impl_casual_case( \
-            heap_ref, (heap_config), name ## _impl); \
+            heap_ref, allocation_mode, (heap_config), name ## _impl); \
     } \
     \
-    static PAS_ALWAYS_INLINE pas_allocation_result name ## _inline_only(pas_heap_ref* heap_ref) \
+    static PAS_ALWAYS_INLINE pas_allocation_result name ## _inline_only(pas_heap_ref* heap_ref, pas_allocation_mode allocation_mode) \
     { \
-        return pas_try_allocate_impl_inline_only(heap_ref, (heap_config), name ## _impl_fast_inline_only); \
+        return pas_try_allocate_impl_inline_only(heap_ref, allocation_mode, (heap_config), name ## _impl_fast_inline_only); \
     } \
     \
-    static PAS_ALWAYS_INLINE pas_allocation_result name(pas_heap_ref* heap_ref) \
+    static PAS_ALWAYS_INLINE pas_allocation_result name(pas_heap_ref* heap_ref, pas_allocation_mode allocation_mode) \
     { \
         pas_allocation_result result; \
-        result = name ## _inline_only(heap_ref); \
+        result = name ## _inline_only(heap_ref, allocation_mode); \
         if (PAS_LIKELY(result.did_succeed)) \
             return result; \
-        return name ## _casual_case(heap_ref); \
+        return name ## _casual_case(heap_ref, allocation_mode); \
     } \
     \
     static PAS_UNUSED PAS_NEVER_INLINE pas_allocation_result \
-    name ## _for_realloc(pas_heap_ref* heap_ref) \
+    name ## _for_realloc(pas_heap_ref* heap_ref, pas_allocation_mode allocation_mode) \
     { \
-        return name(heap_ref); \
+        return name(heap_ref, allocation_mode); \
     } \
     \
     struct pas_dummy
 
-typedef pas_allocation_result (*pas_try_allocate)(pas_heap_ref* heap_ref);
+typedef pas_allocation_result (*pas_try_allocate)(pas_heap_ref* heap_ref, pas_allocation_mode allocation_mode);
 
 PAS_END_EXTERN_C;
 
+#endif /* LIBPAS_ENABLED */
 #endif /* PAS_TRY_ALLOCATE_H */
-

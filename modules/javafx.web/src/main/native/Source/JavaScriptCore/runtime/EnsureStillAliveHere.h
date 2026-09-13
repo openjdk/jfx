@@ -25,9 +25,11 @@
 
 #pragma once
 
-namespace JSC {
+#include <stddef.h>
+#include <stdint.h>
+#include <wtf/Compiler.h>
 
-#if COMPILER(GCC_COMPATIBLE)
+namespace JSC {
 
 ALWAYS_INLINE void ensureStillAliveHere(uint64_t value)
 {
@@ -38,12 +40,5 @@ ALWAYS_INLINE void ensureStillAliveHere(const void* pointer)
 {
     asm volatile ("" : : "g"(pointer) : "memory");
 }
-
-#else
-
-JS_EXPORT_PRIVATE void ensureStillAliveHere(uint64_t value);
-JS_EXPORT_PRIVATE void ensureStillAliveHere(const void*);
-
-#endif
 
 } // namespace JSC

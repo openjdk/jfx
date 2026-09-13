@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2023 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2013-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,10 +25,17 @@
 
 #pragma once
 
-#include "CodeBlock.h"
-#include "Register.h"
-#include "StackAlignment.h"
+#include <JavaScriptCore/CodeBlock.h>
+#include <JavaScriptCore/Register.h>
+#include <JavaScriptCore/StackAlignment.h>
 #include <wtf/ForbidHeapAllocation.h>
+#include <wtf/Platform.h>
+
+#if ENABLE(WEBASSEMBLY)
+#include <JavaScriptCore/JSWebAssemblyInstance.h>
+#endif
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -42,11 +49,12 @@ public:
     Register calleeValue;
     Register argCountAndCodeOriginValue;
     Register thisArg;
+    JSCell* context { nullptr };
     uint32_t paddedArgCount;
     EncodedJSValue* args;
     JSGlobalObject* globalObject;
 
-    inline void init(CodeBlock*, JSGlobalObject*, JSObject*, JSValue, int, EncodedJSValue* otherArgs = nullptr);
+    inline void init(CodeBlock*, JSGlobalObject*, JSObject*, JSValue, JSCell* context, int, EncodedJSValue* otherArgs = nullptr);
 
     inline CodeBlock* codeBlock() const;
     inline void setCodeBlock(CodeBlock*);
@@ -69,9 +77,9 @@ public:
     void setThisValue(JSValue value) { thisArg = value; }
 
 #if ENABLE(WEBASSEMBLY)
-    void setWasmInstance(Wasm::Instance* instance)
+    void setWasmInstance(JSWebAssemblyInstance* instance)
     {
-        codeBlockValue = bitwise_cast<CallFrame*>(instance);
+        codeBlockValue = instance;
     }
 #endif
 
@@ -88,3 +96,5 @@ public:
 };
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

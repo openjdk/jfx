@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2006-2019 Apple Inc.
+ *  Copyright (C) 2006-2019 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -15,7 +15,6 @@
  *  along with this library; see the file COPYING.LIB.  If not, write to
  *  the Free Software Foundation, Inc., 51 Franklin Street, Fifth Floor,
  *  Boston, MA 02110-1301, USA.
- *
  */
 
 #pragma once
@@ -31,20 +30,38 @@ template <typename T> inline T* getPtr(T* p) { return p; }
 
 template <typename T> struct IsSmartPtr {
     static constexpr bool value = false;
+    static constexpr bool isNullable = true;
 };
+
+template<typename T>
+inline constexpr bool IsSmartPtrV = IsSmartPtr<T>::value;
+
+template<typename T>
+inline constexpr bool IsSmartPtrNullableV = IsSmartPtr<T>::isNullable;
+
+template<typename T>
+concept SmartPtr = IsSmartPtrV<T>;
+
+template<typename T>
+concept NullableSmartPtr = SmartPtr<T> && IsSmartPtrNullableV<T>;
+
+template<typename T>
+concept NonNullableSmartPtr = SmartPtr<T> && !IsSmartPtrNullableV<T>;
 
 template <typename T, bool isSmartPtr>
 struct GetPtrHelperBase;
 
 template <typename T>
 struct GetPtrHelperBase<T, false /* isSmartPtr */> {
-    typedef T* PtrType;
+    using PtrType = T*;
+    using UnderlyingType = T;
     static T* getPtr(T& p) { return std::addressof(p); }
 };
 
 template <typename T>
 struct GetPtrHelperBase<T, true /* isSmartPtr */> {
-    typedef typename T::PtrType PtrType;
+    using PtrType = typename T::PtrType;
+    using UnderlyingType = typename T::ValueType;
     static PtrType getPtr(const T& p) { return p.get(); }
 };
 
@@ -68,11 +85,13 @@ inline typename GetPtrHelper<T>::PtrType getPtr(const T& p)
 
 template <typename T, typename Deleter> struct IsSmartPtr<std::unique_ptr<T, Deleter>> {
     static constexpr bool value = true;
+    static constexpr bool isNullable = true;
 };
 
 template <typename T, typename Deleter>
 struct GetPtrHelper<std::unique_ptr<T, Deleter>> {
-    typedef T* PtrType;
+    using PtrType = T*;
+    using UnderlyingType = T;
     static T* getPtr(const std::unique_ptr<T, Deleter>& p) { return p.get(); }
 };
 

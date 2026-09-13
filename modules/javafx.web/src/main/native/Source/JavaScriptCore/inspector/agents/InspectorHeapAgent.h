@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,13 +25,15 @@
 
 #pragma once
 
-#include "HeapObserver.h"
-#include "InspectorAgentBase.h"
-#include "InspectorBackendDispatchers.h"
-#include "InspectorFrontendDispatchers.h"
+#include <JavaScriptCore/HeapObserver.h>
+#include <JavaScriptCore/HeapSnapshotBuilder.h>
+#include <JavaScriptCore/InspectorAgentBase.h>
+#include <JavaScriptCore/InspectorBackendDispatchers.h>
+#include <JavaScriptCore/InspectorFrontendDispatchers.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/Seconds.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 struct HeapSnapshotNode;
@@ -41,16 +43,17 @@ namespace Inspector {
 
 class InjectedScriptManager;
 
-class JS_EXPORT_PRIVATE InspectorHeapAgent : public InspectorAgentBase, public HeapBackendDispatcherHandler, public JSC::HeapObserver {
+class JS_EXPORT_PRIVATE InspectorHeapAgent : public InspectorAgentBase, public HeapBackendDispatcherHandler, public JSC::HeapObserver, public JSC::HeapSnapshotBuilder::Client {
     WTF_MAKE_NONCOPYABLE(InspectorHeapAgent);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(InspectorHeapAgent);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(InspectorHeapAgent);
 public:
     InspectorHeapAgent(AgentContext&);
     ~InspectorHeapAgent() override;
 
     // InspectorAgentBase
-    void didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*) final;
-    void willDestroyFrontendAndBackend(DisconnectReason) final;
+    void didCreateFrontendAndBackend() override;
+    void willDestroyFrontendAndBackend(DisconnectReason) override;
 
     // HeapBackendDispatcherHandler
     Protocol::ErrorStringOr<void> enable() override;
@@ -66,18 +69,23 @@ public:
     void willGarbageCollect() final;
     void didGarbageCollect(JSC::CollectionScope) final;
 
+    // JSC::HeapSnapshotBuilder::Client
+    bool heapSnapshotBuilderIgnoreNode(const JSC::HeapSnapshotBuilder&, JSC::JSCell*) final;
+
 protected:
     void clearHeapSnapshots();
 
     virtual void dispatchGarbageCollectedEvent(Protocol::Heap::GarbageCollection::Type, Seconds startTime, Seconds endTime);
 
+    CheckedRef<InspectorEnvironment> checkedEnvironment() { return m_environment.get(); }
+
 private:
     std::optional<JSC::HeapSnapshotNode> nodeForHeapObjectIdentifier(Protocol::ErrorString&, unsigned heapObjectIdentifier);
 
     InjectedScriptManager& m_injectedScriptManager;
-    std::unique_ptr<HeapFrontendDispatcher> m_frontendDispatcher;
-    RefPtr<HeapBackendDispatcher> m_backendDispatcher;
-    InspectorEnvironment& m_environment;
+    const UniqueRef<HeapFrontendDispatcher> m_frontendDispatcher;
+    const Ref<HeapBackendDispatcher> m_backendDispatcher;
+    WeakRef<InspectorEnvironment> m_environment;
 
     bool m_enabled { false };
     bool m_tracking { false };

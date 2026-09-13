@@ -75,11 +75,15 @@ public:
     const String& modifiedRequestURL() const { return m_modifiedRequestURL; }
     WEBCORE_TESTSUPPORT_EXPORT void setModifiedRequestURL(const String&);
 
+    double willSendRequestDecisionDelay() const { return m_willSendRequestDecisionDelay.value(); }
+    WEBCORE_TESTSUPPORT_EXPORT void setWillSendRequestDecisionDelay(double);
+
     MockContentFilterSettings() = default;
     MockContentFilterSettings(const MockContentFilterSettings&) = default;
     MockContentFilterSettings& operator=(const MockContentFilterSettings&) = default;
+
 private:
-    friend struct IPC::ArgumentCoder<MockContentFilterSettings, void>;
+    friend struct IPC::ArgumentCoder<MockContentFilterSettings>;
 
     bool m_enabled { false };
     DecisionPoint m_decisionPoint { DecisionPoint::AfterResponse };
@@ -87,6 +91,7 @@ private:
     Decision m_unblockRequestDecision { Decision::Block };
     String m_blockedString;
     String m_modifiedRequestURL;
+    Seconds m_willSendRequestDecisionDelay;
 };
 
 } // namespace WebCore

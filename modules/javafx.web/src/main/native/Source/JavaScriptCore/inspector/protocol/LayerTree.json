@@ -1,6 +1,6 @@
 {
     "domain": "LayerTree",
-    "debuggableTypes": ["page", "web-page"],
+    "debuggableTypes": ["web-page"],
     "targetTypes": ["page"],
     "types": [
         {
@@ -75,7 +75,8 @@
                 { "name": "preserve3D", "type": "boolean", "optional": true, "description": "Composition due to association with an element with a \"transform-style: preserve-3d\" style." },
                 { "name": "willChange", "type": "boolean", "optional": true, "description": "Composition due to association with an element with a \"will-change\" style." },
                 { "name": "root", "type": "boolean", "optional": true, "description": "Composition due to association with the root element." },
-                { "name": "blending", "type": "boolean", "optional": true, "description": "Composition due to association with an element with a \"blend-mode\" style." }
+                { "name": "blending", "type": "boolean", "optional": true, "description": "Composition due to association with an element with a \"blend-mode\" style." },
+                { "name": "backdropRoot", "type": "boolean", "optional": true, "description": "Composition due to association with an element that is a backdrop root" }
             ]
         }
     ],
@@ -106,6 +107,16 @@
             ],
             "returns": [
                 { "name": "compositingReasons", "$ref": "CompositingReasons", "description": "An object containing the reasons why the layer was composited as properties." }
+            ]
+        },
+        {
+            "name": "requestContent",
+            "description": "Captures a snapshot of the layer's rendered content as a PNG data URL.",
+            "parameters": [
+                { "name": "layerId", "$ref": "LayerId", "description": "The id of the layer to snapshot." }
+            ],
+            "returns": [
+                { "name": "content", "type": "string", "description": "Base64-encoded PNG data URL of the layer's rendered content." }
             ]
         }
     ],

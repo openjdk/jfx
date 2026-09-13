@@ -29,8 +29,10 @@
 
 #pragma once
 
-#include "CSSParserToken.h"
+#include <WebCore/CSSParserToken.h>
+#include <WebCore/CSSTokenizer.h>
 #include <wtf/Forward.h>
+#include <wtf/text/ParsingUtilities.h>
 
 namespace WebCore {
 
@@ -41,36 +43,43 @@ class StyleSheetContents;
 // This class refers to half-open intervals [first, last).
 class CSSParserTokenRange {
 public:
+    CSSParserTokenRange() = default;
+
+    CSSParserTokenRange(std::span<const CSSParserToken> span)
+        : m_tokens(span)
+    { }
+
     template<size_t inlineBuffer>
-    CSSParserTokenRange(const Vector<CSSParserToken, inlineBuffer>& vector)
-        : m_first(vector.begin())
-        , m_last(vector.end())
+    CSSParserTokenRange(const Vector<CSSParserToken, inlineBuffer>& vector LIFETIME_BOUND)
+        : CSSParserTokenRange(vector.span())
+    { }
+
+    CSSParserTokenRange rangeUntil(const CSSParserTokenRange& end) const { return span().first(end.begin() - begin()); }
+
+    bool atEnd() const { return m_tokens.empty(); }
+
+    const CSSParserToken* begin() const LIFETIME_BOUND { return std::to_address(m_tokens.begin()); }
+    const CSSParserToken* end() const LIFETIME_BOUND { return std::to_address(m_tokens.end()); }
+
+    size_t size() const { return m_tokens.size(); }
+
+    const CSSParserToken& peek(size_t offset = 0) const LIFETIME_BOUND
     {
-    }
-
-    // This should be called on a range with tokens returned by that range.
-    CSSParserTokenRange makeSubRange(const CSSParserToken* first, const CSSParserToken* last) const;
-
-    bool atEnd() const { return m_first == m_last; }
-    const CSSParserToken* end() const { return m_last; }
-
-    const CSSParserToken& peek(unsigned offset = 0) const
-    {
-        if (m_first + offset >= m_last)
+        if (offset < m_tokens.size())
+            return m_tokens[offset];
             return eofToken();
-        return *(m_first + offset);
     }
 
-    const CSSParserToken& consume()
+    const CSSParserToken& consume() LIFETIME_BOUND
     {
-        if (m_first == m_last)
+        if (m_tokens.empty())
             return eofToken();
-        return *m_first++;
+        return WTF::consume(m_tokens);
     }
 
-    const CSSParserToken& consumeIncludingWhitespace()
+    const CSSParserToken& consumeIncludingWhitespace() LIFETIME_BOUND
     {
-        const CSSParserToken& result = consume();
+        auto& result = consume();
         consumeWhitespace();
         return result;
     }
@@ -83,26 +92,24 @@ public:
 
     void consumeWhitespace()
     {
-        while (peek().type() == WhitespaceToken)
-            ++m_first;
+        size_t i = 0;
+        for (; i < m_tokens.size() && CSSTokenizer::isWhitespace(m_tokens[i].type()); ++i) { }
+        skip(m_tokens, i);
     }
 
-    CSSParserTokenRange consumeAll() { return { std::exchange(m_first, m_last), m_last }; }
+    void trimTrailingWhitespace();
+    const CSSParserToken& consumeLast() LIFETIME_BOUND;
 
-    String serialize() const;
+    CSSParserTokenRange consumeAll() { return { std::exchange(m_tokens, std::span<const CSSParserToken> { }) }; }
 
-    const CSSParserToken* begin() const { return m_first; }
+    String serialize(CSSParserToken::SerializationMode = CSSParserToken::SerializationMode::Normal) const;
+
+    std::span<const CSSParserToken> span() const LIFETIME_BOUND { return m_tokens; }
 
     static CSSParserToken& eofToken();
 
 private:
-    CSSParserTokenRange(const CSSParserToken* first, const CSSParserToken* last)
-        : m_first(first)
-        , m_last(last)
-    { }
-
-    const CSSParserToken* m_first;
-    const CSSParserToken* m_last;
+    std::span<const CSSParserToken> m_tokens;
 };
 
 } // namespace WebCore

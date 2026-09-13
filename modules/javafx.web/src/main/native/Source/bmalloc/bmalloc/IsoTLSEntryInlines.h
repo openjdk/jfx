@@ -25,6 +25,12 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
+#if !BUSE(TZONE)
+
 #include "IsoTLSEntry.h"
 
 #if !BUSE(LIBPAS)
@@ -69,3 +75,6 @@ void DefaultIsoTLSEntry<EntryType>::destruct(void* passedEntry)
 } // namespace bmalloc
 
 #endif
+#endif // !BUSE(TZONE)
+
+#endif // __cplusplus

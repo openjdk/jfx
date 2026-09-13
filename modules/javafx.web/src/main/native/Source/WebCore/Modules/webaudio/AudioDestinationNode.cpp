@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
- * Copyright (C) 2020-2021, Apple Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
+ * Copyright (C) 2020-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,11 +40,11 @@
 #include "AudioWorkletMessagingProxy.h"
 #include "AudioWorkletThread.h"
 #include "DenormalDisabler.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(AudioDestinationNode);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AudioDestinationNode);
 
 AudioDestinationNode::AudioDestinationNode(BaseAudioContext& context, float sampleRate)
     : AudioNode(context, NodeTypeDestination)
@@ -58,14 +58,14 @@ AudioDestinationNode::~AudioDestinationNode()
     uninitialize();
 }
 
-void AudioDestinationNode::renderQuantum(AudioBus* destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition)
+void AudioDestinationNode::renderQuantum(AudioBus& destinationBus, size_t numberOfFrames, const AudioIOPosition& outputPosition)
 {
     // We don't want denormals slowing down any of the audio processing
     // since they can very seriously hurt performance.
     // This will take care of all AudioNodes because they all process within this scope.
     DenormalDisabler denormalDisabler;
 
-    context().setAudioThread(Thread::current());
+    context().setAudioThread(Thread::currentSingleton());
 
     // For performance reasons, we forbid heap allocations while doing rendering on the audio thread.
     // Heap allocations that cannot be avoided or have not been fixed yet can be allowed using
@@ -73,13 +73,13 @@ void AudioDestinationNode::renderQuantum(AudioBus* destinationBus, size_t number
     ForbidMallocUseForCurrentThreadScope forbidMallocUse;
 
     if (!context().isInitialized()) {
-        destinationBus->zero();
+        destinationBus.zero();
         return;
     }
 
     ASSERT(numberOfFrames);
     if (!numberOfFrames) {
-        destinationBus->zero();
+        destinationBus.zero();
         return;
     }
 
@@ -87,20 +87,20 @@ void AudioDestinationNode::renderQuantum(AudioBus* destinationBus, size_t number
     context().handlePreRenderTasks(outputPosition);
 
     RefPtr<AudioWorkletGlobalScope> workletGlobalScope;
-    if (auto* audioWorkletProxy = context().audioWorklet().proxy())
-        workletGlobalScope = audioWorkletProxy->workletThread().globalScope();
+    if (RefPtr audioWorkletProxy = context().audioWorklet().proxy()) {
+        if (Ref workletThread = audioWorkletProxy->workletThread(); workletThread->thread() == &Thread::currentSingleton())
+            workletGlobalScope = workletThread->globalScope();
+    }
     if (workletGlobalScope)
         workletGlobalScope->handlePreRenderTasks();
 
     // This will cause the node(s) connected to us to process, which in turn will pull on their input(s),
     // all the way backwards through the rendering graph.
-    AudioBus* renderedBus = input(0)->pull(destinationBus, numberOfFrames);
+    AudioBus& renderedBus = checkedInput(0)->pull(&destinationBus, numberOfFrames);
 
-    if (!renderedBus)
-        destinationBus->zero();
-    else if (renderedBus != destinationBus) {
+    if (&renderedBus != &destinationBus) {
         // in-place processing was not possible - so copy
-        destinationBus->copyFrom(*renderedBus);
+        destinationBus.copyFrom(renderedBus);
     }
 
     // Process nodes which need a little extra help because they are not connected to anything, but still need to process.
@@ -116,12 +116,12 @@ void AudioDestinationNode::renderQuantum(AudioBus* destinationBus, size_t number
         workletGlobalScope->handlePostRenderTasks(m_currentSampleFrame);
 }
 
-void AudioDestinationNode::ref()
+void AudioDestinationNode::ref() const
 {
     context().ref();
 }
 
-void AudioDestinationNode::deref()
+void AudioDestinationNode::deref() const
 {
     context().deref();
 }

@@ -21,22 +21,25 @@
 
 #pragma once
 
+#include "SVGAnimatedString.h"
 #include "SVGElement.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class SVGFEMergeNodeElement final : public SVGElement {
-    WTF_MAKE_ISO_ALLOCATED(SVGFEMergeNodeElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGFEMergeNodeElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGFEMergeNodeElement);
 public:
     static Ref<SVGFEMergeNodeElement> create(const QualifiedName&, Document&);
 
     String in1() const { return m_in1->currentValue(); }
     SVGAnimatedString& in1Animated() { return m_in1; }
 
+    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFEMergeNodeElement, SVGElement>;
+
 private:
     SVGFEMergeNodeElement(const QualifiedName&, Document&);
-
-    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFEMergeNodeElement, SVGElement>;
 
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     void svgAttributeChanged(const QualifiedName&) final;

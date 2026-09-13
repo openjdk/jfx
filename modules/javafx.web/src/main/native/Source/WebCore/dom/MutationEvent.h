@@ -23,13 +23,13 @@
 
 #pragma once
 
-#include "Event.h"
-#include "Node.h"
+#include <WebCore/Event.h>
+#include <WebCore/Node.h>
 
 namespace WebCore {
 
 class MutationEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(MutationEvent);
+    WTF_MAKE_TZONE_ALLOCATED(MutationEvent);
 public:
     enum {
         MODIFICATION = 1,
@@ -56,14 +56,11 @@ public:
     unsigned short attrChange() const { return m_attrChange; }
 
 private:
-    MutationEvent() = default;
+    MutationEvent();
     MutationEvent(const AtomString& type, CanBubble, IsCancelable, Node* relatedNode, const String& prevValue, const String& newValue);
-
 #if PLATFORM(JAVA) // FIXME-java: used in JavaEvent.cpp, or enable RTTI
     bool isMutationEvent() const override final { return true; }
 #endif
-
-    EventInterface eventInterface() const final;
 
     RefPtr<Node> m_relatedNode;
     String m_prevValue;

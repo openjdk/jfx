@@ -26,21 +26,21 @@
 #pragma once
 
 #include "WebGLExtension.h"
+#include "WebGLRenderingContextBase.h"
+#include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
-class WebGLLoseContext final : public WebGLExtension {
-    WTF_MAKE_ISO_ALLOCATED(WebGLLoseContext);
+class WebGLLoseContext final : public WebGLExtension<WebGLRenderingContextBase> {
+    WTF_MAKE_TZONE_ALLOCATED(WebGLLoseContext);
 public:
     explicit WebGLLoseContext(WebGLRenderingContextBase&);
-    virtual ~WebGLLoseContext();
-
-    ExtensionName getName() const override;
-
-    void loseParentContext(WebGLRenderingContextBase::LostContextMode) override;
-
+    ~WebGLLoseContext();
     void loseContext();
     void restoreContext();
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_WEBGL_EXTENSION(WebGLLoseContext)

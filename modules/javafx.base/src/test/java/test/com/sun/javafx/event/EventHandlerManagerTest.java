@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,13 @@
 
 package test.com.sun.javafx.event;
 
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.sun.javafx.event.EventHandlerManager;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 import javafx.event.Event;
 import javafx.event.EventDispatchChain;
@@ -44,7 +44,7 @@ import javafx.event.WeakEventHandlerUtil;
 public final class EventHandlerManagerTest {
     private EventHandlerManager eventHandlerManager;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         eventHandlerManager = new EventHandlerManager(this);
     }
@@ -163,11 +163,11 @@ public final class EventHandlerManagerTest {
         ValueEvent received = (ValueEvent)
                 eventHandlerManager.dispatchEvent(sent, StubEventDispatchChain.EMPTY_CHAIN);
         String message = "value must be " + (same ? "unchanged " : "changed ");
-        assertEquals(message, expected, received.getValue());
+        assertEquals(expected, received.getValue(), message);
         if (same) {
-            assertSame("received event", sent, received);
+            assertSame(sent, received, "received event");
         } else {
-            assertNotSame("received event", sent, received);
+            assertNotSame(sent, received, "received event");
         }
     }
 
@@ -175,20 +175,20 @@ public final class EventHandlerManagerTest {
     public void shouldForwardEventsToChain() {
         final EventDispatchChain eventDispatchChain =
                 StubEventDispatchChain.EMPTY_CHAIN
-                                      .append(eventHandlerManager)
-                                      .append(new EventChangingDispatcher(
-                                                      Operation.add(4),
-                                                      Operation.div(3)));
+                        .append(eventHandlerManager)
+                        .append(new EventChangingDispatcher(
+                                Operation.add(4),
+                                Operation.div(3)));
 
         ValueEvent valueEvent;
 
         valueEvent = (ValueEvent) eventDispatchChain.dispatchEvent(
-                                          new ValueEvent(2));
-        Assert.assertEquals(2, valueEvent.getValue());
+                new ValueEvent(2));
+        assertEquals(2, valueEvent.getValue());
 
         valueEvent = (ValueEvent) eventDispatchChain.dispatchEvent(
-                                          new ValueEvent(5));
-        Assert.assertEquals(3, valueEvent.getValue());
+                new ValueEvent(5));
+        assertEquals(3, valueEvent.getValue());
     }
 
     @Test
@@ -218,11 +218,11 @@ public final class EventHandlerManagerTest {
         testValueEventDispatch(
                 eventHandlerManager, ValueEvent.VALUE_C, 5, 35);
 
-        Assert.assertEquals(0, emptyEventCountingHandler.getEventCount());
+        assertEquals(0, emptyEventCountingHandler.getEventCount());
         dispatchEmptyEvent(eventHandlerManager);
-        Assert.assertEquals(1, emptyEventCountingHandler.getEventCount());
+        assertEquals(1, emptyEventCountingHandler.getEventCount());
         dispatchEmptyEvent(eventHandlerManager);
-        Assert.assertEquals(2, emptyEventCountingHandler.getEventCount());
+        assertEquals(2, emptyEventCountingHandler.getEventCount());
     }
 
     @Test
@@ -282,11 +282,11 @@ public final class EventHandlerManagerTest {
         testValueEventDispatch(
                 eventHandlerManager, ValueEvent.VALUE_C, 5, 210);
 
-        Assert.assertEquals(0, emptyEventCountingHandler.getEventCount());
+        assertEquals(0, emptyEventCountingHandler.getEventCount());
         dispatchEmptyEvent(eventHandlerManager);
-        Assert.assertEquals(1, emptyEventCountingHandler.getEventCount());
+        assertEquals(1, emptyEventCountingHandler.getEventCount());
         dispatchEmptyEvent(eventHandlerManager);
-        Assert.assertEquals(2, emptyEventCountingHandler.getEventCount());
+        assertEquals(2, emptyEventCountingHandler.getEventCount());
     }
 
     @Test
@@ -325,11 +325,11 @@ public final class EventHandlerManagerTest {
         testValueEventDispatch(
                 eventHandlerManager, ValueEvent.VALUE_C, 5, 210);
 
-        Assert.assertEquals(0, emptyEventCountingHandler.getEventCount());
+        assertEquals(0, emptyEventCountingHandler.getEventCount());
         dispatchEmptyEvent(eventHandlerManager);
-        Assert.assertEquals(1, emptyEventCountingHandler.getEventCount());
+        assertEquals(1, emptyEventCountingHandler.getEventCount());
         dispatchEmptyEvent(eventHandlerManager);
-        Assert.assertEquals(2, emptyEventCountingHandler.getEventCount());
+        assertEquals(2, emptyEventCountingHandler.getEventCount());
     }
 
     @Test
@@ -423,10 +423,10 @@ public final class EventHandlerManagerTest {
     public void shouldCallInCorrectOrder() {
         final EventDispatchChain eventDispatchChain =
                 StubEventDispatchChain.EMPTY_CHAIN
-                                      .append(eventHandlerManager)
-                                      .append(new EventChangingDispatcher(
-                                                      Operation.add(4),
-                                                      Operation.div(3)));
+                        .append(eventHandlerManager)
+                        .append(new EventChangingDispatcher(
+                                Operation.add(4),
+                                Operation.div(3)));
 
         eventHandlerManager.setEventHandler(
                 ValueEvent.VALUE_A,
@@ -441,8 +441,8 @@ public final class EventHandlerManagerTest {
         ValueEvent valueEvent;
 
         valueEvent = (ValueEvent) eventDispatchChain.dispatchEvent(
-                                          new ValueEvent(35));
-        Assert.assertEquals(16, valueEvent.getValue());
+                new ValueEvent(35));
+        assertEquals(16, valueEvent.getValue());
     }
 
     @Test
@@ -475,11 +475,11 @@ public final class EventHandlerManagerTest {
         dispatchValueEvent(eventHandlerManager, ValueEvent.VALUE_C);
         dispatchEmptyEvent(eventHandlerManager);
 
-        Assert.assertEquals(5, rootEventCounter.getEventCount());
-        Assert.assertEquals(3, valueEventCounter.getEventCount());
-        Assert.assertEquals(1, valueAEventCounter.getEventCount());
-        Assert.assertEquals(1, valueBEventCounter.getEventCount());
-        Assert.assertEquals(2, emptyEventCounter.getEventCount());
+        assertEquals(5, rootEventCounter.getEventCount());
+        assertEquals(3, valueEventCounter.getEventCount());
+        assertEquals(1, valueAEventCounter.getEventCount());
+        assertEquals(1, valueBEventCounter.getEventCount());
+        assertEquals(2, emptyEventCounter.getEventCount());
     }
 
     @Test
@@ -512,11 +512,11 @@ public final class EventHandlerManagerTest {
         dispatchValueEvent(eventHandlerManager, ValueEvent.VALUE_C);
         dispatchEmptyEvent(eventHandlerManager);
 
-        Assert.assertEquals(5, rootEventCounter.getEventCount());
-        Assert.assertEquals(3, valueEventCounter.getEventCount());
-        Assert.assertEquals(1, valueAEventCounter.getEventCount());
-        Assert.assertEquals(1, valueBEventCounter.getEventCount());
-        Assert.assertEquals(2, emptyEventCounter.getEventCount());
+        assertEquals(5, rootEventCounter.getEventCount());
+        assertEquals(3, valueEventCounter.getEventCount());
+        assertEquals(1, valueAEventCounter.getEventCount());
+        assertEquals(1, valueBEventCounter.getEventCount());
+        assertEquals(2, emptyEventCounter.getEventCount());
     }
 
     @Test
@@ -525,8 +525,8 @@ public final class EventHandlerManagerTest {
                 new EventCountingDispatcher();
         final EventDispatchChain eventDispatchChain =
                 StubEventDispatchChain.EMPTY_CHAIN
-                                      .append(eventHandlerManager)
-                                      .append(eventCountingDispatcher);
+                        .append(eventHandlerManager)
+                        .append(eventCountingDispatcher);
 
         final EventCountingHandler<Event> eventCountingFilter =
                 new EventCountingHandler<>();
@@ -541,11 +541,11 @@ public final class EventHandlerManagerTest {
         eventHandlerManager.addEventHandler(Event.ANY, eventCountingHandler);
         eventHandlerManager.addEventHandler(Event.ANY, eventConsumingHandler);
 
-        Assert.assertNull(eventDispatchChain.dispatchEvent(new EmptyEvent()));
-        Assert.assertEquals(1, eventCountingFilter.getEventCount());
-        Assert.assertEquals(
+        assertNull(eventDispatchChain.dispatchEvent(new EmptyEvent()));
+        assertEquals(1, eventCountingFilter.getEventCount());
+        assertEquals(
                 1, eventCountingDispatcher.getCapturingEventCount());
-        Assert.assertEquals(1, eventCountingHandler.getEventCount());
+        assertEquals(1, eventCountingHandler.getEventCount());
 
         eventHandlerManager.removeEventHandler(
                 Event.ANY, eventCountingHandler);
@@ -556,11 +556,11 @@ public final class EventHandlerManagerTest {
         eventHandlerManager.addEventHandler(Event.ANY, eventConsumingHandler);
         eventHandlerManager.addEventHandler(Event.ANY, eventCountingHandler);
 
-        Assert.assertNull(eventDispatchChain.dispatchEvent(new EmptyEvent()));
-        Assert.assertEquals(2, eventCountingFilter.getEventCount());
-        Assert.assertEquals(
+        assertNull(eventDispatchChain.dispatchEvent(new EmptyEvent()));
+        assertEquals(2, eventCountingFilter.getEventCount());
+        assertEquals(
                 2, eventCountingDispatcher.getCapturingEventCount());
-        Assert.assertEquals(2, eventCountingHandler.getEventCount());
+        assertEquals(2, eventCountingHandler.getEventCount());
     }
 
     @Test
@@ -569,8 +569,8 @@ public final class EventHandlerManagerTest {
                 new EventCountingDispatcher();
         final EventDispatchChain eventDispatchChain =
                 StubEventDispatchChain.EMPTY_CHAIN
-                                      .append(eventHandlerManager)
-                                      .append(eventCountingDispatcher);
+                        .append(eventHandlerManager)
+                        .append(eventCountingDispatcher);
 
         final EventCountingHandler<Event> eventCountingFilter =
                 new EventCountingHandler<>();
@@ -585,11 +585,11 @@ public final class EventHandlerManagerTest {
         eventHandlerManager.addEventFilter(Event.ANY, eventCountingFilter);
         eventHandlerManager.addEventFilter(Event.ANY, eventConsumingFilter);
 
-        Assert.assertNull(eventDispatchChain.dispatchEvent(new EmptyEvent()));
-        Assert.assertEquals(1, eventCountingFilter.getEventCount());
-        Assert.assertEquals(
+        assertNull(eventDispatchChain.dispatchEvent(new EmptyEvent()));
+        assertEquals(1, eventCountingFilter.getEventCount());
+        assertEquals(
                 0, eventCountingDispatcher.getCapturingEventCount());
-        Assert.assertEquals(0, eventCountingHandler.getEventCount());
+        assertEquals(0, eventCountingHandler.getEventCount());
 
         eventHandlerManager.removeEventFilter(Event.ANY, eventCountingFilter);
         eventHandlerManager.removeEventFilter(Event.ANY, eventConsumingFilter);
@@ -598,71 +598,98 @@ public final class EventHandlerManagerTest {
         eventHandlerManager.addEventFilter(Event.ANY, eventConsumingFilter);
         eventHandlerManager.addEventFilter(Event.ANY, eventCountingFilter);
 
-        Assert.assertNull(eventDispatchChain.dispatchEvent(new EmptyEvent()));
-        Assert.assertEquals(2, eventCountingFilter.getEventCount());
-        Assert.assertEquals(
+        assertNull(eventDispatchChain.dispatchEvent(new EmptyEvent()));
+        assertEquals(2, eventCountingFilter.getEventCount());
+        assertEquals(
                 0, eventCountingDispatcher.getCapturingEventCount());
-        Assert.assertEquals(0, eventCountingHandler.getEventCount());
+        assertEquals(0, eventCountingHandler.getEventCount());
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void addEventHandlerShouldThrowNPEForNullEventType() {
-        eventHandlerManager.addEventHandler(
-                null,
-                event -> {
-                });
+        assertThrows(NullPointerException.class, () -> {
+                    eventHandlerManager.addEventHandler(
+                            null,
+                            event -> {
+                            });
+                }
+        );
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void addEventHandlerShouldThrowNPEForNullEventHandler() {
-        eventHandlerManager.addEventHandler(Event.ANY, null);
+        assertThrows(NullPointerException.class, () -> {
+            eventHandlerManager.addEventHandler(Event.ANY, null);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+
+    @Test
     public void removeEventHandlerShouldThrowNPEForNullEventType() {
-        eventHandlerManager.removeEventHandler(
-                null,
-                event -> {
-                });
+        assertThrows(NullPointerException.class, () -> {
+                    eventHandlerManager.removeEventHandler(
+                            null,
+                            event -> {
+                            });
+                }
+        );
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void removeEventHandlerShouldThrowNPEForNullEventHandler() {
-        eventHandlerManager.removeEventHandler(Event.ANY, null);
+        assertThrows(NullPointerException.class, () -> {
+            eventHandlerManager.removeEventHandler(Event.ANY, null);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+
+    @Test
     public void addEventFilterShouldThrowNPEForNullEventType() {
-        eventHandlerManager.addEventFilter(
-                null,
-                event -> {
-                });
+        assertThrows(NullPointerException.class, () -> {
+                    eventHandlerManager.addEventFilter(
+                            null,
+                            event -> {
+                            });
+                }
+        );
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void addEventFilterShouldThrowNPEForNullEventHandler() {
-        eventHandlerManager.addEventFilter(Event.ANY, null);
+        assertThrows(NullPointerException.class, () -> {
+            eventHandlerManager.addEventFilter(Event.ANY, null);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+
+    @Test
     public void removeEventFilterShouldThrowNPEForNullEventType() {
-        eventHandlerManager.removeEventHandler(
-                null,
-                event -> {
-                });
+        assertThrows(NullPointerException.class, () -> {
+                    eventHandlerManager.removeEventHandler(
+                            null,
+                            event -> {
+                            });
+                }
+        );
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void removeEventFilterShouldThrowNPEForNullEventHandler() {
-        eventHandlerManager.removeEventHandler(Event.ANY, null);
+        assertThrows(NullPointerException.class, () -> {
+            eventHandlerManager.removeEventHandler(Event.ANY, null);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+
+    @Test
     public void setEventHandlerShouldThrowNPEForNullEventType() {
-        eventHandlerManager.setEventHandler(
-                null,
-                event -> {
-                });
+        assertThrows(NullPointerException.class, () -> {
+                    eventHandlerManager.setEventHandler(
+                            null,
+                            event -> {
+                            });
+                }
+        );
     }
 
     private static void testValueEventDispatch(
@@ -672,23 +699,23 @@ public final class EventHandlerManagerTest {
             final int calculatedValue) {
         final ValueEvent valueEvent =
                 (ValueEvent) eventDispatcher.dispatchEvent(
-                                     new ValueEvent(eventType, initialValue),
-                                     StubEventDispatchChain.EMPTY_CHAIN);
-        Assert.assertEquals(calculatedValue, valueEvent.getValue());
+                        new ValueEvent(eventType, initialValue),
+                        StubEventDispatchChain.EMPTY_CHAIN);
+        assertEquals(calculatedValue, valueEvent.getValue());
     }
 
     private static Event dispatchEmptyEvent(
             final EventDispatcher eventDispatcher) {
         return eventDispatcher.dispatchEvent(
-                       new EmptyEvent(),
-                       StubEventDispatchChain.EMPTY_CHAIN);
+                new EmptyEvent(),
+                StubEventDispatchChain.EMPTY_CHAIN);
     }
 
     private static Event dispatchValueEvent(
             final EventDispatcher eventDispatcher,
             final EventType<ValueEvent> eventType) {
         return eventDispatcher.dispatchEvent(
-                       new ValueEvent(eventType, 0),
-                       StubEventDispatchChain.EMPTY_CHAIN);
+                new ValueEvent(eventType, 0),
+                StubEventDispatchChain.EMPTY_CHAIN);
     }
 }

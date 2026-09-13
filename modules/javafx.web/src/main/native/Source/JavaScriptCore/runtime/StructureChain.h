@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "JSCast.h"
-#include "JSObject.h"
-#include "Structure.h"
+#include <JavaScriptCore/JSCast.h>
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/Structure.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/UniqueArray.h>
 
@@ -53,10 +53,7 @@ public:
     StructureID* head() { return m_vector.get(); }
     DECLARE_VISIT_CHILDREN;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(CellType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_INFO;
 

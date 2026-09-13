@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <WebCore/ProcessQualified.h>
 #include <wtf/ObjectIdentifier.h>
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
@@ -32,7 +33,8 @@
 namespace WebCore {
 
 struct PlaybackTargetClientContextIdentifierType;
-using PlaybackTargetClientContextIdentifier = ObjectIdentifier<PlaybackTargetClientContextIdentifierType>;
+using PlaybackTargetClientContextID = ObjectIdentifier<PlaybackTargetClientContextIdentifierType>;
+using PlaybackTargetClientContextIdentifier = ProcessQualified<PlaybackTargetClientContextID>;
 
 }
 

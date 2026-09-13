@@ -29,56 +29,136 @@
 
 #include "Chrome.h"
 #include "ChromeClient.h"
+#include "Document.h"
 #include "Element.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "ExceptionCode.h"
+#include "FrameDestructionObserverInlines.h"
+#include "JSDOMPromiseDeferred.h"
+#include "NodeDocument.h"
 #include "Page.h"
 #include "PlatformMouseEvent.h"
 #include "PointerCaptureController.h"
+#include "TaskSource.h"
 #include "UserGestureIndicator.h"
 #include "VoidCallback.h"
+#include <wtf/Ref.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <JavaScriptCore/ConsoleTypes.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PointerLockController);
+
+class UnadjustedMovementPlatformMouseEvent : public PlatformMouseEvent {
+public:
+    explicit UnadjustedMovementPlatformMouseEvent(const PlatformMouseEvent& src)
+        : PlatformMouseEvent(src)
+    {
+        m_movementDelta = src.unadjustedMovementDelta();
+    }
+};
 
 PointerLockController::PointerLockController(Page& page)
     : m_page(page)
 {
 }
 
-void PointerLockController::requestPointerLock(Element* target)
+PointerLockController::~PointerLockController() = default;
+
+void PointerLockController::ref() const
+{
+    m_page->ref();
+}
+
+void PointerLockController::deref() const
+{
+    m_page->deref();
+}
+
+
+void PointerLockController::requestPointerLock(Element* target, std::optional<PointerLockOptions>&& options, RefPtr<DeferredPromise> promise)
 {
     if (!target || !target->isConnected() || m_documentOfRemovedElementWhileWaitingForUnlock) {
         enqueueEvent(eventNames().pointerlockerrorEvent, target);
+        if (promise)
+            promise->reject(ExceptionCode::WrongDocumentError, "Pointer lock target must be in an active document."_s);
         return;
     }
 
     if (m_documentAllowedToRelockWithoutUserGesture != &target->document() && !UserGestureIndicator::processingUserGesture()) {
         enqueueEvent(eventNames().pointerlockerrorEvent, target);
+        // If the request was not started from an engagement gesture and the Document has not previously released a successful Pointer Lock with exitPointerLock():
+        if (promise)
+            promise->reject(ExceptionCode::NotAllowedError, "Pointer lock requires a user gesture."_s);
         return;
     }
 
-    if (target->document().isSandboxed(SandboxPointerLock)) {
+    if (target->document().isSandboxed(SandboxFlag::PointerLock)) {
+        auto reason = "Blocked pointer lock on an element because the element's frame is sandboxed and the 'allow-pointer-lock' permission is not set."_s;
         // FIXME: This message should be moved off the console once a solution to https://bugs.webkit.org/show_bug.cgi?id=103274 exists.
-        target->document().addConsoleMessage(MessageSource::Security, MessageLevel::Error, "Blocked pointer lock on an element because the element's frame is sandboxed and the 'allow-pointer-lock' permission is not set."_s);
+        target->document().addConsoleMessage(MessageSource::Security, MessageLevel::Error, reason);
         enqueueEvent(eventNames().pointerlockerrorEvent, target);
+        // If this's node document's active sandboxing flag set has the sandboxed pointer lock browsing context flag set:
+        if (promise)
+            promise->reject(ExceptionCode::SecurityError, reason);
+        return;
+    }
+
+    if (options && options->unadjustedMovement && !supportsUnadjustedMovement()) {
+        // If options["unadjustedMovement"] is true and the platform does not support unadjustedMovement:
+        enqueueEvent(eventNames().pointerlockerrorEvent, target);
+        if (promise)
+            promise->reject(ExceptionCode::NotSupportedError, "Unadjusted movement is unavailable."_s);
         return;
     }
 
     if (m_element) {
         if (&m_element->document() != &target->document()) {
             enqueueEvent(eventNames().pointerlockerrorEvent, target);
+            // If the user agent's pointer-lock target is an element whose shadow-including root is not equal to this's shadow-including root, then:
+            if (promise)
+                promise->reject(ExceptionCode::InvalidStateError, "Pointer lock cannot be moved to an element in a different document."_s);
             return;
         }
         m_element = target;
+        m_options = WTF::move(options);
+        if (m_lockPending) {
+            // m_lockPending means an answer from the ChromeClient for a previous requestPointerLock on the page is pending. It's currently unknown which way that will go, whether the request will be approved or rejected. Therefore queue the promise for later when that's known and don't send out any pointerlockchangeEvent yet.
+            if (promise)
+                m_promises.append(promise.releaseNonNull());
+        } else {
+            // !m_lockPending means the pointer lock is currently held on the page, and page is just re-targeting it or changing the options.
         enqueueEvent(eventNames().pointerlockchangeEvent, target);
-        m_page.pointerCaptureController().pointerLockWasApplied();
+            if (promise)
+                promise->resolve();
+            // FIXME: https://bugs.webkit.org/show_bug.cgi?id=261786
+            // This probably needs to be called in all code paths.
+            m_page->pointerCaptureController().pointerLockWasApplied();
+        }
     } else {
         m_lockPending = true;
         m_element = target;
-        if (!m_page.chrome().client().requestPointerLock()) {
+        m_options = WTF::move(options);
+        if (promise)
+            m_promises.append(promise.releaseNonNull());
+
+        m_page->chrome().client().requestPointerLock([this, protectedThis = Ref { *this }, target = RefPtr { target }](PointerLockRequestResult result) {
+            switch (result) {
+            case PointerLockRequestResult::Success:
+                didAcquirePointerLock();
+                break;
+            case PointerLockRequestResult::Failure:
+                didNotAcquirePointerLock();
+                break;
+            case PointerLockRequestResult::Unsupported:
+                enqueueEvent(eventNames().pointerlockerrorEvent, target.get());
+            rejectPromises(ExceptionCode::NotSupportedError, "Pointer lock is unavailable."_s);
             clearElement();
-            enqueueEvent(eventNames().pointerlockerrorEvent, target);
+                break;
         }
+        });
     }
 }
 
@@ -88,7 +168,12 @@ void PointerLockController::requestPointerUnlock()
         return;
 
     m_unlockPending = true;
-    m_page.chrome().client().requestPointerUnlock();
+    m_page->chrome().client().requestPointerUnlock([this, protectedThis = Ref { *this }](bool result) {
+        if (result)
+            didLosePointerLock();
+        else
+            didNotAcquirePointerLock();
+    });
 }
 
 void PointerLockController::requestPointerUnlockAndForceCursorVisible()
@@ -99,16 +184,25 @@ void PointerLockController::requestPointerUnlockAndForceCursorVisible()
         return;
 
     m_unlockPending = true;
-    m_page.chrome().client().requestPointerUnlock();
+    m_page->chrome().client().requestPointerUnlock([this, protectedThis = Ref { *this }](bool result) {
+        if (result)
+            didLosePointerLock();
+        else
+            didNotAcquirePointerLock();
+    });
     m_forceCursorVisibleUponUnlock = true;
 }
 
 void PointerLockController::elementWasRemovedInternal()
 {
     m_documentOfRemovedElementWhileWaitingForUnlock = m_element->document();
+    requestPointerUnlock();
+    // It is possible that the element is removed while pointer lock is still pending.
+    // This is essentially the same situation as the !target->isConnected() test in
+    // PointerLockController::requestPointerLock, but it has arisen in between then and now.
+    rejectPromises(ExceptionCode::WrongDocumentError, "Pointer lock target element was removed."_s);
     // Set element null immediately to block any future interaction with it
     // including mouse events received before the unlock completes.
-    requestPointerUnlock();
     clearElement();
 }
 
@@ -120,6 +214,8 @@ void PointerLockController::documentDetached(Document& document)
     if (m_element && &m_element->document() == &document) {
         m_documentOfRemovedElementWhileWaitingForUnlock = m_element->document();
         requestPointerUnlock();
+        // It is possible that the document is detached while pointer lock is still pending.
+        rejectPromises(ExceptionCode::WrongDocumentError, "Pointer lock target document was detached."_s);
         clearElement();
     }
 }
@@ -146,7 +242,8 @@ void PointerLockController::didAcquirePointerLock()
 
     ASSERT(m_element);
 
-    enqueueEvent(eventNames().pointerlockchangeEvent, m_element.get());
+    enqueueEvent(eventNames().pointerlockchangeEvent, m_element.copyRef().get());
+    resolvePromises();
     m_lockPending = false;
     m_forceCursorVisibleUponUnlock = false;
     m_documentAllowedToRelockWithoutUserGesture = m_element->document();
@@ -154,9 +251,17 @@ void PointerLockController::didAcquirePointerLock()
 
 void PointerLockController::didNotAcquirePointerLock()
 {
-    enqueueEvent(eventNames().pointerlockerrorEvent, m_element.get());
+    // didNotAcquirePointerLock is sent in response to ChromeClient::requestPointerLock if the window does not have focus or the UI delegate is not allowing pointer lock.
+    // From the draft spec:
+    // If the this's shadow-including root is the active document of a browsing context which is not (or has an ancestor browsing context which is not) in focus by a window which is in focus by the operating system's window manager:
+    // 1. Fire an event named pointerlockerror at this's node document.
+    // 2. Reject promise with a "WrongDocumentError" DOMException.
+
+    enqueueEvent(eventNames().pointerlockerrorEvent, m_element.copyRef().get());
+    rejectPromises(ExceptionCode::WrongDocumentError, "Pointer lock requires the window to have focus."_s);
     clearElement();
     m_unlockPending = false;
+    m_documentOfRemovedElementWhileWaitingForUnlock = nullptr;
 }
 
 void PointerLockController::didLosePointerLock()
@@ -164,13 +269,13 @@ void PointerLockController::didLosePointerLock()
     if (!m_unlockPending)
         m_documentAllowedToRelockWithoutUserGesture = nullptr;
 
-    enqueueEvent(eventNames().pointerlockchangeEvent, m_element ? &m_element->document() : m_documentOfRemovedElementWhileWaitingForUnlock.get());
+    enqueueEvent(eventNames().pointerlockchangeEvent, m_element ? m_element->protectedDocument().ptr() : RefPtr { m_documentOfRemovedElementWhileWaitingForUnlock.get() }.get());
     clearElement();
     m_unlockPending = false;
     m_documentOfRemovedElementWhileWaitingForUnlock = nullptr;
     if (m_forceCursorVisibleUponUnlock) {
         m_forceCursorVisibleUponUnlock = false;
-        m_page.chrome().client().setCursorHiddenUntilMouseMoves(false);
+        m_page->chrome().client().setCursorHiddenUntilMouseMoves(false);
     }
 }
 
@@ -180,7 +285,7 @@ void PointerLockController::dispatchLockedMouseEvent(const PlatformMouseEvent& e
         return;
 
     Ref protectedElement { *m_element };
-    protectedElement->dispatchMouseEvent(event, eventType, event.clickCount());
+    protectedElement->dispatchMouseEvent((m_options && m_options->unadjustedMovement) ? UnadjustedMovementPlatformMouseEvent(event) : event, eventType, event.clickCount());
 
     // Create click events
     if (eventType == eventNames().mouseupEvent)
@@ -200,20 +305,44 @@ void PointerLockController::clearElement()
 {
     m_lockPending = false;
     m_element = nullptr;
+    m_options = std::nullopt;
+    ASSERT(m_promises.isEmpty());
 }
 
 void PointerLockController::enqueueEvent(const AtomString& type, Element* element)
 {
     if (element)
-        enqueueEvent(type, &element->document());
+        enqueueEvent(type, element->protectedDocument().ptr());
 }
 
 void PointerLockController::enqueueEvent(const AtomString& type, Document* document)
 {
     // FIXME: Spec doesn't specify which task source use.
-    if (RefPtr protectedDocument = document)
-        protectedDocument->queueTaskToDispatchEvent(TaskSource::UserInteraction, Event::create(type, Event::CanBubble::Yes, Event::IsCancelable::No));
+    if (document)
+        document->queueTaskToDispatchEvent(TaskSource::UserInteraction, Event::create(type, Event::CanBubble::Yes, Event::IsCancelable::No));
 }
+
+void PointerLockController::resolvePromises()
+{
+    for (auto& promise : std::exchange(m_promises, { }))
+        promise->resolve();
+}
+
+void PointerLockController::rejectPromises(ExceptionCode code, const String& reason)
+{
+    for (auto& promise : std::exchange(m_promises, { }))
+        promise->reject(code, reason);
+}
+
+bool PointerLockController::supportsUnadjustedMovement() const
+{
+#if HAVE(MOUSE_UNACCELERATED_MOVEMENT) || PLATFORM(IOS_FAMILY)
+    return m_page->chrome().client().hasAccessoryMousePointingDevice();
+#else
+    return false;
+#endif
+}
+
 
 } // namespace WebCore
 

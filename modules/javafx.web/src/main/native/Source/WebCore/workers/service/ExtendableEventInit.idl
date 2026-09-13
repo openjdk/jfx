@@ -24,6 +24,6 @@
  */
 
 [
-    Conditional=SERVICE_WORKER,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ExtendableEventInit : EventInit {
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,6 +59,7 @@ using namespace std;
 #define AAC_PTS_INPUT_DEBUG 0
 #define EOS_DEBUG 0
 
+// MAX_HEADER_SIZE is valid max size for H.264 and AAC, however AAC header is actually smaller.
 #define MAX_HEADER_SIZE 256
 #define INPUT_BUFFERS_BEFORE_ERROR 500
 
@@ -109,6 +110,11 @@ enum
     PROP_0,
     PROP_CODEC_ID,
     PROP_IS_SUPPORTED,
+    // If set MP2T demuxer will not reset PTS to 0 after
+    // seek. Required to be true when we playback two
+    // separate streams like video in TS and raw audio.
+    // Used by HLS with EXT-X-MEDIA.
+    PROP_DISABLE_MP2T_PTS_RESET
 };
 
 #pragma pack(push)
@@ -275,6 +281,10 @@ static void gst_dshowwrapper_class_init (GstDShowWrapperClass *klass)
     g_object_class_install_property (gobject_class, PROP_IS_SUPPORTED,
         g_param_spec_boolean ("is-supported", "Is supported", "Is codec ID supported", FALSE,
         (GParamFlags)(G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS)));
+
+    g_object_class_install_property (gobject_class, PROP_DISABLE_MP2T_PTS_RESET,
+        g_param_spec_boolean ("disable-mp2t-pts-reset", "MP2T PTS Reset", "Disable/Enable PTS reset", FALSE,
+        (GParamFlags)(G_PARAM_WRITABLE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS)));
 }
 
 // Initialize the new element
@@ -355,7 +365,7 @@ static void gst_dshowwrapper_init (GstDShowWrapper *decoder)
     decoder->clock = NULL;
 #endif // ENABLE_CLOCK
 
-    decoder->set_base_pts = FALSE;
+    decoder->disable_mp2t_pts_reset = FALSE;
     decoder->base_pts = GST_CLOCK_TIME_NONE;
 
     decoder->pending_event = NULL;
@@ -420,6 +430,8 @@ static void gst_dshowwrapper_set_property(GObject *object, guint property_id, co
     case PROP_CODEC_ID:
         decoder->codec_id = g_value_get_int(value);
         break;
+    case PROP_DISABLE_MP2T_PTS_RESET:
+        decoder->disable_mp2t_pts_reset = g_value_get_boolean(value);
     default:
         break;
     }
@@ -624,17 +636,25 @@ void dshowwrapper_deliver_post_process_mp2t(GstBuffer *pBuffer, GstDShowWrapper 
     data = info.data;
     size = info.size;
 
-    if (data == NULL || size < 3)
+    // PES header 6 bytes + optional extension + payload
+    // We should have at least 7 bytes (header + 1 byte for payload)
+    if (data == NULL || size < 7)
+    {
+        gst_buffer_unmap(pBuffer, &info);
         return;
+    }
 
     if (data[0] == 0x00 && data[1] == 0x00 && data[2] == 0x01) // PES header start
     {
-        if ((data[6] & 0x80) == 0x80) // Optional PES header
+        // Check for optional PES header and make sure we have enough bytes
+        // to continue parsing optional PES header which is 3 bytes.
+        if ((data[6] & 0x80) == 0x80 && size >= 9) // Optional PES header
         {
             __int64 PTS = 0;
             GstClockTime gst_pts = GST_CLOCK_TIME_NONE;
 
-            if ((data[7] & 0x80) == 0x80) // Get PTS
+            // Make sure we have enough bytes to read PTS
+            if ((data[7] & 0x80) == 0x80 && size >= 14) // Get PTS
             {
                 PTS |= ((__int64)(data[9] & 0x0E) << 29);
                 PTS |= (data[10] << 22);
@@ -665,19 +685,39 @@ void dshowwrapper_deliver_post_process_mp2t(GstBuffer *pBuffer, GstDShowWrapper 
                     }
                 }
 
-                if (gst_pts >= decoder->base_pts && gst_pts > decoder->last_pts[index] && gst_pts - decoder->last_pts[index] < PTS_WRAPAROUND_THRESHOLD)
-                    GST_BUFFER_TIMESTAMP(pBuffer) = gst_pts - decoder->base_pts;
+                // If last_pts is not valid, just set PTS on buffer, otherwise we will be
+                // missing PTS on first buffer.
+                if (GST_CLOCK_TIME_IS_VALID(decoder->last_pts[index]))
+                {
+                    if (gst_pts >= decoder->base_pts && gst_pts > decoder->last_pts[index] && gst_pts - decoder->last_pts[index] < PTS_WRAPAROUND_THRESHOLD)
+                        GST_BUFFER_TIMESTAMP(pBuffer) = gst_pts - decoder->base_pts;
+                }
+                else
+                {
+                    if (gst_pts >= decoder->base_pts)
+                        GST_BUFFER_TIMESTAMP(pBuffer) = gst_pts - decoder->base_pts;
+                }
 
                 if (!GST_CLOCK_TIME_IS_VALID(decoder->last_pts[index]) || (gst_pts > decoder->last_pts[index] && gst_pts - decoder->last_pts[index] < PTS_WRAPAROUND_THRESHOLD))
                     decoder->last_pts[index] = gst_pts;
             }
 
             guint8 optional_remaining_header_size = data[8];
-            size -= (PES_HEADER_SIZE + PES_OPTIONAL_HEADER_SIZE + optional_remaining_header_size);
-            offset = (PES_HEADER_SIZE + PES_OPTIONAL_HEADER_SIZE + optional_remaining_header_size);
+            if ((PES_HEADER_SIZE + PES_OPTIONAL_HEADER_SIZE + optional_remaining_header_size) < size)
+            {
+                size -= (PES_HEADER_SIZE + PES_OPTIONAL_HEADER_SIZE + optional_remaining_header_size);
+                offset = (PES_HEADER_SIZE + PES_OPTIONAL_HEADER_SIZE + optional_remaining_header_size);
+            }
+            else
+            {
+                // Something wrong.
+                gst_buffer_unmap(pBuffer, &info);
+                return;
+            }
         }
         else
         {
+            // Skip 6 bytes of PES header
             size -= PES_HEADER_SIZE;
             offset = PES_HEADER_SIZE;
         }
@@ -732,7 +772,7 @@ int dshowwrapper_deliver(GstBuffer *pBuffer, sUserData *pUserData)
         if ((decoder->eInputFormat == MEDIA_FORMAT_AUDIO_AAC || decoder->eInputFormat == MEDIA_FORMAT_VIDEO_H264) && GST_BUFFER_TIMESTAMP_IS_VALID(decoder->out_buffer[pUserData->output_index]))
         {
             // Do not deliver buffers with backward PTS. GStreamer does not like it.
-            // Use it only for uncomressed data. For compressed it is valid to have backward PTS.
+            // Use it only for uncompressed data. For compressed it is valid to have backward PTS.
             if ((decoder->last_pts[pUserData->output_index] != GST_CLOCK_TIME_NONE && GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]) < decoder->last_pts[pUserData->output_index]) || (gint64)GST_BUFFER_TIMESTAMP(decoder->out_buffer[pUserData->output_index]) < 0)
             {
                 // INLINE - gst_buffer_unref()
@@ -1530,7 +1570,14 @@ static gboolean dshowwrapper_load_decoder_aac(GstStructure *s, GstDShowWrapper *
             codec_data = gst_value_get_buffer(v);
             if (codec_data != NULL)
                 if (gst_buffer_map(codec_data, &info, GST_MAP_READ))
-                    codec_data_size = info.size;
+                    codec_data_size = (gint)info.size;
+        }
+
+        // Make sure header has reasonable size
+        if (codec_data_size < 0 || codec_data_size > MAX_HEADER_SIZE)
+        {
+            gst_buffer_unmap(codec_data, &info);
+            return FALSE;
         }
 
         inputFormat.type = MEDIATYPE_Audio;
@@ -2050,13 +2097,14 @@ static gboolean dshowwrapper_load_decoder_h264(GstStructure *s, GstDShowWrapper 
             if (gst_buffer_map(codec_data, &codec_data_info, GST_MAP_READ))
             {
                 if (codec_data_info.size <= MAX_HEADER_SIZE)
-                    header_size = dshowwrapper_get_avc_config(codec_data_info.data, codec_data_info.size, header, MAX_HEADER_SIZE, &decoder->lengthSizeMinusOne);
+                    header_size = (gint)dshowwrapper_get_avc_config(codec_data_info.data, codec_data_info.size, header, MAX_HEADER_SIZE, &decoder->lengthSizeMinusOne);
                 gst_buffer_unmap(codec_data, &codec_data_info);
             }
         }
         else
             return FALSE;
 
+        // dshowwrapper_get_avc_config() will make sure that (header_size <= MAX_HEADER_SIZE)
         if (header_size <= 0)
             return FALSE;
 
@@ -3002,7 +3050,8 @@ static gboolean dshowwrapper_sink_event(GstPad* pad, GstObject *parent, GstEvent
                 decoder->last_stop = segment.position;
             }
         }
-        if (decoder->eInputFormat == MEDIA_FORMAT_STREAM_MP2T) // Resend new segment event with GST_FORMAT_TIME
+        // Resend new segment event with GST_FORMAT_TIME
+        if (!decoder->disable_mp2t_pts_reset && decoder->eInputFormat == MEDIA_FORMAT_STREAM_MP2T)
         {
             // INLINE - gst_event_unref()
             gst_event_unref (event);
@@ -3266,11 +3315,13 @@ static gboolean dshowwrapper_src_event (GstPad* pad, GstObject *parent, GstEvent
                     int index = 0;
                     decoder->seek_position = start;
                     decoder->rate = rate;
-                    decoder->base_pts = GST_CLOCK_TIME_NONE;
+                    // Do not reset base PTS, if PTS reset disabled
+                    if (!decoder->disable_mp2t_pts_reset)
+                        decoder->base_pts = GST_CLOCK_TIME_NONE;
                     for (index = 0; index < MAX_OUTPUT_DS_STREAMS; index++)
                     {
                         decoder->offset_pts[index] = 0;
-                        decoder->last_pts[index] = 0;
+                        decoder->last_pts[index] = GST_CLOCK_TIME_NONE;
                     }
                 }
             }

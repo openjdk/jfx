@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "VM.h"
-#include "ObjectPrototype.h"
-#include "SlotVisitor.h"
-#include "WriteBarrier.h"
+#include <JavaScriptCore/ObjectPrototype.h>
+#include <JavaScriptCore/SlotVisitor.h>
+#include <JavaScriptCore/VM.h>
+#include <JavaScriptCore/WriteBarrier.h>
 
 namespace JSC {
 
@@ -38,8 +38,8 @@ template<typename Derived>
 class ObjectAllocationProfileBase {
     friend class LLIntOffsetsExtractor;
 public:
-    static ptrdiff_t offsetOfAllocator() { return OBJECT_OFFSETOF(ObjectAllocationProfileBase, m_allocator); }
-    static ptrdiff_t offsetOfStructure() { return OBJECT_OFFSETOF(ObjectAllocationProfileBase, m_structure); }
+    static constexpr ptrdiff_t offsetOfAllocator() { return OBJECT_OFFSETOF(ObjectAllocationProfileBase, m_allocator); }
+    static constexpr ptrdiff_t offsetOfStructure() { return OBJECT_OFFSETOF(ObjectAllocationProfileBase, m_structure); }
 
     ObjectAllocationProfileBase() = default;
 
@@ -92,7 +92,7 @@ class ObjectAllocationProfileWithPrototype : public ObjectAllocationProfileBase<
 public:
     using Base = ObjectAllocationProfileBase<ObjectAllocationProfileWithPrototype>;
 
-    static ptrdiff_t offsetOfPrototype() { return OBJECT_OFFSETOF(ObjectAllocationProfileWithPrototype, m_prototype); }
+    static constexpr ptrdiff_t offsetOfPrototype() { return OBJECT_OFFSETOF(ObjectAllocationProfileWithPrototype, m_prototype); }
 
     ObjectAllocationProfileWithPrototype() = default;
 

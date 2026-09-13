@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2011 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,30 +32,33 @@
 #include "ScriptArguments.h"
 #include "ScriptCallStackFactory.h"
 #include <wtf/SetForScope.h>
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 namespace Inspector {
 
 static constexpr unsigned maximumConsoleMessages = 100;
 static constexpr int expireConsoleMessagesStep = 10;
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorConsoleAgent);
+
 InspectorConsoleAgent::InspectorConsoleAgent(AgentContext& context)
     : InspectorAgentBase("Console"_s)
     , m_injectedScriptManager(context.injectedScriptManager)
-    , m_frontendDispatcher(makeUnique<ConsoleFrontendDispatcher>(context.frontendRouter))
+    , m_frontendDispatcher(makeUniqueRef<ConsoleFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(ConsoleBackendDispatcher::create(context.backendDispatcher, this))
 {
 }
 
 InspectorConsoleAgent::~InspectorConsoleAgent() = default;
 
-void InspectorConsoleAgent::didCreateFrontendAndBackend(FrontendRouter*, BackendDispatcher*)
+void InspectorConsoleAgent::didCreateFrontendAndBackend()
 {
 }
 
 void InspectorConsoleAgent::willDestroyFrontendAndBackend(DisconnectReason)
 {
-    disable();
+    std::ignore = disable();
 }
 
 void InspectorConsoleAgent::discardValues()
@@ -73,14 +76,11 @@ Protocol::ErrorStringOr<void> InspectorConsoleAgent::enable()
 
     if (m_expiredConsoleMessageCount) {
         ConsoleMessage expiredMessage(MessageSource::Other, MessageType::Log, MessageLevel::Warning, makeString(m_expiredConsoleMessageCount, " console messages are not shown."_s));
-        expiredMessage.addToFrontend(*m_frontendDispatcher, m_injectedScriptManager, false);
+        expiredMessage.addToFrontend(m_frontendDispatcher, m_injectedScriptManager, false);
     }
 
-    Vector<std::unique_ptr<ConsoleMessage>> messages;
-    m_consoleMessages.swap(messages);
-
-    for (size_t i = 0; i < messages.size(); ++i)
-        messages[i]->addToFrontend(*m_frontendDispatcher, m_injectedScriptManager, false);
+    for (auto& message : m_consoleMessages)
+        message->addToFrontend(m_frontendDispatcher, m_injectedScriptManager, false);
 
     return { };
 }
@@ -97,7 +97,13 @@ Protocol::ErrorStringOr<void> InspectorConsoleAgent::disable()
 
 Protocol::ErrorStringOr<void> InspectorConsoleAgent::clearMessages()
 {
-    clearMessages(Inspector::Protocol::Console::ClearReason::ConsoleAPI);
+    clearMessages(Inspector::Protocol::Console::ClearReason::Frontend);
+    return { };
+}
+
+Protocol::ErrorStringOr<void> InspectorConsoleAgent::setConsoleClearAPIEnabled(bool enabled)
+{
+    m_consoleClearAPIEnabled = enabled;
     return { };
 }
 
@@ -116,6 +122,9 @@ void InspectorConsoleAgent::mainFrameNavigated()
 
 void InspectorConsoleAgent::clearMessages(Inspector::Protocol::Console::ClearReason reason)
 {
+    if (!m_consoleClearAPIEnabled && reason == Inspector::Protocol::Console::ClearReason::ConsoleAPI)
+        return;
+
     m_consoleMessages.clear();
     m_expiredConsoleMessageCount = 0;
 
@@ -128,9 +137,9 @@ void InspectorConsoleAgent::clearMessages(Inspector::Protocol::Console::ClearRea
 void InspectorConsoleAgent::addMessageToConsole(std::unique_ptr<ConsoleMessage> message)
 {
     if (message->type() == MessageType::Clear)
-        clearMessages();
+        clearMessages(Inspector::Protocol::Console::ClearReason::ConsoleAPI);
 
-    addConsoleMessage(WTFMove(message));
+    addConsoleMessage(WTF::move(message));
 }
 
 void InspectorConsoleAgent::startTiming(JSC::JSGlobalObject* globalObject, const String& label)
@@ -160,14 +169,14 @@ void InspectorConsoleAgent::logTiming(JSC::JSGlobalObject* globalObject, const S
     if (it == m_times.end()) {
         // FIXME: Send an enum to the frontend for localization?
         auto warning = makeString("Timer \""_s, ScriptArguments::truncateStringForConsoleMessage(label), "\" does not exist"_s);
-        addMessageToConsole(makeUnique<ConsoleMessage>(MessageSource::ConsoleAPI, MessageType::Timing, MessageLevel::Warning, warning, WTFMove(callStack)));
+        addMessageToConsole(makeUnique<ConsoleMessage>(MessageSource::ConsoleAPI, MessageType::Timing, MessageLevel::Warning, warning, WTF::move(callStack)));
         return;
     }
 
     MonotonicTime startTime = it->value;
     Seconds elapsed = MonotonicTime::now() - startTime;
     auto message = makeString(ScriptArguments::truncateStringForConsoleMessage(label), ": "_s, FormattedNumber::fixedWidth(elapsed.milliseconds(), 3), "ms"_s);
-    addMessageToConsole(makeUnique<ConsoleMessage>(MessageSource::ConsoleAPI, MessageType::Timing, MessageLevel::Debug, message, WTFMove(arguments), WTFMove(callStack)));
+    addMessageToConsole(makeUnique<ConsoleMessage>(MessageSource::ConsoleAPI, MessageType::Timing, MessageLevel::Debug, message, WTF::move(arguments), WTF::move(callStack)));
 }
 
 void InspectorConsoleAgent::stopTiming(JSC::JSGlobalObject* globalObject, const String& label)
@@ -182,28 +191,20 @@ void InspectorConsoleAgent::stopTiming(JSC::JSGlobalObject* globalObject, const 
     if (it == m_times.end()) {
         // FIXME: Send an enum to the frontend for localization?
         auto warning = makeString("Timer \""_s, ScriptArguments::truncateStringForConsoleMessage(label), "\" does not exist"_s);
-        addMessageToConsole(makeUnique<ConsoleMessage>(MessageSource::ConsoleAPI, MessageType::Timing, MessageLevel::Warning, warning, WTFMove(callStack)));
+        addMessageToConsole(makeUnique<ConsoleMessage>(MessageSource::ConsoleAPI, MessageType::Timing, MessageLevel::Warning, warning, WTF::move(callStack)));
         return;
     }
 
     MonotonicTime startTime = it->value;
     Seconds elapsed = MonotonicTime::now() - startTime;
     auto message = makeString(ScriptArguments::truncateStringForConsoleMessage(label), ": "_s, FormattedNumber::fixedWidth(elapsed.milliseconds(), 3), "ms"_s);
-    addMessageToConsole(makeUnique<ConsoleMessage>(MessageSource::ConsoleAPI, MessageType::Timing, MessageLevel::Debug, message, WTFMove(callStack)));
+    addMessageToConsole(makeUnique<ConsoleMessage>(MessageSource::ConsoleAPI, MessageType::Timing, MessageLevel::Debug, message, WTF::move(callStack)));
 
     m_times.remove(it);
 }
 
-void InspectorConsoleAgent::takeHeapSnapshot(const String& title)
+void InspectorConsoleAgent::reportHeapSnapshot(double timestamp, const String& snapshotData, const String& title)
 {
-    if (!m_heapAgent)
-        return;
-
-    auto result = m_heapAgent->snapshot();
-    if (!result)
-        return;
-
-    auto [timestamp, snapshotData] = WTFMove(result.value());
     m_frontendDispatcher->heapSnapshot(timestamp, snapshotData, title);
 }
 
@@ -234,35 +235,28 @@ void InspectorConsoleAgent::countReset(JSC::JSGlobalObject* globalObject, const 
     // FIXME: Web Inspector should have a better UI for counters, but for now we just log an updated counter value.
 }
 
-static bool isGroupMessage(MessageType type)
-{
-    return type == MessageType::StartGroup
-        || type == MessageType::StartGroupCollapsed
-        || type == MessageType::EndGroup;
-}
-
 void InspectorConsoleAgent::addConsoleMessage(std::unique_ptr<ConsoleMessage> consoleMessage)
 {
     ASSERT_ARG(consoleMessage, consoleMessage);
 
     ConsoleMessage* previousMessage = m_consoleMessages.isEmpty() ? nullptr : m_consoleMessages.last().get();
 
-    if (previousMessage && !isGroupMessage(previousMessage->type()) && previousMessage->isEqual(consoleMessage.get())) {
+    if (previousMessage && previousMessage->isEqual(consoleMessage.get())) {
         previousMessage->incrementCount();
         if (m_enabled)
-            previousMessage->updateRepeatCountInConsole(*m_frontendDispatcher);
+            previousMessage->updateRepeatCountInConsole(m_frontendDispatcher);
     } else {
         if (m_enabled) {
             auto generatePreview = !m_isAddingMessageToFrontend;
             SetForScope isAddingMessageToFrontend(m_isAddingMessageToFrontend, true);
 
-            consoleMessage->addToFrontend(*m_frontendDispatcher, m_injectedScriptManager, generatePreview);
+            consoleMessage->addToFrontend(m_frontendDispatcher, m_injectedScriptManager, generatePreview);
         }
 
-        m_consoleMessages.append(WTFMove(consoleMessage));
+        m_consoleMessages.append(WTF::move(consoleMessage));
         if (m_consoleMessages.size() >= maximumConsoleMessages) {
             m_expiredConsoleMessageCount += expireConsoleMessagesStep;
-            m_consoleMessages.remove(0, expireConsoleMessagesStep);
+            m_consoleMessages.removeAt(0, expireConsoleMessagesStep);
         }
     }
 }

@@ -31,8 +31,11 @@
 #include "MediaSession.h"
 #include "Navigator.h"
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NavigatorMediaSession);
 
 NavigatorMediaSession::NavigatorMediaSession(Navigator& navigator)
     : m_navigator(navigator)
@@ -46,29 +49,34 @@ MediaSession& NavigatorMediaSession::mediaSession(Navigator& navigator)
     return NavigatorMediaSession::from(navigator)->mediaSession();
 }
 
+RefPtr<MediaSession> NavigatorMediaSession::mediaSessionIfExists(Navigator& navigator)
+{
+    return NavigatorMediaSession::from(navigator)->mediaSessionIfExists();
+}
+
 MediaSession& NavigatorMediaSession::mediaSession()
 {
     if (!m_mediaSession)
-        m_mediaSession = MediaSession::create(m_navigator);
+        lazyInitialize(m_mediaSession, MediaSession::create(Ref { m_navigator.get() }));
     return *m_mediaSession;
+}
+
+RefPtr<MediaSession> NavigatorMediaSession::mediaSessionIfExists()
+{
+    return m_mediaSession;
 }
 
 NavigatorMediaSession* NavigatorMediaSession::from(Navigator& navigator)
 {
-    auto* supplement = static_cast<NavigatorMediaSession*>(Supplement<Navigator>::from(&navigator, supplementName()));
+    auto* supplement = downcast<NavigatorMediaSession>(Supplement<Navigator>::from(&navigator, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<NavigatorMediaSession>(navigator);
         supplement = newSupplement.get();
-        provideTo(&navigator, supplementName(), WTFMove(newSupplement));
+        provideTo(&navigator, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }
 
-const char* NavigatorMediaSession::supplementName()
-{
-    return "NavigatorMediaSession";
-}
-
-}
+} // namespace WebCore
 
 #endif // ENABLE(MEDIA_SESSION)

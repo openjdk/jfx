@@ -124,10 +124,6 @@ typedef struct tagTHREADNAME_INFO {
 
 void Thread::initializeCurrentThreadInternal(const char* szThreadName)
 {
-#if COMPILER(MINGW)
-    // FIXME: Implement thread name setting with MingW.
-    UNUSED_PARAM(szThreadName);
-#else
     THREADNAME_INFO info;
     info.dwType = 0x1000;
     info.szName = Thread::normalizeThreadName(szThreadName);
@@ -137,7 +133,7 @@ void Thread::initializeCurrentThreadInternal(const char* szThreadName)
     __try {
         RaiseException(MS_VC_EXCEPTION, 0, sizeof(info) / sizeof(ULONG_PTR), reinterpret_cast<ULONG_PTR*>(&info));
     } __except(EXCEPTION_CONTINUE_EXECUTION) { }
-#endif
+
     initializeCurrentThreadEvenIfNonWTFCreated();
 }
 
@@ -151,13 +147,13 @@ static unsigned __stdcall wtfThreadEntryPoint(void* data)
     return 0;
 }
 
-bool Thread::establishHandle(NewThreadContext* data, std::optional<size_t> stackSize, QOS)
+bool Thread::establishHandle(NewThreadContext& data, std::optional<size_t> stackSize, QOS, SchedulingPolicy)
 {
     unsigned threadIdentifier = 0;
     unsigned initFlag = stackSize ? STACK_SIZE_PARAM_IS_A_RESERVATION : 0;
-    HANDLE threadHandle = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, stackSize.value_or(0), wtfThreadEntryPoint, data, initFlag, &threadIdentifier));
+    HANDLE threadHandle = reinterpret_cast<HANDLE>(_beginthreadex(nullptr, stackSize.value_or(0), wtfThreadEntryPoint, &data, initFlag, &threadIdentifier));
     if (!threadHandle) {
-        LOG_ERROR("Failed to create thread at entry point %p with data %p: %ld", wtfThreadEntryPoint, data, errno);
+        LOG_ERROR("Failed to create thread at entry point %p with data %p: %ld", wtfThreadEntryPoint, &data, errno);
         return false;
     }
     establishPlatformSpecificHandle(threadHandle, threadIdentifier);
@@ -211,7 +207,7 @@ void Thread::detach()
 
 auto Thread::suspend(const ThreadSuspendLocker&) -> Expected<void, PlatformSuspendError>
 {
-    RELEASE_ASSERT_WITH_MESSAGE(this != &Thread::current(), "We do not support suspending the current thread itself.");
+    RELEASE_ASSERT_WITH_MESSAGE(this != &Thread::currentSingleton(), "We do not support suspending the current thread itself.");
     DWORD result = SuspendThread(m_handle);
     if (result != (DWORD)-1)
         return { };
@@ -235,7 +231,7 @@ Thread& Thread::initializeCurrentTLS()
 {
     // Not a WTF-created thread, ThreadIdentifier is not established yet.
     WTF::initialize();
-    Ref<Thread> thread = adoptRef(*new Thread());
+    Ref thread = adoptRef(*new Thread(SchedulingPolicy::Other));
 
     HANDLE handle;
     bool isSuccessful = DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(), &handle, 0, FALSE, DUPLICATE_SAME_ACCESS);
@@ -245,7 +241,7 @@ Thread& Thread::initializeCurrentTLS()
     thread->initializeInThread();
     initializeCurrentThreadEvenIfNonWTFCreated();
 
-    return initializeTLS(WTFMove(thread));
+    return initializeTLS(WTF::move(thread));
 }
 
 ThreadIdentifier Thread::currentID()
@@ -288,16 +284,16 @@ Thread* Thread::currentMayBeNull()
 
 Thread& Thread::initializeTLS(Ref<Thread>&& thread)
 {
-    s_threadHolder.thread = WTFMove(thread);
+    s_threadHolder.thread = WTF::move(thread);
     return *s_threadHolder.thread;
 }
 
-Atomic<int> Thread::SpecificStorage::s_numberOfKeys;
+Atomic<size_t> Thread::SpecificStorage::s_numberOfKeys;
 std::array<Atomic<Thread::SpecificStorage::DestroyFunction>, Thread::SpecificStorage::s_maxKeys> Thread::SpecificStorage::s_destroyFunctions;
 
 bool Thread::SpecificStorage::allocateKey(int& key, DestroyFunction destroy)
 {
-    int k = s_numberOfKeys.exchangeAdd(1);
+    auto k = s_numberOfKeys.exchangeAdd(1);
     if (k >= s_maxKeys) {
         s_numberOfKeys.exchangeSub(1);
         return false;
@@ -329,9 +325,7 @@ void Thread::SpecificStorage::destroySlots()
     }
 }
 
-Mutex::~Mutex()
-{
-}
+Mutex::~Mutex() = default;
 
 void Mutex::lock()
 {
@@ -351,7 +345,7 @@ void Mutex::unlock()
 // Returns an interval in milliseconds suitable for passing to one of the Win32 wait functions (e.g., ::WaitForSingleObject).
 static DWORD absoluteTimeToWaitTimeoutInterval(WallTime absoluteTime)
 {
-    if (std::isinf(absoluteTime)) {
+    if (absoluteTime.isInfinity()) {
         if (absoluteTime == -WallTime::infinity())
             return 0;
         return INFINITE;
@@ -370,9 +364,7 @@ static DWORD absoluteTimeToWaitTimeoutInterval(WallTime absoluteTime)
     return static_cast<DWORD>((absoluteTime - currentTime).milliseconds());
 }
 
-ThreadCondition::~ThreadCondition()
-{
-}
+ThreadCondition::~ThreadCondition() = default;
 
 void ThreadCondition::wait(Mutex& mutex)
 {

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "BadgeClient.h"
+#include <WebCore/BadgeClient.h>
 
 namespace WebCore {
 
@@ -36,8 +36,7 @@ public:
         return adoptRef(*new EmptyBadgeClient);
     }
 private:
-    void setAppBadge(Page*, const SecurityOriginData&, std::optional<uint64_t>) final { }
-    void setClientBadge(Page&, const SecurityOriginData&, std::optional<uint64_t>) final { }
+    void setAppBadge(Frame*, const SecurityOriginData&, std::optional<uint64_t>) final { }
 };
 
 } // namespace WebCore

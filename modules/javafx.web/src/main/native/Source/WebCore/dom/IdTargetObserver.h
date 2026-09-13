@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Google Inc. All Rights Reserved.
+ * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,22 +25,27 @@
 
 #pragma once
 
+#include <wtf/CheckedPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
+class Element;
 class IdTargetObserverRegistry;
 
-class IdTargetObserver {
+class IdTargetObserver : public CanMakeCheckedPtr<IdTargetObserver> {
+    WTF_MAKE_TZONE_ALLOCATED(IdTargetObserver);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(IdTargetObserver);
 public:
     virtual ~IdTargetObserver();
-    virtual void idTargetChanged() = 0;
+    virtual void idTargetChanged(Element&) = 0;
 
 protected:
     IdTargetObserver(IdTargetObserverRegistry&, const AtomString& id);
 
 private:
-    IdTargetObserverRegistry* m_registry;
+    CheckedPtr<IdTargetObserverRegistry> m_registry;
     AtomString m_id;
 };
 

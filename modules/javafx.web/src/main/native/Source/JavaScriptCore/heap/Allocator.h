@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include "AllocationFailureMode.h"
+#include <JavaScriptCore/AllocationFailureMode.h>
 #include <climits>
+#include <cstdint>
 
 namespace JSC {
 
@@ -52,7 +53,7 @@ public:
 
     LocalAllocator* localAllocator() const { return m_localAllocator; }
 
-    bool operator==(const Allocator& other) const { return m_localAllocator == other.localAllocator(); }
+    friend bool operator==(const Allocator&, const Allocator&) = default;
     explicit operator bool() const { return *this != Allocator(); }
 
 private:

@@ -33,11 +33,12 @@
 namespace WebCore {
 
 class MathMLOperatorElement final : public MathMLTokenElement {
-    WTF_MAKE_ISO_ALLOCATED(MathMLOperatorElement);
+    WTF_MAKE_TZONE_ALLOCATED(MathMLOperatorElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MathMLOperatorElement);
 public:
-    static Ref<MathMLOperatorElement> create(const QualifiedName& tagName, Document&);
+    static Ref<MathMLOperatorElement> create(const QualifiedName&, Document&);
     struct OperatorChar {
-        UChar32 character { 0 };
+        char32_t character { 0 };
         bool isVertical { true };
     };
     static OperatorChar parseOperatorChar(const String&);
@@ -53,7 +54,7 @@ public:
     const Length& maxSize();
 
 private:
-    MathMLOperatorElement(const QualifiedName& tagName, Document&);
+    MathMLOperatorElement(const QualifiedName&, Document&);
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
     void childrenChanged(const ChildChange&) final;
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
@@ -77,6 +78,6 @@ private:
     std::optional<Length> m_maxSize;
 };
 
-}
+} // namespace WebCore
 
 #endif // ENABLE(MATHML)

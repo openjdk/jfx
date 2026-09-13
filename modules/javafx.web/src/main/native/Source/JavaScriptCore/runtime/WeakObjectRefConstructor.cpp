@@ -53,7 +53,7 @@ JSC_DEFINE_HOST_FUNCTION(callWeakRef, (JSGlobalObject* globalObject, CallFrame*)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "WeakRef"));
+    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "WeakRef"_s));
 }
 
 JSC_DEFINE_HOST_FUNCTION(constructWeakRef, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -62,7 +62,7 @@ JSC_DEFINE_HOST_FUNCTION(constructWeakRef, (JSGlobalObject* globalObject, CallFr
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue target = callFrame->argument(0);
-    if (UNLIKELY(!canBeHeldWeakly(target)))
+    if (!canBeHeldWeakly(target)) [[unlikely]]
         return throwVMTypeError(globalObject, scope, "First argument to WeakRef should be an object or a non-registered symbol"_s);
 
     JSObject* newTarget = asObject(callFrame->newTarget());

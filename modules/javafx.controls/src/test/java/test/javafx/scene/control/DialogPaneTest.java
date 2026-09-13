@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,11 @@
 
 package test.javafx.scene.control;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import javafx.collections.ObservableList;
 import javafx.css.PseudoClass;
+import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
@@ -36,28 +39,27 @@ import javafx.scene.control.DialogPane;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.BorderPane;
+import javafx.scene.layout.HeaderBar;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
-
-import static org.junit.Assert.assertEquals;
 
 public class DialogPaneTest {
 
     private StageLoader sl;
     private DialogPane dialogPane;
 
-    @Before
+    @BeforeEach
     public void setup() {
         dialogPane = new DialogPane();
         sl = new StageLoader(dialogPane);
     }
 
-    @After
+    @AfterEach
     public void after() {
         sl.dispose();
     }
@@ -151,5 +153,38 @@ public class DialogPaneTest {
                 assertEquals(id, button.getId());
             }
         }
+    }
+
+    @Test
+    public void layoutIsRequestedWhenButtonTypesChange() {
+        dialogPane.getButtonTypes().clear();
+        dialogPane.layout();
+        assertFalse(dialogPane.isNeedsLayout());
+
+        dialogPane.getButtonTypes().add(ButtonType.OK);
+        assertTrue(dialogPane.isNeedsLayout());
+    }
+
+    @Test
+    public void headerBarIsLocatedAtTopOfDialogPane() {
+        var headerBar = new HeaderBar();
+        headerBar.setMinHeight(20);
+        headerBar.setPrefHeight(20);
+        dialogPane.setHeaderBar(headerBar);
+        dialogPane.resize(1000, 1000);
+        dialogPane.applyCss();
+        dialogPane.layout();
+
+        assertEquals(
+            new BoundingBox(0, 0, 1000, 20),
+            dialogPane.lookup("HeaderBar").getLayoutBounds());
+
+        dialogPane.getChildren().stream()
+            .filter(Node::isVisible)
+            .filter(c -> c != headerBar)
+            .forEach(child ->
+                assertTrue(child.getLayoutY() >= headerBar.getHeight(), () ->
+                    child.getClass().getSimpleName() + " must be located below HeaderBar, layoutY = " + child.getLayoutBounds())
+            );
     }
 }

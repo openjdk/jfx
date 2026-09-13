@@ -25,8 +25,12 @@
 
 typedef unsigned long FramesPerSecond;
 
-dictionary KeyframeAnimationOptions : KeyframeEffectOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary KeyframeAnimationOptions : KeyframeEffectOptions {
     DOMString id = "";
-    [EnabledBySetting=WebAnimationsMutableTimelinesEnabled] AnimationTimeline? timeline;
+    AnimationTimeline? timeline;
     [EnabledBySetting=WebAnimationsCustomFrameRateEnabled] (FramesPerSecond or AnimationFrameRatePreset) frameRate = "auto";
+    (TimelineRangeOffset or CSSNumericValue or CSSKeywordValue or DOMString) rangeStart = "normal";
+    (TimelineRangeOffset or CSSNumericValue or CSSKeywordValue or DOMString) rangeEnd = "normal";
 };

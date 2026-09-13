@@ -25,30 +25,37 @@
 
 #pragma once
 
-#include "IDLTypes.h"
-#include "JSDOMConvertBase.h"
+#include <WebCore/IDLTypes.h>
+#include <WebCore/JSDOMConvertBase.h>
 
 #include "JSCustomXPathNSResolver.h"
 #include "JSXPathNSResolver.h"
 
 namespace WebCore {
 
+template<> struct IDLInterface<XPathNSResolver> : IDLWrapper<XPathNSResolver> {
+    using ConversionResultType = Ref<XPathNSResolver>;
+    using NullableConversionResultType = RefPtr<XPathNSResolver>;
+};
+
 template<> struct Converter<IDLInterface<XPathNSResolver>> : DefaultConverter<IDLInterface<XPathNSResolver>> {
+    using Result = ConversionResult<IDLInterface<XPathNSResolver>>;
+
     template<typename ExceptionThrower = DefaultExceptionThrower>
-    static RefPtr<XPathNSResolver> convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, ExceptionThrower&& exceptionThrower = ExceptionThrower())
+    static Result convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, ExceptionThrower&& exceptionThrower = ExceptionThrower())
     {
         JSC::VM& vm = JSC::getVM(&lexicalGlobalObject);
         auto scope = DECLARE_THROW_SCOPE(vm);
         if (!value.isObject()) {
             exceptionThrower(lexicalGlobalObject, scope);
-            return nullptr;
+            return Result::exception();
         }
 
         auto object = asObject(value);
         if (object->inherits<JSXPathNSResolver>())
-            return &JSC::jsCast<JSXPathNSResolver*>(object)->wrapped();
+            return { JSC::jsCast<JSXPathNSResolver*>(object)->wrapped() };
 
-        return JSCustomXPathNSResolver::create(object, JSC::jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject));
+        return { JSCustomXPathNSResolver::create(object, JSC::jsCast<JSDOMGlobalObject*>(&lexicalGlobalObject)) };
     }
 };
 

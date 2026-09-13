@@ -51,8 +51,16 @@ Ref<CSSSupportsRule> CSSSupportsRule::create(StyleRuleSupports& rule, CSSStyleSh
 String CSSSupportsRule::cssText() const
 {
     StringBuilder builder;
-    builder.append("@supports ", conditionText());
+    builder.append("@supports "_s, conditionText());
     appendCSSTextForItems(builder);
+    return builder.toString();
+}
+
+String CSSSupportsRule::cssText(const CSS::SerializationContext& context) const
+{
+    StringBuilder builder;
+    builder.append("@supports "_s, conditionText());
+    appendCSSTextWithReplacementURLsForItems(builder, context);
     return builder.toString();
 }
 

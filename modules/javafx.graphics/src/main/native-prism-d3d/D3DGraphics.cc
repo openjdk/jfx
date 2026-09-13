@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -265,7 +265,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nSetBlendEnabled
     D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
     RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
 
-    IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
+    IDirect3DDevice9Ex *pd3dDevice = pCtx->Get3DDevice();
     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
 
     HRESULT res;
@@ -345,7 +345,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nSetTexture
     HRESULT res = pCtx->BeginScene();
     RETURN_STATUS_IF_FAILED(res);
 
-    IDirect3DDevice9 *pd3dDevice = pCtx->Get3DDevice();
+    IDirect3DDevice9Ex *pd3dDevice = pCtx->Get3DDevice();
     RETURN_STATUS_IF_NULL(pd3dDevice, E_FAIL);
 
     IDirect3DTexture9 *pTex = pRes == NULL ? NULL : pRes->GetTexture();
@@ -493,17 +493,4 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DContext_nResetClipRect
     RETURN_STATUS_IF_NULL(pCtx, E_FAIL);
 
     return pCtx->ResetClip();
-}
-
-/*
- * Class:     com_sun_prism_d3d_D3DContext
- * Method:    nIsRTTVolatile
- */
-JNIEXPORT jboolean JNICALL Java_com_sun_prism_d3d_D3DContext_nIsRTTVolatile
-  (JNIEnv *, jclass, jlong ctx)
-{
-    D3DContext *pCtx = (D3DContext*)jlong_to_ptr(ctx);
-    RETURN_STATUS_IF_NULL(pCtx, false);
-
-    return pCtx->Get3DExDevice() ? false : true;
 }

@@ -33,10 +33,72 @@
 
 namespace WebCore {
 
-Ref<ScrollingStateOverflowScrollingNode> ScrollingStateOverflowScrollingNode::create(ScrollingStateTree& stateTree, ScrollingNodeID nodeID)
-{
-    return adoptRef(*new ScrollingStateOverflowScrollingNode(stateTree, nodeID));
-}
+ScrollingStateOverflowScrollingNode::ScrollingStateOverflowScrollingNode(
+    ScrollingNodeID scrollingNodeID,
+    Vector<Ref<WebCore::ScrollingStateNode>>&& children,
+    OptionSet<ScrollingStateNodeProperty> changedProperties,
+    std::optional<WebCore::PlatformLayerIdentifier> layerID,
+    FloatSize scrollableAreaSize,
+    FloatSize totalContentsSize,
+    FloatSize reachableContentsSize,
+    FloatPoint scrollPosition,
+    IntPoint scrollOrigin,
+    ScrollableAreaParameters&& scrollableAreaParameters,
+#if ENABLE(SCROLLING_THREAD)
+    OptionSet<SynchronousScrollingReason> synchronousScrollingReasons,
+#endif
+    RequestedScrollData&& requestedScrollData,
+    FloatScrollSnapOffsetsInfo&& snapOffsetsInfo,
+    std::optional<unsigned> currentHorizontalSnapPointIndex,
+    std::optional<unsigned> currentVerticalSnapPointIndex,
+    bool isMonitoringWheelEvents,
+    std::optional<PlatformLayerIdentifier> scrollContainerLayer,
+    std::optional<PlatformLayerIdentifier> scrolledContentsLayer,
+    std::optional<PlatformLayerIdentifier> horizontalScrollbarLayer,
+    std::optional<PlatformLayerIdentifier> verticalScrollbarLayer,
+    bool mouseIsOverContentArea,
+    MouseLocationState&& mouseLocationState,
+    ScrollbarHoverState&& scrollbarHoverState,
+    ScrollbarEnabledState&& scrollbarEnabledState,
+    std::optional<ScrollbarColor>&& scrollbarColor,
+    UserInterfaceLayoutDirection scrollbarLayoutDirection,
+    ScrollbarWidth scrollbarWidth,
+    bool useDarkAppearanceForScrollbars,
+    RequestedKeyboardScrollData&& scrollData
+) : ScrollingStateScrollingNode(
+    ScrollingNodeType::Overflow,
+    scrollingNodeID,
+    WTF::move(children),
+    changedProperties,
+    layerID,
+    scrollableAreaSize,
+    totalContentsSize,
+    reachableContentsSize,
+    scrollPosition,
+    scrollOrigin,
+    WTF::move(scrollableAreaParameters),
+#if ENABLE(SCROLLING_THREAD)
+    synchronousScrollingReasons,
+#endif
+    WTF::move(requestedScrollData),
+    WTF::move(snapOffsetsInfo),
+    currentHorizontalSnapPointIndex,
+    currentVerticalSnapPointIndex,
+    isMonitoringWheelEvents,
+    scrollContainerLayer,
+    scrolledContentsLayer,
+    horizontalScrollbarLayer,
+    verticalScrollbarLayer,
+    mouseIsOverContentArea,
+    WTF::move(mouseLocationState),
+    WTF::move(scrollbarHoverState),
+    WTF::move(scrollbarEnabledState),
+    WTF::move(scrollbarColor),
+    scrollbarLayoutDirection,
+    scrollbarWidth,
+    useDarkAppearanceForScrollbars,
+    WTF::move(scrollData)
+) { }
 
 ScrollingStateOverflowScrollingNode::ScrollingStateOverflowScrollingNode(ScrollingStateTree& stateTree, ScrollingNodeID nodeID)
     : ScrollingStateScrollingNode(stateTree, ScrollingNodeType::Overflow, nodeID)
@@ -57,7 +119,7 @@ Ref<ScrollingStateNode> ScrollingStateOverflowScrollingNode::clone(ScrollingStat
 
 void ScrollingStateOverflowScrollingNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
-    ts << "Overflow scrolling node";
+    ts << "Overflow scrolling node"_s;
 
     ScrollingStateScrollingNode::dumpProperties(ts, behavior);
 }

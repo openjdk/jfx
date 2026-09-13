@@ -39,8 +39,8 @@ public:
 private:
     IndexAccessExpression(SourceSpan span, Expression::Ref&& base, Expression::Ref&& index)
         : Expression(span)
-        , m_base(WTFMove(base))
-        , m_index(WTFMove(index))
+        , m_base(WTF::move(base))
+        , m_index(WTF::move(index))
     { }
 
     Expression::Ref m_base;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,9 @@ package com.sun.scenario.effect.compiler;
 
 import java.io.File;
 import com.sun.scenario.effect.compiler.JSLC.JSLCInfo;
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  */
@@ -47,17 +49,19 @@ public class SymbolTest {
         JSLC.compile(jslcinfo, s, Long.MAX_VALUE);
     }
 
-    @Test(expected = RuntimeException.class)
-    public void specialVarUsedOutsideOfMain() throws Exception {
-        String s =
-            "param sampler img;\n" +
-            "float myfunc(float val) {\n" +
-            "    return pos0.x;\n" +
-            "}\n" +
-            "void main() {\n" +
-            "    float foo = pos0.y;\n" +
-            "    float funcres = myfunc(1.5);\n" +
-            "}\n";
-        compile(s);
+    @Test
+    public void specialVarUsedOutsideOfMain() {
+        assertThrows(RuntimeException.class, () -> {
+            String s =
+                "param sampler img;\n" +
+                "float myfunc(float val) {\n" +
+                "    return pos0.x;\n" +
+                "}\n" +
+                "void main() {\n" +
+                "    float foo = pos0.y;\n" +
+                "    float funcres = myfunc(1.5);\n" +
+                "}\n";
+            compile(s);
+        });
     }
 }

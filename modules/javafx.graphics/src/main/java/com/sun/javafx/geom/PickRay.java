@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -261,7 +261,7 @@ public class PickRay {
         }
         double t = -origZ / dirZ;
         if (perspective && t < 0) {
-            // TODO: Or should we use Infinity? (RT-26888)
+            // TODO: Or should we use Infinity? (JDK-8091717)
             return null;
         }
         if (ret == null) {

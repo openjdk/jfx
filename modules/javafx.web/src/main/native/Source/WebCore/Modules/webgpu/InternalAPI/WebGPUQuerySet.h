@@ -26,12 +26,13 @@
 #pragma once
 
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore::WebGPU {
 
-class QuerySet : public RefCounted<QuerySet> {
+class QuerySet : public RefCountedAndCanMakeWeakPtr<QuerySet> {
 public:
     virtual ~QuerySet() = default;
 
@@ -39,11 +40,13 @@ public:
 
     void setLabel(String&& label)
     {
-        m_label = WTFMove(label);
+        m_label = WTF::move(label);
         setLabelInternal(m_label);
     }
 
     virtual void destroy() = 0;
+    virtual bool isRemoteQuerySetProxy() const { return false; }
+    virtual bool isQuerySetImpl() const { return false; }
 
 protected:
     QuerySet() = default;

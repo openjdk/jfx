@@ -26,7 +26,6 @@
 // https://wicg.github.io/IntersectionObserver/
 
 [
-    EnabledBySetting=IntersectionObserverEnabled,
     Exposed=Window,
     JSCustomMarkFunction,
     CustomIsReachable,
@@ -35,7 +34,8 @@
 
     readonly attribute Node? root;
     readonly attribute DOMString rootMargin;
-    readonly attribute sequence<double> thresholds;
+    readonly attribute DOMString scrollMargin;
+    readonly attribute FrozenArray<double> thresholds;
 
     undefined observe(Element target);
     undefined unobserve(Element target);
@@ -44,10 +44,10 @@
 };
 
 [
-    EnabledBySetting=IntersectionObserverEnabled
-]
-dictionary IntersectionObserverInit {
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary IntersectionObserverInit {
     (Element or Document)? root = null;
     DOMString rootMargin = "0px";
+    DOMString scrollMargin = "0px";
     (double or sequence<double>) threshold = 0.0;
 };

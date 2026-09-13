@@ -29,10 +29,11 @@
 
 #pragma once
 
-#include "TextFlags.h"
+#include <WebCore/TextFlags.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashTraits.h>
 #include <wtf/Hasher.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
@@ -43,7 +44,7 @@ enum class IsForPlatformFont : bool;
 
 struct CharacterFallbackMapKey {
     AtomString locale;
-    UChar32 character { 0 };
+    String string;
     bool isForPlatformFont { false };
     ResolvedEmojiPolicy resolvedEmojiPolicy { ResolvedEmojiPolicy::NoPreference };
 
@@ -52,35 +53,30 @@ struct CharacterFallbackMapKey {
 
 inline void add(Hasher& hasher, const CharacterFallbackMapKey& key)
 {
-    add(hasher, key.locale, key.character, key.isForPlatformFont, key.resolvedEmojiPolicy);
+    add(hasher, key.locale, key.string, key.isForPlatformFont, key.resolvedEmojiPolicy);
 }
 
-struct CharacterFallbackMapKeyHash {
-    static unsigned hash(const CharacterFallbackMapKey& key) { return computeHash(key); }
-    static bool equal(const CharacterFallbackMapKey& a, const CharacterFallbackMapKey& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
-};
-
 class SystemFallbackFontCache {
+    WTF_MAKE_TZONE_ALLOCATED(SystemFallbackFontCache);
     WTF_MAKE_NONCOPYABLE(SystemFallbackFontCache);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     static SystemFallbackFontCache& forCurrentThread();
+    static SystemFallbackFontCache* forCurrentThreadIfExists();
 
     SystemFallbackFontCache() = default;
 
-    RefPtr<Font> systemFallbackFontForCharacter(const Font*, UChar32 character, const FontDescription&, ResolvedEmojiPolicy, IsForPlatformFont);
+    RefPtr<Font> systemFallbackFontForCharacterCluster(const Font*, StringView, const FontDescription&, ResolvedEmojiPolicy, IsForPlatformFont);
     void remove(Font*);
 
 private:
     struct CharacterFallbackMapKeyHashTraits : SimpleClassHashTraits<CharacterFallbackMapKey> {
-        static void constructDeletedValue(CharacterFallbackMapKey& slot) { new (NotNull, &slot) CharacterFallbackMapKey { { }, U_SENTINEL, { } }; }
-        static bool isDeletedValue(const CharacterFallbackMapKey& key) { return key.character == U_SENTINEL; }
+        static void constructDeletedValue(CharacterFallbackMapKey& slot) { new (NotNull, &slot) CharacterFallbackMapKey { { }, WTF::HashTableDeletedValue, { } }; }
+        static bool isDeletedValue(const CharacterFallbackMapKey& key) { return key.string.isHashTableDeletedValue(); }
     };
 
     // Fonts are not ref'd to avoid cycles.
     // FIXME: Consider changing these maps to use WeakPtr instead of raw pointers.
-    using CharacterFallbackMap = HashMap<CharacterFallbackMapKey, Font*, CharacterFallbackMapKeyHash, CharacterFallbackMapKeyHashTraits>;
+    using CharacterFallbackMap = HashMap<CharacterFallbackMapKey, Font*, DefaultHash<CharacterFallbackMapKey>, CharacterFallbackMapKeyHashTraits>;
 
     HashMap<const Font*, CharacterFallbackMap> m_characterFallbackMaps;
 };

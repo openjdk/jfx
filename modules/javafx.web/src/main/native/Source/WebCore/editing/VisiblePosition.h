@@ -25,8 +25,10 @@
 
 #pragma once
 
-#include "EditingBoundary.h"
-#include "Position.h"
+#include <WebCore/EditingBoundary.h>
+#include <WebCore/LayoutRect.h>
+#include <WebCore/Position.h>
+#include <WebCore/RenderObject.h>
 
 namespace WebCore {
 
@@ -61,8 +63,8 @@ public:
     WEBCORE_EXPORT VisiblePosition left(bool stayInEditableContent = false, bool* reachedBoundary = nullptr) const;
     WEBCORE_EXPORT VisiblePosition right(bool stayInEditableContent = false, bool* reachedBoundary = nullptr) const;
 
-    WEBCORE_EXPORT UChar32 characterAfter() const;
-    UChar32 characterBefore() const { return previous().characterAfter(); }
+    WEBCORE_EXPORT char32_t characterAfter() const;
+    char32_t characterBefore() const { return previous().characterAfter(); }
 
     // FIXME: This does not handle [table, 0] correctly.
     Element* rootEditableElement() const { return m_deepPosition.isNotNull() ? m_deepPosition.deprecatedNode()->rootEditableElement() : 0; }
@@ -72,7 +74,7 @@ public:
 
     struct LocalCaretRect {
         LayoutRect rect;
-        RenderObject* renderer { nullptr };
+        CheckedPtr<RenderObject> renderer;
     };
     WEBCORE_EXPORT LocalCaretRect localCaretRect() const;
 
@@ -90,7 +92,7 @@ public:
     bool equals(const VisiblePosition&) const;
 
 #if ENABLE(TREE_DEBUGGING)
-    void debugPosition(const char* msg = "") const;
+    void debugPosition(ASCIILiteral msg = ""_s) const;
     String debugDescription() const;
     void showTreeForThis() const;
 #endif
@@ -107,11 +109,7 @@ private:
 
 bool operator==(const VisiblePosition&, const VisiblePosition&);
 
-WEBCORE_EXPORT std::partial_ordering documentOrder(const VisiblePosition&, const VisiblePosition&);
-bool operator<(const VisiblePosition&, const VisiblePosition&);
-bool operator>(const VisiblePosition&, const VisiblePosition&);
-bool operator<=(const VisiblePosition&, const VisiblePosition&);
-bool operator>=(const VisiblePosition&, const VisiblePosition&);
+WEBCORE_EXPORT std::partial_ordering operator<=>(const VisiblePosition&, const VisiblePosition&);
 
 WEBCORE_EXPORT std::optional<BoundaryPoint> makeBoundaryPoint(const VisiblePosition&);
 
@@ -153,26 +151,6 @@ inline bool operator==(const VisiblePosition& a, const VisiblePosition& b)
 {
     // FIXME: Is it correct and helpful for this to be ignoring differences in affinity?
     return a.deepEquivalent() == b.deepEquivalent();
-}
-
-inline bool operator<(const VisiblePosition& a, const VisiblePosition& b)
-{
-    return is_lt(documentOrder(a, b));
-}
-
-inline bool operator>(const VisiblePosition& a, const VisiblePosition& b)
-{
-    return is_gt(documentOrder(a, b));
-}
-
-inline bool operator<=(const VisiblePosition& a, const VisiblePosition& b)
-{
-    return is_lteq(documentOrder(a, b));
-}
-
-inline bool operator>=(const VisiblePosition& a, const VisiblePosition& b)
-{
-    return is_gteq(documentOrder(a, b));
 }
 
 } // namespace WebCore

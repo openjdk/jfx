@@ -25,76 +25,34 @@
 
 #pragma once
 
-#include "PixelBuffer.h"
 #include <JavaScriptCore/Uint8ClampedArray.h>
+#include <WebCore/PixelBuffer.h>
 
 namespace WebCore {
 
 class ByteArrayPixelBuffer : public PixelBuffer {
 public:
     WEBCORE_EXPORT static Ref<ByteArrayPixelBuffer> create(const PixelBufferFormat&, const IntSize&, JSC::Uint8ClampedArray&);
+    WEBCORE_EXPORT static std::optional<Ref<ByteArrayPixelBuffer>> create(const PixelBufferFormat&, const IntSize&, std::span<const uint8_t> data);
 
     WEBCORE_EXPORT static RefPtr<ByteArrayPixelBuffer> tryCreate(const PixelBufferFormat&, const IntSize&);
     WEBCORE_EXPORT static RefPtr<ByteArrayPixelBuffer> tryCreate(const PixelBufferFormat&, const IntSize&, Ref<JSC::ArrayBuffer>&&);
 
-    JSC::Uint8ClampedArray& data() const { return m_data.get(); }
-    Ref<JSC::Uint8ClampedArray>&& takeData() { return WTFMove(m_data); }
+    JSC::Uint8ClampedArray& data() const LIFETIME_BOUND { return m_data.get(); }
+    Ref<JSC::Uint8ClampedArray> protectedData() const { return m_data; }
+    Ref<JSC::Uint8ClampedArray>&& takeData() { return WTF::move(m_data); }
 
+    Type type() const override { return Type::ByteArray; }
     RefPtr<PixelBuffer> createScratchPixelBuffer(const IntSize&) const override;
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<Ref<ByteArrayPixelBuffer>> decode(Decoder&);
 
 private:
     ByteArrayPixelBuffer(const PixelBufferFormat&, const IntSize&, Ref<JSC::Uint8ClampedArray>&&);
 
-    bool isByteArrayPixelBuffer() const override { return true; }
-
     Ref<JSC::Uint8ClampedArray> m_data;
 };
-
-template<class Encoder> void ByteArrayPixelBuffer::encode(Encoder& encoder) const
-{
-    ASSERT(m_data->byteLength() == (m_size.area() * 4));
-
-    encoder << m_format;
-    encoder << m_size;
-    encoder << std::span(m_data->data(), m_data->byteLength());
-}
-
-template<class Decoder> std::optional<Ref<ByteArrayPixelBuffer>> ByteArrayPixelBuffer::decode(Decoder& decoder)
-{
-    std::optional<PixelBufferFormat> format;
-    decoder >> format;
-    if (!format)
-        return std::nullopt;
-
-    // FIXME: Support non-8 bit formats.
-    if (!(format->pixelFormat == PixelFormat::RGBA8 || format->pixelFormat == PixelFormat::BGRA8))
-        return std::nullopt;
-
-    std::optional<IntSize> size;
-    decoder >> size;
-    if (!size)
-        return std::nullopt;
-
-    auto computedBufferSize = PixelBuffer::computeBufferSize(*format, *size);
-    if (computedBufferSize.hasOverflowed())
-        return std::nullopt;
-
-    std::optional<std::span<const uint8_t>> data;
-    decoder >> data;
-    if (!data || data->size_bytes() != computedBufferSize.value())
-        return std::nullopt;
-
-    auto buffer = Uint8ClampedArray::tryCreate(data->data(), data->size_bytes());
-    if (!buffer)
-        return std::nullopt;
-    return ByteArrayPixelBuffer::create(*format, *size, buffer.releaseNonNull());
-}
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ByteArrayPixelBuffer)
-    static bool isType(const WebCore::PixelBuffer& pixelBuffer) { return pixelBuffer.isByteArrayPixelBuffer(); }
+    static bool isType(const WebCore::PixelBuffer& pixelBuffer) { return pixelBuffer.type() == WebCore::PixelBuffer::Type::ByteArray; }
 SPECIALIZE_TYPE_TRAITS_END()

@@ -24,21 +24,22 @@
  */
 
 [
-    Conditional=SERVICE_WORKER,
     EnabledBySetting=ServiceWorkersEnabled,
     Exposed=ServiceWorker,
-    JSGenerateToJSObject,
+    JSCustomMarkFunction
 ] interface ExtendableMessageEvent : ExtendableEvent {
     [Custom] constructor([AtomString] DOMString type, optional ExtendableMessageEventInit eventInitDict);
 
-    [CachedAttribute, CustomGetter] readonly attribute any data;
+    readonly attribute any data;
     readonly attribute USVString origin;
     readonly attribute DOMString lastEventId;
     [SameObject] readonly attribute (ServiceWorkerClient or ServiceWorker or MessagePort)? source;
-    readonly attribute FrozenArray<MessagePort> ports;
+    [CustomGetter] readonly attribute FrozenArray<MessagePort> ports;
 };
 
-dictionary ExtendableMessageEventInit : ExtendableEventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary ExtendableMessageEventInit : ExtendableEventInit {
     any data = null;
     USVString origin = "";
     DOMString lastEventId = "";

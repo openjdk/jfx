@@ -32,7 +32,9 @@
 #include "DFGGraph.h"
 #include "DFGPromotedHeapLocation.h"
 #include "DOMJITSignature.h"
-#include "JSImmutableButterfly.h"
+#include "JSCellButterfly.h"
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC { namespace DFG {
 
@@ -250,8 +252,8 @@ void Node::convertToNewArrayBuffer(FrozenValue* immutableButterfly)
 {
     setOpAndDefaultFlags(NewArrayBuffer);
     NewArrayBufferData data { };
-    data.indexingMode = immutableButterfly->cast<JSImmutableButterfly*>()->indexingMode();
-    data.vectorLengthHint = immutableButterfly->cast<JSImmutableButterfly*>()->toButterfly()->vectorLength();
+    data.indexingMode = immutableButterfly->cast<JSCellButterfly*>()->indexingMode();
+    data.vectorLengthHint = immutableButterfly->cast<JSCellButterfly*>()->toButterfly()->vectorLength();
     children.reset();
     m_opInfo = immutableButterfly;
     m_opInfo2 = data.asQuadWord;
@@ -266,12 +268,26 @@ void Node::convertToNewArrayWithSize()
     m_opInfo = indexingType;
 }
 
-void Node::convertToNewArrayWithConstantSize(Graph&, uint32_t size)
+void Node::convertToNewArrayWithButterfly(Graph&, Node* butterfly)
 {
     ASSERT(op() == NewArrayWithSize);
-    ASSERT(size < MIN_ARRAY_STORAGE_CONSTRUCTION_LENGTH);
-    setOpAndDefaultFlags(NewArrayWithConstantSize);
-    m_opInfo2 = size;
+    IndexingType indexingType = this->indexingType();
+    setOpAndDefaultFlags(NewArrayWithButterfly);
+    ASSERT(child1()->asInt32() < MIN_ARRAY_STORAGE_CONSTRUCTION_LENGTH);
+    children.child2() = Edge(butterfly, KnownStorageUse);
+    ASSERT_UNUSED(indexingType, indexingType == this->indexingType());
+}
+
+void Node::convertToNewArrayWithSizeAndStructure(Graph& graph, RegisteredStructure structure)
+{
+    ASSERT(op() == Construct);
+    Node* node = graph.child(this, 2).node();
+    setOpAndDefaultFlags(NewArrayWithSizeAndStructure);
+    children.reset();
+    children.child1() = Edge(node, Int32Use);
+    children.child2() = Edge();
+    children.child3() = Edge();
+    m_opInfo = structure;
 }
 
 void Node::convertToNewBoundFunction(FrozenValue* executable)
@@ -307,7 +323,7 @@ void Node::convertToDirectCall(FrozenValue* executable)
 
 void Node::convertToCallWasm(FrozenValue* callee)
 {
-    m_op = CallWasm;
+    m_op = m_op == Call ? CallWasm : TailCallInlinedCallerWasm;
     m_opInfo = callee;
 }
 
@@ -376,7 +392,8 @@ void Node::convertToGetByIdMaybeMegamorphic(Graph& graph, CacheableIdentifier id
     children.child1() = Edge(base.node(), CellUse);
     children.child2() = Edge();
     children.child3() = Edge();
-    m_opInfo = identifier;
+    auto* data = graph.m_getByIdData.add(GetByIdData { identifier, CacheType::GetByIdSelf });
+    m_opInfo = data;
 }
 
 void Node::convertToPutByIdMaybeMegamorphic(Graph& graph, CacheableIdentifier identifier)
@@ -395,6 +412,18 @@ void Node::convertToPutByIdMaybeMegamorphic(Graph& graph, CacheableIdentifier id
     children.child1() = Edge(base.node(), CellUse);
     children.child2() = Edge(value.node());
     children.child3() = Edge();
+    m_opInfo = identifier;
+}
+
+void Node::convertToInByIdMaybeMegamorphic(Graph& graph, CacheableIdentifier identifier)
+{
+    ASSERT(op() == InByVal || op() == InByValMegamorphic);
+    bool isMegamorphic = op() == InByValMegamorphic && canUseMegamorphicInById(graph.m_vm, identifier.uid());
+    Edge base = graph.child(this, 0);
+    ASSERT(base.useKind() == CellUse);
+    setOpAndDefaultFlags(isMegamorphic ? InByIdMegamorphic : InById);
+    children.setChild1(Edge(base.node(), CellUse));
+    children.setChild2(Edge());
     m_opInfo = identifier;
 }
 
@@ -453,5 +482,6 @@ void printInternal(PrintStream& out, Node* node)
 
 } // namespace WTF
 
-#endif // ENABLE(DFG_JIT)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
+#endif // ENABLE(DFG_JIT)

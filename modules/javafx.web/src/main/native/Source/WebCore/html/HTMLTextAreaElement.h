@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "HTMLTextFormControlElement.h"
+#include <WebCore/HTMLTextFormControlElement.h>
 
 namespace WebCore {
 
@@ -33,7 +33,8 @@ class RenderTextControlMultiLine;
 enum class SelectionRestorationMode : uint8_t;
 
 class HTMLTextAreaElement final : public HTMLTextFormControlElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLTextAreaElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLTextAreaElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLTextAreaElement);
 public:
     WEBCORE_EXPORT static Ref<HTMLTextAreaElement> create(Document&);
     static Ref<HTMLTextAreaElement> create(const QualifiedName&, Document&, HTMLFormElement*);
@@ -44,14 +45,21 @@ public:
     WEBCORE_EXPORT void setCols(unsigned);
     WEBCORE_EXPORT String defaultValue() const;
     WEBCORE_EXPORT void setDefaultValue(String&&);
-    WEBCORE_EXPORT String value() const final;
+    WEBCORE_EXPORT ValueOrReference<String> value() const final;
     WEBCORE_EXPORT ExceptionOr<void> setValue(const String&, TextFieldEventBehavior = DispatchNoEvent, TextControlSetValueSelection = TextControlSetValueSelection::SetSelectionToEnd) final;
-    unsigned textLength() const { return value().length(); }
+    unsigned textLength() const { return value()->length(); }
     String validationMessage() const final;
+
+    void setSelectionRangeForBindings(unsigned start, unsigned end, const String& direction);
 
     WEBCORE_EXPORT RefPtr<TextControlInnerTextElement> innerTextElement() const final;
 
     bool shouldSaveAndRestoreFormControlState() const final { return true; }
+
+    bool isDevolvableWidget() const override { return true; }
+
+    bool dirAutoUsesValue() const final { return true; }
+
 private:
     HTMLTextAreaElement(Document&, HTMLFormElement*);
 
@@ -67,8 +75,9 @@ private:
 
     bool supportsPlaceholder() const final { return true; }
     HTMLElement* placeholderElement() const final { return m_placeholder.get(); }
+    RefPtr<HTMLElement> protectedPlaceholderElement() const;
     void updatePlaceholderText() final;
-    bool isEmptyValue() const final { return value().isEmpty(); }
+    bool isEmptyValue() const final { return value()->isEmpty(); }
 
     bool isOptionalFormControl() const final { return !isRequiredFormControl(); }
     bool isRequiredFormControl() const final { return isRequired(); }
@@ -99,7 +108,7 @@ private:
     bool hasCustomFocusLogic() const final { return true; }
     int defaultTabIndex() const final { return 0; }
     bool isMouseFocusable() const final { return isFocusable(); }
-    bool isKeyboardFocusable(KeyboardEvent*) const final { return isFocusable(); }
+    bool isKeyboardFocusable(const FocusEventData&) const final { return isFocusable(); }
     void updateFocusAppearance(SelectionRestorationMode, SelectionRevealMode) final;
 
     bool accessKeyAction(bool) final;

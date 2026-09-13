@@ -30,7 +30,13 @@
 #include "ASTIdentifier.h"
 #include "ASTStructureMember.h"
 
-namespace WGSL::AST {
+namespace WGSL {
+
+class AttributeValidator;
+class RewriteGlobalVariables;
+class TypeChecker;
+
+namespace AST {
 
 enum class StructureRole : uint8_t {
     UserDefined,
@@ -38,13 +44,20 @@ enum class StructureRole : uint8_t {
     FragmentInput,
     ComputeInput,
     VertexOutput,
+    VertexOutputWrapper,
     BindGroup,
     UserDefinedResource,
     PackedResource,
+    FragmentOutput,
+    FragmentOutputWrapper,
 };
 
 class Structure final : public Declaration {
     WGSL_AST_BUILDER_NODE(Structure);
+    friend AttributeValidator;
+    friend RewriteGlobalVariables;
+    friend TypeChecker;
+
 public:
     using Ref = std::reference_wrapper<Structure>;
     using List = ReferenceWrapperVector<Structure>;
@@ -52,26 +65,33 @@ public:
     NodeKind kind() const override;
     StructureRole role() const { return m_role; }
     StructureRole& role() { return m_role; }
-    Identifier& name() { return m_name; }
+    Identifier& name() override { return m_name; }
     Attribute::List& attributes() { return m_attributes; }
     StructureMember::List& members() { return m_members; }
     Structure* original() const { return m_original; }
     Structure* packed() const { return m_packed; }
+    const Type* inferredType() const { return m_inferredType; }
 
     void setRole(StructureRole role) { m_role = role; }
+
+    bool hasSizeOrAlignmentAttributes() const { return m_hasSizeOrAlignmentAttributes; }
+    unsigned size() const { return *m_size; }
+    unsigned alignment() const { return *m_alignment; }
 
 private:
     Structure(SourceSpan span, Identifier&& name, StructureMember::List&& members, Attribute::List&& attributes, StructureRole role, Structure* original = nullptr)
         : Declaration(span)
-        , m_name(WTFMove(name))
-        , m_attributes(WTFMove(attributes))
-        , m_members(WTFMove(members))
+        , m_name(WTF::move(name))
+        , m_attributes(WTF::move(attributes))
+        , m_members(WTF::move(members))
         , m_role(role)
         , m_original(original)
     {
         if (m_original) {
             ASSERT(m_role == StructureRole::PackedResource);
             m_original->m_packed = this;
+            m_size = original->m_size;
+            m_alignment = original->m_alignment;
         }
     }
 
@@ -81,8 +101,15 @@ private:
     StructureRole m_role;
     Structure* m_original;
     Structure* m_packed { nullptr };
+    const Type* m_inferredType { nullptr };
+
+    // Computed properties
+    bool m_hasSizeOrAlignmentAttributes { false };
+    std::optional<unsigned> m_size;
+    std::optional<unsigned> m_alignment;
 };
 
-} // namespace WGSL::AST
+} // namespace AST
+} // namespace WGSL
 
 SPECIALIZE_TYPE_TRAITS_WGSL_AST(Structure)

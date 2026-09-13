@@ -29,16 +29,18 @@
 
 #pragma once
 
-#include "Color.h"
-#include "FloatLine.h"
-#include "FloatQuad.h"
-#include "FloatRect.h"
-#include "InspectorOverlayLabel.h"
-#include "Path.h"
-#include "Timer.h"
+#include <WebCore/Color.h>
+#include <WebCore/FloatLine.h>
+#include <WebCore/FloatQuad.h>
+#include <WebCore/FloatRect.h>
+#include <WebCore/InspectorOverlayLabel.h>
+#include <WebCore/Path.h>
+#include <WebCore/Timer.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Deque.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakHashMap.h>
 #include <wtf/WeakPtr.h>
@@ -57,15 +59,16 @@ class WeakPtrImplWithEventTargetData;
 class FontCascade;
 class FloatPoint;
 class GraphicsContext;
-class InspectorClient;
+class InspectorBackendClient;
 class Node;
 class NodeList;
 class Page;
+class PageInspectorController;
 
 struct InspectorOverlayHighlight {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(InspectorOverlayHighlight);
 
-        enum class Type {
+    enum class Type : uint8_t {
             None, // Provides only non-quad information, including grid overlays.
             Node, // Provides 4 quads: margin, border, padding, content.
             NodeList, // Provides a list of nodes.
@@ -73,7 +76,7 @@ struct InspectorOverlayHighlight {
         };
 
         struct Config {
-            WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Config);
             Color content;
             Color contentOutline;
             Color padding;
@@ -84,17 +87,12 @@ struct InspectorOverlayHighlight {
         };
 
         struct GridHighlightOverlay {
-            WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(GridHighlightOverlay);
 
             struct Area {
-                WTF_MAKE_STRUCT_FAST_ALLOCATED;
+            WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Area);
                 String name;
                 FloatQuad quad;
-
-#if PLATFORM(IOS_FAMILY)
-                template<class Encoder> void encode(Encoder&) const;
-            template<class Decoder> static std::optional<Area> decode(Decoder&);
-#endif
             };
 
             Color color;
@@ -102,15 +100,10 @@ struct InspectorOverlayHighlight {
             Vector<FloatQuad> gaps;
             Vector<Area> areas;
             Vector<InspectorOverlayLabel> labels;
-
-#if PLATFORM(IOS_FAMILY)
-            template<class Encoder> void encode(Encoder&) const;
-        template<class Decoder> static std::optional<GridHighlightOverlay> decode(Decoder&);
-#endif
         };
 
         struct FlexHighlightOverlay {
-            WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(FlexHighlightOverlay);
 
             Color color;
             FloatQuad containerBounds;
@@ -120,11 +113,6 @@ struct InspectorOverlayHighlight {
             Vector<FloatQuad> spaceBetweenItemsAndCrossAxisSpace;
             Vector<FloatQuad> crossAxisGaps;
             Vector<InspectorOverlayLabel> labels;
-
-#if PLATFORM(IOS_FAMILY)
-            template<class Encoder> void encode(Encoder&) const;
-        template<class Decoder> static std::optional<FlexHighlightOverlay> decode(Decoder&);
-#endif
         };
 
         void setDataFromConfig(const Config& config)
@@ -152,19 +140,22 @@ struct InspectorOverlayHighlight {
         using Bounds = FloatRect;
 };
 
-class InspectorOverlay {
-    WTF_MAKE_FAST_ALLOCATED;
+class InspectorOverlay : public CanMakeWeakPtr<InspectorOverlay> {
+    WTF_MAKE_TZONE_ALLOCATED(InspectorOverlay);
 public:
-    InspectorOverlay(Page&, InspectorClient*);
+    InspectorOverlay(PageInspectorController&, InspectorBackendClient*);
     ~InspectorOverlay();
+
+    void ref() const;
+    void deref() const;
 
     using Highlight = InspectorOverlayHighlight;
 
     struct Grid {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Grid);
 
         struct Config {
-            WTF_MAKE_STRUCT_FAST_ALLOCATED;
+            WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Config);
 
             Color gridColor;
             bool showLineNames;
@@ -172,6 +163,7 @@ public:
             bool showExtendedGridLines;
             bool showTrackSizes;
             bool showAreaNames;
+            bool showOrderNumbers;
         };
 
         WeakPtr<Node, WeakPtrImplWithEventTargetData> gridNode;
@@ -179,10 +171,10 @@ public:
     };
 
     struct Flex {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Flex);
 
         struct Config {
-            WTF_MAKE_STRUCT_FAST_ALLOCATED;
+            WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Config);
 
             Color flexColor;
             bool showOrderNumbers;
@@ -259,8 +251,10 @@ private:
     bool removeGridOverlayForNode(Node&);
     bool removeFlexOverlayForNode(Node&);
 
-    Page& m_page;
-    InspectorClient* m_client;
+    Page& page() const;
+
+    const WeakRef<PageInspectorController> m_controller;
+    InspectorBackendClient* m_client;
 
     RefPtr<Node> m_highlightNode;
     RefPtr<NodeList> m_highlightNodeList;
@@ -282,84 +276,5 @@ private:
     bool m_showRulers { false };
     bool m_showRulersForNodeHighlight { false };
 };
-
-#if PLATFORM(IOS_FAMILY)
-
-template<class Encoder> void InspectorOverlayHighlight::FlexHighlightOverlay::encode(Encoder& encoder) const
-{
-    encoder << color;
-    encoder << containerBounds;
-    encoder << itemBounds;
-    encoder << mainAxisGaps;
-    encoder << mainAxisSpaceBetweenItemsAndGaps;
-    encoder << spaceBetweenItemsAndCrossAxisSpace;
-    encoder << crossAxisGaps;
-    encoder << labels;
-}
-
-template<class Decoder> std::optional<InspectorOverlayHighlight::FlexHighlightOverlay> InspectorOverlayHighlight::FlexHighlightOverlay::decode(Decoder& decoder)
-{
-    FlexHighlightOverlay flexHighlightOverlay;
-    if (!decoder.decode(flexHighlightOverlay.color))
-        return { };
-    if (!decoder.decode(flexHighlightOverlay.containerBounds))
-        return { };
-    if (!decoder.decode(flexHighlightOverlay.itemBounds))
-        return { };
-    if (!decoder.decode(flexHighlightOverlay.mainAxisGaps))
-        return { };
-    if (!decoder.decode(flexHighlightOverlay.mainAxisSpaceBetweenItemsAndGaps))
-        return { };
-    if (!decoder.decode(flexHighlightOverlay.spaceBetweenItemsAndCrossAxisSpace))
-        return { };
-    if (!decoder.decode(flexHighlightOverlay.crossAxisGaps))
-        return { };
-    if (!decoder.decode(flexHighlightOverlay.labels))
-        return { };
-    return { flexHighlightOverlay };
-}
-
-template<class Encoder> void InspectorOverlayHighlight::GridHighlightOverlay::encode(Encoder& encoder) const
-{
-    encoder << color;
-    encoder << gridLines;
-    encoder << gaps;
-    encoder << areas;
-    encoder << labels;
-}
-
-template<class Decoder> std::optional<InspectorOverlayHighlight::GridHighlightOverlay> InspectorOverlayHighlight::GridHighlightOverlay::decode(Decoder& decoder)
-{
-    GridHighlightOverlay gridHighlightOverlay;
-    if (!decoder.decode(gridHighlightOverlay.color))
-        return { };
-    if (!decoder.decode(gridHighlightOverlay.gridLines))
-        return { };
-    if (!decoder.decode(gridHighlightOverlay.gaps))
-        return { };
-    if (!decoder.decode(gridHighlightOverlay.areas))
-        return { };
-    if (!decoder.decode(gridHighlightOverlay.labels))
-        return { };
-    return { gridHighlightOverlay };
-}
-
-template<class Encoder> void InspectorOverlayHighlight::GridHighlightOverlay::Area::encode(Encoder& encoder) const
-{
-    encoder << name;
-    encoder << quad;
-}
-
-template<class Decoder> std::optional<InspectorOverlayHighlight::GridHighlightOverlay::Area> InspectorOverlayHighlight::GridHighlightOverlay::Area::decode(Decoder& decoder)
-{
-    Area area;
-    if (!decoder.decode(area.name))
-        return { };
-    if (!decoder.decode(area.quad))
-        return { };
-    return { area };
-}
-
-#endif
 
 } // namespace WebCore

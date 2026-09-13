@@ -25,8 +25,6 @@
 
 #pragma once
 
-#include <wtf/EnumTraits.h>
-
 namespace WebCore {
 
 enum class StorageType : uint8_t {
@@ -36,11 +34,6 @@ enum class StorageType : uint8_t {
 };
 
 inline bool isLocalStorage(StorageType storageType)
-{
-    return storageType == StorageType::Local || storageType == StorageType::TransientLocal;
-}
-
-inline bool isPersistentLocalStorage(StorageType storageType)
 {
     return storageType == StorageType::Local || storageType == StorageType::TransientLocal;
 }

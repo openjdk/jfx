@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013, 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,7 @@
 #include "ScriptCallStack.h"
 #include "ScriptCallStackFactory.h"
 #include <wtf/Assertions.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
@@ -40,6 +41,8 @@
 using namespace Inspector;
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ConsoleClient);
 
 static void appendURLAndPosition(StringBuilder& builder, const String& url, unsigned lineNumber, unsigned columnNumber)
 {
@@ -74,14 +77,14 @@ static void appendMessagePrefix(StringBuilder& builder, MessageSource source, Me
     case MessageSource::Storage:
         sourceString = "STORAGE"_s;
         break;
-    case MessageSource::AppCache:
-        sourceString = "APPCACHE"_s;
-        break;
     case MessageSource::Rendering:
         sourceString = "RENDERING"_s;
         break;
     case MessageSource::CSS:
         sourceString = "CSS"_s;
+        break;
+    case MessageSource::Accessibility:
+        sourceString = "Accessibility"_s;
         break;
     case MessageSource::Security:
         sourceString = "SECURITY"_s;
@@ -179,7 +182,7 @@ static void appendMessagePrefix(StringBuilder& builder, MessageSource source, Me
         break;
     }
 
-    builder.append("CONSOLE");
+    builder.append("CONSOLE"_s);
     if (!sourceString.isEmpty())
         builder.append(' ', sourceString);
     if (!typeString.isEmpty())
@@ -194,7 +197,7 @@ void ConsoleClient::printConsoleMessage(MessageSource source, MessageType type, 
 
     if (!url.isEmpty()) {
         appendURLAndPosition(builder, url, lineNumber, columnNumber);
-        builder.append(": ");
+        builder.append(": "_s);
     }
 
     appendMessagePrefix(builder, source, type, level);
@@ -210,11 +213,11 @@ void ConsoleClient::printConsoleMessageWithArguments(MessageSource source, Messa
     Ref<ScriptCallStack> callStack = createScriptCallStackForConsole(globalObject, stackSize);
     const ScriptCallFrame& lastCaller = callStack->at(0);
 
-    StringBuilder builder(StringBuilder::OverflowHandler::RecordOverflow);
+    StringBuilder builder(OverflowPolicy::RecordOverflow);
 
     if (!lastCaller.sourceURL().isEmpty()) {
         appendURLAndPosition(builder, lastCaller.sourceURL(), lastCaller.lineNumber(), lastCaller.columnNumber());
-        builder.append(": ");
+        builder.append(": "_s);
     }
 
     appendMessagePrefix(builder, source, type, level);
@@ -239,7 +242,7 @@ void ConsoleClient::printConsoleMessageWithArguments(MessageSource source, Messa
                 functionName = "(unknown)"_s;
 
             StringBuilder callFrameBuilder;
-            callFrameBuilder.append(i, ": ", functionName, '(');
+            callFrameBuilder.append(i, ": "_s, functionName, '(');
             appendURLAndPosition(callFrameBuilder, callFrame.sourceURL(), callFrame.lineNumber(), callFrame.columnNumber());
             callFrameBuilder.append(')');
 
@@ -250,60 +253,60 @@ void ConsoleClient::printConsoleMessageWithArguments(MessageSource source, Messa
 
 void ConsoleClient::internalMessageWithTypeAndLevel(MessageType type, MessageLevel level, JSC::JSGlobalObject* globalObject, Ref<ScriptArguments>&& arguments, ArgumentRequirement argumentRequirement)
 {
-    if (argumentRequirement == ArgumentRequired && !arguments->argumentCount())
+    if (argumentRequirement == ArgumentRequirement::Yes && !arguments->argumentCount())
         return;
 
-    messageWithTypeAndLevel(type, level, globalObject, WTFMove(arguments));
+    messageWithTypeAndLevel(type, level, globalObject, WTF::move(arguments));
 }
 
 void ConsoleClient::logWithLevel(JSGlobalObject* globalObject, Ref<ScriptArguments>&& arguments, MessageLevel level)
 {
-    internalMessageWithTypeAndLevel(MessageType::Log, level, globalObject, WTFMove(arguments), ArgumentRequired);
+    internalMessageWithTypeAndLevel(MessageType::Log, level, globalObject, WTF::move(arguments), ArgumentRequirement::Yes);
 }
 
 void ConsoleClient::clear(JSGlobalObject* globalObject)
 {
-    internalMessageWithTypeAndLevel(MessageType::Clear, MessageLevel::Log, globalObject, ScriptArguments::create(globalObject, { }), ArgumentNotRequired);
+    internalMessageWithTypeAndLevel(MessageType::Clear, MessageLevel::Log, globalObject, ScriptArguments::create(globalObject, { }), ArgumentRequirement::No);
 }
 
 void ConsoleClient::dir(JSGlobalObject* globalObject, Ref<ScriptArguments>&& arguments)
 {
-    internalMessageWithTypeAndLevel(MessageType::Dir, MessageLevel::Log, globalObject, WTFMove(arguments), ArgumentRequired);
+    internalMessageWithTypeAndLevel(MessageType::Dir, MessageLevel::Log, globalObject, WTF::move(arguments), ArgumentRequirement::Yes);
 }
 
 void ConsoleClient::dirXML(JSGlobalObject* globalObject, Ref<ScriptArguments>&& arguments)
 {
-    internalMessageWithTypeAndLevel(MessageType::DirXML, MessageLevel::Log, globalObject, WTFMove(arguments), ArgumentRequired);
+    internalMessageWithTypeAndLevel(MessageType::DirXML, MessageLevel::Log, globalObject, WTF::move(arguments), ArgumentRequirement::Yes);
 }
 
 void ConsoleClient::table(JSGlobalObject* globalObject, Ref<ScriptArguments>&& arguments)
 {
-    internalMessageWithTypeAndLevel(MessageType::Table, MessageLevel::Log, globalObject, WTFMove(arguments), ArgumentRequired);
+    internalMessageWithTypeAndLevel(MessageType::Table, MessageLevel::Log, globalObject, WTF::move(arguments), ArgumentRequirement::Yes);
 }
 
 void ConsoleClient::trace(JSGlobalObject* globalObject, Ref<ScriptArguments>&& arguments)
 {
-    internalMessageWithTypeAndLevel(MessageType::Trace, MessageLevel::Log, globalObject, WTFMove(arguments), ArgumentNotRequired);
+    internalMessageWithTypeAndLevel(MessageType::Trace, MessageLevel::Log, globalObject, WTF::move(arguments), ArgumentRequirement::No);
 }
 
 void ConsoleClient::assertion(JSGlobalObject* globalObject, Ref<ScriptArguments>&& arguments)
 {
-    internalMessageWithTypeAndLevel(MessageType::Assert, MessageLevel::Error, globalObject, WTFMove(arguments), ArgumentNotRequired);
+    internalMessageWithTypeAndLevel(MessageType::Assert, MessageLevel::Error, globalObject, WTF::move(arguments), ArgumentRequirement::No);
 }
 
 void ConsoleClient::group(JSGlobalObject* globalObject, Ref<ScriptArguments>&& arguments)
 {
-    internalMessageWithTypeAndLevel(MessageType::StartGroup, MessageLevel::Log, globalObject, WTFMove(arguments), ArgumentNotRequired);
+    internalMessageWithTypeAndLevel(MessageType::StartGroup, MessageLevel::Log, globalObject, WTF::move(arguments), ArgumentRequirement::No);
 }
 
 void ConsoleClient::groupCollapsed(JSGlobalObject* globalObject, Ref<ScriptArguments>&& arguments)
 {
-    internalMessageWithTypeAndLevel(MessageType::StartGroupCollapsed, MessageLevel::Log, globalObject, WTFMove(arguments), ArgumentNotRequired);
+    internalMessageWithTypeAndLevel(MessageType::StartGroupCollapsed, MessageLevel::Log, globalObject, WTF::move(arguments), ArgumentRequirement::No);
 }
 
 void ConsoleClient::groupEnd(JSGlobalObject* globalObject, Ref<ScriptArguments>&& arguments)
 {
-    internalMessageWithTypeAndLevel(MessageType::EndGroup, MessageLevel::Log, globalObject, WTFMove(arguments), ArgumentNotRequired);
+    internalMessageWithTypeAndLevel(MessageType::EndGroup, MessageLevel::Log, globalObject, WTF::move(arguments), ArgumentRequirement::No);
 }
 
 } // namespace JSC

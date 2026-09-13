@@ -25,9 +25,11 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace JSC {
 
-enum Synchronousness {
+enum Synchronousness : uint8_t {
     Async,
     Sync
 };

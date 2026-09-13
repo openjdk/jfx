@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -23,20 +23,42 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+// https://w3c.github.io/webrtc-encoded-transform/#RTCEncodedAudioFrameMetadata
+
 [
     Conditional=WEB_RTC,
     JSGenerateToJSObject,
-]
-dictionary RTCEncodedAudioFrameMetadata {
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary RTCEncodedAudioFrameMetadata {
     unsigned long synchronizationSource;
+    octet payloadType;
     sequence<unsigned long> contributingSources;
+    short sequenceNumber;
+    unsigned long rtpTimestamp;
+    // FIXME: add additional time metadata
+    // DOMHighResTimeStamp receiveTime;
+    // DOMHighResTimeStamp captureTime;
+    // DOMHighResTimeStamp senderCaptureTimeOffset;
+    DOMString mimeType;
 };
 
 [
     Conditional=WEB_RTC,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary RTCEncodedAudioFrameOptions {
+    RTCEncodedAudioFrameMetadata metadata;
+};
+
+// https://w3c.github.io/webrtc-encoded-transform/#RTCEncodedAudioFrame-interface
+
+[
+    Conditional=WEB_RTC,
     EnabledBySetting=WebRTCEncodedTransformEnabled,
-    Exposed=DedicatedWorker,
+    Exposed=(Window,DedicatedWorker),
 ] interface RTCEncodedAudioFrame {
+    constructor(RTCEncodedAudioFrame originalFrame, optional RTCEncodedAudioFrameOptions options = {});
+
     readonly attribute unsigned long long timestamp;
     attribute ArrayBuffer data;
     RTCEncodedAudioFrameMetadata getMetadata();

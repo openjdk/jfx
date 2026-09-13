@@ -31,8 +31,9 @@
 #include <limits>
 #include <unicode/utypes.h>
 #include <wtf/Assertions.h>
+#include <wtf/CheckedArithmetic.h>
 #include <wtf/DebugHeap.h>
-#include <wtf/MallocPtr.h>
+#include <wtf/MallocSpan.h>
 #include <wtf/Noncopyable.h>
 
 namespace WTF {
@@ -42,7 +43,7 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StringBuffer);
 template <typename CharType>
 class StringBuffer {
     WTF_MAKE_NONCOPYABLE(StringBuffer);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(StringBuffer);
 public:
     explicit StringBuffer(unsigned length)
         : m_length(length)
@@ -69,15 +70,14 @@ public:
     }
 
     unsigned length() const { return m_length; }
-    CharType* characters() { return m_data; }
+    CharType* characters() LIFETIME_BOUND { return m_data; }
+    std::span<CharType> span() LIFETIME_BOUND { return unsafeMakeSpan(m_data, m_length); }
 
-    CharType& operator[](unsigned i) { ASSERT_WITH_SECURITY_IMPLICATION(i < m_length); return m_data[i]; }
+    CharType& operator[](unsigned i) LIFETIME_BOUND { RELEASE_ASSERT(i < m_length); return m_data[i]; }
 
-    MallocPtr<CharType, StringBufferMalloc> release()
+    MallocSpan<CharType, StringBufferMalloc> release()
     {
-        CharType* data = m_data;
-        m_data = nullptr;
-        return adoptMallocPtr<CharType, StringBufferMalloc>(data);
+        return adoptMallocSpan<CharType, StringBufferMalloc>(unsafeMakeSpan(std::exchange(m_data, nullptr), std::exchange(m_length, 0)));
     }
 
 private:

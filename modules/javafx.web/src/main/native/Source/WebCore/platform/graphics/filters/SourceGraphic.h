@@ -21,22 +21,24 @@
 
 #pragma once
 
-#include "FilterEffect.h"
+#include <WebCore/FilterEffect.h>
 
 namespace WebCore {
 
-class SourceGraphic : public FilterEffect {
+class SourceGraphic final : public FilterEffect {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(SourceGraphic);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SourceGraphic);
 public:
-    WEBCORE_EXPORT static Ref<SourceGraphic> create();
+    WEBCORE_EXPORT static Ref<SourceGraphic> create(DestinationColorSpace = DestinationColorSpace::SRGB());
 
     static AtomString effectName() { return FilterEffect::sourceGraphicName(); }
 
 private:
-    SourceGraphic();
+    explicit SourceGraphic(DestinationColorSpace);
 
     unsigned numberOfEffectInputs() const override { return 0; }
 
-    OptionSet<FilterRenderingMode> supportedFilterRenderingModes() const override;
+    OptionSet<FilterRenderingMode> supportedFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) const override;
     std::unique_ptr<FilterEffectApplier> createAcceleratedApplier() const override;
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
 
@@ -45,4 +47,4 @@ private:
 
 } //namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_FILTER_EFFECT(SourceGraphic)
+SPECIALIZE_TYPE_TRAITS_FILTER_FUNCTION(SourceGraphic)

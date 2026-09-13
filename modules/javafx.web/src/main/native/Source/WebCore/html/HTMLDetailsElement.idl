@@ -20,6 +20,6 @@
 [
     Exposed=Window
 ] interface HTMLDetailsElement : HTMLElement {
+    [CEReactions=NotNeeded, Reflect] attribute DOMString name;
     [CEReactions=NotNeeded, Reflect] attribute boolean open;
 };
-

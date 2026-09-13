@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,15 +38,15 @@ namespace WebCore {
 
 Ref<CSSImageSetValue> CSSImageSetValue::create(CSSValueListBuilder builder)
 {
-    return adoptRef(*new CSSImageSetValue(WTFMove(builder)));
+    return adoptRef(*new CSSImageSetValue(WTF::move(builder)));
 }
 
 CSSImageSetValue::CSSImageSetValue(CSSValueListBuilder builder)
-    : CSSValueContainingVector(ImageSetClass, CommaSeparator, WTFMove(builder))
+    : CSSValueContainingVector(ClassType::ImageSet, CommaSeparator, WTF::move(builder))
 {
 }
 
-String CSSImageSetValue::customCSSText() const
+String CSSImageSetValue::customCSSText(const CSS::SerializationContext& context) const
 {
     StringBuilder result;
     result.append("image-set("_s);
@@ -54,24 +54,20 @@ String CSSImageSetValue::customCSSText() const
         if (i > 0)
             result.append(", "_s);
         ASSERT(is<CSSImageSetOptionValue>(item(i)));
-        result.append(item(i)->cssText());
+        result.append(item(i)->cssText(context));
     }
     result.append(')');
     return result.toString();
 }
 
-RefPtr<StyleImage> CSSImageSetValue::createStyleImage(Style::BuilderState& state) const
+RefPtr<StyleImage> CSSImageSetValue::createStyleImage(const Style::BuilderState& state) const
 {
     size_t length = this->length();
 
-    Vector<ImageWithScale> images;
-    images.reserveInitialCapacity(length);
-
-    for (size_t i = 0; i < length; ++i) {
-        ASSERT(is<CSSImageSetOptionValue>(item(i)));
-        auto option = downcast<CSSImageSetOptionValue>(item(i));
-        images.uncheckedAppend(ImageWithScale { state.createStyleImage(option->image()), option->resolution()->floatValue(CSSUnitType::CSS_DPPX), option->type() });
-    }
+    Vector<ImageWithScale> images(length, [&](size_t i) {
+        RefPtr<const CSSImageSetOptionValue> option = downcast<CSSImageSetOptionValue>(item(i));
+        return ImageWithScale { state.createStyleImage(option->image()), option->protectedResolution()->resolveAsResolution<float>(state.cssToLengthConversionData()), option->type() };
+    });
 
     // Sort the images so that they are stored in order from lowest resolution to highest.
     // We want to maintain the authored order for serialization so we create a sorted indexing vector.
@@ -82,7 +78,7 @@ RefPtr<StyleImage> CSSImageSetValue::createStyleImage(Style::BuilderState& state
         return images[lhs].scaleFactor < images[rhs].scaleFactor;
     });
 
-    return StyleImageSet::create(WTFMove(images), WTFMove(sortedIndices));
+    return StyleImageSet::create(WTF::move(images), WTF::move(sortedIndices));
 }
 
 } // namespace WebCore

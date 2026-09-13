@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,16 +32,16 @@ import javafx.scene.shape.PathElement;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 /**
  * Tests TextFlow Node
  */
 public class TextFlowNodeTest {
-    @BeforeClass
+    @BeforeAll
     public static void initFX() {
         CountDownLatch startupLatch = new CountDownLatch(1);
         Util.startup(startupLatch, startupLatch::countDown);
@@ -56,29 +56,29 @@ public class TextFlowNodeTest {
 
         // underline 0,0 must be empty
         PathElement[] p = f.underlineShape(0, 0);
-        Assert.assertNotNull(p);
-        Assert.assertEquals(0, p.length);
+        Assertions.assertNotNull(p);
+        Assertions.assertEquals(0, p.length);
 
         // underline 1,0 .. 1,len must increase monotonically
         int len = t1.getText().length() + t2.getText().length();
         double w = 0.0;
         for (int i = 1; i < len; i++) {
             p = f.underlineShape(0, i);
-            Assert.assertNotNull(p);
+            Assertions.assertNotNull(p);
 
             // width must increase
             Bounds b = new Path(p).getBoundsInLocal();
-            Assert.assertTrue(b.getWidth() > w);
+            Assertions.assertTrue(b.getWidth() > w);
             w = b.getWidth();
 
             // test height greater than zero
-            Assert.assertTrue(b.getHeight() > 0.0);
+            Assertions.assertTrue(b.getHeight() > 0.0);
         }
 
         // 0,1000 same as 0,len
         Bounds b1 = new Path(f.underlineShape(0, len)).getBoundsInLocal();
         Bounds b2 = new Path(f.underlineShape(0, 1000)).getBoundsInLocal();
-        Assert.assertEquals(b1, b2);
-        Assert.assertTrue(b1.getHeight() > 0.0);
+        Assertions.assertEquals(b1, b2);
+        Assertions.assertTrue(b1.getHeight() > 0.0);
     }
 }

@@ -36,91 +36,37 @@
 #include "ScrollingTreeOverflowScrollingNode.h"
 #include "ScrollingTreePositionedNode.h"
 #include "ScrollingTreeStickyNode.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollingTreeFixedNode);
+
 ScrollingTreeFixedNode::ScrollingTreeFixedNode(ScrollingTree& scrollingTree, ScrollingNodeID nodeID)
-    : ScrollingTreeNode(scrollingTree, ScrollingNodeType::Fixed, nodeID)
+    : ScrollingTreeViewportConstrainedNode(scrollingTree, ScrollingNodeType::Fixed, nodeID)
 {
-    scrollingTree.fixedOrStickyNodeAdded();
 }
 
-ScrollingTreeFixedNode::~ScrollingTreeFixedNode()
-{
-    scrollingTree().fixedOrStickyNodeRemoved();
-}
+ScrollingTreeFixedNode::~ScrollingTreeFixedNode() = default;
 
 bool ScrollingTreeFixedNode::commitStateBeforeChildren(const ScrollingStateNode& stateNode)
 {
-    if (!is<ScrollingStateFixedNode>(stateNode))
+    auto* fixedStateNode = dynamicDowncast<ScrollingStateFixedNode>(stateNode);
+    if (!fixedStateNode)
         return false;
 
-    const auto& fixedStateNode = downcast<ScrollingStateFixedNode>(stateNode);
     if (stateNode.hasChangedProperty(ScrollingStateNode::Property::ViewportConstraints))
-        m_constraints = fixedStateNode.viewportConstraints();
+        m_constraints = fixedStateNode->viewportConstraints();
 
     return true;
 }
 
-FloatPoint ScrollingTreeFixedNode::computeLayerPosition() const
-{
-    FloatSize overflowScrollDelta;
-    ScrollingTreeStickyNode* lastStickyNode = nullptr;
-    for (RefPtr ancestor = parent(); ancestor; ancestor = ancestor->parent()) {
-        if (is<ScrollingTreeFrameScrollingNode>(*ancestor)) {
-            // Fixed nodes are positioned relative to the containing frame scrolling node.
-            // We bail out after finding one.
-            auto layoutViewport = downcast<ScrollingTreeFrameScrollingNode>(*ancestor).layoutViewport();
-            return m_constraints.layerPositionForViewportRect(layoutViewport) - overflowScrollDelta;
-        }
-
-        if (is<ScrollingTreeOverflowScrollingNode>(*ancestor)) {
-            // To keep the layer still during async scrolling we adjust by how much the position has changed since layout.
-            auto& overflowNode = downcast<ScrollingTreeOverflowScrollingNode>(*ancestor);
-            overflowScrollDelta -= overflowNode.scrollDeltaSinceLastCommit();
-            continue;
-        }
-
-        if (is<ScrollingTreeOverflowScrollProxyNode>(*ancestor)) {
-            // To keep the layer still during async scrolling we adjust by how much the position has changed since layout.
-            auto& overflowNode = downcast<ScrollingTreeOverflowScrollProxyNode>(*ancestor);
-            overflowScrollDelta -= overflowNode.scrollDeltaSinceLastCommit();
-            continue;
-        }
-
-        if (is<ScrollingTreePositionedNode>(*ancestor)) {
-            auto& positioningAncestor = downcast<ScrollingTreePositionedNode>(*ancestor);
-            // See if sticky node already handled this positioning node.
-            // FIXME: Include positioning node information to sticky/fixed node to avoid these tests.
-            if (lastStickyNode && lastStickyNode->layer() == positioningAncestor.layer())
-                continue;
-            if (positioningAncestor.layer() != layer())
-                overflowScrollDelta -= positioningAncestor.scrollDeltaSinceLastCommit();
-            continue;
-        }
-
-        if (is<ScrollingTreeStickyNode>(*ancestor)) {
-            auto& stickyNode = downcast<ScrollingTreeStickyNode>(*ancestor);
-            overflowScrollDelta += stickyNode.scrollDeltaSinceLastCommit();
-            lastStickyNode = &stickyNode;
-            continue;
-        }
-
-        if (is<ScrollingTreeFixedNode>(*ancestor)) {
-            // The ancestor fixed node has already applied the needed corrections to say put.
-            return m_constraints.layerPositionAtLastLayout() - overflowScrollDelta;
-        }
-    }
-    ASSERT_NOT_REACHED();
-    return FloatPoint();
-}
-
 void ScrollingTreeFixedNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
-    ts << "fixed node";
+    ts << "fixed node"_s;
     ScrollingTreeNode::dumpProperties(ts, behavior);
-    ts.dumpProperty("fixed constraints", m_constraints);
+    ts.dumpProperty("fixed constraints"_s, m_constraints);
 }
 
 } // namespace WebCore

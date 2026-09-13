@@ -25,46 +25,48 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if PLATFORM(COCOA) && USE(LIBWEBRTC)
 
-#include "VideoFrame.h"
+#include <WebCore/LibWebRTCUtils.h>
+#include <WebCore/VideoFrame.h>
 
-ALLOW_UNUSED_PARAMETERS_BEGIN
-ALLOW_COMMA_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
+// FIXME: Modularize WebRTC
+IGNORE_CLANG_WARNINGS_BEGIN("non-modular-include-in-module")
 #include <webrtc/api/video/video_frame.h>
-#include <webrtc/sdk/WebKit/WebKitUtilities.h>
+#include <webrtc/webkit_sdk/WebKit/WebKitUtilities.h>
+IGNORE_CLANG_WARNINGS_END
 
-ALLOW_UNUSED_PARAMETERS_END
-ALLOW_COMMA_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
-using CVPixelBufferRef = struct __CVBuffer*;
-
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer *CVPixelBufferRef;
 
 namespace WebCore {
 
 class VideoFrameLibWebRTC final : public VideoFrame {
 public:
-    using ConversionCallback = Function<RetainPtr<CVPixelBufferRef>(webrtc::VideoFrameBuffer&)>;
-    static Ref<VideoFrameLibWebRTC> create(MediaTime, bool isMirrored, Rotation, std::optional<PlatformVideoColorSpace>&&, rtc::scoped_refptr<webrtc::VideoFrameBuffer>&&, ConversionCallback&&);
+    using ConversionCallback = std::function<RetainPtr<CVPixelBufferRef>(webrtc::VideoFrameBuffer&)>;
+    static RefPtr<VideoFrameLibWebRTC> create(MediaTime, bool isMirrored, Rotation, std::optional<PlatformVideoColorSpace>&&, Ref<webrtc::VideoFrameBuffer>&&, ConversionCallback&&);
 
-    rtc::scoped_refptr<webrtc::VideoFrameBuffer> buffer() const { return m_buffer; }
-
-    static std::optional<PlatformVideoColorSpace> colorSpaceFromFrame(const webrtc::VideoFrame&);
+    webrtc::scoped_refptr<webrtc::VideoFrameBuffer> buffer() const { return webrtc::scoped_refptr { m_buffer.ptr() }; }
 
 private:
-    VideoFrameLibWebRTC(MediaTime, bool isMirrored, Rotation, PlatformVideoColorSpace&&, rtc::scoped_refptr<webrtc::VideoFrameBuffer>&&, ConversionCallback&&);
+    VideoFrameLibWebRTC(MediaTime, bool isMirrored, Rotation, PlatformVideoColorSpace&&, Ref<webrtc::VideoFrameBuffer>&&, ConversionCallback&&);
 
     // VideoFrame
-    FloatSize presentationSize() const final { return m_size; }
+    IntSize presentationSize() const final { return m_size; }
     uint32_t pixelFormat() const final { return m_videoPixelFormat; }
     CVPixelBufferRef pixelBuffer() const final;
 
-    const rtc::scoped_refptr<webrtc::VideoFrameBuffer> m_buffer;
-    FloatSize m_size;
+    Ref<VideoFrame> clone() final;
+
+    const Ref<webrtc::VideoFrameBuffer> m_buffer;
+    IntSize m_size;
     uint32_t m_videoPixelFormat { 0 };
 
-    mutable ConversionCallback m_conversionCallback;
+    mutable ConversionCallback m_conversionCallback WTF_GUARDED_BY_LOCK(m_pixelBufferLock);
     mutable RetainPtr<CVPixelBufferRef> m_pixelBuffer WTF_GUARDED_BY_LOCK(m_pixelBufferLock);
     mutable Lock m_pixelBufferLock;
 };

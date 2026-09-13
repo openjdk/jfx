@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -166,13 +166,12 @@ namespace WebCore {
 class MediaPlayerFactoryJava final : public MediaPlayerFactory {
 private:
     MediaPlayerEnums::MediaEngineIdentifier identifier() const final { return MediaPlayerEnums::MediaEngineIdentifier::MediaFoundation; };
-
-    std::unique_ptr<MediaPlayerPrivateInterface> createMediaEnginePlayer(MediaPlayer* player) const final
+    Ref<MediaPlayerPrivateInterface> createMediaEnginePlayer(MediaPlayer& player) const final
     {
-        return makeUnique<MediaPlayerPrivate>(player);
+        return adoptRef(*new MediaPlayerPrivate(player));
     }
 
-    void getSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& types) const final
+    void getSupportedTypes(HashSet<String>& types) const final
     {
         return MediaPlayerPrivate::MediaEngineSupportedTypes(types);
     }
@@ -196,7 +195,7 @@ void MediaPlayerPrivate::registerMediaEngine(MediaEngineRegistrar registrar)
     registrar(makeUnique<MediaPlayerFactoryJava>());
 }
 
-void MediaPlayerPrivate::MediaEngineSupportedTypes(HashSet<String, ASCIICaseInsensitiveHash>& types)
+void MediaPlayerPrivate::MediaEngineSupportedTypes(HashSet<String>& types)
 {
     LOG_TRACE0(">>MediaEngineSupportedTypes\n");
     HashSet<String, ASCIICaseInsensitiveHash>& supportedTypes = GetSupportedTypes();
@@ -259,7 +258,7 @@ HashSet<String, ASCIICaseInsensitiveHash>& MediaPlayerPrivate::GetSupportedTypes
 // *********************************************************
 // MediaPlayerPrivate
 // *********************************************************
-MediaPlayerPrivate::MediaPlayerPrivate(MediaPlayer *player)
+MediaPlayerPrivate::MediaPlayerPrivate(MediaPlayer &player)
     : m_player(player)
     , m_networkState(MediaPlayer::NetworkState::Empty)
     , m_readyState(MediaPlayer::ReadyState::HaveNothing)
@@ -268,8 +267,6 @@ MediaPlayerPrivate::MediaPlayerPrivate(MediaPlayer *player)
     , m_hasAudio(false)
     , m_paused(true)
     , m_seeking(false)
-    , m_seekTime(0)
-    , m_duration(0)
     , m_bytesLoaded(0)
     , m_didLoadingProgress(false)
 {
@@ -417,13 +414,13 @@ void MediaPlayerPrivate::setPageIsVisible(bool visible)
     }
 }
 
-float MediaPlayerPrivate::duration() const
+MediaTime MediaPlayerPrivate::duration() const
 {
     // return numeric_limits<float>::infinity(); // "live" stream
     return m_duration;
 }
 
-float MediaPlayerPrivate::currentTime() const
+MediaTime MediaPlayerPrivate::currentTime() const
 {
     if (m_seeking) {
         LOG_TRACE1("MediaPlayerPrivate currentTime returns (seekTime): %f\n", m_seekTime);
@@ -435,7 +432,7 @@ float MediaPlayerPrivate::currentTime() const
     // The Native MediaElement is getting garbage collected in javascript core, hence calling
     // currentTime from gc thread, GetJavaEnv will return null env
     if (!env)
-        return MediaTime::zeroTime().toFloat();
+        return MediaTime::zeroTime();
     static jmethodID s_mID
         = env->GetMethodID(PG_GetMediaPlayerClass(env), "fwkGetCurrentTime", "()F");
     ASSERT(s_mID);
@@ -444,15 +441,14 @@ float MediaPlayerPrivate::currentTime() const
     WTF::CheckAndClearException(env);
 
 //    LOG_TRACE1("MediaPlayerPrivate currentTime returns: %f\n", (float)result);
-
-    return (float)result;
+    return MediaTime::createWithDouble(result);
 }
 
 void MediaPlayerPrivate::seek(float time)
 {
     PLOG_TRACE1(">>MediaPlayerPrivate::seek(%f)\n", time);
 
-    m_seekTime = time;
+    m_seekTime = MediaTime::createWithFloat(time);
 
     JNIEnv* env = WTF::GetJavaEnv();
     static jmethodID s_mID
@@ -468,6 +464,10 @@ void MediaPlayerPrivate::seek(float time)
 bool MediaPlayerPrivate::seeking() const
 {
     return m_seeking;
+}
+constexpr MediaPlayerType MediaPlayerPrivate::mediaPlayerType() const
+{
+    return MediaPlayerType::Null;
 }
 
 MediaTime MediaPlayerPrivate::startTime() const
@@ -545,7 +545,7 @@ MediaPlayer::ReadyState MediaPlayerPrivate::readyState() const
     return m_readyState;
 }
 
-float MediaPlayerPrivate::maxTimeSeekable() const
+MediaTime MediaPlayerPrivate::maxTimeSeekable() const
 {
     return m_duration;
 }
@@ -650,7 +650,7 @@ void MediaPlayerPrivate::setNetworkState(MediaPlayer::NetworkState networkState)
         PLOG_TRACE4("MediaPlayerPrivate NetworkState: %s (%d) => %s (%d)\n",
             networkStateStr(m_networkState), (int)m_networkState, networkStateStr(networkState), (int)networkState);
         m_networkState = networkState;
-        m_player->networkStateChanged();
+        m_player.networkStateChanged();
     }
 }
 
@@ -660,7 +660,7 @@ void MediaPlayerPrivate::setReadyState(MediaPlayer::ReadyState readyState)
         PLOG_TRACE4("MediaPlayerPrivate ReadyState: %s (%d) => %s (%d)\n",
             readyStateStr(m_readyState), (int)m_readyState, readyStateStr(readyState), (int)readyState);
         m_readyState = readyState;
-        m_player->readyStateChanged();
+        m_player.readyStateChanged();
     }
 }
 
@@ -724,7 +724,7 @@ void MediaPlayerPrivate::notifyPaused(bool paused)
 
     if (m_paused != paused) {
         m_paused = paused;
-        m_player->playbackStateChanged();
+        m_player.playbackStateChanged();
     }
 }
 
@@ -736,14 +736,14 @@ void MediaPlayerPrivate::notifySeeking(bool seeking)
         if (!seeking) {
             // notify time change after seek completed
             //LOG_TRACE0("==MediaPlayerPrivate notifySeeking: NOTIFYING time changed\n");
-            m_player->timeChanged();
+            m_player.timeChanged();
         }
     }
 }
 
 void MediaPlayerPrivate::notifyFinished() {
     PLOG_TRACE0(">>MediaPlayerPrivate notifyFinished\n");
-    m_player->timeChanged();
+    m_player.timeChanged();
 }
 
 void MediaPlayerPrivate::notifyReady(bool hasVideo, bool hasAudio)
@@ -758,8 +758,8 @@ void MediaPlayerPrivate::notifyDurationChanged(float duration)
 {
     PLOG_TRACE2(">>MediaPlayerPrivate notifyDurationChanged, %f => %f\n",
         m_duration, duration);
-    m_duration = duration;
-    m_player->durationChanged();
+    m_duration = MediaTime::createWithFloat(duration);
+    m_player.durationChanged();
 }
 
 void MediaPlayerPrivate::notifySizeChanged(int width, int height)
@@ -771,7 +771,7 @@ void MediaPlayerPrivate::notifySizeChanged(int width, int height)
 void MediaPlayerPrivate::notifyNewFrame()
 {
     PLOG_TRACE0(">>MediaPlayerPrivate notifyNewFrame\n");
-    m_player->repaint();
+    m_player.repaint();
     //PLOG_TRACE0("<<MediaPlayerPrivate notifyNewFrame\n");
 }
 
@@ -843,7 +843,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCMediaPlayer_notifyDuration
   (JNIEnv*, jobject, jlong ptr, jfloat duration)
 {
     MediaPlayerPrivate* player = MediaPlayerPrivate::getPlayer(ptr);
-    if (duration != player->duration()) {
+    if (duration != player->duration().toFloat()) {
         player->notifyDurationChanged(duration);
     }
 }

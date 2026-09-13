@@ -25,42 +25,68 @@
 
 #pragma once
 
+#include <wtf/Compiler.h>
 #include <wtf/HashTraits.h>
-#include <wtf/text/TextStream.h>
+#include <wtf/UUID.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTF {
 
+class PrintStream;
+
+template<typename RawValue>
 struct ObjectIdentifierThreadSafeAccessTraits {
+};
+
+template<>
+struct ObjectIdentifierThreadSafeAccessTraits<uint64_t> {
     WTF_EXPORT_PRIVATE static uint64_t generateIdentifierInternal();
 };
 
+template<>
+struct ObjectIdentifierThreadSafeAccessTraits<UUID> {
+    WTF_EXPORT_PRIVATE static UUID generateIdentifierInternal();
+};
+
+template<typename RawValue>
 struct ObjectIdentifierMainThreadAccessTraits {
+};
+
+template<>
+struct ObjectIdentifierMainThreadAccessTraits<uint64_t> {
     WTF_EXPORT_PRIVATE static uint64_t generateIdentifierInternal();
+};
+
+template<>
+struct ObjectIdentifierMainThreadAccessTraits<UUID> {
+    WTF_EXPORT_PRIVATE static UUID generateIdentifierInternal();
 };
 
 // Extracted from ObjectIdentifierGeneric to avoid binary bloat.
+template<typename RawValue>
 class ObjectIdentifierGenericBase {
-public:
-    bool isHashTableDeletedValue() const { return m_identifier == hashTableDeletedValue(); }
-    bool isValid() const { return isValidIdentifier(m_identifier); }
+};
 
-    uint64_t toUInt64() const { return m_identifier; }
-    explicit operator bool() const { return m_identifier; }
+template<>
+class ObjectIdentifierGenericBase<uint64_t> {
+public:
+    using RawValue = uint64_t;
+
+    bool isHashTableDeletedValue() const { return m_identifier == hashTableDeletedValue(); }
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
+    RawValue toUInt64() const { return toRawValue(); } // Use `toRawValue` instead.
+    RawValue toRawValue() const { return m_identifier; }
 
     String loggingString() const
     {
         return String::number(m_identifier);
     }
 
-    template<typename Encoder> void encode(Encoder& encoder) const
-    {
-        ASSERT(isValidIdentifier(m_identifier));
-        encoder << m_identifier;
-    }
+    static constexpr bool isValidIdentifier(RawValue identifier) { return identifier && identifier != hashTableDeletedValue(); }
 
 protected:
-    explicit constexpr ObjectIdentifierGenericBase(uint64_t identifier)
+    explicit constexpr ObjectIdentifierGenericBase(RawValue identifier)
         : m_identifier(identifier)
     {
     }
@@ -69,29 +95,52 @@ protected:
     ~ObjectIdentifierGenericBase() = default;
     ObjectIdentifierGenericBase(HashTableDeletedValueType) : m_identifier(hashTableDeletedValue()) { }
 
-    static uint64_t hashTableDeletedValue() { return std::numeric_limits<uint64_t>::max(); }
-    static bool isValidIdentifier(uint64_t identifier) { return identifier && identifier != hashTableDeletedValue(); }
-
-    template<typename Decoder> static std::optional<uint64_t> decode(Decoder& decoder)
-    {
-        std::optional<uint64_t> identifier;
-        decoder >> identifier;
-        if (!identifier || !isValidIdentifier(*identifier))
-            return std::nullopt;
-        return identifier;
-    }
+    static constexpr RawValue hashTableDeletedValue() { return std::numeric_limits<RawValue>::max(); }
 
 private:
-    uint64_t m_identifier { 0 };
+    RawValue m_identifier { 0 };
 };
 
-template<typename T, typename ThreadSafety>
-class ObjectIdentifierGeneric : public ObjectIdentifierGenericBase {
+template<>
+class ObjectIdentifierGenericBase<UUID> {
+public:
+    using RawValue = UUID;
+
+    bool isHashTableDeletedValue() const { return m_identifier == hashTableDeletedValue(); }
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
+    RawValue toRawValue() const { return m_identifier; }
+
+    String loggingString() const
+    {
+        return m_identifier.toString();
+    }
+
+    static constexpr bool isValidIdentifier(RawValue identifier) { return identifier && !identifier.isHashTableDeletedValue(); }
+
+protected:
+    explicit constexpr ObjectIdentifierGenericBase(RawValue identifier)
+        : m_identifier(identifier)
+    {
+    }
+
+    ObjectIdentifierGenericBase() = default;
+    ~ObjectIdentifierGenericBase() = default;
+    ObjectIdentifierGenericBase(HashTableDeletedValueType) : m_identifier(hashTableDeletedValue()) { }
+
+    static RawValue hashTableDeletedValue() { return UUID { HashTableDeletedValue }; }
+
+private:
+    RawValue m_identifier { MarkableTraits<UUID>::emptyValue() };
+};
+
+template<typename T, typename ThreadSafety, typename RawValue>
+class ObjectIdentifierGeneric : public ObjectIdentifierGenericBase<RawValue> {
 public:
     static ObjectIdentifierGeneric generate()
     {
         RELEASE_ASSERT(!m_generationProtected);
-        return ObjectIdentifierGeneric { ThreadSafety::generateIdentifierInternal() };
+        return ObjectIdentifierGeneric { ThreadSafety::generateIdentifierInternal(), AssumeValidIdValue };
     }
 
     static void enableGenerationProtection()
@@ -99,59 +148,93 @@ public:
         m_generationProtected = true;
     }
 
-    explicit constexpr ObjectIdentifierGeneric(uint64_t identifier)
-        : ObjectIdentifierGenericBase(identifier)
+    explicit constexpr ObjectIdentifierGeneric(RawValue identifier)
+        : ObjectIdentifierGenericBase<RawValue>(identifier)
     {
+        RELEASE_ASSERT(ObjectIdentifierGenericBase<RawValue>::isValidIdentifier(identifier));
     }
 
-    ObjectIdentifierGeneric() = default;
-    ObjectIdentifierGeneric(HashTableDeletedValueType) : ObjectIdentifierGenericBase(HashTableDeletedValue) { }
+    bool isHashTableEmptyValue() const { return !ObjectIdentifierGenericBase<RawValue>::toRawValue(); }
 
-    template<typename Decoder> static std::optional<ObjectIdentifierGeneric> decode(Decoder& decoder)
-    {
-        if (auto identifier = ObjectIdentifierGenericBase::decode(decoder))
-            return ObjectIdentifierGeneric { *identifier };
-        return std::nullopt;
-    }
-
-    struct MarkableTraits {
-        static bool isEmptyValue(ObjectIdentifierGeneric identifier) { return !identifier; }
-        static constexpr ObjectIdentifierGeneric emptyValue() { return ObjectIdentifierGeneric(); }
-    };
+    // Do not call this constructor explicitly, it should only be used by the Hashtable implementation.
+    ObjectIdentifierGeneric(HashTableDeletedValueType) : ObjectIdentifierGenericBase<RawValue>(HashTableDeletedValue) { }
 
 private:
     friend struct HashTraits<ObjectIdentifierGeneric>;
+    friend struct MarkableTraits<ObjectIdentifierGeneric>;
     template<typename U, typename V> friend struct ObjectIdentifierGenericHash;
+
+    enum AssumeValidId { AssumeValidIdValue };
+    explicit constexpr ObjectIdentifierGeneric(RawValue identifier, AssumeValidId)
+        : ObjectIdentifierGenericBase<RawValue>(identifier)
+    {
+        ASSERT(!!identifier);
+    }
+
+    enum InvalidId { InvalidIdValue };
+    ObjectIdentifierGeneric(InvalidId)
+    {
+    }
 
     inline static bool m_generationProtected { false };
 };
 
-template<typename T> using ObjectIdentifier = ObjectIdentifierGeneric<T, ObjectIdentifierMainThreadAccessTraits>;
-template<typename T> using AtomicObjectIdentifier = ObjectIdentifierGeneric<T, ObjectIdentifierThreadSafeAccessTraits>;
-
-inline void add(Hasher& hasher, const ObjectIdentifierGenericBase& identifier)
-{
-    add(hasher, identifier.toUInt64());
-}
-
-struct ObjectIdentifierGenericBaseHash {
-    static unsigned hash(const ObjectIdentifierGenericBase& identifier) { return intHash(identifier.toUInt64()); }
-    static bool equal(const ObjectIdentifierGenericBase& a, const ObjectIdentifierGenericBase& b) { return a.toUInt64() == b.toUInt64(); }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
+template<typename T, typename ThreadSafety, typename RawValue>
+struct MarkableTraits<ObjectIdentifierGeneric<T, ThreadSafety, RawValue>> {
+    static bool isEmptyValue(ObjectIdentifierGeneric<T, ThreadSafety, RawValue> identifier) { return !identifier.toRawValue(); }
+    static constexpr ObjectIdentifierGeneric<T, ThreadSafety, RawValue> emptyValue() { return ObjectIdentifierGeneric<T, ThreadSafety, RawValue>::InvalidIdValue; }
 };
 
-template<typename T, typename U> struct HashTraits<ObjectIdentifierGeneric<T, U>> : SimpleClassHashTraits<ObjectIdentifierGeneric<T, U>> { };
+template<typename T, typename RawValue> using ObjectIdentifier = ObjectIdentifierGeneric<T, ObjectIdentifierMainThreadAccessTraits<RawValue>, RawValue>;
+template<typename T, typename RawValue> using AtomicObjectIdentifier = ObjectIdentifierGeneric<T, ObjectIdentifierThreadSafeAccessTraits<RawValue>, RawValue>;
 
-template<typename T, typename U> struct DefaultHash<ObjectIdentifierGeneric<T, U>> : ObjectIdentifierGenericBaseHash { };
+inline void add(Hasher& hasher, const ObjectIdentifierGenericBase<uint64_t>& identifier)
+{
+    add(hasher, identifier.toRawValue());
+}
 
-WTF_EXPORT_PRIVATE TextStream& operator<<(TextStream&, const ObjectIdentifierGenericBase&);
+inline void add(Hasher& hasher, const ObjectIdentifierGenericBase<UUID>& identifier)
+{
+    add(hasher, identifier.toRawValue());
+}
 
+template<typename T, typename U, typename V> struct HashTraits<ObjectIdentifierGeneric<T, U, V>> : SimpleClassHashTraits<ObjectIdentifierGeneric<T, U, V>> {
+    using ValueType = ObjectIdentifierGeneric<T, U, V>;
+    using PeekType = std::optional<ValueType>;
+    using TakeType = std::optional<ValueType>;
 
+    static ValueType emptyValue() { return ValueType { ValueType::InvalidIdValue }; }
+    static bool isEmptyValue(ValueType value) { return value.isHashTableEmptyValue(); }
+
+    static PeekType peek(ValueType identifier)
+    {
+        if (isEmptyValue(identifier))
+            return std::nullopt;
+        return identifier;
+    }
+
+    static TakeType take(ValueType identifier)
+    {
+        if (isEmptyValue(identifier))
+            return std::nullopt;
+        return identifier;
+    }
+};
+
+WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const ObjectIdentifierGenericBase<uint64_t>&);
+
+WTF_EXPORT_PRIVATE void printInternal(PrintStream&, const ObjectIdentifierGenericBase<UUID>&);
+
+template<typename RawValue>
 class ObjectIdentifierGenericBaseStringTypeAdapter {
+};
+
+template<>
+class ObjectIdentifierGenericBaseStringTypeAdapter<uint64_t> {
 public:
     unsigned length() const { return lengthOfIntegerAsString(m_identifier); }
     bool is8Bit() const { return true; }
-    template<typename CharacterType> void writeTo(CharacterType* destination) const { writeIntegerToBuffer(m_identifier, destination); }
+    template<typename CharacterType> void writeTo(std::span<CharacterType> destination) const { writeIntegerToBuffer(m_identifier, destination); }
 protected:
     explicit ObjectIdentifierGenericBaseStringTypeAdapter(uint64_t identifier)
         : m_identifier(identifier) { }
@@ -160,40 +243,29 @@ private:
 };
 
 template<typename T, typename ThreadSafety>
-class StringTypeAdapter<ObjectIdentifierGeneric<T, ThreadSafety>> : public ObjectIdentifierGenericBaseStringTypeAdapter {
+class StringTypeAdapter<ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>> : public ObjectIdentifierGenericBaseStringTypeAdapter<uint64_t> {
 public:
-    explicit StringTypeAdapter(ObjectIdentifierGeneric<T, ThreadSafety> identifier)
-        : ObjectIdentifierGenericBaseStringTypeAdapter(identifier.toUInt64()) { }
+    explicit StringTypeAdapter(ObjectIdentifierGeneric<T, ThreadSafety, uint64_t> identifier)
+        : ObjectIdentifierGenericBaseStringTypeAdapter(identifier.toRawValue()) { }
 };
 
 template<typename T, typename ThreadSafety>
-bool operator==(const ObjectIdentifierGeneric<T, ThreadSafety>& a, const ObjectIdentifierGeneric<T, ThreadSafety>& b)
+class StringTypeAdapter<ObjectIdentifierGeneric<T, ThreadSafety, UUID>> : public StringTypeAdapter<UUID> {
+public:
+    explicit StringTypeAdapter(ObjectIdentifierGeneric<T, ThreadSafety, UUID> identifier)
+        : StringTypeAdapter<UUID>(identifier.toRawValue()) { }
+};
+
+template<typename T, typename ThreadSafety, typename RawValue>
+bool operator==(const ObjectIdentifierGeneric<T, ThreadSafety, RawValue>& a, const ObjectIdentifierGeneric<T, ThreadSafety, RawValue>& b)
 {
-    return a.toUInt64() == b.toUInt64();
+    return a.toRawValue() == b.toRawValue();
 }
 
 template<typename T, typename ThreadSafety>
-bool operator>(const ObjectIdentifierGeneric<T, ThreadSafety>& a, const ObjectIdentifierGeneric<T, ThreadSafety>& b)
+std::strong_ordering operator<=>(const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& a, const ObjectIdentifierGeneric<T, ThreadSafety, uint64_t>& b)
 {
-    return a.toUInt64() > b.toUInt64();
-}
-
-template<typename T, typename ThreadSafety>
-bool operator>=(const ObjectIdentifierGeneric<T, ThreadSafety>& a, const ObjectIdentifierGeneric<T, ThreadSafety>& b)
-{
-    return a.toUInt64() >= b.toUInt64();
-}
-
-template<typename T, typename ThreadSafety>
-bool operator<(const ObjectIdentifierGeneric<T, ThreadSafety>& a, const ObjectIdentifierGeneric<T, ThreadSafety>& b)
-{
-    return a.toUInt64() < b.toUInt64();
-}
-
-template<typename T, typename ThreadSafety>
-bool operator<=(const ObjectIdentifierGeneric<T, ThreadSafety>& a, const ObjectIdentifierGeneric<T, ThreadSafety>& b)
-{
-    return a.toUInt64() <= b.toUInt64();
+    return a.toRawValue() <=> b.toRawValue();
 }
 
 } // namespace WTF

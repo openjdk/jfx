@@ -191,9 +191,7 @@ bool OptimizeAssociativeExpressionTrees::optimizeRootedTree(Value* root, Inserti
         return false;
     }
 
-    std::sort(leaves.begin(), leaves.end(), [](Value* x, Value* y) {
-        return x->index() < y->index();
-    });
+    std::ranges::sort(leaves, { }, &Value::index);
     Vector<Value*, 4> optLeaves;
     Value* lastValue = nullptr;
     unsigned numSeen = 0;
@@ -252,8 +250,8 @@ bool OptimizeAssociativeExpressionTrees::run()
     m_proc.resetValueOwners();
 
     Vector<unsigned> useCounts(m_proc.values().size(), 0); // Mapping from Value::m_index to use counts.
-    HashSet<Value*> expressionTreeRoots;
-    HashSet<BasicBlock*> rootOwners;
+    UncheckedKeyHashSet<Value*> expressionTreeRoots;
+    UncheckedKeyHashSet<BasicBlock*> rootOwners;
 
     for (BasicBlock* block : m_proc) {
         for (Value* value : *block) {
@@ -294,7 +292,7 @@ bool OptimizeAssociativeExpressionTrees::run()
 
 bool optimizeAssociativeExpressionTrees(Procedure& proc)
 {
-    PhaseScope phaseScope(proc, "optimizeAssociativeExpressionTrees");
+    PhaseScope phaseScope(proc, "optimizeAssociativeExpressionTrees"_s);
     OptimizeAssociativeExpressionTrees optimizeAssociativeExpressionTrees(proc);
     return optimizeAssociativeExpressionTrees.run();
 }

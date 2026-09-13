@@ -35,14 +35,19 @@
 #include "AudioDSPKernelProcessor.h"
 
 #include "AudioDSPKernel.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AudioDSPKernelProcessor);
 
 // setNumberOfChannels() may later be called if the object is not yet in an "initialized" state.
 AudioDSPKernelProcessor::AudioDSPKernelProcessor(float sampleRate, unsigned numberOfChannels)
     : AudioProcessor(sampleRate, numberOfChannels)
 {
 }
+
+AudioDSPKernelProcessor::~AudioDSPKernelProcessor() = default;
 
 void AudioDSPKernelProcessor::initialize()
 {
@@ -56,9 +61,9 @@ void AudioDSPKernelProcessor::initialize()
         DisableMallocRestrictionsForCurrentThreadScope disableMallocRestrictions;
 
         // Create processing kernels, one per channel.
-        m_kernels.reserveInitialCapacity(numberOfChannels());
-        for (unsigned i = 0; i < numberOfChannels(); ++i)
-            m_kernels.uncheckedAppend(createKernel());
+        m_kernels = Vector<std::unique_ptr<AudioDSPKernel>>(numberOfChannels(), [this](size_t) {
+            return createKernel();
+        });
     }
     m_initialized = true;
     m_hasJustReset = true;
@@ -74,24 +79,20 @@ void AudioDSPKernelProcessor::uninitialize()
     m_initialized = false;
 }
 
-void AudioDSPKernelProcessor::process(const AudioBus* source, AudioBus* destination, size_t framesToProcess)
+void AudioDSPKernelProcessor::process(const AudioBus& source, AudioBus& destination, size_t framesToProcess)
 {
-    ASSERT(source && destination);
-    if (!source || !destination)
-        return;
-
     if (!isInitialized()) {
-        destination->zero();
+        destination.zero();
         return;
     }
 
-    bool channelCountMatches = source->numberOfChannels() == destination->numberOfChannels() && source->numberOfChannels() == m_kernels.size();
+    bool channelCountMatches = source.numberOfChannels() == destination.numberOfChannels() && source.numberOfChannels() == m_kernels.size();
     ASSERT(channelCountMatches);
     if (!channelCountMatches)
         return;
 
     for (unsigned i = 0; i < m_kernels.size(); ++i)
-        m_kernels[i]->process(source->channel(i)->data(), destination->channel(i)->mutableData(), framesToProcess);
+        m_kernels[i]->process(source.channel(i)->span().first(framesToProcess), destination.channel(i)->mutableSpan());
 }
 
 void AudioDSPKernelProcessor::processOnlyAudioParams(size_t framesToProcess)

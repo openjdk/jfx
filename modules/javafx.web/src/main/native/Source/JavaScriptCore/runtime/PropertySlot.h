@@ -20,18 +20,21 @@
 
 #pragma once
 
-#include "DOMAnnotation.h"
-#include "DisallowVMEntry.h"
-#include "GetVM.h"
-#include "JSCJSValue.h"
-#include "PropertyName.h"
-#include "PropertyOffset.h"
-#include "ScopeOffset.h"
+#include <JavaScriptCore/DOMAnnotation.h>
+#include <JavaScriptCore/DisallowVMEntry.h>
+#include <JavaScriptCore/GetVM.h>
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/JSCPtrTag.h>
+#include <JavaScriptCore/PropertyName.h>
+#include <JavaScriptCore/PropertyOffset.h>
+#include <JavaScriptCore/ScopeOffset.h>
+#include <JavaScriptCore/Watchpoint.h>
 #include <wtf/Assertions.h>
 #include <wtf/ForbidHeapAllocation.h>
 #include <wtf/FunctionPtr.h>
 
 namespace JSC {
+
 class GetterSetter;
 class JSObject;
 class JSModuleEnvironment;
@@ -210,7 +213,7 @@ public:
 
     void setValue(JSObject* slotBase, unsigned attributes, JSValue value)
     {
-        ASSERT(attributes == attributesForStructure(attributes));
+        ASSERT(attributes == attributesForStructure(attributes) && !(attributes & PropertyAttribute::Accessor));
 
         m_data.value = JSValue::encode(value);
         m_attributes = attributes;
@@ -224,7 +227,7 @@ public:
 
     void setValue(JSObject* slotBase, unsigned attributes, JSValue value, PropertyOffset offset)
     {
-        ASSERT(attributes == attributesForStructure(attributes));
+        ASSERT(attributes == attributesForStructure(attributes) && !(attributes & PropertyAttribute::Accessor));
 
         ASSERT(value);
         m_data.value = JSValue::encode(value);
@@ -240,7 +243,7 @@ public:
 
     void setValue(JSString*, unsigned attributes, JSValue value)
     {
-        ASSERT(attributes == attributesForStructure(attributes));
+        ASSERT(attributes == attributesForStructure(attributes) && !(attributes & PropertyAttribute::Accessor));
 
         ASSERT(value);
         m_data.value = JSValue::encode(value);
@@ -265,9 +268,9 @@ public:
         ASSERT(attributes == attributesForStructure(attributes));
 
         ASSERT(getValue);
-        assertIsTaggedWith<GetValueFuncPtrTag>(bitwise_cast<void*>(getValue));
+        assertIsTaggedWith<GetValueFuncPtrTag>(std::bit_cast<void*>(getValue));
         m_data.custom.getValue = getValue;
-        assertIsNullOrTaggedWith<PutValueFuncPtrTag>(bitwise_cast<void*>(putValue));
+        assertIsNullOrTaggedWith<PutValueFuncPtrTag>(std::bit_cast<void*>(putValue));
         m_data.custom.putValue = putValue;
         m_attributes = attributes;
 

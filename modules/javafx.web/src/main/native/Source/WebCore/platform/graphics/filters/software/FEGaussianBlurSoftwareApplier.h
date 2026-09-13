@@ -26,21 +26,22 @@
 #include "IntSize.h"
 #include "PixelBuffer.h"
 #include <JavaScriptCore/Forward.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class FEGaussianBlur;
-enum class EdgeModeType;
+enum class EdgeModeType : uint8_t;
 
 class FEGaussianBlurSoftwareApplier final : public FilterEffectConcreteApplier<FEGaussianBlur> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(FEGaussianBlurSoftwareApplier);
     using Base = FilterEffectConcreteApplier<FEGaussianBlur>;
 
 public:
     using Base::Base;
 
 private:
-    bool apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const final;
+    bool apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const final;
 
     struct ApplyParameters {
         RefPtr<PixelBuffer> ioBuffer;

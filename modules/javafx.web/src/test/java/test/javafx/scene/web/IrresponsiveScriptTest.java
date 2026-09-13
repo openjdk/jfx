@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,10 +30,10 @@ import java.lang.management.ThreadMXBean;
 import javafx.event.EventHandler;
 import javafx.scene.web.WebEvent;
 import netscape.javascript.JSException;
-import org.junit.Test;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Disabled;
 
-@Ignore("JDK-8280421")
+@Disabled("JDK-8280421")
 public class IrresponsiveScriptTest extends TestBase {
 
     @Test public void testInfiniteLoopInScript() {

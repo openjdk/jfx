@@ -1,6 +1,6 @@
 /*
  * Copyright (C) Research In Motion Limited 2010. All rights reserved.
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -32,7 +32,8 @@ enum FloatBlendMode {
 class SVGPathSource;
 
 class SVGPathBlender {
-    WTF_MAKE_NONCOPYABLE(SVGPathBlender); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(SVGPathBlender);
+    WTF_MAKE_NONCOPYABLE(SVGPathBlender);
 public:
 
     static bool addAnimatedPath(SVGPathSource& from, SVGPathSource& to, SVGPathConsumer&, unsigned repeatCount);
@@ -61,12 +62,15 @@ private:
     float blendAnimatedDimensonalFloat(float from, float to, FloatBlendMode, float progress);
     FloatPoint blendAnimatedFloatPoint(const FloatPoint& from, const FloatPoint& to, float progress);
 
-    SVGPathSource& m_fromSource;
-    SVGPathSource& m_toSource;
-    SVGPathConsumer* m_consumer; // A null consumer indicates that we're just checking blendability.
+    SingleThreadWeakRef<SVGPathSource> m_fromSource;
+    SingleThreadWeakRef<SVGPathSource> m_toSource;
+    SingleThreadWeakPtr<SVGPathConsumer> m_consumer; // A null consumer indicates that we're just checking blendability.
 
     FloatPoint m_fromCurrentPoint;
     FloatPoint m_toCurrentPoint;
+
+    FloatPoint m_fromSubpathPoint;
+    FloatPoint m_toSubpathPoint;
 
     PathCoordinateMode m_fromMode { AbsoluteCoordinates };
     PathCoordinateMode m_toMode { AbsoluteCoordinates };

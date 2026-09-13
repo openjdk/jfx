@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2003 Apple Computer, Inc.  All rights reserved.
- * Copyright 2011, The Android Open Source Project
+ * Copyright (C) 2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,6 +39,7 @@ class JobjectWrapper : public RefCounted<JobjectWrapper> {
 public:
     static Ref<JobjectWrapper> create(jobject object, bool useGlobalRef = false) { return adoptRef(*new JobjectWrapper(object, useGlobalRef)); }
     ~JobjectWrapper();
+
 
     jobject instance() const { return m_instance; }
     void setInstance(jobject instance) { m_instance = instance; }

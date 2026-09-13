@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -155,6 +155,14 @@ public abstract class ConnectionHolder {
      */
     int property(int prop, int value) {
         return 0;
+    }
+
+    /**
+     * Returns ConnectionHolder for additional audio stream if any.
+     * Currently used by HLS with EXT-X-MEDIA tag.
+     */
+    public ConnectionHolder getAudioStream() {
+        return null;
     }
 
     private static class FileConnectionHolder extends ConnectionHolder {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2008, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,22 +31,27 @@
 #include "DataURLDecoder.h"
 #include "HTTPHeaderNames.h"
 #include "HTTPParsers.h"
+#include "IPAddressSpace.h"
 #include "MIMETypeRegistry.h"
 #include "ParsedContentRange.h"
 #include "ResourceResponse.h"
 #include "WebCorePersistentCoders.h"
 #include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/persistence/PersistentCoders.h>
 #include <wtf/persistence/PersistentDecoder.h>
 #include <wtf/persistence/PersistentEncoder.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringView.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ResourceResponseBase);
+
 bool isScriptAllowedByNosniff(const ResourceResponse& response)
 {
-    if (parseContentTypeOptionsHeader(response.httpHeaderField(HTTPHeaderName::XContentTypeOptions)) != ContentTypeOptionsDisposition::Nosniff)
+    if (!response.isNosniff())
         return true;
     String mimeType = extractMIMETypeFromMediaType(response.httpHeaderField(HTTPHeaderName::ContentType));
     return MIMETypeRegistry::isSupportedJavaScriptMIMEType(mimeType);
@@ -56,41 +61,43 @@ ResourceResponseBase::ResourceResponseBase()
 {
 }
 
-ResourceResponseBase::ResourceResponseBase(const URL& url, const String& mimeType, long long expectedLength, const String& textEncodingName)
-    : m_url(url)
-    , m_mimeType(mimeType)
+ResourceResponseBase::ResourceResponseBase(URL&& url, String&& mimeType, long long expectedLength, String&& textEncodingName)
+    : m_url(WTF::move(url))
+    , m_mimeType(WTF::move(mimeType))
     , m_expectedContentLength(expectedLength)
-    , m_textEncodingName(textEncodingName)
+    , m_textEncodingName(WTF::move(textEncodingName))
     , m_certificateInfo(CertificateInfo()) // Empty but valid for synthetic responses.
     , m_isNull(false)
 {
 }
 
-ResourceResponseBase::ResourceResponseBase(std::optional<ResourceResponseBase::ResponseData> data)
-    : m_url(data ? data->m_url : URL { })
-    , m_mimeType(data ? data->m_mimeType : AtomString { })
-    , m_expectedContentLength(data ? data->m_expectedContentLength : 0)
-    , m_textEncodingName(data ? data->m_textEncodingName : AtomString { })
-    , m_httpStatusText(data ? data->m_httpStatusText : AtomString { })
-    , m_httpVersion(data ? data->m_httpVersion : AtomString { })
-    , m_httpHeaderFields(data ? data->m_httpHeaderFields : HTTPHeaderMap { })
-    , m_networkLoadMetrics(data ? data->m_networkLoadMetrics : Box<WebCore::NetworkLoadMetrics> { })
-    , m_certificateInfo(data ? data->m_certificateInfo : std::nullopt)
-    , m_httpStatusCode(data ? data->m_httpStatusCode : 0)
-    , m_isNull(data ? false : true)
-    , m_usedLegacyTLS(data ? data->m_usedLegacyTLS : UsedLegacyTLS::No)
-    , m_wasPrivateRelayed(data ? data->m_wasPrivateRelayed : WasPrivateRelayed::No)
-    , m_isRedirected(data ? data->m_isRedirected : false)
-    , m_isRangeRequested(data ? data->m_isRangeRequested : false)
-    , m_tainting(data ? data->m_tainting : Tainting::Basic)
-    , m_source(data ? data->m_source : Source::Unknown)
-    , m_type(data ? data->m_type : Type::Default)
+ResourceResponseBase::ResourceResponseBase(std::optional<ResourceResponseData>&& data)
+    : m_url(data ? WTF::move(data->url) : URL { })
+    , m_mimeType(data ? WTF::move(data->mimeType) : AtomString { })
+    , m_expectedContentLength(data ? data->expectedContentLength : 0)
+    , m_textEncodingName(data ? WTF::move(data->textEncodingName) : String { })
+    , m_httpStatusText(data ? WTF::move(data->httpStatusText) : String { })
+    , m_httpVersion(data ? WTF::move(data->httpVersion) : String { })
+    , m_httpHeaderFields(data ? WTF::move(data->httpHeaderFields) : HTTPHeaderMap { })
+    , m_networkLoadMetrics(data && data->networkLoadMetrics ? Box<NetworkLoadMetrics>::create(WTF::move(*data->networkLoadMetrics)) : Box<NetworkLoadMetrics> { })
+    , m_certificateInfo(data ? WTF::move(data->certificateInfo) : std::nullopt)
+    , m_httpStatusCode(data ? data->httpStatusCode : 0)
+    , m_isNull(!data)
+    , m_usedLegacyTLS(data ? data->usedLegacyTLS : UsedLegacyTLS::No)
+    , m_wasPrivateRelayed(data ? data->wasPrivateRelayed : WasPrivateRelayed::No)
+    , m_proxyName(data ? data->proxyName : String { })
+    , m_isRedirected(data ? data->isRedirected : false)
+    , m_isRangeRequested(data ? data->isRangeRequested : false)
+    , m_tainting(data ? data->tainting : Tainting::Basic)
+    , m_source(data ? data->source : Source::Unknown)
+    , m_type(data ? data->type : Type::Default)
+    , m_ipAddressSpace(data ? data->ipAddressSpace : IPAddressSpace::Public)
 {
 }
 
-ResourceResponseBase::CrossThreadData ResourceResponseBase::CrossThreadData::isolatedCopy() const
+ResourceResponseData ResourceResponseData::isolatedCopy() const
 {
-    ResourceResponseBase::CrossThreadData result;
+    ResourceResponseData result;
     result.url = url.isolatedCopy();
     result.mimeType = mimeType.isolatedCopy();
     result.expectedContentLength = expectedContentLength;
@@ -107,22 +114,25 @@ ResourceResponseBase::CrossThreadData ResourceResponseBase::CrossThreadData::iso
     result.isRedirected = isRedirected;
     result.usedLegacyTLS = usedLegacyTLS;
     result.wasPrivateRelayed = wasPrivateRelayed;
+    result.proxyName = proxyName.isolatedCopy();
     result.isRangeRequested = isRangeRequested;
     if (certificateInfo)
         result.certificateInfo = certificateInfo->isolatedCopy();
+    result.ipAddressSpace = ipAddressSpace;
     return result;
 }
 
-ResourceResponseBase::CrossThreadData ResourceResponseBase::crossThreadData() const
+ResourceResponseData ResourceResponseBase::crossThreadData() const
 {
     CrossThreadData data;
     data.url = url().isolatedCopy();
-    data.mimeType = mimeType().string().isolatedCopy();
+    data.mimeType = mimeType().isolatedCopy();
     data.expectedContentLength = expectedContentLength();
-    data.textEncodingName = textEncodingName().string().isolatedCopy();
+    data.textEncodingName = textEncodingName().isolatedCopy();
     data.httpStatusCode = httpStatusCode();
-    data.httpStatusText = httpStatusText().string().isolatedCopy();
-    data.httpVersion = httpVersion().string().isolatedCopy();
+    data.httpStatusText = httpStatusText().isolatedCopy();
+    data.httpVersion = httpVersion().isolatedCopy();
+
     data.httpHeaderFields = httpHeaderFields().isolatedCopy();
     if (m_networkLoadMetrics)
         data.networkLoadMetrics = m_networkLoadMetrics->isolatedCopy();
@@ -132,9 +142,11 @@ ResourceResponseBase::CrossThreadData ResourceResponseBase::crossThreadData() co
     data.isRedirected = m_isRedirected;
     data.usedLegacyTLS = m_usedLegacyTLS;
     data.wasPrivateRelayed = m_wasPrivateRelayed;
+    data.proxyName = m_proxyName.isolatedCopy();
     data.isRangeRequested = m_isRangeRequested;
     if (m_certificateInfo)
         data.certificateInfo = m_certificateInfo->isolatedCopy();
+    data.ipAddressSpace = m_ipAddressSpace;
 
     return data;
 }
@@ -143,18 +155,18 @@ ResourceResponse ResourceResponseBase::fromCrossThreadData(CrossThreadData&& dat
 {
     ResourceResponse response;
 
-    response.setURL(data.url);
-    response.setMimeType(AtomString { WTFMove(data.mimeType) });
+    response.setURL(WTF::move(data.url));
+    response.setMimeType(WTF::move(data.mimeType));
     response.setExpectedContentLength(data.expectedContentLength);
-    response.setTextEncodingName(AtomString { WTFMove(data.textEncodingName) });
+    response.setTextEncodingName(WTF::move(data.textEncodingName));
 
     response.setHTTPStatusCode(data.httpStatusCode);
-    response.setHTTPStatusText(AtomString { WTFMove(data.httpStatusText) });
-    response.setHTTPVersion(AtomString { WTFMove(data.httpVersion) });
+    response.setHTTPStatusText(WTF::move(data.httpStatusText));
+    response.setHTTPVersion(WTF::move(data.httpVersion));
 
-    response.m_httpHeaderFields = WTFMove(data.httpHeaderFields);
+    response.m_httpHeaderFields = WTF::move(data.httpHeaderFields);
     if (data.networkLoadMetrics)
-        response.m_networkLoadMetrics = Box<NetworkLoadMetrics>::create(WTFMove(data.networkLoadMetrics.value()));
+        response.m_networkLoadMetrics = Box<NetworkLoadMetrics>::create(WTF::move(data.networkLoadMetrics.value()));
     else
         response.m_networkLoadMetrics = nullptr;
     response.m_source = data.source;
@@ -163,16 +175,17 @@ ResourceResponse ResourceResponseBase::fromCrossThreadData(CrossThreadData&& dat
     response.m_isRedirected = data.isRedirected;
     response.m_usedLegacyTLS =  data.usedLegacyTLS;
     response.m_wasPrivateRelayed = data.wasPrivateRelayed;
+    response.m_proxyName = WTF::move(data.proxyName);
     response.m_isRangeRequested = data.isRangeRequested;
-    response.m_certificateInfo = WTFMove(data.certificateInfo);
-
+    response.m_certificateInfo = WTF::move(data.certificateInfo);
+    response.m_ipAddressSpace = data.ipAddressSpace;
     return response;
 }
 
 ResourceResponse ResourceResponseBase::syntheticRedirectResponse(const URL& fromURL, const URL& toURL)
 {
     ResourceResponse redirectResponse;
-    redirectResponse.setURL(fromURL);
+    redirectResponse.setURL(URL { fromURL });
     redirectResponse.setHTTPStatusCode(302);
     redirectResponse.setHTTPVersion("HTTP/1.1"_s);
     redirectResponse.setHTTPHeaderField(HTTPHeaderName::Location, toURL.string());
@@ -183,7 +196,7 @@ ResourceResponse ResourceResponseBase::syntheticRedirectResponse(const URL& from
 
 ResourceResponse ResourceResponseBase::dataURLResponse(const URL& url, const DataURLDecoder::Result& result)
 {
-    ResourceResponse dataResponse { url, result.mimeType, static_cast<long long>(result.data.size()), result.charset };
+    ResourceResponse dataResponse { URL { url }, String { result.mimeType }, static_cast<long long>(result.data.size()), String { result.charset } };
     dataResponse.setHTTPStatusCode(200);
     dataResponse.setHTTPStatusText("OK"_s);
     dataResponse.setHTTPHeaderField(HTTPHeaderName::ContentType, result.contentType);
@@ -205,7 +218,7 @@ ResourceResponse ResourceResponseBase::filter(const ResourceResponse& response, 
         ResourceResponse opaqueResponse;
         opaqueResponse.setTainting(Tainting::Opaqueredirect);
         opaqueResponse.setType(Type::Opaqueredirect);
-        opaqueResponse.setURL(response.url());
+        opaqueResponse.setURL(URL { response.url() });
         return opaqueResponse;
     }
 
@@ -252,30 +265,30 @@ const URL& ResourceResponseBase::url() const
     return m_url;
 }
 
-void ResourceResponseBase::setURL(const URL& url)
+void ResourceResponseBase::setURL(URL&& url)
 {
     lazyInit(CommonFieldsOnly);
     m_isNull = false;
 
-    m_url = url;
+    m_url = WTF::move(url);
 
     // FIXME: Should invalidate or update platform response if present.
 }
 
-const AtomString& ResourceResponseBase::mimeType() const
+const String& ResourceResponseBase::mimeType() const
 {
     lazyInit(CommonFieldsOnly);
 
     return m_mimeType;
 }
 
-void ResourceResponseBase::setMimeType(const AtomString& mimeType)
+void ResourceResponseBase::setMimeType(String&& mimeType)
 {
     lazyInit(CommonFieldsOnly);
     m_isNull = false;
 
     // FIXME: MIME type is determined by HTTP Content-Type header. We should update the header, so that it doesn't disagree with m_mimeType.
-    m_mimeType = mimeType;
+    m_mimeType = WTF::move(mimeType);
 
     // FIXME: Should invalidate or update platform response if present.
 }
@@ -298,20 +311,20 @@ void ResourceResponseBase::setExpectedContentLength(long long expectedContentLen
     // FIXME: Should invalidate or update platform response if present.
 }
 
-const AtomString& ResourceResponseBase::textEncodingName() const
+const String& ResourceResponseBase::textEncodingName() const
 {
     lazyInit(CommonFieldsOnly);
 
     return m_textEncodingName;
 }
 
-void ResourceResponseBase::setTextEncodingName(AtomString&& encodingName)
+void ResourceResponseBase::setTextEncodingName(String&& encodingName)
 {
     lazyInit(CommonFieldsOnly);
     m_isNull = false;
 
     // FIXME: Text encoding is determined by HTTP Content-Type header. We should update the header, so that it doesn't disagree with m_textEncodingName.
-    m_textEncodingName = WTFMove(encodingName);
+    m_textEncodingName = WTF::move(encodingName);
 
     // FIXME: Should invalidate or update platform response if present.
 }
@@ -343,8 +356,13 @@ String ResourceResponseBase::sanitizeSuggestedFilename(const String& suggestedFi
     response.setHTTPStatusCode(200);
     String escapedSuggestedFilename = makeStringByReplacingAll(suggestedFilename, '\\', "\\\\"_s);
     escapedSuggestedFilename = makeStringByReplacingAll(escapedSuggestedFilename, '"', "\\\""_s);
-    response.setHTTPHeaderField(HTTPHeaderName::ContentDisposition, makeString("attachment; filename=\"", escapedSuggestedFilename, '"'));
+    response.setHTTPHeaderField(HTTPHeaderName::ContentDisposition, makeString("attachment; filename=\""_s, escapedSuggestedFilename, '"'));
     return response.suggestedFilename();
+}
+
+bool ResourceResponseBase::isNosniff() const
+{
+    return parseContentTypeOptionsHeader(httpHeaderField(HTTPHeaderName::XContentTypeOptions)) == ContentTypeOptionsDisposition::Nosniff;
 }
 
 bool ResourceResponseBase::isSuccessful() const
@@ -375,30 +393,30 @@ bool ResourceResponseBase::isRedirection() const
     return isRedirectionStatusCode(m_httpStatusCode);
 }
 
-const AtomString& ResourceResponseBase::httpStatusText() const
+const String& ResourceResponseBase::httpStatusText() const
 {
     lazyInit(AllFields);
 
     return m_httpStatusText;
 }
 
-void ResourceResponseBase::setHTTPStatusText(const AtomString& statusText)
+void ResourceResponseBase::setHTTPStatusText(String&& statusText)
 {
     lazyInit(AllFields);
 
-    m_httpStatusText = statusText;
+    m_httpStatusText = WTF::move(statusText);
 
     // FIXME: Should invalidate or update platform response if present.
 }
 
-const AtomString& ResourceResponseBase::httpVersion() const
+const String& ResourceResponseBase::httpVersion() const
 {
     lazyInit(AllFields);
 
     return m_httpVersion;
 }
 
-void ResourceResponseBase::setHTTPVersion(const AtomString& versionText)
+void ResourceResponseBase::setHTTPVersion(String&& versionText)
 {
     lazyInit(AllFields);
 
@@ -480,16 +498,12 @@ static bool isSafeCrossOriginResponseHeader(HTTPHeaderName name)
         || name == HTTPHeaderName::Trailer
         || name == HTTPHeaderName::Vary
         || name == HTTPHeaderName::XContentTypeOptions
-        || name == HTTPHeaderName::XDNSPrefetchControl
         || name == HTTPHeaderName::XFrameOptions
         || name == HTTPHeaderName::XXSSProtection;
 }
 
 void ResourceResponseBase::sanitizeHTTPHeaderFieldsAccordingToTainting()
 {
-    // FIXME: we don't really need to construct a Tainting here, this is just a workaround
-    // for a GCC 10 bug (see https://gcc.gnu.org/bugzilla/show_bug.cgi?id=97634), that will
-    // be removed once the bug is fixed.
     switch (m_tainting) {
     case ResourceResponse::Tainting::Basic:
         break;
@@ -622,7 +636,7 @@ void ResourceResponseBase::setHTTPHeaderFields(HTTPHeaderMap&& headerFields)
 {
     lazyInit(AllFields);
 
-    m_httpHeaderFields = WTFMove(headerFields);
+    m_httpHeaderFields = WTF::move(headerFields);
 }
 
 void ResourceResponseBase::setHTTPHeaderField(HTTPHeaderName name, const String& value)
@@ -817,7 +831,7 @@ bool ResourceResponseBase::isAttachment() const
     lazyInit(AllFields);
 
     auto value = m_httpHeaderFields.get(HTTPHeaderName::ContentDisposition);
-    return equalLettersIgnoringASCIICase(StringView(value).left(value.find(';')).trim(isUnicodeCompatibleASCIIWhitespace<UChar>), "attachment"_s);
+    return equalLettersIgnoringASCIICase(StringView(value).left(value.find(';')).trim(isUnicodeCompatibleASCIIWhitespace<char16_t>), "attachment"_s);
 }
 
 bool ResourceResponseBase::isAttachmentWithFilename() const
@@ -829,7 +843,7 @@ bool ResourceResponseBase::isAttachmentWithFilename() const
         return false;
 
     StringView contentDispositionView { contentDisposition };
-    if (!equalLettersIgnoringASCIICase(contentDispositionView.left(contentDispositionView.find(';')).trim(isUnicodeCompatibleASCIIWhitespace<UChar>), "attachment"_s))
+    if (!equalLettersIgnoringASCIICase(contentDispositionView.left(contentDispositionView.find(';')).trim(isUnicodeCompatibleASCIIWhitespace<char16_t>), "attachment"_s))
         return false;
 
     return !filenameFromHTTPContentDisposition(contentDispositionView).isNull();
@@ -873,39 +887,38 @@ bool ResourceResponseBase::equalForWebKitLegacyChallengeComparison(const Resourc
 bool ResourceResponseBase::containsInvalidHTTPHeaders() const
 {
     for (auto& header : httpHeaderFields()) {
-        if (!isValidHTTPHeaderValue(header.value.trim(isASCIIWhitespaceWithoutFF<UChar>)))
+        if (!isValidHTTPHeaderValue(header.value.trim(isASCIIWhitespaceWithoutFF<char16_t>)))
             return true;
     }
     return false;
 }
 
-std::optional<ResourceResponseBase::ResponseData> ResourceResponseBase::getResponseData() const
+std::optional<ResourceResponseData> ResourceResponseBase::getResponseData() const
 {
     if (m_isNull)
         return std::nullopt;
     lazyInit(AllFields);
 
-    return { {
-        m_url,
-        m_mimeType,
+    return { ResourceResponseData {
+        URL { m_url },
+        String { m_mimeType },
         m_expectedContentLength,
-        m_textEncodingName,
-        m_httpStatusText,
-        m_httpVersion,
-        m_httpHeaderFields,
-        m_networkLoadMetrics,
-
+        String { m_textEncodingName },
         m_httpStatusCode,
-        m_certificateInfo,
-
+        String { m_httpStatusText },
+        String { m_httpVersion },
+        HTTPHeaderMap { m_httpHeaderFields },
+        m_networkLoadMetrics ? std::optional(*m_networkLoadMetrics) : std::nullopt,
         m_source,
         m_type,
         m_tainting,
-
         m_isRedirected,
         m_usedLegacyTLS,
         m_wasPrivateRelayed,
-        m_isRangeRequested
+        String { m_proxyName },
+        m_isRangeRequested,
+        m_certificateInfo,
+        m_ipAddressSpace
     } };
 }
 
@@ -913,7 +926,7 @@ std::optional<ResourceResponseBase::ResponseData> ResourceResponseBase::getRespo
 
 namespace WTF::Persistence {
 
-void Coder<WebCore::ResourceResponseBase::CrossThreadData>::encode(Encoder& encoder, const WebCore::ResourceResponseBase::CrossThreadData& data)
+void Coder<WebCore::ResourceResponseData>::encodeForPersistence(Encoder& encoder, const WebCore::ResourceResponseData& data)
 {
     encoder << data.url;
     encoder << data.mimeType;
@@ -930,10 +943,11 @@ void Coder<WebCore::ResourceResponseBase::CrossThreadData>::encode(Encoder& enco
     encoder << data.isRedirected;
     encoder << data.usedLegacyTLS;
     encoder << data.wasPrivateRelayed;
+    encoder << data.proxyName;
     encoder << data.isRangeRequested;
 }
 
-std::optional<WebCore::ResourceResponseBase::CrossThreadData> Coder<WebCore::ResourceResponseBase::CrossThreadData>::decode(Decoder& decoder)
+std::optional<WebCore::ResourceResponseData> Coder<WebCore::ResourceResponseData>::decodeForPersistence(Decoder& decoder)
 {
     std::optional<URL> url;
     decoder >> url;
@@ -1010,20 +1024,25 @@ std::optional<WebCore::ResourceResponseBase::CrossThreadData> Coder<WebCore::Res
     if (!wasPrivateRelayed)
         return std::nullopt;
 
+    std::optional<String> proxyName;
+    decoder >> proxyName;
+    if (!proxyName)
+        return std::nullopt;
+
     std::optional<bool> isRangeRequested;
     decoder >> isRangeRequested;
     if (!isRangeRequested)
         return std::nullopt;
 
-    return WebCore::ResourceResponseBase::CrossThreadData {
-        WTFMove(*url),
-        WTFMove(*mimeType),
+    return WebCore::ResourceResponseData {
+        WTF::move(*url),
+        WTF::move(*mimeType),
         *expectedContentLength,
-        WTFMove(*textEncodingName),
+        WTF::move(*textEncodingName),
         *httpStatusCode,
-        WTFMove(*httpStatusText),
-        WTFMove(*httpVersion),
-        WTFMove(*httpHeaderFields),
+        WTF::move(*httpStatusText),
+        WTF::move(*httpVersion),
+        WTF::move(*httpHeaderFields),
         std::nullopt,
         *source,
         *type,
@@ -1031,8 +1050,10 @@ std::optional<WebCore::ResourceResponseBase::CrossThreadData> Coder<WebCore::Res
         *isRedirected,
         *usedLegacyTLS,
         *wasPrivateRelayed,
+        WTF::move(*proxyName),
         *isRangeRequested,
-        WTFMove(*certificateInfo)
+        WTF::move(*certificateInfo),
+        WebCore::IPAddressSpace::Public
     };
 }
 

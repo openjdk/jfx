@@ -27,11 +27,16 @@
 
 #include <wtf/CompletionHandler.h>
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTF {
 class MachSendRight;
+}
+
+namespace WebCore {
+class NativeImage;
 }
 
 namespace WebCore::WebGPU {
@@ -39,14 +44,19 @@ namespace WebCore::WebGPU {
 struct CanvasConfiguration;
 class Texture;
 
-class PresentationContext : public RefCounted<PresentationContext> {
+class PresentationContext : public RefCountedAndCanMakeWeakPtr<PresentationContext> {
 public:
     virtual ~PresentationContext() = default;
 
-    virtual void configure(const CanvasConfiguration&) = 0;
+    [[nodiscard]] virtual bool configure(const CanvasConfiguration&) = 0;
     virtual void unconfigure() = 0;
+    virtual void present(uint32_t frameIndex, bool = false) = 0;
 
-    virtual RefPtr<Texture> getCurrentTexture() = 0;
+    virtual RefPtr<Texture> getCurrentTexture(uint32_t) = 0;
+    virtual RefPtr<WebCore::NativeImage> getMetalTextureAsNativeImage(uint32_t bufferIndex, bool& isIOSurfaceSupportedFormat) = 0;
+
+    virtual bool isRemotePresentationContextProxy() const { return false; }
+    virtual bool isPresentationContextImpl() const { return false; }
 
 protected:
     PresentationContext() = default;

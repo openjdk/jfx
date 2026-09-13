@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "GeneratedImage.h"
+#include <WebCore/GeneratedImage.h>
 
 namespace WebCore {
 
 class Gradient;
-class Image;
+class ImageBuffer;
 
 class GradientImage final : public GeneratedImage {
 public:
@@ -46,13 +46,13 @@ public:
 private:
     WEBCORE_EXPORT GradientImage(Gradient&, const FloatSize&);
 
-    ImageDrawResult draw(GraphicsContext&, const FloatRect& dstRect, const FloatRect& srcRect, const ImagePaintingOptions& = { }) final;
-    void drawPattern(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { }) final;
+    ImageDrawResult draw(GraphicsContext&, const FloatRect& dstRect, const FloatRect& srcRect, ImagePaintingOptions = { }) final;
+    void drawPattern(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions = { }) final;
     bool isGradientImage() const final { return true; }
     void dump(WTF::TextStream&) const final;
 
-    Ref<Gradient> m_gradient;
-    RefPtr<Image> m_cachedImage;
+    const Ref<Gradient> m_gradient;
+    RefPtr<ImageBuffer> m_cachedImage;
     FloatSize m_cachedAdjustedSize;
     unsigned m_cachedGeneratorHash { 0 };
     FloatSize m_cachedScaleFactor;

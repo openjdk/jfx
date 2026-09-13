@@ -27,15 +27,17 @@
 
 #if ENABLE(ATTACHMENT_ELEMENT)
 
-#include "HTMLAttachmentElement.h"
-#include "RenderReplaced.h"
+#include <WebCore/HTMLAttachmentElement.h>
+#include <WebCore/RenderReplaced.h>
 
 namespace WebCore {
 
 class RenderAttachment final : public RenderReplaced {
-    WTF_MAKE_ISO_ALLOCATED(RenderAttachment);
+    WTF_MAKE_TZONE_ALLOCATED(RenderAttachment);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderAttachment);
 public:
     RenderAttachment(HTMLAttachmentElement&, RenderStyle&&);
+    virtual ~RenderAttachment();
 
     HTMLAttachmentElement& attachmentElement() const;
 
@@ -53,17 +55,15 @@ public:
 
 private:
     void element() const = delete;
-    bool isAttachment() const override { return true; }
     ASCIILiteral renderName() const override { return "RenderAttachment"_s; }
     LayoutSize layoutWideLayoutAttachmentOnly();
-    void layoutShadowContent(const LayoutSize&);
+    void layoutShadowContent(const LayoutSize&) override;
 
-    bool shouldDrawSelectionTint() const override { return isWideLayout(); }
+    bool shouldDrawSelectionTint() const final { return false; }
+    void setSelectionState(HighlightState) final;
     void paintReplaced(PaintInfo&, const LayoutPoint& offset) final;
 
     void layout() override;
-
-    LayoutUnit baselinePosition(FontBaseline, bool, LineDirectionMode, LinePositionMode) const override;
 
     LayoutUnit m_minimumIntrinsicWidth;
     bool m_shouldDrawBorder { true };
@@ -73,6 +73,6 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderAttachment, isAttachment())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderAttachment, isRenderAttachment())
 
 #endif // ENABLE(ATTACHMENT_ELEMENT)

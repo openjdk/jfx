@@ -34,24 +34,28 @@
 #include "PaintInfo.h"
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
-#include "RoundedRect.h"
-#include <wtf/IsoMallocInlines.h>
+#include "LayoutRoundedRect.h"
+#include <numbers>
 #include <wtf/MathExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace MathMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderMathMLMenclose);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderMathMLMenclose);
 
 // The MathML in HTML5 implementation note suggests drawing the left part of longdiv with a parenthesis.
 // For now, we use a Bezier curve and this somewhat arbitrary value.
 const unsigned short longDivLeftSpace = 10;
 
 RenderMathMLMenclose::RenderMathMLMenclose(MathMLMencloseElement& element, RenderStyle&& style)
-    : RenderMathMLRow(element, WTFMove(style))
+    : RenderMathMLRow(Type::MathMLMenclose, element, WTF::move(style))
 {
+    ASSERT(isRenderMathMLMenclose());
 }
+
+RenderMathMLMenclose::~RenderMathMLMenclose() = default;
 
 // This arbitrary thickness value is used for the parameter \xi_8 from the MathML in HTML5 implementation note.
 // For now, we take:
@@ -142,10 +146,10 @@ RenderMathMLMenclose::SpaceAroundContent RenderMathMLMenclose::spaceAroundConten
     // - We add extra margin of \xi_8
     // Then for example the top space is \sqrt{2}contentHeight/2 - contentHeight/2 + \xi_8/2 + \xi_8.
     if (hasNotation(MathMLMencloseElement::Circle)) {
-        LayoutUnit extraSpace { (contentWidth * (sqrtOfTwoFloat - 1) + 3 * thickness) / 2 };
+        LayoutUnit extraSpace { (contentWidth * (std::numbers::sqrt2_v<float> - 1) + 3 * thickness) / 2 };
         space.left = std::max(space.left, extraSpace);
         space.right = std::max(space.right, extraSpace);
-        extraSpace = (contentHeight * (sqrtOfTwoFloat - 1) + 3 * thickness) / 2;
+        extraSpace = (contentHeight * (std::numbers::sqrt2_v<float> - 1) + 3 * thickness) / 2;
         space.top = std::max(space.top, extraSpace);
         space.bottom = std::max(space.bottom, extraSpace);
     }
@@ -157,24 +161,34 @@ RenderMathMLMenclose::SpaceAroundContent RenderMathMLMenclose::spaceAroundConten
 
 void RenderMathMLMenclose::computePreferredLogicalWidths()
 {
-    ASSERT(preferredLogicalWidthsDirty());
+    ASSERT(needsPreferredLogicalWidthsUpdate());
 
-    RenderMathMLRow::computePreferredLogicalWidths();
-
-    LayoutUnit preferredWidth = m_maxPreferredLogicalWidth;
+    LayoutUnit preferredWidth = preferredLogicalWidthOfRowItems();
     SpaceAroundContent space = spaceAroundContent(preferredWidth, 0);
-    m_maxPreferredLogicalWidth = space.left + preferredWidth + space.right;
-    m_maxPreferredLogicalWidth = m_minPreferredLogicalWidth;
+    preferredWidth += space.left + space.right;
+    m_maxPreferredLogicalWidth = m_minPreferredLogicalWidth = preferredWidth;
 
-    setPreferredLogicalWidthsDirty(false);
+    auto sizes = sizeAppliedToMathContent(LayoutPhase::CalculatePreferredLogicalWidth);
+    applySizeToMathContent(LayoutPhase::CalculatePreferredLogicalWidth, sizes);
+
+    adjustPreferredLogicalWidthsForBorderAndPadding();
+
+    clearNeedsPreferredWidthsUpdate();
 }
 
-void RenderMathMLMenclose::layoutBlock(bool relayoutChildren, LayoutUnit)
+void RenderMathMLMenclose::layoutBlock(RelayoutChildren relayoutChildren, LayoutUnit)
 {
     ASSERT(needsLayout());
 
-    if (!relayoutChildren && simplifiedLayout())
+    insertPositionedChildrenIntoContainingBlock();
+
+    if (relayoutChildren == RelayoutChildren::No && simplifiedLayout())
         return;
+
+    layoutFloatingChildren();
+
+    recomputeLogicalWidth();
+    computeAndSetBlockDirectionMarginsOfChildren();
 
     LayoutUnit contentWidth, contentAscent, contentDescent;
     stretchVerticalOperatorsAndLayoutChildren();
@@ -184,18 +198,18 @@ void RenderMathMLMenclose::layoutBlock(bool relayoutChildren, LayoutUnit)
     SpaceAroundContent space = spaceAroundContent(contentWidth, contentAscent + contentDescent);
     setLogicalWidth(space.left + contentWidth + space.right);
     setLogicalHeight(space.top + contentAscent + contentDescent + space.bottom);
-
-    LayoutPoint contentLocation(space.left, space.top);
-    for (auto* child = firstChildBox(); child; child = child->nextSiblingBox())
-        child->setLocation(child->location() + contentLocation);
+    shiftInFlowChildren(space.left, space.top);
 
     m_contentRect = LayoutRect(space.left, space.top, contentWidth, contentAscent + contentDescent);
 
-    layoutPositionedObjects(relayoutChildren);
+    auto sizes = sizeAppliedToMathContent(LayoutPhase::Layout);
+    auto shift = applySizeToMathContent(LayoutPhase::Layout, sizes);
+    shiftInFlowChildren(shift, 0);
 
-    updateScrollInfoAfterLayout();
+    adjustLayoutForBorderAndPadding();
+    m_contentRect.moveBy(LayoutPoint(borderLeft() + paddingLeft(), borderAndPaddingBefore()));
 
-    clearNeedsLayout();
+    layoutOutOfFlowBoxes(relayoutChildren);
 }
 
 // GraphicsContext::drawLine does not seem appropriate to draw menclose lines.
@@ -212,7 +226,7 @@ void RenderMathMLMenclose::paint(PaintInfo& info, const LayoutPoint& paintOffset
 {
     RenderMathMLRow::paint(info, paintOffset);
 
-    if (info.context().paintingDisabled() || info.phase != PaintPhase::Foreground || style().visibility() != Visibility::Visible)
+    if (info.context().paintingDisabled() || info.phase != PaintPhase::Foreground || style().usedVisibility() != Visibility::Visible)
         return;
 
     LayoutUnit thickness = ruleThickness();
@@ -223,7 +237,7 @@ void RenderMathMLMenclose::paint(PaintInfo& info, const LayoutPoint& paintOffset
 
     paintInfo.context().setStrokeThickness(thickness);
     paintInfo.context().setStrokeStyle(StrokeStyle::SolidStroke);
-    paintInfo.context().setStrokeColor(style().visitedDependentColorWithColorFilter(CSSPropertyColor));
+    paintInfo.context().setStrokeColor(style().visitedDependentColorApplyingColorFilter());
     paintInfo.context().setFillColor(Color::transparentBlack);
     paintInfo.applyTransform(AffineTransform().translate(paintOffset + location()));
 
@@ -299,8 +313,8 @@ void RenderMathMLMenclose::paint(PaintInfo& info, const LayoutPoint& paintOffset
     // by inflating the content box by 3\xi_8 + \xi_8/2 = 7\xi_8/2
     if (hasNotation(MathMLMencloseElement::RoundedBox)) {
         LayoutSize radiiSize(3 * thickness, 3 * thickness);
-        RoundedRect::Radii radii(radiiSize, radiiSize, radiiSize, radiiSize);
-        RoundedRect roundedRect(m_contentRect, radii);
+        LayoutRoundedRect::Radii radii(radiiSize, radiiSize, radiiSize, radiiSize);
+        LayoutRoundedRect roundedRect(m_contentRect, radii);
         roundedRect.inflate(7 * thickness / 2);
         Path path;
         path.addRoundedRect(roundedRect);
@@ -339,8 +353,8 @@ void RenderMathMLMenclose::paint(PaintInfo& info, const LayoutPoint& paintOffset
     // - The height is \xi_8/2 + contentHeight * \sqrt{2} + \xi_8/2
     if (hasNotation(MathMLMencloseElement::Circle)) {
         LayoutRect ellipseRect;
-        ellipseRect.setWidth(m_contentRect.width() * sqrtOfTwoFloat + thickness);
-        ellipseRect.setHeight(m_contentRect.height() * sqrtOfTwoFloat + thickness);
+        ellipseRect.setWidth(m_contentRect.width() * std::numbers::sqrt2_v<float> + thickness);
+        ellipseRect.setHeight(m_contentRect.height() * std::numbers::sqrt2_v<float> + thickness);
         ellipseRect.setX(m_contentRect.x() - (ellipseRect.width() - m_contentRect.width()) / 2);
         ellipseRect.setY(m_contentRect.y() - (ellipseRect.height() - m_contentRect.height()) / 2);
         Path path;

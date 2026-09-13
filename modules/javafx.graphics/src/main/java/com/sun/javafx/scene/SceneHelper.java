@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,8 +53,16 @@ public final class SceneHelper {
         sceneAccessor.enableInputMethodEvents(scene, enable);
     }
 
-    public static void processKeyEvent(Scene scene, KeyEvent e) {
-        sceneAccessor.processKeyEvent(scene, e);
+    public static InputMethodStateManager getInputMethodStateManager(Scene scene) {
+        return sceneAccessor.getInputMethodStateManager(scene);
+    }
+
+    public static void finishInputMethodComposition(Scene scene) {
+        sceneAccessor.finishInputMethodComposition(scene);
+    }
+
+    public static boolean processKeyEvent(Scene scene, KeyEvent e) {
+        return sceneAccessor.processKeyEvent(scene, e);
     }
 
     public static void processMouseEvent(Scene scene, MouseEvent e) {
@@ -102,6 +110,10 @@ public final class SceneHelper {
         return sceneAccessor.getAccessible(scene);
     }
 
+    public static SceneContext getSceneContext(Scene scene) {
+        return sceneAccessor.getSceneContext(scene);
+    }
+
     public static void setSceneAccessor(final SceneAccessor newAccessor) {
         if (sceneAccessor != null) {
             throw new IllegalStateException();
@@ -118,7 +130,11 @@ public final class SceneHelper {
     public interface SceneAccessor {
         void enableInputMethodEvents(Scene scene, boolean enable);
 
-        void processKeyEvent(Scene scene, KeyEvent e);
+        InputMethodStateManager getInputMethodStateManager(Scene scene);
+
+        void finishInputMethodComposition(Scene scene);
+
+        boolean processKeyEvent(Scene scene, KeyEvent e);
 
         void processMouseEvent(Scene scene, MouseEvent e);
 
@@ -143,6 +159,8 @@ public final class SceneHelper {
         void setTransientFocusContainer(Scene scene, Node node);
 
         Accessible getAccessible(Scene scene);
+
+        SceneContext getSceneContext(Scene scene);
     }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,30 +27,34 @@
 #include "CodeBlockSet.h"
 
 #include "CodeBlock.h"
+#include "HeapInlines.h"
 #include <wtf/CommaPrinter.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
 
-CodeBlockSet::CodeBlockSet()
-{
-}
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CodeBlockSet);
 
-CodeBlockSet::~CodeBlockSet()
-{
-}
+CodeBlockSet::CodeBlockSet() = default;
+
+CodeBlockSet::~CodeBlockSet() = default;
 
 bool CodeBlockSet::contains(const AbstractLocker&, void* candidateCodeBlock)
 {
     RELEASE_ASSERT(m_lock.isLocked());
     CodeBlock* codeBlock = static_cast<CodeBlock*>(candidateCodeBlock);
-    if (!HashSet<CodeBlock*>::isValidValue(codeBlock))
+    if (!UncheckedKeyHashSet<CodeBlock*>::isValidValue(codeBlock))
         return false;
     return m_codeBlocks.contains(codeBlock);
 }
 
-void CodeBlockSet::clearCurrentlyExecuting()
+void CodeBlockSet::clearCurrentlyExecutingAndRemoveDeadCodeBlocks(VM& vm)
 {
+    ASSERT(vm.heap.isInPhase(CollectorPhase::End));
     m_currentlyExecuting.clear();
+    m_codeBlocks.removeIf([&](CodeBlock* codeBlock) {
+        return !vm.heap.isMarked(codeBlock);
+    });
 }
 
 bool CodeBlockSet::isCurrentlyExecuting(CodeBlock* codeBlock)
@@ -61,14 +65,14 @@ bool CodeBlockSet::isCurrentlyExecuting(CodeBlock* codeBlock)
 void CodeBlockSet::dump(PrintStream& out) const
 {
     CommaPrinter comma;
-    out.print("{codeBlocks = [");
+    out.print("{codeBlocks = ["_s);
     for (CodeBlock* codeBlock : m_codeBlocks)
         out.print(comma, pointerDump(codeBlock));
-    out.print("], currentlyExecuting = [");
+    out.print("], currentlyExecuting = ["_s);
     comma = CommaPrinter();
     for (CodeBlock* codeBlock : m_currentlyExecuting)
         out.print(comma, pointerDump(codeBlock));
-    out.print("]}");
+    out.print("]}"_s);
 }
 
 void CodeBlockSet::add(CodeBlock* codeBlock)

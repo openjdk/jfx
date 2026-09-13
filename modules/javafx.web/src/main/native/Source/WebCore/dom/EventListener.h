@@ -20,7 +20,8 @@
 
 #pragma once
 
-#include <wtf/RefCounted.h>
+#include <cstdint>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 
 namespace JSC {
@@ -35,7 +36,7 @@ class ScriptExecutionContext;
 class Event;
 class EventTarget;
 
-class EventListener : public CanMakeWeakPtr<EventListener>, public RefCounted<EventListener> {
+class EventListener : public RefCountedAndCanMakeWeakPtr<EventListener> {
 public:
     enum Type : uint8_t {
         JSEventListenerType,

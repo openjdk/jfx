@@ -41,6 +41,10 @@ IncludeFile.processIncludeOptions()
 inputFlnm = ARGV.shift
 settingsFlnm = ARGV.shift
 outputFlnm = ARGV.shift
+tempFlnm = File.join(
+    ENV['TARGET_TEMP_DIR'] || File.dirname(outputFlnm),
+    "#{File.basename(outputFlnm)}.part"
+)
 
 inputBackends = canonicalizeBackendNames(ARGV.shift.split(/[,\s]+/))
 includeOnlyBackends(inputBackends)
@@ -96,7 +100,7 @@ if $options[:depfile]
     depfile.puts(Shellwords.join(sources.sort))
 end
 
-File.open(outputFlnm, "w") {
+File.open(tempFlnm, "w") {
     | outp |
     $output = outp
     outp.puts inputHash
@@ -112,11 +116,7 @@ File.open(outputFlnm, "w") {
             constsList = constsList(lowLevelAST)
 
             emitCodeInConfiguration(concreteSettings, lowLevelAST, backend) {
-
                 # Windows complains about signed integers being cast to unsigned but we just want the bits.
-                outp.puts "\#if COMPILER(MSVC)"
-                outp.puts "\#pragma warning(disable:4308)"
-                outp.puts "\#endif"
                 constsList.each_with_index {
                     | const, index |
                     outp.puts "constexpr int64_t constValue#{index} = static_cast<int64_t>(#{const.value});"
@@ -150,5 +150,5 @@ File.open(outputFlnm, "w") {
     }
 
     outp.puts "static const int64_t offsetExtractorTable[] = { };" if not configurationList.size
-
 }
+File.rename(tempFlnm, outputFlnm)

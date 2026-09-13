@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2019 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "TypeProfiler.h"
 
 #include "TypeLocation.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace JSC {
@@ -34,6 +35,8 @@ namespace JSC {
 namespace TypeProfilerInternal {
 static constexpr bool verbose = false;
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TypeProfiler);
 
 TypeProfiler::TypeProfiler()
     : m_nextUniqueVariableID(1)
@@ -85,17 +88,17 @@ String TypeProfiler::typeInformationForExpressionAtOffset(TypeProfilerSearchDesc
 
     json.append('{');
 
-    json.append("\"globalTypeSet\":");
+    json.append("\"globalTypeSet\":"_s);
     if (location->m_globalTypeSet && location->m_globalVariableID != TypeProfilerNoGlobalIDExists)
         json.append(location->m_globalTypeSet->toJSONString());
     else
-        json.append("null");
+        json.append("null"_s);
     json.append(',');
 
-    json.append("\"instructionTypeSet\":", location->m_instructionTypeSet->toJSONString(), ',');
+    json.append("\"instructionTypeSet\":"_s, location->m_instructionTypeSet->toJSONString(), ',');
 
     bool isOverflown = location->m_instructionTypeSet->isOverflown() || (location->m_globalTypeSet && location->m_globalTypeSet->isOverflown());
-    json.append("\"isOverflown\":", isOverflown ? "true" : "false");
+    json.append("\"isOverflown\":"_s, isOverflown ? "true"_s : "false"_s);
 
     json.append('}');
 

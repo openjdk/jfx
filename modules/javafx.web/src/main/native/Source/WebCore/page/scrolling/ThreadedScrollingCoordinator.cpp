@@ -32,8 +32,11 @@
 #include "ScrollingThread.h"
 #include "ThreadedScrollingTree.h"
 #include "WheelEventTestMonitor.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ThreadedScrollingCoordinator);
 
 ThreadedScrollingCoordinator::ThreadedScrollingCoordinator(Page* page)
     : AsyncScrollingCoordinator(page)
@@ -47,31 +50,34 @@ void ThreadedScrollingCoordinator::pageDestroyed()
     AsyncScrollingCoordinator::pageDestroyed();
 
     // Invalidating the scrolling tree will break the reference cycle between the ScrollingCoordinator and ScrollingTree objects.
-    RefPtr scrollingTree = static_pointer_cast<ThreadedScrollingTree>(releaseScrollingTree());
-    ScrollingThread::dispatch([scrollingTree = WTFMove(scrollingTree)] {
+    RefPtr scrollingTree = downcast<ThreadedScrollingTree>(releaseScrollingTree());
+    ScrollingThread::dispatch([scrollingTree = WTF::move(scrollingTree)] {
         scrollingTree->invalidate();
     });
 }
 
 void ThreadedScrollingCoordinator::commitTreeStateIfNeeded()
 {
-    willCommitTree();
+    scrollingStateTrees().forEach([&](auto& key, auto& value) {
+        willCommitTree(key);
 
-    LOG_WITH_STREAM(Scrolling, stream << "ThreadedScrollingCoordinator::commitTreeState, has changes " << scrollingStateTree()->hasChangedProperties());
+        LOG_WITH_STREAM(Scrolling, stream << "ThreadedScrollingCoordinator::commitTreeState, has changes " << value->hasChangedProperties());
 
-    if (!scrollingStateTree()->hasChangedProperties())
+        if (!value->hasChangedProperties())
         return;
 
     LOG_WITH_STREAM(ScrollingTree, stream << "ThreadedScrollingCoordinator::commitTreeState: state tree " << scrollingStateTreeAsText(debugScrollingStateTreeAsTextBehaviors));
 
-    auto stateTree = scrollingStateTree()->commit(LayerRepresentation::PlatformLayerRepresentation);
-    scrollingTree()->commitTreeState(WTFMove(stateTree));
+        auto stateTree = commitTreeStateForRootFrameID(key, LayerRepresentation::PlatformLayerRepresentation);
+        stateTree->setRootFrameIdentifier(key);
+        scrollingTree()->commitTreeState(WTF::move(stateTree));
+    });
 }
 
 WheelEventHandlingResult ThreadedScrollingCoordinator::handleWheelEventForScrolling(const PlatformWheelEvent& wheelEvent, ScrollingNodeID targetNodeID, std::optional<WheelScrollGestureState> gestureState)
 {
     ASSERT(isMainThread());
-    ASSERT(m_page);
+    ASSERT(page());
     ASSERT(scrollingTree());
 
     if (scrollingTree()->willWheelEventStartSwipeGesture(wheelEvent))
@@ -79,10 +85,10 @@ WheelEventHandlingResult ThreadedScrollingCoordinator::handleWheelEventForScroll
 
     LOG_WITH_STREAM(Scrolling, stream << "ThreadedScrollingCoordinator::handleWheelEventForScrolling " << wheelEvent << " - sending event to scrolling thread, node " << targetNodeID << " gestureState " << gestureState);
 
-    auto deferrer = WheelEventTestMonitorCompletionDeferrer { m_page->wheelEventTestMonitor().get(), reinterpret_cast<WheelEventTestMonitor::ScrollableAreaIdentifier>(targetNodeID), WheelEventTestMonitor::PostMainThreadWheelEventHandling };
+    auto deferrer = WheelEventTestMonitorCompletionDeferrer { page()->wheelEventTestMonitor().get(), targetNodeID, WheelEventTestMonitor::DeferReason::PostMainThreadWheelEventHandling };
 
     RefPtr<ThreadedScrollingTree> threadedScrollingTree = downcast<ThreadedScrollingTree>(scrollingTree());
-    ScrollingThread::dispatch([threadedScrollingTree, wheelEvent, targetNodeID, gestureState, deferrer = WTFMove(deferrer)] {
+    ScrollingThread::dispatch([threadedScrollingTree, wheelEvent, targetNodeID, gestureState, deferrer = WTF::move(deferrer)] {
         threadedScrollingTree->handleWheelEventAfterMainThread(wheelEvent, targetNodeID, gestureState);
     });
     return WheelEventHandlingResult::handled();
@@ -109,7 +115,10 @@ void ThreadedScrollingCoordinator::didScheduleRenderingUpdate()
 
 void ThreadedScrollingCoordinator::willStartRenderingUpdate()
 {
-    RefPtr<ThreadedScrollingTree> threadedScrollingTree = downcast<ThreadedScrollingTree>(scrollingTree());
+    ASSERT(isMainThread());
+    if (RefPtr page = this->page())
+        page->layoutIfNeeded(LayoutOptions::UpdateCompositingLayers);
+    RefPtr threadedScrollingTree = downcast<ThreadedScrollingTree>(scrollingTree());
     threadedScrollingTree->willStartRenderingUpdate();
     commitTreeStateIfNeeded();
     synchronizeStateFromScrollingTree();

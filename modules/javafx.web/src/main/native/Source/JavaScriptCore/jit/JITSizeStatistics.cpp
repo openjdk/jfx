@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,10 +29,14 @@
 #if ENABLE(JIT)
 
 #include "CCallHelpers.h"
+#include "JITPlan.h"
 #include "LinkBuffer.h"
 #include <wtf/BubbleSort.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(JITSizeStatistics);
 
 JITSizeStatistics::Marker JITSizeStatistics::markStart(String identifier, CCallHelpers& jit)
 {
@@ -42,12 +46,13 @@ JITSizeStatistics::Marker JITSizeStatistics::markStart(String identifier, CCallH
     return marker;
 }
 
-void JITSizeStatistics::markEnd(Marker marker, CCallHelpers& jit)
+void JITSizeStatistics::markEnd(Marker marker, CCallHelpers& jit, JITPlan& planRef)
 {
     CCallHelpers::Label end = jit.labelIgnoringWatchpoints();
+    auto* plan = &planRef;
     jit.addLinkTask([=, this] (LinkBuffer& linkBuffer) {
         size_t size = linkBuffer.locationOf<NoPtrTag>(end).untaggedPtr<char*>() - linkBuffer.locationOf<NoPtrTag>(marker.start).untaggedPtr<char*>();
-        linkBuffer.addMainThreadFinalizationTask([=, this] {
+        plan->addMainThreadFinalizationTask([=, this] {
             auto& entry = m_data.add(marker.identifier, Entry { }).iterator->value;
             ++entry.count;
             entry.totalBytes += size;
@@ -62,7 +67,7 @@ void JITSizeStatistics::dump(PrintStream& out) const
     for (auto pair : m_data)
         entries.append(std::make_pair(pair.key, pair.value));
 
-    std::sort(entries.begin(), entries.end(), [] (const auto& lhs, const auto& rhs) {
+    std::ranges::sort(entries, [](const auto& lhs, const auto& rhs) {
         return lhs.second.totalBytes > rhs.second.totalBytes;
     });
 

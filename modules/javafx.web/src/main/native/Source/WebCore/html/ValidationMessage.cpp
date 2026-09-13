@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010, 2012 Google Inc. All rights reserved.
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,7 +31,9 @@
 
 #include "config.h"
 #include "ValidationMessage.h"
+#include "DocumentPage.h"
 
+#include "ContainerNodeInlines.h"
 #include "CSSPropertyNames.h"
 #include "CSSValueKeywords.h"
 #include "ElementInlines.h"
@@ -44,15 +46,24 @@
 #include "RenderBoxModelObjectInlines.h"
 #include "ScriptDisallowedScope.h"
 #include "Settings.h"
-#include "ShadowPseudoIds.h"
 #include "ShadowRoot.h"
 #include "StyleResolver.h"
 #include "Text.h"
+#include "UserAgentParts.h"
 #include "ValidationMessageClient.h"
+#include <wtf/TZoneMalloc.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ValidationMessage);
+
 using namespace HTMLNames;
+
+Ref<ValidationMessage> ValidationMessage::create(HTMLElement& element)
+{
+    return adoptRef(*new ValidationMessage(element));
+}
 
 ValidationMessage::ValidationMessage(HTMLElement& element)
     : m_element(element)
@@ -95,7 +106,7 @@ void ValidationMessage::updateValidationMessage(HTMLElement& element, const Stri
         if (!updatedMessage.isEmpty()) {
             const AtomString& title = m_element->attributeWithoutSynchronization(titleAttr);
             if (!title.isEmpty())
-                updatedMessage = updatedMessage + '\n' + title;
+                updatedMessage = makeString(updatedMessage, '\n', title);
         }
     }
 
@@ -105,20 +116,20 @@ void ValidationMessage::updateValidationMessage(HTMLElement& element, const Stri
     }
 
     m_element = element;
-    setMessage(updatedMessage);
+    setMessage(WTF::move(updatedMessage));
 }
 
-void ValidationMessage::setMessage(const String& message)
+void ValidationMessage::setMessage(String&& message)
 {
     if (ValidationMessageClient* client = validationMessageClient()) {
-        client->showValidationMessage(*m_element, message);
+        client->showValidationMessage(*m_element, WTF::move(message));
         return;
     }
 
     // Don't modify the DOM tree in this context.
     // If so, an assertion in Element::isFocusable() fails.
     ASSERT(!message.isEmpty());
-    m_message = message;
+    m_message = WTF::move(message);
     if (!m_bubble)
         m_timer = makeUnique<Timer>(*this, &ValidationMessage::buildBubbleTree);
     else
@@ -134,7 +145,7 @@ void ValidationMessage::setMessageDOMAndStartTimer()
     m_messageHeading->removeChildren();
     m_messageBody->removeChildren();
 
-    auto& document = m_messageHeading->document();
+    Ref document = m_messageHeading->document();
     auto lines = StringView(m_message).split('\n');
     auto it = lines.begin();
     if (it != lines.end()) {
@@ -147,7 +158,7 @@ void ValidationMessage::setMessageDOMAndStartTimer()
         }
     }
 
-    int magnification = document.page() ? document.page()->settings().validationMessageTimerMagnification() : -1;
+    int magnification = document->page() ? document->page()->settings().validationMessageTimerMagnification() : -1;
     if (magnification <= 0)
         m_timer = nullptr;
     else {
@@ -196,41 +207,41 @@ void ValidationMessage::buildBubbleTree()
     ScriptDisallowedScope::InMainThread scriptDisallowedScope;
     ScriptDisallowedScope::EventAllowedScope allowedScope(shadowRoot);
 
-    Document& document = m_element->document();
-    m_bubble = HTMLDivElement::create(document);
+    Ref document = m_element->document();
+    m_bubble = HTMLDivElement::create(document.get());
     shadowRoot->appendChild(*m_bubble);
-    m_bubble->setPseudo(ShadowPseudoIds::webkitValidationBubble());
+    m_bubble->setUserAgentPart(UserAgentParts::webkitValidationBubble());
     // Need to force position:absolute because RenderMenuList doesn't assume it
     // contains non-absolute or non-fixed renderers as children.
     m_bubble->setInlineStyleProperty(CSSPropertyPosition, CSSValueAbsolute);
 
-    auto clipper = HTMLDivElement::create(document);
+    Ref clipper = HTMLDivElement::create(document.get());
     m_bubble->appendChild(clipper);
-    clipper->setPseudo(ShadowPseudoIds::webkitValidationBubbleArrowClipper());
-    auto bubbleArrow = HTMLDivElement::create(document);
+    clipper->setUserAgentPart(UserAgentParts::webkitValidationBubbleArrowClipper());
+    Ref bubbleArrow = HTMLDivElement::create(document.get());
     clipper->appendChild(bubbleArrow);
-    bubbleArrow->setPseudo(ShadowPseudoIds::webkitValidationBubbleArrow());
+    bubbleArrow->setUserAgentPart(UserAgentParts::webkitValidationBubbleArrow());
 
-    auto message = HTMLDivElement::create(document);
+    Ref message = HTMLDivElement::create(document.get());
     m_bubble->appendChild(message);
-    message->setPseudo(ShadowPseudoIds::webkitValidationBubbleMessage());
-    auto icon = HTMLDivElement::create(document);
+    message->setUserAgentPart(UserAgentParts::webkitValidationBubbleMessage());
+    Ref icon = HTMLDivElement::create(document.get());
     message->appendChild(icon);
-    icon->setPseudo(ShadowPseudoIds::webkitValidationBubbleIcon());
-    auto textBlock = HTMLDivElement::create(document);
+    icon->setUserAgentPart(UserAgentParts::webkitValidationBubbleIcon());
+    Ref textBlock = HTMLDivElement::create(document.get());
     message->appendChild(textBlock);
-    textBlock->setPseudo(ShadowPseudoIds::webkitValidationBubbleTextBlock());
-    m_messageHeading = HTMLDivElement::create(document);
+    textBlock->setUserAgentPart(UserAgentParts::webkitValidationBubbleTextBlock());
+    m_messageHeading = HTMLDivElement::create(document.get());
     textBlock->appendChild(*m_messageHeading);
-    m_messageHeading->setPseudo(ShadowPseudoIds::webkitValidationBubbleHeading());
-    m_messageBody = HTMLDivElement::create(document);
+    m_messageHeading->setUserAgentPart(UserAgentParts::webkitValidationBubbleHeading());
+    m_messageBody = HTMLDivElement::create(document.get());
     textBlock->appendChild(*m_messageBody);
-    m_messageBody->setPseudo(ShadowPseudoIds::webkitValidationBubbleBody());
+    m_messageBody->setUserAgentPart(UserAgentParts::webkitValidationBubbleBody());
 
     setMessageDOMAndStartTimer();
 
     // FIXME: Use transition to show the bubble.
-    document.scheduleToAdjustValidationMessagePosition(*this);
+    document->scheduleToAdjustValidationMessagePosition(*this);
 }
 
 void ValidationMessage::requestToHideMessage()
@@ -255,11 +266,12 @@ bool ValidationMessage::shadowTreeContains(const Node& node) const
 void ValidationMessage::deleteBubbleTree()
 {
     ASSERT(!validationMessageClient());
-    if (m_bubble) {
-        ScriptDisallowedScope::EventAllowedScope allowedScope(*m_element->userAgentShadowRoot());
+    if (RefPtr bubble = m_bubble) {
+        Ref shadowRoot = *m_element->userAgentShadowRoot();
+        ScriptDisallowedScope::EventAllowedScope allowedScope(shadowRoot);
         m_messageHeading = nullptr;
         m_messageBody = nullptr;
-        m_element->userAgentShadowRoot()->removeChild(*m_bubble);
+        shadowRoot->removeChild(*bubble);
         m_bubble = nullptr;
     }
     m_message = String();

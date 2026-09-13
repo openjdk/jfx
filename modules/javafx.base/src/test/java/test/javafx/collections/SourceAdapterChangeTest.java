@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,12 +33,11 @@ import javafx.beans.Observable;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.SortedList;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-@RunWith(Parameterized.class)
 public class SourceAdapterChangeTest {
 
     @FunctionalInterface
@@ -60,7 +59,6 @@ public class SourceAdapterChangeTest {
                 }
             };
 
-    @Parameterized.Parameters
     public static Collection createParameters() {
         Object[][] data = new Object[][] {
             { unmodifiableObservableList },
@@ -71,17 +69,13 @@ public class SourceAdapterChangeTest {
         return Arrays.asList(data);
     }
 
-    final ListFactory listFactory;
+    ListFactory listFactory;
     ObservableList<Person> items;
     ObservableList<Person> list;
     MockListObserver<Person> mlo;
 
-    public SourceAdapterChangeTest(ListFactory listFactory) {
+    private void setUp(ListFactory listFactory) throws Exception {
         this.listFactory = listFactory;
-    }
-
-    @Before
-    public void setUp() throws Exception {
         items = FXCollections.observableArrayList(
                 (Person p) -> new Observable[]{p.name});
         items.addAll(
@@ -92,8 +86,10 @@ public class SourceAdapterChangeTest {
         list.addListener(mlo);
     }
 
-    @Test
-    public void testUpdate() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testUpdate(ListFactory listFactory) throws Exception {
+        setUp(listFactory);
         items.get(3).name.set("zero"); // four -> zero
         ObservableList<Person> expected = FXCollections.observableArrayList(
                 new Person("one"), new Person("two"), new Person("three"),
@@ -101,8 +97,10 @@ public class SourceAdapterChangeTest {
         mlo.check1Update(expected, 3, 4);
     }
 
-    @Test
-    public void testPermutation() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testPermutation(ListFactory listFactory) throws Exception {
+        setUp(listFactory);
         FXCollections.sort(items);
         ObservableList<Person> expected = FXCollections.observableArrayList(
                 new Person("five"), new Person("four"), new Person("one"),
@@ -110,8 +108,10 @@ public class SourceAdapterChangeTest {
         mlo.check1Permutation(expected, new int[]{2, 4, 3, 1, 0});
     }
 
-    @Test
-    public void testPermutationUpdate() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testPermutationUpdate(ListFactory listFactory) throws Exception {
+        setUp(listFactory);
         SortedList<Person> sorted = items.sorted((o1, o2) -> o1.compareTo(o2));
         list.removeListener(mlo);
         list = listFactory.createList(sorted);

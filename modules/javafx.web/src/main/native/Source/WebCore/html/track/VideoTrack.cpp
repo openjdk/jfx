@@ -35,17 +35,21 @@
 #if ENABLE(VIDEO)
 
 #include "CommonAtomStrings.h"
+#include "ScriptExecutionContext.h"
 #include "VideoTrackClient.h"
 #include "VideoTrackConfiguration.h"
 #include "VideoTrackList.h"
 #include "VideoTrackPrivate.h"
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(MEDIA_SOURCE)
 #include "SourceBuffer.h"
 #endif
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(VideoTrack);
 
 const AtomString& VideoTrack::signKeyword()
 {
@@ -54,19 +58,19 @@ const AtomString& VideoTrack::signKeyword()
 }
 
 VideoTrack::VideoTrack(ScriptExecutionContext* context, VideoTrackPrivate& trackPrivate)
-    : MediaTrackBase(context, MediaTrackBase::VideoTrack, trackPrivate.id(), trackPrivate.label(), trackPrivate.language())
+    : MediaTrackBase(context, MediaTrackBase::VideoTrack, trackPrivate.trackUID(), trackPrivate.id(), trackPrivate.label(), trackPrivate.language())
     , m_private(trackPrivate)
     , m_configuration(VideoTrackConfiguration::create())
     , m_selected(trackPrivate.selected())
 {
-    m_private->setClient(*this);
+    addClientToTrackPrivateBase(*this, trackPrivate);
     updateKindFromPrivate();
     updateConfigurationFromPrivate();
 }
 
 VideoTrack::~VideoTrack()
 {
-    m_private->clearClient();
+    removeClientFromTrackPrivateBase(Ref { m_private });
 }
 
 void VideoTrack::setPrivate(VideoTrackPrivate& trackPrivate)
@@ -74,27 +78,27 @@ void VideoTrack::setPrivate(VideoTrackPrivate& trackPrivate)
     if (m_private.ptr() == &trackPrivate)
         return;
 
-    m_private->clearClient();
+    removeClientFromTrackPrivateBase(Ref { m_private });
     m_private = trackPrivate;
-    m_private->setClient(*this);
+    addClientToTrackPrivateBase(*this, trackPrivate);
 #if !RELEASE_LOG_DISABLED
-    m_private->setLogger(logger(), logIdentifier());
+    trackPrivate.setLogger(protectedLogger().get(), logIdentifier());
 #endif
 
-    m_private->setSelected(m_selected);
+    trackPrivate.setSelected(m_selected);
     updateKindFromPrivate();
     updateConfigurationFromPrivate();
-    setId(m_private->id());
+    setId(trackPrivate.id());
 }
 
 bool VideoTrack::isValidKind(const AtomString& value) const
 {
-    return value == alternativeAtom()
-        || value == commentaryAtom()
-        || value == captionsAtom()
-        || value == mainAtom()
-        || value == signKeyword()
-        || value == subtitlesAtom();
+    return value == "alternative"_s
+        || value == "commentary"_s
+        || value == "captions"_s
+        || value == "main"_s
+        || value == "sign"_s
+        || value == "subtitles"_s;
 }
 
 void VideoTrack::setSelected(const bool selected)
@@ -103,7 +107,7 @@ void VideoTrack::setSelected(const bool selected)
         return;
 
     m_selected = selected;
-    m_private->setSelected(selected);
+    protectedPrivate()->setSelected(selected);
 
     m_clients.forEach([this] (auto& client) {
         client.videoTrackSelectedChanged(*this);
@@ -124,7 +128,7 @@ void VideoTrack::clearClient(VideoTrackClient& client)
 
 size_t VideoTrack::inbandTrackIndex()
 {
-    return m_private->trackIndex();
+    return protectedPrivate()->trackIndex();
 }
 
 void VideoTrack::selectedChanged(bool selected)
@@ -138,9 +142,12 @@ void VideoTrack::selectedChanged(bool selected)
 void VideoTrack::configurationChanged(const PlatformVideoTrackConfiguration& configuration)
 {
     m_configuration->setState(configuration);
+    m_clients.forEach([this] (auto& client) {
+        client.videoTrackConfigurationChanged(*this);
+    });
 }
 
-void VideoTrack::idChanged(const AtomString& id)
+void VideoTrack::idChanged(TrackID id)
 {
     setId(id);
     m_clients.forEach([this] (auto& client) {
@@ -148,17 +155,17 @@ void VideoTrack::idChanged(const AtomString& id)
     });
 }
 
-void VideoTrack::labelChanged(const AtomString& label)
+void VideoTrack::labelChanged(const String& label)
 {
-    setLabel(label);
+    setLabel(AtomString { label.isolatedCopy() });
     m_clients.forEach([this] (auto& client) {
         client.videoTrackLabelChanged(*this);
     });
 }
 
-void VideoTrack::languageChanged(const AtomString& language)
+void VideoTrack::languageChanged(const String& language)
 {
-    setLanguage(language);
+    setLanguage(AtomString { language.isolatedCopy() });
 }
 
 void VideoTrack::willRemove()
@@ -210,26 +217,26 @@ void VideoTrack::setLanguage(const AtomString& language)
 
 void VideoTrack::updateKindFromPrivate()
 {
-    switch (m_private->kind()) {
-    case VideoTrackPrivate::Alternative:
-        setKind(alternativeAtom());
+    switch (protectedPrivate()->kind()) {
+    case VideoTrackPrivate::Kind::Alternative:
+        setKind("alternative"_s);
         return;
-    case VideoTrackPrivate::Captions:
-        setKind(captionsAtom());
+    case VideoTrackPrivate::Kind::Captions:
+        setKind("captions"_s);
         return;
-    case VideoTrackPrivate::Main:
-        setKind(mainAtom());
+    case VideoTrackPrivate::Kind::Main:
+        setKind("main"_s);
         return;
-    case VideoTrackPrivate::Sign:
-        setKind(VideoTrack::signKeyword());
+    case VideoTrackPrivate::Kind::Sign:
+        setKind("sign"_s);
         return;
-    case VideoTrackPrivate::Subtitles:
-        setKind(subtitlesAtom());
+    case VideoTrackPrivate::Kind::Subtitles:
+        setKind("subtitles"_s);
         return;
-    case VideoTrackPrivate::Commentary:
-        setKind(commentaryAtom());
+    case VideoTrackPrivate::Kind::Commentary:
+        setKind("commentary"_s);
         return;
-    case VideoTrackPrivate::None:
+    case VideoTrackPrivate::Kind::None:
         setKind(emptyAtom());
         return;
     }
@@ -241,11 +248,16 @@ void VideoTrack::updateConfigurationFromPrivate()
     m_configuration->setState(m_private->configuration());
 }
 
+Ref<VideoTrackPrivate> VideoTrack::protectedPrivate() const
+{
+    return m_private;
+}
+
 #if !RELEASE_LOG_DISABLED
-void VideoTrack::setLogger(const Logger& logger, const void* logIdentifier)
+void VideoTrack::setLogger(const Logger& logger, uint64_t logIdentifier)
 {
     TrackBase::setLogger(logger, logIdentifier);
-    m_private->setLogger(logger, this->logIdentifier());
+    protectedPrivate()->setLogger(logger, this->logIdentifier());
 }
 #endif
 

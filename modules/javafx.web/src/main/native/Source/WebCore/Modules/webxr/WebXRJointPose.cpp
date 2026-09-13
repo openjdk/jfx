@@ -28,19 +28,19 @@
 
 #if ENABLE(WEBXR) && ENABLE(WEBXR_HANDS)
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WebXRJointPose);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebXRJointPose);
 
 Ref<WebXRJointPose> WebXRJointPose::create(Ref<WebXRRigidTransform>&& transform, bool emulatedPosition, float radius)
 {
-    return adoptRef(*new WebXRJointPose(WTFMove(transform), emulatedPosition, radius));
+    return adoptRef(*new WebXRJointPose(WTF::move(transform), emulatedPosition, radius));
 }
 
 WebXRJointPose::WebXRJointPose(Ref<WebXRRigidTransform>&& transform, bool emulatedPosition, float radius)
-    : WebXRPose(WTFMove(transform), emulatedPosition)
+    : WebXRPose(WTF::move(transform), emulatedPosition)
     , m_radius(radius)
 {
 }

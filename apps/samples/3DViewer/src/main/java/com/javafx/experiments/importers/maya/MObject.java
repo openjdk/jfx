@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -36,6 +36,7 @@ public abstract class MObject {
     final String name;
     MEnv env;
 
+    @Override
     public String toString() {
         return super.toString() + " MObject.name: " + name;
     }

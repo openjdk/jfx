@@ -31,6 +31,10 @@
 #include <mach/mach_traps.h>
 #include <mach/thread_switch.h>
 #endif
+#if BOS(WINDOWS)
+#include <windows.h>
+#endif
+
 #include <thread>
 
 namespace bmalloc {
@@ -40,6 +44,11 @@ static inline void yield()
 #if BOS(DARWIN)
     constexpr mach_msg_timeout_t timeoutInMS = 1;
     thread_switch(MACH_PORT_NULL, SWITCH_OPTION_DEPRESS, timeoutInMS);
+#elif BOS(WINDOWS)
+    // SwitchToThread only yields to threads on the same processor
+    // If that fails we'll Sleep, which will also yield for threads ready to run on other processors
+    if (!SwitchToThread())
+        Sleep(0);
 #else
     sched_yield();
 #endif

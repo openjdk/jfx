@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,19 +30,9 @@ class IOSLayoutTraits extends LayoutTraits
         return IOSInlineMediaControls;
     }
 
-    overridenSupportingObjectClasses()
-    {
-        return null;
-    }
-
     resourceDirectory()
     {
         return "iOS";
-    }
-
-    controlsAlwaysAvailable()
-    {
-        return false;
     }
 
     controlsNeverAvailable()

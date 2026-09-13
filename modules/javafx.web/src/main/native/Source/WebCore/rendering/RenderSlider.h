@@ -28,7 +28,8 @@ class HTMLInputElement;
 class MouseEvent;
 
 class RenderSlider final : public RenderFlexibleBox {
-    WTF_MAKE_ISO_ALLOCATED(RenderSlider);
+    WTF_MAKE_TZONE_ALLOCATED(RenderSlider);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSlider);
 public:
     static const int defaultTrackLength;
 
@@ -36,6 +37,9 @@ public:
     virtual ~RenderSlider();
 
     HTMLInputElement& element() const;
+    Ref<HTMLInputElement> protectedElement() const;
+
+    bool canHaveGeneratedChildren() const override { return false; }
 
     bool inDragMode() const;
 
@@ -43,9 +47,7 @@ public:
 
 private:
     ASCIILiteral renderName() const override { return "RenderSlider"_s; }
-    bool isSlider() const override { return true; }
 
-    LayoutUnit baselinePosition(FontBaseline, bool firstLine, LineDirectionMode, LinePositionMode = PositionOnContainingLine) const override;
     void computeIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const override;
     void computePreferredLogicalWidths() override;
 
@@ -54,4 +56,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSlider, isSlider())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSlider, isRenderSlider())

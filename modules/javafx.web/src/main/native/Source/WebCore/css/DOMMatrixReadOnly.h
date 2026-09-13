@@ -30,7 +30,7 @@
 #include "ScriptWrappable.h"
 #include "TransformationMatrix.h"
 #include <JavaScriptCore/Forward.h>
-#include <variant>
+#include <wtf/NoVirtualDestructorBase.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -42,10 +42,12 @@ class DOMPoint;
 class ScriptExecutionContext;
 struct DOMPointInit;
 
-class DOMMatrixReadOnly : public ScriptWrappable, public RefCounted<DOMMatrixReadOnly> {
-    WTF_MAKE_ISO_ALLOCATED(DOMMatrixReadOnly);
+class DOMMatrixReadOnly : public ScriptWrappable, public RefCounted<DOMMatrixReadOnly>, public NoVirtualDestructorBase {
+    WTF_MAKE_TZONE_ALLOCATED(DOMMatrixReadOnly);
 public:
-    static ExceptionOr<Ref<DOMMatrixReadOnly>> create(ScriptExecutionContext&, std::optional<std::variant<String, Vector<double>>>&&);
+    static ExceptionOr<Ref<DOMMatrixReadOnly>> create(ScriptExecutionContext&, std::optional<Variant<String, Vector<double>>>&&);
+
+    ~DOMMatrixReadOnly();
 
     enum class Is2D : bool { No, Yes };
     static Ref<DOMMatrixReadOnly> create(const TransformationMatrix& matrix, Is2D is2D)
@@ -55,7 +57,7 @@ public:
 
     static Ref<DOMMatrixReadOnly> create(TransformationMatrix&& matrix, Is2D is2D)
     {
-        return adoptRef(*new DOMMatrixReadOnly(WTFMove(matrix), is2D));
+        return adoptRef(*new DOMMatrixReadOnly(WTF::move(matrix), is2D));
     }
 
     static ExceptionOr<Ref<DOMMatrixReadOnly>> fromMatrix(DOMMatrixInit&&);
@@ -102,6 +104,7 @@ public:
     Ref<DOMMatrix> flipY();
     Ref<DOMMatrix> scale(double scaleX = 1, std::optional<double> scaleY = std::nullopt, double scaleZ = 1, double originX = 0, double originY = 0, double originZ = 0);
     Ref<DOMMatrix> scale3d(double scale = 1, double originX = 0, double originY = 0, double originZ = 0);
+    Ref<DOMMatrix> scaleNonUniform(double scaleX = 1, double scaleY = 1);
     Ref<DOMMatrix> rotate(double rotX = 0, std::optional<double> rotY = std::nullopt, std::optional<double> rotZ = std::nullopt); // Angles are in degrees.
     Ref<DOMMatrix> rotateFromVector(double x = 0, double y = 0);
     Ref<DOMMatrix> rotateAxisAngle(double x = 0, double y = 0, double z = 0, double angle = 0); // Angle is in degrees.

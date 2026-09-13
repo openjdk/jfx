@@ -24,7 +24,7 @@
  */
 
 [
-    Conditional=SERVICE_WORKER,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ImageResource {
     required USVString src;
     DOMString sizes;

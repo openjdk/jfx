@@ -138,6 +138,6 @@ static inline void PAS_SIMPLE_FREE_HEAP_ID(_allocation_config_construct)(
         return;
     }
     
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,21 +38,25 @@ public class HTMLUListElementImpl extends HTMLElementImpl implements HTMLUListEl
 
 
 // Attributes
+    @Override
     public boolean getCompact() {
         return getCompactImpl(getPeer());
     }
     native static boolean getCompactImpl(long peer);
 
+    @Override
     public void setCompact(boolean value) {
         setCompactImpl(getPeer(), value);
     }
     native static void setCompactImpl(long peer, boolean value);
 
+    @Override
     public String getType() {
         return getTypeImpl(getPeer());
     }
     native static String getTypeImpl(long peer);
 
+    @Override
     public void setType(String value) {
         setTypeImpl(getPeer(), value);
     }

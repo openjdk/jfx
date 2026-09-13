@@ -18,27 +18,33 @@
  *
  */
 
-#ifndef FontCascadeFonts_h
-#define FontCascadeFonts_h
+#pragma once
 
-#include "Font.h"
-#include "FontRanges.h"
-#include "FontSelector.h"
-#include "GlyphPage.h"
-#include "WidthCache.h"
+#include <WebCore/Font.h>
+#include <WebCore/FontCascadeDescription.h>
+#include <WebCore/FontRanges.h>
+#include <WebCore/FontSelector.h>
+#include <WebCore/GlyphPage.h>
+#include <WebCore/WidthCache.h>
 #include <wtf/EnumeratedArray.h>
 #include <wtf/Forward.h>
+#include <wtf/Function.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/HashTraits.h>
 #include <wtf/MainThread.h>
+#include <wtf/Platform.h>
+#include <wtf/TriState.h>
 
 #if PLATFORM(IOS_FAMILY)
-#include "WebCoreThread.h"
+#include <WebCore/WebCoreThread.h>
 #endif
+
+namespace WTF {
+class TextStream;
+}
 
 namespace WebCore {
 
-class FontCascadeDescription;
 class FontPlatformData;
 class FontSelector;
 class GraphicsContext;
@@ -48,51 +54,59 @@ class MixedFontGlyphPage;
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FontCascadeFonts);
 class FontCascadeFonts : public RefCounted<FontCascadeFonts> {
     WTF_MAKE_NONCOPYABLE(FontCascadeFonts);
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FontCascadeFonts);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FontCascadeFonts, FontCascadeFonts);
 public:
-    static Ref<FontCascadeFonts> create(RefPtr<FontSelector>&& fontSelector) { return adoptRef(*new FontCascadeFonts(WTFMove(fontSelector))); }
+    static Ref<FontCascadeFonts> create() { return adoptRef(*new FontCascadeFonts()); }
     static Ref<FontCascadeFonts> createForPlatformFont(const FontPlatformData& platformData) { return adoptRef(*new FontCascadeFonts(platformData)); }
 
     WEBCORE_EXPORT ~FontCascadeFonts();
 
     bool isForPlatformFont() const { return m_isForPlatformFont; }
 
-    GlyphData glyphDataForCharacter(UChar32, const FontCascadeDescription&, FontVariant, ResolvedEmojiPolicy);
+    GlyphData glyphDataForCharacter(char32_t, const FontCascadeDescription&, FontSelector*, FontVariant, ResolvedEmojiPolicy);
 
-    bool isFixedPitch(const FontCascadeDescription&);
-    void determinePitch(const FontCascadeDescription&);
+    bool isFixedPitch(const FontCascadeDescription&, FontSelector*);
+
+    bool canTakeFixedPitchFastContentMeasuring(const FontCascadeDescription&, FontSelector*);
 
     bool isLoadingCustomFonts() const;
 
-    FontSelector* fontSelector() { return m_fontSelector.get(); }
     // FIXME: It should be possible to combine fontSelectorVersion and generation.
-    unsigned fontSelectorVersion() const { return m_fontSelectorVersion; }
     unsigned generation() const { return m_generation; }
 
     WidthCache& widthCache() { return m_widthCache; }
     const WidthCache& widthCache() const { return m_widthCache; }
 
-    const Font& primaryFont(const FontCascadeDescription&);
-    WEBCORE_EXPORT const FontRanges& realizeFallbackRangesAt(const FontCascadeDescription&, unsigned fallbackIndex);
+    const Font& primaryFont(const FontCascadeDescription&, FontSelector*);
+    WEBCORE_EXPORT const FontRanges& realizeFallbackRangesAt(const FontCascadeDescription&, FontSelector*, unsigned fallbackIndex);
 
     void pruneSystemFallbacks();
 
+    // Only visits fonts that have already been realized; never triggers realization/loading.
+    void forEachRealizedFont(NOESCAPE const Function<void(const Font&)>&) const;
+
 private:
-    FontCascadeFonts(RefPtr<FontSelector>&&);
+    FontCascadeFonts();
     FontCascadeFonts(const FontPlatformData&);
 
-    GlyphData glyphDataForSystemFallback(UChar32, const FontCascadeDescription&, FontVariant, ResolvedEmojiPolicy, bool systemFallbackShouldBeInvisible);
-    GlyphData glyphDataForVariant(UChar32, const FontCascadeDescription&, FontVariant, ResolvedEmojiPolicy, unsigned fallbackIndex = 0);
+    GlyphData glyphDataForSystemFallback(char32_t, const FontCascadeDescription&, FontSelector*, FontVariant, ResolvedEmojiPolicy, bool systemFallbackShouldBeInvisible);
+    GlyphData glyphDataForVariant(char32_t, const FontCascadeDescription&, FontSelector*, FontVariant, ResolvedEmojiPolicy, unsigned fallbackIndex = 0);
+
+    WEBCORE_EXPORT void determinePitch(const FontCascadeDescription&, FontSelector*);
+    WEBCORE_EXPORT void determineCanTakeFixedPitchFastContentMeasuring(const FontCascadeDescription&, FontSelector*);
 
     Vector<FontRanges, 1> m_realizedFallbackRanges;
     unsigned m_lastRealizedFallbackIndex { 0 };
 
     class GlyphPageCacheEntry {
     public:
-        GlyphData glyphDataForCharacter(UChar32);
+        GlyphPageCacheEntry() = default;
+        GlyphPageCacheEntry(RefPtr<GlyphPage>&&);
+
+        GlyphData glyphDataForCharacter(char32_t);
 
         void setSingleFontPage(RefPtr<GlyphPage>&&);
-        void setGlyphDataForCharacter(UChar32, GlyphData);
+        void setGlyphDataForCharacter(char32_t, GlyphData);
 
         bool isNull() const { return !m_singleFont && !m_mixedFont; }
         bool isMixedFont() const { return !!m_mixedFont; }
@@ -103,55 +117,62 @@ private:
         std::unique_ptr<MixedFontGlyphPage> m_mixedFont;
     };
 
-    EnumeratedArray<ResolvedEmojiPolicy, HashMap<unsigned, GlyphPageCacheEntry, IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>>> m_cachedPages;
+    EnumeratedArray<ResolvedEmojiPolicy, HashMap<unsigned, GlyphPageCacheEntry, IntHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>>, ResolvedEmojiPolicy::RequireEmoji> m_cachedPages;
 
-    HashSet<RefPtr<Font>> m_systemFallbackFontSet;
+    HashSet<Ref<Font>> m_systemFallbackFontSet;
 
-    const Font* m_cachedPrimaryFont;
-    RefPtr<FontSelector> m_fontSelector;
+    SingleThreadWeakPtr<const Font> m_cachedPrimaryFont;
 
     WidthCache m_widthCache;
 
-    unsigned m_fontSelectorVersion;
-    unsigned short m_generation;
+    unsigned short m_generation { 0 };
     Pitch m_pitch { UnknownPitch };
     bool m_isForPlatformFont { false };
+    TriState m_canTakeFixedPitchFastContentMeasuring : 2 { TriState::Indeterminate };
 #if ASSERT_ENABLED
     std::optional<Ref<Thread>> m_thread;
 #endif
 };
 
-inline bool FontCascadeFonts::isFixedPitch(const FontCascadeDescription& description)
+inline bool FontCascadeFonts::isFixedPitch(const FontCascadeDescription& description, FontSelector* fontSelector)
 {
     if (m_pitch == UnknownPitch)
-        determinePitch(description);
+        determinePitch(description, fontSelector);
     return m_pitch == FixedPitch;
-};
+}
 
-inline const Font& FontCascadeFonts::primaryFont(const FontCascadeDescription& description)
+inline bool FontCascadeFonts::canTakeFixedPitchFastContentMeasuring(const FontCascadeDescription& description, FontSelector* fontSelector)
 {
-    ASSERT(m_thread ? m_thread->ptr() == &Thread::current() : isMainThread());
+    if (m_canTakeFixedPitchFastContentMeasuring == TriState::Indeterminate)
+        determineCanTakeFixedPitchFastContentMeasuring(description, fontSelector);
+    return m_canTakeFixedPitchFastContentMeasuring == TriState::True;
+}
+
+inline const Font& FontCascadeFonts::primaryFont(const FontCascadeDescription& description, FontSelector* fontSelector)
+{
+    ASSERT(m_thread ? m_thread->ptr() == &Thread::currentSingleton() : isMainThread());
     if (!m_cachedPrimaryFont) {
-        auto& primaryRanges = realizeFallbackRangesAt(description, 0);
-        m_cachedPrimaryFont = primaryRanges.glyphDataForCharacter(' ', ExternalResourceDownloadPolicy::Allow).font;
+        auto& primaryRanges = realizeFallbackRangesAt(description, fontSelector, 0);
+        m_cachedPrimaryFont = primaryRanges.glyphDataForCharacter(' ', ExternalResourceDownloadPolicy::Allow).font.get();
         if (!m_cachedPrimaryFont)
             m_cachedPrimaryFont = primaryRanges.rangeAt(0).font(ExternalResourceDownloadPolicy::Allow);
         else if (m_cachedPrimaryFont->isInterstitial()) {
             for (unsigned index = 1; ; ++index) {
-                auto& localRanges = realizeFallbackRangesAt(description, index);
+                auto& localRanges = realizeFallbackRangesAt(description, fontSelector, index);
                 if (localRanges.isNull())
                     break;
-                auto* font = localRanges.glyphDataForCharacter(' ', ExternalResourceDownloadPolicy::Forbid).font;
+                WeakPtr font = localRanges.glyphDataForCharacter(' ', ExternalResourceDownloadPolicy::Forbid).font.get();
                 if (font && !font->isInterstitial()) {
-                    m_cachedPrimaryFont = font;
+                    m_cachedPrimaryFont = WTF::move(font);
                     break;
                 }
             }
         }
     }
+    ASSERT(m_cachedPrimaryFont);
     return *m_cachedPrimaryFont;
 }
 
-}
+WTF::TextStream& operator<<(WTF::TextStream&, const FontCascadeFonts&);
 
-#endif
+} // namespace WebCore

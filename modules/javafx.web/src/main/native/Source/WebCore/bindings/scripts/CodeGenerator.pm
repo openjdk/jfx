@@ -29,7 +29,6 @@ package CodeGenerator;
 use strict;
 
 use File::Basename;
-use File::Find;
 use Carp qw<longmess>;
 use Data::Dumper;
 
@@ -37,13 +36,13 @@ my $useDocument = "";
 my $useGenerator = "";
 my $useOutputDir = "";
 my $useOutputHeadersDir = "";
-my $useDirectories = "";
 my $preprocessor;
 my $idlAttributes;
 my $writeDependencies = 0;
 my $defines = "";
 my $targetIdlFilePath = "";
 my $supplementalDependencies;
+my $idlFileNamesList;
 
 my $codeGenerator = 0;
 
@@ -77,6 +76,7 @@ my %bufferSourceTypes = (
     "ArrayBuffer" => 1,
     "ArrayBufferView" => 1,
     "DataView" => 1,
+    "Float16Array" => 1,
     "Float32Array" => 1,
     "Float64Array" => 1,
     "Int16Array" => 1,
@@ -120,6 +120,7 @@ my %svgAttributesInHTMLHash = (
 
 # Cache of IDL file pathnames.
 my $idlFiles;
+my %childrenMap;
 my $cachedInterfaces = {};
 my $cachedExtendedAttributes = {};
 my $cachedExternalDictionaries = {};
@@ -142,7 +143,6 @@ sub new
     my $object = shift;
     my $reference = { };
 
-    $useDirectories = shift;
     $useGenerator = shift;
     $useOutputDir = shift;
     $useOutputHeadersDir = shift;
@@ -152,6 +152,7 @@ sub new
     $targetIdlFilePath = shift;
     $idlAttributes = shift;
     $supplementalDependencies = shift;
+    $idlFileNamesList = shift;
 
     bless($reference, $object);
     return $reference;
@@ -404,6 +405,13 @@ sub ProcessInterfaceSupplementalDependencies
         foreach my $interface (@{$document->interfaces}) {
             next unless $object->IsValidSupplementalInterface($interface, $targetInterface, \%includesMap);
 
+            # Ensure the root IDLDocument has access to all relevant enums (e.g., such as those defined in a mixin interface).
+            foreach my $enumeration (@{$document->enumerations}) {
+                my $enumName = $enumeration->type->name;
+                next if grep { $_->type->name eq $enumName } @{$targetDocument->enumerations};
+                push @{$targetDocument->enumerations}, $enumeration;
+            }
+
             if ($interface->isMixin && !$interface->isPartial) {
                 # Recursively process any supplemental dependencies for each valid mixin. This
                 # allows partial partial interface mixins to be merged into the mixin.
@@ -561,20 +569,51 @@ sub IDLFileForInterface
     my $interfaceName = shift;
 
     unless ($idlFiles) {
-        my $sourceRoot = $ENV{SOURCE_ROOT};
-        my @directories = map { $_ = "$sourceRoot/$_" if $sourceRoot && -d "$sourceRoot/$_"; $_ } @$useDirectories;
-        push(@directories, ".");
-
+        return undef unless $idlFileNamesList;
+        open my $fh, "<", $idlFileNamesList or die "cannot open $idlFileNamesList for reading";
         $idlFiles = { };
-
-        my $wanted = sub {
-            $idlFiles->{$1} = $File::Find::name if /^([A-Z].*)\.idl$/ && !exists $idlFiles->{$1};
-            $File::Find::prune = 1 if /^\../;
-        };
-        find($wanted, @directories);
+        while (<$fh>) {
+            chomp $_;
+            my $name = fileparse($_, ".idl");
+            $idlFiles->{$name} = $_;
+        }
+        close $fh;
     }
 
     return $idlFiles->{$interfaceName};
+}
+
+sub BuildInheritanceMap
+{
+    my ($object, $currentInterface) = @_;
+    return if %childrenMap;
+
+    $object->IDLFileForInterface($currentInterface) unless $idlFiles;
+    foreach my $interfaceName (keys %{$idlFiles}) {
+        my $filename = $object->IDLFileForInterface($interfaceName);
+        my $fileContents = slurp($filename);
+
+        # Extract parent interface name.
+        if ($fileContents =~ /interface\s+\Q$interfaceName\E\s*:\s*(\w+)\s*\{/) {
+            my $parent = $1;
+            push @{$childrenMap{$parent}}, $interfaceName;
+        }
+    }
+}
+
+sub ForEachChildInterface
+{
+    my ($object, $currentInterface, $apply) = @_;
+
+    $object->BuildInheritanceMap($currentInterface);
+
+    my $parentInterfaceName = $currentInterface->type->name;
+    my $children = $childrenMap{$parentInterfaceName};
+    return unless $children;
+    foreach my $childInterfaceName (sort @$children) {
+        my $childInterface = $object->ParseInterface($currentInterface, $childInterfaceName);
+        &$apply($childInterface);
+    }
 }
 
 sub GetInterfaceForType
@@ -1074,11 +1113,30 @@ sub LinkOverloadedOperations
     }
 }
 
+sub OperationName
+{
+    my ($generator, $operation) = @_;
+
+    my $operationName = $operation->name;
+    $operationName =~ s/\-(.)/uc($1)/ge;
+    $operationName =~ s/\-//g;
+    $operationName = $generator->WK_lcfirst($operationName);
+
+    if ($operation->extendedAttributes->{"ImplementedAs"}) {
+        $operationName = $operation->extendedAttributes->{"ImplementedAs"};
+    }
+
+    return $operationName;
+}
+
 sub AttributeNameForGetterAndSetter
 {
     my ($generator, $attribute) = @_;
 
     my $attributeName = $attribute->name;
+    $attributeName =~ s/\-(.)/uc($1)/ge;
+    $attributeName =~ s/\-//g;
+
     if ($attribute->extendedAttributes->{"ImplementedAs"}) {
         $attributeName = $attribute->extendedAttributes->{"ImplementedAs"};
     }
@@ -1093,12 +1151,21 @@ sub AttributeNameForGetterAndSetter
 
 sub ContentAttributeName
 {
-    my ($generator, $implIncludes, $interfaceName, $attribute) = @_;
+    my ($generator, $implIncludes, $interfaceName, $attribute, $getterOrSetter) = @_;
 
-    my $contentAttributeName = $attribute->extendedAttributes->{"Reflect"};
+    my $reflect = $attribute->extendedAttributes->{Reflect};
+    my $reflectURL = $attribute->extendedAttributes->{ReflectURL};
+    my $reflectSetter = $attribute->extendedAttributes->{ReflectSetter};
+    die "Do not use both [ReflectURL] and [Reflect] on the same attribute" if $reflectURL && $reflect;
+    die "Do not use both [ReflectURL] and [ReflectSetter] on the same attribute" if $reflectURL && $reflectSetter;
+    die "Do not use both [Reflect] and [ReflectSetter] on the same attribute" if $reflect && $reflectSetter;
+
+    my $contentAttributeName = UnquoteStringLiteral($generator, $getterOrSetter eq "setter" ? $reflect || $reflectURL || $reflectSetter : $reflect || $reflectURL);
     return undef if !$contentAttributeName;
 
-    $contentAttributeName = lc $generator->AttributeNameForGetterAndSetter($attribute) if $contentAttributeName eq "VALUE_IS_MISSING";
+    $contentAttributeName =~ s/-/_/g;
+
+    $contentAttributeName = lc $attribute->name if $contentAttributeName eq "VALUE_IS_MISSING";
 
     my $namespace = $generator->NamespaceForAttributeName($interfaceName, $contentAttributeName);
 
@@ -1106,11 +1173,23 @@ sub ContentAttributeName
     return "WebCore::${namespace}::${contentAttributeName}Attr";
 }
 
+sub UnquoteStringLiteral
+{
+    my ($generator, $s) = @_;
+    return $s if !$s;
+    return $s if length($s) < 2;
+    if (substr($s, 0, 1) ne '"' && substr($s, 0, 1) ne "'") {
+        die "Identifier '$s' should be a string literal" if $s ne "VALUE_IS_MISSING";
+        return $s;
+    }
+    return substr($s, 1, -1);
+}
+
 sub GetterExpression
 {
     my ($generator, $implIncludes, $interfaceName, $attribute) = @_;
 
-    my $contentAttributeName = $generator->ContentAttributeName($implIncludes, $interfaceName, $attribute);
+    my $contentAttributeName = $generator->ContentAttributeName($implIncludes, $interfaceName, $attribute, "getter");
 
     if (!$contentAttributeName) {
         return ($generator->WK_lcfirst($generator->AttributeNameForGetterAndSetter($attribute)));
@@ -1119,18 +1198,20 @@ sub GetterExpression
     my $attributeType = $attribute->type;
 
     my $functionName;
-    if ($attribute->extendedAttributes->{"URL"}) {
+    if ($attribute->extendedAttributes->{ReflectURL}) {
         $implIncludes->{"ElementInlines.h"} = 1;
         $functionName = "getURLAttributeForBindings";
     } elsif ($attributeType->name eq "boolean") {
         $implIncludes->{"ElementInlines.h"} = 1;
         $functionName = "hasAttributeWithoutSynchronization";
+    } elsif ($attributeType->name eq "double") {
+        $functionName = "numericAttribute";
     } elsif ($attributeType->name eq "long") {
-        $functionName = "getIntegralAttribute";
+        $functionName = "integralAttribute";
     } elsif ($attributeType->name eq "unsigned long") {
-        $functionName = "getUnsignedIntegralAttribute";
+        $functionName = "unsignedIntegralAttribute";
     } elsif ($attributeType->name eq "Element") {
-        $functionName = "getElementAttribute";
+        $functionName = "getElementAttributeForBindings";
     } elsif ($attributeType->name eq "FrozenArray" && scalar @{$attributeType->subtypes} == 1 && @{$attributeType->subtypes}[0]->name eq "Element") {
         $functionName = "getElementsArrayAttribute";
     } else {
@@ -1156,7 +1237,7 @@ sub SetterExpression
 {
     my ($generator, $implIncludes, $interfaceName, $attribute) = @_;
 
-    my $contentAttributeName = $generator->ContentAttributeName($implIncludes, $interfaceName, $attribute);
+    my $contentAttributeName = $generator->ContentAttributeName($implIncludes, $interfaceName, $attribute, "setter");
 
     if (!$contentAttributeName) {
         return ("set" . $generator->WK_ucfirst($generator->AttributeNameForGetterAndSetter($attribute)));
@@ -1167,6 +1248,8 @@ sub SetterExpression
     my $functionName;
     if ($attributeType->name eq "boolean") {
         $functionName = "setBooleanAttribute";
+    } elsif ($attributeType->name eq "double") {
+        $functionName = "setNumericAttribute";
     } elsif ($attributeType->name eq "long") {
         $functionName = "setIntegralAttribute";
     } elsif ($attributeType->name eq "unsigned long") {
@@ -1411,30 +1494,33 @@ sub GenerateConditionalString
     }
 }
 
+sub ConditionalComparator
+{
+    # Compare by feature name, with non-negated forms before negated ones,
+    # by moving any leading "!" to the end of the string (e.g. "!FOO" → "FOO!").
+    ($a =~ s/^(!?)(.+)/$2$1/r) cmp ($b =~ s/^(!?)(.+)/$2$1/r)
+}
+
 sub GenerateConditionalStringFromAttributeValue
 {
     my ($generator, $conditional) = @_;
 
-    my %disjunction;
-    map {
-        my $expression = $_;
-        my %conjunction;
-        map { $conjunction{$_} = 1; } split(/&/, $expression);
-        $expression = "ENABLE(" . join(") && ENABLE(", sort keys %conjunction) . ")";
-        $disjunction{$expression} = 1
+    # Unquote string literals if needed.
+    $conditional = UnquoteStringLiteral($generator, $conditional) if $conditional =~ /^['"]/;
+
+    my %disjunction = map {
+        my %conjunction = map {
+            assert("Conditional macros should not include the leading 'ENABLE_'") if $_ =~ /^ENABLE_/;
+
+            s/^(!?)(.+)$/$1ENABLE($2)/r => 1
+        } split(/&/);
+
+        join(" && ", sort ConditionalComparator keys %conjunction) => 1
     } split(/\|/, $conditional);
 
-    return "1" if keys %disjunction == 0;
-    return (%disjunction)[0] if keys %disjunction == 1;
-
-    my @parenthesized;
-    map {
-        my $expression = $_;
-        $expression = "($expression)" if $expression =~ / /;
-        push @parenthesized, $expression;
-    } sort keys %disjunction;
-
-    return join(" || ", @parenthesized);
+    return "1" if %disjunction == 0;
+    return (keys %disjunction)[0] if %disjunction == 1;
+    return join(" || ", map { / / ? "($_)" : $_ } sort ConditionalComparator keys %disjunction);
 }
 
 sub GenerateCompileTimeCheckForEnumsIfNeeded

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -256,7 +256,7 @@ public class ES2Shader extends BaseGraphicsResource implements Shader {
      */
     @Override
     public void disable() throws RuntimeException {
-        // TODO: remove disable() method from Shader interface... (RT-27442)
+        // TODO: remove disable() method from Shader interface... (JDK-8091985)
         context.updateShaderProgram(0);
     }
 
@@ -511,7 +511,7 @@ public class ES2Shader extends BaseGraphicsResource implements Shader {
     @Override
     public void setConstants(String name, IntBuffer buf, int off, int count)
             throws RuntimeException {
-        // TODO: remove off param in favor of IntBuffer.position() (RT-27442)
+        // TODO: remove off param in favor of IntBuffer.position() (JDK-8091985)
         int loc = getUniform(name).location;
         if (loc == -1) {
             return;

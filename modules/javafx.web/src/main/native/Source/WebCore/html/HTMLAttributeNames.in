@@ -12,6 +12,7 @@ align
 alink
 allow
 allowfullscreen
+alpha
 alt
 archive
 aria-activedescendant
@@ -23,6 +24,7 @@ aria-busy
 aria-checked
 aria-colcount
 aria-colindex
+aria-colindextext
 aria-colspan
 aria-controls
 aria-current
@@ -59,6 +61,7 @@ aria-required
 aria-roledescription
 aria-rowcount
 aria-rowindex
+aria-rowindextext
 aria-rowspan
 aria-selected
 aria-setsize
@@ -83,6 +86,7 @@ axis
 background
 behavior
 bgcolor
+blocking
 border
 bordercolor
 capture
@@ -102,15 +106,20 @@ code
 codebase
 codetype
 color
+colorspace
 cols
 colspan
+command
+commandfor
 compact
-composite
 content
 contenteditable
 controls
 coords
 crossorigin
+cue
+cuebackground
+customelementregistry
 data
 datetime
 declare
@@ -129,6 +138,7 @@ dropzone
 enctype
 end
 enterkeyhint
+environmentmap
 event
 expanded
 exportparts
@@ -156,7 +166,6 @@ http-equiv
 id
 imagesizes
 imagesrcset
-incremental
 inert
 inputmode
 integrity
@@ -178,7 +187,6 @@ loopend
 loopstart
 low
 lowsrc
-manifest
 marginheight
 marginwidth
 max
@@ -195,6 +203,7 @@ name
 nohref
 nomodule
 nonce
+noportal
 noresize
 noshade
 novalidate
@@ -208,10 +217,12 @@ onanimationiteration
 onanimationstart
 onautocomplete
 onautocompleteerror
+onauxclick
 onbeforecopy
 onbeforecut
 onbeforeinput
 onbeforeload
+onbeforematch
 onbeforepaste
 onbeforeprint
 onbeforetoggle
@@ -223,6 +234,8 @@ oncanplaythrough
 onchange
 onclick
 onclose
+oncommand
+oncontentvisibilityautostatechange
 oncontextmenu
 oncopy
 oncuechange
@@ -246,6 +259,8 @@ onfocusout
 onformdata
 onfullscreenchange
 onfullscreenerror
+onimmersivechange
+onimmersiveerror
 ongamepadconnected
 ongamepaddisconnected
 ongesturechange
@@ -278,7 +293,9 @@ onoffline
 ononline
 onorientationchange
 onpagehide
+onpagereveal
 onpageshow
+onpageswap
 onpaste
 onpause
 onplay
@@ -294,11 +311,12 @@ onpointerup
 onpopstate
 onprogress
 onratechange
+onredraw
 onrejectionhandled
 onreset
 onresize
 onscroll
-onsearch
+onscrollend
 onsecuritypolicyviolation
 onseeked
 onseeking
@@ -321,6 +339,7 @@ ontransitioncancel
 ontransitionend
 ontransitionrun
 ontransitionstart
+onuncapturederror
 onunhandledrejection
 onunload
 onvolumechange
@@ -359,7 +378,6 @@ popovertargetaction
 poster
 preload
 progress
-pseudo
 readonly
 referrerpolicy
 rel
@@ -380,8 +398,12 @@ scrolldelay
 scrolling
 select
 selected
-shadowrootmode
+shadowrootclonable
+shadowrootcustomelementregistry
 shadowrootdelegatesfocus
+shadowrootmode
+shadowrootreferencetarget
+shadowrootserializable
 shape
 size
 sizes
@@ -392,12 +414,14 @@ src
 srcdoc
 srclang
 srcset
+stagemode
 standby
 start
 step
 style
 subtitle
 summary
+switch
 tabindex
 target
 text
@@ -408,6 +432,7 @@ truespeed
 type
 uiactions
 usemap
+useragentpart
 valign
 value
 valuetype
@@ -423,6 +448,7 @@ webkitdirectory
 webkitdropzone
 width
 wrap
+writingsuggestions
 x-apple-data-detectors
 x-apple-data-detectors-result
 x-apple-data-detectors-type

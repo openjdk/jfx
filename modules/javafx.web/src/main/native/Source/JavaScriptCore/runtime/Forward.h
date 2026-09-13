@@ -25,11 +25,13 @@
 
 #pragma once
 
-#include "StrongForward.h"
-#include "TypedArrayAdaptersForwardDeclarations.h"
+#include <JavaScriptCore/StrongForward.h>
+#include <JavaScriptCore/TypedArrayAdaptersForwardDeclarations.h>
+#include <cstdint>
 
 namespace JSC {
 class ArrayBuffer;
+enum class SourceTaintedOrigin : uint8_t;
 }
 
 using JSC::ArrayBuffer;

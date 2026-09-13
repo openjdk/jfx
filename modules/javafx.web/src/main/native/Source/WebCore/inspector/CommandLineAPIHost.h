@@ -32,6 +32,7 @@
 #include "InstrumentingAgents.h"
 #include <JavaScriptCore/PerGlobalObjectWrapperWorld.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -46,25 +47,21 @@ class EventTarget;
 class JSDOMGlobalObject;
 class Storage;
 
+#if ENABLE(WEB_RTC)
+class RTCLogsCallback;
+#endif
+
 struct EventListenerInfo;
 
 class CommandLineAPIHost : public RefCounted<CommandLineAPIHost> {
 public:
     static Ref<CommandLineAPIHost> create();
-    ~CommandLineAPIHost();
+    ~CommandLineAPIHost() = default;
 
-    void init(RefPtr<InstrumentingAgents> instrumentingAgents)
-    {
-        m_instrumentingAgents = instrumentingAgents;
-    }
-
-    void disconnect();
-
-    void clearConsoleMessages();
     void copyText(const String& text);
 
     class InspectableObject {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_TZONE_ALLOCATED(InspectableObject);
     public:
         virtual JSC::JSValue get(JSC::JSGlobalObject&);
         virtual ~InspectableObject() = default;
@@ -83,7 +80,10 @@ public:
     using EventListenersRecord = Vector<KeyValuePair<String, Vector<ListenerEntry>>>;
     EventListenersRecord getEventListeners(JSC::JSGlobalObject&, EventTarget&);
 
-    String databaseId(Database&);
+#if ENABLE(WEB_RTC)
+    void gatherRTCLogs(JSC::JSGlobalObject&, RefPtr<RTCLogsCallback>&&);
+#endif
+
     String storageId(Storage&);
 
     JSC::JSValue wrapper(JSC::JSGlobalObject*, JSDOMGlobalObject*);
@@ -92,7 +92,6 @@ public:
 private:
     CommandLineAPIHost();
 
-    RefPtr<InstrumentingAgents> m_instrumentingAgents;
     std::unique_ptr<InspectableObject> m_inspectedObject; // $0
     Inspector::PerGlobalObjectWrapperWorld m_wrappers;
 };

@@ -29,6 +29,7 @@
 #include <memory>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -37,20 +38,22 @@ class SecurityOrigin;
 class URLRegistry;
 class URLRegistrable;
 
-class PublicURLManager final : public ActiveDOMObject {
-    WTF_MAKE_FAST_ALLOCATED;
+class PublicURLManager final : public RefCounted<PublicURLManager>, public ActiveDOMObject {
+    WTF_MAKE_TZONE_ALLOCATED(PublicURLManager);
 public:
-    explicit PublicURLManager(ScriptExecutionContext*);
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
-    static std::unique_ptr<PublicURLManager> create(ScriptExecutionContext*);
+    static Ref<PublicURLManager> create(ScriptExecutionContext*);
 
     void registerURL(const URL&, URLRegistrable&);
     void revoke(const URL&);
 
 private:
-    // ActiveDOMObject API.
+    explicit PublicURLManager(ScriptExecutionContext*);
+
+    // ActiveDOMObject.
     void stop() override;
-    const char* activeDOMObjectName() const override;
 
     bool m_isStopped { false };
 };

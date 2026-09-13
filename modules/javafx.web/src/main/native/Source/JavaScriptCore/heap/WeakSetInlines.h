@@ -25,21 +25,23 @@
 
 #pragma once
 
-#include "CellContainerInlines.h"
-#include "MarkedBlock.h"
+#include <JavaScriptCore/CellContainerInlines.h>
+#include <JavaScriptCore/MarkedBlock.h>
 
 namespace JSC {
 
 inline WeakImpl* WeakSet::allocate(JSValue jsValue, WeakHandleOwner* weakHandleOwner, void* context)
 {
     CellContainer container = jsValue.asCell()->cellContainer();
+    ASSERT(container.vm().currentThreadIsHoldingAPILock());
     WeakSet& weakSet = container.weakSet();
     WeakBlock::FreeCell* allocator = weakSet.m_allocator;
-    if (UNLIKELY(!allocator))
+    if (!allocator) [[unlikely]]
         allocator = weakSet.findAllocator(container);
     weakSet.m_allocator = allocator->next;
 
     WeakImpl* weakImpl = WeakBlock::asWeakImpl(allocator);
+    container.vm().heap.didAllocate(sizeof(WeakImpl));
     return new (NotNull, weakImpl) WeakImpl(jsValue, weakHandleOwner, context);
 }
 

@@ -42,8 +42,8 @@ extern "C" __declspec(naked) void currentStackPointer()
     }
 }
 
-#elif CPU(X86) & COMPILER(GCC_COMPATIBLE)
-asm (
+#elif CPU(X86)
+__asm__(
     ".text" "\n"
     ".globl " SYMBOL_STRING(currentStackPointer) "\n"
     SYMBOL_STRING(currentStackPointer) ":" "\n"
@@ -55,11 +55,21 @@ asm (
 
 #elif CPU(X86_64) && OS(WINDOWS)
 
-// The Win64 port will use a hack where we define currentStackPointer in
-// LowLevelInterpreter.asm.
+__asm__(
+    ".text" "\n"
+    ".globl " SYMBOL_STRING(currentStackPointer) "\n"
+    SYMBOL_STRING(currentStackPointer) ":" "\n"
 
-#elif CPU(X86_64) && COMPILER(GCC_COMPATIBLE)
-asm (
+    "movq %rsp, %rax" "\n"
+    "addq $40, %rax" "\n" // Account for return address and shadow stack
+    "ret" "\n"
+
+    ".section .drectve" "\n"
+    ".ascii \"-export:currentStackPointer\"" "\n"
+);
+
+#elif CPU(X86_64)
+__asm__(
     ".text" "\n"
     ".globl " SYMBOL_STRING(currentStackPointer) "\n"
     SYMBOL_STRING(currentStackPointer) ":" "\n"
@@ -70,8 +80,8 @@ asm (
     ".previous" "\n"
 );
 
-#elif CPU(ARM64E) && COMPILER(GCC_COMPATIBLE)
-asm (
+#elif CPU(ARM64E)
+__asm__(
     ".text" "\n"
     ".balign 16" "\n"
     ".globl " SYMBOL_STRING(currentStackPointer) "\n"
@@ -83,8 +93,8 @@ asm (
     ".previous" "\n"
 );
 
-#elif CPU(ARM64) && COMPILER(GCC_COMPATIBLE)
-asm (
+#elif CPU(ARM64)
+__asm__(
     ".text" "\n"
     ".balign 16" "\n"
     ".globl " SYMBOL_STRING(currentStackPointer) "\n"
@@ -95,8 +105,8 @@ asm (
     ".previous" "\n"
 );
 
-#elif CPU(ARM_THUMB2) && COMPILER(GCC_COMPATIBLE)
-asm (
+#elif CPU(ARM_THUMB2)
+__asm__(
     ".text" "\n"
     ".align 2" "\n"
     ".globl " SYMBOL_STRING(currentStackPointer) "\n"
@@ -109,8 +119,8 @@ asm (
     ".previous" "\n"
 );
 
-#elif CPU(MIPS) && COMPILER(GCC_COMPATIBLE)
-asm (
+#elif CPU(MIPS)
+__asm__(
     ".text" "\n"
     ".globl " SYMBOL_STRING(currentStackPointer) "\n"
     SYMBOL_STRING(currentStackPointer) ":" "\n"
@@ -125,14 +135,36 @@ asm (
     ".previous" "\n"
 );
 
-#elif CPU(RISCV64) && COMPILER(GCC_COMPATIBLE)
-asm (
+#elif CPU(RISCV64)
+__asm__(
     ".text" "\n"
     ".globl " SYMBOL_STRING(currentStackPointer) "\n"
     SYMBOL_STRING(currentStackPointer) ":" "\n"
 
      "mv x10, sp" "\n"
      "ret" "\n"
+     ".previous" "\n"
+);
+
+#elif CPU(LOONGARCH64)
+__asm__(
+    ".text" "\n"
+    ".globl " SYMBOL_STRING(currentStackPointer) "\n"
+    SYMBOL_STRING(currentStackPointer) ":" "\n"
+
+     "move $r4, $r3" "\n"
+     "jr   $r1" "\n"
+     ".previous" "\n"
+);
+
+#elif CPU(LOONGARCH64) && COMPILER(GCC_COMPATIBLE)
+asm (
+    ".text" "\n"
+    ".globl " SYMBOL_STRING(currentStackPointer) "\n"
+    SYMBOL_STRING(currentStackPointer) ":" "\n"
+
+     "move $r4, $r3" "\n"
+     "jr   $r1" "\n"
      ".previous" "\n"
 );
 
@@ -143,17 +175,15 @@ asm (
 #elif USE(GENERIC_CURRENT_STACK_POINTER)
 constexpr size_t sizeOfFrameHeader = 2 * sizeof(void*);
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 SUPPRESS_ASAN NEVER_INLINE
 void* currentStackPointer()
 {
-#if COMPILER(GCC_COMPATIBLE)
     return reinterpret_cast<uint8_t*>(__builtin_frame_address(0)) + sizeOfFrameHeader;
-#else
-    // Make sure that sp is the only local variable declared in this function.
-    void* sp = reinterpret_cast<uint8_t*>(&sp) + sizeOfFrameHeader + sizeof(sp);
-    return sp;
-#endif
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 #endif // USE(GENERIC_CURRENT_STACK_POINTER)
 
 } // namespace WTF

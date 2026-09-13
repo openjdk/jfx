@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -33,13 +33,12 @@ package ensemble.samples.graphics2d.brickbreaker;
 
 import java.util.ArrayList;
 import java.util.Iterator;
-
+import javafx.animation.AnimationTimer;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
 import javafx.animation.Timeline;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.geometry.VPos;
 import javafx.scene.Group;
 import javafx.scene.Parent;
@@ -54,7 +53,6 @@ import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.util.Duration;
 import ensemble.samples.graphics2d.brickbreaker.BrickBreakerApp.MainFrame;
-import javafx.animation.AnimationTimer;
 
 public class Level extends Parent {
 

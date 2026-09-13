@@ -28,6 +28,7 @@
 
 #include "DOMWrapperWorld.h"
 #include "Document.h"
+#include "ExceptionOr.h"
 #include "LocalDOMWindow.h"
 #include "MessagePort.h"
 #include "Performance.h"
@@ -44,14 +45,11 @@ static double performanceNow(ScriptExecutionContext& scriptExecutionContext)
     // FIXME: We should consider moving the Performance object to be owned by the
     // the ScriptExecutionContext to avoid this.
 
-    if (is<Document>(scriptExecutionContext)) {
-        if (auto window = downcast<Document>(scriptExecutionContext).domWindow())
+    if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext)) {
+        if (RefPtr window = document->window())
             return window->performance().now();
-        return 0;
-    }
-
-    if (is<WorkerGlobalScope>(scriptExecutionContext))
-        return downcast<WorkerGlobalScope>(scriptExecutionContext).performance().now();
+    } else if (RefPtr workerGlobal = dynamicDowncast<WorkerGlobalScope>(scriptExecutionContext))
+        return workerGlobal->performance().now();
 
     return 0;
 }
@@ -59,14 +57,14 @@ static double performanceNow(ScriptExecutionContext& scriptExecutionContext)
 ExceptionOr<Ref<PerformanceMark>> PerformanceMark::create(JSC::JSGlobalObject& globalObject, ScriptExecutionContext& scriptExecutionContext, const String& name, std::optional<PerformanceMarkOptions>&& markOptions)
 {
     if (is<Document>(scriptExecutionContext) && PerformanceUserTiming::isRestrictedMarkName(name))
-        return Exception { SyntaxError };
+        return Exception { ExceptionCode::SyntaxError };
 
     double startTime;
     JSC::JSValue detail;
     if (markOptions) {
         if (markOptions->startTime) {
             if (*markOptions->startTime < 0)
-                return Exception { TypeError };
+                return Exception { ExceptionCode::TypeError };
             startTime = *markOptions->startTime;
         } else
             startTime = performanceNow(scriptExecutionContext);
@@ -80,7 +78,7 @@ ExceptionOr<Ref<PerformanceMark>> PerformanceMark::create(JSC::JSGlobalObject& g
         detail = JSC::jsNull();
     }
 
-    Vector<RefPtr<MessagePort>> ignoredMessagePorts;
+    Vector<Ref<MessagePort>> ignoredMessagePorts;
     auto serializedDetail = SerializedScriptValue::create(globalObject, detail, { }, ignoredMessagePorts);
     if (serializedDetail.hasException())
         return serializedDetail.releaseException();
@@ -90,7 +88,7 @@ ExceptionOr<Ref<PerformanceMark>> PerformanceMark::create(JSC::JSGlobalObject& g
 
 PerformanceMark::PerformanceMark(const String& name, double startTime, Ref<SerializedScriptValue>&& serializedDetail)
     : PerformanceEntry(name, startTime, startTime)
-    , m_serializedDetail(WTFMove(serializedDetail))
+    , m_serializedDetail(WTF::move(serializedDetail))
 {
 }
 

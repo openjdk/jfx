@@ -25,14 +25,16 @@
 
 #pragma once
 
-#include "MarkedBlockInlines.h"
-#include "MarkedSpace.h"
+#include <JavaScriptCore/MarkedBlockInlines.h>
+#include <JavaScriptCore/MarkedSpace.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
-ALWAYS_INLINE Heap& MarkedSpace::heap() const
+ALWAYS_INLINE JSC::Heap& MarkedSpace::heap() const
 {
-    return *bitwise_cast<Heap*>(bitwise_cast<uintptr_t>(this) - OBJECT_OFFSETOF(Heap, m_objectSpace));
+    return *std::bit_cast<Heap*>(std::bit_cast<uintptr_t>(this) - OBJECT_OFFSETOF(Heap, m_objectSpace));
 }
 
 template<typename Functor> inline void MarkedSpace::forEachLiveCell(HeapIterationScope&, const Functor& functor)
@@ -77,30 +79,32 @@ template<typename Functor> inline void MarkedSpace::forEachDeadCell(HeapIteratio
 }
 
 template<typename Visitor>
-inline Ref<SharedTask<void(Visitor&)>> MarkedSpace::forEachWeakInParallel()
+inline Ref<SharedTask<void(Visitor&)>> MarkedSpace::forEachWeakInParallel(Visitor& visitor)
 {
     constexpr unsigned batchSize = 16;
     class Task final : public SharedTask<void(Visitor&)> {
     public:
-        Task(MarkedSpace& markedSpace)
+        Task(MarkedSpace& markedSpace, Visitor& visitor)
             : m_markedSpace(markedSpace)
             , m_newActiveCursor(markedSpace.m_newActiveWeakSets.begin())
             , m_activeCursor(markedSpace.heap().collectionScope() == CollectionScope::Full ? markedSpace.m_activeWeakSets.begin() : markedSpace.m_activeWeakSets.end())
+            , m_reason(visitor.rootMarkReason())
         {
         }
 
-        void drain(Vector<WeakBlock*, batchSize>& results)
+        std::span<WeakBlock*> drain(std::array<WeakBlock*, batchSize>& results)
         {
             Locker locker { m_lock };
+            size_t resultsSize = 0;
             while (true) {
                 if (m_current) {
                     auto* block = m_current;
                     m_current = m_current->next();
                     if (block->isEmpty())
                         continue;
-                    results.uncheckedAppend(block);
-                    if (results.size() == batchSize)
-                        return;
+                    results[resultsSize++] = block;
+                    if (resultsSize == batchSize)
+                        return std::span { results.data(), resultsSize };
                     continue;
                 }
 
@@ -115,20 +119,20 @@ inline Ref<SharedTask<void(Visitor&)>> MarkedSpace::forEachWeakInParallel()
                     ++m_activeCursor;
                     continue;
                 }
-                return;
+                return std::span { results.data(), resultsSize };
             }
         }
 
         void run(Visitor& visitor) final
         {
-            Vector<WeakBlock*, batchSize> results;
+            SetRootMarkReasonScope rootScope(visitor, m_reason);
+            std::array<WeakBlock*, batchSize> resultsStorage;
             while (true) {
-                drain(results);
-                if (results.isEmpty())
+                auto results = drain(resultsStorage);
+                if (!results.size())
                     return;
-                for (WeakBlock* block : results)
-                    block->visit(visitor);
-                results.clear();
+                for (auto* result : results)
+                    result->visit(visitor);
             }
         }
 
@@ -138,10 +142,12 @@ inline Ref<SharedTask<void(Visitor&)>> MarkedSpace::forEachWeakInParallel()
         SentinelLinkedList<WeakSet, BasicRawSentinelNode<WeakSet>>::iterator m_newActiveCursor;
         SentinelLinkedList<WeakSet, BasicRawSentinelNode<WeakSet>>::iterator m_activeCursor;
         Lock m_lock;
+        RootMarkReason m_reason;
     };
 
-    return adoptRef(*new Task(*this));
+    return adoptRef(*new Task(*this, visitor));
 }
 
 } // namespace JSC
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

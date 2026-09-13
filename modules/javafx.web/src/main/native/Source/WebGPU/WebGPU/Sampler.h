@@ -26,8 +26,14 @@
 #pragma once
 
 #import <wtf/FastMalloc.h>
+#import <wtf/GenericHashKey.h>
+#import <wtf/Hasher.h>
+#import <wtf/ListHashSet.h>
+#import <wtf/Lock.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
+#import <wtf/TZoneMalloc.h>
+#import <wtf/WeakObjCPtr.h>
 
 struct WGPUSamplerImpl {
 };
@@ -38,11 +44,19 @@ class Device;
 
 // https://gpuweb.github.io/gpuweb/#gpusampler
 class Sampler : public WGPUSamplerImpl, public RefCounted<Sampler> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(Sampler);
 public:
-    static Ref<Sampler> create(id<MTLSamplerState> samplerState, const WGPUSamplerDescriptor& descriptor, Device& device)
+    using UniqueSamplerIdentifier = std::array<uint32_t, 4>;
+
+    inline void add(Hasher& hasher, const UniqueSamplerIdentifier& input)
     {
-        return adoptRef(*new Sampler(samplerState, descriptor, device));
+        for (auto value : input)
+            WTF::add(hasher, value);
+    }
+
+    static Ref<Sampler> create(UniqueSamplerIdentifier&& samplerIdentifier, const WGPUSamplerDescriptor& descriptor, Device& device)
+    {
+        return adoptRef(*new Sampler(WTF::move(samplerIdentifier), descriptor, device));
     }
     static Ref<Sampler> createInvalid(Device& device)
     {
@@ -53,9 +67,10 @@ public:
 
     void setLabel(String&&);
 
-    bool isValid() const { return m_samplerState; }
+    bool isValid() const;
 
-    id<MTLSamplerState> samplerState() const { return m_samplerState; }
+    id<MTLSamplerState> cachedSamplerState() const { return m_cachedSamplerState; }
+    id<MTLSamplerState> tryCacheSamplerState() const;
     const WGPUSamplerDescriptor& descriptor() const { return m_descriptor; }
     bool isComparison() const { return descriptor().compare != WGPUCompareFunction_Undefined; }
     bool isFiltering() const { return descriptor().minFilter == WGPUFilterMode_Linear || descriptor().magFilter == WGPUFilterMode_Linear || descriptor().mipmapFilter == WGPUMipmapFilterMode_Linear; }
@@ -63,14 +78,15 @@ public:
     Device& device() const { return m_device; }
 
 private:
-    Sampler(id<MTLSamplerState>, const WGPUSamplerDescriptor&, Device&);
+    Sampler(UniqueSamplerIdentifier&&, const WGPUSamplerDescriptor&, Device&);
     Sampler(Device&);
 
-    const id<MTLSamplerState> m_samplerState { nil };
-
-    const WGPUSamplerDescriptor m_descriptor { };
+    std::optional<UniqueSamplerIdentifier> m_samplerIdentifier;
+    WGPUSamplerDescriptor m_descriptor { };
 
     const Ref<Device> m_device;
+
+    mutable __weak id<MTLSamplerState> m_cachedSamplerState { nil };
 };
 
 } // namespace WebGPU

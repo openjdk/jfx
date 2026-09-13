@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +26,6 @@
 #include "config.h"
 #include "Options.h"
 
-#include "AssemblerCommon.h"
 #include "CPU.h"
 #include "JITOperationValidation.h"
 #include "LLIntCommon.h"
@@ -38,12 +37,15 @@
 #include <stdlib.h>
 #include <string.h>
 #include <wtf/ASCIICType.h>
+#include <wtf/BitSet.h>
 #include <wtf/Compiler.h>
 #include <wtf/DataLog.h>
 #include <wtf/Gigacage.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/NumberOfCores.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/TranslatedProcess.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/threads/Signals.h>
 
@@ -60,9 +62,143 @@
 #include <wtf/cocoa/Entitlements.h>
 #endif
 
+#if OS(LINUX)
+#include <unistd.h>
+extern "C" char **environ;
+#endif
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 bool useOSLogOptionHasChanged = false;
+Options::SandboxPolicy Options::machExceptionHandlerSandboxPolicy = Options::SandboxPolicy::Unknown;
+
+namespace OptionsHelper {
+
+// The purpose of Metadata is to hold transient info needed during initialization of
+// Options. It will be released in Options::finalize(), and will not be kept during
+// VM run time. For now, the only field it contains is a copy of Options defaults
+// which are only used to provide more info for Options dumps.
+struct Metadata {
+    // This struct does not need to be TZONE_ALLOCATED because it is only used for transient memory
+    // during Options initialization, and will not be re-allocated thereafter. See comment above.
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Metadata);
+public:
+    OptionsStorage defaults;
+};
+
+static LazyNeverDestroyed<std::unique_ptr<Metadata>> g_metadata;
+static LazyNeverDestroyed<WTF::BitSet<NumberOfOptions>> g_optionWasOverridden;
+
+struct ConstMetaData {
+    ASCIILiteral name;
+    ASCIILiteral description;
+    Options::Type type;
+    Options::Availability availability;
+    uint16_t offsetOfOption;
+};
+
+// Realize the names for each of the options:
+static const ConstMetaData g_constMetaData[NumberOfOptions] = {
+#define FILL_OPTION_INFO(type_, name_, defaultValue_, availability_, description_) \
+    { #name_ ## _s, description_, Options::Type::type_, Options::Availability::availability_, offsetof(OptionsStorage, name_) },
+    FOR_EACH_JSC_OPTION(FILL_OPTION_INFO)
+#undef FILL_OPTION_INFO
+};
+class Option {
+public:
+    void dump(StringBuilder&) const;
+
+    bool operator==(const Option&) const;
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    ASCIILiteral name() const { return g_constMetaData[m_id].name; }
+    ASCIILiteral description() const { return g_constMetaData[m_id].description; }
+    Options::Type type() const { return g_constMetaData[m_id].type; }
+    Options::Availability availability() const { return g_constMetaData[m_id].availability; }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+    Option(Options::ID id, void* addressOfValue)
+        : m_id(id)
+    {
+        initValue(addressOfValue);
+    }
+
+    void initValue(void* addressOfValue);
+
+    Options::ID m_id;
+    union {
+        bool m_bool;
+        unsigned m_unsigned;
+        double m_double;
+        int32_t m_int32;
+        size_t m_size;
+        OptionRange m_optionRange;
+        const char* m_optionString;
+        GCLogging::Level m_gcLogLevel;
+        OSLogType m_osLogType;
+    };
+};
+
+static void initialize()
+{
+    g_optionWasOverridden.construct();
+
+    // Make a transient copy of the default option values into g_metadata before they get
+    // modified. The defaults are only needed to provide more info when dumping options.
+    // g_metadata will be released in Options::finalize() (see releaseMetadata()).
+    g_metadata.construct();
+    auto metadata = makeUnique<Metadata>();
+    memcpy(&metadata->defaults, &g_jscConfig.options, sizeof(OptionsStorage));
+    g_metadata.get() = WTF::move(metadata);
+}
+
+static void releaseMetadata()
+{
+    g_metadata.get() = nullptr;
+}
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
+static const Option defaultFor(Options::ID id)
+{
+    auto offset = g_constMetaData[id].offsetOfOption;
+    void* addressOfDefault = reinterpret_cast<uint8_t*>(&g_metadata.get()->defaults) + offset;
+    return Option(id, addressOfDefault);
+}
+
+inline static void* addressOfOption(Options::ID id)
+{
+    auto offset = g_constMetaData[id].offsetOfOption;
+    return reinterpret_cast<uint8_t*>(&g_jscConfig.options) + offset;
+}
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+static const Option optionFor(Options::ID id)
+{
+    return Option(id, addressOfOption(id));
+}
+
+inline static bool hasMetadata()
+{
+    return !!g_metadata.get();
+}
+
+inline static bool wasOverridden(Options::ID id)
+{
+    ASSERT(id < NumberOfOptions);
+    return g_optionWasOverridden->get(id);
+}
+
+inline static void setWasOverridden(Options::ID id)
+{
+    ASSERT(id < NumberOfOptions);
+    g_optionWasOverridden->set(id);
+}
+
+} // namespace OptionsHelper
 
 template<typename T>
 std::optional<T> parse(const char* string);
@@ -70,9 +206,10 @@ std::optional<T> parse(const char* string);
 template<>
 std::optional<OptionsStorage::Bool> parse(const char* string)
 {
-    if (equalLettersIgnoringASCIICase(string, "true"_s) || equalLettersIgnoringASCIICase(string, "yes"_s) || !strcmp(string, "1"))
+    auto span = unsafeSpan(string);
+    if (equalLettersIgnoringASCIICase(span, "true"_s) || equalLettersIgnoringASCIICase(span, "yes"_s) || !strcmp(string, "1"))
         return true;
-    if (equalLettersIgnoringASCIICase(string, "false"_s) || equalLettersIgnoringASCIICase(string, "no"_s) || !strcmp(string, "0"))
+    if (equalLettersIgnoringASCIICase(span, "false"_s) || equalLettersIgnoringASCIICase(span, "no"_s) || !strcmp(string, "0"))
         return false;
     return std::nullopt;
 }
@@ -95,7 +232,7 @@ std::optional<OptionsStorage::Unsigned> parse(const char* string)
     return std::nullopt;
 }
 
-#if CPU(ADDRESS64) || OS(DARWIN)
+#if CPU(ADDRESS64) || OS(DARWIN) || OS(HAIKU)
 template<>
 std::optional<OptionsStorage::Size> parse(const char* string)
 {
@@ -104,7 +241,7 @@ std::optional<OptionsStorage::Size> parse(const char* string)
         return value;
     return std::nullopt;
 }
-#endif // CPU(ADDRESS64) || OS(DARWIN)
+#endif // CPU(ADDRESS64) || OS(DARWIN) || OS(HAIKU)
 
 template<>
 std::optional<OptionsStorage::Double> parse(const char* string)
@@ -140,13 +277,14 @@ std::optional<OptionsStorage::OptionString> parse(const char* string)
 template<>
 std::optional<OptionsStorage::GCLogLevel> parse(const char* string)
 {
-    if (equalLettersIgnoringASCIICase(string, "none"_s) || equalLettersIgnoringASCIICase(string, "no"_s) || equalLettersIgnoringASCIICase(string, "false"_s) || !strcmp(string, "0"))
+    auto span = unsafeSpan(string);
+    if (equalLettersIgnoringASCIICase(span, "none"_s) || equalLettersIgnoringASCIICase(span, "no"_s) || equalLettersIgnoringASCIICase(span, "false"_s) || !strcmp(string, "0"))
         return GCLogging::None;
 
-    if (equalLettersIgnoringASCIICase(string, "basic"_s) || equalLettersIgnoringASCIICase(string, "yes"_s) || equalLettersIgnoringASCIICase(string, "true"_s) || !strcmp(string, "1"))
+    if (equalLettersIgnoringASCIICase(span, "basic"_s) || equalLettersIgnoringASCIICase(span, "yes"_s) || equalLettersIgnoringASCIICase(span, "true"_s) || !strcmp(string, "1"))
         return GCLogging::Basic;
 
-    if (equalLettersIgnoringASCIICase(string, "verbose"_s) || !strcmp(string, "2"))
+    if (equalLettersIgnoringASCIICase(span, "verbose"_s) || !strcmp(string, "2"))
         return GCLogging::Verbose;
 
     return std::nullopt;
@@ -157,19 +295,20 @@ std::optional<OptionsStorage::OSLogType> parse(const char* string)
 {
     std::optional<OptionsStorage::OSLogType> result;
 
-    if (equalLettersIgnoringASCIICase(string, "none"_s) || equalLettersIgnoringASCIICase(string, "false"_s) || !strcmp(string, "0"))
+    auto span = unsafeSpan(string);
+    if (equalLettersIgnoringASCIICase(span, "none"_s) || equalLettersIgnoringASCIICase(span, "false"_s) || !strcmp(string, "0"))
         result = OSLogType::None;
-    else if (equalLettersIgnoringASCIICase(string, "true"_s) || !strcmp(string, "1"))
+    else if (equalLettersIgnoringASCIICase(span, "true"_s) || !strcmp(string, "1"))
         result = OSLogType::Error;
-    else if (equalLettersIgnoringASCIICase(string, "default"_s))
+    else if (equalLettersIgnoringASCIICase(span, "default"_s))
         result = OSLogType::Default;
-    else if (equalLettersIgnoringASCIICase(string, "info"_s))
+    else if (equalLettersIgnoringASCIICase(span, "info"_s))
         result = OSLogType::Info;
-    else if (equalLettersIgnoringASCIICase(string, "debug"_s))
+    else if (equalLettersIgnoringASCIICase(span, "debug"_s))
         result = OSLogType::Debug;
-    else if (equalLettersIgnoringASCIICase(string, "error"_s))
+    else if (equalLettersIgnoringASCIICase(span, "error"_s))
         result = OSLogType::Error;
-    else if (equalLettersIgnoringASCIICase(string, "fault"_s))
+    else if (equalLettersIgnoringASCIICase(span, "fault"_s))
         result = OSLogType::Fault;
 
     if (result && result.value() != Options::useOSLog())
@@ -211,21 +350,21 @@ static void initializeDatafileToUseOSLog()
 }
 #endif // OS(DARWIN)
 
-static const char* asString(OSLogType type)
+static ASCIILiteral asString(OSLogType type)
 {
     switch (type) {
     case OSLogType::None:
-        return "none";
+        return "none"_s;
     case OSLogType::Default:
-        return "default";
+        return "default"_s;
     case OSLogType::Info:
-        return "info";
+        return "info"_s;
     case OSLogType::Debug:
-        return "debug";
+        return "debug"_s;
     case OSLogType::Error:
-        return "error";
+        return "error"_s;
     case OSLogType::Fault:
-        return "fault";
+        return "fault"_s;
     }
     RELEASE_ASSERT_NOT_REACHED();
     return nullptr;
@@ -242,14 +381,12 @@ bool Options::isAvailable(Options::ID id, Options::Availability availability)
     if (id == maxSingleAllocationSizeID)
         return true;
 #endif
-#if ENABLE(ASSEMBLER) && OS(LINUX)
-    if (id == logJITCodeForPerfID)
-        return true;
-#endif
     if (id == traceLLIntExecutionID)
         return !!LLINT_TRACING;
     if (id == traceLLIntSlowPathID)
         return !!LLINT_TRACING;
+    if (id == validateVMEntryCalleeSavesID)
+        return !!ASSERT_ENABLED;
     return false;
 }
 
@@ -277,13 +414,15 @@ bool overrideOptionWithHeuristic(T& variable, Options::ID id, const char* name, 
     return false;
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 bool Options::overrideAliasedOptionWithHeuristic(const char* name)
 {
     const char* stringValue = getenv(name);
     if (!stringValue)
         return false;
 
-    auto aliasedOption = makeString(&name[4], '=', stringValue);
+    auto aliasedOption = makeString(unsafeSpan(&name[4]), '=', unsafeSpan(stringValue));
     if (Options::setOption(aliasedOption.utf8().data()))
         return true;
 
@@ -291,9 +430,11 @@ bool Options::overrideAliasedOptionWithHeuristic(const char* name)
     return false;
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
 #endif // !PLATFORM(COCOA)
 
-static unsigned computeNumberOfWorkerThreads(int maxNumberOfWorkerThreads, int minimum = 1)
+unsigned Options::computeNumberOfWorkerThreads(int maxNumberOfWorkerThreads, int minimum)
 {
     int cpusToUse = std::min(kernTCSMAwareNumberOfProcessorCores(), maxNumberOfWorkerThreads);
 
@@ -302,7 +443,7 @@ static unsigned computeNumberOfWorkerThreads(int maxNumberOfWorkerThreads, int m
     return std::max(cpusToUse, minimum);
 }
 
-static int32_t computePriorityDeltaOfWorkerThreads(int32_t twoCorePriorityDelta, int32_t multiCorePriorityDelta)
+int32_t Options::computePriorityDeltaOfWorkerThreads(int32_t twoCorePriorityDelta, int32_t multiCorePriorityDelta)
 {
     if (kernTCSMAwareNumberOfProcessorCores() <= 2)
         return twoCorePriorityDelta;
@@ -310,22 +451,19 @@ static int32_t computePriorityDeltaOfWorkerThreads(int32_t twoCorePriorityDelta,
     return multiCorePriorityDelta;
 }
 
-static constexpr bool jitEnabledByDefault()
-{
-    return is32Bit() || isAddress64Bit();
-}
-
-static unsigned computeNumberOfGCMarkers(unsigned maxNumberOfGCMarkers)
+unsigned Options::computeNumberOfGCMarkers(unsigned maxNumberOfGCMarkers)
 {
     return computeNumberOfWorkerThreads(maxNumberOfGCMarkers);
 }
 
-static bool defaultTCSMValue()
+bool Options::defaultTCSMValue()
 {
     return true;
 }
 
 const char* const OptionRange::s_nullRangeStr = "<null>";
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 bool OptionRange::init(const char* rangeString)
 {
@@ -374,7 +512,9 @@ bool OptionRange::init(const char* rangeString)
     return true;
 }
 
-bool OptionRange::isInRange(unsigned count)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+bool OptionRange::isInRange(unsigned count) const
 {
     if (m_state < Normal)
         return true;
@@ -389,14 +529,6 @@ void OptionRange::dump(PrintStream& out) const
 {
     out.print(m_rangeString);
 }
-
-// Realize the names for each of the options:
-const Options::ConstMetaData Options::s_constMetaData[NumberOfOptions] = {
-#define FILL_OPTION_INFO(type_, name_, defaultValue_, availability_, description_) \
-    { #name_, description_, Options::Type::type_, Availability::availability_, offsetof(OptionsStorage, name_), offsetof(OptionsStorage, name_##Default) },
-    FOR_EACH_JSC_OPTION(FILL_OPTION_INFO)
-#undef FILL_OPTION_INFO
-};
 
 static void scaleJITPolicy()
 {
@@ -418,10 +550,24 @@ static void scaleJITPolicy()
     scaleOption(Options::thresholdForOptimizeSoon(), 1);
     scaleOption(Options::thresholdForFTLOptimizeSoon(), 2);
     scaleOption(Options::thresholdForFTLOptimizeAfterWarmUp(), 2);
+
+    scaleOption(Options::thresholdForBBQOptimizeAfterWarmUp(), 0);
+    scaleOption(Options::thresholdForBBQOptimizeSoon(), 0);
+    scaleOption(Options::thresholdForOMGOptimizeAfterWarmUp(), 1);
+    scaleOption(Options::thresholdForOMGOptimizeSoon(), 1);
 }
+
+#if OS(DARWIN)
+static void disableAllSignalHandlerBasedOptions();
+#endif
 
 static void overrideDefaults()
 {
+#if OS(DARWIN)
+    if (Options::machExceptionHandlerSandboxPolicy == Options::SandboxPolicy::Block)
+        disableAllSignalHandlerBasedOptions();
+#endif
+
 #if !PLATFORM(IOS_FAMILY)
     if (WTF::numberOfProcessorCores() < 4)
 #endif
@@ -436,16 +582,25 @@ static void overrideDefaults()
             Options::gcIncrementScale() = 0;
     }
 
-#if PLATFORM(MAC) && CPU(ARM64)
-    Options::numberOfGCMarkers() = 3;
-    Options::numberOfDFGCompilerThreads() = 3;
-    Options::numberOfFTLCompilerThreads() = 3;
+#if OS(DARWIN) && CPU(ARM64)
+    Options::numberOfGCMarkers() = std::min<unsigned>(4, kernTCSMAwareNumberOfProcessorCores());
+
+    Options::minNumberOfWorklistThreads() = 1;
+    Options::maxNumberOfWorklistThreads() = std::min<unsigned>(3, kernTCSMAwareNumberOfProcessorCores());
+    Options::numberOfBaselineCompilerThreads() = std::min<unsigned>(3, kernTCSMAwareNumberOfProcessorCores());
+    Options::numberOfDFGCompilerThreads() = std::min<unsigned>(3, kernTCSMAwareNumberOfProcessorCores());
+    Options::numberOfFTLCompilerThreads() = std::min<unsigned>(3, kernTCSMAwareNumberOfProcessorCores());
+    Options::worklistLoadFactor() = 20;
+    Options::worklistBaselineLoadWeight() = 2;
+    Options::worklistDFGLoadWeight() = 5;
+    // Set the FTL load weight equal to the load-factor so that a new thread is started for each FTL plan
+    Options::worklistFTLLoadWeight() = 20;
 #endif
 
 #if OS(LINUX) && CPU(ARM)
-    Options::maximumFunctionForCallInlineCandidateBytecodeCost() = 77;
+    Options::maximumFunctionForCallInlineCandidateBytecodeCostForDFG() = 77;
     Options::maximumOptimizationCandidateBytecodeCost() = 42403;
-    Options::maximumFunctionForClosureCallInlineCandidateBytecodeCost() = 68;
+    Options::maximumFunctionForClosureCallInlineCandidateBytecodeCostForDFG() = 68;
     Options::maximumInliningCallerBytecodeCost() = 9912;
     Options::maximumInliningDepth() = 8;
     Options::maximumInliningRecursion() = 3;
@@ -462,7 +617,7 @@ static void overrideDefaults()
 #endif
 
 #if !ENABLE(WEBASSEMBLY)
-    Options::useWebAssemblyFastMemory() = false;
+    Options::useWasmFastMemory() = false;
     Options::useWasmFaultSignalHandler() = false;
 #endif
 
@@ -470,70 +625,134 @@ static void overrideDefaults()
     Options::useMachForExceptions() = false;
 #endif
 
-    if (Options::useWasmLLInt() && !Options::wasmLLIntTiersUpToBBQ()) {
-        Options::thresholdForOMGOptimizeAfterWarmUp() = 1500;
-        Options::thresholdForOMGOptimizeSoon() = 100;
-    }
+#if ASAN_ENABLED
+    // This is a heuristic because ASAN builds are memory hogs in terms of stack frame usage.
+    // So, we need a much larger ReservedZoneSize to allow stack overflow handlers to execute.
+    Options::reservedZoneSize() = 3 * Options::reservedZoneSize();
+#endif
+
+#if PLATFORM(IOS_FAMILY)
+    // This is used to mitigate performance regression rdar://150522186.
+    if (Options::usePartialLoopUnrolling())
+        Options::maxPartialLoopUnrollingBodyNodeSize() = 50;
+#endif
+}
+
+bool Options::setAllJITCodeValidations(const char* valueStr)
+{
+    auto value = parse<OptionsStorage::Bool>(valueStr);
+    if (!value)
+        return false;
+    setAllJITCodeValidations(value.value());
+    return true;
+}
+
+void Options::setAllJITCodeValidations(bool value)
+{
+    Options::validateDFGClobberize() = value;
+    Options::validateDFGExceptionHandling() = value;
+    Options::validateDFGMayExit() = value;
+    Options::validateDoesGC() = value;
+    Options::useJITAsserts() = value;
+}
+
+static inline void disableAllWasmJITOptions()
+{
+    Options::useLLInt() = true;
+    Options::useBBQJIT() = false;
+    Options::useOMGJIT() = false;
+
+    Options::useWasmSIMD() = Options::useWasmSIMD() && Options::useWasmIPIntSIMD();
+
+    Options::dumpWasmDisassembly() = false;
+    Options::dumpBBQDisassembly() = false;
+    Options::dumpOMGDisassembly() = false;
+}
+
+static inline void disableAllWasmOptions()
+{
+    disableAllWasmJITOptions();
+
+    Options::useWasm() = false;
+    Options::useWasmIPInt() = false;
+    Options::useWasmIPIntSIMD() = false;
+    Options::failToCompileWasmCode() = true;
+
+    Options::useWasmFastMemory() = false;
+    Options::useWasmFaultSignalHandler() = false;
+    Options::numberOfWasmCompilerThreads() = 0;
+
+    Options::useWasmSIMD() = false;
+    Options::useWasmRelaxedSIMD() = false;
+    Options::useWasmTailCalls() = false;
 }
 
 static inline void disableAllJITOptions()
 {
     Options::useLLInt() = true;
     Options::useJIT() = false;
+    disableAllWasmJITOptions();
+
     Options::useBaselineJIT() = false;
+    Options::useLOLJIT() = false;
     Options::useDFGJIT() = false;
     Options::useFTLJIT() = false;
-    Options::useBBQJIT() = false;
-    Options::useOMGJIT() = false;
     Options::useDOMJIT() = false;
     Options::useRegExpJIT() = false;
     Options::useJITCage() = false;
     Options::useConcurrentJIT() = false;
 
-    Options::useWebAssembly() = false;
-
     Options::usePollingTraps() = true;
-    Options::useLLInt() = true;
 
     Options::dumpDisassembly() = false;
-    Options::asyncDisassembly() = false;
+    Options::dumpBaselineDisassembly() = false;
     Options::dumpDFGDisassembly() = false;
     Options::dumpFTLDisassembly() = false;
     Options::dumpRegExpDisassembly() = false;
-    Options::dumpWasmDisassembly() = false;
-    Options::dumpBBQDisassembly() = false;
-    Options::dumpOMGDisassembly() = false;
     Options::needDisassemblySupport() = false;
 }
 
-inline void Options::dumpOptionsIfNeeded()
+#if OS(DARWIN)
+static void disableAllSignalHandlerBasedOptions()
 {
-    if (LIKELY(!Options::dumpOptions()))
+    Options::usePollingTraps() = true;
+    Options::useSharedArrayBuffer() = false;
+    Options::useWasmFastMemory() = false;
+    Options::useWasmFaultSignalHandler() = false;
+}
+#endif
+
+void Options::executeDumpOptions()
+{
+    if (!Options::dumpOptions()) [[likely]]
         return;
 
     DumpLevel level = static_cast<DumpLevel>(Options::dumpOptions());
     if (level > DumpLevel::Verbose)
         level = DumpLevel::Verbose;
 
-    const char* title = nullptr;
+    ASCIILiteral title;
     switch (level) {
     case DumpLevel::None:
         break;
     case DumpLevel::Overridden:
-        title = "Overridden JSC options:";
+        title = "Modified JSC options:"_s;
         break;
     case DumpLevel::All:
-        title = "All JSC options:";
+        title = "All JSC options:"_s;
         break;
     case DumpLevel::Verbose:
-        title = "All JSC options with descriptions:";
+        title = "All JSC options with descriptions:"_s;
         break;
     }
 
     StringBuilder builder;
-    dumpAllOptions(builder, level, title, nullptr, "   ", "\n", DumpDefaults);
+    dumpAllOptions(builder, level, title, nullptr, "   "_s, "\n"_s, DumpDefaults);
     dataLog(builder.toString());
 }
+
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 void Options::notifyOptionsChanged()
 {
@@ -543,9 +762,11 @@ void Options::notifyOptionsChanged()
     if (thresholdForGlobalLexicalBindingEpoch == 0 || thresholdForGlobalLexicalBindingEpoch == 1)
         Options::thresholdForGlobalLexicalBindingEpoch() = UINT_MAX;
 
-#if !defined(NDEBUG)
-    Options::validateDFGExceptionHandling() = true;
+#if !ENABLE(OFFLINE_ASM_ALT_ENTRY)
+    if (Options::useGdbJITInfo())
+        dataLogLn("useGdbJITInfo should be used with OFFLINE_ASM_ALT_ENTRY");
 #endif
+
 #if !ENABLE(JIT)
     Options::useJIT() = false;
 #endif
@@ -574,19 +795,62 @@ void Options::notifyOptionsChanged()
 #if !CPU(X86_64) && !CPU(ARM64)
     Options::useConcurrentGC() = false;
     Options::forceUnlinkedDFG() = false;
-    Options::useWebAssemblySIMD() = false;
-    Options::useSinglePassBBQJIT() = false;
+    Options::useWasmSIMD() = false;
+    Options::useWasmIPInt() = false;
+#if !CPU(ARM_THUMB2)
+    Options::useBBQJIT() = false;
 #endif
+#endif
+
+#if !CPU(ARM64)
+    Options::useRandomizingExecutableIslandAllocation() = false;
+#endif
+
+    Options::useDataICInFTL() = false; // Currently, it is not completed. Disable forcefully.
+    Options::forceUnlinkedDFG() = false; // Currently, IC is rapidly changing. We disable this until we get the final form of Data IC.
 
     if (!Options::allowDoubleShape())
         Options::useJIT() = false; // We don't support JIT with !allowDoubleShape. So disable it.
 
+    if (!Options::useWasm())
+        disableAllWasmOptions();
+
+    if (!Options::useJIT())
+        disableAllWasmJITOptions();
+
+    if (!Options::useWasmIPInt())
+        Options::thresholdForBBQOptimizeAfterWarmUp() = 0; // Trigger immediate BBQ tier up.
+
+#if CPU(ARM_THUMB2)
+    // WasmIPInt is not supported on ARM32, so disable wasm if BBQJIT is disabled.
+    if (Options::useWasm() && !Options::useBBQJIT())
+        Options::useWasm() = false;
+#endif
+
+#if ENABLE(WEBASSEMBLY)
+#if CPU(ARM64)
+    if (Options::enableWasmDebugger()) [[unlikely]] {
+        Options::useBBQJIT() = false;
+        Options::useOMGJIT() = false;
+    }
+#else
+    Options::enableWasmDebugger() = false;
+#endif
+#endif
+
     // At initialization time, we may decide that useJIT should be false for any
     // number of reasons (including failing to allocate JIT memory), and therefore,
     // will / should not be able to enable any JIT related services.
-    if (!Options::useJIT())
+    if (!Options::useJIT()) {
         disableAllJITOptions();
-    else {
+#if OS(DARWIN)
+        // If we don't know what the sandbox policy is on mach exception handler use is, we'll
+        // take the default behavior of blocking its use if the JIT is disabled. JIT disablement
+        // is a good proxy indicator for when mach exception handler use would also be blocked.
+        if (machExceptionHandlerSandboxPolicy == SandboxPolicy::Unknown)
+            disableAllSignalHandlerBasedOptions();
+#endif
+    } else {
         if (WTF::isX86BinaryRunningOnARM()) {
         Options::useBaselineJIT() = false;
         Options::useDFGJIT() = false;
@@ -594,7 +858,7 @@ void Options::notifyOptionsChanged()
     }
 
     if (Options::dumpDisassembly()
-        || Options::asyncDisassembly()
+            || Options::dumpBaselineDisassembly()
         || Options::dumpDFGDisassembly()
         || Options::dumpFTLDisassembly()
         || Options::dumpRegExpDisassembly()
@@ -603,32 +867,7 @@ void Options::notifyOptionsChanged()
         || Options::dumpOMGDisassembly())
         Options::needDisassemblySupport() = true;
 
-    if (Options::logJIT()
-        || Options::needDisassemblySupport()
-        || Options::dumpBytecodeAtDFGTime()
-        || Options::dumpGraphAtEachPhase()
-        || Options::dumpDFGGraphAtEachPhase()
-        || Options::dumpDFGFTLGraphAtEachPhase()
-        || Options::dumpB3GraphAtEachPhase()
-        || Options::dumpAirGraphAtEachPhase()
-        || Options::verboseCompilation()
-        || Options::verboseFTLCompilation()
-        || Options::logCompilationChanges()
-        || Options::validateGraph()
-        || Options::validateGraphAtEachPhase()
-        || Options::verboseOSR()
-        || Options::verboseCompilationQueue()
-        || Options::reportCompileTimes()
-        || Options::reportBaselineCompileTimes()
-        || Options::reportDFGCompileTimes()
-        || Options::reportFTLCompileTimes()
-        || Options::logPhaseTimes()
-        || Options::verboseCFA()
-        || Options::verboseDFGFailure()
-            || Options::verboseFTLFailure())
-        Options::alwaysComputeHash() = true;
-
-    if (Options::jitPolicyScale() != Options::jitPolicyScaleDefault())
+        if (OptionsHelper::wasOverridden(jitPolicyScaleID))
         scaleJITPolicy();
 
     if (Options::forceEagerCompilation()) {
@@ -655,34 +894,22 @@ void Options::notifyOptionsChanged()
     ASSERT((static_cast<int64_t>(Options::thresholdForOptimizeAfterLongWarmUp()) << Options::reoptimizationRetryCounterMax()) > 0);
     ASSERT((static_cast<int64_t>(Options::thresholdForOptimizeAfterLongWarmUp()) << Options::reoptimizationRetryCounterMax()) <= static_cast<int64_t>(std::numeric_limits<int32_t>::max()));
 
-        if (!Options::useBBQJIT() && Options::useOMGJIT())
-            Options::wasmLLIntTiersUpToBBQ() = false;
+        if (isX86_64() && !isX86_64_AVX())
+            Options::useWasmSIMD() = false;
 
-#if CPU(X86_64) && ENABLE(JIT)
-        if (!MacroAssembler::supportsAVX())
-            Options::useWebAssemblySIMD() = false;
-#endif
-
-        if (Options::forceAllFunctionsToUseSIMD() && !Options::useWebAssemblySIMD())
+        if (Options::forceAllFunctionsToUseSIMD() && !Options::useWasmSIMD())
             Options::forceAllFunctionsToUseSIMD() = false;
 
-        if (Options::useWebAssemblySIMD() && !Options::useWasmLLInt()) {
+        if (Options::useWasmSIMD() && !Options::useWasmIPInt()) {
             // The LLInt is responsible for discovering if functions use SIMD.
             // If we can't run using it, then we should be conservative.
             Options::forceAllFunctionsToUseSIMD() = true;
         }
-
-        if (Options::useWebAssemblyTailCalls()) {
-            // The single-pass BBQ JIT doesn't support these features currently, so we should use a different
-            // BBQ backend if any of them are enabled. We should remove these limitations as support for each
-            // is added.
-            // FIXME: Add WASM tail calls support to single-pass BBQ JIT. https://bugs.webkit.org/show_bug.cgi?id=253192
-            Options::useSinglePassBBQJIT() = false;
-        }
     }
 
-    if (Options::dumpFuzzerAgentPredictions())
-        Options::alwaysComputeHash() = true;
+    // TODO
+    if (Options::useLOLJIT())
+        Options::forceOSRExitToLLInt() = true;
 
     if (!Options::useConcurrentGC())
         Options::collectContinuously() = false;
@@ -744,44 +971,40 @@ void Options::notifyOptionsChanged()
 #if ASAN_ENABLED && OS(LINUX)
     if (Options::useWasmFaultSignalHandler()) {
         const char* asanOptions = getenv("ASAN_OPTIONS");
-        bool okToUseWebAssemblyFastMemory = asanOptions
+        bool okToUseWasmFastMemory = asanOptions
             && (strstr(asanOptions, "allow_user_segv_handler=1") || strstr(asanOptions, "handle_segv=0"));
-        if (!okToUseWebAssemblyFastMemory) {
-            dataLogLn("WARNING: ASAN interferes with JSC signal handlers; useWebAssemblyFastMemory and useWasmFaultSignalHandler will be disabled.");
+        if (!okToUseWasmFastMemory) {
+            dataLogLn("WARNING: ASAN interferes with JSC signal handlers; useWasmFastMemory and useWasmFaultSignalHandler will be disabled.");
             Options::useWasmFaultSignalHandler() = false;
         }
     }
 #endif
 
-    if (!Options::useWasmFaultSignalHandler())
-        Options::useWebAssemblyFastMemory() = false;
+    // We can't use our pacibsp system while using posix signals because the signal handler could trash our stack during reifyInlinedCallFrames.
+    // If we have JITCage we don't need to restrict ourselves to pacibsp.
+    if (!Options::useMachForExceptions() || Options::useJITCage())
+        Options::allowNonSPTagging() = true;
 
-#if CPU(ADDRESS32)
-    Options::useWebAssemblyFastMemory() = false;
+    if (!Options::useWasmFaultSignalHandler())
+        Options::useWasmFastMemory() = false;
+
+    if (Options::dumpOptimizationTracing()) {
+        Options::printEachDFGFTLInlineCall() = true;
+        Options::printEachUnrolledLoop() = true;
+        // FIXME: Should support for OSR exit as well.
+    }
+
+#if CPU(ADDRESS32) || PLATFORM(PLAYSTATION) || OS(WINDOWS)
+    Options::useWasmFastMemory() = false;
 #endif
 
     // Do range checks where needed and make corrections to the options:
     ASSERT(Options::thresholdForOptimizeAfterLongWarmUp() >= Options::thresholdForOptimizeAfterWarmUp());
     ASSERT(Options::thresholdForOptimizeAfterWarmUp() >= 0);
     ASSERT(Options::criticalGCMemoryThreshold() > 0.0 && Options::criticalGCMemoryThreshold() < 1.0);
-
-    // The following should only be done at the end after all options
-    // have been initialized.
-    dumpOptionsIfNeeded();
-    assertOptionsAreCoherent();
 }
 
-inline void* Options::addressOfOption(Options::ID id)
-{
-    auto offset = Options::s_constMetaData[id].offsetOfOption;
-    return reinterpret_cast<uint8_t*>(&g_jscConfig.options) + offset;
-}
-
-inline void* Options::addressOfOptionDefault(Options::ID id)
-{
-    auto offset = Options::s_constMetaData[id].offsetOfOptionDefault;
-    return reinterpret_cast<uint8_t*>(&g_jscConfig.options) + offset;
-}
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #if OS(WINDOWS)
 // FIXME: Use equalLettersIgnoringASCIICase.
@@ -791,43 +1014,48 @@ inline bool strncasecmp(const char* str1, const char* str2, size_t n)
 }
 #endif
 
-void Options::initialize()
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
+void Options::initializeWithOptionsCustomization(const ScopedLambda<void()>& optionsCustomizationCallback)
 {
     static std::once_flag initializeOptionsOnceFlag;
 
     std::call_once(
         initializeOptionsOnceFlag,
-        [] {
+        [&] {
             AllowUnfinalizedAccessScope scope;
 
             // Sanity check that options address computation is working.
-            RELEASE_ASSERT(Options::addressOfOption(useKernTCSMID) ==  &Options::useKernTCSM());
-            RELEASE_ASSERT(Options::addressOfOptionDefault(useKernTCSMID) ==  &Options::useKernTCSMDefault());
-            RELEASE_ASSERT(Options::addressOfOption(gcMaxHeapSizeID) ==  &Options::gcMaxHeapSize());
-            RELEASE_ASSERT(Options::addressOfOptionDefault(gcMaxHeapSizeID) ==  &Options::gcMaxHeapSizeDefault());
-            RELEASE_ASSERT(Options::addressOfOption(forceOSRExitToLLIntID) ==  &Options::forceOSRExitToLLInt());
-            RELEASE_ASSERT(Options::addressOfOptionDefault(forceOSRExitToLLIntID) ==  &Options::forceOSRExitToLLIntDefault());
+            RELEASE_ASSERT(OptionsHelper::addressOfOption(useKernTCSMID) ==  &Options::useKernTCSM());
+            RELEASE_ASSERT(OptionsHelper::addressOfOption(gcMaxHeapSizeID) ==  &Options::gcMaxHeapSize());
+            RELEASE_ASSERT(OptionsHelper::addressOfOption(forceOSRExitToLLIntID) ==  &Options::forceOSRExitToLLInt());
 
-#ifndef NDEBUG
+#if ENABLE(JSC_RESTRICTED_OPTIONS_BY_DEFAULT)
             Config::enableRestrictedOptions();
 #endif
+
             // Initialize each of the options with their default values:
 #define INIT_OPTION(type_, name_, defaultValue_, availability_, description_) { \
-                auto value = defaultValue_; \
-                name_() = value; \
-                name_##Default() = value; \
+                name_() = defaultValue_; \
             }
             FOR_EACH_JSC_OPTION(INIT_OPTION)
 #undef INIT_OPTION
+            OptionsHelper::initialize();
 
             overrideDefaults();
 
             // Allow environment vars to override options if applicable.
-            // The evn var should be the name of the option prefixed with
+            // The env var should be the name of the option prefixed with
             // "JSC_".
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) || OS(LINUX)
             bool hasBadOptions = false;
-            for (char** envp = *_NSGetEnviron(); *envp; envp++) {
+#if PLATFORM(COCOA)
+            char** envp = *_NSGetEnviron();
+#else
+            char** envp = environ;
+#endif
+
+            for (; *envp; envp++) {
                 const char* env = *envp;
                 if (!strncmp("JSC_", env, 4)) {
                     if (!Options::setOption(&env[4])) {
@@ -838,7 +1066,9 @@ void Options::initialize()
             }
             if (hasBadOptions && Options::validateOptions())
                 CRASH();
-#else // PLATFORM(COCOA)
+#endif // PLATFORM(COCOA) || OS(LINUX)
+
+#if !PLATFORM(COCOA)
 #define OVERRIDE_OPTION_WITH_HEURISTICS(type_, name_, defaultValue_, availability_, description_) \
             overrideOptionWithHeuristic(name_(), name_##ID, "JSC_" #name_, Availability::availability_);
             FOR_EACH_JSC_OPTION(OVERRIDE_OPTION_WITH_HEURISTICS)
@@ -849,7 +1079,7 @@ void Options::initialize()
             FOR_EACH_JSC_ALIASED_OPTION(OVERRIDE_ALIASED_OPTION_WITH_HEURISTICS)
 #undef OVERRIDE_ALIASED_OPTION_WITH_HEURISTICS
 
-#endif // PLATFORM(COCOA)
+#endif // !PLATFORM(COCOA)
 
 #if 0
                 ; // Deconfuse editors that do auto indentation
@@ -859,6 +1089,9 @@ void Options::initialize()
             Options::dumpZappedCellCrashData() =
                 (hwPhysicalCPUMax() >= 4) && (hwL3CacheSize() >= static_cast<int64_t>(6 * MB));
 #endif
+
+            // Client gets the last word on what options they want to override.
+            optionsCustomizationCallback();
 
             // No more options changes after this point. notifyOptionsChanged() will
             // do sanity checks and fix up options as needed.
@@ -873,16 +1106,33 @@ void Options::initialize()
     });
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
 void Options::finalize()
 {
     ASSERT(!g_jscConfig.options.allowUnfinalizedAccess);
     g_jscConfig.options.isFinalized = true;
+
+    // The following should only be done at the end after all options
+    // have been initialized.
+    assertOptionsAreCoherent();
+    if (Options::dumpOptions()) [[unlikely]]
+        executeDumpOptions();
+
+#if USE(LIBPAS)
+    if (Options::libpasForcePGMWithRate())
+        WTF::forceEnablePGM(Options::libpasForcePGMWithRate());
+#endif
+
+    OptionsHelper::releaseMetadata();
 }
 
 static bool isSeparator(char c)
 {
     return isUnicodeCompatibleASCIIWhitespace(c) || (c == ',');
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 bool Options::setOptions(const char* optionsStr)
 {
@@ -903,7 +1153,7 @@ bool Options::setOptions(const char* optionsStr)
             break;
 
         char* optionStart = p;
-        p = strstr(p, "=");
+        p = strchr(p, '=');
         if (!p) {
             dataLogF("'=' not found in option string: %p\n", optionStart);
             WTF::fastFree(optionsStrCopy);
@@ -984,6 +1234,7 @@ bool Options::setOptionWithoutAlias(const char* arg, bool verify)
         std::optional<OptionsStorage::type_> value;                \
         value = parse<OptionsStorage::type_>(valueStr);            \
         if (value) {                                               \
+            OptionsHelper::setWasOverridden(name_##ID);            \
             name_() = value.value();                               \
             if (verify) notifyOptionsChanged();                    \
             return true;                                           \
@@ -997,14 +1248,18 @@ bool Options::setOptionWithoutAlias(const char* arg, bool verify)
     return false; // No option matched.
 }
 
-static const char* invertBoolOptionValue(const char* valueStr)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+static ASCIILiteral invertBoolOptionValue(const char* valueStr)
 {
     std::optional<OptionsStorage::Bool> value = parse<OptionsStorage::Bool>(valueStr);
     if (!value)
-        return nullptr;
-    return value.value() ? "false" : "true";
+        return { };
+    return value.value() ? "false"_s : "true"_s;
 }
 
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 bool Options::setAliasedOption(const char* arg, bool verify)
 {
@@ -1023,11 +1278,11 @@ bool Options::setAliasedOption(const char* arg, bool verify)
         && !strncasecmp(arg, #aliasedName_, equalStr - arg)) {          \
         auto unaliasedOption = String::fromLatin1(#unaliasedName_);     \
         if (equivalence == SameOption)                                  \
-            unaliasedOption = unaliasedOption + equalStr;               \
+            unaliasedOption = makeString(unaliasedOption, unsafeSpan(equalStr)); \
         else {                                                          \
             ASSERT(equivalence == InvertedOption);                      \
-            auto* invertedValueStr = invertBoolOptionValue(equalStr + 1); \
-            if (!invertedValueStr)                                      \
+            auto invertedValueStr = invertBoolOptionValue(equalStr + 1); \
+            if (invertedValueStr.isNull())                                      \
                 return false;                                           \
             unaliasedOption = makeString(unaliasedOption, '=', invertedValueStr); \
         }                                                               \
@@ -1042,6 +1297,8 @@ bool Options::setAliasedOption(const char* arg, bool verify)
     return false; // No option matched.
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
 bool Options::setOption(const char* arg, bool verify)
 {
     AllowUnfinalizedAccessScope scope;
@@ -1052,16 +1309,16 @@ bool Options::setOption(const char* arg, bool verify)
 }
 
 
-void Options::dumpAllOptions(StringBuilder& builder, DumpLevel level, const char* title,
-    const char* separator, const char* optionHeader, const char* optionFooter, DumpDefaultsOption dumpDefaultsOption)
+void Options::dumpAllOptions(StringBuilder& builder, DumpLevel level, ASCIILiteral title,
+    ASCIILiteral separator, ASCIILiteral optionHeader, ASCIILiteral optionFooter, DumpDefaultsOption dumpDefaultsOption)
 {
     AllowUnfinalizedAccessScope scope;
-    if (title) {
+    if (!title.isNull()) {
         builder.append(title);
         builder.append('\n');
     }
 
-    for (size_t id = 0; id < NumberOfOptions; id++) {
+    for (size_t id = 0; id < NumberOfOptions; ++id) {
         if (separator && id)
             builder.append(separator);
         dumpOption(builder, level, static_cast<ID>(id), optionHeader, optionFooter, dumpDefaultsOption);
@@ -1070,88 +1327,46 @@ void Options::dumpAllOptions(StringBuilder& builder, DumpLevel level, const char
 
 void Options::dumpAllOptionsInALine(StringBuilder& builder)
 {
-    dumpAllOptions(builder, DumpLevel::All, nullptr, " ", nullptr, nullptr, DontDumpDefaults);
+    dumpAllOptions(builder, DumpLevel::All, { }, " "_s, { }, { }, DontDumpDefaults);
 }
 
-void Options::dumpAllOptions(DumpLevel level, const char* title)
+void Options::dumpAllOptions(DumpLevel level, ASCIILiteral title)
 {
     StringBuilder builder;
-    dumpAllOptions(builder, level, title, nullptr, "   ", "\n", DumpDefaults);
+    dumpAllOptions(builder, level, title, { }, "   "_s, "\n"_s, DumpDefaults);
     dataLog(builder.toString().utf8().data());
 }
 
-struct OptionReader {
-    class Option {
-    public:
-        void dump(StringBuilder&) const;
-
-        bool operator==(const Option&) const;
-
-        const char* name() const { return Options::s_constMetaData[m_id].name; }
-        const char* description() const { return Options::s_constMetaData[m_id].description; }
-        Options::Type type() const { return Options::s_constMetaData[m_id].type; }
-        Options::Availability availability() const { return Options::s_constMetaData[m_id].availability; }
-        bool isOverridden() const { return *this != OptionReader::defaultFor(m_id); }
-
-    private:
-        Option(Options::ID id, void* addressOfValue)
-            : m_id(id)
-        {
-            initValue(addressOfValue);
-        }
-
-        void initValue(void* addressOfValue);
-
-        Options::ID m_id;
-        union {
-            bool m_bool;
-            unsigned m_unsigned;
-            double m_double;
-            int32_t m_int32;
-            size_t m_size;
-            OptionRange m_optionRange;
-            const char* m_optionString;
-            GCLogging::Level m_gcLogLevel;
-            OSLogType m_osLogType;
-        };
-
-        friend struct OptionReader;
-    };
-
-    static const Option optionFor(Options::ID);
-    static const Option defaultFor(Options::ID);
-};
-
 void Options::dumpOption(StringBuilder& builder, DumpLevel level, Options::ID id,
-    const char* header, const char* footer, DumpDefaultsOption dumpDefaultsOption)
+    ASCIILiteral header, ASCIILiteral footer, DumpDefaultsOption dumpDefaultsOption)
 {
     RELEASE_ASSERT(static_cast<size_t>(id) < NumberOfOptions);
 
-    auto option = OptionReader::optionFor(id);
+    auto option = OptionsHelper::optionFor(id);
     Availability availability = option.availability();
     if (availability != Availability::Normal && !isAvailable(id, availability))
         return;
 
-    bool wasOverridden = option.isOverridden();
+    bool wasOverridden = OptionsHelper::wasOverridden(id);
     bool needsDescription = (level == DumpLevel::Verbose && option.description());
 
     if (level == DumpLevel::Overridden && !wasOverridden)
         return;
 
-    if (header)
+    if (!header.isNull())
         builder.append(header);
     builder.append(option.name(), '=');
     option.dump(builder);
 
-    if (wasOverridden && (dumpDefaultsOption == DumpDefaults)) {
-        auto defaultOption = OptionReader::defaultFor(id);
-        builder.append(" (default: ");
+    if (wasOverridden && (dumpDefaultsOption == DumpDefaults) && OptionsHelper::hasMetadata()) {
+        auto defaultOption = OptionsHelper::defaultFor(id);
+        builder.append(" (default: "_s);
         defaultOption.dump(builder);
-        builder.append(")");
+        builder.append(')');
     }
 
     if (needsDescription)
-        builder.append("   ... ", option.description());
+        builder.append("   ... "_s, option.description());
 
     builder.append(footer);
 }
@@ -1164,31 +1379,34 @@ void Options::assertOptionsAreCoherent()
         coherent = false;
         dataLog("INCOHERENT OPTIONS: at least one of useLLInt or useJIT must be true\n");
     }
-    if (useWebAssembly() && !(useWasmLLInt() || useBBQJIT())) {
+    if (useWasm() && !(useWasmIPInt() || useBBQJIT())) {
         coherent = false;
-        dataLog("INCOHERENT OPTIONS: at least one of useWasmLLInt or useBBQJIT must be true\n");
+        dataLog("INCOHERENT OPTIONS: at least one of useWasmIPInt, or useBBQJIT must be true\n");
+    }
+    if (useWasmIPIntSIMD() && useWasmRelaxedSIMD()) {
+        coherent = false;
+        dataLog("INCOHERENT OPTIONS: useWasmIPIntSIMD and useWasmRelaxedSIMD cannot both be enabled (relaxed SIMD opcodes 0x100-0x10c are not yet supported in IPInt)\n");
     }
     if (useProfiler() && useConcurrentJIT()) {
         coherent = false;
         dataLogLn("Bytecode profiler is not concurrent JIT safe.");
     }
+    if (!allowNonSPTagging() && !useMachForExceptions()) {
+        coherent = false;
+        dataLog("INCOHERENT OPTIONS: can't restrict pointer tagging to pacibsp and use posix signals");
+    }
+
     if (!coherent)
         CRASH();
 }
 
-const OptionReader::Option OptionReader::optionFor(Options::ID id)
-{
-    return Option(id, Options::addressOfOption(id));
-}
+namespace OptionsHelper {
 
-const OptionReader::Option OptionReader::defaultFor(Options::ID id)
-{
-    return Option(id, Options::addressOfOptionDefault(id));
-}
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
-void OptionReader::Option::initValue(void* addressOfValue)
+void Option::initValue(void* addressOfValue)
 {
-    Options::Type type = Options::s_constMetaData[m_id].type;
+    Options::Type type = g_constMetaData[m_id].type;
     switch (type) {
     case Options::Type::Bool:
         memcpy(&m_bool, addressOfValue, sizeof(OptionsStorage::Bool));
@@ -1220,11 +1438,13 @@ void OptionReader::Option::initValue(void* addressOfValue)
     }
 }
 
-void OptionReader::Option::dump(StringBuilder& builder) const
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+
+void Option::dump(StringBuilder& builder) const
 {
     switch (type()) {
     case Options::Type::Bool:
-        builder.append(m_bool ? "true" : "false");
+        builder.append(m_bool ? "true"_s : "false"_s);
         break;
     case Options::Type::Unsigned:
         builder.append(m_unsigned);
@@ -1239,13 +1459,13 @@ void OptionReader::Option::dump(StringBuilder& builder) const
         builder.append(m_int32);
         break;
     case Options::Type::OptionRange:
-        builder.append(m_optionRange.rangeString());
+        builder.append(unsafeSpan(m_optionRange.rangeString()));
         break;
     case Options::Type::OptionString:
-        builder.append('"', m_optionString ? m_optionString : "", '"');
+        builder.append('"', m_optionString ? unsafeSpan(m_optionString) : ""_span, '"');
         break;
     case Options::Type::GCLogLevel:
-        builder.append(GCLogging::levelAsString(m_gcLogLevel));
+        builder.append(m_gcLogLevel);
         break;
     case Options::Type::OSLogType:
         builder.append(asString(m_osLogType));
@@ -1253,7 +1473,7 @@ void OptionReader::Option::dump(StringBuilder& builder) const
     }
 }
 
-bool OptionReader::Option::operator==(const Option& other) const
+bool Option::operator==(const Option& other) const
 {
     ASSERT(type() == other.type());
     switch (type()) {
@@ -1280,23 +1500,47 @@ bool OptionReader::Option::operator==(const Option& other) const
     return false;
 }
 
+} // namespace OptionsHelper
+
 #if ENABLE(JIT_CAGE)
 SUPPRESS_ASAN bool canUseJITCage()
 {
     if (JSC_FORCE_USE_JIT_CAGE)
         return true;
-    return JSC_JIT_CAGE_VERSION() && WTF::processHasEntitlement("com.apple.private.verified-jit"_s);
+    return JSC_JIT_CAGE_VERSION() && !ASAN_ENABLED && WTF::processHasEntitlement("com.apple.private.verified-jit"_s);
 }
 #else
 bool canUseJITCage() { return false; }
 #endif
 
-bool canUseWebAssemblyFastMemory()
+bool canUseHandlerIC()
+{
+#if USE(JSVALUE64)
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool canUseWasm()
+{
+    if constexpr (useCompressedHeap)
+        return false;
+#if ENABLE(WEBASSEMBLY) && !PLATFORM(WATCHOS)
+    return true;
+#else
+    return false;
+#endif
+}
+
+bool hasCapacityToUseLargeGigacage()
 {
     // Gigacage::hasCapacityToUseLargeGigacage is determined based on EFFECTIVE_ADDRESS_WIDTH.
     // If we have enough address range to potentially use a large gigacage,
-    // then we have enough address range to useWebAssemblyFastMemory.
+    // then we have enough address range to useWasmFastMemory.
     return Gigacage::hasCapacityToUseLargeGigacage;
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

@@ -38,7 +38,7 @@ class CPSRethreadingPhase : public Phase {
     static constexpr bool verbose = false;
 public:
     CPSRethreadingPhase(Graph& graph)
-        : Phase(graph, "CPS rethreading")
+        : Phase(graph, "CPS rethreading"_s)
     {
     }
 
@@ -117,7 +117,7 @@ private:
 
             for (unsigned phiIndex = block->phis.size(); phiIndex--;)
                 m_graph.deleteNode(block->phis[phiIndex]);
-            block->phis.resize(0);
+            block->phis.shrink(0);
         }
     }
 
@@ -428,8 +428,10 @@ private:
             size_t index = entry.m_index;
 
             if (verbose) {
+                WTF::dataFile().atomically([&](auto&) {
                 dataLog(" Iterating on phi from block ", block, " ");
                 m_graph.dump(WTF::dataFile(), "", currentPhi);
+                });
             }
 
             for (size_t i = predecessors.size(); i--;) {
@@ -461,8 +463,11 @@ private:
                     || variableInPrevious->op() == SetArgumentDefinitely
                     || variableInPrevious->op() == SetArgumentMaybe);
 
-                if (verbose)
-                    m_graph.dump(WTF::dataFile(), "    Adding new variable from predecessor ", variableInPrevious);
+                if (verbose) {
+                    WTF::dataFile().atomically([&](auto& out) {
+                        m_graph.dump(out, "    Adding new variable from predecessor ", variableInPrevious);
+                    });
+                }
 
                 if (!currentPhi->child1()) {
                     currentPhi->children.setChild1(Edge(variableInPrevious));

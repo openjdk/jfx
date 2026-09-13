@@ -25,10 +25,11 @@
 
 #pragma once
 
-#include "CachedImage.h"
-#include "CachedResourceHandle.h"
-#include "StyleImage.h"
-#include <wtf/IsoMalloc.h>
+#include <WebCore/CachedImage.h>
+#include <WebCore/CachedResourceHandle.h>
+#include <WebCore/StyleImage.h>
+#include <wtf/CheckedPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -36,21 +37,24 @@ namespace WebCore {
 class CachedImage;
 class RenderElement;
 
-class RenderImageResource {
-    WTF_MAKE_NONCOPYABLE(RenderImageResource); WTF_MAKE_ISO_ALLOCATED(RenderImageResource);
+class RenderImageResource : public CanMakeCheckedPtr<RenderImageResource> {
+    WTF_MAKE_NONCOPYABLE(RenderImageResource);
+    WTF_MAKE_TZONE_ALLOCATED(RenderImageResource);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderImageResource);
 public:
     RenderImageResource();
-    virtual ~RenderImageResource() = default;
+    virtual ~RenderImageResource();
 
     virtual void initialize(RenderElement& renderer) { initialize(renderer, nullptr); }
     virtual void shutdown();
 
-    void setCachedImage(CachedImage*);
+    void setCachedImage(CachedResourceHandle<CachedImage>&&);
     CachedImage* cachedImage() const { return m_cachedImage.get(); }
 
     void resetAnimation();
 
     virtual RefPtr<Image> image(const IntSize& size = { }) const;
+    virtual bool currentFrameIsComplete() const;
     virtual bool errorOccurred() const { return m_cachedImage && m_cachedImage->errorOccurred(); }
 
     virtual void setContainerContext(const IntSize&, const URL&);
@@ -70,7 +74,7 @@ protected:
 private:
     virtual LayoutSize imageSize(float multiplier, CachedImage::SizeType) const;
 
-    WeakPtr<RenderElement> m_renderer;
+    SingleThreadWeakPtr<RenderElement> m_renderer;
     CachedResourceHandle<CachedImage> m_cachedImage;
     bool m_cachedImageRemoveClientIsNeeded { true };
 };

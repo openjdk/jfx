@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 #include "common.h"
 
+#include <shlwapi.h>
+
 #include "GlassApplication.h"
 #include "GlassClipboard.h"
 #include "GlassScreen.h"
@@ -34,7 +36,6 @@
 
 #include "com_sun_glass_ui_win_WinApplication.h"
 #include "com_sun_glass_ui_win_WinSystemClipboard.h"
-
 
 /**********************************
  * GlassApplication
@@ -99,7 +100,7 @@ jclass GlassApplication::ClassForName(JNIEnv *env, char *className)
     return foundClass;
 }
 
-GlassApplication::GlassApplication(jobject jrefThis) : BaseWnd(), m_platformSupport(GetEnv())
+GlassApplication::GlassApplication(jobject jrefThis) : BaseWnd(), m_platformSupport(GetEnv(), jrefThis)
 {
     m_grefThis = GetEnv()->NewGlobalRef(jrefThis);
     m_clipboard = NULL;
@@ -168,11 +169,10 @@ LRESULT GlassApplication::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
             }
             break;
         case WM_SETTINGCHANGE:
-            if (((UINT)wParam == SPI_GETHIGHCONTRAST ||
-                    lParam != NULL && wcscmp(LPCWSTR(lParam), L"ImmersiveColorSet") == 0) &&
-                    m_platformSupport.updatePreferences(m_grefThis)) {
+            if (m_platformSupport.onSettingChanged(wParam, lParam)) {
                 return 0;
             }
+
             if ((UINT)wParam != SPI_SETWORKAREA) {
                 break;
             }
@@ -183,7 +183,9 @@ LRESULT GlassApplication::WindowProc(UINT msg, WPARAM wParam, LPARAM lParam)
         case WM_THEMECHANGED:
         case WM_SYSCOLORCHANGE:
         case WM_DWMCOLORIZATIONCOLORCHANGED:
-            if (m_platformSupport.updatePreferences(m_grefThis)) {
+            if (m_platformSupport.updatePreferences(
+                    PlatformSupport::PreferenceType(PlatformSupport::PT_SYSTEM_COLORS |
+                                                    PlatformSupport::PT_UI_SETTINGS))) {
                 return 0;
             }
             break;
@@ -305,9 +307,6 @@ BOOL WINAPI DllMain(HANDLE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
 {
     if (dwReason == DLL_PROCESS_ATTACH) {
         GlassApplication::SetHInstance((HINSTANCE)hinstDLL);
-        tryInitializeRoActivationSupport();
-    } else if (dwReason == DLL_PROCESS_DETACH) {
-        uninitializeRoActivationSupport();
     }
     return TRUE;
 }
@@ -528,6 +527,35 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_win_WinApplication_getPlatformPr
     (JNIEnv * env, jobject self)
 {
     return GlassApplication::GetPlatformPreferences();
+}
+
+/*
+ * Class:     com_sun_glass_ui_win_WinApplication
+ * Method:    _getDefaultBrowser
+ * Signature: ()Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_com_sun_glass_ui_win_WinApplication__1getDefaultBrowser
+        (JNIEnv *env, jclass cls)
+{
+    LPCWSTR fileExtension = L"https";
+    WCHAR defaultBrowser_c [MAX_PATH];
+    DWORD cchBuffer = MAX_PATH;
+
+    // Use AssocQueryString to get the default browser
+    HRESULT hr = AssocQueryStringW(
+        ASSOCF_NONE,            // No special flags
+        ASSOCSTR_COMMAND,       // Request the command string
+        fileExtension,          // File extension
+        NULL,                   // pszExtra (optional)
+        defaultBrowser_c,       // Output buffer - result
+        &cchBuffer              // Size of the output buffer
+    );
+
+    if (FAILED(hr)) {
+        return NULL;
+    }
+
+    return CreateJString(env, defaultBrowser_c);;
 }
 
 } // extern "C"

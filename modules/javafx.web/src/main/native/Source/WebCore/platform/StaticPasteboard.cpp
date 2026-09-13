@@ -77,7 +77,7 @@ void StaticPasteboard::writeString(const String& type, const String& value)
 void StaticPasteboard::writeData(const String& type, Ref<SharedBuffer>&& data)
 {
     m_nonDefaultDataTypes.add(type);
-    m_customData.writeData(type, WTFMove(data));
+    m_customData.writeData(type, WTF::move(data));
 }
 
 void StaticPasteboard::writeStringInCustomData(const String& type, const String& value)
@@ -106,7 +106,7 @@ PasteboardCustomData StaticPasteboard::takeCustomData()
 
 void StaticPasteboard::writeMarkup(const String& markup)
 {
-    m_customData.writeString("text/html"_s, markup);
+    m_customData.writeString(textHTMLContentTypeAtom(), markup);
 }
 
 void StaticPasteboard::writePlainText(const String& text, SmartReplaceOption)
@@ -148,9 +148,11 @@ void StaticPasteboard::write(const PasteboardWebContent& content)
 #if PLATFORM(COCOA)
     markup = content.dataInHTMLFormat;
     text = content.dataInStringFormat;
-#elif PLATFORM(GTK) || USE(LIBWPE)
+#elif PLATFORM(GTK) || USE(LIBWPE) || ENABLE(WPE_PLATFORM)
     markup = content.markup;
     text = content.text;
+#else
+    UNUSED_PARAM(content);
 #endif
 
     if (!markup.isEmpty())

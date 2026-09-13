@@ -27,7 +27,10 @@
 #include "InlineStylePropertyMap.h"
 
 #include "CSSCustomPropertyValue.h"
+#include "CSSSerializationContext.h"
 #include "Document.h"
+#include "NodeInlines.h"
+#include "StyleAttributeMutationScope.h"
 #include "StylePropertiesInlines.h"
 #include "StyledElement.h"
 
@@ -45,21 +48,21 @@ InlineStylePropertyMap::InlineStylePropertyMap(StyledElement& element)
 
 RefPtr<CSSValue> InlineStylePropertyMap::propertyValue(CSSPropertyID propertyID) const
 {
-    if (auto* inlineStyle = m_element ? m_element->inlineStyle() : nullptr)
+    if (RefPtr inlineStyle = m_element ? m_element->inlineStyle() : nullptr)
         return inlineStyle->getPropertyCSSValue(propertyID);
     return nullptr;
 }
 
 String InlineStylePropertyMap::shorthandPropertySerialization(CSSPropertyID propertyID) const
 {
-    if (auto* inlineStyle = m_element ? m_element->inlineStyle() : nullptr)
+    if (RefPtr inlineStyle = m_element ? m_element->inlineStyle() : nullptr)
         return inlineStyle->getPropertyValue(propertyID);
     return String();
 }
 
 RefPtr<CSSValue> InlineStylePropertyMap::customPropertyValue(const AtomString& property) const
 {
-    if (auto* inlineStyle = m_element ? m_element->inlineStyle() : nullptr)
+    if (RefPtr inlineStyle = m_element ? m_element->inlineStyle() : nullptr)
         return inlineStyle->getCustomPropertyCSSValue(property.string());
     return nullptr;
 }
@@ -75,29 +78,34 @@ auto InlineStylePropertyMap::entries(ScriptExecutionContext* context) const -> V
     if (!m_element || !context)
         return { };
 
-    auto* inlineStyle = m_element->inlineStyle();
+    RefPtr inlineStyle = m_element->inlineStyle();
     if (!inlineStyle)
         return { };
 
     auto& document = downcast<Document>(*context);
     return map(*inlineStyle, [&document] (auto property) {
-        return StylePropertyMapEntry(property.cssName(), reifyValueToVector(RefPtr<CSSValue> { property.value() }, property.id(), document));
+        return StylePropertyMapEntry(property.cssName(), reifyValueToVector(document, RefPtr<CSSValue> { property.value() }, property.id()));
     });
 }
 
 void InlineStylePropertyMap::removeProperty(CSSPropertyID propertyID)
 {
-    if (m_element)
-        m_element->removeInlineStyleProperty(propertyID);
+    if (!m_element)
+        return;
+    StyleAttributeMutationScope mutationScope { m_element.get() };
+    if (m_element->removeInlineStyleProperty(propertyID))
+        mutationScope.enqueueMutationRecord();
 }
 
 bool InlineStylePropertyMap::setShorthandProperty(CSSPropertyID propertyID, const String& value)
 {
     if (!m_element)
         return false;
+    StyleAttributeMutationScope mutationScope { m_element.get() };
     bool didFailParsing = false;
-    bool important = false;
-    m_element->setInlineStyleProperty(propertyID, value, important, &didFailParsing);
+    m_element->setInlineStyleProperty(propertyID, value, IsImportant::No, &didFailParsing);
+    if (!didFailParsing)
+        mutationScope.enqueueMutationRecord();
     return !didFailParsing;
 }
 
@@ -105,13 +113,15 @@ bool InlineStylePropertyMap::setProperty(CSSPropertyID propertyID, Ref<CSSValue>
 {
     if (!m_element)
         return false;
+    StyleAttributeMutationScope mutationScope { m_element.get() };
     bool didFailParsing = false;
-    bool important = false;
     // FIXME: We should be able to validate CSSValues without having to serialize to text and go through the
     // parser. This is inefficient.
-    m_element->setInlineStyleProperty(propertyID, value->cssText(), important, &didFailParsing);
-    if (!didFailParsing)
-        m_element->setInlineStyleProperty(propertyID, WTFMove(value));
+    m_element->setInlineStyleProperty(propertyID, value->cssText(CSS::defaultSerializationContext()), IsImportant::No, &didFailParsing);
+    if (!didFailParsing) {
+        m_element->setInlineStyleProperty(propertyID, WTF::move(value));
+        mutationScope.enqueueMutationRecord();
+    }
     return !didFailParsing;
 }
 
@@ -120,21 +130,29 @@ bool InlineStylePropertyMap::setCustomProperty(Document&, const AtomString& prop
     if (!m_element)
         return false;
 
-    auto customPropertyValue = CSSCustomPropertyValue::createUnresolved(property, WTFMove(value));
-    m_element->setInlineStyleCustomProperty(WTFMove(customPropertyValue));
+    StyleAttributeMutationScope mutationScope { m_element.get() };
+    Ref customPropertyValue = CSSCustomPropertyValue::createUnresolved(property, WTF::move(value));
+    if (m_element->setInlineStyleCustomProperty(WTF::move(customPropertyValue)))
+        mutationScope.enqueueMutationRecord();
     return true;
 }
 
 void InlineStylePropertyMap::removeCustomProperty(const AtomString& property)
 {
-    if (m_element)
-        m_element->removeInlineStyleCustomProperty(property);
+    if (!m_element)
+        return;
+    StyleAttributeMutationScope mutationScope { m_element.get() };
+    if (m_element->removeInlineStyleCustomProperty(property))
+        mutationScope.enqueueMutationRecord();
 }
 
 void InlineStylePropertyMap::clear()
 {
-    if (m_element)
+    if (!m_element)
+        return;
+    StyleAttributeMutationScope mutationScope { m_element.get() };
         m_element->removeAllInlineStyleProperties();
+    mutationScope.enqueueMutationRecord();
 }
 
 } // namespace WebCore

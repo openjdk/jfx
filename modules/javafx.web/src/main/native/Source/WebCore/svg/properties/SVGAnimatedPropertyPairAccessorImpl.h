@@ -31,6 +31,7 @@
 #include "SVGAnimatedPropertyPairAccessor.h"
 #include "SVGAnimatedPropertyPairAnimatorImpl.h"
 #include "SVGNames.h"
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -104,7 +105,7 @@ private:
 
         String string1 = dirty1 ? *property1(owner)->synchronize() : property1(owner)->baseValAsString();
         String string2 = dirty2 ? *property2(owner)->synchronize() : property2(owner)->baseValAsString();
-        return string1 == string2 ? string1 : string1 + ", " + string2;
+        return string1 == string2 ? string1 : makeString(string1, ", "_s, string2);
     }
 
     RefPtr<SVGAttributeAnimator> createAnimator(OwnerType& owner, const QualifiedName& attributeName, AnimationMode animationMode, CalcMode calcMode, bool isAccumulated, bool isAdditive) const final
@@ -139,7 +140,7 @@ private:
 
         String string1 = dirty1 ? *property1(owner)->synchronize() : property1(owner)->baseValAsString();
         String string2 = dirty2 ? *property2(owner)->synchronize() : property2(owner)->baseValAsString();
-        return string1 == string2 ? string1 : string1 + ", " + string2;
+        return string1 == string2 ? string1 : makeString(string1, ", "_s, string2);
     }
 
     RefPtr<SVGAttributeAnimator> createAnimator(OwnerType& owner, const QualifiedName& attributeName, AnimationMode animationMode, CalcMode calcMode, bool isAccumulated, bool isAdditive) const final

@@ -27,6 +27,8 @@
     Conditional=APPLE_PAY_INSTALLMENTS,
     ExportMacro=WEBCORE_EXPORT,
     JSGenerateToJSObject,
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ApplePayInstallmentConfiguration {
     ApplePaySetupFeatureType featureType = "appleCard";
     DOMString merchandisingImageData;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,14 +27,10 @@ package test.javafx.scene;
 
 import com.sun.javafx.scene.SceneHelper;
 import test.com.sun.javafx.test.MouseEventGenerator;
-import static org.junit.Assert.*;
 import javafx.event.EventHandler;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-
-import org.junit.Assert;
-import org.junit.Test;
 
 import test.com.sun.javafx.pgstub.StubScene;
 import test.com.sun.javafx.pgstub.StubToolkit;
@@ -52,6 +48,14 @@ import javafx.scene.SubScene;
 import javafx.scene.input.PickResult;
 import javafx.scene.paint.Color;
 import javafx.scene.transform.Rotate;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MouseTest {
 
@@ -999,10 +1003,10 @@ public class MouseTest {
 
         scene.smallSquareTracker.node.addEventHandler(MouseEvent.MOUSE_RELEASED,
                 event -> {
-                    Assert.assertEquals(Double.NaN, event.getX(), 0.0001);
-                    Assert.assertEquals(Double.NaN, event.getY(), 0.0001);
-                    Assert.assertEquals(251.0, event.getSceneX(), 0.0001);
-                    Assert.assertEquals(251.0, event.getSceneY(), 0.0001);
+                    assertEquals(Double.NaN, event.getX(), 0.0001);
+                    assertEquals(Double.NaN, event.getY(), 0.0001);
+                    assertEquals(251.0, event.getSceneX(), 0.0001);
+                    assertEquals(251.0, event.getSceneY(), 0.0001);
                 }
         );
 
@@ -1296,7 +1300,7 @@ public class MouseTest {
         s.innerRect1.setTranslateZ(10);
 
         s.parent1.setOnMouseMoved(event -> {
-            Assert.assertEquals(5, event.getZ(), 0.00001);
+            assertEquals(5, event.getZ(), 0.00001);
             assertSame(s.innerRect1, event.getTarget());
             s.called = true;
         });
@@ -1338,12 +1342,12 @@ public class MouseTest {
         s.innerRect1.setOnMouseExited(event -> {
             assertSame(s.innerRect2, event.getPickResult().getIntersectedNode());
             assertSame(s.innerRect1, event.getTarget());
-            Assert.assertEquals(16.58, event.getPickResult().getIntersectedPoint().getX(), 0.1);
-            Assert.assertEquals(7.33, event.getPickResult().getIntersectedPoint().getY(), 0.1);
-            Assert.assertEquals(0.0, event.getPickResult().getIntersectedPoint().getZ(), 0.0001);
-            Assert.assertEquals(295.81, event.getX(), 0.1);
-            Assert.assertEquals(57.64, event.getY(), 0.1);
-            Assert.assertEquals(-3.0, event.getZ(), 0.1);
+            assertEquals(16.58, event.getPickResult().getIntersectedPoint().getX(), 0.1);
+            assertEquals(7.33, event.getPickResult().getIntersectedPoint().getY(), 0.1);
+            assertEquals(0.0, event.getPickResult().getIntersectedPoint().getZ(), 0.0001);
+            assertEquals(295.81, event.getX(), 0.1);
+            assertEquals(57.64, event.getY(), 0.1);
+            assertEquals(-3.0, event.getZ(), 0.1);
 
             s.called = true;
         });
@@ -1373,12 +1377,12 @@ public class MouseTest {
         s.innerRect1.setOnMouseExited(event -> {
             assertSame(s.innerRect2, event.getPickResult().getIntersectedNode());
             assertSame(s.innerRect1, event.getTarget());
-            Assert.assertEquals(14.07, event.getPickResult().getIntersectedPoint().getX(), 0.1);
-            Assert.assertEquals(5.97, event.getPickResult().getIntersectedPoint().getY(), 0.1);
-            Assert.assertEquals(0.0, event.getPickResult().getIntersectedPoint().getZ(), 0.0001);
-            Assert.assertEquals(216.49, event.getX(), 0.1);
-            Assert.assertEquals(57.64, event.getY(), 0.1);
-            Assert.assertEquals(-191.49, event.getZ(), 0.1);
+            assertEquals(14.07, event.getPickResult().getIntersectedPoint().getX(), 0.1);
+            assertEquals(5.97, event.getPickResult().getIntersectedPoint().getY(), 0.1);
+            assertEquals(0.0, event.getPickResult().getIntersectedPoint().getZ(), 0.0001);
+            assertEquals(216.49, event.getX(), 0.1);
+            assertEquals(57.64, event.getY(), 0.1);
+            assertEquals(-191.49, event.getZ(), 0.1);
 
             s.called = true;
         });

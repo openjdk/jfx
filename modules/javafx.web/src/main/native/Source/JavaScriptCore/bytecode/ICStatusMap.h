@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "CodeOrigin.h"
-#include "ExitingInlineKind.h"
+#include <JavaScriptCore/CodeOrigin.h>
+#include <JavaScriptCore/ExitingInlineKind.h>
 #include <wtf/HashMap.h>
 
 namespace JSC {
@@ -50,7 +50,7 @@ struct ICStatus {
     DeleteByStatus* deleteStatus { nullptr };
 };
 
-typedef HashMap<CodeOrigin, ICStatus, CodeOriginApproximateHash> ICStatusMap;
+typedef UncheckedKeyHashMap<CodeOrigin, ICStatus, CodeOriginApproximateHash> ICStatusMap;
 
 struct ICStatusContext {
     ICStatus get(CodeOrigin) const;

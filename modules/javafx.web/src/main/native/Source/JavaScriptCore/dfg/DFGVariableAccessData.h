@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,10 @@
 #include "Operands.h"
 #include "SpeculatedType.h"
 #include "VirtualRegister.h"
+#include <wtf/SequesteredMalloc.h>
 #include <wtf/UnionFind.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC { namespace DFG {
 
@@ -44,7 +47,7 @@ struct Node;
 enum DoubleBallot { VoteValue, VoteDouble };
 
 class VariableAccessData : public UnionFind<VariableAccessData> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(VariableAccessData);
     WTF_MAKE_NONCOPYABLE(VariableAccessData);
 public:
     VariableAccessData();
@@ -225,5 +228,7 @@ private:
 };
 
 } } // namespace JSC::DFG
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(DFG_JIT)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,11 +33,12 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 
+import java.util.ArrayList;
+import java.util.BitSet;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.function.IntPredicate;
-import java.util.stream.Collectors;
 
 class ControlUtils {
     private ControlUtils() { }
@@ -54,20 +55,26 @@ class ControlUtils {
         });
     }
 
-    static void requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(Control c) {
+    static boolean controlShouldRequestFocusIfCurrentFocusOwnerIsChild(Control c) {
         Scene scene = c.getScene();
         final Node focusOwner = scene == null ? null : scene.getFocusOwner();
         if (focusOwner == null) {
-            c.requestFocus();
+            return true;
         } else if (! c.equals(focusOwner)) {
             Parent p = focusOwner.getParent();
             while (p != null) {
                 if (c.equals(p)) {
-                    c.requestFocus();
-                    break;
+                    return true;
                 }
                 p = p.getParent();
             }
+        }
+        return false;
+    }
+
+    static void requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(Control c) {
+        if (controlShouldRequestFocusIfCurrentFocusOwnerIsChild(c)) {
+            c.requestFocus();
         }
     }
 
@@ -157,28 +164,34 @@ class ControlUtils {
         };
     }
 
+    private static <S> void processContiguousRanges(MultipleSelectionModelBase<S> sm, BitSet indices, boolean isSet) {
+        int begin = indices.nextSetBit(0);
+        while (begin >= 0) {
+            int end = indices.nextClearBit(begin);
+            sm.selectedIndices.set(begin, end, isSet);
+            begin = indices.nextSetBit(end);
+        }
+    }
+
     public static <S> void updateSelectedIndices(MultipleSelectionModelBase<S> sm, boolean isCellSelectionEnabled, ListChangeListener.Change<? extends TablePositionBase<?>> c, IntPredicate removeRowFilter) {
         sm.selectedIndices._beginChange();
 
         while (c.next()) {
-            // it may look like all we are doing here is collecting the removed elements (and
-            // counting the added elements), but the call to 'peek' is also crucial - it is
-            // ensuring that the selectedIndices bitset is correctly updated.
-
             sm.startAtomic();
-            final List<Integer> removed = c.getRemoved().stream()
-                    .mapToInt(TablePositionBase::getRow)
-                    .distinct()
-                    .filter(removeRowFilter)
-                    .boxed()
-                    .peek(sm.selectedIndices::clear)
-                    .collect(Collectors.toList());
 
-            final int addedSize = (int)c.getAddedSubList().stream()
-                    .mapToInt(TablePositionBase::getRow)
-                    .distinct()
-                    .peek(sm.selectedIndices::set)
-                    .count();
+            BitSet removed = c.getRemoved().stream()
+                .mapToInt(TablePositionBase::getRow)
+                .filter(removeRowFilter)
+                .collect(BitSet::new, BitSet::set, BitSet::or);
+
+            processContiguousRanges(sm, removed, false);
+
+            BitSet added = c.getAddedSubList().stream()
+                .mapToInt(TablePositionBase::getRow)
+                .collect(BitSet::new, BitSet::set, BitSet::or);
+
+            processContiguousRanges(sm, added, true);
+
             sm.stopAtomic();
 
             int from = c.getFrom();
@@ -188,12 +201,13 @@ class ControlUtils {
                 int tpRow = c.getList().get(from).getRow();
                 from = sm.selectedIndices.indexOf(tpRow);
             }
-            final int to = from + addedSize;
+            int to = from + added.cardinality();
 
+            List<Integer> removedIndices = removed.stream().boxed().toList();
             if (c.wasReplaced()) {
-                sm.selectedIndices._nextReplace(from, to, removed);
+                sm.selectedIndices._nextReplace(from, to, removedIndices);
             } else if (c.wasRemoved()) {
-                sm.selectedIndices._nextRemove(from, removed);
+                sm.selectedIndices._nextRemove(from, removedIndices);
             } else if (c.wasAdded()) {
                 sm.selectedIndices._nextAdd(from, to);
             }
@@ -205,12 +219,12 @@ class ControlUtils {
             return;
         }
 
-        // Fix for RT-31577 - the selectedItems list was going to
+        // Fix for JDK-8123234 - the selectedItems list was going to
         // empty, but the selectedItem property was staying non-null.
         // There is a unit test for this, so if a more elegant solution
         // can be found in the future and this code removed, the unit
         // test will fail if it isn't fixed elsewhere.
-        // makeAtomic toggle added to resolve RT-32618
+        // makeAtomic toggle added to resolve JDK-8117117
         if (sm.getSelectedItems().isEmpty() && sm.getSelectedItem() != null) {
             sm.setSelectedItem(null);
         }

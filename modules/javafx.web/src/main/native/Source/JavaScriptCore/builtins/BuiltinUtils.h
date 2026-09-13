@@ -26,9 +26,11 @@
 
 #pragma once
 
-#include "ConstructAbility.h"
-#include "ConstructorKind.h"
-#include "ImplementationVisibility.h"
+#include <JavaScriptCore/CommonIdentifiers.h>
+#include <JavaScriptCore/ConstructAbility.h>
+#include <JavaScriptCore/ConstructorKind.h>
+#include <JavaScriptCore/ImplementationVisibility.h>
+#include <JavaScriptCore/InlineAttribute.h>
 
 namespace JSC {
 
@@ -43,6 +45,6 @@ class SourceCode;
 class UnlinkedFunctionExecutable;
 class VM;
 
-JS_EXPORT_PRIVATE UnlinkedFunctionExecutable* createBuiltinExecutable(VM&, const SourceCode&, const Identifier&, ImplementationVisibility, ConstructorKind, ConstructAbility);
+JS_EXPORT_PRIVATE UnlinkedFunctionExecutable* createBuiltinExecutable(VM&, const SourceCode&, const Identifier&, ImplementationVisibility, ConstructorKind, ConstructAbility, InlineAttribute);
 
 } // namespace JSC

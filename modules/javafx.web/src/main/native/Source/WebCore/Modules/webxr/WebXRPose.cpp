@@ -29,19 +29,19 @@
 #if ENABLE(WEBXR)
 
 #include "WebXRRigidTransform.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WebXRPose);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebXRPose);
 
 Ref<WebXRPose> WebXRPose::create(Ref<WebXRRigidTransform>&& transform, bool emulatedPosition)
 {
-    return adoptRef(*new WebXRPose(WTFMove(transform), emulatedPosition));
+    return adoptRef(*new WebXRPose(WTF::move(transform), emulatedPosition));
 }
 
 WebXRPose::WebXRPose(Ref<WebXRRigidTransform>&& transform, bool emulatedPosition)
-    : m_transform(WTFMove(transform)), m_emulatedPosition(emulatedPosition)
+    : m_transform(WTF::move(transform)), m_emulatedPosition(emulatedPosition)
 {
 }
 

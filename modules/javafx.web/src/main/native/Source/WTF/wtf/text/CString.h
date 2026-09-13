@@ -26,10 +26,13 @@
 #pragma once
 
 #include <span>
+#include <wtf/DebugHeap.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/HashTraits.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/SwiftBridging.h>
 
 namespace WTF {
 
@@ -38,10 +41,12 @@ DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CStringBuffer);
 // CStringBuffer is the ref-counted storage class for the characters in a CString.
 // The data is implicitly allocated 1 character longer than length(), as it is zero-terminated.
 class CStringBuffer final : public RefCounted<CStringBuffer> {
-    WTF_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CStringBuffer);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CStringBuffer, CStringBuffer);
 public:
-    const char* data() { return mutableData(); }
     size_t length() const { return m_length; }
+
+    std::span<const char> span() const LIFETIME_BOUND { return unsafeMakeSpan(m_data, m_length); }
+    std::span<const char> spanIncludingNullTerminator() const LIFETIME_BOUND { return unsafeMakeSpan(m_data, m_length + 1); }
 
 private:
     friend class CString;
@@ -49,74 +54,68 @@ private:
     static Ref<CStringBuffer> createUninitialized(size_t length);
 
     CStringBuffer(size_t length) : m_length(length) { }
-    char* mutableData() { return reinterpret_cast_ptr<char*>(this + 1); }
+    std::span<char> mutableSpan() LIFETIME_BOUND { return unsafeMakeSpan(m_data, m_length); }
+    std::span<char> mutableSpanIncludingNullTerminator() LIFETIME_BOUND { return unsafeMakeSpan(m_data, m_length + 1); }
 
     const size_t m_length;
+    char m_data[0];
 };
 
-// A container for a null-terminated char array supporting copy-on-write
-// assignment.  The contained char array may be null.
+// NOTE: Prefer using String.
+
+// A null-terminated, nullable, copy-on-write char array. Useful for interacting with C-style APIs.
+
+// Like const char*, CString does not know its encoding. The caller must apply the right encoding when extracting characters.
 class CString final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(CString);
 public:
     CString() { }
-    WTF_EXPORT_PRIVATE CString(const char*);
-    WTF_EXPORT_PRIVATE CString(const char*, size_t length);
-    CString(const uint8_t* data, size_t length) : CString(reinterpret_cast<const char*>(data), length) { }
+    WTF_EXPORT_PRIVATE CString(ASCIILiteral);
+    WTF_EXPORT_PRIVATE CString(const char*); // Any encoding
+    WTF_EXPORT_PRIVATE CString(std::span<const char>); // Any encoding
+    CString(std::span<const Latin1Character>); // Latin1
+    CString(std::span<const char8_t> characters) : CString(byteCast<Latin1Character>(characters)) { } // UTF-8
     CString(CStringBuffer* buffer) : m_buffer(buffer) { }
-    WTF_EXPORT_PRIVATE static CString newUninitialized(size_t length, char*& characterBuffer);
+    CString(const std::string&); // Any encoding.
+    WTF_EXPORT_PRIVATE static CString newUninitialized(size_t length, std::span<char>& characterBuffer);
     CString(HashTableDeletedValueType) : m_buffer(HashTableDeletedValue) { }
 
-    const char* data() const
-    {
-        return m_buffer ? m_buffer->data() : nullptr;
-    }
+    const char* data() const LIFETIME_BOUND; // Any encoding
 
-    std::string toStdString() const { return m_buffer ? std::string(m_buffer->data()) : std::string(); }
+    std::string toStdString() const;
 
-    const uint8_t* dataAsUInt8Ptr() const { return reinterpret_cast<const uint8_t*>(data()); }
+    std::span<const char> span() const LIFETIME_BOUND; // Any encoding
+    std::span<const char> spanIncludingNullTerminator() const LIFETIME_BOUND; // Any encoding
 
-    std::span<const uint8_t> bytes() const
-    {
-        if (m_buffer)
-            return { reinterpret_cast<const uint8_t*>(m_buffer->data()), m_buffer->length() };
-        return { };
-    }
+    // Copy-on-write
+    WTF_EXPORT_PRIVATE std::span<char> mutableSpan() LIFETIME_BOUND;
+    WTF_EXPORT_PRIVATE std::span<char> mutableSpanIncludingNullTerminator() LIFETIME_BOUND;
+    WTF_EXPORT_PRIVATE void grow(size_t newLength);
 
-    std::span<const uint8_t> bytesInludingNullTerminator() const
-    {
-        if (m_buffer)
-            return { reinterpret_cast<const uint8_t*>(m_buffer->data()), m_buffer->length() + 1 };
-        return { };
-    }
-
-    WTF_EXPORT_PRIVATE char* mutableData();
-    size_t length() const
-    {
-        return m_buffer ? m_buffer->length() : 0;
-    }
+    size_t length() const;
 
     bool isNull() const { return !m_buffer; }
+    bool isEmpty() const { return isNull() || !m_buffer->length(); }
     bool isSafeToSendToAnotherThread() const;
 
-    CStringBuffer* buffer() const { return m_buffer.get(); }
+    CStringBuffer* buffer() const LIFETIME_BOUND { return m_buffer.get(); }
 
     bool isHashTableDeletedValue() const { return m_buffer.isHashTableDeletedValue(); }
 
     WTF_EXPORT_PRIVATE unsigned hash() const;
 
-    // Useful if you want your CString to hold dynamic data.
-    WTF_EXPORT_PRIVATE void grow(size_t newLength);
-
 private:
     void copyBufferIfNeeded();
-    void init(const char*, size_t length);
+    void init(std::span<const char>);
     RefPtr<CStringBuffer> m_buffer;
-};
+} SWIFT_ESCAPABLE;
 
 WTF_EXPORT_PRIVATE bool operator==(const CString&, const CString&);
-WTF_EXPORT_PRIVATE bool operator==(const CString&, const char*);
+WTF_EXPORT_PRIVATE bool operator==(const CString&, ASCIILiteral);
 WTF_EXPORT_PRIVATE bool operator<(const CString&, const CString&);
+
+WTF_EXPORT_PRIVATE CString convertToASCIILowercase(std::span<const char8_t>);
+WTF_EXPORT_PRIVATE CString convertToASCIIUppercase(std::span<const char8_t>);
 
 struct CStringHash {
     static unsigned hash(const CString& string) { return string.hash(); }
@@ -124,12 +123,57 @@ struct CStringHash {
     static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
-template<typename T> struct DefaultHash;
+template<typename> struct DefaultHash;
 template<> struct DefaultHash<CString> : CStringHash { };
 
-template<typename T> struct HashTraits;
+template<typename> struct HashTraits;
 template<> struct HashTraits<CString> : SimpleClassHashTraits<CString> { };
+
+inline CString::CString(std::span<const Latin1Character> bytes)
+    : CString(byteCast<char>(bytes))
+{
+}
+
+inline CString::CString(const std::string& value)
+    : CString(unsafeMakeSpan(value.data(), value.size()))
+{
+}
+
+inline const char* CString::data() const LIFETIME_BOUND
+{
+    return m_buffer ? m_buffer->spanIncludingNullTerminator().data() : nullptr;
+}
+
+inline std::span<const char> CString::span() const LIFETIME_BOUND
+{
+    if (m_buffer)
+        return m_buffer->span();
+    return { };
+}
+
+inline std::span<const char> CString::spanIncludingNullTerminator() const LIFETIME_BOUND
+{
+    if (m_buffer)
+        return m_buffer->spanIncludingNullTerminator();
+    return { };
+}
+
+inline size_t CString::length() const
+{
+    return m_buffer ? m_buffer->length() : 0;
+}
+
+inline std::string CString::toStdString() const
+{
+    auto span = this->span();
+    return std::string { span.data(), span.size() };
+}
+
+// CString is null terminated
+inline const char* safePrintfType(const CString& cstring) { return cstring.data(); }
 
 } // namespace WTF
 
 using WTF::CString;
+using WTF::convertToASCIILowercase;
+using WTF::convertToASCIIUppercase;

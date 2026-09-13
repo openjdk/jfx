@@ -26,6 +26,13 @@
 #include "config.h"
 #include <wtf/text/TextStream.h>
 
+#include <wtf/MathExtras.h>
+#include <wtf/MediaTime.h>
+#include <wtf/ObjectIdentifier.h>
+#include <wtf/Seconds.h>
+#include <wtf/URL.h>
+#include <wtf/UUID.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTF {
@@ -35,7 +42,7 @@ static constexpr size_t printBufferSize = 100; // large enough for any integer o
 static inline bool hasFractions(double val)
 {
     static constexpr double s_epsilon = 0.0001;
-    int ival = static_cast<int>(val);
+    int ival = truncateDoubleToInt32(val);
     double dval = static_cast<double>(ival);
     return std::abs(val - dval) > s_epsilon;
 }
@@ -107,18 +114,24 @@ TextStream& TextStream::operator<<(double d)
 
 TextStream& TextStream::operator<<(const char* string)
 {
-    m_text.append(string);
+    m_text.append(unsafeSpan(string));
     return *this;
 }
 
 TextStream& TextStream::operator<<(const void* p)
 {
     char buffer[printBufferSize];
-    snprintf(buffer, sizeof(buffer) - 1, "%p", p);
+    SAFE_SPRINTF(std::span { buffer }, "%p", p);
     return *this << buffer;
 }
 
 TextStream& TextStream::operator<<(const AtomString& string)
+{
+    m_text.append(string);
+    return *this;
+}
+
+TextStream& TextStream::operator<<(const CString& string)
 {
     m_text.append(string);
     return *this;
@@ -139,6 +152,18 @@ TextStream& TextStream::operator<<(ASCIILiteral string)
 TextStream& TextStream::operator<<(StringView string)
 {
     m_text.append(string);
+    return *this;
+}
+
+TextStream& TextStream::operator<<(const HexNumberBuffer& buffer)
+{
+    m_text.append(buffer);
+    return *this;
+}
+
+TextStream& TextStream::operator<<(const FormattedCSSNumber& number)
+{
+    m_text.append(number);
     return *this;
 }
 
@@ -165,18 +190,18 @@ void TextStream::startGroup()
     TextStream& ts = *this;
 
     if (m_multiLineMode) {
-        ts << "\n";
+        ts << '\n';
         ts.writeIndent();
-        ts << "(";
+        ts << '(';
         ts.increaseIndent();
     } else
-        ts << " (";
+        ts << " ("_s;
 }
 
 void TextStream::endGroup()
 {
     TextStream& ts = *this;
-    ts << ")";
+    ts << ')';
     if (m_multiLineMode)
         ts.decreaseIndent();
 }
@@ -185,10 +210,10 @@ void TextStream::nextLine()
 {
     TextStream& ts = *this;
     if (m_multiLineMode) {
-        ts << "\n";
+        ts << '\n';
         ts.writeIndent();
     } else
-        ts << " ";
+        ts << ' ';
 }
 
 void TextStream::writeIndent()
@@ -200,7 +225,36 @@ void TextStream::writeIndent()
 void writeIndent(TextStream& ts, int indent)
 {
     for (int i = 0; i < indent; ++i)
-        ts << "  ";
+        ts << "  "_s;
 }
 
+TextStream& operator<<(TextStream& ts, Seconds seconds)
+{
+    ts << seconds.value() << 's';
+    return ts;
 }
+
+TextStream& operator<<(TextStream& stream, const MediaTime& time)
+{
+    return stream << time.toJSONString();
+}
+
+TextStream& operator<<(TextStream& ts, const ObjectIdentifierGenericBase<uint64_t>& identifier)
+{
+    ts << identifier.toRawValue();
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, const ObjectIdentifierGenericBase<UUID>& identifier)
+{
+    ts << identifier.toRawValue();
+    return ts;
+}
+
+TextStream& operator<<(TextStream& ts, const URL& url)
+{
+    ts << url.string();
+    return ts;
+}
+
+} // namespace WTF

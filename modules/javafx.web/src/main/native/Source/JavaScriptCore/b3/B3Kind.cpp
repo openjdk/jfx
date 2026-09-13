@@ -36,17 +36,15 @@ void Kind::dump(PrintStream& out) const
 {
     out.print(m_opcode);
 
-    CommaPrinter comma(", ", "<");
+    CommaPrinter comma(", "_s, "<"_s);
     if (isChill())
-        out.print(comma, "Chill");
+        out.print(comma, "Chill"_s);
     if (traps())
-        out.print(comma, "Traps");
-    if (isSensitiveToNaN())
-        out.print(comma, "SensitiveToNaN");
+        out.print(comma, "Traps"_s);
     if (isCloningForbidden())
-        out.print(comma, "CloningForbidden");
+        out.print(comma, "CloningForbidden"_s);
     if (comma.didPrint())
-        out.print(">");
+        out.print(">"_s);
 }
 
 } } // namespace JSC::B3

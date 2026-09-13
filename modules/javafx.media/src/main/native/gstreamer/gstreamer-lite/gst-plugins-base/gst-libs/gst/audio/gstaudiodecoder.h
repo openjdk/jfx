@@ -332,7 +332,7 @@ gboolean          gst_audio_decoder_set_output_caps  (GstAudioDecoder * dec,
 GST_AUDIO_API
 GstCaps *         gst_audio_decoder_proxy_getcaps (GstAudioDecoder * decoder,
                                                    GstCaps         * caps,
-                                                   GstCaps         * filter);
+                                                   GstCaps         * filter) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_AUDIO_API
 gboolean          gst_audio_decoder_negotiate (GstAudioDecoder * dec);
@@ -347,7 +347,7 @@ GstFlowReturn     gst_audio_decoder_finish_frame (GstAudioDecoder * dec,
 
 GST_AUDIO_API
 GstBuffer *       gst_audio_decoder_allocate_output_buffer (GstAudioDecoder * dec,
-                                                            gsize              size);
+                                                            gsize              size) G_GNUC_WARN_UNUSED_RESULT;
 
 /* context parameters */
 

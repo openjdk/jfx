@@ -31,7 +31,6 @@
 #include <wtf/ArgumentCoder.h>
 #include <wtf/MachSendRight.h>
 #else
-#include <variant>
 #endif
 
 namespace WebCore {
@@ -57,11 +56,12 @@ public:
 
 #if HAVE(TASK_IDENTITY_TOKEN)
     task_id_token_t taskIdToken() const { return m_taskIdToken.sendRight(); }
+    const MachSendRight& taskId() const { return m_taskIdToken; }
 #endif
 
 private:
 #if HAVE(TASK_IDENTITY_TOKEN)
-    friend struct IPC::ArgumentCoder<ProcessIdentity, void>;
+    friend struct IPC::ArgumentCoder<ProcessIdentity>;
     WEBCORE_EXPORT ProcessIdentity(MachSendRight&& taskIdToken);
     MachSendRight m_taskIdToken;
 #endif

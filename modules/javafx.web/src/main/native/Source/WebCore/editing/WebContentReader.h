@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,11 +25,13 @@
 
 #pragma once
 
-#include "DocumentFragment.h"
-#include "LocalFrame.h"
-#include "Pasteboard.h"
-#include "SimpleRange.h"
-#include "markup.h"
+#include <WebCore/DocumentFragment.h>
+#include <WebCore/LocalFrame.h>
+#include <WebCore/Pasteboard.h>
+#include <WebCore/SimpleRange.h>
+#include <WebCore/markup.h>
+#include <wtf/Platform.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
@@ -37,38 +39,47 @@ class ArchiveResource;
 
 class FrameWebContentReader : public PasteboardWebContentReader {
 public:
-    LocalFrame& frame;
-
     FrameWebContentReader(LocalFrame& frame)
-        : frame(frame)
+        : m_frame(frame)
     {
     }
+
+    LocalFrame& frame() const { return m_frame.get(); }
+    Ref<LocalFrame> protectedFrame() const { return m_frame.get(); }
 
 protected:
     bool shouldSanitize() const;
     MSOListQuirks msoListQuirksForMarkup() const;
+
+private:
+    WeakRef<LocalFrame> m_frame;
 };
 
 class WebContentReader final : public FrameWebContentReader {
 public:
-    const SimpleRange context;
-    const bool allowPlainText;
-
-    RefPtr<DocumentFragment> fragment;
-    bool madeFragmentFromPlainText;
+#if PLATFORM(COCOA)
+    static constexpr auto placeholderAttachmentFilenamePrefix = "webkit-attachment-"_s;
+#endif
 
     WebContentReader(LocalFrame& frame, const SimpleRange& context, bool allowPlainText)
         : FrameWebContentReader(frame)
-        , context(context)
-        , allowPlainText(allowPlainText)
-        , madeFragmentFromPlainText(false)
+        , m_context(context)
+#if PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)
+        , m_allowPlainText(allowPlainText)
+#endif
     {
+        UNUSED_PARAM(allowPlainText);
     }
 
     void addFragment(Ref<DocumentFragment>&&);
+    RefPtr<DocumentFragment> takeFragment() { return std::exchange(m_fragment, nullptr); }
+    DocumentFragment* fragment() const { return m_fragment.get(); }
+    RefPtr<DocumentFragment> protectedFragment() const { return m_fragment; }
+
+    bool madeFragmentFromPlainText() const { return m_madeFragmentFromPlainText; }
 
 private:
-#if PLATFORM(COCOA) || PLATFORM(GTK)
+#if PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)
     bool readFilePath(const String&, PresentationSize preferredPresentationSize = { }, const String& contentType = { }) override;
     bool readFilePaths(const Vector<String>&) override;
     bool readHTML(const String&) override;
@@ -83,19 +94,27 @@ private:
     bool readRTF(SharedBuffer&) override;
     bool readDataBuffer(SharedBuffer&, const String& type, const AtomString& name, PresentationSize preferredPresentationSize = { }) override;
 #endif
+
+    const SimpleRange m_context;
+#if PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)
+    const bool m_allowPlainText;
+#endif
+
+    RefPtr<DocumentFragment> m_fragment;
+    bool m_madeFragmentFromPlainText { false };
 };
 
 class WebContentMarkupReader final : public FrameWebContentReader {
 public:
-    String markup;
-
     explicit WebContentMarkupReader(LocalFrame& frame)
         : FrameWebContentReader(frame)
     {
     }
 
+    String takeMarkup() { return std::exchange(m_markup, { }); }
+
 private:
-#if PLATFORM(COCOA) || PLATFORM(GTK)
+#if PLATFORM(COCOA) || PLATFORM(GTK) || PLATFORM(WPE)
     bool readFilePath(const String&, PresentationSize = { }, const String& = { }) override { return false; }
     bool readFilePaths(const Vector<String>&) override { return false; }
     bool readHTML(const String&) override;
@@ -110,6 +129,8 @@ private:
     bool readRTF(SharedBuffer&) override;
     bool readDataBuffer(SharedBuffer&, const String&, const AtomString&, PresentationSize = { }) override { return false; }
 #endif
+
+    String m_markup;
 };
 
 #if PLATFORM(COCOA) && defined(__OBJC__)
@@ -118,7 +139,13 @@ struct FragmentAndResources {
     Vector<Ref<ArchiveResource>> resources;
 };
 
-RefPtr<DocumentFragment> createFragmentAndAddResources(LocalFrame&, NSAttributedString *);
+enum class FragmentCreationOptions : uint8_t {
+    IgnoreResources = 1 << 0,
+    NoInterchangeNewlines = 1 << 1,
+    SanitizeMarkup = 1 << 2
+};
+
+WEBCORE_EXPORT RefPtr<DocumentFragment> createFragment(LocalFrame&, NSAttributedString *, OptionSet<FragmentCreationOptions> = { });
 #endif
 
 }

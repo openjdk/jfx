@@ -25,6 +25,12 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
+#if !BUSE(TZONE)
+
 #include "FreeList.h"
 
 #if !BUSE(LIBPAS)
@@ -55,3 +61,6 @@ private:
 } // namespace bmalloc
 
 #endif
+#endif // !BUSE(TZONE)
+
+#endif // __cplusplus

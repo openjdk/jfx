@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "JSFunction.h"
+#include <JavaScriptCore/JSFunction.h>
 
 namespace JSC {
 
@@ -36,7 +36,7 @@ public:
 
     using CustomFunctionPointer = PutValueFunc;
 
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
     static void destroy(JSCell*);
 
     template<typename CellType, SubspaceAccess mode>
@@ -45,11 +45,7 @@ public:
         return vm.customSetterFunctionSpace<mode>();
     }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        ASSERT(globalObject);
-        return Structure::create(vm, globalObject, prototype, TypeInfo(JSFunctionType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     JS_EXPORT_PRIVATE static JSCustomSetterFunction* create(VM&, JSGlobalObject*, const PropertyName&, CustomFunctionPointer);
 

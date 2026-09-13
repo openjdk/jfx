@@ -27,7 +27,7 @@
 
 #if ENABLE(WEBGL)
 
-#include "WebGLSharedObject.h"
+#include "WebGLObject.h"
 #include <wtf/RefPtr.h>
 
 namespace JSC {
@@ -37,22 +37,31 @@ class ArrayBufferView;
 
 namespace WebCore {
 
-class WebGLBuffer final : public WebGLSharedObject {
+class WebGLBuffer final : public WebGLObject {
 public:
     static Ref<WebGLBuffer> create(WebGLRenderingContextBase&);
+    static Ref<WebGLBuffer> createLost();
     virtual ~WebGLBuffer();
 
     GCGLenum getTarget() const { return m_target; }
-    void setTarget(GCGLenum target) { m_target = target; }
-    bool hasEverBeenBound() const { return object() && m_target; }
-
+    void didBind(GCGLenum target);
+    bool isUsable() const { return object() && !isDeleted(); }
+    bool isInitialized() const { return m_target; }
 private:
-    WebGLBuffer(WebGLRenderingContextBase&);
+    WebGLBuffer(WebGLRenderingContextBase&, PlatformGLObject);
+    WebGLBuffer();
 
     void deleteObjectImpl(const AbstractLocker&, GraphicsContextGL*, PlatformGLObject) override;
 
     GCGLenum m_target { 0 };
 };
+
+inline void WebGLBuffer::didBind(GCGLenum target)
+{
+    if (m_target)
+        return;
+    m_target = target;
+}
 
 } // namespace WebCore
 

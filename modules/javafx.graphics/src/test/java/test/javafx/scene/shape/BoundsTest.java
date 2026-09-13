@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,9 +33,9 @@ import javafx.scene.shape.Path;
 import javafx.scene.shape.QuadCurveTo;
 import static test.com.sun.javafx.test.TestHelper.assertSimilar;
 import static test.com.sun.javafx.test.TestHelper.box;
-import static org.junit.Assert.assertEquals;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class BoundsTest {
 
@@ -64,7 +64,8 @@ public class BoundsTest {
         assertEquals(arc.getBoundsInLocal(), arc.getBoundsInParent());
     }
 
-    public @Test void testBoundsForCircle() {
+    @Test
+    public void testBoundsForCircle() {
         Circle circle = new Circle(50);
 
         assertEquals(box(-50, -50, 100, 100), circle.getBoundsInLocal());
@@ -77,7 +78,8 @@ public class BoundsTest {
         assertEquals(circle.getBoundsInLocal(), circle.getBoundsInParent());
     }
 
-    public @Test void testBoundsForCubicCurve() {
+    @Test
+    public void testBoundsForCubicCurve() {
         CubicCurve cubic = new CubicCurve();
         cubic.setStartX(0);
         cubic.setStartY(50);
@@ -92,7 +94,8 @@ public class BoundsTest {
         assertEquals(cubic.getBoundsInLocal(), cubic.getBoundsInParent());
     }
 
-    public @Test void testBoundsForEllipse() {
+    @Test
+    public void testBoundsForEllipse() {
         Ellipse ellipse = new Ellipse(50, 100);
 
         assertEquals(box(-50, -100, 100, 200), ellipse.getBoundsInLocal());
@@ -105,7 +108,8 @@ public class BoundsTest {
         assertEquals(ellipse.getBoundsInLocal(), ellipse.getBoundsInParent());
     }
 
-    public @Test void testBoundsForLine() {
+    @Test
+    public void testBoundsForLine() {
         Line line = new Line(-10, -10, 10, 10);
 
         assertSimilar(box(-11, -11, 22, 22), line.getBoundsInLocal());
@@ -114,7 +118,8 @@ public class BoundsTest {
     }
     */
 
-    public @Test void testBoundsForPath() {
+    @Test
+    public void testBoundsForPath() {
         Path path = new Path();
         path.getElements().add(new MoveTo(10, 50));
         path.getElements().add(new HLineTo(70));
@@ -126,7 +131,8 @@ public class BoundsTest {
         assertEquals(path.getBoundsInLocal(), path.getBoundsInParent());
     }
 /*
-    public @Test void testBoundsForPolygon() {
+    @Test
+    public void testBoundsForPolygon() {
         Polygon polygon = new Polygon(new double[] {0,0,20,10,10,20});
 
         assertEquals(box(0, 0, 20, 20), polygon.getBoundsInLocal());
@@ -139,7 +145,8 @@ public class BoundsTest {
         assertEquals(polygon.getBoundsInLocal(), polygon.getBoundsInParent());
     }
 
-    public @Test void testBoundsForPolyline() {
+    @Test
+    public void testBoundsForPolyline() {
         Polyline polyline = new Polyline(new double[] {0,0,20,10,10,20});
 
         assertSimilar(box(-1, -1, 22, 22), polyline.getBoundsInLocal());
@@ -147,14 +154,16 @@ public class BoundsTest {
         assertEquals(polyline.getBoundsInLocal(), polyline.getBoundsInParent());
     }
 
-    public @Test void testBoundsForQuadCurve() {
+    @Test
+    public void testBoundsForQuadCurve() {
         QuadCurve quad = new QuadCurve(0, 50, 25, 0, 50, 50);
 
         assertEquals(box(0, 25, 50, 25), quad.getBoundsInLocal());
         assertEquals(quad.getBoundsInLocal(), quad.getBoundsInParent());
     }
 
-    public @Test void testBoundsForRectangle() {
+    @Test
+    public void testBoundsForRectangle() {
         Rectangle rect = new Rectangle(100, 100);
 
         assertEquals(box(0, 0, 100, 100), rect.getBoundsInLocal());

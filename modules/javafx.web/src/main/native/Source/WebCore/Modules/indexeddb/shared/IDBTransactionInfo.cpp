@@ -27,8 +27,12 @@
 #include "IDBTransactionInfo.h"
 
 #include "IDBTransaction.h"
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(IDBTransactionInfo);
 
 IDBTransactionInfo::IDBTransactionInfo(const IDBResourceIdentifier& identifier)
     : m_identifier(identifier)
@@ -111,7 +115,7 @@ String IDBTransactionInfo::loggingString() const
         ASSERT_NOT_REACHED();
     }
 
-    return makeString("Transaction: ", m_identifier.loggingString(), " mode ", modeString, " newVersion ", m_newVersion);
+    return makeString("Transaction: "_s, m_identifier.loggingString(), " mode "_s, modeString, " newVersion "_s, m_newVersion);
 }
 
 #endif

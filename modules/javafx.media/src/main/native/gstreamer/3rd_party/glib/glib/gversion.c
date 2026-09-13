@@ -29,28 +29,6 @@
 #include "gversion.h"
 
 /**
- * SECTION:version
- * @Title: Version Information
- * @Short_description: variables and functions to check the GLib version
- *
- * GLib provides version information, primarily useful in configure
- * checks for builds that have a configure script. Applications will
- * not typically use the features described here.
- *
- * The GLib headers annotate deprecated APIs in a way that produces
- * compiler warnings if these deprecated APIs are used. The warnings
- * can be turned off by defining the macro %GLIB_DISABLE_DEPRECATION_WARNINGS
- * before including the glib.h header.
- *
- * GLib also provides support for building applications against
- * defined subsets of deprecated or new GLib APIs. Define the macro
- * %GLIB_VERSION_MIN_REQUIRED to specify up to what version of GLib
- * you want to receive warnings about deprecated APIs. Define the
- * macro %GLIB_VERSION_MAX_ALLOWED to specify the newest version of
- * GLib whose API you want to use.
- */
-
-/**
  * glib_major_version:
  *
  * The major version of the GLib library.

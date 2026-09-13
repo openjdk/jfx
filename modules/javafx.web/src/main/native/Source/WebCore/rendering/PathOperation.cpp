@@ -27,114 +27,131 @@
 #include "PathOperation.h"
 
 #include "AnimationUtilities.h"
-#include "GeometryUtilities.h"
+#include "CSSRayValue.h"
 #include "SVGElement.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGPathData.h"
 #include "SVGPathElement.h"
+#include "StyleLengthWrapper+Blending.h"
+#include "StylePrimitiveNumericTypes+Blending.h"
+#include "StylePrimitiveNumericTypes+Conversions.h"
 
 namespace WebCore {
 
-Ref<ReferencePathOperation> ReferencePathOperation::create(const String& url, const AtomString& fragment, const RefPtr<SVGElement> element)
+PathOperation::~PathOperation() = default;
+
+Ref<ReferencePathOperation> ReferencePathOperation::create(const Style::URL& url, const AtomString& fragment, const RefPtr<SVGElement> element)
 {
     return adoptRef(*new ReferencePathOperation(url, fragment, element));
 }
 
 Ref<ReferencePathOperation> ReferencePathOperation::create(std::optional<Path>&& path)
 {
-    return adoptRef(*new ReferencePathOperation(WTFMove(path)));
+    return adoptRef(*new ReferencePathOperation(WTF::move(path)));
 }
 
 Ref<PathOperation> ReferencePathOperation::clone() const
 {
     if (auto path = this->path()) {
         auto pathCopy = *path;
-        return adoptRef(*new ReferencePathOperation(WTFMove(pathCopy)));
+        return adoptRef(*new ReferencePathOperation(WTF::move(pathCopy)));
     }
     return adoptRef(*new ReferencePathOperation(std::nullopt));
 }
 
-ReferencePathOperation::ReferencePathOperation(const String& url, const AtomString& fragment, const RefPtr<SVGElement> element)
-    : PathOperation(Reference)
+ReferencePathOperation::ReferencePathOperation(const Style::URL& url, const AtomString& fragment, const RefPtr<SVGElement> element)
+    : PathOperation(Type::Reference)
     , m_url(url)
     , m_fragment(fragment)
 {
     if (is<SVGPathElement>(element) || is<SVGGeometryElement>(element))
-        m_path = pathFromGraphicsElement(element.get());
+        m_path = pathFromGraphicsElement(*element);
 }
 
 ReferencePathOperation::ReferencePathOperation(std::optional<Path>&& path)
-    : PathOperation(Reference)
-    , m_path(WTFMove(path))
+    : PathOperation(Type::Reference)
+    , m_path(WTF::move(path))
 {
 }
 
-Ref<RayPathOperation> RayPathOperation::create(float angle, Size size, bool isContaining, FloatRect&& containingBlockBoundingRect, FloatPoint&& position)
+// MARK: - ShapePathOperation
+
+Ref<ShapePathOperation> ShapePathOperation::create(Style::BasicShape shape, CSSBoxType referenceBox)
 {
-    return adoptRef(*new RayPathOperation(angle, size, isContaining, WTFMove(containingBlockBoundingRect), WTFMove(position)));
+    return adoptRef(*new ShapePathOperation(WTF::move(shape), referenceBox));
+}
+
+Ref<PathOperation> ShapePathOperation::clone() const
+{
+    return adoptRef(*new ShapePathOperation(m_shape, m_referenceBox));
+}
+
+bool ShapePathOperation::canBlend(const PathOperation& to) const
+{
+    RefPtr toOperation = dynamicDowncast<ShapePathOperation>(to);
+    return toOperation && WebCore::Style::canBlend(m_shape, toOperation->m_shape);
+}
+
+RefPtr<PathOperation> ShapePathOperation::blend(const PathOperation* to, const BlendingContext& context) const
+{
+    Ref toShapePathOperation = downcast<ShapePathOperation>(*to);
+    return ShapePathOperation::create(WebCore::Style::blend(m_shape, toShapePathOperation->m_shape, context));
+}
+
+std::optional<Path> ShapePathOperation::getPath(const TransformOperationData& data) const
+{
+    return MotionPath::computePathForShape(*this, data);
+}
+
+// MARK: - BoxPathOperation
+
+Ref<BoxPathOperation> BoxPathOperation::create(CSSBoxType referenceBox)
+{
+    return adoptRef(*new BoxPathOperation(referenceBox));
+}
+
+Ref<PathOperation> BoxPathOperation::clone() const
+{
+    return adoptRef(*new BoxPathOperation(referenceBox()));
+}
+
+std::optional<Path> BoxPathOperation::getPath(const TransformOperationData& data) const
+{
+    return MotionPath::computePathForBox(*this, data);
+}
+
+// MARK: - RayPathOperation
+
+Ref<RayPathOperation> RayPathOperation::create(Style::RayFunction&& ray, CSSBoxType referenceBox)
+{
+    return adoptRef(*new RayPathOperation(WTF::move(ray), referenceBox));
+}
+
+Ref<RayPathOperation> RayPathOperation::create(const Style::RayFunction& ray, CSSBoxType referenceBox)
+{
+    return adoptRef(*new RayPathOperation(ray, referenceBox));
 }
 
 Ref<PathOperation> RayPathOperation::clone() const
 {
-    auto containingBlockBoundingRect = m_containingBlockBoundingRect;
-    auto position = m_position;
-    return adoptRef(*new RayPathOperation(m_angle, m_size, m_isContaining, WTFMove(containingBlockBoundingRect), WTFMove(position)));
+    return adoptRef(*new RayPathOperation(m_ray, m_referenceBox));
 }
 
 bool RayPathOperation::canBlend(const PathOperation& to) const
 {
-    if (auto* toRayPathOperation = dynamicDowncast<RayPathOperation>(to))
-        return m_size == toRayPathOperation->size() && m_isContaining == toRayPathOperation->isContaining();
-    return false;
+    RefPtr toRayPathOperation = dynamicDowncast<RayPathOperation>(to);
+    return toRayPathOperation && Style::canBlend(m_ray, toRayPathOperation->m_ray) && m_referenceBox == toRayPathOperation->referenceBox();
 }
 
 RefPtr<PathOperation> RayPathOperation::blend(const PathOperation* to, const BlendingContext& context) const
 {
-    ASSERT(is<RayPathOperation>(to));
-    auto& toRayPathOperation = downcast<RayPathOperation>(*to);
-    return RayPathOperation::create(WebCore::blend(m_angle, toRayPathOperation.angle(), context), m_size, m_isContaining);
+    Ref toRayPathOperation = downcast<RayPathOperation>(*to);
+    return RayPathOperation::create(Style::blend(m_ray, toRayPathOperation->m_ray, context), m_referenceBox);
 }
 
-double RayPathOperation::lengthForPath() const
+std::optional<Path> RayPathOperation::getPath(const TransformOperationData& data) const
 {
-    auto boundingBox = m_containingBlockBoundingRect;
-    auto distances = distanceOfPointToSidesOfRect(boundingBox, m_position);
-
-    switch (m_size) {
-    case Size::ClosestSide:
-        return std::min( { distances.top(), distances.bottom(), distances.left(), distances.right() } );
-    case Size::FarthestSide:
-        return std::max( { distances.top(), distances.bottom(), distances.left(), distances.right() } );
-    case Size::FarthestCorner:
-        return std::sqrt(std::pow(std::max(distances.left(), distances.right()), 2) + std::pow(std::max(distances.top(), distances.bottom()), 2));
-    case Size::ClosestCorner:
-        return std::sqrt(std::pow(std::min(distances.left(), distances.right()), 2) + std::pow(std::min(distances.top(), distances.bottom()), 2));
-    case Size::Sides:
-        return lengthOfRayIntersectionWithBoundingBox(boundingBox, std::make_pair(m_position, m_angle));
-    }
-    RELEASE_ASSERT_NOT_REACHED();
-}
-
-double RayPathOperation::lengthForContainPath(const FloatRect& elementRect, double computedPathLength) const
-{
-    return std::max(0.0, computedPathLength - (std::max(elementRect.width(), elementRect.height()) / 2));
-}
-
-const std::optional<Path> RayPathOperation::getPath(const FloatRect& referenceRect) const
-{
-    if (m_containingBlockBoundingRect.isZero())
-        return std::nullopt;
-
-    double length = lengthForPath();
-    if (m_isContaining)
-        length = lengthForContainPath(referenceRect, length);
-
-    auto radians = deg2rad(toPositiveAngle(m_angle) - 90.0);
-    auto point = FloatPoint(std::cos(radians) * length, std::sin(radians) * length);
-
-    Path path;
-    path.addLineTo(point);
-    return path;
+    return MotionPath::computePathForRay(*this, data);
 }
 
 } // namespace WebCore

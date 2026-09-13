@@ -25,26 +25,33 @@
 
 #pragma once
 
-#include "AllocatorForMode.h"
-#include "AllocatorInlines.h"
-#include "CompleteSubspaceInlines.h"
-#include "CPU.h"
-#include "CallFrameInlines.h"
-#include "DeferGCInlines.h"
-#include "FreeListInlines.h"
-#include "Handle.h"
-#include "HeapInlines.h"
-#include "IsoSubspaceInlines.h"
-#include "JSBigInt.h"
-#include "JSCast.h"
-#include "JSDestructibleObject.h"
-#include "JSObject.h"
-#include "JSString.h"
-#include "LocalAllocatorInlines.h"
-#include "MarkedBlock.h"
-#include "SlotVisitorInlines.h"
-#include "Structure.h"
-#include "Symbol.h"
+#include <wtf/Compiler.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
+#include <JavaScriptCore/AllocatorForMode.h>
+#include <JavaScriptCore/AllocatorInlines.h>
+#include <JavaScriptCore/CPU.h>
+#include <JavaScriptCore/CallFrameInlines.h>
+#include <JavaScriptCore/CompleteSubspaceInlines.h>
+#include <JavaScriptCore/DeferGCInlines.h>
+#include <JavaScriptCore/FreeListInlines.h>
+#include <JavaScriptCore/Handle.h>
+#include <JavaScriptCore/HeapInlines.h>
+#include <JavaScriptCore/IsoSubspaceInlines.h>
+#include <JavaScriptCore/JSBigInt.h>
+#include <JavaScriptCore/JSCast.h>
+#include <JavaScriptCore/JSDestructibleObject.h>
+#include <JavaScriptCore/JSFunction.h>
+#include <JavaScriptCore/JSHeapDouble.h>
+#include <JavaScriptCore/JSHeapInt32.h>
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/JSString.h>
+#include <JavaScriptCore/LocalAllocatorInlines.h>
+#include <JavaScriptCore/MarkedBlock.h>
+#include <JavaScriptCore/SlotVisitorInlines.h>
+#include <JavaScriptCore/Structure.h>
+#include <JavaScriptCore/Symbol.h>
 #include <wtf/CompilationThread.h>
 
 namespace JSC {
@@ -77,18 +84,15 @@ inline JSCell::JSCell(VM&, Structure* structure)
 
 // This constructor should not be used directly. Exceptions are for quite few well-defined builtin objects, e.g. JSString, empty JSFinalObject etc.
 // Structure must be kept alive somehow (e.g. by JSGlobalObject, or ensureStillAliveHere).
-ALWAYS_INLINE JSCell::JSCell(CreatingWellDefinedBuiltinCellTag, StructureID structureID, int32_t blob)
+ALWAYS_INLINE JSCell::JSCell(CreatingWellDefinedBuiltinCellTag, StructureID structureID, uint32_t blob)
     : m_structureID(structureID)
 #if CPU(LITTLE_ENDIAN)
-    , m_indexingTypeAndMisc(static_cast<uint8_t>(blob >> 0))
-    , m_type(bitwise_cast<JSType>(static_cast<uint8_t>(blob >> 8)))
-    , m_flags(bitwise_cast<TypeInfo::InlineTypeFlags>(static_cast<uint8_t>(blob >> 16)))
-    , m_cellState(bitwise_cast<CellState>(static_cast<uint8_t>(blob >> 24)))
+    , m_blob(blob)
 #else
     , m_indexingTypeAndMisc(static_cast<uint8_t>(blob >> 24))
-    , m_type(bitwise_cast<JSType>(static_cast<uint8_t>(blob >> 16)))
-    , m_flags(bitwise_cast<TypeInfo::InlineTypeFlags>(static_cast<uint8_t>(blob >> 8)))
-    , m_cellState(bitwise_cast<CellState>(static_cast<uint8_t>(blob >> 0)))
+    , m_type(std::bit_cast<JSType>(static_cast<uint8_t>(blob >> 16)))
+    , m_flags(std::bit_cast<TypeInfo::InlineTypeFlags>(static_cast<uint8_t>(blob >> 8)))
+    , m_cellState(std::bit_cast<CellState>(static_cast<uint8_t>(blob >> 0)))
 #endif
 {
 }
@@ -185,7 +189,7 @@ inline Allocator allocatorForConcurrently(VM& vm, size_t allocationSize, Allocat
 template<typename T, AllocationFailureMode failureMode>
 ALWAYS_INLINE void* tryAllocateCellHelper(VM& vm, size_t size, GCDeferralContext* deferralContext)
 {
-    ASSERT(deferralContext || vm.heap.isDeferred() || !DisallowGC::isInEffectOnCurrentThread());
+    ASSERT(deferralContext || vm.heap.isDeferred() || !AssertNoGC::isInEffectOnCurrentThread());
     ASSERT(size >= sizeof(T));
     JSCell* result = static_cast<JSCell*>(subspaceFor<T>(vm)->allocate(vm, WTF::roundUpToMultipleOf<T::atomSize>(size), deferralContext, failureMode));
     if constexpr (failureMode == AllocationFailureMode::ReturnNull) {
@@ -402,27 +406,27 @@ inline TriState JSCell::pureToBoolean() const
 
 inline void JSCellLock::lock()
 {
-    Atomic<IndexingType>* lock = bitwise_cast<Atomic<IndexingType>*>(&m_indexingTypeAndMisc);
-    if (UNLIKELY(!IndexingTypeLockAlgorithm::lockFast(*lock)))
+    Atomic<IndexingType>* lock = std::bit_cast<Atomic<IndexingType>*>(&m_indexingTypeAndMisc);
+    if (!IndexingTypeLockAlgorithm::lockFast(*lock)) [[unlikely]]
         lockSlow();
 }
 
 inline bool JSCellLock::tryLock()
 {
-    Atomic<IndexingType>* lock = bitwise_cast<Atomic<IndexingType>*>(&m_indexingTypeAndMisc);
+    Atomic<IndexingType>* lock = std::bit_cast<Atomic<IndexingType>*>(&m_indexingTypeAndMisc);
     return IndexingTypeLockAlgorithm::tryLock(*lock);
 }
 
 inline void JSCellLock::unlock()
 {
-    Atomic<IndexingType>* lock = bitwise_cast<Atomic<IndexingType>*>(&m_indexingTypeAndMisc);
-    if (UNLIKELY(!IndexingTypeLockAlgorithm::unlockFast(*lock)))
+    Atomic<IndexingType>* lock = std::bit_cast<Atomic<IndexingType>*>(&m_indexingTypeAndMisc);
+    if (!IndexingTypeLockAlgorithm::unlockFast(*lock)) [[unlikely]]
         unlockSlow();
 }
 
 inline bool JSCellLock::isLocked() const
 {
-    Atomic<IndexingType>* lock = bitwise_cast<Atomic<IndexingType>*>(&m_indexingTypeAndMisc);
+    Atomic<IndexingType>* lock = std::bit_cast<Atomic<IndexingType>*>(&m_indexingTypeAndMisc);
     return IndexingTypeLockAlgorithm::isLocked(*lock);
 }
 
@@ -471,7 +475,7 @@ ALWAYS_INLINE JSString* JSCell::toStringInline(JSGlobalObject* globalObject) con
 ALWAYS_INLINE bool JSCell::putInline(JSGlobalObject* globalObject, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
 {
     Structure* structure = this->structure();
-    if (LIKELY(!structure->typeInfo().overridesPut()))
+    if (!structure->typeInfo().overridesPut()) [[likely]]
         return JSObject::putInlineForJSObject(asObject(this), globalObject, propertyName, value, slot);
     return structure->methodTable()->put(this, globalObject, propertyName, value, slot);
 }
@@ -482,3 +486,5 @@ inline bool isWebAssemblyInstance(const JSCell* cell)
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

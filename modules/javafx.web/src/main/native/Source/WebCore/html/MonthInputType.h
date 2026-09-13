@@ -30,13 +30,14 @@
 
 #pragma once
 
-#if ENABLE(INPUT_TYPE_MONTH)
-
 #include "BaseDateAndTimeInputType.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class MonthInputType final : public BaseDateAndTimeInputType {
+    WTF_MAKE_TZONE_ALLOCATED(MonthInputType);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MonthInputType);
 public:
     static Ref<MonthInputType> create(HTMLInputElement& element)
     {
@@ -59,6 +60,7 @@ private:
     std::optional<DateComponents> parseToDateComponents(StringView) const final;
     std::optional<DateComponents> setMillisecondToDateComponents(double) const final;
     void handleDOMActivateEvent(Event&) final;
+    void showPicker() final;
 
     bool isValidFormat(OptionSet<DateTimeFormatValidationResults>) const final;
     String formatDateTimeFieldsState(const DateTimeFieldsState&) const final;
@@ -68,5 +70,3 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_INPUT_TYPE(MonthInputType, Type::Month)
-
-#endif // ENABLE(INPUT_TYPE_MONTH)

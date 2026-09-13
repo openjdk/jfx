@@ -43,12 +43,14 @@
 #include "HTMLNames.h"
 #include "InspectorHistory.h"
 #include "Node.h"
+#include "Text.h"
 #include "XMLDocument.h"
 #include "XMLDocumentParser.h"
 #include <wtf/Deque.h>
 #include <wtf/HashTraits.h>
 #include <wtf/RefPtr.h>
 #include <wtf/SHA1.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/Base64.h>
 #include <wtf/text/CString.h>
 
@@ -59,11 +61,11 @@ using HTMLNames::headTag;
 using HTMLNames::htmlTag;
 
 struct DOMPatchSupport::Digest {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(DOMPatchSupport);
 
     String sha1;
     String attrsSHA1;
-    Node* node;
+    CheckedPtr<Node> node;
     Vector<std::unique_ptr<Digest>> children;
 };
 
@@ -76,33 +78,35 @@ DOMPatchSupport::DOMPatchSupport(DOMEditor& domEditor, Document& document)
 void DOMPatchSupport::patchDocument(const String& markup)
 {
     RefPtr<Document> newDocument;
-    if (m_document.isHTMLDocument())
-        newDocument = HTMLDocument::create(nullptr, m_document.settings(), URL(), { });
-    else if (m_document.isXHTMLDocument())
-        newDocument = XMLDocument::createXHTML(nullptr, m_document.settings(), URL());
-    else if (m_document.isSVGDocument())
-        newDocument = XMLDocument::create(nullptr, m_document.settings(), URL());
+    if (m_document->isHTMLDocument())
+        newDocument = HTMLDocument::create(nullptr, m_document->settings(), URL(), { });
+    else if (m_document->isXHTMLDocument())
+        newDocument = XMLDocument::createXHTML(nullptr, m_document->settings(), URL());
+    else if (m_document->isSVGDocument())
+        newDocument = XMLDocument::create(nullptr, m_document->settings(), URL());
 
     ASSERT(newDocument);
     RefPtr<DocumentParser> parser;
-    if (newDocument->isHTMLDocument())
-        parser = HTMLDocumentParser::create(static_cast<HTMLDocument&>(*newDocument));
+    if (RefPtr htmlDocument = dynamicDowncast<HTMLDocument>(newDocument))
+        parser = HTMLDocumentParser::create(*htmlDocument);
     else
-        parser = XMLDocumentParser::create(*newDocument, nullptr);
+        parser = XMLDocumentParser::create(*newDocument, XMLDocumentParser::IsInFrameView::No);
     parser->insert(markup); // Use insert() so that the parser will not yield.
     parser->finish();
     parser->detach();
 
-    if (!m_document.documentElement())
+    RefPtr documentElement = m_document->documentElement();
+    if (!documentElement)
         return;
-    if (!newDocument->documentElement())
+    RefPtr newDocumentElement = newDocument->documentElement();
+    if (!newDocumentElement)
         return;
 
-    std::unique_ptr<Digest> oldInfo = createDigest(*m_document.documentElement(), nullptr);
-    std::unique_ptr<Digest> newInfo = createDigest(*newDocument->documentElement(), &m_unusedNodesMap);
+    std::unique_ptr<Digest> oldInfo = createDigest(*documentElement, nullptr);
+    std::unique_ptr<Digest> newInfo = createDigest(*newDocumentElement, &m_unusedNodesMap);
 
     if (innerPatchNode(*oldInfo, *newInfo).hasException()) {
-        Ref document { m_document };
+        Ref document { m_document.get() };
         // Fall back to rewrite.
         document->write(nullptr, markup);
         document->close();
@@ -117,32 +121,35 @@ ExceptionOr<Node*> DOMPatchSupport::patchNode(Node& node, const String& markup)
         return nullptr;
     }
 
-    Node* previousSibling = node.previousSibling();
+    RefPtr previousSibling = node.previousSibling();
     // FIXME: This code should use one of createFragment* in markup.h
-    auto fragment = DocumentFragment::create(m_document);
-    if (m_document.isHTMLDocument())
-        fragment->parseHTML(markup, node.parentElement() ? *node.parentElement() : *m_document.documentElement());
+    Ref document = m_document.get();
+    auto fragment = DocumentFragment::create(document);
+    RefPtr parentElement = node.parentElement();
+    RefPtr documentElement = document->documentElement();
+    if (document->isHTMLDocument())
+        fragment->parseHTML(markup, parentElement ? *parentElement : *documentElement);
     else
-        fragment->parseXML(markup, node.parentElement() ? node.parentElement() : m_document.documentElement());
+        fragment->parseXML(markup, parentElement ? parentElement.get() : documentElement.get());
 
     // Compose the old list.
-    auto* parentNode = node.parentNode();
+    RefPtr parentNode = node.parentNode();
     Vector<std::unique_ptr<Digest>> oldList;
-    for (Node* child = parentNode->firstChild(); child; child = child->nextSibling())
+    for (RefPtr child = parentNode->firstChild(); child; child = child->nextSibling())
         oldList.append(createDigest(*child, nullptr));
 
     // Compose the new list.
     Vector<std::unique_ptr<Digest>> newList;
-    for (Node* child = parentNode->firstChild(); child != &node; child = child->nextSibling())
+    for (RefPtr child = parentNode->firstChild(); child != &node; child = child->nextSibling())
         newList.append(createDigest(*child, nullptr));
-    for (Node* child = fragment->firstChild(); child; child = child->nextSibling()) {
+    for (RefPtr child = fragment->firstChild(); child; child = child->nextSibling()) {
         if (child->hasTagName(headTag) && !child->firstChild() && !markup.containsIgnoringASCIICase("</head>"_s))
             continue; // HTML5 parser inserts empty <head> tag whenever it parses <body>
         if (child->hasTagName(bodyTag) && !child->firstChild() && !markup.containsIgnoringASCIICase("</body>"_s))
             continue; // HTML5 parser inserts empty <body> tag whenever it parses </head>
         newList.append(createDigest(*child, &m_unusedNodesMap));
     }
-    for (Node* child = node.nextSibling(); child; child = child->nextSibling())
+    for (RefPtr child = node.nextSibling(); child; child = child->nextSibling())
         newList.append(createDigest(*child, nullptr));
 
     if (innerPatchChildren(*parentNode, oldList, newList).hasException()) {
@@ -159,45 +166,45 @@ ExceptionOr<void> DOMPatchSupport::innerPatchNode(Digest& oldDigest, Digest& new
     if (oldDigest.sha1 == newDigest.sha1)
         return { };
 
-    auto& oldNode = *oldDigest.node;
-    auto& newNode = *newDigest.node;
+    Ref oldNode = *oldDigest.node;
+    Ref newNode = *newDigest.node;
 
-    if (newNode.nodeType() != oldNode.nodeType() || newNode.nodeName() != oldNode.nodeName())
-        return m_domEditor.replaceChild(*oldNode.parentNode(), newNode, oldNode);
+    if (newNode->nodeType() != oldNode->nodeType() || newNode->nodeName() != oldNode->nodeName())
+        return m_domEditor.replaceChild(*oldNode->protectedParentNode(), newNode.get(), oldNode);
 
-    if (oldNode.nodeValue() != newNode.nodeValue()) {
-        auto result = m_domEditor.setNodeValue(oldNode, newNode.nodeValue());
+    if (oldNode->nodeValue() != newNode->nodeValue()) {
+        auto result = m_domEditor.setNodeValue(oldNode, newNode->nodeValue());
         if (result.hasException())
             return result.releaseException();
     }
 
-    if (!is<Element>(oldNode))
+    RefPtr oldElement = dynamicDowncast<Element>(oldNode);
+    if (!oldElement)
         return { };
 
     // Patch attributes
-    auto& oldElement = downcast<Element>(oldNode);
-    auto& newElement = downcast<Element>(newNode);
+    Ref newElement = downcast<Element>(newNode);
     if (oldDigest.attrsSHA1 != newDigest.attrsSHA1) {
         // FIXME: Create a function in Element for removing all properties. Take in account whether did/willModifyAttribute are important.
-        if (oldElement.hasAttributesWithoutUpdate()) {
-            while (oldElement.attributeCount()) {
-                auto result = m_domEditor.removeAttribute(oldElement, oldElement.attributeAt(0).localName());
+        if (oldElement->hasAttributesWithoutUpdate()) {
+            while (oldElement->attributeCount()) {
+                auto result = m_domEditor.removeAttribute(*oldElement, oldElement->attributeAt(0).localName());
                 if (result.hasException())
                     return result.releaseException();
             }
         }
 
         // FIXME: Create a function in Element for copying properties. cloneDataFromElement() is close but not enough for this case.
-        if (newElement.hasAttributesWithoutUpdate()) {
-            for (auto& attribute : newElement.attributesIterator()) {
-                auto result = m_domEditor.setAttribute(oldElement, attribute.name().localName(), attribute.value());
+        if (newElement->hasAttributesWithoutUpdate()) {
+            for (auto& attribute : newElement->attributes()) {
+                auto result = m_domEditor.setAttribute(*oldElement, attribute.name().localName(), attribute.value());
                 if (result.hasException())
                     return result.releaseException();
             }
         }
     }
 
-    auto result = innerPatchChildren(oldElement, oldDigest.children, newDigest.children);
+    auto result = innerPatchChildren(*oldElement, oldDigest.children, newDigest.children);
     m_unusedNodesMap.remove(newDigest.sha1);
     return result;
 }
@@ -234,7 +241,7 @@ DOMPatchSupport::diff(const Vector<std::unique_ptr<Digest>>& oldList, const Vect
         newMap[newIndex].second = oldIndex;
     }
 
-    typedef HashMap<String, Vector<size_t>> DiffTable;
+    using DiffTable = HashMap<String, Vector<size_t>>;
     DiffTable newTable;
     DiffTable oldTable;
 
@@ -374,7 +381,7 @@ ExceptionOr<void> DOMPatchSupport::innerPatchChildren(ContainerNode& parentNode,
     for (size_t i = 0; i < newMap.size(); ++i) {
         if (newMap[i].first || merges.contains(newList[i].get()))
             continue;
-        auto result = insertBeforeAndMarkAsUsed(parentNode, *newList[i], parentNode.traverseToChildAt(i));
+        auto result = insertBeforeAndMarkAsUsed(parentNode, *newList[i], RefPtr { parentNode.traverseToChildAt(i) }.get());
         if (result.hasException())
             return result.releaseException();
     }
@@ -383,13 +390,13 @@ ExceptionOr<void> DOMPatchSupport::innerPatchChildren(ContainerNode& parentNode,
     for (size_t i = 0; i < oldMap.size(); ++i) {
         if (!oldMap[i].first)
             continue;
-        RefPtr<Node> node = oldMap[i].first->node;
-        auto* anchorNode = parentNode.traverseToChildAt(oldMap[i].second);
+        RefPtr node = oldMap[i].first->node.get();
+        RefPtr anchorNode = parentNode.traverseToChildAt(oldMap[i].second);
         if (node == anchorNode)
             continue;
         if (node->hasTagName(bodyTag) || node->hasTagName(headTag))
             continue; // Never move head or body, move the rest of the nodes around them.
-        auto result = m_domEditor.insertBefore(parentNode, node.releaseNonNull(), anchorNode);
+        auto result = m_domEditor.insertBefore(parentNode, node.releaseNonNull(), anchorNode.get());
         if (result.hasException())
             return result.releaseException();
     }
@@ -398,8 +405,7 @@ ExceptionOr<void> DOMPatchSupport::innerPatchChildren(ContainerNode& parentNode,
 
 static void addStringToSHA1(SHA1& sha1, const String& string)
 {
-    CString cString = string.utf8();
-    sha1.addBytes(cString.dataAsUInt8Ptr(), cString.length());
+    sha1.addUTF8Bytes(string);
 }
 
 std::unique_ptr<DOMPatchSupport::Digest> DOMPatchSupport::createDigest(Node& node, UnusedNodesMap* unusedNodesMap)
@@ -408,37 +414,36 @@ std::unique_ptr<DOMPatchSupport::Digest> DOMPatchSupport::createDigest(Node& nod
     digest->node = &node;
     SHA1 sha1;
 
-    auto nodeType = node.nodeType();
-    sha1.addBytes(reinterpret_cast<const uint8_t*>(&nodeType), sizeof(nodeType));
+    sha1.addBytes(asByteSpan(node.nodeType()));
     addStringToSHA1(sha1, node.nodeName());
     addStringToSHA1(sha1, node.nodeValue());
 
     if (node.nodeType() == Node::ELEMENT_NODE) {
-        Node* child = node.firstChild();
+        RefPtr child = node.firstChild();
         while (child) {
             std::unique_ptr<Digest> childInfo = createDigest(*child, unusedNodesMap);
             addStringToSHA1(sha1, childInfo->sha1);
             child = child->nextSibling();
-            digest->children.append(WTFMove(childInfo));
+            digest->children.append(WTF::move(childInfo));
         }
         auto& element = downcast<Element>(node);
 
         if (element.hasAttributesWithoutUpdate()) {
             SHA1 attrsSHA1;
-            for (auto& attribute : element.attributesIterator()) {
+            for (auto& attribute : element.attributes()) {
                 addStringToSHA1(attrsSHA1, attribute.name().toString());
                 addStringToSHA1(attrsSHA1, attribute.value());
             }
             SHA1::Digest attrsHash;
             attrsSHA1.computeHash(attrsHash);
-            digest->attrsSHA1 = base64EncodeToString(attrsHash.data(), 10);
+            digest->attrsSHA1 = base64EncodeToString(std::span { attrsHash }.first(10));
             addStringToSHA1(sha1, digest->attrsSHA1);
         }
     }
 
     SHA1::Digest hash;
     sha1.computeHash(hash);
-    digest->sha1 = base64EncodeToString(hash.data(), 10);
+    digest->sha1 = base64EncodeToString(std::span { hash }.first(10));
     if (unusedNodesMap)
         unusedNodesMap->add(digest->sha1, digest.get());
 
@@ -457,7 +462,7 @@ ExceptionOr<void> DOMPatchSupport::removeChildAndMoveToNew(Digest& oldDigest)
 {
     Ref<Node> oldNode = *oldDigest.node;
     ASSERT(oldNode->parentNode());
-    auto result = m_domEditor.removeChild(*oldNode->parentNode(), oldNode);
+    auto result = m_domEditor.removeChild(*oldNode->protectedParentNode(), oldNode);
     if (result.hasException())
         return result.releaseException();
 
@@ -469,8 +474,8 @@ ExceptionOr<void> DOMPatchSupport::removeChildAndMoveToNew(Digest& oldDigest)
     auto it = m_unusedNodesMap.find(oldDigest.sha1);
     if (it != m_unusedNodesMap.end()) {
         auto& newDigest = *it->value;
-        auto& newNode = *newDigest.node;
-        auto result = m_domEditor.replaceChild(*newNode.parentNode(), oldNode.get(), newNode);
+        Ref newNode = *newDigest.node;
+        auto result = m_domEditor.replaceChild(*newNode->protectedParentNode(), oldNode.get(), newNode);
         if (result.hasException())
             return result.releaseException();
         newDigest.node = oldNode.ptr();

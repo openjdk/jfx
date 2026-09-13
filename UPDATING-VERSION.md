@@ -18,8 +18,6 @@ feature version number from `N` to `N+1`:
 
 ```
     jfx.release.major.version
-    javadoc.title
-    javadoc.header
 ```
 
 * In

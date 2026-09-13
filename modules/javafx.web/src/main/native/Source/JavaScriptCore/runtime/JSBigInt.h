@@ -26,16 +26,18 @@
 
 #pragma once
 
-#include "CPU.h"
-#include "Error.h"
-#include "ExceptionHelpers.h"
-#include "JSObject.h"
-#include "MathCommon.h"
+#include <JavaScriptCore/CPU.h>
+#include <JavaScriptCore/Error.h>
+#include <JavaScriptCore/ExceptionHelpers.h>
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/MathCommon.h>
 #include <wtf/CagedUniquePtr.h>
 #include <wtf/Int128.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringView.h>
 #include <wtf/text/WTFString.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -77,20 +79,21 @@ public:
     JS_EXPORT_PRIVATE static JSBigInt* createFrom(JSGlobalObject*, Int128 value);
     static JSBigInt* createFrom(JSGlobalObject*, bool value);
     static JSBigInt* createFrom(JSGlobalObject*, double value);
+    static JSBigInt* createFrom(JSGlobalObject*, VM&, bool sign, std::span<const Digit>);
 
     static JSBigInt* createFrom(JSGlobalObject*, VM&, int32_t value);
 
-    static size_t offsetOfLength()
+    static constexpr size_t offsetOfLength()
     {
         return OBJECT_OFFSETOF(JSBigInt, m_length);
     }
 
-    static size_t offsetOfSign()
+    static constexpr size_t offsetOfSign()
     {
         return OBJECT_OFFSETOF(JSBigInt, m_sign);
     }
 
-    inline static size_t offsetOfData()
+    static constexpr size_t offsetOfData()
     {
         return OBJECT_OFFSETOF(JSBigInt, m_data);
     }
@@ -104,7 +107,7 @@ public:
 
     unsigned length() const { return m_length; }
 
-    static JSValue makeHeapBigIntOrBigInt32(JSGlobalObject* globalObject, int64_t value)
+    ALWAYS_INLINE static JSValue makeHeapBigIntOrBigInt32(JSGlobalObject* globalObject, int64_t value)
     {
 #if USE(BIGINT32)
         if (value <= INT_MAX && value >= INT_MIN)
@@ -113,7 +116,7 @@ public:
         return JSBigInt::createFrom(globalObject, value);
     }
 
-    static JSValue makeHeapBigIntOrBigInt32(JSGlobalObject* globalObject, uint64_t value)
+    ALWAYS_INLINE static JSValue makeHeapBigIntOrBigInt32(JSGlobalObject* globalObject, uint64_t value)
     {
 #if USE(BIGINT32)
         if (value <= INT_MAX)
@@ -122,7 +125,7 @@ public:
         return JSBigInt::createFrom(globalObject, value);
     }
 
-    static JSValue makeHeapBigIntOrBigInt32(JSGlobalObject* globalObject, double value)
+    ALWAYS_INLINE static JSValue makeHeapBigIntOrBigInt32(JSGlobalObject* globalObject, double value)
     {
         ASSERT(isInteger(value));
         if (std::abs(value) <= maxSafeInteger())
@@ -164,28 +167,46 @@ public:
     static ComparisonResult compare(JSBigInt* x, JSBigInt* y);
     static ComparisonResult compare(int32_t x, JSBigInt* y);
     static ComparisonResult compare(JSBigInt* x, int32_t y);
-    static ComparisonResult compare(int32_t x, int32_t y)
-    {
-        if (x == y)
-            return JSBigInt::ComparisonResult::Equal;
-        if (x < y)
-            return JSBigInt::ComparisonResult::LessThan;
-        return JSBigInt::ComparisonResult::GreaterThan;
-    }
+    static ComparisonResult compare(JSBigInt* x, int64_t y);
+    static ComparisonResult compare(JSValue x, int64_t y);
+    static ComparisonResult compare(JSBigInt* x, uint64_t y);
+    static ComparisonResult compare(JSValue x, uint64_t y);
+    static ComparisonResult compare(JSValue x, JSValue y);
 
     double toNumber(JSGlobalObject*) const;
     JSObject* toObject(JSGlobalObject*) const;
     inline bool toBoolean() const { return !isZero(); }
 
-    ComparisonResult static compareToDouble(JSBigInt* x, double y);
+    static ComparisonResult compareToDouble(JSBigInt* x, double y);
+    static ComparisonResult compareToDouble(double x, JSBigInt* y);
+    template<typename BigIntImpl>
+    static ComparisonResult compareToDouble(BigIntImpl x, double y);
+    template <typename BigIntImpl>
+    static ComparisonResult compareToDouble(double x, BigIntImpl y) { return flip(compareToDouble(y, x)); }
+    static ComparisonResult compareToDouble(int32_t x, double y);
+    static ComparisonResult compareToDouble(double x, int32_t y) { return flip(compareToDouble(y, x)); }
+    static ComparisonResult compareToDouble(int64_t x, double y);
+    static ComparisonResult compareToDouble(double x, int64_t y) { return flip(compareToDouble(y, x)); }
+    static ComparisonResult compareToDouble(uint64_t x, double y);
+    static ComparisonResult compareToDouble(double x, uint64_t y) { return flip(compareToDouble(y, x)); }
+    static ComparisonResult compareToDouble(JSValue x, double y);
+    static ComparisonResult compareToDouble(double x, JSValue y) { return flip(compareToDouble(y, x)); }
 
-    ALWAYS_INLINE static JSValue asInt32OrHeapCell(JSGlobalObject* globalObject, int64_t value)
+private:
+    ALWAYS_INLINE static ComparisonResult flip(ComparisonResult result)
     {
-#if USE(BIGINT32)
-        if (static_cast<int64_t>(static_cast<int32_t>(value)) == value)
-            return jsBigInt32(static_cast<int32_t>(value));
-#endif
-        return createFrom(globalObject, value);
+        switch (result) {
+        case JSBigInt::ComparisonResult::LessThan:
+            return JSBigInt::ComparisonResult::GreaterThan;
+        case JSBigInt::ComparisonResult::GreaterThan:
+            return JSBigInt::ComparisonResult::LessThan;
+        case JSBigInt::ComparisonResult::Equal:
+        case JSBigInt::ComparisonResult::Undefined:
+            return result;
+        default:
+            RELEASE_ASSERT_NOT_REACHED();
+            return JSBigInt::ComparisonResult::Undefined;
+        }
     }
 
 private:
@@ -267,7 +288,7 @@ public:
     static JSValue multiply(JSGlobalObject* globalObject, int32_t x, int32_t y)
     {
         int64_t result = static_cast<int64_t>(x) * static_cast<int64_t>(y);
-        return asInt32OrHeapCell(globalObject, result);
+        return makeHeapBigIntOrBigInt32(globalObject, result);
     }
 #endif
 
@@ -275,7 +296,7 @@ public:
 #if USE(BIGINT32)
     static JSValue inc(JSGlobalObject* globalObject, int32_t x)
     {
-        return asInt32OrHeapCell(globalObject, static_cast<int64_t>(x) + 1);
+        return makeHeapBigIntOrBigInt32(globalObject, static_cast<int64_t>(x) + 1);
     }
 #endif
 
@@ -283,7 +304,7 @@ public:
 #if USE(BIGINT32)
     static JSValue dec(JSGlobalObject* globalObject, int32_t x)
     {
-        return asInt32OrHeapCell(globalObject, static_cast<int64_t>(x) - 1);
+        return makeHeapBigIntOrBigInt32(globalObject, static_cast<int64_t>(x) - 1);
     }
 #endif
 
@@ -293,7 +314,7 @@ public:
     static JSValue add(JSGlobalObject*, int32_t x, JSBigInt* y);
     static JSValue add(JSGlobalObject* globalObject, int32_t x, int32_t y)
     {
-        return asInt32OrHeapCell(globalObject, static_cast<int64_t>(x) + static_cast<int64_t>(y));
+        return makeHeapBigIntOrBigInt32(globalObject, static_cast<int64_t>(x) + static_cast<int64_t>(y));
     }
 #endif
 
@@ -303,7 +324,7 @@ public:
     static JSValue sub(JSGlobalObject*, int32_t x, JSBigInt* y);
     static JSValue sub(JSGlobalObject* globalObject, int32_t x, int32_t y)
     {
-        return asInt32OrHeapCell(globalObject, static_cast<int64_t>(x) - static_cast<int64_t>(y));
+        return makeHeapBigIntOrBigInt32(globalObject, static_cast<int64_t>(x) - static_cast<int64_t>(y));
     }
 #endif
 
@@ -318,7 +339,7 @@ public:
             throwRangeError(globalObject, scope, "0 is an invalid divisor value."_s);
             return JSValue();
         }
-        return asInt32OrHeapCell(globalObject, static_cast<int64_t>(x) / static_cast<int64_t>(y));
+        return makeHeapBigIntOrBigInt32(globalObject, static_cast<int64_t>(x) / static_cast<int64_t>(y));
     }
 #endif
 
@@ -333,7 +354,7 @@ public:
             throwRangeError(globalObject, scope, "0 is an invalid divisor value."_s);
             return JSValue();
         }
-        return asInt32OrHeapCell(globalObject, static_cast<int64_t>(x) % static_cast<int64_t>(y));
+        return makeHeapBigIntOrBigInt32(globalObject, static_cast<int64_t>(x) % static_cast<int64_t>(y));
     }
 #endif
 
@@ -341,7 +362,7 @@ public:
 #if USE(BIGINT32)
     static JSValue unaryMinus(JSGlobalObject* globalObject, int32_t x)
     {
-        return asInt32OrHeapCell(globalObject, -static_cast<int64_t>(x));
+        return makeHeapBigIntOrBigInt32(globalObject, -static_cast<int64_t>(x));
     }
 #endif
 
@@ -351,7 +372,7 @@ public:
     static JSValue bitwiseAnd(JSGlobalObject*, int32_t x, JSBigInt* y);
     static JSValue bitwiseAnd(JSGlobalObject* globalObject, int32_t x, int32_t y)
     {
-        return asInt32OrHeapCell(globalObject, x & y);
+        return makeHeapBigIntOrBigInt32(globalObject, x & y);
     }
 #endif
 
@@ -361,7 +382,7 @@ public:
     static JSValue bitwiseOr(JSGlobalObject*, int32_t x, JSBigInt* y);
     static JSValue bitwiseOr(JSGlobalObject* globalObject, int32_t x, int32_t y)
     {
-        return asInt32OrHeapCell(globalObject, x | y);
+        return makeHeapBigIntOrBigInt32(globalObject, x | y);
     }
 #endif
 
@@ -371,7 +392,7 @@ public:
     static JSValue bitwiseXor(JSGlobalObject*, int32_t x, JSBigInt* y);
     static JSValue bitwiseXor(JSGlobalObject* globalObject, int32_t x, int32_t y)
     {
-        return asInt32OrHeapCell(globalObject, x ^ y);
+        return makeHeapBigIntOrBigInt32(globalObject, x ^ y);
     }
 #endif
 
@@ -379,7 +400,7 @@ public:
 #if USE(BIGINT32)
     static JSValue bitwiseNot(JSGlobalObject* globalObject, int32_t x)
     {
-        return asInt32OrHeapCell(globalObject, ~x);
+        return makeHeapBigIntOrBigInt32(globalObject, ~x);
     }
 #endif
 
@@ -401,7 +422,7 @@ public:
         if (!x)
             return jsBigInt32(0);
         if (y < 32)
-            return asInt32OrHeapCell(globalObject, static_cast<int64_t>(x) << y);
+            return makeHeapBigIntOrBigInt32(globalObject, static_cast<int64_t>(x) << y);
         return leftShiftSlow(globalObject, x, y);
     }
 #endif
@@ -422,16 +443,7 @@ public:
 #endif
 
     static JSValue toNumberHeap(JSBigInt*);
-    static JSValue toNumber(JSValue bigInt)
-    {
-        ASSERT(bigInt.isBigInt());
-#if USE(BIGINT32)
-        if (bigInt.isBigInt32())
-            return jsNumber(bigInt.bigInt32AsInt32());
-#endif
-        return toNumberHeap(jsCast<JSBigInt*>(bigInt));
-    }
-
+    inline static JSValue toNumber(JSValue); // Defined in JSBigIntInlines.h
 
     static JSValue asIntN(JSGlobalObject*, uint64_t numberOfBits, JSBigInt*);
     static JSValue asUintN(JSGlobalObject*, uint64_t numberOfBits, JSBigInt*);
@@ -440,30 +452,17 @@ public:
     static JSValue asUintN(JSGlobalObject*, uint64_t numberOfBits, int32_t bigIntAsInt32);
 #endif
 
-    static uint64_t toBigUInt64(JSValue bigInt)
-    {
-        ASSERT(bigInt.isBigInt());
-#if USE(BIGINT32)
-        if (bigInt.isBigInt32())
-            return static_cast<uint64_t>(static_cast<int64_t>(bigInt.bigInt32AsInt32()));
-#endif
-        return toBigUInt64Heap(bigInt.asHeapBigInt());
-    }
-
-    static int64_t toBigInt64(JSValue bigInt)
-    {
-        ASSERT(bigInt.isBigInt());
-#if USE(BIGINT32)
-        if (bigInt.isBigInt32())
-            return static_cast<int64_t>(bigInt.bigInt32AsInt32());
-#endif
-        return static_cast<int64_t>(toBigUInt64Heap(bigInt.asHeapBigInt()));
-    }
+    inline static uint64_t toBigUInt64(JSValue); // Defined in JSBigIntInlines.h
+    inline static int64_t toBigInt64(JSValue); // Defined in JSBigIntInlines.h
 
     Digit digit(unsigned);
     void setDigit(unsigned, Digit); // Use only when initializing.
     JS_EXPORT_PRIVATE JSBigInt* rightTrim(JSGlobalObject*);
     JS_EXPORT_PRIVATE JSBigInt* tryRightTrim(VM&);
+    std::span<const Digit> digits() const
+    {
+        return { dataStorage(), length() };
+    }
 
     JS_EXPORT_PRIVATE std::optional<unsigned> concurrentHash();
     unsigned hash()
@@ -473,10 +472,39 @@ public:
         return hashSlow();
     }
 
-    static std::optional<double> tryExtractDouble(JSValue);
+    inline static std::optional<double> tryExtractDouble(JSValue); // Defined in JSBigIntInlines.h
+
+    inline bool isZero() const
+    {
+        ASSERT(length() || !sign());
+        return !length();
+    }
+
+    static constexpr unsigned bitsPerByte = 8;
+    static constexpr unsigned digitBits = sizeof(Digit) * bitsPerByte;
+    static constexpr unsigned halfDigitBits = digitBits / 2;
+    static constexpr Digit halfDigitMask = (1ull << halfDigitBits) - 1;
+
+    // Digit arithmetic helpers.
+    static Digit digitAdd(Digit a, Digit b, Digit& carry);
+    static Digit digitAdd3(Digit a, Digit b, Digit c, Digit& carry);
+    static Digit digitSub(Digit a, Digit b, Digit& borrow);
+    static Digit digitSub2(Digit a, Digit b, Digit borrowIn, Digit& borrowOut);
+    static std::tuple<Digit, Digit> digitMul(Digit a, Digit b);
+    static Digit digitDiv(Digit high, Digit low, Digit divisor, Digit& remainder);
+    static Digit digitPow(Digit base, Digit exponent);
+    static Digit subtractAndReturnBorrow(std::span<Digit> z, std::span<const Digit> x, std::span<const Digit> y);
+    static Digit addAndReturnCarry(std::span<Digit> z, std::span<const Digit> x, std::span<const Digit> y);
+    static bool productGreaterThan(Digit factor1, Digit factor2, Digit high, Digit low);
+
 
 private:
     JSBigInt(VM&, Structure*, Digit*, unsigned length);
+
+    std::span<Digit> digits()
+    {
+        return { dataStorage(), length() };
+    }
 
     JSBigInt* rightTrim(JSGlobalObject*, VM&);
 
@@ -484,10 +512,6 @@ private:
 
     static JSBigInt* createFromImpl(JSGlobalObject*, uint64_t value, bool sign);
 
-    static constexpr unsigned bitsPerByte = 8;
-    static constexpr unsigned digitBits = sizeof(Digit) * bitsPerByte;
-    static constexpr unsigned halfDigitBits = digitBits / 2;
-    static constexpr Digit halfDigitMask = (1ull << halfDigitBits) - 1;
     static constexpr int maxInt = 0x7FFFFFFF;
 
     static constexpr unsigned doubleMantissaSize = 53;
@@ -507,27 +531,19 @@ private:
 
     template <typename BigIntImpl1, typename BigIntImpl2>
     static ComparisonResult absoluteCompare(BigIntImpl1 x, BigIntImpl2 y);
-    template <typename BigIntImpl>
-    static bool absoluteDivWithDigitDivisor(JSGlobalObject*, VM&, BigIntImpl x, Digit divisor, JSBigInt** quotient, Digit& remainder);
-    template <typename BigIntImpl>
-    static void internalMultiplyAdd(BigIntImpl source, Digit factor, Digit summand, unsigned, JSBigInt* result);
-    template <typename BigIntImpl>
-    static void multiplyAccumulate(BigIntImpl multiplicand, Digit multiplier, JSBigInt* accumulator, unsigned accumulatorIndex);
-    template <typename BigIntImpl1>
-    static void absoluteDivWithBigIntDivisor(JSGlobalObject*, BigIntImpl1 dividend, JSBigInt* divisor, JSBigInt** quotient, JSBigInt** remainder);
+    static void multiplyAdd(std::span<const Digit> source, Digit factor, Digit summand, std::span<Digit> result);
+    static std::span<Digit> multiplySingle(std::span<const Digit> multiplicand, Digit multiplier, std::span<Digit> result);
+    static std::span<Digit> multiplyTextbook(std::span<const Digit> x, std::span<const Digit> y, std::span<Digit> result);
+    template<size_t N>
+    static std::span<Digit, N * 2> multiplyComba(std::span<const Digit, N> x, std::span<const Digit, N> y, std::span<Digit, N * 2> result);
 
-    enum class LeftShiftMode {
-        SameSizeResult,
-        AlwaysAddOneDigit
-    };
+    static std::span<Digit> divideSingle(std::span<Digit> q, Digit& remainder, std::span<const Digit> a, Digit b);
+    static std::tuple<std::span<Digit>, std::span<Digit>> divideTextbook(std::span<Digit> q, std::span<Digit> r, std::span<const Digit> a, std::span<const Digit> b);
+    static Digit divideSameSize(std::span<const Digit> a, std::span<const Digit> b);
+    static std::span<Digit> remainderSameSize(std::span<Digit> r, std::span<const Digit> a, std::span<const Digit> b);
 
-    template <typename BigIntImpl>
-    static JSBigInt* absoluteLeftShiftAlwaysCopy(JSGlobalObject*, BigIntImpl x, unsigned shift, LeftShiftMode);
-    static bool productGreaterThan(Digit factor1, Digit factor2, Digit high, Digit low);
-
-    Digit absoluteInplaceAdd(JSBigInt* summand, unsigned startIndex);
-    Digit absoluteInplaceSub(JSBigInt* subtrahend, unsigned startIndex);
-    void inplaceRightShift(unsigned shift);
+    static std::span<Digit> addTextbook(std::span<const Digit> x, std::span<const Digit> y, std::span<Digit> result);
+    static std::span<Digit> subTextbook(std::span<const Digit> x, std::span<const Digit> y, std::span<Digit> result);
 
     enum class RoundingResult {
         RoundDown,
@@ -542,51 +558,36 @@ private:
         Skip
     };
 
-    template<typename BigIntImpl1, typename BigIntImpl2, typename BitwiseOp>
-    static JSBigInt* absoluteBitwiseOp(JSGlobalObject*, BigIntImpl1 x, BigIntImpl2 y, ExtraDigitsHandling, BitwiseOp&&);
+    template<typename BitwiseOp>
+    static std::span<Digit> absoluteBitwiseOp(std::span<const Digit> x, std::span<const Digit> y, ExtraDigitsHandling, BitwiseOp&&, std::span<Digit> result);
 
-    template <typename BigIntImpl1, typename BigIntImpl2>
-    static JSBigInt* absoluteAnd(JSGlobalObject*, BigIntImpl1 x, BigIntImpl2 y);
-    template <typename BigIntImpl1, typename BigIntImpl2>
-    static JSBigInt* absoluteOr(JSGlobalObject*, BigIntImpl1 x, BigIntImpl2 y);
-    template <typename BigIntImpl1, typename BigIntImpl2>
-    static JSBigInt* absoluteAndNot(JSGlobalObject*, BigIntImpl1 x, BigIntImpl2 y);
-    template <typename BigIntImpl1, typename BigIntImpl2>
-    static JSBigInt* absoluteXor(JSGlobalObject*, BigIntImpl1 x, BigIntImpl2 y);
+    static size_t andLength(std::span<const Digit> x, std::span<const Digit> y) { return std::min(x.size(), y.size()); }
+    static size_t orLength(std::span<const Digit> x, std::span<const Digit> y) { return std::max(x.size(), y.size()); }
+    static size_t andNotLength(std::span<const Digit> x, std::span<const Digit>) { return x.size(); }
+    static size_t xorLength(std::span<const Digit> x, std::span<const Digit> y) { return std::max(x.size(), y.size()); }
+    static std::span<Digit> absoluteAnd(std::span<const Digit> x, std::span<const Digit> y, std::span<Digit> result);
+    static std::span<Digit> absoluteOr(std::span<const Digit> x, std::span<const Digit> y, std::span<Digit> result);
+    static std::span<Digit> absoluteAndNot(std::span<const Digit> x, std::span<const Digit> y, std::span<Digit> result);
+    static std::span<Digit> absoluteXor(std::span<const Digit> x, std::span<const Digit> y, std::span<Digit> result);
 
-    enum class SignOption {
-        Signed,
-        Unsigned
-    };
+    static size_t addOneLength(std::span<const Digit> x) { return x.size() + 1; }
+    static size_t subOneLength(std::span<const Digit> x) { return x.size(); }
+    static std::span<Digit> absoluteAddOne(std::span<const Digit> x, std::span<Digit> result);
+    static std::span<Digit> absoluteSubOne(std::span<const Digit> x, std::span<Digit> result);
 
-    template <typename BigIntImpl>
-    static JSBigInt* absoluteAddOne(JSGlobalObject*, BigIntImpl x, SignOption);
-    template <typename BigIntImpl>
-    static JSBigInt* absoluteSubOne(JSGlobalObject*, BigIntImpl x, unsigned resultLength);
-
-    // Digit arithmetic helpers.
-    static Digit digitAdd(Digit a, Digit b, Digit& carry);
-    static Digit digitSub(Digit a, Digit b, Digit& borrow);
-    static Digit digitMul(Digit a, Digit b, Digit& high);
-    static Digit digitDiv(Digit high, Digit low, Digit divisor, Digit& remainder);
-    static Digit digitPow(Digit base, Digit exponent);
+    static Digit inplaceAdd(std::span<Digit> z, std::span<const Digit> x);
+    static Digit inplaceSub(std::span<Digit> z, std::span<const Digit> x);
+    static std::span<Digit> rightShift(std::span<Digit> z, std::span<const Digit> x, unsigned);
+    static std::span<Digit> leftShift(std::span<Digit> z, std::span<const Digit> x, unsigned);
 
     static String toStringBasePowerOfTwo(VM&, JSGlobalObject*, JSBigInt*, unsigned radix);
     static String toStringGeneric(VM&, JSGlobalObject*, JSBigInt*, unsigned radix);
 
-    inline bool isZero() const
-    {
-        ASSERT(length() || !sign());
-        return length() == 0;
-    }
+    template <typename CharType>
+    static JSValue parseInt(JSGlobalObject*, std::span<const CharType> data, ErrorParseMode);
 
     template <typename CharType>
-    static JSValue parseInt(JSGlobalObject*, CharType*  data, unsigned length, ErrorParseMode);
-
-    template <typename CharType>
-    static JSValue parseInt(JSGlobalObject*, VM&, CharType* data, unsigned length, unsigned startIndex, unsigned radix, ErrorParseMode, ParseIntSign = ParseIntSign::Signed, ParseIntMode = ParseIntMode::AllowEmptyString);
-
-    static JSBigInt* allocateFor(JSGlobalObject*, VM&, unsigned radix, unsigned charcount);
+    static JSValue parseInt(JSGlobalObject*, VM&, std::span<const CharType> data, unsigned startIndex, unsigned radix, ErrorParseMode, ParseIntSign = ParseIntSign::Signed, ParseIntMode = ParseIntMode::AllowEmptyString);
 
     template <typename BigIntImpl>
     static JSBigInt* copy(JSGlobalObject*, BigIntImpl x);
@@ -618,13 +619,14 @@ private:
 
     JS_EXPORT_PRIVATE static uint64_t toBigUInt64Heap(JSBigInt*);
 
-    inline Digit* dataStorage() { return m_data.get(m_length); }
+    inline Digit* dataStorage() { return m_data.get(); }
+    inline const Digit* dataStorage() const { return m_data.get(); }
     inline Digit* dataStorageUnsafe() { return m_data.getUnsafe(); }
 
     const unsigned m_length;
     unsigned m_hash { 0 };
     uint8_t m_sign { false };
-    CagedBarrierPtr<Gigacage::Primitive, Digit, tagCagedPtr> m_data;
+    CagedBarrierPtr<Gigacage::Primitive, Digit> m_data;
 };
 
 inline JSBigInt* asHeapBigInt(JSValue value)
@@ -660,7 +662,7 @@ ALWAYS_INLINE JSBigInt::ComparisonResult invertBigIntCompareResult(JSBigInt::Com
 ALWAYS_INLINE JSValue tryConvertToBigInt32(JSBigInt* bigInt)
 {
 #if USE(BIGINT32)
-    if (UNLIKELY(!bigInt))
+    if (!bigInt) [[unlikely]]
         return JSValue();
 
     if (bigInt->length() <= 1) {
@@ -682,42 +684,6 @@ ALWAYS_INLINE JSValue tryConvertToBigInt32(JSBigInt* bigInt)
     return bigInt;
 }
 
-ALWAYS_INLINE std::optional<double> JSBigInt::tryExtractDouble(JSValue value)
-{
-    if (value.isNumber())
-        return value.asNumber();
-
-    if (!value.isBigInt())
-        return std::nullopt;
-
-#if USE(BIGINT32)
-    if (value.isBigInt32())
-        return value.bigInt32AsInt32();
-#endif
-
-    ASSERT(value.isHeapBigInt());
-    JSBigInt* bigInt = value.asHeapBigInt();
-    if (!bigInt->length())
-        return 0;
-
-    uint64_t integer = 0;
-    if constexpr (sizeof(Digit) == 8) {
-        if (bigInt->length() != 1)
-            return std::nullopt;
-        integer = bigInt->digit(0);
-    } else {
-        ASSERT(sizeof(Digit) == 4);
-        if (bigInt->length() > 2)
-            return std::nullopt;
-        integer = bigInt->digit(0);
-        if (bigInt->length() == 2)
-            integer |= (static_cast<uint64_t>(bigInt->digit(1)) << 32);
-    }
-
-    if (integer <= static_cast<uint64_t>(maxSafeInteger()))
-        return (bigInt->sign()) ? -static_cast<double>(integer) : static_cast<double>(integer);
-
-    return std::nullopt;
-}
-
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

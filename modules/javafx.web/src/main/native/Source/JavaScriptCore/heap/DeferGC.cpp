@@ -29,7 +29,7 @@
 namespace JSC {
 
 #if ASSERT_ENABLED
-LazyNeverDestroyed<ThreadSpecific<unsigned, WTF::CanBeGCThread::True>> DisallowGC::s_scopeReentryCount;
+LazyNeverDestroyed<ThreadSpecific<unsigned, WTF::CanBeGCThread::True>> AssertNoGC::s_scopeReentryCount;
 #endif
 
 } // namespace JSC

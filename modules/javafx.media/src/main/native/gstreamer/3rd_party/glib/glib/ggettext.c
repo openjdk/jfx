@@ -242,6 +242,10 @@ g_dpgettext (const gchar *domain,
 
           translation = g_dgettext (domain, tmp);
 
+          /* g_dgettext() may return the value we pass to it, which will be on
+           * this stack frame since we allocated it with g_alloca(). If so, we
+           * return a pointer into our original input instead.
+           */
           if (translation == tmp)
             return sep + 1;
         }
@@ -299,6 +303,10 @@ g_dpgettext2 (const gchar *domain,
       msg_ctxt_id[msgctxt_len - 1] = '|';
       translation = g_dgettext (domain, msg_ctxt_id);
 
+      /* g_dgettext() may return the value we pass to it, which will be on this
+       * stack frame since we allocated it with g_alloca(). If so, we return our
+       * original input instead.
+       */
       if (translation == msg_ctxt_id)
         return msgid;
     }
@@ -467,6 +475,57 @@ g_dngettext (const gchar *domain,
   return dngettext (domain, msgid, msgid_plural, n);
 }
 
+
+
+/**
+ * SECTION:i18n
+ * @title: Internationalization
+ * @short_description: gettext support macros
+ * @see_also: the gettext manual
+ *
+ * GLib doesn't force any particular localization method upon its users.
+ * But since GLib itself is localized using the gettext() mechanism, it seems
+ * natural to offer the de-facto standard gettext() support macros in an
+ * easy-to-use form.
+ *
+ * In order to use these macros in an application, you must include
+ * `<glib/gi18n.h>`. For use in a library, you must include
+ * `<glib/gi18n-lib.h>`
+ * after defining the %GETTEXT_PACKAGE macro suitably for your library:
+ * |[<!-- language="C" -->
+ * #define GETTEXT_PACKAGE "gtk20"
+ * #include <glib/gi18n-lib.h>
+ * ]|
+ * For an application, note that you also have to call bindtextdomain(),
+ * bind_textdomain_codeset(), textdomain() and setlocale() early on in your
+ * main() to make gettext() work. For example:
+ * |[<!-- language="C" -->
+ * #include <glib/gi18n.h>
+ * #include <locale.h>
+ *
+ * int
+ * main (int argc, char **argv)
+ * {
+ *   setlocale (LC_ALL, "");
+ *   bindtextdomain (GETTEXT_PACKAGE, DATADIR "/locale");
+ *   bind_textdomain_codeset (GETTEXT_PACKAGE, "UTF-8");
+ *   textdomain (GETTEXT_PACKAGE);
+ *
+ *   // Rest of your application.
+ * }
+ * ]|
+ * where `DATADIR` is as typically provided by automake or Meson.
+ *
+ * For a library, you only have to call bindtextdomain() and
+ * bind_textdomain_codeset() in your initialization function. If your library
+ * doesn't have an initialization function, you can call the functions before
+ * the first translated message.
+ *
+ * The
+ * [gettext manual](http://www.gnu.org/software/gettext/manual/gettext.html#Maintainers)
+ * covers details of how to integrate gettext into a project’s build system and
+ * workflow.
+ */
 
 /**
  * SECTION:i18n

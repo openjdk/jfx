@@ -26,31 +26,28 @@
 #include "config.h"
 #include "PushEvent.h"
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "PushMessageData.h"
 #include <JavaScriptCore/JSArrayBuffer.h>
 #include <JavaScriptCore/JSArrayBufferView.h>
 #include <JavaScriptCore/JSCInlines.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(PushEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PushEvent);
 
 static Vector<uint8_t> dataFromPushMessageDataInit(PushMessageDataInit& data)
 {
     return WTF::switchOn(data, [](RefPtr<JSC::ArrayBuffer>& value) -> Vector<uint8_t> {
         if (!value)
             return { };
-        return { reinterpret_cast<const uint8_t*>(value->data()), value->byteLength() };
+        return value->span();
     }, [](RefPtr<JSC::ArrayBufferView>& value) -> Vector<uint8_t> {
         if (!value)
             return { };
-        return { reinterpret_cast<const uint8_t*>(value->baseAddress()), value->byteLength() };
+        return value->span();
     }, [](String& value) -> Vector<uint8_t> {
-        auto utf8 = value.utf8();
-        return Vector<uint8_t> { reinterpret_cast<const uint8_t*>(utf8.data()), utf8.length() };
+        return value.utf8().span();
     });
 }
 
@@ -59,31 +56,73 @@ Ref<PushEvent> PushEvent::create(const AtomString& type, PushEventInit&& initial
     std::optional<Vector<uint8_t>> data;
     if (initializer.data)
         data = dataFromPushMessageDataInit(*initializer.data);
-    return create(type, WTFMove(initializer), WTFMove(data), isTrusted);
+    return adoptRef(*new PushEvent(type, WTF::move(initializer), WTF::move(data), isTrusted));
 }
 
 Ref<PushEvent> PushEvent::create(const AtomString& type, ExtendableEventInit&& initializer, std::optional<Vector<uint8_t>>&& data, IsTrusted isTrusted)
 {
-    return adoptRef(*new PushEvent(type, WTFMove(initializer), WTFMove(data), isTrusted));
+    return adoptRef(*new PushEvent(type, WTF::move(initializer), WTF::move(data), isTrusted));
 }
 
 static inline RefPtr<PushMessageData> pushMessageDataFromOptionalVector(std::optional<Vector<uint8_t>>&& data)
 {
     if (!data)
         return nullptr;
-    return PushMessageData::create(WTFMove(*data));
+    return PushMessageData::create(WTF::move(*data));
 }
+
+
+PushEvent::~PushEvent() = default;
 
 PushEvent::PushEvent(const AtomString& type, ExtendableEventInit&& eventInit, std::optional<Vector<uint8_t>>&& data, IsTrusted isTrusted)
-    : ExtendableEvent(type, WTFMove(eventInit), isTrusted)
-    , m_data(pushMessageDataFromOptionalVector(WTFMove(data)))
+#if ENABLE(DECLARATIVE_WEB_PUSH) && ENABLE(NOTIFICATIONS)
+    : PushEvent(type, WTF::move(eventInit), WTF::move(data), nullptr, std::nullopt, isTrusted)
+#else
+    : ExtendableEvent(EventInterfaceType::PushEvent, type, WTF::move(eventInit), isTrusted)
+    , m_data(pushMessageDataFromOptionalVector(WTF::move(data)))
+#endif
 {
 }
 
-PushEvent::~PushEvent()
+#if ENABLE(DECLARATIVE_WEB_PUSH) && ENABLE(NOTIFICATIONS)
+
+Ref<PushEvent> PushEvent::create(const AtomString& type, ExtendableEventInit&& initializer, Ref<Notification> proposedNotification, std::optional<uint64_t> proposedAppBadge, IsTrusted isTrusted)
+{
+    return adoptRef(*new PushEvent(type, WTF::move(initializer), std::nullopt, WTF::move(proposedNotification), proposedAppBadge, isTrusted));
+}
+
+PushEvent::PushEvent(const AtomString& type, ExtendableEventInit&& eventInit, std::optional<Vector<uint8_t>>&& data, RefPtr<Notification> proposedNotification, std::optional<uint64_t> proposedAppBadge, IsTrusted isTrusted)
+    : ExtendableEvent(EventInterfaceType::PushEvent, type, WTF::move(eventInit), isTrusted)
+    , m_data(pushMessageDataFromOptionalVector(WTF::move(data)))
+    , m_proposedNotification(proposedNotification)
+    , m_proposedAppBadge(proposedAppBadge)
 {
 }
+
+Notification* PushEvent::notification()
+{
+    if (m_updatedNotification)
+        return m_updatedNotification.get();
+
+    return m_proposedNotification.get();
+}
+
+std::optional<uint64_t> PushEvent::appBadge()
+{
+    if (m_updatedAppBadge.has_value())
+        return m_updatedAppBadge.value();
+
+    return m_proposedAppBadge;
+}
+
+std::optional<NotificationData> PushEvent::updatedNotificationData() const
+{
+    if (RefPtr updatedNotification = m_updatedNotification)
+        return updatedNotification->data();
+
+    return std::nullopt;
+}
+
+#endif // ENABLE(DECLARATIVE_WEB_PUSH) && ENABLE(NOTIFICATIONS)
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

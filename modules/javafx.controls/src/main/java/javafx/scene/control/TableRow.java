@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -247,11 +247,11 @@ public class TableRow<T> extends IndexedCell<T> {
         outer: if (valid) {
             final T newValue = items.get(newIndex);
 
-            // RT-35864 - if the index didn't change, then avoid calling updateItem
+            // JDK-8092593 - if the index didn't change, then avoid calling updateItem
             // unless the item has changed.
             if (oldIndex == newIndex) {
                 if (!isItemChanged(oldValue, newValue)) {
-                    // RT-37054:  we break out of the if/else code here and
+                    // JDK-8096969:  we break out of the if/else code here and
                     // proceed with the code following this, so that we may
                     // still update references, listeners, etc as required.
                     break outer;
@@ -259,9 +259,9 @@ public class TableRow<T> extends IndexedCell<T> {
             }
             updateItem(newValue, false);
         } else {
-            // RT-30484 We need to allow a first run to be special-cased to allow
+            // JDK-8116529 We need to allow a first run to be special-cased to allow
             // for the updateItem method to be called at least once to allow for
-            // the correct visual state to be set up. In particular, in RT-30484
+            // the correct visual state to be set up. In particular, in JDK-8116529
             // refer to Ensemble8PopUpTree.png - in this case the arrows are being
             // shown as the new cells are instantiated with the arrows in the
             // children list, and are only hidden in updateItem.

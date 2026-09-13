@@ -30,14 +30,12 @@
 #include <wtf/Forward.h>
 #include <wtf/URL.h>
 
-struct UIDNA;
-
 namespace WTF {
 
 template<typename CharacterType> class CodePointIterator;
 
 class URLParser {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(URLParser);
 public:
     constexpr static int allowedNameToASCIIErrors =
         UIDNA_ERROR_EMPTY_LABEL
@@ -65,7 +63,8 @@ public:
     WTF_EXPORT_PRIVATE static std::optional<String> maybeCanonicalizeScheme(StringView scheme);
 
     static const UIDNA& internationalDomainNameTranscoder();
-    static bool isInUserInfoEncodeSet(UChar);
+    static bool isInUserInfoEncodeSet(char16_t);
+    static bool isSpecialCharacterForFragmentDirective(char16_t);
 
     static std::optional<uint16_t> defaultPortForProtocol(StringView);
     WTF_EXPORT_PRIVATE static std::optional<String> formURLDecode(StringView input);
@@ -77,7 +76,7 @@ private:
     friend class URL;
 
     URL m_url;
-    Vector<LChar> m_asciiBuffer;
+    Vector<Latin1Character> m_asciiBuffer;
     bool m_urlIsSpecial { false };
     bool m_urlIsFile { false };
     bool m_hostHasPercentOrNonASCII { false };
@@ -86,9 +85,9 @@ private:
     const void* m_inputBegin { nullptr };
 
     static constexpr size_t defaultInlineBufferSize = 2048;
-    using LCharBuffer = Vector<LChar, defaultInlineBufferSize>;
+    using Latin1Buffer = Vector<Latin1Character, defaultInlineBufferSize>;
 
-    template<typename CharacterType> void parse(const CharacterType*, const unsigned length, const URL&, const URLTextEncoding*);
+    template<typename CharacterType> void parse(std::span<const CharacterType>, const URL&, const URLTextEncoding*);
     template<typename CharacterType> void parseAuthority(CodePointIterator<CharacterType>);
     enum class HostParsingResult : uint8_t { InvalidHost, IPv6WithPort, IPv6WithoutPort, IPv4WithPort, IPv4WithoutPort, DNSNameWithPort, DNSNameWithoutPort, NonSpecialHostWithoutPort, NonSpecialHostWithPort };
     template<typename CharacterType> HostParsingResult parseHostAndPort(CodePointIterator<CharacterType>);
@@ -107,7 +106,7 @@ private:
     template<typename CharacterType> bool isSingleDotPathSegment(CodePointIterator<CharacterType>);
     template<typename CharacterType> bool isDoubleDotPathSegment(CodePointIterator<CharacterType>);
     template<typename CharacterType> bool shouldCopyFileURL(CodePointIterator<CharacterType>);
-    template<typename CharacterType> bool checkLocalhostCodePoint(CodePointIterator<CharacterType>&, UChar32);
+    template<typename CharacterType> bool checkLocalhostCodePoint(CodePointIterator<CharacterType>&, char32_t);
     template<typename CharacterType> bool isAtLocalhost(CodePointIterator<CharacterType>);
     bool isLocalhost(StringView);
     template<typename CharacterType> void consumeSingleDotPathSegment(CodePointIterator<CharacterType>&);
@@ -115,21 +114,20 @@ private:
     template<typename CharacterType> void appendWindowsDriveLetter(CodePointIterator<CharacterType>&);
     template<typename CharacterType> size_t currentPosition(const CodePointIterator<CharacterType>&);
     template<typename UnsignedIntegerType> void appendNumberToASCIIBuffer(UnsignedIntegerType);
-    template<bool(*isInCodeSet)(UChar32), typename CharacterType> void utf8PercentEncode(const CodePointIterator<CharacterType>&);
+    template<bool(*isInCodeSet)(char32_t), typename CharacterType> void utf8PercentEncode(const CodePointIterator<CharacterType>&);
     template<typename CharacterType> void utf8QueryEncode(const CodePointIterator<CharacterType>&);
-    template<typename CharacterType> std::optional<LCharBuffer> domainToASCII(StringImpl&, const CodePointIterator<CharacterType>& iteratorForSyntaxViolationPosition);
-    template<typename CharacterType> LCharBuffer percentDecode(const LChar*, size_t, const CodePointIterator<CharacterType>& iteratorForSyntaxViolationPosition);
-    static LCharBuffer percentDecode(const LChar*, size_t);
-    bool hasForbiddenHostCodePoint(const LCharBuffer&);
+    template<typename CharacterType> std::optional<Latin1Buffer> domainToASCII(StringImpl&, const CodePointIterator<CharacterType>& iteratorForSyntaxViolationPosition);
+    template<typename CharacterType> Latin1Buffer percentDecode(std::span<const Latin1Character>, const CodePointIterator<CharacterType>& iteratorForSyntaxViolationPosition);
+    static Latin1Buffer percentDecode(std::span<const Latin1Character>);
+    bool hasForbiddenHostCodePoint(const Latin1Buffer&);
     void percentEncodeByte(uint8_t);
-    void appendToASCIIBuffer(UChar32);
-    void appendToASCIIBuffer(const char*, size_t);
-    void appendToASCIIBuffer(const LChar* characters, size_t size) { appendToASCIIBuffer(reinterpret_cast<const char*>(characters), size); }
-    template<typename CharacterType> void encodeNonUTF8Query(const Vector<UChar>& source, const URLTextEncoding&, CodePointIterator<CharacterType>);
+    void appendToASCIIBuffer(char32_t);
+    void appendToASCIIBuffer(std::span<const Latin1Character>);
+    template<typename CharacterType> void encodeNonUTF8Query(const Vector<char16_t>& source, const URLTextEncoding&, CodePointIterator<CharacterType>);
     void copyASCIIStringUntil(const String&, size_t length);
     bool copyBaseWindowsDriveLetter(const URL&);
-    StringView parsedDataView(size_t start, size_t length);
-    UChar parsedDataView(size_t position);
+    StringView parsedDataView(size_t start, size_t length) LIFETIME_BOUND;
+    char16_t parsedDataView(size_t position);
     template<typename CharacterType> bool subdomainStartsWithXNDashDash(CodePointIterator<CharacterType>);
     bool subdomainStartsWithXNDashDash(StringImpl&);
 
@@ -157,5 +155,7 @@ private:
     void popPath();
     bool shouldPopPath(unsigned);
 };
+
+WTF_EXPORT_PRIVATE bool isForbiddenHostCodePoint(char16_t);
 
 }

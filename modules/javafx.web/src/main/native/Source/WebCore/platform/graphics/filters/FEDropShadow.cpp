@@ -25,17 +25,26 @@
 #include "FEDropShadowSoftwareApplier.h"
 #include "FEGaussianBlur.h"
 #include "Filter.h"
+#include "GraphicsContext.h"
 #include <wtf/text/TextStream.h>
+
+#if USE(CORE_IMAGE)
+#include "FEDropShadowCoreImageApplier.h"
+#endif
+
+#if USE(SKIA)
+#include "FEDropShadowSkiaApplier.h"
+#endif
 
 namespace WebCore {
 
-Ref<FEDropShadow> FEDropShadow::create(float stdX, float stdY, float dx, float dy, const Color& shadowColor, float shadowOpacity)
+Ref<FEDropShadow> FEDropShadow::create(float stdX, float stdY, float dx, float dy, const Color& shadowColor, float shadowOpacity, DestinationColorSpace colorSpace)
 {
-    return adoptRef(*new FEDropShadow(stdX, stdY, dx, dy, shadowColor, shadowOpacity));
+    return adoptRef(*new FEDropShadow(stdX, stdY, dx, dy, shadowColor, shadowOpacity, colorSpace));
 }
 
-FEDropShadow::FEDropShadow(float stdX, float stdY, float dx, float dy, const Color& shadowColor, float shadowOpacity)
-    : FilterEffect(FilterEffect::Type::FEDropShadow)
+FEDropShadow::FEDropShadow(float stdX, float stdY, float dx, float dy, const Color& shadowColor, float shadowOpacity, DestinationColorSpace colorSpace)
+    : FilterEffect(FilterEffect::Type::FEDropShadow, colorSpace)
     , m_stdX(stdX)
     , m_stdY(stdY)
     , m_dx(dx)
@@ -132,43 +141,60 @@ IntOutsets FEDropShadow::calculateOutsets(const FloatSize& offset, const FloatSi
     return { top, right, bottom, left };
 }
 
-OptionSet<FilterRenderingMode> FEDropShadow::supportedFilterRenderingModes() const
+OptionSet<FilterRenderingMode> FEDropShadow::supportedFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) const
 {
     OptionSet<FilterRenderingMode> modes = FilterRenderingMode::Software;
-#if HAVE(CGSTYLE_CREATE_SHADOW2)
+#if (USE(CORE_IMAGE)) || (USE(SKIA))
+    modes.add(FilterRenderingMode::Accelerated);
+#endif
+#if USE(CG) && HAVE(FIX_FOR_RADAR_163968203)
     if (m_stdX == m_stdY)
         modes.add(FilterRenderingMode::GraphicsContext);
 #endif
-    return modes;
+    return modes & preferredFilterRenderingModes;
 }
 
-std::optional<GraphicsStyle> FEDropShadow::createGraphicsStyle(const Filter& filter) const
+std::optional<GraphicsStyle> FEDropShadow::createGraphicsStyle(GraphicsContext& context, const Filter& filter) const
 {
     ASSERT(m_stdX == m_stdY);
 
-    auto offset = filter.resolvedSize({ m_dx, m_dy });
+    auto offset = filter.resolvedSize(context.platformShadowOffset({ m_dx, m_dy }));
     auto radius = FEGaussianBlur::calculateUnscaledKernelSize(filter.resolvedSize({ m_stdX, m_stdY }));
-    auto color = m_shadowColor.colorWithAlpha(m_shadowOpacity);
 
-    return GraphicsDropShadow { offset, static_cast<float>(radius.width()), color, ShadowRadiusMode::Default };
+    return GraphicsDropShadow { offset, static_cast<float>(radius.width()), m_shadowColor, ShadowRadiusMode::Default, m_shadowOpacity };
+}
+
+std::unique_ptr<FilterEffectApplier> FEDropShadow::createAcceleratedApplier() const
+{
+#if USE(CORE_IMAGE)
+    return FilterEffectApplier::create<FEDropShadowCoreImageApplier>(*this);
+#elif USE(SKIA)
+    return FilterEffectApplier::create<FEDropShadowSkiaApplier>(*this);
+#else
+    return nullptr;
+#endif
 }
 
 std::unique_ptr<FilterEffectApplier> FEDropShadow::createSoftwareApplier() const
 {
+#if USE(SKIA)
+    return FilterEffectApplier::create<FEDropShadowSkiaApplier>(*this);
+#else
     return FilterEffectApplier::create<FEDropShadowSoftwareApplier>(*this);
+#endif
 }
 
 TextStream& FEDropShadow::externalRepresentation(TextStream& ts, FilterRepresentation representation) const
 {
-    ts << indent <<"[feDropShadow";
+    ts << indent << "[feDropShadow"_s;
     FilterEffect::externalRepresentation(ts, representation);
 
-    ts << " stdDeviation=\"" << m_stdX << ", " << m_stdY << "\"";
-    ts << " dx=\"" << m_dx << "\" dy=\"" << m_dy << "\"";
-    ts << " flood-color=\"" << serializationForRenderTreeAsText(m_shadowColor) << "\"";
-    ts << " flood-opacity=\"" << m_shadowOpacity << "\"";
+    ts << " stdDeviation=\""_s << m_stdX << ", "_s << m_stdY << '"';
+    ts << " dx=\""_s << m_dx << "\" dy=\"" << m_dy << '"';
+    ts << " flood-color=\""_s << serializationForRenderTreeAsText(m_shadowColor) << '"';
+    ts << " flood-opacity=\""_s << m_shadowOpacity << '"';
 
-    ts << "]\n";
+    ts << "]\n"_s;
     return ts;
 }
 

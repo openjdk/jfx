@@ -73,7 +73,6 @@ BEGIN {
         &isGitDirectory
         &isSVN
         &isSVNDirectory
-        &isSVNVersion16OrNewer
         &listOfChangedFilesBetweenRevisions
         &makeFilePathRelative
         &mergeChangeLogs
@@ -338,12 +337,6 @@ sub svnVersion()
         chomp($svnVersion = `svn --version --quiet`);
     }
     return $svnVersion;
-}
-
-sub isSVNVersion16OrNewer()
-{
-    my $version = svnVersion();
-    return "v$version" ge v1.6;
 }
 
 sub chdirReturningRelativePath($)
@@ -2178,8 +2171,6 @@ sub changeLogName()
     }
 
     changeLogNameError("Failed to determine ChangeLog name.") unless $name;
-    # getpwuid seems to always succeed on windows, returning the username instead of the full name.  This check will catch that case.
-    changeLogNameError("'$name' does not contain a space!  ChangeLogs should contain your full name.") unless ($name =~ /\S\s\S/);
 
     return $name;
 }

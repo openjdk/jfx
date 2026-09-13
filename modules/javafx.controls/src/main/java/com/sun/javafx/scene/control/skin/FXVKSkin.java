@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,9 +71,6 @@ import java.util.HashMap;
 import static javafx.scene.input.MouseEvent.MOUSE_PRESSED;
 import static javafx.scene.input.TouchEvent.TOUCH_PRESSED;
 import static javafx.scene.layout.Region.USE_PREF_SIZE;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
 
 public class FXVKSkin extends SkinBase<FXVK> {
 
@@ -189,33 +186,29 @@ public class FXVKSkin extends SkinBase<FXVK> {
     static boolean vkLookup = false;
 
     static {
-        @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            String s = System.getProperty("com.sun.javafx.vk.adjustwindow");
-            if (s != null) {
-                vkAdjustWindow = Boolean.valueOf(s);
+        String s = System.getProperty("com.sun.javafx.vk.adjustwindow");
+        if (s != null) {
+            vkAdjustWindow = Boolean.valueOf(s);
+        }
+        s = System.getProperty("com.sun.javafx.sqe.vk.lookup");
+        if (s != null) {
+            vkLookup = Boolean.valueOf(s);
+        }
+        s = System.getProperty("com.sun.javafx.virtualKeyboard.backspaceRepeatDelay");
+        if (s != null) {
+            Double delay = Double.valueOf(s);
+            KEY_REPEAT_DELAY = Math.min(Math.max(delay, KEY_REPEAT_DELAY_MIN), KEY_REPEAT_DELAY_MAX);
+        }
+        s = System.getProperty("com.sun.javafx.virtualKeyboard.backspaceRepeatRate");
+        if (s != null) {
+            Double rate = Double.valueOf(s);
+            if (rate <= 0) {
+                //disable key repeat
+                KEY_REPEAT_RATE = 0;
+            } else {
+                KEY_REPEAT_RATE = Math.min(Math.max(rate, KEY_REPEAT_RATE_MIN), KEY_REPEAT_RATE_MAX);
             }
-            s = System.getProperty("com.sun.javafx.sqe.vk.lookup");
-            if (s != null) {
-                vkLookup = Boolean.valueOf(s);
-            }
-            s = System.getProperty("com.sun.javafx.virtualKeyboard.backspaceRepeatDelay");
-            if (s != null) {
-                Double delay = Double.valueOf(s);
-                KEY_REPEAT_DELAY = Math.min(Math.max(delay, KEY_REPEAT_DELAY_MIN), KEY_REPEAT_DELAY_MAX);
-            }
-            s = System.getProperty("com.sun.javafx.virtualKeyboard.backspaceRepeatRate");
-            if (s != null) {
-                Double rate = Double.valueOf(s);
-                if (rate <= 0) {
-                    //disable key repeat
-                    KEY_REPEAT_RATE = 0;
-                } else {
-                    KEY_REPEAT_RATE = Math.min(Math.max(rate, KEY_REPEAT_RATE_MIN), KEY_REPEAT_RATE_MAX);
-                }
-            }
-            return null;
-        });
+        }
     }
 
     // Proxy for read-only Window.yProperty() so we can animate.

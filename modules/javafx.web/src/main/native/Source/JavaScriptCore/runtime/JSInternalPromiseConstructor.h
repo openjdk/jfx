@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "JSPromiseConstructor.h"
+#include <JavaScriptCore/JSPromiseConstructor.h>
 
 namespace JSC {
 
@@ -37,7 +37,7 @@ public:
     using Base = JSPromiseConstructor;
     static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
-    static JSInternalPromiseConstructor* create(VM&, Structure*, JSInternalPromisePrototype*, GetterSetter*);
+    static JSInternalPromiseConstructor* create(VM&, Structure*, JSInternalPromisePrototype*);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_INFO;

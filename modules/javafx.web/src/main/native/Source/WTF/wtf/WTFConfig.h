@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,10 @@
 
 #pragma once
 
+#include <wtf/Compiler.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 #include <wtf/Assertions.h>
 #include <wtf/Atomics.h>
 #include <wtf/ExportMacros.h>
@@ -35,21 +39,37 @@
 
 #if USE(SYSTEM_MALLOC)
 namespace Gigacage {
-constexpr size_t reservedSlotsForGigacageConfig = 0;
-constexpr size_t reservedBytesForGigacageConfig = 0;
+// The first 6 slots are reserved for use by system allocators
+constexpr size_t reservedSlotsForGigacageConfig = 6;
+constexpr size_t reservedBytesForGigacageConfig = reservedSlotsForGigacageConfig * sizeof(uint64_t);
 }
 #else
 #include <bmalloc/GigacageConfig.h>
 #endif
 
-#if ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
 namespace WebConfig {
 
 using Slot = uint64_t;
 extern "C" WTF_EXPORT_PRIVATE Slot g_config[];
 
+constexpr size_t reservedSlotsForExecutableAllocator = 2;
+constexpr size_t reservedSlotsForMTEConfiguration = 2;
+constexpr size_t reservedSlotsForAllocationProfiling = 2;
+
+enum ReservedConfigByteOffset {
+    ReservedByteForExecutableAllocator0 = 0,
+    ReservedByteForExecutableAllocator1,
+    // The MTE offsets must be kept in sync with pas_mte_config.h
+    ReservedByteForMTEEnablement,
+    ReservedByteForMTEExtendedConfiguration,
+    ReservedByteForAllocationProfiling,
+    ReservedByteForAllocationProfilingMode,
+    NumberOfReservedConfigBytes
+};
+
+static_assert(NumberOfReservedConfigBytes <= sizeof(Slot) * (reservedSlotsForExecutableAllocator + reservedSlotsForMTEConfiguration + reservedSlotsForAllocationProfiling));
+
 } // namespace WebConfig
-#endif // ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
 
 namespace WTF {
 
@@ -59,6 +79,8 @@ constexpr size_t ConfigSizeToProtect = std::max(CeilingOnPageSize, 16 * KB);
 struct Config {
     WTF_EXPORT_PRIVATE static void permanentlyFreeze();
     WTF_EXPORT_PRIVATE static void initialize();
+    WTF_EXPORT_PRIVATE static void finalize();
+    WTF_EXPORT_PRIVATE static void disableFreezingForTesting();
 
     struct AssertNotFrozenScope {
         AssertNotFrozenScope();
@@ -73,8 +95,9 @@ struct Config {
     uintptr_t highestAccessibleAddress;
 
     bool isPermanentlyFrozen;
+    bool disabledFreezingForTesting;
     bool useSpecialAbortForExtraSecurityImplications;
-#if PLATFORM(COCOA)
+#if PLATFORM(COCOA) || OS(ANDROID)
     bool disableForwardingVPrintfStdErrToOSLog;
 #endif
 
@@ -89,8 +112,6 @@ struct Config {
     uint64_t spaceForExtensions[1];
 };
 
-#if ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
-
 constexpr size_t startSlotOfWTFConfig = Gigacage::reservedSlotsForGigacageConfig;
 constexpr size_t startOffsetOfWTFConfig = startSlotOfWTFConfig * sizeof(WebConfig::Slot);
 
@@ -103,15 +124,19 @@ static_assert(roundUpToMultipleOf<alignmentOfWTFConfig>(startOffsetOfWTFConfig) 
 
 WTF_EXPORT_PRIVATE void setPermissionsOfConfigPage();
 
-#define g_wtfConfig (*bitwise_cast<WTF::Config*>(&WebConfig::g_config[WTF::startSlotOfWTFConfig]))
+WTF_EXPORT_PRIVATE void makePagesFreezable(void* base, size_t); // Works together with permanentlyFreezePages().
 
-#else // not ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
+enum class FreezePagePermission {
+    None, // Remove all permissions i.e. no permissions at all.
+    ReadOnly, // The pages can be read.
+};
+WTF_EXPORT_PRIVATE void permanentlyFreezePages(void* base, size_t, FreezePagePermission);
 
-inline void setPermissionsOfConfigPage() { }
+// Workaround to localize bounds safety warnings to this file.
+// FIXME: Use real types to make materializing WTF::Config* bounds-safe and type-safe.
+inline Config* addressOfWTFConfig() { return std::bit_cast<Config*>(&WebConfig::g_config[startSlotOfWTFConfig]); }
 
-extern "C" WTF_EXPORT_PRIVATE Config g_wtfConfig;
-
-#endif // ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
+#define g_wtfConfig (*WTF::addressOfWTFConfig())
 
 constexpr size_t offsetOfWTFConfigLowestAccessibleAddress = offsetof(WTF::Config, lowestAccessibleAddress);
 
@@ -129,6 +154,4 @@ ALWAYS_INLINE Config::AssertNotFrozenScope::~AssertNotFrozenScope()
 
 } // namespace WTF
 
-#if !ENABLE(UNIFIED_AND_FREEZABLE_CONFIG_RECORD)
-using WTF::g_wtfConfig;
-#endif
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

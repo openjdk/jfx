@@ -25,18 +25,23 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if ENABLE(VIDEO)
 
-#include "FloatSize.h"
-#include "PlaneLayout.h"
-#include "PlatformVideoColorSpace.h"
-#include "VideoPixelFormat.h"
 #include <JavaScriptCore/TypedArrays.h>
+#include <WebCore/FloatSize.h>
+#include <WebCore/PlaneLayout.h>
+#include <WebCore/PlatformVideoColorSpace.h>
+#include <WebCore/VideoPixelFormat.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/MediaTime.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
-typedef struct __CVBuffer *CVPixelBufferRef;
+#include "NativeImage.h"
+
+#if PLATFORM(COCOA)
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer *CVPixelBufferRef;
+#endif
 
 namespace WebCore {
 
@@ -91,10 +96,13 @@ public:
     WEBCORE_EXPORT RefPtr<VideoFrameCV> asVideoFrameCV();
 #endif
 
+    enum class ShouldCloneWithDifferentTimestamp : bool { No, Yes };
+    Ref<VideoFrame> updateTimestamp(MediaTime, ShouldCloneWithDifferentTimestamp);
+
     using CopyCallback = CompletionHandler<void(std::optional<Vector<PlaneLayout>>&&)>;
     void copyTo(std::span<uint8_t>, VideoPixelFormat, Vector<ComputedPlaneLayout>&&, CopyCallback&&);
 
-    virtual FloatSize presentationSize() const = 0;
+    virtual IntSize presentationSize() const = 0;
     virtual uint32_t pixelFormat() const = 0;
 
     virtual bool isRemoteProxy() const { return false; }
@@ -105,21 +113,26 @@ public:
 #endif
 #if PLATFORM(COCOA)
     virtual CVPixelBufferRef pixelBuffer() const { return nullptr; };
-    using ResourceIdentifier = std::pair<uint64_t, uint64_t>;
-    virtual ResourceIdentifier resourceIdentifier() const { return { }; }
+    RetainPtr<CVPixelBufferRef> protectedPixelBuffer() const { return pixelBuffer(); }
 #endif
     WEBCORE_EXPORT virtual void setOwnershipIdentity(const ProcessIdentity&) { }
 
     void initializeCharacteristics(MediaTime presentationTime, bool isMirrored, Rotation);
 
-    void paintInContext(GraphicsContext&, const FloatRect&, const ImageOrientation&, bool shouldDiscardAlpha);
-
+    RefPtr<NativeImage> copyNativeImage() const;
     const PlatformVideoColorSpace& colorSpace() const { return m_colorSpace; }
+
+    bool hasNoTransformation() const { return m_rotation == VideoFrameRotation::None && !m_isMirrored; }
+    bool has90DegreeRotation() const { return m_rotation == VideoFrameRotation::Left || m_rotation == VideoFrameRotation::Right; }
 
 protected:
     WEBCORE_EXPORT VideoFrame(MediaTime presentationTime, bool isMirrored, Rotation, PlatformVideoColorSpace&& = { });
 
+    void initializePresentationTime(MediaTime);
+
 private:
+    virtual Ref<VideoFrame> clone() = 0;
+
     const MediaTime m_presentationTime;
     const bool m_isMirrored;
     const Rotation m_rotation;

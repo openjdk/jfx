@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,8 @@ public class NodeListImpl implements NodeList {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
+
+        @Override
         public void dispose() {
             NodeListImpl.dispose(peer);
         }
@@ -78,6 +80,7 @@ public class NodeListImpl implements NodeList {
 
 
 // Attributes
+    @Override
     public int getLength() {
         return getLengthImpl(getPeer());
     }
@@ -85,6 +88,7 @@ public class NodeListImpl implements NodeList {
 
 
 // Functions
+    @Override
     public Node item(int index)
     {
         return NodeImpl.getImpl(itemImpl(getPeer()

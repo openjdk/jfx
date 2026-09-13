@@ -27,20 +27,22 @@
 #include "AbortSignal.h"
 
 #include "AbortAlgorithm.h"
+#include "ContextDestructionObserverInlines.h"
 #include "DOMException.h"
 #include "DOMTimer.h"
 #include "Event.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "JSDOMException.h"
 #include "ScriptExecutionContext.h"
 #include "WebCoreOpaqueRoot.h"
 #include <JavaScriptCore/Exception.h>
 #include <JavaScriptCore/JSCast.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(AbortSignal);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AbortSignal);
 
 Ref<AbortSignal> AbortSignal::create(ScriptExecutionContext* context)
 {
@@ -52,14 +54,14 @@ Ref<AbortSignal> AbortSignal::abort(JSDOMGlobalObject& globalObject, ScriptExecu
 {
     ASSERT(reason);
     if (reason.isUndefined())
-        reason = toJS(&globalObject, &globalObject, DOMException::create(AbortError));
+        reason = toJS(&globalObject, &globalObject, DOMException::create(ExceptionCode::AbortError));
     return adoptRef(*new AbortSignal(&context, Aborted::Yes, reason));
 }
 
 // https://dom.spec.whatwg.org/#dom-abortsignal-timeout
 Ref<AbortSignal> AbortSignal::timeout(ScriptExecutionContext& context, uint64_t milliseconds)
 {
-    auto signal = adoptRef(*new AbortSignal(&context));
+    Ref signal = AbortSignal::create(&context);
     signal->setHasActiveTimeoutTimer(true);
     auto action = [signal](ScriptExecutionContext& context) mutable {
         signal->setHasActiveTimeoutTimer(false);
@@ -68,19 +70,20 @@ Ref<AbortSignal> AbortSignal::timeout(ScriptExecutionContext& context, uint64_t 
         if (!globalObject)
             return;
 
-        auto& vm = globalObject->vm();
-        Locker locker { vm.apiLock() };
-        signal->signalAbort(toJS(globalObject, globalObject, DOMException::create(TimeoutError)));
+        Locker locker { globalObject->vm().apiLock() };
+        signal->signalAbort(toJS(globalObject, globalObject, DOMException::create(ExceptionCode::TimeoutError)));
     };
-    DOMTimer::install(context, WTFMove(action), Seconds::fromMilliseconds(milliseconds), DOMTimer::Type::SingleShot);
+    DOMTimer::install(context, WTF::move(action), Seconds::fromMilliseconds(milliseconds), DOMTimer::Type::SingleShot);
     return signal;
 }
 
-Ref<AbortSignal> AbortSignal::any(ScriptExecutionContext& context, const Vector<RefPtr<AbortSignal>>& signals)
+Ref<AbortSignal> AbortSignal::any(ScriptExecutionContext& context, const Vector<Ref<AbortSignal>>& signals)
 {
-    auto resultSignal = adoptRef(*new AbortSignal(&context));
+    Ref resultSignal = AbortSignal::create(&context);
 
-    auto abortedSignalIndex = signals.findIf([](auto& signal) { return signal->aborted(); });
+    auto abortedSignalIndex = signals.findIf([](auto& signal) {
+        return signal->aborted();
+    });
     if (abortedSignalIndex != notFound) {
         resultSignal->signalAbort(signals[abortedSignalIndex]->reason().getValue());
         return resultSignal;
@@ -88,7 +91,7 @@ Ref<AbortSignal> AbortSignal::any(ScriptExecutionContext& context, const Vector<
 
     resultSignal->markAsDependent();
     for (auto& signal : signals)
-        resultSignal->addSourceSignal(*signal);
+        resultSignal->addSourceSignal(signal);
 
     return resultSignal;
 }
@@ -106,7 +109,7 @@ AbortSignal::~AbortSignal() = default;
 void AbortSignal::addSourceSignal(AbortSignal& signal)
 {
     if (signal.isDependent()) {
-        for (auto& sourceSignal : signal.sourceSignals())
+        for (Ref sourceSignal : signal.sourceSignals())
             addSourceSignal(sourceSignal);
         return;
     }
@@ -128,7 +131,37 @@ void AbortSignal::signalAbort(JSC::JSValue reason)
     if (m_aborted)
         return;
 
-    // 2. Set signal’s aborted flag.
+    // 2. ... if the reason is not given, set it to a new "AbortError" DOMException.
+    ASSERT(reason);
+    if (reason.isUndefined()) {
+        auto* globalObject = JSC::jsCast<JSDOMGlobalObject*>(protectedScriptExecutionContext()->globalObject());
+        if (!globalObject)
+            return;
+        reason = toJS(globalObject, globalObject, DOMException::create(ExceptionCode::AbortError));
+    }
+
+    // 2. Set signal’s abort reason to reason if it is given; otherwise to a new "AbortError" DOMException.
+    markAborted(reason);
+
+    Vector<Ref<AbortSignal>> dependentSignalsToAbort;
+
+    for (Ref dependentSignal : std::exchange(m_dependentSignals, { })) {
+        if (!dependentSignal->aborted()) {
+            dependentSignal->markAborted(reason);
+            dependentSignalsToAbort.append(WTF::move(dependentSignal));
+        }
+    }
+
+    // 5. Run the abort steps
+    runAbortSteps();
+
+    // 6. For each dependentSignal of dependentSignalsToAbort, run the abort steps for dependentSignal.
+    for (auto& dependentSignal : dependentSignalsToAbort)
+        dependentSignal->runAbortSteps();
+}
+
+void AbortSignal::markAborted(JSC::JSValue reason)
+{
     m_aborted = true;
     m_sourceSignals.clear();
 
@@ -136,17 +169,20 @@ void AbortSignal::signalAbort(JSC::JSValue reason)
     // https://bugs.webkit.org/show_bug.cgi?id=236353
     ASSERT(reason);
     m_reason.setWeakly(reason);
+}
 
-    Ref protectedThis { *this };
-    auto algorithms = std::exchange(m_algorithms, { });
-    for (auto& algorithm : algorithms)
+void AbortSignal::runAbortSteps()
+{
+    auto reason = m_reason.getValue();
+    ASSERT(reason);
+
+    // 1. For each algorithm of signal's abort algorithms: run algorithm.
+    //    2. Empty signal's abort algorithms. (std::exchange empties)
+    for (auto& algorithm : std::exchange(m_algorithms, { }))
         algorithm.second(reason);
 
-    // 5. Fire an event named abort at signal.
+    // 3. Fire an event named abort at signal.
     dispatchEvent(Event::create(eventNames().abortEvent, Event::CanBubble::No, Event::IsCancelable::No));
-
-    for (auto& dependentSignal : std::exchange(m_dependentSignals, { }))
-        Ref { dependentSignal }->signalAbort(reason);
 }
 
 // https://dom.spec.whatwg.org/#abortsignal-follow
@@ -162,9 +198,9 @@ void AbortSignal::signalFollow(AbortSignal& signal)
 
     ASSERT(!m_followingSignal);
     m_followingSignal = signal;
-    signal.addAlgorithm([weakThis = WeakPtr<AbortSignal, WeakPtrImplWithEventTargetData> { this }](JSC::JSValue reason) {
-        if (weakThis)
-            weakThis->signalAbort(reason);
+    signal.addAlgorithm([weakThis = WeakPtr { *this }](JSC::JSValue reason) {
+        if (RefPtr signal = weakThis.get())
+            signal->signalAbort(reason);
     });
 }
 
@@ -176,11 +212,11 @@ void AbortSignal::eventListenersDidChange()
 uint32_t AbortSignal::addAbortAlgorithmToSignal(AbortSignal& signal, Ref<AbortAlgorithm>&& algorithm)
 {
     if (signal.aborted()) {
-        algorithm->handleEvent(signal.m_reason.getValue());
+        algorithm->invoke(signal.m_reason.getValue());
         return 0;
     }
-    return signal.addAlgorithm([algorithm = WTFMove(algorithm)](JSC::JSValue value) mutable {
-        algorithm->handleEvent(value);
+    return signal.addAlgorithm([algorithm = WTF::move(algorithm)](JSC::JSValue value) mutable {
+        algorithm->invoke(value);
     });
 }
 
@@ -191,7 +227,7 @@ void AbortSignal::removeAbortAlgorithmFromSignal(AbortSignal& signal, uint32_t a
 
 uint32_t AbortSignal::addAlgorithm(Algorithm&& algorithm)
 {
-    m_algorithms.append(std::make_pair(++m_algorithmIdentifier, WTFMove(algorithm)));
+    m_algorithms.append(std::make_pair(++m_algorithmIdentifier, WTF::move(algorithm)));
     return m_algorithmIdentifier;
 }
 
@@ -207,9 +243,14 @@ void AbortSignal::throwIfAborted(JSC::JSGlobalObject& lexicalGlobalObject)
     if (!aborted())
         return;
 
-    auto& vm = lexicalGlobalObject.vm();
+    Ref vm = lexicalGlobalObject.vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     throwException(&lexicalGlobalObject, scope, m_reason.getValue());
+}
+
+ScriptExecutionContext* AbortSignal::scriptExecutionContext() const
+{
+    return ContextDestructionObserver::scriptExecutionContext();
 }
 
 WebCoreOpaqueRoot root(AbortSignal* signal)

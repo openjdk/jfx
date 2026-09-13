@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package test.javafx.scene.layout;
 
 import java.lang.reflect.Field;
+import java.util.List;
 import javafx.geometry.Insets;
 import javafx.scene.image.Image;
 import javafx.scene.layout.Border;
@@ -36,10 +37,11 @@ import javafx.scene.layout.BorderWidths;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.StrokeType;
-import org.junit.Test;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
 
 import static javafx.scene.layout.BorderRepeat.*;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests for Border.
@@ -68,7 +70,8 @@ public class BorderTest {
             new BorderImage(IMAGE_4, new BorderWidths(3), Insets.EMPTY, new BorderWidths(3, 4, 5, 6), true, STRETCH, SPACE)
     };
 
-    @Test public void instanceCreation() {
+    @Test
+    public void instanceCreation() {
         Border b = new Border(STROKES_1, IMAGES_1);
         assertEquals(STROKES_1.length, b.getStrokes().size(), 0);
         assertEquals(STROKES_1[0], b.getStrokes().get(0));
@@ -76,7 +79,8 @@ public class BorderTest {
         assertEquals(IMAGES_1[0], b.getImages().get(0));
     }
 
-    @Test public void instanceCreation2() {
+    @Test
+    public void instanceCreation2() {
         Border b = new Border(STROKES_2, IMAGES_2);
         assertEquals(STROKES_2.length, b.getStrokes().size(), 0);
         assertEquals(STROKES_2[0], b.getStrokes().get(0));
@@ -87,35 +91,40 @@ public class BorderTest {
         assertEquals(IMAGES_2[2], b.getImages().get(2));
     }
 
-    @Test public void instanceCreationNullstrokes() {
+    @Test
+    public void instanceCreationNullstrokes() {
         Border b = new Border(null, IMAGES_1);
         assertEquals(0, b.getStrokes().size(), 0);
         assertEquals(IMAGES_1.length, b.getImages().size(), 0);
         assertEquals(IMAGES_1[0], b.getImages().get(0));
     }
 
-    @Test public void instanceCreationEmptystrokes() {
+    @Test
+    public void instanceCreationEmptystrokes() {
         Border b = new Border(new BorderStroke[0], IMAGES_1);
         assertEquals(0, b.getStrokes().size(), 0);
         assertEquals(IMAGES_1.length, b.getImages().size(), 0);
         assertEquals(IMAGES_1[0], b.getImages().get(0));
     }
 
-    @Test public void instanceCreationNullImages() {
+    @Test
+    public void instanceCreationNullImages() {
         Border b = new Border(STROKES_1, null);
         assertEquals(STROKES_1.length, b.getStrokes().size(), 0);
         assertEquals(STROKES_1[0], b.getStrokes().get(0));
         assertEquals(0, b.getImages().size(), 0);
     }
 
-    @Test public void instanceCreationEmptyImages() {
+    @Test
+    public void instanceCreationEmptyImages() {
         Border b = new Border(STROKES_1, new BorderImage[0]);
         assertEquals(STROKES_1.length, b.getStrokes().size(), 0);
         assertEquals(STROKES_1[0], b.getStrokes().get(0));
         assertEquals(0, b.getImages().size(), 0);
     }
 
-    @Test public void instanceCreationWithNullsInTheFillArray() {
+    @Test
+    public void instanceCreationWithNullsInTheFillArray() {
         final BorderStroke[] strokes = new BorderStroke[] {
                 null,
                 new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, new CornerRadii(3), new BorderWidths(4)),
@@ -127,7 +136,8 @@ public class BorderTest {
         assertEquals(strokes[2], b.getStrokes().get(1));
     }
 
-    @Test public void instanceCreationWithNullsInTheFillArray2() {
+    @Test
+    public void instanceCreationWithNullsInTheFillArray2() {
         final BorderStroke[] strokes = new BorderStroke[] {
                 new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, new CornerRadii(3), new BorderWidths(4)),
                 null,
@@ -139,7 +149,8 @@ public class BorderTest {
         assertEquals(strokes[2], b.getStrokes().get(1));
     }
 
-    @Test public void instanceCreationWithNullsInTheFillArray3() {
+    @Test
+    public void instanceCreationWithNullsInTheFillArray3() {
         final BorderStroke[] strokes = new BorderStroke[] {
                 new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, new CornerRadii(3), new BorderWidths(4)),
                 new BorderStroke(Color.BLUE, BorderStrokeStyle.SOLID, new CornerRadii(6), new BorderWidths(8)),
@@ -151,7 +162,8 @@ public class BorderTest {
         assertEquals(strokes[1], b.getStrokes().get(1));
     }
 
-    @Test public void instanceCreationWithNullsInTheFillArray4() {
+    @Test
+    public void instanceCreationWithNullsInTheFillArray4() {
         final BorderStroke[] strokes = new BorderStroke[] {
                 null
         };
@@ -159,7 +171,8 @@ public class BorderTest {
         assertEquals(0, b.getStrokes().size(), 0);
     }
 
-    @Test public void instanceCreationWithNullsInTheImageArray() {
+    @Test
+    public void instanceCreationWithNullsInTheImageArray() {
         final BorderImage[] images = new BorderImage[] {
                 null,
                 new BorderImage(IMAGE_2, new BorderWidths(3), new Insets(4), BorderWidths.EMPTY, false, REPEAT, REPEAT),
@@ -173,7 +186,8 @@ public class BorderTest {
         assertEquals(IMAGES_2[2], b.getImages().get(2));
     }
 
-    @Test public void instanceCreationWithNullsInTheImageArray2() {
+    @Test
+    public void instanceCreationWithNullsInTheImageArray2() {
         final BorderImage[] images = new BorderImage[] {
                 new BorderImage(IMAGE_2, new BorderWidths(3), new Insets(4), BorderWidths.EMPTY, false, REPEAT, REPEAT),
                 null,
@@ -187,7 +201,8 @@ public class BorderTest {
         assertEquals(IMAGES_2[2], b.getImages().get(2));
     }
 
-    @Test public void instanceCreationWithNullsInTheImageArray3() {
+    @Test
+    public void instanceCreationWithNullsInTheImageArray3() {
         final BorderImage[] images = new BorderImage[] {
                 new BorderImage(IMAGE_2, new BorderWidths(3), new Insets(4), BorderWidths.EMPTY, false, REPEAT, REPEAT),
                 new BorderImage(IMAGE_3, new BorderWidths(6), new Insets(2), BorderWidths.EMPTY, false, SPACE, ROUND),
@@ -201,7 +216,8 @@ public class BorderTest {
         assertEquals(IMAGES_2[2], b.getImages().get(2));
     }
 
-    @Test public void instanceCreationWithNullsInTheImageArray4() {
+    @Test
+    public void instanceCreationWithNullsInTheImageArray4() {
         final BorderImage[] images = new BorderImage[] {
                 null
         };
@@ -209,7 +225,8 @@ public class BorderTest {
         assertEquals(0, b.getImages().size(), 0);
     }
 
-    @Test public void suppliedBorderStrokesMutatedLaterDoNotChangeStrokes() {
+    @Test
+    public void suppliedBorderStrokesMutatedLaterDoNotChangeStrokes() {
         final BorderStroke stroke = new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, new CornerRadii(3), new BorderWidths(4));
         final BorderStroke[] strokes = new BorderStroke[] { stroke };
         Border b = new Border(strokes, null);
@@ -221,7 +238,8 @@ public class BorderTest {
         assertSame(stroke, b2.getStrokes().get(0));
     }
 
-    @Test public void suppliedBorderImagesMutatedLaterDoNotChangeImages() {
+    @Test
+    public void suppliedBorderImagesMutatedLaterDoNotChangeImages() {
         final BorderImage image = new BorderImage(IMAGE_2, new BorderWidths(3), new Insets(4),
                                                   BorderWidths.EMPTY, false, REPEAT, REPEAT);
         final BorderImage[] images = new BorderImage[] { image };
@@ -234,27 +252,32 @@ public class BorderTest {
         assertSame(image, b2.getImages().get(0));
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void strokesIsUnmodifiable() {
-        final BorderStroke stroke = new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, new CornerRadii(3), new BorderWidths(4));
-        final BorderStroke[] strokes = new BorderStroke[] { stroke };
-        Border b = new Border(strokes);
-        b.getStrokes().add(new BorderStroke(Color.BLUE, BorderStrokeStyle.SOLID, new CornerRadii(6), new BorderWidths(8)));
+        assertThrows(UnsupportedOperationException.class, () -> {
+            final BorderStroke stroke = new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, new CornerRadii(3), new BorderWidths(4));
+            final BorderStroke[] strokes = new BorderStroke[] { stroke };
+            Border b = new Border(strokes);
+            b.getStrokes().add(new BorderStroke(Color.BLUE, BorderStrokeStyle.SOLID, new CornerRadii(6), new BorderWidths(8)));
+        });
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void imagesIsUnmodifiable() {
-        final BorderImage image = new BorderImage(IMAGE_2, new BorderWidths(3), new Insets(4),
-                                                  BorderWidths.EMPTY, false, REPEAT, REPEAT);
-        final BorderImage[] images = new BorderImage[] { image };
-        Border b = new Border(images);
-        b.getImages().add(
-                new BorderImage(
-                        IMAGE_4, new BorderWidths(3), Insets.EMPTY,
-                        new BorderWidths(3, 4, 5, 6), true, STRETCH, SPACE));
+        assertThrows(UnsupportedOperationException.class, () -> {
+            final BorderImage image = new BorderImage(IMAGE_2, new BorderWidths(3), new Insets(4),
+                                                      BorderWidths.EMPTY, false, REPEAT, REPEAT);
+            final BorderImage[] images = new BorderImage[] { image };
+            Border b = new Border(images);
+            b.getImages().add(
+                    new BorderImage(
+                            IMAGE_4, new BorderWidths(3), Insets.EMPTY,
+                            new BorderWidths(3, 4, 5, 6), true, STRETCH, SPACE));
+        });
     }
 
-    @Test public void insetsAndOutsets_twoPixelOuterStroke() {
+    @Test
+    public void insetsAndOutsets_twoPixelOuterStroke() {
         BorderStrokeStyle style = new BorderStrokeStyle(StrokeType.OUTSIDE, null, null, 0, 0, null);
         BorderStroke stroke = new BorderStroke(Color.ORANGE, style, new CornerRadii(5), new BorderWidths(2));
         Border border = new Border(new BorderStroke[] { stroke }, null);
@@ -265,7 +288,8 @@ public class BorderTest {
         assertEquals(new Insets(0), border.getInsets());
     }
 
-    @Test public void insetsAndOutsets_singlePixelOuterStroke() {
+    @Test
+    public void insetsAndOutsets_singlePixelOuterStroke() {
         BorderStrokeStyle style = new BorderStrokeStyle(StrokeType.OUTSIDE, null, null, 0, 0, null);
         BorderStroke stroke = new BorderStroke(Color.ORANGE, style, new CornerRadii(5), new BorderWidths(1));
         Border border = new Border(new BorderStroke[] { stroke }, null);
@@ -276,7 +300,8 @@ public class BorderTest {
         assertEquals(new Insets(0), border.getInsets());
     }
 
-    @Test public void insetsAndOutsets_singlePixelCenteredStroke() {
+    @Test
+    public void insetsAndOutsets_singlePixelCenteredStroke() {
         BorderStrokeStyle style = new BorderStrokeStyle(StrokeType.CENTERED, null, null, 0, 0, null);
         BorderStroke stroke = new BorderStroke(Color.ORANGE, style, new CornerRadii(5), new BorderWidths(1));
         Border border = new Border(new BorderStroke[] { stroke }, null);
@@ -287,7 +312,8 @@ public class BorderTest {
         assertEquals(new Insets(.5), border.getInsets());
     }
 
-    @Test public void insetsAndOutsets_singlePixelInnerStroke() {
+    @Test
+    public void insetsAndOutsets_singlePixelInnerStroke() {
         BorderStrokeStyle style = new BorderStrokeStyle(StrokeType.INSIDE, null, null, 0, 0, null);
         BorderStroke stroke = new BorderStroke(Color.ORANGE, style, new CornerRadii(5), new BorderWidths(1));
         Border border = new Border(new BorderStroke[] { stroke }, null);
@@ -298,7 +324,8 @@ public class BorderTest {
         assertEquals(new Insets(1), border.getInsets());
     }
 
-    @Test public void insetsAndOutsets_twoPixelOuterStroke_PositiveInsets() {
+    @Test
+    public void insetsAndOutsets_twoPixelOuterStroke_PositiveInsets() {
         BorderStrokeStyle style = new BorderStrokeStyle(StrokeType.OUTSIDE, null, null, 0, 0, null);
         BorderStroke stroke = new BorderStroke(Color.ORANGE, style, new CornerRadii(5), new BorderWidths(2), new Insets(1, 2, 3, 4));
         Border border = new Border(new BorderStroke[] { stroke }, null);
@@ -306,7 +333,8 @@ public class BorderTest {
         assertEquals(new Insets(1, 2, 3, 4), border.getInsets());
     }
 
-    @Test public void insetsAndOutsets_singlePixelOuterStroke_PositiveInsets() {
+    @Test
+    public void insetsAndOutsets_singlePixelOuterStroke_PositiveInsets() {
         BorderStrokeStyle style = new BorderStrokeStyle(StrokeType.OUTSIDE, null, null, 0, 0, null);
         BorderStroke stroke = new BorderStroke(Color.ORANGE, style, new CornerRadii(5), new BorderWidths(1), new Insets(1, 2, 3, 4));
         Border border = new Border(new BorderStroke[] { stroke }, null);
@@ -314,7 +342,8 @@ public class BorderTest {
         assertEquals(new Insets(1, 2, 3, 4), border.getInsets());
     }
 
-    @Test public void insetsAndOutsets_singlePixelCenteredStroke_PositiveInsets() {
+    @Test
+    public void insetsAndOutsets_singlePixelCenteredStroke_PositiveInsets() {
         BorderStrokeStyle style = new BorderStrokeStyle(StrokeType.CENTERED, null, null, 0, 0, null);
         BorderStroke stroke = new BorderStroke(Color.ORANGE, style, new CornerRadii(5), new BorderWidths(1), new Insets(1, 2, 3, 4));
         Border border = new Border(new BorderStroke[] { stroke }, null);
@@ -322,7 +351,8 @@ public class BorderTest {
         assertEquals(new Insets(1.5, 2.5, 3.5, 4.5), border.getInsets());
     }
 
-    @Test public void insetsAndOutsets_singlePixelInnerStroke_PositiveInsets() {
+    @Test
+    public void insetsAndOutsets_singlePixelInnerStroke_PositiveInsets() {
         BorderStrokeStyle style = new BorderStrokeStyle(StrokeType.INSIDE, null, null, 0, 0, null);
         BorderStroke stroke = new BorderStroke(Color.ORANGE, style, new CornerRadii(5), new BorderWidths(1), new Insets(1, 2, 3, 4));
         Border border = new Border(new BorderStroke[] { stroke }, null);
@@ -330,7 +360,8 @@ public class BorderTest {
         assertEquals(new Insets(2, 3, 4, 5), border.getInsets());
     }
 
-    @Test public void insetsAndOutsets_twoPixelOuterStroke_NegativeInsets() {
+    @Test
+    public void insetsAndOutsets_twoPixelOuterStroke_NegativeInsets() {
         BorderStrokeStyle style = new BorderStrokeStyle(StrokeType.OUTSIDE, null, null, 0, 0, null);
         BorderStroke stroke = new BorderStroke(Color.ORANGE, style, new CornerRadii(5), new BorderWidths(2), new Insets(-1, -2, -3, -4));
         Border border = new Border(new BorderStroke[] { stroke }, null);
@@ -338,7 +369,8 @@ public class BorderTest {
         assertEquals(new Insets(0), border.getInsets());
     }
 
-    @Test public void insetsAndOutsets_singlePixelOuterStroke_NegativeInsets() {
+    @Test
+    public void insetsAndOutsets_singlePixelOuterStroke_NegativeInsets() {
         BorderStrokeStyle style = new BorderStrokeStyle(StrokeType.OUTSIDE, null, null, 0, 0, null);
         BorderStroke stroke = new BorderStroke(Color.ORANGE, style, new CornerRadii(5), new BorderWidths(1), new Insets(-1, -2, -3, -4));
         Border border = new Border(new BorderStroke[] { stroke }, null);
@@ -346,7 +378,8 @@ public class BorderTest {
         assertEquals(new Insets(0), border.getInsets());
     }
 
-    @Test public void insetsAndOutsets_singlePixelCenteredStroke_NegativeInsets() {
+    @Test
+    public void insetsAndOutsets_singlePixelCenteredStroke_NegativeInsets() {
         BorderStrokeStyle style = new BorderStrokeStyle(StrokeType.CENTERED, null, null, 0, 0, null);
         BorderStroke stroke = new BorderStroke(Color.ORANGE, style, new CornerRadii(5), new BorderWidths(1), new Insets(-1, -2, -3, -4));
         Border border = new Border(new BorderStroke[] { stroke }, null);
@@ -354,7 +387,8 @@ public class BorderTest {
         assertEquals(new Insets(0), border.getInsets());
     }
 
-    @Test public void insetsAndOutsets_singlePixelInnerStroke_NegativeInsets() {
+    @Test
+    public void insetsAndOutsets_singlePixelInnerStroke_NegativeInsets() {
         BorderStrokeStyle style = new BorderStrokeStyle(StrokeType.INSIDE, null, null, 0, 0, null);
         BorderStroke stroke = new BorderStroke(Color.ORANGE, style, new CornerRadii(5), new BorderWidths(1), new Insets(-1, -2, -3, -4));
         Border border = new Border(new BorderStroke[] { stroke }, null);
@@ -362,47 +396,54 @@ public class BorderTest {
         assertEquals(new Insets(0), border.getInsets());
     }
 
-    @Test public void insetsAndOutsets_singlePixelImageWidthNoInsets() {
+    @Test
+    public void insetsAndOutsets_singlePixelImageWidthNoInsets() {
         BorderImage image = new BorderImage(IMAGE_1, new BorderWidths(1), new Insets(0), null, false, null, null);
         Border border = new Border(null, new BorderImage[] { image });
         assertEquals(new Insets(0), border.getOutsets());
         assertEquals(new Insets(1), border.getInsets());
     }
 
-    @Test public void insetsAndOutsets_singlePixelImageWidthWithPositiveInsets() {
+    @Test
+    public void insetsAndOutsets_singlePixelImageWidthWithPositiveInsets() {
         BorderImage image = new BorderImage(IMAGE_1, new BorderWidths(1), new Insets(10), null, false, null, null);
         Border border = new Border(null, new BorderImage[] { image });
         assertEquals(new Insets(0), border.getOutsets());
         assertEquals(new Insets(11), border.getInsets());
     }
 
-    @Test public void insetsAndOutsets_singlePixelImageWidthWithNegativeInsets() {
+    @Test
+    public void insetsAndOutsets_singlePixelImageWidthWithNegativeInsets() {
         BorderImage image = new BorderImage(IMAGE_1, new BorderWidths(1), new Insets(-10), null, false, null, null);
         Border border = new Border(null, new BorderImage[] { image });
         assertEquals(new Insets(10), border.getOutsets());
         assertEquals(new Insets(0), border.getInsets());
     }
 
-    @Test public void insetsAndOutsets_triplePixelImageWidthWithNegativeInsets() {
+    @Test
+    public void insetsAndOutsets_triplePixelImageWidthWithNegativeInsets() {
         BorderImage image = new BorderImage(IMAGE_1, new BorderWidths(3), new Insets(-1), null, false, null, null);
         Border border = new Border(null, new BorderImage[] { image });
         assertEquals(new Insets(1), border.getOutsets());
         assertEquals(new Insets(2), border.getInsets());
     }
 
-    @Test public void equivalent() {
+    @Test
+    public void equivalent() {
         Border a = new Border((BorderStroke[])null, null);
         Border b = new Border((BorderStroke[])null, null);
         assertEquals(a, b);
     }
 
-    @Test public void equivalent2() {
+    @Test
+    public void equivalent2() {
         Border a = new Border(STROKES_2, null);
         Border b = new Border(STROKES_2, null);
         assertEquals(a, b);
     }
 
-    @Test public void equivalent2b() {
+    @Test
+    public void equivalent2b() {
         final BorderStroke[] strokes = new BorderStroke[] {
             new BorderStroke(Color.GREEN, BorderStrokeStyle.DASHED, new CornerRadii(3), new BorderWidths(4)),
             new BorderStroke(Color.BLUE, BorderStrokeStyle.DOTTED, new CornerRadii(6), new BorderWidths(8))
@@ -414,7 +455,8 @@ public class BorderTest {
         assertEquals(a, b);
     }
 
-    @Test public void equivalent2c() {
+    @Test
+    public void equivalent2c() {
         final BorderStroke[] strokes = new BorderStroke[] {
             new BorderStroke(Color.GREEN, BorderStrokeStyle.DASHED, new CornerRadii(3), new BorderWidths(4)),
             new BorderStroke(Color.BLUE, BorderStrokeStyle.DOTTED, new CornerRadii(6), new BorderWidths(8))
@@ -424,13 +466,15 @@ public class BorderTest {
         assertEquals(a, b);
     }
 
-    @Test public void equivalent3() {
+    @Test
+    public void equivalent3() {
         Border a = new Border(null, IMAGES_2);
         Border b = new Border(null, IMAGES_2);
         assertEquals(a, b);
     }
 
-    @Test public void equivalent3b() {
+    @Test
+    public void equivalent3b() {
         final BorderImage[] images = new BorderImage[] {
                 new BorderImage(IMAGE_2, new BorderWidths(3), new Insets(4), BorderWidths.EMPTY, false, REPEAT, REPEAT),
                 new BorderImage(IMAGE_3, new BorderWidths(6), new Insets(2), BorderWidths.EMPTY, false, SPACE, ROUND),
@@ -441,7 +485,8 @@ public class BorderTest {
         assertEquals(a, b);
     }
 
-    @Test public void equivalent3c() {
+    @Test
+    public void equivalent3c() {
         final BorderImage[] images = new BorderImage[] {
                 new BorderImage(IMAGE_2, new BorderWidths(3), new Insets(4), BorderWidths.EMPTY, false, REPEAT, REPEAT),
                 new BorderImage(IMAGE_3, new BorderWidths(6), new Insets(2), BorderWidths.EMPTY, false, SPACE, ROUND),
@@ -452,71 +497,83 @@ public class BorderTest {
         assertEquals(a, b);
     }
 
-    @Test public void equivalentWithSelf() {
+    @Test
+    public void equivalentWithSelf() {
         Border a = new Border(null, IMAGES_2);
         assertTrue(a.equals(a));
     }
 
-    @Test public void equivalentHasSameHashCode() {
+    @Test
+    public void equivalentHasSameHashCode() {
         Border a = new Border((BorderStroke[])null, null);
         Border b = new Border((BorderStroke[])null, null);
         assertEquals(a.hashCode(), b.hashCode());
     }
 
-    @Test public void equivalentHasSameHashCode2() {
+    @Test
+    public void equivalentHasSameHashCode2() {
         Border a = new Border(STROKES_2, null);
         Border b = new Border(STROKES_2, null);
         assertEquals(a.hashCode(), b.hashCode());
     }
 
-    @Test public void equivalentHasSameHashCode3() {
+    @Test
+    public void equivalentHasSameHashCode3() {
         Border a = new Border(null, IMAGES_2);
         Border b = new Border(null, IMAGES_2);
         assertEquals(a.hashCode(), b.hashCode());
     }
 
-    @Test public void equivalentWithSelfHashCode() {
+    @Test
+    public void equivalentWithSelfHashCode() {
         Border a = new Border(null, IMAGES_2);
         assertEquals(a.hashCode(), a.hashCode());
     }
 
-    @Test public void notEqual() {
+    @Test
+    public void notEqual() {
         Border a = new Border(STROKES_1, null);
         Border b = new Border((BorderStroke[])null, null);
         assertFalse(a.equals(b));
     }
 
-    @Test public void notEqual2() {
+    @Test
+    public void notEqual2() {
         Border a = new Border((BorderStroke[])null, null);
         Border b = new Border(STROKES_2, null);
         assertFalse(a.equals(b));
     }
 
-    @Test public void notEqual3() {
+    @Test
+    public void notEqual3() {
         Border a = new Border(null, IMAGES_1);
         Border b = new Border((BorderStroke[])null, null);
         assertFalse(a.equals(b));
     }
 
-    @Test public void notEqual4() {
+    @Test
+    public void notEqual4() {
         Border a = new Border((BorderStroke[])null, null);
         Border b = new Border(null, IMAGES_2);
         assertFalse(a.equals(b));
     }
 
-    @Test public void notEqual5() {
+    @Test
+    public void notEqual5() {
         Border a = new Border(null, IMAGES_1);
         Border b = new Border(null, IMAGES_2);
         assertFalse(a.equals(b));
     }
 
-    @Test public void notEqual6() {
+    @Test
+    public void notEqual6() {
         Border a = new Border(STROKES_1, null);
         Border b = new Border(STROKES_2, null);
         assertFalse(a.equals(b));
     }
 
-    @Test public void notEqualButHaveSameHashCode() {
+    @Test
+    public void notEqualButHaveSameHashCode() {
         Border a = new Border(STROKES_1, null);
         Border b = new Border(STROKES_2, null);
         // Because Border is final, the only way to test this
@@ -534,7 +591,8 @@ public class BorderTest {
         assertFalse(a.equals(b));
     }
 
-    @Test public void notEqualButHaveSameHashCode2() {
+    @Test
+    public void notEqualButHaveSameHashCode2() {
         Border a = new Border(null, IMAGES_1);
         Border b = new Border(null, IMAGES_2);
         // Because Border is final, the only way to test this
@@ -552,13 +610,15 @@ public class BorderTest {
         assertFalse(a.equals(b));
     }
 
-    @Test public void notEqualWithNull() {
+    @Test
+    public void notEqualWithNull() {
         Border a = new Border((BorderStroke[])null, null);
         assertFalse(a.equals(null));
     }
 
     @SuppressWarnings("unlikely-arg-type")
-    @Test public void notEqualWithRandom() {
+    @Test
+    public void notEqualWithRandom() {
         Border a = new Border((BorderStroke[])null, null);
         assertFalse(a.equals("Some random String"));
     }
@@ -567,13 +627,101 @@ public class BorderTest {
     public void testSingleStroke() {
         var border1 = Border.stroke(Color.BEIGE);
         var border2 = new Border(new BorderStroke(Color.BEIGE, BorderStrokeStyle.SOLID, null, null));
-        assertEquals("The factory method should give the same result as the constructor", border2, border1);
+        assertEquals(border2, border1, "The factory method should give the same result as the constructor");
     }
 
     @Test
     public void testSingleStrokeWithNullPaint() {
         var border1 = Border.stroke(null);
         var border2 = new Border(new BorderStroke(null, BorderStrokeStyle.SOLID, null, null));
-        assertEquals("The factory method should give the same result as the constructor", border2, border1);
+        assertEquals(border2, border1, "The factory method should give the same result as the constructor");
+    }
+
+    @Nested
+    class InterpolationTest {
+        @Test
+        public void interpolateBetweenDifferentValuesReturnsNewInstance() {
+            var startValue = new Border(
+                List.of(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10)),
+                        new BorderStroke(Color.BLUE, BorderStrokeStyle.SOLID, new CornerRadii(20), new BorderWidths(20))),
+                List.of(new BorderImage(IMAGE_1, new BorderWidths(10), new Insets(5), new BorderWidths(10), false, REPEAT, REPEAT)));
+
+            var endValue = new Border(
+                List.of(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, new CornerRadii(20), new BorderWidths(20)),
+                        new BorderStroke(Color.YELLOW, BorderStrokeStyle.SOLID, new CornerRadii(40), new BorderWidths(40))),
+                List.of(new BorderImage(IMAGE_2, new BorderWidths(30), new Insets(15), new BorderWidths(30), false, REPEAT, REPEAT)));
+
+            var expect = new Border(
+                List.of(new BorderStroke(Color.RED.interpolate(Color.GREEN, 0.5), BorderStrokeStyle.SOLID, new CornerRadii(15), new BorderWidths(15)),
+                        new BorderStroke(Color.BLUE.interpolate(Color.YELLOW, 0.5), BorderStrokeStyle.SOLID, new CornerRadii(30), new BorderWidths(30))),
+                List.of(new BorderImage(IMAGE_2, new BorderWidths(20), new Insets(10), new BorderWidths(20), false, REPEAT, REPEAT)));
+
+            assertEquals(expect, startValue.interpolate(endValue, 0.5));
+        }
+
+        @Test
+        public void interpolateBetweenDifferentNumberOfStrokesAndImages() {
+            var startValue = new Border(
+                List.of(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10))),
+                List.of(new BorderImage(IMAGE_1, new BorderWidths(10), new Insets(5), new BorderWidths(10), false, REPEAT, REPEAT)));
+
+            var endValue = new Border(
+                List.of(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, new CornerRadii(20), new BorderWidths(20)),
+                        new BorderStroke(Color.YELLOW, BorderStrokeStyle.SOLID, new CornerRadii(40), new BorderWidths(40))),
+                List.of(new BorderImage(IMAGE_1, new BorderWidths(30), new Insets(15), new BorderWidths(30), false, REPEAT, REPEAT),
+                        new BorderImage(IMAGE_2, new BorderWidths(30), new Insets(15), new BorderWidths(30), false, REPEAT, REPEAT)));
+
+            var expect = new Border(
+                List.of(new BorderStroke(Color.RED.interpolate(Color.GREEN, 0.5), BorderStrokeStyle.SOLID, new CornerRadii(15), new BorderWidths(15)),
+                        new BorderStroke(Color.YELLOW, BorderStrokeStyle.SOLID, new CornerRadii(40), new BorderWidths(40))),
+                List.of(new BorderImage(IMAGE_1, new BorderWidths(20), new Insets(10), new BorderWidths(20), false, REPEAT, REPEAT),
+                        new BorderImage(IMAGE_2, new BorderWidths(30), new Insets(15), new BorderWidths(30), false, REPEAT, REPEAT)));
+
+            var actual = startValue.interpolate(endValue, 0.5);
+
+            assertEquals(expect, actual);
+            assertNotSame(expect, actual);
+        }
+
+        @Test
+        public void interpolateBetweenEqualValuesReturnsStartInstance() {
+            var startValue = new Border(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10)));
+            var endValue = new Border(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10)));
+            assertSame(startValue, startValue.interpolate(endValue, 0.5));
+        }
+
+        @Test
+        public void interpolationFactorZeroReturnsStartInstance() {
+            var startValue = new Border(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10)));
+            var endValue = new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, new CornerRadii(20), new BorderWidths(20)));
+            assertSame(startValue, startValue.interpolate(endValue, 0));
+        }
+
+        @Test
+        public void interpolationFactorOneReturnsEndInstance() {
+            var startValue = new Border(new BorderStroke(Color.RED, BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10)));
+            var endValue = new Border(new BorderStroke(Color.GREEN, BorderStrokeStyle.SOLID, new CornerRadii(20), new BorderWidths(20)));
+            assertSame(endValue, startValue.interpolate(endValue, 1));
+        }
+
+        @Test
+        public void interpolationFactorLessThanZero() {
+            var startValue = new Border(new BorderStroke(new Color(0.5, 0.5, 0.5, 1), BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10)));
+            var endValue = new Border(new BorderStroke(new Color(1, 1, 1, 1), BorderStrokeStyle.SOLID, new CornerRadii(20), new BorderWidths(20)));
+            assertEquals(new Border(new BorderStroke(new Color(0, 0, 0, 1), BorderStrokeStyle.SOLID, new CornerRadii(0), new BorderWidths(0))),
+                         startValue.interpolate(endValue, -1));
+            assertEquals(new Border(new BorderStroke(new Color(0, 0, 0, 1), BorderStrokeStyle.SOLID, new CornerRadii(0), new BorderWidths(0))),
+                         startValue.interpolate(endValue, -2));
+        }
+
+        @Test
+        public void interpolationFactorGreaterThanOne() {
+            var startValue = new Border(new BorderStroke(new Color(0.5, 0.5, 0.5, 1), BorderStrokeStyle.SOLID, new CornerRadii(10), new BorderWidths(10)));
+            var endValue = new Border(new BorderStroke(new Color(1, 1, 1, 1), BorderStrokeStyle.SOLID, new CornerRadii(20), new BorderWidths(20)));
+            assertEquals(new Border(new BorderStroke(new Color(1, 1, 1, 1), BorderStrokeStyle.SOLID, new CornerRadii(30), new BorderWidths(30))),
+                         startValue.interpolate(endValue, 2));
+            assertEquals(new Border(new BorderStroke(new Color(1, 1, 1, 1), BorderStrokeStyle.SOLID, new CornerRadii(40), new BorderWidths(40))),
+                         startValue.interpolate(endValue, 3));
+        }
     }
 }

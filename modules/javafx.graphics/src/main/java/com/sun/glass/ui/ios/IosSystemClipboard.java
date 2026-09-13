@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -124,10 +124,10 @@ class IosSystemClipboard extends SystemClipboard {
                         }
                         itemFirst.put(mimeToUtf(mime), string);
                     } else {
-                        // http://javafx-jira.kenai.com/browse/RT-14593
+                        // JDK-8091740
                         // temporary code, DelayedCallback trips over this
                         // by reusing (incorrectly) text mime type
-                        System.err.println("DelayedCallback not implemented yet: RT-14593");
+                        System.err.println("DelayedCallback not implemented yet: JDK-8091740");
                         Thread.dumpStack();
                     }
                 } else if (mime.equals(FILE_LIST_TYPE)) {
@@ -151,7 +151,7 @@ class IosSystemClipboard extends SystemClipboard {
                         }
                     }
                 } else {
-                    // custom client mime type - pass through (RT-14592)
+                    // custom client mime type - pass through (JDK-8089912)
                     if (itemFirst == null) {
                         itemFirst = new HashMap();
                     }
@@ -259,7 +259,7 @@ class IosSystemClipboard extends SystemClipboard {
                 for (int i=0; i<utfs.length; i++) {
                     byte data[] = this.pasteboard.getItemBytesForUTF(i, mimeToUtf(mimeType));
                     if (data != null) {
-                        // http://javafx-jira.kenai.com/browse/RT-14592
+                        // JDK-8089912
                         // custom data - currently we wrap it up in ByteBuffer
                         ByteBuffer bb = ByteBuffer.wrap(data);
                         list.add(bb);

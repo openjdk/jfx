@@ -29,6 +29,7 @@
 #if USE(CF)
 
 #include <CoreFoundation/CoreFoundation.h>
+#include <wtf/cf/VectorCF.h>
 #include <wtf/text/CString.h>
 
 namespace WTF {
@@ -38,17 +39,15 @@ RefPtr<AtomStringImpl> AtomStringImpl::add(CFStringRef string)
     if (!string)
         return nullptr;
 
-    CFIndex length = CFStringGetLength(string);
+    if (auto span = CFStringGetLatin1CStringSpan(string); span.data())
+        return add(span);
 
-    if (const LChar* ptr = reinterpret_cast<const LChar*>(CFStringGetCStringPtr(string, kCFStringEncodingISOLatin1)))
-        return add(ptr, length);
+    if (auto span = CFStringGetCharactersSpan(string); span.data())
+        return add(span);
 
-    if (const UniChar* ptr = CFStringGetCharactersPtr(string))
-        return add(reinterpret_cast<const UChar*>(ptr), length);
-
-    Vector<UniChar, 1024> ucharBuffer(length);
-    CFStringGetCharacters(string, CFRangeMake(0, length), ucharBuffer.data());
-    return add(reinterpret_cast<const UChar*>(ucharBuffer.data()), length);
+    Vector<char16_t, 1024> ucharBuffer(CFStringGetLength(string));
+    CFStringCopyCharactersSpan(string, ucharBuffer.mutableSpan());
+    return add(ucharBuffer.span());
 }
 
 } // namespace WTF

@@ -30,6 +30,7 @@
 #include <wtf/Forward.h>
 
 #ifdef __OBJC__
+#include <wtf/Platform.h>
 #include <wtf/cocoa/TypeCastsCocoa.h>
 #endif
 
@@ -40,6 +41,11 @@
 namespace WebCore {
 
     class IntSize;
+    class DateComponents;
+
+#if PLATFORM(COCOA)
+    WEBCORE_EXPORT String truncatedStringForMenuItem(const String&);
+#endif
 
     String inputElementAltText();
     String resetButtonDefaultLabel();
@@ -58,19 +64,20 @@ namespace WebCore {
     WEBCORE_EXPORT String contextMenuItemTagAddHighlightToCurrentQuickNote();
     WEBCORE_EXPORT String contextMenuItemTagAddHighlightToNewQuickNote();
 #endif
+    WEBCORE_EXPORT String contextMenuItemTagCopyLinkWithHighlight();
 
 #if ENABLE(CONTEXT_MENUS)
     WEBCORE_EXPORT String contextMenuItemTagOpenLinkInNewWindow();
     String contextMenuItemTagDownloadLinkToDisk();
-    String contextMenuItemTagCopyLinkToClipboard();
+    WEBCORE_EXPORT String contextMenuItemTagCopyLinkToClipboard();
     String contextMenuItemTagOpenImageInNewWindow();
     String contextMenuItemTagDownloadImageToDisk();
     String contextMenuItemTagCopyImageToClipboard();
 #if PLATFORM(GTK)
-    String contextMenuItemTagCopyImageUrlToClipboard();
+    String contextMenuItemTagCopyImageURLToClipboard();
 #endif
     String contextMenuItemTagOpenFrameInNewWindow();
-    String contextMenuItemTagCopy();
+    WEBCORE_EXPORT String contextMenuItemTagCopy();
     String contextMenuItemTagGoBack();
     String contextMenuItemTagGoForward();
     String contextMenuItemTagStop();
@@ -98,9 +105,9 @@ namespace WebCore {
     String contextMenuItemTagNoGuessesFound();
     String contextMenuItemTagIgnoreSpelling();
     String contextMenuItemTagLearnSpelling();
-    String contextMenuItemTagSearchWeb();
+    WEBCORE_EXPORT String contextMenuItemTagSearchWeb();
 #if PLATFORM(COCOA)
-    String contextMenuItemTagLookUpInDictionary(const String& selectedString);
+    WEBCORE_EXPORT String contextMenuItemTagLookUpInDictionary(const String& selectedString);
 #endif
     WEBCORE_EXPORT String contextMenuItemTagOpenLink();
     WEBCORE_EXPORT String contextMenuItemTagIgnoreGrammar();
@@ -120,7 +127,6 @@ namespace WebCore {
     WEBCORE_EXPORT String contextMenuItemTagLeftToRight();
     WEBCORE_EXPORT String contextMenuItemTagRightToLeft();
 #if PLATFORM(COCOA)
-    String contextMenuItemTagSearchInSpotlight();
     WEBCORE_EXPORT String contextMenuItemTagShowFonts();
     WEBCORE_EXPORT String contextMenuItemTagStyles();
     WEBCORE_EXPORT String contextMenuItemTagShowColors();
@@ -134,6 +140,7 @@ namespace WebCore {
     WEBCORE_EXPORT String contextMenuItemTagSmartQuotes();
     WEBCORE_EXPORT String contextMenuItemTagSmartDashes();
     WEBCORE_EXPORT String contextMenuItemTagSmartLinks();
+    WEBCORE_EXPORT String contextMenuItemTagSmartLists();
     WEBCORE_EXPORT String contextMenuItemTagTextReplacement();
     WEBCORE_EXPORT String contextMenuItemTagTransformationsMenu();
     WEBCORE_EXPORT String contextMenuItemTagMakeUpperCase();
@@ -148,17 +155,19 @@ namespace WebCore {
     String contextMenuItemTagCopyVideoLinkToClipboard();
     String contextMenuItemTagCopyAudioLinkToClipboard();
     String contextMenuItemTagToggleMediaControls();
-    String contextMenuItemTagShowMediaControls();
+    WEBCORE_EXPORT String contextMenuItemTagShowMediaControls();
     String contextMenuItemTagHideMediaControls();
     String contextMenuItemTagToggleMediaLoop();
     String contextMenuItemTagEnterVideoFullscreen();
-    String contextMenuItemTagExitVideoFullscreen();
+    WEBCORE_EXPORT String contextMenuItemTagExitVideoFullscreen();
 #if PLATFORM(MAC) && ENABLE(VIDEO_PRESENTATION_MODE)
     String contextMenuItemTagEnterVideoEnhancedFullscreen();
-    String contextMenuItemTagExitVideoEnhancedFullscreen();
+    WEBCORE_EXPORT String contextMenuItemTagExitVideoEnhancedFullscreen();
+    String contextMenuItemTagEnterVideoViewer();
+    WEBCORE_EXPORT String contextMenuItemTagExitVideoViewer();
 #endif
     String contextMenuItemTagMediaPlay();
-    String contextMenuItemTagMediaPause();
+    WEBCORE_EXPORT String contextMenuItemTagMediaPause();
     String contextMenuItemTagMediaMute();
 #if ENABLE(ACCESSIBILITY_ANIMATION_CONTROL)
     String contextMenuItemTagPlayAllAnimations();
@@ -170,17 +179,26 @@ namespace WebCore {
 #if HAVE(TRANSLATION_UI_SERVICES)
     String contextMenuItemTagTranslate(const String& selectedString);
 #endif
-#if ENABLE(PDFJS)
-    String contextMenuItemPDFAutoSize();
-    String contextMenuItemPDFZoomIn();
-    String contextMenuItemPDFZoomOut();
-    String contextMenuItemPDFActualSize();
-    String contextMenuItemPDFSinglePage();
-    String contextMenuItemPDFSinglePageContinuous();
-    String contextMenuItemPDFTwoPages();
-    String contextMenuItemPDFTwoPagesContinuous();
-    String contextMenuItemPDFNextPage();
-    String contextMenuItemPDFPreviousPage();
+#if ENABLE(WRITING_TOOLS)
+    String contextMenuItemTagWritingTools();
+    String contextMenuItemTagProofread();
+    String contextMenuItemTagRewrite();
+    String contextMenuItemTagSummarize();
+#endif
+#if ENABLE(UNIFIED_PDF)
+    WEBCORE_EXPORT String contextMenuItemPDFOpenWithDefaultViewer(const String& appName);
+#endif
+#if ENABLE(PDFJS) || ENABLE(UNIFIED_PDF)
+    WEBCORE_EXPORT String contextMenuItemPDFSinglePage();
+    WEBCORE_EXPORT String contextMenuItemPDFSinglePageContinuous();
+    WEBCORE_EXPORT String contextMenuItemPDFTwoPages();
+    WEBCORE_EXPORT String contextMenuItemPDFTwoPagesContinuous();
+    WEBCORE_EXPORT String contextMenuItemPDFZoomIn();
+    WEBCORE_EXPORT String contextMenuItemPDFZoomOut();
+    WEBCORE_EXPORT String contextMenuItemPDFActualSize();
+    WEBCORE_EXPORT String contextMenuItemPDFNextPage();
+    WEBCORE_EXPORT String contextMenuItemPDFPreviousPage();
+    WEBCORE_EXPORT String contextMenuItemPDFAutoSize();
 #endif
 #endif // ENABLE(CONTEXT_MENU)
 
@@ -190,6 +208,10 @@ namespace WebCore {
     String searchMenuNoRecentSearchesText();
     String searchMenuRecentSearchesText();
     String searchMenuClearRecentSearchesText();
+#endif
+
+#if ENABLE(MEDIA_STREAM)
+    String defaultSystemSpeakerLabel();
 #endif
 
     String AXWebAreaText();
@@ -202,6 +224,7 @@ namespace WebCore {
     String AXDescriptionListText();
     String AXDescriptionListTermText();
     String AXDescriptionListDetailText();
+    String AXHeaderRoleDescriptionText();
     String AXFooterRoleDescriptionText();
     String AXSuggestionRoleDescriptionText();
     String AXFileUploadButtonText();
@@ -220,6 +243,10 @@ namespace WebCore {
     String AXDateFieldMonthText();
     String AXDateFieldDayText();
     String AXDateFieldYearText();
+    String AXTimeFieldHourText();
+    String AXTimeFieldMinuteText();
+    String AXTimeFieldSecondText();
+    String AXTimeFieldMillisecondText();
     String AXDateTimeFieldText();
     String AXMonthFieldText();
     String AXNumberFieldText();
@@ -231,8 +258,8 @@ namespace WebCore {
     String AXButtonActionVerb();
     String AXRadioButtonActionVerb();
     String AXTextFieldActionVerb();
-    String AXCheckedCheckBoxActionVerb();
-    String AXUncheckedCheckBoxActionVerb();
+    String AXCheckedCheckboxActionVerb();
+    String AXUncheckedCheckboxActionVerb();
     String AXMenuListActionVerb();
     String AXMenuListPopupActionVerb();
     String AXLinkActionVerb();
@@ -270,6 +297,8 @@ namespace WebCore {
     String AXAutoFillLoadingLabel();
     String autoFillStrongPasswordLabel();
 
+    String AXProcessingPage(double);
+
     String missingPluginText();
     String crashedPluginText();
     String blockedPluginByContentSecurityPolicyText();
@@ -279,12 +308,6 @@ namespace WebCore {
 
     WEBCORE_EXPORT String multipleFileUploadText(unsigned numberOfFiles);
     String unknownFileSizeText();
-
-#if PLATFORM(COCOA)
-    WEBCORE_EXPORT String postScriptDocumentTypeDescription();
-    String keygenMenuItem2048();
-    WEBCORE_EXPORT String keygenKeychainItemName(const String& host);
-#endif
 
 #if PLATFORM(IOS_FAMILY)
     String htmlSelectMultipleItems(size_t num);
@@ -310,6 +333,7 @@ namespace WebCore {
     String validationMessageValueMissingForMultipleFileText();
     String validationMessageValueMissingForRadioText();
     String validationMessageValueMissingForSelectText();
+    String validationMessageValueMissingForSwitchText();
     String validationMessageTypeMismatchText();
     String validationMessageTypeMismatchForEmailText();
     String validationMessageTypeMismatchForMultipleEmailText();
@@ -331,7 +355,10 @@ namespace WebCore {
 #if ENABLE(VIDEO)
     String trackNoLabelText();
     String textTrackOffMenuItemText();
+    String textTrackOnMenuItemText();
     String textTrackAutomaticMenuItemText();
+    String captionStylePreview();
+    String captionStylePreviewWithProfileName(const String&);
 #if PLATFORM(COCOA)
     String addTrackLabelAsSuffix(const String&, const String&);
     String textTrackKindClosedCaptionsDisplayName();
@@ -358,12 +385,7 @@ namespace WebCore {
     String contextMenuItemTagShowMediaStats();
 #endif // ENABLE(VIDEO)
 
-    String snapshottedPlugInLabelTitle();
-    String snapshottedPlugInLabelSubtitle();
-
-    WEBCORE_EXPORT String useBlockedPlugInContextMenuTitle();
-
-#if ENABLE(WEB_CRYPTO) && PLATFORM(COCOA)
+#if PLATFORM(COCOA)
     String webCryptoMasterKeyKeychainLabel(const String& localizedApplicationName);
     String webCryptoMasterKeyKeychainComment();
 #endif
@@ -389,6 +411,10 @@ namespace WebCore {
     WEBCORE_EXPORT String datePickerYearLabelTitle();
 #endif
 
+#if ENABLE(INPUT_TYPE_WEEK_PICKER)
+    WEBCORE_EXPORT String inputWeekLabel(const DateComponents&);
+#endif
+
 #if ENABLE(WEB_AUTHN)
     WEBCORE_EXPORT String makeCredentialTouchIDPromptTitle(const String& bundleName, const String& domain);
     WEBCORE_EXPORT String getAssertionTouchIDPromptTitle(const String& bundleName, const String& domain);
@@ -402,6 +428,20 @@ namespace WebCore {
 #if ENABLE(IMAGE_ANALYSIS_ENHANCEMENTS)
     WEBCORE_EXPORT String contextMenuItemTagCopySubject();
     WEBCORE_EXPORT String contextMenuItemTitleRemoveBackground();
+#endif
+
+    WEBCORE_EXPORT String pdfPasswordFormTitle();
+    WEBCORE_EXPORT String pdfPasswordFormSubtitle();
+    WEBCORE_EXPORT String pdfPasswordFormInvalidPasswordSubtitle();
+
+#if ENABLE(LINEAR_MEDIA_PLAYER)
+    WEBCORE_EXPORT String fullscreenControllerViewSpatial();
+    WEBCORE_EXPORT String fullscreenControllerViewImmersive();
+#endif
+
+#if ENABLE(SPATIAL_IMAGE_CONTROLS)
+    WEBCORE_EXPORT String imageControlsLabelSpatial();
+    WEBCORE_EXPORT String imageControlsLabelPanorama();
 #endif
 
 #if PLATFORM(COCOA)

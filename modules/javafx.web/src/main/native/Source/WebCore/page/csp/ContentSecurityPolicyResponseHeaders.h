@@ -41,32 +41,29 @@ enum class ContentSecurityPolicyHeaderType : bool {
 class ContentSecurityPolicyResponseHeaders {
 public:
     ContentSecurityPolicyResponseHeaders() = default;
+    ContentSecurityPolicyResponseHeaders(Vector<std::pair<String, ContentSecurityPolicyHeaderType>>&& headers, int httpStatusCode)
+        : m_headers(WTF::move(headers))
+        , m_httpStatusCode(httpStatusCode)
+    { }
+
     WEBCORE_EXPORT explicit ContentSecurityPolicyResponseHeaders(const ResourceResponse&);
 
     ContentSecurityPolicyResponseHeaders isolatedCopy() const &;
     ContentSecurityPolicyResponseHeaders isolatedCopy() &&;
 
-    template <class Encoder> void encode(Encoder&) const;
-    template <class Decoder> static std::optional<ContentSecurityPolicyResponseHeaders> decode(Decoder&);
-
     enum EmptyTag { Empty };
-    struct MarkableTraits {
-        static bool isEmptyValue(const ContentSecurityPolicyResponseHeaders& identifier)
-        {
-            return identifier.m_emptyForMarkable;
-        }
-
-        static ContentSecurityPolicyResponseHeaders emptyValue()
-        {
-            return ContentSecurityPolicyResponseHeaders(Empty);
-        }
-    };
 
     void addPolicyHeadersTo(ResourceResponse&) const;
+
+    const Vector<std::pair<String, ContentSecurityPolicyHeaderType>>& headers() const { return m_headers; }
+    void setHeaders(Vector<std::pair<String, ContentSecurityPolicyHeaderType>>&& headers) { m_headers = WTF::move(headers); }
+    int httpStatusCode() const { return m_httpStatusCode; }
+    void setHTTPStatusCode(int httpStatusCode) { m_httpStatusCode = httpStatusCode; }
 
 private:
     friend bool operator==(const ContentSecurityPolicyResponseHeaders&, const ContentSecurityPolicyResponseHeaders&);
     friend class ContentSecurityPolicy;
+    friend struct MarkableTraits<ContentSecurityPolicyResponseHeaders>;
     ContentSecurityPolicyResponseHeaders(EmptyTag)
         : m_emptyForMarkable(true)
     { }
@@ -81,46 +78,21 @@ inline bool operator==(const ContentSecurityPolicyResponseHeaders&a, const Conte
     return a.m_headers == b.m_headers;
 }
 
-template <class Encoder>
-void ContentSecurityPolicyResponseHeaders::encode(Encoder& encoder) const
-{
-    encoder << static_cast<uint64_t>(m_headers.size());
-    for (auto& pair : m_headers) {
-        encoder << pair.first;
-        encoder << pair.second;
-    }
-    encoder << m_httpStatusCode;
-}
-
-template <class Decoder>
-std::optional<ContentSecurityPolicyResponseHeaders> ContentSecurityPolicyResponseHeaders::decode(Decoder& decoder)
-{
-    ContentSecurityPolicyResponseHeaders headers;
-
-    std::optional<uint64_t> headersSize;
-    decoder >> headersSize;
-    if (!headersSize)
-        return std::nullopt;
-    for (size_t i = 0; i < *headersSize; ++i) {
-        std::optional<String> header;
-        decoder >> header;
-        if (!header)
-            return std::nullopt;
-        std::optional<ContentSecurityPolicyHeaderType> headerType;
-        decoder >> headerType;
-        if (!headerType)
-            return std::nullopt;
-        headers.m_headers.append(std::make_pair(WTFMove(*header), WTFMove(*headerType)));
-    }
-    headers.m_headers.shrinkToFit();
-
-    std::optional<int> httpStatusCode;
-    decoder >> httpStatusCode;
-    if (!httpStatusCode)
-        return std::nullopt;
-    headers.m_httpStatusCode = *httpStatusCode;
-
-    return headers;
-}
-
 } // namespace WebCore
+
+namespace WTF {
+
+template<>
+struct MarkableTraits<WebCore::ContentSecurityPolicyResponseHeaders> {
+    static bool isEmptyValue(const WebCore::ContentSecurityPolicyResponseHeaders& identifier)
+    {
+        return identifier.m_emptyForMarkable;
+    }
+
+    static WebCore::ContentSecurityPolicyResponseHeaders emptyValue()
+    {
+        return WebCore::ContentSecurityPolicyResponseHeaders(WebCore::ContentSecurityPolicyResponseHeaders::Empty);
+    }
+};
+
+} // namespace WTF

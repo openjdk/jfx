@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,19 +46,10 @@ public:
     static Ref<MockMediaSourcePrivate> create(MockMediaPlayerMediaSource&, MediaSourcePrivateClient&);
     virtual ~MockMediaSourcePrivate();
 
-    const Vector<MockSourceBufferPrivate*>& activeSourceBuffers() const { return m_activeSourceBuffers; }
+    constexpr MediaPlatformType platformType() const final { return MediaPlatformType::Mock; }
 
-    bool hasAudio() const;
-    bool hasVideo() const;
-
-    MediaTime duration();
-    const PlatformTimeRanges& buffered();
-
-    MockMediaPlayerMediaSource& player() const { return m_player; }
-
-    void seekToTime(const MediaTime&);
-    MediaTime seekToTime(const MediaTime&, const MediaTime& negativeThreshold, const MediaTime& positiveThreshold);
-    MediaTime currentMediaTime() const;
+    RefPtr<MediaPlayerPrivateInterface> player() const final;
+    void setPlayer(WebCore::MediaPlayerPrivateInterface*) final;
 
     std::optional<VideoPlaybackQualityMetrics> videoPlaybackQualityMetrics();
 
@@ -69,49 +60,41 @@ public:
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final { return m_logger.get(); }
-    const char* logClassName() const override { return "MockMediaSourcePrivate"; }
-    const void* logIdentifier() const final { return m_logIdentifier; }
+    ASCIILiteral logClassName() const override { return "MockMediaSourcePrivate"_s; }
+    uint64_t logIdentifier() const final { return m_logIdentifier; }
     WTFLogChannel& logChannel() const final;
 
-    const void* nextSourceBufferLogIdentifier() { return childLogIdentifier(m_logIdentifier, ++m_nextSourceBufferID); }
+    uint64_t nextSourceBufferLogIdentifier() { return childLogIdentifier(m_logIdentifier, ++m_nextSourceBufferID); }
 #endif
 
 private:
     MockMediaSourcePrivate(MockMediaPlayerMediaSource&, MediaSourcePrivateClient&);
 
     // MediaSourcePrivate Overrides
-    AddStatus addSourceBuffer(const ContentType&, bool webMParserEnabled, RefPtr<SourceBufferPrivate>&) override;
+    AddStatus addSourceBuffer(const ContentType&, const MediaSourceConfiguration&, RefPtr<SourceBufferPrivate>&) override;
     void durationChanged(const MediaTime&) override;
-    void markEndOfStream(EndOfStreamStatus) override;
-    bool isEnded() const override { return m_isEnded; }
-    void unmarkEndOfStream() override;
-    MediaPlayer::ReadyState readyState() const override;
-    void setReadyState(MediaPlayer::ReadyState) override;
-    void waitForSeekCompleted() override;
-    void seekCompleted() override;
 
-    void sourceBufferPrivateDidChangeActiveState(MockSourceBufferPrivate*, bool active);
-    void removeSourceBuffer(SourceBufferPrivate*);
+    void notifyActiveSourceBuffersChanged() final;
 
     friend class MockSourceBufferPrivate;
 
-    MockMediaPlayerMediaSource& m_player;
-    WeakPtr<MediaSourcePrivateClient> m_client;
-    Vector<RefPtr<MockSourceBufferPrivate>> m_sourceBuffers;
-    Vector<MockSourceBufferPrivate*> m_activeSourceBuffers;
-    bool m_isEnded { false };
+    WeakPtr<MockMediaPlayerMediaSource> m_player;
 
     unsigned m_totalVideoFrames { 0 };
     unsigned m_droppedVideoFrames { 0 };
     unsigned m_corruptedVideoFrames { 0 };
     MediaTime m_totalFrameDelay;
 #if !RELEASE_LOG_DISABLED
-    Ref<const Logger> m_logger;
-    const void* m_logIdentifier;
+    const Ref<const Logger> m_logger;
+    const uint64_t m_logIdentifier;
     uint64_t m_nextSourceBufferID { 0 };
 #endif
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::MockMediaSourcePrivate)
+static bool isType(const WebCore::MediaSourcePrivate& mediaSource) { return mediaSource.platformType() == WebCore::MediaPlatformType::Mock; }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(MEDIA_SOURCE)

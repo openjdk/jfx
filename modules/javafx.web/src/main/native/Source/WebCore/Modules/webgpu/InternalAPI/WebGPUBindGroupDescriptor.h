@@ -25,17 +25,20 @@
 
 #pragma once
 
-#include "WebGPUBindGroupEntry.h"
-#include "WebGPUObjectDescriptorBase.h"
+#include <WebCore/WebGPUBindGroupEntry.h>
+#include <WebCore/WebGPUObjectDescriptorBase.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore::WebGPU {
 
 class BindGroupLayout;
 
 struct BindGroupDescriptor : public ObjectDescriptorBase {
-    BindGroupLayout& layout;
+    WeakRef<BindGroupLayout> layout;
     Vector<BindGroupEntry> entries;
+
+    Ref<BindGroupLayout> protectedLayout() const { return layout.get(); }
 };
 
 } // namespace WebCore::WebGPU

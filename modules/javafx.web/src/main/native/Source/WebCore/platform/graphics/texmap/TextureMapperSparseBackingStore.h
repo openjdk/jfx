@@ -33,11 +33,12 @@
 #include "TextureMapperBackingStore.h"
 #include "TextureMapperTile.h"
 #include <wtf/HashMap.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class TextureMapperSparseBackingStore final : public TextureMapperBackingStore {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(TextureMapperSparseBackingStore);
 public:
     using TileIndex = WebCore::IntPoint;
 
@@ -45,7 +46,7 @@ public:
     WEBCORE_EXPORT void paintToTextureMapper(TextureMapper&, const FloatRect&, const TransformationMatrix&, float) override;
     WEBCORE_EXPORT void drawBorder(TextureMapper&, const Color&, float borderWidth, const FloatRect&, const TransformationMatrix&) override;
     WEBCORE_EXPORT void drawRepaintCounter(TextureMapper&, int repaintCount, const Color&, const FloatRect&, const TransformationMatrix&) override;
-    WEBCORE_EXPORT void updateContents(TextureMapper&, const TileIndex&, Image&, const IntRect& dirtyRect);
+    WEBCORE_EXPORT void updateContents(const TileIndex&, Image&, const IntRect& dirtyRect);
     WEBCORE_EXPORT void removeTile(const TileIndex&);
 
 private:

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,28 +25,27 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
+import javafx.geometry.Rectangle2D;
+import javafx.stage.Screen;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import com.sun.glass.ui.monocle.TestLogShim;
-import test.robot.com.sun.glass.ui.monocle.TestApplication;
 import com.sun.glass.ui.monocle.TouchFilterShim.FlushingFilter;
 import com.sun.glass.ui.monocle.TouchFilterShim.LoggingFilter;
 import com.sun.glass.ui.monocle.TouchFilterShim.NoMultiplesOfTenOnXFilter;
 import com.sun.glass.ui.monocle.TouchFilterShim.OverrideIDFilter;
 import com.sun.glass.ui.monocle.TouchFilterShim.TranslateFilter;
-import javafx.geometry.Rectangle2D;
-import javafx.stage.Screen;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Test;
 
 /**
  * Test installation of custom touch filters
  */
 public class TouchPipelineTest extends TouchTestBase {
 
-    @Before
+    @BeforeEach
     public void createDevice() throws Exception {
-        Assume.assumeTrue(TestApplication.isMonocle());
+        Assumptions.assumeTrue(TestApplication.isMonocle());
         ui = new UInput();
         TestApplication.showFullScreenScene();
         TestApplication.addMouseListeners();
@@ -97,11 +96,10 @@ public class TouchPipelineTest extends TouchTestBase {
         TestLogShim.waitForLog("Touch moved: 313, 95");
         TestLogShim.waitForLog("Touch moved: 213, 95");
         // This one should have been filtered out
-        Assert.assertEquals(0, TestLogShim.countLog("Touch Pressed: 208, 195"));
+        Assertions.assertEquals(0, TestLogShim.countLog("Touch Pressed: 208, 195"));
         ui.processLine("EV_KEY BTN_TOUCH 0");
         ui.processLine("EV_SYN");
         TestLogShim.waitForLog("Touch released: 213, 95");
     }
-
 }
 

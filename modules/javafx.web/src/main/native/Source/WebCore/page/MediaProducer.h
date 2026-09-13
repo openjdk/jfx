@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include <wtf/EnumTraits.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/OptionSet.h>
+#include <wtf/Platform.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -64,11 +65,11 @@ enum class MediaProducerMediaState : uint32_t {
 using MediaProducerMediaStateFlags = OptionSet<MediaProducerMediaState>;
 
 enum class MediaProducerMediaCaptureKind : uint8_t {
-    Microphone,
-    Camera,
-    Display,
-    SystemAudio,
-    EveryKind,
+    Microphone = 1 << 0,
+    Camera = 1 << 1,
+    Display = 1 << 2,
+    SystemAudio = 1 << 3,
+    EveryKind = 1 << 4,
 };
 
 enum class MediaProducerMutedState : uint8_t {
@@ -77,11 +78,11 @@ enum class MediaProducerMutedState : uint8_t {
     VideoCaptureIsMuted = 1 << 2,
     ScreenCaptureIsMuted = 1 << 3,
     WindowCaptureIsMuted = 1 << 4,
-    SystemAudioCaptureIsMuted = 1 << 4,
+    SystemAudioCaptureIsMuted = 1 << 5,
 };
 using MediaProducerMutedStateFlags = OptionSet<MediaProducerMutedState>;
 
-class MediaProducer : public CanMakeWeakPtr<MediaProducer> {
+class MediaProducer : public AbstractRefCountedAndCanMakeWeakPtr<MediaProducer> {
 public:
     using MediaState = MediaProducerMediaState;
     using MutedState = MediaProducerMutedState;
@@ -125,65 +126,33 @@ public:
 
     static bool isCapturing(MediaStateFlags state) { return state.containsAny(ActiveCaptureMask) || state.containsAny(MutedCaptureMask); }
 
+#if ENABLE(EXTENSION_CAPABILITIES)
+    static bool needsMediaCapability(MediaStateFlags state)
+    {
+        if (state.contains(MediaProducerMediaState::IsPlayingAudio))
+            return true;
+
+        if (state.contains(MediaProducerMediaState::IsPlayingVideo))
+            return true;
+
+        return MediaProducer::isCapturing(state);
+    }
+#endif
+
     virtual MediaStateFlags mediaState() const = 0;
 
     static constexpr MutedStateFlags AudioAndVideoCaptureIsMuted = { MutedState::AudioCaptureIsMuted, MutedState::VideoCaptureIsMuted };
     static constexpr MutedStateFlags MediaStreamCaptureIsMuted = { MutedState::AudioCaptureIsMuted, MutedState::VideoCaptureIsMuted, MutedState::ScreenCaptureIsMuted, MutedState::WindowCaptureIsMuted, MutedState::SystemAudioCaptureIsMuted };
 
+    virtual void visibilityAdjustmentStateDidChange() { }
     virtual void pageMutedStateDidChange() = 0;
+
+#if PLATFORM(IOS_FAMILY)
+    virtual void sceneIdentifierDidChange() { }
+#endif
 
 protected:
     virtual ~MediaProducer() = default;
 };
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::MediaProducerMediaState> {
-    using values = EnumValues<
-        WebCore::MediaProducerMediaState,
-        WebCore::MediaProducerMediaState::IsPlayingAudio,
-        WebCore::MediaProducerMediaState::IsPlayingVideo,
-        WebCore::MediaProducerMediaState::IsPlayingToExternalDevice,
-        WebCore::MediaProducerMediaState::RequiresPlaybackTargetMonitoring,
-        WebCore::MediaProducerMediaState::ExternalDeviceAutoPlayCandidate,
-        WebCore::MediaProducerMediaState::DidPlayToEnd,
-        WebCore::MediaProducerMediaState::IsSourceElementPlaying,
-        WebCore::MediaProducerMediaState::IsNextTrackControlEnabled,
-        WebCore::MediaProducerMediaState::IsPreviousTrackControlEnabled,
-        WebCore::MediaProducerMediaState::HasPlaybackTargetAvailabilityListener,
-        WebCore::MediaProducerMediaState::HasAudioOrVideo,
-        WebCore::MediaProducerMediaState::HasActiveAudioCaptureDevice,
-        WebCore::MediaProducerMediaState::HasActiveVideoCaptureDevice,
-        WebCore::MediaProducerMediaState::HasMutedAudioCaptureDevice,
-        WebCore::MediaProducerMediaState::HasMutedVideoCaptureDevice,
-        WebCore::MediaProducerMediaState::HasInterruptedAudioCaptureDevice,
-        WebCore::MediaProducerMediaState::HasInterruptedVideoCaptureDevice,
-        WebCore::MediaProducerMediaState::HasUserInteractedWithMediaElement,
-        WebCore::MediaProducerMediaState::HasActiveScreenCaptureDevice,
-        WebCore::MediaProducerMediaState::HasMutedScreenCaptureDevice,
-        WebCore::MediaProducerMediaState::HasInterruptedScreenCaptureDevice,
-        WebCore::MediaProducerMediaState::HasActiveWindowCaptureDevice,
-        WebCore::MediaProducerMediaState::HasMutedWindowCaptureDevice,
-        WebCore::MediaProducerMediaState::HasInterruptedWindowCaptureDevice,
-        WebCore::MediaProducerMediaState::HasActiveSystemAudioCaptureDevice,
-        WebCore::MediaProducerMediaState::HasMutedSystemAudioCaptureDevice,
-        WebCore::MediaProducerMediaState::HasInterruptedSystemAudioCaptureDevice,
-        WebCore::MediaProducerMediaState::HasStreamingActivity
-    >;
-};
-
-template<> struct EnumTraits<WebCore::MediaProducerMutedState> {
-    using values = EnumValues<
-        WebCore::MediaProducerMutedState,
-        WebCore::MediaProducerMutedState::AudioIsMuted,
-        WebCore::MediaProducerMutedState::AudioCaptureIsMuted,
-        WebCore::MediaProducerMutedState::VideoCaptureIsMuted,
-        WebCore::MediaProducerMutedState::ScreenCaptureIsMuted,
-        WebCore::MediaProducerMutedState::WindowCaptureIsMuted,
-        WebCore::MediaProducerMutedState::SystemAudioCaptureIsMuted
-    >;
-};
-
-}

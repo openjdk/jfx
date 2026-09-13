@@ -44,7 +44,7 @@ Ref<PointLightSource> PointLightSource::create(const FloatPoint3D& position)
 }
 
 PointLightSource::PointLightSource(const FloatPoint3D& position)
-    : LightSource(LS_POINT)
+    : LightSource(LightType::LS_POINT)
     , m_position(position)
 {
 }
@@ -102,8 +102,8 @@ bool PointLightSource::setZ(float z)
 
 TextStream& PointLightSource::externalRepresentation(TextStream& ts) const
 {
-    ts << "[type=POINT-LIGHT] ";
-    ts << "[position=\"" << position() << "\"]";
+    ts << "[type=POINT-LIGHT] "_s;
+    ts << "[position=\"" << position() << "\"]"_s;
     return ts;
 }
 

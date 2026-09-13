@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,17 +30,18 @@
 
 #include "CCallHelpers.h"
 #include "MacroAssemblerPrinter.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC { namespace B3 { namespace Air {
+
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_IMPL(PrintSpecial);
 
 PrintSpecial::PrintSpecial(Printer::PrintRecordList* list)
     : m_printRecordList(list)
 {
 }
 
-PrintSpecial::~PrintSpecial()
-{
-}
+PrintSpecial::~PrintSpecial() = default;
 
 void PrintSpecial::forEachArg(Inst&, const ScopedLambda<Inst::EachArgCallback>&)
 {
@@ -113,7 +114,7 @@ void PrintSpecial::deepDumpImpl(PrintStream& out) const
 
 namespace Printer {
 
-NO_RETURN void printAirArg(PrintStream&, Context&)
+[[noreturn]] void printAirArg(PrintStream&, Context&)
 {
     // This function is only a placeholder to let PrintSpecial::generate() know that
     // the Printer needs to be replaced with one for a register, constant, etc. Hence,

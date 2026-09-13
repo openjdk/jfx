@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2010, The Android Open Source Project
  * Copyright (C) 2012 Samsung Electronics. All rights reserved.
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,7 +27,7 @@
 
 #pragma once
 
-#include "DeviceClient.h"
+#include <WebCore/DeviceClient.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefPtr.h>
 
@@ -37,7 +38,9 @@ class DeviceOrientationData;
 class Page;
 
 class DeviceOrientationClient : public DeviceClient {
+    WTF_MAKE_TZONE_ALLOCATED(DeviceOrientationClient);
     WTF_MAKE_NONCOPYABLE(DeviceOrientationClient);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DeviceOrientationClient);
 public:
     DeviceOrientationClient() = default;
     virtual ~DeviceOrientationClient() = default;

@@ -34,16 +34,34 @@
 #include <wtf/ProcessID.h>
 #include <mutex>
 
-#define DATA_LOG_TO_FILE 0
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
-// Set to 1 to use the temp directory from confstr instead of hardcoded directory.
-// The last component of DATA_LOG_FILENAME will still be used.
+// Setting DATA_LOG_TO_FILE to 1 will cause logs to be sent to the filename
+// specified in the WTF_DATA_LOG_FILENAME envvar.
+#define DATA_LOG_TO_FILE 0
+// Alternatively, setting this to 1 will override the above settings and use
+// the temp directory from confstr instead of the hardcoded directory.
 #define DATA_LOG_TO_DARWIN_TEMP_DIR 0
 
-// Uncomment to force logging to the given file regardless of what the environment variable says.
+// Setting DATA_LOG_TO_FILE_IGNORE_ENVVAR to 1 will cause both data-log options
+// above to always use the fallback filename.
+#define DATA_LOG_IGNORE_ENV_VAR 0
+
+#if DATA_LOG_TO_FILE && DATA_LOG_TO_DARWIN_TEMP_DIR
+#error "Set at most one data-log file target"
+#endif
+
+#if OS(WINDOWS) && DATA_LOG_TO_DARWIN_TEMP_DIR
+#error "Cannot log to Darwin temp dir on Windows"
+#endif
+
 // Note that we will append ".<pid>.txt" where <pid> is the PID.
-// This path won't work on Windows, make sure to change to something like C:\\Users\\<more path>\\log.txt.
-#define DATA_LOG_FILENAME "/tmp/WTFLog"
+#define DATA_LOG_DEFAULT_BASENAME "WTFLog"
+#if OS(WINDOWS)
+#define DATA_LOG_DEFAULT_PATH "%localappdata%\\Temp\\"
+#else
+#define DATA_LOG_DEFAULT_PATH "/tmp/"
+#endif
 
 namespace WTF {
 
@@ -60,43 +78,45 @@ static void initializeLogFileOnce()
     if (s_file)
         return;
 
-#if DATA_LOG_TO_FILE
+#if DATA_LOG_TO_FILE || DATA_LOG_TO_DARWIN_TEMP_DIR
 #if DATA_LOG_TO_DARWIN_TEMP_DIR
-    char filenameBuffer[maxPathLength + 1];
-#if defined(DATA_LOG_FILENAME)
-    const char* logBasename = strrchr(DATA_LOG_FILENAME, '/');
+    std::array<char, maxPathLength + 1> filenameBuffer;
+    const char* logBasename = DATA_LOG_DEFAULT_BASENAME;
+#if !DATA_LOG_IGNORE_ENV_VAR
+    logBasename = getenv("WTF_DATA_LOG_FILENAME");
     if (!logBasename)
-        logBasename = (char*)DATA_LOG_FILENAME;
-#else
-    const char* logBasename = "WTFLog";
+        logBasename = DATA_LOG_DEFAULT_BASENAME;
 #endif
 
-    bool success = confstr(_CS_DARWIN_USER_TEMP_DIR, filenameBuffer, sizeof(filenameBuffer));
+    bool success = confstr(_CS_DARWIN_USER_TEMP_DIR, filenameBuffer.data(), filenameBuffer.size());
     if (success) {
         // FIXME: Assert that the path ends with a slash instead of adding a slash if it does not exist
         // once <rdar://problem/23579077> is fixed in all iOS Simulator versions that we use.
         size_t lastComponentLength = strlen(logBasename) + 20; // More than enough for ".<pid>.txt"
-        size_t dirnameLength = strlen(filenameBuffer);
+        size_t dirnameLength = strlenSpan(filenameBuffer);
         bool shouldAddPathSeparator = filenameBuffer[dirnameLength - 1] != '/' && logBasename[0] != '/';
-        if (lastComponentLength + shouldAddPathSeparator <= sizeof(filenameBuffer) - dirnameLength - 1) {
+        if (lastComponentLength + shouldAddPathSeparator <= filenameBuffer.size() - dirnameLength - 1) {
             if (shouldAddPathSeparator)
-                strncat(filenameBuffer, "/", 1);
-            strncat(filenameBuffer, logBasename, sizeof(filenameBuffer) - strlen(filenameBuffer) - 1);
-            filename = filenameBuffer;
+                strncat(filenameBuffer.data(), "/", 1);
+            strncat(filenameBuffer.data(), logBasename, filenameBuffer.size() - strlenSpan(filenameBuffer) - 1);
+            filename = filenameBuffer.data();
         }
     }
-#elif defined(DATA_LOG_FILENAME)
-    filename = DATA_LOG_FILENAME;
-#else
+#elif DATA_LOG_TO_FILE // !DATA_LOG_TO_DARWIN_TEMP_DIR
+    [[maybe_unused]] static constexpr const char* fallbackFilepath = DATA_LOG_DEFAULT_PATH DATA_LOG_DEFAULT_BASENAME;
+    filename = fallbackFilepath;
+#if !DATA_LOG_IGNORE_ENV_VAR
     filename = getenv("WTF_DATA_LOG_FILENAME");
+    if (!filename)
+        filename = fallbackFilepath;
 #endif
+#endif // DATA_LOG_TO_FILE
     char actualFilename[maxPathLength + 1];
-
-    if (filename && !strstr(filename, "%pid")) {
+    if (filename && !contains(unsafeSpan(filename), "%pid"_span)) {
         snprintf(actualFilename, sizeof(actualFilename), "%s.%%pid.txt", filename);
         filename = actualFilename;
     }
-#endif // DATA_LOG_TO_FILE
+#endif // DATA_LOG_TO_FILE || DATA_LOG_TO_DARWIN_TEMP_DIR
 
     setDataFile(filename);
 }
@@ -114,16 +134,15 @@ static void initializeLogFile()
 void setDataFile(const char* path)
 {
     FilePrintStream* file = nullptr;
-    char formattedPath[maxPathLength + 1];
+    std::array<char, maxPathLength + 1> formattedPath;
     const char* pathToOpen = path;
 
     if (path) {
-        const char* pidFormat = strstr(path, "%pid");
-        if (pidFormat) {
-            size_t leadingPathLength = pidFormat - path;
-            size_t pathCharactersAvailable = std::min(maxPathLength, leadingPathLength);
-            strncpy(formattedPath, path, pathCharactersAvailable);
-            char* nextDest = formattedPath + pathCharactersAvailable;
+        auto pathSpan = unsafeSpan(path);
+        if (size_t pidIndex = find(pathSpan, "%pid"_span); pidIndex != notFound) {
+            size_t pathCharactersAvailable = std::min(maxPathLength, pidIndex);
+            strncpy(formattedPath.data(), path, pathCharactersAvailable);
+            char* nextDest = formattedPath.data() + pathCharactersAvailable;
             pathCharactersAvailable = maxPathLength - pathCharactersAvailable;
             if (pathCharactersAvailable) {
                 int pidTextLength = snprintf(nextDest, pathCharactersAvailable, "%d", getCurrentProcessID());
@@ -131,11 +150,11 @@ void setDataFile(const char* path)
                 if (pidTextLength >= 0 && static_cast<size_t>(pidTextLength) < pathCharactersAvailable) {
                     pathCharactersAvailable -= static_cast<size_t>(pidTextLength);
                     nextDest += pidTextLength;
-                    strncpy(nextDest, pidFormat + 4, pathCharactersAvailable);
+                    strncpy(nextDest, pathSpan.subspan(pidIndex + 4).data(), pathCharactersAvailable);
                 }
             }
             formattedPath[maxPathLength] = '\0';
-            pathToOpen = formattedPath;
+            pathToOpen = formattedPath.data();
         }
 
         file = FilePrintStream::open(pathToOpen, "w").release();
@@ -191,3 +210,4 @@ void dataLogFString(const char* str)
 
 } // namespace WTF
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

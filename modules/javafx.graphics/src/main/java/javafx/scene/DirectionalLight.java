@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -48,7 +48,7 @@ import javafx.scene.paint.PhongMaterial;
  * @since 18
  * @see PhongMaterial
  */
-public class DirectionalLight extends LightBase {
+public non-sealed class DirectionalLight extends LightBase {
     static {
         DirectionalLightHelper.setDirectionalLightAccessor(new DirectionalLightHelper.DirectionalLightAccessor() {
             @Override

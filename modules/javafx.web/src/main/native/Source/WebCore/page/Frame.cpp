@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,94 +26,379 @@
 #include "config.h"
 #include "Frame.h"
 
-#include "DocumentInlines.h"
+#include "ContainerNodeInlines.h"
+#include "DocumentPage.h"
+#include "DocumentView.h"
+#include "FrameInlines.h"
+#include "FrameLoader.h"
+#include "FrameLoaderClient.h"
 #include "HTMLFrameOwnerElement.h"
-#include "LocalFrame.h"
+#include "HTMLIFrameElement.h"
+#include "LocalDOMWindow.h"
 #include "NavigationScheduler.h"
+#include "NodeDocument.h"
+#include "OwnerPermissionsPolicyData.h"
 #include "Page.h"
 #include "RemoteFrame.h"
+#include "RenderElement.h"
+#include "RenderWidget.h"
+#include "ScrollingCoordinator.h"
+#include "Settings.h"
 #include "WindowProxy.h"
+#include <wtf/Assertions.h>
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
-Frame::Frame(Page& page, FrameIdentifier frameID, FrameType frameType, HTMLFrameOwnerElement* ownerElement, Frame* parent)
+#if ASSERT_ENABLED
+class FrameLifetimeVerifier {
+public:
+    static FrameLifetimeVerifier& singleton()
+    {
+        static NeverDestroyed<FrameLifetimeVerifier> instance;
+        return instance.get();
+    }
+
+    void frameCreated(Frame& frame)
+    {
+        auto& pair = m_map.ensure(frame.frameID(), [] {
+            return std::pair<WeakPtr<LocalFrame>, WeakPtr<RemoteFrame>> { };
+        }).iterator->value;
+
+        switch (frame.frameType()) {
+        case Frame::FrameType::Local:
+//Invalid for JAVAFX Webkit, as it uses same process not separate web process
+#if !PLATFORM(JAVA)
+            ASSERT_WITH_MESSAGE(!pair.first, "There should never be two LocalFrames with the same ID in the same process");
+#endif
+            pair.first = downcast<LocalFrame>(frame);
+            break;
+        case Frame::FrameType::Remote:
+            ASSERT_WITH_MESSAGE(!pair.second, "There should never be two RemoteFrames with the same ID in the same process");
+            pair.second = downcast<RemoteFrame>(frame);
+            break;
+        }
+    }
+
+    void frameDestroyed(Frame& frame)
+    {
+        auto it = m_map.find(frame.frameID());
+        ASSERT(it != m_map.end());
+        auto& pair = it->value;
+        switch (frame.frameType()) {
+        case Frame::FrameType::Local:
+            ASSERT(pair.first == &frame);
+            if (pair.second)
+                pair.first = nullptr;
+            else
+                m_map.remove(it);
+            break;
+        case Frame::FrameType::Remote:
+            ASSERT(pair.second == &frame);
+            if (pair.first)
+                pair.second = nullptr;
+            else
+                m_map.remove(it);
+        }
+    }
+
+    bool isRootFrameIdentifier(FrameIdentifier identifier)
+    {
+        auto it = m_map.find(identifier);
+        if (it == m_map.end())
+            return false;
+        return it->value.first && it->value.first->isRootFrame();
+    }
+private:
+    HashMap<FrameIdentifier, std::pair<WeakPtr<LocalFrame>, WeakPtr<RemoteFrame>>> m_map;
+};
+#endif
+
+Frame::Frame(Page& page, FrameIdentifier frameID, FrameType frameType, HTMLFrameOwnerElement* ownerElement, Frame* parent, Frame* opener, Ref<FrameTreeSyncData>&& frameTreeSyncData, AddToFrameTree addToFrameTree)
     : m_page(page)
     , m_frameID(frameID)
-    , m_treeNode(*this, parent)
+    , m_treeNode(*this, addToFrameTree == AddToFrameTree::Yes ? parent : nullptr)
     , m_windowProxy(WindowProxy::create(*this))
     , m_ownerElement(ownerElement)
     , m_mainFrame(parent ? page.mainFrame() : *this)
     , m_settings(page.settings())
     , m_frameType(frameType)
-    , m_navigationScheduler(makeUniqueRef<NavigationScheduler>(*this))
+    , m_navigationScheduler(makeUniqueRefWithoutRefCountedCheck<NavigationScheduler>(*this))
+    , m_opener(opener)
+    , m_frameTreeSyncData(WTF::move(frameTreeSyncData))
 {
-    if (parent)
+    relaxAdoptionRequirement();
+    if (parent && addToFrameTree == AddToFrameTree::Yes)
         parent->tree().appendChild(*this);
 
     if (ownerElement)
         ownerElement->setContentFrame(*this);
+
+    if (opener)
+        opener->m_openedFrames.add(*this);
+
+#if ASSERT_ENABLED
+    FrameLifetimeVerifier::singleton().frameCreated(*this);
+#endif
 }
 
 Frame::~Frame()
 {
-    m_windowProxy->detachFromFrame();
-    m_navigationScheduler->cancel();
-}
+    protectedWindowProxy()->detachFromFrame();
+    protectedNavigationScheduler()->cancel();
 
-std::optional<PageIdentifier> Frame::pageID() const
-{
-    if (auto* page = this->page())
-        return page->identifier();
-    return std::nullopt;
-}
-
-bool Frame::isRootFrame() const
-{
-    // A root frame is a local frame with a remote frame parent or no parent.
-    // It is the root of its local frame tree in this process but might have
-    // a parent in another process.
-    switch (m_frameType) {
-    case FrameType::Local:
-        if (auto* parent = tree().parent())
-            return is<RemoteFrame>(parent);
-        ASSERT(&m_mainFrame == this);
-        return true;
-    case FrameType::Remote:
-        break;
-    }
-    return false;
+#if ASSERT_ENABLED
+    FrameLifetimeVerifier::singleton().frameDestroyed(*this);
+#endif
 }
 
 void Frame::resetWindowProxy()
 {
-    ASSERT(m_windowProxy->frame() == this);
-    m_windowProxy->detachFromFrame();
     m_windowProxy = WindowProxy::create(*this);
 }
 
 void Frame::detachFromPage()
 {
+    if (isRootFrame()) {
+        if (RefPtr page = m_page.get()) {
+            page->removeRootFrame(downcast<LocalFrame>(*this));
+            if (RefPtr scrollingCoordinator = page->scrollingCoordinator())
+                scrollingCoordinator->rootFrameWasRemoved(frameID());
+        }
+    }
     m_page = nullptr;
 }
 
 void Frame::disconnectOwnerElement()
 {
-    if (m_ownerElement) {
-        m_ownerElement->clearContentFrame();
+    if (RefPtr ownerElement = m_ownerElement.get()) {
+        ownerElement->clearContentFrame();
         m_ownerElement = nullptr;
     }
 
-    // FIXME: This is a layering violation. Move this code so Frame doesn't do anything with its Document.
-    if (auto* document = is<LocalFrame>(*this) ? downcast<LocalFrame>(*this).document() : nullptr)
-        document->frameWasDisconnectedFromOwner();
+    frameWasDisconnectedFromOwner();
 }
 
-void Frame::takeWindowProxyFrom(Frame& frame)
+void Frame::takeWindowProxyAndOpenerFrom(Frame& frame)
 {
+    ASSERT(is<LocalDOMWindow>(window()) != is<LocalDOMWindow>(frame.window()) || page() != frame.page());
     ASSERT(m_windowProxy->frame() == this);
-    m_windowProxy->detachFromFrame();
+    protectedWindowProxy()->detachFromFrame();
     m_windowProxy = frame.windowProxy();
-    m_windowProxy->replaceFrame(*this);
+    frame.resetWindowProxy();
+    protectedWindowProxy()->replaceFrame(*this);
+
+    ASSERT(!m_opener);
+    m_opener = frame.m_opener;
+    if (m_opener)
+        m_opener->m_openedFrames.add(*this);
+
+    for (Ref opened : frame.m_openedFrames) {
+        ASSERT(opened->m_opener.get() == &frame);
+        opened->m_opener = *this;
+        m_openedFrames.add(opened);
+    }
+    frame.m_openedFrames.clear();
+}
+
+Ref<WindowProxy> Frame::protectedWindowProxy() const
+{
+    return m_windowProxy;
+}
+
+RefPtr<DOMWindow> Frame::protectedWindow() const
+{
+    return window();
+}
+
+Ref<NavigationScheduler> Frame::protectedNavigationScheduler() const
+{
+    return m_navigationScheduler.get();
+}
+
+std::optional<uint64_t> Frame::indexInFrameTreeSiblings() const
+{
+    if (!tree().parent())
+        return std::nullopt;
+
+    for (uint64_t i = 0; i < tree().parent()->tree().childCount(); i++) {
+        if (RefPtr child = tree().parent()->tree().child(i); child->frameID() == this->frameID())
+            return i;
+    }
+
+    ASSERT_NOT_REACHED("This frame should be in its own tree");
+    return std::nullopt;
+}
+
+Vector<uint64_t> Frame::pathToFrame() const
+{
+    Vector<uint64_t> path;
+    RefPtr current = this;
+
+    while (current) {
+        if (auto index = current->indexInFrameTreeSiblings())
+            path.append(*index);
+        current = current->tree().parent();
+    }
+
+    path.reverse();
+    return path;
+}
+
+RenderWidget* Frame::ownerRenderer() const
+{
+    RefPtr ownerElement = this->ownerElement();
+    if (!ownerElement)
+        return nullptr;
+    // FIXME: If <object> is ever fixed to disassociate itself from frames
+    // that it has started but canceled, then this can turn into an ASSERT
+    // since ownerElement would be nullptr when the load is canceled.
+    // https://bugs.webkit.org/show_bug.cgi?id=18585
+    return dynamicDowncast<RenderWidget>(ownerElement->renderer());
+}
+
+RefPtr<FrameView> Frame::protectedVirtualView() const
+{
+    return virtualView();
+}
+
+#if ASSERT_ENABLED
+bool Frame::isRootFrameIdentifier(FrameIdentifier identifier)
+{
+    return FrameLifetimeVerifier::singleton().isRootFrameIdentifier(identifier);
+}
+#endif
+
+void Frame::updateOpener(Frame& newOpener, NotifyUIProcess notifyUIProcess)
+{
+    if (notifyUIProcess == NotifyUIProcess::Yes)
+        loaderClient().updateOpener(newOpener.frameID());
+    if (m_opener)
+        m_opener->m_openedFrames.remove(*this);
+    newOpener.m_openedFrames.add(*this);
+        if (RefPtr page = this->page())
+            page->setOpenedByDOMWithOpener(true);
+    m_opener = newOpener;
+
+    reinitializeDocumentSecurityContext();
+}
+
+void Frame::disownOpener(NotifyUIProcess notifyUIProcess)
+{
+    if (m_opener) {
+        if (notifyUIProcess == NotifyUIProcess::Yes)
+            loaderClient().updateOpener(std::nullopt);
+        m_opener->m_openedFrames.remove(*this);
+    }
+
+    m_opener = nullptr;
+
+    reinitializeDocumentSecurityContext();
+}
+
+void Frame::setOpenerForWebKitLegacy(Frame* frame)
+{
+    ASSERT(!m_opener);
+    ASSERT(frame);
+    m_opener = frame;
+    m_page->setOpenedByDOMWithOpener(true);
+    reinitializeDocumentSecurityContext();
+}
+
+void Frame::detachFromAllOpenedFrames()
+{
+    for (Ref frame : std::exchange(m_openedFrames, { }))
+        frame->m_opener = nullptr;
+}
+
+bool Frame::hasOpenedFrames() const
+{
+    return !m_openedFrames.isEmptyIgnoringNullReferences();
+}
+
+void Frame::setOwnerElement(HTMLFrameOwnerElement* element)
+{
+    m_ownerElement = element;
+    if (element) {
+        element->clearContentFrame();
+        element->setContentFrame(*this);
+    }
+    updateScrollingMode();
+}
+
+void Frame::setOwnerPermissionsPolicy(OwnerPermissionsPolicyData&& ownerPermissionsPolicy)
+{
+    m_ownerPermissionsPolicyOverride = makeUnique<OwnerPermissionsPolicyData>(WTF::move(ownerPermissionsPolicy));
+}
+
+std::optional<OwnerPermissionsPolicyData> Frame::ownerPermissionsPolicy() const
+{
+    if (m_ownerPermissionsPolicyOverride)
+        return *m_ownerPermissionsPolicyOverride;
+
+    RefPtr owner = ownerElement();
+    if (!owner)
+        return std::nullopt;
+
+    auto documentOrigin = owner->protectedDocument()->securityOrigin().data();
+    auto documentPolicy = owner->protectedDocument()->permissionsPolicy();
+
+    RefPtr iframe = dynamicDowncast<HTMLIFrameElement>(owner);
+    auto containerPolicy = iframe ? PermissionsPolicy::processPermissionsPolicyAttribute(*iframe) : PermissionsPolicy::PolicyDirective { };
+    return OwnerPermissionsPolicyData { WTF::move(documentOrigin), WTF::move(documentPolicy), WTF::move(containerPolicy) };
+}
+
+void Frame::updateSandboxFlags(SandboxFlags flags, NotifyUIProcess notifyUIProcess)
+{
+    if (notifyUIProcess == NotifyUIProcess::Yes)
+        loaderClient().updateSandboxFlags(flags);
+}
+
+void Frame::stopForBackForwardCache()
+{
+    if (RefPtr localFrame = dynamicDowncast<LocalFrame>(*this))
+        localFrame->loader().stopForBackForwardCache();
+    else {
+        for (RefPtr child = tree().firstChild(); child; child = child->tree().nextSibling())
+            child->stopForBackForwardCache();
+    }
+}
+
+void Frame::updateFrameTreeSyncData(Ref<FrameTreeSyncData>&& data)
+{
+    m_frameTreeSyncData = WTF::move(data);
+}
+
+void Frame::updateFrameTreeSyncData(const FrameTreeSyncSerializationData& data)
+{
+    protectedFrameTreeSyncData()->update(data);
+}
+
+bool Frame::frameCanCreatePaymentSession() const
+{
+    // Prefer the LocalFrame code path when site isolation is disabled.
+    ASSERT(m_settings->siteIsolationEnabled());
+    return m_frameTreeSyncData->frameCanCreatePaymentSession;
+}
+
+bool Frame::isPrinting() const
+{
+    return m_isPrinting;
+}
+
+void Frame::setPrinting(bool printing, FloatSize pageSize, FloatSize originalPageSize, float maximumShrinkRatio, AdjustViewSize shouldAdjustViewSize, NotifyUIProcess notifyUIProcess)
+{
+    m_isPrinting = printing;
+    if (notifyUIProcess == NotifyUIProcess::Yes && m_settings->siteIsolationEnabled())
+        loaderClient().setPrinting(printing, pageSize, originalPageSize, maximumShrinkRatio, shouldAdjustViewSize);
+}
+
+SecurityOrigin& Frame::topOrigin() const
+{
+    if (RefPtr page = this->page())
+        return page->mainFrameOrigin();
+
+    return SecurityOrigin::opaqueOrigin();
 }
 
 } // namespace WebCore

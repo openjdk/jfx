@@ -51,7 +51,7 @@ template<typename Value>
 const Value* ContextProvider<Value>::Context::add(const String& name, const Value& value)
 {
     auto result = m_map.add(name, value);
-    if (UNLIKELY(!result.isNewEntry))
+    if (!result.isNewEntry) [[unlikely]]
         return nullptr;
     return &result.iterator->value;
 }
@@ -61,8 +61,8 @@ ContextProvider<Value>::ContextScope::ContextScope(ContextProvider<Value>* provi
     : m_provider(*provider)
     , m_previousContext(provider->m_context)
 {
-    m_provider.m_contexts.append(Context { m_previousContext });
-    m_provider.m_context = &m_provider.m_contexts.last();
+    m_provider.m_contexts.append(std::unique_ptr<Context>(new Context { m_previousContext }));
+    m_provider.m_context = m_provider.m_contexts.last().get();
 }
 
 template<typename Value>

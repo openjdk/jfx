@@ -4,7 +4,7 @@
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
- * version 2,1 of the License, or (at your option) any later version.
+ * version 2.1 of the License, or (at your option) any later version.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -23,11 +23,12 @@
 #if ENABLE(WEB_CRYPTO)
 
 #include "CryptoKeyOKP.h"
+#include "ExceptionOr.h"
 #include "GCryptUtilities.h"
 
 namespace WebCore {
 
-static bool extractEDDSASignatureInteger(Vector<uint8_t>& signature, gcry_sexp_t signatureSexp, const char* integerName, size_t keySizeInBytes)
+static bool extractEDDSASignatureInteger(Vector<uint8_t>& signature, gcry_sexp_t signatureSexp, ASCIILiteral integerName, size_t keySizeInBytes)
 {
     // Retrieve byte data of the specified integer.
     PAL::GCrypt::Handle<gcry_sexp_t> integerSexp(gcry_sexp_find_token(signatureSexp, integerName, 0));
@@ -41,11 +42,11 @@ static bool extractEDDSASignatureInteger(Vector<uint8_t>& signature, gcry_sexp_t
     size_t dataSize = integerData->size();
     if (dataSize >= keySizeInBytes) {
         // Append the last `keySizeInBytes` bytes of the data Vector, if available.
-        signature.append(&integerData->at(dataSize - keySizeInBytes), keySizeInBytes);
+        signature.append(integerData->subspan(dataSize - keySizeInBytes, keySizeInBytes));
     } else {
         // If not, prefix the binary data with zero bytes.
         for (size_t paddingSize = keySizeInBytes - dataSize; paddingSize > 0; --paddingSize)
-            signature.uncheckedAppend(0x00);
+            signature.append(0x00);
         signature.appendVector(*integerData);
     }
 
@@ -60,20 +61,20 @@ static ExceptionOr<Vector<uint8_t>> signEd25519(const Vector<uint8_t>& sk, size_
     PAL::GCrypt::Handle<gcry_sexp_t> dataSexp;
     {
         gcry_error_t error = gcry_sexp_build(&dataSexp, nullptr, "(data(flags eddsa)(hash-algo sha512) (value %b))",
-            data.size(), data.data());
+            data.size(), data.span().data());
         if (error != GPG_ERR_NO_ERROR) {
             PAL::GCrypt::logError(error);
-            return Exception { OperationError };
+            return Exception { ExceptionCode::OperationError };
         }
     }
 
     // Construct the `private-key` expression that will also be used for the EC context.
     PAL::GCrypt::Handle<gcry_sexp_t> keySexp;
     gcry_error_t error = gcry_sexp_build(&keySexp, nullptr, "(private-key(ecc(curve Ed25519)(flags eddsa)(d %b)))",
-        sk.size(), sk.data());
+        sk.size(), sk.span().data());
     if (error != GPG_ERR_NO_ERROR) {
         PAL::GCrypt::logError(error);
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
     }
 
     // Perform the PK signing, retrieving a sig-val s-expression of the following form:
@@ -85,7 +86,7 @@ static ExceptionOr<Vector<uint8_t>> signEd25519(const Vector<uint8_t>& sk, size_
     error = gcry_pk_sign(&signatureSexp, dataSexp, keySexp);
     if (error != GPG_ERR_NO_ERROR) {
         PAL::GCrypt::logError(error);
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
     }
 
     // Retrieve MPI data of the resulting r and s integers. They are concatenated into
@@ -93,9 +94,9 @@ static ExceptionOr<Vector<uint8_t>> signEd25519(const Vector<uint8_t>& sk, size_
     Vector<uint8_t> signature;
     signature.reserveInitialCapacity(64);
 
-    if (!extractEDDSASignatureInteger(signature, signatureSexp, "r", keySizeInBytes)
-        || !extractEDDSASignatureInteger(signature, signatureSexp, "s", keySizeInBytes))
-        return Exception { OperationError };
+    if (!extractEDDSASignatureInteger(signature, signatureSexp, "r"_s, keySizeInBytes)
+        || !extractEDDSASignatureInteger(signature, signatureSexp, "s"_s, keySizeInBytes))
+        return Exception { ExceptionCode::OperationError };
 
     return signature;
 }
@@ -108,7 +109,7 @@ static ExceptionOr<bool> verifyEd25519(const Vector<uint8_t>& key, size_t keyLen
     // Construct the sig-val s-expression, extracting the r and s components from the signature vector.
     PAL::GCrypt::Handle<gcry_sexp_t> signatureSexp;
     gcry_error_t error = gcry_sexp_build(&signatureSexp, nullptr, "(sig-val(eddsa(r %b)(s %b)))",
-        keyLengthInBytes, signature.data(), keyLengthInBytes, signature.data() + keyLengthInBytes);
+        keyLengthInBytes, signature.span().data(), keyLengthInBytes, signature.subspan(keyLengthInBytes).data());
     if (error != GPG_ERR_NO_ERROR) {
         PAL::GCrypt::logError(error);
         return false;
@@ -118,7 +119,7 @@ static ExceptionOr<bool> verifyEd25519(const Vector<uint8_t>& key, size_t keyLen
     PAL::GCrypt::Handle<gcry_sexp_t> dataSexp;
     {
         gcry_error_t error = gcry_sexp_build(&dataSexp, nullptr, "(data(flags eddsa)(hash-algo sha512) (value %b))",
-            data.size(), data.data());
+            data.size(), data.span().data());
         if (error != GPG_ERR_NO_ERROR) {
             PAL::GCrypt::logError(error);
             return false;
@@ -128,7 +129,7 @@ static ExceptionOr<bool> verifyEd25519(const Vector<uint8_t>& key, size_t keyLen
     // Construct the `public-key` expression to be used for generating the MPI structure.
     PAL::GCrypt::Handle<gcry_sexp_t> keySexp;
     error = gcry_sexp_build(&keySexp, nullptr, "(public-key(ecc(curve Ed25519)(q %b)))",
-        key.size(), key.data());
+        key.size(), key.span().data());
     if (error != GPG_ERR_NO_ERROR) {
         PAL::GCrypt::logError(error);
         return false;

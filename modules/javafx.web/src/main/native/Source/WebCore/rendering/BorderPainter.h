@@ -23,43 +23,64 @@
 
 #pragma once
 
+#include "BorderData.h"
+#include "GraphicsTypes.h"
 #include "RenderBoxModelObject.h"
 #include "RenderElement.h"
 
 namespace WebCore {
 
+class BorderShape;
+
 class BorderPainter {
 public:
     BorderPainter(const RenderElement&, const PaintInfo&);
 
-    void paintBorder(const LayoutRect&, const RenderStyle&, BackgroundBleedAvoidance = BackgroundBleedNone, bool includeLogicalLeftEdge = true, bool includeLogicalRightEdge = true);
-    void paintOutline(const LayoutRect&);
-    void paintOutline(const LayoutPoint& paintOffset, const Vector<LayoutRect>& lineRects);
+    void paintBorder(const LayoutRect&, const RenderStyle&, BleedAvoidance = BleedAvoidance::None, RectEdges<bool> closedEdges = { true }) const;
 
-    bool paintNinePieceImage(const LayoutRect&, const RenderStyle&, const NinePieceImage&, CompositeOperator = CompositeOperator::SourceOver);
+    bool paintNinePieceImage(const LayoutRect&, const RenderStyle&, const Style::BorderImage&, CompositeOperator = CompositeOperator::SourceOver) const;
+    bool paintNinePieceImage(const LayoutRect&, const RenderStyle&, const Style::MaskBorder&, CompositeOperator = CompositeOperator::SourceOver) const;
+
     static void drawLineForBoxSide(GraphicsContext&, const Document&, const FloatRect&, BoxSide, Color, BorderStyle, float adjacentWidth1, float adjacentWidth2, bool antialias = false);
 
-    static bool allCornersClippedOut(const RoundedRect&, const LayoutRect&);
+    static std::optional<Path> pathForBorderArea(const LayoutRect&, const RenderStyle&, float deviceScaleFactor, RectEdges<bool> closedEdges = { true });
+
     static bool shouldAntialiasLines(GraphicsContext&);
-    static Color calculateBorderStyleColor(const BorderStyle&, const BoxSide&, const Color&);
+    static bool decorationHasAllSolidEdges(const RectEdges<BorderEdge>&);
 
 private:
-    struct Sides;
-    void paintSides(const Sides&);
+    friend class OutlinePainter;
 
-    void paintTranslucentBorderSides(const RoundedRect& outerBorder, const RoundedRect& innerBorder, const IntPoint& innerBorderAdjustment,
-        const BorderEdges&, BoxSideSet edgesToDraw, std::optional<BorderDataRadii>, BackgroundBleedAvoidance, bool includeLogicalLeftEdge, bool includeLogicalRightEdge, bool antialias, bool isHorizontal);
-    void paintBorderSides(const RoundedRect& outerBorder, const RoundedRect& innerBorder, const IntPoint& innerBorderAdjustment, const BorderEdges&, BoxSideSet edgeSet, std::optional<BorderDataRadii>, BackgroundBleedAvoidance, bool includeLogicalLeftEdge, bool includeLogicalRightEdge, bool antialias, bool isHorizontal, const Color* overrideColor = nullptr);
-    void paintOneBorderSide(const RoundedRect& outerBorder, const RoundedRect& innerBorder,
-        const LayoutRect& sideRect, BoxSide, BoxSide adjacentSide1, BoxSide adjacentSide2, const BorderEdges&, std::optional<BorderDataRadii>, const Path*, BackgroundBleedAvoidance, bool includeLogicalLeftEdge, bool includeLogicalRightEdge, bool antialias, bool isHorizontal, const Color* overrideColor);
-    void drawBoxSideFromPath(const LayoutRect& borderRect, const Path& borderPath, const BorderEdges&, std::optional<BorderDataRadii>, float thickness, float drawThickness, BoxSide, Color, BorderStyle, BackgroundBleedAvoidance, bool includeLogicalLeftEdge, bool includeLogicalRightEdge, bool isHorizontal);
-    void clipBorderSidePolygon(const RoundedRect& outerBorder, const RoundedRect& innerBorder, BoxSide, bool firstEdgeMatches, bool secondEdgeMatches);
+    struct Sides {
+        std::optional<BorderData::Radii> radii { }; // FIXME: Do we need this separately from the shape?
+        const BorderEdges& edges;
+        bool haveAllSolidEdges { true };
+        bool outerEdgeIsRectangular { true };
+        bool innerEdgeIsRectangular { true };
+        BleedAvoidance bleedAvoidance { BleedAvoidance::None };
+        RectEdges<bool> closedEdges = { true };
+        bool appliedClipAlready { false };
+    };
+    void paintSides(const BorderShape&, const Sides&) const;
 
-    LayoutRect borderInnerRectAdjustedForBleedAvoidance(const LayoutRect&, BackgroundBleedAvoidance) const;
+    template<typename T>
+    bool paintNinePieceImageImpl(const LayoutRect&, const RenderStyle&, const T&, CompositeOperator = CompositeOperator::SourceOver) const;
+
+    void paintTranslucentBorderSides(const BorderShape&, const Sides&, BoxSideSet edgesToDraw, bool antialias) const;
+    void paintBorderSides(const BorderShape&, const Sides&, BoxSideSet edgesToDraw, bool antialias, const Color* overrideColor = nullptr) const;
+
+    void paintOneBorderSide(const BorderShape&, const Sides&, const LayoutRect& sideRect, BoxSide, BoxSide adjacentSide1, BoxSide adjacentSide2, const Path*, bool antialias, const Color* overrideColor) const;
+
+    void drawBoxSideFromPath(const BorderShape&, const Path& borderPath, const BorderEdges&, float thickness, float drawThickness, BoxSide, Color, BorderStyle, BleedAvoidance) const;
+    void clipBorderSidePolygon(const BorderShape&, BoxSide, bool firstEdgeMatches, bool secondEdgeMatches) const;
+
+    LayoutRect borderRectAdjustedForBleedAvoidance(const LayoutRect&, BleedAvoidance) const;
+
+    static Color calculateBorderStyleColor(const BorderStyle&, const BoxSide&, const Color&);
 
     const Document& document() const;
 
-    const RenderElement& m_renderer;
+    CheckedRef<const RenderElement> m_renderer;
     const PaintInfo& m_paintInfo;
 };
 

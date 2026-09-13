@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,8 @@
 
 package test.javafx.collections;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -39,15 +39,15 @@ import javafx.collections.ObservableArray;
 import javafx.collections.ObservableFloatArray;
 import javafx.collections.ObservableIntegerArray;
 
-import static org.junit.Assert.*;
-import org.junit.Ignore;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Tests for ObservableArray.
  */
-@RunWith(Parameterized.class)
 public class ObservableArrayTest  {
     public static final int INITIAL_SIZE = 6;
 
@@ -290,9 +290,11 @@ public class ObservableArrayTest  {
         @Override
         void assertElementsEqual(float[] actual, int from, int to, float[] expected, int expFrom) {
             for(int i = from, j = expFrom; i < to; i++, j++) {
-                assertEquals("expected float = " + expected[j] + ", actual float = " + actual[i],
+                assertEquals(
                         Float.floatToRawIntBits(expected[j]),
-                        Float.floatToRawIntBits(actual[i]));
+                        Float.floatToRawIntBits(actual[i]),
+                        "expected float = " + expected[j] + ", actual float = " + actual[i]
+                );
             }
         }
 
@@ -339,27 +341,22 @@ public class ObservableArrayTest  {
     }
 
     static final List<String> EMPTY = Collections.emptyList();
-    final ArrayWrapper wrapper;
+    ArrayWrapper wrapper;
     private int initialSize;
     private Object initialElements;
     private ObservableArray array;
     private MockArrayObserver mao;
 
-    public ObservableArrayTest(final ArrayWrapper arrayWrapper) {
-        this.wrapper = arrayWrapper;
-    }
-
-    @Parameterized.Parameters
     public static Collection createParameters() {
         Object[][] data = new Object[][] {
-            { new FloatArrayWrapper() },
-            { new IntegerArrayWrapper() },
-         };
+                { new FloatArrayWrapper() },
+                { new IntegerArrayWrapper() },
+        };
         return Arrays.asList(data);
     }
 
-    @Before
-    public void setUp() throws Exception {
+    private void setUp(ArrayWrapper arrayWrapper) throws Exception {
+        this.wrapper = arrayWrapper;
         initialSize = INITIAL_SIZE;
         initialElements = wrapper.createPrimitiveArray(initialSize);
         array = wrapper.createNotEmptyArray(initialElements);
@@ -384,18 +381,27 @@ public class ObservableArrayTest  {
 
     // ========== pre-condition tests ================
 
-    @Test public void testSize() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSize(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         mao.check0();
         assertEquals(INITIAL_SIZE, array.size());
     }
 
-    @Test public void testClear() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testClear(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         array.clear();
         mao.checkOnlySizeChanged(array);
         assertEquals(0, array.size());
     }
 
-    @Test public void testGet() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testGet(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         for (int i = 0; i < array.size(); i++) {
             Object expected = wrapper.get(initialElements, i);
             Object actural = wrapper.get(i);
@@ -404,7 +410,10 @@ public class ObservableArrayTest  {
         assertUnchanged();
     }
 
-    @Test public void testToArray() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testToArray(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         Object expected = initialElements;
         Object actual = wrapper.toArray(null);
         assertEquals(INITIAL_SIZE, wrapper.arrayLength(actual));
@@ -414,7 +423,10 @@ public class ObservableArrayTest  {
 
     // ========== add/remove listener tests ==========
 
-    @Test public void testAddRemoveListener() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddRemoveListener(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         MockArrayObserver mao2 = new MockArrayObserver();
         array.addListener(mao2);
         array.removeListener(mao);
@@ -423,7 +435,10 @@ public class ObservableArrayTest  {
         mao2.check(array, false, 0, 1);
     }
 
-    @Test public void testAddTwoListenersElementChange() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddTwoListenersElementChange(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         MockArrayObserver mao2 = new MockArrayObserver();
         array.addListener(mao2);
         wrapper.set(0, wrapper.getNextValue());
@@ -431,7 +446,10 @@ public class ObservableArrayTest  {
         mao2.check(array, false, 0, 1);
     }
 
-    @Test public void testAddTwoListenersSizeChange() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddTwoListenersSizeChange(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         MockArrayObserver mao2 = new MockArrayObserver();
         array.addListener(mao2);
         array.resize(3);
@@ -439,7 +457,10 @@ public class ObservableArrayTest  {
         mao2.checkOnlySizeChanged(array);
     }
 
-    @Test public void testAddThreeListeners() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddThreeListeners(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         MockArrayObserver mao2 = new MockArrayObserver();
         MockArrayObserver mao3 = new MockArrayObserver();
         array.addListener(mao2);
@@ -450,7 +471,10 @@ public class ObservableArrayTest  {
         mao3.check(array, false, 0, 1);
     }
 
-    @Test public void testAddThreeListenersSizeChange() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddThreeListenersSizeChange(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         MockArrayObserver mao2 = new MockArrayObserver();
         MockArrayObserver mao3 = new MockArrayObserver();
         array.addListener(mao2);
@@ -461,24 +485,47 @@ public class ObservableArrayTest  {
         mao3.checkOnlySizeChanged(array);
     }
 
-    @Test @Ignore
+    @Test @Disabled
     public void testAddListenerTwice() {
         array.addListener(mao); // add it a second time
         wrapper.set(1, wrapper.getNextValue());
         mao.check(array, false, 1, 2);
     }
 
-    @Test public void testRemoveListenerTwice() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRemoveListenerTwice(ArrayWrapper arrayWrapper) throws Exception  {
+        setUp(arrayWrapper);
+        setUp(arrayWrapper);
         array.removeListener(mao);
         array.removeListener(mao);
         wrapper.set(1, wrapper.getNextValue());
         mao.check0();
     }
 
-    @Test (expected = NullPointerException.class)
-    public void testAddNullArrayChangeListener() {
-        try {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testAddNullArrayChangeListener(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(NullPointerException.class, () -> {
             array.addListener((ArrayChangeListener) null);
+        });
+
+        // Finally block is outside assertThrows() to ensure it always executes
+        mao.check0();
+        array.resize(1);
+        mao.check1();
+    }
+
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddNullInvalidationListener(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        setUp(arrayWrapper);
+        try {
+            assertThrows(NullPointerException.class, () -> {
+                array.addListener((ArrayChangeListener) null);
+            });
         } finally {
             mao.check0();
             array.resize(1);
@@ -486,10 +533,14 @@ public class ObservableArrayTest  {
         }
     }
 
-    @Test (expected = NullPointerException.class)
-    public void testAddNullInvalidationListener() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRemoveNullArrayChangeListener(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         try {
-            array.addListener((InvalidationListener) null);
+            assertThrows(NullPointerException.class, () -> {
+                array.addListener((ArrayChangeListener) null);
+            });
         } finally {
             mao.check0();
             array.resize(1);
@@ -497,21 +548,14 @@ public class ObservableArrayTest  {
         }
     }
 
-    @Test (expected = NullPointerException.class)
-    public void testRemoveNullArrayChangeListener() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testRemoveNullInvalidationListener(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         try {
-            array.removeListener((ArrayChangeListener) null);
-        } finally {
-            mao.check0();
-            array.resize(1);
-            mao.check1();
-        }
-    }
-
-    @Test (expected = NullPointerException.class)
-    public void testRemoveNullInvalidationListener() {
-        try {
-            array.removeListener((InvalidationListener) null);
+            assertThrows(NullPointerException.class, () -> {
+                array.addListener((ArrayChangeListener) null);
+            });
         } finally {
             mao.check0();
             array.resize(1);
@@ -537,36 +581,58 @@ public class ObservableArrayTest  {
                 wrapper.createPrimitiveArray(Math.max(0, newSize - matchingElements), false), 0);
     }
 
-    @Test public void testResizeTo0() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testResizeTo0(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testResize(false, 0, 0);
     }
 
-    @Test public void testResizeToSmaller() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testResizeToSmaller(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testResize(false, 3, 3);
     }
 
-    @Test public void testResizeToSameSize() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testResizeToSameSize(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testResize(true, array.size(), array.size());
     }
 
-    @Test public void testResizeToBigger() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testResizeToBigger(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testResize(false, 10, array.size());
     }
 
-    @Test public void testResizeOnEmpty() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testResizeOnEmpty(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         testResize(false, 10, 0);
     }
 
-    @Test public void testResizeOnEmptyToEmpty() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testResizeOnEmptyToEmpty(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         testResize(true, 0, 0);
     }
 
-    @Test (expected = NegativeArraySizeException.class)
-    public void testResizeToNegative() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testResizeToNegative(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         try {
-            array.resize(-5);
+            assertThrows(NegativeArraySizeException.class, () -> {
+                array.resize(-5);
+            });
         } finally {
             assertUnchanged();
         }
@@ -586,34 +652,53 @@ public class ObservableArrayTest  {
         wrapper.assertElementsEqual(actual, 0, wrapper.arrayLength(expected), expected, 0);
     }
 
-    @Test public void testSetAllASmaller() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllASmaller(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetAllA(true, 3);
     }
 
-    @Test public void testSetAllABigger() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllABigger(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetAllA(true, 10);
     }
 
-    @Test public void testSetAllAOnSameSize() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllAOnSameSize(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetAllA(false, INITIAL_SIZE);
     }
 
-    @Test public void testSetAllAOnEmpty() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllAOnEmpty(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         testSetAllA(true, 3);
     }
 
-    @Test public void testSetAllAOnEmptyToEmpty() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllAOnEmptyToEmpty(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         wrapper.setAllA(wrapper.createPrimitiveArray(0));
         assertUnchanged();
         assertEquals(0, array.size());
     }
 
-    @Test (expected = NullPointerException.class)
-    public void testSetAllAToNull() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllAToNull(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         try {
-            wrapper.setAllA(null);
+            assertThrows(NullPointerException.class, () -> {
+                wrapper.setAllA(null);
+            });
         } finally {
             assertUnchanged();
         }
@@ -635,41 +720,62 @@ public class ObservableArrayTest  {
         wrapper.assertElementsEqual(actual, 0, wrapper.arrayLength(expected), expected, 0);
     }
 
-    @Test public void testSetAllTSmaller() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTSmaller(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetAllT(true, 3);
     }
 
-    @Test public void testSetAllTBigger() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTBigger(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetAllT(true, 10);
     }
 
-    @Test public void testSetAllTOnSameSize() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTOnSameSize(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetAllT(false, INITIAL_SIZE);
     }
 
-    @Test public void testSetAllTOnEmpty() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTOnEmpty(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         testSetAllT(true, 3);
     }
 
-    @Test public void testSetAllTOnEmptyToEmpty() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTOnEmptyToEmpty(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         wrapper.setAllT(wrapper.newInstance().createEmptyArray());
         assertUnchanged();
         assertEquals(0, array.size());
     }
 
-    @Test (expected = NullPointerException.class)
-    public void testSetAllTToNull() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTToNull(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         try {
-            wrapper.setAllT(null);
+            assertThrows(NullPointerException.class, () -> {
+                wrapper.setAllA(null);
+            });
         } finally {
             assertUnchanged();
         }
     }
 
-    @Test public void testSetAllTSelf() {
-
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTSelf(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         wrapper.setAllT(array);
 
         mao.check0();
@@ -679,7 +785,10 @@ public class ObservableArrayTest  {
         wrapper.assertElementsEqual(actual, 0, initialSize, initialElements, 0);
     }
 
-    @Test public void testSetAllTSelfEmpty() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTSelfEmpty(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
 
         wrapper.setAllT(array);
@@ -704,95 +813,143 @@ public class ObservableArrayTest  {
         wrapper.assertElementsEqual(actual, 0, length, expected, srcIndex);
     }
 
-    @Test public void testSetAllARange1() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllARange1(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetAllARange(false, INITIAL_SIZE, 0, INITIAL_SIZE);
     }
 
-    @Test public void testSetAllARange2() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllARange2(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetAllARange(false, INITIAL_SIZE + 10, 0, INITIAL_SIZE);
     }
 
-    @Test public void testSetAllARange3() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllARange3(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetAllARange(false, INITIAL_SIZE + 10, 10, INITIAL_SIZE);
     }
 
-    @Test public void testSetAllARange4() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllARange4(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetAllARange(false, INITIAL_SIZE + 10, 2, INITIAL_SIZE);
     }
 
-    @Test public void testSetAllARange5() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllARange5(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetAllARange(true, INITIAL_SIZE, 0, INITIAL_SIZE / 2);
     }
 
-    @Test public void testSetAllARange6() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllARange6(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetAllARange(true, INITIAL_SIZE + 10, 0, INITIAL_SIZE + 10);
     }
 
-    @Test public void testSetAllARange7() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllARange7(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetAllARange(true, INITIAL_SIZE + 20, 10, INITIAL_SIZE + 10);
     }
 
-    @Test public void testSetAllARange8() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllARange8(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetAllARange(true, INITIAL_SIZE + 10, 2, INITIAL_SIZE - 3);
     }
 
-    @Test public void testSetAllARangeOnEmpty() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllARangeOnEmpty(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         testSetAllARange(true, INITIAL_SIZE, 1, 3);
     }
 
-    @Test public void testSetAllARangeOnEmptyToEmpty() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllARangeOnEmptyToEmpty(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         wrapper.setAllA(wrapper.createPrimitiveArray(INITIAL_SIZE), 1, 0);
         assertUnchanged();
     }
 
-    @Test (expected = NullPointerException.class)
-    public void testSetAllARangeToNull() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllARangeToNull(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         try {
-            wrapper.setAllA(null, 0, 0);
+            assertThrows(NullPointerException.class, () -> {
+                wrapper.setAllA(null, 0, 0);
+            });
         } finally {
             assertUnchanged();
         }
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetAllARangeNegative1() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllARangeNegative1(ArrayWrapper arrayWrapper) throws Exception  {
+        setUp(arrayWrapper);
         try {
-            testSetAllARange(true, INITIAL_SIZE, -1, INITIAL_SIZE);
+            assertThrows(ArrayIndexOutOfBoundsException.class, () -> {
+                testSetAllARange(true, INITIAL_SIZE, -1, INITIAL_SIZE);
+            });
         } finally {
             assertUnchanged();
         }
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetAllARangeNegative2() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllARangeNegative2(ArrayWrapper arrayWrapper) throws Exception  {
+        setUp(arrayWrapper);
         try {
-            testSetAllARange(true, INITIAL_SIZE, 0, INITIAL_SIZE + 1);
+            assertThrows(ArrayIndexOutOfBoundsException.class, () -> {
+                testSetAllARange(true, INITIAL_SIZE, 0, INITIAL_SIZE + 1);
+            });
         } finally {
             assertUnchanged();
         }
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetAllARangeNegative3() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllARangeNegative3(ArrayWrapper arrayWrapper) throws Exception  {
+        setUp(arrayWrapper);
         try {
-            testSetAllARange(true, INITIAL_SIZE, 1, -1);
+            assertThrows(ArrayIndexOutOfBoundsException.class, () -> {
+                testSetAllARange(true, INITIAL_SIZE, 1, -1);
+            });
         } finally {
             assertUnchanged();
         }
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetAllARangeNegative4() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllARangeNegative4(ArrayWrapper arrayWrapper) throws Exception  {
+        setUp(arrayWrapper);
         try {
-            testSetAllARange(true, INITIAL_SIZE, INITIAL_SIZE, 1);
+            assertThrows(ArrayIndexOutOfBoundsException.class, () -> {
+                testSetAllARange(true, INITIAL_SIZE, INITIAL_SIZE, 1);
+            });
         } finally {
             assertUnchanged();
         }
     }
-
-    // ========== setAll(observable array, range) tests ==========
 
     private void testSetAllTRange(boolean sizeChanged, int srcSize, int srcIndex, int length) {
         Object expected = wrapper.createPrimitiveArray(srcSize);
@@ -807,117 +964,174 @@ public class ObservableArrayTest  {
         wrapper.assertElementsEqual(actual, 0, length, expected, srcIndex);
     }
 
-    @Test public void testSetAllTRange1() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTRange1(ArrayWrapper arrayWrapper) throws Exception  {
+        setUp(arrayWrapper);
         testSetAllTRange(false, INITIAL_SIZE, 0, INITIAL_SIZE);
     }
 
-    @Test public void testSetAllTRange2() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTRange2(ArrayWrapper arrayWrapper) throws Exception  {
+        setUp(arrayWrapper);
         testSetAllTRange(false, INITIAL_SIZE + 10, 0, INITIAL_SIZE);
     }
 
-    @Test public void testSetAllTRange3() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTRange3(ArrayWrapper arrayWrapper) throws Exception  {
+        setUp(arrayWrapper);
         testSetAllTRange(false, INITIAL_SIZE + 10, 10, INITIAL_SIZE);
     }
 
-    @Test public void testSetAllTRange4() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTRange4(ArrayWrapper arrayWrapper) throws Exception  {
+        setUp(arrayWrapper);
         testSetAllTRange(false, INITIAL_SIZE + 10, 2, INITIAL_SIZE);
     }
 
-    @Test public void testSetAllTRange5() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTRange5(ArrayWrapper arrayWrapper) throws Exception  {
+        setUp(arrayWrapper);
         testSetAllTRange(true, INITIAL_SIZE, 0, INITIAL_SIZE / 2);
     }
 
-    @Test public void testSetAllTRange6() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTRange6(ArrayWrapper arrayWrapper) throws Exception  {
+        setUp(arrayWrapper);
         testSetAllTRange(true, INITIAL_SIZE + 10, 0, INITIAL_SIZE + 10);
     }
 
-    @Test public void testSetAllTRange7() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTRange7(ArrayWrapper arrayWrapper) throws Exception  {
+        setUp(arrayWrapper);
         testSetAllTRange(true, INITIAL_SIZE + 20, 10, INITIAL_SIZE + 10);
     }
 
-    @Test public void testSetAllTRange8() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTRange8(ArrayWrapper arrayWrapper) throws Exception  {
+        setUp(arrayWrapper);
         testSetAllTRange(true, INITIAL_SIZE + 10, 2, INITIAL_SIZE - 3);
     }
 
-    @Test public void testSetAllTRangeOnEmpty() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTRangeOnEmpty(ArrayWrapper arrayWrapper) throws Exception  {
+        setUp(arrayWrapper);
         makeEmpty();
         testSetAllTRange(true, INITIAL_SIZE, 1, 3);
     }
 
-    @Test public void testSetAllTRangeOnEmptyToEmpty() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTRangeOnEmptyToEmpty(ArrayWrapper arrayWrapper) throws Exception  {
+        setUp(arrayWrapper);
         makeEmpty();
         wrapper.setAllT(wrapper.newInstance().createNotEmptyArray(wrapper.createPrimitiveArray(INITIAL_SIZE)), 1, 0);
         assertUnchanged();
     }
 
-    @Test (expected = NullPointerException.class)
-    public void testSetAllTRangeToNull() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTRangeToNull(ArrayWrapper arrayWrapper) throws Exception  {
+        setUp(arrayWrapper);
         try {
-            wrapper.setAllT(null, 0, 0);
+            assertThrows(NullPointerException.class, () -> {
+                wrapper.setAllT(null, 0, 0);
+            });
         } finally {
             assertUnchanged();
         }
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetAllTRangeNegative1() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTRangeNegative1(ArrayWrapper arrayWrapper) throws Exception  {
+        setUp(arrayWrapper);
         try {
-            testSetAllTRange(true, INITIAL_SIZE, -1, INITIAL_SIZE);
+            assertThrows(ArrayIndexOutOfBoundsException.class, () -> {
+                testSetAllTRange(true, INITIAL_SIZE, -1, INITIAL_SIZE);
+            });
         } finally {
             assertUnchanged();
         }
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetAllTRangeNegative2() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTRangeNegative2(ArrayWrapper arrayWrapper) throws Exception  {
+        setUp(arrayWrapper);
         try {
-            testSetAllTRange(true, INITIAL_SIZE, 0, INITIAL_SIZE + 1);
+            assertThrows(ArrayIndexOutOfBoundsException.class, () -> {
+                testSetAllTRange(true, INITIAL_SIZE, 0, INITIAL_SIZE + 1);
+            });
         } finally {
             assertUnchanged();
         }
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetAllTRangeNegative3() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTRangeNegative3(ArrayWrapper arrayWrapper) throws Exception  {
+        setUp(arrayWrapper);
         try {
-            testSetAllTRange(true, INITIAL_SIZE, 1, -1);
+            assertThrows(ArrayIndexOutOfBoundsException.class, () -> {
+                testSetAllTRange(true, INITIAL_SIZE, 1, -1);
+            });
         } finally {
             assertUnchanged();
         }
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetAllTRangeNegative4() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTRangeNegative4(ArrayWrapper arrayWrapper) throws Exception  {
+        setUp(arrayWrapper);
         try {
-            testSetAllTRange(true, INITIAL_SIZE, INITIAL_SIZE, 1);
+            assertThrows(ArrayIndexOutOfBoundsException.class, () -> {
+                testSetAllTRange(true, INITIAL_SIZE, INITIAL_SIZE, 1);
+            });
         } finally {
             assertUnchanged();
         }
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetAllTRangeNegativeAfterSrcEnsureCapacity() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetAllTRangeNegativeAfterSrcEnsureCapacity(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         Object expected = wrapper.createPrimitiveArray(INITIAL_SIZE);
         ObservableArray src = wrapper.newInstance().createNotEmptyArray(expected);
         src.ensureCapacity(INITIAL_SIZE * 2);
-        try {
+
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> {
             wrapper.setAllT(src, INITIAL_SIZE, 1);
-        } finally {
-            assertUnchanged();
-        }
+        });
+
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetAllTRangeNegativeAfterSrcClear() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetAllTRangeNegativeAfterSrcClear(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         Object expected = wrapper.createPrimitiveArray(INITIAL_SIZE);
         ObservableArray src = wrapper.newInstance().createNotEmptyArray(expected);
         src.clear();
-        try {
+
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> {
             wrapper.setAllT(src, 0, 1);
-        } finally {
-            assertUnchanged();
-        }
+        });
+
+        assertUnchanged();
     }
+
 
     private void testSetAllTRangeSelf(boolean sizeChanged, int srcIndex, int length) {
 
@@ -938,81 +1152,103 @@ public class ObservableArrayTest  {
         wrapper.assertElementsEqual(actual, 0, length, initialElements, srcIndex);
     }
 
-    @Test public void testSetAllTRangeSelf() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTRangeSelf(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetAllTRangeSelf(true, 0, INITIAL_SIZE);
     }
 
-    @Test public void testSetAllTRangeSelfBeginning() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTRangeSelfBeginning(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetAllTRangeSelf(true, 0, INITIAL_SIZE / 2);
     }
 
-    @Test public void testSetAllTRangeSelfTrailing() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTRangeSelfTrailing(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetAllTRangeSelf(true, INITIAL_SIZE / 2, INITIAL_SIZE / 2);
     }
 
-    @Test public void testSetAllTRangeSelfMiddle() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTRangeSelfMiddle(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetAllTRangeSelf(true, 3, 2);
     }
 
-    @Test public void testSetAllTRangeSelfEmpty() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetAllTRangeSelfEmpty(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         testSetAllTRangeSelf(false, 0, 0);
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetAllTRangeSelfNegative1() {
-        try {
-            wrapper.setAllT(array, -1, INITIAL_SIZE);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetAllTRangeSelfNegative1(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () ->
+                wrapper.setAllT(array, -1, INITIAL_SIZE)
+        );
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetAllTRangeSelfNegative2() {
-        try {
-            wrapper.setAllT(array, INITIAL_SIZE, 1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetAllTRangeSelfNegative2(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () ->
+                wrapper.setAllT(array, INITIAL_SIZE, 1)
+        );
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetAllTRangeSelfNegative3() {
-        try {
-            wrapper.setAllT(array, 0, -1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetAllTRangeSelfNegative3(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () ->
+                wrapper.setAllT(array, 0, -1)
+        );
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetAllTRangeSelfNegative4() {
-        try {
-            wrapper.setAllT(array, 0, INITIAL_SIZE + 1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetAllTRangeSelfNegative4(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () ->
+                wrapper.setAllT(array, 0, INITIAL_SIZE + 1)
+        );
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetAllTRangeSelfNegativeAfterEnsureCapacity() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetAllTRangeSelfNegativeAfterEnsureCapacity(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         array.ensureCapacity(INITIAL_SIZE * 2);
-        try {
-            wrapper.setAllT(array, INITIAL_SIZE, 1);
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () ->
+                wrapper.setAllT(array, INITIAL_SIZE, 1)
+        );
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetAllTRangeSelfNegativeAfterClear() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetAllTRangeSelfNegativeAfterClear(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
-        try {
-            wrapper.setAllT(array, 0, 1);
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () ->
+                wrapper.setAllT(array, 0, 1)
+        );
+        assertUnchanged();
     }
 
     // ========== addAll(primitive array) tests ==========
@@ -1033,58 +1269,89 @@ public class ObservableArrayTest  {
         wrapper.assertElementsEqual(actual, oldSize, newSize, src, 0);
     }
 
-    @Test public void testAddAllA0() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllA0(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         wrapper.addAllA(wrapper.createPrimitiveArray(0));
         assertUnchanged();
     }
 
-    @Test public void testAddAllA1() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllA1(ArrayWrapper arrayWrapper) throws Exception  {
+        setUp(arrayWrapper);
         testAddAllA(1);
     }
 
-    @Test public void testAddAllA3() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllA3(ArrayWrapper arrayWrapper) throws Exception  {
+        setUp(arrayWrapper);
         testAddAllA(3);
     }
 
-    @Test public void testAddAllABig() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllABig(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testAddAllA(INITIAL_SIZE * 2);
     }
 
-    @Test public void testAddAllASameSize() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllASameSize(ArrayWrapper arrayWrapper) throws Exception  {
+        setUp(arrayWrapper);
         testAddAllA(INITIAL_SIZE);
     }
 
-    @Test public void testAddAllAOnEmpty1() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllAOnEmpty1(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         testAddAllA(1);
     }
 
-    @Test public void testAddAllAOnEmptySameSize() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllAOnEmptySameSize(ArrayWrapper arrayWrapper)  throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         testAddAllA(INITIAL_SIZE);
     }
 
-    @Test public void testAddAllAOnEmptyBig() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllAOnEmptyBig(ArrayWrapper arrayWrapper)  throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         testAddAllA(INITIAL_SIZE * 3);
     }
 
-    @Test public void testAddAllAOnEmpty0() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllAOnEmpty0(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         wrapper.addAllA(wrapper.createPrimitiveArray(0));
         assertUnchanged();
     }
 
-    @Test (expected = NullPointerException.class)
-    public void testAddAllANull() {
-        try {
-            wrapper.addAllA(null);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testAddAllANull(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(NullPointerException.class, () ->
+                wrapper.addAllA(null)
+        );
+        assertUnchanged();
     }
 
-    @Test public void testAddAllAManyPoints() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllAManyPoints(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         for (int i = 0; i < 65_000; i++) {
             wrapper.addAllA(wrapper.createPrimitiveArray(3));
         }
@@ -1108,58 +1375,89 @@ public class ObservableArrayTest  {
         wrapper.assertElementsEqual(actual, oldSize, newSize, src, 0);
     }
 
-    @Test public void testAddAllT0() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllT0(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         wrapper.addAllT(wrapper.newInstance().createEmptyArray());
         assertUnchanged();
     }
 
-    @Test public void testAddAllT1() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllT1(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testAddAllT(1);
     }
 
-    @Test public void testAddAllT3() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllT3(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testAddAllT(3);
     }
 
-    @Test public void testAddAllTBig() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllTBig(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testAddAllT(INITIAL_SIZE * 2);
     }
 
-    @Test public void testAddAllTSameSize() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllTSameSize(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testAddAllT(INITIAL_SIZE);
     }
 
-    @Test public void testAddAllTOnEmpty1() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllTOnEmpty1(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         testAddAllT(1);
     }
 
-    @Test public void testAddAllTOnEmptySameSize() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllTOnEmptySameSize(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         testAddAllT(INITIAL_SIZE);
     }
 
-    @Test public void testAddAllTOnEmptyBig() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllTOnEmptyBig(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         testAddAllT(INITIAL_SIZE * 3);
     }
 
-    @Test public void testAddAllTOnEmpty0() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllTOnEmpty0(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         wrapper.addAllT(wrapper.newInstance().createEmptyArray());
         assertUnchanged();
     }
 
-    @Test (expected = NullPointerException.class)
-    public void testAddAllTNull() {
-        try {
-            wrapper.addAllT(null);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testAddAllTNull(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(NullPointerException.class, () ->
+                wrapper.addAllT(null)
+        );
+        assertUnchanged();
     }
 
-    @Test public void testAddAllTSelf() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllTSelf(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         wrapper.addAllT(array);
 
         mao.check(array, true, initialSize, initialSize * 2);
@@ -1169,7 +1467,10 @@ public class ObservableArrayTest  {
         wrapper.assertElementsEqual(actual, initialSize, initialSize * 2, initialElements, 0);
     }
 
-    @Test public void testAddAllTSelfEmpty() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllTSelfEmpty(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
 
         wrapper.addAllT(array);
@@ -1180,7 +1481,10 @@ public class ObservableArrayTest  {
         assertEquals(0, wrapper.arrayLength(actual));
     }
 
-    @Test public void testAddAllTManyPoints() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllTManyPoints(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         for (int i = 0; i < 65_000; i++) {
             wrapper.addAllT(wrapper.createNotEmptyArray(wrapper.createPrimitiveArray(3)));
         }
@@ -1205,97 +1509,135 @@ public class ObservableArrayTest  {
         wrapper.assertElementsEqual(actual, oldSize, newSize, src, srcIndex);
     }
 
-    @Test public void testAddAllARange1() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllARange1(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testAddAllARange(INITIAL_SIZE, 0, INITIAL_SIZE);
     }
 
-    @Test public void testAddAllARange2() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllARange2(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testAddAllARange(INITIAL_SIZE + 10, 0, INITIAL_SIZE);
     }
 
-    @Test public void testAddAllARange3() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllARange3(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testAddAllARange(INITIAL_SIZE + 10, 10, INITIAL_SIZE);
     }
 
-    @Test public void testAddAllARange4() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllARange4(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testAddAllARange(INITIAL_SIZE + 10, 2, INITIAL_SIZE);
     }
 
-    @Test public void testAddAllARange5() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllARange5(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testAddAllARange(INITIAL_SIZE, 0, INITIAL_SIZE / 2);
     }
 
-    @Test public void testAddAllARange6() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllARange6(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testAddAllARange(INITIAL_SIZE + 10, 0, INITIAL_SIZE + 10);
     }
 
-    @Test public void testAddAllARange7() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllARange7(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testAddAllARange(INITIAL_SIZE + 20, 10, INITIAL_SIZE + 10);
     }
 
-    @Test public void testAddAllARange8() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllARange8(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testAddAllARange(INITIAL_SIZE + 10, 2, INITIAL_SIZE - 3);
     }
 
-    @Test public void testAddAllARangeOnEmpty1() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllARangeOnEmpty1(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         testAddAllARange(INITIAL_SIZE, 1, 3);
     }
 
-    @Test public void testAddAllARangeOnEmpty2() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllARangeOnEmpty2(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         testAddAllARange(INITIAL_SIZE * 3, INITIAL_SIZE, INITIAL_SIZE * 2);
     }
 
-    @Test public void testAddAllARangeOnEmpty3() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllARangeOnEmpty3(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         wrapper.addAllA(wrapper.createPrimitiveArray(INITIAL_SIZE), 1, 0);
         assertUnchanged();
     }
 
-    @Test (expected = NullPointerException.class)
-    public void testAddAllARangeNull() {
-        try {
-            wrapper.addAllA(null, 0, 0);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testAddAllARangeNull(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(NullPointerException.class, () ->
+                wrapper.addAllA(null, 0, 0)
+        );
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testAddAllARangeNegative1() {
-        try {
-            testAddAllARange(INITIAL_SIZE, -1, INITIAL_SIZE);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testAddAllARangeNegative1(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () ->
+                testAddAllARange(INITIAL_SIZE, -1, INITIAL_SIZE)
+        );
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testAddAllARangeNegative2() {
-        try {
-            testAddAllARange(INITIAL_SIZE, 0, INITIAL_SIZE + 1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testAddAllARangeNegative2(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () ->
+                testAddAllARange(INITIAL_SIZE, 0, INITIAL_SIZE + 1)
+        );
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testAddAllARangeNegative3() {
-        try {
-            testAddAllARange(INITIAL_SIZE, 1, -1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testAddAllARangeNegative3(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () ->
+                testAddAllARange(INITIAL_SIZE, 1, -1)
+        );
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testAddAllARangeNegative4() {
-        try {
-            testAddAllARange(INITIAL_SIZE, INITIAL_SIZE, 1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testAddAllARangeNegative4(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () ->
+                testAddAllARange(INITIAL_SIZE, INITIAL_SIZE, 1)
+        );
+        assertUnchanged();
     }
 
     // ========== addAll(observable array, range) tests ==========
@@ -1317,121 +1659,149 @@ public class ObservableArrayTest  {
         wrapper.assertElementsEqual(actual, oldSize, newSize, src, srcIndex);
     }
 
-    @Test public void testAddAllTRange1() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllTRange1(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testAddAllTRange(INITIAL_SIZE, 0, INITIAL_SIZE);
     }
 
-    @Test public void testAddAllTRange2() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllTRange2(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testAddAllTRange(INITIAL_SIZE + 10, 0, INITIAL_SIZE);
     }
 
-    @Test public void testAddAllTRange3() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllTRange3(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testAddAllTRange(INITIAL_SIZE + 10, 10, INITIAL_SIZE);
     }
 
-    @Test public void testAddAllTRange4() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllTRange4(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testAddAllTRange(INITIAL_SIZE + 10, 2, INITIAL_SIZE);
     }
 
-    @Test public void testAddAllTRange5() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllTRange5(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testAddAllTRange(INITIAL_SIZE, 0, INITIAL_SIZE / 2);
     }
 
-    @Test public void testAddAllTRange6() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllTRange6(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testAddAllTRange(INITIAL_SIZE + 10, 0, INITIAL_SIZE + 10);
     }
 
-    @Test public void testAddAllTRange7() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllTRange7(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testAddAllTRange(INITIAL_SIZE + 20, 10, INITIAL_SIZE + 10);
     }
 
-    @Test public void testAddAllTRange8() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllTRange8(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testAddAllTRange(INITIAL_SIZE + 10, 2, INITIAL_SIZE - 3);
     }
 
-    @Test public void testAddAllTRangeOnEmpty1() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllTRangeOnEmpty1(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         testAddAllTRange(INITIAL_SIZE, 1, 3);
     }
 
-    @Test public void testAddAllTRangeOnEmpty2() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllTRangeOnEmpty2(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         testAddAllTRange(INITIAL_SIZE * 3, INITIAL_SIZE, INITIAL_SIZE * 2);
     }
 
-    @Test public void testAddAllTRangeOnEmpty3() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllTRangeOnEmpty3(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         wrapper.addAllT(wrapper.newInstance().createNotEmptyArray(wrapper.createPrimitiveArray(INITIAL_SIZE)), 1, 0);
         assertUnchanged();
     }
 
-    @Test (expected = NullPointerException.class)
-    public void testAddAllTRangeNull() {
-        try {
-            wrapper.addAllT(null, 0, 0);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testAddAllTRangeNull(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(NullPointerException.class, () -> wrapper.addAllT(null, 0, 0));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testAddAllTRangeNegative1() {
-        try {
-            testAddAllTRange(INITIAL_SIZE, -1, INITIAL_SIZE);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testAddAllTRangeNegative1(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testAddAllTRange(INITIAL_SIZE, -1, INITIAL_SIZE));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testAddAllTRangeNegative2() {
-        try {
-            testAddAllTRange(INITIAL_SIZE, 0, INITIAL_SIZE + 1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testAddAllTRangeNegative2(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testAddAllTRange(INITIAL_SIZE, 0, INITIAL_SIZE + 1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testAddAllTRangeNegative3() {
-        try {
-            testAddAllTRange(INITIAL_SIZE, 1, -1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testAddAllTRangeNegative3(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testAddAllTRange(INITIAL_SIZE, 1, -1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testAddAllTRangeNegative4() {
-        try {
-            testAddAllTRange(INITIAL_SIZE, INITIAL_SIZE, 1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testAddAllTRangeNegative4(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testAddAllTRange(INITIAL_SIZE, INITIAL_SIZE, 1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testAddAllTRangeNegativeAfterSrcEnsureCapacity() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testAddAllTRangeNegativeAfterSrcEnsureCapacity(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         Object srcA = wrapper.createPrimitiveArray(INITIAL_SIZE);
         ObservableArray src = wrapper.newInstance().createNotEmptyArray(srcA);
         src.ensureCapacity(INITIAL_SIZE * 2);
-        try {
-            wrapper.addAllT(src, INITIAL_SIZE, 1);
-        } finally {
-            assertUnchanged();
-        }
+
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> wrapper.addAllT(src, INITIAL_SIZE, 1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testAddAllTRangeNegativeAfterSrcClear() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testAddAllTRangeNegativeAfterSrcClear(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         Object srcA = wrapper.createPrimitiveArray(INITIAL_SIZE);
         ObservableArray src = wrapper.newInstance().createNotEmptyArray(srcA);
         src.clear();
-        try {
-            wrapper.addAllT(src, 0, 1);
-        } finally {
-            assertUnchanged();
-        }
+
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> wrapper.addAllT(src, 0, 1));
+        assertUnchanged();
     }
 
     private void testAddAllTRangeSelf(int srcIndex, int length) {
@@ -1446,76 +1816,82 @@ public class ObservableArrayTest  {
         wrapper.assertElementsEqual(actual, initialSize, expSize, initialElements, srcIndex);
     }
 
-    @Test public void testAddAllTRangeSelf() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllTRangeSelf(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testAddAllTRangeSelf(0, INITIAL_SIZE);
     }
 
-    @Test public void testAddAllTRangeSelfBeginning() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllTRangeSelfBeginning(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testAddAllTRangeSelf(0, INITIAL_SIZE / 2);
     }
 
-    @Test public void testAddAllTRangeSelfTrailing() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllTRangeSelfTrailing(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testAddAllTRangeSelf(INITIAL_SIZE / 2, INITIAL_SIZE / 2);
     }
 
-    @Test public void testAddAllTRangeSelfMiddle() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testAddAllTRangeSelfMiddle(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testAddAllTRangeSelf(2, 2);
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testAddAllTRangeSelfNegative1() {
-        try {
-            testAddAllTRangeSelf(-1, INITIAL_SIZE);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testAddAllTRangeSelfNegative1(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testAddAllTRangeSelf(-1, INITIAL_SIZE));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testAddAllTRangeSelfNegative2() {
-        try {
-            testAddAllTRangeSelf(0, INITIAL_SIZE + 1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testAddAllTRangeSelfNegative2(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testAddAllTRangeSelf(0, INITIAL_SIZE + 1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testAddAllTRangeSelfNegative3() {
-        try {
-            testAddAllTRangeSelf(1, -1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testAddAllTRangeSelfNegative3(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testAddAllTRangeSelf(1, -1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testAddAllTRangeSelfNegative4() {
-        try {
-            testAddAllTRangeSelf(INITIAL_SIZE, 1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testAddAllTRangeSelfNegative4(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testAddAllTRangeSelf(INITIAL_SIZE, 1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testAddAllTRangeSelfNegativeAfterEnsureCapacity() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testAddAllTRangeSelfNegativeAfterEnsureCapacity(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         array.ensureCapacity(INITIAL_SIZE * 2);
-        try {
-            wrapper.addAllT(array, INITIAL_SIZE, 1);
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> wrapper.addAllT(array, INITIAL_SIZE, 1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testAddAllTRangeSelfNegativeAfterClear() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testAddAllTRangeSelfNegativeAfterClear(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
-        try {
-            wrapper.addAllT(array, 0, 1);
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> wrapper.addAllT(array, 0, 1));
+        assertUnchanged();
     }
 
     // ========== set(primitive array, range) tests ==========
@@ -1534,107 +1910,113 @@ public class ObservableArrayTest  {
         wrapper.assertElementsEqual(actual, destIndex + length, INITIAL_SIZE, initialElements, destIndex + length);
     }
 
-    @Test public void testSetARange1() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetARange1(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetARange(5, 0, 0, 5);
     }
 
-    @Test public void testSetARange2() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetARange2(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetARange(3, 2, 0, 3);
     }
 
-    @Test public void testSetARange3() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetARange3(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetARange(5, 0, 2, 3);
     }
 
-    @Test public void testSetARange4() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetARange4(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetARange(5, 0, 0, 3);
     }
 
-    @Test public void testSetARange5() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetARange5(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetARange(10, 3, 5, 3);
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetARangeNegative1() {
-        try {
-            testSetARange(10, -1, 0, 3);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetARangeNegative1(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testSetARange(10, -1, 0, 3));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetARangeNegative2() {
-        try {
-            testSetARange(10, 0, -1, 3);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetARangeNegative2(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testSetARange(10, 0, -1, 3));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetARangeNegative3() {
-        try {
-            testSetARange(10, 1, 1, -1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetARangeNegative3(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testSetARange(10, 1, 1, -1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetARangeNegative4() {
-        try {
-            testSetARange(10, INITIAL_SIZE, 0, 3);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetARangeNegative4(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testSetARange(10, INITIAL_SIZE, 0, 3));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetARangeNegative5() {
-        try {
-            testSetARange(10, 0, 10, 1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetARangeNegative5(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testSetARange(10, 0, 10, 1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetARangeNegative6() {
-        try {
-            testSetARange(3, 0, 1, 4);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetARangeNegative6(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testSetARange(3, 0, 1, 4));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetARangeNegative7() {
-        try {
-            testSetARange(10, INITIAL_SIZE - 3, 0, 4);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetARangeNegative7(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testSetARange(10, INITIAL_SIZE - 3, 0, 4));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetARangeNegativeAfterEnsureCapacity() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetARangeNegativeAfterEnsureCapacity(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         array.ensureCapacity(INITIAL_SIZE * 2);
-        try {
-            testSetARange(1, INITIAL_SIZE, 0, 1);
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testSetARange(1, INITIAL_SIZE, 0, 1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetARangeNegativeAfterClear() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetARangeNegativeAfterClear(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
-        try {
-            testSetARange(1, 0, 0, 1);
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testSetARange(1, 0, 0, 1));
+        assertUnchanged();
     }
 
     // ========== set(ObservableArray, range) tests ==========
@@ -1654,133 +2036,137 @@ public class ObservableArrayTest  {
         wrapper.assertElementsEqual(actual, destIndex + length, initialSize, initialElements, destIndex + length);
     }
 
-    @Test public void testSetTRange1() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetTRange1(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetTRange(5, 0, 0, 5);
     }
 
-    @Test public void testSetTRange2() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetTRange2(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetTRange(3, 2, 0, 3);
     }
 
-    @Test public void testSetTRange3() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetTRange3(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetTRange(5, 0, 2, 3);
     }
 
-    @Test public void testSetTRange4() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetTRange4(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetTRange(5, 0, 0, 3);
     }
 
-    @Test public void testSetTRange5() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetTRange5(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetTRange(10, 3, 5, 3);
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetTRangeNegative1() {
-        try {
-            testSetTRange(10, -1, 0, 3);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetTRangeNegative1(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testSetTRange(10, -1, 0, 3));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetTRangeNegative2() {
-        try {
-            testSetTRange(10, 0, -1, 3);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetTRangeNegative2(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testSetTRange(10, 0, -1, 3));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetTRangeNegative3() {
-        try {
-            testSetTRange(10, 1, 1, -1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetTRangeNegative3(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testSetTRange(10, 1, 1, -1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetTRangeNegative4() {
-        try {
-            testSetTRange(10, INITIAL_SIZE, 0, 3);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetTRangeNegative4(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testSetTRange(10, INITIAL_SIZE, 0, 3));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetTRangeNegative5() {
-        try {
-            testSetTRange(10, 0, 10, 1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetTRangeNegative5(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testSetTRange(10, 0, 10, 1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetTRangeNegative6() {
-        try {
-            testSetTRange(3, 0, 1, 4);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetTRangeNegative6(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testSetTRange(3, 0, 1, 4));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetTRangeNegative7() {
-        try {
-            testSetTRange(10, INITIAL_SIZE - 3, 0, 4);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetTRangeNegative7(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testSetTRange(10, INITIAL_SIZE - 3, 0, 4));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetTRangeNegativeAfterEnsureCapacity() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetTRangeNegativeAfterEnsureCapacity(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         array.ensureCapacity(INITIAL_SIZE * 2);
-        try {
-            testSetTRange(1, INITIAL_SIZE, 0, 1);
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testSetTRange(1, INITIAL_SIZE, 0, 1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetTRangeNegativeAfterClear() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetTRangeNegativeAfterClear(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
-        try {
-            testSetTRange(1, 0, 0, 1);
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testSetTRange(1, 0, 0, 1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetTRangeNegativeAfterSrcEnsureCapacity() {
-        try {
-            Object srcA = wrapper.createPrimitiveArray(1);
-            ObservableArray src = wrapper.newInstance().createNotEmptyArray(srcA);
-            src.ensureCapacity(2);
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetTRangeNegativeAfterSrcEnsureCapacity(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        Object srcA = wrapper.createPrimitiveArray(1);
+        ObservableArray src = wrapper.newInstance().createNotEmptyArray(srcA);
+        src.ensureCapacity(2);
 
-            wrapper.setT(0, src, 1, 1);
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> wrapper.setT(0, src, 1, 1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetTRangeNegativeAfterSrcClear() {
-        try {
-            Object srcA = wrapper.createPrimitiveArray(1);
-            ObservableArray src = wrapper.newInstance().createNotEmptyArray(srcA);
-            src.clear();
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetTRangeNegativeAfterSrcClear(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        Object srcA = wrapper.createPrimitiveArray(1);
+        ObservableArray src = wrapper.newInstance().createNotEmptyArray(srcA);
+        src.clear();
 
-            wrapper.setT(0, src, 0, 1);
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> wrapper.setT(0, src, 0, 1));
+        assertUnchanged();
     }
 
     private void testSetTRangeSelf(int destIndex, int srcIndex, int length) {
@@ -1796,145 +2182,146 @@ public class ObservableArrayTest  {
         wrapper.assertElementsEqual(actual, destIndex + length, initialSize, initialElements, destIndex + length);
     }
 
-    @Test public void testSetTRangeSelf() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetTRangeSelf(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetTRangeSelf(0, 0, INITIAL_SIZE);
     }
 
-    @Test public void testSetTRangeSelfLeft() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetTRangeSelfLeft(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetTRangeSelf(0, 1, INITIAL_SIZE - 1);
     }
 
-    @Test public void testSetTRangeSelfRight() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetTRangeSelfRight(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetTRangeSelf(1, 0, INITIAL_SIZE - 1);
     }
 
-    @Test public void testSetTRangeSelfRightDifferentParts() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetTRangeSelfRightDifferentParts(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetTRangeSelf(0, INITIAL_SIZE / 2, INITIAL_SIZE / 2);
     }
 
-    @Test public void testSetTRangeSelfLeftDifferentParts() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetTRangeSelfLeftDifferentParts(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testSetTRangeSelf(INITIAL_SIZE / 2, 0, INITIAL_SIZE / 2);
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetTRangeSelfNegative1() {
-        try {
-            wrapper.setT(-1, array, 0, INITIAL_SIZE);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetTRangeSelfNegative1(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> wrapper.setT(-1, array, 0, INITIAL_SIZE));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetTRangeSelfNegative2() {
-        try {
-            wrapper.setT(0, array, -1, INITIAL_SIZE);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetTRangeSelfNegative2(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> wrapper.setT(0, array, -1, INITIAL_SIZE));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetTRangeSelfNegative3() {
-        try {
-            wrapper.setT(0, array, 0, INITIAL_SIZE + 1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetTRangeSelfNegative3(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> wrapper.setT(0, array, 0, INITIAL_SIZE + 1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetTRangeSelfNegative4() {
-        try {
-            wrapper.setT(0, array, 1, -1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetTRangeSelfNegative4(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> wrapper.setT(0, array, 1, -1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetTRangeSelfNegative5() {
-        try {
-            wrapper.setT(INITIAL_SIZE, array, 0, 1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetTRangeSelfNegative5(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> wrapper.setT(INITIAL_SIZE, array, 0, 1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetTRangeSelfNegative6() {
-        try {
-            wrapper.setT(0, array, INITIAL_SIZE, 1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetTRangeSelfNegative6(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> wrapper.setT(0, array, INITIAL_SIZE, 1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetTRangeSelfNegativeAfterEnsureCapacity() {
-        try {
-            array.ensureCapacity(INITIAL_SIZE * 2);
-
-            wrapper.setT(0, array, INITIAL_SIZE, 1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetTRangeSelfNegativeAfterEnsureCapacity(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        array.ensureCapacity(INITIAL_SIZE * 2);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> wrapper.setT(0, array, INITIAL_SIZE, 1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetTRangeSelfNegativeAfterClear() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetTRangeSelfNegativeAfterClear(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
-        try {
-            wrapper.setT(0, array, 0, 1);
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> wrapper.setT(0, array, 0, 1));
+        assertUnchanged();
     }
 
 
-    // ========== negative get(index) tests ==========
-
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testGetNegative() {
-        try {
-            wrapper.get(-1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testGetNegative(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> wrapper.get(-1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testGetOutOfBounds() {
-        try {
-            wrapper.get(array.size());
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testGetOutOfBounds(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> wrapper.get(array.size()));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testGetAfterEnsureCapacity() {
-        try {
-            array.ensureCapacity(INITIAL_SIZE * 2);
-            wrapper.get(INITIAL_SIZE);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testGetAfterEnsureCapacity(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        array.ensureCapacity(INITIAL_SIZE * 2);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> wrapper.get(INITIAL_SIZE));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testGetAfterClear() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testGetAfterClear(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
-        try {
-            wrapper.get(0);
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> wrapper.get(0));
+        assertUnchanged();
     }
 
-    // ================== set(index) tests ===============
-
-    @Test public void testSetValue() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSetValue(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         for (int i = 0; i < INITIAL_SIZE; i++) {
             Object expected = wrapper.getNextValue();
 
@@ -1947,42 +2334,38 @@ public class ObservableArrayTest  {
         }
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetValueNegative() {
-        try {
-            wrapper.set(-1, wrapper.getNextValue());
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetValueNegative(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> wrapper.set(-1, wrapper.getNextValue()));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetValueOutOfBounds() {
-        try {
-            wrapper.set(INITIAL_SIZE, wrapper.getNextValue());
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetValueOutOfBounds(ArrayWrapper arrayWrapper) throws Exception  {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> wrapper.set(INITIAL_SIZE, wrapper.getNextValue()));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetValueNegativeAfterClear() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetValueNegativeAfterClear(ArrayWrapper arrayWrapper) throws Exception  {
+        setUp(arrayWrapper);
         makeEmpty();
-        try {
-            wrapper.set(0, wrapper.getNextValue());
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> wrapper.set(0, wrapper.getNextValue()));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testSetValueNegativeAfterEnsureCapacity() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testSetValueNegativeAfterEnsureCapacity(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         array.ensureCapacity(INITIAL_SIZE * 2);
-        try {
-            wrapper.set(INITIAL_SIZE, wrapper.getNextValue());
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> wrapper.set(INITIAL_SIZE, wrapper.getNextValue()));
+        assertUnchanged();
     }
 
     // ================= toArray(array) tests ======================
@@ -2000,24 +2383,39 @@ public class ObservableArrayTest  {
         wrapper.assertElementsEqual(actual, 0, array.size(), wrapper.toArray(null), 0);
     }
 
-    @Test public void testToArraySameSize() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testToArraySameSize(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testToArray(array.size(), true);
     }
 
-    @Test public void testToArraySmaller() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testToArraySmaller(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testToArray(3, false);
     }
 
-    @Test public void testToArrayBigger() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testToArrayBigger(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testToArray(10, true);
     }
 
-    @Test public void testToArrayEmpty() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testToArrayEmpty(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         testToArray(10, true);
     }
 
-    @Test public void testToArrayEmptyToEmpty() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testToArrayEmptyToEmpty(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         testToArray(0, true);
     }
@@ -2034,102 +2432,126 @@ public class ObservableArrayTest  {
         wrapper.assertElementsEqual(actual, length, wrapper.arrayLength(actual), initial, length);
     }
 
-    @Test public void testToArrayRange0() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testToArrayRange0(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testToArrayRange(0, array.size(), array.size());
     }
 
-    @Test public void testToArrayRange1() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testToArrayRange1(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testToArrayRange(3, array.size(), array.size() - 3);
     }
 
-    @Test public void testToArrayRange2() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testToArrayRange2(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testToArrayRange(0, array.size(), array.size() - 3);
     }
 
-    @Test public void testToArrayRange3() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testToArrayRange3(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testToArrayRange(2, array.size(), 2);
     }
 
-    @Test public void testToArrayRange4() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testToArrayRange4(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testToArrayRange(2, 0, 0);
     }
 
-    @Test public void testToArrayRange5() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testToArrayRange5(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         testToArrayRange(0, 0, 0);
     }
 
-    @Test public void testToArrayRange6() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testToArrayRange6(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testToArrayRange(3, 2, 2);
     }
 
-    @Test public void testToArrayRange7() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testToArrayRange7(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testToArrayRange(5, 1, 1);
     }
 
-    @Test public void testToArrayRange8() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testToArrayRange8(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testToArrayRange(0, array.size() * 2, array.size());
     }
 
-    @Test public void testToArrayRange9() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testToArrayRange9(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testToArrayRange(0, array.size() - 1, array.size());
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testToArrayRangeNegative1() {
-        try {
-            testToArrayRange(-1, array.size(), 2);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testToArrayRangeNegative1(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testToArrayRange(-1, array.size(), 2));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testToArrayRangeNegative2() {
-        try {
-            testToArrayRange(array.size(), array.size(), 2);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testToArrayRangeNegative2(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testToArrayRange(array.size(), array.size(), 2));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testToArrayRangeNegative3() {
-        try {
-            testToArrayRange(5, array.size(), array.size() + 1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testToArrayRangeNegative3(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testToArrayRange(5, array.size(), array.size() + 1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testToArrayRangeNegative5() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testToArrayRangeNegative5(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
-        try {
-            testToArrayRange(2, 0, 0);
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testToArrayRange(2, 0, 0));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testToArrayRangeNegativeAfterEnsureCapacity() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testToArrayRangeNegativeAfterEnsureCapacity(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         array.ensureCapacity(INITIAL_SIZE * 2);
-        try {
-            testToArrayRange(INITIAL_SIZE, 1, 1);
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testToArrayRange(INITIAL_SIZE, 1, 1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testToArrayRangeNegativeAfterClear() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testToArrayRangeNegativeAfterClear(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
-        try {
-            testToArrayRange(0, 1, 1);
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testToArrayRange(0, 1, 1));
+        assertUnchanged();
     }
 
     // ============ copyTo(primitive array) tests =========================
@@ -2145,140 +2567,158 @@ public class ObservableArrayTest  {
         wrapper.assertElementsEqual(actual, destIndex + length, wrapper.arrayLength(actual), initial, destIndex + length);
     }
 
-    @Test public void testCopyToA0() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCopyToA0(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testCopyToA(0, array.size(), 0, array.size());
     }
 
-    @Test public void testCopyToA1() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCopyToA1(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testCopyToA(1, array.size(), 2, 3);
     }
 
-    @Test public void testCopyToA2() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCopyToA2(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testCopyToA(2, array.size(), 2, 2);
     }
 
-    @Test public void testCopyToA3() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCopyToA3(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testCopyToA(0, array.size(), 2, 2);
     }
 
-    @Test public void testCopyToA4() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCopyToA4(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testCopyToA(0, 3, 1, 2);
     }
 
-    @Test public void testCopyToA5() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCopyToA5(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testCopyToA(0, array.size() * 3, array.size() * 2, array.size());
     }
 
-    @Test public void testCopyToA6() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCopyToA6(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testCopyToA(3, array.size(), 0, array.size() - 3);
     }
 
-    @Test public void testCopyToA7() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCopyToA7(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testCopyToA(0, 10, 7, 3);
     }
 
-    @Test public void testCopyToA8() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCopyToA8(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testCopyToA(1, 0, 0, 0);
     }
 
-    @Test public void testCopyToA9() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCopyToA9(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         testCopyToA(0, 0, 0, 0);
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToANegative1() {
-        try {
-            testCopyToA(-1, array.size(), 0, array.size());
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToANegative1(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToA(-1, array.size(), 0, array.size()));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToANegative2() {
-        try {
-            testCopyToA(0, array.size() / 2, 0, array.size());
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToANegative2(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToA(0, array.size() / 2, 0, array.size()));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToANegative3() {
-        try {
-            testCopyToA(array.size(), array.size(), 0, array.size());
-        } finally {
-            assertUnchanged();
-        }
-
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToANegative3(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToA(array.size(), array.size(), 0, array.size()));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToANegative4() {
-        try {
-            testCopyToA(0, array.size(), -1, array.size());
-        } finally {
-            assertUnchanged();
-        }
-
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToANegative4(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToA(0, array.size(), -1, array.size()));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToANegative5() {
-        try {
-            testCopyToA(0, array.size(), array.size(), array.size());
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToANegative5(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToA(0, array.size(), array.size(), array.size()));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToANegative6() {
-        try {
-            testCopyToA(0, array.size(), 0, array.size() * 2);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToANegative6(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToA(0, array.size(), 0, array.size() * 2));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToANegative7() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToANegative7(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
-        try {
-            testCopyToA(1, 0, 0, 0);
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToA(1, 0, 0, 0));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToANegative8() {
-        try {
-            testCopyToA(0, 0, 1, 0);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToANegative8(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToA(0, 0, 1, 0));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToANegativeAfterEnsureCapacity() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToANegativeAfterEnsureCapacity(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         array.ensureCapacity(INITIAL_SIZE * 2);
-        try {
-            testCopyToA(INITIAL_SIZE, 1, 0, 1);
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToA(INITIAL_SIZE, 1, 0, 1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToANegativeAfterClear() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToANegativeAfterClear(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
-        try {
-            testCopyToA(0, 1, 0, 1);
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToA(0, 1, 0, 1));
+        assertUnchanged();
     }
 
     // ============ copyTo(ObservableArray) tests =========================
@@ -2298,168 +2738,184 @@ public class ObservableArrayTest  {
         wrapper.assertElementsEqual(actual, destIndex + length, wrapper.arrayLength(actual), initial, destIndex + length);
     }
 
-    @Test public void testCopyToT0() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCopyToT0(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testCopyToT(0, array.size(), 0, array.size());
     }
 
-    @Test public void testCopyToT1() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCopyToT1(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testCopyToT(1, array.size(), 2, 3);
     }
 
-    @Test public void testCopyToT2() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCopyToT2(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testCopyToT(2, array.size(), 2, 2);
     }
 
-    @Test public void testCopyToT3() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCopyToT3(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testCopyToT(0, array.size(), 2, 2);
     }
 
-    @Test public void testCopyToT4() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCopyToT4(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testCopyToT(0, 3, 1, 2);
     }
 
-    @Test public void testCopyToT5() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCopyToT5(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testCopyToT(0, array.size() * 3, array.size() * 2, array.size());
     }
 
-    @Test public void testCopyToT6() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCopyToT6(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testCopyToT(3, array.size(), 0, array.size() - 3);
     }
 
-    @Test public void testCopyToT7() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCopyToT7(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testCopyToT(0, 10, 7, 3);
     }
 
-    @Test public void testCopyToT8() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCopyToT8(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testCopyToT(1, 0, 0, 0);
     }
 
-    @Test public void testCopyToT9() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCopyToT9(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         testCopyToT(0, 0, 0, 0);
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToTNegative1() {
-        try {
-            testCopyToT(-1, array.size(), 0, array.size());
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToTNegative1(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToT(-1, array.size(), 0, array.size()));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToTNegative2() {
-        try {
-            testCopyToT(0, array.size() / 2, 0, array.size());
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToTNegative2(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToT(0, array.size() / 2, 0, array.size()));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToTNegative3() {
-        try {
-            testCopyToT(array.size(), array.size(), 0, array.size());
-        } finally {
-            assertUnchanged();
-        }
-
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToTNegative3(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToT(array.size(), array.size(), 0, array.size()));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToTNegative4() {
-        try {
-            testCopyToT(0, array.size(), -1, array.size());
-        } finally {
-            assertUnchanged();
-        }
-
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToTNegative4(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToT(0, array.size(), -1, array.size()));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToTNegative5() {
-        try {
-            testCopyToT(0, array.size(), array.size(), array.size());
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToTNegative5(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToT(0, array.size(), array.size(), array.size()));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToTNegative6() {
-        try {
-            testCopyToT(0, array.size(), 0, array.size() * 2);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToTNegative6(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToT(0, array.size(), 0, array.size() * 2));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToTNegative7() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToTNegative7(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
-        try {
-            testCopyToT(1, 0, 0, 0);
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToT(1, 0, 0, 0));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToTNegative8() {
-        try {
-            testCopyToT(0, 0, 1, 0);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToTNegative8(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToT(0, 0, 1, 0));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToTNegativeAfterEnsureCapacity() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToTNegativeAfterEnsureCapacity(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         array.ensureCapacity(INITIAL_SIZE * 2);
-        try {
-            testCopyToT(INITIAL_SIZE, 1, 0, 1);
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToT(INITIAL_SIZE, 1, 0, 1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToTNegativeAfterClear() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToTNegativeAfterClear(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
-        try {
-            testCopyToT(0, 1, 0, 1);
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToT(0, 1, 0, 1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToTNegativeAfterDestEnsureCapacity() {
-        try {
-            ArrayWrapper wrapper2 = wrapper.newInstance();
-            Object destA = wrapper2.createPrimitiveArray(1);
-            ObservableArray dest = wrapper2.createNotEmptyArray(destA);
-            dest.ensureCapacity(2);
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToTNegativeAfterDestEnsureCapacity(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        ArrayWrapper wrapper2 = wrapper.newInstance();
+        Object destA = wrapper2.createPrimitiveArray(1);
+        ObservableArray dest = wrapper2.createNotEmptyArray(destA);
+        dest.ensureCapacity(2);
 
-            wrapper.copyToT(0, dest, 1, 1);
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> wrapper.copyToT(0, dest, 1, 1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToTNegativeAfterDestClear() {
-        try {
-            ArrayWrapper wrapper2 = wrapper.newInstance();
-            Object destA = wrapper2.createPrimitiveArray(1);
-            ObservableArray dest = wrapper2.createNotEmptyArray(destA);
-            dest.clear();
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToTNegativeAfterDestClear(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        ArrayWrapper wrapper2 = wrapper.newInstance();
+        Object destA = wrapper2.createPrimitiveArray(1);
+        ObservableArray dest = wrapper2.createNotEmptyArray(destA);
+        dest.clear();
 
-            wrapper.copyToT(0, dest, 0, 1);
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> wrapper.copyToT(0, dest, 0, 1));
+        assertUnchanged();
     }
 
     private void testCopyToTSelf(int srcIndex, int destIndex, int length) {
@@ -2473,123 +2929,138 @@ public class ObservableArrayTest  {
         wrapper.assertElementsEqual(actual, destIndex + length, initialSize, initialElements, destIndex + length);
     }
 
-    @Test public void testCopyToTSelf() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCopyToTSelf(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testCopyToTSelf(0, 0, INITIAL_SIZE);
     }
 
-    @Test public void testCopyToTSelfRight() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCopyToTSelfRight(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testCopyToTSelf(0, 1, INITIAL_SIZE - 1);
     }
 
-    @Test public void testCopyToTSelfLeft() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCopyToTSelfLeft(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testCopyToTSelf(1, 0, INITIAL_SIZE - 1);
     }
 
-    @Test public void testCopyToTSelfRightDifferentParts() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCopyToTSelfRightDifferentParts(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testCopyToTSelf(0, INITIAL_SIZE / 2, INITIAL_SIZE / 2);
     }
 
-    @Test public void testCopyToTSelfLeftDifferentParts() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testCopyToTSelfLeftDifferentParts(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         testCopyToTSelf(INITIAL_SIZE / 2, 0, INITIAL_SIZE / 2);
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToTSelfNegative1() {
-        try {
-            testCopyToTSelf(-1, 0, INITIAL_SIZE);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToTSelfNegative1(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToTSelf(-1, 0, INITIAL_SIZE));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToTSelfNegative2() {
-        try {
-            testCopyToTSelf(INITIAL_SIZE, 0, 1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToTSelfNegative2(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToTSelf(INITIAL_SIZE, 0, 1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToTSelfNegative3() {
-        try {
-            testCopyToTSelf(0, -1, INITIAL_SIZE);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToTSelfNegative3(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToTSelf(0, -1, INITIAL_SIZE));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToTSelfNegative4() {
-        try {
-            testCopyToTSelf(0, INITIAL_SIZE, 1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToTSelfNegative4(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToTSelf(0, INITIAL_SIZE, 1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToTSelfNegative5() {
-        try {
-            testCopyToTSelf(1, 1, -1);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToTSelfNegative5(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToTSelf(1, 1, -1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToTSelfNegative6() {
-        try {
-            testCopyToTSelf(0, 1, INITIAL_SIZE);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToTSelfNegative6(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToTSelf(0, 1, INITIAL_SIZE));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToTSelfNegative7() {
-        try {
-            testCopyToTSelf(1, 0, INITIAL_SIZE);
-        } finally {
-            assertUnchanged();
-        }
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToTSelfNegative7(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToTSelf(1, 0, INITIAL_SIZE));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToTSelfNegativeAfterEnsureCapacity() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToTSelfNegativeAfterEnsureCapacity(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         array.ensureCapacity(INITIAL_SIZE * 2);
-        try {
-            testCopyToTSelf(0, INITIAL_SIZE, 1);
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToTSelf(0, INITIAL_SIZE, 1));
+        assertUnchanged();
     }
 
-    @Test (expected = ArrayIndexOutOfBoundsException.class)
-    public void testCopyToTSelfNegativeAfterClear() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    void testCopyToTSelfNegativeAfterClear(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
-        try {
-            testCopyToTSelf(0, 0, 1);
-        } finally {
-            assertUnchanged();
-        }
+        assertThrows(ArrayIndexOutOfBoundsException.class, () -> testCopyToTSelf(0, 0, 1));
+        assertUnchanged();
     }
 
     // ============ ensureCapacity() and trimToSize() tests ====================
 
-    @Test public void testTrimToSize() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testTrimToSize(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         array.trimToSize();
         assertUnchanged();
     }
 
-    @Test public void testTrimToSizeEmpty() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testTrimToSizeEmpty(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         array.trimToSize();
         assertUnchanged();
     }
 
-    @Test public void testTrimToSizeResize() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testTrimToSizeResize(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         array.resize(3);
         initialSize = 3;
         mao.reset();
@@ -2599,7 +3070,10 @@ public class ObservableArrayTest  {
         assertUnchanged();
     }
 
-    @Test public void testTrimToSizeAddRemove() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testTrimToSizeAddRemove(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         array.resize(1000);
         array.resize(INITIAL_SIZE);
         mao.reset();
@@ -2609,50 +3083,77 @@ public class ObservableArrayTest  {
         assertUnchanged();
     }
 
-    @Test public void testEnsureCapacity0() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testEnsureCapacity0(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         array.ensureCapacity(0);
         assertUnchanged();
     }
 
-    @Test public void testEnsureCapacityBy1() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testEnsureCapacityBy1(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         array.ensureCapacity(INITIAL_SIZE + 1);
         assertUnchanged();
     }
 
-    @Test public void testEnsureCapacity1000() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testEnsureCapacity1000(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         array.ensureCapacity(1000);
         assertUnchanged();
     }
 
-    @Test public void testEnsureCapacitySmaller() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testEnsureCapacitySmaller(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         array.ensureCapacity(INITIAL_SIZE / 2);
         assertUnchanged();
     }
 
-    @Test public void testEnsureCapacityNegative() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testEnsureCapacityNegative(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         array.ensureCapacity(-1000);
         assertUnchanged();
     }
 
-    @Test public void testEnsureCapacityOnEmpty() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testEnsureCapacityOnEmpty(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         array.ensureCapacity(100);
         assertUnchanged();
     }
 
-    @Test public void testEnsureCapacityOnEmpty0() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testEnsureCapacityOnEmpty0(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         array.ensureCapacity(0);
         assertUnchanged();
     }
 
-    @Test public void testEnsureCapacityOnEmptyNegative() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testEnsureCapacityOnEmptyNegative(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         array.ensureCapacity(-1);
         assertUnchanged();
     }
 
-    @Test public void testTrimToSizeEnsureCapacity() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testTrimToSizeEnsureCapacity(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         array.ensureCapacity(1000);
         array.trimToSize();
         assertUnchanged();
@@ -2660,14 +3161,20 @@ public class ObservableArrayTest  {
 
     // ================= clear() tests ====================
 
-    @Test public void testClearEmpty() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testClearEmpty(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         makeEmpty();
         array.clear();
         mao.check0();
         assertEquals(0, array.size());
     }
 
-    @Test public void testClear1000() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testClear1000(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         array.resize(1000);
         mao.reset();
 
@@ -2679,26 +3186,35 @@ public class ObservableArrayTest  {
 
     // ================= toString() tests ===================
 
-    @Test public void testToString() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testToString(ArrayWrapper arrayWrapper) throws Exception{
+        setUp(arrayWrapper);
         String actual = array.toString();
         String expected = wrapper.primitiveArrayToString(wrapper.toArray(null));
         assertEquals(expected, actual);
         String regex = "\\[[0-9]+(\\.[0-9]+){0,1}(\\, [0-9]+(.[0-9]+){0,1}){" + (initialSize - 1) + "}\\]";
-        assertTrue("toString() output matches to regex '" + regex + "'. Actual = '" + actual + "'",
-                actual.matches(regex));
+        assertTrue(actual.matches(regex),
+                () -> "toString() output matches regex '" + regex + "'. Actual = '" + actual + "'");
     }
 
-    @Test public void testToStringAfterResize() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testToStringAfterResize(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         array.resize(initialSize / 2);
         String actual = array.toString();
         String expected = wrapper.primitiveArrayToString(wrapper.toArray(null));
         assertEquals(expected, actual);
         String regex = "\\[[0-9]+(\\.[0-9]+){0,1}(\\, [0-9]+(.[0-9]+){0,1}){" + (array.size() - 1) + "}\\]";
-        assertTrue("toString() output matches to regex '" + regex + "'. Actual = '" + actual + "'",
-                actual.matches(regex));
+        assertTrue(actual.matches(regex),
+                () -> "toString() output does not match regex '" + regex + "'. Actual = '" + actual + "'");
     }
 
-    @Test public void testToStringAfterClear() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testToStringAfterClear(ArrayWrapper arrayWrapper) throws Exception {
+        setUp(arrayWrapper);
         array.clear();
         String actual = array.toString();
         assertEquals("[]", actual);

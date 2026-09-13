@@ -26,20 +26,23 @@
 #include "config.h"
 #include "YouTubePluginReplacement.h"
 
+#include "ExceptionOr.h"
 #include "HTMLIFrameElement.h"
 #include "HTMLNames.h"
 #include "HTMLPlugInElement.h"
+#include "NodeDocument.h"
 #include "RenderElement.h"
 #include "Settings.h"
 #include "ShadowRoot.h"
 #include "YouTubeEmbedShadowElement.h"
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
 void YouTubePluginReplacement::registerPluginReplacement(PluginReplacementRegistrar registrar)
 {
-    registrar(ReplacementPlugin(create, supportsMIMEType, supportsFileExtension, supportsURL, isEnabledBySettings));
+    registrar(ReplacementPlugin(create, supportsMIMEType, supportsFileExtension, supportsURL));
 }
 
 Ref<PluginReplacement> YouTubePluginReplacement::create(HTMLPlugInElement& plugin, const Vector<AtomString>& paramNames, const Vector<AtomString>& paramValues)
@@ -66,23 +69,29 @@ YouTubePluginReplacement::YouTubePluginReplacement(HTMLPlugInElement& plugin, co
         m_attributes.add(paramNames[i], paramValues[i]);
 }
 
+YouTubePluginReplacement::~YouTubePluginReplacement() = default;
+
 RenderPtr<RenderElement> YouTubePluginReplacement::createElementRenderer(HTMLPlugInElement& plugin, RenderStyle&& style, const RenderTreePosition& insertionPosition)
 {
     ASSERT_UNUSED(plugin, m_parentElement == &plugin);
 
-    if (!m_embedShadowElement)
+    RefPtr embedShadowElement = m_embedShadowElement;
+    if (!embedShadowElement)
         return nullptr;
 
-    return m_embedShadowElement->createElementRenderer(WTFMove(style), insertionPosition);
+    return embedShadowElement->createElementRenderer(WTF::move(style), insertionPosition);
 }
 
 void YouTubePluginReplacement::installReplacement(ShadowRoot& root)
 {
-    m_embedShadowElement = YouTubeEmbedShadowElement::create(m_parentElement->document());
+    Ref document = m_parentElement->document();
+    Ref embedShadowElement = YouTubeEmbedShadowElement::create(document);
 
-    root.appendChild(*m_embedShadowElement);
+    m_embedShadowElement = embedShadowElement.copyRef();
 
-    auto iframeElement = HTMLIFrameElement::create(HTMLNames::iframeTag, m_parentElement->document());
+    root.appendChild(embedShadowElement);
+
+    Ref iframeElement = HTMLIFrameElement::create(HTMLNames::iframeTag, document);
     if (m_attributes.contains<HashTranslatorASCIILiteral>("width"_s))
         iframeElement->setAttributeWithoutSynchronization(HTMLNames::widthAttr, "100%"_s);
 
@@ -97,7 +106,7 @@ void YouTubePluginReplacement::installReplacement(ShadowRoot& root)
 
     // Disable frame flattening for this iframe.
     iframeElement->setAttributeWithoutSynchronization(HTMLNames::scrollingAttr, "no"_s);
-    m_embedShadowElement->appendChild(iframeElement);
+    embedShadowElement->appendChild(iframeElement);
 }
 
 static URL createYouTubeURL(StringView videoID, StringView timeID)
@@ -276,7 +285,7 @@ static URL processAndCreateYouTubeURL(const URL& url, bool& isYouTubeShortenedUR
 
 AtomString YouTubePluginReplacement::youTubeURL(const AtomString& srcString)
 {
-    URL srcURL = m_parentElement->document().completeURL(srcString);
+    URL srcURL = m_parentElement->protectedDocument()->completeURL(srcString);
     return youTubeURLFromAbsoluteURL(srcURL, srcString);
 }
 
@@ -332,11 +341,6 @@ AtomString YouTubePluginReplacement::youTubeURLFromAbsoluteURL(const URL& srcURL
 bool YouTubePluginReplacement::supportsURL(const URL& url)
 {
     return isYouTubeURL(url);
-}
-
-bool YouTubePluginReplacement::isEnabledBySettings(const Settings& settings)
-{
-    return settings.youTubeFlashPluginReplacementEnabled();
 }
 
 }

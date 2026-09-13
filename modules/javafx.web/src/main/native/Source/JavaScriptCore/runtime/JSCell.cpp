@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2020 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -31,6 +31,8 @@
 #include "SubspaceInlines.h"
 #include "Symbol.h"
 #include <wtf/LockAlgorithmInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -147,36 +149,35 @@ bool JSCell::deletePropertyByIndex(JSCell* cell, JSGlobalObject* globalObject, u
 
 JSValue JSCell::toPrimitive(JSGlobalObject* globalObject, PreferredPrimitiveType preferredType) const
 {
-    if (isString())
-        return static_cast<const JSString*>(this)->toPrimitive(globalObject, preferredType);
-    if (isSymbol())
-        return static_cast<const Symbol*>(this)->toPrimitive(globalObject, preferredType);
-    if (isHeapBigInt())
-        return static_cast<const JSBigInt*>(this)->toPrimitive(globalObject, preferredType);
-    return static_cast<const JSObject*>(this)->toPrimitive(globalObject, preferredType);
+    if (const auto* string = jsDynamicCast<const JSString*>(this))
+        return string->toPrimitive(globalObject, preferredType);
+    if (const auto* symbol = jsDynamicCast<const Symbol*>(this))
+        return symbol->toPrimitive(globalObject, preferredType);
+    if (const auto* bigInt = jsDynamicCast<const JSBigInt*>(this))
+        return bigInt->toPrimitive(globalObject, preferredType);
+    return jsSecureCast<const JSObject*>(this)->toPrimitive(globalObject, preferredType);
 }
 
 double JSCell::toNumber(JSGlobalObject* globalObject) const
 {
-    if (isString())
-        return static_cast<const JSString*>(this)->toNumber(globalObject);
-    if (isSymbol())
-        return static_cast<const Symbol*>(this)->toNumber(globalObject);
-    if (isHeapBigInt())
-        return static_cast<const JSBigInt*>(this)->toNumber(globalObject);
-    return static_cast<const JSObject*>(this)->toNumber(globalObject);
+    if (const auto* string = jsDynamicCast<const JSString*>(this))
+        return string->toNumber(globalObject);
+    if (const auto* symbol = jsDynamicCast<const Symbol*>(this))
+        return symbol->toNumber(globalObject);
+    if (const auto* bigInt = jsDynamicCast<const JSBigInt*>(this))
+        return bigInt->toNumber(globalObject);
+    return jsSecureCast<const JSObject*>(this)->toNumber(globalObject);
 }
 
 JSObject* JSCell::toObjectSlow(JSGlobalObject* globalObject) const
 {
     Integrity::auditStructureID(structureID());
     ASSERT(!isObject());
-    if (isString())
-        return static_cast<const JSString*>(this)->toObject(globalObject);
-    if (isHeapBigInt())
-        return static_cast<const JSBigInt*>(this)->toObject(globalObject);
-    ASSERT(isSymbol());
-    return static_cast<const Symbol*>(this)->toObject(globalObject);
+    if (const auto* string = jsDynamicCast<const JSString*>(this))
+        return string->toObject(globalObject);
+    if (const auto* bigInt = jsDynamicCast<const JSBigInt*>(this))
+        return bigInt->toObject(globalObject);
+    return jsSecureCast<const Symbol*>(this)->toObject(globalObject);
 }
 
 void slowValidateCell(JSCell* cell)
@@ -196,12 +197,12 @@ bool JSCell::getOwnPropertySlotByIndex(JSObject*, JSGlobalObject*, unsigned, Pro
     return false;
 }
 
-void JSCell::getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode)
+void JSCell::getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode)
 {
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-void JSCell::getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode)
+void JSCell::getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode)
 {
     RELEASE_ASSERT_NOT_REACHED();
 }
@@ -265,13 +266,13 @@ JSString* JSCell::toStringSlowCase(JSGlobalObject* globalObject) const
 
 void JSCellLock::lockSlow()
 {
-    Atomic<IndexingType>* lock = bitwise_cast<Atomic<IndexingType>*>(&m_indexingTypeAndMisc);
+    Atomic<IndexingType>* lock = std::bit_cast<Atomic<IndexingType>*>(&m_indexingTypeAndMisc);
     IndexingTypeLockAlgorithm::lockSlow(*lock);
 }
 
 void JSCellLock::unlockSlow()
 {
-    Atomic<IndexingType>* lock = bitwise_cast<Atomic<IndexingType>*>(&m_indexingTypeAndMisc);
+    Atomic<IndexingType>* lock = std::bit_cast<Atomic<IndexingType>*>(&m_indexingTypeAndMisc);
     IndexingTypeLockAlgorithm::unlockSlow(*lock);
 }
 
@@ -279,16 +280,16 @@ void JSCellLock::unlockSlow()
 NEVER_INLINE NO_RETURN_DUE_TO_CRASH NOT_TAIL_CALLED void reportZappedCellAndCrash(Heap& heap, const JSCell* cell)
 {
     MarkedBlock::Handle* foundBlockHandle = nullptr;
-    uint64_t* cellWords = bitwise_cast<uint64_t*>(cell);
+    uint64_t* cellWords = std::bit_cast<uint64_t*>(cell);
 
-    uintptr_t cellAddress = bitwise_cast<uintptr_t>(cell);
+    uintptr_t cellAddress = std::bit_cast<uintptr_t>(cell);
     uint64_t headerWord = cellWords[0];
     uint64_t zapReasonAndMore = cellWords[1];
     unsigned subspaceHash = 0;
     size_t cellSize = 0;
 
     heap.objectSpace().forEachBlock([&](MarkedBlock::Handle* blockHandle) {
-        if (blockHandle->contains(bitwise_cast<JSCell*>(cell))) {
+        if (blockHandle->contains(std::bit_cast<JSCell*>(cell))) {
             foundBlockHandle = blockHandle;
             return IterationStatus::Done;
         }
@@ -299,7 +300,7 @@ NEVER_INLINE NO_RETURN_DUE_TO_CRASH NOT_TAIL_CALLED void reportZappedCellAndCras
     MarkedBlock* foundBlock = nullptr;
     if (foundBlockHandle) {
         foundBlock = &foundBlockHandle->block();
-        subspaceHash = StringHasher::computeHash(foundBlockHandle->subspace()->name());
+        subspaceHash = SuperFastHash::computeHash(foundBlockHandle->subspace()->name());
         cellSize = foundBlockHandle->cellSize();
 
         variousState |= static_cast<uint64_t>(foundBlockHandle->isFreeListed()) << 0;
@@ -308,7 +309,7 @@ NEVER_INLINE NO_RETURN_DUE_TO_CRASH NOT_TAIL_CALLED void reportZappedCellAndCras
         variousState |= static_cast<uint64_t>(foundBlockHandle->needsDestruction()) << 3;
         variousState |= static_cast<uint64_t>(foundBlock->isNewlyAllocated(cell)) << 4;
 
-        ptrdiff_t cellOffset = cellAddress - bitwise_cast<uintptr_t>(foundBlockHandle->start());
+        ptrdiff_t cellOffset = cellAddress - std::bit_cast<uintptr_t>(foundBlockHandle->start());
         bool cellIsProperlyAligned = !(cellOffset % cellSize);
         variousState |= static_cast<uint64_t>(cellIsProperlyAligned) << 5;
     } else {
@@ -323,7 +324,7 @@ NEVER_INLINE NO_RETURN_DUE_TO_CRASH NOT_TAIL_CALLED void reportZappedCellAndCras
                 return IterationStatus::Done;
 
             if (subspace.isIsoSubspace()) {
-                static_cast<IsoSubspace&>(subspace).forEachLowerTierFreeListedPreciseAllocation([&](PreciseAllocation* allocation) {
+                static_cast<IsoSubspace&>(subspace).forEachLowerTierPreciseFreeListedPreciseAllocation([&](PreciseAllocation* allocation) {
                     if (allocation->contains(cell)) {
                         foundPreciseAllocation = allocation;
                         isFreeListed = true;
@@ -335,7 +336,7 @@ NEVER_INLINE NO_RETURN_DUE_TO_CRASH NOT_TAIL_CALLED void reportZappedCellAndCras
             return IterationStatus::Continue;
         });
         if (foundPreciseAllocation) {
-            subspaceHash = StringHasher::computeHash(foundPreciseAllocation->subspace()->name());
+            subspaceHash = SuperFastHash::computeHash(foundPreciseAllocation->subspace()->name());
             cellSize = foundPreciseAllocation->cellSize();
 
             variousState |= static_cast<uint64_t>(isFreeListed) << 0;
@@ -355,3 +356,5 @@ NEVER_INLINE NO_RETURN_DUE_TO_CRASH NOT_TAIL_CALLED void reportZappedCellAndCras
 #endif // CPU(X86_64)
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

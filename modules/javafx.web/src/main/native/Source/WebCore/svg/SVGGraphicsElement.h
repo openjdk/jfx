@@ -21,9 +21,12 @@
 
 #pragma once
 
+#include "SVGAnimatedPropertyImpl.h"
 #include "SVGElement.h"
 #include "SVGTests.h"
+#include "SVGTransformList.h"
 #include "SVGTransformable.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -33,7 +36,8 @@ class SVGRect;
 class SVGMatrix;
 
 class SVGGraphicsElement : public SVGElement, public SVGTransformable, public SVGTests {
-    WTF_MAKE_ISO_ALLOCATED(SVGGraphicsElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGGraphicsElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGGraphicsElement);
 public:
     virtual ~SVGGraphicsElement();
 
@@ -46,7 +50,7 @@ public:
     SVGElement* nearestViewportElement() const override;
     SVGElement* farthestViewportElement() const override;
 
-    AffineTransform localCoordinateSpaceTransform(SVGLocatable::CTMScope mode) const override { return SVGTransformable::localCoordinateSpaceTransform(mode); }
+    AffineTransform localCoordinateSpaceTransform(CTMScope mode) const override { return SVGTransformable::localCoordinateSpaceTransform(mode); }
     AffineTransform animatedLocalTransform() const override;
     AffineTransform* ensureSupplementalTransform() override;
     AffineTransform* supplementalTransform() const override { return m_supplementalTransform.get(); }
@@ -68,14 +72,17 @@ public:
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGGraphicsElement, SVGElement, SVGTests>;
 
     const SVGTransformList& transform() const { return m_transform->currentValue(); }
+    Ref<const SVGTransformList> protectedTransform() const;
     SVGAnimatedTransformList& transformAnimated() { return m_transform; }
 
 protected:
-    SVGGraphicsElement(const QualifiedName&, Document&, UniqueRef<SVGPropertyRegistry>&&);
+    SVGGraphicsElement(const QualifiedName&, Document&, UniqueRef<SVGPropertyRegistry>&&, OptionSet<TypeFlag> = { });
 
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;
     void didAttachRenderers() override;
+
+    void invalidateResourceImageBuffersIfNeeded();
 
 private:
     bool isSVGGraphicsElement() const override { return true; }
@@ -84,14 +91,18 @@ private:
     std::unique_ptr<AffineTransform> m_supplementalTransform;
 
     // Used to isolate blend operations caused by masking.
-    bool m_shouldIsolateBlending;
+    bool m_shouldIsolateBlending { false };
 
-    Ref<SVGAnimatedTransformList> m_transform { SVGAnimatedTransformList::create(this) };
+    Ref<SVGAnimatedTransformList> m_transform;
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SVGGraphicsElement)
     static bool isType(const WebCore::SVGElement& element) { return element.isSVGGraphicsElement(); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::SVGElement>(node) && isType(downcast<WebCore::SVGElement>(node)); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* svgElement = dynamicDowncast<WebCore::SVGElement>(node);
+        return svgElement && isType(*svgElement);
+    }
 SPECIALIZE_TYPE_TRAITS_END()

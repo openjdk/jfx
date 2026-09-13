@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,9 +40,9 @@ import javafx.beans.property.SimpleFloatProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleLongProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class ObjectPropertyLeakTest {
 
@@ -55,7 +55,7 @@ public class ObjectPropertyLeakTest {
     private final ArrayList<WeakReference<Property<?>>> wrappedRefs = new ArrayList<>();
 
     private void checkRefs(String name, int numExpected,
-            ArrayList<WeakReference<Property<?>>> refs) {
+                           ArrayList<WeakReference<Property<?>>> refs) {
 
         int count = 0;
         for (var ref : refs) {
@@ -63,7 +63,7 @@ public class ObjectPropertyLeakTest {
         }
         final String msg = name + " properties should "
                 + (numExpected > 0 ? "NOT be GCed" : "be GCed");
-        assertEquals(msg, numExpected, count);
+        assertEquals(numExpected, count, msg);
     }
 
     private void commonLeakTest(int origExpected, int wrappedExpected)

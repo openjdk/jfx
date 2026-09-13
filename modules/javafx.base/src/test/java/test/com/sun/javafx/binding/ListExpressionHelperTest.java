@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,8 +42,9 @@ import javafx.collections.ListChangeListener;
 import test.javafx.collections.MockListObserver;
 import javafx.collections.ObservableList;
 import test.javafx.collections.WeakListChangeListenerMock;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Arrays;
 
@@ -66,7 +67,7 @@ public class ListExpressionHelperTest {
     private ChangeListenerMock<? super ObservableList<Object>>[] changeListener;
     private MockListObserver<Object>[] listChangeListener;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         listItem = new Object();
         data1 = FXCollections.observableArrayList();
@@ -88,49 +89,67 @@ public class ListExpressionHelperTest {
         };
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testAddInvalidation_Null_X() {
-        ListExpressionHelper.addListener(null, null, invalidationListener[0]);
+        assertThrows(NullPointerException.class, () -> {
+            ListExpressionHelper.addListener(null, null, invalidationListener[0]);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testAddInvalidation_X_Null() {
-        ListExpressionHelper.addListener(null, observable, (InvalidationListener)null);
+        assertThrows(NullPointerException.class, () -> {
+            ListExpressionHelper.addListener(null, observable, (InvalidationListener) null);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testRemoveInvalidation_Null() {
-        ListExpressionHelper.removeListener(null, (InvalidationListener) null);
+        assertThrows(NullPointerException.class, () -> {
+            ListExpressionHelper.removeListener(null, (InvalidationListener) null);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testAddChange_Null_X() {
-        ListExpressionHelper.addListener(null, null, changeListener[0]);
+        assertThrows(NullPointerException.class, () -> {
+            ListExpressionHelper.addListener(null, null, changeListener[0]);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testAddChange_X_Null() {
-        ListExpressionHelper.addListener(null, observable, (ChangeListener) null);
+        assertThrows(NullPointerException.class, () -> {
+            ListExpressionHelper.addListener(null, observable, (ChangeListener) null);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testRemoveChange_Null() {
-        ListExpressionHelper.removeListener(null, (ChangeListener) null);
+        assertThrows(NullPointerException.class, () -> {
+            ListExpressionHelper.removeListener(null, (ChangeListener) null);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testAddListChange_Null_X() {
-        ListExpressionHelper.addListener(null, null, listChangeListener[0]);
+        assertThrows(NullPointerException.class, () -> {
+            ListExpressionHelper.addListener(null, null, listChangeListener[0]);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testAddListChange_X_Null() {
-        ListExpressionHelper.addListener(null, observable, (ListChangeListener) null);
+        assertThrows(NullPointerException.class, () -> {
+            ListExpressionHelper.addListener(null, observable, (ListChangeListener) null);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testRemoveListChange_Null() {
-        ListExpressionHelper.removeListener(null, (ListChangeListener) null);
+        assertThrows(NullPointerException.class, () -> {
+            ListExpressionHelper.removeListener(null, (ListChangeListener) null);
+        });
     }
 
     @Test
@@ -951,7 +970,5 @@ public class ListExpressionHelperTest {
         invalidationListener[0].check(observable, 1);
         changeListener[0].check(null, UNDEFINED, UNDEFINED, 0);
         listChangeListener[0].check0();
-
-
     }
 }

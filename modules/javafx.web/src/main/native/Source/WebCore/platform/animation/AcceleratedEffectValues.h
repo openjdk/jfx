@@ -25,76 +25,77 @@
 
 #pragma once
 
-#if ENABLE(THREADED_ANIMATION_RESOLUTION)
+#if ENABLE(THREADED_ANIMATIONS)
 
-#include "FilterOperations.h"
-#include "Length.h"
-#include "LengthPoint.h"
-#include "OffsetRotation.h"
-#include "PathOperation.h"
-#include "RotateTransformOperation.h"
-#include "ScaleTransformOperation.h"
-#include "TransformOperations.h"
-#include "TransformationMatrix.h"
-#include "TranslateTransformOperation.h"
+#include <WebCore/AcceleratedEffectOffsetAnchor.h>
+#include <WebCore/AcceleratedEffectOffsetDistance.h>
+#include <WebCore/AcceleratedEffectOffsetPosition.h>
+#include <WebCore/AcceleratedEffectOffsetRotate.h>
+#include <WebCore/AcceleratedEffectOpacity.h>
+#include <WebCore/AcceleratedEffectTransformBox.h>
+#include <WebCore/AcceleratedEffectTransformOrigin.h>
+#include <WebCore/FilterOperations.h>
+#include <WebCore/FloatPoint.h>
+#include <WebCore/PathOperation.h>
+#include <WebCore/RotateTransformOperation.h>
+#include <WebCore/ScaleTransformOperation.h>
+#include <WebCore/TransformOperations.h>
+#include <WebCore/TransformationMatrix.h>
+#include <WebCore/TranslateTransformOperation.h>
 
 namespace WebCore {
 
 class IntRect;
 class Path;
+class RenderLayerModelObject;
 class RenderStyle;
 
 struct AcceleratedEffectValues {
-    float opacity { 1 };
-    LengthPoint transformOrigin { };
+    AcceleratedEffectOpacity opacity { };
+    // FIXME: It is a layering violation to use `TransformOperationData` here, as it is defined in the rendering directory.
+    std::optional<TransformOperationData> transformOperationData;
+    AcceleratedEffectTransformOrigin transformOrigin { };
+    AcceleratedEffectTransformBox transformBox { AcceleratedEffectTransformBox::ContentBox };
     TransformOperations transform { };
     RefPtr<TransformOperation> translate;
     RefPtr<TransformOperation> scale;
     RefPtr<TransformOperation> rotate;
+    // FIXME: It is a layering violation to use `PathOperation` here, as it is defined in the rendering directory.
     RefPtr<PathOperation> offsetPath;
-    Length offsetDistance { };
-    LengthPoint offsetPosition { };
-    LengthPoint offsetAnchor { };
-    OffsetRotation offsetRotate { };
+    AcceleratedEffectOffsetDistance offsetDistance { };
+    // FIXME: This `offsetPosition` is not used.
+    AcceleratedEffectOffsetPosition offsetPosition { };
+    AcceleratedEffectOffsetAnchor offsetAnchor { };
+    AcceleratedEffectOffsetRotate offsetRotate { };
     FilterOperations filter { };
-#if ENABLE(FILTERS_LEVEL_2)
     FilterOperations backdropFilter { };
-#endif
 
-    AcceleratedEffectValues()
-    {
-    }
-
-    AcceleratedEffectValues(float opacity, LengthPoint&& transformOrigin, TransformOperations&& transform, RefPtr<TransformOperation>&& translate, RefPtr<TransformOperation>&& scale, RefPtr<TransformOperation>&& rotate, RefPtr<PathOperation>&& offsetPath, Length&& offsetDistance, LengthPoint&& offsetPosition, LengthPoint&& offsetAnchor, OffsetRotation&& offsetRotate, FilterOperations&& filter
-#if ENABLE(FILTERS_LEVEL_2)
-        , FilterOperations&& backdropFilter
-#endif
-        )
+    AcceleratedEffectValues() = default;
+    // FIXME: It is a layering violation to use `RenderStyle` and `RenderLayerModelObject` here, as they are defined in the rendering directory.
+    AcceleratedEffectValues(const RenderStyle&, const IntRect&, const RenderLayerModelObject* = nullptr);
+    AcceleratedEffectValues(AcceleratedEffectOpacity opacity, std::optional<TransformOperationData>&& transformOperationData, AcceleratedEffectTransformOrigin transformOrigin, AcceleratedEffectTransformBox transformBox, TransformOperations&& transform, RefPtr<TransformOperation>&& translate, RefPtr<TransformOperation>&& scale, RefPtr<TransformOperation>&& rotate, RefPtr<PathOperation>&& offsetPath, AcceleratedEffectOffsetDistance offsetDistance, AcceleratedEffectOffsetPosition offsetPosition, AcceleratedEffectOffsetAnchor offsetAnchor, AcceleratedEffectOffsetRotate offsetRotate, FilterOperations&& filter, FilterOperations&& backdropFilter)
         : opacity(opacity)
-        , transformOrigin(WTFMove(transformOrigin))
-        , transform(WTFMove(transform))
-        , translate(WTFMove(translate))
-        , scale(WTFMove(scale))
-        , rotate(WTFMove(rotate))
-        , offsetPath(WTFMove(offsetPath))
-        , offsetDistance(WTFMove(offsetDistance))
-        , offsetPosition(WTFMove(offsetPosition))
-        , offsetAnchor(WTFMove(offsetAnchor))
-        , offsetRotate(WTFMove(offsetRotate))
-        , filter(WTFMove(filter))
-#if ENABLE(FILTERS_LEVEL_2)
-        , backdropFilter(WTFMove(backdropFilter))
-#endif
+        , transformOperationData(WTF::move(transformOperationData))
+        , transformOrigin(transformOrigin)
+        , transformBox(transformBox)
+        , transform(WTF::move(transform))
+        , translate(WTF::move(translate))
+        , scale(WTF::move(scale))
+        , rotate(WTF::move(rotate))
+        , offsetPath(WTF::move(offsetPath))
+        , offsetDistance(offsetDistance)
+        , offsetPosition(offsetPosition)
+        , offsetAnchor(offsetAnchor)
+        , offsetRotate(offsetRotate)
+        , filter(WTF::move(filter))
+        , backdropFilter(WTF::move(backdropFilter))
     {
     }
 
     WEBCORE_EXPORT AcceleratedEffectValues clone() const;
-
-    WEBCORE_EXPORT AcceleratedEffectValues(const AcceleratedEffectValues&);
-    AcceleratedEffectValues(const RenderStyle&, const IntRect&);
-    AcceleratedEffectValues& operator=(const AcceleratedEffectValues&) = default;
+    WEBCORE_EXPORT TransformationMatrix computedTransformationMatrix(const FloatRect&) const;
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(THREADED_ANIMATION_RESOLUTION)
+#endif // ENABLE(THREADED_ANIMATIONS)

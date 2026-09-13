@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc.
+ * Copyright (C) 2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,13 +27,23 @@
 
 #if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
+#include "ContextDestructionObserverInlines.h"
 #include "EventNames.h"
 #include "LibWebRTCUtils.h"
 #include "RTCDataChannel.h"
 #include "RTCError.h"
 #include <wtf/MainThread.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LibWebRTCDataChannelHandler);
+
+template<typename T>
+inline std::span<const T> span(const webrtc::DataBuffer& buffer)
+{
+    return unsafeMakeSpan(buffer.data.data<T>(), buffer.size());
+}
 
 webrtc::DataChannelInit LibWebRTCDataChannelHandler::fromRTCDataChannelInit(const RTCDataChannelInit& options)
 {
@@ -49,14 +59,13 @@ webrtc::DataChannelInit LibWebRTCDataChannelHandler::fromRTCDataChannelInit(cons
         init.negotiated = *options.negotiated;
     if (options.id)
         init.id = *options.id;
-    init.priority = fromRTCPriorityType(options.priority);
+    init.priority = webrtc::PriorityValue(fromRTCPriorityType(options.priority));
     return init;
 }
 
-LibWebRTCDataChannelHandler::LibWebRTCDataChannelHandler(rtc::scoped_refptr<webrtc::DataChannelInterface>&& channel)
-    : m_channel(WTFMove(channel))
+LibWebRTCDataChannelHandler::LibWebRTCDataChannelHandler(webrtc::scoped_refptr<webrtc::DataChannelInterface>&& channel)
+    : m_channel(toRef(WTF::move(channel)))
 {
-    ASSERT(m_channel);
     checkState();
     m_channel->RegisterObserver(this);
 }
@@ -89,7 +98,7 @@ String LibWebRTCDataChannelHandler::label() const
     return fromStdString(m_channel->label());
 }
 
-void LibWebRTCDataChannelHandler::setClient(RTCDataChannelHandlerClient& client, ScriptExecutionContextIdentifier contextIdentifier)
+void LibWebRTCDataChannelHandler::setClient(RTCDataChannelHandlerClient& client, std::optional<ScriptExecutionContextIdentifier> contextIdentifier)
 {
     Locker locker { m_clientLock };
     ASSERT(!m_client);
@@ -100,7 +109,8 @@ void LibWebRTCDataChannelHandler::setClient(RTCDataChannelHandlerClient& client,
 
     for (auto& message : m_bufferedMessages) {
         switchOn(message, [&](Ref<FragmentedSharedBuffer>& data) {
-            client.didReceiveRawData(data->makeContiguous()->data(), data->size());
+            Ref contiguousData = data->makeContiguous();
+            client.didReceiveRawData(contiguousData->span());
         }, [&](String& text) {
             client.didReceiveStringData(text);
         }, [&](StateChange stateChange) {
@@ -116,12 +126,12 @@ void LibWebRTCDataChannelHandler::setClient(RTCDataChannelHandlerClient& client,
 
 bool LibWebRTCDataChannelHandler::sendStringData(const CString& utf8Text)
 {
-    return m_channel->Send({ rtc::CopyOnWriteBuffer(utf8Text.data(), utf8Text.length()), false });
+    return m_channel->Send({ webrtc::CopyOnWriteBuffer(utf8Text.data(), utf8Text.length()), false });
 }
 
-bool LibWebRTCDataChannelHandler::sendRawData(const uint8_t* data, size_t length)
+bool LibWebRTCDataChannelHandler::sendRawData(std::span<const uint8_t> data)
 {
-    return m_channel->Send({ rtc::CopyOnWriteBuffer(data, length), true });
+    return m_channel->Send({ webrtc::CopyOnWriteBuffer(data.data(), data.size()), true });
 }
 
 void LibWebRTCDataChannelHandler::close()
@@ -162,10 +172,11 @@ void LibWebRTCDataChannelHandler::checkState()
 
     Locker locker { m_clientLock };
     if (!m_hasClient) {
-        m_bufferedMessages.append(StateChange { state, WTFMove(error) });
+        m_bufferedMessages.append(StateChange { state, WTF::move(error) });
         return;
     }
-    postTask([client = m_client, state, error = WTFMove(error)] {
+    postTask([weakClient = m_client, state, error = WTF::move(error)] {
+        RefPtr client = weakClient.get();
         if (!client)
             return;
         if (error && !error->ok()) {
@@ -182,24 +193,25 @@ void LibWebRTCDataChannelHandler::OnMessage(const webrtc::DataBuffer& buffer)
 {
     Locker locker { m_clientLock };
     if (!m_hasClient) {
-        auto* data = buffer.data.data<uint8_t>();
+        auto data = span<uint8_t>(buffer);
         if (buffer.binary)
-            m_bufferedMessages.append(SharedBuffer::create(data, buffer.size()));
+            m_bufferedMessages.append(SharedBuffer::create(data));
         else
-            m_bufferedMessages.append(String::fromUTF8(data, buffer.size()));
+            m_bufferedMessages.append(String::fromUTF8(data));
         return;
     }
 
     std::unique_ptr<webrtc::DataBuffer> protectedBuffer(new webrtc::DataBuffer(buffer));
-    postTask([client = m_client, buffer = WTFMove(protectedBuffer)] {
+    postTask([weakClient = m_client, buffer = WTF::move(protectedBuffer)] {
+        RefPtr client = weakClient.get();
         if (!client)
             return;
 
-        auto* data = buffer->data.data<uint8_t>();
+        auto data = span<uint8_t>(*buffer);
         if (buffer->binary)
-            client->didReceiveRawData(data, buffer->size());
+            client->didReceiveRawData(data);
         else
-            client->didReceiveStringData(String::fromUTF8(data, buffer->size()));
+            client->didReceiveStringData(String::fromUTF8(data));
     });
 }
 
@@ -209,9 +221,9 @@ void LibWebRTCDataChannelHandler::OnBufferedAmountChange(uint64_t amount)
     if (!m_hasClient)
         return;
 
-    postTask([client = m_client, amount] {
-        if (client)
-            client->bufferedAmountIsDecreasing(static_cast<size_t>(amount));
+    postTask([weakClient = m_client, amount] {
+        if (RefPtr client = weakClient.get())
+            client->bufferedAmountIsDecreasing(static_cast<uint64_t>(amount));
     });
 }
 
@@ -220,10 +232,10 @@ void LibWebRTCDataChannelHandler::postTask(Function<void()>&& function)
     ASSERT(m_clientLock.isHeld());
 
     if (!m_contextIdentifier) {
-        callOnMainThread(WTFMove(function));
+        callOnMainThread(WTF::move(function));
         return;
     }
-    ScriptExecutionContext::postTaskTo(m_contextIdentifier, WTFMove(function));
+    ScriptExecutionContext::postTaskTo(*m_contextIdentifier, WTF::move(function));
 }
 
 } // namespace WebCore

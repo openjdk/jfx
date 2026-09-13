@@ -29,33 +29,40 @@
 
 #include "WebGLTexture.h"
 
-#include "WebGLContextGroup.h"
 #include "WebGLFramebuffer.h"
 #include "WebGLRenderingContextBase.h"
 
 namespace WebCore {
 
-Ref<WebGLTexture> WebGLTexture::create(WebGLRenderingContextBase& ctx)
+Ref<WebGLTexture> WebGLTexture::createLost()
 {
-    return adoptRef(*new WebGLTexture(ctx));
+    return adoptRef(*new WebGLTexture { });
 }
 
-WebGLTexture::WebGLTexture(WebGLRenderingContextBase& ctx)
-    : WebGLSharedObject(ctx)
-    , m_target(0)
+Ref<WebGLTexture> WebGLTexture::create(WebGLRenderingContextBase& context)
 {
-    setObject(ctx.graphicsContextGL()->createTexture());
+    auto object = context.graphicsContextGL()->createTexture();
+    if (!object)
+        return createLost();
+    return adoptRef(*new WebGLTexture { context, object });
 }
+
+WebGLTexture::WebGLTexture(WebGLRenderingContextBase& context, PlatformGLObject object)
+    : WebGLObject(context, object)
+{
+}
+
+WebGLTexture::WebGLTexture() = default;
 
 WebGLTexture::~WebGLTexture()
 {
-    if (!hasGroupOrContext())
+    if (!m_context)
         return;
 
     runDestructor();
 }
 
-void WebGLTexture::setTarget(GCGLenum target)
+void WebGLTexture::didBind(GCGLenum target)
 {
     if (!object())
         return;

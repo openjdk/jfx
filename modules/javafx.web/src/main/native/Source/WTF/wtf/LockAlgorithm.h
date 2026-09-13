@@ -68,7 +68,7 @@ public:
 
     static void lock(Atomic<LockType>& lock)
     {
-        if (UNLIKELY(!lockFast(lock)))
+        if (!lockFast(lock)) [[unlikely]]
             lockSlow(lock);
     }
 
@@ -98,18 +98,18 @@ public:
                 value = Hooks::unlockHook(value);
                 return true;
             },
-            std::memory_order_relaxed);
+            std::memory_order_release);
     }
 
     static void unlock(Atomic<LockType>& lock)
     {
-        if (UNLIKELY(!unlockFast(lock)))
+        if (!unlockFast(lock)) [[unlikely]]
             unlockSlow(lock, Unfair);
     }
 
     static void unlockFairly(Atomic<LockType>& lock)
     {
-        if (UNLIKELY(!unlockFast(lock)))
+        if (!unlockFast(lock)) [[unlikely]]
             unlockSlow(lock, Fair);
     }
 
@@ -121,7 +121,7 @@ public:
 
     static void safepoint(Atomic<LockType>& lock)
     {
-        if (UNLIKELY(!safepointFast(lock)))
+        if (!safepointFast(lock)) [[unlikely]]
             safepointSlow(lock);
     }
 

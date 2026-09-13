@@ -26,9 +26,9 @@
 // https://gpuweb.github.io/gpuweb/#dictdef-gpubindgroupdescriptor
 
 [
-    EnabledBySetting=WebGPUEnabled
-]
-dictionary GPUBindGroupDescriptor : GPUObjectDescriptorBase {
+    EnabledBySetting=WebGPUEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GPUBindGroupDescriptor : GPUObjectDescriptorBase {
     required GPUBindGroupLayout layout;
     required sequence<GPUBindGroupEntry> entries;
 };

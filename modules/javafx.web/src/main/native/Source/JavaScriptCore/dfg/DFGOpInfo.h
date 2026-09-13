@@ -41,12 +41,11 @@ namespace JSC { namespace DFG {
 // a constant index, argument, or identifier) from a Node*.
 struct OpInfo {
     OpInfo() : m_value(0) { }
-    template<
-        typename IntegralType,
-        typename Constraint = typename std::enable_if<(std::is_integral<IntegralType>::value || std::is_enum<IntegralType>::value) && sizeof(IntegralType) <= sizeof(uint64_t)>::type>
+    template<typename IntegralType>
+        requires ((std::integral<IntegralType> || std::is_enum_v<IntegralType>) && sizeof(IntegralType) <= sizeof(uint64_t))
     explicit OpInfo(IntegralType value)
         : m_value(static_cast<uint64_t>(value)) { }
-    explicit OpInfo(RegisteredStructure structure) : m_value(static_cast<uint64_t>(bitwise_cast<uintptr_t>(structure))) { }
+    explicit OpInfo(RegisteredStructure structure) : m_value(static_cast<uint64_t>(std::bit_cast<uintptr_t>(structure))) { }
     explicit OpInfo(Operand op) : m_value(op.asBits()) { }
     explicit OpInfo(CacheableIdentifier identifier) : m_value(static_cast<uint64_t>(identifier.rawBits())) { }
     explicit OpInfo(ECMAMode ecmaMode) : m_value(ecmaMode.value()) { }

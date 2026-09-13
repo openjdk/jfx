@@ -41,7 +41,7 @@ void* threadStateLRInternal(PlatformRegisters& regs)
 #if USE(UNTAGGED_THREAD_STATE_PTR)
     if (candidateLR && isTaggedWith<CFunctionPtrTag>(candidateLR))
         return retagCodePtr<CFunctionPtrTag, PlatformRegistersLRPtrTag>(candidateLR);
-    candidateLR = bitwise_cast<void*>(arm_thread_state64_get_lr(regs));
+    candidateLR = std::bit_cast<void*>(arm_thread_state64_get_lr(regs));
     if (!candidateLR)
         return candidateLR;
     return tagCodePtr<PlatformRegistersLRPtrTag>(candidateLR);
@@ -53,12 +53,20 @@ void* threadStateLRInternal(PlatformRegisters& regs)
 
 void* threadStatePCInternal(PlatformRegisters& regs)
 {
+#if CPU(ARM64E) && HAVE(HARDENED_MACH_EXCEPTIONS)
+    // If we have modified the PC and set it to a presigned function we want to avoid
+    // authing the value as it is using a custom ptrauth signing scheme.
+    _STRUCT_ARM_THREAD_STATE64* ts = &(regs);
+    if (!(ts->__opaque_flags & __DARWIN_ARM_THREAD_STATE64_FLAGS_KERNEL_SIGNED_PC))
+        return nullptr;
+#endif // CPU(ARM64E) && HAVE(HARDENED_MACH_EXCEPTIONS)
+
     void* candidatePC = arm_thread_state64_get_pc_fptr(regs);
 
 #if USE(UNTAGGED_THREAD_STATE_PTR)
     if (candidatePC && isTaggedWith<CFunctionPtrTag>(candidatePC))
         return retagCodePtr<CFunctionPtrTag, PlatformRegistersPCPtrTag>(candidatePC);
-    candidatePC = bitwise_cast<void*>(arm_thread_state64_get_pc(regs));
+    candidatePC = std::bit_cast<void*>(arm_thread_state64_get_pc(regs));
     if (!candidatePC)
         return candidatePC;
     return tagCodePtr<PlatformRegistersPCPtrTag>(candidatePC);

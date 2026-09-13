@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,27 +32,22 @@
 
 namespace WebCore {
 
-GPUBasedCanvasRenderingContext::GPUBasedCanvasRenderingContext(CanvasBase& canvas)
-    : CanvasRenderingContext(canvas)
+GPUBasedCanvasRenderingContext::GPUBasedCanvasRenderingContext(CanvasBase& canvas, CanvasRenderingContext::Type type)
+    : CanvasRenderingContext(canvas, type)
     , ActiveDOMObject(canvas.scriptExecutionContext())
 {
+    ASSERT(isGPUBased());
 }
 
 HTMLCanvasElement* GPUBasedCanvasRenderingContext::htmlCanvas() const
 {
-    auto& base = canvasBase();
-    if (!is<HTMLCanvasElement>(base))
-        return nullptr;
-    return &downcast<HTMLCanvasElement>(base);
+    return dynamicDowncast<HTMLCanvasElement>(canvasBase());
 }
 
-void GPUBasedCanvasRenderingContext::notifyCanvasContentChanged()
+void GPUBasedCanvasRenderingContext::markCanvasChanged()
 {
-    if (htmlCanvas()) {
-        RenderBox* renderBox = htmlCanvas()->renderBox();
-        if (renderBox && renderBox->hasAcceleratedCompositing())
-            renderBox->contentChanged(CanvasChanged);
-    }
+    Ref canvas = canvasBase();
+    canvas->didDraw(FloatRect { { }, canvas->size() }, ShouldApplyPostProcessingToDirtyRect::No);
 }
 
 } // namespace WebCore

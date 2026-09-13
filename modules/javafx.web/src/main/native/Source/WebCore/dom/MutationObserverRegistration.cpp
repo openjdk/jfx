@@ -34,10 +34,19 @@
 
 #include "Document.h"
 #include "JSNodeCustom.h"
+#include "NodeDocument.h"
 #include "QualifiedName.h"
 #include "WebCoreOpaqueRootInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MutationObserverRegistration);
+
+Ref<MutationObserverRegistration> MutationObserverRegistration::create(MutationObserver& observer, Node& node, MutationObserverOptions options, const MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>& attributeFilter)
+{
+    return adoptRef(*new MutationObserverRegistration(observer, node, options, attributeFilter));
+}
 
 MutationObserverRegistration::MutationObserverRegistration(MutationObserver& observer, Node& node, MutationObserverOptions options, const MemoryCompactLookupOnlyRobinHoodHashSet<AtomString>& attributeFilter)
     : m_observer(observer)
@@ -67,11 +76,11 @@ void MutationObserverRegistration::observedSubtreeNodeWillDetach(Node& node)
         return;
 
     node.registerTransientMutationObserver(*this);
-    m_observer->setHasTransientRegistration(node.document());
+    m_observer->setHasTransientRegistration(node.protectedDocument());
 
     if (m_transientRegistrationNodes.isEmpty()) {
         ASSERT(!m_nodeKeptAlive);
-        m_nodeKeptAlive = &m_node; // Balanced in takeTransientRegistrations.
+        m_nodeKeptAlive = m_node.ptr(); // Balanced in takeTransientRegistrations.
     }
     m_transientRegistrationNodes.add(node);
 }
@@ -100,7 +109,7 @@ bool MutationObserverRegistration::shouldReceiveMutationFrom(Node& node, Mutatio
     if (!m_options.contains(type))
         return false;
 
-    if (&m_node != &node && !isSubtree())
+    if (m_node.ptr() != &node && !isSubtree())
         return false;
 
     if (type != MutationObserverOptionType::Attributes || !m_options.contains(MutationObserverOptionType::AttributeFilter))
@@ -114,7 +123,7 @@ bool MutationObserverRegistration::shouldReceiveMutationFrom(Node& node, Mutatio
 
 bool MutationObserverRegistration::isReachableFromOpaqueRoots(JSC::AbstractSlotVisitor& visitor) const
 {
-    if (containsWebCoreOpaqueRoot(visitor, m_node))
+    if (containsWebCoreOpaqueRoot(visitor, m_node.ptr()))
         return true;
 
     for (auto& node : m_transientRegistrationNodes) {

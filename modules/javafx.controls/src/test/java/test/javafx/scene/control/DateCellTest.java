@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,12 @@
 
 package test.javafx.scene.control;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.time.LocalDate;
-
-import com.sun.javafx.tk.Toolkit;
-
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.Group;
@@ -37,13 +39,10 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CellShim;
 import javafx.scene.control.DateCell;
 import javafx.stage.Stage;
-
-import org.junit.Before;
-import org.junit.Test;
-
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
-
-import static org.junit.Assert.*;
 
 public class DateCellTest {
     private DateCell cell;
@@ -51,7 +50,8 @@ public class DateCellTest {
     private final LocalDate today = LocalDate.now();
     private final LocalDate tomorrow = today.plusDays(1);
 
-    @Before public void setup() throws Exception {
+    @BeforeEach
+    public void setup() throws Exception {
         cell = new DateCell();
     }
 

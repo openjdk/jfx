@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,8 +28,9 @@
 
 #pragma once
 
-#include "JSCJSValue.h"
+#include <JavaScriptCore/JSCJSValue.h>
 #include <wtf/Assertions.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/VectorTraits.h>
 
 namespace JSC {
@@ -41,7 +42,7 @@ namespace JSC {
     class JSScope;
 
     class Register {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(Register);
     public:
         Register();
 
@@ -195,12 +196,12 @@ namespace JSC {
 #if ENABLE(WEBASSEMBLY) && USE(JSVALUE32_64)
     ALWAYS_INLINE float Register::unboxedFloat() const
     {
-        return bitwise_cast<float>(payload());
+        return std::bit_cast<float>(payload());
     }
 
     SUPPRESS_ASAN ALWAYS_INLINE float Register::asanUnsafeUnboxedFloat() const
     {
-        return bitwise_cast<float>(payload());
+        return std::bit_cast<float>(payload());
     }
 #endif
 
@@ -219,7 +220,7 @@ namespace JSC {
 #if USE(JSVALUE64)
         return u.encodedValue.ptr;
 #else
-        return bitwise_cast<JSCell*>(payload());
+        return std::bit_cast<JSCell*>(payload());
 #endif
     }
 
@@ -228,7 +229,7 @@ namespace JSC {
 #if USE(JSVALUE64)
         return u.encodedValue.ptr;
 #else
-        return bitwise_cast<JSCell*>(payload());
+        return std::bit_cast<JSCell*>(payload());
 #endif
     }
 
@@ -237,7 +238,7 @@ namespace JSC {
 #if USE(JSVALUE64)
         return u.encodedValue.ptr;
 #else
-        return bitwise_cast<void*>(payload());
+        return std::bit_cast<void*>(payload());
 #endif
     }
 
@@ -246,7 +247,7 @@ namespace JSC {
 #if USE(JSVALUE64)
         return u.encodedValue.ptr;
 #else
-        return bitwise_cast<void*>(unsafePayload());
+        return std::bit_cast<void*>(unsafePayload());
 #endif
     }
 

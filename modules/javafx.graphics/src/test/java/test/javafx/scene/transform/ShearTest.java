@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,13 +28,14 @@ package test.javafx.scene.transform;
 import static test.javafx.scene.transform.TransformTest.assertTx;
 import javafx.scene.shape.Rectangle;
 
-import org.junit.Test;
-import static org.junit.Assert.*;
-
 import test.com.sun.javafx.test.TransformHelper;
 import com.sun.javafx.geom.transform.Affine2D;
 import javafx.scene.transform.Shear;
 import javafx.scene.transform.Transform;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class ShearTest {
 
@@ -118,7 +119,8 @@ public class ShearTest {
                  0,  0, 1,      0);
     }
 
-    @Test public void testToString() {
+    @Test
+    public void testToString() {
         final Shear trans = new Shear(8, 15);
 
         String s = trans.toString();
@@ -127,19 +129,23 @@ public class ShearTest {
         assertFalse(s.isEmpty());
     }
 
-    @Test public void testBoundPropertySynced_X() throws Exception {
+    @Test
+    public void testBoundPropertySynced_X() throws Exception {
         TransformTest.checkDoublePropertySynced(new Shear(3, 3, 0, 0), "x", 123.0);
     }
 
-    @Test public void testBoundPropertySynced_Y() throws Exception {
+    @Test
+    public void testBoundPropertySynced_Y() throws Exception {
         TransformTest.checkDoublePropertySynced(new Shear(3, 3, 0, 0), "y", 112.0);
     }
 
-    @Test public void testBoundPropertySynced_PivotX() throws Exception {
+    @Test
+    public void testBoundPropertySynced_PivotX() throws Exception {
         TransformTest.checkDoublePropertySynced(new Shear(3, 3, 0, 0), "pivotX", 22.0);
     }
 
-    @Test public void testBoundPropertySynced_PivotY() throws Exception {
+    @Test
+    public void testBoundPropertySynced_PivotY() throws Exception {
         TransformTest.checkDoublePropertySynced(new Shear(3, 3, 0, 0), "pivotY", 33.0);
     }
 }

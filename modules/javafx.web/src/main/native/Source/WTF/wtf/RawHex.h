@@ -25,6 +25,10 @@
 
 #pragma once
 
+#include <cstdint>
+#include <wtf/Compiler.h>
+#include <wtf/Platform.h>
+
 namespace WTF {
 
 // For printing integral values in hex.
@@ -48,7 +52,7 @@ public:
         : RawHex(static_cast<uintptr_t>(value))
     { }
 
-#if CPU(ADDRESS64) || OS(DARWIN)
+#if CPU(ADDRESS64) || OS(DARWIN) || OS(HAIKU)
     // These causes build errors for CPU(ADDRESS32) on some ports because int32_t
     // is already handled by intptr_t, and uint32_t is handled by uintptr_t.
     explicit RawHex(int32_t value)

@@ -28,7 +28,11 @@
 #include <algorithm>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/MediaTime.h>
+#include <wtf/Platform.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
+
+OBJC_CLASS NSArray;
 
 namespace WTF {
 class PrintStream;
@@ -42,7 +46,7 @@ enum class AddTimeRangeOption : uint8_t {
 };
 
 class WEBCORE_EXPORT PlatformTimeRanges final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(PlatformTimeRanges, WEBCORE_EXPORT);
 public:
     PlatformTimeRanges();
     PlatformTimeRanges(const MediaTime& start, const MediaTime& end);
@@ -72,9 +76,11 @@ public:
     void clear();
 
     bool contain(const MediaTime&) const;
+    bool containWithEpsilon(const MediaTime&, const MediaTime& epsilon) const;
+    bool containWithEpsilon(const PlatformTimeRanges&, const MediaTime& epsilon) const;
 
     size_t find(const MediaTime&) const;
-    size_t findWithEpsilon(const MediaTime&, const MediaTime& epsilon);
+    size_t findWithEpsilon(const MediaTime&, const MediaTime& epsilon) const;
 
     MediaTime nearest(const MediaTime&) const;
 
@@ -123,13 +129,13 @@ public:
             return range.start >= end;
         }
 
-        inline bool operator==(const Range& other) const { return start == other.start && end == other.end; }
+        friend bool operator==(const Range&, const Range&) = default;
     };
 
-    bool operator==(const PlatformTimeRanges& other) const;
+    friend bool operator==(const PlatformTimeRanges&, const PlatformTimeRanges&) = default;
 
 private:
-    friend struct IPC::ArgumentCoder<PlatformTimeRanges, void>;
+    friend struct IPC::ArgumentCoder<PlatformTimeRanges>;
 
     PlatformTimeRanges(Vector<Range>&&);
     PlatformTimeRanges& operator-=(const Range&);
@@ -138,6 +144,12 @@ private:
 
     Vector<Range> m_ranges;
 };
+
+#if PLATFORM(COCOA)
+RetainPtr<NSArray> makeNSArray(const PlatformTimeRanges&);
+#endif
+
+inline String toString(const PlatformTimeRanges& platformTimeRanges) { return platformTimeRanges.toString(); }
 
 } // namespace WebCore
 

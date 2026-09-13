@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 Yusuke Suzuki <yusukesuzuki@slowstart.org>.
+ * Copyright (C) 2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,29 +26,36 @@
 
 #pragma once
 
-#if ENABLE(ASSEMBLER) && OS(LINUX)
+#include <wtf/Platform.h>
 
+#if ENABLE(ASSEMBLER)
+
+#include "LinkBuffer.h"
 #include <stdio.h>
+#include <wtf/FileHandle.h>
 #include <wtf/Lock.h>
+#include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/CString.h>
 
 namespace JSC {
 
 class PerfLog {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PerfLog);
     WTF_MAKE_NONCOPYABLE(PerfLog);
+    friend class LazyNeverDestroyed<PerfLog>;
 public:
-    static void log(CString&&, const uint8_t* executableAddress, size_t);
+    static void log(const CString& name, MacroAssemblerCodeRef<LinkBufferPtrTag>);
 
 private:
     PerfLog();
     static PerfLog& singleton();
 
-    void write(const void*, size_t) WTF_REQUIRES_LOCK(m_lock);
-    void flush() WTF_REQUIRES_LOCK(m_lock);
+    void write(const AbstractLocker&, std::span<const uint8_t>) WTF_REQUIRES_LOCK(m_lock);
+    void write(const AbstractLocker& locker, std::span<const char> span) WTF_REQUIRES_LOCK(m_lock) { write(locker, unsafeMakeSpan(std::bit_cast<const uint8_t*>(span.data()), span.size_bytes())); }
+    void flush(const AbstractLocker&) WTF_REQUIRES_LOCK(m_lock);
 
-    FILE* m_file { nullptr };
-    void* m_marker { nullptr };
+    WTF::FileSystemImpl::FileHandle m_file { };
     uint64_t m_codeIndex { 0 };
     int m_fd { -1 };
     Lock m_lock;
@@ -55,4 +63,4 @@ private:
 
 } // namespace JSC
 
-#endif // ENABLE(ASSEMBLER) && OS(LINUX)
+#endif // ENABLE(ASSEMBLER)

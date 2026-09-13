@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,15 +24,15 @@
 
 package test.robot.javafx.scene.layout;
 
-import static org.junit.Assume.assumeTrue;
-
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import java.util.concurrent.TimeUnit;
 import javafx.geometry.Bounds;
 import javafx.scene.paint.Color;
-
-import org.junit.Ignore;
-import org.junit.Test;
-
-import com.sun.javafx.PlatformUtil;
+import test.util.ScreenCaptureTestWatcher;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 /**************************************************************************
  *                                                                        *
@@ -40,9 +40,11 @@ import com.sun.javafx.PlatformUtil;
  * to align naturally with the edge of the test region.                   *
  *                                                                        *
  *************************************************************************/
+@Timeout(value=20000, unit=TimeUnit.MILLISECONDS)
+@ExtendWith(ScreenCaptureTestWatcher.class)
 public class RegionBackgroundImageUITest extends RegionUITestBase {
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -51,7 +53,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkCompletelyFilled(20);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_RepeatX() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -61,7 +63,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkHorizontalStripAlongTop(20, LEFT);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_RepeatY() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -71,7 +73,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkVerticalStripAlongLeft(20, TOP);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_Space() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -81,7 +83,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkCompletelyFilled(20);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_Round() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -91,7 +93,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkCompletelyFilled(20);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_RoundSpace() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -101,7 +103,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkCompletelyFilled(20);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_PositionCenter() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
@@ -111,7 +113,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkNonRepeating(20, WIDTH / 2, HEIGHT / 2, true);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_PositionCenterFiftyPercent() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
@@ -121,7 +123,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkNonRepeating(20, WIDTH / 2, HEIGHT / 2, true);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_PositionCenterLeft() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
@@ -134,7 +136,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         assertColorEquals(SCENE_FILL, centerX - 11, HEIGHT / 2, TOLERANCE);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_PositionCenterRight() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
@@ -147,7 +149,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         assertColorEquals(SCENE_FILL, centerX + 10, HEIGHT / 2, TOLERANCE);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_PositionCenterTop() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
@@ -160,7 +162,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         assertColorEquals(SCENE_FILL, WIDTH / 2, centerY - 11, TOLERANCE);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_PositionCenterBottom() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -174,7 +176,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         assertColorEquals(SCENE_FILL, WIDTH / 2, centerY + 10, TOLERANCE);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_PositionBottomRight() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -191,7 +193,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         assertColorEquals(SCENE_FILL, centerX, centerY + 10, TOLERANCE);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_PositionCenterRepeatX() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
@@ -201,7 +203,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkHorizontalStripAlongCenter(20, CENTER);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_PositionCenterFiftyPercentRepeatX() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
@@ -211,7 +213,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkHorizontalStripAlongCenter(20, CENTER);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_PositionCenterLeftRepeatX() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
@@ -221,7 +223,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkHorizontalStripAlongCenter(20, LEFT);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_PositionCenterRightRepeatX() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
@@ -230,7 +232,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkHorizontalStripAlongCenter(20, LEFT);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_PositionCenterTopRepeatX() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -241,7 +243,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkHorizontalStripAlongTop(20, CENTER);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_PositionCenterBottomRepeatX() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -252,7 +254,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkHorizontalStripAlongBottom(20, CENTER);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_PositionBottomRightRepeatX() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -263,7 +265,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkHorizontalStripAlongBottom(20, LEFT);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_PositionCenterRepeatY() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -274,7 +276,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkVerticalStripAlongCenter(20, CENTER);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_PositionCenterFiftyPercentRepeatY() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -285,7 +287,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkVerticalStripAlongCenter(20, CENTER);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_PositionCenterLeftRepeatY() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -296,7 +298,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkVerticalStripAlongLeft(20, CENTER);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_PositionCenterRightRepeatY() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -307,7 +309,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkVerticalStripAlongRight(20, CENTER);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_PositionCenterTopRepeatY() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -318,7 +320,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkVerticalStripAlongCenter(20, TOP);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_PositionCenterBottomRepeatY() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -329,7 +331,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkVerticalStripAlongCenter(20, TOP);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_PositionBottomRightRepeatY() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -340,7 +342,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkVerticalStripAlongRight(20, TOP);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_Position25PercentLeft() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
@@ -353,7 +355,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
                 (REGION_TOP +  (int) (.5 * REGION_HEIGHT)), true);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_Position25PercentRight() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
@@ -369,7 +371,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
     // TODO should do from the top & bottom
 
     // TODO should test that cover causes other properties to be ignored
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_Cover() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
@@ -380,7 +382,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
     }
 
     // TODO should test that contain causes other properties to be ignored
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_Contain() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -392,7 +394,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkNonRepeating(200, REGION_LEFT + 300, REGION_TOP + 100, false);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void alignedImage_ContainNoRepeat() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test20x20.png');" +
@@ -402,7 +404,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkNonRepeating(200, REGION_LEFT + 100, REGION_TOP + 100, true);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -410,7 +412,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkCompletelyFilled(48);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_RepeatX() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -420,7 +422,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkHorizontalStripAlongTop(48, LEFT);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_RepeatY() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -430,8 +432,8 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkVerticalStripAlongLeft(48, TOP);
     }
 
-    @Ignore("RT-33411: Doesn't work at present because of Prism bug where the gaps between rows are inconsistent")
-    @Test(timeout = 20000)
+    @Disabled("JDK-8088544: Doesn't work at present because of Prism bug where the gaps between rows are inconsistent")
+    @Test
     public void unalignedImage_Space() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
@@ -440,7 +442,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkEvenlyFilled(48);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_Round() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -450,8 +452,8 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkCompletelyFilled(50); // rounded up from 48 to 50
     }
 
-    @Ignore("RT-33411: Doesn't work at present because of Prism bug where the gaps between rows are inconsistent")
-    @Test(timeout = 20000)
+    @Disabled("JDK-8088544: Doesn't work at present because of Prism bug where the gaps between rows are inconsistent")
+    @Test
     public void unalignedImage_RoundSpace() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
@@ -461,7 +463,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         // even in one dimension and spaced in the other
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_PositionCenter() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
@@ -470,7 +472,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkNonRepeating(48, WIDTH / 2, HEIGHT / 2, true);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_PositionCenterFiftyPercent() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
@@ -479,7 +481,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkNonRepeating(48, WIDTH / 2, HEIGHT / 2, true);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_PositionCenterLeft() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
@@ -488,7 +490,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkNonRepeating(48, REGION_LEFT + 24, HEIGHT / 2, true);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_PositionCenterRight() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
@@ -497,7 +499,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkNonRepeating(48, REGION_RIGHT - 24, HEIGHT / 2, true);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_PositionCenterTop() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
@@ -506,7 +508,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkNonRepeating(48, WIDTH / 2, REGION_TOP + 24, true);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_PositionCenterBottom() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
@@ -515,7 +517,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkNonRepeating(48, WIDTH / 2, REGION_BOTTOM - 24, true);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_PositionBottomRight() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
@@ -524,7 +526,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkNonRepeating(48, REGION_RIGHT - 24, REGION_BOTTOM - 24, true);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_PositionCenterRepeatX() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
@@ -534,7 +536,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkHorizontalStripAlongCenter(48, CENTER);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_PositionCenterFiftyPercentRepeatX() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
@@ -544,7 +546,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkHorizontalStripAlongCenter(48, CENTER);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_PositionCenterLeftRepeatX() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
@@ -554,7 +556,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkHorizontalStripAlongCenter(48, LEFT);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_PositionCenterRightRepeatX() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
@@ -564,7 +566,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkHorizontalStripAlongCenter(48, RIGHT);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_PositionCenterTopRepeatX() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -575,7 +577,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkHorizontalStripAlongTop(48, CENTER);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_PositionCenterBottomRepeatX() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -586,7 +588,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkHorizontalStripAlongBottom(48, CENTER);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_PositionBottomRightRepeatX() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -597,7 +599,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkHorizontalStripAlongBottom(48, RIGHT);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_PositionCenterRepeatY() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -608,7 +610,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkVerticalStripAlongCenter(48, CENTER);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_PositionCenterFiftyPercentRepeatY() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -619,7 +621,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkVerticalStripAlongCenter(48, CENTER);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_PositionCenterLeftRepeatY() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -630,7 +632,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkVerticalStripAlongLeft(48, CENTER);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_PositionCenterRightRepeatY() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -641,7 +643,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkVerticalStripAlongRight(48, CENTER);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_PositionCenterTopRepeatY() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -652,7 +654,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkVerticalStripAlongCenter(48, TOP);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_PositionCenterBottomRepeatY() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -663,7 +665,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkVerticalStripAlongCenter(48, BOTTOM);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_PositionBottomRightRepeatY() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -674,7 +676,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkVerticalStripAlongRight(48, BOTTOM);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_Position25PercentLeft() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
@@ -687,7 +689,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
                 (REGION_TOP +  (int) (.5 * REGION_HEIGHT)), true);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_Position25PercentRight() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
@@ -704,10 +706,9 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     // TODO should test that cover causes other properties to be ignored
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_Cover() {
         assumeTrue(checkIntegralUIScale());
-        assumeTrue(!PlatformUtil.isMac()); // JDK-8255679
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
                 "-fx-background-size: cover;");
@@ -717,7 +718,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
     }
 
     // TODO should test that contain causes other properties to be ignored
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_Contain() {
         assumeTrue(checkIntegralUIScale());
         setStyle("-fx-background-color: black;" +
@@ -729,7 +730,7 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
         checkNonRepeating(200, REGION_LEFT + 300, REGION_TOP + 100, false);
     }
 
-    @Test(timeout = 20000)
+    @Test
     public void unalignedImage_ContainNoRepeat() {
         setStyle("-fx-background-color: black;" +
                 "-fx-background-image: url('test/robot/javafx/scene/layout/test48x48.png');" +
@@ -1056,13 +1057,14 @@ public class RegionBackgroundImageUITest extends RegionUITestBase {
 
     private void checkNonRepeating(int size, int centerX, int centerY, boolean checkForBlack) {
         final int halfSize = size / 2;
-        final int quarterSize = size / 4;
+        final int redCenterDelta = (int)(size / 2.2f);
+        final int greenCenterDelta = (int)(size / 3.3f);
         // The image
-        int x = centerX - halfSize;
-        int y = centerY - halfSize;
+        int x = centerX - redCenterDelta;
+        int y = centerY - redCenterDelta;
         assertColorEquals(contains(x, y) ? Color.RED : SCENE_FILL, x, y, TOLERANCE);
-        x = centerX - quarterSize;
-        y = centerY - quarterSize;
+        x = centerX - greenCenterDelta;
+        y = centerY - greenCenterDelta;
         assertColorEquals(contains(x, y) ? Color.rgb(0, 255, 0) : SCENE_FILL, x, y, TOLERANCE);
         x = centerX;
         y = centerY;

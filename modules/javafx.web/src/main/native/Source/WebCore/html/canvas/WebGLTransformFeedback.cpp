@@ -31,32 +31,40 @@
 #include "WebCoreOpaqueRootInlines.h"
 #include "WebGL2RenderingContext.h"
 #include "WebGLBuffer.h"
-#include "WebGLContextGroup.h"
 #include <JavaScriptCore/AbstractSlotVisitorInlines.h>
 #include <wtf/Lock.h>
 #include <wtf/Locker.h>
 
 namespace WebCore {
 
-Ref<WebGLTransformFeedback> WebGLTransformFeedback::create(WebGL2RenderingContext& ctx)
+Ref<WebGLTransformFeedback> WebGLTransformFeedback::createLost()
 {
-    return adoptRef(*new WebGLTransformFeedback(ctx));
+    return adoptRef(*new WebGLTransformFeedback { });
+}
+
+Ref<WebGLTransformFeedback> WebGLTransformFeedback::create(WebGL2RenderingContext& context)
+{
+    auto object = context.graphicsContextGL()->createTransformFeedback();
+    if (!object)
+        return createLost();
+    return adoptRef(*new WebGLTransformFeedback { context, object });
 }
 
 WebGLTransformFeedback::~WebGLTransformFeedback()
 {
-    if (!hasGroupOrContext())
+    if (!m_context)
         return;
 
     runDestructor();
 }
 
-WebGLTransformFeedback::WebGLTransformFeedback(WebGL2RenderingContext& ctx)
-    : WebGLSharedObject(ctx)
+WebGLTransformFeedback::WebGLTransformFeedback(WebGL2RenderingContext& context, PlatformGLObject object)
+    : WebGLObject(context, object)
 {
-    setObject(ctx.graphicsContextGL()->createTransformFeedback());
-    m_boundIndexedTransformFeedbackBuffers.resize(ctx.maxTransformFeedbackSeparateAttribs());
+    m_boundIndexedTransformFeedbackBuffers.grow(context.maxTransformFeedbackSeparateAttribs());
 }
+
+WebGLTransformFeedback::WebGLTransformFeedback() = default;
 
 void WebGLTransformFeedback::deleteObjectImpl(const AbstractLocker&, GraphicsContextGL* context3d, PlatformGLObject object)
 {
@@ -65,7 +73,7 @@ void WebGLTransformFeedback::deleteObjectImpl(const AbstractLocker&, GraphicsCon
 
 void WebGLTransformFeedback::setProgram(const AbstractLocker&, WebGLProgram& program)
 {
-    m_program = &program;
+    m_program = program;
     m_programLinkCount = program.getLinkCount();
 }
 
@@ -97,11 +105,11 @@ bool WebGLTransformFeedback::hasEnoughBuffers(GCGLuint numRequired) const
 void WebGLTransformFeedback::addMembersToOpaqueRoots(const AbstractLocker& locker, JSC::AbstractSlotVisitor& visitor)
 {
     for (auto& buffer : m_boundIndexedTransformFeedbackBuffers)
-        addWebCoreOpaqueRoot(visitor, buffer.get());
+        SUPPRESS_UNCOUNTED_ARG addWebCoreOpaqueRoot(visitor, buffer.get());
 
     addWebCoreOpaqueRoot(visitor, m_program.get());
     if (m_program)
-        m_program->addMembersToOpaqueRoots(locker, visitor);
+        SUPPRESS_UNCOUNTED_ARG m_program->addMembersToOpaqueRoots(locker, visitor);
 }
 
 void WebGLTransformFeedback::unbindBuffer(const AbstractLocker&, WebGLBuffer& buffer)

@@ -23,19 +23,22 @@
 
 #pragma once
 
-#include "Autofill.h"
-#include "HTMLElement.h"
-#include "ValidatedFormListedElement.h"
+#include <WebCore/Autofill.h>
+#include <WebCore/HTMLElement.h>
+#include <WebCore/ValidatedFormListedElement.h>
 
 #if ENABLE(AUTOCAPITALIZE)
-#include "Autocapitalize.h"
+#include <WebCore/Autocapitalize.h>
 #endif
 
 namespace WebCore {
 
 class HTMLFormControlElement : public HTMLElement, public ValidatedFormListedElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLFormControlElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLFormControlElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLFormControlElement);
 public:
+    USING_CAN_MAKE_WEAKPTR(HTMLElement);
+
     virtual ~HTMLFormControlElement();
 
     bool isValidatedFormListedElement() const final { return true; }
@@ -50,18 +53,16 @@ public:
     bool supportsFocus() const override { return !isDisabled(); }
 
     WEBCORE_EXPORT String formEnctype() const;
-    WEBCORE_EXPORT void setFormEnctype(const AtomString&);
     WEBCORE_EXPORT String formMethod() const;
-    WEBCORE_EXPORT void setFormMethod(const AtomString&);
     bool formNoValidate() const;
     WEBCORE_EXPORT String formAction() const;
-    WEBCORE_EXPORT void setFormAction(const AtomString&);
 
     bool formControlValueMatchesRenderer() const { return m_valueMatchesRenderer; }
     void setFormControlValueMatchesRenderer(bool b) { m_valueMatchesRenderer = b; }
 
     bool wasChangedSinceLastFormControlChangeEvent() const { return m_wasChangedSinceLastFormControlChangeEvent; }
     void setChangedSinceLastFormControlChangeEvent(bool);
+    bool wasCreatedByTaintedScript() const { return m_wasCreatedByTaintedScript; }
 
     virtual void dispatchFormControlChangeEvent();
     void dispatchChangeEvent();
@@ -88,7 +89,6 @@ public:
 #endif
 
     WEBCORE_EXPORT String autocomplete() const;
-    WEBCORE_EXPORT void setAutocomplete(const AtomString&);
 
     AutofillMantle autofillMantle() const;
 
@@ -98,15 +98,15 @@ public:
 
     virtual String resultForDialogSubmit() const;
 
-    HTMLElement* popoverTargetElement() const;
+    RefPtr<HTMLElement> popoverTargetElement() const;
     const AtomString& popoverTargetAction() const;
-    void setPopoverTargetAction(const AtomString& value);
+
+    bool isKeyboardFocusable(const FocusEventData&) const override;
 
     using Node::ref;
     using Node::deref;
 
 protected:
-    constexpr static auto CreateHTMLFormControlElement = CreateHTMLElement | NodeFlag::HasCustomStyleResolveCallbacks;
     HTMLFormControlElement(const QualifiedName& tagName, Document&, HTMLFormElement*);
 
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) override;
@@ -120,14 +120,13 @@ protected:
     void readOnlyStateChanged() override;
     virtual void requiredStateChanged();
 
-    bool isKeyboardFocusable(KeyboardEvent*) const override;
     bool isMouseFocusable() const override;
 
-    void didRecalcStyle(Style::Change) override;
+    void didRecalcStyle(OptionSet<Style::Change>) override;
 
     void dispatchBlurEvent(RefPtr<Element>&& newFocusedElement) override;
 
-    void handlePopoverTargetAction() const;
+    void handlePopoverTargetAction(const EventTarget*);
 
 private:
     void refFormAssociatedElement() const final { ref(); }
@@ -135,8 +134,6 @@ private:
 
     void runFocusingStepsForAutofocus() final;
     HTMLElement* validationAnchorElement() final { return this; }
-
-    bool isFormControlElement() const final { return true; }
 
     // These functions can be called concurrently for ValidityState.
     HTMLElement& asHTMLElement() final { return *this; }
@@ -146,17 +143,16 @@ private:
     FormListedElement* asFormListedElement() final { return this; }
     ValidatedFormListedElement* asValidatedFormListedElement() final { return this; }
 
-    bool needsMouseFocusableQuirk() const;
-
     unsigned m_isRequired : 1;
     unsigned m_valueMatchesRenderer : 1;
     unsigned m_wasChangedSinceLastFormControlChangeEvent : 1;
+    unsigned m_wasCreatedByTaintedScript : 1;
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::HTMLFormControlElement)
     static bool isType(const WebCore::Element& element) { return element.isFormControlElement(); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::Element>(node) && isType(downcast<WebCore::Element>(node)); }
-    static bool isType(const WebCore::FormListedElement& element) { return element.isFormControlElement(); }
+    static bool isType(const WebCore::Node& node) { return node.isFormControlElement(); }
+    static bool isType(const WebCore::FormListedElement& listedElement) { return listedElement.asHTMLElement().isFormControlElement(); }
 SPECIALIZE_TYPE_TRAITS_END()

@@ -1,4 +1,3 @@
-
 /*
  * Copyright (c) 2023 Apple Inc. All rights reserved.
  *
@@ -26,11 +25,53 @@
 
 #pragma once
 
+#include <cmath>
+#include <type_traits>
+#include <wtf/CheckedArithmetic.h>
 #include <wtf/FixedVector.h>
+#include <wtf/HashMap.h>
+#include <wtf/text/StringHash.h>
+#include <wtf/text/WTFString.h>
 
 namespace WGSL {
 
-struct Type;
+#if HAVE(FP16_HALF_SUPPORT)
+using half = __fp16;
+#else
+// Wrap a struct around the supported fp16 type.
+struct half {
+#if PLATFORM(COCOA)
+    using f16 = __fp16;
+#else
+    // _Float16 is the 16bit float type in C++23, and is often available
+    // in compilers prior to C++23.
+    using f16 = _Float16;
+#endif
+    half()
+    {
+    }
+
+    // Constructor from an arithmetic type. Use a template here because the
+    // explicit list of types may differ among platforms.
+    template <typename A,
+        std::enable_if_t<std::is_arithmetic_v<std::decay_t<A>>, bool> = true>
+    half(const A& val)
+        : value(static_cast<f16>(val)) { }
+
+    // Constructor from a ConstantResult.
+    template <typename C,
+        std::enable_if_t<std::is_class_v<std::decay_t<C>>, bool> = true>
+    half(const C& val)
+        : value(val.value().getHalf().value) { }
+
+    operator float() const
+    {
+        return static_cast<float>(value);
+    }
+
+    f16 value { 0 };
+};
+#endif
 
 // A constant value might be:
 // - a scalar
@@ -47,9 +88,12 @@ struct ConstantArray {
     }
 
     ConstantArray(FixedVector<ConstantValue>&& elements)
-        : elements(WTFMove(elements))
+        : elements(WTF::move(elements))
     {
     }
+
+    size_t upperBound() { return elements.size(); }
+    ConstantValue operator[](unsigned);
 
     FixedVector<ConstantValue> elements;
 };
@@ -61,49 +105,116 @@ struct ConstantVector {
     }
 
     ConstantVector(FixedVector<ConstantValue>&& elements)
-        : elements(WTFMove(elements))
+        : elements(WTF::move(elements))
     {
     }
+
+    size_t upperBound() { return elements.size(); }
+    ConstantValue operator[](unsigned);
 
     FixedVector<ConstantValue> elements;
 };
 
-using BaseValue = std::variant<double, int64_t, bool, ConstantArray, ConstantVector>;
+struct ConstantMatrix {
+    ConstantMatrix(uint32_t columns, uint32_t rows)
+        : columns(columns)
+        , rows(rows)
+        , elements(columns * rows)
+    {
+    }
+
+    ConstantMatrix(uint32_t columns, uint32_t rows, const FixedVector<ConstantValue>& elements)
+        : columns(columns)
+        , rows(rows)
+        , elements(elements)
+    {
+        RELEASE_ASSERT(elements.size() == columns * rows);
+    }
+
+    size_t upperBound() { return columns; }
+    ConstantVector operator[](unsigned);
+
+    uint32_t columns;
+    uint32_t rows;
+    FixedVector<ConstantValue> elements;
+};
+
+struct ConstantStruct {
+    HashMap<String, ConstantValue> fields;
+};
+
+using BaseValue = Variant<float, half, double, int32_t, uint32_t, int64_t, bool, ConstantArray, ConstantVector, ConstantMatrix, ConstantStruct>;
 struct ConstantValue : BaseValue {
     ConstantValue() = default;
 
-    template<typename T>
-    ConstantValue(const Type* type, T&& value)
-        : BaseValue(std::forward<T>(value))
-        , type(type)
-    {
-    }
-
-    static void constructDeletedValue(ConstantValue& slot)
-    {
-        slot.type = bitwise_cast<Type*>(static_cast<intptr_t>(-1));
-    }
-    static bool isDeletedValue(const ConstantValue& value)
-    {
-        return value.type == bitwise_cast<Type*>(static_cast<intptr_t>(-1));
-    }
+    using BaseValue::BaseValue;
 
     void dump(PrintStream&) const;
 
-    bool isNumber() const
+    bool isBool() const { return std::holds_alternative<bool>(*this); }
+    bool isVector() const { return std::holds_alternative<ConstantVector>(*this); }
+    bool isMatrix() const { return std::holds_alternative<ConstantMatrix>(*this); }
+    bool isArray() const { return std::holds_alternative<ConstantArray>(*this); }
+
+    bool toBool() const { return std::get<bool>(*this); }
+
+    int64_t integerValue() const
     {
-        return std::holds_alternative<int64_t>(*this) || std::holds_alternative<double>(*this);
+        if (auto* i32 = std::get_if<int32_t>(this))
+            return *i32;
+        if (auto* u32 = std::get_if<uint32_t>(this))
+            return *u32;
+        if (auto* abstractInt = std::get_if<int64_t>(this))
+            return *abstractInt;
+        RELEASE_ASSERT_NOT_REACHED();
+    }
+    half getHalf() const
+    {
+        if (auto* f32 = std::get_if<float>(this))
+            return *f32;
+        if (auto* f64 = std::get_if<double>(this))
+            return *f64;
+        RELEASE_ASSERT_NOT_REACHED();
     }
 
-    double toDouble() const
+    const ConstantVector& toVector() const
     {
-        ASSERT(isNumber());
-        if (std::holds_alternative<double>(*this))
-            return std::get<double>(*this);
-        return static_cast<double>(std::get<int64_t>(*this));
+        return std::get<ConstantVector>(*this);
     }
-
-    const Type* type;
 };
+
+template<typename To, typename From>
+std::optional<To> convertInteger(From value)
+{
+    auto result = Checked<To, RecordOverflow>(value);
+    if (result.hasOverflowed()) [[unlikely]]
+        return std::nullopt;
+    return { result.value() };
+}
+
+template<typename To, typename From>
+std::optional<To> convertFloat(From value)
+{
+    static_assert(std::is_floating_point<To>::value || std::is_same<To, half>::value, "Result type is expected to be a floating point type: double, float, or half");
+
+    static To max;
+    static To lowest;
+    if constexpr (std::is_floating_point<To>::value) {
+        max = std::numeric_limits<To>::max();
+        lowest = std::numeric_limits<To>::lowest();
+    } else {
+        max = 0x1.ffcp15;
+        lowest = -max;
+    }
+
+    if (value > max)
+        return std::nullopt;
+    if (value < lowest)
+        return std::nullopt;
+    if (std::isnan(value))
+        return std::nullopt;
+
+    return { value };
+}
 
 } // namespace WGSL

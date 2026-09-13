@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "FloatingState.h"
 #include "FormattingContext.h"
-#include "LayoutElementBox.h"
-#include <wtf/IsoMalloc.h>
+#include <WebCore/LayoutElementBox.h>
+#include <WebCore/PlacedFloats.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 namespace Layout {
@@ -39,59 +39,54 @@ class Box;
 // FloatingContext is responsible for adjusting the position of a box in the current formatting context
 // by taking the floating boxes into account.
 // Note that a FloatingContext's inline direction always matches the root's inline direction but it may
-// not match the FloatingState's inline direction (i.e. FloatingState may be constructed by a parent BFC with mismatching inline direction).
+// not match the PlacedFloats's inline direction (i.e. PlacedFloats may be constructed by a parent BFC with mismatching inline direction).
 class FloatingContext {
-    WTF_MAKE_ISO_ALLOCATED(FloatingContext);
+    WTF_MAKE_TZONE_ALLOCATED(FloatingContext);
 public:
-    FloatingContext(const FormattingContext&, const FloatingState&);
+    FloatingContext(const ElementBox& formattingContextRoot, const LayoutState&, const PlacedFloats&);
 
-    const FloatingState& floatingState() const { return m_floatingState; }
+    const PlacedFloats& placedFloats() const { return m_placedFloats; }
 
     LayoutPoint positionForFloat(const Box&, const BoxGeometry&, const HorizontalConstraints&) const;
     LayoutPoint positionForNonFloatingFloatAvoider(const Box&, const BoxGeometry&) const;
 
-    struct PositionWithClearance {
+    struct BlockAxisPositionWithClearance {
         LayoutUnit position;
         std::optional<LayoutUnit> clearance;
     };
-    std::optional<PositionWithClearance> verticalPositionWithClearance(const Box&, const BoxGeometry&) const;
+    std::optional<BlockAxisPositionWithClearance> blockAxisPositionWithClearance(const Box&, const BoxGeometry&) const;
 
-    std::optional<LayoutUnit> top() const;
-    std::optional<LayoutUnit> leftBottom() const { return bottom(Clear::Left); }
-    std::optional<LayoutUnit> rightBottom() const { return bottom(Clear::Right); }
-    std::optional<LayoutUnit> bottom() const { return bottom(Clear::Both); }
-
-    bool isEmpty() const { return m_floatingState.floats().isEmpty(); }
+    bool isEmpty() const { return m_placedFloats.list().isEmpty(); }
 
     struct Constraints {
-        std::optional<PointInContextRoot> left;
-        std::optional<PointInContextRoot> right;
+        std::optional<PointInContextRoot> start;
+        std::optional<PointInContextRoot> end;
     };
     enum class MayBeAboveLastFloat : bool { No, Yes };
     Constraints constraints(LayoutUnit candidateTop, LayoutUnit candidateBottom, MayBeAboveLastFloat) const;
 
-    FloatingState::FloatItem toFloatItem(const Box& floatBox, const BoxGeometry&) const;
+    PlacedFloats::Item makeFloatItem(const Box& floatBox, const BoxGeometry&, std::optional<size_t> line = { }) const;
 
-    bool isLogicalLeftPositioned(const Box& floatBox) const;
+    bool isStartPositioned(const Box& floatBox) const;
 
 private:
-    std::optional<LayoutUnit> bottom(Clear) const;
+    bool isFloatingCandidateStartPositionedInBlockFormattingContext(const Box&) const;
+    Clear clearInBlockFormattingContext(const Box&) const;
 
-    bool isFloatingCandidateLeftPositionedInFloatingState(const Box&) const;
-    Clear clearInFloatingState(const Box&) const;
+    const ElementBox& root() const { return m_formattingContextRoot; }
+    // FIXME: Turn this into an actual geometry cache.
+    const LayoutState& containingBlockGeometries() const;
 
-    const FormattingContext& formattingContext() const { return m_formattingContext; }
-    const ElementBox& root() const { return m_formattingContext.root(); }
-
-    void findPositionForFormattingContextRoot(FloatAvoider&) const;
+    void findPositionForFormattingContextRoot(FloatAvoider&, BoxGeometry::HorizontalEdges containingBlockContentBoxEdges) const;
 
     struct AbsoluteCoordinateValuesForFloatAvoider;
     AbsoluteCoordinateValuesForFloatAvoider absoluteCoordinates(const Box&, LayoutPoint borderBoxTopLeft) const;
-    LayoutPoint mapTopLeftToFloatingStateRoot(const Box&, LayoutPoint borderBoxTopLeft) const;
-    Point mapPointFromFormattingContextRootToFloatingStateRoot(Point) const;
+    LayoutPoint mapTopLeftToBlockFormattingContextRoot(const Box&, LayoutPoint borderBoxTopLeft) const;
+    Point mapPointFromFloatingContextRootToBlockFormattingContextRoot(Point) const;
 
-    const FormattingContext& m_formattingContext;
-    const FloatingState& m_floatingState;
+    CheckedRef<const ElementBox> m_formattingContextRoot;
+    const CheckedRef<const LayoutState> m_layoutState;
+    const PlacedFloats& m_placedFloats;
 };
 
 }

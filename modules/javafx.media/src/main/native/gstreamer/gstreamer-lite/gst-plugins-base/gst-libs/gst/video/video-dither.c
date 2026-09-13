@@ -359,11 +359,11 @@ count_power (guint v)
 }
 
 /**
- * gst_video_dither_new: (skip)
+ * gst_video_dither_new: (constructor) (skip)
  * @method: a #GstVideoDitherMethod
  * @flags: a #GstVideoDitherFlags
  * @format: a #GstVideoFormat
- * @quantizer: quantizer
+ * @quantizer: (array fixed-size=4): quantizer
  * @width: the width of the lines
  *
  * Make a new dither object for dithering lines of @format using the
@@ -384,7 +384,7 @@ gst_video_dither_new (GstVideoDitherMethod method, GstVideoDitherFlags flags,
   GstVideoDither *dither;
   gint i;
 
-  dither = g_slice_new0 (GstVideoDither);
+  dither = g_new0 (GstVideoDither, 1);
   dither->method = method;
   dither->flags = flags;
   dither->format = format;
@@ -402,7 +402,7 @@ gst_video_dither_new (GstVideoDitherMethod method, GstVideoDitherFlags flags,
       dither->depth = 16;
       break;
     default:
-      g_slice_free (GstVideoDither, dither);
+      g_free (dither);
       g_return_val_if_reached (NULL);
       break;
   }
@@ -474,7 +474,7 @@ gst_video_dither_free (GstVideoDither * dither)
   g_return_if_fail (dither != NULL);
 
   g_free (dither->errors);
-  g_slice_free (GstVideoDither, dither);
+  g_free (dither);
 }
 
 /**

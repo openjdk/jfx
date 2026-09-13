@@ -34,8 +34,11 @@
 #include "FEBlend.h"
 #include "PixelBuffer.h"
 #include <arm_neon.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FELightingNeonParallelApplier);
 
 class FEBlendUtilitiesNEON {
 public:
@@ -110,9 +113,9 @@ public:
 
 void FEBlendNeonApplier::applyPlatform(unsigned char* srcPixelArrayA, unsigned char* srcPixelArrayB, unsigned char* dstPixelArray, unsigned colorArrayLength) const
 {
-    uint8_t* sourcePixelA = reinterpret_cast<uint8_t*>(srcPixelArrayA);
-    uint8_t* sourcePixelB = reinterpret_cast<uint8_t*>(srcPixelArrayB);
-    uint8_t* destinationPixel = reinterpret_cast<uint8_t*>(dstPixelArray);
+    uint8_t* sourcePixelA = byteCast<uint8_t>(srcPixelArrayA);
+    uint8_t* sourcePixelB = byteCast<uint8_t>(srcPixelArrayB);
+    uint8_t* destinationPixel = byteCast<uint8_t>(dstPixelArray);
 
     uint16x8_t sixteenConst255 = vdupq_n_u16(255);
     uint16x8_t sixteenConstOne = vdupq_n_u16(1);
@@ -130,7 +133,7 @@ void FEBlendNeonApplier::applyPlatform(unsigned char* srcPixelArrayA, unsigned c
         uint16x8_t alphaB = vcombine_u16(vdup_n_u16(alphaB1), vdup_n_u16(alphaB2));
 
         uint16x8_t result;
-        switch (m_effect.blendMode()) {
+        switch (m_effect->blendMode()) {
         case BlendMode::Normal:
             result = FEBlendUtilitiesNEON::normal(doubblePixelA, doubblePixelB, alphaA, alphaB, sixteenConst255, sixteenConstOne);
             break;
@@ -167,7 +170,7 @@ void FEBlendNeonApplier::applyPlatform(unsigned char* srcPixelArrayA, unsigned c
     }
 }
 
-bool FEBlendNeonApplier::apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const
+bool FEBlendNeonApplier::apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const
 {
     auto& input = inputs[0].get();
     auto& input2 = inputs[1].get();
@@ -176,7 +179,7 @@ bool FEBlendNeonApplier::apply(const Filter&, const FilterImageVector& inputs, F
     if (!destinationPixelBuffer)
         return false;
 
-    auto* destinationPixelArray = destinationPixelBuffer->bytes();
+    auto* destinationPixelArray = destinationPixelBuffer->bytes().data();
 
     auto effectADrawingRect = result.absoluteImageRectRelativeTo(input);
     auto sourcePixelArrayA = input.getPixelBuffer(AlphaPremultiplication::Premultiplied, effectADrawingRect);
@@ -184,11 +187,14 @@ bool FEBlendNeonApplier::apply(const Filter&, const FilterImageVector& inputs, F
     auto effectBDrawingRect = result.absoluteImageRectRelativeTo(input2);
     auto sourcePixelArrayB = input2.getPixelBuffer(AlphaPremultiplication::Premultiplied, effectBDrawingRect);
 
-    unsigned sourcePixelArrayLength = sourcePixelArrayA->sizeInBytes();
-    ASSERT(sourcePixelArrayLength == sourcePixelArrayB->sizeInBytes());
+    if (!sourcePixelArrayA || !sourcePixelArrayB)
+        return false;
+
+    unsigned sourcePixelArrayLength = sourcePixelArrayA->bytes().size();
+    ASSERT(sourcePixelArrayLength == sourcePixelArrayB->bytes().size());
 
     if (sourcePixelArrayLength >= 8) {
-        applyPlatform(sourcePixelArrayA->bytes(), sourcePixelArrayB->bytes(), destinationPixelArray, sourcePixelArrayLength);
+        applyPlatform(sourcePixelArrayA->bytes().data(), sourcePixelArrayB->bytes().data(), destinationPixelArray, sourcePixelArrayLength);
         return true;
     }
 
@@ -197,8 +203,8 @@ bool FEBlendNeonApplier::apply(const Filter&, const FilterImageVector& inputs, F
     uint32_t sourceA[2] = { 0, 0 };
     uint32_t sourceBAndDest[2] = { 0, 0 };
 
-    sourceA[0] = reinterpret_cast<uint32_t*>(sourcePixelArrayA->bytes())[0];
-    sourceBAndDest[0] = reinterpret_cast<uint32_t*>(sourcePixelArrayB->bytes())[0];
+    sourceA[0] = reinterpret_cast<uint32_t*>(sourcePixelArrayA->bytes().data())[0];
+    sourceBAndDest[0] = reinterpret_cast<uint32_t*>(sourcePixelArrayB->bytes().data())[0];
     applyPlatform(reinterpret_cast<uint8_t*>(sourceA), reinterpret_cast<uint8_t*>(sourceBAndDest), reinterpret_cast<uint8_t*>(sourceBAndDest), 8);
     reinterpret_cast<uint32_t*>(destinationPixelArray)[0] = sourceBAndDest[0];
     return true;

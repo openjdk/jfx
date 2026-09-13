@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,23 +28,24 @@
 
 #include "JSCInlines.h"
 #include "VisitCounter.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
 
 static constexpr bool verboseMarkingConstraint = false;
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MarkingConstraint);
+
 MarkingConstraint::MarkingConstraint(CString abbreviatedName, CString name, ConstraintVolatility volatility, ConstraintConcurrency concurrency, ConstraintParallelism parallelism)
     : m_abbreviatedName(abbreviatedName)
-    , m_name(WTFMove(name))
+    , m_name(WTF::move(name))
     , m_volatility(volatility)
     , m_concurrency(concurrency)
     , m_parallelism(parallelism)
 {
 }
 
-MarkingConstraint::~MarkingConstraint()
-{
-}
+MarkingConstraint::~MarkingConstraint() = default;
 
 void MarkingConstraint::resetStats()
 {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -160,7 +160,7 @@ public class MainController implements Initializable {
                                 }
                             }
                             if (supportedFile!=null) {
-                                // workaround for RT-30195
+                                // workaround for JDK-8119860
                                 if (supportedFile.getAbsolutePath().indexOf('%') != -1) {
                                     supportedFile = new File(URLDecoder.decode(supportedFile.getAbsolutePath()));
                                 }

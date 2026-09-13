@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -383,7 +383,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_X11GLFactory_nInitialize
  */
 JNIEXPORT jint JNICALL Java_com_sun_prism_es2_X11GLFactory_nGetAdapterOrdinal
 (JNIEnv *env, jclass class, jlong screen) {
-    //TODO: Needs implementation to handle multi-monitors (RT-27437)
+    //TODO: Needs implementation to handle multi-monitors (JDK-8091992)
     return 0;
 }
 
@@ -394,7 +394,7 @@ JNIEXPORT jint JNICALL Java_com_sun_prism_es2_X11GLFactory_nGetAdapterOrdinal
  */
 JNIEXPORT jint JNICALL Java_com_sun_prism_es2_X11GLFactory_nGetAdapterCount
 (JNIEnv *env, jclass class) {
-    //TODO: Needs implementation to handle multi-monitors (RT-27437)
+    //TODO: Needs implementation to handle multi-monitors (JDK-8091992)
     return 1;
 }
 

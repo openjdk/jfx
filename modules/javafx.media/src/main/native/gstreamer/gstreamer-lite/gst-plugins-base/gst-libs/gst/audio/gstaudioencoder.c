@@ -248,6 +248,10 @@ struct _GstAudioEncoderPrivate
    * in the adapter. these events shall be sent after negotiation but before
    * we push the following buffer. */
   GList *early_pending_events;
+
+#ifndef GSTREAMER_LITE
+  GstLogContext *input_buffer_disappeared_lctx;
+#endif // GSTREAMER_LITE
 };
 
 
@@ -447,7 +451,6 @@ gst_audio_encoder_init (GstAudioEncoder * enc, GstAudioEncoderClass * bclass)
       GST_DEBUG_FUNCPTR (gst_audio_encoder_src_event));
   gst_pad_set_query_function (enc->srcpad,
       GST_DEBUG_FUNCPTR (gst_audio_encoder_src_query));
-  gst_pad_use_fixed_caps (enc->srcpad);
   gst_element_add_pad (GST_ELEMENT (enc), enc->srcpad);
   GST_DEBUG_OBJECT (enc, "src created");
 
@@ -467,6 +470,14 @@ gst_audio_encoder_init (GstAudioEncoder * enc, GstAudioEncoderClass * bclass)
   enc->priv->ctx.min_latency = 0;
   enc->priv->ctx.max_latency = 0;
   gst_audio_encoder_reset (enc, TRUE);
+
+#ifndef GSTREAMER_LITE
+  GST_LOG_CONTEXT_INIT (enc->priv->input_buffer_disappeared_lctx,
+      GST_LOG_CONTEXT_FLAG_THROTTLE, {
+        GST_LOG_CONTEXT_BUILDER_SET_INTERVAL (60 * GST_SECOND);
+      });
+#endif // GSTREAMER_LITE
+
   GST_DEBUG_OBJECT (enc, "init ok");
 }
 
@@ -542,6 +553,10 @@ gst_audio_encoder_finalize (GObject * object)
   GstAudioEncoder *enc = GST_AUDIO_ENCODER (object);
 
   g_object_unref (enc->priv->adapter);
+#ifndef GSTREAMER_LITE
+  g_clear_pointer (&enc->priv->input_buffer_disappeared_lctx,
+      gst_log_context_free);
+#endif // GSTREAMER_LITE
 
   g_rec_mutex_clear (&enc->stream_lock);
 
@@ -1015,8 +1030,13 @@ gst_audio_encoder_finish_frame (GstAudioEncoder * enc, GstBuffer * buf,
         data.outbuf = buf;
         gst_buffer_foreach_meta (inbuf, foreach_metadata, &data);
       } else {
+#ifndef GSTREAMER_LITE
+        GST_CTX_WARNING_OBJECT (enc->priv->input_buffer_disappeared_lctx, enc,
+            "Can't copy metadata because input buffer disappeared");
+#else // GSTREAMER_LITE
         GST_WARNING_OBJECT (enc,
             "Can't copy metadata because input buffer disappeared");
+#endif // GSTREAMER_LITE
       }
     }
 
@@ -1154,12 +1174,9 @@ gst_audio_encoder_push_buffers (GstAudioEncoder * enc, gboolean force)
 
     priv->got_data = FALSE;
     if (G_LIKELY (need)) {
-      const guint8 *data;
-
-      data = gst_adapter_map (priv->adapter, priv->offset + need);
-      buf =
-          gst_buffer_new_wrapped_full (GST_MEMORY_FLAG_READONLY,
-          (gpointer) data, priv->offset + need, priv->offset, need, NULL, NULL);
+      buf = gst_adapter_get_buffer (priv->adapter, priv->offset + need);
+      buf = gst_buffer_make_writable (buf);
+      gst_buffer_resize (buf, priv->offset, -1);
     } else if (!priv->drainable) {
       GST_DEBUG_OBJECT (enc, "non-drainable and no more data");
       goto finish;
@@ -1186,7 +1203,6 @@ gst_audio_encoder_push_buffers (GstAudioEncoder * enc, gboolean force)
 
     if (G_LIKELY (buf)) {
       gst_buffer_unref (buf);
-      gst_adapter_unmap (priv->adapter);
     }
 
   finish:
@@ -1729,8 +1745,8 @@ gst_audio_encoder_sink_event_default (GstAudioEncoder * enc, GstEvent * event)
           break;
         }
       }
-      /* fall through */
     }
+      /* FALLTHROUGH */
     default:
       /* Forward non-serialized events immediately. */
       if (!GST_EVENT_IS_SERIALIZED (event)) {

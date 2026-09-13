@@ -25,12 +25,16 @@
 
 #pragma once
 
-#include "WasmName.h"
+#include <JavaScriptCore/Options.h>
+#include <JavaScriptCore/WasmName.h>
+#include <wtf/Compiler.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/text/CString.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Vector.h>
 #include <utility>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC { namespace Wasm {
 
@@ -39,6 +43,7 @@ struct NameSection : public ThreadSafeRefCounted<NameSection> {
 public:
     NameSection()
     {
+        if (Options::useEagerWasmModuleHashing())
         setHash(std::nullopt);
     }
 
@@ -70,3 +75,5 @@ public:
 };
 
 } } // namespace JSC::Wasm
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

@@ -30,6 +30,7 @@
 
 #include "CryptoAlgorithmRsaOaepParams.h"
 #include "CryptoKeyRSA.h"
+#include "ExceptionOr.h"
 #include "GCryptUtilities.h"
 #include "NotImplemented.h"
 
@@ -42,11 +43,11 @@ static std::optional<Vector<uint8_t>> gcryptEncrypt(CryptoAlgorithmIdentifier ha
     PAL::GCrypt::Handle<gcry_sexp_t> dataSexp;
     {
         auto shaAlgorithm = hashAlgorithmName(hashAlgorithmIdentifier);
-        if (!shaAlgorithm)
+        if (shaAlgorithm.isNull())
             return std::nullopt;
 
         gcry_error_t error = gcry_sexp_build(&dataSexp, nullptr, "(data(flags oaep)(hash-algo %s)(label %b)(value %b))",
-            *shaAlgorithm, labelVector.size(), labelVector.data(), plainText.size(), plainText.data());
+            shaAlgorithm.characters(), labelVector.size(), labelVector.span().data(), plainText.size(), plainText.span().data());
         if (error != GPG_ERR_NO_ERROR) {
             PAL::GCrypt::logError(error);
             return std::nullopt;
@@ -80,11 +81,11 @@ static std::optional<Vector<uint8_t>> gcryptDecrypt(CryptoAlgorithmIdentifier ha
     PAL::GCrypt::Handle<gcry_sexp_t> encValSexp;
     {
         auto shaAlgorithm = hashAlgorithmName(hashAlgorithmIdentifier);
-        if (!shaAlgorithm)
+        if (shaAlgorithm.isNull())
             return std::nullopt;
 
         gcry_error_t error = gcry_sexp_build(&encValSexp, nullptr, "(enc-val(flags oaep)(hash-algo %s)(label %b)(rsa(a %b)))",
-            *shaAlgorithm, labelVector.size(), labelVector.data(), cipherText.size(), cipherText.data());
+            shaAlgorithm.characters(), labelVector.size(), labelVector.span().data(), cipherText.size(), cipherText.span().data());
         if (error != GPG_ERR_NO_ERROR) {
             PAL::GCrypt::logError(error);
             return std::nullopt;
@@ -115,16 +116,16 @@ ExceptionOr<Vector<uint8_t>> CryptoAlgorithmRSA_OAEP::platformEncrypt(const Cryp
     RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(!(key.keySizeInBits() % 8));
     auto output = gcryptEncrypt(key.hashAlgorithmIdentifier(), key.platformKey(), parameters.labelVector(), plainText, key.keySizeInBits() / 8);
     if (!output)
-        return Exception { OperationError };
-    return WTFMove(*output);
+        return Exception { ExceptionCode::OperationError };
+    return WTF::move(*output);
 }
 
 ExceptionOr<Vector<uint8_t>> CryptoAlgorithmRSA_OAEP::platformDecrypt(const CryptoAlgorithmRsaOaepParams& parameters, const CryptoKeyRSA& key, const Vector<uint8_t>& cipherText)
 {
     auto output = gcryptDecrypt(key.hashAlgorithmIdentifier(), key.platformKey(), parameters.labelVector(), cipherText);
     if (!output)
-        return Exception { OperationError };
-    return WTFMove(*output);
+        return Exception { ExceptionCode::OperationError };
+    return WTF::move(*output);
 }
 
 } // namespace WebCore

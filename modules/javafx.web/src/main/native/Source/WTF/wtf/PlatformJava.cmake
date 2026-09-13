@@ -15,6 +15,12 @@ list(APPEND WTF_PUBLIC_HEADERS
     unicode/java/UnicodeJava.h
 )
 
+if (UNIX)
+    list(APPEND WTF_PUBLIC_HEADERS
+        unix/UnixFileDescriptor.h
+    )
+endif ()
+
 list(APPEND WTF_SOURCES
     java/FileSystemJava.cpp
     java/JavaEnv.cpp
@@ -50,17 +56,16 @@ if (APPLE)
         ${WTF_DERIVED_SOURCES_DIR}/mach_excServer.c
         ${WTF_DERIVED_SOURCES_DIR}/mach_excUser.c
     )
-
+    #if_platform_JAVA 
     list(APPEND WTF_PUBLIC_HEADERS
         cf/TypeCastsCF.h
     )
-
+    #endif_platform_JAVA  
     list(APPEND WTF_PRIVATE_INCLUDE_DIRECTORIES
         # Check whether we can use WTF/icu
         # "${WTF_DIR}/icu"
         ${WTF_DERIVED_SOURCES_DIR}
     )
-
     list(APPEND WTF_SOURCES
         BlockObjCExceptions.mm
         cf/LanguageCF.cpp
@@ -105,6 +110,7 @@ elseif (WIN32)
         win/RunLoopWin.cpp
         win/ThreadingWin.cpp
         win/Win32Handle.cpp
+        win/SignalsWin.cpp
     )
 
     list(APPEND WTF_PUBLIC_HEADERS

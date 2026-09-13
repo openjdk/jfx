@@ -123,7 +123,7 @@ void JSFinalizationRegistry::finalizeUnconditionally(VM& vm, CollectionScope)
         bool keyIsDead = !vm.heap.isMarked(bucket.key);
         DeadRegistrations* deadList = nullptr;
         auto getDeadList = [&] () -> DeadRegistrations& {
-            if (UNLIKELY(!deadList))
+            if (!deadList) [[unlikely]]
                 deadList = &m_deadRegistrations.add(bucket.key, DeadRegistrations()).iterator->value;
             return *deadList;
         };
@@ -151,13 +151,13 @@ void JSFinalizationRegistry::finalizeUnconditionally(VM& vm, CollectionScope)
     });
 
     if (!m_hasAlreadyScheduledWork && (readiedCell || deadCount(locker))) {
-        auto ticket = vm.deferredWorkTimer->addPendingWork(vm, this, { });
-        ASSERT(vm.deferredWorkTimer->hasPendingWork(ticket));
-        vm.deferredWorkTimer->scheduleWorkSoon(ticket, [this](DeferredWorkTimer::Ticket) {
+        auto weakTicket = vm.deferredWorkTimer->addPendingWork(DeferredWorkTimer::WorkType::ImminentlyScheduled, vm, this, { });
+        bool queued = vm.deferredWorkTimer->scheduleWorkSoonIfActive(weakTicket, [this](DeferredWorkTimer::Ticket&) {
             JSGlobalObject* globalObject = this->globalObject();
             this->m_hasAlreadyScheduledWork = false;
             this->runFinalizationCleanup(globalObject);
         });
+        RELEASE_ASSERT(queued);
         m_hasAlreadyScheduledWork = true;
     }
 }
@@ -206,11 +206,11 @@ void JSFinalizationRegistry::registerTarget(VM& vm, JSCell* target, JSValue hold
     registration.target = target;
     registration.holdings.setWithoutWriteBarrier(holdings);
     if (token.isUndefined())
-        m_noUnregistrationLive.append(WTFMove(registration));
+        m_noUnregistrationLive.append(WTF::move(registration));
     else {
         RELEASE_ASSERT(token.isCell());
         auto result = m_liveRegistrations.add(token.asCell(), LiveRegistrations());
-        result.iterator->value.append(WTFMove(registration));
+        result.iterator->value.append(WTF::move(registration));
     }
     vm.writeBarrier(this);
 }
@@ -234,6 +234,21 @@ size_t JSFinalizationRegistry::liveCount(const Locker<JSCellLock>&)
     return count;
 }
 
+Vector<JSFinalizationRegistry::LiveRegistration> JSFinalizationRegistry::liveRegistrations(const Locker<JSCellLock>&) const
+{
+    Vector<LiveRegistration> liveRegistrations;
+
+    for (const auto& registration : m_noUnregistrationLive)
+        liveRegistrations.append({ registration.target, registration.holdings.get() });
+
+    for (const auto& [unregisterToken, registrations] : m_liveRegistrations) {
+        for (const auto& registration : registrations)
+            liveRegistrations.append({ registration.target, registration.holdings.get(), unregisterToken });
+    }
+
+    return liveRegistrations;
+}
+
 size_t JSFinalizationRegistry::deadCount(const Locker<JSCellLock>&)
 {
     size_t count = m_noUnregistrationDead.size();
@@ -241,6 +256,21 @@ size_t JSFinalizationRegistry::deadCount(const Locker<JSCellLock>&)
         count += iter.value.size();
 
     return count;
+}
+
+Vector<JSFinalizationRegistry::DeadRegistration> JSFinalizationRegistry::deadRegistrations(const Locker<JSCellLock>&) const
+{
+    Vector<DeadRegistration> deadRegistrations;
+
+    for (const auto& heldValue : m_noUnregistrationDead)
+        deadRegistrations.append({ heldValue.get() });
+
+    for (const auto& [unregisterToken, heldValues] : m_deadRegistrations) {
+        for (const auto& heldValue : heldValues)
+            deadRegistrations.append({ heldValue.get(), unregisterToken });
+    }
+
+    return deadRegistrations;
 }
 
 }

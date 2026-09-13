@@ -39,9 +39,13 @@
 #include "AudioTrackList.h"
 #include "AudioTrackPrivate.h"
 #include "CommonAtomStrings.h"
+#include "ScriptExecutionContext.h"
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AudioTrack);
 
 const AtomString& AudioTrack::descriptionKeyword()
 {
@@ -62,19 +66,25 @@ const AtomString& AudioTrack::translationKeyword()
 }
 
 AudioTrack::AudioTrack(ScriptExecutionContext* context, AudioTrackPrivate& trackPrivate)
-    : MediaTrackBase(context, MediaTrackBase::AudioTrack, trackPrivate.id(), trackPrivate.label(), trackPrivate.language())
+    : MediaTrackBase(context, MediaTrackBase::AudioTrack, trackPrivate.trackUID(), trackPrivate.id(), trackPrivate.label(), trackPrivate.language())
     , m_private(trackPrivate)
     , m_enabled(trackPrivate.enabled())
     , m_configuration(AudioTrackConfiguration::create())
 {
-    m_private->setClient(*this);
+    addClientToTrackPrivateBase(*this, trackPrivate);
+
     updateKindFromPrivate();
     updateConfigurationFromPrivate();
 }
 
 AudioTrack::~AudioTrack()
 {
-    m_private->clearClient();
+    removeClientFromTrackPrivateBase(protectedPrivate());
+}
+
+Ref<AudioTrackPrivate> AudioTrack::protectedPrivate() const
+{
+    return m_private;
 }
 
 void AudioTrack::setPrivate(AudioTrackPrivate& trackPrivate)
@@ -82,17 +92,18 @@ void AudioTrack::setPrivate(AudioTrackPrivate& trackPrivate)
     if (m_private.ptr() == &trackPrivate)
         return;
 
-    m_private->clearClient();
+    removeClientFromTrackPrivateBase(protectedPrivate());
     m_private = trackPrivate;
-    m_private->setEnabled(m_enabled);
-    m_private->setClient(*this);
+    trackPrivate.setEnabled(m_enabled);
+    addClientToTrackPrivateBase(*this, trackPrivate);
+
 #if !RELEASE_LOG_DISABLED
-    m_private->setLogger(logger(), logIdentifier());
+    trackPrivate.setLogger(protectedLogger(), logIdentifier());
 #endif
 
     updateKindFromPrivate();
     updateConfigurationFromPrivate();
-    setId(m_private->id());
+    setId(trackPrivate.id());
 }
 
 void AudioTrack::setLanguage(const AtomString& language)
@@ -106,12 +117,12 @@ void AudioTrack::setLanguage(const AtomString& language)
 
 bool AudioTrack::isValidKind(const AtomString& value) const
 {
-    return value == alternativeAtom()
-        || value == commentaryAtom()
-        || value == descriptionKeyword()
-        || value == mainAtom()
-        || value == mainDescKeyword()
-        || value == translationKeyword();
+    return value == "alternative"_s
+        || value == "commentary"_s
+        || value == "description"_s
+        || value == "main"_s
+        || value == "main-desc"_s
+        || value == "translation"_s;
 }
 
 void AudioTrack::setEnabled(bool enabled)
@@ -119,7 +130,7 @@ void AudioTrack::setEnabled(bool enabled)
     if (m_enabled == enabled)
         return;
 
-    m_private->setEnabled(enabled);
+    protectedPrivate()->setEnabled(enabled);
     m_clients.forEach([this] (auto& client) {
         client.audioTrackEnabledChanged(*this);
     });
@@ -139,7 +150,7 @@ void AudioTrack::clearClient(AudioTrackClient& client)
 
 size_t AudioTrack::inbandTrackIndex() const
 {
-    return m_private->trackIndex();
+    return protectedPrivate()->trackIndex();
 }
 
 void AudioTrack::enabledChanged(bool enabled)
@@ -157,9 +168,12 @@ void AudioTrack::enabledChanged(bool enabled)
 void AudioTrack::configurationChanged(const PlatformAudioTrackConfiguration& configuration)
 {
     m_configuration->setState(configuration);
+    m_clients.forEach([this] (auto& client) {
+        client.audioTrackConfigurationChanged(*this);
+    });
 }
 
-void AudioTrack::idChanged(const AtomString& id)
+void AudioTrack::idChanged(TrackID id)
 {
     setId(id);
     m_clients.forEach([this] (auto& client) {
@@ -167,17 +181,17 @@ void AudioTrack::idChanged(const AtomString& id)
     });
 }
 
-void AudioTrack::labelChanged(const AtomString& label)
+void AudioTrack::labelChanged(const String& label)
 {
-    setLabel(label);
+    setLabel(AtomString { label.isolatedCopy() });
     m_clients.forEach([this] (auto& client) {
         client.audioTrackLabelChanged(*this);
     });
 }
 
-void AudioTrack::languageChanged(const AtomString& language)
+void AudioTrack::languageChanged(const String& language)
 {
-    setLanguage(language);
+    setLanguage(AtomString { language.isolatedCopy() });
 }
 
 void AudioTrack::willRemove()
@@ -189,26 +203,26 @@ void AudioTrack::willRemove()
 
 void AudioTrack::updateKindFromPrivate()
 {
-    switch (m_private->kind()) {
-    case AudioTrackPrivate::Alternative:
-        setKind(alternativeAtom());
+    switch (protectedPrivate()->kind()) {
+    case AudioTrackPrivate::Kind::Alternative:
+        setKind("alternative"_s);
         break;
-    case AudioTrackPrivate::Description:
-        setKind(AudioTrack::descriptionKeyword());
+    case AudioTrackPrivate::Kind::Description:
+        setKind("description"_s);
         break;
-    case AudioTrackPrivate::Main:
-        setKind(mainAtom());
+    case AudioTrackPrivate::Kind::Main:
+        setKind("main"_s);
         break;
-    case AudioTrackPrivate::MainDesc:
-        setKind(AudioTrack::mainDescKeyword());
+    case AudioTrackPrivate::Kind::MainDesc:
+        setKind("main-desc"_s);
         break;
-    case AudioTrackPrivate::Translation:
-        setKind(AudioTrack::translationKeyword());
+    case AudioTrackPrivate::Kind::Translation:
+        setKind("translation"_s);
         break;
-    case AudioTrackPrivate::Commentary:
-        setKind(commentaryAtom());
+    case AudioTrackPrivate::Kind::Commentary:
+        setKind("commentary"_s);
         break;
-    case AudioTrackPrivate::None:
+    case AudioTrackPrivate::Kind::None:
         setKind(emptyAtom());
         break;
     default:
@@ -223,10 +237,10 @@ void AudioTrack::updateConfigurationFromPrivate()
 }
 
 #if !RELEASE_LOG_DISABLED
-void AudioTrack::setLogger(const Logger& logger, const void* logIdentifier)
+void AudioTrack::setLogger(const Logger& logger, uint64_t logIdentifier)
 {
     TrackBase::setLogger(logger, logIdentifier);
-    m_private->setLogger(logger, this->logIdentifier());
+    protectedPrivate()->setLogger(logger, this->logIdentifier());
 }
 #endif
 

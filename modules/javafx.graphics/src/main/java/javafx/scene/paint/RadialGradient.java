@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,9 +26,10 @@
 package javafx.scene.paint;
 
 import java.util.List;
-
+import java.util.Objects;
 import com.sun.javafx.scene.paint.GradientUtils;
 import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.InterpolationUtils;
 import javafx.beans.NamedArg;
 
 /**
@@ -71,8 +72,10 @@ public final class RadialGradient extends Paint {
     /**
      * Defines the angle in degrees from the center of the gradient
      * to the focus point to which the first color is mapped.
-     * @return the angle in degrees from the center of the gradient
-     * to the focus point to which the first color is mapped
+     *
+     * @return the angle in degrees from the center of the gradient to the focus point
+     *         to which the first color is mapped
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getFocusAngle() {
         return focusAngle;
@@ -85,8 +88,10 @@ public final class RadialGradient extends Paint {
      * focus point to which the first color is mapped.
      * A distance of 0.0 will be at the center of the gradient circle.
      * A distance of 1.0 will be on the circumference of the gradient circle.
-     * @return the distance from the center of the gradient to the
-     * focus point to which the first color is mapped
+     *
+     * @return the distance from the center of the gradient to the focus point to which
+     *         the first color is mapped
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a>
      */
     public final double getFocusDistance() {
         return focusDistance;
@@ -97,13 +102,15 @@ public final class RadialGradient extends Paint {
     /**
      * Defines the X coordinate of the center point of the circle defining the gradient.
      * If proportional is true (the default), this value specifies a
-     * point on a unit square that will be scaled to match the size of the
+     * point on a unit square that will be scaled to match the size of
      * the shape that the gradient fills.
      * The last color of the gradient is mapped to the perimeter of this circle.
      *
-     * @return the X coordinate of the center point of the circle defining the
-     * gradient
+     * @return the X coordinate of the center point of the circle defining the gradient
      * @defaultValue 0.0
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a>
+     *                    if both values are absolute or both values are {@link #isProportional() proportional},
+     *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getCenterX() {
         return centerX;
@@ -118,9 +125,11 @@ public final class RadialGradient extends Paint {
      * the shape that the gradient fills.
      * The last color of the gradient is mapped to the perimeter of this circle.
      *
-     * @return the X coordinate of the center point of the circle defining the
-     * gradient
+     * @return the X coordinate of the center point of the circle defining the gradient
      * @defaultValue 0.0
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a>
+     *                    if both values are absolute or both values are {@link #isProportional() proportional},
+     *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getCenterY() {
         return centerY;
@@ -134,9 +143,11 @@ public final class RadialGradient extends Paint {
      * size relative to  unit square that will be scaled to match the size of the
      * the shape that the gradient fills.
      *
-     * @return the radius of the circle defining the extents of the color
-     * gradient
+     * @return the radius of the circle defining the extents of the color gradient
      * @defaultValue 1.0
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a>
+     *                    if both values are absolute or both values are {@link #isProportional() proportional},
+     *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getRadius() {
         return radius;
@@ -153,9 +164,9 @@ public final class RadialGradient extends Paint {
      * If this flag is false, then the center coordinates and the radius are
      * specified in the local coordinate system of the node.
      *
-     * @return true if the center and radius values are proportional, otherwise
-     * absolute
+     * @return true if the center and radius values are proportional, otherwise absolute
      * @defaultValue true
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isProportional() {
         return proportional;
@@ -170,6 +181,7 @@ public final class RadialGradient extends Paint {
      *
      * @return the cycle method applied to this radial gradient
      * @defaultValue NO_CYCLE
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final CycleMethod getCycleMethod() {
         return cycleMethod;
@@ -191,6 +203,9 @@ public final class RadialGradient extends Paint {
      *
      * @return the list of Stop values
      * @defaultValue empty
+     * @interpolationType Stop list interpolation produces smooth transitions of gradient stops by allowing
+     *                    the insertion of new stops along the gradient. At most, the intermediate stop list
+     *                    has the combined number of gradient stops of both the start list and the target list.
      */
     public final List<Stop> getStops() {
         return stops;
@@ -219,17 +234,21 @@ public final class RadialGradient extends Paint {
 
     /**
      * Creates a new instance of RadialGradient.
+     *
      * @param focusAngle the angle in degrees from the center of the gradient
-     * to the focus point to which the first color is mapped
+     *                   to the focus point to which the first color is mapped
      * @param focusDistance the distance from the center of the gradient to the
-     * focus point to which the first color is mapped
+     *                      focus point to which the first color is mapped,
+     *                      must be greater than or equal to zero
      * @param centerX the X coordinate of the center point of the gradient's circle
      * @param centerY the Y coordinate of the center point of the gradient's circle
-     * @param radius the radius of the circle defining the extents of the color gradient
+     * @param radius the radius of the circle defining the extents of the color gradient,
+     *               must be greater than or equal to zero
      * @param proportional whether the coordinates and sizes are proportional
-     * to the shape which this gradient fills
+     *                     to the shape which this gradient fills
      * @param cycleMethod cycle method applied to the gradient
      * @param stops the gradient's color specification
+     * @throws IllegalArgumentException if {@code focusDistance} or {@code radius} is negative
      */
     public RadialGradient(
             @NamedArg("focusAngle") double focusAngle,
@@ -240,6 +259,7 @@ public final class RadialGradient extends Paint {
             @NamedArg(value="proportional", defaultValue="true") boolean proportional,
             @NamedArg("cycleMethod") CycleMethod cycleMethod,
             @NamedArg("stops") Stop... stops) {
+        checkInvariants(radius, focusDistance);
         this.focusAngle = focusAngle;
         this.focusDistance = focusDistance;
         this.centerX = centerX;
@@ -253,17 +273,21 @@ public final class RadialGradient extends Paint {
 
     /**
      * Creates a new instance of RadialGradient.
+     *
      * @param focusAngle the angle in degrees from the center of the gradient
-     * to the focus point to which the first color is mapped
+     *                   to the focus point to which the first color is mapped
      * @param focusDistance the distance from the center of the gradient to the
-     * focus point to which the first color is mapped
+     *                      focus point to which the first color is mapped,
+     *                      must be greater than or equal to zero
      * @param centerX the X coordinate of the center point of the gradient's circle
      * @param centerY the Y coordinate of the center point of the gradient's circle
-     * @param radius the radius of the circle defining the extents of the color gradient
+     * @param radius the radius of the circle defining the extents of the color gradient,
+     *               must be greater than or equal to zero
      * @param proportional whether the coordinates and sizes are proportional
-     * to the shape which this gradient fills
+     *                     to the shape which this gradient fills
      * @param cycleMethod cycle method applied to the gradient
      * @param stops the gradient's color specification
+     * @throws IllegalArgumentException if {@code focusDistance} or {@code radius} is negative
      */
     public RadialGradient(
             @NamedArg("focusAngle") double focusAngle,
@@ -274,6 +298,7 @@ public final class RadialGradient extends Paint {
             @NamedArg(value="proportional", defaultValue="true") boolean proportional,
             @NamedArg("cycleMethod") CycleMethod cycleMethod,
             @NamedArg("stops") List<Stop> stops) {
+        checkInvariants(radius, focusDistance);
         this.focusAngle = focusAngle;
         this.focusDistance = focusDistance;
         this.centerX = centerX;
@@ -283,6 +308,34 @@ public final class RadialGradient extends Paint {
         this.cycleMethod = (cycleMethod == null) ? CycleMethod.NO_CYCLE : cycleMethod;
         this.stops = Stop.normalize(stops);
         this.opaque = determineOpacity();
+    }
+
+    /**
+     * Private constructor accepting a stop list that is already normalized.
+     * This constructor is only called from the {@link #interpolate} method.
+     */
+    private RadialGradient(
+            double focusAngle, double focusDistance, double centerX, double centerY, double radius,
+            boolean proportional, CycleMethod cycleMethod, List<Stop> stops, int ignored) {
+        this.focusAngle = focusAngle;
+        this.focusDistance = focusDistance;
+        this.centerX = centerX;
+        this.centerY = centerY;
+        this.radius = radius;
+        this.proportional = proportional;
+        this.cycleMethod = cycleMethod;
+        this.stops = stops;
+        this.opaque = determineOpacity();
+    }
+
+    private static void checkInvariants(double radius, double focusDistance) {
+        if (radius < 0) {
+            throw new IllegalArgumentException("radius cannot be negative");
+        }
+
+        if (focusDistance < 0) {
+            throw new IllegalArgumentException("focusDistance cannot be negative");
+        }
     }
 
     /**
@@ -312,6 +365,95 @@ public final class RadialGradient extends Paint {
     }
 
     /**
+     * Returns an intermediate value between the value of this {@code RadialGradient} and the specified
+     * {@code endValue} using the linear interpolation factor {@code t}, ranging from 0 (inclusive)
+     * to 1 (inclusive).
+     *
+     * @param endValue the target value
+     * @param t the interpolation factor
+     * @throws NullPointerException if {@code endValue} is {@code null}
+     * @return the intermediate value
+     * @since 24
+     */
+    public RadialGradient interpolate(RadialGradient endValue, double t) {
+        Objects.requireNonNull(endValue, "endValue cannot be null");
+
+        // We don't check equals(endValue) here to prevent unnecessary equality checks,
+        // and only check for equality with 'this' or 'endValue' after interpolation.
+        if (t == 0.0) {
+            return this;
+        }
+
+        if (t == 1.0) {
+            return endValue;
+        }
+
+        double newCenterX, newCenterY, newRadius;
+        boolean newProportional;
+
+        if (this.proportional == endValue.proportional) {
+            newCenterX = InterpolationUtils.interpolate(this.centerX, endValue.centerX, t);
+            newCenterY = InterpolationUtils.interpolate(this.centerY, endValue.centerY, t);
+            newRadius = Math.max(0, InterpolationUtils.interpolate(this.radius, endValue.radius, t));
+            newProportional = this.proportional;
+        } else if (t < 0.5) {
+            newCenterX = this.centerX;
+            newCenterY = this.centerY;
+            newRadius = this.radius;
+            newProportional = this.proportional;
+        } else {
+            newCenterX = endValue.centerX;
+            newCenterY = endValue.centerY;
+            newRadius = endValue.radius;
+            newProportional = endValue.proportional;
+        }
+
+        double newFocusAngle = InterpolationUtils.interpolate(this.focusAngle, endValue.focusAngle, t);
+        double newFocusDistance = Math.max(0, InterpolationUtils.interpolate(this.focusDistance, endValue.focusDistance, t));
+        CycleMethod newCycleMethod = InterpolationUtils.interpolateDiscrete(this.cycleMethod, endValue.cycleMethod, t);
+
+        // Optimization: if both lists are equal, we don't compute a new intermediate list.
+        List<Stop> newStops = this.stops.equals(endValue.stops) ?
+            null : Stop.interpolateLists(this.stops, endValue.stops, t);
+
+        if (isSame(newFocusAngle, newFocusDistance, newCenterX, newCenterY, newRadius, newProportional,
+                   newCycleMethod, Objects.requireNonNullElse(newStops, this.stops))) {
+            return this;
+        }
+
+        if (endValue.isSame(newFocusAngle, newFocusDistance, newCenterX, newCenterY, newRadius, newProportional,
+                            newCycleMethod, Objects.requireNonNullElse(newStops, endValue.stops))) {
+            return endValue;
+        }
+
+        return new RadialGradient(newFocusAngle, newFocusDistance, newCenterX, newCenterY, newRadius, newProportional,
+                                  newCycleMethod, Objects.requireNonNullElse(newStops, this.stops), 0);
+    }
+
+    private boolean isSame(double focusAngle, double focusDistance, double centerX, double centerY,
+                           double radius, boolean proportional, CycleMethod cycleMethod, List<Stop> stops) {
+        return this.focusAngle == focusAngle
+            && this.focusDistance == focusDistance
+            && this.centerX == centerX
+            && this.centerY == centerY
+            && this.radius == radius
+            && this.proportional == proportional
+            && this.cycleMethod == cycleMethod
+            && this.stops == stops;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws NullPointerException {@inheritDoc}
+     * @since 24
+     */
+    @Override
+    public Paint interpolate(Paint endValue, double t) {
+        return InterpolationUtils.interpolatePaint(this, endValue, t);
+    }
+
+    /**
      * Indicates whether some other object is "equal to" this one.
      * @param obj the reference object with which to compare.
      * @return {@code true} if this object is equal to the {@code obj} argument; {@code false} otherwise.
@@ -338,7 +480,6 @@ public final class RadialGradient extends Paint {
      */
     @Override public int hashCode() {
         // We should be able to just call focusAngle.hashCode(),
-        // see http://javafx-jira.kenai.com/browse/JFXC-4247
         if (hash == 0) {
             long bits = 17;
             bits = 37 * bits + Double.doubleToLongBits(focusAngle);
@@ -404,9 +545,9 @@ public final class RadialGradient extends Paint {
      * &lt;point&gt; = [ [ &lt;length&gt; &lt;length&gt; ] | [ &lt;percentage&gt; | &lt;percentage&gt; ] ]
      * &lt;color-stop&gt; = [ &lt;color&gt; [ &lt;percentage&gt; | &lt;length&gt;]? ]
      * </pre>
-     * <p>Currently length can be only specified in px, the specification of unit can be omited.
+     * <p>Currently length can be only specified in px, the specification of unit can be omitted.
      * Format of color representation is the one used in {@link Color#web(String color)}.
-     * The radial-gradient keyword can be omited.
+     * The radial-gradient keyword can be omitted.
      * For additional information about the format of string representation, see the
      * <a href="../doc-files/cssref.html">CSS Reference Guide</a>.
      * </p>
@@ -464,8 +605,11 @@ public final class RadialGradient extends Paint {
         if ("focus-distance".equals(tokens[0])) {
             GradientUtils.Parser.checkNumberOfArguments(tokens, 1);
             distance = GradientUtils.Parser.parsePercentage(tokens[1]);
-
             parser.shift();
+
+            if (distance < 0) {
+                throw new IllegalArgumentException("Invalid gradient specification: focus-distance cannot be negative");
+            }
         }
 
         tokens = parser.splitCurrentToken();
@@ -484,9 +628,12 @@ public final class RadialGradient extends Paint {
             GradientUtils.Parser.checkNumberOfArguments(tokens, 1);
             radius = parser.parsePoint(tokens[1]);
             parser.shift();
+
+            if (radius.value < 0) {
+                throw new IllegalArgumentException("Invalid gradient specification: radius cannot be negative");
+            }
         } else {
-            throw new IllegalArgumentException("Invalid gradient specification: "
-                    + "radius must be specified");
+            throw new IllegalArgumentException("Invalid gradient specification: radius must be specified");
         }
 
         CycleMethod method = CycleMethod.NO_CYCLE;

@@ -24,15 +24,18 @@
 #include "FilterImage.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-bool SourceGraphicSoftwareApplier::apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SourceGraphicSoftwareApplier);
+
+bool SourceGraphicSoftwareApplier::apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const
 {
     auto& input = inputs[0].get();
 
-    auto resultImage = result.imageBuffer();
-    auto sourceImage = input.imageBuffer();
+    RefPtr resultImage = result.imageBuffer();
+    RefPtr sourceImage = input.imageBuffer();
     if (!resultImage || !sourceImage)
         return false;
 

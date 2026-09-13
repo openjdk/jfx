@@ -28,7 +28,6 @@
 #if ENABLE(WEB_CRYPTO)
 
 #include "CryptoKey.h"
-#include "ExceptionOr.h"
 #include <wtf/Function.h>
 #include <wtf/Vector.h>
 
@@ -36,6 +35,7 @@ namespace WebCore {
 
 class CryptoAlgorithmParameters;
 struct JsonWebKey;
+template<typename> class ExceptionOr;
 
 class CryptoKeyHMAC final : public CryptoKey {
 public:
@@ -57,13 +57,14 @@ public:
 
     CryptoAlgorithmIdentifier hashAlgorithmIdentifier() const { return m_hash; }
 
-    static ExceptionOr<size_t> getKeyLength(const CryptoAlgorithmParameters&);
+    static ExceptionOr<std::optional<size_t>> getKeyLength(const CryptoAlgorithmParameters&);
 
 private:
     CryptoKeyHMAC(const Vector<uint8_t>& key, CryptoAlgorithmIdentifier hash, bool extractable, CryptoKeyUsageBitmap);
     CryptoKeyHMAC(Vector<uint8_t>&& key, CryptoAlgorithmIdentifier hash, bool extractable, CryptoKeyUsageBitmap);
 
     KeyAlgorithm algorithm() const final;
+    CryptoKey::Data data() const final;
 
     CryptoAlgorithmIdentifier m_hash;
     Vector<uint8_t> m_key;

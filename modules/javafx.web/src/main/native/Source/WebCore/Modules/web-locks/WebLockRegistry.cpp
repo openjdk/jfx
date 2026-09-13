@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021, Apple Inc. All rights reserved.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,12 +26,13 @@
 #include "WebLockRegistry.h"
 
 #include "Exception.h"
+#include "ScriptExecutionContext.h"
 #include "WebLockManager.h"
 #include "WebLockManagerSnapshot.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RobinHoodHashMap.h>
-#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
 
@@ -41,7 +42,7 @@ static RefPtr<WebLockRegistry>& sharedRegistry()
     return registry;
 }
 
-WebLockRegistry& WebLockRegistry::shared()
+WebLockRegistry& WebLockRegistry::singleton()
 {
     auto& registry = sharedRegistry();
     if (!registry)
@@ -52,10 +53,10 @@ WebLockRegistry& WebLockRegistry::shared()
 void WebLockRegistry::setSharedRegistry(Ref<WebLockRegistry>&& registry)
 {
     ASSERT(!sharedRegistry());
-    sharedRegistry() = WTFMove(registry);
+    sharedRegistry() = WTF::move(registry);
 }
 
-class LocalWebLockRegistry::PerOriginRegistry : public RefCounted<PerOriginRegistry>, public CanMakeWeakPtr<PerOriginRegistry> {
+class LocalWebLockRegistry::PerOriginRegistry : public RefCountedAndCanMakeWeakPtr<PerOriginRegistry> {
 public:
     static Ref<PerOriginRegistry> create(LocalWebLockRegistry&, PAL::SessionID, const ClientOrigin&);
     ~PerOriginRegistry();
@@ -72,7 +73,7 @@ public:
     void releaseLock(WebLockIdentifier, const String& name);
     void abortLockRequest(WebLockIdentifier, const String& name, CompletionHandler<void(bool)>&&);
     void snapshot(CompletionHandler<void(WebLockManagerSnapshot&&)>&&);
-    void clientsAreGoingAway(const Function<bool(const LockInfo&)>& matchClient);
+    void clientsAreGoingAway(NOESCAPE const Function<bool(const LockInfo&)>& matchClient);
 
 private:
     PerOriginRegistry(LocalWebLockRegistry&, PAL::SessionID, const ClientOrigin&);
@@ -98,7 +99,7 @@ LocalWebLockRegistry::~LocalWebLockRegistry() = default;
 
 auto LocalWebLockRegistry::ensureRegistryForOrigin(PAL::SessionID sessionID, const ClientOrigin& clientOrigin) -> Ref<PerOriginRegistry>
 {
-    if (auto existingRegistry = m_perOriginRegistries.get({ sessionID, clientOrigin }))
+    if (RefPtr existingRegistry = m_perOriginRegistries.get({ sessionID, clientOrigin }))
         return *existingRegistry;
 
     return PerOriginRegistry::create(*this, sessionID, clientOrigin);
@@ -106,7 +107,7 @@ auto LocalWebLockRegistry::ensureRegistryForOrigin(PAL::SessionID sessionID, con
 
 auto LocalWebLockRegistry::existingRegistryForOrigin(PAL::SessionID sessionID, const ClientOrigin& clientOrigin) const -> RefPtr<PerOriginRegistry>
 {
-    return m_perOriginRegistries.get({ sessionID, clientOrigin }).get();
+    return m_perOriginRegistries.get({ sessionID, clientOrigin });
 }
 
 Ref<LocalWebLockRegistry::PerOriginRegistry> LocalWebLockRegistry::PerOriginRegistry::create(LocalWebLockRegistry& globalRegistry, PAL::SessionID sessionID, const ClientOrigin& clientOrigin)
@@ -130,13 +131,13 @@ LocalWebLockRegistry::PerOriginRegistry::~PerOriginRegistry()
 
 void LocalWebLockRegistry::requestLock(PAL::SessionID sessionID, const ClientOrigin& clientOrigin, WebLockIdentifier lockIdentifier, ScriptExecutionContextIdentifier clientID, const String& name, WebLockMode mode, bool steal, bool ifAvailable, Function<void(bool)>&& grantedHandler, Function<void()>&& lockStolenHandler)
 {
-    ensureRegistryForOrigin(sessionID, clientOrigin)->requestLock(lockIdentifier, clientID, name, mode, steal, ifAvailable, WTFMove(grantedHandler), WTFMove(lockStolenHandler));
+    ensureRegistryForOrigin(sessionID, clientOrigin)->requestLock(lockIdentifier, clientID, name, mode, steal, ifAvailable, WTF::move(grantedHandler), WTF::move(lockStolenHandler));
 }
 
 // https://wicg.github.io/web-locks/#request-a-lock
 void LocalWebLockRegistry::PerOriginRegistry::requestLock(WebLockIdentifier lockIdentifier, ScriptExecutionContextIdentifier clientID, const String& name, WebLockMode mode, bool steal, bool ifAvailable, Function<void(bool)>&& grantedHandler, Function<void()>&& lockStolenHandler)
 {
-    LockRequest request { { *this, lockIdentifier, clientID, mode, WTFMove(lockStolenHandler) }, name, WTFMove(grantedHandler) };
+    LockRequest request { { *this, lockIdentifier, clientID, mode, WTF::move(lockStolenHandler) }, name, WTF::move(grantedHandler) };
 
     if (steal) {
         auto it = m_heldLocks.find(name);
@@ -151,9 +152,9 @@ void LocalWebLockRegistry::PerOriginRegistry::requestLock(WebLockIdentifier lock
     }
     auto& queue = m_lockRequestQueueMap.ensure(name, [] { return Deque<LockRequest> { }; }).iterator->value;
     if (steal)
-        queue.prepend(WTFMove(request));
+        queue.prepend(WTF::move(request));
     else
-        queue.append(WTFMove(request));
+        queue.append(WTF::move(request));
     processLockRequestQueue(name, queue);
 }
 
@@ -186,7 +187,7 @@ void LocalWebLockRegistry::abortLockRequest(PAL::SessionID sessionID, const Clie
     if (!registry)
         return completionHandler(false);
 
-    registry->abortLockRequest(lockIdentifier, name, WTFMove(completionHandler));
+    registry->abortLockRequest(lockIdentifier, name, WTF::move(completionHandler));
 }
 
 // https://wicg.github.io/web-locks/#abort-the-request
@@ -236,8 +237,8 @@ void LocalWebLockRegistry::PerOriginRegistry::processLockRequestQueue(const Stri
             return;
         auto request = queue.takeFirst();
         auto& locksForName = m_heldLocks.ensure(request.name, [] { return Vector<LockInfo> { }; }).iterator->value;
-        auto grantedHandler = WTFMove(request.grantedHandler);
-        locksForName.append(WTFMove(request));
+        auto grantedHandler = WTF::move(request.grantedHandler);
+        locksForName.append(WTF::move(request));
         grantedHandler(true);
     }
     auto removedQueue = m_lockRequestQueueMap.take(name);
@@ -250,7 +251,7 @@ void LocalWebLockRegistry::snapshot(PAL::SessionID sessionID, const ClientOrigin
     if (!registry)
         return completionHandler({ });
 
-    registry->snapshot(WTFMove(completionHandler));
+    registry->snapshot(WTF::move(completionHandler));
 }
 
 // https://wicg.github.io/web-locks/#snapshot-the-lock-state
@@ -266,7 +267,7 @@ void LocalWebLockRegistry::PerOriginRegistry::snapshot(CompletionHandler<void(We
             snapshot.held.append({ pair.key, lockInfo.mode, lockInfo.clientID.toString() });
     }
 
-    completionHandler(WTFMove(snapshot));
+    completionHandler(WTF::move(snapshot));
 }
 
 void LocalWebLockRegistry::clientIsGoingAway(PAL::SessionID sessionID, const ClientOrigin& clientOrigin, ScriptExecutionContextIdentifier clientID)
@@ -276,7 +277,7 @@ void LocalWebLockRegistry::clientIsGoingAway(PAL::SessionID sessionID, const Cli
 }
 
 // https://wicg.github.io/web-locks/#agent-integration
-void LocalWebLockRegistry::PerOriginRegistry::clientsAreGoingAway(const Function<bool(const LockInfo&)>& matchClient)
+void LocalWebLockRegistry::PerOriginRegistry::clientsAreGoingAway(NOESCAPE const Function<bool(const LockInfo&)>& matchClient)
 {
     // FIXME: This is inefficient. We could optimize this by keeping track of which locks map to which clients.
     HashSet<String> namesOfQueuesToProcess;

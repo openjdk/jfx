@@ -38,6 +38,8 @@
 #include <wtf/DataLog.h>
 #endif
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 const unsigned opcodeLengths[] = {
@@ -46,21 +48,9 @@ const unsigned opcodeLengths[] = {
 #undef OPCODE_LENGTH
 };
 
-const char* const opcodeNames[] = {
-#define OPCODE_NAME_ENTRY(opcode, size) #opcode,
+const ASCIILiteral opcodeNames[] = {
+#define OPCODE_NAME_ENTRY(opcode, size) #opcode ## _s,
     FOR_EACH_OPCODE_ID(OPCODE_NAME_ENTRY)
-#undef OPCODE_NAME_ENTRY
-};
-
-const unsigned wasmOpcodeLengths[] = {
-#define OPCODE_LENGTH(opcode, length) length,
-    FOR_EACH_WASM_ID(OPCODE_LENGTH)
-#undef OPCODE_LENGTH
-};
-
-const char* const wasmOpcodeNames[] = {
-#define OPCODE_NAME_ENTRY(opcode, size) #opcode,
-    FOR_EACH_WASM_ID(OPCODE_NAME_ENTRY)
 #undef OPCODE_NAME_ENTRY
 };
 
@@ -70,7 +60,7 @@ inline const char* padOpcodeName(OpcodeID op, unsigned width)
 {
     auto padding = "                                ";
     auto paddingLength = strlen(padding);
-    auto opcodeNameLength = strlen(opcodeNames[op]);
+    auto opcodeNameLength = opcodeNames[op].length();
     if (opcodeNameLength >= width)
         return "";
     if (paddingLength + opcodeNameLength < width)
@@ -153,7 +143,7 @@ OpcodeStats::~OpcodeStats()
 
     for (int i = 0; i < numOpcodeIDs; ++i) {
         int index = sortedIndices[i];
-        dataLogF("%s:%s %lld - %.2f%%\n", opcodeNames[index], padOpcodeName((OpcodeID)index, 28), opcodeCounts[index], ((double) opcodeCounts[index]) / ((double) totalInstructions) * 100.0);
+        dataLogF("%s:%s %lld - %.2f%%\n", opcodeNames[index].characters(), padOpcodeName((OpcodeID)index, 28), opcodeCounts[index], ((double) opcodeCounts[index]) / ((double) totalInstructions) * 100.0);
     }
 
     dataLogF("\n");
@@ -166,7 +156,7 @@ OpcodeStats::~OpcodeStats()
         if (!count)
             break;
 
-        dataLogF("%s%s %s:%s %lld %.2f%%\n", opcodeNames[indexPair.first], padOpcodeName((OpcodeID)indexPair.first, 28), opcodeNames[indexPair.second], padOpcodeName((OpcodeID)indexPair.second, 28), count, ((double) count) / ((double) totalInstructionPairs) * 100.0);
+        dataLogF("%s%s %s:%s %lld %.2f%%\n", opcodeNames[indexPair.first].characters(), padOpcodeName((OpcodeID)indexPair.first, 28), opcodeNames[indexPair.second].characters(), padOpcodeName((OpcodeID)indexPair.second, 28), count, ((double) count) / ((double) totalInstructionPairs) * 100.0);
     }
 
     dataLogF("\n");
@@ -178,7 +168,7 @@ OpcodeStats::~OpcodeStats()
         double opcodeProportion = ((double) opcodeCount) / ((double) totalInstructions);
         if (opcodeProportion < 0.0001)
             break;
-        dataLogF("\n%s:%s %lld - %.2f%%\n", opcodeNames[index], padOpcodeName((OpcodeID)index, 28), opcodeCount, opcodeProportion * 100.0);
+        dataLogF("\n%s:%s %lld - %.2f%%\n", opcodeNames[index].characters(), padOpcodeName((OpcodeID)index, 28), opcodeCount, opcodeProportion * 100.0);
 
         for (int j = 0; j < numOpcodeIDs * numOpcodeIDs; ++j) {
             std::pair<int, int> indexPair = sortedPairIndices[j];
@@ -191,7 +181,7 @@ OpcodeStats::~OpcodeStats()
             if (indexPair.first != index && indexPair.second != index)
                 continue;
 
-            dataLogF("    %s%s %s:%s %lld - %.2f%%\n", opcodeNames[indexPair.first], padOpcodeName((OpcodeID)indexPair.first, 28), opcodeNames[indexPair.second], padOpcodeName((OpcodeID)indexPair.second, 28), pairCount, pairProportion * 100.0);
+            dataLogF("    %s%s %s:%s %lld - %.2f%%\n", opcodeNames[indexPair.first].characters(), padOpcodeName((OpcodeID)indexPair.first, 28), opcodeNames[indexPair.second].characters(), padOpcodeName((OpcodeID)indexPair.second, 28), pairCount, pairProportion * 100.0);
         }
 
     }
@@ -253,3 +243,5 @@ void printInternal(PrintStream& out, OpcodeID opcode)
 }
 
 } // namespace WTF
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

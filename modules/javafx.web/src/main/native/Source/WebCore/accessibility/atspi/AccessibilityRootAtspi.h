@@ -23,7 +23,7 @@
 #include "AccessibilityAtspiEnums.h"
 #include "IntRect.h"
 #include <wtf/FastMalloc.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/WeakPtr.h>
 
 typedef struct _GDBusInterfaceVTable GDBusInterfaceVTable;
@@ -33,8 +33,9 @@ namespace WebCore {
 class AccessibilityObjectAtspi;
 class Page;
 
-class AccessibilityRootAtspi final : public RefCounted<AccessibilityRootAtspi> {
-    WTF_MAKE_FAST_ALLOCATED;
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(AccessibilityRootAtspi);
+class AccessibilityRootAtspi final : public RefCountedAndCanMakeWeakPtr<AccessibilityRootAtspi> {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(AccessibilityRootAtspi, AccessibilityRootAtspi);
 public:
     static Ref<AccessibilityRootAtspi> create(Page&);
     ~AccessibilityRootAtspi() = default;

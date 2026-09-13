@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Alex Milowski (alex@milowski.com). All rights reserved.
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2016 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -31,6 +31,7 @@
 #if ENABLE(MATHML)
 
 #include "CommonAtomStrings.h"
+#include "ContainerNodeInlines.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "HTMLHtmlElement.h"
 #include "HTMLMapElement.h"
@@ -42,16 +43,17 @@
 #include "RenderTableCell.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGSVGElement.h"
-#include <wtf/IsoMallocInlines.h>
+#include "Settings.h"
 #include <wtf/SortedArrayMap.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(MathMLPresentationElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MathMLPresentationElement);
 
 using namespace MathMLNames;
 
-MathMLPresentationElement::MathMLPresentationElement(const QualifiedName& tagName, Document& document, ConstructionType constructionType)
+MathMLPresentationElement::MathMLPresentationElement(const QualifiedName& tagName, Document& document, OptionSet<TypeFlag> constructionType)
     : MathMLElement(tagName, document, constructionType)
 {
 }
@@ -64,9 +66,9 @@ Ref<MathMLPresentationElement> MathMLPresentationElement::create(const Qualified
 RenderPtr<RenderElement> MathMLPresentationElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition& insertionPosition)
 {
     if (hasTagName(mtableTag))
-        return createRenderer<RenderMathMLTable>(*this, WTFMove(style));
+        return createRenderer<RenderMathMLTable>(*this, WTF::move(style));
 
-    return MathMLElement::createElementRenderer(WTFMove(style), insertionPosition);
+    return MathMLElement::createElementRenderer(WTF::move(style), insertionPosition);
 }
 
 const MathMLElement::BooleanValue& MathMLPresentationElement::cachedBooleanAttribute(const QualifiedName& name, std::optional<BooleanValue>& attribute)
@@ -74,11 +76,12 @@ const MathMLElement::BooleanValue& MathMLPresentationElement::cachedBooleanAttri
     if (attribute)
         return attribute.value();
 
-    // In MathML, attribute values are case-sensitive.
+    // In MathML Core, attribute values are ASCII case-insensitive.
+    // https://w3c.github.io/mathml-core/#dfn-boolean
     const AtomString& value = attributeWithoutSynchronization(name);
-    if (value == trueAtom())
+    if (equalIgnoringASCIICase(value, trueAtom()))
         attribute = BooleanValue::True;
-    else if (value == falseAtom())
+    else if (equalIgnoringASCIICase(value, falseAtom()))
         attribute = BooleanValue::False;
     else
         attribute = BooleanValue::Default;
@@ -90,12 +93,12 @@ MathMLElement::Length MathMLPresentationElement::parseNumberAndUnit(StringView s
 {
     LengthType lengthType = LengthType::UnitLess;
     unsigned stringLength = string.length();
-    UChar lastChar = string[stringLength - 1];
+    char16_t lastChar = string[stringLength - 1];
     if (lastChar == '%') {
         lengthType = LengthType::Percentage;
         stringLength--;
     } else if (stringLength >= 2) {
-        UChar penultimateChar = string[stringLength - 2];
+        char16_t penultimateChar = string[stringLength - 2];
         if (penultimateChar == 'c' && lastChar == 'm')
             lengthType = LengthType::Cm;
         if (penultimateChar == 'e' && lastChar == 'm')
@@ -183,13 +186,13 @@ MathMLElement::Length MathMLPresentationElement::parseMathMLLength(const String&
 
     // We first skip whitespace from both ends of the string.
     StringView stringView = string;
-    StringView trimmedLength = stringView.trim(isASCIIWhitespaceWithoutFF<UChar>);
+    StringView trimmedLength = stringView.trim(isASCIIWhitespaceWithoutFF<char16_t>);
 
     if (trimmedLength.isEmpty())
         return Length();
 
     // We consider the most typical case: a number followed by an optional unit.
-    UChar firstChar = trimmedLength[0];
+    char16_t firstChar = trimmedLength[0];
     if (isASCIIDigit(firstChar) || firstChar == '-' || firstChar == '.')
         return parseNumberAndUnit(trimmedLength, acceptLegacyMathMLLengths);
 
@@ -207,34 +210,33 @@ const MathMLElement::Length& MathMLPresentationElement::cachedMathMLLength(const
     return length.value();
 }
 
-MathMLElement::MathVariant MathMLPresentationElement::parseMathVariantAttribute(const AtomString& attributeValue)
+MathVariant MathMLPresentationElement::parseMathVariantAttribute(const AtomString& attributeValue)
 {
     // The mathvariant attribute values is case-sensitive.
-    static constexpr std::pair<ComparableASCIILiteral, MathVariant> mappings[] = {
-        { "bold", MathVariant::Bold },
-        { "bold-fraktur", MathVariant::BoldFraktur },
-        { "bold-italic", MathVariant::BoldItalic },
-        { "bold-sans-serif", MathVariant::BoldSansSerif },
-        { "bold-script", MathVariant::BoldScript },
-        { "double-struck", MathVariant::DoubleStruck },
-        { "fraktur", MathVariant::Fraktur },
-        { "initial", MathVariant::Initial },
-        { "italic", MathVariant::Italic },
-        { "looped", MathVariant::Looped },
-        { "monospace", MathVariant::Monospace },
-        { "normal", MathVariant::Normal },
-        { "sans-serif", MathVariant::SansSerif },
-        { "sans-serif-bold-italic", MathVariant::SansSerifBoldItalic },
-        { "sans-serif-italic", MathVariant::SansSerifItalic },
-        { "script", MathVariant::Script },
-        { "stretched", MathVariant::Stretched },
-        { "tailed", MathVariant::Tailed },
-    };
-    static constexpr SortedArrayMap map { mappings };
+    static constexpr SortedArrayMap map { std::to_array<std::pair<ComparableASCIILiteral, MathVariant>>({
+        { "bold"_s, MathVariant::Bold },
+        { "bold-fraktur"_s, MathVariant::BoldFraktur },
+        { "bold-italic"_s, MathVariant::BoldItalic },
+        { "bold-sans-serif"_s, MathVariant::BoldSansSerif },
+        { "bold-script"_s, MathVariant::BoldScript },
+        { "double-struck"_s, MathVariant::DoubleStruck },
+        { "fraktur"_s, MathVariant::Fraktur },
+        { "initial"_s, MathVariant::Initial },
+        { "italic"_s, MathVariant::Italic },
+        { "looped"_s, MathVariant::Looped },
+        { "monospace"_s, MathVariant::Monospace },
+        { "normal"_s, MathVariant::Normal },
+        { "sans-serif"_s, MathVariant::SansSerif },
+        { "sans-serif-bold-italic"_s, MathVariant::SansSerifBoldItalic },
+        { "sans-serif-italic"_s, MathVariant::SansSerifItalic },
+        { "script"_s, MathVariant::Script },
+        { "stretched"_s, MathVariant::Stretched },
+        { "tailed"_s, MathVariant::Tailed },
+    }) };
     return map.get(attributeValue, MathVariant::None);
 }
 
-std::optional<MathMLElement::MathVariant> MathMLPresentationElement::specifiedMathVariant()
+std::optional<MathVariant> MathMLPresentationElement::specifiedMathVariant()
 {
     if (!acceptsMathVariantAttribute())
         return std::nullopt;

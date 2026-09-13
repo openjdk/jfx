@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,21 +28,26 @@
 
 #include "InstrumentingAgents.h"
 #include "WebConsoleAgent.h"
+#include <JavaScriptCore/InspectorProtocolTypes.h>
 #include <wtf/Lock.h>
 #include <wtf/RunLoop.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace Inspector;
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebHeapAgent);
+
 struct GarbageCollectionData {
-    Protocol::Heap::GarbageCollection::Type type;
+    Inspector::Protocol::Heap::GarbageCollection::Type type;
     Seconds startTime;
     Seconds endTime;
 };
 
-class SendGarbageCollectionEventsTask final {
-    WTF_MAKE_FAST_ALLOCATED;
+class SendGarbageCollectionEventsTask final : public CanMakeThreadSafeCheckedPtr<SendGarbageCollectionEventsTask> {
+    WTF_MAKE_TZONE_ALLOCATED(SendGarbageCollectionEventsTask);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SendGarbageCollectionEventsTask);
 public:
     SendGarbageCollectionEventsTask(WebHeapAgent&);
     void addGarbageCollection(GarbageCollectionData&&);
@@ -56,9 +61,11 @@ private:
     RunLoop::Timer m_timer;
 };
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SendGarbageCollectionEventsTask);
+
 SendGarbageCollectionEventsTask::SendGarbageCollectionEventsTask(WebHeapAgent& agent)
     : m_agent(agent)
-    , m_timer(RunLoop::main(), this, &SendGarbageCollectionEventsTask::timerFired)
+    , m_timer(RunLoop::mainSingleton(), "SendGarbageCollectionEventsTask::Timer"_s, this, &SendGarbageCollectionEventsTask::timerFired)
 {
 }
 
@@ -66,7 +73,7 @@ void SendGarbageCollectionEventsTask::addGarbageCollection(GarbageCollectionData
 {
     {
         Locker locker { m_collectionsLock };
-        m_collections.append(WTFMove(collection));
+        m_collections.append(WTF::move(collection));
     }
 
     if (!m_timer.isActive())
@@ -92,39 +99,44 @@ void SendGarbageCollectionEventsTask::timerFired()
         m_collections.swap(collectionsToSend);
     }
 
-    m_agent.dispatchGarbageCollectionEventsAfterDelay(WTFMove(collectionsToSend));
+    m_agent.dispatchGarbageCollectionEventsAfterDelay(WTF::move(collectionsToSend));
 }
 
 WebHeapAgent::WebHeapAgent(WebAgentContext& context)
     : InspectorHeapAgent(context)
     , m_instrumentingAgents(context.instrumentingAgents)
-    , m_sendGarbageCollectionEventsTask(makeUnique<SendGarbageCollectionEventsTask>(*this))
+    , m_sendGarbageCollectionEventsTask(makeUniqueRef<SendGarbageCollectionEventsTask>(*this))
 {
 }
 
 WebHeapAgent::~WebHeapAgent() = default;
 
-Protocol::ErrorStringOr<void> WebHeapAgent::enable()
+void WebHeapAgent::didCreateFrontendAndBackend()
 {
-    auto result = InspectorHeapAgent::enable();
+    InspectorHeapAgent::didCreateFrontendAndBackend();
 
-    if (auto* consoleAgent = m_instrumentingAgents.webConsoleAgent())
-        consoleAgent->setHeapAgent(this);
-
-    return result;
+    Ref agents = m_instrumentingAgents.get();
+    ASSERT(agents->persistentWebHeapAgent() != this);
+    agents->setPersistentWebHeapAgent(this);
 }
 
-Protocol::ErrorStringOr<void> WebHeapAgent::disable()
+void WebHeapAgent::willDestroyFrontendAndBackend(DisconnectReason reason)
+{
+    InspectorHeapAgent::willDestroyFrontendAndBackend(reason);
+
+    Ref agents = m_instrumentingAgents.get();
+    ASSERT(agents->persistentWebHeapAgent() == this);
+    agents->setPersistentWebHeapAgent(nullptr);
+}
+
+Inspector::Protocol::ErrorStringOr<void> WebHeapAgent::disable()
 {
     m_sendGarbageCollectionEventsTask->reset();
-
-    if (auto* consoleAgent = m_instrumentingAgents.webConsoleAgent())
-        consoleAgent->setHeapAgent(nullptr);
 
     return InspectorHeapAgent::disable();
 }
 
-void WebHeapAgent::dispatchGarbageCollectedEvent(Protocol::Heap::GarbageCollection::Type type, Seconds startTime, Seconds endTime)
+void WebHeapAgent::dispatchGarbageCollectedEvent(Inspector::Protocol::Heap::GarbageCollection::Type type, Seconds startTime, Seconds endTime)
 {
     // Dispatch the event asynchronously because this method may be
     // called between collection and sweeping and we don't want to
@@ -134,7 +146,7 @@ void WebHeapAgent::dispatchGarbageCollectedEvent(Protocol::Heap::GarbageCollecti
     // VM as the inspected page.
 
     GarbageCollectionData data = {type, startTime, endTime};
-    m_sendGarbageCollectionEventsTask->addGarbageCollection(WTFMove(data));
+    m_sendGarbageCollectionEventsTask->addGarbageCollection(WTF::move(data));
 }
 
 void WebHeapAgent::dispatchGarbageCollectionEventsAfterDelay(Vector<GarbageCollectionData>&& collections)

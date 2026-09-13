@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include <wtf/WeakPtr.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
-struct PreviewConverterProvider : CanMakeWeakPtr<PreviewConverterProvider> {
+struct PreviewConverterProvider : AbstractRefCountedAndCanMakeWeakPtr<PreviewConverterProvider> {
     virtual ~PreviewConverterProvider() = default;
 
     virtual void provideMainResourceForPreviewConverter(PreviewConverter&, CompletionHandler<void(Ref<FragmentedSharedBuffer>&&)>&&) = 0;

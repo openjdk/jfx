@@ -35,12 +35,17 @@
 #if USE(PTHREADS)
 
 #include <errno.h>
+#include <wtf/MonotonicTime.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/SafeStrerror.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/ThreadingPrimitives.h>
 #include <wtf/WTFConfig.h>
 #include <wtf/WordLock.h>
+
+#if OS(HAIKU)
+#include <OS.h>
+#endif
 
 #if OS(LINUX)
 #include <sched.h>
@@ -50,12 +55,6 @@
 #ifndef SCHED_RESET_ON_FORK
 #define SCHED_RESET_ON_FORK 0x40000000
 #endif
-#endif
-
-#if !COMPILER(MSVC)
-#include <limits.h>
-#include <sched.h>
-#include <sys/time.h>
 #endif
 
 #if !OS(DARWIN) && OS(UNIX)
@@ -76,16 +75,18 @@
 #include <mach/thread_switch.h>
 #endif
 
+#if OS(QNX)
+#define SA_RESTART 0
+#endif
+
 namespace WTF {
 
-Thread::~Thread()
-{
-}
+Thread::~Thread() = default;
 
 #if !OS(DARWIN)
 class Semaphore final {
     WTF_MAKE_NONCOPYABLE(Semaphore);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Semaphore);
 public:
     explicit Semaphore(unsigned initialValue)
     {
@@ -181,8 +182,10 @@ void Thread::initializePlatformThreading()
         g_wtfConfig.sigThreadSuspendResume = SIGUSR1;
         if (const char* string = getenv("JSC_SIGNAL_FOR_GC")) {
             int32_t value = 0;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
             if (sscanf(string, "%d", &value) == 1)
                 g_wtfConfig.sigThreadSuspendResume = value;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         }
     }
     g_wtfConfig.isThreadSuspendResumeSignalConfigured = true;
@@ -209,7 +212,7 @@ void Thread::initializePlatformThreading()
         if (sigaction(signal, nullptr, &oldAction))
             return false;
         // It has signal already.
-        if (oldAction.sa_handler != SIG_DFL || bitwise_cast<void*>(oldAction.sa_sigaction) != bitwise_cast<void*>(SIG_DFL))
+        if (oldAction.sa_handler != SIG_DFL || std::bit_cast<void*>(oldAction.sa_sigaction) != std::bit_cast<void*>(SIG_DFL))
             WTFLogAlways("Overriding existing handler for signal %d. Set JSC_SIGNAL_FOR_GC if you want WebKit to use a different signal", signal);
         return !sigaction(signal, &action, 0);
     };
@@ -261,9 +264,30 @@ dispatch_qos_class_t Thread::dispatchQOSClass(QOS qos)
 }
 #endif
 
-#if OS(LINUX)
-static int schedPolicy(Thread::QOS qos)
+#if HAVE(SCHEDULING_POLICIES) || OS(LINUX)
+static int schedPolicy(Thread::SchedulingPolicy schedulingPolicy)
 {
+    switch (schedulingPolicy) {
+    case Thread::SchedulingPolicy::FIFO:
+        return SCHED_FIFO;
+    case Thread::SchedulingPolicy::Realtime:
+        return SCHED_RR;
+    case Thread::SchedulingPolicy::Other:
+        return SCHED_OTHER;
+    }
+    ASSERT_NOT_REACHED();
+    return SCHED_OTHER;
+}
+#endif
+
+#if OS(LINUX)
+static int schedPolicy(Thread::QOS qos, Thread::SchedulingPolicy schedulingPolicy)
+{
+    // A specific scheduling policy can override the implied policy from QOS
+    auto policy = schedPolicy(schedulingPolicy);
+    if (policy != SCHED_OTHER)
+        return policy;
+
     switch (qos) {
     case Thread::QOS::UserInteractive:
         return SCHED_RR;
@@ -279,7 +303,7 @@ static int schedPolicy(Thread::QOS qos)
 }
 #endif
 
-bool Thread::establishHandle(NewThreadContext* context, std::optional<size_t> stackSize, QOS qos)
+bool Thread::establishHandle(NewThreadContext& context, std::optional<size_t> stackSize, QOS qos, SchedulingPolicy schedulingPolicy)
 {
     pthread_t threadHandle;
     pthread_attr_t attr;
@@ -287,27 +311,35 @@ bool Thread::establishHandle(NewThreadContext* context, std::optional<size_t> st
 #if HAVE(QOS_CLASSES)
     pthread_attr_set_qos_class_np(&attr, dispatchQOSClass(qos), 0);
 #endif
+#if HAVE(SCHEDULING_POLICIES)
+    pthread_attr_setschedpolicy(&attr, schedPolicy(schedulingPolicy));
+#endif
     if (stackSize)
         pthread_attr_setstacksize(&attr, stackSize.value());
-    int error = pthread_create(&threadHandle, &attr, wtfThreadEntryPoint, context);
+    int error = pthread_create(&threadHandle, &attr, wtfThreadEntryPoint, &context);
     pthread_attr_destroy(&attr);
     if (error) {
-        LOG_ERROR("Failed to create pthread at entry point %p with context %p", wtfThreadEntryPoint, context);
+        LOG_ERROR("Failed to create pthread at entry point %p with context %p", wtfThreadEntryPoint, &context);
         return false;
     }
 
 #if OS(LINUX)
-    int policy = schedPolicy(qos);
+    int policy = schedPolicy(qos, schedulingPolicy);
     if (policy == SCHED_RR)
         RealTimeThreads::singleton().registerThread(*this);
     else {
-        struct sched_param param = { 0 };
+        struct sched_param param = { };
         error = pthread_setschedparam(threadHandle, policy | SCHED_RESET_ON_FORK, &param);
         if (error)
             LOG_ERROR("Failed to set sched policy %d for thread %ld: %s", policy, threadHandle, safeStrerror(error).data());
     }
-#elif !HAVE(QOS_CLASSES)
+#else
+#if !HAVE(QOS_CLASSES)
     UNUSED_PARAM(qos);
+#endif
+#if !HAVE(SCHEDULING_POLICIES)
+    UNUSED_PARAM(schedulingPolicy);
+#endif
 #endif
 
     establishPlatformSpecificHandle(threadHandle);
@@ -318,6 +350,8 @@ void Thread::initializeCurrentThreadInternal(const char* threadName)
 {
 #if HAVE(PTHREAD_SETNAME_NP)
     pthread_setname_np(normalizeThreadName(threadName));
+#elif OS(HAIKU)
+    rename_thread(find_thread(nullptr), normalizeThreadName(threadName));
 #elif OS(LINUX)
     prctl(PR_SET_NAME, normalizeThreadName(threadName));
 #else
@@ -342,6 +376,25 @@ void Thread::changePriority(int delta)
     pthread_setschedparam(m_handle, policy, &param);
 #endif
 }
+
+#if HAVE(THREAD_TIME_CONSTRAINTS)
+void Thread::setThreadTimeConstraints(MonotonicTime period, MonotonicTime nominalComputation, MonotonicTime constraint, bool isPremptable)
+{
+#if OS(DARWIN)
+    thread_time_constraint_policy policy { };
+    policy.period = period.toMachAbsoluteTime();
+    policy.computation = nominalComputation.toMachAbsoluteTime();
+    policy.constraint = constraint.toMachAbsoluteTime();
+    policy.preemptible = isPremptable;
+    if (auto error = thread_policy_set(machThread(), THREAD_TIME_CONSTRAINT_POLICY, (thread_policy_t)&policy, THREAD_TIME_CONSTRAINT_POLICY_COUNT)) {
+        UNUSED_VARIABLE(error);
+        LOG_ERROR("Thread %p failed to set time constraints with error %d", this, error);
+    }
+#else
+    ASSERT_NOT_REACHED();
+#endif
+}
+#endif
 
 int Thread::waitForCompletion()
 {
@@ -384,12 +437,12 @@ Thread& Thread::initializeCurrentTLS()
 {
     // Not a WTF-created thread, Thread is not established yet.
     WTF::initialize();
-    Ref<Thread> thread = adoptRef(*new Thread());
+    Ref thread = adoptRef(*new Thread(SchedulingPolicy::Other));
     thread->establishPlatformSpecificHandle(pthread_self());
     thread->initializeInThread();
     initializeCurrentThreadEvenIfNonWTFCreated();
 
-    return initializeTLS(WTFMove(thread));
+    return initializeTLS(WTF::move(thread));
 }
 
 bool Thread::signal(int signalNumber)
@@ -403,7 +456,7 @@ bool Thread::signal(int signalNumber)
 
 auto Thread::suspend(const ThreadSuspendLocker&) -> Expected<void, PlatformSuspendError>
 {
-    RELEASE_ASSERT_WITH_MESSAGE(this != &Thread::current(), "We do not support suspending the current thread itself.");
+    RELEASE_ASSERT_WITH_MESSAGE(this != &Thread::currentSingleton(), "We do not support suspending the current thread itself.");
 #if OS(DARWIN)
     kern_return_t result = thread_suspend(m_platformThread);
     if (result != KERN_SUCCESS)
@@ -456,7 +509,7 @@ void Thread::resume(const ThreadSuspendLocker&)
 
 #if OS(DARWIN)
 struct ThreadStateMetadata {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(ThreadStateMetadata);
     unsigned userCount;
     thread_state_flavor_t flavor;
 };
@@ -495,7 +548,7 @@ size_t Thread::getRegisters(const ThreadSuspendLocker&, PlatformRegisters& regis
     kern_return_t result = thread_get_state(m_platformThread, metadata.flavor, (thread_state_t)&registers, &metadata.userCount);
     if (result != KERN_SUCCESS) {
         WTFReportFatalError(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, "JavaScript garbage collection failed because thread_get_state returned an error (%d). This is probably the result of running inside Rosetta, which is not supported.", result);
-        CRASH();
+        CRASH_WITH_INFO(result, KERN_SUCCESS);
     }
     return metadata.userCount * sizeof(uintptr_t);
 #else
@@ -525,7 +578,7 @@ void Thread::initializeTLSKey()
 Thread& Thread::initializeTLS(Ref<Thread>&& thread)
 {
     // We leak the ref to keep the Thread alive while it is held in TLS. destructTLS will deref it later at thread destruction time.
-    auto& threadInTLS = thread.leakRef();
+    SUPPRESS_UNCOUNTED_LOCAL auto& threadInTLS = thread.leakRef();
 #if !HAVE(FAST_TLS)
     ASSERT(s_key != InvalidThreadSpecificKey);
     threadSpecificSet(s_key, &threadInTLS);
@@ -556,8 +609,8 @@ void Thread::destructTLS(void* data)
     _pthread_setspecific_direct(WTF_THREAD_DATA_KEY, thread);
     pthread_key_init_np(WTF_THREAD_DATA_KEY, &destructTLS);
 #endif
-    // Destructor of ClientData can rely on Thread::current() (e.g. AtomStringTable).
-    // We destroy it after re-setting Thread::current() so that we can ensure destruction
+    // Destructor of ClientData can rely on Thread::currentSingleton() (e.g. AtomStringTable).
+    // We destroy it after re-setting Thread::currentSingleton() so that we can ensure destruction
     // can still access to it.
     thread->m_clientData = nullptr;
 }
@@ -606,7 +659,7 @@ void ThreadCondition::wait(Mutex& mutex)
 
 bool ThreadCondition::timedWait(Mutex& mutex, WallTime absoluteTime)
 {
-    if (std::isinf(absoluteTime)) {
+    if (absoluteTime.isInfinity()) {
         if (absoluteTime == -WallTime::infinity())
             return false;
         wait(mutex);

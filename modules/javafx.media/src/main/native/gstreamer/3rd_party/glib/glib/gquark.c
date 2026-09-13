@@ -43,6 +43,7 @@
 #include "gtestutils.h"
 #include "glib_trace.h"
 #include "glib-init.h"
+#include "glib-private.h"
 
 #define QUARK_BLOCK_SIZE         2048
 #define QUARK_STRING_BLOCK_SIZE (4096 - sizeof (gsize))
@@ -67,40 +68,34 @@ g_quark_init (void)
 }
 
 /**
- * SECTION:quarks
- * @title: Quarks
- * @short_description: a 2-way association between a string and a
- *     unique integer identifier
- *
- * Quarks are associations between strings and integer identifiers.
- * Given either the string or the #GQuark identifier it is possible to
- * retrieve the other.
- *
- * Quarks are used for both [datasets][glib-Datasets] and
- * [keyed data lists][glib-Keyed-Data-Lists].
- *
- * To create a new quark from a string, use g_quark_from_string() or
- * g_quark_from_static_string().
- *
- * To find the string corresponding to a given #GQuark, use
- * g_quark_to_string().
- *
- * To find the #GQuark corresponding to a given string, use
- * g_quark_try_string().
- *
- * Another use for the string pool maintained for the quark functions
- * is string interning, using g_intern_string() or
- * g_intern_static_string(). An interned string is a canonical
- * representation for a string. One important advantage of interned
- * strings is that they can be compared for equality by a simple
- * pointer comparison, rather than using strcmp().
- */
-
-/**
  * GQuark:
  *
  * A GQuark is a non-zero integer which uniquely identifies a
- * particular string. A GQuark value of zero is associated to %NULL.
+ * particular string.
+ *
+ * A GQuark value of zero is associated to `NULL`.
+ *
+ * Given either the string or the `GQuark` identifier it is possible to
+ * retrieve the other.
+ *
+ * Quarks are used for both
+ * [datasets and keyed data lists](datalist-and-dataset.html).
+ *
+ * To create a new quark from a string, use [func@GLib.quark_from_string]
+ * or [func@GLib.quark_from_static_string].
+ *
+ * To find the string corresponding to a given `GQuark`, use
+ * [func@GLib.quark_to_string].
+ *
+ * To find the `GQuark` corresponding to a given string, use
+ * [func@GLib.quark_try_string].
+ *
+ * Another use for the string pool maintained for the quark functions
+ * is string interning, using [func@GLib.intern_string] or
+ * [func@GLib.intern_static_string]. An interned string is a canonical
+ * representation for a string. One important advantage of interned
+ * strings is that they can be compared for equality by a simple
+ * pointer comparison, rather than using `strcmp()`.
  */
 
 /**
@@ -301,6 +296,7 @@ quark_new (gchar *string)
        * us to do lockless lookup of the arrays, and there shouldn't be that
        * many quarks in an app
        */
+      g_ignore_leak (g_atomic_pointer_get (&quarks));
       g_atomic_pointer_set (&quarks, quarks_new);
     }
 

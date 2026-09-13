@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "PermissionName.h"
+#include <WebCore/PermissionName.h>
 #include <optional>
 
 namespace WebCore {
@@ -33,7 +33,7 @@ namespace WebCore {
 struct PermissionDescriptor {
     PermissionName name;
 
-    bool operator==(const PermissionDescriptor& descriptor) const { return name == descriptor.name; }
+    friend bool operator==(PermissionDescriptor, PermissionDescriptor) = default;
 };
 
 } // namespace WebCore

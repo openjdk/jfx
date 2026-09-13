@@ -30,7 +30,11 @@
 
 #pragma once
 
-#include "ResourceLoaderIdentifier.h"
+#include <WebCore/LoaderMalloc.h>
+#include <WebCore/ResourceLoaderIdentifier.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
@@ -40,15 +44,16 @@ class ResourceResponse;
 class ResourceTiming;
 class SharedBuffer;
 
-class ThreadableLoaderClient {
-    WTF_MAKE_NONCOPYABLE(ThreadableLoaderClient); WTF_MAKE_FAST_ALLOCATED;
+class ThreadableLoaderClient : public AbstractRefCountedAndCanMakeWeakPtr<ThreadableLoaderClient> {
+    WTF_MAKE_NONCOPYABLE(ThreadableLoaderClient);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ThreadableLoaderClient, Loader);
 public:
     virtual void didSendData(unsigned long long /*bytesSent*/, unsigned long long /*totalBytesToBeSent*/) { }
 
-    virtual void didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse&) { }
+    virtual void didReceiveResponse(ScriptExecutionContextIdentifier, std::optional<ResourceLoaderIdentifier>, const ResourceResponse&) { }
     virtual void didReceiveData(const SharedBuffer&) { }
-    virtual void didFinishLoading(ResourceLoaderIdentifier, const NetworkLoadMetrics&) { }
-    virtual void didFail(const ResourceError&) { }
+    virtual void didFinishLoading(ScriptExecutionContextIdentifier, std::optional<ResourceLoaderIdentifier>, const NetworkLoadMetrics&) { }
+    virtual void didFail(std::optional<ScriptExecutionContextIdentifier>, const ResourceError&) { }
     virtual void didFinishTiming(const ResourceTiming&) { }
     virtual void notifyIsDone(bool) { ASSERT_NOT_REACHED(); }
 

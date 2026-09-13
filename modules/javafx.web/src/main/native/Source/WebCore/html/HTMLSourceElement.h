@@ -26,17 +26,29 @@
 #pragma once
 
 #include "ActiveDOMObject.h"
+#include "AttachmentAssociatedElement.h"
 #include "HTMLElement.h"
 #include "MediaQuery.h"
 #include "Timer.h"
 
 namespace WebCore {
 
-class HTMLSourceElement final : public HTMLElement, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(HTMLSourceElement);
+class HTMLSourceElement final
+    : public HTMLElement
+#if ENABLE(ATTACHMENT_ELEMENT)
+    , public AttachmentAssociatedElement
+#endif
+    , public ActiveDOMObject {
+    WTF_MAKE_TZONE_ALLOCATED(HTMLSourceElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLSourceElement);
 public:
     static Ref<HTMLSourceElement> create(Document&);
     static Ref<HTMLSourceElement> create(const QualifiedName&, Document&);
+
+    // ActiveDOMObject.
+    void ref() const final { HTMLElement::ref(); }
+    void deref() const final { HTMLElement::deref(); }
+    USING_CAN_MAKE_WEAKPTR(HTMLElement);
 
     void scheduleErrorEvent();
     void cancelPendingErrorEvent();
@@ -48,11 +60,30 @@ private:
 
     InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
     void removedFromAncestor(RemovalType, ContainerNode&) final;
+    void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;
+
     bool isURLAttribute(const Attribute&) const final;
+    bool attributeContainsURL(const Attribute&) const final;
+    Attribute replaceURLsInAttributeValue(const Attribute&, const CSS::SerializationContext&) const override;
+    void addCandidateSubresourceURLs(ListHashSet<URL>&) const override;
 
     // ActiveDOMObject.
-    const char* activeDOMObjectName() const final;
     void stop() final;
+
+#if ENABLE(ATTACHMENT_ELEMENT)
+    HTMLSourceElement& asHTMLElement() final { return *this; }
+    const HTMLSourceElement& asHTMLElement() const final { return *this; }
+
+    void refAttachmentAssociatedElement() const final { HTMLElement::ref(); }
+    void derefAttachmentAssociatedElement() const final { HTMLElement::deref(); }
+
+    AttachmentAssociatedElement* asAttachmentAssociatedElement() final { return this; }
+
+    AttachmentAssociatedElementType attachmentAssociatedElementType() const final { return AttachmentAssociatedElementType::Source; }
+#endif
+
+    Ref<Element> cloneElementWithoutAttributesAndChildren(Document&, CustomElementRegistry*) const final;
+    void copyNonAttributePropertiesFromElement(const Element&) final;
 
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
 

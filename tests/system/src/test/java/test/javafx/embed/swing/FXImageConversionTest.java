@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,16 +24,13 @@
  */
 package test.javafx.embed.swing;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.awt.image.BufferedImage;
 import javafx.embed.swing.SwingFXUtils;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-
-import org.junit.Test;
-import junit.framework.Assert;
+import org.junit.jupiter.api.Test;
 
 public class FXImageConversionTest {
 
@@ -55,7 +52,7 @@ public class FXImageConversionTest {
 
             assertTrue(bf.getType() == BufferedImage.TYPE_INT_RGB);
         } catch (ClassCastException cex) {
-            Assert.fail("FX image conversion wrong cast " + cex);
+            fail("FX image conversion wrong cast " + cex);
         }
     }
 
@@ -74,7 +71,7 @@ public class FXImageConversionTest {
 
             assertTrue(bf.getType() == BufferedImage.TYPE_INT_ARGB_PRE);
         } catch (ClassCastException cex) {
-            Assert.fail("FX image conversion wrong cast " + cex);
+            fail("FX image conversion wrong cast " + cex);
         }
     }
 
@@ -93,7 +90,7 @@ public class FXImageConversionTest {
 
             assertTrue(bf.getType() == BufferedImage.TYPE_INT_ARGB_PRE);
         } catch (ClassCastException cex) {
-            Assert.fail("FX image conversion wrong cast " + cex);
+            fail("FX image conversion wrong cast " + cex);
         }
     }
 }

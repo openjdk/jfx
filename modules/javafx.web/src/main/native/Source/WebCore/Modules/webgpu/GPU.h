@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,11 +25,8 @@
 
 #pragma once
 
-#include "GPUAdapter.h"
-#include "GPURequestAdapterOptions.h"
-#include "GPUTextureFormat.h"
-#include "JSDOMPromiseDeferredForward.h"
-#include "WebGPU.h"
+#include <WebCore/JSDOMPromiseDeferredForward.h>
+#include <WebCore/WebGPU.h>
 #include <optional>
 #include <wtf/Deque.h>
 #include <wtf/Ref.h>
@@ -37,33 +34,46 @@
 
 namespace WebCore {
 
+class GPUAdapter;
 class GPUCompositorIntegration;
 class GPUPresentationContext;
 struct GPUPresentationContextDescriptor;
+class GraphicsContext;
+class NativeImage;
+class WGSLLanguageFeatures;
+
+enum class GPUTextureFormat : uint8_t;
+
+struct GPURequestAdapterOptions;
 
 class GPU : public RefCounted<GPU> {
 public:
     static Ref<GPU> create(Ref<WebGPU::GPU>&& backing)
     {
-        return adoptRef(*new GPU(WTFMove(backing)));
+        return adoptRef(*new GPU(WTF::move(backing)));
     }
     ~GPU();
 
     using RequestAdapterPromise = DOMPromiseDeferred<IDLNullable<IDLInterface<GPUAdapter>>>;
     void requestAdapter(const std::optional<GPURequestAdapterOptions>&, RequestAdapterPromise&&);
 
-    GPUTextureFormat getPreferredCanvasFormat();
+    GPUTextureFormat getPreferredCanvasFormat() const;
+    WGSLLanguageFeatures& wgslLanguageFeatures() const { return m_wgslLanguageFeatures; }
 
-    Ref<GPUPresentationContext> createPresentationContext(const GPUPresentationContextDescriptor&);
+    RefPtr<GPUPresentationContext> createPresentationContext(const GPUPresentationContextDescriptor&);
 
-    Ref<GPUCompositorIntegration> createCompositorIntegration();
+    RefPtr<GPUCompositorIntegration> createCompositorIntegration();
+
+    void paintToCanvas(NativeImage&, const IntSize&, GraphicsContext&);
+    const WebGPU::GPU& backing() const { return m_backing; }
+    WebGPU::GPU& backing() { return m_backing; }
 
 private:
     GPU(Ref<WebGPU::GPU>&&);
 
     struct PendingRequestAdapterArguments;
-    Deque<PendingRequestAdapterArguments> m_pendingRequestAdapterArguments;
-    Ref<WebGPU::GPU> m_backing;
+    const Ref<WebGPU::GPU> m_backing;
+    const Ref<WGSLLanguageFeatures> m_wgslLanguageFeatures;
 };
 
 }

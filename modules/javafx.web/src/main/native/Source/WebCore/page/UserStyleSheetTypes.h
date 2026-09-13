@@ -25,31 +25,18 @@
 
 #pragma once
 
-#include <wtf/EnumTraits.h>
 #include <wtf/HashMap.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
 enum UserStyleInjectionTime { InjectInExistingDocuments, InjectInSubsequentDocuments };
-enum UserStyleLevel { UserStyleUserLevel, UserStyleAuthorLevel };
+enum class UserStyleLevel : bool { User, Author };
 
 class DOMWrapperWorld;
 class UserStyleSheet;
 
-typedef Vector<std::unique_ptr<UserStyleSheet>> UserStyleSheetVector;
-typedef HashMap<RefPtr<DOMWrapperWorld>, std::unique_ptr<UserStyleSheetVector>> UserStyleSheetMap;
+using UserStyleSheetVector = Vector<std::unique_ptr<UserStyleSheet>>;
+using UserStyleSheetMap = HashMap<Ref<DOMWrapperWorld>, std::unique_ptr<UserStyleSheetVector>>;
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::UserStyleLevel> {
-    using values = EnumValues<
-        WebCore::UserStyleLevel,
-        WebCore::UserStyleLevel::UserStyleUserLevel,
-        WebCore::UserStyleLevel::UserStyleAuthorLevel
-    >;
-};
-
-} // namespace WTF

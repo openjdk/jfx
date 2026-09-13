@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,7 +36,7 @@ class GPUPipelineLayout : public RefCounted<GPUPipelineLayout> {
 public:
     static Ref<GPUPipelineLayout> create(Ref<WebGPU::PipelineLayout>&& backing)
     {
-        return adoptRef(*new GPUPipelineLayout(WTFMove(backing)));
+        return adoptRef(*new GPUPipelineLayout(WTF::move(backing)));
     }
 
     String label() const;
@@ -47,11 +47,11 @@ public:
 
 private:
     GPUPipelineLayout(Ref<WebGPU::PipelineLayout>&& backing)
-        : m_backing(WTFMove(backing))
+        : m_backing(WTF::move(backing))
     {
     }
 
-    Ref<WebGPU::PipelineLayout> m_backing;
+    const Ref<WebGPU::PipelineLayout> m_backing;
 };
 
 }

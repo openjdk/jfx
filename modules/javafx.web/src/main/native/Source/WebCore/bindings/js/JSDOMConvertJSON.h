@@ -25,16 +25,26 @@
 
 #pragma once
 
-#include "IDLTypes.h"
-#include "JSDOMConvertBase.h"
+#include <JavaScriptCore/JSGlobalObject.h>
 #include <JavaScriptCore/JSONObject.h>
+#include <WebCore/IDLTypes.h>
+#include <WebCore/JSDOMConvertBase.h>
 
 namespace WebCore {
 
 template<> struct Converter<IDLJSON> : DefaultConverter<IDLJSON> {
-    static String convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
+    using Result = ConversionResult<IDLJSON>;
+
+    static Result convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
     {
-        return JSC::JSONStringify(&lexicalGlobalObject, value, 0);
+        auto& vm = lexicalGlobalObject.vm();
+        auto throwScope = DECLARE_THROW_SCOPE(vm);
+
+        auto conversionResult = JSC::JSONStringify(&lexicalGlobalObject, value, 0);
+
+        RETURN_IF_EXCEPTION(throwScope, Result::exception());
+
+        return Result { WTF::move(conversionResult) };
     }
 };
 

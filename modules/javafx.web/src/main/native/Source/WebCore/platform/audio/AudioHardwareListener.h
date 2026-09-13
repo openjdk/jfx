@@ -25,8 +25,8 @@
 
 #pragma once
 
+#include <wtf/AbstractRefCounted.h>
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
 
 namespace WebCore {
 
@@ -36,7 +36,7 @@ enum class AudioHardwareActivityType {
     IsInactive
 };
 
-class AudioHardwareListener {
+class AudioHardwareListener : public AbstractRefCounted {
 public:
     class Client {
     public:
@@ -45,9 +45,6 @@ public:
         virtual void audioHardwareDidBecomeInactive() = 0;
         virtual void audioOutputDeviceChanged() = 0;
     };
-
-    virtual void ref() const = 0;
-    virtual void deref() const = 0;
 
     using CreationFunction = Function<Ref<AudioHardwareListener>(AudioHardwareListener::Client&)>;
     WEBCORE_EXPORT static void setCreationFunction(CreationFunction&&);
@@ -59,10 +56,10 @@ public:
     AudioHardwareActivityType hardwareActivity() const { return m_activity; }
 
     struct BufferSizeRange {
-        size_t minimum { 0 };
-        size_t maximum { 0 };
+        uint64_t minimum { 0 };
+        uint64_t maximum { 0 };
         operator bool() const { return minimum && maximum; }
-        size_t nearest(size_t value) const { return std::min(std::max(value, minimum), maximum); }
+        uint64_t nearest(uint64_t value) const { return std::min(std::max(value, minimum), maximum); }
     };
     BufferSizeRange supportedBufferSizes() const { return m_supportedBufferSizes; }
 

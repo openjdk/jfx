@@ -25,14 +25,15 @@
 
 #pragma once
 
-#include "CryptoAlgorithmIdentifier.h"
-#include "CryptoKeyFormat.h"
-#include "CryptoKeyPair.h"
-#include "CryptoKeyUsage.h"
-#include "ExceptionOr.h"
-#include "JsonWebKey.h"
-#include <variant>
+#include <WebCore/CryptoAlgorithmIdentifier.h>
+#include <WebCore/CryptoKey.h>
+#include <WebCore/CryptoKeyFormat.h>
+#include <WebCore/CryptoKeyPair.h>
+#include <WebCore/CryptoKeyUsage.h>
+#include <WebCore/JsonWebKey.h>
+#include <pal/crypto/CryptoDigest.h>
 #include <wtf/Function.h>
+#include <wtf/Platform.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/WorkQueue.h>
@@ -42,11 +43,13 @@
 namespace WebCore {
 
 class CryptoAlgorithmParameters;
-class CryptoKey;
 class ScriptExecutionContext;
+template<typename> class ExceptionOr;
 
-using KeyData = std::variant<Vector<uint8_t>, JsonWebKey>;
-using KeyOrKeyPair = std::variant<RefPtr<CryptoKey>, CryptoKeyPair>;
+enum class ExceptionCode : uint8_t;
+
+using KeyData = Variant<Vector<uint8_t>, JsonWebKey>;
+using KeyOrKeyPair = Variant<RefPtr<CryptoKey>, CryptoKeyPair>;
 
 class CryptoAlgorithm : public ThreadSafeRefCounted<CryptoAlgorithm> {
 public:
@@ -66,19 +69,20 @@ public:
     virtual void encrypt(const CryptoAlgorithmParameters&, Ref<CryptoKey>&&, Vector<uint8_t>&&, VectorCallback&&, ExceptionCallback&&, ScriptExecutionContext&, WorkQueue&);
     virtual void decrypt(const CryptoAlgorithmParameters&, Ref<CryptoKey>&&, Vector<uint8_t>&&, VectorCallback&&, ExceptionCallback&&, ScriptExecutionContext&, WorkQueue&);
     virtual void sign(const CryptoAlgorithmParameters&, Ref<CryptoKey>&&, Vector<uint8_t>&&, VectorCallback&&, ExceptionCallback&&, ScriptExecutionContext&, WorkQueue&);
-    virtual void verify(const CryptoAlgorithmParameters&, Ref<CryptoKey>&&, Vector<uint8_t>&& signature, Vector<uint8_t>&&, BoolCallback&&, ExceptionCallback&&, ScriptExecutionContext&, WorkQueue&);
+    virtual void doVerify(const CryptoAlgorithmParameters&, Ref<CryptoKey>&&, Vector<uint8_t>&& signature, Vector<uint8_t>&&, BoolCallback&&, ExceptionCallback&&, ScriptExecutionContext&, WorkQueue&);
     virtual void digest(Vector<uint8_t>&&, VectorCallback&&, ExceptionCallback&&, ScriptExecutionContext&, WorkQueue&);
     virtual void generateKey(const CryptoAlgorithmParameters&, bool extractable, CryptoKeyUsageBitmap, KeyOrKeyPairCallback&&, ExceptionCallback&&, ScriptExecutionContext&);
-    virtual void deriveBits(const CryptoAlgorithmParameters&, Ref<CryptoKey>&&, size_t length, VectorCallback&&, ExceptionCallback&&, ScriptExecutionContext&, WorkQueue&);
+    virtual void deriveBits(const CryptoAlgorithmParameters&, Ref<CryptoKey>&&, std::optional<size_t> length, VectorCallback&&, ExceptionCallback&&, ScriptExecutionContext&, WorkQueue&);
     // FIXME: https://bugs.webkit.org/show_bug.cgi?id=169262
     virtual void importKey(CryptoKeyFormat, KeyData&&, const CryptoAlgorithmParameters&, bool extractable, CryptoKeyUsageBitmap, KeyCallback&&, ExceptionCallback&&);
     virtual void exportKey(CryptoKeyFormat, Ref<CryptoKey>&&, KeyDataCallback&&, ExceptionCallback&&);
     virtual void wrapKey(Ref<CryptoKey>&&, Vector<uint8_t>&&, VectorCallback&&, ExceptionCallback&&);
     virtual void unwrapKey(Ref<CryptoKey>&&, Vector<uint8_t>&&, VectorCallback&&, ExceptionCallback&&);
-    virtual ExceptionOr<size_t> getKeyLength(const CryptoAlgorithmParameters&);
+    virtual ExceptionOr<std::optional<size_t>> getKeyLength(const CryptoAlgorithmParameters&);
 
     static void dispatchOperationInWorkQueue(WorkQueue&, ScriptExecutionContext&, VectorCallback&&, ExceptionCallback&&, Function<ExceptionOr<Vector<uint8_t>>()>&&);
     static void dispatchOperationInWorkQueue(WorkQueue&, ScriptExecutionContext&, BoolCallback&&, ExceptionCallback&&, Function<ExceptionOr<bool>()>&&);
+    static void dispatchDigest(WorkQueue&, ScriptExecutionContext&, VectorCallback&&, ExceptionCallback&&, Vector<uint8_t>&& message, PAL::CryptoDigest::Algorithm);
 };
 
 } // namespace WebCore

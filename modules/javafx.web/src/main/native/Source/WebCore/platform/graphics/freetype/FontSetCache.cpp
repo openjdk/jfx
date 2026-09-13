@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2022 Igalia S.L.
+ * Copyright (C) 2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,14 +22,13 @@
 #include "FontSetCache.h"
 
 #include "CairoUtilities.h"
-#include "CharacterProperties.h"
 #include "FontCache.h"
-#include "UTF16UChar32Iterator.h"
+#include <wtf/text/CharacterProperties.h>
 
 namespace WebCore {
 
 FontSetCache::FontSet::FontSet(RefPtr<FcPattern>&& fontPattern)
-    : pattern(WTFMove(fontPattern))
+    : pattern(WTF::move(fontPattern))
 {
     FcResult result;
     fontSet.reset(FcFontSort(nullptr, pattern.get(), FcTrue, nullptr, &result));
@@ -41,7 +41,7 @@ FontSetCache::FontSet::FontSet(RefPtr<FcPattern>&& fontPattern)
     }
 }
 
-RefPtr<FcPattern> FontSetCache::bestForCharacters(const FontDescription& fontDescription, bool preferColoredFont, const UChar* characters, unsigned length)
+RefPtr<FcPattern> FontSetCache::bestForCharacters(const FontDescription& fontDescription, bool preferColoredFont, StringView stringView)
 {
     auto addResult = m_cache.ensure(FontSetCacheKey(fontDescription, preferColoredFont), [&fontDescription, preferColoredFont]() -> std::unique_ptr<FontSetCache::FontSet> {
         RefPtr<FcPattern> pattern = adoptRef(FcPatternCreate());
@@ -58,7 +58,7 @@ RefPtr<FcPattern> FontSetCache::bestForCharacters(const FontDescription& fontDes
         FcConfigSubstitute(nullptr, pattern.get(), FcMatchPattern);
         cairo_ft_font_options_substitute(getDefaultCairoFontOptions(), pattern.get());
         FcDefaultSubstitute(pattern.get());
-        return makeUnique<FontSetCache::FontSet>(WTFMove(pattern));
+        return makeUnique<FontSetCache::FontSet>(WTF::move(pattern));
     });
 
     if (!addResult.iterator->value)
@@ -71,15 +71,12 @@ RefPtr<FcPattern> FontSetCache::bestForCharacters(const FontDescription& fontDes
     }
 
     FcUniquePtr<FcCharSet> fontConfigCharSet(FcCharSetCreate());
-    UTF16UChar32Iterator iterator(characters, length);
-    UChar32 character = iterator.next();
     bool hasNonIgnorableCharacters = false;
-    while (character != iterator.end()) {
+    for (char32_t character : stringView.codePoints()) {
         if (!isDefaultIgnorableCodePoint(character)) {
             FcCharSetAddChar(fontConfigCharSet.get(), character);
             hasNonIgnorableCharacters = true;
         }
-        character = iterator.next();
     }
 
     FcPattern* bestPattern = nullptr;

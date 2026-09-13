@@ -33,7 +33,7 @@ namespace JSC {
 const ClassInfo ModuleProgramExecutable::s_info = { "ModuleProgramExecutable"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(ModuleProgramExecutable) };
 
 ModuleProgramExecutable::ModuleProgramExecutable(JSGlobalObject* globalObject, const SourceCode& source)
-    : Base(globalObject->vm().moduleProgramExecutableStructure.get(), globalObject->vm(), source, false, DerivedContextType::None, false, false, EvalContextType::None, NoIntrinsic)
+    : Base(globalObject->vm().moduleProgramExecutableStructure.get(), globalObject->vm(), source, StrictModeLexicallyScopedFeature, DerivedContextType::None, false, false, EvalContextType::None, NoIntrinsic)
 {
     ASSERT(source.provider()->sourceType() == SourceProviderSourceType::Module);
     VM& vm = globalObject->vm();
@@ -70,12 +70,15 @@ UnlinkedModuleProgramCodeBlock* ModuleProgramExecutable::getUnlinkedCodeBlock(JS
     RELEASE_AND_RETURN(throwScope, unlinkedModuleProgramCode);
 }
 
-ModuleProgramExecutable* ModuleProgramExecutable::create(JSGlobalObject* globalObject, const SourceCode& source)
+ModuleProgramExecutable* ModuleProgramExecutable::tryCreate(JSGlobalObject* globalObject, const SourceCode& source)
 {
     VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     ModuleProgramExecutable* executable = new (NotNull, allocateCell<ModuleProgramExecutable>(vm)) ModuleProgramExecutable(globalObject, source);
     executable->finishCreation(vm);
     executable->getUnlinkedCodeBlock(globalObject); // This generates and binds unlinked code block.
+    RETURN_IF_EXCEPTION(scope, nullptr);
     return executable;
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -294,7 +294,7 @@ public class MenuItem implements EventTarget, Styleable {
     /**
      * The action, which is invoked whenever the MenuItem is fired. This
      * may be due to the user clicking on the button with the mouse, or by
-     * a touch event, or by a key press, or if the developer programatically
+     * a touch event, or by a key press, or if the developer programmatically
      * invokes the {@link #fire()} method.
      */
     private ObjectProperty<EventHandler<ActionEvent>> onAction;
@@ -417,16 +417,31 @@ public class MenuItem implements EventTarget, Styleable {
     }
 
     /**
-     * MnemonicParsing property to enable/disable text parsing.
-     * If this is set to true, then the MenuItem text will be
-     * parsed to see if it contains the mnemonic parsing character '_'.
-     * When a mnemonic is detected the key combination will
-     * be determined based on the succeeding character, and the mnemonic
-     * added.
-     *
+     * Determines whether the mnemonic character in the menu item text will be parsed.
      * <p>
-     * The default value for MenuItem is true.
-     * </p>
+     * The parsing recognizes two formats:
+     * <ul>
+     *   <li><b>Simple mnemonic</b>:
+     *     the first character preceded by the first {@code _}
+     *     character will be treated as the mnemonic. For example, "E_xit" will cause
+     *     the text to become "Exit" and the mnemonic will be "x". This is the most
+     *     common designation of a mnemonic, which will typically be visualized with an underline.
+     *     To prevent {@code _} from being
+     *     treated as the mnemonic prefix character, repeat it twice in a row.
+     *   <li><b>Extended mnemonic</b>:
+     *     an optional representation of a mnemonic is
+     *     {@code _(c)}, where {@code c} is the mnemonic character. For example,
+     *     "Exit_(q)" will cause the text to become "Exit" and the
+     *     mnemonic will be "q". This is typically provided in
+     *     translated strings to support mnemonics where the main text does not have any
+     *     characters that map to keyboard keys. In these cases, the skin for the
+     *     control will typically present the mnemonic surrounded by parentheses.
+     *     The extended mnemonic might be hidden on certain platforms and only displayed
+     *     when the mnemonic modifier key is pressed.
+     * </ul>
+     *
+     * @defaultValue {@code true}
+     * @see Labeled#mnemonicParsingProperty()
      */
     private BooleanProperty mnemonicParsing;
     public final void setMnemonicParsing(boolean value) {
@@ -577,7 +592,7 @@ public class MenuItem implements EventTarget, Styleable {
 
     /** {@inheritDoc} */
     @Override public Node getStyleableNode() {
-        // Fix for RT-20582. We dive into the visual representation
+        // Fix for JDK-8118568. We dive into the visual representation
         // of this MenuItem so that we may return it to the caller.
         ContextMenu parentPopup = MenuItem.this.getParentPopup();
         if (parentPopup == null || ! (parentPopup.getSkin() instanceof ContextMenuSkin)) return null;

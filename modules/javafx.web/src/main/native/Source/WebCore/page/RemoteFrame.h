@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,34 +25,35 @@
 
 #pragma once
 
-#include "Frame.h"
-#include "LayerHostingContextIdentifier.h"
+#include <WebCore/Frame.h>
+#include <WebCore/LayerHostingContextIdentifier.h>
 #include <wtf/RefPtr.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
 
+class IntPoint;
 class RemoteDOMWindow;
 class RemoteFrameClient;
 class RemoteFrameView;
 class WeakPtrImplWithEventTargetData;
 
+enum class AdvancedPrivacyProtections : uint16_t;
+enum class AutoplayPolicy : uint8_t;
 enum class RenderAsTextFlag : uint16_t;
+
+struct AccessibilityRemoteToken;
 
 class RemoteFrame final : public Frame {
 public:
-    WEBCORE_EXPORT static Ref<RemoteFrame> createMainFrame(Page&, UniqueRef<RemoteFrameClient>&&, FrameIdentifier);
-    WEBCORE_EXPORT static Ref<RemoteFrame> createSubframe(Page&, UniqueRef<RemoteFrameClient>&&, FrameIdentifier, Frame& parent);
-    WEBCORE_EXPORT static Ref<RemoteFrame> createSubframeWithContentsInAnotherProcess(Page&, UniqueRef<RemoteFrameClient>&&, FrameIdentifier, HTMLFrameOwnerElement&, std::optional<LayerHostingContextIdentifier>);
+    using ClientCreator = CompletionHandler<UniqueRef<RemoteFrameClient>(RemoteFrame&)>;
+    WEBCORE_EXPORT static Ref<RemoteFrame> createMainFrame(Page&, ClientCreator&&, FrameIdentifier, Frame* opener, Ref<FrameTreeSyncData>&&);
+    WEBCORE_EXPORT static Ref<RemoteFrame> createSubframe(Page&, ClientCreator&&, FrameIdentifier, Frame& parent, Frame* opener, Ref<FrameTreeSyncData>&&, AddToFrameTree);
+    WEBCORE_EXPORT static Ref<RemoteFrame> createSubframeWithContentsInAnotherProcess(Page&, ClientCreator&&, FrameIdentifier, HTMLFrameOwnerElement&, std::optional<LayerHostingContextIdentifier>, Ref<FrameTreeSyncData>&&);
     ~RemoteFrame();
 
     RemoteDOMWindow& window() const;
-
-    void setOpener(Frame* opener) { m_opener = opener; }
-    Frame* opener() const { return m_opener.get(); }
-
-    WEBCORE_EXPORT void didFinishLoadInAnotherProcess();
 
     const RemoteFrameClient& client() const { return m_client.get(); }
     RemoteFrameClient& client() { return m_client.get(); }
@@ -63,23 +64,56 @@ public:
     Markable<LayerHostingContextIdentifier> layerHostingContextIdentifier() const { return m_layerHostingContextIdentifier; }
 
     String renderTreeAsText(size_t baseIndent, OptionSet<RenderAsTextFlag>);
+    void bindRemoteAccessibilityFrames(int processIdentifier, AccessibilityRemoteToken, CompletionHandler<void(AccessibilityRemoteToken, int)>&&);
+    void updateRemoteFrameAccessibilityOffset(IntPoint);
+    void unbindRemoteAccessibilityFrames(int);
+
+    void setCustomUserAgent(String&& customUserAgent) { m_customUserAgent = WTF::move(customUserAgent); }
+    String customUserAgent() const final;
+    void setCustomUserAgentAsSiteSpecificQuirks(String&& customUserAgentAsSiteSpecificQuirks) { m_customUserAgentAsSiteSpecificQuirks = WTF::move(customUserAgentAsSiteSpecificQuirks); }
+    String customUserAgentAsSiteSpecificQuirks() const final;
+
+    void setCustomNavigatorPlatform(String&& customNavigatorPlatform) { m_customNavigatorPlatform = WTF::move(customNavigatorPlatform); }
+    String customNavigatorPlatform() const final;
+
+    void setAdvancedPrivacyProtections(OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections) { m_advancedPrivacyProtections = advancedPrivacyProtections; }
+    OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections() const final;
+
+    void setAutoplayPolicy(AutoplayPolicy autoplayPolicy) { m_autoplayPolicy = autoplayPolicy; }
+    AutoplayPolicy autoplayPolicy() const final;
+
+    void updateScrollingMode() final;
+    void reportMixedContentViolation(bool blocked, const URL& target) const final;
+    const SecurityOrigin& frameDocumentSecurityOriginOrOpaque() const;
 
 private:
-    WEBCORE_EXPORT explicit RemoteFrame(Page&, UniqueRef<RemoteFrameClient>&&, FrameIdentifier, HTMLFrameOwnerElement*, Frame*, Markable<LayerHostingContextIdentifier>);
+    WEBCORE_EXPORT explicit RemoteFrame(Page&, ClientCreator&&, FrameIdentifier, HTMLFrameOwnerElement*, Frame* parent, Markable<LayerHostingContextIdentifier>, Frame* opener, Ref<FrameTreeSyncData>&&, AddToFrameTree = AddToFrameTree::Yes);
 
     void frameDetached() final;
     bool preventsParentFromBeingComplete() const final;
     void changeLocation(FrameLoadRequest&&) final;
-    void broadcastFrameRemovalToOtherProcesses() final;
+    void loadFrameRequest(FrameLoadRequest&&, Event*) final;
+    void didFinishLoadInAnotherProcess() final;
+    bool isRootFrame() const final { return false; }
+    void documentURLForConsoleLog(CompletionHandler<void(const URL&)>&&) final;
+    SecurityOrigin* frameDocumentSecurityOrigin() const final;
+    String frameURLProtocol() const final;
 
     FrameView* virtualView() const final;
+    void disconnectView() final;
     DOMWindow* virtualWindow() const final;
+    FrameLoaderClient& loaderClient() final;
+    void reinitializeDocumentSecurityContext() final { }
 
-    Ref<RemoteDOMWindow> m_window;
-    RefPtr<Frame> m_opener;
+    const Ref<RemoteDOMWindow> m_window;
     RefPtr<RemoteFrameView> m_view;
-    UniqueRef<RemoteFrameClient> m_client;
+    const UniqueRef<RemoteFrameClient> m_client;
     Markable<LayerHostingContextIdentifier> m_layerHostingContextIdentifier;
+    String m_customUserAgent;
+    String m_customUserAgentAsSiteSpecificQuirks;
+    String m_customNavigatorPlatform;
+    OptionSet<AdvancedPrivacyProtections> m_advancedPrivacyProtections;
+    AutoplayPolicy m_autoplayPolicy;
     bool m_preventsParentFromBeingComplete { true };
 };
 

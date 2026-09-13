@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,8 @@
  */
 package test.robot.test3d;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import java.util.concurrent.TimeUnit;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.scene.AmbientLight;
@@ -40,12 +42,12 @@ import javafx.scene.shape.DrawMode;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
 import javafx.stage.Stage;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.robot.testharness.VisualTestBase;
 
-import static org.junit.Assume.assumeTrue;
-
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class AABalanceFlipTest extends VisualTestBase {
 
     private Stage testStage;
@@ -55,12 +57,14 @@ public class AABalanceFlipTest extends VisualTestBase {
 
     WritableImage selfIllumMap;
 
-    @Before
-    public void setupEach() {
+    @BeforeEach
+    @Override
+    public void doSetup() {
         assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
+        super.doSetup();
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testAABalanceFlip() {
         final int WIDTH = 600;
         final int HEIGHT = 600;

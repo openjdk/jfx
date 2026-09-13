@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -55,7 +55,9 @@ public class LightBaseHelper extends NodeHelper {
 
     @Override
     protected NGNode createPeerImpl(Node node) {
-        throw new UnsupportedOperationException("Applications should not extend the LightBase class directly.");
+        // This method is only implemented so that LightBaseHelper can be instantiated,
+        // but it will never be called.
+        throw new InternalError();
     }
 
     @Override

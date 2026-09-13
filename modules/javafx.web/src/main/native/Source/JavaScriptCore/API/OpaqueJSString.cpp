@@ -28,6 +28,7 @@
 
 #include "Identifier.h"
 #include "IdentifierInlines.h"
+#include <wtf/MallocSpan.h>
 #include <wtf/text/StringView.h>
 
 using namespace JSC;
@@ -37,7 +38,7 @@ RefPtr<OpaqueJSString> OpaqueJSString::tryCreate(const String& string)
     if (string.isNull())
         return nullptr;
 
-    return adoptRef(new OpaqueJSString(string));
+    return adoptRef(new OpaqueJSString(String { string }));
 }
 
 RefPtr<OpaqueJSString> OpaqueJSString::tryCreate(String&& string)
@@ -45,17 +46,17 @@ RefPtr<OpaqueJSString> OpaqueJSString::tryCreate(String&& string)
     if (string.isNull())
         return nullptr;
 
-    return adoptRef(new OpaqueJSString(WTFMove(string)));
+    return adoptRef(new OpaqueJSString(WTF::move(string)));
 }
 
 OpaqueJSString::~OpaqueJSString()
 {
     // m_characters is put in a local here to avoid an extra atomic load.
-    UChar* characters = m_characters;
+    char16_t* characters = m_characters;
     if (!characters)
         return;
 
-    if (!m_string.is8Bit() && m_string.characters16() == characters)
+    if (!m_string.is8Bit() && m_string.span16().data() == characters)
         return;
 
     fastFree(characters);
@@ -71,35 +72,30 @@ Identifier OpaqueJSString::identifier(VM* vm) const
 {
     if (m_string.isNull())
         return Identifier();
-
     if (m_string.isEmpty())
-        return Identifier(Identifier::EmptyIdentifier);
-
+        return Identifier(Identifier::EmptyIdentifierFlag::EmptyIdentifier);
     if (m_string.is8Bit())
-        return Identifier::fromString(*vm, m_string.characters8(), m_string.length());
-
-    return Identifier::fromString(*vm, m_string.characters16(), m_string.length());
+        return Identifier::fromString(*vm, m_string.span8());
+    return Identifier::fromString(*vm, m_string.span16());
 }
 
-const UChar* OpaqueJSString::characters()
+const char16_t* OpaqueJSString::characters() LIFETIME_BOUND
 {
     // m_characters is put in a local here to avoid an extra atomic load.
-    UChar* characters = m_characters;
+    char16_t* characters = m_characters;
     if (characters)
         return characters;
 
     if (m_string.isNull())
         return nullptr;
 
-    UChar* newCharacters = static_cast<UChar*>(fastMalloc(m_string.length() * sizeof(UChar)));
-    StringView { m_string }.getCharacters(newCharacters);
+    auto newCharacters = MallocSpan<char16_t>::malloc(m_string.length() * sizeof(char16_t));
+    StringView { m_string }.getCharacters(newCharacters.mutableSpan());
 
-    if (!m_characters.compare_exchange_strong(characters, newCharacters)) {
-        fastFree(newCharacters);
+    if (!m_characters.compare_exchange_strong(characters, newCharacters.mutableSpan().data()))
         return characters;
-    }
 
-    return newCharacters;
+    return newCharacters.leakSpan().data();
 }
 
 bool OpaqueJSString::equal(const OpaqueJSString* a, const OpaqueJSString* b)

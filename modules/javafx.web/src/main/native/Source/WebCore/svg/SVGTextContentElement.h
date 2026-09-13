@@ -22,6 +22,7 @@
 #pragma once
 
 #include "SVGGraphicsElement.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -51,7 +52,7 @@ template<> struct SVGPropertyTraits<SVGLengthAdjustType> {
         return emptyString();
     }
 
-    static SVGLengthAdjustType fromString(const String& value)
+    static SVGLengthAdjustType fromString(SVGElement&, const String& value)
     {
         if (value == "spacingAndGlyphs"_s)
             return SVGLengthAdjustSpacingAndGlyphs;
@@ -62,7 +63,8 @@ template<> struct SVGPropertyTraits<SVGLengthAdjustType> {
 };
 
 class SVGTextContentElement : public SVGGraphicsElement {
-    WTF_MAKE_ISO_ALLOCATED(SVGTextContentElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGTextContentElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGTextContentElement);
 public:
     enum {
         LENGTHADJUST_UNKNOWN = SVGLengthAdjustUnknown,
@@ -80,7 +82,7 @@ public:
     int getCharNumAtPosition(DOMPointInit&&);
     ExceptionOr<void> selectSubString(unsigned charnum, unsigned nchars);
 
-    static SVGTextContentElement* elementFromRenderer(RenderObject*);
+    static const SVGTextContentElement* elementFromRenderer(const RenderObject*);
 
     using PropertyRegistry = SVGPropertyOwnerRegistry<SVGTextContentElement, SVGGraphicsElement>;
 
@@ -115,5 +117,9 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SVGTextContentElement)
     static bool isType(const WebCore::SVGElement& element) { return element.isTextContent(); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::SVGElement>(node) && isType(downcast<WebCore::SVGElement>(node)); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* svgElement = dynamicDowncast<WebCore::SVGElement>(node);
+        return svgElement && isType(*svgElement);
+    }
 SPECIALIZE_TYPE_TRAITS_END()

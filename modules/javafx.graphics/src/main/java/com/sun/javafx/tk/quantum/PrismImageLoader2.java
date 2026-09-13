@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,6 @@
 
 package com.sun.javafx.tk.quantum;
 
-import java.io.IOException;
 import java.io.InputStream;
 
 import com.sun.javafx.iio.ImageFrame;
@@ -39,12 +38,6 @@ import com.sun.javafx.runtime.async.AsyncOperationListener;
 import com.sun.javafx.tk.PlatformImage;
 import com.sun.prism.Image;
 import com.sun.prism.impl.PrismSettings;
-import java.lang.reflect.UndeclaredThrowableException;
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -233,52 +226,30 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
     }
 
     static final class AsyncImageLoader
-        extends AbstractRemoteResource<PrismImageLoader2>
+        extends AbstractRemoteResource<com.sun.javafx.tk.ImageLoader>
     {
         private static final ExecutorService BG_LOADING_EXECUTOR =
                 createExecutor();
-
-        @SuppressWarnings("removal")
-        private final AccessControlContext acc;
 
         double width, height;
         boolean preserveRatio;
         boolean smooth;
 
-        @SuppressWarnings("removal")
         public AsyncImageLoader(
-                AsyncOperationListener<PrismImageLoader2> listener,
-                String url,
+                AsyncOperationListener<com.sun.javafx.tk.ImageLoader> listener,
+                SizedStreamSupplier sizedStreamSupplier,
                 double width, double height, boolean preserveRatio, boolean smooth)
         {
-            super(url, listener);
+            super(sizedStreamSupplier, listener);
             this.width = width;
             this.height = height;
             this.preserveRatio = preserveRatio;
             this.smooth = smooth;
-            this.acc = AccessController.getContext();
         }
 
         @Override
-        protected PrismImageLoader2 processStream(InputStream stream) throws IOException {
+        protected PrismImageLoader2 processStream(InputStream stream) {
             return new PrismImageLoader2(stream, width, height, preserveRatio, smooth);
-        }
-
-        @SuppressWarnings("removal")
-        @Override
-        public PrismImageLoader2 call() throws IOException {
-            try {
-                return AccessController.doPrivileged(
-                        (PrivilegedExceptionAction<PrismImageLoader2>) () -> AsyncImageLoader.super.call(), acc);
-            } catch (final PrivilegedActionException e) {
-                final Throwable cause = e.getCause();
-
-                if (cause instanceof IOException) {
-                    throw (IOException) cause;
-                }
-
-                throw new UndeclaredThrowableException(cause);
-            }
         }
 
         @Override
@@ -287,28 +258,20 @@ class PrismImageLoader2 implements com.sun.javafx.tk.ImageLoader {
         }
 
         private static ExecutorService createExecutor() {
-            @SuppressWarnings("removal")
             final ThreadGroup bgLoadingThreadGroup =
-                    AccessController.doPrivileged(
-                            (PrivilegedAction<ThreadGroup>) () -> new ThreadGroup(
-                                QuantumToolkit.getFxUserThread()
-                                              .getThreadGroup(),
-                                "Background image loading thread pool")
-                    );
+                    new ThreadGroup(QuantumToolkit.getFxUserThread()
+                            .getThreadGroup(),
+                            "Background image loading thread pool");
 
-            @SuppressWarnings("removal")
-            final ThreadFactory bgLoadingThreadFactory =
-                    runnable -> AccessController.doPrivileged(
-                            (PrivilegedAction<Thread>) () -> {
-                                final Thread newThread =
-                                        new Thread(bgLoadingThreadGroup,
-                                                   runnable);
-                                newThread.setPriority(
-                                              Thread.MIN_PRIORITY);
+            final ThreadFactory bgLoadingThreadFactory = runnable -> {
+                final Thread newThread
+                        = new Thread(bgLoadingThreadGroup,
+                                runnable);
+                newThread.setPriority(
+                        Thread.MIN_PRIORITY);
 
-                                return newThread;
-                            }
-                    );
+                return newThread;
+            };
 
             final ExecutorService bgLoadingExecutor =
                     Executors.newCachedThreadPool(bgLoadingThreadFactory);

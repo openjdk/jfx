@@ -23,11 +23,17 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "BPlatform.h"
 #include "IsoHeap.h"
+
+#if !BUSE(TZONE)
+#include "AllocationCounts.h"
 
 #if BUSE(LIBPAS)
 
 #include "bmalloc_heap_inlines.h"
+#include "bmalloc_heap_internal.h"
+#include "pas_allocation_mode.h"
 
 #include "IsoMallocFallback.h"
 
@@ -38,28 +44,71 @@ void* isoAllocate(pas_heap_ref& heapRef)
     // FIXME: libpas should know how to do the fallback thing.
     // https://bugs.webkit.org/show_bug.cgi?id=227177
 
+    auto typeSize = pas_simple_type_size(reinterpret_cast<pas_simple_type>(heapRef.type));
     if (IsoMallocFallback::shouldTryToFallBack()) {
-        IsoMallocFallback::MallocResult result = IsoMallocFallback::tryMalloc(
-            pas_simple_type_size(reinterpret_cast<pas_simple_type>(heapRef.type)));
+        IsoMallocFallback::MallocResult result = IsoMallocFallback::tryMalloc(typeSize, CompactAllocationMode::NonCompact);
         if (result.didFallBack) {
             RELEASE_BASSERT(result.ptr);
+            BPROFILE_ALLOCATION(NON_JS_CELL, result.ptr, typeSize);
             return result.ptr;
         }
     }
 
-    return bmalloc_iso_allocate_inline(&heapRef);
+    void* result = bmalloc_iso_allocate_inline(&heapRef, pas_non_compact_allocation_mode);
+    BPROFILE_ALLOCATION(NON_JS_CELL, result, typeSize);
+    return result;
 }
 
 void* isoTryAllocate(pas_heap_ref& heapRef)
 {
+    auto typeSize = pas_simple_type_size(reinterpret_cast<pas_simple_type>(heapRef.type));
     if (IsoMallocFallback::shouldTryToFallBack()) {
-        IsoMallocFallback::MallocResult result = IsoMallocFallback::tryMalloc(
-            pas_simple_type_size(reinterpret_cast<pas_simple_type>(heapRef.type)));
-        if (result.didFallBack)
+        IsoMallocFallback::MallocResult result = IsoMallocFallback::tryMalloc(typeSize, CompactAllocationMode::NonCompact);
+        if (result.didFallBack) {
+            BPROFILE_TRY_ALLOCATION(NON_JS_CELL, result.ptr, typeSize);
             return result.ptr;
     }
+    }
 
-    return bmalloc_try_iso_allocate_inline(&heapRef);
+    void* result = bmalloc_try_iso_allocate_inline(&heapRef, pas_non_compact_allocation_mode);
+    BPROFILE_TRY_ALLOCATION(NON_JS_CELL, result, typeSize);
+    return result;
+}
+
+void* isoAllocateCompact(pas_heap_ref& heapRef)
+{
+    // FIXME: libpas should know how to do the fallback thing.
+    // https://bugs.webkit.org/show_bug.cgi?id=227177
+
+    auto typeSize = pas_simple_type_size(reinterpret_cast<pas_simple_type>(heapRef.type));
+    if (IsoMallocFallback::shouldTryToFallBack()) {
+        IsoMallocFallback::MallocResult result = IsoMallocFallback::tryMalloc(typeSize, CompactAllocationMode::Compact);
+        if (result.didFallBack) {
+            RELEASE_BASSERT(result.ptr);
+            BPROFILE_ALLOCATION(COMPACTIBLE, result.ptr, typeSize);
+            return result.ptr;
+        }
+    }
+
+    void* result = bmalloc_iso_allocate_inline(&heapRef, pas_always_compact_allocation_mode);
+    BPROFILE_ALLOCATION(COMPACTIBLE, result, typeSize);
+    return result;
+}
+
+void* isoTryAllocateCompact(pas_heap_ref& heapRef)
+{
+    auto typeSize = pas_simple_type_size(reinterpret_cast<pas_simple_type>(heapRef.type));
+    if (IsoMallocFallback::shouldTryToFallBack()) {
+        IsoMallocFallback::MallocResult result = IsoMallocFallback::tryMalloc(typeSize, CompactAllocationMode::Compact);
+        if (result.didFallBack) {
+            BPROFILE_TRY_ALLOCATION(NON_JS_CELL, result.ptr, typeSize);
+            return result.ptr;
+        }
+    }
+
+    void* result = bmalloc_try_iso_allocate_inline(&heapRef, pas_always_compact_allocation_mode);
+    BPROFILE_TRY_ALLOCATION(COMPACTIBLE, result, typeSize);
+    return result;
 }
 
 void isoDeallocate(void* ptr)
@@ -74,4 +123,4 @@ void isoDeallocate(void* ptr)
 } } // namespace bmalloc::api
 
 #endif // BUSE(LIBPAS)
-
+#endif // !BUSE(TZONE)

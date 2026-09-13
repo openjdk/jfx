@@ -25,15 +25,19 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
+#if !BUSE(TZONE)
+
 #include "DeferredDecommit.h"
 
 #if !BUSE(LIBPAS)
 
 namespace bmalloc {
 
-inline DeferredDecommit::DeferredDecommit()
-{
-}
+inline DeferredDecommit::DeferredDecommit() = default;
 
 inline DeferredDecommit::DeferredDecommit(IsoDirectoryBaseBase* directory, IsoPageBase* page, unsigned pageIndex)
     : directory(directory)
@@ -45,3 +49,6 @@ inline DeferredDecommit::DeferredDecommit(IsoDirectoryBaseBase* directory, IsoPa
 } // namespace bmalloc
 
 #endif
+#endif // !BUSE(TZONE)
+
+#endif // __cplusplus

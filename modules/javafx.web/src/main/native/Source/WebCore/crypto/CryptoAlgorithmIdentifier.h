@@ -29,7 +29,8 @@
 
 namespace WebCore {
 
-enum class CryptoAlgorithmIdentifier {
+constexpr auto sha224DeprecationMessage = "SHA224 is not supported";
+enum class CryptoAlgorithmIdentifier : uint8_t {
     RSAES_PKCS1_v1_5 = 1,
     RSASSA_PKCS1_v1_5,
     RSA_PSS,
@@ -43,15 +44,37 @@ enum class CryptoAlgorithmIdentifier {
     AES_KW,
     HMAC,
     SHA_1,
-    SHA_224,
+    DEPRECATED_SHA_224,
     SHA_256,
     SHA_384,
     SHA_512,
     HKDF,
     PBKDF2,
-    Ed25519
+    Ed25519,
+    X25519
 };
 
-} // namespace WebCore
+inline PAL::CryptoDigestHashFunction toCKHashFunction(CryptoAlgorithmIdentifier hash)
+{
+    switch (hash) {
+    case CryptoAlgorithmIdentifier::SHA_256:
+        return PAL::CryptoDigestHashFunction::SHA_256;
+    case CryptoAlgorithmIdentifier::SHA_384:
+        return PAL::CryptoDigestHashFunction::SHA_384;
+    case CryptoAlgorithmIdentifier::SHA_512:
+        return PAL::CryptoDigestHashFunction::SHA_512;
+    case CryptoAlgorithmIdentifier::SHA_1:
+        return PAL::CryptoDigestHashFunction::SHA_1;
+    default:
+        ASSERT_NOT_REACHED();
+        return PAL::CryptoDigestHashFunction::SHA_512;
+    }
+}
 
+inline bool isValidHashParameter(CryptoAlgorithmIdentifier hash)
+{
+    return hash == CryptoAlgorithmIdentifier::SHA_1 || hash == CryptoAlgorithmIdentifier::SHA_256 || hash == CryptoAlgorithmIdentifier::SHA_512 || hash == CryptoAlgorithmIdentifier::SHA_384;
+}
+
+} // namespace WebCore
 #endif // ENABLE(WEB_CRYPTO)

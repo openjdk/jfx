@@ -27,7 +27,6 @@
 # canonicalization table as decribed in ECMAScript 6 standard in section
 # "21.2.2.8.2 Runtime Semantics: Canonicalize()", step 2.
 
-import sys
 import copy
 import optparse
 import os
@@ -99,10 +98,7 @@ aliases = None
 
 def openOrExit(path, mode):
     try:
-        if sys.version_info.major >= 3:
-            return open(path, mode, encoding="UTF-8")
-        else:
-            return open(path, mode)
+        return open(path, mode, encoding="UTF-8")
     except IOError as e:
         print("I/O error opening {0}, ({1}): {2}".format(path, e.errno, e.strerror))
         exit(1)
@@ -569,7 +565,7 @@ class PropertyData:
                 output += codePoint
             else:
                 output += "\\x{:x}".format(ord(codePoint))
-        file.write("{{ reinterpret_cast<UChar32*>(const_cast<char32_t*>(U\"{}\")), {}}}".format(output, len(utf32String)))
+        file.write("{{ std::span {{ U\"{}\", {} }}}}".format(output, len(utf32String)))
 
     def dump(self, file, commaAfter):
         file.write("static std::unique_ptr<CharacterClass> {}()\n{{\n".format(self.getCreateFuncName()))
@@ -581,16 +577,16 @@ class PropertyData:
         file.write("\n")
         file.write("    auto characterClass = makeUnique<CharacterClass>(\n")
         if self.hasStrings:
-            file.write("        std::initializer_list<Vector<UChar32>>(")
+            file.write("        std::initializer_list<Vector<char32_t>>(")
             self.dumpMatchData(file, 1, self.matchStrings, self.convertStringToCppFormat)
             file.write("),\n")
-        file.write("        std::initializer_list<UChar32>(")
+        file.write("        std::initializer_list<char32_t>(")
         self.dumpMatchData(file, 8, self.matches, lambda file, match: (file.write("{0:0=#4x}".format(match))))
         file.write("),\n")
         file.write("        std::initializer_list<CharacterRange>(")
         self.dumpMatchData(file, 4, self.ranges, lambda file, range: (file.write("{{{0:0=#4x}, {1:0=#4x}}}".format(range[0], range[1]))))
         file.write("),\n")
-        file.write("        std::initializer_list<UChar32>(")
+        file.write("        std::initializer_list<char32_t>(")
         self.dumpMatchData(file, 8, self.unicodeMatches, lambda file, match: (file.write("{0:0=#6x}".format(match))))
         file.write("),\n")
         file.write("        std::initializer_list<CharacterRange>(")
@@ -609,7 +605,7 @@ class PropertyData:
             propertyData.dump(file, propertyData != cls.allPropertyData[-1])
 
         file.write("using CreateCharacterClass = std::unique_ptr<CharacterClass> (*)();\n")
-        file.write("static CreateCharacterClass createCharacterClassFunctions[{}] = {{\n   ".format(len(cls.allPropertyData)))
+        file.write("static constinit CreateCharacterClass createCharacterClassFunctions[{}] = {{\n   ".format(len(cls.allPropertyData)))
         functionsOnThisLine = 0
         for propertyData in cls.allPropertyData:
             file.write(" {},".format(propertyData.getCreateFuncName()))
@@ -622,57 +618,67 @@ class PropertyData:
 
     @classmethod
     def createAndDumpHashTable(self, file, propertyDict, tablePrefix):
-        propertyKeys = propertyDict.keys()
-        numberOfKeys = len(propertyKeys)
-        hashSize = ceilingToPowerOf2(numberOfKeys * 2)
-        hashMask = hashSize - 1
-        hashTable = [None] * hashSize
-        valueTable = []
-        tableSize = hashSize
+        def createAndDumpHashTableHelper(propertyDict, tablePrefix, isMac):
+            propertyKeys = propertyDict.keys()
+            numberOfKeys = len(propertyKeys)
+            hashSize = ceilingToPowerOf2(numberOfKeys * 2)
+            hashMask = hashSize - 1
+            hashTable = [None] * hashSize
+            valueTable = []
+            tableSize = hashSize
+            hashTableString = ""
 
-        keyValuesToHash = []
-        for propertyName in propertyKeys:
-            propertyData = propertyDict[propertyName]
-            keyValuesToHash.append((propertyName, propertyData.getIndex()))
-            for alias in propertyData.aliases:
-                keyValuesToHash.append((alias, propertyData.getIndex()))
+            keyValuesToHash = []
+            for propertyName in propertyKeys:
+                propertyData = propertyDict[propertyName]
+                keyValuesToHash.append((propertyName, propertyData.getIndex()))
+                for alias in propertyData.aliases:
+                    keyValuesToHash.append((alias, propertyData.getIndex()))
 
-        for keyValue in keyValuesToHash:
-            key = keyValue[0]
-            hash = stringHash(key) % hashSize
-            while hashTable[hash] is not None:
-                if hashTable[hash][1] is not None:
-                    hash = hashTable[hash][1]
-                else:
-                    hashTable[hash] = (hashTable[hash][0], tableSize)
-                    hashTable.append(None)
-                    hash = tableSize
-                    tableSize = tableSize + 1
+            for keyValue in keyValuesToHash:
+                key = keyValue[0]
+                hash = stringHash(key, isMac) % hashSize
+                while hashTable[hash] is not None:
+                    if hashTable[hash][1] is not None:
+                        hash = hashTable[hash][1]
+                    else:
+                        hashTable[hash] = (hashTable[hash][0], tableSize)
+                        hashTable.append(None)
+                        hash = tableSize
+                        tableSize = tableSize + 1
 
-            hashTable[hash] = (len(valueTable), None)
-            valueTable.append((key, keyValue[1]))
+                hashTable[hash] = (len(valueTable), None)
+                valueTable.append((key, keyValue[1]))
 
-        file.write("static const struct HashIndex {}TableIndex[{}] = {{\n".format(tablePrefix, len(hashTable)))
+            hashTableString += "static constinit const struct HashIndex {}TableIndex[{}] = {{\n".format(tablePrefix, len(hashTable))
 
-        for tableIndex in hashTable:
-            value = -1
-            next = -1
-            if tableIndex is not None:
-                value = tableIndex[0]
-                if tableIndex[1] is not None:
-                    next = tableIndex[1]
+            for tableIndex in hashTable:
+                value = -1
+                next = -1
+                if tableIndex is not None:
+                    value = tableIndex[0]
+                    if tableIndex[1] is not None:
+                        next = tableIndex[1]
 
-            file.write("    {{ {}, {} }},\n".format(value, next))
+                hashTableString += "    {{ {}, {} }},\n".format(value, next)
 
-        file.write("};\n\n")
+            hashTableString += "};\n\n"
 
-        file.write("static const struct HashValue {}TableValue[{}] = {{\n".format(tablePrefix, len(valueTable)))
-        for value in valueTable:
-            file.write("    {{ \"{}\", {} }},\n".format(value[0], value[1]))
-        file.write("};\n\n")
+            hashTableString += "static constinit const struct HashValue {}TableValue[{}] = {{\n".format(tablePrefix, len(valueTable))
+            for value in valueTable:
+                hashTableString += "    {{ \"{}\", {} }},\n".format(value[0], value[1])
+            hashTableString += "};\n\n"
 
-        file.write("static const struct HashTable {}HashTable = \n".format(tablePrefix))
-        file.write("    {{ {}, {}, {}TableValue, {}TableIndex }};\n\n".format(len(valueTable), hashMask, tablePrefix, tablePrefix))
+            hashTableString += "static constinit const struct HashTable {}HashTable = \n".format(tablePrefix)
+            hashTableString += "    {{ {}, {}, {}TableValue, {}TableIndex }};\n\n".format(len(valueTable), hashMask, tablePrefix, tablePrefix)
+            return hashTableString
+
+        hashTableForMacOS = createAndDumpHashTableHelper(propertyDict, tablePrefix, True)
+        hashTableForIOS = createAndDumpHashTableHelper(propertyDict, tablePrefix, False)
+        hashTableToWrite = hashTableForMacOS
+        if hashTableForMacOS != hashTableForIOS:
+            hashTableToWrite = "#if PLATFORM(MAC)\n{}#else\n{}#endif\n".format(hashTableForMacOS, hashTableForIOS)
+        file.write(hashTableToWrite)
 
     @classmethod
     def dumpMayContainStringFunc(cls, file):
@@ -772,6 +778,8 @@ class Scripts:
                 self.unknownScript.addMatch(MaxUnicode)
             else:
                 self.unknownScript.addRange(lastAssignedCodePoint + 1, MaxUnicode)
+
+        self.scriptsByName["Unknown"] = self.unknownScript
 
         self.scriptsParsed = True
 

@@ -25,16 +25,17 @@
 
 #pragma once
 
-#include "CSSColorValue.h"
-#include "ExceptionOr.h"
+#include "CSSOMColorValue.h"
 
 namespace WebCore {
 
-using CSSColorRGBComp = std::variant<double, RefPtr<CSSNumericValue>, String, RefPtr<CSSKeywordValue>>;
-using RectifiedCSSColorRGBComp = std::variant<RefPtr<CSSNumericValue>, RefPtr<CSSKeywordValue>>;
+template<typename> class ExceptionOr;
 
-class CSSRGB final : public CSSColorValue {
-    WTF_MAKE_ISO_ALLOCATED(CSSRGB);
+using CSSColorRGBComp = Variant<double, RefPtr<CSSNumericValue>, String, RefPtr<CSSKeywordValue>>;
+using RectifiedCSSColorRGBComp = Variant<RefPtr<CSSNumericValue>, RefPtr<CSSKeywordValue>>;
+
+class CSSRGB final : public CSSOMColorValue {
+    WTF_MAKE_TZONE_ALLOCATED(CSSRGB);
 public:
     static ExceptionOr<Ref<CSSRGB>> create(CSSColorRGBComp&&, CSSColorRGBComp&&, CSSColorRGBComp&&, CSSColorPercent&&);
 
@@ -52,6 +53,8 @@ public:
 private:
     CSSRGB(RectifiedCSSColorRGBComp&&, RectifiedCSSColorRGBComp&&, RectifiedCSSColorRGBComp&&, RectifiedCSSColorPercent&&);
 
+    CSSStyleValueType styleValueType() const final { return CSSStyleValueType::CSSColorRGB; }
+
     RectifiedCSSColorRGBComp m_red;
     RectifiedCSSColorRGBComp m_green;
     RectifiedCSSColorRGBComp m_blue;
@@ -59,3 +62,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSRGB)
+    static bool isType(const WebCore::CSSStyleValue& value) { return value.styleValueType() == WebCore::CSSStyleValueType::CSSColorRGB; }
+SPECIALIZE_TYPE_TRAITS_END()

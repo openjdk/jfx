@@ -25,6 +25,9 @@
 
 #pragma once
 
+#include <WebCore/PlatformExportMacros.h>
+#include <wtf/OptionSet.h>
+#include <wtf/text/TextStream.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -90,7 +93,8 @@ enum class MediaPlayerMediaEngineIdentifier : uint8_t {
         HolePunch,
         MediaFoundation,
         MockMSE,
-        CocoaWebM
+    CocoaWebM,
+    WirelessPlayback,
 };
 
 enum class MediaPlayerWirelessPlaybackTargetType : uint8_t {
@@ -105,6 +109,18 @@ enum class MediaPlayerPitchCorrectionAlgorithm : uint8_t {
         BestForSpeech,
 };
 
+enum class MediaPlayerNeedsRenderingModeChanged : bool {
+    No,
+    Yes,
+};
+
+enum class MediaPlayerSoundStageSize : uint8_t {
+    Auto,
+    Small,
+    Medium,
+    Large,
+};
+
 class MediaPlayerEnums {
 public:
     using NetworkState = MediaPlayerNetworkState;
@@ -117,11 +133,15 @@ public:
     using MediaEngineIdentifier = MediaPlayerMediaEngineIdentifier;
     using WirelessPlaybackTargetType = MediaPlayerWirelessPlaybackTargetType;
     using PitchCorrectionAlgorithm = MediaPlayerPitchCorrectionAlgorithm;
+    using NeedsRenderingModeChanged = MediaPlayerNeedsRenderingModeChanged;
+    using SoundStageSize = MediaPlayerSoundStageSize;
 
     enum {
         VideoFullscreenModeNone = 0,
         VideoFullscreenModeStandard = 1 << 0,
         VideoFullscreenModePictureInPicture = 1 << 1,
+        VideoFullscreenModeInWindow = 1 << 2,
+        VideoFullscreenModeAllValidBitsMask = (VideoFullscreenModeStandard | VideoFullscreenModePictureInPicture | VideoFullscreenModeInWindow)
     };
     typedef uint32_t VideoFullscreenMode;
 };
@@ -132,6 +152,17 @@ String convertEnumerationToString(MediaPlayerEnums::NetworkState);
 String convertEnumerationToString(MediaPlayerEnums::Preload);
 String convertEnumerationToString(MediaPlayerEnums::SupportsType);
 String convertEnumerationToString(MediaPlayerEnums::BufferingPolicy);
+
+enum class VideoRendererPreference : uint8_t {
+    PrefersDecompressionSession = 1 << 0,
+    ProtectedFallbackDisabled = 1 << 1,
+    UseDecompressionSessionForProtectedContent = 1 << 2,
+    UseStereoDecoding = 1 << 3,
+#if PLATFORM(IOS_FAMILY)
+    CanShowWhileLocked = 1 << 4,
+#endif
+};
+using VideoRendererPreferences = OptionSet<VideoRendererPreference>;
 
 } // namespace WebCore
 

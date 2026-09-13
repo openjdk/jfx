@@ -29,14 +29,14 @@
  */
 
 #include "config.h"
-
 #include "BlobURL.h"
-#include "Document.h"
+
+#include "DocumentSecurityOrigin.h"
 #include "SecurityOrigin.h"
 #include "ThreadableBlobRegistry.h"
-
 #include <wtf/URL.h>
 #include <wtf/UUID.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -57,9 +57,9 @@ static const Document* blobOwner(const SecurityOrigin& blobOrigin)
     if (!isMainThread())
         return nullptr;
 
-    for (const auto* document : Document::allDocuments()) {
-        if (document->securityOrigin().isSameOriginAs(blobOrigin))
-            return document;
+    for (auto& document : Document::allDocuments()) {
+        if (document->protectedSecurityOrigin()->isSameOriginAs(blobOrigin))
+            return document.ptr();
     }
     return nullptr;
 }
@@ -77,7 +77,7 @@ bool BlobURL::isSecureBlobURL(const URL& url)
 
     // As per https://github.com/w3c/webappsec-mixed-content/issues/41, Blob URL is secure if the document that created it is secure.
     if (auto origin = ThreadableBlobRegistry::getCachedOrigin(url)) {
-        if (auto* document = blobOwner(*origin))
+        if (RefPtr document = blobOwner(*origin))
             return document->isSecureContext();
     }
     return SecurityOrigin::isSecure(getOriginURL(url));
@@ -89,5 +89,12 @@ URL BlobURL::createBlobURL(StringView originString)
     String urlString = makeString("blob:"_s, originString, '/', WTF::UUID::createVersion4());
     return URL({ }, urlString);
 }
+
+#if ASSERT_ENABLED
+bool BlobURL::isInternalURL(const URL& url)
+{
+    return url.string().startsWith("blob:blobinternal://"_s);
+}
+#endif
 
 } // namespace WebCore

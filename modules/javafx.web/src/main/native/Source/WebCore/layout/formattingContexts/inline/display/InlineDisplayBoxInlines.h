@@ -30,7 +30,12 @@
 namespace WebCore {
 namespace InlineDisplay {
 
-inline bool Box::isHorizontal() const { return style().isHorizontalWritingMode(); }
+inline bool Box::isHorizontal() const { return writingMode().isHorizontal(); }
+
+inline bool Box::isVisible() const
+{
+    return !isFullyTruncated() && style().usedVisibility() == Visibility::Visible;
+}
 
 }
 }

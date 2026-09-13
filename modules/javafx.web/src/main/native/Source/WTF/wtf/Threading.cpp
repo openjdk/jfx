@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -50,6 +50,7 @@
 #endif
 
 #if PLATFORM(COCOA)
+#include <wtf/cocoa/Entitlements.h>
 #include <wtf/darwin/LibraryPathDiagnostics.h>
 #endif
 
@@ -59,12 +60,16 @@
 #define USE_LIBPAS_THREAD_SUSPEND_LOCK 1
 #include <bmalloc/pas_thread_suspend_lock.h>
 #endif
+#if USE(TZONE_MALLOC)
+#if BUSE(TZONE)
+#include <bmalloc/TZoneHeapManager.h>
+#else
+#error USE(TZONE_MALLOC) requires BUSE(TZONE)
 #endif
+#endif // USE(TZONE_MALLOC)
+#endif // !USE(SYSTEM_MALLOC)
 
 namespace WTF {
-
-Lock Thread::s_allThreadsLock;
-
 
 // During suspend, suspend or resume should not be executed from the other threads.
 // We use global lock instead of per thread lock.
@@ -109,11 +114,17 @@ static std::optional<size_t> stackSize(ThreadType threadType)
 #if PLATFORM(PLAYSTATION)
     if (threadType == ThreadType::JavaScript)
         return 512 * KB;
-#elif OS(DARWIN) && ASAN_ENABLED
+#elif OS(DARWIN) && (ASAN_ENABLED || ASSERT_ENABLED)
     if (threadType == ThreadType::Compiler)
-        return 1 * MB; // ASan needs more stack space (especially on Debug builds).
-#elif PLATFORM(JAVA) && OS(WINDOWS) && USE(JSVALUE32_64)
-    return 1 * MB;
+        return 1 * MB; // ASan / Debug build needs more stack space.
+#elif OS(WINDOWS)
+    // WebGL conformance tests need more stack space <https://webkit.org/b/261297>
+    if (threadType == ThreadType::Graphics)
+#if defined(NDEBUG)
+        return 2 * MB;
+#else
+        return 4 * MB;
+#endif
 #else
     UNUSED_PARAM(threadType);
 #endif
@@ -138,21 +149,21 @@ uint32_t ThreadLike::currentSequence()
     if (uint32_t uid = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(dispatch_get_specific(&s_uid))))
         return uid;
 #endif
-    return Thread::current().uid();
+    return Thread::currentSingleton().uid();
 }
 
 struct Thread::NewThreadContext : public ThreadSafeRefCounted<NewThreadContext> {
 public:
-    NewThreadContext(const char* name, Function<void()>&& entryPoint, Ref<Thread>&& thread)
+    NewThreadContext(ASCIILiteral name, Function<void()>&& entryPoint, Ref<Thread>&& thread)
         : name(name)
-        , entryPoint(WTFMove(entryPoint))
-        , thread(WTFMove(thread))
+        , entryPoint(WTF::move(entryPoint))
+        , thread(WTF::move(thread))
     {
     }
 
     enum class Stage { Start, EstablishedHandle, Initialized };
     Stage stage { Stage::Start };
-    const char* name;
+    ASCIILiteral name;
     Function<void()> entryPoint;
     Ref<Thread> thread;
     Mutex mutex;
@@ -162,19 +173,10 @@ public:
 #endif
 };
 
-HashSet<Thread*>& Thread::allThreads()
+ThreadSafeWeakHashSet<Thread>& Thread::allThreads()
 {
-    static LazyNeverDestroyed<HashSet<Thread*>> allThreads;
-    static std::once_flag onceKey;
-    std::call_once(onceKey, [&] {
-        allThreads.construct();
-    });
+    static NeverDestroyed<ThreadSafeWeakHashSet<Thread>> allThreads;
     return allThreads;
-}
-
-Lock& Thread::allThreadsLock()
-{
-    return s_allThreadsLock;
 }
 
 const char* Thread::normalizeThreadName(const char* threadName)
@@ -199,8 +201,8 @@ const char* Thread::normalizeThreadName(const char* threadName)
     if (result.length() > kLinuxThreadNameLimit)
         result = result.right(kLinuxThreadNameLimit);
 #endif
-    ASSERT(result.characters8()[result.length()] == '\0');
-    return reinterpret_cast<const char*>(result.characters8());
+    auto characters = result.span8();
+    return byteCast<char>(characters.data());
 #endif
 }
 
@@ -210,15 +212,16 @@ void Thread::initializeInThread()
         m_stack = StackBounds::currentThreadStackBounds();
     m_savedLastStackTop = stack().origin();
 
+#if !HAVE(STACK_BOUNDS_FOR_NEW_THREAD)
+    if (!isMainThread())
+        allThreads().add(*this); // Must have stack bounds before adding to allThreads()
+#endif
+
     m_currentAtomStringTable = &m_defaultAtomStringTable;
 #if USE(WEB_THREAD)
     // On iOS, one AtomStringTable is shared between the main UI thread and the WebThread.
     if (isWebThread() || isUIThread()) {
-        static LazyNeverDestroyed<AtomStringTable> sharedStringTable;
-        static std::once_flag onceKey;
-        std::call_once(onceKey, [&] {
-            sharedStringTable.construct();
-        });
+        static NeverDestroyed<AtomStringTable> sharedStringTable;
         m_currentAtomStringTable = &sharedStringTable.get();
     }
 #endif
@@ -233,16 +236,21 @@ void Thread::entryPoint(NewThreadContext* newThreadContext)
     Function<void()> function;
     {
         // Ref is already incremented by Thread::create.
-        Ref<NewThreadContext> context = adoptRef(*newThreadContext);
+        Ref context = adoptRef(*newThreadContext);
         // Block until our creating thread has completed any extra setup work, including establishing ThreadIdentifier.
         MutexLocker locker(context->mutex);
-        ASSERT(context->stage == NewThreadContext::Stage::EstablishedHandle);
+
+#if !HAVE(STACK_BOUNDS_FOR_NEW_THREAD)
+        RELEASE_ASSERT(context->stage == NewThreadContext::Stage::EstablishedHandle);
+#endif
 
         Thread::initializeCurrentThreadInternal(context->name);
-        function = WTFMove(context->entryPoint);
-        context->thread->initializeInThread();
+        function = WTF::move(context->entryPoint);
 
-        Thread::initializeTLS(WTFMove(context->thread));
+        Ref thread = WTF::move(context->thread);
+        thread->initializeInThread();
+
+        Thread::initializeTLS(WTF::move(thread));
 
 #if !HAVE(STACK_BOUNDS_FOR_NEW_THREAD)
         // Ack completion of initialization to the creating thread.
@@ -251,49 +259,39 @@ void Thread::entryPoint(NewThreadContext* newThreadContext)
 #endif
     }
 
-    ASSERT(!Thread::current().stack().isEmpty());
+    ASSERT(!Thread::currentSingleton().stack().isEmpty());
     function();
 }
 
-Ref<Thread> Thread::create(const char* name, Function<void()>&& entryPoint, ThreadType threadType, QOS qos)
+Ref<Thread> Thread::create(ASCIILiteral name, Function<void()>&& entryPoint, ThreadType threadType, QOS qos, SchedulingPolicy schedulingPolicy)
 {
     WTF::initialize();
-    Ref<Thread> thread = adoptRef(*new Thread());
-    Ref<NewThreadContext> context = adoptRef(*new NewThreadContext { name, WTFMove(entryPoint), thread.copyRef() });
-    // Increment the context ref on behalf of the created thread. We do not just use a unique_ptr and leak it to the created thread because both the creator and created thread has a need to keep the context alive:
-    // 1. the created thread needs to keep it alive because Thread::create() can exit before the created thread has a chance to use the context.
-    // 2. the creator thread (if HAVE(STACK_BOUNDS_FOR_NEW_THREAD) is false) needs to keep it alive because the created thread may exit before the creator has a chance to wake up from waiting for the completion of the created thread's initialization. This waiting uses a condition variable in the context.
-    // Hence, a joint ownership model is needed if HAVE(STACK_BOUNDS_FOR_NEW_THREAD) is false. To simplify the code, we just go with joint ownership by both the creator and created threads,
-    // and make the context ThreadSafeRefCounted.
-    context->ref();
+
+    Ref thread = adoptRef(*new Thread(schedulingPolicy));
+
+    Ref context = adoptRef(*new NewThreadContext { name, WTF::move(entryPoint), thread.get() });
     {
         MutexLocker locker(context->mutex);
-        bool success = thread->establishHandle(context.ptr(), stackSize(threadType), qos);
+        context->ref(); // Adopted by Thread::entryPoint
+        bool success = thread->establishHandle(context.get(), stackSize(threadType), qos, schedulingPolicy);
         RELEASE_ASSERT(success);
-        context->stage = NewThreadContext::Stage::EstablishedHandle;
 
 #if HAVE(STACK_BOUNDS_FOR_NEW_THREAD)
         thread->m_stack = StackBounds::newThreadStackBounds(thread->m_handle);
+        thread->m_savedLastStackTop = thread->stack().origin();
+        allThreads().add(thread.get()); // Must have stack bounds before adding to allThreads()
 #else
         // In platforms which do not support StackBounds::newThreadStackBounds(), we do not have a way to get stack
         // bounds outside the target thread itself. Thus, we need to initialize thread information in the target thread
         // and wait for completion of initialization in the caller side.
+        context->stage = NewThreadContext::Stage::EstablishedHandle;
         while (context->stage != NewThreadContext::Stage::Initialized)
             context->condition.wait(context->mutex);
+
+        // Thread::entryPoint initializes thread->m_stack and thread->m_savedLastStackTop and adds to allThreads().
 #endif
     }
 
-    // We must register threads here since threads registered in allThreads are expected to have complete thread data which can be initialized in launched thread side.
-    // However, it is also possible that the launched thread has finished its execution before it is registered in allThreads here! In this case, the thread has already
-    // called Thread::didExit to unregister itself from allThreads. Registering such a thread will register a stale thread pointer to allThreads, which will not be removed
-    // even after Thread is destroyed. Register a thread only when it has not unregistered itself from allThreads yet.
-    {
-        Locker locker { allThreadsLock() };
-        if (!thread->m_didUnregisterFromAllThreads)
-            allThreads().add(thread.ptr());
-    }
-
-    ASSERT(!thread->stack().isEmpty());
     return thread;
 }
 
@@ -313,11 +311,7 @@ static bool shouldRemoveThreadFromThreadGroup()
 
 void Thread::didExit()
 {
-    {
-        Locker locker { allThreadsLock() };
-        allThreads().remove(this);
-        m_didUnregisterFromAllThreads = true;
-    }
+    allThreads().remove(*this);
 
     if (shouldRemoveThreadFromThreadGroup()) {
         {
@@ -362,7 +356,7 @@ unsigned Thread::numberOfThreadGroups()
 
 bool Thread::exchangeIsCompilationThread(bool newValue)
 {
-    auto& thread = Thread::current();
+    auto& thread = Thread::currentSingleton();
     bool oldValue = thread.m_isCompilationThread;
     thread.m_isCompilationThread = newValue;
     return oldValue;
@@ -370,17 +364,18 @@ bool Thread::exchangeIsCompilationThread(bool newValue)
 
 void Thread::registerGCThread(GCThreadType gcThreadType)
 {
-    Thread::current().m_gcThreadType = static_cast<unsigned>(gcThreadType);
+    Thread::currentSingleton().m_gcThreadType = static_cast<unsigned>(gcThreadType);
 }
 
 bool Thread::mayBeGCThread()
 {
-    return Thread::current().gcThreadType() != GCThreadType::None;
+    // TODO: FIX THIS
+    return Thread::currentSingleton().gcThreadType() != GCThreadType::None || Thread::currentSingleton().m_isCompilationThread;
 }
 
 void Thread::registerJSThread(Thread& thread)
 {
-    ASSERT(&thread == &Thread::current());
+    ASSERT(&thread == &Thread::currentSingleton());
     thread.m_isJSThread = true;
 }
 
@@ -394,7 +389,7 @@ void Thread::setCurrentThreadIsUserInteractive(int relativePriority)
     // We don't allow to make the main thread real time. This is used by secondary processes to match the
     // UI process, but in linux the UI process is not real time.
     if (!isMainThread())
-        RealTimeThreads::singleton().registerThread(current());
+        RealTimeThreads::singleton().registerThread(currentSingleton());
     UNUSED_PARAM(relativePriority);
 #else
     UNUSED_PARAM(relativePriority);
@@ -444,6 +439,11 @@ auto Thread::currentThreadQOS() -> QOS
 #endif
 }
 
+bool Thread::currentThreadIsRealtime()
+{
+    return Thread::currentSingleton().m_isRealtime;
+}
+
 #if HAVE(QOS_CLASSES)
 static qos_class_t globalMaxQOSclass { QOS_CLASS_UNSPECIFIED };
 
@@ -470,12 +470,30 @@ void Thread::dump(PrintStream& out) const
 ThreadSpecificKey Thread::s_key = InvalidThreadSpecificKey;
 #endif
 
+#if USE(TZONE_MALLOC)
+#if PLATFORM(COCOA)
+static bool hasDisableTZoneEntitlement()
+{
+    return processHasEntitlement("webkit.tzone.disable"_s);
+}
+#endif
+#endif
+
 void initialize()
 {
     static std::once_flag onceKey;
     std::call_once(onceKey, [] {
+#if ENABLE(CONJECTURE_ASSERT)
+        wtfConjectureAssertIsEnabled = !!getenv("ENABLE_WEBKIT_CONJECTURE_ASSERT");
+#endif
         setPermissionsOfConfigPage();
         Config::initialize();
+#if USE(TZONE_MALLOC)
+#if PLATFORM(COCOA)
+        bmalloc::api::TZoneHeapManager::setHasDisableTZoneEntitlementCallback(hasDisableTZoneEntitlement);
+#endif
+        bmalloc::api::TZoneHeapManager::ensureSingleton(); // Force initialization.
+#endif
         Gigacage::ensureGigacage();
         Config::AssertNotFrozenScope assertScope;
 #if !HAVE(FAST_TLS) && !OS(WINDOWS)
@@ -483,13 +501,10 @@ void initialize()
 #endif
         initializeDates();
         Thread::initializePlatformThreading();
-#if USE(PTHREADS) && HAVE(MACHINE_CONTEXT)
-        SignalHandlers::initialize();
-#endif
 #if PLATFORM(COCOA)
         initializeLibraryPathDiagnostics();
 #endif
-#if OS(WINDOWS)
+#if USE(WINDOWS_EVENT_LOOP)
         RunLoop::registerRunLoopMessageWindowClass();
 #endif
     });

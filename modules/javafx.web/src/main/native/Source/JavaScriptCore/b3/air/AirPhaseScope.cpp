@@ -35,10 +35,10 @@
 
 namespace JSC { namespace B3 { namespace Air {
 
-PhaseScope::PhaseScope(Code& code, const char* name)
+PhaseScope::PhaseScope(Code& code, ASCIILiteral name)
     : m_code(code)
     , m_name(name)
-    , m_timingScope("Air", name)
+    , m_timingScope("Air"_s, name)
 {
     if (shouldDumpIRAtEachPhase(AirMode)) {
         dataLog("Air after ", code.lastPhaseName(), ", before ", name, ":\n");
@@ -54,6 +54,9 @@ PhaseScope::~PhaseScope()
     m_code.setLastPhaseName(m_name);
     if (shouldValidateIRAtEachPhase())
         validate(m_code, m_dumpBefore.data());
+
+    if (Options::dumpIonGraph()) [[unlikely]]
+        m_code.appendIonGraphPass(m_name);
 }
 
 } } } // namespace JSC::B3::Air

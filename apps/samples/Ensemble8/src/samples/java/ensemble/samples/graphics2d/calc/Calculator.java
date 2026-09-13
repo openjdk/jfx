@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -31,8 +31,6 @@
  */
 package ensemble.samples.graphics2d.calc;
 
-import ensemble.samples.graphics2d.calc.Key.Code;
-import javafx.event.EventHandler;
 import javafx.geometry.VPos;
 import javafx.scene.Parent;
 import javafx.scene.input.KeyEvent;
@@ -44,6 +42,7 @@ import javafx.scene.paint.Stop;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
+import ensemble.samples.graphics2d.calc.Key.Code;
 
 
 public class Calculator extends Parent {

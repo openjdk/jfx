@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -135,9 +135,9 @@ public final class AudioEqualizer {
 
             this.jfxEqualizer = jfxEqualizer;
 
-            // Propogate enabled
+            // Propagate enabled
             jfxEqualizer.setEnabled(isEnabled());
-            // Propogate bands
+            // Propagate bands
             for (EqualizerBand band : bands) {
                 if (band.getCenterFrequency() > 0 && band.getBandwidth() > 0) {
                     com.sun.media.jfxmedia.effects.EqualizerBand jfxBand =

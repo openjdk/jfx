@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,29 +25,20 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
+import java.util.Collection;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import com.sun.glass.ui.monocle.TestLogShim;
-import test.robot.com.sun.glass.ui.monocle.ParameterizedTestBase;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
 import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
-import org.junit.Test;
-import org.junit.runners.Parameterized;
-
-import java.util.Collection;
 
 /** Multitouch tests with three points */
-public class MultiTouch3Test extends ParameterizedTestBase {
+public final class MultiTouch3Test extends ParameterizedTestBase {
 
-    public MultiTouch3Test(TestTouchDevice device) {
-        super(device);
-    }
-
-    @Parameterized.Parameters
-    public static Collection<Object[]> data() {
+    private static Collection<TestTouchDevice> parameters() {
         return TestTouchDevices.getTouchDeviceParameters(3);
     }
 
-    @Test
-//    @Ignore("RT-35546")
     /** This test follows the sequence described in touch event documentation:
      * 1. Touch the screen with two fingers
      * 2. Move both fingers
@@ -55,7 +46,10 @@ public class MultiTouch3Test extends ParameterizedTestBase {
      * 4. Move all fingers
      * 5. Remove all fingers
      */
-    public void touchSequence() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void touchSequence(TestTouchDevice device) throws Exception {
+        createDevice(device, null);
         final int x1 = (int) Math.round(width * 0.5f);
         final int y1 = (int) Math.round(height * 0.5f);
         final int x2 = (int) Math.round(width * 0.75f);

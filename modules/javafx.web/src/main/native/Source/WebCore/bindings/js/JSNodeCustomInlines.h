@@ -25,9 +25,8 @@
 
 #pragma once
 
-#include "DocumentInlines.h"
-#include "ElementInlines.h"
-#include "JSNodeCustom.h"
+#include <WebCore/JSNodeCustom.h>
+#include <WebCore/NodeInlines.h>
 
 namespace WebCore {
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,9 @@
 
 package test.robot.com.sun.glass.ui.monocle.input.devices;
 
+import org.junit.jupiter.api.Assumptions;
 import test.robot.com.sun.glass.ui.monocle.TestApplication;
 import test.robot.com.sun.glass.ui.monocle.UInput;
-import org.junit.Assume;
 
 /**
  * SamsungLMS700KF07004Device sends ABS_X and ABS_Y events. It uses BTN_TOUCH to notify
@@ -43,7 +43,7 @@ public class SamsungLMS700KF07004Device extends TestTouchDevice {
 
     @Override
     public void create() {
-        Assume.assumeTrue(TestApplication.isMonocle());
+        Assumptions.assumeTrue(TestApplication.isMonocle());
         ui = new UInput();
         ui.processLine("OPEN");
         ui.processLine("EVBIT EV_SYN");

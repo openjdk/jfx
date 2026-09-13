@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,8 @@ package javafx.collections;
 
 /**
  * Interface that receives notifications of changes to an ObservableArray.
+ *
+ * @param <T> the array element type
  * @since JavaFX 8.0
  */
 public interface ArrayChangeListener<T extends ObservableArray<T>> {

@@ -45,7 +45,7 @@ static inline const char* pas_biasing_directory_kind_get_string(pas_biasing_dire
     case pas_biasing_directory_bitfit_kind:
         return "bitfit_biasing_directory";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

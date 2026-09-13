@@ -36,7 +36,9 @@
 #include <sys/stat.h>
 #include <windows.h>
 #include <wtf/CryptographicallyRandomNumber.h>
+#include <wtf/FileHandle.h>
 #include <wtf/HashMap.h>
+#include <wtf/MappedFileData.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
@@ -51,23 +53,11 @@ static const ULONGLONG kSecondsFromFileTimeToTimet = 11644473600;
 
 static bool getFindData(String path, WIN32_FIND_DATAW& findData)
 {
-    HANDLE handle = FindFirstFileW(path.wideCharacters().data(), &findData);
+    HANDLE handle = FindFirstFileW(path.wideCharacters().span().data(), &findData);
     if (handle == INVALID_HANDLE_VALUE)
         return false;
     FindClose(handle);
     return true;
-}
-
-static std::optional<uint64_t> getFileSizeFromByHandleFileInformationStructure(const BY_HANDLE_FILE_INFORMATION& fileInformation)
-{
-    ULARGE_INTEGER fileSize;
-    fileSize.HighPart = fileInformation.nFileSizeHigh;
-    fileSize.LowPart = fileInformation.nFileSizeLow;
-
-    if (fileSize.QuadPart > static_cast<ULONGLONG>(std::numeric_limits<long long>::max()))
-        return std::nullopt;
-
-    return fileSize.QuadPart;
 }
 
 static void fileCreationTimeFromFindData(const WIN32_FIND_DATAW& findData, time_t& time)
@@ -80,23 +70,7 @@ static void fileCreationTimeFromFindData(const WIN32_FIND_DATAW& findData, time_
     time = fileTime.QuadPart / 10000000 - kSecondsFromFileTimeToTimet;
 }
 
-
-std::optional<uint64_t> fileSize(PlatformFileHandle fileHandle)
-{
-    BY_HANDLE_FILE_INFORMATION fileInformation;
-    if (!::GetFileInformationByHandle(fileHandle, &fileInformation))
-        return std::nullopt;
-
-    return getFileSizeFromByHandleFileInformationStructure(fileInformation);
-}
-
-std::optional<PlatformFileID> fileID(PlatformFileHandle fileHandle)
-{
-    // FIXME (246118): Implement this function properly.
-    return std::nullopt;
-}
-
-bool fileIDsAreEqual(std::optional<PlatformFileID> a, std::optional<PlatformFileID> b)
+bool fileIDsAreEqual(std::optional<PlatformFileID>, std::optional<PlatformFileID>)
 {
     // FIXME (246118): Implement this function properly.
     return true;
@@ -118,22 +92,22 @@ CString fileSystemRepresentation(const String& path)
     auto characters = StringView(path).upconvertedCharacters();
     int size = WideCharToMultiByte(CP_ACP, 0, wcharFrom(characters), path.length(), 0, 0, 0, 0);
 
-    char* buffer;
+    std::span<char> buffer;
     CString string = CString::newUninitialized(size, buffer);
 
-    WideCharToMultiByte(CP_ACP, 0, wcharFrom(characters), path.length(), buffer, size, 0, 0);
+    WideCharToMultiByte(CP_ACP, 0, wcharFrom(characters), path.length(), buffer.data(), buffer.size(), 0, 0);
 
     return string;
 }
 
 static String storageDirectory(DWORD pathIdentifier)
 {
-    Vector<UChar> buffer(MAX_PATH);
-    if (FAILED(SHGetFolderPathW(nullptr, pathIdentifier | CSIDL_FLAG_CREATE, nullptr, 0, wcharFrom(buffer.data()))))
+    Vector<char16_t> buffer(MAX_PATH);
+    if (FAILED(SHGetFolderPathW(nullptr, pathIdentifier | CSIDL_FLAG_CREATE, nullptr, 0, wcharFrom(buffer.mutableSpan().data()))))
         return String();
 
-    buffer.shrink(wcslen(wcharFrom(buffer.data())));
-    String directory = String::adopt(WTFMove(buffer));
+    buffer.shrink(wcslen(wcharFrom(buffer.span().data())));
+    String directory = String::adopt(WTF::move(buffer));
 
     directory = pathByAppendingComponent(directory, "Apple Computer\\WebKit"_s);
     if (!makeAllDirectories(directory))
@@ -160,14 +134,14 @@ static String generateTemporaryPath(const Function<bool(const String&)>& action)
 {
     wchar_t tempPath[MAX_PATH];
     int tempPathLength = ::GetTempPathW(std::size(tempPath), tempPath);
-    if (tempPathLength <= 0 || tempPathLength > std::size(tempPath))
+    if (tempPathLength <= 0 || static_cast<size_t>(tempPathLength) >= std::size(tempPath))
         return String();
 
     String proposedPath;
     do {
         wchar_t tempFile[] = L"XXXXXXXX.tmp"; // Use 8.3 style name (more characters aren't helpful due to 8.3 short file names)
         const int randomPartLength = 8;
-        cryptographicallyRandomValues(tempFile, randomPartLength * sizeof(wchar_t));
+        cryptographicallyRandomValues({ reinterpret_cast<uint8_t*>(tempFile), randomPartLength * sizeof(wchar_t) });
 
         // Limit to valid filesystem characters, also excluding others that could be problematic, like punctuation.
         // don't include both upper and lowercase since Windows file systems are typically not case sensitive.
@@ -185,27 +159,27 @@ static String generateTemporaryPath(const Function<bool(const String&)>& action)
     return proposedPath;
 }
 
-String openTemporaryFile(StringView, PlatformFileHandle& handle, StringView suffix)
+std::pair<String, FileHandle> openTemporaryFile(StringView, StringView suffix, const String&)
 {
     // FIXME: Suffix is not supported, but OK for now since the code using it is macOS-port-only.
     ASSERT_UNUSED(suffix, suffix.isEmpty());
 
-    handle = INVALID_HANDLE_VALUE;
+    FileHandle handle;
 
     String proposedPath = generateTemporaryPath([&handle](const String& proposedPath) {
         // use CREATE_NEW to avoid overwriting an existing file with the same name
-        handle = ::CreateFileW(proposedPath.wideCharacters().data(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr);
+        handle = FileHandle::adopt(::CreateFileW(proposedPath.wideCharacters().span().data(), GENERIC_READ | GENERIC_WRITE, 0, nullptr, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, nullptr));
 
-        return isHandleValid(handle) || GetLastError() == ERROR_ALREADY_EXISTS;
+        return handle || GetLastError() == ERROR_ALREADY_EXISTS;
     });
 
-    if (!isHandleValid(handle))
-        return String();
+    if (!handle)
+        return { String(), FileHandle() };
 
-    return proposedPath;
+    return { proposedPath, WTF::move(handle) };
 }
 
-PlatformFileHandle openFile(const String& path, FileOpenMode mode, FileAccessPermission, bool failIfFileExists)
+FileHandle openFile(const String& path, FileOpenMode mode, FileAccessPermission, OptionSet<FileLockMode> lockMode, bool failIfFileExists)
 {
     DWORD desiredAccess = 0;
     DWORD creationDisposition = 0;
@@ -230,75 +204,7 @@ PlatformFileHandle openFile(const String& path, FileOpenMode mode, FileAccessPer
         creationDisposition = CREATE_NEW;
 
     String destination = path;
-    return CreateFile(destination.wideCharacters().data(), desiredAccess, shareMode, nullptr, creationDisposition, FILE_ATTRIBUTE_NORMAL, nullptr);
-}
-
-void closeFile(PlatformFileHandle& handle)
-{
-    if (isHandleValid(handle)) {
-        ::CloseHandle(handle);
-        handle = invalidPlatformFileHandle;
-    }
-}
-
-long long seekFile(PlatformFileHandle handle, long long offset, FileSeekOrigin origin)
-{
-    DWORD moveMethod = FILE_BEGIN;
-
-    if (origin == FileSeekOrigin::Current)
-        moveMethod = FILE_CURRENT;
-    else if (origin == FileSeekOrigin::End)
-        moveMethod = FILE_END;
-
-    LARGE_INTEGER largeOffset;
-    largeOffset.QuadPart = offset;
-
-    largeOffset.LowPart = SetFilePointer(handle, largeOffset.LowPart, &largeOffset.HighPart, moveMethod);
-
-    if (largeOffset.LowPart == INVALID_SET_FILE_POINTER && GetLastError() != NO_ERROR)
-        return -1;
-
-    return largeOffset.QuadPart;
-}
-
-bool truncateFile(PlatformFileHandle handle, long long offset)
-{
-    FILE_END_OF_FILE_INFO eofInfo;
-    eofInfo.EndOfFile.QuadPart = offset;
-
-    return SetFileInformationByHandle(handle, FileEndOfFileInfo, &eofInfo, sizeof(FILE_END_OF_FILE_INFO));
-}
-
-bool flushFile(PlatformFileHandle handle)
-{
-    // Not implemented.
-    return false;
-}
-
-int writeToFile(PlatformFileHandle handle, const void* data, int length)
-{
-    if (!isHandleValid(handle))
-        return -1;
-
-    DWORD bytesWritten;
-    bool success = WriteFile(handle, data, length, &bytesWritten, nullptr);
-
-    if (!success)
-        return -1;
-    return static_cast<int>(bytesWritten);
-}
-
-int readFromFile(PlatformFileHandle handle, void* data, int length)
-{
-    if (!isHandleValid(handle))
-        return -1;
-
-    DWORD bytesRead;
-    bool success = ::ReadFile(handle, data, length, &bytesRead, nullptr);
-
-    if (!success)
-        return -1;
-    return static_cast<int>(bytesRead);
+    return FileHandle::adopt(CreateFile(destination.wideCharacters().span().data(), desiredAccess, shareMode, nullptr, creationDisposition, FILE_ATTRIBUTE_NORMAL, nullptr), lockMode);
 }
 
 String localUserSpecificStorageDirectory()
@@ -314,16 +220,12 @@ String roamingUserSpecificStorageDirectory()
 std::optional<int32_t> getFileDeviceId(const String& fsFile)
 {
     auto handle = openFile(fsFile, FileOpenMode::Read);
-    if (!isHandleValid(handle))
+    if (!handle)
         return std::nullopt;
 
     BY_HANDLE_FILE_INFORMATION fileInformation = { };
-    if (!::GetFileInformationByHandle(handle, &fileInformation)) {
-        closeFile(handle);
+    if (!::GetFileInformationByHandle(handle.platformHandle(), &fileInformation))
         return std::nullopt;
-    }
-
-    closeFile(handle);
 
     return fileInformation.dwVolumeSerialNumber;
 }
@@ -338,58 +240,10 @@ String createTemporaryDirectory()
 std::optional<uint32_t> volumeFileBlockSize(const String& path)
 {
     DWORD sectorsPerCluster, bytesPerSector, freeClusters, totalClusters;
-    if (!GetDiskFreeSpaceW(path.wideCharacters().data(), &sectorsPerCluster, &bytesPerSector, &freeClusters, &totalClusters))
+    if (!GetDiskFreeSpaceW(path.wideCharacters().span().data(), &sectorsPerCluster, &bytesPerSector, &freeClusters, &totalClusters))
         return std::nullopt;
 
     return sectorsPerCluster * bytesPerSector;
-}
-
-MappedFileData::~MappedFileData()
-{
-    if (m_fileData)
-        UnmapViewOfFile(m_fileData);
-}
-
-bool MappedFileData::mapFileHandle(PlatformFileHandle handle, FileOpenMode openMode, MappedFileMode)
-{
-    if (!isHandleValid(handle))
-        return false;
-
-    auto size = fileSize(handle);
-    if (!size || *size > std::numeric_limits<size_t>::max() || *size > std::numeric_limits<decltype(m_fileSize)>::max()) {
-        return false;
-    }
-
-    if (!*size) {
-        return true;
-    }
-
-    DWORD pageProtection = PAGE_READONLY;
-    DWORD desiredAccess = FILE_MAP_READ;
-    switch (openMode) {
-    case FileOpenMode::Read:
-        pageProtection = PAGE_READONLY;
-        desiredAccess = FILE_MAP_READ;
-        break;
-    case FileOpenMode::Truncate:
-        pageProtection = PAGE_READWRITE;
-        desiredAccess = FILE_MAP_WRITE;
-        break;
-    case FileOpenMode::ReadWrite:
-        pageProtection = PAGE_READWRITE;
-        desiredAccess = FILE_MAP_WRITE | FILE_MAP_READ;
-        break;
-    }
-
-    m_fileMapping = Win32Handle::adopt(CreateFileMapping(handle, nullptr, pageProtection, 0, 0, nullptr));
-    if (!m_fileMapping)
-        return false;
-
-    m_fileData = MapViewOfFile(m_fileMapping.get(), desiredAccess, 0, 0, *size);
-    if (!m_fileData)
-        return false;
-    m_fileSize = *size;
-    return true;
 }
 
 } // namespace FileSystemImpl

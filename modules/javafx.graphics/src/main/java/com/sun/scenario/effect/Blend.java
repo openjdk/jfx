@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -583,7 +583,7 @@ public class Blend extends CoreEffect<RenderState> {
     {
         // A blend operation operates on its inputs pixel-by-pixel
         // with no expansion or contraction.
-        // RT-27563
+        // JDK-8091561
         // TODO: The RenderSpaceRenderState object uses the output clip unchanged
         // for its inputs, but we could further restrict the amount we ask for
         // each input to the intersection of the two input bounds, but for now we

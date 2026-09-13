@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,12 +27,13 @@ package test.javafx.geometry;
 
 import javafx.geometry.Point2D;
 import javafx.geometry.Point3D;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class Point2DTest {
 
@@ -88,10 +89,12 @@ public class Point2DTest {
         assertEquals(new Point2D(1, 7), p1.add(-1, 3));
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testAddNull() {
-        Point2D point = new Point2D(1, 2);
-        point.add(null);
+        assertThrows(NullPointerException.class, () -> {
+            Point2D point = new Point2D(1, 2);
+            point.add(null);
+        });
     }
 
     @Test
@@ -103,10 +106,12 @@ public class Point2DTest {
         assertEquals(new Point2D(3, 1), p1.subtract(-1, 3));
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testSubtractNull() {
-        Point2D point = new Point2D(1, 2);
-        point.subtract(null);
+        assertThrows(NullPointerException.class, () -> {
+            Point2D point = new Point2D(1, 2);
+            point.subtract(null);
+        });
     }
 
     @Test
@@ -144,10 +149,12 @@ public class Point2DTest {
         assertEquals(new Point2D(0.5, -1), p1.midpoint(1, -2));
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testMidpointNull() {
-        Point2D point = new Point2D(1, 2);
-        point.midpoint(null);
+        assertThrows(NullPointerException.class, () -> {
+            Point2D point = new Point2D(1, 2);
+            point.midpoint(null);
+        });
     }
 
     @Test
@@ -167,10 +174,12 @@ public class Point2DTest {
         assertEquals(Double.NaN, p2.angle(p2, p4), 0.000001);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testVectorAngleNull() {
-        Point2D point = new Point2D(1, 2);
-        point.angle(null);
+        assertThrows(NullPointerException.class, () -> {
+            Point2D point = new Point2D(1, 2);
+            point.angle(null);
+        });
     }
 
     @Test
@@ -187,16 +196,20 @@ public class Point2DTest {
         assertEquals(0, p2.angle(p3, p4), 0.000001);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testPointAngle1Null() {
-        Point2D point = new Point2D(1, 2);
-        point.angle(null, new Point2D(2, 8));
+        assertThrows(NullPointerException.class, () -> {
+            Point2D point = new Point2D(1, 2);
+            point.angle(null, new Point2D(2, 8));
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testPointAngle2Null() {
-        Point2D point = new Point2D(2, 3);
-        point.angle(new Point2D(5, 3), null);
+        assertThrows(NullPointerException.class, () -> {
+            Point2D point = new Point2D(2, 3);
+            point.angle(new Point2D(5, 3), null);
+        });
     }
 
     @Test
@@ -241,10 +254,12 @@ public class Point2DTest {
         assertEquals(2, p3.dotProduct(-4, -5), 0.000001);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testDotProductNull() {
-        Point2D point = new Point2D(1, 2);
-        point.dotProduct(null);
+        assertThrows(NullPointerException.class, () -> {
+            Point2D point = new Point2D(1, 2);
+            point.dotProduct(null);
+        });
     }
 
     @Test
@@ -259,10 +274,12 @@ public class Point2DTest {
         assertEquals(new Point3D(0, 0, 6), p3.crossProduct(p2));
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testCrossProductNull() {
-        Point2D point = new Point2D(1, 2);
-        point.crossProduct(null);
+        assertThrows(NullPointerException.class, () -> {
+            Point2D point = new Point2D(1, 2);
+            point.crossProduct(null);
+        });
     }
 
     @Test
@@ -286,8 +303,8 @@ public class Point2DTest {
         Point2D p1 = new Point2D(1, 0);
         Point2D p2 = new Point2D(0, -1);
 
-        assertEquals("t=0: should return the initial point", p1, p1.interpolate(p2, 0));
-        assertEquals("t=1: should return the final point", p2, p1.interpolate(p2, 1));
+        assertEquals(p1, p1.interpolate(p2, 0), "t=0: should return the initial point");
+        assertEquals(p2, p1.interpolate(p2, 1), "t=1: should return the final point");
         testNearEquality("t=0.25: should return 25% from the inital point", 0.75, -0.25, p1.interpolate(p2, 0.25));
         testNearEquality("t=0.5: should return 50% from the inital point", 0.5, -0.5, p1.interpolate(p2, 0.5));
         testNearEquality("t=0.75: should return 75% from the inital point", 0.25, -0.75, p1.interpolate(p2, 0.75));
@@ -298,8 +315,8 @@ public class Point2DTest {
     }
 
     private void testNearEquality(String message, double expectedX, double expectedY, Point2D result) {
-        assertEquals(message, expectedX, result.getX(), 1e-15);
-        assertEquals(message, expectedY, result.getY(), 1e-15);
+        assertEquals(expectedX, result.getX(), 1e-15, message);
+        assertEquals(expectedY, result.getY(), 1e-15, message);
     }
 
     @Test

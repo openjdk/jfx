@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,6 +24,8 @@
 
 #pragma once
 
+#include <wtf/HashFunctions.h>
+#include <wtf/HashTraits.h>
 #include <wtf/text/OrdinalNumber.h>
 
 namespace WTF {
@@ -31,7 +33,7 @@ namespace WTF {
 // TextPosition structure specifies coordinates within an text resource. It is used mostly
 // for saving script source position.
 class TextPosition {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(TextPosition);
 public:
     TextPosition(OrdinalNumber line, OrdinalNumber column)
         : m_line(line)
@@ -40,13 +42,37 @@ public:
     }
 
     TextPosition() { }
-    bool operator==(const TextPosition& other) const { return m_line == other.m_line && m_column == other.m_column; }
+    friend bool operator==(const TextPosition&, const TextPosition&) = default;
+    friend std::strong_ordering operator<=>(const TextPosition& a, const TextPosition& b)
+    {
+        auto lineComparison = a.m_line <=> b.m_line;
+        return lineComparison != std::strong_ordering::equal ? lineComparison : a.m_column <=> b.m_column;
+    }
 
     // A value with line value less than a minimum; used as an impossible position.
     static TextPosition belowRangePosition() { return TextPosition(OrdinalNumber::beforeFirst(), OrdinalNumber::beforeFirst()); }
 
     OrdinalNumber m_line;
     OrdinalNumber m_column;
+};
+
+template<typename T> struct DefaultHash;
+template<> struct DefaultHash<TextPosition> {
+    static unsigned hash(const TextPosition& key) { return pairIntHash(static_cast<unsigned>(key.m_line.zeroBasedInt()), static_cast<unsigned>(key.m_column.zeroBasedInt())); }
+    static bool equal(const TextPosition& a, const TextPosition& b) { return a == b; }
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
+};
+
+template<typename T> struct HashTraits;
+template<> struct HashTraits<TextPosition> : GenericHashTraits<TextPosition> {
+    static void constructDeletedValue(TextPosition& slot)
+    {
+        slot = TextPosition::belowRangePosition();
+    }
+    static bool isDeletedValue(const TextPosition& value)
+    {
+        return value == TextPosition::belowRangePosition();
+    }
 };
 
 }

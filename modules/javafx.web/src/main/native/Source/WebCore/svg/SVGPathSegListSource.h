@@ -24,6 +24,7 @@
 #include "SVGPathSeg.h"
 #include "SVGPathSource.h"
 #include <wtf/RefPtr.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
@@ -39,17 +40,17 @@ private:
     SVGPathSegType nextCommand(SVGPathSegType) final;
 
     std::optional<SVGPathSegType> parseSVGSegmentType() final;
-    std::optional<MoveToSegment> parseMoveToSegment() final;
-    std::optional<LineToSegment> parseLineToSegment() final;
-    std::optional<LineToHorizontalSegment> parseLineToHorizontalSegment() final;
-    std::optional<LineToVerticalSegment> parseLineToVerticalSegment() final;
-    std::optional<CurveToCubicSegment> parseCurveToCubicSegment() final;
-    std::optional<CurveToCubicSmoothSegment> parseCurveToCubicSmoothSegment() final;
-    std::optional<CurveToQuadraticSegment> parseCurveToQuadraticSegment() final;
-    std::optional<CurveToQuadraticSmoothSegment> parseCurveToQuadraticSmoothSegment() final;
-    std::optional<ArcToSegment> parseArcToSegment() final;
+    std::optional<MoveToSegment> parseMoveToSegment(FloatPoint) final;
+    std::optional<LineToSegment> parseLineToSegment(FloatPoint) final;
+    std::optional<LineToHorizontalSegment> parseLineToHorizontalSegment(FloatPoint) final;
+    std::optional<LineToVerticalSegment> parseLineToVerticalSegment(FloatPoint) final;
+    std::optional<CurveToCubicSegment> parseCurveToCubicSegment(FloatPoint) final;
+    std::optional<CurveToCubicSmoothSegment> parseCurveToCubicSmoothSegment(FloatPoint) final;
+    std::optional<CurveToQuadraticSegment> parseCurveToQuadraticSegment(FloatPoint) final;
+    std::optional<CurveToQuadraticSmoothSegment> parseCurveToQuadraticSmoothSegment(FloatPoint) final;
+    std::optional<ArcToSegment> parseArcToSegment(FloatPoint) final;
 
-    const SVGPathSegList& m_pathSegList;
+    SingleThreadWeakRef<const SVGPathSegList> m_pathSegList;
     RefPtr<SVGPathSeg> m_segment;
     size_t m_itemCurrent;
     size_t m_itemEnd;

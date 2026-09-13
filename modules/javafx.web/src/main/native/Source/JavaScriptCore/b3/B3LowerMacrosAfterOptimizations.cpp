@@ -35,6 +35,7 @@
 #include "B3ConstFloatValue.h"
 #include "B3ConstPtrValue.h"
 #include "B3InsertionSetInlines.h"
+#include "B3Operations.h"
 #include "B3PhaseScope.h"
 #include "B3ValueInlines.h"
 
@@ -83,9 +84,9 @@ private:
 
                 Value* mask = nullptr;
                 if (m_value->type() == Double)
-                    mask = m_insertionSet.insert<ConstDoubleValue>(m_index, m_origin, bitwise_cast<double>(~(1ll << 63)));
+                    mask = m_insertionSet.insert<ConstDoubleValue>(m_index, m_origin, std::bit_cast<double>(~(1ll << 63)));
                 else if (m_value->type() == Float)
-                    mask = m_insertionSet.insert<ConstFloatValue>(m_index, m_origin, bitwise_cast<float>(~(1 << 31)));
+                    mask = m_insertionSet.insert<ConstFloatValue>(m_index, m_origin, std::bit_cast<float>(~(1 << 31)));
                 else
                     RELEASE_ASSERT_NOT_REACHED();
                 Value* result = m_insertionSet.insert<Value>(m_index, BitAnd, m_origin, m_value->child(0), mask);
@@ -134,6 +135,28 @@ private:
                 m_value->replaceWithIdentity(result);
                 break;
             }
+            case FTrunc: {
+                if (MacroAssembler::supportsFloatingPointRounding())
+                    break;
+
+                Value* functionAddress = nullptr;
+                if (m_value->type() == Double)
+                    functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, tagCFunction<OperationPtrTag>(Math::truncDouble));
+                else if (m_value->type() == Float)
+                    functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, tagCFunction<OperationPtrTag>(Math::truncFloat));
+                else
+                    RELEASE_ASSERT_NOT_REACHED();
+
+                Value* result = m_insertionSet.insert<CCallValue>(m_index,
+                    m_value->type(),
+                    m_origin,
+                    Effects::none(),
+                    functionAddress,
+                    m_value->child(0));
+                m_value->replaceWithIdentity(result);
+                break;
+            }
+
             case Neg: {
                 if (!m_value->type().isFloat())
                     break;
@@ -156,6 +179,21 @@ private:
                 break;
             }
 
+            case PurifyNaN: {
+                if (m_value->type() == Double) {
+                    auto* pureNaN = m_insertionSet.insert<ConstDoubleValue>(m_index, m_value->origin(), PNaN);
+                    auto* compare = m_insertionSet.insert<Value>(m_index, Equal, m_value->origin(), m_value->child(0), m_value->child(0));
+                    auto* result = m_insertionSet.insert<Value>(m_index, Select, m_value->origin(), compare, m_value->child(0), pureNaN);
+                    m_value->replaceWithIdentity(result);
+                } else {
+                    auto* pureNaN = m_insertionSet.insert<ConstFloatValue>(m_index, m_value->origin(), static_cast<float>(PNaN));
+                    auto* compare = m_insertionSet.insert<Value>(m_index, Equal, m_value->origin(), m_value->child(0), m_value->child(0));
+                    auto* result = m_insertionSet.insert<Value>(m_index, Select, m_value->origin(), compare, m_value->child(0), pureNaN);
+                    m_value->replaceWithIdentity(result);
+                }
+                break;
+            }
+
             case RotL: {
                 // ARM64 doesn't have a rotate left.
                 if (isARM64()) {
@@ -164,6 +202,36 @@ private:
                     m_value->replaceWithIdentity(rotate);
                     break;
                 }
+                break;
+            }
+
+            case MemoryCopy: {
+                Value* functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, tagCFunction<OperationPtrTag>(operationMemoryCopy));
+                Value* result = m_insertionSet.insert<CCallValue>(
+                    m_index,
+                    m_value->type(),
+                    m_origin,
+                    m_value->effects(),
+                    functionAddress,
+                    m_value->child(0),
+                    m_value->child(1),
+                    m_value->child(2));
+                m_value->replaceWithIdentity(result);
+                break;
+            }
+
+            case MemoryFill: {
+                Value* functionAddress = m_insertionSet.insert<ConstPtrValue>(m_index, m_origin, tagCFunction<OperationPtrTag>(operationMemoryFill));
+                Value* result = m_insertionSet.insert<CCallValue>(
+                    m_index,
+                    m_value->type(),
+                    m_origin,
+                    m_value->effects(),
+                    functionAddress,
+                    m_value->child(0),
+                    m_value->child(1),
+                    m_value->child(2));
+                m_value->replaceWithIdentity(result);
                 break;
             }
 
@@ -194,7 +262,7 @@ bool lowerMacrosImpl(Procedure& proc)
 
 bool lowerMacrosAfterOptimizations(Procedure& proc)
 {
-    PhaseScope phaseScope(proc, "lowerMacrosAfterOptimizations");
+    PhaseScope phaseScope(proc, "lowerMacrosAfterOptimizations"_s);
     bool result = lowerMacrosImpl(proc);
     if (shouldValidateIR())
         RELEASE_ASSERT(!lowerMacrosImpl(proc));

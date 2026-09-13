@@ -28,16 +28,15 @@
 
 #if ENABLE(CONTEXT_MENUS)
 
-#include "HitTestResult.h"
-#include "Image.h"
+#include <WebCore/HTMLMediaElementIdentifier.h>
+#include <WebCore/HitTestResult.h>
+#include <WebCore/Image.h>
 
 namespace WebCore {
 
 class Event;
 
-class ContextMenuContext {
-public:
-    enum class Type : uint8_t {
+enum class ContextMenuContextType : uint8_t {
         ContextMenu,
 #if ENABLE(SERVICE_CONTROLS)
         ServicesMenu,
@@ -45,10 +44,14 @@ public:
 #if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
         MediaControls,
 #endif // ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
-    };
+};
+
+class ContextMenuContext {
+public:
+    using Type = ContextMenuContextType;
 
     ContextMenuContext();
-    ContextMenuContext(Type, const HitTestResult&, Event*);
+    ContextMenuContext(Type, const HitTestResult&, RefPtr<Event>&&);
 
     ~ContextMenuContext();
 
@@ -63,6 +66,8 @@ public:
     const String& selectedText() const { return m_selectedText; }
 
     bool hasEntireImage() const { return m_hasEntireImage; }
+    bool allowsFollowingLink() const { return m_allowsFollowingLink; }
+    bool allowsFollowingImageURL() const { return m_allowsFollowingImageURL; }
 
 #if ENABLE(SERVICE_CONTROLS)
     void setControlledImage(Image* controlledImage) { m_controlledImage = controlledImage; }
@@ -77,12 +82,19 @@ public:
     Image* potentialQRCodeViewportSnapshotImage() const { return m_potentialQRCodeViewportSnapshotImage.get(); }
 #endif
 
+#if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
+    void setMediaElementIdentifier(HTMLMediaElementIdentifier identifier) { m_mediaElementIdentifier = identifier; }
+    std::optional<HTMLMediaElementIdentifier> mediaElementIdentifier() const { return m_mediaElementIdentifier; }
+#endif
+
 private:
     Type m_type { Type::ContextMenu };
     HitTestResult m_hitTestResult;
     RefPtr<Event> m_event;
     String m_selectedText;
     bool m_hasEntireImage { false };
+    bool m_allowsFollowingLink { false };
+    bool m_allowsFollowingImageURL { false };
 
 #if ENABLE(SERVICE_CONTROLS)
     RefPtr<Image> m_controlledImage;
@@ -92,25 +104,12 @@ private:
     RefPtr<Image> m_potentialQRCodeNodeSnapshotImage;
     RefPtr<Image> m_potentialQRCodeViewportSnapshotImage;
 #endif
+
+#if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
+    Markable<HTMLMediaElementIdentifier> m_mediaElementIdentifier;
+#endif
 };
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::ContextMenuContext::Type> {
-    using values = EnumValues<
-        WebCore::ContextMenuContext::Type,
-        WebCore::ContextMenuContext::Type::ContextMenu
-#if ENABLE(SERVICE_CONTROLS)
-        , WebCore::ContextMenuContext::Type::ServicesMenu
-#endif // ENABLE(SERVICE_CONTROLS)
-#if ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
-        , WebCore::ContextMenuContext::Type::MediaControls
-#endif // ENABLE(MEDIA_CONTROLS_CONTEXT_MENUS)
-    >;
-};
-
-} // namespace WTF
 
 #endif // ENABLE(CONTEXT_MENUS)

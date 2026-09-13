@@ -26,37 +26,52 @@
 
 #pragma once
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-
 #include "HTMLDivElement.h"
 
 #include <wtf/GregorianDateTime.h>
+#include <wtf/ValueOrReference.h>
 #include <wtf/WeakPtr.h>
+
+namespace WebCore {
+class DateTimeFieldElementFieldOwner;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::DateTimeFieldElementFieldOwner> : std::true_type { };
+}
 
 namespace WebCore {
 
 class DateComponents;
+class DateTimeFieldElement;
 class RenderStyle;
 
 struct DateTimeFieldsState;
 
-class DateTimeFieldElement : public HTMLDivElement {
-    WTF_MAKE_ISO_ALLOCATED(DateTimeFieldElement);
-public:
-    enum EventBehavior : bool { DispatchNoEvent, DispatchInputAndChangeEvents };
+enum class DateTimePlaceholderIfNoValue : bool { No, Yes };
 
-    class FieldOwner : public CanMakeWeakPtr<FieldOwner> {
-    public:
-        virtual ~FieldOwner();
+class DateTimeFieldElementFieldOwner : public CanMakeWeakPtr<DateTimeFieldElementFieldOwner> {
+public:
+    virtual ~DateTimeFieldElementFieldOwner();
         virtual void didBlurFromField(Event&) = 0;
         virtual void fieldValueChanged() = 0;
         virtual bool focusOnNextField(const DateTimeFieldElement&) = 0;
         virtual bool focusOnPreviousField(const DateTimeFieldElement&) = 0;
         virtual bool isFieldOwnerDisabled() const = 0;
         virtual bool isFieldOwnerReadOnly() const = 0;
+        virtual bool isFieldOwnerHorizontal() const = 0;
+    virtual bool didFieldOwnerTransferFocusToPicker() = 0;
+    virtual void didSuppressBlurDueToPickerFocusTransfer() = 0;
         virtual AtomString localeIdentifier() const = 0;
         virtual const GregorianDateTime& placeholderDate() const = 0;
-    };
+};
+
+class DateTimeFieldElement : public HTMLDivElement {
+    WTF_MAKE_TZONE_ALLOCATED(DateTimeFieldElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DateTimeFieldElement);
+public:
+    enum EventBehavior : bool { DispatchNoEvent, DispatchInputAndChangeEvents };
 
     void defaultEventHandler(Event&) override;
     bool isFocusable() const final;
@@ -64,39 +79,40 @@ public:
     String visibleValue() const;
 
     virtual bool hasValue() const = 0;
-    virtual void populateDateTimeFieldsState(DateTimeFieldsState&) = 0;
+    virtual void populateDateTimeFieldsState(DateTimeFieldsState&, DateTimePlaceholderIfNoValue = DateTimePlaceholderIfNoValue::No) = 0;
     virtual void setEmptyValue(EventBehavior = DispatchNoEvent) = 0;
     virtual void setValueAsDate(const DateComponents&) = 0;
     virtual void setValueAsInteger(int, EventBehavior = DispatchNoEvent) = 0;
     virtual void stepDown() = 0;
     virtual void stepUp() = 0;
-    virtual String value() const = 0;
+    virtual ValueOrReference<String> value() const = 0;
     virtual String placeholderValue() const = 0;
 
 protected:
-    constexpr static auto CreateDateTimeFieldElement = CreateHTMLDivElement | NodeFlag::HasCustomStyleResolveCallbacks;
-    DateTimeFieldElement(Document&, FieldOwner&);
-    void initialize(const AtomString& pseudo);
+    DateTimeFieldElement(Document&, DateTimeFieldElementFieldOwner&);
     Locale& localeForOwner() const;
     AtomString localeIdentifier() const;
     void updateVisibleValue(EventBehavior);
     virtual void adjustMinInlineSize(RenderStyle&) const = 0;
     virtual int valueAsInteger() const = 0;
+    virtual int placeholderValueAsInteger() const = 0;
     virtual void handleKeyboardEvent(KeyboardEvent&) = 0;
     virtual void handleBlurEvent(Event&);
 
 private:
-    std::optional<Style::ResolvedStyle> resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle*) final;
+    std::optional<Style::UnadjustedStyle> resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle*) final;
 
     bool supportsFocus() const override;
+
+    bool transferredFocusToPicker() const final;
+    void didSuppressBlurDueToPickerFocusTransfer() final;
 
     void defaultKeyboardEventHandler(KeyboardEvent&);
     bool isFieldOwnerDisabled() const;
     bool isFieldOwnerReadOnly() const;
+    bool isFieldOwnerHorizontal() const;
 
-    WeakPtr<FieldOwner> m_fieldOwner;
+    WeakPtr<DateTimeFieldElementFieldOwner> m_fieldOwner;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(DATE_AND_TIME_INPUT_TYPES)

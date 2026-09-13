@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,6 @@
 
 #pragma once
 
-#if ENABLE(CSS_PAINTING_API)
-
 #include "CSSValue.h"
 #include <wtf/text/WTFString.h>
 
@@ -44,26 +42,24 @@ class CSSPaintImageValue final : public CSSValue {
 public:
     static Ref<CSSPaintImageValue> create(String name, Ref<CSSVariableData> arguments)
     {
-        return adoptRef(*new CSSPaintImageValue(WTFMove(name), WTFMove(arguments)));
+        return adoptRef(*new CSSPaintImageValue(WTF::move(name), WTF::move(arguments)));
     }
     ~CSSPaintImageValue();
 
     const String& name() const { return m_name; }
 
     bool equals(const CSSPaintImageValue& other) const { return m_name == other.m_name; }
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
 
-    RefPtr<StyleImage> createStyleImage(Style::BuilderState&) const;
+    RefPtr<StyleImage> createStyleImage(const Style::BuilderState&) const;
 
 private:
     explicit CSSPaintImageValue(String&&, Ref<CSSVariableData>&&);
 
     String m_name;
-    Ref<CSSVariableData> m_arguments;
+    const Ref<CSSVariableData> m_arguments;
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_CSS_VALUE(CSSPaintImageValue, isPaintImageValue())
-
-#endif

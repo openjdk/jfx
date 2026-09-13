@@ -56,16 +56,18 @@ void CSSParserObserverWrapper::skipCommentsBefore(const CSSParserTokenRange& ran
     unsigned startIndex = range.begin() - m_firstParserToken;
     if (!leaveDirectlyBefore)
         ++startIndex;
-    while (m_commentIterator < m_commentOffsets.end() && m_commentIterator->tokensBefore < startIndex)
-        ++m_commentIterator;
+    while (m_commentIndex < m_commentOffsets.size() && m_commentOffsets[m_commentIndex].tokensBefore < startIndex)
+        ++m_commentIndex;
 }
 
 void CSSParserObserverWrapper::yieldCommentsBefore(const CSSParserTokenRange& range)
 {
     unsigned startIndex = range.begin() - m_firstParserToken;
-    while (m_commentIterator < m_commentOffsets.end() && m_commentIterator->tokensBefore <= startIndex) {
-        m_observer.observeComment(m_commentIterator->startOffset, m_commentIterator->endOffset);
-        ++m_commentIterator;
+    for (; m_commentIndex < m_commentOffsets.size(); ++m_commentIndex) {
+        auto& commentOffset = m_commentOffsets[m_commentIndex];
+        if (commentOffset.tokensBefore > startIndex)
+            break;
+        m_observer.observeComment(commentOffset.startOffset, commentOffset.endOffset);
     }
 }
 

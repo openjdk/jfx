@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,7 +28,9 @@
 
 #if ENABLE(WEB_RTC)
 
+#include "ContextDestructionObserverInlines.h"
 #include "CryptoKeyRaw.h"
+#include "EventTargetInlines.h"
 #include "JSDOMConvertBufferSource.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSRTCEncodedAudioFrame.h"
@@ -45,11 +47,12 @@
 #include "ReadableStreamSource.h"
 #include "SharedBuffer.h"
 #include "WritableStream.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/EnumTraits.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RTCRtpSFrameTransform);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RTCRtpSFrameTransform);
 
 Ref<RTCRtpSFrameTransform> RTCRtpSFrameTransform::create(ScriptExecutionContext& context, Options options)
 {
@@ -66,20 +69,18 @@ RTCRtpSFrameTransform::RTCRtpSFrameTransform(ScriptExecutionContext& context, Op
     m_transformer->setAuthenticationSize(options.authenticationSize);
 }
 
-RTCRtpSFrameTransform::~RTCRtpSFrameTransform()
-{
-}
+RTCRtpSFrameTransform::~RTCRtpSFrameTransform() = default;
 
 void RTCRtpSFrameTransform::setEncryptionKey(CryptoKey& key, std::optional<uint64_t> keyId, DOMPromiseDeferred<void>&& promise)
 {
     auto algorithm = key.algorithm();
     if (!std::holds_alternative<CryptoKeyAlgorithm>(algorithm)) {
-        promise.reject(Exception { TypeError, "Invalid key"_s });
+        promise.reject(Exception { ExceptionCode::TypeError, "Invalid key"_s });
         return;
     }
 
     if (std::get<CryptoKeyAlgorithm>(algorithm).name != "HKDF"_s) {
-        promise.reject(Exception { TypeError, "Only HKDF is supported"_s });
+        promise.reject(Exception { ExceptionCode::TypeError, "Only HKDF is supported"_s });
         return;
     }
 
@@ -116,31 +117,30 @@ static RTCRtpSFrameTransformErrorEvent::Type errorTypeFromInformation(const RTCR
         return RTCRtpSFrameTransformErrorEvent::Type::Authentication;
     case RTCRtpSFrameTransformer::Error::Syntax:
         return RTCRtpSFrameTransformErrorEvent::Type::Syntax;
-    case RTCRtpSFrameTransformer::Error::Other:
-        return RTCRtpSFrameTransformErrorEvent::Type::Other;
     default:
         RELEASE_ASSERT_NOT_REACHED();
     }
 }
 
-static std::optional<Vector<uint8_t>> processFrame(std::span<const uint8_t> data, RTCRtpSFrameTransformer& transformer, ScriptExecutionContextIdentifier identifier, const WeakPtr<RTCRtpSFrameTransform, WeakPtrImplWithEventTargetData>& weakTransform)
+static std::optional<Vector<uint8_t>> processFrame(std::span<const uint8_t> data, RTCRtpSFrameTransformer& transformer, ScriptExecutionContextIdentifier identifier, const ThreadSafeWeakPtr<RTCRtpSFrameTransform>& weakTransform)
 {
     auto result = transformer.transform(data);
     if (!result.has_value()) {
-        auto errorInformation = WTFMove(result.error());
+        auto errorInformation = WTF::move(result.error());
         errorInformation.message = { };
-        RELEASE_LOG_ERROR(WebRTC, "RTCRtpSFrameTransform failed transforming a frame with error %d", errorInformation.error);
+        RELEASE_LOG_ERROR(WebRTC, "RTCRtpSFrameTransform failed transforming a frame with error %hhu", enumToUnderlyingType(errorInformation.error));
         // Call the error event handler.
         ScriptExecutionContext::postTaskTo(identifier, [errorInformation, weakTransform](auto&&) {
-            if (!weakTransform || weakTransform->isContextStopped())
+            RefPtr transform = weakTransform.get();
+            if (!transform || transform->isContextStopped())
                 return;
-            if (errorInformation.error == RTCRtpSFrameTransformer::Error::KeyID && weakTransform->hasKey(errorInformation.keyId))
+            if (errorInformation.error == RTCRtpSFrameTransformer::Error::KeyID && transform->hasKey(errorInformation.keyId))
                 return;
-            weakTransform->dispatchEvent(RTCRtpSFrameTransformErrorEvent::create(Event::CanBubble::No, Event::IsCancelable::No, errorTypeFromInformation(errorInformation)));
+            transform->dispatchEvent(RTCRtpSFrameTransformErrorEvent::create(Event::CanBubble::No, Event::IsCancelable::No, errorTypeFromInformation(errorInformation)));
         });
         return { };
     }
-    return WTFMove(result.value());
+    return WTF::move(result.value());
 }
 
 bool RTCRtpSFrameTransform::hasKey(uint64_t keyID) const
@@ -152,7 +152,7 @@ void RTCRtpSFrameTransform::initializeTransformer(RTCRtpTransformBackend& backen
 {
     ASSERT(!isAttached());
 
-    auto* context = scriptExecutionContext();
+    RefPtr context = scriptExecutionContext();
     if (!context)
         return;
 
@@ -165,7 +165,7 @@ void RTCRtpSFrameTransform::initializeTransformer(RTCRtpTransformBackend& backen
     m_transformer->setIsEncrypting(side == Side::Sender);
     m_transformer->setMediaType(backend.mediaType());
 
-    backend.setTransformableFrameCallback([transformer = m_transformer, identifier = context->identifier(), backend = Ref { backend }, weakThis = WeakPtr { *this }](auto&& frame) {
+    backend.setTransformableFrameCallback([transformer = m_transformer, identifier = context->identifier(), backend = Ref { backend }, weakThis = ThreadSafeWeakPtr { *this }](auto&& frame) {
         auto chunk = frame->data();
         if (!chunk.data() || !chunk.size())
             return;
@@ -174,7 +174,7 @@ void RTCRtpSFrameTransform::initializeTransformer(RTCRtpTransformBackend& backen
         if (!result)
             return;
 
-        frame->setData({ result.value().data(), result.value().size() });
+        frame->setData(result.value().span());
 
         backend->processTransformedFrame(frame.get());
     });
@@ -195,46 +195,48 @@ void RTCRtpSFrameTransform::willClearBackend(RTCRtpTransformBackend& backend)
     backend.clearTransformableFrameCallback();
 }
 
-static void transformFrame(std::span<const uint8_t> data, JSDOMGlobalObject& globalObject, RTCRtpSFrameTransformer& transformer, SimpleReadableStreamSource& source, ScriptExecutionContextIdentifier identifier, const WeakPtr<RTCRtpSFrameTransform, WeakPtrImplWithEventTargetData>& weakTransform)
+static void transformFrame(std::span<const uint8_t> data, JSDOMGlobalObject& globalObject, RTCRtpSFrameTransformer& transformer, SimpleReadableStreamSource& source, ScriptExecutionContextIdentifier identifier, const ThreadSafeWeakPtr<RTCRtpSFrameTransform>& weakTransform)
 {
     auto result = processFrame(data, transformer, identifier, weakTransform);
-    auto buffer = result ? SharedBuffer::create(WTFMove(*result)) : SharedBuffer::create();
+    auto buffer = result ? SharedBuffer::create(WTF::move(*result)) : SharedBuffer::create();
     source.enqueue(toJS(&globalObject, &globalObject, buffer->tryCreateArrayBuffer().get()));
 }
 
 template<typename Frame>
-void transformFrame(Frame& frame, JSDOMGlobalObject& globalObject, RTCRtpSFrameTransformer& transformer, SimpleReadableStreamSource& source, ScriptExecutionContextIdentifier identifier, const WeakPtr<RTCRtpSFrameTransform, WeakPtrImplWithEventTargetData>& weakTransform)
+void transformFrame(Frame& frame, JSDOMGlobalObject& globalObject, RTCRtpSFrameTransformer& transformer, SimpleReadableStreamSource& source, ScriptExecutionContextIdentifier identifier, const ThreadSafeWeakPtr<RTCRtpSFrameTransform>& weakTransform)
 {
-    auto rtcFrame = frame.rtcFrame();
+    Ref vm = globalObject.vm();
+    auto rtcFrame = frame.rtcFrame(vm, RTCEncodedFrame::ShouldNeuter::No);
     auto chunk = rtcFrame->data();
     auto result = processFrame(chunk, transformer, identifier, weakTransform);
     std::span<const uint8_t> transformedChunk;
     if (result)
-        transformedChunk = { result->data(), result->size() };
+        transformedChunk = result->span();
     rtcFrame->setData(transformedChunk);
     source.enqueue(toJS(&globalObject, &globalObject, frame));
 }
 
 ExceptionOr<void> RTCRtpSFrameTransform::createStreams()
 {
-    auto* globalObject = scriptExecutionContext() ? JSC::jsCast<JSDOMGlobalObject*>(scriptExecutionContext()->globalObject()) : nullptr;
+    auto* globalObject = scriptExecutionContext() ? JSC::jsCast<JSDOMGlobalObject*>(protectedScriptExecutionContext()->globalObject()) : nullptr;
     if (!globalObject)
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
 
     m_readableStreamSource = SimpleReadableStreamSource::create();
     auto readable = ReadableStream::create(*globalObject, *m_readableStreamSource);
     if (readable.hasException())
         return readable.releaseException();
 
-    auto writable = WritableStream::create(*JSC::jsCast<JSDOMGlobalObject*>(globalObject), SimpleWritableStreamSink::create([transformer = m_transformer, readableStreamSource = m_readableStreamSource, weakThis = WeakPtr { *this }](auto& context, auto value) -> ExceptionOr<void> {
+    auto writable = WritableStream::create(*JSC::jsCast<JSDOMGlobalObject*>(globalObject), SimpleWritableStreamSink::create([transformer = m_transformer, readableStreamSource = m_readableStreamSource, weakThis = ThreadSafeWeakPtr { *this }](auto& context, auto value) -> ExceptionOr<void> {
         if (!context.globalObject())
-            return Exception { InvalidStateError };
+            return Exception { ExceptionCode::InvalidStateError };
         auto& globalObject = *JSC::jsCast<JSDOMGlobalObject*>(context.globalObject());
         auto scope = DECLARE_THROW_SCOPE(globalObject.vm());
 
-        auto frame = convert<IDLUnion<IDLArrayBuffer, IDLArrayBufferView, IDLInterface<RTCEncodedAudioFrame>, IDLInterface<RTCEncodedVideoFrame>>>(globalObject, value);
-        if (scope.exception())
-            return Exception { ExistingExceptionError };
+        auto frameConversionResult = convert<IDLUnion<IDLArrayBuffer, IDLArrayBufferView, IDLInterface<RTCEncodedAudioFrame>, IDLInterface<RTCEncodedVideoFrame>>>(globalObject, value);
+        if (frameConversionResult.hasException(scope)) [[unlikely]]
+            return Exception { ExceptionCode::ExistingExceptionError };
+        auto frame = frameConversionResult.releaseReturnValue();
 
         // We do not want to throw any exception in the transform to make sure we do not error the transform.
         WTF::switchOn(frame, [&](RefPtr<RTCEncodedAudioFrame>& value) {
@@ -242,9 +244,9 @@ ExceptionOr<void> RTCRtpSFrameTransform::createStreams()
         }, [&](RefPtr<RTCEncodedVideoFrame>& value) {
             transformFrame(*value, globalObject, transformer.get(), *readableStreamSource, context.identifier(), weakThis);
         }, [&](RefPtr<ArrayBuffer>& value) {
-            transformFrame({ static_cast<const uint8_t*>(value->data()), value->byteLength() }, globalObject, transformer.get(), *readableStreamSource, context.identifier(), weakThis);
+            transformFrame(value->span(), globalObject, transformer.get(), *readableStreamSource, context.identifier(), weakThis);
         }, [&](RefPtr<ArrayBufferView>& value) {
-            transformFrame({ static_cast<const uint8_t*>(value->data()), value->byteLength() }, globalObject, transformer.get(), *readableStreamSource, context.identifier(), weakThis);
+            transformFrame(value->span(), globalObject, transformer.get(), *readableStreamSource, context.identifier(), weakThis);
         });
         return { };
     }));
@@ -260,17 +262,17 @@ ExceptionOr<void> RTCRtpSFrameTransform::createStreams()
     return { };
 }
 
-ExceptionOr<RefPtr<ReadableStream>> RTCRtpSFrameTransform::readable()
+ExceptionOr<Ref<ReadableStream>> RTCRtpSFrameTransform::readable()
 {
     if (!m_readable) {
         auto result = createStreams();
         if (result.hasException())
             return result.releaseException();
     }
-    return m_readable.copyRef();
+    return m_readable.releaseNonNull();
 }
 
-ExceptionOr<RefPtr<WritableStream>> RTCRtpSFrameTransform::writable()
+ExceptionOr<Ref<WritableStream>> RTCRtpSFrameTransform::writable()
 {
     if (!m_writable) {
         auto result = createStreams();
@@ -279,12 +281,17 @@ ExceptionOr<RefPtr<WritableStream>> RTCRtpSFrameTransform::writable()
     }
 
     m_hasWritable = true;
-    return m_writable.copyRef();
+    return m_writable.releaseNonNull();
 }
 
 bool RTCRtpSFrameTransform::virtualHasPendingActivity() const
 {
     return (m_isAttached || m_hasWritable) && hasEventListeners();
+}
+
+ScriptExecutionContext* RTCRtpSFrameTransform::scriptExecutionContext() const
+{
+    return ContextDestructionObserver::scriptExecutionContext();
 }
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 // Copyright 2015 The Chromium Authors. All rights reserved.
-// Copyright (C) 2016 Apple Inc. All rights reserved.
+// Copyright (C) 2016-2024 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -30,23 +30,25 @@
 #include "config.h"
 #include "CSSSupportsParser.h"
 
-#include "CSSParserImpl.h"
-#include "CSSPropertyParserHelpers.h"
+#include "CSSParser.h"
+#include "CSSPropertyParserConsumer+Font.h"
+#include "CSSPropertyParserState.h"
 #include "CSSSelectorParser.h"
+#include "CSSTokenizer.h"
 #include "FontCustomPlatformData.h"
 #include "StyleRule.h"
 
 namespace WebCore {
 
-CSSSupportsParser::SupportsResult CSSSupportsParser::supportsCondition(CSSParserTokenRange range, CSSParserImpl& parser, SupportsParsingMode mode, CSSParserEnum::IsNestedContext isNestedContext)
+CSSSupportsParser::SupportsResult CSSSupportsParser::supportsCondition(CSSParserTokenRange range, CSSParser& parser, ParsingMode mode)
 {
     // FIXME: The spec allows leading whitespace in @supports but not CSS.supports,
     // but major browser vendors allow it in CSS.supports also.
     range.consumeWhitespace();
-    CSSSupportsParser supportsParser(parser, isNestedContext);
+    CSSSupportsParser supportsParser(parser);
 
     auto result = supportsParser.consumeCondition(range);
-    if (mode != ForWindowCSS || result != Invalid)
+    if (mode != ParsingMode::AllowBareDeclarationAndGeneralEnclosed || result != Invalid)
         return result;
 
     // window.CSS.supports requires parsing as-if the condition was wrapped in
@@ -55,7 +57,15 @@ CSSSupportsParser::SupportsResult CSSSupportsParser::supportsCondition(CSSParser
     return supportsParser.consumeSupportsFeatureOrGeneralEnclosed(range);
 }
 
-enum ClauseType { Unresolved, Conjunction, Disjunction };
+CSSSupportsParser::SupportsResult CSSSupportsParser::supportsCondition(const String& condition, const CSSParserContext& context, ParsingMode mode)
+{
+    CSSParser parser(context, condition);
+    if (!parser.tokenizer())
+        return SupportsResult::Invalid;
+    return supportsCondition(parser.tokenizer()->tokenRange(), parser, mode);
+}
+
+enum class ClauseType { Unresolved, Conjunction, Disjunction };
 
 CSSSupportsParser::SupportsResult CSSSupportsParser::consumeCondition(CSSParserTokenRange range)
 {
@@ -65,7 +75,7 @@ CSSSupportsParser::SupportsResult CSSSupportsParser::consumeCondition(CSSParserT
     }
 
     bool result = false;
-    ClauseType clauseType = Unresolved;
+    auto clauseType = ClauseType::Unresolved;
 
     auto previousTokenType = IdentToken;
 
@@ -74,9 +84,9 @@ CSSSupportsParser::SupportsResult CSSSupportsParser::consumeCondition(CSSParserT
         if (nextResult == Invalid)
             return Invalid;
         bool nextSupported = nextResult;
-        if (clauseType == Unresolved)
+        if (clauseType == ClauseType::Unresolved)
             result = nextSupported;
-        else if (clauseType == Conjunction)
+        else if (clauseType == ClauseType::Conjunction)
             result &= nextSupported;
         else
             result |= nextSupported;
@@ -93,14 +103,14 @@ CSSSupportsParser::SupportsResult CSSSupportsParser::consumeCondition(CSSParserT
 
         previousTokenType = token.type();
 
-        if (clauseType == Unresolved)
-            clauseType = token.value().length() == 3 ? Conjunction : Disjunction;
-        if ((clauseType == Conjunction && !equalLettersIgnoringASCIICase(token.value(), "and"_s))
-            || (clauseType == Disjunction && !equalLettersIgnoringASCIICase(token.value(), "or"_s)))
+        if (clauseType == ClauseType::Unresolved)
+            clauseType = token.value().length() == 3 ? ClauseType::Conjunction : ClauseType::Disjunction;
+        if ((clauseType == ClauseType::Conjunction && !equalLettersIgnoringASCIICase(token.value(), "and"_s))
+            || (clauseType == ClauseType::Disjunction && !equalLettersIgnoringASCIICase(token.value(), "or"_s)))
             return Invalid;
 
         range.consume();
-        if (range.peek().type() != WhitespaceToken)
+        if (!CSSTokenizer::isWhitespace(range.peek().type()))
             return Invalid;
         range.consumeWhitespace();
     }
@@ -114,7 +124,7 @@ CSSSupportsParser::SupportsResult CSSSupportsParser::consumeNegation(CSSParserTo
 
     if (range.peek().type() == IdentToken)
         range.consume();
-    if (range.peek().type() != WhitespaceToken)
+    if (!CSSTokenizer::isWhitespace(range.peek().type()))
         return Invalid;
     range.consumeWhitespace();
     auto result = consumeConditionInParenthesis(range, tokenType);
@@ -163,14 +173,16 @@ CSSSupportsParser::SupportsResult CSSSupportsParser::consumeSupportsSelectorFunc
     auto block = range.consumeBlock();
     block.consumeWhitespace();
 
-    return CSSSelectorParser::supportsComplexSelector(block, m_parser.context(), m_isNestedContext) ? Supported : Unsupported;
+    return CSSSelectorParser::supportsComplexSelector(block, m_parser.context()) ? Supported : Unsupported;
 }
 
 // <supports-font-format-fn>
 CSSSupportsParser::SupportsResult CSSSupportsParser::consumeSupportsFontFormatFunction(CSSParserTokenRange& range)
 {
     ASSERT(range.peek().type() == FunctionToken && range.peek().functionId() == CSSValueFontFormat);
-    auto format = CSSPropertyParserHelpers::consumeFontFormat(range, true);
+
+    auto state = CSS::PropertyParserState { .context = m_parser.context() };
+    auto format = CSSPropertyParserHelpers::consumeFontFormat(range, state, true);
     if (format.isNull())
         return Unsupported;
     return FontCustomPlatformData::supportsFormat(format) ? Supported : Unsupported;
@@ -180,7 +192,9 @@ CSSSupportsParser::SupportsResult CSSSupportsParser::consumeSupportsFontFormatFu
 CSSSupportsParser::SupportsResult CSSSupportsParser::consumeSupportsFontTechFunction(CSSParserTokenRange& range)
 {
     ASSERT(range.peek().type() == FunctionToken && range.peek().functionId() == CSSValueFontTech);
-    auto technologies = CSSPropertyParserHelpers::consumeFontTech(range, true);
+
+    auto state = CSS::PropertyParserState { .context = m_parser.context() };
+    auto technologies = CSSPropertyParserHelpers::consumeFontTech(range, state, true);
     if (technologies.isEmpty())
         return Unsupported;
     ASSERT(technologies.size() == 1);

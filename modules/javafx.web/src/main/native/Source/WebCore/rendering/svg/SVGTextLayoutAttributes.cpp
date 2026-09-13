@@ -1,5 +1,7 @@
 /*
  * Copyright (C) Research In Motion Limited 2010-11. All rights reserved.
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2015 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,6 +22,7 @@
 #include "config.h"
 #include "SVGTextLayoutAttributes.h"
 
+#include "RenderSVGInlineText.h"
 #include <stdio.h>
 #include <wtf/text/CString.h>
 
@@ -33,42 +36,9 @@ SVGTextLayoutAttributes::SVGTextLayoutAttributes(RenderSVGInlineText& context)
 void SVGTextLayoutAttributes::clear()
 {
     m_characterDataMap.clear();
-    m_textMetricsValues.clear();
+    m_textMetricsValues.shrink(0);
 }
 
-float SVGTextLayoutAttributes::emptyValue()
-{
-    static float s_emptyValue = std::numeric_limits<float>::max() - 1;
-    return s_emptyValue;
-}
-
-static inline void dumpSVGCharacterDataMapValue(const char* identifier, float value, bool appendSpace = true)
-{
-    if (value == SVGTextLayoutAttributes::emptyValue()) {
-        fprintf(stderr, "%s=x", identifier);
-        if (appendSpace)
-            fprintf(stderr, " ");
-        return;
-    }
-    fprintf(stderr, "%s=%lf", identifier, value);
-    if (appendSpace)
-        fprintf(stderr, " ");
-}
-
-void SVGTextLayoutAttributes::dump() const
-{
-    fprintf(stderr, "context: %p\n", &m_context);
-    const SVGCharacterDataMap::const_iterator end = m_characterDataMap.end();
-    for (SVGCharacterDataMap::const_iterator it = m_characterDataMap.begin(); it != end; ++it) {
-        const SVGCharacterData& data = it->value;
-        fprintf(stderr, " ---> pos=%i, data={", it->key);
-        dumpSVGCharacterDataMapValue("x", data.x);
-        dumpSVGCharacterDataMapValue("y", data.y);
-        dumpSVGCharacterDataMapValue("dx", data.dx);
-        dumpSVGCharacterDataMapValue("dy", data.dy);
-        dumpSVGCharacterDataMapValue("rotate", data.rotate, false);
-        fprintf(stderr, "}\n");
-    }
-}
-
+RenderSVGInlineText& SVGTextLayoutAttributes::context() { return m_context.get(); }
+const RenderSVGInlineText& SVGTextLayoutAttributes::context() const { return m_context.get(); }
 }

@@ -22,6 +22,7 @@
 #include "config.h"
 #include "NumberConstructor.h"
 
+#include "JSBigIntInlines.h"
 #include "JSCInlines.h"
 #include "NumberObject.h"
 #include "NumberPrototype.h"
@@ -29,6 +30,7 @@
 namespace JSC {
 
 static JSC_DECLARE_HOST_FUNCTION(numberConstructorFuncIsNaN);
+static JSC_DECLARE_HOST_FUNCTION(numberConstructorFuncIsFinite);
 static JSC_DECLARE_HOST_FUNCTION(numberConstructorFuncIsInteger);
 static JSC_DECLARE_HOST_FUNCTION(numberConstructorFuncIsSafeInteger);
 
@@ -44,9 +46,9 @@ const ClassInfo NumberConstructor::s_info = { "Function"_s, &Base::s_info, &numb
 
 /* Source for NumberConstructor.lut.h
 @begin numberConstructorTable
-  isFinite       JSBuiltin                           DontEnum|Function 1
+  isFinite       numberConstructorFuncIsFinite       DontEnum|Function 1 NumberIsFiniteIntrinsic
   isNaN          numberConstructorFuncIsNaN          DontEnum|Function 1 NumberIsNaNIntrinsic
-  isSafeInteger  numberConstructorFuncIsSafeInteger  DontEnum|Function 1
+  isSafeInteger  numberConstructorFuncIsSafeInteger  DontEnum|Function 1 NumberIsSafeIntegerIntrinsic
 @end
 */
 
@@ -58,7 +60,7 @@ NumberConstructor::NumberConstructor(VM& vm, NativeExecutable* executable, JSGlo
 {
 }
 
-NumberConstructor* NumberConstructor::create(VM& vm, Structure* structure, NumberPrototype* numberPrototype, GetterSetter*)
+NumberConstructor* NumberConstructor::create(VM& vm, Structure* structure, NumberPrototype* numberPrototype)
 {
     JSGlobalObject* globalObject = structure->globalObject();
     NativeExecutable* executable = vm.getHostFunction(callNumberConstructor, ImplementationVisibility::Public, NumberConstructorIntrinsic, constructNumberConstructor, nullptr, vm.propertyNames->Number.string());
@@ -159,6 +161,14 @@ JSC_DEFINE_HOST_FUNCTION(numberConstructorFuncIsNaN, (JSGlobalObject*, CallFrame
     if (!argument.isNumber())
         return JSValue::encode(jsBoolean(false));
     return JSValue::encode(jsBoolean(std::isnan(argument.asNumber())));
+}
+
+JSC_DEFINE_HOST_FUNCTION(numberConstructorFuncIsFinite, (JSGlobalObject*, CallFrame* callFrame))
+{
+    JSValue argument = callFrame->argument(0);
+    if (!argument.isNumber())
+        return JSValue::encode(jsBoolean(false));
+    return JSValue::encode(jsBoolean(std::isfinite(argument.asNumber())));
 }
 
 } // namespace JSC

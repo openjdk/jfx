@@ -26,6 +26,8 @@
 #pragma once
 
 #include <wtf/Function.h>
+#include <wtf/RefCounted.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/ThreadSafetyAnalysis.h>
 
 namespace WTF {
@@ -33,28 +35,29 @@ namespace WTF {
 // FunctionDispatcher is an abstract representation of something that functions can be
 // dispatched to. This can for example be a run loop or a work queue.
 
-class FunctionDispatcher {
+class WTF_EXPORT_PRIVATE FunctionDispatcher {
 public:
-    WTF_EXPORT_PRIVATE virtual ~FunctionDispatcher();
+    virtual ~FunctionDispatcher();
 
     virtual void dispatch(Function<void ()>&&) = 0;
 
 protected:
-    WTF_EXPORT_PRIVATE FunctionDispatcher();
+    FunctionDispatcher();
 };
 
-class WTF_CAPABILITY("is current") SerialFunctionDispatcher : public FunctionDispatcher {
+class WTF_CAPABILITY("is current") WTF_EXPORT_PRIVATE SerialFunctionDispatcher : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<SerialFunctionDispatcher>, public FunctionDispatcher {
 public:
-#if ASSERT_ENABLED
-    WTF_EXPORT_PRIVATE virtual void assertIsCurrent() const = 0;
-#endif
+    virtual bool isCurrent() const = 0;
+};
+
+// A GuaranteedSerialFunctionDispatcher guarantees that a dispatched function will always be run.
+class GuaranteedSerialFunctionDispatcher : public SerialFunctionDispatcher {
 };
 
 inline void assertIsCurrent(const SerialFunctionDispatcher& queue) WTF_ASSERTS_ACQUIRED_CAPABILITY(queue)
 {
-#if ASSERT_ENABLED
-    queue.assertIsCurrent();
-#else
+    ASSERT(queue.isCurrent());
+#if !ASSERT_ENABLED
     UNUSED_PARAM(queue);
 #endif
 }
@@ -63,3 +66,4 @@ inline void assertIsCurrent(const SerialFunctionDispatcher& queue) WTF_ASSERTS_A
 
 using WTF::FunctionDispatcher;
 using WTF::SerialFunctionDispatcher;
+using WTF::GuaranteedSerialFunctionDispatcher;

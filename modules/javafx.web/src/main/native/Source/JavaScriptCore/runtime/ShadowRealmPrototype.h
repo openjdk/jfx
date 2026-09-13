@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include "JSObject.h"
+#include <JavaScriptCore/JSObject.h>
 
 namespace JSC {
 
@@ -51,10 +51,7 @@ public:
 
     DECLARE_INFO;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
 private:
     ShadowRealmPrototype(VM&, Structure*);

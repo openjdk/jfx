@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,106 +25,92 @@
 
 package test.javafx.util.converter;
 
+import static org.junit.jupiter.api.Assertions.*;
+
 import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
 import java.util.Locale;
+
+import org.junit.jupiter.api.Test;
+
 import javafx.util.converter.NumberStringConverter;
 import javafx.util.converter.NumberStringConverterShim;
-import static org.junit.Assert.*;
 
-import org.junit.Before;
-import org.junit.Test;
-
-/**
- */
 public class NumberStringConverterTest {
-    private NumberStringConverter converter;
 
-    @Before public void setup() {
-        converter = new NumberStringConverter();
+    private static final String PATTERN = "#,##,###,####";
+
+    private static final NumberStringConverter US_LOCALE_CONVERTER = new NumberStringConverter(Locale.US);
+
+    @Test
+    void testDefaultConstructor() {
+        NumberFormat numberFormat = NumberFormat.getNumberInstance(Locale.getDefault());
+
+        var converter = new NumberStringConverter();
+
+        assertEquals(numberFormat, numberFormatOf(converter));
     }
 
-    /*********************************************************************
-     * Test constructors
-     ********************************************************************/
+    @Test
+    void testConstructor_locale() {
+        NumberFormat numberFormat = NumberFormat.getNumberInstance(Locale.CANADA);
 
-    @Test public void testDefaultConstructor() {
-        NumberStringConverter c = new NumberStringConverter();
-        assertEquals(Locale.getDefault(), NumberStringConverterShim.getLocale(c));
-        assertNull(NumberStringConverterShim.getPattern(c));
-        assertNull(NumberStringConverterShim.getNumberFormatVar(c));
+        var converter = new NumberStringConverter(Locale.CANADA);
+
+        assertEquals(numberFormat, numberFormatOf(converter));
     }
 
-    @Test public void testConstructor_locale() {
-        NumberStringConverter c = new NumberStringConverter(Locale.CANADA);
-        assertEquals(Locale.CANADA, NumberStringConverterShim.getLocale(c));
-        assertNull(NumberStringConverterShim.getPattern(c));
-        assertNull(NumberStringConverterShim.getNumberFormatVar(c));
+    @Test
+    void testConstructor_pattern() {
+        var symbols = new DecimalFormatSymbols(Locale.getDefault());
+        var numberFormat = new DecimalFormat(PATTERN, symbols);
+
+        var converter = new NumberStringConverter(PATTERN);
+
+        assertEquals(numberFormat, numberFormatOf(converter));
     }
 
-    @Test public void testConstructor_pattern() {
-        NumberStringConverter c = new NumberStringConverter("#,##,###,####");
-        assertEquals(Locale.getDefault(), NumberStringConverterShim.getLocale(c));
-        assertEquals("#,##,###,####", NumberStringConverterShim.getPattern(c));
-        assertNull(NumberStringConverterShim.getNumberFormatVar(c));
+    @Test
+    void testConstructor_locale_pattern() {
+        var symbols = new DecimalFormatSymbols(Locale.CANADA);
+        var numberFormat = new DecimalFormat(PATTERN, symbols);
+
+        var converter = new NumberStringConverter(Locale.CANADA, PATTERN);
+
+        assertEquals(numberFormat, numberFormatOf(converter));
     }
 
-    @Test public void testConstructor_locale_pattern() {
-        NumberStringConverter c = new NumberStringConverter(Locale.CANADA, "#,##,###,####");
-        assertEquals(Locale.CANADA, NumberStringConverterShim.getLocale(c));
-        assertEquals("#,##,###,####", NumberStringConverterShim.getPattern(c));
-        assertNull(NumberStringConverterShim.getNumberFormatVar(c));
+    @Test
+    void testConstructor_numberFormat() {
+        NumberFormat numberFormat = NumberFormat.getNumberInstance(Locale.JAPAN);
+
+        var converter = new NumberStringConverter(numberFormat);
+
+        assertEquals(numberFormat, numberFormatOf(converter));
     }
 
-    @Test public void testConstructor_numberFormat() {
-        NumberFormat format = NumberFormat.getCurrencyInstance(Locale.JAPAN);
-        NumberStringConverter c = new NumberStringConverter(format);
-        assertNull(NumberStringConverterShim.getLocale(c));
-        assertNull(NumberStringConverterShim.getPattern(c));
-        assertEquals(format, NumberStringConverterShim.getNumberFormatVar(c));
+    static NumberFormat numberFormatOf(NumberStringConverter csc) {
+        return NumberStringConverterShim.getNumberFormat(csc);
     }
 
-
-    /*********************************************************************
-     * Test methods
-     ********************************************************************/
-
-    @Test public void getNumberFormat_default() {
-        assertNotNull(NumberStringConverterShim.getNumberFormat(converter));
+    @Test
+    void fromString_testValidInput() {
+        assertEquals(10L, US_LOCALE_CONVERTER.fromString("10"));
     }
 
-    @Test public void getNumberFormat_nonNullPattern() {
-        converter = new NumberStringConverter("#,##,###,####");
-        assertTrue(
-                NumberStringConverterShim.getNumberFormat(converter)
-                instanceof DecimalFormat);
+    @Test
+    void fromString_testValidInputWithWhiteSpace() {
+        assertEquals(10L, US_LOCALE_CONVERTER.fromString("      10      "));
     }
 
-    @Test public void getNumberFormat_nonNullNumberFormat() {
-        NumberFormat nf = NumberFormat.getCurrencyInstance();
-        converter = new NumberStringConverter(nf);
-        assertEquals(nf, NumberStringConverterShim.getNumberFormat(converter));
+    @Test
+    void fromString_testInvalidInput() {
+        assertThrows(RuntimeException.class, () -> US_LOCALE_CONVERTER.fromString("abcdefg"));
     }
 
-
-    /*********************************************************************
-     * Test toString / fromString methods
-     ********************************************************************/
-
-    @Test public void fromString_testValidInput() {
-        assertEquals(10L, converter.fromString("10"));
-    }
-
-    @Test public void fromString_testValidInputWithWhiteSpace() {
-        assertEquals(10L, converter.fromString("      10      "));
-    }
-
-    @Test(expected=RuntimeException.class)
-    public void fromString_testInvalidInput() {
-        converter.fromString("abcdefg");
-    }
-
-    @Test public void toString_validInput() {
-        assertEquals("10", converter.toString(10L));
+    @Test
+    void toString_validInput() {
+        assertEquals("10", US_LOCALE_CONVERTER.toString(10L));
     }
 }

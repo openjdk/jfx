@@ -25,25 +25,18 @@
 
 #pragma once
 
-#include "FontSelectionAlgorithm.h"
+#include <WebCore/FontSelectionAlgorithm.h>
 #include <array>
 #include <optional>
 #include <wtf/EnumeratedArray.h>
+#include <wtf/Platform.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
 class SystemFontDatabase {
 public:
-#if !PLATFORM(JAVA)
     WEBCORE_EXPORT static SystemFontDatabase& singleton();
-#else
-    WEBCORE_EXPORT static SystemFontDatabase& singleton()
-    {
-              static NeverDestroyed<SystemFontDatabase> database = SystemFontDatabase();
-              return database.get();
-    }
-#endif
 
     enum class FontShorthand {
         // This needs to be kept in sync with CSSValue and CSSPropertyParserHelpers::lowerFontShorthand().
@@ -81,9 +74,13 @@ public:
     const AtomString& systemFontShorthandFamily(FontShorthand);
     float systemFontShorthandSize(FontShorthand);
     FontSelectionValue systemFontShorthandWeight(FontShorthand);
-
+#if !PLATFORM(JAVA)
 protected:
     SystemFontDatabase();
+#else
+public:
+    SystemFontDatabase();
+#endif
 
 private:
     friend class FontCache;

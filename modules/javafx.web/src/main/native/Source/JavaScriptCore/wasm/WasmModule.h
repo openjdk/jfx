@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,12 +25,19 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY)
 
-#include "WasmCalleeGroup.h"
-#include "WasmJS.h"
-#include "WasmMemory.h"
-#include "WasmOps.h"
+#include <wtf/Compiler.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
+#include <JavaScriptCore/WasmCalleeGroup.h>
+#include <JavaScriptCore/WasmInstanceAnchor.h>
+#include <JavaScriptCore/WasmJS.h>
+#include <JavaScriptCore/WasmMemory.h>
+#include <JavaScriptCore/WasmOps.h>
 #include <wtf/Expected.h>
 #include <wtf/Lock.h>
 #include <wtf/SharedTask.h>
@@ -39,33 +46,35 @@
 namespace JSC {
 
 class VM;
+class JSWebAssemblyInstance;
+class WebAssemblyCompileOptions;
 
 namespace Wasm {
 
-class LLIntPlan;
+class IPIntCallee;
 class IPIntPlan;
+class MergedProfile;
 struct ModuleInformation;
+enum class BindingFailure;
 
 class Module : public ThreadSafeRefCounted<Module> {
 public:
-    using ValidationResult = Expected<RefPtr<Module>, String>;
+    using ValidationResult = Expected<Ref<Module>, String>;
     typedef void CallbackType(ValidationResult&&);
     using AsyncValidationCallback = RefPtr<SharedTask<CallbackType>>;
 
     static ValidationResult validateSync(VM&, Vector<uint8_t>&& source);
     static void validateAsync(VM&, Vector<uint8_t>&& source, Module::AsyncValidationCallback&&);
 
-    static Ref<Module> create(LLIntPlan& plan)
-    {
-        return adoptRef(*new Module(plan));
-    }
     static Ref<Module> create(IPIntPlan& plan)
     {
         return adoptRef(*new Module(plan));
     }
 
-    Wasm::TypeIndex typeIndexFromFunctionIndexSpace(unsigned functionIndexSpace) const;
+    Wasm::TypeIndex typeIndexFromFunctionIndexSpace(FunctionSpaceIndex functionIndexSpace) const;
     const Wasm::ModuleInformation& moduleInformation() const { return m_moduleInformation.get(); }
+
+    void applyCompileOptions(const WebAssemblyCompileOptions&);
 
     Ref<CalleeGroup> compileSync(VM&, MemoryMode);
     void compileAsync(VM&, MemoryMode, CalleeGroup::AsyncCompilationCallback&&);
@@ -76,22 +85,31 @@ public:
 
     void copyInitialCalleeGroupToAllMemoryModes(MemoryMode);
 
-    WasmToJSCallee& wasmToJSCallee() { return m_wasmToJSCallee.get(); }
+    CodePtr<WasmEntryPtrTag> importFunctionStub(FunctionSpaceIndex importFunctionNum) { return m_wasmToJSExitStubs[importFunctionNum].code(); }
+
+    IPIntCallees& ipintCallees() const { return m_ipintCallees.get(); }
+
+    Ref<Wasm::InstanceAnchor> registerAnchor(JSWebAssemblyInstance*);
+
+    std::unique_ptr<MergedProfile> createMergedProfile(const IPIntCallee&);
+
+    uint32_t debugId() const;
+    void setDebugId(uint32_t);
 
 private:
     Ref<CalleeGroup> getOrCreateCalleeGroup(VM&, MemoryMode);
 
-    Module(LLIntPlan&);
     Module(IPIntPlan&);
-    Ref<ModuleInformation> m_moduleInformation;
+    const Ref<ModuleInformation> m_moduleInformation;
     RefPtr<CalleeGroup> m_calleeGroups[numberOfMemoryModes];
-    Ref<LLIntCallees> m_llintCallees;
-    Ref<IPIntCallees> m_ipintCallees;
-    Ref<WasmToJSCallee> m_wasmToJSCallee;
-    MacroAssemblerCodeRef<JITCompilationPtrTag> m_llintEntryThunks;
+    const Ref<IPIntCallees> m_ipintCallees;
+    FixedVector<MacroAssemblerCodeRef<WasmEntryPtrTag>> m_wasmToJSExitStubs;
+    ThreadSafeWeakHashSet<InstanceAnchor> m_anchors;
     Lock m_lock;
 };
 
 } } // namespace JSC::Wasm
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEBASSEMBLY)

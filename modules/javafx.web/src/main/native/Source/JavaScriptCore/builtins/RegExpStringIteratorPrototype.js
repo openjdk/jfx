@@ -30,20 +30,20 @@ function next()
     if (!@isObject(this))
         @throwTypeError("%RegExpStringIteratorPrototype%.next requires |this| to be an Object");
 
-    var done = @getByIdDirectPrivate(this, "regExpStringIteratorDone");
-    if (done === @undefined)
+    if (!@isRegExpStringIterator(this))
         @throwTypeError("%RegExpStringIteratorPrototype%.next requires |this| to be an RegExp String Iterator instance");
 
-    if (done)
+    var flags = @getRegExpStringIteratorInternalField(this, @regExpStringIteratorFieldFlags);
+    if (flags & @regExpStringIteratorFlagDone)
         return { value: @undefined, done: true };
 
-    var regExp = @getByIdDirectPrivate(this, "regExpStringIteratorRegExp");
-    var string = @getByIdDirectPrivate(this, "regExpStringIteratorString");
-    var global = @getByIdDirectPrivate(this, "regExpStringIteratorGlobal");
-    var fullUnicode = @getByIdDirectPrivate(this, "regExpStringIteratorUnicode");
+    var regExp = @getRegExpStringIteratorInternalField(this, @regExpStringIteratorFieldRegExp);
+    var string = @getRegExpStringIteratorInternalField(this, @regExpStringIteratorFieldString);
+    var global = flags & @regExpStringIteratorFlagGlobal;
+    var fullUnicode = flags & @regExpStringIteratorFlagFullUnicode;
     var match = @regExpExec(regExp, string);
     if (match === null) {
-        @putByIdDirectPrivate(this, "regExpStringIteratorDone", true);
+        @putRegExpStringIteratorInternalField(this, @regExpStringIteratorFieldFlags, flags | @regExpStringIteratorFlagDone);
         return { value: @undefined, done: true };
     }
 
@@ -54,7 +54,7 @@ function next()
             regExp.lastIndex = @advanceStringIndex(string, thisIndex, fullUnicode);
         }
     } else
-        @putByIdDirectPrivate(this, "regExpStringIteratorDone", true);
+        @putRegExpStringIteratorInternalField(this, @regExpStringIteratorFieldFlags, flags | @regExpStringIteratorFlagDone);
 
     return { value: match, done: false };
 }

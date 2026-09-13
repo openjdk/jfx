@@ -25,17 +25,106 @@
 
 #pragma once
 
-#include "ScrollView.h"
+#include <WebCore/ScrollView.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
+class Frame;
 enum class RenderAsTextFlag : uint16_t;
 
 class FrameView : public ScrollView {
+    WTF_MAKE_TZONE_ALLOCATED(FrameView);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FrameView);
 public:
     enum class Type : bool { Local, Remote };
     virtual Type viewType() const = 0;
     virtual void writeRenderTreeAsText(TextStream&, OptionSet<RenderAsTextFlag>) = 0;
+    virtual Frame& frame() const = 0;
+    Ref<Frame> protectedFrame() const;
+
+    WEBCORE_EXPORT int headerHeight() const final;
+    WEBCORE_EXPORT int footerHeight() const final;
+
+    WEBCORE_EXPORT FloatBoxExtent obscuredContentInsets(InsetType = InsetType::WebCoreInset) const final;
+
+    float visibleContentScaleFactor() const final;
+
+    HostWindow* hostWindow() const final;
+    WEBCORE_EXPORT void invalidateRect(const IntRect&) final;
+    bool isActive() const final;
+    bool forceUpdateScrollbarsOnMainThreadForPerformanceTesting() const final;
+    IntRect scrollableAreaBoundingBox(bool* = nullptr) const final;
+
+    void scrollbarStyleChanged(ScrollbarStyle, bool forceUpdate) override;
+
+    // Coordinate systems:
+    //
+    // "View"
+    //     Top left is top left of the FrameView/ScrollView/Widget. Size is Widget::boundsRect().size().
+    //
+    // "TotalContents"
+    //    Relative to ScrollView's scrolled contents, including headers and footers. Size is totalContentsSize().
+    //
+    // "Contents"
+    //    Relative to ScrollView's scrolled contents, excluding headers and footers, so top left is top left of the scroll view's
+    //    document, and size is contentsSize().
+    //
+    // "Absolute"
+    //    Relative to the document's scroll origin (non-zero for RTL documents), but affected by page zoom and page scale. Mostly used
+    //    in rendering code.
+    //
+    // "Document"
+    //    Relative to the document's scroll origin, but not affected by page zoom or page scale. Size is equivalent to CSS pixel dimensions.
+    //    FIXME: some uses are affected by page zoom (e.g. layout and visual viewports).
+    //
+    // "Client"
+    //    Relative to the visible part of the document (or, more strictly, the layout viewport rect), and with the same scaling
+    //    as Document coordinates, i.e. matching CSS pixels. Affected by scroll origin.
+    //
+    // "LayoutViewport"
+    //    Similar to client coordinates, but affected by page zoom (but not page scale).
+    //
+
+    // Methods to convert points and rects between the coordinate space of the renderer, and this view.
+    WEBCORE_EXPORT IntPoint convertFromRendererToContainingView(const RenderElement*, IntPoint) const;
+    WEBCORE_EXPORT FloatPoint convertFromRendererToContainingView(const RenderElement*, FloatPoint) const;
+    WEBCORE_EXPORT IntRect convertFromRendererToContainingView(const RenderElement*, const IntRect&) const;
+    WEBCORE_EXPORT FloatRect convertFromRendererToContainingView(const RenderElement*, const FloatRect&) const;
+
+    WEBCORE_EXPORT IntPoint convertFromContainingViewToRenderer(const RenderElement*, IntPoint) const;
+    WEBCORE_EXPORT FloatPoint convertFromContainingViewToRenderer(const RenderElement*, FloatPoint) const;
+    WEBCORE_EXPORT DoublePoint convertFromContainingViewToRenderer(const RenderElement*, DoublePoint) const;
+    WEBCORE_EXPORT IntRect convertFromContainingViewToRenderer(const RenderElement*, const IntRect&) const;
+    WEBCORE_EXPORT FloatRect convertFromContainingViewToRenderer(const RenderElement*, const FloatRect&) const;
+
+    // Override ScrollView methods to do point conversion via renderers, in order to take transforms into account.
+    IntPoint convertToContainingView(IntPoint) const final;
+    FloatPoint convertToContainingView(FloatPoint) const final;
+    IntRect convertToContainingView(const IntRect&) const final;
+    FloatRect convertToContainingView(const FloatRect&) const final;
+
+    IntPoint convertFromContainingView(IntPoint) const final;
+    FloatPoint convertFromContainingView(FloatPoint) const final;
+    DoublePoint convertFromContainingView(DoublePoint) const final;
+    IntRect convertFromContainingView(const IntRect&) const final;
+    FloatRect convertFromContainingView(const FloatRect&) const final;
+
+    WEBCORE_EXPORT virtual LayoutRect layoutViewportRect() const = 0;
+
+    // Computes the visible area of a child frame in this frame as a rectangle.
+    // std::nullopt is returned if the child frame is entirely invisible, or
+    // the visible area is not computable. The given child frame must be a
+    // direct child of this frame.
+    virtual std::optional<LayoutRect> visibleRectOfChild(const Frame&) const = 0;
+
+private:
+    ScrollableArea* enclosingScrollableArea() const final;
+
+    bool scrollAnimatorEnabled() const final;
+#if ENABLE(FORM_CONTROL_REFRESH)
+    bool formControlRefreshEnabled() const final;
+#endif
 };
 
 }

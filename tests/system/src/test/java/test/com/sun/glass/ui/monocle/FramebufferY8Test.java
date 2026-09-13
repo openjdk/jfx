@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,8 +24,6 @@
  */
 package test.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.FramebufferY8Shim;
-import com.sun.glass.ui.monocle.FramebufferY8SuperShim;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferByte;
 import java.io.ByteArrayOutputStream;
@@ -37,10 +35,12 @@ import java.nio.IntBuffer;
 import java.nio.channels.Channels;
 import java.util.stream.IntStream;
 import javax.imageio.ImageIO;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import com.sun.glass.ui.monocle.FramebufferY8Shim;
+import com.sun.glass.ui.monocle.FramebufferY8SuperShim;
 
 /**
  * Provides test cases for the {@code FramebufferY8} class.
@@ -74,7 +74,7 @@ public class FramebufferY8Test {
      * {@code Framebuffer} and {@code FramebufferY8} constructors through their
      * shim subclasses. This method runs only once before all of the test cases.
      */
-    @BeforeClass
+    @BeforeAll
     public static void onlyOnce() {
         bb = ByteBuffer.allocate(WIDTH * HEIGHT * Integer.BYTES);
         bb.order(ByteOrder.nativeOrder());
@@ -125,9 +125,9 @@ public class FramebufferY8Test {
         ByteBuffer oldBuffer = copyOld(bitsPerPixel);
         ByteBuffer newBuffer = copyNew(bitsPerPixel);
         if (oldBuffer.hasArray() && newBuffer.hasArray()) {
-            Assert.assertArrayEquals(oldBuffer.array(), newBuffer.array());
+            Assertions.assertArrayEquals(oldBuffer.array(), newBuffer.array());
         } else {
-            Assert.assertEquals(oldBuffer, newBuffer);
+            Assertions.assertEquals(oldBuffer, newBuffer);
         }
     }
 
@@ -177,7 +177,7 @@ public class FramebufferY8Test {
     private void writeTest(int bitsPerPixel) throws IOException {
         ByteArrayOutputStream oldStream = writeOld(bitsPerPixel);
         ByteArrayOutputStream newStream = writeNew(bitsPerPixel);
-        Assert.assertArrayEquals(oldStream.toByteArray(), newStream.toByteArray());
+        Assertions.assertArrayEquals(oldStream.toByteArray(), newStream.toByteArray());
     }
 
     /**
@@ -353,7 +353,7 @@ public class FramebufferY8Test {
     /**
      * Saves the source test image to a file in PNG format.
      */
-    @Ignore("Saves the source ARGB32 buffer as a PNG image")
+    @Disabled("Saves the source ARGB32 buffer as a PNG image")
     @Test
     public void saveImage() {
         var image = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
@@ -374,7 +374,7 @@ public class FramebufferY8Test {
      * format with the method {@code FramebufferY8.copyToBuffer} and saves the
      * resulting image as a PNG file.
      */
-    @Ignore("Saves the target Y8 buffer as a PNG image")
+    @Disabled("Saves the target Y8 buffer as a PNG image")
     @Test
     public void saveImageY8() {
         int bitsPerPixel = Byte.SIZE;

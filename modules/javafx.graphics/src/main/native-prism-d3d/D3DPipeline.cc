@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2007, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,10 +30,8 @@
 
 // d3d9.dll library dynamic load
 HMODULE hLibD3D9 = 0;
-typedef IDirect3D9 * WINAPI FnDirect3DCreate9(UINT SDKVersion);
 typedef HRESULT WINAPI FnDirect3DCreate9Ex(UINT SDKVersion, IDirect3D9Ex**);
 
-FnDirect3DCreate9 * pD3D9FactoryFunction = 0;
 FnDirect3DCreate9Ex * pD3D9FactoryExFunction = 0;
 
 static jboolean checkAndClearException(JNIEnv *env) {
@@ -51,7 +49,6 @@ void loadD3DLibrary() {
         hLibD3D9 = ::LoadLibrary(path);
     }
     if (hLibD3D9) {
-        pD3D9FactoryFunction = (FnDirect3DCreate9*)GetProcAddress(hLibD3D9, "Direct3DCreate9");
         pD3D9FactoryExFunction = (FnDirect3DCreate9Ex*)GetProcAddress(hLibD3D9, "Direct3DCreate9Ex");
     }
 }
@@ -60,13 +57,8 @@ void freeD3DLibrary() {
     if (hLibD3D9) {
         ::FreeLibrary(hLibD3D9);
         hLibD3D9 = 0;
-        pD3D9FactoryFunction = 0;
         pD3D9FactoryExFunction = 0;
     }
-}
-
-IDirect3D9 * Direct3DCreate9() {
-    return pD3D9FactoryFunction ? pD3D9FactoryFunction(D3D_SDK_VERSION) : 0;
 }
 
 IDirect3D9Ex * Direct3DCreate9Ex() {
@@ -237,12 +229,12 @@ void fillOsVersionInformation(JNIEnv *env, jobject object, jclass clazz) {
     }
 }
 
-inline IDirect3D9* addRef(IDirect3D9* i) {
+inline IDirect3D9Ex* addRef(IDirect3D9Ex* i) {
     i->AddRef();
     return i;
 }
 
-int getMaxSampleSupport(IDirect3D9 *d3d9, UINT adapter) {
+int getMaxSampleSupport(IDirect3D9Ex *d3d9, UINT adapter) {
     int maxSamples = 0;
     if (SUCCEEDED(d3d9->CheckDeviceMultiSampleType(adapter,
                     D3DDEVTYPE_HAL , D3DFMT_X8R8G8B8, FALSE,
@@ -272,8 +264,8 @@ JNIEXPORT jobject JNICALL Java_com_sun_prism_d3d_D3DPipeline_nGetDriverInformati
     }
 
     // if there is D3DPipelineManager take ready D3D9 object, otherwise create new
-    IDirect3D9 * d3d9 = D3DPipelineManager::GetInstance() ?
-        addRef(D3DPipelineManager::GetInstance()->GetD3DObject()) : Direct3DCreate9();
+    IDirect3D9Ex * d3d9 = D3DPipelineManager::GetInstance() ?
+        addRef(D3DPipelineManager::GetInstance()->GetD3DObject()) : Direct3DCreate9Ex();
 
     if (!d3d9) {
         return 0;
@@ -307,8 +299,8 @@ JNIEXPORT jobject JNICALL Java_com_sun_prism_d3d_D3DPipeline_nGetDriverInformati
 JNIEXPORT jint JNICALL Java_com_sun_prism_d3d_D3DPipeline_nGetMaxSampleSupport(JNIEnv *env, jclass, jint adapter) {
 
     // if there is D3DPipelineManager take ready D3D9 object, otherwise create new
-    IDirect3D9 * d3d9 = D3DPipelineManager::GetInstance() ?
-        addRef(D3DPipelineManager::GetInstance()->GetD3DObject()) : Direct3DCreate9();
+    IDirect3D9Ex * d3d9 = D3DPipelineManager::GetInstance() ?
+        addRef(D3DPipelineManager::GetInstance()->GetD3DObject()) : Direct3DCreate9Ex();
 
     if (!d3d9) {
         return 0;

@@ -19,7 +19,7 @@ macro(WEBKIT_COMPUTE_SOURCES _framework)
     endif ()
 
     if (ENABLE_UNIFIED_BUILDS)
-        execute_process(COMMAND ${RUBY_EXECUTABLE} ${WTF_SCRIPTS_DIR}/generate-unified-source-bundles.rb
+        execute_process(COMMAND ${Ruby_EXECUTABLE} ${WTF_SCRIPTS_DIR}/generate-unified-source-bundles.rb
             ${gusb_args}
             "--print-bundled-sources"
             ${_sourceListFileTruePaths}
@@ -36,7 +36,7 @@ macro(WEBKIT_COMPUTE_SOURCES _framework)
         endforeach ()
         unset(_sourceFileTmp)
 
-        execute_process(COMMAND ${RUBY_EXECUTABLE} ${WTF_SCRIPTS_DIR}/generate-unified-source-bundles.rb
+        execute_process(COMMAND ${Ruby_EXECUTABLE} ${WTF_SCRIPTS_DIR}/generate-unified-source-bundles.rb
             ${gusb_args}
             ${_sourceListFileTruePaths}
             RESULT_VARIABLE  _resultTmp
@@ -46,11 +46,18 @@ macro(WEBKIT_COMPUTE_SOURCES _framework)
             message(FATAL_ERROR "generate-unified-source-bundles.rb exited with non-zero status, exiting")
         endif ()
 
-        list(APPEND ${_framework}_SOURCES ${_outputTmp})
+        foreach (_file IN LISTS _outputTmp)
+            if (_file MATCHES "\\.c$")
+                list(APPEND ${_framework}_C_SOURCES ${_file})
+            else ()
+                list(APPEND ${_framework}_SOURCES ${_file})
+            endif ()
+        endforeach ()
+
         unset(_resultTmp)
         unset(_outputTmp)
     else ()
-        execute_process(COMMAND ${RUBY_EXECUTABLE} ${WTF_SCRIPTS_DIR}/generate-unified-source-bundles.rb
+        execute_process(COMMAND ${Ruby_EXECUTABLE} ${WTF_SCRIPTS_DIR}/generate-unified-source-bundles.rb
             ${gusb_args}
             "--print-all-sources"
             ${_sourceListFileTruePaths}
@@ -136,6 +143,9 @@ macro(WEBKIT_LIBRARY_DECLARE _target)
 
     if (${_target}_LIBRARY_TYPE STREQUAL "OBJECT")
         list(APPEND ${_target}_INTERFACE_LIBRARIES $<TARGET_OBJECTS:${_target}>)
+        if (TARGET ${_target}_c)
+            list(APPEND ${_target}_INTERFACE_LIBRARIES $<TARGET_OBJECTS:${_target}_c>)
+        endif ()
     endif ()
 endmacro()
 
@@ -144,47 +154,65 @@ macro(WEBKIT_EXECUTABLE_DECLARE _target)
 endmacro()
 
 # Private macro for setting the properties of a target.
-macro(_WEBKIT_TARGET _target)
-    target_sources(${_target} PRIVATE
-        ${${_target}_HEADERS}
-        ${${_target}_SOURCES}
-    )
-
-    if (PLAYSTATION AND CMAKE_GENERATOR MATCHES "Visual Studio")
-        set(${_target}_SOURCES_C ${${_target}_SOURCES})
-        list(FILTER ${_target}_SOURCES_C INCLUDE REGEX "\\.c$")
-        set_source_files_properties(
-            ${${_target}_SOURCES_C}
-            PROPERTIES LANGUAGE C
-            COMPILE_OPTIONS --std=gnu17
-        )
-    endif ()
-
-    target_include_directories(${_target} PUBLIC "$<BUILD_INTERFACE:${${_target}_INCLUDE_DIRECTORIES}>")
-    target_include_directories(${_target} SYSTEM PRIVATE "$<BUILD_INTERFACE:${${_target}_SYSTEM_INCLUDE_DIRECTORIES}>")
-    target_include_directories(${_target} PRIVATE "$<BUILD_INTERFACE:${${_target}_PRIVATE_INCLUDE_DIRECTORIES}>")
+macro(_WEBKIT_TARGET_SETUP _target _logical_name)
+    target_include_directories(${_target} PUBLIC "$<BUILD_INTERFACE:${${_logical_name}_INCLUDE_DIRECTORIES}>")
+    target_include_directories(${_target} SYSTEM PRIVATE "$<BUILD_INTERFACE:${${_logical_name}_SYSTEM_INCLUDE_DIRECTORIES}>")
+    target_include_directories(${_target} PRIVATE "$<BUILD_INTERFACE:${${_logical_name}_PRIVATE_INCLUDE_DIRECTORIES}>")
 
     if (DEVELOPER_MODE_CXX_FLAGS)
         target_compile_options(${_target} PRIVATE ${DEVELOPER_MODE_CXX_FLAGS})
     endif ()
 
-    target_compile_definitions(${_target} PRIVATE "BUILDING_${_target}")
-    if (${_target}_DEFINITIONS)
-        target_compile_definitions(${_target} PUBLIC ${${_target}_DEFINITIONS})
+    target_compile_definitions(${_target} PRIVATE "BUILDING_${_logical_name}")
+    if (${_logical_name}_DEFINITIONS)
+        target_compile_definitions(${_target} PUBLIC ${${_logical_name}_DEFINITIONS})
     endif ()
-    if (${_target}_PRIVATE_DEFINITIONS)
-        target_compile_definitions(${_target} PRIVATE ${${_target}_PRIVATE_DEFINITIONS})
-    endif ()
-
-    if (${_target}_LIBRARIES)
-        target_link_libraries(${_target} PUBLIC ${${_target}_LIBRARIES})
-    endif ()
-    if (${_target}_PRIVATE_LIBRARIES)
-        target_link_libraries(${_target} PRIVATE ${${_target}_PRIVATE_LIBRARIES})
+    if (${_logical_name}_PRIVATE_DEFINITIONS)
+        target_compile_definitions(${_target} PRIVATE ${${_logical_name}_PRIVATE_DEFINITIONS})
     endif ()
 
-    if (${_target}_DEPENDENCIES)
-        add_dependencies(${_target} ${${_target}_DEPENDENCIES})
+    if (${_logical_name}_COMPILE_OPTIONS)
+        target_compile_options(${_target} PRIVATE ${${_logical_name}_COMPILE_OPTIONS})
+    endif ()
+
+    if (${_logical_name}_LIBRARIES)
+        target_link_libraries(${_target} PUBLIC ${${_logical_name}_LIBRARIES})
+    endif ()
+    if (${_logical_name}_PRIVATE_LIBRARIES)
+        target_link_libraries(${_target} PRIVATE ${${_logical_name}_PRIVATE_LIBRARIES})
+    endif ()
+
+    if (${_logical_name}_DEPENDENCIES)
+        add_dependencies(${_target} ${${_logical_name}_DEPENDENCIES})
+    endif ()
+endmacro()
+
+macro(_WEBKIT_TARGET _target)
+    if (CMAKE_GENERATOR MATCHES "Visual Studio")
+        if (${_target}_C_SOURCES)
+            add_library(${_target}_c OBJECT)
+            target_sources(${_target}_c PRIVATE ${${_target}_C_SOURCES})
+
+            _WEBKIT_TARGET_SETUP(${_target}_c ${_target})
+
+            set_target_properties(${_target}_c PROPERTIES C_STANDARD 17)
+            list(APPEND ${_target}_PRIVATE_LIBRARIES ${_target}_c)
+    endif ()
+
+        target_sources(${_target} PRIVATE
+            ${${_target}_HEADERS}
+            ${${_target}_SOURCES}
+        )
+
+        _WEBKIT_TARGET_SETUP(${_target} ${_target})
+    else ()
+        target_sources(${_target} PRIVATE
+            ${${_target}_HEADERS}
+            ${${_target}_SOURCES}
+            ${${_target}_C_SOURCES}
+        )
+
+        _WEBKIT_TARGET_SETUP(${_target} ${_target})
     endif ()
 endmacro()
 
@@ -292,6 +320,9 @@ macro(_WEBKIT_FRAMEWORK_LINK_FRAMEWORK _target_name)
             list(APPEND ${_target_name}_PRIVATE_LIBRARIES WebKit::${framework})
             if (${framework}_LIBRARY_TYPE STREQUAL "OBJECT")
                 list(APPEND ${_target_name}_PRIVATE_LIBRARIES $<TARGET_OBJECTS:${framework}>)
+                if (TARGET ${framework}_c)
+                    list(APPEND ${_target_name}_PRIVATE_LIBRARIES $<TARGET_OBJECTS:${framework}_c>)
+                endif ()
             endif ()
         else ()
             list(APPEND ${_target_name}_LIBRARIES WebKit::${framework})
@@ -307,13 +338,16 @@ macro(_WEBKIT_TARGET_LINK_FRAMEWORK _target)
         get_property(_linked_into GLOBAL PROPERTY ${framework}_LINKED_INTO)
 
         # See if the target is linking a framework that the specified framework is already linked into
-        if ((NOT _linked_into) OR (${framework} STREQUAL ${_linked_into}) OR (NOT ${_linked_into} IN_LIST ${_target}_FRAMEWORKS))
+        if ((NOT _linked_into) OR (framework STREQUAL _linked_into) OR (NOT _linked_into IN_LIST ${_target}_FRAMEWORKS))
             list(APPEND ${_target}_PRIVATE_LIBRARIES WebKit::${framework})
 
             # The WebKit:: alias targets do not propagate OBJECT libraries so the
             # underyling library's objects are explicitly added to link properly
             if (TARGET ${framework} AND ${framework}_LIBRARY_TYPE STREQUAL "OBJECT")
                 list(APPEND ${_target}_PRIVATE_LIBRARIES $<TARGET_OBJECTS:${framework}>)
+                if (TARGET ${framework}_c)
+                    list(APPEND ${_target}_PRIVATE_LIBRARIES $<TARGET_OBJECTS:${framework}_c>)
+                endif ()
             endif ()
         endif ()
     endforeach ()
@@ -352,6 +386,12 @@ macro(WEBKIT_FRAMEWORK _target)
     _WEBKIT_TARGET(${_target})
     _WEBKIT_TARGET_ANALYZE(${_target})
 
+    # Apply PGO compile flags only to library targets (not executables) to avoid duplicate symbol errors
+    # Link flags are applied globally via CMAKE_SHARED_LINKER_FLAGS for LTO compatibility
+    if (PGO_COMPILE_OPTIONS)
+        target_compile_options(${_target} PRIVATE ${PGO_COMPILE_OPTIONS})
+    endif ()
+
     if (${_target}_OUTPUT_NAME)
         set_target_properties(${_target} PROPERTIES OUTPUT_NAME ${${_target}_OUTPUT_NAME})
     endif ()
@@ -378,6 +418,12 @@ macro(WEBKIT_LIBRARY _target)
     _WEBKIT_TARGET(${_target})
     _WEBKIT_TARGET_ANALYZE(${_target})
 
+    # Apply PGO compile flags only to library targets (not executables) to avoid duplicate symbol errors
+    # Link flags are applied globally via CMAKE_SHARED_LINKER_FLAGS for LTO compatibility
+    if (PGO_COMPILE_OPTIONS)
+        target_compile_options(${_target} PRIVATE ${PGO_COMPILE_OPTIONS})
+    endif ()
+
     if (${_target}_OUTPUT_NAME)
         set_target_properties(${_target} PROPERTIES OUTPUT_NAME ${${_target}_OUTPUT_NAME})
     endif ()
@@ -392,16 +438,6 @@ macro(WEBKIT_EXECUTABLE _target)
 
     if (${_target}_OUTPUT_NAME)
         set_target_properties(${_target} PROPERTIES OUTPUT_NAME ${${_target}_OUTPUT_NAME})
-    endif ()
-    if (WIN32)
-        if (WTF_CPU_X86)
-            set(_processor_architecture "x86")
-        elseif (WTF_CPU_X86_64)
-            set(_processor_architecture "amd64")
-        else ()
-            set(_processor_architecture "*")
-        endif ()
-        target_link_options(${_target} PRIVATE "/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='${_processor_architecture}' publicKeyToken='6595b64144ccf1df' language='*'")
     endif ()
 endmacro()
 
@@ -436,6 +472,51 @@ function(WEBKIT_COPY_FILES target_name)
     add_custom_target(${target_name} ALL DEPENDS ${dst_files})
 endfunction()
 
+function(WEBKIT_SYMLINK_FILES target_name)
+    set(options FLATTENED)
+    set(oneValueArgs DESTINATION)
+    set(multiValueArgs FILES)
+    cmake_parse_arguments(opt "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+    set(files ${opt_FILES})
+    set(dst_files)
+    file(MAKE_DIRECTORY ${opt_DESTINATION})
+    foreach (file IN LISTS files)
+        if (IS_ABSOLUTE ${file})
+            set(src_file ${file})
+        else ()
+            set(src_file ${CMAKE_CURRENT_SOURCE_DIR}/${file})
+        endif ()
+        if (opt_FLATTENED)
+            get_filename_component(filename ${file} NAME)
+            set(dst_file ${opt_DESTINATION}/${filename})
+        else ()
+            get_filename_component(file_dir ${file} DIRECTORY)
+            file(MAKE_DIRECTORY ${opt_DESTINATION}/${file_dir})
+            set(dst_file ${opt_DESTINATION}/${file})
+        endif ()
+        if (WIN32 AND PORT STREQUAL "Java")
+            add_custom_command(
+                OUTPUT ${dst_file}
+                # Clean up any existing file/link first
+                COMMAND ${CMAKE_COMMAND} -E remove -f ${dst_file}
+                # Write the forwarding lines directly into the destination file
+                COMMAND ${CMAKE_COMMAND} -E echo "#pragma once" > ${dst_file}
+                COMMAND ${CMAKE_COMMAND} -E echo "#include \"${src_file}\"" >> ${dst_file}
+                MAIN_DEPENDENCY ${file}
+                VERBATIM
+            )
+         else ()
+             add_custom_command(OUTPUT ${dst_file}
+                 COMMAND ${CMAKE_COMMAND} -E create_symlink ${src_file} ${dst_file}
+                 MAIN_DEPENDENCY ${file}
+                 VERBATIM
+             )
+         endif ()
+        list(APPEND dst_files ${dst_file})
+    endforeach ()
+    add_custom_target(${target_name} ALL DEPENDS ${dst_files})
+endfunction()
+
 # Helper macros for debugging CMake problems.
 macro(WEBKIT_DEBUG_DUMP_COMMANDS)
     set(CMAKE_VERBOSE_MAKEFILE ON)
@@ -464,6 +545,12 @@ macro(WEBKIT_ADD_TARGET_PROPERTIES _target _property _flags)
     unset(_tmp)
 endmacro()
 
+function(WEBKIT_ADD_TARGET_UNSAFE_BUFFER_WARNINGS _target)
+    if (ENABLE_UNSAFE_BUFFER_USAGE_WARNING AND WEBKIT_UNSAFE_BUFFER_WARNING_FLAGS)
+        WEBKIT_ADD_TARGET_CXX_FLAGS(${_target} ${WEBKIT_UNSAFE_BUFFER_WARNING_FLAGS})
+    endif ()
+endfunction()
+
 macro(WEBKIT_POPULATE_LIBRARY_VERSION library_name)
     if (NOT DEFINED ${library_name}_VERSION_MAJOR)
         set(${library_name}_VERSION_MAJOR ${PROJECT_VERSION_MAJOR})
@@ -484,4 +571,78 @@ macro(WEBKIT_CREATE_SYMLINK target src dest)
         COMMAND ln -sf ${src} ${dest}
         DEPENDS ${dest}
         COMMENT "Create symlink from ${src} to ${dest}")
+endmacro()
+
+macro(WEBKIT_SETUP_SWIFT_AND_GENERATE_SWIFT_CPP_INTEROP_HEADER _target _module_name _interop_module_path _output_header)
+    if (SWIFT_REQUIRED)
+        set_target_properties(${_target} PROPERTIES Swift_MODULE_NAME ${_module_name})
+        # Ask swiftc where to find the header files which support C/C++ builds
+        # Right now this macro is used only once; if it's used more often then
+        # we should abstract this so it's executed only once.
+        execute_process(
+            COMMAND ${ORIGINAL_Swift_COMPILER} -print-target-info
+            OUTPUT_VARIABLE _swift_target_info
+        )
+        string(JSON _swift_target_paths GET ${_swift_target_info} "paths")
+        string(JSON _swift_runtime_resource_path GET ${_swift_target_paths} "runtimeResourcePath")
+        target_include_directories(${_target} SYSTEM AFTER PRIVATE "${_swift_runtime_resource_path}")
+
+        # Assemble arguments which need to be passed to swiftc.
+        # Add WebKit's various feature flags as -D directives to the Swift compiler.
+        GET_WEBKIT_CONFIG_VARIABLES(_swift_definitions)
+        list(TRANSFORM _swift_definitions PREPEND "-D")
+        set(_swift_options ${_swift_definitions})
+        # Other options needed by Swift for C++ interop, including the location
+        # of the modulemap and hader for WebKit's internal "APIs" which we
+        # make available from C++ to Swift.
+        list(APPEND _swift_options "-cxx-interoperability-mode=default" "-Xcc" "-std=c++2b" "-I${_interop_module_path}")
+        # We'll use these options both for mainstream cmake invocations of swiftc (here)
+        # and for our own invocation to output an interoperability .h file (later)
+        list(TRANSFORM _swift_options PREPEND "$<$<COMPILE_LANGUAGE:Swift>:" OUTPUT_VARIABLE _swift_only_options)
+        list(TRANSFORM _swift_only_options APPEND ">")
+        target_compile_options(${_target} PRIVATE ${_swift_only_options})
+
+        # cmake's Swift interop does not respect CMAKE_SHARED_LINKER_FLAGS, so let's pass
+        # on those that we can.
+        # rdar://155519819
+        string(REPLACE " " ";" CMAKE_SHARED_LINKER_FLAGS_SPLIT "${CMAKE_SHARED_LINKER_FLAGS}")
+        foreach (_flag IN ITEMS ${CMAKE_SHARED_LINKER_FLAGS_SPLIT})
+            # We can only pass on -Wl flags.
+            string(SUBSTRING ${_flag} 0 4 _prefix)
+            if (${_prefix} STREQUAL "-Wl,")
+                string(SUBSTRING ${_flag} 4 -1 _shorter_flag)
+                # The following unfortunately deduplicates the -Xlinker
+                # target_compile_options(${_target} PUBLIC "$<$<COMPILE_LANGUAGE:Swift>:-Xlinker>")
+                target_compile_options(${_target} PUBLIC "$<$<COMPILE_LANGUAGE:Swift>:SHELL:-Xlinker ${_shorter_flag}>")
+            endif ()
+        endforeach ()
+
+        # Generate the header required for C++ to call into Swift.
+        set(_swift_sources $<TARGET_PROPERTY:${_target},SOURCES>)
+        set(_swift_sources $<FILTER:${_swift_sources},INCLUDE,\\.swift$>)
+
+        cmake_path(APPEND CMAKE_CURRENT_BINARY_DIR include OUTPUT_VARIABLE _header_base_path)
+        cmake_path(APPEND _header_base_path ${_output_header} OUTPUT_VARIABLE _header_path)
+        cmake_path(APPEND CMAKE_CURRENT_BINARY_DIR "${_target}.emit-module.d" OUTPUT_VARIABLE _depfile_path)
+
+        add_custom_command(
+            OUTPUT ${_header_path}
+            DEPENDS ${_swift_sources}
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            COMMAND
+                ${ORIGINAL_Swift_COMPILER} -typecheck
+                ${_swift_options}
+                $<LIST:TRANSFORM,$<TARGET_PROPERTY:${_target},INCLUDE_DIRECTORIES>,PREPEND,-I>
+                ${_swift_sources}
+                -module-name WebKit
+                -emit-clang-header-path ${_header_path}
+                -emit-dependencies
+            DEPFILE ${_depfile_path}
+            COMMENT
+                "Generating ${_target} C++ bindings to Swift at '${_header_path}'"
+            COMMAND_EXPAND_LISTS)
+
+        target_include_directories(${_target} PUBLIC ${_header_base_path})
+        target_sources(${_target} PRIVATE ${_header_path})
+    endif ()
 endmacro()

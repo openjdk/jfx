@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -42,10 +42,12 @@ String::String(JNIEnv* env, const JLString &s)
         } else {
             const jchar* str = env->GetStringCritical(s, NULL);
             if (str) {
-                m_impl = StringImpl::create((const UChar*)str, len);
+                std::span<const UChar> createSpan(reinterpret_cast<const UChar*>(str), len);
+                m_impl = StringImpl::create(createSpan);
                 env->ReleaseStringCritical(s, str);
             } else {
-                m_impl = StringImpl::create(reinterpret_cast<const UChar*>(L"OME"), 3);
+                std::span<const UChar> createSpan(reinterpret_cast<const UChar*>(str), 3);
+                m_impl = StringImpl::create(createSpan);
             }
         }
     }
@@ -63,9 +65,11 @@ JLString String::toJavaString(JNIEnv *env) const
             for (unsigned i = 0; i < len; i++) {
                 jchars[i] = characterAt(i);
             }
-            return env->NewString(jchars.data(), len);
+            return env->NewString(jchars.span().data(), len);
         } else {
-            return env->NewString((jchar*)characters16(), len);
+              //return env->NewString((jchar*)characters16(), len);
+              std::span<const UChar> span = span16();
+              return env->NewString(reinterpret_cast<const jchar*>(span.data()), span.size());
         }
     }
 }

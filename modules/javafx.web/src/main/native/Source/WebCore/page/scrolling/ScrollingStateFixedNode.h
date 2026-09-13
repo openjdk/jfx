@@ -27,8 +27,8 @@
 
 #if ENABLE(ASYNC_SCROLLING)
 
-#include "ScrollingConstraints.h"
-#include "ScrollingStateNode.h"
+#include <WebCore/ScrollingConstraints.h>
+#include <WebCore/ScrollingStateNode.h>
 
 #include <wtf/Forward.h>
 
@@ -37,8 +37,9 @@ namespace WebCore {
 class FixedPositionViewportConstraints;
 
 class ScrollingStateFixedNode final : public ScrollingStateNode {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(ScrollingStateFixedNode, WEBCORE_EXPORT);
 public:
-    static Ref<ScrollingStateFixedNode> create(ScrollingStateTree&, ScrollingNodeID);
+    template<typename... Args> static Ref<ScrollingStateFixedNode> create(Args&&... args) { return adoptRef(*new ScrollingStateFixedNode(std::forward<Args>(args)...)); }
 
     Ref<ScrollingStateNode> clone(ScrollingStateTree&) final;
 
@@ -48,6 +49,7 @@ public:
     const FixedPositionViewportConstraints& viewportConstraints() const { return m_constraints; }
 
 private:
+    WEBCORE_EXPORT ScrollingStateFixedNode(ScrollingNodeID, Vector<Ref<ScrollingStateNode>>&&, OptionSet<ScrollingStateNodeProperty>, std::optional<PlatformLayerIdentifier>, FixedPositionViewportConstraints&&);
     ScrollingStateFixedNode(ScrollingStateTree&, ScrollingNodeID);
     ScrollingStateFixedNode(const ScrollingStateFixedNode&, ScrollingStateTree&);
 

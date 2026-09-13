@@ -24,8 +24,9 @@
 
 #pragma once
 
-#include "RenderImageResource.h"
-#include "RenderReplaced.h"
+#include <WebCore/RenderImageResource.h>
+#include <WebCore/RenderReplaced.h>
+#include <wtf/Platform.h>
 
 namespace WebCore {
 
@@ -38,21 +39,23 @@ enum ImageSizeChangeType {
 };
 
 class RenderImage : public RenderReplaced {
-    WTF_MAKE_ISO_ALLOCATED(RenderImage);
+    WTF_MAKE_TZONE_ALLOCATED(RenderImage);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderImage);
 public:
-    RenderImage(Element&, RenderStyle&&, StyleImage* = nullptr, const float = 1.0f);
-    RenderImage(Document&, RenderStyle&&, StyleImage* = nullptr);
+    RenderImage(Type, Element&, RenderStyle&&, StyleImage* = nullptr, const float imageDevicePixelRatio = 1.0f);
+    RenderImage(Type, Document&, RenderStyle&&, StyleImage* = nullptr);
     virtual ~RenderImage();
 
     RenderImageResource& imageResource() { return *m_imageResource; }
     const RenderImageResource& imageResource() const { return *m_imageResource; }
+    CheckedRef<RenderImageResource> checkedImageResource() const;
     CachedImage* cachedImage() const { return imageResource().cachedImage(); }
 
     ImageSizeChangeType setImageSizeForAltText(CachedImage* newImage = nullptr);
 
     void updateAltText();
 
-    HTMLMapElement* imageMap() const;
+    RefPtr<HTMLMapElement> imageMap() const;
     void areaElementFocusChanged(HTMLAreaElement*);
 
 #if PLATFORM(IOS_FAMILY)
@@ -76,23 +79,26 @@ public:
     bool isShowingAltText() const;
 
     virtual bool shouldDisplayBrokenImageIcon() const;
-
-    bool hasNonBitmapImage() const;
+    bool shouldRespectZeroIntrinsicWidth() const override;
 
     String accessibilityDescription() const { return imageResource().image()->accessibilityDescription(); }
 
-    bool hasAnimatedImage() const;
+#if ENABLE(MULTI_REPRESENTATION_HEIC)
+    bool isMultiRepresentationHEIC() const;
+#endif
 
 protected:
+    RenderImage(Type, Element&, RenderStyle&&, OptionSet<ReplacedFlag>, StyleImage* = nullptr, const float imageDevicePixelRatio = 1.0f);
     void willBeDestroyed() override;
 
-    bool needsPreferredWidthsRecalculation() const final;
+    bool shouldInvalidatePreferredWidths() const final;
     RenderBox* embeddedContentBox() const final;
-    void computeIntrinsicRatioInformation(FloatSize& intrinsicSize, FloatSize& intrinsicRatio) const final;
+    FloatSize computeIntrinsicSize() const final;
+    FloatSize preferredAspectRatio() const final;
     bool foregroundIsKnownToBeOpaqueInRect(const LayoutRect& localRect, unsigned maxDepthToTest) const override;
 
-    void styleWillChange(StyleDifference, const RenderStyle& newStyle) override;
-    void styleDidChange(StyleDifference, const RenderStyle*) override;
+    void styleWillChange(Style::Difference, const RenderStyle& newStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle*) override;
 
     void imageChanged(WrappedImagePtr, const IntRect* = nullptr) override;
 
@@ -111,7 +117,6 @@ private:
     bool canHaveChildren() const override;
 
     bool isImage() const override { return true; }
-    bool isRenderImage() const final { return true; }
 
     void paintReplaced(PaintInfo&, const LayoutPoint&) override;
     void paintIncompleteImageOutline(PaintInfo&, LayoutPoint, LayoutUnit) const;
@@ -120,7 +125,7 @@ private:
 
     LayoutUnit minimumReplacedHeight() const override;
 
-    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) final;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) final;
 
     IntSize imageSizeForError(CachedImage*) const;
@@ -131,11 +136,11 @@ private:
 
     void paintAreaElementFocusRing(PaintInfo&, const LayoutPoint& paintOffset);
 
-    void layoutShadowContent(const LayoutSize& oldSize);
+    bool isDimensionlessSVG() const;
 
     bool hasShadowContent() const { return m_hasShadowControls || m_hasImageOverlay; }
 
-    LayoutUnit computeReplacedLogicalWidth(ShouldComputePreferred = ComputeActual) const override;
+    LayoutUnit computeReplacedLogicalWidth(ShouldComputePreferred = ShouldComputePreferred::ComputeActual) const override;
     LayoutUnit computeReplacedLogicalHeight(std::optional<LayoutUnit> estimatedUsedWidth = std::nullopt) const override;
 
     bool shouldCollapseToEmpty() const;

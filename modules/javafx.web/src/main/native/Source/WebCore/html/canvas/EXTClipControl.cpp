@@ -28,37 +28,30 @@
 #if ENABLE(WEBGL)
 #include "EXTClipControl.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(EXTClipControl);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EXTClipControl);
 
 EXTClipControl::EXTClipControl(WebGLRenderingContextBase& context)
-    : WebGLExtension(context)
+    : WebGLExtension(context, WebGLExtensionName::EXTClipControl)
 {
-    context.graphicsContextGL()->ensureExtensionEnabled("GL_EXT_clip_control"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::EXT_clip_control);
 }
 
 EXTClipControl::~EXTClipControl() = default;
 
-WebGLExtension::ExtensionName EXTClipControl::getName() const
-{
-    return EXTClipControlName;
-}
-
 bool EXTClipControl::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_EXT_clip_control"_s);
+    return context.supportsExtension(GCGLExtension::EXT_clip_control);
 }
 
 void EXTClipControl::clipControlEXT(GCGLenum origin, GCGLenum depth)
 {
-    auto context = WebGLExtensionScopedContext(this);
-    if (context.isLost())
+    if (isContextLost())
         return;
-
-    context->graphicsContextGL()->clipControlEXT(origin, depth);
+    context()->graphicsContextGL()->clipControlEXT(origin, depth);
 }
 
 } // namespace WebCore

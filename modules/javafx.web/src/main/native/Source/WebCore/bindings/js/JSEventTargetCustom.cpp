@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,8 +30,8 @@
 #include "EventTargetHeaders.h"
 #include "EventTargetInterfaces.h"
 #include "JSDOMGlobalObjectInlines.h"
+#include "JSDOMWindow.h"
 #include "JSEventListener.h"
-#include "JSLocalDOMWindow.h"
 #include "JSWindowProxy.h"
 #include "JSWorkerGlobalScope.h"
 #include "LocalDOMWindow.h"
@@ -46,15 +46,15 @@ using namespace JSC;
 
 JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<EventTarget>&& value)
 {
-    return createWrapper<EventTarget>(globalObject, WTFMove(value));
+    return createWrapper<EventTarget>(globalObject, WTF::move(value));
 }
 
 EventTarget* JSEventTarget::toWrapped(VM&, JSValue value)
 {
     if (value.inherits<JSWindowProxy>())
         return &jsCast<JSWindowProxy*>(asObject(value))->wrapped();
-    if (value.inherits<JSLocalDOMWindow>())
-        return &jsCast<JSLocalDOMWindow*>(asObject(value))->wrapped();
+    if (value.inherits<JSDOMWindow>())
+        return &jsCast<JSDOMWindow*>(asObject(value))->wrapped();
     if (value.inherits<JSWorkerGlobalScope>())
         return &jsCast<JSWorkerGlobalScope*>(asObject(value))->wrapped();
     if (value.inherits<JSEventTarget>())
@@ -66,7 +66,7 @@ JSEventTargetWrapper jsEventTargetCast(VM& vm, JSValue thisValue)
 {
     if (auto* target = jsDynamicCast<JSEventTarget*>(thisValue))
         return { target->wrapped(), *target };
-    if (auto* window = toJSDOMGlobalObject<JSLocalDOMWindow>(vm, thisValue))
+    if (auto* window = toJSDOMGlobalObject<JSDOMWindow>(vm, thisValue))
         return { window->wrapped(), *window };
     if (auto* scope = toJSDOMGlobalObject<JSWorkerGlobalScope>(vm, thisValue))
         return { scope->wrapped(), *scope };

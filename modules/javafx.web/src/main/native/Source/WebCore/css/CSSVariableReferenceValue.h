@@ -29,30 +29,37 @@
 
 #pragma once
 
-#include "CSSParserContext.h"
-#include "CSSValue.h"
-#include "CSSValueKeywords.h"
+#include <WebCore/CSSParserTokenRange.h>
+#include <WebCore/CSSPropertyNames.h>
+#include <WebCore/CSSValue.h>
+#include <WebCore/CSSValueKeywords.h>
+#include <WebCore/CSSVariableData.h>
+#include <wtf/PointerComparison.h>
+#include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 class CSSParserToken;
-class CSSParserTokenRange;
-class CSSVariableData;
+struct CSSParserContext;
 
 namespace Style {
-class BuilderState;
+class Builder;
 }
 
-class CSSVariableReferenceValue : public CSSValue {
+enum CSSPropertyID : uint16_t;
+
+class CSSVariableReferenceValue final : public CSSValue {
 public:
     static Ref<CSSVariableReferenceValue> create(const CSSParserTokenRange&, const CSSParserContext&);
-    static Ref<CSSVariableReferenceValue> create(Ref<CSSVariableData>&&, const CSSParserContext& = strictCSSParserContext());
+    static Ref<CSSVariableReferenceValue> create(Ref<CSSVariableData>&&);
 
     bool equals(const CSSVariableReferenceValue&) const;
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
 
-    RefPtr<CSSVariableData> resolveVariableReferences(Style::BuilderState&) const;
-    const CSSParserContext& context() const { return m_context; }
+    RefPtr<CSSVariableData> resolveVariableReferences(Style::Builder&) const;
+    const CSSParserContext& context() const;
+
+    RefPtr<CSSValue> resolveSingleValue(Style::Builder&, CSSPropertyID) const;
 
     // The maximum number of tokens that may be produced by a var() reference or var() fallback value.
     // https://drafts.csswg.org/css-variables/#long-variables
@@ -60,18 +67,59 @@ public:
 
     const CSSVariableData& data() const { return m_data.get(); }
 
+    template<typename CacheFunction> bool resolveAndCacheValue(Style::Builder&, NOESCAPE const CacheFunction&) const;
+
 private:
-    explicit CSSVariableReferenceValue(Ref<CSSVariableData>&&, const CSSParserContext&);
+    explicit CSSVariableReferenceValue(Ref<CSSVariableData>&&);
 
-    std::optional<Vector<CSSParserToken>> resolveTokenRange(CSSParserTokenRange, Style::BuilderState&) const;
-    bool resolveVariableReference(CSSParserTokenRange, CSSValueID, Vector<CSSParserToken>&, Style::BuilderState&) const;
+    std::optional<Vector<CSSParserToken>> resolveTokenRange(CSSParserTokenRange, Style::Builder&) const;
+    bool resolveVariableReference(CSSParserTokenRange, CSSValueID, Vector<CSSParserToken>&, Style::Builder&) const;
+    bool evaluateDashedFunction(StringView functionName, CSSParserTokenRange, Vector<CSSParserToken>&, Style::Builder&) const;
+
     enum class FallbackResult : uint8_t { None, Valid, Invalid };
-    std::pair<FallbackResult, Vector<CSSParserToken>> resolveVariableFallback(const AtomString& variableName, CSSParserTokenRange, CSSValueID functionId, Style::BuilderState&) const;
+    std::pair<FallbackResult, Vector<CSSParserToken>> resolveVariableFallback(const AtomString& variableName, CSSParserTokenRange, CSSValueID functionId, Style::Builder&) const;
 
-    Ref<CSSVariableData> m_data;
+    void cacheSimpleReference();
+    RefPtr<CSSVariableData> tryResolveSimpleReference(Style::Builder&) const;
+
+    const Ref<CSSVariableData> m_data;
     mutable String m_stringValue;
-    const CSSParserContext m_context;
+
+    // For quicky resolving simple var(--foo) values.
+    struct SimpleReference {
+        AtomString name;
+        CSSValueID functionId;
+    };
+    std::optional<SimpleReference> m_simpleReference;
+
+    mutable RefPtr<CSSVariableData> m_cacheDependencyData;
+    mutable RefPtr<CSSValue> m_cachedValue;
+#if ASSERT_ENABLED
+    mutable CSSPropertyID m_cachePropertyID { CSSPropertyInvalid };
+#endif
 };
+
+template<typename CacheFunction>
+bool CSSVariableReferenceValue::resolveAndCacheValue(Style::Builder& builder, NOESCAPE const CacheFunction& cacheFunction) const
+
+{
+    if (auto data = tryResolveSimpleReference(builder)) {
+        if (!arePointingToEqualData(m_cacheDependencyData, data))
+            cacheFunction(data);
+        m_cacheDependencyData = WTF::move(data);
+        return true;
+    }
+
+    auto resolvedTokens = resolveTokenRange(m_data->tokenRange(), builder);
+    if (!resolvedTokens)
+        return false;
+
+    if (!m_cacheDependencyData || m_cacheDependencyData->tokens() != *resolvedTokens) {
+        m_cacheDependencyData = CSSVariableData::create(*resolvedTokens, context());
+        cacheFunction(m_cacheDependencyData);
+    }
+    return true;
+}
 
 } // namespace WebCore
 

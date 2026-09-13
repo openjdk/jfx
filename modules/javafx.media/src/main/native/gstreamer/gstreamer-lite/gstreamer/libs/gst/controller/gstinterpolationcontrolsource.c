@@ -607,15 +607,16 @@ static struct
   GstControlSourceGetValueArray get_value_array;
 } interpolation_modes[] = {
   {
-  (GstControlSourceGetValue) interpolate_none_get,
-        (GstControlSourceGetValueArray) interpolate_none_get_value_array}, {
-  (GstControlSourceGetValue) interpolate_linear_get,
-        (GstControlSourceGetValueArray) interpolate_linear_get_value_array}, {
-  (GstControlSourceGetValue) interpolate_cubic_get,
-        (GstControlSourceGetValueArray) interpolate_cubic_get_value_array}, {
-    (GstControlSourceGetValue) interpolate_cubic_monotonic_get,
+        (GstControlSourceGetValue) interpolate_none_get,
+      (GstControlSourceGetValueArray) interpolate_none_get_value_array}, {
+        (GstControlSourceGetValue) interpolate_linear_get,
+      (GstControlSourceGetValueArray) interpolate_linear_get_value_array}, {
+        (GstControlSourceGetValue) interpolate_cubic_get,
+      (GstControlSourceGetValueArray) interpolate_cubic_get_value_array}, {
+        (GstControlSourceGetValue) interpolate_cubic_monotonic_get,
         (GstControlSourceGetValueArray)
-interpolate_cubic_monotonic_get_value_array}};
+      interpolate_cubic_monotonic_get_value_array}
+};
 
 static const guint num_interpolation_modes = G_N_ELEMENTS (interpolation_modes);
 

@@ -27,26 +27,28 @@
 #include "WorkerAuditAgent.h"
 
 #include "JSDOMGlobalObject.h"
-#include "WorkerOrWorkletGlobalScope.h"
 #include "WorkerOrWorkletScriptController.h"
 #include <JavaScriptCore/InjectedScript.h>
 #include <JavaScriptCore/InjectedScriptManager.h>
 #include <JavaScriptCore/JSCInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace Inspector;
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WorkerAuditAgent);
+
 WorkerAuditAgent::WorkerAuditAgent(WorkerAgentContext& context)
     : InspectorAuditAgent(context)
     , m_globalScope(context.globalScope)
 {
-    ASSERT(context.globalScope.isContextThread());
+    ASSERT(context.globalScope->isContextThread());
 }
 
 WorkerAuditAgent::~WorkerAuditAgent() = default;
 
-InjectedScript WorkerAuditAgent::injectedScriptForEval(Protocol::ErrorString& errorString, std::optional<Protocol::Runtime::ExecutionContextId>&& executionContextId)
+InjectedScript WorkerAuditAgent::injectedScriptForEval(Inspector::Protocol::ErrorString& errorString, std::optional<Inspector::Protocol::Runtime::ExecutionContextId>&& executionContextId)
 {
     if (executionContextId) {
         errorString = "executionContextId is not supported for workers as there is only one execution context"_s;
@@ -55,7 +57,7 @@ InjectedScript WorkerAuditAgent::injectedScriptForEval(Protocol::ErrorString& er
 
     // FIXME: What guarantees m_globalScope.script() is non-null?
     // FIXME: What guarantees globalScopeWrapper() is non-null?
-    return injectedScriptManager().injectedScriptFor(m_globalScope.script()->globalScopeWrapper());
+    return injectedScriptManager().injectedScriptFor(m_globalScope->script()->globalScopeWrapper());
 }
 
 } // namespace WebCore

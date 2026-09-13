@@ -29,6 +29,7 @@
 #include "JITCode.h"
 #include "JITCodeMap.h"
 #include "StructureStubInfo.h"
+#include <wtf/ButterflyArray.h>
 #include <wtf/CompactPointerTuple.h>
 
 #if ENABLE(JIT)
@@ -62,20 +63,18 @@ public:
     using Constant = unsigned;
 
     enum class Type : uint8_t {
-        GlobalObject,
-        StructureStubInfo,
         FunctionDecl,
         FunctionExpr,
     };
 
-    using Value = CompactPointerTuple<void*, Type>;
+    using Value = JITConstant<Type>;
 
     JITConstantPool() = default;
     JITConstantPool(JITConstantPool&&) = default;
     JITConstantPool& operator=(JITConstantPool&&) = default;
 
     JITConstantPool(Vector<Value>&& constants)
-        : m_constants(WTFMove(constants))
+        : m_constants(WTF::move(constants))
     {
     }
 
@@ -93,6 +92,13 @@ public:
     ~BaselineJITCode() override;
     PCToCodeOriginMap* pcToCodeOriginMap() override { return m_pcToCodeOriginMap.get(); }
 
+    CodeLocationLabel<JSInternalPtrTag> getCallLinkDoneLocationForBytecodeIndex(BytecodeIndex) const;
+
+    double livenessRate() const { return m_livenessRate; }
+    void setLivenessRate(double rate) { m_livenessRate = rate; }
+    double fullnessRate() const { return m_fullnessRate; }
+    void setFullnessRate(double rate) { m_fullnessRate = rate; }
+
     FixedVector<BaselineUnlinkedCallLinkInfo> m_unlinkedCalls;
     FixedVector<BaselineUnlinkedStructureStubInfo> m_unlinkedStubInfos;
     FixedVector<SimpleJumpTable> m_switchJumpTables;
@@ -100,26 +106,50 @@ public:
     JITCodeMap m_jitCodeMap;
     JITConstantPool m_constantPool;
     std::unique_ptr<PCToCodeOriginMap> m_pcToCodeOriginMap;
+private:
+    // The percentage of ValueProfiles that had some profiling data in them.
+    double m_livenessRate { 0 };
+    // The percentage of ValueProfile buckets that had a value in them.
+    double m_fullnessRate { 0 };
+public:
     bool m_isShareable { true };
 };
 
-class BaselineJITData final : public TrailingArray<BaselineJITData, void*> {
-    WTF_MAKE_FAST_ALLOCATED;
+class BaselineJITData final : public ButterflyArray<BaselineJITData, StructureStubInfo, void*> {
     friend class LLIntOffsetsExtractor;
 public:
-    using Base = TrailingArray<BaselineJITData, void*>;
+    using Base = ButterflyArray<BaselineJITData, StructureStubInfo, void*>;
 
-    static std::unique_ptr<BaselineJITData> create(unsigned poolSize)
+    static std::unique_ptr<BaselineJITData> create(unsigned stubInfoSize, unsigned poolSize, CodeBlock* codeBlock)
     {
-        return std::unique_ptr<BaselineJITData> { new (NotNull, fastMalloc(Base::allocationSize(poolSize))) BaselineJITData(poolSize) };
+        return std::unique_ptr<BaselineJITData> { createImpl(stubInfoSize, poolSize, codeBlock) };
     }
 
-    explicit BaselineJITData(unsigned size)
-        : Base(size)
+    explicit BaselineJITData(unsigned poolSize, unsigned stubInfoSize, CodeBlock*);
+
+    static constexpr ptrdiff_t offsetOfGlobalObject() { return OBJECT_OFFSETOF(BaselineJITData, m_globalObject); }
+    static constexpr ptrdiff_t offsetOfStackOffset() { return OBJECT_OFFSETOF(BaselineJITData, m_stackOffset); }
+    static constexpr ptrdiff_t offsetOfJITExecuteCounter() { return OBJECT_OFFSETOF(BaselineJITData, m_executeCounter) + OBJECT_OFFSETOF(BaselineExecutionCounter, m_counter); }
+    static constexpr ptrdiff_t offsetOfJITExecutionActiveThreshold() { return OBJECT_OFFSETOF(BaselineJITData, m_executeCounter) + OBJECT_OFFSETOF(BaselineExecutionCounter, m_activeThreshold); }
+    static constexpr ptrdiff_t offsetOfJITExecutionTotalCount() { return OBJECT_OFFSETOF(BaselineJITData, m_executeCounter) + OBJECT_OFFSETOF(BaselineExecutionCounter, m_totalCount); }
+
+    StructureStubInfo& stubInfo(unsigned index)
     {
+        auto span = stubInfos();
+        return span[span.size() - index - 1];
     }
 
-    FixedVector<StructureStubInfo> m_stubInfos;
+    auto stubInfos() -> decltype(leadingSpan())
+    {
+        return leadingSpan();
+    }
+
+    BaselineExecutionCounter& executeCounter() { return m_executeCounter; }
+    const BaselineExecutionCounter& executeCounter() const { return m_executeCounter; }
+
+    JSGlobalObject* m_globalObject { nullptr }; // This is not marked since owner CodeBlock will mark JSGlobalObject.
+    intptr_t m_stackOffset { 0 };
+    BaselineExecutionCounter m_executeCounter;
 };
 
 } // namespace JSC

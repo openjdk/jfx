@@ -28,28 +28,23 @@
 #if ENABLE(WEBGL)
 #include "OESShaderMultisampleInterpolation.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(OESShaderMultisampleInterpolation);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(OESShaderMultisampleInterpolation);
 
 OESShaderMultisampleInterpolation::OESShaderMultisampleInterpolation(WebGLRenderingContextBase& context)
-    : WebGLExtension(context)
+    : WebGLExtension(context, WebGLExtensionName::OESShaderMultisampleInterpolation)
 {
-    context.graphicsContextGL()->ensureExtensionEnabled("GL_OES_shader_multisample_interpolation"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::OES_shader_multisample_interpolation);
 }
 
 OESShaderMultisampleInterpolation::~OESShaderMultisampleInterpolation() = default;
 
-WebGLExtension::ExtensionName OESShaderMultisampleInterpolation::getName() const
-{
-    return OESShaderMultisampleInterpolationName;
-}
-
 bool OESShaderMultisampleInterpolation::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_OES_shader_multisample_interpolation"_s);
+    return context.supportsExtension(GCGLExtension::OES_shader_multisample_interpolation);
 }
 
 } // namespace WebCore

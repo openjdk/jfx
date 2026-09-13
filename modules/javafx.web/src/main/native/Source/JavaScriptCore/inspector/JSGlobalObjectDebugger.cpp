@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,10 +29,13 @@
 #include "JSGlobalObject.h"
 #include "JSLock.h"
 #include <wtf/RunLoop.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace Inspector {
 
 using namespace JSC;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(JSGlobalObjectDebugger);
 
 JSGlobalObjectDebugger::JSGlobalObjectDebugger(JSGlobalObject& globalObject)
     : Debugger(globalObject.vm())
@@ -64,12 +67,12 @@ void JSGlobalObjectDebugger::runEventLoopWhilePaused()
     JSC::JSLock::DropAllLocks dropAllLocks(&m_globalObject.vm());
 
     while (!m_doneProcessingDebuggerEvents) {
-        if (RunLoop::cycle(JSGlobalObjectDebugger::runLoopMode()) == RunLoop::CycleResult::Stop)
+        if (RunLoop::cycle(JSGlobalObjectDebugger::runLoopModeSingleton()) == RunLoop::CycleResult::Stop)
             break;
     }
 }
 
-RunLoopMode JSGlobalObjectDebugger::runLoopMode()
+RunLoopMode JSGlobalObjectDebugger::runLoopModeSingleton()
 {
 #if USE(CF) && !PLATFORM(WATCHOS)
     // Run the RunLoop in a custom run loop mode to prevent default observers

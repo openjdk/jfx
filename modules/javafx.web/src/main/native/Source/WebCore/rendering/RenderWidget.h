@@ -21,10 +21,10 @@
 
 #pragma once
 
-#include "HTMLFrameOwnerElement.h"
-#include "OverlapTestRequestClient.h"
-#include "RenderReplaced.h"
-#include "Widget.h"
+#include <WebCore/HTMLFrameOwnerElement.h>
+#include <WebCore/OverlapTestRequestClient.h>
+#include <WebCore/RenderReplaced.h>
+#include <WebCore/Widget.h>
 
 namespace WebCore {
 
@@ -48,7 +48,7 @@ public:
     static void scheduleWidgetToMove(Widget&, LocalFrameView*);
 
 private:
-    using WidgetToParentMap = HashMap<RefPtr<Widget>, LocalFrameView*>;
+    using WidgetToParentMap = HashMap<Ref<Widget>, SingleThreadWeakPtr<LocalFrameView>>;
     static WidgetToParentMap& widgetNewParentMap();
 
     WEBCORE_EXPORT void moveWidgets();
@@ -56,37 +56,34 @@ private:
     WEBCORE_EXPORT static bool s_haveScheduledWidgetToMove;
 };
 
-inline void WidgetHierarchyUpdatesSuspensionScope::scheduleWidgetToMove(Widget& widget, LocalFrameView* frame)
-{
-    s_haveScheduledWidgetToMove = true;
-    widgetNewParentMap().set(&widget, frame);
-}
-
 class RenderWidget : public RenderReplaced, private OverlapTestRequestClient, public RefCounted<RenderWidget> {
-    WTF_MAKE_ISO_ALLOCATED(RenderWidget);
+    WTF_MAKE_TZONE_ALLOCATED(RenderWidget);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderWidget);
 public:
     virtual ~RenderWidget();
 
-    HTMLFrameOwnerElement& frameOwnerElement() const { return downcast<HTMLFrameOwnerElement>(nodeForNonAnonymous()); }
+    inline HTMLFrameOwnerElement& frameOwnerElement() const; // Defined in RenderWidgetInlines.h
+    inline Ref<HTMLFrameOwnerElement> protectedFrameOwnerElement() const; // Defined in RenderWidgetInlines.h
 
     Widget* widget() const { return m_widget.get(); }
+    RefPtr<Widget> protectedWidget() const { return m_widget; }
     WEBCORE_EXPORT void setWidget(RefPtr<Widget>&&);
 
     static RenderWidget* find(const Widget&);
 
     enum class ChildWidgetState { Valid, Destroyed };
-    ChildWidgetState updateWidgetPosition() WARN_UNUSED_RETURN;
+    [[nodiscard]] ChildWidgetState updateWidgetPosition();
     WEBCORE_EXPORT IntRect windowClipRect() const;
 
-    bool requiresAcceleratedCompositing() const;
+    virtual bool requiresAcceleratedCompositing() const;
 
     RemoteFrame* remoteFrame() const;
 
 protected:
-    RenderWidget(HTMLFrameOwnerElement&, RenderStyle&&);
+    RenderWidget(Type, HTMLFrameOwnerElement&, RenderStyle&&);
 
     void willBeDestroyed() override;
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) final;
     void layout() override;
     void paint(PaintInfo&, const LayoutPoint&) override;
     bool nodeAtPoint(const HitTestRequest&, HitTestResult&, const HitTestLocation& locationInContainer, const LayoutPoint& accumulatedOffset, HitTestAction) override;
@@ -95,9 +92,7 @@ protected:
 private:
     void element() const = delete;
 
-    bool isWidget() const final { return true; }
-
-    bool needsPreferredWidthsRecalculation() const final;
+    bool shouldInvalidatePreferredWidths() const final;
     RenderBox* embeddedContentBox() const final;
 
     void setSelectionState(HighlightState) final;
@@ -114,4 +109,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderWidget, isWidget())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderWidget, isRenderWidget())

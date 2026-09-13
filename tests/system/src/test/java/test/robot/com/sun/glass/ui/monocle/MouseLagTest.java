@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,23 +25,22 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import com.sun.glass.ui.monocle.TestLogShim;
-import test.robot.com.sun.glass.ui.monocle.TestApplication;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
 
 public class MouseLagTest {
 
     private UInput ui;
-    @Rule public TestName name = new TestName();
 
-    @Before public void setUpScreen() throws Exception {
+    @BeforeEach
+    public void setUpScreen(TestInfo t) throws Exception {
         TestLogShim.reset();
-        TestLogShim.log(name.getMethodName());
+        // get test name from the junit5
+        TestLogShim.log(t.getDisplayName());
         TestApplication.showFullScreenScene();
         TestApplication.addMouseListeners();
         TestApplication.movePointerTo(300, 300);
@@ -61,7 +60,8 @@ public class MouseLagTest {
         ui.processLine("CREATE");
     }
 
-    @After public void destroyDevice() throws Exception {
+    @AfterEach
+    public void destroyDevice() throws Exception {
         if (ui != null) {
             try {
                 ui.processLine("DESTROY");
@@ -103,13 +103,11 @@ public class MouseLagTest {
 
         long t = System.currentTimeMillis() - startTime;
         // Make sure events could be sent in the required time
-        Assert.assertTrue("Took " + t + "ms to send 3000 events, of which "
-                          + TestLogShim.countLogContaining("moved")
-                          + " were received",
-                          t < 6000l * TestApplication.getTimeScale());
+        Assertions.assertTrue(
+            t < 6000l * TestApplication.getTimeScale(),
+            "Took " + t + "ms to send 3000 events, of which " + TestLogShim.countLogContaining("moved") + " were received");
         TestLogShim.log("Sent 3000 events in " + t + "ms");
         // Make sure events could be delivered in the required time
         TestLogShim.waitForLog("Mouse moved: 300, 310", 6000l - t);
     }
-
 }

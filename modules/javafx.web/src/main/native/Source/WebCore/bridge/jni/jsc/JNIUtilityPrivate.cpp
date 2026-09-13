@@ -324,7 +324,7 @@ jthrowable dispatchJNICall(int count, RootObject*, jobject obj, bool isStatic, J
       env->SetObjectArrayElement(argsArray, i, args[i]);
     jmethodID invokeMethod =
         env->GetStaticMethodID(utilityCls, "fwkInvokeWithContext",
-                               "(Ljava/lang/reflect/Method;Ljava/lang/Object;[Ljava/lang/Object;Ljava/security/AccessControlContext;)Ljava/lang/Object;");
+                               "(Ljava/lang/reflect/Method;Ljava/lang/Object;[Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
     jobject r = env->CallStaticObjectMethod(utilityCls, invokeMethod,
                                             rmethod, obj, argsArray,
                                             accessControlContext);

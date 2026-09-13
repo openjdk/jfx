@@ -836,6 +836,11 @@ qtdemux_dump_trun (GstQTDemux * qtdemux, GstByteReader * data, int depth)
     GST_LOG ("%*s    first-sample-flags: %u", depth, "", first_sample_flags);
   }
 
+  /* Nothing to print below */
+  if ((flags & (TR_SAMPLE_DURATION | TR_SAMPLE_SIZE | TR_SAMPLE_FLAGS |
+              TR_COMPOSITION_TIME_OFFSETS)) == 0)
+    return TRUE;
+
   for (i = 0; i < samples_count; i++) {
     if (flags & TR_SAMPLE_DURATION) {
       if (!gst_byte_reader_get_uint32_be (data, &sample_duration))
@@ -1157,6 +1162,35 @@ qtdemux_dump_gmin (GstQTDemux * qtdemux, GstByteReader * data, int depth)
       opc_b);
   GST_LOG ("%*s  balance :       %d", depth, "", balance);
 
+  return TRUE;
+}
+
+gboolean
+qtdemux_dump_mhaC (GstQTDemux * qtdemux, GstByteReader * data, int depth)
+{
+  guint8 config_version;
+  guint8 mpegh3da_profile_level_indication;
+  guint8 reference_channel_layout;
+  guint16 mpegh3da_config_length;
+  if (!gst_byte_reader_get_uint8 (data, &config_version) ||
+      !gst_byte_reader_get_uint8 (data, &mpegh3da_profile_level_indication)
+      || !gst_byte_reader_get_uint8 (data, &reference_channel_layout)
+      || !gst_byte_reader_get_uint16_be (data, &mpegh3da_config_length)
+      || !gst_byte_reader_skip (data, mpegh3da_config_length))
+    return FALSE;
+
+  GST_LOG_OBJECT (qtdemux,
+      "%*s  config version:                           %d", depth, "",
+      (gint) config_version);
+  GST_LOG_OBJECT (qtdemux,
+      "%*s  MPEG-H 3D audio profile level indication: %d", depth, "",
+      (gint) mpegh3da_profile_level_indication);
+  GST_LOG_OBJECT (qtdemux,
+      "%*s  reference channel layout:                 %d", depth, "",
+      (gint) reference_channel_layout);
+  GST_LOG_OBJECT (qtdemux,
+      "%*s  MPEG-H 3D audio configuration length:     %" G_GUINT16_FORMAT,
+      depth, "", mpegh3da_config_length);
   return TRUE;
 }
 

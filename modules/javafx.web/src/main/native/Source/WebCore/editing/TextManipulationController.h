@@ -25,14 +25,16 @@
 
 #pragma once
 
-#include "Position.h"
-#include "QualifiedName.h"
-#include "TextManipulationControllerExclusionRule.h"
-#include "TextManipulationControllerManipulationFailure.h"
-#include "TextManipulationItem.h"
+#include <WebCore/Position.h>
+#include <WebCore/QualifiedName.h>
+#include <WebCore/TextManipulationControllerExclusionRule.h>
+#include <WebCore/TextManipulationControllerManipulationFailure.h>
+#include <WebCore/TextManipulationItem.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/CompletionHandler.h>
-#include <wtf/EnumTraits.h>
+#include <wtf/Markable.h>
 #include <wtf/ObjectIdentifier.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
 
@@ -42,8 +44,11 @@ class Document;
 class Element;
 class VisiblePosition;
 
-class TextManipulationController : public CanMakeWeakPtr<TextManipulationController> {
-    WTF_MAKE_FAST_ALLOCATED;
+using NodeSet = HashSet<Ref<Node>>;
+
+class TextManipulationController final : public CanMakeWeakPtr<TextManipulationController>, public CanMakeCheckedPtr<TextManipulationController> {
+    WTF_MAKE_TZONE_ALLOCATED(TextManipulationController);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(TextManipulationController);
 public:
     TextManipulationController(Document&);
 
@@ -57,7 +62,8 @@ public:
     void didAddOrCreateRendererForNode(Node&);
     void removeNode(Node&);
 
-    WEBCORE_EXPORT Vector<ManipulationFailure> completeManipulation(const Vector<TextManipulationItem>&);
+    using ManipulationResult = TextManipulationControllerManipulationResult;
+    WEBCORE_EXPORT ManipulationResult completeManipulation(const Vector<TextManipulationItem>&);
 
 private:
     void observeParagraphs(const Position& start, const Position& end);
@@ -97,12 +103,10 @@ private:
     };
     using NodeEntry = std::pair<Ref<Node>, Ref<Node>>;
     Vector<Ref<Node>> getPath(Node*, Node*);
-    void updateInsertions(Vector<NodeEntry>&, const Vector<Ref<Node>>&, Node*, HashSet<Ref<Node>>&, Vector<NodeInsertion>&);
-    std::optional<ManipulationFailure::Type> replace(const ManipulationItemData&, const Vector<TextManipulationToken>&, HashSet<Ref<Node>>& containersWithoutVisualOverflowBeforeReplacement);
+    void updateInsertions(Vector<NodeEntry>&, const Vector<Ref<Node>>&, Node*, NodeSet&, Vector<NodeInsertion>&);
+    std::optional<ManipulationFailure::Type> replace(const ManipulationItemData&, const Vector<TextManipulationToken>&, NodeSet& containersWithoutVisualOverflowBeforeReplacement);
 
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
-    WeakHashSet<Element, WeakPtrImplWithEventTargetData> m_elementsWithNewRenderer;
-    WeakHashSet<Node, WeakPtrImplWithEventTargetData> m_textNodesWithNewRenderer;
     WeakHashSet<Node, WeakPtrImplWithEventTargetData> m_manipulatedNodes;
     WeakHashSet<Node, WeakPtrImplWithEventTargetData> m_manipulatedNodesWithNewContent;
     WeakHashSet<Node, WeakPtrImplWithEventTargetData> m_addedOrNewlyRenderedNodes;
@@ -116,8 +120,6 @@ private:
 
     Vector<ExclusionRule> m_exclusionRules;
     HashMap<TextManipulationItemIdentifier, ManipulationItemData> m_items;
-    TextManipulationItemIdentifier m_itemIdentifier;
-    TextManipulationTokenIdentifier m_tokenIdentifier;
 };
 
 } // namespace WebCore

@@ -28,9 +28,8 @@
 
 #if ENABLE(PICTURE_IN_PICTURE_API)
 
-#include "HTMLVideoElement.h"
-#include "Supplementable.h"
-#include <wtf/IsoMalloc.h>
+#include <WebCore/Supplementable.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -38,7 +37,7 @@ class DeferredPromise;
 class Document;
 
 class DocumentPictureInPicture : public Supplement<Document> {
-    WTF_MAKE_ISO_ALLOCATED(DocumentPictureInPicture);
+    WTF_MAKE_TZONE_ALLOCATED(DocumentPictureInPicture);
 public:
     virtual ~DocumentPictureInPicture();
 
@@ -48,9 +47,14 @@ public:
     static DocumentPictureInPicture* from(Document&);
 
 private:
-    static const char* supplementName() { return "DocumentPictureInPicture"; };
+    static ASCIILiteral supplementName() { return "DocumentPictureInPicture"_s; };
+    bool isDocumentPictureInPicture() const final { return true; }
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::DocumentPictureInPicture)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isDocumentPictureInPicture(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(PICTURE_IN_PICTURE_API)

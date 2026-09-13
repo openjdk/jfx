@@ -1,18 +1,5 @@
-package test.javafx.fxml;
-
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
-import javafx.util.Callback;
-import org.junit.Test;
-
-import java.io.IOException;
-import javafx.fxml.FXMLLoader;
-import javafx.fxml.LoadException;
-
-import static org.junit.Assert.*;
-
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +22,23 @@ import static org.junit.Assert.*;
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
+
+package test.javafx.fxml;
+
+import javafx.beans.value.ChangeListener;
+import javafx.beans.value.ObservableValue;
+import javafx.util.Callback;
+import org.junit.jupiter.api.Test;
+
+import java.io.IOException;
+import javafx.fxml.FXMLLoader;
+import javafx.fxml.LoadException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public class FXMLLoader_EventsTest {
     @Test
     public void testListEvents() throws Exception {
@@ -201,10 +205,12 @@ public class FXMLLoader_EventsTest {
     }
 
 
-    @Test(expected = LoadException.class)
+    @Test
     public void testPropertyEvents_testExpressionHandler_NA() throws IOException {
-        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("property_events_test_expression_na.fxml"));
-        fxmlLoader.load();
+        assertThrows(LoadException.class, () -> {
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("property_events_test_expression_na.fxml"));
+            fxmlLoader.load();
+        });
     }
 
     @Test

@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/ExportMacros.h>
+
 namespace WTF {
 
 class PrintStream;
@@ -33,6 +35,8 @@ enum class ClockType {
     Wall,
     Monotonic,
     Approximate,
+    Continuous,
+    ContinuousApproximate,
 };
 
 WTF_EXPORT_PRIVATE void printInternal(PrintStream&, ClockType);

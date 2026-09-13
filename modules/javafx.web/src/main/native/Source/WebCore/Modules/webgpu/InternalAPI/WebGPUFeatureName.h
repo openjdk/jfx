@@ -26,7 +26,6 @@
 #pragma once
 
 #include <cstdint>
-#include <wtf/EnumTraits.h>
 
 namespace WebCore::WebGPU {
 
@@ -34,13 +33,23 @@ enum class FeatureName : uint8_t {
     DepthClipControl,
     Depth32floatStencil8,
     TextureCompressionBc,
+    TextureCompressionBcSliced3d,
     TextureCompressionEtc2,
     TextureCompressionAstc,
+    TextureCompressionAstcSliced3d,
     TimestampQuery,
     IndirectFirstInstance,
     ShaderF16,
     Rg11b10ufloatRenderable,
     Bgra8unormStorage,
+    Float32Filterable,
+    Float32Blendable,
+    ClipDistances,
+    DualSourceBlending,
+    Float16Renderable,
+    Float32Renderable,
+    CoreFeaturesAndLimits,
+    TextureFormatsTier1,
 };
 
 } // namespace WebCore::WebGPU

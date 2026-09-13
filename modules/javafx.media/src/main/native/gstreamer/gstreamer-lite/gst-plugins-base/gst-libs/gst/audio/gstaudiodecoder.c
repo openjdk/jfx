@@ -957,7 +957,7 @@ gst_audio_decoder_setup (GstAudioDecoder * dec)
   gst_query_unref (query);
 
   /* normalize to bool */
-  dec->priv->agg = ! !res;
+  dec->priv->agg = !!res;
 }
 
 static GstFlowReturn
@@ -1384,6 +1384,7 @@ gst_audio_decoder_finish_frame_or_subframe (GstAudioDecoder * dec,
       goto exit;
     }
 
+    /* FIXME: This is wrong if multiple full frames are pending */
     if (priv->pending_events)
       send_pending_events (dec);
   }
@@ -1423,9 +1424,23 @@ gst_audio_decoder_finish_frame_or_subframe (GstAudioDecoder * dec,
     frames = priv->frames.length;
   }
 
-  if (G_LIKELY (priv->frames.length))
+  if (G_LIKELY (buf))
+    buf = gst_buffer_make_writable (buf);
+
+  if (G_LIKELY (priv->frames.length)) {
     ts = GST_BUFFER_PTS (priv->frames.head->data);
-  else
+    if (G_LIKELY (buf)) {
+      /* propagate RESYNC flag to output buffer */
+      if (GST_BUFFER_FLAG_IS_SET (priv->frames.head->data,
+              GST_BUFFER_FLAG_RESYNC))
+        GST_BUFFER_FLAG_SET (buf, GST_BUFFER_FLAG_RESYNC);
+      if (is_subframe) {
+        priv->frames.head->data =
+            gst_buffer_make_writable (priv->frames.head->data);
+        GST_BUFFER_FLAG_UNSET (priv->frames.head->data, GST_BUFFER_FLAG_RESYNC);
+      }
+    }
+  } else
     ts = GST_CLOCK_TIME_NONE;
 
   GST_DEBUG_OBJECT (dec, "leading frame ts %" GST_TIME_FORMAT,
@@ -1477,7 +1492,8 @@ gst_audio_decoder_finish_frame_or_subframe (GstAudioDecoder * dec,
        * discard buffer ts and carry on producing perfect stream,
        * otherwise resync to ts */
       if (G_UNLIKELY (diff < (gint64) - dec->priv->tolerance ||
-              diff > (gint64) dec->priv->tolerance)) {
+              diff > (gint64) dec->priv->tolerance ||
+              GST_BUFFER_FLAG_IS_SET (buf, GST_BUFFER_FLAG_RESYNC))) {
         GST_DEBUG_OBJECT (dec, "base_ts resync");
         priv->base_ts = ts;
         priv->samples = 0;
@@ -1501,7 +1517,6 @@ gst_audio_decoder_finish_frame_or_subframe (GstAudioDecoder * dec,
     priv->taglist_changed = FALSE;
   }
 
-  buf = gst_buffer_make_writable (buf);
   if (G_LIKELY (GST_CLOCK_TIME_IS_VALID (priv->base_ts))) {
     GST_BUFFER_PTS (buf) =
         priv->base_ts +
@@ -2310,8 +2325,21 @@ gst_audio_decoder_handle_gap (GstAudioDecoder * dec, GstEvent * event)
      * so just try sending GAP downstream */
     flowret = check_pending_reconfigure (dec);
     if (flowret == GST_FLOW_OK) {
-      send_pending_events (dec);
-      ret = gst_audio_decoder_push_event (dec, event);
+      /* Only forward the gap event immediately if no frames are currently
+       * pending, otherwise it needs to be queued up instead. This mirrors
+       * the code in gst_audio_decoder_finish_frame_or_subframe().
+       *
+       * FIXME: This is wrong if multiple full frames are pending.
+       */
+      if (dec->priv->subframe_samples == 0) {
+        send_pending_events (dec);
+        ret = gst_audio_decoder_push_event (dec, event);
+      } else {
+        dec->priv->pending_events =
+            g_list_append (dec->priv->pending_events, event);
+        gst_event_unref (event);
+        ret = TRUE;
+      }
     } else {
       ret = FALSE;
       gst_event_unref (event);
@@ -2366,9 +2394,11 @@ gst_audio_decoder_sink_eventfunc (GstAudioDecoder * dec, GstEvent * event)
     {
       GstSegment seg;
       GstFormat format;
+      guint32 seqnum;
 
       GST_AUDIO_DECODER_STREAM_LOCK (dec);
       gst_event_copy_segment (event, &seg);
+      seqnum = gst_event_get_seqnum (event);
 
       format = seg.format;
       if (format == GST_FORMAT_TIME) {
@@ -2395,6 +2425,7 @@ gst_audio_decoder_sink_eventfunc (GstAudioDecoder * dec, GstEvent * event)
           /* replace event */
           gst_event_unref (event);
           event = gst_event_new_segment (&seg);
+          gst_event_set_seqnum (event, seqnum);
         } else {
           GST_DEBUG_OBJECT (dec, "unsupported format; ignoring");
           GST_AUDIO_DECODER_STREAM_UNLOCK (dec);
@@ -2535,9 +2566,8 @@ gst_audio_decoder_sink_eventfunc (GstAudioDecoder * dec, GstEvent * event)
           break;
         }
       }
-
-      /* fall through */
     }
+      /* FALLTHROUGH */
     default:
       if (!GST_EVENT_IS_SERIALIZED (event)) {
         ret =
@@ -2894,8 +2924,8 @@ gst_audio_decoder_sink_query_default (GstAudioDecoder * dec, GstQuery * query)
         res = FALSE;
         break;
       }
-      /* fall-through */
     }
+      /* FALLTHROUGH */
     default:
       res = gst_pad_query_default (pad, GST_OBJECT_CAST (dec), query);
       break;

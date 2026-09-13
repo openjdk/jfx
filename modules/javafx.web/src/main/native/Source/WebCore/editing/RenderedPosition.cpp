@@ -33,6 +33,8 @@
 
 #include "CaretRectComputation.h"
 #include "InlineRunAndOffset.h"
+#include "NodeInlines.h"
+#include "RenderObjectInlines.h"
 #include "VisiblePosition.h"
 
 namespace WebCore {
@@ -40,7 +42,7 @@ namespace WebCore {
 static inline const RenderObject* rendererFromPosition(const Position& position)
 {
     ASSERT(position.isNotNull());
-    Node* rendererNode = nullptr;
+    RefPtr<Node> rendererNode;
     switch (position.anchorType()) {
     case Position::PositionIsOffsetInAnchor:
         rendererNode = position.computeNodeAfterPosition();
@@ -97,14 +99,14 @@ RenderedPosition::RenderedPosition(const Position& position, Affinity affinity)
 InlineIterator::LeafBoxIterator RenderedPosition::previousLeafOnLine() const
 {
     if (!m_previousLeafOnLine)
-        m_previousLeafOnLine = m_box->previousOnLineIgnoringLineBreak();
+        m_previousLeafOnLine = m_box->nextLineLeftwardOnLineIgnoringLineBreak();
     return *m_previousLeafOnLine;
 }
 
 InlineIterator::LeafBoxIterator RenderedPosition::nextLeafOnLine() const
 {
     if (!m_nextLeafOnLine)
-        m_nextLeafOnLine = m_box->nextOnLineIgnoringLineBreak();
+        m_nextLeafOnLine = m_box->nextLineRightwardOnLineIgnoringLineBreak();
     return *m_nextLeafOnLine;
 }
 
@@ -127,14 +129,14 @@ unsigned char RenderedPosition::bidiLevelOnRight() const
     return box ? box->bidiLevel() : 0;
 }
 
-RenderedPosition RenderedPosition::leftBoundaryOfBidiRun(unsigned char bidiLevelOfRun)
+RenderedPosition RenderedPosition::leftBoundaryOfBidiRun(unsigned char bidiLevelOfRun) const
 {
     if (!m_box || bidiLevelOfRun > m_box->bidiLevel())
         return RenderedPosition();
 
     auto box = m_box;
     do {
-        auto prev = box->previousOnLineIgnoringLineBreak();
+        auto prev = box->nextLineLeftwardOnLineIgnoringLineBreak();
         if (!prev || prev->bidiLevel() < bidiLevelOfRun)
             return RenderedPosition(&box->renderer(), box, box->leftmostCaretOffset());
         box = prev;
@@ -144,14 +146,14 @@ RenderedPosition RenderedPosition::leftBoundaryOfBidiRun(unsigned char bidiLevel
     return RenderedPosition();
 }
 
-RenderedPosition RenderedPosition::rightBoundaryOfBidiRun(unsigned char bidiLevelOfRun)
+RenderedPosition RenderedPosition::rightBoundaryOfBidiRun(unsigned char bidiLevelOfRun) const
 {
     if (!m_box || bidiLevelOfRun > m_box->bidiLevel())
         return RenderedPosition();
 
     auto box = m_box;
     do {
-        auto next = box->nextOnLineIgnoringLineBreak();
+        auto next = box->nextLineRightwardOnLineIgnoringLineBreak();
         if (!next || next->bidiLevel() < bidiLevelOfRun)
             return RenderedPosition(&box->renderer(), box, box->rightmostCaretOffset());
         box = next;
@@ -206,9 +208,9 @@ Position RenderedPosition::positionAtLeftBoundaryOfBiDiRun() const
     ASSERT(atLeftBoundaryOfBidiRun());
 
     if (atLeftmostOffsetInBox())
-        return makeDeprecatedLegacyPosition(m_renderer->node(), m_offset);
+        return makeDeprecatedLegacyPosition(m_renderer->protectedNode().get(), m_offset);
 
-    return makeDeprecatedLegacyPosition(nextLeafOnLine()->renderer().node(), nextLeafOnLine()->leftmostCaretOffset());
+    return makeDeprecatedLegacyPosition(nextLeafOnLine()->renderer().protectedNode().get(), nextLeafOnLine()->leftmostCaretOffset());
 }
 
 Position RenderedPosition::positionAtRightBoundaryOfBiDiRun() const
@@ -216,9 +218,9 @@ Position RenderedPosition::positionAtRightBoundaryOfBiDiRun() const
     ASSERT(atRightBoundaryOfBidiRun());
 
     if (atRightmostOffsetInBox())
-        return makeDeprecatedLegacyPosition(m_renderer->node(), m_offset);
+        return makeDeprecatedLegacyPosition(m_renderer->protectedNode().get(), m_offset);
 
-    return makeDeprecatedLegacyPosition(previousLeafOnLine()->renderer().node(), previousLeafOnLine()->rightmostCaretOffset());
+    return makeDeprecatedLegacyPosition(previousLeafOnLine()->renderer().protectedNode().get(), previousLeafOnLine()->rightmostCaretOffset());
 }
 
 IntRect RenderedPosition::absoluteRect(CaretRectMode caretRectMode) const
@@ -228,6 +230,18 @@ IntRect RenderedPosition::absoluteRect(CaretRectMode caretRectMode) const
 
     IntRect localRect = snappedIntRect(computeLocalCaretRect(*m_renderer, { m_box, m_offset }, caretRectMode));
     return localRect == IntRect() ? IntRect() : m_renderer->localToAbsoluteQuad(FloatRect(localRect)).enclosingBoundingBox();
+}
+
+std::optional<BoundaryPoint> RenderedPosition::boundaryPoint() const
+{
+    if (!m_box)
+        return std::nullopt;
+
+    RefPtr node = m_box->renderer().node();
+    if (!node)
+        return std::nullopt;
+
+    return BoundaryPoint { *node, offset() };
 }
 
 bool renderObjectContainsPosition(const RenderObject* target, const Position& position)

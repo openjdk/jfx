@@ -25,11 +25,12 @@
 
 #pragma once
 
-#include "ScrollingTreeScrollingNodeDelegate.h"
+#include <WebCore/ScrollingTreeScrollingNodeDelegate.h>
 
 #if ENABLE(ASYNC_SCROLLING) && ENABLE(SCROLLING_THREAD)
 
-#include "ScrollingEffectsController.h"
+#include <WebCore/ScrollingEffectsController.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -41,6 +42,7 @@ class ScrollingTreeScrollingNode;
 class ScrollingTree;
 
 class ThreadedScrollingTreeScrollingNodeDelegate : public ScrollingTreeScrollingNodeDelegate, private ScrollingEffectsControllerClient {
+    WTF_MAKE_TZONE_ALLOCATED(ThreadedScrollingTreeScrollingNodeDelegate);
 public:
     void updateSnapScrollState();
 
@@ -81,8 +83,10 @@ protected:
 
     ScrollExtents scrollExtents() const override;
 
-    void deferWheelEventTestCompletionForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason) const override;
-    void removeWheelEventTestCompletionDeferralForReason(WheelEventTestMonitor::ScrollableAreaIdentifier, WheelEventTestMonitor::DeferReason) const override;
+    void deferWheelEventTestCompletionForReason(ScrollingNodeID, WheelEventTestMonitor::DeferReason) const override;
+    void removeWheelEventTestCompletionDeferralForReason(ScrollingNodeID, WheelEventTestMonitor::DeferReason) const override;
+
+    ScrollingNodeID scrollingNodeIDForTesting() const final;
 
     FloatPoint adjustedScrollPosition(const FloatPoint&) const override;
 

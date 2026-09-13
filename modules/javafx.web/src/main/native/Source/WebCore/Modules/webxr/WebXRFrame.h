@@ -28,13 +28,13 @@
 #if ENABLE(WEBXR)
 
 #include "DOMHighResTimeStamp.h"
-#include "ExceptionOr.h"
 #include "PlatformXR.h"
+#include "TransformationMatrix.h"
 #include <JavaScriptCore/Float32Array.h>
-#include <wtf/IsoMalloc.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -46,23 +46,36 @@ class WebXRReferenceSpace;
 class WebXRSession;
 class WebXRSpace;
 class WebXRViewerPose;
+template<typename> class ExceptionOr;
+
+#if ENABLE(WEBXR_HIT_TEST)
+class WebXRHitTestResult;
+class WebXRHitTestSource;
+class WebXRTransientInputHitTestResult;
+class WebXRTransientInputHitTestSource;
+#endif
 
 class WebXRFrame : public RefCounted<WebXRFrame> {
-    WTF_MAKE_ISO_ALLOCATED(WebXRFrame);
+    WTF_MAKE_TZONE_ALLOCATED(WebXRFrame);
 public:
     enum class IsAnimationFrame : bool { No, Yes };
     static Ref<WebXRFrame> create(WebXRSession&, IsAnimationFrame);
     ~WebXRFrame();
 
-    const WebXRSession& session() const { return m_session.get(); }
+    WebXRSession& session() const { return m_session.get(); }
 
     ExceptionOr<RefPtr<WebXRViewerPose>> getViewerPose(const Document&, const WebXRReferenceSpace&);
     ExceptionOr<RefPtr<WebXRPose>> getPose(const Document&, const WebXRSpace&, const WebXRSpace&);
 
 #if ENABLE(WEBXR_HANDS)
     ExceptionOr<RefPtr<WebXRJointPose>> getJointPose(const Document&, const WebXRJointSpace&, const WebXRSpace&);
-    ExceptionOr<bool> fillJointRadii(const Vector<RefPtr<WebXRJointSpace>>&, Float32Array&);
-    ExceptionOr<bool> fillPoses(const Document&, const Vector<RefPtr<WebXRSpace>>&, const WebXRSpace&, Float32Array&);
+    ExceptionOr<bool> fillJointRadii(const Vector<Ref<WebXRJointSpace>>&, Float32Array&);
+    ExceptionOr<bool> fillPoses(const Document&, const Vector<Ref<WebXRSpace>>&, const WebXRSpace&, Float32Array&);
+#endif
+
+#if ENABLE(WEBXR_HIT_TEST)
+    ExceptionOr<Vector<Ref<WebXRHitTestResult>>> getHitTestResults(const WebXRHitTestSource&);
+    ExceptionOr<Vector<Ref<WebXRTransientInputHitTestResult>>> getHitTestResultsForTransientInput(const WebXRTransientInputHitTestSource&);
 #endif
 
     void setTime(DOMHighResTimeStamp time) { m_time = time; }
@@ -71,7 +84,14 @@ public:
     bool isActive() const { return m_active; }
     bool isAnimationFrame() const { return m_isAnimationFrame; }
 
-    static TransformationMatrix matrixFromPose(const PlatformXR::Device::FrameData::Pose&);
+    static TransformationMatrix matrixFromPose(const PlatformXR::FrameData::Pose&);
+
+    struct PopulatedPose {
+        TransformationMatrix transform;
+        bool emulatedPosition { false };
+    };
+
+    ExceptionOr<std::optional<PopulatedPose>> populatePose(const Document&, const WebXRSpace&, const WebXRSpace&);
 
 private:
     WebXRFrame(WebXRSession&, IsAnimationFrame);
@@ -80,13 +100,10 @@ private:
     bool isLocalReferenceSpace(const WebXRSpace&) const;
     bool mustPosesBeLimited(const WebXRSpace&, const WebXRSpace&) const;
 
-    struct PopulatedPose;
-    ExceptionOr<std::optional<PopulatedPose>> populatePose(const Document&, const WebXRSpace&, const WebXRSpace&);
-
     bool m_active { false };
     bool m_isAnimationFrame { false };
     DOMHighResTimeStamp m_time { 0 };
-    Ref<WebXRSession> m_session;
+    const Ref<WebXRSession> m_session;
 };
 
 } // namespace WebCore

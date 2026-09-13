@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,31 +41,37 @@ public class AttrImpl extends NodeImpl implements Attr {
 
 
 // Attributes
+    @Override
     public String getName() {
         return getNameImpl(getPeer());
     }
     native static String getNameImpl(long peer);
 
+    @Override
     public boolean getSpecified() {
         return getSpecifiedImpl(getPeer());
     }
     native static boolean getSpecifiedImpl(long peer);
 
+    @Override
     public String getValue() {
         return getValueImpl(getPeer());
     }
     native static String getValueImpl(long peer);
 
+    @Override
     public void setValue(String value) throws DOMException {
         setValueImpl(getPeer(), value);
     }
     native static void setValueImpl(long peer, String value);
 
+    @Override
     public Element getOwnerElement() {
         return ElementImpl.getImpl(getOwnerElementImpl(getPeer()));
     }
     native static long getOwnerElementImpl(long peer);
 
+    @Override
     public boolean isId() {
         return isIdImpl(getPeer());
     }
@@ -73,6 +79,7 @@ public class AttrImpl extends NodeImpl implements Attr {
 
 
 //stubs
+    @Override
     public TypeInfo getSchemaTypeInfo() {
         throw new UnsupportedOperationException("Not supported yet.");
     }

@@ -28,9 +28,10 @@
 
 #if ENABLE(PICTURE_IN_PICTURE_API)
 
-#include "ActiveDOMObject.h"
-#include "EventTarget.h"
-#include "IntSize.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/EventTargetInterfaces.h>
+#include <WebCore/IntSize.h>
 #include <wtf/RefCounted.h>
 
 namespace WebCore {
@@ -39,34 +40,35 @@ class PictureInPictureWindow final
     : public ActiveDOMObject
     , public EventTarget
     , public RefCounted<PictureInPictureWindow> {
-    WTF_MAKE_ISO_ALLOCATED(PictureInPictureWindow);
+    WTF_MAKE_TZONE_ALLOCATED(PictureInPictureWindow);
 public:
     static Ref<PictureInPictureWindow> create(Document&);
     virtual ~PictureInPictureWindow();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     int width() const { return m_size.width(); }
     int height() const { return m_size.height(); }
     void setSize(const IntSize&);
     void close();
 
-    using RefCounted<PictureInPictureWindow>::ref;
-    using RefCounted<PictureInPictureWindow>::deref;
-
 private:
     PictureInPictureWindow(Document&);
 
-    // ActiveDOMObject
-    const char* activeDOMObjectName() const final { return "PictureInPictureWindow"; }
-
-    // EventTarget
+    // EventTarget.
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
-    EventTargetInterface eventTargetInterface() const override { return PictureInPictureWindowEventTargetInterfaceType; };
-    ScriptExecutionContext* scriptExecutionContext() const override { return ActiveDOMObject::scriptExecutionContext(); };
+    enum EventTargetInterfaceType eventTargetInterface() const override { return EventTargetInterfaceType::PictureInPictureWindow; };
+    ScriptExecutionContext* scriptExecutionContext() const override;
 
     IntSize m_size;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(PictureInPictureWindow)
 
 #endif // ENABLE(PICTURE_IN_PICTURE_API)

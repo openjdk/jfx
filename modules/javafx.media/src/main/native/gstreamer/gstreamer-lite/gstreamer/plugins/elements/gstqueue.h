@@ -99,6 +99,7 @@ struct _GstQueue {
 
   /* position of src/sink */
   GstClockTimeDiff sinktime, srctime;
+  GstClockTimeDiff sink_start_time;
   /* TRUE if either position needs to be recalculated */
   gboolean sink_tainted, src_tainted;
 
@@ -108,7 +109,7 @@ struct _GstQueue {
   gboolean      eos;
 
   /* the queue of data we're keeping our grubby hands on */
-  GstQueueArray *queue;
+  GstVecDeque *queue;
 
   GstQueueSize
     cur_level,          /* currently in the queue */
@@ -128,7 +129,8 @@ struct _GstQueue {
   gboolean head_needs_discont, tail_needs_discont;
   gboolean push_newsegment;
 
-  gboolean silent;      /* don't emit signals */
+  gboolean silent;             /* don't emit signals */
+  gboolean notify_levels;      /* emit 'notify' signals on level changes */
 
   /* whether the first new segment has been applied to src */
   gboolean newseg_applied_to_src;

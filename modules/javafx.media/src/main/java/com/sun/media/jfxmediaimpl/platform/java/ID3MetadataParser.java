@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,6 +38,11 @@ final class ID3MetadataParser extends MetadataParserImpl {
     private static final int ID3_VERSION_MIN = 2;
     private static final int ID3_VERSION_MAX = 4;
 
+    // Max tag size cannot be more than 256 MB
+    private static final int MAX_TAG_SIZE = 256 * 1024 * 1024;
+    // Max frame size cannot be more than 16 MB
+    private static final int MAX_FRAME_SIZE = 16 * 1024 * 1024;
+
     private static final String CHARSET_UTF_8 = "UTF-8";
     private static final String CHARSET_ISO_8859_1 = "ISO-8859-1";
     private static final String CHARSET_UTF_16 = "UTF-16";
@@ -46,6 +51,7 @@ final class ID3MetadataParser extends MetadataParserImpl {
     private int COMMCount = 0;
     private int TXXXCount = 0;
     private int version = 3; // Default to 3
+    private int tagSize = 0;
     private boolean unsynchronized = false;
 
     public ID3MetadataParser(Locator locator) {
@@ -82,10 +88,13 @@ final class ID3MetadataParser extends MetadataParserImpl {
                     unsynchronized = true;
                 }
 
-                int tagSize = 0;
                 for (int i = 6, shift = 21; i < 10; i++) {
                     tagSize += (buf[i] & 0x7f) << shift;
                     shift -= 7;
+                }
+
+                if (!validateTagSize()) {
+                    return; // Abort parser if tag size is invalid.
                 }
 
                 startRawMetadata(tagSize + 10);
@@ -106,6 +115,14 @@ final class ID3MetadataParser extends MetadataParserImpl {
                         idBytes = getBytes(4);
                         frameSize = getFrameSize();
                         skipBytes(2);
+                    }
+
+                    if (!validateFrameSize(frameSize)) {
+                        // Dispose any parsed or partially parsed metadata
+                        disposeMetadata();
+                        setParseRawMetadata(false);
+                        disposeRawMetadata();
+                        return; // Abort parser if frame size is invalid.
                     }
 
                     if (0 == idBytes[0]) {
@@ -237,6 +254,30 @@ final class ID3MetadataParser extends MetadataParserImpl {
             }
             done();
         }
+    }
+
+    // Tag size should be <= MAX_TAG_SIZE and stream length.
+    private boolean validateTagSize() {
+        long streamLength = getStreamLength(); // Can be -1 if unknown
+        if ((streamLength > 0 && tagSize > streamLength) ||
+                tagSize > MAX_TAG_SIZE) {
+            Logger.logMsg(Logger.ERROR, "Unexpected ID3 tag size("
+                    + tagSize +"). ID3 metadata will be ignored.");
+            return false;
+        }
+
+        return true;
+    }
+
+    // Frame size should be <= MAX_FRAME_SIZE and tag size.
+    private boolean validateFrameSize(int frameSize) {
+        if (frameSize > tagSize || frameSize > MAX_FRAME_SIZE) {
+            Logger.logMsg(Logger.ERROR, "Unexpected ID3 frame size("
+                    + frameSize +"). ID3 metadata will be ignored.");
+            return false;
+        }
+
+        return true;
     }
 
     private int getFrameSize() throws IOException {

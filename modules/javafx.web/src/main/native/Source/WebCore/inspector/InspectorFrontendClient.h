@@ -31,12 +31,13 @@
 
 #pragma once
 
-#include "CertificateInfo.h"
-#include "Color.h"
-#include "DiagnosticLoggingClient.h"
-#include "FrameIdentifier.h"
-#include "InspectorDebuggableType.h"
-#include "UserInterfaceLayoutDirection.h"
+#include <WebCore/CertificateInfo.h>
+#include <WebCore/Color.h>
+#include <WebCore/DiagnosticLoggingClient.h>
+#include <WebCore/FrameIdentifier.h>
+#include <WebCore/InspectorDebuggableType.h>
+#include <WebCore/InspectorFrontendAPIDispatcher.h>
+#include <WebCore/UserInterfaceLayoutDirection.h>
 #include <wtf/Forward.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
@@ -49,10 +50,31 @@ using ExtensionTabID = String;
 #endif
 
 namespace WebCore {
+class InspectorFrontendClient;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::InspectorFrontendClient> : std::true_type { };
+}
+
+namespace WebCore {
 
 class FloatRect;
-class InspectorFrontendAPIDispatcher;
 class Page;
+
+enum class InspectorFrontendClientAppearance : uint8_t {
+    System,
+    Light,
+    Dark,
+};
+
+struct InspectorFrontendClientSaveData {
+    String displayType;
+    String url;
+    String content;
+    bool base64Encoded;
+};
 
 class InspectorFrontendClient : public CanMakeWeakPtr<InspectorFrontendClient> {
 public:
@@ -90,11 +112,8 @@ public:
     virtual void reopen() = 0;
     virtual void resetState() = 0;
 
-    enum class Appearance {
-        System,
-        Light,
-        Dark,
-    };
+    using Appearance = WebCore::InspectorFrontendClientAppearance;
+
     WEBCORE_EXPORT virtual void setForcedAppearance(Appearance) = 0;
 
     virtual UserInterfaceLayoutDirection userInterfaceLayoutDirection() const = 0;
@@ -114,15 +133,9 @@ public:
         SingleFile,
         FileVariants,
     };
-    struct SaveData {
-        String displayType;
-        String url;
-        String content;
-        bool base64Encoded;
 
-        template<class Encoder> void encode(Encoder&) const;
-        template<class Decoder> static std::optional<SaveData> decode(Decoder&);
-    };
+    using SaveData = InspectorFrontendClientSaveData;
+
     virtual bool canSave(SaveMode) = 0;
     virtual void save(Vector<SaveData>&&, bool forceSaveAs) = 0;
 
@@ -136,6 +149,9 @@ public:
     virtual void showCertificate(const CertificateInfo&) = 0;
 
     virtual void setInspectorPageDeveloperExtrasEnabled(bool) = 0;
+
+    virtual void setPageAndTextZoomFactors(double /* pageZoomFactor */, double /* textZoomFactor */) { }
+    virtual double pageZoomFactor() const { return 1.0; }
 
 #if ENABLE(INSPECTOR_TELEMETRY)
     virtual bool supportsDiagnosticLogging() { return false; }
@@ -153,63 +169,10 @@ public:
 
     WEBCORE_EXPORT virtual void sendMessageToBackend(const String&) = 0;
     WEBCORE_EXPORT virtual InspectorFrontendAPIDispatcher& frontendAPIDispatcher() = 0;
+    Ref<InspectorFrontendAPIDispatcher> protectedFrontendAPIDispatcher() { return frontendAPIDispatcher(); }
     WEBCORE_EXPORT virtual Page* frontendPage() = 0;
 
     WEBCORE_EXPORT virtual bool isUnderTest() = 0;
 };
 
-template<class Encoder>
-void InspectorFrontendClient::SaveData::encode(Encoder& encoder) const
-{
-    encoder << displayType;
-    encoder << url;
-    encoder << content;
-    encoder << base64Encoded;
-}
-
-template<class Decoder>
-std::optional<InspectorFrontendClient::SaveData> InspectorFrontendClient::SaveData::decode(Decoder& decoder)
-{
-#define DECODE(name, type) \
-    std::optional<type> name; \
-    decoder >> name; \
-    if (!name) \
-        return std::nullopt; \
-
-    DECODE(displayType, String)
-    DECODE(url, String)
-    DECODE(content, String)
-    DECODE(base64Encoded, bool)
-
-#undef DECODE
-
-    return { {
-        WTFMove(*displayType),
-        WTFMove(*url),
-        WTFMove(*content),
-        WTFMove(*base64Encoded),
-    } };
-}
-
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::InspectorFrontendClient::Appearance> {
-    using values = EnumValues<
-        WebCore::InspectorFrontendClient::Appearance,
-        WebCore::InspectorFrontendClient::Appearance::System,
-        WebCore::InspectorFrontendClient::Appearance::Light,
-        WebCore::InspectorFrontendClient::Appearance::Dark
-    >;
-};
-
-template<> struct EnumTraits<WebCore::InspectorFrontendClient::SaveMode> {
-    using values = EnumValues<
-        WebCore::InspectorFrontendClient::SaveMode,
-        WebCore::InspectorFrontendClient::SaveMode::SingleFile,
-        WebCore::InspectorFrontendClient::SaveMode::FileVariants
-    >;
-};
-
-} // namespace WTF

@@ -47,9 +47,8 @@ public:
         : m_graph(graph)
         , m_graphDumpMode(graphDumpMode)
         , m_graphDumpBeforePhase(graphDumpBeforePhase)
-        , m_myTupleRefCounts(m_graph.m_tupleData.size())
+        , m_myTupleRefCounts(m_graph.m_tupleData.size(), 0)
     {
-        m_myTupleRefCounts.fill(0);
     }
 
     #define VALIDATE(context, assertion) do { \
@@ -275,6 +274,7 @@ public:
                     case DoubleRepUse:
                     case BooleanUse:
                     case KnownBooleanUse:
+                    case KnownStorageUse:
                         break;
                     default:
                         VALIDATE((node), !"Bad use kind");
@@ -364,6 +364,17 @@ public:
                         VALIDATE((node), !hasAnyArrayStorage(structure->indexingType()));
                     }
                     break;
+                case NewArrayWithButterfly:
+                case NewButterflyWithSize:
+                case MaterializeNewArrayWithButterfly: {
+                    // These only support constant size butterflies right now.
+                    Edge sizeChild = node->op() == MaterializeNewArrayWithButterfly ? m_graph.varArgChild(node, 0) : node->child1();
+                    VALIDATE((node), sizeChild->isInt32Constant());
+                    VALIDATE((node), !hasAnyArrayStorage(node->indexingType()));
+                    if (node->op() == MaterializeNewArrayWithButterfly)
+                        VALIDATE((node), !hasUndecided(node->indexingType()));
+                    break;
+                }
                 case DoubleConstant:
                 case Int52Constant:
                     VALIDATE((node), node->isNumberConstant());
@@ -411,7 +422,7 @@ public:
                     VALIDATE((node), node->vectorLengthHint() >= node->numChildren());
                     break;
                 case NewArrayBuffer:
-                    VALIDATE((node), node->vectorLengthHint() >= node->castOperand<JSImmutableButterfly*>()->length());
+                    VALIDATE((node), node->vectorLengthHint() >= node->castOperand<JSCellButterfly*>()->length());
                     break;
                 case GetByVal:
                     switch (node->arrayMode().type()) {
@@ -496,7 +507,7 @@ public:
 
         for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
             // We expect the predecessor list to be de-duplicated.
-            HashSet<BasicBlock*> predecessors;
+            UncheckedKeyHashSet<BasicBlock*> predecessors;
             for (BasicBlock* predecessor : block->predecessors)
                 predecessors.add(predecessor);
             VALIDATE((block), predecessors.size() == block->predecessors.size());
@@ -516,8 +527,8 @@ private:
             if (!block)
                 continue;
 
-            HashSet<Node*> phisInThisBlock;
-            HashSet<Node*> nodesInThisBlock;
+            UncheckedKeyHashSet<Node*> phisInThisBlock;
+            UncheckedKeyHashSet<Node*> nodesInThisBlock;
 
             for (size_t i = 0; i < block->numNodes(); ++i) {
                 Node* node = block->node(i);
@@ -533,7 +544,7 @@ private:
             }
 
             {
-                HashSet<Node*> seenNodes;
+                UncheckedKeyHashSet<Node*> seenNodes;
                 for (size_t i = 0; i < block->size(); ++i) {
                     Node* node = block->at(i);
                     m_graph.doToChildren(node, [&] (const Edge& edge) {
@@ -675,12 +686,14 @@ private:
                 case CheckInBounds:
                 case CheckInBoundsInt52:
                 case PhantomNewObject:
+                case PhantomNewArrayWithButterfly:
+                case PhantomNewButterflyWithSize:
                 case PhantomNewFunction:
                 case PhantomNewGeneratorFunction:
                 case PhantomNewAsyncFunction:
                 case PhantomNewAsyncGeneratorFunction:
                 case PhantomCreateActivation:
-                case PhantomNewRegexp:
+                case PhantomNewRegExp:
                 case GetMyArgumentByVal:
                 case GetMyArgumentByValOutOfBounds:
                 case PutHint:
@@ -797,7 +810,7 @@ private:
 
         if (m_graph.m_form == ThreadedCPS) {
             Vector<Node*> worklist;
-            HashSet<Node*> seen;
+            UncheckedKeyHashSet<Node*> seen;
             for (BasicBlock* block : m_graph.blocksInNaturalOrder()) {
                 for (Node* node : *block) {
                     if (node->op() == GetLocal || node->op() == PhantomLocal) {
@@ -867,7 +880,7 @@ private:
 
             bool isOSRExited = false;
 
-            HashSet<Node*> nodesInThisBlock;
+            UncheckedKeyHashSet<Node*> nodesInThisBlock;
 
             for (auto* node : *block) {
                 switch (node->op()) {
@@ -895,6 +908,7 @@ private:
                     continue;
                 switch (node->op()) {
                 case PhantomNewObject:
+                case PhantomNewButterflyWithSize:
                 case PhantomNewFunction:
                 case PhantomNewGeneratorFunction:
                 case PhantomNewAsyncFunction:
@@ -903,7 +917,7 @@ private:
                 case PhantomDirectArguments:
                 case PhantomCreateRest:
                 case PhantomClonedArguments:
-                case PhantomNewRegexp:
+                case PhantomNewRegExp:
                 case MovHint:
                 case Upsilon:
                 case ForwardVarargs:
@@ -913,6 +927,36 @@ private:
                 case ConstructForwardVarargs:
                 case GetMyArgumentByVal:
                 case GetMyArgumentByValOutOfBounds:
+                    break;
+
+                case PhantomNewArrayWithButterfly:
+                    // Conceptually it is valid to sink/eliminate the Array wrapper around a butterfly.
+                    // The problem is that our GC doesn't scan auxilary buffers it sees on the stack since
+                    // they don't have an indexing header. This means any new objects that are stored into
+                    // the butterfly wouldn't be marked. e.g. something like:
+                    //
+                    // 1: NewButterflyWithSize
+                    // 2: PhantomNewArrayWithButterfly
+                    // 3: NewObject
+                    // -: PutByVal(@2, 1, @3, @1)
+                    // ... GC
+                    // 4: GetByVal(@2, 1, @1)
+                    // -: Use(@4) <-- UAF
+                    //
+                    // It's possible we work around this by one of:
+                    // 1) Allocating a JSCellButterfly but that only saves a few bytes so it probably
+                    //    wouldn't be profitable.
+                    // 2) Conservatively scanning any auxilary found on the stack but not visited by an
+                    //    object.
+                    //
+                    //
+                    // This assertion below is what we'd like to ASSERT but it's possible
+                    // (although inefficient) for ObjectAllocationSinking to sink an Array
+                    // but not the Butterfly then never store into said Butterfly.
+                    //
+                    // VALIDATE((node), node->child2()->op() == PhantomNewButterflyWithSize);
+                    //
+                    // Instead we rely on every store node validating that no child is a Phantom.
                     break;
 
                 case Check:
@@ -946,7 +990,7 @@ private:
 
                 case PhantomNewArrayBuffer:
                     VALIDATE((node), m_graph.m_form == SSA);
-                    VALIDATE((node), node->vectorLengthHint() >= node->castOperand<JSImmutableButterfly*>()->length());
+                    VALIDATE((node), node->vectorLengthHint() >= node->castOperand<JSCellButterfly*>()->length());
                     break;
 
                 case NewArrayWithSpread: {
@@ -1087,22 +1131,24 @@ private:
     {
         if (m_graphDumpMode == DontDumpGraph)
             return;
+        WTF::dataFile().atomically([&](auto&) {
         dataLog("\n");
         if (!m_graphDumpBeforePhase.isNull()) {
             dataLog("Before phase:\n");
             dataLog(m_graphDumpBeforePhase);
         }
         dataLog("At time of failure:\n");
-        m_graph.dump();
+            dataLog(m_graph);
+        });
     }
 
     Graph& m_graph;
     GraphDumpMode m_graphDumpMode;
     CString m_graphDumpBeforePhase;
 
-    HashMap<Node*, unsigned> m_myRefCounts;
+    UncheckedKeyHashMap<Node*, unsigned> m_myRefCounts;
     Vector<uint32_t> m_myTupleRefCounts;
-    HashSet<Node*> m_acceptableNodes;
+    UncheckedKeyHashSet<Node*> m_acceptableNodes;
 };
 
 } // End anonymous namespace.

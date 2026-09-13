@@ -19,10 +19,11 @@
 
 #pragma once
 
-#include "FloatSize.h"
-#include "Image.h"
+#include <WebCore/FloatSize.h>
+#include <WebCore/Image.h>
 #include <wtf/HashMap.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -35,7 +36,7 @@ class SVGImageForContainer;
 class RenderObject;
 
 class SVGImageCache {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(SVGImageCache, WEBCORE_EXPORT);
 public:
     explicit SVGImageCache(SVGImage*);
     ~SVGImageCache();
@@ -49,10 +50,11 @@ public:
 
 private:
     Image* findImageForRenderer(const RenderObject*) const;
+    RefPtr<SVGImage> protectedSVGImage() const;
 
-    typedef HashMap<const CachedImageClient*, RefPtr<SVGImageForContainer>> ImageForContainerMap;
+    using ImageForContainerMap = HashMap<const CachedImageClient*, Ref<SVGImageForContainer>>;
 
-    SVGImage* m_svgImage;
+    WeakPtr<SVGImage> m_svgImage;
     ImageForContainerMap m_imageForContainerMap;
 };
 

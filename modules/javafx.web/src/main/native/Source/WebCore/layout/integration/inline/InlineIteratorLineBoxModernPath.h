@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "InlineIteratorBoxModernPath.h"
-#include "LayoutIntegrationInlineContent.h"
-#include "RenderBlockFlow.h"
+#include <WebCore/InlineIteratorBoxModernPath.h>
+#include <WebCore/LayoutIntegrationInlineContent.h>
+#include <WebCore/RenderBlockFlow.h>
 
 namespace WebCore {
 namespace InlineIterator {
@@ -52,28 +52,44 @@ public:
     float logicalTop() const { return line().lineBoxLogicalRect().y(); }
     float logicalBottom() const { return line().lineBoxLogicalRect().maxY(); }
     float logicalWidth() const { return line().lineBoxLogicalRect().width(); }
-    float inkOverflowTop() const { return line().inkOverflow().y(); }
-    float inkOverflowBottom() const { return line().inkOverflow().maxY(); }
+    float inkOverflowLogicalTop() const { return line().isHorizontal() ? line().inkOverflow().y() : line().inkOverflow().x(); }
+    float inkOverflowLogicalBottom() const { return line().isHorizontal() ? line().inkOverflow().maxY() : line().inkOverflow().maxX(); }
     float scrollableOverflowTop() const { return line().scrollableOverflow().y(); }
     float scrollableOverflowBottom() const { return line().scrollableOverflow().maxY(); }
 
     bool hasEllipsis() const { return line().hasEllipsis(); }
-    FloatRect ellipsisVisualRectIgnoringBlockDirection() const { return *line().ellipsisVisualRect(); }
-    TextRun ellipsisText() const { return line().ellipsisText(); }
+    FloatRect ellipsisVisualRectIgnoringBlockDirection() const { return lineEllipsis().visualRect; }
+    TextRun ellipsisText() const { return TextRun { lineEllipsis().text.string() }; }
 
-    float contentLogicalTopAdjustedForPrecedingLineBox() const { return !m_lineIndex ? contentLogicalTop() : LineBoxIteratorModernPath(*m_inlineContent, m_lineIndex - 1).contentLogicalBottomAdjustedForFollowingLineBox(); }
-    // FIXME: Implement.
-    float contentLogicalBottomAdjustedForFollowingLineBox() const { return contentLogicalBottom(); }
+    float contentLogicalTopAdjustedForPrecedingLineBox() const
+    {
+        if (formattingContextRoot().writingMode().isLineInverted() || !m_lineIndex)
+            return contentLogicalTop();
+        return LineBoxIteratorModernPath { *m_inlineContent, m_lineIndex - 1 }.contentLogicalBottom();
+    }
+    float contentLogicalBottomAdjustedForFollowingLineBox() const
+    {
+        if (!formattingContextRoot().writingMode().isLineInverted() || m_lineIndex == lines().size() - 1)
+            return contentLogicalBottom();
+        return LineBoxIteratorModernPath { *m_inlineContent, m_lineIndex + 1 }.contentLogicalTop();
+    }
 
-    float contentLogicalLeft() const { return line().lineBoxLeft() + line().contentLogicalLeftIgnoringInlineDirection(); }
+    float contentLogicalLeft() const
+    {
+        auto writingMode = formattingContextRoot().writingMode();
+        if (writingMode.isLogicalLeftLineLeft())
+            return line().lineBoxLeft() + line().contentLogicalLeftIgnoringInlineDirection();
+        ASSERT(writingMode.isVertical()); // Currently only sideways-lr gets this far.
+        return line().bottom() - (line().contentLogicalLeftIgnoringInlineDirection() + line().contentLogicalWidth());
+    }
     float contentLogicalRight() const { return contentLogicalLeft() + line().contentLogicalWidth(); }
     bool isHorizontal() const { return line().isHorizontal(); }
     FontBaseline baselineType() const { return line().baselineType(); }
 
     const RenderBlockFlow& formattingContextRoot() const { return m_inlineContent->formattingContextRoot(); }
 
-    RenderFragmentContainer* containingFragment() const { return nullptr; }
     bool isFirstAfterPageBreak() const { return line().isFirstAfterPageBreak(); }
+    bool hasBlockLevelBox() const { return line().hasBlockLevelBox(); }
 
     size_t lineIndex() const { return m_lineIndex; }
 
@@ -96,7 +112,7 @@ public:
         --m_lineIndex;
     }
 
-    bool operator==(const LineBoxIteratorModernPath& other) const { return m_inlineContent == other.m_inlineContent && m_lineIndex == other.m_lineIndex; }
+    friend bool operator==(const LineBoxIteratorModernPath&, const LineBoxIteratorModernPath&) = default;
 
     bool atEnd() const { return !m_inlineContent || m_lineIndex == lines().size(); }
 
@@ -106,7 +122,7 @@ public:
             return { *m_inlineContent };
         auto runIterator = BoxModernPath { *m_inlineContent, line().firstBoxIndex() };
         if (runIterator.box().isInlineBox())
-            runIterator.traverseNextOnLine();
+            runIterator.traverseNextLeafOnLine();
         return runIterator;
     }
 
@@ -117,15 +133,22 @@ public:
             return { *m_inlineContent };
         auto runIterator = BoxModernPath { *m_inlineContent, line().firstBoxIndex() + boxCount - 1 };
         if (runIterator.box().isInlineBox())
-            runIterator.traversePreviousOnLine();
+            runIterator.traversePreviousLeafOnLine();
         return runIterator;
     }
 
 private:
     void setAtEnd() { m_lineIndex = lines().size(); }
 
-    const InlineDisplay::Lines& lines() const { return m_inlineContent->displayContent().lines; }
-    const InlineDisplay::Line& line() const { return lines()[m_lineIndex]; }
+    const InlineDisplay::Lines& lines() const LIFETIME_BOUND { return m_inlineContent->displayContent().lines; }
+    const InlineDisplay::Line& line() const LIFETIME_BOUND { return lines()[m_lineIndex]; }
+    InlineDisplay::Line::Ellipsis lineEllipsis() const
+    {
+        if (auto ellipsis = m_inlineContent->displayContent().lineEllipsis(m_lineIndex))
+            return *ellipsis;
+        ASSERT_NOT_REACHED();
+        return { };
+    }
 
     WeakPtr<const LayoutIntegration::InlineContent> m_inlineContent;
     size_t m_lineIndex { 0 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,7 +65,11 @@ public class TestGraphics extends BaseGraphics {
     public static final Graphics TEST_GRAPHICS = new TestGraphics();
 
     public TestGraphics() {
-        super(new TestContext(), new TestRenderTarget());
+        this(0, 0);
+    }
+
+    public TestGraphics(int width, int height) {
+        super(new TestContext(), new TestRenderTarget(width, height));
     }
 
     @Override
@@ -286,6 +290,14 @@ public class TestGraphics extends BaseGraphics {
 
     private static class TestRenderTarget implements RenderTarget {
 
+        private final int width;
+        private final int height;
+
+        public TestRenderTarget(int width, int height) {
+            this.width = width;
+            this.height = height;
+        }
+
         @Override
         public Screen getAssociatedScreen() {
             return null;
@@ -327,12 +339,12 @@ public class TestGraphics extends BaseGraphics {
 
         @Override
         public int getContentWidth() {
-            return 0;
+            return width;
         }
 
         @Override
         public int getContentHeight() {
-            return 0;
+            return height;
         }
 
         @Override

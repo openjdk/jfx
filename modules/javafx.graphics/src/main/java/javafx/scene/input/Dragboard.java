@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,6 @@ package javafx.scene.input;
 import java.util.Set;
 
 import com.sun.javafx.scene.input.DragboardHelper;
-import com.sun.javafx.tk.PermissionHelper;
 import com.sun.javafx.tk.TKClipboard;
 import javafx.scene.image.Image;
 
@@ -38,25 +37,12 @@ import javafx.scene.image.Image;
  */
 public final class Dragboard extends Clipboard {
 
-    /**
-     * Whether access to the data requires a permission.
-     */
-    private boolean dataAccessRestricted = true;
-
     Dragboard(TKClipboard peer) {
         super(peer);
     }
 
-    @Override
-    Object getContentImpl(DataFormat dataFormat) {
-        if (dataAccessRestricted) {
-            PermissionHelper.checkClipboardPermission();
-        }
-        return super.getContentImpl(dataFormat);
-    }
-
     /**
-     * Gets set of transport modes supported by source of this drag opeation.
+     * Gets set of transport modes supported by source of this drag operation.
      * @return set of supported transfer modes
      */
     public final Set<TransferMode> getTransferModes() {
@@ -73,7 +59,7 @@ public final class Dragboard extends Clipboard {
 
     // PENDING_DOC_REVIEW
     /**
-     * Sets the visual representation of data being transfered
+     * Sets the visual representation of data being transferred
      * in a drag and drop gesture.
      * Uses the given image for the drag view with the offsetX and offsetY
      * specifying cursor position over the image.
@@ -92,7 +78,7 @@ public final class Dragboard extends Clipboard {
     }
 
     /**
-     * Sets the visual representation of data being transfered
+     * Sets the visual representation of data being transferred
      * in a drag and drop gesture.
      * This method should be called only when starting drag and drop operation
      * in the DRAG_DETECTED handler, calling it at other times
@@ -165,11 +151,6 @@ public final class Dragboard extends Clipboard {
         // This is used by classes in different packages to get access to
         // private and package private methods.
         DragboardHelper.setDragboardAccessor(new DragboardHelper.DragboardAccessor() {
-
-            @Override
-            public void setDataAccessRestriction(Dragboard dragboard, boolean restricted) {
-                dragboard.dataAccessRestricted = restricted;
-            }
 
             @Override
             public TKClipboard getPeer(Dragboard dragboard) {

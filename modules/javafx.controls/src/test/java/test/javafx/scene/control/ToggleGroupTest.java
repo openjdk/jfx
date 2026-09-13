@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,13 @@
 
 package test.javafx.scene.control;
 
-import com.sun.javafx.event.EventUtil;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.Group;
@@ -35,13 +41,9 @@ import javafx.scene.control.ToggleButton;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-
-import org.junit.Before;
-import org.junit.Test;
-
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertNotNull;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.event.EventUtil;
 
 public class ToggleGroupTest {
     private ToggleButton b1, b2, b3, b4;
@@ -64,7 +66,8 @@ public class ToggleGroupTest {
         return !isMember(b, g);
     }
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         b1 = make("one");
         b2 = make("two");
         b3 = make("three");
@@ -231,7 +234,7 @@ public class ToggleGroupTest {
         assertEquals(b3, g2.getSelectedToggle());
     }
 
-    // RT-3977
+    // JDK-8106999
     @Test public void testAddMultipleSelected() {
         b1.setSelected(true);
         b2.setSelected(true);

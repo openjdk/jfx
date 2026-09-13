@@ -37,6 +37,10 @@ MediaStreamAudioSource::MediaStreamAudioSource(float sampleRate)
     : RealtimeMediaSource(CaptureDevice { { }, CaptureDevice::DeviceType::Microphone, "MediaStreamAudioDestinationNode"_s })
 {
     m_currentSettings.setSampleRate(sampleRate);
+
+#if USE(GSTREAMER)
+    gst_audio_info_init(&m_info);
+#endif
 }
 
 MediaStreamAudioSource::~MediaStreamAudioSource() = default;
@@ -56,6 +60,15 @@ const RealtimeMediaSourceSettings& MediaStreamAudioSource::settings()
     notImplemented();
     return m_currentSettings;
 }
+
+#if !PLATFORM(COCOA)
+void MediaStreamAudioSource::setNumberOfChannels(unsigned)
+{
+    // FIXME: implement this.
+    // https://bugs.webkit.org/show_bug.cgi?id=122430
+    notImplemented();
+}
+#endif
 
 #if !PLATFORM(COCOA) && !USE(GSTREAMER)
 void MediaStreamAudioSource::consumeAudio(AudioBus&, size_t)

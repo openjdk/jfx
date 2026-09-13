@@ -23,7 +23,7 @@
 
 #pragma once
 
-#include "JSCJSValue.h"
+#include <JavaScriptCore/JSCJSValue.h>
 #include <unicode/uchar.h>
 
 namespace JSC {
@@ -54,17 +54,19 @@ JSC_DECLARE_HOST_FUNCTION(globalFuncProtoGetter);
 JSC_DECLARE_HOST_FUNCTION(globalFuncProtoSetter);
 JSC_DECLARE_HOST_FUNCTION(globalFuncSetPrototypeDirect);
 JSC_DECLARE_HOST_FUNCTION(globalFuncSetPrototypeDirectOrThrow);
-JSC_DECLARE_HOST_FUNCTION(globalFuncHostPromiseRejectionTracker);
 JSC_DECLARE_HOST_FUNCTION(globalFuncBuiltinLog);
 JSC_DECLARE_HOST_FUNCTION(globalFuncBuiltinDescribe);
-JSC_DECLARE_HOST_FUNCTION(globalFuncImportMapStatus);
 JSC_DECLARE_HOST_FUNCTION(globalFuncImportModule);
 JSC_DECLARE_HOST_FUNCTION(globalFuncCopyDataProperties);
-JSC_DECLARE_HOST_FUNCTION(globalFuncDateTimeFormat);
+JSC_DECLARE_HOST_FUNCTION(globalFuncCloneObject);
 JSC_DECLARE_HOST_FUNCTION(globalFuncHandleNegativeProxyHasTrapResult);
 JSC_DECLARE_HOST_FUNCTION(globalFuncHandlePositiveProxySetTrapResult);
 JSC_DECLARE_HOST_FUNCTION(globalFuncHandleProxyGetTrapResult);
+JSC_DECLARE_HOST_FUNCTION(globalFuncIsFinite);
 JSC_DECLARE_HOST_FUNCTION(globalFuncIsNaN);
+JSC_DECLARE_HOST_FUNCTION(globalFuncToIntegerOrInfinity);
+JSC_DECLARE_HOST_FUNCTION(globalFuncToLength);
+JSC_DECLARE_HOST_FUNCTION(globalFuncSpeciesGetter);
 
 JS_EXPORT_PRIVATE double jsToNumber(StringView);
 

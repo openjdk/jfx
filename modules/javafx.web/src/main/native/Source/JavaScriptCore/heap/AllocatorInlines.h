@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "Allocator.h"
-#include "LocalAllocator.h"
+#include <JavaScriptCore/Allocator.h>
+#include <JavaScriptCore/LocalAllocator.h>
 
 namespace JSC {
 
-ALWAYS_INLINE void* Allocator::allocate(Heap& heap, size_t cellSize, GCDeferralContext* context, AllocationFailureMode mode) const
+ALWAYS_INLINE void* Allocator::allocate(JSC::Heap& heap, size_t cellSize, GCDeferralContext* context, AllocationFailureMode mode) const
 {
     return m_localAllocator->allocate(heap, cellSize, context, mode);
 }

@@ -28,6 +28,8 @@
 
 namespace WebCore {
 
+class SVGElement;
+
 class SVGZoomAndPan {
     WTF_MAKE_NONCOPYABLE(SVGZoomAndPan);
 public:
@@ -40,16 +42,16 @@ public:
 
     SVGZoomAndPanType zoomAndPan() const { return m_zoomAndPan; }
     void setZoomAndPan(SVGZoomAndPanType zoomAndPan) { m_zoomAndPan = zoomAndPan; }
-    ExceptionOr<void> setZoomAndPan(unsigned) { return Exception { NoModificationAllowedError }; }
+    ExceptionOr<void> setZoomAndPan(unsigned) { return Exception { ExceptionCode::NoModificationAllowedError }; }
     void reset() { m_zoomAndPan = SVGPropertyTraits<SVGZoomAndPanType>::initialValue(); }
 
-    void parseAttribute(const QualifiedName&, const AtomString&);
+    void parseAttribute(SVGElement&, const QualifiedName&, const AtomString&);
 
 protected:
     SVGZoomAndPan() = default;
 
-    static std::optional<SVGZoomAndPanType> parseZoomAndPan(StringParsingBuffer<LChar>&);
-    static std::optional<SVGZoomAndPanType> parseZoomAndPan(StringParsingBuffer<UChar>&);
+    static std::optional<SVGZoomAndPanType> parseZoomAndPan(StringParsingBuffer<Latin1Character>&);
+    static std::optional<SVGZoomAndPanType> parseZoomAndPan(StringParsingBuffer<char16_t>&);
 
 private:
     SVGZoomAndPanType m_zoomAndPan { SVGPropertyTraits<SVGZoomAndPanType>::initialValue() };

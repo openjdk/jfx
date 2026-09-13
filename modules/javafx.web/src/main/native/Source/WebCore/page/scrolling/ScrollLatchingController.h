@@ -28,7 +28,9 @@
 #include "FloatSize.h"
 #include "ScrollTypes.h"
 #include "Timer.h"
+#include <wtf/CanMakeWeakPtr.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 #if ENABLE(WHEEL_EVENT_LATCHING)
@@ -41,16 +43,21 @@ namespace WebCore {
 
 class Element;
 class LocalFrame;
+class Page;
 class PlatformWheelEvent;
 class ScrollableArea;
+class WeakPtrImplWithEventTargetData;
 
-class ScrollLatchingController {
-    WTF_MAKE_FAST_ALLOCATED;
+class ScrollLatchingController : public CanMakeWeakPtr<ScrollLatchingController> {
+    WTF_MAKE_TZONE_ALLOCATED(ScrollLatchingController);
 public:
-    ScrollLatchingController();
+    explicit ScrollLatchingController(Page&);
     ~ScrollLatchingController();
 
     void clear();
+
+    void ref() const;
+    void deref() const;
 
     void receivedWheelEvent(const PlatformWheelEvent&);
     FloatSize cumulativeEventDelta() const { return m_cumulativeEventDelta; }
@@ -72,7 +79,7 @@ private:
     struct FrameState {
         WeakPtr<Element, WeakPtrImplWithEventTargetData> wheelEventElement;
         WeakPtr<ScrollableArea> scrollableArea;
-        LocalFrame* frame { nullptr };
+        WeakPtr<LocalFrame> frame;
         bool isOverWidget { false };
     };
 
@@ -85,6 +92,7 @@ private:
 
     bool shouldLatchToScrollableArea(const LocalFrame&, ScrollableArea*, FloatSize) const;
 
+    WeakRef<Page> m_page;
     FloatSize m_cumulativeEventDelta;
     Vector<FrameState> m_frameStateStack;
     Timer m_clearLatchingStateTimer;
@@ -95,3 +103,4 @@ WTF::TextStream& operator<<(WTF::TextStream&, const ScrollLatchingController&);
 } // namespace WebCore
 
 #endif // ENABLE(WHEEL_EVENT_LATCHING)
+

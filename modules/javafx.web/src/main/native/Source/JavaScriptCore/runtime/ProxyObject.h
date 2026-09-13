@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "JSInternalFieldObjectImpl.h"
+#include <JavaScriptCore/JSInternalFieldObjectImpl.h>
 
 namespace JSC {
 
@@ -73,18 +73,11 @@ public:
         return proxy;
     }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype, bool isCallable)
-    {
-        unsigned flags = StructureFlags;
-        if (isCallable)
-            flags |= (ImplementsHasInstance | ImplementsDefaultHasInstance);
-        Structure* result = Structure::create(vm, globalObject, prototype, TypeInfo(ProxyObjectType, flags), info(), NonArray | MayHaveIndexedAccessors);
-        RELEASE_ASSERT(!result->canAccessPropertiesQuicklyForEnumeration());
-        RELEASE_ASSERT(!result->canCachePropertyNameEnumerator(vm));
-        return result;
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue, bool);
 
     DECLARE_EXPORT_INFO;
+
+    DECLARE_VISIT_CHILDREN;
 
     JSObject* target() const { return jsCast<JSObject*>(internalField(Field::Target).get()); }
     JSValue handler() const { return internalField(Field::Handler).get(); }
@@ -123,10 +116,9 @@ private:
     static bool preventExtensions(JSObject*, JSGlobalObject*);
     static bool isExtensible(JSObject*, JSGlobalObject*);
     static bool defineOwnProperty(JSObject*, JSGlobalObject*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
-    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
     static bool setPrototype(JSObject*, JSGlobalObject*, JSValue prototype, bool shouldThrowIfCantSet);
     static JSValue getPrototype(JSObject*, JSGlobalObject*);
-    DECLARE_VISIT_CHILDREN;
 
     bool getOwnPropertySlotCommon(JSGlobalObject*, PropertyName, PropertySlot&);
     bool performInternalMethodGetOwnProperty(JSGlobalObject*, PropertyName, PropertySlot&);
@@ -139,8 +131,8 @@ private:
     bool performPreventExtensions(JSGlobalObject*);
     bool performIsExtensible(JSGlobalObject*);
     bool performDefineOwnProperty(JSGlobalObject*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
-    void performGetOwnPropertyNames(JSGlobalObject*, PropertyNameArray&);
-    void performGetOwnEnumerablePropertyNames(JSGlobalObject*, PropertyNameArray&);
+    void performGetOwnPropertyNames(JSGlobalObject*, PropertyNameArrayBuilder&);
+    void performGetOwnEnumerablePropertyNames(JSGlobalObject*, PropertyNameArrayBuilder&);
     bool performSetPrototype(JSGlobalObject*, JSValue prototype, bool shouldThrowIfCantSet);
 
     bool m_isCallable : 1 { false };

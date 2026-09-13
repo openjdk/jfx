@@ -25,7 +25,8 @@
 
 [
     Conditional=DEVICE_ORIENTATION,
-    Exposed=Window
+    Exposed=Window,
+    SecureContext
 ] interface DeviceMotionEvent : Event {
     readonly attribute Acceleration? acceleration;
     readonly attribute Acceleration? accelerationIncludingGravity;
@@ -45,7 +46,9 @@
 
 [
     Conditional=DEVICE_ORIENTATION,
-    JSGenerateToJSObject
+    JSGenerateToJSObject,
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary Acceleration {
     double? x;
     double? y;
@@ -54,7 +57,9 @@
 
 [
     Conditional=DEVICE_ORIENTATION,
-    JSGenerateToJSObject
+    JSGenerateToJSObject,
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary RotationRate {
     double? alpha;
     double? beta;

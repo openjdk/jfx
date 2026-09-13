@@ -32,7 +32,16 @@ namespace WebCore {
 
 class CaptureDevice {
 public:
-    enum class DeviceType : uint8_t { Unknown, Microphone, Speaker, Camera, Screen, Window, SystemAudio };
+    enum class DeviceType : uint8_t {
+        Unknown     = 1 << 0,
+        Microphone  = 1 << 1,
+        Speaker     = 1 << 2,
+        Camera      = 1 << 3,
+        Screen      = 1 << 4,
+        Window      = 1 << 5,
+        SystemAudio = 1 << 6,
+    };
+    static bool isScreenShareType(DeviceType type) { return type == DeviceType::Screen || type == DeviceType::Window || type == DeviceType::SystemAudio; }
 
     CaptureDevice(const String& persistentId, DeviceType type, const String& label, const String& groupId = emptyString(), bool isEnabled = false, bool isDefault = false, bool isMock = false, bool isEphemeral = false)
         : m_persistentId(persistentId)
@@ -42,7 +51,7 @@ public:
         , m_enabled(isEnabled)
         , m_default(isDefault)
         , m_isMockDevice(isMock)
-        , m_isEphemeral(isEphemeral)
+        , m_isEphemeral(isEphemeral || isScreenShareType(m_type))
     {
     }
 
@@ -84,6 +93,11 @@ public:
         return m_type == DeviceType::Microphone || m_type == DeviceType::Camera;
     }
 
+    bool isSpeakerDevice() const
+    {
+        return m_type == DeviceType::Speaker;
+    }
+
     explicit operator bool() const { return m_type != DeviceType::Unknown; }
 
     CaptureDevice isolatedCopy() &&;
@@ -122,10 +136,10 @@ inline bool haveDevicesChanged(const Vector<CaptureDevice>& oldDevices, const Ve
 inline CaptureDevice CaptureDevice::isolatedCopy() &&
 {
     return {
-        WTFMove(m_persistentId).isolatedCopy(),
+        WTF::move(m_persistentId).isolatedCopy(),
         m_type,
-        WTFMove(m_label).isolatedCopy(),
-        WTFMove(m_groupId).isolatedCopy(),
+        WTF::move(m_label).isolatedCopy(),
+        WTF::move(m_groupId).isolatedCopy(),
         m_enabled,
         m_default,
         m_isMockDevice,
@@ -133,29 +147,4 @@ inline CaptureDevice CaptureDevice::isolatedCopy() &&
     };
 }
 
-
-
-
-
-
 } // namespace WebCore
-
-#if ENABLE(MEDIA_STREAM)
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::CaptureDevice::DeviceType> {
-    using values = EnumValues<
-        WebCore::CaptureDevice::DeviceType,
-        WebCore::CaptureDevice::DeviceType::Unknown,
-        WebCore::CaptureDevice::DeviceType::Microphone,
-        WebCore::CaptureDevice::DeviceType::Speaker,
-        WebCore::CaptureDevice::DeviceType::Camera,
-        WebCore::CaptureDevice::DeviceType::Screen,
-        WebCore::CaptureDevice::DeviceType::Window,
-        WebCore::CaptureDevice::DeviceType::SystemAudio
-    >;
-};
-
-} // namespace WTF
-#endif
-

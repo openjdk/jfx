@@ -31,18 +31,48 @@
 #include "ImageBufferUtilitiesCG.h"
 #include "Logging.h"
 #include <pal/spi/cg/CoreGraphicsSPI.h>
+#include <wtf/StackTrace.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #include "CoreVideoSoftLink.h"
 #include "VideoToolboxSoftLink.h"
 
 namespace WebCore {
 
-PixelBufferConformerCV::PixelBufferConformerCV(CFDictionaryRef attributes)
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PixelBufferConformerCV);
+
+#if RELEASE_LOG_DISABLED
+#define RELEASE_LOG_STACKTRACE(channel) ((void)0)
+#else
+static constexpr int kDefaultFramesToShow = 31;
+static constexpr int kDefaultFramesToSkip = 2;
+
+static void logStackTrace(WTFLogChannel* channel)
+{
+    std::array<void*, kDefaultFramesToShow + kDefaultFramesToSkip> stack;
+    int frameCount = kDefaultFramesToShow + kDefaultFramesToSkip;
+    WTFGetBacktrace(stack.data(), &frameCount);
+    StackTraceSymbolResolver { std::span { stack }.first(frameCount) }.forEach([&](int frameNumber, void* stackFrame, const char* name) {
+        if (name)
+            os_log(channel->osLogChannel, "%-3d %p %{public}s", frameNumber, stackFrame, name);
+        else
+            os_log(channel->osLogChannel, "%-3d %p", frameNumber, stackFrame);
+    });
+}
+#define RELEASE_LOG_STACKTRACE(channel) logStackTrace(&LOG_CHANNEL(channel))
+#endif
+
+RetainPtr<VTPixelBufferConformerRef> PixelBufferConformerCV::createPixelConformer(CFDictionaryRef attributes)
 {
     VTPixelBufferConformerRef conformer = nullptr;
     VTPixelBufferConformerCreateWithAttributes(kCFAllocatorDefault, attributes, &conformer);
     ASSERT(conformer);
-    m_pixelConformer = adoptCF(conformer);
+    return adoptCF(conformer);
+}
+
+PixelBufferConformerCV::PixelBufferConformerCV(CFDictionaryRef attributes)
+    : m_pixelConformer(createPixelConformer(attributes))
+{
 }
 
 struct CVPixelBufferInfo {
@@ -70,18 +100,16 @@ static const void* CVPixelBufferGetBytePointerCallback(void* refcon)
     }
 
     ++info->lockCount;
-    void* address = CVPixelBufferGetBaseAddress(info->pixelBuffer.get());
-    if (!address) {
-        RELEASE_LOG_ERROR(Media, "CVPixelBufferGetBaseAddress returned null");
+    auto bytes = CVPixelBufferGetSpan(info->pixelBuffer.get());
+    if (!bytes.data()) {
+        RELEASE_LOG_ERROR(Media, "CVPixelBufferGetSpan returned null");
         RELEASE_LOG_STACKTRACE(Media);
         return nullptr;
     }
 
-    size_t byteLength = CVPixelBufferGetBytesPerRow(info->pixelBuffer.get()) * CVPixelBufferGetHeight(info->pixelBuffer.get());
-
-    verifyImageBufferIsBigEnough(address, byteLength);
-    RELEASE_LOG_INFO(Media, "CVPixelBufferGetBytePointerCallback() returning bytePointer: %p, size: %zu", address, byteLength);
-    return address;
+    verifyImageBufferIsBigEnough(bytes);
+    RELEASE_LOG_INFO(Media, "CVPixelBufferGetBytePointerCallback() returning bytePointer: %p, size: %zu", bytes.data(), bytes.size());
+    return bytes.data();
 }
 
 static void CVPixelBufferReleaseBytePointerCallback(void* refcon, const void*)
@@ -164,7 +192,7 @@ RetainPtr<CGImageRef> PixelBufferConformerCV::createImageFromPixelBuffer(CVPixel
     }
 
     auto colorSpace = createCGColorSpaceForCVPixelBuffer(rawBuffer);
-    return imageFrom32BGRAPixelBuffer(WTFMove(buffer), colorSpace.get());
+    return imageFrom32BGRAPixelBuffer(WTF::move(buffer), colorSpace.get());
 }
 
 RetainPtr<CGImageRef> PixelBufferConformerCV::imageFrom32BGRAPixelBuffer(RetainPtr<CVPixelBufferRef>&& buffer, CGColorSpaceRef colorSpace)
@@ -181,7 +209,7 @@ RetainPtr<CGImageRef> PixelBufferConformerCV::imageFrom32BGRAPixelBuffer(RetainP
         return nullptr;
 
     CVPixelBufferInfo* info = new CVPixelBufferInfo();
-    info->pixelBuffer = WTFMove(buffer);
+    info->pixelBuffer = WTF::move(buffer);
     info->lockCount = 0;
 
     CGDataProviderDirectCallbacks providerCallbacks = { 0, CVPixelBufferGetBytePointerCallback, CVPixelBufferReleaseBytePointerCallback, 0, CVPixelBufferReleaseInfoCallback };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,12 +30,8 @@ import com.sun.javafx.scene.traversal.SceneTraversalEngine;
 import com.sun.javafx.scene.traversal.TraversalEngine;
 import com.sun.javafx.scene.traversal.TraversalMethod;
 import com.sun.javafx.scene.traversal.TraverseListener;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
 
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 
 import javafx.geometry.Bounds;
 import javafx.scene.Group;
@@ -44,25 +40,21 @@ import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Tests for TraversalEngine with the default ContainerTabOrder algorithm,
  * tests if using the WeightedClosestCorner algorithm have been
  * left in comments.
  */
-@RunWith(Parameterized.class)
 public final class TraversalTest {
-    private final int fromNumber;
-    private final Direction direction;
-    private final int toNumber;
-    private final int toNumberTransformed;
-
     private Stage stage;
     private Scene scene;
     /**
@@ -88,72 +80,61 @@ public final class TraversalTest {
     /*
      * Parameters: [fromNumber], [direction], [toNumber], [toNumberTransformed]
      */
-    @Parameters
-    public static Collection data() {
-        return Arrays.asList(new Object[][] {
+    public static Stream<Arguments> data() {
+        return Stream.of(
             /* traversal from center */
-            { 5, Direction.LEFT, 4, 8 },
-            { 5, Direction.RIGHT, 6, 2 },
-            { 5, Direction.UP, 2, 4 },
-            { 5, Direction.DOWN, 8, 6 },
+            Arguments.of( 5, Direction.LEFT, 4, 8 ),
+            Arguments.of( 5, Direction.RIGHT, 6, 2 ),
+            Arguments.of( 5, Direction.UP, 2, 4 ),
+            Arguments.of( 5, Direction.DOWN, 8, 6 ),
 
             // using WeightedClosestCorner, target varies according to transform
-            //{ 5, Direction.PREVIOUS, 4, 8 },
-            //{ 5, Direction.NEXT, 6, 2 },
+            //Arguments.of( 5, Direction.PREVIOUS, 4, 8 ),
+            //Arguments.of( 5, Direction.NEXT, 6, 2 ),
 
             // using ContainerTabOrder, target is always the same
-            { 5, Direction.PREVIOUS, 4, 4 },
-            { 5, Direction.NEXT, 6, 6 },
+            Arguments.of( 5, Direction.PREVIOUS, 4, 4 ),
+            Arguments.of( 5, Direction.NEXT, 6, 6 ),
 
             /* traversal from borders (untransformed) */
-            { 4, Direction.LEFT, 4, 7 },
-            { 6, Direction.RIGHT, 6, 3 },
-            { 2, Direction.UP, 2, 1 },
-            { 8, Direction.DOWN, 8, 9 },
+            Arguments.of( 4, Direction.LEFT, 4, 7 ),
+            Arguments.of( 6, Direction.RIGHT, 6, 3 ),
+            Arguments.of( 2, Direction.UP, 2, 1 ),
+            Arguments.of( 8, Direction.DOWN, 8, 9 ),
 
             // using WeightedClosestCorner, target varies according to transform
-            //{ 4, Direction.PREVIOUS, 3, 7 },
-            //{ 1, Direction.PREVIOUS, 9, 4 },
-            //{ 6, Direction.NEXT, 7, 3 },
-            //{ 9, Direction.NEXT, 1, 6 },
+            //Arguments.of( 4, Direction.PREVIOUS, 3, 7 ),
+            //Arguments.of( 1, Direction.PREVIOUS, 9, 4 ),
+            //Arguments.of( 6, Direction.NEXT, 7, 3 ),
+            //Arguments.of( 9, Direction.NEXT, 1, 6 ),
 
             // using ContainerTabOrder, target always the same
-            { 4, Direction.PREVIOUS, 3, 3 },
-            { 1, Direction.PREVIOUS, 9, 9 },
-            { 6, Direction.NEXT, 7, 7 },
-            { 9, Direction.NEXT, 1, 1 },
+            Arguments.of( 4, Direction.PREVIOUS, 3, 3 ),
+            Arguments.of( 1, Direction.PREVIOUS, 9, 9 ),
+            Arguments.of( 6, Direction.NEXT, 7, 7 ),
+            Arguments.of( 9, Direction.NEXT, 1, 1 ),
 
             /* traversal from borders (transformed) */
-            { 2, Direction.RIGHT, 3, 2 },
-            { 8, Direction.LEFT, 7, 8 },
-            { 4, Direction.UP, 1, 4 },
-            { 6, Direction.DOWN, 9, 6 },
+            Arguments.of( 2, Direction.RIGHT, 3, 2 ),
+            Arguments.of( 8, Direction.LEFT, 7, 8 ),
+            Arguments.of( 4, Direction.UP, 1, 4 ),
+            Arguments.of( 6, Direction.DOWN, 9, 6 ),
 
             // using WeightedClosestCorner, target varies according to transform
-            //{ 8, Direction.PREVIOUS, 7, 1 },
-            //{ 7, Direction.PREVIOUS, 6, 3 },
-            //{ 2, Direction.NEXT, 3, 9 },
-            //{ 3, Direction.NEXT, 4, 7 }
+            //Arguments.of( 8, Direction.PREVIOUS, 7, 1 ),
+            //Arguments.of( 7, Direction.PREVIOUS, 6, 3 ),
+            //Arguments.of( 2, Direction.NEXT, 3, 9 ),
+            //Arguments.of( 3, Direction.NEXT, 4, 7)}
 
             // using ContainerTabOrder, target always the same
-            { 8, Direction.PREVIOUS, 7, 7 },
-            { 7, Direction.PREVIOUS, 6, 6 },
-            { 2, Direction.NEXT, 3, 3 },
-            { 3, Direction.NEXT, 4, 4 }
-        });
+            Arguments.of( 8, Direction.PREVIOUS, 7, 7 ),
+            Arguments.of( 7, Direction.PREVIOUS, 6, 6 ),
+            Arguments.of( 2, Direction.NEXT, 3, 3 ),
+            Arguments.of( 3, Direction.NEXT, 4, 4)
+        );
     }
 
-    public TraversalTest(final int fromNumber,
-                         final Direction direction,
-                         final int toNumber,
-                         final int toNumberTransformed) {
-        this.fromNumber = fromNumber;
-        this.direction = direction;
-        this.toNumber = toNumber;
-        this.toNumberTransformed = toNumberTransformed;
-    }
-
-    @Before
+    @BeforeEach
     public void setUp() {
         stage = new Stage();
         scene = new Scene(new Group(), 500, 500);
@@ -167,7 +148,7 @@ public final class TraversalTest {
         stage.requestFocus();
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         stage = null;
         scene = null;
@@ -175,23 +156,35 @@ public final class TraversalTest {
         traversalEngine = null;
     }
 
-    @Test
-    public void untransformedTraversalTest() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void untransformedTraversalTest(int fromNumber,
+                                           Direction direction,
+                                           int toNumber,
+                                           int toNumberTransformed) {
         keypadNodes[fromNumber - 1].requestFocus();
         traversalEngine.trav(keypadNodes[fromNumber - 1], direction, TraversalMethod.DEFAULT);
         assertTrue(keypadNodes[toNumber - 1].isFocused());
     }
 
-    @Test
-    public void transformedTraversalTest() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void transformedTraversalTest(int fromNumber,
+                                         Direction direction,
+                                         int toNumber,
+                                         int toNumberTransformed) {
         scene.getRoot().setRotate(90);
         keypadNodes[fromNumber - 1].requestFocus();
         traversalEngine.trav(keypadNodes[fromNumber - 1], direction, TraversalMethod.DEFAULT);
         assertTrue(keypadNodes[toNumberTransformed - 1].isFocused());
     }
 
-    @Test
-    public void traverseListenerTest() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void traverseListenerTest(int fromNumber,
+                                     Direction direction,
+                                     int toNumber,
+                                     int toNumberTransformed) {
         final TraverseListenerImpl traverseListener =
                 new TraverseListenerImpl();
         traversalEngine.addTraverseListener(traverseListener);

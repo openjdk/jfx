@@ -28,12 +28,13 @@
 
 #include "BlobLoader.h"
 #include "Document.h"
+#include "ExceptionOr.h"
 #include "SharedBuffer.h"
 
 namespace WebCore {
 
 ShareDataReader::ShareDataReader(CompletionHandler<void(ExceptionOr<ShareDataWithParsedURL&>)>&& completionHandler)
-    : m_completionHandler(WTFMove(completionHandler))
+    : m_completionHandler(WTF::move(completionHandler))
 {
 
 }
@@ -46,14 +47,19 @@ ShareDataReader::~ShareDataReader()
 void ShareDataReader::start(Document* document, ShareDataWithParsedURL&& shareData)
 {
     m_filesReadSoFar = 0;
-    m_shareData = WTFMove(shareData);
+    m_shareData = WTF::move(shareData);
     int count = 0;
     m_pendingFileLoads.reserveInitialCapacity(m_shareData.shareData.files.size());
     for (auto& blob : m_shareData.shareData.files) {
-        m_pendingFileLoads.uncheckedAppend(makeUniqueRef<BlobLoader>([this, count, fileName = blob->name()](BlobLoader&) {
+        Ref blobLoader = BlobLoader::create([this, count, fileName = blob->name()](BlobLoader&) {
             this->didFinishLoading(count, fileName);
-        }));
-        m_pendingFileLoads.last()->start(*blob, document, FileReaderLoader::ReadAsArrayBuffer);
+        });
+        m_pendingFileLoads.append(blobLoader.copyRef());
+        blobLoader->start(blob, document, FileReaderLoader::ReadAsArrayBuffer);
+        if (m_pendingFileLoads.isEmpty()) {
+            // The previous load failed synchronously and cancel() was called. We should not attempt to do any further loads.
+            break;
+        }
         ++count;
     }
 }
@@ -67,17 +73,17 @@ void ShareDataReader::didFinishLoading(int loadIndex, const String& fileName)
 
     if (m_pendingFileLoads[loadIndex]->errorCode()) {
         if (auto completionHandler = std::exchange(m_completionHandler, { }))
-            completionHandler(Exception { AbortError, "Abort due to error while reading files."_s });
+            completionHandler(Exception { ExceptionCode::AbortError, "Abort due to error while reading files."_s });
         cancel();
         return;
     }
 
-    auto arrayBuffer = m_pendingFileLoads[loadIndex]->arrayBufferResult();
+    auto arrayBuffer = Ref { m_pendingFileLoads[loadIndex] }->arrayBufferResult();
 
     RawFile file;
     file.fileName = fileName;
-    file.fileData = SharedBuffer::create(static_cast<const unsigned char*>(arrayBuffer->data()), arrayBuffer->byteLength());
-    m_shareData.files.append(WTFMove(file));
+    file.fileData = SharedBuffer::create(arrayBuffer->span());
+    m_shareData.files.append(WTF::move(file));
     m_filesReadSoFar++;
 
     if (m_filesReadSoFar == static_cast<int>(m_pendingFileLoads.size())) {
@@ -89,9 +95,7 @@ void ShareDataReader::didFinishLoading(int loadIndex, const String& fileName)
 
 void ShareDataReader::cancel()
 {
-    // Don't call m_pendingFileLoads.clear() here since destroying a BlobLoader will cause its completion handler
-    // to get called, which will call didFinishLoading() and try to access m_pendingFileLoads.
-    std::exchange(m_pendingFileLoads, { });
+    m_pendingFileLoads.clear();
 }
 
 }

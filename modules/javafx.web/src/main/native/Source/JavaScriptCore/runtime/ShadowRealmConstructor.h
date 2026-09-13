@@ -26,8 +26,8 @@
 
 #pragma once
 
-#include "InternalFunction.h"
-#include "ShadowRealmPrototype.h"
+#include <JavaScriptCore/InternalFunction.h>
+#include <JavaScriptCore/ShadowRealmPrototype.h>
 
 namespace JSC {
 
@@ -38,7 +38,7 @@ public:
     typedef InternalFunction Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags;
 
-    static ShadowRealmConstructor* create(VM& vm, Structure* structure, ShadowRealmPrototype* shadowRealmPrototype, GetterSetter*)
+    static ShadowRealmConstructor* create(VM& vm, Structure* structure, ShadowRealmPrototype* shadowRealmPrototype)
     {
         ShadowRealmConstructor* constructor = new (NotNull, allocateCell<ShadowRealmConstructor>(vm)) ShadowRealmConstructor(vm, structure);
         constructor->finishCreation(vm, shadowRealmPrototype);
@@ -47,10 +47,7 @@ public:
 
     DECLARE_INFO;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(InternalFunctionType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
 private:
     ShadowRealmConstructor(VM&, Structure*);

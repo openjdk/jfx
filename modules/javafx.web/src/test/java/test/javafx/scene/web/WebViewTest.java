@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,8 @@
 
 package test.javafx.scene.web;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.File;
 import javafx.event.Event;
@@ -35,7 +35,7 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.web.WebEngineShim;
 import javafx.scene.web.WebView;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class WebViewTest extends TestBase {
     final static float SCALE = 1.78f;
@@ -68,9 +68,8 @@ public class WebViewTest extends TestBase {
     }
 
     void checkFontScale(WebView view, float scale) {
-        assertEquals("WebView.fontScale", scale, view.getFontScale(), DELTA);
-        assertEquals("WebPage.zoomFactor",
-                scale, WebEngineShim.getPage(view.getEngine()).getZoomFactor(true), DELTA);
+        assertEquals(scale, view.getFontScale(), DELTA, "WebView.fontScale");
+        assertEquals(scale, WebEngineShim.getPage(view.getEngine()).getZoomFactor(true), DELTA, "WebPage.zoomFactor");
     }
 
     private void setFontScale(final WebView view, final float scale) throws Exception {
@@ -80,7 +79,7 @@ public class WebViewTest extends TestBase {
     }
 
     void checkZoom(WebView view, float zoom) {
-        assertEquals("WebView.zoom", zoom, view.getZoom(), DELTA);
+        assertEquals(zoom, view.getZoom(), DELTA, "WebView.zoom");
     }
 
     private void setZoom(final WebView view, final float zoom) throws Exception {
@@ -96,20 +95,21 @@ public class WebViewTest extends TestBase {
      */
     @Test public void testFontWeights() {
         loadContent(
-            "<!DOCTYPE html><html><head></head>" +
-            "<body>" +
-            "   <div style=\"font: 19px system-ui\">" +
-            "       <div style=\"font-style: italic;\">" +
-            "           <span id=\"six\" style=\"font-weight: 600;\">Hello, World</span>" +
-            "           <span id=\"nine\" style=\"font-weight: 900;\">Hello, World</span>" +
-            "       </div>" +
-            "   </div>" +
-            "</body> </html>"
-            );
+                "<!DOCTYPE html><html><head></head>" +
+                "<body>" +
+                "   <div style=\"font: 19px system-ui\">" +
+                "       <div style=\"font-style: italic;\">" +
+                "           <span id=\"six\" style=\"font-weight: 600;\">Hello, World</span>" +
+                "           <span id=\"nine\" style=\"font-weight: 900;\">Hello, World</span>" +
+                "       </div>" +
+                "   </div>" +
+                "</body> </html>"
+        );
         submit(() -> {
-            assertFalse("Font weight test failed ",
-                (Boolean) getEngine().executeScript(
-                "document.getElementById('six').offsetWidth == document.getElementById('nine').offsetWidth"));
+            assertFalse(
+                    (Boolean) getEngine().executeScript(
+                            "document.getElementById('six').offsetWidth == document.getElementById('nine').offsetWidth"),
+                    "Font weight test failed ");
         });
     }
 }

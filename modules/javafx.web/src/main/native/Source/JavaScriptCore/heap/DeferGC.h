@@ -25,7 +25,8 @@
 
 #pragma once
 
-#include "DisallowScope.h"
+#include <JavaScriptCore/DisallowScope.h>
+#include <JavaScriptCore/JSExportMacros.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/ThreadSpecific.h>
 
@@ -53,16 +54,16 @@ public:
     ~DeferGCForAWhile();
 
 private:
-    Heap& m_heap;
+    JSC::Heap& m_heap;
 };
 
-class DisallowGC : public DisallowScope<DisallowGC> {
-    WTF_MAKE_NONCOPYABLE(DisallowGC);
+class AssertNoGC : public DisallowScope<AssertNoGC> {
+    WTF_MAKE_NONCOPYABLE(AssertNoGC);
     WTF_FORBID_HEAP_ALLOCATION;
-    typedef DisallowScope<DisallowGC> Base;
+    typedef DisallowScope<AssertNoGC> Base;
 public:
 #if ASSERT_ENABLED
-    DisallowGC() = default;
+    AssertNoGC() = default;
 
     static void initialize()
     {
@@ -82,11 +83,11 @@ private:
     JS_EXPORT_PRIVATE static LazyNeverDestroyed<ThreadSpecific<unsigned, WTF::CanBeGCThread::True>> s_scopeReentryCount;
 
 #else
-    ALWAYS_INLINE DisallowGC() { } // We need this to placate Clang due to unused warnings.
+    ALWAYS_INLINE AssertNoGC() { } // We need this to placate Clang due to unused warnings.
     ALWAYS_INLINE static void initialize() { }
 #endif // ASSERT_ENABLED
 
-    friend class DisallowScope<DisallowGC>;
+    friend class DisallowScope<AssertNoGC>;
 };
 
 } // namespace JSC

@@ -42,7 +42,7 @@ inline std::tuple<ASCIILiteral, JSString*> inferBuiltinTag(JSGlobalObject* globa
 
 #if PLATFORM(IOS) || PLATFORM(VISION)
     static bool needsOldBuiltinTag = isPokerBros();
-    if (UNLIKELY(needsOldBuiltinTag))
+    if (needsOldBuiltinTag) [[unlikely]]
         return std::tuple { object->className(), nullptr };
 #endif
 
@@ -139,6 +139,11 @@ ALWAYS_INLINE JSString* objectPrototypeToString(JSGlobalObject* globalObject, JS
         return asString(result);
 
     RELEASE_AND_RETURN(scope, objectPrototypeToStringSlow(globalObject, thisObject));
+}
+
+inline Structure* ObjectPrototype::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
+{
+    return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
 }
 
 } // namespace JSC

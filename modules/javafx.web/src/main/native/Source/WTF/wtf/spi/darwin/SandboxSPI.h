@@ -25,16 +25,26 @@
 
 #pragma once
 
+#include <wtf/Compiler.h>
+
+DECLARE_SYSTEM_HEADER
+
+#include <wtf/Platform.h>
+
 #if OS(DARWIN)
 
+#import <mach/message.h>
 #import <sandbox.h>
+#import <unistd.h>
 
 #if USE(APPLE_INTERNAL_SDK)
 #import <sandbox/private.h>
 #else
 enum sandbox_filter_type {
     SANDBOX_FILTER_NONE,
+    SANDBOX_FILTER_PATH,
     SANDBOX_FILTER_GLOBAL_NAME = 2,
+    SANDBOX_FILTER_PREFERENCE_DOMAIN = 6,
     SANDBOX_FILTER_XPC_SERVICE_NAME = 12,
     SANDBOX_FILTER_IOKIT_CONNECTION,
     SANDBOX_FILTER_SYSCALL_NUMBER,

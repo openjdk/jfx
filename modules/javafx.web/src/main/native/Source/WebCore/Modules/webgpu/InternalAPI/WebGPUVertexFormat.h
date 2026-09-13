@@ -26,27 +26,35 @@
 #pragma once
 
 #include <cstdint>
-#include <wtf/EnumTraits.h>
 
 namespace WebCore::WebGPU {
 
 enum class VertexFormat : uint8_t {
+    Uint8,
     Uint8x2,
     Uint8x4,
+    Sint8,
     Sint8x2,
     Sint8x4,
+    Unorm8,
     Unorm8x2,
     Unorm8x4,
+    Snorm8,
     Snorm8x2,
     Snorm8x4,
+    Uint16,
     Uint16x2,
     Uint16x4,
+    Sint16,
     Sint16x2,
     Sint16x4,
+    Unorm16,
     Unorm16x2,
     Unorm16x4,
+    Snorm16,
     Snorm16x2,
     Snorm16x4,
+    Float16,
     Float16x2,
     Float16x4,
     Float32,
@@ -61,46 +69,8 @@ enum class VertexFormat : uint8_t {
     Sint32x2,
     Sint32x3,
     Sint32x4,
+    Unorm1010102,
+    Unorm8x4Bgra,
 };
 
 } // namespace WebCore::WebGPU
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::WebGPU::VertexFormat> {
-    using values = EnumValues<
-        WebCore::WebGPU::VertexFormat,
-        WebCore::WebGPU::VertexFormat::Uint8x2,
-        WebCore::WebGPU::VertexFormat::Uint8x4,
-        WebCore::WebGPU::VertexFormat::Sint8x2,
-        WebCore::WebGPU::VertexFormat::Sint8x4,
-        WebCore::WebGPU::VertexFormat::Unorm8x2,
-        WebCore::WebGPU::VertexFormat::Unorm8x4,
-        WebCore::WebGPU::VertexFormat::Snorm8x2,
-        WebCore::WebGPU::VertexFormat::Snorm8x4,
-        WebCore::WebGPU::VertexFormat::Uint16x2,
-        WebCore::WebGPU::VertexFormat::Uint16x4,
-        WebCore::WebGPU::VertexFormat::Sint16x2,
-        WebCore::WebGPU::VertexFormat::Sint16x4,
-        WebCore::WebGPU::VertexFormat::Unorm16x2,
-        WebCore::WebGPU::VertexFormat::Unorm16x4,
-        WebCore::WebGPU::VertexFormat::Snorm16x2,
-        WebCore::WebGPU::VertexFormat::Snorm16x4,
-        WebCore::WebGPU::VertexFormat::Float16x2,
-        WebCore::WebGPU::VertexFormat::Float16x4,
-        WebCore::WebGPU::VertexFormat::Float32,
-        WebCore::WebGPU::VertexFormat::Float32x2,
-        WebCore::WebGPU::VertexFormat::Float32x3,
-        WebCore::WebGPU::VertexFormat::Float32x4,
-        WebCore::WebGPU::VertexFormat::Uint32,
-        WebCore::WebGPU::VertexFormat::Uint32x2,
-        WebCore::WebGPU::VertexFormat::Uint32x3,
-        WebCore::WebGPU::VertexFormat::Uint32x4,
-        WebCore::WebGPU::VertexFormat::Sint32,
-        WebCore::WebGPU::VertexFormat::Sint32x2,
-        WebCore::WebGPU::VertexFormat::Sint32x3,
-        WebCore::WebGPU::VertexFormat::Sint32x4
-    >;
-};
-
-} // namespace WTF

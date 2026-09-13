@@ -25,20 +25,25 @@
 
 #pragma once
 
-#include "InspectorFrontendChannel.h"
+#include <JavaScriptCore/InspectorFrontendChannel.h>
+#include <JavaScriptCore/JSExportMacros.h>
+#include <wtf/CheckedRef.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace Inspector {
 
-// FIXME: Add DedicatedWorker Inspector Targets
-// FIXME: Add ServiceWorker Inspector Targets
 enum class InspectorTargetType : uint8_t {
     Page,
+    Frame,
     DedicatedWorker,
     ServiceWorker,
 };
 
-class JS_EXPORT_PRIVATE InspectorTarget {
+class InspectorTarget : public CanMakeWeakPtr<InspectorTarget>, public CanMakeCheckedPtr<InspectorTarget> {
+    WTF_MAKE_TZONE_ALLOCATED(InspectorTarget);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(InspectorTarget);
 public:
     virtual ~InspectorTarget() = default;
 
@@ -49,8 +54,8 @@ public:
     virtual bool isProvisional() const { return false; }
     bool isPaused() const { return m_isPaused; }
     void pause();
-    void resume();
-    void setResumeCallback(WTF::Function<void()>&&);
+    JS_EXPORT_PRIVATE void resume();
+    JS_EXPORT_PRIVATE void setResumeCallback(WTF::Function<void()>&&);
 
     // Connection management.
     virtual void connect(FrontendChannel::ConnectionType) = 0;
@@ -63,16 +68,3 @@ private:
 };
 
 } // namespace Inspector
-
-namespace WTF {
-
-template<> struct EnumTraits<Inspector::InspectorTargetType> {
-    using values = EnumValues<
-        Inspector::InspectorTargetType,
-        Inspector::InspectorTargetType::Page,
-        Inspector::InspectorTargetType::DedicatedWorker,
-        Inspector::InspectorTargetType::ServiceWorker
-    >;
-};
-
-} // namespace WTF

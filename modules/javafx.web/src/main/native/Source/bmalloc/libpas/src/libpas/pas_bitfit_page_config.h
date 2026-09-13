@@ -26,6 +26,7 @@
 #ifndef PAS_BITFIT_PAGE_CONFIG_H
 #define PAS_BITFIT_PAGE_CONFIG_H
 
+#include "pas_allocation_mode.h"
 #include "pas_bitfit_max_free.h"
 #include "pas_bitfit_page_config_kind.h"
 #include "pas_bitfit_page_config_variant.h"
@@ -55,7 +56,8 @@ typedef pas_fast_path_allocation_result (*pas_bitfit_page_config_specialized_all
     pas_bitfit_allocator* allocator,
     pas_local_allocator* local_allocator,
     size_t size,
-    size_t alignment);
+    size_t alignment,
+    pas_allocation_mode allocation_mode);
 typedef void (*pas_bitfit_page_config_specialized_page_deallocate_with_page)(
     pas_bitfit_page* page, uintptr_t begin);
 typedef size_t (*pas_bitfit_page_config_specialized_page_get_allocation_size_with_page)(
@@ -63,9 +65,12 @@ typedef size_t (*pas_bitfit_page_config_specialized_page_get_allocation_size_wit
 typedef void (*pas_bitfit_page_config_specialized_page_shrink_with_page)(
     pas_bitfit_page* page, uintptr_t begin, size_t new_size);
 
-#define PAS_MAX_BITFIT_OBJECT_SIZE(payload_size, min_align_shift) \
+#define PAS_MAX_BITFIT_OBJECT_SIZE_WITH_MAX_BITS(payload_size, min_align_shift, max_bits) \
     PAS_MIN_CONST(PAS_MAX_OBJECT_SIZE((payload_size)), \
-                  PAS_BITFIT_MAX_FREE_MAX_VALID * (1u << (min_align_shift)))
+                  max_bits * (1u << (min_align_shift)))
+
+#define PAS_MAX_BITFIT_OBJECT_SIZE(payload_size, min_align_shift) \
+    PAS_MAX_BITFIT_OBJECT_SIZE_WITH_MAX_BITS(payload_size, min_align_shift, PAS_BITFIT_MAX_FREE_MAX_VALID)
 
 struct pas_bitfit_page_config {
     pas_page_base_config base;
@@ -128,7 +133,8 @@ PAS_API extern bool pas_marge_bitfit_page_config_variant_is_enabled_override;
         pas_bitfit_allocator* allocator, \
         pas_local_allocator* local_allocator, \
         size_t size, \
-        size_t alignment); \
+        size_t alignment, \
+        pas_allocation_mode allocation_mode); \
     PAS_API void lower_case_page_config_name ## _specialized_page_deallocate_with_page( \
         pas_bitfit_page* page, uintptr_t begin); \
     PAS_API size_t lower_case_page_config_name ## _specialized_page_get_allocation_size_with_page( \
@@ -156,7 +162,7 @@ static inline bool pas_bitfit_page_config_is_enabled(pas_bitfit_page_config conf
     case pas_marge_bitfit_page_config_variant:
         return pas_marge_bitfit_page_config_variant_is_enabled_override;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return false;
 }
 

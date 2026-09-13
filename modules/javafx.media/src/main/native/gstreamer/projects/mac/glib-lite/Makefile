@@ -77,6 +77,7 @@ C_SOURCES = glib/garcbox.c \
             glib/gdataset.c \
             glib/gdate.c \
             glib/gdatetime.c \
+            glib/gdatetime-private.c \
             glib/gdir.c \
             glib/gerror.c \
             glib/genviron.c \
@@ -86,7 +87,6 @@ C_SOURCES = glib/garcbox.c \
             glib/ghook.c \
             glib/giochannel.c \
             glib/giounix.c \
-            glib/gkeyfile.c \
             glib/glib-init.c \
             glib/glib-private.c \
             glib/glist.c \
@@ -111,6 +111,7 @@ C_SOURCES = glib/garcbox.c \
             glib/gscanner.c \
             glib/gsequence.c \
             glib/gspawn.c \
+            glib/gspawn-posix.c \
             glib/gshell.c \
             glib/gslice.c \
             glib/gslist.c \
@@ -120,7 +121,6 @@ C_SOURCES = glib/garcbox.c \
             glib/gstringchunk.c \
             glib/gtestutils.c \
             glib/gthread.c \
-            glib/gthread-posix.c \
             glib/gthreadpool.c \
             glib/gtimer.c \
             glib/gtimezone.c \
@@ -129,7 +129,6 @@ C_SOURCES = glib/garcbox.c \
             glib/gtree.c \
             glib/gunibreak.c \
             glib/gunidecomp.c \
-            glib/guniprop.c \
             glib/guri.c \
             glib/gutf8.c \
             glib/gutils.c \
@@ -148,7 +147,6 @@ C_SOURCES = glib/garcbox.c \
             glib/gnulib/printf.c \
             glib/gnulib/vasnprintf.c \
             gobject/gatomicarray.c \
-            gobject/gbinding.c \
             gobject/gboxed.c \
             gobject/gclosure.c \
             gobject/genums.c \

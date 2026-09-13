@@ -31,7 +31,7 @@ G_BEGIN_DECLS
  * @GST_VIDEO_CHROMA_SITE_NONE: no cositing
  * @GST_VIDEO_CHROMA_SITE_H_COSITED: chroma is horizontally cosited
  * @GST_VIDEO_CHROMA_SITE_V_COSITED: chroma is vertically cosited
- * @GST_VIDEO_CHROMA_SITE_ALT_LINE: choma samples are sited on alternate lines
+ * @GST_VIDEO_CHROMA_SITE_ALT_LINE: chroma samples are sited on alternate lines
  * @GST_VIDEO_CHROMA_SITE_COSITED: chroma samples cosited with luma samples
  * @GST_VIDEO_CHROMA_SITE_JPEG: jpeg style cositing, also for mpeg1 and mjpeg
  * @GST_VIDEO_CHROMA_SITE_MPEG2: mpeg2 style cositing

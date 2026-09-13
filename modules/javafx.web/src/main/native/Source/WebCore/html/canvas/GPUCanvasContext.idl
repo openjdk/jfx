@@ -28,7 +28,9 @@
 [
     ActiveDOMObject,
     EnabledBySetting=WebGPUEnabled,
-    Exposed=(Window), /* https://bugs.webkit.org/show_bug.cgi?id=232542: DedicatedWorker */
+    ReportExtraMemoryCost,
+    ReportExternalMemoryCost,
+    Exposed=(Window,Worker),
     SecureContext,
     SkipVTableValidation,
 ]
@@ -42,5 +44,6 @@ interface GPUCanvasContext {
     undefined configure(GPUCanvasConfiguration configuration);
     undefined unconfigure();
 
+    GPUCanvasConfiguration? getConfiguration();
     GPUTexture getCurrentTexture();
 };

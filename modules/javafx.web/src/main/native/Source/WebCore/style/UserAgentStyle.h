@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 1999 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2013 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -40,15 +40,17 @@ public:
 
     static StyleSheetContents* defaultStyleSheet;
     static StyleSheetContents* quirksStyleSheet;
-    static StyleSheetContents* dialogStyleSheet;
     static StyleSheetContents* svgStyleSheet;
     static StyleSheetContents* mathMLStyleSheet;
-    static StyleSheetContents* mediaControlsStyleSheet;
+    static StyleSheetContents* mathMLCoreExtrasStyleSheet;
+    static StyleSheetContents* mathMLFontSizeMathStyleSheet;
+    static StyleSheetContents* mathMLLegacyFontSizeMathStyleSheet;
     static StyleSheetContents* mediaQueryStyleSheet;
     static StyleSheetContents* horizontalFormControlsStyleSheet;
-    static StyleSheetContents* plugInsStyleSheet;
+    static StyleSheetContents* htmlSwitchControlStyleSheet;
     static StyleSheetContents* popoverStyleSheet;
     static StyleSheetContents* counterStylesStyleSheet;
+    static StyleSheetContents* viewTransitionsStyleSheet;
 #if ENABLE(FULLSCREEN_API)
     static StyleSheetContents* fullscreenStyleSheet;
 #endif
@@ -57,15 +59,6 @@ public:
 #endif
 #if ENABLE(ATTACHMENT_ELEMENT)
     static StyleSheetContents* attachmentStyleSheet;
-#endif
-#if ENABLE(DATALIST_ELEMENT)
-    static StyleSheetContents* dataListStyleSheet;
-#endif
-#if ENABLE(INPUT_TYPE_COLOR)
-    static StyleSheetContents* colorInputStyleSheet;
-#endif
-#if ENABLE(IOS_FORM_CONTROL_REFRESH)
-    static StyleSheetContents* legacyFormControlsIOSStyleSheet;
 #endif
 
     static void initDefaultStyleSheet();

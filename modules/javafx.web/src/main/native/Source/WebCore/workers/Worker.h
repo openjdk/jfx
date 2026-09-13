@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2010, 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008, 2010, 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,8 +29,10 @@
 #include "ActiveDOMObject.h"
 #include "ContentSecurityPolicyResponseHeaders.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "FetchRequestCredentials.h"
 #include "MessagePort.h"
+#include "WorkerGlobalScopeProxy.h"
 #include "WorkerOptions.h"
 #include "WorkerScriptLoaderClient.h"
 #include "WorkerType.h"
@@ -50,16 +52,21 @@ namespace WebCore {
 class RTCRtpScriptTransform;
 class RTCRtpScriptTransformer;
 class ScriptExecutionContext;
-class WorkerGlobalScopeProxy;
+class TrustedScriptURL;
 class WorkerScriptLoader;
 
 struct StructuredSerializeOptions;
 struct WorkerOptions;
 
 class Worker final : public AbstractWorker, public ActiveDOMObject, private WorkerScriptLoaderClient {
-    WTF_MAKE_ISO_ALLOCATED(Worker);
+    WTF_MAKE_TZONE_ALLOCATED(Worker);
 public:
-    static ExceptionOr<Ref<Worker>> create(ScriptExecutionContext&, JSC::RuntimeFlags, const String& url, WorkerOptions&&);
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
+    USING_CAN_MAKE_WEAKPTR(AbstractWorker);
+
+    static ExceptionOr<Ref<Worker>> create(ScriptExecutionContext&, JSC::RuntimeFlags, Variant<RefPtr<TrustedScriptURL>, String>&&, WorkerOptions&&);
     virtual ~Worker();
 
     ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue message, StructuredSerializeOptions&&);
@@ -70,9 +77,11 @@ public:
     String identifier() const { return m_identifier; }
     const String& name() const { return m_options.name; }
 
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    using ActiveDOMObject::protectedScriptExecutionContext;
 
     void dispatchEvent(Event&) final;
+    void reportError(const String&);
 
 #if ENABLE(WEB_RTC)
     void createRTCRtpScriptTransformer(RTCRtpScriptTransform&, MessageWithMessagePorts&&);
@@ -82,21 +91,20 @@ public:
 
     void postTaskToWorkerGlobalScope(Function<void(ScriptExecutionContext&)>&&);
 
-    static void forEachWorker(const Function<Function<void(ScriptExecutionContext&)>()>&);
+    static void forEachWorker(NOESCAPE const Function<Function<void(ScriptExecutionContext&)>()>&);
 
 private:
     Worker(ScriptExecutionContext&, JSC::RuntimeFlags, WorkerOptions&&);
 
-    EventTargetInterface eventTargetInterface() const final { return WorkerEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::Worker; }
 
-    void didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse&) final;
-    void notifyFinished() final;
+    void didReceiveResponse(ScriptExecutionContextIdentifier, std::optional<ResourceLoaderIdentifier>, const ResourceResponse&) final;
+    void notifyFinished(std::optional<ScriptExecutionContextIdentifier>) final;
 
     // ActiveDOMObject.
     void stop() final;
     void suspend(ReasonForSuspension) final;
     void resume() final;
-    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
     static void networkStateChanged(bool isOnLine);
@@ -117,3 +125,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(Worker)

@@ -36,10 +36,10 @@
 
 namespace JSC { namespace B3 {
 
-PhaseScope::PhaseScope(Procedure& procedure, const char* name)
+PhaseScope::PhaseScope(Procedure& procedure, ASCIILiteral name)
     : m_procedure(procedure)
     , m_name(name)
-    , m_timingScope("B3", name)
+    , m_timingScope("B3"_s, name)
 {
     if (shouldDumpIRAtEachPhase(B3Mode)) {
         dataLog("B3 after ", procedure.lastPhaseName(), ", before ", name, ":\n");
@@ -55,6 +55,9 @@ PhaseScope::~PhaseScope()
     m_procedure.setLastPhaseName(m_name);
     if (shouldValidateIRAtEachPhase())
         validate(m_procedure, m_dumpBefore.data());
+
+    if (Options::dumpIonGraph()) [[unlikely]]
+        m_procedure.appendIonGraphPass(m_name);
 }
 
 } } // namespace JSC::B3

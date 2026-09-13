@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,13 +27,14 @@
 #include "MergeIdenticalElementsCommand.h"
 
 #include "Element.h"
+#include "NodeDocument.h"
 
 namespace WebCore {
 
 MergeIdenticalElementsCommand::MergeIdenticalElementsCommand(Ref<Element>&& first, Ref<Element>&& second)
     : SimpleEditCommand(first->document())
-    , m_element1(WTFMove(first))
-    , m_element2(WTFMove(second))
+    , m_element1(WTF::move(first))
+    , m_element2(WTF::move(second))
 {
     ASSERT(m_element1->nextSibling() == m_element2.ptr());
 }
@@ -46,36 +47,36 @@ void MergeIdenticalElementsCommand::doApply()
     m_atChild = m_element2->firstChild();
 
     Vector<Ref<Node>> children;
-    for (Node* child = m_element1->firstChild(); child; child = child->nextSibling())
+    for (RefPtr child = m_element1->firstChild(); child; child = child->nextSibling())
         children.append(*child);
 
-    for (auto& child : children)
-        m_element2->insertBefore(child, m_atChild.get());
+    for (Ref child : children)
+        m_element2->insertBefore(child, m_atChild.copyRef());
 
     m_element1->remove();
 }
 
 void MergeIdenticalElementsCommand::doUnapply()
 {
-    RefPtr<Node> atChild = WTFMove(m_atChild);
+    RefPtr<Node> atChild = WTF::move(m_atChild);
 
-    auto* parent = m_element2->parentNode();
+    RefPtr parent = m_element2->parentNode();
     if (!parent || !parent->hasEditableStyle())
         return;
 
-    if (parent->insertBefore(m_element1, m_element2.ptr()).hasException())
+    if (parent->insertBefore(m_element1, m_element2.copyRef()).hasException())
         return;
 
     Vector<Ref<Node>> children;
-    for (Node* child = m_element2->firstChild(); child && child != atChild; child = child->nextSibling())
+    for (RefPtr child = m_element2->firstChild(); child && child != atChild; child = child->nextSibling())
         children.append(*child);
 
-    for (auto& child : children)
+    for (Ref child : children)
         m_element1->appendChild(child);
 }
 
 #ifndef NDEBUG
-void MergeIdenticalElementsCommand::getNodesInCommand(HashSet<Ref<Node>>& nodes)
+void MergeIdenticalElementsCommand::getNodesInCommand(NodeSet& nodes)
 {
     addNodeAndDescendants(m_element1.ptr(), nodes);
     addNodeAndDescendants(m_element2.ptr(), nodes);

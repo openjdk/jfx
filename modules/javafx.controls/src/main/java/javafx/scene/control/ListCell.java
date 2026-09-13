@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,6 +28,7 @@ package javafx.scene.control;
 import java.lang.ref.WeakReference;
 import java.util.List;
 
+import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.WeakInvalidationListener;
@@ -149,7 +150,7 @@ public class ListCell<T> extends IndexedCell<T> {
     private final ListChangeListener<T> itemsListener = c -> {
         boolean doUpdate = false;
         while (c.next()) {
-            // RT-35395: We only update the item in this cell if the current cell
+            // JDK-8091726: We only update the item in this cell if the current cell
             // index is within the range of the change and certain changes to the
             // list have occurred.
             final int currentIndex = getIndex();
@@ -327,7 +328,7 @@ public class ListCell<T> extends IndexedCell<T> {
 
         if (isEditing() && newIndex == oldIndex) {
             // no-op
-            // Fix for RT-31165 - if we (needlessly) update the index whilst the
+            // Fix for JDK-8123482 - if we (needlessly) update the index whilst the
             // cell is being edited it will no longer be in an editing state.
             // This means that in certain (common) circumstances that it will
             // appear that a cell is uneditable as, despite being clicked, it
@@ -344,6 +345,37 @@ public class ListCell<T> extends IndexedCell<T> {
     /** {@inheritDoc} */
     @Override protected Skin<?> createDefaultSkin() {
         return new ListCellSkin<>(this);
+    }
+
+    /*
+     * The layoutChildren() method is overridden to address a specific accessibility issue: JDK-8309374
+     * If the Accessibility client application requests FOCUS_ITEM before the focused
+     * ListViewSkin/ListCell is created, then JavaFX would return a null object,
+     * and hence accessibility client application cannot draw the focus rectangle.
+     * In this scenario, JavaFX should notify the accessibility application once the
+     * focused ListCell is created and its layout is completed.
+     */
+    /** {@inheritDoc} */
+    @Override protected void layoutChildren() {
+        super.layoutChildren();
+
+        if (isFocused()) {
+            ListView<T> listView = getListView();
+            if (listView != null) {
+                /*
+                 * The notifyAccessibleAttributeChanged() call is submitted via runLater to defer it until after
+                 * the layout completes, because:
+                 * It is possible that when accessibility client application is processing a FOCUS_ITEM notification,
+                 * it may trigger a layout of focused ListItem, and it ends up generating another FOCUS_ITEM change
+                 * notification from here.
+                 * We observed that this scenario occurs when client application is trying to get the
+                 * the focus item property of a focused ListItem's parent(ListView).
+                 * This scenario is avoided by submitting the call via runLater,
+                 * so that the notification is not sent during any getAttribute() call.
+                 */
+                Platform.runLater(() -> listView.notifyAccessibleAttributeChanged(AccessibleAttribute.FOCUS_ITEM));
+            }
+        }
     }
 
 
@@ -391,12 +423,20 @@ public class ListCell<T> extends IndexedCell<T> {
         // out of the editing state.
         // This MUST come before the updateItem call below, otherwise it will
         // call cancelEdit(), resulting in both commit and cancel events being
-        // fired (as identified in RT-29650)
+        // fired (as identified in JDK-8124615)
         super.commitEdit(newValue);
 
         ListView<T> list = getListView();
+        boolean listShouldRequestFocus = false;
+
         // JDK-8187307: fire the commit after updating cell's editing state
         if (list != null) {
+            // The cell is going to be updated, and the current focus owner might be removed from it.
+            // Before that happens, check if it has the list as a parent (otherwise the user might have
+            // clicked out of the list entirely and given focus to something else), so the list can
+            // request the focus back, once the edit commit ends.
+            listShouldRequestFocus = ControlUtils.controlShouldRequestFocusIfCurrentFocusOwnerIsChild(list);
+
             // Inform the ListView of the edit being ready to be committed.
             list.fireEvent(new ListView.EditEvent<>(list,
                     ListView.<T>editCommitEvent(),
@@ -415,10 +455,11 @@ public class ListCell<T> extends IndexedCell<T> {
             list.edit(-1);
 
             // request focus back onto the list, only if the current focus
-            // owner has the list as a parent (otherwise the user might have
-            // clicked out of the list entirely and given focus to something else.
+            // owner had the list as a parent.
             // It would be rude of us to request it back again.
-            ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(list);
+            if (listShouldRequestFocus) {
+                list.requestFocus();
+            }
         }
     }
 
@@ -437,7 +478,7 @@ public class ListCell<T> extends IndexedCell<T> {
 
             // request focus back onto the list, only if the current focus
             // owner has the list as a parent (otherwise the user might have
-            // clicked out of the list entirely and given focus to something else.
+            // clicked out of the list entirely and given focus to something else).
             // It would be rude of us to request it back again.
             ControlUtils.requestFocusOnControlOnlyIfCurrentFocusOwnerIsChild(list);
 
@@ -472,11 +513,11 @@ public class ListCell<T> extends IndexedCell<T> {
         outer: if (valid) {
             final T newValue = items.get(index);
 
-            // RT-35864 - if the index didn't change, then avoid calling updateItem
+            // JDK-8092593 - if the index didn't change, then avoid calling updateItem
             // unless the item has changed.
             if (oldIndex == index) {
                 if (!isItemChanged(oldValue, newValue)) {
-                    // RT-37054:  we break out of the if/else code here and
+                    // JDK-8096969:  we break out of the if/else code here and
                     // proceed with the code following this, so that we may
                     // still update references, listeners, etc as required.
                     break outer;
@@ -484,9 +525,9 @@ public class ListCell<T> extends IndexedCell<T> {
             }
             updateItem(newValue, false);
         } else {
-            // RT-30484 We need to allow a first run to be special-cased to allow
+            // JDK-8116529 We need to allow a first run to be special-cased to allow
             // for the updateItem method to be called at least once to allow for
-            // the correct visual state to be set up. In particular, in RT-30484
+            // the correct visual state to be set up. In particular, in JDK-8116529
             // refer to Ensemble8PopUpTree.png - in this case the arrows are being
             // shown as the new cells are instantiated with the arrows in the
             // children list, and are only hidden in updateItem.

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -133,7 +133,8 @@ void SocketStreamHandleImpl::didOpen()
 
 void SocketStreamHandleImpl::didReceiveData(const uint8_t* data, int length)
 {
-    m_client.didReceiveSocketStreamData(*this, data, length);
+    std::span<const uint8_t> span(data, length);
+    m_client.didReceiveSocketStreamData(*this, span);
 }
 
 void SocketStreamHandleImpl::didFail(int errorCode, const String& errorDescription)

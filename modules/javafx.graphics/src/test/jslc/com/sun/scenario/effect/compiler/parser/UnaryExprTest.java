@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,15 +33,17 @@ import com.sun.scenario.effect.compiler.tree.LiteralExpr;
 import com.sun.scenario.effect.compiler.tree.UnaryExpr;
 import com.sun.scenario.effect.compiler.tree.VariableExpr;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
-import org.junit.Before;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class UnaryExprTest extends PrimaryExprTest {
 
     private String primary;
 
-    @Before
+    @BeforeEach
     @Override
     public void setUp() {
         super.setUp();
@@ -49,60 +51,62 @@ public class UnaryExprTest extends PrimaryExprTest {
     }
 
     @Test
-    public void negated() throws Exception {
+    public void negated() {
         UnaryExpr tree = parseTreeFor("!true");
         assertEquals(tree.getOp(), UnaryOpType.NOT);
         assertEquals(((LiteralExpr)tree.getExpr()).getValue(), Boolean.TRUE);
     }
 
     @Test
-    public void positive() throws Exception {
+    public void positive() {
         UnaryExpr tree = parseTreeFor("+72.4");
         assertEquals(tree.getOp(), UnaryOpType.PLUS);
         assertEquals(((LiteralExpr)tree.getExpr()).getValue(), Float.valueOf(72.4f));
     }
 
     @Test
-    public void negative() throws Exception {
+    public void negative() {
         UnaryExpr tree = parseTreeFor("-72.4");
         assertEquals(tree.getOp(), UnaryOpType.MINUS);
         assertEquals(((LiteralExpr)tree.getExpr()).getValue(), Float.valueOf(72.4f));
     }
 
     @Test
-    public void preIncrement() throws Exception {
+    public void preIncrement() {
         UnaryExpr tree = parseTreeFor("++foo");
         assertEquals(tree.getOp(), UnaryOpType.INC);
         assertEquals(((VariableExpr)tree.getExpr()).getVariable().getName(), "foo");
     }
 
     @Test
-    public void preDecrement() throws Exception {
+    public void preDecrement() {
         UnaryExpr tree = parseTreeFor("--foo");
         assertEquals(tree.getOp(), UnaryOpType.DEC);
         assertEquals(((VariableExpr)tree.getExpr()).getVariable().getName(), "foo");
     }
 
     @Test
-    public void postIncrement() throws Exception {
+    public void postIncrement() {
         UnaryExpr tree = parseTreeFor("foo++");
         assertEquals(tree.getOp(), UnaryOpType.INC);
         assertEquals(((VariableExpr)tree.getExpr()).getVariable().getName(), "foo");
     }
 
     @Test
-    public void postDecrement() throws Exception {
+    public void postDecrement() {
         UnaryExpr tree = parseTreeFor("foo--");
         assertEquals(tree.getOp(), UnaryOpType.DEC);
         assertEquals(((VariableExpr)tree.getExpr()).getVariable().getName(), "foo");
     }
 
-    @Test(expected = ParseCancellationException.class)
-    public void notAUnaryExpression() throws Exception {
-        parseTreeFor("^" + primary);
+    @Test
+    public void notAUnaryExpression() {
+        assertThrows(ParseCancellationException.class, () -> {
+            parseTreeFor("^" + primary);
+        });
     }
 
-    private UnaryExpr parseTreeFor(String text) throws Exception {
+    private UnaryExpr parseTreeFor(String text) {
         JSLParser parser = parserOver(text);
         JSLVisitor visitor = new JSLVisitor();
         visitor.getSymbolTable().declareVariable("foo", Type.INT, null);

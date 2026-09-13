@@ -1,7 +1,7 @@
 /*
     Copyright (C) 1998 Lars Knoll (knoll@mpi-hd.mpg.de)
     Copyright (C) 2001 Dirk Mueller <mueller@kde.org>
-    Copyright (C) 2004, 2006-2008, 2015 Apple Inc. All rights reserved.
+    Copyright (C) 2004-2025 Apple Inc. All rights reserved.
     Copyright (C) 2010 Google Inc. All rights reserved.
 
     This library is free software; you can redistribute it and/or
@@ -28,23 +28,26 @@
 #include <WebCore/ResourceLoaderOptions.h>
 #include <WebCore/Timer.h>
 #include <array>
+#include <wtf/CheckedPtr.h>
 #include <wtf/Deque.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
+#include <wtf/Forward.h>
+#include <wtf/UniqueRef.h>
 
 class WebResourceLoadScheduler;
-
-namespace WebCore {
-class DocumentLoader;
-}
 
 WebResourceLoadScheduler& webResourceLoadScheduler();
 
 class WebResourceLoadScheduler final : public WebCore::LoaderStrategy {
-    WTF_MAKE_NONCOPYABLE(WebResourceLoadScheduler); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WebResourceLoadScheduler);
+    WTF_MAKE_NONCOPYABLE(WebResourceLoadScheduler);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WebResourceLoadScheduler);
 public:
     WebResourceLoadScheduler();
 
@@ -63,7 +66,7 @@ public:
 
     void startPingLoad(WebCore::LocalFrame&, WebCore::ResourceRequest&, const WebCore::HTTPHeaderMap&, const WebCore::FetchOptions&, WebCore::ContentSecurityPolicyImposition, PingLoadCompletionHandler&&) final;
 
-    void preconnectTo(WebCore::FrameLoader&, const URL&, WebCore::StoredCredentialsPolicy, ShouldPreconnectAsFirstParty, PreconnectCompletionHandler&&) final;
+    void preconnectTo(WebCore::FrameLoader&, WebCore::ResourceRequest&&, WebCore::StoredCredentialsPolicy, ShouldPreconnectAsFirstParty, PreconnectCompletionHandler&&) final;
 
     void setCaptureExtraNetworkLoadMetricsEnabled(bool) final { }
 
@@ -75,6 +78,9 @@ public:
     bool isOnLine() const final;
     void addOnlineStateChangeListener(WTF::Function<void(bool)>&&) final;
 
+    static WebCore::ResourceError blockedErrorFromRequest(const WebCore::ResourceRequest&);
+    static WebCore::ResourceError pluginWillHandleLoadErrorFromResponse(const WebCore::ResourceResponse&);
+
 private:
     virtual ~WebResourceLoadScheduler();
 
@@ -82,11 +88,27 @@ private:
     void scheduleServePendingRequests();
     void requestTimerFired();
 
+    WebCore::ResourceError cancelledError(const WebCore::ResourceRequest&) const final;
+    WebCore::ResourceError blockedError(const WebCore::ResourceRequest&) const final;
+    WebCore::ResourceError blockedByContentBlockerError(const WebCore::ResourceRequest&) const final;
+    WebCore::ResourceError cannotShowURLError(const WebCore::ResourceRequest&) const final;
+    WebCore::ResourceError interruptedForPolicyChangeError(const WebCore::ResourceRequest&) const final;
+#if ENABLE(CONTENT_FILTERING)
+    WebCore::ResourceError blockedByContentFilterError(const WebCore::ResourceRequest&) const final;
+#endif
+    WebCore::ResourceError cannotShowMIMETypeError(const WebCore::ResourceResponse&) const final;
+    WebCore::ResourceError fileDoesNotExistError(const WebCore::ResourceResponse&) const final;
+    WebCore::ResourceError httpsUpgradeRedirectLoopError(const WebCore::ResourceRequest&) const final;
+    WebCore::ResourceError httpNavigationWithHTTPSOnlyError(const WebCore::ResourceRequest&) const final;
+    WebCore::ResourceError pluginWillHandleLoadError(const WebCore::ResourceResponse&) const final;
+
     bool isSuspendingPendingRequests() const { return !!m_suspendPendingRequestsCount; }
     void isResourceLoadFinished(WebCore::CachedResource&, CompletionHandler<void(bool)>&&) final;
 
-    class HostInformation {
-        WTF_MAKE_NONCOPYABLE(HostInformation); WTF_MAKE_FAST_ALLOCATED;
+    class HostInformation final : public CanMakeWeakPtr<HostInformation>, public CanMakeCheckedPtr<HostInformation> {
+        WTF_MAKE_NONCOPYABLE(HostInformation);
+        WTF_MAKE_TZONE_ALLOCATED(HostInformation);
+        WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HostInformation);
     public:
         HostInformation(const String&, unsigned);
         ~HostInformation();
@@ -116,12 +138,12 @@ private:
         FindOnly
     };
 
-    HostInformation* hostForURL(const URL&, CreateHostPolicy = FindOnly);
-    void servePendingRequests(HostInformation*, WebCore::ResourceLoadPriority);
+    CheckedPtr<HostInformation> hostForURL(const URL&, CreateHostPolicy = FindOnly);
+    void servePendingRequests(CheckedRef<HostInformation>&&, WebCore::ResourceLoadPriority);
 
-    typedef HashMap<String, HostInformation*, StringHash> HostMap;
+    typedef HashMap<String, std::unique_ptr<HostInformation>, StringHash> HostMap;
     HostMap m_hosts;
-    HostInformation* m_nonHTTPProtocolHost;
+    const UniqueRef<HostInformation> m_nonHTTPProtocolHost;
 
     WebCore::Timer m_requestTimer;
 

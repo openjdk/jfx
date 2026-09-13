@@ -25,21 +25,25 @@
 
 #pragma once
 
-#include "WebGPUObjectDescriptorBase.h"
-#include "WebGPUQuerySet.h"
-#include "WebGPURenderPassColorAttachment.h"
-#include "WebGPURenderPassDepthStencilAttachment.h"
-#include "WebGPURenderPassTimestampWrites.h"
+#include <WebCore/WebGPUObjectDescriptorBase.h>
+#include <WebCore/WebGPUQuerySet.h>
+#include <WebCore/WebGPURenderPassColorAttachment.h>
+#include <WebCore/WebGPURenderPassDepthStencilAttachment.h>
+#include <WebCore/WebGPURenderPassTimestampWrites.h>
 #include <optional>
 #include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore::WebGPU {
 
 struct RenderPassDescriptor : public ObjectDescriptorBase {
     Vector<std::optional<RenderPassColorAttachment>> colorAttachments;
     std::optional<RenderPassDepthStencilAttachment> depthStencilAttachment;
-    QuerySet* occlusionQuerySet { nullptr };
-    RenderPassTimestampWrites timestampWrites;
+    WeakPtr<QuerySet> occlusionQuerySet;
+    std::optional<RenderPassTimestampWrites> timestampWrites;
+    std::optional<uint64_t> maxDrawCount;
+
+    RefPtr<QuerySet> protectedOcclusionQuerySet() const { return occlusionQuerySet.get(); }
 };
 
 } // namespace WebCore::WebGPU

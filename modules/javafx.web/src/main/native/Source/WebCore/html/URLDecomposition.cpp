@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "URLDecomposition.h"
 
 #include "SecurityOrigin.h"
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
@@ -84,48 +85,14 @@ String URLDecomposition::host() const
     return fullURL().hostAndPort();
 }
 
-static unsigned countASCIIDigits(StringView string)
-{
-    unsigned length = string.length();
-    for (unsigned count = 0; count < length; ++count) {
-        if (!isASCIIDigit(string[count]))
-            return count;
-    }
-    return length;
-}
-
 void URLDecomposition::setHost(StringView value)
 {
     auto fullURL = this->fullURL();
     if (value.isEmpty() && !fullURL.protocolIsFile() && fullURL.hasSpecialScheme())
         return;
 
-    size_t separator = value.reverseFind(':');
-    if (!separator)
-        return;
+    fullURL.setHostAndPort(value);
 
-    if (fullURL.hasOpaquePath())
-        return;
-
-    // No port if no colon or rightmost colon is within the IPv6 section.
-    size_t ipv6Separator = value.reverseFind(']');
-    if (separator == notFound || (ipv6Separator != notFound && ipv6Separator > separator))
-        fullURL.setHost(value);
-    else {
-        // Multiple colons are acceptable only in case of IPv6.
-        if (value.find(':') != separator && ipv6Separator == notFound)
-            return;
-        unsigned portLength = countASCIIDigits(value.substring(separator + 1));
-        if (!portLength) {
-            fullURL.setHost(value.left(separator));
-        } else {
-            auto portNumber = parseInteger<uint16_t>(value.substring(separator + 1, portLength));
-            if (portNumber && WTF::isDefaultPortForProtocol(*portNumber, fullURL.protocol()))
-                fullURL.setHostAndPort(value.left(separator));
-            else
-                fullURL.setHostAndPort(value.left(separator + 1 + portLength));
-        }
-    }
     if (fullURL.isValid())
         setFullURL(fullURL);
 }
@@ -139,8 +106,6 @@ void URLDecomposition::setHostname(StringView host)
 {
     auto fullURL = this->fullURL();
     if (host.isEmpty() && !fullURL.protocolIsFile() && fullURL.hasSpecialScheme())
-        return;
-    if (fullURL.hasOpaquePath())
         return;
     fullURL.setHost(host);
     if (fullURL.isValid())
@@ -156,7 +121,7 @@ String URLDecomposition::port() const
 }
 
 // Outer optional is whether we could parse at all. Inner optional is "no port specified".
-static std::optional<std::optional<uint16_t>> parsePort(StringView string, StringView protocol)
+std::optional<std::optional<uint16_t>> URLDecomposition::parsePort(StringView string, StringView protocol)
 {
     // https://url.spec.whatwg.org/#port-state with state override given.
     uint32_t port { 0 };
@@ -187,7 +152,7 @@ void URLDecomposition::setPort(StringView value)
     auto fullURL = this->fullURL();
     if (fullURL.host().isEmpty() || fullURL.protocolIsFile())
         return;
-    auto port = parsePort(value, fullURL.protocol());
+    auto port = URLDecomposition::parsePort(value, fullURL.protocol());
     if (!port)
         return;
     fullURL.setPort(*port);

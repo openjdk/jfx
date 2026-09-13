@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -94,6 +94,8 @@ import javafx.beans.property.ReadOnlyStringProperty;
  *     other state, the values for these properties may be any value in their
  *     respective valid ranges.
  * </p>
+ *
+ * @param <V> the worker resulting value type
  * @since JavaFX 2.0
  */
 public interface Worker<V> {

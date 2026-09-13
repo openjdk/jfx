@@ -27,7 +27,6 @@
 
 #include "GPUIntegralTypes.h"
 #include "WebGPUExtent3D.h"
-#include <variant>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -47,7 +46,7 @@ struct GPUExtent3DDict {
     GPUIntegerCoordinate depthOrArrayLayers { 0 };
 };
 
-using GPUExtent3D = std::variant<Vector<GPUIntegerCoordinate>, GPUExtent3DDict>;
+using GPUExtent3D = Variant<Vector<GPUIntegerCoordinate>, GPUExtent3DDict>;
 
 inline WebGPU::Extent3D convertToBacking(const GPUExtent3D& extent3D)
 {

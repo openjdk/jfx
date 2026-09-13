@@ -25,6 +25,10 @@
 
 #include "audio.h"
 
+#ifdef GSTREAMER_LITE
+#include "gst/glib-compat-private.h"
+#endif // GSTREAMER_LITE
+
 #include <gst/gststructure.h>
 
 #ifndef GST_DISABLE_GST_DEBUG
@@ -61,7 +65,7 @@ ensure_debug_category (void)
 GstAudioInfo *
 gst_audio_info_copy (const GstAudioInfo * info)
 {
-  return g_slice_dup (GstAudioInfo, info);
+  return g_memdup2 (info, sizeof (GstAudioInfo));
 }
 
 /**
@@ -74,7 +78,7 @@ gst_audio_info_copy (const GstAudioInfo * info)
 void
 gst_audio_info_free (GstAudioInfo * info)
 {
-  g_slice_free (GstAudioInfo, info);
+  g_free (info);
 }
 
 G_DEFINE_BOXED_TYPE (GstAudioInfo, gst_audio_info,
@@ -93,7 +97,7 @@ gst_audio_info_new (void)
 {
   GstAudioInfo *info;
 
-  info = g_slice_new (GstAudioInfo);
+  info = g_new (GstAudioInfo, 1);
   gst_audio_info_init (info);
 
   return info;
@@ -386,7 +390,7 @@ gst_audio_info_to_caps (const GstAudioInfo * info)
         "but no channel positions present");
   }
 
-  caps = gst_caps_new_simple ("audio/x-raw",
+  caps = gst_caps_new_static_str_simple ("audio/x-raw",
       "format", G_TYPE_STRING, format,
       "layout", G_TYPE_STRING, layout,
       "rate", G_TYPE_INT, info->rate,
@@ -408,8 +412,8 @@ gst_audio_info_to_caps (const GstAudioInfo * info)
         && info->position[0] == GST_AUDIO_CHANNEL_POSITION_MONO) {
       /* Default mono special case */
     } else {
-      gst_caps_set_simple (caps, "channel-mask", GST_TYPE_BITMASK, channel_mask,
-          NULL);
+      gst_caps_set_simple_static_str (caps, "channel-mask", GST_TYPE_BITMASK,
+          channel_mask, NULL);
     }
   }
 

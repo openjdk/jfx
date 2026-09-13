@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,14 +28,17 @@
 
 #include "InjectedScript.h"
 #include "InjectedScriptManager.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace Inspector {
 
 using namespace JSC;
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(JSGlobalObjectRuntimeAgent);
+
 JSGlobalObjectRuntimeAgent::JSGlobalObjectRuntimeAgent(JSAgentContext& context)
     : InspectorRuntimeAgent(context)
-    , m_frontendDispatcher(makeUnique<RuntimeFrontendDispatcher>(context.frontendRouter))
+    , m_frontendDispatcher(makeUniqueRef<RuntimeFrontendDispatcher>(context.frontendRouter))
     , m_backendDispatcher(RuntimeBackendDispatcher::create(context.backendDispatcher, this))
     , m_globalObject(context.inspectedGlobalObject)
 {

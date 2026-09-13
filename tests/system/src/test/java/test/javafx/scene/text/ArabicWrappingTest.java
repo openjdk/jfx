@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,24 +25,26 @@
 
 package test.javafx.scene.text;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import static org.junit.Assert.*;
-
-import javafx.application.Platform;
-import javafx.stage.Stage;
-import javafx.scene.Scene;
-import javafx.scene.layout.HBox;
-import javafx.scene.text.Font;
-import javafx.scene.text.Text;
-import javafx.application.Application;
-
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
+import javafx.application.Application;
+import javafx.application.Platform;
+import javafx.scene.Scene;
+import javafx.scene.layout.HBox;
+import javafx.scene.text.Font;
+import javafx.scene.text.Text;
+import javafx.stage.Stage;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
+@Timeout(value=120000, unit=TimeUnit.MILLISECONDS)
 public class ArabicWrappingTest extends Application {
 
     static PrintStream systemErr = System.err;
@@ -75,7 +77,7 @@ public class ArabicWrappingTest extends Application {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() {
         systemErrFilter = new SystemErrFilter(System.err);
         System.setErr(systemErrFilter);
@@ -84,7 +86,7 @@ public class ArabicWrappingTest extends Application {
         }).start();
     }
 
-    @AfterClass
+    @AfterAll
     public static void exitTest() {
         Platform.exit();
     }
@@ -100,13 +102,14 @@ public class ArabicWrappingTest extends Application {
      * the @BeforeClass annotated method.
      * In other words, this is fine here.
      */
-    @Test(timeout=120000)
+    @Test
     public void testWrapping() {
 
        while (!ArabicWrappingTest.testDone) {
            try {
                Thread.sleep(2000);
            } catch (Exception e) {
+               fail(e);
            }
        }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,9 +26,10 @@
 package test.javafx.css;
 
 import com.sun.javafx.css.SelectorPartitioning;
+import com.sun.javafx.css.SimpleSelector;
 
 import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 import java.util.List;
 import javafx.css.CssParser;
 import javafx.css.Declaration;
@@ -36,25 +37,20 @@ import javafx.css.DeclarationShim;
 import javafx.css.Rule;
 import javafx.css.RuleShim;
 import javafx.css.Selector;
-import javafx.css.SimpleSelector;
-import javafx.css.SimpleSelectorShim;
 import javafx.css.Stylesheet;
 import javafx.scene.paint.Color;
-import org.junit.Test;
-import static org.junit.Assert.*;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@RunWith(Parameterized.class)
 public class SelectorPartitioningTest {
 
-    public SelectorPartitioningTest(final Data data) {
-        this.data = data;
+    public SelectorPartitioningTest() {
         this.instance = new SelectorPartitioning();
     }
-    private final Data data;
     private final SelectorPartitioning instance;
 
     private static class Data {
@@ -88,8 +84,7 @@ public class SelectorPartitioningTest {
                 ).toString());
             List<String> styleClasses =
                 styleClass != null ? Arrays.asList(styleClass.split("\\.")) : null;
-            this.selector =
-                SimpleSelectorShim.getSimpleSelector(type, styleClasses, null, id);
+            this.selector = new SimpleSelector(type, styleClasses, null, id);
             this.matches = matches;
         }
     }
@@ -121,45 +116,44 @@ public class SelectorPartitioningTest {
     }
 
 
-    @Parameters
-    public static Collection data() {
+    public static Stream<Arguments> data() {
 
         int red = 0;
         int green = 0;
         int blue = 0;
-        return Arrays.asList(new Object[] {
+        return Stream.of (
             /* selector = * */
-            new Object[] {new SimpleData("*", null, null, Color.rgb(red += 10, 0, 0))},
+            Arguments.of(new SimpleData("*", null, null, Color.rgb(red += 10, 0, 0))),
             /* selector = A */
-            new Object[] {new SimpleData("A", null, null, Color.rgb(red += 10, 0, 0))},
+            Arguments.of(new SimpleData("A", null, null, Color.rgb(red += 10, 0, 0))),
             /* selector = * A.b */
-            new Object[] {new SimpleData("A", "b", null, Color.rgb(red += 10, 0, 0))},
+            Arguments.of(new SimpleData("A", "b", null, Color.rgb(red += 10, 0, 0))),
             /* selector = A#c */
-            new Object[] {new SimpleData("A", null, "c", Color.rgb(red += 10, 0, 0))},
+            Arguments.of(new SimpleData("A", null, "c", Color.rgb(red += 10, 0, 0))),
             /* selector = A.b#c */
-            new Object[] {new SimpleData("A", "b", "c", Color.rgb(red += 10, 0, 0))},
+            Arguments.of(new SimpleData("A", "b", "c", Color.rgb(red += 10, 0, 0))),
             /* selector = *.b */
-            new Object[] {new SimpleData("*", "b", null, Color.rgb(red += 10, 0, 0))},
+            Arguments.of(new SimpleData("*", "b", null, Color.rgb(red += 10, 0, 0))),
             /* selector = *#c */
-            new Object[] {new SimpleData("*", null, "c", Color.rgb(red += 10, 0, 0))},
+            Arguments.of(new SimpleData("*", null, "c", Color.rgb(red += 10, 0, 0))),
             /* selector = *.b#c */
-            new Object[] {new SimpleData("*", "b", "c", Color.rgb(red += 10, 0, 0))},
+            Arguments.of(new SimpleData("*", "b", "c", Color.rgb(red += 10, 0, 0))),
 
-            new Object[] {
+            Arguments.of(
                 new ComplexData(
                     (SimpleSelector)Selector.createSelector("*.b"),
                     new SimpleData("*", "b", null, Color.rgb(0, green += 10, 0), true),
                     new SimpleData("*", "c", null, Color.rgb(0, green += 10, 0), false),
                     new SimpleData("*", "b.c", null, Color.rgb(0, green += 10, 0), false)
-                )},
-            new Object[] {
+                )),
+            Arguments.of(
                 new ComplexData(
                     (SimpleSelector)Selector.createSelector("*.b.c"),
                     new SimpleData("*", "b", null, Color.rgb(0, green += 10, 0), true),
                     new SimpleData("*", "c", null, Color.rgb(0, green += 10, 0), true),
                     new SimpleData("*", "b.c", null, Color.rgb(0, green += 10, 0), true)
-                )},
-            new Object[] {
+                )),
+            Arguments.of(
                 new ComplexData(
                     (SimpleSelector)Selector.createSelector("A.b"),
                     new SimpleData("*", "b", null, Color.rgb(0, green += 10, 0), true),
@@ -167,8 +161,8 @@ public class SelectorPartitioningTest {
                     new SimpleData("*", null, null, Color.rgb(0, green += 10, 0), true),
                     new SimpleData("*", "c", null, Color.rgb(0, green += 10, 0), false),
                     new SimpleData("*", "b.c", null, Color.rgb(0, green += 10, 0), false)
-                )},
-            new Object[] {
+                )),
+            Arguments.of(
                 new ComplexData(
                     (SimpleSelector)Selector.createSelector("A.c"),
                     new SimpleData("*", "b", null, Color.rgb(0, green += 10, 0), false),
@@ -176,8 +170,8 @@ public class SelectorPartitioningTest {
                     new SimpleData("*", null, null, Color.rgb(0, green += 10, 0), true),
                     new SimpleData("*", "c", null, Color.rgb(0, green += 10, 0), true),
                     new SimpleData("*", "b.c", null, Color.rgb(0, green += 10, 0), false)
-                )},
-            new Object[] {
+                )),
+            Arguments.of(
                 new ComplexData(
                     (SimpleSelector)Selector.createSelector("A.b.c"),
                     new SimpleData("*", "b", null, Color.rgb(0, green += 10, 0), true),
@@ -185,12 +179,13 @@ public class SelectorPartitioningTest {
                     new SimpleData("*", null, null, Color.rgb(0, green += 10, 0), true),
                     new SimpleData("*", "c", null, Color.rgb(0, green += 10, 0), true),
                     new SimpleData("*", "b.c", null, Color.rgb(0, green += 10, 0), true)
-                )}
-        });
+                ))
+        );
     }
 
-    @Test
-    public void testSelectorPartitionAndMatch() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testSelectorPartitionAndMatch(Data data) {
 
         Stylesheet stylesheet =
                 new CssParser().parse(data.stylesheetText);
@@ -212,7 +207,7 @@ public class SelectorPartitioningTest {
 
         SimpleSelector simple = simpleData.selector;
 
-        List<Selector> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassSet());
+        List<Selector> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassNames());
 
         assertEquals(1,matched.size());
         Selector selector = matched.get(0);
@@ -226,9 +221,9 @@ public class SelectorPartitioningTest {
 
         Color color = (Color)DeclarationShim.get_parsedValue(decl).convert(null);
 
-        assertEquals(simpleData.selector.toString(), data.color.getRed(), color.getRed(), 0.00001);
-        assertEquals(simpleData.selector.toString(), data.color.getGreen(), color.getGreen(), 0.00001);
-        assertEquals(simpleData.selector.toString(), data.color.getBlue(), color.getBlue(), 0.00001);
+        assertEquals(simpleData.color.getRed(), color.getRed(), 0.00001, simpleData.selector.toString());
+        assertEquals(simpleData.color.getGreen(), color.getGreen(), 0.00001, simpleData.selector.toString());
+        assertEquals(simpleData.color.getBlue(), color.getBlue(), 0.00001, simpleData.selector.toString());
 
     }
 
@@ -236,14 +231,14 @@ public class SelectorPartitioningTest {
 
         SimpleSelector simple = complexData.selector;
 
-        List<Selector> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassSet());
+        List<Selector> matched = instance.match(simple.getId(), simple.getName(), simple.getStyleClassNames());
         assertEquals(complexData.matches, matched.size());
 
         for(Selector s1 : matched) {
             for (SimpleData datum : complexData.data) {
                 Selector s2 = datum.selector;
                 if (s1.equals(s2)) {
-                    assertTrue(s1.toString() + " != " + s2.toString(), datum.matches);
+                    assertTrue(datum.matches, s1.toString() + " != " + s2.toString());
                 }
             }
         }

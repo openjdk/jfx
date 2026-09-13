@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,9 +31,9 @@ import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.TimeZone;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * A test for the {@link DateParser} class.
@@ -299,8 +299,9 @@ public class DateParserTest {
     private static void test(String dateString, String expectedResult) {
         try {
             long actualResult = DateParserShim.parse(dateString);
-            assertEquals("Unexpected result, date string: [" + dateString
-                    + "],", expectedResult, DF.format(new Date(actualResult)));
+            assertEquals(expectedResult, DF.format(new Date(actualResult)),
+                    "Unexpected result, date string: [" + dateString
+                            + "],");
         } catch (ParseException ex) {
             throw new AssertionError(ex);
         }

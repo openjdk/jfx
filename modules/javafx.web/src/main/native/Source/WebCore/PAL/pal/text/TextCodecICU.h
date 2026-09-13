@@ -28,6 +28,8 @@
 
 #include "TextCodec.h"
 #include <unicode/ucnv.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/text/ASCIILiteral.h>
 #include <wtf/unicode/icu/ICUHelpers.h>
 
 namespace PAL {
@@ -35,29 +37,30 @@ namespace PAL {
 using ICUConverterPtr = std::unique_ptr<UConverter, ICUDeleter<ucnv_close>>;
 
 class TextCodecICU final : public TextCodec {
+    WTF_MAKE_TZONE_ALLOCATED(TextCodecICU);
 public:
     static void registerEncodingNames(EncodingNameRegistrar);
     static void registerCodecs(TextCodecRegistrar);
 
-    explicit TextCodecICU(const char* encoding, const char* canonicalConverterName);
+    explicit TextCodecICU(ASCIILiteral encoding, ASCIILiteral canonicalConverterName);
     virtual ~TextCodecICU();
 
 private:
-    String decode(const char*, size_t length, bool flush, bool stopOnError, bool& sawError) final;
+    String decode(std::span<const uint8_t>, bool flush, bool stopOnError, bool& sawError) final;
     Vector<uint8_t> encode(StringView, UnencodableHandling) const final;
 
     void createICUConverter() const;
     void releaseICUConverter() const;
 
-    int decodeToBuffer(UChar* buffer, UChar* bufferLimit, const char*& source, const char* sourceLimit, int32_t* offsets, bool flush, UErrorCode&);
+    int decodeToBuffer(std::span<char16_t> buffer, std::span<const uint8_t>& source, int32_t* offsets, bool flush, UErrorCode&);
 
-    const char* const m_encodingName;
-    const char* const m_canonicalConverterName;
+    ASCIILiteral m_encodingName;
+    ASCIILiteral const m_canonicalConverterName;
     mutable ICUConverterPtr m_converter;
 };
 
 struct ICUConverterWrapper {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(ICUConverterWrapper);
 
     ICUConverterPtr converter;
 };

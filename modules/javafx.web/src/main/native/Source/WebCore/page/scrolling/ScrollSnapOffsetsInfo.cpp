@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2014-2022 Apple Inc. All rights reserved.
  * Copyright (C) 2020 Igalia S.L.
+ * Copyright (C) 2026 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,15 +29,16 @@
 #include "ScrollSnapOffsetsInfo.h"
 
 #include "ElementChildIteratorInlines.h"
+#include "FloatQuad.h"
 #include "LayoutRect.h"
-#include "Length.h"
 #include "Logging.h"
 #include "RenderBox.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
+#include "RenderElementInlines.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "ScrollableArea.h"
-#include "StyleScrollSnapPoints.h"
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <ranges>
 
 namespace WebCore {
 
@@ -199,7 +201,7 @@ static std::pair<LayoutType, std::optional<unsigned>> closestSnapOffsetWithInfoA
         return pairForNoSnapping;
 
     auto isNearEnoughToOffsetForProximity = [&](LayoutType candidateSnapOffset) {
-        if (info.strictness != ScrollSnapStrictness::Proximity)
+        if (!info.strictness || *info.strictness != ScrollSnapStrictness::Proximity)
             return true;
 
         // This is an arbitrary choice for what it means to be "in proximity" of a snap offset. We should play around with
@@ -249,25 +251,18 @@ static std::pair<LayoutType, std::optional<unsigned>> closestSnapOffsetWithInfoA
     return velocity < 0 ? *previous : *next;
 }
 
-enum class InsetOrOutset {
-    Inset,
-    Outset
-};
-
-static LayoutRect computeScrollSnapPortOrAreaRect(const LayoutRect& rect, const LengthBox& insetOrOutsetBox, InsetOrOutset insetOrOutset)
+static LayoutRect computeScrollSnapPortRect(const RenderStyle& style, const LayoutRect& rect)
 {
-    // We are using minimumValueForLength here for insetOrOutset box, because if this value is defined by scroll-padding then the
-    // Length of any side may be "auto." In that case, we want to use 0, because that is how WebKit currently interprets an "auto"
-    // value for scroll-padding. See: https://drafts.csswg.org/css-scroll-snap-1/#propdef-scroll-padding
-    LayoutBoxExtent extents(
-        minimumValueForLength(insetOrOutsetBox.top(), rect.height()), minimumValueForLength(insetOrOutsetBox.right(), rect.width()),
-        minimumValueForLength(insetOrOutsetBox.bottom(), rect.height()), minimumValueForLength(insetOrOutsetBox.left(), rect.width()));
-    auto snapPortOrArea(rect);
-    if (insetOrOutset == InsetOrOutset::Inset)
-        snapPortOrArea.contract(extents);
-    else
-        snapPortOrArea.expand(extents);
-    return snapPortOrArea;
+    auto result = rect;
+    result.contract(Style::extentForRect(style.scrollPaddingBox(), rect, style.usedZoomForLength()));
+    return result;
+}
+
+static LayoutRect computeScrollSnapAreaRect(const RenderStyle& style, const LayoutRect& rect)
+{
+    auto result = rect;
+    result.expand(Style::extentForRect(style.scrollMarginBox(), rect, style.usedZoomForLength()));
+    return result;
 }
 
 static LayoutUnit computeScrollSnapAlignOffset(LayoutUnit minLocation, LayoutUnit maxLocation, ScrollSnapAxisAlignType alignment, bool axisIsFlipped)
@@ -285,26 +280,29 @@ static LayoutUnit computeScrollSnapAlignOffset(LayoutUnit minLocation, LayoutUni
     }
 }
 
-static std::pair<bool, bool> axesFlippedForWritingModeAndDirection(WritingMode writingMode, TextDirection textDirection)
+bool hasScrollSnappedBoxes(const RenderBox& scrollingElementBox)
 {
-    // text-direction flips the inline axis and writing-mode can flip the block axis. Whether or
-    // not the writing-mode is vertical determines the physical orientation of the block and inline axes.
-    bool hasVerticalWritingMode = isVerticalWritingMode(writingMode);
-    bool blockAxisFlipped = isFlippedWritingMode(writingMode);
-    bool inlineAxisFlipped = textDirection == TextDirection::RTL;
-    return std::make_pair(hasVerticalWritingMode ? blockAxisFlipped : inlineAxisFlipped, hasVerticalWritingMode ? inlineAxisFlipped : blockAxisFlipped);
+    auto scrollSnapTypeContainer = scrollingElementBox.style().scrollSnapType().tryContainer();
+    if (!scrollSnapTypeContainer)
+        return false;
+
+    auto& boxesWithScrollSnapPositions = scrollingElementBox.view().boxesWithScrollSnapPositions();
+    if (boxesWithScrollSnapPositions.isEmptyIgnoringNullReferences())
+        return false;
+
+    return true;
 }
 
-void updateSnapOffsetsForScrollableArea(ScrollableArea& scrollableArea, const RenderBox& scrollingElementBox, const RenderStyle& scrollingElementStyle, LayoutRect viewportRectInBorderBoxCoordinates, WritingMode writingMode, TextDirection textDirection, Element* focusedElement)
+void updateSnapOffsetsForScrollableArea(ScrollableArea& scrollableArea, const RenderBox& scrollingElementBox, const RenderStyle& scrollingElementStyle, LayoutRect viewportRectInBorderBoxCoordinates, WritingMode writingMode, Element* focusedElement)
 {
-    auto scrollSnapType = scrollingElementStyle.scrollSnapType();
+    auto scrollSnapTypeContainer = scrollingElementStyle.scrollSnapType().tryContainer();
     const auto& boxesWithScrollSnapPositions = scrollingElementBox.view().boxesWithScrollSnapPositions();
-    if (scrollSnapType.strictness == ScrollSnapStrictness::None || boxesWithScrollSnapPositions.isEmpty()) {
+    if (!scrollSnapTypeContainer || boxesWithScrollSnapPositions.isEmptyIgnoringNullReferences()) {
         scrollableArea.clearSnapOffsets();
         return;
     }
 
-    auto addOrUpdateStopForSnapOffset = [](HashMap<LayoutUnit, SnapOffset<LayoutUnit>>& offsets, LayoutUnit newOffset, ScrollSnapStop stop, bool hasSnapAreaLargerThanViewport, ElementIdentifier snapTargetID, bool isFocused, size_t snapAreaIndices)
+    auto addOrUpdateStopForSnapOffset = [](HashMap<LayoutUnit, SnapOffset<LayoutUnit>>& offsets, LayoutUnit newOffset, ScrollSnapStop stop, bool hasSnapAreaLargerThanViewport, NodeIdentifier snapTargetID, bool isFocused, size_t snapAreaIndices)
     {
         if (!offsets.isValidKey(newOffset))
             return;
@@ -324,46 +322,47 @@ void updateSnapOffsetsForScrollableArea(ScrollableArea& scrollableArea, const Re
     HashMap<LayoutUnit, SnapOffset<LayoutUnit>> verticalSnapOffsetsMap;
     HashMap<LayoutUnit, SnapOffset<LayoutUnit>> horizontalSnapOffsetsMap;
     Vector<LayoutRect> snapAreas;
-    Vector<ElementIdentifier> snapAreasIDs;
+    Vector<NodeIdentifier> snapAreasIDs;
 
     auto maxScrollOffset = scrollableArea.maximumScrollOffset();
     maxScrollOffset.clampNegativeToZero();
     auto scrollPosition = LayoutPoint { scrollableArea.scrollPosition() };
 
-    auto [scrollerXAxisFlipped, scrollerYAxisFlipped] = axesFlippedForWritingModeAndDirection(writingMode, textDirection);
-    bool scrollerHasVerticalWritingMode = isVerticalWritingMode(writingMode);
-    bool hasHorizontalSnapOffsets = scrollSnapType.axis == ScrollSnapAxis::Both || scrollSnapType.axis == ScrollSnapAxis::XAxis;
-    bool hasVerticalSnapOffsets = scrollSnapType.axis == ScrollSnapAxis::Both || scrollSnapType.axis == ScrollSnapAxis::YAxis;
-    if (scrollSnapType.axis == ScrollSnapAxis::Block) {
+    bool scrollerXAxisFlipped = !writingMode.isAnyLeftToRight();
+    bool scrollerYAxisFlipped = !writingMode.isAnyTopToBottom();
+    bool scrollerHasVerticalWritingMode = writingMode.isVertical();
+    bool hasHorizontalSnapOffsets = scrollSnapTypeContainer->axis == ScrollSnapAxis::Both || scrollSnapTypeContainer->axis == ScrollSnapAxis::XAxis;
+    bool hasVerticalSnapOffsets = scrollSnapTypeContainer->axis == ScrollSnapAxis::Both || scrollSnapTypeContainer->axis == ScrollSnapAxis::YAxis;
+    if (scrollSnapTypeContainer->axis == ScrollSnapAxis::Block) {
         hasHorizontalSnapOffsets = scrollerHasVerticalWritingMode;
         hasVerticalSnapOffsets = !scrollerHasVerticalWritingMode;
     }
-    if (scrollSnapType.axis == ScrollSnapAxis::Inline) {
+    if (scrollSnapTypeContainer->axis == ScrollSnapAxis::Inline) {
         hasHorizontalSnapOffsets = !scrollerHasVerticalWritingMode;
         hasVerticalSnapOffsets = scrollerHasVerticalWritingMode;
     }
 
     // The bounds of the scrolling container's snap port, where the top left of the scrolling container's border box is the origin.
-    auto scrollSnapPort = computeScrollSnapPortOrAreaRect(viewportRectInBorderBoxCoordinates, scrollingElementStyle.scrollPadding(), InsetOrOutset::Inset);
+    auto scrollSnapPort = computeScrollSnapPortRect(scrollingElementStyle, viewportRectInBorderBoxCoordinates);
     LOG_WITH_STREAM(ScrollSnap, stream << "Computing scroll snap offsets for " << scrollableArea << " in snap port " << scrollSnapPort);
-    for (auto* child : boxesWithScrollSnapPositions) {
-        if (child->enclosingScrollableContainerForSnapping() != &scrollingElementBox)
+    for (auto& child : boxesWithScrollSnapPositions) {
+        if (child.enclosingScrollableContainer() != &scrollingElementBox || !child.element())
             continue;
 
         // The bounds of the child element's snap area, where the top left of the scrolling container's border box is the origin.
         // The snap area is the bounding box of the child element's border box, after applying transformations.
         OptionSet<MapCoordinatesMode> options = { UseTransforms, IgnoreStickyOffsets };
-        auto scrollSnapArea = LayoutRect(child->localToContainerQuad(FloatQuad(child->borderBoundingBox()), &scrollingElementBox, options).boundingBox());
+        auto scrollSnapArea = LayoutRect(child.localToContainerQuad(FloatQuad(child.borderBoundingBox()), &scrollingElementBox, options).boundingBox());
 
         // localToContainerQuad will transform the scroll snap area by the scroll position, except in the case that this position is
         // coming from a ScrollView. We want the transformed area, but without scroll position taken into account.
         if (!scrollableArea.isScrollView())
             scrollSnapArea.moveBy(scrollPosition);
 
-        scrollSnapArea = computeScrollSnapPortOrAreaRect(scrollSnapArea, child->style().scrollMargin(), InsetOrOutset::Outset);
-        LOG_WITH_STREAM(ScrollSnap, stream << "    Considering scroll snap target area " << scrollSnapArea);
-        auto alignment = child->style().scrollSnapAlign();
-        auto stop = child->style().scrollSnapStop();
+        scrollSnapArea = computeScrollSnapAreaRect(child.style(), scrollSnapArea);
+        LOG_WITH_STREAM(ScrollSnap, stream << "    Considering scroll snap target area " << scrollSnapArea << " scroll snap id: " << child.element()->nodeIdentifier() << " element: " << *child.element());
+        auto alignment = child.style().scrollSnapAlign();
+        auto stop = child.style().scrollSnapStop();
 
         // From https://drafts.csswg.org/css-scroll-snap-1/#scroll-snap-align:
         // "Start and end alignments are resolved with respect to the writing mode of the snap container unless the
@@ -371,9 +370,12 @@ void updateSnapOffsetsForScrollableArea(ScrollableArea& scrollableArea, const Re
         // mode of the box itself."
         bool areaXAxisFlipped = scrollerXAxisFlipped;
         bool areaYAxisFlipped = scrollerYAxisFlipped;
-        bool areaHasVerticalWritingMode = isVerticalWritingMode(child->style().writingMode());
-        if ((areaHasVerticalWritingMode && scrollSnapArea.height() > scrollSnapPort.height()) || (!areaHasVerticalWritingMode && scrollSnapArea.width() > scrollSnapPort.width()))
-            std::tie(areaXAxisFlipped, areaYAxisFlipped) = axesFlippedForWritingModeAndDirection(child->style().writingMode(), child->style().direction());
+        bool areaHasVerticalWritingMode = child.writingMode().isVertical();
+        if ((areaHasVerticalWritingMode && scrollSnapArea.height() > scrollSnapPort.height())
+            || (!areaHasVerticalWritingMode && scrollSnapArea.width() > scrollSnapPort.width())) {
+            areaXAxisFlipped = !child.writingMode().isAnyLeftToRight();
+            areaYAxisFlipped = !child.writingMode().isAnyTopToBottom();
+        }
 
         ScrollSnapAxisAlignType xAlign = scrollerHasVerticalWritingMode ? alignment.blockAlign : alignment.inlineAlign;
         ScrollSnapAxisAlignType yAlign = scrollerHasVerticalWritingMode ? alignment.inlineAlign : alignment.blockAlign;
@@ -387,9 +389,10 @@ void updateSnapOffsetsForScrollableArea(ScrollableArea& scrollableArea, const Re
         LayoutRect scrollSnapAreaAsOffsets(scrollableArea.scrollOffsetFromPosition(roundedIntPoint(snapAreaOriginRelativeToBorderEdge)), scrollSnapArea.size());
         snapAreas.append(scrollSnapAreaAsOffsets);
 
-        auto isFocused = child->element() ? focusedElement == child->element() : false;
-        auto identifier = child->element() ? child->element()->identifier() : ObjectIdentifier<ElementIdentifierType>(0);
+        auto isFocused = child.element() ? focusedElement == child.element() : false;
+        auto identifier = child.element()->nodeIdentifier();
         snapAreasIDs.append(identifier);
+
         if (snapsHorizontally) {
             auto absoluteScrollXPosition = computeScrollSnapAlignOffset(scrollSnapArea.x(), scrollSnapArea.maxX(), xAlign, areaXAxisFlipped) - computeScrollSnapAlignOffset(scrollSnapPort.x(), scrollSnapPort.maxX(), xAlign, areaXAxisFlipped);
             auto absoluteScrollOffset = clampTo<int>(scrollableArea.scrollOffsetFromPosition({ roundToInt(absoluteScrollXPosition), 0 }).x(), 0, maxScrollOffset.x());
@@ -412,18 +415,18 @@ void updateSnapOffsetsForScrollableArea(ScrollableArea& scrollableArea, const Re
 
     Vector<SnapOffset<LayoutUnit>> horizontalSnapOffsets = copyToVector(horizontalSnapOffsetsMap.values());
     if (!horizontalSnapOffsets.isEmpty()) {
-        std::sort(horizontalSnapOffsets.begin(), horizontalSnapOffsets.end(), compareSnapOffsets);
+        std::ranges::sort(horizontalSnapOffsets, compareSnapOffsets);
         LOG_WITH_STREAM(ScrollSnap, stream << " => Computed horizontal scroll snap offsets: " << horizontalSnapOffsets);
     }
 
     Vector<SnapOffset<LayoutUnit>> verticalSnapOffsets = copyToVector(verticalSnapOffsetsMap.values());
     if (!verticalSnapOffsets.isEmpty()) {
-        std::sort(verticalSnapOffsets.begin(), verticalSnapOffsets.end(), compareSnapOffsets);
+        std::ranges::sort(verticalSnapOffsets, compareSnapOffsets);
         LOG_WITH_STREAM(ScrollSnap, stream << " => Computed vertical scroll snap offsets: " << verticalSnapOffsets);
     }
 
     scrollableArea.setScrollSnapOffsetInfo({
-        scrollSnapType.strictness,
+        scrollSnapTypeContainer->strictness,
         horizontalSnapOffsets,
         verticalSnapOffsets,
         snapAreas,

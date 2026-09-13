@@ -29,47 +29,88 @@
 #import <wtf/FastMalloc.h>
 #import <wtf/Ref.h>
 #import <wtf/RefCounted.h>
+#import <wtf/TZoneMalloc.h>
 #import <wtf/Vector.h>
 
 struct WGPURenderBundleImpl {
 };
 
+@interface ResourceUsageAndRenderStage : NSObject
+- (instancetype)initWithUsage:(MTLResourceUsage)usage renderStages:(MTLRenderStages)renderStages entryUsage:(OptionSet<WebGPU::BindGroupEntryUsage>)entryUsage binding:(uint32_t)binding resource:(WebGPU::BindGroupEntryUsageData::Resource)resource;
+
+@property (nonatomic) MTLResourceUsage usage;
+@property (nonatomic) MTLRenderStages renderStages;
+@property (nonatomic) OptionSet<WebGPU::BindGroupEntryUsage> entryUsage;
+@property (nonatomic) uint32_t binding;
+@property (nonatomic) WebGPU::BindGroupEntryUsageData::Resource resource;
+@end
+
+@class RenderBundleICBWithResources;
+
 namespace WebGPU {
 
+class BindGroup;
+class Buffer;
+class CommandEncoder;
 class Device;
+class RenderBundleEncoder;
+class RenderPassEncoder;
+class RenderPipeline;
+class TextureOrTextureView;
+class TextureView;
 
 // https://gpuweb.github.io/gpuweb/#gpurenderbundle
 class RenderBundle : public WGPURenderBundleImpl, public RefCounted<RenderBundle> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(RenderBundle);
 public:
-    static Ref<RenderBundle> create(id<MTLIndirectCommandBuffer> indirectCommandBuffer, Vector<BindableResources>&& resources, Device& device)
+    using MinVertexCountsContainer = HashMap<uint64_t, IndexBufferAndIndexData, DefaultHash<uint64_t>, WTF::UnsignedWithZeroKeyHashTraits<uint64_t>>;
+    using ResourcesContainer = NSMapTable<id<MTLResource>, ResourceUsageAndRenderStage*>;
+    static Ref<RenderBundle> create(NSArray<RenderBundleICBWithResources*> *resources, Vector<WebGPU::BindableResources>&& bindableResources, RefPtr<WebGPU::RenderBundleEncoder> encoder, const WGPURenderBundleEncoderDescriptor& descriptor, uint64_t commandCount, bool makeSubmitInvalid, HashSet<RefPtr<const BindGroup>>&& bindGroups, Device& device)
     {
-        return adoptRef(*new RenderBundle(indirectCommandBuffer, WTFMove(resources), device));
+        return adoptRef(*new RenderBundle(resources, WTF::move(bindableResources), encoder, descriptor, commandCount, makeSubmitInvalid, WTF::move(bindGroups), device));
     }
-    static Ref<RenderBundle> createInvalid(Device& device)
+    static Ref<RenderBundle> createInvalid(Device& device, NSString* errorString)
     {
-        return adoptRef(*new RenderBundle(device));
+        return adoptRef(*new RenderBundle(device, errorString));
     }
 
     ~RenderBundle();
 
     void setLabel(String&&);
 
-    bool isValid() const { return m_indirectCommandBuffer; }
-
-    id<MTLIndirectCommandBuffer> indirectCommandBuffer() const { return m_indirectCommandBuffer; }
+    bool isValid() const;
 
     Device& device() const { return m_device; }
-    const Vector<BindableResources>& resources() const { return m_resources; }
+    NSArray<RenderBundleICBWithResources*> *renderBundlesResources() const { return m_renderBundlesResources; }
+
+    void replayCommands(RenderPassEncoder&) const;
+    void updateMinMaxDepths(float minDepth, float maxDepth);
+    bool validateRenderPass(bool depthReadOnly, bool stencilReadOnly, const WGPURenderPassDescriptor&, const Vector<TextureOrTextureView>&, const std::optional<TextureOrTextureView>&) const;
+    bool validatePipeline(const RenderPipeline*);
+    uint64_t drawCount() const;
+    NSString* lastError() const;
+    bool requiresCommandReplay() const;
+    bool makeSubmitInvalid() const;
+    bool rebindSamplersIfNeeded() const;
+    const Vector<WebGPU::BindableResources>& resources() { return m_resources; }
 
 private:
-    RenderBundle(id<MTLIndirectCommandBuffer>, Vector<BindableResources>&&, Device&);
-    RenderBundle(Device&);
-
-    const id<MTLIndirectCommandBuffer> m_indirectCommandBuffer { nil };
+    RenderBundle(NSArray<RenderBundleICBWithResources*> *, Vector<WebGPU::BindableResources>&&, RefPtr<RenderBundleEncoder>, const WGPURenderBundleEncoderDescriptor&, uint64_t, bool makeSubmitInvalid, HashSet<RefPtr<const BindGroup>>&&, Device&);
+    RenderBundle(Device&, NSString*);
 
     const Ref<Device> m_device;
-    Vector<BindableResources> m_resources;
+    RefPtr<RenderBundleEncoder> m_renderBundleEncoder;
+    NSArray<RenderBundleICBWithResources*> *m_renderBundlesResources;
+    Vector<WebGPU::BindableResources> m_resources;
+    WGPURenderBundleEncoderDescriptor m_descriptor;
+    const Vector<WGPUTextureFormat> m_descriptorColorFormats;
+    HashSet<RefPtr<const BindGroup>> m_bindGroups;
+
+    NSString* m_lastErrorString { nil };
+    uint64_t m_commandCount { 0 };
+    float m_minDepth { 0.f };
+    float m_maxDepth { 1.f };
+    bool m_makeSubmitInvalid { false };
 };
 
 } // namespace WebGPU

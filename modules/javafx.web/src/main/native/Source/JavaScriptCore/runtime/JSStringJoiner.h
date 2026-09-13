@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,6 +28,8 @@
 #include "ExceptionHelpers.h"
 #include "JSCJSValue.h"
 #include "JSGlobalObject.h"
+#include "JSString.h"
+#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace JSC {
 
@@ -46,24 +48,25 @@ public:
 
     void reserveCapacity(JSGlobalObject*, size_t);
 
-    void append(JSGlobalObject*, JSValue);
+    bool append(JSGlobalObject*, JSValue);
     void appendNumber(VM&, int32_t);
     void appendNumber(VM&, double);
-    bool appendWithoutSideEffects(JSGlobalObject*, JSValue);
     void appendEmptyString();
 
-    JSValue join(JSGlobalObject*);
+    JSString* join(JSGlobalObject*);
 
 private:
+    bool appendWithoutSideEffects(JSGlobalObject*, JSValue);
     void append(JSString*, StringViewWithUnderlyingString&&);
     void append8Bit(const String&);
     unsigned joinedLength(JSGlobalObject*) const;
-    JSValue joinSlow(JSGlobalObject*);
+    JSString* joinImpl(JSGlobalObject*);
 
     StringView m_separator;
     Entries m_strings;
     CheckedUint32 m_accumulatedStringsLength;
     CheckedUint32 m_stringsCount;
+    bool m_hasOverflowed { false };
     bool m_isAll8Bit { true };
     JSString* m_lastString { nullptr };
 };
@@ -78,18 +81,21 @@ inline void JSStringJoiner::reserveCapacity(JSGlobalObject* globalObject, size_t
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    if (UNLIKELY(!m_strings.tryReserveCapacity(count)))
+    if (!m_strings.tryReserveCapacity(count)) [[unlikely]]
         throwOutOfMemoryError(globalObject, scope);
 }
 
-inline JSValue JSStringJoiner::join(JSGlobalObject* globalObject)
+inline JSString* JSStringJoiner::join(JSGlobalObject* globalObject)
 {
     if (m_stringsCount == 1) {
+        // If m_stringsCount is 1, then there's no chance of an overflow because m_strings
+        // is a Vector<Entry, 16>, and has at least space for 16 entries.
+        ASSERT(!m_hasOverflowed);
         if (m_lastString)
             return m_lastString;
         return jsString(globalObject->vm(), m_strings[0].m_view.toString());
     }
-    return joinSlow(globalObject);
+    return joinImpl(globalObject);
 }
 
 ALWAYS_INLINE void JSStringJoiner::append(JSString* jsString, StringViewWithUnderlyingString&& string)
@@ -97,7 +103,7 @@ ALWAYS_INLINE void JSStringJoiner::append(JSString* jsString, StringViewWithUnde
     ++m_stringsCount;
     if (m_lastString == jsString) {
         auto& entry = m_strings.last();
-        if (LIKELY(entry.m_additional < UINT16_MAX)) {
+        if (entry.m_additional < UINT16_MAX) [[likely]] {
             ++entry.m_additional;
             m_accumulatedStringsLength += entry.m_view.view.length();
             return;
@@ -105,7 +111,7 @@ ALWAYS_INLINE void JSStringJoiner::append(JSString* jsString, StringViewWithUnde
     }
     m_accumulatedStringsLength += string.view.length();
     m_isAll8Bit = m_isAll8Bit && string.view.is8Bit();
-    m_strings.append({ WTFMove(string), 0 });
+    m_hasOverflowed |= !m_strings.tryAppend({ WTF::move(string), 0 });
     m_lastString = jsString;
 }
 
@@ -114,14 +120,14 @@ ALWAYS_INLINE void JSStringJoiner::append8Bit(const String& string)
     ASSERT(string.is8Bit());
     ++m_stringsCount;
     m_accumulatedStringsLength += string.length();
-    m_strings.append({ { string, string }, 0 });
+    m_hasOverflowed |= !m_strings.tryAppend({ { string, string }, 0 });
     m_lastString = nullptr;
 }
 
 ALWAYS_INLINE void JSStringJoiner::appendEmptyString()
 {
     ++m_stringsCount;
-    m_strings.append({ { { }, { } }, 0 });
+    m_hasOverflowed |= !m_strings.tryAppend({ { { }, { } }, 0 });
     m_lastString = nullptr;
 }
 
@@ -135,15 +141,22 @@ ALWAYS_INLINE bool JSStringJoiner::appendWithoutSideEffects(JSGlobalObject* glob
     // 5) It uses optimized code paths for all the cases known to be 8-bit and for the empty string.
     // If we might make an effectful calls, return false. Otherwise return true.
 
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
     if (value.isCell()) {
-        JSString* jsString;
         // FIXME: Support JSBigInt in side-effect-free append.
         // https://bugs.webkit.org/show_bug.cgi?id=211173
-        if (!value.asCell()->isString())
-            return false;
-        jsString = asString(value);
-        append(jsString, jsString->viewWithUnderlyingString(globalObject));
+        if (JSString* jsString = jsDynamicCast<JSString*>(value)) {
+            auto view = jsString->view(globalObject);
+            RETURN_IF_EXCEPTION(scope, false);
+            // Since getting the view didn't OOM, we know that the underlying String exists and isn't
+            // a rope. Thus, `tryGetValue` on the owner JSString will succeed. Since jsString could be
+            // a substring we make sure to get the owner's String not jsString's.
+            append(jsString, StringViewWithUnderlyingString(view, jsCast<const JSString*>(view.owner)->tryGetValue()));
         return true;
+    }
+        return false;
     }
 
     if (value.isInt32()) {
@@ -175,19 +188,25 @@ ALWAYS_INLINE bool JSStringJoiner::appendWithoutSideEffects(JSGlobalObject* glob
     return true;
 }
 
-ALWAYS_INLINE void JSStringJoiner::append(JSGlobalObject* globalObject, JSValue value)
+ALWAYS_INLINE bool JSStringJoiner::append(JSGlobalObject* globalObject, JSValue value)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
     bool success = appendWithoutSideEffects(globalObject, value);
-    RETURN_IF_EXCEPTION(scope, void());
+    RETURN_IF_EXCEPTION(scope, false);
     if (!success) {
         ASSERT(value.isCell());
+        ASSERT(!value.isString());
         JSString* jsString = value.asCell()->toStringInline(globalObject);
-        RETURN_IF_EXCEPTION(scope, void());
-        RELEASE_AND_RETURN(scope, append(jsString, jsString->viewWithUnderlyingString(globalObject)));
+        RETURN_IF_EXCEPTION(scope, false);
+        auto view = jsString->view(globalObject);
+        RETURN_IF_EXCEPTION(scope, false);
+        scope.release();
+        append(jsString, StringViewWithUnderlyingString(view, jsCast<const JSString*>(view.owner)->tryGetValue()));
+        return false;
     }
+    return true;
 }
 
 ALWAYS_INLINE void JSStringJoiner::appendNumber(VM& vm, int32_t value)
@@ -197,10 +216,70 @@ ALWAYS_INLINE void JSStringJoiner::appendNumber(VM& vm, int32_t value)
 
 ALWAYS_INLINE void JSStringJoiner::appendNumber(VM& vm, double value)
 {
-    if (canBeStrictInt32(value))
-        appendNumber(vm, static_cast<int32_t>(value));
+    if (auto int32Value = tryConvertToStrictInt32(value))
+        appendNumber(vm, int32Value.value());
     else
     append8Bit(vm.numericStrings.add(value));
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
+// Avoids the overhead of accumulating intermediate vectors of values when
+// we're only joining existing strings.
+class JSOnlyStringsAndInt32sJoiner {
+public:
+    JSOnlyStringsAndInt32sJoiner(StringView separator)
+        : m_separator(separator)
+        , m_isAll8Bit(m_separator.is8Bit())
+    {
+    }
+
+    JSString* tryJoin(JSGlobalObject* globalObject, const WriteBarrier<Unknown>* data, unsigned length)
+    {
+        if (length == 1) {
+            JSValue value = data[0].get();
+            if (!value)
+                return nullptr;
+            if (value.isString())
+                return asString(value);
+            if (value.isInt32()) {
+                m_accumulatedStringsLength = WTF::StringTypeAdapter<int32_t> { value.asInt32() }.length();
+                return joinImpl(globalObject, data, length);
+            }
+            return nullptr;
+        }
+
+        for (size_t i = 0; i < length; ++i) {
+            JSValue value = data[i].get();
+            if (!value)
+                return nullptr;
+
+            if (value.isString()) {
+                JSString* string = asString(value);
+                m_accumulatedStringsLength += string->length();
+                m_isAll8Bit &= string->is8Bit();
+                continue;
+            }
+
+            if (value.isInt32()) {
+                m_accumulatedStringsLength += WTF::StringTypeAdapter<int32_t> { value.asInt32() }.length();
+                continue;
+            }
+
+            return nullptr;
+        }
+
+        return joinImpl(globalObject, data, length);
+    }
+
+private:
+    JSString* joinImpl(JSGlobalObject*, const WriteBarrier<Unknown>*, unsigned);
+
+    StringView m_separator;
+    CheckedUint32 m_accumulatedStringsLength;
+    bool m_isAll8Bit { true };
+};
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 } // namespace JSC

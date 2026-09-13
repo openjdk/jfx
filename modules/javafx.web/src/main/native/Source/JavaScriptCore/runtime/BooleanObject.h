@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "JSWrapperObject.h"
+#include <JavaScriptCore/JSWrapperObject.h>
 
 namespace JSC {
 
@@ -47,10 +47,7 @@ public:
 
     DECLARE_EXPORT_INFO;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(BooleanObjectType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 };
 static_assert(sizeof(BooleanObject) == sizeof(JSWrapperObject));
 

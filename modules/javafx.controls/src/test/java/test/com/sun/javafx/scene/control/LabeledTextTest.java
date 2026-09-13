@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,7 +25,12 @@
 
 package test.com.sun.javafx.scene.control;
 
-import com.sun.javafx.scene.control.LabeledText;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import javafx.css.CssMetaData;
 import javafx.css.Stylesheet;
 import javafx.scene.Cursor;
@@ -39,8 +44,9 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
-import org.junit.*;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.scene.control.LabeledText;
 
 /**
  *
@@ -57,7 +63,8 @@ public class LabeledTextTest {
     public LabeledTextTest() {
     }
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         label =
             new Label("\"A computer once beat me at chess, "
                 + "but it was no match for me at kick boxing.\" Emo Philips");
@@ -111,13 +118,11 @@ public class LabeledTextTest {
 
     @Test
     public void testLabeledTextFillStyleAffectsLabeledText() {
-
         label.setStyle("-fx-text-fill: rgb(255,0,0);");
         label.applyCss();
         Color expected = Color.rgb(255, 0, 0);
         assertEquals(expected, label.getTextFill());
         assertEquals(expected, labeledText.getFill());
-
     }
 
     @Test
@@ -132,12 +137,10 @@ public class LabeledTextTest {
 
     @Test
     public void testLabeledUnderlineStyleAffectsLabeledText() {
-
         label.setStyle("-fx-underline: true;");
         label.applyCss();
         assert(label.isUnderline() == true);
         assert(labeledText.isUnderline() == true);
-
     }
 
     @Test
@@ -253,7 +256,6 @@ public class LabeledTextTest {
 
     @Test
     public void testLabeledTextFillIsSettableByCss() {
-
         CssMetaData sp = getCssMetaData("-fx-fill");
         assertTrue(sp.isSettable(labeledText));
     }
@@ -263,10 +265,8 @@ public class LabeledTextTest {
         assertEquals(Color.GREEN, labeledText.getFill());
     }
 
-
     @Test
     public void testLabeledTextTextAlignmentIsSettableByCss() {
-
         CssMetaData sp = getCssMetaData("-fx-text-alignment");
         assertTrue(sp.isSettable(labeledText));
     }
@@ -276,10 +276,8 @@ public class LabeledTextTest {
         assertEquals(TextAlignment.RIGHT, labeledText.getTextAlignment());
     }
 
-
     @Test
     public void testLabeledTextFontIsSettableByCss() {
-
         CssMetaData sp = getCssMetaData("-fx-font");
         assertTrue(sp.isSettable(labeledText));
     }
@@ -289,10 +287,8 @@ public class LabeledTextTest {
         assertEquals(Font.font("Amble", 10), labeledText.getFont());
     }
 
-
     @Test
     public void testLabeledTextUnderlineIsSettableByCss() {
-
         CssMetaData sp = getCssMetaData("-fx-underline");
         assertTrue(sp.isSettable(labeledText));
     }
@@ -371,9 +367,8 @@ public class LabeledTextTest {
         assertTrue(labeledText.isUnderline());
     }
 
-
-    @Test public void test_RT_37787() {
-
+    @Test
+    public void test_RT_37787() {
         label = new Label("test_RT_37787");
         label.getStyleClass().clear();
         label.setId("test-rt-37787");
@@ -388,15 +383,14 @@ public class LabeledTextTest {
         stage.setScene(scene);
         stage.show();
 
-        // If the actual size is 10 * 1.5 * 1.5 = 22.5, then we've encountered RT-37787!
+        // If the actual size is 10 * 1.5 * 1.5 = 22.5, then we've encountered JDK-8093937!
         double expected = Font.getDefault().getSize() * 1.5;
         double actual = label.getFont().getSize();
         assertEquals(expected, actual, .1);
-
     }
 
-    @Test public void test_RT_37787_with_inline_style() {
-
+    @Test
+    public void test_RT_37787_with_inline_style() {
         label = new Label("test_RT_37787_with_inline_style");
         label.setStyle("-fx-font-size: 1.231em;");
         label.getStyleClass().clear();
@@ -412,7 +406,5 @@ public class LabeledTextTest {
         double expected = Font.getDefault().getSize() * 1.5 * 1.231;
         double actual = label.getFont().getSize();
         assertEquals(expected, actual, .1);
-
     }
-
 }

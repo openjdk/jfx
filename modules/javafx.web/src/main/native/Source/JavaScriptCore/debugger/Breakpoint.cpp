@@ -27,8 +27,11 @@
 #include "Breakpoint.h"
 
 #include "Debugger.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Breakpoint);
 
 Breakpoint::Action::Action(Breakpoint::Action::Type type)
     : type(type)
@@ -37,13 +40,13 @@ Breakpoint::Action::Action(Breakpoint::Action::Type type)
 
 Ref<Breakpoint> Breakpoint::create(BreakpointID id, const String& condition, ActionsVector&& actions, bool autoContinue, size_t ignoreCount)
 {
-    return adoptRef(*new Breakpoint(id, condition, WTFMove(actions), autoContinue, ignoreCount));
+    return adoptRef(*new Breakpoint(id, condition, WTF::move(actions), autoContinue, ignoreCount));
 }
 
 Breakpoint::Breakpoint(BreakpointID id, String condition, ActionsVector&& actions, bool autoContinue, size_t ignoreCount)
     : m_id(id)
     , m_condition(condition)
-    , m_actions(WTFMove(actions))
+    , m_actions(WTF::move(actions))
     , m_autoContinue(autoContinue)
     , m_ignoreCount(ignoreCount)
 {

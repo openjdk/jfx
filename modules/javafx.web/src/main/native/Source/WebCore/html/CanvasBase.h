@@ -25,13 +25,15 @@
 
 #pragma once
 
-#include "CanvasNoiseInjection.h"
-#include "FloatRect.h"
-#include "IntSize.h"
-#include "PixelBuffer.h"
-#include "TaskSource.h"
+#include <WebCore/CSSParserContext.h>
+#include <WebCore/CanvasNoiseInjection.h>
+#include <WebCore/FloatRect.h>
+#include <WebCore/IntSize.h>
+#include <WebCore/PixelBuffer.h>
+#include <WebCore/TaskSource.h>
+#include <atomic>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/HashSet.h>
-#include <wtf/TypeCasts.h>
 #include <wtf/WeakHashSet.h>
 
 namespace WebCore {
@@ -42,9 +44,7 @@ class CanvasObserver;
 class CanvasRenderingContext;
 class Element;
 class Event;
-class GraphicsClient;
 class GraphicsContext;
-class GraphicsContextStateSaver;
 class Image;
 class ImageBuffer;
 class IntRect;
@@ -54,21 +54,16 @@ class WebCoreOpaqueRoot;
 
 enum class ShouldApplyPostProcessingToDirtyRect : bool { No, Yes };
 
-class CanvasDisplayBufferObserver : public CanMakeWeakPtr<CanvasDisplayBufferObserver> {
+class CanvasDisplayBufferObserver : public AbstractRefCountedAndCanMakeWeakPtr<CanvasDisplayBufferObserver> {
 public:
-    virtual ~CanvasDisplayBufferObserver() = default;
+    virtual ~CanvasDisplayBufferObserver();
 
     virtual void canvasDisplayBufferPrepared(CanvasBase&) = 0;
 };
 
-class CanvasBase {
+class CanvasBase : public AbstractRefCountedAndCanMakeWeakPtr<CanvasBase> {
 public:
     virtual ~CanvasBase();
-
-    virtual void refCanvasBase() = 0;
-    virtual void derefCanvasBase() = 0;
-    void ref() { refCanvasBase(); }
-    void deref() { derefCanvasBase(); }
 
     virtual bool isHTMLCanvasElement() const { return false; }
     virtual bool isOffscreenCanvas() const { return false; }
@@ -77,17 +72,9 @@ public:
     virtual unsigned width() const { return m_size.width(); }
     virtual unsigned height() const { return m_size.height(); }
     const IntSize& size() const { return m_size; }
+    virtual void setSizeForControllingContext(IntSize) = 0;
 
-    ImageBuffer* buffer() const;
-
-    virtual void setImageBufferAndMarkDirty(RefPtr<ImageBuffer>&&) { }
-
-    virtual AffineTransform baseTransform() const;
-
-    void makeRenderingResultsAvailable();
-
-    size_t memoryCost() const;
-    size_t externalMemoryCost() const;
+    RefPtr<ImageBuffer> makeRenderingResultsAvailable(ShouldApplyPostProcessingToDirtyRect = ShouldApplyPostProcessingToDirtyRect::Yes);
 
     void setOriginClean() { m_originClean = true; }
     void setOriginTainted() { m_originClean = false; }
@@ -95,13 +82,16 @@ public:
 
     virtual SecurityOrigin* securityOrigin() const { return nullptr; }
     ScriptExecutionContext* scriptExecutionContext() const { return canvasBaseScriptExecutionContext();  }
+    RefPtr<ScriptExecutionContext> protectedScriptExecutionContext() const;
 
     virtual CanvasRenderingContext* renderingContext() const = 0;
+
+    const CSSParserContext& cssParserContext() const;
 
     void addObserver(CanvasObserver&);
     void removeObserver(CanvasObserver&);
     bool hasObserver(CanvasObserver&) const;
-    void notifyObserversCanvasChanged(const std::optional<FloatRect>&);
+    void notifyObserversCanvasChanged(const FloatRect&);
     void notifyObserversCanvasResized();
     void notifyObserversCanvasDestroyed(); // Must be called in destruction before clearing m_context.
     void addDisplayBufferObserver(CanvasDisplayBufferObserver&);
@@ -111,11 +101,7 @@ public:
 
     HashSet<Element*> cssCanvasClients() const;
 
-    virtual GraphicsContext* drawingContext() const;
-    virtual GraphicsContext* existingDrawingContext() const;
-
-    GraphicsClient* graphicsClient() const;
-
+    // !rect means caller knows the full canvas is invalidated previously.
     void didDraw(const std::optional<FloatRect>& rect) { return didDraw(rect, ShouldApplyPostProcessingToDirtyRect::Yes); }
     virtual void didDraw(const std::optional<FloatRect>&, ShouldApplyPostProcessingToDirtyRect);
 
@@ -124,60 +110,64 @@ public:
 
     bool hasActiveInspectorCanvasCallTracer() const;
 
-    bool shouldAccelerate(const IntSize&) const;
-    bool shouldAccelerate(unsigned area) const;
+    bool shouldAccelerate() const;
 
     WEBCORE_EXPORT static void setMaxCanvasAreaForTesting(std::optional<size_t>);
+    [[nodiscard]] bool validateArea() const;
 
-    virtual void queueTaskKeepingObjectAlive(TaskSource, Function<void()>&&) = 0;
+    virtual void queueTaskKeepingObjectAlive(TaskSource, Function<void(CanvasBase&)>&&) = 0;
     virtual void dispatchEvent(Event&) = 0;
 
     bool postProcessPixelBufferResults(Ref<PixelBuffer>&&) const;
     void recordLastFillText(const String&);
 
+    void setNoiseInjectionSalt(NoiseInjectionHashSalt salt) { m_canvasNoiseHashSalt = salt; }
+    bool havePendingCanvasNoiseInjection() const { return m_canvasNoiseInjection.haveDirtyRects(); }
+
+    RefPtr<ImageBuffer> createImageForNoiseInjection() const;
+
 protected:
-    explicit CanvasBase(IntSize, const std::optional<NoiseInjectionHashSalt>&);
+    explicit CanvasBase(IntSize, ScriptExecutionContext&);
 
     virtual ScriptExecutionContext* canvasBaseScriptExecutionContext() const = 0;
+    RefPtr<ScriptExecutionContext> protectedCanvasBaseScriptExecutionContext() const;
+    virtual std::unique_ptr<CSSParserContext> createCSSParserContext() const = 0;
 
-    virtual void setSize(const IntSize& size) { m_size = size; }
+    void setSize(const IntSize&);
 
-    RefPtr<ImageBuffer> setImageBuffer(RefPtr<ImageBuffer>&&) const;
-    virtual bool hasCreatedImageBuffer() const { return false; }
-    static size_t activePixelMemory();
-
-    void resetGraphicsContextState() const;
-
-    RefPtr<ImageBuffer> allocateImageBuffer(bool usesDisplayListDrawing, bool avoidBackendSizeCheckForTesting) const;
     String lastFillText() const { return m_lastFillText; }
+    void addCanvasNeedingPreparationForDisplayOrFlush();
+    void removeCanvasNeedingPreparationForDisplayOrFlush();
 
 private:
     bool shouldInjectNoiseBeforeReadback() const;
-    virtual void createImageBuffer() const { }
 
     mutable IntSize m_size;
-    mutable Lock m_imageBufferAssignmentLock;
-    mutable RefPtr<ImageBuffer> m_imageBuffer;
-    mutable size_t m_imageBufferCost { 0 };
-    mutable std::unique_ptr<GraphicsContextStateSaver> m_contextStateSaver;
+    mutable std::unique_ptr<CSSParserContext> m_cssParserContext;
 
     String m_lastFillText;
 
+    WeakHashSet<CanvasObserver> m_observers;
+    WeakHashSet<CanvasDisplayBufferObserver> m_displayBufferObservers;
+
     CanvasNoiseInjection m_canvasNoiseInjection;
-    Markable<NoiseInjectionHashSalt, IntegralMarkableTraits<NoiseInjectionHashSalt>> m_canvasNoiseHashSalt;
+    Markable<NoiseInjectionHashSalt, IntegralMarkableTraits<NoiseInjectionHashSalt, std::numeric_limits<int64_t>::max()>> m_canvasNoiseHashSalt;
+
     bool m_originClean { true };
+    mutable bool m_hasWarnedExceedsArea { false };
 #if ASSERT_ENABLED
     bool m_didNotifyObserversCanvasDestroyed { false };
 #endif
-    WeakHashSet<CanvasObserver> m_observers;
-    WeakHashSet<CanvasDisplayBufferObserver> m_displayBufferObservers;
 };
 
 WebCoreOpaqueRoot root(CanvasBase*);
 
-} // namespace WebCore
 
-#define SPECIALIZE_TYPE_TRAITS_CANVAS(ToValueTypeName, predicate) \
-SPECIALIZE_TYPE_TRAITS_BEGIN(ToValueTypeName) \
-static bool isType(const WebCore::CanvasBase& canvas) { return canvas.predicate; } \
-SPECIALIZE_TYPE_TRAITS_END()
+inline const CSSParserContext& CanvasBase::cssParserContext() const
+{
+    if (!m_cssParserContext) [[unlikely]]
+        m_cssParserContext = createCSSParserContext();
+    return *m_cssParserContext;
+}
+
+} // namespace WebCore

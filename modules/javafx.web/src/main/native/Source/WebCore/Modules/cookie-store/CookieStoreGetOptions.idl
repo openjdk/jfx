@@ -25,7 +25,11 @@
 
 // https://wicg.github.io/cookie-store/#dictdef-cookiestoregetoptions
 
-dictionary CookieStoreGetOptions {
+[
+    JSGenerateToJSObject,
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary CookieStoreGetOptions {
     USVString name;
     USVString url;
 };

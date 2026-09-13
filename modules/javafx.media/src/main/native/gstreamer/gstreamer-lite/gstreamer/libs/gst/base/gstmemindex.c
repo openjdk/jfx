@@ -140,7 +140,7 @@ gst_mem_index_free_format (gpointer key, gpointer value, gpointer user_data)
     g_tree_destroy (index->tree);
   }
 
-  g_slice_free (GstMemIndexFormatIndex, index);
+  g_free (index);
 }
 
 static void
@@ -155,7 +155,7 @@ gst_mem_index_free_id (gpointer key, gpointer value, gpointer user_data)
     id_index->format_index = NULL;
   }
 
-  g_slice_free (GstMemIndexId, id_index);
+  g_free (id_index);
 }
 
 static void
@@ -189,7 +189,7 @@ gst_mem_index_add_id (GstIndex * index, GstIndexEntry * entry)
   id_index = g_hash_table_lookup (memindex->id_index, &entry->id);
 
   if (!id_index) {
-    id_index = g_slice_new0 (GstMemIndexId);
+    id_index = g_new0 (GstMemIndexId, 1);
 
     id_index->id = entry->id;
     id_index->format_index = g_hash_table_new (g_int_hash, g_int_equal);
@@ -224,7 +224,7 @@ gst_mem_index_index_format (GstMemIndexId * id_index, GstIndexEntry * entry,
   index = g_hash_table_lookup (id_index->format_index, format);
 
   if (!index) {
-    index = g_slice_new0 (GstMemIndexFormatIndex);
+    index = g_new0 (GstMemIndexFormatIndex, 1);
 
     index->format = *format;
     index->offset = assoc;

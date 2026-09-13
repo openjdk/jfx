@@ -25,11 +25,12 @@
 
 #pragma once
 
-#include "IDBDatabaseInfo.h"
-#include "IDBResourceIdentifier.h"
-#include "IDBTransactionDurability.h"
-#include "IDBTransactionMode.h"
-#include "IndexedDB.h"
+#include <WebCore/IDBDatabaseInfo.h>
+#include <WebCore/IDBResourceIdentifier.h>
+#include <WebCore/IDBTransactionDurability.h>
+#include <WebCore/IDBTransactionMode.h>
+#include <WebCore/IndexedDB.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -43,7 +44,7 @@ class IDBConnectionToClient;
 }
 
 class IDBTransactionInfo {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(IDBTransactionInfo, WEBCORE_EXPORT);
 public:
     static IDBTransactionInfo clientTransaction(const IDBClient::IDBConnectionProxy&, const Vector<String>& objectStores, IDBTransactionMode, std::optional<IDBTransactionDurability>);
     static IDBTransactionInfo versionChange(const IDBServer::IDBConnectionToClient&, const IDBDatabaseInfo& originalDatabaseInfo, uint64_t newVersion);
@@ -72,8 +73,8 @@ public:
         , m_mode(mode)
         , m_durability(durability)
         , m_newVersion(newVersion)
-        , m_objectStores(WTFMove(objectStores))
-        , m_originalDatabaseInfo(WTFMove(originalDatabaseInfo)) { }
+        , m_objectStores(WTF::move(objectStores))
+        , m_originalDatabaseInfo(WTF::move(originalDatabaseInfo)) { }
 
 #if !LOG_DISABLED
     String loggingString() const;

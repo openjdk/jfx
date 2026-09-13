@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,9 +37,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  * A test for the {@link CookieManager} class.
@@ -67,8 +67,7 @@ public class CookieManagerTest {
                 "foo=bar",
                 "baz=qux; Domain=example.org",
                 "quux=corge; Path=/grault");
-        assertEquals("quux=corge; foo=bar; baz=qux",
-                get("http://example.org/grault"));
+        assertEquals("quux=corge; foo=bar; baz=qux", get("http://example.org/grault"));
     }
 
     /**
@@ -128,10 +127,8 @@ public class CookieManagerTest {
                 "foo=bar",
                 "baz=qux; Domain=example.org",
                 "quux=corge; Path=/grault");
-        assertEquals("quux=corge; foo=bar; baz=qux",
-                get("http://Example.org/grault"));
-        assertEquals("quux=corge; foo=bar; baz=qux",
-                get("http://EXAMPLE.ORG/grault"));
+        assertEquals("quux=corge; foo=bar; baz=qux", get("http://Example.org/grault"));
+        assertEquals("quux=corge; foo=bar; baz=qux", get("http://EXAMPLE.ORG/grault"));
     }
 
     /**
@@ -144,18 +141,12 @@ public class CookieManagerTest {
                 "baz=qux; Path=/",
                 "quux=courge; Path=/lvl1",
                 "grault=garply; Path=/lvl1/lvl2");
-        assertEquals("grault=garply; quux=courge; foo=bar; baz=qux",
-                get("http://example.org/lvl1/lvl2/lvl3/lvl4"));
-        assertEquals("grault=garply; quux=courge; foo=bar; baz=qux",
-                get("http://example.org/lvl1/lvl2/lvl3"));
-        assertEquals("grault=garply; quux=courge; foo=bar; baz=qux",
-                get("http://example.org/lvl1/lvl2"));
-        assertEquals("quux=courge; foo=bar; baz=qux",
-                get("http://example.org/lvl1/lvl2A"));
-        assertEquals("quux=courge; foo=bar; baz=qux",
-                get("http://example.org/lvl1/lvlA"));
-        assertEquals("quux=courge; foo=bar; baz=qux",
-                get("http://example.org/lvl1"));
+        assertEquals("grault=garply; quux=courge; foo=bar; baz=qux", get("http://example.org/lvl1/lvl2/lvl3/lvl4"));
+        assertEquals("grault=garply; quux=courge; foo=bar; baz=qux", get("http://example.org/lvl1/lvl2/lvl3"));
+        assertEquals("grault=garply; quux=courge; foo=bar; baz=qux", get("http://example.org/lvl1/lvl2"));
+        assertEquals("quux=courge; foo=bar; baz=qux", get("http://example.org/lvl1/lvl2A"));
+        assertEquals("quux=courge; foo=bar; baz=qux", get("http://example.org/lvl1/lvlA"));
+        assertEquals("quux=courge; foo=bar; baz=qux", get("http://example.org/lvl1"));
         assertEquals("foo=bar; baz=qux", get("http://example.org/lvl1A"));
         assertEquals("foo=bar; baz=qux", get("http://example.org/lvlA"));
         assertEquals("foo=bar; baz=qux", get("http://example.org/"));
@@ -173,8 +164,7 @@ public class CookieManagerTest {
                 "quux=courge; HttpOnly",
                 "grault=garply; Secure; HttpOnly");
         assertEquals("foo=bar; quux=courge", get("http://example.org/"));
-        assertEquals("foo=bar; baz=qux; quux=courge; grault=garply",
-                get("https://example.org/"));
+        assertEquals("foo=bar; baz=qux; quux=courge; grault=garply", get("https://example.org/"));
         assertEquals("foo=bar", get("javascript://example.org/"));
         assertEquals("foo=bar; baz=qux", get("javascripts://example.org/"));
     }
@@ -188,8 +178,7 @@ public class CookieManagerTest {
                 "foo=bar",
                 "baz=qux; Path=/lvl1",
                 "quux=courge; Path=/lvl1/lvl2");
-        assertEquals("quux=courge; baz=qux; foo=bar",
-                get("http://example.org/lvl1/lvl2"));
+        assertEquals("quux=courge; baz=qux; foo=bar", get("http://example.org/lvl1/lvl2"));
     }
 
     /**
@@ -198,15 +187,13 @@ public class CookieManagerTest {
     @Test
     public void testCreationTimeSorting() {
         put("http://example.org/", "foo=bar", "baz=qux", "quux=courge");
-        assertEquals("foo=bar; baz=qux; quux=courge",
-                get("http://example.org/"));
+        assertEquals("foo=bar; baz=qux; quux=courge", get("http://example.org/"));
 
         sleep(10);
 
         put("http://example.org/", "foo=discard; Max-Age=0");
         put("http://example.org/", "foo=bar");
-        assertEquals("baz=qux; quux=courge; foo=bar",
-                get("http://example.org/"));
+        assertEquals("baz=qux; quux=courge; foo=bar", get("http://example.org/"));
     }
 
     /**
@@ -219,8 +206,7 @@ public class CookieManagerTest {
                 "baz=qux; Path=/lvl1",
                 "quux=courge",
                 "grault=garply; Path=/lvl1/lvl2");
-        assertEquals("grault=garply; baz=qux; foo=bar; quux=courge",
-                get("http://example.org/lvl1/lvl2"));
+        assertEquals("grault=garply; baz=qux; foo=bar; quux=courge", get("http://example.org/lvl1/lvl2"));
     }
 
     /**
@@ -267,15 +253,13 @@ public class CookieManagerTest {
                 "foo=bar",
                 "baz=qux; Domain=example.org",
                 "quux=corge; Path=/grault");
-        assertEquals("quux=corge; foo=bar; baz=qux",
-                get("http://example.org/grault"));
+        assertEquals("quux=corge; foo=bar; baz=qux", get("http://example.org/grault"));
 
         put("http://EXAMPLE.ORG/",
                 "foo=bar2",
                 "baz=qux2; Domain=example.org",
                 "quux=corge2; Path=/grault");
-        assertEquals("quux=corge2; foo=bar2; baz=qux2",
-                get("http://example.org/grault"));
+        assertEquals("quux=corge2; foo=bar2; baz=qux2", get("http://example.org/grault"));
     }
 
     /**

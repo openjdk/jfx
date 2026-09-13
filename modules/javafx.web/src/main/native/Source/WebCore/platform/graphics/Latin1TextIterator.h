@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
  * Copyright (C) Research In Motion Limited 2011. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
@@ -19,8 +19,7 @@
  *
  */
 
-#ifndef Latin1TextIterator_h
-#define Latin1TextIterator_h
+#pragma once
 
 #include <wtf/text/WTFString.h>
 
@@ -28,40 +27,53 @@ namespace WebCore {
 
 class Latin1TextIterator {
 public:
-    // The passed in LChar pointer starts at 'currentIndex'. The iterator operates on the range [currentIndex, lastIndex].
-    // 'endCharacter' denotes the maximum length of the UChar array, which might exceed 'lastIndex'.
-    Latin1TextIterator(const LChar* characters, unsigned currentIndex, unsigned lastIndex, unsigned /*endCharacter*/)
+    // The passed in Latin1Character pointer starts at 'currentIndex'. The iterator operates on the range [currentIndex, lastIndex].
+    // 'endCharacter' denotes the maximum length of the char16_t array, which might exceed 'lastIndex'.
+    Latin1TextIterator(std::span<const Latin1Character> characters, unsigned currentIndex, unsigned lastIndex)
         : m_characters(characters)
         , m_currentIndex(currentIndex)
+        , m_originalIndex(currentIndex)
         , m_lastIndex(lastIndex)
     {
     }
 
-    bool consume(UChar32& character, unsigned& clusterLength)
+    bool consume(char32_t& character, unsigned& clusterLength)
     {
         if (m_currentIndex >= m_lastIndex)
             return false;
 
-        character = *m_characters;
+        auto relativeIndex = m_currentIndex - m_originalIndex;
+        character = m_characters[relativeIndex];
         clusterLength = 1;
         return true;
     }
 
     void advance(unsigned advanceLength)
     {
-        m_characters += advanceLength;
         m_currentIndex += advanceLength;
     }
 
+    void reset(unsigned index)
+    {
+        if (index >= m_lastIndex)
+            return;
+        m_currentIndex = index;
+    }
+
+    std::span<const Latin1Character> remainingCharacters() const
+    {
+        auto relativeIndex = m_currentIndex - m_originalIndex;
+        return m_characters.subspan(relativeIndex);
+    }
+
     unsigned currentIndex() const { return m_currentIndex; }
-    const LChar* characters() const { return m_characters; }
+    std::span<const Latin1Character> characters() const { return m_characters; }
 
 private:
-    const LChar* m_characters;
+    std::span<const Latin1Character> m_characters;
     unsigned m_currentIndex;
-    unsigned m_lastIndex;
+    const unsigned m_originalIndex;
+    const unsigned m_lastIndex;
 };
 
-}
-
-#endif
+} // namespace WebCore

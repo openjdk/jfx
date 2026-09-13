@@ -45,7 +45,7 @@ static inline const char* pas_free_range_kind_get_string(pas_free_range_kind kin
     case pas_free_meta_range:
         return "free_meta_range";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

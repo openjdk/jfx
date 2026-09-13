@@ -23,33 +23,21 @@
 #pragma once
 
 #include "FilterEffectApplier.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class FEComposite;
 
 class FECompositeSoftwareApplier final : public FilterEffectConcreteApplier<FEComposite> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(FECompositeSoftwareApplier);
     using Base = FilterEffectConcreteApplier<FEComposite>;
 
 public:
-    using Base::Base;
+    FECompositeSoftwareApplier(const FEComposite&);
 
 private:
-    bool apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const final;
-
-    static uint8_t clampByte(int);
-
-    template <int b1, int b4>
-    static inline void computeArithmeticPixels(unsigned char* source, unsigned char* destination, int pixelArrayLength, float k1, float k2, float k3, float k4);
-
-    template <int b1, int b4>
-    static inline void computeArithmeticPixelsUnclamped(unsigned char* source, unsigned char* destination, int pixelArrayLength, float k1, float k2, float k3, float k4);
-
-    static inline void applyPlatformArithmetic(unsigned char* source, unsigned char* destination, int pixelArrayLength, float k1, float k2, float k3, float k4);
-
-    bool applyArithmetic(FilterImage& input, FilterImage& input2, FilterImage& result) const;
-    bool applyNonArithmetic(FilterImage& input, FilterImage& input2, FilterImage& result) const;
+    bool apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const final;
 };
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,46 +36,36 @@ import java.util.Set;
 import javafx.scene.Node;
 import javafx.scene.web.WebEngineShim;
 
-import org.junit.After;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized.Parameters;
-import org.junit.runners.Parameterized;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.Arguments;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@RunWith(Parameterized.class)
+import java.util.stream.Stream;
+
 public final class FormControlsTest extends TestBase {
 
     private static final PrintStream ERR = System.err;
 
-    // To arguments from junit data provider.
-    private final String element;
-    private final String selector;
-
-    // TODO: junit 4.11 provides an option to label arguments.
-    @Parameters
-    public static Collection<String[]> data() {
-        return Arrays.asList(new String[][] {
-            {"<input type='checkbox'/>", "check-box"},
-            {"<input type='radio'/>", "radio-button"},
-            {"<input type='button'/>", "button"},
-            {"<input type='text'/>", "text-field"},
-            {"<meter value='06'>60%</meter>", "progress-bar"},
-            {"<input type='range'/>", "slider"},
-            // TODO: Add other form controls once it is enabled
-            // from WebKit.
-        });
+    static Stream<Arguments> dataProvider() {
+        return Stream.of(
+                Arguments.of("<input type='checkbox'/>", "check-box"),
+                Arguments.of("<input type='radio'/>", "radio-button"),
+                Arguments.of("<input type='button'/>", "button"),
+                Arguments.of("<input type='text'/>", "text-field"),
+                Arguments.of("<meter value='06'>60%</meter>", "progress-bar"),
+                Arguments.of("<input type='range'/>", "slider")
+                // TODO: Add other form controls once it is enabled from WebKit.
+        );
     }
 
-    public FormControlsTest(final String element, final String selector) {
-        this.element = element;
-        this.selector = selector;
-    }
-
-    private void printWithFormControl(final Runnable testBody) {
+    private void printWithFormControl(final Runnable testBody, String element, String selector) {
         final ByteArrayOutputStream errStream = new ByteArrayOutputStream();
 
         System.setErr(new PrintStream(errStream));
@@ -84,56 +74,56 @@ public final class FormControlsTest extends TestBase {
         System.setErr(ERR);
 
         final String exMessage = errStream.toString();
-        assertFalse(String.format("%s:Test failed with exception:\n%s", selector, exMessage),
-            exMessage.contains("Exception") || exMessage.contains("Error"));
+        assertFalse(exMessage.contains("Exception") || exMessage.contains("Error"),
+                String.format("%s: Test failed with exception:\n%s", selector, exMessage));
     }
 
-    @Test
-    public void testRendering() {
+    @ParameterizedTest
+    @MethodSource("dataProvider")
+    public void testRendering(String element, String selector) {
         final Runnable testBody = () -> {
             final WebPage page = WebEngineShim.getPage(getEngine());
             assertNotNull(page);
             WebPageShim.mockPrint(page, 0, 0, 800, 600);
             final Set<Node> elements = getView().lookupAll("." + selector);
-            // Check whether control is added as a children of WebView.
-            assertEquals(
-                String.format("%s control doesn't exists as child of WebView", selector),
-                1,
-                elements.size());
+            // Check whether control is added as a child of WebView.
+            assertEquals(1, elements.size(),
+                    String.format("%s control doesn't exist as child of WebView", selector));
             final Node node = (Node) elements.toArray()[0];
-            // Check whether Node's styleClass contains given selector.
-            assertTrue(
-                String.format("%s styleClass=%s is incorrect", node.getTypeSelector(), selector),
-                node.getStyleClass().contains(selector));
+            // Check whether Node's styleClass contains the given selector.
+            assertTrue(node.getStyleClass().contains(selector),
+                    String.format("%s styleClass=%s is incorrect", node.getTypeSelector(), selector));
         };
 
-        printWithFormControl(testBody);
+        printWithFormControl(testBody, element, selector);
     }
 
-    @Test
-    public void testPrint() {
+    @ParameterizedTest
+    @MethodSource("dataProvider")
+    public void testPrint(String element, String selector) {
         final Runnable testBody = () -> {
             final WebPage page = WebEngineShim.getPage(getEngine());
             assertNotNull(page);
             WebPageShim.mockPrint(page, 0, 0, 800, 600);
         };
 
-        printWithFormControl(testBody);
+        printWithFormControl(testBody, element, selector);
     }
 
-    @Test
-    public void testPrintByPageNumber() {
+    @ParameterizedTest
+    @MethodSource("dataProvider")
+    public void testPrintByPageNumber(String element, String selector) {
         final Runnable testBody = () -> {
             final WebPage page = WebEngineShim.getPage(getEngine());
             assertNotNull(page);
             WebPageShim.mockPrintByPage(page, 0, 0, 0, 800, 600);
         };
-        printWithFormControl(testBody);
+
+        printWithFormControl(testBody, element, selector);
     }
 
-    @After
+    @AfterEach
     public void teardown() {
         System.setErr(ERR);
     }
 }
-

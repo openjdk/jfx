@@ -26,21 +26,28 @@
 #include "config.h"
 #include "ImageQualityController.h"
 
+#include "DocumentView.h"
+#include "FrameDestructionObserverInlines.h"
 #include "GraphicsContext.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "Page.h"
 #include "RenderBoxModelObject.h"
-#include "RenderStyleInlines.h"
+#include "RenderObjectInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderView.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ImageQualityController);
 
 static const double cInterpolationCutoff = 800. * 800.;
 static const Seconds lowQualityTimeThreshold { 500_ms };
 
 ImageQualityController::ImageQualityController(const RenderView& renderView)
     : m_renderView(renderView)
-    , m_timer(*this, &ImageQualityController::highQualityRepaintTimerFired)
+    , m_timer(*this, &ImageQualityController::highQualityRepaintTimerFired, lowQualityTimeThreshold)
 {
 }
 
@@ -60,7 +67,7 @@ void ImageQualityController::set(RenderBoxModelObject* object, LayerSizeMap* inn
     else {
         LayerSizeMap newInnerMap;
         newInnerMap.set(layer, size);
-        m_objectLayerSizeMap.set(object, newInnerMap);
+        m_objectLayerSizeMap.set(*object, newInnerMap);
     }
 }
 
@@ -75,14 +82,14 @@ void ImageQualityController::removeObject(RenderBoxModelObject* object)
 
 void ImageQualityController::highQualityRepaintTimerFired()
 {
-    if (m_renderView.renderTreeBeingDestroyed())
+    if (m_renderView->renderTreeBeingDestroyed())
         return;
     if (!m_animatedResizeIsActive && !m_liveResizeOptimizationIsActive)
         return;
     m_animatedResizeIsActive = false;
 
     // If the FrameView is in live resize, punt the timer and hold back for now.
-    if (m_renderView.frameView().inLiveResize()) {
+    if (m_renderView->frameView().inLiveResize()) {
         restartTimer();
         return;
     }
@@ -95,7 +102,7 @@ void ImageQualityController::highQualityRepaintTimerFired()
 
 void ImageQualityController::restartTimer()
 {
-    m_timer.startOneShot(lowQualityTimeThreshold);
+    m_timer.restart();
 }
 
 std::optional<InterpolationQuality> ImageQualityController::interpolationQualityFromStyle(const RenderStyle& style)
@@ -114,6 +121,18 @@ std::optional<InterpolationQuality> ImageQualityController::interpolationQuality
     return std::nullopt;
 }
 
+InterpolationQuality ImageQualityController::chooseInterpolationQualityForSVG(GraphicsContext& context, const RenderElement& renderElement, Image& image)
+{
+    // If the image is not a bitmap image, then none of this is relevant and we just paint at high quality.
+    if (!(image.isBitmapImage() || image.isPDFDocumentImage()) || context.paintingDisabled())
+        return InterpolationQuality::Default;
+
+    if (auto styleInterpolation = interpolationQualityFromStyle(renderElement.style()))
+        return *styleInterpolation;
+
+    return InterpolationQuality::Default;
+}
+
 InterpolationQuality ImageQualityController::chooseInterpolationQuality(GraphicsContext& context, RenderBoxModelObject* object, Image& image, const void* layer, const LayoutSize& size)
 {
     // If the image is not a bitmap image, then none of this is relevant and we just paint at high quality.
@@ -129,16 +148,13 @@ InterpolationQuality ImageQualityController::chooseInterpolationQuality(Graphics
 
     // Look ourselves up in the hashtables.
     auto i = m_objectLayerSizeMap.find(object);
-    LayerSizeMap* innerMap = i != m_objectLayerSizeMap.end() ? &i->value : 0;
-    LayoutSize oldSize;
-    bool isFirstResize = true;
+    auto* innerMap = i != m_objectLayerSizeMap.end() ? &i->value : 0;
+    std::optional<LayoutSize> oldSize;
     if (innerMap) {
-        LayerSizeMap::iterator j = innerMap->find(layer);
-        if (j != innerMap->end()) {
-            isFirstResize = false;
+        auto j = innerMap->find(layer);
+        if (j != innerMap->end())
             oldSize = j->value;
         }
-    }
 
     // If the containing FrameView is being resized, paint at low quality until resizing is finished.
     if (auto* frame = object->document().frame()) {
@@ -153,45 +169,54 @@ InterpolationQuality ImageQualityController::chooseInterpolationQuality(Graphics
             return InterpolationQuality::Default;
     }
 
-    const AffineTransform& currentTransform = context.getCTM();
-    bool contextIsScaled = !currentTransform.isIdentityOrTranslationOrFlipped();
-    if (!contextIsScaled && size == imageSize) {
+    auto contextIsScaled = [](GraphicsContext& context) {
+        return !context.getCTM().isIdentityOrTranslationOrFlipped();
+    };
+
+    if (size == imageSize && !contextIsScaled(context)) {
         // There is no scale in effect. If we had a scale in effect before, we can just remove this object from the list.
         removeLayer(object, innerMap, layer);
         return InterpolationQuality::Default;
     }
 
     // There is no need to hash scaled images that always use low quality mode when the page demands it. This is the iChat case.
-    if (m_renderView.page().inLowQualityImageInterpolationMode()) {
+    if (m_renderView->page().inLowQualityImageInterpolationMode()) {
         double totalPixels = static_cast<double>(image.width()) * static_cast<double>(image.height());
         if (totalPixels > cInterpolationCutoff)
             return InterpolationQuality::Low;
     }
 
+    auto saveEntryIfNewOrSizeChanged = [&]() {
+        if (!oldSize || oldSize.value() != size)
+            set(object, innerMap, layer, size);
+    };
+
     // If an animated resize is active, paint in low quality and kick the timer ahead.
     if (m_animatedResizeIsActive) {
-        set(object, innerMap, layer, size);
+        saveEntryIfNewOrSizeChanged();
         restartTimer();
         return InterpolationQuality::Low;
     }
+
     // If this is the first time resizing this image, or its size is the
     // same as the last resize, draw at high res, but record the paint
     // size and set the timer.
-    if (isFirstResize || oldSize == size) {
+    if (!oldSize || oldSize.value() == size) {
+        saveEntryIfNewOrSizeChanged();
         restartTimer();
-        set(object, innerMap, layer, size);
         return InterpolationQuality::Default;
     }
-    // If the timer is no longer active, draw at high quality and don't
-    // set the timer.
+
+    // If the timer is no longer active, draw at high quality and don't set the timer.
     if (!m_timer.isActive()) {
         removeLayer(object, innerMap, layer);
         return InterpolationQuality::Default;
     }
+
     // This object has been resized to two different sizes while the timer
     // is active, so draw at low quality, set the flag for animated resizes and
     // the object to the list for high quality redraw.
-    set(object, innerMap, layer, size);
+    saveEntryIfNewOrSizeChanged();
     m_animatedResizeIsActive = true;
     restartTimer();
     return InterpolationQuality::Low;

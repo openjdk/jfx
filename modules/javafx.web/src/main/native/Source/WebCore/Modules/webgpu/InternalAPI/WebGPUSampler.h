@@ -26,12 +26,13 @@
 #pragma once
 
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore::WebGPU {
 
-class Sampler : public RefCounted<Sampler> {
+class Sampler : public RefCountedAndCanMakeWeakPtr<Sampler> {
 public:
     virtual ~Sampler() = default;
 
@@ -39,9 +40,12 @@ public:
 
     void setLabel(String&& label)
     {
-        m_label = WTFMove(label);
+        m_label = WTF::move(label);
         setLabelInternal(m_label);
     }
+
+    virtual bool isRemoteSamplerProxy() const { return false; }
+    virtual bool isSamplerImpl() const { return false; }
 
 protected:
     Sampler() = default;

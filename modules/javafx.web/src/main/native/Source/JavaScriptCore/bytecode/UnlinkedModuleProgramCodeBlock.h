@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2022 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "UnlinkedGlobalCodeBlock.h"
+#include <JavaScriptCore/UnlinkedGlobalCodeBlock.h>
 
 namespace JSC {
 
@@ -97,10 +97,7 @@ private:
     int m_moduleEnvironmentSymbolTableConstantRegisterOffset { 0 };
 
 public:
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
-    {
-        return Structure::create(vm, globalObject, proto, TypeInfo(UnlinkedModuleProgramCodeBlockType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_INFO;
 };

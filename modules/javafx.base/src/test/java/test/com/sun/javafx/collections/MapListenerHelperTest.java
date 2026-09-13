@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,16 +34,14 @@ import test.javafx.beans.InvalidationListenerMock;
 import javafx.beans.Observable;
 import javafx.collections.*;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.BitSet;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class MapListenerHelperTest {
 
@@ -56,7 +54,7 @@ public class MapListenerHelperTest {
     private ObservableMap<Object, Object> map;
     private MapChangeListener.Change<Object, Object> change;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         invalidationListenerMock = new InvalidationListenerMock[] {
                 new InvalidationListenerMock(),
@@ -84,25 +82,37 @@ public class MapListenerHelperTest {
         }
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testAddInvalidationListener_Null() {
-        MapListenerHelper.addListener(helper, (InvalidationListener)null);
+        assertThrows(NullPointerException.class, () -> {
+            MapListenerHelper.addListener(helper, (InvalidationListener)null);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+
+    @Test
     public void testRemoveInvalidationListener_Null() {
-        MapListenerHelper.removeListener(helper, (InvalidationListener) null);
+        assertThrows(NullPointerException.class, () -> {
+            MapListenerHelper.removeListener(helper, (InvalidationListener) null);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+
+    @Test
     public void testRemoveMapChangeListener_Null() {
-        MapListenerHelper.removeListener(helper, (MapChangeListener<Object, Object>) null);
+        assertThrows(NullPointerException.class, () -> {
+            MapListenerHelper.removeListener(helper, (MapChangeListener<Object, Object>) null);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+
+    @Test
     public void testAddMapChangeListener_Null() {
-        MapListenerHelper.addListener(helper, (MapChangeListener<Object, Object>) null);
+        assertThrows(NullPointerException.class, () -> {
+            MapListenerHelper.addListener(helper, (MapChangeListener<Object, Object>) null);
+        });
     }
+
 
     @Test
     public void testEmpty() {

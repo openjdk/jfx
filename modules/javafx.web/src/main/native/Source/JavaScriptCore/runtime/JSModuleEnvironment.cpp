@@ -93,7 +93,7 @@ bool JSModuleEnvironment::getOwnPropertySlot(JSObject* cell, JSGlobalObject* glo
     return Base::getOwnPropertySlot(thisObject, globalObject, propertyName, slot);
 }
 
-void JSModuleEnvironment::getOwnSpecialPropertyNames(JSObject* cell, JSGlobalObject*, PropertyNameArray& propertyNamesArray, DontEnumPropertiesMode)
+void JSModuleEnvironment::getOwnSpecialPropertyNames(JSObject* cell, JSGlobalObject*, PropertyNameArrayBuilder& propertyNamesArray, DontEnumPropertiesMode)
 {
     JSModuleEnvironment* thisObject = jsCast<JSModuleEnvironment*>(cell);
     if (propertyNamesArray.includeStringProperties()) {

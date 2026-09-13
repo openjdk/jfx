@@ -26,56 +26,41 @@
 #include "config.h"
 #include "CachePayload.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 CachePayload CachePayload::makeMappedPayload(FileSystem::MappedFileData&& data)
 {
-    return CachePayload(WTFMove(data));
+    return CachePayload(WTF::move(data));
 }
 
-CachePayload CachePayload::makeMallocPayload(MallocPtr<uint8_t, VMMalloc>&& data, size_t size)
+CachePayload CachePayload::makeMallocPayload(MallocSpan<uint8_t, VMMalloc>&& data)
 {
-    return CachePayload(std::pair { WTFMove(data), size });
+    return CachePayload(WTF::move(data));
 }
 
 CachePayload CachePayload::makeEmptyPayload()
 {
-    return CachePayload(std::pair { nullptr, 0 });
+    return CachePayload({ });
 }
 
-CachePayload::CachePayload(CachePayload&& other)
-{
-    m_data = WTFMove(other.m_data);
-    other.m_data = std::pair { nullptr, 0 };
-}
+CachePayload::CachePayload(CachePayload&&) = default;
 
-CachePayload::CachePayload(std::variant<FileSystem::MappedFileData, std::pair<MallocPtr<uint8_t, VMMalloc>, size_t>>&& data)
-    : m_data(WTFMove(data))
+CachePayload::CachePayload(DataType&& data)
+    : m_data(WTF::move(data))
 {
 }
 
 CachePayload::~CachePayload() = default;
 
-const uint8_t* CachePayload::data() const
+std::span<const uint8_t> CachePayload::span() const LIFETIME_BOUND
 {
-    return WTF::switchOn(m_data,
-        [](const FileSystem::MappedFileData& data) {
-            return static_cast<const uint8_t*>(data.data());
-        }, [](const std::pair<MallocPtr<uint8_t, VMMalloc>, size_t>& data) -> const uint8_t* {
-            return data.first.get();
-        }
-    );
-}
-
-size_t CachePayload::size() const
-{
-    return WTF::switchOn(m_data,
-        [](const FileSystem::MappedFileData& data) -> size_t {
-            return data.size();
-        }, [](const std::pair<MallocPtr<uint8_t, VMMalloc>, size_t>& data) -> size_t {
-            return data.second;
-        }
-    );
+    return WTF::switchOn(m_data, [](const auto& data) {
+        return data.span();
+    });
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

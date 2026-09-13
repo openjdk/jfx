@@ -25,31 +25,36 @@
 
 #pragma once
 
-#include "IterationKind.h"
-#include "JSInternalFieldObjectImpl.h"
-#include "JSSet.h"
+#include <JavaScriptCore/IterationKind.h>
+#include <JavaScriptCore/JSInternalFieldObjectImpl.h>
+#include <JavaScriptCore/JSSet.h>
 
 namespace JSC {
 
-class JSSetIterator final : public JSInternalFieldObjectImpl<3> {
+const static uint8_t JSSetIteratorNumberOFInternalFields = 4;
+
+class JSSetIterator final : public JSInternalFieldObjectImpl<JSSetIteratorNumberOFInternalFields> {
 public:
-    using HashMapBucketType = HashMapBucket<HashMapBucketDataKey>;
-    using Base = JSInternalFieldObjectImpl<3>;
+    using Base = JSInternalFieldObjectImpl<JSSetIteratorNumberOFInternalFields>;
 
     DECLARE_EXPORT_INFO;
 
+    DECLARE_VISIT_CHILDREN;
+
     enum class Field : uint8_t {
-        SetBucket = 0,
+        Entry = 0,
         IteratedObject,
+        Storage,
         Kind,
     };
-    static_assert(numberOfInternalFields == 3);
+    static_assert(numberOfInternalFields == JSSetIteratorNumberOFInternalFields);
 
     static std::array<JSValue, numberOfInternalFields> initialValues()
     {
         return { {
+            jsNumber(0),
             jsNull(),
-            jsNull(),
+            JSValue(),
             jsNumber(0),
         } };
     }
@@ -63,10 +68,7 @@ public:
         return vm.setIteratorSpace<mode>();
     }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(JSSetIteratorType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     static JSSetIterator* create(VM& vm, Structure* structure, JSSet* iteratedObject, IterationKind kind)
     {
@@ -77,44 +79,87 @@ public:
 
     static JSSetIterator* createWithInitialValues(VM&, Structure*);
 
-    ALWAYS_INLINE HashMapBucketType* advanceIter(VM& vm)
+    ALWAYS_INLINE JSValue nextWithAdvance(VM& vm)
     {
-        HashMapBucketType* prev = iterator();
-        HashMapBucketType* sentinel = jsCast<HashMapBucketType*>(vm.sentinelSetBucket());
-        if (prev == sentinel)
-            return nullptr;
-        HashMapBucketType* bucket = prev->next();
-        while (bucket && bucket->deleted())
-            bucket = bucket->next();
-        if (!bucket) {
-            setIterator(vm, sentinel);
-            return nullptr;
+        JSCell* sentinel = vm.orderedHashTableSentinel();
+        JSCell* storage = this->tryGetStorage();
+        if (storage == sentinel)
+            return { };
+
+        if (!storage) {
+            storage = iteratedObject()->storage();
+            if (!storage) {
+                markClosed(sentinel);
+            return { };
+            }
+
+            // This path is very unlikely path. This happens only when
+            // the iterator is created with empty set and set gets a new
+            // entry before this iterator.next() is called.
+            setStorage(vm, storage);
         }
-        setIterator(vm, bucket); // We keep iterator on the last value since the first thing we do in this function is call next().
-        return bucket;
+
+        JSSet::Storage& storageRef = *jsCast<JSSet::Storage*>(storage);
+        auto result = JSSet::Helper::transitAndNext(vm, storageRef, entry());
+        if (!result.storage) {
+            markClosed(sentinel);
+            return { };
+        }
+
+        setEntry(vm, result.entry + 1);
+        if (result.storage != storage)
+            setStorage(vm, result.storage);
+        return result.key;
     }
 
     bool next(JSGlobalObject* globalObject, JSValue& value)
     {
-        HashMapBucketType* bucket = advanceIter(getVM(globalObject));
-        if (!bucket)
+        JSValue nextKey = nextWithAdvance(globalObject->vm());
+        if (nextKey.isEmpty())
             return false;
 
         switch (kind()) {
         case IterationKind::Values:
         case IterationKind::Keys:
-            value = bucket->key();
+            value = nextKey;
             break;
         case IterationKind::Entries:
-            value = createPair(globalObject, bucket->key(), bucket->key());
+            value = constructArrayPair(globalObject, nextKey, nextKey);
             break;
         }
         return true;
     }
 
+    JSValue next(VM& vm)
+    {
+        JSValue key = nextWithAdvance(vm);
+        return key.isEmpty() ? jsBoolean(true) : jsBoolean(false);
+    }
+
+    JSValue peekKey(VM& vm)
+    {
+        JSSet::Helper::Entry entry = this->entry() - 1;
+        JSCell* storage = this->tryGetStorage();
+        ASSERT(storage);
+        ASSERT_UNUSED(vm, storage != vm.orderedHashTableSentinel());
+        JSSet::Storage& storageRef = *jsCast<JSSet::Storage*>(storage);
+        return JSSet::Helper::getKey(storageRef, entry);
+    }
+
     IterationKind kind() const { return static_cast<IterationKind>(internalField(Field::Kind).get().asUInt32AsAnyInt()); }
-    JSObject* iteratedObject() const { return jsCast<JSObject*>(internalField(Field::IteratedObject).get()); }
-    HashMapBucketType* iterator() const { return jsCast<HashMapBucketType*>(internalField(Field::SetBucket).get()); }
+    JSSet* iteratedObject() const { return jsCast<JSSet*>(internalField(Field::IteratedObject).get()); }
+    JSCell* tryGetStorage() const
+    {
+        JSValue value = internalField(Field::Storage).get();
+        if (!value)
+            return nullptr;
+        return value.asCell();
+    }
+    JSSet::Helper::Entry entry() const { return JSSet::Helper::toNumber(internalField(Field::Entry).get()); }
+
+    void setIteratedObject(VM& vm, JSSet* set) { internalField(Field::IteratedObject).set(vm, this, set); }
+    void setStorage(VM& vm, JSCell* storage) { internalField(Field::Storage).set(vm, this, storage); }
+    void setEntry(VM& vm, JSSet::Helper::Entry entry) { internalField(Field::Entry).set(vm, this, JSSet::Helper::toJSValue(entry)); }
 
 private:
     JSSetIterator(VM& vm, Structure* structure)
@@ -122,16 +167,17 @@ private:
     {
     }
 
-    void setIterator(VM& vm, HashMapBucketType* bucket)
+    void markClosed(JSCell* sentinel)
     {
-        internalField(Field::SetBucket).set(vm, this, bucket);
+        internalField(Field::Storage).setWithoutWriteBarrier(sentinel);
     }
 
     JS_EXPORT_PRIVATE void finishCreation(VM&, JSSet*, IterationKind);
     void finishCreation(VM&);
-    JS_EXPORT_PRIVATE JSValue createPair(JSGlobalObject*, JSValue, JSValue);
-    DECLARE_VISIT_CHILDREN;
 };
 STATIC_ASSERT_IS_TRIVIALLY_DESTRUCTIBLE(JSSetIterator);
+
+JSC_DECLARE_HOST_FUNCTION(setIteratorPrivateFuncSetIteratorNext);
+JSC_DECLARE_HOST_FUNCTION(setIteratorPrivateFuncSetIteratorKey);
 
 } // namespace JSC

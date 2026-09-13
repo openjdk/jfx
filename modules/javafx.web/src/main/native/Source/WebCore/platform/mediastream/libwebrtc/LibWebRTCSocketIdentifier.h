@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-enum LibWebRTCSocketIdentifierType { };
+struct LibWebRTCSocketIdentifierType;
 using LibWebRTCSocketIdentifier = AtomicObjectIdentifier<LibWebRTCSocketIdentifierType>;
 
 } // namespace WebCore

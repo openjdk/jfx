@@ -32,17 +32,9 @@
 
 #if USE(LIBWEBRTC)
 
-#include "LibWebRTCMacros.h"
-#include "RealtimeMediaSource.h"
-
-ALLOW_UNUSED_PARAMETERS_BEGIN
-ALLOW_COMMA_BEGIN
-
-#include <webrtc/api/media_stream_interface.h>
-
-ALLOW_UNUSED_PARAMETERS_END
-ALLOW_COMMA_END
-
+#include <WebCore/LibWebRTCMacros.h>
+#include <WebCore/LibWebRTCRefWrappers.h>
+#include <WebCore/RealtimeMediaSource.h>
 #include <wtf/RetainPtr.h>
 
 namespace WebCore {
@@ -52,24 +44,22 @@ class FrameRateMonitor;
 
 class RealtimeIncomingVideoSource
     : public RealtimeMediaSource
-    , private rtc::VideoSinkInterface<webrtc::VideoFrame>
+    , private webrtc::VideoSinkInterface<webrtc::VideoFrame>
     , private webrtc::ObserverInterface
     , public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<RealtimeIncomingVideoSource, WTF::DestructionThread::MainRunLoop>
 {
 public:
-    static Ref<RealtimeIncomingVideoSource> create(rtc::scoped_refptr<webrtc::VideoTrackInterface>&&, String&&);
+    static Ref<RealtimeIncomingVideoSource> create(Ref<webrtc::VideoTrackInterface>&&, String&&);
     ~RealtimeIncomingVideoSource();
-    void ref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<RealtimeIncomingVideoSource, WTF::DestructionThread::MainRunLoop>::ref(); }
-    void deref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<RealtimeIncomingVideoSource, WTF::DestructionThread::MainRunLoop>::deref(); }
-    ThreadSafeWeakPtrControlBlock& controlBlock() const final { return ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<RealtimeIncomingVideoSource, WTF::DestructionThread::MainRunLoop>::controlBlock(); }
+    WTF_ABSTRACT_THREAD_SAFE_REF_COUNTED_AND_CAN_MAKE_WEAK_PTR_IMPL;
 
     void enableFrameRatedMonitoring();
 
 protected:
-    RealtimeIncomingVideoSource(rtc::scoped_refptr<webrtc::VideoTrackInterface>&&, String&&);
+    RealtimeIncomingVideoSource(Ref<webrtc::VideoTrackInterface>&&, String&&);
 
 #if !RELEASE_LOG_DISABLED
-    const char* logClassName() const final { return "RealtimeIncomingVideoSource"; }
+    ASCIILiteral logClassName() const final { return "RealtimeIncomingVideoSource"_s; }
 #endif
 
     static VideoFrameTimeMetadata metadataFromVideoFrame(const webrtc::VideoFrame&);
@@ -91,13 +81,14 @@ private:
     void OnChanged() final;
 
     std::optional<RealtimeMediaSourceSettings> m_currentSettings;
-    rtc::scoped_refptr<webrtc::VideoTrackInterface> m_videoTrack;
+    const Ref<webrtc::VideoTrackInterface> m_videoTrack;
 
+    double m_currentFrameRate { -1 };
     std::unique_ptr<FrameRateMonitor> m_frameRateMonitor;
 #if !RELEASE_LOG_DISABLED
     bool m_enableFrameRatedMonitoringLogging { false };
     mutable RefPtr<const Logger> m_logger;
-    const void* m_logIdentifier;
+    uint64_t m_logIdentifier { 0 };
 #endif
 };
 

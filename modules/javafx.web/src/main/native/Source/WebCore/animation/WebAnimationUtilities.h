@@ -25,20 +25,25 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
-#include "RenderStyleConstants.h"
-#include "WebAnimationTypes.h"
+#include <WebCore/RenderStyleConstants.h>
+#include <WebCore/WebAnimationTypes.h>
 #include <wtf/Forward.h>
 #include <wtf/Markable.h>
 #include <wtf/Seconds.h>
 
 namespace WebCore {
 
-enum class PseudoId : uint16_t;
+enum class PseudoId : uint8_t;
 
 class AnimationEventBase;
+class Document;
 class Element;
+class RenderStyle;
 class WebAnimation;
+
+namespace Style {
+struct PseudoElementIdentifier;
+}
 
 inline double secondsToWebAnimationsAPITime(const Seconds time)
 {
@@ -58,9 +63,13 @@ const auto timeEpsilon = Seconds::fromMilliseconds(0.001);
 
 bool compareAnimationsByCompositeOrder(const WebAnimation&, const WebAnimation&);
 bool compareAnimationEventsByCompositeOrder(const AnimationEventBase&, const AnimationEventBase&);
-String pseudoIdAsString(PseudoId);
-ExceptionOr<PseudoId> pseudoIdFromString(const String&);
-AtomString animatablePropertyAsString(AnimatableProperty);
+String pseudoElementIdentifierAsString(const std::optional<Style::PseudoElementIdentifier>&);
+std::pair<bool, std::optional<Style::PseudoElementIdentifier>> pseudoElementIdentifierFromString(const String&, Document*);
+AtomString animatablePropertyAsString(AnimatableCSSProperty);
+bool animatablePropertiesContainTransformRelatedProperty(const HashSet<AnimatableCSSProperty>&);
+
+// Determines whether a RenderStyle specifies a transition on `display` property.
+bool styleHasDisplayTransition(const RenderStyle&);
 
 } // namespace WebCore
 

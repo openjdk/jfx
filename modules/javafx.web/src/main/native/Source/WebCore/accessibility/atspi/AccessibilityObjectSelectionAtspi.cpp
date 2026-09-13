@@ -85,6 +85,18 @@ unsigned AccessibilityObjectAtspi::selectionCount() const
     return m_coreObject->selectedChildren().size();
 }
 
+Vector<Ref<AccessibilityObjectAtspi>> AccessibilityObjectAtspi::selectedChildren() const
+{
+    if (!m_coreObject)
+        return { };
+
+    auto selectedChildren = m_coreObject->selectedChildren();
+    if (selectedChildren.isEmpty())
+        return { };
+
+    return wrapperVector(selectedChildren);
+}
+
 AccessibilityObjectAtspi* AccessibilityObjectAtspi::selectedChild(unsigned index) const
 {
     if (!m_coreObject)
@@ -93,7 +105,6 @@ AccessibilityObjectAtspi* AccessibilityObjectAtspi::selectedChild(unsigned index
     auto selectedItems = m_coreObject->selectedChildren();
     if (index >= selectedItems.size())
         return nullptr;
-
     return selectedItems[index]->wrapper();
 }
 

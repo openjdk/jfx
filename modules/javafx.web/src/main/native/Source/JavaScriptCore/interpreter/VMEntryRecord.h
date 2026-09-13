@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "GPRInfo.h"
+#include <JavaScriptCore/GPRInfo.h>
 
 namespace JSC {
 
@@ -41,11 +41,11 @@ struct VMEntryRecord {
      * after callee save registers where local variables would go.
      */
     VM* const m_vm;
+    JSCell* const m_context;
+    // The following two fields are sometimes treated as a pair in assembly code, making usages of the second one implicit.
+    // To find them, look for loadpairq/storepairq of "VMEntryRecord::m_prevTopCallFrame" in *.asm files.
     CallFrame* const m_prevTopCallFrame;
     EntryFrame* const m_prevTopEntryFrame;
-    JSObject* const m_callee;
-
-    JSObject* callee() const { return m_callee; }
 
 #if !ENABLE(C_LOOP) && NUMBER_OF_CALLEE_SAVES_REGISTERS > 0
     CPURegister calleeSaveRegistersBuffer[NUMBER_OF_CALLEE_SAVES_REGISTERS];
@@ -60,6 +60,8 @@ struct VMEntryRecord {
     SUPPRESS_ASAN EntryFrame* unsafePrevTopEntryFrame() { return m_prevTopEntryFrame; }
 };
 
-extern "C" VMEntryRecord* vmEntryRecord(EntryFrame*);
+static_assert(OBJECT_OFFSETOF(VMEntryRecord, m_prevTopEntryFrame) == OBJECT_OFFSETOF(VMEntryRecord, m_prevTopCallFrame) + sizeof(void*), "We load/store these using a pair instruction");
+
+extern "C" VMEntryRecord* SYSV_ABI vmEntryRecord(EntryFrame*);
 
 } // namespace JSC

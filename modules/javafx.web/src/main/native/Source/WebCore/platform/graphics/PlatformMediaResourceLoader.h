@@ -27,13 +27,16 @@
 
 #if ENABLE(VIDEO)
 
-#include "PolicyChecker.h"
-#include "SharedBuffer.h"
+#include <WebCore/PolicyChecker.h>
+#include <WebCore/SharedBuffer.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Expected.h>
+#include <wtf/Lock.h>
+#include <wtf/MainThreadDispatcher.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
@@ -43,22 +46,26 @@ class ResourceError;
 class ResourceRequest;
 class ResourceResponse;
 
-class PlatformMediaResourceClient : public RefCounted<PlatformMediaResourceClient> {
+class PlatformMediaResourceClient : public ThreadSafeRefCounted<PlatformMediaResourceClient> {
 public:
     virtual ~PlatformMediaResourceClient() = default;
 
+    // Those methods must be called on PlatformMediaResourceLoader::targetDispatcher()
     virtual void responseReceived(PlatformMediaResource&, const ResourceResponse&, CompletionHandler<void(ShouldContinuePolicyCheck)>&& completionHandler) { completionHandler(ShouldContinuePolicyCheck::Yes); }
-    virtual void redirectReceived(PlatformMediaResource&, ResourceRequest&& request, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&& completionHandler) { completionHandler(WTFMove(request)); }
+    virtual void redirectReceived(PlatformMediaResource&, ResourceRequest&& request, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&& completionHandler) { completionHandler(WTF::move(request)); }
     virtual bool shouldCacheResponse(PlatformMediaResource&, const ResourceResponse&) { return true; }
     virtual void dataSent(PlatformMediaResource&, unsigned long long, unsigned long long) { }
     virtual void dataReceived(PlatformMediaResource&, const SharedBuffer&) { RELEASE_ASSERT_NOT_REACHED(); }
     virtual void accessControlCheckFailed(PlatformMediaResource&, const ResourceError&) { }
     virtual void loadFailed(PlatformMediaResource&, const ResourceError&) { }
     virtual void loadFinished(PlatformMediaResource&, const NetworkLoadMetrics&) { }
+
+    virtual bool isWebCoreNSURLSessionDataTaskClient() const { return false; }
 };
 
 class PlatformMediaResourceLoader : public ThreadSafeRefCounted<PlatformMediaResourceLoader, WTF::DestructionThread::Main> {
-    WTF_MAKE_NONCOPYABLE(PlatformMediaResourceLoader); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(PlatformMediaResourceLoader);
+    WTF_MAKE_NONCOPYABLE(PlatformMediaResourceLoader);
 public:
     enum LoadOption {
         BufferData = 1 << 0,
@@ -68,26 +75,44 @@ public:
 
     virtual ~PlatformMediaResourceLoader() = default;
 
-    virtual RefPtr<PlatformMediaResource> requestResource(ResourceRequest&&, LoadOptions) = 0;
     virtual void sendH2Ping(const URL&, CompletionHandler<void(Expected<Seconds, ResourceError>&&)>&&) = 0;
+
+    // Can be called on any threads. Return the function dispatcher on which the PlaftormMediaResource and PlatformMediaResourceClient must be be called on.
+    virtual Ref<GuaranteedSerialFunctionDispatcher> targetDispatcher() { return MainThreadDispatcher::singleton(); }
+    // requestResource will be called on the main thread, the PlatformMediaResource object is to be used on targetDispatcher().
+    virtual RefPtr<PlatformMediaResource> requestResource(ResourceRequest&&, LoadOptions) = 0;
 
 protected:
     PlatformMediaResourceLoader() = default;
 };
 
-class PlatformMediaResource : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<PlatformMediaResource, WTF::DestructionThread::Main> {
-    WTF_MAKE_NONCOPYABLE(PlatformMediaResource); WTF_MAKE_FAST_ALLOCATED;
+class PlatformMediaResource : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<PlatformMediaResource> {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(PlatformMediaResource);
+    WTF_MAKE_NONCOPYABLE(PlatformMediaResource);
 public:
+    // Called on the main thread.
     PlatformMediaResource() = default;
-    virtual ~PlatformMediaResource() = default;
-    virtual void stop() { }
+
+    // Can be called on any threads, must be made thread-safe.
     virtual bool didPassAccessControlCheck() const { return false; }
 
-    void setClient(RefPtr<PlatformMediaResourceClient>&& client) { m_client = WTFMove(client); }
-    PlatformMediaResourceClient* client() { return m_client.get(); }
+    // Can be called on any thread.
+    virtual ~PlatformMediaResource() = default;
+    virtual void shutdown() { }
+    void setClient(RefPtr<PlatformMediaResourceClient>&& client)
+    {
+        Locker locker { m_lock };
+        m_client = WTF::move(client);
+    }
+    RefPtr<PlatformMediaResourceClient> client() const
+    {
+        Locker locker { m_lock };
+        return m_client;
+    }
 
-protected:
-    RefPtr<PlatformMediaResourceClient> m_client;
+private:
+    RefPtr<PlatformMediaResourceClient> m_client WTF_GUARDED_BY_LOCK(m_lock);
+    mutable Lock m_lock;
 };
 
 } // namespace WebCore

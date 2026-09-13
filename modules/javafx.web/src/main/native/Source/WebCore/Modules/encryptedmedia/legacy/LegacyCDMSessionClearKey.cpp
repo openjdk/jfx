@@ -32,6 +32,7 @@
 #include <JavaScriptCore/TypedArrayAdaptors.h>
 #include <pal/text/TextEncoding.h>
 #include <wtf/JSONValues.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/UUID.h>
 #include <wtf/text/Base64.h>
 
@@ -39,6 +40,8 @@
 
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CDMSessionClearKey);
 
 CDMSessionClearKey::CDMSessionClearKey(LegacyCDMSessionClient& client)
     : m_client(client)
@@ -61,7 +64,7 @@ RefPtr<Uint8Array> CDMSessionClearKey::generateKeyRequest(const String& mimeType
     m_initData = initData;
 
     bool sawError = false;
-    String keyID = PAL::UTF8Encoding().decode(static_cast<char*>(m_initData->baseAddress()), m_initData->byteLength(), true, sawError);
+    String keyID = PAL::UTF8Encoding().decode(initData->span(), true, sawError);
     if (sawError) {
         errorCode = WebKitMediaKeyError::MEDIA_KEYERR_CLIENT;
         return nullptr;
@@ -82,7 +85,7 @@ bool CDMSessionClearKey::update(JSC::Uint8Array* rawKeysData, RefPtr<JSC::Uint8A
     ASSERT(rawKeysData);
 
     do {
-        auto rawKeysString = String::fromUTF8(rawKeysData->data(), rawKeysData->length());
+        auto rawKeysString = String::fromUTF8(rawKeysData->span());
         if (rawKeysString.isEmpty())  {
             LOG(Media, "CDMSessionClearKey::update(%p) - failed: empty message", this);
             break;
@@ -153,7 +156,7 @@ bool CDMSessionClearKey::update(JSC::Uint8Array* rawKeysData, RefPtr<JSC::Uint8A
                 continue;
             }
 
-            m_cachedKeys.set(keyId, WTFMove(*keyData));
+            m_cachedKeys.set(keyId, WTF::move(*keyData));
             foundValidKey = true;
         }
 
@@ -172,7 +175,7 @@ RefPtr<JSC::ArrayBuffer> CDMSessionClearKey::cachedKeyForKeyID(const String& key
         return nullptr;
 
     auto keyData = m_cachedKeys.get(keyId);
-    auto keyDataArray = JSC::Uint8Array::create(keyData.data(), keyData.size());
+    auto keyDataArray = JSC::Uint8Array::create(keyData.span());
     return keyDataArray->unsharedBuffer();
 }
 

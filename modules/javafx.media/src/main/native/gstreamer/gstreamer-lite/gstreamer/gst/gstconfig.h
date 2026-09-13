@@ -37,10 +37,9 @@
  *
  * If a subsystem is disabled in GStreamer, a value is defined in
  * &lt;gst/gst.h&gt;. You can check this if you do subsystem-specific stuff.
- * <example id="example-gstconfig">
- * <title>Doing subsystem specific things</title>
- * <programlisting>
- * &hash;ifndef GST_DISABLE_GST_DEBUG
+ *
+ * ``` C
+ * #ifndef GST_DISABLE_GST_DEBUG
  * // do stuff specific to the debugging subsystem
  * &hash;endif // GST_DISABLE_GST_DEBUG
  * </programlisting>
@@ -49,6 +48,8 @@
 
 #ifndef __GST_CONFIG_H__
 #define __GST_CONFIG_H__
+
+#include <glib.h>
 
 /* trick gtk-doc into believing these symbols are defined (yes, it's ugly) */
 
@@ -73,14 +74,16 @@
  *
  * Configures the inclusion of the debugging subsystem
  */
-/* #undef GST_DISABLE_GST_DEBUG */
+// GSTREAMER_LITE Should be defined
+#define GST_DISABLE_GST_DEBUG 1
 
 /**
  * GST_DISABLE_PARSE:
  *
  * Configures the inclusion of the gst-launch parser
  */
-/* #undef GST_DISABLE_LOADSAVE */
+// GSTREAMER_LITE Should be defined
+#define GST_DISABLE_PARSE 1
 
 /**
  * GST_DISABLE_REGISTRY:
@@ -89,11 +92,34 @@
  * If one disables this, required plugins need to be loaded and registered
  * manually
  */
+// GSTREAMER_LITE Should not be defined
 /* #undef GST_DISABLE_REGISTRY */
+
+/**
+ * GST_DISABLE_CAST_CHECKS:
+ *
+ * Disable run-time GObject cast checks
+ */
+#define GST_DISABLE_CAST_CHECKS 1
+
+/**
+ * GST_DISABLE_GLIB_ASSERTS:
+ *
+ * Disable GLib assertion
+ */
+#define GST_DISABLE_GLIB_ASSERTS 0
+
+/**
+ * GST_DISABLE_GLIB_CHECKS:
+ *
+ * Disable GLib checks such as API guards
+ */
+#define GST_DISABLE_GLIB_CHECKS 0
+
 
 /* FIXME: test and document these! */
 /* Configures the use of external plugins */
-/* #undef GST_DISABLE_PLUGIN */
+#undef GST_DISABLE_PLUGIN
 
 #ifndef GSTREAMER_LITE
 /* Whether or not the CPU supports unaligned access
@@ -116,14 +142,26 @@
 #define GST_HAVE_UNALIGNED_ACCESS 1
 #endif // GSTREAMER_LITE
 
-/**
- * GST_EXPORT:
- *
- * Export the given variable from the built shared object.
- *
- * On Windows, this exports the variable from the DLL.
- * On other platforms, this gets defined to "extern".
- */
+#if (defined(_WIN32) || defined(__CYGWIN__)) && !defined(GST_STATIC_COMPILATION)
+#  define _GST_EXPORT __declspec(dllexport)
+#  define _GST_IMPORT __declspec(dllimport)
+#elif __GNUC__ >= 4
+#  define _GST_EXPORT __attribute__((visibility("default")))
+#  define _GST_IMPORT
+#else
+#  define _GST_EXPORT
+#  define _GST_IMPORT
+#endif
+
+#define GST_API_EXPORT _GST_EXPORT extern
+#define GST_API_IMPORT _GST_IMPORT extern
+
+#ifdef BUILDING_GST
+#  define GST_API GST_API_EXPORT
+#else
+#  define GST_API GST_API_IMPORT
+#endif
+
 /**
  * GST_PLUGIN_EXPORT:
  *
@@ -132,35 +170,26 @@
  * On Windows, this exports the plugin definition from the DLL.
  * On other platforms, this gets defined as a no-op.
  */
-/* Only use __declspec(dllexport/import) when we have been built with MSVC or
- * the user is linking to us with MSVC. The only remaining case is when we were
- * built with MinGW and are linking with MinGW in which case we rely on the
- * linker to auto-export/import symbols. Of course all this is only used when
- * not linking statically.
+#define GST_PLUGIN_EXPORT _GST_EXPORT
+
+/**
+ * GST_EXPORT:
  *
- * NOTE: To link to GStreamer statically on Windows, you must define
- * GST_STATIC_COMPILATION or the prototypes will cause the compiler to search
- * for the symbol inside a DLL.
+ * Export the given variable from the built shared object.
+ *
+ * On Windows, this exports the variable from the DLL.
+ * On other platforms, this gets defined to "extern".
+ * Deprecated: 1.22: Applications should define their own export macros.
  */
-#ifdef _MSC_VER
-# define GST_PLUGIN_EXPORT __declspec(dllexport)
-# ifdef GST_EXPORTS
-#  define GST_EXPORT __declspec(dllexport)
-# else
-#  define GST_EXPORT __declspec(dllimport) extern
-# endif
+#ifdef GST_EXPORTS
+#  define GST_EXPORT GST_API_EXPORT
 #else
-# if defined(__GNUC__) || (defined(__SUNPRO_C) && (__SUNPRO_C >= 0x590))
-#  define GST_PLUGIN_EXPORT __attribute__ ((visibility ("default")))
-#  define GST_EXPORT extern __attribute__ ((visibility ("default")))
-# else
-#  define GST_PLUGIN_EXPORT
-#  define GST_EXPORT extern
-# endif
+#  define GST_EXPORT GST_API_IMPORT
 #endif
 
 #ifdef GSTREAMER_LITE
   // We using def file to limit export, so not need to export all APIs
+  #undef GST_API
   #ifndef GST_API
     #if defined(__GNUC__)
       #define GST_API GST_EXPORT
@@ -184,6 +213,18 @@
 #else
 #define GST_DEPRECATED G_DEPRECATED GST_API
 #define GST_DEPRECATED_FOR(f) G_DEPRECATED_FOR(f) GST_API
+#endif
+
+#if defined(GST_DISABLE_DEPRECATED) && \
+    (G_GNUC_CHECK_VERSION(3, 1) ||                 \
+     (defined (__clang_major__) && (__clang_major__ > 3 || (__clang_major__ == 3 && __clang_minor__ >= 0))))
+#define GST_DEPRECATED_TYPE G_DEPRECATED
+#define GST_DEPRECATED_TYPE_FOR(f) G_DEPRECATED_FOR(f)
+#define GST_UNAVAILABLE_TYPE(maj,min) G_UNAVAILABLE(maj,min)
+#else
+#define GST_DEPRECATED_TYPE
+#define GST_DEPRECATED_TYPE_FOR(f)
+#define GST_UNAVAILABLE_TYPE(maj,min)
 #endif
 
 #endif /* __GST_CONFIG_H__ */

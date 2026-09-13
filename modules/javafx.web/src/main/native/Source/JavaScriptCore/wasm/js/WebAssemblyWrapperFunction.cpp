@@ -37,27 +37,42 @@ namespace JSC {
 const ClassInfo WebAssemblyWrapperFunction::s_info = { "WebAssemblyWrapperFunction"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WebAssemblyWrapperFunction) };
 
 static JSC_DECLARE_HOST_FUNCTION(callWebAssemblyWrapperFunction);
-static JSC_DECLARE_HOST_FUNCTION(callWebAssemblyWrapperFunctionIncludingV128);
+static JSC_DECLARE_HOST_FUNCTION(callWebAssemblyWrapperFunctionIncludingInvalidValues);
 
-WebAssemblyWrapperFunction::WebAssemblyWrapperFunction(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure, JSWebAssemblyInstance* instance, JSObject* function, Wasm::WasmToWasmImportableFunction importableFunction, RefPtr<const Wasm::RTT> rtt)
-    : Base(vm, executable, globalObject, structure, instance, importableFunction, rtt)
+WebAssemblyWrapperFunction::WebAssemblyWrapperFunction(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure, JSObject* function, Wasm::WasmOrJSImportableFunction&& importableFunction, WasmOrJSImportableFunctionCallLinkInfo* callLinkInfo)
+    : Base(vm, executable, globalObject, structure, WTF::move(importableFunction), callLinkInfo)
     , m_function(function, WriteBarrierEarlyInit)
 { }
 
-WebAssemblyWrapperFunction* WebAssemblyWrapperFunction::create(VM& vm, JSGlobalObject* globalObject, Structure* structure, JSObject* function, unsigned importIndex, JSWebAssemblyInstance* instance, Wasm::TypeIndex typeIndex, RefPtr<const Wasm::RTT> rtt)
+WebAssemblyWrapperFunction* WebAssemblyWrapperFunction::create(VM& vm, JSGlobalObject* globalObject, Structure* structure, JSObject* function, unsigned importIndex, JSWebAssemblyInstance* instance, Wasm::TypeIndex typeIndex, Ref<const Wasm::RTT>&& rtt)
 {
     ASSERT_WITH_MESSAGE(!function->inherits<WebAssemblyWrapperFunction>(), "We should never double wrap a wrapper function.");
 
     String name = emptyString();
-    const auto& signature = Wasm::TypeInformation::getFunctionSignature(typeIndex);
+    SUPPRESS_UNCOUNTED_LOCAL const auto& signature = Wasm::TypeInformation::getFunctionSignature(typeIndex);
     NativeExecutable* executable = nullptr;
-    if (signature.argumentsOrResultsIncludeV128())
-        executable = vm.getHostFunction(callWebAssemblyWrapperFunctionIncludingV128, ImplementationVisibility::Public, NoIntrinsic, callHostFunctionAsConstructor, nullptr, name);
+    if (signature.argumentsOrResultsIncludeV128() || signature.argumentsOrResultsIncludeExnref()) [[unlikely]]
+        executable = vm.getHostFunction(callWebAssemblyWrapperFunctionIncludingInvalidValues, ImplementationVisibility::Public, NoIntrinsic, callHostFunctionAsConstructor, nullptr, name);
     else
         executable = vm.getHostFunction(callWebAssemblyWrapperFunction, ImplementationVisibility::Public, NoIntrinsic, callHostFunctionAsConstructor, nullptr, name);
 
     RELEASE_ASSERT(JSValue(function).isCallable());
-    WebAssemblyWrapperFunction* result = new (NotNull, allocateCell<WebAssemblyWrapperFunction>(vm)) WebAssemblyWrapperFunction(vm, executable, globalObject, structure, instance, function, Wasm::WasmToWasmImportableFunction { typeIndex, &instance->instance().importFunctionInfo(importIndex)->importFunctionStub }, rtt);
+    WebAssemblyWrapperFunction* result = new (NotNull, allocateCell<WebAssemblyWrapperFunction>(vm)) WebAssemblyWrapperFunction(vm, executable, globalObject, structure, function,
+        Wasm::WasmOrJSImportableFunction {
+            {
+                {
+                    CalleeBits::encodeNativeCallee(&Wasm::WasmToJSCallee::singleton()),
+                    { instance, WriteBarrierEarlyInit },
+                    &instance->importFunctionInfo(importIndex)->importFunctionStub
+                },
+                rtt.ptr(),
+                typeIndex
+            },
+            { },
+            { }
+        },
+        instance->importFunctionInfo(importIndex));
+    result->m_importableFunction.importFunction.set(vm, globalObject, function);
     result->finishCreation(vm, executable, signature.argumentCount(), name);
     return result;
 }
@@ -86,16 +101,16 @@ JSC_DEFINE_HOST_FUNCTION(callWebAssemblyWrapperFunction, (JSGlobalObject* global
     auto scope = DECLARE_THROW_SCOPE(vm);
     WebAssemblyWrapperFunction* wasmFunction = jsCast<WebAssemblyWrapperFunction*>(callFrame->jsCallee());
     JSObject* function = wasmFunction->function();
-    auto callData = JSC::getCallData(function);
+    auto callData = JSC::getCallDataInline(function);
     RELEASE_ASSERT(callData.type != CallData::Type::None);
     RELEASE_AND_RETURN(scope, JSValue::encode(call(globalObject, function, callData, jsUndefined(), ArgList(callFrame))));
 }
 
-JSC_DEFINE_HOST_FUNCTION(callWebAssemblyWrapperFunctionIncludingV128, (JSGlobalObject* globalObject, CallFrame*))
+JSC_DEFINE_HOST_FUNCTION(callWebAssemblyWrapperFunctionIncludingInvalidValues, (JSGlobalObject* globalObject, CallFrame*))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    return throwVMTypeError(globalObject, scope, Wasm::errorMessageForExceptionType(Wasm::ExceptionType::TypeErrorInvalidV128Use));
+    return throwVMTypeError(globalObject, scope, Wasm::errorMessageForExceptionType(Wasm::ExceptionType::TypeErrorInvalidValueUse));
 }
 
 } // namespace JSC

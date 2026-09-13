@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,11 +28,14 @@ package javafx.util;
 import java.io.Serializable;
 import javafx.beans.NamedArg;
 
- /**
-  * <p>A convenience class to represent name-value pairs.</p>
-  * @since JavaFX 2.0
-  */
-public class Pair<K,V> implements Serializable{
+/**
+ * A convenience class to represent name-value pairs.
+ *
+ * @param <K> the key (name) type
+ * @param <V> the value type
+ * @since JavaFX 2.0
+ */
+public class Pair<K, V> implements Serializable {
 
     /**
      * Key of this <code>Pair</code>.

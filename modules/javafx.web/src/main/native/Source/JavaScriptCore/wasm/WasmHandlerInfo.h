@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,22 +25,29 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY)
 
-#include "CodeLocation.h"
+#include <JavaScriptCore/CodeLocation.h>
 #include <wtf/Forward.h>
 #include <wtf/text/ASCIILiteral.h>
 
 namespace JSC {
+class JSWebAssemblyInstance;
+
 namespace Wasm {
 
-class Instance;
 class Tag;
 
 enum class HandlerType {
     Catch = 0,
     CatchAll = 1,
     Delegate = 2,
+    TryTableCatch = 3,
+    TryTableCatchRef = 4,
+    TryTableCatchAll = 5,
+    TryTableCatchAllRef = 6,
 };
 
 struct HandlerInfoBase {
@@ -48,6 +55,7 @@ struct HandlerInfoBase {
     uint32_t m_start;
     uint32_t m_end;
     uint32_t m_target;
+    uint32_t m_targetMetadata { 0 };
     uint32_t m_tryDepth;
     uint32_t m_exceptionIndexOrDelegateTarget;
 };
@@ -67,6 +75,17 @@ struct UnlinkedHandlerInfo : public HandlerInfoBase {
         m_exceptionIndexOrDelegateTarget = exceptionIndexOrDelegateTarget;
     }
 
+    UnlinkedHandlerInfo(HandlerType handlerType, uint32_t start, uint32_t end, uint32_t target, uint32_t targetMetadata, uint32_t tryDepth, uint32_t exceptionIndexOrDelegateTarget)
+    {
+        m_type = handlerType;
+        m_start = start;
+        m_end = end;
+        m_target = target;
+        m_targetMetadata = targetMetadata;
+        m_tryDepth = tryDepth;
+        m_exceptionIndexOrDelegateTarget = exceptionIndexOrDelegateTarget;
+    }
+
     ASCIILiteral typeName() const
     {
         switch (m_type) {
@@ -76,6 +95,14 @@ struct UnlinkedHandlerInfo : public HandlerInfoBase {
             return "catchall"_s;
         case HandlerType::Delegate:
             return "delegate"_s;
+        case HandlerType::TryTableCatch:
+            return "try_table catch"_s;
+        case HandlerType::TryTableCatchRef:
+            return "try_table catch_ref"_s;
+        case HandlerType::TryTableCatchAll:
+            return "try_table catch_all"_s;
+        case HandlerType::TryTableCatchAllRef:
+            return "try_table catch_all_ref"_s;
         default:
             ASSERT_NOT_REACHED();
             break;
@@ -85,7 +112,7 @@ struct UnlinkedHandlerInfo : public HandlerInfoBase {
 };
 
 struct HandlerInfo : public HandlerInfoBase {
-    static const HandlerInfo* handlerForIndex(Instance&, const FixedVector<HandlerInfo>& exeptionHandlers, unsigned index, const Wasm::Tag* exceptionTag);
+    static const HandlerInfo* handlerForIndex(JSWebAssemblyInstance&, const FixedVector<HandlerInfo>& exeptionHandlers, unsigned index, const Wasm::Tag* exceptionTag);
 
     void initialize(const UnlinkedHandlerInfo&, CodePtr<ExceptionHandlerPtrTag>);
 

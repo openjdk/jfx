@@ -25,10 +25,9 @@
 
 #pragma once
 
-#include "CSSNumericBaseType.h"
+#include <WebCore/CSSNumericBaseType.h>
 #include <optional>
 #include <wtf/Markable.h>
-#include <wtf/text/StringConcatenateNumbers.h>
 
 namespace WebCore {
 
@@ -46,10 +45,10 @@ public:
     BaseTypeStorage resolution;
     BaseTypeStorage flex;
     BaseTypeStorage percent;
-    Markable<CSSNumericBaseType, EnumMarkableTraits<CSSNumericBaseType>> percentHint;
+    Markable<CSSNumericBaseType> percentHint;
 
     static std::optional<CSSNumericType> create(CSSUnitType, int exponent = 1);
-    bool operator==(const CSSNumericType& other) const;
+    friend bool operator==(const CSSNumericType&, const CSSNumericType&) = default;
     static std::optional<CSSNumericType> addTypes(const Vector<Ref<CSSNumericValue>>&);
     static std::optional<CSSNumericType> addTypes(CSSNumericType, CSSNumericType);
     static std::optional<CSSNumericType> multiplyTypes(const Vector<Ref<CSSNumericValue>>&);

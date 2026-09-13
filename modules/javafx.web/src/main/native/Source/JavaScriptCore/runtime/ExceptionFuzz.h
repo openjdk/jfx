@@ -25,7 +25,8 @@
 
 #pragma once
 
-#include "Options.h"
+#include <JavaScriptCore/Options.h>
+#include <wtf/text/ASCIILiteral.h>
 
 namespace JSC {
 
@@ -34,12 +35,12 @@ class JSGlobalObject;
 class ThrowScope;
 
 // Call this only if you know that exception fuzzing is enabled.
-void doExceptionFuzzing(JSGlobalObject*, ThrowScope&, const char* where, const void* returnPC);
+void doExceptionFuzzing(JSGlobalObject*, ThrowScope&, ASCIILiteral where, const void* returnPC);
 
 // This is what you should call if you don't know if fuzzing is enabled.
-ALWAYS_INLINE void doExceptionFuzzingIfEnabled(JSGlobalObject* globalObject, ThrowScope& scope, const char* where, const void* returnPC)
+ALWAYS_INLINE void doExceptionFuzzingIfEnabled(JSGlobalObject* globalObject, ThrowScope& scope, ASCIILiteral where, const void* returnPC)
 {
-    if (LIKELY(!Options::useExceptionFuzz()))
+    if (!Options::useExceptionFuzz()) [[likely]]
         return;
     doExceptionFuzzing(globalObject, scope, where, returnPC);
 }

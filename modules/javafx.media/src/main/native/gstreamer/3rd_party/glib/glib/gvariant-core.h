@@ -25,8 +25,20 @@
 #include <glib/gvariant.h>
 #include <glib/gbytes.h>
 
+#if GLIB_SIZEOF_VOID_P == 8
+# define G_VARIANT_MAX_PREALLOCATED 64
+#else
+# define G_VARIANT_MAX_PREALLOCATED 32
+#endif
+
 /* gvariant-core.c */
 
+GVariant *              g_variant_new_preallocated_trusted              (const GVariantType  *type,
+                                                                         gconstpointer        data,
+                                                                         gsize                size);
+GVariant *              g_variant_new_take_bytes                        (const GVariantType  *type,
+                                                                         GBytes              *bytes,
+                                                                         gboolean             trusted);
 GVariant *              g_variant_new_from_children                     (const GVariantType  *type,
                                                                          GVariant           **children,
                                                                          gsize                n_children,

@@ -29,17 +29,21 @@
 #if ENABLE(ASYNC_SCROLLING)
 
 #include "ScrollingStateFixedNode.h"
+#include "ScrollingStateScrollingNode.h"
 #include "ScrollingStateTree.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollingStateNode);
+
 ScrollingStateNode::ScrollingStateNode(ScrollingNodeType nodeType, ScrollingStateTree& scrollingStateTree, ScrollingNodeID nodeID)
     : m_nodeType(nodeType)
     , m_nodeID(nodeID)
-    , m_scrollingStateTree(scrollingStateTree)
+    , m_scrollingStateTree(&scrollingStateTree)
 {
 }
 
@@ -49,7 +53,7 @@ ScrollingStateNode::ScrollingStateNode(const ScrollingStateNode& stateNode, Scro
     : m_nodeType(stateNode.nodeType())
     , m_nodeID(stateNode.scrollingNodeID())
     , m_changedProperties(stateNode.changedProperties())
-    , m_scrollingStateTree(adoptiveTree)
+    , m_scrollingStateTree(&adoptiveTree)
 {
     if (hasChangedProperty(Property::Layer))
         setLayer(stateNode.layer().toRepresentation(adoptiveTree.preferredLayerRepresentation()));
@@ -57,7 +61,52 @@ ScrollingStateNode::ScrollingStateNode(const ScrollingStateNode& stateNode, Scro
     scrollingStateTree().addNode(*this);
 }
 
+ScrollingStateNode::ScrollingStateNode(ScrollingNodeType nodeType, ScrollingNodeID nodeID, Vector<Ref<ScrollingStateNode>>&& children, OptionSet<ScrollingStateNodeProperty> changedProperties, std::optional<PlatformLayerIdentifier> layerID)
+    : m_nodeType(nodeType)
+    , m_nodeID(nodeID)
+    , m_changedProperties(changedProperties)
+    , m_children(WTF::move(children))
+    , m_layer(layerID)
+{
+    for (auto& child : m_children) {
+        ASSERT(!child->parent());
+        child->setParent(this);
+    }
+    ASSERT(parentPointersAreCorrect());
+}
+
 ScrollingStateNode::~ScrollingStateNode() = default;
+
+void ScrollingStateNode::attachAfterDeserialization(ScrollingStateTree& tree)
+{
+    ASSERT(!m_scrollingStateTree);
+    m_scrollingStateTree = &tree;
+
+    // Non-deserialization ScrollingStateScrollingNode constructors do this during construction,
+    // but since we didn't have a ScrollingStateTree pointer until attaching, do it now.
+    if (is<ScrollingStateScrollingNode>(*this))
+        tree.scrollingNodeAdded();
+
+    for (auto& child : m_children)
+        child->attachAfterDeserialization(tree);
+}
+
+void ScrollingStateNode::setChildren(Vector<Ref<ScrollingStateNode>>&& children)
+{
+    m_children = WTF::move(children);
+    for (auto& child : m_children) {
+        ASSERT(!child->parent());
+        child->setParent(this);
+    }
+    ASSERT(parentPointersAreCorrect());
+}
+
+void ScrollingStateNode::traverse(NOESCAPE const Function<void(ScrollingStateNode&)>& function)
+{
+    function(*this);
+    for (auto& child : m_children)
+        child->traverse(function);
+}
 
 void ScrollingStateNode::setPropertyChanged(Property property)
 {
@@ -65,7 +114,8 @@ void ScrollingStateNode::setPropertyChanged(Property property)
         return;
 
     setPropertyChangedInternal(property);
-    m_scrollingStateTree.setHasChangedProperties();
+    ASSERT(m_scrollingStateTree);
+    m_scrollingStateTree->setHasChangedProperties();
 }
 
 OptionSet<ScrollingStateNode::Property> ScrollingStateNode::applicableProperties() const
@@ -77,7 +127,8 @@ void ScrollingStateNode::setPropertyChangesAfterReattach()
 {
     auto allPropertiesForNodeType = applicableProperties();
     setPropertiesChangedInternal(allPropertiesForNodeType);
-    m_scrollingStateTree.setHasChangedProperties();
+    ASSERT(m_scrollingStateTree);
+    m_scrollingStateTree->setHasChangedProperties();
 }
 
 Ref<ScrollingStateNode> ScrollingStateNode::cloneAndReset(ScrollingStateTree& adoptiveTree)
@@ -94,10 +145,7 @@ Ref<ScrollingStateNode> ScrollingStateNode::cloneAndReset(ScrollingStateTree& ad
 
 void ScrollingStateNode::cloneAndResetChildren(ScrollingStateNode& clone, ScrollingStateTree& adoptiveTree)
 {
-    if (!m_children)
-        return;
-
-    for (auto& child : *m_children)
+    for (auto& child : m_children)
         clone.appendChild(child->cloneAndReset(adoptiveTree));
 }
 
@@ -105,9 +153,7 @@ void ScrollingStateNode::appendChild(Ref<ScrollingStateNode>&& childNode)
 {
     childNode->setParent(this);
 
-    if (!m_children)
-        m_children = makeUnique<Vector<RefPtr<ScrollingStateNode>>>();
-    m_children->append(WTFMove(childNode));
+    m_children.append(WTF::move(childNode));
     setPropertyChanged(Property::ChildNodes);
 }
 
@@ -115,16 +161,11 @@ void ScrollingStateNode::insertChild(Ref<ScrollingStateNode>&& childNode, size_t
 {
     childNode->setParent(this);
 
-    if (!m_children) {
-        ASSERT(!index);
-        m_children = makeUnique<Vector<RefPtr<ScrollingStateNode>>>();
-    }
-
-    if (index > m_children->size()) {
+    if (index > m_children.size()) {
         ASSERT_NOT_REACHED();  // Crash data suggest we can get here.
-        m_children->append(WTFMove(childNode));
+        m_children.append(WTF::move(childNode));
     } else
-        m_children->insert(index, WTFMove(childNode));
+        m_children.insert(index, WTF::move(childNode));
 
     setPropertyChanged(Property::ChildNodes);
 }
@@ -141,26 +182,18 @@ void ScrollingStateNode::removeFromParent()
 
 void ScrollingStateNode::removeChild(ScrollingStateNode& childNode)
 {
-    auto childIndex = indexOfChild(childNode);
-    if (childIndex != notFound)
-        removeChildAtIndex(childIndex);
-}
-
-void ScrollingStateNode::removeChildAtIndex(size_t index)
-{
-    ASSERT(m_children && index < m_children->size());
-    if (m_children && index < m_children->size()) {
-        m_children->remove(index);
+    auto didRemove = m_children.removeFirstMatching([&](auto& child) {
+        return child.ptr() == &childNode;
+    });
+    if (didRemove)
         setPropertyChanged(Property::ChildNodes);
-    }
 }
 
-size_t ScrollingStateNode::indexOfChild(ScrollingStateNode& childNode) const
+RefPtr<ScrollingStateNode> ScrollingStateNode::childAtIndex(size_t index) const
 {
-    if (!m_children)
-        return notFound;
-
-    return m_children->find(&childNode);
+    if (index >= m_children.size())
+        return nullptr;
+    return m_children[index].copyRef();
 }
 
 void ScrollingStateNode::setLayer(const LayerRepresentation& layerRepresentation)
@@ -173,49 +206,37 @@ void ScrollingStateNode::setLayer(const LayerRepresentation& layerRepresentation
     setPropertyChanged(Property::Layer);
 }
 
-#if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
-void ScrollingStateNode::setInteractionRegionsLayer(const LayerRepresentation& layerRepresentation)
-{
-    if (layerRepresentation == m_interactionRegionsLayer)
-        return;
-
-    m_interactionRegionsLayer = layerRepresentation;
-
-    // Piggybacks on other property changed flags: Property::Layer and Property::ScrollContainerLayer.
-}
-#endif
-
 void ScrollingStateNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
     if (behavior & ScrollingStateTreeAsTextBehavior::IncludeNodeIDs)
-        ts.dumpProperty("nodeID", scrollingNodeID());
+        ts.dumpProperty("nodeID"_s, scrollingNodeID());
 
     if (behavior & ScrollingStateTreeAsTextBehavior::IncludeLayerIDs)
-        ts.dumpProperty("layerID", layer().layerID());
+        ts.dumpProperty("layerID"_s, layer().layerID());
 }
 
 void ScrollingStateNode::dump(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
-    ts << "\n";
-    ts << indent << "(";
+    ts << '\n';
+    ts << indent << '(';
     ts.increaseIndent();
     dumpProperties(ts, behavior);
 
-    if (m_children) {
-        ts << "\n";
+    if (!m_children.isEmpty()) {
+        ts << '\n';
         ts << indent <<"(";
         {
             TextStream::IndentScope indentScope(ts);
-            ts << "children " << children()->size();
-            for (auto& child : *m_children)
+            ts << "children "_s << children().size();
+            for (auto& child : m_children)
                 child->dump(ts, behavior);
-            ts << "\n";
+            ts << '\n';
         }
-        ts << indent << ")";
+        ts << indent << ')';
     }
-    ts << "\n";
+    ts << '\n';
     ts.decreaseIndent();
-    ts << indent << ")";
+    ts << indent << ')';
 }
 
 String ScrollingStateNode::scrollingStateTreeAsText(OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
@@ -223,9 +244,20 @@ String ScrollingStateNode::scrollingStateTreeAsText(OptionSet<ScrollingStateTree
     TextStream ts(TextStream::LineMode::MultipleLine, TextStream::Formatting::SVGStyleRect);
 
     dump(ts, behavior);
-    ts << "\n";
+    ts << '\n';
     return ts.release();
 }
+
+#if ASSERT_ENABLED
+bool ScrollingStateNode::parentPointersAreCorrect() const
+{
+    for (auto& child : m_children) {
+        if (child->parent().get() != this || !child->parentPointersAreCorrect())
+            return false;
+    }
+    return true;
+}
+#endif
 
 } // namespace WebCore
 

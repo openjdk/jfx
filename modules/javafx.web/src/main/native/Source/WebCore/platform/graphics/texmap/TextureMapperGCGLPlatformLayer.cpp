@@ -21,16 +21,19 @@
 #include "config.h"
 #include "TextureMapperGCGLPlatformLayer.h"
 
-#if ENABLE(WEBGL) && USE(TEXTURE_MAPPER) && !USE(NICOSIA)
+#if ENABLE(WEBGL) && USE(TEXTURE_MAPPER) && !USE(COORDINATED_GRAPHICS)
 
 #include "ANGLEHeaders.h"
-#include "BitmapTextureGL.h"
+#include "BitmapTexture.h"
 #include "GLContext.h"
+#include "TextureMapper.h"
+#include "TextureMapperFlags.h"
 #include "TextureMapperGLHeaders.h"
-#include "TextureMapperPlatformLayerBuffer.h"
-#include "TextureMapperPlatformLayerProxy.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextureMapperGCGLPlatformLayer);
 
 TextureMapperGCGLPlatformLayer::TextureMapperGCGLPlatformLayer(GraphicsContextGLTextureMapperANGLE& context)
     : m_context(context)
@@ -45,13 +48,16 @@ TextureMapperGCGLPlatformLayer::~TextureMapperGCGLPlatformLayer()
 
 void TextureMapperGCGLPlatformLayer::paintToTextureMapper(TextureMapper& textureMapper, const FloatRect& targetRect, const TransformationMatrix& matrix, float opacity)
 {
+    if (!m_context.m_isCompositorTextureInitialized)
+        return;
+
     auto attrs = m_context.contextAttributes();
-    TextureMapperGL& texmapGL = static_cast<TextureMapperGL&>(textureMapper);
-    TextureMapperGL::Flags flags = TextureMapperGL::ShouldFlipTexture | (attrs.alpha ? TextureMapperGL::ShouldBlend : 0);
-    IntSize textureSize(m_context.m_currentWidth, m_context.m_currentHeight);
-    texmapGL.drawTexture(m_context.m_compositorTexture, flags, textureSize, targetRect, matrix, opacity);
+    OptionSet<TextureMapperFlags> flags = TextureMapperFlags::ShouldFlipTexture;
+    if (attrs.alpha)
+        flags.add(TextureMapperFlags::ShouldBlend);
+    textureMapper.drawTexture(m_context.m_compositorTexture, flags, targetRect, matrix, opacity);
 }
 
 } // namespace WebCore
 
-#endif // ENABLE(WEBGL) && USE(TEXTURE_MAPPER)
+#endif // ENABLE(WEBGL) && USE(TEXTURE_MAPPER) && !USE(COORDINATED_GRAPHICS)

@@ -35,14 +35,6 @@ struct SHA1Functions {
     static constexpr auto final = SHA1_Final;
     static constexpr size_t digestLength = SHA_DIGEST_LENGTH;
 };
-
-struct SHA224Functions {
-    static constexpr auto init = SHA224_Init;
-    static constexpr auto update = SHA224_Update;
-    static constexpr auto final = SHA224_Final;
-    static constexpr size_t digestLength = SHA224_DIGEST_LENGTH;
-};
-
 struct SHA256Functions {
     static constexpr auto init = SHA256_Init;
     static constexpr auto update = SHA256_Update;
@@ -69,13 +61,13 @@ namespace PAL {
 
 struct CryptoDigestContext {
     virtual ~CryptoDigestContext() = default;
-    virtual void addBytes(const void* input, size_t length) = 0;
+    virtual void addBytes(std::span<const uint8_t> input) = 0;
     virtual Vector<uint8_t> computeHash() = 0;
 };
 
 template <typename SHAContext, typename SHAFunctions>
 struct CryptoDigestContextImpl : public CryptoDigestContext {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(CryptoDigestContextImpl);
 
     static std::unique_ptr<CryptoDigestContext> create()
     {
@@ -87,15 +79,15 @@ struct CryptoDigestContextImpl : public CryptoDigestContext {
         SHAFunctions::init(&m_context);
     }
 
-    void addBytes(const void* input, size_t length) override
+    void addBytes(std::span<const uint8_t> input) override
     {
-        SHAFunctions::update(&m_context, input, length);
+        SHAFunctions::update(&m_context, static_cast<const void*>(input.data()), input.size());
     }
 
     Vector<uint8_t> computeHash() override
     {
         Vector<uint8_t> result(SHAFunctions::digestLength);
-        SHAFunctions::final(result.data(), &m_context);
+        SHAFunctions::final(result.mutableSpan().data(), &m_context);
         return result;
     }
 
@@ -103,43 +95,39 @@ private:
     SHAContext m_context;
 };
 
-CryptoDigest::CryptoDigest()
-{
-}
+CryptoDigest::CryptoDigest() = default;
 
-CryptoDigest::~CryptoDigest()
+CryptoDigest::~CryptoDigest() = default;
+
+static std::unique_ptr<CryptoDigestContext> createCryptoDigest(CryptoDigest::Algorithm algorithm)
 {
+    switch (algorithm) {
+    case CryptoDigest::Algorithm::SHA_1:
+        return CryptoDigestContextImpl<SHA_CTX, SHA1Functions>::create();
+    case CryptoDigest::Algorithm::DEPRECATED_SHA_224:
+        RELEASE_ASSERT_NOT_REACHED_WITH_MESSAGE("SHA224 is not supported.");
+        return CryptoDigestContextImpl<SHA256_CTX, SHA256Functions>::create();
+    case CryptoDigest::Algorithm::SHA_256:
+        return CryptoDigestContextImpl<SHA256_CTX, SHA256Functions>::create();
+    case CryptoDigest::Algorithm::SHA_384:
+        return CryptoDigestContextImpl<SHA512_CTX, SHA384Functions>::create();
+    case CryptoDigest::Algorithm::SHA_512:
+        return CryptoDigestContextImpl<SHA512_CTX, SHA512Functions>::create();
+    }
+    return nullptr;
 }
 
 std::unique_ptr<CryptoDigest> CryptoDigest::create(CryptoDigest::Algorithm algorithm)
 {
-    std::unique_ptr<CryptoDigest> digest(new CryptoDigest);
-
-    switch (algorithm) {
-    case CryptoDigest::Algorithm::SHA_1:
-        digest->m_context = CryptoDigestContextImpl<SHA_CTX, SHA1Functions>::create();
-        return digest;
-    case CryptoDigest::Algorithm::SHA_224:
-        digest->m_context = CryptoDigestContextImpl<SHA256_CTX, SHA224Functions>::create();
-        return digest;
-    case CryptoDigest::Algorithm::SHA_256:
-        digest->m_context = CryptoDigestContextImpl<SHA256_CTX, SHA256Functions>::create();
-        return digest;
-    case CryptoDigest::Algorithm::SHA_384:
-        digest->m_context = CryptoDigestContextImpl<SHA512_CTX, SHA384Functions>::create();
-        return digest;
-    case CryptoDigest::Algorithm::SHA_512:
-        digest->m_context = CryptoDigestContextImpl<SHA512_CTX, SHA512Functions>::create();
-        return digest;
-    }
-
-    return nullptr;
+    std::unique_ptr<CryptoDigest> digest = WTF::makeUnique<CryptoDigest>();
+    digest->m_context = createCryptoDigest(algorithm);
+    return digest;
 }
 
-void CryptoDigest::addBytes(const void* input, size_t length)
+void CryptoDigest::addBytes(std::span<const uint8_t> input)
 {
     ASSERT(m_context);
-    m_context->addBytes(input, length);
+    m_context->addBytes(input);
 }
 
 Vector<uint8_t> CryptoDigest::computeHash()

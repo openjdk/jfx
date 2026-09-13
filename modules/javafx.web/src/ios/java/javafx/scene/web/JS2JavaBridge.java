@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,6 @@ package javafx.scene.web;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URLDecoder;
-import java.security.AccessControlContext;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -101,10 +100,6 @@ class JS2JavaBridge {
     }
     String getJavaBridge() {
         return javaBridge;
-    }
-
-    AccessControlContext getAccessControlContext() {
-        return webEngine.getAccessControlContext();
     }
 
     private void populateObject(String jsName, ExportedJavaObject jsObj) {

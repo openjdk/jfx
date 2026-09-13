@@ -26,7 +26,8 @@
 #pragma once
 
 #include "EventTarget.h"
-#include <wtf/IsoMalloc.h>
+#include "EventTargetInterfaces.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 
@@ -40,12 +41,12 @@ class Pasteboard;
 class PasteboardCustomData;
 
 class Clipboard final : public RefCounted<Clipboard>, public EventTarget {
-    WTF_MAKE_ISO_ALLOCATED(Clipboard);
+    WTF_MAKE_TZONE_ALLOCATED(Clipboard);
 public:
     static Ref<Clipboard> create(Navigator&);
     ~Clipboard();
 
-    EventTargetInterface eventTargetInterface() const final;
+    enum EventTargetInterfaceType eventTargetInterface() const final;
     ScriptExecutionContext* scriptExecutionContext() const final;
 
     LocalFrame* frame() const;
@@ -58,7 +59,7 @@ public:
     void writeText(const String& data, Ref<DeferredPromise>&&);
 
     void read(Ref<DeferredPromise>&&);
-    void write(const Vector<RefPtr<ClipboardItem>>& data, Ref<DeferredPromise>&&);
+    void write(const Vector<Ref<ClipboardItem>>& data, Ref<DeferredPromise>&&);
 
     void getType(ClipboardItem&, const String& type, Ref<DeferredPromise>&&);
 
@@ -83,12 +84,12 @@ private:
     public:
         static Ref<ItemWriter> create(Clipboard& clipboard, Ref<DeferredPromise>&& promise)
         {
-            return adoptRef(*new ItemWriter(clipboard, WTFMove(promise)));
+            return adoptRef(*new ItemWriter(clipboard, WTF::move(promise)));
         }
 
         ~ItemWriter();
 
-        void write(const Vector<RefPtr<ClipboardItem>>&);
+        void write(const Vector<Ref<ClipboardItem>>&);
         void invalidate();
 
     private:
@@ -115,3 +116,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(Clipboard)

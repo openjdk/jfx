@@ -29,15 +29,25 @@
 namespace WebCore {
 
 #if PLATFORM(COCOA)
-Vector<MachSendRight> GPUCompositorIntegration::recreateRenderBuffers(int width, int height) const
+Vector<MachSendRight> GPUCompositorIntegration::recreateRenderBuffers(int width, int height, WebCore::DestinationColorSpace&& destinationColorSpace, WebCore::AlphaPremultiplication alphaMode, WebCore::WebGPU::TextureFormat textureFormat, unsigned bufferCount, WebCore::WebGPU::Device& device) const
 {
-    return m_backing->recreateRenderBuffers(width, height);
+    return m_backing->recreateRenderBuffers(width, height, WTF::move(destinationColorSpace), alphaMode, textureFormat, bufferCount, device);
 }
 #endif
 
-void GPUCompositorIntegration::prepareForDisplay(CompletionHandler<void()>&& completionHandler)
+void GPUCompositorIntegration::prepareForDisplay(uint32_t frameIndex, CompletionHandler<void()>&& completionHandler)
 {
-    m_backing->prepareForDisplay(WTFMove(completionHandler));
+    m_backing->prepareForDisplay(frameIndex, WTF::move(completionHandler));
+}
+
+void GPUCompositorIntegration::paintCompositedResultsToCanvas(WebCore::ImageBuffer& imageBuffer, uint32_t bufferIndex)
+{
+    m_backing->paintCompositedResultsToCanvas(imageBuffer, bufferIndex);
+}
+
+void GPUCompositorIntegration::updateContentsHeadroom(float headroom)
+{
+    m_backing->updateContentsHeadroom(headroom);
 }
 
 } // namespace WebCore

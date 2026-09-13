@@ -30,6 +30,7 @@
 
 #pragma once
 
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 struct z_stream_s;
@@ -38,7 +39,7 @@ typedef z_stream_s z_stream;
 namespace WebCore {
 
 class WebSocketDeflater {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(WebSocketDeflater, WEBCORE_EXPORT);
 public:
     enum ContextTakeOverMode {
         DoNotTakeOverContext,
@@ -49,10 +50,10 @@ public:
     WEBCORE_EXPORT ~WebSocketDeflater();
 
     bool initialize();
-    bool addBytes(const uint8_t*, size_t);
+    bool addBytes(std::span<const uint8_t>);
     bool finish();
-    const uint8_t* data() { return m_buffer.data(); }
     size_t size() const { return m_buffer.size(); }
+    std::span<const uint8_t> span() const LIFETIME_BOUND { return m_buffer.span(); }
     void reset();
 
 private:
@@ -63,16 +64,16 @@ private:
 };
 
 class WebSocketInflater {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(WebSocketInflater, WEBCORE_EXPORT);
 public:
     explicit WebSocketInflater(int windowBits = 15);
     WEBCORE_EXPORT ~WebSocketInflater();
 
     bool initialize();
-    bool addBytes(const uint8_t*, size_t);
+    bool addBytes(std::span<const uint8_t>);
     bool finish();
-    const uint8_t* data() { return m_buffer.data(); }
     size_t size() const { return m_buffer.size(); }
+    std::span<const uint8_t> span() const LIFETIME_BOUND { return m_buffer.span(); }
     void reset();
 
 private:

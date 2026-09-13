@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,38 +23,36 @@
  * questions.
  */
 
-#import <Cocoa/Cocoa.h>
-#import <OpenGL/gl.h>
-#import <OpenGL/OpenGL.h>
-
 #import "GlassView.h"
-#import "GlassOffscreen.h"
+#import "GlassLayer.h"
 
-// 3D version of Glass providing OpenGL context through CAOpenGLLayer
-@interface GlassView3D : NSOpenGLView <GlassView, NSTextInputClient>
+// GlassView3D is subView of GlassHostView and it performs event
+// handling tasks related to both OpenGL and Metal pipeline
+@interface GlassView3D : NSView <GlassView, NSTextInputClient>
 {
     GlassViewDelegate   *_delegate;
-
-    NSUInteger          _drawCounter; // draw counter, so that we only bind/unbind offscreen once
-
     NSTrackingArea      *_trackingArea;
+    GlassLayer *layer;
 
-    GLuint              _texture;
-    GLuint              _textureWidth;
-    GLuint              _textureHeight;
-
-    CGFloat             _backgroundR;
-    CGFloat             _backgroundG;
-    CGFloat             _backgroundB;
-    CGFloat             _backgroundA;
+    NSView *subView;
 
     NSAttributedString *nsAttrBuffer;
     BOOL imEnabled;
-    BOOL shouldProcessKeyEvent;
+    BOOL handlingKeyEvent;
+    BOOL didCommitText;
+
     BOOL isHiDPIAware;
+    NSEvent *lastKeyEvent;
+
+    // These fields track state for the Keyman input method.
+    BOOL keymanActive;
+    BOOL sendKeyEvent;
+    unichar insertTextChar;
 }
 
+- (GlassViewDelegate*)delegate;
 - (id)initWithFrame:(NSRect)frame withJview:(jobject)jView withJproperties:(jobject)jproperties;
 - (void)setFrameOrigin:(NSPoint)newOrigin;
+- (CALayer*)getLayer;
 
 @end

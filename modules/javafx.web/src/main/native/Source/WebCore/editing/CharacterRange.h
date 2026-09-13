@@ -33,6 +33,10 @@
 typedef struct _NSRange NSRange;
 #endif
 
+namespace WTF {
+class TextStream;
+}
+
 namespace WebCore {
 
 struct CharacterRange {
@@ -41,6 +45,8 @@ struct CharacterRange {
 
     CharacterRange() = default;
     constexpr CharacterRange(uint64_t location, uint64_t length);
+
+    bool operator==(const CharacterRange&) const = default;
 
 #if USE(CF)
     constexpr CharacterRange(CFRange);
@@ -58,6 +64,8 @@ constexpr CharacterRange::CharacterRange(uint64_t location, uint64_t length)
     , length(length)
 {
 }
+
+WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const CharacterRange&);
 
 #if USE(CF)
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2008 David Smith <catfish.man@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
@@ -30,7 +30,9 @@
 #include "TagCollection.h"
 #include <new>
 #include <wtf/HashSet.h>
+#include <wtf/NoVirtualDestructorBase.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakHashSet.h>
 
 namespace WebCore {
@@ -45,7 +47,7 @@ template<typename ListType> struct NodeListTypeIdentifier;
 DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(NodeListsNodeData);
 class NodeListsNodeData {
     WTF_MAKE_NONCOPYABLE(NodeListsNodeData);
-    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(NodeListsNodeData);
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(NodeListsNodeData, NodeListsNodeData);
 public:
     NodeListsNodeData() = default;
 
@@ -60,7 +62,7 @@ public:
         ASSERT(!m_emptyChildNodeList);
         if (m_childNodeList)
             return *m_childNodeList;
-        auto list = ChildNodeList::create(node);
+        Ref list = ChildNodeList::create(node);
         m_childNodeList = list.ptr();
         return list;
     }
@@ -68,7 +70,8 @@ public:
     void removeChildNodeList(ChildNodeList* list)
     {
         ASSERT(m_childNodeList == list);
-        if (deleteThisAndUpdateNodeRareDataIfAboutToRemoveLastList(list->ownerNode()))
+        Ref ownerNode = list->ownerNode();
+        if (deleteThisAndUpdateNodeRareDataIfAboutToRemoveLastList(ownerNode))
             return;
         m_childNodeList = nullptr;
     }
@@ -78,7 +81,7 @@ public:
         ASSERT(!m_childNodeList);
         if (m_emptyChildNodeList)
             return *m_emptyChildNodeList;
-        auto list = EmptyNodeList::create(node);
+        Ref list = EmptyNodeList::create(node);
         m_emptyChildNodeList = list.ptr();
         return list;
     }
@@ -86,7 +89,8 @@ public:
     void removeEmptyChildNodeList(EmptyNodeList* list)
     {
         ASSERT(m_emptyChildNodeList == list);
-        if (deleteThisAndUpdateNodeRareDataIfAboutToRemoveLastList(list->ownerNode()))
+        Ref ownerNode = list->ownerNode();
+        if (deleteThisAndUpdateNodeRareDataIfAboutToRemoveLastList(ownerNode))
             return;
         m_emptyChildNodeList = nullptr;
     }
@@ -111,8 +115,8 @@ public:
         if (!result.isNewEntry)
             return static_cast<T&>(*result.iterator->value);
 
-        auto list = T::create(container, name);
-        result.iterator->value = &list.get();
+        Ref list = T::create(container, name);
+        result.iterator->value = list.ptr();
         return list;
     }
 
@@ -122,7 +126,7 @@ public:
         if (!result.isNewEntry)
             return *result.iterator->value;
 
-        auto list = TagCollectionNS::create(node, namespaceURI, localName);
+        Ref list = TagCollectionNS::create(node, namespaceURI, localName);
         result.iterator->value = list.ptr();
         return list;
     }
@@ -134,8 +138,8 @@ public:
         if (!result.isNewEntry)
             return static_cast<T&>(*result.iterator->value);
 
-        auto list = T::create(container, collectionType, name);
-        result.iterator->value = &list.get();
+        Ref list = T::create(container, collectionType, name);
+        result.iterator->value = list.ptr();
         return list;
     }
 
@@ -146,8 +150,8 @@ public:
         if (!result.isNewEntry)
             return static_cast<T&>(*result.iterator->value);
 
-        auto list = T::create(container, collectionType);
-        result.iterator->value = &list.get();
+        Ref list = T::create(container, collectionType);
+        result.iterator->value = list.ptr();
         return list;
     }
 
@@ -202,8 +206,8 @@ private:
     bool deleteThisAndUpdateNodeRareDataIfAboutToRemoveLastList(Node&);
 
     // These two are currently mutually exclusive and could be unioned. Not very important as this class is large anyway.
-    ChildNodeList* m_childNodeList { nullptr };
-    EmptyNodeList* m_emptyChildNodeList { nullptr };
+    SingleThreadWeakPtr<ChildNodeList> m_childNodeList;
+    SingleThreadWeakPtr<EmptyNodeList> m_emptyChildNodeList;
 
     NodeListCacheMap m_atomNameCaches;
     TagCollectionNSCache m_tagCollectionNSCache;
@@ -211,18 +215,19 @@ private:
 };
 
 class NodeMutationObserverData {
-    WTF_MAKE_NONCOPYABLE(NodeMutationObserverData); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(NodeMutationObserverData);
+    WTF_MAKE_NONCOPYABLE(NodeMutationObserverData);
 public:
-    Vector<std::unique_ptr<MutationObserverRegistration>> registry;
+    Vector<Ref<MutationObserverRegistration>> registry;
     WeakHashSet<MutationObserverRegistration> transientRegistry;
 
-    NodeMutationObserverData() { }
+    NodeMutationObserverData() = default;
 };
 
-DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(NodeRareData);
-class NodeRareData {
+DECLARE_COMPACT_ALLOCATOR_WITH_HEAP_IDENTIFIER(NodeRareData);
+class NodeRareData : public NoVirtualDestructorBase {
     WTF_MAKE_NONCOPYABLE(NodeRareData);
-    WTF_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(NodeRareData);
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_COMPACT_ALLOCATED_WITH_HEAP_IDENTIFIER(NodeRareData, NodeRareData);
 public:
 #if defined(DUMP_NODE_STATISTICS) && DUMP_NODE_STATISTICS
     enum class UseType : uint32_t {
@@ -252,7 +257,10 @@ public:
         Nonce = 1 << 23,
         ExplicitlySetAttrElementsMap = 1 << 24,
         Popover = 1 << 25,
-        DisplayContentsStyle = 1 << 26,
+        DisplayContentsOrNoneStyle = 1 << 26,
+        CustomStateSet = 1 << 27,
+        UserInfo = 1 << 28,
+        InvokedPopover = 1 << 29,
     };
 #endif
 
@@ -293,8 +301,6 @@ public:
     OptionSet<UseType> useTypes() const
     {
         OptionSet<UseType> result;
-        if (m_unusualTabIndex)
-            result.add(UseType::TabIndex);
         if (m_nodeLists)
             result.add(UseType::NodeList);
         if (m_mutationObserverData)

@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "MouseEvent.h"
-#include "MouseEventInit.h"
+#include <WebCore/MouseEvent.h>
+#include <WebCore/MouseEventInit.h>
 
 namespace WebCore {
 
@@ -38,30 +38,31 @@ struct DragEventInit : public MouseEventInit {
     RefPtr<DataTransfer> dataTransfer;
 };
 
-class DragEvent : public MouseEvent {
-    WTF_MAKE_ISO_ALLOCATED(DragEvent);
+class DragEvent final : public MouseEvent {
+    WTF_MAKE_TZONE_ALLOCATED(DragEvent);
 public:
     using Init = DragEventInit;
 
     static Ref<DragEvent> create(const AtomString& eventType, DragEventInit&&);
     static Ref<DragEvent> createForBindings();
     static Ref<DragEvent> create(const AtomString& type, CanBubble, IsCancelable, IsComposed, MonotonicTime timestamp, RefPtr<WindowProxy>&&, int detail,
-        const IntPoint& screenLocation, const IntPoint& windowLocation, double movementX, double movementY, OptionSet<Modifier>, short button, unsigned short buttons,
+        const IntPoint& screenLocation, const IntPoint& windowLocation, double movementX, double movementY, OptionSet<Modifier>, MouseButton, unsigned short buttons,
         EventTarget* relatedTarget, double force, SyntheticClickType, DataTransfer* = nullptr, IsSimulated = IsSimulated::No, IsTrusted = IsTrusted::Yes);
 
+    virtual ~DragEvent();
 
     DataTransfer* dataTransfer() const { return m_dataTransfer.get(); }
 
 private:
     DragEvent(const AtomString& eventType, DragEventInit&&);
     DragEvent(const AtomString& type, CanBubble, IsCancelable, IsComposed, MonotonicTime timestamp, RefPtr<WindowProxy>&&, int detail,
-        const IntPoint& screenLocation, const IntPoint& windowLocation, double movementX, double movementY, OptionSet<Modifier>, short button, unsigned short buttons,
+        const IntPoint& screenLocation, const IntPoint& windowLocation, double movementX, double movementY, OptionSet<Modifier>, MouseButton, unsigned short buttons,
         EventTarget* relatedTarget, double force, SyntheticClickType, DataTransfer*, IsSimulated, IsTrusted);
     DragEvent();
 
-    EventInterface eventInterface() const final;
-
-    RefPtr<DataTransfer> m_dataTransfer;
+    const RefPtr<DataTransfer> m_dataTransfer;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENT(DragEvent)

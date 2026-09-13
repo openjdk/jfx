@@ -1,38 +1,38 @@
-/*
- * Summary: API to build regexp automata
- * Description: the API to build regexp automata
+/**
+ * @file
  *
- * Copy: See Copyright for the status of this software.
+ * @brief API to build regexp automata
  *
- * Author: Daniel Veillard
+ * These are internal functions and shouldn't be used.
+ *
+ * @copyright See Copyright for the status of this software.
+ *
+ * @author Daniel Veillard
  */
 
 #ifndef __XML_AUTOMATA_H__
 #define __XML_AUTOMATA_H__
 
 #include <libxml/xmlversion.h>
-#include <libxml/tree.h>
 
 #ifdef LIBXML_REGEXP_ENABLED
-#ifdef LIBXML_AUTOMATA_ENABLED
-#include <libxml/xmlregexp.h>
+
+#include <libxml/xmlstring.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 /**
- * xmlAutomataPtr:
+ * A libxml automata description
  *
- * A libxml automata description, It can be compiled into a regexp
+ * It can be compiled into a regexp
  */
 typedef struct _xmlAutomata xmlAutomata;
 typedef xmlAutomata *xmlAutomataPtr;
 
 /**
- * xmlAutomataStatePtr:
- *
- * A state int the automata description,
+ * A state in the automata description
  */
 typedef struct _xmlAutomataState xmlAutomataState;
 typedef xmlAutomataState *xmlAutomataStatePtr;
@@ -40,107 +40,125 @@ typedef xmlAutomataState *xmlAutomataStatePtr;
 /*
  * Building API
  */
-XMLPUBFUN xmlAutomataPtr XMLCALL
+XML_DEPRECATED
+XMLPUBFUN xmlAutomata *
                     xmlNewAutomata              (void);
-XMLPUBFUN void XMLCALL
-                    xmlFreeAutomata             (xmlAutomataPtr am);
+XML_DEPRECATED
+XMLPUBFUN void
+                    xmlFreeAutomata             (xmlAutomata *am);
 
-XMLPUBFUN xmlAutomataStatePtr XMLCALL
-                    xmlAutomataGetInitState     (xmlAutomataPtr am);
-XMLPUBFUN int XMLCALL
-                    xmlAutomataSetFinalState    (xmlAutomataPtr am,
-                                                 xmlAutomataStatePtr state);
-XMLPUBFUN xmlAutomataStatePtr XMLCALL
-                    xmlAutomataNewState         (xmlAutomataPtr am);
-XMLPUBFUN xmlAutomataStatePtr XMLCALL
-                    xmlAutomataNewTransition    (xmlAutomataPtr am,
-                                                 xmlAutomataStatePtr from,
-                                                 xmlAutomataStatePtr to,
+XML_DEPRECATED
+XMLPUBFUN xmlAutomataState *
+                    xmlAutomataGetInitState     (xmlAutomata *am);
+XML_DEPRECATED
+XMLPUBFUN int
+                    xmlAutomataSetFinalState    (xmlAutomata *am,
+                                                 xmlAutomataState *state);
+XML_DEPRECATED
+XMLPUBFUN xmlAutomataState *
+                    xmlAutomataNewState         (xmlAutomata *am);
+XML_DEPRECATED
+XMLPUBFUN xmlAutomataState *
+                    xmlAutomataNewTransition    (xmlAutomata *am,
+                                                 xmlAutomataState *from,
+                                                 xmlAutomataState *to,
                                                  const xmlChar *token,
                                                  void *data);
-XMLPUBFUN xmlAutomataStatePtr XMLCALL
-                    xmlAutomataNewTransition2   (xmlAutomataPtr am,
-                                                 xmlAutomataStatePtr from,
-                                                 xmlAutomataStatePtr to,
+XML_DEPRECATED
+XMLPUBFUN xmlAutomataState *
+                    xmlAutomataNewTransition2   (xmlAutomata *am,
+                                                 xmlAutomataState *from,
+                                                 xmlAutomataState *to,
                                                  const xmlChar *token,
                                                  const xmlChar *token2,
                                                  void *data);
-XMLPUBFUN xmlAutomataStatePtr XMLCALL
-                    xmlAutomataNewNegTrans      (xmlAutomataPtr am,
-                                                 xmlAutomataStatePtr from,
-                                                 xmlAutomataStatePtr to,
+XML_DEPRECATED
+XMLPUBFUN xmlAutomataState *
+                    xmlAutomataNewNegTrans      (xmlAutomata *am,
+                                                 xmlAutomataState *from,
+                                                 xmlAutomataState *to,
                                                  const xmlChar *token,
                                                  const xmlChar *token2,
                                                  void *data);
 
-XMLPUBFUN xmlAutomataStatePtr XMLCALL
-                    xmlAutomataNewCountTrans    (xmlAutomataPtr am,
-                                                 xmlAutomataStatePtr from,
-                                                 xmlAutomataStatePtr to,
+XML_DEPRECATED
+XMLPUBFUN xmlAutomataState *
+                    xmlAutomataNewCountTrans    (xmlAutomata *am,
+                                                 xmlAutomataState *from,
+                                                 xmlAutomataState *to,
                                                  const xmlChar *token,
                                                  int min,
                                                  int max,
                                                  void *data);
-XMLPUBFUN xmlAutomataStatePtr XMLCALL
-                    xmlAutomataNewCountTrans2   (xmlAutomataPtr am,
-                                                 xmlAutomataStatePtr from,
-                                                 xmlAutomataStatePtr to,
-                                                 const xmlChar *token,
-                                                 const xmlChar *token2,
-                                                 int min,
-                                                 int max,
-                                                 void *data);
-XMLPUBFUN xmlAutomataStatePtr XMLCALL
-                    xmlAutomataNewOnceTrans     (xmlAutomataPtr am,
-                                                 xmlAutomataStatePtr from,
-                                                 xmlAutomataStatePtr to,
-                                                 const xmlChar *token,
-                                                 int min,
-                                                 int max,
-                                                 void *data);
-XMLPUBFUN xmlAutomataStatePtr XMLCALL
-                    xmlAutomataNewOnceTrans2    (xmlAutomataPtr am,
-                                                 xmlAutomataStatePtr from,
-                                                 xmlAutomataStatePtr to,
+XML_DEPRECATED
+XMLPUBFUN xmlAutomataState *
+                    xmlAutomataNewCountTrans2   (xmlAutomata *am,
+                                                 xmlAutomataState *from,
+                                                 xmlAutomataState *to,
                                                  const xmlChar *token,
                                                  const xmlChar *token2,
                                                  int min,
                                                  int max,
                                                  void *data);
-XMLPUBFUN xmlAutomataStatePtr XMLCALL
-                    xmlAutomataNewAllTrans      (xmlAutomataPtr am,
-                                                 xmlAutomataStatePtr from,
-                                                 xmlAutomataStatePtr to,
+XML_DEPRECATED
+XMLPUBFUN xmlAutomataState *
+                    xmlAutomataNewOnceTrans     (xmlAutomata *am,
+                                                 xmlAutomataState *from,
+                                                 xmlAutomataState *to,
+                                                 const xmlChar *token,
+                                                 int min,
+                                                 int max,
+                                                 void *data);
+XML_DEPRECATED
+XMLPUBFUN xmlAutomataState *
+                    xmlAutomataNewOnceTrans2    (xmlAutomata *am,
+                                                 xmlAutomataState *from,
+                                                 xmlAutomataState *to,
+                                                 const xmlChar *token,
+                                                 const xmlChar *token2,
+                                                 int min,
+                                                 int max,
+                                                 void *data);
+XML_DEPRECATED
+XMLPUBFUN xmlAutomataState *
+                    xmlAutomataNewAllTrans      (xmlAutomata *am,
+                                                 xmlAutomataState *from,
+                                                 xmlAutomataState *to,
                                                  int lax);
-XMLPUBFUN xmlAutomataStatePtr XMLCALL
-                    xmlAutomataNewEpsilon       (xmlAutomataPtr am,
-                                                 xmlAutomataStatePtr from,
-                                                 xmlAutomataStatePtr to);
-XMLPUBFUN xmlAutomataStatePtr XMLCALL
-                    xmlAutomataNewCountedTrans  (xmlAutomataPtr am,
-                                                 xmlAutomataStatePtr from,
-                                                 xmlAutomataStatePtr to,
+XML_DEPRECATED
+XMLPUBFUN xmlAutomataState *
+                    xmlAutomataNewEpsilon       (xmlAutomata *am,
+                                                 xmlAutomataState *from,
+                                                 xmlAutomataState *to);
+XML_DEPRECATED
+XMLPUBFUN xmlAutomataState *
+                    xmlAutomataNewCountedTrans  (xmlAutomata *am,
+                                                 xmlAutomataState *from,
+                                                 xmlAutomataState *to,
                                                  int counter);
-XMLPUBFUN xmlAutomataStatePtr XMLCALL
-                    xmlAutomataNewCounterTrans  (xmlAutomataPtr am,
-                                                 xmlAutomataStatePtr from,
-                                                 xmlAutomataStatePtr to,
+XML_DEPRECATED
+XMLPUBFUN xmlAutomataState *
+                    xmlAutomataNewCounterTrans  (xmlAutomata *am,
+                                                 xmlAutomataState *from,
+                                                 xmlAutomataState *to,
                                                  int counter);
-XMLPUBFUN int XMLCALL
-                    xmlAutomataNewCounter       (xmlAutomataPtr am,
+XML_DEPRECATED
+XMLPUBFUN int
+                    xmlAutomataNewCounter       (xmlAutomata *am,
                                                  int min,
                                                  int max);
 
-XMLPUBFUN xmlRegexpPtr XMLCALL
-                    xmlAutomataCompile          (xmlAutomataPtr am);
-XMLPUBFUN int XMLCALL
-                    xmlAutomataIsDeterminist    (xmlAutomataPtr am);
+XML_DEPRECATED
+XMLPUBFUN struct _xmlRegexp *
+                    xmlAutomataCompile          (xmlAutomata *am);
+XML_DEPRECATED
+XMLPUBFUN int
+                    xmlAutomataIsDeterminist    (xmlAutomata *am);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* LIBXML_AUTOMATA_ENABLED */
 #endif /* LIBXML_REGEXP_ENABLED */
 
 #endif /* __XML_AUTOMATA_H__ */

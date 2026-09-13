@@ -31,6 +31,9 @@
 #include "JSCInlines.h"
 #include "Nodes.h"
 #include "VMTrapsInlines.h"
+#include <wtf/text/MakeString.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -118,9 +121,11 @@ const Identifier* IdentifierArena::makeBigIntDecimalIdentifier(VM& vm, const Ide
 const Identifier& IdentifierArena::makePrivateIdentifier(VM& vm, ASCIILiteral prefix, unsigned identifier)
 {
     auto symbolName = makeString(prefix, identifier);
-    auto symbol = vm.privateSymbolRegistry().symbolForKey(symbolName);
+    auto symbol = vm.checkedPrivateSymbolRegistry()->symbolForKey(symbolName);
     m_identifiers.append(Identifier::fromUid(symbol));
     return m_identifiers.last();
 }
 
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

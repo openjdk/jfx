@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 
 #include <wtf/Atomics.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/StdLibExtras.h>
 
 namespace WTF {
 
@@ -34,11 +35,11 @@ namespace WTF {
 
 template<typename T>
 class LocklessBag final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(LocklessBag);
     WTF_MAKE_NONCOPYABLE(LocklessBag);
 public:
     struct Node {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Node);
     public:
         T data;
         Node* next;
@@ -69,34 +70,30 @@ public:
     // CONSUMER FUNCTIONS: Everything below here is only safe to call from the consumer thread.
 
     // This function is actually safe to call from more than one thread, but ONLY if no thread can call consumeAll.
-    template<typename Functor>
-    void iterate(const Functor& func)
+    void iterate(NOESCAPE const Invocable<void(const T&)> auto& func)
     {
         Node* node = m_head.load();
         while (node) {
-            const T& data = node->data;
-            func(data);
+            func(node->data);
             node = node->next;
         }
     }
 
-    template<typename Functor>
-    void consumeAll(const Functor& func)
+    void consumeAll(NOESCAPE const Invocable<void(T&&)> auto& func)
     {
         consumeAllWithNode([&] (T&& data, Node* node) {
-            func(WTFMove(data));
+            func(WTF::move(data));
             delete node;
         });
     }
 
-    template<typename Functor>
-    void consumeAllWithNode(const Functor& func)
+    void consumeAllWithNode(NOESCAPE const Invocable<void(T&&, Node*)> auto& func)
     {
         Node* node = m_head.exchange(nullptr);
         while (node) {
             Node* oldNode = node;
             node = node->next;
-            func(WTFMove(oldNode->data), oldNode);
+            func(WTF::move(oldNode->data), oldNode);
         }
     }
 

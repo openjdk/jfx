@@ -28,37 +28,49 @@
 
 #include "ColorHash.h"
 #include "Cursor.h"
+#include "DocumentView.h"
 #include "ElementIterator.h"
 #include "FloatRoundedRect.h"
 #include "Gradient.h"
 #include "GraphicsContext.h"
+#include "GraphicsLayer.h"
 #include "HitTestResult.h"
 #include "InteractionRegion.h"
 #include "LocalFrameView.h"
+#include "NodeInlines.h"
 #include "Page.h"
 #include "PageOverlay.h"
 #include "PageOverlayController.h"
 #include "PathUtilities.h"
 #include "PlatformMouseEvent.h"
 #include "Region.h"
+#include "RemoteFrame.h"
 #include "RenderLayer.h"
 #include "RenderLayerBacking.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "ScrollingCoordinator.h"
 #include "Settings.h"
+
+#if PLATFORM(COCOA)
+#include <pal/cocoa/EnhancedSecurityCocoa.h>
+#endif
+
 #include <wtf/SortedArrayMap.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
 DebugPageOverlays* DebugPageOverlays::sharedDebugOverlays;
 
-class RegionOverlay : public RefCounted<RegionOverlay>, public PageOverlay::Client {
+class RegionOverlay : public RefCounted<RegionOverlay>, public PageOverlayClient {
 public:
     static Ref<RegionOverlay> create(Page&, DebugPageOverlays::RegionType);
     virtual ~RegionOverlay();
 
     void recomputeRegion();
     PageOverlay& overlay() { return *m_overlay; }
+    Ref<PageOverlay> protectedOverlay() { return *m_overlay; }
 
     void setRegionChanged() { m_regionChanged = true; }
 
@@ -79,7 +91,7 @@ protected:
     virtual bool updateRegion() = 0;
     void drawRegion(GraphicsContext&, const Region&, const Color&, const IntRect& dirtyRect);
 
-    Page& m_page;
+    WeakPtr<Page> m_page;
     RefPtr<PageOverlay> m_overlay;
     std::unique_ptr<Region> m_region;
     Color m_color;
@@ -108,28 +120,32 @@ private:
 
 bool MouseWheelRegionOverlay::updateRegion()
 {
+    RefPtr page = m_page.get();
+    if (!page)
+        return false;
 #if ENABLE(WHEEL_EVENT_REGIONS)
     // Wheel event regions are painted via RenderLayerBacking::paintDebugOverlays().
     return false;
 #else
     auto region = makeUnique<Region>();
 
-    for (auto* frame = &m_page.mainFrame(); frame; frame = frame->tree().traverseNext()) {
-        auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+    for (RefPtr frame = page->mainFrame(); frame; frame = frame->tree().traverseNext()) {
+        RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
         if (!localFrame)
             continue;
         if (!localFrame->view() || !localFrame->document())
             continue;
 
-        auto frameRegion = localFrame->document()->absoluteRegionForEventTargets(localFrame->document()->wheelEventTargets());
-        frameRegion.first.translate(toIntSize(localFrame->view()->contentsToRootView(IntPoint())));
+        Ref document = *localFrame->document();
+        auto frameRegion = document->absoluteRegionForWheelEventTargets();
+        frameRegion.first.translate(toIntSize(localFrame->protectedView()->contentsToRootView(IntPoint())));
         region->unite(frameRegion.first);
     }
 
     region->translate(m_overlay->viewToOverlayOffset());
 
     bool regionChanged = !m_region || !(*m_region == *region);
-    m_region = WTFMove(region);
+    m_region = WTF::move(region);
     return regionChanged;
 #endif
 }
@@ -159,9 +175,12 @@ private:
 
 bool NonFastScrollableRegionOverlay::updateRegion()
 {
+    RefPtr page = m_page.get();
+    if (!page)
+        return false;
     bool regionChanged = false;
 
-    if (ScrollingCoordinator* scrollingCoordinator = m_page.scrollingCoordinator()) {
+    if (RefPtr scrollingCoordinator = page->scrollingCoordinator()) {
         EventTrackingRegions eventTrackingRegions = scrollingCoordinator->absoluteEventTrackingRegions();
 
         if (eventTrackingRegions != m_eventTrackingRegions) {
@@ -186,7 +205,7 @@ static void drawRightAlignedText(const String& text, GraphicsContext& context, c
 
 void NonFastScrollableRegionOverlay::drawRect(PageOverlay& pageOverlay, GraphicsContext& context, const IntRect&)
 {
-    static constexpr std::pair<EventTrackingRegions::EventType, SRGBA<uint8_t>> colorMappings[] = {
+    constexpr SortedArrayMap colors { std::to_array<std::pair<EventTrackingRegions::EventType, SRGBA<uint8_t>>>({
         { EventTrackingRegions::EventType::Mousedown, { 80, 245, 80, 50 } },
         { EventTrackingRegions::EventType::Mousemove, { 245, 245, 80, 50 } },
         { EventTrackingRegions::EventType::Mouseup, { 80, 245, 176, 50 } },
@@ -195,8 +214,7 @@ void NonFastScrollableRegionOverlay::drawRect(PageOverlay& pageOverlay, Graphics
         { EventTrackingRegions::EventType::Touchmove, { 80, 204, 245, 50 } },
         { EventTrackingRegions::EventType::Touchstart, { 191, 191, 63, 50 } },
         { EventTrackingRegions::EventType::Wheel, { 255, 128, 0, 50 } },
-    };
-    constexpr SortedArrayMap colors { colorMappings };
+    }) };
     constexpr auto defaultColor = Color::black.colorWithAlphaByte(64);
 
     IntRect bounds = pageOverlay.bounds();
@@ -210,7 +228,7 @@ void NonFastScrollableRegionOverlay::drawRect(PageOverlay& pageOverlay, Graphics
     fontDescription.setSpecifiedSize(12);
     fontDescription.setComputedSize(12);
     fontDescription.setWeight(FontSelectionValue(500));
-    FontCascade font(WTFMove(fontDescription), 0, 0);
+    FontCascade font(WTF::move(fontDescription));
     font.update(nullptr);
 
     auto drawLegend = [&] (const Color& color, ASCIILiteral text) {
@@ -295,11 +313,11 @@ private:
 
 bool InteractionRegionOverlay::updateRegion()
 {
-    m_overlay->setNeedsDisplay();
+    protectedOverlay()->setNeedsDisplay();
     return true;
 }
 
-static Vector<Path> pathsForRect(const IntRect& rect, float borderRadius)
+static Vector<Path> pathsForRect(const FloatRect& rect, float borderRadius)
 {
     static constexpr float radius = 4;
 
@@ -310,27 +328,30 @@ static Vector<Path> pathsForRect(const IntRect& rect, float borderRadius)
 
 std::optional<std::pair<RenderLayer&, GraphicsLayer&>> InteractionRegionOverlay::activeLayer() const
 {
+    RefPtr page = m_page.get();
+    if (!page)
+        return std::nullopt;
     constexpr OptionSet<HitTestRequest::Type> hitType {
         HitTestRequest::Type::ReadOnly,
         HitTestRequest::Type::Active,
         HitTestRequest::Type::AllowChildFrameContent
     };
     HitTestResult result(m_mouseLocationInContentCoordinates);
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page.mainFrame());
-    if (!localMainFrame)
+    RefPtr localTopDocument = page->localTopDocument();
+    if (!localTopDocument)
         return std::nullopt;
 
-    localMainFrame->document()->hitTest(hitType, result);
+    localTopDocument->hitTest(hitType, result);
 
-    auto* hitNode = result.innerNode();
+    RefPtr hitNode = result.innerNode();
     if (!hitNode || !hitNode->renderer())
         return std::nullopt;
 
-    auto* rendererLayer = hitNode->renderer()->enclosingLayer();
+    CheckedPtr rendererLayer = hitNode->checkedRenderer()->enclosingLayer();
     if (!rendererLayer)
         return std::nullopt;
 
-    auto* layer = rendererLayer->enclosingCompositingLayerForRepaint().layer;
+    CheckedPtr layer = rendererLayer->enclosingCompositingLayerForRepaint().layer;
     if (!layer)
         return std::nullopt;
 
@@ -338,7 +359,7 @@ std::optional<std::pair<RenderLayer&, GraphicsLayer&>> InteractionRegionOverlay:
     if (!backing)
         return std::nullopt;
 
-    auto* graphicsLayer = backing->graphicsLayer();
+    RefPtr graphicsLayer = backing->graphicsLayer();
     if (!graphicsLayer)
         return std::nullopt;
 
@@ -348,6 +369,9 @@ std::optional<std::pair<RenderLayer&, GraphicsLayer&>> InteractionRegionOverlay:
 std::optional<InteractionRegion> InteractionRegionOverlay::activeRegion() const
 {
 #if ENABLE(INTERACTION_REGIONS_IN_EVENT_REGION)
+    RefPtr page = m_page.get();
+    if (!page)
+        return std::nullopt;
     auto layerPair = activeLayer();
     if (!layerPair)
         return std::nullopt;
@@ -357,7 +381,7 @@ std::optional<InteractionRegion> InteractionRegionOverlay::activeRegion() const
     IntRect hitRectInOverlayCoordinates;
     float hitRegionArea = 0;
 
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page.mainFrame());
+    RefPtr localMainFrame = page->localMainFrame();
     if (!localMainFrame)
         return std::nullopt;
 
@@ -378,7 +402,7 @@ std::optional<InteractionRegion> InteractionRegionOverlay::activeRegion() const
         if (!boundingRect.contains(m_mouseLocationInContentCoordinates))
             continue;
 
-        auto paths = pathsForRect(rectInOverlayCoordinates, region.borderRadius);
+        auto paths = pathsForRect(rectInOverlayCoordinates, region.cornerRadius);
         bool didHitRegion = false;
         for (const auto& path : paths) {
             if (path.contains(m_mouseLocationInContentCoordinates)) {
@@ -426,7 +450,7 @@ static void drawCheckbox(const String& text, GraphicsContext& context, const Fon
     context.drawText(font, textRun, box.location() + FloatSize { checkboxRect.width() + textHorizontalPadding, lineHeight });
 
     Path checkboxPath;
-    checkboxPath.addRoundedRect(FloatRoundedRect { checkboxRect, FloatRoundedRect::Radii { 3 } });
+    checkboxPath.addRoundedRect(FloatRoundedRect { checkboxRect, CornerRadii { 3 } });
 
     if (state) {
         context.setFillColor(Color::darkGray);
@@ -440,10 +464,10 @@ static void drawCheckbox(const String& text, GraphicsContext& context, const Fon
 
 FloatRect InteractionRegionOverlay::rectForSettingAtIndex(unsigned index) const
 {
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page.mainFrame());
-    if (!localMainFrame)
+    RefPtr mainFrameView = RefPtr { m_page.get() }->protectedMainFrame()->virtualView();
+    if (!mainFrameView)
         return FloatRect();
-    auto viewSize = localMainFrame->view()->layoutSize();
+    auto viewSize = mainFrameView->layoutSize();
     static constexpr float settingsWidth = 150;
     static constexpr float rowHeight = 16;
     return {
@@ -472,12 +496,12 @@ void InteractionRegionOverlay::drawSettings(GraphicsContext& context)
     for (unsigned i = 1; i < m_settings.size(); i++)
         rect.unite(rectForSettingAtIndex(i));
 
-    rect.expand(FloatBoxExtent { 4, 4, 4, 4 });
+    rect.expand(FloatBoxExtent { 4.0f, 4.0f, 4.0f, 4.0f });
 
     {
         GraphicsContextStateSaver stateSaver(context);
         context.setDropShadow({ { }, 5, Color(Color::black).colorWithAlpha(0.5), ShadowRadiusMode::Default });
-        context.fillRoundedRect(FloatRoundedRect { rect, FloatRoundedRect::Radii { 6 } }, Color(Color::white).colorWithAlpha(0.85));
+        context.fillRoundedRect(FloatRoundedRect { rect, CornerRadii { 6 } }, Color(Color::white).colorWithAlpha(0.85));
     }
 
     FontCascadeDescription fontDescription;
@@ -485,7 +509,7 @@ void InteractionRegionOverlay::drawSettings(GraphicsContext& context)
     fontDescription.setSpecifiedSize(12);
     fontDescription.setComputedSize(12);
     fontDescription.setWeight(FontSelectionValue(500));
-    FontCascade font(WTFMove(fontDescription), 0, 0);
+    FontCascade font(WTF::move(fontDescription));
     font.update(nullptr);
 
     for (unsigned i = 0; i < m_settings.size(); i++) {
@@ -514,7 +538,7 @@ void InteractionRegionOverlay::drawRect(PageOverlay&, GraphicsContext& context, 
         };
 
         auto makeGradient = [&] (Gradient::RadialData gradientData) {
-            auto gradient = Gradient::create(WTFMove(gradientData), { ColorInterpolationMethod::SRGB { }, AlphaPremultiplication::Unpremultiplied });
+            auto gradient = Gradient::create(WTF::move(gradientData), { ColorInterpolationMethod::SRGB { }, AlphaPremultiplication::Unpremultiplied });
             if (region && valueForSetting("wash"_s) && valueForSetting("clip"_s)) {
                 gradient->addColorStop({ 0.1, Color(Color::white).colorWithAlpha(0.5) });
                 gradient->addColorStop({ 1, Color(Color::white).colorWithAlpha(0.1) });
@@ -533,8 +557,32 @@ void InteractionRegionOverlay::drawRect(PageOverlay&, GraphicsContext& context, 
         bool shouldClip = valueForSetting("clip"_s);
         Vector<Path> clipPaths;
 
-        if (shouldClip)
-            clipPaths = pathsForRect(region->rectInLayerCoordinates, region->borderRadius);
+        if (shouldClip) {
+            const auto rectInLayerCoordinates = region->rectInLayerCoordinates;
+
+            if (auto clipPath = region->clipPath) {
+                Path existingClip = *clipPath;
+                AffineTransform transform;
+
+                transform.translate(rectInLayerCoordinates.location());
+                if (RefPtr page = m_page.get())
+                    transform.scale(page->pageScaleFactor());
+
+                existingClip.transform(transform);
+                clipPaths.append(existingClip);
+            } else {
+                auto scaleFactor = 1.f;
+                if (RefPtr page = m_page.get())
+                    scaleFactor = page->pageScaleFactor();
+
+                if (region->useContinuousCorners) {
+                    Path path;
+                    path.addContinuousRoundedRect(rectInLayerCoordinates, region->cornerRadius * scaleFactor);
+                    clipPaths.append(path);
+                } else
+                    clipPaths = pathsForRect(rectInLayerCoordinates, region->cornerRadius * scaleFactor);
+            }
+        }
 
         bool shouldUseBackdropGradient = !shouldClip || !region || (!valueForSetting("wash"_s) && valueForSetting("clip"_s));
 
@@ -546,7 +594,7 @@ void InteractionRegionOverlay::drawRect(PageOverlay&, GraphicsContext& context, 
                     backdropGradient->addColorStop({ 0.1, Color(Color::black).colorWithAlpha(0.2) });
                     backdropGradient->addColorStop({ 1, Color(Color::black).colorWithAlpha(0) });
 
-                    context.setFillGradient(WTFMove(backdropGradient));
+                    context.setFillGradient(WTF::move(backdropGradient));
                     context.fillPath(path);
                 }
             } else {
@@ -554,7 +602,7 @@ void InteractionRegionOverlay::drawRect(PageOverlay&, GraphicsContext& context, 
                 backdropGradient->addColorStop({ 0.1, Color(Color::black).colorWithAlpha(0.2) });
                 backdropGradient->addColorStop({ 1, Color(Color::black).colorWithAlpha(0) });
 
-                context.setFillGradient(WTFMove(backdropGradient));
+                context.setFillGradient(WTF::move(backdropGradient));
                 context.fillRect(dirtyRect);
             }
         }
@@ -569,6 +617,20 @@ void InteractionRegionOverlay::drawRect(PageOverlay&, GraphicsContext& context, 
             context.setFillGradient(makeGradient(gradientData(defaultRadius)));
             context.fillRect(dirtyRect);
         }
+
+#if ENABLE(INTERACTION_REGION_TEXT_CONTENT)
+        FontCascadeDescription fontDescription;
+        fontDescription.setOneFamily("Helvetica"_s);
+        fontDescription.setSpecifiedSize(10);
+        fontDescription.setComputedSize(10);
+        fontDescription.setWeight(FontSelectionValue(500));
+        FontCascade font(WTF::move(fontDescription));
+        font.update(nullptr);
+
+        TextRun textRun = TextRun(region->text);
+        context.setFillColor(Color::black);
+        context.drawText(font, textRun, region->rectInLayerCoordinates.location());
+#endif
     }
 
     stateSaver.restore();
@@ -578,10 +640,13 @@ void InteractionRegionOverlay::drawRect(PageOverlay&, GraphicsContext& context, 
 
 bool InteractionRegionOverlay::mouseEvent(PageOverlay& overlay, const PlatformMouseEvent& event)
 {
-    auto* localMainFrame = dynamicDowncast<LocalFrame>(m_page.mainFrame());
+    RefPtr page = m_page.get();
+    if (!page)
+        return false;
+    RefPtr localMainFrame = page->localMainFrame();
     if (!localMainFrame)
         return false;
-    auto mainFrameView = localMainFrame->view();
+    RefPtr mainFrameView = localMainFrame->view();
 
     std::optional<Cursor> cursorToSet;
 
@@ -590,14 +655,14 @@ bool InteractionRegionOverlay::mouseEvent(PageOverlay& overlay, const PlatformMo
     else if (!valueForSetting("hover"_s))
         cursorToSet = pointerCursor();
 
-    auto eventInContentsCoordinates = mainFrameView->windowToContents(event.position());
+    auto eventInContentsCoordinates = mainFrameView->windowToContents(flooredIntPoint(event.position()));
     for (unsigned i = 0; i < m_settings.size(); i++) {
         if (!rectForSettingAtIndex(i).contains(eventInContentsCoordinates))
             continue;
         cursorToSet = handCursor();
-        if (event.button() == LeftButton && event.type() == PlatformEvent::Type::MousePressed) {
+        if (event.button() == MouseButton::Left && event.type() == PlatformEvent::Type::MousePressed) {
             m_settings[i].value = !m_settings[i].value;
-            m_page.forceRepaintAllFrames();
+            page->forceRepaintAllFrames();
             return true;
         }
     }
@@ -615,6 +680,50 @@ bool InteractionRegionOverlay::mouseEvent(PageOverlay& overlay, const PlatformMo
 }
 
 #if COMPILER(CLANG)
+#pragma mark - EnhancedSecurityOverlay
+#endif
+
+class EnhancedSecurityOverlay final : public RegionOverlay {
+public:
+    static Ref<EnhancedSecurityOverlay> create(Page& page)
+    {
+        return adoptRef(*new EnhancedSecurityOverlay(page));
+    }
+
+private:
+    explicit EnhancedSecurityOverlay(Page& page)
+        : RegionOverlay(page, Color::transparentBlack)
+    {
+    }
+
+    bool updateRegion() final
+    {
+        protectedOverlay()->setNeedsDisplay();
+        return true;
+    }
+    void drawRect(PageOverlay&, GraphicsContext&, const IntRect& dirtyRect) final;
+};
+
+void EnhancedSecurityOverlay::drawRect(PageOverlay&, GraphicsContext& context, const IntRect& dirtyRect)
+{
+    RefPtr page = m_page.get();
+    if (!page)
+        return;
+
+#if PLATFORM(COCOA)
+    bool isEnhancedSecurityEnabled = PAL::isEnhancedSecurityEnabledForCurrentProcess();
+#else
+    bool isEnhancedSecurityEnabled = false;
+#endif
+
+    Color overlayColor = isEnhancedSecurityEnabled
+        ? Color::green.colorWithAlphaByte(32) // Green overlay when enabled
+        : Color::red.colorWithAlphaByte(32); // Red overlay when disabled
+
+    context.fillRect(dirtyRect, overlayColor);
+}
+
+#if COMPILER(CLANG)
 #pragma mark - RegionOverlay
 #endif
 
@@ -627,6 +736,8 @@ Ref<RegionOverlay> RegionOverlay::create(Page& page, DebugPageOverlays::RegionTy
         return NonFastScrollableRegionOverlay::create(page);
     case DebugPageOverlays::RegionType::InteractionRegion:
         return InteractionRegionOverlay::create(page);
+    case DebugPageOverlays::RegionType::EnhancedSecurity:
+        return EnhancedSecurityOverlay::create(page);
     }
     ASSERT_NOT_REACHED();
     return MouseWheelRegionOverlay::create(page);
@@ -641,8 +752,11 @@ RegionOverlay::RegionOverlay(Page& page, Color regionColor)
 
 RegionOverlay::~RegionOverlay()
 {
-    if (m_overlay)
-        m_page.pageOverlayController().uninstallPageOverlay(*m_overlay, PageOverlay::FadeMode::DoNotFade);
+    RefPtr page = m_page.get();
+    if (!page)
+        return;
+    if (RefPtr overlay = m_overlay)
+        page->pageOverlayController().uninstallPageOverlay(*overlay, PageOverlay::FadeMode::DoNotFade);
 }
 
 void RegionOverlay::willMoveToPage(PageOverlay&, Page* page)
@@ -692,7 +806,7 @@ void RegionOverlay::recomputeRegion()
         return;
 
     if (updateRegion())
-        m_overlay->setNeedsDisplay();
+        protectedOverlay()->setNeedsDisplay();
 
     m_regionChanged = false;
 }
@@ -714,9 +828,9 @@ static inline size_t indexOf(DebugPageOverlays::RegionType regionType)
     return static_cast<size_t>(regionType);
 }
 
-RegionOverlay& DebugPageOverlays::ensureRegionOverlayForPage(Page& page, RegionType regionType)
+Ref<RegionOverlay> DebugPageOverlays::ensureRegionOverlayForPage(Page& page, RegionType regionType)
 {
-    auto it = m_pageRegionOverlays.find(&page);
+    auto it = m_pageRegionOverlays.find(page);
     if (it != m_pageRegionOverlays.end()) {
         auto& visualizer = it->value[indexOf(regionType)];
         if (!visualizer)
@@ -725,49 +839,54 @@ RegionOverlay& DebugPageOverlays::ensureRegionOverlayForPage(Page& page, RegionT
     }
 
     Vector<RefPtr<RegionOverlay>> visualizers(NumberOfRegionTypes);
-    auto visualizer = RegionOverlay::create(page, regionType);
+    Ref visualizer = RegionOverlay::create(page, regionType);
     visualizers[indexOf(regionType)] = visualizer.copyRef();
-    m_pageRegionOverlays.add(&page, WTFMove(visualizers));
+    m_pageRegionOverlays.add(page, WTF::move(visualizers));
     return visualizer;
 }
 
 void DebugPageOverlays::showRegionOverlay(Page& page, RegionType regionType)
 {
-    auto& visualizer = ensureRegionOverlayForPage(page, regionType);
-    page.pageOverlayController().installPageOverlay(visualizer.overlay(), PageOverlay::FadeMode::DoNotFade);
+    Ref visualizer = ensureRegionOverlayForPage(page, regionType);
+    page.pageOverlayController().installPageOverlay(visualizer->protectedOverlay(), PageOverlay::FadeMode::DoNotFade);
 }
 
 void DebugPageOverlays::hideRegionOverlay(Page& page, RegionType regionType)
 {
-    auto it = m_pageRegionOverlays.find(&page);
+    auto it = m_pageRegionOverlays.find(page);
     if (it == m_pageRegionOverlays.end())
         return;
     auto& visualizer = it->value[indexOf(regionType)];
     if (!visualizer)
         return;
-    page.pageOverlayController().uninstallPageOverlay(visualizer->overlay(), PageOverlay::FadeMode::DoNotFade);
+    page.pageOverlayController().uninstallPageOverlay(visualizer->protectedOverlay(), PageOverlay::FadeMode::DoNotFade);
     visualizer = nullptr;
 }
 
 void DebugPageOverlays::regionChanged(LocalFrame& frame, RegionType regionType)
 {
-    auto* page = frame.page();
+    RefPtr page = frame.page();
     if (!page)
         return;
 
-    if (auto* visualizer = regionOverlayForPage(*page, regionType))
+    if (RefPtr visualizer = regionOverlayForPage(*page, regionType))
         visualizer->setRegionChanged();
+}
+
+bool DebugPageOverlays::hasOverlaysForPage(Page& page) const
+{
+    return m_pageRegionOverlays.contains(page);
 }
 
 void DebugPageOverlays::updateRegionIfNecessary(Page& page, RegionType regionType)
 {
-    if (auto* visualizer = regionOverlayForPage(page, regionType))
+    if (RefPtr visualizer = regionOverlayForPage(page, regionType))
         visualizer->recomputeRegion();
 }
 
 RegionOverlay* DebugPageOverlays::regionOverlayForPage(Page& page, RegionType regionType) const
 {
-    auto it = m_pageRegionOverlays.find(&page);
+    auto it = m_pageRegionOverlays.find(page);
     if (it == m_pageRegionOverlays.end())
         return nullptr;
     return it->value.at(indexOf(regionType)).get();
@@ -789,6 +908,11 @@ void DebugPageOverlays::updateOverlayRegionVisibility(Page& page, OptionSet<Debu
         showRegionOverlay(page, RegionType::InteractionRegion);
     else
         hideRegionOverlay(page, RegionType::InteractionRegion);
+
+    if (visibleRegions.contains(DebugOverlayRegions::EnhancedSecurity))
+        showRegionOverlay(page, RegionType::EnhancedSecurity);
+    else
+        hideRegionOverlay(page, RegionType::EnhancedSecurity);
 }
 
 void DebugPageOverlays::settingsChanged(Page& page)
@@ -802,7 +926,7 @@ void DebugPageOverlays::settingsChanged(Page& page)
 
 bool DebugPageOverlays::shouldPaintOverlayIntoLayer(Page& page, RegionType regionType) const
 {
-    if (auto* overlay = regionOverlayForPage(page, regionType))
+    if (RefPtr overlay = regionOverlayForPage(page, regionType))
         return overlay->shouldPaintOverlayIntoLayer();
     return false;
 }

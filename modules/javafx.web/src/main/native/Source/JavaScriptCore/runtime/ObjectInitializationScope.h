@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "DeferGC.h"
-#include "DisallowVMEntry.h"
-#include "VM.h"
+#include <JavaScriptCore/DeferGC.h>
+#include <JavaScriptCore/DisallowVMEntry.h>
+#include <JavaScriptCore/VM.h>
 
 namespace JSC {
 
@@ -49,7 +49,7 @@ private:
     void verifyPropertiesAreInitialized(JSObject*);
 
     VM& m_vm;
-    std::optional<DisallowGC> m_disallowGC;
+    std::optional<AssertNoGC> m_assertNoGC;
     std::optional<DisallowVMEntry> m_disallowVMEntry;
     JSObject* m_object { nullptr };
 };

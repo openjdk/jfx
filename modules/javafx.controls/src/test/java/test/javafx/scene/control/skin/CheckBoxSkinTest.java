@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,20 +25,18 @@
 
 package test.javafx.scene.control.skin;
 
-import static org.junit.Assert.assertEquals;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.skin.CheckBoxSkin;
-import com.sun.javafx.tk.Toolkit;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.control.CheckBox;
+import javafx.scene.control.skin.CheckBoxSkin;
 import javafx.stage.Stage;
-
-import org.junit.BeforeClass;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
 
 /**
  */
@@ -49,11 +47,13 @@ public class CheckBoxSkinTest {
     private Scene scene;
     private Stage stage;
 
-    @BeforeClass public static void initToolKit() {
+    @BeforeAll
+    public static void initToolKit() {
         tk = Toolkit.getToolkit();
     }
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         checkbox = new CheckBox("Test");
         skin = new CheckBoxSkinMock(checkbox);
         // Set some padding so that any places where padding was being

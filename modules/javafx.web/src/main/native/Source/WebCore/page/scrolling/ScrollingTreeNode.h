@@ -25,13 +25,15 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if ENABLE(ASYNC_SCROLLING)
 
-#include "IntRect.h"
-#include "ScrollTypes.h"
-#include "ScrollingCoordinator.h"
-#include "ScrollingStateNode.h"
+#include <WebCore/IntRect.h>
+#include <WebCore/ScrollTypes.h>
+#include <WebCore/ScrollingCoordinator.h>
+#include <WebCore/ScrollingStateNode.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/TypeCasts.h>
 
@@ -43,7 +45,7 @@ class ScrollingTreeFrameScrollingNode;
 class ScrollingTreeScrollingNode;
 
 class ScrollingTreeNode : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<ScrollingTreeNode> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(ScrollingTreeNode, WEBCORE_EXPORT);
     friend class ScrollingTree;
 public:
     virtual ~ScrollingTreeNode();
@@ -59,14 +61,16 @@ public:
     bool isPositionedNodeCocoa() const { return isPositionedNode(); }
     bool isOverflowScrollProxyNodeCocoa() const { return isOverflowScrollProxyNode(); }
 #endif
-#if USE(NICOSIA)
-    bool isFixedNodeNicosia() const { return isFixedNode(); }
-    bool isPositionedNodeNicosia() const { return isPositionedNode(); }
-    bool isOverflowScrollProxyNodeNicosia() const { return isOverflowScrollProxyNode(); }
+#if USE(COORDINATED_GRAPHICS)
+    bool isFixedNodeCoordinated() const { return isFixedNode(); }
+    bool isPositionedNodeCoordinated() const { return isPositionedNode(); }
+    bool isOverflowScrollProxyNodeCoordinated() const { return isOverflowScrollProxyNode(); }
 #endif
-    bool isScrollingNode() const { return isFrameScrollingNode() || isOverflowScrollingNode(); }
+    bool isScrollingNode() const { return isFrameScrollingNode() || isOverflowScrollingNode() || isPluginScrollingNode(); }
     bool isFrameScrollingNode() const { return nodeType() == ScrollingNodeType::MainFrame || nodeType() == ScrollingNodeType::Subframe; }
     bool isFrameHostingNode() const { return nodeType() == ScrollingNodeType::FrameHosting; }
+    bool isPluginScrollingNode() const { return nodeType() == ScrollingNodeType::PluginScrolling; }
+    bool isPluginHostingNode() const { return nodeType() == ScrollingNodeType::PluginHosting; }
     bool isOverflowScrollingNode() const { return nodeType() == ScrollingNodeType::Overflow; }
     bool isOverflowScrollProxyNode() const { return nodeType() == ScrollingNodeType::OverflowProxy; }
 
@@ -87,14 +91,19 @@ public:
     void removeChild(ScrollingTreeNode&);
     void removeAllChildren();
 
+    virtual bool isRootOfHostedSubtree() const { return false; }
+
     WEBCORE_EXPORT RefPtr<ScrollingTreeFrameScrollingNode> enclosingFrameNodeIncludingSelf();
     WEBCORE_EXPORT RefPtr<ScrollingTreeScrollingNode> enclosingScrollingNodeIncludingSelf();
 
     WEBCORE_EXPORT void dump(WTF::TextStream&, OptionSet<ScrollingStateTreeAsTextBehavior>) const;
 
+    FrameIdentifier frameIdentifier() const { return *m_parentFrameIdentifier; }
+    void setFrameIdentifier(FrameIdentifier frameID) { m_parentFrameIdentifier = frameID; }
+
 protected:
     ScrollingTreeNode(ScrollingTree&, ScrollingNodeType, ScrollingNodeID);
-    ScrollingTree& scrollingTree() const { return m_scrollingTree; }
+    RefPtr<ScrollingTree> scrollingTree() const { return m_scrollingTree.get(); }
 
     virtual void applyLayerPositions() = 0;
 
@@ -103,10 +112,11 @@ protected:
     Vector<Ref<ScrollingTreeNode>> m_children;
 
 private:
-    ScrollingTree& m_scrollingTree;
+    ThreadSafeWeakPtr<ScrollingTree> m_scrollingTree;
 
     const ScrollingNodeType m_nodeType;
     const ScrollingNodeID m_nodeID;
+    Markable<FrameIdentifier> m_parentFrameIdentifier;
 
     ThreadSafeWeakPtr<ScrollingTreeNode> m_parent;
 };

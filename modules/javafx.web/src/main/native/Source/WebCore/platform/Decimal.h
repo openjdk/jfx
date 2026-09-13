@@ -33,6 +33,7 @@
 
 #include <stdint.h>
 #include <wtf/Assertions.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -47,8 +48,13 @@ class SpecialValueHandler;
 // class to compiler supported one. See below URI for current status of decimal
 // type for C++: // http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n1977.html
 class Decimal {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(Decimal);
 public:
+    static constexpr int ExponentMax = 1023;
+    static constexpr int ExponentMin = -1023;
+    static constexpr int Precision = 18;
+    static constexpr uint64_t MaxCoefficient = UINT64_C(0XDE0B6B3A763FFFF); // 999999999999999999 == 18 9's
+
     enum Sign {
         Positive,
         Negative,
@@ -60,9 +66,9 @@ public:
         friend class Decimal;
         friend class DecimalPrivate::SpecialValueHandler;
     public:
-        EncodedData(Sign, int exponent, uint64_t coefficient);
+        constexpr EncodedData(Sign, int exponent, uint64_t coefficient);
 
-        bool operator==(const EncodedData&) const;
+        friend bool operator==(const EncodedData&, const EncodedData&) = default;
 
         uint64_t coefficient() const { return m_coefficient; }
         int countDigits() const;
@@ -83,7 +89,7 @@ public:
             ClassZero,
         };
 
-        EncodedData(Sign, FormatClass);
+        constexpr EncodedData(Sign, FormatClass);
         FormatClass formatClass() const { return m_formatClass; }
 
         uint64_t m_coefficient;
@@ -92,24 +98,15 @@ public:
         Sign m_sign;
     };
 
-    Decimal(int32_t = 0);
-    Decimal(Sign, int exponent, uint64_t coefficient);
-    Decimal(const Decimal&);
+    constexpr Decimal(int32_t = 0);
+    constexpr Decimal(Sign, int exponent, uint64_t coefficient);
 
-    Decimal& operator=(const Decimal&);
     Decimal& operator+=(const Decimal&);
     Decimal& operator-=(const Decimal&);
     Decimal& operator*=(const Decimal&);
     Decimal& operator/=(const Decimal&);
 
     Decimal operator-() const;
-
-    bool operator==(const Decimal&) const;
-    bool operator!=(const Decimal&) const;
-    bool operator<(const Decimal&) const;
-    bool operator<=(const Decimal&) const;
-    bool operator>(const Decimal&) const;
-    bool operator>=(const Decimal&) const;
 
     Decimal operator+(const Decimal&) const;
     Decimal operator-(const Decimal&) const;
@@ -140,7 +137,7 @@ public:
     // Note: toString method supports infinity and nan but fromString not.
     String toString() const;
 
-    static Decimal fromDouble(double);
+    WEBCORE_EXPORT static Decimal fromDouble(double);
     // fromString supports following syntax EBNF:
     //  number ::= sign? digit+ ('.' digit*) (exponent-marker sign? digit+)?
     //          | sign? '.' digit+ (exponent-marker sign? digit+)?
@@ -149,13 +146,23 @@ public:
     //  digit ::= '0' | '1' | ... | '9'
     // Note: fromString doesn't support "infinity" and "nan".
     static Decimal fromString(StringView);
-    static Decimal infinity(Sign);
-    static Decimal nan();
-    static Decimal zero(Sign);
+
+    static constexpr Decimal infinity(Sign);
+    static constexpr Decimal nan();
+    static constexpr Decimal zero(Sign);
+    static constexpr Decimal doubleMax();
 
     // You should not use below methods. We expose them for unit testing.
-    explicit Decimal(const EncodedData&);
+    explicit constexpr Decimal(const EncodedData& data)
+        : m_data(data)
+    {
+    }
+
     const EncodedData& value() const { return m_data; }
+
+    friend bool operator==(const Decimal&, const Decimal&);
+    friend bool operator!=(const Decimal&, const Decimal&);
+    friend std::partial_ordering operator<=>(const Decimal&, const Decimal&);
 
 private:
     struct AlignedOperands {
@@ -165,7 +172,7 @@ private:
     };
 
     Decimal(double);
-    Decimal compareTo(const Decimal&) const;
+    WEBCORE_EXPORT Decimal compareTo(const Decimal&) const;
 
     static AlignedOperands alignOperands(const Decimal& lhs, const Decimal& rhs);
     static inline Sign invertSign(Sign sign) { return sign == Negative ? Positive : Negative; }
@@ -174,6 +181,98 @@ private:
 
     EncodedData m_data;
 };
+
+inline constexpr Decimal::EncodedData::EncodedData(Sign sign, FormatClass formatClass)
+    : m_coefficient(0)
+    , m_exponent(0)
+    , m_formatClass(formatClass)
+    , m_sign(sign)
+{
+}
+
+inline constexpr Decimal::EncodedData::EncodedData(Sign sign, int exponent, uint64_t coefficient)
+    : m_formatClass(coefficient ? ClassNormal : ClassZero)
+    , m_sign(sign)
+{
+    if (exponent >= ExponentMin && exponent <= ExponentMax) {
+        while (coefficient > MaxCoefficient) {
+            coefficient /= 10;
+            ++exponent;
+        }
+    }
+
+    if (exponent > ExponentMax) {
+        m_coefficient = 0;
+        m_exponent = 0;
+        m_formatClass = ClassInfinity;
+        return;
+    }
+
+    if (exponent < ExponentMin) {
+        m_coefficient = 0;
+        m_exponent = 0;
+        m_formatClass = ClassZero;
+        return;
+    }
+
+    m_coefficient = coefficient;
+    m_exponent = static_cast<int16_t>(exponent);
+}
+
+inline constexpr Decimal::Decimal(int32_t i32)
+    : m_data(i32 < 0 ? Negative : Positive, 0, i32 < 0 ? static_cast<uint64_t>(-static_cast<int64_t>(i32)) : static_cast<uint64_t>(i32))
+{
+}
+
+inline constexpr Decimal::Decimal(Sign sign, int exponent, uint64_t coefficient)
+    : m_data(sign, exponent, coefficient)
+{
+}
+
+inline bool operator==(const Decimal& a, const Decimal& b)
+{
+    return a.m_data == b.m_data || a.compareTo(b).isZero();
+}
+
+inline bool operator!=(const Decimal& a, const Decimal& b)
+{
+    if (a.m_data == b.m_data)
+        return false;
+    auto result = a.compareTo(b);
+    return !result.isNaN() && !result.isZero();
+}
+
+inline std::partial_ordering operator<=>(const Decimal& a, const Decimal& b)
+{
+    if (a.m_data == b.m_data)
+        return std::partial_ordering::equivalent;
+    auto result = a.compareTo(b);
+    if (result.isZero())
+        return std::partial_ordering::equivalent;
+    if (result.isNaN())
+        return std::partial_ordering::unordered;
+    return result.isNegative() ? std::partial_ordering::less : std::partial_ordering::greater;
+}
+
+inline constexpr Decimal Decimal::infinity(Sign sign)
+{
+    return Decimal(EncodedData(sign, EncodedData::ClassInfinity));
+}
+
+inline constexpr Decimal Decimal::nan()
+{
+    return Decimal(EncodedData(Positive, EncodedData::ClassNaN));
+}
+
+inline constexpr Decimal Decimal::zero(Sign sign)
+{
+    return Decimal(EncodedData(sign, EncodedData::ClassZero));
+}
+
+inline constexpr Decimal Decimal::doubleMax()
+{
+    return Decimal(EncodedData(Sign::Positive, 292, 17976931348623157));
+}
 
 } // namespace WebCore
 

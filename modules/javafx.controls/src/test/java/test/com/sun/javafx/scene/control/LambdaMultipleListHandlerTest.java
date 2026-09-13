@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,25 +25,24 @@
 
 package test.com.sun.javafx.scene.control;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.attemptGC;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
-
-import org.junit.Before;
-import org.junit.Test;
-
-import com.sun.javafx.scene.control.LambdaMultiplePropertyChangeListenerHandler;
-
-import static org.junit.Assert.*;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.*;
-
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.scene.control.LambdaMultiplePropertyChangeListenerHandler;
 
 /**
  * Test support of listChange listeners.
@@ -89,9 +88,8 @@ public class LambdaMultipleListHandlerTest {
         // remove listener chain
         Consumer<Change<?>> removedChain = handler.unregisterListChangeListeners(items);
         items.add("added after removed");
-        assertEquals("none of the removed listeners must be notified",
-                0, changes.size() + secondChanges.size());
-       // manually add the chained listener
+        assertEquals(0, changes.size() + secondChanges.size(), "none of the removed listeners must be notified");
+        // manually add the chained listener
         items.addListener((ListChangeListener)(c -> removedChain.accept(c)));
         items.add("added");
         assertEquals(1, changes.size());
@@ -190,10 +188,10 @@ public class LambdaMultipleListHandlerTest {
         handler.registerListChangeListener(items, consumer);
         handler.dispose();
         items.add("added");
-        assertEquals("listener must not be invoked after dispose", 0, changes.size());
+        assertEquals(0, changes.size(), "listener must not be invoked after dispose");
         handler.registerListChangeListener(items, consumer);
         items.add("added");
-        assertEquals("listener must be invoked when re-registered after dispose", 1, changes.size());
+        assertEquals(1, changes.size(), "listener must be invoked when re-registered after dispose");
     }
 
 
@@ -213,15 +211,15 @@ public class LambdaMultipleListHandlerTest {
         assertEquals(1, changes.size());
         handler = null;
         attemptGC(ref);
-        assertNull("handler must be gc'ed", ref.get());
+        assertNull(ref.get(), "handler must be gc'ed");
         items.add("another");
-        assertEquals("listener must not be invoked after gc", 1, changes.size());
+        assertEquals(1, changes.size(), "listener must not be invoked after gc");
     }
 
 
 //----------- setup and intial
 
-    @Before
+    @BeforeEach
     public void setup() {
         handler = new LambdaMultiplePropertyChangeListenerHandler();
         items = FXCollections.observableArrayList("one", "two", "four");
@@ -242,8 +240,8 @@ public class LambdaMultipleListHandlerTest {
         itemsProperty.addListener((obs, ov, nv) -> changes[0]++);
         itemsProperty.set(FXCollections.observableArrayList(data));
         // notifications when newList.equals(oldList)
-        assertEquals("changeListener not notified", 0, changes[0]);
-        assertEquals("invalidationListener notified", 1, invalidations[0]);
+        assertEquals(0, changes[0], "changeListener not notified");
+        assertEquals(1, invalidations[0], "invalidationListener notified");
         itemsProperty.get().add("added");
         // sanity: no notification on modifications to the list
         assertEquals(0, changes[0]);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLogShim;
-import test.robot.com.sun.glass.ui.monocle.TestApplication;
 import javafx.application.Platform;
 import javafx.scene.Group;
 import javafx.scene.Scene;
@@ -34,20 +32,19 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.robot.Robot;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
-import junit.framework.AssertionFailedError;
-import org.junit.*;
-import org.junit.rules.TestName;
-
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import com.sun.glass.ui.monocle.TestLogShim;
 
 public class ModalDialogTest {
 
-    @Rule
-    public TestName name = new TestName();
-
-    @Before
-    public void setUpScreen() throws Exception {
+    @BeforeEach
+    public void setUpScreen(TestInfo t) throws Exception {
         TestLogShim.reset();
-        TestLogShim.log(name.getMethodName());
+        // get test name from the junit5
+        TestLogShim.log(t.getDisplayName());
         TestApplication.showFullScreenScene();
     }
 
@@ -83,7 +80,7 @@ public class ModalDialogTest {
         });
         TestLogShim.waitForLog("Clicked at 100, 100");
         if (TestLogShim.countLog("Clicked at 300, 400") != 0) {
-            throw new AssertionFailedError("Disabled window should not receive mouse events!");
+            Assertions.fail("Disabled window should not receive mouse events!");
         }
     }
 }

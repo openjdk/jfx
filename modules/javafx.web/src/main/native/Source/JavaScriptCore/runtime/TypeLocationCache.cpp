@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2014 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,7 +48,7 @@ std::pair<TypeLocation*, bool> TypeLocationCache::getTypeLocation(GlobalVariable
         location->m_sourceID = sourceID;
         location->m_divotStart = start;
         location->m_divotEnd = end;
-        location->m_globalTypeSet = WTFMove(globalTypeSet);
+        location->m_globalTypeSet = WTF::move(globalTypeSet);
         return location;
     });
     return std::pair { result.iterator->value, result.isNewEntry };

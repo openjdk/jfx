@@ -25,18 +25,18 @@
 
 #pragma once
 
-#if ENABLE(DATALIST_ELEMENT)
-
 #include "HTMLDivElement.h"
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
 class TextFieldInputType;
 
 class DataListButtonElement final : public HTMLDivElement {
-    WTF_MAKE_ISO_ALLOCATED(DataListButtonElement);
+    WTF_MAKE_TZONE_ALLOCATED(DataListButtonElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DataListButtonElement);
 public:
-    class DataListButtonOwner {
+    class DataListButtonOwner : public AbstractRefCountedAndCanMakeWeakPtr<DataListButtonOwner> {
     public:
         virtual ~DataListButtonOwner() = default;
         virtual void dataListButtonElementWasClicked() = 0;
@@ -46,14 +46,30 @@ public:
 
     static Ref<DataListButtonElement> create(Document&, DataListButtonOwner&);
 
+    bool canAdjustStyleForAppearance() const { return m_canAdjustStyleForAppearance; }
+
+    void removeOwner() { m_owner = nullptr; }
+
 private:
     explicit DataListButtonElement(Document&, DataListButtonOwner&);
 
-    void defaultEventHandler(Event&) override;
+    bool isDataListButtonElement() const final { return true; }
+    std::optional<Style::UnadjustedStyle> resolveCustomStyle(const Style::ResolutionContext&, const RenderStyle* shadowHostStyle) final;
 
-    DataListButtonOwner& m_owner;
+    void defaultEventHandler(Event&) override;
+    bool isDisabledFormControl() const override;
+
+    WeakPtr<DataListButtonOwner> m_owner;
+    bool m_canAdjustStyleForAppearance { true };
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(DATALIST_ELEMENT)
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::DataListButtonElement)
+    static bool isType(const WebCore::HTMLElement& element) { return element.isDataListButtonElement(); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* htmlElement = dynamicDowncast<WebCore::HTMLElement>(node);
+        return htmlElement && isType(*htmlElement);
+    }
+SPECIALIZE_TYPE_TRAITS_END()

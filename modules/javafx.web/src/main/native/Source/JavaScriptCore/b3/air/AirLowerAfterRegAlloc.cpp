@@ -54,7 +54,7 @@ static constexpr bool verbose = false;
 
 void lowerAfterRegAlloc(Code& code)
 {
-    PhaseScope phaseScope(code, "lowerAfterRegAlloc");
+    PhaseScope phaseScope(code, "lowerAfterRegAlloc"_s);
 
     if (AirLowerAfterRegAllocInternal::verbose)
         dataLog("Code before lowerAfterRegAlloc:\n", code);
@@ -79,7 +79,7 @@ void lowerAfterRegAlloc(Code& code)
 
     padInterference(code);
 
-    HashMap<Inst*, RegisterSetBuilder> usedRegisters;
+    UncheckedKeyHashMap<Inst*, RegisterSetBuilder> usedRegisters;
 
     RegLiveness liveness(code);
     for (BasicBlock* block : code) {

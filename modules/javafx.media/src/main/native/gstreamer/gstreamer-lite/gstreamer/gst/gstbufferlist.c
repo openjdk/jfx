@@ -61,8 +61,6 @@ struct _GstBufferList
   guint n_buffers;
   guint n_allocated;
 
-  gsize slice_size;
-
   /* one-item array, in reality more items are pre-allocated
    * as part of the GstBufferList structure, and that
    * pre-allocated array extends beyond the declared struct */
@@ -104,7 +102,6 @@ static void
 _gst_buffer_list_free (GstBufferList * list)
 {
   guint i, len;
-  gsize slice_size;
 
   GST_LOG ("free %p", list);
 
@@ -119,17 +116,15 @@ _gst_buffer_list_free (GstBufferList * list)
   if (GST_BUFFER_LIST_IS_USING_DYNAMIC_ARRAY (list))
     g_free (list->buffers);
 
-  slice_size = list->slice_size;
-
 #ifdef USE_POISONING
-  memset (list, 0xff, slice_size);
+  memset (list, 0xff, sizeof (GstBufferList));
 #endif
 
-  g_slice_free1 (slice_size, list);
+  g_free (list);
 }
 
 static void
-gst_buffer_list_init (GstBufferList * list, guint n_allocated, gsize slice_size)
+gst_buffer_list_init (GstBufferList * list, guint n_allocated)
 {
   gst_mini_object_init (GST_MINI_OBJECT_CAST (list), 0, _gst_buffer_list_type,
       (GstMiniObjectCopyFunction) _gst_buffer_list_copy, NULL,
@@ -138,7 +133,6 @@ gst_buffer_list_init (GstBufferList * list, guint n_allocated, gsize slice_size)
   list->buffers = &list->arr[0];
   list->n_buffers = 0;
   list->n_allocated = n_allocated;
-  list->slice_size = slice_size;
 
   GST_LOG ("init %p", list);
 }
@@ -166,11 +160,11 @@ gst_buffer_list_new_sized (guint size)
 
   slice_size = sizeof (GstBufferList) + (n_allocated - 1) * sizeof (gpointer);
 
-  list = g_slice_alloc0 (slice_size);
+  list = g_malloc0 (slice_size);
 
   GST_LOG ("new %p", list);
 
-  gst_buffer_list_init (list, n_allocated, slice_size);
+  gst_buffer_list_init (list, n_allocated);
 
   return list;
 }
@@ -229,8 +223,8 @@ gst_buffer_list_remove_range_internal (GstBufferList * list, guint idx,
 /**
  * gst_buffer_list_foreach:
  * @list: a #GstBufferList
- * @func: (scope call): a #GstBufferListFunc to call
- * @user_data: (closure): user data passed to @func
+ * @func: (scope call) (closure user_data): a #GstBufferListFunc to call
+ * @user_data: user data passed to @func
  *
  * Calls @func with @data for each buffer in @list.
  *
@@ -338,9 +332,9 @@ gst_buffer_list_foreach (GstBufferList * list, GstBufferListFunc func,
  * You must make sure that @idx does not exceed the number of
  * buffers available.
  *
- * Returns: (transfer none) (nullable): the buffer at @idx in @group
- *     or %NULL when there is no buffer. The buffer remains valid as
- *     long as @list is valid and buffer is not removed from the list.
+ * Returns: (transfer none): the buffer at @idx in @group.
+ *     The returned buffer remains valid as long as @list is valid and
+ *     buffer is not removed from the list.
  */
 GstBuffer *
 gst_buffer_list_get (GstBufferList * list, guint idx)
@@ -361,8 +355,8 @@ gst_buffer_list_get (GstBufferList * list, guint idx)
  * You must make sure that @idx does not exceed the number of
  * buffers available.
  *
- * Returns: (transfer none) (nullable): the buffer at @idx in @group.
- *     The returned  buffer remains valid as long as @list is valid and
+ * Returns: (transfer none): the buffer at @idx in @group.
+ *     The returned buffer remains valid as long as @list is valid and
  *     the buffer is not removed from the list.
  *
  * Since: 1.14
@@ -662,4 +656,60 @@ gst_buffer_list_take (GstBufferList ** old_list, GstBufferList * new_list)
 {
   return gst_mini_object_take ((GstMiniObject **) old_list,
       (GstMiniObject *) new_list);
+}
+
+/**
+ * gst_buffer_list_steal: (skip)
+ * @old_list: (inout) (transfer full) (nullable): pointer to a
+ *     pointer to a #GstBufferList to be stolen.
+ *
+ * Atomically replace the #GstBufferList pointed to by @old_list with %NULL and
+ * return the original buffer list.
+ * Since: 1.28
+ */
+GstBufferList *
+gst_buffer_list_steal (GstBufferList ** old_list)
+{
+  return GST_BUFFER_LIST_CAST (gst_mini_object_steal ((GstMiniObject **)
+          old_list));
+}
+
+/**
+ * gst_buffer_list_is_writable:
+ * @list: a #GstEvent
+ *
+ * Tests if you can safely modify @list. It is only safe to modify buffer list when
+ * there is only one owner of the buffer list - ie, the object is writable.
+ */
+gboolean
+gst_buffer_list_is_writable (const GstBufferList * list)
+{
+  return gst_mini_object_is_writable (GST_MINI_OBJECT_CONST_CAST (list));
+}
+
+/**
+ * gst_buffer_list_make_writable:
+ * @list: (transfer full): a #GstBufferList
+ *
+ * Returns a writable copy of @list.
+ *
+ * If there is only one reference count on @list, the caller must be the owner,
+ * and so this function will return the buffer list object unchanged. If on the other
+ * hand there is more than one reference on the object, a new buffer list object will
+ * be returned. The caller's reference on @list will be removed, and instead the
+ * caller will own a reference to the returned object.
+ *
+ * In short, this function unrefs the buffer_list in the argument and refs the buffer list
+ * that it returns. Don't access the argument after calling this function. See
+ * also: gst_buffer_list_ref().
+ *
+ * Returns: (transfer full): a writable buffer list which may or may not be the
+ *     same as @buffer list
+ */
+GstBufferList *
+gst_buffer_list_make_writable (GstBufferList * list)
+{
+  return
+      GST_BUFFER_LIST_CAST (gst_mini_object_make_writable (GST_MINI_OBJECT_CAST
+          (list)));
 }

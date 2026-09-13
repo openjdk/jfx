@@ -25,28 +25,33 @@
 
 #pragma once
 
-#include "ArrayAllocationProfile.h"
-#include "ArrayConstructor.h"
-#include "ArrayPrototype.h"
-#include "JSClassRef.h"
-#include "JSCustomGetterFunction.h"
-#include "JSCustomSetterFunction.h"
-#include "JSFunction.h"
-#include "JSGlobalLexicalEnvironment.h"
-#include "JSGlobalObject.h"
-#include "JSWeakObjectMapRefInternal.h"
-#include "LinkTimeConstant.h"
-#include "ObjectPrototype.h"
-#include "StrongInlines.h"
+#include <JavaScriptCore/ArrayAllocationProfile.h>
+#include <JavaScriptCore/ArrayConstructor.h>
+#include <JavaScriptCore/ArrayPrototype.h>
+#include <JavaScriptCore/JSClassRef.h>
+#include <JavaScriptCore/JSCustomGetterFunction.h>
+#include <JavaScriptCore/JSCustomSetterFunction.h>
+#include <JavaScriptCore/JSFunction.h>
+#include <JavaScriptCore/JSGlobalLexicalEnvironment.h>
+#include <JavaScriptCore/JSGlobalObject.h>
+#include <JavaScriptCore/JSWeakObjectMapRefInternal.h>
+#include <JavaScriptCore/LinkTimeConstant.h>
+#include <JavaScriptCore/ObjectInitializationScope.h>
+#include <JavaScriptCore/ObjectPrototype.h>
+#include <JavaScriptCore/ParserModes.h>
+#include <JavaScriptCore/StrongInlines.h>
+#include <JavaScriptCore/StructureInlines.h>
 #include <wtf/Hasher.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
 struct JSGlobalObject::RareData {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(JSGlobalObject);
 
     unsigned profileGroup { 0 };
-    HashMap<OpaqueJSClass*, std::unique_ptr<OpaqueJSClassContextData>> opaqueJSClassData;
+    UncheckedKeyHashMap<OpaqueJSClass*, std::unique_ptr<OpaqueJSClassContextData>> opaqueJSClassData;
 };
 
 struct JSGlobalObject::GlobalPropertyInfo {
@@ -55,7 +60,7 @@ struct JSGlobalObject::GlobalPropertyInfo {
         , value(v)
         , attributes(a)
     {
-        ASSERT(Thread::current().stack().contains(this));
+        ASSERT(Thread::currentSingleton().stack().contains(this));
     }
 
     const Identifier identifier;
@@ -107,7 +112,7 @@ ALWAYS_INLINE bool JSGlobalObject::stringPrototypeChainIsSane()
 
 inline void JSGlobalObject::setUnhandledRejectionCallback(VM& vm, JSObject* function)
 {
-    m_unhandledRejectionCallback.set(vm, function);
+    m_unhandledRejectionCallback.set(vm, this, function);
 }
 
 ALWAYS_INLINE bool JSGlobalObject::isArrayPrototypeIteratorProtocolFastAndNonObservable()
@@ -207,27 +212,39 @@ ALWAYS_INLINE Structure* JSGlobalObject::arrayStructureForIndexingTypeDuringAllo
     RELEASE_AND_RETURN(scope, InternalFunction::createSubclassStructure(globalObject, asObject(newTarget), functionGlobalObject->arrayStructureForIndexingTypeDuringAllocation(indexingType)));
 }
 
+inline JSFunction* JSGlobalObject::evalFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::evalFunction)); }
 inline JSFunction* JSGlobalObject::throwTypeErrorFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::throwTypeErrorFunction)); }
 inline JSFunction* JSGlobalObject::iteratorProtocolFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::performIteration)); }
-inline JSFunction* JSGlobalObject::newPromiseCapabilityFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::newPromiseCapability)); }
-inline JSFunction* JSGlobalObject::resolvePromiseFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::resolvePromise)); }
-inline JSFunction* JSGlobalObject::rejectPromiseFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::rejectPromise)); }
 inline JSFunction* JSGlobalObject::promiseProtoThenFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::defaultPromiseThen)); }
-inline JSFunction* JSGlobalObject::performPromiseThenFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::performPromiseThen)); }
+inline JSFunction* JSGlobalObject::promiseEmptyOnFulfilledFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::promiseEmptyOnFulfilled)); }
+inline JSFunction* JSGlobalObject::promiseEmptyOnRejectedFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::promiseEmptyOnRejected)); }
 inline JSFunction* JSGlobalObject::regExpProtoExecFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::regExpBuiltinExec)); }
 inline JSFunction* JSGlobalObject::stringProtoSubstringFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::stringSubstring)); }
-inline JSFunction* JSGlobalObject::performProxyObjectHasFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::performProxyObjectHas)); }
-inline JSFunction* JSGlobalObject::performProxyObjectGetFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::performProxyObjectGet)); }
-inline JSFunction* JSGlobalObject::performProxyObjectGetFunctionConcurrently() const { return linkTimeConstantConcurrently<JSFunction*>(LinkTimeConstant::performProxyObjectGet); }
-inline JSFunction* JSGlobalObject::performProxyObjectGetByValFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::performProxyObjectGetByVal)); }
-inline JSFunction* JSGlobalObject::performProxyObjectGetByValFunctionConcurrently() const { return linkTimeConstantConcurrently<JSFunction*>(LinkTimeConstant::performProxyObjectGetByVal); }
-inline JSFunction* JSGlobalObject::performProxyObjectSetSloppyFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::performProxyObjectSetSloppy)); }
-inline JSFunction* JSGlobalObject::performProxyObjectSetSloppyFunctionConcurrently() const { return linkTimeConstantConcurrently<JSFunction*>(LinkTimeConstant::performProxyObjectSetSloppy); }
-inline JSFunction* JSGlobalObject::performProxyObjectSetStrictFunction() const { return jsCast<JSFunction*>(linkTimeConstant(LinkTimeConstant::performProxyObjectSetStrict)); }
-inline JSFunction* JSGlobalObject::performProxyObjectSetStrictFunctionConcurrently() const { return linkTimeConstantConcurrently<JSFunction*>(LinkTimeConstant::performProxyObjectSetStrict); }
-inline GetterSetter* JSGlobalObject::regExpProtoGlobalGetter() const { return bitwise_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoGlobalGetter)); }
-inline GetterSetter* JSGlobalObject::regExpProtoUnicodeGetter() const { return bitwise_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoUnicodeGetter)); }
-inline GetterSetter* JSGlobalObject::regExpProtoUnicodeSetsGetter() const { return bitwise_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoUnicodeSetsGetter)); }
+inline JSFunction* JSGlobalObject::performProxyObjectHasFunction() const { return m_performProxyObjectHasFunction.get(); }
+inline JSFunction* JSGlobalObject::performProxyObjectHasFunctionConcurrently() const { return performProxyObjectHasFunction(); }
+inline JSFunction* JSGlobalObject::performProxyObjectHasByValFunction() const { return m_performProxyObjectHasByValFunction.get(); }
+inline JSFunction* JSGlobalObject::performProxyObjectHasByValFunctionConcurrently() const { return performProxyObjectHasByValFunction(); }
+inline JSFunction* JSGlobalObject::performProxyObjectGetFunction() const { return m_performProxyObjectGetFunction.get(); }
+inline JSFunction* JSGlobalObject::performProxyObjectGetFunctionConcurrently() const { return performProxyObjectGetFunction(); }
+inline JSFunction* JSGlobalObject::performProxyObjectGetByValFunction() const { return m_performProxyObjectGetByValFunction.get(); }
+inline JSFunction* JSGlobalObject::performProxyObjectGetByValFunctionConcurrently() const { return performProxyObjectGetByValFunction(); }
+inline JSFunction* JSGlobalObject::performProxyObjectSetSloppyFunction() const { return m_performProxyObjectSetSloppyFunction.get(); }
+inline JSFunction* JSGlobalObject::performProxyObjectSetSloppyFunctionConcurrently() const { return performProxyObjectSetSloppyFunction(); }
+inline JSFunction* JSGlobalObject::performProxyObjectSetStrictFunction() const { return m_performProxyObjectSetStrictFunction.get(); }
+inline JSFunction* JSGlobalObject::performProxyObjectSetStrictFunctionConcurrently() const { return performProxyObjectSetStrictFunction(); }
+inline JSFunction* JSGlobalObject::performProxyObjectSetByValSloppyFunction() const { return m_performProxyObjectSetByValSloppyFunction.get(); }
+inline JSFunction* JSGlobalObject::performProxyObjectSetByValSloppyFunctionConcurrently() const { return performProxyObjectSetByValSloppyFunction(); }
+inline JSFunction* JSGlobalObject::performProxyObjectSetByValStrictFunction() const { return m_performProxyObjectSetByValStrictFunction.get(); }
+inline JSFunction* JSGlobalObject::performProxyObjectSetByValStrictFunctionConcurrently() const { return performProxyObjectSetByValStrictFunction(); }
+inline GetterSetter* JSGlobalObject::regExpProtoFlagsGetter() const { return std::bit_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoFlagsGetter)); }
+inline GetterSetter* JSGlobalObject::regExpProtoDotAllGetter() const { return std::bit_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoDotAllGetter)); }
+inline GetterSetter* JSGlobalObject::regExpProtoGlobalGetter() const { return std::bit_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoGlobalGetter)); }
+inline GetterSetter* JSGlobalObject::regExpProtoHasIndicesGetter() const { return std::bit_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoHasIndicesGetter)); }
+inline GetterSetter* JSGlobalObject::regExpProtoIgnoreCaseGetter() const { return std::bit_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoIgnoreCaseGetter)); }
+inline GetterSetter* JSGlobalObject::regExpProtoMultilineGetter() const { return std::bit_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoMultilineGetter)); }
+inline GetterSetter* JSGlobalObject::regExpProtoStickyGetter() const { return std::bit_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoStickyGetter)); }
+inline GetterSetter* JSGlobalObject::regExpProtoUnicodeGetter() const { return std::bit_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoUnicodeGetter)); }
+inline GetterSetter* JSGlobalObject::regExpProtoUnicodeSetsGetter() const { return std::bit_cast<GetterSetter*>(linkTimeConstant(LinkTimeConstant::regExpProtoUnicodeSetsGetter)); }
 
 ALWAYS_INLINE VM& getVM(JSGlobalObject* globalObject)
 {
@@ -271,7 +288,7 @@ inline JSArray* constructEmptyArray(JSGlobalObject* globalObject, ArrayAllocatio
     RETURN_IF_EXCEPTION(scope, nullptr);
 
     JSArray* result = JSArray::tryCreate(vm, structure, initialLength);
-    if (UNLIKELY(!result)) {
+    if (!result) [[unlikely]] {
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
@@ -302,7 +319,68 @@ inline JSArray* constructArrayNegativeIndexed(JSGlobalObject* globalObject, Arra
     auto scope = DECLARE_THROW_SCOPE(vm);
     Structure* structure = globalObject->arrayStructureForProfileDuringAllocation(globalObject, profile, newTarget);
     RETURN_IF_EXCEPTION(scope, nullptr);
-    return ArrayAllocationProfile::updateLastAllocationFor(profile, constructArrayNegativeIndexed(globalObject, structure, values, length));
+    scope.release();
+    JSArray* array = constructArrayNegativeIndexed(globalObject, structure, values, length);
+    if (!array) [[unlikely]]
+        return nullptr;
+    return ArrayAllocationProfile::updateLastAllocationFor(profile, array);
+}
+
+ALWAYS_INLINE JSArray* tryCreateContiguousArrayWithPattern(JSGlobalObject* globalObject, JSString* pattern, size_t initialLength)
+{
+    if (initialLength >= MIN_ARRAY_STORAGE_CONSTRUCTION_LENGTH)
+        return nullptr;
+
+    if (globalObject->isHavingABadTime()) [[unlikely]]
+        return nullptr;
+
+    VM& vm = globalObject->vm();
+    Structure* structure = globalObject->originalArrayStructureForIndexingType(ArrayWithContiguous);
+    if (!hasContiguous(structure->indexingType())) [[unlikely]]
+        return nullptr;
+
+    unsigned vectorLength = Butterfly::optimalContiguousVectorLength(structure, initialLength);
+    void* temp = vm.auxiliarySpace().allocate(
+        vm,
+        Butterfly::totalSize(0, 0, true, vectorLength * sizeof(EncodedJSValue)),
+        nullptr, AllocationFailureMode::ReturnNull);
+    if (!temp) [[unlikely]]
+        return nullptr;
+    Butterfly* butterfly = Butterfly::fromBase(temp, 0, 0);
+    butterfly->setVectorLength(vectorLength);
+    butterfly->setPublicLength(initialLength);
+
+#if OS(DARWIN)
+    memset_pattern8(static_cast<void*>(butterfly->contiguous().data()), &pattern, sizeof(EncodedJSValue) * initialLength);
+    if (vectorLength > initialLength)
+        memset(static_cast<void*>(butterfly->contiguous().data() + initialLength), 0, sizeof(EncodedJSValue) * (vectorLength - initialLength));
+#else
+    for (unsigned i = 0; i < initialLength; ++i)
+        butterfly->contiguous().atUnsafe(i).setWithoutWriteBarrier(pattern);
+    for (unsigned i = initialLength; i < vectorLength; ++i)
+        butterfly->contiguous().atUnsafe(i).clear();
+#endif
+    auto* array = JSArray::createWithButterfly(vm, nullptr, structure, butterfly);
+    // Clang can optimize this away, and butterfly doesn't visit anything.
+    ensureStillAliveHere(pattern);
+    return array;
+}
+
+ALWAYS_INLINE JSArray* createPatternFilledArray(JSGlobalObject* globalObject, JSString* pattern, size_t count)
+{
+    VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (JSArray* array = tryCreateContiguousArrayWithPattern(globalObject, pattern, count); array) [[likely]]
+        return array;
+
+    JSArray* array = constructEmptyArray(globalObject, nullptr, count);
+    RETURN_IF_EXCEPTION(scope, { });
+    for (size_t i = 0, arrayIndex = 0; i < count; ++i) {
+        array->putDirectIndex(globalObject, arrayIndex++, pattern);
+        RETURN_IF_EXCEPTION(scope, { });
+    }
+    return array;
 }
 
 inline OptionSet<CodeGenerationMode> JSGlobalObject::defaultCodeGenerationMode() const
@@ -358,6 +436,18 @@ inline Structure* JSGlobalObject::arrayBufferStructure(ArrayBufferSharingMode sh
     return nullptr;
 }
 
+inline Structure* JSGlobalObject::arrayBufferStructureConcurrently(ArrayBufferSharingMode sharingMode) const
+{
+    switch (sharingMode) {
+    case ArrayBufferSharingMode::Default:
+        return m_arrayBufferStructure.getConcurrently();
+    case ArrayBufferSharingMode::Shared:
+        return m_sharedArrayBufferStructure.getConcurrently();
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
+}
+
 inline JSObject* JSGlobalObject::arrayBufferConstructor(ArrayBufferSharingMode sharingMode) const
 {
     switch (sharingMode) {
@@ -365,6 +455,18 @@ inline JSObject* JSGlobalObject::arrayBufferConstructor(ArrayBufferSharingMode s
         return m_arrayBufferStructure.constructor(this);
     case ArrayBufferSharingMode::Shared:
         return m_sharedArrayBufferStructure.constructor(this);
+    }
+    RELEASE_ASSERT_NOT_REACHED();
+    return nullptr;
+}
+
+inline GetterSetter* JSGlobalObject::arrayBufferSpeciesGetterSetter(ArrayBufferSharingMode sharingMode) const
+{
+    switch (sharingMode) {
+    case ArrayBufferSharingMode::Default:
+        return m_arrayBufferSpeciesGetterSetter.get();
+    case ArrayBufferSharingMode::Shared:
+        return m_sharedArrayBufferSpeciesGetterSetter.get();
     }
     RELEASE_ASSERT_NOT_REACHED();
     return nullptr;
@@ -421,6 +523,8 @@ inline Structure* JSGlobalObject::errorStructure(ErrorType errorType) const
         return m_URIErrorStructure.get(this);
     case ErrorType::AggregateError:
         return m_aggregateErrorStructure.get(this);
+    case ErrorType::SuppressedError:
+        return m_suppressedErrorStructure.get(this);
     }
     ASSERT_NOT_REACHED();
     return nullptr;
@@ -431,10 +535,34 @@ inline JSScope* JSGlobalObject::globalScope()
     return m_globalLexicalEnvironment.get();
 }
 
-inline void JSGlobalObject::addVar(JSGlobalObject* globalObject, const Identifier& propertyName)
+// https://tc39.es/ecma262/#sec-candeclareglobalvar
+inline bool JSGlobalObject::canDeclareGlobalVar(const Identifier& ident)
 {
-    if (!hasOwnProperty(globalObject, propertyName))
-        addGlobalVar(propertyName);
+    if (isStructureExtensible()) [[likely]]
+        return true;
+
+    PropertySlot slot(this, PropertySlot::InternalMethodType::GetOwnProperty);
+    return getOwnPropertySlot(this, this, ident, slot);
+}
+
+// https://tc39.es/ecma262/#sec-createglobalvarbinding
+template<BindingCreationContext context>
+inline void JSGlobalObject::createGlobalVarBinding(const Identifier& ident)
+{
+    VM& vm = this->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    PropertySlot slot(this, PropertySlot::InternalMethodType::GetOwnProperty);
+    bool hasProperty = getOwnPropertySlot(this, this, ident, slot);
+    RETURN_IF_EXCEPTION(scope, void());
+    if (hasProperty) [[unlikely]]
+        return;
+
+    ASSERT(isStructureExtensible());
+    if constexpr (context == BindingCreationContext::Global)
+        addSymbolTableEntry(ident);
+    else
+        putDirect(vm, ident, jsUndefined());
 }
 
 inline InlineWatchpointSet& JSGlobalObject::typedArraySpeciesWatchpointSet(TypedArrayType type)
@@ -572,3 +700,5 @@ template<typename Type> inline Type JSGlobalObject::linkTimeConstantConcurrently
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

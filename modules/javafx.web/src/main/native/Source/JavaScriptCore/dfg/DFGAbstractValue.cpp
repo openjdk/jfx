@@ -31,6 +31,8 @@
 #include "DFGGraph.h"
 #include "JSCJSValueInlines.h"
 #include "TrackedReferences.h"
+#include <wtf/AlignedStorage.h>
+#include <wtf/StdLibExtras.h>
 
 namespace JSC { namespace DFG {
 
@@ -144,6 +146,11 @@ void AbstractValue::fixTypeForRepresentation(Graph& graph, NodeFlags representat
         if (m_type & SpecAnyIntAsDouble) {
             // AnyIntAsDouble can produce i32 or i52. SpecAnyIntAsDouble doesn't bound the magnitude of the value.
             m_type &= ~SpecAnyIntAsDouble;
+            m_type |= SpecInt52Any;
+        }
+
+        if (m_type & SpecNonIntAsDouble) {
+            m_type &= ~SpecNonIntAsDouble;
             m_type |= SpecInt52Any;
         }
 
@@ -524,8 +531,8 @@ void AbstractValue::validateReferences(const TrackedReferences& trackedReference
 #if USE(JSVALUE64) && !defined(NDEBUG)
 void AbstractValue::ensureCanInitializeWithZeros()
 {
-    std::aligned_storage<sizeof(AbstractValue), alignof(AbstractValue)>::type zeroFilledStorage;
-    memset(static_cast<void*>(&zeroFilledStorage), 0, sizeof(AbstractValue));
+    AlignedStorage<AbstractValue> zeroFilledStorage;
+    zeroBytes(*zeroFilledStorage);
     ASSERT(*this == *static_cast<AbstractValue*>(static_cast<void*>(&zeroFilledStorage)));
 }
 #endif

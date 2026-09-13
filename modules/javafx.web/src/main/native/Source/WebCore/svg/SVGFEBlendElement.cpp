@@ -26,23 +26,25 @@
 #include "FEBlend.h"
 #include "NodeName.h"
 #include "SVGNames.h"
-#include <wtf/IsoMallocInlines.h>
+#include "SVGPropertyOwnerRegistry.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFEBlendElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGFEBlendElement);
 
 inline SVGFEBlendElement::SVGFEBlendElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::feBlendTag));
 
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::modeAttr, BlendMode, &SVGFEBlendElement::m_mode>();
         PropertyRegistry::registerProperty<SVGNames::inAttr, &SVGFEBlendElement::m_in1>();
         PropertyRegistry::registerProperty<SVGNames::in2Attr, &SVGFEBlendElement::m_in2>();
-    });
+    }
 }
 
 Ref<SVGFEBlendElement> SVGFEBlendElement::create(const QualifiedName& tagName, Document& document)
@@ -56,14 +58,14 @@ void SVGFEBlendElement::attributeChanged(const QualifiedName& name, const AtomSt
     case AttributeNames::modeAttr: {
         BlendMode mode = BlendMode::Normal;
         if (parseBlendMode(newValue, mode))
-            m_mode->setBaseValInternal<BlendMode>(mode);
+        Ref { m_mode }->setBaseValInternal<BlendMode>(mode);
         break;
     }
     case AttributeNames::inAttr:
-        m_in1->setBaseValInternal(newValue);
+        Ref { m_in1 }->setBaseValInternal(newValue);
         break;
     case AttributeNames::in2Attr:
-        m_in2->setBaseValInternal(newValue);
+        Ref { m_in2 }->setBaseValInternal(newValue);
         break;
     default:
         break;

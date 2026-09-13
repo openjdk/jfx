@@ -25,12 +25,13 @@
 
 #pragma once
 
-#include "WebGPUIntegralTypes.h"
+#include <WebCore/WebGPUIntegralTypes.h>
 #include <cstdint>
 #include <optional>
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore::WebGPU {
@@ -40,7 +41,7 @@ class Buffer;
 class ComputePipeline;
 class QuerySet;
 
-class ComputePassEncoder : public RefCounted<ComputePassEncoder> {
+class ComputePassEncoder : public RefCountedAndCanMakeWeakPtr<ComputePassEncoder> {
 public:
     virtual ~ComputePassEncoder() = default;
 
@@ -48,7 +49,7 @@ public:
 
     void setLabel(String&& label)
     {
-        m_label = WTFMove(label);
+        m_label = WTF::move(label);
         setLabelInternal(m_label);
     }
 
@@ -58,18 +59,19 @@ public:
 
     virtual void end() = 0;
 
-    virtual void setBindGroup(Index32, const BindGroup&,
+    virtual void setBindGroup(Index32, const BindGroup*,
         std::optional<Vector<BufferDynamicOffset>>&&) = 0;
 
-    virtual void setBindGroup(Index32, const BindGroup&,
-        const uint32_t* dynamicOffsetsArrayBuffer,
-        size_t dynamicOffsetsArrayBufferLength,
+    virtual void setBindGroup(Index32, const BindGroup*,
+        std::span<const uint32_t> dynamicOffsetsArrayBuffer,
         Size64 dynamicOffsetsDataStart,
         Size32 dynamicOffsetsDataLength) = 0;
 
     virtual void pushDebugGroup(String&& groupLabel) = 0;
     virtual void popDebugGroup() = 0;
     virtual void insertDebugMarker(String&& markerLabel) = 0;
+    virtual bool isRemoteComputePassEncoderProxy() const { return false; }
+    virtual bool isComputePassEncoderImpl() const { return false; }
 
 protected:
     ComputePassEncoder() = default;

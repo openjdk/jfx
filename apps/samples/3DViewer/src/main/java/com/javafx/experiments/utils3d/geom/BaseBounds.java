@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -115,7 +115,7 @@ public abstract class BaseBounds {
 
     public abstract BaseBounds deriveWithUnion(BaseBounds other);
 
-    // TODO: Add variants of deriveWithNewBounds such as pair of Vec* (RT-26886)
+    // TODO: Add variants of deriveWithNewBounds such as pair of Vec* (JDK-8092361)
     public abstract BaseBounds deriveWithNewBounds(Rectangle other);
 
     public abstract BaseBounds deriveWithNewBounds(BaseBounds other);
@@ -145,7 +145,7 @@ public abstract class BaseBounds {
                                           float maxX, float maxY, float maxZ);
 
     // TODO: obsolete add and replace with deriveWithUnion(Vec2f v) and deriveWithUnion(Vec3f v)
-    // (RT-26886)
+    // (JDK-8092361)
     public abstract void add(Point2D p);
 
     public abstract void add(float x, float y, float z);

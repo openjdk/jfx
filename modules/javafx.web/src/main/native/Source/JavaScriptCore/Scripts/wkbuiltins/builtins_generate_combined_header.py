@@ -59,6 +59,7 @@ class BuiltinsCombinedHeaderGenerator(BuiltinsGenerator):
         sections.append(self.generate_license())
         sections.append(Template(Templates.DoNotEditWarning).substitute(args))
         sections.append(Template(Templates.HeaderIncludeGuard).substitute(args))
+        sections.append(Template(Templates.RequiredHeaderIncludes).substitute(args))
         sections.append(self.generate_forward_declarations())
         sections.append(Template(Templates.NamespaceTop).substitute(args))
         sections.append("extern const char s_%(namespace)sCombinedCode[];" % args);
@@ -81,6 +82,7 @@ class VM;
 enum class ConstructAbility : uint8_t;
 enum class ConstructorKind : uint8_t;
 enum class ImplementationVisibility : uint8_t;
+enum class InlineAttribute : uint8_t;
 }"""
 
     def generate_section_for_object(self, object):
@@ -99,11 +101,12 @@ enum class ImplementationVisibility : uint8_t;
                 'codeName': BuiltinsGenerator.mangledNameForFunction(function) + 'Code',
             }
 
-            lines.append("""extern const char* const s_%(codeName)s;
-extern const int s_%(codeName)sLength;
-extern const JSC::ConstructAbility s_%(codeName)sConstructAbility;
-extern const JSC::ConstructorKind s_%(codeName)sConstructorKind;
-extern const JSC::ImplementationVisibility s_%(codeName)sImplementationVisibility;""" % function_args)
+            lines.append("""extern constinit const char* const s_%(codeName)s;
+extern constinit const int s_%(codeName)sLength;
+extern constinit const JSC::ConstructAbility s_%(codeName)sConstructAbility;
+extern constinit const JSC::ConstructorKind s_%(codeName)sConstructorKind;
+extern constinit const JSC::ImplementationVisibility s_%(codeName)sImplementationVisibility;
+extern constinit const JSC::InlineAttribute s_%(codeName)sInlineAttribute;""" % function_args)
 
         return lines
 

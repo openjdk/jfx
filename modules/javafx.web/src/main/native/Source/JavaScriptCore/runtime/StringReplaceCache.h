@@ -26,18 +26,24 @@
 
 #pragma once
 
+#include <JavaScriptCore/MatchResult.h>
+#include <JavaScriptCore/SlotVisitorMacros.h>
 #include <array>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/Vector.h>
+#include <wtf/text/AtomString.h>
 
 namespace JSC {
 
-DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StringReplaceCache);
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER_AND_EXPORT(StringReplaceCache, WTF_INTERNAL);
 
-class JSImmutableButterfly;
+class JSCellButterfly;
 class RegExp;
 
 class StringReplaceCache {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(StringReplaceCache);
     WTF_MAKE_NONCOPYABLE(StringReplaceCache);
+
 public:
     static constexpr unsigned cacheSize = 64;
 
@@ -46,12 +52,15 @@ public:
     struct Entry {
         RefPtr<AtomStringImpl> m_subject { nullptr };
         RegExp* m_regExp { nullptr };
-        JSImmutableButterfly* m_result { nullptr }; // We use JSImmutableButterfly since we would like to keep all entries alive while repeatedly calling a JS function.
+        JSCellButterfly* m_result { nullptr }; // We use JSCellButterfly since we would like to keep all entries alive while repeatedly calling a JS function.
+        MatchResult m_matchResult { };
         Vector<int> m_lastMatch { };
     };
 
     Entry* get(const String& subject, RegExp*);
-    void set(const String& subject, RegExp*, JSImmutableButterfly*, const Vector<int>&);
+    void set(const String& subject, RegExp*, JSCellButterfly*, MatchResult, const Vector<int>&);
+
+    DECLARE_VISIT_AGGREGATE;
 
     void clear()
     {

@@ -25,10 +25,12 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY)
 
-#include "WasmExceptionType.h"
-#include "WasmMemory.h"
+#include <JavaScriptCore/WasmExceptionType.h>
+#include <JavaScriptCore/WasmMemory.h>
 #include <wtf/Forward.h>
 #include <wtf/Function.h>
 
@@ -42,7 +44,6 @@ class CallFrame;
 namespace Wasm {
 
 struct CompilationContext;
-class Instance;
 struct InternalFunction;
 struct ModuleInformation;
 class TypeDefinition;
@@ -52,7 +53,7 @@ struct UnlinkedWasmToWasmCall;
 using CreateJSWrapper = WTF::Function<std::unique_ptr<InternalFunction>(CCallHelpers&, const TypeDefinition&, Vector<UnlinkedWasmToWasmCall>*, const ModuleInformation&, MemoryMode, uint32_t)>;
 
 // Called as soon as an exception is detected. The return value is the PC to continue at.
-using ThrowWasmException = void* (*)(CallFrame*, Wasm::ExceptionType, Instance*);
+using ThrowWasmException = void* (*)(CallFrame*, Wasm::ExceptionType, JSWebAssemblyInstance*);
 
 } } // namespace JSC::Wasm
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -186,7 +186,7 @@ public class CustomColorDialog extends HBox {
 
     public void show() {
         if (dialog.getOwner() != null) {
-            // Workaround of RT-29871: Instead of just invoking fixPosition()
+            // Workaround of JDK-8091771: Instead of just invoking fixPosition()
             // here need to use listener that fixes dialog position once both
             // width and height are determined
             dialog.widthProperty().addListener(positionAdjuster);
@@ -245,7 +245,7 @@ public class CustomColorDialog extends HBox {
             return;
         }
 
-        // Math.max(0, ...) added for RT-34704 to ensure the dialog is at least 0 x 0
+        // Math.max(0, ...) added for JDK-8095542 to ensure the dialog is at least 0 x 0
         double minWidth = Math.max(0, computeMinWidth(getHeight()) + (dialog.getWidth() - customScene.getWidth()));
         double minHeight = Math.max(0, computeMinHeight(getWidth()) + (dialog.getHeight() - customScene.getHeight()));
         dialog.setMinWidth(minWidth);

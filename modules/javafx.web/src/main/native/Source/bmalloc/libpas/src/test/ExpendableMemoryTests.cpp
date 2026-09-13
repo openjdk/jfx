@@ -42,11 +42,11 @@ using namespace std;
 namespace {
 
 static const bmalloc_type theType = BMALLOC_TYPE_INITIALIZER(42, 2, "foo");
-pas_heap_ref theHeap = BMALLOC_HEAP_REF_INITIALIZER(&theType);
+pas_heap_ref theHeap = BMALLOC_HEAP_REF_INITIALIZER(&theType, pas_bmalloc_heap_ref_kind_non_compact);
 
 void testPayloadImpl(pas_heap_ref& heap, bool firstRun)
 {
-    void* object = bmalloc_iso_allocate(&heap);
+    void* object = bmalloc_iso_allocate(&heap, pas_non_compact_allocation_mode);
     CHECK(object);
     CHECK_EQUAL(bmalloc_get_allocation_size(object), 48);
 
@@ -58,23 +58,23 @@ void testPayloadImpl(pas_heap_ref& heap, bool firstRun)
         CHECK(!pas_large_expendable_memory_head);
     }
 
-    void* smallArray = bmalloc_iso_allocate_array_by_size(&heap, 100);
+    void* smallArray = bmalloc_iso_allocate_array_by_size(&heap, 100, pas_non_compact_allocation_mode);
     CHECK(smallArray);
     CHECK_EQUAL(bmalloc_get_allocation_size(smallArray), 112);
 
-    void* mediumArray = bmalloc_iso_allocate_array_by_size(&heap, 400);
+    void* mediumArray = bmalloc_iso_allocate_array_by_size(&heap, 400, pas_non_compact_allocation_mode);
     CHECK(mediumArray);
     CHECK_EQUAL(bmalloc_get_allocation_size(mediumArray), 400);
 
-    void* largeArray = bmalloc_iso_allocate_array_by_size(&heap, 2000);
+    void* largeArray = bmalloc_iso_allocate_array_by_size(&heap, 2000, pas_non_compact_allocation_mode);
     CHECK(largeArray);
-    CHECK_EQUAL(bmalloc_get_allocation_size(largeArray), 2016);
+    CHECK_EQUAL(bmalloc_get_allocation_size(largeArray), 2048);
 
-    void* largerArray = bmalloc_iso_allocate_array_by_size(&heap, 10000);
+    void* largerArray = bmalloc_iso_allocate_array_by_size(&heap, 10000, pas_non_compact_allocation_mode);
     CHECK(largerArray);
     CHECK_EQUAL(bmalloc_get_allocation_size(largerArray), 10752);
 
-    void* largestArray = bmalloc_iso_allocate_array_by_size(&heap, 100000);
+    void* largestArray = bmalloc_iso_allocate_array_by_size(&heap, 100000, pas_non_compact_allocation_mode);
     CHECK(largestArray);
     CHECK_EQUAL(bmalloc_get_allocation_size(largestArray), 100000);
 
@@ -197,7 +197,7 @@ void testSoManyHeaps()
     pas_scavenger_suspend();
 
     for (unsigned i = numHeaps; i--;)
-        heaps[i] = BMALLOC_HEAP_REF_INITIALIZER(&theType);
+        heaps[i] = BMALLOC_HEAP_REF_INITIALIZER(&theType, pas_bmalloc_heap_ref_kind_non_compact);
 
     for (unsigned i = 0; i < numHeaps; ++i)
         testPayloadImpl(heaps[i], !i);
@@ -222,7 +222,7 @@ void testRage(unsigned numHeaps, function<unsigned(unsigned)> allocationSize, un
     pas_primitive_heap_ref* heaps = new pas_primitive_heap_ref[numHeaps];
 
     for (unsigned i = numHeaps; i--;)
-        heaps[i] = BMALLOC_FLEX_HEAP_REF_INITIALIZER(new bmalloc_type(BMALLOC_TYPE_INITIALIZER(1, 1, "test")));
+        heaps[i] = BMALLOC_FLEX_HEAP_REF_INITIALIZER(new bmalloc_type(BMALLOC_TYPE_INITIALIZER(1, 1, "test")), pas_bmalloc_heap_ref_kind_non_compact);
 
     mutex lock;
     unsigned numThreadsDone = 0;
@@ -232,7 +232,7 @@ void testRage(unsigned numHeaps, function<unsigned(unsigned)> allocationSize, un
             for (unsigned j = 0; j < count; ++j) {
                 pas_primitive_heap_ref* heap = heaps + deterministicRandomNumber(numHeaps);
                 size_t size = allocationSize(j);
-                void* ptr = bmalloc_allocate_flex(heap, size);
+                void* ptr = bmalloc_allocate_flex(heap, size, pas_non_compact_allocation_mode);
                 CHECK(ptr);
                 CHECK_GREATER_EQUAL(bmalloc_get_allocation_size(ptr), size);
                 CHECK_EQUAL(bmalloc_get_heap(ptr),
@@ -257,15 +257,16 @@ void testRematerializeAfterSearchOfDecommitted()
     static constexpr unsigned someOtherSize = 5000;
 
     pas_primitive_heap_ref heapRef = BMALLOC_FLEX_HEAP_REF_INITIALIZER(
-        new bmalloc_type(BMALLOC_TYPE_INITIALIZER(1, 1, "test")));
+        new bmalloc_type(BMALLOC_TYPE_INITIALIZER(1, 1, "test")),
+        pas_bmalloc_heap_ref_kind_non_compact);
     pas_heap* heap = bmalloc_flex_heap_ref_get_heap(&heapRef);
 
-    void* ptr = bmalloc_allocate_flex(&heapRef, initialSize);
+    void* ptr = bmalloc_allocate_flex(&heapRef, initialSize, pas_non_compact_allocation_mode);
     CHECK_EQUAL(bmalloc_get_allocation_size(ptr), initialSize);
     CHECK_EQUAL(bmalloc_get_heap(ptr), heap);
     CHECK_EQUAL(heapRef.cached_index, pas_segregated_heap_index_for_size(initialSize, BMALLOC_HEAP_CONFIG));
 
-    ptr = bmalloc_allocate_flex(&heapRef, size);
+    ptr = bmalloc_allocate_flex(&heapRef, size, pas_non_compact_allocation_mode);
     CHECK_EQUAL(bmalloc_get_allocation_size(ptr), size);
     CHECK_EQUAL(bmalloc_get_heap(ptr), heap);
 
@@ -273,36 +274,34 @@ void testRematerializeAfterSearchOfDecommitted()
         reinterpret_cast<uintptr_t>(ptr), &bmalloc_heap_config);
     pas_segregated_size_directory* directory = pas_segregated_view_get_size_directory(view);
 
-    pas_segregated_heap_medium_directory_tuple* tuple =
+    pas_segregated_heap_medium_directory_result result =
         pas_segregated_heap_medium_directory_tuple_for_index(
             &heap->segregated_heap,
             pas_segregated_heap_index_for_size(size, BMALLOC_HEAP_CONFIG),
             pas_segregated_heap_medium_size_directory_search_within_size_class_progression,
             pas_lock_is_not_held);
 
-    CHECK(tuple);
-    CHECK_EQUAL(pas_compact_atomic_segregated_size_directory_ptr_load(&tuple->directory),
-                directory);
+    CHECK_EQUAL(result.directory, directory);
 
     pas_scavenger_fake_decommit_expendable_memory();
 
-    tuple->begin_index = 0;
+    result.tuple_unsafe_without_lock->begin_index = 0;
 
-    pas_segregated_heap_medium_directory_tuple* someOtherTuple =
+    pas_segregated_heap_medium_directory_result someOtherResult =
         pas_segregated_heap_medium_directory_tuple_for_index(
             &heap->segregated_heap,
             pas_segregated_heap_index_for_size(someOtherSize, BMALLOC_HEAP_CONFIG),
             pas_segregated_heap_medium_size_directory_search_within_size_class_progression,
             pas_lock_is_not_held);
 
-    if (someOtherTuple) {
-        cout << "Unexpectedly found a tuple: " << someOtherTuple << "\n";
+    if (someOtherResult.tuple_unsafe_without_lock) {
+        cout << "Unexpectedly found a tuple: " << someOtherResult.tuple_unsafe_without_lock << "\n";
         cout << "It points at directory = "
-             << pas_compact_atomic_segregated_size_directory_ptr_load(&someOtherTuple->directory) << "\n";
+             << someOtherResult.directory << "\n";
         cout << "Our original directory is = " << directory << "\n";
     }
 
-    CHECK(!someOtherTuple);
+    CHECK(!someOtherResult.tuple_unsafe_without_lock);
 }
 
 void testBasicSizeClass(unsigned firstSize, unsigned secondSize)
@@ -310,14 +309,15 @@ void testBasicSizeClass(unsigned firstSize, unsigned secondSize)
     static constexpr bool verbose = false;
 
     pas_primitive_heap_ref heapRef = BMALLOC_FLEX_HEAP_REF_INITIALIZER(
-        new bmalloc_type(BMALLOC_TYPE_INITIALIZER(1, 1, "test")));
+        new bmalloc_type(BMALLOC_TYPE_INITIALIZER(1, 1, "test")),
+        pas_bmalloc_heap_ref_kind_non_compact);
 
     if (verbose)
         cout << "Allocating " << firstSize << "\n";
-    void* ptr = bmalloc_allocate_flex(&heapRef, firstSize);
+    void* ptr = bmalloc_allocate_flex(&heapRef, firstSize, pas_non_compact_allocation_mode);
     if (verbose)
         cout << "Allocating " << secondSize << "\n";
-    bmalloc_allocate_flex(&heapRef, secondSize);
+    bmalloc_allocate_flex(&heapRef, secondSize, pas_non_compact_allocation_mode);
 
     if (verbose)
         cout << "Doing some checks.\n";

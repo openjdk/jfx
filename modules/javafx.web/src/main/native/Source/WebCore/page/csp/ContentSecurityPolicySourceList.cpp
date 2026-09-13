@@ -29,13 +29,13 @@
 
 #include "ContentSecurityPolicy.h"
 #include "ContentSecurityPolicyDirectiveNames.h"
-#include "ParsingUtilities.h"
-#include "PublicSuffix.h"
+#include "PublicSuffixStore.h"
 #include <pal/text/TextEncoding.h>
 #include <wtf/ASCIICType.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/URL.h>
 #include <wtf/text/Base64.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringParsingBuffer.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
@@ -100,7 +100,7 @@ template<typename CharacterType> static bool isSourceListNone(StringParsingBuffe
 ContentSecurityPolicySourceList::ContentSecurityPolicySourceList(const ContentSecurityPolicy& policy, const String& directiveName)
     : m_policy(policy)
     , m_directiveName(directiveName)
-    , m_contentSecurityPolicyModeForExtension(m_policy.contentSecurityPolicyModeForExtension())
+    , m_contentSecurityPolicyModeForExtension(policy.contentSecurityPolicyModeForExtension())
 {
 }
 
@@ -118,11 +118,11 @@ void ContentSecurityPolicySourceList::parse(const String& value)
 
 bool ContentSecurityPolicySourceList::isProtocolAllowedByStar(const URL& url) const
 {
-    if (m_policy.allowContentSecurityPolicySourceStarToMatchAnyProtocol())
+    if (m_policy->allowContentSecurityPolicySourceStarToMatchAnyProtocol())
         return true;
 
     // This is counter to the CSP3 spec which only allows HTTPS but Chromium also allows it.
-    bool isAllowed = url.protocolIsInHTTPFamily() || url.protocolIs("ws"_s) || url.protocolIs("wss"_s) || url.protocolIs(m_policy.selfProtocol());
+    bool isAllowed = url.protocolIsInHTTPFamily() || url.protocolIs("ws"_s) || url.protocolIs("wss"_s) || url.protocolIs(m_policy->selfProtocol());
     // Also not allowed by the Content Security Policy Level 3 spec., we allow a data URL to match
     // "img-src *" and either a data URL or blob URL to match "media-src *" for web compatibility.
     if (equalIgnoringASCIICase(m_directiveName, ContentSecurityPolicyDirectiveNames::imgSrc))
@@ -137,7 +137,7 @@ bool ContentSecurityPolicySourceList::matches(const URL& url, bool didReceiveRed
     if (m_allowStar && isProtocolAllowedByStar(url))
         return true;
 
-    if (m_allowSelf && m_policy.urlMatchesSelf(url, equalIgnoringASCIICase(m_directiveName, ContentSecurityPolicyDirectiveNames::frameSrc)
+    if (m_allowSelf && m_policy->urlMatchesSelf(url, equalIgnoringASCIICase(m_directiveName, ContentSecurityPolicyDirectiveNames::frameSrc)
 ))
         return true;
 
@@ -205,11 +205,6 @@ static bool isRestrictedDirectiveForMode(const String& directive, ContentSecurit
 
 bool ContentSecurityPolicySourceList::isValidSourceForExtensionMode(const ContentSecurityPolicySourceList::Source& parsedSource)
 {
-    bool hostIsPublicSuffix = false;
-#if ENABLE(PUBLIC_SUFFIX_LIST)
-    hostIsPublicSuffix = isPublicSuffix(parsedSource.host.value);
-#endif
-
     switch (m_contentSecurityPolicyModeForExtension) {
     case ContentSecurityPolicyModeForExtension::None:
         return true;
@@ -217,7 +212,7 @@ bool ContentSecurityPolicySourceList::isValidSourceForExtensionMode(const Conten
         if (!isRestrictedDirectiveForMode(m_directiveName, ContentSecurityPolicyModeForExtension::ManifestV2))
             return true;
 
-        if (parsedSource.host.hasWildcard && hostIsPublicSuffix)
+        if (parsedSource.host.hasWildcard && PublicSuffixStore::singleton().isPublicSuffix(parsedSource.host.value))
             return false;
 
         if (equalLettersIgnoringASCIICase(parsedSource.scheme, "blob"_s))
@@ -251,10 +246,10 @@ template<typename CharacterType> void ContentSecurityPolicySourceList::parse(Str
         if (buffer.atEnd())
             return;
 
-        auto beginSource = buffer.position();
+        auto beginSource = buffer.span();
         skipWhile<isSourceCharacter>(buffer);
 
-        auto sourceBuffer = StringParsingBuffer { beginSource, buffer.position() };
+        StringParsingBuffer sourceBuffer(beginSource.first(buffer.position() - beginSource.data()));
 
         if (parseNonceSource(sourceBuffer))
             continue;
@@ -269,11 +264,11 @@ template<typename CharacterType> void ContentSecurityPolicySourceList::parse(Str
             if (source->scheme.isEmpty() && source->host.value.isEmpty())
                 continue;
             if (isCSPDirectiveName(source->host.value))
-                m_policy.reportDirectiveAsSourceExpression(m_directiveName, source->host.value);
+                m_policy->reportDirectiveAsSourceExpression(m_directiveName, source->host.value);
             if (isValidSourceForExtensionMode(source.value()))
                 m_list.append(ContentSecurityPolicySource(m_policy, source->scheme.convertToASCIILowercase(), source->host.value.toString(), source->port.value, source->path, source->host.hasWildcard, source->port.hasWildcard, IsSelfSource::No));
         } else
-            m_policy.reportInvalidSourceExpression(m_directiveName, String(beginSource, buffer.position() - beginSource));
+            m_policy->reportInvalidSourceExpression(m_directiveName, beginSource.first(buffer.position() - beginSource.data()));
 
         ASSERT(buffer.atEnd() || isUnicodeCompatibleASCIIWhitespace(*buffer));
     }
@@ -326,7 +321,12 @@ template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::
         return source;
     }
 
-    if (skipExactlyIgnoringASCIICase(buffer, "'wasm-unsafe-eval'"_s) && extensionModeAllowsKeywordsForDirective(m_contentSecurityPolicyModeForExtension, m_directiveName)) {
+    if (skipExactlyIgnoringASCIICase(buffer, "'trusted-types-eval'"_s) && extensionModeAllowsKeywordsForDirective(m_contentSecurityPolicyModeForExtension, m_directiveName)) {
+        m_allowTrustedEval = true;
+        return source;
+    }
+
+    if (skipExactlyIgnoringASCIICase(buffer, "'wasm-unsafe-eval'"_s)) {
         m_allowWasmEval = true;
         return source;
     }
@@ -341,40 +341,55 @@ template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::
         return source;
     }
 
+    if (skipExactlyIgnoringASCIICase(buffer, "'report-sha256'"_s) && extensionModeAllowsKeywordsForDirective(m_contentSecurityPolicyModeForExtension, m_directiveName)) {
+        m_reportHash |= static_cast<HashAlgorithmSet>(ResourceCryptographicDigest::Algorithm::SHA256);
+        return source;
+    }
+
+    if (skipExactlyIgnoringASCIICase(buffer, "'report-sha384'"_s) && extensionModeAllowsKeywordsForDirective(m_contentSecurityPolicyModeForExtension, m_directiveName)) {
+        m_reportHash |= static_cast<HashAlgorithmSet>(ResourceCryptographicDigest::Algorithm::SHA384);
+        return source;
+    }
+
+    if (skipExactlyIgnoringASCIICase(buffer, "'report-sha512'"_s) && extensionModeAllowsKeywordsForDirective(m_contentSecurityPolicyModeForExtension, m_directiveName)) {
+        m_reportHash |= static_cast<HashAlgorithmSet>(ResourceCryptographicDigest::Algorithm::SHA512);
+        return source;
+    }
+
     if (m_allowNonParserInsertedScripts)
         return source;
 
-    auto begin = buffer.position();
+    auto begin = buffer.span();
     auto beginHost = begin;
-    auto beginPath = buffer.end();
-    const CharacterType* beginPort = nullptr;
+    auto beginPath = begin.subspan(begin.size());
+    std::span<const CharacterType> beginPort;
 
     skipWhile<isNotColonOrSlash>(buffer);
 
     if (buffer.atEnd()) {
         // host
         //     ^
-        auto host = parseHost(StringParsingBuffer { beginHost, buffer.position() });
+        auto host = parseHost(beginHost.first(buffer.position() - beginHost.data()));
         if (!host)
             return std::nullopt;
 
-        source.host = WTFMove(*host);
+        source.host = WTF::move(*host);
         return source;
     }
 
     if (buffer.hasCharactersRemaining() && *buffer == '/') {
         // host/path || host/ || /
         //     ^            ^    ^
-        auto host = parseHost(StringParsingBuffer { beginHost, buffer.position() });
+        auto host = parseHost(beginHost.first(buffer.position() - beginHost.data()));
         if (!host)
             return std::nullopt;
 
-        auto path = parsePath(buffer);
+        auto path = parsePath(buffer.span());
         if (!path)
             return std::nullopt;
 
-        source.host = WTFMove(*host);
-        source.path = WTFMove(path);
+        source.host = WTF::move(*host);
+        source.path = WTF::move(path);
         return source;
     }
 
@@ -382,18 +397,18 @@ template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::
         if (buffer.lengthRemaining() == 1) {
             // scheme:
             //       ^
-            auto scheme = parseScheme(StringParsingBuffer { begin, buffer.position() });
+            auto scheme = parseScheme(StringParsingBuffer(begin.first(buffer.position() - begin.data())));
             if (!scheme)
                 return std::nullopt;
 
-            source.scheme = WTFMove(scheme);
+            source.scheme = WTF::move(scheme);
             return source;
         }
 
         if (buffer[1] == '/') {
             // scheme://host || scheme://
             //       ^                ^
-            auto scheme = parseScheme(StringParsingBuffer { begin, buffer.position() });
+            auto scheme = parseScheme(StringParsingBuffer(begin.first(buffer.position() - begin.data())));
             if (!scheme
                 || !skipExactly(buffer, ':')
                 || !skipExactly(buffer, '/')
@@ -402,16 +417,16 @@ template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::
             if (buffer.atEnd())
                 return std::nullopt;
 
-            source.scheme = WTFMove(scheme);
+            source.scheme = WTF::move(scheme);
 
-            beginHost = buffer.position();
+            beginHost = buffer.span();
             skipWhile<isNotColonOrSlash>(buffer);
         }
 
         if (buffer.hasCharactersRemaining() && *buffer == ':') {
             // host:port || scheme://host:port
             //     ^                     ^
-            beginPort = buffer.position();
+            beginPort = buffer.span();
             skipUntil(buffer, '/');
         }
     }
@@ -419,33 +434,33 @@ template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::
     if (buffer.hasCharactersRemaining() && *buffer == '/') {
         // scheme://host/path || scheme://host:port/path
         //              ^                          ^
-        if (buffer.position() == beginHost)
+        if (buffer.position() == beginHost.data())
             return std::nullopt;
 
-        beginPath = buffer.position();
+        beginPath = buffer.span();
     }
 
-    auto host = parseHost(StringParsingBuffer { beginHost, beginPort ? beginPort : beginPath });
+    auto host = parseHost(beginHost.first((beginPort.data() ? beginPort.data() : beginPath.data()) - beginHost.data()));
     if (!host)
         return std::nullopt;
 
-    if (beginPort) {
-        auto port = parsePort(StringParsingBuffer { beginPort, beginPath });
+    if (beginPort.data()) {
+        auto port = parsePort(beginPort.first(beginPath.data() - beginPort.data()));
         if (!port)
             return std::nullopt;
 
-        source.port = WTFMove(*port);
+        source.port = WTF::move(*port);
     }
 
-    if (beginPath != buffer.end()) {
-        auto path = parsePath(StringParsingBuffer { beginPath, buffer.end() });
+    if (!beginPath.empty()) {
+        auto path = parsePath(beginPath);
         if (!path)
             return std::nullopt;
 
-        source.path = WTFMove(path);
+        source.path = WTF::move(path);
     }
 
-    source.host = WTFMove(*host);
+    source.host = WTF::move(*host);
     return source;
 }
 
@@ -459,7 +474,7 @@ template<typename CharacterType> StringView ContentSecurityPolicySourceList::par
     if (buffer.atEnd())
         return { };
 
-    auto begin = buffer.position();
+    auto begin = buffer.span();
 
     if (!skipExactly<isASCIIAlpha>(buffer))
         return { };
@@ -469,15 +484,16 @@ template<typename CharacterType> StringView ContentSecurityPolicySourceList::par
     if (!buffer.atEnd())
         return { };
 
-    return StringView(begin, buffer.position() - begin);
+    return begin.first(buffer.position() - begin.data());
 }
 
 // host              = [ "*." ] 1*host-char *( "." 1*host-char )
 //                   / "*"
 // host-char         = ALPHA / DIGIT / "-"
 //
-template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::Host> ContentSecurityPolicySourceList::parseHost(StringParsingBuffer<CharacterType> buffer)
+template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::Host> ContentSecurityPolicySourceList::parseHost(std::span<const CharacterType> span)
 {
+    StringParsingBuffer buffer { span };
     ASSERT(buffer.position() <= buffer.end());
 
     if (buffer.atEnd())
@@ -495,7 +511,7 @@ template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::
             return std::nullopt;
     }
 
-    auto hostBegin = buffer.position();
+    auto hostBegin = buffer.span();
 
     while (buffer.hasCharactersRemaining()) {
         if (!skipExactly<isHostCharacter>(buffer))
@@ -508,31 +524,33 @@ template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::
     }
 
     ASSERT(buffer.atEnd());
-    host.value = StringView(hostBegin, buffer.position() - hostBegin);
+    host.value = hostBegin.first(buffer.position() - hostBegin.data());
     return host;
 }
 
-template<typename CharacterType> String ContentSecurityPolicySourceList::parsePath(StringParsingBuffer<CharacterType> buffer)
+template<typename CharacterType> String ContentSecurityPolicySourceList::parsePath(std::span<const CharacterType> span)
 {
+    StringParsingBuffer buffer { span };
     ASSERT(buffer.position() <= buffer.end());
 
-    auto begin = buffer.position();
+    auto begin = buffer.span();
     skipWhile<isPathComponentCharacter>(buffer);
     // path/to/file.js?query=string || path/to/file.js#anchor
     //                ^                               ^
     if (buffer.hasCharactersRemaining())
-        m_policy.reportInvalidPathCharacter(m_directiveName, String(begin, buffer.end() - begin), *buffer);
+        m_policy->reportInvalidPathCharacter(m_directiveName, begin, *buffer);
 
     ASSERT(buffer.position() <= buffer.end());
     ASSERT(buffer.atEnd() || (*buffer == '#' || *buffer == '?'));
 
-    return PAL::decodeURLEscapeSequences(StringView(begin, buffer.position() - begin));
+    return String(begin.first(buffer.position() - begin.data()));
 }
 
 // port              = ":" ( 1*DIGIT / "*" )
 //
-template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::Port> ContentSecurityPolicySourceList::parsePort(StringParsingBuffer<CharacterType> buffer)
+template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::Port> ContentSecurityPolicySourceList::parsePort(std::span<const CharacterType> span)
 {
+    StringParsingBuffer buffer { span };
     ASSERT(buffer.position() <= buffer.end());
 
     if (!skipExactly(buffer, ':'))
@@ -547,14 +565,14 @@ template<typename CharacterType> std::optional<ContentSecurityPolicySourceList::
         return port;
     }
 
-    auto begin = buffer.position();
+    auto begin = buffer.span();
     skipWhile<isASCIIDigit>(buffer);
 
     if (!buffer.atEnd())
         return std::nullopt;
 
-    unsigned length = buffer.position() - begin;
-    auto portInteger = parseInteger<uint16_t>({ begin, length }).value_or(0);
+    unsigned length = buffer.position() - begin.data();
+    auto portInteger = parseInteger<uint16_t>(begin.first(length)).value_or(0);
     if (!portInteger)
         return std::nullopt;
 
@@ -578,12 +596,12 @@ template<typename CharacterType> bool ContentSecurityPolicySourceList::parseNonc
     if (!skipExactlyIgnoringASCIICase(buffer, "'nonce-"_s))
         return false;
 
-    auto beginNonceValue = buffer.position();
+    auto beginNonceValue = buffer.span();
     skipWhile<isNonceCharacter>(buffer);
-    if (buffer.atEnd() || buffer.position() == beginNonceValue || *buffer != '\'')
+    if (buffer.atEnd() || buffer.position() == beginNonceValue.data() || *buffer != '\'')
         return false;
     if (extensionModeAllowsKeywordsForDirective(m_contentSecurityPolicyModeForExtension, m_directiveName))
-        m_nonces.add(String(beginNonceValue, buffer.position() - beginNonceValue));
+        m_nonces.add(beginNonceValue.first(buffer.position() - beginNonceValue.data()));
     return true;
 }
 
@@ -610,7 +628,7 @@ template<typename CharacterType> bool ContentSecurityPolicySourceList::parseHash
 
     if (extensionModeAllowsKeywordsForDirective(m_contentSecurityPolicyModeForExtension, m_directiveName)) {
         m_hashAlgorithmsUsed.add(digest->algorithm);
-        m_hashes.add(WTFMove(*digest));
+        m_hashes.add(WTF::move(*digest));
     }
     return true;
 }

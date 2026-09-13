@@ -21,6 +21,7 @@
 
 #include "ActiveDOMObject.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "MediaQuery.h"
 #include "MediaQueryMatcher.h"
 
@@ -36,10 +37,15 @@ class MediaQueryEvaluator;
 // will be called whenever the value of the query changes.
 
 class MediaQueryList final : public RefCounted<MediaQueryList>, public EventTarget, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(MediaQueryList);
+    WTF_MAKE_TZONE_ALLOCATED(MediaQueryList);
 public:
     static Ref<MediaQueryList> create(Document&, MediaQueryMatcher&, MQ::MediaQueryList&&, bool matches);
     ~MediaQueryList();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     String media() const;
     bool matches();
@@ -51,22 +57,18 @@ public:
 
     void detachFromMatcher();
 
-    using RefCounted::ref;
-    using RefCounted::deref;
-
 private:
     MediaQueryList(Document&, MediaQueryMatcher&, MQ::MediaQueryList&&, bool matches);
 
     void setMatches(bool);
 
-    EventTargetInterface eventTargetInterface() const final { return MediaQueryListEventTargetInterfaceType; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::MediaQueryList; }
+    ScriptExecutionContext* scriptExecutionContext() const final;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
     void eventListenersDidChange() final;
 
     // ActiveDOMObject.
-    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
     RefPtr<MediaQueryMatcher> m_matcher;
@@ -79,4 +81,6 @@ private:
     bool m_needsNotification { false };
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(MediaQueryList)

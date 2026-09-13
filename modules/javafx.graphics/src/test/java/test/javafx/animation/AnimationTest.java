@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,12 +35,14 @@ import javafx.animation.Animation.Status;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.util.Duration;
-import org.junit.After;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import org.junit.Before;
-import org.junit.Test;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class AnimationTest {
 
@@ -59,7 +61,7 @@ public class AnimationTest {
     private AnimationImpl animation;
     private ClipEnvelopeMock clipEnvelope;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         timer = new AbstractPrimaryTimerMock();
         clipEnvelope = new ClipEnvelopeMock();
@@ -68,7 +70,7 @@ public class AnimationTest {
         clipEnvelope.setAnimation(animation);
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         animation.stop();
     }
@@ -244,14 +246,18 @@ public class AnimationTest {
         assertEquals(0, clipEnvelope.getLastJumpTo());
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testJumpTo_Null() {
-        animation.jumpTo((Duration)null);
+        assertThrows(NullPointerException.class, () -> {
+            animation.jumpTo((Duration)null);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testJumpTo_UNKNOWN() {
-        animation.jumpTo(Duration.UNKNOWN);
+        assertThrows(IllegalArgumentException.class, () -> {
+            animation.jumpTo(Duration.UNKNOWN);
+        });
     }
 
     @Test
@@ -318,9 +324,11 @@ public class AnimationTest {
         assertEquals(Duration.ZERO, animation.getCurrentTime());
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testJumpToCuePoint_Null() {
-        animation.jumpTo((String)null);
+        assertThrows(NullPointerException.class, () -> {
+            animation.jumpTo((String)null);
+        });
     }
 
     @Test

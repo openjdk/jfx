@@ -29,26 +29,25 @@
 #pragma once
 
 #include "AccessibilityMockObject.h"
-#include "AccessibilityTable.h"
 #include "IntRect.h"
 
 namespace WebCore {
 
 class AccessibilityTableHeaderContainer final : public AccessibilityMockObject {
 public:
-    static Ref<AccessibilityTableHeaderContainer> create();
+    static Ref<AccessibilityTableHeaderContainer> create(AXID, AXObjectCache&);
     virtual ~AccessibilityTableHeaderContainer();
 
-    AccessibilityRole roleValue() const override { return AccessibilityRole::TableHeaderContainer; }
+    AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::TableHeaderContainer; }
 
-    void addChildren() override;
+    void addChildren() final;
 
-    LayoutRect elementRect() const override;
+    LayoutRect elementRect() const final;
 
 private:
-    AccessibilityTableHeaderContainer();
+    explicit AccessibilityTableHeaderContainer(AXID, AXObjectCache&);
 
-    bool computeAccessibilityIsIgnored() const override;
+    bool computeIsIgnored() const final;
 
     LayoutRect m_headerRect;
 };

@@ -26,25 +26,24 @@
 #include "config.h"
 #include "NavigatorWebDriver.h"
 
+#include "DocumentPage.h"
 #include "LocalFrame.h"
 #include "Navigator.h"
 #include "Page.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 using namespace JSC;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NavigatorWebDriver);
 
 NavigatorWebDriver::NavigatorWebDriver() = default;
 
 NavigatorWebDriver::~NavigatorWebDriver() = default;
 
-const char* NavigatorWebDriver::supplementName()
-{
-    return "NavigatorWebDriver";
-}
-
 bool NavigatorWebDriver::isControlledByAutomation(const Navigator& navigator)
 {
-    auto* frame = navigator.frame();
+    RefPtr frame = navigator.frame();
     if (!frame || !frame->page())
         return false;
 
@@ -53,11 +52,11 @@ bool NavigatorWebDriver::isControlledByAutomation(const Navigator& navigator)
 
 NavigatorWebDriver* NavigatorWebDriver::from(Navigator* navigator)
 {
-    NavigatorWebDriver* supplement = static_cast<NavigatorWebDriver*>(Supplement<Navigator>::from(navigator, supplementName()));
+    auto* supplement = downcast<NavigatorWebDriver>(Supplement<Navigator>::from(navigator, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<NavigatorWebDriver>();
         supplement = newSupplement.get();
-        provideTo(navigator, supplementName(), WTFMove(newSupplement));
+        provideTo(navigator, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }

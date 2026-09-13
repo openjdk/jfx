@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -49,30 +49,17 @@ public class Disposer implements Runnable {
 
     static {
         disposerInstance = new Disposer();
-
-        @SuppressWarnings("removal")
-        var dummy = java.security.AccessController.doPrivileged(
-            new java.security.PrivilegedAction<>() {
-                @Override
-                public Object run() {
-                    /* The thread must be a member of a thread group
-                     * which will not get GCed before VM exit.
-                     * Make its parent the top-level thread group.
-                     */
-                    ThreadGroup tg = Thread.currentThread().getThreadGroup();
-                    for (ThreadGroup tgn = tg;
-                         tgn != null;
-                         tg = tgn, tgn = tg.getParent());
-                    Thread t =
-                        new Thread(tg, disposerInstance, "Property Disposer");
-                    t.setContextClassLoader(null);
-                    t.setDaemon(true);
-                    t.setPriority(Thread.MAX_PRIORITY);
-                    t.start();
-                    return null;
-                }
-            }
-        );
+        /* The thread must be a member of a thread group
+         * which will not get GCed before VM exit.
+         * Make its parent the top-level thread group.
+         */
+        ThreadGroup tg = Thread.currentThread().getThreadGroup();
+        for (ThreadGroup tgn = tg; tgn != null; tg = tgn, tgn = tg.getParent());
+        Thread t = new Thread(tg, disposerInstance, "Property Disposer");
+        t.setContextClassLoader(null);
+        t.setDaemon(true);
+        t.setPriority(Thread.MAX_PRIORITY);
+        t.start();
     }
 
     /**

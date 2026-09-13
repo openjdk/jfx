@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,5 +25,34 @@
 
 #pragma once
 
-#include "HashMapImplInlines.h"
-#include "JSSet.h"
+#include <JavaScriptCore/JSSet.h>
+
+namespace JSC {
+
+inline Structure* JSSet::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
+{
+    return Structure::create(vm, globalObject, prototype, TypeInfo(JSSetType, StructureFlags), info());
+}
+
+ALWAYS_INLINE bool JSSet::isIteratorProtocolFastAndNonObservable()
+{
+    JSGlobalObject* globalObject = this->globalObject();
+    if (!globalObject->isSetPrototypeIteratorProtocolFastAndNonObservable())
+        return false;
+
+    VM& vm = globalObject->vm();
+    Structure* structure = this->structure();
+    // This is the fast case. Many sets will be an original set.
+    if (structure == globalObject->setStructure())
+        return true;
+
+    if (getPrototypeDirect() != globalObject->jsSetPrototype())
+        return false;
+
+    if (getDirectOffset(vm, vm.propertyNames->iteratorSymbol) != invalidOffset)
+        return false;
+
+    return true;
+}
+
+}

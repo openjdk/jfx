@@ -25,11 +25,11 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "ActiveDOMObject.h"
 #include "ContextDestructionObserver.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
+#include "ScriptExecutionContext.h"
 #include "ServiceWorkerData.h"
 #include <JavaScriptCore/Strong.h>
 #include <wtf/RefCounted.h>
@@ -48,12 +48,17 @@ class SWClientConnection;
 struct StructuredSerializeOptions;
 
 class ServiceWorker final : public RefCounted<ServiceWorker>, public EventTarget, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(ServiceWorker);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(ServiceWorker, WEBCORE_EXPORT);
 public:
     using State = ServiceWorkerState;
     static Ref<ServiceWorker> getOrCreate(ScriptExecutionContext&, ServiceWorkerData&&);
 
-    virtual ~ServiceWorker();
+    WEBCORE_EXPORT virtual ~ServiceWorker();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     const URL& scriptURL() const { return m_data.scriptURL; }
 
@@ -67,31 +72,34 @@ public:
     ServiceWorkerRegistrationIdentifier registrationIdentifier() const { return m_data.registrationIdentifier; }
     WorkerType workerType() const { return m_data.type; }
 
-    using RefCounted::ref;
-    using RefCounted::deref;
-
     const ServiceWorkerData& data() const { return m_data; }
 
 private:
     ServiceWorker(ScriptExecutionContext&, ServiceWorkerData&&);
     void updatePendingActivityForEventDispatch();
 
-    EventTargetInterface eventTargetInterface() const final;
+    enum EventTargetInterfaceType eventTargetInterface() const final;
     ScriptExecutionContext* scriptExecutionContext() const final;
+    using ActiveDOMObject::protectedScriptExecutionContext;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
     // ActiveDOMObject.
-    const char* activeDOMObjectName() const final;
     void stop() final;
 
     SWClientConnection& swConnection();
+    Ref<SWClientConnection> protectedSWConnection();
 
     ServiceWorkerData m_data;
     bool m_isStopped { false };
     RefPtr<PendingActivity<ServiceWorker>> m_pendingActivityForEventDispatch;
 };
 
+inline ServiceWorker* ScriptExecutionContext::serviceWorker(ServiceWorkerIdentifier identifier)
+{
+    return m_serviceWorkers.get(identifier);
+}
+
 } // namespace WebCore
 
-#endif // ENABLE(SERVICE_WORKER)
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(ServiceWorker)

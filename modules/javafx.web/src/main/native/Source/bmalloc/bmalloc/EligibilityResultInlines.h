@@ -25,6 +25,12 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
+#if !BUSE(TZONE)
+
 #include "EligibilityResult.h"
 
 #if !BUSE(LIBPAS)
@@ -47,3 +53,6 @@ EligibilityResult<Config>::EligibilityResult(IsoPage<Config>* page)
 } // namespace bmalloc
 
 #endif
+#endif // !BUSE(TZONE)
+
+#endif // __cplusplus

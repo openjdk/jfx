@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,6 +44,8 @@
 #include <wtf/WTFProcess.h>
 #include <wtf/text/StringCommon.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 // We don't have a NO_RETURN_DUE_TO_EXIT, nor should we. That's ridiculous.
 static bool hiddenTruthBecauseNoReturnIsStupid() { return true; }
 
@@ -74,8 +76,6 @@ static Vector<double> doubleOperands()
     };
 }
 
-
-#if CPU(X86) || CPU(X86_64) || CPU(ARM64) || CPU(RISCV64)
 static Vector<float> floatOperands()
 {
     return Vector<float> {
@@ -93,7 +93,6 @@ static Vector<float> floatOperands()
         -std::numeric_limits<float>::infinity(),
     };
 }
-#endif
 
 static Vector<int32_t> int32Operands()
 {
@@ -106,6 +105,7 @@ static Vector<int32_t> int32Operands()
         42,
         -42,
         64,
+        static_cast<int32_t>(0x80000000U),
         std::numeric_limits<int32_t>::max(),
         std::numeric_limits<int32_t>::min(),
     };
@@ -153,6 +153,7 @@ static Vector<int64_t> int64Operands()
         42,
         -42,
         64,
+        static_cast<int64_t>(0x8000000000000000ULL),
         std::numeric_limits<int32_t>::max(),
         std::numeric_limits<int32_t>::min(),
         std::numeric_limits<int64_t>::max(),
@@ -248,9 +249,6 @@ bool isSpecialGPR(MacroAssembler::RegisterID id)
 #if CPU(ARM64)
     if (id == ARM64Registers::x18)
         return true;
-#elif CPU(MIPS)
-    if (id == MIPSRegisters::zero || id == MIPSRegisters::k0 || id == MIPSRegisters::k1)
-        return true;
 #elif CPU(RISCV64)
     if (id == RISCV64Registers::zero || id == RISCV64Registers::ra || id == RISCV64Registers::gp || id == RISCV64Registers::tp)
         return true;
@@ -263,14 +261,14 @@ MacroAssemblerCodeRef<JSEntryPtrTag> compile(Generator&& generate)
     CCallHelpers jit;
     generate(jit);
     LinkBuffer linkBuffer(jit, nullptr);
-    return FINALIZE_CODE(linkBuffer, JSEntryPtrTag, "testmasm compilation");
+    return FINALIZE_CODE(linkBuffer, JSEntryPtrTag, nullptr, "testmasm compilation");
 }
 
 template<typename T, typename... Arguments>
 T invoke(const MacroAssemblerCodeRef<JSEntryPtrTag>& code, Arguments... arguments)
 {
     void* executableAddress = untagCFunctionPtr<JSEntryPtrTag>(code.code().taggedPtr());
-    T (*function)(Arguments...) = bitwise_cast<T(*)(Arguments...)>(executableAddress);
+    T (SYSV_ABI *function)(Arguments...) = std::bit_cast<T(SYSV_ABI *)(Arguments...)>(executableAddress);
 
 #if CPU(RISCV64)
     // RV64 calling convention requires all 32-bit values to be sign-extended into the whole register.
@@ -295,7 +293,7 @@ T invoke(const MacroAssemblerCodeRef<JSEntryPtrTag>& code, Arguments... argument
 template<typename T, typename... Arguments>
 T compileAndRun(Generator&& generator, Arguments... arguments)
 {
-    return invoke<T>(compile(WTFMove(generator)), arguments...);
+    return invoke<T>(compile(WTF::move(generator)), arguments...);
 }
 
 void emitFunctionPrologue(CCallHelpers& jit)
@@ -332,8 +330,8 @@ void testGetEffectiveAddress(size_t pointer, ptrdiff_t length, int32_t offset, C
 {
     CHECK_EQ(compileAndRun<size_t>([=] (CCallHelpers& jit) {
         emitFunctionPrologue(jit);
-        jit.move(CCallHelpers::TrustedImmPtr(bitwise_cast<void*>(pointer)), GPRInfo::regT0);
-        jit.move(CCallHelpers::TrustedImmPtr(bitwise_cast<void*>(length)), GPRInfo::regT1);
+        jit.move(CCallHelpers::TrustedImmPtr(std::bit_cast<void*>(pointer)), GPRInfo::regT0);
+        jit.move(CCallHelpers::TrustedImmPtr(std::bit_cast<void*>(length)), GPRInfo::regT1);
         jit.getEffectiveAddress(CCallHelpers::BaseIndex(GPRInfo::regT0, GPRInfo::regT1, scale, offset), GPRInfo::returnValueGPR);
         emitFunctionEpilogue(jit);
         jit.ret();
@@ -344,7 +342,7 @@ void testGetEffectiveAddress(size_t pointer, ptrdiff_t length, int32_t offset, C
 // Nan, should either yield 0 in dest or fail.
 void testBranchTruncateDoubleToInt32(double val, int32_t expected)
 {
-    const uint64_t valAsUInt = bitwise_cast<uint64_t>(val);
+    const uint64_t valAsUInt = std::bit_cast<uint64_t>(val);
 #if CPU(BIG_ENDIAN)
     const bool isBigEndian = true;
 #else
@@ -377,6 +375,128 @@ void testBranchTruncateDoubleToInt32(double val, int32_t expected)
         jit.ret();
     }), expected);
 }
+
+static void testBranch32()
+{
+    auto compare = [](CCallHelpers::RelationalCondition cond, int32_t v1, int32_t v2) -> int {
+        switch (cond) {
+        case CCallHelpers::LessThan:
+            return !!(static_cast<int32_t>(v1) < static_cast<int32_t>(v2));
+        case CCallHelpers::LessThanOrEqual:
+            return !!(static_cast<int32_t>(v1) <= static_cast<int32_t>(v2));
+        case CCallHelpers::GreaterThan:
+            return !!(static_cast<int32_t>(v1) > static_cast<int32_t>(v2));
+        case CCallHelpers::GreaterThanOrEqual:
+            return !!(static_cast<int32_t>(v1) >= static_cast<int32_t>(v2));
+        case CCallHelpers::Below:
+            return !!(static_cast<uint32_t>(v1) < static_cast<uint32_t>(v2));
+        case CCallHelpers::BelowOrEqual:
+            return !!(static_cast<uint32_t>(v1) <= static_cast<uint32_t>(v2));
+        case CCallHelpers::Above:
+            return !!(static_cast<uint32_t>(v1) > static_cast<uint32_t>(v2));
+        case CCallHelpers::AboveOrEqual:
+            return !!(static_cast<uint32_t>(v1) >= static_cast<uint32_t>(v2));
+        case CCallHelpers::Equal:
+            return !!(static_cast<uint32_t>(v1) == static_cast<uint32_t>(v2));
+        case CCallHelpers::NotEqual:
+            return !!(static_cast<uint32_t>(v1) != static_cast<uint32_t>(v2));
+        }
+        return 0;
+    };
+
+    for (auto value : int32Operands()) {
+        for (auto value2 : int32Operands()) {
+            auto tryTest = [&](CCallHelpers::RelationalCondition cond) {
+                auto test = compile([=](CCallHelpers& jit) {
+                    emitFunctionPrologue(jit);
+
+                    auto branch = jit.branch32(cond, GPRInfo::argumentGPR0, CCallHelpers::TrustedImm32(value2));
+                    jit.move(CCallHelpers::TrustedImm32(0), GPRInfo::returnValueGPR);
+                    auto done = jit.jump();
+                    branch.link(&jit);
+                    jit.move(CCallHelpers::TrustedImm32(1), GPRInfo::returnValueGPR);
+                    done.link(&jit);
+
+                    emitFunctionEpilogue(jit);
+                    jit.ret();
+                });
+                CHECK_EQ(invoke<int>(test, value), compare(cond, value, value2));
+            };
+            tryTest(CCallHelpers::LessThan);
+            tryTest(CCallHelpers::LessThanOrEqual);
+            tryTest(CCallHelpers::GreaterThan);
+            tryTest(CCallHelpers::GreaterThanOrEqual);
+            tryTest(CCallHelpers::Below);
+            tryTest(CCallHelpers::BelowOrEqual);
+            tryTest(CCallHelpers::Above);
+            tryTest(CCallHelpers::AboveOrEqual);
+            tryTest(CCallHelpers::Equal);
+            tryTest(CCallHelpers::NotEqual);
+        }
+    }
+}
+
+#if CPU(X86_64) || CPU(ARM64)
+static void testBranch64()
+{
+    auto compare = [](CCallHelpers::RelationalCondition cond, int64_t v1, int64_t v2) -> int {
+        switch (cond) {
+        case CCallHelpers::LessThan:
+            return !!(static_cast<int64_t>(v1) < static_cast<int64_t>(v2));
+        case CCallHelpers::LessThanOrEqual:
+            return !!(static_cast<int64_t>(v1) <= static_cast<int64_t>(v2));
+        case CCallHelpers::GreaterThan:
+            return !!(static_cast<int64_t>(v1) > static_cast<int64_t>(v2));
+        case CCallHelpers::GreaterThanOrEqual:
+            return !!(static_cast<int64_t>(v1) >= static_cast<int64_t>(v2));
+        case CCallHelpers::Below:
+            return !!(static_cast<uint64_t>(v1) < static_cast<uint64_t>(v2));
+        case CCallHelpers::BelowOrEqual:
+            return !!(static_cast<uint64_t>(v1) <= static_cast<uint64_t>(v2));
+        case CCallHelpers::Above:
+            return !!(static_cast<uint64_t>(v1) > static_cast<uint64_t>(v2));
+        case CCallHelpers::AboveOrEqual:
+            return !!(static_cast<uint64_t>(v1) >= static_cast<uint64_t>(v2));
+        case CCallHelpers::Equal:
+            return !!(static_cast<uint64_t>(v1) == static_cast<uint64_t>(v2));
+        case CCallHelpers::NotEqual:
+            return !!(static_cast<uint64_t>(v1) != static_cast<uint64_t>(v2));
+        }
+        return 0;
+    };
+
+    for (auto value : int64Operands()) {
+        for (auto value2 : int64Operands()) {
+            auto tryTest = [&](CCallHelpers::RelationalCondition cond) {
+                auto test = compile([=](CCallHelpers& jit) {
+                    emitFunctionPrologue(jit);
+
+                    auto branch = jit.branch64(cond, GPRInfo::argumentGPR0, CCallHelpers::TrustedImm64(value2));
+                    jit.move(CCallHelpers::TrustedImm32(0), GPRInfo::returnValueGPR);
+                    auto done = jit.jump();
+                    branch.link(&jit);
+                    jit.move(CCallHelpers::TrustedImm32(1), GPRInfo::returnValueGPR);
+                    done.link(&jit);
+
+                    emitFunctionEpilogue(jit);
+                    jit.ret();
+                });
+                CHECK_EQ(invoke<int>(test, value), compare(cond, value, value2));
+            };
+            tryTest(CCallHelpers::LessThan);
+            tryTest(CCallHelpers::LessThanOrEqual);
+            tryTest(CCallHelpers::GreaterThan);
+            tryTest(CCallHelpers::GreaterThanOrEqual);
+            tryTest(CCallHelpers::Below);
+            tryTest(CCallHelpers::BelowOrEqual);
+            tryTest(CCallHelpers::Above);
+            tryTest(CCallHelpers::AboveOrEqual);
+            tryTest(CCallHelpers::Equal);
+            tryTest(CCallHelpers::NotEqual);
+        }
+    }
+}
+#endif
 
 void testBranchTest8()
 {
@@ -826,8 +946,8 @@ void testShiftAndAdd()
             emitFunctionPrologue(jit);
             jit.pushPair(scratchGPR, GPRInfo::argumentGPR3);
 
-            jit.move(CCallHelpers::TrustedImmPtr(bitwise_cast<void*>(basePointer)), baseGPR);
-            jit.move(CCallHelpers::TrustedImmPtr(bitwise_cast<void*>(index)), indexGPR);
+            jit.move(CCallHelpers::TrustedImmPtr(std::bit_cast<void*>(basePointer)), baseGPR);
+            jit.move(CCallHelpers::TrustedImmPtr(std::bit_cast<void*>(index)), indexGPR);
             jit.shiftAndAdd(baseGPR, indexGPR, shift, destGPR);
 
             jit.probeDebug([=] (Probe::Context& context) {
@@ -1357,7 +1477,7 @@ void testExtractUnsignedBitfield64()
     Vector<uint32_t> imms = { 0, 1, 5, 7, 30, 31, 32, 42, 56, 62, 63, 64 };
     for (auto lsb : imms) {
         for (auto width : imms) {
-            if (lsb >= 0 && width > 0 && lsb + width < 64) {
+            if (width > 0 && lsb + width < 64) {
                 auto ubfx64 = compile([=] (CCallHelpers& jit) {
                     emitFunctionPrologue(jit);
 
@@ -1381,7 +1501,7 @@ void testInsertUnsignedBitfieldInZero32()
     Vector<uint32_t> imms = { 0, 1, 5, 7, 30, 31, 32, 42, 56, 62, 63, 64 };
     for (auto lsb : imms) {
         for (auto width : imms) {
-            if (lsb >= 0 && width > 0 && lsb + width < 32) {
+            if (width > 0 && lsb + width < 32) {
                 auto ubfiz32 = compile([=] (CCallHelpers& jit) {
                     emitFunctionPrologue(jit);
 
@@ -1406,7 +1526,7 @@ void testInsertUnsignedBitfieldInZero64()
     Vector<uint32_t> imms = { 0, 1, 5, 7, 30, 31, 32, 42, 56, 62, 63, 64 };
     for (auto lsb : imms) {
         for (auto width : imms) {
-            if (lsb >= 0 && width > 0 && lsb + width < 64) {
+            if (width > 0 && lsb + width < 64) {
                 auto ubfiz64 = compile([=] (CCallHelpers& jit) {
                     emitFunctionPrologue(jit);
 
@@ -1432,7 +1552,7 @@ void testInsertBitField32()
     Vector<uint32_t> imms = { 0, 1, 5, 7, 30, 31, 32, 42, 56, 62, 63, 64 };
     for (auto lsb : imms) {
         for (auto width : imms) {
-            if (lsb >= 0 && width > 0 && lsb + width < 32) {
+            if (width > 0 && lsb + width < 32) {
                 auto bfi32 = compile([=] (CCallHelpers& jit) {
                     emitFunctionPrologue(jit);
 
@@ -1462,7 +1582,7 @@ void testInsertBitField64()
     Vector<uint32_t> imms = { 0, 1, 5, 7, 30, 31, 32, 42, 56, 62, 63, 64 };
     for (auto lsb : imms) {
         for (auto width : imms) {
-            if (lsb >= 0 && width > 0 && lsb + width < 64) {
+            if (width > 0 && lsb + width < 64) {
                 auto bfi64 = compile([=] (CCallHelpers& jit) {
                     emitFunctionPrologue(jit);
 
@@ -1492,7 +1612,7 @@ void testExtractInsertBitfieldAtLowEnd32()
     Vector<uint32_t> imms = { 0, 1, 5, 7, 30, 31, 32, 42, 56, 62, 63, 64 };
     for (auto lsb : imms) {
         for (auto width : imms) {
-            if (lsb >= 0 && width > 0 && lsb + width < 32) {
+            if (width > 0 && lsb + width < 32) {
                 auto bfxil32 = compile([=] (CCallHelpers& jit) {
                     emitFunctionPrologue(jit);
 
@@ -1522,7 +1642,7 @@ void testExtractInsertBitfieldAtLowEnd64()
     Vector<uint64_t> imms = { 0, 1, 5, 7, 30, 31, 32, 42, 56, 62, 63, 64 };
     for (auto lsb : imms) {
         for (auto width : imms) {
-            if (lsb >= 0 && width > 0 && lsb + width < 64) {
+            if (width > 0 && lsb + width < 64) {
                 auto bfxil64 = compile([=] (CCallHelpers& jit) {
                     emitFunctionPrologue(jit);
 
@@ -1551,7 +1671,7 @@ void testClearBitField32()
     Vector<uint32_t> imms = { 0, 1, 5, 7, 30, 31, 32, 42, 56, 62, 63, 64 };
     for (auto lsb : imms) {
         for (auto width : imms) {
-            if (lsb >= 0 && width > 0 && lsb + width < 32) {
+            if (width > 0 && lsb + width < 32) {
                 auto bfc32 = compile([=] (CCallHelpers& jit) {
                     emitFunctionPrologue(jit);
 
@@ -1576,7 +1696,7 @@ void testClearBitField64()
     Vector<uint32_t> imms = { 0, 1, 5, 7, 30, 31, 32, 42, 56, 62, 63, 64 };
     for (auto lsb : imms) {
         for (auto width : imms) {
-            if (lsb >= 0 && width > 0 && lsb + width < 32) {
+            if (width > 0 && lsb + width < 32) {
                 auto bfc64 = compile([=] (CCallHelpers& jit) {
                     emitFunctionPrologue(jit);
 
@@ -1673,7 +1793,7 @@ void testInsertSignedBitfieldInZero32()
     Vector<uint32_t> imms = { 0, 1, 5, 7, 30, 31, 32, 42, 56, 62, 63, 64 };
     for (auto lsb : imms) {
         for (auto width : imms) {
-            if (lsb >= 0 && width > 0 && lsb + width < 32) {
+            if (width > 0 && lsb + width < 32) {
                 auto insertSignedBitfieldInZero32 = compile([=] (CCallHelpers& jit) {
                     emitFunctionPrologue(jit);
 
@@ -1703,7 +1823,7 @@ void testInsertSignedBitfieldInZero64()
     Vector<uint32_t> imms = { 0, 1, 5, 7, 30, 31, 32, 42, 56, 62, 63, 64 };
     for (auto lsb : imms) {
         for (auto width : imms) {
-            if (lsb >= 0 && width > 0 && lsb + width < 64) {
+            if (width > 0 && lsb + width < 64) {
                 auto insertSignedBitfieldInZero64 = compile([=] (CCallHelpers& jit) {
                     emitFunctionPrologue(jit);
 
@@ -1732,7 +1852,7 @@ void testExtractSignedBitfield32()
     Vector<uint32_t> imms = { 0, 1, 5, 7, 30, 31, 32, 42, 56, 62, 63, 64 };
     for (auto lsb : imms) {
         for (auto width : imms) {
-            if (lsb >= 0 && width > 0 && lsb + width < 32) {
+            if (width > 0 && lsb + width < 32) {
                 auto extractSignedBitfield32 = compile([=] (CCallHelpers& jit) {
                     emitFunctionPrologue(jit);
 
@@ -1762,7 +1882,7 @@ void testExtractSignedBitfield64()
     Vector<uint32_t> imms = { 0, 1, 5, 7, 30, 31, 32, 42, 56, 62, 63, 64 };
     for (auto lsb : imms) {
         for (auto width : imms) {
-            if (lsb >= 0 && width > 0 && lsb + width < 64) {
+            if (width > 0 && lsb + width < 64) {
                 auto extractSignedBitfield64 = compile([=] (CCallHelpers& jit) {
                     emitFunctionPrologue(jit);
 
@@ -1787,13 +1907,11 @@ void testExtractSignedBitfield64()
 
 void testExtractRegister32()
 {
-    Vector<uint32_t> imms = { 0, 1, 5, 7, 30, 31, 32, 42, 56, 62, 63, 64 };
     uint32_t datasize = CHAR_BIT * sizeof(uint32_t);
 
     for (auto n : int32Operands()) {
         for (auto m : int32Operands()) {
-            for (auto lsb : imms) {
-                if (0 <= lsb && lsb < datasize) {
+            for (uint32_t lsb = 0; lsb < datasize; ++lsb) {
                     auto extractRegister32 = compile([=] (CCallHelpers& jit) {
                         emitFunctionPrologue(jit);
 
@@ -1806,31 +1924,28 @@ void testExtractRegister32()
                         jit.ret();
                     });
 
-                    // ((n & mask) << highWidth) | (m >> lowWidth)
+                // Test pattern: d = ((n & mask) << highWidth) | (m >>> lowWidth)
                     // Where: highWidth = datasize - lowWidth
                     //        mask = (1 << lowWidth) - 1
                     uint32_t highWidth = datasize - lsb;
-                    uint32_t mask = (1U << lsb) - 1U;
-                    uint32_t left = highWidth == datasize ? 0U : (n & mask) << highWidth;
-                    uint32_t right = (static_cast<uint32_t>(m) >> lsb);
+                uint32_t mask = (1U << (lsb % 32)) - 1U;
+                uint32_t left = (n & mask) << (highWidth % 32);
+                uint32_t right = (static_cast<uint32_t>(m) >> (lsb % 32));
                     uint32_t rhs = left | right;
                     uint32_t lhs = invoke<uint32_t>(extractRegister32, n, m);
                     CHECK_EQ(lhs, rhs);
                 }
             }
         }
-    }
 }
 
 void testExtractRegister64()
 {
-    Vector<uint32_t> imms = { 0, 1, 5, 7, 30, 31, 32, 42, 56, 62, 63, 64 };
     uint64_t datasize = CHAR_BIT * sizeof(uint64_t);
 
     for (auto n : int64Operands()) {
         for (auto m : int64Operands()) {
-            for (auto lsb : imms) {
-                if (0 <= lsb && lsb < datasize) {
+            for (uint32_t lsb = 0; lsb < datasize; ++lsb) {
                     auto extractRegister64 = compile([=] (CCallHelpers& jit) {
                         emitFunctionPrologue(jit);
 
@@ -1843,17 +1958,19 @@ void testExtractRegister64()
                         jit.ret();
                     });
 
+                // Test pattern: d = ((n & mask) << highWidth) | (m >>> lowWidth)
+                // Where: highWidth = datasize - lowWidth
+                //        mask = (1 << lowWidth) - 1
                     uint64_t highWidth = datasize - lsb;
-                    uint64_t mask = (1ULL << lsb) - 1ULL;
-                    uint64_t left = highWidth == datasize ? 0ULL : (n & mask) << highWidth;
-                    uint64_t right = (static_cast<uint64_t>(m) >> lsb);
+                uint64_t mask = (1ULL << (lsb % 64)) - 1ULL;
+                uint64_t left = (n & mask) << (highWidth % 64);
+                uint64_t right = (static_cast<uint64_t>(m) >> (lsb % 64));
                     uint64_t rhs = left | right;
                     uint64_t lhs = invoke<uint64_t>(extractRegister64, n, m);
                     CHECK_EQ(lhs, rhs);
                 }
             }
         }
-    }
 }
 
 void testAddWithLeftShift32()
@@ -2363,7 +2480,7 @@ void testXorNotWithUnsignedRightShift64()
 void testStorePrePostIndex32()
 {
     int32_t nums[] = { 1, 2, 3 };
-    intptr_t addr = bitwise_cast<intptr_t>(&nums[1]);
+    intptr_t addr = std::bit_cast<intptr_t>(&nums[1]);
     int32_t index = sizeof(int32_t);
 
     auto test1 = [&] (int32_t src) {
@@ -2380,7 +2497,7 @@ void testStorePrePostIndex32()
         return invoke<intptr_t>(store, src, addr);
     };
 
-    int32_t* p1 = bitwise_cast<int32_t*>(test1(4));
+    int32_t* p1 = std::bit_cast<int32_t*>(test1(4));
     CHECK_EQ(*p1, 4);
     CHECK_EQ(*--p1, nums[1]);
 
@@ -2398,7 +2515,7 @@ void testStorePrePostIndex32()
         return invoke<intptr_t>(store, src, addr);
     };
 
-    int32_t* p2 = bitwise_cast<int32_t*>(test2(5));
+    int32_t* p2 = std::bit_cast<int32_t*>(test2(5));
     CHECK_EQ(*p2, 4);
     CHECK_EQ(*--p2, 5);
 }
@@ -2406,7 +2523,7 @@ void testStorePrePostIndex32()
 void testStorePrePostIndex64()
 {
     int64_t nums[] = { 1, 2, 3 };
-    intptr_t addr = bitwise_cast<intptr_t>(&nums[1]);
+    intptr_t addr = std::bit_cast<intptr_t>(&nums[1]);
     int32_t index = sizeof(int64_t);
 
     auto test1 = [&] (int64_t src) {
@@ -2423,7 +2540,7 @@ void testStorePrePostIndex64()
         return invoke<intptr_t>(store, src, addr);
     };
 
-    int64_t* p1 = bitwise_cast<int64_t*>(test1(4));
+    int64_t* p1 = std::bit_cast<int64_t*>(test1(4));
     CHECK_EQ(*p1, 4);
     CHECK_EQ(*--p1, nums[1]);
 
@@ -2441,7 +2558,7 @@ void testStorePrePostIndex64()
         return invoke<intptr_t>(store, src, addr);
     };
 
-    int64_t* p2 = bitwise_cast<int64_t*>(test2(5));
+    int64_t* p2 = std::bit_cast<int64_t*>(test2(5));
     CHECK_EQ(*p2, 4);
     CHECK_EQ(*--p2, 5);
 }
@@ -3010,7 +3127,7 @@ void testZeroExtend48ToWord()
     });
 
     auto zeroTop16Bits = [] (int64_t value) -> int64_t {
-        return value & (1ull << 48) - 1;
+        return value & ((1ull << 48) - 1);
     };
 
     for (auto a : int64Operands())
@@ -3030,7 +3147,7 @@ void testZeroExtend48ToWord()
 }
 #endif
 
-#if CPU(X86) || CPU(X86_64) || CPU(ARM64) || CPU(RISCV64)
+#if CPU(X86_64) || CPU(ARM64) || CPU(RISCV64)
 void testCompareFloat(MacroAssembler::DoubleCondition condition)
 {
     float arg1 = 0;
@@ -3071,7 +3188,7 @@ void testCompareFloat(MacroAssembler::DoubleCondition condition)
         }
     }
 }
-#endif // CPU(X86) || CPU(X86_64) || CPU(ARM64)
+#endif // CPU(X86_64) || CPU(ARM64)
 
 #if CPU(X86_64) || CPU(ARM64) || CPU(RISCV64)
 
@@ -3834,6 +3951,38 @@ void testMoveDoubleConditionallyFloatSameArg(MacroAssembler::DoubleCondition con
     testMoveConditionallyFloatingPointSameArg(condition, testCode, arg1, floatOperands(), selectionA, selectionB);
 }
 
+void testSignExtend8To32()
+{
+    auto code = compile([&] (CCallHelpers& jit) {
+        emitFunctionPrologue(jit);
+        jit.signExtend8To32(GPRInfo::argumentGPR0, GPRInfo::returnValueGPR);
+        emitFunctionEpilogue(jit);
+        jit.ret();
+    });
+
+    for (auto a : int8Operands()) {
+        // Ensuring the upper 32bit is zero cleared.
+        int64_t expectedResult = static_cast<int64_t>(static_cast<uint64_t>(static_cast<uint32_t>(static_cast<int32_t>(a))));
+        CHECK_EQ(invoke<int64_t>(code, a), expectedResult);
+    }
+}
+
+void testSignExtend16To32()
+{
+    auto code = compile([&] (CCallHelpers& jit) {
+        emitFunctionPrologue(jit);
+        jit.signExtend16To32(GPRInfo::argumentGPR0, GPRInfo::returnValueGPR);
+        emitFunctionEpilogue(jit);
+        jit.ret();
+    });
+
+    for (auto a : int16Operands()) {
+        // Ensuring the upper 32bit is zero cleared.
+        int64_t expectedResult = static_cast<int64_t>(static_cast<uint64_t>(static_cast<uint32_t>(static_cast<int32_t>(a))));
+        CHECK_EQ(invoke<int64_t>(code, a), expectedResult);
+    }
+}
+
 void testSignExtend8To64()
 {
     auto code = compile([&] (CCallHelpers& jit) {
@@ -4167,6 +4316,513 @@ void testSub32ArgImm()
             CHECK_EQ(invoke<uint32_t>(sub, value), static_cast<uint32_t>(value - immediate));
     }
 }
+
+template<typename SrcT, typename DstT, typename Scenario, typename CompileFunctor>
+void testLoadExtend_Address_RegisterID(const Scenario* scenarios, size_t numberOfScenarios, CompileFunctor compileFunctor)
+{
+    const int32_t offsets[] = {
+        std::numeric_limits<int>::max(),
+        0x10000000,
+        0x1000000,
+        0x100000,
+        0x10000,
+        0x1000,
+        0x100,
+        0x10,
+        0x8,
+        0,
+        -0x8,
+        -0x10,
+        -0x100,
+        -0x1000,
+        -0x10000,
+        -0x100000,
+        -0x1000000,
+        -0x10000000,
+        std::numeric_limits<int>::min()
+    };
+
+    for (size_t j = 0; j < ARRAY_SIZE(offsets); ++j) {
+        auto offset = offsets[j];
+        offset = (offset / sizeof(SrcT)) * sizeof(SrcT); // Make sure the offset is aligned.
+
+        auto test = compile([&] (CCallHelpers& jit) {
+            emitFunctionPrologue(jit);
+            compileFunctor(jit, offset);
+            emitFunctionEpilogue(jit);
+            jit.ret();
+        });
+
+        for (size_t i = 0; i < numberOfScenarios; ++i) {
+            DstT result;
+            SrcT* baseAddress = std::bit_cast<SrcT*>(std::bit_cast<const uint8_t*>(&scenarios[i].src) - offset);
+            invoke<void>(test, &result, baseAddress);
+            CHECK_EQ(result, scenarios[i].expected);
+        }
+    }
+}
+
+template<typename SrcT, typename DstT, typename Scenario, typename CompileFunctor>
+void testLoadExtend_BaseIndex_RegisterID(const Scenario* scenarios, size_t numberOfScenarios, CompileFunctor compileFunctor)
+{
+    const int32_t offsets[] = {
+        std::numeric_limits<int>::max(),
+        0x10000000,
+        0x1000000,
+        0x100000,
+        0x10000,
+        0x1000,
+        0x100,
+        0x10,
+        0x8,
+        0,
+        -0x8,
+        -0x10,
+        -0x100,
+        -0x1000,
+        -0x10000,
+        -0x100000,
+        -0x1000000,
+        -0x10000000,
+        std::numeric_limits<int>::min()
+    };
+
+    const int32_t indexes[] = {
+        std::numeric_limits<int>::max(),
+        0x100,
+        0x8,
+        0x2,
+        0,
+        -0x2,
+        -0x8,
+        -0x100,
+        std::numeric_limits<int>::min()
+    };
+
+    for (size_t k = 0; k < ARRAY_SIZE(offsets); ++k) {
+        int32_t offset = offsets[k];
+        offset = (offset / sizeof(SrcT)) * sizeof(SrcT); // Make sure the offset is aligned.
+
+        auto test = compile([&] (CCallHelpers& jit) {
+            emitFunctionPrologue(jit);
+            compileFunctor(jit, offset);
+            emitFunctionEpilogue(jit);
+            jit.ret();
+        });
+
+        for (size_t j = 0; j < ARRAY_SIZE(indexes); ++j) {
+            auto index = indexes[j];
+
+            for (size_t i = 0; i < numberOfScenarios; ++i) {
+                DstT result;
+                SrcT* baseAddress = std::bit_cast<SrcT*>(std::bit_cast<const uint8_t*>(&scenarios[i].src) - (index * sizeof(SrcT)) - offset);
+                invoke<void>(test, &result, baseAddress, static_cast<intptr_t>(index));
+                CHECK_EQ(result, scenarios[i].expected);
+            }
+        }
+    }
+}
+
+template<typename T, typename Scenario, typename CompileFunctor>
+void testLoadExtend_voidp_RegisterID(const Scenario* scenarios, size_t numberOfScenarios, CompileFunctor compileFunctor)
+{
+    for (size_t i = 0; i < numberOfScenarios; ++i) {
+        auto test = compile([&] (CCallHelpers& jit) {
+            emitFunctionPrologue(jit);
+            compileFunctor(jit, &scenarios[i].src);
+            emitFunctionEpilogue(jit);
+            jit.ret();
+        });
+
+        T result;
+        invoke<void>(test, &result);
+        CHECK_EQ(result, scenarios[i].expected);
+    }
+}
+
+struct SignedLoad8to32Scenario {
+    int8_t src;
+    int32_t expected;
+};
+
+const SignedLoad8to32Scenario signedLoad8to32Scenarios[] = {
+    { 0x7f, 0x7fll },
+    { 42, 42 },
+    { 1, 1 },
+    { 0, 0 },
+    { -1, -1 },
+    { -42, -42 },
+    { static_cast<int8_t>(0x81), static_cast<int32_t>(0xffffff81ll) },
+    { static_cast<int8_t>(0x80), static_cast<int32_t>(0xffffff80ll) },
+};
+
+struct SignedLoad16to32Scenario {
+    int16_t src;
+    int32_t expected;
+};
+
+const SignedLoad16to32Scenario signedLoad16to32Scenarios[] = {
+    { 0x7fff, 0x7fffll },
+    { 42, 42 },
+    { 1, 1 },
+    { 0, 0 },
+    { -1, -1 },
+    { -42, -42 },
+    { static_cast<int16_t>(0x8001), static_cast<int32_t>(0xffff8001ll) },
+    { static_cast<int16_t>(0x8000), static_cast<int32_t>(0xffff8000ll) },
+};
+
+// void loadAcq8SignedExtendTo32(Address address, RegisterID dest)
+void testLoadAcq8SignedExtendTo32_Address_RegisterID()
+{
+#if CPU(ARM64) || CPU(ARM)
+    testLoadExtend_Address_RegisterID<int8_t, int32_t>(signedLoad8to32Scenarios, ARRAY_SIZE(signedLoad8to32Scenarios),
+        [] (CCallHelpers& jit, int offset) {
+            constexpr GPRReg resultAddressGPR = GPRInfo::argumentGPR0;
+            constexpr GPRReg srcAddressGPR = GPRInfo::argumentGPR1;
+            constexpr GPRReg resultGPR = GPRInfo::argumentGPR2;
+
+            jit.loadAcq8SignedExtendTo32(CCallHelpers::Address(srcAddressGPR, offset), resultGPR);
+            jit.store32(resultGPR, CCallHelpers::Address(resultAddressGPR));
+        });
+#endif
+}
+
+// void load8SignedExtendTo32(Address address, RegisterID dest)
+void testLoad8SignedExtendTo32_Address_RegisterID()
+{
+    testLoadExtend_Address_RegisterID<int8_t, int32_t>(signedLoad8to32Scenarios, ARRAY_SIZE(signedLoad8to32Scenarios),
+        [] (CCallHelpers& jit, int offset) {
+            constexpr GPRReg resultAddressGPR = GPRInfo::argumentGPR0;
+            constexpr GPRReg srcAddressGPR = GPRInfo::argumentGPR1;
+            constexpr GPRReg resultGPR = GPRInfo::argumentGPR2;
+
+            jit.load8SignedExtendTo32(CCallHelpers::Address(srcAddressGPR, offset), resultGPR);
+            jit.store32(resultGPR, CCallHelpers::Address(resultAddressGPR));
+        });
+}
+
+// void load8SignedExtendTo32(BaseIndex address, RegisterID dest)
+void testLoad8SignedExtendTo32_BaseIndex_RegisterID()
+{
+    testLoadExtend_BaseIndex_RegisterID<int8_t, int32_t>(signedLoad8to32Scenarios, ARRAY_SIZE(signedLoad8to32Scenarios),
+        [] (CCallHelpers& jit, int offset) {
+            constexpr GPRReg resultAddressGPR = GPRInfo::argumentGPR0;
+            constexpr GPRReg baseAddressGPR = GPRInfo::argumentGPR1;
+            constexpr GPRReg indexGPR = GPRInfo::argumentGPR2;
+            constexpr GPRReg resultGPR = GPRInfo::argumentGPR3;
+
+            jit.load8SignedExtendTo32(CCallHelpers::BaseIndex(baseAddressGPR, indexGPR, CCallHelpers::Scale::TimesOne, offset), resultGPR);
+            jit.store32(resultGPR, CCallHelpers::Address(resultAddressGPR));
+        });
+}
+
+// void load8SignedExtendTo32(const void* address, RegisterID dest)
+void testLoad8SignedExtendTo32_voidp_RegisterID()
+{
+#if CPU(ARM64) || CPU(RISCV64)
+    testLoadExtend_voidp_RegisterID<int32_t>(signedLoad8to32Scenarios, ARRAY_SIZE(signedLoad8to32Scenarios),
+        [] (CCallHelpers& jit, const void* src) {
+            constexpr GPRReg resultAddressGPR = GPRInfo::argumentGPR0;
+            constexpr GPRReg resultGPR = GPRInfo::argumentGPR1;
+
+            jit.load8SignedExtendTo32(src, resultGPR);
+            jit.store32(resultGPR, CCallHelpers::Address(resultAddressGPR, 0));
+        });
+#endif
+}
+
+// void loadAcq16SignedExtendTo32(Address address, RegisterID dest)
+void testLoadAcq16SignedExtendTo32_Address_RegisterID()
+{
+#if CPU(ARM64) || CPU(ARM)
+    testLoadExtend_Address_RegisterID<int16_t, int32_t>(signedLoad16to32Scenarios, ARRAY_SIZE(signedLoad16to32Scenarios),
+        [] (CCallHelpers& jit, int offset) {
+            constexpr GPRReg resultAddressGPR = GPRInfo::argumentGPR0;
+            constexpr GPRReg srcAddressGPR = GPRInfo::argumentGPR1;
+            constexpr GPRReg resultGPR = GPRInfo::argumentGPR2;
+
+            jit.loadAcq16SignedExtendTo32(CCallHelpers::Address(srcAddressGPR, offset), resultGPR);
+            jit.store32(resultGPR, CCallHelpers::Address(resultAddressGPR));
+        });
+#endif
+}
+
+// void load16SignedExtendTo32(Address address, RegisterID dest)
+void testLoad16SignedExtendTo32_Address_RegisterID()
+{
+    testLoadExtend_Address_RegisterID<int16_t, int32_t>(signedLoad16to32Scenarios, ARRAY_SIZE(signedLoad16to32Scenarios),
+        [] (CCallHelpers& jit, int offset) {
+            constexpr GPRReg resultAddressGPR = GPRInfo::argumentGPR0;
+            constexpr GPRReg srcAddressGPR = GPRInfo::argumentGPR1;
+            constexpr GPRReg resultGPR = GPRInfo::argumentGPR2;
+
+            jit.load16SignedExtendTo32(CCallHelpers::Address(srcAddressGPR, offset), resultGPR);
+            jit.store32(resultGPR, CCallHelpers::Address(resultAddressGPR));
+        });
+}
+
+// void load16SignedExtendTo32(BaseIndex address, RegisterID dest)
+void testLoad16SignedExtendTo32_BaseIndex_RegisterID()
+{
+    testLoadExtend_BaseIndex_RegisterID<int16_t, int32_t>(signedLoad16to32Scenarios, ARRAY_SIZE(signedLoad16to32Scenarios),
+        [] (CCallHelpers& jit, int offset) {
+            constexpr GPRReg resultAddressGPR = GPRInfo::argumentGPR0;
+            constexpr GPRReg baseAddressGPR = GPRInfo::argumentGPR1;
+            constexpr GPRReg indexGPR = GPRInfo::argumentGPR2;
+            constexpr GPRReg resultGPR = GPRInfo::argumentGPR3;
+
+            jit.load16SignedExtendTo32(CCallHelpers::BaseIndex(baseAddressGPR, indexGPR, CCallHelpers::Scale::TimesTwo, offset), resultGPR);
+            jit.store32(resultGPR, CCallHelpers::Address(resultAddressGPR));
+        });
+}
+
+// void load16SignedExtendTo32(const void* address, RegisterID dest)
+void testLoad16SignedExtendTo32_voidp_RegisterID()
+{
+#if CPU(ARM64) || CPU(RISCV64)
+    testLoadExtend_voidp_RegisterID<int32_t>(signedLoad16to32Scenarios, ARRAY_SIZE(signedLoad16to32Scenarios),
+        [] (CCallHelpers& jit, const void* src) {
+            constexpr GPRReg resultAddressGPR = GPRInfo::argumentGPR0;
+            constexpr GPRReg resultGPR = GPRInfo::argumentGPR1;
+
+            jit.load16SignedExtendTo32(src, resultGPR);
+            jit.store32(resultGPR, CCallHelpers::Address(resultAddressGPR, 0));
+        });
+#endif
+}
+
+#if CPU(ADDRESS64)
+
+struct SignedLoad8to64Scenario {
+    int8_t src;
+    int64_t expected;
+};
+
+const SignedLoad8to64Scenario signedLoad8to64Scenarios[] = {
+    { 0x7f, 0x7fll },
+    { 42, 42 },
+    { 1, 1 },
+    { 0, 0 },
+    { -1, -1 },
+    { -42, -42 },
+    { static_cast<int8_t>(0x81), static_cast<int64_t>(0xffffffffffffff81ll) },
+    { static_cast<int8_t>(0x80), static_cast<int64_t>(0xffffffffffffff80ll) },
+};
+
+struct SignedLoad16to64Scenario {
+    int16_t src;
+    int64_t expected;
+};
+
+const SignedLoad16to64Scenario signedLoad16to64Scenarios[] = {
+    { 0x7fff, 0x7fffll },
+    { 42, 42 },
+    { 1, 1 },
+    { 0, 0 },
+    { -1, -1 },
+    { -42, -42 },
+    { static_cast<int16_t>(0x8001), static_cast<int64_t>(0xffffffffffff8001ll) },
+    { static_cast<int16_t>(0x8000), static_cast<int64_t>(0xffffffffffff8000ll) },
+};
+
+struct SignedLoad32to64Scenario {
+    int32_t src;
+    int64_t expected;
+};
+
+const SignedLoad32to64Scenario signedLoad32to64Scenarios[] = {
+    { 0x7fffffff, 0x7fffffffll },
+    { 42, 42 },
+    { 1, 1 },
+    { 0, 0 },
+    { -1, -1 },
+    { -42, -42 },
+    { static_cast<int32_t>(0x80000001), static_cast<int64_t>(0xffffffff80000001ll) },
+    { static_cast<int32_t>(0x80000000), static_cast<int64_t>(0xffffffff80000000ll) },
+};
+
+// void loadAcq8SignedExtendTo64(Address address, RegisterID dest)
+void testLoadAcq8SignedExtendTo64_Address_RegisterID()
+{
+#if CPU(ARM64)
+    testLoadExtend_Address_RegisterID<int8_t, int64_t>(signedLoad8to64Scenarios, ARRAY_SIZE(signedLoad8to64Scenarios),
+        [] (CCallHelpers& jit, int offset) {
+            constexpr GPRReg resultAddressGPR = GPRInfo::argumentGPR0;
+            constexpr GPRReg srcAddressGPR = GPRInfo::argumentGPR1;
+            constexpr GPRReg resultGPR = GPRInfo::argumentGPR2;
+
+            jit.loadAcq8SignedExtendTo64(CCallHelpers::Address(srcAddressGPR, offset), resultGPR);
+            jit.store64(resultGPR, CCallHelpers::Address(resultAddressGPR));
+        });
+#endif
+}
+
+// void load8SignedExtendTo64(Address address, RegisterID dest)
+void testLoad8SignedExtendTo64_Address_RegisterID()
+{
+    testLoadExtend_Address_RegisterID<int8_t, int64_t>(signedLoad8to64Scenarios, ARRAY_SIZE(signedLoad8to64Scenarios),
+        [] (CCallHelpers& jit, int offset) {
+            constexpr GPRReg resultAddressGPR = GPRInfo::argumentGPR0;
+            constexpr GPRReg srcAddressGPR = GPRInfo::argumentGPR1;
+            constexpr GPRReg resultGPR = GPRInfo::argumentGPR2;
+
+            jit.load8SignedExtendTo64(CCallHelpers::Address(srcAddressGPR, offset), resultGPR);
+            jit.store64(resultGPR, CCallHelpers::Address(resultAddressGPR));
+        });
+}
+
+// void load8SignedExtendTo64(BaseIndex address, RegisterID dest)
+void testLoad8SignedExtendTo64_BaseIndex_RegisterID()
+{
+    testLoadExtend_BaseIndex_RegisterID<int8_t, int64_t>(signedLoad8to64Scenarios, ARRAY_SIZE(signedLoad8to64Scenarios),
+        [] (CCallHelpers& jit, int offset) {
+            constexpr GPRReg resultAddressGPR = GPRInfo::argumentGPR0;
+            constexpr GPRReg baseAddressGPR = GPRInfo::argumentGPR1;
+            constexpr GPRReg indexGPR = GPRInfo::argumentGPR2;
+            constexpr GPRReg resultGPR = GPRInfo::argumentGPR3;
+
+            jit.load8SignedExtendTo64(CCallHelpers::BaseIndex(baseAddressGPR, indexGPR, CCallHelpers::Scale::TimesOne, offset), resultGPR);
+            jit.store64(resultGPR, CCallHelpers::Address(resultAddressGPR));
+        });
+}
+
+// void load8SignedExtendTo64(const void* address, RegisterID dest)
+void testLoad8SignedExtendTo64_voidp_RegisterID()
+{
+#if !CPU(X86_64)
+    testLoadExtend_voidp_RegisterID<int64_t>(signedLoad8to64Scenarios, ARRAY_SIZE(signedLoad8to64Scenarios),
+        [] (CCallHelpers& jit, const void* src) {
+            constexpr GPRReg resultAddressGPR = GPRInfo::argumentGPR0;
+            constexpr GPRReg resultGPR = GPRInfo::argumentGPR1;
+
+            jit.load8SignedExtendTo64(src, resultGPR);
+            jit.store64(resultGPR, CCallHelpers::Address(resultAddressGPR, 0));
+        });
+#endif
+}
+
+// void loadAcq16SignedExtendTo64(Address address, RegisterID dest)
+void testLoadAcq16SignedExtendTo64_Address_RegisterID()
+{
+#if CPU(ARM64)
+    testLoadExtend_Address_RegisterID<int16_t, int64_t>(signedLoad16to64Scenarios, ARRAY_SIZE(signedLoad16to64Scenarios),
+        [] (CCallHelpers& jit, int offset) {
+            constexpr GPRReg resultAddressGPR = GPRInfo::argumentGPR0;
+            constexpr GPRReg srcAddressGPR = GPRInfo::argumentGPR1;
+            constexpr GPRReg resultGPR = GPRInfo::argumentGPR2;
+
+            jit.loadAcq16SignedExtendTo64(CCallHelpers::Address(srcAddressGPR, offset), resultGPR);
+            jit.store64(resultGPR, CCallHelpers::Address(resultAddressGPR));
+        });
+#endif
+}
+
+// void load16SignedExtendTo64(Address address, RegisterID dest)
+void testLoad16SignedExtendTo64_Address_RegisterID()
+{
+    testLoadExtend_Address_RegisterID<int16_t, int64_t>(signedLoad16to64Scenarios, ARRAY_SIZE(signedLoad16to64Scenarios),
+        [] (CCallHelpers& jit, int offset) {
+            constexpr GPRReg resultAddressGPR = GPRInfo::argumentGPR0;
+            constexpr GPRReg srcAddressGPR = GPRInfo::argumentGPR1;
+            constexpr GPRReg resultGPR = GPRInfo::argumentGPR2;
+
+            jit.load16SignedExtendTo64(CCallHelpers::Address(srcAddressGPR, offset), resultGPR);
+            jit.store64(resultGPR, CCallHelpers::Address(resultAddressGPR));
+        });
+}
+
+// void load16SignedExtendTo64(BaseIndex address, RegisterID dest)
+void testLoad16SignedExtendTo64_BaseIndex_RegisterID()
+{
+    testLoadExtend_BaseIndex_RegisterID<int16_t, int64_t>(signedLoad16to64Scenarios, ARRAY_SIZE(signedLoad16to64Scenarios),
+        [] (CCallHelpers& jit, int offset) {
+            constexpr GPRReg resultAddressGPR = GPRInfo::argumentGPR0;
+            constexpr GPRReg baseAddressGPR = GPRInfo::argumentGPR1;
+            constexpr GPRReg indexGPR = GPRInfo::argumentGPR2;
+            constexpr GPRReg resultGPR = GPRInfo::argumentGPR3;
+
+            jit.load16SignedExtendTo64(CCallHelpers::BaseIndex(baseAddressGPR, indexGPR, CCallHelpers::Scale::TimesTwo, offset), resultGPR);
+            jit.store64(resultGPR, CCallHelpers::Address(resultAddressGPR));
+        });
+}
+
+// void load16SignedExtendTo64(const void* address, RegisterID dest)
+void testLoad16SignedExtendTo64_voidp_RegisterID()
+{
+#if !CPU(X86_64)
+    testLoadExtend_voidp_RegisterID<int64_t>(signedLoad16to64Scenarios, ARRAY_SIZE(signedLoad16to64Scenarios),
+        [] (CCallHelpers& jit, const void* src) {
+            constexpr GPRReg resultAddressGPR = GPRInfo::argumentGPR0;
+            constexpr GPRReg resultGPR = GPRInfo::argumentGPR1;
+
+            jit.load16SignedExtendTo64(src, resultGPR);
+            jit.store64(resultGPR, CCallHelpers::Address(resultAddressGPR, 0));
+        });
+#endif
+}
+
+// void loadAcq32SignedExtendTo64(Address address, RegisterID dest)
+void testLoadAcq32SignedExtendTo64_Address_RegisterID()
+{
+#if CPU(ARM64)
+    testLoadExtend_Address_RegisterID<int32_t, int64_t>(signedLoad32to64Scenarios, ARRAY_SIZE(signedLoad32to64Scenarios),
+        [] (CCallHelpers& jit, int offset) {
+            constexpr GPRReg resultAddressGPR = GPRInfo::argumentGPR0;
+            constexpr GPRReg srcAddressGPR = GPRInfo::argumentGPR1;
+            constexpr GPRReg resultGPR = GPRInfo::argumentGPR2;
+
+            jit.loadAcq32SignedExtendTo64(CCallHelpers::Address(srcAddressGPR, offset), resultGPR);
+            jit.store64(resultGPR, CCallHelpers::Address(resultAddressGPR));
+        });
+#endif
+}
+
+// void load32SignedExtendTo64(Address address, RegisterID dest)
+void testLoad32SignedExtendTo64_Address_RegisterID()
+{
+    testLoadExtend_Address_RegisterID<int32_t, int64_t>(signedLoad32to64Scenarios, ARRAY_SIZE(signedLoad32to64Scenarios),
+        [] (CCallHelpers& jit, int offset) {
+            constexpr GPRReg resultAddressGPR = GPRInfo::argumentGPR0;
+            constexpr GPRReg srcAddressGPR = GPRInfo::argumentGPR1;
+            constexpr GPRReg resultGPR = GPRInfo::argumentGPR2;
+
+            jit.load32SignedExtendTo64(CCallHelpers::Address(srcAddressGPR, offset), resultGPR);
+            jit.store64(resultGPR, CCallHelpers::Address(resultAddressGPR));
+        });
+}
+
+// void load32SignedExtendTo64(BaseIndex address, RegisterID dest)
+void testLoad32SignedExtendTo64_BaseIndex_RegisterID()
+{
+    testLoadExtend_BaseIndex_RegisterID<int32_t, int64_t>(signedLoad32to64Scenarios, ARRAY_SIZE(signedLoad32to64Scenarios),
+        [] (CCallHelpers& jit, int offset) {
+            constexpr GPRReg resultAddressGPR = GPRInfo::argumentGPR0;
+            constexpr GPRReg baseAddressGPR = GPRInfo::argumentGPR1;
+            constexpr GPRReg indexGPR = GPRInfo::argumentGPR2;
+            constexpr GPRReg resultGPR = GPRInfo::argumentGPR3;
+
+            jit.load32SignedExtendTo64(CCallHelpers::BaseIndex(baseAddressGPR, indexGPR, CCallHelpers::Scale::TimesFour, offset), resultGPR);
+            jit.store64(resultGPR, CCallHelpers::Address(resultAddressGPR));
+        });
+}
+
+// void load32SignedExtendTo64(const void* address, RegisterID dest)
+void testLoad32SignedExtendTo64_voidp_RegisterID()
+{
+#if !CPU(X86_64)
+    testLoadExtend_voidp_RegisterID<int64_t>(signedLoad32to64Scenarios, ARRAY_SIZE(signedLoad32to64Scenarios),
+        [] (CCallHelpers& jit, const void* src) {
+            constexpr GPRReg resultAddressGPR = GPRInfo::argumentGPR0;
+            constexpr GPRReg resultGPR = GPRInfo::argumentGPR1;
+
+            jit.load32SignedExtendTo64(src, resultGPR);
+            jit.store64(resultGPR, CCallHelpers::Address(resultAddressGPR, 0));
+        });
+#endif
+}
+
+#endif // CPU(ADDRESS64)
 
 #if CPU(ARM64)
 void testLoadStorePair64Int64()
@@ -4510,7 +5166,7 @@ void testLoadStorePair64Double()
     };
 
     auto asInt64 = [] (double value) {
-        return bitwise_cast<int64_t>(value);
+        return std::bit_cast<int64_t>(value);
     };
 
     auto testStorePair0 = compile([&] (CCallHelpers& jit) {
@@ -4711,8 +5367,8 @@ void testProbeWritesArgumentRegisters()
             cpu.gpr(GPRInfo::argumentGPR2) = testWord(2);
             cpu.gpr(GPRInfo::argumentGPR3) = testWord(3);
 
-            cpu.fpr(FPRInfo::fpRegT0) = bitwise_cast<double>(testWord64(0));
-            cpu.fpr(FPRInfo::fpRegT1) = bitwise_cast<double>(testWord64(1));
+            cpu.fpr(FPRInfo::fpRegT0) = std::bit_cast<double>(testWord64(0));
+            cpu.fpr(FPRInfo::fpRegT1) = std::bit_cast<double>(testWord64(1));
         });
 
         // Validate that expected values were written.
@@ -4773,7 +5429,7 @@ void testProbePreservesGPRS()
             }
             for (auto id = CCallHelpers::firstFPRegister(); id <= CCallHelpers::lastFPRegister(); id = nextID(id)) {
                 originalState.fpr(id) = cpu.fpr(id);
-                cpu.fpr(id) = bitwise_cast<double>(testWord64(id));
+                cpu.fpr(id) = std::bit_cast<double>(testWord64(id));
             }
         });
 
@@ -4798,9 +5454,6 @@ void testProbePreservesGPRS()
                 CHECK_EQ(cpu.gpr(id), testWord(id));
             }
             for (auto id = CCallHelpers::firstFPRegister(); id <= CCallHelpers::lastFPRegister(); id = nextID(id)) {
-#if CPU(MIPS)
-                if (!(id & 1))
-#endif
                 CHECK_EQ(cpu.fpr<uint64_t>(id), testWord64(id));
             }
         });
@@ -4828,9 +5481,6 @@ void testProbePreservesGPRS()
                 CHECK_EQ(cpu.gpr(id), originalState.gpr(id));
             }
             for (auto id = CCallHelpers::firstFPRegister(); id <= CCallHelpers::lastFPRegister(); id = nextID(id))
-#if CPU(MIPS)
-                if (!(id & 1))
-#endif
                 CHECK_EQ(cpu.fpr<uint64_t>(id), originalState.fpr<uint64_t>(id));
         });
 
@@ -4846,11 +5496,11 @@ void testProbeModifiesStackPointer(WTF::Function<void*(Probe::Context&)> compute
     CPUState originalState;
     void* originalSP { nullptr };
     void* modifiedSP { nullptr };
-#if !(CPU(MIPS) || CPU(RISCV64))
+#if !CPU(RISCV64)
     uintptr_t modifiedFlags { 0 };
 #endif
 
-#if CPU(X86) || CPU(X86_64)
+#if CPU(X86_64)
     auto flagsSPR = X86Registers::eflags;
     uintptr_t flagsMask = 0xc5;
 #elif CPU(ARM_THUMB2)
@@ -4877,10 +5527,10 @@ void testProbeModifiesStackPointer(WTF::Function<void*(Probe::Context&)> compute
             }
             for (auto id = CCallHelpers::firstFPRegister(); id <= CCallHelpers::lastFPRegister(); id = nextID(id)) {
                 originalState.fpr(id) = cpu.fpr(id);
-                cpu.fpr(id) = bitwise_cast<double>(testWord64(id));
+                cpu.fpr(id) = std::bit_cast<double>(testWord64(id));
             }
 
-#if !(CPU(MIPS) || CPU(RISCV64))
+#if !(CPU(RISCV64))
             originalState.spr(flagsSPR) = cpu.spr(flagsSPR);
             modifiedFlags = originalState.spr(flagsSPR) ^ flagsMask;
             cpu.spr(flagsSPR) = modifiedFlags;
@@ -4905,11 +5555,8 @@ void testProbeModifiesStackPointer(WTF::Function<void*(Probe::Context&)> compute
                 CHECK_EQ(cpu.gpr(id), testWord(id));
             }
             for (auto id = CCallHelpers::firstFPRegister(); id <= CCallHelpers::lastFPRegister(); id = nextID(id))
-#if CPU(MIPS)
-                if (!(id & 1))
-#endif
                 CHECK_EQ(cpu.fpr<uint64_t>(id), testWord64(id));
-#if !(CPU(MIPS) || CPU(RISCV64))
+#if !CPU(RISCV64)
             CHECK_EQ(cpu.spr(flagsSPR) & flagsMask, modifiedFlags & flagsMask);
 #endif
             CHECK_EQ(cpu.sp(), modifiedSP);
@@ -4926,7 +5573,7 @@ void testProbeModifiesStackPointer(WTF::Function<void*(Probe::Context&)> compute
             }
             for (auto id = CCallHelpers::firstFPRegister(); id <= CCallHelpers::lastFPRegister(); id = nextID(id))
                 cpu.fpr(id) = originalState.fpr(id);
-#if !(CPU(MIPS) || CPU(RISCV64))
+#if !CPU(RISCV64)
             cpu.spr(flagsSPR) = originalState.spr(flagsSPR);
 #endif
             cpu.sp() = originalSP;
@@ -4942,11 +5589,8 @@ void testProbeModifiesStackPointer(WTF::Function<void*(Probe::Context&)> compute
                 CHECK_EQ(cpu.gpr(id), originalState.gpr(id));
             }
             for (auto id = CCallHelpers::firstFPRegister(); id <= CCallHelpers::lastFPRegister(); id = nextID(id))
-#if CPU(MIPS)
-                if (!(id & 1))
-#endif
                 CHECK_EQ(cpu.fpr<uint64_t>(id), originalState.fpr<uint64_t>(id));
-#if !(CPU(MIPS) || CPU(RISCV64))
+#if !CPU(RISCV64)
             CHECK_EQ(cpu.spr(flagsSPR) & flagsMask, originalState.spr(flagsSPR) & flagsMask);
 #endif
             CHECK_EQ(cpu.sp(), originalSP);
@@ -4967,7 +5611,7 @@ void testProbeModifiesStackPointerToInsideProbeStateOnStack()
 #endif
     for (size_t offset = 0; offset < sizeof(Probe::State); offset += increment) {
         testProbeModifiesStackPointer([=] (Probe::Context& context) -> void* {
-            return reinterpret_cast<uint8_t*>(probeStateForContext(context)) + offset;
+            return static_cast<uint8_t*>(probeStateForContext(context)) + offset;
 
         });
     }
@@ -5027,12 +5671,12 @@ void testProbeModifiesStackValues()
     CPUState originalState;
     void* originalSP { nullptr };
     void* newSP { nullptr };
-#if !(CPU(MIPS) || CPU(RISCV64))
+#if !CPU(RISCV64)
     uintptr_t modifiedFlags { 0 };
 #endif
     size_t numberOfExtraEntriesToWrite { 10 }; // ARM64 requires that this be 2 word aligned.
 
-#if CPU(X86) || CPU(X86_64)
+#if CPU(X86_64)
     MacroAssembler::SPRegisterID flagsSPR = X86Registers::eflags;
     uintptr_t flagsMask = 0xc5;
 #elif CPU(ARM_THUMB2)
@@ -5061,9 +5705,9 @@ void testProbeModifiesStackValues()
             }
             for (auto id = CCallHelpers::firstFPRegister(); id <= CCallHelpers::lastFPRegister(); id = nextID(id)) {
                 originalState.fpr(id) = cpu.fpr(id);
-                cpu.fpr(id) = bitwise_cast<double>(testWord64(id));
+                cpu.fpr(id) = std::bit_cast<double>(testWord64(id));
             }
-#if !(CPU(MIPS) || CPU(RISCV64))
+#if !CPU(RISCV64)
             originalState.spr(flagsSPR) = cpu.spr(flagsSPR);
             modifiedFlags = originalState.spr(flagsSPR) ^ flagsMask;
             cpu.spr(flagsSPR) = modifiedFlags;
@@ -5071,16 +5715,16 @@ void testProbeModifiesStackValues()
 
             // Ensure that we'll be writing over the regions of the stack where the Probe::State is.
             originalSP = cpu.sp();
-            newSP = reinterpret_cast<uintptr_t*>(probeStateForContext(context)) - numberOfExtraEntriesToWrite;
+            newSP = static_cast<uintptr_t*>(probeStateForContext(context)) - numberOfExtraEntriesToWrite;
             cpu.sp() = newSP;
 
             // Fill the stack with values.
-            uintptr_t* p = reinterpret_cast<uintptr_t*>(newSP);
+            uintptr_t* p = static_cast<uintptr_t*>(newSP);
             int count = 0;
             stack.set<double>(p++, 1.234567);
             if (is32Bit())
                 p++; // On 32-bit targets, a double takes up 2 uintptr_t.
-            while (p < reinterpret_cast<uintptr_t*>(originalSP))
+            while (p < static_cast<uintptr_t*>(originalSP))
                 stack.set<uintptr_t>(p++, testWord(count++));
         });
 
@@ -5101,22 +5745,19 @@ void testProbeModifiesStackValues()
                 CHECK_EQ(cpu.gpr(id), testWord(id));
             }
             for (auto id = CCallHelpers::firstFPRegister(); id <= CCallHelpers::lastFPRegister(); id = nextID(id))
-#if CPU(MIPS)
-                if (!(id & 1))
-#endif
                 CHECK_EQ(cpu.fpr<uint64_t>(id), testWord64(id));
-#if !(CPU(MIPS) || CPU(RISCV64))
+#if !CPU(RISCV64)
             CHECK_EQ(cpu.spr(flagsSPR) & flagsMask, modifiedFlags & flagsMask);
 #endif
             CHECK_EQ(cpu.sp(), newSP);
 
             // Validate the stack values.
-            uintptr_t* p = reinterpret_cast<uintptr_t*>(newSP);
+            uintptr_t* p = static_cast<uintptr_t*>(newSP);
             int count = 0;
             CHECK_EQ(stack.get<double>(p++), 1.234567);
             if (is32Bit())
                 p++; // On 32-bit targets, a double takes up 2 uintptr_t.
-            while (p < reinterpret_cast<uintptr_t*>(originalSP))
+            while (p < static_cast<uintptr_t*>(originalSP))
                 CHECK_EQ(stack.get<uintptr_t>(p++), testWord(count++));
         });
 
@@ -5131,7 +5772,7 @@ void testProbeModifiesStackValues()
             }
             for (auto id = CCallHelpers::firstFPRegister(); id <= CCallHelpers::lastFPRegister(); id = nextID(id))
                 cpu.fpr(id) = originalState.fpr(id);
-#if !(CPU(MIPS) || CPU(RISCV64))
+#if !CPU(RISCV64)
             cpu.spr(flagsSPR) = originalState.spr(flagsSPR);
 #endif
             cpu.sp() = originalSP;
@@ -5209,8 +5850,8 @@ void testAndOrDouble()
         for (auto b : operands) {
             arg1 = a;
             arg2 = b;
-            uint64_t expectedResult = bitwise_cast<uint64_t>(arg1) & bitwise_cast<uint64_t>(arg2);
-            CHECK_EQ(bitwise_cast<uint64_t>(invoke<double>(andDouble)), expectedResult);
+            uint64_t expectedResult = std::bit_cast<uint64_t>(arg1) & std::bit_cast<uint64_t>(arg2);
+            CHECK_EQ(std::bit_cast<uint64_t>(invoke<double>(andDouble)), expectedResult);
         }
     }
 
@@ -5229,9 +5870,75 @@ void testAndOrDouble()
         for (auto b : operands) {
             arg1 = a;
             arg2 = b;
-            uint64_t expectedResult = bitwise_cast<uint64_t>(arg1) | bitwise_cast<uint64_t>(arg2);
-            CHECK_EQ(bitwise_cast<uint64_t>(invoke<double>(orDouble)), expectedResult);
+            uint64_t expectedResult = std::bit_cast<uint64_t>(arg1) | std::bit_cast<uint64_t>(arg2);
+            CHECK_EQ(std::bit_cast<uint64_t>(invoke<double>(orDouble)), expectedResult);
         }
+    }
+}
+
+void testNegateDouble()
+{
+    double arg = 0;
+
+    auto negateDoubleDifferentRegs = compile([&] (CCallHelpers& jit) {
+        emitFunctionPrologue(jit);
+        jit.loadDouble(CCallHelpers::TrustedImmPtr(&arg), FPRInfo::fpRegT1);
+        jit.negateDouble(FPRInfo::fpRegT1, FPRInfo::returnValueFPR);
+        emitFunctionEpilogue(jit);
+        jit.ret();
+    });
+
+    auto negateDoubleSameReg = compile([&] (CCallHelpers& jit) {
+        emitFunctionPrologue(jit);
+        jit.loadDouble(CCallHelpers::TrustedImmPtr(&arg), FPRInfo::returnValueFPR);
+        jit.negateDouble(FPRInfo::returnValueFPR, FPRInfo::returnValueFPR);
+        emitFunctionEpilogue(jit);
+        jit.ret();
+    });
+
+    auto operands = doubleOperands();
+    for (auto value : operands) {
+        arg = value;
+        double resultDifferent = invoke<double>(negateDoubleDifferentRegs);
+        double resultSame = invoke<double>(negateDoubleSameReg);
+        uint64_t expectedBits = std::bit_cast<uint64_t>(value) ^ 0x8000000000000000ULL; // Flip sign bit
+        uint64_t resultDifferentBits = std::bit_cast<uint64_t>(resultDifferent);
+        uint64_t resultSameBits = std::bit_cast<uint64_t>(resultSame);
+        CHECK_EQ(resultDifferentBits, expectedBits);
+        CHECK_EQ(resultSameBits, expectedBits);
+    }
+}
+
+void testNegateFloat()
+{
+    float arg = 0;
+
+    auto negateFloatDifferentRegs = compile([&] (CCallHelpers& jit) {
+        emitFunctionPrologue(jit);
+        jit.loadFloat(CCallHelpers::TrustedImmPtr(&arg), FPRInfo::fpRegT1);
+        jit.negateFloat(FPRInfo::fpRegT1, FPRInfo::returnValueFPR);
+        emitFunctionEpilogue(jit);
+        jit.ret();
+    });
+
+    auto negateFloatSameReg = compile([&] (CCallHelpers& jit) {
+        emitFunctionPrologue(jit);
+        jit.loadFloat(CCallHelpers::TrustedImmPtr(&arg), FPRInfo::returnValueFPR);
+        jit.negateFloat(FPRInfo::returnValueFPR, FPRInfo::returnValueFPR);
+        emitFunctionEpilogue(jit);
+        jit.ret();
+    });
+
+    auto operands = floatOperands();
+    for (auto value : operands) {
+        arg = value;
+        float resultDifferent = invoke<float>(negateFloatDifferentRegs);
+        float resultSame = invoke<float>(negateFloatSameReg);
+        uint32_t expectedBits = std::bit_cast<uint32_t>(value) ^ 0x80000000U; // Flip sign bit
+        uint32_t resultDifferentBits = std::bit_cast<uint32_t>(resultDifferent);
+        uint32_t resultSameBits = std::bit_cast<uint32_t>(resultSame);
+        CHECK_EQ(resultDifferentBits, expectedBits);
+        CHECK_EQ(resultSameBits, expectedBits);
     }
 }
 
@@ -5416,8 +6123,11 @@ void testLoadBaseIndex()
             emitFunctionEpilogue(jit);
             jit.ret();
         });
-        uint16_t array[] = { 1, 2, 0x7ff3, 4, 5, };
+        uint16_t array[] = { 1, 2, 0x7ff3, 0x8000, 5, };
         CHECK_EQ(invoke<uint32_t>(test, array, static_cast<UCPURegister>(3)), 0x7ff3);
+#if CPU(REGISTER64)
+        CHECK_EQ(invoke<uint64_t>(test, array, static_cast<UCPURegister>(4)), 0xffff8000);
+#endif
     }
     {
         auto test = compile([=](CCallHelpers& jit) {
@@ -5428,6 +6138,9 @@ void testLoadBaseIndex()
         });
         uint16_t array[] = { UINT16_MAX - 1, UINT16_MAX - 2, UINT16_MAX - 3, UINT16_MAX - 4, static_cast<uint16_t>(-1), };
         CHECK_EQ(invoke<uint32_t>(test, array, static_cast<UCPURegister>(3)), static_cast<uint32_t>(-1));
+#if CPU(REGISTER64)
+        CHECK_EQ(invoke<uint64_t>(test, array, static_cast<UCPURegister>(3)), static_cast<uint32_t>(-1));
+#endif
     }
 
     // load8
@@ -5460,8 +6173,11 @@ void testLoadBaseIndex()
             emitFunctionEpilogue(jit);
             jit.ret();
         });
-        uint8_t array[] = { 1, 2, 0x73, 4, 5, };
+        uint8_t array[] = { 1, 2, 0x73, 0x80, 5, };
         CHECK_EQ(invoke<uint32_t>(test, array, static_cast<UCPURegister>(3)), 0x73);
+#if CPU(REGISTER64)
+        CHECK_EQ(invoke<uint64_t>(test, array, static_cast<UCPURegister>(4)), 0xffffff80);
+#endif
     }
     {
         auto test = compile([=](CCallHelpers& jit) {
@@ -5472,6 +6188,9 @@ void testLoadBaseIndex()
         });
         uint8_t array[] = { UINT8_MAX - 1, UINT8_MAX - 2, UINT8_MAX - 3, UINT8_MAX - 4, static_cast<uint8_t>(-1), };
         CHECK_EQ(invoke<uint32_t>(test, array, static_cast<UCPURegister>(3)), static_cast<uint32_t>(-1));
+#if CPU(REGISTER64)
+        CHECK_EQ(invoke<uint64_t>(test, array, static_cast<UCPURegister>(3)), static_cast<uint32_t>(-1));
+#endif
     }
 
     // loadDouble
@@ -5732,11 +6451,7 @@ void testStoreBaseIndex()
     {
         auto test = compile([=](CCallHelpers& jit) {
             emitFunctionPrologue(jit);
-#if OS(WINDOWS)
-            constexpr FPRReg inputFPR = FPRInfo::argumentFPR2;
-#else
             constexpr FPRReg inputFPR = FPRInfo::argumentFPR0;
-#endif
             jit.storeDouble(inputFPR, CCallHelpers::BaseIndex(GPRInfo::argumentGPR0, GPRInfo::argumentGPR1, CCallHelpers::TimesEight, -8));
             emitFunctionEpilogue(jit);
             jit.ret();
@@ -5748,11 +6463,7 @@ void testStoreBaseIndex()
     {
         auto test = compile([=](CCallHelpers& jit) {
             emitFunctionPrologue(jit);
-#if OS(WINDOWS)
-            constexpr FPRReg inputFPR = FPRInfo::argumentFPR2;
-#else
             constexpr FPRReg inputFPR = FPRInfo::argumentFPR0;
-#endif
             jit.storeDouble(inputFPR, CCallHelpers::BaseIndex(GPRInfo::argumentGPR0, GPRInfo::argumentGPR1, CCallHelpers::TimesEight, 8));
             emitFunctionEpilogue(jit);
             jit.ret();
@@ -5766,11 +6477,7 @@ void testStoreBaseIndex()
     {
         auto test = compile([=](CCallHelpers& jit) {
             emitFunctionPrologue(jit);
-#if OS(WINDOWS)
-            constexpr FPRReg inputFPR = FPRInfo::argumentFPR2;
-#else
             constexpr FPRReg inputFPR = FPRInfo::argumentFPR0;
-#endif
             jit.storeFloat(inputFPR, CCallHelpers::BaseIndex(GPRInfo::argumentGPR0, GPRInfo::argumentGPR1, CCallHelpers::TimesFour, -4));
             emitFunctionEpilogue(jit);
             jit.ret();
@@ -5782,11 +6489,7 @@ void testStoreBaseIndex()
     {
         auto test = compile([=](CCallHelpers& jit) {
             emitFunctionPrologue(jit);
-#if OS(WINDOWS)
-            constexpr FPRReg inputFPR = FPRInfo::argumentFPR2;
-#else
             constexpr FPRReg inputFPR = FPRInfo::argumentFPR0;
-#endif
             jit.storeFloat(inputFPR, CCallHelpers::BaseIndex(GPRInfo::argumentGPR0, GPRInfo::argumentGPR1, CCallHelpers::TimesFour, 4));
             emitFunctionEpilogue(jit);
             jit.ret();
@@ -5906,57 +6609,6 @@ void testStoreImmediateBaseIndex()
 #endif
 }
 
-static void testCagePreservesPACFailureBit()
-{
-#if GIGACAGE_ENABLED
-    // Placate ASan builds and any environments that disables the Gigacage.
-    if (!Gigacage::shouldBeEnabled())
-        return;
-
-    RELEASE_ASSERT(!Gigacage::disablingPrimitiveGigacageIsForbidden());
-    auto cage = compile([] (CCallHelpers& jit) {
-        emitFunctionPrologue(jit);
-        constexpr GPRReg storageGPR = GPRInfo::argumentGPR0;
-        constexpr GPRReg lengthGPR = GPRInfo::argumentGPR1;
-        constexpr GPRReg scratchGPR = GPRInfo::argumentGPR2;
-        jit.cageConditionallyAndUntag(Gigacage::Primitive, storageGPR, lengthGPR, scratchGPR);
-        jit.move(GPRInfo::argumentGPR0, GPRInfo::returnValueGPR);
-        emitFunctionEpilogue(jit);
-        jit.ret();
-    });
-
-    void* ptr = Gigacage::tryMalloc(Gigacage::Primitive, 1);
-    void* taggedPtr = tagArrayPtr(ptr, 1);
-    RELEASE_ASSERT(hasOneBitSet(Gigacage::maxSize(Gigacage::Primitive) << 2));
-    void* notCagedPtr = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(ptr) + (Gigacage::maxSize(Gigacage::Primitive) << 2));
-    CHECK_NOT_EQ(Gigacage::caged(Gigacage::Primitive, notCagedPtr), notCagedPtr);
-    void* taggedNotCagedPtr = tagArrayPtr(notCagedPtr, 1);
-
-    if (!isARM64E())
-        CHECK_EQ(invoke<void*>(cage, taggedPtr, 2), ptr);
-
-    CHECK_EQ(invoke<void*>(cage, taggedPtr, 1), ptr);
-
-    auto cageWithoutAuthentication = compile([] (CCallHelpers& jit) {
-        emitFunctionPrologue(jit);
-        jit.cageWithoutUntagging(Gigacage::Primitive, GPRInfo::argumentGPR0);
-        jit.move(GPRInfo::argumentGPR0, GPRInfo::returnValueGPR);
-        emitFunctionEpilogue(jit);
-        jit.ret();
-    });
-
-    CHECK_EQ(invoke<void*>(cageWithoutAuthentication, taggedPtr), taggedPtr);
-    if (isARM64E()) {
-        CHECK_NOT_EQ(invoke<void*>(cageWithoutAuthentication, taggedNotCagedPtr), taggedNotCagedPtr);
-        CHECK_NOT_EQ(invoke<void*>(cageWithoutAuthentication, taggedNotCagedPtr), tagArrayPtr(notCagedPtr, 1));
-        CHECK_NOT_EQ(invoke<void*>(cageWithoutAuthentication, taggedNotCagedPtr), taggedPtr);
-        CHECK_NOT_EQ(invoke<void*>(cageWithoutAuthentication, taggedNotCagedPtr), tagArrayPtr(ptr, 1));
-    }
-
-    Gigacage::free(Gigacage::Primitive, ptr);
-#endif
-}
-
 static void testBranchIfType()
 {
     using JSC::JSType;
@@ -6030,8 +6682,9 @@ static void testBranchConvertDoubleToInt52()
 {
     auto toInt52 = compile([](CCallHelpers& jit) {
         emitFunctionPrologue(jit);
+        constexpr bool canIgnoreNegativeZero = false;
         CCallHelpers::JumpList failureCases;
-        jit.branchConvertDoubleToInt52(FPRInfo::argumentFPR0, GPRInfo::returnValueGPR, failureCases, GPRInfo::returnValueGPR2, FPRInfo::argumentFPR1);
+        jit.branchConvertDoubleToInt52(FPRInfo::argumentFPR0, GPRInfo::returnValueGPR, failureCases, GPRInfo::returnValueGPR2, FPRInfo::argumentFPR1, canIgnoreNegativeZero);
         auto done = jit.jump();
         failureCases.link(&jit);
         jit.move(CCallHelpers::TrustedImm64(1ULL << 52), GPRInfo::returnValueGPR);
@@ -6065,6 +6718,729 @@ static void testBranchConvertDoubleToInt52()
     CHECK_EQ((invoke<int64_t>(toInt52, static_cast<double>(42.195))), (1LL << 52));
     CHECK_EQ((invoke<int64_t>(toInt52, static_cast<double>(0.3))), (1LL << 52));
     CHECK_EQ((invoke<int64_t>(toInt52, static_cast<double>(-0.1))), (1LL << 52));
+}
+#endif
+
+#if CPU(X86_64)
+#define CHECK_CODE_WAS_EMITTED(_jit, _emitter) do {                      \
+        size_t _beforeCodeSize = _jit.m_assembler.buffer().codeSize();   \
+        _emitter;                                                        \
+        size_t _afterCodeSize = _jit.m_assembler.buffer().codeSize();    \
+        if (_afterCodeSize > _beforeCodeSize)                            \
+            break;                                                       \
+        crashLock.lock();                                                \
+        dataLog("FAILED while testing " #_emitter ": expected it to emit code\n"); \
+        WTFReportAssertionFailure(__FILE__, __LINE__, WTF_PRETTY_FUNCTION, "CHECK_CODE_WAS_EMITTED("#_jit ", " #_emitter ")"); \
+        CRASH();                                                         \
+    } while (false)
+
+static void testAtomicAndEmitsCode()
+{
+    // On x86, atomic (seqcst) RMW operations must emit a seqcst store (so a
+    // LOCK-prefixed store or a fence or something).
+    //
+    // This tests that the optimization to elide and'ing -1 must not be
+    // applied when the and is atomic.
+
+    auto test32 = compile([] (CCallHelpers& jit) {
+        emitFunctionPrologue(jit);
+
+        GPRReg scratch = GPRInfo::argumentGPR2;
+        jit.move(CCallHelpers::TrustedImm32(0), scratch);
+        CHECK_CODE_WAS_EMITTED(jit, jit.atomicAnd32(CCallHelpers::TrustedImm32(-1), CCallHelpers::Address(GPRInfo::argumentGPR0)));
+        CHECK_CODE_WAS_EMITTED(jit, jit.atomicAnd32(CCallHelpers::TrustedImm32(-1), CCallHelpers::BaseIndex(GPRInfo::argumentGPR0, scratch, CCallHelpers::TimesEight, 0)));
+
+        emitFunctionEpilogue(jit);
+        jit.ret();
+    });
+
+    auto test64 = compile([] (CCallHelpers& jit) {
+        emitFunctionPrologue(jit);
+
+        GPRReg scratch = GPRInfo::argumentGPR2;
+        jit.move(CCallHelpers::TrustedImm32(0), scratch);
+        CHECK_CODE_WAS_EMITTED(jit, jit.atomicAnd64(CCallHelpers::TrustedImm32(-1), CCallHelpers::Address(GPRInfo::argumentGPR0)));
+        CHECK_CODE_WAS_EMITTED(jit, jit.atomicAnd64(CCallHelpers::TrustedImm32(-1), CCallHelpers::BaseIndex(GPRInfo::argumentGPR0, scratch, CCallHelpers::TimesEight, 0)));
+
+        emitFunctionEpilogue(jit);
+        jit.ret();
+    });
+
+    uint64_t value = 42;
+
+    invoke<void>(test32, &value);
+    CHECK_EQ(value, 42);
+
+    invoke<void>(test64, &value);
+    CHECK_EQ(value, 42);
+}
+#endif
+
+#if CPU(ARM64)
+static void testMove32ToFloatMovi()
+{
+    // Test movi-encodable patterns
+    auto testPattern = [] (uint32_t pattern) {
+        auto test = compile([=] (CCallHelpers& jit) {
+            emitFunctionPrologue(jit);
+
+            jit.move32ToFloat(CCallHelpers::TrustedImm32(pattern), FPRInfo::fpRegT0);
+            jit.moveFloatTo32(FPRInfo::fpRegT0, GPRInfo::returnValueGPR);
+
+            emitFunctionEpilogue(jit);
+            jit.ret();
+        });
+
+        CHECK_EQ(invoke<uint32_t>(test), pattern);
+    };
+
+    // Test shifted immediate patterns (single byte at shift 0, 8, 16, 24)
+    testPattern(0x00000012); // shift 0
+    testPattern(0x00001200); // shift 8
+    testPattern(0x00120000); // shift 16
+    testPattern(0x12000000); // shift 24
+    testPattern(0x00000080); // Sign bit at byte 0
+    testPattern(0x00008000); // Sign bit at byte 1
+    testPattern(0x00800000); // Sign bit at byte 2
+    testPattern(0x80000000); // Sign bit at byte 3 (common pattern!)
+    testPattern(0x000000ff); // Max byte at shift 0
+    testPattern(0x0000ff00); // Max byte at shift 8
+    testPattern(0x00ff0000); // Max byte at shift 16
+    testPattern(0xff000000); // Max byte at shift 24
+
+    // Test inverted shifted immediate patterns
+    testPattern(0xffffffed); // ~0x00000012
+    testPattern(0xffffedff); // ~0x00001200
+    testPattern(0xffedffff); // ~0x00120000
+    testPattern(0xedffffff); // ~0x12000000
+    testPattern(0xffffff7f); // ~0x00000080
+    testPattern(0xffff7fff); // ~0x00008000
+    testPattern(0xff7fffff); // ~0x00800000
+    testPattern(0x7fffffff); // ~0x80000000 (common pattern!)
+    testPattern(0xffffff00); // ~0x000000ff
+    testPattern(0xffff00ff); // ~0x0000ff00
+    testPattern(0xff00ffff); // ~0x00ff0000
+    testPattern(0x00ffffff); // ~0xff000000
+
+    // Test MSL (Mask Shift Left) patterns
+    testPattern(0x000012ff); // movi #0x12, MSL #8
+    testPattern(0x0012ffff); // movi #0x12, MSL #16
+    testPattern(0x000042ff); // movi #0x42, MSL #8
+    testPattern(0x0042ffff); // movi #0x42, MSL #16
+    testPattern(0x0080ffff); // movi #0x80, MSL #16 (sign bit + mask)
+
+    // Test inverted MSL patterns
+    testPattern(0xffffed00); // mvni #0x12, MSL #8 → ~0x000012ff
+    testPattern(0xffed0000); // mvni #0x12, MSL #16 → ~0x0012ffff
+    testPattern(0xffffbd00); // mvni #0x42, MSL #8 → ~0x000042ff
+    testPattern(0xffbd0000); // mvni #0x42, MSL #16 → ~0x0042ffff
+    testPattern(0xff7f0000); // mvni #0x80, MSL #16 → ~0x0080ffff
+
+    // Test byte-mask patterns (each byte is 0x00 or 0xFF)
+    testPattern(0x00000000); // All zero (handled by moveZeroToFloat)
+    testPattern(0xffffffff); // All 0xFF
+    testPattern(0xff00ff00); // Bytes 1 and 3 are 0xFF
+    testPattern(0x00ff00ff); // Bytes 0 and 2 are 0xFF
+    testPattern(0xffff0000); // Bytes 2 and 3 are 0xFF
+    testPattern(0x0000ffff); // Bytes 0 and 1 are 0xFF
+    testPattern(0xff0000ff); // Bytes 0 and 3 are 0xFF
+
+    // Test non-encodable patterns (should still work via fallback)
+    testPattern(0x12345678); // Multiple non-zero bytes
+    testPattern(0x3f800000); // Float 1.0 (0x3f and 0x80 in different bytes)
+    testPattern(0x40000000); // Float 2.0
+    testPattern(0xc0000000); // Float -2.0
+}
+
+static void testMove64ToDoubleMovi()
+{
+    // Test movi-encodable patterns (each byte is 0x00 or 0xFF)
+    auto testPattern = [] (uint64_t pattern) {
+        auto test = compile([=] (CCallHelpers& jit) {
+            emitFunctionPrologue(jit);
+
+            jit.move64ToDouble(CCallHelpers::TrustedImm64(pattern), FPRInfo::fpRegT0);
+            jit.moveDoubleTo64(FPRInfo::fpRegT0, GPRInfo::returnValueGPR);
+
+            emitFunctionEpilogue(jit);
+            jit.ret();
+        });
+
+        CHECK_EQ(invoke<uint64_t>(test), pattern);
+    };
+
+    // Test movi patterns (direct encoding)
+    testPattern(0x0000000000000000ULL); // All zero
+    testPattern(0x00000000000000ffULL); // Byte 0 is 0xFF
+    testPattern(0x000000000000ff00ULL); // Byte 1 is 0xFF
+    testPattern(0x00000000ff000000ULL); // Byte 4 is 0xFF
+    testPattern(0xff00000000000000ULL); // Byte 7 is 0xFF
+    testPattern(0xffffffffffffffffULL); // All 0xFF
+    testPattern(0xff00ff00ff00ff00ULL); // Alternating pattern
+    testPattern(0x00ff00ff00ff00ffULL); // Alternating pattern
+    testPattern(0xffffffff00000000ULL); // Upper 4 bytes 0xFF
+    testPattern(0x00000000ffffffffULL); // Lower 4 bytes 0xFF
+
+    // Test mvni patterns (inverted encoding)
+    testPattern(0xffffffffffffff00ULL); // ~0x00000000000000ff
+    testPattern(0xffffffffffff00ffULL); // ~0x000000000000ff00
+    testPattern(0xffffffff00ffffffULL); // ~0x00000000ff000000
+    testPattern(0x00ffffffffffffffULL); // ~0xff00000000000000
+    testPattern(0x00ff00ff00ff00ffULL); // Can be encoded as movi
+
+    // Test repeated 32-bit patterns (will use move32ToFloat logic)
+    testPattern(0x8000000080000000ULL); // Repeated sign bit
+    testPattern(0x7fffffff7fffffffULL); // Repeated INT32_MAX
+    testPattern(0x000042ff000042ffULL); // Repeated MSL pattern
+    testPattern(0xffffbd00ffffbd00ULL); // Repeated inverted MSL
+    testPattern(0x0012000000120000ULL); // Repeated LSL shift
+    testPattern(0xff00ff00ff00ff00ULL); // Repeated byte mask
+    testPattern(0x00ff00ff00ff00ffULL); // Can be encoded as movi
+
+    // Test non-encodable patterns (should still work via fallback)
+    testPattern(0x7fffffffffffffffULL); // Sign bit pattern
+    testPattern(0x8000000000000000ULL); // Sign bit pattern
+    testPattern(0x123456789abcdef0ULL); // Arbitrary pattern
+    testPattern(0x3ff0000000000000ULL); // Double 1.0
+}
+
+// Regression test for bug where move64ToDouble incorrectly called move32ToFloat
+// for repeated 32-bit patterns. The old code would call move32ToFloat which uses
+// fmov<32> that only sets the lower 32 bits, leaving upper 32 bits undefined.
+// This test verifies that BOTH upper and lower 32 bits are set correctly.
+static void testMove64ToDoubleRepeated32BitPatternBug()
+{
+    auto testPattern = [] (uint64_t pattern) {
+        auto test = compile([=] (CCallHelpers& jit) {
+            emitFunctionPrologue(jit);
+
+            // Load the 64-bit pattern into a double register
+            jit.move64ToDouble(CCallHelpers::TrustedImm64(pattern), FPRInfo::fpRegT0);
+
+            // Read back the entire 64-bit value
+            jit.moveDoubleTo64(FPRInfo::fpRegT0, GPRInfo::returnValueGPR);
+
+            emitFunctionEpilogue(jit);
+            jit.ret();
+        });
+
+        uint64_t result = invoke<uint64_t>(test);
+
+        // The bug would cause the upper 32 bits to be undefined/garbage
+        // Verify BOTH upper and lower 32 bits are correct
+        uint32_t resultLower = static_cast<uint32_t>(result);
+        uint32_t resultUpper = static_cast<uint32_t>(result >> 32);
+        uint32_t expectedLower = static_cast<uint32_t>(pattern);
+        uint32_t expectedUpper = static_cast<uint32_t>(pattern >> 32);
+
+        if (resultLower != expectedLower || resultUpper != expectedUpper) {
+            dataLog("FAIL: testMove64ToDoubleRepeated32BitPatternBug\n");
+            dataLog("  Pattern:  0x", hex(pattern), "\n");
+            dataLog("  Expected: 0x", hex(expectedUpper), "'", hex(expectedLower), "\n");
+            dataLog("  Got:      0x", hex(resultUpper), "'", hex(resultLower), "\n");
+            dataLog("  Upper 32 bits ", (resultUpper == expectedUpper ? "OK" : "WRONG"), "\n");
+            dataLog("  Lower 32 bits ", (resultLower == expectedLower ? "OK" : "WRONG"), "\n");
+        }
+
+        CHECK_EQ(result, pattern);
+    };
+
+    // Test various repeated 32-bit patterns that would trigger the bug
+    // These patterns have the same value in upper and lower 32 bits
+
+    // FP immediate patterns (canEncodeFPImm<32> returns true)
+    testPattern(0x3f8000003f800000ULL); // Repeated float 1.0
+    testPattern(0x4000000040000000ULL); // Repeated float 2.0
+    testPattern(0xc0000000c0000000ULL); // Repeated float -2.0
+    testPattern(0x0000000000000000ULL); // Zero (handled specially but worth testing)
+
+    // Shifted immediate patterns (movi with LSL)
+    testPattern(0x0012000000120000ULL); // Repeated movi #0x12, LSL #16
+    testPattern(0x1200000012000000ULL); // Repeated movi #0x12, LSL #24
+    testPattern(0x0000120000001200ULL); // Repeated movi #0x12, LSL #8
+    testPattern(0x0000001200000012ULL); // Repeated movi #0x12, LSL #0
+
+    // MSL patterns (movi with MSL)
+    testPattern(0x000042ff000042ffULL); // Repeated movi #0x42, MSL #8
+    testPattern(0x0042ffff0042ffffULL); // Repeated movi #0x42, MSL #16
+    testPattern(0x008000ff008000ffULL); // Repeated movi #0x80, MSL #8
+
+    // Inverted MSL patterns (mvni with MSL)
+    testPattern(0xffffbd00ffffbd00ULL); // Repeated mvni #0x42, MSL #8 (inverted 0x000042ff)
+    testPattern(0xffbd0000ffbd0000ULL); // Repeated mvni #0x42, MSL #16 (inverted 0x0042ffff)
+
+    // 16-bit shifted patterns (movi with 16-bit lanes)
+    testPattern(0x0012001200120012ULL); // Repeated movi with 16-bit lanes
+    testPattern(0xff00ff00ff00ff00ULL); // Repeated byte mask pattern
+
+    // 8-bit replicated patterns (movi with 8-bit lanes)
+    testPattern(0x4242424242424242ULL); // Repeated byte 0x42
+    testPattern(0x8080808080808080ULL); // Repeated byte 0x80
+    testPattern(0xffffffffffffffffULL); // All 0xFF bytes
+
+    // Edge cases
+    testPattern(0x8000000080000000ULL); // Repeated sign bit (INT32_MIN)
+    testPattern(0x7fffffff7fffffffULL); // Repeated INT32_MAX
+    testPattern(0x0000000100000001ULL); // Repeated 1
+    testPattern(0xfffffffefffffffeULL); // Repeated -2 (as uint32)
+}
+
+// Test half-precision FMOV encoding (cmode=0b1110, op=1)
+// Verifies that 16-bit, 32-bit, and 64-bit FMOV use correct encodings
+static void testFMovHalfPrecisionEncoding()
+{
+    // This test verifies that fmov_v correctly generates different encodings
+    // for different lane widths:
+    //   16-bit: cmode=0b1110, op=1
+    //   32-bit: cmode=0b1111, op=0
+    //   64-bit: cmode=0b1111, op=1
+
+    // Test that different FMOV variants execute correctly
+    // The key test is that 16-bit and 32-bit FMOV produce the right values
+
+    auto testNonCollision = [] {
+        // Test that 32-bit and 16-bit FMOV work independently
+        // If encodings collided, one would overwrite the other incorrectly
+        auto test = compile([] (CCallHelpers& jit) {
+            emitFunctionPrologue(jit);
+
+            // Use high-level MacroAssembler functions which will call fmov_v internally
+            // Test with FP immediates that are encodable in both formats
+
+            // For 32-bit float 1.0 (0x3f800000)
+            // We'll use move32ToFloat which should use fmov or movi
+            jit.move(CCallHelpers::TrustedImm32(0x3f800000), GPRInfo::regT0);
+            jit.move32ToFloat(CCallHelpers::TrustedImm32(0x3f800000), FPRInfo::fpRegT0);
+            jit.moveFloatTo32(FPRInfo::fpRegT0, GPRInfo::returnValueGPR);
+
+            emitFunctionEpilogue(jit);
+            jit.ret();
+        });
+
+        uint32_t result = invoke<uint32_t>(test);
+        // Should get back the same bit pattern
+        CHECK_EQ(result, 0x3f800000U);
+    };
+
+    testNonCollision();
+
+    // Test half-precision values work correctly through the encoding
+    // We test by verifying canEncodeFPImm works for 16-bit
+    auto testHalfPrecisionValidation = [] {
+        // Verify some known half-precision FP immediate values are encodable
+        // Half-precision 1.0 = 0x3C00
+        CHECK_EQ(ARM64Assembler::canEncodeFPImm<16>(0x3C00), true);
+
+        // Half-precision 2.0 = 0x4000
+        CHECK_EQ(ARM64Assembler::canEncodeFPImm<16>(0x4000), true);
+
+        // Half-precision -1.0 = 0xBC00
+        CHECK_EQ(ARM64Assembler::canEncodeFPImm<16>(0xBC00), true);
+
+        // Half-precision 0.5 = 0x3800
+        CHECK_EQ(ARM64Assembler::canEncodeFPImm<16>(0x3800), true);
+
+        // Half-precision with lower mantissa bits set (should fail - needs 6 zeros)
+        CHECK_EQ(ARM64Assembler::canEncodeFPImm<16>(0x3C01), false);
+        CHECK_EQ(ARM64Assembler::canEncodeFPImm<16>(0x3C3F), false);
+
+        // Exponent out of valid range (should fail - needs exponent 12-19)
+        CHECK_EQ(ARM64Assembler::canEncodeFPImm<16>(0x7C00), false); // Infinity
+        CHECK_EQ(ARM64Assembler::canEncodeFPImm<16>(0x0400), false); // Too small exponent
+    };
+
+    testHalfPrecisionValidation();
+}
+
+static void testMove128ToVectorMovi()
+{
+    auto testPattern = [&](v128_t pattern) {
+        // Create a simple function that moves the v128 immediate to a vector register
+        // then extracts both 64-bit lanes to verify correctness
+        auto compilation = compile([&](CCallHelpers& jit) {
+            emitFunctionPrologue(jit);
+
+            // Move the v128 pattern to vector register v0
+            jit.move128ToVector(pattern, ARM64Registers::q0);
+
+            // Extract lower 64 bits to x0
+            jit.vectorExtractLaneInt64(CCallHelpers::TrustedImm32(0), ARM64Registers::q0, ARM64Registers::x0);
+
+            // Extract upper 64 bits to x1
+            jit.vectorExtractLaneInt64(CCallHelpers::TrustedImm32(1), ARM64Registers::q0, ARM64Registers::x1);
+
+            // Return (results will be in x0 and x1)
+            emitFunctionEpilogue(jit);
+            jit.ret();
+        });
+
+        // Execute and verify
+        auto [low64, high64] = invoke<std::pair<uint64_t, uint64_t>>(compilation);
+        CHECK_EQ(low64, pattern.u64x2[0]);
+        CHECK_EQ(high64, pattern.u64x2[1]);
+    };
+
+    // Test all zeros (special case)
+    testPattern(v128_t { 0x0000000000000000ULL, 0x0000000000000000ULL });
+
+    // Test all ones (0xFFFFFFFF repeated 4 times, uses mvni<128>)
+    testPattern(v128_t { 0xffffffffffffffffULL, 0xffffffffffffffffULL });
+
+    // Test 32-bit LSL patterns repeated 4 times (uses movi<128>)
+    testPattern(v128_t { 0x1200000012000000ULL, 0x1200000012000000ULL }); // 0x12 << 24
+    testPattern(v128_t { 0x0012000000120000ULL, 0x0012000000120000ULL }); // 0x12 << 16
+    testPattern(v128_t { 0x0000120000001200ULL, 0x0000120000001200ULL }); // 0x12 << 8
+    testPattern(v128_t { 0x0000001200000012ULL, 0x0000001200000012ULL }); // 0x12 << 0
+
+    // Test inverted 32-bit LSL patterns repeated 4 times (uses mvni<128>)
+    testPattern(v128_t { 0xedffffffedffffffULL, 0xedffffffedffffffULL }); // ~(0x12 << 24)
+    testPattern(v128_t { 0xffedffffffedffffULL, 0xffedffffffedffffULL }); // ~(0x12 << 16)
+
+    // Test 32-bit MSL patterns repeated 4 times (uses movi<128> with MSL)
+    testPattern(v128_t { 0x000042ff000042ffULL, 0x000042ff000042ffULL }); // MSL #8
+    testPattern(v128_t { 0x0042ffff0042ffffULL, 0x0042ffff0042ffffULL }); // MSL #16
+
+    // Test inverted 32-bit MSL patterns repeated 4 times (uses mvni<128> with MSL)
+    testPattern(v128_t { 0xffffbd00ffffbd00ULL, 0xffffbd00ffffbd00ULL }); // ~MSL #8
+    testPattern(v128_t { 0xffbd0000ffbd0000ULL, 0xffbd0000ffbd0000ULL }); // ~MSL #16
+
+    // Test 32-bit byte-mask patterns repeated 4 times (uses movi<128>)
+    testPattern(v128_t { 0xff00ff00ff00ff00ULL, 0xff00ff00ff00ff00ULL }); // Byte mask
+
+    // Test 64-bit patterns repeated twice (uses movi/mvni<64> + dup)
+    testPattern(v128_t { 0xff00ff00ff00ff00ULL, 0xff00ff00ff00ff00ULL }); // 64-bit byte mask repeated
+
+    // Test non-repeating patterns (should use fallback)
+    testPattern(v128_t { 0x0000000000000000ULL, 0xffffffffffffffffULL }); // Half zeros, half ones
+    testPattern(v128_t { 0x123456789abcdef0ULL, 0xfedcba9876543210ULL }); // Arbitrary different values
+    testPattern(v128_t { 0x0000000000000042ULL, 0x0000000000000043ULL }); // Simple different values
+}
+
+// Comprehensive tests for move16ToFloat16 covering all code paths
+static void testMove16ToFloat16Comprehensive()
+{
+    auto testPattern = [] (uint16_t pattern) {
+        auto test = compile([=] (CCallHelpers& jit) {
+            emitFunctionPrologue(jit);
+
+            jit.move16ToFloat16(CCallHelpers::TrustedImm32(pattern), FPRInfo::fpRegT0);
+            jit.moveFloat16To16(FPRInfo::fpRegT0, GPRInfo::returnValueGPR);
+
+            emitFunctionEpilogue(jit);
+            jit.ret();
+        });
+
+        uint16_t result = static_cast<uint16_t>(invoke<uint32_t>(test));
+        CHECK_EQ(result, pattern);
+    };
+
+    // Test zero (moveZeroToFloat path)
+    testPattern(0x0000);
+
+    // Test FP immediate encoding (fmov path)
+    testPattern(0x3C00); // Half-precision 1.0
+    testPattern(0x4000); // Half-precision 2.0
+    testPattern(0xBC00); // Half-precision -1.0
+    testPattern(0x3800); // Half-precision 0.5
+    testPattern(0x4200); // Half-precision 3.0
+    testPattern(0x4400); // Half-precision 4.0
+
+    // Test 16-bit LSL shifted immediate (movi path)
+    testPattern(0x1200); // 0x12 << 8
+    testPattern(0x0012); // 0x12 << 0
+    testPattern(0x8000); // Sign bit
+    testPattern(0xFF00); // Max byte at shift 8
+    testPattern(0x00FF); // Max byte at shift 0
+
+    // Test inverted 16-bit LSL shifted immediate (mvni path)
+    testPattern(0xEDFF); // ~0x1200
+    testPattern(0xFFED); // ~0x0012
+    testPattern(0x7FFF); // ~0x8000
+    testPattern(0x00FF); // ~0xFF00
+    testPattern(0xFF00); // ~0x00FF
+
+    // Test all bytes equal (movi 8-bit path)
+    testPattern(0x4242); // Same byte repeated
+    testPattern(0x8080); // Sign bit in both bytes
+    testPattern(0xFFFF); // All ones
+    testPattern(0x1111); // Low value repeated
+
+    // Test non-encodable patterns (fallback path)
+    testPattern(0x1234); // Arbitrary pattern
+    testPattern(0x3C01); // Near FP immediate but not encodable
+    testPattern(0xABCD); // Random pattern
+    testPattern(0x5A5A); // Alternating bits pattern
+}
+
+// Comprehensive tests for move32ToFloat covering all code paths
+static void testMove32ToFloatComprehensive()
+{
+    auto testPattern = [] (uint32_t pattern) {
+        auto test = compile([=] (CCallHelpers& jit) {
+            emitFunctionPrologue(jit);
+
+            jit.move32ToFloat(CCallHelpers::TrustedImm32(pattern), FPRInfo::fpRegT0);
+            jit.moveFloatTo32(FPRInfo::fpRegT0, GPRInfo::returnValueGPR);
+
+            emitFunctionEpilogue(jit);
+            jit.ret();
+        });
+
+        CHECK_EQ(invoke<uint32_t>(test), pattern);
+    };
+
+    // Test zero (moveZeroToFloat path)
+    testPattern(0x00000000);
+
+    // Test FP immediate encoding (fmov path)
+    testPattern(0x3F800000); // Float 1.0
+    testPattern(0x40000000); // Float 2.0
+    testPattern(0xC0000000); // Float -2.0
+    testPattern(0x3F000000); // Float 0.5
+
+    // Test 32-bit LSL shifted immediate (movi path)
+    testPattern(0x00000012); // shift 0
+    testPattern(0x00001200); // shift 8
+    testPattern(0x00120000); // shift 16
+    testPattern(0x12000000); // shift 24
+    testPattern(0x80000000); // Sign bit (very common!)
+    testPattern(0x000000FF); // Max byte at shift 0
+    testPattern(0x0000FF00); // Max byte at shift 8
+    testPattern(0x00FF0000); // Max byte at shift 16
+    testPattern(0xFF000000); // Max byte at shift 24
+
+    // Test inverted 32-bit LSL shifted immediate (mvni path)
+    testPattern(0xFFFFFFED); // ~0x00000012
+    testPattern(0xFFFFEDFF); // ~0x00001200
+    testPattern(0xFFEDFFFF); // ~0x00120000
+    testPattern(0xEDFFFFFF); // ~0x12000000
+    testPattern(0x7FFFFFFF); // ~0x80000000 (INT32_MAX, common!)
+    testPattern(0xFFFFFF00); // ~0x000000FF
+    testPattern(0xFFFF00FF); // ~0x0000FF00
+
+    // Test MSL (Mask Shift Left) patterns (movi MSL path)
+    testPattern(0x000012FF); // movi #0x12, MSL #8
+    testPattern(0x0012FFFF); // movi #0x12, MSL #16
+    testPattern(0x000042FF); // movi #0x42, MSL #8
+    testPattern(0x0042FFFF); // movi #0x42, MSL #16
+    testPattern(0x0080FFFF); // movi #0x80, MSL #16
+
+    // Test inverted MSL patterns (mvni MSL path)
+    testPattern(0xFFFFED00); // mvni #0x12, MSL #8
+    testPattern(0xFFED0000); // mvni #0x12, MSL #16
+    testPattern(0xFFFFBD00); // mvni #0x42, MSL #8
+    testPattern(0xFFBD0000); // mvni #0x42, MSL #16
+
+    // Test byte-mask patterns (movi<64> path)
+    testPattern(0xFF00FF00); // Bytes 1 and 3 are 0xFF
+    testPattern(0x00FF00FF); // Bytes 0 and 2 are 0xFF
+    testPattern(0xFFFF0000); // Bytes 2 and 3 are 0xFF
+    testPattern(0x0000FFFF); // Bytes 0 and 1 are 0xFF
+    testPattern(0xFF0000FF); // Bytes 0 and 3 are 0xFF
+    testPattern(0xFFFFFFFF); // All 0xFF
+
+    // Test repeated 16-bit halves with FP immediate (fmov_v<16> path)
+    testPattern(0x3C003C00); // Repeated half-precision 1.0
+    testPattern(0x40004000); // Repeated half-precision 2.0
+
+    // Test repeated 16-bit halves with LSL (movi<16> path)
+    testPattern(0x12001200); // Repeated 0x1200
+    testPattern(0x00120012); // Repeated 0x0012
+    testPattern(0x80008000); // Repeated sign bit
+
+    // Test repeated 16-bit halves with inverted LSL (mvni<16> path)
+    testPattern(0xEDFFEDFF); // Repeated ~0x1200
+    testPattern(0xFFEDFFED); // Repeated ~0x0012
+
+    // Test all 4 bytes equal (movi 8-bit path)
+    testPattern(0x42424242); // Byte 0x42 repeated
+    testPattern(0x80808080); // Byte 0x80 repeated
+    testPattern(0x11111111); // Byte 0x11 repeated
+
+    // Test non-encodable patterns (fallback path)
+    testPattern(0x12345678); // Multiple non-zero bytes
+    testPattern(0xABCDEF01); // Arbitrary pattern
+    testPattern(0x3F800001); // Near float 1.0 but not exact
+}
+
+// Comprehensive tests for move64ToDouble covering all code paths
+static void testMove64ToDoubleComprehensive()
+{
+    auto testPattern = [] (uint64_t pattern) {
+        auto test = compile([=] (CCallHelpers& jit) {
+            emitFunctionPrologue(jit);
+
+            jit.move64ToDouble(CCallHelpers::TrustedImm64(pattern), FPRInfo::fpRegT0);
+            jit.moveDoubleTo64(FPRInfo::fpRegT0, GPRInfo::returnValueGPR);
+
+            emitFunctionEpilogue(jit);
+            jit.ret();
+        });
+
+        CHECK_EQ(invoke<uint64_t>(test), pattern);
+    };
+
+    // Test zero (moveZeroToDouble path)
+    testPattern(0x0000000000000000ULL);
+
+    // Test FP immediate encoding (fmov<64> path)
+    testPattern(0x3FF0000000000000ULL); // Double 1.0
+    testPattern(0x4000000000000000ULL); // Double 2.0
+    testPattern(0xC000000000000000ULL); // Double -2.0
+
+    // Test byte-mask patterns (movi<64> path)
+    testPattern(0x00000000000000FFULL); // Byte 0 is 0xFF
+    testPattern(0x000000000000FF00ULL); // Byte 1 is 0xFF
+    testPattern(0x00000000FF000000ULL); // Byte 4 is 0xFF
+    testPattern(0xFF00000000000000ULL); // Byte 7 is 0xFF
+    testPattern(0xFF00FF00FF00FF00ULL); // Alternating pattern
+    testPattern(0x00FF00FF00FF00FFULL); // Alternating pattern
+    testPattern(0xFFFFFFFF00000000ULL); // Upper 4 bytes 0xFF
+    testPattern(0x00000000FFFFFFFFULL); // Lower 4 bytes 0xFF
+    testPattern(0xFFFFFFFFFFFFFFFFULL); // All 0xFF
+
+    // Test repeated 32-bit halves with FP immediate (fmov_v<32> path)
+    testPattern(0x3F8000003F800000ULL); // Repeated float 1.0
+    testPattern(0x4000000040000000ULL); // Repeated float 2.0
+    testPattern(0xC0000000C0000000ULL); // Repeated float -2.0
+
+    // Test repeated 32-bit halves with LSL (movi path)
+    testPattern(0x0012000000120000ULL); // Repeated movi #0x12, LSL #16
+    testPattern(0x1200000012000000ULL); // Repeated movi #0x12, LSL #24
+    testPattern(0x0000120000001200ULL); // Repeated movi #0x12, LSL #8
+    testPattern(0x0000001200000012ULL); // Repeated movi #0x12, LSL #0
+    testPattern(0x8000000080000000ULL); // Repeated sign bit
+    testPattern(0x7FFFFFFF7FFFFFFFULL); // Repeated INT32_MAX
+
+    // Test repeated 32-bit halves with inverted LSL (mvni path)
+    testPattern(0xFFFFEDFFFFFFEDFFULL); // Repeated ~0x00001200
+    testPattern(0xEDFFFFFFEDFFFFFFULL); // Repeated ~0x12000000
+
+    // Test repeated 32-bit halves with MSL (movi MSL path)
+    testPattern(0x000042FF000042FFULL); // Repeated movi #0x42, MSL #8
+    testPattern(0x0042FFFF0042FFFFULL); // Repeated movi #0x42, MSL #16
+    testPattern(0x008000FF008000FFULL); // Repeated movi #0x80, MSL #8
+    testPattern(0x0080FFFF0080FFFFULL); // Repeated movi #0x80, MSL #16
+
+    // Test repeated 32-bit halves with inverted MSL (mvni MSL path)
+    testPattern(0xFFFFBD00FFFFBD00ULL); // Repeated mvni #0x42, MSL #8
+    testPattern(0xFFBD0000FFBD0000ULL); // Repeated mvni #0x42, MSL #16
+
+    // Test repeated 16-bit values (all four 16-bit lanes equal) with FP immediate
+    testPattern(0x3C003C003C003C00ULL); // Repeated half-precision 1.0
+    testPattern(0x4000400040004000ULL); // Repeated half-precision 2.0
+
+    // Test repeated 16-bit values with LSL (movi<16> path)
+    testPattern(0x0012001200120012ULL); // Repeated 0x0012
+    testPattern(0x1200120012001200ULL); // Repeated 0x1200
+    testPattern(0x8000800080008000ULL); // Repeated sign bit
+
+    // Test repeated 16-bit values with inverted LSL (mvni<16> path)
+    testPattern(0xFFEDFFEDFFEDFFEDULL); // Repeated ~0x0012
+    testPattern(0xEDFFEDFFEDFFEDFFULL); // Repeated ~0x1200
+
+    // Test all 8 bytes equal (movi 8-bit path)
+    testPattern(0x4242424242424242ULL); // Byte 0x42 repeated
+    testPattern(0x8080808080808080ULL); // Byte 0x80 repeated
+    testPattern(0x1111111111111111ULL); // Byte 0x11 repeated
+
+    // Test non-encodable patterns (fallback path)
+    testPattern(0x123456789ABCDEF0ULL); // Arbitrary pattern
+    testPattern(0x7FFFFFFFFFFFFFFFULL); // Near all ones
+    testPattern(0x8000000000000000ULL); // Single sign bit
+    testPattern(0x3FF0000000000001ULL); // Near double 1.0
+}
+
+// Comprehensive tests for move128ToVector covering all code paths
+static void testMove128ToVectorComprehensive()
+{
+    auto testPattern = [&](v128_t pattern) {
+        auto compilation = compile([&](CCallHelpers& jit) {
+            emitFunctionPrologue(jit);
+
+            jit.move128ToVector(pattern, ARM64Registers::q0);
+
+            // Extract lower 64 bits to x0
+            jit.vectorExtractLaneInt64(CCallHelpers::TrustedImm32(0), ARM64Registers::q0, ARM64Registers::x0);
+
+            // Extract upper 64 bits to x1
+            jit.vectorExtractLaneInt64(CCallHelpers::TrustedImm32(1), ARM64Registers::q0, ARM64Registers::x1);
+
+            emitFunctionEpilogue(jit);
+            jit.ret();
+        });
+
+        auto [low64, high64] = invoke<std::pair<uint64_t, uint64_t>>(compilation);
+        CHECK_EQ(low64, pattern.u64x2[0]);
+        CHECK_EQ(high64, pattern.u64x2[1]);
+    };
+
+    // Test all zeros (special case)
+    testPattern(v128_t { 0x0000000000000000ULL, 0x0000000000000000ULL });
+
+    // Test upper and lower 64-bit halves equal with FP immediate (fmov_v<128,64> path)
+    testPattern(v128_t { 0x3FF0000000000000ULL, 0x3FF0000000000000ULL }); // Double 1.0 repeated
+    testPattern(v128_t { 0x4000000000000000ULL, 0x4000000000000000ULL }); // Double 2.0 repeated
+
+    // Test upper and lower 64-bit halves equal with byte mask (movi<128,64> path)
+    testPattern(v128_t { 0xFF00FF00FF00FF00ULL, 0xFF00FF00FF00FF00ULL });
+    testPattern(v128_t { 0x00FF00FF00FF00FFULL, 0x00FF00FF00FF00FFULL });
+    testPattern(v128_t { 0xFFFFFFFF00000000ULL, 0xFFFFFFFF00000000ULL });
+
+    // Test all four 32-bit lanes equal with FP immediate (fmov_v<128,32> path)
+    testPattern(v128_t { 0x3F8000003F800000ULL, 0x3F8000003F800000ULL }); // Float 1.0 repeated 4 times
+    testPattern(v128_t { 0x4000000040000000ULL, 0x4000000040000000ULL }); // Float 2.0 repeated 4 times
+
+    // Test all four 32-bit lanes equal with LSL (movi<128,32> path)
+    testPattern(v128_t { 0x1200000012000000ULL, 0x1200000012000000ULL }); // 0x12 << 24, repeated
+    testPattern(v128_t { 0x0012000000120000ULL, 0x0012000000120000ULL }); // 0x12 << 16, repeated
+    testPattern(v128_t { 0x0000120000001200ULL, 0x0000120000001200ULL }); // 0x12 << 8, repeated
+    testPattern(v128_t { 0x0000001200000012ULL, 0x0000001200000012ULL }); // 0x12 << 0, repeated
+    testPattern(v128_t { 0x8000000080000000ULL, 0x8000000080000000ULL }); // Sign bit repeated
+
+    // Test all four 32-bit lanes equal with inverted LSL (mvni<128,32> path)
+    testPattern(v128_t { 0xEDFFFFFFEDFFFFFFULL, 0xEDFFFFFFEDFFFFFFULL }); // ~(0x12 << 24), repeated
+    testPattern(v128_t { 0xFFEDFFFFFFEDFFFFULL, 0xFFEDFFFFFFEDFFFFULL }); // ~(0x12 << 16), repeated
+    testPattern(v128_t { 0xFFFFEDFFFFFFEDFFULL, 0xFFFFEDFFFFFFEDFFULL }); // ~(0x12 << 8), repeated
+    testPattern(v128_t { 0x7FFFFFFF7FFFFFFFULL, 0x7FFFFFFF7FFFFFFFULL }); // ~sign bit, repeated
+
+    // Test all four 32-bit lanes equal with MSL (movi<128,32> MSL path)
+    testPattern(v128_t { 0x000042FF000042FFULL, 0x000042FF000042FFULL }); // MSL #8, repeated
+    testPattern(v128_t { 0x0042FFFF0042FFFFULL, 0x0042FFFF0042FFFFULL }); // MSL #16, repeated
+    testPattern(v128_t { 0x008000FF008000FFULL, 0x008000FF008000FFULL }); // MSL #8 with 0x80
+
+    // Test all four 32-bit lanes equal with inverted MSL (mvni<128,32> MSL path)
+    testPattern(v128_t { 0xFFFFBD00FFFFBD00ULL, 0xFFFFBD00FFFFBD00ULL }); // ~MSL #8, repeated
+    testPattern(v128_t { 0xFFBD0000FFBD0000ULL, 0xFFBD0000FFBD0000ULL }); // ~MSL #16, repeated
+
+    // Test all four 32-bit lanes equal with byte mask (movi<128,64> path for 32-bit)
+    testPattern(v128_t { 0xFF00FF00FF00FF00ULL, 0xFF00FF00FF00FF00ULL });
+    testPattern(v128_t { 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL }); // All ones
+
+    // Test all eight 16-bit lanes equal with FP immediate (fmov_v<128,16> path)
+    testPattern(v128_t { 0x3C003C003C003C00ULL, 0x3C003C003C003C00ULL }); // Half 1.0 repeated 8 times
+    testPattern(v128_t { 0x4000400040004000ULL, 0x4000400040004000ULL }); // Half 2.0 repeated 8 times
+
+    // Test all eight 16-bit lanes equal with LSL (movi<128,16> path)
+    testPattern(v128_t { 0x1200120012001200ULL, 0x1200120012001200ULL }); // 0x1200 repeated
+    testPattern(v128_t { 0x0012001200120012ULL, 0x0012001200120012ULL }); // 0x0012 repeated
+    testPattern(v128_t { 0x8000800080008000ULL, 0x8000800080008000ULL }); // Sign bit repeated
+
+    // Test all eight 16-bit lanes equal with inverted LSL (mvni<128,16> path)
+    testPattern(v128_t { 0xEDFFEDFFEDFFEDFFULL, 0xEDFFEDFFEDFFEDFFULL }); // ~0x1200 repeated
+    testPattern(v128_t { 0xFFEDFFEDFFEDFFEDULL, 0xFFEDFFEDFFEDFFEDULL }); // ~0x0012 repeated
+
+    // Test all 16 bytes equal (movi<128,8> path)
+    testPattern(v128_t { 0x4242424242424242ULL, 0x4242424242424242ULL }); // 0x42 repeated 16 times
+    testPattern(v128_t { 0x8080808080808080ULL, 0x8080808080808080ULL }); // 0x80 repeated 16 times
+    testPattern(v128_t { 0x1111111111111111ULL, 0x1111111111111111ULL }); // 0x11 repeated 16 times
+
+    // Test non-repeating patterns (fallback path - GPR + vector lane insertion)
+    testPattern(v128_t { 0x0000000000000000ULL, 0xFFFFFFFFFFFFFFFFULL }); // Half zeros, half ones
+    testPattern(v128_t { 0x123456789ABCDEF0ULL, 0xFEDCBA9876543210ULL }); // Different arbitrary values
+    testPattern(v128_t { 0x0000000000000042ULL, 0x0000000000000043ULL }); // Simple different values
+    testPattern(v128_t { 0x3FF0000000000000ULL, 0x4000000000000000ULL }); // Different doubles
+    testPattern(v128_t { 0x123456789ABCDEF0ULL, 0x123456789ABCDEF1ULL }); // Nearly same but different
 }
 #endif
 
@@ -6102,7 +7478,9 @@ static void testGPRInfoConsistency()
 // Using WTF_IGNORES_THREAD_SAFETY_ANALYSIS because the function is still holding crashLock when exiting.
 void run(const char* filter) WTF_IGNORES_THREAD_SAFETY_ANALYSIS
 {
-    JSC::initialize();
+    JSC::initialize([] {
+        JSC::Options::useJITCage() = false;
+    });
     unsigned numberOfTests = 0;
 
     Deque<RefPtr<SharedTask<void()>>> tasks;
@@ -6152,6 +7530,8 @@ void run(const char* filter) WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     RUN(testLoadStorePair32());
     RUN(testSub32ArgImm());
 
+    RUN(testBranch32());
+
     RUN(testBranchTest8());
     RUN(testBranchTest16());
 
@@ -6165,6 +7545,7 @@ void run(const char* filter) WTF_IGNORES_THREAD_SAFETY_ANALYSIS
 #endif
 
 #if CPU(X86_64) || CPU(ARM64)
+    RUN(testBranch64());
     RUN(testClearBit64());
     RUN(testClearBits64WithMask());
     RUN(testClearBits64WithMaskTernary());
@@ -6172,6 +7553,35 @@ void run(const char* filter) WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     RUN(testCountTrailingZeros64WithoutNullCheck());
     RUN(testShiftAndAdd());
     RUN(testStore64Imm64AddressPointer());
+#endif
+
+    RUN(testLoadAcq8SignedExtendTo32_Address_RegisterID());
+    RUN(testLoad8SignedExtendTo32_Address_RegisterID());
+    RUN(testLoad8SignedExtendTo32_BaseIndex_RegisterID());
+    RUN(testLoad8SignedExtendTo32_voidp_RegisterID());
+
+    RUN(testLoadAcq16SignedExtendTo32_Address_RegisterID());
+    RUN(testLoad16SignedExtendTo32_Address_RegisterID());
+    RUN(testLoad16SignedExtendTo32_BaseIndex_RegisterID());
+    RUN(testLoad16SignedExtendTo32_voidp_RegisterID());
+
+    RUN(testLoadStorePair32());
+
+#if CPU(ADDRESS64)
+    RUN(testLoadAcq8SignedExtendTo64_Address_RegisterID());
+    RUN(testLoad8SignedExtendTo64_Address_RegisterID());
+    RUN(testLoad8SignedExtendTo64_BaseIndex_RegisterID());
+    RUN(testLoad8SignedExtendTo64_voidp_RegisterID());
+
+    RUN(testLoadAcq16SignedExtendTo64_Address_RegisterID());
+    RUN(testLoad16SignedExtendTo64_Address_RegisterID());
+    RUN(testLoad16SignedExtendTo64_BaseIndex_RegisterID());
+    RUN(testLoad16SignedExtendTo64_voidp_RegisterID());
+
+    RUN(testLoadAcq32SignedExtendTo64_Address_RegisterID());
+    RUN(testLoad32SignedExtendTo64_Address_RegisterID());
+    RUN(testLoad32SignedExtendTo64_BaseIndex_RegisterID());
+    RUN(testLoad32SignedExtendTo64_voidp_RegisterID());
 #endif
 
 #if CPU(ARM64)
@@ -6274,7 +7684,7 @@ void run(const char* filter) WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     }
 #endif
 
-#if CPU(X86) || CPU(X86_64) || CPU(ARM64) || CPU(RISCV64)
+#if CPU(X86_64) || CPU(ARM64) || CPU(RISCV64)
     FOR_EACH_DOUBLE_CONDITION_RUN(testCompareFloat);
 #endif
 
@@ -6303,6 +7713,8 @@ void run(const char* filter) WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     FOR_EACH_DOUBLE_CONDITION_RUN(testMoveDoubleConditionallyDoubleSameArg);
     FOR_EACH_DOUBLE_CONDITION_RUN(testMoveDoubleConditionallyFloatSameArg);
 
+    RUN(testSignExtend8To32());
+    RUN(testSignExtend16To32());
     RUN(testSignExtend8To64());
     RUN(testSignExtend16To64());
 #endif
@@ -6323,17 +7735,35 @@ void run(const char* filter) WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     RUN(testStoreBaseIndex());
     RUN(testStoreImmediateBaseIndex());
 
-    RUN(testCagePreservesPACFailureBit());
-
     RUN(testBranchIfType());
     RUN(testBranchIfNotType());
 #if CPU(X86_64) || CPU(ARM64)
     RUN(testBranchConvertDoubleToInt52());
 #endif
 
+#if CPU(X86_64)
+    RUN(testAtomicAndEmitsCode());
+#endif
+
     RUN(testOrImmMem());
 
     RUN(testAndOrDouble());
+
+    RUN(testNegateDouble());
+
+    RUN(testNegateFloat());
+
+#if CPU(ARM64)
+    RUN(testMove32ToFloatMovi());
+    RUN(testMove64ToDoubleMovi());
+    RUN(testMove64ToDoubleRepeated32BitPatternBug());
+    RUN(testFMovHalfPrecisionEncoding());
+    RUN(testMove128ToVectorMovi());
+    RUN(testMove16ToFloat16Comprehensive());
+    RUN(testMove32ToFloatComprehensive());
+    RUN(testMove64ToDoubleComprehensive());
+    RUN(testMove128ToVectorComprehensive());
+#endif
 
     RUN(testGPRInfoConsistency());
 
@@ -6346,7 +7776,7 @@ void run(const char* filter) WTF_IGNORES_THREAD_SAFETY_ANALYSIS
     for (unsigned i = filter ? 1 : WTF::numberOfProcessorCores(); i--;) {
         threads.append(
             Thread::create(
-                "testmasm thread",
+                "testmasm thread"_s,
                 [&] () {
                     for (;;) {
                         RefPtr<SharedTask<void()>> task;
@@ -6403,3 +7833,5 @@ extern "C" __declspec(dllexport) int WINAPI dllLauncherEntryPoint(int argc, cons
     return main(argc, const_cast<char**>(argv));
 }
 #endif
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

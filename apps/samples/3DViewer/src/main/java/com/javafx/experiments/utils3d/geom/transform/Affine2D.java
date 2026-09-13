@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 1996, 2015, Oracle and/or its affiliates.
+ * Copyright (c) 1996, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -764,6 +764,7 @@ public class Affine2D extends AffineBase {
      * @param Tx the <code>BaseTransform</code> object from which to
      *           copy the transform
      */
+    @Override
     public void setTransform(BaseTransform Tx) {
         switch (Tx.getDegree()) {
             case IDENTITY:
@@ -791,7 +792,7 @@ public class Affine2D extends AffineBase {
                     System.out.print(", " + Tx.getMzt());
                     System.out.println();
                     // TODO: Should this be thrown before we modify anything?
-                    // (RT-26801)
+                    // (JDK-8091010)
                     degreeError(Degree.AFFINE_2D);
                 }
                 /* No Break */
@@ -1066,6 +1067,7 @@ public class Affine2D extends AffineBase {
      * @throws NoninvertibleTransformException if the matrix cannot be inverted.
      * @see #getDeterminant
      */
+    @Override
     public Affine2D createInverse()
             throws NoninvertibleTransformException {
         double det;
@@ -1397,7 +1399,7 @@ public class Affine2D extends AffineBase {
     public BaseTransform deriveWithConcatenation(double mxx, double myx,
                                                  double mxy, double myy,
                                                  double mxt, double myt) {
-        // TODO: Simplify this (RT-26801)
+        // TODO: Simplify this (JDK-8091010)
         BaseTransform tmpTx = getInstance(mxx, myx,
                 mxy, myy,
                 mxt, myt);

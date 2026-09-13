@@ -31,7 +31,6 @@ XML_NAME = xml2
 XML_BASENAME = lib$(XML_NAME)
 XML_SO = $(XML_BASENAME).dll
 XML_IMP = $(XML_BASENAME).lib
-XML_DEF = $(XML_BASENAME).def
 XML_A = $(XML_BASENAME)_a.lib
 DUMMY = dir.exists
 
@@ -42,28 +41,24 @@ XML_INTDIR_A = int.a.bcb
 UTILS_INTDIR = int.utils.bcb
 
 # The preprocessor and its options.
-CPP = cpp32.exe -P- -DWIN32
+CPP = cpp32.exe -P-
 CPPFLAGS = -I"$(XML_SRCDIR)\include" -DNOLIBTOOL 
 !if "$(WITH_THREADS)" != "no"
-CPPFLAGS = $(CPPFLAGS) -D_REENTRANT -D__MT__
+CPPFLAGS = $(CPPFLAGS) -D__MT__
 !endif
 
 # The compiler and its options.
 CC = bcc32.exe
-CFLAGS = -q -DWIN32 -D_NO_VCL -D_WINDOWS -D_MBCS -DEILSEQ=2 -DNOLIBTOOL -w-
+CFLAGS = -q -D_NO_VCL -D_WINDOWS -D_MBCS -DEILSEQ=2 -DNOLIBTOOL -w-
 CFLAGS = $(CFLAGS) -I"$(XML_SRCDIR)" -I"$(XML_SRCDIR)\include" -I"$(INCPREFIX)" -I"$(INCLUDE)"
 !if "$(WITH_THREADS)" != "no"
-CFLAGS = $(CFLAGS) -D_REENTRANT -tWM
+CFLAGS = $(CFLAGS) -tWM
 !endif
 !if "$(DYNRUNTIME)" == "1"
 CFLAGS = $(CFLAGS) -tWR
 !endif
-!if "$(WITH_THREADS)" == "yes" || "$(WITH_THREADS)" == "ctls"
-CFLAGS = $(CFLAGS) -DHAVE_WIN32_THREADS -DHAVE_COMPILER_TLS
-!else if "$(WITH_THREADS)" == "native"
-CFLAGS = $(CFLAGS) -DHAVE_WIN32_THREADS
-!else if "$(WITH_THREADS)" == "posix"
-CFLAGS = $(CFLAGS) -DHAVE_PTHREAD_H
+!if "$(WITH_THREADS)" == "ctls"
+CFLAGS = $(CFLAGS) "-DXML_THREAD_LOCAL=__declspec(thread)"
 !endif
 
 # The linker and its options.
@@ -80,7 +75,7 @@ LIBS = $(LIBS) cw32i.lib
 !else
 LIBS = $(LIBS) cw32.lib
 !endif
-!if "$(WITH_FTP)" == "1" || "$(WITH_HTTP)" == "1"
+!if "$(WITH_HTTP)" == "1"
 LIBS = $(LIBS) wsock32.lib ws2_32.lib
 !endif 
 !if "$(WITH_ICONV)" == "1"
@@ -126,15 +121,12 @@ XML_OBJS = $(XML_INTDIR)\buf.obj\
 	$(XML_INTDIR)\hash.obj\
 	$(XML_INTDIR)\HTMLparser.obj\
 	$(XML_INTDIR)\HTMLtree.obj\
-	$(XML_INTDIR)\legacy.obj\
 	$(XML_INTDIR)\list.obj\
-	$(XML_INTDIR)\nanoftp.obj\
 	$(XML_INTDIR)\nanohttp.obj\
 	$(XML_INTDIR)\parser.obj\
 	$(XML_INTDIR)\parserInternals.obj\
 	$(XML_INTDIR)\pattern.obj\
 	$(XML_INTDIR)\relaxng.obj\
-	$(XML_INTDIR)\SAX.obj\
 	$(XML_INTDIR)\SAX2.obj\
 	$(XML_INTDIR)\schematron.obj\
 	$(XML_INTDIR)\threads.obj\
@@ -171,15 +163,12 @@ XML_OBJS_A = $(XML_INTDIR_A)\buf.obj\
 	$(XML_INTDIR_A)\hash.obj\
 	$(XML_INTDIR_A)\HTMLparser.obj\
 	$(XML_INTDIR_A)\HTMLtree.obj\
-	$(XML_INTDIR_A)\legacy.obj\
 	$(XML_INTDIR_A)\list.obj\
-	$(XML_INTDIR_A)\nanoftp.obj\
 	$(XML_INTDIR_A)\nanohttp.obj\
 	$(XML_INTDIR_A)\parser.obj\
 	$(XML_INTDIR_A)\parserInternals.obj\
 	$(XML_INTDIR_A)\pattern.obj\
 	$(XML_INTDIR_A)\relaxng.obj\
-	$(XML_INTDIR_A)\SAX.obj\
 	$(XML_INTDIR_A)\SAX2.obj\
 	$(XML_INTDIR_A)\schematron.obj\
 	$(XML_INTDIR_A)\threads.obj\
@@ -205,18 +194,11 @@ XML_OBJS_A = $(XML_INTDIR_A)\buf.obj\
 # Xmllint and friends executables.
 UTILS = $(BINDIR)\xmllint.exe\
 	$(BINDIR)\xmlcatalog.exe\
-	$(BINDIR)\testAutomata.exe\
 	$(BINDIR)\testModule.exe\
 	$(BINDIR)\runtest.exe\
 	$(BINDIR)\runsuite.exe\
 	$(BINDIR)\testapi.exe\
 	$(BINDIR)\testlimits.exe
-
-
-!if "$(WITH_THREADS)" != "no"
-UTILS = $(UTILS) $(BINDIR)\testThreads.exe
-!endif
-
 
 all : libxml libxmla utils
 
@@ -295,17 +277,12 @@ $(XML_OBJS_A) : $(XML_INTDIR_A)\$(DUMMY)
 
 #def4bcb.exe : def4bcb.c
 
-# Creates the export definition file (DEF) for libxml.
-#$(XML_INTDIR)\$(XML_DEF) : $(XML_INTDIR)\$(DUMMY) $(XML_DEF).src def4bcb.exe
-#	$(CPP) $(CPPFLAGS) -o $(XML_INTDIR)\$(XML_DEF).tmp $(XML_DEF).src
-#	def4bcb -msnames < $(XML_INTDIR)\$(XML_DEF).tmp > $(XML_INTDIR)\$(XML_DEF)
-
 # Creates the libxml shared object.
 $(BINDIR)\$(XML_SO) : $(BINDIR)\$(DUMMY) $(XML_OBJS)
 	$(LD) $(LDFLAGS) -Tpd -Gi c0d32.obj $(XML_OBJS),$(BINDIR)\$(XML_SO),,$(LIBS)
 
-#$(BINDIR)\$(XML_SO) : $(BINDIR)\$(DUMMY) $(XML_OBJS) $(XML_INTDIR)\$(XML_DEF)
-#	$(LD) $(LDFLAGS) -Tpd -Gi c0d32.obj $(XML_OBJS),$(BINDIR)\$(XML_SO),,$(LIBS),$(XML_INTDIR)\$(XML_DEF)
+#$(BINDIR)\$(XML_SO) : $(BINDIR)\$(DUMMY) $(XML_OBJS)
+#	$(LD) $(LDFLAGS) -Tpd -Gi c0d32.obj $(XML_OBJS),$(BINDIR)\$(XML_SO),,$(LIBS)
 
 # Creates the libxml archive.
 $(BINDIR)\$(XML_A) : $(BINDIR)\$(DUMMY) $(XML_OBJS_A)

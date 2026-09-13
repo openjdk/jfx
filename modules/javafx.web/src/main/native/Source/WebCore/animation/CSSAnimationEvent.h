@@ -25,16 +25,16 @@
 
 #pragma once
 
-#include "DeclarativeAnimationEvent.h"
+#include "StyleOriginatedAnimationEvent.h"
 
 namespace WebCore {
 
-class CSSAnimationEvent final : public DeclarativeAnimationEvent {
-    WTF_MAKE_ISO_ALLOCATED(CSSAnimationEvent);
+class CSSAnimationEvent final : public StyleOriginatedAnimationEvent {
+    WTF_MAKE_TZONE_ALLOCATED(CSSAnimationEvent);
 public:
-    static Ref<CSSAnimationEvent> create(const AtomString& type, WebAnimation* animation, std::optional<Seconds> scheduledTime, double elapsedTime, PseudoId pseudoId, const String& animationName)
+    static Ref<CSSAnimationEvent> create(const AtomString& type, WebAnimation* animation, std::optional<Seconds> scheduledTime, double elapsedTime, const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier, const String& animationName)
     {
-        return adoptRef(*new CSSAnimationEvent(type, animation, scheduledTime, elapsedTime, pseudoId, animationName));
+        return adoptRef(*new CSSAnimationEvent(type, animation, scheduledTime, elapsedTime, pseudoElementIdentifier, animationName));
     }
 
     struct Init : EventInit {
@@ -50,14 +50,10 @@ public:
 
     virtual ~CSSAnimationEvent();
 
-    bool isCSSAnimationEvent() const final { return true; }
-
     const String& animationName() const { return m_animationName; }
 
-    EventInterface eventInterface() const override { return CSSAnimationEventInterfaceType; }
-
 private:
-    CSSAnimationEvent(const AtomString& type, WebAnimation*, std::optional<Seconds> scheduledTime, double elapsedTime, PseudoId, const String& animationName);
+    CSSAnimationEvent(const AtomString& type, WebAnimation*, std::optional<Seconds> scheduledTime, double elapsedTime, const std::optional<Style::PseudoElementIdentifier>&, const String& animationName);
     CSSAnimationEvent(const AtomString&, const Init&, IsTrusted);
 
     String m_animationName;
@@ -65,4 +61,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_ANIMATION_EVENT_BASE(CSSAnimationEvent, isCSSAnimationEvent())
+SPECIALIZE_TYPE_TRAITS_EVENT(CSSAnimationEvent)

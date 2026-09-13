@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,14 @@
 
 package test.javafx.animation;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-
 import com.sun.javafx.tk.Toolkit;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import javafx.util.Duration;
 
@@ -43,13 +43,13 @@ public class AnimationPulseReceiverTest {
     private AbstractPrimaryTimerMock timer;
     private AnimationMock animation;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         timer = new AbstractPrimaryTimerMock();
         animation = new AnimationMock(timer, Duration.INDEFINITE, 1.0, 1, false);
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         animation.doStop();
     }

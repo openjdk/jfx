@@ -23,6 +23,7 @@
 #include "CommonAtomStrings.h"
 #include "FEConvolveMatrix.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -48,7 +49,7 @@ struct SVGPropertyTraits<EdgeModeType> {
         return emptyString();
     }
 
-    static EdgeModeType fromString(const String& value)
+    static EdgeModeType fromString(SVGElement&, const String& value)
     {
         if (value == "duplicate"_s)
             return EdgeModeType::Duplicate;
@@ -61,7 +62,8 @@ struct SVGPropertyTraits<EdgeModeType> {
 };
 
 class SVGFEConvolveMatrixElement final : public SVGFilterPrimitiveStandardAttributes {
-    WTF_MAKE_ISO_ALLOCATED(SVGFEConvolveMatrixElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGFEConvolveMatrixElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGFEConvolveMatrixElement);
 public:
     static Ref<SVGFEConvolveMatrixElement> create(const QualifiedName&, Document&);
 
@@ -94,10 +96,14 @@ public:
     SVGAnimatedNumber& kernelUnitLengthYAnimated() { return m_kernelUnitLengthY; }
     SVGAnimatedBoolean& preserveAlphaAnimated() { return m_preserveAlpha; }
 
+    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFEConvolveMatrixElement, SVGFilterPrimitiveStandardAttributes>;
+
 private:
     SVGFEConvolveMatrixElement(const QualifiedName&, Document&);
 
-    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFEConvolveMatrixElement, SVGFilterPrimitiveStandardAttributes>;
+    static constexpr int initialOrderValue = 3;
+    static constexpr float initialDivisorValue = 1;
+    static constexpr float initialKernelUnitLengthValue = 0;
 
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;
@@ -109,10 +115,10 @@ private:
     RefPtr<FilterEffect> createFilterEffect(const FilterEffectVector&, const GraphicsContext& destinationContext) const override;
 
     Ref<SVGAnimatedString> m_in1 { SVGAnimatedString::create(this) };
-    Ref<SVGAnimatedInteger> m_orderX { SVGAnimatedInteger::create(this) };
-    Ref<SVGAnimatedInteger> m_orderY { SVGAnimatedInteger::create(this) };
+    Ref<SVGAnimatedInteger> m_orderX { SVGAnimatedInteger::create(this, initialOrderValue) };
+    Ref<SVGAnimatedInteger> m_orderY { SVGAnimatedInteger::create(this, initialOrderValue) };
     Ref<SVGAnimatedNumberList> m_kernelMatrix { SVGAnimatedNumberList::create(this) };
-    Ref<SVGAnimatedNumber> m_divisor { SVGAnimatedNumber::create(this) };
+    Ref<SVGAnimatedNumber> m_divisor { SVGAnimatedNumber::create(this, initialDivisorValue) };
     Ref<SVGAnimatedNumber> m_bias { SVGAnimatedNumber::create(this) };
     Ref<SVGAnimatedInteger> m_targetX { SVGAnimatedInteger::create(this) };
     Ref<SVGAnimatedInteger> m_targetY { SVGAnimatedInteger::create(this) };

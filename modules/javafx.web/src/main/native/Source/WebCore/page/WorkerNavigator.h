@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,33 +25,43 @@
 
 #pragma once
 
-#include "JSDOMPromiseDeferredForward.h"
-#include "NavigatorBase.h"
-#include "Supplementable.h"
+#include <WebCore/JSDOMPromiseDeferredForward.h>
+#include <WebCore/NavigatorBase.h>
+#include <WebCore/Supplementable.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
+class GPU;
+class NavigatorUAData;
+
 class WorkerNavigator final : public NavigatorBase, public Supplementable<WorkerNavigator> {
+    WTF_MAKE_TZONE_ALLOCATED(WorkerNavigator);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WorkerNavigator);
 public:
     static Ref<WorkerNavigator> create(ScriptExecutionContext& context, const String& userAgent, bool isOnline) { return adoptRef(*new WorkerNavigator(context, userAgent, isOnline)); }
+
+    virtual ~WorkerNavigator();
 
     const String& userAgent() const final;
     bool onLine() const final;
     void setIsOnline(bool isOnline) { m_isOnline = isOnline; }
 
-#if ENABLE(BADGING)
     void setAppBadge(std::optional<unsigned long long>, Ref<DeferredPromise>&&);
     void clearAppBadge(Ref<DeferredPromise>&&);
-#endif
+    NavigatorUAData& userAgentData() const;
 
     GPU* gpu();
 
 private:
     explicit WorkerNavigator(ScriptExecutionContext&, const String&, bool isOnline);
 
+    mutable RefPtr<NavigatorUAData> m_navigatorUAData;
     String m_userAgent;
     bool m_isOnline;
+#if HAVE(WEBGPU_IMPLEMENTATION)
+    RefPtr<GPU> m_gpuForWebGPU;
+#endif
 };
 
 } // namespace WebCore

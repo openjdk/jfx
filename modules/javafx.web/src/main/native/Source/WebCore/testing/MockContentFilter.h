@@ -25,20 +25,23 @@
 
 #pragma once
 
-#include "MockContentFilterSettings.h"
-#include "PlatformContentFilter.h"
+#include <WebCore/MockContentFilterSettings.h>
+#include <WebCore/PlatformContentFilter.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
 
 class MockContentFilter final : public PlatformContentFilter {
-    friend UniqueRef<MockContentFilter> WTF::makeUniqueRefWithoutFastMallocCheck<MockContentFilter>();
+    WTF_MAKE_TZONE_ALLOCATED(MockContentFilter);
 
 public:
     static void ensureInstalled();
-    static UniqueRef<MockContentFilter> create();
+    static Ref<MockContentFilter> create(const PlatformContentFilter::FilterParameters&);
 
+    bool isEnabled() const final { return enabled(); }
     void willSendRequest(ResourceRequest&, const ResourceResponse&) override;
+    void willSendRequest(ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(String&&)>&&) final;
     void responseReceived(const ResourceResponse&) override;
     void addData(const SharedBuffer&) override;
     void finishedAddingData() override;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,10 @@
 
 package test.javafx.scene.control;
 
+import static org.junit.jupiter.api.Assertions.*;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
+
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -34,12 +38,14 @@ import javafx.beans.property.StringProperty;
 import javafx.scene.Scene;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextInputControlShim;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
-import static org.junit.Assert.*;
+import javafx.scene.control.skin.TextAreaSkin;
+import javafx.scene.control.skin.TextInputSkinShim;
+import javafx.scene.layout.StackPane;
+import javafx.scene.text.Text;
+import javafx.stage.Stage;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  *
@@ -49,14 +55,32 @@ public class TextAreaTest {
     private TextArea txtArea;//Empty string
     private TextArea dummyTxtArea;//With string value
 
-    @Before public void setup() {
+    private Scene scene;
+    private Stage stage;
+    private StackPane root;
+
+    @BeforeEach
+    public void setup() {
         txtArea = new TextArea();
         dummyTxtArea = new TextArea("dummy");
         setUncaughtExceptionHandler();
     }
 
-    @After public void cleanup() {
+    @AfterEach
+    public void cleanup() {
+        if (stage != null) {
+            stage.hide();
+        }
         removeUncaughtExceptionHandler();
+    }
+
+    private void initStage() {
+        //This step is not needed (Just to make sure StubToolkit is loaded into VM)
+        Toolkit tk = Toolkit.getToolkit();
+        root = new StackPane();
+        scene = new Scene(root);
+        stage = new Stage();
+        stage.setScene(scene);
     }
 
     private void setUncaughtExceptionHandler() {
@@ -187,17 +211,17 @@ public class TextAreaTest {
     @Test public void checkPromptTextPropertyBind() {
         StringProperty strPr = new SimpleStringProperty("value");
         txtArea.promptTextProperty().bind(strPr);
-        assertTrue("PromptText cannot be bound", txtArea.getPromptText().equals("value"));
+        assertTrue(txtArea.getPromptText().equals("value"), "PromptText cannot be bound");
         strPr.setValue("newvalue");
-        assertTrue("PromptText cannot be bound", txtArea.getPromptText().equals("newvalue"));
+        assertTrue(txtArea.getPromptText().equals("newvalue"), "PromptText cannot be bound");
     }
 
     @Test public void checkTextPropertyBind() {
         StringProperty strPr = new SimpleStringProperty("value");
         txtArea.textProperty().bind(strPr);
-        assertEquals("Text cannot be bound", txtArea.getText(), "value");
+        assertEquals(txtArea.getText(), "value", "Text cannot be bound");
         strPr.setValue("newvalue");
-        assertEquals("Text cannot be bound", txtArea.getText(),  "newvalue");
+        assertEquals(txtArea.getText(),  "newvalue", "Text cannot be bound");
     }
 
     @Test public void checkScrollLeftPropertyBind() {
@@ -238,6 +262,42 @@ public class TextAreaTest {
         assertTrue(txtArea.isWrapText());
         boolPr.setValue(false);
         assertFalse(txtArea.isWrapText());
+    }
+
+    @Test
+    public void testPromptTextWithBindingWithLineBreaks() {
+        initStage();
+        txtArea.setSkin(new TextAreaSkin(txtArea));
+        String promptWithLineBreaks = "Prompt\nwith\nLineBreaks";
+        StringProperty promptProperty = new SimpleStringProperty(promptWithLineBreaks);
+        txtArea.promptTextProperty().bind(promptProperty);
+        root.getChildren().add(txtArea);
+        Text promptNode = TextInputSkinShim.getPromptNode(txtArea);
+        assertEquals(promptWithLineBreaks, promptNode.getText());
+        txtArea.promptTextProperty().unbind();
+    }
+
+    @Test
+    public void testPromptTextInTextArea() {
+        initStage();
+        txtArea.setSkin(new TextAreaSkin(txtArea));
+        String promptWithLineBreaks = "Prompt\nwith\nLineBreaks";
+        txtArea.setPromptText(promptWithLineBreaks);
+        root.getChildren().add(txtArea);
+        Text promptNode = TextInputSkinShim.getPromptNode(txtArea);
+        assertEquals(promptWithLineBreaks, promptNode.getText());
+    }
+
+    @Test
+    public void testPromptTextWithNullValue() {
+        initStage();
+        txtArea.setSkin(new TextAreaSkin(txtArea));
+        String promptWithNull = null;
+        StringProperty promptPropertyNull = new SimpleStringProperty(promptWithNull);
+        txtArea.promptTextProperty().bind(promptPropertyNull);
+        root.getChildren().add(txtArea);
+        Text promptNode = TextInputSkinShim.getPromptNode(txtArea);
+        assertNull(promptNode);
     }
 
     /*********************************************************************

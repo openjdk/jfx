@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,7 +37,7 @@ import java.util.Arrays;
 */
 public abstract class SetExpressionHelper<E> extends ExpressionHelperBase {
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------------------------------------------
     // Static methods
 
     public static <E> SetExpressionHelper<E> addListener(SetExpressionHelper<E> helper, ObservableSetValue<E> observable, InvalidationListener listener) {
@@ -95,7 +95,7 @@ public abstract class SetExpressionHelper<E> extends ExpressionHelperBase {
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------------------------------------------
     // Common implementations
 
     protected final ObservableSetValue<E> observable;
@@ -116,7 +116,7 @@ public abstract class SetExpressionHelper<E> extends ExpressionHelperBase {
     protected abstract void fireValueChangedEvent();
     protected abstract void fireValueChangedEvent(SetChangeListener.Change<? extends E> change);
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //------------------------------------------------------------------------------------------------------------------
     // Implementations
 
     private static class SingleInvalidation<E> extends SetExpressionHelper<E> {

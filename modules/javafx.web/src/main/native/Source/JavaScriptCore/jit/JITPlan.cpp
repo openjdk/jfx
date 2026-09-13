@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,9 +31,15 @@
 #include "AbstractSlotVisitor.h"
 #include "CodeBlock.h"
 #include "HeapInlines.h"
+#include "JITSafepoint.h"
+#include "JITWorklistThread.h"
 #include "JSCellInlines.h"
+#include "ProfilerSupport.h"
 #include "VMInlines.h"
 #include <wtf/CompilationThread.h>
+#include <wtf/StringPrintStream.h>
+#include <wtf/SystemTracing.h>
+#include <wtf/text/StringConcatenate.h>
 
 namespace JSC {
 
@@ -47,13 +53,25 @@ JITPlan::JITPlan(JITCompilationMode mode, CodeBlock* codeBlock)
     : m_mode(mode)
     , m_vm(&codeBlock->vm())
     , m_codeBlock(codeBlock)
+    , m_signpostMessage(signpostMessage())
 {
+    m_vm->changeNumberOfActiveJITPlans(1);
+}
+
+JITPlan::~JITPlan()
+{
+    if (m_vm)
+        m_vm->changeNumberOfActiveJITPlans(-1);
 }
 
 void JITPlan::cancel()
 {
     RELEASE_ASSERT(m_stage != JITPlanStage::Canceled);
+    RELEASE_ASSERT(!safepointKeepsDependenciesLive());
     ASSERT(m_vm);
+
+    endSignpost(JITPlan::SignpostDetail::Canceled);
+    m_vm->changeNumberOfActiveJITPlans(-1);
     m_stage = JITPlanStage::Canceled;
     m_vm = nullptr;
     m_codeBlock = nullptr;
@@ -61,12 +79,18 @@ void JITPlan::cancel()
 
 void JITPlan::notifyCompiling()
 {
+    ASSERT(m_stage == JITPlanStage::Preparing);
+    endSignpost();
     m_stage = JITPlanStage::Compiling;
+    beginSignpost();
 }
 
 void JITPlan::notifyReady()
 {
+    ASSERT(m_stage == JITPlanStage::Compiling);
+    endSignpost();
     m_stage = JITPlanStage::Ready;
+    beginSignpost();
 }
 
 auto JITPlan::tier() const -> Tier
@@ -115,7 +139,7 @@ bool JITPlan::isKnownToBeLiveDuringGC(AbstractSlotVisitor& visitor)
     return true;
 }
 
-bool JITPlan::iterateCodeBlocksForGC(AbstractSlotVisitor& visitor, const Function<void(CodeBlock*)>& func)
+bool JITPlan::iterateCodeBlocksForGC(AbstractSlotVisitor& visitor, NOESCAPE const Function<void(CodeBlock*)>& func)
 {
     if (!isKnownToBeLiveDuringGC(visitor))
         return false;
@@ -136,6 +160,16 @@ bool JITPlan::checkLivenessAndVisitChildren(AbstractSlotVisitor& visitor)
     return true;
 }
 
+bool JITPlan::isInSafepoint() const
+{
+    return m_thread && m_thread->safepoint();
+}
+
+bool JITPlan::safepointKeepsDependenciesLive() const
+{
+    return m_thread && m_thread->safepoint() && m_thread->safepoint()->keepDependenciesLive();
+}
+
 bool JITPlan::computeCompileTimes() const
 {
     return reportCompileTimes()
@@ -151,31 +185,107 @@ bool JITPlan::reportCompileTimes() const
         || (Options::reportFTLCompileTimes() && isFTL());
 }
 
+static inline void* signpostId(JITPlan& plan)
+{
+    uintptr_t id = std::bit_cast<uintptr_t>(&plan);
+    unsigned stage = static_cast<unsigned>(plan.stage());
+    ASSERT(!(id & 0xf));
+    ASSERT(!(stage & ~0xfu));
+    id |= stage;
+    return std::bit_cast<void*>(id);
+}
+
+CString JITPlan::signpostMessage()
+{
+    if (!Options::useCompilerSignpost()) [[likely]]
+        return CString();
+    StringPrintStream stream;
+    stream.print(m_mode, " ", *m_codeBlock);
+    return stream.toCString();
+}
+
+void JITPlan::beginSignpostImpl()
+{
+    ASSERT(Options::useCompilerSignpost() && !m_signpostMessage.isNull());
+    auto id = signpostId(*this);
+    UNUSED_VARIABLE(id); // WTFBeginSignpost not always defined
+    String detalString;
+    switch (m_stage) {
+    case JITPlanStage::Preparing:
+        WTFBeginSignpost(id, JSCJITPlanQueued, "%" PUBLIC_LOG_STRING, m_signpostMessage.data());
+        detalString = makeString("JSCJITPlanQueued:"_s, m_signpostMessage);
+        break;
+    case JITPlanStage::Compiling:
+        WTFBeginSignpost(id, JSCJITCompiler, "%" PUBLIC_LOG_STRING, m_signpostMessage.data());
+        detalString = makeString("JSCJITCompiler:"_s, m_signpostMessage);
+        break;
+    case JITPlanStage::Ready:
+        WTFBeginSignpost(id, JSCJITPlanReady, "%" PUBLIC_LOG_STRING, m_signpostMessage.data());
+        detalString = makeString("JSCJITPlanReady:"_s, m_signpostMessage);
+        break;
+    case JITPlanStage::Canceled:
+        RELEASE_ASSERT_NOT_REACHED();
+    };
+    ProfilerSupport::markStart(id, ProfilerSupport::Category::JSGlobalObjectSignpost, detalString.ascii().data());
+}
+
+void JITPlan::endSignpostImpl(JITPlan::SignpostDetail detail)
+{
+    ASSERT(Options::useCompilerSignpost() && !m_signpostMessage.isNull());
+    auto id = signpostId(*this);
+    auto detailStr = ""_s;
+    if (detail == JITPlan::SignpostDetail::Canceled)
+        detailStr = "Canceled"_s;
+    UNUSED_VARIABLE(id); // WTFEndSignpost not always defined
+    UNUSED_VARIABLE(detailStr);
+    String detalString;
+    switch (m_stage) {
+    case JITPlanStage::Preparing:
+        WTFEndSignpost(id, JSCJITPlanQueued, "%" PUBLIC_LOG_STRING " %" PUBLIC_LOG_STRING, m_signpostMessage.data(), detailStr.characters());
+        detalString = makeString("JSCJITPlanQueued:"_s, m_signpostMessage, " "_s, detailStr);
+        break;
+    case JITPlanStage::Compiling:
+        WTFEndSignpost(id, JSCJITCompiler, "%" PUBLIC_LOG_STRING " %" PUBLIC_LOG_STRING, m_signpostMessage.data(), detailStr.characters());
+        detalString = makeString("JSCJITCompiler:"_s, m_signpostMessage, " "_s, detailStr);
+        break;
+    case JITPlanStage::Ready:
+        WTFEndSignpost(id, JSCJITPlanReady, "%" PUBLIC_LOG_STRING " %" PUBLIC_LOG_STRING, m_signpostMessage.data(), detailStr.characters());
+        detalString = makeString("JSCJITPlanReady:"_s, m_signpostMessage, " "_s, detailStr);
+        break;
+    case JITPlanStage::Canceled:
+        RELEASE_ASSERT_NOT_REACHED();
+    };
+    ProfilerSupport::markEnd(id, ProfilerSupport::Category::JSGlobalObjectSignpost, detalString.ascii().data());
+}
+
 void JITPlan::compileInThread(JITWorklistThread* thread)
 {
-    m_thread = thread;
+    SetForScope threadScope(m_thread, thread);
 
     MonotonicTime before;
     CString codeBlockName;
-    if (UNLIKELY(computeCompileTimes()))
+
+    bool computeCompileTimes = this->computeCompileTimes();
+    if (computeCompileTimes) [[unlikely]] {
         before = MonotonicTime::now();
-    if (UNLIKELY(reportCompileTimes()))
+        if (reportCompileTimes())
         codeBlockName = toCString(*m_codeBlock);
+    }
 
     CompilationScope compilationScope;
 
 #if ENABLE(DFG_JIT)
-    if (DFG::logCompilationChanges(m_mode) || Options::logPhaseTimes())
+    if (DFG::logCompilationChanges(m_mode) || Options::logPhaseTimes()) [[unlikely]]
         dataLog("DFG(Plan) compiling ", *m_codeBlock, " with ", m_mode, ", instructions size = ", m_codeBlock->instructionsSize(), "\n");
 #endif // ENABLE(DFG_JIT)
 
     CompilationPath path = compileInThreadImpl();
-
     RELEASE_ASSERT((path == CancelPath) == (m_stage == JITPlanStage::Canceled));
 
-    MonotonicTime after;
-    if (UNLIKELY(computeCompileTimes())) {
-        after = MonotonicTime::now();
+    if (!computeCompileTimes) [[likely]]
+        return;
+
+    MonotonicTime after = MonotonicTime::now();
 
         if (Options::reportTotalCompileTimes()) {
             if (isFTL()) {
@@ -187,7 +297,7 @@ void JITPlan::compileInThread(JITWorklistThread* thread)
             else
                 totalDFGCompileTime += after - before;
         }
-    }
+
     const char* pathName = nullptr;
     switch (path) {
     case FailPath:
@@ -210,17 +320,37 @@ void JITPlan::compileInThread(JITWorklistThread* thread)
         break;
     }
     if (m_codeBlock) { // m_codeBlock will be null if the compilation was cancelled.
-        if (path == FTLPath)
+        switch (path) {
+        case FTLPath:
             CODEBLOCK_LOG_EVENT(m_codeBlock, "ftlCompile", ("took ", (after - before).milliseconds(), " ms (DFG: ", (m_timeBeforeFTL - before).milliseconds(), ", B3: ", (after - m_timeBeforeFTL).milliseconds(), ") with ", pathName));
-        else
+            break;
+        case DFGPath:
             CODEBLOCK_LOG_EVENT(m_codeBlock, "dfgCompile", ("took ", (after - before).milliseconds(), " ms with ", pathName));
+            break;
+        case BaselinePath:
+            CODEBLOCK_LOG_EVENT(m_codeBlock, "baselineCompile", ("took ", (after - before).milliseconds(), " ms with ", pathName));
+            break;
+        case FailPath:
+            CODEBLOCK_LOG_EVENT(m_codeBlock, "failed compilation", ("took ", (after - before).milliseconds(), " ms with ", pathName));
+            break;
+        case CancelPath:
+            CODEBLOCK_LOG_EVENT(m_codeBlock, "cancelled compilation", ("took ", (after - before).milliseconds(), " ms with ", pathName));
+            break;
+        }
     }
-    if (UNLIKELY(reportCompileTimes())) {
+    if (reportCompileTimes()) [[unlikely]] {
         dataLog("Optimized ", codeBlockName, " using ", m_mode, " with ", pathName, " into ", codeSize(), " bytes in ", (after - before).milliseconds(), " ms");
         if (path == FTLPath)
             dataLog(" (DFG: ", (m_timeBeforeFTL - before).milliseconds(), ", B3: ", (after - m_timeBeforeFTL).milliseconds(), ")");
         dataLog(".\n");
     }
+}
+
+void JITPlan::runMainThreadFinalizationTasks()
+{
+    auto tasks = std::exchange(m_mainThreadFinalizationTasks, { });
+    for (auto& task : tasks)
+        task->run();
 }
 
 } // namespace JSC

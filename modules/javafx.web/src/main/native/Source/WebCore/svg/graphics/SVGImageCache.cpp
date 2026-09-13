@@ -28,8 +28,11 @@
 #include "LocalFrameView.h"
 #include "SVGImage.h"
 #include "SVGImageForContainer.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGImageCache);
 
 SVGImageCache::SVGImageCache(SVGImage* svgImage)
     : m_svgImage(svgImage)
@@ -61,17 +64,22 @@ void SVGImageCache::setContainerContextForClient(const CachedImageClient& client
     FloatSize containerSizeWithoutZoom(containerSize);
     containerSizeWithoutZoom.scale(1 / containerZoom);
 
-    m_imageForContainerMap.set(&client, SVGImageForContainer::create(m_svgImage, containerSizeWithoutZoom, containerZoom, imageURL));
+    m_imageForContainerMap.set(&client, SVGImageForContainer::create(protectedSVGImage().get(), containerSizeWithoutZoom, containerZoom, imageURL));
 }
 
 Image* SVGImageCache::findImageForRenderer(const RenderObject* renderer) const
 {
-    return renderer ? m_imageForContainerMap.get(renderer) : nullptr;
+    return renderer ? m_imageForContainerMap.get(&renderer->cachedImageClient()) : nullptr;
+}
+
+RefPtr<SVGImage> SVGImageCache::protectedSVGImage() const
+{
+    return m_svgImage.get();
 }
 
 FloatSize SVGImageCache::imageSizeForRenderer(const RenderObject* renderer) const
 {
-    auto* image = findImageForRenderer(renderer);
+    SUPPRESS_UNCOUNTED_LOCAL auto* image = findImageForRenderer(renderer);
     return image ? image->size() : m_svgImage->size();
 }
 
@@ -79,11 +87,12 @@ FloatSize SVGImageCache::imageSizeForRenderer(const RenderObject* renderer) cons
 // restart on page load, nor will two animations in different pages have different timelines.
 Image* SVGImageCache::imageForRenderer(const RenderObject* renderer) const
 {
-    auto* image = findImageForRenderer(renderer);
-    if (!image)
-        return &Image::nullImage();
+    if (Image* image = findImageForRenderer(renderer)) {
     ASSERT(!image->size().isEmpty());
     return image;
+    }
+
+    return &Image::nullImage();
 }
 
 } // namespace WebCore

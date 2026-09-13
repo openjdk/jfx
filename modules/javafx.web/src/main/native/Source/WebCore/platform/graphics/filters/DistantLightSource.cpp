@@ -41,7 +41,7 @@ Ref<DistantLightSource> DistantLightSource::create(float azimuth, float elevatio
 }
 
 DistantLightSource::DistantLightSource(float azimuth, float elevation)
-    : LightSource(LS_DISTANT)
+    : LightSource(LightType::LS_DISTANT)
     , m_azimuth(azimuth)
     , m_elevation(elevation)
 {
@@ -89,9 +89,9 @@ bool DistantLightSource::setElevation(float elevation)
 
 TextStream& DistantLightSource::externalRepresentation(TextStream& ts) const
 {
-    ts << "[type=DISTANT-LIGHT] ";
-    ts << "[azimuth=\"" << azimuth() << "\"]";
-    ts << "[elevation=\"" << elevation() << "\"]";
+    ts << "[type=DISTANT-LIGHT] "_s;
+    ts << "[azimuth=\"" << azimuth() << "\"]"_s;
+    ts << "[elevation=\"" << elevation() << "\"]"_s;
     return ts;
 }
 

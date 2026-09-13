@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,10 @@
 
 #pragma once
 
+#include <algorithm>
+#include <cstddef>
+#include <span>
 #include <wtf/NeverDestroyed.h>
-#include <wtf/Vector.h>
 
 namespace WTF {
 
@@ -40,7 +42,7 @@ struct TinyLRUCachePolicy {
 
 template<typename KeyType, typename ValueType, size_t capacity = 4, typename Policy = TinyLRUCachePolicy<KeyType, ValueType>>
 class TinyLRUCache {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(TinyLRUCache);
 public:
     const ValueType& get(const KeyType& key)
     {
@@ -49,29 +51,38 @@ public:
             return valueForNull;
         }
 
-        auto index = m_cache.reverseFindIf([&key](auto& entry) { return entry.first == key; });
-        if (index != notFound) {
+        auto cacheBuffer = this->cacheBuffer();
+        for (size_t i = m_size; i-- > 0;) {
+            if (cacheBuffer[i].first == key) {
+                if (i < m_size - 1) {
             // Move entry to the end of the cache if necessary.
-            if (index != m_cache.size() - 1) {
-                auto entry = WTFMove(m_cache[index]);
-                m_cache.remove(index);
-                m_cache.uncheckedAppend(WTFMove(entry));
+                    auto entry = WTF::move(cacheBuffer[i]);
+                    do {
+                        cacheBuffer[i] = WTF::move(cacheBuffer[i + 1]);
+                    } while (++i < m_size - 1);
+                    cacheBuffer[m_size - 1] = WTF::move(entry);
             }
-            return m_cache[m_cache.size() - 1].second;
+                return cacheBuffer[m_size - 1].second;
+        }
         }
 
-        // m_cache[0] is the LRU entry, so remove it.
-        if (m_cache.size() == capacity)
-            m_cache.remove(0);
+        // cacheBuffer[0] is the LRU entry, so remove it.
+        if (m_size == capacity) {
+            for (size_t i = 0; i < m_size - 1; ++i)
+                cacheBuffer[i] = WTF::move(cacheBuffer[i + 1]);
+        } else
+            ++m_size;
 
-        m_cache.uncheckedAppend(std::pair { Policy::createKeyForStorage(key), Policy::createValueForKey(key) });
-        return m_cache.last().second;
+        cacheBuffer[m_size - 1] = std::pair { Policy::createKeyForStorage(key), Policy::createValueForKey(key) };
+        return cacheBuffer[m_size - 1].second;
     }
 
 private:
     using Entry = std::pair<KeyType, ValueType>;
-    using Cache = Vector<Entry, capacity>;
-    Cache m_cache;
+    std::span<Entry, capacity> cacheBuffer() { return m_cacheBuffer; }
+
+    alignas(Entry) std::array<Entry, capacity> m_cacheBuffer;
+    size_t m_size { 0 };
 };
 
 } // namespace WTF

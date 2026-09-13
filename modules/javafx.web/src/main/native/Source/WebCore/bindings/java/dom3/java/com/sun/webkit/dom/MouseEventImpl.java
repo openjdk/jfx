@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,51 +41,61 @@ public class MouseEventImpl extends UIEventImpl implements MouseEvent {
 
 
 // Attributes
+    @Override
     public int getScreenX() {
         return getScreenXImpl(getPeer());
     }
     native static int getScreenXImpl(long peer);
 
+    @Override
     public int getScreenY() {
         return getScreenYImpl(getPeer());
     }
     native static int getScreenYImpl(long peer);
 
+    @Override
     public int getClientX() {
         return getClientXImpl(getPeer());
     }
     native static int getClientXImpl(long peer);
 
+    @Override
     public int getClientY() {
         return getClientYImpl(getPeer());
     }
     native static int getClientYImpl(long peer);
 
+    @Override
     public boolean getCtrlKey() {
         return getCtrlKeyImpl(getPeer());
     }
     native static boolean getCtrlKeyImpl(long peer);
 
+    @Override
     public boolean getShiftKey() {
         return getShiftKeyImpl(getPeer());
     }
     native static boolean getShiftKeyImpl(long peer);
 
+    @Override
     public boolean getAltKey() {
         return getAltKeyImpl(getPeer());
     }
     native static boolean getAltKeyImpl(long peer);
 
+    @Override
     public boolean getMetaKey() {
         return getMetaKeyImpl(getPeer());
     }
     native static boolean getMetaKeyImpl(long peer);
 
+    @Override
     public short getButton() {
         return getButtonImpl(getPeer());
     }
     native static short getButtonImpl(long peer);
 
+    @Override
     public EventTarget getRelatedTarget() {
         return (EventTarget)NodeImpl.getImpl(getRelatedTargetImpl(getPeer()));
     }
@@ -123,6 +133,7 @@ public class MouseEventImpl extends UIEventImpl implements MouseEvent {
 
 
 // Functions
+    @Override
     public void initMouseEvent(String type
         , boolean canBubble
         , boolean cancelable

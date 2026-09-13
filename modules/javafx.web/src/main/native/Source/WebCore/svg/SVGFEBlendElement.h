@@ -24,6 +24,7 @@
 
 #include "GraphicsTypes.h"
 #include "SVGFilterPrimitiveStandardAttributes.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -31,7 +32,7 @@ template<>
 struct SVGPropertyTraits<BlendMode> {
     static unsigned highestEnumValue() { return static_cast<unsigned>(BlendMode::Luminosity); }
 
-    static BlendMode fromString(const String& string)
+    static BlendMode fromString(SVGElement&, const String& string)
     {
         BlendMode mode = BlendMode::Normal;
         parseBlendMode(string, mode);
@@ -48,7 +49,8 @@ struct SVGPropertyTraits<BlendMode> {
 };
 
 class SVGFEBlendElement final : public SVGFilterPrimitiveStandardAttributes {
-    WTF_MAKE_ISO_ALLOCATED(SVGFEBlendElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGFEBlendElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGFEBlendElement);
 public:
     static Ref<SVGFEBlendElement> create(const QualifiedName&, Document&);
 
@@ -60,10 +62,10 @@ public:
     SVGAnimatedString& in2Animated() { return m_in2; }
     SVGAnimatedEnumeration& modeAnimated() { return m_mode; }
 
+    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFEBlendElement, SVGFilterPrimitiveStandardAttributes>;
+
 private:
     SVGFEBlendElement(const QualifiedName&, Document&);
-
-    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFEBlendElement, SVGFilterPrimitiveStandardAttributes>;
 
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;

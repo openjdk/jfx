@@ -25,31 +25,16 @@
 
 #pragma once
 
-#include <variant>
+#include <WebCore/FontMetrics.h>
 #include <wtf/Markable.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
-struct FloatMarkableTraits {
-    constexpr static bool isEmptyValue(float value)
-    {
-        return value != value;
-    }
-
-    constexpr static float emptyValue()
-    {
-        return std::numeric_limits<float>::quiet_NaN();
-    }
-};
-
 struct FontSizeAdjust {
-    bool operator==(const FontSizeAdjust& other) const
-    {
-        return metric == other.metric && value == other.value
-            && isFromFont == other.isFromFont;
-    }
+    friend bool operator==(const FontSizeAdjust&, const FontSizeAdjust&) = default;
 
+    enum class ValueType : bool { Number, FromFont };
     enum class Metric : uint8_t {
         ExHeight,
         CapHeight,
@@ -57,41 +42,71 @@ struct FontSizeAdjust {
         IcWidth,
         IcHeight
     };
+
+    std::optional<float> resolve(float computedSize, const FontMetrics& fontMetrics) const
+    {
+        std::optional<float> metricValue;
+        switch (metric) {
+        case FontSizeAdjust::Metric::CapHeight:
+            metricValue = fontMetrics.capHeight();
+            break;
+        case FontSizeAdjust::Metric::ChWidth:
+                metricValue = fontMetrics.zeroWidth();
+            break;
+        // FIXME: Are ic-height and ic-width the same? Gecko treats them the same.
+        case FontSizeAdjust::Metric::IcWidth:
+        case FontSizeAdjust::Metric::IcHeight:
+                metricValue = fontMetrics.ideogramWidth();
+            break;
+        case FontSizeAdjust::Metric::ExHeight:
+        default:
+                metricValue = fontMetrics.xHeight();
+        }
+
+        return metricValue.has_value() && computedSize
+            ? std::make_optional(*metricValue / computedSize)
+            : std::nullopt;
+    }
+
+    bool isNone() const { return !value && type != ValueType::FromFont; }
+    bool isFromFont() const { return type == ValueType::FromFont; }
+    bool shouldResolveFromFont() const { return isFromFont() && !value; }
+
     Metric metric { Metric::ExHeight };
-    bool isFromFont { false };
-    Markable<float, FloatMarkableTraits> value { };
+    ValueType type { ValueType::Number };
+    Markable<float> value { };
 };
 
 inline void add(Hasher& hasher, const FontSizeAdjust& fontSizeAdjust)
 {
-    add(hasher, fontSizeAdjust.metric, *fontSizeAdjust.value);
+    add(hasher, fontSizeAdjust.metric, fontSizeAdjust.type, fontSizeAdjust.value.unsafeValue());
 }
 
 inline TextStream& operator<<(TextStream& ts, const FontSizeAdjust& fontSizeAdjust)
 {
     switch (fontSizeAdjust.metric) {
     case FontSizeAdjust::Metric::CapHeight:
-        ts << "cap-height";
+        ts << "cap-height"_s;
         break;
     case FontSizeAdjust::Metric::ChWidth:
-        ts << "ch-width";
+        ts << "ch-width"_s;
         break;
     case FontSizeAdjust::Metric::IcWidth:
-        ts << "ic-width";
+        ts << "ic-width"_s;
         break;
     case FontSizeAdjust::Metric::IcHeight:
-        ts << "ic-height";
+        ts << "ic-height"_s;
         break;
     case FontSizeAdjust::Metric::ExHeight:
     default:
-        if (fontSizeAdjust.isFromFont)
-            return ts << "from-font";
+        if (fontSizeAdjust.isFromFont())
+            return ts << "from-font"_s;
         return ts << *fontSizeAdjust.value;
     }
 
-    if (fontSizeAdjust.isFromFont)
-        return ts << " " << "from-font";
-    return ts << " " << fontSizeAdjust.value;
+    if (fontSizeAdjust.isFromFont())
+        return ts << ' ' << "from-font"_s;
+    return ts << ' ' << *fontSizeAdjust.value;
 }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,26 +25,24 @@
 
 package test.com.sun.javafx.application;
 
-import com.sun.javafx.application.PlatformImplShim;
-import javafx.application.Platform;
-import javafx.embed.swing.JFXPanel;
-import javafx.scene.Group;
-import javafx.scene.Scene;
-import javafx.scene.paint.Color;
-import junit.framework.AssertionFailedError;
-import test.util.Util;
-
-import javax.swing.JFrame;
-import javax.swing.SwingUtilities;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-
-import org.junit.Test;
-import org.junit.Assert;
+import javax.swing.JFrame;
+import javax.swing.SwingUtilities;
+import javafx.application.Platform;
+import javafx.embed.swing.JFXPanel;
+import javafx.scene.Group;
+import javafx.scene.Scene;
+import javafx.scene.paint.Color;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.application.PlatformImplShim;
+import test.util.Util;
 
 /**
  * Test program for Platform.exit() behavior with an embedded JFXPanel.
@@ -96,7 +94,7 @@ public class SwingNoExit {
             }
         });
         if (!initLatch.await(Util.TIMEOUT, TimeUnit.MILLISECONDS)) {
-            throw new AssertionFailedError("Timeout waiting for JFXPanel to launch and initialize");
+            fail("Timeout waiting for JFXPanel to launch and initialize");
         }
         Throwable t = error.get();
         if (t != null) {
@@ -109,14 +107,13 @@ public class SwingNoExit {
             runAndWait.countDown();
         });
         if (!runAndWait.await(Util.TIMEOUT, TimeUnit.MILLISECONDS)) {
-            throw new AssertionFailedError("Timeout waiting for Platform.exit()");
+            fail("Timeout waiting for Platform.exit()");
         }
 
         final CountDownLatch exitLatch = PlatformImplShim.test_getPlatformExitLatch();
         Thread.sleep(SLEEP_TIME);
         // Platform.exit() should not cause FX to exit, while JFXPanel is alive
-        Assert.assertEquals("Platform.exit() caused FX to exit, while JFXPanel is alive",
-                            1, exitLatch.getCount());
+        assertEquals(1, exitLatch.getCount(), "Platform.exit() caused FX to exit, while JFXPanel is alive");
 
         try {
             SwingUtilities.invokeAndWait(() -> {
@@ -125,12 +122,11 @@ public class SwingNoExit {
             });
         }
         catch (InvocationTargetException ex) {
-            throw new AssertionFailedError("Exception while disposing JFrame");
+            fail(ex);
         }
 
         Thread.sleep(SLEEP_TIME);
         // JFXPanel is gone, implicit exit is false, so FX should have exited now
-        Assert.assertEquals("FX is not exited, when the last JFXPanel is disposed",
-                            0, exitLatch.getCount());
+       assertEquals(0, exitLatch.getCount(), "FX is not exited, when the last JFXPanel is disposed");
     }
 }

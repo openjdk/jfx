@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "ElementAncestorIterator.h"
-#include "ElementIteratorInlines.h"
+#include <WebCore/ElementAncestorIterator.h>
+#include <WebCore/ElementIteratorInlines.h>
 
 namespace WebCore {
 
@@ -44,7 +44,7 @@ inline ElementAncestorIterator<ElementType>& ElementAncestorIterator<ElementType
 template <typename ElementType>
 inline ElementAncestorIterator<ElementType> ElementAncestorRange<ElementType>::begin() const
 {
-    return ElementAncestorIterator<ElementType>(m_first);
+    return ElementAncestorIterator<ElementType>(m_first.get());
 }
 
 // Standalone functions
@@ -57,8 +57,8 @@ template<> inline ElementAncestorRange<Element> lineageOfType<Element>(Element& 
 template <typename ElementType>
 inline ElementAncestorRange<ElementType> lineageOfType(Element& first)
 {
-    if (is<ElementType>(first))
-        return ElementAncestorRange<ElementType>(&downcast<ElementType>(first));
+    if (auto* element = dynamicDowncast<ElementType>(first))
+        return ElementAncestorRange<ElementType>(element);
     return ancestorsOfType<ElementType>(first);
 }
 
@@ -70,8 +70,24 @@ template<> inline ElementAncestorRange<const Element> lineageOfType<Element>(con
 template <typename ElementType>
 inline ElementAncestorRange<const ElementType> lineageOfType(const Element& first)
 {
-    if (is<ElementType>(first))
-        return ElementAncestorRange<const ElementType>(&downcast<ElementType>(first));
+    if (auto* element = dynamicDowncast<ElementType>(first))
+        return ElementAncestorRange<const ElementType>(element);
+    return ancestorsOfType<ElementType>(first);
+}
+
+template <typename ElementType>
+inline ElementAncestorRange<ElementType> lineageOfType(Node& first)
+{
+    if (auto* element = dynamicDowncast<ElementType>(first))
+        return ElementAncestorRange<ElementType>(element);
+    return ancestorsOfType<ElementType>(first);
+}
+
+template <typename ElementType>
+inline ElementAncestorRange<const ElementType> lineageOfType(const Node& first)
+{
+    if (auto* element = dynamicDowncast<ElementType>(first))
+        return ElementAncestorRange<const ElementType>(element);
     return ancestorsOfType<ElementType>(first);
 }
 

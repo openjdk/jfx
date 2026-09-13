@@ -27,9 +27,9 @@
 
 #if ENABLE(APPLE_PAY)
 
-#include "ApplePayDetailsUpdateBase.h"
-#include "ApplePayError.h"
-#include "ApplePayShippingMethod.h"
+#include <WebCore/ApplePayDetailsUpdateBase.h>
+#include <WebCore/ApplePayError.h>
+#include <WebCore/ApplePayShippingMethod.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
@@ -38,7 +38,7 @@ namespace WebCore {
 
 struct ApplePayPaymentMethodUpdate final : public ApplePayDetailsUpdateBase {
 #if ENABLE(APPLE_PAY_UPDATE_SHIPPING_METHODS_WHEN_CHANGING_LINE_ITEMS)
-    Vector<RefPtr<ApplePayError>> errors;
+    Vector<Ref<ApplePayError>> errors;
 
     Vector<ApplePayShippingMethod> newShippingMethods;
 #endif

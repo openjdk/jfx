@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc.  All rights reserved.
+ * Copyright (C) 2022, 2023 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,16 +35,17 @@ public:
     virtual ~ObservableArray() { }
 
     virtual bool setValueAt(JSGlobalObject*, unsigned index, JSValue) = 0;
-    virtual bool deleteValueAt(JSGlobalObject*, unsigned index) = 0;
+    virtual void removeLast() = 0;
     virtual JSValue valueAt(JSGlobalObject*, unsigned index) const = 0;
     virtual unsigned length() const = 0;
+    virtual void shrinkTo(unsigned) = 0;
 };
 
 class JSObservableArray final : public JSArray {
 public:
     using Base = JSArray;
     static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnPropertyNames | OverridesPut | InterceptsGetOwnPropertySlotByIndexEvenWhenLengthIsNotZero;
-    static constexpr bool needsDestruction = true;
+    static constexpr JSC::DestructionMode needsDestruction = JSC::NeedsDestruction;
 
     template<typename CellType, JSC::SubspaceAccess>
     static JSC::GCClient::IsoSubspace* subspaceFor(JSC::VM& vm)
@@ -59,14 +60,15 @@ public:
         // We need to pass in the right global object for "array".
         Structure* domStructure = WebCore::deprecatedGetDOMStructure<JSObservableArray>(lexicalGlobalObject);
         JSObservableArray* observableArray = new (NotNull, allocateCell<JSObservableArray>(vm)) JSObservableArray(vm, domStructure);
-        observableArray->finishCreation(vm, WTFMove(array));
+        observableArray->finishCreation(vm, WTF::move(array));
         return observableArray;
     }
 
     ~JSObservableArray();
     static void destroy(JSCell*);
 
-    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    static bool defineOwnProperty(JSObject*, JSGlobalObject*, PropertyName, const PropertyDescriptor&, bool throwException);
+    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
     static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
     static bool getOwnPropertySlotByIndex(JSObject*, JSGlobalObject*, unsigned, PropertySlot&);
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);

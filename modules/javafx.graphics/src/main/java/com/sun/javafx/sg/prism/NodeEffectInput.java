@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -86,7 +86,7 @@ public final class NodeEffectInput extends Effect {
                               Effect defaultInput)
     {
         // TODO: update Effect.getBounds() to take Rectangle2D param so
-        // that we can avoid creating garbage here? (RT-23958)
+        // that we can avoid creating garbage here? (JDK-8098188)
         BaseTransform t = transform == null ?
                 BaseTransform.IDENTITY_TRANSFORM : transform;
         tempBounds = node.getContentBounds(tempBounds, t);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008,2009 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008,2009 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,16 +27,17 @@
 
 #if ENABLE(VIDEO)
 
-#include "HTMLDocument.h"
+#include <WebCore/HTMLDocument.h>
 
 namespace WebCore {
 
 class MediaDocument final : public HTMLDocument {
-    WTF_MAKE_ISO_ALLOCATED(MediaDocument);
+    WTF_MAKE_TZONE_ALLOCATED(MediaDocument);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MediaDocument);
 public:
     static Ref<MediaDocument> create(LocalFrame* frame, const Settings& settings, const URL& url)
     {
-        auto document = adoptRef(*new MediaDocument(frame, settings, url));
+        Ref document = adoptRef(*new MediaDocument(frame, settings, url));
         document->addToContextsMap();
         return document;
     }
@@ -50,7 +51,7 @@ private:
 
     Ref<DocumentParser> createParser() override;
 
-    void defaultEventHandler(Event&) override;
+    void defaultEventHandler(Event&) override { }
 
     void replaceMediaElementTimerFired();
 
@@ -61,7 +62,11 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::MediaDocument)
     static bool isType(const WebCore::Document& document) { return document.isMediaDocument(); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::Document>(node) && isType(downcast<WebCore::Document>(node)); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* document = dynamicDowncast<WebCore::Document>(node);
+        return document && isType(*document);
+    }
 SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(VIDEO)

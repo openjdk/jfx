@@ -34,51 +34,7 @@ namespace IPC {
 class Decoder;
 class Encoder;
 
-template<typename T, typename I = T, typename = void> struct HasLegacyDecoder : std::false_type { };
-template<typename T, typename I> struct HasLegacyDecoder<T, I, std::void_t<decltype(I::decode(std::declval<Decoder&>(), std::declval<T&>()))>> : std::true_type { };
-template<typename T, typename I = T, typename = void> struct HasModernDecoder : std::false_type { };
-template<typename T, typename I> struct HasModernDecoder<T, I, std::void_t<decltype(I::decode(std::declval<Decoder&>()))>> : std::true_type { };
-
-template<typename T, typename = void> struct ArgumentCoder {
-    template<typename Encoder>
-    static void encode(Encoder& encoder, const T& t)
-    {
-        t.encode(encoder);
-    }
-
-    template<typename Encoder>
-    static void encode(Encoder& encoder, T&& t)
-    {
-        WTFMove(t).encode(encoder);
-    }
-
-    template<typename Decoder>
-    static std::optional<T> decode(Decoder& decoder)
-    {
-        if constexpr(HasModernDecoder<T>::value)
-            return T::decode(decoder);
-        else {
-            T t;
-            if (T::decode(decoder, t))
-                return t;
-            return std::nullopt;
-        }
-    }
-
-    template<typename Decoder>
-    static WARN_UNUSED_RETURN bool decode(Decoder& decoder, T& t)
-    {
-        if constexpr(HasLegacyDecoder<T>::value)
-            return T::decode(decoder, t);
-        else {
-            std::optional<T> optional = T::decode(decoder);
-            if (!optional)
-                return false;
-            t = WTFMove(*optional);
-            return true;
-        }
-    }
-};
+template<typename> struct ArgumentCoder;
 
 template<>
 struct ArgumentCoder<bool> {
@@ -100,7 +56,8 @@ struct ArgumentCoder<bool> {
 };
 
 template<typename T>
-struct ArgumentCoder<T, typename std::enable_if_t<std::is_arithmetic_v<T>>> {
+    requires (std::is_arithmetic_v<T>)
+struct ArgumentCoder<T> {
     template<typename Encoder>
     static void encode(Encoder& encoder, T value)
     {
@@ -115,7 +72,8 @@ struct ArgumentCoder<T, typename std::enable_if_t<std::is_arithmetic_v<T>>> {
 };
 
 template<typename T>
-struct ArgumentCoder<T, typename std::enable_if_t<std::is_enum_v<T>>> {
+    requires (std::is_enum_v<T>)
+struct ArgumentCoder<T> {
     template<typename Encoder>
     static void encode(Encoder& encoder, T value)
     {
@@ -126,8 +84,7 @@ struct ArgumentCoder<T, typename std::enable_if_t<std::is_enum_v<T>>> {
     template<typename Decoder>
     static std::optional<T> decode(Decoder& decoder)
     {
-        std::optional<std::underlying_type_t<T>> value;
-        decoder >> value;
+        auto value = decoder.template decode<std::underlying_type_t<T>>();
         if (value && WTF::isValidEnum<T>(*value))
             return static_cast<T>(*value);
         return std::nullopt;

@@ -34,6 +34,8 @@
 
 namespace JSC { namespace DFG {
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 void VariableEvent::dump(PrintStream& out) const
 {
     switch (kind()) {
@@ -76,13 +78,13 @@ void VariableEvent::dumpFillInfo(const char* name, PrintStream& out) const
 {
     out.print(name, "(", id(), ", ");
     if (dataFormat() == DataFormatDouble)
-        out.printf("%s", FPRInfo::debugName(fpr()));
+        out.printf("%s", FPRInfo::debugName(fpr()).characters());
 #if USE(JSVALUE32_64)
     else if (dataFormat() & DataFormatJS)
-        out.printf("%s:%s", GPRInfo::debugName(tagGPR()), GPRInfo::debugName(payloadGPR()));
+        out.printf("%s:%s", GPRInfo::debugName(tagGPR()).characters(), GPRInfo::debugName(payloadGPR()).characters());
 #endif
     else
-        out.printf("%s", GPRInfo::debugName(gpr()));
+        out.printf("%s", GPRInfo::debugName(gpr()).characters());
     out.printf(", %s)", dataFormatToString(dataFormat()));
 }
 
@@ -90,6 +92,8 @@ void VariableEvent::dumpSpillInfo(const char* name, PrintStream& out) const
 {
     out.print(name, "(", id(), ", ", spillRegister(), ", ", dataFormatToString(dataFormat()), ")");
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 } } // namespace JSC::DFG
 

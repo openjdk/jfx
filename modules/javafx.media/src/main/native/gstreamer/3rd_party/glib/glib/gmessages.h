@@ -229,6 +229,11 @@ gchar           *g_log_writer_format_fields    (GLogLevelFlags   log_level,
                                                 gsize            n_fields,
                                                 gboolean         use_color);
 
+GLIB_AVAILABLE_IN_2_80
+GLogWriterOutput g_log_writer_syslog           (GLogLevelFlags   log_level,
+                                                const GLogField *fields,
+                                                gsize            n_fields,
+                                                gpointer         user_data);
 GLIB_AVAILABLE_IN_2_50
 GLogWriterOutput g_log_writer_journald         (GLogLevelFlags   log_level,
                                                 const GLogField *fields,
@@ -250,6 +255,9 @@ void            g_log_writer_default_set_use_stderr (gboolean use_stderr);
 GLIB_AVAILABLE_IN_2_68
 gboolean        g_log_writer_default_would_drop (GLogLevelFlags  log_level,
                                                  const char     *log_domain);
+GLIB_AVAILABLE_IN_2_80
+void            g_log_writer_default_set_debug_domains (const gchar * const *domains);
+
 
 /* G_MESSAGES_DEBUG enablement */
 GLIB_AVAILABLE_IN_2_72
@@ -544,6 +552,9 @@ GPrintFunc      g_set_printerr_handler  (GPrintFunc      func);
  *
  * Logs a warning if the expression is not true.
  *
+ * Unlike g_return_if_fail(), the expression is always evaluated, even if
+ * checks and assertions are disabled.
+ *
  * Since: 2.16
  */
 #define g_warn_if_fail(expr) \
@@ -635,6 +646,7 @@ GPrintFunc      g_set_printerr_handler  (GPrintFunc      func);
 
 #else /* !G_DISABLE_CHECKS */
 
+#ifndef GSTREAMER_LITE
 #define g_return_if_fail(expr) \
   G_STMT_START { \
     if (G_LIKELY (expr)) \
@@ -682,6 +694,37 @@ GPrintFunc      g_set_printerr_handler  (GPrintFunc      func);
            G_STRFUNC); \
     return (val); \
   } G_STMT_END
+#else // GSTREAMER_LITE
+#define g_return_if_fail(expr) \
+  G_STMT_START { \
+    if (G_LIKELY (expr)) \
+      { } \
+    else \
+      { \
+        return; \
+      } \
+  } G_STMT_END
+
+#define g_return_val_if_fail(expr, val) \
+  G_STMT_START { \
+    if (G_LIKELY (expr)) \
+      { } \
+    else \
+      { \
+        return (val); \
+      } \
+  } G_STMT_END
+
+#define g_return_if_reached() \
+  G_STMT_START { \
+    return; \
+  } G_STMT_END
+
+#define g_return_val_if_reached(val) \
+  G_STMT_START { \
+    return (val); \
+  } G_STMT_END
+#endif // GSTREAMER_LITE
 
 #endif /* !G_DISABLE_CHECKS */
 

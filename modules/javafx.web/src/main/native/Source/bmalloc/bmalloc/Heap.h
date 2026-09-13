@@ -25,6 +25,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "BumpRange.h"
 #include "Chunk.h"
 #include "FailureAction.h"
@@ -133,7 +135,7 @@ private:
     std::array<List<Chunk>, pageClassCount> m_freePages;
     std::array<List<Chunk>, pageClassCount> m_chunkCache;
 
-    Map<void*, size_t, LargeObjectHash> m_largeAllocated;
+    Map<void*, size_t, LargeObjectHash, AllowDeleting::DeletingAllowed> m_largeAllocated;
     LargeMap m_largeFree;
 
     ObjectTypeTable m_objectTypes;
@@ -173,3 +175,5 @@ inline bool Heap::isLarge(void* object)
 } // namespace bmalloc
 
 #endif
+
+#endif // __cplusplus

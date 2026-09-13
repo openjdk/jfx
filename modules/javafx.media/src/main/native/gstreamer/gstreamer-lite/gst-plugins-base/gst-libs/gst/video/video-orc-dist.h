@@ -55,13 +55,15 @@ typedef unsigned long orc_uint64;
 #endif
 typedef union { orc_int16 i; orc_int8 x2[2]; } orc_union16;
 typedef union { orc_int32 i; float f; orc_int16 x2[2]; orc_int8 x4[4]; } orc_union32;
-typedef union { orc_int64 i; double f; orc_int32 x2[2]; float x2f[2]; orc_int16 x4[4]; } orc_union64;
+typedef union { orc_int64 i; double f; orc_int32 x2[2]; float x2f[2]; orc_int16 x4[4]; orc_int8 x8[8]; } orc_union64;
 #endif
 #ifndef ORC_RESTRICT
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
 #define ORC_RESTRICT restrict
 #elif defined(__GNUC__) && __GNUC__ >= 4
 #define ORC_RESTRICT __restrict__
+#elif defined(_MSC_VER)
+#define ORC_RESTRICT __restrict
 #else
 #define ORC_RESTRICT
 #endif
@@ -143,6 +145,10 @@ void video_orc_unpack_BGR16 (guint32 * ORC_RESTRICT d1, const guint16 * ORC_REST
 void video_orc_unpack_BGR16_trunc (guint32 * ORC_RESTRICT d1, const guint16 * ORC_RESTRICT s1, int n);
 void video_orc_pack_BGR16_le (guint16 * ORC_RESTRICT d1, const guint32 * ORC_RESTRICT s1, int n);
 void video_orc_pack_BGR16_be (guint16 * ORC_RESTRICT d1, const guint32 * ORC_RESTRICT s1, int n);
+void video_orc_unpack_RBGA_le (guint8 * ORC_RESTRICT d1, const guint8 * ORC_RESTRICT s1, int n);
+void video_orc_unpack_RBGA_be (guint8 * ORC_RESTRICT d1, const guint8 * ORC_RESTRICT s1, int n);
+void video_orc_pack_RBGA_le (guint8 * ORC_RESTRICT d1, const guint8 * ORC_RESTRICT s1, int n);
+void video_orc_pack_RBGA_be (guint8 * ORC_RESTRICT d1, const guint8 * ORC_RESTRICT s1, int n);
 void video_orc_resample_bilinear_u32 (guint8 * ORC_RESTRICT d1, const guint8 * ORC_RESTRICT s1, int p1, int p2, int n);
 void video_orc_merge_linear_u8 (orc_uint8 * ORC_RESTRICT d1, const orc_uint8 * ORC_RESTRICT s1, const orc_uint8 * ORC_RESTRICT s2, int p1, int n);
 void video_orc_memset_2d (guint8 * ORC_RESTRICT d1, int d1_stride, int p1, int n, int m);

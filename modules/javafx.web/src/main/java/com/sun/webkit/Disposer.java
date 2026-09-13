@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,6 @@ package com.sun.webkit;
 
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
-import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
@@ -59,24 +58,20 @@ public final class Disposer implements Runnable {
             new HashSet<>();
 
     static {
-        @SuppressWarnings("removal")
-        var dummy = java.security.AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            /*
-             * The thread must be a member of a thread group
-             * which will not get GCed before VM exit.
-             * Make its parent the top-level thread group.
-             */
-            ThreadGroup tg = Thread.currentThread().getThreadGroup();
-            for (ThreadGroup tgn = tg;
-                    tgn != null;
-                    tg = tgn, tgn = tg.getParent());
+        /*
+         * The thread must be a member of a thread group
+         * which will not get GCed before VM exit.
+         * Make its parent the top-level thread group.
+         */
+        ThreadGroup tg = Thread.currentThread().getThreadGroup();
+        for (ThreadGroup tgn = tg;
+                tgn != null;
+                tg = tgn, tgn = tg.getParent());
 
-            Thread t = new Thread(tg, disposerInstance, "Disposer");
-            t.setDaemon(true);
-            t.setPriority(Thread.MAX_PRIORITY);
-            t.start();
-            return null;
-        });
+        Thread t = new Thread(tg, disposerInstance, "Disposer");
+        t.setDaemon(true);
+        t.setPriority(Thread.MAX_PRIORITY);
+        t.start();
     }
 
     /**

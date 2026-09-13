@@ -27,19 +27,21 @@
 
 #if ENABLE(WEBGL) && ENABLE(VIDEO) && USE(AVFOUNDATION)
 
-#include "GraphicsContextGLCV.h"
-#include "ImageOrientation.h"
+#include <WebCore/GraphicsContextGLCV.h>
+#include <WebCore/GraphicsContextGLCocoa.h>
+#include <WebCore/ImageOrientation.h>
 #include <memory>
+#include <wtf/CheckedRef.h>
+#include <wtf/TZoneMalloc.h>
 
-typedef struct __CVBuffer* CVPixelBufferRef;
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer* CVPixelBufferRef;
 
 namespace WebCore {
-class GraphicsContextGLCocoa;
 
 // GraphicsContextGLCV implementation for GraphicsContextGLCocoa.
 // This class is part of the internal implementation of GraphicsContextGLCocoa.
 class GraphicsContextGLCVCocoa final : public GraphicsContextGLCV {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(GraphicsContextGLCVCocoa);
 public:
     static std::unique_ptr<GraphicsContextGLCVCocoa> create(GraphicsContextGLCocoa&);
 
@@ -53,7 +55,7 @@ private:
 
     RetainPtr<CVPixelBufferRef> convertPixelBuffer(CVPixelBufferRef);
 
-    GraphicsContextGLCocoa& m_owner;
+    const CheckedRef<GraphicsContextGLCocoa> m_owner;
     GCGLDisplay m_display { nullptr };
     GCGLContext m_context { nullptr };
     GCGLConfig m_config { nullptr };
@@ -71,7 +73,8 @@ private:
     GCGLint m_uvTextureSizeUniformLocation { -1 };
 
     struct TextureContent {
-        intptr_t surface { 0 };
+        RetainPtr<IOSurfaceRef> surface;
+        uint32_t surfaceID { 0 };
         uint32_t surfaceSeed { 0 };
         GCGLint level { 0 };
         GCGLenum internalFormat { 0 };
@@ -80,7 +83,7 @@ private:
         FlipY unpackFlipY { FlipY::No };
         ImageOrientation orientation;
 
-        bool operator==(const TextureContent&) const;
+        friend bool operator==(const TextureContent&, const TextureContent&) = default;
     };
     using TextureContentMap = HashMap<GCGLuint, TextureContent, IntHash<GCGLuint>, WTF::UnsignedWithZeroKeyHashTraits<GCGLuint>>;
     TextureContentMap m_knownContent;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Google, Inc. All Rights Reserved.
+ * Copyright (C) 2010 Google, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,7 +48,7 @@ public:
     public:
         // Inline because they're hot and Vector<T> uses them.
         explicit Entry(HTMLStackItem&& item)
-            : m_item(WTFMove(item))
+            : m_item(WTF::move(item))
         {
         }
         enum MarkerEntryType { MarkerEntry };
@@ -64,7 +64,7 @@ public:
             // Callers should check isMarker() before calling element().
             return m_item.element();
         }
-        void replaceElement(HTMLStackItem&& item) { m_item = WTFMove(item); }
+        void replaceElement(HTMLStackItem&& item) { m_item = WTF::move(item); }
 
         // Needed for use with Vector. This is super-hot and must be inline.
         bool operator==(Element* element) const { return m_item.elementOrNull() == element; }
@@ -108,7 +108,7 @@ public:
     void removeUpdatingBookmark(Element&, Bookmark&);
 
     Bookmark bookmarkFor(Element&);
-    void swapTo(Element& oldElement, HTMLStackItem&& newItem, const Bookmark&);
+    void swapTo(Ref<Element> oldElement, HTMLStackItem&& newItem, const Bookmark&);
 
     void appendMarker();
     // clearToLastMarker also clears the marker (per the HTML5 spec).

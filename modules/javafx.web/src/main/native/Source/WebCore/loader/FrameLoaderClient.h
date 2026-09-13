@@ -25,22 +25,35 @@
 
 #pragma once
 
-#include "FrameLoaderTypes.h"
+#include <WebCore/FloatSize.h>
+#include <WebCore/FrameIdentifier.h>
+#include <WebCore/FrameLoaderTypes.h>
+#include <WebCore/FrameTreeSyncClient.h>
+#include <WebCore/NavigationIdentifier.h>
+#include <WebCore/SandboxFlags.h>
 
 namespace WebCore {
 
 class FormState;
+class Frame;
+class HitTestResult;
 class NavigationAction;
 class ResourceRequest;
 class ResourceResponse;
 
+enum class AdjustViewSize : bool;
 enum class PolicyDecisionMode;
+enum class SandboxFlag : uint16_t;
 
-using FramePolicyFunction = Function<void(PolicyAction, PolicyCheckIdentifier)>;
+using FramePolicyFunction = CompletionHandler<void(PolicyAction)>;
+using SandboxFlags = OptionSet<SandboxFlag>;
 
-class FrameLoaderClient {
+class FrameLoaderClient : public WebCore::FrameTreeSyncClient {
 public:
-    virtual void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, const ResourceResponse& redirectResponse, FormState*, PolicyDecisionMode, PolicyCheckIdentifier, FramePolicyFunction&&) = 0;
+    virtual void dispatchDecidePolicyForNavigationAction(const NavigationAction&, const ResourceRequest&, const ResourceResponse& redirectResponse, FormState*, const String& clientRedirectSourceForHistory, std::optional<NavigationIdentifier>, std::optional<HitTestResult>&&, bool hasOpener, NavigationUpgradeToHTTPSBehavior, SandboxFlags, PolicyDecisionMode, FramePolicyFunction&&) = 0;
+    virtual void updateSandboxFlags(SandboxFlags) = 0;
+    virtual void updateOpener(std::optional<FrameIdentifier>) = 0;
+    virtual void setPrinting(bool printing, FloatSize pageSize, FloatSize originalPageSize, float maximumShrinkRatio, AdjustViewSize) = 0;
     virtual ~FrameLoaderClient() = default;
 };
 

@@ -24,9 +24,10 @@
 
 #pragma once
 
-#include "ContainerQuery.h"
+#include "ContainerQueryEvaluator.h"
 #include "HasSelectorFilter.h"
 #include "SelectorFilter.h"
+#include <WebCore/ContainerQuery.h>
 #include <wtf/HashMap.h>
 
 namespace WebCore::Style {
@@ -39,7 +40,7 @@ enum class HasPseudoClassMatch : uint8_t { None, Matches, Fails, FailsSubtree };
 struct SelectorMatchingState {
     SelectorFilter selectorFilter;
 
-    CachedQueryContainers queryContainers;
+    ContainerQueryEvaluationState containerQueryEvaluationState;
 
     HashMap<HasPseudoClassCacheKey, HasPseudoClassMatch> hasPseudoClassMatchCache;
     HashMap<HasPseudoClassFilterKey, std::unique_ptr<HasSelectorFilter>> hasPseudoClassSelectorFilters;

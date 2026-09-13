@@ -25,14 +25,14 @@
 
 #pragma once
 
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/Forward.h>
-#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 struct Cookie;
 
-class CookieChangeListener : public CanMakeWeakPtr<CookieChangeListener> {
+class CookieChangeListener : public AbstractRefCountedAndCanMakeWeakPtr<CookieChangeListener> {
 public:
     virtual void cookiesAdded(const String& host, const Vector<Cookie>&) = 0;
     virtual void cookiesDeleted(const String& host, const Vector<Cookie>&) = 0;

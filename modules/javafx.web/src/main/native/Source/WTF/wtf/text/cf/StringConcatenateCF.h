@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/StdLibExtras.h>
+#include <wtf/cf/VectorCF.h>
 #include <wtf/text/StringConcatenate.h>
 
 #if USE(CF)
@@ -34,12 +36,12 @@ namespace WTF {
 template<> class StringTypeAdapter<CFStringRef> {
 public:
     StringTypeAdapter(CFStringRef);
-    unsigned length() const { return m_string ? CFStringGetLength(m_string) : 0; }
-    bool is8Bit() const { return !m_string || CFStringGetCStringPtr(m_string, kCFStringEncodingISOLatin1); }
-    template<typename CharacterType> void writeTo(CharacterType*) const;
+    unsigned length() const { return m_string ? CFStringGetLength(m_string.get()) : 0; }
+    bool is8Bit() const { return !m_string || CFStringGetCStringPtr(m_string.get(), kCFStringEncodingISOLatin1); }
+    template<typename CharacterType> void writeTo(std::span<CharacterType>) const;
 
 private:
-    CFStringRef m_string;
+    const RetainPtr<CFStringRef> m_string;
 };
 
 inline StringTypeAdapter<CFStringRef>::StringTypeAdapter(CFStringRef string)
@@ -47,16 +49,16 @@ inline StringTypeAdapter<CFStringRef>::StringTypeAdapter(CFStringRef string)
 {
 }
 
-template<> inline void StringTypeAdapter<CFStringRef>::writeTo<LChar>(LChar* destination) const
+template<> inline void StringTypeAdapter<CFStringRef>::writeTo<Latin1Character>(std::span<Latin1Character> destination) const
 {
     if (m_string)
-        std::memcpy(destination, CFStringGetCStringPtr(m_string, kCFStringEncodingISOLatin1), CFStringGetLength(m_string));
+        memcpySpan(destination, CFStringGetLatin1CStringSpan(m_string.get()));
 }
 
-template<> inline void StringTypeAdapter<CFStringRef>::writeTo<UChar>(UChar* destination) const
+template<> inline void StringTypeAdapter<CFStringRef>::writeTo<char16_t>(std::span<char16_t> destination) const
 {
     if (m_string)
-        CFStringGetCharacters(m_string, CFRangeMake(0, CFStringGetLength(m_string)), reinterpret_cast<UniChar*>(destination));
+        CFStringCopyCharactersSpan(m_string.get(), destination);
 }
 
 #ifdef __OBJC__

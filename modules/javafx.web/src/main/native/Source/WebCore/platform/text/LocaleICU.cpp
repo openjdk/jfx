@@ -31,14 +31,21 @@
 #include "config.h"
 #include "LocaleICU.h"
 
+#include "LocaleToScriptMapping.h"
 #include "LocalizedStrings.h"
 #include <limits>
 #include <unicode/udatpg.h>
 #include <unicode/uloc.h>
+#include <unicode/uscript.h>
 #include <wtf/DateMath.h>
 #include <wtf/text/StringBuffer.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/unicode/icu/ICUHelpers.h>
+
+#if USE(HARFBUZZ)
+#include <hb-icu.h>
+#include <hb.h>
+#endif
 
 
 namespace WebCore {
@@ -59,10 +66,27 @@ LocaleICU::~LocaleICU()
 #if !UCONFIG_NO_FORMATTING
     unum_close(m_numberFormat);
 #endif
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
     udat_close(m_shortDateFormat);
     udat_close(m_mediumTimeFormat);
     udat_close(m_shortTimeFormat);
+}
+
+Locale::WritingDirection LocaleICU::defaultWritingDirection() const
+{
+#if USE(HARFBUZZ)
+    UScriptCode icuScript = localeToScriptCode(m_locale.span());
+    hb_script_t script = hb_icu_script_to_script(icuScript);
+
+    switch (hb_script_get_horizontal_direction(script)) {
+    case HB_DIRECTION_LTR:
+        return WritingDirection::LeftToRight;
+    case HB_DIRECTION_RTL:
+        return WritingDirection::RightToLeft;
+    default:
+        return WritingDirection::Default;
+    }
+#else
+    return WritingDirection::Default;
 #endif
 }
 
@@ -74,12 +98,12 @@ String LocaleICU::decimalSymbol(UNumberFormatSymbol symbol)
     ASSERT(U_SUCCESS(status) || needsToGrowToProduceBuffer(status));
     if (U_FAILURE(status) && !needsToGrowToProduceBuffer(status))
         return String();
-    StringBuffer<UChar> buffer(bufferLength);
+    StringBuffer<char16_t> buffer(bufferLength);
     status = U_ZERO_ERROR;
     unum_getSymbol(m_numberFormat, symbol, buffer.characters(), bufferLength, &status);
     if (U_FAILURE(status))
         return String();
-    return String::adopt(WTFMove(buffer));
+    return String::adopt(WTF::move(buffer));
 }
 
 String LocaleICU::decimalTextAttribute(UNumberFormatTextAttribute tag)
@@ -89,13 +113,13 @@ String LocaleICU::decimalTextAttribute(UNumberFormatTextAttribute tag)
     ASSERT(U_SUCCESS(status) || needsToGrowToProduceBuffer(status));
     if (U_FAILURE(status) && !needsToGrowToProduceBuffer(status))
         return String();
-    StringBuffer<UChar> buffer(bufferLength);
+    StringBuffer<char16_t> buffer(bufferLength);
     status = U_ZERO_ERROR;
     unum_getTextAttribute(m_numberFormat, tag, buffer.characters(), bufferLength, &status);
     ASSERT(U_SUCCESS(status));
     if (U_FAILURE(status))
         return String();
-    return String::adopt(WTFMove(buffer));
+    return String::adopt(WTF::move(buffer));
 }
 #endif
 
@@ -128,7 +152,6 @@ void LocaleICU::initializeLocaleData()
 #endif
 }
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
 bool LocaleICU::initializeShortDateFormat()
 {
     if (m_didCreateShortDateFormat)
@@ -140,9 +163,9 @@ bool LocaleICU::initializeShortDateFormat()
 
 UDateFormat* LocaleICU::openDateFormat(UDateFormatStyle timeStyle, UDateFormatStyle dateStyle) const
 {
-    const UChar gmtTimezone[3] = {'G', 'M', 'T'};
+    constexpr std::array<char16_t, 3> gmtTimezone { 'G', 'M', 'T' };
     UErrorCode status = U_ZERO_ERROR;
-    return udat_open(timeStyle, dateStyle, m_locale.data(), gmtTimezone, std::size(gmtTimezone), 0, -1, &status);
+    return udat_open(timeStyle, dateStyle, m_locale.data(), gmtTimezone.data(), gmtTimezone.size(), 0, -1, &status);
 }
 
 static String getDateFormatPattern(const UDateFormat* dateFormat)
@@ -151,15 +174,15 @@ static String getDateFormatPattern(const UDateFormat* dateFormat)
         return emptyString();
 
     UErrorCode status = U_ZERO_ERROR;
-    int32_t length = udat_toPattern(dateFormat, TRUE, 0, 0, &status);
+    int32_t length = udat_toPattern(dateFormat, true, 0, 0, &status);
     if (!needsToGrowToProduceBuffer(status) || !length)
         return emptyString();
-    StringBuffer<UChar> buffer(length);
+    StringBuffer<char16_t> buffer(length);
     status = U_ZERO_ERROR;
-    udat_toPattern(dateFormat, TRUE, buffer.characters(), length, &status);
+    udat_toPattern(dateFormat, true, buffer.characters(), length, &status);
     if (U_FAILURE(status))
         return emptyString();
-    return String::adopt(WTFMove(buffer));
+    return String::adopt(WTF::move(buffer));
 }
 
 std::unique_ptr<Vector<String>> LocaleICU::createLabelVector(const UDateFormat* dateFormat, UDateFormatSymbolType type, int32_t startIndex, int32_t size)
@@ -176,23 +199,19 @@ std::unique_ptr<Vector<String>> LocaleICU::createLabelVector(const UDateFormat* 
         int32_t length = udat_getSymbols(dateFormat, type, startIndex + i, 0, 0, &status);
         if (!needsToGrowToProduceBuffer(status))
             return makeUnique<Vector<String>>();
-        StringBuffer<UChar> buffer(length);
+        StringBuffer<char16_t> buffer(length);
         status = U_ZERO_ERROR;
         udat_getSymbols(dateFormat, type, startIndex + i, buffer.characters(), length, &status);
         if (U_FAILURE(status))
             return makeUnique<Vector<String>>();
-        labels->uncheckedAppend(String::adopt(WTFMove(buffer)));
+        labels->append(String::adopt(WTF::move(buffer)));
     }
     return labels;
 }
 
 static std::unique_ptr<Vector<String>> createFallbackMonthLabels()
 {
-    auto labels = makeUnique<Vector<String>>();
-    labels->reserveInitialCapacity(std::size(WTF::monthFullName));
-    for (auto monthName : WTF::monthFullName)
-        labels->uncheckedAppend(monthName);
-    return labels;
+    return makeUnique<Vector<String>>(std::span { WTF::monthFullName });
 }
 
 const Vector<String>& LocaleICU::monthLabels()
@@ -253,21 +272,21 @@ String LocaleICU::dateFormat()
     return m_dateFormat;
 }
 
-static String getFormatForSkeleton(const char* locale, const UChar* skeleton, int32_t skeletonLength)
+static String getFormatForSkeleton(const CString& locale, std::span<const char16_t> skeleton)
 {
     String format = "yyyy-MM"_s;
     UErrorCode status = U_ZERO_ERROR;
-    UDateTimePatternGenerator* patternGenerator = udatpg_open(locale, &status);
+    UDateTimePatternGenerator* patternGenerator = udatpg_open(locale.data(), &status);
     if (!patternGenerator)
         return format;
     status = U_ZERO_ERROR;
-    int32_t length = udatpg_getBestPattern(patternGenerator, skeleton, skeletonLength, 0, 0, &status);
+    int32_t length = udatpg_getBestPattern(patternGenerator, skeleton.data(), skeleton.size(), 0, 0, &status);
     if (needsToGrowToProduceBuffer(status) && length) {
-        StringBuffer<UChar> buffer(length);
+        StringBuffer<char16_t> buffer(length);
         status = U_ZERO_ERROR;
-        udatpg_getBestPattern(patternGenerator, skeleton, skeletonLength, buffer.characters(), length, &status);
+        udatpg_getBestPattern(patternGenerator, skeleton.data(), skeleton.size(), buffer.characters(), length, &status);
         if (U_SUCCESS(status))
-            format = String::adopt(WTFMove(buffer));
+            format = String::adopt(WTF::move(buffer));
     }
     udatpg_close(patternGenerator);
     return format;
@@ -275,21 +294,21 @@ static String getFormatForSkeleton(const char* locale, const UChar* skeleton, in
 
 String LocaleICU::monthFormat()
 {
-    if (!m_monthFormat.isNull())
-        return m_monthFormat;
+    if (m_monthFormat.isNull()) {
     // Gets a format for "MMMM" because Windows API always provides formats for
     // "MMMM" in some locales.
-    const UChar skeleton[] = { 'y', 'y', 'y', 'y', 'M', 'M', 'M', 'M' };
-    m_monthFormat = getFormatForSkeleton(m_locale.data(), skeleton, std::size(skeleton));
+        static constexpr std::array<char16_t, 8> skeleton { 'y', 'y', 'y', 'y', 'M', 'M', 'M', 'M' };
+        m_monthFormat = getFormatForSkeleton(m_locale, skeleton);
+    }
     return m_monthFormat;
 }
 
 String LocaleICU::shortMonthFormat()
 {
-    if (!m_shortMonthFormat.isNull())
-        return m_shortMonthFormat;
-    const UChar skeleton[] = { 'y', 'y', 'y', 'y', 'M', 'M', 'M' };
-    m_shortMonthFormat = getFormatForSkeleton(m_locale.data(), skeleton, std::size(skeleton));
+    if (m_shortMonthFormat.isNull()) {
+        static constexpr std::array<char16_t, 7> skeleton { 'y', 'y', 'y', 'y', 'M', 'M', 'M' };
+        m_shortMonthFormat = getFormatForSkeleton(m_locale, skeleton);
+    }
     return m_shortMonthFormat;
 }
 
@@ -366,8 +385,6 @@ const Vector<String>& LocaleICU::timeAMPMLabels()
     initializeDateTimeFormat();
     return m_timeAMPMLabels;
 }
-
-#endif
 
 } // namespace WebCore
 

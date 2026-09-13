@@ -25,21 +25,22 @@
 
 #include "config.h"
 #include "WebXRViewerPose.h"
-#include <wtf/IsoMallocInlines.h>
 
 #if ENABLE(WEBXR)
 
+#include <wtf/TZoneMallocInlines.h>
+
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WebXRViewerPose);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebXRViewerPose);
 
 Ref<WebXRViewerPose> WebXRViewerPose::create(Ref<WebXRRigidTransform>&& transform, bool emulatedPosition)
 {
-    return adoptRef(*new WebXRViewerPose(WTFMove(transform), emulatedPosition));
+    return adoptRef(*new WebXRViewerPose(WTF::move(transform), emulatedPosition));
 }
 
 WebXRViewerPose::WebXRViewerPose(Ref<WebXRRigidTransform>&& transform, bool emulatedPosition)
-    : WebXRPose(WTFMove(transform), emulatedPosition)
+    : WebXRPose(WTF::move(transform), emulatedPosition)
 {
 }
 
@@ -52,7 +53,7 @@ const Vector<Ref<WebXRView>>& WebXRViewerPose::views() const
 
 void WebXRViewerPose::setViews(Vector<Ref<WebXRView>>&& views)
 {
-    m_views = WTFMove(views);
+    m_views = WTF::move(views);
 }
 
 } // namespace WebCore

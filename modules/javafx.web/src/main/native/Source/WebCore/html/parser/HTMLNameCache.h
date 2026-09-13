@@ -34,22 +34,22 @@ namespace WebCore {
 
 class HTMLNameCache {
 public:
-    ALWAYS_INLINE static QualifiedName makeAttributeQualifiedName(std::span<const UChar> string)
+    ALWAYS_INLINE static QualifiedName makeAttributeQualifiedName(std::span<const char16_t> string)
     {
         return makeQualifiedName(string);
     }
 
-    ALWAYS_INLINE static QualifiedName makeAttributeQualifiedName(std::span<const LChar> string)
+    ALWAYS_INLINE static QualifiedName makeAttributeQualifiedName(std::span<const Latin1Character> string)
     {
         return makeQualifiedName(string);
     }
 
-    ALWAYS_INLINE static AtomString makeAttributeValue(std::span<const UChar> string)
+    ALWAYS_INLINE static AtomString makeAttributeValue(std::span<const char16_t> string)
     {
         return makeAtomString(string);
     }
 
-    ALWAYS_INLINE static AtomString makeAttributeValue(std::span<const LChar> string)
+    ALWAYS_INLINE static AtomString makeAttributeValue(std::span<const Latin1Character> string)
     {
         return makeAtomString(string);
     }
@@ -68,15 +68,12 @@ private:
         if (string.empty())
             return emptyAtom();
 
-        auto length = string.size();
-        if (length > maxStringLengthForCache)
-            return AtomString(string.data(), length);
+        if (string.size() > maxStringLengthForCache)
+            return AtomString(string);
 
-        auto firstCharacter = string[0];
-        auto lastCharacter = string[length - 1];
-        auto& slot = atomStringCacheSlot(firstCharacter, lastCharacter, length);
-        if (!equal(slot.impl(), string.data(), length)) {
-            AtomString result(string.data(), length);
+        auto& slot = atomStringCacheSlot(string.front(), string.back(), string.size());
+        if (!equal(slot.impl(), string)) {
+            AtomString result { string };
             slot = result;
             return result;
         }
@@ -90,15 +87,12 @@ private:
         if (string.empty())
             return nullQName();
 
-        auto length = string.size();
-        if (length > maxStringLengthForCache)
-            return QualifiedName(nullAtom(), AtomString(string.data(), length), nullAtom());
+        if (string.size() > maxStringLengthForCache)
+            return QualifiedName(nullAtom(), AtomString(string), nullAtom());
 
-        auto firstCharacter = string[0];
-        auto lastCharacter = string[length - 1];
-        auto& slot = qualifiedNameCacheSlot(firstCharacter, lastCharacter, length);
-        if (!slot || !equal(slot->m_localName.impl(), string.data(), length)) {
-            QualifiedName result(nullAtom(), AtomString(string.data(), length), nullAtom());
+        auto& slot = qualifiedNameCacheSlot(string.front(), string.back(), string.size());
+        if (!slot || !equal(slot->m_localName.impl(), string)) {
+            QualifiedName result(nullAtom(), AtomString(string), nullAtom());
             slot = result.impl();
             return result;
         }
@@ -106,7 +100,7 @@ private:
         return *slot;
     }
 
-    ALWAYS_INLINE static size_t slotIndex(UChar firstCharacter, UChar lastCharacter, UChar length)
+    ALWAYS_INLINE static size_t slotIndex(char16_t firstCharacter, char16_t lastCharacter, char16_t length, size_t capacity)
     {
         unsigned hash = (firstCharacter << 6) ^ ((lastCharacter << 14) ^ firstCharacter);
         hash += (hash >> 14) + (length << 14);
@@ -114,23 +108,24 @@ private:
         return (hash + (hash >> 6)) % capacity;
     }
 
-    ALWAYS_INLINE static AtomString& atomStringCacheSlot(UChar firstCharacter, UChar lastCharacter, UChar length)
+    ALWAYS_INLINE static AtomString& atomStringCacheSlot(char16_t firstCharacter, char16_t lastCharacter, char16_t length)
     {
-        auto index = slotIndex(firstCharacter, lastCharacter, length);
+        auto index = slotIndex(firstCharacter, lastCharacter, length, atomStringCacheCapacity);
         return atomStringCache()[index];
     }
 
-    ALWAYS_INLINE static RefPtr<QualifiedName::QualifiedNameImpl>& qualifiedNameCacheSlot(UChar firstCharacter, UChar lastCharacter, UChar length)
+    ALWAYS_INLINE static RefPtr<QualifiedName::QualifiedNameImpl>& qualifiedNameCacheSlot(char16_t firstCharacter, char16_t lastCharacter, char16_t length)
     {
-        auto index = slotIndex(firstCharacter, lastCharacter, length);
+        auto index = slotIndex(firstCharacter, lastCharacter, length, qualifiedNameCacheCapacity);
         return qualifiedNameCache()[index];
     }
 
     static constexpr auto maxStringLengthForCache = 36;
-    static constexpr auto capacity = 512;
+    static constexpr auto atomStringCacheCapacity = 2048;
+    static constexpr auto qualifiedNameCacheCapacity = 512;
 
-    using AtomStringCache = std::array<AtomString, capacity>;
-    using QualifiedNameCache = std::array<RefPtr<QualifiedName::QualifiedNameImpl>, capacity>;
+    using AtomStringCache = std::array<AtomString, atomStringCacheCapacity>;
+    using QualifiedNameCache = std::array<RefPtr<QualifiedName::QualifiedNameImpl>, qualifiedNameCacheCapacity>;
 
     static AtomStringCache& atomStringCache();
     static QualifiedNameCache& qualifiedNameCache();

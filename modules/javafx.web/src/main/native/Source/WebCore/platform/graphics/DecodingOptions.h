@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "IntSize.h"
+#include <WebCore/IntSize.h>
 #include <optional>
 
 namespace WebCore {
@@ -36,23 +36,28 @@ enum class DecodingMode : uint8_t {
     Asynchronous
 };
 
+enum class ShouldDecodeToHDR : bool {
+    No,
+    Yes
+};
+
 class DecodingOptions {
 public:
-    DecodingOptions(DecodingMode decodingMode = DecodingMode::Synchronous, const std::optional<IntSize>& sizeForDrawing = std::nullopt)
+    DecodingOptions(DecodingMode decodingMode = DecodingMode::Synchronous, ShouldDecodeToHDR shouldDecodeToHDR = ShouldDecodeToHDR::No, const std::optional<IntSize>& sizeForDrawing = std::nullopt)
         : m_decodingMode(decodingMode)
+        , m_shouldDecodeToHDR(shouldDecodeToHDR)
         , m_sizeForDrawing(sizeForDrawing)
     {
     }
 
-    bool operator==(const DecodingOptions& other) const
-    {
-        return m_decodingMode == other.m_decodingMode && m_sizeForDrawing == other.m_sizeForDrawing;
-    }
+    friend bool operator==(const DecodingOptions&, const DecodingOptions&) = default;
 
     DecodingMode decodingMode() const { return m_decodingMode; }
     bool isAuto() const { return m_decodingMode == DecodingMode::Auto; }
     bool isSynchronous() const { return m_decodingMode == DecodingMode::Synchronous; }
     bool isAsynchronous() const { return m_decodingMode == DecodingMode::Asynchronous; }
+
+    ShouldDecodeToHDR shouldDecodeToHDR() const { return m_shouldDecodeToHDR; }
 
     std::optional<IntSize> sizeForDrawing() const { return m_sizeForDrawing; }
     bool hasFullSize() const { return !m_sizeForDrawing; }
@@ -60,6 +65,9 @@ public:
 
     bool isCompatibleWith(const DecodingOptions& other) const
     {
+        if (shouldDecodeToHDR() != other.shouldDecodeToHDR())
+            return false;
+
         if (isAuto() || other.isAuto())
             return false;
 
@@ -74,7 +82,10 @@ public:
 
 private:
     DecodingMode m_decodingMode;
+    ShouldDecodeToHDR m_shouldDecodeToHDR;
     std::optional<IntSize> m_sizeForDrawing;
 };
+
+TextStream& operator<<(TextStream&, DecodingMode);
 
 } // namespace WebCore

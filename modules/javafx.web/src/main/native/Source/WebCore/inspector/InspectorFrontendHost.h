@@ -28,12 +28,11 @@
 
 #pragma once
 
-#include "ContextMenu.h"
-#include "ContextMenuProvider.h"
-#include "ExceptionOr.h"
-#include "InspectorFrontendClient.h"
 #include <JavaScriptCore/JSCJSValue.h>
-#include <wtf/RefCounted.h>
+#include <WebCore/ContextMenu.h>
+#include <WebCore/ContextMenuProvider.h>
+#include <WebCore/InspectorFrontendClient.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -47,10 +46,12 @@ class Event;
 class File;
 class FrontendMenuProvider;
 class HTMLIFrameElement;
+class OffscreenCanvasRenderingContext2D;
 class Page;
 class Path2D;
+template<typename> class ExceptionOr;
 
-class InspectorFrontendHost : public RefCounted<InspectorFrontendHost> {
+class InspectorFrontendHost : public RefCountedAndCanMakeWeakPtr<InspectorFrontendHost> {
 public:
     static Ref<InspectorFrontendHost> create(InspectorFrontendClient* client, Page* frontendPage)
     {
@@ -172,6 +173,13 @@ public:
     Ref<Path2D> getPath(const CanvasRenderingContext2D&) const;
     void setPath(CanvasRenderingContext2D&, Path2D&) const;
 
+#if ENABLE(OFFSCREEN_CANVAS)
+    float getCurrentX(const OffscreenCanvasRenderingContext2D&) const;
+    float getCurrentY(const OffscreenCanvasRenderingContext2D&) const;
+    Ref<Path2D> getPath(const OffscreenCanvasRenderingContext2D&) const;
+    void setPath(OffscreenCanvasRenderingContext2D&, Path2D&) const;
+#endif
+
 private:
 #if ENABLE(CONTEXT_MENUS)
     friend class FrontendMenuProvider;
@@ -181,7 +189,7 @@ private:
     InspectorFrontendClient* m_client;
     WeakPtr<Page> m_frontendPage;
 #if ENABLE(CONTEXT_MENUS)
-    FrontendMenuProvider* m_menuProvider;
+    WeakPtr<FrontendMenuProvider> m_menuProvider;
 #endif
 };
 

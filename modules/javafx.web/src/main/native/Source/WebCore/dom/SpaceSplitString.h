@@ -20,39 +20,37 @@
 
 #pragma once
 
+#include <algorithm>
 #include <wtf/MainThread.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/AtomString.h>
 
 namespace WebCore {
 
 class SpaceSplitStringData {
+    WTF_MAKE_TZONE_ALLOCATED(SpaceSplitStringData);
     WTF_MAKE_NONCOPYABLE(SpaceSplitStringData);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
     static RefPtr<SpaceSplitStringData> create(const AtomString&);
 
+    auto begin() const LIFETIME_BOUND { return std::to_address(tokenArray().begin()); }
+    auto end() const LIFETIME_BOUND { return std::to_address(tokenArray().end()); }
+    auto begin() LIFETIME_BOUND { return std::to_address(tokenArray().begin()); }
+    auto end() LIFETIME_BOUND { return std::to_address(tokenArray().end()); }
+
     bool contains(const AtomString& string)
     {
-        const AtomString* data = tokenArrayStart();
-        unsigned i = 0;
-        do {
-            if (data[i] == string)
-                return true;
-            ++i;
-        } while (i < m_size);
-        return false;
+        auto tokens = tokenArray();
+        return std::ranges::find(tokens, string) != tokens.end();
     }
 
     bool containsAll(SpaceSplitStringData&);
 
     unsigned size() const { return m_size; }
-    static ptrdiff_t sizeMemoryOffset() { return OBJECT_OFFSETOF(SpaceSplitStringData, m_size); }
+    static constexpr ptrdiff_t sizeMemoryOffset() { return OBJECT_OFFSETOF(SpaceSplitStringData, m_size); }
 
-    const AtomString& operator[](unsigned i)
-    {
-        RELEASE_ASSERT(i < m_size);
-        return tokenArrayStart()[i];
-    }
+    const AtomString& operator[](unsigned i) LIFETIME_BOUND { return tokenArray()[i]; }
 
     void ref()
     {
@@ -73,7 +71,9 @@ public:
         m_refCount = tempRefCount;
     }
 
-    static ptrdiff_t tokensMemoryOffset() { return sizeof(SpaceSplitStringData); }
+    const AtomString& keyString() const LIFETIME_BOUND { return m_keyString; }
+
+    static constexpr ptrdiff_t tokensMemoryOffset() { return sizeof(SpaceSplitStringData); }
 
 private:
     static Ref<SpaceSplitStringData> create(const AtomString&, unsigned tokenCount);
@@ -89,11 +89,13 @@ private:
     ~SpaceSplitStringData() = default;
     static void destroy(SpaceSplitStringData*);
 
-    AtomString* tokenArrayStart() { return reinterpret_cast<AtomString*>(this + 1); }
+    std::span<AtomString> tokenArray() LIFETIME_BOUND { return unsafeMakeSpan(m_tokens, m_size); }
+    std::span<const AtomString> tokenArray() const LIFETIME_BOUND { return unsafeMakeSpan(m_tokens, m_size); }
 
     AtomString m_keyString;
     unsigned m_refCount;
     unsigned m_size;
+    AtomString m_tokens[0];
 };
 
 class SpaceSplitString {
@@ -103,8 +105,14 @@ public:
     enum class ShouldFoldCase : bool { No, Yes };
     SpaceSplitString(const AtomString&, ShouldFoldCase);
 
-    bool operator==(const SpaceSplitString& other) const { return m_data == other.m_data; }
+    const AtomString& keyString() const LIFETIME_BOUND
+    {
+        if (m_data)
+            return m_data->keyString();
+        return nullAtom();
+    }
 
+    friend bool operator==(const SpaceSplitString&, const SpaceSplitString&) = default;
     void set(const AtomString&, ShouldFoldCase);
     void clear() { m_data = nullptr; }
 
@@ -113,11 +121,16 @@ public:
 
     unsigned size() const { return m_data ? m_data->size() : 0; }
     bool isEmpty() const { return !m_data; }
-    const AtomString& operator[](unsigned i) const
+    const AtomString& operator[](unsigned i) const LIFETIME_BOUND
     {
         ASSERT_WITH_SECURITY_IMPLICATION(m_data);
         return (*m_data)[i];
     }
+
+    auto begin() const LIFETIME_BOUND { return m_data ? m_data->begin() : nullptr; }
+    auto end() const LIFETIME_BOUND { return m_data ? m_data->end() : nullptr; }
+    auto begin() LIFETIME_BOUND { return m_data ? m_data->begin() : nullptr; }
+    auto end() LIFETIME_BOUND { return m_data ? m_data->end() : nullptr; }
 
     static bool spaceSplitStringContainsValue(StringView spaceSplitString, StringView value, ShouldFoldCase);
 

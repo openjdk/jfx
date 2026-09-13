@@ -23,6 +23,8 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
+ // https://html.spec.whatwg.org/#videotracklist
+
 [
     ActiveDOMObject,
     Conditional=VIDEO,
@@ -31,12 +33,12 @@
     Exposed=Window
 ] interface VideoTrackList : EventTarget {
     readonly attribute unsigned long length;
-    getter VideoTrack item(unsigned long index);
-    VideoTrack getTrackById([AtomString] DOMString id);
+    // FIXME: Remove 'item' from below to align with the specification. See: https://bugs.webkit.org/show_bug.cgi?id=260763
+    [ImplementedAs=itemForBindings] getter VideoTrack? item(unsigned long index);
+    VideoTrack? getTrackById([AtomString] DOMString id);
     readonly attribute long selectedIndex;
 
     attribute EventHandler onchange;
     attribute EventHandler onaddtrack;
     attribute EventHandler onremovetrack;
 };
-

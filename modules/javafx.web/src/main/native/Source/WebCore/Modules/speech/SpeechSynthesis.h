@@ -27,6 +27,7 @@
 
 #if ENABLE(SPEECH_SYNTHESIS)
 
+#include "EventTargetInterfaces.h"
 #include "PlatformSpeechSynthesisUtterance.h"
 #include "PlatformSpeechSynthesizer.h"
 #include "SpeechSynthesisClient.h"
@@ -42,14 +43,16 @@ class Document;
 class PlatformSpeechSynthesizerClient;
 class SpeechSynthesisVoice;
 
-class SpeechSynthesis : public PlatformSpeechSynthesizerClient, public SpeechSynthesisClientObserver, public RefCounted<SpeechSynthesis>, public ContextDestructionObserver, public EventTarget {
-    WTF_MAKE_ISO_ALLOCATED(SpeechSynthesis);
+class SpeechSynthesis : public PlatformSpeechSynthesizerClient, public SpeechSynthesisClientObserver, public RefCounted<SpeechSynthesis>, public ActiveDOMObject, public EventTarget {
+    WTF_MAKE_TZONE_ALLOCATED(SpeechSynthesis);
 public:
     static Ref<SpeechSynthesis> create(ScriptExecutionContext&);
     virtual ~SpeechSynthesis();
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     bool pending() const;
     bool speaking() const;
@@ -58,7 +61,7 @@ public:
     void speak(SpeechSynthesisUtterance&);
     void cancel();
     void pause();
-    void resume();
+    void resumeSynthesis();
 
     const Vector<Ref<SpeechSynthesisVoice>>& getVoices();
 
@@ -66,19 +69,20 @@ public:
     WEBCORE_EXPORT void setPlatformSynthesizer(Ref<PlatformSpeechSynthesizer>&&);
 
     // Restrictions to change default behaviors.
-    enum BehaviorRestrictionFlags {
-        NoRestrictions = 0,
-        RequireUserGestureForSpeechStartRestriction = 1 << 0,
+    enum class BehaviorRestrictionFlags : uint8_t {
+        RequireUserGestureForSpeechStart = 1 << 0,
     };
-    typedef unsigned BehaviorRestrictions;
+    using BehaviorRestrictions = OptionSet<BehaviorRestrictionFlags>;
 
-    bool userGestureRequiredForSpeechStart() const { return m_restrictions & RequireUserGestureForSpeechStartRestriction; }
-    void removeBehaviorRestriction(BehaviorRestrictions restriction) { m_restrictions &= ~restriction; }
+    bool userGestureRequiredForSpeechStart() const { return m_restrictions.contains(BehaviorRestrictionFlags::RequireUserGestureForSpeechStart); }
+    void removeBehaviorRestriction(BehaviorRestrictions restriction) { m_restrictions.remove(restriction); }
+    WEBCORE_EXPORT void simulateVoicesListChange();
 
 private:
     SpeechSynthesis(ScriptExecutionContext&);
+    RefPtr<SpeechSynthesisUtterance> protectedCurrentSpeechUtterance();
 
-    // PlatformSpeechSynthesizerClient override methods.
+    // PlatformSpeechSynthesizerClient
     void voicesDidChange() override;
     void didStartSpeaking(PlatformSpeechSynthesisUtterance&) override;
     void didPauseSpeaking(PlatformSpeechSynthesisUtterance&) override;
@@ -87,7 +91,7 @@ private:
     void speakingErrorOccurred(PlatformSpeechSynthesisUtterance&) override;
     void boundaryEventOccurred(PlatformSpeechSynthesisUtterance&, SpeechBoundary, unsigned charIndex, unsigned charLength) override;
 
-    // SpeechSynthesisClient override methods
+    // SpeechSynthesisClientObserver
     void didStartSpeaking() override;
     void didFinishSpeaking() override;
     void didPauseSpeaking() override;
@@ -96,25 +100,47 @@ private:
     void boundaryEventOccurred(bool wordBoundary, unsigned charIndex, unsigned charLength) override;
     void voicesChanged() override;
 
+    // ActiveDOMObject
+    void suspend(ReasonForSuspension) final;
+    void stop() final;
+    bool virtualHasPendingActivity() const final;
+
     void startSpeakingImmediately(SpeechSynthesisUtterance&);
     void handleSpeakingCompleted(SpeechSynthesisUtterance&, bool errorOccurred);
+    void stopPlatformSpeech();
 
-    ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
-    EventTargetInterface eventTargetInterface() const final { return SpeechSynthesisEventTargetInterfaceType; }
+    // EventTarget
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::SpeechSynthesis; }
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
+    void eventListenersDidChange() final;
 
     PlatformSpeechSynthesizer& ensurePlatformSpeechSynthesizer();
+    Ref<PlatformSpeechSynthesizer> ensureProtectedPlatformSpeechSynthesizer();
 
     RefPtr<PlatformSpeechSynthesizer> m_platformSpeechSynthesizer;
-    Vector<Ref<SpeechSynthesisVoice>> m_voiceList;
-    RefPtr<SpeechSynthesisUtterance> m_currentSpeechUtterance;
+    std::optional<Vector<Ref<SpeechSynthesisVoice>>> m_voiceList;
+    std::unique_ptr<SpeechSynthesisUtteranceActivity> m_currentSpeechUtterance;
     Deque<Ref<SpeechSynthesisUtterance>> m_utteranceQueue;
     bool m_isPaused;
     BehaviorRestrictions m_restrictions;
     WeakPtr<SpeechSynthesisClient> m_speechSynthesisClient;
+    bool m_hasEventListener { false };
 };
 
 } // namespace WebCore
+
+namespace WTF {
+template<> struct EnumTraits<WebCore::SpeechSynthesis::BehaviorRestrictionFlags> {
+    using values = EnumValues<
+        WebCore::SpeechSynthesis::BehaviorRestrictionFlags,
+        WebCore::SpeechSynthesis::BehaviorRestrictionFlags::RequireUserGestureForSpeechStart
+    >;
+};
+
+} // namespace WTF
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(SpeechSynthesis)
 
 #endif // ENABLE(SPEECH_SYNTHESIS)

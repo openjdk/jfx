@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,11 +24,9 @@
  */
 package test.javafx.stage;
 
-import static org.junit.Assume.assumeTrue;
-
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -36,14 +34,11 @@ import javafx.scene.Scene;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import com.sun.javafx.PlatformUtil;
-
 import test.util.Util;
 
 public class RestoreStagePositionTest {
@@ -54,7 +49,7 @@ public class RestoreStagePositionTest {
         initFX();
         try {
             RestoreStagePositionTest test = new RestoreStagePositionTest();
-            test.testUfullscreenPosition();
+            test.testUnfullscreenPosition();
             test.testDemaximizedPosition();
         } catch (Throwable e) {
             e.printStackTrace();
@@ -77,31 +72,28 @@ public class RestoreStagePositionTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardown() {
-        Util.shutdown(stage);
+        Util.shutdown();
     }
 
     @Test
-    public void testUfullscreenPosition() throws Exception {
-        // Disable on Mac until JDK-8176813 is fixed
-        assumeTrue(!PlatformUtil.isMac());
-
+    public void testUnfullscreenPosition() throws Exception {
         Thread.sleep(200);
-        Assert.assertTrue(stage.isShowing());
-        Assert.assertFalse(stage.isFullScreen());
+        Assertions.assertTrue(stage.isShowing());
+        Assertions.assertFalse(stage.isFullScreen());
 
         double x = stage.getX();
         double y = stage.getY();
 
         Platform.runLater(() -> stage.setFullScreen(true));
-        Thread.sleep(400);
-        Assert.assertTrue(stage.isFullScreen());
+        Thread.sleep(800);
+        Assertions.assertTrue(stage.isFullScreen());
         CountDownLatch latch = new CountDownLatch(2);
 
         ChangeListener<Number> listenerX = (observable, oldValue, newValue) -> {
@@ -121,25 +113,22 @@ public class RestoreStagePositionTest {
         stage.xProperty().removeListener(listenerX);
         stage.xProperty().removeListener(listenerY);
 
-        Assert.assertEquals("Window was moved", x, stage.getX(), 0.1);
-        Assert.assertEquals("Window was moved", y, stage.getY(), 0.1);
+        Assertions.assertEquals(x, stage.getX(), 0.1, "Window was moved");
+        Assertions.assertEquals(y, stage.getY(), 0.1, "Window was moved");
     }
 
     @Test
     public void testDemaximizedPosition() throws Exception {
-        // Disable on Mac until JDK-8089230 is fixed
-        assumeTrue(!PlatformUtil.isMac());
-
         Thread.sleep(200);
-        Assert.assertTrue(stage.isShowing());
-        Assert.assertFalse(stage.isMaximized());
+        Assertions.assertTrue(stage.isShowing());
+        Assertions.assertFalse(stage.isMaximized());
 
         double x = stage.getX();
         double y = stage.getY();
 
-        Platform.runLater(() -> stage.setMaximized(true));
-        Thread.sleep(200);
-        Assert.assertTrue(stage.isMaximized());
+        Util.runAndWait(() -> stage.setMaximized(true));
+        Util.waitForIdle(stage.getScene());
+        Assertions.assertTrue(stage.isMaximized());
         CountDownLatch latch = new CountDownLatch(2);
 
         ChangeListener<Number> listenerX = (observable, oldValue, newValue) -> {
@@ -159,7 +148,7 @@ public class RestoreStagePositionTest {
         stage.xProperty().removeListener(listenerX);
         stage.xProperty().removeListener(listenerY);
 
-        Assert.assertEquals("Window was moved", x, stage.getX(), 0.1);
-        Assert.assertEquals("Window was moved", y, stage.getY(), 0.1);
+        Assertions.assertEquals(x, stage.getX(), 0.1, "Window was moved");
+        Assertions.assertEquals(y, stage.getY(), 0.1, "Window was moved");
     }
 }

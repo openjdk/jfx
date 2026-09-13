@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,7 +39,7 @@ public:
     }
 
     ResourceResponse(const URL& url, const String& mimeType, long long expectedLength, const String& textEncodingName)
-        : ResourceResponseBase(url, mimeType, expectedLength, textEncodingName)
+        : ResourceResponseBase(URL(url), String(mimeType), expectedLength, String(textEncodingName))
     {
     }
 

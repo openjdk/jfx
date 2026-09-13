@@ -25,35 +25,41 @@
 
 #pragma once
 
-#include "FrameView.h"
+#include <WebCore/FrameView.h>
+#include <WebCore/RemoteFrame.h>
+
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class RemoteFrame;
 
 class RemoteFrameView final : public FrameView {
+    WTF_MAKE_TZONE_ALLOCATED(RemoteFrameView);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RemoteFrameView);
 public:
     static Ref<RemoteFrameView> create(RemoteFrame& frame) { return adoptRef(*new RemoteFrameView(frame)); }
 
     Type viewType() const final { return Type::Remote; }
     void writeRenderTreeAsText(TextStream&, OptionSet<RenderAsTextFlag>) override;
-    const RemoteFrame& frame() const { return m_frame.get(); }
-    RemoteFrame& frame() { return m_frame.get(); }
+    RemoteFrame& frame() const final { return m_frame; }
+
+    WEBCORE_EXPORT LayoutRect layoutViewportRect() const final;
+    std::optional<LayoutRect> visibleRectOfChild(const Frame&) const final;
+
+    // Set the frame rectangle, like setFrameRect, without synching the new rect to other Local/RemoteFrameViews.
+    // When frameRect of a RemoteFrameView changes, it syncs the new rect to other Local/RemoteFrameViews.
+    // RemoteFrameViews on the receiving end will set using this method to avoid repeating the sync.
+    WEBCORE_EXPORT void setFrameRectWithoutSync(const IntRect&);
 
 private:
     WEBCORE_EXPORT RemoteFrameView(RemoteFrame&);
 
     bool isRemoteFrameView() const final { return true; }
-    void invalidateRect(const IntRect&) final;
-    bool isActive() const final;
-    bool forceUpdateScrollbarsOnMainThreadForPerformanceTesting() const final;
-    ScrollableArea* enclosingScrollableArea() const final;
     bool isScrollableOrRubberbandable() final;
     bool hasScrollableOrRubberbandableAncestor() final;
-    IntRect scrollableAreaBoundingBox(bool*) const final;
     bool shouldPlaceVerticalScrollbarOnLeft() const final;
     void invalidateScrollbarRect(Scrollbar&, const IntRect&) final;
-    HostWindow* hostWindow() const final;
     IntRect windowClipRect() const final;
     void paintContents(GraphicsContext&, const IntRect& damageRect, SecurityOriginPaintPolicy, RegionContext*) final;
     void addedOrRemovedScrollbar() final;

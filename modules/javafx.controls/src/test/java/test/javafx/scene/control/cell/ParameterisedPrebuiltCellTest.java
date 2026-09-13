@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,11 @@
 
 package test.javafx.scene.control.cell;
 
-import java.util.Arrays;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.util.Collection;
-
+import java.util.List;
 import javafx.scene.control.Cell;
 import javafx.scene.control.cell.CheckBoxListCell;
 import javafx.scene.control.cell.CheckBoxTableCell;
@@ -35,39 +37,32 @@ import javafx.scene.control.cell.CheckBoxTreeCell;
 import javafx.scene.control.cell.CheckBoxTreeTableCell;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-
-import static org.junit.Assert.*;
-
-@RunWith(Parameterized.class)
 public class ParameterisedPrebuiltCellTest {
 
-    @Parameters public static Collection implementations() {
-        return Arrays.asList(new Object[][] {
-            { CheckBoxListCell.class },
-            { CheckBoxTableCell.class },
-            { CheckBoxTreeCell.class },
-            { CheckBoxTreeTableCell.class },
-        });
+    private static Collection<Class> parameters() {
+        return List.of(
+            CheckBoxListCell.class,
+            CheckBoxTableCell.class,
+            CheckBoxTreeCell.class,
+            CheckBoxTreeTableCell.class
+        );
     }
 
-    private Class<? extends Cell> cellClass;
     private Cell cell;
-
     private int count = 0;
 
-    public ParameterisedPrebuiltCellTest(Class<? extends Cell> cellClass) {
-        this.cellClass = cellClass;
-    }
-
-    @Before public void setup() throws Exception {
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    private void setup(Class<? extends Cell> cellClass) {
         count = 0;
-        cell = cellClass.getDeclaredConstructor().newInstance();
+        try {
+            cell = cellClass.getDeclaredConstructor().newInstance();
+        } catch (Exception e) {
+            fail(e);
+        }
     }
 
 
@@ -77,13 +72,19 @@ public class ParameterisedPrebuiltCellTest {
      *
      **************************************************************************/
 
-    @Test public void testSetText() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSetText(Class<? extends Cell> cellClass) {
+        setup(cellClass);
         assertNull(cell.getText());
         cell.setText("TEST");
         assertEquals("TEST", cell.getText());
     }
 
-    @Test public void testTextProperty() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testTextProperty(Class<? extends Cell> cellClass) {
+        setup(cellClass);
         assertEquals(0, count);
         cell.textProperty().addListener((observable, oldValue, newValue) -> {
             count++;
@@ -109,13 +110,19 @@ public class ParameterisedPrebuiltCellTest {
      *
      **************************************************************************/
 
-    @Test public void testSetGraphic() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSetGraphic(Class<? extends Cell> cellClass) {
+        setup(cellClass);
         Rectangle rect = new Rectangle(10, 10, Color.RED);
         cell.setGraphic(rect);
         assertEquals(rect, cell.getGraphic());
     }
 
-    @Test public void testGraphicProperty() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testGraphicProperty(Class<? extends Cell> cellClass) {
+        setup(cellClass);
         assertEquals(0, count);
         cell.graphicProperty().addListener((observable, oldValue, newValue) -> {
             count++;

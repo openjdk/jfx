@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -142,19 +142,17 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
         @Override
         public FontPosture convert(ParsedValue<String, FontPosture> value, Font font) {
 
-            // Testing for RT-31022 exposed a ClassCastException where value
+            // Testing for JDK-8116809 exposed a ClassCastException where value
             // wraps a String (e.g., "ITALIC", not a FontUnits.Style).
             final Object val = value.getValue();
 
             FontPosture style = null;
 
-            if (val instanceof String) {
+            if (val instanceof String stringVal) {
                 try {
-                    String sval = ((String)val).toUpperCase(Locale.ROOT);
-                    style = Enum.valueOf(FontPosture.class, sval);
+                    String upperStringVal = stringVal.toUpperCase(Locale.ROOT);
+                    style = Enum.valueOf(FontPosture.class, upperStringVal);
                 } catch (IllegalArgumentException iae) {
-                    style =  FontPosture.REGULAR;
-                } catch (NullPointerException npe) {
                     style =  FontPosture.REGULAR;
                 }
 
@@ -197,19 +195,17 @@ public final class FontConverter extends StyleConverter<ParsedValue[], Font> {
         @Override
         public FontWeight convert(ParsedValue<String, FontWeight> value, Font font) {
 
-            // Testing for RT-31022 exposed a ClassCastException where value
+            // Testing for JDK-8116809 exposed a ClassCastException where value
             // wraps a String (e.g., "ITALIC", not a FontUnits.Style).
             final Object val = value.getValue();
 
             FontWeight weight = null;
 
-            if (val instanceof String) {
+            if (val instanceof String stringVal) {
                 try {
-                    String sval = ((String)val).toUpperCase(Locale.ROOT);
-                    weight = Enum.valueOf(FontWeight.class, sval);
+                    String upperStringVal = stringVal.toUpperCase(Locale.ROOT);
+                    weight = Enum.valueOf(FontWeight.class, upperStringVal);
                 } catch (IllegalArgumentException iae) {
-                    weight =  FontWeight.NORMAL;
-                } catch (NullPointerException npe) {
                     weight =  FontWeight.NORMAL;
                 }
 

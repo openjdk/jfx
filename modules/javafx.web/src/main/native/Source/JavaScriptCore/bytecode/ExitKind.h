@@ -39,6 +39,7 @@ enum ExitKind : uint8_t {
     BadConstantCache, // We exited because a cache on a weak constant (usually a prototype) was wrong.
     BadIndexingType, // We exited because an indexing type was wrong.
     BadTypeInfoFlags, // We exited because we made an incorrect assumption about what TypeInfo flags we would see.
+    BadStringType, // We exited because we made an incorrect assumption about StringIdent v.s. StringVar
     Overflow, // We exited because of overflow.
     NegativeZero, // We exited because we encountered negative zero.
     NegativeIndex, // We exited because we encountered a negative index in a place we didn't want to see it.
@@ -57,19 +58,12 @@ enum ExitKind : uint8_t {
     WatchdogTimerFired, // We exited because we need to service the watchdog timer.
     DebuggerEvent, // We exited because we need to service the debugger.
     ExceptionCheck, // We exited because a direct exception check showed that we threw an exception from a C call.
+    WillThrowOutOfMemoryError, // We exited because we would like to throw OutOfMemory error.
     GenericUnwind, // We exited because we arrived at this OSR exit from genericUnwind.
     BigInt32Overflow, // We exited because of an BigInt32 overflow.
     UnexpectedResizableArrayBufferView, // We exited because we made an incorrect assumption about what type of ArrayBufferView we would see.
 };
 
-ASCIILiteral exitKindToString(ExitKind);
 bool exitKindMayJettison(ExitKind);
 
 } // namespace JSC
-
-namespace WTF {
-
-class PrintStream;
-void printInternal(PrintStream&, JSC::ExitKind);
-
-} // namespace WTF

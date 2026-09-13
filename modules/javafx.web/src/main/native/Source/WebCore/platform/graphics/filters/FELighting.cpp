@@ -29,13 +29,18 @@
 #include "config.h"
 #include "FELighting.h"
 
-#include "FELightingSoftwareApplier.h"
+#include "FELightingNeonParallelApplier.h"
+#include "FELightingSoftwareParallelApplier.h"
 #include "Filter.h"
+
+#if USE(CORE_IMAGE)
+#include "FELightingCoreImageApplier.h"
+#endif
 
 namespace WebCore {
 
-FELighting::FELighting(Type type, const Color& lightingColor, float surfaceScale, float diffuseConstant, float specularConstant, float specularExponent, float kernelUnitLengthX, float kernelUnitLengthY, Ref<LightSource>&& lightSource)
-    : FilterEffect(type)
+FELighting::FELighting(Type type, const Color& lightingColor, float surfaceScale, float diffuseConstant, float specularConstant, float specularExponent, float kernelUnitLengthX, float kernelUnitLengthY, Ref<LightSource>&& lightSource, DestinationColorSpace colorSpace)
+    : FilterEffect(type, colorSpace)
     , m_lightingColor(lightingColor)
     , m_surfaceScale(surfaceScale)
     , m_diffuseConstant(std::max(diffuseConstant, 0.0f))
@@ -43,7 +48,7 @@ FELighting::FELighting(Type type, const Color& lightingColor, float surfaceScale
     , m_specularExponent(clampTo<float>(specularExponent, 1.0f, 128.0f))
     , m_kernelUnitLengthX(kernelUnitLengthX)
     , m_kernelUnitLengthY(kernelUnitLengthY)
-    , m_lightSource(WTFMove(lightSource))
+    , m_lightSource(WTF::move(lightSource))
 {
 }
 
@@ -57,7 +62,7 @@ bool FELighting::operator==(const FELighting& other) const
         && m_specularExponent == other.m_specularExponent
         && m_kernelUnitLengthX == other.m_kernelUnitLengthX
         && m_kernelUnitLengthY == other.m_kernelUnitLengthY
-        && m_lightSource.get() == other.m_lightSource.get();
+        && arePointingToEqualData(m_lightSource, other.m_lightSource);
 }
 
 bool FELighting::setSurfaceScale(float surfaceScale)
@@ -101,9 +106,31 @@ FloatRect FELighting::calculateImageRect(const Filter& filter, std::span<const F
     return filter.maxEffectRect(primitiveSubregion);
 }
 
+OptionSet<FilterRenderingMode> FELighting::supportedFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) const
+{
+    OptionSet<FilterRenderingMode> modes = FilterRenderingMode::Software;
+#if USE(CORE_IMAGE)
+    modes.add(FilterRenderingMode::Accelerated);
+#endif
+    return modes & preferredFilterRenderingModes;
+}
+
+std::unique_ptr<FilterEffectApplier> FELighting::createAcceleratedApplier() const
+{
+#if USE(CORE_IMAGE)
+    return FilterEffectApplier::create<FELightingCoreImageApplier>(*this);
+#else
+    return nullptr;
+#endif
+}
+
 std::unique_ptr<FilterEffectApplier> FELighting::createSoftwareApplier() const
 {
-    return FilterEffectApplier::create<FELightingSoftwareApplier>(*this);
+#if (CPU(ARM_NEON) && CPU(ARM_TRADITIONAL) && COMPILER(GCC_COMPATIBLE))
+    return FilterEffectApplier::create<FELightingNeonParallelApplier>(*this);
+#else
+    return FilterEffectApplier::create<FELightingSoftwareParallelApplier>(*this);
+#endif
 }
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -64,7 +64,7 @@ public interface TKSceneListener {
     /**
      * Pass a key event to the scene to handle
      */
-    public void keyEvent(KeyEvent keyEvent);
+    public boolean keyEvent(KeyEvent keyEvent);
 
     /**
      * Pass an input method event to the scene to handle
@@ -84,7 +84,12 @@ public interface TKSceneListener {
             boolean _altDown, boolean _metaDown,
             boolean _direct, boolean _inertia);
 
-    public void menuEvent(double x, double y, double xAbs, double yAbs,
+    /**
+     * Pass a menu event to the scene to handle.
+     *
+     * @return {@code true} if the event was handled by the scene, {@code false} otherwise
+     */
+    public boolean menuEvent(double x, double y, double xAbs, double yAbs,
             boolean isKeyboardTrigger);
 
     public void zoomEvent(
@@ -120,4 +125,14 @@ public interface TKSceneListener {
     public void touchEventEnd();
 
     public Accessible getSceneAccessible();
+
+    /**
+     * Returns the header area type at the specified coordinates, or {@code null}
+     * if the specified coordinates do not intersect with a header area.
+     *
+     * @param x the X coordinate relative to the scene
+     * @param y the Y coordinate relative to the scene
+     * @return the header area type, or {@code null}
+     */
+    public HeaderAreaType pickHeaderArea(double x, double y);
 }

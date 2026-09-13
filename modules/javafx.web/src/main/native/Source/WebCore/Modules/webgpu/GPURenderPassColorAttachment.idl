@@ -27,13 +27,15 @@
 
 // https://bugs.webkit.org/show_bug.cgi?id=232548 This shouldn't need to be here.
 typedef (sequence<double> or GPUColorDict) GPUColor;
+typedef [EnforceRange] unsigned long GPUIntegerCoordinate;
 
 [
-    EnabledBySetting=WebGPUEnabled
-]
-dictionary GPURenderPassColorAttachment {
-    required GPUTextureView view;
-    GPUTextureView resolveTarget;
+    EnabledBySetting=WebGPUEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GPURenderPassColorAttachment {
+    required (GPUTexture or GPUTextureView) view;
+    GPUIntegerCoordinate depthSlice;
+    (GPUTexture or GPUTextureView) resolveTarget;
 
     GPUColor clearValue;
     required GPULoadOp loadOp;

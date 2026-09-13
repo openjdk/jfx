@@ -30,7 +30,7 @@
 #include "DirectArguments.h"
 #include "ExceptionHelpers.h"
 #include "FunctionCodeBlock.h"
-#include "JSImmutableButterfly.h"
+#include "JSCellButterfly.h"
 #include "JSPropertyNameEnumerator.h"
 #include "ScopedArguments.h"
 #include "SlowPathFunction.h"
@@ -66,21 +66,24 @@ inline JSValue opEnumeratorGetByVal(JSGlobalObject* globalObject, JSValue baseVa
 
     switch (mode) {
     case JSPropertyNameEnumerator::IndexedMode: {
-        if (arrayProfile && LIKELY(baseValue.isCell()))
+        if (arrayProfile) {
+            if (baseValue.isCell()) [[likely]]
             arrayProfile->observeStructureID(baseValue.asCell()->structureID());
+        }
         RELEASE_AND_RETURN(scope, baseValue.get(globalObject, static_cast<unsigned>(index)));
     }
     case JSPropertyNameEnumerator::OwnStructureMode: {
-        if (LIKELY(baseValue.isCell()) && baseValue.asCell()->structureID() == enumerator->cachedStructureID()) {
+        if (baseValue.isCell()) [[likely]] {
+            if (baseValue.asCell()->structureID() == enumerator->cachedStructureID()) {
             // We'll only match the structure ID if the base is an object.
             ASSERT(index < enumerator->endStructurePropertyIndex());
             RELEASE_AND_RETURN(scope, baseValue.getObject()->getDirect(index < enumerator->cachedInlineCapacity() ? index : index - enumerator->cachedInlineCapacity() + firstOutOfLineOffset));
-        } else {
+            }
+        }
             if (enumeratorMetadata)
                 *enumeratorMetadata |= static_cast<uint8_t>(JSPropertyNameEnumerator::HasSeenOwnStructureModeStructureMismatch);
+        [[fallthrough]];
         }
-        FALLTHROUGH;
-    }
 
     case JSPropertyNameEnumerator::GenericMode: {
         if (arrayProfile && baseValue.isCell() && mode != JSPropertyNameEnumerator::OwnStructureMode)
@@ -108,9 +111,6 @@ inline bool opInByVal(JSGlobalObject* globalObject, JSValue baseVal, JSValue pro
     }
 
     JSObject* baseObj = asObject(baseVal);
-    if (arrayProfile)
-        arrayProfile->observeStructure(baseObj->structure());
-
     uint32_t i;
     if (propName.getUInt32(i)) {
         if (arrayProfile)
@@ -183,7 +183,15 @@ static ALWAYS_INLINE void putDirectWithReify(VM& vm, JSGlobalObject* globalObjec
     auto scope = DECLARE_THROW_SCOPE(vm);
     bool isJSFunction = baseObject->inherits<JSFunction>();
     if (isJSFunction) {
-        jsCast<JSFunction*>(baseObject)->reifyLazyPropertyIfNeeded(vm, globalObject, propertyName);
+        JSFunction* jsFunction = jsCast<JSFunction*>(baseObject);
+
+        if (propertyName == vm.propertyNames->prototype) {
+            slot.disableCaching();
+            if (FunctionRareData* rareData = jsFunction->rareData())
+                rareData->clear("Store to prototype property of a function");
+        }
+
+        jsFunction->reifyLazyPropertyIfNeeded<>(vm, globalObject, propertyName);
         RETURN_IF_EXCEPTION(scope, void());
     }
 
@@ -191,7 +199,7 @@ static ALWAYS_INLINE void putDirectWithReify(VM& vm, JSGlobalObject* globalObjec
     if (result)
         *result = structure;
 
-    if (LIKELY(canPutDirectFast(vm, structure, propertyName, isJSFunction))) {
+    if (canPutDirectFast(vm, structure, propertyName, isJSFunction)) [[likely]] {
         bool success = baseObject->putDirect(vm, propertyName, value, 0, slot);
         ASSERT_UNUSED(success, success);
     } else {
@@ -204,22 +212,24 @@ static ALWAYS_INLINE void putDirectWithReify(VM& vm, JSGlobalObject* globalObjec
 
 static ALWAYS_INLINE void putDirectAccessorWithReify(VM& vm, JSGlobalObject* globalObject, JSObject* baseObject, PropertyName propertyName, GetterSetter* accessor, unsigned attribute)
 {
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    bool isJSFunction = baseObject->inherits<JSFunction>();
-    if (isJSFunction) {
-        jsCast<JSFunction*>(baseObject)->reifyLazyPropertyIfNeeded(vm, globalObject, propertyName);
-        RETURN_IF_EXCEPTION(scope, void());
-    }
-
     // baseObject is either JSFinalObject during object literal construction, or a userland JSFunction class
     // constructor, both of which are guaranteed to be extensible and without non-configurable |propertyName|.
     // Please also note that static "prototype" accessor in a `class` literal is a syntax error.
+
+    auto scope = DECLARE_THROW_SCOPE(vm);
+    bool isJSFunction = baseObject->inherits<JSFunction>();
+    if (isJSFunction) {
+        ASSERT(propertyName != vm.propertyNames->prototype);
+        jsCast<JSFunction*>(baseObject)->reifyLazyPropertyIfNeeded<>(vm, globalObject, propertyName);
+        RETURN_IF_EXCEPTION(scope, void());
+    }
+
     ASSERT(canPutDirectFast(vm, originalStructureBeforePut(baseObject), propertyName, isJSFunction));
     scope.release();
     baseObject->putDirectAccessor(globalObject, propertyName, accessor, attribute);
 }
 
-inline JSArray* allocateNewArrayBuffer(VM& vm, Structure* structure, JSImmutableButterfly* immutableButterfly)
+inline JSArray* allocateNewArrayBuffer(VM& vm, Structure* structure, JSCellButterfly* immutableButterfly)
 {
     JSGlobalObject* globalObject = structure->globalObject();
     Structure* originalStructure = globalObject->originalArrayStructureForIndexingType(immutableButterfly->indexingMode());
@@ -229,7 +239,7 @@ inline JSArray* allocateNewArrayBuffer(VM& vm, Structure* structure, JSImmutable
 
     JSArray* result = JSArray::createWithButterfly(vm, nullptr, originalStructure, immutableButterfly->toButterfly());
     // FIXME: This works but it's slow. If we cared enough about the perf when having a bad time then we could fix it.
-    if (UNLIKELY(originalStructure != structure)) {
+    if (originalStructure != structure) [[unlikely]] {
         ASSERT(hasSlowPutArrayStorage(structure->indexingMode()));
         ASSERT(globalObject->isHavingABadTime());
 
@@ -246,15 +256,9 @@ inline JSArray* allocateNewArrayBuffer(VM& vm, Structure* structure, JSImmutable
 
 class CallFrame;
 
-#define JSC_DECLARE_COMMON_SLOW_PATH(name) \
-    JSC_DECLARE_JIT_OPERATION(name, UGPRPair, (CallFrame*, const JSInstruction*))
+#define JSC_DECLARE_COMMON_SLOW_PATH(name) JSC_DECLARE_JIT_OPERATION(name, UGPRPair, (CallFrame*, const JSInstruction*))
+#define JSC_DEFINE_COMMON_SLOW_PATH(name) JSC_DEFINE_JIT_OPERATION(name, UGPRPair, (CallFrame* callFrame, const JSInstruction* pc))
 
-#define JSC_DEFINE_COMMON_SLOW_PATH(name) \
-    JSC_DEFINE_JIT_OPERATION(name, UGPRPair, (CallFrame* callFrame, const JSInstruction* pc))
-
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_direct_arguments);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_scoped_arguments);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_cloned_arguments);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_this);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enter);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_to_this);
@@ -289,12 +293,12 @@ JSC_DECLARE_COMMON_SLOW_PATH(slow_path_bitxor);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_typeof);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_typeof_is_object);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_typeof_is_function);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_instanceof_custom);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_is_callable);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_is_constructor);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_strcat);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_to_primitive);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_to_property_key);
+JSC_DECLARE_COMMON_SLOW_PATH(slow_path_to_property_key_or_number);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_get_property_enumerator);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_next);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_get_by_val);
@@ -303,7 +307,6 @@ JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_put_by_val);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_enumerator_has_own_property);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_profile_type_clear_log);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_unreachable);
-JSC_DECLARE_COMMON_SLOW_PATH(slow_path_create_lexical_environment);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_push_with_scope);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_resolve_scope);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_resolve_scope_for_hoisting_func_decl_in_eval);
@@ -318,6 +321,8 @@ JSC_DECLARE_COMMON_SLOW_PATH(slow_path_put_by_val_with_this);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_define_data_property);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_define_accessor_property);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_throw_static_error);
+JSC_DECLARE_COMMON_SLOW_PATH(slow_path_instanceof_custom_from_instanceof);
+JSC_DECLARE_COMMON_SLOW_PATH(slow_path_throw_static_error_from_instanceof);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_new_promise);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_new_generator);
 JSC_DECLARE_COMMON_SLOW_PATH(slow_path_new_array_with_spread);

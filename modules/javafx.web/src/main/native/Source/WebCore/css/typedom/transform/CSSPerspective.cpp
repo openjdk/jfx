@@ -38,11 +38,11 @@
 #include "CSSUnitValue.h"
 #include "DOMMatrix.h"
 #include "ExceptionOr.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CSSPerspective);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSPerspective);
 
 static ExceptionOr<CSSPerspectiveValue> checkLength(CSSPerspectiveValue length)
 {
@@ -50,61 +50,63 @@ static ExceptionOr<CSSPerspectiveValue> checkLength(CSSPerspectiveValue length)
     auto checkKeywordValue = [] (RefPtr<CSSKeywordValue> value) -> ExceptionOr<CSSPerspectiveValue> {
         RELEASE_ASSERT(value);
         if (!equalLettersIgnoringASCIICase(value->value(), "none"_s))
-            return Exception { TypeError };
-        return { WTFMove(value) };
+            return Exception { ExceptionCode::TypeError };
+        return { WTF::move(value) };
     };
-    return WTF::switchOn(WTFMove(length),
+    return WTF::switchOn(WTF::move(length),
         [] (RefPtr<CSSNumericValue> value) -> ExceptionOr<CSSPerspectiveValue> {
             if (value && !value->type().matches<CSSNumericBaseType::Length>())
-                return Exception { TypeError };
-            return { WTFMove(value) };
+                return Exception { ExceptionCode::TypeError };
+            return { WTF::move(value) };
         }, [&] (String value) {
-            return checkKeywordValue(CSSKeywordValue::rectifyKeywordish(WTFMove(value)));
+            return checkKeywordValue(CSSKeywordValue::rectifyKeywordish(WTF::move(value)));
         }, checkKeywordValue);
 }
 
 ExceptionOr<Ref<CSSPerspective>> CSSPerspective::create(CSSPerspectiveValue length)
 {
-    auto checkedLength = checkLength(WTFMove(length));
+    auto checkedLength = checkLength(WTF::move(length));
     if (checkedLength.hasException())
         return checkedLength.releaseException();
     return adoptRef(*new CSSPerspective(checkedLength.releaseReturnValue()));
 }
 
-ExceptionOr<Ref<CSSPerspective>> CSSPerspective::create(CSSFunctionValue& cssFunctionValue)
+ExceptionOr<Ref<CSSPerspective>> CSSPerspective::create(Ref<const CSSFunctionValue> cssFunctionValue, Document& document)
 {
-    if (cssFunctionValue.name() != CSSValuePerspective) {
+    if (cssFunctionValue->name() != CSSValuePerspective) {
         ASSERT_NOT_REACHED();
         return CSSPerspective::create("none"_s);
     }
 
-    if (cssFunctionValue.size() != 1 || !cssFunctionValue.item(0)) {
+    if (cssFunctionValue->size() != 1 || !cssFunctionValue->item(0)) {
         ASSERT_NOT_REACHED();
-        return Exception { TypeError, "Unexpected number of values."_s };
+        return Exception { ExceptionCode::TypeError, "Unexpected number of values."_s };
     }
 
-    auto keywordOrNumeric = CSSStyleValueFactory::reifyValue(*cssFunctionValue.item(0), std::nullopt);
+    auto keywordOrNumeric = CSSStyleValueFactory::reifyValue(document, *cssFunctionValue->item(0), std::nullopt);
     if (keywordOrNumeric.hasException())
         return keywordOrNumeric.releaseException();
-    auto& keywordOrNumericValue = keywordOrNumeric.returnValue().get();
-    return [&]() -> ExceptionOr<Ref<CSSPerspective>> {
-        if (is<CSSKeywordValue>(keywordOrNumericValue))
-            return CSSPerspective::create(&downcast<CSSKeywordValue>(keywordOrNumericValue));
-        if (is<CSSNumericValue>(keywordOrNumericValue))
-            return CSSPerspective::create(&downcast<CSSNumericValue>(keywordOrNumericValue));
-        return Exception { TypeError, "Expected a CSSNumericValue."_s };
+    Ref keywordOrNumericValue = keywordOrNumeric.returnValue();
+    return [&] -> ExceptionOr<Ref<CSSPerspective>> {
+        if (RefPtr keywordValue = dynamicDowncast<CSSKeywordValue>(keywordOrNumericValue))
+            return CSSPerspective::create(keywordValue);
+        if (RefPtr numericValue = dynamicDowncast<CSSNumericValue>(keywordOrNumericValue))
+            return CSSPerspective::create(numericValue);
+        return Exception { ExceptionCode::TypeError, "Expected a CSSNumericValue."_s };
     }();
 }
 
 CSSPerspective::CSSPerspective(CSSPerspectiveValue length)
     : CSSTransformComponent(Is2D::No)
-    , m_length(WTFMove(length))
+    , m_length(WTF::move(length))
 {
 }
 
+CSSPerspective::~CSSPerspective() = default;
+
 ExceptionOr<void> CSSPerspective::setLength(CSSPerspectiveValue length)
 {
-    auto checkedLength = checkLength(WTFMove(length));
+    auto checkedLength = checkLength(WTF::move(length));
     if (checkedLength.hasException())
         return checkedLength.releaseException();
     m_length = checkedLength.releaseReturnValue();
@@ -119,11 +121,11 @@ void CSSPerspective::setIs2D(bool)
 void CSSPerspective::serialize(StringBuilder& builder) const
 {
     // https://drafts.css-houdini.org/css-typed-om/#serialize-a-cssperspective
-    builder.append("perspective(");
+    builder.append("perspective("_s);
     WTF::switchOn(m_length,
         [&] (const RefPtr<CSSNumericValue>& value) {
             if (auto* unitValue = dynamicDowncast<CSSUnitValue>(value.get()); unitValue && unitValue->value() < 0.0) {
-                builder.append("calc(");
+                builder.append("calc("_s);
                 value->serialize(builder);
                 builder.append(')');
                 return;
@@ -144,18 +146,18 @@ ExceptionOr<Ref<DOMMatrix>> CSSPerspective::toMatrix()
     if (!std::holds_alternative<RefPtr<CSSNumericValue>>(m_length))
         return { DOMMatrix::create({ }, DOMMatrixReadOnly::Is2D::Yes) };
 
-    auto length = std::get<RefPtr<CSSNumericValue>>(m_length);
-    if (!is<CSSUnitValue>(length))
-        return Exception { TypeError };
+    RefPtr length = dynamicDowncast<CSSUnitValue>(std::get<RefPtr<CSSNumericValue>>(m_length));
+    if (!length)
+        return Exception { ExceptionCode::TypeError };
 
-    auto valuePx = downcast<CSSUnitValue>(*length).convertTo(CSSUnitType::CSS_PX);
+    auto valuePx = length->convertTo(CSSUnitType::CSS_PX);
     if (!valuePx)
-        return Exception { TypeError, "Length unit is not compatible with 'px'"_s };
+        return Exception { ExceptionCode::TypeError, "Length unit is not compatible with 'px'"_s };
 
     TransformationMatrix matrix { };
     matrix.applyPerspective(valuePx->value());
 
-    return { DOMMatrix::create(WTFMove(matrix), DOMMatrixReadOnly::Is2D::No) };
+    return { DOMMatrix::create(WTF::move(matrix), DOMMatrixReadOnly::Is2D::No) };
 }
 
 RefPtr<CSSValue> CSSPerspective::toCSSValue() const

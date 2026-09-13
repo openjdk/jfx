@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include <wtf/TypeCasts.h>
 #include <wtf/text/UniquedStringImpl.h>
 
 namespace WTF {
@@ -28,57 +29,34 @@ class AtomStringTable;
 
 class AtomStringImpl final : public UniquedStringImpl {
 public:
-    WTF_EXPORT_PRIVATE static RefPtr<AtomStringImpl> lookUp(const LChar*, unsigned length);
-    WTF_EXPORT_PRIVATE static RefPtr<AtomStringImpl> lookUp(const UChar*, unsigned length);
-    static RefPtr<AtomStringImpl> lookUp(StringImpl* string)
-    {
-        if (!string || string->isAtom())
-            return static_cast<AtomStringImpl*>(string);
-        return lookUpSlowCase(*string);
-    }
+    WTF_EXPORT_PRIVATE static RefPtr<AtomStringImpl> lookUp(std::span<const Latin1Character>);
+    WTF_EXPORT_PRIVATE static RefPtr<AtomStringImpl> lookUp(std::span<const char16_t>);
+    static RefPtr<AtomStringImpl> lookUp(StringImpl*);
 
     static void remove(AtomStringImpl*);
 
-    WTF_EXPORT_PRIVATE static RefPtr<AtomStringImpl> add(const LChar*, unsigned length);
-    WTF_EXPORT_PRIVATE static RefPtr<AtomStringImpl> add(const UChar*, unsigned length);
-    ALWAYS_INLINE static RefPtr<AtomStringImpl> add(const char* s, unsigned length) { return add(reinterpret_cast<const LChar*>(s), length); }
+    WTF_EXPORT_PRIVATE static RefPtr<AtomStringImpl> add(std::span<const Latin1Character>);
+    WTF_EXPORT_PRIVATE static RefPtr<AtomStringImpl> add(std::span<const char16_t>);
+    ALWAYS_INLINE static RefPtr<AtomStringImpl> add(std::span<const char> characters);
 
-    WTF_EXPORT_PRIVATE static RefPtr<AtomStringImpl> add(HashTranslatorCharBuffer<LChar>&);
-    WTF_EXPORT_PRIVATE static RefPtr<AtomStringImpl> add(HashTranslatorCharBuffer<UChar>&);
+    WTF_EXPORT_PRIVATE static RefPtr<AtomStringImpl> add(HashTranslatorCharBuffer<Latin1Character>&);
+    WTF_EXPORT_PRIVATE static RefPtr<AtomStringImpl> add(HashTranslatorCharBuffer<char16_t>&);
 
     WTF_EXPORT_PRIVATE static RefPtr<AtomStringImpl> add(StringImpl*, unsigned offset, unsigned length);
-    ALWAYS_INLINE static RefPtr<AtomStringImpl> add(StringImpl* string)
-    {
-        if (!string)
-            return nullptr;
-        return add(*string);
-    }
-    ALWAYS_INLINE static RefPtr<AtomStringImpl> add(RefPtr<StringImpl>&& string)
-    {
-        if (!string)
-            return nullptr;
-        return add(string.releaseNonNull());
-    }
-    WTF_EXPORT_PRIVATE static RefPtr<AtomStringImpl> add(const StaticStringImpl*);
-    ALWAYS_INLINE static Ref<AtomStringImpl> add(ASCIILiteral literal) { return addLiteral(literal.characters(), literal.length()); }
-
-    // Not using the add() naming to encourage developers to call add(ASCIILiteral) when they have a string literal.
-    ALWAYS_INLINE static RefPtr<AtomStringImpl> addCString(const char* s) { return s ? add(s, strlen(s)) : nullptr; }
+    ALWAYS_INLINE static RefPtr<AtomStringImpl> add(StringImpl*);
+    ALWAYS_INLINE static RefPtr<AtomStringImpl> add(RefPtr<StringImpl>&&);
+    WTF_EXPORT_PRIVATE static RefPtr<AtomStringImpl> add(const StaticStringImpl&);
+    ALWAYS_INLINE static Ref<AtomStringImpl> add(ASCIILiteral);
 
     // Returns null if the input data contains an invalid UTF-8 sequence.
-    static RefPtr<AtomStringImpl> addUTF8(const char* start, const char* end);
+    static RefPtr<AtomStringImpl> add(std::span<const char8_t>);
 
 #if USE(CF)
     WTF_EXPORT_PRIVATE static RefPtr<AtomStringImpl> add(CFStringRef);
 #endif
 
     template<typename StringTableProvider>
-    ALWAYS_INLINE static RefPtr<AtomStringImpl> addWithStringTableProvider(StringTableProvider& stringTableProvider, StringImpl* string)
-    {
-        if (!string)
-            return nullptr;
-        return add(*stringTableProvider.atomStringTable(), *string);
-    }
+    ALWAYS_INLINE static RefPtr<AtomStringImpl> addWithStringTableProvider(StringTableProvider&, StringImpl*);
 
 #if ASSERT_ENABLED
     WTF_EXPORT_PRIVATE static bool isInAtomStringTable(StringImpl*);
@@ -87,34 +65,11 @@ public:
 private:
     AtomStringImpl() = delete;
 
-    ALWAYS_INLINE static Ref<AtomStringImpl> add(StringImpl& string)
-    {
-        if (string.isAtom()) {
-            ASSERT_WITH_MESSAGE(!string.length() || isInAtomStringTable(&string), "The atom string comes from an other thread!");
-            return static_cast<AtomStringImpl&>(string);
-        }
-        return addSlowCase(string);
-    }
+    ALWAYS_INLINE static Ref<AtomStringImpl> add(StringImpl&);
+    ALWAYS_INLINE static Ref<AtomStringImpl> add(Ref<StringImpl>&&);
+    WTF_EXPORT_PRIVATE static Ref<AtomStringImpl> addLiteral(std::span<const Latin1Character>);
 
-    ALWAYS_INLINE static Ref<AtomStringImpl> add(Ref<StringImpl>&& string)
-    {
-        if (string->isAtom()) {
-            ASSERT_WITH_MESSAGE(!string->length() || isInAtomStringTable(string.ptr()), "The atom string comes from an other thread!");
-            return static_reference_cast<AtomStringImpl>(WTFMove(string));
-        }
-        return addSlowCase(WTFMove(string));
-    }
-
-    WTF_EXPORT_PRIVATE static Ref<AtomStringImpl> addLiteral(const char* characters, unsigned length);
-
-    ALWAYS_INLINE static Ref<AtomStringImpl> add(AtomStringTable& stringTable, StringImpl& string)
-    {
-        if (string.isAtom()) {
-            ASSERT_WITH_MESSAGE(!string.length() || isInAtomStringTable(&string), "The atom string comes from an other thread!");
-            return static_cast<AtomStringImpl&>(string);
-        }
-        return addSlowCase(stringTable, string);
-    }
+    ALWAYS_INLINE static Ref<AtomStringImpl> add(AtomStringTable&, StringImpl&);
 
     WTF_EXPORT_PRIVATE static Ref<AtomStringImpl> addSlowCase(StringImpl&);
     WTF_EXPORT_PRIVATE static Ref<AtomStringImpl> addSlowCase(Ref<StringImpl>&&);
@@ -122,6 +77,74 @@ private:
 
     WTF_EXPORT_PRIVATE static RefPtr<AtomStringImpl> lookUpSlowCase(StringImpl&);
 };
+
+inline RefPtr<AtomStringImpl> AtomStringImpl::lookUp(StringImpl* string)
+{
+    if (!string)
+        return nullptr;
+    if (auto* atom = dynamicDowncast<AtomStringImpl>(*string))
+        return atom;
+    return lookUpSlowCase(*string);
+}
+
+ALWAYS_INLINE RefPtr<AtomStringImpl> AtomStringImpl::add(std::span<const char> characters)
+{
+    return add(byteCast<Latin1Character>(characters));
+}
+
+ALWAYS_INLINE RefPtr<AtomStringImpl> AtomStringImpl::add(StringImpl* string)
+{
+    if (!string)
+        return nullptr;
+    return add(*string);
+}
+
+ALWAYS_INLINE RefPtr<AtomStringImpl> AtomStringImpl::add(RefPtr<StringImpl>&& string)
+{
+    if (!string)
+        return nullptr;
+    return add(string.releaseNonNull());
+}
+
+ALWAYS_INLINE Ref<AtomStringImpl> AtomStringImpl::add(ASCIILiteral literal)
+{
+    return addLiteral(literal.span8());
+}
+
+template<typename StringTableProvider>
+ALWAYS_INLINE RefPtr<AtomStringImpl> AtomStringImpl::addWithStringTableProvider(StringTableProvider& stringTableProvider, StringImpl* string)
+{
+    if (!string)
+        return nullptr;
+    return add(*stringTableProvider.atomStringTable(), *string);
+}
+
+ALWAYS_INLINE Ref<AtomStringImpl> AtomStringImpl::add(StringImpl& string)
+{
+    if (auto* atom = dynamicDowncast<AtomStringImpl>(string)) {
+            ASSERT_WITH_MESSAGE(!string.length() || isInAtomStringTable(&string), "The atom string comes from an other thread!");
+        return *atom;
+        }
+        return addSlowCase(string);
+}
+
+ALWAYS_INLINE Ref<AtomStringImpl> AtomStringImpl::add(Ref<StringImpl>&& string)
+{
+    if (is<AtomStringImpl>(string)) {
+            ASSERT_WITH_MESSAGE(!string->length() || isInAtomStringTable(string.ptr()), "The atom string comes from an other thread!");
+        return uncheckedDowncast<AtomStringImpl>(WTF::move(string));
+        }
+    return addSlowCase(WTF::move(string));
+}
+
+ALWAYS_INLINE Ref<AtomStringImpl> AtomStringImpl::add(AtomStringTable& stringTable, StringImpl& string)
+{
+    if (auto* atom = dynamicDowncast<AtomStringImpl>(string)) {
+            ASSERT_WITH_MESSAGE(!string.length() || isInAtomStringTable(&string), "The atom string comes from an other thread!");
+        return *atom;
+        }
+        return addSlowCase(stringTable, string);
+}
 
 #if ASSERT_ENABLED
 
@@ -139,6 +162,13 @@ template<> struct ValueCheck<const AtomStringImpl*> {
 
 #endif // ASSERT_ENABLED
 
-}
+inline void printInternal(PrintStream& out, const AtomStringImpl* value) { printInternal(out, std::bit_cast<const StringImpl*>(value)); }
+inline void printInternal(PrintStream& out, AtomStringImpl* value) { printInternal(out, static_cast<const AtomStringImpl*>(value)); }
+
+} // namespace WTF
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WTF::AtomStringImpl) \
+    static bool isType(const WTF::StringImpl& string) { return string.isAtom(); } \
+SPECIALIZE_TYPE_TRAITS_END()
 
 using WTF::AtomStringImpl;

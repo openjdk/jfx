@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "AllocationFailureMode.h"
-#include "FreeList.h"
-#include "MarkedBlock.h"
+#include <JavaScriptCore/AllocationFailureMode.h>
+#include <JavaScriptCore/FreeList.h>
+#include <JavaScriptCore/MarkedBlock.h>
 #include <wtf/Noncopyable.h>
 
 namespace JSC {
@@ -52,10 +52,8 @@ public:
     void resumeAllocating();
     void stopAllocatingForGood();
 
-    static ptrdiff_t offsetOfFreeList();
-    static ptrdiff_t offsetOfCellSize();
-
-    bool isFreeListedCell(const void*) const;
+    static constexpr ptrdiff_t offsetOfFreeList();
+    static constexpr ptrdiff_t offsetOfCellSize();
 
     BlockDirectory& directory() const { return *m_directory; }
 
@@ -81,12 +79,12 @@ private:
     unsigned m_allocationCursor { 0 }; // Points to the next block that is a candidate for allocation.
 };
 
-inline ptrdiff_t LocalAllocator::offsetOfFreeList()
+inline constexpr ptrdiff_t LocalAllocator::offsetOfFreeList()
 {
     return OBJECT_OFFSETOF(LocalAllocator, m_freeList);
 }
 
-inline ptrdiff_t LocalAllocator::offsetOfCellSize()
+inline constexpr ptrdiff_t LocalAllocator::offsetOfCellSize()
 {
     return OBJECT_OFFSETOF(LocalAllocator, m_freeList) + FreeList::offsetOfCellSize();
 }

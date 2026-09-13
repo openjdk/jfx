@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,29 +27,30 @@
 
 #if ENABLE(VIDEO)
 
-#include "InbandTextTrackPrivateClient.h"
+#include <WebCore/InbandTextTrackPrivateClient.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
+enum class InbandTextTrackPrivateMode : uint8_t {
+    Disabled,
+    Hidden,
+    Showing
+};
+
 class InbandTextTrackPrivate : public TrackPrivateBase {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(InbandTextTrackPrivate);
 public:
     enum class CueFormat : uint8_t {
         Data,
         Generic,
-        WebVTT
+        WebVTT,
+        Unknown
     };
     static Ref<InbandTextTrackPrivate> create(CueFormat format) { return adoptRef(*new InbandTextTrackPrivate(format)); }
     virtual ~InbandTextTrackPrivate() = default;
 
-    InbandTextTrackPrivateClient* client() const override { return m_client.get(); }
-    virtual void setClient(InbandTextTrackPrivateClient& client) { m_client = client; }
-    void clearClient() { m_client = nullptr; }
-
-    enum class Mode : uint8_t {
-        Disabled,
-        Hidden,
-        Showing
-    };
+    using Mode = InbandTextTrackPrivateMode;
     virtual void setMode(Mode mode) { m_mode = mode; };
     virtual InbandTextTrackPrivate::Mode mode() const { return m_mode; }
 
@@ -70,10 +71,10 @@ public:
     virtual bool isMainProgramContent() const { return true; }
     virtual bool isEasyToRead() const { return false; }
     virtual bool isDefault() const { return false; }
-    AtomString label() const override { return emptyAtom(); }
-    AtomString language() const override { return emptyAtom(); }
-    AtomString id() const override { return emptyAtom(); }
-    virtual AtomString inBandMetadataTrackDispatchType() const { return emptyAtom(); }
+    String label() const override { return emptyString(); }
+    String language() const override { return emptyString(); }
+    std::optional<String> trackUID() const override { return emptyString(); }
+    virtual String inBandMetadataTrackDispatchType() const { return emptyString(); }
 
     CueFormat cueFormat() const { return m_format; }
 
@@ -92,10 +93,16 @@ public:
     }
 
 #if !RELEASE_LOG_DISABLED
-    const char* logClassName() const override { return "InbandTextTrackPrivate"; }
+    ASCIILiteral logClassName() const override { return "InbandTextTrackPrivate"_s; }
 #endif
 
     Type type() const final { return Type::Text; };
+
+    enum class InbandTextTrackType : uint8_t {
+        BaseTrack,
+        AVFTrack
+    };
+    virtual InbandTextTrackType inbandTextTrackType() const { return InbandTextTrackType::BaseTrack; }
 
 protected:
     InbandTextTrackPrivate(CueFormat format)
@@ -104,8 +111,7 @@ protected:
     }
 
 private:
-    CueFormat m_format;
-    WeakPtr<InbandTextTrackPrivateClient> m_client { nullptr };
+    CueFormat m_format { CueFormat::Unknown };
     Mode m_mode { Mode::Disabled };
 };
 
@@ -115,39 +121,5 @@ SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::InbandTextTrackPrivate)
 static bool isType(const WebCore::TrackPrivateBase& track) { return track.type() == WebCore::TrackPrivateBase::Type::Text; }
 SPECIALIZE_TYPE_TRAITS_END()
 
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::InbandTextTrackPrivate::CueFormat> {
-    using values = EnumValues<
-        WebCore::InbandTextTrackPrivate::CueFormat,
-        WebCore::InbandTextTrackPrivate::CueFormat::Data,
-        WebCore::InbandTextTrackPrivate::CueFormat::Generic,
-        WebCore::InbandTextTrackPrivate::CueFormat::WebVTT
-    >;
-};
-
-template<> struct EnumTraits<WebCore::InbandTextTrackPrivate::Mode> {
-    using values = EnumValues<
-        WebCore::InbandTextTrackPrivate::Mode,
-        WebCore::InbandTextTrackPrivate::Mode::Disabled,
-        WebCore::InbandTextTrackPrivate::Mode::Hidden,
-        WebCore::InbandTextTrackPrivate::Mode::Showing
-    >;
-};
-
-template<> struct EnumTraits<WebCore::InbandTextTrackPrivate::Kind> {
-    using values = EnumValues<
-        WebCore::InbandTextTrackPrivate::Kind,
-        WebCore::InbandTextTrackPrivate::Kind::Subtitles,
-        WebCore::InbandTextTrackPrivate::Kind::Captions,
-        WebCore::InbandTextTrackPrivate::Kind::Descriptions,
-        WebCore::InbandTextTrackPrivate::Kind::Chapters,
-        WebCore::InbandTextTrackPrivate::Kind::Metadata,
-        WebCore::InbandTextTrackPrivate::Kind::Forced,
-        WebCore::InbandTextTrackPrivate::Kind::None
-    >;
-};
-
-} // namespace WTF
-
 #endif // ENABLE(VIDEO)
+

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "JSCell.h"
+#include <JavaScriptCore/JSCell.h>
 
 namespace JSC {
 
@@ -78,6 +78,7 @@ struct Uint8Adaptor;
 struct Uint16Adaptor;
 struct Uint32Adaptor;
 struct Uint8ClampedAdaptor;
+struct Float16Adaptor;
 struct Float32Adaptor;
 struct Float64Adaptor;
 struct BigInt64Adaptor;
@@ -90,6 +91,7 @@ using JSUint8Array = JSGenericTypedArrayView<Uint8Adaptor>;
 using JSUint8ClampedArray = JSGenericTypedArrayView<Uint8ClampedAdaptor>;
 using JSUint16Array = JSGenericTypedArrayView<Uint16Adaptor>;
 using JSUint32Array = JSGenericTypedArrayView<Uint32Adaptor>;
+using JSFloat16Array = JSGenericTypedArrayView<Float16Adaptor>;
 using JSFloat32Array = JSGenericTypedArrayView<Float32Adaptor>;
 using JSFloat64Array = JSGenericTypedArrayView<Float64Adaptor>;
 using JSBigInt64Array = JSGenericTypedArrayView<BigInt64Adaptor>;
@@ -102,6 +104,7 @@ using JSResizableOrGrowableSharedUint8Array = JSGenericResizableOrGrowableShared
 using JSResizableOrGrowableSharedUint8ClampedArray = JSGenericResizableOrGrowableSharedTypedArrayView<Uint8ClampedAdaptor>;
 using JSResizableOrGrowableSharedUint16Array = JSGenericResizableOrGrowableSharedTypedArrayView<Uint16Adaptor>;
 using JSResizableOrGrowableSharedUint32Array = JSGenericResizableOrGrowableSharedTypedArrayView<Uint32Adaptor>;
+using JSResizableOrGrowableSharedFloat16Array = JSGenericResizableOrGrowableSharedTypedArrayView<Float16Adaptor>;
 using JSResizableOrGrowableSharedFloat32Array = JSGenericResizableOrGrowableSharedTypedArrayView<Float32Adaptor>;
 using JSResizableOrGrowableSharedFloat64Array = JSGenericResizableOrGrowableSharedTypedArrayView<Float64Adaptor>;
 using JSResizableOrGrowableSharedBigInt64Array = JSGenericResizableOrGrowableSharedTypedArrayView<BigInt64Adaptor>;
@@ -116,17 +119,23 @@ using JSResizableOrGrowableSharedBigUint64Array = JSGenericResizableOrGrowableSh
     macro(JSUint16Array, JSType::Uint16ArrayType, JSType::Uint16ArrayType) \
     macro(JSInt32Array, JSType::Int32ArrayType, JSType::Int32ArrayType) \
     macro(JSUint32Array, JSType::Uint32ArrayType, JSType::Uint32ArrayType) \
+    macro(JSFloat16Array, JSType::Float16ArrayType, JSType::Float16ArrayType) \
     macro(JSFloat32Array, JSType::Float32ArrayType, JSType::Float32ArrayType) \
     macro(JSFloat64Array, JSType::Float64ArrayType, JSType::Float64ArrayType) \
     macro(JSBigInt64Array, JSType::BigInt64ArrayType, JSType::BigInt64ArrayType) \
     macro(JSBigUint64Array, JSType::BigUint64ArrayType, JSType::BigUint64ArrayType) \
 
 #define FOR_EACH_JS_DYNAMIC_CAST_JS_TYPE_OVERLOAD_FORWARD_DECLARED(macro) \
-    macro(JSImmutableButterfly, JSType::JSImmutableButterflyType, JSType::JSImmutableButterflyType) \
+    macro(JSCellButterfly, JSType::JSCellButterflyType, JSType::JSCellButterflyType) \
     macro(JSStringIterator, JSType::JSStringIteratorType, JSType::JSStringIteratorType) \
+    macro(Structure, JSType::StructureType, JSType::StructureType) \
     macro(JSString, JSType::StringType, JSType::StringType) \
     macro(JSBigInt, JSType::HeapBigIntType, JSType::HeapBigIntType) \
     macro(Symbol, JSType::SymbolType, JSType::SymbolType) \
+    macro(GetterSetter, JSType::GetterSetterType, JSType::GetterSetterType) \
+    macro(CustomGetterSetter, JSType::CustomGetterSetterType, JSType::CustomGetterSetterType) \
+    macro(NativeExecutable, JSType::NativeExecutableType, JSType::NativeExecutableType) \
+    macro(CodeBlock, JSType::CodeBlockType, JSType::CodeBlockType) \
     macro(JSObject, FirstObjectType, LastObjectType) \
     macro(JSFinalObject, JSType::FinalObjectType, JSType::FinalObjectType) \
     macro(JSFunction, JSType::JSFunctionType, JSType::JSFunctionType) \
@@ -136,7 +145,11 @@ using JSResizableOrGrowableSharedBigUint64Array = JSGenericResizableOrGrowableSh
     macro(JSArrayIterator, JSType::JSArrayIteratorType, JSType::JSArrayIteratorType) \
     macro(JSArrayBuffer, JSType::ArrayBufferType, JSType::ArrayBufferType) \
     macro(JSArrayBufferView, FirstTypedArrayType, LastTypedArrayType) \
+    macro(JSIterator, JSType::JSIteratorType, JSType::JSIteratorType) \
     macro(JSPromise, JSType::JSPromiseType, JSType::JSPromiseType) \
+    macro(JSPromiseCombinatorsContext, JSType::JSPromiseCombinatorsContextType, JSType::JSPromiseCombinatorsContextType) \
+    macro(JSPromiseCombinatorsGlobalContext, JSType::JSPromiseCombinatorsGlobalContextType, JSType::JSPromiseCombinatorsGlobalContextType) \
+    macro(JSPromiseReaction, JSType::JSPromiseReactionType, JSType::JSPromiseReactionType) \
     macro(JSGlobalProxy, JSType::GlobalProxyType, JSType::GlobalProxyType) \
     macro(JSSet, JSType::JSSetType, JSType::JSSetType) \
     macro(JSMap, JSType::JSMapType, JSType::JSMapType) \
@@ -161,6 +174,9 @@ using JSResizableOrGrowableSharedBigUint64Array = JSGenericResizableOrGrowableSh
     macro(StringObject, JSType::StringObjectType, JSType::DerivedStringObjectType) \
     macro(ShadowRealmObject, JSType::ShadowRealmType, JSType::ShadowRealmType) \
     macro(JSDataView, JSType::DataViewType, JSType::DataViewType) \
+    macro(JSGenerator, JSType::JSGeneratorType, JSType::JSGeneratorType) \
+    macro(JSAsyncGenerator, JSType::JSAsyncGeneratorType, JSType::JSAsyncGeneratorType) \
+    macro(WebAssemblyGCObjectBase, JSType::WebAssemblyGCObjectType, JSType::WebAssemblyGCObjectType) \
 
 #define FOR_EACH_JS_DYNAMIC_CAST_JS_TYPE_OVERLOAD(macro) \
     FOR_EACH_JS_DYNAMIC_CAST_JS_TYPE_OVERLOAD_FORWARD_DECLARED(macro) \
@@ -236,7 +252,7 @@ template<typename Target, typename From>
 bool inherits(From* from)
 {
     using Dispatcher = InheritsTraits<Target>;
-    return Dispatcher::template inherits(from);
+    return Dispatcher::template inherits<>(from);
 }
 
 } // namespace JSCastingHelpers
@@ -245,7 +261,7 @@ template<typename To, typename From>
 To jsDynamicCast(From* from)
 {
     using Dispatcher = JSCastingHelpers::InheritsTraits<typename std::remove_cv<typename std::remove_pointer<To>::type>::type>;
-    if (LIKELY(Dispatcher::template inherits(from)))
+    if (Dispatcher::template inherits<>(from)) [[likely]]
         return static_cast<To>(from);
     return nullptr;
 }
@@ -253,7 +269,7 @@ To jsDynamicCast(From* from)
 template<typename To>
 To jsDynamicCast(JSValue from)
 {
-    if (UNLIKELY(!from.isCell()))
+    if (!from.isCell()) [[unlikely]]
         return nullptr;
     return jsDynamicCast<To>(from.asCell());
 }

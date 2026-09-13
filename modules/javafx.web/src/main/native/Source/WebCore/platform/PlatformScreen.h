@@ -25,19 +25,18 @@
 
 #pragma once
 
-#include <wtf/EnumTraits.h>
+#include <WebCore/ContentsFormat.h>
+#include <WebCore/ScreenProperties.h>
 #include <wtf/Forward.h>
+#include <wtf/Platform.h>
+#include <wtf/ThreadSafeRefCounted.h>
 
 #if PLATFORM(MAC)
 OBJC_CLASS NSScreen;
 OBJC_CLASS NSWindow;
-#ifdef NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES
+
 typedef struct CGRect NSRect;
 typedef struct CGPoint NSPoint;
-#else
-typedef struct _NSRect NSRect;
-typedef struct _NSPoint NSPoint;
-#endif
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -57,13 +56,10 @@ typedef struct CGColorSpace *CGColorSpaceRef;
 namespace WebCore {
 
 class DestinationColorSpace;
+class FloatPoint;
 class FloatRect;
 class FloatSize;
 class Widget;
-
-using PlatformDisplayID = uint32_t;
-
-using PlatformGPUID = uint64_t; // On MAC, MACCATALYST, global IOKit registryID that can identify a GPU across process boundaries.
 
 int screenDepth(Widget*);
 int screenDepthPerComponent(Widget*);
@@ -73,22 +69,16 @@ WEBCORE_EXPORT DestinationColorSpace screenColorSpace(Widget* = nullptr);
 bool screenHasInvertedColors();
 
 #if USE(GLIB)
-double screenDPI();
-void setScreenDPIObserverHandler(Function<void()>&&, void*);
+double fontDPI(); // dpi to use for font scaling
+double screenDPI(PlatformDisplayID); // dpi of the display device, corrected for device scaling
 #endif
 
 FloatRect screenRect(Widget*);
 FloatRect screenAvailableRect(Widget*);
 
+WEBCORE_EXPORT OptionSet<ContentsFormat> screenContentsFormats(Widget* = nullptr);
 WEBCORE_EXPORT bool screenSupportsExtendedColor(Widget* = nullptr);
 
-enum class DynamicRangeMode : uint8_t {
-    None,
-    Standard,
-    HLG,
-    HDR10,
-    DolbyVisionPQ,
-};
 #if HAVE(AVPLAYER_VIDEORANGEOVERRIDE)
 WEBCORE_EXPORT DynamicRangeMode preferredDynamicRangeMode(Widget* = nullptr);
 #else
@@ -97,6 +87,7 @@ constexpr DynamicRangeMode preferredDynamicRangeMode(Widget* = nullptr) { return
 
 #if PLATFORM(MAC) || PLATFORM(IOS_FAMILY)
 WEBCORE_EXPORT bool screenSupportsHighDynamicRange(Widget* = nullptr);
+WEBCORE_EXPORT bool screenSupportsHighDynamicRange(PlatformDisplayID);
 #else
 constexpr bool screenSupportsHighDynamicRange(Widget* = nullptr) { return false; }
 #endif
@@ -104,25 +95,54 @@ constexpr bool screenSupportsHighDynamicRange(Widget* = nullptr) { return false;
 struct ScreenProperties;
 struct ScreenData;
 
+class PlatformScreen : public ThreadSafeRefCounted<PlatformScreen> {
+public:
+    WEBCORE_EXPORT static Ref<const PlatformScreen> singleton();
+    WEBCORE_EXPORT static void updateSingletonProperties(ScreenProperties&&);
+
+    WEBCORE_EXPORT const ScreenData* screenData(PlatformDisplayID) const LIFETIME_BOUND;
+    WEBCORE_EXPORT PlatformDisplayID primaryScreenDisplayID() const;
+    WEBCORE_EXPORT const ScreenProperties& screenProperties() const LIFETIME_BOUND;
+    WEBCORE_EXPORT const ScreenDataMap& screenDatas() const LIFETIME_BOUND;
+
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    WEBCORE_EXPORT OptionSet<ContentsFormat> screenContentsFormatsForTesting() const;
+    WEBCORE_EXPORT static void updateSingletonContentsFormatsForTesting(OptionSet<ContentsFormat>);
+#endif
+
+private:
+    static Ref<PlatformScreen> create(ScreenProperties&&);
+    static Ref<PlatformScreen>& instance();
+
+    explicit PlatformScreen(ScreenProperties&&);
+
+    ScreenProperties m_properties;
+};
+
 WEBCORE_EXPORT ScreenProperties collectScreenProperties();
-WEBCORE_EXPORT void setScreenProperties(const ScreenProperties&);
-const ScreenProperties& getScreenProperties();
-const ScreenData* screenData(PlatformDisplayID screendisplayID);
-WEBCORE_EXPORT PlatformDisplayID primaryScreenDisplayID();
+
+#if HAVE(SUPPORT_HDR_DISPLAY)
+WEBCORE_EXPORT float currentEDRHeadroomForDisplay(PlatformDisplayID);
+WEBCORE_EXPORT float maxEDRHeadroomForDisplay(PlatformDisplayID);
+WEBCORE_EXPORT bool suppressEDRForDisplay(PlatformDisplayID);
+#endif
 
 #if PLATFORM(MAC)
 
 WEBCORE_EXPORT PlatformDisplayID displayID(NSScreen *);
 
 WEBCORE_EXPORT NSScreen *screen(NSWindow *);
+WEBCORE_EXPORT RetainPtr<NSScreen> protectedScreen(NSWindow *);
 NSScreen *screen(PlatformDisplayID);
+RetainPtr<NSScreen> protectedScreen(PlatformDisplayID);
 
-FloatRect screenRectForDisplay(PlatformDisplayID);
+WEBCORE_EXPORT FloatRect screenRectForDisplay(PlatformDisplayID);
 WEBCORE_EXPORT FloatRect screenRectForPrimaryScreen();
 WEBCORE_EXPORT FloatRect availableScreenRect(NSScreen *);
 
 WEBCORE_EXPORT FloatRect toUserSpace(const NSRect&, NSWindow *destination);
 WEBCORE_EXPORT FloatRect toUserSpaceForPrimaryScreen(const NSRect&);
+WEBCORE_EXPORT FloatPoint toUserSpaceForPrimaryScreen(const NSPoint&);
 WEBCORE_EXPORT NSRect toDeviceSpace(const FloatRect&, NSWindow *source);
 
 NSPoint flipScreenPoint(const NSPoint&, NSScreen *);
@@ -146,33 +166,17 @@ float screenPPIFactor();
 WEBCORE_EXPORT FloatSize screenSize();
 WEBCORE_EXPORT FloatSize availableScreenSize();
 WEBCORE_EXPORT FloatSize overrideScreenSize();
+WEBCORE_EXPORT FloatSize overrideAvailableScreenSize();
 WEBCORE_EXPORT float screenScaleFactor(UIScreen * = nullptr);
 
 #endif
 
 #if ENABLE(TOUCH_EVENTS)
-#if PLATFORM(GTK) || PLATFORM(WPE)
+#if PLATFORM(GTK)
 WEBCORE_EXPORT bool screenHasTouchDevice();
-WEBCORE_EXPORT bool screenIsTouchPrimaryInputDevice();
 #else
 constexpr bool screenHasTouchDevice() { return true; }
-constexpr bool screenIsTouchPrimaryInputDevice() { return true; }
 #endif
 #endif
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::DynamicRangeMode> {
-    using values = EnumValues<
-        WebCore::DynamicRangeMode,
-        WebCore::DynamicRangeMode::None,
-        WebCore::DynamicRangeMode::Standard,
-        WebCore::DynamicRangeMode::HLG,
-        WebCore::DynamicRangeMode::HDR10,
-        WebCore::DynamicRangeMode::DolbyVisionPQ
-    >;
-};
-
-} // namespace WTF

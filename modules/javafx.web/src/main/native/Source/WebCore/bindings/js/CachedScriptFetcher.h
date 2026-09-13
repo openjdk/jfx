@@ -25,11 +25,12 @@
 
 #pragma once
 
-#include "CachedResourceHandle.h"
-#include "ReferrerPolicy.h"
-#include "RequestPriority.h"
-#include "ResourceLoadPriority.h"
 #include <JavaScriptCore/ScriptFetcher.h>
+#include <WebCore/CachedResourceHandle.h>
+#include <WebCore/ReferrerPolicy.h>
+#include <WebCore/RequestPriority.h>
+#include <WebCore/ResourceLoadPriority.h>
+#include <WebCore/ResourceLoaderOptions.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -37,37 +38,45 @@ namespace WebCore {
 class CachedScript;
 class Document;
 
+enum class FetchOptionsDestination : uint8_t;
+
 class CachedScriptFetcher : public JSC::ScriptFetcher {
 public:
-    virtual CachedResourceHandle<CachedScript> requestModuleScript(Document&, const URL& sourceURL, String&& integrity) const;
+    virtual CachedResourceHandle<CachedScript> requestModuleScript(Document&, const URL& sourceURL, FetchOptionsDestination, String&& integrity, std::optional<ServiceWorkersMode>) const;
 
-    static Ref<CachedScriptFetcher> create(const String& charset);
+    static Ref<CachedScriptFetcher> create(const AtomString& charset);
 
 protected:
-    CachedScriptFetcher(const String& nonce, ReferrerPolicy referrerPolicy, RequestPriority fetchPriorityHint, const String& charset, const AtomString& initiatorType, bool isInUserAgentShadowTree)
+    CachedScriptFetcher(const String& nonce, ReferrerPolicy referrerPolicy, RequestPriority fetchPriority, const AtomString& charset, const AtomString& initiatorType, bool isInUserAgentShadowTree)
         : m_nonce(nonce)
         , m_charset(charset)
         , m_initiatorType(initiatorType)
         , m_isInUserAgentShadowTree(isInUserAgentShadowTree)
         , m_referrerPolicy(referrerPolicy)
-        , m_fetchPriorityHint(fetchPriorityHint)
+        , m_fetchPriority(fetchPriority)
     {
     }
 
-    CachedScriptFetcher(const String& charset)
+    explicit CachedScriptFetcher(const AtomString& charset)
         : m_charset(charset)
     {
     }
 
-    CachedResourceHandle<CachedScript> requestScriptWithCache(Document&, const URL& sourceURL, const String& crossOriginMode, String&& integrity, std::optional<ResourceLoadPriority>) const;
+    CachedResourceHandle<CachedScript> requestScriptWithCache(Document&, const URL& sourceURL, FetchOptionsDestination, const String& crossOriginMode, String&& integrity, std::optional<ResourceLoadPriority>, std::optional<ServiceWorkersMode>) const;
 
 private:
+    bool isCachedScriptFetcher() const final { return true; }
+
     String m_nonce;
-    String m_charset;
+    AtomString m_charset;
     AtomString m_initiatorType;
     bool m_isInUserAgentShadowTree { false };
     ReferrerPolicy m_referrerPolicy { ReferrerPolicy::EmptyString };
-    RequestPriority m_fetchPriorityHint { RequestPriority::Auto };
+    RequestPriority m_fetchPriority { RequestPriority::Auto };
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CachedScriptFetcher)
+    static bool isType(const JSC::ScriptFetcher& fetcher) { return fetcher.isCachedScriptFetcher(); }
+SPECIALIZE_TYPE_TRAITS_END()

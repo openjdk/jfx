@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2020 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Library General Public
@@ -27,14 +27,17 @@
 #include "BooleanConstructor.h"
 #include "CustomGetterSetter.h"
 #include "GetterSetter.h"
-#include "JSBigInt.h"
+#include "JSBigIntInlines.h"
 #include "JSCInlines.h"
 #include "NumberObject.h"
 #include "NumberPrototype.h"
 #include "ParseInt.h"
 #include "TypeError.h"
+#include <wtf/text/MakeString.h>
 
 namespace JSC {
+
+constinit const char radixDigits[] = "0123456789abcdefghijklmnopqrstuvwxyz";
 
 double JSValue::toIntegerPreserveNaN(JSGlobalObject* globalObject) const
 {
@@ -47,6 +50,8 @@ uint64_t JSValue::toLength(JSGlobalObject* globalObject) const
 {
     // ECMA 7.1.15
     // http://www.ecma-international.org/ecma-262/6.0/#sec-tolength
+    if (isInt32())
+        return static_cast<uint64_t>(std::max<int32_t>(asInt32(), 0));
     double d = toIntegerOrInfinity(globalObject);
     if (d <= 0)
         return 0;
@@ -217,7 +222,7 @@ bool JSValue::putToPrimitive(JSGlobalObject* globalObject, PropertyName property
     // Check if there are any setters or getters in the prototype chain
     JSObject* obj = synthesizePrototype(globalObject);
     EXCEPTION_ASSERT(!!scope.exception() == !obj);
-    if (UNLIKELY(!obj))
+    if (!obj) [[unlikely]]
         return false;
     RELEASE_AND_RETURN(scope, obj->methodTable()->put(obj, globalObject, propertyName, value, slot));
 }
@@ -234,7 +239,7 @@ bool JSValue::putToPrimitiveByIndex(JSGlobalObject* globalObject, unsigned prope
 
     JSObject* prototype = synthesizePrototype(globalObject);
     EXCEPTION_ASSERT(!!scope.exception() == !prototype);
-    if (UNLIKELY(!prototype))
+    if (!prototype) [[unlikely]]
         return false;
     bool putResult = false;
     bool success = prototype->attemptToInterceptPutByIndexOnHoleForPrototype(globalObject, *this, propertyName, value, shouldThrow, putResult);
@@ -267,12 +272,14 @@ void JSValue::dumpInContextAssumingStructure(
 #if USE(JSVALUE64)
         out.printf("Double: %lld, %lf", (long long)reinterpretDoubleToInt64(asDouble()), asDouble());
 #else
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         union {
             double asDouble;
             uint32_t asTwoInt32s[2];
         } u;
         u.asDouble = asDouble();
         out.printf("Double: %08x:%08x, %lf", u.asTwoInt32s[1], u.asTwoInt32s[0], asDouble());
+        WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 #endif
     } else if (isCell()) {
         if (structure->classInfoForCells()->isSubClassOf(JSString::info())) {
@@ -304,7 +311,10 @@ void JSValue::dumpInContextAssumingStructure(
             out.print("BigInt[heap-allocated]: addr=", RawPointer(asCell()), ", length=", jsCast<JSBigInt*>(asCell())->length(), ", sign=", jsCast<JSBigInt*>(asCell())->sign());
         else if (structure->classInfoForCells()->isSubClassOf(JSObject::info())) {
             out.print("Object: ", RawPointer(asCell()));
-            out.print(" with butterfly ", RawPointer(asObject(asCell())->butterfly()), "(base=", RawPointer(asObject(asCell())->butterfly()->base(structure)), ")");
+            auto* butterfly = asObject(asCell())->butterfly();
+            out.print(" with butterfly ", RawPointer(butterfly));
+            if (butterfly)
+                out.print("(base=", RawPointer(butterfly->base(structure)), ")");
             out.print(" (Structure ", inContext(*structure, context), ")");
         } else {
             out.print("Cell: ", RawPointer(asCell()));
@@ -422,28 +432,36 @@ String JSValue::toWTFStringSlowCase(JSGlobalObject* globalObject) const
     RELEASE_AND_RETURN(scope, string->value(globalObject));
 }
 
-#if !COMPILER(GCC_COMPATIBLE)
-// This makes the argument opaque from the compiler.
-NEVER_INLINE void ensureStillAliveHere(JSValue)
-{
-}
-#endif
-
 WTF::String JSValue::toWTFStringForConsole(JSGlobalObject* globalObject) const
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSString* string = toString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    String result = string->value(globalObject);
+    auto result = string->value(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
     if (isString())
-        return tryMakeString('"', result, '"');
+        return tryMakeString('"', result.data, '"');
     if (jsDynamicCast<JSArray*>(*this))
-        return tryMakeString('[', result, ']');
+        return tryMakeString('[', result.data, ']');
     if (jsDynamicCast<JSBigInt*>(*this))
-        return tryMakeString(result, 'n');
+        return tryMakeString(result.data, 'n');
     return result;
+}
+
+bool JSValue::isGetterSetterSlow() const
+{
+    return isGetterSetter();
+}
+
+bool JSValue::isCustomGetterSetterSlow() const
+{
+    return isCustomGetterSetter();
+}
+
+bool JSValue::isStringSlow() const
+{
+    return isString();
 }
 
 } // namespace JSC

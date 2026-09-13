@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2006 Oliver Hunt <ojh16@student.canterbury.ac.nz>
- * Copyright (C) 2006 Apple Inc.
+ * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2013 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -27,18 +28,21 @@ namespace WebCore {
 class SVGGraphicsElement;
 
 class RenderSVGInline : public RenderInline {
-    WTF_MAKE_ISO_ALLOCATED(RenderSVGInline);
+    WTF_MAKE_TZONE_ALLOCATED(RenderSVGInline);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGInline);
 public:
-    RenderSVGInline(SVGGraphicsElement&, RenderStyle&&);
+    RenderSVGInline(Type, SVGGraphicsElement&, RenderStyle&&);
+    virtual ~RenderSVGInline();
 
     inline SVGGraphicsElement& graphicsElement() const;
+
+    bool isChildAllowed(const RenderObject&, const RenderStyle&) const override;
 
 private:
     void element() const = delete;
 
     ASCIILiteral renderName() const override { return "RenderSVGInline"_s; }
     bool requiresLayer() const final { return false; }
-    bool isSVGInline() const final { return true; }
 
     void updateFromStyle() final;
 
@@ -49,27 +53,29 @@ private:
     // this element, since we need it for filters.
     FloatRect objectBoundingBox() const final;
     FloatRect strokeBoundingBox() const final;
-    FloatRect repaintRectInLocalCoordinates() const final;
+    FloatRect repaintRectInLocalCoordinates(RepaintRectCalculation = RepaintRectCalculation::Fast) const final;
+    FloatRect decoratedBoundingBox() const final;
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     LayoutPoint currentSVGLayoutLocation() const final { return { }; }
     void setCurrentSVGLayoutLocation(const LayoutPoint&) final { ASSERT_NOT_REACHED(); }
 
     bool needsHasSVGTransformFlags() const final;
-#endif
 
     LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const final;
+    RepaintRects rectsForRepaintingAfterLayout(const RenderLayerModelObject* repaintContainer, RepaintOutlineBounds) const final;
+
     std::optional<FloatRect> computeFloatVisibleRectInContainer(const FloatRect&, const RenderLayerModelObject* container, VisibleRectContext) const final;
+
     void mapLocalToContainer(const RenderLayerModelObject* ancestorContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const final;
-    const RenderObject* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const final;
+    const RenderElement* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const final;
     void absoluteQuads(Vector<FloatQuad>&, bool* wasFixed) const final;
 
     std::unique_ptr<LegacyInlineFlowBox> createInlineFlowBox() final;
 
     void willBeDestroyed() final;
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) final;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) final;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGInline, isSVGInline())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGInline, isRenderSVGInline())

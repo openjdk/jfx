@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,10 +36,10 @@
 
 namespace WebCore {
 
-static HashSet<StorageThread*>& activeStorageThreads()
+static HashSet<CheckedRef<StorageThread>>& activeStorageThreads()
 {
     ASSERT(isMainThread());
-    static NeverDestroyed<HashSet<StorageThread*>> threads;
+    static NeverDestroyed<HashSet<CheckedRef<StorageThread>>> threads;
     return threads;
 }
 
@@ -60,17 +60,17 @@ void StorageThread::start()
     ASSERT(isMainThread());
     if (!m_thread) {
         if (m_type == Type::LocalStorage) {
-            m_thread = Thread::create("LocalStorage", [this] {
+            m_thread = Thread::create("LocalStorage"_s, [this] {
                 threadEntryPoint();
             });
         } else {
             ASSERT(m_type == Type::IndexedDB);
-            m_thread = Thread::create("IndexedDB", [this] {
+            m_thread = Thread::create("IndexedDB"_s, [this] {
                 threadEntryPoint();
             });
         }
     }
-    activeStorageThreads().add(this);
+    activeStorageThreads().add(*this);
 }
 
 void StorageThread::threadEntryPoint()
@@ -90,14 +90,14 @@ void StorageThread::dispatch(Function<void ()>&& function)
 {
     ASSERT(isMainThread());
     ASSERT(!m_queue.killed() && m_thread);
-    m_queue.append(makeUnique<Function<void ()>>(WTFMove(function)));
+    m_queue.append(makeUnique<Function<void ()>>(WTF::move(function)));
 }
 
 void StorageThread::terminate()
 {
     ASSERT(isMainThread());
     ASSERT(!m_queue.killed() && m_thread);
-    activeStorageThreads().remove(this);
+    activeStorageThreads().remove(*this);
     // Even in weird, exceptional cases, don't wait on a nonexistent thread to terminate.
     if (!m_thread)
         return;

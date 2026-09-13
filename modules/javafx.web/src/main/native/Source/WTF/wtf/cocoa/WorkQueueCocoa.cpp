@@ -28,18 +28,14 @@
 
 #include <wtf/BlockPtr.h>
 #include <wtf/Ref.h>
-
-#if PLATFORM(JAVA)
-#include <wtf/java/JavaEnv.h>
-#endif
+#include <wtf/darwin/DispatchExtras.h>
 
 namespace WTF {
 
 namespace {
 
 struct DispatchWorkItem {
-    WTF_MAKE_STRUCT_FAST_ALLOCATED;
-    Ref<WorkQueueBase> m_workQueue;
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(DispatchWorkItem);
     Function<void()> m_function;
     void operator()() { m_function(); }
 };
@@ -55,84 +51,62 @@ template<typename T> static void dispatchWorkItem(void* dispatchContext)
 
 void WorkQueueBase::dispatch(Function<void()>&& function)
 {
-    dispatch_async_f(m_dispatchQueue.get(), new DispatchWorkItem { Ref { *this }, WTFMove(function) }, dispatchWorkItem<DispatchWorkItem>);
-#if PLATFORM(JAVA)
-        AttachThreadAsDaemonToJavaEnv autoAttach;
-#endif
+    dispatch_async_f(m_dispatchQueue.get(), new DispatchWorkItem { WTF::move(function) }, dispatchWorkItem<DispatchWorkItem>);
 }
 
 void WorkQueueBase::dispatchWithQOS(Function<void()>&& function, QOS qos)
 {
-#if PLATFORM(JAVA)
-        AttachThreadAsDaemonToJavaEnv autoAttach;
-#endif
-    dispatch_block_t blockWithQOS = dispatch_block_create_with_qos_class(DISPATCH_BLOCK_ENFORCE_QOS_CLASS, Thread::dispatchQOSClass(qos), 0, makeBlockPtr([function = WTFMove(function)] {
+    // FIXME: This is a false positive. rdar://160931336
+    SUPPRESS_RETAINPTR_CTOR_ADOPT auto blockWithQOS = adoptOSObject(dispatch_block_create_with_qos_class(DISPATCH_BLOCK_ENFORCE_QOS_CLASS, Thread::dispatchQOSClass(qos), 0, makeBlockPtr([function = WTF::move(function)] () mutable {
         function();
-    }).get());
-    dispatch_async(m_dispatchQueue.get(), blockWithQOS);
-#if !__has_feature(objc_arc)
-    Block_release(blockWithQOS);
-#endif
+        function = { };
+    }).get()));
+    dispatch_async(m_dispatchQueue.get(), blockWithQOS.get());
 }
 
 void WorkQueueBase::dispatchAfter(Seconds duration, Function<void()>&& function)
 {
-    dispatch_after_f(dispatch_time(DISPATCH_TIME_NOW, duration.nanosecondsAs<int64_t>()), m_dispatchQueue.get(), new DispatchWorkItem { Ref { *this },  WTFMove(function) }, dispatchWorkItem<DispatchWorkItem>);
+    dispatch_after_f(dispatch_time(DISPATCH_TIME_NOW, duration.nanosecondsAs<int64_t>()), m_dispatchQueue.get(), new DispatchWorkItem { WTF::move(function) }, dispatchWorkItem<DispatchWorkItem>);
 }
 
 void WorkQueueBase::dispatchSync(Function<void()>&& function)
 {
-    dispatch_sync_f(m_dispatchQueue.get(), new Function<void()> { WTFMove(function) }, dispatchWorkItem<Function<void()>>);
+    dispatch_sync_f(m_dispatchQueue.get(), new Function<void()> { WTF::move(function) }, dispatchWorkItem<Function<void()>>);
 }
 
 WorkQueueBase::WorkQueueBase(OSObjectPtr<dispatch_queue_t>&& dispatchQueue)
-    : m_dispatchQueue(WTFMove(dispatchQueue))
+    : m_dispatchQueue(WTF::move(dispatchQueue))
+    , m_threadID(mainThreadID)
 {
 }
 
-void WorkQueueBase::platformInitialize(const char* name, Type type, QOS qos)
+void WorkQueueBase::platformInitialize(ASCIILiteral name, Type type, QOS qos)
 {
     dispatch_queue_attr_t attr = type == Type::Concurrent ? DISPATCH_QUEUE_CONCURRENT : DISPATCH_QUEUE_SERIAL;
     attr = dispatch_queue_attr_make_with_qos_class(attr, Thread::dispatchQOSClass(qos), 0);
-    m_dispatchQueue = adoptOSObject(dispatch_queue_create(name, attr));
+    // FIXME: This is a false positive. rdar://160931336
+    SUPPRESS_RETAINPTR_CTOR_ADOPT lazyInitialize(m_dispatchQueue, adoptOSObject(dispatch_queue_create(name, attr)));
     dispatch_set_context(m_dispatchQueue.get(), this);
-#if ASSERT_ENABLED
     // We use &s_uid for the key, since it's convenient. Dispatch does not dereference it.
     // We use s_uid to generate the id so that WorkQueues and Threads share the id namespace.
     // This makes it possible to assert that code runs in the expected sequence, regardless of if it is
     // in a thread or a work queue.
-    dispatch_queue_set_specific(m_dispatchQueue.get(), &s_uid, reinterpret_cast<void*>(static_cast<uintptr_t>(++s_uid)), nullptr);
-#endif
+    m_threadID = ++s_uid;
+    dispatch_queue_set_specific(m_dispatchQueue.get(), &s_uid, reinterpret_cast<void*>(m_threadID), nullptr);
 }
 
 void WorkQueueBase::platformInvalidate()
 {
 }
 
-WorkQueue::WorkQueue(OSObjectPtr<dispatch_queue_t>&& queue)
-    : WorkQueueBase(WTFMove(queue))
+WorkQueue::WorkQueue(MainTag)
+    : WorkQueueBase(mainDispatchQueueSingleton())
 {
-    // Note: for main work queue we do not create a sequence id, the main thread id will be used.
 }
-
-Ref<WorkQueue> WorkQueue::constructMainWorkQueue()
-{
-    return adoptRef(*new WorkQueue(dispatch_get_main_queue()));
-}
-
-#if ASSERT_ENABLED
-ThreadLikeAssertion WorkQueue::threadLikeAssertion() const
-{
-    auto sequenceID = static_cast<uint32_t>(reinterpret_cast<uintptr_t>(dispatch_queue_get_specific(m_dispatchQueue.get(), &s_uid)));
-    if (!sequenceID)
-        sequenceID = Thread::current().uid(); // Main thread sequence id.
-    return createThreadLikeAssertion(sequenceID);
-}
-#endif
 
 void ConcurrentWorkQueue::apply(size_t iterations, WTF::Function<void(size_t index)>&& function)
 {
-    dispatch_apply(iterations, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), makeBlockPtr([function = WTFMove(function)](size_t index) {
+    dispatch_apply(iterations, globalDispatchQueueSingleton(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), makeBlockPtr([function = WTF::move(function)](size_t index) {
         function(index);
     }).get());
 }

@@ -32,6 +32,8 @@
 #include "config.h"
 #include "SharedBufferChunkReader.h"
 
+#include <wtf/text/StringCommon.h>
+
 namespace WebCore {
 
 #if ENABLE(MHTML)
@@ -39,7 +41,7 @@ namespace WebCore {
 SharedBufferChunkReader::SharedBufferChunkReader(FragmentedSharedBuffer* buffer, const Vector<char>& separator)
     : m_iteratorCurrent(buffer->begin())
     , m_iteratorEnd(buffer->end())
-    , m_segment(m_iteratorCurrent != m_iteratorEnd ? m_iteratorCurrent->segment->data() : nullptr)
+    , m_segment(m_iteratorCurrent != m_iteratorEnd ? m_iteratorCurrent->segment->span().data() : nullptr)
     , m_separator(separator)
 {
 }
@@ -47,7 +49,7 @@ SharedBufferChunkReader::SharedBufferChunkReader(FragmentedSharedBuffer* buffer,
 SharedBufferChunkReader::SharedBufferChunkReader(FragmentedSharedBuffer* buffer, const char* separator)
     : m_iteratorCurrent(buffer->begin())
     , m_iteratorEnd(buffer->end())
-    , m_segment(m_iteratorCurrent != m_iteratorEnd ? m_iteratorCurrent->segment->data() : nullptr)
+    , m_segment(m_iteratorCurrent != m_iteratorEnd ? m_iteratorCurrent->segment->span().data() : nullptr)
 {
     setSeparator(separator);
 }
@@ -60,7 +62,7 @@ void SharedBufferChunkReader::setSeparator(const Vector<char>& separator)
 void SharedBufferChunkReader::setSeparator(const char* separator)
 {
     m_separator.clear();
-    m_separator.append(separator, strlen(separator));
+    m_separator.append(unsafeSpan(separator));
 }
 
 bool SharedBufferChunkReader::nextChunk(Vector<uint8_t>& chunk, bool includeSeparator)
@@ -72,11 +74,13 @@ bool SharedBufferChunkReader::nextChunk(Vector<uint8_t>& chunk, bool includeSepa
     while (true) {
         while (m_segmentIndex < m_iteratorCurrent->segment->size()) {
             // FIXME: The existing code to check for separators doesn't work correctly with arbitrary separator strings.
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // Glib ports only.
             auto currentCharacter = m_segment[m_segmentIndex++];
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
             if (currentCharacter != m_separator[m_separatorIndex]) {
                 if (m_separatorIndex > 0) {
                     ASSERT_WITH_SECURITY_IMPLICATION(m_separatorIndex <= m_separator.size());
-                    chunk.append(m_separator.data(), m_separatorIndex);
+                    chunk.append(m_separator.span().first(m_separatorIndex));
                     m_separatorIndex = 0;
                 }
                 chunk.append(currentCharacter);
@@ -93,13 +97,15 @@ bool SharedBufferChunkReader::nextChunk(Vector<uint8_t>& chunk, bool includeSepa
 
         // Read the next segment.
         m_segmentIndex = 0;
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // Glib ports only.
         if (++m_iteratorCurrent == m_iteratorEnd) {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
             m_segment = nullptr;
             if (m_separatorIndex > 0)
-                chunk.append(reinterpret_cast<const uint8_t*>(m_separator.data()), m_separatorIndex);
+                chunk.append(byteCast<uint8_t>(m_separator.subspan(0, m_separatorIndex)));
             return !chunk.isEmpty();
         }
-        m_segment = m_iteratorCurrent->segment->data();
+        m_segment = m_iteratorCurrent->segment->span().data();
     }
 
     ASSERT_NOT_REACHED();
@@ -112,7 +118,7 @@ String SharedBufferChunkReader::nextChunkAsUTF8StringWithLatin1Fallback(bool inc
     if (!nextChunk(data, includeSeparator))
         return String();
 
-    return data.size() ? String::fromUTF8WithLatin1Fallback(data.data(), data.size()) : emptyString();
+    return data.size() ? String::fromUTF8WithLatin1Fallback(data.span()) : emptyString();
 }
 
 size_t SharedBufferChunkReader::peek(Vector<uint8_t>& data, size_t requestedSize)
@@ -122,7 +128,8 @@ size_t SharedBufferChunkReader::peek(Vector<uint8_t>& data, size_t requestedSize
         return 0;
 
     size_t availableInSegment = std::min(m_iteratorCurrent->segment->size() - m_segmentIndex, requestedSize);
-    data.append(m_segment + m_segmentIndex, availableInSegment);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN // Glib ports only.
+    data.append(unsafeMakeSpan(m_segment + m_segmentIndex, availableInSegment));
 
     size_t readBytesCount = availableInSegment;
     requestedSize -= readBytesCount;
@@ -130,9 +137,9 @@ size_t SharedBufferChunkReader::peek(Vector<uint8_t>& data, size_t requestedSize
     auto currentSegment = m_iteratorCurrent;
 
     while (requestedSize && ++currentSegment != m_iteratorEnd) {
-        const uint8_t* segment = currentSegment->segment->data();
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         size_t lengthInSegment = std::min(currentSegment->segment->size(), requestedSize);
-        data.append(segment, lengthInSegment);
+        data.append(currentSegment->segment->span().first(lengthInSegment));
         readBytesCount += lengthInSegment;
         requestedSize -= lengthInSegment;
     }

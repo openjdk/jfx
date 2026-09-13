@@ -41,6 +41,7 @@ public:
     static Ref<CSSSupportsRule> create(StyleRuleSupports&, CSSStyleSheet* parent);
 
     String cssText() const final;
+    String cssText(const CSS::SerializationContext&) const final;
     String conditionText() const final;
 
 private:

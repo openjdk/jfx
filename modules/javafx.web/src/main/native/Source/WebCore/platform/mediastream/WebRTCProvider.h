@@ -25,13 +25,14 @@
 
 #pragma once
 
-#include "MDNSRegisterError.h"
-#include "MediaCapabilitiesInfo.h"
-#include "RTCDataChannelRemoteHandlerConnection.h"
-#include "RTCRtpCapabilities.h"
-#include "ScriptExecutionContextIdentifier.h"
+#include <WebCore/MDNSRegisterError.h>
+#include <WebCore/MediaCapabilitiesInfo.h>
+#include <WebCore/RTCDataChannelRemoteHandlerConnection.h>
+#include <WebCore/RTCRtpCapabilities.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Expected.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/text/WTFString.h>
 
@@ -45,16 +46,13 @@ struct MediaDecodingConfiguration;
 struct MediaEncodingConfiguration;
 
 class WEBCORE_EXPORT WebRTCProvider {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(WebRTCProvider, WEBCORE_EXPORT);
 public:
     static UniqueRef<WebRTCProvider> create();
     WebRTCProvider() = default;
     virtual ~WebRTCProvider() = default;
 
     static bool webRTCAvailable();
-    static void setH264HardwareEncoderAllowed(bool);
-
-    virtual void setActive(bool);
 
     virtual RefPtr<RTCDataChannelRemoteHandlerConnection> createRTCDataChannelRemoteHandlerConnection();
 
@@ -81,6 +79,12 @@ public:
     virtual void setLoggingLevel(WTFLogLevel);
     virtual void clearFactory();
 
+    void setPortAllocatorRange(StringView);
+    std::optional<std::pair<int, int>> portAllocatorRange() const;
+
+    virtual bool isLibWebRTCProvider() const { return false; }
+    virtual bool isWebCoreLibWebRTCProvider() const { return false; }
+
 protected:
 #if ENABLE(WEB_RTC)
     std::optional<RTCRtpCapabilities>& audioDecodingCapabilities();
@@ -106,6 +110,8 @@ protected:
     bool m_supportsVP9Profile0 { false };
     bool m_supportsVP9Profile2 { false };
     bool m_supportsMDNS { false };
+
+    std::optional<std::pair<int, int>> m_portAllocatorRange;
 
 private:
     virtual void initializeAudioDecodingCapabilities();

@@ -40,6 +40,8 @@
 #include <wtf/cocoa/RuntimeApplicationChecksCocoa.h>
 #endif
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 using namespace JSC;
 
 // Helper functions.
@@ -115,15 +117,17 @@ static JSObject* createTypedArray(JSGlobalObject* globalObject, JSTypedArrayType
         throwOutOfMemoryError(globalObject, scope);
         return nullptr;
     }
+    constexpr JSTypedArrayType kJSTypedArrayTypeFloat16Array = static_cast<JSTypedArrayType>(kJSTypedArrayTypeBigUint64Array + 1);
     bool isResizableOrGrowableShared = buffer->isResizableOrGrowableShared();
-    switch (type) {
+    switch (static_cast<int>(type)) {
 #define JSC_TYPED_ARRAY_FACTORY(type) case kJSTypedArrayType##type##Array: { \
-        return JS##type##Array::create(globalObject, globalObject->typedArrayStructure(Type##type, isResizableOrGrowableShared), WTFMove(buffer), offset, length.value()); \
+        return JS##type##Array::create(globalObject, globalObject->typedArrayStructure(Type##type, isResizableOrGrowableShared), WTF::move(buffer), offset, length.value()); \
     }
     FOR_EACH_TYPED_ARRAY_TYPE_EXCLUDING_DATA_VIEW(JSC_TYPED_ARRAY_FACTORY)
 #undef JSC_TYPED_ARRAY_CHECK
     case kJSTypedArrayTypeArrayBuffer:
     case kJSTypedArrayTypeNone:
+    default:
         RELEASE_ASSERT_NOT_REACHED();
     }
     return nullptr;
@@ -162,7 +166,7 @@ JSObjectRef JSObjectMakeTypedArray(JSContextRef ctx, JSTypedArrayType arrayType,
     unsigned elementByteSize = elementSize(toTypedArrayType(arrayType));
 
     auto buffer = ArrayBuffer::tryCreate(length, elementByteSize);
-    JSObject* result = createTypedArray(globalObject, arrayType, WTFMove(buffer), 0, length);
+    JSObject* result = createTypedArray(globalObject, arrayType, WTF::move(buffer), 0, length);
     if (handleExceptionIfNeeded(scope, ctx, exception) == ExceptionStatus::DidThrow)
         return nullptr;
     return toRef(result);
@@ -180,11 +184,11 @@ JSObjectRef JSObjectMakeTypedArrayWithBytesNoCopy(JSContextRef ctx, JSTypedArray
 
     unsigned elementByteSize = elementSize(toTypedArrayType(arrayType));
 
-    auto buffer = ArrayBuffer::createFromBytes(bytes, length, createSharedTask<void(void*)>([=](void* p) {
+    auto buffer = ArrayBuffer::createFromBytes({ static_cast<const uint8_t*>(bytes), length }, createSharedTask<void(void*)>([=](void* p) {
         if (destructor)
             destructor(p, destructorContext);
     }));
-    JSObject* result = createTypedArray(globalObject, arrayType, WTFMove(buffer), 0, length / elementByteSize);
+    JSObject* result = createTypedArray(globalObject, arrayType, WTF::move(buffer), 0, length / elementByteSize);
     if (handleExceptionIfNeeded(scope, ctx, exception) == ExceptionStatus::DidThrow)
         return nullptr;
     return toRef(result);
@@ -212,7 +216,7 @@ JSObjectRef JSObjectMakeTypedArrayWithArrayBuffer(JSContextRef ctx, JSTypedArray
     std::optional<size_t> length;
     if (!buffer->isResizableOrGrowableShared())
         length = buffer->byteLength() / elementByteSize;
-    JSObject* result = createTypedArray(globalObject, arrayType, WTFMove(buffer), 0, length);
+    JSObject* result = createTypedArray(globalObject, arrayType, WTF::move(buffer), 0, length);
     if (handleExceptionIfNeeded(scope, ctx, exception) == ExceptionStatus::DidThrow)
         return nullptr;
     return toRef(result);
@@ -313,12 +317,12 @@ JSObjectRef JSObjectMakeArrayBufferWithBytesNoCopy(JSContextRef ctx, void* bytes
     JSLockHolder locker(vm);
     auto scope = DECLARE_CATCH_SCOPE(vm);
 
-    auto buffer = ArrayBuffer::createFromBytes(bytes, byteLength, createSharedTask<void(void*)>([=](void* p) {
+    auto buffer = ArrayBuffer::createFromBytes({ static_cast<const uint8_t*>(bytes), byteLength }, createSharedTask<void(void*)>([=](void* p) {
         if (bytesDeallocator)
             bytesDeallocator(p, deallocatorContext);
     }));
 
-    JSArrayBuffer* jsBuffer = JSArrayBuffer::create(vm, globalObject->arrayBufferStructure(ArrayBufferSharingMode::Default), WTFMove(buffer));
+    JSArrayBuffer* jsBuffer = JSArrayBuffer::create(vm, globalObject->arrayBufferStructure(ArrayBufferSharingMode::Default), WTF::move(buffer));
     if (handleExceptionIfNeeded(scope, ctx, exception) == ExceptionStatus::DidThrow)
         return nullptr;
 
@@ -371,3 +375,5 @@ size_t JSObjectGetArrayBufferByteLength(JSContextRef, JSObjectRef objectRef, JSV
 
     return 0;
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

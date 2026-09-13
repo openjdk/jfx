@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,6 +27,7 @@ package test.javafx.scene.bounds;
 
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.transform.BaseTransform;
+import com.sun.javafx.scene.AbstractNode;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGRectangle;
 import javafx.beans.property.FloatProperty;
@@ -40,7 +41,7 @@ import test.com.sun.javafx.scene.bounds.PerfNodeHelper;
  * A special node used for performance tests to make sure that the minimum
  * amount of bounds computation work happens as possible.
  */
-public class PerfNode extends Node {
+public class PerfNode extends AbstractNode {
     static {
          // This is used by classes in different packages to get access to
          // private and package private methods.

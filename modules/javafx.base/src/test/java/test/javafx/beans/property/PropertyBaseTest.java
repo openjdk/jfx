@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,8 +26,6 @@
 package test.javafx.beans.property;
 
 import test.com.sun.javafx.binding.ExpressionHelperUtility;
-import java.util.Arrays;
-import java.util.List;
 import javafx.beans.property.Property;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
@@ -39,29 +37,29 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.beans.value.ObservableNumberValue;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.ObservableValueBase;
-import static org.junit.Assert.assertEquals;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
-@RunWith(Parameterized.class)
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Stream;
+
 public class PropertyBaseTest<T> {
 
     @FunctionalInterface
     public interface PropertyFactory<T> {
-        public Property<T> createProperty();
+        Property<T> createProperty();
     }
 
     public static class Factory<T> {
-
-        private PropertyFactory<T> propertyFactory;
-        private PropertyFactory<T> observableFactory;
-        private T value;
+        private final PropertyFactory<T> propertyFactory;
+        private final PropertyFactory<T> observableFactory;
+        private final T value;
 
         public Factory(PropertyFactory<T> propertyFactory,
-                PropertyFactory<T> observableFactory, T value)
-        {
+                       PropertyFactory<T> observableFactory, T value) {
             this.propertyFactory = propertyFactory;
             this.observableFactory = observableFactory;
             this.value = value;
@@ -81,8 +79,7 @@ public class PropertyBaseTest<T> {
     }
 
     private static class NumberPropertyMock extends ObservableValueBase<Number>
-            implements ObservableNumberValue, Property<Number>
-    {
+            implements ObservableNumberValue, Property<Number> {
         private Number value = 0;
 
         @Override public int intValue()       { return value.intValue(); }
@@ -105,54 +102,40 @@ public class PropertyBaseTest<T> {
         @Override public String getName() { return ""; }
     }
 
-    @Parameterized.Parameters
-    public static List<Object[]> data() {
-        return Arrays.asList(new Object[][] {
-            // primitive binding
-            // Property->Listener->Value
-            { new Factory(() -> new SimpleBooleanProperty(), () -> new SimpleBooleanProperty(), true) },
-            { new Factory(() -> new SimpleDoubleProperty(), () -> new SimpleDoubleProperty(), 1.0) },
-            { new Factory(() -> new SimpleFloatProperty(), () -> new SimpleFloatProperty(), 1.0f) },
-            { new Factory(() -> new SimpleIntegerProperty(), () -> new SimpleIntegerProperty(), 1) },
-            { new Factory(() -> new SimpleLongProperty(), () -> new SimpleLongProperty(), 1L) },
-            // generic with wrapper
-            // Property->Listener->Binding->BindingHelperObserver->Value
-            { new Factory(() -> new SimpleBooleanProperty(), () -> new SimpleObjectProperty<>(), true) },
-            { new Factory(() -> new SimpleDoubleProperty(), () -> new SimpleObjectProperty<>(), 1.0) },
-            { new Factory(() -> new SimpleDoubleProperty(), () -> new NumberPropertyMock(), 1.0) },
-            { new Factory(() -> new SimpleFloatProperty(), () -> new SimpleObjectProperty<>(), 1.0f) },
-            { new Factory(() -> new SimpleFloatProperty(), () -> new NumberPropertyMock(), 1.0f) },
-            { new Factory(() -> new SimpleIntegerProperty(), () -> new SimpleObjectProperty<>(), 1) },
-            { new Factory(() -> new SimpleIntegerProperty(), () -> new NumberPropertyMock(), 1) },
-            { new Factory(() -> new SimpleLongProperty(), () -> new SimpleObjectProperty<>(), 1L) },
-            { new Factory(() -> new SimpleLongProperty(), () -> new NumberPropertyMock(), 1L) },
-            // generic
-            // Property->Listener->Value
-            { new Factory(() -> new SimpleObjectProperty(), () -> new SimpleObjectProperty<>(), new Object()) },
-            { new Factory(() -> new SimpleStringProperty(), () -> new SimpleObjectProperty<>(), "1") },
-            // the same as generic
-            { new Factory(() -> new SimpleStringProperty(), () -> new SimpleStringProperty(), "1") },
-        });
+    static Stream<Factory<?>> data() {
+        return Stream.of(
+                // Primitive bindings
+                new Factory<>(SimpleBooleanProperty::new, SimpleBooleanProperty::new, true),
+                new Factory<>(SimpleDoubleProperty::new, SimpleDoubleProperty::new, 1.0),
+                new Factory<>(SimpleFloatProperty::new, SimpleFloatProperty::new, 1.0f),
+                new Factory<>(SimpleIntegerProperty::new, SimpleIntegerProperty::new, 1),
+                new Factory<>(SimpleLongProperty::new, SimpleLongProperty::new, 1L),
+
+                // Generic with wrapper
+                new Factory<>(SimpleBooleanProperty::new, () -> new SimpleObjectProperty<>(), true),
+                new Factory<>(SimpleDoubleProperty::new, () -> new SimpleObjectProperty<>(), 1.0),
+                new Factory<>(SimpleDoubleProperty::new, NumberPropertyMock::new, 1.0),
+                new Factory<>(SimpleFloatProperty::new, () -> new SimpleObjectProperty<>(), 1.0f),
+                new Factory<>(SimpleFloatProperty::new, NumberPropertyMock::new, 1.0f),
+                new Factory<>(SimpleIntegerProperty::new, () -> new SimpleObjectProperty<>(), 1),
+                new Factory<>(SimpleIntegerProperty::new, NumberPropertyMock::new, 1),
+                new Factory<>(SimpleLongProperty::new, () -> new SimpleObjectProperty<>(), 1L),
+                new Factory<>(SimpleLongProperty::new, NumberPropertyMock::new, 1L),
+
+                // Generic
+                new Factory<>(SimpleObjectProperty::new, () -> new SimpleObjectProperty<>(), new Object()),
+                new Factory<>(SimpleStringProperty::new, () -> new SimpleObjectProperty<>(), "1"),
+                new Factory<>(SimpleStringProperty::new, SimpleStringProperty::new, "1")
+        );
     }
 
-    public PropertyBaseTest(Factory<T> factory) {
-        this.factory = factory;
-    }
+    @ParameterizedTest
+    @MethodSource("data")
+    void testUnbindAfterInvalidation(Factory<T> factory) {
+        Property<T> property = factory.createProperty();
+        Property<T> observable = factory.createObservable();
+        T value = factory.getValue();
 
-    @Before
-    public void setUp() {
-        property = factory.createProperty();
-        observable = factory.createObservable();
-        value = factory.getValue();
-    }
-
-    private Factory<T> factory;
-    private Property<T> property;
-    private Property<T> observable;
-    private T value;
-
-    @Test
-    public void testUnbindAfterInvalidation() {
         property.bind(observable);
         assertEquals(1, ExpressionHelperUtility.getInvalidationListeners(observable).size());
 
@@ -163,28 +146,37 @@ public class PropertyBaseTest<T> {
         assertEquals(0, ExpressionHelperUtility.getInvalidationListeners(observable).size());
     }
 
-    @Test
-    public void testTrimAfterGC() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testTrimAfterGC(Factory<T> factory) {
+        Property<T> property = factory.createProperty();
+        Property<T> observable = factory.createObservable();
+        T value = factory.getValue();
+
         Property<T> p1 = factory.createProperty();
         Property<T> p2 = factory.createProperty();
-        p1.bind(observable); // creates SingleInvalidation
-        p2.bind(observable); // creates Generic with 2 listeners
+        p1.bind(observable);
+        p2.bind(observable);
         assertEquals(2, ExpressionHelperUtility.getInvalidationListeners(observable).size());
 
         p1 = null;
         p2 = null;
         System.gc();
 
-        property.bind(observable); // calls trim
+        property.bind(observable);
         assertEquals(1, ExpressionHelperUtility.getInvalidationListeners(observable).size());
     }
 
-    @Test
-    public void testUnbindGenericWrapper() {
+    @ParameterizedTest
+    @MethodSource("data")
+    void testUnbindGenericWrapper(Factory<T> factory) {
+        Property<T> property = factory.createProperty();
+        Property<T> observable = factory.createObservable();
+
         property.bind(observable);
         assertEquals(1, ExpressionHelperUtility.getInvalidationListeners(observable).size());
 
-        property.unbind(); // should unbind wrapper from observable
+        property.unbind();
         assertEquals(0, ExpressionHelperUtility.getInvalidationListeners(observable).size());
     }
 }

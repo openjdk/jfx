@@ -40,13 +40,6 @@ typedef struct _GTypeModuleClass GTypeModuleClass;
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GTypeModule, g_object_unref)
 
-/**
- * GTypeModule:
- * @name: the name of the module
- *
- * The members of the GTypeModule structure should not
- * be accessed directly, except for the @name field.
- */
 struct _GTypeModule
 {
   GObject parent_instance;

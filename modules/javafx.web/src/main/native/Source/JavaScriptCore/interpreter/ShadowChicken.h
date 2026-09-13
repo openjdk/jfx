@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "CallFrame.h"
-#include "JSCJSValue.h"
-#include <wtf/FastMalloc.h>
+#include <JavaScriptCore/CallFrame.h>
+#include <JavaScriptCore/JSCJSValue.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/PrintStream.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
@@ -68,7 +68,7 @@ class VM;
 
 class ShadowChicken {
     WTF_MAKE_NONCOPYABLE(ShadowChicken);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ShadowChicken);
 public:
     struct Packet {
         Packet()
@@ -80,12 +80,12 @@ public:
         static constexpr intptr_t tailMarkerValue = static_cast<intptr_t>(unlikelyValue);
         static JSObject* tailMarker()
         {
-            return bitwise_cast<JSObject*>(tailMarkerValue);
+            return std::bit_cast<JSObject*>(tailMarkerValue);
         }
 
         static JSObject* throwMarker()
         {
-            return bitwise_cast<JSObject*>(static_cast<intptr_t>(unlikelyValue + 1));
+            return std::bit_cast<JSObject*>(static_cast<intptr_t>(unlikelyValue + 1));
         }
 
         static Packet prologue(JSObject* callee, CallFrame* frame, CallFrame* callerFrame, JSScope* scope)
@@ -151,16 +151,7 @@ public:
         {
         }
 
-        bool operator==(const Frame& other) const
-        {
-            return callee == other.callee
-                && frame == other.frame
-                && thisValue == other.thisValue
-                && scope == other.scope
-                && codeBlock == other.codeBlock
-                && callSiteIndex.bits() == other.callSiteIndex.bits()
-                && isTailDeleted == other.isTailDeleted;
-        }
+        friend bool operator==(const Frame&, const Frame&) = default;
 
         void dump(PrintStream&) const;
 

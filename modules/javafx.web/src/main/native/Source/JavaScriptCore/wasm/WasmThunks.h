@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,10 +25,13 @@
 
 #pragma once
 
-#if ENABLE(WEBASSEMBLY)
+#include <wtf/Platform.h>
 
-#include "MacroAssemblerCodeRef.h"
-#include "WasmJS.h"
+#if ENABLE(WEBASSEMBLY) && ENABLE(JIT)
+
+#include <JavaScriptCore/MacroAssemblerCodeRef.h>
+#include <JavaScriptCore/WasmJS.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC { namespace Wasm {
 
@@ -36,10 +39,16 @@ typedef MacroAssemblerCodeRef<JITThunkPtrTag> (*ThunkGenerator)(const AbstractLo
 
 MacroAssemblerCodeRef<JITThunkPtrTag> throwExceptionFromWasmThunkGenerator(const AbstractLocker&);
 MacroAssemblerCodeRef<JITThunkPtrTag> throwStackOverflowFromWasmThunkGenerator(const AbstractLocker&);
-#if USE(JSVALUE64)
+MacroAssemblerCodeRef<JITThunkPtrTag> throwExceptionFromOMGThunkGenerator(const AbstractLocker&);
+
 MacroAssemblerCodeRef<JITThunkPtrTag> catchInWasmThunkGenerator(const AbstractLocker&);
+MacroAssemblerCodeRef<JITThunkPtrTag> crashDueToBBQStackOverflowGenerator(const AbstractLocker&);
+MacroAssemblerCodeRef<JITThunkPtrTag> crashDueToOMGStackOverflowGenerator(const AbstractLocker&);
+#if ENABLE(WEBASSEMBLY_BBQJIT)
+MacroAssemblerCodeRef<JITThunkPtrTag> materializeBaselineDataGenerator(const AbstractLocker&);
+MacroAssemblerCodeRef<JITThunkPtrTag> callPolymorphicCalleeGenerator(const AbstractLocker&);
 #endif
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#if ENABLE(WEBASSEMBLY_OMGJIT)
 MacroAssemblerCodeRef<JITThunkPtrTag> triggerOMGEntryTierUpThunkGeneratorImpl(const AbstractLocker&, bool isSIMDContext);
 MacroAssemblerCodeRef<JITThunkPtrTag> triggerOMGEntryTierUpThunkGeneratorSIMD(const AbstractLocker&);
 MacroAssemblerCodeRef<JITThunkPtrTag> triggerOMGEntryTierUpThunkGeneratorNoSIMD(const AbstractLocker&);
@@ -52,7 +61,7 @@ constexpr ThunkGenerator triggerOMGEntryTierUpThunkGenerator(bool isSIMDContext)
 #endif
 
 class Thunks {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(Thunks);
     WTF_MAKE_NONCOPYABLE(Thunks);
 public:
     static void initialize();
@@ -65,10 +74,10 @@ public:
 private:
     Thunks() = default;
 
-    HashMap<ThunkGenerator, MacroAssemblerCodeRef<JITThunkPtrTag>> m_stubs;
+    UncheckedKeyHashMap<ThunkGenerator, MacroAssemblerCodeRef<JITThunkPtrTag>> m_stubs;
     Lock m_lock;
 };
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY)
+#endif // ENABLE(WEBASSEMBLY) && ENABLE(JIT)

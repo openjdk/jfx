@@ -23,10 +23,8 @@
  * DAMAGE.
  */
 
-#ifndef DateTimeFormat_h
-#define DateTimeFormat_h
+#pragma once
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -98,7 +96,7 @@ public:
     public:
         virtual ~TokenHandler() = default;
         virtual void visitField(FieldType, int numberOfPatternCharacters) = 0;
-        virtual void visitLiteral(String&&) = 0;
+        virtual void visitLiteral(const String&) = 0;
     };
 
     // Returns true if succeeded, false if failed.
@@ -107,6 +105,3 @@ public:
 };
 
 } // namespace WebCore
-
-#endif
-#endif // DateTimeFormat_h

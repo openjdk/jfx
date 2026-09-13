@@ -24,6 +24,7 @@
 
 #pragma once
 
+#include <wtf/CheckedPtr.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -46,7 +47,7 @@ public:
     void setTrailingWhitespace(RenderText& whitespace) { m_whitespace = &whitespace; }
     void clear()
     {
-        m_whitespace = { };
+        m_whitespace = nullptr;
         m_boxes.shrink(0); // Use shrink(0) instead of clear() to retain our capacity.
     }
 
@@ -60,7 +61,7 @@ public:
     void updateWhitespaceCollapsingTransitionsForTrailingBoxes(LineWhitespaceCollapsingState&, const LegacyInlineIterator& lBreak, CollapseFirstSpace);
 
 private:
-    RenderText* m_whitespace { nullptr };
+    CheckedPtr<RenderText> m_whitespace;
     Vector<std::reference_wrapper<RenderBoxModelObject>, 4> m_boxes;
 };
 

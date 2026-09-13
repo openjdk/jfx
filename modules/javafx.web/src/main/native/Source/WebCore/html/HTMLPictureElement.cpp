@@ -32,20 +32,18 @@
 #include "ImageLoader.h"
 #include "Logging.h"
 #include "Settings.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLPictureElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLPictureElement);
 
 HTMLPictureElement::HTMLPictureElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
 {
 }
 
-HTMLPictureElement::~HTMLPictureElement()
-{
-}
+HTMLPictureElement::~HTMLPictureElement() = default;
 
 Ref<HTMLPictureElement> HTMLPictureElement::create(const QualifiedName& tagName, Document& document)
 {
@@ -54,15 +52,15 @@ Ref<HTMLPictureElement> HTMLPictureElement::create(const QualifiedName& tagName,
 
 void HTMLPictureElement::sourcesChanged()
 {
-    for (auto& element : childrenOfType<HTMLImageElement>(*this))
-        element.selectImageSource(RelevantMutation::Yes);
+    for (Ref element : childrenOfType<HTMLImageElement>(*this))
+        element->selectImageSource(RelevantMutation::Yes);
 }
 
 void HTMLPictureElement::sourceDimensionAttributesChanged(const HTMLSourceElement& sourceElement)
 {
-    for (auto& element : childrenOfType<HTMLImageElement>(*this)) {
-        if (&sourceElement == element.sourceElement())
-            element.invalidateAttributeMapping();
+    for (Ref element : childrenOfType<HTMLImageElement>(*this)) {
+        if (&sourceElement == element->sourceElement())
+            element->invalidateAttributeMapping();
     }
 }
 
@@ -72,10 +70,8 @@ bool HTMLPictureElement::isSystemPreviewImage()
     if (!document().settings().systemPreviewEnabled())
         return false;
 
-    auto* parent = parentElement();
-    if (!is<HTMLAnchorElement>(parent))
-        return false;
-    return downcast<HTMLAnchorElement>(parent)->isSystemPreviewLink();
+    auto* parent = dynamicDowncast<HTMLAnchorElement>(parentElement());
+    return parent && parent->isSystemPreviewLink();
 }
 #endif
 

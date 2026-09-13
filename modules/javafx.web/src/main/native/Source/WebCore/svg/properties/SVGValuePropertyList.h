@@ -63,16 +63,12 @@ public:
 
         // Remove existing items.
         while (size() > newSize)
-            remove(size() - 1);
+            removeAt(size() - 1);
     }
 
-    // Visual Studio doesn't seem to see these private constructors from subclasses.
-    // FIXME: See what it takes to remove this hack.
-#if !COMPILER(MSVC)
 protected:
-#endif
     using Base::append;
-    using Base::remove;
+    using Base::removeAt;
 
     // Base and default constructor. Do not use "using Base::Base" because of Windows and GTK ports.
     SVGValuePropertyList(SVGPropertyOwner* owner = nullptr, SVGPropertyAccess access = SVGPropertyAccess::ReadWrite)

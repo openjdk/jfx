@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,8 @@
 
 package test.javafx.binding.expression;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import javafx.beans.binding.DoubleBinding;
 import javafx.beans.binding.FloatBinding;
 import javafx.beans.binding.LongBinding;
@@ -39,8 +39,9 @@ import javafx.beans.value.ObservableValue;
 import javafx.beans.value.ObservableValueStub;
 import javafx.collections.FXCollections;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class LongExpressionTest {
 
@@ -55,7 +56,7 @@ public class LongExpressionTest {
     private short short1;
     private byte byte1;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         data = 34258;
         op1 = new SimpleLongProperty(data);
@@ -213,8 +214,11 @@ public class LongExpressionTest {
         assertEquals(op1, LongExpression.longExpression((ObservableValue)op1));
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testFactory_Null() {
-        LongExpression.longExpression(null);
+        assertThrows(NullPointerException.class, () -> {
+            LongExpression.longExpression(null);
+        });
     }
+
 }

@@ -26,8 +26,65 @@
 #include "config.h"
 #include "testb3.h"
 
-#if ENABLE(B3_JIT) && !CPU(ARM)
+#include <numbers>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
+#if ENABLE(B3_JIT)
+
+void testCSEStoreWithLoop()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    BasicBlock* loop = proc.addBlock();
+    BasicBlock* body = proc.addBlock();
+    BasicBlock* done = proc.addBlock();
+
+    // --------------------------- Root ---------------------------
+    Value* constZero = root->appendIntConstant(proc, Origin(), Int64, 0);
+    Value* constOne = root->appendIntConstant(proc, Origin(), Int64, 1);
+    Value* constTen = root->appendIntConstant(proc, Origin(), Int64, 10);
+    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    Value* count = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+    UpsilonValue* originalCounter = root->appendNew<UpsilonValue>(proc, Origin(), constZero);
+    root->appendNewControlValue(proc, Jump, Origin(), FrequentedBlock(loop));
+
+    // --------------------------- Loop ---------------------------
+    Value* loopCounter = loop->appendNew<Value>(proc, Phi, Int64, Origin());
+    Value* incCounter = loop->appendNew<Value>(proc, Add, Origin(), loopCounter, constOne);
+    UpsilonValue* incCounterUpsilon = loop->appendNew<UpsilonValue>(proc, Origin(), incCounter);
+    originalCounter->setPhi(loopCounter);
+    incCounterUpsilon->setPhi(loopCounter);
+    Value* valueFromAddress = loop->appendNew<MemoryValue>(proc, Load, Int64, Origin(), address);
+    loop->appendNewControlValue(proc, Branch, Origin(),
+        loop->appendNew<Value>(proc, Below, Origin(), incCounter, constTen),
+        FrequentedBlock(body),
+        FrequentedBlock(loop));
+
+    // --------------------------- Body ---------------------------
+    body->appendNew<MemoryValue>(proc, Store, Origin(), count, address);
+    CheckValue* checkAdd = body->appendNew<CheckValue>(proc, CheckAdd, Origin(), count, valueFromAddress);
+    checkAdd->setGenerator(
+        [&](CCallHelpers& jit, const StackmapGenerationParams&) {
+            AllowMacroScratchRegisterUsage allowScratch(jit);
+            jit.abortWithReason(B3Oops);
+        });
+    body->appendNew<MemoryValue>(proc, Store, Origin(), checkAdd, address);
+    body->appendNewControlValue(proc, Branch, Origin(),
+        body->appendNew<Value>(proc, Below, Origin(), incCounter, count),
+        FrequentedBlock(loop),
+        FrequentedBlock(done));
+
+    // --------------------------- Done ---------------------------
+    done->appendNew<MemoryValue>(proc, Store, Origin(), checkAdd, address);
+    done->appendNewControlValue(proc, Return, Origin(), address);
+
+
+    auto code = compileProc(proc);
+    int64_t num = 1;
+    invoke<int64_t>(*code, std::bit_cast<intptr_t>(&num), 2);
+    CHECK_EQ(num, 5);
+}
 
 void testLoadPreIndex32()
 {
@@ -39,12 +96,13 @@ void testLoadPreIndex32()
 
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<intptr_t>(proc, root);
     BasicBlock* loopTest = proc.addBlock();
     BasicBlock* loopBody = proc.addBlock();
     BasicBlock* done = proc.addBlock();
 
     Variable* r = proc.addVariable(Int32);
-    Variable* p = proc.addVariable(Int64);
+    Variable* p = proc.addVariable(pointerType());
 
     // ---------------------- Root_Block
     // r1 = 0
@@ -53,7 +111,7 @@ void testLoadPreIndex32()
     // Upsilon(p1, ^p2)
     Value* r1 = root->appendIntConstant(proc, Origin(), Int32, 0);
     root->appendNew<VariableValue>(proc, B3::Set, Origin(), r, r1);
-    Value* p1 = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    Value* p1 = arguments[0];
     root->appendNew<VariableValue>(proc, B3::Set, Origin(), p, p1);
     root->appendNewControlValue(proc, Jump, Origin(), FrequentedBlock(loopTest));
 
@@ -73,7 +131,7 @@ void testLoadPreIndex32()
     // r3 = r2 + load(p3)
     // Upsilon(r3, ^r2)
     // goto loop
-    Value* p3 = loopBody->appendNew<Value>(proc, Add, Origin(), p2, loopBody->appendNew<Const64Value>(proc, Origin(), 4));
+    Value* p3 = loopBody->appendNew<Value>(proc, Add, Origin(), p2, loopBody->appendNew<ConstPtrValue>(proc, Origin(), 4));
     loopBody->appendNew<VariableValue>(proc, B3::Set, Origin(), p, p3);
     Value* r3 = loopBody->appendNew<Value>(proc, Add, Origin(), r2, loopBody->appendNew<MemoryValue>(proc, Load, Int32, Origin(), p3));
     loopBody->appendNew<VariableValue>(proc, B3::Set, Origin(), r, r3);
@@ -89,17 +147,17 @@ void testLoadPreIndex32()
     fixSSA(proc);
 
     auto code = compileProc(proc);
-    if (isARM64())
+    if (isARM64() && Options::useB3CanonicalizePrePostIncrements())
         checkUsesInstruction(*code, "#4]!");
 
-    auto test = [&] () -> int32_t {
+    auto expected = [&] () -> int32_t {
         int32_t r = 0;
         while (r < 10)
             r += *++ptr;
         return r;
     };
 
-    CHECK_EQ(invoke<int32_t>(*code, bitwise_cast<intptr_t>(ptr)), test());
+    CHECK_EQ(invoke<int32_t>(*code, std::bit_cast<intptr_t>(ptr)), expected());
 }
 
 void testLoadPreIndex64()
@@ -112,12 +170,13 @@ void testLoadPreIndex64()
 
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<intptr_t>(proc, root);
     BasicBlock* loopTest = proc.addBlock();
     BasicBlock* loopBody = proc.addBlock();
     BasicBlock* done = proc.addBlock();
 
     Variable* r = proc.addVariable(Int64);
-    Variable* p = proc.addVariable(Int64);
+    Variable* p = proc.addVariable(pointerType());
 
     // ---------------------- Root_Block
     // r1 = 0
@@ -126,7 +185,7 @@ void testLoadPreIndex64()
     // Upsilon(p1, ^p2)
     Value* r1 = root->appendIntConstant(proc, Origin(), Int64, 0);
     root->appendNew<VariableValue>(proc, B3::Set, Origin(), r, r1);
-    Value* p1 = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    Value* p1 = arguments[0];
     root->appendNew<VariableValue>(proc, B3::Set, Origin(), p, p1);
     root->appendNewControlValue(proc, Jump, Origin(), FrequentedBlock(loopTest));
 
@@ -146,7 +205,7 @@ void testLoadPreIndex64()
     // r3 = r2 + load(p3)
     // Upsilon(r3, ^r2)
     // goto loop
-    Value* p3 = loopBody->appendNew<Value>(proc, Add, Origin(), p2, loopBody->appendNew<Const64Value>(proc, Origin(), 8));
+    Value* p3 = loopBody->appendNew<Value>(proc, Add, Origin(), p2, loopBody->appendNew<ConstPtrValue>(proc, Origin(), 8));
     loopBody->appendNew<VariableValue>(proc, B3::Set, Origin(), p, p3);
     Value* r3 = loopBody->appendNew<Value>(proc, Add, Origin(), r2, loopBody->appendNew<MemoryValue>(proc, Load, Int64, Origin(), p3));
     loopBody->appendNew<VariableValue>(proc, B3::Set, Origin(), r, r3);
@@ -162,17 +221,17 @@ void testLoadPreIndex64()
     fixSSA(proc);
 
     auto code = compileProc(proc);
-    if (isARM64())
+    if (isARM64() && Options::useB3CanonicalizePrePostIncrements())
         checkUsesInstruction(*code, "#8]!");
 
-    auto test = [&] () -> int64_t {
+    auto expected = [&] () -> int64_t {
         int64_t r = 0;
         while (r < 10)
             r += *++ptr;
         return r;
     };
 
-    CHECK_EQ(invoke<int64_t>(*code, bitwise_cast<intptr_t>(ptr)), test());
+    CHECK_EQ(invoke<int64_t>(*code, std::bit_cast<intptr_t>(ptr)), expected());
 }
 
 void testLoadPostIndex32()
@@ -185,12 +244,13 @@ void testLoadPostIndex32()
 
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<intptr_t>(proc, root);
     BasicBlock* loopTest = proc.addBlock();
     BasicBlock* loopBody = proc.addBlock();
     BasicBlock* done = proc.addBlock();
 
     Variable* r = proc.addVariable(Int32);
-    Variable* p = proc.addVariable(Int64);
+    Variable* p = proc.addVariable(pointerType());
 
     // ---------------------- Root_Block
     // r1 = 0
@@ -199,7 +259,7 @@ void testLoadPostIndex32()
     // Upsilon(p1, ^p2)
     Value* r1 = root->appendIntConstant(proc, Origin(), Int32, 0);
     root->appendNew<VariableValue>(proc, B3::Set, Origin(), r, r1);
-    Value* p1 = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    Value* p1 = arguments[0];
     root->appendNew<VariableValue>(proc, B3::Set, Origin(), p, p1);
     root->appendNewControlValue(proc, Jump, Origin(), FrequentedBlock(loopTest));
 
@@ -220,7 +280,7 @@ void testLoadPostIndex32()
     // Upsilon(p3, ^p2)
     // goto loop
     Value* r3 = loopBody->appendNew<Value>(proc, Add, Origin(), r2, loopBody->appendNew<MemoryValue>(proc, Load, Int32, Origin(), p2));
-    Value* p3 = loopBody->appendNew<Value>(proc, Add, Origin(), p2, loopBody->appendNew<Const64Value>(proc, Origin(), 4));
+    Value* p3 = loopBody->appendNew<Value>(proc, Add, Origin(), p2, loopBody->appendNew<ConstPtrValue>(proc, Origin(), 4));
     loopBody->appendNew<VariableValue>(proc, B3::Set, Origin(), r, r3);
     loopBody->appendNew<VariableValue>(proc, B3::Set, Origin(), p, p3);
     loopBody->appendNewControlValue(proc, Jump, Origin(), FrequentedBlock(loopTest));
@@ -235,17 +295,17 @@ void testLoadPostIndex32()
     fixSSA(proc);
 
     auto code = compileProc(proc);
-    if (isARM64())
+    if (isARM64() && Options::useB3CanonicalizePrePostIncrements())
         checkUsesInstruction(*code, "], #4");
 
-    auto test = [&] () -> int32_t {
+    auto expected = [&] () -> int32_t {
         int32_t r = 0;
         while (r < 10)
             r += *ptr++;
         return r;
     };
 
-    CHECK_EQ(invoke<int32_t>(*code, bitwise_cast<intptr_t>(ptr)), test());
+    CHECK_EQ(invoke<int32_t>(*code, std::bit_cast<intptr_t>(ptr)), expected());
 }
 
 void testLoadPostIndex64()
@@ -258,12 +318,13 @@ void testLoadPostIndex64()
 
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<intptr_t>(proc, root);
     BasicBlock* loopTest = proc.addBlock();
     BasicBlock* loopBody = proc.addBlock();
     BasicBlock* done = proc.addBlock();
 
     Variable* r = proc.addVariable(Int64);
-    Variable* p = proc.addVariable(Int64);
+    Variable* p = proc.addVariable(pointerType());
 
     // ---------------------- Root_Block
     // r1 = 0
@@ -272,7 +333,7 @@ void testLoadPostIndex64()
     // Upsilon(p1, ^p2)
     Value* r1 = root->appendIntConstant(proc, Origin(), Int64, 0);
     root->appendNew<VariableValue>(proc, B3::Set, Origin(), r, r1);
-    Value* p1 = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    Value* p1 = arguments[0];
     root->appendNew<VariableValue>(proc, B3::Set, Origin(), p, p1);
     root->appendNewControlValue(proc, Jump, Origin(), FrequentedBlock(loopTest));
 
@@ -293,7 +354,7 @@ void testLoadPostIndex64()
     // Upsilon(p3, ^p2)
     // goto loop
     Value* r3 = loopBody->appendNew<Value>(proc, Add, Origin(), r2, loopBody->appendNew<MemoryValue>(proc, Load, Int64, Origin(), p2));
-    Value* p3 = loopBody->appendNew<Value>(proc, Add, Origin(), p2, loopBody->appendNew<Const64Value>(proc, Origin(), 8));
+    Value* p3 = loopBody->appendNew<Value>(proc, Add, Origin(), p2, loopBody->appendNew<ConstPtrValue>(proc, Origin(), 8));
     loopBody->appendNew<VariableValue>(proc, B3::Set, Origin(), r, r3);
     loopBody->appendNew<VariableValue>(proc, B3::Set, Origin(), p, p3);
     loopBody->appendNewControlValue(proc, Jump, Origin(), FrequentedBlock(loopTest));
@@ -308,17 +369,95 @@ void testLoadPostIndex64()
     fixSSA(proc);
 
     auto code = compileProc(proc);
-    if (isARM64())
+    if (isARM64() && Options::useB3CanonicalizePrePostIncrements())
         checkUsesInstruction(*code, "], #8");
 
-    auto test = [&] () -> int64_t {
+    auto expected = [&] () -> int64_t {
         int64_t r = 0;
         while (r < 10)
             r += *ptr++;
         return r;
     };
 
-    CHECK_EQ(invoke<int64_t>(*code, bitwise_cast<intptr_t>(ptr)), test());
+    CHECK_EQ(invoke<int64_t>(*code, std::bit_cast<intptr_t>(ptr)), expected());
+}
+
+void testLoadPreIndex32WithStore()
+{
+    if (Options::defaultB3OptLevel() < 2)
+        return;
+
+    int32_t nums[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 };
+    int32_t* ptr = nums;
+
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<intptr_t>(proc, root);
+    BasicBlock* loopTest = proc.addBlock();
+    BasicBlock* loopBody = proc.addBlock();
+    BasicBlock* done = proc.addBlock();
+
+    Variable* r = proc.addVariable(Int32);
+    Variable* p = proc.addVariable(pointerType());
+
+    // ---------------------- Root_Block
+    // r1 = 0
+    // Upsilon(r1, ^r2)
+    // p1 = addr
+    // Upsilon(p1, ^p2)
+    Value* r1 = root->appendIntConstant(proc, Origin(), Int32, 0);
+    root->appendNew<VariableValue>(proc, B3::Set, Origin(), r, r1);
+    Value* p1 = arguments[0];
+    root->appendNew<VariableValue>(proc, B3::Set, Origin(), p, p1);
+    root->appendNewControlValue(proc, Jump, Origin(), FrequentedBlock(loopTest));
+
+    // ---------------------- Loop_Test_Block
+    // loop:
+    // p2 = Phi()
+    // r2 = Phi()
+    // if r2 >= 10 goto done
+    Value* r2 = loopTest->appendNew<VariableValue>(proc, B3::Get, Origin(), r);
+    Value* p2 = loopTest->appendNew<VariableValue>(proc, B3::Get, Origin(), p);
+    Value* cond = loopTest->appendNew<Value>(proc, AboveEqual, Origin(), r2, loopTest->appendNew<Const32Value>(proc, Origin(), 10));
+    loopTest->appendNewControlValue(proc, Branch, Origin(), cond, FrequentedBlock(done), FrequentedBlock(loopBody));
+
+    // ---------------------- Loop_Body_Block
+    // p3 = p2 + 1
+    // Upsilon(p3, ^p2)
+    // p3' = p3
+    // store(5, p3')
+    // r3 = r2 + load(p3)
+    // Upsilon(r3, ^r2)
+    // goto loop
+    Value* p3 = loopBody->appendNew<Value>(proc, Add, Origin(), p2, loopBody->appendNew<ConstPtrValue>(proc, Origin(), 4));
+    loopBody->appendNew<VariableValue>(proc, B3::Set, Origin(), p, p3);
+    Value* p3Prime = loopBody->appendNew<Value>(proc, Opaque, Origin(), p3);
+    loopBody->appendNew<MemoryValue>(proc, Store, Origin(), loopBody->appendNew<Const32Value>(proc, Origin(), 5), p3Prime);
+    Value* r3 = loopBody->appendNew<Value>(proc, Add, Origin(), r2, loopBody->appendNew<MemoryValue>(proc, Load, Int32, Origin(), p3));
+    loopBody->appendNew<VariableValue>(proc, B3::Set, Origin(), r, r3);
+    loopBody->appendNewControlValue(proc, Jump, Origin(), FrequentedBlock(loopTest));
+
+    // ---------------------- Done_Block
+    // done:
+    // return r2
+    done->appendNewControlValue(proc, Return, Origin(), r2);
+
+    proc.resetReachability();
+    validate(proc);
+    fixSSA(proc);
+
+    auto code = compileProc(proc);
+
+    auto expected = [&] () -> int32_t {
+        int32_t r = 0;
+        while (r < 10) {
+            *++ptr = 5;
+            r += *ptr;
+        }
+        return r;
+    };
+
+    CHECK_EQ(invoke<int32_t>(*code, std::bit_cast<intptr_t>(ptr)), expected());
 }
 
 void testStorePreIndex32()
@@ -331,21 +470,20 @@ void testStorePreIndex32()
 
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<intptr_t, int32_t>(proc, root);
 
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
-    Value* value = root->appendNew<Value>(
-        proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1));
-    Value* offset = root->appendNew<Const64Value>(proc, Origin(), 4);
+    Value* address = arguments[0];
+    Value* value = arguments[1];
+    Value* offset = root->appendNew<ConstPtrValue>(proc, Origin(), 4);
     Value* preIncrement = root->appendNew<Value>(proc, Add, Origin(), address, offset);
     root->appendNew<MemoryValue>(proc, Store, Origin(), value, preIncrement);
     root->appendNewControlValue(proc, Return, Origin(), preIncrement);
 
     auto code = compileProc(proc);
-    if (isARM64())
+    if (isARM64() && Options::useB3CanonicalizePrePostIncrements())
         checkUsesInstruction(*code, "#4]!");
-    intptr_t res = invoke<intptr_t>(*code, bitwise_cast<intptr_t>(ptr), 4);
-    ptr = bitwise_cast<int32_t*>(res);
+    intptr_t res = invoke<intptr_t>(*code, std::bit_cast<intptr_t>(ptr), 4);
+    ptr = std::bit_cast<int32_t*>(res);
     CHECK_EQ(nums[2], *ptr);
 }
 
@@ -359,17 +497,20 @@ void testStorePreIndex64()
 
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<intptr_t, int64_t>(proc, root);
 
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
-    Value* value = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
-    Value* offset = root->appendNew<Const64Value>(proc, Origin(), 8);
+    Value* address = arguments[0];
+    Value* value = arguments[1];
+    Value* offset = root->appendNew<ConstPtrValue>(proc, Origin(), 8);
     Value* preIncrement = root->appendNew<Value>(proc, Add, Origin(), address, offset);
     root->appendNew<MemoryValue>(proc, Store, Origin(), value, preIncrement);
     root->appendNewControlValue(proc, Return, Origin(), preIncrement);
 
     auto code = compileProc(proc);
-    intptr_t res = invoke<intptr_t>(*code, bitwise_cast<intptr_t>(ptr), 4);
-    ptr = bitwise_cast<int64_t*>(res);
+    if (isARM64() && Options::useB3CanonicalizePrePostIncrements())
+        checkUsesInstruction(*code, "#8]!");
+    intptr_t res = invoke<intptr_t>(*code, std::bit_cast<intptr_t>(ptr), 4);
+    ptr = std::bit_cast<int64_t*>(res);
     CHECK_EQ(nums[2], *ptr);
 }
 
@@ -383,21 +524,20 @@ void testStorePostIndex32()
 
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<intptr_t, int32_t>(proc, root);
 
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
-    Value* value = root->appendNew<Value>(
-        proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1));
+    Value* address = arguments[0];
+    Value* value = arguments[1];
     root->appendNew<MemoryValue>(proc, Store, Origin(), value, address);
-    Value* offset = root->appendNew<Const64Value>(proc, Origin(), 4);
+    Value* offset = root->appendNew<ConstPtrValue>(proc, Origin(), 4);
     Value* preIncrement = root->appendNew<Value>(proc, Add, Origin(), address, offset);
     root->appendNewControlValue(proc, Return, Origin(), preIncrement);
 
     auto code = compileProc(proc);
-    if (isARM64())
+    if (isARM64() && Options::useB3CanonicalizePrePostIncrements())
         checkUsesInstruction(*code, "], #4");
-    intptr_t res = invoke<intptr_t>(*code, bitwise_cast<intptr_t>(ptr), 4);
-    ptr = bitwise_cast<int32_t*>(res);
+    intptr_t res = invoke<intptr_t>(*code, std::bit_cast<intptr_t>(ptr), 4);
+    ptr = std::bit_cast<int32_t*>(res);
     CHECK_EQ(nums[1], 4);
     CHECK_EQ(nums[2], *ptr);
 }
@@ -412,19 +552,20 @@ void testStorePostIndex64()
 
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<intptr_t, int64_t>(proc, root);
 
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
-    Value* value = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+    Value* address = arguments[0];
+    Value* value = arguments[1];
     root->appendNew<MemoryValue>(proc, Store, Origin(), value, address);
-    Value* offset = root->appendNew<Const64Value>(proc, Origin(), 8);
+    Value* offset = root->appendNew<ConstPtrValue>(proc, Origin(), 8);
     Value* preIncrement = root->appendNew<Value>(proc, Add, Origin(), address, offset);
     root->appendNewControlValue(proc, Return, Origin(), preIncrement);
 
     auto code = compileProc(proc);
-    if (isARM64())
+    if (isARM64() && Options::useB3CanonicalizePrePostIncrements())
         checkUsesInstruction(*code, "], #8");
-    intptr_t res = invoke<intptr_t>(*code, bitwise_cast<intptr_t>(ptr), 4);
-    ptr = bitwise_cast<int64_t*>(res);
+    intptr_t res = invoke<intptr_t>(*code, std::bit_cast<intptr_t>(ptr), 4ULL);
+    ptr = std::bit_cast<int64_t*>(res);
     CHECK_EQ(nums[1], 4);
     CHECK_EQ(nums[2], *ptr);
 }
@@ -443,10 +584,9 @@ void testInsertSignedBitfieldInZero32()
     auto test = [&] (int32_t lsb, int32_t mask1, int32_t mask2) -> int32_t {
         Procedure proc;
         BasicBlock* root = proc.addBlock();
+        auto arguments = cCallArgumentValues<int32_t>(proc, root);
 
-        Value* srcValue = root->appendNew<Value>(
-            proc, Trunc, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+        Value* srcValue = arguments[0];
         Value* lsbValue = root->appendNew<Const32Value>(proc, Origin(), lsb);
         Value* mask1Value = root->appendNew<Const32Value>(proc, Origin(), mask1);
         Value* mask2Value = root->appendNew<Const32Value>(proc, Origin(), mask2);
@@ -471,7 +611,7 @@ void testInsertSignedBitfieldInZero32()
         int32_t mask1 = (1 << width) - 1;
         int32_t mask2 = 1 << (width - 1);
         int32_t bfsx = ((src & mask1) ^ mask2) - mask2;
-        CHECK(test(lsb, mask1, mask2) == (bfsx << lsb));
+        CHECK_EQ(test(lsb, mask1, mask2), (bfsx << lsb));
     }
 }
 
@@ -488,8 +628,9 @@ void testInsertSignedBitfieldInZero64()
     auto test = [&] (int32_t lsb, int32_t amount) -> int64_t {
         Procedure proc;
         BasicBlock* root = proc.addBlock();
+        auto arguments = cCallArgumentValues<int64_t>(proc, root);
 
-        Value* srcValue = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+        Value* srcValue = arguments[0];
         Value* lsbValue = root->appendNew<Const32Value>(proc, Origin(), lsb);
         Value* amountValue = root->appendNew<Const32Value>(proc, Origin(), amount);
 
@@ -513,7 +654,7 @@ void testInsertSignedBitfieldInZero64()
         int32_t width = widths.at(i);
         int64_t amount = CHAR_BIT * sizeof(src) - width;
         int64_t bfsx = (src << amount) >> amount;
-        CHECK(test(lsb, amount) == (bfsx << lsb));
+        CHECK_EQ(test(lsb, amount), (bfsx << lsb));
     }
 }
 
@@ -531,10 +672,9 @@ void testExtractSignedBitfield32()
     auto test = [&] (int32_t lsb, int32_t mask1, int32_t mask2) -> int32_t {
         Procedure proc;
         BasicBlock* root = proc.addBlock();
+        auto arguments = cCallArgumentValues<int32_t>(proc, root);
 
-        Value* srcValue = root->appendNew<Value>(
-            proc, Trunc, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+        Value* srcValue = arguments[0];
         Value* lsbValue = root->appendNew<Const32Value>(proc, Origin(), lsb);
         Value* mask1Value = root->appendNew<Const32Value>(proc, Origin(), mask1);
         Value* mask2Value = root->appendNew<Const32Value>(proc, Origin(), mask2);
@@ -559,7 +699,7 @@ void testExtractSignedBitfield32()
         int32_t mask1 = (1 << width) - 1;
         int32_t mask2 = 1 << (width - 1);
         int32_t result = (((src >> lsb) & mask1) ^ mask2) - mask2;
-        CHECK(test(lsb, mask1, mask2) == result);
+        CHECK_EQ(test(lsb, mask1, mask2), result);
     }
 }
 
@@ -576,8 +716,9 @@ void testExtractSignedBitfield64()
     auto test = [&] (int32_t lsb, int32_t amount) -> int64_t {
         Procedure proc;
         BasicBlock* root = proc.addBlock();
+        auto arguments = cCallArgumentValues<int64_t>(proc, root);
 
-        Value* srcValue = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+        Value* srcValue = arguments[0];
         Value* lsbValue = root->appendNew<Const32Value>(proc, Origin(), lsb);
         Value* amountValue = root->appendNew<Const32Value>(proc, Origin(), amount);
 
@@ -597,19 +738,18 @@ void testExtractSignedBitfield64()
         int32_t width = widths.at(i);
         int64_t amount = CHAR_BIT * sizeof(src) - width;
         int64_t result = ((src >> lsb) << amount) >> amount;
-        CHECK(test(lsb, amount) == result);
+        CHECK_EQ(test(lsb, amount), result);
     }
 }
 
-void testBitOrBitOrArgImmImm32(int a, int b, int c)
+void testBitOrBitOrArgImmImm32(int32_t a, int32_t b, int32_t c)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<uint32_t>(proc, root);
     Value* innerBitOr = root->appendNew<Value>(
         proc, BitOr, Origin(),
-        root->appendNew<Value>(
-            proc, Trunc, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0)),
+        arguments[0],
         root->appendNew<Const32Value>(proc, Origin(), b));
     root->appendNewControlValue(
         proc, Return, Origin(),
@@ -618,18 +758,17 @@ void testBitOrBitOrArgImmImm32(int a, int b, int c)
             innerBitOr,
             root->appendNew<Const32Value>(proc, Origin(), c)));
 
-    CHECK(compileAndRun<int>(proc, a) == ((a | b) | c));
+    CHECK_EQ(compileAndRun<int>(proc, a), ((a | b) | c));
 }
 
-void testBitOrImmBitOrArgImm32(int a, int b, int c)
+void testBitOrImmBitOrArgImm32(int32_t a, int32_t b, int32_t c)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<uint32_t>(proc, root);
     Value* innerBitOr = root->appendNew<Value>(
         proc, BitOr, Origin(),
-        root->appendNew<Value>(
-            proc, Trunc, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0)),
+        arguments[0],
         root->appendNew<Const32Value>(proc, Origin(), c));
     root->appendNewControlValue(
         proc, Return, Origin(),
@@ -638,19 +777,20 @@ void testBitOrImmBitOrArgImm32(int a, int b, int c)
             root->appendNew<Const32Value>(proc, Origin(), a),
             innerBitOr));
 
-    CHECK(compileAndRun<int>(proc, b) == (a | (b | c)));
+    CHECK_EQ(compileAndRun<int>(proc, b), (a | (b | c)));
 }
 
 double bitOrDouble(double a, double b)
 {
-    return bitwise_cast<double>(bitwise_cast<uint64_t>(a) | bitwise_cast<uint64_t>(b));
+    return std::bit_cast<double>(std::bit_cast<uint64_t>(a) | std::bit_cast<uint64_t>(b));
 }
 
 void testBitOrArgDouble(double a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument = root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0);
+    auto arguments = cCallArgumentValues<double>(proc, root);
+    Value* argument = arguments[0];
     Value* result = root->appendNew<Value>(proc, BitOr, Origin(), argument, argument);
     root->appendNewControlValue(proc, Return, Origin(), result);
 
@@ -661,8 +801,9 @@ void testBitOrArgsDouble(double a, double b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argumentA = root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0);
-    Value* argumentB = root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR1);
+    auto arguments = cCallArgumentValues<double, double>(proc, root);
+    Value* argumentA = arguments[0];
+    Value* argumentB = arguments[1];
     Value* result = root->appendNew<Value>(proc, BitOr, Origin(), argumentA, argumentB);
     root->appendNewControlValue(proc, Return, Origin(), result);
 
@@ -673,7 +814,8 @@ void testBitOrArgImmDouble(double a, double b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argumentA = root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0);
+    auto arguments = cCallArgumentValues<double>(proc, root);
+    Value* argumentA = arguments[0];
     Value* argumentB = root->appendNew<ConstDoubleValue>(proc, Origin(), b);
     Value* result = root->appendNew<Value>(proc, BitOr, Origin(), argumentA, argumentB);
     root->appendNewControlValue(proc, Return, Origin(), result);
@@ -695,50 +837,45 @@ void testBitOrImmsDouble(double a, double b)
 
 float bitOrFloat(float a, float b)
 {
-    return bitwise_cast<float>(bitwise_cast<uint32_t>(a) | bitwise_cast<uint32_t>(b));
+    return std::bit_cast<float>(std::bit_cast<uint32_t>(a) | std::bit_cast<uint32_t>(b));
 }
 
 void testBitOrArgFloat(float a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument = root->appendNew<Value>(proc, BitwiseCast, Origin(),
-        root->appendNew<Value>(proc, Trunc, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0)));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argument = root->appendNew<Value>(proc, BitwiseCast, Origin(), arguments[0]);
     Value* result = root->appendNew<Value>(proc, BitOr, Origin(), argument, argument);
     root->appendNewControlValue(proc, Return, Origin(), result);
 
-    CHECK(isIdentical(compileAndRun<float>(proc, bitwise_cast<int32_t>(a)), bitOrFloat(a, a)));
+    CHECK(isIdentical(compileAndRun<float>(proc, std::bit_cast<int32_t>(a)), bitOrFloat(a, a)));
 }
 
 void testBitOrArgsFloat(float a, float b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argumentA = root->appendNew<Value>(proc, BitwiseCast, Origin(),
-        root->appendNew<Value>(proc, Trunc, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0)));
-    Value* argumentB = root->appendNew<Value>(proc, BitwiseCast, Origin(),
-        root->appendNew<Value>(proc, Trunc, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1)));
+    auto arguments = cCallArgumentValues<int32_t, int32_t>(proc, root);
+    Value* argumentA = root->appendNew<Value>(proc, BitwiseCast, Origin(), arguments[0]);
+    Value* argumentB = root->appendNew<Value>(proc, BitwiseCast, Origin(), arguments[1]);
     Value* result = root->appendNew<Value>(proc, BitOr, Origin(), argumentA, argumentB);
     root->appendNewControlValue(proc, Return, Origin(), result);
 
-    CHECK(isIdentical(compileAndRun<float>(proc, bitwise_cast<int32_t>(a), bitwise_cast<int32_t>(b)), bitOrFloat(a, b)));
+    CHECK(isIdentical(compileAndRun<float>(proc, std::bit_cast<int32_t>(a), std::bit_cast<int32_t>(b)), bitOrFloat(a, b)));
 }
 
 void testBitOrArgImmFloat(float a, float b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argumentA = root->appendNew<Value>(proc, BitwiseCast, Origin(),
-        root->appendNew<Value>(proc, Trunc, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0)));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argumentA = root->appendNew<Value>(proc, BitwiseCast, Origin(), arguments[0]);
     Value* argumentB = root->appendNew<ConstFloatValue>(proc, Origin(), b);
     Value* result = root->appendNew<Value>(proc, BitOr, Origin(), argumentA, argumentB);
     root->appendNewControlValue(proc, Return, Origin(), result);
 
-    CHECK(isIdentical(compileAndRun<float>(proc, bitwise_cast<int32_t>(a), bitwise_cast<int32_t>(b)), bitOrFloat(a, b)));
+    CHECK(isIdentical(compileAndRun<float>(proc, std::bit_cast<int32_t>(a), std::bit_cast<int32_t>(b)), bitOrFloat(a, b)));
 }
 
 void testBitOrImmsFloat(float a, float b)
@@ -757,12 +894,9 @@ void testBitOrArgsFloatWithUselessDoubleConversion(float a, float b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argumentA = root->appendNew<Value>(proc, BitwiseCast, Origin(),
-        root->appendNew<Value>(proc, Trunc, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0)));
-    Value* argumentB = root->appendNew<Value>(proc, BitwiseCast, Origin(),
-        root->appendNew<Value>(proc, Trunc, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1)));
+    auto arguments = cCallArgumentValues<int32_t, int32_t>(proc, root);
+    Value* argumentA = root->appendNew<Value>(proc, BitwiseCast, Origin(), arguments[0]);
+    Value* argumentB = root->appendNew<Value>(proc, BitwiseCast, Origin(), arguments[1]);
     Value* argumentAasDouble = root->appendNew<Value>(proc, FloatToDouble, Origin(), argumentA);
     Value* argumentBasDouble = root->appendNew<Value>(proc, FloatToDouble, Origin(), argumentB);
     Value* doubleResult = root->appendNew<Value>(proc, BitOr, Origin(), argumentAasDouble, argumentBasDouble);
@@ -772,28 +906,29 @@ void testBitOrArgsFloatWithUselessDoubleConversion(float a, float b)
     double doubleA = a;
     double doubleB = b;
     float expected = static_cast<float>(bitOrDouble(doubleA, doubleB));
-    CHECK(isIdentical(compileAndRun<float>(proc, bitwise_cast<int32_t>(a), bitwise_cast<int32_t>(b)), expected));
+    CHECK(isIdentical(compileAndRun<float>(proc, std::bit_cast<int32_t>(a), std::bit_cast<int32_t>(b)), expected));
 }
 
 void testBitXorArgs(int64_t a, int64_t b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int64_t, int64_t>(proc, root);
+    Value* argumentA = arguments[0];
+    Value* argumentB = arguments[1];
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
-            proc, BitXor, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1)));
-
-    CHECK(compileAndRun<int64_t>(proc, a, b) == (a ^ b));
+            proc, BitXor, Origin(), argumentA, argumentB));
+    CHECK_EQ(compileAndRun<int64_t>(proc, a, b), (a ^ b));
 }
 
 void testBitXorSameArg(int64_t a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<int64_t>(proc, root);
+    Value* argument = arguments[0];
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
@@ -814,9 +949,10 @@ void testBitXorAndAndArgs(int64_t a, int64_t b, int64_t c)
     for (int i = 0; i < 4; ++i) {
         Procedure proc;
         BasicBlock* root = proc.addBlock();
-        Value* argA = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
-        Value* argB = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
-        Value* argC = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR2);
+        auto arguments = cCallArgumentValues<int64_t, int64_t, int64_t>(proc, root);
+        Value* argA = arguments[0];
+        Value* argB = arguments[1];
+        Value* argC = arguments[2];
         Value* andAB = i & 2 ? root->appendNew<Value>(proc, BitAnd, Origin(), argA, argB)
             : root->appendNew<Value>(proc, BitAnd, Origin(), argB, argA);
         Value* andAC = i & 1 ? root->appendNew<Value>(proc, BitAnd, Origin(), argA, argC)
@@ -842,9 +978,10 @@ void testBitXorAndAndArgs32(int32_t a, int32_t b, int32_t c)
     for (int i = 0; i < 4; ++i) {
         Procedure proc;
         BasicBlock* root = proc.addBlock();
-        Value* argA = root->appendNew<Value>(proc, Trunc, Origin(), root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
-        Value* argB = root->appendNew<Value>(proc, Trunc, Origin(), root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1));
-        Value* argC = root->appendNew<Value>(proc, Trunc, Origin(), root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR2));
+        auto arguments = cCallArgumentValues<int32_t, int32_t, int32_t>(proc, root);
+        Value* argA = arguments[0];
+        Value* argB = arguments[1];
+        Value* argC = arguments[2];
         Value* andAB = i & 2 ? root->appendNew<Value>(proc, BitAnd, Origin(), argA, argB)
             : root->appendNew<Value>(proc, BitAnd, Origin(), argB, argA);
         Value* andAC = i & 1 ? root->appendNew<Value>(proc, BitAnd, Origin(), argA, argC)
@@ -870,8 +1007,9 @@ void testBitXorAndSameArgs(int64_t a, int64_t b)
     for (int i = 0; i < 4; ++i) {
         Procedure proc;
         BasicBlock* root = proc.addBlock();
-        Value* argA = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
-        Value* argB = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+        auto arguments = cCallArgumentValues<int64_t, int64_t>(proc, root);
+        Value* argA = arguments[0];
+        Value* argB = arguments[1];
         Value* andAB = i & 1 ? root->appendNew<Value>(proc, BitAnd, Origin(), argA, argB)
             : root->appendNew<Value>(proc, BitAnd, Origin(), argB, argA);
         Value* result = i & 2 ? root->appendNew<Value>(proc, BitXor, Origin(), andAB, argA)
@@ -892,8 +1030,9 @@ void testBitXorAndSameArgs32(int32_t a, int32_t b)
     for (int i = 0; i < 4; ++i) {
         Procedure proc;
         BasicBlock* root = proc.addBlock();
-        Value* argA = root->appendNew<Value>(proc, Trunc, Origin(), root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
-        Value* argB = root->appendNew<Value>(proc, Trunc, Origin(), root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1));
+        auto arguments = cCallArgumentValues<int32_t, int32_t>(proc, root);
+        Value* argA = arguments[0];
+        Value* argB = arguments[1];
         Value* andAB = i & 1 ? root->appendNew<Value>(proc, BitAnd, Origin(), argA, argB)
             : root->appendNew<Value>(proc, BitAnd, Origin(), argB, argA);
         Value* result = i & 2 ? root->appendNew<Value>(proc, BitXor, Origin(), andAB, argA)
@@ -915,44 +1054,47 @@ void testBitXorImms(int64_t a, int64_t b)
             root->appendNew<Const64Value>(proc, Origin(), a),
             root->appendNew<Const64Value>(proc, Origin(), b)));
 
-    CHECK(compileAndRun<int64_t>(proc) == (a ^ b));
+    CHECK_EQ(compileAndRun<int64_t>(proc), (a ^ b));
 }
 
 void testBitXorArgImm(int64_t a, int64_t b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int64_t>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
             proc, BitXor, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0),
+            arguments[0],
             root->appendNew<Const64Value>(proc, Origin(), b)));
 
-    CHECK(compileAndRun<int64_t>(proc, a) == (a ^ b));
+    CHECK_EQ(compileAndRun<int64_t>(proc, a), (a ^ b));
 }
 
 void testBitXorImmArg(int64_t a, int64_t b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int64_t>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
             proc, BitXor, Origin(),
             root->appendNew<Const64Value>(proc, Origin(), a),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0)));
+            arguments[0]));
 
-    CHECK(compileAndRun<int64_t>(proc, b) == (a ^ b));
+    CHECK_EQ(compileAndRun<int64_t>(proc, b), (a ^ b));
 }
 
 void testBitXorBitXorArgImmImm(int64_t a, int64_t b, int64_t c)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int64_t>(proc, root);
     Value* innerBitXor = root->appendNew<Value>(
         proc, BitXor, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0),
+        arguments[0],
         root->appendNew<Const64Value>(proc, Origin(), b));
     root->appendNewControlValue(
         proc, Return, Origin(),
@@ -961,16 +1103,17 @@ void testBitXorBitXorArgImmImm(int64_t a, int64_t b, int64_t c)
             innerBitXor,
             root->appendNew<Const64Value>(proc, Origin(), c)));
 
-    CHECK(compileAndRun<int64_t>(proc, a) == ((a ^ b) ^ c));
+    CHECK_EQ(compileAndRun<int64_t>(proc, a), ((a ^ b) ^ c));
 }
 
 void testBitXorImmBitXorArgImm(int64_t a, int64_t b, int64_t c)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int64_t>(proc, root);
     Value* innerBitXor = root->appendNew<Value>(
         proc, BitXor, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0),
+        arguments[0],
         root->appendNew<Const64Value>(proc, Origin(), c));
     root->appendNewControlValue(
         proc, Return, Origin(),
@@ -979,34 +1122,30 @@ void testBitXorImmBitXorArgImm(int64_t a, int64_t b, int64_t c)
             root->appendNew<Const64Value>(proc, Origin(), a),
             innerBitXor));
 
-    CHECK(compileAndRun<int64_t>(proc, b) == (a ^ (b ^ c)));
+    CHECK_EQ(compileAndRun<int64_t>(proc, b), (a ^ (b ^ c)));
 }
 
-void testBitXorArgs32(int a, int b)
+void testBitXorArgs32(int32_t a, int32_t b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t, int32_t>(proc, root);
+    Value* argumentA = arguments[0];
+    Value* argumentB = arguments[1];
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
-            proc, BitXor, Origin(),
-            root->appendNew<Value>(
-                proc, Trunc, Origin(),
-                root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0)),
-            root->appendNew<Value>(
-                proc, Trunc, Origin(),
-                root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1))));
+            proc, BitXor, Origin(), argumentA, argumentB));
 
-    CHECK(compileAndRun<int>(proc, a, b) == (a ^ b));
+    CHECK_EQ(compileAndRun<int>(proc, a, b), (a ^ b));
 }
 
-void testBitXorSameArg32(int a)
+void testBitXorSameArg32(int32_t a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument = root->appendNew<Value>(
-        proc, Trunc, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argument = arguments[0];
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
@@ -1017,7 +1156,7 @@ void testBitXorSameArg32(int a)
     CHECK(!compileAndRun<int>(proc, a));
 }
 
-void testBitXorImms32(int a, int b)
+void testBitXorImms32(int32_t a, int32_t b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
@@ -1028,50 +1167,47 @@ void testBitXorImms32(int a, int b)
             root->appendNew<Const32Value>(proc, Origin(), a),
             root->appendNew<Const32Value>(proc, Origin(), b)));
 
-    CHECK(compileAndRun<int>(proc) == (a ^ b));
+    CHECK_EQ(compileAndRun<int>(proc), (a ^ b));
 }
 
-void testBitXorArgImm32(int a, int b)
+void testBitXorArgImm32(int32_t a, int32_t b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
             proc, BitXor, Origin(),
-            root->appendNew<Value>(
-                proc, Trunc, Origin(),
-                root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0)),
+            arguments[0],
             root->appendNew<Const32Value>(proc, Origin(), b)));
 
-    CHECK(compileAndRun<int>(proc, a) == (a ^ b));
+    CHECK_EQ(compileAndRun<int>(proc, a), (a ^ b));
 }
 
-void testBitXorImmArg32(int a, int b)
+void testBitXorImmArg32(int32_t a, int32_t b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
             proc, BitXor, Origin(),
             root->appendNew<Const32Value>(proc, Origin(), a),
-            root->appendNew<Value>(
-                proc, Trunc, Origin(),
-                root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0))));
+            arguments[0]));
 
-    CHECK(compileAndRun<int>(proc, b) == (a ^ b));
+    CHECK_EQ(compileAndRun<int>(proc, b), (a ^ b));
 }
 
-void testBitXorBitXorArgImmImm32(int a, int b, int c)
+void testBitXorBitXorArgImmImm32(int32_t a, int32_t b, int32_t c)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
     Value* innerBitXor = root->appendNew<Value>(
         proc, BitXor, Origin(),
-        root->appendNew<Value>(
-            proc, Trunc, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0)),
+        arguments[0],
         root->appendNew<Const32Value>(proc, Origin(), b));
     root->appendNewControlValue(
         proc, Return, Origin(),
@@ -1080,18 +1216,17 @@ void testBitXorBitXorArgImmImm32(int a, int b, int c)
             innerBitXor,
             root->appendNew<Const32Value>(proc, Origin(), c)));
 
-    CHECK(compileAndRun<int>(proc, a) == ((a ^ b) ^ c));
+    CHECK_EQ(compileAndRun<int>(proc, a), ((a ^ b) ^ c));
 }
 
-void testBitXorImmBitXorArgImm32(int a, int b, int c)
+void testBitXorImmBitXorArgImm32(int32_t a, int32_t b, int32_t c)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
     Value* innerBitXor = root->appendNew<Value>(
         proc, BitXor, Origin(),
-        root->appendNew<Value>(
-            proc, Trunc, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0)),
+        arguments[0],
         root->appendNew<Const32Value>(proc, Origin(), c));
     root->appendNewControlValue(
         proc, Return, Origin(),
@@ -1100,19 +1235,20 @@ void testBitXorImmBitXorArgImm32(int a, int b, int c)
             root->appendNew<Const32Value>(proc, Origin(), a),
             innerBitXor));
 
-    CHECK(compileAndRun<int>(proc, b) == (a ^ (b ^ c)));
+    CHECK_EQ(compileAndRun<int>(proc, b), (a ^ (b ^ c)));
 }
 
 void testBitNotArg(int64_t a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int64_t>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
             proc, BitXor, Origin(),
             root->appendNew<Const64Value>(proc, Origin(), -1),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0)));
+            arguments[0]));
 
     CHECK(isIdentical(compileAndRun<int64_t>(proc, a), static_cast<int64_t>((static_cast<uint64_t>(a) ^ 0xffffffffffffffff))));
 }
@@ -1135,7 +1271,8 @@ void testBitNotMem(int64_t a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<int64_t*>(proc, root);
+    Value* address = arguments[0];
     MemoryValue* load = root->appendNew<MemoryValue>(proc, Load, Int64, Origin(), address);
     Value* notLoad = root->appendNew<Value>(proc, BitXor, Origin(),
         root->appendNew<Const64Value>(proc, Origin(), -1),
@@ -1152,13 +1289,12 @@ void testBitNotArg32(int32_t a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(proc, BitXor, Origin(),
             root->appendNew<Const32Value>(proc, Origin(), -1),
-            argument));
+            arguments[0]));
     CHECK(isIdentical(compileAndRun<int32_t>(proc, a), static_cast<int32_t>((static_cast<uint32_t>(a) ^ 0xffffffff))));
 }
 
@@ -1180,7 +1316,8 @@ void testBitNotMem32(int32_t a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<int32_t*>(proc, root);
+    Value* address = arguments[0];
     MemoryValue* load = root->appendNew<MemoryValue>(proc, Load, Int32, Origin(), address);
     Value* notLoad = root->appendNew<Value>(proc, BitXor, Origin(),
         root->appendNew<Const32Value>(proc, Origin(), -1),
@@ -1193,17 +1330,16 @@ void testBitNotMem32(int32_t a)
     CHECK(isIdentical(input, static_cast<int32_t>((static_cast<uint32_t>(a) ^ 0xffffffff))));
 }
 
-void testNotOnBooleanAndBranch32(int64_t a, int64_t b)
+void testNotOnBooleanAndBranch32(int32_t a, int32_t b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t, int32_t>(proc, root);
     BasicBlock* thenCase = proc.addBlock();
     BasicBlock* elseCase = proc.addBlock();
 
-    Value* arg1 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
-    Value* arg2 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1));
+    Value* arg1 = arguments[0];
+    Value* arg2 = arguments[1];
     Value* argsAreEqual = root->appendNew<Value>(proc, Equal, Origin(), arg1, arg2);
     Value* argsAreNotEqual = root->appendNew<Value>(proc, BitXor, Origin(),
         root->appendNew<Const32Value>(proc, Origin(), 1),
@@ -1223,20 +1359,19 @@ void testNotOnBooleanAndBranch32(int64_t a, int64_t b)
         elseCase->appendNew<Const32Value>(proc, Origin(), -42));
 
     int32_t expectedValue = (a != b) ? 42 : -42;
-    CHECK(compileAndRun<int32_t>(proc, a, b) == expectedValue);
+    CHECK_EQ(compileAndRun<int32_t>(proc, a, b), expectedValue);
 }
 
-void testBitNotOnBooleanAndBranch32(int64_t a, int64_t b)
+void testBitNotOnBooleanAndBranch32(int32_t a, int32_t b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t, int32_t>(proc, root);
     BasicBlock* thenCase = proc.addBlock();
     BasicBlock* elseCase = proc.addBlock();
 
-    Value* arg1 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
-    Value* arg2 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1));
+    Value* arg1 = arguments[0];
+    Value* arg2 = arguments[1];
     Value* argsAreEqual = root->appendNew<Value>(proc, Equal, Origin(), arg1, arg2);
     Value* bitNotArgsAreEqual = root->appendNew<Value>(proc, BitXor, Origin(),
         root->appendNew<Const32Value>(proc, Origin(), -1),
@@ -1252,23 +1387,24 @@ void testBitNotOnBooleanAndBranch32(int64_t a, int64_t b)
         elseCase->appendNew<Const32Value>(proc, Origin(), -42));
 
     static constexpr int32_t expectedValue = 42;
-    CHECK(compileAndRun<int32_t>(proc, a, b) == expectedValue);
+    CHECK_EQ(compileAndRun<int32_t>(proc, a, b), expectedValue);
 }
 
 void testShlArgs(int64_t a, int64_t b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int64_t, int64_t>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
             proc, Shl, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0),
+            arguments[0],
             root->appendNew<Value>(
                 proc, Trunc, Origin(),
-                root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1))));
+                arguments[1])));
 
-    CHECK(compileAndRun<int64_t>(proc, a, b) == (a << b));
+    CHECK_EQ(compileAndRun<int64_t>(proc, a, b), (a << b));
 }
 
 void testShlImms(int64_t a, int64_t b)
@@ -1283,29 +1419,31 @@ void testShlImms(int64_t a, int64_t b)
             root->appendNew<Const32Value>(proc, Origin(), b)));
 
     b = b & 0x3f; // to avoid undefined behaviour below
-    CHECK(compileAndRun<int64_t>(proc) == (a << b));
+    CHECK_EQ(compileAndRun<int64_t>(proc), (a << b));
 }
 
 void testShlArgImm(int64_t a, int64_t b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int64_t>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
             proc, Shl, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0),
+            arguments[0],
             root->appendNew<Const32Value>(proc, Origin(), b)));
 
     b = b & 0x3f; // to avoid undefined behaviour below
-    CHECK(compileAndRun<int64_t>(proc, a) == (a << b));
+    CHECK_EQ(compileAndRun<int64_t>(proc, a), (a << b));
 }
 
 void testShlSShrArgImm(int64_t a, int64_t b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argA = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<int64_t>(proc, root);
+    Value* argA = arguments[0];
     Value* constB = root->appendNew<Const32Value>(proc, Origin(), b);
     Value* innerShift = root->appendNew<Value>(proc, SShr, Origin(), argA, constB);
     root->appendNewControlValue(
@@ -1316,39 +1454,35 @@ void testShlSShrArgImm(int64_t a, int64_t b)
             constB));
 
     b = b & 0x3f; // to avoid undefined behaviour below
-    CHECK(compileAndRun<int64_t>(proc, a) == ((a >> b) << b));
+    CHECK_EQ(compileAndRun<int64_t>(proc, a), ((a >> b) << b));
 }
 
 void testShlArg32(int32_t a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* value = root->appendNew<Value>(
-        proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* value = arguments[0];
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(proc, Shl, Origin(), value, value));
 
-    CHECK(compileAndRun<int32_t>(proc, a) == (a << a));
+    CHECK_EQ(compileAndRun<int32_t>(proc, a), (a << a));
 }
 
 void testShlArgs32(int32_t a, int32_t b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t, int32_t>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
             proc, Shl, Origin(),
-            root->appendNew<Value>(
-                proc, Trunc, Origin(),
-                root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0)),
-            root->appendNew<Value>(
-                proc, Trunc, Origin(),
-                root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1))));
+            arguments[0],
+            arguments[1]));
 
-    CHECK(compileAndRun<int32_t>(proc, a, b) == (a << b));
+    CHECK_EQ(compileAndRun<int32_t>(proc, a, b), (a << (b & 31)));
 }
 
 void testShlImms32(int32_t a, int32_t b)
@@ -1363,33 +1497,31 @@ void testShlImms32(int32_t a, int32_t b)
             root->appendNew<Const32Value>(proc, Origin(), b)));
 
     b = b & 0x1f; // to avoid undefined behaviour below
-    CHECK(compileAndRun<int32_t>(proc) == (a << b));
+    CHECK_EQ(compileAndRun<int32_t>(proc), (a << b));
 }
 
 void testShlArgImm32(int32_t a, int32_t b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
             proc, Shl, Origin(),
-            root->appendNew<Value>(
-                proc, Trunc, Origin(),
-                root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0)),
+            arguments[0],
             root->appendNew<Const32Value>(proc, Origin(), b)));
 
     b = b & 0x1f; // to avoid undefined behaviour below
-    CHECK(compileAndRun<int32_t>(proc, a) == (a << b));
+    CHECK_EQ(compileAndRun<int32_t>(proc, a), (a << b));
 }
 
 void testShlZShrArgImm32(int32_t a, int32_t b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argA = root->appendNew<Value>(
-        proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argA = arguments[0];
     Value* constB = root->appendNew<Const32Value>(proc, Origin(), b);
     Value* innerShift = root->appendNew<Value>(proc, ZShr, Origin(), argA, constB);
     root->appendNewControlValue(
@@ -1400,23 +1532,24 @@ void testShlZShrArgImm32(int32_t a, int32_t b)
             constB));
 
     b = b & 0x1f; // to avoid undefined behaviour below
-    CHECK(compileAndRun<int32_t>(proc, a) == static_cast<int32_t>((static_cast<uint32_t>(a) >> b) << b));
+    CHECK_EQ(compileAndRun<int32_t>(proc, a), static_cast<int32_t>((static_cast<uint32_t>(a) >> b) << b));
 }
 
 static void testSShrArgs(int64_t a, int64_t b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int64_t, int64_t>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
             proc, SShr, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0),
+            arguments[0],
             root->appendNew<Value>(
                 proc, Trunc, Origin(),
-                root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1))));
+                arguments[1])));
 
-    CHECK(compileAndRun<int64_t>(proc, a, b) == (a >> b));
+    CHECK_EQ(compileAndRun<int64_t>(proc, a, b), (a >> b));
 }
 
 static void testSShrImms(int64_t a, int64_t b)
@@ -1430,53 +1563,50 @@ static void testSShrImms(int64_t a, int64_t b)
             root->appendNew<Const64Value>(proc, Origin(), a),
             root->appendNew<Const32Value>(proc, Origin(), b)));
 
-    CHECK(compileAndRun<int64_t>(proc) == (a >> b));
+    CHECK_EQ(compileAndRun<int64_t>(proc), (a >> b));
 }
 
 static void testSShrArgImm(int64_t a, int64_t b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int64_t>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
             proc, SShr, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0),
+            arguments[0],
             root->appendNew<Const32Value>(proc, Origin(), b)));
 
-    CHECK(compileAndRun<int64_t>(proc, a) == (a >> b));
+    CHECK_EQ(compileAndRun<int64_t>(proc, a), (a >> b));
 }
 
 static void testSShrArg32(int32_t a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* value = root->appendNew<Value>(
-        proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* value = arguments[0];
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(proc, SShr, Origin(), value, value));
 
-    CHECK(compileAndRun<int32_t>(proc, a) == (a >> (a & 31)));
+    CHECK_EQ(compileAndRun<int32_t>(proc, a), (a >> (a & 31)));
 }
 
 static void testSShrArgs32(int32_t a, int32_t b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t, int32_t>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
             proc, SShr, Origin(),
-            root->appendNew<Value>(
-                proc, Trunc, Origin(),
-                root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0)),
-            root->appendNew<Value>(
-                proc, Trunc, Origin(),
-                root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1))));
+            arguments[0],
+            arguments[1]));
 
-    CHECK(compileAndRun<int32_t>(proc, a, b) == (a >> b));
+    CHECK_EQ(compileAndRun<int32_t>(proc, a, b), (a >> b));
 }
 
 static void testSShrImms32(int32_t a, int32_t b)
@@ -1490,39 +1620,37 @@ static void testSShrImms32(int32_t a, int32_t b)
             root->appendNew<Const32Value>(proc, Origin(), a),
             root->appendNew<Const32Value>(proc, Origin(), b)));
 
-    CHECK(compileAndRun<int32_t>(proc) == (a >> b));
+    CHECK_EQ(compileAndRun<int32_t>(proc), (a >> b));
 }
 
 static void testSShrArgImm32(int32_t a, int32_t b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
             proc, SShr, Origin(),
-            root->appendNew<Value>(
-                proc, Trunc, Origin(),
-                root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0)),
+            arguments[0],
             root->appendNew<Const32Value>(proc, Origin(), b)));
 
-    CHECK(compileAndRun<int32_t>(proc, a) == (a >> b));
+    CHECK_EQ(compileAndRun<int32_t>(proc, a), (a >> b));
 }
 
 static void testZShrArgs(uint64_t a, uint64_t b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int64_t, int32_t>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
             proc, ZShr, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0),
-            root->appendNew<Value>(
-                proc, Trunc, Origin(),
-                root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1))));
+            arguments[0],
+            arguments[1]));
 
-    CHECK(compileAndRun<uint64_t>(proc, a, b) == (a >> b));
+    CHECK_EQ(compileAndRun<uint64_t>(proc, a, b), (a >> b));
 }
 
 static void testZShrImms(uint64_t a, uint64_t b)
@@ -1536,53 +1664,50 @@ static void testZShrImms(uint64_t a, uint64_t b)
             root->appendNew<Const64Value>(proc, Origin(), a),
             root->appendNew<Const32Value>(proc, Origin(), b)));
 
-    CHECK(compileAndRun<uint64_t>(proc) == (a >> b));
+    CHECK_EQ(compileAndRun<uint64_t>(proc), (a >> b));
 }
 
 static void testZShrArgImm(uint64_t a, uint64_t b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<uint64_t>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
             proc, ZShr, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0),
+            arguments[0],
             root->appendNew<Const32Value>(proc, Origin(), b)));
 
-    CHECK(compileAndRun<uint64_t>(proc, a) == (a >> b));
+    CHECK_EQ(compileAndRun<uint64_t>(proc, a), (a >> b));
 }
 
 static void testZShrArg32(uint32_t a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* value = root->appendNew<Value>(
-        proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<uint32_t>(proc, root);
+    Value* value = arguments[0];
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(proc, ZShr, Origin(), value, value));
 
-    CHECK(compileAndRun<uint32_t>(proc, a) == (a >> (a & 31)));
+    CHECK_EQ(compileAndRun<uint32_t>(proc, a), (a >> (a & 31)));
 }
 
 static void testZShrArgs32(uint32_t a, uint32_t b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<uint32_t, uint32_t>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
             proc, ZShr, Origin(),
-            root->appendNew<Value>(
-                proc, Trunc, Origin(),
-                root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0)),
-            root->appendNew<Value>(
-                proc, Trunc, Origin(),
-                root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1))));
+            arguments[0],
+            arguments[1]));
 
-    CHECK(compileAndRun<uint32_t>(proc, a, b) == (a >> b));
+    CHECK_EQ(compileAndRun<uint32_t>(proc, a, b), (a >> (b & 31)));
 }
 
 static void testZShrImms32(uint32_t a, uint32_t b)
@@ -1596,23 +1721,22 @@ static void testZShrImms32(uint32_t a, uint32_t b)
             root->appendNew<Const32Value>(proc, Origin(), a),
             root->appendNew<Const32Value>(proc, Origin(), b)));
 
-    CHECK(compileAndRun<uint32_t>(proc) == (a >> b));
+    CHECK_EQ(compileAndRun<uint32_t>(proc), (a >> (b & 31)));
 }
 
 static void testZShrArgImm32(uint32_t a, uint32_t b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<uint32_t>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
             proc, ZShr, Origin(),
-            root->appendNew<Value>(
-                proc, Trunc, Origin(),
-                root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0)),
+            arguments[0],
             root->appendNew<Const32Value>(proc, Origin(), b)));
 
-    CHECK(compileAndRun<uint32_t>(proc, a) == (a >> b));
+    CHECK_EQ(compileAndRun<uint32_t>(proc, a), (a >> (b & 31)));
 }
 
 template<typename IntegerType>
@@ -1623,7 +1747,7 @@ static unsigned countLeadingZero(IntegerType value)
         return bitCount;
 
     unsigned counter = 0;
-    while (!(static_cast<uint64_t>(value) & (1l << (bitCount - 1)))) {
+    while (!(static_cast<uint64_t>(value) & (1ull << (bitCount - 1)))) {
         value <<= 1;
         ++counter;
     }
@@ -1634,54 +1758,58 @@ void testClzArg64(int64_t a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<int64_t>(proc, root);
+    Value* argument = arguments[0];
     Value* clzValue = root->appendNew<Value>(proc, Clz, Origin(), argument);
     root->appendNewControlValue(proc, Return, Origin(), clzValue);
-    CHECK(compileAndRun<unsigned>(proc, a) == countLeadingZero(a));
+    CHECK_EQ(compileAndRun<unsigned>(proc, a), countLeadingZero(a));
 }
 
 void testClzMem64(int64_t a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<int64_t*>(proc, root);
+    Value* address = arguments[0];
     MemoryValue* value = root->appendNew<MemoryValue>(proc, Load, Int64, Origin(), address);
     Value* clzValue = root->appendNew<Value>(proc, Clz, Origin(), value);
     root->appendNewControlValue(proc, Return, Origin(), clzValue);
-    CHECK(compileAndRun<unsigned>(proc, &a) == countLeadingZero(a));
+    CHECK_EQ(compileAndRun<unsigned>(proc, &a), countLeadingZero(a));
 }
 
 void testClzArg32(int32_t a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argument = arguments[0];
     Value* clzValue = root->appendNew<Value>(proc, Clz, Origin(), argument);
     root->appendNewControlValue(proc, Return, Origin(), clzValue);
-    CHECK(compileAndRun<unsigned>(proc, a) == countLeadingZero(a));
+    CHECK_EQ(compileAndRun<unsigned>(proc, a), countLeadingZero(a));
 }
 
 void testClzMem32(int32_t a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<int32_t*>(proc, root);
+    Value* address = arguments[0];
     MemoryValue* value = root->appendNew<MemoryValue>(proc, Load, Int32, Origin(), address);
     Value* clzValue = root->appendNew<Value>(proc, Clz, Origin(), value);
     root->appendNewControlValue(proc, Return, Origin(), clzValue);
-    CHECK(compileAndRun<unsigned>(proc, &a) == countLeadingZero(a));
+    CHECK_EQ(compileAndRun<unsigned>(proc, &a), countLeadingZero(a));
 }
 
 void testAbsArg(double a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<double>(proc, root);
+    auto* arg = arguments[0];
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
-            proc, Abs, Origin(),
-                root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0)));
+            proc, Abs, Origin(), arg));
 
     CHECK(isIdentical(compileAndRun<double>(proc, a), std::abs(a)));
 }
@@ -1702,7 +1830,8 @@ void testAbsMem(double a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<double*>(proc, root);
+    Value* address = arguments[0];
     MemoryValue* loadDouble = root->appendNew<MemoryValue>(proc, Load, Double, Origin(), address);
     root->appendNewControlValue(
         proc, Return, Origin(),
@@ -1715,8 +1844,8 @@ void testAbsAbsArg(double a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* firstAbs = root->appendNew<Value>(proc, Abs, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0));
+    auto arguments = cCallArgumentValues<double>(proc, root);
+    Value* firstAbs = root->appendNew<Value>(proc, Abs, Origin(), arguments[0]);
     Value* secondAbs = root->appendNew<Value>(proc, Abs, Origin(), firstAbs);
     root->appendNewControlValue(proc, Return, Origin(), secondAbs);
 
@@ -1727,8 +1856,8 @@ void testAbsNegArg(double a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* neg = root->appendNew<Value>(proc, Neg, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0));
+    auto arguments = cCallArgumentValues<double>(proc, root);
+    Value* neg = root->appendNew<Value>(proc, Neg, Origin(), arguments[0]);
     Value* abs = root->appendNew<Value>(proc, Abs, Origin(), neg);
     root->appendNewControlValue(proc, Return, Origin(), abs);
 
@@ -1739,41 +1868,43 @@ void testAbsBitwiseCastArg(double a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argumentAsInt64 = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<int64_t>(proc, root);
+    Value* argumentAsInt64 = arguments[0];
     Value* argumentAsDouble = root->appendNew<Value>(proc, BitwiseCast, Origin(), argumentAsInt64);
     Value* absValue = root->appendNew<Value>(proc, Abs, Origin(), argumentAsDouble);
     root->appendNewControlValue(proc, Return, Origin(), absValue);
 
-    CHECK(isIdentical(compileAndRun<double>(proc, bitwise_cast<int64_t>(a)), std::abs(a)));
+    CHECK(isIdentical(compileAndRun<double>(proc, std::bit_cast<int64_t>(a)), std::abs(a)));
 }
 
 void testBitwiseCastAbsBitwiseCastArg(double a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argumentAsInt64 = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<int64_t>(proc, root);
+    Value* argumentAsInt64 = arguments[0];
     Value* argumentAsDouble = root->appendNew<Value>(proc, BitwiseCast, Origin(), argumentAsInt64);
     Value* absValue = root->appendNew<Value>(proc, Abs, Origin(), argumentAsDouble);
     Value* resultAsInt64 = root->appendNew<Value>(proc, BitwiseCast, Origin(), absValue);
 
     root->appendNewControlValue(proc, Return, Origin(), resultAsInt64);
 
-    int64_t expectedResult = bitwise_cast<int64_t>(std::abs(a));
-    CHECK(isIdentical(compileAndRun<int64_t>(proc, bitwise_cast<int64_t>(a)), expectedResult));
+    int64_t expectedResult = std::bit_cast<int64_t>(std::abs(a));
+    CHECK(isIdentical(compileAndRun<int64_t>(proc, std::bit_cast<int64_t>(a)), expectedResult));
 }
 
 void testAbsArg(float a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argument32 = arguments[0];
     Value* argument = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
     Value* result = root->appendNew<Value>(proc, Abs, Origin(), argument);
     Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), result);
     root->appendNewControlValue(proc, Return, Origin(), result32);
 
-    CHECK(isIdentical(compileAndRun<int32_t>(proc, bitwise_cast<int32_t>(a)), bitwise_cast<int32_t>(static_cast<float>(std::abs(a)))));
+    CHECK(isIdentical(compileAndRun<int32_t>(proc, std::bit_cast<int32_t>(a)), std::bit_cast<int32_t>(static_cast<float>(std::abs(a)))));
 }
 
 void testAbsImm(float a)
@@ -1785,85 +1916,87 @@ void testAbsImm(float a)
     Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), result);
     root->appendNewControlValue(proc, Return, Origin(), result32);
 
-    CHECK(isIdentical(compileAndRun<int32_t>(proc, bitwise_cast<int32_t>(a)), bitwise_cast<int32_t>(static_cast<float>(std::abs(a)))));
+    CHECK(isIdentical(compileAndRun<int32_t>(proc, std::bit_cast<int32_t>(a)), std::bit_cast<int32_t>(static_cast<float>(std::abs(a)))));
 }
 
 void testAbsMem(float a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<float*>(proc, root);
+    Value* address = arguments[0];
     MemoryValue* loadFloat = root->appendNew<MemoryValue>(proc, Load, Float, Origin(), address);
     Value* result = root->appendNew<Value>(proc, Abs, Origin(), loadFloat);
     Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), result);
     root->appendNewControlValue(proc, Return, Origin(), result32);
 
-    CHECK(isIdentical(compileAndRun<int32_t>(proc, &a), bitwise_cast<int32_t>(static_cast<float>(std::abs(a)))));
+    CHECK(isIdentical(compileAndRun<int32_t>(proc, &a), std::bit_cast<int32_t>(static_cast<float>(std::abs(a)))));
 }
 
 void testAbsAbsArg(float a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argument32 = arguments[0];
+
     Value* argument = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
     Value* firstAbs = root->appendNew<Value>(proc, Abs, Origin(), argument);
     Value* secondAbs = root->appendNew<Value>(proc, Abs, Origin(), firstAbs);
     root->appendNewControlValue(proc, Return, Origin(), secondAbs);
 
-    CHECK(isIdentical(compileAndRun<float>(proc, bitwise_cast<int32_t>(a)), static_cast<float>(std::abs(std::abs(a)))));
+    CHECK(isIdentical(compileAndRun<float>(proc, std::bit_cast<int32_t>(a)), static_cast<float>(std::abs(std::abs(a)))));
 }
 
 void testAbsNegArg(float a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argument32 = arguments[0];
     Value* argument = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
     Value* neg = root->appendNew<Value>(proc, Neg, Origin(), argument);
     Value* abs = root->appendNew<Value>(proc, Abs, Origin(), neg);
     root->appendNewControlValue(proc, Return, Origin(), abs);
 
-    CHECK(isIdentical(compileAndRun<float>(proc, bitwise_cast<int32_t>(a)), static_cast<float>(std::abs(- a))));
+    CHECK(isIdentical(compileAndRun<float>(proc, std::bit_cast<int32_t>(a)), static_cast<float>(std::abs(- a))));
 }
 
 void testAbsBitwiseCastArg(float a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argumentAsInt32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argumentAsInt32 = arguments[0];
     Value* argumentAsfloat = root->appendNew<Value>(proc, BitwiseCast, Origin(), argumentAsInt32);
     Value* absValue = root->appendNew<Value>(proc, Abs, Origin(), argumentAsfloat);
     root->appendNewControlValue(proc, Return, Origin(), absValue);
 
-    CHECK(isIdentical(compileAndRun<float>(proc, bitwise_cast<int32_t>(a)), static_cast<float>(std::abs(a))));
+    CHECK(isIdentical(compileAndRun<float>(proc, std::bit_cast<int32_t>(a)), static_cast<float>(std::abs(a))));
 }
 
 void testBitwiseCastAbsBitwiseCastArg(float a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argumentAsInt32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argumentAsInt32 = arguments[0];
     Value* argumentAsfloat = root->appendNew<Value>(proc, BitwiseCast, Origin(), argumentAsInt32);
     Value* absValue = root->appendNew<Value>(proc, Abs, Origin(), argumentAsfloat);
     Value* resultAsInt64 = root->appendNew<Value>(proc, BitwiseCast, Origin(), absValue);
 
     root->appendNewControlValue(proc, Return, Origin(), resultAsInt64);
 
-    int32_t expectedResult = bitwise_cast<int32_t>(static_cast<float>(std::abs(a)));
-    CHECK(isIdentical(compileAndRun<int32_t>(proc, bitwise_cast<int32_t>(a)), expectedResult));
+    int32_t expectedResult = std::bit_cast<int32_t>(static_cast<float>(std::abs(a)));
+    CHECK(isIdentical(compileAndRun<int32_t>(proc, std::bit_cast<int32_t>(a)), expectedResult));
 }
 
 void testAbsArgWithUselessDoubleConversion(float a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    auto* argument32 = arguments[0];
     Value* floatValue = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
     Value* asDouble = root->appendNew<Value>(proc, FloatToDouble, Origin(), floatValue);
     Value* result = root->appendNew<Value>(proc, Abs, Origin(), asDouble);
@@ -1871,27 +2004,27 @@ void testAbsArgWithUselessDoubleConversion(float a)
     Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), floatResult);
     root->appendNewControlValue(proc, Return, Origin(), result32);
 
-    CHECK(isIdentical(compileAndRun<int32_t>(proc, bitwise_cast<int32_t>(a)), bitwise_cast<int32_t>(static_cast<float>(std::abs(a)))));
+    CHECK(isIdentical(compileAndRun<int32_t>(proc, std::bit_cast<int32_t>(a)), std::bit_cast<int32_t>(static_cast<float>(std::abs(a)))));
 }
 
 void testAbsArgWithEffectfulDoubleConversion(float a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t, double*>(proc, root);
+    Value* argument32 = arguments[0];
     Value* floatValue = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
     Value* asDouble = root->appendNew<Value>(proc, FloatToDouble, Origin(), floatValue);
     Value* result = root->appendNew<Value>(proc, Abs, Origin(), asDouble);
     Value* floatResult = root->appendNew<Value>(proc, DoubleToFloat, Origin(), result);
     Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), floatResult);
-    Value* doubleAddress = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+    Value* doubleAddress = arguments[1];
     root->appendNew<MemoryValue>(proc, Store, Origin(), result, doubleAddress);
     root->appendNewControlValue(proc, Return, Origin(), result32);
 
     double effect = 0;
-    int32_t resultValue = compileAndRun<int32_t>(proc, bitwise_cast<int32_t>(a), &effect);
-    CHECK(isIdentical(resultValue, bitwise_cast<int32_t>(static_cast<float>(std::abs(a)))));
+    int32_t resultValue = compileAndRun<int32_t>(proc, std::bit_cast<int32_t>(a), &effect);
+    CHECK(isIdentical(resultValue, std::bit_cast<int32_t>(static_cast<float>(std::abs(a)))));
     CHECK(isIdentical(effect, static_cast<double>(std::abs(a))));
 }
 
@@ -1899,11 +2032,10 @@ void testCeilArg(double a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<double>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
-        root->appendNew<Value>(
-            proc, Ceil, Origin(),
-                root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0)));
+        root->appendNew<Value>(proc, Ceil, Origin(), arguments[0]));
 
     CHECK(isIdentical(compileAndRun<double>(proc, a), ceil(a)));
 }
@@ -1924,7 +2056,8 @@ void testCeilMem(double a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<double*>(proc, root);
+    Value* address = arguments[0];
     MemoryValue* loadDouble = root->appendNew<MemoryValue>(proc, Load, Double, Origin(), address);
     root->appendNewControlValue(
         proc, Return, Origin(),
@@ -1937,8 +2070,8 @@ void testCeilCeilArg(double a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* firstCeil = root->appendNew<Value>(proc, Ceil, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0));
+    auto arguments = cCallArgumentValues<double>(proc, root);
+    Value* firstCeil = root->appendNew<Value>(proc, Ceil, Origin(), arguments[0]);
     Value* secondCeil = root->appendNew<Value>(proc, Ceil, Origin(), firstCeil);
     root->appendNewControlValue(proc, Return, Origin(), secondCeil);
 
@@ -1949,8 +2082,9 @@ void testFloorCeilArg(double a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<double>(proc, root);
     Value* firstCeil = root->appendNew<Value>(proc, Ceil, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0));
+        arguments[0]);
     Value* wrappingFloor = root->appendNew<Value>(proc, Floor, Origin(), firstCeil);
     root->appendNewControlValue(proc, Return, Origin(), wrappingFloor);
 
@@ -1961,7 +2095,8 @@ void testCeilIToD64(int64_t a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<int64_t>(proc, root);
+    Value* argument = arguments[0];
     Value* argumentAsDouble = root->appendNew<Value>(proc, IToD, Origin(), argument);
 
     root->appendNewControlValue(
@@ -1975,8 +2110,8 @@ void testCeilIToD32(int64_t a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argument = arguments[0];
     Value* argumentAsDouble = root->appendNew<Value>(proc, IToD, Origin(), argument);
 
     root->appendNewControlValue(
@@ -1990,14 +2125,14 @@ void testCeilArg(float a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argument32 = arguments[0];
     Value* argument = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
     Value* result = root->appendNew<Value>(proc, Ceil, Origin(), argument);
     Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), result);
     root->appendNewControlValue(proc, Return, Origin(), result32);
 
-    CHECK(isIdentical(compileAndRun<int32_t>(proc, bitwise_cast<int32_t>(a)), bitwise_cast<int32_t>(ceilf(a))));
+    CHECK(isIdentical(compileAndRun<int32_t>(proc, std::bit_cast<int32_t>(a)), std::bit_cast<int32_t>(ceilf(a))));
 }
 
 void testCeilImm(float a)
@@ -2009,56 +2144,57 @@ void testCeilImm(float a)
     Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), result);
     root->appendNewControlValue(proc, Return, Origin(), result32);
 
-    CHECK(isIdentical(compileAndRun<int32_t>(proc, bitwise_cast<int32_t>(a)), bitwise_cast<int32_t>(ceilf(a))));
+    CHECK(isIdentical(compileAndRun<int32_t>(proc), std::bit_cast<int32_t>(ceilf(a))));
 }
 
 void testCeilMem(float a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<float*>(proc, root);
+    Value* address = arguments[0];
     MemoryValue* loadFloat = root->appendNew<MemoryValue>(proc, Load, Float, Origin(), address);
     Value* result = root->appendNew<Value>(proc, Ceil, Origin(), loadFloat);
     Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), result);
     root->appendNewControlValue(proc, Return, Origin(), result32);
 
-    CHECK(isIdentical(compileAndRun<int32_t>(proc, &a), bitwise_cast<int32_t>(ceilf(a))));
+    CHECK(isIdentical(compileAndRun<int32_t>(proc, &a), std::bit_cast<int32_t>(ceilf(a))));
 }
 
 void testCeilCeilArg(float a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argument32 = arguments[0];
     Value* argument = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
     Value* firstCeil = root->appendNew<Value>(proc, Ceil, Origin(), argument);
     Value* secondCeil = root->appendNew<Value>(proc, Ceil, Origin(), firstCeil);
     root->appendNewControlValue(proc, Return, Origin(), secondCeil);
 
-    CHECK(isIdentical(compileAndRun<float>(proc, bitwise_cast<int32_t>(a)), ceilf(a)));
+    CHECK(isIdentical(compileAndRun<float>(proc, std::bit_cast<int32_t>(a)), ceilf(a)));
 }
 
 void testFloorCeilArg(float a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argument32 = arguments[0];
     Value* argument = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
     Value* firstCeil = root->appendNew<Value>(proc, Ceil, Origin(), argument);
     Value* wrappingFloor = root->appendNew<Value>(proc, Floor, Origin(), firstCeil);
     root->appendNewControlValue(proc, Return, Origin(), wrappingFloor);
 
-    CHECK(isIdentical(compileAndRun<float>(proc, bitwise_cast<int32_t>(a)), ceilf(a)));
+    CHECK(isIdentical(compileAndRun<float>(proc, std::bit_cast<int32_t>(a)), ceilf(a)));
 }
 
 void testCeilArgWithUselessDoubleConversion(float a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argument32 = arguments[0];
     Value* floatValue = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
     Value* asDouble = root->appendNew<Value>(proc, FloatToDouble, Origin(), floatValue);
     Value* result = root->appendNew<Value>(proc, Ceil, Origin(), asDouble);
@@ -2066,27 +2202,27 @@ void testCeilArgWithUselessDoubleConversion(float a)
     Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), floatResult);
     root->appendNewControlValue(proc, Return, Origin(), result32);
 
-    CHECK(isIdentical(compileAndRun<int32_t>(proc, bitwise_cast<int32_t>(a)), bitwise_cast<int32_t>(ceilf(a))));
+    CHECK(isIdentical(compileAndRun<int32_t>(proc, std::bit_cast<int32_t>(a)), std::bit_cast<int32_t>(ceilf(a))));
 }
 
 void testCeilArgWithEffectfulDoubleConversion(float a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t, double*>(proc, root);
+    Value* argument32 = arguments[0];
     Value* floatValue = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
     Value* asDouble = root->appendNew<Value>(proc, FloatToDouble, Origin(), floatValue);
     Value* result = root->appendNew<Value>(proc, Ceil, Origin(), asDouble);
     Value* floatResult = root->appendNew<Value>(proc, DoubleToFloat, Origin(), result);
     Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), floatResult);
-    Value* doubleAddress = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+    Value* doubleAddress = arguments[1];
     root->appendNew<MemoryValue>(proc, Store, Origin(), result, doubleAddress);
     root->appendNewControlValue(proc, Return, Origin(), result32);
 
     double effect = 0;
-    int32_t resultValue = compileAndRun<int32_t>(proc, bitwise_cast<int32_t>(a), &effect);
-    CHECK(isIdentical(resultValue, bitwise_cast<int32_t>(ceilf(a))));
+    int32_t resultValue = compileAndRun<int32_t>(proc, std::bit_cast<int32_t>(a), &effect);
+    CHECK(isIdentical(resultValue, std::bit_cast<int32_t>(ceilf(a))));
     CHECK(isIdentical(effect, static_cast<double>(ceilf(a))));
 }
 
@@ -2094,11 +2230,10 @@ void testFloorArg(double a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<double>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
-        root->appendNew<Value>(
-            proc, Floor, Origin(),
-                root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0)));
+        root->appendNew<Value>(proc, Floor, Origin(), arguments[0]));
 
     CHECK(isIdentical(compileAndRun<double>(proc, a), floor(a)));
 }
@@ -2119,7 +2254,8 @@ void testFloorMem(double a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<double*>(proc, root);
+    Value* address = arguments[0];
     MemoryValue* loadDouble = root->appendNew<MemoryValue>(proc, Load, Double, Origin(), address);
     root->appendNewControlValue(
         proc, Return, Origin(),
@@ -2132,8 +2268,8 @@ void testFloorFloorArg(double a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* firstFloor = root->appendNew<Value>(proc, Floor, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0));
+    auto arguments = cCallArgumentValues<double>(proc, root);
+    Value* firstFloor = root->appendNew<Value>(proc, Floor, Origin(), arguments[0]);
     Value* secondFloor = root->appendNew<Value>(proc, Floor, Origin(), firstFloor);
     root->appendNewControlValue(proc, Return, Origin(), secondFloor);
 
@@ -2144,8 +2280,8 @@ void testCeilFloorArg(double a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* firstFloor = root->appendNew<Value>(proc, Floor, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0));
+    auto arguments = cCallArgumentValues<double>(proc, root);
+    Value* firstFloor = root->appendNew<Value>(proc, Floor, Origin(), arguments[0]);
     Value* wrappingCeil = root->appendNew<Value>(proc, Ceil, Origin(), firstFloor);
     root->appendNewControlValue(proc, Return, Origin(), wrappingCeil);
 
@@ -2156,7 +2292,8 @@ void testFloorIToD64(int64_t a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<int64_t>(proc, root);
+    Value* argument = arguments[0];
     Value* argumentAsDouble = root->appendNew<Value>(proc, IToD, Origin(), argument);
 
     root->appendNewControlValue(
@@ -2170,8 +2307,8 @@ void testFloorIToD32(int64_t a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int64_t>(proc, root);
+    Value* argument = root->appendNew<Value>(proc, Trunc, Origin(), arguments[0]);
     Value* argumentAsDouble = root->appendNew<Value>(proc, IToD, Origin(), argument);
 
     root->appendNewControlValue(
@@ -2185,14 +2322,14 @@ void testFloorArg(float a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argument32 = arguments[0];
     Value* argument = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
     Value* result = root->appendNew<Value>(proc, Floor, Origin(), argument);
     Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), result);
     root->appendNewControlValue(proc, Return, Origin(), result32);
 
-    CHECK(isIdentical(compileAndRun<int32_t>(proc, bitwise_cast<int32_t>(a)), bitwise_cast<int32_t>(floorf(a))));
+    CHECK(isIdentical(compileAndRun<int32_t>(proc, std::bit_cast<int32_t>(a)), std::bit_cast<int32_t>(floorf(a))));
 }
 
 void testFloorImm(float a)
@@ -2204,56 +2341,57 @@ void testFloorImm(float a)
     Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), result);
     root->appendNewControlValue(proc, Return, Origin(), result32);
 
-    CHECK(isIdentical(compileAndRun<int32_t>(proc, bitwise_cast<int32_t>(a)), bitwise_cast<int32_t>(floorf(a))));
+    CHECK(isIdentical(compileAndRun<int32_t>(proc), std::bit_cast<int32_t>(floorf(a))));
 }
 
 void testFloorMem(float a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<float*>(proc, root);
+    Value* address = arguments[0];
     MemoryValue* loadFloat = root->appendNew<MemoryValue>(proc, Load, Float, Origin(), address);
     Value* result = root->appendNew<Value>(proc, Floor, Origin(), loadFloat);
     Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), result);
     root->appendNewControlValue(proc, Return, Origin(), result32);
 
-    CHECK(isIdentical(compileAndRun<int32_t>(proc, &a), bitwise_cast<int32_t>(floorf(a))));
+    CHECK(isIdentical(compileAndRun<int32_t>(proc, &a), std::bit_cast<int32_t>(floorf(a))));
 }
 
 void testFloorFloorArg(float a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argument32 = arguments[0];
     Value* argument = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
     Value* firstFloor = root->appendNew<Value>(proc, Floor, Origin(), argument);
     Value* secondFloor = root->appendNew<Value>(proc, Floor, Origin(), firstFloor);
     root->appendNewControlValue(proc, Return, Origin(), secondFloor);
 
-    CHECK(isIdentical(compileAndRun<float>(proc, bitwise_cast<int32_t>(a)), floorf(a)));
+    CHECK(isIdentical(compileAndRun<float>(proc, std::bit_cast<int32_t>(a)), floorf(a)));
 }
 
 void testCeilFloorArg(float a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argument32 = arguments[0];
     Value* argument = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
     Value* firstFloor = root->appendNew<Value>(proc, Floor, Origin(), argument);
     Value* wrappingCeil = root->appendNew<Value>(proc, Ceil, Origin(), firstFloor);
     root->appendNewControlValue(proc, Return, Origin(), wrappingCeil);
 
-    CHECK(isIdentical(compileAndRun<float>(proc, bitwise_cast<int32_t>(a)), floorf(a)));
+    CHECK(isIdentical(compileAndRun<float>(proc, std::bit_cast<int32_t>(a)), floorf(a)));
 }
 
 void testFloorArgWithUselessDoubleConversion(float a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argument32 = arguments[0];
     Value* floatValue = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
     Value* asDouble = root->appendNew<Value>(proc, FloatToDouble, Origin(), floatValue);
     Value* result = root->appendNew<Value>(proc, Floor, Origin(), asDouble);
@@ -2261,35 +2399,113 @@ void testFloorArgWithUselessDoubleConversion(float a)
     Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), floatResult);
     root->appendNewControlValue(proc, Return, Origin(), result32);
 
-    CHECK(isIdentical(compileAndRun<int32_t>(proc, bitwise_cast<int32_t>(a)), bitwise_cast<int32_t>(floorf(a))));
+    CHECK(isIdentical(compileAndRun<int32_t>(proc, std::bit_cast<int32_t>(a)), std::bit_cast<int32_t>(floorf(a))));
 }
 
 void testFloorArgWithEffectfulDoubleConversion(float a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t, double*>(proc, root);
+    Value* argument32 = arguments[0];
     Value* floatValue = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
     Value* asDouble = root->appendNew<Value>(proc, FloatToDouble, Origin(), floatValue);
     Value* result = root->appendNew<Value>(proc, Floor, Origin(), asDouble);
     Value* floatResult = root->appendNew<Value>(proc, DoubleToFloat, Origin(), result);
     Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), floatResult);
-    Value* doubleAddress = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+    Value* doubleAddress = arguments[1];
     root->appendNew<MemoryValue>(proc, Store, Origin(), result, doubleAddress);
     root->appendNewControlValue(proc, Return, Origin(), result32);
 
     double effect = 0;
-    int32_t resultValue = compileAndRun<int32_t>(proc, bitwise_cast<int32_t>(a), &effect);
-    CHECK(isIdentical(resultValue, bitwise_cast<int32_t>(floorf(a))));
+    int32_t resultValue = compileAndRun<int32_t>(proc, std::bit_cast<int32_t>(a), &effect);
+    CHECK(isIdentical(resultValue, std::bit_cast<int32_t>(floorf(a))));
     CHECK(isIdentical(effect, static_cast<double>(floorf(a))));
+}
+
+void testFTruncArg(double a)
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<double>(proc, root);
+    root->appendNewControlValue(
+        proc, Return, Origin(),
+        root->appendNew<Value>(proc, FTrunc, Origin(), arguments[0]));
+
+    CHECK(isIdentical(compileAndRun<double>(proc, a), trunc(a)));
+}
+
+void testFTruncImm(double a)
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    Value* argument = root->appendNew<ConstDoubleValue>(proc, Origin(), a);
+    root->appendNewControlValue(
+        proc, Return, Origin(),
+        root->appendNew<Value>(proc, FTrunc, Origin(), argument));
+
+    CHECK(isIdentical(compileAndRun<double>(proc), trunc(a)));
+}
+
+void testFTruncMem(double a)
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<double*>(proc, root);
+    Value* address = arguments[0];
+    MemoryValue* loadDouble = root->appendNew<MemoryValue>(proc, Load, Double, Origin(), address);
+    root->appendNewControlValue(
+        proc, Return, Origin(),
+        root->appendNew<Value>(proc, FTrunc, Origin(), loadDouble));
+
+    CHECK(isIdentical(compileAndRun<double>(proc, &a), trunc(a)));
+}
+
+void testFTruncArg(float a)
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argument32 = arguments[0];
+    Value* argument = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
+    Value* result = root->appendNew<Value>(proc, FTrunc, Origin(), argument);
+    Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), result);
+    root->appendNewControlValue(proc, Return, Origin(), result32);
+
+    CHECK(isIdentical(compileAndRun<int32_t>(proc, std::bit_cast<int32_t>(a)), std::bit_cast<int32_t>(truncf(a))));
+}
+
+void testFTruncImm(float a)
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    Value* argument = root->appendNew<ConstFloatValue>(proc, Origin(), a);
+    Value* result = root->appendNew<Value>(proc, FTrunc, Origin(), argument);
+    Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), result);
+    root->appendNewControlValue(proc, Return, Origin(), result32);
+
+    CHECK(isIdentical(compileAndRun<int32_t>(proc), std::bit_cast<int32_t>(truncf(a))));
+}
+
+void testFTruncMem(float a)
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<float*>(proc, root);
+    Value* address = arguments[0];
+    MemoryValue* loadFloat = root->appendNew<MemoryValue>(proc, Load, Float, Origin(), address);
+    Value* result = root->appendNew<Value>(proc, FTrunc, Origin(), loadFloat);
+    Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), result);
+    root->appendNewControlValue(proc, Return, Origin(), result32);
+
+    CHECK(isIdentical(compileAndRun<int32_t>(proc, &a), std::bit_cast<int32_t>(truncf(a))));
 }
 
 double correctSqrt(double value)
 {
-#if CPU(X86) || CPU(X86_64)
+#if CPU(X86_64)
     double result;
-    asm ("sqrtsd %1, %0" : "=x"(result) : "x"(value));
+    __asm__("sqrtsd %1, %0" : "=x"(result) : "x"(value));
     return result;
 #else
     return sqrt(value);
@@ -2300,11 +2516,10 @@ void testSqrtArg(double a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<double>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
-        root->appendNew<Value>(
-            proc, Sqrt, Origin(),
-                root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0)));
+        root->appendNew<Value>(proc, Sqrt, Origin(), arguments[0]));
 
     CHECK(isIdentical(compileAndRun<double>(proc, a), correctSqrt(a)));
 }
@@ -2325,7 +2540,8 @@ void testSqrtMem(double a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<double*>(proc, root);
+    Value* address = arguments[0];
     MemoryValue* loadDouble = root->appendNew<MemoryValue>(proc, Load, Double, Origin(), address);
     root->appendNewControlValue(
         proc, Return, Origin(),
@@ -2338,14 +2554,14 @@ void testSqrtArg(float a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argument32 = arguments[0];
     Value* argument = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
     Value* result = root->appendNew<Value>(proc, Sqrt, Origin(), argument);
     Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), result);
     root->appendNewControlValue(proc, Return, Origin(), result32);
 
-    CHECK(isIdentical(compileAndRun<int32_t>(proc, bitwise_cast<int32_t>(a)), bitwise_cast<int32_t>(static_cast<float>(correctSqrt(a)))));
+    CHECK(isIdentical(compileAndRun<int32_t>(proc, std::bit_cast<int32_t>(a)), std::bit_cast<int32_t>(static_cast<float>(correctSqrt(a)))));
 }
 
 void testSqrtImm(float a)
@@ -2357,28 +2573,29 @@ void testSqrtImm(float a)
     Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), result);
     root->appendNewControlValue(proc, Return, Origin(), result32);
 
-    CHECK(isIdentical(compileAndRun<int32_t>(proc, bitwise_cast<int32_t>(a)), bitwise_cast<int32_t>(static_cast<float>(correctSqrt(a)))));
+    CHECK(isIdentical(compileAndRun<int32_t>(proc), std::bit_cast<int32_t>(static_cast<float>(correctSqrt(a)))));
 }
 
 void testSqrtMem(float a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<float*>(proc, root);
+    Value* address = arguments[0];
     MemoryValue* loadFloat = root->appendNew<MemoryValue>(proc, Load, Float, Origin(), address);
     Value* result = root->appendNew<Value>(proc, Sqrt, Origin(), loadFloat);
     Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), result);
     root->appendNewControlValue(proc, Return, Origin(), result32);
 
-    CHECK(isIdentical(compileAndRun<int32_t>(proc, &a), bitwise_cast<int32_t>(static_cast<float>(correctSqrt(a)))));
+    CHECK(isIdentical(compileAndRun<int32_t>(proc, &a), std::bit_cast<int32_t>(static_cast<float>(correctSqrt(a)))));
 }
 
 void testSqrtArgWithUselessDoubleConversion(float a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argument32 = arguments[0];
     Value* floatValue = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
     Value* asDouble = root->appendNew<Value>(proc, FloatToDouble, Origin(), floatValue);
     Value* result = root->appendNew<Value>(proc, Sqrt, Origin(), asDouble);
@@ -2386,86 +2603,102 @@ void testSqrtArgWithUselessDoubleConversion(float a)
     Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), floatResult);
     root->appendNewControlValue(proc, Return, Origin(), result32);
 
-    CHECK(isIdentical(compileAndRun<int32_t>(proc, bitwise_cast<int32_t>(a)), bitwise_cast<int32_t>(static_cast<float>(correctSqrt(a)))));
+    CHECK(isIdentical(compileAndRun<int32_t>(proc, std::bit_cast<int32_t>(a)), std::bit_cast<int32_t>(static_cast<float>(correctSqrt(a)))));
 }
 
 void testSqrtArgWithEffectfulDoubleConversion(float a)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t, double*>(proc, root);
+    Value* argument32 = arguments[0];
     Value* floatValue = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
     Value* asDouble = root->appendNew<Value>(proc, FloatToDouble, Origin(), floatValue);
     Value* result = root->appendNew<Value>(proc, Sqrt, Origin(), asDouble);
     Value* floatResult = root->appendNew<Value>(proc, DoubleToFloat, Origin(), result);
     Value* result32 = root->appendNew<Value>(proc, BitwiseCast, Origin(), floatResult);
-    Value* doubleAddress = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+    Value* doubleAddress = arguments[1];
     root->appendNew<MemoryValue>(proc, Store, Origin(), result, doubleAddress);
     root->appendNewControlValue(proc, Return, Origin(), result32);
 
     double effect = 0;
-    int32_t resultValue = compileAndRun<int32_t>(proc, bitwise_cast<int32_t>(a), &effect);
-    CHECK(isIdentical(resultValue, bitwise_cast<int32_t>(static_cast<float>(correctSqrt(a)))));
+    int32_t resultValue = compileAndRun<int32_t>(proc, std::bit_cast<int32_t>(a), &effect);
+    CHECK(isIdentical(resultValue, std::bit_cast<int32_t>(static_cast<float>(correctSqrt(a)))));
     double expected = static_cast<double>(correctSqrt(a));
     CHECK(isIdentical(effect, expected));
+}
+
+void testPurifyNaN()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<double>(proc, root);
+    root->appendNewControlValue(
+        proc, Return, Origin(),
+        root->appendNew<Value>(proc, PurifyNaN, Origin(), arguments[0]));
+
+    auto code = compileProc(proc);
+
+    for (auto& value : floatingPointOperands<double>())
+        CHECK(isIdentical(invoke<double>(*code, value.value), JSC::purifyNaN(value.value)));
+
+    CHECK(!isImpureNaN(invoke<double>(*code, std::bit_cast<double>(0xffff000000000000ULL))));
 }
 
 void testCompareTwoFloatToDouble(float a, float b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t, int32_t>(proc, root);
 
-    Value* arg1As32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    Value* arg1As32 = arguments[0];
     Value* arg1Float = root->appendNew<Value>(proc, BitwiseCast, Origin(), arg1As32);
     Value* arg1AsDouble = root->appendNew<Value>(proc, FloatToDouble, Origin(), arg1Float);
 
-    Value* arg2As32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1));
+    Value* arg2As32 = arguments[1];
     Value* arg2Float = root->appendNew<Value>(proc, BitwiseCast, Origin(), arg2As32);
     Value* arg2AsDouble = root->appendNew<Value>(proc, FloatToDouble, Origin(), arg2Float);
     Value* equal = root->appendNew<Value>(proc, Equal, Origin(), arg1AsDouble, arg2AsDouble);
 
     root->appendNewControlValue(proc, Return, Origin(), equal);
 
-    CHECK(compileAndRun<int64_t>(proc, bitwise_cast<int32_t>(a), bitwise_cast<int32_t>(b)) == (a == b));
+    CHECK(compileAndRun<intptr_t>(proc, std::bit_cast<int32_t>(a), std::bit_cast<int32_t>(b)) == (a == b));
 }
 
 void testCompareOneFloatToDouble(float a, double b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t, double>(proc, root);
 
-    Value* arg1As32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    Value* arg1As32 = arguments[0];
     Value* arg1Float = root->appendNew<Value>(proc, BitwiseCast, Origin(), arg1As32);
     Value* arg1AsDouble = root->appendNew<Value>(proc, FloatToDouble, Origin(), arg1Float);
 
-    Value* arg2AsDouble = root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0);
+    Value* arg2AsDouble = arguments[1];
     Value* equal = root->appendNew<Value>(proc, Equal, Origin(), arg1AsDouble, arg2AsDouble);
 
     root->appendNewControlValue(proc, Return, Origin(), equal);
 
-    CHECK(compileAndRun<int64_t>(proc, bitwise_cast<int32_t>(a), b) == (a == b));
+    CHECK(compileAndRun<intptr_t>(proc, std::bit_cast<int32_t>(a), b) == (a == b));
 }
 
 void testCompareFloatToDoubleThroughPhi(float a, float b)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<long, int32_t, double>(proc, root);
     BasicBlock* thenCase = proc.addBlock();
     BasicBlock* elseCase = proc.addBlock();
     BasicBlock* tail = proc.addBlock();
 
-    Value* condition = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    Value* condition = arguments[0];
 
-    Value* arg1As32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1));
+    Value* arg1As32 = arguments[1];
     Value* arg1Float = root->appendNew<Value>(proc, BitwiseCast, Origin(), arg1As32);
     Value* arg1AsDouble = root->appendNew<Value>(proc, FloatToDouble, Origin(), arg1Float);
 
-    Value* arg2AsDouble = root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0);
+    Value* arg2AsDouble = arguments[2];
     Value* arg2AsFloat = root->appendNew<Value>(proc, DoubleToFloat, Origin(), arg2AsDouble);
     Value* arg2AsFRoundedDouble = root->appendNew<Value>(proc, FloatToDouble, Origin(), arg2AsFloat);
 
@@ -2488,10 +2721,10 @@ void testCompareFloatToDoubleThroughPhi(float a, float b)
     tail->appendNewControlValue(proc, Return, Origin(), equal);
 
     auto code = compileProc(proc);
-    int32_t integerA = bitwise_cast<int32_t>(a);
+    int32_t integerA = std::bit_cast<int32_t>(a);
     double doubleB = b;
-    CHECK(invoke<int64_t>(*code, 1, integerA, doubleB) == (a == b));
-    CHECK(invoke<int64_t>(*code, 0, integerA, doubleB) == (b == 0));
+    CHECK_EQ(invoke<intptr_t>(*code, 1L, integerA, doubleB), (a == b));
+    CHECK_EQ(invoke<intptr_t>(*code, 0L, integerA, doubleB), (b == 0));
 }
 
 void testDoubleToFloatThroughPhi(float value)
@@ -2506,13 +2739,13 @@ void testDoubleToFloatThroughPhi(float value)
     // Both Adds can be converted to float add.
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<long, int32_t>(proc, root);
     BasicBlock* thenCase = proc.addBlock();
     BasicBlock* elseCase = proc.addBlock();
     BasicBlock* tail = proc.addBlock();
 
-    Value* condition = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
-    Value* argument32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1));
+    Value* condition = arguments[0];
+    Value* argument32 = arguments[1];
     Value* floatValue = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
     Value* argAsDouble = root->appendNew<Value>(proc, FloatToDouble, Origin(), floatValue);
 
@@ -2526,7 +2759,7 @@ void testDoubleToFloatThroughPhi(float value)
     UpsilonValue* thenValue = thenCase->appendNew<UpsilonValue>(proc, Origin(), thenAdd);
     thenCase->appendNewControlValue(proc, Jump, Origin(), FrequentedBlock(tail));
 
-    Value* elseConst = elseCase->appendNew<ConstDoubleValue>(proc, Origin(), M_PI);
+    Value* elseConst = elseCase->appendNew<ConstDoubleValue>(proc, Origin(), std::numbers::pi);
     UpsilonValue* elseValue = elseCase->appendNew<UpsilonValue>(proc, Origin(), elseConst);
     elseCase->appendNewControlValue(proc, Jump, Origin(), FrequentedBlock(tail));
 
@@ -2537,8 +2770,8 @@ void testDoubleToFloatThroughPhi(float value)
     tail->appendNewControlValue(proc, Return, Origin(), floatResult);
 
     auto code = compileProc(proc);
-    CHECK(isIdentical(invoke<float>(*code, 1, bitwise_cast<int32_t>(value)), value + 42.5f));
-    CHECK(isIdentical(invoke<float>(*code, 0, bitwise_cast<int32_t>(value)), static_cast<float>(M_PI)));
+    CHECK(isIdentical(invoke<float>(*code, 1L, std::bit_cast<int32_t>(value)), value + 42.5f));
+    CHECK(isIdentical(invoke<float>(*code, 0L, std::bit_cast<int32_t>(value)), std::numbers::pi_v<float>));
 }
 
 void testReduceFloatToDoubleValidates()
@@ -2558,11 +2791,12 @@ void testReduceFloatToDoubleValidates()
     // This should not crash in the validator after ReduceFloatToDouble.
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<uint64_t>(proc, root);
     BasicBlock* thenCase = proc.addBlock();
     BasicBlock* elseCase = proc.addBlock();
     BasicBlock* tail = proc.addBlock();
 
-    Value* condition = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    Value* condition = arguments[0];
     Value* thingy = root->appendNew<Value>(proc, BitwiseCast, Origin(), condition);
     thingy = root->appendNew<Value>(proc, DoubleToFloat, Origin(), thingy); // Make the phase think it has work to do.
     root->appendNewControlValue(
@@ -2592,21 +2826,21 @@ void testReduceFloatToDoubleValidates()
     tail->appendNewControlValue(proc, Return, Origin(), result);
 
     auto code = compileProc(proc);
-    CHECK(isIdentical(invoke<float>(*code, 1), 11.5f * 11.5f + static_cast<float>(bitwise_cast<double>(static_cast<uint64_t>(1))) + 11.5f));
-    CHECK(isIdentical(invoke<float>(*code, 0), 10.5f * 10.5f + static_cast<float>(bitwise_cast<double>(static_cast<uint64_t>(0))) + 10.5f));
+    CHECK(isIdentical(invoke<float>(*code, static_cast<uint64_t>(1)), 11.5f * 11.5f + static_cast<float>(std::bit_cast<double>(static_cast<uint64_t>(1))) + 11.5f));
+    CHECK(isIdentical(invoke<float>(*code, static_cast<uint64_t>(0)), 10.5f * 10.5f + static_cast<float>(std::bit_cast<double>(static_cast<uint64_t>(0))) + 10.5f));
 }
 
 void testDoubleProducerPhiToFloatConversion(float value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<long, int32_t>(proc, root);
     BasicBlock* thenCase = proc.addBlock();
     BasicBlock* elseCase = proc.addBlock();
     BasicBlock* tail = proc.addBlock();
 
-    Value* condition = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
-    Value* argument32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1));
+    Value* condition = arguments[0];
+    Value* argument32 = arguments[1];
     Value* floatValue = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
 
     root->appendNewControlValue(
@@ -2632,8 +2866,8 @@ void testDoubleProducerPhiToFloatConversion(float value)
     tail->appendNewControlValue(proc, Return, Origin(), floatResult);
 
     auto code = compileProc(proc);
-    CHECK(isIdentical(invoke<float>(*code, 1, bitwise_cast<int32_t>(value)), value + value));
-    CHECK(isIdentical(invoke<float>(*code, 0, bitwise_cast<int32_t>(value)), 42.5f + value));
+    CHECK(isIdentical(invoke<float>(*code, 1L, std::bit_cast<int32_t>(value)), value + value));
+    CHECK(isIdentical(invoke<float>(*code, 0L, std::bit_cast<int32_t>(value)), 42.5f + value));
 }
 
 void testDoubleProducerPhiToFloatConversionWithDoubleConsumer(float value)
@@ -2642,13 +2876,13 @@ void testDoubleProducerPhiToFloatConversionWithDoubleConsumer(float value)
     // as a Float and as a Double.
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<long, int32_t>(proc, root);
     BasicBlock* thenCase = proc.addBlock();
     BasicBlock* elseCase = proc.addBlock();
     BasicBlock* tail = proc.addBlock();
 
-    Value* condition = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
-    Value* argument32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1));
+    Value* condition = arguments[0];
+    Value* argument32 = arguments[1];
     Value* floatValue = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
 
     root->appendNewControlValue(
@@ -2681,21 +2915,21 @@ void testDoubleProducerPhiToFloatConversionWithDoubleConsumer(float value)
     tail->appendNewControlValue(proc, Return, Origin(), doubleAdd);
 
     auto code = compileProc(proc);
-    CHECK(isIdentical(invoke<double>(*code, 1, bitwise_cast<int32_t>(value)), (value + value) + static_cast<double>(value)));
-    CHECK(isIdentical(invoke<double>(*code, 0, bitwise_cast<int32_t>(value)), static_cast<double>((42.5f + value) + 42.5f)));
+    CHECK(isIdentical(invoke<double>(*code, 1L, std::bit_cast<int32_t>(value)), (value + value) + static_cast<double>(value)));
+    CHECK(isIdentical(invoke<double>(*code, 0L, std::bit_cast<int32_t>(value)), static_cast<double>((42.5f + value) + 42.5f)));
 }
 
 void testDoubleProducerPhiWithNonFloatConst(float value, double constValue)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<long, int32_t>(proc, root);
     BasicBlock* thenCase = proc.addBlock();
     BasicBlock* elseCase = proc.addBlock();
     BasicBlock* tail = proc.addBlock();
 
-    Value* condition = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
-    Value* argument32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1));
+    Value* condition = arguments[0];
+    Value* argument32 = arguments[1];
     Value* floatValue = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
 
     root->appendNewControlValue(
@@ -2721,22 +2955,23 @@ void testDoubleProducerPhiWithNonFloatConst(float value, double constValue)
     tail->appendNewControlValue(proc, Return, Origin(), floatResult);
 
     auto code = compileProc(proc);
-    CHECK(isIdentical(invoke<float>(*code, 1, bitwise_cast<int32_t>(value)), value + value));
-    CHECK(isIdentical(invoke<float>(*code, 0, bitwise_cast<int32_t>(value)), static_cast<float>(constValue + value)));
+    CHECK(isIdentical(invoke<float>(*code, 1L, std::bit_cast<int32_t>(value)), value + value));
+    CHECK(isIdentical(invoke<float>(*code, 0L, std::bit_cast<int32_t>(value)), static_cast<float>(constValue + value)));
 }
 
 void testDoubleArgToInt64BitwiseCast(double value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument = root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0);
+    auto arguments = cCallArgumentValues<double>(proc, root);
+    Value* argument = arguments[0];
 
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
             proc, BitwiseCast, Origin(), argument));
 
-    CHECK(isIdentical(compileAndRun<int64_t>(proc, value), bitwise_cast<int64_t>(value)));
+    CHECK(isIdentical(compileAndRun<int64_t>(proc, value), std::bit_cast<int64_t>(value)));
 }
 
 void testDoubleImmToInt64BitwiseCast(double value)
@@ -2750,14 +2985,15 @@ void testDoubleImmToInt64BitwiseCast(double value)
         root->appendNew<Value>(
             proc, BitwiseCast, Origin(), argument));
 
-    CHECK(isIdentical(compileAndRun<int64_t>(proc), bitwise_cast<int64_t>(value)));
+    CHECK(isIdentical(compileAndRun<int64_t>(proc), std::bit_cast<int64_t>(value)));
 }
 
 void testTwoBitwiseCastOnDouble(double value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument = root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0);
+    auto arguments = cCallArgumentValues<double>(proc, root);
+    Value* argument = arguments[0];
     Value* first = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument);
     Value* second = root->appendNew<Value>(proc, BitwiseCast, Origin(), first);
     root->appendNewControlValue(proc, Return, Origin(), second);
@@ -2769,20 +3005,22 @@ void testBitwiseCastOnDoubleInMemory(double value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<double*>(proc, root);
+    Value* address = arguments[0];
     MemoryValue* loadDouble = root->appendNew<MemoryValue>(proc, Load, Double, Origin(), address);
     Value* cast = root->appendNew<Value>(proc, BitwiseCast, Origin(), loadDouble);
     root->appendNewControlValue(proc, Return, Origin(), cast);
 
-    CHECK(isIdentical(compileAndRun<int64_t>(proc, &value), bitwise_cast<int64_t>(value)));
+    CHECK(isIdentical(compileAndRun<int64_t>(proc, &value), std::bit_cast<int64_t>(value)));
 }
 
 void testBitwiseCastOnDoubleInMemoryIndexed(double value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* base = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
-    Value* offset = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+    auto arguments = cCallArgumentValues<double*, ptrdiff_t>(proc, root);
+    Value* base = arguments[0];
+    Value* offset = arguments[1];
     Value* scaledOffset = root->appendNew<Value>(proc, Shl, Origin(),
         offset,
         root->appendNew<Const32Value>(proc, Origin(), 3));
@@ -2791,21 +3029,22 @@ void testBitwiseCastOnDoubleInMemoryIndexed(double value)
     Value* cast = root->appendNew<Value>(proc, BitwiseCast, Origin(), loadDouble);
     root->appendNewControlValue(proc, Return, Origin(), cast);
 
-    CHECK(isIdentical(compileAndRun<int64_t>(proc, &value, 0), bitwise_cast<int64_t>(value)));
+    CHECK(isIdentical(compileAndRun<int64_t>(proc, &value, static_cast<ptrdiff_t>(0)), std::bit_cast<int64_t>(value)));
 }
 
 void testInt64BArgToDoubleBitwiseCast(int64_t value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<int64_t>(proc, root);
+    Value* argument = arguments[0];
 
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
             proc, BitwiseCast, Origin(), argument));
 
-    CHECK(isIdentical(compileAndRun<double>(proc, value), bitwise_cast<double>(value)));
+    CHECK(isIdentical(compileAndRun<double>(proc, value), std::bit_cast<double>(value)));
 }
 
 void testInt64BImmToDoubleBitwiseCast(int64_t value)
@@ -2819,14 +3058,15 @@ void testInt64BImmToDoubleBitwiseCast(int64_t value)
         root->appendNew<Value>(
             proc, BitwiseCast, Origin(), argument));
 
-    CHECK(isIdentical(compileAndRun<double>(proc), bitwise_cast<double>(value)));
+    CHECK(isIdentical(compileAndRun<double>(proc), std::bit_cast<double>(value)));
 }
 
 void testTwoBitwiseCastOnInt64(int64_t value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<int64_t>(proc, root);
+    Value* argument = arguments[0];
     Value* first = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument);
     Value* second = root->appendNew<Value>(proc, BitwiseCast, Origin(), first);
     root->appendNewControlValue(proc, Return, Origin(), second);
@@ -2838,20 +3078,22 @@ void testBitwiseCastOnInt64InMemory(int64_t value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<int64_t*>(proc, root);
+    Value* address = arguments[0];
     MemoryValue* loadDouble = root->appendNew<MemoryValue>(proc, Load, Int64, Origin(), address);
     Value* cast = root->appendNew<Value>(proc, BitwiseCast, Origin(), loadDouble);
     root->appendNewControlValue(proc, Return, Origin(), cast);
 
-    CHECK(isIdentical(compileAndRun<double>(proc, &value), bitwise_cast<double>(value)));
+    CHECK(isIdentical(compileAndRun<double>(proc, &value), std::bit_cast<double>(value)));
 }
 
 void testBitwiseCastOnInt64InMemoryIndexed(int64_t value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* base = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
-    Value* offset = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+    auto arguments = cCallArgumentValues<int64_t*, ptrdiff_t>(proc, root);
+    Value* base = arguments[0];
+    Value* offset = arguments[1];
     Value* scaledOffset = root->appendNew<Value>(proc, Shl, Origin(),
         offset,
         root->appendNew<Const32Value>(proc, Origin(), 3));
@@ -2860,7 +3102,7 @@ void testBitwiseCastOnInt64InMemoryIndexed(int64_t value)
     Value* cast = root->appendNew<Value>(proc, BitwiseCast, Origin(), loadDouble);
     root->appendNewControlValue(proc, Return, Origin(), cast);
 
-    CHECK(isIdentical(compileAndRun<double>(proc, &value, 0), bitwise_cast<double>(value)));
+    CHECK(isIdentical(compileAndRun<double>(proc, &value, static_cast<ptrdiff_t>(0)), std::bit_cast<double>(value)));
 }
 
 void testFloatImmToInt32BitwiseCast(float value)
@@ -2874,33 +3116,35 @@ void testFloatImmToInt32BitwiseCast(float value)
         root->appendNew<Value>(
             proc, BitwiseCast, Origin(), argument));
 
-    CHECK(isIdentical(compileAndRun<int32_t>(proc), bitwise_cast<int32_t>(value)));
+    CHECK(isIdentical(compileAndRun<int32_t>(proc), std::bit_cast<int32_t>(value)));
 }
 
 void testBitwiseCastOnFloatInMemory(float value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<float*>(proc, root);
+    Value* address = arguments[0];
     MemoryValue* loadFloat = root->appendNew<MemoryValue>(proc, Load, Float, Origin(), address);
     Value* cast = root->appendNew<Value>(proc, BitwiseCast, Origin(), loadFloat);
     root->appendNewControlValue(proc, Return, Origin(), cast);
 
-    CHECK(isIdentical(compileAndRun<int32_t>(proc, &value), bitwise_cast<int32_t>(value)));
+    CHECK(isIdentical(compileAndRun<int32_t>(proc, &value), std::bit_cast<int32_t>(value)));
 }
 
 void testInt32BArgToFloatBitwiseCast(int32_t value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argument = arguments[0];
 
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
             proc, BitwiseCast, Origin(), argument));
 
-    CHECK(isIdentical(compileAndRun<float>(proc, value), bitwise_cast<float>(value)));
+    CHECK(isIdentical(compileAndRun<float>(proc, value), std::bit_cast<float>(value)));
 }
 
 void testInt32BImmToFloatBitwiseCast(int32_t value)
@@ -2914,14 +3158,15 @@ void testInt32BImmToFloatBitwiseCast(int32_t value)
         root->appendNew<Value>(
             proc, BitwiseCast, Origin(), argument));
 
-    CHECK(isIdentical(compileAndRun<float>(proc), bitwise_cast<float>(value)));
+    CHECK(isIdentical(compileAndRun<float>(proc), std::bit_cast<float>(value)));
 }
 
 void testTwoBitwiseCastOnInt32(int32_t value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argument = arguments[0];
     Value* first = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument);
     Value* second = root->appendNew<Value>(proc, BitwiseCast, Origin(), first);
     root->appendNewControlValue(proc, Return, Origin(), second);
@@ -2933,19 +3178,21 @@ void testBitwiseCastOnInt32InMemory(int32_t value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<int32_t*>(proc, root);
+    Value* address = arguments[0];
     MemoryValue* loadFloat = root->appendNew<MemoryValue>(proc, Load, Int32, Origin(), address);
     Value* cast = root->appendNew<Value>(proc, BitwiseCast, Origin(), loadFloat);
     root->appendNewControlValue(proc, Return, Origin(), cast);
 
-    CHECK(isIdentical(compileAndRun<float>(proc, &value), bitwise_cast<float>(value)));
+    CHECK(isIdentical(compileAndRun<float>(proc, &value), std::bit_cast<float>(value)));
 }
 
 void testConvertDoubleToFloatArg(double value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument = root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0);
+    auto arguments = cCallArgumentValues<double>(proc, root);
+    Value* argument = arguments[0];
     Value* asFloat = root->appendNew<Value>(proc, DoubleToFloat, Origin(), argument);
     root->appendNewControlValue(proc, Return, Origin(), asFloat);
 
@@ -2967,7 +3214,8 @@ void testConvertDoubleToFloatMem(double value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<double*>(proc, root);
+    Value* address = arguments[0];
     MemoryValue* loadedDouble = root->appendNew<MemoryValue>(proc, Load, Double, Origin(), address);
     Value* asFloat = root->appendNew<Value>(proc, DoubleToFloat, Origin(), loadedDouble);
     root->appendNewControlValue(proc, Return, Origin(), asFloat);
@@ -2979,13 +3227,13 @@ void testConvertFloatToDoubleArg(float value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument32 = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* argument32 = arguments[0];
     Value* floatValue = root->appendNew<Value>(proc, BitwiseCast, Origin(), argument32);
     Value* asDouble = root->appendNew<Value>(proc, FloatToDouble, Origin(), floatValue);
     root->appendNewControlValue(proc, Return, Origin(), asDouble);
 
-    CHECK(isIdentical(compileAndRun<double>(proc, bitwise_cast<int32_t>(value)), static_cast<double>(value)));
+    CHECK(isIdentical(compileAndRun<double>(proc, std::bit_cast<int32_t>(value)), static_cast<double>(value)));
 }
 
 void testConvertFloatToDoubleImm(float value)
@@ -3003,7 +3251,8 @@ void testConvertFloatToDoubleMem(float value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<float*>(proc, root);
+    Value* address = arguments[0];
     MemoryValue* loadedFloat = root->appendNew<MemoryValue>(proc, Load, Float, Origin(), address);
     Value* asDouble = root->appendNew<Value>(proc, FloatToDouble, Origin(), loadedFloat);
     root->appendNewControlValue(proc, Return, Origin(), asDouble);
@@ -3015,7 +3264,8 @@ void testConvertDoubleToFloatToDouble(double value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument = root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0);
+    auto arguments = cCallArgumentValues<double>(proc, root);
+    Value* argument = arguments[0];
     Value* asFloat = root->appendNew<Value>(proc, DoubleToFloat, Origin(), argument);
     Value* asDouble = root->appendNew<Value>(proc, FloatToDouble, Origin(), asFloat);
     root->appendNewControlValue(proc, Return, Origin(), asDouble);
@@ -3027,7 +3277,8 @@ void testConvertDoubleToFloatToDoubleToFloat(double value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument = root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0);
+    auto arguments = cCallArgumentValues<double>(proc, root);
+    Value* argument = arguments[0];
     Value* asFloat = root->appendNew<Value>(proc, DoubleToFloat, Origin(), argument);
     Value* asDouble = root->appendNew<Value>(proc, FloatToDouble, Origin(), asFloat);
     Value* asFloatAgain = root->appendNew<Value>(proc, DoubleToFloat, Origin(), asDouble);
@@ -3040,7 +3291,8 @@ void testConvertDoubleToFloatEqual(double value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument = root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0);
+    auto arguments = cCallArgumentValues<double>(proc, root);
+    Value* argument = arguments[0];
     Value* asFloat = root->appendNew<Value>(proc, DoubleToFloat, Origin(), argument);
     Value* asDouble = root->appendNew<Value>(proc, FloatToDouble, Origin(), asFloat);
     Value* constant = root->appendNew<ConstDoubleValue>(proc, Origin(), value);
@@ -3054,8 +3306,9 @@ void testLoadFloatConvertDoubleConvertFloatStoreFloat(float value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* src = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
-    Value* dst = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+    auto arguments = cCallArgumentValues<float*, float*>(proc, root);
+    Value* src = arguments[0];
+    Value* dst = arguments[1];
     MemoryValue* loadedFloat = root->appendNew<MemoryValue>(proc, Load, Float, Origin(), src);
     Value* asDouble = root->appendNew<Value>(proc, FloatToDouble, Origin(), loadedFloat);
     Value* asFloatAgain = root->appendNew<Value>(proc, DoubleToFloat, Origin(), asDouble);
@@ -3065,7 +3318,7 @@ void testLoadFloatConvertDoubleConvertFloatStoreFloat(float value)
 
     float input = value;
     float output = 0.;
-    CHECK(!compileAndRun<int64_t>(proc, &input, &output));
+    CHECK(!compileAndRun<int32_t>(proc, &input, &output));
     CHECK(isIdentical(input, output));
 }
 
@@ -3073,7 +3326,8 @@ void testFroundArg(double value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* argument = root->appendNew<ArgumentRegValue>(proc, Origin(), FPRInfo::argumentFPR0);
+    auto arguments = cCallArgumentValues<double>(proc, root);
+    Value* argument = arguments[0];
     Value* asFloat = root->appendNew<Value>(proc, DoubleToFloat, Origin(), argument);
     Value* asDouble = root->appendNew<Value>(proc, FloatToDouble, Origin(), asFloat);
     root->appendNewControlValue(proc, Return, Origin(), asDouble);
@@ -3085,7 +3339,8 @@ void testFroundMem(double value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<double*>(proc, root);
+    Value* address = arguments[0];
     MemoryValue* loadedDouble = root->appendNew<MemoryValue>(proc, Load, Double, Origin(), address);
     Value* asFloat = root->appendNew<Value>(proc, DoubleToFloat, Origin(), loadedDouble);
     Value* asDouble = root->appendNew<Value>(proc, FloatToDouble, Origin(), asFloat);
@@ -3098,7 +3353,8 @@ void testIToD64Arg()
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* src = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<int64_t>(proc, root);
+    Value* src = arguments[0];
     Value* srcAsDouble = root->appendNew<Value>(proc, IToD, Origin(), src);
     root->appendNewControlValue(proc, Return, Origin(), srcAsDouble);
 
@@ -3111,7 +3367,8 @@ void testIToF64Arg()
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* src = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<int64_t>(proc, root);
+    Value* src = arguments[0];
     Value* srcAsFloat = root->appendNew<Value>(proc, IToF, Origin(), src);
     root->appendNewControlValue(proc, Return, Origin(), srcAsFloat);
 
@@ -3124,8 +3381,8 @@ void testIToD32Arg()
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* src = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* src = arguments[0];
     Value* srcAsDouble = root->appendNew<Value>(proc, IToD, Origin(), src);
     root->appendNewControlValue(proc, Return, Origin(), srcAsDouble);
 
@@ -3138,8 +3395,8 @@ void testIToF32Arg()
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* src = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* src = arguments[0];
     Value* srcAsFloat = root->appendNew<Value>(proc, IToF, Origin(), src);
     root->appendNewControlValue(proc, Return, Origin(), srcAsFloat);
 
@@ -3148,11 +3405,40 @@ void testIToF32Arg()
         CHECK(isIdentical(invoke<float>(*code, testValue.value), static_cast<float>(testValue.value)));
 }
 
+void testIToDU32Arg()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* src = arguments[0];
+    Value* srcAsDouble = root->appendNew<Value>(proc, IToD, Origin(), root->appendNew<Value>(proc, ZExt32, Origin(), src));
+    root->appendNewControlValue(proc, Return, Origin(), srcAsDouble);
+
+    auto code = compileProc(proc);
+    for (auto testValue : int32Operands())
+        CHECK(isIdentical(invoke<double>(*code, static_cast<uint32_t>(testValue.value)), static_cast<double>(static_cast<uint32_t>(testValue.value))));
+}
+
+void testIToFU32Arg()
+{
+    Procedure proc;
+    BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* src = arguments[0];
+    Value* srcAsFloat = root->appendNew<Value>(proc, IToF, Origin(), root->appendNew<Value>(proc, ZExt32, Origin(), src));
+    root->appendNewControlValue(proc, Return, Origin(), srcAsFloat);
+
+    auto code = compileProc(proc);
+    for (auto testValue : int32Operands())
+        CHECK(isIdentical(invoke<float>(*code, static_cast<uint32_t>(testValue.value)), static_cast<float>(static_cast<uint32_t>(testValue.value))));
+}
+
 void testIToD64Mem()
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<int64_t*>(proc, root);
+    Value* address = arguments[0];
     MemoryValue* loadedSrc = root->appendNew<MemoryValue>(proc, Load, Int64, Origin(), address);
     Value* srcAsDouble = root->appendNew<Value>(proc, IToD, Origin(), loadedSrc);
     root->appendNewControlValue(proc, Return, Origin(), srcAsDouble);
@@ -3162,7 +3448,7 @@ void testIToD64Mem()
     for (auto testValue : int64Operands()) {
         inMemoryValue = testValue.value;
         CHECK(isIdentical(invoke<double>(*code, &inMemoryValue), static_cast<double>(testValue.value)));
-        CHECK(inMemoryValue == testValue.value);
+        CHECK_EQ(inMemoryValue, testValue.value);
     }
 }
 
@@ -3170,7 +3456,8 @@ void testIToF64Mem()
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<int64_t*>(proc, root);
+    Value* address = arguments[0];
     MemoryValue* loadedSrc = root->appendNew<MemoryValue>(proc, Load, Int64, Origin(), address);
     Value* srcAsFloat = root->appendNew<Value>(proc, IToF, Origin(), loadedSrc);
     root->appendNewControlValue(proc, Return, Origin(), srcAsFloat);
@@ -3180,7 +3467,7 @@ void testIToF64Mem()
     for (auto testValue : int64Operands()) {
         inMemoryValue = testValue.value;
         CHECK(isIdentical(invoke<float>(*code, &inMemoryValue), static_cast<float>(testValue.value)));
-        CHECK(inMemoryValue == testValue.value);
+        CHECK_EQ(inMemoryValue, testValue.value);
     }
 }
 
@@ -3188,7 +3475,8 @@ void testIToD32Mem()
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<int32_t*>(proc, root);
+    Value* address = arguments[0];
     MemoryValue* loadedSrc = root->appendNew<MemoryValue>(proc, Load, Int32, Origin(), address);
     Value* srcAsDouble = root->appendNew<Value>(proc, IToD, Origin(), loadedSrc);
     root->appendNewControlValue(proc, Return, Origin(), srcAsDouble);
@@ -3198,7 +3486,7 @@ void testIToD32Mem()
     for (auto testValue : int32Operands()) {
         inMemoryValue = testValue.value;
         CHECK(isIdentical(invoke<double>(*code, &inMemoryValue), static_cast<double>(testValue.value)));
-        CHECK(inMemoryValue == testValue.value);
+        CHECK_EQ(inMemoryValue, testValue.value);
     }
 }
 
@@ -3206,7 +3494,8 @@ void testIToF32Mem()
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<int32_t*>(proc, root);
+    Value* address = arguments[0];
     MemoryValue* loadedSrc = root->appendNew<MemoryValue>(proc, Load, Int32, Origin(), address);
     Value* srcAsFloat = root->appendNew<Value>(proc, IToF, Origin(), loadedSrc);
     root->appendNewControlValue(proc, Return, Origin(), srcAsFloat);
@@ -3216,7 +3505,7 @@ void testIToF32Mem()
     for (auto testValue : int32Operands()) {
         inMemoryValue = testValue.value;
         CHECK(isIdentical(invoke<float>(*code, &inMemoryValue), static_cast<float>(testValue.value)));
-        CHECK(inMemoryValue == testValue.value);
+        CHECK_EQ(inMemoryValue, testValue.value);
     }
 }
 
@@ -3264,7 +3553,8 @@ void testIToDReducedToIToF64Arg()
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* src = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+    auto arguments = cCallArgumentValues<int64_t>(proc, root);
+    Value* src = arguments[0];
     Value* srcAsDouble = root->appendNew<Value>(proc, IToD, Origin(), src);
     Value* floatResult = root->appendNew<Value>(proc, DoubleToFloat, Origin(), srcAsDouble);
     root->appendNewControlValue(proc, Return, Origin(), floatResult);
@@ -3278,8 +3568,8 @@ void testIToDReducedToIToF32Arg()
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    Value* src = root->appendNew<Value>(proc, Trunc, Origin(),
-        root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    Value* src = arguments[0];
     Value* srcAsDouble = root->appendNew<Value>(proc, IToD, Origin(), src);
     Value* floatResult = root->appendNew<Value>(proc, DoubleToFloat, Origin(), srcAsDouble);
     root->appendNewControlValue(proc, Return, Origin(), floatResult);
@@ -3328,11 +3618,12 @@ void testStoreZeroReg()
     {
         Procedure proc;
         BasicBlock* root = proc.addBlock();
+        auto arguments = cCallArgumentValues<int32_t*, ptrdiff_t>(proc, root);
 
         Value* value = root->appendNew<Const32Value>(proc, Origin(), 0);
-        Value* base = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
-        Value* offset = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
-        Value* displacement = root->appendNew<Const64Value>(proc, Origin(), -1);
+        Value* base = arguments[0];
+        Value* offset = arguments[1];
+        Value* displacement = root->appendNew<ConstPtrValue>(proc, Origin(), -1);
 
         Value* baseDisplacement = root->appendNew<Value>(proc, Add, Origin(), displacement, base);
         Value* address = root->appendNew<Value>(proc, Add, Origin(), baseDisplacement, offset);
@@ -3341,18 +3632,19 @@ void testStoreZeroReg()
         root->appendNewControlValue(proc, Return, Origin(), value);
 
         int32_t slot32 = 0xbaadbeef;
-        compileAndRun<int32_t>(proc, &slot32, 1);
+        compileAndRun<int32_t>(proc, &slot32, static_cast<ptrdiff_t>(1));
         CHECK_EQ(slot32, 0);
     }
 
     {
         Procedure proc;
         BasicBlock* root = proc.addBlock();
+        auto arguments = cCallArgumentValues<int64_t*, ptrdiff_t>(proc, root);
 
         Value* value = root->appendNew<Const64Value>(proc, Origin(), 0);
-        Value* base = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
-        Value* offset = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
-        Value* displacement = root->appendNew<Const64Value>(proc, Origin(), -1);
+        Value* base = arguments[0];
+        Value* offset = arguments[1];
+        Value* displacement = root->appendNew<ConstPtrValue>(proc, Origin(), -1);
 
         Value* baseDisplacement = root->appendNew<Value>(proc, Add, Origin(), displacement, base);
         Value* address = root->appendNew<Value>(proc, Add, Origin(), baseDisplacement, offset);
@@ -3361,34 +3653,33 @@ void testStoreZeroReg()
         root->appendNewControlValue(proc, Return, Origin(), value);
 
         int64_t slot64 = 0xbaadbeef;
-        compileAndRun<int64_t>(proc, &slot64, 1);
+        compileAndRun<int64_t>(proc, &slot64, static_cast<ptrdiff_t>(1));
         CHECK_EQ(slot64, 0);
     }
 }
 
-void testStore32(int value)
+void testStore32(int32_t value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    int slot = 0xbaadbeef;
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
+    int32_t slot = 0xbaadbeef;
     root->appendNew<MemoryValue>(
         proc, Store, Origin(),
-        root->appendNew<Value>(
-            proc, Trunc, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0)),
+        arguments[0],
         root->appendNew<ConstPtrValue>(proc, Origin(), &slot), 0);
     root->appendNewControlValue(
         proc, Return, Origin(), root->appendNew<Const32Value>(proc, Origin(), 0));
 
-    CHECK(!compileAndRun<int>(proc, value));
-    CHECK(slot == value);
+    CHECK(!compileAndRun<int32_t>(proc, value));
+    CHECK_EQ(slot, value);
 }
 
 void testStoreConstant(int value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
-    int slot = 0xbaadbeef;
+    int32_t slot = 0xbaadbeef;
     root->appendNew<MemoryValue>(
         proc, Store, Origin(),
         root->appendNew<Const32Value>(proc, Origin(), value),
@@ -3396,8 +3687,8 @@ void testStoreConstant(int value)
     root->appendNewControlValue(
         proc, Return, Origin(), root->appendNew<Const32Value>(proc, Origin(), 0));
 
-    CHECK(!compileAndRun<int>(proc));
-    CHECK(slot == value);
+    CHECK(!compileAndRun<int32_t>(proc));
+    CHECK_EQ(slot, value);
 }
 
 void testStoreConstantPtr(intptr_t value)
@@ -3418,7 +3709,7 @@ void testStoreConstantPtr(intptr_t value)
         proc, Return, Origin(), root->appendNew<Const32Value>(proc, Origin(), 0));
 
     CHECK(!compileAndRun<int>(proc));
-    CHECK(slot == value);
+    CHECK_EQ(slot, value);
 }
 
 void testStore8Arg()
@@ -3426,28 +3717,28 @@ void testStore8Arg()
     { // Direct addressing.
         Procedure proc;
         BasicBlock* root = proc.addBlock();
+        auto arguments = cCallArgumentValues<int32_t, int8_t*>(proc, root);
 
-        Value* value = root->appendNew<Value>(proc, Trunc, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
-        Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+        Value* value = arguments[0];
+        Value* address = arguments[1];
 
         root->appendNew<MemoryValue>(proc, Store8, Origin(), value, address);
         root->appendNewControlValue(proc, Return, Origin(), value);
 
         int8_t storage = 0;
-        CHECK(compileAndRun<int64_t>(proc, 42, &storage) == 42);
-        CHECK(storage == 42);
+        CHECK_EQ(compileAndRun<int32_t>(proc, 42, &storage), 42);
+        CHECK_EQ(storage, 42);
     }
 
     { // Indexed addressing.
         Procedure proc;
         BasicBlock* root = proc.addBlock();
+        auto arguments = cCallArgumentValues<int32_t, int8_t*, ptrdiff_t>(proc, root);
 
-        Value* value = root->appendNew<Value>(proc, Trunc, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
-        Value* base = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
-        Value* offset = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR2);
-        Value* displacement = root->appendNew<Const64Value>(proc, Origin(), -1);
+        Value* value = arguments[0];
+        Value* base = arguments[1];
+        Value* offset = arguments[2];
+        Value* displacement = root->appendNew<ConstPtrValue>(proc, Origin(), -1);
 
         Value* baseDisplacement = root->appendNew<Value>(proc, Add, Origin(), displacement, base);
         Value* address = root->appendNew<Value>(proc, Add, Origin(), baseDisplacement, offset);
@@ -3456,8 +3747,8 @@ void testStore8Arg()
         root->appendNewControlValue(proc, Return, Origin(), value);
 
         int8_t storage = 0;
-        CHECK(compileAndRun<int64_t>(proc, 42, &storage, 1) == 42);
-        CHECK(storage == 42);
+        CHECK_EQ(compileAndRun<intptr_t>(proc, 42, &storage, static_cast<ptrdiff_t>(1)), 42);
+        CHECK_EQ(storage, 42);
     }
 }
 
@@ -3466,26 +3757,28 @@ void testStore8Imm()
     { // Direct addressing.
         Procedure proc;
         BasicBlock* root = proc.addBlock();
+        auto arguments = cCallArgumentValues<int8_t*>(proc, root);
 
         Value* value = root->appendNew<Const32Value>(proc, Origin(), 42);
-        Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+        Value* address = arguments[0];
 
         root->appendNew<MemoryValue>(proc, Store8, Origin(), value, address);
         root->appendNewControlValue(proc, Return, Origin(), value);
 
         int8_t storage = 0;
-        CHECK(compileAndRun<int64_t>(proc, &storage) == 42);
-        CHECK(storage == 42);
+        CHECK_EQ(compileAndRun<int32_t>(proc, &storage), 42);
+        CHECK_EQ(storage, 42);
     }
 
     { // Indexed addressing.
         Procedure proc;
         BasicBlock* root = proc.addBlock();
+        auto arguments = cCallArgumentValues<int8_t*, ptrdiff_t>(proc, root);
 
         Value* value = root->appendNew<Const32Value>(proc, Origin(), 42);
-        Value* base = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
-        Value* offset = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
-        Value* displacement = root->appendNew<Const64Value>(proc, Origin(), -1);
+        Value* base = arguments[0];
+        Value* offset = arguments[1];
+        Value* displacement = root->appendNew<ConstPtrValue>(proc, Origin(), -1);
 
         Value* baseDisplacement = root->appendNew<Value>(proc, Add, Origin(), displacement, base);
         Value* address = root->appendNew<Value>(proc, Add, Origin(), baseDisplacement, offset);
@@ -3494,13 +3787,14 @@ void testStore8Imm()
         root->appendNewControlValue(proc, Return, Origin(), value);
 
         int8_t storage = 0;
-        CHECK(compileAndRun<int64_t>(proc, &storage, 1) == 42);
-        CHECK(storage == 42);
+        CHECK_EQ(compileAndRun<int32_t>(proc, &storage, static_cast<ptrdiff_t>(1)), 42);
+        CHECK_EQ(storage, 42);
     }
 }
 
 void testStorePartial8BitRegisterOnX86()
 {
+#if !CPU(ARM_THUMB2)
     Procedure proc;
     BasicBlock* root = proc.addBlock();
 
@@ -3546,8 +3840,9 @@ void testStorePartial8BitRegisterOnX86()
     root->appendNewControlValue(proc, Return, Origin(), returnValue);
 
     int8_t storage = 0xff;
-    CHECK(compileAndRun<int64_t>(proc, 0x12345678abcdef12, &storage) == 0x12345678abcdef12);
+    CHECK_EQ(compileAndRun<int64_t>(proc, 0x12345678abcdef12, &storage), 0x12345678abcdef12);
     CHECK(!storage);
+#endif // !CPU(ARM_THUMB2)
 }
 
 void testStore16Arg()
@@ -3555,28 +3850,28 @@ void testStore16Arg()
     { // Direct addressing.
         Procedure proc;
         BasicBlock* root = proc.addBlock();
+        auto arguments = cCallArgumentValues<int32_t, int16_t*>(proc, root);
 
-        Value* value = root->appendNew<Value>(proc, Trunc, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
-        Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
+        Value* value = arguments[0];
+        Value* address = arguments[1];
 
         root->appendNew<MemoryValue>(proc, Store16, Origin(), value, address);
         root->appendNewControlValue(proc, Return, Origin(), value);
 
         int16_t storage = -1;
-        CHECK(compileAndRun<int64_t>(proc, 42, &storage) == 42);
-        CHECK(storage == 42);
+        CHECK_EQ(compileAndRun<int32_t>(proc, 42, &storage), 42);
+        CHECK_EQ(storage, 42);
     }
 
     { // Indexed addressing.
         Procedure proc;
         BasicBlock* root = proc.addBlock();
+        auto arguments = cCallArgumentValues<int32_t, int16_t*, ptrdiff_t>(proc, root);
 
-        Value* value = root->appendNew<Value>(proc, Trunc, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0));
-        Value* base = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
-        Value* offset = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR2);
-        Value* displacement = root->appendNew<Const64Value>(proc, Origin(), -1);
+        Value* value = arguments[0];
+        Value* base = arguments[1];
+        Value* offset = arguments[2];
+        Value* displacement = root->appendNew<ConstPtrValue>(proc, Origin(), -1);
 
         Value* baseDisplacement = root->appendNew<Value>(proc, Add, Origin(), displacement, base);
         Value* address = root->appendNew<Value>(proc, Add, Origin(), baseDisplacement, offset);
@@ -3585,8 +3880,8 @@ void testStore16Arg()
         root->appendNewControlValue(proc, Return, Origin(), value);
 
         int16_t storage = -1;
-        CHECK(compileAndRun<int64_t>(proc, 42, &storage, 1) == 42);
-        CHECK(storage == 42);
+        CHECK_EQ(compileAndRun<int32_t>(proc, 42, &storage, static_cast<ptrdiff_t>(1)), 42);
+        CHECK_EQ(storage, 42);
     }
 }
 
@@ -3595,26 +3890,28 @@ void testStore16Imm()
     { // Direct addressing.
         Procedure proc;
         BasicBlock* root = proc.addBlock();
+        auto arguments = cCallArgumentValues<int16_t*>(proc, root);
 
         Value* value = root->appendNew<Const32Value>(proc, Origin(), 42);
-        Value* address = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
+        Value* address = arguments[0];
 
         root->appendNew<MemoryValue>(proc, Store16, Origin(), value, address);
         root->appendNewControlValue(proc, Return, Origin(), value);
 
         int16_t storage = -1;
-        CHECK(compileAndRun<int64_t>(proc, &storage) == 42);
-        CHECK(storage == 42);
+        CHECK_EQ(compileAndRun<int32_t>(proc, &storage), 42);
+        CHECK_EQ(storage, 42);
     }
 
     { // Indexed addressing.
         Procedure proc;
         BasicBlock* root = proc.addBlock();
+        auto arguments = cCallArgumentValues<int16_t*, ptrdiff_t>(proc, root);
 
         Value* value = root->appendNew<Const32Value>(proc, Origin(), 42);
-        Value* base = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0);
-        Value* offset = root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR1);
-        Value* displacement = root->appendNew<Const64Value>(proc, Origin(), -1);
+        Value* base = arguments[0];
+        Value* offset = arguments[1];
+        Value* displacement = root->appendNew<ConstPtrValue>(proc, Origin(), -1);
 
         Value* baseDisplacement = root->appendNew<Value>(proc, Add, Origin(), displacement, base);
         Value* address = root->appendNew<Value>(proc, Add, Origin(), baseDisplacement, offset);
@@ -3623,8 +3920,8 @@ void testStore16Imm()
         root->appendNewControlValue(proc, Return, Origin(), value);
 
         int16_t storage = -1;
-        CHECK(compileAndRun<int64_t>(proc, &storage, 1) == 42);
-        CHECK(storage == 42);
+        CHECK_EQ(compileAndRun<int32_t>(proc, &storage, static_cast<ptrdiff_t>(1)), 42);
+        CHECK_EQ(storage, 42);
     }
 }
 
@@ -3632,79 +3929,81 @@ void testTrunc(int64_t value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int64_t>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
             proc, Trunc, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0)));
+            arguments[0]));
 
-    CHECK(compileAndRun<int>(proc, value) == static_cast<int>(value));
+    CHECK_EQ(compileAndRun<int>(proc, value), static_cast<int>(value));
 }
 
-void testAdd1(int value)
+void testAdd1(int32_t value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
             proc, Add, Origin(),
-            root->appendNew<Value>(
-                proc, Trunc, Origin(),
-                root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0)),
+            arguments[0],
             root->appendNew<Const32Value>(proc, Origin(), 1)));
 
-    CHECK(compileAndRun<int>(proc, value) == value + 1);
+    CHECK_EQ(compileAndRun<int>(proc, value), value + 1);
 }
 
 void testAdd1Ptr(intptr_t value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<intptr_t>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
             proc, Add, Origin(),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0),
+            arguments[0],
             root->appendNew<ConstPtrValue>(proc, Origin(), 1)));
 
-    CHECK(compileAndRun<intptr_t>(proc, value) == value + 1);
+    CHECK_EQ(compileAndRun<intptr_t>(proc, value), value + 1);
 }
 
 void testNeg32(int32_t value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
             proc, Sub, Origin(),
             root->appendNew<Const32Value>(proc, Origin(), 0),
-            root->appendNew<Value>(
-                proc, Trunc, Origin(),
-                root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0))));
+            arguments[0]));
 
-    CHECK(compileAndRun<int32_t>(proc, value) == -value);
+    CHECK_EQ(compileAndRun<int32_t>(proc, value), -value);
 }
 
 void testNegPtr(intptr_t value)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<intptr_t>(proc, root);
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Value>(
             proc, Sub, Origin(),
             root->appendNew<ConstPtrValue>(proc, Origin(), 0),
-            root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0)));
+            arguments[0]));
 
-    CHECK(compileAndRun<intptr_t>(proc, value) == -value);
+    CHECK_EQ(compileAndRun<intptr_t>(proc, value), -value);
 }
 
-void testStoreAddLoad32(int amount)
+void testStoreAddLoad32(int32_t amount)
 {
     Procedure proc;
     BasicBlock* root = proc.addBlock();
+    auto arguments = cCallArgumentValues<int32_t>(proc, root);
     int slot = 37;
     ConstPtrValue* slotPtr = root->appendNew<ConstPtrValue>(proc, Origin(), &slot);
     root->appendNew<MemoryValue>(
@@ -3712,16 +4011,14 @@ void testStoreAddLoad32(int amount)
         root->appendNew<Value>(
             proc, Add, Origin(),
             root->appendNew<MemoryValue>(proc, Load, Int32, Origin(), slotPtr),
-            root->appendNew<Value>(
-                proc, Trunc, Origin(),
-                root->appendNew<ArgumentRegValue>(proc, Origin(), GPRInfo::argumentGPR0))),
+            arguments[0]),
         slotPtr, 0);
     root->appendNewControlValue(
         proc, Return, Origin(),
         root->appendNew<Const32Value>(proc, Origin(), 0));
 
     CHECK(!compileAndRun<int>(proc, amount));
-    CHECK(slot == 37 + amount);
+    CHECK_EQ(slot, 37 + amount);
 }
 
 // Make sure the compiler does not try to optimize anything out.
@@ -3746,6 +4043,7 @@ void addArgTests(const TestConfig* config, Deque<RefPtr<SharedTask<void()>>>& ta
     RUN(testAddImmArg(1, 2));
     RUN(testAddImmArg(0, 2));
     RUN(testAddImmArg(1, 0));
+
     RUN_BINARY(testAddArgMem, int64Operands(), int64Operands());
     RUN_BINARY(testAddMemArg, int64Operands(), int64Operands());
     RUN_BINARY(testAddImmMem, int64Operands(), int64Operands());
@@ -3761,32 +4059,38 @@ void addArgTests(const TestConfig* config, Deque<RefPtr<SharedTask<void()>>>& ta
     RUN(testAddLoadTwice());
     RUN_TERNARY(testAddMulMulArgs, int64Operands(), int64Operands(), int64Operands());
 
-    RUN(testAddArgDouble(M_PI));
-    RUN(testAddArgsDouble(M_PI, 1));
-    RUN(testAddArgsDouble(M_PI, -M_PI));
-    RUN(testAddArgImmDouble(M_PI, 1));
-    RUN(testAddArgImmDouble(M_PI, 0));
-    RUN(testAddArgImmDouble(M_PI, negativeZero()));
+    RUN(testAddArgDouble(std::numbers::pi));
+    RUN(testAddArgsDouble(std::numbers::pi, 1));
+    RUN(testAddArgsDouble(std::numbers::pi, -std::numbers::pi));
+    RUN(testAddArgImmDouble(std::numbers::pi, 1));
+    RUN(testAddArgImmDouble(std::numbers::pi, 0));
+    RUN(testAddArgImmDouble(std::numbers::pi, negativeZero()));
     RUN(testAddArgImmDouble(0, 0));
     RUN(testAddArgImmDouble(0, negativeZero()));
     RUN(testAddArgImmDouble(negativeZero(), 0));
     RUN(testAddArgImmDouble(negativeZero(), negativeZero()));
-    RUN(testAddImmArgDouble(M_PI, 1));
-    RUN(testAddImmArgDouble(M_PI, 0));
-    RUN(testAddImmArgDouble(M_PI, negativeZero()));
+    RUN(testAddImmArgDouble(std::numbers::pi, 1));
+    RUN(testAddImmArgDouble(std::numbers::pi, 0));
+    RUN(testAddImmArgDouble(std::numbers::pi, negativeZero()));
     RUN(testAddImmArgDouble(0, 0));
     RUN(testAddImmArgDouble(0, negativeZero()));
     RUN(testAddImmArgDouble(negativeZero(), 0));
     RUN(testAddImmArgDouble(negativeZero(), negativeZero()));
-    RUN(testAddImmsDouble(M_PI, 1));
-    RUN(testAddImmsDouble(M_PI, 0));
-    RUN(testAddImmsDouble(M_PI, negativeZero()));
+    RUN(testAddImmsDouble(std::numbers::pi, 1));
+    RUN(testAddImmsDouble(std::numbers::pi, 0));
+    RUN(testAddImmsDouble(std::numbers::pi, negativeZero()));
     RUN(testAddImmsDouble(0, 0));
     RUN(testAddImmsDouble(0, negativeZero()));
     RUN(testAddImmsDouble(negativeZero(), negativeZero()));
     RUN_UNARY(testAddArgFloat, floatingPointOperands<float>());
     RUN_BINARY(testAddArgsFloat, floatingPointOperands<float>(), floatingPointOperands<float>());
+
+    // The ARMv7 ABI expects floats to be passed in consecutive s* registers, but
+    // AirCCallingConvention can't currently do that.
+#if !CPU(ARM_THUMB2)
     RUN_BINARY(testAddFPRArgsFloat, floatingPointOperands<float>(), floatingPointOperands<float>());
+#endif
+
     RUN_BINARY(testAddArgImmFloat, floatingPointOperands<float>(), floatingPointOperands<float>());
     RUN_BINARY(testAddImmArgFloat, floatingPointOperands<float>(), floatingPointOperands<float>());
     RUN_BINARY(testAddImmsFloat, floatingPointOperands<float>(), floatingPointOperands<float>());
@@ -3858,6 +4162,8 @@ void addArgTests(const TestConfig* config, Deque<RefPtr<SharedTask<void()>>>& ta
     RUN(testMulNegArgs32());
     RUN(testMulNegSignExtend32());
     RUN(testMulNegZeroExtend32());
+    RUN(testMulNegArgsDouble());
+    RUN(testMulNegArgsFloat());
 
     RUN_BINARY(testMulArgNegArg, int64Operands(), int64Operands())
     RUN_BINARY(testMulNegArgArg, int64Operands(), int64Operands())
@@ -3875,26 +4181,26 @@ void addArgTests(const TestConfig* config, Deque<RefPtr<SharedTask<void()>>>& ta
     RUN_BINARY(testMulArgsFloatWithUselessDoubleConversion, floatingPointOperands<float>(), floatingPointOperands<float>());
     RUN_BINARY(testMulArgsFloatWithEffectfulDoubleConversion, floatingPointOperands<float>(), floatingPointOperands<float>());
 
-    RUN(testDivArgDouble(M_PI));
-    RUN(testDivArgsDouble(M_PI, 1));
-    RUN(testDivArgsDouble(M_PI, -M_PI));
-    RUN(testDivArgImmDouble(M_PI, 1));
-    RUN(testDivArgImmDouble(M_PI, 0));
-    RUN(testDivArgImmDouble(M_PI, negativeZero()));
+    RUN(testDivArgDouble(std::numbers::pi));
+    RUN(testDivArgsDouble(std::numbers::pi, 1));
+    RUN(testDivArgsDouble(std::numbers::pi, -std::numbers::pi));
+    RUN(testDivArgImmDouble(std::numbers::pi, 1));
+    RUN(testDivArgImmDouble(std::numbers::pi, 0));
+    RUN(testDivArgImmDouble(std::numbers::pi, negativeZero()));
     RUN(testDivArgImmDouble(0, 0));
     RUN(testDivArgImmDouble(0, negativeZero()));
     RUN(testDivArgImmDouble(negativeZero(), 0));
     RUN(testDivArgImmDouble(negativeZero(), negativeZero()));
-    RUN(testDivImmArgDouble(M_PI, 1));
-    RUN(testDivImmArgDouble(M_PI, 0));
-    RUN(testDivImmArgDouble(M_PI, negativeZero()));
+    RUN(testDivImmArgDouble(std::numbers::pi, 1));
+    RUN(testDivImmArgDouble(std::numbers::pi, 0));
+    RUN(testDivImmArgDouble(std::numbers::pi, negativeZero()));
     RUN(testDivImmArgDouble(0, 0));
     RUN(testDivImmArgDouble(0, negativeZero()));
     RUN(testDivImmArgDouble(negativeZero(), 0));
     RUN(testDivImmArgDouble(negativeZero(), negativeZero()));
-    RUN(testDivImmsDouble(M_PI, 1));
-    RUN(testDivImmsDouble(M_PI, 0));
-    RUN(testDivImmsDouble(M_PI, negativeZero()));
+    RUN(testDivImmsDouble(std::numbers::pi, 1));
+    RUN(testDivImmsDouble(std::numbers::pi, 0));
+    RUN(testDivImmsDouble(std::numbers::pi, negativeZero()));
     RUN(testDivImmsDouble(0, 0));
     RUN(testDivImmsDouble(0, negativeZero()));
     RUN(testDivImmsDouble(negativeZero(), negativeZero()));
@@ -3909,6 +4215,11 @@ void addArgTests(const TestConfig* config, Deque<RefPtr<SharedTask<void()>>>& ta
 
     RUN_BINARY(testUDivArgsInt32, int32Operands(), int32Operands());
     RUN_BINARY(testUDivArgsInt64, int64Operands(), int64Operands());
+    RUN_BINARY(testUDivByConstantInt32, int32Operands(), int32Operands());
+    RUN_UNARY(testUDivByConstantInt32PowerOf2, int32Operands());
+    RUN_UNARY(testUDivByConstantInt32NonPowerOf2, int32Operands());
+    RUN_UNARY(testUDivByConstantInt32EvenDivisors, int32Operands());
+    RUN_UNARY(testUDivByConstantInt32EdgeCases, int32Operands());
 
     RUN_UNARY(testModArgDouble, floatingPointOperands<double>());
     RUN_BINARY(testModArgsDouble, floatingPointOperands<double>(), floatingPointOperands<double>());
@@ -4010,20 +4321,27 @@ void addCallTests(const TestConfig* config, Deque<RefPtr<SharedTask<void()>>>& t
 
     RUN(testCallSimpleDouble(1, 2));
     RUN(testCallFunctionWithHellaDoubleArguments());
+
+// The ARMv7 ABI expects floats to be passed in consecutive s* registers, but
+// AirCCallingConvention can't currently do that.
+#if !CPU(ARM_THUMB2)
     RUN_BINARY(testCallSimpleFloat, floatingPointOperands<float>(), floatingPointOperands<float>());
     RUN(testCallFunctionWithHellaFloatArguments());
-}
+#endif
+    }
 
 void addShrTests(const TestConfig* config, Deque<RefPtr<SharedTask<void()>>>& tasks)
 {
     RUN(testSShrArgs(1, 0));
     RUN(testSShrArgs(1, 1));
+    RUN(testSShrArgs(1, 32));
     RUN(testSShrArgs(1, 62));
     RUN(testSShrArgs(0xffffffffffffffff, 0));
     RUN(testSShrArgs(0xffffffffffffffff, 1));
     RUN(testSShrArgs(0xffffffffffffffff, 63));
     RUN(testSShrImms(1, 0));
     RUN(testSShrImms(1, 1));
+    RUN(testSShrImms(1, 32));
     RUN(testSShrImms(1, 62));
     RUN(testSShrImms(1, 65));
     RUN(testSShrImms(0xffffffffffffffff, 0));
@@ -4031,6 +4349,7 @@ void addShrTests(const TestConfig* config, Deque<RefPtr<SharedTask<void()>>>& ta
     RUN(testSShrImms(0xffffffffffffffff, 63));
     RUN(testSShrArgImm(1, 0));
     RUN(testSShrArgImm(1, 1));
+    RUN(testSShrArgImm(1, 32));
     RUN(testSShrArgImm(1, 62));
     RUN(testSShrArgImm(1, 65));
     RUN(testSShrArgImm(0xffffffffffffffff, 0));
@@ -4060,12 +4379,14 @@ void addShrTests(const TestConfig* config, Deque<RefPtr<SharedTask<void()>>>& ta
 
     RUN(testZShrArgs(1, 0));
     RUN(testZShrArgs(1, 1));
+    RUN(testZShrArgs(1, 32));
     RUN(testZShrArgs(1, 62));
     RUN(testZShrArgs(0xffffffffffffffff, 0));
     RUN(testZShrArgs(0xffffffffffffffff, 1));
     RUN(testZShrArgs(0xffffffffffffffff, 63));
     RUN(testZShrImms(1, 0));
     RUN(testZShrImms(1, 1));
+    RUN(testZShrImms(1, 32));
     RUN(testZShrImms(1, 62));
     RUN(testZShrImms(1, 65));
     RUN(testZShrImms(0xffffffffffffffff, 0));
@@ -4073,6 +4394,7 @@ void addShrTests(const TestConfig* config, Deque<RefPtr<SharedTask<void()>>>& ta
     RUN(testZShrImms(0xffffffffffffffff, 63));
     RUN(testZShrArgImm(1, 0));
     RUN(testZShrArgImm(1, 1));
+    RUN(testZShrArgImm(1, 32));
     RUN(testZShrArgImm(1, 62));
     RUN(testZShrArgImm(1, 65));
     RUN(testZShrArgImm(0xffffffffffffffff, 0));
@@ -4099,18 +4421,21 @@ void addShrTests(const TestConfig* config, Deque<RefPtr<SharedTask<void()>>>& ta
     RUN(testZShrArgImm32(0xffffffff, 0));
     RUN(testZShrArgImm32(0xffffffff, 1));
     RUN(testZShrArgImm32(0xffffffff, 63));
+#if !CPU(ARM)
+    RUN(testCSEStoreWithLoop());
+#endif
 
-    if (Options::useB3CanonicalizePrePostIncrements()) {
         RUN(testLoadPreIndex32());
         RUN(testLoadPreIndex64());
         RUN(testLoadPostIndex32());
         RUN(testLoadPostIndex64());
-
+    RUN(testLoadPreIndex32WithStore());
         RUN(testStorePreIndex32());
         RUN(testStorePreIndex64());
         RUN(testStorePostIndex32());
         RUN(testStorePostIndex64());
-    }
 }
 
 #endif // ENABLE(B3_JIT)
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

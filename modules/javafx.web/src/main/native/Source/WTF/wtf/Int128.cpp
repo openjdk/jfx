@@ -265,9 +265,9 @@ std::ostream& operator<<(std::ostream& os, Int128Impl v) {
       (flags & std::ios::basefield) == std::ios_base::fmtflags();
   if (print_as_decimal) {
     if (Int128High64(v) < 0) {
-      rep = "-";
+      rep.append("-");
     } else if (flags & std::ios::showpos) {
-      rep = "+";
+      rep.append("+");
     }
   }
 
@@ -302,9 +302,11 @@ std::ostream& operator<<(std::ostream& os, Int128Impl v) {
 
 void printInternal(PrintStream& out, UInt128 value)
 {
-    auto vector = numberToStringUnsigned<Vector<LChar, 50>>(value);
+    auto vector = numberToStringUnsigned<Vector<Latin1Character, 50>>(value);
     vector.append('\0');
-    out.printf("%s", bitwise_cast<const char*>(vector.data()));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    out.printf("%s", std::bit_cast<const char*>(vector.span().data()));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 void printInternal(PrintStream& out, Int128 value)
@@ -318,9 +320,11 @@ void printInternal(PrintStream& out, Int128 value)
         positive = static_cast<UInt128>(0x8000'0000'0000'0000ULL) << 64;
     else
         positive = -value;
-    auto vector = numberToStringUnsigned<Vector<LChar, 50>>(positive);
+    auto vector = numberToStringUnsigned<Vector<Latin1Character, 50>>(positive);
     vector.append('\0');
-    out.printf("-%s", bitwise_cast<const char*>(vector.data()));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+    out.printf("-%s", std::bit_cast<const char*>(vector.span().data()));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
 }  // namespace WTF
@@ -333,7 +337,6 @@ constexpr bool numeric_limits<WTF::UInt128Impl>::is_exact;
 constexpr bool numeric_limits<WTF::UInt128Impl>::has_infinity;
 constexpr bool numeric_limits<WTF::UInt128Impl>::has_quiet_NaN;
 constexpr bool numeric_limits<WTF::UInt128Impl>::has_signaling_NaN;
-constexpr float_denorm_style numeric_limits<WTF::UInt128Impl>::has_denorm;
 constexpr bool numeric_limits<WTF::UInt128Impl>::has_denorm_loss;
 constexpr float_round_style numeric_limits<WTF::UInt128Impl>::round_style;
 constexpr bool numeric_limits<WTF::UInt128Impl>::is_iec559;
@@ -357,7 +360,6 @@ constexpr bool numeric_limits<WTF::Int128Impl>::is_exact;
 constexpr bool numeric_limits<WTF::Int128Impl>::has_infinity;
 constexpr bool numeric_limits<WTF::Int128Impl>::has_quiet_NaN;
 constexpr bool numeric_limits<WTF::Int128Impl>::has_signaling_NaN;
-constexpr float_denorm_style numeric_limits<WTF::Int128Impl>::has_denorm;
 constexpr bool numeric_limits<WTF::Int128Impl>::has_denorm_loss;
 constexpr float_round_style numeric_limits<WTF::Int128Impl>::round_style;
 constexpr bool numeric_limits<WTF::Int128Impl>::is_iec559;

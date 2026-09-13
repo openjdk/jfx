@@ -34,7 +34,12 @@
 #include <wtf/JSONValues.h>
 
 #include <functional>
+#include <wtf/ASCIICType.h>
 #include <wtf/CommaPrinter.h>
+#include <wtf/MathExtras.h>
+#include <wtf/ZippedRange.h>
+#include <wtf/text/MakeString.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WTF {
@@ -59,127 +64,121 @@ enum class Token {
     Invalid,
 };
 
-const char* const nullToken = "null";
-const char* const trueToken = "true";
-const char* const falseToken = "false";
+constexpr auto nullToken = "null"_s;
+constexpr auto trueToken = "true"_s;
+constexpr auto falseToken = "false"_s;
 
 template<typename CodeUnit>
-bool parseConstToken(const CodeUnit* start, const CodeUnit* end, const CodeUnit** tokenEnd, const char* token)
+bool parseConstToken(std::span<const CodeUnit> data, std::span<const CodeUnit>& tokenEnd, ASCIILiteral token)
 {
-    while (start < end && *token != '\0' && *start++ == *token++) { }
-
-    if (*token != '\0')
+    if (data.size() < token.length())
         return false;
 
-    *tokenEnd = start;
+    for (auto [character, tokenCharacter] : zippedRange(data, token.span8())) {
+        if (character != tokenCharacter)
+        return false;
+    }
+
+    tokenEnd = data.subspan(token.length());
     return true;
 }
 
 template<typename CodeUnit>
-bool readInt(const CodeUnit* start, const CodeUnit* end, const CodeUnit** tokenEnd, bool canHaveLeadingZeros)
+bool readInt(std::span<const CodeUnit> data, std::span<const CodeUnit>& tokenEnd, bool canHaveLeadingZeros)
 {
-    if (start == end)
+    if (data.empty())
         return false;
 
-    bool haveLeadingZero = '0' == *start;
-    int length = 0;
-    while (start < end && '0' <= *start && *start <= '9') {
-        ++start;
-        ++length;
-    }
+    bool hasLeadingZero = data[0] == '0';
+    size_t originalSize = data.size();
+    skipWhile<isASCIIDigit>(data);
 
+    size_t length = originalSize - data.size();
     if (!length)
         return false;
 
-    if (!canHaveLeadingZeros && length > 1 && haveLeadingZero)
+    if (!canHaveLeadingZeros && length > 1 && hasLeadingZero)
         return false;
 
-    *tokenEnd = start;
+    tokenEnd = data;
     return true;
 }
 
 template<typename CodeUnit>
-bool parseNumberToken(const CodeUnit* start, const CodeUnit* end, const CodeUnit** tokenEnd)
+bool parseNumberToken(std::span<const CodeUnit> data, std::span<const CodeUnit>& tokenEnd)
 {
     // We just grab the number here. We validate the size in DecodeNumber.
     // According to RFC 4627, a valid number is: [minus] int [frac] [exp]
-    if (start == end)
+    if (data.empty())
         return false;
 
-    CodeUnit c = *start;
-    if ('-' == c)
-        ++start;
+    skipExactly(data, '-');
 
-    if (!readInt(start, end, &start, false))
+    if (!readInt(data, data, false))
         return false;
 
-    if (start == end) {
-        *tokenEnd = start;
+    if (data.empty()) {
+        tokenEnd = data;
         return true;
     }
 
     // Optional fraction part.
-    c = *start;
-    if ('.' == c) {
-        ++start;
-        if (!readInt(start, end, &start, true))
+    if (skipExactly(data, '.')) {
+        if (!readInt(data, data, true))
             return false;
-        if (start == end) {
-            *tokenEnd = start;
+        if (data.empty()) {
+            tokenEnd = data;
             return true;
         }
-        c = *start;
     }
 
     // Optional exponent part.
-    if ('e' == c || 'E' == c) {
-        ++start;
-        if (start == end)
+    if (skipExactly(data, 'e') || skipExactly(data, 'E')) {
+        if (data.empty())
             return false;
-        c = *start;
-        if ('-' == c || '+' == c) {
-            ++start;
-            if (start == end)
+        if (skipExactly(data, '-') || skipExactly(data, '+')) {
+            if (data.empty())
                 return false;
         }
-        if (!readInt(start, end, &start, true))
+        if (!readInt(data, data, true))
             return false;
     }
 
-    *tokenEnd = start;
+    tokenEnd = data;
     return true;
 }
 
 template<typename CodeUnit>
-bool readHexDigits(const CodeUnit* start, const CodeUnit* end, const CodeUnit** tokenEnd, int digits)
+bool readHexDigits(std::span<const CodeUnit> data, std::span<const CodeUnit>& tokenEnd, unsigned digits)
 {
-    if (end - start < digits)
+    if (data.size() < digits)
         return false;
 
-    for (int i = 0; i < digits; ++i) {
-        if (!isASCIIHexDigit(*start++))
+    for (unsigned i = 0; i < digits; ++i) {
+        if (!isASCIIHexDigit(data.front()))
             return false;
+        skip(data, 1);
     }
 
-    *tokenEnd = start;
+    tokenEnd = data;
     return true;
 }
 
 template<typename CodeUnit>
-bool parseStringToken(const CodeUnit* start, const CodeUnit* end, const CodeUnit** tokenEnd)
+bool parseStringToken(std::span<const CodeUnit> data, std::span<const CodeUnit>& tokenEnd)
 {
-    while (start < end) {
-        CodeUnit c = *start++;
-        if ('\\' == c && start < end) {
-            c = *start++;
+    while (!data.empty()) {
+        CodeUnit c = consume(data);
+        if ('\\' == c && !data.empty()) {
+            c = consume(data);
             // Make sure the escaped char is valid.
             switch (c) {
             case 'x':
-                if (!readHexDigits(start, end, &start, 2))
+                if (!readHexDigits(data, data, 2))
                     return false;
                 break;
             case 'u':
-                if (!readHexDigits(start, end, &start, 4))
+                if (!readHexDigits(data, data, 4))
                     return false;
                 break;
             case '\\':
@@ -196,7 +195,7 @@ bool parseStringToken(const CodeUnit* start, const CodeUnit* end, const CodeUnit
                 return false;
             }
         } else if ('"' == c) {
-            *tokenEnd = start;
+            tokenEnd = data;
             return true;
         }
     }
@@ -205,46 +204,45 @@ bool parseStringToken(const CodeUnit* start, const CodeUnit* end, const CodeUnit
 }
 
 template<typename CodeUnit>
-Token parseToken(const CodeUnit* start, const CodeUnit* end, const CodeUnit** tokenStart, const CodeUnit** tokenEnd)
+Token parseToken(std::span<const CodeUnit> data, std::span<const CodeUnit>& tokenStart, std::span<const CodeUnit>& tokenEnd)
 {
-    while (start < end && isASCIIWhitespaceWithoutFF(*start))
-        ++start;
+    skipWhile<isASCIIWhitespaceWithoutFF>(data);
 
-    if (start == end)
+    if (data.empty())
         return Token::Invalid;
 
-    *tokenStart = start;
+    tokenStart = data;
 
-    switch (*start) {
+    switch (data.front()) {
     case 'n':
-        if (parseConstToken(start, end, tokenEnd, nullToken))
+        if (parseConstToken(data, tokenEnd, nullToken))
             return Token::Null;
         break;
     case 't':
-        if (parseConstToken(start, end, tokenEnd, trueToken))
+        if (parseConstToken(data, tokenEnd, trueToken))
             return Token::BoolTrue;
         break;
     case 'f':
-        if (parseConstToken(start, end, tokenEnd, falseToken))
+        if (parseConstToken(data, tokenEnd, falseToken))
             return Token::BoolFalse;
         break;
     case '[':
-        *tokenEnd = start + 1;
+        tokenEnd = data.subspan(1);
         return Token::ArrayBegin;
     case ']':
-        *tokenEnd = start + 1;
+        tokenEnd = data.subspan(1);
         return Token::ArrayEnd;
     case ',':
-        *tokenEnd = start + 1;
+        tokenEnd = data.subspan(1);
         return Token::ListSeparator;
     case '{':
-        *tokenEnd = start + 1;
+        tokenEnd = data.subspan(1);
         return Token::ObjectBegin;
     case '}':
-        *tokenEnd = start + 1;
+        tokenEnd = data.subspan(1);
         return Token::ObjectEnd;
     case ':':
-        *tokenEnd = start + 1;
+        tokenEnd = data.subspan(1);
         return Token::ObjectPairSeparator;
     case '0':
     case '1':
@@ -257,11 +255,11 @@ Token parseToken(const CodeUnit* start, const CodeUnit* end, const CodeUnit** to
     case '8':
     case '9':
     case '-':
-        if (parseNumberToken(start, end, tokenEnd))
+        if (parseNumberToken(data, tokenEnd))
             return Token::Number;
         break;
     case '"':
-        if (parseStringToken(start + 1, end, tokenEnd))
+        if (parseStringToken(data.subspan(1), tokenEnd))
             return Token::String;
         break;
     }
@@ -270,17 +268,17 @@ Token parseToken(const CodeUnit* start, const CodeUnit* end, const CodeUnit** to
 }
 
 template<typename CodeUnit>
-bool decodeString(const CodeUnit* start, const CodeUnit* end, StringBuilder& output)
+bool decodeString(std::span<const CodeUnit> data, StringBuilder& output)
 {
-    while (start < end) {
-        UChar c = *start++;
+    while (!data.empty()) {
+        char16_t c = consume(data);
         if ('\\' != c) {
             output.append(c);
             continue;
         }
-        if (UNLIKELY(start >= end))
+        if (data.empty()) [[unlikely]]
             return false;
-        c = *start++;
+        c = consume(data);
         switch (c) {
         case '"':
         case '/':
@@ -305,16 +303,16 @@ bool decodeString(const CodeUnit* start, const CodeUnit* end, StringBuilder& out
             c = '\v';
             break;
         case 'x':
-            if (UNLIKELY(start + 1 >= end))
+            if (data.size() < 2) [[unlikely]]
                 return false;
-            c = toASCIIHexValue(start[0], start[1]);
-            start += 2;
+            c = toASCIIHexValue(data[0], data[1]);
+            skip(data, 2);
             break;
         case 'u':
-            if (UNLIKELY(start + 3 >= end))
+            if (data.size() < 4) [[unlikely]]
                 return false;
-            c = toASCIIHexValue(start[0], start[1]) << 8 | toASCIIHexValue(start[2], start[3]);
-            start += 4;
+            c = toASCIIHexValue(data[0], data[1]) << 8 | toASCIIHexValue(data[2], data[3]);
+            skip(data, 4);
             break;
         default:
             return false;
@@ -326,19 +324,16 @@ bool decodeString(const CodeUnit* start, const CodeUnit* end, StringBuilder& out
 }
 
 template<typename CodeUnit>
-bool decodeString(const CodeUnit* start, const CodeUnit* end, String& output)
+bool decodeString(std::span<const CodeUnit> data, String& output)
 {
-    if (start == end) {
+    if (data.empty()) {
         output = emptyString();
         return true;
     }
 
-    if (start > end)
-        return false;
-
     StringBuilder buffer;
-    buffer.reserveCapacity(end - start);
-    if (!decodeString(start, end, buffer))
+    buffer.reserveCapacity(data.size());
+    if (!decodeString(data, buffer))
         return false;
 
     output = buffer.toString();
@@ -346,15 +341,15 @@ bool decodeString(const CodeUnit* start, const CodeUnit* end, String& output)
 }
 
 template<typename CodeUnit>
-RefPtr<JSON::Value> buildValue(const CodeUnit* start, const CodeUnit* end, const CodeUnit** valueTokenEnd, int depth)
+RefPtr<JSON::Value> buildValue(std::span<const CodeUnit> data, std::span<const CodeUnit>& valueTokenEnd, int depth)
 {
     if (depth > stackLimit)
         return nullptr;
 
     RefPtr<JSON::Value> result;
-    const CodeUnit* tokenStart;
-    const CodeUnit* tokenEnd;
-    Token token = parseToken(start, end, &tokenStart, &tokenEnd);
+    std::span<const CodeUnit> tokenStart;
+    std::span<const CodeUnit> tokenEnd;
+    Token token = parseToken(data, tokenStart, tokenEnd);
     switch (token) {
     case Token::Invalid:
         return nullptr;
@@ -369,7 +364,7 @@ RefPtr<JSON::Value> buildValue(const CodeUnit* start, const CodeUnit* end, const
         break;
     case Token::Number: {
         bool ok;
-        double value = charactersToDouble(tokenStart, tokenEnd - tokenStart, &ok);
+        double value = charactersToDouble(tokenStart.first(tokenEnd.data() - tokenStart.data()), &ok);
         if (!ok)
             return nullptr;
         result = JSON::Value::create(value);
@@ -377,7 +372,9 @@ RefPtr<JSON::Value> buildValue(const CodeUnit* start, const CodeUnit* end, const
     }
     case Token::String: {
         String value;
-        bool ok = decodeString(tokenStart + 1, tokenEnd - 1, value);
+        if (tokenEnd.data() - tokenStart.data() < 2)
+            return nullptr;
+        bool ok = decodeString(tokenStart.subspan(1, std::to_address(tokenEnd.begin()) - std::to_address(tokenStart.begin()) - 2), value);
         if (!ok)
             return nullptr;
         result = JSON::Value::create(value);
@@ -385,20 +382,20 @@ RefPtr<JSON::Value> buildValue(const CodeUnit* start, const CodeUnit* end, const
     }
     case Token::ArrayBegin: {
         Ref<JSON::Array> array = JSON::Array::create();
-        start = tokenEnd;
-        token = parseToken(start, end, &tokenStart, &tokenEnd);
+        data = tokenEnd;
+        token = parseToken(data, tokenStart, tokenEnd);
         while (token != Token::ArrayEnd) {
-            RefPtr<JSON::Value> arrayNode = buildValue(start, end, &tokenEnd, depth + 1);
+            RefPtr<JSON::Value> arrayNode = buildValue(data, tokenEnd, depth + 1);
             if (!arrayNode)
                 return nullptr;
             array->pushValue(arrayNode.releaseNonNull());
 
             // After a list value, we expect a comma or the end of the list.
-            start = tokenEnd;
-            token = parseToken(start, end, &tokenStart, &tokenEnd);
+            data = tokenEnd;
+            token = parseToken(data, tokenStart, tokenEnd);
             if (token == Token::ListSeparator) {
-                start = tokenEnd;
-                token = parseToken(start, end, &tokenStart, &tokenEnd);
+                data = tokenEnd;
+                token = parseToken(data, tokenStart, tokenEnd);
                 if (token == Token::ArrayEnd)
                     return nullptr;
             } else if (token != Token::ArrayEnd) {
@@ -407,38 +404,40 @@ RefPtr<JSON::Value> buildValue(const CodeUnit* start, const CodeUnit* end, const
             }
         }
         ASSERT(token == Token::ArrayEnd);
-        result = WTFMove(array);
+        result = WTF::move(array);
         break;
     }
     case Token::ObjectBegin: {
         Ref<JSON::Object> object = JSON::Object::create();
-        start = tokenEnd;
-        token = parseToken(start, end, &tokenStart, &tokenEnd);
+        data = tokenEnd;
+        token = parseToken(data, tokenStart, tokenEnd);
         while (token != Token::ObjectEnd) {
             if (token != Token::String)
                 return nullptr;
             String key;
-            if (!decodeString(tokenStart + 1, tokenEnd - 1, key))
+            if (tokenEnd.data() - tokenStart.data() < 2)
                 return nullptr;
-            start = tokenEnd;
+            if (!decodeString(tokenStart.subspan(1, std::to_address(tokenEnd.begin()) - std::to_address(tokenStart.begin()) - 2), key))
+                return nullptr;
+            data = tokenEnd;
 
-            token = parseToken(start, end, &tokenStart, &tokenEnd);
+            token = parseToken(data, tokenStart, tokenEnd);
             if (token != Token::ObjectPairSeparator)
                 return nullptr;
-            start = tokenEnd;
+            data = tokenEnd;
 
-            RefPtr<JSON::Value> value = buildValue(start, end, &tokenEnd, depth + 1);
+            RefPtr<JSON::Value> value = buildValue(data, tokenEnd, depth + 1);
             if (!value)
                 return nullptr;
             object->setValue(key, value.releaseNonNull());
-            start = tokenEnd;
+            data = tokenEnd;
 
             // After a key/value pair, we expect a comma or the end of the
             // object.
-            token = parseToken(start, end, &tokenStart, &tokenEnd);
+            token = parseToken(data, tokenStart, tokenEnd);
             if (token == Token::ListSeparator) {
-                start = tokenEnd;
-                token = parseToken(start, end, &tokenStart, &tokenEnd);
+                data = tokenEnd;
+                token = parseToken(data, tokenStart, tokenEnd);
                 if (token == Token::ObjectEnd)
                     return nullptr;
             } else if (token != Token::ObjectEnd) {
@@ -447,7 +446,7 @@ RefPtr<JSON::Value> buildValue(const CodeUnit* start, const CodeUnit* end, const
             }
         }
         ASSERT(token == Token::ObjectEnd);
-        result = WTFMove(object);
+        result = WTF::move(object);
         break;
     }
 
@@ -455,7 +454,7 @@ RefPtr<JSON::Value> buildValue(const CodeUnit* start, const CodeUnit* end, const
         // We got a token that's not a value.
         return nullptr;
     }
-    *valueTokenEnd = tokenEnd;
+    valueTokenEnd = tokenEnd;
     return result;
 }
 
@@ -463,19 +462,11 @@ RefPtr<JSON::Value> buildValue(const CodeUnit* start, const CodeUnit* end, const
 
 template<typename Visitor> constexpr decltype(auto) Value::visitDerived(Visitor&& visitor)
 {
-    switch (m_type) {
-    case Type::Null:
-    case Type::Boolean:
-    case Type::Double:
-    case Type::Integer:
-    case Type::String:
-        return std::invoke(std::forward<Visitor>(visitor), static_cast<Value&>(*this));
-    case Type::Object:
+    if (std::holds_alternative<ObjectTypeTag>(m_value))
         return std::invoke(std::forward<Visitor>(visitor), static_cast<Object&>(*this));
-    case Type::Array:
+    if (std::holds_alternative<ArrayTypeTag>(m_value))
         return std::invoke(std::forward<Visitor>(visitor), static_cast<Array&>(*this));
-    }
-    RELEASE_ASSERT_NOT_REACHED();
+    return std::invoke(std::forward<Visitor>(visitor), static_cast<Value&>(*this));
 }
 
 template<typename Visitor> constexpr decltype(auto) Value::visitDerived(Visitor&& visitor) const
@@ -520,11 +511,11 @@ Ref<Value> Value::create(const String& value)
 
 RefPtr<Value> Value::parseJSON(StringView json)
 {
-    auto containsNonSpace = [] (const auto* begin, const auto* end) {
-        if (!begin)
+    auto containsNonSpace = [] (auto span) {
+        if (!span.data())
             return false;
-        for (const auto* it = begin; it < end; it++) {
-            if (!isASCIIWhitespaceWithoutFF(*it))
+        for (auto character : span) {
+            if (!isASCIIWhitespaceWithoutFF(character))
                 return true;
         }
         return false;
@@ -532,21 +523,27 @@ RefPtr<Value> Value::parseJSON(StringView json)
 
     RefPtr<Value> result;
     if (json.is8Bit()) {
-        const LChar* start = json.characters8();
-        const LChar* end = start + json.length();
-        const LChar* tokenEnd { nullptr };
-        result = buildValue(start, end, &tokenEnd, 0);
-        if (containsNonSpace(tokenEnd, end))
+        auto data = json.span8();
+        std::span<const Latin1Character> tokenEnd;
+        result = buildValue(data, tokenEnd, 0);
+        if (containsNonSpace(tokenEnd))
             return nullptr;
     } else {
-        const UChar* start = json.characters16();
-        const UChar* end = start + json.length();
-        const UChar* tokenEnd { nullptr };
-        result = buildValue(start, end, &tokenEnd, 0);
-        if (containsNonSpace(tokenEnd, end))
+        auto data = json.span16();
+        std::span<const char16_t> tokenEnd;
+        result = buildValue(data, tokenEnd, 0);
+        if (containsNonSpace(tokenEnd))
             return nullptr;
     }
     return result;
+}
+
+std::optional<Ref<Value>> Value::optionalParseJSON(StringView json)
+{
+    auto value = parseJSON(json);
+    if (value)
+        return value.releaseNonNull();
+    return std::nullopt;
 }
 
 String Value::toJSONString() const
@@ -559,81 +556,75 @@ String Value::toJSONString() const
 
 std::optional<bool> Value::asBoolean() const
 {
-    if (type() != Type::Boolean)
+    if (auto* boolean = std::get_if<bool>(&m_value))
+        return *boolean;
         return std::nullopt;
-    return m_value.boolean;
 }
 
 std::optional<double> Value::asDouble() const
 {
-    if (type() != Type::Double && type() != Type::Integer)
+    if (auto* number = std::get_if<double>(&m_value))
+        return *number;
+    if (auto* number = std::get_if<int>(&m_value))
+        return static_cast<double>(*number);
         return std::nullopt;
-    return m_value.number;
 }
 
 std::optional<int> Value::asInteger() const
 {
-    if (type() != Type::Double && type() != Type::Integer)
+    if (auto* number = std::get_if<int>(&m_value))
+        return *number;
+    if (auto* number = std::get_if<double>(&m_value))
+        return truncateDoubleToInt32(*number);
         return std::nullopt;
-    return static_cast<int>(m_value.number);
 }
 
-String Value::asString() const
+const String& Value::asString() const
 {
-    if (type() != Type::String)
+    if (auto* string = std::get_if<String>(&m_value))
+        return *string;
         return nullString();
-    return m_value.string;
 }
 
 void Value::dump(PrintStream& out) const
 {
-    switch (m_type) {
-    case Type::Null:
+    WTF::visit(WTF::makeVisitor([&](std::monostate) {
         out.print("null"_s);
-        break;
-    case Type::Boolean:
-        out.print(m_value.boolean ? "true"_s : "false"_s);
-        break;
-    case Type::String: {
-        StringBuilder builder;
-        builder.appendQuotedJSONString(m_value.string);
-        out.print(builder.toString());
-        break;
-    }
-    case Type::Double:
-    case Type::Integer: {
-        if (!std::isfinite(m_value.number))
+    }, [&](bool boolean) {
+        out.print(boolean ? "true"_s : "false"_s);
+    }, [&](double number) {
+        if (!std::isfinite(number))
             out.print("null"_s);
         else
-            out.print(makeString(m_value.number));
-        break;
-    }
-    case Type::Object: {
-        auto& object = *static_cast<const ObjectBase*>(this);
-        CommaPrinter comma(",");
-        out.print("{");
+            out.print(makeString(number));
+    }, [&](int number) {
+        out.print(makeString(number));
+    }, [&](const String& string) {
+        StringBuilder builder;
+        builder.appendQuotedJSONString(string);
+        out.print(builder.toString());
+    }, [&](ObjectTypeTag) {
+        // Safety: This lambda runs synchronously so it is safe to capture `this` without refing.
+        SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE auto& object = *static_cast<const ObjectBase*>(this);
+        CommaPrinter comma(","_s);
+        out.print("{"_s);
         for (const auto& key : object.m_order) {
             auto findResult = object.m_map.find(key);
             ASSERT(findResult != object.m_map.end());
             StringBuilder builder;
             builder.appendQuotedJSONString(findResult->key);
-            out.print(comma, builder.toString(), ":", findResult->value.get());
+            out.print(comma, builder.toString(), ":"_s, findResult->value.get());
         }
-        out.print("}");
-        break;
-    }
-    case Type::Array: {
-        auto& array = *static_cast<const ArrayBase*>(this);
-        CommaPrinter comma(",");
-        out.print("[");
+        out.print("}"_s);
+    }, [&](ArrayTypeTag) {
+        // Safety: This lambda runs synchronously so it is safe to capture `this` without refing.
+        SUPPRESS_UNCOUNTED_LAMBDA_CAPTURE auto& array = *static_cast<const ArrayBase*>(this);
+        CommaPrinter comma(","_s);
+        out.print("["_s);
         for (auto& value : array.m_map)
             out.print(comma, value.get());
-        out.print("]");
-        break;
-    }
-    default:
-        ASSERT_NOT_REACHED();
-    }
+        out.print("]"_s);
+    }), m_value);
 }
 
 void Value::writeJSON(StringBuilder& output) const
@@ -645,31 +636,27 @@ void Value::writeJSON(StringBuilder& output) const
 
 void Value::writeJSONImpl(StringBuilder& output) const
 {
-    switch (m_type) {
-    case Type::Null:
-        output.append("null");
-        break;
-    case Type::Boolean:
-        if (m_value.boolean)
-            output.append("true");
+    WTF::visit(WTF::makeVisitor([&](std::monostate) {
+        output.append("null"_s);
+    }, [&](bool boolean) {
+        if (boolean)
+            output.append("true"_s);
         else
-            output.append("false");
-        break;
-    case Type::String:
-        output.appendQuotedJSONString(m_value.string);
-        break;
-    case Type::Double:
-    case Type::Integer: {
-        if (!std::isfinite(m_value.number))
-            output.append("null");
+            output.append("false"_s);
+    }, [&](double number) {
+        if (!std::isfinite(number))
+            output.append("null"_s);
         else
-            output.append(m_value.number);
-        break;
-    }
-    case Type::Object:
-    case Type::Array:
+            output.append(number);
+    }, [&](int number) {
+        output.append(number);
+    }, [&](const String& string) {
+        output.appendQuotedJSONString(string);
+    }, [&](ObjectTypeTag) {
         ASSERT_NOT_REACHED();
-    }
+    }, [&](ArrayTypeTag) {
+        ASSERT_NOT_REACHED();
+    }), m_value);
 }
 
 size_t Value::memoryCost() const
@@ -682,8 +669,8 @@ size_t Value::memoryCost() const
 size_t Value::memoryCostImpl() const
 {
     size_t memoryCost = sizeof(*this);
-    if (m_type == Type::String && m_value.string)
-        memoryCost += m_value.string->sizeInBytes();
+    if (auto* string = std::get_if<String>(&m_value))
+        memoryCost += string->sizeInBytes();
     return memoryCost;
 }
 
@@ -693,7 +680,7 @@ size_t ObjectBase::memoryCostImpl() const
 {
     size_t memoryCost = sizeof(*this);
     for (const auto& entry : m_map)
-        memoryCost += entry.key.sizeInBytes() + entry.value->memoryCost();
+        memoryCost += entry.key.sizeInBytes() + Ref { entry.value }->memoryCost();
     return memoryCost;
 }
 
@@ -769,13 +756,13 @@ void ObjectBase::writeJSONImpl(StringBuilder& output) const
             output.append(',');
         output.appendQuotedJSONString(findResult->key);
         output.append(':');
-        findResult->value->writeJSON(output);
+        Ref { findResult->value }->writeJSON(output);
     }
     output.append('}');
 }
 
 ObjectBase::ObjectBase()
-    : Value(Type::Object)
+    : Value(ObjectTypeTag::Object)
 {
 }
 
@@ -784,16 +771,19 @@ ArrayBase::~ArrayBase() = default;
 void ArrayBase::writeJSONImpl(StringBuilder& output) const
 {
     output.append('[');
-    for (auto it = m_map.begin(); it != m_map.end(); ++it) {
-        if (it != m_map.begin())
+    bool isFirst = true;
+    for (auto& value : m_map) {
+        if (isFirst)
+            isFirst = false;
+        else
             output.append(',');
-        (*it)->writeJSON(output);
+        value->writeJSON(output);
     }
     output.append(']');
 }
 
 ArrayBase::ArrayBase()
-    : Value(Type::Array)
+    : Value(ArrayTypeTag::Array)
 {
 }
 

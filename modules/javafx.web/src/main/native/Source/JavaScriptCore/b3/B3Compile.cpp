@@ -38,7 +38,7 @@ namespace JSC { namespace B3 {
 
 Compilation compile(Procedure& proc)
 {
-    CompilerTimingScope timingScope("Total B3+Air", "compile");
+    CompilerTimingScope timingScope("Total B3+Air"_s, "compile"_s);
 
     prepareForGeneration(proc);
 
@@ -46,7 +46,7 @@ Compilation compile(Procedure& proc)
     generate(proc, jit);
     LinkBuffer linkBuffer(jit, nullptr);
 
-    return Compilation(FINALIZE_CODE(linkBuffer, JITCompilationPtrTag, "Compilation"), proc.releaseByproducts());
+    return Compilation(FINALIZE_CODE(linkBuffer, JITCompilationPtrTag, nullptr, "Compilation"), proc.releaseByproducts());
 }
 
 } } // namespace JSC::B3

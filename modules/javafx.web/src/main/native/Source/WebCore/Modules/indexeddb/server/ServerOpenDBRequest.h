@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include "IDBConnectionToClient.h"
-#include "IDBRequestData.h"
+#include <WebCore/IDBConnectionToClient.h>
+#include <WebCore/IDBDatabaseConnectionIdentifier.h>
+#include <WebCore/IDBOpenRequestData.h>
 #include <wtf/HashSet.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -37,37 +38,40 @@ class IDBDatabaseInfo;
 
 namespace IDBServer {
 
+class UniqueIDBDatabaseTransaction;
+
 class ServerOpenDBRequest : public RefCounted<ServerOpenDBRequest> {
 public:
-    static Ref<ServerOpenDBRequest> create(IDBConnectionToClient&, const IDBRequestData&);
+    static Ref<ServerOpenDBRequest> create(IDBConnectionToClient&, const IDBOpenRequestData&);
 
     IDBConnectionToClient& connection() { return m_connection; }
-    const IDBRequestData& requestData() const { return m_requestData; }
+    const IDBOpenRequestData& requestData() const { return m_requestData; }
 
     bool isOpenRequest() const;
     bool isDeleteRequest() const;
 
     void maybeNotifyRequestBlocked(uint64_t currentVersion);
-    void notifyDidDeleteDatabase(const IDBDatabaseInfo&);
 
-    uint64_t versionChangeID() const;
-
-    void notifiedConnectionsOfVersionChange(HashSet<uint64_t>&& connectionIdentifiers);
-    void connectionClosedOrFiredVersionChangeEvent(uint64_t connectionIdentifier);
+    void notifiedConnectionsOfVersionChange(HashSet<IDBDatabaseConnectionIdentifier>&& connectionIdentifiers);
+    void connectionClosedOrFiredVersionChangeEvent(IDBDatabaseConnectionIdentifier);
     bool hasConnectionsPendingVersionChangeEvent() const { return !m_connectionsPendingVersionChangeEvent.isEmpty(); }
     bool hasNotifiedConnectionsOfVersionChange() const { return m_notifiedConnectionsOfVersionChange; }
 
+    void setVersionChangeTransaction(UniqueIDBDatabaseTransaction&);
+    void didDeleteDatabase(const IDBResultData&);
+    void didOpenDatabase(const IDBResultData&);
 
 private:
-    ServerOpenDBRequest(IDBConnectionToClient&, const IDBRequestData&);
+    ServerOpenDBRequest(IDBConnectionToClient&, const IDBOpenRequestData&);
 
-    Ref<IDBConnectionToClient> m_connection;
-    IDBRequestData m_requestData;
+    const Ref<IDBConnectionToClient> m_connection;
+    IDBOpenRequestData m_requestData;
 
     bool m_notifiedBlocked { false };
 
     bool m_notifiedConnectionsOfVersionChange { false };
-    HashSet<uint64_t> m_connectionsPendingVersionChangeEvent;
+    HashSet<IDBDatabaseConnectionIdentifier> m_connectionsPendingVersionChangeEvent;
+    RefPtr<UniqueIDBDatabaseTransaction> m_versionChangeTransaction;
 };
 
 } // namespace IDBServer

@@ -25,24 +25,26 @@
 
 #pragma once
 
-#include "DeclarativeAnimation.h"
-#include "Styleable.h"
+#include <WebCore/StyleAnimation.h>
+#include <WebCore/StyleOriginatedAnimation.h>
+#include <WebCore/Styleable.h>
+#include <WebCore/TimelineRangeValue.h>
 #include <wtf/OptionSet.h>
 #include <wtf/Ref.h>
 
 namespace WebCore {
 
-class Animation;
 class RenderStyle;
 
-class CSSAnimation final : public DeclarativeAnimation {
-    WTF_MAKE_ISO_ALLOCATED(CSSAnimation);
+class CSSAnimation final : public StyleOriginatedAnimation {
+    WTF_MAKE_TZONE_ALLOCATED(CSSAnimation);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(CSSAnimation);
 public:
-    static Ref<CSSAnimation> create(const Styleable&, const Animation&, const RenderStyle* oldStyle, const RenderStyle& newStyle, const Style::ResolutionContext&);
+    static Ref<CSSAnimation> create(const Styleable&, Style::Animation&&, const RenderStyle* oldStyle, const RenderStyle& newStyle, const Style::ResolutionContext&);
     ~CSSAnimation() = default;
 
-    bool isCSSAnimation() const override { return true; }
-    const String& animationName() const { return m_animationName; }
+    const String& animationName() const { return m_animationName.name; }
+    const Style::ScopedName& scopedAnimationName() const { return m_animationName; }
 
     void effectTimingWasUpdatedUsingBindings(OptionalEffectTiming);
     void effectKeyframesWereSetUsingBindings();
@@ -50,17 +52,30 @@ public:
     void keyframesRuleDidChange();
     void updateKeyframesIfNeeded(const RenderStyle* oldStyle, const RenderStyle& newStyle, const Style::ResolutionContext&);
 
+    void syncStyleOriginatedTimeline();
+
+    const Style::Animation& backingStyleAnimation() const { return m_backingStyleAnimation; }
+    void setBackingStyleAnimation(const Style::Animation&);
+
 private:
-    CSSAnimation(const Styleable&, const Animation&);
+    CSSAnimation(const Styleable&, Style::ScopedName&&, Style::Animation&&);
+
+    bool isCSSAnimation() const final { return true; }
 
     void syncPropertiesWithBackingAnimation() final;
-    Ref<DeclarativeAnimationEvent> createEvent(const AtomString& eventType, std::optional<Seconds> scheduledTime, double elapsedTime, PseudoId) final;
+    AnimationPlayState backingAnimationPlayState() const final;
+    TimingFunction* backingAnimationTimingFunction() const final;
+    Ref<StyleOriginatedAnimationEvent> createEvent(const AtomString& eventType, std::optional<Seconds> scheduledTime, double elapsedTime, const std::optional<Style::PseudoElementIdentifier>&) final;
 
+    AnimationTimeline* bindingsTimeline() const final;
+    void setBindingsTimeline(RefPtr<AnimationTimeline>&&) final;
     ExceptionOr<void> bindingsPlay() final;
     ExceptionOr<void> bindingsPause() final;
     void setBindingsEffect(RefPtr<AnimationEffect>&&) final;
-    ExceptionOr<void> setBindingsStartTime(const std::optional<CSSNumberish>&) final;
+    ExceptionOr<void> setBindingsStartTime(const std::optional<WebAnimationTime>&) final;
     ExceptionOr<void> bindingsReverse() final;
+    void setBindingsRangeStart(TimelineRangeValue&&) final;
+    void setBindingsRangeEnd(TimelineRangeValue&&) final;
 
     enum class Property : uint16_t {
         Name = 1 << 0,
@@ -72,11 +87,16 @@ private:
         Delay = 1 << 6,
         FillMode = 1 << 7,
         Keyframes = 1 << 8,
-        CompositeOperation = 1 << 9
+        CompositeOperation = 1 << 9,
+        Timeline = 1 << 10,
+        RangeStart = 1 << 11,
+        RangeEnd = 1 << 12,
     };
 
-    String m_animationName;
+    Style::ScopedName m_animationName;
     OptionSet<Property> m_overriddenProperties;
+    std::optional<AnimationPlayState> m_lastStyleOriginatedPlayState;
+    Style::Animation m_backingStyleAnimation;
 };
 
 } // namespace WebCore

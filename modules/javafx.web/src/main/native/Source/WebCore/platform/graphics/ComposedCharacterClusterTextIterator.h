@@ -32,10 +32,9 @@ namespace WebCore {
 
 class ComposedCharacterClusterTextIterator {
 public:
-    // The passed in UChar pointer starts at 'currentIndex'. The iterator operates on the range [currentIndex, lastIndex].
-    // 'endIndex' denotes the maximum length of the UChar array, which might exceed 'lastIndex'.
-    ComposedCharacterClusterTextIterator(const UChar* characters, unsigned currentIndex, unsigned lastIndex, unsigned endIndex)
-        : m_iterator(StringView(characters, endIndex - currentIndex), nullptr, 0, TextBreakIterator::CaretMode { }, nullAtom())
+    // The passed in char16_t pointer starts at 'currentIndex'. The iterator operates on the range [currentIndex, lastIndex].
+    ComposedCharacterClusterTextIterator(std::span<const char16_t> characters, unsigned currentIndex, unsigned lastIndex)
+        : m_iterator(characters, { }, TextBreakIterator::CaretMode { }, nullAtom())
         , m_characters(characters)
         , m_originalIndex(currentIndex)
         , m_currentIndex(currentIndex)
@@ -43,7 +42,7 @@ public:
     {
     }
 
-    bool consume(UChar32& character, unsigned& clusterLength)
+    bool consume(char32_t& character, unsigned& clusterLength)
     {
         if (m_currentIndex >= m_lastIndex)
             return false;
@@ -63,14 +62,29 @@ public:
         m_currentIndex += advanceLength;
     }
 
+    void reset(unsigned index)
+    {
+        ASSERT(index >= m_originalIndex);
+        if (index >= m_lastIndex)
+            return;
+        m_currentIndex = index;
+    }
+
+    std::span<const char16_t> remainingCharacters() const
+    {
+        auto relativeIndex = m_currentIndex - m_originalIndex;
+        return m_characters.subspan(relativeIndex);
+    }
+
     unsigned currentIndex() const { return m_currentIndex; }
+    std::span<const char16_t> characters() const { return m_characters; }
 
 private:
     CachedTextBreakIterator m_iterator;
-    const UChar* m_characters;
-    unsigned m_originalIndex { 0 };
+    std::span<const char16_t> m_characters;
+    const unsigned m_originalIndex { 0 };
     unsigned m_currentIndex { 0 };
-    unsigned m_lastIndex { 0 };
+    const unsigned m_lastIndex { 0 };
 };
 
-}
+} // namespace WebCore

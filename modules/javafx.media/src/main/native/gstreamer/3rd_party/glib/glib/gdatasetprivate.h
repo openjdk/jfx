@@ -38,6 +38,28 @@ G_BEGIN_DECLS
 #define G_DATALIST_GET_FLAGS(datalist)        \
   ((gsize) g_atomic_pointer_get (datalist) & G_DATALIST_FLAGS_MASK)
 
+/*< private >
+ * GDataListUpdateAtomicFunc:
+ * @data: (inout) (nullable) (not optional): the existing data corresponding to
+ *   the "key_id" parameter of g_datalist_id_update_atomic(), and return location
+ *   for the new value for it
+ * @destroy_notify: (inout) (nullable) (not optional): the existing destroy
+ *   notify function for @data, and return location for the destroy notify
+ *   function for the new value for it
+ * @user_data: user data passed in to [func@GLib.datalist_id_update_atomic]
+ *
+ * Callback from [func@GLib.datalist_id_update_atomic].
+ *
+ * Since: 2.80
+ */
+typedef gpointer (*GDataListUpdateAtomicFunc) (gpointer *data,
+                                               GDestroyNotify *destroy_notify,
+                                               gpointer user_data);
+
+gpointer g_datalist_id_update_atomic (GData **datalist,
+                                      GQuark key_id,
+                                      GDataListUpdateAtomicFunc callback,
+                                      gpointer user_data);
 
 G_END_DECLS
 

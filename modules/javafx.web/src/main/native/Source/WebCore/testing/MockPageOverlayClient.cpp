@@ -29,11 +29,13 @@
 #include "Document.h"
 #include "GraphicsContext.h"
 #include "GraphicsLayer.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "Page.h"
 #include "PageOverlayController.h"
 #include "PlatformMouseEvent.h"
+#include <JavaScriptCore/ConsoleTypes.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -60,7 +62,7 @@ Ref<MockPageOverlay> MockPageOverlayClient::installOverlay(Page& page, PageOverl
 void MockPageOverlayClient::uninstallAllOverlays()
 {
     while (!m_overlays.isEmpty()) {
-        RefPtr<MockPageOverlay> mockOverlay = m_overlays.takeAny();
+        RefPtr mockOverlay = m_overlays.takeAny();
         PageOverlayController* overlayController = mockOverlay->overlay()->controller();
         ASSERT(overlayController);
         overlayController->uninstallPageOverlay(*mockOverlay->overlay(), PageOverlay::FadeMode::DoNotFade);
@@ -69,11 +71,11 @@ void MockPageOverlayClient::uninstallAllOverlays()
 
 String MockPageOverlayClient::layerTreeAsText(Page& page, OptionSet<LayerTreeAsTextOptions> options)
 {
-    GraphicsLayer* viewOverlayRoot = page.pageOverlayController().viewOverlayRootLayer();
-    GraphicsLayer* documentOverlayRoot = page.pageOverlayController().documentOverlayRootLayer();
+    RefPtr viewOverlayRoot = page.pageOverlayController().viewOverlayRootLayer();
+    RefPtr documentOverlayRoot = page.pageOverlayController().documentOverlayRootLayer();
 
-    return "View-relative:\n" + (viewOverlayRoot ? viewOverlayRoot->layerTreeAsText(options | LayerTreeAsTextOptions::IncludePageOverlayLayers) : "(no view-relative overlay root)"_s)
-        + "\n\nDocument-relative:\n" + (documentOverlayRoot ? documentOverlayRoot->layerTreeAsText(options | LayerTreeAsTextOptions::IncludePageOverlayLayers) : "(no document-relative overlay root)"_s);
+    return makeString("View-relative:\n"_s, (viewOverlayRoot ? viewOverlayRoot->layerTreeAsText(options | LayerTreeAsTextOptions::IncludePageOverlayLayers) : "(no view-relative overlay root)"_s)
+        , "\n\nDocument-relative:\n"_s, (documentOverlayRoot ? documentOverlayRoot->layerTreeAsText(options | LayerTreeAsTextOptions::IncludePageOverlayLayers) : "(no document-relative overlay root)"_s));
 }
 
 void MockPageOverlayClient::willMoveToPage(PageOverlay&, Page*)
@@ -105,9 +107,11 @@ void MockPageOverlayClient::drawRect(PageOverlay& overlay, GraphicsContext& cont
 
 bool MockPageOverlayClient::mouseEvent(PageOverlay& overlay, const PlatformMouseEvent& event)
 {
-    if (auto* localMainFrame = dynamicDowncast<LocalFrame>(overlay.page()->mainFrame())) {
-        localMainFrame->document()->addConsoleMessage(MessageSource::Other, MessageLevel::Debug,
-        makeString("MockPageOverlayClient::mouseEvent location (", event.position().x(), ", ", event.position().y(), ')'));
+    if (RefPtr mainFrame = overlay.page()->mainFrame()) {
+        if (RefPtr localMainFrame = dynamicDowncast<LocalFrame>(mainFrame)) {
+            if (RefPtr document = localMainFrame->document())
+                document->addConsoleMessage(MessageSource::Other, MessageLevel::Debug, makeString("MockPageOverlayClient::mouseEvent location ("_s, flooredIntPoint(event.position()).x(), ", "_s, flooredIntPoint(event.position()).y(), ')'));
+        }
     }
     return false;
 }

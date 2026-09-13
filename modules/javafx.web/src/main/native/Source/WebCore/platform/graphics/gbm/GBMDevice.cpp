@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2022 Metrological Group B.V.
- * Copyright (C) 2022 Igalia S.L.
+ * Copyright (C) 2025 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,10 +27,8 @@
 #include "GBMDevice.h"
 
 #if USE(GBM)
-
 #include <fcntl.h>
 #include <gbm.h>
-#include <mutex>
 #include <unistd.h>
 #include <wtf/SafeStrerror.h>
 #include <wtf/StdLibExtras.h>
@@ -39,39 +36,31 @@
 
 namespace WebCore {
 
-GBMDevice& GBMDevice::singleton()
+RefPtr<GBMDevice> GBMDevice::create(const CString& filename)
 {
-    static std::unique_ptr<GBMDevice> s_device;
-    static std::once_flag s_onceFlag;
-    std::call_once(s_onceFlag,
-        [] {
-            s_device = makeUnique<GBMDevice>();
-        });
-    return *s_device;
+    RELEASE_ASSERT(isMainThread());
+    auto fd = UnixFileDescriptor { open(filename.data(), O_RDWR | O_CLOEXEC), UnixFileDescriptor::Adopt };
+    if (!fd) {
+        WTFLogAlways("Failed to open DRM node %s: %s", filename.data(), safeStrerror(errno).data());
+        return nullptr;
+    }
+    auto* device = gbm_create_device(fd.value());
+    if (!device) {
+        WTFLogAlways("Failed to create GBM device for DRM node: %s: %s", filename.data(), safeStrerror(errno).data());
+        return nullptr;
+    }
+    return adoptRef(*new GBMDevice(WTF::move(fd), device));
+}
+
+GBMDevice::GBMDevice(UnixFileDescriptor&& fd, struct gbm_device* device)
+    : m_fd(WTF::move(fd))
+    , m_device(device)
+{
 }
 
 GBMDevice::~GBMDevice()
 {
-    if (m_device.has_value() && m_device.value())
-        gbm_device_destroy(m_device.value());
-}
-
-void GBMDevice::initialize(const String& deviceFile)
-{
-    RELEASE_ASSERT(!m_device.has_value());
-    if (!deviceFile.isEmpty()) {
-        m_fd = UnixFileDescriptor { open(deviceFile.utf8().data(), O_RDWR | O_CLOEXEC), UnixFileDescriptor::Adopt };
-        if (m_fd) {
-            m_device = gbm_create_device(m_fd.value());
-            if (m_device.value())
-            return;
-
-            WTFLogAlways("Failed to create GBM device for render device: %s: %s", deviceFile.utf8().data(), safeStrerror(errno).data());
-            m_fd = { };
-        } else
-            WTFLogAlways("Failed to open DRM render device %s: %s", deviceFile.utf8().data(), safeStrerror(errno).data());
-        }
-    m_device = nullptr;
+    gbm_device_destroy(m_device);
 }
 
 } // namespace WebCore

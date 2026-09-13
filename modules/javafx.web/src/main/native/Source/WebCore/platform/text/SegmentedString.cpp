@@ -20,6 +20,7 @@
 #include "config.h"
 #include "SegmentedString.h"
 
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextPosition.h>
 
@@ -28,15 +29,15 @@ namespace WebCore {
 inline void SegmentedString::Substring::appendTo(StringBuilder& builder) const
 {
     if (is8Bit)
-        builder.appendCharacters(currentCharacter8, length);
+        builder.append(s.currentCharacter8);
     else
-        builder.appendCharacters(currentCharacter16, length);
+        builder.append(s.currentCharacter16);
 }
 
 SegmentedString& SegmentedString::operator=(SegmentedString&& other)
 {
-    m_currentSubstring = WTFMove(other.m_currentSubstring);
-    m_otherSubstrings = WTFMove(other.m_otherSubstrings);
+    m_currentSubstring = WTF::move(other.m_currentSubstring);
+    m_otherSubstrings = WTF::move(other.m_otherSubstrings);
 
     m_isClosed = other.m_isClosed;
 
@@ -57,9 +58,9 @@ SegmentedString& SegmentedString::operator=(SegmentedString&& other)
 
 unsigned SegmentedString::length() const
 {
-    unsigned length = m_currentSubstring.length;
+    unsigned length = m_currentSubstring.length();
     for (auto& substring : m_otherSubstrings)
-        length += substring.length;
+        length += substring.length();
     return length;
 }
 
@@ -75,7 +76,7 @@ void SegmentedString::setExcludeLineNumbers()
 
 void SegmentedString::clear()
 {
-    m_currentSubstring.length = 0;
+    m_currentSubstring.clear();
     m_otherSubstrings.clear();
 
     m_isClosed = false;
@@ -92,13 +93,13 @@ void SegmentedString::clear()
 inline void SegmentedString::appendSubstring(Substring&& substring)
 {
     ASSERT(!m_isClosed);
-    if (!substring.length)
+    if (!substring.length())
         return;
-    if (m_currentSubstring.length)
-        m_otherSubstrings.append(WTFMove(substring));
+    if (m_currentSubstring.length())
+        m_otherSubstrings.append(WTF::move(substring));
     else {
         m_numberOfCharactersConsumedPriorToCurrentSubstring += m_currentSubstring.numberOfCharactersConsumed();
-        m_currentSubstring = WTFMove(substring);
+        m_currentSubstring = WTF::move(substring);
         m_currentCharacter = m_currentSubstring.currentCharacter();
         updateAdvanceFunctionPointers();
     }
@@ -118,10 +119,10 @@ void SegmentedString::pushBack(String&& string)
     ASSERT(string.length() <= numberOfCharactersConsumed());
 
     m_numberOfCharactersConsumedPriorToCurrentSubstring += m_currentSubstring.numberOfCharactersConsumed();
-    if (m_currentSubstring.length)
-        m_otherSubstrings.prepend(WTFMove(m_currentSubstring));
-    m_currentSubstring = WTFMove(string);
-    m_numberOfCharactersConsumedPriorToCurrentSubstring -= m_currentSubstring.length;
+    if (m_currentSubstring.length())
+        m_otherSubstrings.prepend(WTF::move(m_currentSubstring));
+    m_currentSubstring = WTF::move(string);
+    m_numberOfCharactersConsumedPriorToCurrentSubstring -= m_currentSubstring.length();
     m_currentCharacter = m_currentSubstring.currentCharacter();
     updateAdvanceFunctionPointers();
 }
@@ -141,14 +142,14 @@ void SegmentedString::append(const SegmentedString& string)
 
 void SegmentedString::append(SegmentedString&& string)
 {
-    appendSubstring(WTFMove(string.m_currentSubstring));
+    appendSubstring(WTF::move(string.m_currentSubstring));
     for (auto& substring : string.m_otherSubstrings)
-        m_otherSubstrings.append(WTFMove(substring));
+        m_otherSubstrings.append(WTF::move(substring));
 }
 
 void SegmentedString::append(String&& string)
 {
-    appendSubstring(WTFMove(string));
+    appendSubstring(WTF::move(string));
 }
 
 void SegmentedString::append(const String& string)
@@ -167,28 +168,31 @@ String SegmentedString::toString() const
 
 void SegmentedString::advanceWithoutUpdatingLineNumber16()
 {
-    m_currentCharacter = *++m_currentSubstring.currentCharacter16;
-    decrementAndCheckLength();
+    skip(m_currentSubstring.s.currentCharacter16, 1);
+    m_currentCharacter = m_currentSubstring.s.currentCharacter16.front();
+    updateAdvanceFunctionPointersIfNecessary();
 }
 
 void SegmentedString::advanceAndUpdateLineNumber16()
 {
     ASSERT(m_currentSubstring.doNotExcludeLineNumbers);
     processPossibleNewline();
-    m_currentCharacter = *++m_currentSubstring.currentCharacter16;
-    decrementAndCheckLength();
+    skip(m_currentSubstring.s.currentCharacter16, 1);
+    m_currentCharacter = m_currentSubstring.s.currentCharacter16.front();
+    updateAdvanceFunctionPointersIfNecessary();
 }
 
 inline void SegmentedString::advancePastSingleCharacterSubstringWithoutUpdatingLineNumber()
 {
-    ASSERT(m_currentSubstring.length == 1);
+    ASSERT(m_currentSubstring.length() == 1);
+    m_currentSubstring.clear();
+    m_numberOfCharactersConsumedPriorToCurrentSubstring += m_currentSubstring.numberOfCharactersConsumed();
     if (m_otherSubstrings.isEmpty()) {
-        m_currentSubstring.length = 0;
+        m_currentSubstring = { };
         m_currentCharacter = 0;
         updateAdvanceFunctionPointersForEmptyString();
         return;
     }
-    m_numberOfCharactersConsumedPriorToCurrentSubstring += m_currentSubstring.numberOfCharactersConsumed();
     m_currentSubstring = m_otherSubstrings.takeFirst();
     // If we've previously consumed some characters of the non-current string, we now account for those
     // characters as part of the current string, not as part of "prior to current string."
@@ -199,7 +203,7 @@ inline void SegmentedString::advancePastSingleCharacterSubstringWithoutUpdatingL
 
 void SegmentedString::advancePastSingleCharacterSubstring()
 {
-    ASSERT(m_currentSubstring.length == 1);
+    ASSERT(m_currentSubstring.length() == 1);
     ASSERT(m_currentSubstring.doNotExcludeLineNumbers);
     processPossibleNewline();
     advancePastSingleCharacterSubstringWithoutUpdatingLineNumber();
@@ -207,14 +211,14 @@ void SegmentedString::advancePastSingleCharacterSubstring()
 
 void SegmentedString::advanceEmpty()
 {
-    ASSERT(!m_currentSubstring.length);
+    ASSERT(!m_currentSubstring.length());
     ASSERT(m_otherSubstrings.isEmpty());
     ASSERT(!m_currentCharacter);
 }
 
 void SegmentedString::updateAdvanceFunctionPointersForSingleCharacterSubstring()
 {
-    ASSERT(m_currentSubstring.length == 1);
+    ASSERT(m_currentSubstring.length() == 1);
     m_fastPathFlags = NoFastPath;
     m_advanceWithoutUpdatingLineNumberFunction = &SegmentedString::advancePastSingleCharacterSubstringWithoutUpdatingLineNumber;
     if (m_currentSubstring.doNotExcludeLineNumbers)
@@ -239,20 +243,20 @@ void SegmentedString::setCurrentPosition(OrdinalNumber line, OrdinalNumber colum
     m_numberOfCharactersConsumedPriorToCurrentLine = numberOfCharactersConsumed() + prologLength - columnAftreProlog.zeroBasedInt();
 }
 
-SegmentedString::AdvancePastResult SegmentedString::advancePastSlowCase(const char* literal, bool lettersIgnoringASCIICase)
+SegmentedString::AdvancePastResult SegmentedString::advancePastSlowCase(ASCIILiteral literal, bool lettersIgnoringASCIICase)
 {
     constexpr unsigned maxLength = 10;
-    ASSERT(!strchr(literal, '\n'));
-    auto length = strlen(literal);
+    ASSERT(!WTF::contains(literal.span(), '\n'));
+    auto length = literal.length();
     ASSERT(length <= maxLength);
     if (length > this->length())
         return NotEnoughCharacters;
-    UChar consumedCharacters[maxLength];
+    std::array<char16_t, maxLength> consumedCharacters;
     for (unsigned i = 0; i < length; ++i) {
         auto character = m_currentCharacter;
         if (characterMismatch(character, literal[i], lettersIgnoringASCIICase)) {
             if (i)
-                pushBack(String { consumedCharacters, i });
+                pushBack(String(std::span { consumedCharacters }.first(i)));
             return DidNotMatch;
         }
         advancePastNonNewline();
@@ -263,7 +267,7 @@ SegmentedString::AdvancePastResult SegmentedString::advancePastSlowCase(const ch
 
 void SegmentedString::updateAdvanceFunctionPointersForEmptyString()
 {
-    ASSERT(!m_currentSubstring.length);
+    ASSERT(!m_currentSubstring.length());
     ASSERT(m_otherSubstrings.isEmpty());
     ASSERT(!m_currentCharacter);
     m_fastPathFlags = NoFastPath;

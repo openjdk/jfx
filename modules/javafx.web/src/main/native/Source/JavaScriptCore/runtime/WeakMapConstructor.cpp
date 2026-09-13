@@ -53,7 +53,7 @@ JSC_DEFINE_HOST_FUNCTION(callWeakMap, (JSGlobalObject* globalObject, CallFrame*)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "WeakMap"));
+    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "WeakMap"_s));
 }
 
 JSC_DEFINE_HOST_FUNCTION(constructWeakMap, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -73,7 +73,7 @@ JSC_DEFINE_HOST_FUNCTION(constructWeakMap, (JSGlobalObject* globalObject, CallFr
     JSValue adderFunction = weakMap->JSObject::get(globalObject, vm.propertyNames->set);
     RETURN_IF_EXCEPTION(scope, encodedJSValue());
 
-    auto adderFunctionCallData = JSC::getCallData(adderFunction);
+    auto adderFunctionCallData = JSC::getCallDataInline(adderFunction);
     if (adderFunctionCallData.type == CallData::Type::None)
         return throwVMTypeError(globalObject, scope, "'set' property of a WeakMap should be callable."_s);
 
@@ -83,7 +83,7 @@ JSC_DEFINE_HOST_FUNCTION(constructWeakMap, (JSGlobalObject* globalObject, CallFr
     forEachInIterable(globalObject, iterable, [&](VM& vm, JSGlobalObject* globalObject, JSValue nextItem) {
         auto scope = DECLARE_THROW_SCOPE(vm);
         if (!nextItem.isObject()) {
-            throwTypeError(globalObject, scope);
+            throwTypeError(globalObject, scope, "WeakMap requires that an entry be an Object."_s);
             return;
         }
 
@@ -96,7 +96,7 @@ JSC_DEFINE_HOST_FUNCTION(constructWeakMap, (JSGlobalObject* globalObject, CallFr
         RETURN_IF_EXCEPTION(scope, void());
 
         if (canPerformFastSet) {
-            if (UNLIKELY(!canBeHeldWeakly(key))) {
+            if (!canBeHeldWeakly(key)) [[unlikely]] {
                 throwTypeError(asObject(adderFunction)->globalObject(), scope, WeakMapInvalidKeyError);
             return;
         }

@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "CSSParserIdioms.h"
-#include "CSSPrimitiveValue.h"
-#include "DeprecatedCSSOMValue.h"
+#include <WebCore/CSSParserIdioms.h>
+#include <WebCore/CSSPrimitiveValue.h>
+#include <WebCore/DeprecatedCSSOMValue.h>
 
 namespace WebCore {
 
@@ -74,7 +74,7 @@ public:
     }
 
     bool equals(const DeprecatedCSSOMPrimitiveValue& other) const { return m_value->equals(other.m_value); }
-    String cssText() const { return m_value->cssText(); }
+    String cssText() const;
 
     WEBCORE_EXPORT unsigned short primitiveType() const;
     WEBCORE_EXPORT ExceptionOr<float> getFloatValue(unsigned short unitType) const;
@@ -83,8 +83,8 @@ public:
     WEBCORE_EXPORT ExceptionOr<Ref<DeprecatedCSSOMRect>> getRectValue() const;
     WEBCORE_EXPORT ExceptionOr<Ref<DeprecatedCSSOMRGBColor>> getRGBColorValue() const;
 
-    static ExceptionOr<void> setFloatValue(unsigned short, double) { return Exception { NoModificationAllowedError }; }
-    static ExceptionOr<void> setStringValue(unsigned short, const String&) { return Exception { NoModificationAllowedError }; }
+    static ExceptionOr<void> setFloatValue(unsigned short, double) { return Exception { ExceptionCode::NoModificationAllowedError }; }
+    static ExceptionOr<void> setStringValue(unsigned short, const String&) { return Exception { ExceptionCode::NoModificationAllowedError }; }
 
     bool isCSSWideKeyword() const { return WebCore::isCSSWideKeyword(valueID(m_value.get())); }
     static unsigned short cssValueType() { return CSS_PRIMITIVE_VALUE; }
@@ -95,6 +95,8 @@ private:
         , m_value(value)
     {
     }
+
+    Ref<const CSSValue> protectedValue() const { return m_value; }
 
     Ref<const CSSValue> m_value;
 };

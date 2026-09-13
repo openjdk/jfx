@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "InternalFunction.h"
+#include <JavaScriptCore/InternalFunction.h>
 
 namespace JSC {
 
@@ -36,6 +36,7 @@ JS_EXPORT_PRIVATE JSC_DECLARE_HOST_FUNCTION(callUint8Array);
 JS_EXPORT_PRIVATE JSC_DECLARE_HOST_FUNCTION(callUint8ClampedArray);
 JS_EXPORT_PRIVATE JSC_DECLARE_HOST_FUNCTION(callUint16Array);
 JS_EXPORT_PRIVATE JSC_DECLARE_HOST_FUNCTION(callUint32Array);
+JS_EXPORT_PRIVATE JSC_DECLARE_HOST_FUNCTION(callFloat16Array);
 JS_EXPORT_PRIVATE JSC_DECLARE_HOST_FUNCTION(callFloat32Array);
 JS_EXPORT_PRIVATE JSC_DECLARE_HOST_FUNCTION(callFloat64Array);
 JS_EXPORT_PRIVATE JSC_DECLARE_HOST_FUNCTION(callBigInt64Array);
@@ -49,6 +50,7 @@ JS_EXPORT_PRIVATE JSC_DECLARE_HOST_FUNCTION(constructUint8Array);
 JS_EXPORT_PRIVATE JSC_DECLARE_HOST_FUNCTION(constructUint8ClampedArray);
 JS_EXPORT_PRIVATE JSC_DECLARE_HOST_FUNCTION(constructUint16Array);
 JS_EXPORT_PRIVATE JSC_DECLARE_HOST_FUNCTION(constructUint32Array);
+JS_EXPORT_PRIVATE JSC_DECLARE_HOST_FUNCTION(constructFloat16Array);
 JS_EXPORT_PRIVATE JSC_DECLARE_HOST_FUNCTION(constructFloat32Array);
 JS_EXPORT_PRIVATE JSC_DECLARE_HOST_FUNCTION(constructFloat64Array);
 JS_EXPORT_PRIVATE JSC_DECLARE_HOST_FUNCTION(constructBigInt64Array);
@@ -87,6 +89,8 @@ public:
             return callUint16Array;
         case TypeUint32:
             return callUint32Array;
+        case TypeFloat16:
+            return callFloat16Array;
         case TypeFloat32:
             return callFloat32Array;
         case TypeFloat64:
@@ -120,6 +124,8 @@ public:
             return constructUint16Array;
         case TypeUint32:
             return constructUint32Array;
+        case TypeFloat16:
+            return constructFloat16Array;
         case TypeFloat32:
             return constructFloat32Array;
         case TypeFloat64:
@@ -140,5 +146,11 @@ private:
     JSGenericTypedArrayViewConstructor(VM&, Structure*);
     void finishCreation(VM&, JSGlobalObject*, JSObject* prototype, const String& name);
 };
+
+JSC_DECLARE_HOST_FUNCTION(uint8ArrayConstructorFromBase64);
+JSC_DECLARE_HOST_FUNCTION(uint8ArrayConstructorFromHex);
+
+[[nodiscard]] size_t decodeHex(std::span<const Latin1Character>, std::span<uint8_t> result);
+[[nodiscard]] size_t decodeHex(std::span<const char16_t>, std::span<uint8_t> result);
 
 } // namespace JSC

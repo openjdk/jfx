@@ -46,17 +46,15 @@ void Phase::beginPhase()
         m_graphDumpBeforePhase = out.toCString();
     }
 
-    if (!shouldDumpGraphAtEachPhase(m_graph.m_plan.mode()))
-        return;
-
-    dataLog(m_graph.prefix(), "Beginning DFG phase ", m_name, ".\n");
-    dataLog(m_graph.prefix(), "Before ", m_name, ":\n");
-    m_graph.dump();
+    dataLogIf(shouldDumpGraphAtEachPhase(m_graph.m_plan.mode()),
+        m_graph.prefix(), "Beginning DFG phase ", m_name, ".\n",
+        m_graph.prefix(), "Before ", m_name, ":\n",
+        m_graph);
 }
 
 void Phase::endPhase()
 {
-    if (!Options::validateGraphAtEachPhase())
+    if (!Options::validateGraphAtEachPhase() || m_disableGraphValidation)
         return;
     validate();
 }

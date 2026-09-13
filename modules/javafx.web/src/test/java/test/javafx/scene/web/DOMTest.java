@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,16 +25,16 @@
 
 package test.javafx.scene.web;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import javafx.scene.web.WebEngine;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.w3c.dom.*;
 import org.w3c.dom.css.*;
 import org.w3c.dom.events.*;
@@ -58,16 +58,16 @@ public class DOMTest extends TestBase {
             NodeList ee = doc.getElementsByTagName("p");
 
             int numProcessed = 0;
-                for (int i = 0 ; i < ee.getLength() ; i++) {
-                    Node n = ee.item(i);
-                    String s = ((ElementImpl)n).getId();
-                    String newId = "new" + s;
-                    ((ElementImpl)n).setId(newId);
-                    assertEquals("New element id", newId, ((ElementImpl)n).getId());
-                    numProcessed++;
-                }
+            for (int i = 0 ; i < ee.getLength() ; i++) {
+                Node n = ee.item(i);
+                String s = ((ElementImpl)n).getId();
+                String newId = "new" + s;
+                ((ElementImpl)n).setId(newId);
+                assertEquals(newId, ((ElementImpl)n).getId(), "New element id");
+                numProcessed++;
+            }
 
-            assertTrue("Number of processed Elements is equal to 0", numProcessed > 0);
+            assertTrue(numProcessed > 0, "Number of processed Elements is equal to 0");
         });
     }
 
@@ -76,7 +76,7 @@ public class DOMTest extends TestBase {
         submit(() -> {
             Element emptyP = doc.getElementById("empty-paragraph");
             String textContent = emptyP.getTextContent();
-            assertEquals("Text content of an empty paragraph", "", textContent);
+            assertEquals("", textContent, "Text content of an empty paragraph");
         });
     }
 
@@ -96,17 +96,17 @@ public class DOMTest extends TestBase {
             int count2 = c2.getLength();
 
             // Some sanity/identity checks
-            assertSame("Sibling expected", right2, n.getNextSibling());
-            assertSame("Sibling expected", n, right2.getPreviousSibling());
+            assertSame(right2, n.getNextSibling(), "Sibling expected");
+            assertSame(n, right2.getPreviousSibling(), "Sibling expected");
 
             Node ret = p1.appendChild(n);
-            assertSame("Sibling expected", left2, right2.getPreviousSibling());
-            assertSame("Parent check", p2, right2.getParentNode());
+            assertSame(left2, right2.getPreviousSibling(), "Sibling expected");
+            assertSame(p2, right2.getParentNode(), "Parent check");
 
             verifyChildRemoved(p2, count2, left2, right2);
             verifyChildAdded(n, p1, count1);
             verifySiblings(n, left1, null);
-            assertSame("Returned node", n, ret);
+            assertSame(n, ret, "Returned node");
         });
     }
 
@@ -126,8 +126,8 @@ public class DOMTest extends TestBase {
             int count2 = c2.getLength();
 
             // Some sanity/identity checks
-            assertSame("Sibling expected", right2, n.getNextSibling());
-            assertSame("Sibling expected", n, right2.getPreviousSibling());
+            assertSame(right2, n.getNextSibling(), "Sibling expected");
+            assertSame(n, right2.getPreviousSibling(), "Sibling expected");
 
             try {
                 p1.insertBefore(null, null);
@@ -139,13 +139,13 @@ public class DOMTest extends TestBase {
             }
 
             Node ret = p1.insertBefore(n, null);
-            assertSame("Sibling expected", left2, right2.getPreviousSibling());
-            assertSame("Parent check", p2, right2.getParentNode());
+            assertSame(left2, right2.getPreviousSibling(), "Sibling expected");
+            assertSame(p2, right2.getParentNode(), "Parent check");
 
             verifyChildRemoved(p2, count2, left2, right2);
             verifyChildAdded(n, p1, count1);
             verifySiblings(n, left1, null);
-            assertSame("Returned node", n, ret);
+            assertSame(n, ret, "Returned node");
         });
     }
 
@@ -170,7 +170,7 @@ public class DOMTest extends TestBase {
             verifyChildRemoved(p2, count2, left2, right2);
             verifyChildAdded(n, p1, count1);
             verifySiblings(n, left1, right1);
-            assertEquals("Returned node", n, ret);
+            assertEquals(n, ret, "Returned node");
         });
     }
 
@@ -197,7 +197,7 @@ public class DOMTest extends TestBase {
             verifyChildAdded(n, p1, count1 - 1);    // child count stays the same
             verifySiblings(n, left1, right1);
             verifyNodeRemoved(old);
-            assertEquals("Returned node", old, ret);
+            assertEquals(old, ret, "Returned node");
         });
     }
 
@@ -215,7 +215,7 @@ public class DOMTest extends TestBase {
 
             verifyChildRemoved(p, count, left, right);
             verifyNodeRemoved(n);
-            assertEquals("Returned node", n, ret);
+            assertEquals(n, ret, "Returned node");
         });
     }
 
@@ -231,19 +231,19 @@ public class DOMTest extends TestBase {
             final EventTarget[] evtTarget = new EventTarget[1];
 
             EventListener listener = new EventListener() {
-                    @Override
-                    public void handleEvent(Event evt) {
-                        evtTarget[0] = evt.getTarget();
-                    }
-                };
+                @Override
+                public void handleEvent(Event evt) {
+                    evtTarget[0] = evt.getTarget();
+                }
+            };
             ((EventTarget) p).addEventListener("DOMNodeRemoved",
-                                               listener, false);
+                    listener, false);
 
             Node ret = p.removeChild(n);
-            assertEquals("event target2", evtTarget[0], n);
+            assertEquals(evtTarget[0], n, "event target2");
             verifyChildRemoved(p, count, left, right);
             verifyNodeRemoved(n);
-            assertEquals("Returned node", n, ret);
+            assertEquals(n, ret, "Returned node");
         });
     }
 
@@ -251,30 +251,30 @@ public class DOMTest extends TestBase {
         final Document doc = getDocumentFor("src/test/resources/test/html/dom.html");
         submit(() -> {
             Element p = doc.getElementById("showcase-paragraph");
-            assertEquals("P element's node type", Node.ELEMENT_NODE, p.getNodeType());
-            assertEquals("P element's tag name", "P", p.getTagName());
+            assertEquals(Node.ELEMENT_NODE, p.getNodeType(), "P element's node type");
+            assertEquals("P", p.getTagName(), "P element's tag name");
 
             NodeList children = p.getChildNodes();
-            assertEquals("Paragraph child count", 3, children.getLength());
+            assertEquals(3, children.getLength(), "Paragraph child count");
             Node text = children.item(0);
-            assertEquals("Text node type", Node.TEXT_NODE, text.getNodeType());
+            assertEquals(Node.TEXT_NODE, text.getNodeType(), "Text node type");
             Node comment = children.item(1);
-            assertEquals("Comment node type", Node.COMMENT_NODE, comment.getNodeType());
+            assertEquals(Node.COMMENT_NODE, comment.getNodeType(), "Comment node type");
             Node element = children.item(2);
-            assertEquals("SPAN element's node type", Node.ELEMENT_NODE, element.getNodeType());
+            assertEquals(Node.ELEMENT_NODE, element.getNodeType(), "SPAN element's node type");
 
             Element span = (Element) element;
-            assertEquals("SPAN element's tag name", "SPAN", span.getTagName());
-            assertTrue("SPAN has 'class' attribute", span.hasAttribute("class"));
-            assertTrue("SPAN has 'CLASS' attribute", span.hasAttribute("CLASS"));
-            assertEquals("SPAN attributes count", 1, span.getAttributes().getLength());
+            assertEquals("SPAN", span.getTagName(), "SPAN element's tag name");
+            assertTrue(span.hasAttribute("class"), "SPAN has 'class' attribute");
+            assertTrue(span.hasAttribute("CLASS"), "SPAN has 'CLASS' attribute");
+            assertEquals(1, span.getAttributes().getLength(), "SPAN attributes count");
 
             Attr attr = span.getAttributeNode("class");
-            assertEquals("Attr node type", Node.ATTRIBUTE_NODE, attr.getNodeType());
+            assertEquals(Node.ATTRIBUTE_NODE, attr.getNodeType(), "Attr node type");
             children = span.getChildNodes();
-            assertEquals("SPAN element child count", 1, children.getLength());
+            assertEquals(1, children.getLength(), "SPAN element child count");
             text = children.item(0);
-            assertEquals("SPAN text node type", Node.TEXT_NODE, text.getNodeType());
+            assertEquals(Node.TEXT_NODE, text.getNodeType(), "SPAN text node type");
         });
     }
 
@@ -283,11 +283,11 @@ public class DOMTest extends TestBase {
         submit(() -> {
             NodeList inputsp = doc.getElementsByTagName("p");
             HTMLParagraphElement elp = (HTMLParagraphElement) inputsp.item(0);
-            assertEquals("P element typification", "left", elp.getAlign());
+            assertEquals("left", elp.getAlign(), "P element typification");
 
             NodeList inputsi = doc.getElementsByTagName("img");
             HTMLImageElement eli = (HTMLImageElement) inputsi.item(0);
-            assertEquals("Image element typification", "file:///C:/test.png", eli.getSrc());
+            assertEquals("file:///C:/test.png", eli.getSrc(), "Image element typification");
         });
     }
 
@@ -319,23 +319,23 @@ public class DOMTest extends TestBase {
             // dispatch test
             MouseEvent evClick = (MouseEvent)((DocumentEvent)htmlDoc).createEvent("MouseEvent");
             evClick.initMouseEvent(
-                "click",
-                true,
-                true,
-                ((DocumentView)htmlDoc).getDefaultView(),
-                10,
-                0, 0, 0, 0,
-                true, true, true, true,
-                (short)1, (EventTarget)body);
+                    "click",
+                    true,
+                    true,
+                    ((DocumentView)htmlDoc).getDefaultView(),
+                    10,
+                    0, 0, 0, 0,
+                    true, true, true, true,
+                    (short)1, (EventTarget)body);
 
             //check start condition
-            assertEquals("Wrong body initial state", "bodyClass", body.getClassName());
+            assertEquals("bodyClass", body.getClassName(), "Wrong body initial state");
 
             //FIXME: ineffective - there is not ScriptExecutionContext
             listenerJS.handleEvent(evClick);
             //OK!
             ((EventTarget)body).dispatchEvent(evClick);
-            assertEquals("JS EventHandler does not work directly", "testClass", body.getClassName());
+            assertEquals("testClass", body.getClassName(), "JS EventHandler does not work directly");
 
             EventListener listener1 = evt -> {
                 EventTarget src = ((MouseEvent) evt).getTarget();
@@ -343,7 +343,7 @@ public class DOMTest extends TestBase {
             };
             ((EventTarget)body).addEventListener("click", listener1, false);
             ((EventTarget)body).dispatchEvent(evClick);
-            assertEquals("Java EventHandler does not work directly", "newTestClass", body.getClassName());
+            assertEquals("newTestClass", body.getClassName(), "Java EventHandler does not work directly");
 
             EventListener listener2 = evt -> {
                 //OK: stacked ScriptExecutionContext
@@ -351,7 +351,7 @@ public class DOMTest extends TestBase {
             };
             ((EventTarget)body).addEventListener("click", listener2, false);
             ((EventTarget)body).dispatchEvent(evClick);
-            assertEquals("JS EventHandler does not work from Java call", "testClass", body.getClassName());
+            assertEquals("testClass", body.getClassName(), "JS EventHandler does not work from Java call");
         });
     }
 
@@ -368,7 +368,7 @@ public class DOMTest extends TestBase {
 
             //Style access
             CSSStyleDeclaration style = ((HTMLBodyElementImpl)body).getStyle();
-            assertEquals("Style extraction", "blue", style.getPropertyValue("background-color"));
+            assertEquals("blue", style.getPropertyValue("background-color"), "Style extraction");
         });
     }
 
@@ -379,21 +379,21 @@ public class DOMTest extends TestBase {
             for (int i = 0; i < shl.getLength(); ++i ) {
                 StyleSheet sh = shl.item(i);
                 String type = sh.getType();
-                assertEquals("Style type", "text/css", type);
+                assertEquals("text/css", type, "Style type");
                 String media = sh.getMedia().getMediaText();
                 if (i == 0) {
-                    assertEquals("Style media", "screen", media);
+                    assertEquals("screen", media, "Style media");
                 }
                 CSSRuleList rl = ((CSSStyleSheet)sh).getCssRules();
                 for (int k = 0; k < rl.getLength(); ++k ) {
                     CSSRule r = rl.item(k);
                     switch (r.getType()) {
-                    case CSSRule.MEDIA_RULE:
-                        CSSRuleList mediaRl = ((CSSMediaRule)r).getCssRules();
-                        break;
-                    case CSSRule.IMPORT_RULE:
-                        String url = ((CSSImportRule)r).getHref();
-                        break;
+                        case CSSRule.MEDIA_RULE:
+                            CSSRuleList mediaRl = ((CSSMediaRule)r).getCssRules();
+                            break;
+                        case CSSRule.IMPORT_RULE:
+                            String url = ((CSSImportRule)r).getHref();
+                            break;
                     }
                     String cssText = r.getCssText();
                 }
@@ -432,47 +432,38 @@ public class DOMTest extends TestBase {
 
             String attributeName = "test";
             Attr attr = doc.createAttribute(attributeName);
-            assertEquals("Created attribute", attributeName, attr.getName());
+            assertEquals(attributeName, attr.getName(), "Created attribute");
         });
     }
 
     // helper methods
 
     private void verifyChildRemoved(Node parent,
-            int oldChildrenCount, Node leftSibling, Node rightSibling) {
-        assertSame("Children count",
-                oldChildrenCount - 1, parent.getChildNodes().getLength());
-        assertSame("Left sibling's next sibling",
-                rightSibling, leftSibling.getNextSibling());
-        assertSame("Right sibling's previous sibling",
-                leftSibling, rightSibling.getPreviousSibling());
+                                    int oldChildrenCount, Node leftSibling, Node rightSibling) {
+        assertSame(oldChildrenCount - 1, parent.getChildNodes().getLength(), "Children count");
+        assertSame(rightSibling, leftSibling.getNextSibling(), "Left sibling's next sibling");
+        assertSame(leftSibling, rightSibling.getPreviousSibling(), "Right sibling's previous sibling");
     }
 
     private void verifyChildAdded(Node n, Node parent, int oldChildrenCount) {
-        assertEquals("Children count",
-                oldChildrenCount + 1, parent.getChildNodes().getLength());
-        assertEquals("Added node's parent",
-                parent, n.getParentNode());
+        assertEquals(oldChildrenCount + 1, parent.getChildNodes().getLength(), "Children count");
+        assertEquals(parent, n.getParentNode(), "Added node's parent");
     }
 
     private void verifySiblings(Node n, Node leftSibling, Node rightSibling) {
-        assertSame("Added node's previous sibling",
-                leftSibling, n.getPreviousSibling());
-        assertSame("Added node's next sibling",
-                rightSibling, n.getNextSibling());
+        assertSame(leftSibling, n.getPreviousSibling(), "Added node's previous sibling");
+        assertSame(rightSibling, n.getNextSibling(), "Added node's next sibling");
 
         if (leftSibling != null)
-            assertSame("Previous sibling's next sibling",
-                    n, leftSibling.getNextSibling());
+            assertSame(n, leftSibling.getNextSibling(), "Previous sibling's next sibling");
 
         if (rightSibling != null)
-            assertSame("Next sibling's previous sibling",
-                    n, rightSibling.getPreviousSibling());
+            assertSame(n, rightSibling.getPreviousSibling(), "Next sibling's previous sibling");
     }
 
     private void verifyNodeRemoved(Node n) {
-        assertNull("Removed node's parent", n.getParentNode());
-        assertNull("Removed node's previous sibling", n.getPreviousSibling());
-        assertNull("Removed node's next sibling", n.getNextSibling());
+        assertNull(n.getParentNode(), "Removed node's parent");
+        assertNull(n.getPreviousSibling(), "Removed node's previous sibling");
+        assertNull(n.getNextSibling(), "Removed node's next sibling");
     }
 }

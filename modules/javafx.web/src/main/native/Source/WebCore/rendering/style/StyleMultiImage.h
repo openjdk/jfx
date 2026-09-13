@@ -26,6 +26,7 @@
 
 #include "StyleImage.h"
 #include "StyleInvalidImage.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -43,7 +44,7 @@ inline bool operator==(const ImageWithScale& a, const ImageWithScale& b)
 }
 
 class StyleMultiImage : public StyleImage {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(StyleMultiImage);
 public:
     virtual ~StyleMultiImage();
 
@@ -61,18 +62,18 @@ private:
     bool canRender(const RenderElement*, float multiplier) const final;
     bool isPending() const final;
     void load(CachedResourceLoader&, const ResourceLoaderOptions&) final;
-    bool isLoaded() const final;
+    bool isLoaded(const RenderElement*) const final;
     bool errorOccurred() const final;
     FloatSize imageSize(const RenderElement*, float multiplier) const final;
     bool imageHasRelativeWidth() const final;
     bool imageHasRelativeHeight() const final;
-    void computeIntrinsicDimensions(const RenderElement*, Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio) final;
+    void computeIntrinsicDimensions(const RenderElement*, float& intrinsicWidth, float& intrinsicHeight, FloatSize& intrinsicRatio) final;
     bool usesImageContainerSize() const final;
     void setContainerContextForRenderer(const RenderElement&, const FloatSize&, float);
     void addClient(RenderElement&) final;
     void removeClient(RenderElement&) final;
     bool hasClient(RenderElement&) const final;
-    RefPtr<Image> image(const RenderElement*, const FloatSize&) const final;
+    RefPtr<Image> image(const RenderElement*, const FloatSize&, const GraphicsContext& destinationContext, bool isForFirstLine) const final;
     float imageScaleFactor() const final;
     bool knownToBeOpaque(const RenderElement&) const final;
     const StyleImage* selectedImage() const final { return m_selectedImage.get(); }

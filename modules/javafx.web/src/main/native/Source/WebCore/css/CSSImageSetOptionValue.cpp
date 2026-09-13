@@ -27,41 +27,40 @@
 #include "CSSImageSetOptionValue.h"
 
 #include "CSSImageValue.h"
-#include "CSSPrimitiveValue.h"
 
 namespace WebCore {
 
 CSSImageSetOptionValue::CSSImageSetOptionValue(Ref<CSSValue>&& image, Ref<CSSPrimitiveValue>&& resolution)
-    : CSSValue(ImageSetOptionClass)
-    , m_image(WTFMove(image))
-    , m_resolution(WTFMove(resolution))
+    : CSSValue(ClassType::ImageSetOption)
+    , m_image(WTF::move(image))
+    , m_resolution(WTF::move(resolution))
 {
 }
 
 CSSImageSetOptionValue::CSSImageSetOptionValue(Ref<CSSValue>&& image, Ref<CSSPrimitiveValue>&& resolution, String&& type)
-    : CSSValue(ImageSetOptionClass)
-    , m_image(WTFMove(image))
-    , m_resolution(WTFMove(resolution))
-    , m_mimeType(WTFMove(type))
+    : CSSValue(ClassType::ImageSetOption)
+    , m_image(WTF::move(image))
+    , m_resolution(WTF::move(resolution))
+    , m_mimeType(WTF::move(type))
 {
 }
 
 Ref<CSSImageSetOptionValue> CSSImageSetOptionValue::create(Ref<CSSValue>&& image)
 {
     ASSERT(is<CSSImageValue>(image) || image->isImageGeneratorValue());
-    return adoptRef(*new CSSImageSetOptionValue(WTFMove(image), CSSPrimitiveValue::create(1.0, CSSUnitType::CSS_X)));
+    return adoptRef(*new CSSImageSetOptionValue(WTF::move(image), CSSPrimitiveValue::create(1.0, CSSUnitType::CSS_X)));
 }
 
 Ref<CSSImageSetOptionValue> CSSImageSetOptionValue::create(Ref<CSSValue>&& image, Ref<CSSPrimitiveValue>&& resolution)
 {
     ASSERT(is<CSSImageValue>(image) || image->isImageGeneratorValue());
-    return adoptRef(*new CSSImageSetOptionValue(WTFMove(image), WTFMove(resolution)));
+    return adoptRef(*new CSSImageSetOptionValue(WTF::move(image), WTF::move(resolution)));
 }
 
 Ref<CSSImageSetOptionValue> CSSImageSetOptionValue::create(Ref<CSSValue>&& image, Ref<CSSPrimitiveValue>&& resolution, String type)
 {
     ASSERT(is<CSSImageValue>(image) || image->isImageGeneratorValue());
-    return adoptRef(*new CSSImageSetOptionValue(WTFMove(image), WTFMove(resolution), WTFMove(type)));
+    return adoptRef(*new CSSImageSetOptionValue(WTF::move(image), WTF::move(resolution), WTF::move(type)));
 }
 
 bool CSSImageSetOptionValue::equals(const CSSImageSetOptionValue& other) const
@@ -78,11 +77,11 @@ bool CSSImageSetOptionValue::equals(const CSSImageSetOptionValue& other) const
     return true;
 }
 
-String CSSImageSetOptionValue::customCSSText() const
+String CSSImageSetOptionValue::customCSSText(const CSS::SerializationContext& context) const
 {
     StringBuilder result;
-    result.append(m_image->cssText());
-    result.append(' ', m_resolution->cssText());
+    result.append(m_image->cssText(context));
+    result.append(' ', m_resolution->cssText(context));
     if (!m_mimeType.isNull())
         result.append(" type(\""_s, m_mimeType, "\")"_s);
 
@@ -91,12 +90,17 @@ String CSSImageSetOptionValue::customCSSText() const
 
 void CSSImageSetOptionValue::setResolution(Ref<CSSPrimitiveValue>&& resolution)
 {
-    m_resolution = WTFMove(resolution);
+    m_resolution = WTF::move(resolution);
 }
 
 void CSSImageSetOptionValue::setType(String type)
 {
-    m_mimeType = WTFMove(type);
+    m_mimeType = WTF::move(type);
+}
+
+bool CSSImageSetOptionValue::customTraverseSubresources(NOESCAPE const Function<bool(const CachedResource&)>& handler) const
+{
+    return m_resolution->traverseSubresources(handler) || m_image->traverseSubresources(handler);
 }
 
 } // namespace WebCore

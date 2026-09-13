@@ -32,9 +32,14 @@
 
 #include "UpSampler.h"
 
+#include <numbers>
 #include <wtf/MathExtras.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(UpSampler);
 
 UpSampler::UpSampler(size_t inputBlockSize)
     : m_inputBlockSize(inputBlockSize)
@@ -60,26 +65,26 @@ void UpSampler::initializeKernel()
 
     for (int i = 0; i < n; ++i) {
         // Compute the sinc() with offset.
-        double s = piDouble * (i - halfSize - subsampleOffset);
+        double s = std::numbers::pi * (i - halfSize - subsampleOffset);
         double sinc = !s ? 1.0 : sin(s) / s;
 
         // Compute Blackman window, matching the offset of the sinc().
         double x = (i - subsampleOffset) / n;
-        double window = a0 - a1 * cos(2.0 * piDouble * x) + a2 * cos(4.0 * piDouble * x);
+        double window = a0 - a1 * cos(2.0 * std::numbers::pi * x) + a2 * cos(4.0 * std::numbers::pi * x);
 
         // Window the sinc() function.
         m_kernel[i] = sinc * window;
     }
 }
 
-void UpSampler::process(const float* sourceP, float* destP, size_t sourceFramesToProcess)
+void UpSampler::process(std::span<const float> source, std::span<float> destination)
 {
-    bool isInputBlockSizeGood = sourceFramesToProcess == m_inputBlockSize;
+    bool isInputBlockSizeGood = source.size() == m_inputBlockSize;
     ASSERT(isInputBlockSizeGood);
     if (!isInputBlockSizeGood)
         return;
 
-    bool isTempBufferGood = sourceFramesToProcess == m_tempBuffer.size();
+    bool isTempBufferGood = source.size() == m_tempBuffer.size();
     ASSERT(isTempBufferGood);
     if (!isTempBufferGood)
         return;
@@ -92,27 +97,29 @@ void UpSampler::process(const float* sourceP, float* destP, size_t sourceFramesT
     size_t halfSize = m_kernel.size() / 2;
 
     // Copy source samples to 2nd half of input buffer.
-    bool isInputBufferGood = m_inputBuffer.size() == sourceFramesToProcess * 2 && halfSize <= sourceFramesToProcess;
+    bool isInputBufferGood = m_inputBuffer.size() == source.size() * 2 && halfSize <= source.size();
     ASSERT(isInputBufferGood);
     if (!isInputBufferGood)
         return;
 
-    float* inputP = m_inputBuffer.data() + sourceFramesToProcess;
-    memcpy(inputP, sourceP, sizeof(float) * sourceFramesToProcess);
+    auto inputBuffer = m_inputBuffer.span();
+    auto inputP = inputBuffer.subspan(source.size());
+    memcpySpan(inputP, source);
 
-    // Copy even sample-frames 0,2,4,6... (delayed by the linear phase delay) directly into destP.
-    for (unsigned i = 0; i < sourceFramesToProcess; ++i)
-        destP[i * 2] = *((inputP - halfSize) + i);
+    // Copy even sample-frames 0,2,4,6... (delayed by the linear phase delay) directly into destination.
+    auto inputPMinusHalfSize = inputBuffer.subspan(inputP.data() - inputBuffer.data() - halfSize);
+    for (size_t i = 0; i < source.size(); ++i)
+        destination[i * 2] = inputPMinusHalfSize[i];
 
     // Compute odd sample-frames 1,3,5,7...
-    float* oddSamplesP = m_tempBuffer.data();
-    m_convolver.process(&m_kernel, sourceP, oddSamplesP, sourceFramesToProcess);
+    auto oddSamplesP = m_tempBuffer.span();
+    m_convolver.process(&m_kernel, source, oddSamplesP);
 
-    for (unsigned i = 0; i < sourceFramesToProcess; ++i)
-        destP[i * 2 + 1] = oddSamplesP[i];
+    for (size_t i = 0; i < source.size(); ++i)
+        destination[i * 2 + 1] = oddSamplesP[i];
 
     // Copy 2nd half of input buffer to 1st half.
-    memcpy(m_inputBuffer.data(), inputP, sizeof(float) * sourceFramesToProcess);
+    memcpySpan(m_inputBuffer.span(), inputP);
 }
 
 void UpSampler::reset()

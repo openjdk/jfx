@@ -36,75 +36,77 @@
 #include "CSSStyleValueFactory.h"
 #include "DOMMatrix.h"
 #include "ExceptionOr.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CSSSkewY);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSSkewY);
 
 ExceptionOr<Ref<CSSSkewY>> CSSSkewY::create(Ref<CSSNumericValue> ay)
 {
     if (!ay->type().matches<CSSNumericBaseType::Angle>())
-        return Exception { TypeError };
-    return adoptRef(*new CSSSkewY(WTFMove(ay)));
+        return Exception { ExceptionCode::TypeError };
+    return adoptRef(*new CSSSkewY(WTF::move(ay)));
 }
 
-ExceptionOr<Ref<CSSSkewY>> CSSSkewY::create(CSSFunctionValue& cssFunctionValue)
+ExceptionOr<Ref<CSSSkewY>> CSSSkewY::create(Ref<const CSSFunctionValue> cssFunctionValue, Document& document)
 {
-    if (cssFunctionValue.name() != CSSValueSkewY) {
+    if (cssFunctionValue->name() != CSSValueSkewY) {
         ASSERT_NOT_REACHED();
-        return CSSSkewY::create(CSSNumericFactory::deg(0));
+        return CSSSkewY::create(Ref<CSSNumericValue>(CSSNumericFactory::deg(0)));
     }
 
-    if (cssFunctionValue.size() != 1 || !cssFunctionValue.item(0)) {
+    if (cssFunctionValue->size() != 1 || !cssFunctionValue->item(0)) {
         ASSERT_NOT_REACHED();
-        return Exception { TypeError, "Unexpected number of values."_s };
+        return Exception { ExceptionCode::TypeError, "Unexpected number of values."_s };
     }
 
-    auto valueOrException = CSSStyleValueFactory::reifyValue(*cssFunctionValue.item(0), std::nullopt);
+    auto valueOrException = CSSStyleValueFactory::reifyValue(document, *cssFunctionValue->item(0), std::nullopt);
     if (valueOrException.hasException())
         return valueOrException.releaseException();
-    if (!is<CSSNumericValue>(valueOrException.returnValue()))
-        return Exception { TypeError, "Expected a CSSNumericValue."_s };
-    return CSSSkewY::create(downcast<CSSNumericValue>(valueOrException.releaseReturnValue().get()));
+    RefPtr numericValue = dynamicDowncast<CSSNumericValue>(valueOrException.releaseReturnValue());
+    if (!numericValue)
+        return Exception { ExceptionCode::TypeError, "Expected a CSSNumericValue."_s };
+    return CSSSkewY::create(numericValue.releaseNonNull());
 }
 
 CSSSkewY::CSSSkewY(Ref<CSSNumericValue> ay)
     : CSSTransformComponent(Is2D::Yes)
-    , m_ay(WTFMove(ay))
+    , m_ay(WTF::move(ay))
 {
 }
 
 ExceptionOr<void> CSSSkewY::setAy(Ref<CSSNumericValue> ay)
 {
     if (!ay->type().matches<CSSNumericBaseType::Angle>())
-        return Exception { TypeError };
+        return Exception { ExceptionCode::TypeError };
 
-    m_ay = WTFMove(ay);
+    m_ay = WTF::move(ay);
     return { };
 }
 
 void CSSSkewY::serialize(StringBuilder& builder) const
 {
     // https://drafts.css-houdini.org/css-typed-om/#serialize-a-cssskewy
-    builder.append("skewY(");
+    builder.append("skewY("_s);
     m_ay->serialize(builder);
     builder.append(')');
 }
 
 ExceptionOr<Ref<DOMMatrix>> CSSSkewY::toMatrix()
 {
-    if (!is<CSSUnitValue>(m_ay))
-        return Exception { TypeError };
+    RefPtr ay = dynamicDowncast<CSSUnitValue>(m_ay);
+    if (!ay)
+        return Exception { ExceptionCode::TypeError };
 
-    auto y = downcast<CSSUnitValue>(m_ay.get()).convertTo(CSSUnitType::CSS_DEG);
+    auto y = ay->convertTo(CSSUnitType::CSS_DEG);
     if (!y)
-        return Exception { TypeError };
+        return Exception { ExceptionCode::TypeError };
 
     TransformationMatrix matrix { };
     matrix.skewY(y->value());
 
-    return { DOMMatrix::create(WTFMove(matrix), DOMMatrixReadOnly::Is2D::Yes) };
+    return { DOMMatrix::create(WTF::move(matrix), DOMMatrixReadOnly::Is2D::Yes) };
 }
 
 RefPtr<CSSValue> CSSSkewY::toCSSValue() const
@@ -114,7 +116,7 @@ RefPtr<CSSValue> CSSSkewY::toCSSValue() const
         return nullptr;
     CSSValueListBuilder arguments;
     arguments.append(ay.releaseNonNull());
-    return CSSFunctionValue::create(CSSValueSkewY, WTFMove(arguments));
+    return CSSFunctionValue::create(CSSValueSkewY, WTF::move(arguments));
 }
 
 } // namespace WebCore

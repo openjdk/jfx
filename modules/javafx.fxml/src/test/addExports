@@ -15,3 +15,4 @@
 --add-exports javafx.fxml/com.sun.javafx.fxml.expression=ALL-UNNAMED
 # compilation addons
 --add-exports javafx.base/com.sun.javafx.beans=ALL-UNNAMED
+--add-exports=javafx.graphics/com.sun.javafx.text=ALL-UNNAMED

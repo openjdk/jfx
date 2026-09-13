@@ -33,14 +33,11 @@ public:
     using Base = JSFunction;
     static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
 
-    static NumberConstructor* create(VM&, Structure*, NumberPrototype*, GetterSetter*);
+    static NumberConstructor* create(VM&, Structure*, NumberPrototype*);
 
     DECLARE_INFO;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue proto)
-    {
-        return Structure::create(vm, globalObject, proto, TypeInfo(JSFunctionType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     static bool isIntegerImpl(JSValue value)
     {

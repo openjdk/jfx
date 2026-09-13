@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,16 +28,16 @@
 #include "CryptoAlgorithmParameters.h"
 #include <JavaScriptCore/JSObject.h>
 #include <JavaScriptCore/Strong.h>
-#include <variant>
 
 #if ENABLE(WEB_CRYPTO)
 
 namespace WebCore {
 
 class CryptoAlgorithmEcdsaParams final : public CryptoAlgorithmParameters {
+    WTF_MAKE_TZONE_ALLOCATED(CryptoAlgorithmEcdsaParams);
 public:
     // FIXME: Consider merging hash and hashIdentifier.
-    std::variant<JSC::Strong<JSC::JSObject>, String> hash;
+    Variant<JSC::Strong<JSC::JSObject>, String> hash;
     CryptoAlgorithmIdentifier hashIdentifier;
 
     Class parametersClass() const final { return Class::EcdsaParams; }

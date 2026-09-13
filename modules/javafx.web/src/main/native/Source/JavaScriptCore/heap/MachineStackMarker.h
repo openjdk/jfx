@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2017 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -21,9 +21,10 @@
 
 #pragma once
 
-#include "RegisterState.h"
+#include <JavaScriptCore/RegisterState.h>
 #include <wtf/Lock.h>
 #include <wtf/ScopedLambda.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadGroup.h>
 
 namespace JSC {
@@ -40,7 +41,7 @@ struct CurrentThreadState {
 };
 
 class MachineThreads {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(MachineThreads);
     WTF_MAKE_NONCOPYABLE(MachineThreads);
 public:
     MachineThreads();
@@ -48,7 +49,7 @@ public:
     void gatherConservativeRoots(ConservativeRoots&, JITStubRoutineSet&, CodeBlockSet&, CurrentThreadState*, Thread*);
 
     // Only needs to be called by clients that can use the same heap from multiple threads.
-    bool addCurrentThread() { return m_threadGroup->addCurrentThread() == ThreadGroupAddResult::NewlyAdded; }
+    bool addCurrentThread() { return Ref { m_threadGroup }->addCurrentThread() == ThreadGroupAddResult::NewlyAdded; }
 
     WordLock& getLock() { return m_threadGroup->getLock(); }
     const ListHashSet<Ref<Thread>>& threads(const AbstractLocker& locker) const { return m_threadGroup->threads(locker); }
@@ -65,7 +66,7 @@ private:
 #define DECLARE_AND_COMPUTE_CURRENT_THREAD_STATE(stateName) \
     CurrentThreadState stateName; \
     stateName.stackTop = &stateName; \
-    stateName.stackOrigin = Thread::current().stack().origin(); \
+    stateName.stackOrigin = Thread::currentSingleton().stack().origin(); \
     ALLOCATE_AND_GET_REGISTER_STATE(stateName ## _registerState); \
     stateName.registerState = &stateName ## _registerState
 

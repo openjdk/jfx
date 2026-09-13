@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,11 @@
 
 #pragma once
 
+#include <JavaScriptCore/JSExportMacros.h>
 #include <stdint.h>
 
-// Generated during the build based on a hash of JSCBuiltins.o, CachedTypes.o, and any production
-// build source version number.
-extern const uint32_t JSCBytecodeCacheVersion;
+namespace JSC {
+
+JS_EXPORT_PRIVATE NEVER_INLINE uint32_t computeJSCBytecodeCacheVersion();
+
+}

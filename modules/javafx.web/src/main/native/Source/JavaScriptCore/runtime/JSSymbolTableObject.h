@@ -28,11 +28,11 @@
 
 #pragma once
 
-#include "JSScope.h"
-#include "PropertyDescriptor.h"
-#include "SymbolTable.h"
-#include "ThrowScope.h"
-#include "VariableWriteFireDetail.h"
+#include <JavaScriptCore/JSScope.h>
+#include <JavaScriptCore/PropertyDescriptor.h>
+#include <JavaScriptCore/SymbolTable.h>
+#include <JavaScriptCore/ThrowScope.h>
+#include <JavaScriptCore/VariableWriteFireDetail.h>
 
 namespace JSC {
 
@@ -44,11 +44,13 @@ public:
     SymbolTable* symbolTable() const { return m_symbolTable.get(); }
 
     JS_EXPORT_PRIVATE static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
-    JS_EXPORT_PRIVATE static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    JS_EXPORT_PRIVATE static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
 
-    static ptrdiff_t offsetOfSymbolTable() { return OBJECT_OFFSETOF(JSSymbolTableObject, m_symbolTable); }
+    static constexpr ptrdiff_t offsetOfSymbolTable() { return OBJECT_OFFSETOF(JSSymbolTableObject, m_symbolTable); }
 
     DECLARE_EXPORT_INFO;
+
+    DECLARE_VISIT_CHILDREN;
 
 protected:
     JSSymbolTableObject(VM& vm, Structure* structure, JSScope* scope)
@@ -58,9 +60,10 @@ protected:
 
     JSSymbolTableObject(VM& vm, Structure* structure, JSScope* scope, SymbolTable* symbolTable)
         : Base(vm, structure, scope)
+        , m_symbolTable(symbolTable, WriteBarrierEarlyInit)
     {
         ASSERT(symbolTable);
-        setSymbolTable(vm, symbolTable);
+        symbolTable->notifyCreation(vm, this, "Allocated a scope");
     }
 
     void setSymbolTable(VM& vm, SymbolTable* symbolTable)
@@ -69,8 +72,6 @@ protected:
         symbolTable->notifyCreation(vm, this, "Allocated a scope");
         m_symbolTable.set(vm, this, symbolTable);
     }
-
-    DECLARE_VISIT_CHILDREN;
 
 private:
     WriteBarrier<SymbolTable> m_symbolTable;

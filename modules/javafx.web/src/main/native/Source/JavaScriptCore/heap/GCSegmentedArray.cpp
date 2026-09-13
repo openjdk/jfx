@@ -25,9 +25,12 @@
 
 #include "config.h"
 #include "GCSegmentedArray.h"
+#include "JSCell.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(GCSegmentedArray);
 
 } // namespace JSC
+

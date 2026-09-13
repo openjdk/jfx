@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2007 Rob Buis <buis@kde.org>
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -23,12 +23,17 @@
 #include "SVGScriptElement.h"
 
 #include "Document.h"
+#include "ElementInlines.h"
 #include "Event.h"
-#include <wtf/IsoMallocInlines.h>
+#include "EventNames.h"
+#include "EventTargetInlines.h"
+#include "NodeInlines.h"
+#include "ScriptElement.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGScriptElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGScriptElement);
 
 inline SVGScriptElement::SVGScriptElement(const QualifiedName& tagName, Document& document, bool wasInsertedByParser, bool alreadyStarted)
     : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -46,8 +51,21 @@ Ref<SVGScriptElement> SVGScriptElement::create(const QualifiedName& tagName, Doc
 
 void SVGScriptElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
+    if (name == SVGNames::asyncAttr)
+        handleAsyncAttribute();
+
     SVGURIReference::parseAttribute(name, newValue);
     SVGElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
+}
+
+bool SVGScriptElement::async() const
+{
+    return hasAsyncAttribute() || forceAsync();
+}
+
+bool SVGScriptElement::hasAsyncAttribute() const
+{
+    return hasAttributeWithoutSynchronization(SVGNames::asyncAttr);
 }
 
 void SVGScriptElement::svgAttributeChanged(const QualifiedName& attrName)
@@ -80,15 +98,21 @@ void SVGScriptElement::childrenChanged(const ChildChange& change)
     ScriptElement::childrenChanged(change);
 }
 
+void SVGScriptElement::finishParsingChildren()
+{
+    SVGElement::finishParsingChildren();
+    ScriptElement::finishParsingChildren();
+}
+
 void SVGScriptElement::addSubresourceAttributeURLs(ListHashSet<URL>& urls) const
 {
     SVGElement::addSubresourceAttributeURLs(urls);
 
-    addSubresourceURL(urls, document().completeURL(href()));
+    addSubresourceURL(urls, protectedDocument()->completeURL(href()));
 }
-Ref<Element> SVGScriptElement::cloneElementWithoutAttributesAndChildren(Document& targetDocument)
+Ref<Element> SVGScriptElement::cloneElementWithoutAttributesAndChildren(Document& document, CustomElementRegistry*) const
 {
-    return adoptRef(*new SVGScriptElement(tagQName(), targetDocument, false, alreadyStarted()));
+    return adoptRef(*new SVGScriptElement(tagQName(), document, false, alreadyStarted()));
 }
 
 void SVGScriptElement::dispatchErrorEvent()

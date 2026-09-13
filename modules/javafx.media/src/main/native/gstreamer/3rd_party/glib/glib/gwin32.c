@@ -41,10 +41,8 @@
 #include <errno.h>
 #include <fcntl.h>
 
-#define STRICT          /* Strict typing, please */
 #include <winsock2.h>
 #include <windows.h>
-#undef STRICT
 #ifndef G_WITH_CYGWIN
 #include <direct.h>
 #endif
@@ -397,7 +395,7 @@ get_package_directory_from_module (const gchar *module_name)
  *
  * It is strongly recommended that packagers of GLib-using libraries
  * for Windows do not store installation paths in the Registry to be
- * used by this function as that interfers with having several
+ * used by this function as that interferes with having several
  * parallel installations of the library. Enabling multiple
  * installations of different versions of some GLib-using library, or
  * GLib itself, is desirable for various reasons.

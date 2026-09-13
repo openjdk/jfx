@@ -26,13 +26,14 @@
 #pragma once
 
 #ifdef __cplusplus
+#include <wtf/text/WTFString.h>
+
 extern "C" {
-#endif
 
 typedef void (^WGPUBufferMapBlockCallback)(WGPUBufferMapAsyncStatus);
 typedef void (^WGPUCompilationInfoBlockCallback)(WGPUCompilationInfoRequestStatus, const WGPUCompilationInfo* compilationInfo);
-typedef void (^WGPUCreateComputePipelineAsyncBlockCallback)(WGPUCreatePipelineAsyncStatus, WGPUComputePipeline pipeline, const char* message);
-typedef void (^WGPUCreateRenderPipelineAsyncBlockCallback)(WGPUCreatePipelineAsyncStatus, WGPURenderPipeline pipeline, const char* message);
+typedef void (^WGPUCreateComputePipelineAsyncBlockCallback)(WGPUCreatePipelineAsyncStatus, WGPUComputePipeline pipeline, WTF::String&& message);
+typedef void (^WGPUCreateRenderPipelineAsyncBlockCallback)(WGPUCreatePipelineAsyncStatus, WGPURenderPipeline pipeline, WTF::String&& message);
 typedef void (^WGPUErrorBlockCallback)(WGPUErrorType, const char* message);
 typedef void (^WGPUQueueWorkDoneBlockCallback)(WGPUQueueWorkDoneStatus);
 typedef void (^WGPURequestAdapterBlockCallback)(WGPURequestAdapterStatus, WGPUAdapter adapter, const char* message);
@@ -67,6 +68,5 @@ void wgpuShaderModuleGetCompilationInfoWithBlock(WGPUShaderModule, WGPUCompilati
 
 #endif // !defined(WGPU_SKIP_DECLARATIONS)
 
-#ifdef __cplusplus
 } // extern "C"
 #endif

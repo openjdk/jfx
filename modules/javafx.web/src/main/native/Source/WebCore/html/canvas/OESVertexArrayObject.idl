@@ -25,11 +25,12 @@
 
 [
     Conditional=WEBGL, 
-    GenerateIsReachable=ImplWebGLRenderingContext,
+    GenerateIsReachable,
     LegacyNoInterfaceObject,
 ] interface OESVertexArrayObject {
     const unsigned long VERTEX_ARRAY_BINDING_OES = 0x85B5;
 
+    // FIXME: https://github.com/KhronosGroup/WebGL/issues/3754.
     WebGLVertexArrayObjectOES createVertexArrayOES();
     undefined deleteVertexArrayOES(optional WebGLVertexArrayObjectOES? arrayObject = null);
     boolean isVertexArrayOES(optional WebGLVertexArrayObjectOES? arrayObject = null);

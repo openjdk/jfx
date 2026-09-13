@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,19 +25,25 @@
 
 #pragma once
 
-#include "ArrayBufferSharingMode.h"
-#include "BufferMemoryHandle.h"
-#include "GCIncomingRefCounted.h"
-#include "Watchpoint.h"
-#include "Weak.h"
-#include "WeakImpl.h"
+#include <wtf/Compiler.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
+#include <JavaScriptCore/ArrayBufferSharingMode.h>
+#include <JavaScriptCore/BufferMemoryHandle.h>
+#include <JavaScriptCore/GCIncomingRefCounted.h>
+#include <JavaScriptCore/Watchpoint.h>
+#include <JavaScriptCore/Weak.h>
+#include <JavaScriptCore/WeakImpl.h>
 #include <wtf/CagedPtr.h>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/PackedRefPtr.h>
 #include <wtf/SharedTask.h>
 #include <wtf/StdIntExtras.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace JSC {
@@ -46,6 +52,10 @@ class VM;
 class ArrayBuffer;
 class ArrayBufferView;
 class JSArrayBuffer;
+
+namespace Wasm {
+class Memory;
+}
 
 using ArrayBufferDestructorFunction = RefPtr<SharedTask<void(void*)>>;
 
@@ -58,12 +68,12 @@ public:
 
     JS_EXPORT_PRIVATE ~SharedArrayBufferContents();
 
-    static Ref<SharedArrayBufferContents> create(void* data, size_t size, std::optional<size_t> maxByteLength, RefPtr<BufferMemoryHandle> memoryHandle, ArrayBufferDestructorFunction&& destructor, Mode mode)
+    static Ref<SharedArrayBufferContents> create(std::span<uint8_t> data, std::optional<size_t> maxByteLength, RefPtr<BufferMemoryHandle> memoryHandle, ArrayBufferDestructorFunction&& destructor, Mode mode)
     {
-        return adoptRef(*new SharedArrayBufferContents(data, size, maxByteLength, WTFMove(memoryHandle), WTFMove(destructor), mode));
+        return adoptRef(*new SharedArrayBufferContents(data, maxByteLength, WTF::move(memoryHandle), WTF::move(destructor), mode));
     }
 
-    void* data() const { return m_data.getMayBeNull(m_maxByteLength); }
+    void* data() const LIFETIME_BOUND { return m_data.getMayBeNull(); }
 
     size_t sizeInBytes(std::memory_order order) const
     {
@@ -79,8 +89,8 @@ public:
 
     Mode mode() const { return m_mode; }
 
-    Expected<int64_t, GrowFailReason> grow(VM&, size_t newByteLength);
-    Expected<int64_t, GrowFailReason> grow(const AbstractLocker&, VM&, size_t newByteLength);
+    Expected<int64_t, GrowFailReason> grow(VM&, size_t newByteLength, bool requirePageMultiple);
+    Expected<int64_t, GrowFailReason> grow(const AbstractLocker&, VM&, size_t newByteLength, bool requirePageMultiple);
 
     void updateSize(size_t sizeInBytes, std::memory_order order = std::memory_order_seq_cst)
     {
@@ -89,15 +99,15 @@ public:
 
     BufferMemoryHandle* memoryHandle() const { return m_memoryHandle.get(); }
 
-    static ptrdiff_t offsetOfSizeInBytes() { return OBJECT_OFFSETOF(SharedArrayBufferContents, m_sizeInBytes); }
+    static constexpr ptrdiff_t offsetOfSizeInBytes() { return OBJECT_OFFSETOF(SharedArrayBufferContents, m_sizeInBytes); }
 
 private:
-    SharedArrayBufferContents(void* data, size_t size, std::optional<size_t> maxByteLength, RefPtr<BufferMemoryHandle> memoryHandle, ArrayBufferDestructorFunction&& destructor, Mode mode)
-        : m_data(data, maxByteLength.value_or(size))
-        , m_destructor(WTFMove(destructor))
-        , m_memoryHandle(WTFMove(memoryHandle))
-        , m_sizeInBytes(size)
-        , m_maxByteLength(maxByteLength.value_or(size))
+    SharedArrayBufferContents(std::span<uint8_t> data, std::optional<size_t> maxByteLength, RefPtr<BufferMemoryHandle> memoryHandle, ArrayBufferDestructorFunction&& destructor, Mode mode)
+        : m_data(data.data())
+        , m_destructor(WTF::move(destructor))
+        , m_memoryHandle(WTF::move(memoryHandle))
+        , m_sizeInBytes(data.size())
+        , m_maxByteLength(maxByteLength.value_or(data.size()))
         , m_hasMaxByteLength(!!maxByteLength)
         , m_mode(mode)
     {
@@ -107,7 +117,7 @@ private:
 #endif
     }
 
-    using DataType = CagedPtr<Gigacage::Primitive, void, tagCagedPtr>;
+    using DataType = CagedPtr<Gigacage::Primitive, void>;
     DataType m_data;
     ArrayBufferDestructorFunction m_destructor;
     RefPtr<BufferMemoryHandle> m_memoryHandle;
@@ -122,8 +132,8 @@ class ArrayBufferContents final {
 public:
     ArrayBufferContents() = default;
     ArrayBufferContents(void* data, size_t sizeInBytes, std::optional<size_t> maxByteLength, ArrayBufferDestructorFunction&& destructor)
-        : m_data(data, maxByteLength.value_or(sizeInBytes))
-        , m_destructor(WTFMove(destructor))
+        : m_data(data)
+        , m_destructor(WTF::move(destructor))
         , m_sizeInBytes(sizeInBytes)
         , m_maxByteLength(maxByteLength.value_or(sizeInBytes))
         , m_hasMaxByteLength(!!maxByteLength)
@@ -131,31 +141,41 @@ public:
         RELEASE_ASSERT(m_sizeInBytes <= MAX_ARRAY_BUFFER_SIZE);
     }
 
-    ArrayBufferContents(Ref<SharedArrayBufferContents>&& shared)
-        : m_shared(WTFMove(shared))
+    ArrayBufferContents(std::span<const uint8_t> data, std::optional<size_t> maxByteLength, ArrayBufferDestructorFunction&& destructor)
+        : ArrayBufferContents(const_cast<uint8_t*>(data.data()), data.size(), maxByteLength, WTF::move(destructor))
+    {
+    }
+
+    ArrayBufferContents(Ref<SharedArrayBufferContents>&& shared, bool forceFixedLengthIfWasm = true)
+        : m_shared(WTF::move(shared))
         , m_memoryHandle(m_shared->memoryHandle())
         , m_sizeInBytes(m_shared->sizeInBytes(std::memory_order_seq_cst))
     {
         RELEASE_ASSERT(m_sizeInBytes <= MAX_ARRAY_BUFFER_SIZE);
-        if (m_shared->mode() == SharedArrayBufferContents::Mode::WebAssembly) {
+        bool adjustedForceFixedLengthIfWasm = forceFixedLengthIfWasm || !Options::useWasmMemoryToBufferAPIs();
+        if (m_shared->mode() == SharedArrayBufferContents::Mode::WebAssembly && adjustedForceFixedLengthIfWasm) {
             m_hasMaxByteLength = false;
             m_maxByteLength = m_sizeInBytes;
         } else {
             m_hasMaxByteLength = !!m_shared->maxByteLength();
             m_maxByteLength = m_shared->maxByteLength().value_or(m_sizeInBytes);
         }
-        m_data = DataType { m_shared->data(), m_maxByteLength };
+        // data() cannot destroy m_shared here so the code is safe as is so avoid
+        // refing for performance reasons.
+        SUPPRESS_UNCOUNTED_ARG m_data = DataType { m_shared->data() };
     }
 
     ArrayBufferContents(void* data, size_t sizeInBytes, size_t maxByteLength, Ref<BufferMemoryHandle>&& memoryHandle)
-        : m_data(data, maxByteLength)
-        , m_memoryHandle(WTFMove(memoryHandle))
+        : m_data(data)
+        , m_memoryHandle(WTF::move(memoryHandle))
         , m_sizeInBytes(sizeInBytes)
         , m_maxByteLength(maxByteLength)
         , m_hasMaxByteLength(true)
     {
         RELEASE_ASSERT(m_sizeInBytes <= MAX_ARRAY_BUFFER_SIZE);
     }
+
+    JS_EXPORT_PRIVATE static std::optional<ArrayBufferContents> fromSpan(std::span<const uint8_t>);
 
     ArrayBufferContents(ArrayBufferContents&& other)
     {
@@ -164,23 +184,23 @@ public:
 
     ArrayBufferContents& operator=(ArrayBufferContents&& other)
     {
-        ArrayBufferContents moved(WTFMove(other));
+        ArrayBufferContents moved(WTF::move(other));
         swap(moved);
         return *this;
     }
 
     ~ArrayBufferContents()
     {
-        if (m_destructor) {
+        if (RefPtr destructor = m_destructor) {
             // FIXME: We shouldn't use getUnsafe here: https://bugs.webkit.org/show_bug.cgi?id=197698
-            m_destructor->run(m_data.getUnsafe());
+            destructor->run(m_data.getUnsafe());
         }
     }
 
     explicit operator bool() { return !!m_data; }
 
-    void* data() const { return m_data.getMayBeNull(m_maxByteLength); }
-    void* dataWithoutPACValidation() const { return m_data.getUnsafe(); }
+    void* data() const LIFETIME_BOUND { return m_data.getMayBeNull(); }
+    void* dataWithoutPACValidation() const LIFETIME_BOUND { return m_data.getUnsafe(); }
     size_t sizeInBytes(std::memory_order order = std::memory_order_seq_cst) const
     {
         if (m_hasMaxByteLength) {
@@ -196,10 +216,15 @@ public:
         return std::nullopt;
     }
 
+    std::span<uint8_t> mutableSpan() LIFETIME_BOUND { return { static_cast<uint8_t*>(data()), sizeInBytes() }; }
+    std::span<const uint8_t> span() const LIFETIME_BOUND { return { static_cast<const uint8_t*>(data()), sizeInBytes() }; }
+
     bool isShared() const { return m_shared; }
     bool isResizableOrGrowableShared() const { return m_hasMaxByteLength; }
     bool isGrowableShared() const { return isResizableOrGrowableShared() && isShared(); }
     bool isResizableNonShared() const { return isResizableOrGrowableShared() && !isShared(); }
+
+    void refreshAfterWasmMemoryGrow(Wasm::Memory*);
 
     void swap(ArrayBufferContents& other)
     {
@@ -215,10 +240,12 @@ public:
 
     ArrayBufferContents detach()
     {
-        ArrayBufferContents contents(WTFMove(*this));
+        ArrayBufferContents contents(WTF::move(*this));
         m_hasMaxByteLength = contents.m_hasMaxByteLength; // m_maxByteLength needs to be cleared while we need to keep the information that we had m_hasMaxByteLength.
         return contents;
     }
+
+    JS_EXPORT_PRIVATE void shareWith(ArrayBufferContents&);
 
 private:
     void reset()
@@ -243,9 +270,8 @@ private:
 
     void makeShared();
     void copyTo(ArrayBufferContents&);
-    void shareWith(ArrayBufferContents&);
 
-    using DataType = CagedPtr<Gigacage::Primitive, void, tagCagedPtr>;
+    using DataType = CagedPtr<Gigacage::Primitive, void>;
     DataType m_data { nullptr };
     ArrayBufferDestructorFunction m_destructor { nullptr };
     RefPtr<SharedArrayBufferContents> m_shared;
@@ -259,34 +285,34 @@ class ArrayBuffer final : public GCIncomingRefCounted<ArrayBuffer> {
 public:
     JS_EXPORT_PRIVATE static Ref<ArrayBuffer> create(size_t numElements, unsigned elementByteSize);
     JS_EXPORT_PRIVATE static Ref<ArrayBuffer> create(ArrayBuffer&);
-    JS_EXPORT_PRIVATE static Ref<ArrayBuffer> create(const void* source, size_t byteLength);
+    JS_EXPORT_PRIVATE static Ref<ArrayBuffer> create(std::span<const uint8_t> = { });
     JS_EXPORT_PRIVATE static Ref<ArrayBuffer> create(ArrayBufferContents&&);
-    JS_EXPORT_PRIVATE static Ref<ArrayBuffer> create(const Vector<uint8_t>&);
-    JS_EXPORT_PRIVATE static Ref<ArrayBuffer> createAdopted(const void* data, size_t byteLength);
-    JS_EXPORT_PRIVATE static Ref<ArrayBuffer> createFromBytes(const void* data, size_t byteLength, ArrayBufferDestructorFunction&&);
-    JS_EXPORT_PRIVATE static Ref<ArrayBuffer> createShared(Ref<SharedArrayBufferContents>&&);
+    JS_EXPORT_PRIVATE static Ref<ArrayBuffer> createAdopted(std::span<const uint8_t>);
+    JS_EXPORT_PRIVATE static Ref<ArrayBuffer> createFromBytes(std::span<const uint8_t> data, ArrayBufferDestructorFunction&&);
+    JS_EXPORT_PRIVATE static Ref<ArrayBuffer> createShared(Ref<SharedArrayBufferContents>&&, bool forceFixedLengthIfWasm = true);
     JS_EXPORT_PRIVATE static RefPtr<ArrayBuffer> tryCreate(size_t numElements, unsigned elementByteSize, std::optional<size_t> maxByteLength = std::nullopt);
     JS_EXPORT_PRIVATE static RefPtr<ArrayBuffer> tryCreate(ArrayBuffer&);
-    JS_EXPORT_PRIVATE static RefPtr<ArrayBuffer> tryCreate(const void* source, size_t byteLength);
+    JS_EXPORT_PRIVATE static RefPtr<ArrayBuffer> tryCreate(std::span<const uint8_t> = { });
     JS_EXPORT_PRIVATE static RefPtr<ArrayBuffer> tryCreateShared(VM&, size_t numElements, unsigned elementByteSize, size_t maxByteLength);
 
     // Only for use by Uint8ClampedArray::tryCreateUninitialized and FragmentedSharedBuffer::tryCreateArrayBuffer.
     JS_EXPORT_PRIVATE static Ref<ArrayBuffer> createUninitialized(size_t numElements, unsigned elementByteSize);
     JS_EXPORT_PRIVATE static RefPtr<ArrayBuffer> tryCreateUninitialized(size_t numElements, unsigned elementByteSize);
 
-    inline void* data();
-    inline const void* data() const;
+    inline void* data() LIFETIME_BOUND;
+    inline const void* data() const LIFETIME_BOUND;
     inline size_t byteLength(std::memory_order = std::memory_order_relaxed) const;
     inline std::optional<size_t> maxByteLength() const;
 
-    inline void* dataWithoutPACValidation();
-    inline const void* dataWithoutPACValidation() const;
+    inline void* dataWithoutPACValidation() LIFETIME_BOUND;
+    inline const void* dataWithoutPACValidation() const LIFETIME_BOUND;
 
     void makeShared();
     void setSharingMode(ArrayBufferSharingMode);
     inline bool isShared() const;
     inline ArrayBufferSharingMode sharingMode() const { return isShared() ? ArrayBufferSharingMode::Shared : ArrayBufferSharingMode::Default; }
     inline bool isResizableOrGrowableShared() const { return m_contents.isResizableOrGrowableShared(); }
+    inline bool isFixedLength() const { return !isResizableOrGrowableShared(); }
     inline bool isGrowableShared() const { return m_contents.isGrowableShared(); }
     inline bool isResizableNonShared() const { return m_contents.isResizableNonShared(); }
 
@@ -298,11 +324,14 @@ public:
 
     inline void pin();
     inline void unpin();
+    inline bool isDetachable() const;
     inline void pinAndLock();
     inline bool isLocked();
 
     void makeWasmMemory();
     inline bool isWasmMemory();
+    // When a resizable buffer is associated with a non-shared Wasm memory, this function is called by the memory's growthSuccessCallback.
+    void refreshAfterWasmMemoryGrow(Wasm::Memory*);
 
     JS_EXPORT_PRIVATE bool transferTo(VM&, ArrayBufferContents&);
     JS_EXPORT_PRIVATE bool shareWith(ArrayBufferContents&);
@@ -311,18 +340,20 @@ public:
     bool isDetached() { return !m_contents.m_data; }
     InlineWatchpointSet& detachingWatchpointSet() { return m_detachingWatchpointSet; }
 
-    static ptrdiff_t offsetOfSizeInBytes() { return OBJECT_OFFSETOF(ArrayBuffer, m_contents) + OBJECT_OFFSETOF(ArrayBufferContents, m_sizeInBytes); }
-    static ptrdiff_t offsetOfData() { return OBJECT_OFFSETOF(ArrayBuffer, m_contents) + OBJECT_OFFSETOF(ArrayBufferContents, m_data); }
-    static ptrdiff_t offsetOfShared() { return OBJECT_OFFSETOF(ArrayBuffer, m_contents) + OBJECT_OFFSETOF(ArrayBufferContents, m_shared); }
+    static constexpr ptrdiff_t offsetOfSizeInBytes() { return OBJECT_OFFSETOF(ArrayBuffer, m_contents) + OBJECT_OFFSETOF(ArrayBufferContents, m_sizeInBytes); }
+    static constexpr ptrdiff_t offsetOfData() { return OBJECT_OFFSETOF(ArrayBuffer, m_contents) + OBJECT_OFFSETOF(ArrayBufferContents, m_data); }
+    static constexpr ptrdiff_t offsetOfShared() { return OBJECT_OFFSETOF(ArrayBuffer, m_contents) + OBJECT_OFFSETOF(ArrayBufferContents, m_shared); }
 
-    ~ArrayBuffer() { }
+    JS_EXPORT_PRIVATE ~ArrayBuffer();
 
     JS_EXPORT_PRIVATE static Ref<SharedTask<void(void*)>> primitiveGigacageDestructor();
 
     Expected<int64_t, GrowFailReason> grow(VM&, size_t newByteLength);
     Expected<int64_t, GrowFailReason> resize(VM&, size_t newByteLength);
 
-    Vector<uint8_t> toVector() const { return { static_cast<const uint8_t*>(data()), byteLength() }; };
+    std::span<uint8_t> mutableSpan() LIFETIME_BOUND { return { static_cast<uint8_t*>(data()), byteLength() }; }
+    std::span<const uint8_t> span() const LIFETIME_BOUND { return { static_cast<const uint8_t*>(data()), byteLength() }; }
+    Vector<uint8_t> toVector() const { return { span() }; }
 
 private:
     static Ref<ArrayBuffer> create(size_t numElements, unsigned elementByteSize, ArrayBufferContents::InitializationPolicy);
@@ -346,22 +377,22 @@ private:
     bool m_locked { false };
 };
 
-void* ArrayBuffer::data()
+void* ArrayBuffer::data() LIFETIME_BOUND
 {
     return m_contents.data();
 }
 
-const void* ArrayBuffer::data() const
+const void* ArrayBuffer::data() const LIFETIME_BOUND
 {
     return m_contents.data();
 }
 
-void* ArrayBuffer::dataWithoutPACValidation()
+void* ArrayBuffer::dataWithoutPACValidation() LIFETIME_BOUND
 {
     return m_contents.dataWithoutPACValidation();
 }
 
-const void* ArrayBuffer::dataWithoutPACValidation() const
+const void* ArrayBuffer::dataWithoutPACValidation() const LIFETIME_BOUND
 {
     return m_contents.dataWithoutPACValidation();
 }
@@ -397,6 +428,11 @@ void ArrayBuffer::unpin()
     m_pinCount--;
 }
 
+bool ArrayBuffer::isDetachable() const
+{
+    return !m_pinCount && !m_locked && !isShared();
+}
+
 void ArrayBuffer::pinAndLock()
 {
     m_locked = true;
@@ -417,7 +453,7 @@ JS_EXPORT_PRIVATE ASCIILiteral errorMessageForTransfer(ArrayBuffer*);
 // https://tc39.es/proposal-resizablearraybuffer/#sec-makeidempotentarraybufferbytelengthgetter
 template<std::memory_order order>
 class IdempotentArrayBufferByteLengthGetter {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(IdempotentArrayBufferByteLengthGetter);
 public:
     IdempotentArrayBufferByteLengthGetter() = default;
 
@@ -434,6 +470,10 @@ private:
     std::optional<size_t> m_byteLength;
 };
 
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<std::memory_order order>, IdempotentArrayBufferByteLengthGetter<order>);
+
 } // namespace JSC
 
 using JSC::ArrayBuffer;
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

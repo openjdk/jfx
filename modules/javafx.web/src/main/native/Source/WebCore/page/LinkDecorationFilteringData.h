@@ -25,29 +25,24 @@
 
 #pragma once
 
-#include "RegistrableDomain.h"
-#include <optional>
+#include <WebCore/RegistrableDomain.h>
 
 namespace WebCore {
 
 struct LinkDecorationFilteringData {
     RegistrableDomain domain;
+    String path;
     String linkDecoration;
 
-    LinkDecorationFilteringData(RegistrableDomain&& domain, const String& linkDecoration)
-        : domain(WTFMove(domain))
-        , linkDecoration(linkDecoration)
+    LinkDecorationFilteringData(RegistrableDomain&& domain, String&& path, String&& linkDecoration)
+        : domain(WTF::move(domain))
+        , path(WTF::move(path))
+        , linkDecoration(WTF::move(linkDecoration))
     {
     }
 
-    LinkDecorationFilteringData(const String& domain, const String& linkDecoration)
-        : domain(RegistrableDomain { URL { domain } } )
-        , linkDecoration(linkDecoration)
-    {
-    }
-
-    LinkDecorationFilteringData(const String& linkDecoration)
-        : linkDecoration(linkDecoration)
+    LinkDecorationFilteringData(String&& domain, String&& path, String&& linkDecoration)
+        : LinkDecorationFilteringData(RegistrableDomain { URL { WTF::move(domain) } }, WTF::move(path), WTF::move(linkDecoration))
     {
     }
 
@@ -55,37 +50,18 @@ struct LinkDecorationFilteringData {
     LinkDecorationFilteringData& operator=(const LinkDecorationFilteringData&) = default;
 
     LinkDecorationFilteringData(LinkDecorationFilteringData&& data)
-        : domain(WTFMove(data.domain))
-        , linkDecoration(WTFMove(data.linkDecoration))
+        : domain(WTF::move(data.domain))
+        , path(WTF::move(data.path))
+        , linkDecoration(WTF::move(data.linkDecoration))
     {
     }
 
     LinkDecorationFilteringData& operator=(LinkDecorationFilteringData&& data)
     {
-        domain = WTFMove(data.domain);
-        linkDecoration = WTFMove(data.linkDecoration);
+        domain = WTF::move(data.domain);
+        path = WTF::move(data.path);
+        linkDecoration = WTF::move(data.linkDecoration);
         return *this;
-    }
-
-    template<class Encoder> void encode(Encoder& encoder) const
-    {
-        encoder << domain;
-        encoder << linkDecoration;
-    }
-
-    template<class Decoder> static std::optional<LinkDecorationFilteringData> decode(Decoder& decoder)
-    {
-        std::optional<RegistrableDomain> domain;
-        decoder >> domain;
-        if (!domain)
-            return std::nullopt;
-
-        std::optional<String> linkDecoration;
-        decoder >> linkDecoration;
-        if (!linkDecoration)
-            return std::nullopt;
-
-        return { { WTFMove(*domain), WTFMove(*linkDecoration) } };
     }
 };
 

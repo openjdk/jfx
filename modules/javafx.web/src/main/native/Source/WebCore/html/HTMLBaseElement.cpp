@@ -27,11 +27,11 @@
 #include "ElementInlines.h"
 #include "HTMLNames.h"
 #include "TextResourceDecoder.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLBaseElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLBaseElement);
 
 using namespace HTMLNames;
 
@@ -48,9 +48,10 @@ Ref<HTMLBaseElement> HTMLBaseElement::create(const QualifiedName& tagName, Docum
 
 void HTMLBaseElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == hrefAttr || name == targetAttr)
-        document().processBaseElement();
-    else
+    if (name == hrefAttr || name == targetAttr) {
+        if (isConnected())
+            protectedDocument()->processBaseElement();
+    } else
         HTMLElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
@@ -58,7 +59,7 @@ Node::InsertedIntoAncestorResult HTMLBaseElement::insertedIntoAncestor(Insertion
 {
     HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
     if (insertionType.connectedToDocument)
-        document().processBaseElement();
+        protectedDocument()->processBaseElement();
     return InsertedIntoAncestorResult::Done;
 }
 
@@ -66,7 +67,7 @@ void HTMLBaseElement::removedFromAncestor(RemovalType removalType, ContainerNode
 {
     HTMLElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
     if (removalType.disconnectedFromDocument)
-        document().processBaseElement();
+        protectedDocument()->processBaseElement();
 }
 
 bool HTMLBaseElement::isURLAttribute(const Attribute& attribute) const
@@ -86,18 +87,17 @@ String HTMLBaseElement::href() const
     if (url.isNull())
         url = emptyAtom();
 
-    // Same logic as openFunc() in XMLDocumentParserLibxml2.cpp. Keep them in sync.
-    auto* encoding = document().decoder() ? document().decoder()->encodingForURLParsing() : nullptr;
-    URL urlRecord(document().fallbackBaseURL(), url, encoding);
+    Ref document = this->document();
+    auto urlRecord = document->completeURL(url, document->fallbackBaseURL());
     if (!urlRecord.isValid())
         return url;
 
     return urlRecord.string();
 }
-
+#if PLATFORM(JAVA)
 void HTMLBaseElement::setHref(const AtomString& value)
 {
     setAttributeWithoutSynchronization(hrefAttr, value);
 }
-
+#endif
 }

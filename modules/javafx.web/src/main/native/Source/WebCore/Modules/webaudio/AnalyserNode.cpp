@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,11 +30,12 @@
 
 #include "AudioNodeInput.h"
 #include "AudioNodeOutput.h"
-#include <wtf/IsoMallocInlines.h>
+#include "ExceptionOr.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(AnalyserNode);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AnalyserNode);
 
 ExceptionOr<Ref<AnalyserNode>> AnalyserNode::create(BaseAudioContext& context, const AnalyserOptions& options)
 {
@@ -61,7 +62,7 @@ ExceptionOr<Ref<AnalyserNode>> AnalyserNode::create(BaseAudioContext& context, c
 
 AnalyserNode::AnalyserNode(BaseAudioContext& context)
     : AudioBasicInspectorNode(context, NodeTypeAnalyser)
-    , m_analyser { context.noiseInjectionPolicy() }
+    , m_analyser { context.noiseInjectionPolicies() }
 {
     addOutput(1);
 
@@ -75,18 +76,18 @@ AnalyserNode::~AnalyserNode()
 
 void AnalyserNode::process(size_t framesToProcess)
 {
-    AudioBus* outputBus = output(0)->bus();
+    Ref outputBus = checkedOutput(0)->bus();
 
     if (!isInitialized()) {
         outputBus->zero();
         return;
     }
 
-    AudioBus* inputBus = input(0)->bus();
+    Ref inputBus = checkedInput(0)->bus();
 
     // Give the analyser the audio which is passing through this AudioNode. This must always
     // be done so that the state of the Analyser reflects the current input.
-    m_analyser.writeInput(inputBus, framesToProcess);
+    m_analyser.writeInput(inputBus.get(), framesToProcess);
 
     if (!input(0)->isConnected()) {
         outputBus->zero();
@@ -95,21 +96,21 @@ void AnalyserNode::process(size_t framesToProcess)
 
     // For in-place processing, our override of pullInputs() will just pass the audio data through unchanged if the channel count matches from input to output
     // (resulting in inputBus == outputBus). Otherwise, do an up-mix to stereo.
-    if (inputBus != outputBus)
-        outputBus->copyFrom(*inputBus);
+    if (inputBus.ptr() != outputBus.ptr())
+        outputBus->copyFrom(inputBus.get());
 }
 
 ExceptionOr<void> AnalyserNode::setFftSize(unsigned size)
 {
     if (!m_analyser.setFftSize(size))
-        return Exception { IndexSizeError, "fftSize must be power of 2 in the range 32 to 32768."_s };
+        return Exception { ExceptionCode::IndexSizeError, "fftSize must be power of 2 in the range 32 to 32768."_s };
     return { };
 }
 
 ExceptionOr<void> AnalyserNode::setMinMaxDecibels(double minDecibels, double maxDecibels)
 {
     if (maxDecibels <= minDecibels)
-        return Exception { IndexSizeError, "minDecibels must be less than maxDecibels."_s };
+        return Exception { ExceptionCode::IndexSizeError, "minDecibels must be less than maxDecibels."_s };
 
     m_analyser.setMinDecibels(minDecibels);
     m_analyser.setMaxDecibels(maxDecibels);
@@ -119,7 +120,7 @@ ExceptionOr<void> AnalyserNode::setMinMaxDecibels(double minDecibels, double max
 ExceptionOr<void> AnalyserNode::setMinDecibels(double k)
 {
     if (k >= maxDecibels())
-        return Exception { IndexSizeError, "minDecibels must be less than maxDecibels."_s };
+        return Exception { ExceptionCode::IndexSizeError, "minDecibels must be less than maxDecibels."_s };
 
     m_analyser.setMinDecibels(k);
     return { };
@@ -128,7 +129,7 @@ ExceptionOr<void> AnalyserNode::setMinDecibels(double k)
 ExceptionOr<void> AnalyserNode::setMaxDecibels(double k)
 {
     if (k <= minDecibels())
-        return Exception { IndexSizeError, "maxDecibels must be greater than minDecibels."_s };
+        return Exception { ExceptionCode::IndexSizeError, "maxDecibels must be greater than minDecibels."_s };
 
     m_analyser.setMaxDecibels(k);
     return { };
@@ -137,7 +138,7 @@ ExceptionOr<void> AnalyserNode::setMaxDecibels(double k)
 ExceptionOr<void> AnalyserNode::setSmoothingTimeConstant(double k)
 {
     if (k < 0 || k > 1)
-        return Exception { IndexSizeError, "Smoothing time constant needs to be between 0 and 1."_s };
+        return Exception { ExceptionCode::IndexSizeError, "Smoothing time constant needs to be between 0 and 1."_s };
 
     m_analyser.setSmoothingTimeConstant(k);
     return { };
@@ -153,7 +154,7 @@ void AnalyserNode::updatePullStatus()
 {
     ASSERT(context().isGraphOwner());
 
-    if (output(0)->isConnected()) {
+    if (checkedOutput(0)->isConnected()) {
         // When an AudioBasicInspectorNode is connected to a downstream node, it
         // will get pulled by the downstream node, thus remove it from the context's
         // automatic pull list.

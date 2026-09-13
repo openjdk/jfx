@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 Yusuke Suzuki <utatane.tea@gmail.com>.
- * Copyright (C) 2016-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,19 +34,29 @@
 #include "IdentifierInlines.h"
 #include "IterationKind.h"
 #include "JSArrayIterator.h"
+#include "JSAsyncDisposableStack.h"
+#include "JSAsyncFromSyncIterator.h"
 #include "JSAsyncGenerator.h"
+#include "JSDisposableStack.h"
 #include "JSGenerator.h"
 #include "JSGlobalObject.h"
+#include "JSIteratorHelper.h"
 #include "JSMapIterator.h"
 #include "JSModuleLoader.h"
 #include "JSPromise.h"
+#include "JSRegExpStringIterator.h"
 #include "JSSetIterator.h"
 #include "JSStringIterator.h"
+#include "JSWrapForValidIterator.h"
 #include "LinkTimeConstant.h"
+#include "Microtask.h"
 #include "Nodes.h"
 #include "StrongInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(BytecodeIntrinsicRegistry);
 
 #define INITIALIZE_BYTECODE_INTRINSIC_NAMES_TO_SET(name) m_bytecodeIntrinsicMap.add(vm.propertyNames->builtinNames().name##PrivateName().impl(), Entry(&BytecodeIntrinsicNode::emit_intrinsic_##name));
 #define INITIALIZE_BYTECODE_INTRINSIC_NAMES_TO_SET_FOR_LINK_TIME_CONSTANT(name, code) m_bytecodeIntrinsicMap.add(vm.propertyNames->builtinNames().name##PrivateName().impl(), JSC::LinkTimeConstant::name);
@@ -94,27 +104,61 @@ BytecodeIntrinsicRegistry::BytecodeIntrinsicRegistry(VM& vm)
     m_GeneratorResumeModeReturn.set(m_vm, jsNumber(static_cast<int32_t>(JSGenerator::ResumeMode::ReturnMode)));
     m_GeneratorStateCompleted.set(m_vm, jsNumber(static_cast<int32_t>(JSGenerator::State::Completed)));
     m_GeneratorStateExecuting.set(m_vm, jsNumber(static_cast<int32_t>(JSGenerator::State::Executing)));
+    m_GeneratorStateInit.set(m_vm, jsNumber(static_cast<int32_t>(JSGenerator::State::Init)));
     m_arrayIteratorFieldIteratedObject.set(m_vm, jsNumber(static_cast<int32_t>(JSArrayIterator::Field::IteratedObject)));
     m_arrayIteratorFieldIndex.set(m_vm, jsNumber(static_cast<int32_t>(JSArrayIterator::Field::Index)));
     m_arrayIteratorFieldKind.set(m_vm, jsNumber(static_cast<int32_t>(JSArrayIterator::Field::Kind)));
-    m_mapIteratorFieldMapBucket.set(m_vm, jsNumber(static_cast<int32_t>(JSMapIterator::Field::MapBucket)));
+
+    m_mapIteratorFieldEntry.set(m_vm, jsNumber(static_cast<int32_t>(JSMapIterator::Field::Entry)));
+    m_mapIteratorFieldIteratedObject.set(m_vm, jsNumber(static_cast<int32_t>(JSMapIterator::Field::IteratedObject)));
+    m_mapIteratorFieldStorage.set(m_vm, jsNumber(static_cast<int32_t>(JSMapIterator::Field::Storage)));
     m_mapIteratorFieldKind.set(m_vm, jsNumber(static_cast<int32_t>(JSMapIterator::Field::Kind)));
-    m_setIteratorFieldSetBucket.set(m_vm, jsNumber(static_cast<int32_t>(JSSetIterator::Field::SetBucket)));
+    m_setIteratorFieldEntry.set(m_vm, jsNumber(static_cast<int32_t>(JSSetIterator::Field::Entry)));
+    m_setIteratorFieldIteratedObject.set(m_vm, jsNumber(static_cast<int32_t>(JSSetIterator::Field::IteratedObject)));
+    m_setIteratorFieldStorage.set(m_vm, jsNumber(static_cast<int32_t>(JSSetIterator::Field::Storage)));
     m_setIteratorFieldKind.set(m_vm, jsNumber(static_cast<int32_t>(JSSetIterator::Field::Kind)));
     m_stringIteratorFieldIndex.set(m_vm, jsNumber(static_cast<int32_t>(JSStringIterator::Field::Index)));
     m_stringIteratorFieldIteratedString.set(m_vm, jsNumber(static_cast<int32_t>(JSStringIterator::Field::IteratedString)));
-    m_asyncGeneratorFieldSuspendReason.set(m_vm, jsNumber(static_cast<unsigned>(JSAsyncGenerator::Field::SuspendReason)));
-    m_asyncGeneratorFieldQueueFirst.set(m_vm, jsNumber(static_cast<unsigned>(JSAsyncGenerator::Field::QueueFirst)));
-    m_asyncGeneratorFieldQueueLast.set(m_vm, jsNumber(static_cast<unsigned>(JSAsyncGenerator::Field::QueueLast)));
+    m_asyncGeneratorFieldQueue.set(m_vm, jsNumber(static_cast<unsigned>(JSAsyncGenerator::Field::Queue)));
+    m_asyncGeneratorFieldResumeValue.set(m_vm, jsNumber(static_cast<unsigned>(JSAsyncGenerator::Field::ResumeValue)));
+    m_asyncGeneratorFieldResumeMode.set(m_vm, jsNumber(static_cast<unsigned>(JSAsyncGenerator::Field::ResumeMode)));
+    m_asyncGeneratorFieldResumePromise.set(m_vm, jsNumber(static_cast<unsigned>(JSAsyncGenerator::Field::ResumePromise)));
+    m_AsyncGeneratorResumeModeEmpty.set(m_vm, jsNumber(static_cast<int32_t>(JSAsyncGenerator::AsyncGeneratorResumeMode::Empty)));
     m_AsyncGeneratorStateCompleted.set(m_vm, jsNumber(static_cast<int32_t>(JSAsyncGenerator::AsyncGeneratorState::Completed)));
     m_AsyncGeneratorStateExecuting.set(m_vm, jsNumber(static_cast<int32_t>(JSAsyncGenerator::AsyncGeneratorState::Executing)));
-    m_AsyncGeneratorStateSuspendedStart.set(m_vm, jsNumber(static_cast<int32_t>(JSAsyncGenerator::AsyncGeneratorState::SuspendedStart)));
-    m_AsyncGeneratorStateSuspendedYield.set(m_vm, jsNumber(static_cast<int32_t>(JSAsyncGenerator::AsyncGeneratorState::SuspendedYield)));
+    m_AsyncGeneratorStateInit.set(m_vm, jsNumber(static_cast<int32_t>(JSAsyncGenerator::AsyncGeneratorState::Init)));
     m_AsyncGeneratorStateAwaitingReturn.set(m_vm, jsNumber(static_cast<int32_t>(JSAsyncGenerator::AsyncGeneratorState::AwaitingReturn)));
     m_AsyncGeneratorSuspendReasonYield.set(m_vm, jsNumber(static_cast<int32_t>(JSAsyncGenerator::AsyncGeneratorSuspendReason::Yield)));
     m_AsyncGeneratorSuspendReasonAwait.set(m_vm, jsNumber(static_cast<int32_t>(JSAsyncGenerator::AsyncGeneratorSuspendReason::Await)));
-    m_AsyncGeneratorSuspendReasonNone.set(m_vm, jsNumber(static_cast<int32_t>(JSAsyncGenerator::AsyncGeneratorSuspendReason::None)));
+    m_AsyncGeneratorSuspendReasonShift.set(m_vm, jsNumber(static_cast<int32_t>(JSAsyncGenerator::reasonShift)));
+    m_AsyncGeneratorSuspendReasonMask.set(m_vm, jsNumber(static_cast<int32_t>(JSAsyncGenerator::reasonMask)));
+    m_asyncFromSyncIteratorFieldSyncIterator.set(m_vm, jsNumber(static_cast<int32_t>(JSAsyncFromSyncIterator::Field::SyncIterator)));
+    m_asyncFromSyncIteratorFieldNextMethod.set(m_vm, jsNumber(static_cast<int32_t>(JSAsyncFromSyncIterator::Field::NextMethod)));
     m_abstractModuleRecordFieldState.set(m_vm, jsNumber(static_cast<int32_t>(AbstractModuleRecord::Field::State)));
+    m_wrapForValidIteratorFieldIteratedIterator.set(m_vm, jsNumber(static_cast<int32_t>(JSWrapForValidIterator::Field::IteratedIterator)));
+    m_wrapForValidIteratorFieldIteratedNextMethod.set(m_vm, jsNumber(static_cast<int32_t>(JSWrapForValidIterator::Field::IteratedNextMethod)));
+    m_regExpStringIteratorFieldRegExp.set(m_vm, jsNumber(static_cast<int32_t>(JSRegExpStringIterator::Field::RegExp)));
+    m_regExpStringIteratorFieldString.set(m_vm, jsNumber(static_cast<int32_t>(JSRegExpStringIterator::Field::String)));
+    m_regExpStringIteratorFieldFlags.set(m_vm, jsNumber(static_cast<int32_t>(JSRegExpStringIterator::Field::Flags)));
+    m_regExpStringIteratorFlagGlobal.set(m_vm, jsNumber(static_cast<int32_t>(JSRegExpStringIterator::FlagBit::Global)));
+    m_regExpStringIteratorFlagFullUnicode.set(m_vm, jsNumber(static_cast<int32_t>(JSRegExpStringIterator::FlagBit::FullUnicode)));
+    m_regExpStringIteratorFlagDone.set(m_vm, jsNumber(static_cast<int32_t>(JSRegExpStringIterator::FlagBit::Done)));
+    m_iteratorHelperFieldGenerator.set(m_vm, jsNumber(static_cast<int32_t>(JSIteratorHelper::Field::Generator)));
+    m_iteratorHelperFieldUnderlyingIterator.set(m_vm, jsNumber(static_cast<int32_t>(JSIteratorHelper::Field::UnderlyingIterator)));
+    m_disposableStackFieldState.set(m_vm, jsNumber(static_cast<int32_t>(JSDisposableStack::Field::State)));
+    m_disposableStackFieldCapability.set(m_vm, jsNumber(static_cast<int32_t>(JSDisposableStack::Field::Capability)));
+    m_DisposableStackStatePending.set(m_vm, jsNumber(static_cast<int32_t>(JSDisposableStack::State::Pending)));
+    m_DisposableStackStateDisposed.set(m_vm, jsNumber(static_cast<int32_t>(JSDisposableStack::State::Disposed)));
+    m_asyncDisposableStackFieldState.set(m_vm, jsNumber(static_cast<int32_t>(JSAsyncDisposableStack::Field::State)));
+    m_asyncDisposableStackFieldCapability.set(m_vm, jsNumber(static_cast<int32_t>(JSAsyncDisposableStack::Field::Capability)));
+    m_AsyncDisposableStackStatePending.set(m_vm, jsNumber(static_cast<int32_t>(JSAsyncDisposableStack::State::Pending)));
+    m_AsyncDisposableStackStateDisposed.set(m_vm, jsNumber(static_cast<int32_t>(JSAsyncDisposableStack::State::Disposed)));
+    m_InternalMicrotaskAsyncFromSyncIteratorContinue.set(m_vm, jsNumber(static_cast<int32_t>(InternalMicrotask::AsyncFromSyncIteratorContinue)));
+    m_InternalMicrotaskAsyncFromSyncIteratorDone.set(m_vm, jsNumber(static_cast<int32_t>(InternalMicrotask::AsyncFromSyncIteratorDone)));
+    m_InternalMicrotaskAsyncGeneratorYieldAwaited.set(m_vm, jsNumber(static_cast<int32_t>(InternalMicrotask::AsyncGeneratorYieldAwaited)));
+    m_InternalMicrotaskAsyncGeneratorBodyCallNormal.set(m_vm, jsNumber(static_cast<int32_t>(InternalMicrotask::AsyncGeneratorBodyCallNormal)));
+    m_InternalMicrotaskAsyncGeneratorBodyCallReturn.set(m_vm, jsNumber(static_cast<int32_t>(InternalMicrotask::AsyncGeneratorBodyCallReturn)));
+    m_InternalMicrotaskAsyncGeneratorResumeNext.set(m_vm, jsNumber(static_cast<int32_t>(InternalMicrotask::AsyncGeneratorResumeNext)));
 }
 
 std::optional<BytecodeIntrinsicRegistry::Entry> BytecodeIntrinsicRegistry::lookup(const Identifier& ident) const
@@ -135,14 +179,9 @@ std::optional<BytecodeIntrinsicRegistry::Entry> BytecodeIntrinsicRegistry::looku
     JSC_COMMON_BYTECODE_INTRINSIC_CONSTANTS_SIMPLE_EACH_NAME(JSC_DECLARE_BYTECODE_INTRINSIC_CONSTANT_GENERATORS)
 #undef JSC_DECLARE_BYTECODE_INTRINSIC_CONSTANT_GENERATORS
 
-JSValue BytecodeIntrinsicRegistry::sentinelMapBucketValue(BytecodeGenerator& generator)
+JSValue BytecodeIntrinsicRegistry::orderedHashTableSentinelValue(BytecodeGenerator& generator)
 {
-    return generator.vm().sentinelMapBucket();
-}
-
-JSValue BytecodeIntrinsicRegistry::sentinelSetBucketValue(BytecodeGenerator& generator)
-{
-    return generator.vm().sentinelSetBucket();
+    return generator.vm().orderedHashTableSentinel();
 }
 
 } // namespace JSC

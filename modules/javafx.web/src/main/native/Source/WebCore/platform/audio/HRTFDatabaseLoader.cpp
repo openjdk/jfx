@@ -40,9 +40,9 @@
 namespace WebCore {
 
 // Keeps track of loaders on a per-sample-rate basis.
-static HashMap<double, HRTFDatabaseLoader*>& loaderMap()
+static HashMap<double, ThreadSafeWeakPtr<HRTFDatabaseLoader>>& loaderMap()
 {
-    static NeverDestroyed<HashMap<double, HRTFDatabaseLoader*>> loaderMap;
+    static NeverDestroyed<HashMap<double, ThreadSafeWeakPtr<HRTFDatabaseLoader>>> loaderMap;
     return loaderMap;
 }
 
@@ -50,13 +50,13 @@ Ref<HRTFDatabaseLoader> HRTFDatabaseLoader::createAndLoadAsynchronouslyIfNecessa
 {
     ASSERT(isMainThread());
 
-    if (RefPtr<HRTFDatabaseLoader> loader = loaderMap().get(sampleRate)) {
+    if (RefPtr<HRTFDatabaseLoader> loader = loaderMap().get(sampleRate).get()) {
         ASSERT(sampleRate == loader->databaseSampleRate());
         return loader.releaseNonNull();
     }
 
     auto loader = adoptRef(*new HRTFDatabaseLoader(sampleRate));
-    loaderMap().add(sampleRate, loader.ptr());
+    loaderMap().set(sampleRate, loader.ptr());
 
     loader->loadAsynchronously();
 
@@ -76,8 +76,18 @@ HRTFDatabaseLoader::~HRTFDatabaseLoader()
     waitForLoaderThreadCompletion();
     m_hrtfDatabase = nullptr;
 
-    // Remove ourself from the map.
-    loaderMap().remove(m_databaseSampleRate);
+    // Try to remove ourselves from the map, but
+    // not if the cached loader with our sample
+    // rate is not actually the this being destroyed.
+    auto it = loaderMap().find(m_databaseSampleRate);
+    if (it == loaderMap().end())
+        return;
+
+    RefPtr loader = it->value.get();
+    if (loader && loader.get() != this)
+        return;
+
+    loaderMap().remove(it);
 }
 
 void HRTFDatabaseLoader::load()
@@ -97,8 +107,9 @@ void HRTFDatabaseLoader::loadAsynchronously()
 
     if (!m_hrtfDatabase.get() && !m_databaseLoaderThread) {
         // Start the asynchronous database loading process.
-        m_databaseLoaderThread = Thread::create("HRTF database loader", [this] {
-            load();
+        m_databaseLoaderThread = Thread::create("HRTF database loader"_s, [weakThis = ThreadSafeWeakPtr { *this }] {
+            if (RefPtr protectedThis = weakThis.get())
+                protectedThis->load();
         });
     }
 }
@@ -113,8 +124,8 @@ void HRTFDatabaseLoader::waitForLoaderThreadCompletion()
     Locker locker { m_threadLock };
 
     // waitForThreadCompletion() should not be called twice for the same thread.
-    if (m_databaseLoaderThread)
-        m_databaseLoaderThread->waitForCompletion();
+    if (RefPtr thread = m_databaseLoaderThread)
+        thread->waitForCompletion();
     m_databaseLoaderThread = nullptr;
 }
 

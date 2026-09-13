@@ -38,7 +38,15 @@ class FileSystemEntryCallback : public RefCounted<FileSystemEntryCallback>, publ
 public:
     using ActiveDOMCallback::ActiveDOMCallback;
 
-    virtual CallbackResult<void> handleEvent(FileSystemEntry&) = 0;
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
+    virtual CallbackResult<void> invoke(FileSystemEntry&) = 0;
+    virtual CallbackResult<void> invokeRethrowingException(FileSystemEntry&) = 0;
+
+private:
+    virtual bool hasCallback() const = 0;
 };
 
 } // namespace WebCore

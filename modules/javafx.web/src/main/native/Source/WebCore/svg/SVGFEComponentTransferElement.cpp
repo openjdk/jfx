@@ -29,21 +29,23 @@
 #include "SVGComponentTransferFunctionElementInlines.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGNames.h"
-#include <wtf/IsoMallocInlines.h>
+#include "SVGPropertyOwnerRegistry.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFEComponentTransferElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGFEComponentTransferElement);
 
 inline SVGFEComponentTransferElement::SVGFEComponentTransferElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::feComponentTransferTag));
 
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::inAttr, &SVGFEComponentTransferElement::m_in1>();
-    });
+    }
 }
 
 Ref<SVGFEComponentTransferElement> SVGFEComponentTransferElement::create(const QualifiedName& tagName, Document& document)
@@ -54,7 +56,7 @@ Ref<SVGFEComponentTransferElement> SVGFEComponentTransferElement::create(const Q
 void SVGFEComponentTransferElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     if (name == SVGNames::inAttr)
-        m_in1->setBaseValInternal(newValue);
+        Ref { m_in1 }->setBaseValInternal(newValue);
 
     SVGFilterPrimitiveStandardAttributes::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
@@ -74,10 +76,10 @@ RefPtr<FilterEffect> SVGFEComponentTransferElement::createFilterEffect(const Fil
 {
     ComponentTransferFunctions functions;
 
-    for (auto& child : childrenOfType<SVGComponentTransferFunctionElement>(*this))
-        functions[child.channel()] = child.transferFunction();
+    for (Ref child : childrenOfType<SVGComponentTransferFunctionElement>(*this))
+        functions[child->channel()] = child->transferFunction();
 
-    return FEComponentTransfer::create(WTFMove(functions));
+    return FEComponentTransfer::create(WTF::move(functions));
 }
 
 static bool isRelevantTransferFunctionElement(const Element& child)
@@ -86,7 +88,7 @@ static bool isRelevantTransferFunctionElement(const Element& child)
 
     ASSERT(is<SVGComponentTransferFunctionElement>(child));
 
-    for (auto laterSibling = child.nextElementSibling(); laterSibling; laterSibling = laterSibling->nextElementSibling()) {
+    for (CheckedPtr laterSibling = child.nextElementSibling(); laterSibling; laterSibling = laterSibling->nextElementSibling()) {
         if (laterSibling->elementName() == name)
             return false;
     }
@@ -98,29 +100,28 @@ bool SVGFEComponentTransferElement::setFilterEffectAttributeFromChild(FilterEffe
 {
     ASSERT(isRelevantTransferFunctionElement(childElement));
 
-    if (!is<SVGComponentTransferFunctionElement>(childElement)) {
-        ASSERT_NOT_REACHED();
+    RefPtr child = dynamicDowncast<SVGComponentTransferFunctionElement>(childElement);
+    ASSERT(child);
+    if (!child)
         return false;
-    }
 
     auto& effect = downcast<FEComponentTransfer>(filterEffect);
-    auto& child = downcast<SVGComponentTransferFunctionElement>(childElement);
 
     switch (attrName.nodeName()) {
     case AttributeNames::typeAttr:
-        return effect.setType(child.channel(), child.type());
+        return effect.setType(child->channel(), child->type());
     case AttributeNames::slopeAttr:
-        return effect.setSlope(child.channel(), child.slope());
+        return effect.setSlope(child->channel(), child->slope());
     case AttributeNames::interceptAttr:
-        return effect.setIntercept(child.channel(), child.intercept());
+        return effect.setIntercept(child->channel(), child->intercept());
     case AttributeNames::amplitudeAttr:
-        return effect.setAmplitude(child.channel(), child.amplitude());
+        return effect.setAmplitude(child->channel(), child->amplitude());
     case AttributeNames::exponentAttr:
-        return effect.setExponent(child.channel(), child.exponent());
+        return effect.setExponent(child->channel(), child->exponent());
     case AttributeNames::offsetAttr:
-        return effect.setOffset(child.channel(), child.offset());
+        return effect.setOffset(child->channel(), child->offset());
     case AttributeNames::tableValuesAttr:
-        return effect.setTableValues(child.channel(), child.tableValues());
+        return effect.setTableValues(child->channel(), child->tableValues());
     default:
         break;
     }

@@ -25,20 +25,19 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "EpochTimeStamp.h"
-#include "ExceptionOr.h"
 
 #include <JavaScriptCore/ArrayBuffer.h>
 #include <optional>
-#include <wtf/IsoMalloc.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
+template<typename> class ExceptionOr;
+
 class PushSubscriptionOptions : public RefCounted<PushSubscriptionOptions> {
-    WTF_MAKE_ISO_ALLOCATED(PushSubscriptionOptions);
+    WTF_MAKE_TZONE_ALLOCATED(PushSubscriptionOptions);
 public:
     template<typename... Args> static Ref<PushSubscriptionOptions> create(Args&&... args) { return adoptRef(*new PushSubscriptionOptions(std::forward<Args>(args)...)); }
     ~PushSubscriptionOptions();
@@ -55,5 +54,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

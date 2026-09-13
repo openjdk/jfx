@@ -28,28 +28,23 @@
 #if ENABLE(WEBGL)
 #include "EXTsRGB.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(EXTsRGB);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EXTsRGB);
 
 EXTsRGB::EXTsRGB(WebGLRenderingContextBase& context)
-    : WebGLExtension(context)
+    : WebGLExtension(context, WebGLExtensionName::EXTsRGB)
 {
-    context.graphicsContextGL()->ensureExtensionEnabled("GL_EXT_sRGB"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::EXT_sRGB);
 }
 
 EXTsRGB::~EXTsRGB() = default;
 
-WebGLExtension::ExtensionName EXTsRGB::getName() const
-{
-    return EXTsRGBName;
-}
-
 bool EXTsRGB::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_EXT_sRGB"_s);
+    return context.supportsExtension(GCGLExtension::EXT_sRGB);
 }
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -88,12 +88,12 @@ class EffectUtil {
             //   of the primitive and then changing the direction we bump the
             //   shadow, but the simplest and most compatible solution is to
             //   just turn off the optimizations when we have a 3D depth buffer.
-            // (RT-26982)
+            // (JDK-8091738)
             return false;
         }
         if (effect instanceof InnerShadow && !aa) {
             // TODO: Handle AA, or at least case when rectangle is pixel aligned...
-            // (RT-26982)
+            // (JDK-8091738)
             InnerShadow shadow = (InnerShadow)effect;
             float radius = shadow.getRadius();
             if (radius > 0f &&
@@ -155,7 +155,7 @@ class EffectUtil {
         float ox2 = ox1 + rw;
         float oy2 = oy1 + rh;
         g.setPaint(toPrismColor(shadow.getColor(), alpha));
-        // TODO: The "outer edge" slices below overlap at the corners... (RT-26982)
+        // TODO: The "outer edge" slices below overlap at the corners... (JDK-8091738)
         drawClippedTexture(g, itex,
                            cx1,   cy1,   cx2,   cy2,
                            cx1,   cy1,   cx2,   oy1-r,

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,8 @@
 [
     Conditional=MEDIA_STREAM,
     JSGenerateToJSObject,
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary MediaTrackConstraints : MediaTrackConstraintSet {
     sequence<MediaTrackConstraintSet> advanced;
 };
@@ -32,7 +34,9 @@
 [
     Conditional=MEDIA_STREAM,
     JSGenerateToJSObject,
-    ImplementedAs=MediaTrackConstraintSet
+    JSGenerateToNativeObject,
+    ImplementedAs=MediaTrackConstraintSet,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary MediaTrackConstraintSet {
     ConstrainLong width;
     ConstrainLong height;
@@ -49,7 +53,29 @@
     ConstrainDOMString groupId;
     ConstrainDOMString displaySurface;
     ConstrainBoolean logicalSurface;
+
+    ConstrainDOMString whiteBalanceMode;
+    // FIXME: add exposureMode;
+    // FIXME: add focusMode;
+    // FIXME: add pointsOfInterest;
+
+    // FIXME: add exposureCompensation;
+    // FIXME: add exposureTime;
+    // FIXME: add colorTemperature;
+    // FIXME: add iso;
+
+    // FIXME: add brightness;
+    // FIXME: add contrast;
+    // FIXME: add saturation;
+    // FIXME: add sharpness;
+
+    // FIXME: add focusDistance;
     ConstrainDouble zoom;
+
+    ConstrainBoolean torch;
+
+    ConstrainBoolean backgroundBlur;
+    ConstrainBoolean powerEfficient;
 };
 
 typedef (double or ConstrainDoubleRange) ConstrainDouble;
@@ -60,7 +86,9 @@ typedef (DOMString or sequence<DOMString> or ConstrainDOMStringParameters) Const
 [
     Conditional=MEDIA_STREAM,
     JSGenerateToJSObject,
-    ImplementedAs=ConstrainBooleanParameters
+    JSGenerateToNativeObject,
+    ImplementedAs=ConstrainBooleanParameters,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ConstrainBooleanParameters {
     boolean exact;
     boolean ideal;
@@ -69,7 +97,9 @@ typedef (DOMString or sequence<DOMString> or ConstrainDOMStringParameters) Const
 [
     Conditional=MEDIA_STREAM,
     JSGenerateToJSObject,
-    ImplementedAs=ConstrainDOMStringParameters
+    JSGenerateToNativeObject,
+    ImplementedAs=ConstrainDOMStringParameters,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ConstrainDOMStringParameters {
     (DOMString or sequence<DOMString>) exact;
     (DOMString or sequence<DOMString>) ideal;
@@ -78,7 +108,9 @@ typedef (DOMString or sequence<DOMString> or ConstrainDOMStringParameters) Const
 [
     Conditional=MEDIA_STREAM,
     JSGenerateToJSObject,
-    ImplementedAs=ConstrainDoubleRange
+    JSGenerateToNativeObject,
+    ImplementedAs=ConstrainDoubleRange,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ConstrainDoubleRange : DoubleRange {
     double exact;
     double ideal;
@@ -87,7 +119,9 @@ typedef (DOMString or sequence<DOMString> or ConstrainDOMStringParameters) Const
 [
     Conditional=MEDIA_STREAM,
     JSGenerateToJSObject,
-    ImplementedAs=ConstrainLongRange
+    JSGenerateToNativeObject,
+    ImplementedAs=ConstrainLongRange,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ConstrainLongRange : LongRange {
     long exact;
     long ideal;

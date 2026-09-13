@@ -33,6 +33,7 @@
 #include "HTMLNames.h"
 #include <wtf/Assertions.h>
 #include <wtf/SortedArrayMap.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -43,65 +44,67 @@ struct AutofillFieldNameMapping {
     AutofillCategory category;
 };
 
-static constexpr std::pair<ComparableLettersLiteral, AutofillFieldNameMapping> fieldNameMappings[] = {
-    { "additional-name", { AutofillFieldName::AdditionalName, AutofillCategory::Normal } },
-    { "address-level1", { AutofillFieldName::AddressLevel1, AutofillCategory::Normal } },
-    { "address-level2", { AutofillFieldName::AddressLevel2, AutofillCategory::Normal } },
-    { "address-level3", { AutofillFieldName::AddressLevel3, AutofillCategory::Normal } },
-    { "address-level4", { AutofillFieldName::AddressLevel4, AutofillCategory::Normal } },
-    { "address-line1", { AutofillFieldName::AddressLine1, AutofillCategory::Normal } },
-    { "address-line2", { AutofillFieldName::AddressLine2, AutofillCategory::Normal } },
-    { "address-line3", { AutofillFieldName::AddressLine3, AutofillCategory::Normal } },
-    { "bday", { AutofillFieldName::Bday, AutofillCategory::Normal } },
-    { "bday-day", { AutofillFieldName::BdayDay, AutofillCategory::Normal } },
-    { "bday-month", { AutofillFieldName::BdayMonth, AutofillCategory::Normal } },
-    { "bday-year", { AutofillFieldName::BdayYear, AutofillCategory::Normal } },
-    { "cc-additional-name", { AutofillFieldName::CcAdditionalName, AutofillCategory::Normal } },
-    { "cc-csc", { AutofillFieldName::CcCsc, AutofillCategory::Normal } },
-    { "cc-exp", { AutofillFieldName::CcExp, AutofillCategory::Normal } },
-    { "cc-exp-month", { AutofillFieldName::CcExpMonth, AutofillCategory::Normal } },
-    { "cc-exp-year", { AutofillFieldName::CcExpYear, AutofillCategory::Normal } },
-    { "cc-family-name", { AutofillFieldName::CcFamilyName, AutofillCategory::Normal } },
-    { "cc-given-name", { AutofillFieldName::CcGivenName, AutofillCategory::Normal } },
-    { "cc-name", { AutofillFieldName::CcName, AutofillCategory::Normal } },
-    { "cc-number", { AutofillFieldName::CcNumber, AutofillCategory::Normal } },
-    { "cc-type", { AutofillFieldName::CcType, AutofillCategory::Normal } },
-    { "country", { AutofillFieldName::Country, AutofillCategory::Normal } },
-    { "country-name", { AutofillFieldName::CountryName, AutofillCategory::Normal } },
-    { "current-password", { AutofillFieldName::CurrentPassword, AutofillCategory::Normal } },
-    { "email", { AutofillFieldName::Email, AutofillCategory::Contact } },
-    { "family-name", { AutofillFieldName::FamilyName, AutofillCategory::Normal } },
-    { "given-name", { AutofillFieldName::GivenName, AutofillCategory::Normal } },
-    { "honorific-prefix", { AutofillFieldName::HonorificPrefix, AutofillCategory::Normal } },
-    { "honorific-suffix", { AutofillFieldName::HonorificSuffix, AutofillCategory::Normal } },
-    { "impp", { AutofillFieldName::Impp, AutofillCategory::Contact } },
-    { "language", { AutofillFieldName::Language, AutofillCategory::Normal } },
-    { "name", { AutofillFieldName::Name, AutofillCategory::Normal } },
-    { "new-password", { AutofillFieldName::NewPassword, AutofillCategory::Normal } },
-    { "nickname", { AutofillFieldName::Nickname, AutofillCategory::Normal } },
-    { "off", { AutofillFieldName::None, AutofillCategory::Off } },
-    { "on", { AutofillFieldName::None, AutofillCategory::Automatic } },
-    { "organization", { AutofillFieldName::Organization, AutofillCategory::Normal } },
-    { "organization-title", { AutofillFieldName::OrganizationTitle, AutofillCategory::Normal } },
-    { "photo", { AutofillFieldName::Photo, AutofillCategory::Normal } },
-    { "postal-code", { AutofillFieldName::PostalCode, AutofillCategory::Normal } },
-    { "sex", { AutofillFieldName::Sex, AutofillCategory::Normal } },
-    { "street-address", { AutofillFieldName::StreetAddress, AutofillCategory::Normal } },
-    { "tel", { AutofillFieldName::Tel, AutofillCategory::Contact } },
-    { "tel-area-code", { AutofillFieldName::TelAreaCode, AutofillCategory::Contact } },
-    { "tel-country-code", { AutofillFieldName::TelCountryCode, AutofillCategory::Contact } },
-    { "tel-extension", { AutofillFieldName::TelExtension, AutofillCategory::Contact } },
-    { "tel-local", { AutofillFieldName::TelLocal, AutofillCategory::Contact } },
-    { "tel-local-prefix", { AutofillFieldName::TelLocalPrefix, AutofillCategory::Contact } },
-    { "tel-local-suffix", { AutofillFieldName::TelLocalSuffix, AutofillCategory::Contact } },
-    { "tel-national", { AutofillFieldName::TelNational, AutofillCategory::Contact } },
-    { "transaction-amount", { AutofillFieldName::TransactionAmount, AutofillCategory::Normal } },
-    { "transaction-currency", { AutofillFieldName::TransactionCurrency, AutofillCategory::Normal } },
-    { "url", { AutofillFieldName::URL, AutofillCategory::Normal } },
-    { "username", { AutofillFieldName::Username, AutofillCategory::Normal } },
-    { "webauthn", { AutofillFieldName::WebAuthn, AutofillCategory::Credential } },
-};
-static constexpr SortedArrayMap fieldNameMap { fieldNameMappings };
+static constexpr SortedArrayMap fieldNameMap { std::to_array<std::pair<ComparableLettersLiteral, AutofillFieldNameMapping>>({
+    { "additional-name"_s, { AutofillFieldName::AdditionalName, AutofillCategory::Normal } },
+    { "address-level1"_s, { AutofillFieldName::AddressLevel1, AutofillCategory::Normal } },
+    { "address-level2"_s, { AutofillFieldName::AddressLevel2, AutofillCategory::Normal } },
+    { "address-level3"_s, { AutofillFieldName::AddressLevel3, AutofillCategory::Normal } },
+    { "address-level4"_s, { AutofillFieldName::AddressLevel4, AutofillCategory::Normal } },
+    { "address-line1"_s, { AutofillFieldName::AddressLine1, AutofillCategory::Normal } },
+    { "address-line2"_s, { AutofillFieldName::AddressLine2, AutofillCategory::Normal } },
+    { "address-line3"_s, { AutofillFieldName::AddressLine3, AutofillCategory::Normal } },
+    { "bday"_s, { AutofillFieldName::Bday, AutofillCategory::Normal } },
+    { "bday-day"_s, { AutofillFieldName::BdayDay, AutofillCategory::Normal } },
+    { "bday-month"_s, { AutofillFieldName::BdayMonth, AutofillCategory::Normal } },
+    { "bday-year"_s, { AutofillFieldName::BdayYear, AutofillCategory::Normal } },
+    { "cc-additional-name"_s, { AutofillFieldName::CcAdditionalName, AutofillCategory::Normal } },
+    { "cc-csc"_s, { AutofillFieldName::CcCsc, AutofillCategory::Normal } },
+    { "cc-exp"_s, { AutofillFieldName::CcExp, AutofillCategory::Normal } },
+    { "cc-exp-month"_s, { AutofillFieldName::CcExpMonth, AutofillCategory::Normal } },
+    { "cc-exp-year"_s, { AutofillFieldName::CcExpYear, AutofillCategory::Normal } },
+    { "cc-family-name"_s, { AutofillFieldName::CcFamilyName, AutofillCategory::Normal } },
+    { "cc-given-name"_s, { AutofillFieldName::CcGivenName, AutofillCategory::Normal } },
+    { "cc-name"_s, { AutofillFieldName::CcName, AutofillCategory::Normal } },
+    { "cc-number"_s, { AutofillFieldName::CcNumber, AutofillCategory::Normal } },
+    { "cc-type"_s, { AutofillFieldName::CcType, AutofillCategory::Normal } },
+    { "country"_s, { AutofillFieldName::Country, AutofillCategory::Normal } },
+    { "country-name"_s, { AutofillFieldName::CountryName, AutofillCategory::Normal } },
+    { "current-password"_s, { AutofillFieldName::CurrentPassword, AutofillCategory::Normal } },
+    { "device-eid"_s, { AutofillFieldName::DeviceEID, AutofillCategory::Normal } },
+    { "device-imei"_s, { AutofillFieldName::DeviceIMEI, AutofillCategory::Normal } },
+    { "email"_s, { AutofillFieldName::Email, AutofillCategory::Contact } },
+    { "family-name"_s, { AutofillFieldName::FamilyName, AutofillCategory::Normal } },
+    { "given-name"_s, { AutofillFieldName::GivenName, AutofillCategory::Normal } },
+    { "honorific-prefix"_s, { AutofillFieldName::HonorificPrefix, AutofillCategory::Normal } },
+    { "honorific-suffix"_s, { AutofillFieldName::HonorificSuffix, AutofillCategory::Normal } },
+    { "impp"_s, { AutofillFieldName::Impp, AutofillCategory::Contact } },
+    { "language"_s, { AutofillFieldName::Language, AutofillCategory::Normal } },
+    { "name"_s, { AutofillFieldName::Name, AutofillCategory::Normal } },
+    { "new-password"_s, { AutofillFieldName::NewPassword, AutofillCategory::Normal } },
+    { "nickname"_s, { AutofillFieldName::Nickname, AutofillCategory::Normal } },
+    { "off"_s, { AutofillFieldName::None, AutofillCategory::Off } },
+    { "on"_s, { AutofillFieldName::None, AutofillCategory::Automatic } },
+    { "one-time-code"_s, { AutofillFieldName::OneTimeCode, AutofillCategory::Normal } },
+    { "organization"_s, { AutofillFieldName::Organization, AutofillCategory::Normal } },
+    { "organization-title"_s, { AutofillFieldName::OrganizationTitle, AutofillCategory::Normal } },
+    { "photo"_s, { AutofillFieldName::Photo, AutofillCategory::Normal } },
+    { "postal-code"_s, { AutofillFieldName::PostalCode, AutofillCategory::Normal } },
+    { "sex"_s, { AutofillFieldName::Sex, AutofillCategory::Normal } },
+    { "street-address"_s, { AutofillFieldName::StreetAddress, AutofillCategory::Normal } },
+    { "tel"_s, { AutofillFieldName::Tel, AutofillCategory::Contact } },
+    { "tel-area-code"_s, { AutofillFieldName::TelAreaCode, AutofillCategory::Contact } },
+    { "tel-country-code"_s, { AutofillFieldName::TelCountryCode, AutofillCategory::Contact } },
+    { "tel-extension"_s, { AutofillFieldName::TelExtension, AutofillCategory::Contact } },
+    { "tel-local"_s, { AutofillFieldName::TelLocal, AutofillCategory::Contact } },
+    { "tel-local-prefix"_s, { AutofillFieldName::TelLocalPrefix, AutofillCategory::Contact } },
+    { "tel-local-suffix"_s, { AutofillFieldName::TelLocalSuffix, AutofillCategory::Contact } },
+    { "tel-national"_s, { AutofillFieldName::TelNational, AutofillCategory::Contact } },
+    { "transaction-amount"_s, { AutofillFieldName::TransactionAmount, AutofillCategory::Normal } },
+    { "transaction-currency"_s, { AutofillFieldName::TransactionCurrency, AutofillCategory::Normal } },
+    { "url"_s, { AutofillFieldName::URL, AutofillCategory::Normal } },
+    { "username"_s, { AutofillFieldName::Username, AutofillCategory::Normal } },
+    { "webauthn"_s, { AutofillFieldName::WebAuthn, AutofillCategory::Credential } },
+}) };
 
 AutofillFieldName toAutofillFieldName(const AtomString& value)
 {
@@ -163,7 +166,7 @@ AutofillData AutofillData::createFromHTMLFormControlElement(const HTMLFormContro
         if (element.autofillMantle() == AutofillMantle::Anchor)
             return { emptyAtom(), emptyString(), NonAutofillCredentialType::None };
 
-        auto form = element.form();
+        RefPtr form = element.form();
         if (form && form->autocomplete() == offAtom())
             return { offAtom(), emptyString(), NonAutofillCredentialType::None };
         return { onAtom(), emptyString(), NonAutofillCredentialType::None };
@@ -246,11 +249,14 @@ AutofillData AutofillData::createFromHTMLFormControlElement(const HTMLFormContro
             return defaultLabel();
 
         category = mapEntry->category;
+        // 5. If category is not Normal and category is not Contact, then jump to the step labeled default.
         if (category != AutofillCategory::Normal && category != AutofillCategory::Contact)
             return defaultLabel();
-        if (tokens.size() > maxTokensForAutofillFieldCategory(category))
+        // 6. If index is greater than maximum tokens minus one (i.e. if the number of remaining tokens is
+        // greater than maximum tokens), then jump to the step labeled default
+        if (index > maxTokensForAutofillFieldCategory(category) - 1)
             return defaultLabel();
-        idlValue = makeString(tokens[index], " ", idlValue);
+        idlValue = makeString(tokens[index], ' ', idlValue);
     }
 
     // 12, If the indexth token in tokens is the first entry, then skip to the step labeled done.
@@ -274,7 +280,7 @@ AutofillData AutofillData::createFromHTMLFormControlElement(const HTMLFormContro
 
         // 4. Let IDL value be the concatenation of contact, a U+0020 SPACE character, and the previous
         // value of IDL value (which at this point will always be field).
-        idlValue = makeString(contact, " ", idlValue);
+        idlValue = makeString(contact, ' ', idlValue);
 
         // 5. If the indexth entry in tokens is the first entry, then skip to the step labeled done.
         if (index == 0)
@@ -299,7 +305,7 @@ AutofillData AutofillData::createFromHTMLFormControlElement(const HTMLFormContro
         // 4. Let IDL value be the concatenation of mode, a U+0020 SPACE character, and the previous
         // value of IDL value (which at this point will either be field or the concatenation of contact,
         // a space, and field).
-        idlValue = makeString(mode, " ", idlValue);
+        idlValue = makeString(mode, ' ', idlValue);
 
         // 5. If the indexth entry in tokens is the first entry, then skip to the step labeled done.
         if (index == 0)
@@ -328,7 +334,7 @@ AutofillData AutofillData::createFromHTMLFormControlElement(const HTMLFormContro
 
     // 20. Let IDL value be the concatenation of section, a U+0020 SPACE character, and the previous
     // value of IDL value.
-    idlValue = makeString(section, " ", idlValue);
+    idlValue = makeString(section, ' ', idlValue);
 
     return { field, idlValue, credentialType };
 }

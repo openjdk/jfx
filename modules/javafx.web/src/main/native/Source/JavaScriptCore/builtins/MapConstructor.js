@@ -27,16 +27,30 @@ function groupBy(items, callback)
 {
     "use strict";
 
-    if (!@isObject(items))
-        @throwTypeError("Map.groupBy requires that the first argument must be an object");
+    if (@isUndefinedOrNull(items))
+        @throwTypeError("Map.groupBy requires that the first argument not be null or undefined");
 
     if (!@isCallable(callback))
         @throwTypeError("Map.groupBy requires that the second argument must be a function");
 
+    var iteratorMethod = items.@@iterator;
+    if (!@isCallable(iteratorMethod))
+        @throwTypeError("Map.groupBy requires that the property of the first argument, items[Symbol.iterator] be a function");
+
     var groups = new @Map;
     var k = 0;
-    for (var item of items) {
-        var key = callback.@call(@undefined, item, k, items);
+
+    var iterator = iteratorMethod.@call(items);
+    // Since for-of loop once more looks up the @@iterator property of a given iterable,
+    // it could be observable if the user defines a getter for @@iterator.
+    // To avoid this situation, we define a wrapper object that @@iterator just returns a given iterator.
+    var wrapper = {
+        @@iterator: function () { return iterator; }
+    };
+    for (var item of wrapper) {
+        if (k >= @MAX_SAFE_INTEGER)
+            @throwTypeError("The number of iterations exceeds 2**53 - 1");
+        var key = callback.@call(@undefined, item, k);
         var group = groups.@get(key);
         if (!group) {
             group = [];

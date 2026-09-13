@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,14 +25,20 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY)
 
-#include "SlotVisitorMacros.h"
-#include "WasmFormat.h"
-#include "WasmLimits.h"
-#include "WriteBarrier.h"
+#include <JavaScriptCore/SlotVisitorMacros.h>
+#include <JavaScriptCore/WasmFormat.h>
+#include <JavaScriptCore/WasmLimits.h>
+#include <JavaScriptCore/WasmTypeDefinition.h>
+#include <JavaScriptCore/WriteBarrier.h>
 #include <wtf/Ref.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -40,19 +46,20 @@ class JSWebAssemblyGlobal;
 
 namespace Wasm {
 
-class Instance;
-
 class Global final : public ThreadSafeRefCounted<Global> {
     WTF_MAKE_NONCOPYABLE(Global);
-    WTF_MAKE_FAST_ALLOCATED(Global);
+    WTF_MAKE_TZONE_ALLOCATED(Global);
 public:
     union Value {
         v128_t m_vector { };
         uint64_t m_primitive;
         WriteBarrierBase<Unknown> m_externref;
         Value* m_pointer;
+
+        static constexpr ptrdiff_t offsetOfValue() { return 0; }
+        static constexpr ptrdiff_t offsetOfOwner() { return Global::offsetOfOwner() - Global::offsetOfValue(); }
     };
-    static_assert(sizeof(Value) == 16, "Update LLInt if this changes");
+    static_assert(sizeof(Value) == 16, "Update IPInt if this changes");
 
     static Ref<Global> create(Wasm::Type type, Wasm::Mutability mutability, uint64_t initialValue = 0)
     {
@@ -80,12 +87,12 @@ public:
         m_owner = owner;
     }
 
-    static ptrdiff_t offsetOfValue() { ASSERT(!OBJECT_OFFSETOF(Value, m_primitive)); ASSERT(!OBJECT_OFFSETOF(Value, m_externref)); return OBJECT_OFFSETOF(Global, m_value); }
-    static ptrdiff_t offsetOfOwner() { return OBJECT_OFFSETOF(Global, m_owner); }
+    static constexpr ptrdiff_t offsetOfValue() { ASSERT(!OBJECT_OFFSETOF(Value, m_primitive)); ASSERT(!OBJECT_OFFSETOF(Value, m_externref)); return OBJECT_OFFSETOF(Global, m_value); }
+    static constexpr ptrdiff_t offsetOfOwner() { return OBJECT_OFFSETOF(Global, m_owner); }
 
     static Global& fromBinding(Value& value)
     {
-        return *bitwise_cast<Global*>(bitwise_cast<uint8_t*>(&value) - offsetOfValue());
+        return *std::bit_cast<Global*>(std::bit_cast<uint8_t*>(&value) - offsetOfValue());
     }
 
     Value* valuePointer() { return &m_value; }
@@ -96,6 +103,8 @@ private:
         , m_mutability(mutability)
     {
         ASSERT(m_type != Types::V128);
+        if (auto typeDefinition = TypeInformation::getRef(type.index))
+            m_typeDependencies.emplace(Ref { *typeDefinition });
         m_value.m_primitive = initialValue;
     }
 
@@ -104,15 +113,22 @@ private:
         , m_mutability(mutability)
     {
         ASSERT(m_type == Types::V128);
+        if (auto typeDefinition = TypeInformation::getRef(type.index))
+            m_typeDependencies.emplace(Ref { *typeDefinition });
         m_value.m_vector = initialValue;
     }
 
     Wasm::Type m_type;
+    // If m_type came from a TypeDefinition, the following retains the definition
+    // and all transitively reachable types to prevent dangling TypeIndex values.
+    std::optional<WebAssemblyGCTypeDependencies> m_typeDependencies;
     Wasm::Mutability m_mutability;
     JSWebAssemblyGlobal* m_owner { nullptr };
     Value m_value;
 };
 
 } } // namespace JSC::Wasm
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEBASSEMBLY)

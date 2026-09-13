@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -320,7 +320,7 @@ public class PSWRenderer extends PrRenderer {
         if (dst == null) {
             return null;
         }
-        // RT-27561
+        // JDK-8091213
         // TODO: it is wasteful to create an RTT here; eventually it would
         // be nice if we could use plain Textures as a source Filterable...
         Graphics g = dst.createGraphics();

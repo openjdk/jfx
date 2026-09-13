@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2004, 2005, 2006, 2008 Nikolas Zimmermann <zimmermann@kde.org>
  * Copyright (C) 2004, 2005, 2006 Rob Buis <buis@kde.org>
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,15 +21,15 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
-#include "SVGParsingError.h"
-#include "SVGPropertyTraits.h"
+#include <WebCore/CSSPrimitiveNumeric.h>
+#include <WebCore/SVGParsingError.h>
+#include <WebCore/SVGPropertyTraits.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
-class CSSPrimitiveValue;
-class Element;
 class SVGLengthContext;
+template<typename> class ExceptionOr;
 
 enum class SVGLengthType : uint8_t {
     Unknown = 0,
@@ -42,7 +42,9 @@ enum class SVGLengthType : uint8_t {
     Millimeters,
     Inches,
     Points,
-    Picas
+    Picas,
+    Lh,
+    Ch
 };
 
 enum class SVGLengthMode : uint8_t {
@@ -59,34 +61,29 @@ enum class SVGLengthNegativeValuesMode : uint8_t {
 enum class ShouldConvertNumberToPxLength : bool { No, Yes };
 
 class SVGLengthValue {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(SVGLengthValue);
 public:
     SVGLengthValue(SVGLengthMode = SVGLengthMode::Other, const String& valueAsString = { });
     SVGLengthValue(float valueInSpecifiedUnits, SVGLengthType, SVGLengthMode = SVGLengthMode::Other);
     SVGLengthValue(const SVGLengthContext&, float, SVGLengthType = SVGLengthType::Number, SVGLengthMode = SVGLengthMode::Other);
 
-    static std::optional<SVGLengthValue> construct(SVGLengthMode, StringView);
-    static SVGLengthValue construct(SVGLengthMode, StringView, SVGParsingError&, SVGLengthNegativeValuesMode = SVGLengthNegativeValuesMode::Allow);
-    static SVGLengthValue blend(const SVGLengthValue& from, const SVGLengthValue& to, float progress);
+    static SVGLengthValue construct(SVGLengthMode, StringView, SVGParsingError&, SVGLengthNegativeValuesMode = SVGLengthNegativeValuesMode::Allow, ASCIILiteral = { });
 
-    static SVGLengthValue fromCSSPrimitiveValue(const CSSPrimitiveValue&, const CSSToLengthConversionData&, ShouldConvertNumberToPxLength = ShouldConvertNumberToPxLength::No);
-    Ref<CSSPrimitiveValue> toCSSPrimitiveValue(const Element* = nullptr) const;
-
-    SVGLengthType lengthType() const { return m_lengthType; }
+    SVGLengthType lengthType() const;
     SVGLengthMode lengthMode() const { return m_lengthMode; }
 
-    bool isZero() const { return !m_valueInSpecifiedUnits;  }
-    bool isRelative() const { return m_lengthType == SVGLengthType::Percentage || m_lengthType == SVGLengthType::Ems || m_lengthType == SVGLengthType::Exs; }
+    bool isZero() const;
+    bool isRelative() const;
 
     float value(const SVGLengthContext&) const;
-    float valueAsPercentage() const { return m_lengthType == SVGLengthType::Percentage ? m_valueInSpecifiedUnits / 100 : m_valueInSpecifiedUnits; }
-    float valueInSpecifiedUnits() const { return m_valueInSpecifiedUnits; }
+    float valueAsPercentage() const;
+    float valueInSpecifiedUnits() const;
 
     String valueAsString() const;
     AtomString valueAsAtomString() const;
     ExceptionOr<float> valueForBindings(const SVGLengthContext&) const;
 
-    void setValueInSpecifiedUnits(float value) { m_valueInSpecifiedUnits = value; }
+    void setValueInSpecifiedUnits(float);
     ExceptionOr<void> setValue(const SVGLengthContext&, float);
     ExceptionOr<void> setValue(const SVGLengthContext&, float, SVGLengthType, SVGLengthMode);
 
@@ -95,16 +92,12 @@ public:
 
     ExceptionOr<void> convertToSpecifiedUnits(const SVGLengthContext&, SVGLengthType);
 
+    friend bool operator==(SVGLengthValue, SVGLengthValue) = default;
+
 private:
-    float m_valueInSpecifiedUnits { 0 };
-    SVGLengthType m_lengthType { SVGLengthType::Number };
+    Variant<CSS::Number<>, CSS::LengthPercentage<>> m_value;
     SVGLengthMode m_lengthMode { SVGLengthMode::Other };
 };
-
-inline bool operator==(const SVGLengthValue& a, const SVGLengthValue& b)
-{
-    return a.valueInSpecifiedUnits() == b.valueInSpecifiedUnits() && a.lengthType() == b.lengthType() && a.lengthMode() == b.lengthMode();
-}
 
 WTF::TextStream& operator<<(WTF::TextStream&, const SVGLengthValue&);
 

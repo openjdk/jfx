@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,7 @@
 #undef IMPL
 
 
-#include <WebCore/CSSStyleDeclaration.h>
+#include <WebCore/CSSStyleProperties.h>
 #include <WebCore/CSSStyleRule.h>
 #include <WebCore/JSExecState.h>
 
@@ -59,7 +59,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_CSSStyleRuleImpl_setSelectorTextI
 JNIEXPORT jlong JNICALL Java_com_sun_webkit_dom_CSSStyleRuleImpl_getStyleImpl(JNIEnv* env, jclass, jlong peer)
 {
     WebCore::JSMainThreadNullState state;
-    return JavaReturn<CSSStyleDeclaration>(env, WTF::getPtr(IMPL->style()));
+    return JavaReturn<CSSStyleProperties>(env, WTF::getPtr(IMPL->style()));
 }
 
 }

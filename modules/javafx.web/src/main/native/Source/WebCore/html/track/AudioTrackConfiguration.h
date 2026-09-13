@@ -28,6 +28,7 @@
 #if ENABLE(VIDEO)
 
 #include "PlatformAudioTrackConfiguration.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -35,9 +36,9 @@ namespace WebCore {
 using AudioTrackConfigurationInit = PlatformAudioTrackConfiguration;
 
 class AudioTrackConfiguration : public RefCounted<AudioTrackConfiguration> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(AudioTrackConfiguration);
 public:
-    static Ref<AudioTrackConfiguration> create(AudioTrackConfigurationInit&& init) { return adoptRef(*new AudioTrackConfiguration(WTFMove(init))); }
+    static Ref<AudioTrackConfiguration> create(AudioTrackConfigurationInit&& init) { return adoptRef(*new AudioTrackConfiguration(WTF::move(init))); }
     static Ref<AudioTrackConfiguration> create() { return adoptRef(*new AudioTrackConfiguration()); }
 
     void setState(const AudioTrackConfigurationInit& state) { m_state = state; }
@@ -53,6 +54,11 @@ public:
 
     uint64_t bitrate() const { return m_state.bitrate; }
     void setBitrate(uint64_t bitrate) { m_state.bitrate = bitrate; }
+
+    bool isProtected() const { return m_state.isProtected; }
+    void setProtected(bool isProtected) { m_state.isProtected = isProtected; }
+
+    Ref<JSON::Object> toJSON() const;
 
 private:
     AudioTrackConfiguration(AudioTrackConfigurationInit&& init)

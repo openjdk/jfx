@@ -25,18 +25,19 @@
 
 #include "RenderBlock.h"
 #include "RenderIterator.h"
+#include "RenderObjectInlines.h"
 #include "RenderMultiColumnFlow.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderTreeBuilder.h"
 #include "Text.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderTextFragment);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderTextFragment);
 
 RenderTextFragment::RenderTextFragment(Text& textNode, const String& text, int startOffset, int length)
-    : RenderText(textNode, text.substring(startOffset, length))
+    : RenderText(Type::TextFragment, textNode, text.substring(startOffset, length))
     , m_start(startOffset)
     , m_end(length)
     , m_firstLetter(nullptr)
@@ -44,7 +45,7 @@ RenderTextFragment::RenderTextFragment(Text& textNode, const String& text, int s
 }
 
 RenderTextFragment::RenderTextFragment(Document& document, const String& text, int startOffset, int length)
-    : RenderText(document, text.substring(startOffset, length))
+    : RenderText(Type::TextFragment, document, text.substring(startOffset, length))
     , m_start(startOffset)
     , m_end(length)
     , m_firstLetter(nullptr)
@@ -52,7 +53,7 @@ RenderTextFragment::RenderTextFragment(Document& document, const String& text, i
 }
 
 RenderTextFragment::RenderTextFragment(Document& textNode, const String& text)
-    : RenderText(textNode, text)
+    : RenderText(Type::TextFragment, textNode, text)
     , m_start(0)
     , m_end(text.length())
     , m_contentString(text)
@@ -86,14 +87,16 @@ void RenderTextFragment::setTextInternal(const String& newText, bool force)
     ASSERT(!textNode() || textNode()->renderer() == this);
 }
 
-UChar RenderTextFragment::previousCharacter() const
+Vector<char16_t> RenderTextFragment::previousCharacter() const
 {
     if (start()) {
         String original = textNode() ? textNode()->data() : contentString();
-        if (!original.isNull() && start() <= original.length())
-            return original[start() - 1];
+        if (!original.isNull() && start() <= original.length()) {
+            Vector<char16_t> previous;
+            previous.append(original[start() - 1]);
+            return previous;
+        }
     }
-
     return RenderText::previousCharacter();
 }
 
@@ -104,7 +107,7 @@ RenderBlock* RenderTextFragment::blockForAccompanyingFirstLetter()
     for (auto& block : ancestorsOfType<RenderBlock>(*m_firstLetter)) {
         if (is<RenderMultiColumnFlow>(block))
             break;
-        if (block.style().hasPseudoStyle(PseudoId::FirstLetter) && block.canHaveChildren())
+        if (block.style().hasPseudoStyle(PseudoElementType::FirstLetter) && block.canHaveChildren())
             return &block;
     }
     return nullptr;

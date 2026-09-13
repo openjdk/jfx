@@ -31,12 +31,11 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
-#include "GCReachableRef.h"
+#include <WebCore/GCReachableRef.h>
+#include <WebCore/MutationObserverOptions.h>
 #include <wtf/Forward.h>
 #include <wtf/HashSet.h>
-#include <wtf/IsoMalloc.h>
-#include <wtf/OptionSet.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakHashSet.h>
 
@@ -53,27 +52,10 @@ class MutationObserverRegistration;
 class MutationRecord;
 class Node;
 class WindowEventLoop;
-
-enum class MutationObserverOptionType : uint8_t {
-    // MutationType
-    ChildList = 1 << 0,
-    Attributes = 1 << 1,
-    CharacterData = 1 << 2,
-
-    // ObservationFlags
-    Subtree = 1 << 3,
-    AttributeFilter = 1 << 4,
-
-    // DeliveryFlags
-    AttributeOldValue = 1 << 5,
-    CharacterDataOldValue = 1 << 6,
-};
-
-using MutationObserverOptions = OptionSet<MutationObserverOptionType>;
-using MutationRecordDeliveryOptions = OptionSet<MutationObserverOptionType>;
+template<typename> class ExceptionOr;
 
 class MutationObserver final : public RefCounted<MutationObserver> {
-    WTF_MAKE_ISO_ALLOCATED(MutationObserver);
+    WTF_MAKE_TZONE_ALLOCATED(MutationObserver);
 public:
     static Ref<MutationObserver> create(Ref<MutationCallback>&&);
 
@@ -109,6 +91,7 @@ public:
     MutationCallback& callback() const { return m_callback.get(); }
 
     static void enqueueSlotChangeEvent(HTMLSlotElement&);
+    static void enqueueShadowRootAttachedEvent(Element&);
 
     static void notifyMutationObservers(WindowEventLoop&);
 
@@ -123,7 +106,7 @@ private:
 
     static bool validateOptions(MutationObserverOptions);
 
-    Ref<MutationCallback> m_callback;
+    const Ref<MutationCallback> m_callback;
     Vector<Ref<MutationRecord>> m_records;
     HashSet<GCReachableRef<Node>> m_pendingTargets;
     WeakHashSet<MutationObserverRegistration> m_registrations;

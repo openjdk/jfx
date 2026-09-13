@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,29 +25,40 @@
 
 #pragma once
 
-#include "CSSValue.h"
+#include <WebCore/CSSPrimitiveValue.h>
+#include <WebCore/CSSValue.h>
+#include <wtf/Function.h>
 
 namespace WebCore {
 
-class CSSPrimitiveValue;
-
 class CSSReflectValue final : public CSSValue {
 public:
-    static Ref<CSSReflectValue> create(CSSValueID direction, Ref<CSSPrimitiveValue> offset, RefPtr<CSSValue> mask);
+    static Ref<CSSReflectValue> create(CSSValueID direction, Ref<CSSValue> offset, RefPtr<CSSValue> mask);
 
     CSSValueID direction() const { return m_direction; }
-    const CSSPrimitiveValue& offset() const { return m_offset.get(); }
+    const CSSValue& offset() const { return m_offset.get(); }
     const CSSValue* mask() const { return m_mask.get(); }
 
-    String customCSSText() const;
+    String customCSSText(const CSS::SerializationContext&) const;
     bool equals(const CSSReflectValue&) const;
 
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
+    {
+        if (func(m_offset.get()) == IterationStatus::Done)
+            return IterationStatus::Done;
+        if (m_mask) {
+            if (func(*m_mask) == IterationStatus::Done)
+                return IterationStatus::Done;
+        }
+        return IterationStatus::Continue;
+    }
+
 private:
-    CSSReflectValue(CSSValueID direction, Ref<CSSPrimitiveValue> offset, RefPtr<CSSValue> mask);
+    CSSReflectValue(CSSValueID direction, Ref<CSSValue> offset, RefPtr<CSSValue> mask);
 
     CSSValueID m_direction;
-    Ref<CSSPrimitiveValue> m_offset;
-    RefPtr<CSSValue> m_mask;
+    const Ref<CSSValue> m_offset;
+    const RefPtr<CSSValue> m_mask;
 };
 
 } // namespace WebCore

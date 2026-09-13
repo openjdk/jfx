@@ -30,10 +30,13 @@
 #include "IDBKeyRangeData.h"
 #include "Logging.h"
 #include "MemoryIndex.h"
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 namespace IDBServer {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(IndexValueStore);
 
 IndexValueStore::IndexValueStore(bool unique)
     : m_unique(unique)
@@ -82,12 +85,30 @@ bool IndexValueStore::contains(const IDBKeyData& key) const
     return true;
 }
 
+std::optional<Vector<IDBKeyData>> IndexValueStore::valueKeys(const IDBKeyData& key) const
+{
+    auto* entry = m_records.get(key);
+    if (!entry)
+        return std::nullopt;
+
+    return entry->keys();
+}
+
+Vector<IDBKeyData> IndexValueStore::allKeys() const
+{
+    Vector<IDBKeyData> result;
+    for (auto& key : m_records.keys())
+        result.append(key);
+
+    return result;
+}
+
 IDBError IndexValueStore::addRecord(const IDBKeyData& indexKey, const IDBKeyData& valueKey)
 {
     auto result = m_records.add(indexKey, nullptr);
 
     if (!result.isNewEntry && m_unique)
-        return IDBError(ConstraintError);
+        return IDBError(ExceptionCode::ConstraintError);
 
     if (result.isNewEntry)
         result.iterator->value = makeUnique<IndexValueEntry>(m_unique);
@@ -101,11 +122,22 @@ IDBError IndexValueStore::addRecord(const IDBKeyData& indexKey, const IDBKeyData
 void IndexValueStore::removeRecord(const IDBKeyData& indexKey, const IDBKeyData& valueKey)
 {
     auto iterator = m_records.find(indexKey);
+    if (iterator == m_records.end())
+        return;
+
     if (!iterator->value)
         return;
 
-    if (iterator->value->removeKey(valueKey))
+    if (iterator->value->removeKey(valueKey) && !iterator->value->getCount()) {
         m_records.remove(iterator);
+        m_orderedKeys.erase(indexKey);
+    }
+}
+
+void IndexValueStore::removeRecord(const IDBKeyData& indexKey)
+{
+    m_records.remove(indexKey);
+    m_orderedKeys.erase(indexKey);
 }
 
 void IndexValueStore::removeEntriesWithValueKey(MemoryIndex& index, const IDBKeyData& valueKey)
@@ -117,13 +149,24 @@ void IndexValueStore::removeEntriesWithValueKey(MemoryIndex& index, const IDBKey
         if (entry.value->removeKey(valueKey))
             index.notifyCursorsOfValueChange(entry.key, valueKey);
         if (!entry.value->getCount())
-            entryKeysToRemove.uncheckedAppend(entry.key);
+            entryKeysToRemove.append(entry.key);
     }
 
     for (auto& entry : entryKeysToRemove) {
         m_orderedKeys.erase(entry);
         m_records.remove(entry);
     }
+}
+
+Vector<IDBKeyData> IndexValueStore::findKeysWithValueKey(const IDBKeyData& valueKey)
+{
+    Vector<IDBKeyData> keys;
+    for (auto& [key, entry] : m_records) {
+        if (entry->contains(valueKey))
+            keys.append(key);
+    }
+
+    return keys;
 }
 
 IDBKeyData IndexValueStore::lowestKeyWithRecordInRange(const IDBKeyRangeData& range) const
@@ -155,7 +198,7 @@ IDBKeyDataSet::iterator IndexValueStore::lowestIteratorInRange(const IDBKeyRange
     }
 
     if (!range.upperKey.isNull()) {
-        if (lowestInRange->compare(range.upperKey) > 0)
+        if (*lowestInRange > range.upperKey)
             return m_orderedKeys.end();
         if (range.upperOpen && *lowestInRange == range.upperKey)
             return m_orderedKeys.end();
@@ -179,7 +222,7 @@ IDBKeyDataSet::reverse_iterator IndexValueStore::highestReverseIteratorInRange(c
     }
 
     if (!range.lowerKey.isNull()) {
-        if (highestInRange->compare(range.lowerKey) < 0)
+        if (*highestInRange < range.lowerKey)
             return m_orderedKeys.rend();
         if (range.lowerOpen && *highestInRange == range.lowerKey)
             return m_orderedKeys.rend();
@@ -401,7 +444,7 @@ String IndexValueStore::loggingString() const
 {
     StringBuilder builder;
     for (auto& key : m_orderedKeys)
-        builder.append("Key: ", key.loggingString(), "  Entry has ", m_records.get(key)->getCount(), " entries");
+        builder.append("Key: "_s, key.loggingString(), "  Entry has "_s, m_records.get(key)->getCount(), " entries"_s);
     return builder.toString();
 }
 #endif

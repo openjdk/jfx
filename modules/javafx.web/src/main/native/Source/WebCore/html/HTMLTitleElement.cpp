@@ -30,18 +30,17 @@
 #include "RenderElement.h"
 #include "RenderStyle.h"
 #include "ResolvedStyle.h"
-#include "StyleInheritedData.h"
 #include "StyleResolver.h"
 #include "Text.h"
 #include "TextManipulationController.h"
 #include "TextNodeTraversal.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLTitleElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLTitleElement);
 
 using namespace HTMLNames;
 
@@ -59,21 +58,37 @@ Ref<HTMLTitleElement> HTMLTitleElement::create(const QualifiedName& tagName, Doc
 Node::InsertedIntoAncestorResult HTMLTitleElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree)
 {
     HTMLElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
-    document().titleElementAdded(*this);
+
+    if (insertionType.connectedToDocument)
+        return InsertedIntoAncestorResult::NeedsPostInsertionCallback;
+
     return InsertedIntoAncestorResult::Done;
+}
+
+void HTMLTitleElement::didFinishInsertingNode()
+{
+    HTMLElement::didFinishInsertingNode();
+
+    m_title = computedTextWithDirection();
+    protectedDocument()->titleElementAdded(*this);
 }
 
 void HTMLTitleElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
 {
     HTMLElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
-    document().titleElementRemoved(*this);
+
+    if (removalType.disconnectedFromDocument)
+        protectedDocument()->titleElementRemoved(*this);
 }
 
 void HTMLTitleElement::childrenChanged(const ChildChange& change)
 {
     HTMLElement::childrenChanged(change);
+
+    if (isConnected()) {
     m_title = computedTextWithDirection();
-    document().titleElementTextChanged(*this);
+        protectedDocument()->titleElementTextChanged(*this);
+    }
 }
 
 String HTMLTitleElement::text() const
@@ -83,17 +98,18 @@ String HTMLTitleElement::text() const
 
 StringWithDirection HTMLTitleElement::computedTextWithDirection()
 {
+    ASSERT(isConnected());
+    if (!firstChild())
+        return { };
     auto direction = TextDirection::LTR;
-    if (auto* computedStyle = this->computedStyle())
-        direction = computedStyle->direction();
-    else
-        direction = styleResolver().styleForElement(*this, { parentElement() ? parentElement()->renderStyle() : nullptr }).style->direction();
+    if (CheckedPtr computedStyle = this->computedStyle())
+        direction = computedStyle->writingMode().computedTextDirection();
     return { text(), direction };
 }
 
 void HTMLTitleElement::setText(String&& value)
 {
-    setTextContent(WTFMove(value));
+    setTextContent(WTF::move(value));
 }
 
 }

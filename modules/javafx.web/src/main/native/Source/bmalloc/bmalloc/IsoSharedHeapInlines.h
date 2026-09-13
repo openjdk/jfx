@@ -25,12 +25,20 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
+#if !BUSE(TZONE)
+
 #include "IsoSharedHeap.h"
 
 #include "IsoSharedPage.h"
-#include "StdLibExtras.h"
+#include <bit>
 
 #if !BUSE(LIBPAS)
+
+#include "Scavenger.h"
 
 namespace bmalloc {
 
@@ -86,3 +94,6 @@ BNO_INLINE void* IsoSharedHeap::allocateSlow(const LockHolder& locker, bool abor
 } // namespace bmalloc
 
 #endif
+#endif // !BUSE(TZONE)
+
+#endif // __cplusplus

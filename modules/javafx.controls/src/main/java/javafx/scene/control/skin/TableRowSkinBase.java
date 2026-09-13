@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,25 +25,23 @@
 
 package javafx.scene.control.skin;
 
-
 import java.lang.ref.Reference;
 import java.lang.ref.WeakReference;
 import java.util.*;
 
-import com.sun.javafx.PlatformUtil;
+import com.sun.javafx.scene.NodeHelper;
 import javafx.animation.FadeTransition;
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.ObservableList;
 import javafx.css.StyleOrigin;
 import javafx.css.StyleableObjectProperty;
-import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
+import javafx.scene.layout.Region;
 import javafx.util.Duration;
-
-import com.sun.javafx.tk.Toolkit;
 
 /**
  * TableRowSkinBase is the base skin class used by controls such as
@@ -72,15 +70,6 @@ public abstract class TableRowSkinBase<T,
      *                                                                         *
      **************************************************************************/
 
-    // There appears to be a memory leak when using the stub toolkit. Therefore,
-    // to prevent tests from failing we disable the animations below when the
-    // stub toolkit is being used.
-    // Filed as RT-29163.
-    private static boolean IS_STUB_TOOLKIT = Toolkit.getToolkit().toString().contains("StubToolkit");
-
-    // lets save the CPU and not do animations when on embedded platforms
-    private static boolean DO_ANIMATIONS = ! IS_STUB_TOOLKIT && ! PlatformUtil.isEmbedded();
-
     private static final Duration FADE_DURATION = Duration.millis(200);
 
     /*
@@ -95,11 +84,6 @@ public abstract class TableRowSkinBase<T,
      */
     static final Map<TableColumnBase<?,?>, Double> maxDisclosureWidthMap = new WeakHashMap<>();
 
-    // Specifies the number of times we will call 'recreateCells()' before we blow
-    // out the cellsMap structure and rebuild all cells. This helps to prevent
-    // against memory leaks in certain extreme circumstances.
-    private static final int DEFAULT_FULL_REFRESH_COUNTER = 100;
-
 
     /* *************************************************************************
      *                                                                         *
@@ -113,26 +97,15 @@ public abstract class TableRowSkinBase<T,
      * efficiency we create cells for all columns, even if they aren't visible,
      * and we only create new cells if we don't already have it cached in this
      * map.
-     *
-     * Note that this means that it is possible for this map to therefore be
-     * a memory leak if an application uses TableView and is creating and removing
-     * a large number of tableColumns. This is mitigated in the recreateCells()
-     * function below - refer to that to learn more.
      */
     WeakHashMap<TableColumnBase, Reference<R>> cellsMap;
 
     // This observableArrayList contains the currently visible table cells for this row.
     final List<R> cells = new ArrayList<>();
 
-    private int fullRefreshCounter = DEFAULT_FULL_REFRESH_COUNTER;
-
     boolean isDirty = false;
-    boolean updateCells = false;
 
-    // FIXME: replace cached values with direct lookup - JDK-8277000
-    double fixedCellSize;
-    boolean fixedCellSizeEnabled;
-
+    private Map<Node, FadeTransition> currentTransitions;
 
     /* *************************************************************************
      *                                                                         *
@@ -152,7 +125,7 @@ public abstract class TableRowSkinBase<T,
         getSkinnable().setPickOnBounds(false);
 
         recreateCells();
-        updateCells(true);
+        updateCells();
 
         // init bindings
         // watches for any change in the leaf columns observableArrayList - this will indicate
@@ -163,20 +136,19 @@ public abstract class TableRowSkinBase<T,
 
 
         // use invalidation listener here to update even when item equality is true
-        // (e.g. see RT-22463)
+        // (e.g. see JDK-8098235)
         registerInvalidationListener(control.itemProperty(), o -> requestCellUpdate());
-        registerChangeListener(control.indexProperty(), e -> {
-            // Fix for RT-36661, where empty table cells were showing content, as they
-            // had incorrect table cell indices (but the table row index was correct).
-            // Note that we only do the update on empty cells to avoid the issue
-            // noted below in requestCellUpdate().
-            if (getSkinnable().isEmpty()) {
-                requestCellUpdate();
-            }
-        });
+        registerChangeListener(control.indexProperty(), e -> requestCellUpdate());
     }
 
+    @Override
+    public void dispose() {
+        if (currentTransitions != null) {
+            currentTransitions.forEach((_, value) -> value.stop());
+        }
 
+        super.dispose();
+    }
 
     /* *************************************************************************
      *                                                                         *
@@ -184,7 +156,7 @@ public abstract class TableRowSkinBase<T,
      *                                                                         *
      **************************************************************************/
 
-    private void updateLeafColumns() {
+    void updateLeafColumns() {
         isDirty = true;
         getSkinnable().requestLayout();
     }
@@ -255,9 +227,9 @@ public abstract class TableRowSkinBase<T,
 
         C control = getSkinnable();
 
-        ///////////////////////////////////////////
+        //-----------------------------------------
         // indentation code starts here
-        ///////////////////////////////////////////
+        //-----------------------------------------
         double leftMargin = 0;
         double disclosureWidth = 0;
         double graphicWidth = 0;
@@ -292,12 +264,11 @@ public abstract class TableRowSkinBase<T,
                     if (disclosureWidth > defaultDisclosureWidth) {
                         maxDisclosureWidthMap.put(treeColumn, disclosureWidth);
 
-                        // RT-36359: The recorded max width of the disclosure node
+                        // JDK-8094321: The recorded max width of the disclosure node
                         // has increased. We need to go back and request all
                         // earlier rows to update themselves to take into account
                         // this increased indentation.
                         final VirtualFlow<C> flow = getVirtualFlow();
-                        final int thisIndex = getSkinnable().getIndex();
                         for (int i = 0; i < flow.cells.size(); i++) {
                             C cell = flow.cells.get(i);
                             if (cell == null || cell.isEmpty()) continue;
@@ -308,16 +279,16 @@ public abstract class TableRowSkinBase<T,
                 }
             }
         }
-        ///////////////////////////////////////////
+        //-----------------------------------------
         // indentation code ends here
-        ///////////////////////////////////////////
+        //-----------------------------------------
 
         // layout the individual column cells
         double width;
         double height;
 
         /**
-         * RT-26743:TreeTableView: Vertical Line looks unfinished.
+         * JDK-8125142:TreeTableView: Vertical Line looks unfinished.
          * We used to not do layout on cells whose row exceeded the number
          * of items, but now we do so as to ensure we get vertical lines
          * where expected in cases where the vertical height exceeds the
@@ -326,12 +297,16 @@ public abstract class TableRowSkinBase<T,
         int index = control.getIndex();
         if (index < 0/* || row >= itemsProperty().get().size()*/) return;
 
+        VirtualFlow<C> virtualFlow = getVirtualFlow();
+        double fixedCellSize = getFixedCellSize();
         for (int column = 0, max = cells.size(); column < max; column++) {
             R tableCell = cells.get(column);
             TableColumnBase<T, ?> tableColumn = getTableColumn(tableCell);
 
+            width = snapSizeX(tableColumn.getWidth());
+
             boolean isVisible = true;
-            if (fixedCellSizeEnabled) {
+            if (fixedCellSize > 0) {
                 // we determine if the cell is visible, and if not we have the
                 // ability to take it out of the scenegraph to help improve
                 // performance. However, we only do this when there is a
@@ -341,7 +316,7 @@ public abstract class TableRowSkinBase<T,
                 // provided by the developer, and this means that we do not have
                 // to concern ourselves with the possibility that the height
                 // may be variable and / or dynamic.
-                isVisible = isColumnPartiallyOrFullyVisible(tableColumn);
+                isVisible = isColumnPartiallyOrFullyVisible(x, width, virtualFlow);
 
                 y = 0;
                 height = fixedCellSize;
@@ -350,14 +325,11 @@ public abstract class TableRowSkinBase<T,
             }
 
             if (isVisible) {
-                if (fixedCellSizeEnabled && tableCell.getParent() == null) {
+                if (tableCell.getParent() == null) {
                     getChildren().add(tableCell);
                 }
-                // Note: prefWidth() has to be called only after the tableCell is added to the tableRow, if it wasn't
-                // already. Otherwise, it might not have its skin yet, and its pref width is therefore 0.
-                width = tableCell.prefWidth(height);
 
-                // Added for RT-32700, and then updated for RT-34074.
+                // Added for JDK-8115536, and then updated for JDK-8122708.
                 // We change the alignment from CENTER_LEFT to TOP_LEFT if the
                 // height of the row is greater than the default size, and if
                 // the alignment is the default alignment.
@@ -373,11 +345,11 @@ public abstract class TableRowSkinBase<T,
                 if (! centreContent && origin == null) {
                     tableCell.setAlignment(Pos.TOP_LEFT);
                 }
-                // --- end of RT-32700 fix
+                // --- end of JDK-8115536 fix
 
-                ///////////////////////////////////////////
+                //-----------------------------------------
                 // further indentation code starts here
-                ///////////////////////////////////////////
+                //-----------------------------------------
                 if (indentationRequired && column == indentationColumnIndex) {
                     if (disclosureVisible) {
                         double ph = disclosureNode.prefHeight(disclosureWidth);
@@ -417,27 +389,27 @@ public abstract class TableRowSkinBase<T,
                         }
                     }
                 }
-                ///////////////////////////////////////////
+                //-----------------------------------------
                 // further indentation code ends here
-                ///////////////////////////////////////////
+                //-----------------------------------------
                 tableCell.resize(width, height);
                 tableCell.relocate(x, y);
 
-                // Request layout is here as (partial) fix for RT-28684.
+                // Request layout is here as (partial) fix for JDK-8118040.
                 // This does not appear to impact performance...
                 tableCell.requestLayout();
             } else {
-                width = tableCell.prefWidth(height);
-                if (fixedCellSizeEnabled) {
-                    // we only add/remove to the scenegraph if the fixed cell
-                    // length support is enabled - otherwise we keep all
-                    // TableCells in the scenegraph
+                if (tableCell.getParent() != null) {
                     getChildren().remove(tableCell);
                 }
             }
 
             x += width;
         }
+    }
+
+    double getFixedCellSize() {
+        return Region.USE_COMPUTED_SIZE;
     }
 
     int getIndentationLevel(C control) {
@@ -481,21 +453,9 @@ public abstract class TableRowSkinBase<T,
         return true;
     }
 
-    void updateCells(boolean resetChildren) {
-        // To avoid a potential memory leak (when the TableColumns in the
-        // TableView are created/inserted/removed/deleted, we have a 'refresh
-        // counter' that when we reach 0 will delete all cells in this row
-        // and recreate all of them.
-        if (resetChildren) {
-            if (fullRefreshCounter == 0) {
-                recreateCells();
-            }
-            fullRefreshCounter--;
-        }
-
+    void updateCells() {
         // if clear isn't called first, we can run into situations where the
         // cells aren't updated properly.
-        final boolean cellsEmpty = cells.isEmpty();
         cells.clear();
 
         final C skinnable = getSkinnable();
@@ -526,23 +486,7 @@ public abstract class TableRowSkinBase<T,
             cells.add(cell);
         }
 
-        // update children of each row
-        if (fixedCellSizeEnabled) {
-            // we leave the adding / removing up to the layoutChildren method mostly, but here we remove any children
-            // cells that refer to columns that are removed or not visible.
-            List<Node> toRemove = new ArrayList<>();
-            for (Node cell : getChildren()) {
-                if (!(cell instanceof IndexedCell)) continue;
-                TableColumnBase<T, ?> tableColumn = getTableColumn((R) cell);
-                if (!getVisibleLeafColumns().contains(tableColumn)) {
-                    toRemove.add(cell);
-                }
-            }
-            getChildren().removeAll(toRemove);
-        }
-        if (resetChildren || cellsEmpty) {
-            getChildren().setAll(cells);
-        }
+        getChildren().setAll(cells);
     }
 
     VirtualFlow<C> getVirtualFlow() {
@@ -567,14 +511,15 @@ public abstract class TableRowSkinBase<T,
 
     /** {@inheritDoc} */
     @Override protected double computePrefHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (fixedCellSizeEnabled) {
+        double fixedCellSize = getFixedCellSize();
+        if (fixedCellSize > 0) {
             return fixedCellSize;
         }
 
-        // fix for RT-29080
+        // fix for JDK-8118823
         checkState();
 
-        // Support for RT-18467: making it easier to specify a height for
+        // Support for JDK-8119085: making it easier to specify a height for
         // cells via CSS, where the desired height is less than the height
         // of the TableCells. Essentially, -fx-cell-size is given higher
         // precedence now
@@ -600,14 +545,15 @@ public abstract class TableRowSkinBase<T,
 
     /** {@inheritDoc} */
     @Override protected double computeMinHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (fixedCellSizeEnabled) {
+        double fixedCellSize = getFixedCellSize();
+        if (fixedCellSize > 0) {
             return fixedCellSize;
         }
 
-        // fix for RT-29080
+        // fix for JDK-8118823
         checkState();
 
-        // Support for RT-18467: making it easier to specify a height for
+        // Support for JDK-8119085: making it easier to specify a height for
         // cells via CSS, where the desired height is less than the height
         // of the TableCells. Essentially, -fx-cell-size is given higher
         // precedence now
@@ -630,7 +576,8 @@ public abstract class TableRowSkinBase<T,
 
     /** {@inheritDoc} */
     @Override protected double computeMaxHeight(double width, double topInset, double rightInset, double bottomInset, double leftInset) {
-        if (fixedCellSizeEnabled) {
+        double fixedCellSize = getFixedCellSize();
+        if (fixedCellSize > 0) {
             return fixedCellSize;
         }
         return super.computeMaxHeight(width, topInset, rightInset, bottomInset, leftInset);
@@ -638,12 +585,8 @@ public abstract class TableRowSkinBase<T,
 
     final void checkState() {
         if (isDirty) {
-            updateCells(true);
+            updateCells();
             isDirty = false;
-            updateCells = false;
-        } else if (updateCells) {
-            updateCells(false);
-            updateCells = false;
         }
     }
 
@@ -663,38 +606,23 @@ public abstract class TableRowSkinBase<T,
      *                                                                         *
      **************************************************************************/
 
-    private boolean isColumnPartiallyOrFullyVisible(TableColumnBase col) {
-        if (col == null || !col.isVisible()) return false;
+    private boolean isColumnPartiallyOrFullyVisible(double start, double width, VirtualFlow<C> virtualFlow) {
+        double end = start + width;
 
-        final VirtualFlow<?> virtualFlow = getVirtualFlow();
         double scrollX = virtualFlow == null ? 0.0 : virtualFlow.getHbar().getValue();
+        double headerWidth = virtualFlow == null ? 0.0 : virtualFlow.getViewportBreadth();
+        double virtualFlowWidth = headerWidth + scrollX;
 
-        // work out where this column header is, and it's width (start -> end)
-        double start = 0;
-        final ObservableList<? extends TableColumnBase> visibleLeafColumns = getVisibleLeafColumns();
-        for (int i = 0, max = visibleLeafColumns.size(); i < max; i++) {
-            TableColumnBase<?,?> c = visibleLeafColumns.get(i);
-            if (c.equals(col)) break;
-            start += c.getWidth();
-        }
-        double end = start + col.getWidth();
-
-        // determine the width of the table
-        final Insets padding = getSkinnable().getPadding();
-        double headerWidth = getSkinnable().getWidth() - padding.getLeft() + padding.getRight();
-
-        return (start >= scrollX || end > scrollX) && (start < (headerWidth + scrollX) || end <= (headerWidth + scrollX));
+        return (start >= scrollX || end > scrollX) && (start < virtualFlowWidth || end <= virtualFlowWidth);
     }
 
     private void requestCellUpdate() {
-        updateCells = true;
         getSkinnable().requestLayout();
-
-        // update the index of all children cells (RT-29849).
+        // update the index of all children cells (JDK-8119094).
         // Note that we do this after the TableRow item has been updated,
         // rather than when the TableRow index has changed (as this will be
         // before the row has updated its item). This will result in the
-        // issue highlighted in RT-33602, where the table cell had the correct
+        // issue highlighted in JDK-8115269, where the table cell had the correct
         // item whilst the row had the old item.
         final int newIndex = getSkinnable().getIndex();
         for (int i = 0, max = cells.size(); i < max; i++) {
@@ -721,7 +649,6 @@ public abstract class TableRowSkinBase<T,
         ObservableList<? extends TableColumnBase/*<T,?>*/> columns = getVisibleLeafColumns();
 
         cellsMap = new WeakHashMap<>(columns.size());
-        fullRefreshCounter = DEFAULT_FULL_REFRESH_COUNTER;
         getChildren().clear();
 
         for (TableColumnBase col : columns) {
@@ -746,28 +673,67 @@ public abstract class TableRowSkinBase<T,
     }
 
     private void fadeOut(final Node node) {
-        if (node.getOpacity() < 1.0) return;
-
-        if (! DO_ANIMATIONS) {
-            node.setOpacity(0);
+        if (node.getOpacity() < 1.0) {
             return;
         }
 
-        final FadeTransition fader = new FadeTransition(FADE_DURATION, node);
-        fader.setToValue(0.0);
-        fader.play();
+        cancelTransition(node);
+
+        if (shouldAnimate()) {
+            var transition = new FadeTransition(FADE_DURATION, node);
+            transition.setOnFinished(_ -> removeTransition(node));
+            transition.setToValue(0.0);
+            transition.play();
+            trackTransition(node, transition);
+        } else {
+            node.setOpacity(0);
+        }
     }
 
     private void fadeIn(final Node node) {
-        if (node.getOpacity() > 0.0) return;
-
-        if (! DO_ANIMATIONS) {
-            node.setOpacity(1);
+        if (node.getOpacity() > 0.0) {
             return;
         }
 
-        final FadeTransition fader = new FadeTransition(FADE_DURATION, node);
-        fader.setToValue(1.0);
-        fader.play();
+        cancelTransition(node);
+
+        if (shouldAnimate()) {
+            var transition = new FadeTransition(FADE_DURATION, node);
+            transition.setOnFinished(_ -> removeTransition(node));
+            transition.setToValue(1.0);
+            transition.play();
+            trackTransition(node, transition);
+        } else {
+            node.setOpacity(1);
+        }
+    }
+
+    private void cancelTransition(Node node) {
+        if (currentTransitions != null && currentTransitions.get(node) instanceof FadeTransition transition) {
+            transition.stop();
+            currentTransitions.remove(node);
+        }
+    }
+
+    private void removeTransition(Node node) {
+        if (currentTransitions != null) {
+            currentTransitions.remove(node);
+        }
+    }
+
+    private void trackTransition(Node node, FadeTransition transition) {
+        if (currentTransitions == null) {
+            currentTransitions = new IdentityHashMap<>(8);
+        }
+
+        currentTransitions.put(node, transition);
+    }
+
+    private boolean shouldAnimate() {
+        C skinnable = getSkinnable();
+        return skinnable != null
+            && NodeHelper.isTreeShowing(skinnable)
+            && skinnable.getScene() instanceof Scene scene
+            && !scene.getPreferences().isReducedMotion();
     }
 }

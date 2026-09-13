@@ -1,5 +1,6 @@
 /**
  * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,58 +26,40 @@
 
 #pragma once
 
+#include "CSSPrimitiveKeywordList.h"
 #include "InlineLevelBox.h"
-#include "RenderStyleInlines.h"
+#include "LayoutBoxInlines.h"
+#include "RenderStyle+GettersInlines.h"
 
 namespace WebCore {
 namespace Layout {
 
-inline InlineLevelBox::InlineLevelBox(const Box& layoutBox, const RenderStyle& style, InlineLayoutUnit logicalLeft, InlineLayoutSize logicalSize, Type type, OptionSet<PositionWithinLayoutBox> positionWithinLayoutBox)
+template<typename PreferredLineHeightFunctor> InlineLevelBox::VerticalAlignment toInlineBoxLevelVerticalAlign(const Style::VerticalAlign& verticalAlign, NOESCAPE PreferredLineHeightFunctor&& preferredLineHeightFunctor)
+{
+    return WTF::switchOn(verticalAlign,
+        [](CSS::PrimitiveKeyword auto const& keyword) -> InlineLevelBox::VerticalAlignment {
+            return keyword;
+        },
+        [&](const Style::VerticalAlign::Length& length) -> InlineLevelBox::VerticalAlignment {
+            return Style::evaluate<InlineLayoutUnit>(length, std::forward<PreferredLineHeightFunctor>(preferredLineHeightFunctor), Style::ZoomNeeded { });
+        }
+    );
+}
+
+inline InlineLevelBox::InlineLevelBox(const Box& layoutBox, const RenderStyle& style, InlineLayoutUnit logicalLeft, InlineLayoutSize logicalSize, Type type, EnumSet<PositionWithinLayoutBox> positionWithinLayoutBox)
     : m_layoutBox(layoutBox)
     , m_logicalRect({ }, logicalLeft, logicalSize.width(), logicalSize.height())
+    , m_hasContent(layoutBox.isRubyBase() && layoutBox.associatedRubyAnnotationBox()) // Normally we set inline box's has-content state as we come across child content, but ruby annotations are not visible to inline layout.
     , m_isFirstWithinLayoutBox(positionWithinLayoutBox.contains(PositionWithinLayoutBox::First))
     , m_isLastWithinLayoutBox(positionWithinLayoutBox.contains(PositionWithinLayoutBox::Last))
     , m_type(type)
-    , m_style({ style.fontCascade().metricsOfPrimaryFont(), style.lineHeight(), style.textBoxEdge(), style.textBoxTrim(), style.lineBoxContain(), InlineLayoutUnit(style.fontCascade().fontDescription().computedSize()), { } })
+    , m_style({ style.fontCascade().metricsOfPrimaryFont(), style.lineHeight(), style.textBoxTrim(), style.textBoxEdge(), style.lineFitEdge(), style.usedZoomForLength(), style.lineBoxContain(), InlineLayoutUnit(style.fontCascade().fontDescription().computedSize()), toInlineBoxLevelVerticalAlign(style.verticalAlign(), [this] { return preferredLineHeight(); }) })
 {
-    m_style.verticalAlignment.type = style.verticalAlign();
-    if (m_style.verticalAlignment.type == VerticalAlign::Length)
-        m_style.verticalAlignment.baselineOffset = floatValueForLength(style.verticalAlignLength(), preferredLineHeight());
-
-    auto setAnnotationIfApplicable = [&] {
-        if (auto* rubyAdjustments = layoutBox.rubyAdjustments()) {
-            m_annotation = { rubyAdjustments->annotationAbove, rubyAdjustments->annotationBelow };
-            return;
-        }
-        // Generic, non-inline box inline-level content (e.g. replaced elements) can't have text-emphasis annotations.
-        if (!isRootInlineBox() && !isInlineBox())
-            return;
-        auto hasTextEmphasis =  style.textEmphasisMark() != TextEmphasisMark::None;
-        if (!hasTextEmphasis)
-            return;
-        auto emphasisPosition = style.textEmphasisPosition();
-        // Normally we resolve visual -> logical values at pre-layout time, but emphaisis values are not part of the general box geometry.
-        auto hasAboveTextEmphasis = false;
-        auto hasUnderTextEmphasis = false;
-        if (style.isHorizontalWritingMode()) {
-            hasAboveTextEmphasis = emphasisPosition.contains(TextEmphasisPosition::Over);
-            hasUnderTextEmphasis = !hasAboveTextEmphasis && emphasisPosition.contains(TextEmphasisPosition::Under);
-        } else {
-            hasAboveTextEmphasis = emphasisPosition.contains(TextEmphasisPosition::Right) || emphasisPosition == TextEmphasisPosition::Over;
-            hasUnderTextEmphasis = !hasAboveTextEmphasis && (emphasisPosition.contains(TextEmphasisPosition::Left) || emphasisPosition == TextEmphasisPosition::Under);
-        }
-
-        if (hasAboveTextEmphasis || hasUnderTextEmphasis) {
-            InlineLayoutUnit annotationSize = roundToInt(style.fontCascade().floatEmphasisMarkHeight(style.textEmphasisMarkString()));
-            m_annotation = { hasAboveTextEmphasis ? annotationSize : 0, hasAboveTextEmphasis ? 0 : annotationSize };
-        }
-    };
-    setAnnotationIfApplicable();
 }
 
-inline InlineLevelBox InlineLevelBox::createAtomicInlineLevelBox(const Box& layoutBox, const RenderStyle& style, InlineLayoutUnit logicalLeft, InlineLayoutUnit logicalWidth)
+inline InlineLevelBox InlineLevelBox::createAtomicInlineBox(const Box& layoutBox, const RenderStyle& style, InlineLayoutUnit logicalLeft, InlineLayoutUnit logicalWidth)
 {
-    return { layoutBox, style, logicalLeft, { logicalWidth, { } }, Type::AtomicInlineLevelBox };
+    return { layoutBox, style, logicalLeft, { logicalWidth, { } }, Type::AtomicInlineBox };
 }
 
 inline InlineLevelBox InlineLevelBox::createGenericInlineLevelBox(const Box& layoutBox, const RenderStyle& style, InlineLayoutUnit logicalLeft)
@@ -102,20 +85,31 @@ inline InlineLevelBox InlineLevelBox::createRootInlineBox(const Box& layoutBox, 
 inline bool InlineLevelBox::mayStretchLineBox() const
 {
     if (isRootInlineBox())
-        return m_style.lineBoxContain.containsAny({ LineBoxContain::Block, LineBoxContain::Inline }) || (hasContent() && m_style.lineBoxContain.containsAny({ LineBoxContain::InitialLetter, LineBoxContain::Font, LineBoxContain::Glyphs }));
+        return m_style.lineBoxContain.containsAny({ WebCore::Style::WebkitLineBoxContainValue::Block, WebCore::Style::WebkitLineBoxContainValue::Inline }) || (hasContent() && m_style.lineBoxContain.containsAny({ WebCore::Style::WebkitLineBoxContainValue::InitialLetter, WebCore::Style::WebkitLineBoxContainValue::Font, WebCore::Style::WebkitLineBoxContainValue::Glyphs }));
 
-    if (isAtomicInlineLevelBox())
-        return m_style.lineBoxContain.contains(LineBoxContain::Replaced);
+    if (isAtomicInlineBox())
+        return m_style.lineBoxContain.contains(WebCore::Style::WebkitLineBoxContainValue::Replaced);
 
     if (isInlineBox()) {
-        // Either the inline box itself is included or its text content thorugh Glyph and Font.
-        return m_style.lineBoxContain.containsAny({ LineBoxContain::Inline, LineBoxContain::InlineBox }) || (hasContent() && m_style.lineBoxContain.containsAny({ LineBoxContain::Font, LineBoxContain::Glyphs }));
+        // Either the inline box itself is included or its text content through Glyph and Font.
+        return m_style.lineBoxContain.containsAny({ WebCore::Style::WebkitLineBoxContainValue::Inline, WebCore::Style::WebkitLineBoxContainValue::InlineBox }) || (hasContent() && m_style.lineBoxContain.containsAny({ WebCore::Style::WebkitLineBoxContainValue::Font, WebCore::Style::WebkitLineBoxContainValue::Glyphs }));
     }
 
     if (isLineBreakBox())
-        return m_style.lineBoxContain.containsAny({ LineBoxContain::Inline, LineBoxContain::InlineBox }) || (hasContent() && m_style.lineBoxContain.containsAny({ LineBoxContain::Font, LineBoxContain::Glyphs }));
+        return m_style.lineBoxContain.containsAny({ WebCore::Style::WebkitLineBoxContainValue::Inline, WebCore::Style::WebkitLineBoxContainValue::InlineBox }) || (hasContent() && m_style.lineBoxContain.containsAny({ WebCore::Style::WebkitLineBoxContainValue::Font, WebCore::Style::WebkitLineBoxContainValue::Glyphs }));
 
     return true;
+}
+
+inline void InlineLevelBox::setTextEmphasis(std::pair<InlineLayoutUnit, InlineLayoutUnit> textEmphasis)
+{
+    if (!textEmphasis.first && !textEmphasis.second)
+        return;
+    if (textEmphasis.first) {
+        m_textEmphasis = TextEmphasis { textEmphasis.first, 0.f };
+        return;
+    }
+    m_textEmphasis = TextEmphasis { 0.f, textEmphasis.second };
 }
 
 }

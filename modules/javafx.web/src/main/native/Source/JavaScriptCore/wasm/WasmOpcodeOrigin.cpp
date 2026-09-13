@@ -26,15 +26,56 @@
 #include "config.h"
 #include "WasmOpcodeOrigin.h"
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#include "B3Origin.h"
+
+#include <wtf/text/MakeString.h>
+
+#if ENABLE(WEBASSEMBLY)
 
 namespace JSC { namespace Wasm {
 
+
+#if ENABLE(WEBASSEMBLY_OMGJIT)
+OpcodeOrigin::OpcodeOrigin(B3::Origin origin)
+{
+    ASSERT(origin.isPackedWasmOrigin());
+    packedData = origin.m_data.bits();
+}
+
+B3::Origin OpcodeOrigin::asB3Origin()
+{
+    return B3::Origin(packedData);
+}
+#endif
+
+ASCIILiteral OpcodeOrigin::opcodeString() const
+{
+    switch (opcode()) {
+#if USE(JSVALUE64)
+    case OpType::ExtGC:
+        return makeString(gcOpcode());
+    case OpType::Ext1:
+        return makeString(ext1Opcode());
+    case OpType::ExtSIMD:
+        return makeString(simdOpcode());
+    case OpType::ExtAtomic:
+        return makeString(atomicOpcode());
+#endif
+    default:
+        return makeString(opcode());
+    }
+}
+
 void OpcodeOrigin::dump(PrintStream& out) const
 {
-    out.print("{opcode: ", makeString(opcode()), ", location: ", RawHex(location()), "}");
+    out.print("{opcode: ", opcodeString(), ", location: ", RawHex(location()), "}");
 }
+
+static_assert(sizeof(OpcodeOrigin) == sizeof(uint64_t), "this packing doesn't work if this isn't the case");
+#if ENABLE(WEBASSEMBLY_OMGJIT)
+static_assert(sizeof(B3::Origin) == sizeof(uint64_t), "this packing doesn't work if this isn't the case");
+#endif
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY_B3JIT)
+#endif // ENABLE(WEBASSEMBLY)

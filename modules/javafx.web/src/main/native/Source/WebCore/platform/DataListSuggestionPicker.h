@@ -25,24 +25,22 @@
 
 #pragma once
 
-#if ENABLE(DATALIST_ELEMENT)
-
-#include "DataListSuggestionInformation.h"
-#include <wtf/WeakPtr.h>
+#include <WebCore/DataListSuggestionInformation.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-class DataListSuggestionPicker : public CanMakeWeakPtr<DataListSuggestionPicker> {
-    WTF_MAKE_FAST_ALLOCATED;
+class DataListSuggestionPicker : public AbstractRefCountedAndCanMakeWeakPtr<DataListSuggestionPicker> {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(DataListSuggestionPicker);
 public:
     virtual ~DataListSuggestionPicker() = default;
 
+    virtual void detach() { }
     virtual void close() { }
     virtual void handleKeydownWithIdentifier(const String&) { }
     virtual void displayWithActivationType(DataListSuggestionActivationType) { }
 };
 
 } // namespace WebCore
-
-#endif

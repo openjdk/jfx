@@ -244,7 +244,7 @@ ALWAYS_INLINE void JIT::emit_compareImpl(VirtualRegister op1, VirtualRegister op
         JumpList failures;
         emitLoadCharacterString(jsRegT10.payloadGPR(), jsRegT10.payloadGPR(), failures);
         addSlowCase(failures);
-        emitCompare(commute(cond), jsRegT10, Imm32(asString(getConstantOperand(left))->tryGetValue(disallowAllocation)[0]));
+        emitCompare(commute(cond), jsRegT10, Imm32(asString(getConstantOperand(left))->tryGetValue(disallowAllocation).data[0]));
         return true;
     };
 
@@ -367,8 +367,8 @@ void JIT::emit_compareAndJumpSlow(const JSInstruction* instruction, DoubleCondit
     emit_compareSlowImpl(op1, op2, instruction->size(), operation, iter, handleReturnValueGPR, emitCompareAndJump);
 }
 
-template<typename SlowOperation, typename HanldeReturnValueGPRFunctor, typename EmitDoubleCompareFunctor>
-void JIT::emit_compareSlowImpl(VirtualRegister op1, VirtualRegister op2, size_t instructionSize, SlowOperation operation, Vector<SlowCaseEntry>::iterator& iter, const HanldeReturnValueGPRFunctor& handleReturnValueGPR, const EmitDoubleCompareFunctor& emitDoubleCompare)
+template<typename SlowOperation, typename HandleReturnValueGPRFunctor, typename EmitDoubleCompareFunctor>
+void JIT::emit_compareSlowImpl(VirtualRegister op1, VirtualRegister op2, size_t instructionSize, SlowOperation operation, Vector<SlowCaseEntry>::iterator& iter, const HandleReturnValueGPRFunctor& handleReturnValueGPR, const EmitDoubleCompareFunctor& emitDoubleCompare)
 {
 
     // We generate inline code for the following cases in the slow path:
@@ -403,7 +403,6 @@ void JIT::emit_compareSlowImpl(VirtualRegister op1, VirtualRegister op2, size_t 
             return false;
         linkAllSlowCases(iter);
 
-        if (supportsFloatingPoint()) {
             Jump fail1 = branchIfNotNumber(jsReg2, regT4);
             unboxDouble(jsReg2, fpReg2);
 
@@ -415,7 +414,6 @@ void JIT::emit_compareSlowImpl(VirtualRegister op1, VirtualRegister op2, size_t 
             emitJumpSlowToHot(jump(), instructionSize);
 
             fail1.link(this);
-        }
 
         emitGetVirtualRegister(op, jsReg1);
         loadGlobalObject(regT4);
@@ -431,7 +429,6 @@ void JIT::emit_compareSlowImpl(VirtualRegister op1, VirtualRegister op2, size_t 
 
     linkSlowCase(iter); // LHS is not Int.
 
-    if (supportsFloatingPoint()) {
         Jump fail1 = branchIfNotNumber(jsRegT10, regT4);
         Jump fail2 = branchIfNotNumber(jsRegT32, regT4);
         Jump fail3 = branchIfInt32(jsRegT32);
@@ -445,7 +442,6 @@ void JIT::emit_compareSlowImpl(VirtualRegister op1, VirtualRegister op2, size_t 
         fail1.link(this);
         fail2.link(this);
         fail3.link(this);
-    }
 
     linkSlowCase(iter); // RHS is not Int.
     loadGlobalObject(regT4);
@@ -606,7 +602,7 @@ void JIT::emitSlow_op_negate(const JSInstruction* currentInstruction, Vector<Slo
 {
     linkAllSlowCases(iter);
 
-    JITNegIC* negIC = bitwise_cast<JITNegIC*>(m_instructionToMathIC.get(currentInstruction));
+    JITNegIC* negIC = std::bit_cast<JITNegIC*>(m_instructionToMathIC.get(currentInstruction));
     // FIXME: it would be better to call those operationValueNegate, since the operand can be a BigInt
     emitMathICSlow<OpNegate>(negIC, currentInstruction, operationArithNegateProfiledOptimize, operationArithNegateProfiled, operationArithNegateOptimize);
 }
@@ -752,7 +748,7 @@ void JIT::emitSlow_op_add(const JSInstruction* currentInstruction, Vector<SlowCa
 {
     linkAllSlowCases(iter);
 
-    JITAddIC* addIC = bitwise_cast<JITAddIC*>(m_instructionToMathIC.get(currentInstruction));
+    JITAddIC* addIC = std::bit_cast<JITAddIC*>(m_instructionToMathIC.get(currentInstruction));
     emitMathICSlow<OpAdd>(addIC, currentInstruction, operationValueAddProfiledOptimize, operationValueAddProfiled, operationValueAddOptimize);
 }
 
@@ -951,11 +947,11 @@ void JIT::emitMathICSlow(JITBinaryMathIC<Generator>* mathIC, const JSInstruction
     loadGlobalObject(globalObjetGPR);
     if (arithProfile && shouldEmitProfiling()) {
         if (mathICGenerationState.shouldSlowPathRepatch)
-            mathICGenerationState.slowPathCall = callOperationWithResult(bitwise_cast<J_JITOperation_GJJMic>(profiledRepatchFunction), resultRegs, globalObjetGPR, leftRegs, rightRegs, TrustedImmPtr(mathIC));
+            mathICGenerationState.slowPathCall = callOperationWithResult(std::bit_cast<J_JITOperation_GJJMic>(profiledRepatchFunction), resultRegs, globalObjetGPR, leftRegs, rightRegs, TrustedImmPtr(mathIC));
         else
             mathICGenerationState.slowPathCall = callOperationWithResult(profiledFunction, resultRegs, globalObjetGPR, leftRegs, rightRegs, TrustedImmPtr(arithProfile));
     } else
-        mathICGenerationState.slowPathCall = callOperationWithResult(bitwise_cast<J_JITOperation_GJJMic>(repatchFunction), resultRegs, globalObjetGPR, leftRegs, rightRegs, TrustedImmPtr(mathIC));
+        mathICGenerationState.slowPathCall = callOperationWithResult(std::bit_cast<J_JITOperation_GJJMic>(repatchFunction), resultRegs, globalObjetGPR, leftRegs, rightRegs, TrustedImmPtr(mathIC));
 
 #if ENABLE(MATH_IC_STATS)
     auto slowPathEnd = label();
@@ -1043,7 +1039,7 @@ void JIT::emitSlow_op_mul(const JSInstruction* currentInstruction, Vector<SlowCa
 {
     linkAllSlowCases(iter);
 
-    JITMulIC* mulIC = bitwise_cast<JITMulIC*>(m_instructionToMathIC.get(currentInstruction));
+    JITMulIC* mulIC = std::bit_cast<JITMulIC*>(m_instructionToMathIC.get(currentInstruction));
     emitMathICSlow<OpMul>(mulIC, currentInstruction, operationValueMulProfiledOptimize, operationValueMulProfiled, operationValueMulOptimize);
 }
 
@@ -1059,7 +1055,7 @@ void JIT::emitSlow_op_sub(const JSInstruction* currentInstruction, Vector<SlowCa
 {
     linkAllSlowCases(iter);
 
-    JITSubIC* subIC = bitwise_cast<JITSubIC*>(m_instructionToMathIC.get(currentInstruction));
+    JITSubIC* subIC = std::bit_cast<JITSubIC*>(m_instructionToMathIC.get(currentInstruction));
     emitMathICSlow<OpSub>(subIC, currentInstruction, operationValueSubProfiledOptimize, operationValueSubProfiled, operationValueSubOptimize);
 }
 

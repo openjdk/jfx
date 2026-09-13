@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,41 +30,43 @@ import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.value.ObservableValue;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public abstract class PropertiesTestBase {
 
-    private final Configuration configuration;
-
-    public PropertiesTestBase(final Configuration configuration) {
-        this.configuration = configuration;
-    }
-
-    @Test
-    public void testGetBean() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testGetBean(Configuration configuration) {
         configuration.getBeanTest();
     }
 
-    @Test
-    public void testGetName() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testGetName(Configuration configuration) {
         configuration.getNameTest();
     }
 
-    @Test
-    public void testBasicAccess() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testBasicAccess(Configuration configuration) {
         configuration.basicAccessTest();
     }
 
-    @Test
-    public void testBinding() {
+    @ParameterizedTest
+    @MethodSource("data")
+    public void testBinding(Configuration configuration) {
         configuration.bindingTest();
     }
 
     /**
      * Single bean, single property configuration.
      */
-    public static Object[] config(final Object bean,
+    public static Arguments config(final Object bean,
                                   final String propertyName,
                                   final Object propertyValue1,
                                   final Object propertyValue2) {
@@ -77,7 +79,7 @@ public abstract class PropertiesTestBase {
     /**
      * Single bean, single property configuration with custom value comparator.
      */
-    public static Object[] config(final Object bean,
+    public static Arguments config(final Object bean,
                                   final String propertyName,
                                   final Object propertyValue1,
                                   final Object propertyValue2,
@@ -93,7 +95,7 @@ public abstract class PropertiesTestBase {
      * Single bean, propertyA (source) and propertyB (dependent) property
      * configuration.
      */
-    public static Object[] config(final Object beanA,
+    public static Arguments config(final Object beanA,
                                   final String propertyAName,
                                   final Object propertyAValue1,
                                   final Object propertyAValue2,
@@ -113,7 +115,7 @@ public abstract class PropertiesTestBase {
      * BeanA with propertyA (source) and BeanB with propertyB (dependent)
      * configuration.
      */
-    public static Object[] config(final Object beanA,
+    public static Arguments config(final Object beanA,
                                   final String propertyAName,
                                   final Object propertyAValue1,
                                   final Object propertyAValue2,
@@ -135,7 +137,7 @@ public abstract class PropertiesTestBase {
      * BeanA with propertyA (source) and BeanB with propertyB (dependent)
      * with custom value comparator configuration.
      */
-    public static Object[] config(final Object beanA,
+    public static Arguments config(final Object beanA,
                                   final String propertyAName,
                                   final Object propertyAValue1,
                                   final Object propertyAValue2,
@@ -155,8 +157,8 @@ public abstract class PropertiesTestBase {
                                         propertyBComparator));
     }
 
-    public static Object[] config(final Configuration configuration) {
-        return new Object[] { configuration };
+    public static Arguments config(final Configuration configuration) {
+        return Arguments.of( configuration );
     }
 
     public static class Configuration {
@@ -261,8 +263,8 @@ public abstract class PropertiesTestBase {
                     (ReadOnlyProperty<?>) BindingHelper.getPropertyModel(
                                                   beanB, propertyBReference);
 
-            Assert.assertSame(beanA, propertyA.getBean());
-            Assert.assertSame(beanB, propertyB.getBean());
+            assertSame(beanA, propertyA.getBean());
+            assertSame(beanB, propertyB.getBean());
         }
 
         public void getNameTest() {
@@ -273,10 +275,10 @@ public abstract class PropertiesTestBase {
                     (ReadOnlyProperty<?>) BindingHelper.getPropertyModel(
                                                   beanB, propertyBReference);
 
-            Assert.assertEquals(propertyAReference.getPropertyName(),
-                                propertyA.getName());
-            Assert.assertEquals(propertyBReference.getPropertyName(),
-                                propertyB.getName());
+            assertEquals(propertyAReference.getPropertyName(),
+                         propertyA.getName());
+            assertEquals(propertyBReference.getPropertyName(),
+                         propertyB.getName());
         }
 
         public void basicAccessTest() {
@@ -429,18 +431,18 @@ public abstract class PropertiesTestBase {
 
         public void assertCalled() {
             if (counter == 0) {
-                Assert.fail("Listener has not been called!");
+                fail("Listener has not been called!");
                 return;
             }
 
             if (!allowMultipleNotifications && (counter > 1)) {
-                Assert.fail("Listener called multiple times!");
+                fail("Listener called multiple times!");
             }
         }
 
         public void assertNotCalled() {
             if (counter != 0) {
-                Assert.fail("Listener has been called!");
+                fail("Listener has been called!");
                 return;
             }
         }

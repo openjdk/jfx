@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,12 +54,6 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLLIElementImpl_setTypeImpl(JNI
 {
     WebCore::JSMainThreadNullState state;
     IMPL->setAttributeWithoutSynchronization(WebCore::HTMLNames::typeAttr, AtomString{String(env, value)});
-}
-
-JNIEXPORT jint JNICALL Java_com_sun_webkit_dom_HTMLLIElementImpl_getValueImpl(JNIEnv*, jclass, jlong peer)
-{
-    WebCore::JSMainThreadNullState state;
-    return IMPL->getIntegralAttribute(WebCore::HTMLNames::valueAttr);
 }
 
 JNIEXPORT void JNICALL Java_com_sun_webkit_dom_HTMLLIElementImpl_setValueImpl(JNIEnv*, jclass, jlong peer, jint value)

@@ -25,12 +25,14 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if ENABLE(VIDEO)
 
-#include "CSSPropertyNames.h"
-#include "CaptionPreferencesDelegate.h"
-#include "CaptionUserPreferences.h"
-#include "Color.h"
+#include <WebCore/CSSPropertyNames.h>
+#include <WebCore/CaptionPreferencesDelegate.h>
+#include <WebCore/CaptionUserPreferences.h>
+#include <WebCore/Color.h>
+#include <wtf/TZoneMalloc.h>
 
 #if PLATFORM(COCOA)
 OBJC_CLASS WebCaptionUserPreferencesMediaAFWeakObserver;
@@ -39,9 +41,9 @@ OBJC_CLASS WebCaptionUserPreferencesMediaAFWeakObserver;
 namespace WebCore {
 
 class CaptionUserPreferencesMediaAF : public CaptionUserPreferences {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(CaptionUserPreferencesMediaAF);
 public:
-    static Ref<CaptionUserPreferencesMediaAF> create(PageGroup&);
+    WEBCORE_EXPORT static Ref<CaptionUserPreferencesMediaAF> create(PageGroup&);
     virtual ~CaptionUserPreferencesMediaAF();
 
 #if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
@@ -51,6 +53,12 @@ public:
     WEBCORE_EXPORT static CaptionDisplayMode platformCaptionDisplayMode();
     WEBCORE_EXPORT static void platformSetCaptionDisplayMode(CaptionDisplayMode);
     WEBCORE_EXPORT static void setCachedCaptionDisplayMode(CaptionDisplayMode);
+
+    WEBCORE_EXPORT static Vector<String> platformProfileIDs();
+    WEBCORE_EXPORT static String platformActiveProfileID();
+    WEBCORE_EXPORT static bool canSetActiveProfileID();
+    WEBCORE_EXPORT static bool setActiveProfileID(const String&);
+    WEBCORE_EXPORT static String nameForProfileID(const String&);
 
     bool userPrefersCaptions() const override;
     bool userPrefersSubtitles() const override;
@@ -76,6 +84,8 @@ public:
     bool shouldFilterTrackMenu() const { return true; }
 
     WEBCORE_EXPORT static void setCaptionPreferencesDelegate(std::unique_ptr<CaptionPreferencesDelegate>&&);
+
+    bool testingMode() const final;
 #else
     bool shouldFilterTrackMenu() const { return false; }
 #endif
@@ -84,32 +94,37 @@ public:
     static RefPtr<CaptionUserPreferencesMediaAF> extractCaptionUserPreferencesMediaAF(void* observer);
 #endif
 
-    String captionsStyleSheetOverride() const override;
-    Vector<RefPtr<AudioTrack>> sortedTrackListForMenu(AudioTrackList*) override;
-    Vector<RefPtr<TextTrack>> sortedTrackListForMenu(TextTrackList*, HashSet<TextTrack::Kind>) override;
-    String displayNameForTrack(AudioTrack*) const override;
-    String displayNameForTrack(TextTrack*) const override;
+    WEBCORE_EXPORT String captionsStyleSheetOverride() const override;
+    Vector<Ref<AudioTrack>> sortedTrackListForMenu(AudioTrackList*) override;
+    Vector<Ref<TextTrack>> sortedTrackListForMenu(TextTrackList*, HashSet<TextTrack::Kind>) override;
+    String displayNameForTrack(const AudioTrack&) const override;
+    String displayNameForTrack(const TextTrack&) const override;
+    String captionPreviewTitle() const override;
+
+#if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
+    WEBCORE_EXPORT String captionsWindowCSS() const;
+    WEBCORE_EXPORT String captionsBackgroundCSS() const;
+    WEBCORE_EXPORT String captionsTextColorCSS() const;
+    WEBCORE_EXPORT Color captionsTextColor(bool&) const;
+    WEBCORE_EXPORT String captionsDefaultFontCSS() const;
+    WEBCORE_EXPORT String captionsFontSizeCSS() const;
+    WEBCORE_EXPORT String windowRoundedCornerRadiusCSS() const;
+    WEBCORE_EXPORT String captionsTextEdgeCSS() const;
+    WEBCORE_EXPORT String colorPropertyCSS(CSSPropertyID, const Color&, bool) const;
+#endif
 
 private:
-    CaptionUserPreferencesMediaAF(PageGroup&);
+    explicit CaptionUserPreferencesMediaAF(PageGroup&);
 
 #if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)
     void updateTimerFired();
-
-    String captionsWindowCSS() const;
-    String captionsBackgroundCSS() const;
-    String captionsTextColorCSS() const;
-    Color captionsTextColor(bool&) const;
-    String captionsDefaultFontCSS() const;
-    String windowRoundedCornerRadiusCSS() const;
-    String captionsTextEdgeCSS() const;
-    String colorPropertyCSS(CSSPropertyID, const Color&, bool) const;
+    bool hasNullCaptionProfile() const;
 #endif
 
 #if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK) && PLATFORM(COCOA)
     static RetainPtr<WebCaptionUserPreferencesMediaAFWeakObserver> createWeakObserver(CaptionUserPreferencesMediaAF*);
 
-    RetainPtr<WebCaptionUserPreferencesMediaAFWeakObserver> m_weakObserver;
+    const RetainPtr<WebCaptionUserPreferencesMediaAFWeakObserver> m_observer;
 #endif
 
 #if HAVE(MEDIA_ACCESSIBILITY_FRAMEWORK)

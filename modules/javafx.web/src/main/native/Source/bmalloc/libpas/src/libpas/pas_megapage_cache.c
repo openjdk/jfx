@@ -32,7 +32,9 @@
 #include "pas_bootstrap_free_heap.h"
 #include "pas_internal_config.h"
 #include "pas_large_free_heap_config.h"
+#include "pas_mte.h"
 #include "pas_payload_reservation_page_list.h"
+#include "pas_zero_memory.h"
 #include <stdio.h>
 
 typedef struct {
@@ -119,6 +121,9 @@ static pas_aligned_allocation_result megapage_cache_allocate_aligned(size_t size
     }
 
     begin = (uintptr_t)base_before_exclusion;
+    PAS_PROFILE(MEGAPAGE_SET, begin);
+    PAS_MTE_HANDLE(MEGAPAGE_SET, begin);
+
     end = begin + new_size;
 
     PAS_ASSERT(pas_alignment_is_ptr_aligned(cache_config->allocation_alignment, begin));
@@ -168,11 +173,11 @@ static pas_aligned_allocation_result megapage_cache_allocate_aligned(size_t size
 
 void pas_megapage_cache_construct(pas_megapage_cache* cache,
                                   pas_heap_page_provider provider,
-                                  void* provider_arg)
+                                  pas_megapage_cache_size cache_size)
 {
     pas_simple_large_free_heap_construct(&cache->free_heap);
     cache->provider = provider;
-    cache->provider_arg = provider_arg;
+    cache->provider_arg = (void*)(uintptr_t)cache_size;
 }
 
 void* pas_megapage_cache_try_allocate(pas_megapage_cache* cache,

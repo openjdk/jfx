@@ -26,6 +26,7 @@
 #include "SVGNames.h"
 #include "SVGURIReference.h"
 #include "SVGUnitTypes.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -57,7 +58,7 @@ struct SVGPropertyTraits<SVGSpreadMethodType> {
         return emptyString();
     }
 
-    static SVGSpreadMethodType fromString(const String& value)
+    static SVGSpreadMethodType fromString(SVGElement&, const String& value)
     {
         if (value == "pad"_s)
             return SVGSpreadMethodPad;
@@ -70,13 +71,14 @@ struct SVGPropertyTraits<SVGSpreadMethodType> {
 };
 
 class SVGGradientElement : public SVGElement, public SVGURIReference {
-    WTF_MAKE_ISO_ALLOCATED(SVGGradientElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGGradientElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGGradientElement);
 public:
     enum {
         SVG_SPREADMETHOD_UNKNOWN = SVGSpreadMethodUnknown,
-        SVG_SPREADMETHOD_PAD = SVGSpreadMethodReflect,
-        SVG_SPREADMETHOD_REFLECT = SVGSpreadMethodRepeat,
-        SVG_SPREADMETHOD_REPEAT = SVGSpreadMethodUnknown
+        SVG_SPREADMETHOD_PAD = SVGSpreadMethodPad,
+        SVG_SPREADMETHOD_REFLECT = SVGSpreadMethodReflect,
+        SVG_SPREADMETHOD_REPEAT = SVGSpreadMethodRepeat
     };
 
     GradientColorStops buildStops();
@@ -97,6 +99,8 @@ protected:
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;
 
+    void invalidateGradientResource();
+
 private:
     bool needsPendingResourceHandling() const override { return false; }
     void childrenChanged(const ChildChange&) override;
@@ -115,6 +119,7 @@ static bool isType(const WebCore::SVGElement& element)
 }
 static bool isType(const WebCore::Node& node)
 {
-    return is<WebCore::SVGElement>(node) && isType(downcast<WebCore::SVGElement>(node));
+    auto* svgElement = dynamicDowncast<WebCore::SVGElement>(node);
+    return svgElement && isType(*svgElement);
 }
 SPECIALIZE_TYPE_TRAITS_END()

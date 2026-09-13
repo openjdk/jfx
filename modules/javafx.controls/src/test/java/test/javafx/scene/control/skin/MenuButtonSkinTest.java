@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,16 +25,14 @@
 
 package test.javafx.scene.control.skin;
 
-import static org.junit.Assert.assertEquals;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import javafx.beans.value.ObservableValue;
 import javafx.geometry.Insets;
 import javafx.scene.control.MenuButton;
 import javafx.scene.control.MenuItem;
-
 import javafx.scene.control.skin.MenuButtonSkin;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * This fails with IllegalStateException because of the toolkit's check for the FX application thread
@@ -43,7 +41,8 @@ public class MenuButtonSkinTest {
     private MenuButton menubutton;
     private MenuButtonSkinMock skin;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         menubutton = new MenuButton();
         menubutton.getItems().addAll(new MenuItem("Vanilla"), new MenuItem("Chocolate"));
         skin = new MenuButtonSkinMock(menubutton);

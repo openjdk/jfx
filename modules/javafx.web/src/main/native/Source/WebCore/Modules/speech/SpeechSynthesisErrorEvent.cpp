@@ -29,20 +29,21 @@
 #if ENABLE(SPEECH_SYNTHESIS)
 
 #include "ScriptExecutionContext.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SpeechSynthesisErrorEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SpeechSynthesisErrorEvent);
 
-Ref<SpeechSynthesisErrorEvent> SpeechSynthesisErrorEvent::create(const AtomString& type, const SpeechSynthesisErrorEventInit& initializer)
+Ref<SpeechSynthesisErrorEvent> SpeechSynthesisErrorEvent::create(const AtomString& type, SpeechSynthesisErrorEventInit&& initializer)
 {
-    return adoptRef(*new SpeechSynthesisErrorEvent(type, initializer));
+    auto error = initializer.error;
+    return adoptRef(*new SpeechSynthesisErrorEvent(type, error, WTF::move(initializer)));
 }
 
-SpeechSynthesisErrorEvent::SpeechSynthesisErrorEvent(const AtomString& type, const SpeechSynthesisErrorEventInit& initializer)
-    : SpeechSynthesisEvent(type, initializer)
-    , m_error(initializer.error)
+SpeechSynthesisErrorEvent::SpeechSynthesisErrorEvent(const AtomString& type, SpeechSynthesisErrorCode error, SpeechSynthesisErrorEventInit&& initializer)
+    : SpeechSynthesisEvent(EventInterfaceType::SpeechSynthesisErrorEvent, type, WTF::move(initializer))
+    , m_error(error)
 {
 }
 

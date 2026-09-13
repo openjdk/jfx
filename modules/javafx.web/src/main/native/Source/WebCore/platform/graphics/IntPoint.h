@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include "IntSize.h"
+#include <WebCore/IntSize.h>
 #include <cmath>
+#include <wtf/Platform.h>
 
 #if USE(CG)
 typedef struct CGPoint CGPoint;
@@ -34,11 +35,7 @@ typedef struct CGPoint CGPoint;
 
 #if !PLATFORM(IOS_FAMILY)
 #if OS(DARWIN)
-#ifdef NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES
 typedef struct CGPoint NSPoint;
-#else
-typedef struct _NSPoint NSPoint;
-#endif
 #endif
 #endif // !PLATFORM(IOS_FAMILY)
 
@@ -58,16 +55,16 @@ class IntRect;
 
 class IntPoint {
 public:
-    IntPoint() : m_x(0), m_y(0) { }
-    IntPoint(int x, int y) : m_x(x), m_y(y) { }
+    constexpr IntPoint() : m_x(0), m_y(0) { }
+    constexpr IntPoint(int x, int y) : m_x(x), m_y(y) { }
     explicit IntPoint(const IntSize& size) : m_x(size.width()), m_y(size.height()) { }
     WEBCORE_EXPORT explicit IntPoint(const FloatPoint&); // don't do this implicitly since it's lossy
 
-    static IntPoint zero() { return IntPoint(); }
-    bool isZero() const { return !m_x && !m_y; }
+    static constexpr IntPoint zero() { return IntPoint(); }
+    constexpr bool isZero() const { return !m_x && !m_y; }
 
-    int x() const { return m_x; }
-    int y() const { return m_y; }
+    constexpr int x() const { return m_x; }
+    constexpr int y() const { return m_y; }
 
     void setX(int x) { m_x = x; }
     void setY(int y) { m_y = y; }
@@ -86,7 +83,17 @@ public:
         this->scale(scale, scale);
     }
 
-    IntPoint expandedTo(const IntPoint& other) const
+    constexpr IntPoint scaled(float scale) const
+    {
+        return { static_cast<int>(std::lround(m_x * scale)), static_cast<int>(std::lround(m_y * scale)) };
+    }
+
+    constexpr IntPoint scaled(float scaleX, float scaleY) const
+    {
+        return { static_cast<int>(std::lround(m_x * scaleX)), static_cast<int>(std::lround(m_y * scaleY)) };
+    }
+
+    constexpr IntPoint expandedTo(const IntPoint& other) const
     {
         return {
             m_x > other.m_x ? m_x : other.m_x,
@@ -94,7 +101,7 @@ public:
         };
     }
 
-    IntPoint shrunkTo(const IntPoint& other) const
+    constexpr IntPoint shrunkTo(const IntPoint& other) const
     {
         return {
             m_x < other.m_x ? m_x : other.m_x,
@@ -118,17 +125,12 @@ public:
         return IntPoint(m_y, m_x);
     }
 
+    friend bool operator==(const IntPoint&, const IntPoint&) = default;
+
 #if USE(CG)
     WEBCORE_EXPORT explicit IntPoint(const CGPoint&); // don't do this implicitly since it's lossy
     WEBCORE_EXPORT operator CGPoint() const;
 #endif
-
-#if !PLATFORM(IOS_FAMILY)
-#if OS(DARWIN) && !defined(NSGEOMETRY_TYPES_SAME_AS_CGGEOMETRY_TYPES)
-    WEBCORE_EXPORT explicit IntPoint(const NSPoint&); // don't do this implicitly since it's lossy
-    WEBCORE_EXPORT operator NSPoint() const;
-#endif
-#endif // !PLATFORM(IOS_FAMILY)
 
 #if PLATFORM(WIN)
     WEBCORE_EXPORT IntPoint(const POINT&);
@@ -176,11 +178,6 @@ inline IntPoint operator-(const IntPoint& a, const IntSize& b)
 inline IntPoint operator-(const IntPoint& point)
 {
     return IntPoint(-point.x(), -point.y());
-}
-
-inline bool operator==(const IntPoint& a, const IntPoint& b)
-{
-    return a.x() == b.x() && a.y() == b.y();
 }
 
 inline IntSize toIntSize(const IntPoint& a)

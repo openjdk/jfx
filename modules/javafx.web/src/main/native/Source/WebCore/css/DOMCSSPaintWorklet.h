@@ -25,9 +25,7 @@
 
 #pragma once
 
-#if ENABLE(CSS_PAINTING_API)
-
-#include "Supplementable.h"
+#include <WebCore/Supplementable.h>
 #include "Worklet.h"
 
 #include <wtf/RefCounted.h>
@@ -58,8 +56,9 @@ private:
     { }
 };
 
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(DOMCSSPaintWorklet);
 class DOMCSSPaintWorklet final : public Supplement<DOMCSSNamespace> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(DOMCSSPaintWorklet, DOMCSSPaintWorklet);
 public:
     explicit DOMCSSPaintWorklet(DOMCSSNamespace&) { }
 
@@ -67,8 +66,12 @@ public:
 
 private:
     static DOMCSSPaintWorklet* from(DOMCSSNamespace&);
-    static const char* supplementName();
+    static ASCIILiteral supplementName() { return "DOMCSSPaintWorklet"_s; }
+    bool isDOMCSSPaintWorklet() const final { return true; }
 };
 
 } // namespace WebCore
-#endif
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::DOMCSSPaintWorklet)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isDOMCSSPaintWorklet(); }
+SPECIALIZE_TYPE_TRAITS_END()

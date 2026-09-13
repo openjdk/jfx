@@ -25,7 +25,10 @@
 
 #pragma once
 
-#include "FloatingState.h"
+#include <WebCore/Font.h>
+#include <WebCore/PlacedFloats.h>
+#include <WebCore/StyleTextBoxEdge.h>
+#include <algorithm>
 
 namespace WebCore {
 namespace Layout {
@@ -36,36 +39,93 @@ class BlockFormattingContext;
 class BlockLayoutState {
 public:
     struct LineClamp {
-        size_t maximumLineCount { 0 };
-        size_t currentLineCount { 0 };
+        size_t maximumLines { 0 };
+        bool shouldDiscardOverflow { false };
+        bool isLegacy { true };
     };
-    enum class TextBoxTrimSide : uint8_t {
-        Start = 1 << 0,
-        End   = 1 << 1
+    enum class TextBoxTrimSide : bool {
+        Start,
+        End
     };
-    using TextBoxTrim = OptionSet<TextBoxTrimSide>;
-    BlockLayoutState(FloatingState&, std::optional<LineClamp> = { }, TextBoxTrim = { }, std::optional<LayoutUnit> intrusiveInitialLetterLogicalBottom = { });
+    using TextBoxTrim = EnumSet<TextBoxTrimSide>;
 
-    FloatingState& floatingState() { return m_floatingState; }
-    const FloatingState& floatingState() const { return m_floatingState; }
+    struct LineGrid {
+        LayoutSize layoutOffset;
+        LayoutSize gridOffset;
+        InlineLayoutUnit columnWidth;
+        LayoutUnit rowHeight;
+        LayoutUnit topRowOffset;
+        Ref<const Font> primaryFont;
+        std::optional<LayoutSize> paginationOrigin;
+        LayoutUnit pageLogicalTop;
+    };
+
+    struct MarginState {
+        void resetBeforeSideOfBlock()
+        {
+            ASSERT(atBeforeSideOfBlock);
+            atBeforeSideOfBlock = { };
+        }
+
+        void resetMarginValues()
+        {
+            positiveMargin = { };
+            negativeMargin = { };
+            contentOffsetAfterSelfCollapsingBlock = { };
+        }
+
+        LayoutUnit margin() const { return positiveMargin - negativeMargin; }
+
+        // FIXME: This tracks RenderBlockFlow's MarginInfo for now.
+        bool canCollapseWithChildren : 1 { false };
+        bool canCollapseMarginBeforeWithChildren : 1 { false };
+        bool canCollapseMarginAfterWithChildren : 1 { false };
+        bool quirkContainer : 1 { false };
+        bool atBeforeSideOfBlock : 1 { true };
+        bool atAfterSideOfBlock : 1 { false };
+        bool hasMarginBeforeQuirk : 1 { false };
+        bool hasMarginAfterQuirk : 1 { false };
+        bool determinedMarginBeforeQuirk : 1 { false };
+        LayoutUnit positiveMargin;
+        LayoutUnit negativeMargin;
+        // This tracks the offset initiated by a self collapsing block when "next line top position" diverges from "current line's bottom".
+        // See the last paragraph at https://www.w3.org/TR/CSS22/box.html#collapsing-margins
+        LayoutUnit contentOffsetAfterSelfCollapsingBlock;
+    };
+
+    BlockLayoutState(PlacedFloats&, MarginState, std::optional<LineClamp> = { }, TextBoxTrim = { }, Style::TextBoxEdge = CSS::Keyword::Auto { }, std::optional<LayoutUnit> intrusiveInitialLetterLogicalBottom = { }, std::optional<LineGrid> lineGrid = { });
+
+    PlacedFloats& placedFloats() { return m_placedFloats; }
+    const PlacedFloats& placedFloats() const { return m_placedFloats; }
 
     std::optional<LineClamp> lineClamp() const { return m_lineClamp; }
     TextBoxTrim textBoxTrim() const { return m_textBoxTrim; }
+    Style::TextBoxEdge textBoxEdge() const { return m_textBoxEdge; }
 
     std::optional<LayoutUnit> intrusiveInitialLetterLogicalBottom() const { return m_intrusiveInitialLetterLogicalBottom; }
+    const std::optional<LineGrid>& lineGrid() const { return m_lineGrid; }
+
+    MarginState& marginState() { return m_marginState; }
+    const MarginState& marginState() const { return m_marginState; }
 
 private:
-    FloatingState& m_floatingState;
+    PlacedFloats& m_placedFloats;
     std::optional<LineClamp> m_lineClamp;
     TextBoxTrim m_textBoxTrim;
+    Style::TextBoxEdge m_textBoxEdge;
     std::optional<LayoutUnit> m_intrusiveInitialLetterLogicalBottom;
+    std::optional<LineGrid> m_lineGrid;
+    MarginState m_marginState;
 };
 
-inline BlockLayoutState::BlockLayoutState(FloatingState& floatingState, std::optional<LineClamp> lineClamp, TextBoxTrim textBoxTrim, std::optional<LayoutUnit> intrusiveInitialLetterLogicalBottom)
-    : m_floatingState(floatingState)
+inline BlockLayoutState::BlockLayoutState(PlacedFloats& placedFloats, MarginState marginState, std::optional<LineClamp> lineClamp, TextBoxTrim textBoxTrim, Style::TextBoxEdge textBoxEdge, std::optional<LayoutUnit> intrusiveInitialLetterLogicalBottom, std::optional<LineGrid> lineGrid)
+    : m_placedFloats(placedFloats)
     , m_lineClamp(lineClamp)
     , m_textBoxTrim(textBoxTrim)
+    , m_textBoxEdge(textBoxEdge)
     , m_intrusiveInitialLetterLogicalBottom(intrusiveInitialLetterLogicalBottom)
+    , m_lineGrid(lineGrid)
+    , m_marginState(marginState)
 {
 }
 

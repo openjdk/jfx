@@ -45,7 +45,7 @@ public:
     }
     static Ref<TouchList> create(FixedVector<std::reference_wrapper<Touch>>&& touches)
     {
-        return adoptRef(*new TouchList(WTFMove(touches)));
+        return adoptRef(*new TouchList(WTF::move(touches)));
     }
 
     unsigned length() const { return m_values.size(); }
@@ -54,16 +54,16 @@ public:
     Touch* item(unsigned);
     const Touch* item(unsigned) const;
 
-    void append(Ref<Touch>&& touch) { m_values.append(WTFMove(touch)); }
+    void append(Ref<Touch>&& touch) { m_values.append(WTF::move(touch)); }
 
 private:
     TouchList() = default;
 
     explicit TouchList(FixedVector<std::reference_wrapper<Touch>>&& touches)
     {
-        m_values.reserveInitialCapacity(touches.size());
-        for (auto& touch : touches)
-            m_values.uncheckedAppend(touch.get());
+        m_values = WTF::map(touches, [](auto& touch) -> Ref<Touch> {
+            return touch.get();
+        });
     }
 
     Vector<Ref<Touch>> m_values;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,26 +25,50 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(JIT)
 
-#include "CodeOrigin.h"
-#include "MacroAssembler.h"
-#include "VM.h"
+#include <JavaScriptCore/CallFrame.h>
+#include <JavaScriptCore/CodeOrigin.h>
+#include <JavaScriptCore/MacroAssembler.h>
+#include <JavaScriptCore/VM.h>
+#include <JavaScriptCore/WasmOpcodeOrigin.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/ValidatedReinterpretCast.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
-
-#if ENABLE(FTL_JIT) || ENABLE(WEBASSEMBLY_B3JIT)
 namespace B3 {
 class PCToOriginMap;
 }
+
+#if ENABLE(WEBASSEMBLY)
+namespace Wasm {
+class WasmOrigin {
+    MAKE_VALIDATED_REINTERPRET_CAST
+public:
+    friend bool operator==(const WasmOrigin&, const WasmOrigin&) = default;
+
+    WasmOrigin(CallSiteIndex callSiteIndex, OpcodeOrigin opcodeOrigin)
+        : m_callSiteIndex(callSiteIndex)
+        , m_opcodeOrigin(opcodeOrigin)
+    { }
+
+    CallSiteIndex m_callSiteIndex { };
+    OpcodeOrigin m_opcodeOrigin { };
+};
+
+MAKE_VALIDATED_REINTERPRET_CAST_IMPL("WasmOrigin", WasmOrigin)
+
+} // namespace Wasm
 #endif
 
 class LinkBuffer;
 class PCToCodeOriginMapBuilder;
 
 class PCToCodeOriginMapBuilder {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(PCToCodeOriginMapBuilder);
     WTF_MAKE_NONCOPYABLE(PCToCodeOriginMapBuilder);
     friend class PCToCodeOriginMap;
 
@@ -57,12 +81,12 @@ public:
 
 #if ENABLE(FTL_JIT)
     enum JSTag { JSCodeOriginMap };
-    PCToCodeOriginMapBuilder(JSTag, VM&, B3::PCToOriginMap);
+    PCToCodeOriginMapBuilder(JSTag, VM&, const B3::PCToOriginMap&);
 #endif
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#if ENABLE(WEBASSEMBLY_OMGJIT)
     enum WasmTag { WasmCodeOriginMap };
-    PCToCodeOriginMapBuilder(WasmTag, B3::PCToOriginMap);
+    PCToCodeOriginMapBuilder(WasmTag, const B3::PCToOriginMap&);
 #endif
 
     void appendItem(MacroAssembler::Label label, const CodeOrigin& origin)
@@ -90,7 +114,7 @@ private:
 
 // FIXME: <rdar://problem/39436658>
 class PCToCodeOriginMap {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PCToCodeOriginMap);
     WTF_MAKE_NONCOPYABLE(PCToCodeOriginMap);
 public:
     PCToCodeOriginMap(PCToCodeOriginMapBuilder&&, LinkBuffer&);

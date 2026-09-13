@@ -49,12 +49,13 @@ public:
     void* dataAddressAtOffset(size_t offset) override;
     unsigned offsetOf(void* pointerIntoCode) override;
     size_t size() override;
+    void setSize(size_t size) { m_size = size; }
     bool contains(void*) override;
 
     void initializeB3Code(CodeRef<JSEntryPtrTag>);
     void initializeB3Byproducts(std::unique_ptr<OpaqueByproducts>);
     void initializeAddressForCall(CodePtr<JSEntryPtrTag>);
-    void initializeArityCheckEntrypoint(CodeRef<JSEntryPtrTag>);
+    void initializeAddressForArityCheck(CodePtr<JSEntryPtrTag>);
 
     void validateReferences(const TrackedReferences&) override;
 
@@ -66,14 +67,21 @@ public:
 
     JITCode* ftl() override;
     DFG::CommonData* dfgCommon() override;
-    static ptrdiff_t commonDataOffset() { return OBJECT_OFFSETOF(JITCode, common); }
-    void shrinkToFit(const ConcurrentJSLocker&) override;
+    const DFG::CommonData* dfgCommon() const override;
+    static constexpr ptrdiff_t commonDataOffset() { return OBJECT_OFFSETOF(JITCode, common); }
+    void shrinkToFit() override;
 
     bool isUnlinked() const { return common.isUnlinked(); }
 
     PCToCodeOriginMap* pcToCodeOriginMap() override { return common.m_pcToCodeOriginMap.get(); }
 
     const RegisterAtOffsetList* calleeSaveRegisters() const { return &m_calleeSaveRegisters; }
+
+    unsigned numberOfCompiledDFGNodes() const { return m_numberOfCompiledDFGNodes; }
+    void setNumberOfCompiledDFGNodes(unsigned numberOfCompiledDFGNodes)
+    {
+        m_numberOfCompiledDFGNodes = numberOfCompiledDFGNodes;
+    }
 
     DFG::CommonData common;
     Vector<OSRExit> m_osrExit;
@@ -84,7 +92,9 @@ public:
 private:
     CodeRef<JSEntryPtrTag> m_b3Code;
     std::unique_ptr<OpaqueByproducts> m_b3Byproducts;
-    CodeRef<JSEntryPtrTag> m_arityCheckEntrypoint;
+    CodePtr<JSEntryPtrTag> m_addressForArityCheck;
+    size_t m_size { 1000 };
+    unsigned m_numberOfCompiledDFGNodes { 0 };
 };
 
 } } // namespace JSC::FTL

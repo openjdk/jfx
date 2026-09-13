@@ -490,7 +490,7 @@ gst_type_find_element_seek (GstTypeFindElement * typefind, GstEvent * event)
   gst_segment_do_seek (&seeksegment, rate, format, flags,
       start_type, start, stop_type, stop, NULL);
 
-  flush = ! !(flags & GST_SEEK_FLAG_FLUSH);
+  flush = !!(flags & GST_SEEK_FLAG_FLUSH);
 
   GST_DEBUG_OBJECT (typefind, "New segment %" GST_SEGMENT_FORMAT, &seeksegment);
 
@@ -720,8 +720,8 @@ gst_type_find_element_sink_event (GstPad * pad, GstObject * parent,
           typefind->cached_events = NULL;
           gst_adapter_clear (typefind->adapter);
           GST_OBJECT_UNLOCK (typefind);
-          /* fall through */
         }
+          /* FALLTHROUGH */
         case GST_EVENT_FLUSH_START:
           res = gst_pad_push_event (typefind->src, event);
           break;
@@ -1208,8 +1208,10 @@ gst_type_find_element_loop (GstPad * pad)
 
     /* Pull 4k blocks and send downstream */
     ret = gst_pad_pull_range (typefind->sink, typefind->offset, 4096, &outbuf);
-    if (ret != GST_FLOW_OK)
+    if (ret != GST_FLOW_OK) {
+      gst_clear_buffer (&outbuf);
       goto pause;
+    }
 
     typefind->offset += gst_buffer_get_size (outbuf);
 

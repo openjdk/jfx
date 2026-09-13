@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "LayoutInitialContainingBlock.h"
+#include <WebCore/LayoutInitialContainingBlock.h>
 
 namespace WebCore {
 namespace Layout {
@@ -36,22 +36,21 @@ public:
     LayoutIterator(const ElementBox* root);
     LayoutIterator(const ElementBox* root, const T* current);
 
+    const T& get() const;
+
     const T& operator*() const;
     const T* operator->() const;
 
     bool operator==(const LayoutIterator& other) const;
 
     LayoutIterator& traverseNext();
+    LayoutIterator& traverseNextSkippingChildren();
     LayoutIterator& traverseNextSibling();
 
 private:
     const ElementBox* m_root;
     const T* m_current;
 };
-
-// Similar to WTF::is<>() but without the static_assert() making sure the check is necessary.
-template <typename T, typename U>
-inline bool isLayoutBoxOfType(const U& layoutBox) { return TypeCastTraits<const T, const U>::isOfType(layoutBox); }
 
 namespace LayoutBoxTraversal {
 
@@ -63,8 +62,8 @@ inline const Box* firstChild(U& object)
 
 inline const Box* firstChild(const Box& box)
 {
-    if (is<ElementBox>(box))
-        return downcast<ElementBox>(box).firstChild();
+    if (auto* elementBox = dynamicDowncast<ElementBox>(box))
+        return elementBox->firstChild();
     return nullptr;
 }
 
@@ -94,6 +93,18 @@ inline const Box* next(const U& current, const ElementBox& stayWithin)
     return nextAncestorSibling(current, stayWithin);
 }
 
+template <typename U>
+inline const Box* nextSkippingChildren(const U& current, const ElementBox& stayWithin)
+{
+    if (&current == &stayWithin)
+        return nullptr;
+
+    if (auto* sibling = current.nextSibling())
+        return sibling;
+
+    return nextAncestorSibling(current, stayWithin);
+}
+
 }
 // Traversal helpers
 namespace Traversal {
@@ -101,37 +112,66 @@ namespace Traversal {
 template <typename T, typename U>
 inline const T* firstChild(U& current)
 {
+    if constexpr(std::same_as<T, Box>)
+        return LayoutBoxTraversal::firstChild(current);
+    else {
     auto* object = LayoutBoxTraversal::firstChild(current);
-    while (object && !isLayoutBoxOfType<T>(*object))
+        while (object && !is<T>(*object))
         object = object->nextSibling();
-    return static_cast<const T*>(object);
+        return uncheckedDowncast<T>(object);
+    }
 }
 
 template <typename T>
 inline const T* nextSibling(const T& current)
 {
+    if constexpr(std::same_as<T, Box>)
+        return current.nextSibling();
+    else {
     auto* object = current.nextSibling();
-    while (object && !isLayoutBoxOfType<T>(*object))
+        while (object && !is<T>(*object))
         object = object->nextSibling();
-    return static_cast<const T*>(object);
+        return uncheckedDowncast<T>(object);
+    }
 }
 
 template <typename T, typename U>
 inline const T* firstWithin(const U& stayWithin)
 {
+    if constexpr(std::same_as<T, Box>)
+        return LayoutBoxTraversal::firstChild(stayWithin);
+    else {
     auto* descendant = LayoutBoxTraversal::firstChild(stayWithin);
-    while (descendant && !isLayoutBoxOfType<T>(*descendant))
+        while (descendant && !is<T>(*descendant))
         descendant = LayoutBoxTraversal::next(*descendant, stayWithin);
-    return static_cast<const T*>(descendant);
+        return uncheckedDowncast<T>(descendant);
+    }
 }
 
 template <typename T, typename U>
 inline const T* next(const U& current, const ElementBox& stayWithin)
 {
+    if constexpr(std::same_as<T, Box>)
+        return LayoutBoxTraversal::next(current, stayWithin);
+    else {
     auto* descendant = LayoutBoxTraversal::next(current, stayWithin);
-    while (descendant && !isLayoutBoxOfType<T>(*descendant))
+        while (descendant && !is<T>(*descendant))
         descendant = LayoutBoxTraversal::next(*descendant, stayWithin);
-    return static_cast<const T*>(descendant);
+        return uncheckedDowncast<T>(descendant);
+    }
+}
+
+template <typename T, typename U>
+inline const T* nextSkippingChildren(const U& current, const ElementBox& stayWithin)
+{
+    if constexpr(std::same_as<T, Box>)
+        return LayoutBoxTraversal::nextSkippingChildren(current, stayWithin);
+    else {
+    auto* descendant = LayoutBoxTraversal::nextSkippingChildren(current, stayWithin);
+        while (descendant && !is<T>(*descendant))
+        descendant = LayoutBoxTraversal::nextSkippingChildren(*descendant, stayWithin);
+        return uncheckedDowncast<T>(descendant);
+    }
 }
 
 }
@@ -169,17 +209,30 @@ inline LayoutIterator<T>& LayoutIterator<T>::traverseNext()
 }
 
 template <typename T>
-inline const T& LayoutIterator<T>::operator*() const
+inline LayoutIterator<T>& LayoutIterator<T>::traverseNextSkippingChildren()
 {
     ASSERT(m_current);
-    return *m_current;
+    m_current = Traversal::nextSkippingChildren<T>(*m_current, *m_root);
+    return *this;
+}
+
+template <typename T>
+inline const T& LayoutIterator<T>::operator*() const
+{
+    return get();
 }
 
 template <typename T>
 inline const T* LayoutIterator<T>::operator->() const
 {
+    return &get();
+}
+
+template <typename T>
+inline const T& LayoutIterator<T>::get() const
+{
     ASSERT(m_current);
-    return m_current;
+    return *m_current;
 }
 
 template <typename T>
@@ -191,5 +244,5 @@ inline bool LayoutIterator<T>::operator==(const LayoutIterator& other) const
 
 }
 }
-#include "LayoutChildIterator.h"
+#include <WebCore/LayoutChildIterator.h>
 

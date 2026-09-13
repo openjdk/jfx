@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,11 +25,12 @@
 
 #pragma once
 
-#include "DebuggerPrimitives.h"
-#include <wtf/FastMalloc.h>
+#include <JavaScriptCore/DebuggerPrimitives.h>
+#include <JavaScriptCore/JSExportMacros.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -40,7 +41,7 @@ class JSGlobalObject;
 
 class Breakpoint : public RefCounted<Breakpoint> {
     WTF_MAKE_NONCOPYABLE(Breakpoint);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(Breakpoint, JS_EXPORT_PRIVATE);
 public:
     struct Action {
         enum class Type : uint8_t {

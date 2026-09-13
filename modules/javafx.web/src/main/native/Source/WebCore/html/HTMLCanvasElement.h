@@ -27,18 +27,19 @@
 
 #pragma once
 
-#include "ActiveDOMObject.h"
-#include "CSSParserContext.h"
-#include "CanvasBase.h"
-#include "Document.h"
-#include "FloatRect.h"
-#include "GraphicsTypes.h"
-#include "HTMLElement.h"
+#include <JavaScriptCore/JSCJSValue.h>
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/CanvasBase.h>
+#include <WebCore/Document.h>
+#include <WebCore/FloatRect.h>
+#include <WebCore/GraphicsTypes.h>
+#include <WebCore/HTMLElement.h>
+#include <WebCore/PlatformDynamicRangeLimit.h>
 #include <memory>
 #include <wtf/Forward.h>
 
 #if ENABLE(WEBGL)
-#include "WebGLContextAttributes.h"
+#include <WebCore/WebGLContextAttributes.h>
 #endif
 
 namespace WebCore {
@@ -62,33 +63,35 @@ struct CanvasRenderingContext2DSettings;
 struct ImageBitmapRenderingContextSettings;
 struct UncachedString;
 
-class HTMLCanvasElement final : public HTMLElement, public CanvasBase, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(HTMLCanvasElement);
+class HTMLCanvasElement final : public HTMLElement, public ActiveDOMObject, public CanvasBase {
+    WTF_MAKE_TZONE_ALLOCATED(HTMLCanvasElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLCanvasElement);
 public:
+    USING_CAN_MAKE_WEAKPTR(HTMLElement);
+
     static Ref<HTMLCanvasElement> create(Document&);
     static Ref<HTMLCanvasElement> create(const QualifiedName&, Document&);
     virtual ~HTMLCanvasElement();
 
+    using HTMLElement::protectedScriptExecutionContext;
+
     WEBCORE_EXPORT ExceptionOr<void> setWidth(unsigned);
     WEBCORE_EXPORT ExceptionOr<void> setHeight(unsigned);
-
-    void setSize(const IntSize& newSize) override;
 
     CanvasRenderingContext* renderingContext() const final { return m_context.get(); }
     ExceptionOr<std::optional<RenderingContext>> getContext(JSC::JSGlobalObject&, const String& contextId, FixedVector<JSC::Strong<JSC::Unknown>>&& arguments);
 
-    CanvasRenderingContext* getContext(const String&);
+    RefPtr<CanvasRenderingContext> getContext(const String&);
 
     static bool is2dType(const String&);
     CanvasRenderingContext2D* createContext2d(const String&, CanvasRenderingContext2DSettings&&);
     CanvasRenderingContext2D* getContext2d(const String&, CanvasRenderingContext2DSettings&&);
 
 #if ENABLE(WEBGL)
-    using WebGLVersion = GraphicsContextGLWebGLVersion;
     static bool isWebGLType(const String&);
     static WebGLVersion toWebGLVersion(const String&);
     WebGLRenderingContextBase* createContextWebGL(WebGLVersion type, WebGLContextAttributes&& = { });
-    WebGLRenderingContextBase* getContextWebGL(WebGLVersion type, WebGLContextAttributes&& = { });
+    RefPtr<WebGLRenderingContextBase> getContextWebGL(WebGLVersion type, WebGLContextAttributes&& = { });
 #endif
 
     static bool isBitmapRendererType(const String&);
@@ -112,11 +115,14 @@ public:
     void paint(GraphicsContext&, const LayoutRect&);
 
 #if ENABLE(MEDIA_STREAM) || ENABLE(WEB_CODECS)
+    // Returns the context drawing buffer as a VideoFrame.
     RefPtr<VideoFrame> toVideoFrame();
 #endif
 #if ENABLE(MEDIA_STREAM)
     ExceptionOr<Ref<MediaStream>> captureStream(std::optional<double>&& frameRequestRate);
 #endif
+
+    std::unique_ptr<CSSParserContext> createCSSParserContext() const final;
 
     Image* copiedImage() const final;
     void clearCopiedImage() const final;
@@ -124,29 +130,26 @@ public:
 
     SecurityOrigin* securityOrigin() const final;
 
-    WEBCORE_EXPORT void setUsesDisplayListDrawing(bool);
-
-    // FIXME: Only some canvas rendering contexts need an ImageBuffer.
-    // It would be better to have the contexts own the buffers.
-    void setImageBufferAndMarkDirty(RefPtr<ImageBuffer>&&) final;
-
     bool needsPreparationForDisplay();
     void prepareForDisplay();
+    void dynamicRangeLimitDidChange(PlatformDynamicRangeLimit);
+    WEBCORE_EXPORT std::optional<double> getContextEffectiveDynamicRangeLimitValue() const;
 
     void setIsSnapshotting(bool isSnapshotting) { m_isSnapshotting = isSnapshotting; }
     bool isSnapshotting() const { return m_isSnapshotting; }
 
     bool isControlledByOffscreen() const;
 
-    WEBCORE_EXPORT void setAvoidIOSurfaceSizeCheckInWebProcessForTesting();
-
-    void queueTaskKeepingObjectAlive(TaskSource, Function<void()>&&) final;
+    void queueTaskKeepingObjectAlive(TaskSource, Function<void(CanvasBase&)>&&) final;
     void dispatchEvent(Event&) final;
 
-    CSSParserContext& cssParserContext();
+    // ActiveDOMObject.
+    void ref() const final { HTMLElement::ref(); }
+    void deref() const final { HTMLElement::deref(); }
 
-    using HTMLElement::ref;
-    using HTMLElement::deref;
+    using HTMLElement::scriptExecutionContext;
+
+    void setSizeForControllingContext(IntSize) final;
 
 private:
     HTMLCanvasElement(const QualifiedName&, Document&);
@@ -154,7 +157,6 @@ private:
     bool isHTMLCanvasElement() const final { return true; }
 
     // ActiveDOMObject.
-    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
     // EventTarget.
@@ -164,55 +166,32 @@ private:
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
+    bool isReplaced(const RenderStyle* = nullptr) const final;
 
     bool canContainRangeEndPoint() const final;
     bool canStartSelection() const final;
 
-    void reset();
+    void didUpdateSizeProperties();
 
-    void createImageBuffer() const final;
-    void clearImageBuffer() const;
-
-    bool hasCreatedImageBuffer() const final { return m_hasCreatedImageBuffer; }
-
-    void setSurfaceSize(const IntSize&);
-
-    bool paintsIntoCanvasBuffer() const;
-
-    bool isGPUBased() const;
-
-    void refCanvasBase() final { HTMLElement::ref(); }
-    void derefCanvasBase() final { HTMLElement::deref(); }
+    bool usesContentsAsLayerContents() const;
 
     ScriptExecutionContext* canvasBaseScriptExecutionContext() const final { return HTMLElement::scriptExecutionContext(); }
+    RefPtr<ScriptExecutionContext> protectedCanvasBaseScriptExecutionContext() const { return canvasBaseScriptExecutionContext(); }
 
     void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;
-    Node::InsertedIntoAncestorResult insertedIntoAncestor(InsertionType, ContainerNode&) final;
-    void removedFromAncestor(RemovalType, ContainerNode& oldParentOfRemovedTree) final;
 
-    std::unique_ptr<CanvasRenderingContext> m_context;
-    mutable RefPtr<Image> m_copiedImage; // FIXME: This is temporary for platforms that have to copy the image buffer to render (and for CSSCanvasValue).
-    std::unique_ptr<CSSParserContext> m_cssParserContext;
+    std::optional<FloatRect> computeDirtyRectangleIfNeeded(const std::optional<FloatRect>&) const;
 
-    std::optional<bool> m_usesDisplayListDrawing;
-
-    bool m_avoidBackendSizeCheckForTesting { false };
-    bool m_ignoreReset { false };
-    // m_hasCreatedImageBuffer means we tried to malloc the buffer. We didn't necessarily get it.
-    mutable bool m_hasCreatedImageBuffer { false };
-    mutable bool m_didClearImageBuffer { false };
+    bool m_ignoreDidUpdateSizeProperties { false };
 #if ENABLE(WEBGL)
     bool m_hasRelevantWebGLEventListener { false };
 #endif
     bool m_isSnapshotting { false };
-};
 
-inline CSSParserContext& HTMLCanvasElement::cssParserContext()
-{
-    if (!m_cssParserContext)
-        m_cssParserContext = WTF::makeUnique<CSSParserContext>(document());
-    return *m_cssParserContext;
-}
+    std::unique_ptr<CanvasRenderingContext> m_context;
+    PlatformDynamicRangeLimit m_dynamicRangeLimit { PlatformDynamicRangeLimit::initialValue() };
+    mutable RefPtr<Image> m_copiedImage; // FIXME: This is temporary for platforms that have to copy the image buffer to render (and for CSSCanvasValue).
+};
 
 WebCoreOpaqueRoot root(HTMLCanvasElement*);
 
@@ -226,6 +205,10 @@ private:
     static bool checkTagName(const WebCore::CanvasBase& base) { return base.isHTMLCanvasElement(); }
     static bool checkTagName(const WebCore::HTMLElement& element) { return element.hasTagName(WebCore::HTMLNames::canvasTag); }
     static bool checkTagName(const WebCore::Node& node) { return node.hasTagName(WebCore::HTMLNames::canvasTag); }
-    static bool checkTagName(const WebCore::EventTarget& target) { return is<WebCore::Node>(target) && checkTagName(downcast<WebCore::Node>(target)); }
+    static bool checkTagName(const WebCore::EventTarget& target)
+    {
+        auto* node = dynamicDowncast<WebCore::Node>(target);
+        return node && checkTagName(*node);
+    }
 };
 }

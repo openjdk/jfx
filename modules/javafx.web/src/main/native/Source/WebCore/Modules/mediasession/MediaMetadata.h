@@ -27,11 +27,14 @@
 
 #if ENABLE(MEDIA_SESSION)
 
-#include "CachedImageClient.h"
-#include "CachedResourceHandle.h"
 #include "MediaMetadataInit.h"
-#include "MediaSession.h"
+#include <WebCore/CachedImageClient.h>
+#include <WebCore/CachedResourceHandle.h>
+#include <WebCore/MediaSession.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Function.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/URL.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 
@@ -40,34 +43,42 @@ namespace WebCore {
 class CachedImage;
 class Document;
 class Image;
+class WeakPtrImplWithEventTargetData;
 struct MediaImage;
 
 using MediaSessionMetadata = MediaMetadataInit;
 
-class ArtworkImageLoader final : public CachedImageClient {
-    WTF_MAKE_FAST_ALLOCATED;
+class ArtworkImageLoader final : public CachedImageClient, public RefCounted<ArtworkImageLoader> {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(ArtworkImageLoader, WEBCORE_EXPORT);
 public:
     using ArtworkImageLoaderCallback = Function<void(Image*)>;
     // The callback will only be called upon success or explicit failure to retrieve the image. If the operation is interrupted following the
     // destruction of the ArtworkImageLoader, the callback won't be called.
-    WEBCORE_EXPORT ArtworkImageLoader(Document&, const String& src, ArtworkImageLoaderCallback&&);
+    WEBCORE_EXPORT static Ref<ArtworkImageLoader> create(Document&, const String& src, ArtworkImageLoaderCallback&&);
     WEBCORE_EXPORT ~ArtworkImageLoader();
 
     WEBCORE_EXPORT void requestImageResource();
 
+    // CachedResourceClient.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
 protected:
-    void notifyFinished(CachedResource&, const NetworkLoadMetrics&) override;
+    void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) override;
 
 private:
-    Document& m_document;
+    ArtworkImageLoader(Document&, const String& src, ArtworkImageLoaderCallback&&);
+
+    WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
     const String m_src;
     ArtworkImageLoaderCallback m_callback;
     CachedResourceHandle<CachedImage> m_cachedImage;
 };
 
-class MediaMetadata : public RefCounted<MediaMetadata> {
+class MediaMetadata final : public RefCountedAndCanMakeWeakPtr<MediaMetadata> {
 public:
     static ExceptionOr<Ref<MediaMetadata>> create(ScriptExecutionContext&, std::optional<MediaMetadataInit>&&);
+    static Ref<MediaMetadata> create(MediaSession&, Vector<URL>&&);
     ~MediaMetadata();
 
     void setMediaSession(MediaSession&);
@@ -96,16 +107,26 @@ public:
 #endif
 
 private:
+    struct Pair {
+        float score;
+        String src;
+    };
+
     MediaMetadata();
     void setArtworkImage(Image*);
     void metadataUpdated();
     void refreshArtworkImage();
+    void tryNextArtworkImage(uint32_t, Vector<Pair>&&);
+
+    static constexpr int s_minimumSize = 128;
+    static constexpr int s_idealSize = 512;
 
     WeakPtr<MediaSession> m_session;
     MediaSessionMetadata m_metadata;
-    std::unique_ptr<ArtworkImageLoader> m_artworkLoader;
+    RefPtr<ArtworkImageLoader> m_artworkLoader;
     String m_artworkImageSrc;
     RefPtr<Image> m_artworkImage;
+    Vector<URL> m_defaultImages;
 };
 
 }

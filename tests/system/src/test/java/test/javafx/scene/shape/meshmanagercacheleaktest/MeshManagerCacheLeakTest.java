@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,18 +25,17 @@
 
 package test.javafx.scene.shape.meshmanagercacheleaktest;
 
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import static test.javafx.scene.shape.meshmanagercacheleaktest.Constants.ERROR_LAUNCH;
+import static test.javafx.scene.shape.meshmanagercacheleaktest.Constants.ERROR_NONE;
+import static test.javafx.scene.shape.meshmanagercacheleaktest.Constants.ERROR_OOM;
 import java.util.ArrayList;
-
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
-
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.Assert;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeTrue;
-
-import static test.javafx.scene.shape.meshmanagercacheleaktest.Constants.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  * Unit test for verifying leak with cache of TriangleMesh in PredefinedMeshManager.
@@ -47,23 +46,26 @@ public class MeshManagerCacheLeakTest {
     private final String pkgName = className.substring(0, className.lastIndexOf("."));
     private final String testAppName = pkgName + "." + "MeshManagerCacheLeakApp";
 
-    @Before
+    @BeforeEach
     public void setUp() {
         assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
         assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8201763
     }
 
-    @Test (timeout = 15000)
+    @Test
+    @Timeout(value=15)
     public void testSphereCacheLeakTest() throws Exception {
         testMeshManagerCacheLeak("Sphere", "10");
     }
 
-    @Test (timeout = 15000)
+    @Test
+    @Timeout(value=15)
     public void testCylinderCacheLeakTest() throws Exception {
         testMeshManagerCacheLeak("Cylinder", "25");
     }
 
-    @Test (timeout = 20000)
+    @Test
+    @Timeout(value=20)
     public void testBoxCacheLeakTest() throws Exception {
         testMeshManagerCacheLeak("Box", "350");
     }
@@ -72,7 +74,7 @@ public class MeshManagerCacheLeakTest {
         String[] jvmArgs = {"-Xmx16m"};
         // Launch the test app
         final ArrayList<String> cmd = test.util.Util.createApplicationLaunchCommand(
-            testAppName, null, null, jvmArgs);
+            testAppName, null, jvmArgs);
         // and add our arguments
         cmd.add(String.valueOf(shape));
         cmd.add(String.valueOf(count));

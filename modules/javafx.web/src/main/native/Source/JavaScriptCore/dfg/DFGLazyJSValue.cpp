@@ -59,7 +59,7 @@ JSValue LazyJSValue::getValue(VM& vm) const
     return JSValue();
 }
 
-static TriState equalToSingleCharacter(JSValue value, UChar character)
+static TriState equalToSingleCharacter(JSValue value, char16_t character)
 {
     if (!value.isString())
         return TriState::False;
@@ -131,7 +131,7 @@ String LazyJSValue::tryGetString(Graph& graph) const
         return u.stringImpl;
 
     case SingleCharacterString:
-        return String(&u.character, 1);
+        return span(u.character);
 
     case KnownValue:
     case KnownStringImpl:
@@ -215,7 +215,7 @@ uintptr_t LazyJSValue::switchLookupValue(SwitchKind kind) const
             return 0;
         case SwitchCell:
             if (value()->value())
-                return bitwise_cast<uintptr_t>(value()->value().asCell());
+                return std::bit_cast<uintptr_t>(value()->value().asCell());
             return 0;
         default:
             RELEASE_ASSERT_NOT_REACHED();
@@ -238,7 +238,7 @@ uintptr_t LazyJSValue::switchLookupValue(SwitchKind kind) const
     return 0;
 }
 
-void LazyJSValue::emit(CCallHelpers& jit, JSValueRegs result) const
+void LazyJSValue::emit(CCallHelpers& jit, JSValueRegs result, Plan& planRef) const
 {
     if (m_kind == KnownValue) {
         jit.moveValue(value()->value(), result);
@@ -263,9 +263,10 @@ void LazyJSValue::emit(CCallHelpers& jit, JSValueRegs result) const
 
     CodeBlock* codeBlock = jit.codeBlock();
 
+    auto* plan = &planRef;
     jit.addLinkTask([=] (LinkBuffer& linkBuffer) {
         auto patchLocation = linkBuffer.locationOf<JITCompilationPtrTag>(label);
-        linkBuffer.addMainThreadFinalizationTask([=] {
+        plan->addMainThreadFinalizationTask([=] {
             JSValue realValue = thisValue.getValue(codeBlock->vm());
             RELEASE_ASSERT(realValue.isCell());
 
@@ -288,7 +289,7 @@ void LazyJSValue::dumpInContext(PrintStream& out, DumpContext* context) const
     case SingleCharacterString:
         out.print("Lazy:SingleCharacterString(");
         out.printf("%04X", static_cast<unsigned>(character()));
-        out.print(" / ", StringImpl::utf8ForCharacters(&u.character, 1).value(), ")");
+        out.print(" / ", StringImpl::utf8ForCharacters(span(u.character)).value(), ")");
         return;
     case KnownStringImpl:
         out.print("Lazy:KnownString(", stringImpl(), ")");

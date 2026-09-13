@@ -28,28 +28,23 @@
 #if ENABLE(WEBGL)
 #include "WebGLStencilTexturing.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WebGLStencilTexturing);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebGLStencilTexturing);
 
 WebGLStencilTexturing::WebGLStencilTexturing(WebGLRenderingContextBase& context)
-    : WebGLExtension(context)
+    : WebGLExtension(context, WebGLExtensionName::WebGLStencilTexturing)
 {
-    context.graphicsContextGL()->ensureExtensionEnabled("GL_ANGLE_stencil_texturing"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::ANGLE_stencil_texturing);
 }
 
 WebGLStencilTexturing::~WebGLStencilTexturing() = default;
 
-WebGLExtension::ExtensionName WebGLStencilTexturing::getName() const
-{
-    return WebGLStencilTexturingName;
-}
-
 bool WebGLStencilTexturing::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_ANGLE_stencil_texturing"_s);
+    return context.supportsExtension(GCGLExtension::ANGLE_stencil_texturing);
 }
 
 } // namespace WebCore

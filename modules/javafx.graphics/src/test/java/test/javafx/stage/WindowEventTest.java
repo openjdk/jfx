@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,13 +28,15 @@ package test.javafx.stage;
 import javafx.stage.Window;
 import javafx.stage.WindowEvent;
 import javafx.stage.WindowShim;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 public class WindowEventTest {
 
-    @Test public void testConstructor() {
+    @Test
+    public void testConstructor() {
         Window w = new WindowShim();
         WindowEvent e = new WindowEvent(w, WindowEvent.WINDOW_HIDING);
         assertSame(WindowEvent.WINDOW_HIDING, e.getEventType());

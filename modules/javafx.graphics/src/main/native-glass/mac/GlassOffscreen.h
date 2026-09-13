@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,57 +24,36 @@
  */
 
 #import <Cocoa/Cocoa.h>
+#import "common.h"
 
-#import <OpenGL/gl.h>
-#import <OpenGL/OpenGL.h>
-
-@protocol GlassOffscreenProtocol
-
-// as destination (to draw into)
-- (void)bindForWidth:(GLuint)width andHeight:(GLuint)height;
-- (void)unbind;
-
-// as source (to show)
-- (GLuint)texture;
-- (void)blitForWidth:(GLuint)width andHeight:(GLuint)height;
-
-- (GLuint)width;
-- (GLuint)height;
-- (GLuint)fbo;
-
-@end
-
-@interface GlassOffscreen : NSObject <GlassOffscreenProtocol>
+@interface GlassOffscreen : NSObject
 {
-    CGLContextObj               _ctx;
-    CGLContextObj               _ctxToRestore;
-
-    id<GlassOffscreenProtocol>  _offscreen;
-
-    GLboolean                   _dirty;
-
-    GLfloat                     _backgroundR;
-    GLfloat                     _backgroundG;
-    GLfloat                     _backgroundB;
-    GLfloat                     _backgroundA;
-
-    CAOpenGLLayer*              _layer;
+    float    _backgroundR;
+    float    _backgroundG;
+    float    _backgroundB;
+    float    _backgroundA;
+    CALayer* _layer;
 }
 
-- (id)initWithContext:(CGLContextObj)ctx
-            andIsSwPipe:(BOOL)isSwPipe;
-- (CGLContextObj)getContext;
-
 - (void)setBackgroundColor:(NSColor*)color;
-
+- (jlong)fbo;
+- (unsigned int)width;
+- (unsigned int)height;
+- (void)bindForWidth:(unsigned int)width
+           andHeight:(unsigned int)height;
+- (void)unbind;
 - (void)blit;
-- (GLuint)texture;
-
-- (CAOpenGLLayer*)getLayer;
-- (void)setLayer:(CAOpenGLLayer*)new_layer;
-
-- (GLboolean)isDirty;
-
-- (void)blitFromOffscreen:(GlassOffscreen*) other_offscreen;
-
+- (void)blitForWidth:(unsigned int)width
+           andHeight:(unsigned int)height;
+- (unsigned char)isDirty;
+- (void)blitFromOffscreen:(GlassOffscreen*)other_offscreen;
+- (void)flush:(GlassOffscreen*)glassOffScreen;
+- (void)pushPixels:(void*)pixels
+         withWidth:(unsigned int)width
+        withHeight:(unsigned int)height
+        withScaleX:(float)scalex
+        withScaleY:(float)scaley
+            ofView:(NSView*)view;
+- (CALayer*)getLayer;
+- (void)setLayer:(CALayer*)new_layer;
 @end

@@ -28,31 +28,26 @@
 
 #include "ExceptionOr.h"
 #include <wtf/FixedVector.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CSSNumericArray);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSNumericArray);
 
 Ref<CSSNumericArray> CSSNumericArray::create(FixedVector<CSSNumberish>&& numberishes)
 {
-    return adoptRef(*new CSSNumericArray(WTF::map(WTFMove(numberishes), CSSNumericValue::rectifyNumberish)));
+    return adoptRef(*new CSSNumericArray(WTF::map(WTF::move(numberishes), CSSNumericValue::rectifyNumberish)));
 }
 
 Ref<CSSNumericArray> CSSNumericArray::create(Vector<Ref<CSSNumericValue>>&& values)
 {
-    return adoptRef(*new CSSNumericArray(WTFMove(values)));
+    return adoptRef(*new CSSNumericArray(WTF::move(values)));
 }
 
 CSSNumericArray::CSSNumericArray(Vector<Ref<CSSNumericValue>>&& values)
-    : m_array(WTFMove(values))
-{
-}
-
-CSSNumericArray::CSSNumericArray(FixedVector<Ref<CSSNumericValue>>&& values)
-    : m_array(WTFMove(values))
+    : m_array(WTF::move(values))
 {
 }
 

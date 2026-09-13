@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2012 Google Inc. All rights reserved.
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,42 +29,32 @@
 #if ENABLE(WEB_RTC)
 
 #include "RTCDataChannel.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RTCDataChannelEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RTCDataChannelEvent);
 
 Ref<RTCDataChannelEvent> RTCDataChannelEvent::create(const AtomString& type, CanBubble canBubble, IsCancelable cancelable, Ref<RTCDataChannel>&& channel)
 {
-    return adoptRef(*new RTCDataChannelEvent(type, canBubble, cancelable, WTFMove(channel)));
+    return adoptRef(*new RTCDataChannelEvent(type, canBubble, cancelable, WTF::move(channel)));
 }
 
 Ref<RTCDataChannelEvent> RTCDataChannelEvent::create(const AtomString& type, Init&& initializer, IsTrusted isTrusted)
 {
-    return adoptRef(*new RTCDataChannelEvent(type, WTFMove(initializer), isTrusted));
+    return adoptRef(*new RTCDataChannelEvent(type, WTF::move(initializer), isTrusted));
 }
 
 RTCDataChannelEvent::RTCDataChannelEvent(const AtomString& type, CanBubble canBubble, IsCancelable cancelable, Ref<RTCDataChannel>&& channel)
-    : Event(type, canBubble, cancelable)
-    , m_channel(WTFMove(channel))
+    : Event(EventInterfaceType::RTCDataChannelEvent, type, canBubble, cancelable)
+    , m_channel(WTF::move(channel))
 {
 }
 
 RTCDataChannelEvent::RTCDataChannelEvent(const AtomString& type, Init&& initializer, IsTrusted isTrusted)
-    : Event(type, initializer, isTrusted)
+    : Event(EventInterfaceType::RTCDataChannelEvent, type, initializer, isTrusted)
     , m_channel(initializer.channel.releaseNonNull())
 {
-}
-
-RTCDataChannel& RTCDataChannelEvent::channel()
-{
-    return m_channel.get();
-}
-
-EventInterface RTCDataChannelEvent::eventInterface() const
-{
-    return RTCDataChannelEventInterfaceType;
 }
 
 } // namespace WebCore

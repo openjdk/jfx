@@ -30,6 +30,7 @@
 #include <wtf/HashFunctions.h>
 #include <wtf/Lock.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TrailingArray.h>
 #include <wtf/Vector.h>
 
 namespace WTF {
@@ -54,7 +55,7 @@ namespace WTF {
 // focuses so much on cases where the table does not change.
 class ConcurrentPtrHashSet final {
     WTF_MAKE_NONCOPYABLE(ConcurrentPtrHashSet);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ConcurrentPtrHashSet);
 
 public:
     WTF_EXPORT_PRIVATE ConcurrentPtrHashSet();
@@ -75,7 +76,7 @@ public:
     size_t size() const
     {
         Table* table = m_table.loadRelaxed();
-        if (table == &m_stubTable)
+        if (table == m_stubTable.get())
             return sizeSlow();
         return table->load.loadRelaxed();
     }
@@ -89,11 +90,11 @@ public:
     WTF_EXPORT_PRIVATE void clear();
 
 private:
-    struct Table {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+    struct Table final : public TrailingArray<Table, Atomic<void*>> {
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Table);
 
         static std::unique_ptr<Table> create(unsigned size);
-        void initializeStub();
+        static std::unique_ptr<Table> createStub();
 
         unsigned maxLoad() const { return size / 2; }
 
@@ -105,12 +106,17 @@ private:
         unsigned size; // This is immutable.
         unsigned mask; // This is immutable.
         Atomic<unsigned> load;
-        Atomic<void*> array[1];
+
+    private:
+        Table(size_t size)
+            : TrailingArray<Table, Atomic<void*>>(size)
+        {
+        }
     };
 
-    static unsigned hash(void* ptr)
+    static unsigned hash(const void* ptr)
     {
-        return PtrHash<void*>::hash(ptr);
+        return PtrHash<const void*>::hash(ptr);
     }
 
     void initialize();
@@ -131,14 +137,14 @@ private:
     bool containsImpl(void* ptr) const
     {
         Table* table = m_table.loadRelaxed();
-        if (table == &m_stubTable)
+        if (table == m_stubTable.get())
             return containsImplSlow(ptr);
 
         unsigned mask = table->mask;
         unsigned startIndex = hash(ptr) & mask;
         unsigned index = startIndex;
         for (;;) {
-            void* entry = table->array[index].loadRelaxed();
+            void* entry = table->at(index).loadRelaxed();
             if (!entry)
                 return false;
             if (entry == ptr)
@@ -156,7 +162,7 @@ private:
         unsigned startIndex = hash(ptr) & mask;
         unsigned index = startIndex;
         for (;;) {
-            void* entry = table->array[index].loadRelaxed();
+            void* entry = table->at(index).loadRelaxed();
             if (!entry)
                 return addSlow(table, mask, startIndex, index, ptr);
             if (entry == ptr)
@@ -175,7 +181,7 @@ private:
 
     Vector<std::unique_ptr<Table>, 4> m_allTables;
     Atomic<Table*> m_table; // This is never null.
-    Table m_stubTable;
+    std::unique_ptr<Table> m_stubTable;
     mutable Lock m_lock; // We just use this to control resize races.
 };
 

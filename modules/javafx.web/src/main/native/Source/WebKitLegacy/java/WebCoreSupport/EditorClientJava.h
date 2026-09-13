@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,13 +32,15 @@
 
 #include <wtf/Deque.h>
 #include <wtf/Forward.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class Page;
 
 class EditorClientJava final : public EditorClient, public TextCheckerClient {
-    WTF_MAKE_NONCOPYABLE(EditorClientJava); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_NONCOPYABLE(EditorClientJava);
+    WTF_MAKE_TZONE_ALLOCATED(EditorClientJava);
 public:
     EditorClientJava(const JLObject &webPage);
     ~EditorClientJava() override;
@@ -70,10 +72,10 @@ public:
     void didEndEditing() override;
     void willWriteSelectionToPasteboard(const std::optional<SimpleRange>&) override;
     void didWriteSelectionToPasteboard() override;
-    void getClientPasteboardData(const std::optional<SimpleRange>&, Vector<String>& pasteboardTypes, Vector<RefPtr<SharedBuffer> >& pasteboardData) override;
+    virtual void getClientPasteboardData(const std::optional<SimpleRange>&, Vector<std::pair<String, RefPtr<WebCore::SharedBuffer>>>& pasteboardTypesAndData) override;
     void didUpdateComposition() override { }
 
-    DOMPasteAccessResponse requestDOMPasteAccess(DOMPasteAccessCategory, const String& originIdentifier) override;
+    DOMPasteAccessResponse requestDOMPasteAccess(DOMPasteAccessCategory, FrameIdentifier, const String& originIdentifier) override;
     void discardedComposition(const Document&) override;
     void canceledComposition() override;
 
@@ -133,7 +135,6 @@ public:
     void updateSpellingUIWithMisspelledWord(const String&) override;
     void showSpellingUI(bool show) override;
     bool spellingUIIsShowing() override;
-    void willSetInputMethodState() override;
     void setInputMethodState(Element*) override;
 
     // TextCheckerClient member functions
@@ -152,6 +153,7 @@ public:
     // identification. Noramlly it's the text surrounding the "word" for which we are getting correction suggestions.
     void getGuessesForWord(const String& word, const String& context, const VisibleSelection& currentSelection, Vector<String>& guesses) override;
     void requestCheckingOfString(TextCheckingRequest&, const VisibleSelection& currentSelection) override;
+    void requestExtendedCheckingOfString(TextCheckingRequest&, const VisibleSelection& currentSelection) override;
     bool performTwoStepDrop(DocumentFragment&, const SimpleRange&, bool) final { return false; }
     bool canShowFontPanel() const  { return false; }
 

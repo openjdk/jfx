@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -34,10 +34,6 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.security.PrivilegedExceptionAction;
 
 import com.sun.javafx.reflect.ReflectUtil;
 
@@ -172,12 +168,7 @@ class ExportedJavaObject {
     // returns JSON-encoded result
     public String call(final String methodName, final String args) throws CallException {
         try {
-            return AccessController.doPrivileged(new PrivilegedExceptionAction<String>() {
-                @Override
-                public String run() throws Exception {
-                    return callWorker(methodName, args);
-                }
-            }, getJSBridge().getAccessControlContext());
+            return callWorker(methodName, args);
         } catch (Exception e) {
             if (e instanceof CallException) {
                 throw (CallException) e;

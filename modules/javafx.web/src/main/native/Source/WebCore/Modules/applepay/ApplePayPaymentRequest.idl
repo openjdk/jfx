@@ -34,6 +34,7 @@
 
 [
     Conditional=APPLE_PAY,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ApplePayPaymentRequest : ApplePayRequestBase {
     required ApplePayLineItem total;
     sequence<ApplePayLineItem> lineItems;
@@ -50,4 +51,7 @@
     [Conditional=APPLE_PAY_MULTI_MERCHANT_PAYMENTS] sequence<ApplePayPaymentTokenContext> multiTokenContexts;
 
     [Conditional=APPLE_PAY_DEFERRED_PAYMENTS] ApplePayDeferredPaymentRequest deferredPaymentRequest;
+
+    [Conditional=APPLE_PAY_DISBURSEMENTS] ApplePayDisbursementRequest disbursementRequest;
+
 };

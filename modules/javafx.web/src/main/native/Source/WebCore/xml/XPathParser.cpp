@@ -1,6 +1,6 @@
 /*
  * Copyright 2005 Maksim Orlovich <maksim@kde.org>
- * Copyright (C) 2006, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2019 Google Inc. All rights reserved.
  * Copyright (C) 2007 Alexey Proskuryakov <ap@webkit.org>
  *
@@ -29,6 +29,7 @@
 #include "config.h"
 #include "XPathParser.h"
 
+#include "ExceptionOr.h"
 #include "XPathEvaluator.h"
 #include "XPathNSResolver.h"
 #include "XPathPath.h"
@@ -36,6 +37,7 @@
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringHash.h>
 
 extern int xpathyyparse(WebCore::XPath::Parser&);
@@ -47,21 +49,27 @@ namespace XPath {
 
 struct Parser::Token {
     int type;
-    String string;
-    Step::Axis axis;
-    NumericOp::Opcode numericOpcode;
-    EqTestOp::Opcode equalityTestOpcode;
+    using TokenValue = Variant<String, Step::Axis, NumericOp::Opcode, EqTestOp::Opcode>;
+    TokenValue value;
 
-    Token(int type) : type(type) { }
-    Token(int type, const String& string) : type(type), string(string) { }
-    Token(int type, Step::Axis axis) : type(type), axis(axis) { }
-    Token(int type, NumericOp::Opcode opcode) : type(type), numericOpcode(opcode) { }
-    Token(int type, EqTestOp::Opcode opcode) : type(type), equalityTestOpcode(opcode) { }
+    Token() = delete;
+
+    Token(int type)
+        : type(type)
+    { }
+    Token(int type, TokenValue&& value)
+        : type(type), value(WTF::move(value))
+    { }
+
+    String& string() { return std::get<String>(value); }
+    Step::Axis axis() const { return std::get<Step::Axis>(value); }
+    NumericOp::Opcode numericOpcode() const { return std::get<NumericOp::Opcode>(value); }
+    EqTestOp::Opcode equalityTestOpcode() const { return std::get<EqTestOp::Opcode>(value); }
 };
 
 enum XMLCat { NameStart, NameCont, NotPartOfName };
 
-static XMLCat charCat(UChar character)
+static XMLCat charCat(char16_t character)
 {
     if (character == '_')
         return NameStart;
@@ -82,7 +90,7 @@ static MemoryCompactLookupOnlyRobinHoodHashMap<String, Step::Axis> createAxisNam
         ASCIILiteral name;
         Step::Axis axis;
     };
-    const AxisName axisNameList[] = {
+    static constexpr auto axisNameList = std::to_array<AxisName>({
         { "ancestor"_s, Step::AncestorAxis },
         { "ancestor-or-self"_s, Step::AncestorOrSelfAxis },
         { "attribute"_s, Step::AttributeAxis },
@@ -96,7 +104,7 @@ static MemoryCompactLookupOnlyRobinHoodHashMap<String, Step::Axis> createAxisNam
         { "preceding"_s, Step::PrecedingAxis },
         { "preceding-sibling"_s, Step::PrecedingSiblingAxis },
         { "self"_s, Step::SelfAxis }
-    };
+    });
     MemoryCompactLookupOnlyRobinHoodHashMap<String, Step::Axis> map;
     for (auto& axisName : axisNameList)
         map.add(axisName.name, axisName.axis);
@@ -161,7 +169,7 @@ char Parser::peekAheadHelper()
 {
     if (m_nextPos + 1 >= m_data.length())
         return 0;
-    UChar next = m_data[m_nextPos + 1];
+    char16_t next = m_data[m_nextPos + 1];
     if (next >= 0xff)
         return 0;
     return next;
@@ -171,7 +179,7 @@ char Parser::peekCurHelper()
 {
     if (m_nextPos >= m_data.length())
         return 0;
-    UChar next = m_data[m_nextPos];
+    char16_t next = m_data[m_nextPos];
     if (next >= 0xff)
         return 0;
     return next;
@@ -179,7 +187,7 @@ char Parser::peekCurHelper()
 
 Parser::Token Parser::lexString()
 {
-    UChar delimiter = m_data[m_nextPos];
+    char16_t delimiter = m_data[m_nextPos];
     int startPos = m_nextPos + 1;
 
     for (m_nextPos = startPos; m_nextPos < m_data.length(); ++m_nextPos) {
@@ -203,7 +211,7 @@ Parser::Token Parser::lexNumber()
 
     // Go until end or a non-digits character.
     for (; m_nextPos < m_data.length(); ++m_nextPos) {
-        UChar aChar = m_data[m_nextPos];
+        char16_t aChar = m_data[m_nextPos];
         if (aChar >= 0xff) break;
 
         if (!isASCIIDigit(aChar)) {
@@ -254,7 +262,7 @@ bool Parser::lexQName(String& name)
     if (!lexNCName(n2))
         return false;
 
-    name = n1 + ":" + n2;
+    name = makeString(n1, ':', n2);
     return true;
 }
 
@@ -293,22 +301,22 @@ inline Parser::Token Parser::nextTokenInternal()
     case '-':
         return makeTokenAndAdvance(MINUS);
     case '=':
-        return makeTokenAndAdvance(EQOP, EqTestOp::OP_EQ);
+        return makeTokenAndAdvance(EQOP, EqTestOp::Opcode::Eq);
     case '!':
         if (peekAheadHelper() == '=')
-            return makeTokenAndAdvance(EQOP, EqTestOp::OP_NE, 2);
+            return makeTokenAndAdvance(EQOP, EqTestOp::Opcode::Ne, 2);
         return Token(XPATH_ERROR);
     case '<':
         if (peekAheadHelper() == '=')
-            return makeTokenAndAdvance(RELOP, EqTestOp::OP_LE, 2);
-        return makeTokenAndAdvance(RELOP, EqTestOp::OP_LT);
+            return makeTokenAndAdvance(RELOP, EqTestOp::Opcode::Le, 2);
+        return makeTokenAndAdvance(RELOP, EqTestOp::Opcode::Lt);
     case '>':
         if (peekAheadHelper() == '=')
-            return makeTokenAndAdvance(RELOP, EqTestOp::OP_GE, 2);
-        return makeTokenAndAdvance(RELOP, EqTestOp::OP_GT);
+            return makeTokenAndAdvance(RELOP, EqTestOp::Opcode::Ge, 2);
+        return makeTokenAndAdvance(RELOP, EqTestOp::Opcode::Gt);
     case '*':
         if (isBinaryOperatorContext())
-            return makeTokenAndAdvance(MULOP, NumericOp::OP_Mul);
+            return makeTokenAndAdvance(MULOP, NumericOp::Opcode::Mul);
         ++m_nextPos;
         return Token(NAMETEST, "*"_s);
     case '$': { // $ QName
@@ -332,9 +340,9 @@ inline Parser::Token Parser::nextTokenInternal()
         if (name == "or"_s)
             return Token(OR);
         if (name == "mod"_s)
-            return Token(MULOP, NumericOp::OP_Mod);
+            return Token(MULOP, NumericOp::Opcode::Mod);
         if (name == "div"_s)
-            return Token(MULOP, NumericOp::OP_Div);
+            return Token(MULOP, NumericOp::Opcode::Div);
     }
 
     // See whether we are at a :
@@ -356,7 +364,7 @@ inline Parser::Token Parser::nextTokenInternal()
         skipWS();
         if (peekCurHelper() == '*') {
             m_nextPos++;
-            return Token(NAMETEST, name + ":*");
+            return Token(NAMETEST, makeString(name, ":*"_s));
         }
 
         // Make a full qname.
@@ -364,7 +372,7 @@ inline Parser::Token Parser::nextTokenInternal()
         if (!lexNCName(n2))
             return Token(XPATH_ERROR);
 
-        name = name + ":" + n2;
+        name = makeString(name, ':', n2);
     }
 
     skipWS();
@@ -399,7 +407,7 @@ inline Parser::Token Parser::nextToken()
 
 Parser::Parser(const String& statement, RefPtr<XPathNSResolver>&& resolver)
     : m_data(statement)
-    , m_resolver(WTFMove(resolver))
+    , m_resolver(WTF::move(resolver))
 {
 }
 
@@ -409,14 +417,14 @@ int Parser::lex(YYSTYPE& yylval)
 
     switch (token.type) {
     case AXISNAME:
-        yylval.axis = token.axis;
+        yylval.axis = token.axis();
         break;
     case MULOP:
-        yylval.numericOpcode = token.numericOpcode;
+        yylval.numericOpcode = token.numericOpcode();
         break;
     case RELOP:
     case EQOP:
-        yylval.equalityTestOpcode = token.equalityTestOpcode;
+        yylval.equalityTestOpcode = token.equalityTestOpcode();
         break;
     case NODETYPE:
     case FUNCTIONNAME:
@@ -424,7 +432,7 @@ int Parser::lex(YYSTYPE& yylval)
     case VARIABLEREFERENCE:
     case NUMBER:
     case NAMETEST:
-        yylval.string = token.string.releaseImpl().leakRef();
+        yylval.string = token.string().releaseImpl().leakRef();
         break;
     }
 
@@ -452,17 +460,18 @@ bool Parser::expandQualifiedName(const String& qualifiedName, AtomString& localN
 
 ExceptionOr<std::unique_ptr<Expression>> Parser::parseStatement(const String& statement, RefPtr<XPathNSResolver>&& resolver)
 {
-    Parser parser { statement, WTFMove(resolver) };
+    Parser parser { statement, WTF::move(resolver) };
 
     int parseError = xpathyyparse(parser);
 
     if (parser.m_sawNamespaceError)
-        return Exception { NamespaceError };
+        return Exception { ExceptionCode::NamespaceError };
 
     if (parseError)
-        return Exception { SyntaxError };
+        return Exception { ExceptionCode::SyntaxError };
 
-    return WTFMove(parser.m_result);
+    return WTF::move(parser.m_result);
 }
 
-} }
+} // namespace XPath
+} // namespace WebCore

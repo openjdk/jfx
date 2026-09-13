@@ -41,12 +41,13 @@ namespace FTL {
 class ExitTimeObjectMaterialization {
     WTF_MAKE_NONCOPYABLE(ExitTimeObjectMaterialization)
 public:
-    ExitTimeObjectMaterialization(DFG::NodeType, CodeOrigin);
+    ExitTimeObjectMaterialization(DFG::Node*, CodeOrigin);
     ~ExitTimeObjectMaterialization();
 
     void add(DFG::PromotedLocationDescriptor, const ExitValue&);
 
     DFG::NodeType type() const { return m_type; }
+    IndexingType indexingType() const { return m_indexingType; }
     CodeOrigin origin() const { return m_origin; }
 
     ExitValue get(DFG::PromotedLocationDescriptor) const;
@@ -60,6 +61,7 @@ public:
 
 private:
     DFG::NodeType m_type;
+    IndexingType m_indexingType;
     CodeOrigin m_origin;
     Vector<ExitPropertyValue> m_properties;
 };

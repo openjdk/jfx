@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,8 @@
 #include "CachedResourceHandle.h"
 #include "Font.h"
 #include "FontSelector.h"
+#include "ScriptExecutionContext.h"
+#include "StyleRule.h"
 #include "Timer.h"
 #include "WebKitFontFamilyNames.h"
 #include <memory>
@@ -46,18 +48,17 @@ class CSSSegmentedFontFace;
 class CSSValueList;
 class CachedFont;
 class ScriptExecutionContext;
-class StyleRuleFontFace;
-class StyleRuleFontFeatureValues;
-class StyleRuleFontPaletteValues;
 
-class CSSFontSelector final : public FontSelector, public CSSFontFace::Client, public ActiveDOMObject {
+class CSSFontSelector final : public FontSelector, public CSSFontFaceClient, public ActiveDOMObject {
 public:
-    using FontSelector::weakPtrFactory;
-    using FontSelector::WeakValueType;
-    using FontSelector::WeakPtrImplType;
-
     static Ref<CSSFontSelector> create(ScriptExecutionContext&);
     virtual ~CSSFontSelector();
+
+    // ActiveDOMObject, CSSFontFaceClient.
+    void ref() const final { FontSelector::ref(); }
+    void deref() const final { FontSelector::deref(); }
+
+    USING_CAN_MAKE_WEAKPTR(FontSelector);
 
     unsigned version() const final { return m_version; }
     unsigned uniqueId() const final { return m_uniqueId; }
@@ -82,7 +83,12 @@ public:
     void registerForInvalidationCallbacks(FontSelectorClient&) final;
     void unregisterForInvalidationCallbacks(FontSelectorClient&) final;
 
+    bool isSimpleFontSelectorForDescription() const final;
+
+    bool isCSSFontSelector() const final { return true; }
+
     ScriptExecutionContext* scriptExecutionContext() const { return m_context.get(); }
+    Ref<ScriptExecutionContext> protectedScriptExecutionContext() const { return *m_context; }
 
     FontFaceSet* fontFaceSetIfExists();
     FontFaceSet& fontFaceSet();
@@ -95,10 +101,6 @@ public:
 
     void updateStyleIfNeeded();
 
-    // CSSFontFace::Client needs to be able to be held in a RefPtr.
-    void ref() final { FontSelector::ref(); }
-    void deref() final { FontSelector::deref(); }
-
 private:
     explicit CSSFontSelector(ScriptExecutionContext&);
 
@@ -108,27 +110,24 @@ private:
 
     std::optional<AtomString> resolveGenericFamily(const FontDescription&, const AtomString& family);
 
-    const FontPaletteValues& lookupFontPaletteValues(const AtomString& familyName, const FontDescription&);
-    RefPtr<FontFeatureValues> lookupFontFeatureValues(const AtomString& familyName);
+    const FontPaletteValues& lookupFontPaletteValues(const AtomString& familyName, const FontDescription&) const;
+    RefPtr<FontFeatureValues> lookupFontFeatureValues(const AtomString& familyName) const;
 
-    // CSSFontFace::Client
+    // CSSFontFaceClient
     void fontLoaded(CSSFontFace&) final;
     void updateStyleIfNeeded(CSSFontFace&) final;
 
     void fontModified();
 
-    // ActiveDOMObject
-    const char* activeDOMObjectName() const final { return "CSSFontSelector"_s; }
-
     struct PendingFontFaceRule {
-        StyleRuleFontFace& styleRuleFontFace;
+        const Ref<StyleRuleFontFace> styleRuleFontFace;
         bool isInitiatingElementInUserAgentShadowTree;
     };
     Vector<PendingFontFaceRule> m_stagingArea;
 
     WeakPtr<ScriptExecutionContext> m_context;
     RefPtr<FontFaceSet> m_fontFaceSet;
-    Ref<CSSFontFaceSet> m_cssFontFaceSet;
+    const Ref<CSSFontFaceSet> m_cssFontFaceSet;
     HashSet<FontSelectorClient*> m_clients;
 
     struct PaletteMapHash : DefaultHash<std::pair<AtomString, AtomString>> {
@@ -148,7 +147,7 @@ private:
     HashSet<RefPtr<CSSFontFace>> m_cssConnectionsPossiblyToRemove;
     HashSet<RefPtr<StyleRuleFontFace>> m_cssConnectionsEncounteredDuringBuild;
 
-    CSSFontFaceSet::FontModifiedObserver m_fontModifiedObserver;
+    const Ref<CSSFontFaceSet::FontModifiedObserver> m_fontModifiedObserver;
 
     unsigned m_uniqueId;
     unsigned m_version;
@@ -161,3 +160,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSFontSelector)
+    static bool isType(const WebCore::FontSelector& selector) { return selector.isCSSFontSelector(); }
+SPECIALIZE_TYPE_TRAITS_END()

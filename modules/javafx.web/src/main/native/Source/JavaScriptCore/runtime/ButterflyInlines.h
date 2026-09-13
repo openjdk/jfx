@@ -25,11 +25,13 @@
 
 #pragma once
 
-#include "ArrayStorageInlines.h"
-#include "Butterfly.h"
-#include "JSObject.h"
-#include "Structure.h"
-#include "VM.h"
+#include <JavaScriptCore/ArrayStorageInlines.h>
+#include <JavaScriptCore/Butterfly.h>
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/Structure.h>
+#include <JavaScriptCore/VM.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -77,8 +79,8 @@ ALWAYS_INLINE unsigned Butterfly::optimalContiguousVectorLength(Structure* struc
 inline Butterfly* Butterfly::tryCreateUninitialized(VM& vm, JSObject*, size_t preCapacity, size_t propertyCapacity, bool hasIndexingHeader, size_t indexingPayloadSizeInBytes, GCDeferralContext* deferralContext)
 {
     size_t size = totalSize(preCapacity, propertyCapacity, hasIndexingHeader, indexingPayloadSizeInBytes);
-    void* base = vm.jsValueGigacageAuxiliarySpace().allocate(vm, size, deferralContext, AllocationFailureMode::ReturnNull);
-    if (UNLIKELY(!base))
+    void* base = vm.auxiliarySpace().allocate(vm, size, deferralContext, AllocationFailureMode::ReturnNull);
+    if (!base) [[unlikely]]
         return nullptr;
 
     Butterfly* result = fromBase(base, preCapacity, propertyCapacity);
@@ -89,7 +91,7 @@ inline Butterfly* Butterfly::tryCreateUninitialized(VM& vm, JSObject*, size_t pr
 inline Butterfly* Butterfly::createUninitialized(VM& vm, JSObject*, size_t preCapacity, size_t propertyCapacity, bool hasIndexingHeader, size_t indexingPayloadSizeInBytes)
 {
     size_t size = totalSize(preCapacity, propertyCapacity, hasIndexingHeader, indexingPayloadSizeInBytes);
-    void* base = vm.jsValueGigacageAuxiliarySpace().allocate(vm, size, nullptr, AllocationFailureMode::Assert);
+    void* base = vm.auxiliarySpace().allocate(vm, size, nullptr, AllocationFailureMode::Assert);
     Butterfly* result = fromBase(base, preCapacity, propertyCapacity);
 
     return result;
@@ -98,13 +100,14 @@ inline Butterfly* Butterfly::createUninitialized(VM& vm, JSObject*, size_t preCa
 inline Butterfly* Butterfly::tryCreate(VM& vm, JSObject*, size_t preCapacity, size_t propertyCapacity, bool hasIndexingHeader, const IndexingHeader& indexingHeader, size_t indexingPayloadSizeInBytes)
 {
     size_t size = totalSize(preCapacity, propertyCapacity, hasIndexingHeader, indexingPayloadSizeInBytes);
-    void* base = vm.jsValueGigacageAuxiliarySpace().allocate(vm, size, nullptr, AllocationFailureMode::ReturnNull);
+    void* base = vm.auxiliarySpace().allocate(vm, size, nullptr, AllocationFailureMode::ReturnNull);
     if (!base)
         return nullptr;
     Butterfly* result = fromBase(base, preCapacity, propertyCapacity);
     if (hasIndexingHeader)
         *result->indexingHeader() = indexingHeader;
-    gcSafeZeroMemory(result->propertyStorage() - propertyCapacity, propertyCapacity * sizeof(EncodedJSValue));
+    // Use memcpy since this butterfly is not tied to any object yet.
+    memset(result->propertyStorage() - propertyCapacity, 0, propertyCapacity * sizeof(EncodedJSValue));
     return result;
 }
 
@@ -139,13 +142,12 @@ inline Butterfly* Butterfly::createOrGrowPropertyStorage(
     size_t indexingPayloadSizeInBytes = oldButterfly->indexingHeader()->indexingPayloadSizeInBytes(structure);
     bool hasIndexingHeader = structure->hasIndexingHeader(intendedOwner);
     Butterfly* result = createUninitialized(vm, intendedOwner, preCapacity, newPropertyCapacity, hasIndexingHeader, indexingPayloadSizeInBytes);
-    gcSafeMemcpy(
+    // Use memcpy since this butterfly is not tied to any object yet.
+    memcpy(
         result->propertyStorage() - oldPropertyCapacity,
         oldButterfly->propertyStorage() - oldPropertyCapacity,
         totalSize(0, oldPropertyCapacity, hasIndexingHeader, indexingPayloadSizeInBytes));
-    gcSafeZeroMemory(
-        result->propertyStorage() - newPropertyCapacity,
-        (newPropertyCapacity - oldPropertyCapacity) * sizeof(EncodedJSValue));
+    memset(result->propertyStorage() - newPropertyCapacity, 0, (newPropertyCapacity - oldPropertyCapacity) * sizeof(EncodedJSValue));
     return result;
 }
 
@@ -174,11 +176,11 @@ inline Butterfly* Butterfly::growArrayRight(
     void* theBase = base(0, propertyCapacity);
     size_t oldSize = totalSize(0, propertyCapacity, hadIndexingHeader, oldIndexingPayloadSizeInBytes);
     size_t newSize = totalSize(0, propertyCapacity, true, newIndexingPayloadSizeInBytes);
-    void* newBase = vm.jsValueGigacageAuxiliarySpace().allocate(vm, newSize, nullptr, AllocationFailureMode::ReturnNull);
+    void* newBase = vm.auxiliarySpace().allocate(vm, newSize, nullptr, AllocationFailureMode::ReturnNull);
     if (!newBase)
         return nullptr;
-    // FIXME: This probably shouldn't be a memcpy.
-    gcSafeMemcpy(static_cast<JSValue*>(newBase), static_cast<JSValue*>(theBase), oldSize);
+    // Use memcpy since this butterfly is not tied to any object yet.
+    memcpy(static_cast<JSValue*>(newBase), static_cast<JSValue*>(theBase), oldSize);
     return fromBase(newBase, 0, propertyCapacity);
 }
 
@@ -209,18 +211,19 @@ inline Butterfly* Butterfly::reallocArrayRightIfPossible(
     // We can eagerly destroy butterfly backed by PreciseAllocation if (1) concurrent collector is not active and (2) the butterfly does not contain any property storage.
     // This is because during deallocation concurrent collector can access butterfly and DFG concurrent compilers accesses properties.
     // Objects with no properties are common in arrays, and we are focusing on very large array crafted by repeating Array#push, so... that's fine!
-    bool canRealloc = !propertyCapacity && !vm.heap.mutatorShouldBeFenced() && bitwise_cast<HeapCell*>(theBase)->isPreciseAllocation();
+    bool canRealloc = !propertyCapacity && !vm.heap.mutatorShouldBeFenced() && std::bit_cast<HeapCell*>(theBase)->isPreciseAllocation();
     if (canRealloc) {
-        void* newBase = vm.jsValueGigacageAuxiliarySpace().reallocatePreciseAllocationNonVirtual(vm, bitwise_cast<HeapCell*>(theBase), newSize, &deferralContext, AllocationFailureMode::ReturnNull);
+        void* newBase = vm.auxiliarySpace().reallocatePreciseAllocationNonVirtual(vm, std::bit_cast<HeapCell*>(theBase), newSize, &deferralContext, AllocationFailureMode::ReturnNull);
         if (!newBase)
             return nullptr;
         return fromBase(newBase, 0, propertyCapacity);
     }
 
-    void* newBase = vm.jsValueGigacageAuxiliarySpace().allocate(vm, newSize, &deferralContext, AllocationFailureMode::ReturnNull);
+    void* newBase = vm.auxiliarySpace().allocate(vm, newSize, &deferralContext, AllocationFailureMode::ReturnNull);
     if (!newBase)
         return nullptr;
-    gcSafeMemcpy(static_cast<JSValue*>(newBase), static_cast<JSValue*>(theBase), oldSize);
+    // Use memcpy since this butterfly is not tied to any object yet.
+    memcpy(static_cast<JSValue*>(newBase), static_cast<JSValue*>(theBase), oldSize);
     return fromBase(newBase, 0, propertyCapacity);
 }
 
@@ -237,7 +240,8 @@ inline Butterfly* Butterfly::resizeArray(
     size_t size = std::min(
         totalSize(0, propertyCapacity, oldHasIndexingHeader, oldIndexingPayloadSizeInBytes),
         totalSize(0, propertyCapacity, newHasIndexingHeader, newIndexingPayloadSizeInBytes));
-    gcSafeMemcpy(static_cast<JSValue*>(to), static_cast<JSValue*>(from), size);
+    // Use memcpy since this butterfly is not tied to any object yet.
+    memcpy(static_cast<JSValue*>(to), static_cast<JSValue*>(from), size);
     return result;
 }
 
@@ -283,4 +287,32 @@ inline Butterfly* Butterfly::shift(Structure* structure, size_t numberOfSlots)
     return IndexingHeader::fromEndOf(propertyStorage() + numberOfSlots)->butterfly();
 }
 
+ALWAYS_INLINE void Butterfly::clearRange(IndexingType indexingType, Butterfly* butterfly, unsigned start, unsigned end)
+{
+    ASSERT(end >= start);
+
+    if (size_t remaining = end - start) {
+        // 32-bit, non-Darwin builds don't use `remaining`.
+        UNUSED_VARIABLE(remaining);
+        if (hasDouble(indexingType)) {
+#if OS(DARWIN)
+            constexpr double pattern = PNaN;
+            memset_pattern8(static_cast<void*>(butterfly->contiguous().data() + start), &pattern, sizeof(double) * remaining);
+#else
+            for (unsigned i = start; i < end; ++i)
+                butterfly->contiguousDouble().atUnsafe(i) = PNaN;
+#endif
+        } else {
+#if USE(JSVALUE64)
+            memset(static_cast<void*>(butterfly->contiguous().data() + start), 0, sizeof(JSValue) * remaining);
+#else
+            for (unsigned i = start; i < end; ++i)
+                butterfly->contiguous().atUnsafe(i).clear();
+#endif
+        }
+    }
+}
+
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

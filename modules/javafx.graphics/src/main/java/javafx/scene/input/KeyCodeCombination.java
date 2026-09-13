@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,9 +31,9 @@ import javafx.beans.NamedArg;
 // PENDING_DOC_REVIEW
 /**
  * This class represents a key combination in which the main key is specified
- * by its {@code KeyCode}. Such key combination is independent on the keyboard
- * functional layout configured by the user at the time of key combination
- * matching.
+ * by its {@link KeyCode}. This is the recommended way to specify a shortcut
+ * that does not involve a symbol or punctuation (for such a shortcut a
+ * {@link KeyCharacterCombination} is preferred).
  * @since JavaFX 2.0
  */
 public final class KeyCodeCombination extends KeyCombination {

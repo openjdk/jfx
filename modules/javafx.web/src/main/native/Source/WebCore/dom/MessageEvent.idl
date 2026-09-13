@@ -26,11 +26,7 @@
  *
  */
 
-#if defined(ENABLE_SERVICE_WORKER) && ENABLE_SERVICE_WORKER
 typedef (WindowProxy or MessagePort or ServiceWorker) MessageEventSource;
-#else
-typedef (WindowProxy or MessagePort) MessageEventSource;
-#endif
 
 [
     Exposed=(Window,Worker,AudioWorklet),
@@ -50,7 +46,9 @@ typedef (WindowProxy or MessagePort) MessageEventSource;
         optional sequence<MessagePort> messagePorts = []);
 };
 
-dictionary MessageEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary MessageEventInit : EventInit {
     any data = null;
     USVString origin = "";
     DOMString lastEventId = "";

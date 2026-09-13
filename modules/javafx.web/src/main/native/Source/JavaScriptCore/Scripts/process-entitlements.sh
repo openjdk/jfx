@@ -12,38 +12,52 @@ function plistbuddy()
 function mac_process_jsc_entitlements()
 {
     plistbuddy Add :com.apple.security.cs.allow-jit bool YES
+    plistbuddy Add :com.apple.security.fatal-exceptions array
+    plistbuddy Add :com.apple.security.fatal-exceptions:0 string jit
+
     if [[ "${WK_USE_RESTRICTED_ENTITLEMENTS}" == YES ]]
     then
+        plistbuddy Add :com.apple.private.pac.exception bool YES
+
         if (( "${TARGET_MAC_OS_X_VERSION_MAJOR}" >= 110000 ))
         then
             plistbuddy Add :com.apple.security.cs.jit-write-allowlist bool YES
+            plistbuddy Add :com.apple.developer.kernel.extended-virtual-addressing bool YES
         fi
 
-        if (( "${TARGET_MAC_OS_X_VERSION_MAJOR}" >= 120000 ))
+        if (( "${TARGET_MAC_OS_X_VERSION_MAJOR}" >= 120000 )) && [[ -z "${SKIP_ROSETTA_BREAKING_ENTITLEMENTS}" ]]
         then
             plistbuddy Add :com.apple.private.verified-jit bool YES
             plistbuddy Add :com.apple.security.cs.single-jit bool YES
         fi
+
+        plistbuddy Add :com.apple.developer.hardened-process bool YES
     fi
 }
 
 function mac_process_testapi_entitlements()
 {
+    plistbuddy Add :com.apple.security.fatal-exceptions array
+    plistbuddy Add :com.apple.security.fatal-exceptions:0 string jit
     if [[ "${WK_USE_RESTRICTED_ENTITLEMENTS}" == YES ]]
     then
+        plistbuddy Add :com.apple.private.pac.exception bool YES
         plistbuddy Add :com.apple.security.cs.allow-jit bool YES
         plistbuddy Add :com.apple.rootless.storage.JavaScriptCore bool YES
 
         if (( "${TARGET_MAC_OS_X_VERSION_MAJOR}" >= 110000 ))
         then
             plistbuddy Add :com.apple.security.cs.jit-write-allowlist bool YES
+            plistbuddy Add :com.apple.developer.kernel.extended-virtual-addressing bool YES
         fi
 
-        if (( "${TARGET_MAC_OS_X_VERSION_MAJOR}" >= 120000 ))
+        if (( "${TARGET_MAC_OS_X_VERSION_MAJOR}" >= 120000 )) && [[ -z "${SKIP_ROSETTA_BREAKING_ENTITLEMENTS}" ]]
         then
             plistbuddy Add :com.apple.private.verified-jit bool YES
             plistbuddy Add :com.apple.security.cs.single-jit bool YES
         fi
+
+        plistbuddy Add :com.apple.developer.hardened-process bool YES
     fi
 }
 
@@ -54,16 +68,22 @@ function mac_process_testapi_entitlements()
 function maccatalyst_process_jsc_entitlements()
 {
     plistbuddy Add :com.apple.security.cs.allow-jit bool YES
+    plistbuddy Add :com.apple.security.fatal-exceptions array
+    plistbuddy Add :com.apple.security.fatal-exceptions:0 string jit
 
     if [[ "${WK_USE_RESTRICTED_ENTITLEMENTS}" == YES ]]
     then
+        plistbuddy Add :com.apple.private.pac.exception bool YES
         if (( "${TARGET_MAC_OS_X_VERSION_MAJOR}" >= 110000 ))
         then
             plistbuddy Add :com.apple.security.cs.jit-write-allowlist bool YES
+            plistbuddy Add :com.apple.developer.kernel.extended-virtual-addressing bool YES
         fi
+
+        plistbuddy Add :com.apple.developer.hardened-process bool YES
     fi
 
-    if (( "${TARGET_MAC_OS_X_VERSION_MAJOR}" >= 120000 ))
+    if (( "${TARGET_MAC_OS_X_VERSION_MAJOR}" >= 120000 )) && [[ -z "${SKIP_ROSETTA_BREAKING_ENTITLEMENTS}" ]]
     then
         plistbuddy Add :com.apple.private.verified-jit bool YES
         plistbuddy Add :com.apple.security.cs.single-jit bool YES
@@ -74,13 +94,22 @@ function maccatalyst_process_testapi_entitlements()
 {
     plistbuddy Add :com.apple.rootless.storage.JavaScriptCore bool YES
     plistbuddy Add :com.apple.security.cs.allow-jit bool YES
+    plistbuddy Add :com.apple.security.fatal-exceptions array
+    plistbuddy Add :com.apple.security.fatal-exceptions:0 string jit
+
+    if [[ "${WK_USE_RESTRICTED_ENTITLEMENTS}" == YES ]]
+    then
+        plistbuddy Add :com.apple.private.pac.exception bool YES
+        plistbuddy Add :com.apple.developer.hardened-process bool YES
+    fi
 
     if (( "${TARGET_MAC_OS_X_VERSION_MAJOR}" >= 110000 ))
     then
         plistbuddy Add :com.apple.security.cs.jit-write-allowlist bool YES
+        plistbuddy Add :com.apple.developer.kernel.extended-virtual-addressing bool YES
     fi
 
-    if (( "${TARGET_MAC_OS_X_VERSION_MAJOR}" >= 120000 ))
+    if (( "${TARGET_MAC_OS_X_VERSION_MAJOR}" >= 120000 )) && [[ -z "${SKIP_ROSETTA_BREAKING_ENTITLEMENTS}" ]]
     then
         plistbuddy Add :com.apple.private.verified-jit bool YES
         plistbuddy Add :com.apple.security.cs.single-jit bool YES
@@ -93,13 +122,26 @@ function maccatalyst_process_testapi_entitlements()
 
 function ios_family_process_jsc_entitlements()
 {
+    plistbuddy Add :com.apple.private.pac.exception bool YES
+    # If you update this, make sure to update jsc.cpp:3973 (or somewhere around there) to
+    # ensure that `Options::crashIfCantAllocateJITMemory` is disabled on non-JIT platforms
+    if [[ "${PLATFORM_NAME}" != watchos && "${PLATFORM_NAME}" != appletvos ]]; then
     plistbuddy Add :com.apple.private.verified-jit bool YES
+        if [[ "${PLATFORM_NAME}" == iphoneos ]]; then
+            if (( $(( ${SDK_VERSION_ACTUAL} )) >= 170400 )); then
+                plistbuddy Add :com.apple.developer.cs.allow-jit bool YES
+                plistbuddy Add :com.apple.developer.web-browser-engine.webcontent bool YES
+            else
     plistbuddy Add :dynamic-codesigning bool YES
-}
-
-function ios_family_process_testapi_entitlements()
-{
-    ios_family_process_jsc_entitlements
+            fi
+        else
+            plistbuddy Add :dynamic-codesigning bool YES
+        fi
+    fi
+    plistbuddy Add :com.apple.developer.kernel.extended-virtual-addressing bool YES
+    plistbuddy Add :com.apple.security.fatal-exceptions array
+    plistbuddy Add :com.apple.security.fatal-exceptions:0 string jit
+    plistbuddy Add :com.apple.developer.hardened-process bool YES
 }
 
 rm -f "${WK_PROCESSED_XCENT_FILE}"
@@ -110,7 +152,7 @@ then
     [[ "${RC_XBS}" != YES ]] && plistbuddy Add :com.apple.security.get-task-allow bool YES
 elif [[ "${WK_PLATFORM_NAME}" == macosx ]]
 then
-    [[ "${RC_XBS}" != YES ]] && plistbuddy Add :com.apple.security.get-task-allow bool YES
+    [[ "${RC_XBS}" != YES ]] && [[ "${WK_USE_RESTRICTED_ENTITLEMENTS}" == YES ]] && plistbuddy Add :com.apple.security.get-task-allow bool YES
 
     if [[ "${PRODUCT_NAME}" == jsc ||
           "${PRODUCT_NAME}" == dynbench ||
@@ -142,18 +184,19 @@ then
     fi
 elif [[ "${WK_PLATFORM_NAME}" == iphoneos ||
         "${WK_PLATFORM_NAME}" == appletvos ||
-        "${WK_PLATFORM_NAME}" == watchos ]]
+        "${WK_PLATFORM_NAME}" == watchos ||
+        "${WK_PLATFORM_NAME}" == xros ]]
 then
     if [[ "${PRODUCT_NAME}" == jsc ||
           "${PRODUCT_NAME}" == dynbench ||
           "${PRODUCT_NAME}" == minidom ||
+          "${PRODUCT_NAME}" == testapi ||
           "${PRODUCT_NAME}" == testair ||
           "${PRODUCT_NAME}" == testb3 ||
           "${PRODUCT_NAME}" == testdfg ||
           "${PRODUCT_NAME}" == testmasm ||
           "${PRODUCT_NAME}" == testmem ||
           "${PRODUCT_NAME}" == testRegExp ]]; then ios_family_process_jsc_entitlements
-    elif [[ "${PRODUCT_NAME}" == testapi ]]; then ios_family_process_testapi_entitlements
     else echo "Unsupported/unknown product: ${PRODUCT_NAME}"
     fi
 else

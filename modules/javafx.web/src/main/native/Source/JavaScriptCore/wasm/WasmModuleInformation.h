@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,19 +25,26 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY)
 
-#include "WasmBranchHints.h"
-#include "WasmFormat.h"
+#include <JavaScriptCore/WasmBranchHints.h>
+#include <JavaScriptCore/WasmFormat.h>
+#include <JavaScriptCore/WasmModuleDebugInfo.h>
 
 #include <wtf/FixedBitVector.h>
 #include <wtf/HashMap.h>
 
-namespace JSC { namespace Wasm {
+namespace JSC {
 
-struct ModuleInformation : public ThreadSafeRefCounted<ModuleInformation> {
+class WebAssemblyCompileOptions;
 
-    using BranchHints = HashMap<uint32_t, BranchHintMap, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>;
+namespace Wasm {
+
+struct ModuleInformation final : public ThreadSafeRefCounted<ModuleInformation> {
+
+    using BranchHints = UncheckedKeyHashMap<uint32_t, BranchHintMap, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>;
 
     ModuleInformation();
     ModuleInformation(const ModuleInformation&) = delete;
@@ -51,12 +58,12 @@ struct ModuleInformation : public ThreadSafeRefCounted<ModuleInformation> {
     JS_EXPORT_PRIVATE ~ModuleInformation();
 
     size_t functionIndexSpaceSize() const { return importFunctionTypeIndices.size() + internalFunctionTypeIndices.size(); }
-    bool isImportedFunctionFromFunctionIndexSpace(size_t functionIndex) const
+    bool isImportedFunctionFromFunctionIndexSpace(FunctionSpaceIndex functionIndex) const
     {
         ASSERT(functionIndex < functionIndexSpaceSize());
         return functionIndex < importFunctionTypeIndices.size();
     }
-    TypeIndex typeIndexFromFunctionIndexSpace(size_t functionIndex) const
+    TypeIndex typeIndexFromFunctionIndexSpace(FunctionSpaceIndex functionIndex) const
     {
         return isImportedFunctionFromFunctionIndexSpace(functionIndex)
             ? importFunctionTypeIndices[functionIndex]
@@ -81,8 +88,11 @@ struct ModuleInformation : public ThreadSafeRefCounted<ModuleInformation> {
     uint32_t importExceptionCount() const { return importExceptionTypeIndices.size(); }
     uint32_t internalExceptionCount() const { return internalExceptionTypeIndices.size(); }
 
-    // Currently, our wasm implementation allows only one memory and table.
-    // If we need to remove this limitation, we would have MemoryInformation and TableInformation in the Vectors.
+    FunctionCodeIndex toCodeIndex(FunctionSpaceIndex index) const { ASSERT(importFunctionCount() <= index && index < functionIndexSpaceSize()); return FunctionCodeIndex(index - importFunctionCount()); }
+    FunctionSpaceIndex toSpaceIndex(FunctionCodeIndex index) const { ASSERT(index < internalFunctionCount()); return FunctionSpaceIndex(index + importFunctionCount()); }
+
+    // Currently, our wasm implementation allows only one memory.
+    // If we need to remove this limitation, we would have MemoryInformation in the Vectors.
     uint32_t memoryCount() const { return memory ? 1 : 0; }
     uint32_t tableCount() const { return tables.size(); }
     uint32_t elementCount() const { return elements.size(); }
@@ -90,6 +100,7 @@ struct ModuleInformation : public ThreadSafeRefCounted<ModuleInformation> {
     uint32_t dataSegmentsCount() const { return numberOfDataSegments.value_or(0); }
 
     const TableInformation& table(unsigned index) const { return tables[index]; }
+    const GlobalInformation& global(unsigned index) const { return globals[index]; }
 
     void initializeFunctionTrackers() const
     {
@@ -99,22 +110,18 @@ struct ModuleInformation : public ThreadSafeRefCounted<ModuleInformation> {
     }
 
     const FixedBitVector& referencedFunctions() const { return m_referencedFunctions; }
-    bool hasReferencedFunction(unsigned functionIndexSpace) const { return m_referencedFunctions.test(functionIndexSpace); }
-    void addReferencedFunction(unsigned functionIndexSpace) const { m_referencedFunctions.concurrentTestAndSet(functionIndexSpace); }
+    bool hasReferencedFunction(FunctionSpaceIndex functionIndexSpace) const { return m_referencedFunctions.test(functionIndexSpace); }
+    void addReferencedFunction(FunctionSpaceIndex functionIndexSpace) const { m_referencedFunctions.concurrentTestAndSet(functionIndexSpace); }
 
-    bool isDeclaredFunction(uint32_t index) const { return m_declaredFunctions.contains(index); }
-    void addDeclaredFunction(uint32_t index) { m_declaredFunctions.set(index); }
+    bool isDeclaredFunction(FunctionSpaceIndex index) const { return m_declaredFunctions.contains(index); }
+    void addDeclaredFunction(FunctionSpaceIndex index) { m_declaredFunctions.set(index); }
 
     bool isDeclaredException(uint32_t index) const { return m_declaredExceptions.contains(index); }
     void addDeclaredException(uint32_t index) { m_declaredExceptions.set(index); }
 
-    size_t functionWasmSizeImportSpace(uint32_t index) const
-    {
-        ASSERT(index >= importFunctionCount());
-        return functionWasmSize(index - importFunctionCount());
-    }
+    size_t functionWasmSizeImportSpace(FunctionSpaceIndex index) const { return functionWasmSize(toCodeIndex(index)); }
 
-    size_t functionWasmSize(uint32_t index) const
+    size_t functionWasmSize(FunctionCodeIndex index) const
     {
         ASSERT(index < internalFunctionCount());
         ASSERT(functions[index].finishedValidating);
@@ -123,38 +130,33 @@ struct ModuleInformation : public ThreadSafeRefCounted<ModuleInformation> {
         return size;
     }
 
-    bool usesSIMDImportSpace(uint32_t index) const
-    {
-        ASSERT(index >= importFunctionCount());
-        return usesSIMD(index - importFunctionCount());
-    }
-
-    bool usesSIMD(uint32_t index) const
+    bool usesSIMDImportSpace(FunctionSpaceIndex index) const { return usesSIMD(toCodeIndex(index)); }
+    bool usesSIMD(FunctionCodeIndex index) const
     {
         ASSERT(index < internalFunctionCount());
         ASSERT(functions[index].finishedValidating);
 
         // See also: B3Procedure::usesSIMD().
-        if (!Options::useWebAssemblySIMD())
+        if (!Options::useWasmSIMD())
             return false;
         if (Options::forceAllFunctionsToUseSIMD())
             return true;
-        // The LLInt discovers this value.
-        ASSERT(Options::useWasmLLInt());
+        ASSERT(Options::useWasmIPInt());
 
         return functions[index].usesSIMD;
     }
-    void markUsesSIMD(uint32_t index) { ASSERT(index < internalFunctionCount()); ASSERT(!functions[index].finishedValidating); functions[index].usesSIMD = true; }
+    void markUsesSIMD(FunctionCodeIndex index) { ASSERT(index < internalFunctionCount()); ASSERT(!functions[index].finishedValidating); functions[index].usesSIMD = true; }
 
-    bool usesExceptions(uint32_t index) const { ASSERT(index < internalFunctionCount()); ASSERT(functions[index].finishedValidating); return functions[index].usesExceptions; }
-    void markUsesExceptions(uint32_t index) { ASSERT(index < internalFunctionCount()); ASSERT(!functions[index].finishedValidating); functions[index].usesExceptions = true; }
-    bool usesAtomics(uint32_t index) const { ASSERT(index < internalFunctionCount()); ASSERT(functions[index].finishedValidating); return functions[index].usesAtomics; }
-    void markUsesAtomics(uint32_t index) { ASSERT(index < internalFunctionCount()); ASSERT(!functions[index].finishedValidating); functions[index].usesAtomics = true; }
+    bool usesExceptions(FunctionCodeIndex index) const { ASSERT(index < internalFunctionCount()); ASSERT(functions[index].finishedValidating); return functions[index].usesExceptions; }
+    void markUsesExceptions(FunctionCodeIndex index) { ASSERT(index < internalFunctionCount()); ASSERT(!functions[index].finishedValidating); functions[index].usesExceptions = true; }
+    bool usesAtomics(FunctionCodeIndex index) const { ASSERT(index < internalFunctionCount()); ASSERT(functions[index].finishedValidating); return functions[index].usesAtomics; }
+    void markUsesAtomics(FunctionCodeIndex index) { ASSERT(index < internalFunctionCount()); ASSERT(!functions[index].finishedValidating); functions[index].usesAtomics = true; }
 
-    void doneSeeingFunction(uint32_t index) { ASSERT(index < internalFunctionCount()); ASSERT(!functions[index].finishedValidating); functions[index].finishedValidating = true; }
+    void doneSeeingFunction(FunctionCodeIndex index) { ASSERT(index < internalFunctionCount()); ASSERT(!functions[index].finishedValidating); functions[index].finishedValidating = true; }
 
     uint32_t typeCount() const { return typeSignatures.size(); }
 
+    bool hasGCObjectTypes() const { return m_hasGCObjectTypes; }
     bool hasMemoryImport() const { return memory.isImport(); }
 
     BranchHint getBranchHint(uint32_t functionOffset, uint32_t branchOffset) const
@@ -165,39 +167,76 @@ struct ModuleInformation : public ThreadSafeRefCounted<ModuleInformation> {
             : it->value.getBranchHint(branchOffset);
     }
 
+    // FIXME: This should probably be FunctionCodeIndex as calling an import always clobbers the instance.
     const FixedBitVector& clobberingTailCalls() const { return m_clobberingTailCalls; }
-    bool callCanClobberInstance(uint32_t functionIndexSpace) const { return m_clobberingTailCalls.test(functionIndexSpace); }
-    void addClobberingTailCall(uint32_t functionIndexSpace) { m_clobberingTailCalls.concurrentTestAndSet(functionIndexSpace); }
+    bool callCanClobberInstance(FunctionSpaceIndex functionIndexSpace) const { return m_clobberingTailCalls.test(functionIndexSpace); }
+    void addClobberingTailCall(FunctionSpaceIndex functionIndexSpace) { m_clobberingTailCalls.concurrentTestAndSet(functionIndexSpace); }
 
+    void setTotalFunctionSize(size_t totalFunctionSize)
+    {
+        m_totalFunctionSize = totalFunctionSize;
+    }
+    size_t totalFunctionSize() const { return m_totalFunctionSize; }
+
+    void applyCompileOptions(const WebAssemblyCompileOptions&);
+    bool importedStringConstantsEquals(const String& expected) const { return m_importedStringConstants && m_importedStringConstants.value() == expected; }
+    bool builtinSetsInclude(const String& qualifiedName) const { return m_qualifiedBuiltinSetNames.contains(qualifiedName); }
+
+    // nameSection is read from compiler threads (lock-free via atomic pointer)
+    // and written from the main thread when the custom "name" section is parsed.
+    NameSection& nameSection() const { return *m_nameSectionPtr.load(std::memory_order_acquire); }
+    void setNameSection(Ref<NameSection>&&);
+
+    // FIXME: These should probably be FixedVectors.
     Vector<Import> imports;
+    FixedBitVector importShouldBeHidden; // filter imports[i] from the result of Module.imports(moduleObject)
     Vector<TypeIndex> importFunctionTypeIndices;
     Vector<TypeIndex> internalFunctionTypeIndices;
     Vector<TypeIndex> importExceptionTypeIndices;
     Vector<TypeIndex> internalExceptionTypeIndices;
     Vector<Ref<TypeDefinition>> typeSignatures;
+    Vector<Ref<TypeDefinition>> recursionGroups;
 
     MemoryInformation memory;
+    bool m_hasGCObjectTypes { false };
+    mutable Atomic<bool> m_usesLegacyExceptions { false };
+    mutable Atomic<bool> m_usesModernExceptions { false };
 
     Vector<FunctionData> functions;
 
     Vector<Export> exports;
     std::optional<uint32_t> startFunctionIndexSpace;
-    Vector<Segment::Ptr> data;
+    Vector<std::unique_ptr<Segment>> data;
     Vector<Element> elements;
     Vector<TableInformation> tables;
     Vector<GlobalInformation> globals;
     unsigned firstInternalGlobal { 0 };
     uint32_t codeSectionSize { 0 };
     Vector<CustomSection> customSections;
-    Ref<NameSection> nameSection;
     BranchHints branchHints;
     std::optional<uint32_t> numberOfDataSegments;
-    Vector<RefPtr<const RTT>> rtts;
+    Vector<Ref<const RTT>> rtts;
+    using ConstantExpressionAndSourceOffset = std::pair<Vector<uint8_t>, size_t>;
+    Vector<ConstantExpressionAndSourceOffset> constantExpressions;
+    Name sourceMappingURL;
+    std::unique_ptr<Wasm::ModuleDebugInfo> debugInfo;
 
     BitVector m_declaredFunctions;
     BitVector m_declaredExceptions;
     mutable FixedBitVector m_referencedFunctions;
     mutable FixedBitVector m_clobberingTailCalls;
+    size_t m_totalFunctionSize { 0 };
+    uint32_t m_numSmallFunctions { 0 };
+
+private:
+    void populateImportShouldBeHidden();
+
+    std::optional<String> m_importedStringConstants;
+    Vector<String> m_qualifiedBuiltinSetNames;
+    Ref<NameSection> m_nameSection;
+    RefPtr<NameSection> m_retiredNameSection;
+    std::atomic<NameSection*> m_nameSectionPtr { nullptr };
+    bool m_hasCustomNameSection { false };
 };
 
 

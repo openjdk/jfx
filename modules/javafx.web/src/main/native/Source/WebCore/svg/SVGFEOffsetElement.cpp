@@ -24,24 +24,27 @@
 
 #include "FEOffset.h"
 #include "NodeName.h"
+#include "SVGFilterRenderer.h"
 #include "SVGNames.h"
-#include <wtf/IsoMallocInlines.h>
+#include "SVGPropertyOwnerRegistry.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGFEOffsetElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGFEOffsetElement);
 
 inline SVGFEOffsetElement::SVGFEOffsetElement(const QualifiedName& tagName, Document& document)
     : SVGFilterPrimitiveStandardAttributes(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::feOffsetTag));
 
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::inAttr, &SVGFEOffsetElement::m_in1>();
         PropertyRegistry::registerProperty<SVGNames::dxAttr, &SVGFEOffsetElement::m_dx>();
         PropertyRegistry::registerProperty<SVGNames::dyAttr, &SVGFEOffsetElement::m_dy>();
-    });
+    }
 }
 
 Ref<SVGFEOffsetElement> SVGFEOffsetElement::create(const QualifiedName& tagName, Document& document)
@@ -53,13 +56,13 @@ void SVGFEOffsetElement::attributeChanged(const QualifiedName& name, const AtomS
 {
     switch (name.nodeName()) {
     case AttributeNames::dxAttr:
-        m_dx->setBaseValInternal(newValue.toFloat());
+        Ref { m_dx }->setBaseValInternal(newValue.toFloat());
         break;
     case AttributeNames::dyAttr:
-        m_dy->setBaseValInternal(newValue.toFloat());
+        Ref { m_dy }->setBaseValInternal(newValue.toFloat());
         break;
     case AttributeNames::inAttr:
-        m_in1->setBaseValInternal(newValue);
+        Ref { m_in1 }->setBaseValInternal(newValue);
         break;
     default:
         break;
@@ -108,7 +111,7 @@ bool SVGFEOffsetElement::isIdentity() const
 
 IntOutsets SVGFEOffsetElement::outsets(const FloatRect& targetBoundingBox, SVGUnitTypes::SVGUnitType primitiveUnits) const
 {
-    auto offset = SVGFilter::calculateResolvedSize({ dx(), dy() }, targetBoundingBox, primitiveUnits);
+    auto offset = SVGFilterRenderer::calculateResolvedSize({ dx(), dy() }, targetBoundingBox, primitiveUnits);
     return FEOffset::calculateOutsets(offset);
 }
 

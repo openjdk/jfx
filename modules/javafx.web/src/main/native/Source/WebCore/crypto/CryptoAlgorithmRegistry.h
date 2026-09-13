@@ -33,14 +33,13 @@
 #include <wtf/text/StringHash.h>
 
 #if ENABLE(WEB_CRYPTO)
-
 namespace WebCore {
 
 class CryptoAlgorithm;
 
 class CryptoAlgorithmRegistry {
     WTF_MAKE_NONCOPYABLE(CryptoAlgorithmRegistry);
-    friend class LazyNeverDestroyed<CryptoAlgorithmRegistry>;
+    friend class NeverDestroyed<CryptoAlgorithmRegistry>;
 
 public:
     static CryptoAlgorithmRegistry& singleton();
@@ -69,5 +68,4 @@ private:
 };
 
 } // namespace WebCore
-
 #endif // ENABLE(WEB_CRYPTO)

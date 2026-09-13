@@ -35,6 +35,7 @@
 #include "CBORValue.h"
 #include "CBORWriter.h"
 #include "WebAuthenticationConstants.h"
+#include "WebAuthenticationUtils.h"
 
 namespace fido {
 
@@ -44,12 +45,12 @@ cbor::CBORValue toArrayValue(const Container& container)
     auto value = WTF::map(container, [](auto& item) {
         return cbor::CBORValue(item);
     });
-    return cbor::CBORValue(WTFMove(value));
+    return cbor::CBORValue(WTF::move(value));
 }
 
 AuthenticatorGetInfoResponse::AuthenticatorGetInfoResponse(StdSet<ProtocolVersion>&& versions, Vector<uint8_t>&& aaguid)
-    : m_versions(WTFMove(versions))
-    , m_aaguid(WTFMove(aaguid))
+    : m_versions(WTF::move(versions))
+    , m_aaguid(WTF::move(aaguid))
 {
 }
 
@@ -59,56 +60,52 @@ AuthenticatorGetInfoResponse& AuthenticatorGetInfoResponse::setMaxMsgSize(uint32
     return *this;
 }
 
-AuthenticatorGetInfoResponse& AuthenticatorGetInfoResponse::setPinProtocols(Vector<uint8_t>&& pinProtocols)
+AuthenticatorGetInfoResponse& AuthenticatorGetInfoResponse::setPinProtocols(StdSet<PINUVAuthProtocol>&& pinProtocols)
 {
-    m_pinProtocols = WTFMove(pinProtocols);
+    m_pinProtocols = WTF::move(pinProtocols);
     return *this;
 }
 
 AuthenticatorGetInfoResponse& AuthenticatorGetInfoResponse::setExtensions(Vector<String>&& extensions)
 {
-    m_extensions = WTFMove(extensions);
+    m_extensions = WTF::move(extensions);
     return *this;
 }
 
 AuthenticatorGetInfoResponse& AuthenticatorGetInfoResponse::setOptions(AuthenticatorSupportedOptions&& options)
 {
-    m_options = WTFMove(options);
+    m_options = WTF::move(options);
     return *this;
 }
 
 AuthenticatorGetInfoResponse& AuthenticatorGetInfoResponse::setTransports(Vector<WebCore::AuthenticatorTransport>&& transports)
 {
-    m_transports = WTFMove(transports);
+    m_transports = WTF::move(transports);
     return *this;
 }
 
-static String toString(WebCore::AuthenticatorTransport transport)
+AuthenticatorGetInfoResponse& AuthenticatorGetInfoResponse::setRemainingDiscoverableCredentials(uint32_t remainingDiscoverableCredentials)
 {
-    switch (transport) {
-    case WebCore::AuthenticatorTransport::Usb:
-        return WebCore::authenticatorTransportUsb;
-        break;
-    case WebCore::AuthenticatorTransport::Nfc:
-        return WebCore::authenticatorTransportNfc;
-        break;
-    case WebCore::AuthenticatorTransport::Ble:
-        return WebCore::authenticatorTransportBle;
-        break;
-    case WebCore::AuthenticatorTransport::Internal:
-        return WebCore::authenticatorTransportInternal;
-        break;
-    case WebCore::AuthenticatorTransport::Cable:
-        return WebCore::authenticatorTransportCable;
-    case WebCore::AuthenticatorTransport::Hybrid:
-        return WebCore::authenticatorTransportHybrid;
-    case WebCore::AuthenticatorTransport::SmartCard:
-        return WebCore::authenticatorTransportSmartCard;
-    default:
-        break;
-    }
-    ASSERT_NOT_REACHED();
-    return nullString();
+    m_remainingDiscoverableCredentials = remainingDiscoverableCredentials;
+    return *this;
+}
+
+AuthenticatorGetInfoResponse& AuthenticatorGetInfoResponse::setMinPINLength(uint32_t minPINLength)
+{
+    m_minPINLength = minPINLength;
+    return *this;
+}
+
+AuthenticatorGetInfoResponse& AuthenticatorGetInfoResponse::setMaxCredentialCountInList(uint32_t maxCredentialCountInList)
+{
+    m_maxCredentialCountInList = maxCredentialCountInList;
+    return *this;
+}
+
+AuthenticatorGetInfoResponse& AuthenticatorGetInfoResponse::setMaxCredentialIDLength(uint32_t maxCredentialIDLength)
+{
+    m_maxCredentialIdLength = maxCredentialIDLength;
+    return *this;
 }
 
 Vector<uint8_t> encodeAsCBOR(const AuthenticatorGetInfoResponse& response)
@@ -119,27 +116,45 @@ Vector<uint8_t> encodeAsCBOR(const AuthenticatorGetInfoResponse& response)
 
     CBORValue::ArrayValue versionArray;
     for (const auto& version : response.versions())
-        versionArray.append(version == ProtocolVersion::kCtap ? kCtap2Version : kU2fVersion);
-    deviceInfoMap.emplace(CBORValue(1), CBORValue(WTFMove(versionArray)));
+        versionArray.append(toString(version));
+    deviceInfoMap.emplace(CBORValue(1), CBORValue(WTF::move(versionArray)));
+    deviceInfoMap.emplace(CBORValue(kCtapAuthenticatorGetInfoVersionsKey), CBORValue(WTF::move(versionArray)));
 
     if (response.extensions())
-        deviceInfoMap.emplace(CBORValue(2), toArrayValue(*response.extensions()));
+        deviceInfoMap.emplace(CBORValue(kCtapAuthenticatorGetInfoExtensionsKey), toArrayValue(*response.extensions()));
 
-    deviceInfoMap.emplace(CBORValue(3), CBORValue(response.aaguid()));
-    deviceInfoMap.emplace(CBORValue(4), convertToCBOR(response.options()));
+    deviceInfoMap.emplace(CBORValue(kCtapAuthenticatorGetInfoAAGUIDKey), CBORValue(response.aaguid()));
+    deviceInfoMap.emplace(CBORValue(kCtapAuthenticatorGetInfoOptionsKey), convertToCBOR(response.options()));
 
     if (response.maxMsgSize())
-        deviceInfoMap.emplace(CBORValue(5), CBORValue(static_cast<int64_t>(*response.maxMsgSize())));
+        deviceInfoMap.emplace(CBORValue(kCtapAuthenticatorGetInfoMaxMsgSizeKey), CBORValue(static_cast<int64_t>(*response.maxMsgSize())));
 
-    if (response.pinProtocol())
-        deviceInfoMap.emplace(CBORValue(6), toArrayValue(*response.pinProtocol()));
+    if (response.pinProtocol()) {
+        CBORValue::ArrayValue protocols;
+        for (auto protocol : *response.pinProtocol())
+            protocols.append(CBORValue(static_cast<int64_t>(protocol)));
+        deviceInfoMap.emplace(CBORValue(kCtapAuthenticatorGetInfoPinUVAuthProtocolsKey), CBORValue(WTF::move(protocols)));
+    }
 
     if (response.transports()) {
         auto transports = *response.transports();
-        deviceInfoMap.emplace(CBORValue(7), toArrayValue(transports.map(toString)));
+        deviceInfoMap.emplace(CBORValue(kCtapAuthenticatorGetInfoTransportsKey), toArrayValue(transports.map([](auto transport) {
+            return WebCore::toString(transport);
+        })));
     }
 
-    auto encodedBytes = CBORWriter::write(CBORValue(WTFMove(deviceInfoMap)));
+    if (response.remainingDiscoverableCredentials())
+        deviceInfoMap.emplace(CBORValue(kCtapAuthenticatorGetInfoRemainingDiscoverableCredentialsKey), CBORValue(static_cast<int64_t>(*response.remainingDiscoverableCredentials())));
+
+    if (auto minPINLength = response.minPINLength())
+        deviceInfoMap.emplace(CBORValue(kCtapAuthenticatorGetInfoMinPINLengthKey), CBORValue(static_cast<int64_t>(*minPINLength)));
+
+    if (response.maxCredentialCountInList())
+        deviceInfoMap.emplace(CBORValue(kCtapAuthenticatorGetInfoMaxCredentialCountInListKey), CBORValue(static_cast<int64_t>(*response.maxCredentialCountInList())));
+    if (response.maxCredentialIDLength())
+        deviceInfoMap.emplace(CBORValue(kCtapAuthenticatorGetInfoMaxCredentialIdLengthKey), CBORValue(static_cast<int64_t>(*response.maxCredentialIDLength())));
+
+    auto encodedBytes = CBORWriter::write(CBORValue(WTF::move(deviceInfoMap)));
     ASSERT(encodedBytes);
     return *encodedBytes;
 }

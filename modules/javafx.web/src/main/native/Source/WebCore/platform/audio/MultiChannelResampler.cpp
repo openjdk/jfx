@@ -35,39 +35,31 @@
 #include "AudioBus.h"
 #include "SincResampler.h"
 #include <functional>
-#include <wtf/Algorithms.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-MultiChannelResampler::MultiChannelResampler(double scaleFactor, unsigned numberOfChannels, unsigned requestFrames, Function<void(AudioBus*, size_t framesToProcess)>&& provideInput)
-    : m_numberOfChannels(numberOfChannels)
-    , m_provideInput(WTFMove(provideInput))
-    , m_multiChannelBus(AudioBus::create(numberOfChannels, requestFrames, false))
-{
-    // As an optimization, we will use the buffer passed to provideInputForChannel() as channel memory for the first channel so we
-    // only need to allocate memory if there is more than one channel.
-    if (numberOfChannels > 1) {
-        m_channelsMemory.reserveInitialCapacity(numberOfChannels - 1);
-        for (unsigned channelIndex = 1; channelIndex < numberOfChannels; ++channelIndex) {
-            m_channelsMemory.uncheckedAppend(makeUnique<AudioFloatArray>(requestFrames));
-            m_multiChannelBus->setChannelMemory(channelIndex, m_channelsMemory.last()->data(), requestFrames);
-        }
-    }
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MultiChannelResampler);
 
+MultiChannelResampler::MultiChannelResampler(double scaleFactor, unsigned numberOfChannels, unsigned requestFrames, Function<void(AudioBus&, size_t framesToProcess)>&& provideInput)
+    : m_numberOfChannels(numberOfChannels)
+    , m_provideInput(WTF::move(provideInput))
+    , m_multiChannelBus(AudioBus::create(numberOfChannels, requestFrames))
+{
     // Create each channel's resampler.
-    m_kernels.reserveInitialCapacity(numberOfChannels);
-    for (unsigned channelIndex = 0; channelIndex < numberOfChannels; ++channelIndex)
-        m_kernels.uncheckedAppend(makeUnique<SincResampler>(scaleFactor, requestFrames, std::bind(&MultiChannelResampler::provideInputForChannel, this, std::placeholders::_1, std::placeholders::_2, channelIndex)));
+    m_kernels = Vector<std::unique_ptr<SincResampler>>(numberOfChannels, [&](size_t channelIndex) {
+        return makeUnique<SincResampler>(scaleFactor, requestFrames, std::bind(&MultiChannelResampler::provideInputForChannel, this, std::placeholders::_1, std::placeholders::_2, channelIndex));
+    });
 }
 
 MultiChannelResampler::~MultiChannelResampler() = default;
 
-void MultiChannelResampler::process(AudioBus* destination, size_t framesToProcess)
+void MultiChannelResampler::process(AudioBus& destination, size_t framesToProcess)
 {
-    ASSERT(m_numberOfChannels == destination->numberOfChannels());
-    if (destination->numberOfChannels() == 1) {
+    ASSERT(m_numberOfChannels == destination.numberOfChannels());
+    if (destination.numberOfChannels() == 1) {
         // Fast path when the bus is mono to avoid the chunking below.
-        m_kernels[0]->process(destination->channel(0)->mutableSpan(), framesToProcess);
+        m_kernels[0]->process(destination.channel(0)->mutableSpan(), framesToProcess);
         return;
     }
 
@@ -81,7 +73,7 @@ void MultiChannelResampler::process(AudioBus* destination, size_t framesToProces
 
         for (unsigned channelIndex = 0; channelIndex < m_numberOfChannels; ++channelIndex) {
             ASSERT(chunkSize == m_kernels[channelIndex]->chunkSize());
-            auto* channel = destination->channel(channelIndex);
+            auto* channel = destination.channel(channelIndex);
             m_kernels[channelIndex]->process(channel->mutableSpan().subspan(m_outputFramesReady), framesThisTime);
         }
 
@@ -92,19 +84,13 @@ void MultiChannelResampler::process(AudioBus* destination, size_t framesToProces
 void MultiChannelResampler::provideInputForChannel(std::span<float> buffer, size_t framesToProcess, unsigned channelIndex)
 {
     ASSERT(channelIndex < m_multiChannelBus->numberOfChannels());
-    ASSERT(framesToProcess == m_multiChannelBus->length());
+    ASSERT(framesToProcess <= m_multiChannelBus->length());
 
-    if (!channelIndex) {
-        // As an optimization, we use the provided buffer as memory for the first channel in the AudioBus. This avoids
-        // having to memcpy() for the first channel.
-        RELEASE_ASSERT(framesToProcess <= buffer.size());
-        m_multiChannelBus->setChannelMemory(0, buffer.data(), framesToProcess);
-        m_provideInput(m_multiChannelBus.get(), framesToProcess);
-        return;
-    }
+    if (!channelIndex)
+        m_provideInput(m_multiChannelBus, framesToProcess);
 
     // Copy the channel data from what we received from m_multiChannelProvider.
-    memcpySpan(buffer.subspan(0, framesToProcess), m_multiChannelBus->channel(channelIndex)->span().subspan(0, framesToProcess));
+    memcpySpan(buffer, m_multiChannelBus->channel(channelIndex)->span().first(framesToProcess));
 }
 
 } // namespace WebCore

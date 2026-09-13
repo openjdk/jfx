@@ -21,9 +21,11 @@
 
 #pragma once
 
-#include "JSDOMGlobalObject.h"
-#include "NodeConstants.h"
 #include <JavaScriptCore/JSDestructibleObject.h>
+#include <JavaScriptCore/StructureInlines.h>
+#include <WebCore/JSDOMGlobalObject.h>
+#include <WebCore/NodeConstants.h>
+#include <wtf/Compiler.h>
 #include <wtf/SignedPtr.h>
 
 namespace WebCore {
@@ -76,13 +78,14 @@ public:
     using DOMWrapped = ImplementationClass;
 
     ImplementationClass& wrapped() const { return m_wrapped; }
-    static ptrdiff_t offsetOfWrapped() { return OBJECT_OFFSETOF(JSDOMWrapper, m_wrapped); }
+    Ref<ImplementationClass> protectedWrapped() const { return m_wrapped; }
+    static constexpr ptrdiff_t offsetOfWrapped() { return OBJECT_OFFSETOF(JSDOMWrapper, m_wrapped); }
     constexpr static bool hasCustomPtrTraits() { return !std::is_same_v<PtrTraits, RawPtrTraits<ImplementationClass>>; };
 
 protected:
     JSDOMWrapper(JSC::Structure* structure, JSC::JSGlobalObject& globalObject, Ref<ImplementationClass>&& impl)
         : Base(structure, globalObject)
-        , m_wrapped(WTFMove(impl)) { }
+        , m_wrapped(WTF::move(impl)) { }
 
 private:
     Ref<ImplementationClass, PtrTraits> m_wrapped;

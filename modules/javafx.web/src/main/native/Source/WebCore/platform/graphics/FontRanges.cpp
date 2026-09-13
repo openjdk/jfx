@@ -28,8 +28,8 @@
 
 #include "Font.h"
 #include "FontSelector.h"
-#include "platform/text/CharacterProperties.h"
 #include <wtf/Assertions.h>
+#include <wtf/text/CharacterProperties.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -39,9 +39,9 @@ const Font* FontRanges::Range::font(ExternalResourceDownloadPolicy policy) const
     return m_fontAccessor->font(policy);
 }
 
-FontRanges::FontRanges(FontRanges&& other, bool isGeneric)
-: m_ranges { WTFMove(other.m_ranges) }
-, m_isGeneric { isGeneric }
+FontRanges::FontRanges(FontRanges&& other, IsGenericFontFamily isGenericFontFamily)
+    : m_ranges { WTF::move(other.m_ranges) }
+    , m_isGenericFontFamily { isGenericFontFamily }
 {
 }
 
@@ -49,12 +49,12 @@ class TrivialFontAccessor final : public FontAccessor {
 public:
     static Ref<TrivialFontAccessor> create(Ref<Font>&& font)
     {
-        return adoptRef(*new TrivialFontAccessor(WTFMove(font)));
+        return adoptRef(*new TrivialFontAccessor(WTF::move(font)));
     }
 
 private:
     TrivialFontAccessor(RefPtr<Font>&& font)
-        : m_font(WTFMove(font))
+        : m_font(WTF::move(font))
     {
     }
 
@@ -79,23 +79,23 @@ FontRanges::FontRanges(RefPtr<Font>&& font)
 
 FontRanges::~FontRanges() = default;
 
-GlyphData FontRanges::glyphDataForCharacter(UChar32 character, ExternalResourceDownloadPolicy policy) const
+GlyphData FontRanges::glyphDataForCharacter(char32_t character, ExternalResourceDownloadPolicy policy) const
 {
-    const Font* resultFont = nullptr;
-    if (isGeneric() && isPrivateUseAreaCharacter(character))
+    RefPtr<const Font> resultFont;
+    if (isGenericFontFamily() && isPrivateUseAreaCharacter(character))
         return GlyphData();
 
     for (auto& range : m_ranges) {
         if (range.from() <= character && character <= range.to()) {
-            if (auto* font = range.font(policy)) {
+            if (RefPtr font = range.font(policy)) {
                 if (font->isInterstitial()) {
                     policy = ExternalResourceDownloadPolicy::Forbid;
                     if (!resultFont)
-                        resultFont = font;
+                        resultFont = WTF::move(font);
                 } else {
                     auto glyphData = font->glyphDataForCharacter(character);
-                    if (glyphData.font) {
-                        auto* glyphDataFont = glyphData.font;
+                    if (glyphData.isValid()) {
+                        RefPtr glyphDataFont = glyphData.font.get();
                         if (glyphDataFont && glyphDataFont->visibility() == Font::Visibility::Visible && resultFont && resultFont->visibility() == Font::Visibility::Invisible)
                             return GlyphData(glyphData.glyph, &glyphDataFont->invisibleFont());
                         return glyphData;
@@ -116,14 +116,15 @@ GlyphData FontRanges::glyphDataForCharacter(UChar32 character, ExternalResourceD
     return GlyphData();
 }
 
-const Font* FontRanges::fontForCharacter(UChar32 character) const
+const Font* FontRanges::fontForCharacter(char32_t character) const
 {
-    return glyphDataForCharacter(character, ExternalResourceDownloadPolicy::Allow).font;
+    return glyphDataForCharacter(character, ExternalResourceDownloadPolicy::Allow).font.get();
 }
 
 const Font& FontRanges::fontForFirstRange() const
 {
-    auto* font = m_ranges[0].font(ExternalResourceDownloadPolicy::Forbid);
+    // This is a false positive because the non-trivial expression is the RHS before we initialize the pointer local.
+    SUPPRESS_UNCOUNTED_LOCAL auto* font = m_ranges[0].font(ExternalResourceDownloadPolicy::Forbid);
     ASSERT(font);
     return *font;
 }

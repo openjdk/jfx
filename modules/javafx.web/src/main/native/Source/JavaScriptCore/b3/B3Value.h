@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,10 +37,13 @@
 #include "B3ValueKey.h"
 #include "B3Width.h"
 #include <wtf/CommaPrinter.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/IteratorRange.h>
+#include <wtf/SequesteredMalloc.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/TriState.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC { namespace B3 {
 
@@ -51,9 +54,21 @@ class SIMDValue;
 class PhiChildren;
 class Procedure;
 
+// B3 purposefully only represents signed 32-bit offsets because that's what x86 can encode, and
+// ARM64 cannot encode anything bigger. The IsLegalOffset concept is then used on B3 Value
+// methods to prevent implicit conversions by C++ from invalid offset types: these cause compilation
+// to fail, instead of causing implementation-defined behavior (which often turns to exploit).
+// OffsetType isn't sufficient to determine offset validity! Each Value opcode further has an
+// isLegalOffset runtime method used to determine value legality at runtime. This is exposed to users
+// of B3 to force them to reason about the target's offset.
+template<typename Int>
+concept IsLegalOffset = std::signed_integral<Int> && sizeof(Int) <= sizeof(int32_t);
+
 class JS_EXPORT_PRIVATE Value {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(Value);
 public:
+    using OffsetType = int32_t;
+
     static const char* const dumpPrefix;
 
     static bool accepts(Kind) { return true; }
@@ -77,7 +92,6 @@ public:
     // instead of value->kind().isBlah().
     bool isChill() const { return kind().isChill(); }
     bool traps() const { return kind().traps(); }
-    bool isSensitiveToNaN() const { return kind().isSensitiveToNaN(); }
 
     Origin origin() const { return m_origin; }
     void setOrigin(Origin origin) { m_origin = origin; }
@@ -212,6 +226,8 @@ public:
     virtual Value* addConstant(Procedure&, const Value* other) const;
     virtual Value* subConstant(Procedure&, const Value* other) const;
     virtual Value* mulConstant(Procedure&, const Value* other) const;
+    virtual Value* mulHighConstant(Procedure&, const Value* other) const;
+    virtual Value* uMulHighConstant(Procedure&, const Value* other) const;
     virtual Value* checkAddConstant(Procedure&, const Value* other) const;
     virtual Value* checkSubConstant(Procedure&, const Value* other) const;
     virtual Value* checkMulConstant(Procedure&, const Value* other) const;
@@ -238,7 +254,9 @@ public:
     virtual Value* absConstant(Procedure&) const;
     virtual Value* ceilConstant(Procedure&) const;
     virtual Value* floorConstant(Procedure&) const;
+    virtual Value* fTruncConstant(Procedure&) const;
     virtual Value* sqrtConstant(Procedure&) const;
+    virtual Value* purifyNaNConstant(Procedure&) const;
 
     virtual Value* vectorAndConstant(Procedure&, const Value* other) const;
     virtual Value* vectorOrConstant(Procedure&, const Value* other) const;
@@ -340,21 +358,6 @@ public:
     template<typename Functor>
     void walk(const Functor& functor, PhiChildren* = nullptr);
 
-    // B3 purposefully only represents signed 32-bit offsets because that's what x86 can encode, and
-    // ARM64 cannot encode anything bigger. The IsLegalOffset type trait is then used on B3 Value
-    // methods to prevent implicit conversions by C++ from invalid offset types: these cause compilation
-    // to fail, instead of causing implementation-defined behavior (which often turns to exploit).
-    // OffsetType isn't sufficient to determine offset validity! Each Value opcode further has an
-    // isLegalOffset runtime method used to determine value legality at runtime. This is exposed to users
-    // of B3 to force them to reason about the target's offset.
-    typedef int32_t OffsetType;
-    template<typename Int>
-    struct IsLegalOffset {
-        static constexpr bool value = std::is_integral<Int>::value
-            && std::is_signed<Int>::value
-            && sizeof(Int) <= sizeof(OffsetType);
-    };
-
 protected:
     Value* cloneImpl() const;
 
@@ -367,27 +370,27 @@ protected:
     // The specific value of VarArgs does not matter, but the value of the others is assumed to match their meaning.
     enum NumChildren : uint8_t { Zero = 0, One = 1, Two = 2, Three = 3, VarArgs = 4};
 
-    char* childrenAlloc() { return bitwise_cast<char*>(this) + adjacencyListOffset(); }
-    const char* childrenAlloc() const { return bitwise_cast<const char*>(this) + adjacencyListOffset(); }
+    char* childrenAlloc() { return std::bit_cast<char*>(this) + m_adjacencyListOffset; }
+    const char* childrenAlloc() const { return std::bit_cast<const char*>(this) + m_adjacencyListOffset; }
     Vector<Value*, 3>& childrenVector()
     {
         ASSERT(m_numChildren == VarArgs);
-        return *bitwise_cast<Vector<Value*, 3>*>(childrenAlloc());
+        return *std::bit_cast<Vector<Value*, 3>*>(childrenAlloc());
     }
     const Vector<Value*, 3>& childrenVector() const
     {
         ASSERT(m_numChildren == VarArgs);
-        return *bitwise_cast<Vector<Value*, 3> const*>(childrenAlloc());
+        return *std::bit_cast<Vector<Value*, 3> const*>(childrenAlloc());
     }
     Value** childrenArray()
     {
         ASSERT(m_numChildren != VarArgs);
-        return bitwise_cast<Value**>(childrenAlloc());
+        return std::bit_cast<Value**>(childrenAlloc());
     }
     Value* const* childrenArray() const
     {
         ASSERT(m_numChildren != VarArgs);
-        return bitwise_cast<Value* const*>(childrenAlloc());
+        return std::bit_cast<Value* const*>(childrenAlloc());
     }
 
     template<typename... Arguments>
@@ -416,14 +419,17 @@ protected:
         case Identity:
         case Opaque:
         case Neg:
+        case PurifyNaN:
         case Clz:
         case Abs:
         case Ceil:
         case Floor:
+        case FTrunc:
         case Sqrt:
         case SExt8:
         case SExt16:
         case Trunc:
+        case TruncHigh:
         case SExt8To64:
         case SExt16To64:
         case SExt32:
@@ -474,6 +480,8 @@ protected:
         case Add:
         case Sub:
         case Mul:
+        case MulHigh:
+        case UMulHigh:
         case Div:
         case UDiv:
         case Mod:
@@ -524,6 +532,8 @@ protected:
         case VectorAddSat:
         case VectorSubSat:
         case VectorMul:
+        case VectorMulHigh:
+        case VectorMulLow:
         case VectorDotProduct:
         case VectorDiv:
         case VectorMin:
@@ -542,6 +552,7 @@ protected:
         case VectorMulByElement:
         case VectorShiftByVector:
         case VectorRelaxedSwizzle:
+        case Stitch:
             return 2 * sizeof(Value*);
         case Select:
         case AtomicWeakCAS:
@@ -549,6 +560,9 @@ protected:
         case VectorBitwiseSelect:
         case VectorRelaxedMAdd:
         case VectorRelaxedNMAdd:
+        case VectorRelaxedLaneSelect:
+        case MemoryFill:
+        case MemoryCopy:
             return 3 * sizeof(Value*);
         case CCall:
         case Check:
@@ -574,7 +588,7 @@ private:
         // We must allocate enough space that replaceWithIdentity can work without buffer overflow.
         size_t allocIdentitySize = sizeof(Value) + sizeof(Value*);
         size_t allocSize = std::max(size + adjacencyListSpace, allocIdentitySize);
-        return static_cast<char*>(WTF::fastMalloc(allocSize));
+        return static_cast<char*>(SequesteredArenaMalloc::malloc(allocSize));
     }
 
 protected:
@@ -600,7 +614,7 @@ protected:
     Value& operator=(const Value&) = delete;
     Value& operator=(Value&&) = delete;
 
-    size_t adjacencyListOffset() const;
+    size_t computeAdjacencyListOffset() const;
 
     friend class Procedure;
     friend class SparseCollection<Value>;
@@ -609,6 +623,10 @@ private:
     template<typename... Arguments>
     void buildAdjacencyList(NumChildren numChildren, Arguments... arguments)
     {
+        size_t offset = computeAdjacencyListOffset();
+        RELEASE_ASSERT(offset == static_cast<uint16_t>(offset));
+        m_adjacencyListOffset = offset;
+
         if (numChildren == VarArgs) {
             new (childrenAlloc()) Vector<Value*, 3> { arguments... };
             return;
@@ -618,18 +636,21 @@ private:
     }
     void buildAdjacencyList(size_t offset, const Value& valueToClone)
     {
+        RELEASE_ASSERT(offset == static_cast<uint16_t>(offset));
+        m_adjacencyListOffset = offset;
+
         switch (valueToClone.m_numChildren) {
         case VarArgs:
-            new (bitwise_cast<char*>(this) + offset) Vector<Value*, 3> (valueToClone.childrenVector());
+            new (std::bit_cast<char*>(this) + offset) Vector<Value*, 3> (valueToClone.childrenVector());
             break;
         case Three:
-            bitwise_cast<Value**>(bitwise_cast<char*>(this) + offset)[2] = valueToClone.childrenArray()[2];
-            FALLTHROUGH;
+            std::bit_cast<Value**>(std::bit_cast<char*>(this) + offset)[2] = valueToClone.childrenArray()[2];
+            [[fallthrough]];
         case Two:
-            bitwise_cast<Value**>(bitwise_cast<char*>(this) + offset)[1] = valueToClone.childrenArray()[1];
-            FALLTHROUGH;
+            std::bit_cast<Value**>(std::bit_cast<char*>(this) + offset)[1] = valueToClone.childrenArray()[1];
+            [[fallthrough]];
         case One:
-            bitwise_cast<Value**>(bitwise_cast<char*>(this) + offset)[0] = valueToClone.childrenArray()[0];
+            std::bit_cast<Value**>(std::bit_cast<char*>(this) + offset)[0] = valueToClone.childrenArray()[0];
             break;
         case Zero:
             break;
@@ -646,24 +667,27 @@ private:
         case Jump:
         case Oops:
         case EntrySwitch:
-            if (UNLIKELY(numArgs))
+            if (numArgs) [[unlikely]]
                 badKind(kind, numArgs);
             return Zero;
         case Return:
-            if (UNLIKELY(numArgs > 1))
+            if (numArgs > 1) [[unlikely]]
                 badKind(kind, numArgs);
             return numArgs ? One : Zero;
         case Identity:
         case Opaque:
         case Neg:
+        case PurifyNaN:
         case Clz:
         case Abs:
         case Ceil:
         case Floor:
+        case FTrunc:
         case Sqrt:
         case SExt8:
         case SExt16:
         case Trunc:
+        case TruncHigh:
         case SExt8To64:
         case SExt16To64:
         case SExt32:
@@ -699,12 +723,14 @@ private:
         case VectorExtaddPairwise:
         case VectorDupElement:
         case VectorRelaxedTruncSat:
-            if (UNLIKELY(numArgs != 1))
+            if (numArgs != 1) [[unlikely]]
                 badKind(kind, numArgs);
             return One;
         case Add:
         case Sub:
         case Mul:
+        case MulHigh:
+        case UMulHigh:
         case Div:
         case UDiv:
         case Mod:
@@ -746,6 +772,8 @@ private:
         case VectorAddSat:
         case VectorSubSat:
         case VectorMul:
+        case VectorMulHigh:
+        case VectorMulLow:
         case VectorDotProduct:
         case VectorDiv:
         case VectorMin:
@@ -764,14 +792,18 @@ private:
         case VectorMulByElement:
         case VectorShiftByVector:
         case VectorRelaxedSwizzle:
-            if (UNLIKELY(numArgs != 2))
+        case Stitch:
+            if (numArgs != 2) [[unlikely]]
                 badKind(kind, numArgs);
             return Two;
         case Select:
         case VectorBitwiseSelect:
         case VectorRelaxedMAdd:
         case VectorRelaxedNMAdd:
-            if (UNLIKELY(numArgs != 3))
+        case VectorRelaxedLaneSelect:
+        case MemoryCopy:
+        case MemoryFill:
+            if (numArgs != 3) [[unlikely]]
                 badKind(kind, numArgs);
             return Three;
         default:
@@ -863,6 +895,7 @@ protected:
     unsigned m_index { UINT_MAX };
 private:
     Kind m_kind;
+    uint16_t m_adjacencyListOffset;
     Type m_type;
 protected:
     NumChildren m_numChildren;
@@ -1005,11 +1038,11 @@ public: \
 private: \
     Value** childrenArray() \
     { \
-        return bitwise_cast<Value**>(bitwise_cast<char*>(this) + sizeof(*this)); \
+        return std::bit_cast<Value**>(std::bit_cast<char*>(this) + sizeof(*this)); \
     } \
     Value* const* childrenArray() const \
     { \
-        return bitwise_cast<Value* const*>(bitwise_cast<char const*>(this) + sizeof(*this)); \
+        return std::bit_cast<Value* const*>(std::bit_cast<char const*>(this) + sizeof(*this)); \
     }
 
 // Only use this for classes with no subclass that add new fields (as it uses sizeof(*this))
@@ -1017,13 +1050,15 @@ private: \
 private: \
     Vector<Value*, 3>& childrenVector() \
     { \
-        return *bitwise_cast<Vector<Value*, 3>*>(bitwise_cast<char*>(this) + sizeof(*this)); \
+        return *std::bit_cast<Vector<Value*, 3>*>(std::bit_cast<char*>(this) + sizeof(*this)); \
     } \
     const Vector<Value*, 3>& childrenVector() const \
     { \
-        return *bitwise_cast<Vector<Value*, 3> const*>(bitwise_cast<char const*>(this) + sizeof(*this)); \
+        return *std::bit_cast<Vector<Value*, 3> const*>(std::bit_cast<char const*>(this) + sizeof(*this)); \
     } \
 
 } } // namespace JSC::B3
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(B3_JIT)

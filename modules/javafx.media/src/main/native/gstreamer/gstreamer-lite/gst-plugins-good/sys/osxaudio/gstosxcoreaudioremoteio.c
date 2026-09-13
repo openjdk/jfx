@@ -21,10 +21,19 @@
  */
 
 #import <AudioUnit/AUComponent.h>
+#import "gstiosaudiosession.h"
 
 static gboolean
 gst_core_audio_open_impl (GstCoreAudio * core_audio)
 {
+  /* On iOS, an AVAudioSession needs to be set up to 1) avoid playback being silenced
+   * by silent mode and 2) to allow audio to be captured from the microphone.
+   * However, AVAudioSession has a lot of settings and in more complicated scenarios,
+   * apps/users should handle that themselves. Disable auto-config through the
+   * configure-session property on osxaudiosrc/sink in those cases. */
+  if (core_audio->configure_session)
+    gst_ios_audio_session_setup (core_audio->is_src);
+
   return gst_core_audio_open_device (core_audio, kAudioUnitSubType_RemoteIO,
       "RemoteIO");
 }
@@ -43,11 +52,13 @@ gst_core_audio_pause_processing_impl (GstCoreAudio * core_audio)
       core_audio->element->io_proc, (gulong) core_audio->device_id);
 
   if (core_audio->io_proc_active) {
-    /* CoreAudio isn't threadsafe enough to do this here;
-     * we must deactivate the render callback elsewhere. See:
+    /* CoreAudio isn't threadsafe enough to remove the render callback in the
+     * render notify callback, so we pause by having the callback drop
+     * samples or feed silence. See:
      * http://lists.apple.com/archives/Coreaudio-api/2006/Mar/msg00010.html
+     * https://gitlab.freedesktop.org/gstreamer/gstreamer/-/issues/4155
      */
-    core_audio->io_proc_needs_deactivation = TRUE;
+    g_atomic_int_set (&core_audio->io_proc_dropping, TRUE);
   }
   return TRUE;
 }
@@ -126,6 +137,7 @@ static gboolean
 gst_core_audio_select_device_impl (GstCoreAudio * core_audio)
 {
   /* No device selection in iOS */
+  core_audio->is_default = TRUE;
   return TRUE;
 }
 

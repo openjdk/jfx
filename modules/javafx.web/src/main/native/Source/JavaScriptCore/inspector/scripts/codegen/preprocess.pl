@@ -44,7 +44,7 @@ if (!$preprocessor) {
         push(@args, qw(/nologo /EP /TP /C));
     } else {
         $preprocessor = $ENV{CC} || (-x "/usr/bin/clang" ? "/usr/bin/clang" : "/usr/bin/gcc");
-        push(@args, qw(-E -P -x c++ -C));
+        push(@args, qw(-E -P -x c++ -C -ffreestanding));
     }
 }
 

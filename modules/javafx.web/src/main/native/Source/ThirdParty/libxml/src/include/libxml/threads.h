@@ -1,11 +1,14 @@
 /**
- * Summary: interfaces for thread handling
- * Description: set of generic threading related routines
+ * @file
+ *
+ * @brief interfaces for thread handling
+ *
+ * set of generic threading related routines
  *              should work with pthreads, Windows native or TLS threads
  *
- * Copy: See Copyright for the status of this software.
+ * @copyright See Copyright for the status of this software.
  *
- * Author: Daniel Veillard
+ * @author Daniel Veillard
  */
 
 #ifndef __XML_THREADS_H__
@@ -17,71 +20,57 @@
 extern "C" {
 #endif
 
-/*
- * xmlMutex are a simple mutual exception locks.
- */
+/** Mutual exclusion object */
 typedef struct _xmlMutex xmlMutex;
 typedef xmlMutex *xmlMutexPtr;
 
-/*
- * xmlRMutex are reentrant mutual exception locks.
- */
+/** Reentrant mutual exclusion object */
 typedef struct _xmlRMutex xmlRMutex;
 typedef xmlRMutex *xmlRMutexPtr;
 
-#ifdef __cplusplus
-}
-#endif
-#include <libxml/globals.h>
-#ifdef __cplusplus
-extern "C" {
-#endif
-XMLPUBFUN xmlMutexPtr XMLCALL
-                        xmlNewMutex     (void);
-XMLPUBFUN void XMLCALL
-                        xmlMutexLock    (xmlMutexPtr tok);
-XMLPUBFUN void XMLCALL
-                        xmlMutexUnlock  (xmlMutexPtr tok);
-XMLPUBFUN void XMLCALL
-                        xmlFreeMutex    (xmlMutexPtr tok);
+XMLPUBFUN int
+                        xmlCheckThreadLocalStorage(void);
 
-XMLPUBFUN xmlRMutexPtr XMLCALL
+XMLPUBFUN xmlMutex *
+                        xmlNewMutex     (void);
+XMLPUBFUN void
+                        xmlMutexLock    (xmlMutex *tok);
+XMLPUBFUN void
+                        xmlMutexUnlock  (xmlMutex *tok);
+XMLPUBFUN void
+                        xmlFreeMutex    (xmlMutex *tok);
+
+XMLPUBFUN xmlRMutex *
                         xmlNewRMutex    (void);
-XMLPUBFUN void XMLCALL
-                        xmlRMutexLock   (xmlRMutexPtr tok);
-XMLPUBFUN void XMLCALL
-                        xmlRMutexUnlock (xmlRMutexPtr tok);
-XMLPUBFUN void XMLCALL
-                        xmlFreeRMutex   (xmlRMutexPtr tok);
+XMLPUBFUN void
+                        xmlRMutexLock   (xmlRMutex *tok);
+XMLPUBFUN void
+                        xmlRMutexUnlock (xmlRMutex *tok);
+XMLPUBFUN void
+                        xmlFreeRMutex   (xmlRMutex *tok);
 
 /*
  * Library wide APIs.
  */
 XML_DEPRECATED
-XMLPUBFUN void XMLCALL
+XMLPUBFUN void
                         xmlInitThreads  (void);
-XMLPUBFUN void XMLCALL
+XMLPUBFUN void
                         xmlLockLibrary  (void);
-XMLPUBFUN void XMLCALL
+XMLPUBFUN void
                         xmlUnlockLibrary(void);
-XMLPUBFUN int XMLCALL
-                        xmlGetThreadId  (void);
-XMLPUBFUN int XMLCALL
-                        xmlIsMainThread (void);
 XML_DEPRECATED
-XMLPUBFUN void XMLCALL
+XMLPUBFUN void
                         xmlCleanupThreads(void);
-XMLPUBFUN xmlGlobalStatePtr XMLCALL
-                        xmlGetGlobalState(void);
 
-#ifdef HAVE_PTHREAD_H
-#elif defined(HAVE_WIN32_THREADS) && !defined(HAVE_COMPILER_TLS) && (!defined(LIBXML_STATIC) || defined(LIBXML_STATIC_FOR_DLL))
-#if defined(LIBXML_STATIC_FOR_DLL)
-int XMLCALL
+/** @cond IGNORE */
+#if defined(LIBXML_THREAD_ENABLED) && defined(_WIN32) && \
+    defined(LIBXML_STATIC_FOR_DLL)
+int
 xmlDllMain(void *hinstDLL, unsigned long fdwReason,
            void *lpvReserved);
 #endif
-#endif
+/** @endcond */
 
 #ifdef __cplusplus
 }

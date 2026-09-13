@@ -25,13 +25,13 @@
 
 #pragma once
 
-#include "MediaConfiguration.h"
-#include "MediaEncodingType.h"
+#include <WebCore/MediaConfiguration.h>
+#include <WebCore/MediaEncodingType.h>
 
 namespace WebCore {
 
 struct MediaEncodingConfiguration : MediaConfiguration {
-    MediaEncodingType type;
+    MediaEncodingType type { };
 
     MediaEncodingConfiguration isolatedCopy() const;
 };

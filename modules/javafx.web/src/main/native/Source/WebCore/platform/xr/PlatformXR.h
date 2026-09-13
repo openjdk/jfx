@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2020 Igalia, S.L.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -18,30 +19,61 @@
  */
 #pragma once
 
-#include "DestinationColorSpace.h"
-#include "FloatPoint3D.h"
-#include "GraphicsTypesGL.h"
-#include "IntRect.h"
-#include "IntSize.h"
+#include <WebCore/DestinationColorSpace.h>
+#include <WebCore/FloatPoint3D.h>
+#include <WebCore/GraphicsTypesGL.h>
+#include <WebCore/IntRect.h>
+#include <WebCore/IntSize.h>
+#include <WebCore/TransformationMatrix.h>
 #include <memory>
-#include <variant>
 #include <wtf/CompletionHandler.h>
 #include <wtf/HashMap.h>
-#include <wtf/Ref.h>
+#include <wtf/Platform.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
+#if USE(UNIX_DOMAIN_SOCKETS)
+#include <wtf/unix/UnixFileDescriptor.h>
+#endif
+
+#if OS(ANDROID)
+#include <wtf/android/RefPtrAndroid.h>
+#endif
 
 #if PLATFORM(COCOA)
-#include "IOSurface.h"
+#include <WebCore/IOSurface.h>
+#include <WebCore/XRGPUProjectionLayerInit.h>
 #include <wtf/MachSendRight.h>
 #endif
 
+#if ENABLE(WEBXR_HIT_TEST)
+#include <WebCore/ExceptionOr.h>
+#endif
+
+namespace PlatformXR {
+class TrackingAndRenderingClient;
+}
+
+namespace WTF {
+template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
+template<> struct IsDeprecatedWeakRefSmartPointerException<PlatformXR::TrackingAndRenderingClient> : std::true_type { };
+}
+
 namespace WebCore {
+enum class XRHitTestTrackableType : uint8_t;
 class SecurityOriginData;
+
+struct XRCanvasConfiguration;
 }
 
 namespace PlatformXR {
+
+enum class Layout : uint8_t {
+    Shared,
+    Layered,
+};
 
 enum class SessionMode : uint8_t {
     Inline,
@@ -49,21 +81,27 @@ enum class SessionMode : uint8_t {
     ImmersiveAr,
 };
 
-enum class ReferenceSpaceType {
+inline bool isImmersive(SessionMode mode)
+{
+    using enum PlatformXR::SessionMode;
+    return mode == ImmersiveAr || mode == ImmersiveVr;
+}
+
+enum class ReferenceSpaceType : uint8_t {
     Viewer,
     Local,
     LocalFloor,
     BoundedFloor,
-    Unbounded
+    Unbounded,
 };
 
-enum class Eye {
+enum class Eye : uint8_t {
     None,
     Left,
     Right,
 };
 
-enum class VisibilityState {
+enum class VisibilityState : uint8_t {
     Visible,
     VisibleBlurred,
     Hidden
@@ -72,20 +110,29 @@ enum class VisibilityState {
 using LayerHandle = int;
 
 #if ENABLE(WEBXR)
+using HitTestSource = unsigned;
+using TransientInputHitTestSource = unsigned;
 using InputSourceHandle = int;
 
 // https://immersive-web.github.io/webxr/#enumdef-xrhandedness
-enum class XRHandedness {
+enum class XRHandedness : uint8_t {
     None,
     Left,
     Right,
 };
 
 // https://immersive-web.github.io/webxr/#enumdef-xrtargetraymode
-enum class XRTargetRayMode {
+enum class XRTargetRayMode : uint8_t {
     Gaze,
     TrackedPointer,
     Screen,
+    TransientPointer,
+};
+
+enum class XREnvironmentBlendMode : uint8_t {
+    Opaque,
+    AlphaBlend,
+    Additive
 };
 
 // https://immersive-web.github.io/webxr/#feature-descriptor
@@ -97,6 +144,13 @@ enum class SessionFeature : uint8_t {
     ReferenceSpaceTypeUnbounded,
 #if ENABLE(WEBXR_HANDS)
     HandTracking,
+#endif
+#if ENABLE(WEBXR_HIT_TEST)
+    HitTest,
+#endif
+    WebGPU,
+#if ENABLE(WEBXR_LAYERS)
+    Layers,
 #endif
 };
 
@@ -121,7 +175,7 @@ inline SessionFeature sessionFeatureFromReferenceSpaceType(ReferenceSpaceType re
 
 inline std::optional<SessionFeature> parseSessionFeatureDescriptor(StringView string)
 {
-    auto feature = string.trim(isUnicodeCompatibleASCIIWhitespace<UChar>).convertToASCIILowercase();
+    auto feature = string.trim(isUnicodeCompatibleASCIIWhitespace<char16_t>).convertToASCIILowercase();
 
     if (feature == "viewer"_s)
         return SessionFeature::ReferenceSpaceTypeViewer;
@@ -137,7 +191,16 @@ inline std::optional<SessionFeature> parseSessionFeatureDescriptor(StringView st
     if (feature == "hand-tracking"_s)
         return SessionFeature::HandTracking;
 #endif
-
+#if ENABLE(WEBXR_HIT_TEST)
+    if (feature == "hit-test"_s)
+        return SessionFeature::HitTest;
+#endif
+    if (feature == "webgpu"_s)
+        return SessionFeature::WebGPU;
+#if ENABLE(WEBXR_LAYERS)
+    if (feature == "layers"_s)
+        return SessionFeature::Layers;
+#endif
     return std::nullopt;
 }
 
@@ -157,6 +220,16 @@ inline String sessionFeatureDescriptor(SessionFeature sessionFeature)
 #if ENABLE(WEBXR_HANDS)
     case SessionFeature::HandTracking:
         return "hand-tracking"_s;
+#endif
+#if ENABLE(WEBXR_HIT_TEST)
+    case SessionFeature::HitTest:
+        return "hit-test"_s;
+#endif
+    case SessionFeature::WebGPU:
+        return "webgpu"_s;
+#if ENABLE(WEBXR_LAYERS)
+    case SessionFeature::Layers:
+        return "layers"_s;
 #endif
     default:
         ASSERT_NOT_REACHED();
@@ -199,8 +272,205 @@ enum class HandJoint : unsigned {
 
 class TrackingAndRenderingClient;
 
-class Device : public ThreadSafeRefCounted<Device>, public CanMakeWeakPtr<Device> {
-    WTF_MAKE_FAST_ALLOCATED;
+struct DepthRange {
+    float near { 0.1f };
+    float far { 1000.0f };
+};
+
+struct RequestData {
+    bool isPassthroughFullyObscured;
+    DepthRange depthRange;
+};
+
+struct RateMapDescription {
+    WebCore::IntSize screenSize = { 0, 0 };
+    Vector<float> horizontalSamplesLeft;
+    Vector<float> horizontalSamplesRight;
+    // Vertical samples is shared by both horizontalSamples
+    Vector<float> verticalSamples;
+};
+
+#if ENABLE(WEBXR_HIT_TEST)
+struct Ray {
+    WebCore::FloatPoint3D origin;
+    WebCore::FloatPoint3D direction;
+};
+
+enum class InputSourceSpaceType : uint8_t {
+    TargetRay,
+    Grip,
+};
+
+struct InputSourceSpaceInfo {
+    InputSourceHandle handle;
+    InputSourceSpaceType type;
+};
+
+using NativeOriginInformation = Variant<ReferenceSpaceType, InputSourceSpaceInfo>;
+
+struct HitTestOptions {
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(HitTestOptions);
+    NativeOriginInformation nativeOrigin;
+    Vector<WebCore::XRHitTestTrackableType> entityTypes;
+    Ray offsetRay;
+};
+struct TransientInputHitTestOptions {
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(TransientInputHitTestOptions);
+    String profile;
+    Vector<WebCore::XRHitTestTrackableType> entityTypes;
+    Ray offsetRay;
+};
+#endif // ENABLE(WEBXR_HIT_TEST)
+
+struct FrameData {
+        struct FloatQuaternion {
+            float x { 0.0f };
+            float y { 0.0f };
+            float z { 0.0f };
+            float w { 1.0f };
+        };
+
+        struct Pose {
+            WebCore::FloatPoint3D position;
+            FloatQuaternion orientation;
+        };
+
+        struct Fov {
+            // In radians
+            float up { 0.0f };
+            float down { 0.0f };
+            float left { 0.0f };
+            float right { 0.0f };
+        };
+
+        static constexpr size_t projectionMatrixSize = 16;
+        typedef std::array<float, projectionMatrixSize> ProjectionMatrix;
+
+    using Projection = Variant<Fov, ProjectionMatrix, std::nullptr_t>;
+
+        struct View {
+            Pose offset;
+            Projection projection = { nullptr };
+        };
+
+        struct StageParameters {
+            int id { 0 };
+            Vector<WebCore::FloatPoint> bounds;
+        };
+
+    static constexpr auto LayerSetupSizeMax = std::numeric_limits<uint16_t>::max();
+    struct LayerSetupData {
+        std::array<std::array<uint16_t, 2>, 2> physicalSize;
+        std::array<WebCore::IntRect, 2> viewports;
+        RateMapDescription foveationRateMapDesc;
+#if PLATFORM(COCOA)
+        MachSendRight completionSyncEvent;
+#endif
+    };
+
+#if OS(ANDROID)
+    using ExternalTexture = RefPtr<AHardwareBuffer>;
+#else
+    struct ExternalTexture {
+#if PLATFORM(COCOA)
+        MachSendRight handle;
+        bool isSharedTexture { false };
+
+        explicit operator bool() const { return !!handle; }
+#else
+        Vector<WTF::UnixFileDescriptor> fds;
+        Vector<uint32_t> strides;
+        Vector<uint32_t> offsets;
+        uint32_t fourcc;
+        uint64_t modifier;
+
+        explicit operator bool() const { return !fds.isEmpty(); }
+#endif
+    };
+#endif
+
+    struct ExternalTextureData {
+        uint64_t reusableTextureIndex = 0;
+        ExternalTexture colorTexture;
+        ExternalTexture depthStencilBuffer;
+    };
+
+        struct LayerData {
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(LayerData);
+        std::optional<LayerSetupData> layerSetup = { std::nullopt };
+        uint64_t renderingFrameIndex { 0 };
+        std::optional<ExternalTextureData> textureData;
+        // FIXME: <rdar://134998122> Remove when new CC lands.
+        bool requestDepth { false };
+        bool isForTesting { false };
+        };
+
+        struct InputSourceButton {
+            bool touched { false };
+            bool pressed { false };
+            float pressedValue { 0 };
+        };
+
+        struct InputSourcePose {
+            Pose pose;
+            bool isPositionEmulated { false };
+        };
+
+#if ENABLE(WEBXR_HANDS)
+        struct InputSourceHandJoint {
+            InputSourcePose pose;
+            float radius { 0 };
+        };
+
+        using HandJointsVector = Vector<std::optional<InputSourceHandJoint>>;
+#endif
+
+        struct InputSource {
+            InputSourceHandle handle { 0 };
+        XRHandedness handedness { XRHandedness::None };
+            XRTargetRayMode targetRayMode { XRTargetRayMode::Gaze };
+            Vector<String> profiles;
+            InputSourcePose pointerOrigin;
+            std::optional<InputSourcePose> gripOrigin;
+            Vector<InputSourceButton> buttons;
+            Vector<float> axes;
+#if ENABLE(WEBXR_HANDS)
+            std::optional<HandJointsVector> handJoints;
+#endif
+        };
+
+#if ENABLE(WEBXR_HIT_TEST)
+    struct HitTestResult {
+        Pose pose;
+    };
+    struct TransientInputHitTestResult {
+        InputSourceHandle inputSource;
+        Vector<HitTestResult> results;
+    };
+#endif
+
+        bool isTrackingValid { false };
+        bool isPositionValid { false };
+        bool isPositionEmulated { false };
+        bool shouldRender { false };
+        long predictedDisplayTime { 0 };
+        Pose origin;
+        std::optional<Pose> floorTransform;
+        StageParameters stageParameters;
+        Vector<View> views;
+    HashMap<LayerHandle, UniqueRef<LayerData>> layers;
+#if ENABLE(WEBXR_HIT_TEST)
+    HashMap<HitTestSource, Vector<HitTestResult>> hitTestResults;
+    HashMap<TransientInputHitTestSource, Vector<TransientInputHitTestResult>> transientInputHitTestResults;
+#endif
+        Vector<InputSource> inputSources;
+    XREnvironmentBlendMode environmentBlendMode { XREnvironmentBlendMode::Opaque };
+
+        FrameData copy() const;
+};
+
+class Device : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<Device> {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(Device);
     WTF_MAKE_NONCOPYABLE(Device);
 public:
     virtual ~Device() = default;
@@ -213,6 +483,7 @@ public:
     FeatureList enabledFeatures(SessionMode mode) const { return m_enabledFeaturesMap.get(mode); }
 
     virtual WebCore::IntSize recommendedResolution(SessionMode) { return { 1, 1 }; }
+    virtual double minimumNearClipPlane() const { return 0.1; }
 
     bool supportsOrientationTracking() const { return m_supportsOrientationTracking; }
     bool supportsViewportScaling() const { return m_supportsViewportScaling; }
@@ -225,11 +496,11 @@ public:
     // the native resolution if the device supports supersampling.
     virtual double maxFramebufferScalingFactor() const { return nativeFramebufferScalingFactor(); }
 
-
-    virtual void initializeTrackingAndRendering(const WebCore::SecurityOriginData&, SessionMode, const FeatureList&) = 0;
+    virtual void initializeTrackingAndRendering(const WebCore::SecurityOriginData&, SessionMode, const FeatureList&, std::optional<WebCore::XRCanvasConfiguration>&&) = 0;
     virtual void shutDownTrackingAndRendering() = 0;
+    virtual void didCompleteShutdownTriggeredBySystem() { }
     TrackingAndRenderingClient* trackingAndRenderingClient() const { return m_trackingAndRenderingClient.get(); }
-    void setTrackingAndRenderingClient(WeakPtr<TrackingAndRenderingClient>&& client) { m_trackingAndRenderingClient = WTFMove(client); }
+    void setTrackingAndRenderingClient(WeakPtr<TrackingAndRenderingClient>&& client) { m_trackingAndRenderingClient = WTF::move(client); }
 
     // If this method returns true, that means the device will notify TrackingAndRenderingClient
     // when the platform has completed all steps to shut down the XR session.
@@ -238,138 +509,12 @@ public:
     virtual std::optional<LayerHandle> createLayerProjection(uint32_t width, uint32_t height, bool alpha) = 0;
     virtual void deleteLayer(LayerHandle) = 0;
 
-    struct FrameData {
-        struct FloatQuaternion {
-            float x { 0.0f };
-            float y { 0.0f };
-            float z { 0.0f };
-            float w { 1.0f };
-
-            template<class Encoder> void encode(Encoder&) const;
-            template<class Decoder> static std::optional<FloatQuaternion> decode(Decoder&);
-        };
-
-        struct Pose {
-            WebCore::FloatPoint3D position;
-            FloatQuaternion orientation;
-
-            template<class Encoder> void encode(Encoder&) const;
-            template<class Decoder> static std::optional<Pose> decode(Decoder&);
-        };
-
-        struct Fov {
-            // In radians
-            float up { 0.0f };
-            float down { 0.0f };
-            float left { 0.0f };
-            float right { 0.0f };
-
-            template<class Encoder> void encode(Encoder&) const;
-            template<class Decoder> static std::optional<Fov> decode(Decoder&);
-        };
-
-        static constexpr size_t projectionMatrixSize = 16;
-        typedef std::array<float, projectionMatrixSize> ProjectionMatrix;
-
-        using Projection = std::variant<Fov, ProjectionMatrix, std::nullptr_t>;
-
-        struct View {
-            Pose offset;
-            Projection projection = { nullptr };
-
-            template<class Encoder> void encode(Encoder&) const;
-            template<class Decoder> static std::optional<View> decode(Decoder&);
-        };
-
-        struct StageParameters {
-            int id { 0 };
-            Vector<WebCore::FloatPoint> bounds;
-
-            template<class Encoder> void encode(Encoder&) const;
-            template<class Decoder> static std::optional<StageParameters> decode(Decoder&);
-        };
-
-        struct LayerData {
-#if USE(IOSURFACE_FOR_XR_LAYER_DATA)
-            std::unique_ptr<WebCore::IOSurface> surface;
-            bool isShared { false };
-#elif USE(MTLTEXTURE_FOR_XR_LAYER_DATA)
-            std::tuple<MachSendRight, bool> colorTexture = { MachSendRight(), false };
-            std::tuple<MachSendRight, bool> depthStencilBuffer = { MachSendRight(), false };
-#else
-            PlatformGLObject opaqueTexture { 0 };
+#if ENABLE(WEBXR_HIT_TEST)
+    virtual void requestHitTestSource(const HitTestOptions&, CompletionHandler<void(WebCore::ExceptionOr<HitTestSource>)>&&) = 0;
+    virtual void deleteHitTestSource(HitTestSource) = 0;
+    virtual void requestTransientInputHitTestSource(const TransientInputHitTestOptions&, CompletionHandler<void(WebCore::ExceptionOr<TransientInputHitTestSource>)>&&) = 0;
+    virtual void deleteTransientInputHitTestSource(TransientInputHitTestSource) = 0;
 #endif
-#if USE(MTLSHAREDEVENT_FOR_XR_FRAME_COMPLETION)
-            std::tuple<MachSendRight, uint64_t> completionSyncEvent;
-#endif
-
-            template<class Encoder> void encode(Encoder&) const;
-            template<class Decoder> static std::optional<LayerData> decode(Decoder&);
-        };
-
-        struct InputSourceButton {
-            bool touched { false };
-            bool pressed { false };
-            float pressedValue { 0 };
-
-            template<class Encoder> void encode(Encoder&) const;
-            template<class Decoder> static std::optional<InputSourceButton> decode(Decoder&);
-        };
-
-        struct InputSourcePose {
-            Pose pose;
-            bool isPositionEmulated { false };
-
-            template<class Encoder> void encode(Encoder&) const;
-            template<class Decoder> static std::optional<InputSourcePose> decode(Decoder&);
-        };
-
-#if ENABLE(WEBXR_HANDS)
-        struct InputSourceHandJoint {
-            InputSourcePose pose;
-            float radius { 0 };
-
-            template<class Encoder> void encode(Encoder&) const;
-            template<class Decoder> static std::optional<InputSourceHandJoint> decode(Decoder&);
-        };
-
-        using HandJointsVector = Vector<std::optional<InputSourceHandJoint>>;
-#endif
-
-        struct InputSource {
-            InputSourceHandle handle { 0 };
-            XRHandedness handeness { XRHandedness::None };
-            XRTargetRayMode targetRayMode { XRTargetRayMode::Gaze };
-            Vector<String> profiles;
-            InputSourcePose pointerOrigin;
-            std::optional<InputSourcePose> gripOrigin;
-            Vector<InputSourceButton> buttons;
-            Vector<float> axes;
-#if ENABLE(WEBXR_HANDS)
-            std::optional<HandJointsVector> handJoints;
-#endif
-
-            template<class Encoder> void encode(Encoder&) const;
-            template<class Decoder> static std::optional<InputSource> decode(Decoder&);
-        };
-
-        bool isTrackingValid { false };
-        bool isPositionValid { false };
-        bool isPositionEmulated { false };
-        bool shouldRender { false };
-        long predictedDisplayTime { 0 };
-        Pose origin;
-        std::optional<Pose> floorTransform;
-        StageParameters stageParameters;
-        Vector<View> views;
-        HashMap<LayerHandle, LayerData> layers;
-        Vector<InputSource> inputSources;
-
-        FrameData copy() const;
-
-        template<class Encoder> void encode(Encoder&) const;
-        template<class Decoder> static std::optional<FrameData> decode(Decoder&);
-    };
 
     struct LayerView {
         Eye eye { Eye::None };
@@ -380,6 +525,9 @@ public:
         LayerHandle handle { 0 };
         bool visible { true };
         Vector<LayerView> views;
+#if USE(OPENXR)
+        WTF::UnixFileDescriptor fenceFD;
+#endif
     };
 
     struct ViewData {
@@ -390,7 +538,7 @@ public:
     virtual Vector<ViewData> views(SessionMode) const = 0;
 
     using RequestFrameCallback = Function<void(FrameData&&)>;
-    virtual void requestFrame(RequestFrameCallback&&) = 0;
+    virtual void requestFrame(std::optional<RequestData>&&, RequestFrameCallback&&) = 0;
     virtual void submitFrame(Vector<Layer>&&) { };
 protected:
     Device() = default;
@@ -407,6 +555,8 @@ protected:
     WeakPtr<TrackingAndRenderingClient> m_trackingAndRenderingClient;
 };
 
+using DeviceList = Vector<Ref<Device>>;
+
 class TrackingAndRenderingClient : public CanMakeWeakPtr<TrackingAndRenderingClient> {
 public:
     virtual ~TrackingAndRenderingClient() = default;
@@ -414,370 +564,15 @@ public:
     // This event is used to ensure that initial inputsourceschange events occur after the initial session is resolved.
     // WebxR apps can wait for the input source events before calling requestAnimationFrame.
     // Per-frame input source updates are handled via session.requestAnimationFrame which calls Device::requestFrame.
-    virtual void sessionDidInitializeInputSources(Vector<Device::FrameData::InputSource>&&) = 0;
+    virtual void sessionDidInitializeInputSources(Vector<FrameData::InputSource>&&) = 0;
     virtual void sessionDidEnd() = 0;
     virtual void updateSessionVisibilityState(VisibilityState) = 0;
     // FIXME: handle frame update
 };
 
-class Instance {
-public:
-    WEBCORE_EXPORT static Instance& singleton();
-
-    using DeviceList = Vector<Ref<Device>>;
-    WEBCORE_EXPORT void enumerateImmersiveXRDevices(CompletionHandler<void(const DeviceList&)>&&);
-
-private:
-    friend LazyNeverDestroyed<Instance>;
-    Instance();
-    ~Instance() = default;
-
-    struct Impl;
-    UniqueRef<Impl> m_impl;
-
-    DeviceList m_immersiveXRDevices;
-};
-
-template<class Encoder>
-void Device::FrameData::FloatQuaternion::encode(Encoder& encoder) const
+inline FrameData FrameData::copy() const
 {
-    encoder << x << y << z << w;
-}
-
-template<class Decoder>
-std::optional<Device::FrameData::FloatQuaternion> Device::FrameData::FloatQuaternion::decode(Decoder& decoder)
-{
-    Device::FrameData::FloatQuaternion floatQuaternion;
-    if (!decoder.decode(floatQuaternion.x))
-        return std::nullopt;
-    if (!decoder.decode(floatQuaternion.y))
-        return std::nullopt;
-    if (!decoder.decode(floatQuaternion.z))
-        return std::nullopt;
-    if (!decoder.decode(floatQuaternion.w))
-        return std::nullopt;
-    return floatQuaternion;
-}
-
-template<class Encoder>
-void Device::FrameData::Pose::encode(Encoder& encoder) const
-{
-    encoder << position << orientation;
-}
-
-template<class Decoder>
-std::optional<Device::FrameData::Pose> Device::FrameData::Pose::decode(Decoder& decoder)
-{
-    Device::FrameData::Pose pose;
-    if (!decoder.decode(pose.position))
-        return std::nullopt;
-    if (!decoder.decode(pose.orientation))
-        return std::nullopt;
-    return pose;
-}
-
-template<class Encoder>
-void Device::FrameData::Fov::encode(Encoder& encoder) const
-{
-    encoder << up << down << left << right;
-}
-
-template<class Decoder>
-std::optional<Device::FrameData::Fov> Device::FrameData::Fov::decode(Decoder& decoder)
-{
-    Device::FrameData::Fov fov;
-    if (!decoder.decode(fov.up))
-        return std::nullopt;
-    if (!decoder.decode(fov.down))
-        return std::nullopt;
-    if (!decoder.decode(fov.left))
-        return std::nullopt;
-    if (!decoder.decode(fov.right))
-        return std::nullopt;
-    return fov;
-}
-
-template<class Encoder>
-void Device::FrameData::View::encode(Encoder& encoder) const
-{
-    encoder << offset;
-
-    bool hasFov = std::holds_alternative<PlatformXR::Device::FrameData::Fov>(projection);
-    encoder << hasFov;
-    if (hasFov) {
-        encoder << std::get<PlatformXR::Device::FrameData::Fov>(projection);
-        return;
-    }
-
-    bool hasProjectionMatrix = std::holds_alternative<PlatformXR::Device::FrameData::ProjectionMatrix>(projection);
-    encoder << hasProjectionMatrix;
-    if (hasProjectionMatrix) {
-        for (float f : std::get<PlatformXR::Device::FrameData::ProjectionMatrix>(projection))
-            encoder << f;
-        return;
-    }
-
-    ASSERT(std::holds_alternative<std::nullptr_t>(projection));
-}
-
-template<class Decoder>
-std::optional<Device::FrameData::View> Device::FrameData::View::decode(Decoder& decoder)
-{
-    PlatformXR::Device::FrameData::View view;
-    if (!decoder.decode(view.offset))
-        return std::nullopt;
-
-    bool hasFov;
-    if (!decoder.decode(hasFov))
-        return std::nullopt;
-
-    if (hasFov) {
-        PlatformXR::Device::FrameData::Fov fov;
-        if (!decoder.decode(fov))
-            return std::nullopt;
-        view.projection = { WTFMove(fov) };
-        return view;
-    }
-
-    bool hasProjectionMatrix;
-    if (!decoder.decode(hasProjectionMatrix))
-        return std::nullopt;
-
-    if (hasProjectionMatrix) {
-        PlatformXR::Device::FrameData::ProjectionMatrix projectionMatrix;
-        for (size_t i = 0; i < PlatformXR::Device::FrameData::projectionMatrixSize; ++i) {
-            float f;
-            if (!decoder.decode(f))
-                return std::nullopt;
-            projectionMatrix[i] = f;
-        }
-        view.projection = { WTFMove(projectionMatrix) };
-        return view;
-    }
-
-    view.projection = { nullptr };
-    return view;
-}
-
-template<class Encoder>
-void Device::FrameData::StageParameters::encode(Encoder& encoder) const
-{
-    encoder << id;
-    encoder << bounds;
-}
-
-template<class Decoder>
-std::optional<Device::FrameData::StageParameters> Device::FrameData::StageParameters::decode(Decoder& decoder)
-{
-    PlatformXR::Device::FrameData::StageParameters stageParameters;
-    if (!decoder.decode(stageParameters.id))
-        return std::nullopt;
-    if (!decoder.decode(stageParameters.bounds))
-        return std::nullopt;
-    return stageParameters;
-}
-
-template<class Encoder>
-void Device::FrameData::LayerData::encode(Encoder& encoder) const
-{
-#if USE(IOSURFACE_FOR_XR_LAYER_DATA)
-    MachSendRight surfaceSendRight = surface ? surface->createSendRight() : MachSendRight();
-    encoder << WTFMove(surfaceSendRight);
-    encoder << isShared;
-#elif USE(MTLTEXTURE_FOR_XR_LAYER_DATA)
-    encoder << std::tuple(colorTexture);
-    encoder << std::tuple(depthStencilBuffer);
-#else
-    encoder << opaqueTexture;
-#endif
-#if USE(MTLSHAREDEVENT_FOR_XR_FRAME_COMPLETION)
-    encoder << std::tuple(completionSyncEvent);
-#endif
-}
-
-template<class Decoder>
-std::optional<Device::FrameData::LayerData> Device::FrameData::LayerData::decode(Decoder& decoder)
-{
-    PlatformXR::Device::FrameData::LayerData layerData;
-#if USE(IOSURFACE_FOR_XR_LAYER_DATA)
-    MachSendRight surfaceSendRight;
-    if (!decoder.decode(surfaceSendRight))
-        return std::nullopt;
-    layerData.surface = WebCore::IOSurface::createFromSendRight(WTFMove(surfaceSendRight));
-    if (!decoder.decode(layerData.isShared))
-        return std::nullopt;
-#elif USE(MTLTEXTURE_FOR_XR_LAYER_DATA)
-    if (!decoder.decode(layerData.colorTexture))
-        return std::nullopt;
-    if (!decoder.decode(layerData.depthStencilBuffer))
-        return std::nullopt;
-#else
-    if (!decoder.decode(layerData.opaqueTexture))
-        return std::nullopt;
-#endif
-#if USE(MTLSHAREDEVENT_FOR_XR_FRAME_COMPLETION)
-    if (!decoder.decode(layerData.completionSyncEvent))
-        return std::nullopt;
-#endif
-    return layerData;
-}
-
-template<class Encoder>
-void Device::FrameData::InputSourceButton::encode(Encoder& encoder) const
-{
-    encoder << touched;
-    encoder << pressed;
-    encoder << pressedValue;
-}
-
-template<class Decoder>
-std::optional<Device::FrameData::InputSourceButton> Device::FrameData::InputSourceButton::decode(Decoder& decoder)
-{
-    PlatformXR::Device::FrameData::InputSourceButton button;
-    if (!decoder.decode(button.touched))
-        return std::nullopt;
-    if (!decoder.decode(button.pressed))
-        return std::nullopt;
-    if (!decoder.decode(button.pressedValue))
-        return std::nullopt;
-    return button;
-}
-
-template<class Encoder>
-void Device::FrameData::InputSourcePose::encode(Encoder& encoder) const
-{
-    encoder << pose;
-    encoder << isPositionEmulated;
-}
-
-template<class Decoder>
-std::optional<Device::FrameData::InputSourcePose> Device::FrameData::InputSourcePose::decode(Decoder& decoder)
-{
-    PlatformXR::Device::FrameData::InputSourcePose inputSourcePose;
-    if (!decoder.decode(inputSourcePose.pose))
-        return std::nullopt;
-    if (!decoder.decode(inputSourcePose.isPositionEmulated))
-        return std::nullopt;
-    return inputSourcePose;
-}
-
-#if ENABLE(WEBXR_HANDS)
-template<class Encoder>
-void Device::FrameData::InputSourceHandJoint::encode(Encoder& encoder) const
-{
-    encoder << pose;
-    encoder << radius;
-}
-
-template<class Decoder>
-std::optional<Device::FrameData::InputSourceHandJoint> Device::FrameData::InputSourceHandJoint::decode(Decoder& decoder)
-{
-    std::optional<InputSourcePose> pose;
-    decoder >> pose;
-    if (!pose)
-        return std::nullopt;
-    std::optional<float> radius;
-    decoder >> radius;
-    if (!radius)
-        return std::nullopt;
-    return { { WTFMove(*pose), *radius } };
-}
-#endif
-
-template<class Encoder>
-void Device::FrameData::InputSource::encode(Encoder& encoder) const
-{
-    encoder << handle;
-    encoder << handeness;
-    encoder << targetRayMode;
-    encoder << profiles;
-    encoder << pointerOrigin;
-    encoder << gripOrigin;
-    encoder << buttons;
-    encoder << axes;
-#if ENABLE(WEBXR_HANDS)
-    encoder << handJoints;
-#endif
-}
-
-template<class Decoder>
-std::optional<Device::FrameData::InputSource> Device::FrameData::InputSource::decode(Decoder& decoder)
-{
-    PlatformXR::Device::FrameData::InputSource source;
-    if (!decoder.decode(source.handle))
-        return std::nullopt;
-    if (!decoder.decode(source.handeness))
-        return std::nullopt;
-    if (!decoder.decode(source.targetRayMode))
-        return std::nullopt;
-    if (!decoder.decode(source.profiles))
-        return std::nullopt;
-    if (!decoder.decode(source.pointerOrigin))
-        return std::nullopt;
-    if (!decoder.decode(source.gripOrigin))
-        return std::nullopt;
-    if (!decoder.decode(source.buttons))
-        return std::nullopt;
-    if (!decoder.decode(source.axes))
-        return std::nullopt;
-#if ENABLE(WEBXR_HANDS)
-    if (!decoder.decode(source.handJoints))
-        return std::nullopt;
-#endif
-    return source;
-}
-
-
-template<class Encoder>
-void Device::FrameData::encode(Encoder& encoder) const
-{
-    encoder << isTrackingValid;
-    encoder << isPositionValid;
-    encoder << isPositionEmulated;
-    encoder << shouldRender;
-    encoder << predictedDisplayTime;
-    encoder << origin;
-    encoder << floorTransform;
-    encoder << stageParameters;
-    encoder << views;
-    encoder << layers;
-    encoder << inputSources;
-}
-
-template<class Decoder>
-std::optional<Device::FrameData> Device::FrameData::decode(Decoder& decoder)
-{
-    PlatformXR::Device::FrameData frameData;
-    if (!decoder.decode(frameData.isTrackingValid))
-        return std::nullopt;
-    if (!decoder.decode(frameData.isPositionValid))
-        return std::nullopt;
-    if (!decoder.decode(frameData.isPositionEmulated))
-        return std::nullopt;
-    if (!decoder.decode(frameData.shouldRender))
-        return std::nullopt;
-    if (!decoder.decode(frameData.predictedDisplayTime))
-        return std::nullopt;
-    if (!decoder.decode(frameData.origin))
-        return std::nullopt;
-    if (!decoder.decode(frameData.floorTransform))
-        return std::nullopt;
-    if (!decoder.decode(frameData.stageParameters))
-        return std::nullopt;
-    if (!decoder.decode(frameData.views))
-        return std::nullopt;
-    if (!decoder.decode(frameData.layers))
-        return std::nullopt;
-    if (!decoder.decode(frameData.inputSources))
-        return std::nullopt;
-
-
-    return frameData;
-}
-
-inline Device::FrameData Device::FrameData::copy() const
-{
-    PlatformXR::Device::FrameData frameData;
+    PlatformXR::FrameData frameData;
     frameData.isTrackingValid = isTrackingValid;
     frameData.isPositionValid = isPositionValid;
     frameData.isPositionEmulated = isPositionEmulated;
@@ -788,78 +583,10 @@ inline Device::FrameData Device::FrameData::copy() const
     frameData.stageParameters = stageParameters;
     frameData.views = views;
     frameData.inputSources = inputSources;
+    frameData.environmentBlendMode = environmentBlendMode;
     return frameData;
 }
 
 #endif // ENABLE(WEBXR)
 
 } // namespace PlatformXR
-
-#if ENABLE(WEBXR)
-
-namespace WTF {
-
-template<> struct EnumTraits<PlatformXR::SessionMode> {
-    using values = EnumValues<
-        PlatformXR::SessionMode,
-        PlatformXR::SessionMode::Inline,
-        PlatformXR::SessionMode::ImmersiveVr,
-        PlatformXR::SessionMode::ImmersiveAr
-    >;
-};
-
-template<> struct EnumTraits<PlatformXR::ReferenceSpaceType> {
-    using values = EnumValues<
-        PlatformXR::ReferenceSpaceType,
-        PlatformXR::ReferenceSpaceType::Viewer,
-        PlatformXR::ReferenceSpaceType::Local,
-        PlatformXR::ReferenceSpaceType::LocalFloor,
-        PlatformXR::ReferenceSpaceType::BoundedFloor,
-        PlatformXR::ReferenceSpaceType::Unbounded
-    >;
-};
-
-template<> struct EnumTraits<PlatformXR::VisibilityState> {
-    using values = EnumValues<
-        PlatformXR::VisibilityState,
-        PlatformXR::VisibilityState::Visible,
-        PlatformXR::VisibilityState::VisibleBlurred,
-        PlatformXR::VisibilityState::Hidden
-    >;
-};
-
-template<> struct EnumTraits<PlatformXR::XRHandedness> {
-    using values = EnumValues<
-        PlatformXR::XRHandedness,
-        PlatformXR::XRHandedness::None,
-        PlatformXR::XRHandedness::Left,
-        PlatformXR::XRHandedness::Right
-    >;
-};
-
-template<> struct EnumTraits<PlatformXR::XRTargetRayMode> {
-    using values = EnumValues<
-        PlatformXR::XRTargetRayMode,
-        PlatformXR::XRTargetRayMode::Gaze,
-        PlatformXR::XRTargetRayMode::TrackedPointer,
-        PlatformXR::XRTargetRayMode::Screen
-    >;
-};
-
-template<> struct EnumTraits<PlatformXR::SessionFeature> {
-    using values = EnumValues<
-        PlatformXR::SessionFeature,
-        PlatformXR::SessionFeature::ReferenceSpaceTypeViewer,
-        PlatformXR::SessionFeature::ReferenceSpaceTypeLocal,
-        PlatformXR::SessionFeature::ReferenceSpaceTypeLocalFloor,
-        PlatformXR::SessionFeature::ReferenceSpaceTypeBoundedFloor,
-        PlatformXR::SessionFeature::ReferenceSpaceTypeUnbounded
-#if ENABLE(WEBXR_HANDS)
-        , PlatformXR::SessionFeature::HandTracking
-#endif
-    >;
-};
-
-}
-
-#endif

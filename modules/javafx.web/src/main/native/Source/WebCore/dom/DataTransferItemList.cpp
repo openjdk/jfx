@@ -27,17 +27,21 @@
 #include "DataTransferItemList.h"
 
 #include "ContextDestructionObserver.h"
+#include "ContextDestructionObserverInlines.h"
 #include "DataTransferItem.h"
 #include "DeprecatedGlobalSettings.h"
 #include "Document.h"
+#include "ExceptionOr.h"
 #include "FileList.h"
+#include "MIMETypeRegistry.h"
 #include "Pasteboard.h"
+#include "ScriptWrappableInlines.h"
 #include "Settings.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(DataTransferItemList);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DataTransferItemList);
 
 DataTransferItemList::DataTransferItemList(Document& document, DataTransfer& dataTransfer)
     : ContextDestructionObserver(&document)
@@ -72,12 +76,13 @@ static bool shouldExposeTypeInItemList(const String& type)
 
 ExceptionOr<RefPtr<DataTransferItem>> DataTransferItemList::add(Document& document, const String& data, const String& type)
 {
-    if (!m_dataTransfer.canWriteData())
+    Ref dataTransfer = m_dataTransfer.get();
+    if (!dataTransfer->canWriteData())
         return nullptr;
 
     for (auto& item : ensureItems()) {
         if (!item->isFile() && equalIgnoringASCIICase(item->type(), type))
-            return Exception { NotSupportedError };
+            return Exception { ExceptionCode::NotSupportedError };
     }
 
     String lowercasedType = type.convertToASCIILowercase();
@@ -85,46 +90,49 @@ ExceptionOr<RefPtr<DataTransferItem>> DataTransferItemList::add(Document& docume
     if (!shouldExposeTypeInItemList(lowercasedType))
         return nullptr;
 
-    m_dataTransfer.setDataFromItemList(document, lowercasedType, data);
+    dataTransfer->setDataFromItemList(document, lowercasedType, data);
     ASSERT(m_items);
-    m_items->append(DataTransferItem::create(*this, lowercasedType));
+    m_items->append(DataTransferItem::create(*this, lowercasedType, DataTransferItem::Kind::String));
     return m_items->last().ptr();
 }
 
 RefPtr<DataTransferItem> DataTransferItemList::add(Ref<File>&& file)
 {
-    if (!m_dataTransfer.canWriteData())
+    Ref dataTransfer = m_dataTransfer.get();
+    if (!dataTransfer->canWriteData())
         return nullptr;
 
     ensureItems().append(DataTransferItem::create(*this, file->type(), file.copyRef()));
-    m_dataTransfer.didAddFileToItemList();
+    dataTransfer->didAddFileToItemList();
     return m_items->last().ptr();
 }
 
 ExceptionOr<void> DataTransferItemList::remove(unsigned index)
 {
-    if (!m_dataTransfer.canWriteData())
-        return Exception { InvalidStateError };
+    Ref dataTransfer = m_dataTransfer.get();
+    if (!dataTransfer->canWriteData())
+        return Exception { ExceptionCode::InvalidStateError };
 
     auto& items = ensureItems();
     if (items.size() <= index)
         return { };
 
     // FIXME: Remove the file from the pasteboard object once we add support for it.
-    Ref<DataTransferItem> removedItem = items[index].copyRef();
+    Ref removedItem = items[index].copyRef();
     if (!removedItem->isFile())
-        m_dataTransfer.pasteboard().clear(removedItem->type());
+        dataTransfer->pasteboard().clear(removedItem->type());
     removedItem->clearListAndPutIntoDisabledMode();
-    items.remove(index);
+    items.removeAt(index);
     if (removedItem->isFile())
-        m_dataTransfer.updateFileList(scriptExecutionContext());
+        dataTransfer->updateFileList(protectedScriptExecutionContext().get());
 
     return { };
 }
 
 void DataTransferItemList::clear()
 {
-    m_dataTransfer.pasteboard().clear();
+    Ref dataTransfer = m_dataTransfer.get();
+    dataTransfer->pasteboard().clear();
     bool removedItemContainingFile = false;
     if (m_items) {
         for (auto& item : *m_items) {
@@ -135,7 +143,7 @@ void DataTransferItemList::clear()
     }
 
     if (removedItemContainingFile)
-        m_dataTransfer.updateFileList(scriptExecutionContext());
+        dataTransfer->updateFileList(protectedScriptExecutionContext().get());
 }
 
 Vector<Ref<DataTransferItem>>& DataTransferItemList::ensureItems() const
@@ -143,17 +151,27 @@ Vector<Ref<DataTransferItem>>& DataTransferItemList::ensureItems() const
     if (m_items)
         return *m_items;
 
+    Ref document = *this->document();
+    Ref dataTransfer = m_dataTransfer.get();
     Vector<Ref<DataTransferItem>> items;
-    for (auto& type : m_dataTransfer.typesForItemList()) {
+    for (auto& type : dataTransfer->typesForItemList(document)) {
         auto lowercasedType = type.convertToASCIILowercase();
         if (shouldExposeTypeInItemList(lowercasedType))
-            items.append(DataTransferItem::create(*this, lowercasedType));
+            items.append(DataTransferItem::create(*this, lowercasedType, DataTransferItem::Kind::String));
     }
 
-    for (auto& file : m_dataTransfer.files(document()).files())
+    if (dataTransfer->canReadData()) {
+    for (auto& file : dataTransfer->files(document).files())
         items.append(DataTransferItem::create(*this, file->type(), file.copyRef()));
+    } else if (dataTransfer->canReadTypes()) {
+        items.appendVector(WTF::compactMap(dataTransfer->pasteboard().promisedFileMIMETypes(), [&](auto type) -> std::optional<Ref<DataTransferItem>> {
+            if (!MIMETypeRegistry::isSupportedImageMIMEType(type) && !MIMETypeRegistry::isSupportedMediaMIMEType(type))
+                return std::nullopt;
+            return { DataTransferItem::create(*this, type, DataTransferItem::Kind::File) };
+        }));
+    }
 
-    m_items = WTFMove(items);
+    m_items = WTF::move(items);
 
     return *m_items;
 }
@@ -166,7 +184,7 @@ static void removeStringItemOfLowercasedType(Vector<Ref<DataTransferItem>>& item
     if (index == notFound)
         return;
     items[index]->clearListAndPutIntoDisabledMode();
-    items.remove(index);
+    items.removeAt(index);
 }
 
 void DataTransferItemList::didClearStringData(const String& type)
@@ -196,7 +214,7 @@ void DataTransferItemList::didSetStringData(const String& type)
     String lowercasedType = type.convertToASCIILowercase();
     removeStringItemOfLowercasedType(*m_items, type.convertToASCIILowercase());
 
-    m_items->append(DataTransferItem::create(*this, lowercasedType));
+    m_items->append(DataTransferItem::create(*this, lowercasedType, DataTransferItem::Kind::String));
 }
 
 Document* DataTransferItemList::document() const

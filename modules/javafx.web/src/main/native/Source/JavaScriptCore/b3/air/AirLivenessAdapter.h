@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,7 +33,10 @@
 #include "AirInstInlines.h"
 #include "AirStackSlot.h"
 #include "AirTmpInlines.h"
+#include <wtf/ForbidHeapAllocation.h>
 #include <wtf/IndexMap.h>
+#include <wtf/SequesteredMalloc.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC { namespace B3 { namespace Air {
 
@@ -43,6 +46,8 @@ static constexpr bool verbose = false;
 
 template<typename Adapter>
 struct LivenessAdapter {
+    WTF_FORBID_HEAP_ALLOCATION;
+public:
     typedef Air::CFG CFG;
 
     typedef Vector<unsigned, 4> ActionsList;
@@ -145,6 +150,8 @@ struct LivenessAdapter {
 
 template<Bank adapterBank, Arg::Temperature minimumTemperature = Arg::Cold>
 struct TmpLivenessAdapter : LivenessAdapter<TmpLivenessAdapter<adapterBank, minimumTemperature>> {
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_TEMPLATE(TmpLivenessAdapter);
+public:
     typedef LivenessAdapter<TmpLivenessAdapter<adapterBank, minimumTemperature>> Base;
 
     static constexpr const char* name = "TmpLiveness";
@@ -165,7 +172,17 @@ struct TmpLivenessAdapter : LivenessAdapter<TmpLivenessAdapter<adapterBank, mini
     static Tmp indexToValue(unsigned index) { return AbsoluteTmpMapper<adapterBank>::tmpFromAbsoluteIndex(index); }
 };
 
+#define TZONE_TEMPLATE_PARAMS template<Bank adapterBank, Arg::Temperature minimumTemperature>
+#define TZONE_TYPE TmpLivenessAdapter<adapterBank, minimumTemperature>
+
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_TEMPLATE_IMPL_WITH_MULTIPLE_OR_SPECIALIZED_PARAMETERS();
+
+#undef TZONE_TEMPLATE_PARAMS
+#undef TZONE_TYPE
+
 struct UnifiedTmpLivenessAdapter : LivenessAdapter<UnifiedTmpLivenessAdapter> {
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(UnifiedTmpLivenessAdapter);
+public:
     typedef LivenessAdapter<UnifiedTmpLivenessAdapter> Base;
 
     static constexpr const char* name = "UnifiedTmpLiveness";
@@ -189,6 +206,8 @@ struct UnifiedTmpLivenessAdapter : LivenessAdapter<UnifiedTmpLivenessAdapter> {
 };
 
 struct StackSlotLivenessAdapter : LivenessAdapter<StackSlotLivenessAdapter> {
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(StackSlotLivenessAdapter);
+public:
     static constexpr const char* name = "StackSlotLiveness";
     typedef StackSlot* Thing;
 

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2008 Nikolas Zimmermann <zimmermann@kde.org>
- * Copyright (C) 2009-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2022 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,14 +21,15 @@
 
 #pragma once
 
-#include "ContainerNode.h"
-#include "ContentSecurityPolicy.h"
-#include "LoadableScript.h"
-#include "ReferrerPolicy.h"
-#include "RequestPriority.h"
-#include "ScriptExecutionContextIdentifier.h"
-#include "ScriptType.h"
-#include "UserGestureIndicator.h"
+#include <JavaScriptCore/Forward.h>
+#include <WebCore/ContainerNode.h>
+#include <WebCore/ContentSecurityPolicy.h>
+#include <WebCore/LoadableScript.h>
+#include <WebCore/ReferrerPolicy.h>
+#include <WebCore/RequestPriority.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/ScriptType.h>
+#include <WebCore/UserGestureIndicator.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/text/TextPosition.h>
 
@@ -38,6 +39,7 @@ class CachedScript;
 class ContainerNode;
 class Element;
 class LoadableModuleScript;
+class Node;
 class PendingScript;
 class ScriptSourceCode;
 
@@ -45,16 +47,19 @@ class ScriptElement {
 public:
     virtual ~ScriptElement() = default;
 
-    Element& element() { return m_element; }
-    const Element& element() const { return m_element; }
+    Element& element() { return m_element.get(); }
+    const Element& element() const { return m_element.get(); }
+    Ref<Element> protectedElement() const { return m_element.get(); }
 
     bool prepareScript(const TextPosition& scriptStartPosition = TextPosition());
 
-    String scriptCharset() const { return m_characterEncoding; }
+    const AtomString& scriptCharset() const { return m_characterEncoding; }
     WEBCORE_EXPORT String scriptContent() const;
     void executeClassicScript(const ScriptSourceCode&);
     void executeModuleScript(LoadableModuleScript&);
     void registerImportMap(const ScriptSourceCode&);
+    void registerSpeculationRules(const ScriptSourceCode&);
+    void unregisterSpeculationRules();
 
     void executePendingScript(PendingScript&);
 
@@ -74,13 +79,16 @@ public:
     bool willExecuteWhenDocumentFinishedParsing() const { return m_willExecuteWhenDocumentFinishedParsing; }
     bool willExecuteInOrder() const { return m_willExecuteInOrder; }
     LoadableScript* loadableScript() { return m_loadableScript.get(); }
+    RefPtr<LoadableScript> protectedLoadableScript() { return m_loadableScript; }
 
     ScriptType scriptType() const { return m_scriptType; }
 
-    void ref();
-    void deref();
+    JSC::SourceTaintedOrigin sourceTaintedOrigin() const { return m_taintedOrigin; }
 
-    static std::optional<ScriptType> determineScriptType(const String& typeAttribute, const String& languageAttribute, bool isHTMLDocument = true);
+    void ref() const;
+    void deref() const;
+
+    static std::optional<ScriptType> determineScriptType(const String& typeAttribute, const String& languageAttribute, bool isHTMLDocument = true, bool speculationRulesPrefetchEnabled = false);
 
 protected:
     ScriptElement(Element&, bool createdByParser, bool isEvaluated);
@@ -101,8 +109,14 @@ protected:
 
     void didFinishInsertingNode();
     void childrenChanged(const ContainerNode::ChildChange&);
+    void finishParsingChildren();
     void handleSourceAttribute(const String& sourceURL);
     void handleAsyncAttribute();
+
+    void setTrustedScriptText(const String&);
+
+    virtual void potentiallyBlockRendering() { }
+    virtual void unblockRendering() { }
 
 private:
     void executeScriptAndDispatchEvent(LoadableScript&);
@@ -112,20 +126,22 @@ private:
     void dispatchLoadEventRespectingUserGestureIndicator();
 
     bool requestClassicScript(const String& sourceURL);
-    bool requestModuleScript(const TextPosition& scriptStartPosition);
-    bool requestImportMap(LocalFrame&, const String& sourceURL);
+    bool requestModuleScript(const String& sourceText, const TextPosition& scriptStartPosition);
+
+    void updateTaintedOriginFromSourceURL();
 
     virtual String sourceAttributeValue() const = 0;
-    virtual String charsetAttributeValue() const = 0;
+    virtual AtomString charsetAttributeValue() const = 0;
     virtual String typeAttributeValue() const = 0;
     virtual String languageAttributeValue() const = 0;
     virtual ReferrerPolicy referrerPolicy() const = 0;
-    virtual RequestPriority fetchPriorityHint() const { return RequestPriority::Auto; }
+    virtual RequestPriority fetchPriority() const { return RequestPriority::Auto; }
 
     virtual bool isScriptPreventedByAttributes() const { return false; }
 
-    Element& m_element;
+    WeakRef<Element, WeakPtrImplWithEventTargetData> m_element;
     OrdinalNumber m_startLineNumber { OrdinalNumber::beforeFirst() };
+    JSC::SourceTaintedOrigin m_taintedOrigin;
     ParserInserted m_parserInserted : bitWidthOfParserInserted;
     bool m_isExternalScript : 1 { false };
     bool m_alreadyStarted : 1;
@@ -136,20 +152,24 @@ private:
     bool m_willExecuteWhenDocumentFinishedParsing : 1 { false };
     bool m_forceAsync : 1;
     bool m_willExecuteInOrder : 1 { false };
+    bool m_childrenChangedByAPI : 1 { false };
     ScriptType m_scriptType : bitWidthOfScriptType { ScriptType::Classic };
-    String m_characterEncoding;
-    String m_fallbackCharacterEncoding;
+    AtomString m_characterEncoding;
+    AtomString m_fallbackCharacterEncoding;
     RefPtr<LoadableScript> m_loadableScript;
 
     // https://html.spec.whatwg.org/multipage/scripting.html#preparation-time-document
-    ScriptExecutionContextIdentifier m_preparationTimeDocumentIdentifier;
+    Markable<ScriptExecutionContextIdentifier> m_preparationTimeDocumentIdentifier;
 
     MonotonicTime m_creationTime;
     RefPtr<UserGestureToken> m_userGestureToken;
+
+    // https://w3c.github.io/trusted-types/dist/spec/#slots-with-trusted-values
+    String m_trustedScriptText { emptyString() };
 };
 
 // FIXME: replace with is/downcast<ScriptElement>.
-bool isScriptElement(Element&);
-ScriptElement& downcastScriptElement(Element&);
+bool isScriptElement(Node&);
+ScriptElement* dynamicDowncastScriptElement(Element&);
 
 }

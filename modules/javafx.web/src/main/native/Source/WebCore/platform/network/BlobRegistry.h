@@ -32,6 +32,7 @@
 #pragma once
 
 #include <optional>
+#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -44,10 +45,12 @@ class SecurityOriginData;
 
 struct PolicyContainer;
 
-WEBCORE_EXPORT BlobRegistry& blobRegistry();
+WEBCORE_EXPORT CheckedRef<BlobRegistry> blobRegistry();
 
 // BlobRegistry is not thread-safe. It should only be called from main thread.
-class WEBCORE_EXPORT BlobRegistry {
+class WEBCORE_EXPORT BlobRegistry : public CanMakeCheckedPtr<BlobRegistry> {
+    WTF_MAKE_TZONE_ALLOCATED(BlobRegistry);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(BlobRegistry);
 public:
 
     // Registers a blob URL referring to the specified file.
@@ -69,6 +72,8 @@ public:
 
     virtual void registerBlobURLHandle(const URL&, const std::optional<SecurityOriginData>& topOrigin) = 0;
     virtual void unregisterBlobURLHandle(const URL&, const std::optional<SecurityOriginData>& topOrigin) = 0;
+
+    virtual String blobType(const URL&) = 0;
 
     virtual unsigned long long blobSize(const URL&) = 0;
 

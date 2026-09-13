@@ -27,11 +27,12 @@
 
 #if ENABLE(MEDIA_SESSION_COORDINATOR)
 
-#include "Exception.h"
-#include "MediaPositionState.h"
-#include "MediaSessionCoordinatorState.h"
-#include "MediaSessionPlaybackState.h"
-#include "MediaSessionReadyState.h"
+#include <WebCore/Exception.h>
+#include <WebCore/MediaPositionState.h>
+#include <WebCore/MediaSessionCoordinatorState.h>
+#include <WebCore/MediaSessionPlaybackState.h>
+#include <WebCore/MediaSessionReadyState.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/WeakPtr.h>
 
@@ -41,7 +42,7 @@ class Logger;
 
 namespace WebCore {
 
-class MediaSessionCoordinatorClient : public CanMakeWeakPtr<MediaSessionCoordinatorClient> {
+class MediaSessionCoordinatorClient : public AbstractRefCountedAndCanMakeWeakPtr<MediaSessionCoordinatorClient> {
 public:
     virtual ~MediaSessionCoordinatorClient() = default;
 
@@ -71,20 +72,20 @@ public:
     virtual void playbackStateChanged(MediaSessionPlaybackState) = 0;
     virtual void trackIdentifierChanged(const String&) = 0;
 
-    void setLogger(const Logger&, const void*);
+    void setLogger(const Logger&, uint64_t);
     virtual void setClient(WeakPtr<MediaSessionCoordinatorClient> client) { m_client = client;}
 
 protected:
     explicit MediaSessionCoordinatorPrivate() = default;
 
     const Logger* loggerPtr() const { return m_logger.get(); }
-    const void* logIdentifier() const { return m_logIdentifier; }
+    uint64_t logIdentifier() const { return m_logIdentifier; }
 
     WeakPtr<MediaSessionCoordinatorClient> client() const { return m_client; }
 
 private:
     RefPtr<const Logger> m_logger;
-    const void* m_logIdentifier;
+    uint64_t m_logIdentifier { 0 };
     WeakPtr<MediaSessionCoordinatorClient> m_client;
 };
 

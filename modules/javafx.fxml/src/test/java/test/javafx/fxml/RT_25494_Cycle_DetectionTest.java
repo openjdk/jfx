@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,22 +27,29 @@ package test.javafx.fxml;
 
 import java.io.IOException;
 import javafx.fxml.FXMLLoader;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class RT_25494_Cycle_DetectionTest {
 
-    @Test(expected=IOException.class)
+    @Test
     public void test_dummy_cycle() throws Exception {
-        FXMLLoader.load(RT_25494_Cycle_DetectionTest.class.getResource("dummy-cycle.fxml"));
+        assertThrows(IOException.class, () -> {
+            FXMLLoader.load(RT_25494_Cycle_DetectionTest.class.getResource("dummy-cycle.fxml"));
+        });
     }
 
-    @Test(expected=IOException.class)
+    @Test
     public void test_one_2_one_cycle() throws Exception {
-        FXMLLoader.load(RT_25494_Cycle_DetectionTest.class.getResource("one-2-one-cycle.fxml"));
+        assertThrows(IOException.class, () -> {
+            FXMLLoader.load(RT_25494_Cycle_DetectionTest.class.getResource("one-2-one-cycle.fxml"));
+        });
     }
 
-    @Test(expected=IOException.class)
+    @Test
     public void test_cycle() throws Exception {
-        FXMLLoader.load(RT_25494_Cycle_DetectionTest.class.getResource("cycle.fxml"));
+        assertThrows(IOException.class, () -> {
+            FXMLLoader.load(RT_25494_Cycle_DetectionTest.class.getResource("cycle.fxml"));
+        });
     }
 }

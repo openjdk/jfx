@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,6 @@
 
 package com.sun.glass.ui.monocle;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
 class DispmanAcceleratedScreen extends AcceleratedScreen {
 
     DispmanAcceleratedScreen(int[] attributes) throws GLException {
@@ -38,14 +35,8 @@ class DispmanAcceleratedScreen extends AcceleratedScreen {
 
     @Override
     protected long platformGetNativeWindow() {
-        @SuppressWarnings("removal")
-        int displayID = AccessController.doPrivileged(
-                (PrivilegedAction<Integer>)
-                        () -> Integer.getInteger("dispman.display", 0 /* LCD */));
-        @SuppressWarnings("removal")
-        int layerID = AccessController.doPrivileged(
-                (PrivilegedAction<Integer>)
-                        () -> Integer.getInteger("dispman.layer", 1));
+        int displayID = Integer.getInteger("dispman.display", 0 /* LCD */);
+        int layerID = Integer.getInteger("dispman.layer", 1);
         return _platformGetNativeWindow(displayID, layerID);
     }
 }

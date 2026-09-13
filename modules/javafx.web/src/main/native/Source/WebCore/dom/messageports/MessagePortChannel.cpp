@@ -39,25 +39,29 @@ Ref<MessagePortChannel> MessagePortChannel::create(MessagePortChannelRegistry& r
 }
 
 MessagePortChannel::MessagePortChannel(MessagePortChannelRegistry& registry, const MessagePortIdentifier& port1, const MessagePortIdentifier& port2)
-    : m_registry(registry)
+    : m_ports { port1, port2 }
+    , m_registry(registry)
 {
     ASSERT(isMainThread());
 
     relaxAdoptionRequirement();
 
-    m_ports[0] = port1;
     m_processes[0] = port1.processIdentifier;
     m_entangledToProcessProtectors[0] = this;
-    m_ports[1] = port2;
     m_processes[1] = port2.processIdentifier;
     m_entangledToProcessProtectors[1] = this;
 
-    m_registry.messagePortChannelCreated(*this);
+    checkedRegistry()->messagePortChannelCreated(*this);
 }
 
 MessagePortChannel::~MessagePortChannel()
 {
-    m_registry.messagePortChannelDestroyed(*this);
+    checkedRegistry()->messagePortChannelDestroyed(*this);
+}
+
+CheckedRef<MessagePortChannelRegistry> MessagePortChannel::checkedRegistry() const
+{
+    return m_registry;
 }
 
 std::optional<ProcessIdentifier> MessagePortChannel::processForPort(const MessagePortIdentifier& port)
@@ -105,7 +109,7 @@ void MessagePortChannel::disentanglePort(const MessagePortIdentifier& port)
 
     // This set of steps is to guarantee that the lock is unlocked before the
     // last ref to this object is released.
-    auto protectedThis = WTFMove(m_entangledToProcessProtectors[i]);
+    auto protectedThis = WTF::move(m_entangledToProcessProtectors[i]);
 }
 
 void MessagePortChannel::closePort(const MessagePortIdentifier& port)
@@ -117,10 +121,6 @@ void MessagePortChannel::closePort(const MessagePortIdentifier& port)
 
     m_processes[i] = std::nullopt;
     m_isClosed[i] = true;
-
-    // This set of steps is to guarantee that the lock is unlocked before the
-    // last ref to this object is released.
-    Ref protectedThis { *this };
 
     m_pendingMessages[i].clear();
     m_pendingMessagePortTransfers[i].clear();
@@ -135,7 +135,10 @@ bool MessagePortChannel::postMessageToRemote(MessageWithMessagePorts&& message, 
     ASSERT(remoteTarget == m_ports[0] || remoteTarget == m_ports[1]);
     size_t i = remoteTarget == m_ports[0] ? 0 : 1;
 
-    m_pendingMessages[i].append(WTFMove(message));
+    if (m_isClosed[i])
+        return false;
+
+    m_pendingMessages[i].append(WTF::move(message));
     LOG(MessagePorts, "MessagePortChannel %s (%p) now has %zu messages pending on port %s", logString().utf8().data(), this, m_pendingMessages[i].size(), remoteTarget.logString().utf8().data());
 
     if (m_pendingMessages[i].size() == 1) {
@@ -161,7 +164,7 @@ void MessagePortChannel::takeAllMessagesForPort(const MessagePortIdentifier& por
         return;
     }
 
-    ASSERT(m_pendingMessageProtectors[i]);
+    ASSERT(m_pendingMessageProtectors[i] == this);
 
     Vector<MessageWithMessagePorts> result;
     result.swap(m_pendingMessages[i]);
@@ -171,13 +174,13 @@ void MessagePortChannel::takeAllMessagesForPort(const MessagePortIdentifier& por
     LOG(MessagePorts, "There are %zu messages to take for port %s. Taking them now, messages in flight is now %" PRIu64, result.size(), port.logString().utf8().data(), m_messageBatchesInFlight);
 
     auto size = result.size();
-    callback(WTFMove(result), [size, this, port, protectedThis = WTFMove(m_pendingMessageProtectors[i])] {
+    callback(WTF::move(result), [size, port, protectedThis = WTF::move(m_pendingMessageProtectors[i])] {
         UNUSED_PARAM(port);
 #if LOG_DISABLED
         UNUSED_PARAM(size);
 #endif
-        --m_messageBatchesInFlight;
-        LOG(MessagePorts, "Message port channel %s was notified that a batch of %zu message port messages targeted for port %s just completed dispatch, in flight is now %" PRIu64, logString().utf8().data(), size, port.logString().utf8().data(), m_messageBatchesInFlight);
+        --(protectedThis->m_messageBatchesInFlight);
+        LOG(MessagePorts, "Message port channel %s was notified that a batch of %zu message port messages targeted for port %s just completed dispatch, in flight is now %" PRIu64, protectedThis->logString().utf8().data(), size, port.logString().utf8().data(), protectedThis->m_messageBatchesInFlight);
 
     });
 }

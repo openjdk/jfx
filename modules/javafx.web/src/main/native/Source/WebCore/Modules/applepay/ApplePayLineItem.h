@@ -27,8 +27,8 @@
 
 #if ENABLE(APPLE_PAY)
 
-#include "ApplePayPaymentTiming.h"
-#include "ApplePayRecurringPaymentDateUnit.h"
+#include <WebCore/ApplePayPaymentTiming.h>
+#include <WebCore/ApplePayRecurringPaymentDateUnit.h>
 #include <optional>
 #include <wtf/WallTime.h>
 #include <wtf/text/WTFString.h>
@@ -61,6 +61,18 @@ struct ApplePayLineItem final {
 #if ENABLE(APPLE_PAY_AUTOMATIC_RELOAD_LINE_ITEM)
     String automaticReloadPaymentThresholdAmount; /* required */
 #endif
+
+#if ENABLE(APPLE_PAY_DISBURSEMENTS)
+
+    enum class DisbursementLineItemType : uint8_t {
+        Disbursement,
+        InstantFundsOutFee,
+    };
+
+    std::optional<DisbursementLineItemType> disbursementLineItemType;
+
+#endif
+
 };
 
 } // namespace WebCore

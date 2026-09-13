@@ -29,6 +29,7 @@
 #include "ImageBuffer.h"
 #include "PixelBuffer.h"
 #include <wtf/MathExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if USE(ACCELERATE)
 #include <Accelerate/Accelerate.h>
@@ -36,13 +37,15 @@
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FEColorMatrixSoftwareApplier);
+
 FEColorMatrixSoftwareApplier::FEColorMatrixSoftwareApplier(const FEColorMatrix& effect)
     : Base(effect)
 {
-    if (m_effect.type() == FECOLORMATRIX_TYPE_SATURATE)
-        FEColorMatrix::calculateSaturateComponents(m_components, m_effect.values()[0]);
-    else if (m_effect.type() == FECOLORMATRIX_TYPE_HUEROTATE)
-        FEColorMatrix::calculateHueRotateComponents(m_components, m_effect.values()[0]);
+    if (m_effect->type() == ColorMatrixType::FECOLORMATRIX_TYPE_SATURATE)
+        FEColorMatrix::calculateSaturateComponents(m_components, m_effect->values()[0]);
+    else if (m_effect->type() == ColorMatrixType::FECOLORMATRIX_TYPE_HUEROTATE)
+        FEColorMatrix::calculateHueRotateComponents(m_components, m_effect->values()[0]);
 }
 
 inline void FEColorMatrixSoftwareApplier::matrix(float& red, float& green, float& blue, float& alpha) const
@@ -52,7 +55,7 @@ inline void FEColorMatrixSoftwareApplier::matrix(float& red, float& green, float
     float b = blue;
     float a = alpha;
 
-    const auto& values = m_effect.values();
+    const auto& values = m_effect->values();
 
     red   = values[ 0] * r + values[ 1] * g + values[ 2] * b + values[ 3] * a + values[ 4] * 255;
     green = values[ 5] * r + values[ 6] * g + values[ 7] * b + values[ 8] * a + values[ 9] * 255;
@@ -83,7 +86,7 @@ inline void FEColorMatrixSoftwareApplier::luminance(float& red, float& green, fl
 #if USE(ACCELERATE)
 void FEColorMatrixSoftwareApplier::applyPlatformAccelerated(PixelBuffer& pixelBuffer) const
 {
-    auto* pixelBytes = pixelBuffer.bytes();
+    auto* pixelBytes = pixelBuffer.bytes().data();
     auto bufferSize = pixelBuffer.size();
     const int32_t divisor = 256;
 
@@ -99,12 +102,12 @@ void FEColorMatrixSoftwareApplier::applyPlatformAccelerated(PixelBuffer& pixelBu
     dest.rowBytes = bufferSize.width() * 4;
     dest.data = pixelBytes;
 
-    switch (m_effect.type()) {
-    case FECOLORMATRIX_TYPE_UNKNOWN:
+    switch (m_effect->type()) {
+    case ColorMatrixType::FECOLORMATRIX_TYPE_UNKNOWN:
         break;
 
-    case FECOLORMATRIX_TYPE_MATRIX: {
-        const auto& values = m_effect.values();
+    case ColorMatrixType::FECOLORMATRIX_TYPE_MATRIX: {
+        const auto& values = m_effect->values();
 
         const int16_t matrix[4 * 4] = {
             static_cast<int16_t>(roundf(values[ 0] * divisor)),
@@ -131,8 +134,8 @@ void FEColorMatrixSoftwareApplier::applyPlatformAccelerated(PixelBuffer& pixelBu
         break;
     }
 
-    case FECOLORMATRIX_TYPE_SATURATE:
-    case FECOLORMATRIX_TYPE_HUEROTATE: {
+    case ColorMatrixType::FECOLORMATRIX_TYPE_SATURATE:
+    case ColorMatrixType::FECOLORMATRIX_TYPE_HUEROTATE: {
         const int16_t matrix[4 * 4] = {
             static_cast<int16_t>(roundf(m_components[0] * divisor)),
             static_cast<int16_t>(roundf(m_components[3] * divisor)),
@@ -157,7 +160,8 @@ void FEColorMatrixSoftwareApplier::applyPlatformAccelerated(PixelBuffer& pixelBu
         vImageMatrixMultiply_ARGB8888(&src, &dest, matrix, divisor, nullptr, nullptr, kvImageNoFlags);
         break;
     }
-    case FECOLORMATRIX_TYPE_LUMINANCETOALPHA: {
+    case ColorMatrixType::FECOLORMATRIX_TYPE_LUMINANCETOALPHA: {
+        // FIXME: Use luminanceToAlphaColorMatrix(), but the coefficients are slightly different. Have these been selected for integer math?
         const int16_t matrix[4 * 4] = {
             0,
             0,
@@ -188,13 +192,13 @@ void FEColorMatrixSoftwareApplier::applyPlatformAccelerated(PixelBuffer& pixelBu
 
 void FEColorMatrixSoftwareApplier::applyPlatformUnaccelerated(PixelBuffer& pixelBuffer) const
 {
-    auto pixelByteLength = pixelBuffer.sizeInBytes();
+    auto pixelByteLength = pixelBuffer.bytes().size();
 
-    switch (m_effect.type()) {
-    case FECOLORMATRIX_TYPE_UNKNOWN:
+    switch (m_effect->type()) {
+    case ColorMatrixType::FECOLORMATRIX_TYPE_UNKNOWN:
         break;
 
-    case FECOLORMATRIX_TYPE_MATRIX:
+    case ColorMatrixType::FECOLORMATRIX_TYPE_MATRIX:
         for (unsigned pixelByteOffset = 0; pixelByteOffset < pixelByteLength; pixelByteOffset += 4) {
             float red = pixelBuffer.item(pixelByteOffset);
             float green = pixelBuffer.item(pixelByteOffset + 1);
@@ -208,8 +212,8 @@ void FEColorMatrixSoftwareApplier::applyPlatformUnaccelerated(PixelBuffer& pixel
         }
         break;
 
-    case FECOLORMATRIX_TYPE_SATURATE:
-    case FECOLORMATRIX_TYPE_HUEROTATE:
+    case ColorMatrixType::FECOLORMATRIX_TYPE_SATURATE:
+    case ColorMatrixType::FECOLORMATRIX_TYPE_HUEROTATE:
         for (unsigned pixelByteOffset = 0; pixelByteOffset < pixelByteLength; pixelByteOffset += 4) {
             float red = pixelBuffer.item(pixelByteOffset);
             float green = pixelBuffer.item(pixelByteOffset + 1);
@@ -223,7 +227,7 @@ void FEColorMatrixSoftwareApplier::applyPlatformUnaccelerated(PixelBuffer& pixel
         }
         break;
 
-    case FECOLORMATRIX_TYPE_LUMINANCETOALPHA:
+    case ColorMatrixType::FECOLORMATRIX_TYPE_LUMINANCETOALPHA:
         for (unsigned pixelByteOffset = 0; pixelByteOffset < pixelByteLength; pixelByteOffset += 4) {
             float red = pixelBuffer.item(pixelByteOffset);
             float green = pixelBuffer.item(pixelByteOffset + 1);
@@ -242,11 +246,11 @@ void FEColorMatrixSoftwareApplier::applyPlatformUnaccelerated(PixelBuffer& pixel
 void FEColorMatrixSoftwareApplier::applyPlatform(PixelBuffer& pixelBuffer) const
 {
 #if USE(ACCELERATE)
-    const auto& values = m_effect.values();
+    const auto& values = m_effect->values();
 
     // vImageMatrixMultiply_ARGB8888 takes a 4x4 matrix, if any value in the last column of the FEColorMatrix 5x4 matrix
     // is not zero, fall back to non-vImage code.
-    if (m_effect.type() != FECOLORMATRIX_TYPE_MATRIX || (!values[4] && !values[9] && !values[14] && !values[19])) {
+    if (m_effect->type() != ColorMatrixType::FECOLORMATRIX_TYPE_MATRIX || (!values[4] && !values[9] && !values[14] && !values[19])) {
         applyPlatformAccelerated(pixelBuffer);
         return;
     }
@@ -254,17 +258,17 @@ void FEColorMatrixSoftwareApplier::applyPlatform(PixelBuffer& pixelBuffer) const
     applyPlatformUnaccelerated(pixelBuffer);
 }
 
-bool FEColorMatrixSoftwareApplier::apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const
+bool FEColorMatrixSoftwareApplier::apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const
 {
-    auto& input = inputs[0].get();
+    Ref input = inputs[0];
 
-    auto resultImage = result.imageBuffer();
+    RefPtr resultImage = result.imageBuffer();
     if (!resultImage)
         return false;
 
-    auto inputImage = input.imageBuffer();
+    RefPtr inputImage = input->imageBuffer();
     if (inputImage) {
-        auto inputImageRect = input.absoluteImageRectRelativeTo(result);
+        auto inputImageRect = input->absoluteImageRectRelativeTo(result);
         resultImage->context().drawImageBuffer(*inputImage, inputImageRect);
     }
 

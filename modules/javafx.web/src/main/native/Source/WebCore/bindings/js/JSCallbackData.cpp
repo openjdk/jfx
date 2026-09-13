@@ -34,9 +34,13 @@
 #include "JSExecState.h"
 #include "JSExecStateInstrumentation.h"
 #include <JavaScriptCore/Exception.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 using namespace JSC;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(JSCallbackData);
 
 // https://webidl.spec.whatwg.org/#call-a-user-objects-operation
 JSValue JSCallbackData::invokeCallback(JSDOMGlobalObject& globalObject, JSObject* callback, JSValue thisValue, MarkedArgumentBuffer& args, CallbackType method, PropertyName functionName, NakedPtr<JSC::Exception>& returnedException)
@@ -46,7 +50,7 @@ JSValue JSCallbackData::invokeCallback(JSDOMGlobalObject& globalObject, JSObject
     JSGlobalObject* lexicalGlobalObject = &globalObject;
     VM& vm = lexicalGlobalObject->vm();
 
-    auto scope = DECLARE_CATCH_SCOPE(vm);
+    auto scope = DECLARE_THROW_SCOPE(vm);
 
     JSValue function;
     CallData callData;
@@ -63,15 +67,15 @@ JSValue JSCallbackData::invokeCallback(JSDOMGlobalObject& globalObject, JSObject
 
         ASSERT(!functionName.isNull());
         function = callback->get(lexicalGlobalObject, functionName);
-        if (UNLIKELY(scope.exception())) {
+        if (scope.exception()) [[unlikely]] {
             returnedException = scope.exception();
-            scope.clearException();
+            TRY_CLEAR_EXCEPTION(scope, JSValue());
             return JSValue();
         }
 
         callData = JSC::getCallData(function);
         if (callData.type == CallData::Type::None) {
-            returnedException = JSC::Exception::create(vm, createTypeError(lexicalGlobalObject, makeString("'", String(functionName.uid()), "' property of callback interface should be callable")));
+            returnedException = JSC::Exception::create(vm, createTypeError(lexicalGlobalObject, makeString('\'', String(functionName.uid()), "' property of callback interface should be callable"_s)));
             return JSValue();
         }
 
@@ -81,35 +85,28 @@ JSValue JSCallbackData::invokeCallback(JSDOMGlobalObject& globalObject, JSObject
     ASSERT(!function.isEmpty());
     ASSERT(callData.type != CallData::Type::None);
 
-    ScriptExecutionContext* context = globalObject.scriptExecutionContext();
+    RefPtr context = globalObject.scriptExecutionContext();
     // We will fail to get the context if the frame has been detached.
     if (!context)
         return JSValue();
 
-    JSExecState::instrumentFunction(context, callData);
+    JSExecState::instrumentFunction(context.get(), callData);
 
     returnedException = nullptr;
     JSValue result = JSExecState::profiledCall(lexicalGlobalObject, JSC::ProfilingReason::Other, function, callData, thisValue, args, returnedException);
 
-    InspectorInstrumentation::didCallFunction(context);
+    InspectorInstrumentation::didCallFunction(context.get());
 
     return result;
 }
 
 template<typename Visitor>
-void JSCallbackDataWeak::visitJSFunction(Visitor& visitor)
+void JSCallbackData::visitJSFunction(Visitor& visitor)
 {
     visitor.append(m_callback);
 }
 
-template void JSCallbackDataWeak::visitJSFunction(JSC::AbstractSlotVisitor&);
-template void JSCallbackDataWeak::visitJSFunction(JSC::SlotVisitor&);
-
-bool JSCallbackDataWeak::WeakOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown>, void* context, AbstractSlotVisitor& visitor, const char** reason)
-{
-    if (UNLIKELY(reason))
-        *reason = "Context is opaque root"; // FIXME: what is the context.
-    return visitor.containsOpaqueRoot(context);
-}
+template void JSCallbackData::visitJSFunction(JSC::AbstractSlotVisitor&);
+template void JSCallbackData::visitJSFunction(JSC::SlotVisitor&);
 
 } // namespace WebCore

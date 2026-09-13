@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,15 +38,11 @@
 
 namespace WebCore {
 
-void BitmapImage::invalidatePlatformData()
-{
-}
-
 Ref<Image> BitmapImage::createFromName(const char* name)
 {
     Ref<BitmapImage> img(create());
 
-    WC_GETJAVAENV_CHKRET(env, WTFMove(img));
+    WC_GETJAVAENV_CHKRET(env, WTF::move(img));
 
 #if USE(IMAGEIO)
     static jmethodID midLoadFromResource = env->GetMethodID(
@@ -58,16 +54,16 @@ Ref<Image> BitmapImage::createFromName(const char* name)
     SharedBufferBuilder bufferBuilder;
     //RefPtr<SharedBuffer> dataBuffer(SharedBuffer::create());
     //img->m_source->ensureDecoderAvailable(dataBuffer.get());
-    img->m_source->ensureDecoderAvailable(bufferBuilder.take().ptr());
-    env->CallVoidMethod(
+    //img->m_source->ensureDecoderAvailable(bufferBuilder.take().ptr());    //revisit
+  /*  env->CallVoidMethod(
         static_cast<ImageDecoderJava*>(img->m_source->m_decoder.get())->nativeDecoder(),
         midLoadFromResource,
         (jstring)String::fromLatin1(name).toJavaString(env));
-    WTF::CheckAndClearException(env);
+    WTF::CheckAndClearException(env); */
 
     // we have to make this call in order to initialize
     // internal flags that indicates the image readiness
-    img->encodedDataStatus();
+   // img->encodedDataStatus();
 
     // Absence if the image size indicates some problem with
     // the availability of the resource referred by the name.
@@ -94,9 +90,9 @@ Ref<Image> BitmapImage::createFromName(const char* name)
     WTF::CheckAndClearException(env);
     //From the upper call we got a callback [Java_com_sun_webkit_graphics_WCGraphicsManager_append]
     //that fills the buffer.
-    img->setData(WTFMove(dataBuffer), true);
+    img->setData(WTF::move(dataBuffer), true);
 #endif
-    return WTFMove(img);
+    return WTF::move(img);
 }
 
 
@@ -112,7 +108,7 @@ JNIEXPORT void JNICALL Java_com_sun_webkit_graphics_WCGraphicsManager_append
     SharedBufferBuilder* pBuffer = static_cast<SharedBufferBuilder*>jlong_to_ptr(sharedBufferPtr);
 
     void *cbits = env->GetPrimitiveArrayCritical(jbits, 0);
-    pBuffer->append(static_cast<char*>(cbits), count);
+    pBuffer->append(std::span<const uint8_t>(static_cast<const uint8_t*>(cbits), count));
     env->ReleasePrimitiveArrayCritical(jbits, cbits, JNI_ABORT);
 }
 

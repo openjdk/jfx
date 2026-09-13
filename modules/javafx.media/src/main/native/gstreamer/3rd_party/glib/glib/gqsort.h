@@ -35,12 +35,19 @@
 
 G_BEGIN_DECLS
 
-GLIB_AVAILABLE_IN_ALL
+GLIB_DEPRECATED_IN_2_82_FOR(g_sort_array)
 void g_qsort_with_data (gconstpointer    pbase,
       gint             total_elems,
       gsize            size,
       GCompareDataFunc compare_func,
       gpointer         user_data);
+
+GLIB_AVAILABLE_IN_2_82
+void g_sort_array (const void       *array,
+                   size_t            n_elements,
+                   size_t            element_size,
+                   GCompareDataFunc  compare_func,
+                   void             *user_data);
 
 G_END_DECLS
 

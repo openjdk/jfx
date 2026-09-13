@@ -30,11 +30,11 @@
 #include "HTMLFieldSetElement.h"
 #include "HTMLNames.h"
 #include "SelectionRestorationMode.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLLegendElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLLegendElement);
 
 inline HTMLLegendElement::HTMLLegendElement(const QualifiedName& tagName, Document& document)
     : HTMLElement(tagName, document)
@@ -52,10 +52,14 @@ HTMLFormElement* HTMLLegendElement::form() const
     // According to the specification, If the legend has a fieldset element as
     // its parent, then the form attribute must return the same value as the
     // form attribute on that fieldset element. Otherwise, it must return null.
-    RefPtr fieldset = parentNode();
-    if (!is<HTMLFieldSetElement>(fieldset))
-        return nullptr;
-    return downcast<HTMLFieldSetElement>(*fieldset).form();
+    RefPtr fieldset = dynamicDowncast<HTMLFieldSetElement>(parentNode());
+    return fieldset ? fieldset->form() : nullptr;
+}
+
+RefPtr<HTMLFormElement> HTMLLegendElement::formForBindings() const
+{
+    // FIXME: The downcast should be unnecessary, but the WPT was written before https://github.com/WICG/webcomponents/issues/1072 was resolved. Update once the WPT has been updated.
+    return dynamicDowncast<HTMLFormElement>(retargetReferenceTargetForBindings(form()));
 }
 
 } // namespace

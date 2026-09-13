@@ -35,18 +35,16 @@
 #include "RTCRtpSendParameters.h"
 #include <wtf/text/WTFString.h>
 
-ALLOW_UNUSED_PARAMETERS_BEGIN
-ALLOW_DEPRECATED_DECLARATIONS_BEGIN
-ALLOW_COMMA_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
+IGNORE_CLANG_WARNINGS_BEGIN("nullability-completeness")
 
 #include <webrtc/api/rtp_parameters.h>
 #include <webrtc/api/rtp_transceiver_interface.h>
+#include <webrtc/api/webrtc_sdp.h>
 #include <webrtc/p2p/base/p2p_constants.h>
-#include <webrtc/pc/webrtc_sdp.h>
 
-ALLOW_COMMA_END
-ALLOW_DEPRECATED_DECLARATIONS_END
-ALLOW_UNUSED_PARAMETERS_END
+IGNORE_CLANG_WARNINGS_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 namespace WebCore {
 
@@ -64,6 +62,17 @@ webrtc::Priority fromRTCPriorityType(RTCPriorityType priority)
     }
 
     RELEASE_ASSERT_NOT_REACHED();
+}
+
+RTCPriorityType toRTCPriorityType(webrtc::PriorityValue priority)
+{
+    if (priority <= webrtc::PriorityValue(webrtc::Priority::kVeryLow))
+        return RTCPriorityType::VeryLow;
+    if (priority <= webrtc::PriorityValue(webrtc::Priority::kLow))
+        return RTCPriorityType::Low;
+    if (priority <= webrtc::PriorityValue(webrtc::Priority::kMedium))
+        return RTCPriorityType::Medium;
+    return RTCPriorityType::High;
 }
 
 RTCPriorityType toRTCPriorityType(webrtc::Priority priority)
@@ -159,6 +168,7 @@ static inline RTCRtpHeaderExtensionParameters toRTCHeaderExtensionParameters(con
 
     parameters.uri = fromStdString(rtcParameters.uri);
     parameters.id = rtcParameters.id;
+    parameters.encrypted = rtcParameters.encrypt;
 
     return parameters;
 }
@@ -169,6 +179,7 @@ static inline webrtc::RtpExtension fromRTCHeaderExtensionParameters(const RTCRtp
 
     rtcParameters.uri = parameters.uri.utf8().data();
     rtcParameters.id = parameters.id;
+    rtcParameters.encrypt = parameters.encrypted;
 
     return rtcParameters;
 }
@@ -185,7 +196,7 @@ static inline RTCRtpCodecParameters toRTCCodecParameters(const webrtc::RtpCodecP
         parameters.channels = *rtcParameters.num_channels;
 
     StringBuilder sdpFmtpLineBuilder;
-    sdpFmtpLineBuilder.append("a=fmtp:", parameters.payloadType, ' ');
+    sdpFmtpLineBuilder.append("a=fmtp:"_s, parameters.payloadType, ' ');
 
     bool isFirst = true;
     for (auto& keyValue : rtcParameters.parameters) {
@@ -193,7 +204,7 @@ static inline RTCRtpCodecParameters toRTCCodecParameters(const webrtc::RtpCodecP
             sdpFmtpLineBuilder.append(';');
         else
             isFirst = false;
-        sdpFmtpLineBuilder.append(keyValue.first.c_str(), '=', keyValue.second.c_str());
+        sdpFmtpLineBuilder.append(std::span { keyValue.first }, '=', std::span { keyValue.second });
     }
     parameters.sdpFmtpLine = sdpFmtpLineBuilder.toString();
 
@@ -255,11 +266,11 @@ void updateRTCRtpSendParameters(const RTCRtpSendParameters& parameters, webrtc::
     for (size_t i = 0; i < parameters.encodings.size(); ++i) {
         rtcParameters.encodings[i].active = parameters.encodings[i].active;
         if (parameters.encodings[i].maxBitrate)
-            rtcParameters.encodings[i].max_bitrate_bps = parameters.encodings[i].maxBitrate;
+            rtcParameters.encodings[i].max_bitrate_bps = *parameters.encodings[i].maxBitrate;
         if (parameters.encodings[i].maxFramerate)
-            rtcParameters.encodings[i].max_framerate = parameters.encodings[i].maxFramerate;
+            rtcParameters.encodings[i].max_framerate = *parameters.encodings[i].maxFramerate;
         if (parameters.encodings[i].scaleResolutionDownBy)
-            rtcParameters.encodings[i].scale_resolution_down_by = parameters.encodings[i].scaleResolutionDownBy;
+            rtcParameters.encodings[i].scale_resolution_down_by = *parameters.encodings[i].scaleResolutionDownBy;
         rtcParameters.encodings[i].bitrate_priority = toWebRTCBitRatePriority(parameters.encodings[i].priority);
         if (parameters.encodings[i].networkPriority)
             rtcParameters.encodings[i].network_priority = fromRTCPriorityType(*parameters.encodings[i].networkPriority);
@@ -270,7 +281,10 @@ void updateRTCRtpSendParameters(const RTCRtpSendParameters& parameters, webrtc::
         rtcParameters.header_extensions.push_back(fromRTCHeaderExtensionParameters(extension));
     // Codecs parameters are readonly
 
-    switch (parameters.degradationPreference) {
+    if (!parameters.degradationPreference)
+        rtcParameters.degradation_preference = { };
+    else {
+        switch (*parameters.degradationPreference) {
     case RTCDegradationPreference::MaintainFramerate:
         rtcParameters.degradation_preference = webrtc::DegradationPreference::MAINTAIN_FRAMERATE;
         break;
@@ -280,6 +294,7 @@ void updateRTCRtpSendParameters(const RTCRtpSendParameters& parameters, webrtc::
     case RTCDegradationPreference::Balanced:
         rtcParameters.degradation_preference = webrtc::DegradationPreference::BALANCED;
         break;
+    }
     }
 
     if (parameters.rtcp.reducedSize)
@@ -321,14 +336,14 @@ webrtc::RtpTransceiverDirection fromRTCRtpTransceiverDirection(RTCRtpTransceiver
     RELEASE_ASSERT_NOT_REACHED();
 }
 
-webrtc::RtpTransceiverInit fromRtpTransceiverInit(const RTCRtpTransceiverInit& init, cricket::MediaType type)
+webrtc::RtpTransceiverInit fromRtpTransceiverInit(const RTCRtpTransceiverInit& init, webrtc::MediaType type)
 {
     webrtc::RtpTransceiverInit rtcInit;
     rtcInit.direction = fromRTCRtpTransceiverDirection(init.direction);
     for (auto& stream : init.streams)
         rtcInit.stream_ids.push_back(stream->id().utf8().data());
 
-    if (type == cricket::MediaType::MEDIA_TYPE_AUDIO) {
+    if (type == webrtc::MediaType::AUDIO) {
         if (!init.sendEncodings.isEmpty())
             rtcInit.send_encodings.push_back(fromRTCEncodingParameters(init.sendEncodings[0]));
     } else {
@@ -342,19 +357,19 @@ ExceptionCode toExceptionCode(webrtc::RTCErrorType type)
 {
     switch (type) {
     case webrtc::RTCErrorType::INVALID_PARAMETER:
-        return InvalidAccessError;
+        return ExceptionCode::InvalidAccessError;
     case webrtc::RTCErrorType::INVALID_RANGE:
-        return RangeError;
+        return ExceptionCode::RangeError;
     case webrtc::RTCErrorType::SYNTAX_ERROR:
-        return SyntaxError;
+        return ExceptionCode::SyntaxError;
     case webrtc::RTCErrorType::INVALID_STATE:
-        return InvalidStateError;
+        return ExceptionCode::InvalidStateError;
     case webrtc::RTCErrorType::INVALID_MODIFICATION:
-        return InvalidModificationError;
+        return ExceptionCode::InvalidModificationError;
     case webrtc::RTCErrorType::NETWORK_ERROR:
-        return NetworkError;
+        return ExceptionCode::NetworkError;
     default:
-        return OperationError;
+        return ExceptionCode::OperationError;
     }
 }
 
@@ -367,7 +382,7 @@ Exception toException(const webrtc::RTCError& error)
 
 static inline RTCIceComponent toRTCIceComponent(int component)
 {
-    return component == cricket::ICE_CANDIDATE_COMPONENT_RTP ? RTCIceComponent::Rtp : RTCIceComponent::Rtcp;
+    return component == webrtc::ICE_CANDIDATE_COMPONENT_RTP ? RTCIceComponent::Rtp : RTCIceComponent::Rtcp;
 }
 
 static inline std::optional<RTCIceProtocol> toRTCIceProtocol(const std::string& protocol)
@@ -392,21 +407,23 @@ static inline std::optional<RTCIceTcpCandidateType> toRTCIceTcpCandidateType(con
     return RTCIceTcpCandidateType::So;
 }
 
-static inline std::optional<RTCIceCandidateType> toRTCIceCandidateType(const std::string& type)
+static inline std::optional<RTCIceCandidateType> toRTCIceCandidateType(webrtc::IceCandidateType type)
 {
-    if (type == "")
-        return { };
-    if (type == "local")
+    switch (type) {
+    case webrtc::IceCandidateType::kHost:
         return RTCIceCandidateType::Host;
-    if (type == "stun")
+    case webrtc::IceCandidateType::kSrflx:
         return RTCIceCandidateType::Srflx;
-    if (type == "prflx")
+    case webrtc::IceCandidateType::kPrflx:
         return RTCIceCandidateType::Prflx;
-    ASSERT(type == "relay");
+    case webrtc::IceCandidateType::kRelay:
     return RTCIceCandidateType::Relay;
+    };
+    ASSERT_NOT_REACHED();
+    return { };
 }
 
-RTCIceCandidateFields convertIceCandidate(const cricket::Candidate& candidate)
+RTCIceCandidateFields convertIceCandidate(const webrtc::Candidate& candidate)
 {
     RTCIceCandidateFields fields;
     fields.foundation = fromStdString(candidate.foundation());

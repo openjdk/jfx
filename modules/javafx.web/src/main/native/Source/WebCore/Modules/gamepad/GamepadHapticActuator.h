@@ -43,6 +43,9 @@ struct GamepadEffectParameters;
 
 class GamepadHapticActuator : public RefCounted<GamepadHapticActuator>, public ActiveDOMObject, public VisibilityChangeClient {
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     using EffectType = GamepadHapticEffectType;
     enum class Type : uint8_t { Vibration, DualRumble };
     enum class Result : uint8_t { Complete, Preempted };
@@ -65,7 +68,6 @@ private:
     RefPtr<DeferredPromise>& promiseForEffectType(EffectType);
 
     // ActiveDOMObject.
-    const char* activeDOMObjectName() const final;
     void suspend(ReasonForSuspension) final;
     void stop() final;
 

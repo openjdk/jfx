@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,7 +28,10 @@ module monkey_tester {
     requires javafx.base;
     requires javafx.controls;
     requires javafx.graphics;
+    requires javafx.media;
     requires javafx.web;
     requires java.desktop;
     requires javafx.swing;
+    requires jfx.incubator.input;
+    requires jfx.incubator.richtext;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Google, Inc. All Rights Reserved.
+ * Copyright (C) 2010 Google, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -75,6 +75,11 @@ void DocumentParser::suspendScheduledTasks()
 
 void DocumentParser::resumeScheduledTasks()
 {
+}
+
+RefPtr<Document> DocumentParser::protectedDocument() const
+{
+    return document();
 }
 
 } // namespace WebCore

@@ -25,9 +25,7 @@
 
 #pragma once
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-
-#include "IntRect.h"
+#include <WebCore/IntRect.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -52,8 +50,7 @@ struct DateTimeChooserParameters {
     bool useDarkAppearance { false };
     bool hasSecondField { false };
     bool hasMillisecondField { false };
+    bool wasActivatedByKeyboard { false };
 };
 
 } // namespace WebCore
-
-#endif

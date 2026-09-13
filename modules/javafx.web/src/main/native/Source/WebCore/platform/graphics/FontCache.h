@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2007-2008 Torch Mobile, Inc.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,25 +29,27 @@
 
 #pragma once
 
-#include "FontCascadeCache.h"
-#include "FontCreationContext.h"
-#include "FontDescription.h"
-#include "FontPlatformData.h"
-#include "FontSelector.h"
-#include "FontTaggedSettings.h"
-#include "SystemFallbackFontCache.h"
-#include "Timer.h"
+#include <WebCore/FontCascadeCache.h>
+#include <WebCore/FontCreationContext.h>
+#include <WebCore/FontDescription.h>
+#include <WebCore/FontPlatformData.h>
+#include <WebCore/FontSelector.h>
+#include <WebCore/FontTaggedSettings.h>
+#include <WebCore/SystemFallbackFontCache.h>
+#include <WebCore/Timer.h>
 #include <array>
 #include <limits.h>
+#include <wtf/CheckedPtr.h>
 #include <wtf/CrossThreadCopier.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/HashTraits.h>
 #include <wtf/ListHashSet.h>
+#include <wtf/Platform.h>
 #include <wtf/PointerComparison.h>
 #include <wtf/RefPtr.h>
 #include <wtf/RobinHoodHashSet.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
 #include <wtf/WorkQueue.h>
@@ -55,10 +57,10 @@
 #include <wtf/text/WTFString.h>
 
 #if PLATFORM(COCOA)
-#include "FontCacheCoreText.h"
-#include "FontDatabase.h"
-#include "FontFamilySpecificationCoreTextCache.h"
-#include "SystemFontDatabaseCoreText.h"
+#include <WebCore/FontCacheCoreText.h>
+#include <WebCore/FontDatabase.h>
+#include <WebCore/FontFamilySpecificationCoreTextCache.h>
+#include <WebCore/SystemFontDatabaseCoreText.h>
 #endif
 
 #if PLATFORM(IOS_FAMILY)
@@ -70,10 +72,20 @@
 #include <windows.h>
 #include <objidl.h>
 #include <mlang.h>
+struct IDWriteFactory;
+struct IDWriteFontCollection;
 #endif
 
 #if USE(FREETYPE)
 #include "FontSetCache.h"
+#endif
+
+#if USE(SKIA)
+#include "SkiaHarfBuzzFontCache.h"
+#include <skia/core/SkFontMgr.h>
+#if !OS(ANDROID) && !PLATFORM(WIN)
+#include "SkiaSystemFallbackFontCache.h"
+#endif
 #endif
 
 namespace WebCore {
@@ -92,10 +104,27 @@ using IMLangFontLinkType = IMLangFontLink2;
 using IMLangFontLinkType = IMLangFontLink;
 #endif
 
-class FontCache {
-    WTF_MAKE_NONCOPYABLE(FontCache); WTF_MAKE_FAST_ALLOCATED;
+struct FontCachePrewarmInformation {
+    Vector<String> seenFamilies;
+    Vector<String> fontNamesRequiringSystemFallback;
+
+    bool isEmpty() const;
+    FontCachePrewarmInformation isolatedCopy() const & { return { crossThreadCopy(seenFamilies), crossThreadCopy(fontNamesRequiringSystemFallback) }; }
+    FontCachePrewarmInformation isolatedCopy() && { return { crossThreadCopy(WTF::move(seenFamilies)), crossThreadCopy(WTF::move(fontNamesRequiringSystemFallback)) }; }
+};
+
+enum class FontLookupOptions : uint8_t {
+    ExactFamilyNameMatch     = 1 << 0,
+    DisallowBoldSynthesis    = 1 << 1,
+    DisallowObliqueSynthesis = 1 << 2,
+};
+
+class FontCache : public CanMakeCheckedPtr<FontCache> {
+    WTF_MAKE_TZONE_ALLOCATED(FontCache);
+    WTF_MAKE_NONCOPYABLE(FontCache);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FontCache);
 public:
-    WEBCORE_EXPORT static FontCache& forCurrentThread();
+    WEBCORE_EXPORT static CheckedRef<FontCache> forCurrentThread();
     static FontCache* forCurrentThreadIfExists();
     static FontCache* forCurrentThreadIfNotDestroyed();
 
@@ -104,7 +133,7 @@ public:
 
     // These methods are implemented by the platform.
     enum class PreferColoredFont : bool { No, Yes };
-    RefPtr<Font> systemFallbackForCharacters(const FontDescription&, const Font& originalFontData, IsForPlatformFont, PreferColoredFont, const UChar* characters, unsigned length);
+    RefPtr<Font> systemFallbackForCharacterCluster(const FontDescription&, const Font& originalFontData, IsForPlatformFont, PreferColoredFont, StringView);
     Vector<String> systemFontFamilies();
     void platformInit();
 
@@ -125,7 +154,7 @@ public:
     // It comes into play when you create an @font-face which shares a family name as a preinstalled font.
     Vector<FontSelectionCapabilities> getFontSelectionCapabilitiesInFamily(const AtomString&, AllowUserInstalledFonts);
 
-    WEBCORE_EXPORT RefPtr<Font> fontForFamily(const FontDescription&, const String&, const FontCreationContext& = { }, bool checkingAlternateName = false);
+    WEBCORE_EXPORT RefPtr<Font> fontForFamily(const FontDescription&, const String&, const FontCreationContext& = { }, OptionSet<FontLookupOptions> = { });
     WEBCORE_EXPORT Ref<Font> lastResortFallbackFont(const FontDescription&);
     WEBCORE_EXPORT Ref<Font> fontForPlatformData(const FontPlatformData&);
     RefPtr<Font> similarFont(const FontDescription&, const String& family);
@@ -152,7 +181,7 @@ public:
 
     static void releaseNoncriticalMemoryInAllFontCaches();
 
-    void updateFontCascade(const FontCascade&, RefPtr<FontSelector>&&);
+    void updateFontCascade(const FontCascade&);
 
 #if PLATFORM(WIN)
     RefPtr<Font> fontFromDescriptionAndLogFont(const FontDescription&, const LOGFONT&, String& outFontFamilyName);
@@ -164,17 +193,8 @@ public:
 
     std::unique_ptr<FontPlatformData> createFontPlatformDataForTesting(const FontDescription&, const AtomString& family);
 
-    struct PrewarmInformation {
-        Vector<String> seenFamilies;
-        Vector<String> fontNamesRequiringSystemFallback;
+    using PrewarmInformation = FontCachePrewarmInformation;
 
-        bool isEmpty() const;
-        PrewarmInformation isolatedCopy() const & { return { crossThreadCopy(seenFamilies), crossThreadCopy(fontNamesRequiringSystemFallback) }; }
-        PrewarmInformation isolatedCopy() && { return { crossThreadCopy(WTFMove(seenFamilies)), crossThreadCopy(WTFMove(fontNamesRequiringSystemFallback)) }; }
-
-        template<class Encoder> void encode(Encoder&) const;
-        template<class Decoder> static std::optional<PrewarmInformation> decode(Decoder&);
-    };
     PrewarmInformation collectPrewarmInformation() const;
     void prewarm(PrewarmInformation&&);
     static void prewarmGlobally();
@@ -192,6 +212,12 @@ public:
     static bool configurePatternForFontDescription(FcPattern*, const FontDescription&);
 #endif
 
+#if USE(SKIA)
+    static Vector<hb_feature_t> computeFeatures(const FontDescription&, const FontCreationContext&);
+    WEBCORE_EXPORT SkFontMgr& fontManager() const;
+    SkiaHarfBuzzFontCache& harfBuzzFontCache() { return m_harfBuzzFontCache; }
+#endif
+
     void invalidate();
 
 private:
@@ -200,13 +226,13 @@ private:
     void platformInvalidate();
     WEBCORE_EXPORT void purgeInactiveFontDataIfNeeded();
 
-    FontPlatformData* cachedFontPlatformData(const FontDescription&, const String& family, const FontCreationContext& = { }, bool checkingAlternateName = false);
+    FontPlatformData* cachedFontPlatformData(const FontDescription&, const String& family, const FontCreationContext& = { }, OptionSet<FontLookupOptions> = { });
 
     // These functions are implemented by each platform (unclear which functions this comment applies to).
-    WEBCORE_EXPORT std::unique_ptr<FontPlatformData> createFontPlatformData(const FontDescription&, const AtomString& family, const FontCreationContext&);
+    WEBCORE_EXPORT std::unique_ptr<FontPlatformData> createFontPlatformData(const FontDescription&, const AtomString& family, const FontCreationContext&, OptionSet<FontLookupOptions>);
 
-    static std::optional<ASCIILiteral> alternateFamilyName(const String&);
-    static std::optional<ASCIILiteral> platformAlternateFamilyName(const String&);
+    static ASCIILiteral alternateFamilyName(const String&);
+    static ASCIILiteral platformAlternateFamilyName(const String&);
 
 #if PLATFORM(MAC)
     bool shouldAutoActivateFontIfNeeded(const AtomString& family);
@@ -220,7 +246,7 @@ private:
 
     WeakHashSet<FontSelector> m_clients;
     struct FontDataCaches;
-    UniqueRef<FontDataCaches> m_fontDataCaches;
+    const UniqueRef<FontDataCaches> m_fontDataCaches;
     FontCascadeCache m_fontCascadeCache;
     SystemFallbackFontCache m_systemFallbackFontCache;
     MemoryCompactLookupOnlyRobinHoodHashSet<AtomString> m_familiesUsingBackslashAsYenSign;
@@ -244,7 +270,7 @@ private:
 
     ListHashSet<String> m_seenFamiliesForPrewarming;
     ListHashSet<String> m_fontNamesRequiringSystemFallbackForPrewarming;
-    RefPtr<WorkQueue> m_prewarmQueue;
+    const RefPtr<WorkQueue> m_prewarmQueue;
 
     FontFamilySpecificationCoreTextCache m_fontFamilySpecificationCoreTextCache;
     SystemFontDatabaseCoreText m_systemFontDatabaseCoreText;
@@ -256,15 +282,31 @@ private:
     FontSetCache m_fontSetCache;
 #endif
 
+#if USE(SKIA)
+    mutable sk_sp<SkFontMgr> m_fontManager;
+    SkiaHarfBuzzFontCache m_harfBuzzFontCache;
+#if !OS(ANDROID) && !PLATFORM(WIN)
+    SkiaSystemFallbackFontCache m_skiaSystemFallbackFontCache;
+#endif
+#endif
+
+#if PLATFORM(WIN) && USE(SKIA)
+    struct CreateDWriteFactoryResult {
+        COMPtr<IDWriteFactory> factory;
+        COMPtr<IDWriteFontCollection> fontCollection;
+    };
+    static CreateDWriteFactoryResult createDWriteFactory();
+#endif
+
     friend class Font;
 };
 
 inline std::unique_ptr<FontPlatformData> FontCache::createFontPlatformDataForTesting(const FontDescription& fontDescription, const AtomString& family)
 {
-    return createFontPlatformData(fontDescription, family, { });
+    return createFontPlatformData(fontDescription, family, { }, FontLookupOptions::ExactFamilyNameMatch);
 }
 
-#if !PLATFORM(COCOA) && !USE(FREETYPE)
+#if !PLATFORM(COCOA) && !USE(FREETYPE) && !USE(SKIA)
 
 inline void FontCache::platformPurgeInactiveFontData()
 {
@@ -272,28 +314,9 @@ inline void FontCache::platformPurgeInactiveFontData()
 
 #endif
 
-inline bool FontCache::PrewarmInformation::isEmpty() const
+inline bool FontCachePrewarmInformation::isEmpty() const
 {
     return seenFamilies.isEmpty() && fontNamesRequiringSystemFallback.isEmpty();
-}
-
-template<class Encoder>
-void FontCache::PrewarmInformation::encode(Encoder& encoder) const
-{
-    encoder << seenFamilies;
-    encoder << fontNamesRequiringSystemFallback;
-}
-
-template<class Decoder>
-std::optional<FontCache::PrewarmInformation> FontCache::PrewarmInformation::decode(Decoder& decoder)
-{
-    PrewarmInformation prewarmInformation;
-    if (!decoder.decode(prewarmInformation.seenFamilies))
-        return { };
-    if (!decoder.decode(prewarmInformation.fontNamesRequiringSystemFallback))
-        return { };
-
-    return prewarmInformation;
 }
 
 }

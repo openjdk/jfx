@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,12 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import test.robot.com.sun.glass.ui.monocle.TestApplication;
-import javafx.geometry.Rectangle2D;
-import javafx.stage.Screen;
-import org.junit.After;
-import org.junit.Before;
-
 import java.io.OutputStream;
 import java.io.PrintStream;
+import javafx.geometry.Rectangle2D;
+import javafx.stage.Screen;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import test.com.sun.glass.ui.monocle.TestRunnable;
 
 public class TouchTestBase {
@@ -80,7 +78,7 @@ public class TouchTestBase {
         this.absYMax = (double) absYMax;
     }
 
-    @Before
+    @BeforeEach
     public void initDevice() throws Exception {
         TestApplication.getStage();
         ui = new UInput();
@@ -89,7 +87,7 @@ public class TouchTestBase {
         TestRunnable.invokeAndWait(() -> screen = Screen.getPrimary().getBounds());
     }
 
-    @After
+    @AfterEach
     public void destroyDevice() throws InterruptedException {
         try {
             ui.waitForQuiet();

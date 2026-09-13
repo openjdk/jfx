@@ -32,15 +32,16 @@
 
 namespace JSC {
 
-GetByVariant::GetByVariant(CacheableIdentifier identifier, const StructureSet& structureSet, PropertyOffset offset, const ObjectPropertyConditionSet& conditionSet, std::unique_ptr<CallLinkStatus> callLinkStatus, JSFunction* intrinsicFunction, CodePtr<CustomAccessorPtrTag> customAccessorGetter, std::unique_ptr<DOMAttributeAnnotation> domAttribute)
+GetByVariant::GetByVariant(CacheableIdentifier identifier, const StructureSet& structureSet, bool viaGlobalProxy, PropertyOffset offset, const ObjectPropertyConditionSet& conditionSet, std::unique_ptr<CallLinkStatus> callLinkStatus, JSFunction* intrinsicFunction, CodePtr<CustomAccessorPtrTag> customAccessorGetter, std::unique_ptr<DOMAttributeAnnotation> domAttribute)
     : m_structureSet(structureSet)
     , m_conditionSet(conditionSet)
+    , m_viaGlobalProxy(viaGlobalProxy)
     , m_offset(offset)
-    , m_callLinkStatus(WTFMove(callLinkStatus))
+    , m_callLinkStatus(WTF::move(callLinkStatus))
     , m_intrinsicFunction(intrinsicFunction)
     , m_customAccessorGetter(customAccessorGetter)
-    , m_domAttribute(WTFMove(domAttribute))
-    , m_identifier(WTFMove(identifier))
+    , m_domAttribute(WTF::move(domAttribute))
+    , m_identifier(WTF::move(identifier))
 {
     if (!structureSet.size()) {
         ASSERT(offset == invalidOffset);
@@ -50,7 +51,7 @@ GetByVariant::GetByVariant(CacheableIdentifier identifier, const StructureSet& s
         ASSERT(intrinsic() != NoIntrinsic);
 }
 
-GetByVariant::~GetByVariant() { }
+GetByVariant::~GetByVariant() = default;
 
 GetByVariant::GetByVariant(const GetByVariant& other)
     : GetByVariant(other.m_identifier)
@@ -63,6 +64,7 @@ GetByVariant& GetByVariant::operator=(const GetByVariant& other)
     m_identifier = other.m_identifier;
     m_structureSet = other.m_structureSet;
     m_conditionSet = other.m_conditionSet;
+    m_viaGlobalProxy = other.m_viaGlobalProxy;
     m_offset = other.m_offset;
     m_intrinsicFunction = other.m_intrinsicFunction;
     m_customAccessorGetter = other.m_customAccessorGetter;
@@ -92,6 +94,15 @@ inline bool GetByVariant::canMergeIntrinsicStructures(const GetByVariant& other)
         return logElementSize(thisType) == logElementSize(otherType);
     }
 
+    case DataViewByteLengthIntrinsic: {
+#if ASSERT_ENABLED
+        TypedArrayType thisType = typedArrayType((*m_structureSet.begin())->typeInfo().type());
+        TypedArrayType otherType = typedArrayType((*other.m_structureSet.begin())->typeInfo().type());
+        ASSERT(thisType == TypeDataView && otherType == TypeDataView);
+#endif
+        return true;
+    }
+
     default:
         return true;
     }
@@ -104,6 +115,9 @@ bool GetByVariant::attemptToMerge(const GetByVariant& other)
         return false;
 
     if (m_identifier && (m_identifier != other.m_identifier))
+        return false;
+
+    if (m_viaGlobalProxy != other.m_viaGlobalProxy)
         return false;
 
     if (m_offset != other.m_offset)
@@ -130,16 +144,15 @@ bool GetByVariant::attemptToMerge(const GetByVariant& other)
     if (m_conditionSet.isEmpty() != other.m_conditionSet.isEmpty())
         return false;
 
-    ObjectPropertyConditionSet mergedConditionSet;
     if (!m_conditionSet.isEmpty()) {
-        mergedConditionSet = m_conditionSet.mergedWith(other.m_conditionSet);
+        auto mergedConditionSet = m_conditionSet.mergedWith(other.m_conditionSet);
         if (!mergedConditionSet.isValid())
             return false;
         // If this is a hit variant, one slot base should exist. If this is not a hit variant, the slot base is not necessary.
         if (!isPropertyUnset() && !mergedConditionSet.hasOneSlotBaseCondition())
             return false;
-    }
     m_conditionSet = mergedConditionSet;
+    }
 
     m_structureSet.merge(other.m_structureSet);
 
@@ -193,6 +206,7 @@ void GetByVariant::dumpInContext(PrintStream& out, DumpContext* context) const
         return;
     }
     out.print(inContext(structureSet(), context), ", ", inContext(m_conditionSet, context));
+    out.print(", viaGlobalProxy = ", viaGlobalProxy());
     out.print(", offset = ", offset());
     if (m_callLinkStatus)
         out.print(", call = ", *m_callLinkStatus);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,11 +25,12 @@
 
 #pragma once
 
-#include "BlockDirectory.h"
-#include "IsoMemoryAllocatorBase.h"
-#include "Subspace.h"
-#include "SubspaceAccess.h"
+#include <JavaScriptCore/AlignedMemoryAllocator.h>
+#include <JavaScriptCore/BlockDirectory.h>
+#include <JavaScriptCore/Subspace.h>
+#include <JavaScriptCore/SubspaceAccess.h>
 #include <wtf/SinglyLinkedListWithTail.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
@@ -39,35 +40,36 @@ namespace GCClient {
 class IsoSubspace;
 }
 
-class IsoSubspace : public Subspace {
+class IsoSubspace final : public Subspace {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(IsoSubspace, JS_EXPORT_PRIVATE);
 public:
-    JS_EXPORT_PRIVATE IsoSubspace(CString name, Heap&, const HeapCellType&, size_t size, uint8_t numberOfLowerTierCells, std::unique_ptr<IsoMemoryAllocatorBase>&& = nullptr);
-    JS_EXPORT_PRIVATE ~IsoSubspace() override;
+    JS_EXPORT_PRIVATE IsoSubspace(CString name, Heap&, const HeapCellType&, size_t, uint8_t numberOfLowerTierPreciseCells, std::unique_ptr<AlignedMemoryAllocator>&& = nullptr);
+    JS_EXPORT_PRIVATE ~IsoSubspace() final;
 
     size_t cellSize() { return m_directory.cellSize(); }
 
-    void sweepLowerTierCell(PreciseAllocation*);
+    void sweepLowerTierPreciseCell(PreciseAllocation*);
     void clearIsoCellSetBit(PreciseAllocation*);
 
-    void* tryAllocateFromLowerTier();
-    void destroyLowerTierFreeList();
+    void* tryAllocateLowerTierPrecise(size_t cellSize);
+    void destroyLowerTierPreciseFreeList();
 
     void sweep();
 
-    template<typename Func> void forEachLowerTierFreeListedPreciseAllocation(const Func&);
+    template<typename Func> void forEachLowerTierPreciseFreeListedPreciseAllocation(const Func&);
 
 private:
     friend class IsoCellSet;
     friend class GCClient::IsoSubspace;
 
-    void didResizeBits(unsigned newSize) override;
-    void didRemoveBlock(unsigned blockIndex) override;
-    void didBeginSweepingToFreeList(MarkedBlock::Handle*) override;
+    void didResizeBits(unsigned newSize) final;
+    void didRemoveBlock(unsigned blockIndex) final;
+    void didBeginSweepingToFreeList(MarkedBlock::Handle*) final;
 
     BlockDirectory m_directory;
-    std::unique_ptr<IsoMemoryAllocatorBase> m_isoAlignedMemoryAllocator;
-    SentinelLinkedList<PreciseAllocation, PackedRawSentinelNode<PreciseAllocation>> m_lowerTierFreeList;
-    SentinelLinkedList<IsoCellSet, PackedRawSentinelNode<IsoCellSet>> m_cellSets;
+    std::unique_ptr<AlignedMemoryAllocator> m_allocator;
+    SentinelLinkedList<PreciseAllocation, BasicRawSentinelNode<PreciseAllocation>> m_lowerTierPreciseFreeList;
+    SentinelLinkedList<IsoCellSet, BasicRawSentinelNode<IsoCellSet>> m_cellSets;
 };
 
 
@@ -75,7 +77,7 @@ namespace GCClient {
 
 class IsoSubspace {
     WTF_MAKE_NONCOPYABLE(IsoSubspace);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(IsoSubspace);
 public:
     JS_EXPORT_PRIVATE IsoSubspace(JSC::IsoSubspace&);
     JS_EXPORT_PRIVATE ~IsoSubspace() = default;
@@ -98,7 +100,10 @@ ALWAYS_INLINE Allocator IsoSubspace::allocatorFor(size_t size, AllocatorForMode)
 
 } // namespace GCClient
 
-#define ISO_SUBSPACE_INIT(heap, heapCellType, type) ("IsoSpace " #type, (heap), (heapCellType), sizeof(type), type::numberOfLowerTierCells)
+#define ISO_SUBSPACE_INIT(heap, heapCellType, type) \
+    ISO_SUBSPACE_INIT_WITH_NAME(heap, heapCellType, type, #type ""_s)
+
+#define ISO_SUBSPACE_INIT_WITH_NAME(heap, heapCellType, type, name) (name, (heap), (heapCellType), sizeof(type), type::numberOfLowerTierPreciseCells)
 
 } // namespace JSC
 

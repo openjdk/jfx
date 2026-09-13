@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "GenericMediaQueryTypes.h"
+#include <WebCore/GenericMediaQueryTypes.h>
 
 namespace WebCore {
 namespace MQ {
@@ -42,12 +42,6 @@ using MediaQueryList = Vector<MediaQuery>;
 struct MediaQueryResult {
     MediaQueryList mediaQueryList;
     bool result;
-};
-
-enum class MediaQueryDynamicDependency : uint8_t  {
-    Viewport = 1 << 0,
-    Appearance = 1 << 1,
-    Accessibility = 1 << 2,
 };
 
 template<typename TraverseFunction>

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,6 +47,13 @@ module javafx.base {
 
     exports com.sun.javafx to
         javafx.controls,
+        // Add an entry for each incubator module here, leaving the incubator
+        // placeholder lines as an example.
+        // BEGIN: incubator placeholder
+        //jfx.incubator.mymod,
+        // END: incubator placeholder
+        jfx.incubator.input,
+        jfx.incubator.richtext,
         javafx.graphics,
         javafx.fxml,
         javafx.media,

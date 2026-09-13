@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,9 +36,10 @@
 namespace WebCore {
 
 class CryptoAlgorithmHkdfParams final : public CryptoAlgorithmParameters {
+    WTF_MAKE_TZONE_ALLOCATED(CryptoAlgorithmHkdfParams);
 public:
     // FIXME: Consider merging hash and hashIdentifier.
-    std::variant<JSC::Strong<JSC::JSObject>, String> hash;
+    Variant<JSC::Strong<JSC::JSObject>, String> hash;
     CryptoAlgorithmIdentifier hashIdentifier;
     BufferSource salt;
     BufferSource info;
@@ -48,7 +49,7 @@ public:
         if (!m_saltVector.isEmpty() || !salt.length())
             return m_saltVector;
 
-        m_saltVector.append(salt.data(), salt.length());
+        m_saltVector.append(salt.span());
         return m_saltVector;
     }
 
@@ -57,7 +58,7 @@ public:
         if (!m_infoVector.isEmpty() || !info.length())
             return m_infoVector;
 
-        m_infoVector.append(info.data(), info.length());
+        m_infoVector.append(info.span());
         return m_infoVector;
     }
 

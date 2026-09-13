@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -40,6 +40,7 @@ import com.sun.javafx.util.TempState;
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.VetoableListDecorator;
+import javafx.css.PseudoClass;
 import javafx.css.Selector;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.geom.BaseBounds;
@@ -76,13 +77,13 @@ import javafx.stage.Window;
  *
  * @since JavaFX 2.0
  */
-public abstract class Parent extends Node {
+public abstract non-sealed class Parent extends Node {
     // package private for testing
     static final int DIRTY_CHILDREN_THRESHOLD = 10;
 
     // If set to true, generate a warning message whenever adding a node to a
     // parent if it is currently a child of another parent.
-    private static final boolean warnOnAutoMove = PropertyHelper.getBooleanProperty("javafx.sg.warn");
+    private static final boolean warnOnAutoMove = Boolean.getBoolean("javafx.sg.warn");
 
     /**
      * Threshold when it's worth to populate list of removed children.
@@ -316,7 +317,11 @@ public abstract class Parent extends Node {
     private boolean geomChanged;
     private boolean childSetModified;
     private final ObservableList<Node> children = new VetoableListDecorator<Node>(new TrackableObservableList<Node>() {
-
+        private static final PseudoClass FIRST_CHILD_PSEUDO_CLASS = PseudoClass.getPseudoClass("first-child");
+        private static final PseudoClass LAST_CHILD_PSEUDO_CLASS = PseudoClass.getPseudoClass("last-child");
+        private static final PseudoClass ONLY_CHILD_PSEUDO_CLASS = PseudoClass.getPseudoClass("only-child");
+        private static final PseudoClass NTH_EVEN_CHILD_PSEUDO_CLASS = PseudoClass.getPseudoClass("nth-child(even)");
+        private static final PseudoClass NTH_ODD_CHILD_PSEUDO_CLASS = PseudoClass.getPseudoClass("nth-child(odd)");
 
         @Override
         protected void onChanged(Change<Node> c) {
@@ -324,6 +329,7 @@ public abstract class Parent extends Node {
             unmodifiableManagedChildren = null;
             boolean relayout = false;
             boolean viewOrderChildrenDirty = false;
+            int firstDirtyChildIndex = -1;
 
             if (childSetModified) {
                 while (c.next()) {
@@ -351,6 +357,12 @@ public abstract class Parent extends Node {
                         if (n.isManaged()) {
                             relayout = true;
                         }
+                    }
+
+                    // Sub-changes are sorted by their 'from' index, so it is sufficient to record
+                    // the index of the first change to separate unchanged from changed elements.
+                    if (firstDirtyChildIndex < 0) {
+                        firstDirtyChildIndex = from;
                     }
 
                     // Mark viewOrderChildrenDirty if there is modification to children list
@@ -402,6 +414,12 @@ public abstract class Parent extends Node {
                 // If childSet was not modified, we still need to check whether the permutation
                 // did change the layout
                 layout_loop:while (c.next()) {
+                    // Sub-changes are sorted by their 'from' index, so it is sufficient to record
+                    // the index of the first change to separate unchanged from changed elements.
+                    if (firstDirtyChildIndex < 0) {
+                        firstDirtyChildIndex = c.getFrom();
+                    }
+
                     List<Node> removed = c.getRemoved();
                     for (int i = 0, removedSize = removed.size(); i < removedSize; ++i) {
                         if (removed.get(i).isManaged()) {
@@ -418,7 +436,6 @@ public abstract class Parent extends Node {
                     }
                 }
             }
-
 
             //
             // Note that the styles of a child do not affect the parent or
@@ -449,10 +466,8 @@ public abstract class Parent extends Node {
 
             // Note the starting index at which we need to update the
             // PGGroup on the next update, and mark the children dirty
-            c.reset();
-            c.next();
-            if (startIdx > c.getFrom()) {
-                startIdx = c.getFrom();
+            if (startIdx > firstDirtyChildIndex) {
+                startIdx = firstDirtyChildIndex;
             }
 
             NodeHelper.markDirty(Parent.this, DirtyBits.PARENT_CHILDREN);
@@ -463,8 +478,57 @@ public abstract class Parent extends Node {
             if (viewOrderChildrenDirty) {
                 markViewOrderChildrenDirty();
             }
+
+            c.reset();
+            updateStructuralPseudoClasses(c, firstDirtyChildIndex);
         }
 
+        private void updateStructuralPseudoClasses(Change<Node> change, int firstDirtyChildIndex) {
+            while (change.next()) {
+                if (change.wasRemoved()) {
+                    for (Node node : change.getRemoved()) {
+                        node.pseudoClassStateChanged(FIRST_CHILD_PSEUDO_CLASS, false);
+                        node.pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, false);
+                        node.pseudoClassStateChanged(ONLY_CHILD_PSEUDO_CLASS, false);
+                        node.pseudoClassStateChanged(NTH_EVEN_CHILD_PSEUDO_CLASS, false);
+                        node.pseudoClassStateChanged(NTH_ODD_CHILD_PSEUDO_CLASS, false);
+                    }
+                }
+            }
+
+            int size = size();
+
+            // Toggle the "only-child" / "first-child" / "last-child" pseudo-classes.
+            if (size == 1) {
+                Node first = getFirst();
+                first.pseudoClassStateChanged(FIRST_CHILD_PSEUDO_CLASS, true);
+                first.pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, true);
+                first.pseudoClassStateChanged(ONLY_CHILD_PSEUDO_CLASS, true);
+            } else if (size > 1) {
+                Node first = getFirst(), last = getLast();
+                first.pseudoClassStateChanged(FIRST_CHILD_PSEUDO_CLASS, true);
+                first.pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, false);
+                first.pseudoClassStateChanged(ONLY_CHILD_PSEUDO_CLASS, false);
+                last.pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, true);
+
+                if (firstDirtyChildIndex > 0) {
+                    // Clear the "last-child" pseudo-class on the last non-modified child.
+                    Node lastNonModified = get(firstDirtyChildIndex - 1);
+                    if (last != lastNonModified) {
+                        lastNonModified.pseudoClassStateChanged(LAST_CHILD_PSEUDO_CLASS, false);
+                    }
+                }
+            }
+
+            // Toggle the "nth-child(even)" and "nth-child(odd)" pseudo-classes on all modified children.
+            if (firstDirtyChildIndex >= 0) {
+                for (int i = firstDirtyChildIndex; i < size; ++i) {
+                    Node n = get(i);
+                    n.pseudoClassStateChanged(NTH_EVEN_CHILD_PSEUDO_CLASS, i % 2 != 0);
+                    n.pseudoClassStateChanged(NTH_ODD_CHILD_PSEUDO_CLASS, i % 2 == 0);
+                }
+            }
+        }
     }) {
         @Override
         protected void onProposedChange(final List<Node> newNodes, int... toBeRemoved) {
@@ -657,8 +721,8 @@ public abstract class Parent extends Node {
      * restored. An {@link IllegalArgumentException} is thrown in this case.
      *
      * <p>
-     * If this {@link Parent} node is attached to a {@link Scene} attached to a {@link Window}
-     * that is showning ({@link javafx.stage.Window#isShowing()}), then its
+     * If this {@link Parent} node is attached to a {@link Scene} attached to a {@link Window},
+     * that is, showing ({@link javafx.stage.Window#isShowing()}), then its
      * list of children must only be modified on the JavaFX Application Thread.
      * An {@link IllegalStateException} is thrown if this restriction is
      * violated.
@@ -760,7 +824,7 @@ public abstract class Parent extends Node {
                        final Scene oldScene, final SubScene oldSubScene) {
 
         if (oldScene != null && newScene == null) {
-            // RT-34863 - clean up CSS cache when Parent is removed from scene-graph
+            // JDK-8094828 - clean up CSS cache when Parent is removed from scene-graph
             StyleManager.getInstance().forget(this);
 
             // Clear removed list on parent who is no longer in a scene
@@ -905,7 +969,7 @@ public abstract class Parent extends Node {
         if (needsLayout == null) {
             needsLayout = new ReadOnlyBooleanWrapper(this, "needsLayout", layoutFlag == LayoutFlags.NEEDS_LAYOUT);
         }
-        return needsLayout;
+        return needsLayout.getReadOnlyProperty();
     }
 
     /**
@@ -927,10 +991,13 @@ public abstract class Parent extends Node {
     private double minHeightCache = -1;
 
     void setLayoutFlag(LayoutFlags flag) {
+        // Needs to be set before needsLayout is updated, as otherwise a listener that
+        // calls isNeedsLayout() might see the old value.
+        layoutFlag = flag;
+
         if (needsLayout != null) {
             needsLayout.set(flag == LayoutFlags.NEEDS_LAYOUT);
         }
-        layoutFlag = flag;
     }
 
     private void markDirtyLayout(boolean local, boolean forceParentLayout) {
@@ -954,7 +1021,7 @@ public abstract class Parent extends Node {
      * rendered. This is batched up asynchronously to happen once per
      * "pulse", or frame of animation.
      * <p>
-     * If this parent is either a layout root or unmanaged, then it will be
+     * If this parent is either a scene root or unmanaged, then it will be
      * added directly to the scene's dirty layout list, otherwise requestParentLayout
      * will be invoked.
      * @since JavaFX 8.0
@@ -999,7 +1066,15 @@ public abstract class Parent extends Node {
         if (!layoutRoot) {
             final Parent p = getParent();
             if (p != null && (!p.performingLayout || forceParentLayout)) {
-                p.requestLayout();
+
+                /*
+                 * The forceParentLayout flag must be propagated to mark all ancestors
+                 * as needing layout. Failure to do so while performingLayout is true
+                 * would stop the propagation mid-tree. This leaves some nodes as needing
+                 * layout, while its ancestors are clean, which is an inconsistent state.
+                 */
+
+                p.requestLayout(forceParentLayout);
             }
         }
     }
@@ -1071,16 +1146,20 @@ public abstract class Parent extends Node {
         }
     }
 
-    // PENDING_DOC_REVIEW
     /**
-     * Calculates the preferred width of this {@code Parent}. The default
-     * implementation calculates this width as the width of the area occupied
-     * by its managed children when they are positioned at their
-     * current positions at their preferred widths.
+     * Computes the preferred width for the specified height.
+     * <p>
+     * An overriding implementation should be consistent with the layout policy implemented by
+     * {@link #layoutChildren()}. If pixel snapping is used, corresponding measurement and layout
+     * calculations must use the same snapped values.
      *
-     * @param height the height that should be used if preferred width depends
-     *      on it
-     * @return the calculated preferred width
+     * @implNote The default implementation computes the horizontal span containing the parent's origin
+     *           and all managed children. It uses each child's current layout position and preferred width,
+     *           constrained by the child's minimum and maximum widths.
+     *           The {@code height} parameter is ignored.
+     * @param height the height on which to base the preferred width, or {@code -1} if no height is specified
+     * @return the computed preferred width
+     * @see <a href="layout/package-summary.html#pixel-snapping">Pixel Snapping</a>
      */
     protected double computePrefWidth(double height) {
         double minX = 0;
@@ -1096,16 +1175,20 @@ public abstract class Parent extends Node {
         return maxX - minX;
     }
 
-    // PENDING_DOC_REVIEW
     /**
-     * Calculates the preferred height of this {@code Parent}. The default
-     * implementation calculates this height as the height of the area occupied
-     * by its managed children when they are positioned at their current
-     * positions at their preferred heights.
+     * Computes the preferred height for the specified width.
+     * <p>
+     * An overriding implementation should be consistent with the layout policy implemented by
+     * {@link #layoutChildren()}. If pixel snapping is used, corresponding measurement and layout
+     * calculations must use the same snapped values.
      *
-     * @param width the width that should be used if preferred height depends
-     *      on it
-     * @return the calculated preferred height
+     * @implNote The default implementation computes the vertical span containing the parent's origin
+     *           and all managed children. It uses each child's current layout position and preferred height,
+     *           constrained by the child's minimum and maximum heights.
+     *           The {@code width} parameter is ignored.
+     * @param width the width on which to base the preferred height, or {@code -1} if no width is specified
+     * @return the computed preferred height
+     * @see <a href="layout/package-summary.html#pixel-snapping">Pixel Snapping</a>
      */
     protected double computePrefHeight(double width) {
         double minY = 0;
@@ -1122,26 +1205,33 @@ public abstract class Parent extends Node {
     }
 
     /**
-     * Calculates the minimum width of this {@code Parent}. The default
-     * implementation simply returns the pref width.
+     * Computes the minimum width for the specified height.
+     * <p>
+     * An overriding implementation should be consistent with the layout policy implemented by
+     * {@link #layoutChildren()}. If pixel snapping is used, corresponding measurement and layout
+     * calculations must use the same snapped values.
      *
-     * @param height the height that should be used if min width depends
-     *      on it
-     * @return the calculated min width
+     * @implNote The default implementation returns {@link #prefWidth(double) prefWidth(height)}.
+     * @param height the height on which to base the minimum width, or {@code -1} if no height is specified
+     * @return the computed minimum width
+     * @see <a href="layout/package-summary.html#pixel-snapping">Pixel Snapping</a>
      * @since JavaFX 2.1
      */
     protected double computeMinWidth(double height) {
         return prefWidth(height);
     }
 
-    // PENDING_DOC_REVIEW
     /**
-     * Calculates the min height of this {@code Parent}. The default
-     * implementation simply returns the pref height;
+     * Computes the minimum height for the specified width.
+     * <p>
+     * An overriding implementation should be consistent with the layout policy implemented by
+     * {@link #layoutChildren()}. If pixel snapping is used, corresponding measurement and layout
+     * calculations must use the same snapped values.
      *
-     * @param width the width that should be used if min height depends
-     *      on it
-     * @return the calculated min height
+     * @implNote The default implementation returns {@link #prefHeight(double) prefHeight(width)}.
+     * @param width the width on which to base the minimum height, or {@code -1} if no width is specified
+     * @return the computed minimum height
+     * @see <a href="layout/package-summary.html#pixel-snapping">Pixel Snapping</a>
      * @since JavaFX 2.1
      */
     protected double computeMinHeight(double width) {
@@ -1224,12 +1314,16 @@ public abstract class Parent extends Node {
     }
 
     /**
-     * Invoked during the layout pass to layout the children in this
-     * {@code Parent}. By default it will only set the size of managed,
-     * resizable content to their preferred sizes and does not do any node
-     * positioning.
+     * Invoked by {@link #layout()} during a layout pass to position and resize the managed children.
      * <p>
-     * Subclasses should override this function to layout content as needed.
+     * Subclasses should override this method to implement their layout policy. When pixel snapping is used,
+     * this parent owns the snapping policy for the positions and sizes it allocates to its children.
+     * The snapped allocations made here must be consistent with the corresponding minimum-size and
+     * preferred-size calculations.
+     *
+     * @implSpec The default implementation invokes {@link Node#autosize()} on each managed,
+     *           resizable child and leaves all child positions unchanged.
+     * @see <a href="layout/package-summary.html#pixel-snapping">Pixel Snapping</a>
      */
     protected void layoutChildren() {
         for (int i=0, max=children.size(); i<max; i++) {
@@ -1285,7 +1379,7 @@ public abstract class Parent extends Node {
                 // styleManager will get recreated in NodeHelper.processCSS.
                 StyleManager.getInstance().stylesheetsChanged(Parent.this, c);
 
-                // RT-9784 - if stylesheet is removed, reset styled properties to
+                // JDK-8110059 - if stylesheet is removed, reset styled properties to
                 // their initial value.
                 c.reset();
                 while(c.next()) {
@@ -1322,7 +1416,7 @@ public abstract class Parent extends Node {
      *
      * Note: This method MUST only be called via its accessor method.
      */
-     // SB-dependency: RT-21247 has been filed to track this
+     // SB-dependency: JDK-8091352 has been filed to track this
     private List<String> doGetAllParentStylesheets() {
 
         List<String> list = null;
@@ -1359,7 +1453,7 @@ public abstract class Parent extends Node {
         // Nothing to do...
         if (cssFlag == CssFlags.CLEAN) return;
 
-        // RT-29254 - If DIRTY_BRANCH, pass control to Node#processCSS. This avoids calling NodeHelper.processCSS on
+        // JDK-8124385 - If DIRTY_BRANCH, pass control to Node#processCSS. This avoids calling NodeHelper.processCSS on
         // this node and all of its children when css doesn't need updated, recalculated, or reapplied.
         if (cssFlag == CssFlags.DIRTY_BRANCH) {
             super.processCSS();
@@ -1373,7 +1467,7 @@ public abstract class Parent extends Node {
         if (children.isEmpty()) return;
 
         //
-        // RT-33103
+        // JDK-8117203
         //
         // It is possible for a child to be removed from children in the middle of
         // the following loop. Iterating over the children may result in an IndexOutOfBoundsException.
@@ -1394,7 +1488,7 @@ public abstract class Parent extends Node {
 
             // If the parent styles are being updated, recalculated or
             // reapplied, then make sure the children get the same treatment.
-            // Unless the child is already more dirty than this parent (RT-29074).
+            // Unless the child is already more dirty than this parent (JDK-8124468).
             if(CssFlags.UPDATE.compareTo(child.cssFlag) > 0) {
                 child.cssFlag = CssFlags.UPDATE;
             }
@@ -1837,7 +1931,7 @@ public abstract class Parent extends Node {
     }
 
     // Note: this marks the currently processed child in terms of transformed bounds. In rare situations like
-    // in RT-37879, it might happen that the child bounds will be marked as invalid. Due to optimizations,
+    // in JDK-8096304, it might happen that the child bounds will be marked as invalid. Due to optimizations,
     // the invalidation must *always* be propagated to the parent, because the parent with some transformation
     // calls child's getTransformedBounds non-idenitity transform and the child's transformed bounds are thus not validated.
     // This does not apply to the call itself however, because the call will yield the correct result even if something
@@ -1860,6 +1954,15 @@ public abstract class Parent extends Node {
             return;
         }
 
+        // When we have a scene overlay (like the full-screen notification message or default window buttons
+        // of an extended stage), the scene root is the parent of the overlay node. However, the overlay node
+        // is not contained in the scene root's children list, because it is not a publicly accessible part of
+        // the scene graph. When this method is called on the root node, we need to check whether the supposed
+        // child is actually contained in the children list.
+        if (!childSet.contains(node)) {
+            return;
+        }
+
         cachedBoundsInvalid = true;
 
         // mark the node such that the parent knows that the child's bounds
@@ -1878,6 +1981,11 @@ public abstract class Parent extends Node {
      * Called by node whenever the visibility of the node changes.
      */
     void childVisibilityChanged(Node node) {
+        // See comment above in childBoundsChanged(Node)
+        if (!childSet.contains(node)) {
+            return;
+        }
+
         if (node.isVisible()) {
             childIncluded(node);
         } else {

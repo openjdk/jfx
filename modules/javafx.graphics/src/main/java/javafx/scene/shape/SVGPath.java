@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,7 +53,7 @@ svg.setContent("M40,60 C42,48 44,30 25,32");
 </PRE>
  * @since JavaFX 2.0
  */
-public class SVGPath extends Shape {
+public non-sealed class SVGPath extends Shape {
     static {
         SVGPathHelper.setSVGPathAccessor(new SVGPathHelper.SVGPathAccessor() {
             @Override

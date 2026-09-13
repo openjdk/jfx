@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,14 @@
 
 package test.javafx.scene.control;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
-import com.sun.javafx.tk.Toolkit;
 import javafx.collections.ListChangeListener;
 import javafx.scene.control.Button;
 import javafx.scene.control.FocusModel;
@@ -39,19 +41,16 @@ import javafx.scene.control.MultipleSelectionModel;
 import javafx.scene.control.ScrollBar;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.layout.VBox;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.scene.control.behavior.ListViewAnchorRetriever;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
+import test.com.sun.javafx.scene.control.infrastructure.MouseEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 import test.com.sun.javafx.scene.control.infrastructure.VirtualFlowTestUtils;
 
-import static org.junit.Assert.*;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-
-//@Ignore("Disabling tests as they fail with OOM in continuous builds")
 public class ListViewMouseInputTest {
     private ListView<String> listView;
     private MultipleSelectionModel<String> sm;
@@ -59,7 +58,8 @@ public class ListViewMouseInputTest {
 
     private StageLoader stageLoader;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         listView = new ListView<>();
         sm = listView.getSelectionModel();
         fm = listView.getFocusModel();
@@ -68,9 +68,12 @@ public class ListViewMouseInputTest {
 
         listView.getItems().setAll("1", "2", "3", "4", "5", "6", "7", "8", "9", "10");
         sm.clearAndSelect(0);
+
+        stageLoader = new StageLoader(listView);
     }
 
-    @After public void tearDown() {
+    @AfterEach
+    public void tearDown() {
         listView.getSkin().dispose();
 
         if (stageLoader != null) {
@@ -131,13 +134,15 @@ public class ListViewMouseInputTest {
 
         sm.clearAndSelect(9);
 
+        stageLoader = new StageLoader(listView);
+
         // select all from 9 - 7
         VirtualFlowTestUtils.clickOnRow(listView, 7, KeyModifier.SHIFT);
-        assertTrue(debug(), isSelected(7,8,9));
+        assertTrue(isSelected(7,8,9), debug());
 
         // select all from 9 - 7 - 5
         VirtualFlowTestUtils.clickOnRow(listView, 5, KeyModifier.SHIFT);
-        assertTrue(debug(),isSelected(5,6,7,8,9));
+        assertTrue(isSelected(5,6,7,8,9), debug());
     }
 
     @Test public void test_rt29833_mouse_select_downwards() {
@@ -145,13 +150,15 @@ public class ListViewMouseInputTest {
 
         sm.clearAndSelect(5);
 
+        stageLoader = new StageLoader(listView);
+
         // select all from 5 - 7
         VirtualFlowTestUtils.clickOnRow(listView, 7, KeyModifier.SHIFT);
-        assertTrue(debug(), isSelected(5,6,7));
+        assertTrue(isSelected(5,6,7), debug());
 
         // select all from 5 - 7 - 9
         VirtualFlowTestUtils.clickOnRow(listView, 9, KeyModifier.SHIFT);
-        assertTrue(debug(),isSelected(5,6,7,8,9));
+        assertTrue(isSelected(5,6,7,8,9), debug());
     }
 
     private int rt30394_count = 0;
@@ -171,6 +178,8 @@ public class ListViewMouseInputTest {
         assertEquals(0,rt30394_count);
         assertFalse(fm.isFocused(0));
 
+        stageLoader = new StageLoader(listView);
+
         // select the first row with the shift key held down. The focus event
         // should only fire once - for focus on 0 (never -1 as this bug shows).
         VirtualFlowTestUtils.clickOnRow(listView, 0, KeyModifier.SHIFT);
@@ -181,6 +190,8 @@ public class ListViewMouseInputTest {
     @Test public void test_rt32119() {
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.clearSelection();
+
+        stageLoader = new StageLoader(listView);
 
         // select rows 2, 3, and 4
         VirtualFlowTestUtils.clickOnRow(listView, 2);
@@ -252,6 +263,8 @@ public class ListViewMouseInputTest {
             listView.getItems().add("Row " + i);
         }
 
+        stageLoader = new StageLoader(listView);
+
         final MultipleSelectionModel sm = listView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.clearAndSelect(0);
@@ -278,6 +291,8 @@ public class ListViewMouseInputTest {
             listView.getItems().add("Row " + i);
         }
 
+        stageLoader = new StageLoader(listView);
+
         final MultipleSelectionModel sm = listView.getSelectionModel();
         sm.setSelectionMode(SelectionMode.MULTIPLE);
         sm.clearAndSelect(0);
@@ -303,6 +318,8 @@ public class ListViewMouseInputTest {
             listView.getItems().add("Row " + i);
         }
 
+        stageLoader = new StageLoader(listView);
+
         final MultipleSelectionModel sm = listView.getSelectionModel();
         final FocusModel fm = listView.getFocusModel();
         sm.setSelectionMode(SelectionMode.SINGLE);
@@ -320,7 +337,7 @@ public class ListViewMouseInputTest {
 
     @Test public void test_rt_37069() {
         final int items = 8;
-        listView.getItems().clear();
+        listView = new ListView<>();
         for (int i = 0; i < items; i++) {
             listView.getItems().add("Row " + i);
         }
@@ -363,6 +380,8 @@ public class ListViewMouseInputTest {
             assertFalse(copy.contains(null));
         });
 
+        stageLoader = new StageLoader(listView);
+
         // select all
         VirtualFlowTestUtils.clickOnRow(listView, 0, KeyModifier.getShortcutKey());
         assertEquals(1, hitCount.get());
@@ -391,9 +410,32 @@ public class ListViewMouseInputTest {
     @Test public void testClickWithNullSelectionModelDoesNotThrowNPE() {
         listView.setSelectionModel(null);
 
-        stageLoader = new StageLoader(listView);
-
         assertDoesNotThrow(()  -> VirtualFlowTestUtils.clickOnRow(listView, 2));
     }
 
+    @Test public void testShiftClickRangeDeselect() {
+        sm.clearAndSelect(2);
+
+        // extend selection from anchor (2) down to row 6
+        VirtualFlowTestUtils.clickOnRow(listView, 6, KeyModifier.SHIFT);
+        assertTrue(isSelected(2, 3, 4, 5, 6), debug());
+
+        // contract back to anchor (2) - row 4; rows 5 and 6 must be deselected
+        VirtualFlowTestUtils.clickOnRow(listView, 4, KeyModifier.SHIFT);
+        assertTrue(isSelected(2, 3, 4), debug());
+        assertTrue(isNotSelected(5, 6), debug());
+    }
+
+    @Test public void testShiftClickToAnchor() {
+        sm.clearAndSelect(4);
+
+        // extend selection from anchor (4) to row 7
+        VirtualFlowTestUtils.clickOnRow(listView, 7, KeyModifier.SHIFT);
+        assertTrue(isSelected(4, 5, 6, 7), debug());
+
+        // shift-click back on anchor — minRow == maxRow == 4, only row 4 should remain selected
+        VirtualFlowTestUtils.clickOnRow(listView, 4, KeyModifier.SHIFT);
+        assertTrue(isSelected(4), debug());
+        assertTrue(isNotSelected(5, 6, 7), debug());
+    }
 }

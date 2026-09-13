@@ -31,74 +31,81 @@ namespace WTF {
 
 template<typename T>
 class StringParsingBuffer final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(StringParsingBuffer);
 public:
     using CharacterType = T;
 
     constexpr StringParsingBuffer() = default;
 
-    constexpr StringParsingBuffer(const CharacterType* characters, unsigned length)
-        : m_position { characters }
-        , m_end { characters + length }
+    constexpr StringParsingBuffer(std::span<const CharacterType> characters LIFETIME_BOUND)
+        : m_data { characters }
     {
-        ASSERT(characters || !length);
+        ASSERT(m_data.data() || m_data.empty());
     }
 
-    constexpr StringParsingBuffer(const CharacterType* characters, const CharacterType* end)
-        : m_position { characters }
-        , m_end { end }
+    constexpr auto position() const LIFETIME_BOUND { return m_data.data(); }
+    constexpr auto end() const LIFETIME_BOUND { return std::to_address(m_data.end()); }
+
+    constexpr bool hasCharactersRemaining() const { return !m_data.empty(); }
+    constexpr bool atEnd() const { return m_data.empty(); }
+
+    constexpr size_t lengthRemaining() const { return m_data.size(); }
+
+    constexpr void setPosition(std::span<const CharacterType> position)
     {
-        ASSERT(characters <= end);
-        ASSERT(!characters == !end);
-        ASSERT(static_cast<size_t>(end - characters) <= std::numeric_limits<unsigned>::max());
+        ASSERT(position.data() <= std::to_address(m_data.end()));
+        ASSERT(std::to_address(position.end()) <= std::to_address(m_data.end()));
+        m_data = position;
     }
 
-    constexpr auto position() const { return m_position; }
-    constexpr auto end() const { return m_end; }
-
-    constexpr bool hasCharactersRemaining() const { return m_position < m_end; }
-    constexpr bool atEnd() const { return m_position == m_end; }
-
-    constexpr unsigned lengthRemaining() const { return m_end - m_position; }
-
-    constexpr void setPosition(const CharacterType* position)
-    {
-        ASSERT(m_position <= m_end);
-        m_position = position;
-    }
-
-    StringView stringViewOfCharactersRemaining() const { return { m_position, lengthRemaining() }; }
+    StringView stringViewOfCharactersRemaining() const LIFETIME_BOUND { return span(); }
 
     CharacterType consume()
     {
         ASSERT(hasCharactersRemaining());
-        auto character = *m_position;
-        ++m_position;
+        auto character = m_data.front();
+        m_data = m_data.subspan(1);
         return character;
     }
 
-    CharacterType operator[](unsigned i) const
+    std::span<const CharacterType> span() const LIFETIME_BOUND { return m_data; }
+
+    std::span<const CharacterType> consume(size_t count) LIFETIME_BOUND
+    {
+        ASSERT(count <= lengthRemaining());
+        auto result = m_data.first(count);
+        m_data = m_data.subspan(count);
+        return result;
+    }
+
+    void dropLast(size_t amountToDrop = 1)
+    {
+        ASSERT(amountToDrop <= lengthRemaining());
+        m_data = m_data.first(lengthRemaining() - amountToDrop);
+    }
+
+    CharacterType operator[](size_t i) const
     {
         ASSERT(i < lengthRemaining());
-        return m_position[i];
+        return m_data[i];
     }
 
     constexpr CharacterType operator*() const
     {
         ASSERT(hasCharactersRemaining());
-        return *m_position;
+        return m_data.front();
     }
 
     constexpr void advance()
     {
         ASSERT(hasCharactersRemaining());
-        ++m_position;
+        m_data = m_data.subspan(1);
     }
 
-    constexpr void advanceBy(unsigned places)
+    constexpr void advanceBy(size_t places)
     {
         ASSERT(places <= lengthRemaining());
-        m_position += places;
+        m_data = m_data.subspan(places);
     }
 
     constexpr StringParsingBuffer& operator++()
@@ -121,15 +128,14 @@ public:
     }
 
 private:
-    const CharacterType* m_position { nullptr };
-    const CharacterType* m_end { nullptr };
+    std::span<const CharacterType> m_data;
 };
 
-template<typename StringType, typename Function> decltype(auto) readCharactersForParsing(StringType&& string, Function&& functor)
+template<typename StringType, typename Function> decltype(auto) readCharactersForParsing(StringType&& string, NOESCAPE const Function& functor)
 {
     if (string.is8Bit())
-        return functor(StringParsingBuffer { string.characters8(), string.length() });
-    return functor(StringParsingBuffer { string.characters16(), string.length() });
+        return functor(StringParsingBuffer { string.span8() });
+    return functor(StringParsingBuffer { string.span16() });
 }
 
 } // namespace WTF

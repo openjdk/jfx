@@ -55,7 +55,7 @@ static constexpr bool verbose = false;
 class ArgumentsEliminationPhase : public Phase {
 public:
     ArgumentsEliminationPhase(Graph& graph)
-        : Phase(graph, "arguments elimination")
+        : Phase(graph, "arguments elimination"_s)
     {
     }
 
@@ -65,10 +65,7 @@ public:
         // version over LoadStore.
         DFG_ASSERT(m_graph, nullptr, m_graph.m_form == SSA);
 
-        if (DFGArgumentsEliminationPhaseInternal::verbose) {
-            dataLog("Graph before arguments elimination:\n");
-            m_graph.dump();
-        }
+        dataLogIf(DFGArgumentsEliminationPhaseInternal::verbose, "Graph before arguments elimination:\n", m_graph);
 
         identifyCandidates();
         if (m_candidates.isEmpty())
@@ -342,6 +339,7 @@ private:
                         escape(node->child1(), node);
                     break;
 
+                case GetUndetachedTypeArrayLength:
                 case GetTypedArrayLengthAsInt52:
                     // This node is only used for TypedArrays, so should not be relevant for arguments elimination
                     escape(node->child2(), node);
@@ -483,7 +481,7 @@ private:
                 case GetByOffset:
                     if (node->child2()->op() == CreateClonedArguments && node->storageAccessData().offset == clonedArgumentsLengthPropertyOffset)
                         break;
-                    FALLTHROUGH;
+                    [[fallthrough]];
                 default:
                     m_graph.doToChildren(node, [&] (Edge edge) { return escape(edge, node); });
                     break;
@@ -547,8 +545,8 @@ private:
             return IterationStatus::Continue;
         });
 
-        using InlineCallFrames = HashSet<InlineCallFrame*, WTF::DefaultHash<InlineCallFrame*>, WTF::NullableHashTraits<InlineCallFrame*>>;
-        using InlineCallFramesForCanditates = HashMap<Node*, InlineCallFrames>;
+        using InlineCallFrames = UncheckedKeyHashSet<InlineCallFrame*, WTF::DefaultHash<InlineCallFrame*>, WTF::NullableHashTraits<InlineCallFrame*>>;
+        using InlineCallFramesForCanditates = UncheckedKeyHashMap<Node*, InlineCallFrames>;
         InlineCallFramesForCanditates inlineCallFramesForCandidate;
         for (auto& [candidate, availability] : m_candidates) {
             auto& set = inlineCallFramesForCandidate.add(candidate, InlineCallFrames()).iterator->value;
@@ -606,7 +604,7 @@ private:
             return interfere;
         };
 
-        auto removeViaKill = [&](BasicBlock* block, unsigned nodeIndex, Node* candidate) {
+        auto removeViaKill = [&](BasicBlock* block, const unsigned nodeIndex, Node* candidate) {
                     if (!m_candidates.contains(candidate))
                         return;
 
@@ -662,21 +660,17 @@ private:
                         }
 
                         // This loop considers all nodes up to the nodeIndex, excluding the nodeIndex.
+                // scanIndex is a working copy so each inline call frame independently
+                // scans the full [0, nodeIndex) range.
                         //
-                        // Note: nodeIndex here has a double meaning. Before entering this
-                        // while loop, it refers to the remaining number of nodes that have
-                // yet to be processed. Inside the loop, it refers to the index
-                        // of the current node to process (after we decrement it).
-                        //
-                        // If the remaining number of nodes is 0, we should not decrement nodeIndex.
-                        // Hence, we must only decrement nodeIndex inside the while loop instead of
-                        // in its condition statement. Note that this while loop is embedded in an
-                        // outer for loop. If we decrement nodeIndex in the condition statement, a
-                        // nodeIndex of 0 will become UINT_MAX, and the outer loop will wrongly
-                        // treat this as there being UINT_MAX remaining nodes to process.
-                        while (nodeIndex) {
-                            --nodeIndex;
-                            Node* node = block->at(nodeIndex);
+                // If the remaining number of nodes is 0, we should not decrement
+                // scanIndex. Hence, we must only decrement it inside the while loop
+                // instead of in its condition statement; otherwise a scanIndex of 0 would
+                // become UINT_MAX.
+                unsigned scanIndex = nodeIndex;
+                while (scanIndex) {
+                    --scanIndex;
+                    Node* node = block->at(scanIndex);
                             if (node == candidate)
                                 break;
 
@@ -695,7 +689,7 @@ private:
                                 NoOpClobberize());
 
                             if (found) {
-                        dataLogLnIf(DFGArgumentsEliminationPhaseInternal::verbose, "eliminating candidate: ", candidate, " because it is clobbered by ", block->at(nodeIndex));
+                        dataLogLnIf(DFGArgumentsEliminationPhaseInternal::verbose, "eliminating candidate: ", candidate, " because it is clobbered by ", block->at(scanIndex));
                                 transitivelyRemoveCandidate(candidate);
                                 return;
                             }
@@ -1043,7 +1037,7 @@ private:
                                 }
 
                                 if (candidate->op() == PhantomNewArrayBuffer)
-                                    return candidate->castOperand<JSImmutableButterfly*>()->length();
+                                    return candidate->castOperand<JSCellButterfly*>()->length();
 
                                 ASSERT(candidate->op() == PhantomCreateRest);
                                 unsigned numberOfArgumentsToSkip = candidate->numberOfArgumentsToSkip();
@@ -1078,7 +1072,7 @@ private:
                                     }
 
                                     if (candidate->op() == PhantomNewArrayBuffer) {
-                                        auto* array = candidate->castOperand<JSImmutableButterfly*>();
+                                        auto* array = candidate->castOperand<JSCellButterfly*>();
                                         for (unsigned index = 0; index < array->length(); ++index) {
                                             JSValue constant;
                                             if (candidate->indexingType() == ArrayWithDouble)
@@ -1292,7 +1286,7 @@ private:
 
                                 if (candidate->op() == PhantomNewArrayBuffer) {
                                     bool canExit = true;
-                                    auto* array = candidate->castOperand<JSImmutableButterfly*>();
+                                    auto* array = candidate->castOperand<JSCellButterfly*>();
                                     for (unsigned index = 0; index < array->length(); ++index) {
                                         JSValue constant;
                                         if (candidate->indexingType() == ArrayWithDouble)
@@ -1408,7 +1402,7 @@ private:
         }
     }
 
-    HashMap<Node*, AvailabilityMap> m_candidates;
+    UncheckedKeyHashMap<Node*, AvailabilityMap> m_candidates;
 };
 
 } // anonymous namespace

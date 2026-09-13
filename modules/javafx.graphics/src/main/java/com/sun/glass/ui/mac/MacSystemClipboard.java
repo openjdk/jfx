@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,7 +51,7 @@ class MacSystemClipboard extends SystemClipboard {
     // regardless of whether such attribute already exists or not
     static final boolean SUPPORT_10_5_API_FORCE = false;
 
-    // http://javafx-jira.kenai.com/browse/RT-12187
+    // JDK-8092024
     // Mac OS X 10.6 supports more than one nonhomogenous item, however, JFX currently does not
     static final boolean SUPPORT_10_6_API = false;
 
@@ -150,10 +150,10 @@ class MacSystemClipboard extends SystemClipboard {
                             }
                             itemFirst.put(FormatEncoder.mimeToUtf(mime), string);
                         } else {
-                            // http://javafx-jira.kenai.com/browse/RT-14593
+                            // JDK-8091740
                             // temporary code, DelayedCallback trips over this
                             // by reusing (incorrectly) text mime type
-                            System.err.println("DelayedCallback not implemented yet: RT-14593");
+                            System.err.println("DelayedCallback not implemented yet: JDK-8091740");
                             Thread.dumpStack();
                         }
                         break;
@@ -198,7 +198,7 @@ class MacSystemClipboard extends SystemClipboard {
                     }
                     default:
                     {
-                        // http://javafx-jira.kenai.com/browse/RT-14592
+                        // JDK-8089912
                         // custom client mime type - pass through
                         if (itemFirst == null) {
                             itemFirst = new HashMap<>();
@@ -287,7 +287,7 @@ class MacSystemClipboard extends SystemClipboard {
                 for (int i = 0; i < utfs.length; i++) {
                     byte data[] = this.pasteboard.getItemBytesForUTF(i, FormatEncoder.mimeToUtf(mime));
                     if (data != null) {
-                        // http://javafx-jira.kenai.com/browse/RT-14592
+                        // JDK-8089912
                         // custom data - currently we wrap it up in ByteBuffer
                         ByteBuffer bb = ByteBuffer.wrap(data);
                         list.add(bb);

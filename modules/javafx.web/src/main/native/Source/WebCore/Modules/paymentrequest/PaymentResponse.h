@@ -30,6 +30,8 @@
 #include "ActiveDOMObject.h"
 #include "ContextDestructionObserver.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
+#include "ExceptionOr.h"
 #include "JSValueInWrappedObject.h"
 #include "PaymentAddress.h"
 #include <wtf/WeakPtr.h>
@@ -47,7 +49,7 @@ enum class PaymentComplete;
 template<typename IDLType> class DOMPromiseDeferred;
 
 class PaymentResponse final : public ActiveDOMObject, public EventTarget, public RefCounted<PaymentResponse> {
-    WTF_MAKE_ISO_ALLOCATED(PaymentResponse);
+    WTF_MAKE_TZONE_ALLOCATED(PaymentResponse);
 public:
     using DetailsFunction = Function<JSC::Strong<JSC::JSObject>(JSC::JSGlobalObject&)>;
 
@@ -59,6 +61,11 @@ public:
     }
 
     ~PaymentResponse();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     const String& requestId() const { return m_requestId; }
     void setRequestId(const String& requestId) { m_requestId = requestId; }
@@ -92,21 +99,17 @@ public:
     bool hasRetryPromise() const { return !!m_retryPromise; }
     void settleRetryPromise(ExceptionOr<void>&& = { });
 
-    using RefCounted<PaymentResponse>::ref;
-    using RefCounted<PaymentResponse>::deref;
-
 private:
     PaymentResponse(ScriptExecutionContext*, PaymentRequest&);
     void finishConstruction();
 
     // ActiveDOMObject
-    const char* activeDOMObjectName() const final { return "PaymentResponse"; }
     void stop() final;
     void suspend(ReasonForSuspension) final;
 
     // EventTarget
-    EventTargetInterface eventTargetInterface() const final { return PaymentResponseEventTargetInterfaceType; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::PaymentResponse; }
+    ScriptExecutionContext* scriptExecutionContext() const final;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
@@ -132,5 +135,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(PaymentResponse)
 
 #endif // ENABLE(PAYMENT_REQUEST)

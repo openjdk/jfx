@@ -2,7 +2,7 @@
 
 <!--
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,6 +62,10 @@
                 font-size: 16px;
                 margin: 18px 0px 10px 0px;
             }
+            h5 {
+                font-size: 14px;
+                margin: 18px 0px 10px 0px;
+            }
             ul.contents li {
                 font-size: 12px;
                 font-weight:bold;
@@ -81,15 +85,15 @@
             }
             .csspropertytable {
                 border-spacing: 1px;
-                background-color: #CCC;
+                background-color: #ededed;
             }
             .csspropertytable th, .csspropertytable td {
                 padding: 2px;
             }
-            .csspropertytable thead th, .csspropertytable thead td {
+            .csspropertytable thead th, .csspropertytable thead td, .csspropertytable tbody th.subheader {
                 font-size: 10px;
                 text-align: center;
-                background-color: #CCC;
+                background-color: #ededed;
             }
             .csspropertytable tbody {
                 background-color:#FFF;
@@ -102,7 +106,7 @@
             }*/
             .cssmisctable {
                 border-spacing: 2px;
-                background-color:#CCC;
+                background-color: #ededed;
             }
             .cssmisctable th, .cssmisctable td {
                 padding: 4px;
@@ -117,8 +121,8 @@
                 background-color: #FFF;
             }
             .package {
-                margin: 15px 0px 0px 0px;
-                padding: 2px;
+                padding: 5px;
+                font-size: 14px;
                 background-color:#666;
                 color:#FFF;
                 font-weight:bold;
@@ -131,7 +135,7 @@
             th.parents, td.parents {
                 font-weight:bold;
                 color:#C00;
-                background-color:#DDD;
+                background-color: #f2f2f2;
                 padding: 4px;
                 text-align:center;
                 font-size: 10px;
@@ -172,15 +176,14 @@
                 font-family:"Lucida Console", Monaco, monospace;
                 font-size: 14px;
                 /*        white-space: pre; */
-
                 padding: 0px 0px 0px 40px;
-                color:#090;
+                color:#050;
                 margin: 0px;
             }
             span.example {
                 font-family:"Lucida Console", Monaco, monospace;
                 font-size: 14px;
-                color:#090;
+                color:#050;
             }
             p.subtitle {
                 font-style: italic;
@@ -236,14 +239,26 @@
                 border:2px solid black;
                 margin-right:1em;
             }
+            .skip-nav {
+                position: absolute;
+                top: auto;
+                left: -9999px;
+                overflow: hidden;
+            }
+            .left40 {
+                margin-left: 40px;
+            }
+            .nowrap {
+                white-space: nowrap;
+            }
         </style>
   </head>
   <body>
     <div class="fx-code-header">
-      <div class="version"><br>
-        Release: JavaFX @FXVERSION@</div>
+        <div class="skip-nav"><a href="#skip-navbar-top" title="Skip navigation links">Skip navigation links</a></div>
     </div>
     <h1>JavaFX CSS Reference Guide</h1>
+    <div>Release: @FXVERSION@</div>
     <h2>Contents</h2>
     <ul class="contents">
       <li><a href="#intro">Introduction</a>
@@ -253,6 +268,7 @@
           <li><a href="#intronaming">Naming Conventions</a></li>
           <li><a href="#intropublicapi">CSS Public API</a></li>
           <li><a href="#introinheritance">Inheritance</a></li>
+          <li><a href="#introtransitions">Transitions</a>
           <li><a href="#introatrules">&#64; Rules</a></li>
           <li><a href="#introexamples">Examples</a></li>
           <li><a href="#introparserwarnings">Understanding Parser Warnings</a></li>
@@ -277,6 +293,7 @@
           <li><a href="#typefont">&lt;font&gt;</a></li>
           <li><a href="#typepaint">&lt;paint&gt;</a></li>
           <li><a href="#typecolor">&lt;color&gt;</a></li>
+          <li><a href="#typeeasingfunction">&lt;easing-function&gt;</a></li>
           <li><a href="#typetextbounds">&lt;text-bounds&gt;</a></li>
         </ul>
       </li>
@@ -444,8 +461,19 @@
           </li>
         </ul>
       </li>
+      <li><a href="#incubator-modules">Incubator Modules</a>
+        <ul>
+          <li>jfx.incubator.scene.control.richtext
+            <ul>
+              <li><a href="#codearea">CodeArea</a></li>
+              <li><a href="#richtextarea">RichTextArea</a></li>
+            </ul>
+          </li>
+        </ul>
+      </li>
       <li><a href="#references">References</a></li>
     </ul>
+    <span class="skip-nav" id="skip-navbar-top"></span>
     <h2><a id="intro">Introduction</a></h2>
     <p>
         Never has styling a Java UI been easier than with JavaFX and Cascading Style Sheets (CSS). Going from one
@@ -457,7 +485,7 @@
     </p>
     <p>
       The structure of this document is as follows. First, there is a
-      description of all value types for JavaFX CSS properties.Where
+      description of all value types for JavaFX CSS properties. Where
       appropriate, this includes a grammar for the syntax of values of that
       type. Then, for each scene&#8209;graph node that supports CSS styles, a table is
       given that lists the properties that are supported, along with type and
@@ -537,8 +565,7 @@
     <p>
         JavaFX CSS also supports pseudo&#8209;classes, but does not implement the full range of pseudo&#8209;classes as
         specified in <a href="http://www.w3.org/TR/css3-selectors/#pseudo-classes">Pseudo&#8209;classes</a>. The pseudo&#8209;classes
-        supported by each Node type are given in the tables within this reference. Note that JavaFX does not currently
-        support structural pseudo&#8209;classes.
+        supported by each Node type are given in the tables within this reference.
     </p>
     <p>
         Each node honors a set of properties that depends on the node's JavaFX
@@ -569,7 +596,7 @@
         Beginning with JavaFX 2.1, the Parent class has a
         <a href="../../../javafx/scene/Parent.html#getStylesheets--">getStylesheets</a> property,
         allowing style sheets to be set on a container. This allows for one branch
-        of of the scene&#8209;graph to have a distinct set of styles. Any instance of
+        of the scene&#8209;graph to have a distinct set of styles. Any instance of
         Parent can have style sheets. A child will take its styles from its own
         inline styles, the style sheets of all its ancestors, and any style sheets
         from the Scene.
@@ -615,7 +642,7 @@
         lower case, with compound words separated by hyphens. The convention is
         therefore to take JavaFX class names and form their corresponding CSS
         style&#8209;class name by separating the compound words with hyphens and
-        convering the letters to all lower case. For example, the JavaFX
+        converting the letters to all lower case. For example, the JavaFX
         ToggleButton class would have a style&#8209;class of "toggle-button". The
         convention for mapping JavaFX variable names to CSS property names is
         similar, with the addition of the "-fx-" prefix. For example, the
@@ -680,18 +707,104 @@
         inherited provided there is not an author or an inline-style that applies specifically to that node.
         In this case, the inherited font is created from the user-set font and any parts of the applicable
         author or in-line style.
-    <h3><a id="introatrules">&#64; Rules</a></h3>
-    <p>
-        Beginning with JavaFX 8u20, the CSS
-        <a href="http://www.w3.org/TR/CSS21/cascade.html#at-import">@import</a> is also partially supported.
-        Only unconditional import is supported. In other words, the media&#8209;type qualifier is not supported.
-        Also, the JavaFX CSS parser is non-compliant with regard to where an @import may appear within a stylesheet
-        (see <a href="http://www.w3.org/TR/CSS21/syndata.html#at-rules">At&#8209;rules</a>).
-        Users are cautioned that this will be fixed in a future release. Adherence to the W3C standard is strongly advised.
+
+    <h3><a id="introtransitions">Transitions</a></h3>
+    <p>JavaFX supports <em>implicit transitions</em> for properties that are styled by CSS. When a property value is
+        changed by CSS, it transitions to its new value over a period of time. Implicit transitions are supported for
+        all primitive types, as well as for types that implement <code>javafx.animation.Interpolatable</code>.</p>
+    <p>Transitions can be defined for any node in the JavaFX scene graph with the following properties:</p>
+    <table class="csspropertytable">
+    <caption>Transition Properties</caption>
+      <thead>
+        <tr>
+        <th class="propertyname" scope="col">CSS Property</th>
+        <th class="value" scope="col">Values</th>
+        <th scope="col">Default</th>
+        <th scope="col">Comments</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+        <th class="propertyname" scope="row">transition&#8209;property</th>
+          <td class="value">[ none | all | &lt;custom&#8209;ident&gt;# ]</td>
+          <td class="default">all</td>
+          <td>The name of the CSS property to which the transition is applied.</td>
+        </tr>
+        <tr>
+        <th class="propertyname" scope="row">transition&#8209;duration</th>
+          <td class="value"><a href="#typeduration" class="typelink">&lt;duration&gt;#</a></td>
+          <td class="default">0s</td>
+          <td>The duration of the transition, not including an optional delay before the transition starts.</td>
+        </tr>
+        <tr>
+        <th class="propertyname" scope="row">transition&#8209;timing&#8209;function</th>
+          <td class="value"><a href="#typeeasingfunction" class="typelink">&lt;easing&#8209;function&gt;#</a></td>
+          <td class="default">ease</td>
+          <td>The easing function that is used to calculate the intermediate values.</td>
+        </tr>
+        <tr>
+        <th class="propertyname" scope="row">transition&#8209;delay</th>
+          <td class="value"><a href="#typeduration" class="typelink">&lt;duration&gt;#</a></td>
+          <td class="default">0s</td>
+          <td>The delay after which the transition starts. If a negative delay is specified, the transition starts
+              as if it had already been running for the specified time.</td>
+        </tr>
+        <tr>
+        <th class="propertyname" scope="row">transition</th>
+        <td class="value">
+            &lt;single-transition&gt;#
+            <br><br>
+            <strong>where</strong> &lt;single&#8209;transition&gt; = [ none | all | &lt;custom&#8209;ident&gt; ] ||
+            <a href="#typeduration" class="typelink">&lt;duration&gt;</a> ||
+            <a href="#typeeasingfunction" class="typelink">&lt;easing&#8209;function&gt;</a> ||
+            <a href="#typeduration" class="typelink">&lt;duration&gt;</a>
+        </td>
+        <td class="default"></td>
+        <td>Short-hand notation for the individual properties. Note that while the order of the values generally
+            doesn't matter, the first duration is always assigned to the <strong>transition-duration</strong>
+            property, while the second duration is always assigned to the <strong>transition-delay</strong>
+            property.</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>A transition is not started (or cancelled if already running) in any of these scenarios:
+      <ol>
+        <li>The property value is set programmatically</li>
+        <li>The property is bound</li>
+        <li>The node (or any of its parents) is invisible, as indicated by the
+            <a href="../../../javafx/scene/Node.html#visibleProperty()">Node.visible</a> property</li>
+        <li>The node is removed from the scene graph</li>
+      </ol>
     </p>
-    <p>Since JavaFX 8, the implementation partially supports the CSS3 syntax to load a font from a URL using the
+    Nodes fire <a href="../../../javafx/css/TransitionEvent.html">TransitionEvent</a> to signal the creation,
+    beginning, completion and cancellation of transitions.
+    <h4>Example</h4>
+    <p>A button that smoothly changes its opacity on mouse-hover can be defined in a stylesheet like this:</p>
+    <p class="example">
+        .button {<br>
+        &nbsp;&nbsp;&nbsp; -fx-opacity: 0.8;<br>
+        &nbsp;&nbsp;&nbsp; transition-property: -fx-opacity;<br>
+        &nbsp;&nbsp;&nbsp; transition-duration: 0.5s;<br>
+        }<br>
+        <br>
+        .button:hover {<br>
+        &nbsp;&nbsp;&nbsp; -fx-opacity: 1;<br>
+        }
+    </p>
+
+    <h3><a id="introatrules">&#64; Rules</a></h3>
+    <h4>@import <a class="grammar" style="font-weight: normal">[ &lt;url&gt; | &lt;string&gt; ] &lt;media-query-list&gt;? ;</a></h4>
+    <p>The @import rule allows applications to import rules from other stylesheets. Import rules must be placed before
+        all other @-rules and style rules, and no other rule can be placed between @import rules. If a valid import
+        rule is encountered, the content of the referenced stylesheet is treated as if it literally appeared at the
+        location of the @import rule.</p>
+    <p>An import rule can optionally include a <a href="#figure-media-query-list">media query list</a> that specifies
+        the conditions under which the imported rules apply, as if they were wrapped in a @media rule with the same
+        media query list.</p>
+    <h4>@font-face</h4>
+    <p>Since JavaFX 8, the implementation partially supports the <label for="font-face-example-1">CSS3 syntax to load a font from a URL</label> using the
     <a href="http://www.w3.org/TR/css3-fonts/#the-font-face-rule">@font&#8209;face</a> rule:</p>
-    <textarea rows="8" cols="132">
+    <textarea id="font-face-example-1" readonly rows="8" cols="132">
 
      &#64;font-face {
         font-family: 'sample';
@@ -702,8 +815,8 @@
     </textarea>
     <p>This allows public resources for fonts to be used in a JavaFX application. For example, assume the URL
     "http://font.samples/web?family=samples" returns the @font&#8209;face rule given above. Then the
-        following code shows how the sample font could be used in a JavaFX application.</p>
-    <textarea rows="20" cols="132">
+        following code shows <label for="font-face-example-2">how the sample font could be used in a JavaFX application.</label></p>
+    <textarea id="font-face-example-2" readonly rows="20" cols="132">
 
     import javafx.application.Application;
     import javafx.scene.Scene;
@@ -728,6 +841,220 @@
     <p>Although the parser will parse the syntax, all @font&#8209;face descriptors are ignored except for
         the <code>src</code> descriptor. The <code>src</code> descriptor is expected to be a
         <a href="#typeurl" class="typelink">&lt;url&gt;</a>. The <code>format</code> hint is ignored.</p>
+    <h4>@media</h4>
+    <p>A media query is a method of testing certain aspects of the <a href="../../../javafx/scene/Scene.html">Scene</a>
+        or <a href="../../../javafx/stage/Stage.html">Stage</a>. Media queries are independent of the contents of the
+        scene graph, its styling, or any other internal aspect; they're only dependent on "external" configuration of
+        the <code>Scene</code> or <code>Stage</code>.
+    <p>Several media queries can be combined into a comma-separated <strong>media query list</strong>.
+        A media query list evaluates to <code>true</code> if <em>any</em> of the media queries is <code>true</code>,
+        and evaluates to <code>false</code> only if <em>all</em> the media queries are <code>false</code>.
+        An empty media query list evaluates to <code>true</code>.
+        <figure style="margin: 0" id="figure-media-query-list">
+            <img src="media-query.svg" width="210" alt="Media Query List">
+            <figcaption style="float: left; margin-top: 27px">
+                <span class="grammar">&lt;media-query-list&gt;:</span>
+            </figcaption>
+        </figure>
+    <p>A <strong>media query</strong> consists of one or more <strong>media features</strong>.
+        A media feature tests a single, specific feature of the <code>Scene</code>.
+        Syntactically, media features resemble CSS properties: they consist of a feature name, a colon, and a value to
+        test for. Media features are always enclosed in parentheses. They may also be written in boolean form as just a
+        feature name, or in range form using arithmetic comparison operators.
+        <figure style="margin: 0">
+            <img src="media-feature.svg" width="430" alt="Media Feature">
+            <figcaption style="float: left; margin-top: 16px">
+                <span class="grammar">&lt;media-feature&gt;:</span>
+            </figcaption>
+        </figure>
+    <h5 id="mf-boolean-context">Evaluating Media Features in a Boolean Context</h5>
+    <p>If the colon and value are omitted, the media feature is evaluated in a boolean context.
+        This is a convenient shorthand for features that have a reasonable default value. A media feature that is
+        evaluated in a boolean context evaluates to <code>true</code> if it would be <code>true</code> for any value
+        <em>other</em> than the reasonable default value.
+    <p>For example, the <code>prefers-reduced-motion</code> media feature has a default value of <code>no-preference</code>.
+        When evaluated in a boolean context, the media feature evaluates to <code>false</code> if the user has indicated no
+        preference, and evaluates to <code>true</code> if the user has indicated the <code>reduce</code> preference.
+    <h5>Evaluating Media Features in a Range Context</h5>
+    <p>A media feature with a range type can be evaluated in a range context with two forms:
+        <ol>
+            <li>The <strong>basic form</strong> consists of a feature name, an arithmetic comparison operator,
+                and a value. For example:<br>
+                <code>
+                    (width &gt; 600px)<br>
+                    (500px &lt;= height)<br>
+                </code>
+                <br>
+            <li>The <strong>interval form</strong> consists of a feature name, nested between two comparison
+                operators and two values. For example:<br>
+                <code>
+                    (600px &gt;= width &gt;= 400px)<br>
+                    (10em &lt; height &lt;= 20em)<br>
+                </code>
+        </ol>
+        Rather than evaluating media features in a range context, they can also be evaluated in a discrete context by
+        writing the feature name with a "min-" or "max-" prefix:
+        <ul>
+            <li>Using the "min-" prefix on a feature name is equivalent to using the <code>&gt;=</code> operator, for example:<br>
+                <code>(min-height: 500px)</code> is equivalent to <code>(height &gt;= 500px)</code><br>
+                <br>
+            <li>Using the "max-" prefix on a feature name is equivalent to using the <code>&lt;=</code> operator, for example:<br>
+                <code>(max-width: 600px)</code> is equivalent to <code>(width &lt;= 600px)</code><br>
+        </ul>
+    <h5>Combining Media Features</h5>
+    <p>Media features can be combined using boolean algebra (<code>not</code>, <code>and</code>, <code>or</code>):
+    <ul>
+        <li>Any media feature can be negated by placing the <code>not</code> operator before it:<br>
+            <code>
+                &nbsp;&nbsp;&nbsp;&nbsp;@media not (prefers-color-scheme: light) { ... }<br>
+            </code>
+            <br>
+        <li>Two or more media features can be chained together, such that the query is only true if <em>all</em> the
+            media features are true, by placing the <code>and</code> operator between them:<br>
+            <code>
+                &nbsp;&nbsp;&nbsp;&nbsp;@media (prefers-color-scheme: dark) and<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (prefers-reduced-motion) and<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (prefers-reduced-transparency) { ... }<br>
+            </code>
+            <br>
+        <li>Two or more media features can be chained together, such that the query is true if <em>any</em> of the
+            media features are true, by placing the <code>or</code> operator between them:<br>
+            <code>
+                &nbsp;&nbsp;&nbsp;&nbsp;@media (prefers-color-scheme: dark) or<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (prefers-reduced-motion) or<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (prefers-reduced-transparency) { ... }<br>
+            </code>
+            <br>
+        <li>Expressions can be grouped by wrapping them in parentheses:<br>
+            <code>
+                &nbsp;&nbsp;&nbsp;&nbsp;@media (prefers-color-scheme: dark) and<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ((prefers-reduced-motion) or (prefers-reduced-transparency)) { ... }<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;@media (prefers-color-scheme: dark) and (not (prefers-reduced-motion)) { ... }<br>
+            </code>
+            <br>
+        <li>It is invalid to mix different boolean operators at the same "level" of a media query. For example,
+            the following expression is invalid, as it is unclear what was meant:<br>
+            <code>
+                &nbsp;&nbsp;&nbsp;&nbsp;@media (prefers-color-scheme: dark) and<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (prefers-reduced-motion) or<br>
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (prefers-reduced-transparency) { ... }<br>
+            </code>
+            <br>
+            In this case, parentheses must be used to group expressions.
+    </ul>
+    <table class="csspropertytable" id="mediafeatures">
+        <caption>Available media features</caption>
+        <colgroup>
+            <col style="min-width: 230px">
+            <col style="width: 30%">
+            <col style="min-width: 80px">
+            <col style="width: 70%">
+        </colgroup>
+        <tbody>
+            <tr>
+                <th class="propertyname subheader" scope="col">Viewport Characteristics</th>
+                <th class="subheader" scope="col">Value</th>
+                <th class="subheader" scope="col">Type</th>
+                <th class="subheader" scope="col">Comments</th>
+            </tr>
+            <tr>
+                <td class="value">width</td>
+                <td class="value"><a href="#typelength" class="typeref">&lt;length&gt;</a></td>
+                <td>range</td>
+                <td>corresponds to <code>Scene.width</code></td>
+            </tr>
+            <tr>
+                <td class="value">height</td>
+                <td class="value"><a href="#typelength" class="typeref">&lt;length&gt;</a></td>
+                <td>range</td>
+                <td>corresponds to <code>Scene.height</code></td>
+            </tr>
+            <tr>
+                <td class="value nowrap">aspect-ratio</td>
+                <td class="value"><a href="#typenumber" class="typeref">&lt;number&gt;</a></td>
+                <td>range</td>
+                <td>aspect ratio = <code>width</code> / <code>height</code></td>
+            </tr>
+            <tr>
+                <td class="value">orientation</td>
+                <td class="value">portrait | landscape</td>
+                <td>discrete</td>
+                <td><code>portrait</code> if <code>height</code> &gt;= <code>width</code>, <code>landscape</code> otherwise</td>
+            </tr>
+            <tr>
+                <td class="value nowrap">display-mode</td>
+                <td class="value">fullscreen | standalone</td>
+                <td>discrete</td>
+                <td><code>fullscreen</code> if <code>Stage.isFullScreen()</code>, <code>standalone</code> otherwise</td>
+            </tr>
+            <tr>
+                <th class="propertyname subheader" scope="col">User Preference</th>
+                <th class="subheader" scope="col">Value</th>
+                <th class="subheader" scope="col">Type</th>
+                <th class="subheader" scope="col">Comments</th>
+            </tr>
+            <tr>
+                <td class="value nowrap">prefers-color-scheme</td>
+                <td class="value">light | dark</td>
+                <td>discrete</td>
+                <td></td>
+            </tr>
+            <tr>
+                <td class="value nowrap">prefers-reduced-data</td>
+                <td class="value">no-preference | reduce</td>
+                <td>discrete</td>
+                <td><code>no-preference</code> evaluates as <code>false</code></td>
+            </tr>
+            <tr>
+                <td class="value nowrap">prefers-reduced-motion</td>
+                <td class="value">no-preference | reduce</td>
+                <td>discrete</td>
+                <td><code>no-preference</code> evaluates as <code>false</code></td>
+            </tr>
+            <tr>
+                <td class="value nowrap">prefers-reduced-transparency</td>
+                <td class="value">no-preference | reduce</td>
+                <td>discrete</td>
+                <td><code>no-preference</code> evaluates as <code>false</code></td>
+            </tr>
+            <tr>
+                <td class="value nowrap">-fx-prefers-persistent-scrollbars</td>
+                <td class="value">no-preference | persistent</td>
+                <td>discrete</td>
+                <td><code>no-preference</code> evaluates as <code>false</code></td>
+            </tr>
+            <tr>
+                <th class="propertyname subheader" scope="col">Platform Features</th>
+                <th class="subheader" scope="col">Value</th>
+                <th class="subheader" scope="col">Type</th>
+                <th class="subheader" scope="col">Comments</th>
+            </tr>
+            <tr>
+                <td class="value nowrap">-fx-supports-conditional-feature</td>
+                <td class="value">
+                    graphics | controls | media | web | swt | swing |
+                    fxml | scene3d | effect | <span class="nowrap">shape-clip</span> |
+                    <span class="nowrap">input-method</span> | <span class="nowrap">transparent-window</span> |
+                    <span class="nowrap">unified-window</span> | <span class="nowrap">extended-window</span> |
+                    <span class="nowrap">two-level-focus</span> | <span class="nowrap">virtual-keyboard</span> |
+                    <span class="nowrap">input-touch</span> | <span class="nowrap">input-multitouch</span> |
+                    <span class="nowrap">input-pointer</span></td>
+                <td>discrete</td>
+                <td>Evaluates to <code>true</code> if
+                    <code><a href="../../application/Platform.html#isSupported(javafx.application.ConditionalFeature)">
+                    Platform.isSupported(ConditionalFeature)</a></code> returns <code>true</code> for the specified
+                    conditional feature.<br>
+                    This media feature cannot be evaluated in a <a href="#mf-boolean-context">boolean context</a>.</td>
+            </tr>
+            <tr>
+                <td class="value nowrap">-fx-platform</td>
+                <td class="value">android | ios | linux | macos | windows</td>
+                <td>discrete</td>
+                <td>This media feature cannot be evaluated in a <a href="#mf-boolean-context">boolean context</a>.</td>
+            </tr>
+        </tbody>
+    </table>
     <h3><a id="introexamples">Examples</a></h3>
     <p>Consider the following simple JavaFX application: </p>
     <p class="example">Scene scene = new Scene(new Group()); <br>
@@ -780,9 +1107,8 @@
     <li> While the JavaFX CSS parser will parse valid CSS syntax, it is not a
         fully compliant CSS parser. One should not expect the parser to handle
         syntax not specified in this document.</li>
-    <li>With the exception of @font&#8209;face and @import, @-keyword statements are ignored.</li>
+    <li>With the exception of @font&#8209;face, @import, and @media, @-keyword statements are ignored.</li>
     <li>The &lt;media-query-list&gt; of the @import statement is not parsed.</li>
-    <li>The structural pseudo&#8209;classes are not supported. </li>
     <li>The ":active" and ":focus" dynamic pseudo&#8209;classes are not supported.
         However, <a href="#node">Nodes</a> do support the ":pressed" and
         ":focused" pseudo&#8209;classes, which are similar. </li>
@@ -800,6 +1126,8 @@
         sheet.</li>
     <li>When parsing a <a href="http://www.w3.org/TR/CSS2/syndata.html#uri">URI</a>,
         the parser doesn't handle URI escapes nor \&lt;hex-digit&gt;[1,6] code points.</li>
+    <li>JavaFX CSS does not combine short-hand and long-hand property notations in a declaration block.
+        Using both notations in a single declaration block may lead to unexpected results.</li>
     </ol>
     <h2><a id="types">Types</a></h2>
     <h3><a id="typeinherit">inherit</a></h3>
@@ -912,14 +1240,14 @@
       values are used, then the distance value for first and last stop in the
       series must be specified. This restriction may be removed in a future
       release.</p>
-    <p>"<span style="color: #009900; ">red, white 70%, blue</span>" is valid since the
+    <p>"<span style="color: #050; ">red, white 70%, blue</span>" is valid since the
       distance for red and blue is assumed to be 0% and 100%, respectively.</p>
-    <p>"<span style="color: #009900; ">red 10, white, blue 90</span>" is valid. Because
+    <p>"<span style="color: #050; ">red 10, white, blue 90</span>" is valid. Because
       distance for red and blue is 10 and 90, respectively, the distance for
       white can be calculated.</p>
-    <p>"<span style="color: #009900; ">red, white 70, blue</span>" is <span style="font-style:italic;">not</span> valid
+    <p>"<span style="color: #050; ">red, white 70, blue</span>" is <span style="font-style:italic;">not</span> valid
       since distance units do not agree.</p>
-    <p>"<span style="color: #009900; ">red, white, blue</span>" is valid. The stops are
+    <p>"<span style="color: #050; ">red, white, blue</span>" is valid. The stops are
       distributed evenly between 0% and 100%.</p>
     <h3><a id="typeurl">&lt;uri&gt;</a></h3>
     <p class="grammar">url ( [\"\']? &lt;address&gt; [\"\']? )</p>
@@ -932,7 +1260,7 @@
     <p>If the <span class="grammar">&lt;address&gt;</span> does not have a [scheme:] component, the <span class="grammar">&lt;address&gt;</span>
         is considered to be the [path] component only.
         A leading '/' character indicates that the [path] is relative to the
-        root of the classpath. If the the style appears in a stylesheet and
+        root of the classpath. If the style appears in a stylesheet and
         has no leading '/' character, the path is relative to the base URI of
         the stylesheet. If the style appears in an inline style, the path is
         relative to the root of the classpath (regardless of whether or not
@@ -986,9 +1314,9 @@
     </table>
     <p>Note that for inline styles, leading dot-segments (e.g. '..' or '.') do resolve since the path is always
     anchored at the root of the classpath.</p>
-    <p>As an example, the code snippet below creates a scene filled with a fictional 'Duke.png' image, located in an
-    'image' directory:</p>
-    <textarea rows="9" cols="132">
+    <p>As an example, <label for="uri-example-1">the code snippet below creates a scene filled with a fictional 'Duke.png' image, located in an
+    'image' directory:</label></p>
+    <textarea id="uri-example-1" readonly rows="9" cols="132">
 
     &#64;Override public void start(Stage stage) {
         StackPane root = new StackPane();
@@ -1095,14 +1423,18 @@
       <span class="grammar">[[ &lt;font-style&gt; || &lt;font-weight&gt; ]?
         &lt;font-size&gt; &lt;font-family&gt; ]</span></p>
     <h4><a id="fontprops">Font Properties</a></h4>
-    <p>Most classes that use text will support the following font properties. In
-      some cases a similar set of properties will be supported but with a
-      different prefix instead of "-fx-font".</p>
+    <p>Most classes that use text will support the following font properties.</p>
+    <p>
+        Additionally, this treatment is extended to any font property whose suffix matches an entry in the table below.
+        <br>
+        Example: "-fx-tick-label-font" or "custom-font-weight".
+    </p>
     <table class="csspropertytable">
     <caption>Available CSS Properties</caption>
       <thead>
         <tr>
         <th class="propertyname" scope="col">CSS Property</th>
+        <th class="propertyname" scope="col">Suffix</th>
         <th class="value" scope="col">Values</th>
         <th scope="col">Default</th>
         <th scope="col">Comments</th>
@@ -1111,6 +1443,7 @@
       <tbody>
         <tr>
         <th class="propertyname" scope="row">-fx-font</th>
+          <td>font</td>
           <td class="value"><a href="#typefont" class="typelink">&lt;font&gt;</a></td>
           <td>inherit</td>
           <td>shorthand property for font-size, font-family, font-weight and
@@ -1118,24 +1451,28 @@
         </tr>
         <tr>
         <th class="propertyname" scope="row">-fx-font-family</th>
+          <td>font-family</td>
           <td class="value"><a href="#typefont" class="typelink">&lt;font-family&gt;</a></td>
           <td>inherit</td>
           <td>&nbsp;</td>
         </tr>
         <tr>
         <th class="propertyname" scope="row">-fx-font-size</th>
+          <td>font-size</td>
           <td class="value"><a href="#typefont" class="typelink">&lt;font-size&gt;</a></td>
           <td>inherit</td>
           <td>&nbsp;</td>
         </tr>
         <tr>
         <th class="propertyname" scope="row">-fx-font-style</th>
+          <td>font-style</td>
           <td class="value"><a href="#typefont" class="typelink">&lt;font-style&gt;</a></td>
           <td>inherit</td>
           <td>&nbsp;</td>
         </tr>
         <tr>
         <th class="propertyname" scope="row">-fx-font-weight</th>
+          <td>font-weight</td>
           <td class="value"><a href="#typefont" class="typelink">&lt;font-weight&gt;</a></td>
           <td>inherit</td>
           <td>&nbsp;</td>
@@ -1432,15 +1769,15 @@
     <p>With looked-up colors you can refer to any other color property that is
       set on the current node or any of its parents. This is a very powerful
       feature, as it allows a generic palette of colors to be specified on the
-      scene then used thoughout the application. If you want to change one of
+      scene then used throughout the application. If you want to change one of
       those palette colors you can do so at any level in the scene tree and it
-      will affect that node and all its decendents. Looked-up colors are not
+      will affect that node and all its descendants. Looked-up colors are not
       looked up until they are applied, so they are live and react to any style
       changes that might occur, such as replacing a palette color at runtime
       with the "style" property on a node.</p>
     <p>In the following example, all background color of all buttons uses the
       looked up color "abc".</p>
-    <p class="example">.root { abc: #f00 }<br>
+    <p class="example">:root { abc: #f00 }<br>
       .button { -fx-background-color: abc }</p>
     <h4>RGB Colors <span class="grammar" style="font-size: smaller;">&lt;rgb-color&gt;</span></h4>
     <p>The RGB color model is used in numerical color specifications. It has a
@@ -1579,6 +1916,151 @@
           href="#typecolor"
           class="typelink">&lt;color&gt;</a>
         ) ]+ </span></p>
+
+    <h3><a id="typeeasingfunction">&lt;easing-function&gt;</a></h3>
+    <p class="grammar">linear | &lt;linear-easing-function&gt; | &lt;cubic-bezier-easing-function&gt; | &lt;step-easing-function&gt; | &lt;fx-easing-function&gt;</p>
+    <p><strong>Linear</strong> <span class="grammar" style="font-size: smaller;">linear</span><br>
+       The linear easing keyword is a simple linear mapping from the input progress value to the output progress value.<br>
+       It is equivalent to <span class="grammar">linear(0, 1)</span></p>
+    <figure style="display: inline-block">
+        <img src="easing-linear.svg" width="200" alt="Linear easing function">
+    </figure>
+    <p><strong>Linear Easing Function</strong> <span class="grammar" style="font-size: smaller;">&lt;linear-easing-function&gt;</span><br></p>
+    <p class="grammar">linear([ <a href="#typenumber" class="typelink">&lt;number&gt;</a> && <a href="#typepercentage" class="typelink">&lt;percentage&gt;{0,2}</a> ]#)</p>
+    <p>The linear easing function interpolates linearly between its control points. The control points are specified
+        as a comma-separated list of two or more items, where each item consists of a <a href="#typenumber" class="typelink">&lt;number&gt;</a>,
+        optionally followed by one or two <a href="#typepercentage" class="typelink">&lt;percentage&gt;</a> values.</p>
+    <p>The <a href="#typenumber" class="typelink">&lt;number&gt;</a> specifies the progress of the animation in time.
+        The optional <a href="#typepercentage" class="typelink">&lt;percentage&gt;</a> specifies when that progress
+        is reached; if two percentages are specified, they indicate a segment of time when the animation is paused.
+        If no percentage is specified, the control point is spaced evenly between neighboring control points.</p>
+    <p>Examples of linear easing functions:</p>
+    <figure style="display: inline-block">
+        <img src="easing-linear-func1.svg" width="200" alt="linear easing function">
+        <figcaption style="margin-left: 40px" class="grammar">linear(0, 0.25, 1)</figcaption>
+    </figure>
+    <figure style="display: inline-block">
+        <img src="easing-linear-func2.svg" width="200" alt="linear easing function">
+        <figcaption style="margin-left: 20px" class="grammar">linear(0, 0.25 75%, 1)</figcaption>
+    </figure>
+    <figure style="display: inline-block">
+        <img src="easing-linear-func3.svg" width="200" alt="linear easing function">
+        <figcaption style="margin-left: 10px" class="grammar">linear(0, 0.25 25% 75%, 1)</figcaption>
+    </figure>
+    <p><strong>Cubic Bézier Easing Functions</strong> <span class="grammar" style="font-size: smaller;">&lt;cubic-bezier-easing-function&gt;</span><br></p>
+    <p class="grammar">ease | ease-in | ease-out | ease-in-out | cubic-bezier(<a href="#typenumber" class="typelink">&lt;number&nbsp;[0,1]&gt;</a>, <a href="#typenumber" class="typelink">&lt;number&gt;</a>, <a href="#typenumber" class="typelink">&lt;number&nbsp;[0,1]&gt;</a>, <a href="#typenumber" class="typelink">&lt;number&gt;</a>)</p>
+    <p>The values have the following meaning:</p>
+    <table class="left40" role="presentation" summary="Cubic Bézier Easing Functions">
+        <tr>
+            <td style="width: 120px; vertical-align: top"><span class="grammar">ease</span></td>
+            <td>equivalent to <span class="grammar">cubic-bezier(0.25, 0.1, 0.25, 1)</span></td>
+        </tr>
+        <tr>
+            <td style="width: 120px; vertical-align: top"><span class="grammar">ease-in</span></td>
+            <td>equivalent to <span class="grammar">cubic-bezier(0.42, 0, 1, 1)</span></td>
+        </tr>
+        <tr>
+            <td style="width: 120px; vertical-align: top"><span class="grammar">ease-out</span></td>
+            <td>equivalent to <span class="grammar">cubic-bezier(0, 0, 0.58, 1)</span></td>
+        </tr>
+        <tr>
+            <td style="width: 120px; vertical-align: top"><span class="grammar">ease-in-out</span></td>
+            <td>equivalent to <span class="grammar">cubic-bezier(0.42, 0, 0.58, 1)</span></td>
+        </tr>
+        <tr>
+            <td style="width: 120px; vertical-align: top"><span class="grammar">cubic-bezier</span></td>
+            <td>defines the control points P1 and P2 using four real numbers: (x<sub>P1</sub>, y<sub>P1</sub>, x<sub>P2</sub>, y<sub>P2</sub>)</td>
+        </tr>
+    </table>
+    <p>A cubic Bézier function is defined by four control points, where P0 is fixed at (0,0) and P3 is fixed at (1,1).
+       P1 and P2 are restricted to the interval [0,1] on the input progress axis:</p>
+    <figure style="display: inline-block">
+        <img src="easing-cubicbezier.svg" width="200" alt="Cubic Bézier easing function">
+    </figure>
+    <p><strong>Step Easing Functions</strong> <span class="grammar" style="font-size: smaller;">&lt;step-easing-function&gt;</span></p>
+    <p class="grammar">step-start | step-end | steps(<a href="#typenumber" class="typelink">&lt;integer&gt;</a>[,&lt;step-position&gt;]?)</p>
+    <p class="grammar">where &lt;step-position&gt; = jump-start | jump-end | jump-none | jump-both | start | end</p>
+    <p>The values have the following meaning:</p>
+    <table class="left40" role="presentation" summary="Step Easing Functions">
+        <tr>
+            <td style="width: 120px; vertical-align: top"><span class="grammar">step-start</span></td>
+            <td>equivalent to <span class="grammar">steps(1, start)</span></td>
+        </tr>
+        <tr>
+            <td style="width: 120px; vertical-align: top"><span class="grammar">step-end</span></td>
+            <td>equivalent to <span class="grammar">steps(1, end)</span></td>
+        </tr>
+        <tr>
+            <td style="width: 120px; vertical-align: top"><span class="grammar">steps</span></td>
+            <td>defines a step function with <a href="#typenumber" class="typelink">&lt;integer&gt;</a> intervals
+                and an optional <span class="grammar">&lt;step-position&gt;</span>;<br>if omitted,
+                <span class="grammar">end</span> is implied</span>
+            </td>
+        </tr>
+        <tr><td><br></td></tr>
+        <tr>
+            <td style="width: 120px; vertical-align: top"><span class="grammar">jump-start</span></td>
+            <td>the interval starts with a rise point when the input progress value is 0</td>
+        </tr>
+        <tr>
+            <td style="width: 120px; vertical-align: top"><span class="grammar">jump-end</span></td>
+            <td>the interval ends with a rise point when the input progress value is 1</td>
+        </tr>
+        <tr>
+            <td style="width: 120px; vertical-align: top"><span class="grammar">jump-none</span></td>
+            <td>all rise points are within the open interval (0..1)</td>
+        </tr>
+        <tr>
+            <td style="width: 120px; vertical-align: top"><span class="grammar">jump-both</span></td>
+            <td>the interval starts with a rise point when the input progress value is 0,
+                and ends with a rise point when the input progress value is 1</td>
+        </tr>
+        <tr>
+            <td style="width: 120px; vertical-align: top"><span class="grammar">start</span></td>
+            <td>equivalent to <span class="grammar">jump-start</span></td>
+        </tr>
+        <tr>
+            <td style="width: 120px; vertical-align: top"><span class="grammar">end</span></td>
+            <td>equivalent to <span class="grammar">jump-end</span></td>
+        </tr>
+    </table>
+    <p>Examples of step easing functions:</p>
+    <figure style="display: inline-block">
+        <img src="easing-stepstart.svg" width="200" alt="jump-start easing function">
+        <figcaption style="margin-left: 30px" class="grammar">steps(3, jump-start)</figcaption>
+    </figure>
+    <figure style="display: inline-block">
+        <img src="easing-stepend.svg" width="200" alt="jump-end easing function">
+        <figcaption style="margin-left: 30px" class="grammar">steps(3, jump-end)</figcaption>
+    </figure>
+    <figure style="display: inline-block">
+        <img src="easing-stepnone.svg" width="200" alt="jump-none easing function">
+        <figcaption style="margin-left: 30px" class="grammar">steps(3, jump-none)</figcaption>
+    </figure>
+    <figure style="display: inline-block">
+        <img src="easing-stepboth.svg" width="200" alt="jump-both easing function">
+        <figcaption style="margin-left: 30px" class="grammar">steps(3, jump-both)</figcaption>
+    </figure>
+    <p><strong>SMIL 3.0 Easing Functions</strong> <span class="grammar" style="font-size: smaller;">&lt;fx-easing-function&gt;</span><br></p>
+    <p class="grammar">-fx-ease-in | -fx-ease-out | -fx-ease-both</p>
+    <p>The values have the following meaning:</p>
+    <table class="left40" role="presentation" summary="SMIL 3.0 Easing Functions">
+        <tr>
+            <td style="width: 120px; vertical-align: top"><span class="grammar">-fx-ease-in</span></td>
+            <td>SMIL 3.0 ease-in function with an acceleration factor of 0.2</td>
+        </tr>
+        <tr>
+            <td style="width: 120px; vertical-align: top"><span class="grammar">-fx-ease-out</span></td>
+            <td>SMIL 3.0 ease-out function with a deceleration factor of 0.2</td>
+        </tr>
+        <tr>
+            <td style="width: 120px; vertical-align: top"><span class="grammar">-fx-ease-both</span></td>
+            <td>SMIL 3.0 ease-in/out function with an acceleration and deceleration factor of 0.2</td>
+        </tr>
+    </table>
+    <p>These functions are provided for compatibility with <code>javafx.animation.Interpolator</code>
+       implementations of SMIL 3.0 cubic bezier easing functions.</p>
+
     <h3><a id="typetextbounds">&lt;text-bounds&gt;</a></h3>
     <p>The geometry of text can be measured either in terms of the bounds of
        the particular text to be rendered - visual bounds, or as properties
@@ -1606,27 +2088,15 @@
           within the bounds of its parent.</li>
     </ul>
     <h2><a id="stage">Stage</a></h2>
-    <table class="package" width="100%">
-        <tbody>
-        <tr>
-            <td>javafx.stage</td>
-        </tr>
-        </tbody>
-    </table>
-    <h4><a id="popupwindow">Group</a></h4>
-    <p class="styleclass">Style class: .root.popup</p>
+    <h3 class="package">javafx.stage</h3>
+    <h4><a id="popupwindow">PopupWindow</a></h4>
+    <p class="styleclass">Style class: :root.popup</p>
     <p>PopupWindow does not have any properties that can be styled by CSS, but a PopupWindow does have its own Scene.
-        Scene's root gets the .root style-class by default. If the Scene is the root scene of a PopupWindow, then the
+        Scene's root gets the :root pseudo-class by default. If the Scene is the root scene of a PopupWindow, then the
         .popup style-class is also added. This allows the root scene of a PopupWindow to have distinct styles via
-        the CSS rule <code>.root.popup { /* declarations */ }</code>
+        the CSS rule <code>:root.popup { /* declarations */ }</code>
     <h2><a id="nodes">Nodes</a></h2>
-    <table class="package" width="100%">
-      <tbody>
-        <tr>
-          <td>javafx.scene</td>
-        </tr>
-      </tbody>
-    </table>
+    <h3 class="package">javafx.scene</h3>
     <h4><a id="group">Group</a></h4>
     <p class="styleclass">Style class: empty by default</p>
     <table class="csspropertytable">
@@ -1791,41 +2261,63 @@
     <h4>Pseudo-classes</h4>
     <table class="csspropertytable">
     <caption>Available CSS Pseudo-classes</caption>
-      <thead>
-        <tr>
-        <th class="propertyname" scope="col">CSS Pseudo-class</th>
-        <th scope="col">Comments</th>
-        </tr>
-      </thead>
       <tbody>
         <tr>
-        <th class="propertyname" scope="row">disabled</th>
-          <td>applies when the <strong>disabled</strong> variable is true</td>
+          <th class="propertyname subheader" scope="col">User Action Pseudo-classes</th>
+          <th class="subheader" scope="col">Comments</th>
         </tr>
         <tr>
-        <th class="propertyname" scope="row">focused</th>
+          <th class="propertyname" scope="row">focused</th>
           <td>applies when the <strong>focused</strong> variable is true</td>
         </tr>
         <tr>
-        <th class="propertyname" scope="row">focus-visible</th>
+          <th class="propertyname" scope="row">focus-visible</th>
           <td>applies when the <strong>focusVisible</strong> variable is true</td>
         </tr>
         <tr>
-        <th class="propertyname" scope="row">focus-within</th>
+          <th class="propertyname" scope="row">focus-within</th>
           <td>applies when the <strong>focusWithin</strong> variable is true</td>
         </tr>
         <tr>
-        <th class="propertyname" scope="row">hover</th>
+          <th class="propertyname" scope="row">hover</th>
           <td>applies when the <strong>hover</strong> variable is true</td>
         </tr>
         <tr>
-        <th class="propertyname" scope="row">pressed</th>
+          <th class="propertyname" scope="row">pressed</th>
           <td>applies when the <strong>pressed</strong> variable is true</td>
         </tr>
         <tr>
-        <th class="propertyname" scope="row">show-mnemonic</th>
-          <td>apples when the mnemonic affordance (typically an underscore)
-            should be shown.</td>
+          <th class="propertyname subheader" scope="col">Input Pseudo-classes</th>
+          <th class="subheader" scope="col">Comments</th>
+        </tr>
+        <tr>
+          <th class="propertyname" scope="row">disabled</th>
+          <td>applies when the <strong>disabled</strong> variable is true</td>
+        </tr>
+        <tr>
+          <th class="propertyname" scope="row">show-mnemonic</th>
+          <td>applies when the mnemonic affordance (typically an underscore) should be shown</td>
+        </tr>
+        <tr>
+          <th class="propertyname subheader" scope="col">Tree-Structural Pseudo-classes</th>
+          <th class="subheader" scope="col">Comments</th>
+        </tr>
+        <tr>
+          <th class="propertyname" scope="row">first-child</th>
+          <td>applies when the node is the first child in its <code>Parent</code> container</td>
+        </tr>
+        <tr>
+          <th class="propertyname" scope="row">last-child</th>
+          <td>applies when the node is the last child in its <code>Parent</code> container</td>
+        </tr>
+        <tr>
+          <th class="propertyname" scope="row">only-child</th>
+          <td>applies when the node is the only child in its <code>Parent</code> container</td>
+        </tr>
+        <tr>
+          <th class="propertyname" scope="row">nth-child(even | odd)</th>
+          <td>applies when the node is the n-th child in its <code>Parent</code> container
+              (the first child at index 0 matches "odd", the second child at index 1 matches "even", etc.)</td>
         </tr>
       </tbody>
     </table>
@@ -1851,23 +2343,37 @@
         </tr>
       </tbody>
     </table>
+    <h4>Pseudo-classes</h4>
+    <table class="csspropertytable">
+        <caption>Available CSS Pseudo-classes</caption>
+        <thead>
+        <tr>
+            <th class="propertyname" scope="col">CSS Pseudo-class</th>
+            <th scope="col">Comments</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <th class="propertyname" scope="row">root</th>
+            <td>applies when the <code>Parent</code> is the root node of a <code>Scene</code> or <code>SubScene</code></td>
+        </tr>
+        <tr>
+            <td colspan="2" class="parents" scope="row">Also has all pseudo&#8209;classes of <a href="#node">Node</a></td>
+        </tr>
+        </tbody>
+    </table>
     <br>
     <h4><a id="scene">Scene</a></h4>
     <p class="styleclass">Style class: not applicable<br>
     </p>
     <p>The Scene object has no settable CSS properties, nor does it have any
-      pseudo&#8209;classes. However, the root node of the scene is assigned the style
+      pseudo&#8209;classes. However, the root node of the scene matches the
+      structural pseudo-class <code>:root</code>, as well as the legacy style
       class "root" (in addition to style classes already assigned to the node).
       This is useful because the root node of Scene is the root container for
       all active scene&#8209;graph nodes. Thus, it can serve as a container for
       properties that are inherited or looked up.</p>
-    <table class="package" width="100%">
-      <tbody>
-        <tr>
-          <td>javafx.scene.image</td>
-        </tr>
-      </tbody>
-    </table>
+    <h3 class="package">javafx.scene.image</h3>
     <h4><a id="imageview">ImageView</a></h4>
 <p class="styleclass">Style class: image-view</p>
     <table class="csspropertytable">
@@ -1915,13 +2421,7 @@
         </tr>
       </tbody>
     </table>
-    <table class="package" width="100%">
-      <tbody>
-        <tr>
-          <td>javafx.scene.layout</td>
-        </tr>
-      </tbody>
-    </table>
+    <h3 class="package">javafx.scene.layout</h3>
     <br>
     <h4><a id="anchorpane">AnchorPane</a></h4>
 <p class="styleclass">Style class: empty by default</p>
@@ -1993,7 +2493,7 @@
     </table>
     <h4>Substructure</h4>
     <ul>
-        <li>header-panel  &mdash; BoderPane
+        <li>header-panel  &mdash; BorderPane
         <ul><li>graphic-container &mdash; StackPane</li></ul>
         </li>
         <li>content &mdash; Label</li>
@@ -2309,7 +2809,7 @@
                 [ , [<a href="#typesize" class="typelink">&lt;size&gt;</a>]{1,4} [ / [<a href="#typesize" class="typelink">&lt;size&gt;</a>]{1,4} ]? ]*
             <td class="default">0 0 0 0</td>
             <td>
-                <p>The same syntax and semenatics as CSS Backgrounds and Borders Module Level 3: <a href="http://www.w3.org/TR/css3-background/#the-border-radius">Curve Radii</a>
+                <p>The same syntax and semantics as CSS Backgrounds and Borders Module Level 3: <a href="http://www.w3.org/TR/css3-background/#the-border-radius">Curve Radii</a>
                 applies to -fx-background-radius. Note that JavaFX supports only the short-hand syntax.</p>
                 <p>Each comma-separated value or set of values in the series applies to the corresponding background color.</p>
           </td>
@@ -2683,7 +3183,7 @@
           <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
           <td class="default">-1</td>
           <td>Percentage values are not useful since the actual value would be
-              computed from the width and/or height of the Regions's parent before
+              computed from the width and/or height of the Region's parent before
               the parent is laid out.</td>
         </tr>
         <tr>
@@ -2842,23 +3342,11 @@
       </tbody>
     </table>
 
-    <table class="package" width="100%">
-      <tbody>
-        <tr>
-          <td>javafx.scene.media</td>
-        </tr>
-      </tbody>
-    </table>
+    <h3 class="package">javafx.scene.media</h3>
     <h4><a id="mediaview">MediaView</a></h4>
 <p class="styleclass">Style class: media-view</p>
 
-    <table class="package" width="100%">
-      <tbody>
-        <tr>
-          <td>javafx.scene.shape</td>
-        </tr>
-      </tbody>
-    </table>
+    <h3 class="package">javafx.scene.shape</h3>
     <h4><a id="shape">Shape</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <table class="csspropertytable">
@@ -3056,13 +3544,7 @@
 <p class="styleclass">Style class: empty by default</p>
     <p>The SVGPath node has all the properties of <a href="#shape">Shape</a>
       and <a href="#node">Node</a>.</p>
-    <table class="package" width="100%">
-      <tbody>
-        <tr>
-          <td>javafx.scene.text</td>
-        </tr>
-      </tbody>
-    </table>
+    <h3 class="package">javafx.scene.text</h3>
     <h4><a id="text">Text</a></h4>
 <p class="styleclass">Style class: empty by default</p>
     <table class="csspropertytable">
@@ -3179,13 +3661,7 @@
         </tr>
       </tbody>
     </table>
-    <table class="package" width="100%">
-      <tbody>
-        <tr>
-          <td>javafx.scene.web</td>
-        </tr>
-      </tbody>
-    </table>
+    <h3 class="package">javafx.scene.web</h3>
     <h4><a id="webview">WebView</a></h4>
     <p class="styleclass">Style class: web-view</p>
     <table class="csspropertytable">
@@ -3266,13 +3742,7 @@
     </table>
     <!-- Controls -->
     <h2><a id="controls">Controls</a></h2>
-    <table class="package" width="100%">
-      <tbody>
-        <tr>
-        <td>javafx.scene.control</td>
-        </tr>
-      </tbody>
-    </table>
+    <h3 class="package">javafx.scene.control</h3>
     <p>Since JavaFX 2.0, the default skins for all controls support styling from
       CSS. This is accomplished by building the skins from layout objects called
       Regions. Most of the style properties for a control are provided by the
@@ -4083,7 +4553,7 @@
     <p>The PasswordField control has all the properties of <a href="#textfield">TextField</a></p>
     <h4><a id="popupcontrol">PopupControl</a></h4>
     <p>PopupControl is also a <a href="#popupwindow">PopupWindow</a> and as such, its root node has the
-    style-class .root.popup</p>
+    style-class :root.popup</p>
     <h4><a id="progressbar">ProgressBar</a></h4>
     <p class="styleclass">Style class: progress-bar</p>
     <table class="csspropertytable">
@@ -4132,7 +4602,7 @@
         <thead>
         <tr>
         <th class="propertyname" scope="row">CSS Pseudo-class</th>
-            <th>Comments</th>
+            <th scope="col">Comments</th>
         </tr>
         </thead>
         <tbody>
@@ -4141,7 +4611,7 @@
             <td>applies if the <strong>indeterminate</strong> variable is false</td>
         </tr>
         <tr>
-        <th class="propertyname" scope="row">indetermindate</th>
+        <th class="propertyname" scope="row">indeterminate</th>
             <td>applies if the <strong>indeterminate</strong> variable is true</td>
         </tr>
         <tr>
@@ -4208,7 +4678,7 @@
           <td>applies if the <strong>indeterminate</strong> variable is false</td>
         </tr>
         <tr>
-        <th class="propertyname" scope="row">indetermindate</th>
+        <th class="propertyname" scope="row">indeterminate</th>
           <td>applies if the <strong>indeterminate</strong> variable is true</td>
         </tr>
         <tr>
@@ -4811,7 +5281,7 @@
         </tr>
         <tr>
         <th class="propertyname" scope="row">right</th>
-          <td>applies if the side is rght</td>
+          <td>applies if the side is right</td>
         </tr>
         <tr>
         <th class="propertyname" scope="row">bottom</th>
@@ -5388,7 +5858,7 @@
         <th class="propertyname" scope="row">-fx-indent</th>
           <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a></td>
           <td>10</td>
-          <td>The amout of space to multiply by the treeItem.level to get the
+          <td>The amount of space to multiply by the treeItem.level to get the
             left margin</td>
         </tr>
         <tr>
@@ -5510,13 +5980,7 @@
     </table>
     <!-- Charts -->
     <h2><a id="charts">Charts</a></h2>
-    <table class="package" width="100%">
-      <tbody>
-        <tr>
-          <td>javafx.scene.chart</td>
-        </tr>
-      </tbody>
-    </table>
+    <h3 class="package">javafx.scene.chart</h3>
     <h4><a id="areachart">AreaChart</a></h4>
     <table class="csspropertytable">
     <caption>Available Style Classes</caption>
@@ -6161,6 +6625,223 @@
         <li>chart-vertical-zero-line &mdash; Line</li>
         <li>chart-horizontal-zero-line &mdash; Line</li>
     </ul>
+
+    <!-- Incubator Modules -->
+    <h2><a id="incubator-modules">Incubator Modules</a></h2>
+    <h3 class="package">jfx.incubator.scene.control.richtext</h3>
+
+    <h4><a id="richtextarea">RichTextArea</a></h4>
+    <p class="styleclass">Style class: rich-text-area</p>
+
+    <table class="csspropertytable">
+      <caption>Available Style Classes</caption>
+      <thead>
+        <tr>
+          <th class="propertyname" scope="col">Style Class</th>
+          <th scope="col">Comment</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row" class="propertyname">
+            text-highlight-1<br>
+            text-highlight-2<br>
+            text-highlight-3<br>
+            text-highlight-4<br>
+            text-highlight-5
+          </th>
+          <td>The text highlight styles.</td>
+        </tr>
+        <tr>
+          <th scope="row" class="propertyname">
+            wavy-underline-1<br>
+            wavy-underline-2<br>
+            wavy-underline-3
+         </th>
+          <td>The wavy underline styles.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>&nbsp;</p>
+
+      <table class="csspropertytable">
+        <caption>Available CSS Properties</caption>
+        <thead>
+          <tr>
+            <th class="propertyname" scope="col">CSS Property</th>
+            <th class="value" scope="col">Values</th>
+            <th scope="col">Default</th>
+            <th scope="col">Comments</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th class="propertyname" scope="row">-fx-caret-blink-period</th>
+            <td class="value"><a href="#typeduration" class="typelink">&lt;duration&gt;</a></td>
+            <td>1000 ms</td>
+            <td>Determines the caret blink period.</td>
+          </tr>
+          <tr>
+            <th class="propertyname" scope="row">-fx-content-padding</th>
+            <td class="value"><a href="#typesize" class="typelink">&lt;size&gt;</a>
+                | <a href="#typesize" class="typelink">&lt;size&gt;</a> <a href="#typesize"
+                class="typelink">&lt;size&gt;</a>
+                <a href="#typesize" class="typelink">&lt;size&gt;</a> <a href="#typesize"
+                class="typelink">&lt;size&gt;</a>
+            </td>
+            <td>0 0 0 0</td>
+            <td>Amount of padding in the content area.</td>
+          </tr>
+          <tr>
+            <th class="propertyname" scope="row">-fx-display-caret</th>
+            <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
+            <td>true</td>
+            <td>Determines whether the caret is displayed.</td>
+          </tr>
+          <tr>
+            <th class="propertyname" scope="row">-fx-highlight-current-paragraph</th>
+            <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
+            <td>false</td>
+            <td>Determines whether the current paragraph is highlighted.</td>
+          </tr>
+          <tr>
+            <th class="propertyname" scope="row">-fx-use-content-height</th>
+            <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
+            <td>false</td>
+            <td>Determines whether the preferred height is the same as the content height.</td>
+          </tr>
+          <tr>
+            <th class="propertyname" scope="row">-fx-use-content-width</th>
+            <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
+            <td>false</td>
+            <td>Determines whether the preferred width is the same as the content width.</td>
+          </tr>
+          <tr>
+            <th class="propertyname" scope="row">-fx-wrap-text</th>
+            <td class="value"><a href="#typeboolean" class="typelink">&lt;boolean&gt;</a></td>
+            <td>false</td>
+            <td>Determines whether text should be wrapped.</td>
+          </tr>
+          <tr>
+           <th colspan="4" class="parents" scope="row">Also has all properties of <a href="#control">Control</a></th>
+          </tr>
+        </tbody>
+      </table>
+    <h4>Pseudo-classes</h4>
+    <table class="csspropertytable">
+      <caption>Available CSS Pseudo-classes</caption>
+      <thead>
+        <tr>
+        <th class="propertyname" scope="col">CSS Pseudo-class</th>
+        <th scope="col">Comments</th>
+      </tr>
+      </thead>
+      <tbody>
+        <!--
+        <tr>
+        <th class="propertyname" scope="row">horizontal</th>
+            <td>applies if this Slider is horizontal</td>
+        </tr>
+        <tr>
+        <th class="propertyname" scope="row">vertical</th>
+            <td>applies if this Slider is vertical</td>
+        </tr>
+        -->
+        <tr>
+          <th colspan="2" class="parents" scope="row">Also has all pseudo&#8209;classes of <a href="#control">Control</a></th>
+        </tr>
+        </tbody>
+    </table>
+    <h4>Substructure</h4>
+    <ul>
+      <li>rich-text-area &mdash; Pane</li>
+        <ul>
+          <li>vflow &mdash; Pane</li>
+          <ul>
+            <li>left-side &mdash; Pane</li>
+            <li>right-side &mdash; Pane</li>
+            <li>scroll-bar:vertical &mdash; ScrollBar</li>
+            <li>scroll-bar:horizontal &mdash; ScrollBar</li>
+            <li>vport &mdash; Pane</li>
+            <ul>
+              <li>content &mdash; Pane</li>
+              <ul>
+                <li>drop-target &mdash; Path</li>
+                <li>caret &mdash; Path</li>
+                <li>(paragraphs cells)</li>
+                <li>selection-highlight &mdash; Path</li>
+                <li>caret-line &mdash; Path</li>
+                
+              </ul></li>
+            </ul></li>
+          </ul></li>
+        </ul></li>
+    </ul>
+
+    <h4><a id="codearea">CodeArea</a></h4>
+    <p>The CodeArea control has all the properties of <a href="#richtextarea">RichTextArea</a></p>
+    <p class="styleclass">Style class: code-area</p>
+      <table class="csspropertytable">
+        <caption>Available CSS Properties</caption>
+        <thead>
+          <tr>
+            <th class="propertyname" scope="col">CSS Property</th>
+            <th class="value" scope="col">Values</th>
+            <th scope="col">Default</th>
+            <th scope="col">Comments</th>
+          </tr>
+        </thead>   
+        <tbody>
+          <tr>
+            <th class="propertyname" scope="row">-fx-font</th>
+            <td class="value"><a href="#typefont" class="typelink">&lt;font&gt;</a></td>
+            <td>Monospaced 12px</td>
+            <td>Determines the font to use for text.</td>
+          </tr>
+          <tr>
+            <th class="propertyname" scope="row">-fx-line-spacing</th>
+            <td class="value"><a href="#typenumber" class="typelink">&lt;number&gt;</a></td>
+            <td>0</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+            <th class="propertyname" scope="row">-fx-tab-size</th>
+            <td class="value"><a href="#typenumber" class="typelink">&lt;integer&gt;</a></td>
+            <td>8</td>
+            <td>&nbsp;</td>
+          </tr>
+          <tr>
+           <th colspan="4" class="parents" scope="row">Also has all properties of <a href="#richtextarea">RichTextArea</a></th>
+          </tr>
+        </tbody>
+      </table>
+    <h4>Pseudo-classes</h4>
+    <table class="csspropertytable">
+      <caption>Available CSS Pseudo-classes</caption>
+      <thead>
+        <tr>
+        <th class="propertyname" scope="col">CSS Pseudo-class</th>
+        <th scope="col">Comments</th>
+      </tr>
+      </thead>
+      <tbody>
+        <!--
+        <tr>
+        <th class="propertyname" scope="row">horizontal</th>
+            <td>applies if this Slider is horizontal</td>
+        </tr>
+        <tr>
+        <th class="propertyname" scope="row">vertical</th>
+            <td>applies if this Slider is vertical</td>
+        </tr>
+        -->
+        <tr>
+          <th colspan="2" class="parents" scope="row">Also has all pseudo&#8209;classes of <a href="#richtextarea">RichTextArea</a></th>
+        </tr>
+        </tbody>
+    </table>
+
     <h2><a id="references">References</a></h2>
     <p>[1] CSS 2.1: <a href="http://www.w3.org/TR/CSS21/" target="_blank">http://www.w3.org/TR/CSS21/</a>
     </p>
@@ -6175,7 +6856,7 @@
     <p>[5] Uniform Resource Identifier (URI): Generic Syntax <a href="http://www.ietf.org/rfc/rfc3986">RFC-3986</a></p>
     <hr>
     <p>
-<small><a href="http://bugreport.java.com/bugreport/">Report a bug or suggest an enhancement</a><br> Copyright &copy; 2008, 2024, Oracle and/or its affiliates. All rights reserved.</small>
+<small><a href="http://bugreport.java.com/bugreport/">Report a bug or suggest an enhancement</a><br> Copyright &copy; 2008, 2026, Oracle and/or its affiliates. All rights reserved.</small>
     </p>
     <br>
   </body>

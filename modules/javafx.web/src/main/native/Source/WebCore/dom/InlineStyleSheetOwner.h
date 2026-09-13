@@ -21,8 +21,8 @@
 
 #pragma once
 
-#include "CSSStyleSheet.h"
-#include "StyleScope.h"
+#include <WebCore/CSSStyleSheet.h>
+#include <WebCore/StyleScope.h>
 #include <wtf/text/TextPosition.h>
 
 namespace WebCore {
@@ -51,8 +51,6 @@ public:
     void finishParsingChildren(Element&);
 
     Style::Scope* styleScope() { return m_styleScope.get(); }
-
-    static void clearCache();
 
 private:
     void createSheet(Element&, const String& text);

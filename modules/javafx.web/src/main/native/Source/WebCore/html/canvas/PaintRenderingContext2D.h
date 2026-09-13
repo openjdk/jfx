@@ -26,28 +26,37 @@
 #pragma once
 
 #include "CanvasRenderingContext2DBase.h"
-
-#if ENABLE(CSS_PAINTING_API)
-
-#include "CustomPaintCanvas.h"
+#include "DisplayListRecorderImpl.h"
+#include <optional>
 
 namespace WebCore {
 
+namespace DisplayList {
+class DrawingContext;
+}
+
+class CustomPaintCanvas;
+
 class PaintRenderingContext2D final : public CanvasRenderingContext2DBase {
-    WTF_MAKE_ISO_ALLOCATED(PaintRenderingContext2D);
+    WTF_MAKE_TZONE_ALLOCATED(PaintRenderingContext2D);
 public:
-    static std::unique_ptr<PaintRenderingContext2D> create(CanvasBase&);
+    static std::unique_ptr<PaintRenderingContext2D> create(CustomPaintCanvas&);
 
     virtual ~PaintRenderingContext2D();
 
-    CustomPaintCanvas& canvas() const { return downcast<CustomPaintCanvas>(canvasBase()); }
+    GraphicsContext* drawingContext() const;
+    AffineTransform baseTransform() const;
+
+    CustomPaintCanvas& canvas() const;
+    void replayDisplayList(GraphicsContext& target) const;
+
+protected:
+    void didUpdateCanvasSizeProperties(bool) final;
 
 private:
-    bool isPaint() const override { return true; }
-
-    PaintRenderingContext2D(CanvasBase&);
+    PaintRenderingContext2D(CustomPaintCanvas&);
+    mutable std::optional<DisplayList::RecorderImpl> m_recordingContext;
 };
 
 } // namespace WebCore
 SPECIALIZE_TYPE_TRAITS_CANVASRENDERINGCONTEXT(WebCore::PaintRenderingContext2D, isPaint())
-#endif

@@ -53,10 +53,10 @@ bool RotateTransformOperation::operator==(const TransformOperation& other) const
     if (!isSameType(other))
         return false;
     const RotateTransformOperation& r = downcast<RotateTransformOperation>(other);
-    return m_x == r.m_x && m_y == r.m_y && m_z == r.m_z && m_angle == r.m_angle;
+    return m_angle == r.m_angle && m_x == r.m_x && m_y == r.m_y && m_z == r.m_z;
 }
 
-Ref<TransformOperation> RotateTransformOperation::blend(const TransformOperation* from, const BlendingContext& context, bool blendToIdentity)
+Ref<TransformOperation> RotateTransformOperation::blend(const TransformOperation* from, const BlendingContext& context, bool blendToIdentity) const
 {
     if (blendToIdentity) {
         if (context.compositeOperation == CompositeOperation::Accumulate)
@@ -65,7 +65,7 @@ Ref<TransformOperation> RotateTransformOperation::blend(const TransformOperation
     }
     auto outputType = sharedPrimitiveType(from);
     if (!outputType)
-        return *this;
+        return const_cast<RotateTransformOperation&>(*this);
 
     const RotateTransformOperation* fromOp = downcast<RotateTransformOperation>(from);
     const RotateTransformOperation* toOp = this;
@@ -81,8 +81,9 @@ Ref<TransformOperation> RotateTransformOperation::blend(const TransformOperation
     // angle is used or (0, 0, 1) if both angles are zero.
 
     auto normalizedVector = [](const RotateTransformOperation& op) -> FloatPoint3D {
-        auto length = std::hypot(op.m_x, op.m_y, op.m_z);
+        if (auto length = std::hypot(op.m_x, op.m_y, op.m_z))
         return { static_cast<float>(op.m_x / length), static_cast<float>(op.m_y / length), static_cast<float>(op.m_z / length) };
+        return { };
     };
 
     double fromAngle = fromOp ? fromOp->m_angle : 0.0;
@@ -118,9 +119,9 @@ Ref<TransformOperation> RotateTransformOperation::blend(const TransformOperation
     }
 
     // Convert that to Axis/Angle form
-    double x = -decomp.quaternionX;
-    double y = -decomp.quaternionY;
-    double z = -decomp.quaternionZ;
+    double x = decomp.quaternion.x;
+    double y = decomp.quaternion.y;
+    double z = decomp.quaternion.z;
 #if PLATFORM(JAVA)
     double length = javamath::hypot(x, y, z);
 #else
@@ -132,7 +133,7 @@ Ref<TransformOperation> RotateTransformOperation::blend(const TransformOperation
         x /= length;
         y /= length;
         z /= length;
-        angle = rad2deg(acos(decomp.quaternionW) * 2);
+        angle = rad2deg(acos(decomp.quaternion.w) * 2);
     } else {
         x = 0;
         y = 0;
@@ -143,7 +144,7 @@ Ref<TransformOperation> RotateTransformOperation::blend(const TransformOperation
 
 void RotateTransformOperation::dump(TextStream& ts) const
 {
-    ts << type() << "(" << TextStream::FormatNumberRespectingIntegers(m_x) << ", " << TextStream::FormatNumberRespectingIntegers(m_y) << ", " << TextStream::FormatNumberRespectingIntegers(m_z) << ", " << TextStream::FormatNumberRespectingIntegers(m_angle) << "deg)";
+    ts << type() << '(' << TextStream::FormatNumberRespectingIntegers(m_x) << ", "_s << TextStream::FormatNumberRespectingIntegers(m_y) << ", "_s << TextStream::FormatNumberRespectingIntegers(m_z) << ", "_s << TextStream::FormatNumberRespectingIntegers(m_angle) << "deg)"_s;
 }
 
 } // namespace WebCore

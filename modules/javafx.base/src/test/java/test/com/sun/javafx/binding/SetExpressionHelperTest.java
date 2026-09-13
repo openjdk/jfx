@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,8 +30,8 @@ import javafx.beans.property.SetProperty;
 import javafx.beans.property.SimpleSetProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableSet;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import test.javafx.beans.InvalidationListenerMock;
 import test.javafx.beans.value.ChangeListenerMock;
 import test.javafx.collections.MockSetObserver;
@@ -49,7 +49,7 @@ public class SetExpressionHelperTest {
     private ChangeListenerMock<? super ObservableSet<Object>>[] changeListener;
     private MockSetObserver<Object>[] setChangeListener;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         value = new Object();
         data1 = FXCollections.observableSet();
@@ -59,13 +59,13 @@ public class SetExpressionHelperTest {
         observable = new SimpleSetProperty<>(data1);
 
         invalidationListener = new InvalidationListenerMock[]{
-            new InvalidationListenerMock(), new InvalidationListenerMock(), new InvalidationListenerMock()
+                new InvalidationListenerMock(), new InvalidationListenerMock(), new InvalidationListenerMock()
         };
         changeListener = new ChangeListenerMock[]{
-            new ChangeListenerMock(UNDEFINED), new ChangeListenerMock(UNDEFINED), new ChangeListenerMock(UNDEFINED)
+                new ChangeListenerMock(UNDEFINED), new ChangeListenerMock(UNDEFINED), new ChangeListenerMock(UNDEFINED)
         };
         setChangeListener = new MockSetObserver[]{
-            new MockSetObserver<>(), new MockSetObserver<>(), new MockSetObserver<>()
+                new MockSetObserver<>(), new MockSetObserver<>(), new MockSetObserver<>()
         };
     }
 

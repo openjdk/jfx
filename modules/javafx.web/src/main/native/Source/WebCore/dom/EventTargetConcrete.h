@@ -29,24 +29,26 @@
 #include "EventTarget.h"
 #include "EventTargetInterfaces.h"
 #include "ScriptExecutionContext.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 class EventTargetConcrete final : public RefCounted<EventTargetConcrete>, public EventTarget, private ContextDestructionObserver {
-    WTF_MAKE_ISO_ALLOCATED(EventTargetConcrete);
+    WTF_MAKE_TZONE_ALLOCATED(EventTargetConcrete);
 public:
     static Ref<EventTargetConcrete> create(ScriptExecutionContext&);
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
 private:
     explicit EventTargetConcrete(ScriptExecutionContext&);
 
-    EventTargetInterface eventTargetInterface() const final { return EventTargetInterfaceType; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::EventTarget; }
+    ScriptExecutionContext* scriptExecutionContext() const final;
 
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }

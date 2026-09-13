@@ -25,74 +25,166 @@
 
 #pragma once
 
-#include "FrameIdentifier.h"
-#include "FrameTree.h"
-#include "PageIdentifier.h"
+#include <WebCore/FrameIdentifier.h>
+#include <WebCore/FrameTree.h>
+#include <WebCore/FrameTreeSyncData.h>
+#include <WebCore/PageIdentifier.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Ref.h>
-#include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/UniqueRef.h>
+#include <wtf/WeakHashSet.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class DOMWindow;
-class FrameView;
+class Event;
+class FloatSize;
+class FrameLoaderClient;
 class FrameLoadRequest;
+class FrameView;
 class HTMLFrameOwnerElement;
 class NavigationScheduler;
 class Page;
+class RenderWidget;
 class Settings;
 class WeakPtrImplWithEventTargetData;
 class WindowProxy;
 
-class Frame : public ThreadSafeRefCounted<Frame, WTF::DestructionThread::Main>, public CanMakeWeakPtr<Frame> {
+enum class AdjustViewSize : bool;
+
+struct OwnerPermissionsPolicyData;
+
+enum class AdvancedPrivacyProtections : uint16_t;
+enum class AutoplayPolicy : uint8_t;
+enum class ReferrerPolicy : uint8_t;
+enum class SandboxFlag : uint16_t;
+enum class ScrollbarMode : uint8_t;
+
+using SandboxFlags = OptionSet<SandboxFlag>;
+
+class Frame : public RefCountedAndCanMakeWeakPtr<Frame> {
 public:
     virtual ~Frame();
 
+    enum class AddToFrameTree : bool { No, Yes };
+    enum class NotifyUIProcess : bool { No, Yes };
     enum class FrameType : bool { Local, Remote };
     FrameType frameType() const { return m_frameType; }
 
     WindowProxy& windowProxy() { return m_windowProxy; }
     const WindowProxy& windowProxy() const { return m_windowProxy; }
+    Ref<WindowProxy> protectedWindowProxy() const;
+
     DOMWindow* window() const { return virtualWindow(); }
+    RefPtr<DOMWindow> protectedWindow() const;
     FrameTree& tree() const { return m_treeNode; }
+    WEBCORE_EXPORT std::optional<uint64_t> indexInFrameTreeSiblings() const;
+    WEBCORE_EXPORT Vector<uint64_t> pathToFrame() const;
     FrameIdentifier frameID() const { return m_frameID; }
-    inline Page* page() const; // Defined in Page.h.
-    WEBCORE_EXPORT std::optional<PageIdentifier> pageID() const;
+    WEBCORE_EXPORT SecurityOrigin& topOrigin() const;
+    inline Page* page() const; // Defined in DocumentPage.h.
+    inline RefPtr<Page> protectedPage() const; // Defined in DocumentPage.h.
+    inline std::optional<PageIdentifier> pageID() const; // Defined in DocumentPage.h.
     Settings& settings() const { return m_settings.get(); }
-    Frame& mainFrame() const { return m_mainFrame; }
-    bool isMainFrame() const { return this == &m_mainFrame; }
-    WEBCORE_EXPORT bool isRootFrame() const;
+    Frame& mainFrame() { return *m_mainFrame; }
+    const Frame& mainFrame() const { return *m_mainFrame; }
+    Ref<Frame> protectedMainFrame() { return mainFrame(); }
+    Ref<const Frame> protectedMainFrame() const { return mainFrame(); }
+    bool isMainFrame() const { return this == m_mainFrame.get(); }
+    WEBCORE_EXPORT void disownOpener(NotifyUIProcess = NotifyUIProcess::No);
+    WEBCORE_EXPORT void updateOpener(Frame&, NotifyUIProcess = NotifyUIProcess::Yes);
+    WEBCORE_EXPORT void setOpenerForWebKitLegacy(Frame*);
+    const Frame* opener() const { return m_opener.get(); }
+    Frame* opener() { return m_opener.get(); }
+    bool hasOpenedFrames() const;
+    WEBCORE_EXPORT void detachFromAllOpenedFrames();
+    virtual bool isRootFrame() const = 0;
+#if ASSERT_ENABLED
+    WEBCORE_EXPORT static bool isRootFrameIdentifier(FrameIdentifier);
+#endif
 
     WEBCORE_EXPORT void detachFromPage();
-    inline HTMLFrameOwnerElement* ownerElement() const; // Defined in HTMLFrameOwnerElement.h.
+
+    WEBCORE_EXPORT void setOwnerElement(HTMLFrameOwnerElement*);
+    inline HTMLFrameOwnerElement* ownerElement() const; // Defined in FrameInlines.h.
+    inline RefPtr<HTMLFrameOwnerElement> protectedOwnerElement() const; // Defined in FrameInlines.h.
+
     WEBCORE_EXPORT void disconnectOwnerElement();
     NavigationScheduler& navigationScheduler() const { return m_navigationScheduler.get(); }
-    WEBCORE_EXPORT void takeWindowProxyFrom(Frame&);
+    Ref<NavigationScheduler> protectedNavigationScheduler() const;
+    WEBCORE_EXPORT void takeWindowProxyAndOpenerFrom(Frame&);
 
     virtual void frameDetached() = 0;
     virtual bool preventsParentFromBeingComplete() const = 0;
     virtual void changeLocation(FrameLoadRequest&&) = 0;
-    virtual void broadcastFrameRemovalToOtherProcesses() = 0;
+    virtual void loadFrameRequest(FrameLoadRequest&&, Event*) = 0;
+    virtual void didFinishLoadInAnotherProcess() = 0;
 
     virtual FrameView* virtualView() const = 0;
+    WEBCORE_EXPORT RefPtr<FrameView> protectedVirtualView() const;
+    virtual void disconnectView() = 0;
+    virtual FrameLoaderClient& loaderClient() = 0;
+    virtual void documentURLForConsoleLog(CompletionHandler<void(const URL&)>&&) = 0;
+
+    virtual String customUserAgent() const = 0;
+    virtual String customUserAgentAsSiteSpecificQuirks() const = 0;
+    virtual String customNavigatorPlatform() const = 0;
+    virtual OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections() const = 0;
+    virtual AutoplayPolicy autoplayPolicy() const = 0;
+
+    virtual void updateSandboxFlags(SandboxFlags, NotifyUIProcess);
+    virtual void updateReferrerPolicy(ReferrerPolicy) { }
+
+    WEBCORE_EXPORT RenderWidget* ownerRenderer() const; // Renderer for the element that contains this frame.
+
+    WEBCORE_EXPORT void setOwnerPermissionsPolicy(OwnerPermissionsPolicyData&&);
+    WEBCORE_EXPORT std::optional<OwnerPermissionsPolicyData> ownerPermissionsPolicy() const;
+
+    virtual void updateScrollingMode() = 0;
+
+    virtual void reportMixedContentViolation(bool blocked, const URL& target) const = 0;
+
+    void stopForBackForwardCache();
+
+    WEBCORE_EXPORT void updateFrameTreeSyncData(Ref<FrameTreeSyncData>&&);
+    WEBCORE_EXPORT void updateFrameTreeSyncData(const FrameTreeSyncSerializationData&);
+
+    virtual bool frameCanCreatePaymentSession() const;
+    FrameTreeSyncData& frameTreeSyncData() const { return m_frameTreeSyncData.get(); }
+    Ref<FrameTreeSyncData> protectedFrameTreeSyncData() const { return m_frameTreeSyncData.get(); }
+    WEBCORE_EXPORT virtual SecurityOrigin* frameDocumentSecurityOrigin() const = 0;
+    WEBCORE_EXPORT virtual String frameURLProtocol() const = 0;
+
+    WEBCORE_EXPORT virtual void setPrinting(bool printing, FloatSize pageSize, FloatSize originalPageSize, float maximumShrinkRatio, AdjustViewSize, NotifyUIProcess = NotifyUIProcess::Yes);
+    WEBCORE_EXPORT bool isPrinting() const;
 
 protected:
-    Frame(Page&, FrameIdentifier, FrameType, HTMLFrameOwnerElement*, Frame* parent);
+    Frame(Page&, FrameIdentifier, FrameType, HTMLFrameOwnerElement*, Frame* parent, Frame* opener, Ref<FrameTreeSyncData>&&, AddToFrameTree = AddToFrameTree::Yes);
     void resetWindowProxy();
+
+    virtual void frameWasDisconnectedFromOwner() const { }
 
 private:
     virtual DOMWindow* virtualWindow() const = 0;
+    virtual void reinitializeDocumentSecurityContext() = 0;
 
     WeakPtr<Page> m_page;
     const FrameIdentifier m_frameID;
     mutable FrameTree m_treeNode;
     Ref<WindowProxy> m_windowProxy;
     WeakPtr<HTMLFrameOwnerElement, WeakPtrImplWithEventTargetData> m_ownerElement;
-    Frame& m_mainFrame;
+    const WeakPtr<Frame> m_mainFrame;
     const Ref<Settings> m_settings;
     FrameType m_frameType;
     mutable UniqueRef<NavigationScheduler> m_navigationScheduler;
+    WeakPtr<Frame> m_opener;
+    WeakHashSet<Frame> m_openedFrames;
+    std::unique_ptr<OwnerPermissionsPolicyData> m_ownerPermissionsPolicyOverride;
+    bool m_isPrinting { false };
+
+    Ref<FrameTreeSyncData> m_frameTreeSyncData;
 };
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,20 +25,13 @@
 
 package test.com.sun.javafx.scene.control.infrastructure;
 
-import java.util.Arrays;
-import java.util.Collection;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-import com.sun.javafx.tk.Toolkit;
-
-import static javafx.scene.layout.AnchorPane.*;
-import static org.junit.Assert.*;
-
+import static javafx.scene.layout.AnchorPane.setBottomAnchor;
+import static javafx.scene.layout.AnchorPane.setLeftAnchor;
+import static javafx.scene.layout.AnchorPane.setRightAnchor;
+import static javafx.scene.layout.AnchorPane.setTopAnchor;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import javafx.geometry.Bounds;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
@@ -48,14 +41,14 @@ import javafx.scene.control.Labeled;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.stage.Stage;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
 
 /**
  * Test for MouseEventFirer.
- * <p>
- * The test is parameterized on not/using (old/new) the alternative mouseEvent creation
- * path.
  */
-@RunWith(Parameterized.class)
 public class MouseEventFirerTest {
 
     //------------ fields
@@ -76,36 +69,42 @@ public class MouseEventFirerTest {
     @Test
     public void testLocalStandaloneDeltaNegative() {
         Button button = new Button("standalone button, a bit longish");
+        content.getChildren().setAll(button);
         assertLocal(button, - 10, - 5);
     }
 
     @Test
     public void testLocalStandaloneDelta() {
         Button button = new Button("standalone button, a bit longish");
+        content.getChildren().setAll(button);
         assertLocal(button, 10, 5);
     }
 
     @Test
     public void testLocalStandalone() {
         Button button = new Button("standalone button, a bit longish");
+        content.getChildren().setAll(button);
         assertLocal(button, 0, 0);
     }
 
     @Test
     public void testMouseCoordinatesStandaloneDeltaNegative() {
         Button button = new Button("standalone button, a bit longish");
+        content.getChildren().setAll(button);
         assertMouseCoordinatesDelta(button, - 10, - 5);
     }
 
     @Test
     public void testMouseCoordinatesStandaloneDelta() {
         Button button = new Button("standalone button, a bit longish");
+        content.getChildren().setAll(button);
         assertMouseCoordinatesDelta(button, 10, 5);
     }
 
     @Test
     public void testMouseCoordinatesStandalone() {
         Button button = new Button("standalone button, a bit longish");
+        content.getChildren().setAll(button);
         assertMouseCoordinatesDelta(button, 0, 0);
     }
 
@@ -132,13 +131,13 @@ public class MouseEventFirerTest {
      *
      */
     protected void assertLocal(Node target, double deltaX, double deltaY) {
-        MouseEventFirer firer = new MouseEventFirer(target, useAlternative);
+        MouseEventFirer firer = new MouseEventFirer(target);
         String text = target instanceof Labeled ? ((Labeled) target).getText() : target.getId();
         target.setOnMousePressed(e -> {
             double width = target.getLayoutBounds().getWidth();
             double height = target.getLayoutBounds().getHeight();
-            assertEquals("local x of " + text, width /2 + deltaX, e.getX(), EPS);
-            assertEquals("local y of " + text, height / 2 + deltaY, e.getY(), EPS);
+            assertEquals(width /2 + deltaX, e.getX(), EPS, "local x of " + text);
+            assertEquals(height / 2 + deltaY, e.getY(), EPS, "local y of " + text);
         });
         firer.fireMousePressed(deltaX, deltaY);
     }
@@ -165,7 +164,7 @@ public class MouseEventFirerTest {
      *  and asserts basic mouseEvent constraints.
      */
     protected void assertMouseCoordinatesDelta(Node target, double deltaX, double deltaY) {
-        MouseEventFirer firer = new MouseEventFirer(target, useAlternative);
+        MouseEventFirer firer = new MouseEventFirer(target);
         target.setOnMousePressed(this::assertMouseEventCoordinates);
         firer.fireMousePressed(deltaX, deltaY);
     }
@@ -179,39 +178,20 @@ public class MouseEventFirerTest {
         String text = receiver instanceof Labeled ? ((Labeled) receiver).getText() : receiver.getId();
 
         Point2D sceneP = receiver.localToScene(mouse.getX(), mouse.getY());
-        assertEquals("sceneX of " + text, sceneP.getX(), mouse.getSceneX(), EPS);
-        assertEquals("sceneY of " + text, sceneP.getY(), mouse.getSceneY(), EPS);
+        assertEquals(sceneP.getX(), mouse.getSceneX(), EPS, "sceneX of " + text);
+        assertEquals(sceneP.getY(), mouse.getSceneY(), EPS, "sceneY of " + text);
         Point2D screenP = receiver.localToScreen(mouse.getX(), mouse.getY());
-        assertEquals("screenX of " + text, screenP.getX(), mouse.getScreenX(), EPS);
-        assertEquals("screenY of " + text, screenP.getY(), mouse.getScreenY(), EPS);
+        assertEquals(screenP.getX(), mouse.getScreenX(), EPS, "screenX of " + text);
+        assertEquals(screenP.getY(), mouse.getScreenY(), EPS, "screenY of " + text);
     }
 
- // ------------- parameterized in not/alternative mouseEvent creation
-
-    private boolean useAlternative;
-
-    @Parameterized.Parameters
-    public static Collection<Object[]> data() {
-        // current / alternative mouseEvent creation
-        Object[][] data = new Object[][] {
-            // @Ignore("8253769")
-            // {false},
-            {true},
-        };
-        return Arrays.asList(data);
-    }
-
-    public MouseEventFirerTest(boolean useAlternative) {
-        this.useAlternative = useAlternative;
-    }
-
- // ------------ setup/cleanup/intial
+// ------------ setup/cleanup/intial
 
     @Test
     public void testFirer() {
-        new MouseEventFirer(topLeft, true);
-        assertSame("sanity: firer must not change hierarchy", scene, topLeft.getScene());
-        assertSame("sanity: firer must not change hierarchy", stage, topLeft.getScene().getWindow());
+        new MouseEventFirer(topLeft);
+        assertSame(scene, topLeft.getScene(), "sanity: firer must not change hierarchy");
+        assertSame(stage, topLeft.getScene().getWindow(), "sanity: firer must not change hierarchy");
     }
 
     @Test
@@ -228,7 +208,7 @@ public class MouseEventFirerTest {
         setLeftAnchor(topLeft, null);
         setRightAnchor(topLeft, 0.);
         Toolkit.getToolkit().firePulse();
-        assertEquals("sanity: layout bounds unchanged", initial, topLeft.getLayoutBounds());
+        assertEquals(initial, topLeft.getLayoutBounds(), "sanity: layout bounds unchanged");
     }
 
     @Test
@@ -248,7 +228,7 @@ public class MouseEventFirerTest {
         assertEquals(content.getHeight() - bottomRight.prefHeight(-1), bottomRight.getBoundsInParent().getMinY(), EPS);
     }
 
-    @Before
+    @BeforeEach
     public void setup() {
         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
             if (throwable instanceof RuntimeException) {
@@ -281,10 +261,9 @@ public class MouseEventFirerTest {
         stage.show();
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         if (stage != null) stage.hide();
         Thread.currentThread().setUncaughtExceptionHandler(null);
     }
-
 }

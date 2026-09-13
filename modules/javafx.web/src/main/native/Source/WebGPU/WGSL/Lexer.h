@@ -25,51 +25,37 @@
 
 #pragma once
 
-#include "Token.h"
-#include <wtf/ASCIICType.h>
-#include <wtf/text/WTFString.h>
+#include "SourceSpan.h"
+#include <wtf/text/StringParsingBuffer.h>
 
 namespace WGSL {
+
+enum class TokenType : uint32_t;
+
+struct Token;
 
 template<typename T>
 class Lexer {
 public:
-    Lexer(const String& wgsl)
+    Lexer(std::span<const T> code)
+        : m_code { code }
+        , m_current { m_code.hasCharactersRemaining() ? m_code[0] : T { } }
     {
-        if constexpr (std::is_same<T, LChar>::value) {
-            m_code = wgsl.characters8();
-            m_codeEnd = m_code + wgsl.sizeInBytes();
-        } else {
-            static_assert(std::is_same<T, UChar>::value, "The lexer expects its template parameter to be either LChar or UChar");
-            m_code = wgsl.characters16();
-            ASSERT(!(wgsl.sizeInBytes() % 2));
-            m_codeEnd = m_code + wgsl.sizeInBytes() / 2;
-        }
-
-        m_current = (m_code != m_codeEnd) ? *m_code : 0;
-        m_currentPosition = { 1, 0, 0 };
     }
 
-    Token lex();
+    Vector<Token> lex();
     bool isAtEndOfFile() const;
-    SourcePosition currentPosition() const { return m_currentPosition; }
 
 private:
+    Token nextToken();
+    Token lexNumber();
     unsigned currentOffset() const { return m_currentPosition.offset; }
     unsigned currentTokenLength() const { return currentOffset() - m_tokenStartingPosition.offset; }
 
-    Token makeToken(TokenType type)
-    {
-        return { type, m_tokenStartingPosition, currentTokenLength() };
-    }
-    Token makeLiteralToken(TokenType type, double literalValue)
-    {
-        return { type, m_tokenStartingPosition, currentTokenLength(), literalValue };
-    }
-    Token makeIdentifierToken(String&& identifier)
-    {
-        return { WGSL::TokenType::Identifier, m_tokenStartingPosition, currentTokenLength(), WTFMove(identifier) };
-    }
+    Token makeToken(TokenType);
+    Token makeFloatToken(TokenType, double);
+    Token makeIntegerToken(TokenType, int64_t);
+    Token makeIdentifierToken(String&&);
 
     T shift(unsigned = 1);
     T peek(unsigned = 0);
@@ -78,25 +64,9 @@ private:
     void skipLineComment();
     bool skipWhitespaceAndComments();
 
-    // Reads [0-9]+
-    std::optional<uint64_t> parseDecimalInteger();
-    // Parse pattern (e|E)(\+|-)?[0-9]+f? if it is present, and return the exponent
-    std::optional<int64_t> parseDecimalFloatExponent();
-    // Checks whether there is an "i" or "u" coming, and return the right kind of literal token
-    Token parseIntegerLiteralSuffix(double literalValue);
-
-    static bool isIdentifierStart(T character) { return isASCIIAlpha(character) || character == '_'; }
-    static bool isIdentifierContinue(T character) { return isASCIIAlphanumeric(character) || character == '_'; }
-    static unsigned readDecimal(T character)
-    {
-        ASSERT(isASCIIDigit(character));
-        return character - '0';
-    }
-
+    StringParsingBuffer<T> m_code;
     T m_current;
-    const T* m_code;
-    const T* m_codeEnd;
-    SourcePosition m_currentPosition { 0, 0, 0 };
+    SourcePosition m_currentPosition { 1, 0, 0 };
     SourcePosition m_tokenStartingPosition { 0, 0, 0 };
 };
 

@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2023 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -21,40 +21,46 @@
 
 #pragma once
 
-#include "ArrayBuffer.h"
-#include "CellState.h"
-#include "CollectionScope.h"
-#include "CollectorPhase.h"
-#include "CompleteSubspace.h"
-#include "DeleteAllCodeEffort.h"
-#include "GCConductor.h"
-#include "GCIncomingRefCountedSet.h"
-#include "GCMemoryOperations.h"
-#include "GCRequest.h"
-#include "HandleSet.h"
-#include "HeapFinalizerCallback.h"
-#include "HeapObserver.h"
-#include "IsoCellSet.h"
-#include "IsoHeapCellType.h"
-#include "IsoInlinedHeapCellType.h"
-#include "IsoSubspace.h"
-#include "JSDestructibleObjectHeapCellType.h"
-#include "MarkedBlock.h"
-#include "MarkedSpace.h"
-#include "MutatorState.h"
-#include "Options.h"
-#include "StructureID.h"
-#include "Synchronousness.h"
-#include "WeakHandleOwner.h"
+#include <JavaScriptCore/ArrayBuffer.h>
+#include <JavaScriptCore/CellState.h>
+#include <JavaScriptCore/CollectionScope.h>
+#include <JavaScriptCore/CollectorPhase.h>
+#include <JavaScriptCore/CompleteSubspace.h>
+#include <JavaScriptCore/DeleteAllCodeEffort.h>
+#include <JavaScriptCore/GCConductor.h>
+#include <JavaScriptCore/GCIncomingRefCountedSet.h>
+#include <JavaScriptCore/GCMemoryOperations.h>
+#include <JavaScriptCore/GCRequest.h>
+#include <JavaScriptCore/HandleSet.h>
+#include <JavaScriptCore/HeapFinalizerCallback.h>
+#include <JavaScriptCore/HeapObserver.h>
+#include <JavaScriptCore/IsoCellSet.h>
+#include <JavaScriptCore/IsoHeapCellType.h>
+#include <JavaScriptCore/IsoInlinedHeapCellType.h>
+#include <JavaScriptCore/IsoSubspace.h>
+#include <JavaScriptCore/JSDestructibleObjectHeapCellType.h>
+#include <JavaScriptCore/MarkedBlock.h>
+#include <JavaScriptCore/MarkedSpace.h>
+#include <JavaScriptCore/MutatorState.h>
+#include <JavaScriptCore/Options.h>
+#include <JavaScriptCore/PreciseSubspace.h>
+#include <JavaScriptCore/StructureID.h>
+#include <JavaScriptCore/Synchronousness.h>
+#include <JavaScriptCore/WeakHandleOwner.h>
 #include <wtf/AutomaticThread.h>
+#include <wtf/Box.h>
 #include <wtf/ConcurrentPtrHashSet.h>
 #include <wtf/Deque.h>
 #include <wtf/HashCountedSet.h>
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
 #include <wtf/Markable.h>
+#include <wtf/NotFound.h>
 #include <wtf/ParallelHelperPool.h>
+#include <wtf/SegmentedVector.h>
 #include <wtf/Threading.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -73,11 +79,10 @@ class Heap;
 class HeapProfiler;
 class HeapVerifier;
 class IncrementalSweeper;
-class IsoSubspacePerVM;
 class JITStubRoutine;
 class JITStubRoutineSet;
 class JSCell;
-class JSImmutableButterfly;
+class JSCellButterfly;
 class JSRopeString;
 class JSString;
 class JSValue;
@@ -108,6 +113,10 @@ namespace DFG {
 class SpeculativeJIT;
 }
 
+namespace Wasm {
+class Callee;
+}
+
 namespace GCClient {
 class Heap;
 }
@@ -130,6 +139,7 @@ class Heap;
     v(numberObjectSpace, cellHeapCellType, NumberObject) \
     v(plainObjectSpace, cellHeapCellType, JSNonFinalObject) \
     v(promiseSpace, cellHeapCellType, JSPromise) \
+    v(iteratorSpace, cellHeapCellType, JSIterator) \
     v(propertyNameEnumeratorSpace, cellHeapCellType, JSPropertyNameEnumerator) \
     v(propertyTableSpace, destructibleCellHeapCellType, PropertyTable) \
     v(regExpSpace, destructibleCellHeapCellType, RegExp) \
@@ -143,9 +153,18 @@ class Heap;
     v(structureRareDataSpace, destructibleCellHeapCellType, StructureRareData) \
     v(symbolTableSpace, destructibleCellHeapCellType, SymbolTable)
 
+
+#if ENABLE(WEBASSEMBLY)
+#define FOR_EACH_JSC_WEBASSEMBLY_STRUCTURE_ISO_SUBSPACE(v) \
+    v(webAssemblyGCStructureSpace, destructibleCellHeapCellType, WebAssemblyGCStructure)
+#else
+#define FOR_EACH_JSC_WEBASSEMBLY_STRUCTURE_ISO_SUBSPACE(v)
+#endif
+
 #define FOR_EACH_JSC_STRUCTURE_ISO_SUBSPACE(v) \
     v(structureSpace, destructibleCellHeapCellType, Structure) \
     v(brandedStructureSpace, destructibleCellHeapCellType, BrandedStructure) \
+    FOR_EACH_JSC_WEBASSEMBLY_STRUCTURE_ISO_SUBSPACE(v)
 
 #define FOR_EACH_JSC_ISO_SUBSPACE(v) \
     FOR_EACH_JSC_COMMON_ISO_SUBSPACE(v) \
@@ -170,20 +189,23 @@ class Heap;
 
 #if ENABLE(WEBASSEMBLY)
 #define FOR_EACH_JSC_WEBASSEMBLY_DYNAMIC_ISO_SUBSPACE(v) \
-    v(webAssemblyArraySpace, webAssemblyArrayHeapCellType, JSWebAssemblyArray) \
     v(webAssemblyExceptionSpace, webAssemblyExceptionHeapCellType, JSWebAssemblyException) \
     v(webAssemblyFunctionSpace, webAssemblyFunctionHeapCellType, WebAssemblyFunction) \
     v(webAssemblyGlobalSpace, webAssemblyGlobalHeapCellType, JSWebAssemblyGlobal) \
-    v(webAssemblyInstanceSpace, webAssemblyInstanceHeapCellType, JSWebAssemblyInstance) \
     v(webAssemblyMemorySpace, webAssemblyMemoryHeapCellType, JSWebAssemblyMemory) \
-    v(webAssemblyStructSpace, webAssemblyStructHeapCellType, JSWebAssemblyStruct) \
     v(webAssemblyModuleSpace, webAssemblyModuleHeapCellType, JSWebAssemblyModule) \
     v(webAssemblyModuleRecordSpace, webAssemblyModuleRecordHeapCellType, WebAssemblyModuleRecord) \
     v(webAssemblyTableSpace, webAssemblyTableHeapCellType, JSWebAssemblyTable) \
     v(webAssemblyTagSpace, webAssemblyTagHeapCellType, JSWebAssemblyTag) \
     v(webAssemblyWrapperFunctionSpace, cellHeapCellType, WebAssemblyWrapperFunction)
+
+// FIXME: This is a bit confusingly named since the objects in here are exclusive to the subspace but they can vary in size thus can't be in an IsoSubspace.
+#define FOR_EACH_JSC_WEBASSEMBLY_DYNAMIC_NON_ISO_SUBSPACE(v) \
+    v(webAssemblyInstanceSpace, webAssemblyInstanceHeapCellType, JSWebAssemblyInstance, PreciseSubspace)
+
 #else
 #define FOR_EACH_JSC_WEBASSEMBLY_DYNAMIC_ISO_SUBSPACE(v)
+#define FOR_EACH_JSC_WEBASSEMBLY_DYNAMIC_NON_ISO_SUBSPACE(v)
 #endif
 
 #define FOR_EACH_JSC_DYNAMIC_ISO_SUBSPACE(v) \
@@ -210,9 +232,11 @@ class Heap;
     v(debuggerScopeSpace, cellHeapCellType, DebuggerScope) \
     v(errorInstanceSpace, errorInstanceHeapCellType, ErrorInstance) \
     v(finalizationRegistrySpace, finalizationRegistryCellType, JSFinalizationRegistry) \
+    v(float16ArraySpace, cellHeapCellType, JSFloat16Array) \
     v(float32ArraySpace, cellHeapCellType, JSFloat32Array) \
     v(float64ArraySpace, cellHeapCellType, JSFloat64Array) \
     v(functionRareDataSpace, destructibleCellHeapCellType, FunctionRareData) \
+    v(functionWithFieldsSpace, cellHeapCellType, JSFunctionWithFields) \
     v(generatorSpace, cellHeapCellType, JSGenerator) \
     v(globalObjectSpace, globalObjectHeapCellType, JSGlobalObject) \
     v(injectedScriptHostSpace, injectedScriptHostSpaceHeapCellType, Inspector::JSInjectedScriptHost) \
@@ -231,21 +255,21 @@ class Heap;
     v(intlSegmentIteratorSpace, intlSegmentIteratorHeapCellType, IntlSegmentIterator) \
     v(intlSegmenterSpace, intlSegmenterHeapCellType, IntlSegmenter) \
     v(intlSegmentsSpace, intlSegmentsHeapCellType, IntlSegments) \
+    v(iteratorHelperSpace, cellHeapCellType, JSIteratorHelper) \
     v(javaScriptCallFrameSpace, javaScriptCallFrameHeapCellType, Inspector::JSJavaScriptCallFrame) \
     v(jsModuleRecordSpace, jsModuleRecordHeapCellType, JSModuleRecord) \
     v(syntheticModuleRecordSpace, syntheticModuleRecordHeapCellType, SyntheticModuleRecord) \
-    v(mapBucketSpace, cellHeapCellType, JSMap::BucketType) \
     v(mapIteratorSpace, cellHeapCellType, JSMapIterator) \
     v(mapSpace, cellHeapCellType, JSMap) \
     v(moduleNamespaceObjectSpace, moduleNamespaceObjectHeapCellType, JSModuleNamespaceObject) \
     v(nativeStdFunctionSpace, nativeStdFunctionHeapCellType, JSNativeStdFunction) \
     v(proxyObjectSpace, cellHeapCellType, ProxyObject) \
     v(proxyRevokeSpace, cellHeapCellType, ProxyRevoke) \
+    v(rawJSONObjectSpace, cellHeapCellType, JSRawJSONObject) \
     v(remoteFunctionSpace, cellHeapCellType, JSRemoteFunction) \
     v(scopedArgumentsTableSpace, destructibleCellHeapCellType, ScopedArgumentsTable) \
     v(scriptFetchParametersSpace, destructibleCellHeapCellType, JSScriptFetchParameters) \
     v(scriptFetcherSpace, destructibleCellHeapCellType, JSScriptFetcher) \
-    v(setBucketSpace, cellHeapCellType, JSSet::BucketType) \
     v(setIteratorSpace, cellHeapCellType, JSSetIterator) \
     v(setSpace, cellHeapCellType, JSSet) \
     v(shadowRealmSpace, cellHeapCellType, ShadowRealmObject) \
@@ -274,14 +298,22 @@ class Heap;
     v(weakMapSpace, weakMapHeapCellType, JSWeakMap) \
     v(weakSetSpace, weakSetHeapCellType, JSWeakSet) \
     v(withScopeSpace, cellHeapCellType, JSWithScope) \
+    v(wrapForValidIteratorSpace, cellHeapCellType, JSWrapForValidIterator) \
+    v(promiseCombinatorsContextSpace, cellHeapCellType, JSPromiseCombinatorsContext) \
+    v(promiseCombinatorsGlobalContextSpace, cellHeapCellType, JSPromiseCombinatorsGlobalContext) \
+    v(promiseReactionSpace, cellHeapCellType, JSPromiseReaction) \
+    v(asyncFromSyncIteratorSpace, cellHeapCellType, JSAsyncFromSyncIterator) \
+    v(regExpStringIteratorSpace, cellHeapCellType, JSRegExpStringIterator) \
+    v(disposableStackSpace, cellHeapCellType, JSDisposableStack) \
+    v(asyncDisposableStackSpace, cellHeapCellType, JSAsyncDisposableStack) \
     \
     FOR_EACH_JSC_WEBASSEMBLY_DYNAMIC_ISO_SUBSPACE(v)
 
-
 typedef HashCountedSet<JSCell*> ProtectCountSet;
-typedef HashCountedSet<const char*> TypeCountSet;
+typedef HashCountedSet<ASCIILiteral> TypeCountSet;
 
-enum class HeapType : uint8_t { Small, Large };
+enum class HeapType : uint8_t { Small, Medium, Large };
+enum class GrowthMode : uint8_t { Default, Aggressive };
 
 class HeapUtil;
 
@@ -290,8 +322,8 @@ class Heap {
 public:
     friend class JIT;
     friend class DFG::SpeculativeJIT;
-    static Heap* heap(const JSValue); // 0 for immediate values
-    static Heap* heap(const HeapCell*);
+    static JSC::Heap* heap(const JSValue); // 0 for immediate values
+    static JSC::Heap* heap(const HeapCell*);
 
     // This constant determines how many blocks we iterate between checks of our
     // deadline when calling Heap::isPagedOut. Decreasing it will cause us to detect
@@ -326,10 +358,18 @@ public:
     SlotVisitor& collectorSlotVisitor() { return *m_collectorSlotVisitor; }
 
     JS_EXPORT_PRIVATE GCActivityCallback* fullActivityCallback();
+    JS_EXPORT_PRIVATE RefPtr<GCActivityCallback> protectedFullActivityCallback();
     JS_EXPORT_PRIVATE GCActivityCallback* edenActivityCallback();
-    JS_EXPORT_PRIVATE void setGarbageCollectionTimerEnabled(bool);
+    JS_EXPORT_PRIVATE RefPtr<GCActivityCallback> protectedEdenActivityCallback();
 
-    JS_EXPORT_PRIVATE IncrementalSweeper& sweeper();
+    JS_EXPORT_PRIVATE void setFullActivityCallback(RefPtr<GCActivityCallback>&&);
+    JS_EXPORT_PRIVATE void setEdenActivityCallback(RefPtr<GCActivityCallback>&&);
+    JS_EXPORT_PRIVATE void disableStopIfNecessaryTimer();
+
+    JS_EXPORT_PRIVATE void setGarbageCollectionTimerEnabled(bool);
+    JS_EXPORT_PRIVATE void scheduleOpportunisticFullCollection();
+
+    IncrementalSweeper& sweeper() { return m_sweeper.get(); }
 
     void addObserver(HeapObserver* observer) { m_observers.append(observer); }
     void removeObserver(HeapObserver* observer) { m_observers.removeFirst(observer); }
@@ -391,8 +431,8 @@ public:
     // 2. Use this API may trigger JSRopeString::resolveRope. If this API need
     // to be used when resolving a rope string, then make sure to call this API
     // after the rope string is completely resolved.
-    void reportExtraMemoryAllocated(size_t);
-    void reportExtraMemoryAllocated(GCDeferralContext*, size_t);
+    void reportExtraMemoryAllocated(const JSCell*, size_t);
+    void reportExtraMemoryAllocated(GCDeferralContext*, const JSCell*, size_t);
     JS_EXPORT_PRIVATE void reportExtraMemoryVisited(size_t);
 
 #if ENABLE(RESOURCE_USAGE)
@@ -416,15 +456,15 @@ public:
     JS_EXPORT_PRIVATE size_t globalObjectCount();
     JS_EXPORT_PRIVATE size_t protectedObjectCount();
     JS_EXPORT_PRIVATE size_t protectedGlobalObjectCount();
-    JS_EXPORT_PRIVATE std::unique_ptr<TypeCountSet> protectedObjectTypeCounts();
-    JS_EXPORT_PRIVATE std::unique_ptr<TypeCountSet> objectTypeCounts();
+    JS_EXPORT_PRIVATE TypeCountSet protectedObjectTypeCounts();
+    JS_EXPORT_PRIVATE TypeCountSet objectTypeCounts();
 
-    HashSet<MarkedVectorBase*>& markListSet();
+    UncheckedKeyHashSet<MarkedVectorBase*>& markListSet();
     void addMarkedJSValueRefArray(MarkedJSValueRefArray*);
 
     template<typename Functor> void forEachProtectedCell(const Functor&);
-    template<typename Functor> void forEachCodeBlock(const Functor&);
-    template<typename Functor> void forEachCodeBlockIgnoringJITPlans(const AbstractLocker& codeBlockSetLocker, const Functor&);
+    template<typename Functor> void forEachCodeBlock(NOESCAPE const Functor&);
+    template<typename Functor> void forEachCodeBlockIgnoringJITPlans(const AbstractLocker& codeBlockSetLocker, NOESCAPE const Functor&);
 
     HandleSet* handleSet() { return &m_handleSet; }
 
@@ -443,7 +483,7 @@ public:
     void deleteAllCodeBlocks(DeleteAllCodeEffort);
     void deleteAllUnlinkedCodeBlocks(DeleteAllCodeEffort);
 
-    void didAllocate(size_t);
+    JS_EXPORT_PRIVATE void didAllocate(size_t);
     bool isPagedOut();
 
     const JITStubRoutineSet& jitStubRoutines() { return *m_jitStubRoutines; }
@@ -562,19 +602,36 @@ public:
 
     Seconds totalGCTime() const { return m_totalGCTime; }
 
-    HashMap<JSImmutableButterfly*, JSString*> immutableButterflyToStringCache;
+    UncheckedKeyHashMap<JSCellButterfly*, JSString*> immutableButterflyToStringCache;
 
     bool isMarkingForGCVerifier() const { return m_isMarkingForGCVerifier; }
 
-    void appendPossiblyAccessedStringFromConcurrentThreads(String&& string)
+    void setKeepVerifierSlotVisitor();
+    void clearVerifierSlotVisitor();
+
+    void appendPossiblyAccessedStringFromConcurrentThreadsOrGCOwnedDataScope(const JSString* owner, String&& string)
     {
-        m_possiblyAccessedStringsFromConcurrentThreads.append(WTFMove(string));
+        m_possiblyAccessedStringsFromConcurrentThreadsOrGCOwnedDataScope.append({ owner, WTF::move(string) });
     }
+
+    void clearConcurrentRetainedDataIfPossible();
+
+    bool isInPhase(CollectorPhase phase) const { return m_currentPhase == phase; }
+
+#if ENABLE(WEBASSEMBLY)
+    // FIXME: We should have a way to clear Wasm::Callees pending destruction when the Module dies.
+    void reportWasmCalleePendingDestruction(Ref<Wasm::Callee>&&);
+    bool isWasmCalleePendingDestruction(Wasm::Callee&);
+#endif
+
+    // This is a debug function for checking who marked the target cell.
+    void dumpVerifierMarkerData(HeapCell*);
 
 private:
     friend class AllocatingScope;
     friend class CodeBlock;
     friend class CollectingScope;
+    friend class ConservativeRoots;
     friend class DeferGC;
     friend class DeferGCForAWhile;
     friend class GCAwareJITStubRoutine;
@@ -583,7 +640,6 @@ private:
     friend class HandleSet;
     friend class HeapUtil;
     friend class HeapVerifier;
-    friend class IsoSubspacePerVM;
     friend class JITStubRoutine;
     friend class LLIntOffsetsExtractor;
     friend class MarkStackMergingConstraint;
@@ -617,8 +673,11 @@ private:
 
     Lock& lock() { return m_lock; }
 
-    JS_EXPORT_PRIVATE void reportExtraMemoryAllocatedSlowCase(GCDeferralContext*, size_t);
+    void reportExtraMemoryAllocatedPossiblyFromAlreadyMarkedCell(const JSCell*, size_t);
+    JS_EXPORT_PRIVATE void reportExtraMemoryAllocatedSlowCase(GCDeferralContext*, const JSCell*, size_t);
     JS_EXPORT_PRIVATE void deprecatedReportExtraMemorySlowCase(size_t);
+
+    size_t totalBytesAllocatedThisCycle() { return m_nonOversizedBytesAllocatedThisCycle + m_oversizedBytesAllocatedThisCycle; }
 
     bool shouldCollectInCollectorThread(const AbstractLocker&);
     void collectInCollectorThread();
@@ -677,12 +736,11 @@ private:
     Ticket requestCollection(GCRequest);
     void waitForCollection(Ticket);
 
-    void suspendCompilerThreads();
+    bool suspendCompilerThreads();
     void willStartCollection();
     void prepareForMarking();
 
     void gatherStackRoots(ConservativeRoots&);
-    void gatherJSStackRoots(ConservativeRoots&);
     void gatherScratchBufferRoots(ConservativeRoots&);
     void beginMarking();
     void visitCompilerWorklistWeakReferences();
@@ -690,6 +748,7 @@ private:
     void updateObjectCounts();
     void endMarking();
 
+    void cancelDeferredWorkIfNeeded();
     void reapWeakHandles();
     void pruneStaleEntriesFromWeakGCHashTables();
     void sweepArrayBuffers();
@@ -705,6 +764,7 @@ private:
 
     void deleteUnmarkedCompiledCode();
     JS_EXPORT_PRIVATE void addToRememberedSet(const JSCell*);
+    double projectedGCRateLimitingValue(MonotonicTime);
     void updateAllocationLimits();
     void didFinishCollection();
     void resumeCompilerThreads();
@@ -741,7 +801,7 @@ private:
     bool overCriticalMemoryThreshold(MemoryThresholdCallType memoryThresholdCallType = MemoryThresholdCallType::Cached);
 
     template<typename Visitor>
-    void iterateExecutingAndCompilingCodeBlocks(Visitor&, const Function<void(CodeBlock*)>&);
+    void iterateExecutingAndCompilingCodeBlocks(Visitor&, NOESCAPE const Function<void(CodeBlock*)>&);
 
     template<typename Func, typename Visitor>
     void iterateExecutingAndCompilingCodeBlocksWithoutHoldingLocks(Visitor&, const Func&);
@@ -753,33 +813,44 @@ private:
     void dumpHeapStatisticsAtVMDestruction();
 
     static bool useGenerationalGC();
-    static bool shouldSweepSynchronously();
+    bool shouldSweepSynchronously();
 
     void verifyGC();
+    void verifierMark();
 
     Lock m_lock;
     const HeapType m_heapType;
     MutatorState m_mutatorState { MutatorState::Running };
     const size_t m_ramSize;
+    const GrowthMode m_growthMode;
     const size_t m_minBytesPerCycle;
+    const size_t m_maxEdenSizeForRateLimiting;
+    double m_gcRateLimitingValue { 0.0 };
+    size_t m_bytesAllocatedBeforeLastEdenCollect { 0 };
     size_t m_sizeAfterLastCollect { 0 };
     size_t m_sizeAfterLastFullCollect { 0 };
     size_t m_sizeBeforeLastFullCollect { 0 };
     size_t m_sizeAfterLastEdenCollect { 0 };
     size_t m_sizeBeforeLastEdenCollect { 0 };
 
-    size_t m_bytesAllocatedThisCycle { 0 };
+    size_t m_oversizedBytesAllocatedThisCycle { 0 };
+    size_t m_lastOversidedAllocationThisCycle { 0 };
+
+    size_t m_nonOversizedBytesAllocatedThisCycle { 0 };
     size_t m_bytesAbandonedSinceLastFullCollect { 0 };
     size_t m_maxEdenSize;
     size_t m_maxEdenSizeWhenCritical;
     size_t m_maxHeapSize;
+    size_t m_totalBytesVisitedAfterLastFullCollect { 0 };
     size_t m_totalBytesVisited { 0 };
     size_t m_totalBytesVisitedThisCycle { 0 };
     double m_incrementBalance { 0 };
 
+    bool m_shouldDoOpportunisticFullCollection { false };
+    bool m_isInOpportunisticTask { false };
     bool m_shouldDoFullCollection { false };
-    Markable<CollectionScope, EnumMarkableTraits<CollectionScope>> m_collectionScope;
-    Markable<CollectionScope, EnumMarkableTraits<CollectionScope>> m_lastCollectionScope;
+    Markable<CollectionScope> m_collectionScope;
+    Markable<CollectionScope> m_lastCollectionScope;
     Lock m_raceMarkStackLock;
 
     MarkedSpace m_objectSpace;
@@ -788,7 +859,7 @@ private:
     size_t m_deprecatedExtraMemorySize { 0 };
 
     ProtectCountSet m_protectedValues;
-    HashSet<MarkedVectorBase*> m_markListSet;
+    UncheckedKeyHashSet<MarkedVectorBase*> m_markListSet;
     SentinelLinkedList<MarkedJSValueRefArray, BasicRawSentinelNode<MarkedJSValueRefArray>> m_markedJSValueRefArrays;
 
     std::unique_ptr<MachineThreads> m_machineThreads;
@@ -818,21 +889,36 @@ private:
     bool m_isShuttingDown { false };
     bool m_mutatorShouldBeFenced { Options::forceFencedBarrier() };
     bool m_isMarkingForGCVerifier { false };
+    bool m_keepVerifierSlotVisitor { false };
+    Lock m_wasmCalleesPendingDestructionLock;
 
     unsigned m_barrierThreshold { Options::forceFencedBarrier() ? tautologicalThreshold : blackThreshold };
 
+#if PLATFORM(MAC)
+    Seconds m_lastFullGCLength { 2_ms };
+    Seconds m_lastEdenGCLength { 2_ms };
+#else
     Seconds m_lastFullGCLength { 10_ms };
     Seconds m_lastEdenGCLength { 10_ms };
+#endif
 
     Vector<WeakBlock*> m_logicallyEmptyWeakBlocks;
     size_t m_indexOfNextLogicallyEmptyWeakBlockToSweep { WTF::notFound };
 
-    Vector<String> m_possiblyAccessedStringsFromConcurrentThreads;
+#if ASSERT_ENABLED
+    template<typename> friend struct GCOwnedDataScope;
+    const void* m_topGCOwnedDataScope { nullptr };
+#endif
+    // Use a SegmentedVector rather than a Vector because we don't want to have to copy in order to grow the buffer.
+    // Since this list is walked once to deref all the strings
+    // We don't need fast access.
+    SegmentedVector<std::pair<const JSString*, String>, 256, 10, SegmentedVectorGrowthPolicy::Doubling> m_possiblyAccessedStringsFromConcurrentThreadsOrGCOwnedDataScope;
+   UncheckedKeyHashSet<const JSString*> m_discoveredAccessedStringsFromGCOwnedDataScope;
 
-    RefPtr<FullGCActivityCallback> m_fullActivityCallback;
+    RefPtr<GCActivityCallback> m_fullActivityCallback;
     RefPtr<GCActivityCallback> m_edenActivityCallback;
-    Ref<IncrementalSweeper> m_sweeper;
-    Ref<StopIfNecessaryTimer> m_stopIfNecessaryTimer;
+    const Ref<IncrementalSweeper> m_sweeper;
+    const Ref<StopIfNecessaryTimer> m_stopIfNecessaryTimer;
 
     Vector<HeapObserver*> m_observers;
 
@@ -850,7 +936,11 @@ private:
 #endif
     unsigned m_deferralDepth { 0 };
 
-    HashSet<WeakGCHashTable*> m_weakGCHashTables;
+    UncheckedKeyHashSet<WeakGCHashTable*> m_weakGCHashTables;
+
+#if ENABLE(WEBASSEMBLY)
+    UncheckedKeyHashSet<Ref<Wasm::Callee>> m_wasmCalleesPendingDestruction WTF_GUARDED_BY_LOCK(m_wasmCalleesPendingDestructionLock);
+#endif
 
     std::unique_ptr<MarkStackArray> m_sharedCollectorMarkStack;
     std::unique_ptr<MarkStackArray> m_sharedMutatorMarkStack;
@@ -897,18 +987,21 @@ private:
     bool m_mutatorDidRun { true };
     bool m_didDeferGCWork { false };
     bool m_shouldStopCollectingContinuously { false };
+    bool m_isCompilerThreadsSuspended { false };
 
     uint64_t m_mutatorExecutionVersion { 0 };
     uint64_t m_phaseVersion { 0 };
+    uint64_t m_gcVersion { 0 };
     Box<Lock> m_threadLock;
-    Ref<AutomaticThreadCondition> m_threadCondition; // The mutator must not wait on this. It would cause a deadlock.
-    RefPtr<AutomaticThread> m_thread;
+    const Ref<AutomaticThreadCondition> m_threadCondition; // The mutator must not wait on this. It would cause a deadlock.
+    const RefPtr<AutomaticThread> m_thread;
 
     RefPtr<Thread> m_collectContinuouslyThread { nullptr };
 
     MonotonicTime m_lastGCStartTime;
     MonotonicTime m_lastGCEndTime;
     MonotonicTime m_currentGCStartTime;
+    MonotonicTime m_lastFullGCEndTime;
     Seconds m_totalGCTime;
 
     uintptr_t m_barriersExecuted { 0 };
@@ -979,6 +1072,7 @@ public:
     IsoHeapCellType webAssemblyExceptionHeapCellType;
     IsoHeapCellType webAssemblyFunctionHeapCellType;
     IsoHeapCellType webAssemblyGlobalHeapCellType;
+    // We can use IsoHeapCellType for instances because it's allocated out of a PreciseSubspace reserved for just instances.
     IsoHeapCellType webAssemblyInstanceHeapCellType;
     IsoHeapCellType webAssemblyMemoryHeapCellType;
     IsoHeapCellType webAssemblyStructHeapCellType;
@@ -991,12 +1085,11 @@ public:
     // AlignedMemoryAllocators
     std::unique_ptr<FastMallocAlignedMemoryAllocator> fastMallocAllocator;
     std::unique_ptr<GigacageAlignedMemoryAllocator> primitiveGigacageAllocator;
-    std::unique_ptr<GigacageAlignedMemoryAllocator> jsValueGigacageAllocator;
 
     // Subspaces
     CompleteSubspace primitiveGigacageAuxiliarySpace; // Typed arrays, strings, bitvectors, etc go here.
-    CompleteSubspace jsValueGigacageAuxiliarySpace; // Butterflies, arrays of JSValues, etc go here.
-    CompleteSubspace immutableButterflyJSValueGigacageAuxiliarySpace; // JSImmutableButterfly goes here.
+    CompleteSubspace auxiliarySpace; // Butterflies, arrays of JSValues, etc go here.
+    CompleteSubspace immutableButterflyAuxiliarySpace; // JSCellButterfly goes here.
 
     // We make cross-cutting assumptions about typed arrays being in the primitive Gigacage and butterflies
     // being in the JSValue gigacage. For some types, it's super obvious where they should go, and so we
@@ -1009,8 +1102,6 @@ public:
         switch (kind) {
         case Gigacage::Primitive:
             return primitiveGigacageAuxiliarySpace;
-        case Gigacage::JSValue:
-            return jsValueGigacageAuxiliarySpace;
         case Gigacage::NumberOfKinds:
             break;
         }
@@ -1020,7 +1111,6 @@ public:
 
     // Whenever possible, use subspaceFor<CellType>(vm) to get one of these subspaces.
     CompleteSubspace cellSpace;
-    CompleteSubspace variableSizedCellSpace; // FIXME: This space is problematic because we have things in here like DirectArguments and ScopedArguments; those should be split into JSValueOOB cells and JSValueStrict auxiliaries. https://bugs.webkit.org/show_bug.cgi?id=182858
     CompleteSubspace destructibleObjectSpace;
 
 #define DECLARE_ISO_SUBSPACE(name, heapCellType, type) \
@@ -1057,7 +1147,7 @@ public:
     std::unique_ptr<type> m_##name;
 
     struct SpaceAndSet {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(SpaceAndSet);
 
         IsoSubspace space;
         IsoCellSet set;
@@ -1071,8 +1161,8 @@ public:
 
         static IsoCellSet& setFor(Subspace& space)
         {
-            return *bitwise_cast<IsoCellSet*>(
-                bitwise_cast<char*>(&space) -
+            return *std::bit_cast<IsoCellSet*>(
+                std::bit_cast<char*>(&space) -
                 OBJECT_OFFSETOF(SpaceAndSet, space) +
                 OBJECT_OFFSETOF(SpaceAndSet, set));
         }
@@ -1088,7 +1178,7 @@ public:
     }
 
     struct ScriptExecutableSpaceAndSets {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(ScriptExecutableSpaceAndSets);
 
         IsoSubspace space;
         IsoCellSet clearableCodeSet;
@@ -1106,8 +1196,8 @@ public:
 
         static ScriptExecutableSpaceAndSets& setAndSpaceFor(Subspace& space)
         {
-            return *bitwise_cast<ScriptExecutableSpaceAndSets*>(
-                bitwise_cast<char*>(&space) -
+            return *std::bit_cast<ScriptExecutableSpaceAndSets*>(
+                std::bit_cast<char*>(&space) -
                 OBJECT_OFFSETOF(ScriptExecutableSpaceAndSets, space));
         }
 
@@ -1135,8 +1225,23 @@ public:
     using UnlinkedFunctionExecutableSpaceAndSet = SpaceAndSet;
     UnlinkedFunctionExecutableSpaceAndSet unlinkedFunctionExecutableSpaceAndSet;
 
-    Vector<IsoSubspacePerVM*> perVMIsoSubspaces;
 #undef DYNAMIC_SPACE_AND_SET_DEFINE_MEMBER
+
+#define DEFINE_NON_ISO_SUBSPACE_MEMBER(name, heapCellType, type, SubspaceType) \
+    template<SubspaceAccess mode> \
+    SubspaceType* name() \
+    { \
+        if (m_##name || mode == SubspaceAccess::Concurrently) \
+            return m_##name.get(); \
+        return name##Slow(); \
+    } \
+    JS_EXPORT_PRIVATE SubspaceType* name##Slow(); \
+    std::unique_ptr<SubspaceType> m_##name;
+
+    FOR_EACH_JSC_WEBASSEMBLY_DYNAMIC_NON_ISO_SUBSPACE(DEFINE_NON_ISO_SUBSPACE_MEMBER)
+#undef DEFINE_NON_ISO_SUBSPACE_MEMBER
+
+    CString m_signpostMessage;
 };
 
 namespace GCClient {
@@ -1190,12 +1295,12 @@ private:
     IsoSubspace programExecutableSpace;
     IsoSubspace unlinkedFunctionExecutableSpace;
 
-    Vector<IsoSubspacePerVM*> perVMIsoSubspaces;
 
     friend class JSC::VM;
-    friend class JSC::IsoSubspacePerVM;
 };
 
 } // namespace GCClient
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

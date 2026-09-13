@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,18 +33,24 @@ import test.com.sun.javafx.pgstub.StubImageLoaderFactory;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import test.com.sun.javafx.test.PropertyInvalidationCounter;
 import com.sun.javafx.tk.Toolkit;
-import javafx.beans.InvalidationListener;
-import org.junit.Before;
-import org.junit.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.util.LinkedList;
 import java.util.Queue;
+
+import javafx.beans.InvalidationListener;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageShim;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public final class ImageTest {
     private final StubToolkit toolkit;
@@ -55,7 +61,7 @@ public final class ImageTest {
         imageLoaderFactory = toolkit.getImageLoaderFactory();
     }
 
-    @Before
+    @BeforeEach
     public void setUp() {
         imageLoaderFactory.reset();
     }
@@ -126,6 +132,35 @@ public final class ImageTest {
         registerImage(url, 200, 100);
 
         final Image image = new Image(url, true);
+
+        final StubAsyncImageLoader lastAsyncImageLoader =
+                getLastAsyncImageLoader();
+
+        lastAsyncImageLoader.setProgress(0, 100);
+        final float p1 = (float) image.getProgress();
+
+        lastAsyncImageLoader.setProgress(33, 100);
+        final float p2 = (float) image.getProgress();
+
+        lastAsyncImageLoader.setProgress(66, 100);
+        final float p3 = (float) image.getProgress();
+
+        lastAsyncImageLoader.setProgress(200, 100);
+        final float p4 = (float) image.getProgress();
+
+        lastAsyncImageLoader.finish();
+
+        assertTrue(p1 < p2);
+        assertTrue(p2 < p3);
+        assertTrue(p3 == p4);
+    }
+
+    @Test
+    public void loadImageStreamAsyncProgressTest() {
+        final InputStream stream = new ByteArrayInputStream(new byte[0]);
+        registerImage(stream, 200, 100);
+
+        final Image image = new Image(stream, true);
 
         final StubAsyncImageLoader lastAsyncImageLoader =
                 getLastAsyncImageLoader();
@@ -513,48 +548,73 @@ public final class ImageTest {
         verifyLoadedImage(image, 0, 0, false, false, 100, 200);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void createImageFromNullUrlTest() {
-        new Image((String) null);
+        assertThrows(NullPointerException.class, () -> {
+            new Image((String) null);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void createImageAsyncFromNullUrlTest() {
-        new Image(null, true);
+        assertThrows(NullPointerException.class, () -> {
+            new Image((String)null, true);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void createImageFromNullInputStreamTest() {
-        new Image((InputStream) null);
+        assertThrows(NullPointerException.class, () -> {
+            new Image((InputStream) null);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
+    public void createImageAsyncFromNullInputStreamTest() {
+        assertThrows(NullPointerException.class, () -> {
+            new Image((InputStream) null, true);
+        });
+    }
+
+    @Test
     public void createImageFromEmptyUrlTest() {
-        new Image("");
+        assertThrows(IllegalArgumentException.class, () -> {
+            new Image("");
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void createImageAsyncFromEmptyUrlTest() {
-        new Image("", true);
+        assertThrows(IllegalArgumentException.class, () -> {
+            new Image("", true);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void createImageFromInvalidUrlTest() {
-        new Image(":");
+        assertThrows(IllegalArgumentException.class, () -> {
+            new Image(":");
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void createImageAsyncFromInvalidUrlTest() {
-        new Image(":", true);
+        assertThrows(IllegalArgumentException.class, () -> {
+            new Image(":", true);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void createImageFromUnsupportedUrlTest() {
-        new Image("unsupported:image.png");
+        assertThrows(IllegalArgumentException.class, () -> {
+            new Image("unsupported:image.png");
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void createImageAsyncFromUnsupportedUrlTest() {
-        new Image("unsupported:image.png", true);
+        assertThrows(IllegalArgumentException.class, () -> {
+            new Image("unsupported:image.png", true);
+        });
     }
 }

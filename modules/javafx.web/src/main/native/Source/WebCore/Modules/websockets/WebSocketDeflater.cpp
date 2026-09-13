@@ -34,15 +34,18 @@
 #if !PLATFORM(JAVA)
 
 #include "Logging.h"
+#include <array>
 #include <wtf/CheckedArithmetic.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <zlib.h>
 
 namespace WebCore {
 
 static const int defaultMemLevel = 8;
 static const size_t bufferIncrementUnit = 4096;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebSocketDeflater);
 
 WebSocketDeflater::WebSocketDeflater(int windowBits, ContextTakeOverMode contextTakeOverMode)
     : m_windowBits(windowBits)
@@ -51,7 +54,7 @@ WebSocketDeflater::WebSocketDeflater(int windowBits, ContextTakeOverMode context
     ASSERT(m_windowBits >= 8);
     ASSERT(m_windowBits <= 15);
     m_stream = makeUniqueWithoutFastMallocCheck<z_stream>();
-    memset(m_stream.get(), 0, sizeof(z_stream));
+    zeroBytes(*m_stream);
 }
 
 bool WebSocketDeflater::initialize()
@@ -66,20 +69,20 @@ WebSocketDeflater::~WebSocketDeflater()
         LOG(Network, "WebSocketDeflater %p Destructor deflateEnd() failed: %d is returned", this, result);
 }
 
-static void setStreamParameter(z_stream* stream, const uint8_t* inputData, size_t inputLength, uint8_t* outputData, size_t outputLength)
+static void setStreamParameter(z_stream* stream, std::span<const uint8_t> inputData, std::span<uint8_t> outputData)
 {
-    stream->next_in = const_cast<uint8_t*>(inputData);
-    stream->avail_in = inputLength;
-    stream->next_out = outputData;
-    stream->avail_out = outputLength;
+    stream->next_in = const_cast<uint8_t*>(inputData.data());
+    stream->avail_in = inputData.size();
+    stream->next_out = outputData.data();
+    stream->avail_out = outputData.size();
 }
 
-bool WebSocketDeflater::addBytes(const uint8_t* data, size_t length)
+bool WebSocketDeflater::addBytes(std::span<const uint8_t> data)
 {
-    if (!length)
+    if (!data.size())
         return false;
 
-    size_t maxLength = deflateBound(m_stream.get(), length);
+    size_t maxLength = deflateBound(m_stream.get(), data.size());
     size_t writePosition = m_buffer.size();
     CheckedSize bufferSize = maxLength;
     bufferSize += writePosition;
@@ -87,7 +90,7 @@ bool WebSocketDeflater::addBytes(const uint8_t* data, size_t length)
         return false;
 
     m_buffer.grow(bufferSize.value());
-    setStreamParameter(m_stream.get(), data, length, m_buffer.data() + writePosition, maxLength);
+    setStreamParameter(m_stream.get(), data, m_buffer.mutableSpan().subspan(writePosition, maxLength));
     int result = deflate(m_stream.get(), Z_NO_FLUSH);
     if (result != Z_OK || m_stream->avail_in > 0)
         return false;
@@ -107,7 +110,7 @@ bool WebSocketDeflater::finish()
 
         m_buffer.grow(bufferSize.value());
         size_t availableCapacity = m_buffer.size() - writePosition;
-        setStreamParameter(m_stream.get(), 0, 0, m_buffer.data() + writePosition, availableCapacity);
+        setStreamParameter(m_stream.get(), { }, m_buffer.mutableSpan().subspan(writePosition, availableCapacity));
         int result = deflate(m_stream.get(), Z_SYNC_FLUSH);
         if (m_stream->avail_out) {
             m_buffer.shrink(writePosition + availableCapacity - m_stream->avail_out);
@@ -131,11 +134,13 @@ void WebSocketDeflater::reset()
         deflateReset(m_stream.get());
 }
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebSocketInflater);
+
 WebSocketInflater::WebSocketInflater(int windowBits)
     : m_windowBits(windowBits)
     , m_stream(makeUniqueWithoutFastMallocCheck<z_stream>())
 {
-    memset(m_stream.get(), 0, sizeof(z_stream));
+    zeroBytes(*m_stream);
 }
 
 bool WebSocketInflater::initialize()
@@ -150,13 +155,13 @@ WebSocketInflater::~WebSocketInflater()
         LOG(Network, "WebSocketInflater %p Destructor inflateEnd() failed: %d is returned", this, result);
 }
 
-bool WebSocketInflater::addBytes(const uint8_t* data, size_t length)
+bool WebSocketInflater::addBytes(std::span<const uint8_t> data)
 {
-    if (!length)
+    if (!data.size())
         return false;
 
     size_t consumedSoFar = 0;
-    while (consumedSoFar < length) {
+    while (consumedSoFar < data.size()) {
         size_t writePosition = m_buffer.size();
         CheckedSize bufferSize = writePosition;
         bufferSize += bufferIncrementUnit;
@@ -165,8 +170,8 @@ bool WebSocketInflater::addBytes(const uint8_t* data, size_t length)
 
         m_buffer.grow(bufferSize.value());
         size_t availableCapacity = m_buffer.size() - writePosition;
-        size_t remainingLength = length - consumedSoFar;
-        setStreamParameter(m_stream.get(), data + consumedSoFar, remainingLength, m_buffer.data() + writePosition, availableCapacity);
+        size_t remainingLength = data.size() - consumedSoFar;
+        setStreamParameter(m_stream.get(), data.subspan(consumedSoFar, remainingLength), m_buffer.mutableSpan().subspan(writePosition, availableCapacity));
         int result = inflate(m_stream.get(), Z_NO_FLUSH);
         consumedSoFar += remainingLength - m_stream->avail_in;
         m_buffer.shrink(writePosition + availableCapacity - m_stream->avail_out);
@@ -182,18 +187,17 @@ bool WebSocketInflater::addBytes(const uint8_t* data, size_t length)
             return false;
         ASSERT(remainingLength > m_stream->avail_in);
     }
-    ASSERT(consumedSoFar == length);
+    ASSERT(consumedSoFar == data.size());
     return true;
 }
 
 bool WebSocketInflater::finish()
 {
-    constexpr uint8_t strippedFields[] = { 0, 0, 0xFF, 0xFF };
-    constexpr auto strippedLength = std::size(strippedFields);
+    constexpr std::array<uint8_t, 4> strippedFields { 0, 0, 0xFF, 0xFF };
 
     // Appends 4 octests of 0x00 0x00 0xff 0xff
     size_t consumedSoFar = 0;
-    while (consumedSoFar < strippedLength) {
+    while (consumedSoFar < strippedFields.size()) {
         size_t writePosition = m_buffer.size();
         CheckedSize bufferSize = writePosition;
         bufferSize += bufferIncrementUnit;
@@ -202,8 +206,8 @@ bool WebSocketInflater::finish()
 
         m_buffer.grow(bufferSize.value());
         size_t availableCapacity = m_buffer.size() - writePosition;
-        size_t remainingLength = strippedLength - consumedSoFar;
-        setStreamParameter(m_stream.get(), strippedFields + consumedSoFar, remainingLength, m_buffer.data() + writePosition, availableCapacity);
+        size_t remainingLength = strippedFields.size() - consumedSoFar;
+        setStreamParameter(m_stream.get(), std::span { strippedFields }.subspan(consumedSoFar), m_buffer.mutableSpan().subspan(writePosition, availableCapacity));
         int result = inflate(m_stream.get(), Z_FINISH);
         consumedSoFar += remainingLength - m_stream->avail_in;
         m_buffer.shrink(writePosition + availableCapacity - m_stream->avail_out);
@@ -213,7 +217,7 @@ bool WebSocketInflater::finish()
             return false;
         ASSERT(remainingLength > m_stream->avail_in);
     }
-    ASSERT(consumedSoFar == strippedLength);
+    ASSERT(consumedSoFar == strippedFields.size());
 
     return true;
 }

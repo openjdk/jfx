@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -59,6 +59,11 @@ CachedResourceHandleBase::~CachedResourceHandleBase()
 {
     if (m_resource)
         m_resource->unregisterHandle(this);
+}
+
+CachedResource* CachedResourceHandleBase::get() const
+{
+    return m_resource.get();
 }
 
 void CachedResourceHandleBase::setResource(CachedResource* resource)

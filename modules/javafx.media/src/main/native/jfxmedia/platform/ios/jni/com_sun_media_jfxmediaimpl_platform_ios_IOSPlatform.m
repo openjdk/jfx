@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -59,7 +59,7 @@ extern "C" {
 
     void interruptionListenerCallback(void *inUserData, UInt32 interruptionState) {
         // TODO: take care of interruption
-        // http://javafx-jira.kenai.com/browse/RT-27005
+        // JDK-8096014
     }
 
     jint initAudioSession() {
@@ -94,7 +94,7 @@ extern "C" {
                            error: &setCategoryError];
         }
 
-        /* TODO: add fine-grained error handling http://javafx-jira.kenai.com/browse/RT-27005
+        /* TODO: add fine-grained error handling JDK-8096014
          if (setCategoryError) {
          //error = ERROR_MANAGER_ENGINEINIT_FAIL;
          }*/
@@ -115,7 +115,7 @@ extern "C" {
         const jint error = initAudioSession();
 
         // TODO: send error to Java
-        // http://javafx-jira.kenai.com/browse/RT-27005
+        // JDK-8096014
     }
 
     /*

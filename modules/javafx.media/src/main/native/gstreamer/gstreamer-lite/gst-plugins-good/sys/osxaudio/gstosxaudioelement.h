@@ -54,10 +54,12 @@
 #endif
 
 #include <gst/gst.h>
-#ifdef HAVE_IOS
-#include <CoreAudio/CoreAudioTypes.h>
-#else
+
+#include <TargetConditionals.h>
+#if TARGET_OS_OSX
 #include <CoreAudio/CoreAudio.h>
+#else
+#include <CoreAudio/CoreAudioTypes.h>
 #endif
 #include <AudioUnit/AudioUnit.h>
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,12 +25,14 @@
 
 #pragma once
 
-#include "JSCConfig.h"
-#include "JSExportMacros.h"
+#include <JavaScriptCore/CPU.h>
+#include <JavaScriptCore/JSCConfig.h>
+#include <JavaScriptCore/JSExportMacros.h>
 #include <stdint.h>
 #include <wtf/ForbidHeapAllocation.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/PrintStream.h>
+#include <wtf/ScopedLambda.h>
 #include <wtf/StdLibExtras.h>
 
 namespace WTF {
@@ -42,6 +44,12 @@ namespace JSC {
 
 class Options {
 public:
+    enum class SandboxPolicy : uint8_t {
+        Unknown,
+        Allow,
+        Block,
+    };
+
     enum class DumpLevel : uint8_t {
         None = 0,
         Overridden,
@@ -102,8 +110,16 @@ public:
 #endif
     };
 
-    JS_EXPORT_PRIVATE static void initialize();
+    JS_EXPORT_PRIVATE static void initializeWithOptionsCustomization(const ScopedLambda<void()>& optionsCustomizationCallback);
+
+    ALWAYS_INLINE static void initialize(const Invocable<void()> auto& optionsCustomizationCallback)
+    {
+        SUPPRESS_FORWARD_DECL_ARG initializeWithOptionsCustomization(scopedLambda<void()>(optionsCustomizationCallback));
+    }
+
     static void finalize();
+
+    JS_EXPORT_PRIVATE static bool setAllJITCodeValidations(const char* arg);
 
     // Parses a string of options where each option is of the format "--<optionName>=<value>"
     // and are separated by a space. The leading "--" is optional and will be ignored.
@@ -113,15 +129,13 @@ public:
     // (no spaces allowed) and set the specified option if appropriate.
     JS_EXPORT_PRIVATE static bool setOption(const char* arg, bool verify = true);
 
-    JS_EXPORT_PRIVATE static void dumpAllOptions(DumpLevel, const char* title = nullptr);
+    JS_EXPORT_PRIVATE static void executeDumpOptions();
     JS_EXPORT_PRIVATE static void dumpAllOptionsInALine(StringBuilder&);
 
     JS_EXPORT_PRIVATE static void assertOptionsAreCoherent();
     JS_EXPORT_PRIVATE static void notifyOptionsChanged();
 
 #define DECLARE_OPTION_ACCESSORS(type_, name_, defaultValue_, availability_, description_) \
-private: \
-    ALWAYS_INLINE static OptionsStorage::type_& name_##Default() { return g_jscConfig.options.name_##Default; } \
 public: \
     ALWAYS_INLINE static OptionsStorage::type_& name_() \
     { \
@@ -133,28 +147,20 @@ public: \
 #undef DECLARE_OPTION_ACCESSORS
 
     static bool isAvailable(ID, Availability);
+    JS_EXPORT_PRIVATE static SandboxPolicy machExceptionHandlerSandboxPolicy;
 
 private:
-    struct ConstMetaData {
-        const char* name;
-        const char* description;
-        Type type;
-        Availability availability;
-        uint16_t offsetOfOption;
-        uint16_t offsetOfOptionDefault;
-    };
-
     Options();
 
     enum DumpDefaultsOption {
         DontDumpDefaults,
         DumpDefaults
     };
-    static void dumpOptionsIfNeeded();
-    static void dumpAllOptions(StringBuilder&, DumpLevel, const char* title,
-        const char* separator, const char* optionHeader, const char* optionFooter, DumpDefaultsOption);
+    static void dumpAllOptions(DumpLevel, ASCIILiteral title = { });
+    static void dumpAllOptions(StringBuilder&, DumpLevel, ASCIILiteral title,
+        ASCIILiteral separator, ASCIILiteral optionHeader, ASCIILiteral optionFooter, DumpDefaultsOption);
     static void dumpOption(StringBuilder&, DumpLevel, ID,
-        const char* optionHeader, const char* optionFooter, DumpDefaultsOption);
+        ASCIILiteral optionHeader, ASCIILiteral optionFooter, DumpDefaultsOption);
 
     static bool setOptionWithoutAlias(const char* arg, bool verify = true);
     static bool setAliasedOption(const char* arg, bool verify = true);
@@ -162,12 +168,14 @@ private:
     static bool overrideAliasedOptionWithHeuristic(const char* name);
 #endif
 
-    inline static void* addressOfOption(Options::ID);
-    inline static void* addressOfOptionDefault(Options::ID);
+    static void setAllJITCodeValidations(bool);
 
-    static const ConstMetaData s_constMetaData[NumberOfOptions];
-
-    friend struct OptionReader;
+    static bool defaultTCSMValue();
+    static unsigned computeNumberOfGCMarkers(unsigned maxNumberOfGCMarkers);
+    static unsigned computeNumberOfWorkerThreads(int maxNumberOfWorkerThreads, int minimum = 1);
+    static int32_t computePriorityDeltaOfWorkerThreads(int32_t twoCorePriorityDelta, int32_t multiCorePriorityDelta);
+    static constexpr bool jitEnabledByDefault() { return !useCompressedHeap && (is32Bit() || isAddress64Bit()); }
+    static constexpr bool ipintEnabledByDefault() { return isARM64() || isARM64E() || isX86_64(); }
 };
 
 } // namespace JSC

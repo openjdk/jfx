@@ -38,6 +38,11 @@
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
 
+#if PLATFORM(COCOA)
+#include <pal/spi/cocoa/NetworkSPI.h>
+#include <wtf/darwin/NetworkOSObject.h>
+#endif // PLATFORM(COCOA)
+
 extern FILE* testResult;
 
 class TestRunner : public WTR::UIScriptContextDelegate, public RefCounted<TestRunner> {
@@ -59,14 +64,15 @@ public:
 
     void addDisallowedURL(JSStringRef url);
     const std::set<std::string>& allowedHosts() const { return m_allowedHosts; }
-    void setAllowedHosts(std::set<std::string> hosts) { m_allowedHosts = WTFMove(hosts); }
+    void setAllowedHosts(std::set<std::string> hosts) { m_allowedHosts = WTF::move(hosts); }
     bool allowAnyHTTPSCertificateForAllowedHosts() const { return m_allowAnyHTTPSCertificateForAllowedHosts; }
     void setAllowAnyHTTPSCertificateForAllowedHosts(bool allow) { m_allowAnyHTTPSCertificateForAllowedHosts = allow; }
     const std::set<std::string>& localhostAliases() const { return m_localhostAliases; }
-    void setLocalhostAliases(std::set<std::string> hosts) { m_localhostAliases = WTFMove(hosts); }
+    void setLocalhostAliases(std::set<std::string> hosts) { m_localhostAliases = WTF::move(hosts); }
     void addURLToRedirect(std::string origin, std::string destination);
     const char* redirectionDestinationForURL(const char*);
-    void clearAllApplicationCaches();
+    void setPortsForUpgradingInsecureScheme(uint16_t insecurePort, uint16_t securePort) { m_portsForUpgradingInsecureScheme = { insecurePort, securePort }; }
+    std::optional<std::pair<uint16_t, uint16_t>> portsForUpgradingInsecureScheme() { return m_portsForUpgradingInsecureScheme; }
     void clearAllDatabases();
     void clearNotificationPermissionState();
     void clearApplicationCacheForOrigin(JSStringRef name);
@@ -103,7 +109,6 @@ public:
     void removeAllCookies(JSValueRef callback);
     void removeAllVisitedLinks();
     void setAcceptsEditing(bool);
-    void setAppCacheMaximumSize(unsigned long long quota);
     void setCacheModel(int);
     void setCustomPolicyDelegate(bool setDelegate, bool permissive);
     void setDatabaseQuota(unsigned long long quota);
@@ -360,10 +365,6 @@ public:
     const std::string& titleTextDirection() const { return m_titleTextDirection; }
     void setTitleTextDirection(const std::string& direction) { m_titleTextDirection = direction; }
 
-    // Custom full screen behavior.
-    void setHasCustomFullScreenBehavior(bool value) { m_customFullScreenBehavior = value; }
-    bool hasCustomFullScreenBehavior() const { return m_customFullScreenBehavior; }
-
     void setStorageDatabaseIdleInterval(double);
     void closeIdleLocalStorageDatabases();
 
@@ -395,6 +396,17 @@ public:
     bool isSecureEventInputEnabled() const;
 
     void generateTestReport(JSStringRef message, JSStringRef group);
+
+    void setObscuredContentInsets(double top, double right, double bottom, double left);
+
+    void setPageScaleFactor(double scaleFactor, long x, long y);
+    static JSValueRef alwaysResolvePromise(JSContextRef);
+
+    void setHasMouseDeviceForTesting(bool);
+
+#if ENABLE(DNS_SERVER_FOR_TESTING)
+    void initializeDNS();
+#endif
 
 private:
     TestRunner(const std::string& testURL, const std::string& expectedPixelHash);
@@ -458,7 +470,6 @@ private:
     bool m_shouldStayOnPageAfterHandlingBeforeUnload { false };
     // FIXME 81697: This variable most likely will be removed once we have migrated the tests from fast/notifications to http/tests/notifications.
     bool m_areLegacyWebNotificationPermissionRequestsIgnored { false };
-    bool m_customFullScreenBehavior { false };
     bool m_hasPendingWebNotificationClick { false };
     bool m_dumpJSConsoleLogInStdErr { false };
     bool m_didCancelClientRedirect { false };
@@ -480,6 +491,7 @@ private:
     std::set<std::string> m_willSendRequestClearHeaders;
     std::set<std::string> m_allowedHosts;
     std::set<std::string> m_localhostAliases;
+    std::optional<std::pair<uint16_t, uint16_t>> m_portsForUpgradingInsecureScheme;
 
     std::vector<uint8_t> m_audioResult;
 
@@ -490,12 +502,15 @@ private:
         String scriptString;
     };
 
-    std::unique_ptr<WTR::UIScriptContext> m_UIScriptContext;
-    UIScriptInvocationData* m_pendingUIScriptInvocationData { nullptr };
+    RefPtr<WTR::UIScriptContext> m_UIScriptContext;
 
     std::vector<std::string> m_openPanelFiles;
 #if PLATFORM(IOS_FAMILY)
     std::vector<uint8_t> m_openPanelFilesMediaIcon;
+#endif
+
+#if PLATFORM(COCOA)
+    OSObjectPtr<nw_resolver_config_t> m_resolverConfig;
 #endif
 
     static JSRetainPtr<JSClassRef> createJSClass();

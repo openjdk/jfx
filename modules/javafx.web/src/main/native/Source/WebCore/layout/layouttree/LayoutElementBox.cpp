@@ -26,21 +26,22 @@
 #include "config.h"
 #include "LayoutElementBox.h"
 
-#include "RenderStyleInlines.h"
-#include <wtf/IsoMallocInlines.h>
+#include "RenderElement.h"
+#include "RenderStyle+GettersInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 namespace Layout {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(ElementBox);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ElementBox);
 
-ElementBox::ElementBox(ElementAttributes&& attributes, RenderStyle&& style, std::unique_ptr<RenderStyle>&& firstLineStyle, OptionSet<BaseTypeFlag> baseTypeFlags)
-    : Box(WTFMove(attributes), WTFMove(style), WTFMove(firstLineStyle), baseTypeFlags | ElementBoxFlag)
+ElementBox::ElementBox(ElementAttributes&& attributes, RenderStyle&& style, std::unique_ptr<RenderStyle>&& firstLineStyle, EnumSet<BaseTypeFlag> baseTypeFlags)
+    : Box(WTF::move(attributes), WTF::move(style), WTF::move(firstLineStyle), baseTypeFlags | ElementBoxFlag)
 {
 }
 
-ElementBox::ElementBox(ElementAttributes&& attributes, OptionSet<ListMarkerAttribute> listMarkerAttributes, RenderStyle&& style, std::unique_ptr<RenderStyle>&& firstLineStyle)
-    : Box(WTFMove(attributes), WTFMove(style), WTFMove(firstLineStyle), ElementBoxFlag)
+ElementBox::ElementBox(ElementAttributes&& attributes, EnumSet<ListMarkerAttribute> listMarkerAttributes, RenderStyle&& style, std::unique_ptr<RenderStyle>&& firstLineStyle)
+    : Box(WTF::move(attributes), WTF::move(style), WTF::move(firstLineStyle), ElementBoxFlag)
     , m_replacedData(makeUnique<ReplacedData>())
 {
     ASSERT(isListMarkerBox());
@@ -48,7 +49,7 @@ ElementBox::ElementBox(ElementAttributes&& attributes, OptionSet<ListMarkerAttri
 }
 
 ElementBox::ElementBox(ElementAttributes&& attributes, ReplacedAttributes&& replacedAttributes, RenderStyle&& style, std::unique_ptr<RenderStyle>&& firstLineStyle)
-    : Box(WTFMove(attributes), WTFMove(style), WTFMove(firstLineStyle), ElementBoxFlag)
+    : Box(WTF::move(attributes), WTF::move(style), WTF::move(firstLineStyle), ElementBoxFlag)
     , m_replacedData(makeUnique<ReplacedData>())
 {
     m_replacedData->intrinsicSize = replacedAttributes.intrinsicSize;
@@ -81,6 +82,16 @@ const Box* ElementBox::firstInFlowOrFloatingChild() const
     return nullptr;
 }
 
+const Box* ElementBox::firstOutOfFlowChild() const
+{
+    if (auto* firstChild = this->firstChild()) {
+        if (firstChild->isOutOfFlowPositioned())
+            return firstChild;
+        return firstChild->nextOutOfFlowSibling();
+    }
+    return nullptr;
+}
+
 const Box* ElementBox::lastInFlowChild() const
 {
     if (auto* lastChild = this->lastChild()) {
@@ -101,9 +112,24 @@ const Box* ElementBox::lastInFlowOrFloatingChild() const
     return nullptr;
 }
 
+const Box* ElementBox::lastOutOfFlowChild() const
+{
+    if (auto* lastChild = this->lastChild()) {
+        if (lastChild->isOutOfFlowPositioned())
+            return lastChild;
+        return lastChild->previousOutOfFlowSibling();
+    }
+    return nullptr;
+}
+
+bool ElementBox::hasOutOfFlowChild() const
+{
+    return !!firstOutOfFlowChild();
+}
+
 void ElementBox::appendChild(UniqueRef<Box> childRef)
 {
-    insertChild(WTFMove(childRef), m_lastChild.get());
+    insertChild(WTF::move(childRef), m_lastChild.get());
 }
 
 void ElementBox::insertChild(UniqueRef<Box> childRef, Box* beforeChild)
@@ -122,7 +148,7 @@ void ElementBox::insertChild(UniqueRef<Box> childRef, Box* beforeChild)
     ASSERT(!nextOrFirst);
 
     m_lastChild = childBox.get();
-    nextOrFirst = WTFMove(childBox);
+        nextOrFirst = WTF::move(childBox);
         return;
     }
 
@@ -130,8 +156,8 @@ void ElementBox::insertChild(UniqueRef<Box> childRef, Box* beforeChild)
         // Insert as first.
         ASSERT(m_firstChild && m_lastChild);
         m_firstChild->m_previousSibling = childBox.get();
-        childBox->m_nextSibling = WTFMove(m_firstChild);
-        m_firstChild = WTFMove(childBox);
+        childBox->m_nextSibling = WTF::move(m_firstChild);
+        m_firstChild = WTF::move(childBox);
         return;
     }
 
@@ -139,9 +165,9 @@ void ElementBox::insertChild(UniqueRef<Box> childRef, Box* beforeChild)
     auto* nextSibling = beforeChild->m_nextSibling.get();
     ASSERT(nextSibling);
     childBox->m_previousSibling = beforeChild;
-    childBox->m_nextSibling = WTFMove(beforeChild->m_nextSibling);
+    childBox->m_nextSibling = WTF::move(beforeChild->m_nextSibling);
     nextSibling->m_previousSibling = childBox.get();
-    beforeChild->m_nextSibling = WTFMove(childBox);
+    beforeChild->m_nextSibling = WTF::move(childBox);
 }
 
 void ElementBox::destroyChildren()
@@ -180,7 +206,9 @@ LayoutUnit ElementBox::intrinsicWidth() const
     ASSERT(hasIntrinsicWidth());
     if (m_replacedData && m_replacedData->intrinsicSize)
         return m_replacedData->intrinsicSize->width();
-    return LayoutUnit { style().logicalWidth().value() };
+
+    // FIXME: Document what invariant holds to allow not checking if the logicalWidth() is fixed.
+    return LayoutUnit { style().logicalWidth().tryFixed()->resolveZoom(style().usedZoomForLength()) };
 }
 
 LayoutUnit ElementBox::intrinsicHeight() const
@@ -188,7 +216,9 @@ LayoutUnit ElementBox::intrinsicHeight() const
     ASSERT(hasIntrinsicHeight());
     if (m_replacedData && m_replacedData->intrinsicSize)
         return m_replacedData->intrinsicSize->height();
-    return LayoutUnit { style().logicalHeight().value() };
+
+    // FIXME: Document what invariant holds to allow not checking if the logicalHeight() is fixed.
+    return LayoutUnit { style().logicalHeight().tryFixed()->resolveZoom(style().usedZoomForLength()) };
 }
 
 LayoutUnit ElementBox::intrinsicRatio() const
@@ -206,6 +236,11 @@ LayoutUnit ElementBox::intrinsicRatio() const
 bool ElementBox::hasAspectRatio() const
 {
     return isImage();
+}
+
+RenderElement* ElementBox::rendererForIntegration() const
+{
+    return downcast<RenderElement>(Box::rendererForIntegration());
 }
 
 }

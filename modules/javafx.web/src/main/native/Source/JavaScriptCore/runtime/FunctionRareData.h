@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "InternalFunctionAllocationProfile.h"
-#include "JSCast.h"
-#include "ObjectAllocationProfile.h"
-#include "PackedCellPtr.h"
-#include "Watchpoint.h"
+#include <JavaScriptCore/InternalFunctionAllocationProfile.h>
+#include <JavaScriptCore/JSCast.h>
+#include <JavaScriptCore/ObjectAllocationProfile.h>
+#include <JavaScriptCore/PackedCellPtr.h>
+#include <JavaScriptCore/Watchpoint.h>
 
 namespace JSC {
 
@@ -53,7 +53,7 @@ public:
 
     static FunctionRareData* create(VM&, ExecutableBase*);
 
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
 
     template<typename CellType, SubspaceAccess mode>
     static GCClient::IsoSubspace* subspaceFor(VM& vm)
@@ -69,10 +69,10 @@ public:
 
     DECLARE_INFO;
 
-    static inline ptrdiff_t offsetOfObjectAllocationProfile() { return OBJECT_OFFSETOF(FunctionRareData, m_objectAllocationProfile); }
-    static inline ptrdiff_t offsetOfAllocationProfileWatchpointSet() { return OBJECT_OFFSETOF(FunctionRareData, m_allocationProfileWatchpointSet); }
-    static inline ptrdiff_t offsetOfInternalFunctionAllocationProfile() { return OBJECT_OFFSETOF(FunctionRareData, m_internalFunctionAllocationProfile); }
-    static inline ptrdiff_t offsetOfExecutable() { return OBJECT_OFFSETOF(FunctionRareData, m_executable); }
+    static constexpr ptrdiff_t offsetOfObjectAllocationProfile() { return OBJECT_OFFSETOF(FunctionRareData, m_objectAllocationProfile); }
+    static constexpr ptrdiff_t offsetOfAllocationProfileWatchpointSet() { return OBJECT_OFFSETOF(FunctionRareData, m_allocationProfileWatchpointSet); }
+    static constexpr ptrdiff_t offsetOfInternalFunctionAllocationProfile() { return OBJECT_OFFSETOF(FunctionRareData, m_internalFunctionAllocationProfile); }
+    static constexpr ptrdiff_t offsetOfExecutable() { return OBJECT_OFFSETOF(FunctionRareData, m_executable); }
 
     ObjectAllocationProfileWithPrototype* objectAllocationProfile()
     {
@@ -97,7 +97,7 @@ public:
     Structure* createInternalFunctionAllocationStructureFromBase(VM& vm, JSGlobalObject* baseGlobalObject, JSObject* prototype, Structure* baseStructure)
     {
         initializeAllocationProfileWatchpointSet();
-        return m_internalFunctionAllocationProfile.createAllocationStructureFromBase(vm, baseGlobalObject, this, prototype, baseStructure);
+        return m_internalFunctionAllocationProfile.createAllocationStructureFromBase(vm, baseGlobalObject, this, prototype, baseStructure, allocationProfileWatchpointSet());
     }
     void clearInternalFunctionAllocationProfile(const char* reason)
     {

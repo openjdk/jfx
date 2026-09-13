@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -483,17 +483,20 @@ final class BMPImageLoader extends ImageLoaderImpl {
     }
 
     @Override
-    public ImageFrame load(int imageIndex, int width, int height,
-            boolean preserveAspectRatio, boolean smooth) throws IOException
-    {
+    public ImageFrame load(int imageIndex, double w, double h,
+            boolean preserveAspectRatio, boolean smooth,
+            float screenPixelScale, float imagePixelScale) throws IOException {
+        ImageTools.validateMaxDimensions(w, h, imagePixelScale);
+
         if (0 != imageIndex) {
             return null;
         }
         int hght = Math.abs(bih.biHeight);
 
-        int[] outWH = ImageTools.computeDimensions(bih.biWidth, hght, width, height, preserveAspectRatio);
-        width = outWH[0];
-        height = outWH[1];
+        int[] outWH = ImageTools.computeDimensions(
+            bih.biWidth, hght, (int)(w * imagePixelScale), (int)(h * imagePixelScale), preserveAspectRatio);
+        int width = outWH[0];
+        int height = outWH[1];
 
         int bpp = 3;
         if (width >= (Integer.MAX_VALUE / height / bpp)) {
@@ -555,7 +558,7 @@ final class BMPImageLoader extends ImageLoaderImpl {
         }
 
         return new ImageFrame(ImageStorage.ImageType.RGB, img,
-                width, height, width * bpp, null, imageMetadata);
+                width, height, width * bpp, imagePixelScale, imageMetadata);
     }
 }
 

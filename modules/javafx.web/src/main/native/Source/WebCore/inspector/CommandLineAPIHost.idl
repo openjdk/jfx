@@ -33,7 +33,6 @@
 [
     LegacyNoInterfaceObject,
 ] interface CommandLineAPIHost {
-    undefined clearConsoleMessages();
     undefined copyText(DOMString text);
 
     [CallWith=CurrentGlobalObject] undefined inspect(any objectToInspect, any hints);
@@ -41,12 +40,14 @@
 
     [CallWith=CurrentGlobalObject] record<DOMString, sequence<ListenerEntry>> getEventListeners(EventTarget target);
 
-    DOMString databaseId(Database database);
+    [Conditional=WEB_RTC, CallWith=CurrentGlobalObject] undefined gatherRTCLogs(RTCLogsCallback? callback);
+
     DOMString storageId(Storage storage);
 };
 
 [
-    JSGenerateToJSObject
+    JSGenerateToJSObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ListenerEntry {
     required object listener;
     required boolean useCapture;

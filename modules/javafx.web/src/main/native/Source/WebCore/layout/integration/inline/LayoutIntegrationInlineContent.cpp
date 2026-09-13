@@ -28,20 +28,35 @@
 
 #include "InlineIteratorBox.h"
 #include "LayoutIntegrationLineLayout.h"
+#include "RenderStyle+GettersInlines.h"
+#include "SVGTextFragment.h"
 #include "TextPainter.h"
 
 namespace WebCore {
 namespace LayoutIntegration {
 
-InlineContent::InlineContent(const LineLayout& lineLayout)
-    : m_lineLayout(lineLayout)
+InlineContent::InlineContent(const RenderBlockFlow& formattingContextRoot)
+    : m_formattingContextRoot(formattingContextRoot)
 {
 }
 
-bool InlineContent::hasContent() const
+bool InlineContent::hasContentfulInFlowBox() const
 {
     ASSERT(m_displayContent.boxes.isEmpty() || m_displayContent.boxes[0].isRootInlineBox());
-    return m_displayContent.boxes.size() > 1;
+    for (auto& line : m_displayContent.lines) {
+        if (line.hasContentfulInFlowBox())
+            return true;
+    }
+    return false;
+}
+
+bool InlineContent::hasContentfulInlineLevelBox() const
+{
+    for (auto& line : m_displayContent.lines) {
+        if (line.hasContentfulInlineLevelBox())
+            return true;
+    }
+    return false;
 }
 
 IteratorRange<const InlineDisplay::Box*> InlineContent::boxesForRect(const LayoutRect& rect) const
@@ -52,12 +67,16 @@ IteratorRange<const InlineDisplay::Box*> InlineContent::boxesForRect(const Layou
     auto& lines = m_displayContent.lines;
     auto& boxes = m_displayContent.boxes;
 
+    // FIXME: Do the flips.
+    if (formattingContextRoot().writingMode().isBlockFlipped())
+        return { boxes.begin(), boxes.end() };
+
     if (lines.first().inkOverflow().maxY() > rect.y() && lines.last().inkOverflow().y() < rect.maxY())
-        return { &boxes.first(), &boxes.last() + 1 };
+        return { boxes.begin(), boxes.end() };
 
     // The optimization below relies on line paint bounds not exeeding those of the neighboring lines
-    if (hasMultilinePaintOverlap)
-        return { &boxes.first(), &boxes.last() + 1 };
+    if (m_hasMultilinePaintOverlap)
+        return { boxes.begin(), boxes.end() };
 
     auto height = lines.last().lineBoxBottom() - lines.first().lineBoxTop();
     auto averageLineHeight = height / lines.size();
@@ -80,25 +99,15 @@ IteratorRange<const InlineDisplay::Box*> InlineContent::boxesForRect(const Layou
     }
 
     auto firstBox = lines[startLine].firstBoxIndex();
-    auto lastBox = lines[endLine].firstBoxIndex() + lines[endLine].boxCount() - 1;
+    auto lastBox = lines[endLine].firstBoxIndex() + lines[endLine].boxCount();
 
-    return { &boxes[firstBox], &boxes[lastBox] + 1 };
-}
-
-InlineContent::~InlineContent()
-{
-    for (auto& box : m_displayContent.boxes)
-        TextPainter::removeGlyphDisplayList(box);
-}
-
-const RenderObject& InlineContent::rendererForLayoutBox(const Layout::Box& layoutBox) const
-{
-    return lineLayout().rendererForLayoutBox(layoutBox);
+    auto boxSpan = boxes.subspan(firstBox, lastBox - firstBox);
+    return { std::to_address(boxSpan.begin()), std::to_address(boxSpan.end()) };
 }
 
 const RenderBlockFlow& InlineContent::formattingContextRoot() const
 {
-    return lineLayout().flow();
+    return m_formattingContextRoot;
 }
 
 size_t InlineContent::indexForBox(const InlineDisplay::Box& box) const
@@ -145,6 +154,23 @@ std::optional<size_t> InlineContent::firstBoxIndexForLayoutBox(const Layout::Box
     return it->value;
 }
 
+// Returns a block level box if the line is for block-in-inline.
+const InlineDisplay::Box* InlineContent::blockLevelBoxForLine(const InlineDisplay::Line& line) const
+{
+    if (!line.hasBlockLevelBox())
+        return nullptr;
+    auto& lastBox = displayContent().boxes[line.lastBoxIndex()];
+    ASSERT(lastBox.isBlockLevelBox());
+    return lastBox.isBlockLevelBox() ? &lastBox : nullptr;
+}
+
+bool InlineContent::isInlineBoxWrapperForBlockLevelBox(const InlineDisplay::Box& box) const
+{
+    if (!box.isInlineBox() || !m_hasBlockLevelBoxes)
+        return false;
+    return lineForBox(box).hasBlockLevelBox();
+}
+
 const Vector<size_t>& InlineContent::nonRootInlineBoxIndexesForLayoutBox(const Layout::Box& layoutBox) const
 {
     ASSERT(layoutBox.isElementBox());
@@ -160,7 +186,7 @@ const Vector<size_t>& InlineContent::nonRootInlineBoxIndexesForLayoutBox(const L
                 return Vector<size_t> { };
             }).iterator->value.append(i);
         }
-        for (auto entry : *m_inlineBoxIndexCache)
+        for (auto& entry : *m_inlineBoxIndexCache)
             entry.value.shrinkToFit();
     }
 
@@ -171,6 +197,12 @@ const Vector<size_t>& InlineContent::nonRootInlineBoxIndexesForLayoutBox(const L
     }
 
     return it->value;
+}
+
+const Vector<SVGTextFragment>& InlineContent::svgTextFragments(size_t index) const
+{
+    RELEASE_ASSERT(m_svgTextFragmentsForBoxes.size() > index);
+    return m_svgTextFragmentsForBoxes[index];
 }
 
 void InlineContent::releaseCaches()
@@ -187,4 +219,3 @@ void InlineContent::shrinkToFit()
 
 }
 }
-

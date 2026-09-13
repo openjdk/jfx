@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2010 University of Szeged
  * Copyright (C) 2010 Renata Hodovan (hodovan@inf.u-szeged.hu)
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,39 +30,50 @@
 #include "RegExpCache.h"
 
 #include "StrongInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
 
-RegExp* RegExpCache::lookupOrCreate(const String& patternString, OptionSet<Yarr::Flags> flags)
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RegExpCache);
+
+RegExp* RegExpCache::lookup(VM&, const WTF::String& patternString, OptionSet<Yarr::Flags> flags)
 {
+    Locker locker { m_lock };
     RegExpKey key(flags, patternString);
-    if (RegExp* regExp = m_weakCache.get(key))
-        return regExp;
-
-    RegExp* regExp = RegExp::createWithoutCaching(*m_vm, patternString, flags);
-#if ENABLE(REGEXP_TRACING)
-    m_vm->addRegExpToTrace(regExp);
-#endif
-
-    weakAdd(m_weakCache, key, Weak<RegExp>(regExp, this));
-    return regExp;
+    return m_weakCache.get(key);
 }
 
-RegExpCache::RegExpCache(VM* vm)
-    : m_nextEntryInStrongCache(0)
-    , m_vm(vm)
+RegExp* RegExpCache::lookupOrCreate(VM& vm, const String& patternString, OptionSet<Yarr::Flags> flags)
 {
+    RegExpKey key(flags, patternString);
+    {
+        Locker locker { m_lock };
+    if (RegExp* regExp = m_weakCache.get(key))
+        return regExp;
+    }
+
+    RegExp* regExp = RegExp::createWithoutCaching(vm, patternString, flags);
+#if ENABLE(REGEXP_TRACING)
+    vm.addRegExpToTrace(regExp);
+#endif
+
+    {
+        Locker locker { m_lock };
+    weakAdd(m_weakCache, key, Weak<RegExp>(regExp, this));
+    return regExp;
+    }
 }
 
 RegExp* RegExpCache::ensureEmptyRegExpSlow(VM& vm)
 {
     RegExp* regExp = RegExp::create(vm, emptyString(), { });
-    m_emptyRegExp.set(vm, regExp);
+    m_emptyRegExp = regExp;
     return regExp;
 }
 
 void RegExpCache::finalize(Handle<Unknown> handle, void*)
 {
+    Locker locker { m_lock };
     RegExp* regExp = static_cast<RegExp*>(handle.get().asCell());
     weakRemove(m_weakCache, regExp->key(), regExp);
 }
@@ -72,7 +83,8 @@ void RegExpCache::addToStrongCache(RegExp* regExp)
     String pattern = regExp->pattern();
     if (pattern.length() > maxStrongCacheablePatternLength)
         return;
-    m_strongCache[m_nextEntryInStrongCache].set(*m_vm, regExp);
+
+    m_strongCache[m_nextEntryInStrongCache] = regExp;
     m_nextEntryInStrongCache++;
     if (m_nextEntryInStrongCache == maxStrongCacheableEntries)
         m_nextEntryInStrongCache = 0;
@@ -80,17 +92,25 @@ void RegExpCache::addToStrongCache(RegExp* regExp)
 
 void RegExpCache::deleteAllCode()
 {
-    for (int i = 0; i < maxStrongCacheableEntries; i++)
-        m_strongCache[i].clear();
+    m_strongCache.fill(nullptr);
     m_nextEntryInStrongCache = 0;
 
-    RegExpCacheMap::iterator end = m_weakCache.end();
-    for (RegExpCacheMap::iterator it = m_weakCache.begin(); it != end; ++it) {
-        RegExp* regExp = it->value.get();
+    Locker locker { m_lock };
+    for (auto& [key, weakHandle] : m_weakCache) {
+        RegExp* regExp = weakHandle.get();
         if (!regExp) // Skip zombies.
             continue;
         regExp->deleteCode();
     }
 }
+
+template<typename Visitor>
+void RegExpCache::visitAggregateImpl(Visitor& visitor)
+{
+    for (auto cell : m_strongCache)
+        visitor.appendUnbarriered(cell);
+    visitor.appendUnbarriered(m_emptyRegExp);
+}
+DEFINE_VISIT_AGGREGATE(RegExpCache);
 
 }

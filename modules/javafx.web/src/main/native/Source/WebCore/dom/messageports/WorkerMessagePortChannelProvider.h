@@ -28,27 +28,34 @@
 #include "MessagePortChannelProvider.h"
 #include <wtf/CompletionHandler.h>
 #include <wtf/HashMap.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class WorkerOrWorkletGlobalScope;
 
-class WorkerMessagePortChannelProvider final : public MessagePortChannelProvider {
-    WTF_MAKE_FAST_ALLOCATED;
+class WorkerMessagePortChannelProvider final : public MessagePortChannelProvider, public RefCounted<WorkerMessagePortChannelProvider> {
+    WTF_MAKE_TZONE_ALLOCATED(WorkerMessagePortChannelProvider);
 public:
-    explicit WorkerMessagePortChannelProvider(WorkerOrWorkletGlobalScope&);
+    static Ref<WorkerMessagePortChannelProvider> create(WorkerOrWorkletGlobalScope&);
     ~WorkerMessagePortChannelProvider();
 
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
 private:
-    void createNewMessagePortChannel(const MessagePortIdentifier& local, const MessagePortIdentifier& remote) final;
+    explicit WorkerMessagePortChannelProvider(WorkerOrWorkletGlobalScope&);
+
+    void createNewMessagePortChannel(const MessagePortIdentifier& local, const MessagePortIdentifier& remote, bool siteIsolationEnabled) final;
     void entangleLocalPortInThisProcessToRemote(const MessagePortIdentifier& local, const MessagePortIdentifier& remote) final;
     void messagePortDisentangled(const MessagePortIdentifier& local) final;
     void messagePortClosed(const MessagePortIdentifier& local) final;
     void postMessageToRemote(MessageWithMessagePorts&&, const MessagePortIdentifier& remoteTarget) final;
     void takeAllMessagesForPort(const MessagePortIdentifier&, CompletionHandler<void(Vector<MessageWithMessagePorts>&&, CompletionHandler<void()>&&)>&&) final;
 
-    WorkerOrWorkletGlobalScope& m_scope;
+    WeakPtr<WorkerOrWorkletGlobalScope> m_scope;
 
     uint64_t m_lastCallbackIdentifier { 0 };
     HashMap<uint64_t, CompletionHandler<void(Vector<MessageWithMessagePorts>&&, Function<void()>&&)>> m_takeAllMessagesCallbacks;

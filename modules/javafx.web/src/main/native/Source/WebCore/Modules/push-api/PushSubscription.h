@@ -25,19 +25,15 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
-#include "EpochTimeStamp.h"
-#include "ExceptionOr.h"
-#include "JSDOMPromiseDeferredForward.h"
-#include "PushEncryptionKeyName.h"
-#include "PushSubscriptionData.h"
-#include "PushSubscriptionJSON.h"
+#include <WebCore/EpochTimeStamp.h>
+#include <WebCore/JSDOMPromiseDeferredForward.h>
+#include <WebCore/PushEncryptionKeyName.h>
+#include <WebCore/PushSubscriptionData.h>
+#include <WebCore/PushSubscriptionJSON.h>
 
 #include <optional>
-#include <variant>
-#include <wtf/IsoMalloc.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 class ArrayBuffer;
@@ -46,12 +42,13 @@ class ArrayBuffer;
 namespace WebCore {
 
 class PushSubscriptionOptions;
+class PushSubscriptionOwner;
 class ScriptExecutionContext;
 class ServiceWorkerContainer;
-class ServiceWorkerRegistration;
+template<typename> class ExceptionOr;
 
 class PushSubscription : public RefCounted<PushSubscription> {
-    WTF_MAKE_ISO_ALLOCATED_EXPORT(PushSubscription, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(PushSubscription, WEBCORE_EXPORT);
 public:
     template<typename... Args> static Ref<PushSubscription> create(Args&&... args) { return adoptRef(*new PushSubscription(std::forward<Args>(args)...)); }
     WEBCORE_EXPORT ~PushSubscription();
@@ -70,13 +67,11 @@ public:
     PushSubscriptionJSON toJSON() const;
 
 private:
-    WEBCORE_EXPORT explicit PushSubscription(PushSubscriptionData&&, RefPtr<ServiceWorkerRegistration>&& = nullptr);
+    WEBCORE_EXPORT explicit PushSubscription(PushSubscriptionData&&, RefPtr<PushSubscriptionOwner>&& = nullptr);
 
     PushSubscriptionData m_data;
-    RefPtr<ServiceWorkerRegistration> m_serviceWorkerRegistration;
+    RefPtr<PushSubscriptionOwner> m_pushSubscriptionOwner;
     mutable RefPtr<PushSubscriptionOptions> m_options;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

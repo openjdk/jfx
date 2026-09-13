@@ -30,6 +30,8 @@
 
 #include "CBORReader.h"
 #include "CBORWriter.h"
+#include "CredentialPropertiesOutput.h"
+#include <wtf/text/Base64.h>
 
 namespace WebCore {
 
@@ -65,7 +67,7 @@ std::optional<AuthenticationExtensionsClientOutputs> AuthenticationExtensionsCli
         largeBlobIt = largeBlobMap.find(cbor::CBORValue("blob"));
         if (largeBlobIt != largeBlobMap.end() && largeBlobIt->second.isByteString()) {
             RefPtr<ArrayBuffer> blob = ArrayBuffer::create(largeBlobIt->second.getByteString());
-            largeBlob.blob = WTFMove(blob);
+            largeBlob.blob = WTF::move(blob);
         }
 
         largeBlobIt = largeBlobMap.find(cbor::CBORValue("written"));
@@ -94,8 +96,8 @@ Vector<uint8_t> AuthenticationExtensionsClientOutputs::toCBOR() const
         if (largeBlob->supported)
             largeBlobMap[cbor::CBORValue("supported")] = cbor::CBORValue(largeBlob->supported.value());
 
-        if (largeBlob->blob)
-            largeBlobMap[cbor::CBORValue("blob")] = cbor::CBORValue(largeBlob->blob->toVector());
+        if (RefPtr blob = largeBlob->blob)
+            largeBlobMap[cbor::CBORValue("blob")] = cbor::CBORValue(blob->toVector());
 
         if (largeBlob->written)
             largeBlobMap[cbor::CBORValue("written")] = cbor::CBORValue(largeBlob->written.value());
@@ -103,10 +105,36 @@ Vector<uint8_t> AuthenticationExtensionsClientOutputs::toCBOR() const
         clientOutputsMap[cbor::CBORValue("largeBlob")] = cbor::CBORValue(largeBlobMap);
     }
 
-    auto clientOutputs = cbor::CBORWriter::write(cbor::CBORValue(WTFMove(clientOutputsMap)));
+    auto clientOutputs = cbor::CBORWriter::write(cbor::CBORValue(WTF::move(clientOutputsMap)));
     ASSERT(clientOutputs);
 
     return *clientOutputs;
+}
+
+AuthenticationExtensionsClientOutputsJSON AuthenticationExtensionsClientOutputs::toJSON() const
+{
+    AuthenticationExtensionsClientOutputsJSON result;
+    result.appid = appid;
+    result.credProps = credProps;
+    RefPtr<ArrayBuffer> blob;
+    if (largeBlob) {
+        blob = largeBlob->blob;
+        result.largeBlob = AuthenticationExtensionsClientOutputsJSON::LargeBlobOutputsJSON {
+            largeBlob->supported,
+            base64URLEncodeToString(blob->span()),
+            largeBlob->written,
+        };
+    }
+    if (prf) {
+        result.prf = AuthenticationExtensionsClientOutputsJSON::PRFOutputsJSON {
+            prf->enabled,
+            AuthenticationExtensionsClientOutputsJSON::PRFValuesJSON {
+                base64URLEncodeToString(blob->span()),
+                base64URLEncodeToString(blob->span()),
+            },
+        };
+    }
+    return result;
 }
 
 } // namespace WebCore

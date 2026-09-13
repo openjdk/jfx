@@ -49,7 +49,7 @@ public:
     T& operator*() const { return m_iterator->get(); }
     T* operator->() const { return m_iterator->ptr(); }
 
-    bool operator==(const Iterator& other) const { return m_iterator == other.m_iterator; }
+    friend bool operator==(const Iterator&, const Iterator&) = default;
 
     Iterator& operator++()
     {
@@ -85,7 +85,7 @@ public:
     const T& operator*() const { return m_iterator->get(); }
     const T* operator->() const { return m_iterator->ptr(); }
 
-    bool operator==(const Iterator& other) const { return m_iterator == other.m_iterator; }
+    friend bool operator==(const Iterator&, const Iterator&) = default;
 
     Iterator& operator++()
     {
@@ -115,31 +115,31 @@ public:
 
     using Base::size;
 
-    iterator begin() { return iterator { Base::begin() }; }
-    iterator end() { return iterator { Base::end() }; }
-    const_iterator begin() const { return const_iterator { Base::begin() }; }
-    const_iterator end() const { return const_iterator { Base::end() }; }
-    reverse_iterator rbegin() { return reverse_iterator(end()); }
-    reverse_iterator rend() { return reverse_iterator(begin()); }
-    const_reverse_iterator rbegin() const { return const_reverse_iterator(end()); }
-    const_reverse_iterator rend() const { return const_reverse_iterator(begin()); }
+    iterator begin() LIFETIME_BOUND { return iterator { Base::begin() }; }
+    iterator end() LIFETIME_BOUND { return iterator { Base::end() }; }
+    const_iterator begin() const LIFETIME_BOUND { return const_iterator { Base::begin() }; }
+    const_iterator end() const LIFETIME_BOUND { return const_iterator { Base::end() }; }
+    reverse_iterator rbegin() LIFETIME_BOUND { return reverse_iterator(end()); }
+    reverse_iterator rend() LIFETIME_BOUND { return reverse_iterator(begin()); }
+    const_reverse_iterator rbegin() const LIFETIME_BOUND { return const_reverse_iterator(end()); }
+    const_reverse_iterator rend() const LIFETIME_BOUND { return const_reverse_iterator(begin()); }
 
     RefVector() = default;
     RefVector(std::initializer_list<WTF::Ref<T>>);
 
-    T& at(size_t i) { return Base::at(i).get(); }
-    const T& at(size_t i) const { return Base::at(i).get(); }
+    T& at(size_t i) LIFETIME_BOUND { return Base::at(i).get(); }
+    const T& at(size_t i) const LIFETIME_BOUND { return Base::at(i).get(); }
 
-    T& operator[](size_t i) { return Base::at(i).get(); }
-    const T& operator[](size_t i) const { return Base::at(i).get(); }
+    T& operator[](size_t i) LIFETIME_BOUND { return Base::at(i).get(); }
+    const T& operator[](size_t i) const LIFETIME_BOUND { return Base::at(i).get(); }
 
-    T& first() { return Base::at(0).get(); }
-    const T& first() const { return Base::at(0).get(); }
-    T& last() { return Base::at(Base::size() - 1).get(); }
-    const T& last() const { return Base::at(Base::size() - 1).get(); }
+    T& first() LIFETIME_BOUND { return Base::at(0).get(); }
+    const T& first() const LIFETIME_BOUND { return Base::at(0).get(); }
+    T& last() LIFETIME_BOUND { return Base::at(Base::size() - 1).get(); }
+    const T& last() const LIFETIME_BOUND { return Base::at(Base::size() - 1).get(); }
 
-    template<typename MatchFunction> size_t findIf(const MatchFunction&) const;
-    template<typename MatchFunction> bool containsIf(const MatchFunction& matches) const { return findIf(matches) != notFound; }
+    template<typename MatchFunction> size_t findIf(NOESCAPE const MatchFunction&) const;
+    template<typename MatchFunction> bool containsIf(NOESCAPE const MatchFunction& matches) const { return findIf(matches) != notFound; }
 };
 
 template<typename T, size_t inlineCapacity>
@@ -150,7 +150,7 @@ inline RefVector<T, inlineCapacity>::RefVector(std::initializer_list<WTF::Ref<T>
 
 template<typename T, size_t inlineCapacity>
 template<typename MatchFunction>
-size_t RefVector<T, inlineCapacity>::findIf(const MatchFunction& matches) const
+size_t RefVector<T, inlineCapacity>::findIf(NOESCAPE const MatchFunction& matches) const
 {
     for (size_t i = 0; i < size(); ++i) {
         if (matches(at(i)))

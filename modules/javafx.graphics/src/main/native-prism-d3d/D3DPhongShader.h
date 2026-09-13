@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -110,7 +110,7 @@ psMtl1_b1mi(), psMtl1_b2mi(), psMtl1_b3mi();
 
 class D3DPhongShader {
 public:
-    D3DPhongShader(IDirect3DDevice9 *dev);
+    D3DPhongShader(IDirect3DDevice9Ex *dev);
     virtual ~D3DPhongShader();
     IDirect3DVertexShader9 *getVertexShader();
     int getBumpMode(bool isBumpMap);
@@ -121,7 +121,7 @@ static const int SelfIlllumTotal = 2;
 static const int maxLights = 3;
 
 private:
-    IDirect3DDevice9 *device;
+    IDirect3DDevice9Ex *device;
     IDirect3DVertexShader9 *vertexShader;
     IDirect3DPixelShader9 *pixelShader0, *pixelShader0_si;
     IDirect3DPixelShader9 *pixelShaders[SelfIlllumTotal][BumpTotal][SpecTotal][maxLights];

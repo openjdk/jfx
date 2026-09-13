@@ -21,34 +21,82 @@
 #import "config.h"
 #import <wtf/text/TextStream.h>
 
+#import <objc/runtime.h>
 #import <wtf/text/cf/StringConcatenateCF.h>
 
 namespace WTF {
 
 TextStream& TextStream::operator<<(id object)
 {
-    if ([object isKindOfClass:[NSArray class]])
-        return *this << static_cast<NSArray *>(object);
+    if (object_isClass(object)) {
+        m_text.append(NSStringFromClass(object));
+        return *this;
+    }
+
+    auto outputArray = [&](NSArray *array) {
+        *this << '[';
+
+        for (NSUInteger i = 0; i < array.count; ++i) {
+            id item = array[i];
+            *this << item;
+            if (i < array.count - 1)
+                *this << ", "_s;
+        }
+
+        *this << ']';
+    };
+
+    if ([object isKindOfClass:[NSArray class]]) {
+        outputArray(object);
+        return *this;
+    }
+
+    auto outputDictionary = [&](NSDictionary *dictionary) {
+        *this << '{';
+        bool needLeadingComma = false;
+
+        [dictionary enumerateKeysAndObjectsUsingBlock:[&](id key, id value, BOOL *) {
+            if (needLeadingComma)
+                *this << ", "_s;
+            needLeadingComma = true;
+
+            *this << key;
+            *this << ": "_s;
+            *this << value;
+        }];
+
+        *this << '}';
+    };
+
+    if ([object isKindOfClass:[NSDictionary class]]) {
+        outputDictionary(object);
+        return *this;
+    }
 
     if ([object conformsToProtocol:@protocol(NSObject)])
         m_text.append([object description]);
     else
-        m_text.append("(id)");
+        *this << "(id)"_s;
+
     return *this;
 }
 
-TextStream& TextStream::operator<<(NSArray *array)
+TextStream& operator<<(TextStream& ts, CGRect rect)
 {
-    *this << "[";
-
-    for (NSUInteger i = 0; i < array.count; ++i) {
-        id item = array[i];
-        *this << item;
-        if (i < array.count - 1)
-            *this << ", ";
-    }
-
-    return *this << "]";
+    ts << "{{"_s << rect.origin.x << ", "_s << rect.origin.y << "}, {"_s << rect.size.width << ", "_s << rect.size.height << "}}"_s;
+    return ts;
 }
 
+TextStream& operator<<(TextStream& ts, CGSize size)
+{
+    ts << '{' << size.width << ", "_s << size.height << '}';
+    return ts;
 }
+
+TextStream& operator<<(TextStream& ts, CGPoint point)
+{
+    ts << '{' << point.x << ", "_s << point.y << '}';
+    return ts;
+}
+
+} // namespace WTF

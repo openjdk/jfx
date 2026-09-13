@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Google, Inc. All Rights Reserved.
+ * Copyright (C) 2010 Google, Inc. All rights reserved.
  * Copyright (C) 2011 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,6 +30,7 @@
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/Ref.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -40,18 +41,21 @@ class QualifiedName;
 // NOTE: The HTML5 spec uses a backwards (grows downward) stack.  We're using
 // more standard (grows upwards) stack terminology here.
 class HTMLElementStack {
-    WTF_MAKE_NONCOPYABLE(HTMLElementStack); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(HTMLElementStack);
+    WTF_MAKE_NONCOPYABLE(HTMLElementStack);
 public:
     HTMLElementStack() = default;
     ~HTMLElementStack();
 
     class ElementRecord {
-        WTF_MAKE_NONCOPYABLE(ElementRecord); WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_TZONE_ALLOCATED(ElementRecord);
+        WTF_MAKE_NONCOPYABLE(ElementRecord);
     public:
         ElementRecord(HTMLStackItem&&, std::unique_ptr<ElementRecord>);
         ~ElementRecord();
 
         Element& element() const { return m_item.element(); }
+        Ref<Element> protectedElement() const { return m_item.element(); }
         ContainerNode& node() const { return m_item.node(); }
         ElementName elementName() const { return m_item.elementName(); }
         HTMLStackItem& stackItem() { return m_item; }
@@ -66,8 +70,8 @@ public:
     private:
         friend class HTMLElementStack;
 
-        std::unique_ptr<ElementRecord> releaseNext() { return WTFMove(m_next); }
-        void setNext(std::unique_ptr<ElementRecord> next) { m_next = WTFMove(next); }
+        std::unique_ptr<ElementRecord> releaseNext() { return WTF::move(m_next); }
+        void setNext(std::unique_ptr<ElementRecord> next) { m_next = WTF::move(next); }
 
         HTMLStackItem m_item;
         std::unique_ptr<ElementRecord> m_next;
@@ -87,6 +91,8 @@ public:
     ElementRecord* find(Element&) const;
     ElementRecord* furthestBlockForFormattingElement(Element&) const;
     ElementRecord* topmost(ElementName) const;
+
+    bool containsTemplateElement() const { return m_templateElementCount; }
 
     void insertAbove(HTMLStackItem&&, ElementRecord&);
 
@@ -122,6 +128,7 @@ public:
     bool inScope(ElementName) const;
     bool inListItemScope(ElementName) const;
     bool inTableScope(ElementName) const;
+    bool hasAnyInTableScope(std::initializer_list<ElementName> targetElements) const;
     bool inButtonScope(ElementName) const;
     bool inSelectScope(ElementName) const;
 
@@ -153,10 +160,11 @@ private:
     // FIXME: We don't currently require type-specific information about
     // these elements so we haven't yet bothered to plumb the types all the
     // way down through createElement, etc.
-    ContainerNode* m_rootNode { nullptr };
-    Element* m_headElement { nullptr };
-    Element* m_bodyElement { nullptr };
+    CheckedPtr<ContainerNode> m_rootNode;
+    CheckedPtr<Element> m_headElement;
+    CheckedPtr<Element> m_bodyElement;
     unsigned m_stackDepth { 0 };
+    unsigned m_templateElementCount { 0 };
 };
 
 } // namespace WebCore

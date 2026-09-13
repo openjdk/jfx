@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,18 +23,16 @@
  * questions.
  */
 
-import javafx.collections.FXCollections;
+import javafx.application.Application;
 import javafx.collections.ObservableSet;
 import javafx.collections.SetChangeListener;
-
-import javafx.application.Application;
-import javafx.print.PrinterJob;
 import javafx.print.Printer;
+import javafx.print.PrinterJob;
 import javafx.scene.Scene;
-import javafx.stage.Stage;
 import javafx.scene.control.Button;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
+import javafx.stage.Stage;
 
 public class PrinterListenerTest extends Application {
 
@@ -46,10 +44,12 @@ public class PrinterListenerTest extends Application {
     Printer defaultPrinter;
     Stage window;
 
+    @Override
     public void start(Stage stage) {
         window = stage;
         printPrinters();
         printers.addListener(new SetChangeListener<Printer>() {
+           @Override
            public void onChanged(SetChangeListener.Change<? extends Printer> change) {
                printChanged(change);
            }

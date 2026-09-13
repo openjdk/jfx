@@ -36,7 +36,7 @@ void CurlSSLHandle::platformInitialize()
     auto certificateData = CertificateData::create();
     CertificateStore::getTrustedRootCA(*certificateData);
     CertificateInfo::Certificate caCertData;
-    caCertData.append(certificateData->data(), certificateData->size());
+    caCertData.append(std::span { certificateData->data(), certificateData->size() });
     if (certificateData->size())
         setCACertData(WTFMove(caCertData));
     setCipherList(CertificateStore::cipherSuites());

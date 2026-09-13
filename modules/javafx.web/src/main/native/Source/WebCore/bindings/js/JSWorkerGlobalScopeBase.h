@@ -28,14 +28,9 @@
 
 #include "JSDOMGlobalObject.h"
 #include "JSDOMWrapper.h"
-
-#if ENABLE(SERVICE_WORKER)
 #include "ServiceWorkerGlobalScope.h"
-#endif
 
 namespace WebCore {
-
-class WorkerGlobalScope;
 
 class JSWorkerGlobalScopeBase : public JSDOMGlobalObject {
 public:
@@ -47,6 +42,8 @@ public:
     static void destroy(JSC::JSCell*);
 
     DECLARE_INFO;
+
+    DECLARE_VISIT_CHILDREN;
 
     WorkerGlobalScope& wrapped() const { return *m_wrapped; }
     ScriptExecutionContext* scriptExecutionContext() const;
@@ -61,18 +58,16 @@ public:
     static bool shouldInterruptScriptBeforeTimeout(const JSC::JSGlobalObject*);
     static JSC::RuntimeFlags javaScriptRuntimeFlags(const JSC::JSGlobalObject*);
     static JSC::ScriptExecutionStatus scriptExecutionStatus(JSC::JSGlobalObject*, JSC::JSObject*);
-    static void queueMicrotaskToEventLoop(JSC::JSGlobalObject&, Ref<JSC::Microtask>&&);
-    static void reportViolationForUnsafeEval(JSC::JSGlobalObject*, JSC::JSString*);
+    static void queueMicrotaskToEventLoop(JSC::JSGlobalObject&, JSC::QueuedTask&&);
+    static void reportViolationForUnsafeEval(JSC::JSGlobalObject*, const String&);
 
 protected:
     JSWorkerGlobalScopeBase(JSC::VM&, JSC::Structure*, RefPtr<WorkerGlobalScope>&&);
     void finishCreation(JSC::VM&, JSC::JSGlobalProxy*);
 
-    DECLARE_VISIT_CHILDREN;
-
-private:
     static const JSC::GlobalObjectMethodTable* globalObjectMethodTable();
 
+private:
     RefPtr<WorkerGlobalScope> m_wrapped;
 };
 

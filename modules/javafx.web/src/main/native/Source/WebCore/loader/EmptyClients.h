@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2006 Eric Seidel (eric@webkit.org)
- * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies).
  * Copyright (C) 2012 Samsung Electronics. All rights reserved.
  *
@@ -28,7 +28,14 @@
 
 #pragma once
 
-#include "ChromeClient.h"
+#include <WebCore/ChromeClient.h>
+#include <WebCore/CryptoClient.h>
+#include <WebCore/ExceptionOr.h>
+#include <WebCore/FocusOptions.h>
+#include <WebCore/PageIdentifier.h>
+#include <wtf/CompletionHandler.h>
+#include <wtf/Platform.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 
 // Empty client classes for use by WebCore.
@@ -36,15 +43,21 @@
 // First created for SVGImage as it had no way to access the current Page (nor should it, since Images are not tied to a page).
 // See http://bugs.webkit.org/show_bug.cgi?id=5971 for the original discussion about this file.
 
+namespace PAL {
+class SessionID;
+}
+
 namespace WebCore {
 
 class DiagnosticLoggingClient;
 class EditorClient;
 class HTMLImageElement;
 class PageConfiguration;
+enum class BroadcastFocusedElement : bool;
+struct FocusOptions;
 
 class EmptyChromeClient : public ChromeClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(EmptyChromeClient);
 
     void chromeDestroyed() override { }
 
@@ -59,10 +72,10 @@ class EmptyChromeClient : public ChromeClient {
     bool canTakeFocus(FocusDirection) const final { return false; }
     void takeFocus(FocusDirection) final { }
 
-    void focusedElementChanged(Element*) final { }
-    void focusedFrameChanged(LocalFrame*) final { }
+    void focusedElementChanged(Element*, LocalFrame*, FocusOptions, BroadcastFocusedElement) final { }
+    void focusedFrameChanged(Frame*) final { }
 
-    Page* createWindow(LocalFrame&, const WindowFeatures&, const NavigationAction&) final { return nullptr; }
+    RefPtr<Page> createWindow(LocalFrame&, const String&, const WindowFeatures&, const NavigationAction&) final { return nullptr; }
     void show() final { }
 
     bool canRunModal() const final { return false; }
@@ -82,13 +95,15 @@ class EmptyChromeClient : public ChromeClient {
 
     void setResizable(bool) final { }
 
-    void addMessageToConsole(MessageSource, MessageLevel, const String&, unsigned, unsigned, const String&) final { }
-    void addMessageWithArgumentsToConsole(MessageSource, MessageLevel, const String&, std::span<const String>, unsigned, unsigned, const String&) final { }
+    void addMessageToConsole(JSC::MessageSource, JSC::MessageLevel, const String&, unsigned, unsigned, const String&) final { }
 
     bool canRunBeforeUnloadConfirmPanel() final { return false; }
-    bool runBeforeUnloadConfirmPanel(const String&, LocalFrame&) final { return true; }
+    bool runBeforeUnloadConfirmPanel(String&&, LocalFrame&) final { return true; }
 
     void closeWindow() final { }
+
+    void rootFrameAdded(const LocalFrame&) final { }
+    void rootFrameRemoved(const LocalFrame&) final { }
 
     void runJavaScriptAlert(LocalFrame&, const String&) final { }
     bool runJavaScriptConfirm(LocalFrame&, const String&) final { return false; }
@@ -98,11 +113,12 @@ class EmptyChromeClient : public ChromeClient {
     bool selectItemAlignmentFollowsMenuWritingDirection() final { return false; }
     RefPtr<PopupMenu> createPopupMenu(PopupMenuClient&) const final;
     RefPtr<SearchPopupMenu> createSearchPopupMenu(PopupMenuClient&) const final;
-
+#if PLATFORM(JAVA)
     void setStatusbarText(const String&) final { }
-
+#endif
     KeyboardUIMode keyboardUIMode() final { return KeyboardAccessDefault; }
 
+    bool hasAccessoryMousePointingDevice() const final { return false; }
     bool hoverSupportedByPrimaryPointingDevice() const final { return false; };
     bool hoverSupportedByAnyAvailablePointingDevice() const final { return false; }
     std::optional<PointerCharacteristics> pointerCharacteristicsOfPrimaryPointingDevice() const final { return std::nullopt; };
@@ -114,9 +130,15 @@ class EmptyChromeClient : public ChromeClient {
     void scroll(const IntSize&, const IntRect&, const IntRect&) final { }
 
     IntPoint screenToRootView(const IntPoint& p) const final { return p; }
+    IntPoint rootViewToScreen(const IntPoint& p) const final { return p; }
     IntRect rootViewToScreen(const IntRect& r) const final { return r; }
     IntPoint accessibilityScreenToRootView(const IntPoint& p) const final { return p; };
     IntRect rootViewToAccessibilityScreen(const IntRect& r) const final { return r; };
+#if PLATFORM(IOS_FAMILY)
+    void relayAccessibilityNotification(String&&, RetainPtr<NSData>&&) const final { };
+    void relayAriaNotifyNotification(AriaNotifyData&&) const final { };
+    void relayLiveRegionNotification(LiveRegionAnnouncementData&&) const final { };
+#endif
 
     void didFinishLoadingImageForElement(HTMLImageElement&) final { }
 
@@ -131,31 +153,21 @@ class EmptyChromeClient : public ChromeClient {
     void exceededDatabaseQuota(LocalFrame&, const String&, DatabaseDetails) final { }
 
     void reachedMaxAppCacheSize(int64_t) final { }
-    void reachedApplicationCacheOriginQuota(SecurityOrigin&, int64_t) final { }
 
-#if ENABLE(INPUT_TYPE_COLOR)
-    std::unique_ptr<ColorChooser> createColorChooser(ColorChooserClient&, const Color&) final;
-#endif
+    RefPtr<ColorChooser> createColorChooser(ColorChooserClient&, const Color&) final;
 
-#if ENABLE(DATALIST_ELEMENT)
-    std::unique_ptr<DataListSuggestionPicker> createDataListSuggestionPicker(DataListSuggestionsClient&) final;
+    RefPtr<DataListSuggestionPicker> createDataListSuggestionPicker(DataListSuggestionsClient&) final;
     bool canShowDataListSuggestionLabels() const final { return false; }
-#endif
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-    std::unique_ptr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&) final;
-#endif
+    RefPtr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&) final;
 
-#if ENABLE(APP_HIGHLIGHTS)
-    void storeAppHighlight(AppHighlight&&) const final;
-#endif
-
-    void setTextIndicator(const TextIndicatorData&) const final;
+    void setTextIndicator(RefPtr<TextIndicator>&&) const final;
+    void updateTextIndicator(RefPtr<TextIndicator>&&) const final;
 
     DisplayRefreshMonitorFactory* displayRefreshMonitorFactory() const final;
 
     void runOpenPanel(LocalFrame&, FileChooser&) final;
-    void showShareSheet(ShareDataWithParsedURL&, CompletionHandler<void(bool)>&&) final;
+    void showShareSheet(ShareDataWithParsedURL&&, CompletionHandler<void(bool)>&&) final;
     void loadIconForFiles(const Vector<String>&, FileIconLoader&) final { }
 
     void elementDidFocus(Element&, const FocusOptions&) final { }
@@ -173,9 +185,14 @@ class EmptyChromeClient : public ChromeClient {
     void triggerRenderingUpdate() final { }
 
 #if PLATFORM(WIN)
-    void setLastSetCursorToCurrentCursor() final { }
     void AXStartFrameLoad() final { }
     void AXFinishFrameLoad() final { }
+#endif
+
+#if PLATFORM(PLAYSTATION) || PLATFORM(HAIKU)
+    void postAccessibilityNotification(AccessibilityObject&, AXNotification) final { }
+    void postAccessibilityNodeTextChangeNotification(AccessibilityObject*, AXTextChange, unsigned, const String&) final { }
+    void postAccessibilityFrameLoadingEventNotification(AccessibilityObject*, AXLoadingEvent) final { }
 #endif
 
 #if ENABLE(IOS_TOUCH_EVENTS)
@@ -219,15 +236,19 @@ class EmptyChromeClient : public ChromeClient {
 
     bool isEmptyChromeClient() const final { return true; }
 
-    void didAssociateFormControls(const Vector<RefPtr<Element>>&, LocalFrame&) final { }
+    void didAssociateFormControls(const Vector<Ref<Element>>&, LocalFrame&) final { }
     bool shouldNotifyOnFormChanges() final { return false; }
 
-    RefPtr<Icon> createIconForFiles(const Vector<String>& /* filenames */) final { return nullptr; }
+    RefPtr<Icon> createIconForFiles(const Vector<String>& /* filenames */) final;
 
     void requestCookieConsent(CompletionHandler<void(CookieConsentDecisionResult)>&&) final;
 };
 
 DiagnosticLoggingClient& emptyDiagnosticLoggingClient();
 WEBCORE_EXPORT PageConfiguration pageConfigurationWithEmptyClients(std::optional<PageIdentifier>, PAL::SessionID);
+
+class EmptyCryptoClient: public CryptoClient {
+    WTF_MAKE_TZONE_ALLOCATED(EmptyCryptoClient);
+};
 
 }

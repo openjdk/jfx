@@ -25,13 +25,13 @@
 
 #pragma once
 
-#include "IDBActiveDOMObject.h"
-#include "IDBDatabaseNameAndVersion.h"
-#include "IDBResourceIdentifier.h"
+#include <WebCore/IDBActiveDOMObject.h>
+#include <WebCore/IDBDatabaseNameAndVersion.h>
+#include <WebCore/IDBResourceIdentifier.h>
 #include <wtf/Forward.h>
 #include <wtf/Function.h>
-#include <wtf/IsoMalloc.h>
 #include <wtf/Ref.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
@@ -42,8 +42,8 @@ namespace IDBClient {
 class IDBConnectionProxy;
 }
 
-class WEBCORE_EXPORT IDBDatabaseNameAndVersionRequest final : public ThreadSafeRefCounted<IDBDatabaseNameAndVersionRequest>, public IDBActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(IDBDatabaseNameAndVersionRequest);
+class IDBDatabaseNameAndVersionRequest final : public ThreadSafeRefCounted<IDBDatabaseNameAndVersionRequest>, public IDBActiveDOMObject {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(IDBDatabaseNameAndVersionRequest, WEBCORE_EXPORT);
 public:
     using InfoCallback = Function<void(std::optional<Vector<IDBDatabaseNameAndVersion>>&&)>;
 
@@ -53,8 +53,9 @@ public:
 
     const IDBResourceIdentifier& resourceIdentifier() const;
 
-    using ThreadSafeRefCounted<IDBDatabaseNameAndVersionRequest>::ref;
-    using ThreadSafeRefCounted<IDBDatabaseNameAndVersionRequest>::deref;
+    // ActiveDOMObject.
+    void ref() const final { ThreadSafeRefCounted::ref(); }
+    void deref() const final { ThreadSafeRefCounted::deref(); }
 
     void complete(std::optional<Vector<IDBDatabaseNameAndVersion>>&&);
 
@@ -63,10 +64,9 @@ private:
 
     // ActiveDOMObject.
     bool virtualHasPendingActivity() const final;
-    const char* activeDOMObjectName() const final;
     void stop() final;
 
-    Ref<IDBClient::IDBConnectionProxy> m_connectionProxy;
+    const Ref<IDBClient::IDBConnectionProxy> m_connectionProxy;
     IDBResourceIdentifier m_resourceIdentifier;
     InfoCallback m_callback;
 };

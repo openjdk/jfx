@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2021 Apple Inc.  All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,7 @@ namespace WebCore {
 
 template<typename PropertyType, typename AnimationFunction>
 class SVGPrimitivePropertyAnimator : public SVGPropertyAnimator<AnimationFunction> {
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(SVGPrimitivePropertyAnimator);
     using Base = SVGPropertyAnimator<AnimationFunction>;
     using ValuePropertyType = SVGValueProperty<PropertyType>;
     using Base::Base;
@@ -44,20 +45,20 @@ class SVGPrimitivePropertyAnimator : public SVGPropertyAnimator<AnimationFunctio
 public:
     static auto create(const QualifiedName& attributeName, Ref<SVGProperty>&& property, AnimationMode animationMode, CalcMode calcMode, bool isAccumulated, bool isAdditive)
     {
-        return adoptRef(*new SVGPrimitivePropertyAnimator(attributeName, WTFMove(property), animationMode, calcMode, isAccumulated, isAdditive));
+        return adoptRef(*new SVGPrimitivePropertyAnimator(attributeName, WTF::move(property), animationMode, calcMode, isAccumulated, isAdditive));
     }
 
     template<typename... Arguments>
     SVGPrimitivePropertyAnimator(const QualifiedName& attributeName, Ref<SVGProperty>&& property, Arguments&&... arguments)
         : Base(attributeName, std::forward<Arguments>(arguments)...)
-        , m_property(static_reference_cast<ValuePropertyType>(WTFMove(property)))
+        , m_property(unsafeRefDowncast<ValuePropertyType>(WTF::move(property)))
     {
     }
 
     void start(SVGElement& targetElement) override
     {
         String baseValue = computeCSSPropertyValue(targetElement, cssPropertyID(m_attributeName.localName()));
-        m_property->setValue(SVGPropertyTraits<PropertyType>::fromString(baseValue));
+        m_property->setValue(SVGPropertyTraits<PropertyType>::fromString(targetElement, baseValue));
     }
 
     void animate(SVGElement& targetElement, float progress, unsigned repeatCount) override
@@ -72,7 +73,15 @@ public:
     }
 
 protected:
-    Ref<ValuePropertyType> m_property;
+    const Ref<ValuePropertyType> m_property;
 };
+
+#define TZONE_TEMPLATE_PARAMS template<typename PropertyType, typename AnimationFunction>
+#define TZONE_TYPE SVGPrimitivePropertyAnimator<PropertyType, AnimationFunction>
+
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL_WITH_MULTIPLE_OR_SPECIALIZED_PARAMETERS();
+
+#undef TZONE_TEMPLATE_PARAMS
+#undef TZONE_TYPE
 
 } // namespace WebCore

@@ -31,6 +31,7 @@
 #include "CryptoAlgorithmRegistry.h"
 #include "CryptoKeyPair.h"
 #include "CryptoKeyRSAComponents.h"
+#include "ExceptionOr.h"
 #include "GCryptUtilities.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/GenericTypedArrayViewInlines.h>
@@ -56,7 +57,7 @@ static size_t getRSAModulusLength(gcry_sexp_t keySexp)
     return *length * 8;
 }
 
-static Vector<uint8_t> getRSAKeyParameter(gcry_sexp_t keySexp, const char* name)
+static Vector<uint8_t> getRSAKeyParameter(gcry_sexp_t keySexp, ASCIILiteral name)
 {
     // Retrieve the s-expression token for the specified parameter of the given RSA key.
     PAL::GCrypt::Handle<gcry_sexp_t> paramSexp(gcry_sexp_find_token(keySexp, name, 0));
@@ -68,7 +69,7 @@ static Vector<uint8_t> getRSAKeyParameter(gcry_sexp_t keySexp, const char* name)
     if (!data)
         return { };
 
-    return WTFMove(data.value());
+    return WTF::move(data.value());
 }
 
 RefPtr<CryptoKeyRSA> CryptoKeyRSA::create(CryptoAlgorithmIdentifier identifier, CryptoAlgorithmIdentifier hash, bool hasHash, const CryptoKeyRSAComponents& keyData, bool extractable, CryptoKeyUsageBitmap usages)
@@ -114,24 +115,24 @@ RefPtr<CryptoKeyRSA> CryptoKeyRSA::create(CryptoAlgorithmIdentifier identifier, 
         switch (keyType) {
         case CryptoKeyType::Public:
             error = gcry_sexp_build(&keySexp, nullptr, "(public-key(rsa(n %b)(e %b)))",
-                keyData.modulus().size(), keyData.modulus().data(),
-                keyData.exponent().size(), keyData.exponent().data());
+                keyData.modulus().size(), keyData.modulus().span().data(),
+                keyData.exponent().size(), keyData.exponent().span().data());
             break;
         case CryptoKeyType::Private:
             if (keyData.hasAdditionalPrivateKeyParameters()) {
                 error = gcry_sexp_build(&keySexp, nullptr, "(private-key(rsa(n %b)(e %b)(d %b)(p %b)(q %b)))",
-                    keyData.modulus().size(), keyData.modulus().data(),
-                    keyData.exponent().size(), keyData.exponent().data(),
-                    keyData.privateExponent().size(), keyData.privateExponent().data(),
-                    keyData.secondPrimeInfo().primeFactor.size(), keyData.secondPrimeInfo().primeFactor.data(),
-                    keyData.firstPrimeInfo().primeFactor.size(), keyData.firstPrimeInfo().primeFactor.data());
+                    keyData.modulus().size(), keyData.modulus().span().data(),
+                    keyData.exponent().size(), keyData.exponent().span().data(),
+                    keyData.privateExponent().size(), keyData.privateExponent().span().data(),
+                    keyData.secondPrimeInfo().primeFactor.size(), keyData.secondPrimeInfo().primeFactor.span().data(),
+                    keyData.firstPrimeInfo().primeFactor.size(), keyData.firstPrimeInfo().primeFactor.span().data());
                 break;
             }
 
             error = gcry_sexp_build(&keySexp, nullptr, "(private-key(rsa(n %b)(e %b)(d %b)))",
-                keyData.modulus().size(), keyData.modulus().data(),
-                keyData.exponent().size(), keyData.exponent().data(),
-                keyData.privateExponent().size(), keyData.privateExponent().data());
+                keyData.modulus().size(), keyData.modulus().span().data(),
+                keyData.exponent().size(), keyData.exponent().span().data(),
+                keyData.privateExponent().size(), keyData.privateExponent().span().data());
             break;
         case CryptoKeyType::Secret:
             ASSERT_NOT_REACHED();
@@ -149,7 +150,7 @@ RefPtr<CryptoKeyRSA> CryptoKeyRSA::create(CryptoAlgorithmIdentifier identifier, 
 
 CryptoKeyRSA::CryptoKeyRSA(CryptoAlgorithmIdentifier identifier, CryptoAlgorithmIdentifier hash, bool hasHash, CryptoKeyType type, PlatformRSAKeyContainer&& platformKey, bool extractable, CryptoKeyUsageBitmap usage)
     : CryptoKey(identifier, type, extractable, usage)
-    , m_platformKey(WTFMove(platformKey))
+    , m_platformKey(WTF::move(platformKey))
     , m_restrictedToSpecificHash(hasHash)
     , m_hash(hash)
 {
@@ -173,8 +174,10 @@ size_t CryptoKeyRSA::keySizeInBits() const
 static std::optional<uint32_t> exponentVectorToUInt32(const Vector<uint8_t>& exponent)
 {
     if (exponent.size() > 4) {
-        if (std::any_of(exponent.begin(), exponent.end() - 4, [](uint8_t element) { return !!element; }))
+        for (auto element : exponent.subspan(0, exponent.size() - 4)) {
+            if (!!element)
             return std::nullopt;
+    }
     }
 
     uint32_t result = 0;
@@ -225,11 +228,11 @@ void CryptoKeyRSA::generatePair(CryptoAlgorithmIdentifier algorithm, CryptoAlgor
     }
 
     context->postTask(
-        [algorithm, hash, hasHash, extractable, usage, publicKeySexp = PlatformRSAKeyContainer(publicKeySexp.release()), privateKeySexp = PlatformRSAKeyContainer(privateKeySexp.release()), callback = WTFMove(callback)](auto&) mutable {
-            auto publicKey = CryptoKeyRSA::create(algorithm, hash, hasHash, CryptoKeyType::Public, WTFMove(publicKeySexp), true, usage);
-            auto privateKey = CryptoKeyRSA::create(algorithm, hash, hasHash, CryptoKeyType::Private, WTFMove(privateKeySexp), extractable, usage);
+        [algorithm, hash, hasHash, extractable, usage, publicKeySexp = PlatformRSAKeyContainer(publicKeySexp.release()), privateKeySexp = PlatformRSAKeyContainer(privateKeySexp.release()), callback = WTF::move(callback)](auto&) mutable {
+            auto publicKey = CryptoKeyRSA::create(algorithm, hash, hasHash, CryptoKeyType::Public, WTF::move(publicKeySexp), true, usage);
+            auto privateKey = CryptoKeyRSA::create(algorithm, hash, hasHash, CryptoKeyType::Private, WTF::move(privateKeySexp), extractable, usage);
 
-            callback(CryptoKeyPair { WTFMove(publicKey), WTFMove(privateKey) });
+            callback(CryptoKeyPair { WTF::move(publicKey), WTF::move(privateKey) });
         });
 }
 
@@ -275,7 +278,7 @@ RefPtr<CryptoKeyRSA> CryptoKeyRSA::importSpki(CryptoAlgorithmIdentifier identifi
         if (!algorithm)
             return nullptr;
 
-        if (!supportedAlgorithmIdentifier(algorithm->data(), algorithm->size()))
+        if (!supportedAlgorithmIdentifier(algorithm->span().data(), algorithm->size()))
             return nullptr;
     }
 
@@ -299,7 +302,7 @@ RefPtr<CryptoKeyRSA> CryptoKeyRSA::importSpki(CryptoAlgorithmIdentifier identifi
             return nullptr;
 
         gcry_error_t error = gcry_sexp_build(&platformKey, nullptr, "(public-key(rsa(n %b)(e %b)))",
-            modulus->size(), modulus->data(), publicExponent->size(), publicExponent->data());
+            modulus->size(), modulus->span().data(), publicExponent->size(), publicExponent->span().data());
         if (error != GPG_ERR_NO_ERROR) {
             PAL::GCrypt::logError(error);
             return nullptr;
@@ -322,7 +325,7 @@ RefPtr<CryptoKeyRSA> CryptoKeyRSA::importPkcs8(CryptoAlgorithmIdentifier identif
         if (!version)
             return nullptr;
 
-        if (!CryptoConstants::matches(version->data(), version->size(), CryptoConstants::s_asn1Version0))
+        if (!CryptoConstants::matches(version->span().data(), version->size(), CryptoConstants::s_asn1Version0))
             return nullptr;
     }
 
@@ -332,7 +335,7 @@ RefPtr<CryptoKeyRSA> CryptoKeyRSA::importPkcs8(CryptoAlgorithmIdentifier identif
         if (!algorithm)
             return nullptr;
 
-        if (!supportedAlgorithmIdentifier(algorithm->data(), algorithm->size()))
+        if (!supportedAlgorithmIdentifier(algorithm->span().data(), algorithm->size()))
             return nullptr;
     }
 
@@ -353,7 +356,7 @@ RefPtr<CryptoKeyRSA> CryptoKeyRSA::importPkcs8(CryptoAlgorithmIdentifier identif
         if (!version)
             return nullptr;
 
-        if (!CryptoConstants::matches(version->data(), version->size(), CryptoConstants::s_asn1Version0))
+        if (!CryptoConstants::matches(version->span().data(), version->size(), CryptoConstants::s_asn1Version0))
             return nullptr;
     }
 
@@ -378,12 +381,12 @@ RefPtr<CryptoKeyRSA> CryptoKeyRSA::importPkcs8(CryptoAlgorithmIdentifier identif
         PAL::GCrypt::Handle<gcry_mpi_t> uMPI(gcry_mpi_new(0));
         {
             PAL::GCrypt::Handle<gcry_mpi_t> pMPI;
-            gcry_error_t error = gcry_mpi_scan(&pMPI, GCRYMPI_FMT_USG, prime1->data(), prime1->size(), nullptr);
+            gcry_error_t error = gcry_mpi_scan(&pMPI, GCRYMPI_FMT_USG, prime1->span().data(), prime1->size(), nullptr);
             if (error != GPG_ERR_NO_ERROR)
                 return nullptr;
 
             PAL::GCrypt::Handle<gcry_mpi_t> qMPI;
-            error = gcry_mpi_scan(&qMPI, GCRYMPI_FMT_USG, prime2->data(), prime2->size(), nullptr);
+            error = gcry_mpi_scan(&qMPI, GCRYMPI_FMT_USG, prime2->span().data(), prime2->size(), nullptr);
             if (error != GPG_ERR_NO_ERROR)
                 return nullptr;
 
@@ -391,10 +394,10 @@ RefPtr<CryptoKeyRSA> CryptoKeyRSA::importPkcs8(CryptoAlgorithmIdentifier identif
         }
 
         gcry_error_t error = gcry_sexp_build(&platformKey, nullptr, "(private-key(rsa(n %b)(e %b)(d %b)(p %b)(q %b)(u %M)))",
-            modulus->size(), modulus->data(),
-            publicExponent->size(), publicExponent->data(),
-            privateExponent->size(), privateExponent->data(),
-            prime2->size(), prime2->data(), prime1->size(), prime1->data(), uMPI.handle());
+            modulus->size(), modulus->span().data(),
+            publicExponent->size(), publicExponent->span().data(),
+            privateExponent->size(), privateExponent->span().data(),
+            prime2->size(), prime2->span().data(), prime1->size(), prime1->span().data(), uMPI.handle());
         if (error != GPG_ERR_NO_ERROR) {
             PAL::GCrypt::logError(error);
             return nullptr;
@@ -407,40 +410,40 @@ RefPtr<CryptoKeyRSA> CryptoKeyRSA::importPkcs8(CryptoAlgorithmIdentifier identif
 ExceptionOr<Vector<uint8_t>> CryptoKeyRSA::exportSpki() const
 {
     if (type() != CryptoKeyType::Public)
-        return Exception { InvalidAccessError };
+        return Exception { ExceptionCode::InvalidAccessError };
 
     PAL::TASN1::Structure rsaPublicKey;
     {
         // Create the `RSAPublicKey` structure.
         if (!PAL::TASN1::createStructure("WebCrypto.RSAPublicKey", &rsaPublicKey))
-            return Exception { OperationError };
+            return Exception { ExceptionCode::OperationError };
 
         // Retrieve the modulus and public exponent s-expressions.
         PAL::GCrypt::Handle<gcry_sexp_t> modulusSexp(gcry_sexp_find_token(m_platformKey.get(), "n", 0));
         PAL::GCrypt::Handle<gcry_sexp_t> publicExponentSexp(gcry_sexp_find_token(m_platformKey.get(), "e", 0));
         if (!modulusSexp || !publicExponentSexp)
-            return Exception { OperationError };
+            return Exception { ExceptionCode::OperationError };
 
         // Retrieve MPI data for the modulus and public exponent components.
         auto modulus = mpiSignedData(modulusSexp);
         auto publicExponent = mpiSignedData(publicExponentSexp);
         if (!modulus || !publicExponent)
-            return Exception { OperationError };
+            return Exception { ExceptionCode::OperationError };
 
         // Write out the modulus data under `modulus`.
-        if (!PAL::TASN1::writeElement(rsaPublicKey, "modulus", modulus->data(), modulus->size()))
-            return Exception { OperationError };
+        if (!PAL::TASN1::writeElement(rsaPublicKey, "modulus", modulus->span().data(), modulus->size()))
+            return Exception { ExceptionCode::OperationError };
 
         // Write out the public exponent data under `publicExponent`.
-        if (!PAL::TASN1::writeElement(rsaPublicKey, "publicExponent", publicExponent->data(), publicExponent->size()))
-            return Exception { OperationError };
+        if (!PAL::TASN1::writeElement(rsaPublicKey, "publicExponent", publicExponent->span().data(), publicExponent->size()))
+            return Exception { ExceptionCode::OperationError };
     }
 
     PAL::TASN1::Structure spki;
     {
         // Create the `SubjectPublicKeyInfo` structure.
         if (!PAL::TASN1::createStructure("WebCrypto.SubjectPublicKeyInfo", &spki))
-            return Exception { OperationError };
+            return Exception { ExceptionCode::OperationError };
 
         // Write out the id-rsaEncryption identifier under `algorithm.algorithm`.
         // FIXME: In case the key algorithm is:
@@ -451,43 +454,43 @@ ExceptionOr<Vector<uint8_t>> CryptoKeyRSA::exportSpki() const
         //     - this should write out id-RSAES-OAEP, along with setting `algorithm.parameters`
         //       to a RSAES-OAEP-params structure
         if (!PAL::TASN1::writeElement(spki, "algorithm.algorithm", CryptoConstants::s_rsaEncryptionIdentifier.data(), 1))
-            return Exception { OperationError };
+            return Exception { ExceptionCode::OperationError };
 
         // Write out the null value under `algorithm.parameters`.
         if (!PAL::TASN1::writeElement(spki, "algorithm.parameters", CryptoConstants::s_asn1NullValue.data(), CryptoConstants::s_asn1NullValue.size()))
-            return Exception { OperationError };
+            return Exception { ExceptionCode::OperationError };
 
         // Write out the `RSAPublicKey` data under `subjectPublicKey`. Because this is a
         // bit string parameter, the data size has to be multiplied by 8.
         {
             auto data = PAL::TASN1::encodedData(rsaPublicKey, "");
-            if (!data || !PAL::TASN1::writeElement(spki, "subjectPublicKey", data->data(), data->size() * 8))
-                return Exception { OperationError };
+            if (!data || !PAL::TASN1::writeElement(spki, "subjectPublicKey", data->span().data(), data->size() * 8))
+                return Exception { ExceptionCode::OperationError };
         }
     }
 
     // Retrieve the encoded `SubjectPublicKeyInfo` data and return it.
     auto result = PAL::TASN1::encodedData(spki, "");
     if (!result)
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
 
-    return WTFMove(result.value());
+    return WTF::move(result.value());
 }
 
 ExceptionOr<Vector<uint8_t>> CryptoKeyRSA::exportPkcs8() const
 {
     if (type() != CryptoKeyType::Private)
-        return Exception { InvalidAccessError };
+        return Exception { ExceptionCode::InvalidAccessError };
 
     PAL::TASN1::Structure rsaPrivateKey;
     {
         // Create the `RSAPrivateKey` structure.
         if (!PAL::TASN1::createStructure("WebCrypto.RSAPrivateKey", &rsaPrivateKey))
-            return Exception { OperationError };
+            return Exception { ExceptionCode::OperationError };
 
         // Write out '0' under `version`.
         if (!PAL::TASN1::writeElement(rsaPrivateKey, "version", "0", 0))
-            return Exception { OperationError };
+            return Exception { ExceptionCode::OperationError };
 
         // Retrieve the `n`, `e`, `d`, `q` and `p` s-expression tokens. libgcrypt swaps the usage of
         // the p and q primes internally, so we adjust the lookup accordingly.
@@ -497,7 +500,7 @@ ExceptionOr<Vector<uint8_t>> CryptoKeyRSA::exportPkcs8() const
         PAL::GCrypt::Handle<gcry_sexp_t> pSexp(gcry_sexp_find_token(m_platformKey.get(), "q", 0));
         PAL::GCrypt::Handle<gcry_sexp_t> qSexp(gcry_sexp_find_token(m_platformKey.get(), "p", 0));
         if (!nSexp || !eSexp || !dSexp || !pSexp || !qSexp)
-            return Exception { OperationError };
+            return Exception { ExceptionCode::OperationError };
 
         // Write the MPI data of retrieved s-expression tokens under `modulus`, `publicExponent`,
         // `privateExponent`, `prime1` and `prime2`.
@@ -508,14 +511,14 @@ ExceptionOr<Vector<uint8_t>> CryptoKeyRSA::exportPkcs8() const
             auto prime1 = mpiSignedData(pSexp);
             auto prime2 = mpiSignedData(qSexp);
             if (!modulus || !publicExponent || !privateExponent || !prime1 || !prime2)
-                return Exception { OperationError };
+                return Exception { ExceptionCode::OperationError };
 
-            if (!PAL::TASN1::writeElement(rsaPrivateKey, "modulus", modulus->data(), modulus->size())
-                || !PAL::TASN1::writeElement(rsaPrivateKey, "publicExponent", publicExponent->data(), publicExponent->size())
-                || !PAL::TASN1::writeElement(rsaPrivateKey, "privateExponent", privateExponent->data(), privateExponent->size())
-                || !PAL::TASN1::writeElement(rsaPrivateKey, "prime1", prime1->data(), prime1->size())
-                || !PAL::TASN1::writeElement(rsaPrivateKey, "prime2", prime2->data(), prime2->size()))
-                return Exception { OperationError };
+            if (!PAL::TASN1::writeElement(rsaPrivateKey, "modulus", modulus->span().data(), modulus->size())
+                || !PAL::TASN1::writeElement(rsaPrivateKey, "publicExponent", publicExponent->span().data(), publicExponent->size())
+                || !PAL::TASN1::writeElement(rsaPrivateKey, "privateExponent", privateExponent->span().data(), privateExponent->size())
+                || !PAL::TASN1::writeElement(rsaPrivateKey, "prime1", prime1->span().data(), prime1->size())
+                || !PAL::TASN1::writeElement(rsaPrivateKey, "prime2", prime2->span().data(), prime2->size()))
+                return Exception { ExceptionCode::OperationError };
         }
 
         // Manually compute the MPI values for the `exponent1`, `exponent2` and `coefficient`
@@ -525,7 +528,7 @@ ExceptionOr<Vector<uint8_t>> CryptoKeyRSA::exportPkcs8() const
             PAL::GCrypt::Handle<gcry_mpi_t> pMPI(gcry_sexp_nth_mpi(pSexp, 1, GCRYMPI_FMT_USG));
             PAL::GCrypt::Handle<gcry_mpi_t> qMPI(gcry_sexp_nth_mpi(qSexp, 1, GCRYMPI_FMT_USG));
             if (!dMPI || !pMPI || !qMPI)
-                return Exception { OperationError };
+                return Exception { ExceptionCode::OperationError };
 
             // `exponent1`
             {
@@ -535,8 +538,8 @@ ExceptionOr<Vector<uint8_t>> CryptoKeyRSA::exportPkcs8() const
                 gcry_mpi_mod(dpMPI, dMPI, pm1MPI);
 
                 auto dp = mpiSignedData(dpMPI);
-                if (!dp || !PAL::TASN1::writeElement(rsaPrivateKey, "exponent1", dp->data(), dp->size()))
-                    return Exception { OperationError };
+                if (!dp || !PAL::TASN1::writeElement(rsaPrivateKey, "exponent1", dp->span().data(), dp->size()))
+                    return Exception { ExceptionCode::OperationError };
             }
 
             // `exponent2`
@@ -547,8 +550,8 @@ ExceptionOr<Vector<uint8_t>> CryptoKeyRSA::exportPkcs8() const
                 gcry_mpi_mod(dqMPI, dMPI, qm1MPI);
 
                 auto dq = mpiSignedData(dqMPI);
-                if (!dq || !PAL::TASN1::writeElement(rsaPrivateKey, "exponent2", dq->data(), dq->size()))
-                    return Exception { OperationError };
+                if (!dq || !PAL::TASN1::writeElement(rsaPrivateKey, "exponent2", dq->span().data(), dq->size()))
+                    return Exception { ExceptionCode::OperationError };
             }
 
             // `coefficient`
@@ -557,26 +560,26 @@ ExceptionOr<Vector<uint8_t>> CryptoKeyRSA::exportPkcs8() const
                 gcry_mpi_invm(qiMPI, qMPI, pMPI);
 
                 auto qi = mpiSignedData(qiMPI);
-                if (!qi || !PAL::TASN1::writeElement(rsaPrivateKey, "coefficient", qi->data(), qi->size()))
-                    return Exception { OperationError };
+                if (!qi || !PAL::TASN1::writeElement(rsaPrivateKey, "coefficient", qi->span().data(), qi->size()))
+                    return Exception { ExceptionCode::OperationError };
             }
         }
 
         // Eliminate the optional `otherPrimeInfos` element.
         // FIXME: this should be supported in the future, if there is such information available.
         if (!PAL::TASN1::writeElement(rsaPrivateKey, "otherPrimeInfos", nullptr, 0))
-            return Exception { OperationError };
+            return Exception { ExceptionCode::OperationError };
     }
 
     PAL::TASN1::Structure pkcs8;
     {
         // Create the `PrivateKeyInfo` structure.
         if (!PAL::TASN1::createStructure("WebCrypto.PrivateKeyInfo", &pkcs8))
-            return Exception { OperationError };
+            return Exception { ExceptionCode::OperationError };
 
         // Write out '0' under `version`.
         if (!PAL::TASN1::writeElement(pkcs8, "version", "0", 0))
-            return Exception { OperationError };
+            return Exception { ExceptionCode::OperationError };
 
         // Write out the id-rsaEncryption identifier under `algorithm.algorithm`.
         // FIXME: In case the key algorithm is:
@@ -587,42 +590,42 @@ ExceptionOr<Vector<uint8_t>> CryptoKeyRSA::exportPkcs8() const
         //     - this should write out id-RSAES-OAEP, along with setting `algorithm.parameters`
         //       to a RSAES-OAEP-params structure
         if (!PAL::TASN1::writeElement(pkcs8, "privateKeyAlgorithm.algorithm", "1.2.840.113549.1.1.1", 1))
-            return Exception { OperationError };
+            return Exception { ExceptionCode::OperationError };
 
         // Write out a null value under `algorithm.parameters`.
         if (!PAL::TASN1::writeElement(pkcs8, "privateKeyAlgorithm.parameters", CryptoConstants::s_asn1NullValue.data(), CryptoConstants::s_asn1NullValue.size()))
-            return Exception { OperationError };
+            return Exception { ExceptionCode::OperationError };
 
         // Write out the `RSAPrivateKey` data under `privateKey`.
         {
             auto data = PAL::TASN1::encodedData(rsaPrivateKey, "");
-            if (!data || !PAL::TASN1::writeElement(pkcs8, "privateKey", data->data(), data->size()))
-                return Exception { OperationError };
+            if (!data || !PAL::TASN1::writeElement(pkcs8, "privateKey", data->span().data(), data->size()))
+                return Exception { ExceptionCode::OperationError };
         }
 
         // Eliminate the optional `attributes` element.
         if (!PAL::TASN1::writeElement(pkcs8, "attributes", nullptr, 0))
-            return Exception { OperationError };
+            return Exception { ExceptionCode::OperationError };
     }
 
     // Retrieve the encoded `PrivateKeyInfo` data and return it.
     auto result = PAL::TASN1::encodedData(pkcs8, "");
     if (!result)
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
 
-    return WTFMove(result.value());
+    return WTF::move(result.value());
 }
 
 auto CryptoKeyRSA::algorithm() const -> KeyAlgorithm
 {
     auto modulusLength = getRSAModulusLength(m_platformKey.get());
-    auto publicExponent = getRSAKeyParameter(m_platformKey.get(), "e");
+    auto publicExponent = getRSAKeyParameter(m_platformKey.get(), "e"_s);
 
     if (m_restrictedToSpecificHash) {
         CryptoRsaHashedKeyAlgorithm result;
         result.name = CryptoAlgorithmRegistry::singleton().name(algorithmIdentifier());
         result.modulusLength = modulusLength;
-        result.publicExponent = Uint8Array::tryCreate(publicExponent.data(), publicExponent.size());
+        result.publicExponent = Uint8Array::tryCreate(publicExponent.span());
         result.hash.name = CryptoAlgorithmRegistry::singleton().name(m_hash);
         return result;
     }
@@ -630,7 +633,7 @@ auto CryptoKeyRSA::algorithm() const -> KeyAlgorithm
     CryptoRsaKeyAlgorithm result;
     result.name = CryptoAlgorithmRegistry::singleton().name(algorithmIdentifier());
     result.modulusLength = modulusLength;
-    result.publicExponent = Uint8Array::tryCreate(publicExponent.data(), publicExponent.size());
+    result.publicExponent = Uint8Array::tryCreate(publicExponent.span());
     return result;
 }
 
@@ -638,31 +641,31 @@ std::unique_ptr<CryptoKeyRSAComponents> CryptoKeyRSA::exportData() const
 {
     switch (type()) {
     case CryptoKeyType::Public:
-        return CryptoKeyRSAComponents::createPublic(getRSAKeyParameter(m_platformKey.get(), "n"), getRSAKeyParameter(m_platformKey.get(), "e"));
+        return CryptoKeyRSAComponents::createPublic(getRSAKeyParameter(m_platformKey.get(), "n"_s), getRSAKeyParameter(m_platformKey.get(), "e"_s));
     case CryptoKeyType::Private: {
         auto parameterMPI =
-            [](gcry_sexp_t sexp, const char* name) -> gcry_mpi_t {
+            [](gcry_sexp_t sexp, ASCIILiteral name) -> gcry_mpi_t {
                 PAL::GCrypt::Handle<gcry_sexp_t> paramSexp(gcry_sexp_find_token(sexp, name, 0));
                 if (!paramSexp)
                     return nullptr;
                 return gcry_sexp_nth_mpi(paramSexp, 1, GCRYMPI_FMT_USG);
             };
 
-        PAL::GCrypt::Handle<gcry_mpi_t> dMPI(parameterMPI(m_platformKey.get(), "d"));
+        PAL::GCrypt::Handle<gcry_mpi_t> dMPI(parameterMPI(m_platformKey.get(), "d"_s));
         // libgcrypt internally uses p and q such that p < q, while usually it's q < p.
         // Switch the two primes here and continue with assuming the latter.
-        PAL::GCrypt::Handle<gcry_mpi_t> pMPI(parameterMPI(m_platformKey.get(), "q"));
-        PAL::GCrypt::Handle<gcry_mpi_t> qMPI(parameterMPI(m_platformKey.get(), "p"));
+        PAL::GCrypt::Handle<gcry_mpi_t> pMPI(parameterMPI(m_platformKey.get(), "q"_s));
+        PAL::GCrypt::Handle<gcry_mpi_t> qMPI(parameterMPI(m_platformKey.get(), "p"_s));
         if (!dMPI || !pMPI || !qMPI)
             return nullptr;
 
         CryptoKeyRSAComponents::PrimeInfo firstPrimeInfo;
         if (auto data = mpiData(pMPI))
-            firstPrimeInfo.primeFactor = WTFMove(data.value());
+            firstPrimeInfo.primeFactor = WTF::move(data.value());
 
         CryptoKeyRSAComponents::PrimeInfo secondPrimeInfo;
         if (auto data = mpiData(qMPI))
-            secondPrimeInfo.primeFactor = WTFMove(data.value());
+            secondPrimeInfo.primeFactor = WTF::move(data.value());
 
         // dp -- d mod (p - 1)
         {
@@ -672,7 +675,7 @@ std::unique_ptr<CryptoKeyRSAComponents> CryptoKeyRSA::exportData() const
             gcry_mpi_mod(dpMPI, dMPI, pm1MPI);
 
             if (auto data = mpiData(dpMPI))
-                firstPrimeInfo.factorCRTExponent = WTFMove(data.value());
+                firstPrimeInfo.factorCRTExponent = WTF::move(data.value());
         }
 
         // dq -- d mod (q - 1)
@@ -683,7 +686,7 @@ std::unique_ptr<CryptoKeyRSAComponents> CryptoKeyRSA::exportData() const
             gcry_mpi_mod(dqMPI, dMPI, qm1MPI);
 
             if (auto data = mpiData(dqMPI))
-                secondPrimeInfo.factorCRTExponent = WTFMove(data.value());
+                secondPrimeInfo.factorCRTExponent = WTF::move(data.value());
         }
 
         // qi -- q^(-1) mod p
@@ -692,16 +695,16 @@ std::unique_ptr<CryptoKeyRSAComponents> CryptoKeyRSA::exportData() const
             gcry_mpi_invm(qiMPI, qMPI, pMPI);
 
             if (auto data = mpiData(qiMPI))
-                secondPrimeInfo.factorCRTCoefficient = WTFMove(data.value());
+                secondPrimeInfo.factorCRTCoefficient = WTF::move(data.value());
         }
 
         Vector<uint8_t> privateExponent;
         if (auto data = mpiData(dMPI))
-            privateExponent = WTFMove(data.value());
+            privateExponent = WTF::move(data.value());
 
         return CryptoKeyRSAComponents::createPrivateWithAdditionalData(
-            getRSAKeyParameter(m_platformKey.get(), "n"), getRSAKeyParameter(m_platformKey.get(), "e"), WTFMove(privateExponent),
-            WTFMove(firstPrimeInfo), WTFMove(secondPrimeInfo), Vector<CryptoKeyRSAComponents::PrimeInfo> { });
+            getRSAKeyParameter(m_platformKey.get(), "n"_s), getRSAKeyParameter(m_platformKey.get(), "e"_s), WTF::move(privateExponent),
+            WTF::move(firstPrimeInfo), WTF::move(secondPrimeInfo), Vector<CryptoKeyRSAComponents::PrimeInfo> { });
     }
     default:
         ASSERT_NOT_REACHED();

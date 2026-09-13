@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package test.robot.test3d;
 
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import java.util.concurrent.TimeUnit;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.scene.AmbientLight;
@@ -36,15 +38,15 @@ import javafx.scene.paint.PhongMaterial;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
 import javafx.stage.Stage;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import test.robot.testharness.VisualTestBase;
-
-import static org.junit.Assume.assumeTrue;
 
 /**
  * Basic TriangleMesh validation tests.
  */
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class TriangleMeshValidationTest extends VisualTestBase {
 
     private Stage testStage;
@@ -59,12 +61,14 @@ public class TriangleMeshValidationTest extends VisualTestBase {
     private static final int HEIGHT = 800;
     private Color bgColor = Color.rgb(10, 10, 40);
 
-    @Before
-    public void setupEach() {
+    @BeforeEach
+    @Override
+    public void doSetup() {
         assumeTrue(Platform.isSupported(ConditionalFeature.SCENE3D));
+        super.doSetup();
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testEmptyMesh() {
         runAndWait(() -> {
             testStage = getStage();
@@ -87,7 +91,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testInvalidPointsLength() {
         runAndWait(() -> {
             testStage = getStage();
@@ -119,7 +123,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testInvalidTexCoordLength() {
         runAndWait(() -> {
             testStage = getStage();
@@ -147,7 +151,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testInvalidFacesLength() {
         runAndWait(() -> {
             testStage = getStage();
@@ -183,7 +187,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testInvalidFacesIndex() {
         runAndWait(() -> {
             testStage = getStage();
@@ -218,7 +222,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testInvalidFaceSmoothingGroupsLength() {
         runAndWait(() -> {
             testStage = getStage();
@@ -243,7 +247,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testPointsLengthChange() {
         runAndWait(() -> {
             testStage = getStage();
@@ -276,7 +280,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testTexCoordsLengthChange() {
         runAndWait(() -> {
             testStage = getStage();
@@ -309,7 +313,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testFaceLengthChange() {
         runAndWait(() -> {
             testStage = getStage();
@@ -353,7 +357,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testResetFaceSmoothingGroup() {
         runAndWait(() -> {
             testStage = getStage();
@@ -384,7 +388,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testUpdateMesh() {
         runAndWait(() -> {
             testStage = getStage();
@@ -431,7 +435,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testDegeneratedMeshUpdateFaces() {
         runAndWait(() -> {
             testStage = getStage();
@@ -471,7 +475,7 @@ public class TriangleMeshValidationTest extends VisualTestBase {
         });
     }
 
-    @Test(timeout = 15000)
+    @Test
     public void testDegeneratedMeshUpdatePoints() {
         runAndWait(() -> {
             testStage = getStage();

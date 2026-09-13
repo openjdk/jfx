@@ -30,10 +30,10 @@ typedef (CSSNumberish or CSSKeywordish) CSSColorPercent;
 
 // https://drafts.css-houdini.org/css-typed-om/#cssoklab
 [
-    EnabledBySetting=CSSTypedOMEnabled&CSSTypedOMColorEnabled,
+    EnabledBySetting=CSSTypedOMColorEnabled,
     Exposed=(Window,Worker,PaintWorklet/*,LayoutWorklet*/),
     JSGenerateToNativeObject,
-] interface CSSOKLab : CSSColorValue {
+] interface CSSOKLab : CSSOMColorValue {
     constructor(CSSColorPercent l, CSSColorNumber a, CSSColorNumber b, optional CSSColorPercent alpha = 1.0);
     attribute CSSColorPercent l;
     attribute CSSColorNumber a;

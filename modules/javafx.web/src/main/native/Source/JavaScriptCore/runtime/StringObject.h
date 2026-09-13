@@ -20,8 +20,8 @@
 
 #pragma once
 
-#include "JSWrapperObject.h"
-#include "JSString.h"
+#include <JavaScriptCore/JSString.h>
+#include <JavaScriptCore/JSWrapperObject.h>
 
 namespace JSC {
 
@@ -59,17 +59,14 @@ public:
 
     JS_EXPORT_PRIVATE static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
     JS_EXPORT_PRIVATE static bool deletePropertyByIndex(JSCell*, JSGlobalObject*, unsigned propertyName);
-    JS_EXPORT_PRIVATE static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    JS_EXPORT_PRIVATE static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
     JS_EXPORT_PRIVATE static bool defineOwnProperty(JSObject*, JSGlobalObject*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
 
     DECLARE_EXPORT_INFO;
 
     JSString* internalValue() const { return asString(JSWrapperObject::internalValue()); }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(StringObjectType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
 protected:
     JS_EXPORT_PRIVATE void finishCreation(VM&, JSString*);

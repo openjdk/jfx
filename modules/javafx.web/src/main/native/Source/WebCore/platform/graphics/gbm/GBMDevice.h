@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2022 Metrological Group B.V.
- * Copyright (C) 2022 Igalia S.L.
+ * Copyright (C) 2025 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,35 +26,26 @@
 #pragma once
 
 #if USE(GBM)
-
-#include <optional>
-#include <wtf/Noncopyable.h>
+#include <wtf/ThreadSafeRefCounted.h>
+#include <wtf/text/CString.h>
 #include <wtf/unix/UnixFileDescriptor.h>
 
 struct gbm_device;
 
-namespace WTF {
-class String;
-}
-
 namespace WebCore {
 
-class GBMDevice {
-    WTF_MAKE_NONCOPYABLE(GBMDevice);
-    WTF_MAKE_FAST_ALLOCATED();
+class GBMDevice final : public ThreadSafeRefCounted<GBMDevice, WTF::DestructionThread::Main> {
 public:
-    static GBMDevice& singleton();
-
-    GBMDevice() = default;
+    static RefPtr<GBMDevice> create(const CString&);
     ~GBMDevice();
 
-    bool isInitialized() const { return m_device.has_value(); }
-    void initialize(const WTF::String&);
-    struct gbm_device* device() const { RELEASE_ASSERT(m_device.has_value()); return m_device.value(); }
+    struct gbm_device* device() const { return m_device; }
 
 private:
+    GBMDevice(WTF::UnixFileDescriptor&&, struct gbm_device*);
+
     WTF::UnixFileDescriptor m_fd;
-    std::optional<struct gbm_device*> m_device;
+    struct gbm_device* m_device { nullptr };
 };
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2008 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,12 +26,12 @@
 
 #pragma once
 
-#include "ActiveDOMObject.h"
-#include "EventTarget.h"
-#include "ExceptionOr.h"
-#include "MessagePortChannel.h"
-#include "MessagePortIdentifier.h"
-#include "MessageWithMessagePorts.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/EventTargetInterfaces.h>
+#include <WebCore/MessagePortChannel.h>
+#include <WebCore/MessagePortIdentifier.h>
+#include <WebCore/MessageWithMessagePorts.h>
 #include <wtf/WeakPtr.h>
 
 namespace JSC {
@@ -47,12 +47,19 @@ class WebCoreOpaqueRoot;
 
 struct StructuredSerializeOptions;
 
-class MessagePort final : public ActiveDOMObject, public EventTarget {
+template<typename> class ExceptionOr;
+
+class MessagePort final : public ActiveDOMObject, public EventTarget, public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<MessagePort> {
     WTF_MAKE_NONCOPYABLE(MessagePort);
-    WTF_MAKE_ISO_ALLOCATED(MessagePort);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(MessagePort, WEBCORE_EXPORT);
 public:
     static Ref<MessagePort> create(ScriptExecutionContext&, const MessagePortIdentifier& local, const MessagePortIdentifier& remote);
-    virtual ~MessagePort();
+    WEBCORE_EXPORT virtual ~MessagePort();
+
+    // ActiveDOMObject.
+    void ref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::ref(); }
+    void deref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     ExceptionOr<void> postMessage(JSC::JSGlobalObject&, JSC::JSValue message, StructuredSerializeOptions&&);
 
@@ -61,11 +68,12 @@ public:
     void entangle();
 
     // Returns nullptr if the passed-in vector is empty.
-    static ExceptionOr<Vector<TransferredMessagePort>> disentanglePorts(Vector<RefPtr<MessagePort>>&&);
-    static Vector<RefPtr<MessagePort>> entanglePorts(ScriptExecutionContext&, Vector<TransferredMessagePort>&&);
+    static ExceptionOr<Vector<TransferredMessagePort>> disentanglePorts(Vector<Ref<MessagePort>>&&);
+    static Vector<Ref<MessagePort>> entanglePorts(ScriptExecutionContext&, Vector<TransferredMessagePort>&&);
 
     WEBCORE_EXPORT static bool isMessagePortAliveForTesting(const MessagePortIdentifier&);
     WEBCORE_EXPORT static void notifyMessageAvailable(const MessagePortIdentifier&);
+    WEBCORE_EXPORT static void notifyAllConnectionsClosed();
 
     WEBCORE_EXPORT void messageAvailable();
     bool started() const { return m_started; }
@@ -81,12 +89,10 @@ public:
     const MessagePortIdentifier& identifier() const { return m_identifier; }
     const MessagePortIdentifier& remoteIdentifier() const { return m_remoteIdentifier; }
 
-    WEBCORE_EXPORT void ref() const;
-    WEBCORE_EXPORT void deref() const;
-
     // EventTarget.
-    EventTargetInterface eventTargetInterface() const final { return MessagePortEventTargetInterfaceType; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::MessagePort; }
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    using ActiveDOMObject::protectedScriptExecutionContext;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
@@ -96,13 +102,12 @@ public:
     static Ref<MessagePort> entangle(ScriptExecutionContext&, TransferredMessagePort&&);
 
 private:
-    explicit MessagePort(ScriptExecutionContext&, const MessagePortIdentifier& local, const MessagePortIdentifier& remote);
+    MessagePort(ScriptExecutionContext&, const MessagePortIdentifier& local, const MessagePortIdentifier& remote);
 
     bool addEventListener(const AtomString& eventType, Ref<EventListener>&&, const AddEventListenerOptions&) final;
     bool removeEventListener(const AtomString& eventType, EventListener&, const EventListenerOptions&) final;
 
-    // ActiveDOMObject
-    const char* activeDOMObjectName() const final;
+    // ActiveDOMObject.
     void contextDestroyed() final;
     void stop() final { close(); }
     bool virtualHasPendingActivity() const final;
@@ -117,10 +122,10 @@ private:
 
     MessagePortIdentifier m_identifier;
     MessagePortIdentifier m_remoteIdentifier;
-
-    mutable std::atomic<unsigned> m_refCount { 1 };
 };
 
 WebCoreOpaqueRoot root(MessagePort*);
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(MessagePort)

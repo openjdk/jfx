@@ -120,8 +120,10 @@ G_BEGIN_DECLS
  * @G_PARAM_READABLE: the parameter is readable
  * @G_PARAM_WRITABLE: the parameter is writable
  * @G_PARAM_READWRITE: alias for %G_PARAM_READABLE | %G_PARAM_WRITABLE
- * @G_PARAM_CONSTRUCT: the parameter will be set upon object construction
- * @G_PARAM_CONSTRUCT_ONLY: the parameter can only be set upon object construction
+ * @G_PARAM_CONSTRUCT: the parameter will be set upon object construction.
+ *   See [vfunc@Object.constructed] for more details
+ * @G_PARAM_CONSTRUCT_ONLY: the parameter can only be set upon object construction.
+ *   See [vfunc@Object.constructed] for more details
  * @G_PARAM_LAX_VALIDATION: upon parameter conversion (see g_param_value_convert())
  *  strict validation is not required
  * @G_PARAM_STATIC_NAME: the string used as name when constructing the
@@ -203,17 +205,7 @@ typedef struct _GParamSpec      GParamSpec;
 typedef struct _GParamSpecClass GParamSpecClass;
 typedef struct _GParameter  GParameter GOBJECT_DEPRECATED_TYPE_IN_2_54;
 typedef struct _GParamSpecPool  GParamSpecPool;
-/**
- * GParamSpec: (ref-func g_param_spec_ref_sink) (unref-func g_param_spec_unref) (set-value-func g_value_set_param) (get-value-func g_value_get_param)
- * @g_type_instance: private #GTypeInstance portion
- * @name: name of this parameter: always an interned string
- * @flags: #GParamFlags flags for this parameter
- * @value_type: the #GValue type for this parameter
- * @owner_type: #GType type that uses (introduces) this parameter
- *
- * All other fields of the GParamSpec struct are private and
- * should not be used directly.
- */
+
 struct _GParamSpec
 {
   GTypeInstance  g_type_instance;
@@ -453,7 +445,8 @@ GOBJECT_AVAILABLE_IN_ALL
 GParamSpec**    g_param_spec_pool_list      (GParamSpecPool *pool,
                          GType       owner_type,
                          guint      *n_pspecs_p);
-
+GOBJECT_AVAILABLE_IN_2_80
+void            g_param_spec_pool_free          (GParamSpecPool *pool);
 
 /* contracts:
  *

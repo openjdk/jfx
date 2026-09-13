@@ -33,17 +33,18 @@
 #include "WebGPUTextureDimension.h"
 #include "WebGPUTextureFormat.h"
 #include <WebGPU/WebGPU.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore::WebGPU {
 
 class ConvertToBackingContext;
 
 class TextureImpl final : public Texture {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(TextureImpl);
 public:
     static Ref<TextureImpl> create(WebGPUPtr<WGPUTexture>&& texture, TextureFormat format, TextureDimension dimension, ConvertToBackingContext& convertToBackingContext)
     {
-        return adoptRef(*new TextureImpl(WTFMove(texture), format, dimension, convertToBackingContext));
+        return adoptRef(*new TextureImpl(WTF::move(texture), format, dimension, convertToBackingContext));
     }
 
     virtual ~TextureImpl();
@@ -59,10 +60,12 @@ private:
     TextureImpl& operator=(TextureImpl&&) = delete;
 
     WGPUTexture backing() const { return m_backing.get(); }
+    bool isTextureImpl() const final { return true; }
 
-    Ref<TextureView> createView(const std::optional<TextureViewDescriptor>&) final;
+    RefPtr<TextureView> createView(const std::optional<TextureViewDescriptor>&) final;
 
     void destroy() final;
+    void undestroy() final;
 
     void setLabelInternal(const String&) final;
 
@@ -70,9 +73,13 @@ private:
     TextureDimension m_dimension { TextureDimension::_2d };
 
     WebGPUPtr<WGPUTexture> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebGPU::TextureImpl)
+    static bool isType(const WebCore::WebGPU::Texture& texture) { return texture.isTextureImpl(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

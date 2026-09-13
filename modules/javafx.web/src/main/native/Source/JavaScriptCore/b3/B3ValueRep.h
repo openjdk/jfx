@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,17 +25,21 @@
 
 #pragma once
 
-#if ENABLE(B3_JIT)
+#include <wtf/Platform.h>
 
-#include "FPRInfo.h"
-#include "GPRInfo.h"
-#include "JSCJSValue.h"
-#include "Reg.h"
-#include "RegisterSet.h"
-#include "ValueRecovery.h"
+#if ENABLE(B3_JIT) || ENABLE(WEBASSEMBLY_BBQJIT)
+
+#include <JavaScriptCore/FPRInfo.h>
+#include <JavaScriptCore/GPRInfo.h>
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/Reg.h>
+#include <JavaScriptCore/RegisterSet.h>
+#include <JavaScriptCore/ValueRecovery.h>
 #include <wtf/PrintStream.h>
+#include <wtf/SequesteredMalloc.h>
+#include <wtf/TZoneMalloc.h>
 #if ENABLE(WEBASSEMBLY)
-#include "WasmValueLocation.h"
+#include <JavaScriptCore/WasmValueLocation.h>
 #endif
 
 namespace JSC {
@@ -44,14 +48,21 @@ class AssemblyHelpers;
 
 namespace B3 {
 
+// ValueRep uses its own concept to avoid dependency on B3Value.h.
+// This has the same constraints as B3::IsLegalOffset (see B3Value.h).
+template<typename Int>
+concept IsLegalOffsetRep = std::signed_integral<Int> && sizeof(Int) <= sizeof(int32_t);
+
 // We use this class to describe value representations at stackmaps. It's used both to force a
 // representation and to get the representation. When the B3 client forces a representation, we say
 // that it's an input. When B3 tells the client what representation it picked, we say that it's an
 // output.
 
 class ValueRep {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(ValueRep);
 public:
+    using OffsetType = int32_t;
+
     enum Kind : uint8_t {
         // As an input representation, this means that B3 can pick any representation. As an output
         // representation, this means that we don't know. This will only arise as an output
@@ -87,6 +98,15 @@ public:
         // representation, this tells us what register B3 picked.
         Register,
 
+#if USE(JSVALUE32_64)
+        // This is only used for BBQ OSR on 32-bits.
+        // LLInt uses 64-bit stack values to represent I64s.
+        // BBQ uses register pairs.
+        // OMG treats I64 values as tuples, and tries to agressively de-structure them. It
+        // should never see this representation, except when tiering up from BBQ.
+        RegisterPair,
+#endif
+
         // As an input representation, this forces a particular register and states that
         // the register is used late. This means that the register is used after the result
         // is defined (i.e, the result will interfere with this as an input).
@@ -102,7 +122,7 @@ public:
         StackArgument,
 
         // As an output representation, this tells us that B3 constant-folded the value.
-        Constant
+        Constant,
     };
 
     ValueRep()
@@ -119,7 +139,14 @@ public:
     ValueRep(Kind kind)
         : m_kind(kind)
     {
-        ASSERT(kind == WarmAny || kind == ColdAny || kind == LateColdAny || kind == SomeRegister || kind == SomeRegisterWithClobber || kind == SomeEarlyRegister || kind == SomeLateRegister);
+        ASSERT(kind == WarmAny
+            || kind == ColdAny
+            || kind == LateColdAny
+            || kind == SomeRegister
+            || kind == SomeRegisterWithClobber
+            || kind == SomeEarlyRegister
+            || kind == SomeLateRegister
+        );
     }
 
 #if ENABLE(WEBASSEMBLY)
@@ -146,7 +173,18 @@ public:
             ASSERT_NOT_REACHED();
         }
     }
-#endif
+
+#if USE(JSVALUE32_64)
+    // Only use this for OSR stackmaps.
+    enum OSRValueRepTag { OSRValueRep };
+    ValueRep(OSRValueRepTag, Reg lo, Reg hi)
+    {
+        m_kind = RegisterPair;
+        u.regPair.regLo = lo;
+        u.regPair.regHi = hi;
+    }
+#endif // USE(JSVALUE32_64)
+#endif // ENABLE(WEBASSEMBLY)
 
     static ValueRep reg(Reg reg)
     {
@@ -160,7 +198,8 @@ public:
         return result;
     }
 
-    static ValueRep stack(intptr_t offsetFromFP)
+    template<IsLegalOffsetRep Int>
+    static ValueRep stack(Int offsetFromFP)
     {
         ValueRep result;
         result.m_kind = Stack;
@@ -168,7 +207,8 @@ public:
         return result;
     }
 
-    static ValueRep stackArgument(intptr_t offsetFromSP)
+    template<IsLegalOffsetRep Int>
+    static ValueRep stackArgument(Int offsetFromSP)
     {
         ValueRep result;
         result.m_kind = StackArgument;
@@ -186,12 +226,12 @@ public:
 
     static ValueRep constantDouble(double value)
     {
-        return ValueRep::constant(bitwise_cast<int64_t>(value));
+        return ValueRep::constant(std::bit_cast<int64_t>(value));
     }
 
     static ValueRep constantFloat(float value)
     {
-        return ValueRep::constant(static_cast<uint64_t>(bitwise_cast<uint32_t>(value)));
+        return ValueRep::constant(static_cast<uint64_t>(std::bit_cast<uint32_t>(value)));
     }
 
     Kind kind() const { return m_kind; }
@@ -221,6 +261,22 @@ public:
 
     bool isReg() const { return kind() == Register || kind() == LateRegister || kind() == SomeLateRegister; }
 
+#if USE(JSVALUE32_64)
+    bool isRegPair(OSRValueRepTag) const { return kind() == RegisterPair; }
+
+    GPRReg gprLo(OSRValueRepTag) const
+    {
+        ASSERT(isRegPair(OSRValueRep));
+        return u.regPair.regLo.gpr();
+    }
+
+    GPRReg gprHi(OSRValueRepTag) const
+    {
+        ASSERT(isRegPair(OSRValueRep));
+        return u.regPair.regHi.gpr();
+    }
+#endif
+
     Reg reg() const
     {
         ASSERT(isReg());
@@ -235,7 +291,7 @@ public:
 
     bool isStack() const { return kind() == Stack; }
 
-    intptr_t offsetFromFP() const
+    OffsetType offsetFromFP() const
     {
         ASSERT(isStack());
         return u.offsetFromFP;
@@ -243,7 +299,7 @@ public:
 
     bool isStackArgument() const { return kind() == StackArgument; }
 
-    intptr_t offsetFromSP() const
+    OffsetType offsetFromSP() const
     {
         ASSERT(isStackArgument());
         return u.offsetFromSP;
@@ -259,25 +315,14 @@ public:
 
     double doubleValue() const
     {
-        return bitwise_cast<double>(value());
+        return std::bit_cast<double>(value());
     }
 
     float floatValue() const
     {
-        return bitwise_cast<float>(static_cast<uint32_t>(static_cast<uint64_t>(value())));
+        return std::bit_cast<float>(static_cast<uint32_t>(static_cast<uint64_t>(value())));
     }
 
-    ValueRep withOffset(intptr_t offset) const
-    {
-        switch (kind()) {
-        case Stack:
-            return stack(offsetFromFP() + offset);
-        case StackArgument:
-            return stackArgument(offsetFromSP() + offset);
-        default:
-            return *this;
-        }
-    }
 
     void addUsedRegistersTo(bool isSIMDContext, RegisterSetBuilder&) const;
 
@@ -308,13 +353,21 @@ public:
 private:
     union U {
         Reg reg;
-        intptr_t offsetFromFP;
-        intptr_t offsetFromSP;
+        OffsetType offsetFromFP;
+        OffsetType offsetFromSP;
         int64_t value;
+
+        struct RegisterPair {
+            Reg regLo;
+            Reg regHi;
+        };
+        RegisterPair regPair;
 
         U()
         {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
             memset(static_cast<void*>(this), 0, sizeof(*this));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         }
     } u;
     Kind m_kind;

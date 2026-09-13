@@ -25,17 +25,25 @@
 
 #pragma once
 
+#import "BindableResource.h"
 #import "Device.h"
 #import <wtf/Ref.h>
-#import <wtf/RefCounted.h>
+#import <wtf/RefCountedAndCanMakeWeakPtr.h>
+#import <wtf/TZoneMalloc.h>
+#import <wtf/WeakHashSet.h>
+#import <wtf/WeakPtr.h>
+
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer* CVPixelBufferRef;
 
 struct WGPUExternalTextureImpl {
 };
 
 namespace WebGPU {
 
-class ExternalTexture : public WGPUExternalTextureImpl, public RefCounted<ExternalTexture> {
-    WTF_MAKE_FAST_ALLOCATED;
+class CommandEncoder;
+
+class ExternalTexture : public RefCountedAndCanMakeWeakPtr<ExternalTexture>, public WGPUExternalTextureImpl, public TrackedResource {
+    WTF_MAKE_TZONE_ALLOCATED(ExternalTexture);
 public:
     static Ref<ExternalTexture> create(CVPixelBufferRef pixelBuffer, WGPUColorSpace colorSpace, Device& device)
     {
@@ -51,13 +59,28 @@ public:
     CVPixelBufferRef pixelBuffer() const { return m_pixelBuffer.get(); }
     WGPUColorSpace colorSpace() const { return m_colorSpace; }
 
+    void destroy();
+    void undestroy();
+    void setCommandEncoder(CommandEncoder&) const;
+    bool isDestroyed() const;
+
+    bool isValid() const;
+    void update(CVPixelBufferRef);
+    size_t openCommandEncoderCount() const;
+    void updateExternalTextures(id<MTLTexture>, id<MTLTexture>);
+
 private:
     ExternalTexture(CVPixelBufferRef, WGPUColorSpace, Device&);
     ExternalTexture(Device&);
 
+    Ref<Device> protectedDevice() const { return m_device; }
+
     RetainPtr<CVPixelBufferRef> m_pixelBuffer;
     WGPUColorSpace m_colorSpace;
     const Ref<Device> m_device;
+    bool m_destroyed { false };
+    id<MTLTexture> m_texture0 { nil };
+    id<MTLTexture> m_texture1 { nil };
 };
 
 } // namespace WebGPU

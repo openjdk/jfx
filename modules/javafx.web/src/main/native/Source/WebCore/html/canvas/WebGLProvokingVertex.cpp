@@ -28,37 +28,30 @@
 #if ENABLE(WEBGL)
 #include "WebGLProvokingVertex.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WebGLProvokingVertex);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebGLProvokingVertex);
 
 WebGLProvokingVertex::WebGLProvokingVertex(WebGLRenderingContextBase& context)
-    : WebGLExtension(context)
+    : WebGLExtension(context, WebGLExtensionName::WebGLProvokingVertex)
 {
-    context.graphicsContextGL()->ensureExtensionEnabled("GL_ANGLE_provoking_vertex"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::ANGLE_provoking_vertex);
 }
 
 WebGLProvokingVertex::~WebGLProvokingVertex() = default;
 
-WebGLExtension::ExtensionName WebGLProvokingVertex::getName() const
-{
-    return WebGLProvokingVertexName;
-}
-
 bool WebGLProvokingVertex::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_ANGLE_provoking_vertex"_s);
+    return context.supportsExtension(GCGLExtension::ANGLE_provoking_vertex);
 }
 
 void WebGLProvokingVertex::provokingVertexWEBGL(GCGLenum provokeMode)
 {
-    auto context = WebGLExtensionScopedContext(this);
-    if (context.isLost())
+    if (isContextLost())
         return;
-
-    context->graphicsContextGL()->provokingVertexANGLE(provokeMode);
+    context()->graphicsContextGL()->provokingVertexANGLE(provokeMode);
 }
 
 } // namespace WebCore

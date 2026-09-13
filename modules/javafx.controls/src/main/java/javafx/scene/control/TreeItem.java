@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -386,7 +386,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
     // a very expensive call.
     ObservableList<TreeItem<T>> children;
 
-    // Made static based on findings of RT-18344 - EventHandlerManager is an
+    // Made static based on findings of JDK-8118829 - EventHandlerManager is an
     // expensive class and should be reused amongst classes if at all possible.
     private final EventHandlerManager eventHandlerManager =
             new EventHandlerManager(this);
@@ -554,7 +554,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         if (expanded == null) {
             expanded = new BooleanPropertyBase() {
                 @Override protected void invalidated() {
-                    // We don't fire expanded events for leaf nodes (RT-32620)
+                    // We don't fire expanded events for leaf nodes (JDK-8123264)
                     if (isLeaf()) return;
 
                     EventType<?> evtType = isExpanded() ?
@@ -657,7 +657,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         // checkSortState should in almost all instances be called, but there
         // are situations where checking the sort state will result in
         // unwanted permutation events being fired (if a sort is applied). To
-        // avoid this (which resolves RT-37593), we set the ignoreSortUpdate
+        // avoid this (which resolves JDK-8096663), we set the ignoreSortUpdate
         // to true (and of course, we're careful to set it back to false again)
         if (!ignoreSortUpdate) {
             checkSortState();
@@ -959,7 +959,7 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
             // We only replace the parent if the parentLinkCount of the given
             // TreeItem is zero (which indicates that this TreeItem has not been
             // 'linked' to its parent multiple times). This can happen in
-            // situations such as what is shown in RT-28668 (and tested for in
+            // situations such as what is shown in JDK-8124825 (and tested for in
             // TreeViewTest.test_rt28556()). Specifically, when a sort is applied
             // to the children of a TreeItem, it is possible for them to be
             // sorted in such a way that the element is considered to be
@@ -998,14 +998,21 @@ public class TreeItem<T> implements EventTarget { //, Comparable<TreeItem<T>> {
         public static final EventType<?> ANY = TREE_NOTIFICATION_EVENT;
 
         private transient final TreeItem<T> treeItem;
+        @SuppressWarnings("doclint:missing")
         private final T newValue;
 
+        @SuppressWarnings("doclint:missing")
         private final List<? extends TreeItem<T>> added;
+        @SuppressWarnings("doclint:missing")
         private final List<? extends TreeItem<T>> removed;
+        @SuppressWarnings("doclint:missing")
         private final ListChangeListener.Change<? extends TreeItem<T>> change;
 
+        @SuppressWarnings("doclint:missing")
         private final boolean wasExpanded;
+        @SuppressWarnings("doclint:missing")
         private final boolean wasCollapsed;
+        @SuppressWarnings("doclint:missing")
         private boolean wasPermutated;
 
         /**

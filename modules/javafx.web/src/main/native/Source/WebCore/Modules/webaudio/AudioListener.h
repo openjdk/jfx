@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,6 @@
 #pragma once
 
 #include "AudioArray.h"
-#include "ExceptionOr.h"
 #include "FloatPoint3D.h"
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -39,6 +38,7 @@ namespace WebCore {
 
 class AudioParam;
 class BaseAudioContext;
+template<typename> class ExceptionOr;
 
 // AudioListener maintains the state of the listener in the audio scene as defined in the OpenAL specification.
 
@@ -73,17 +73,17 @@ public:
     bool hasSampleAccurateValues() const;
     bool shouldUseARate() const;
 
-    const float* positionXValues(size_t framesToProcess);
-    const float* positionYValues(size_t framesToProcess);
-    const float* positionZValues(size_t framesToProcess);
+    std::span<const float> positionXValues(size_t framesToProcess);
+    std::span<const float> positionYValues(size_t framesToProcess);
+    std::span<const float> positionZValues(size_t framesToProcess);
 
-    const float* forwardXValues(size_t framesToProcess);
-    const float* forwardYValues(size_t framesToProcess);
-    const float* forwardZValues(size_t framesToProcess);
+    std::span<const float> forwardXValues(size_t framesToProcess);
+    std::span<const float> forwardYValues(size_t framesToProcess);
+    std::span<const float> forwardZValues(size_t framesToProcess);
 
-    const float* upXValues(size_t framesToProcess);
-    const float* upYValues(size_t framesToProcess);
-    const float* upZValues(size_t framesToProcess);
+    std::span<const float> upXValues(size_t framesToProcess);
+    std::span<const float> upYValues(size_t framesToProcess);
+    std::span<const float> upZValues(size_t framesToProcess);
 
     void updateValuesIfNeeded(size_t framesToProcess);
 
@@ -97,15 +97,15 @@ protected:
 
 private:
 
-    Ref<AudioParam> m_positionX;
-    Ref<AudioParam> m_positionY;
-    Ref<AudioParam> m_positionZ;
-    Ref<AudioParam> m_forwardX;
-    Ref<AudioParam> m_forwardY;
-    Ref<AudioParam> m_forwardZ;
-    Ref<AudioParam> m_upX;
-    Ref<AudioParam> m_upY;
-    Ref<AudioParam> m_upZ;
+    const Ref<AudioParam> m_positionX;
+    const Ref<AudioParam> m_positionY;
+    const Ref<AudioParam> m_positionZ;
+    const Ref<AudioParam> m_forwardX;
+    const Ref<AudioParam> m_forwardY;
+    const Ref<AudioParam> m_forwardZ;
+    const Ref<AudioParam> m_upX;
+    const Ref<AudioParam> m_upY;
+    const Ref<AudioParam> m_upZ;
 
     // Last time that the automations were updated.
     double m_lastUpdateTime { -1 };

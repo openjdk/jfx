@@ -27,9 +27,11 @@
 #ifndef ThreadTimers_h
 #define ThreadTimers_h
 
+#include <wtf/CheckedPtr.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Vector.h>
 
@@ -40,13 +42,17 @@ class ThreadTimers;
 class TimerBase;
 
 struct ThreadTimerHeapItem;
-typedef Vector<RefPtr<ThreadTimerHeapItem>> ThreadTimerHeap;
+using ThreadTimerHeap = Vector<Ref<ThreadTimerHeapItem>>;
 
 // A collection of timers per thread. Kept in ThreadGlobalData.
 class ThreadTimers {
-    WTF_MAKE_NONCOPYABLE(ThreadTimers); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ThreadTimers);
+    WTF_MAKE_NONCOPYABLE(ThreadTimers);
 public:
     ThreadTimers();
+
+    // Fire timers for this length of time, and then quit to let the run loop process user input events.
+    static constexpr auto maxDurationOfFiringTimers { 16_ms };
 
     // On a thread different then main, we should set the thread's instance of the SharedTimer.
     void setSharedTimer(SharedTimer*);
@@ -60,11 +66,13 @@ public:
     unsigned nextHeapInsertionCount() { return m_currentHeapInsertionOrder++; }
 
 private:
+    inline CheckedPtr<SharedTimer> checkedSharedTimer();
+
     void sharedTimerFiredInternal();
     void fireTimersInNestedEventLoopInternal();
 
     ThreadTimerHeap m_timerHeap;
-    SharedTimer* m_sharedTimer { nullptr }; // External object, can be a run loop on a worker thread. Normally set/reset by worker thread.
+    CheckedPtr<SharedTimer> m_sharedTimer; // External object, can be a run loop on a worker thread. Normally set/reset by worker thread.
     bool m_firingTimers { false };
     bool m_shouldBreakFireLoopForRenderingUpdate { false };
     unsigned m_currentHeapInsertionOrder { 0 };
@@ -72,6 +80,9 @@ private:
 };
 
 struct ThreadTimerHeapItem : ThreadSafeRefCounted<ThreadTimerHeapItem> {
+    WTF_MAKE_COMPACT_TZONE_ALLOCATED(ThreadTimerHeapItem);
+
+public:
     static RefPtr<ThreadTimerHeapItem> create(TimerBase&, MonotonicTime, unsigned);
 
     bool hasTimer() const { return m_timer; }

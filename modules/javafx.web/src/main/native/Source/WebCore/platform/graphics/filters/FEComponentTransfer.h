@@ -22,13 +22,13 @@
 
 #pragma once
 
-#include "FilterEffect.h"
+#include <WebCore/FilterEffect.h>
 #include <wtf/EnumeratedArray.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
-enum ComponentTransferType {
+enum class ComponentTransferType : uint8_t {
     FECOMPONENTTRANSFER_TYPE_UNKNOWN  = 0,
     FECOMPONENTTRANSFER_TYPE_IDENTITY = 1,
     FECOMPONENTTRANSFER_TYPE_TABLE    = 2,
@@ -38,12 +38,15 @@ enum ComponentTransferType {
 };
 
 struct ComponentTransferFunction {
-    ComponentTransferType type { FECOMPONENTTRANSFER_TYPE_UNKNOWN };
+    ComponentTransferType type { ComponentTransferType::FECOMPONENTTRANSFER_TYPE_UNKNOWN };
 
-    float slope { 0 };
+    // For linear
+    float slope { 1 };
     float intercept { 0 };
-    float amplitude { 0 };
-    float exponent { 0 };
+
+    // For gamma
+    float amplitude { 1 };
+    float exponent { 1 };
     float offset { 0 };
 
     Vector<float> tableValues;
@@ -55,24 +58,19 @@ enum class ComponentTransferChannel : uint8_t { Red, Green, Blue, Alpha };
 
 } // namespace WebCore
 
-namespace WTF {
-template<> struct EnumTraits<WebCore::ComponentTransferChannel> {
-    using values = EnumValues<WebCore::ComponentTransferChannel,
-        WebCore::ComponentTransferChannel::Red,
-        WebCore::ComponentTransferChannel::Green,
-        WebCore::ComponentTransferChannel::Blue,
-        WebCore::ComponentTransferChannel::Alpha>;
-};
-}
-
 namespace WebCore {
 
-using ComponentTransferFunctions = EnumeratedArray<ComponentTransferChannel, ComponentTransferFunction>;
+using ComponentTransferFunctions = EnumeratedArray<ComponentTransferChannel, ComponentTransferFunction, ComponentTransferChannel::Alpha>;
 
-class FEComponentTransfer : public FilterEffect {
+class FEComponentTransfer final : public FilterEffect {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(FEComponentTransfer);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FEComponentTransfer);
 public:
-    WEBCORE_EXPORT static Ref<FEComponentTransfer> create(const ComponentTransferFunction& redFunc, const ComponentTransferFunction& greenFunc, const ComponentTransferFunction& blueFunc, const ComponentTransferFunction& alphaFunc);
+    WEBCORE_EXPORT static Ref<FEComponentTransfer> create(const ComponentTransferFunction& redFunc, const ComponentTransferFunction& greenFunc, const ComponentTransferFunction& blueFunc, const ComponentTransferFunction& alphaFunc, DestinationColorSpace = DestinationColorSpace::SRGB());
     static Ref<FEComponentTransfer> create(ComponentTransferFunctions&&);
+
+    using LookupTable = std::array<uint8_t, 256>;
+    static LookupTable computeLookupTable(const ComponentTransferFunction&);
 
     bool operator==(const FEComponentTransfer&) const;
 
@@ -89,16 +87,13 @@ public:
     bool setOffset(ComponentTransferChannel, float);
     bool setTableValues(ComponentTransferChannel, Vector<float>&&);
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<Ref<FEComponentTransfer>> decode(Decoder&);
-
 private:
-    FEComponentTransfer(const ComponentTransferFunction& redFunc, const ComponentTransferFunction& greenFunc, const ComponentTransferFunction& blueFunc, const ComponentTransferFunction& alphaFunc);
+    FEComponentTransfer(const ComponentTransferFunction& redFunc, const ComponentTransferFunction& greenFunc, const ComponentTransferFunction& blueFunc, const ComponentTransferFunction& alphaFunc, DestinationColorSpace);
     FEComponentTransfer(ComponentTransferFunctions&&);
 
     bool operator==(const FilterEffect& other) const override { return areEqual<FEComponentTransfer>(*this, other); }
 
-    OptionSet<FilterRenderingMode> supportedFilterRenderingModes() const override;
+    OptionSet<FilterRenderingMode> supportedFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) const override;
     std::unique_ptr<FilterEffectApplier> createAcceleratedApplier() const override;
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
 
@@ -109,21 +104,4 @@ private:
 
 } // namespace WebCore
 
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::ComponentTransferType> {
-    using values = EnumValues<
-        WebCore::ComponentTransferType,
-
-        WebCore::FECOMPONENTTRANSFER_TYPE_UNKNOWN,
-        WebCore::FECOMPONENTTRANSFER_TYPE_IDENTITY,
-        WebCore::FECOMPONENTTRANSFER_TYPE_TABLE,
-        WebCore::FECOMPONENTTRANSFER_TYPE_DISCRETE,
-        WebCore::FECOMPONENTTRANSFER_TYPE_LINEAR,
-        WebCore::FECOMPONENTTRANSFER_TYPE_GAMMA
-    >;
-};
-
-} // namespace WTF
-
-SPECIALIZE_TYPE_TRAITS_FILTER_EFFECT(FEComponentTransfer)
+SPECIALIZE_TYPE_TRAITS_FILTER_FUNCTION(FEComponentTransfer)

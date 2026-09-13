@@ -30,13 +30,13 @@ typedef [EnforceRange] unsigned long GPUStencilValue;
 typedef [EnforceRange] long GPUDepthBias;
 
 [
-    EnabledBySetting=WebGPUEnabled
-]
-dictionary GPUDepthStencilState {
+    EnabledBySetting=WebGPUEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GPUDepthStencilState {
     required GPUTextureFormat format;
 
-    boolean depthWriteEnabled = false;
-    GPUCompareFunction depthCompare = "always";
+    boolean depthWriteEnabled;
+    GPUCompareFunction depthCompare;
 
     GPUStencilFaceState stencilFront;
     GPUStencilFaceState stencilBack;

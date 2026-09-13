@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "JSObject.h"
+#include <JavaScriptCore/JSObject.h>
 #include <wtf/CompactPointerTuple.h>
 #include <wtf/HashMap.h>
 
@@ -51,13 +51,17 @@ public:
     PropertyCondition()
         : m_header(nullptr, Presence)
     {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         memset(&u, 0, sizeof(u));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     }
 
     PropertyCondition(WTF::HashTableDeletedValueType)
         : m_header(nullptr, Absence)
     {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         memset(&u, 0, sizeof(u));
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     }
 
     static PropertyCondition presenceWithoutBarrier(UniquedStringImpl* uid, PropertyOffset offset, unsigned attributes)
@@ -271,6 +275,8 @@ public:
         return !m_header.pointer() && m_header.type() == Absence;
     }
 
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
     // Two conditions are compatible if they are identical or if they speak of different uids. If
     // false is returned, you have to decide how to resolve the conflict - for example if there is
     // a Presence and an Equivalence then in some cases you'll want the more general of the two
@@ -326,13 +332,13 @@ public:
 
     // This means that it's still valid and we could enforce validity by setting a transition
     // watchpoint on the structure and possibly an impure property watchpoint.
-    bool isWatchableAssumingImpurePropertyWatchpoint(
-        Structure*, JSObject* base, WatchabilityEffort) const;
+    bool isWatchableAssumingImpurePropertyWatchpoint(Structure*, JSObject*, WatchabilityEffort) const;
+    bool isWatchableAssumingImpurePropertyWatchpoint(Structure*, JSObject*, WatchabilityEffort, Concurrency) const;
 
     // This means that it's still valid and we could enforce validity by setting a transition
     // watchpoint on the structure.
-    bool isWatchable(
-        Structure*, JSObject*, WatchabilityEffort) const;
+    bool isWatchable(Structure*, JSObject*, WatchabilityEffort) const;
+    bool isWatchable(Structure*, JSObject*, WatchabilityEffort, Concurrency) const;
 
     bool watchingRequiresStructureTransitionWatchpoint() const
     {
@@ -364,7 +370,7 @@ public:
     PropertyCondition attemptToMakeReplacementWithoutBarrier(JSObject* base) const;
 
 private:
-    bool isWatchableWhenValid(Structure*, WatchabilityEffort) const;
+    bool isWatchableWhenValid(Structure*, WatchabilityEffort, Concurrency) const;
 
     Header m_header;
     union {
@@ -381,24 +387,11 @@ private:
     } u;
 };
 
-struct PropertyConditionHash {
-    static unsigned hash(const PropertyCondition& key) { return key.hash(); }
-    static bool equal(
-        const PropertyCondition& a, const PropertyCondition& b)
-    {
-        return a == b;
-    }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } // namespace JSC
 
 namespace WTF {
 
 void printInternal(PrintStream&, JSC::PropertyCondition::Kind);
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::PropertyCondition> : JSC::PropertyConditionHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::PropertyCondition> : SimpleClassHashTraits<JSC::PropertyCondition> { };

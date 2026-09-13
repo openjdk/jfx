@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2008-2021 Apple Inc. All Rights Reserved.
+ *  Copyright (C) 2008-2021 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -45,7 +45,7 @@ ALWAYS_INLINE JSArray* tryCreateUninitializedRegExpMatchesArray(ObjectInitializa
 
     const bool hasIndexingHeader = true;
     Butterfly* butterfly = Butterfly::tryCreateUninitialized(vm, nullptr, 0, structure->outOfLineCapacity(), hasIndexingHeader, vectorLength * sizeof(EncodedJSValue), deferralContext);
-    if (UNLIKELY(!butterfly))
+    if (!butterfly) [[unlikely]]
         return nullptr;
 
     butterfly->setVectorLength(vectorLength);
@@ -61,7 +61,7 @@ ALWAYS_INLINE JSArray* tryCreateUninitializedRegExpMatchesArray(ObjectInitializa
 }
 
 ALWAYS_INLINE JSArray* createRegExpMatchesArray(
-    VM& vm, JSGlobalObject* globalObject, JSString* input, const String& inputValue,
+    VM& vm, JSGlobalObject* globalObject, JSString* input, StringView inputValue,
     RegExp* regExp, unsigned startOffset, MatchResult& result)
 {
     if constexpr (validateDFGDoesGC)
@@ -125,7 +125,7 @@ ALWAYS_INLINE JSArray* createRegExpMatchesArray(
         return result;
     };
 
-    if (UNLIKELY(globalObject->isHavingABadTime())) {
+    if (globalObject->isHavingABadTime()) [[unlikely]] {
         GCDeferralContext deferralContext(vm);
         ObjectInitializationScope matchesArrayScope(vm);
         ObjectInitializationScope indicesArrayScope(vm);
@@ -230,17 +230,6 @@ ALWAYS_INLINE JSArray* createRegExpMatchesArray(
     return array;
 }
 
-inline JSArray* createRegExpMatchesArray(JSGlobalObject* globalObject, JSString* string, RegExp* regExp, unsigned startOffset)
-{
-    VM& vm = getVM(globalObject);
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    MatchResult ignoredResult;
-    String input = string->value(globalObject);
-    RETURN_IF_EXCEPTION(scope, { });
-
-    RELEASE_AND_RETURN(scope, createRegExpMatchesArray(vm, globalObject, string, WTFMove(input), regExp, startOffset, ignoredResult));
-}
 JSArray* createEmptyRegExpMatchesArray(JSGlobalObject*, JSString*, RegExp*);
 Structure* createRegExpMatchesArrayStructure(VM&, JSGlobalObject*);
 Structure* createRegExpMatchesArrayWithIndicesStructure(VM&, JSGlobalObject*);

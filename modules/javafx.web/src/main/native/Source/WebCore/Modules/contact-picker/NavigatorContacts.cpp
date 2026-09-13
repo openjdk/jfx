@@ -29,8 +29,11 @@
 #include "ContactsManager.h"
 #include "Navigator.h"
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NavigatorContacts);
 
 NavigatorContacts::NavigatorContacts(Navigator& navigator)
     : m_navigator(navigator)
@@ -39,32 +42,27 @@ NavigatorContacts::NavigatorContacts(Navigator& navigator)
 
 NavigatorContacts::~NavigatorContacts() = default;
 
-RefPtr<ContactsManager> NavigatorContacts::contacts(Navigator& navigator)
+Ref<ContactsManager> NavigatorContacts::contacts(Navigator& navigator)
 {
     return NavigatorContacts::from(navigator)->contacts();
 }
 
-RefPtr<ContactsManager> NavigatorContacts::contacts()
+Ref<ContactsManager> NavigatorContacts::contacts()
 {
     if (!m_contactsManager)
-        m_contactsManager = ContactsManager::create(m_navigator);
-    return m_contactsManager;
+        lazyInitialize(m_contactsManager, ContactsManager::create(m_navigator.get()));
+    return *m_contactsManager;
 }
 
 NavigatorContacts* NavigatorContacts::from(Navigator& navigator)
 {
-    auto* supplement = static_cast<NavigatorContacts*>(Supplement<Navigator>::from(&navigator, supplementName()));
+    auto* supplement = downcast<NavigatorContacts>(Supplement<Navigator>::from(&navigator, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<NavigatorContacts>(navigator);
         supplement = newSupplement.get();
-        provideTo(&navigator, supplementName(), WTFMove(newSupplement));
+        provideTo(&navigator, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }
 
-const char* NavigatorContacts::supplementName()
-{
-    return "NavigatorContacts";
-}
-
-}
+} // namespace WebCore

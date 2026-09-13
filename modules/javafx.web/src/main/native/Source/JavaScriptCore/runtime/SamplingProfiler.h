@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,19 +25,23 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(SAMPLING_PROFILER)
 
-#include "CallFrame.h"
-#include "CodeBlockHash.h"
-#include "JITCode.h"
-#include "MachineStackMarker.h"
-#include "PCToCodeOriginMap.h"
-#include "WasmCompilationMode.h"
-#include "WasmIndexOrName.h"
+#include <JavaScriptCore/CallFrame.h>
+#include <JavaScriptCore/CodeBlockHash.h>
+#include <JavaScriptCore/JITCode.h>
+#include <JavaScriptCore/MachineStackMarker.h>
+#include <JavaScriptCore/NativeCallee.h>
+#include <JavaScriptCore/PCToCodeOriginMap.h>
+#include <JavaScriptCore/WasmCompilationMode.h>
+#include <JavaScriptCore/WasmIndexOrName.h>
 #include <wtf/Box.h>
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>
 #include <wtf/Stopwatch.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakRandom.h>
 
@@ -47,7 +51,7 @@ class VM;
 class ExecutableBase;
 
 class SamplingProfiler : public ThreadSafeRefCounted<SamplingProfiler> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(SamplingProfiler);
 public:
 
     struct UnprocessedStackFrame {
@@ -67,6 +71,7 @@ public:
         CalleeBits unverifiedCallee;
         CodeBlock* verifiedCodeBlock { nullptr };
         CallSiteIndex callSiteIndex;
+        NativeCallee::Category nativeCalleeCategory { NativeCallee::Category::InlineCache };
 #if ENABLE(WEBASSEMBLY)
         std::optional<Wasm::IndexOrName> wasmIndexOrName;
 #endif
@@ -118,13 +123,12 @@ public:
 
             bool hasExpressionInfo() const
             {
-                return lineNumber != std::numeric_limits<unsigned>::max()
-                    && columnNumber != std::numeric_limits<unsigned>::max();
+                return lineColumn.line != std::numeric_limits<unsigned>::max()
+                    && lineColumn.column != std::numeric_limits<unsigned>::max();
             }
 
             // These attempt to be expression-level line and column number.
-            unsigned lineNumber { std::numeric_limits<unsigned>::max() };
-            unsigned columnNumber { std::numeric_limits<unsigned>::max() };
+            LineColumn lineColumn { std::numeric_limits<unsigned>::max(), std::numeric_limits<unsigned>::max() };
             BytecodeIndex bytecodeIndex;
             CodeBlockHash codeBlockHash;
             JITType jitType { JITType::None };
@@ -138,12 +142,12 @@ public:
         unsigned lineNumber() const
         {
             ASSERT(hasExpressionInfo());
-            return semanticLocation.lineNumber;
+            return semanticLocation.lineColumn.line;
         }
         unsigned columnNumber() const
         {
             ASSERT(hasExpressionInfo());
-            return semanticLocation.columnNumber;
+            return semanticLocation.lineColumn.column;
         }
 
         // These are function-level data.
@@ -151,12 +155,13 @@ public:
         String displayName(VM&);
         int functionStartLine();
         unsigned functionStartColumn();
-        SourceID sourceID();
+        std::tuple<SourceProvider*, SourceID> sourceProviderAndID();
         String url();
     };
 
     struct UnprocessedStackTrace {
-        Seconds timestamp;
+        MonotonicTime timestamp;
+        Seconds stopwatchTimestamp;
         void* topPC;
         bool topFrameIsLLInt;
         void* llintPC;
@@ -165,18 +170,19 @@ public:
     };
 
     struct StackTrace {
-        Seconds timestamp;
+        MonotonicTime timestamp;
+        Seconds stopwatchTimestamp;
         Vector<StackFrame> frames;
         StackTrace()
         { }
         StackTrace(StackTrace&& other)
             : timestamp(other.timestamp)
-            , frames(WTFMove(other.frames))
+            , frames(WTF::move(other.frames))
         { }
     };
 
     SamplingProfiler(VM&, Ref<Stopwatch>&&);
-    ~SamplingProfiler();
+    JS_EXPORT_PRIVATE ~SamplingProfiler();
     void noticeJSLockAcquisition();
     void noticeVMEntry();
     void shutdown();
@@ -190,7 +196,7 @@ public:
     JS_EXPORT_PRIVATE void noticeCurrentThreadAsJSCExecutionThread();
     void noticeCurrentThreadAsJSCExecutionThreadWithLock() WTF_REQUIRES_LOCK(m_lock);
     void processUnverifiedStackTraces() WTF_REQUIRES_LOCK(m_lock);
-    void setStopWatch(Ref<Stopwatch>&& stopwatch) WTF_REQUIRES_LOCK(m_lock) { m_stopwatch = WTFMove(stopwatch); }
+    void setStopWatch(Ref<Stopwatch>&& stopwatch) WTF_REQUIRES_LOCK(m_lock) { m_stopwatch = WTF::move(stopwatch); }
     void pause() WTF_REQUIRES_LOCK(m_lock);
     void clearData() WTF_REQUIRES_LOCK(m_lock);
 
@@ -219,10 +225,9 @@ private:
     Vector<StackTrace> m_stackTraces WTF_GUARDED_BY_LOCK(m_lock);
     Vector<UnprocessedStackTrace> m_unprocessedStackTraces WTF_GUARDED_BY_LOCK(m_lock);
     Seconds m_timingInterval;
-    Seconds m_lastTime WTF_GUARDED_BY_LOCK(m_lock);
     RefPtr<Thread> m_thread;
     RefPtr<Thread> m_jscExecutionThread WTF_GUARDED_BY_LOCK(m_lock);
-    HashSet<JSCell*> m_liveCellPointers WTF_GUARDED_BY_LOCK(m_lock);
+    UncheckedKeyHashSet<JSCell*> m_liveCellPointers WTF_GUARDED_BY_LOCK(m_lock);
     Vector<UnprocessedStackFrame> m_currentFrames WTF_GUARDED_BY_LOCK(m_lock);
 };
 

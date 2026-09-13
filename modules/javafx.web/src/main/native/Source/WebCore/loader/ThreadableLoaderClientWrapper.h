@@ -56,46 +56,40 @@ public:
 
     void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent)
     {
-        if (m_client)
-            m_client->didSendData(bytesSent, totalBytesToBeSent);
+        if (RefPtr client = m_client.get())
+            client->didSendData(bytesSent, totalBytesToBeSent);
     }
 
-    void didReceiveResponse(ResourceLoaderIdentifier identifier, const ResourceResponse& response)
+    void didReceiveResponse(ScriptExecutionContextIdentifier mainContext, std::optional<ResourceLoaderIdentifier> identifier, const ResourceResponse& response)
     {
-        if (m_client)
-            m_client->didReceiveResponse(identifier, response);
+        if (RefPtr client = m_client.get())
+            client->didReceiveResponse(mainContext, identifier, response);
     }
 
     void didReceiveData(const SharedBuffer& buffer)
     {
-        if (m_client)
-            m_client->didReceiveData(buffer);
+        if (RefPtr client = m_client.get())
+            client->didReceiveData(buffer);
     }
 
-    void didFinishLoading(ResourceLoaderIdentifier identifier, const NetworkLoadMetrics& metrics)
+    void didFinishLoading(ScriptExecutionContextIdentifier mainContext, std::optional<ResourceLoaderIdentifier> identifier, const NetworkLoadMetrics& metrics)
     {
         m_done = true;
-        if (m_client)
-            m_client->didFinishLoading(identifier, metrics);
+        if (RefPtr client = m_client.get())
+            client->didFinishLoading(mainContext, identifier, metrics);
     }
 
     void notifyIsDone(bool isDone)
     {
-        if (m_client)
-            m_client->notifyIsDone(isDone);
+        if (RefPtr client = m_client.get())
+            client->notifyIsDone(isDone);
     }
 
-    void didFail(const ResourceError& error)
+    void didFail(std::optional<ScriptExecutionContextIdentifier> mainContext, const ResourceError& error)
     {
         m_done = true;
-        if (m_client)
-            m_client->didFail(error);
-    }
-
-    void didReceiveAuthenticationCancellation(ResourceLoaderIdentifier identifier, const ResourceResponse& response)
-    {
-        if (m_client)
-            m_client->didReceiveResponse(identifier, response);
+        if (RefPtr client = m_client.get())
+            client->didFail(mainContext, error);
     }
 
     const String& initiator() const { return m_initiator; }
@@ -103,13 +97,13 @@ public:
 protected:
     explicit ThreadableLoaderClientWrapper(ThreadableLoaderClient&, const String&);
 
-    ThreadableLoaderClient* m_client;
+    WeakPtr<ThreadableLoaderClient> m_client;
     String m_initiator;
     bool m_done { false };
 };
 
 inline ThreadableLoaderClientWrapper::ThreadableLoaderClientWrapper(ThreadableLoaderClient& client, const String& initiator)
-    : m_client(&client)
+    : m_client(client)
     , m_initiator(initiator.isolatedCopy())
 {
 }

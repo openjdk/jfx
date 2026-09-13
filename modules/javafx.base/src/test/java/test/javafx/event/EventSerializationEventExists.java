@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,10 +35,10 @@ import java.util.List;
 import javafx.event.Event;
 import javafx.event.EventType;
 import javafx.event.EventTypeShim;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class EventSerializationEventExists {
 
@@ -46,7 +46,7 @@ public class EventSerializationEventExists {
     private ObjectOutputStream objectOutputStream;
     private ObjectInputStream objectInputStream;
 
-    @Before
+    @BeforeEach
     public void setUp() throws IOException {
         byteArrayOutputStream = new ByteArrayOutputStream();
         objectOutputStream = new ObjectOutputStream(byteArrayOutputStream);
@@ -57,7 +57,7 @@ public class EventSerializationEventExists {
     }
 
     @Test
-    @Ignore
+    @Disabled
     public void testSerializationEventExists() throws IOException, ClassNotFoundException {
         EventType ev = null;
         try {

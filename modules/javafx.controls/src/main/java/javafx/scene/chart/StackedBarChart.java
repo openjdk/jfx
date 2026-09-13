@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,31 +26,35 @@
 package javafx.scene.chart;
 
 
-import java.util.*;
-
-import javafx.animation.*;
-import javafx.application.Platform;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import javafx.animation.FadeTransition;
+import javafx.animation.Interpolator;
+import javafx.animation.KeyFrame;
+import javafx.animation.KeyValue;
+import javafx.animation.ParallelTransition;
+import javafx.animation.Timeline;
 import javafx.beans.NamedArg;
 import javafx.beans.property.DoubleProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
+import javafx.css.PseudoClass;
+import javafx.css.Styleable;
+import javafx.css.StyleableDoubleProperty;
+import javafx.css.StyleableProperty;
+import javafx.css.converter.SizeConverter;
 import javafx.geometry.Orientation;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
-
 import com.sun.javafx.charts.Legend.LegendItem;
-
-import javafx.css.StyleableDoubleProperty;
-import javafx.css.CssMetaData;
-import javafx.css.PseudoClass;
-
-import javafx.css.converter.SizeConverter;
-
-import javafx.collections.ListChangeListener;
-import javafx.css.Styleable;
-import javafx.css.StyleableProperty;
 
 
 /**
@@ -58,6 +62,9 @@ import javafx.css.StyleableProperty;
  * data values for a category. The bars can be vertical or horizontal depending
  * on which axis is a category axis.
  * The bar for each series is stacked on top of the previous series.
+ *
+ * @param <X> the X axis value type
+ * @param <Y> the Y axis value type
  * @since JavaFX 2.1
  */
 public class StackedBarChart<X, Y> extends XYChart<X, Y> {
@@ -69,7 +76,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
     private CategoryAxis categoryAxis;
     private ValueAxis valueAxis;
     private ParallelTransition parallelTransition;
-    // RT-23125 handling data removal when a category is removed.
+    // JDK-8115252 handling data removal when a category is removed.
     private ListChangeListener<String> categoriesListener = new ListChangeListener<>() {
         @Override public void onChanged(ListChangeListener.Change<? extends String> c) {
             while (c.next()) {
@@ -78,10 +85,12 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
                         for (Data<X, Y> data : series.getData()) {
                             if ((cat).equals((orientation == orientation.VERTICAL) ?
                                     data.getXValue() : data.getYValue())) {
-                                boolean animatedOn = getAnimated();
-                                setAnimated(false);
-                                dataItemRemoved(data, series);
-                                setAnimated(animatedOn);
+                                try {
+                                    setSuppressAnimation(true);
+                                    dataItemRemoved(data, series);
+                                } finally {
+                                    setSuppressAnimation(false);
+                                }
                             }
                         }
                     }
@@ -532,7 +541,7 @@ public class StackedBarChart<X, Y> extends XYChart<X, Y> {
             bar = new StackPane();
             bar.setAccessibleRole(AccessibleRole.TEXT);
             bar.setAccessibleRoleDescription("Bar");
-            bar.focusTraversableProperty().bind(Platform.accessibilityActiveProperty());
+            bar.setFocusTraversable(isAccessibilityActive());
             item.setNode(bar);
         }
         bar.getStyleClass().setAll("chart-bar", "series" + seriesIndex, "data" + itemIndex, series.defaultColorStyleClass);

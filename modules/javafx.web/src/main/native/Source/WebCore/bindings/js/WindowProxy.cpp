@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2001 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2006-2019 Apple Inc. All rights reserved.
+ *  Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -22,11 +22,14 @@
 #include "WindowProxy.h"
 
 #include "CommonVM.h"
-#include "GCController.h"
+#include "DOMWrapperWorld.h"
+#include "DocumentPage.h"
+#include "FrameConsoleClient.h"
+#include "GarbageCollectionController.h"
+#include "JSDOMWindowBase.h"
 #include "JSWindowProxy.h"
 #include "LocalFrame.h"
 #include "Page.h"
-#include "PageConsoleClient.h"
 #include "PageGroup.h"
 #include "RemoteFrame.h"
 #include "ScriptController.h"
@@ -35,6 +38,7 @@
 #include <JavaScriptCore/StrongInlines.h>
 #include <JavaScriptCore/WeakGCMapInlines.h>
 #include <wtf/MemoryPressureHandler.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -47,21 +51,27 @@ static void collectGarbageAfterWindowProxyDestruction()
     if (MemoryPressureHandler::singleton().isUnderMemoryPressure()) {
         // NOTE: We do the collection on next runloop to ensure that there's no pointer
         //       to the window object on the stack.
-        GCController::singleton().garbageCollectOnNextRunLoop();
+        GarbageCollectionController::singleton().garbageCollectOnNextRunLoop();
     } else
-        GCController::singleton().garbageCollectSoon();
+        GarbageCollectionController::singleton().garbageCollectSoon();
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WindowProxy);
 
 WindowProxy::WindowProxy(Frame& frame)
     : m_frame(frame)
-    , m_jsWindowProxies(makeUniqueRef<ProxyMap>())
 {
+}
+
+Ref<WindowProxy> WindowProxy::create(Frame& frame)
+{
+    return adoptRef(*new WindowProxy(frame));
 }
 
 WindowProxy::~WindowProxy()
 {
     ASSERT(!m_frame);
-    ASSERT(m_jsWindowProxies->isEmpty());
+    ASSERT(m_jsWindowProxies.isEmpty());
 }
 
 Frame* WindowProxy::frame() const
@@ -75,27 +85,28 @@ void WindowProxy::detachFromFrame()
 
     m_frame = nullptr;
 
-    // It's likely that destroying windowProxies will create a lot of garbage.
-    if (!m_jsWindowProxies->isEmpty()) {
-        while (!m_jsWindowProxies->isEmpty()) {
-            auto it = m_jsWindowProxies->begin();
+    // It's likely that destroying proxies will create a lot of garbage.
+    if (!m_jsWindowProxies.isEmpty()) {
+        do {
+            auto it = m_jsWindowProxies.begin();
             it->value->window()->setConsoleClient(nullptr);
-            destroyJSWindowProxy(*it->key);
-        }
+            destroyJSWindowProxy(it->key);
+        } while (!m_jsWindowProxies.isEmpty());
         collectGarbageAfterWindowProxyDestruction();
     }
 }
 
 void WindowProxy::replaceFrame(Frame& frame)
 {
+    ASSERT(m_frame);
     m_frame = frame;
-    setDOMWindow(frame.window());
+    setDOMWindow(frame.protectedWindow().get());
 }
 
 void WindowProxy::destroyJSWindowProxy(DOMWrapperWorld& world)
 {
-    ASSERT(m_jsWindowProxies->contains(&world));
-    m_jsWindowProxies->remove(&world);
+    ASSERT(m_jsWindowProxies.contains(&world));
+    m_jsWindowProxies.remove(&world);
     world.didDestroyWindowProxy(this);
 }
 
@@ -103,20 +114,20 @@ JSWindowProxy& WindowProxy::createJSWindowProxy(DOMWrapperWorld& world)
 {
     ASSERT(m_frame);
 
-    ASSERT(!m_jsWindowProxies->contains(&world));
+    ASSERT(!m_jsWindowProxies.contains(&world));
     ASSERT(m_frame->window());
 
     VM& vm = world.vm();
 
-    Strong<JSWindowProxy> jsWindowProxy(vm, &JSWindowProxy::create(vm, *m_frame->window(), world));
-    m_jsWindowProxies->add(&world, jsWindowProxy);
+    Strong<JSWindowProxy> jsWindowProxy(vm, &JSWindowProxy::create(vm, *m_frame->protectedWindow().get(), world));
+    m_jsWindowProxies.add(world, jsWindowProxy);
     world.didCreateWindowProxy(this);
     return *jsWindowProxy.get();
 }
 
 Vector<JSC::Strong<JSWindowProxy>> WindowProxy::jsWindowProxiesAsVector() const
 {
-    return copyToVector(m_jsWindowProxies->values());
+    return copyToVector(m_jsWindowProxies.values());
 }
 
 JSDOMGlobalObject* WindowProxy::globalObject(DOMWrapperWorld& world)
@@ -132,14 +143,14 @@ JSWindowProxy& WindowProxy::createJSWindowProxyWithInitializedScript(DOMWrapperW
 
     JSLockHolder lock(world.vm());
     auto& windowProxy = createJSWindowProxy(world);
-    if (is<LocalFrame>(*m_frame))
-        downcast<LocalFrame>(*m_frame).script().initScriptForWindowProxy(windowProxy);
+    if (RefPtr localFrame = dynamicDowncast<LocalFrame>(*m_frame))
+        localFrame->checkedScript()->initScriptForWindowProxy(windowProxy);
     return windowProxy;
 }
 
 void WindowProxy::clearJSWindowProxiesNotMatchingDOMWindow(DOMWindow* newDOMWindow, bool goingIntoBackForwardCache)
 {
-    if (m_jsWindowProxies->isEmpty())
+    if (m_jsWindowProxies.isEmpty())
         return;
 
     JSLockHolder lock(commonVM());
@@ -165,7 +176,7 @@ void WindowProxy::setDOMWindow(DOMWindow* newDOMWindow)
 {
     ASSERT(newDOMWindow);
 
-    if (m_jsWindowProxies->isEmpty())
+    if (m_jsWindowProxies.isEmpty())
         return;
 
     ASSERT(m_frame);
@@ -178,58 +189,50 @@ void WindowProxy::setDOMWindow(DOMWindow* newDOMWindow)
 
         windowProxy->setWindow(*newDOMWindow);
 
-        ScriptController* scriptController = nullptr;
-        Page* page = nullptr;
-        if (is<LocalFrame>(*m_frame)) {
-            auto& frame = downcast<LocalFrame>(*m_frame);
-            scriptController = &frame.script();
-            page = frame.page();
-        }
+        if (RefPtr localFrame = dynamicDowncast<LocalFrame>(m_frame.get())) {
+            CheckedRef scriptController = localFrame->script();
 
         // ScriptController's m_cacheableBindingRootObject persists between page navigations
-        // so needs to know about the new JSLocalDOMWindow.
-        if (auto* cacheableBindingRootObject = scriptController ? scriptController->existingCacheableBindingRootObject() : nullptr)
+        // so needs to know about the new JSDOMWindow.
+            if (RefPtr cacheableBindingRootObject = scriptController->existingCacheableBindingRootObject())
             cacheableBindingRootObject->updateGlobalObject(windowProxy->window());
 
+            windowProxy->window()->setConsoleClient(localFrame->console());
+        }
+
+        RefPtr page = m_frame->page();
         windowProxy->attachDebugger(page ? page->debugger() : nullptr);
-        if (page) {
+        if (page)
             windowProxy->window()->setProfileGroup(page->group().identifier());
-        windowProxy->window()->setConsoleClient(page->console());
-    }
     }
 }
 
 void WindowProxy::attachDebugger(JSC::Debugger* debugger)
 {
-    for (auto& windowProxy : m_jsWindowProxies->values())
+    for (auto& windowProxy : m_jsWindowProxies.values())
         windowProxy->attachDebugger(debugger);
 }
 
 DOMWindow* WindowProxy::window() const
 {
-    return m_frame ? m_frame->window() : nullptr;
+    RefPtr frame = m_frame.get();
+    return frame ? frame->window() : nullptr;
 }
 
-WindowProxy::ProxyMap::ValuesConstIteratorRange WindowProxy::jsWindowProxies() const
+JSWindowProxy* WindowProxy::existingJSWindowProxy(DOMWrapperWorld& world) const
 {
-    return m_jsWindowProxies->values();
+    return m_jsWindowProxies.get(&world).get();
 }
 
-WindowProxy::ProxyMap WindowProxy::releaseJSWindowProxies()
+JSWindowProxy* WindowProxy::jsWindowProxy(DOMWrapperWorld& world)
 {
-    return std::exchange(m_jsWindowProxies, makeUniqueRef<ProxyMap>());
-}
+    if (!m_frame)
+        return nullptr;
 
-void WindowProxy::setJSWindowProxies(ProxyMap&& windowProxies)
-{
-    m_jsWindowProxies = makeUniqueRef<ProxyMap>(WTFMove(windowProxies));
-}
+    if (auto* existingProxy = existingJSWindowProxy(world))
+        return existingProxy;
 
-#if PLATFORM(JAVA)
-void WindowProxy::set_existing_window_proxy(bool existingWindowProxy_, DOMWrapperWorld& world) {
-    VM& vm = world.vm();
-    vm.set_existing_window_proxy(existingWindowProxy_);
+    return &createJSWindowProxyWithInitializedScript(world);
 }
-#endif
 
 } // namespace WebCore

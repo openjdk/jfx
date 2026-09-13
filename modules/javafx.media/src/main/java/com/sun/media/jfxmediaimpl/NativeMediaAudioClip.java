@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,7 +65,7 @@ final class NativeMediaAudioClip extends AudioClip {
 
     /*
      * TODO: Implement unsupported methods
-     * http://javafx-jira.kenai.com/browse/RT-27007
+     * JDK-8089356
      */
     public static AudioClip create(byte[] data, int dataOffset, int sampleCount, int sampleFormat, int channels, int sampleRate) {
         throw new UnsupportedOperationException("NativeMediaAudioClip does not support creating clips from raw sample data");

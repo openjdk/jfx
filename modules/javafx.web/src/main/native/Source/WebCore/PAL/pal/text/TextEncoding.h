@@ -26,8 +26,10 @@
 #pragma once
 
 #include "UnencodableHandling.h"
+#include <pal/ExportMacros.h>
 #include <wtf/URL.h>
 #include <wtf/text/StringView.h>
+#include <wtf/text/WTFString.h>
 
 namespace PAL {
 
@@ -36,34 +38,33 @@ enum class NFCNormalize : bool { No, Yes };
 class TextEncoding : public WTF::URLTextEncoding {
 public:
     TextEncoding() = default;
-    PAL_EXPORT TextEncoding(const char* name);
+    PAL_EXPORT TextEncoding(ASCIILiteral name);
     PAL_EXPORT TextEncoding(StringView name);
     PAL_EXPORT TextEncoding(const String& name);
 
-    bool isValid() const { return m_name; }
-    const char* name() const { return m_name; }
-    PAL_EXPORT const char* domName() const; // name exposed via DOM
+    bool isValid() const { return !m_name.isNull(); }
+    ASCIILiteral name() const { return m_name; }
+    PAL_EXPORT ASCIILiteral domName() const; // name exposed via DOM
     bool usesVisualOrdering() const;
     bool isJapanese() const;
 
     const TextEncoding& closestByteBasedEquivalent() const;
     const TextEncoding& encodingForFormSubmissionOrURLParsing() const;
 
-    PAL_EXPORT String decode(const char*, size_t length, bool stopOnError, bool& sawError) const;
-    String decode(const char*, size_t length) const;
-    String decode(const uint8_t* data, size_t length) const { return decode(reinterpret_cast<const char*>(data), length); }
+    PAL_EXPORT String decode(std::span<const uint8_t>, bool stopOnError, bool& sawError) const;
+    String decode(std::span<const uint8_t>) const;
     PAL_EXPORT Vector<uint8_t> encode(StringView, PAL::UnencodableHandling, NFCNormalize = NFCNormalize::Yes) const;
     Vector<uint8_t> encodeForURLParsing(StringView string) const final { return encode(string, PAL::UnencodableHandling::URLEncodedEntities, NFCNormalize::No); }
 
-    UChar backslashAsCurrencySymbol() const;
+    char16_t backslashAsCurrencySymbol() const;
     bool isByteBasedEncoding() const { return !isNonByteBasedEncoding(); }
 
 private:
     bool isNonByteBasedEncoding() const;
     bool isUTF7Encoding() const;
 
-    const char* m_name { nullptr };
-    UChar m_backslashAsCurrencySymbol;
+    ASCIILiteral m_name;
+    char16_t m_backslashAsCurrencySymbol;
 };
 
 inline bool operator==(const TextEncoding& a, const TextEncoding& b) { return a.name() == b.name(); }
@@ -80,10 +81,10 @@ PAL_EXPORT const TextEncoding& WindowsLatin1Encoding();
 // the resulting string will have embedded null characters!
 PAL_EXPORT String decodeURLEscapeSequences(StringView, const TextEncoding& = UTF8Encoding());
 
-inline String TextEncoding::decode(const char* characters, size_t length) const
+inline String TextEncoding::decode(std::span<const uint8_t> characters) const
 {
     bool ignored;
-    return decode(characters, length, false, ignored);
+    return decode(characters, false, ignored);
 }
 
 } // namespace PAL

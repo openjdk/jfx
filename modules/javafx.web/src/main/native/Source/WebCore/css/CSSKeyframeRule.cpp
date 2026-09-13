@@ -27,36 +27,58 @@
 #include "CSSKeyframeRule.h"
 
 #include "CSSKeyframesRule.h"
-#include "CSSParser.h"
+#include "CSSPropertyParserConsumer+Animations.h"
+#include "CSSSerializationContext.h"
+#include "CSSStyleProperties.h"
 #include "MutableStyleProperties.h"
-#include "PropertySetCSSStyleDeclaration.h"
 #include "StyleProperties.h"
 #include "StylePropertiesInlines.h"
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
+void StyleRuleKeyframe::Key::writeToString(StringBuilder& str) const
+{
+    if (rangeName == CSSValueContain)
+        str.append("contain "_s);
+    else if (rangeName == CSSValueCover)
+        str.append("cover "_s);
+    else if (rangeName == CSSValueEntry)
+        str.append("entry "_s);
+    else if (rangeName == CSSValueEntryCrossing)
+        str.append("entry-crossing "_s);
+    else if (rangeName == CSSValueExit)
+        str.append("exit "_s);
+    else if (rangeName == CSSValueExitCrossing)
+        str.append("exit-crossing "_s);
+    str.append(offset * 100, '%');
+}
+
 StyleRuleKeyframe::StyleRuleKeyframe(Ref<StyleProperties>&& properties)
     : StyleRuleBase(StyleRuleType::Keyframe)
-    , m_properties(WTFMove(properties))
+    , m_properties(WTF::move(properties))
 {
 }
 
-StyleRuleKeyframe::StyleRuleKeyframe(Vector<double>&& keys, Ref<StyleProperties>&& properties)
+StyleRuleKeyframe::StyleRuleKeyframe(Vector<Key>&& keys, Ref<StyleProperties>&& properties)
     : StyleRuleBase(StyleRuleType::Keyframe)
-    , m_properties(WTFMove(properties))
-    , m_keys(WTFMove(keys))
+    , m_properties(WTF::move(properties))
+    , m_keys(WTF::move(keys))
 {
 }
 
 Ref<StyleRuleKeyframe> StyleRuleKeyframe::create(Ref<StyleProperties>&& properties)
 {
-    return adoptRef(*new StyleRuleKeyframe(WTFMove(properties)));
+    return adoptRef(*new StyleRuleKeyframe(WTF::move(properties)));
 }
 
-Ref<StyleRuleKeyframe> StyleRuleKeyframe::create(Vector<double>&& keys, Ref<StyleProperties>&& properties)
+Ref<StyleRuleKeyframe> StyleRuleKeyframe::create(Vector<std::pair<CSSValueID, double>>&& keys, Ref<StyleProperties>&& properties)
 {
-    return adoptRef(*new StyleRuleKeyframe(WTFMove(keys), WTFMove(properties)));
+    auto keyStructs = keys.map([](auto& pair) -> Key {
+        return { pair.first, pair.second };
+    });
+    return adoptRef(*new StyleRuleKeyframe(WTF::move(keyStructs), WTF::move(properties)));
 }
 
 StyleRuleKeyframe::~StyleRuleKeyframe() = default;
@@ -65,7 +87,7 @@ MutableStyleProperties& StyleRuleKeyframe::mutableProperties()
 {
     if (!is<MutableStyleProperties>(m_properties))
         m_properties = m_properties->mutableCopy();
-    return downcast<MutableStyleProperties>(m_properties.get());
+    return uncheckedDowncast<MutableStyleProperties>(m_properties.get());
 }
 
 String StyleRuleKeyframe::keyText() const
@@ -74,7 +96,7 @@ String StyleRuleKeyframe::keyText() const
     for (size_t i = 0; i < m_keys.size(); ++i) {
         if (i)
             keyText.append(',');
-        keyText.append(m_keys[i] * 100, '%');
+        m_keys[i].writeToString(keyText);
     }
     return keyText.toString();
 }
@@ -82,18 +104,20 @@ String StyleRuleKeyframe::keyText() const
 bool StyleRuleKeyframe::setKeyText(const String& keyText)
 {
     ASSERT(!keyText.isNull());
-    auto keys = CSSParser::parseKeyframeKeyList(keyText);
+    auto keys = CSSPropertyParserHelpers::parseKeyframeKeyList(keyText, strictCSSParserContext());
     if (keys.isEmpty())
         return false;
-    m_keys = WTFMove(keys);
+    m_keys = keys.map([](auto& pair) -> Key {
+        return { pair.first, pair.second };
+    });
     return true;
 }
 
 String StyleRuleKeyframe::cssText() const
 {
-    if (auto declarations = m_properties->asText(); !declarations.isEmpty())
-        return makeString(keyText(), " { ", declarations, " }");
-    return makeString(keyText(), " { }");
+    if (auto declarations = m_properties->asText(CSS::defaultSerializationContext()); !declarations.isEmpty())
+        return makeString(keyText(), " { "_s, declarations, " }"_s);
+    return makeString(keyText(), " { }"_s);
 }
 
 CSSKeyframeRule::CSSKeyframeRule(StyleRuleKeyframe& keyframe, CSSKeyframesRule* parent)
@@ -109,10 +133,10 @@ CSSKeyframeRule::~CSSKeyframeRule()
         m_propertiesCSSOMWrapper->clearParentRule();
 }
 
-CSSStyleDeclaration& CSSKeyframeRule::style()
+CSSStyleProperties& CSSKeyframeRule::style()
 {
     if (!m_propertiesCSSOMWrapper)
-        m_propertiesCSSOMWrapper = StyleRuleCSSStyleDeclaration::create(m_keyframe->mutableProperties(), *this);
+        m_propertiesCSSOMWrapper = StyleRuleCSSStyleProperties::create(m_keyframe->mutableProperties(), *this);
     return *m_propertiesCSSOMWrapper;
 }
 

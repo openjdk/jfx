@@ -43,15 +43,18 @@ namespace WTF {
 // We are assuming 48bit pointers here, which is also assumed in JSValue anyway.
 template<typename PointerType, typename Type>
 class CompactPointerTuple final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(CompactPointerTuple);
 public:
     static_assert(sizeof(Type) <= 2);
     static_assert(std::is_pointer<PointerType>::value);
+    static_assert(::allowCompactPointers<PointerType>());
     static_assert(std::is_integral<Type>::value || std::is_enum<Type>::value);
     using UnsignedType = std::make_unsigned_t<std::conditional_t<std::is_same_v<Type, bool>, uint8_t, Type>>;
     static_assert(sizeof(UnsignedType) == sizeof(Type));
 
     CompactPointerTuple() = default;
+
+    friend bool operator==(const CompactPointerTuple&, const CompactPointerTuple&) = default;
 
 #if CPU(ADDRESS64)
 public:
@@ -59,7 +62,7 @@ public:
     static_assert(OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH) <= maxNumberOfBitsInPointer);
 
 #if CPU(LITTLE_ENDIAN)
-    static ptrdiff_t offsetOfType()
+    static constexpr ptrdiff_t offsetOfType()
     {
         return maxNumberOfBitsInPointer / 8;
     }
@@ -74,13 +77,14 @@ public:
         ASSERT(this->pointer() == pointer);
     }
 
-    template<typename OtherPointerType, typename = std::enable_if<std::is_pointer<PointerType>::value && std::is_convertible<OtherPointerType, PointerType>::value>>
+    template<typename OtherPointerType>
+        requires (std::is_pointer_v<PointerType> && std::is_convertible_v<OtherPointerType, PointerType>)
     CompactPointerTuple(CompactPointerTuple<OtherPointerType, Type>&& other)
         : m_data { std::exchange(other.m_data, { }) }
     {
     }
 
-    PointerType pointer() const { return bitwise_cast<PointerType>(m_data & pointerMask); }
+    PointerType pointer() const { return std::bit_cast<PointerType>(m_data & pointerMask); }
     void setPointer(PointerType pointer)
     {
         m_data = encode(pointer, type());
@@ -96,9 +100,9 @@ public:
 
     uint64_t data() const { return m_data; }
 
-    bool operator==(const CompactPointerTuple& other) const
+    void swap(CompactPointerTuple& other)
     {
-        return m_data == other.m_data;
+        std::swap(m_data, other.m_data);
     }
 
 private:
@@ -113,7 +117,7 @@ private:
 
     static uint64_t encode(PointerType pointer, Type type)
     {
-        return bitwise_cast<uint64_t>(pointer) | encodeType(type);
+        return std::bit_cast<uint64_t>(pointer) | encodeType(type);
     }
 
     uint64_t m_data { 0 };
@@ -125,7 +129,8 @@ public:
     {
     }
 
-    template<typename OtherPointerType, typename = std::enable_if<std::is_pointer<PointerType>::value && std::is_convertible<OtherPointerType, PointerType>::value>>
+    template<typename OtherPointerType>
+        requires (std::is_pointer_v<PointerType> && std::is_convertible_v<OtherPointerType, PointerType>)
     CompactPointerTuple(CompactPointerTuple<OtherPointerType, Type>&& other)
         : m_pointer { std::exchange(other.m_pointer, { }) }
         , m_type { std::exchange(other.m_type, { }) }
@@ -137,9 +142,10 @@ public:
     Type type() const { return m_type; }
     void setType(Type type) { m_type = type; }
 
-    bool operator==(const CompactPointerTuple& other) const
+    void swap(CompactPointerTuple& other)
     {
-        return m_type == other.m_type && m_pointer == other.m_pointer;
+        std::swap(m_pointer, other.m_pointer);
+        std::swap(m_type, other.m_type);
     }
 
 private:

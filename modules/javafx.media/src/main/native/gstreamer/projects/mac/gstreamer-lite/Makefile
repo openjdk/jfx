@@ -108,6 +108,7 @@ C_SOURCES = gstreamer/gst/gst.c \
             gstreamer/gst/gstevent.c \
             gstreamer/gst/gstformat.c \
             gstreamer/gst/gstghostpad.c \
+            gstreamer/gst/gstidstr.c \
             gstreamer/gst/gstinfo.c \
             gstreamer/gst/gstiterator.c \
             gstreamer/gst/gstmemory.c \
@@ -122,7 +123,6 @@ C_SOURCES = gstreamer/gst/gst.c \
             gstreamer/gst/gstpipeline.c \
             gstreamer/gst/gstplugin.c \
             gstreamer/gst/gstpluginfeature.c \
-            gstreamer/gst/gstpluginloader.c \
             gstreamer/gst/gstpoll.c \
             gstreamer/gst/gstprotection.c \
             gstreamer/gst/gstquark.c \
@@ -151,6 +151,7 @@ C_SOURCES = gstreamer/gst/gst.c \
             gstreamer/gst/gsturi.c \
             gstreamer/gst/gstutils.c \
             gstreamer/gst/gstvalue.c \
+            gstreamer/gst/gstvecdeque.c \
             gstreamer/libs/gst/base/gstadapter.c \
             gstreamer/libs/gst/base/gstbaseparse.c \
             gstreamer/libs/gst/base/gstbasesink.c \
@@ -165,8 +166,10 @@ C_SOURCES = gstreamer/gst/gst.c \
             gstreamer/libs/gst/base/gstpushsrc.c \
             gstreamer/libs/gst/base/gstqueuearray.c \
             gstreamer/libs/gst/base/gsttypefindhelper.c \
+            gst-plugins-base/gst-libs/gst/app/app-enumtypes.c \
             gst-plugins-base/gst-libs/gst/app/gstapp-marshal.c \
             gst-plugins-base/gst-libs/gst/app/gstappsink.c \
+            gst-plugins-base/gst-libs/gst/app/gstapputils.c \
             gst-plugins-base/gst-libs/gst/audio/audio.c \
             gst-plugins-base/gst-libs/gst/audio/audio-channels.c \
             gst-plugins-base/gst-libs/gst/audio/audio-channel-mixer.c \
@@ -197,8 +200,6 @@ C_SOURCES = gstreamer/gst/gst.c \
             gst-plugins-base/gst-libs/gst/fft/kiss_fftr_f32.c \
             gst-plugins-base/gst-libs/gst/pbutils/codec-utils.c \
             gst-plugins-base/gst-libs/gst/pbutils/descriptions.c \
-            gst-plugins-base/gst-libs/gst/pbutils/gstdiscoverer.c \
-            gst-plugins-base/gst-libs/gst/pbutils/gstdiscoverer-types.c \
             gst-plugins-base/gst-libs/gst/pbutils/gstpluginsbaseversion.c \
             gst-plugins-base/gst-libs/gst/pbutils/missing-plugins.c \
             gst-plugins-base/gst-libs/gst/pbutils/pbutils.c \
@@ -213,11 +214,16 @@ C_SOURCES = gstreamer/gst/gst.c \
             gst-plugins-base/gst-libs/gst/tag/lang.c \
             gst-plugins-base/gst-libs/gst/tag/tags.c \
             gst-plugins-base/gst-libs/gst/tag/tag-enumtypes.c \
+            gst-plugins-base/gst-libs/gst/video/gstvideometa.c \
+            gst-plugins-base/gst-libs/gst/video/gstvideopool.c \
+            gst-plugins-base/gst-libs/gst/video/gstvideotimecode.c \
             gst-plugins-base/gst-libs/gst/video/video.c \
             gst-plugins-base/gst-libs/gst/video/video-chroma.c \
             gst-plugins-base/gst-libs/gst/video/video-color.c \
             gst-plugins-base/gst-libs/gst/video/video-converter.c \
             gst-plugins-base/gst-libs/gst/video/video-format.c \
+            gst-plugins-base/gst-libs/gst/video/video-frame.c \
+            gst-plugins-base/gst-libs/gst/video/video-hdr.c \
             gst-plugins-base/gst-libs/gst/video/video-enumtypes.c \
             gst-plugins-base/gst-libs/gst/video/video-info.c \
             gst-plugins-base/gst-libs/gst/video/video-multiview.c \

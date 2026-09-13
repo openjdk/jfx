@@ -246,11 +246,7 @@ public:
         }
 
         // Now try to coalesce some moves.
-        std::sort(
-            m_coalescableMoves.begin(), m_coalescableMoves.end(),
-            [&] (CoalescableMove& a, CoalescableMove& b) -> bool {
-                return a.frequency > b.frequency;
-            });
+        std::ranges::sort(m_coalescableMoves, std::ranges::greater { }, &CoalescableMove::frequency);
 
         for (const CoalescableMove& move : m_coalescableMoves) {
             IndexType slotToKill = remap(move.src);
@@ -316,12 +312,7 @@ private:
         {
         }
 
-        bool operator==(const CoalescableMove& other) const
-        {
-            return src == other.src
-                && dst == other.dst
-                && frequency == other.frequency;
-        }
+        friend bool operator==(const CoalescableMove&, const CoalescableMove&) = default;
 
         explicit operator bool() const
         {
@@ -370,7 +361,7 @@ bool tryTrivialStackAllocation(Code& code)
 
 void allocateStackByGraphColoring(Code& code)
 {
-    PhaseScope phaseScope(code, "allocateStackByGraphColoring");
+    PhaseScope phaseScope(code, "allocateStackByGraphColoring"_s);
 
     handleCalleeSaves(code);
 

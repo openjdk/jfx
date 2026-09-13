@@ -20,7 +20,7 @@
 #ifndef IntPointHash_h
 #define IntPointHash_h
 
-#include "IntPoint.h"
+#include <WebCore/IntPoint.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/HashTraits.h>
 
@@ -34,6 +34,7 @@ struct IntPointHash {
 };
 template<> struct HashTraits<WebCore::IntPoint> : GenericHashTraits<WebCore::IntPoint> {
     static WebCore::IntPoint emptyValue() { return WebCore::IntPoint(0, std::numeric_limits<int>::min()); }
+    static bool isEmptyValue(const WebCore::IntPoint& value) { return value.y() == std::numeric_limits<int>::min(); }
 
     static void constructDeletedValue(WebCore::IntPoint& slot) { slot.setX(std::numeric_limits<int>::min()); }
     static bool isDeletedValue(const WebCore::IntPoint& slot) { return slot.x() == std::numeric_limits<int>::min(); }

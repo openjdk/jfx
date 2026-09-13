@@ -46,6 +46,8 @@
 
 #include <wtf/Scope.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC { namespace FTL {
 
 using namespace DFG;
@@ -81,7 +83,8 @@ static void reboxAccordingToFormat(
         break;
     }
 
-    case DataFormatJS: {
+    case DataFormatJS:
+    case DataFormatStorage: {
         // Done already!
         break;
     }
@@ -89,7 +92,7 @@ static void reboxAccordingToFormat(
     case DataFormatDouble: {
         jit.moveDoubleTo64(FPRInfo::fpRegT0, scratch1);
         jit.move64ToDouble(value, FPRInfo::fpRegT0);
-        jit.purifyNaN(FPRInfo::fpRegT0);
+        jit.purifyNaN(FPRInfo::fpRegT0, FPRInfo::fpRegT0);
         jit.boxDouble(FPRInfo::fpRegT0, value);
         jit.move64ToDouble(scratch1, FPRInfo::fpRegT0);
         break;
@@ -105,12 +108,14 @@ static void compileRecovery(
     CCallHelpers& jit, const ExitValue& value,
     const FixedVector<B3::ValueRep>& valueReps,
     char* registerScratch,
-    const HashMap<ExitTimeObjectMaterialization*, EncodedJSValue*>& materializationToPointer)
+    const UncheckedKeyHashMap<ExitTimeObjectMaterialization*, EncodedJSValue*>& materializationToPointer)
 {
     switch (value.kind()) {
-    case ExitValueDead:
-        jit.move(MacroAssembler::TrustedImm64(JSValue::encode(jsUndefined())), GPRInfo::regT0);
+    case ExitValueDead: {
+        EncodedJSValue deadValue = Options::poisonDeadOSRExitVariables() ? poisonedDeadOSRExitValue : encodedJSUndefined();
+        jit.move(MacroAssembler::TrustedImm64(deadValue), GPRInfo::regT0);
         break;
+    }
 
     case ExitValueConstant:
         jit.move(MacroAssembler::TrustedImm64(JSValue::encode(value.constant())), GPRInfo::regT0);
@@ -148,12 +153,13 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
 
     CCallHelpers jit(codeBlock);
 
-    if (UNLIKELY(Options::printEachOSRExit())) {
+    if (Options::printEachOSRExit()) [[unlikely]] {
         SpeculationFailureDebugInfo* debugInfo = new SpeculationFailureDebugInfo;
         debugInfo->codeBlock = jit.codeBlock();
         debugInfo->kind = exit.m_kind;
+        debugInfo->exitIndex = exitID;
         debugInfo->bytecodeIndex = exit.m_codeOrigin.bytecodeIndex();
-        jit.probe(tagCFunction<JITProbePtrTag>(operationDebugPrintSpeculationFailure), debugInfo, SavedFPWidth::DontSaveVectors);
+        jit.probe(tagCFunction<JITProbePtrTag>(operationDebugPrintSpeculationFailure), debugInfo);
     }
 
     // The first thing we need to do is restablish our frame in the case of an exception.
@@ -186,18 +192,18 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
             materialization->properties().size());
     }
 
-    ScratchBuffer* scratchBuffer = vm.scratchBufferForSize(
-        sizeof(EncodedJSValue) * (
-            exit.m_descriptor->m_values.size() + numMaterializations + maxMaterializationNumArguments) +
+    const size_t scratchBufferSize =
+        sizeof(EncodedJSValue) * (exit.m_descriptor->m_values.size() + numMaterializations + maxMaterializationNumArguments) +
         requiredScratchMemorySizeInBytes() +
-        codeBlock->jitCode()->calleeSaveRegisters()->sizeOfAreaInBytes());
+        codeBlock->jitCode()->calleeSaveRegisters()->sizeOfAreaInBytes();
+    ScratchBuffer* scratchBuffer = vm.scratchBufferForSize(scratchBufferSize);
     EncodedJSValue* scratch = scratchBuffer ? static_cast<EncodedJSValue*>(scratchBuffer->dataBuffer()) : nullptr;
     EncodedJSValue* materializationPointers = scratch + exit.m_descriptor->m_values.size();
     EncodedJSValue* materializationArguments = materializationPointers + numMaterializations;
-    char* registerScratch = bitwise_cast<char*>(materializationArguments + maxMaterializationNumArguments);
-    uint64_t* unwindScratch = bitwise_cast<uint64_t*>(registerScratch + requiredScratchMemorySizeInBytes());
+    char* registerScratch = std::bit_cast<char*>(materializationArguments + maxMaterializationNumArguments);
+    uint64_t* unwindScratch = std::bit_cast<uint64_t*>(registerScratch + requiredScratchMemorySizeInBytes());
 
-    HashMap<ExitTimeObjectMaterialization*, EncodedJSValue*> materializationToPointer;
+    UncheckedKeyHashMap<ExitTimeObjectMaterialization*, EncodedJSValue*> materializationToPointer;
     unsigned materializationCount = 0;
     for (ExitTimeObjectMaterialization* materialization : exit.m_descriptor->m_materializations) {
         materializationToPointer.add(
@@ -235,7 +241,7 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
     jit.popToRestore(GPRInfo::regT0);
     jit.checkStackPointerAlignment();
 
-    if (UNLIKELY(vm.m_perBytecodeProfiler && jitCode->dfgCommon()->compilation)) {
+    if (vm.m_perBytecodeProfiler && jitCode->dfgCommon()->compilation) [[unlikely]] {
         Profiler::Database& database = *vm.m_perBytecodeProfiler;
         Profiler::Compilation* compilation = jitCode->dfgCommon()->compilation.get();
 
@@ -255,22 +261,15 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
     // Do some value profiling.
     if (exit.m_descriptor->m_profileDataFormat != DataFormatNone) {
         Location::forValueRep(exit.m_valueReps[0]).restoreInto(jit, registerScratch, GPRInfo::regT0);
-        reboxAccordingToFormat(
-            exit.m_descriptor->m_profileDataFormat, jit, GPRInfo::regT0, GPRInfo::regT1, GPRInfo::regT2);
+        reboxAccordingToFormat(exit.m_descriptor->m_profileDataFormat, jit, GPRInfo::regT0, GPRInfo::regT1, GPRInfo::regT2);
 
         if (exit.m_kind == BadCache || exit.m_kind == BadIndexingType) {
             CodeOrigin codeOrigin = exit.m_codeOriginForExitProfile;
             CodeBlock* codeBlock = jit.baselineCodeBlockFor(codeOrigin);
             if (ArrayProfile* arrayProfile = codeBlock->getArrayProfile(ConcurrentJSLocker(codeBlock->m_lock), codeOrigin.bytecodeIndex())) {
-                const auto* instruction = codeBlock->instructions().at(codeOrigin.bytecodeIndex()).ptr();
-                CCallHelpers::Jump skipProfile;
-                if (instruction->is<OpGetById>()) {
-                    auto& metadata = instruction->as<OpGetById>().metadata(codeBlock);
-                    skipProfile = jit.branch8(CCallHelpers::NotEqual, CCallHelpers::AbsoluteAddress(&metadata.m_modeMetadata.mode), CCallHelpers::TrustedImm32(static_cast<uint8_t>(GetByIdMode::ArrayLength)));
-                }
-
+                jit.move(CCallHelpers::TrustedImmPtr(arrayProfile), GPRInfo::regT3);
                 jit.load32(MacroAssembler::Address(GPRInfo::regT0, JSCell::structureIDOffset()), GPRInfo::regT1);
-                jit.store32(GPRInfo::regT1, arrayProfile->addressOfLastSeenStructureID());
+                jit.store32(GPRInfo::regT1, CCallHelpers::Address(GPRInfo::regT3, ArrayProfile::offsetOfSpeculationFailureStructureID()));
 
                 jit.load8(MacroAssembler::Address(GPRInfo::regT0, JSCell::typeInfoTypeOffset()), GPRInfo::regT2);
                 jit.sub32(MacroAssembler::TrustedImm32(FirstTypedArrayType), GPRInfo::regT2);
@@ -282,13 +281,9 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
                 notTypedArray.link(&jit);
                 jit.load8(MacroAssembler::Address(GPRInfo::regT0, JSCell::indexingTypeAndMiscOffset()), GPRInfo::regT1);
                 jit.and32(MacroAssembler::TrustedImm32(IndexingModeMask), GPRInfo::regT1);
-                jit.move(MacroAssembler::TrustedImm32(1), GPRInfo::regT2);
-                jit.lshift32(GPRInfo::regT1, GPRInfo::regT2);
+                jit.lshift32(MacroAssembler::TrustedImm32(1), GPRInfo::regT1, GPRInfo::regT2);
                 storeArrayModes.link(&jit);
-                jit.or32(GPRInfo::regT2, MacroAssembler::AbsoluteAddress(arrayProfile->addressOfArrayModes()));
-
-                if (skipProfile.isSet())
-                    skipProfile.link(&jit);
+                jit.or32(GPRInfo::regT2, CCallHelpers::Address(GPRInfo::regT3, ArrayProfile::offsetOfArrayModes()));
             }
         }
 
@@ -302,7 +297,7 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
     // needing another object if the later is needed for the
     // allocation of the former.
 
-    HashSet<ExitTimeObjectMaterialization*> toMaterialize;
+    UncheckedKeyHashSet<ExitTimeObjectMaterialization*> toMaterialize;
     for (ExitTimeObjectMaterialization* materialization : exit.m_descriptor->m_materializations)
         toMaterialize.add(materialization);
 
@@ -338,6 +333,7 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
                 if (!property.location().neededForMaterialization())
                     continue;
 
+                ASSERT(property.value().kind() != ExitValueDead);
                 recoverValue(property.value());
                 jit.storePtr(GPRInfo::regT0, materializationArguments + propertyIndex);
             }
@@ -394,7 +390,13 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
             if (value.dataFormat() == DataFormatJS) {
                 switch (value.kind()) {
                 case ExitValueDead:
-                    if (UNLIKELY(!undefinedGPR)) {
+                    if (Options::poisonDeadOSRExitVariables()) [[unlikely]] {
+                        spooler.moveConstant(poisonedDeadOSRExitValue);
+                        spooler.storeGPR(index * sizeof(EncodedJSValue));
+                        break;
+                    }
+
+                    if (!undefinedGPR) [[unlikely]] {
                         jit.move(CCallHelpers::TrustedImm64(JSValue::encode(jsUndefined())), GPRInfo::regT4);
                         undefinedGPR = GPRInfo::regT4;
                     }
@@ -405,7 +407,7 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
                 case ExitValueConstant: {
                     EncodedJSValue currentConstant = JSValue::encode(value.constant());
                     if (currentConstant == encodedJSUndefined()) {
-                        if (UNLIKELY(!undefinedGPR)) {
+                        if (!undefinedGPR) [[unlikely]] {
                             jit.move(CCallHelpers::TrustedImm64(JSValue::encode(jsUndefined())), GPRInfo::regT4);
                             undefinedGPR = GPRInfo::regT4;
                         }
@@ -444,6 +446,13 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
             }
         }
         spooler.finalizeGPR();
+    }
+
+    // The scratch buffer can become the sole retainer of saved on-stack values, so set the
+    // active length for the GC.
+    if (scratchBuffer) {
+        jit.move(CCallHelpers::TrustedImmPtr(scratchBuffer->addressOfActiveLength()), GPRInfo::regT0);
+        jit.storePtr(CCallHelpers::TrustedImm32(scratchBufferSize), CCallHelpers::Address(GPRInfo::regT0));
     }
 
     // Henceforth we make it look like the exiting function was called through a register
@@ -553,7 +562,7 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
             // but we can get their values that were preserved by using the unwind data. We've already
             // copied all unwind-able preserved registers into the unwind scratch buffer, so we can get
             // the values to restore from there.
-            ASSERT((bitwise_cast<uintptr_t>(unwindScratch) - bitwise_cast<uintptr_t>(registerScratch)) == requiredScratchMemorySizeInBytes());
+            ASSERT((std::bit_cast<uintptr_t>(unwindScratch) - std::bit_cast<uintptr_t>(registerScratch)) == requiredScratchMemorySizeInBytes());
             jit.addPtr(CCallHelpers::TrustedImm32(requiredScratchMemorySizeInBytes()), GPRInfo::regT3); // Change registerScratch to unwindScratch.
             {
                 // Load from unwindScratch buffer to callee-save registers.
@@ -592,6 +601,14 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
 
     size_t baselineVirtualRegistersForCalleeSaves = CodeBlock::calleeSaveSpaceAsVirtualRegisters(*baselineCodeBlock->jitCode()->calleeSaveRegisters());
 
+    if (exit.m_kind == WillThrowOutOfMemoryError) {
+        jit.store32(CCallHelpers::TrustedImm32(exit.m_exitCallSiteIndex.bits()), CCallHelpers::tagFor(CallFrameSlot::argumentCountIncludingThis));
+        jit.setupArguments<decltype(operationThrowOutOfMemoryError)>(CCallHelpers::TrustedImmPtr(&vm));
+        jit.prepareCallOperation(vm);
+        jit.move(AssemblyHelpers::TrustedImmPtr(tagCFunction<OperationPtrTag>(operationThrowOutOfMemoryError)), GPRInfo::nonArgGPR0);
+        jit.call(GPRInfo::nonArgGPR0, OperationPtrTag);
+    }
+
     if (exit.m_codeOrigin.inlineStackContainsActiveCheckpoint()) {
         EncodedJSValue* tmpScratch = scratch + exit.m_descriptor->m_values.tmpIndex(0);
         jit.setupArguments<decltype(operationMaterializeOSRExitSideState)>(CCallHelpers::TrustedImmPtr(&vm), CCallHelpers::TrustedImmPtr(&exit), CCallHelpers::TrustedImmPtr(tmpScratch));
@@ -623,6 +640,11 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
         spooler.finalizeGPR();
     }
 
+    if (scratchBuffer) {
+        jit.move(CCallHelpers::TrustedImmPtr(scratchBuffer->addressOfActiveLength()), GPRInfo::regT0);
+        jit.storePtr(CCallHelpers::TrustedImm32(0), CCallHelpers::Address(GPRInfo::regT0));
+    }
+
     handleExitCounts(vm, jit, exit);
     reifyInlinedCallFrames(jit, exit);
     adjustAndJumpToTarget(vm, jit, exit);
@@ -630,18 +652,17 @@ static void compileStub(VM& vm, unsigned exitID, JITCode* jitCode, OSRExit& exit
     LinkBuffer patchBuffer(jit, codeBlock, LinkBuffer::Profile::FTLOSRExit);
     exit.m_code = FINALIZE_CODE_IF(
         shouldDumpDisassembly() || Options::verboseOSR() || Options::verboseFTLOSRExit(),
-        patchBuffer, OSRExitPtrTag,
+        patchBuffer, OSRExitPtrTag, nullptr,
         "FTL OSR exit #%u (D@%u, %s, %s) from %s, with operands = %s",
             exitID, exit.m_dfgNodeIndex, toCString(exit.m_codeOrigin).data(),
-            exitKindToString(exit.m_kind), toCString(*codeBlock).data(),
+            toCString(exit.m_kind).data(), toCString(*codeBlock).data(),
             toCString(ignoringContext<DumpContext>(exit.m_descriptor->m_values)).data()
         );
 }
 
-JSC_DEFINE_JIT_OPERATION(operationCompileFTLOSRExit, void*, (CallFrame* callFrame, unsigned exitID))
+JSC_DEFINE_NOEXCEPT_JIT_OPERATION(operationCompileFTLOSRExit, void*, (CallFrame* callFrame, unsigned exitID))
 {
-    if (shouldDumpDisassembly() || Options::verboseOSR() || Options::verboseFTLOSRExit())
-        dataLog("Compiling OSR exit with exitID = ", exitID, "\n");
+    dataLogLnIf(shouldDumpDisassembly() || Options::verboseOSR() || Options::verboseFTLOSRExit(), "Compiling OSR exit with exitID = ", exitID);
 
     VM& vm = callFrame->deprecatedVM();
     // Don't need an ActiveScratchBufferScope here because we DeferGCForAWhile below.
@@ -668,19 +689,21 @@ JSC_DEFINE_JIT_OPERATION(operationCompileFTLOSRExit, void*, (CallFrame* callFram
     OSRExit& exit = jitCode->m_osrExit[exitID];
 
     if (shouldDumpDisassembly() || Options::verboseOSR() || Options::verboseFTLOSRExit()) {
-        dataLog("    Owning block: ", pointerDump(codeBlock), "\n");
-        dataLog("    Origin: ", exit.m_codeOrigin, "\n");
+        dataLogLn(
+            "    Owning block: ", pointerDump(codeBlock), "\n",
+            "    Origin: ", exit.m_codeOrigin);
         if (exit.m_codeOriginForExitProfile != exit.m_codeOrigin)
-            dataLog("    Origin for exit profile: ", exit.m_codeOriginForExitProfile, "\n");
-        dataLog("    Current call site index: ", callFrame->callSiteIndex().bits(), "\n");
-        dataLog("    Exit is exception handler: ", exit.isExceptionHandler(), "\n");
-        dataLog("    Is unwind handler: ", exit.isGenericUnwindHandler(), "\n");
-        dataLog("    Exit values: ", exit.m_descriptor->m_values, "\n");
-        dataLog("    Value reps: ", listDump(exit.m_valueReps), "\n");
+            dataLogLn("    Origin for exit profile: ", exit.m_codeOriginForExitProfile);
+        dataLogLn(
+            "    Current call site index: ", callFrame->callSiteIndex().bits(), "\n",
+            "    Exit is exception handler: ", exit.isExceptionHandler(), "\n",
+            "    Is unwind handler: ", exit.isGenericUnwindHandler(), "\n",
+            "    Exit values: ", exit.m_descriptor->m_values, "\n",
+            "    Value reps: ", listDump(exit.m_valueReps));
         if (!exit.m_descriptor->m_materializations.isEmpty()) {
-            dataLog("    Materializations:\n");
+            dataLogLn("    Materializations:");
             for (ExitTimeObjectMaterialization* materialization : exit.m_descriptor->m_materializations)
-                dataLog("        ", pointerDump(materialization), "\n");
+                dataLogLn("        ", pointerDump(materialization));
         }
     }
 
@@ -694,5 +717,6 @@ JSC_DEFINE_JIT_OPERATION(operationCompileFTLOSRExit, void*, (CallFrame* callFram
 
 } } // namespace JSC::FTL
 
-#endif // ENABLE(FTL_JIT)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
+#endif // ENABLE(FTL_JIT)

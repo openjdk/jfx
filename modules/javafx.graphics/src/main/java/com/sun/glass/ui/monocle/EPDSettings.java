@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,8 +27,6 @@ package com.sun.glass.ui.monocle;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
 import com.sun.javafx.util.Logging;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.text.MessageFormat;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -204,10 +202,8 @@ class EPDSettings {
      *
      * @return a new {@code EPDSettings} instance
      */
-    @SuppressWarnings("removal")
     static EPDSettings newInstance() {
-        return AccessController.doPrivileged(
-                (PrivilegedAction<EPDSettings>) () -> new EPDSettings());
+        return new EPDSettings();
     }
 
     private final PlatformLogger logger = Logging.getJavaFXLogger();

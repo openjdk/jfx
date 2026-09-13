@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,45 +25,79 @@
 
 #pragma once
 
+#include "GPUIntegralTypes.h"
+#include "GPUTextureAspect.h"
+#include "GPUTextureDimension.h"
 #include "GPUTextureFormat.h"
 #include "WebGPUTexture.h"
 #include <optional>
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
+class GPUDevice;
 class GPUTextureView;
+
+struct GPUTextureDescriptor;
 struct GPUTextureViewDescriptor;
 
-class GPUTexture : public RefCounted<GPUTexture> {
+template<typename> class ExceptionOr;
+
+class GPUTexture : public RefCountedAndCanMakeWeakPtr<GPUTexture> {
 public:
-    static Ref<GPUTexture> create(Ref<WebGPU::Texture>&& backing, GPUTextureFormat format)
+    static Ref<GPUTexture> create(Ref<WebGPU::Texture>&& backing, const GPUTextureDescriptor& descriptor, const GPUDevice& device)
     {
-        return adoptRef(*new GPUTexture(WTFMove(backing), format));
+        return adoptRef(*new GPUTexture(WTF::move(backing), descriptor, device));
     }
 
     String label() const;
     void setLabel(String&&);
 
-    Ref<GPUTextureView> createView(const std::optional<GPUTextureViewDescriptor>&) const;
+    ExceptionOr<Ref<GPUTextureView>> createView(const std::optional<GPUTextureViewDescriptor>&) const;
 
     void destroy();
+    bool isDestroyed() const { return m_isDestroyed; }
 
     WebGPU::Texture& backing() { return m_backing; }
     const WebGPU::Texture& backing() const { return m_backing; }
     GPUTextureFormat format() const { return m_format; }
 
-private:
-    GPUTexture(Ref<WebGPU::Texture>&& backing, GPUTextureFormat format)
-        : m_backing(WTFMove(backing))
-        , m_format(format)
-    {
-    }
+    GPUIntegerCoordinateOut width() const;
+    GPUIntegerCoordinateOut height() const;
+    GPUIntegerCoordinateOut depthOrArrayLayers() const;
+    GPUIntegerCoordinateOut mipLevelCount() const;
+    GPUSize32Out sampleCount() const;
+    GPUTextureDimension dimension() const;
+    GPUFlagsConstant usage() const;
 
-    Ref<WebGPU::Texture> m_backing;
-    GPUTextureFormat m_format;
+    static GPUTextureFormat aspectSpecificFormat(GPUTextureFormat, GPUTextureAspect);
+    static uint32_t texelBlockSize(GPUTextureFormat);
+    static uint32_t texelBlockWidth(GPUTextureFormat);
+    static uint32_t texelBlockHeight(GPUTextureFormat);
+
+    virtual ~GPUTexture();
+private:
+    GPUTexture(Ref<WebGPU::Texture>&&, const GPUTextureDescriptor&, const GPUDevice&);
+
+    GPUTexture(const GPUTexture&) = delete;
+    GPUTexture(GPUTexture&&) = delete;
+    GPUTexture& operator=(const GPUTexture&) = delete;
+    GPUTexture& operator=(GPUTexture&&) = delete;
+
+    const Ref<WebGPU::Texture> m_backing;
+    const GPUTextureFormat m_format;
+    const GPUIntegerCoordinateOut m_width;
+    const GPUIntegerCoordinateOut m_height;
+    const GPUIntegerCoordinateOut m_depthOrArrayLayers;
+    const GPUIntegerCoordinateOut m_mipLevelCount;
+    const GPUSize32Out m_sampleCount;
+    const GPUTextureDimension m_dimension;
+    const GPUFlagsConstant m_usage;
+    const Ref<const GPUDevice> m_device;
+    bool m_isDestroyed { false };
 };
 
 }

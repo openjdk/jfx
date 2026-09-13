@@ -28,6 +28,7 @@
 #if ENABLE(PAYMENT_REQUEST)
 
 #include "Event.h"
+#include "ExceptionOr.h"
 #include <wtf/URL.h>
 
 namespace WebCore {
@@ -36,7 +37,7 @@ class DOMPromise;
 class Document;
 
 class MerchantValidationEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(MerchantValidationEvent);
+    WTF_MAKE_TZONE_ALLOCATED(MerchantValidationEvent);
 public:
     struct Init final : EventInit {
         String methodName;
@@ -53,9 +54,6 @@ public:
 private:
     MerchantValidationEvent(const AtomString& type, const String& methodName, URL&& validationURL);
     MerchantValidationEvent(const AtomString& type, String&& methodName, URL&& validationURL, Init&&);
-
-    // Event
-    EventInterface eventInterface() const final;
 
     bool m_isCompleted { false };
     String m_methodName;

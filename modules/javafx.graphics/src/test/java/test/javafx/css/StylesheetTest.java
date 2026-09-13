@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,11 +25,12 @@
 
 package test.javafx.css;
 
-import com.sun.javafx.css.StyleManager;
-import javafx.css.StyleConverter.StringStore;
-import javafx.css.converter.EnumConverter;
-import javafx.css.converter.StringConverter;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
@@ -39,29 +40,35 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import javafx.application.ColorScheme;
 import javafx.css.CssParser;
+import javafx.css.CssParserShim;
 import javafx.css.Declaration;
 import javafx.css.ParsedValue;
 import javafx.css.Rule;
 import javafx.css.RuleShim;
 import javafx.css.Selector;
-import javafx.css.SimpleSelector;
 import javafx.css.StyleConverter;
+import javafx.css.StyleConverter.StringStore;
 import javafx.css.StyleOrigin;
 import javafx.css.StyleableProperty;
 import javafx.css.Stylesheet;
 import javafx.css.StylesheetShim;
-
+import javafx.css.converter.EnumConverter;
+import javafx.css.converter.StringConverter;
 import javafx.geometry.NodeOrientation;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.VPos;
 import javafx.scene.Group;
 import javafx.scene.Scene;
+import javafx.scene.layout.Background;
 import javafx.scene.layout.StackPane;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
@@ -71,10 +78,14 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontSmoothingType;
 import javafx.scene.text.TextAlignment;
 import javafx.stage.Stage;
-import org.junit.*;
-import static org.junit.Assert.*;
-import static org.junit.Assert.assertEquals;
-
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.css.BinarySerializer;
+import com.sun.javafx.css.RuleHelper;
+import com.sun.javafx.css.SimpleSelector;
+import com.sun.javafx.css.StyleManager;
+import com.sun.javafx.css.media.MediaFeaturesShim;
+import com.sun.javafx.css.media.TriState;
+import com.sun.javafx.css.media.expression.FunctionExpression;
 
 public class StylesheetTest {
 
@@ -270,9 +281,9 @@ public class StylesheetTest {
             for (int n=0; n<cssRules.size(); n++) {
                 Rule expected = cssRules.get(n);
                 Rule actual = bssRules.get(n);
-                assertEquals(Integer.toString(n),
-                        RuleShim.getUnobservedDeclarationList(expected),
-                        RuleShim.getUnobservedDeclarationList(actual));
+                assertEquals(RuleShim.getUnobservedDeclarationList(expected),
+                             RuleShim.getUnobservedDeclarationList(actual),
+                             Integer.toString(n));
             }
 
         } catch (IOException ioe) {
@@ -293,11 +304,11 @@ public class StylesheetTest {
             stage.setScene(scene);
             stage.show();
         } catch (NullPointerException e) {
-            // RT-23140 is supposed to fix the NPE. Did it?
+            // JDK-8126949 is supposed to fix the NPE. Did it?
             fail("Test purpose failed: " + e.toString());
         } catch (Exception e) {
             // Something other than an NPE should still raise a red flag,
-            // but the exception is not what RT-23140 fixed.
+            // but the exception is not what JDK-8126949 fixed.
 
             fail("Exception not expected: " + e.toString());
         }
@@ -490,7 +501,7 @@ public class StylesheetTest {
     @Test
     public void testRT_30953_deserialize_from_2_2_45() {
 
-        // RT-30953-2.2.4bss was generated with javafx version 2.2.45 from 7u??
+        // RT-30953-2.2.45.bss was generated with javafx version 2.2.45 from 7u??
         Stylesheet ss = deserialize("RT-30953-2.2.45.bss");
         checkConvert(ss);
     }
@@ -498,7 +509,7 @@ public class StylesheetTest {
     @Test
     public void testRT_30953_deserialize_from_2_2_4() {
 
-        // RT-30953-2.2.4bss was generated with javafx version 2.2.4 from 7u10
+        // RT-30953-2.2.4.bss was generated with javafx version 2.2.4 from 7u10
         Stylesheet ss = deserialize("RT-30953-2.2.4.bss");
         checkConvert(ss);
     }
@@ -650,7 +661,7 @@ public class StylesheetTest {
     }
 
     private byte[] convertCssTextToBinary(String cssText) throws IOException {
-        var stylesheet = new CssParser().parse(cssText);
+        var stylesheet = new CssParserShim().parseUnmerged(cssText, true);
         var stream = new ByteArrayOutputStream();
         var stringStore = new StringStore();
         StylesheetShim.writeBinary(stylesheet, new DataOutputStream(stream), stringStore);
@@ -776,4 +787,116 @@ public class StylesheetTest {
         assertEquals(Color.BLUE, rect.getFill());
     }
 
+    @Test
+    public void testRootPseudoClassSelectsRootNode() {
+        var root = new StackPane();
+        var _ = new Scene(root);
+
+        root.applyCss();
+        assertNotEquals(Background.fill(Color.RED), root.getBackground());
+
+        root.getStylesheets().add("data:base64," + Base64.getEncoder().encodeToString("""
+            :root {
+                -fx-background-color: red;
+            }
+            """.getBytes(StandardCharsets.UTF_8)));
+
+        root.applyCss();
+        assertEquals(Background.fill(Color.RED), root.getBackground());
+    }
+
+    @Test
+    void serializeStylesheetWithMediaRule() throws IOException {
+        byte[] data = convertCssTextToBinary("""
+            .rect { -fx-fill: blue; }
+            @media (prefers-color-scheme: dark) {
+                .rect { -fx-fill: red; }
+            }
+            """);
+
+        var stylesheet = Stylesheet.loadBinary(new ByteArrayInputStream(data));
+        assertEquals(2, stylesheet.getRules().size());
+        assertNull(RuleHelper.getMediaRule(stylesheet.getRules().get(0)));
+
+        var mediaRule = RuleHelper.getMediaRule(stylesheet.getRules().get(1));
+        assertEquals(
+            FunctionExpression.of("prefers-color-scheme", "dark", _ -> null, ColorScheme.DARK),
+            mediaRule.getQueries().getFirst());
+    }
+
+    @Test
+    void serializeStylesheetWithConditionalImport() throws IOException {
+        var oldDefault = MediaFeaturesShim.getDefault();
+
+        try {
+            TriState[] testFeatureValue = new TriState[] { TriState.FALSE };
+
+            MediaFeaturesShim.setDefault((_, _) -> FunctionExpression.of(
+                "StylesheetTest-feature1", "value", () -> testFeatureValue[0], _ -> null, null));
+
+            byte[] data = convertCssTextToBinary("""
+                @import url("%s") (StylesheetTest-feature1);
+                .rect2 { -fx-fill: green; }
+                """.formatted("data:base64," + Base64.getEncoder().encodeToString("""
+                .rect1 { -fx-fill: blue; }
+                @media (prefers-color-scheme: dark) {
+                    .rect1 { -fx-fill: red; }
+                }
+                """.getBytes(StandardCharsets.UTF_8))));
+
+            // 1. If the import condition never matches, the stylesheet is not imported.
+            testFeatureValue[0] = TriState.FALSE;
+            var stylesheet = Stylesheet.loadBinary(new ByteArrayInputStream(data));
+            assertEquals(1, stylesheet.getRules().size());
+            assertNull(RuleHelper.getMediaRule(stylesheet.getRules().getFirst()));
+
+            // 2. If the import condition always matches, the stylesheet is unconditionally imported.
+            testFeatureValue[0] = TriState.TRUE;
+            stylesheet = Stylesheet.loadBinary(new ByteArrayInputStream(data));
+            assertEquals(3, stylesheet.getRules().size());
+            assertNull(RuleHelper.getMediaRule(stylesheet.getRules().get(0))); // unconditional import
+            assertNotNull(RuleHelper.getMediaRule(stylesheet.getRules().get(1)));
+            assertNull(RuleHelper.getMediaRule(stylesheet.getRules().get(2)));
+
+            // 3. If the import condition is unknown, the stylesheet is conditionally imported.
+            testFeatureValue[0] = TriState.UNKNOWN;
+            stylesheet = Stylesheet.loadBinary(new ByteArrayInputStream(data));
+            assertEquals(3, stylesheet.getRules().size());
+            assertNotNull(RuleHelper.getMediaRule(stylesheet.getRules().get(0))); // conditional import
+            assertNotNull(RuleHelper.getMediaRule(stylesheet.getRules().get(1)));
+            assertNull(RuleHelper.getMediaRule(stylesheet.getRules().get(2)));
+        } finally {
+            MediaFeaturesShim.setDefault(oldDefault);
+        }
+    }
+
+    @Test
+    public void testSortedPseudoClasses() throws Exception {
+        String name = "yo";
+        List<String> styleClasses = List.of("test", "TEST");
+        List<String> pseudoClasses = List.of(
+            "z",
+            "a",
+            "d",
+            "b",
+            "x",
+            "gggg",
+            "uu",
+            "zzz"
+            );
+        String id = "id";
+        Selector selector = new SimpleSelector(name, styleClasses, pseudoClasses, id);
+
+        StringStore store = new StringStore();
+        DataOutputStream out = new DataOutputStream(new ByteArrayOutputStream());
+        BinarySerializer.write(selector, out, store);
+
+        ArrayList<String> expected = new ArrayList<>();
+        expected.add(name);
+        expected.addAll(styleClasses);
+        expected.add(id);
+        expected.addAll(pseudoClasses.stream().sorted().toList());
+
+        assertEquals(expected, store.strings);
+    }
 }

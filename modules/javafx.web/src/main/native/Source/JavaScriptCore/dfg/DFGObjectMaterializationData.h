@@ -38,7 +38,6 @@ namespace JSC { namespace DFG {
 struct ObjectMaterializationData {
     // Determines the meaning of the passed nodes.
     Vector<PromotedLocationDescriptor> m_properties;
-
     void dump(PrintStream&) const;
 };
 

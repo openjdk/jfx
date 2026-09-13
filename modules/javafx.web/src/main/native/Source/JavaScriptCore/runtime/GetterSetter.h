@@ -22,13 +22,12 @@
 
 #pragma once
 
-#include "JSCast.h"
-
-#include "CallFrame.h"
-#include "JSGlobalObject.h"
-#include "NullGetterFunction.h"
-#include "NullSetterFunction.h"
-#include "Structure.h"
+#include <JavaScriptCore/CallFrame.h>
+#include <JavaScriptCore/JSCast.h>
+#include <JavaScriptCore/JSGlobalObject.h>
+#include <JavaScriptCore/NullGetterFunction.h>
+#include <JavaScriptCore/NullSetterFunction.h>
+#include <JavaScriptCore/Structure.h>
 
 namespace JSC {
 
@@ -108,17 +107,14 @@ public:
     JSValue callGetter(JSGlobalObject*, JSValue thisValue);
     bool callSetter(JSGlobalObject*, JSValue thisValue, JSValue, bool shouldThrow);
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(GetterSetterType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
-    static ptrdiff_t offsetOfGetter()
+    static constexpr ptrdiff_t offsetOfGetter()
     {
         return OBJECT_OFFSETOF(GetterSetter, m_getter);
     }
 
-    static ptrdiff_t offsetOfSetter()
+    static constexpr ptrdiff_t offsetOfSetter()
     {
         return OBJECT_OFFSETOF(GetterSetter, m_setter);
     }

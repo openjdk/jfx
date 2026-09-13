@@ -35,7 +35,6 @@
 #include "RefPtrCairo.h"
 #include "RefPtrFontconfig.h"
 #include "StyleFontSizeFunctions.h"
-#include "UTF16UChar32Iterator.h"
 #include <cairo-ft.h>
 #include <cairo.h>
 #include <fontconfig/fcfreetype.h>
@@ -44,8 +43,8 @@
 #include <wtf/HashMap.h>
 #include <wtf/text/CString.h>
 
-#if PLATFORM(GTK)
-#include "GtkUtilities.h"
+#if PLATFORM(GTK) || (PLATFORM(WPE) && ENABLE(WPE_PLATFORM))
+#include "SystemSettings.h"
 #endif
 
 #if ENABLE(VARIATION_FONTS)
@@ -84,7 +83,7 @@ static int fontWeightToFontconfigWeight(FontSelectionValue weight)
 
 bool FontCache::configurePatternForFontDescription(FcPattern* pattern, const FontDescription& fontDescription)
 {
-    if (!FcPatternAddInteger(pattern, FC_SLANT, fontDescription.italic() ? FC_SLANT_ITALIC : FC_SLANT_ROMAN))
+    if (!FcPatternAddInteger(pattern, FC_SLANT, fontDescription.fontStyleSlope() ? FC_SLANT_ITALIC : FC_SLANT_ROMAN))
         return false;
     if (!FcPatternAddInteger(pattern, FC_WEIGHT, fontWeightToFontconfigWeight(fontDescription.weight())))
         return false;
@@ -93,7 +92,7 @@ bool FontCache::configurePatternForFontDescription(FcPattern* pattern, const Fon
     return true;
 }
 
-static void getFontPropertiesFromPattern(FcPattern* pattern, const FontDescription& fontDescription, bool& fixedWidth, bool& syntheticBold, bool& syntheticOblique)
+static void getFontPropertiesFromPattern(FcPattern* pattern, const FontDescription& fontDescription, OptionSet<FontLookupOptions> options, bool& fixedWidth, bool& syntheticBold, bool& syntheticOblique)
 {
     fixedWidth = false;
     int spacing;
@@ -101,8 +100,9 @@ static void getFontPropertiesFromPattern(FcPattern* pattern, const FontDescripti
         fixedWidth = true;
 
     syntheticBold = false;
-    bool descriptionAllowsSyntheticBold = fontDescription.hasAutoFontSynthesisWeight();
-    if (descriptionAllowsSyntheticBold && isFontWeightBold(fontDescription.weight())) {
+    bool allowSyntheticBold = fontDescription.hasAutoFontSynthesisWeight()
+        && !options.contains(FontLookupOptions::DisallowBoldSynthesis);
+    if (allowSyntheticBold && isFontWeightBold(fontDescription.weight())) {
         // The FC_EMBOLDEN property instructs us to fake the boldness of the font.
         FcBool fontConfigEmbolden = FcFalse;
         if (FcPatternGetBool(pattern, FC_EMBOLDEN, 0, &fontConfigEmbolden) == FcResultMatch)
@@ -117,24 +117,25 @@ static void getFontPropertiesFromPattern(FcPattern* pattern, const FontDescripti
     // We requested an italic font, but Fontconfig gave us one that was neither oblique nor italic.
     syntheticOblique = false;
     int actualFontSlant;
-    bool descriptionAllowsSyntheticOblique = fontDescription.hasAutoFontSynthesisStyle();
-    if (descriptionAllowsSyntheticOblique && fontDescription.italic()
+    bool allowSyntheticOblique = fontDescription.hasAutoFontSynthesisStyle()
+        && !options.contains(FontLookupOptions::DisallowObliqueSynthesis);
+    if (allowSyntheticOblique && fontDescription.fontStyleSlope()
         && FcPatternGetInteger(pattern, FC_SLANT, 0, &actualFontSlant) == FcResultMatch) {
         syntheticOblique = actualFontSlant == FC_SLANT_ROMAN;
     }
 }
 
-RefPtr<Font> FontCache::systemFallbackForCharacters(const FontDescription& description, const Font&, IsForPlatformFont, PreferColoredFont preferColoredFont, const UChar* characters, unsigned length)
+RefPtr<Font> FontCache::systemFallbackForCharacterCluster(const FontDescription& description, const Font&, IsForPlatformFont, PreferColoredFont preferColoredFont, StringView stringView)
 {
-    RefPtr<FcPattern> resultPattern = m_fontSetCache.bestForCharacters(description, preferColoredFont == PreferColoredFont::Yes, characters, length);
+    RefPtr<FcPattern> resultPattern = m_fontSetCache.bestForCharacters(description, preferColoredFont == PreferColoredFont::Yes, stringView);
     if (!resultPattern)
         return nullptr;
 
     bool fixedWidth, syntheticBold, syntheticOblique;
-    getFontPropertiesFromPattern(resultPattern.get(), description, fixedWidth, syntheticBold, syntheticOblique);
+    getFontPropertiesFromPattern(resultPattern.get(), description, { }, fixedWidth, syntheticBold, syntheticOblique);
 
     RefPtr<cairo_font_face_t> fontFace = adoptRef(cairo_ft_font_face_create_for_pattern(resultPattern.get()));
-    FontPlatformData alternateFontData(fontFace.get(), WTFMove(resultPattern), description.computedSize(), fixedWidth, syntheticBold, syntheticOblique, description.orientation());
+    FontPlatformData alternateFontData(fontFace.get(), WTF::move(resultPattern), description.computedSize(), fixedWidth, syntheticBold, syntheticOblique, description.orientation());
     return fontForPlatformData(alternateFontData);
 }
 
@@ -200,20 +201,22 @@ static String getFamilyNameStringFromFamily(const String& family)
     if (family.length() && !family.startsWith("-webkit-"_s))
         return family;
 
-    if (family == familyNamesData->at(FamilyNamesIndex::StandardFamily) || family == familyNamesData->at(FamilyNamesIndex::SerifFamily))
+    if (family == *familyNamesData->at(FamilyNamesIndex::StandardFamily) || family == *familyNamesData->at(FamilyNamesIndex::SerifFamily))
         return "serif"_s;
-    if (family == familyNamesData->at(FamilyNamesIndex::SansSerifFamily))
+    if (family == *familyNamesData->at(FamilyNamesIndex::SansSerifFamily))
         return "sans-serif"_s;
-    if (family == familyNamesData->at(FamilyNamesIndex::MonospaceFamily))
+    if (family == *familyNamesData->at(FamilyNamesIndex::MonospaceFamily))
         return "monospace"_s;
-    if (family == familyNamesData->at(FamilyNamesIndex::CursiveFamily))
+    if (family == *familyNamesData->at(FamilyNamesIndex::CursiveFamily))
         return "cursive"_s;
-    if (family == familyNamesData->at(FamilyNamesIndex::FantasyFamily))
+    if (family == *familyNamesData->at(FamilyNamesIndex::FantasyFamily))
         return "fantasy"_s;
+    if (family == *familyNamesData->at(FamilyNamesIndex::MathFamily))
+        return "math"_s;
 
-#if PLATFORM(GTK)
-    if (family == familyNamesData->at(FamilyNamesIndex::SystemUiFamily) || family == "-webkit-system-font"_s)
-        return defaultGtkSystemFont();
+#if PLATFORM(GTK) || (PLATFORM(WPE) && ENABLE(WPE_PLATFORM))
+    if (family == *familyNamesData->at(FamilyNamesIndex::SystemUiFamily) || family == "-webkit-system-font"_s)
+        return SystemSettings::singleton().defaultSystemFont();
 #endif
 
     return emptyString();
@@ -361,7 +364,7 @@ static inline bool isCommonlyUsedGenericFamily(const String& familyNameString)
         || equalLettersIgnoringASCIICase(familyNameString, "cursive"_s);
 }
 
-std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomString& family, const FontCreationContext& fontCreationContext)
+std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDescription& fontDescription, const AtomString& family, const FontCreationContext& fontCreationContext, OptionSet<FontLookupOptions> options)
 {
     // The CSS font matching algorithm (http://www.w3.org/TR/css3-fonts/#font-matching-algorithm)
     // says that we must find an exact match for font family, slant (italic or oblique can be used)
@@ -434,7 +437,7 @@ std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDe
         return nullptr;
 
     bool fixedWidth, syntheticBold, syntheticOblique;
-    getFontPropertiesFromPattern(resultPattern.get(), fontDescription, fixedWidth, syntheticBold, syntheticOblique);
+    getFontPropertiesFromPattern(resultPattern.get(), fontDescription, options, fixedWidth, syntheticBold, syntheticOblique);
 
     if (fontCreationContext.fontFaceFeatures() && !fontCreationContext.fontFaceFeatures()->isEmpty()) {
         for (auto& fontFaceFeature : *fontCreationContext.fontFaceFeatures()) {
@@ -450,10 +453,10 @@ std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDe
 #if ENABLE(VARIATION_FONTS)
     // Cairo doesn't have API to get the FT_Face of an unscaled font, so we need to
     // create a temporary scaled font to get the FT_Face.
-    CairoUniquePtr<cairo_font_options_t> options(cairo_font_options_copy(getDefaultCairoFontOptions()));
+    CairoUniquePtr<cairo_font_options_t> fontOptions(cairo_font_options_copy(getDefaultCairoFontOptions()));
     cairo_matrix_t matrix;
     cairo_matrix_init_identity(&matrix);
-    RefPtr<cairo_scaled_font_t> scaledFont = adoptRef(cairo_scaled_font_create(fontFace.get(), &matrix, &matrix, options.get()));
+    RefPtr<cairo_scaled_font_t> scaledFont = adoptRef(cairo_scaled_font_create(fontFace.get(), &matrix, &matrix, fontOptions.get()));
     CairoFtFaceLocker cairoFtFaceLocker(scaledFont.get());
     if (FT_Face freeTypeFace = cairoFtFaceLocker.ftFace()) {
         auto variants = buildVariationSettings(freeTypeFace, fontDescription, fontCreationContext);
@@ -463,7 +466,7 @@ std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDe
 #endif
 
     auto size = fontDescription.adjustedSizeForFontFace(fontCreationContext.sizeAdjust());
-    FontPlatformData platformData(fontFace.get(), WTFMove(resultPattern), size, fixedWidth, syntheticBold, syntheticOblique, fontDescription.orientation());
+    FontPlatformData platformData(fontFace.get(), WTF::move(resultPattern), size, fixedWidth, syntheticBold, syntheticOblique, fontDescription.orientation());
 
     platformData.updateSizeWithFontSizeAdjust(fontDescription.fontSizeAdjust(), fontDescription.computedSize());
     auto platformDataUniquePtr = makeUnique<FontPlatformData>(platformData);
@@ -477,9 +480,9 @@ std::unique_ptr<FontPlatformData> FontCache::createFontPlatformData(const FontDe
     return platformDataUniquePtr;
 }
 
-std::optional<ASCIILiteral> FontCache::platformAlternateFamilyName(const String&)
+ASCIILiteral FontCache::platformAlternateFamilyName(const String&)
 {
-    return std::nullopt;
+    return { };
 }
 
 #if ENABLE(VARIATION_FONTS)
@@ -493,7 +496,7 @@ static String fontNameMapName(FT_Face face, unsigned id)
         switch (name.platform_id) {
         case TT_PLATFORM_MACINTOSH:
             if (name.encoding_id == TT_MAC_ID_ROMAN)
-                return String(name.string, name.string_len);
+                return String({ byteCast<Latin1Character>(name.string), name.string_len });
             // FIXME: implement other macintosh encodings.
             break;
         case TT_PLATFORM_APPLE_UNICODE:
@@ -541,7 +544,7 @@ VariationDefaultsMap defaultVariationValues(FT_Face face, ShouldLocalizeAxisName
         if (axisName.isEmpty())
             axisName = String::fromUTF8(ftMMVar->axis[i].name);
 
-        VariationDefaults resultValues = { WTFMove(axisName), narrowPrecisionToFloat(ftMMVar->axis[i].def / 65536.), narrowPrecisionToFloat(ftMMVar->axis[i].minimum / 65536.), narrowPrecisionToFloat(ftMMVar->axis[i].maximum / 65536.) };
+        VariationDefaults resultValues = { WTF::move(axisName), narrowPrecisionToFloat(ftMMVar->axis[i].def / 65536.), narrowPrecisionToFloat(ftMMVar->axis[i].minimum / 65536.), narrowPrecisionToFloat(ftMMVar->axis[i].maximum / 65536.) };
         result.set(resultKey, resultValues);
     }
     FT_Done_MM_Var(face->glyph->library, ftMMVar);

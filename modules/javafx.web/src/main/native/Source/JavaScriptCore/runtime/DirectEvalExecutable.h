@@ -25,15 +25,15 @@
 
 #pragma once
 
-#include "EvalExecutable.h"
+#include <JavaScriptCore/EvalExecutable.h>
 
 namespace JSC {
 
 class DirectEvalExecutable final : public EvalExecutable {
 public:
-    static DirectEvalExecutable* create(JSGlobalObject*, const SourceCode&, DerivedContextType, NeedsClassFieldInitializer, PrivateBrandRequirement, bool isArrowFunctionContext, bool isInsideOrdinaryFunction, EvalContextType, const TDZEnvironment* parentScopeTDZVariables, const PrivateNameEnvironment*, ECMAMode);
+    static DirectEvalExecutable* create(JSGlobalObject*, const SourceCode&, LexicallyScopedFeatures, DerivedContextType, NeedsClassFieldInitializer, PrivateBrandRequirement, bool isArrowFunctionContext, bool isInsideOrdinaryFunction, EvalContextType, const TDZEnvironment* parentScopeTDZVariables, const PrivateNameEnvironment*);
 private:
-    DirectEvalExecutable(JSGlobalObject*, const SourceCode&, bool inStrictContext, DerivedContextType, NeedsClassFieldInitializer, PrivateBrandRequirement, bool isArrowFunctionContext, bool isInsideOrdinaryFunction, EvalContextType);
+    DirectEvalExecutable(JSGlobalObject*, const SourceCode&, LexicallyScopedFeatures, DerivedContextType, NeedsClassFieldInitializer, PrivateBrandRequirement, bool isArrowFunctionContext, bool isInsideOrdinaryFunction, EvalContextType);
 };
 
 static_assert(sizeof(DirectEvalExecutable) == sizeof(EvalExecutable));

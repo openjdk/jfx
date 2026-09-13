@@ -34,31 +34,50 @@
 namespace WebCore {
 
 RTCEncodedFrame::RTCEncodedFrame(Ref<RTCRtpTransformableFrame>&& frame)
-    : m_frame(WTFMove(frame))
+    : m_frame(WTF::move(frame))
 {
 }
 
 RefPtr<JSC::ArrayBuffer> RTCEncodedFrame::data() const
 {
-    if (!m_data) {
-    auto data = m_frame->data();
-        m_data = JSC::ArrayBuffer::create(data.data(), data.size());
-    }
+    if (!m_data)
+        m_data = m_isNeutered ? JSC::ArrayBuffer::create(static_cast<size_t>(0U), 1) : JSC::ArrayBuffer::create(m_frame->data());
     return m_data;
 }
 
 void RTCEncodedFrame::setData(JSC::ArrayBuffer& buffer)
 {
-    m_data = &buffer;
+    m_data = buffer;
 }
 
-Ref<RTCRtpTransformableFrame> RTCEncodedFrame::rtcFrame()
+uint64_t RTCEncodedFrame::timestamp() const
 {
+    if (!m_timestamp)
+        m_timestamp = m_frame->timestamp();
+    return *m_timestamp;
+}
+
+Ref<RTCRtpTransformableFrame> RTCEncodedFrame::rtcFrame(JSC::VM& vm, ShouldNeuter shouldNeuter)
+{
+    if (shouldNeuter == ShouldNeuter::Yes && !m_isNeutered) {
+        m_isNeutered = true;
     if (m_data) {
-        m_frame->setData({ static_cast<const uint8_t*>(m_data->data()), m_data->byteLength() });
-        m_data = nullptr;
+        m_frame->setData(m_data->span());
+
+            JSC::ArrayBufferContents emptyBuffer;
+            bool result = m_data->transferTo(vm, emptyBuffer);
+            ASSERT_UNUSED(result, result);
+    }
     }
     return m_frame;
+}
+
+Ref<RTCRtpTransformableFrame> RTCEncodedFrame::serialize()
+{
+    auto clone = m_frame->clone();
+    if (m_data)
+        clone->setData(m_data->span());
+    return clone;
 }
 
 } // namespace WebCore

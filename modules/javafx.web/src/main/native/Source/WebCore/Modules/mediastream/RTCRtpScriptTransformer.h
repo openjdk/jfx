@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,40 +27,45 @@
 
 #if ENABLE(WEB_RTC)
 
-#include "ActiveDOMObject.h"
-#include "ExceptionOr.h"
-#include "JSDOMPromiseDeferredForward.h"
-#include "RTCRtpTransformBackend.h"
 #include <JavaScriptCore/JSCJSValue.h>
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/JSDOMPromiseDeferredForward.h>
+#include <WebCore/RTCRtpTransformBackend.h>
 #include <wtf/Deque.h>
+#include <wtf/ObjectIdentifier.h>
 #include <wtf/RefCounted.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
+class FrameRateMonitor;
 class MessagePort;
+class RTCEncodedStreamProducer;
+class RTCRtpTransformBackend;
 class ReadableStream;
 class ScriptExecutionContext;
-class RTCRtpTransformBackend;
 class SerializedScriptValue;
-class SimpleReadableStreamSource;
 class WritableStream;
 
 struct MessageWithMessagePorts;
 
+template<typename> class ExceptionOr;
+
 class RTCRtpScriptTransformer
     : public RefCounted<RTCRtpScriptTransformer>
-    , public ActiveDOMObject
-    , public CanMakeWeakPtr<RTCRtpScriptTransformer> {
+    , public ActiveDOMObject {
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     static ExceptionOr<Ref<RTCRtpScriptTransformer>> create(ScriptExecutionContext&, MessageWithMessagePorts&&);
     ~RTCRtpScriptTransformer();
 
     ReadableStream& readable();
-    ExceptionOr<Ref<WritableStream>> writable();
+    WritableStream& writable();
     JSC::JSValue options(JSC::JSGlobalObject&);
 
-    void generateKeyFrame(Ref<DeferredPromise>&&);
+    void generateKeyFrame(const String&, Ref<DeferredPromise>&&);
     void sendKeyFrameRequest(Ref<DeferredPromise>&&);
 
     void startPendingActivity() { m_pendingActivity = makePendingActivity(*this); }
@@ -70,27 +75,24 @@ public:
     void clear(ClearCallback);
 
 private:
-    RTCRtpScriptTransformer(ScriptExecutionContext&, Ref<SerializedScriptValue>&&, Vector<RefPtr<MessagePort>>&&, Ref<ReadableStream>&&, Ref<SimpleReadableStreamSource>&&);
+    RTCRtpScriptTransformer(ScriptExecutionContext&, Ref<SerializedScriptValue>&&, Vector<Ref<MessagePort>>&&, Ref<RTCEncodedStreamProducer>&&);
 
-    // ActiveDOMObject
-    const char* activeDOMObjectName() const final { return "RTCRtpScriptTransformer"; }
+    // ActiveDOMObject.
     void stop() final { stopPendingActivity(); }
 
-    void stopPendingActivity() { auto pendingActivity = WTFMove(m_pendingActivity); }
+    void stopPendingActivity() { auto pendingActivity = WTF::move(m_pendingActivity); }
 
     void enqueueFrame(ScriptExecutionContext&, Ref<RTCRtpTransformableFrame>&&);
 
-    Ref<SerializedScriptValue> m_options;
-    Vector<RefPtr<MessagePort>> m_ports;
+    const Ref<SerializedScriptValue> m_options;
+    Vector<Ref<MessagePort>> m_ports;
 
-    Ref<SimpleReadableStreamSource> m_readableSource;
-    Ref<ReadableStream> m_readable;
-    RefPtr<WritableStream> m_writable;
+    const Ref<RTCEncodedStreamProducer> m_streamProducer;
 
     RefPtr<RTCRtpTransformBackend> m_backend;
     RefPtr<PendingActivity<RTCRtpScriptTransformer>> m_pendingActivity;
 
-    Deque<Ref<DeferredPromise>> m_pendingKeyFramePromises;
+    bool m_isSender { false };
 };
 
 } // namespace WebCore

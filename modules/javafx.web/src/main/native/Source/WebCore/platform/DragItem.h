@@ -25,13 +25,15 @@
 
 #pragma once
 
-#include "DragActions.h"
-#include "DragImage.h"
-#include "FloatPoint.h"
-#include "IntPoint.h"
-#include "IntRect.h"
-#include "PasteboardWriterData.h"
-#include "PromisedAttachmentInfo.h"
+#include <WebCore/DragActions.h>
+#include <WebCore/DragImage.h>
+#include <WebCore/FloatPoint.h>
+#include <WebCore/FrameIdentifier.h>
+#include <WebCore/IntPoint.h>
+#include <WebCore/IntRect.h>
+#include <WebCore/PasteboardWriterData.h>
+#include <WebCore/PlatformLayerIdentifier.h>
+#include <WebCore/PromisedAttachmentInfo.h>
 
 namespace WebCore {
 
@@ -42,83 +44,23 @@ struct DragItem final {
     FloatPoint imageAnchorPoint;
 
     std::optional<DragSourceAction> sourceAction;
+    std::optional<FrameIdentifier> rootFrameID;
     IntPoint eventPositionInContentCoordinates;
     IntPoint dragLocationInContentCoordinates;
     IntPoint dragLocationInWindowCoordinates;
     String title;
     URL url;
+    // FIXME: rdar://160803165 dragPreviewFrameInRootViewCoordinates is calculated using convertToRootView, which is incorrect with Site Isolation.
     IntRect dragPreviewFrameInRootViewCoordinates;
     bool containsSelection { false };
 
-    PasteboardWriterData data;
     PromisedAttachmentInfo promisedAttachmentInfo;
 
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static WARN_UNUSED_RETURN bool decode(Decoder&, DragItem&);
+#if ENABLE(MODEL_ELEMENT_STAGE_MODE_INTERACTION)
+    Markable<PlatformLayerIdentifier> modelLayerID;
+#endif
+
+    PasteboardWriterData data { };
 };
-
-template<class Encoder>
-void DragItem::encode(Encoder& encoder) const
-{
-    // FIXME(173815): We should encode and decode PasteboardWriterData and platform drag image data
-    // here too, as part of moving off of the legacy dragging codepath.
-    encoder << sourceAction;
-    encoder << imageAnchorPoint << eventPositionInContentCoordinates << dragLocationInContentCoordinates << dragLocationInWindowCoordinates << title << url << dragPreviewFrameInRootViewCoordinates << containsSelection;
-    bool hasIndicatorData = image.hasIndicatorData();
-    encoder << hasIndicatorData;
-    if (hasIndicatorData)
-        encoder << image.indicatorData().value();
-    bool hasVisiblePath = image.hasVisiblePath();
-    encoder << hasVisiblePath;
-    if (hasVisiblePath)
-        encoder << image.visiblePath().value();
-    encoder << promisedAttachmentInfo;
-}
-
-template<class Decoder>
-bool DragItem::decode(Decoder& decoder, DragItem& result)
-{
-    if (!decoder.decode(result.sourceAction))
-        return false;
-    if (!decoder.decode(result.imageAnchorPoint))
-        return false;
-    if (!decoder.decode(result.eventPositionInContentCoordinates))
-        return false;
-    if (!decoder.decode(result.dragLocationInContentCoordinates))
-        return false;
-    if (!decoder.decode(result.dragLocationInWindowCoordinates))
-        return false;
-    if (!decoder.decode(result.title))
-        return false;
-    if (!decoder.decode(result.url))
-        return false;
-    if (!decoder.decode(result.dragPreviewFrameInRootViewCoordinates))
-        return false;
-    if (!decoder.decode(result.containsSelection))
-        return false;
-    bool hasIndicatorData;
-    if (!decoder.decode(hasIndicatorData))
-        return false;
-    if (hasIndicatorData) {
-        std::optional<TextIndicatorData> indicatorData;
-        decoder >> indicatorData;
-        if (!indicatorData)
-            return false;
-        result.image.setIndicatorData(*indicatorData);
-    }
-    bool hasVisiblePath;
-    if (!decoder.decode(hasVisiblePath))
-        return false;
-    if (hasVisiblePath) {
-        std::optional<Path> visiblePath;
-        decoder >> visiblePath;
-        if (!visiblePath)
-            return false;
-        result.image.setVisiblePath(*visiblePath);
-    }
-    if (!decoder.decode(result.promisedAttachmentInfo))
-        return false;
-    return true;
-}
 
 }

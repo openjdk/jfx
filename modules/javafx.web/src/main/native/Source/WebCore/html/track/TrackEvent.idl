@@ -23,15 +23,19 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. 
  */
 
+ // https://html.spec.whatwg.org/multipage/media.html#the-trackevent-interface
+
 [
     Conditional=VIDEO,
     Exposed=Window
 ] interface TrackEvent : Event {
-    constructor([AtomString] DOMString type, optional TrackEventInit eventInitDict);
+    constructor([AtomString] DOMString type, optional TrackEventInit eventInitDict = {});
 
     readonly attribute (VideoTrack or AudioTrack or TextTrack)? track;
 };
 
-dictionary TrackEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary TrackEventInit : EventInit {
     (VideoTrack or AudioTrack or TextTrack)? track = null;
 };

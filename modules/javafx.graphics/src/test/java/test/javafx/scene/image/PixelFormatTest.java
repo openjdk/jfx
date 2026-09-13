@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,15 +25,15 @@
 
 package test.javafx.scene.image;
 
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertTrue;
-
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import javafx.scene.image.PixelFormat;
 import javafx.scene.image.WritablePixelFormat;
 import javafx.scene.paint.Color;
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class PixelFormatTest {
     static Color derive(Color c, double opacity) {
@@ -55,10 +55,10 @@ public final class PixelFormatTest {
     };
 
     static void checkArgb(int argb1, int argb2, double delta) {
-        assertEquals("alpha", (argb1 >> 24) & 0xff, (argb2 >> 24) & 0xff);
-        assertEquals("red",   (argb1 >> 16) & 0xff, (argb2 >> 16) & 0xff, delta);
-        assertEquals("green", (argb1 >>  8) & 0xff, (argb2 >>  8) & 0xff, delta);
-        assertEquals("blue",  (argb1      ) & 0xff, (argb2      ) & 0xff, delta);
+        assertEquals((argb1 >> 24) & 0xff, (argb2 >> 24) & 0xff, "alpha");
+        assertEquals((argb1 >> 16) & 0xff, (argb2 >> 16) & 0xff, delta, "red");
+        assertEquals((argb1 >>  8) & 0xff, (argb2 >>  8) & 0xff, delta, "green");
+        assertEquals((argb1      ) & 0xff, (argb2      ) & 0xff, delta, "blue");
     }
 
     void test(PixelFormat<ByteBuffer> pfb, ByteBuffer bbuf, Color c,

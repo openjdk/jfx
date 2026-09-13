@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,17 +25,24 @@
 
 package test.launchertest;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
+import static test.launchertest.Constants.ERROR_ASSERTION_FAILURE;
+import static test.launchertest.Constants.ERROR_NONE;
+import static test.launchertest.Constants.ERROR_TOOLKIT_IS_RUNNING;
+import static test.launchertest.Constants.ERROR_TOOLKIT_NOT_RUNNING;
+import static test.launchertest.Constants.ERROR_UNEXPECTED_EXCEPTION;
 import java.io.File;
 import java.util.ArrayList;
-import junit.framework.AssertionFailedError;
-import org.junit.Test;
-
-import static org.junit.Assert.*;
-import static test.launchertest.Constants.*;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import test.javafx.util.OutputRedirect;
 
 /**
  * Unit test for launching modular FX applications
  */
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class ModuleLauncherTest {
 
     private static final String modulePath2 = System.getProperty("launchertest.testapp2.module.path");
@@ -51,6 +58,15 @@ public class ModuleLauncherTest {
     private final int testExitCode = ERROR_NONE;
 
     private void doTestLaunchModule(String appModulePath, String testAppName) throws Exception {
+        OutputRedirect.suppressStderr();
+        try {
+            doTestLaunchModule2(appModulePath, testAppName);
+        } finally {
+            OutputRedirect.checkAndRestoreStderr();
+        }
+    }
+
+    private void doTestLaunchModule2(String appModulePath, String testAppName) throws Exception {
         final String javafxModulePath = System.getProperty("worker.module.path");
         String modulePath;
         if (javafxModulePath != null) {
@@ -66,7 +82,6 @@ public class ModuleLauncherTest {
                 test.util.Util.createApplicationLaunchCommand(
                         moduleAppName,
                         null,
-                        null,
                         new String[] { mpArg }
                         );
 
@@ -80,228 +95,228 @@ public class ModuleLauncherTest {
             case 0:// SUCCESS
             case ERROR_NONE:
                 if (retVal != testExitCode) {
-                    throw new AssertionFailedError(testAppName
+                    fail(testAppName
                             + ": Unexpected 'success' exit; expected:"
                             + testExitCode + " was:" + retVal);
                 }
                 return;
 
             case 1:
-                throw new AssertionFailedError(testAppName
+                fail(testAppName
                         + ": unable to launch java application");
 
             case ERROR_TOOLKIT_NOT_RUNNING:
-                throw new AssertionFailedError(testAppName
+                fail(testAppName
                         + ": Toolkit not running prior to loading application class");
             case ERROR_TOOLKIT_IS_RUNNING:
-                throw new AssertionFailedError(testAppName
+                fail(testAppName
                         + ": Toolkit is running but should not be");
 
             case ERROR_ASSERTION_FAILURE:
-                throw new AssertionFailedError(testAppName
+                fail(testAppName
                 + ": Assertion failure in test application");
 
             case ERROR_UNEXPECTED_EXCEPTION:
-                throw new AssertionFailedError(testAppName
+                fail(testAppName
                 + ": unexpected exception");
 
             default:
-                throw new AssertionFailedError(testAppName
+                fail(testAppName
                         + ": Unexpected error exit: " + retVal);
         }
     }
 
-
-    @Test (timeout = 15000)
+    @Test
     public void testLaunchModule() throws Exception {
         doTestLaunchModule(modulePath2, "testapp.TestApp");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testLaunchModuleNoMain() throws Exception {
         doTestLaunchModule(modulePath2, "testapp.TestAppNoMain");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testLaunchModuleNotApplication() throws Exception {
         doTestLaunchModule(modulePath2, "testapp.TestNotApplication");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleTableViewUnexported() throws Exception {
         doTestLaunchModule(modulePath3, "myapp3.AppTableViewUnexported");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleTableViewExported() throws Exception {
         doTestLaunchModule(modulePath3, "myapp3.AppTableViewExported");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleTableViewQualExported() throws Exception {
         doTestLaunchModule(modulePath3, "myapp3.AppTableViewQualExported");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleTableViewOpened() throws Exception {
         doTestLaunchModule(modulePath3, "myapp3.AppTableViewOpened");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleTableViewQualOpened() throws Exception {
         doTestLaunchModule(modulePath3, "myapp3.AppTableViewQualOpened");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleTreeTableViewUnexported() throws Exception {
         doTestLaunchModule(modulePath3, "myapp3.AppTreeTableViewUnexported");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleTreeTableViewExported() throws Exception {
         doTestLaunchModule(modulePath3, "myapp3.AppTreeTableViewExported");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleTreeTableViewQualExported() throws Exception {
         doTestLaunchModule(modulePath3, "myapp3.AppTreeTableViewQualExported");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleTreeTableViewOpened() throws Exception {
         doTestLaunchModule(modulePath3, "myapp3.AppTreeTableViewOpened");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleTreeTableViewQualOpened() throws Exception {
         doTestLaunchModule(modulePath3, "myapp3.AppTreeTableViewQualOpened");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleBeansUnexported() throws Exception {
         doTestLaunchModule(modulePath4, "myapp4.AppBeansUnexported");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleBeansExported() throws Exception {
         doTestLaunchModule(modulePath4, "myapp4.AppBeansExported");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleBeansQualExported() throws Exception {
         doTestLaunchModule(modulePath4, "myapp4.AppBeansQualExported");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleBeansOpened() throws Exception {
         doTestLaunchModule(modulePath4, "myapp4.AppBeansOpened");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleBeansQualOpened() throws Exception {
         doTestLaunchModule(modulePath4, "myapp4.AppBeansQualOpened");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleBindingsUnexported() throws Exception {
         doTestLaunchModule(modulePath4, "myapp4.AppBindingsUnexported");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleBindingsExported() throws Exception {
         doTestLaunchModule(modulePath4, "myapp4.AppBindingsExported");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleBindingsQualExported() throws Exception {
         doTestLaunchModule(modulePath4, "myapp4.AppBindingsQualExported");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleBindingsOpened() throws Exception {
         doTestLaunchModule(modulePath4, "myapp4.AppBindingsOpened");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleBindingsQualOpened() throws Exception {
         doTestLaunchModule(modulePath4, "myapp4.AppBindingsQualOpened");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleJSCallbackUnexported() throws Exception {
         doTestLaunchModule(modulePath5, "myapp5.AppJSCallbackUnexported");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleJSCallbackExported() throws Exception {
         doTestLaunchModule(modulePath5, "myapp5.AppJSCallbackExported");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleJSCallbackQualExported() throws Exception {
         doTestLaunchModule(modulePath5, "myapp5.AppJSCallbackQualExported");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleJSCallbackOpened() throws Exception {
         doTestLaunchModule(modulePath5, "myapp5.AppJSCallbackOpened");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleJSCallbackQualOpened() throws Exception {
         doTestLaunchModule(modulePath5, "myapp5.AppJSCallbackQualOpened");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleFXMLUnexported() throws Exception {
         doTestLaunchModule(modulePath6, "myapp6.AppFXMLUnexported");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleFXMLExported() throws Exception {
         doTestLaunchModule(modulePath6, "myapp6.AppFXMLExported");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleFXMLQualExported() throws Exception {
         doTestLaunchModule(modulePath6, "myapp6.AppFXMLQualExported");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleFXMLOpened() throws Exception {
         doTestLaunchModule(modulePath6, "myapp6.AppFXMLOpened");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testModuleFXMLQualOpened() throws Exception {
         doTestLaunchModule(modulePath6, "myapp6.AppFXMLQualOpened");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testFXMLScriptDeployment() throws Exception {
         doTestLaunchModule(modulePathScript1, "myapp1.FXMLScriptDeployment");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testFXMLScriptDeployment2Compile_On() throws Exception {
         doTestLaunchModule(modulePathScript2, "myapp2.FXMLScriptDeployment2Compile_On");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testFXMLScriptDeployment2Compile_Off() throws Exception {
         doTestLaunchModule(modulePathScript2, "myapp2.FXMLScriptDeployment2Compile_Off");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testFXMLScriptDeployment2Compile_On_Off() throws Exception {
         doTestLaunchModule(modulePathScript2, "myapp2.FXMLScriptDeployment2Compile_On_Off");
     }
 
-    @Test (timeout = 15000)
+    @Test
     public void testFXMLScriptDeployment2Compile_Off_On() throws Exception {
         doTestLaunchModule(modulePathScript2, "myapp2.FXMLScriptDeployment2Compile_Off_On");
     }
-    @Test (timeout = 15000)
+
+    @Test
     public void testFXMLScriptDeployment2Compile_Fail_Compilation() throws Exception {
         doTestLaunchModule(modulePathScript2, "myapp2.FXMLScriptDeployment2Compile_Fail_Compilation");
     }

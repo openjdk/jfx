@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc.  All rights reserved.
+ * Copyright (C) 2022-2024 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,8 +29,11 @@
 #include "CSSCounterStyleDescriptors.h"
 #include "CSSCounterStyleRegistry.h"
 #include <cmath>
+#include <wtf/Assertions.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextBreakIterator.h>
+#include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {
 
@@ -152,7 +155,7 @@ String CSSCounterStyle::counterForSystemAdditive(unsigned value) const
 enum class Formality : bool { Informal, Formal };
 
 // This table format was derived from an old draft of the CSS specification: 3 group markers, 3 digit markers, 10 digits, negative sign.
-static String counterForSystemCJK(int number, const std::array<UChar, 17>& table, Formality formality)
+static String counterForSystemCJK(int number, const std::array<char16_t, 17>& table, Formality formality)
 {
     enum AbstractCJKCharacter {
         NoChar,
@@ -164,7 +167,7 @@ static String counterForSystemCJK(int number, const std::array<UChar, 17>& table
     };
 
     if (!number)
-        return { &table[Digit0 - 1] , 1 };
+        return span(table[Digit0 - 1]);
 
     ASSERT(number != std::numeric_limits<int>::min());
     bool needsNegativeSign = number < 0;
@@ -173,14 +176,15 @@ static String counterForSystemCJK(int number, const std::array<UChar, 17>& table
 
     constexpr unsigned groupLength = 8; // 4 digits, 3 digit markers, and a group marker
     constexpr unsigned bufferLength = 4 * groupLength;
-    AbstractCJKCharacter buffer[bufferLength] = { NoChar };
+    std::array<AbstractCJKCharacter, bufferLength> buffer;
+    buffer.fill(NoChar);
 
     for (int i = 0; i < 4; ++i) {
         int groupValue = number % 10000;
         number /= 10000;
 
         // Process least-significant group first, but put it in the buffer last.
-        auto group = &buffer[(3 - i) * groupLength];
+        auto group = std::span { buffer }.subspan((3 - i) * groupLength);
 
         if (groupValue && i)
             group[7] = static_cast<AbstractCJKCharacter>(SecondGroupMarker - 1 + i);
@@ -218,7 +222,7 @@ static String counterForSystemCJK(int number, const std::array<UChar, 17>& table
 
     // Convert into characters, omitting consecutive runs of digit0 and trailing digit0.
     unsigned length = 0;
-    UChar characters[1 + bufferLength];
+    std::array<char16_t, bufferLength + 1> characters;
     auto last = NoChar;
     if (needsNegativeSign)
         characters[length++] = table[NegativeSign - 1];
@@ -233,12 +237,35 @@ static String counterForSystemCJK(int number, const std::array<UChar, 17>& table
     if (last == Digit0)
         --length;
 
-    return { characters, length };
+    return std::span<const char16_t> { characters }.first(length);
+}
+
+String CSSCounterStyle::counterForSystemDisclosureClosed(WritingMode writingMode)
+{
+    if (writingMode.isVerticalTypographic())
+        return span(writingMode.isInlineTopToBottom() ? blackDownPointingTriangle : blackUpPointingTriangle);
+    return span(writingMode.isBidiLTR() ? blackRightPointingTriangle : blackLeftPointingTriangle);
+}
+
+String CSSCounterStyle::counterForSystemDisclosureOpen(WritingMode writingMode)
+{
+    switch (writingMode.blockDirection()) {
+    case FlowDirection::TopToBottom:
+        return span(blackDownPointingTriangle);
+    case FlowDirection::BottomToTop:
+        return span(blackUpPointingTriangle);
+    case FlowDirection::LeftToRight:
+        return span(blackRightPointingTriangle);
+    case FlowDirection::RightToLeft:
+        return span(blackLeftPointingTriangle);
+    }
+    ASSERT_NOT_REACHED();
+    return { };
 }
 
 String CSSCounterStyle::counterForSystemSimplifiedChineseInformal(int value)
 {
-    static constexpr std::array<UChar, 17> simplifiedChineseInformalTable {
+    static constexpr std::array<char16_t, 17> simplifiedChineseInformalTable {
         0x842C, 0x5104, 0x5146, // These three group markers are probably wrong; OK because we don't use this on big enough numbers.
         0x5341, 0x767E, 0x5343,
         0x96F6, 0x4E00, 0x4E8C, 0x4E09, 0x56DB,
@@ -250,7 +277,7 @@ String CSSCounterStyle::counterForSystemSimplifiedChineseInformal(int value)
 
 String CSSCounterStyle::counterForSystemSimplifiedChineseFormal(int value)
 {
-    static constexpr std::array<UChar, 17> simplifiedChineseFormalTable {
+    static constexpr std::array<char16_t, 17> simplifiedChineseFormalTable {
         0x842C, 0x5104, 0x5146, // These three group markers are probably wrong; OK because we don't use this on big enough numbers.
         0x62FE, 0x4F70, 0x4EDF,
         0x96F6, 0x58F9, 0x8D30, 0x53C1, 0x8086,
@@ -262,7 +289,7 @@ String CSSCounterStyle::counterForSystemSimplifiedChineseFormal(int value)
 
 String CSSCounterStyle::counterForSystemTraditionalChineseInformal(int value)
 {
-    static constexpr std::array<UChar, 17> traditionalChineseInformalTable {
+    static constexpr std::array<char16_t, 17> traditionalChineseInformalTable {
         0x842C, 0x5104, 0x5146,
         0x5341, 0x767E, 0x5343,
         0x96F6, 0x4E00, 0x4E8C, 0x4E09, 0x56DB,
@@ -274,7 +301,7 @@ String CSSCounterStyle::counterForSystemTraditionalChineseInformal(int value)
 
 String CSSCounterStyle::counterForSystemTraditionalChineseFormal(int value)
 {
-    static constexpr std::array<UChar, 17> traditionalChineseFormalTable {
+    static constexpr std::array<char16_t, 17> traditionalChineseFormalTable {
         0x842C, 0x5104, 0x5146, // These three group markers are probably wrong; OK because we don't use this on big enough numbers.
         0x62FE, 0x4F70, 0x4EDF,
         0x96F6, 0x58F9, 0x8CB3, 0x53C3, 0x8086,
@@ -289,21 +316,21 @@ String CSSCounterStyle::counterForSystemEthiopicNumeric(unsigned value)
     ASSERT(value >= 1);
 
     if (value == 1) {
-        UChar ethiopicDigitOne = 0x1369;
-        return { &ethiopicDigitOne, 1 };
+        char16_t ethiopicDigitOne = 0x1369;
+        return span(ethiopicDigitOne);
     }
 
     // Split the number into groups of two digits, starting with the least significant decimal digit.
-    uint8_t groups[5];
+    std::array<uint8_t, 5> groups;
     for (auto& group : groups) {
         group = value % 100;
         value /= 100;
     }
 
-    UChar buffer[std::size(groups) * 3];
+    std::array<char16_t, groups.size() * 3> buffer;
     unsigned length = 0;
     bool isMostSignificantGroup = true;
-    for (int i = std::size(groups) - 1; i >= 0; --i) {
+    for (int i = groups.size() - 1; i >= 0; --i) {
         auto value = groups[i];
         bool isOddIndex = i & 1;
         // If the group has the value zero, or if the group is the most significant one and has the value 1,
@@ -323,10 +350,10 @@ String CSSCounterStyle::counterForSystemEthiopicNumeric(unsigned value)
             isMostSignificantGroup = false;
     }
 
-    return { buffer, length };
+    return std::span<const char16_t> { buffer }.first(length);
 }
 
-String CSSCounterStyle::initialRepresentation(int value) const
+String CSSCounterStyle::initialRepresentation(int value, WritingMode writingMode) const
 {
     unsigned absoluteValue = std::abs(value);
     switch (system()) {
@@ -342,16 +369,20 @@ String CSSCounterStyle::initialRepresentation(int value) const
         return counterForSystemAdditive(absoluteValue);
     case CSSCounterStyleDescriptors::System::Fixed:
         return counterForSystemFixed(value);
+    case CSSCounterStyleDescriptors::System::DisclosureClosed:
+        return counterForSystemDisclosureClosed(writingMode);
+    case CSSCounterStyleDescriptors::System::DisclosureOpen:
+        return counterForSystemDisclosureOpen(writingMode);
     case CSSCounterStyleDescriptors::System::SimplifiedChineseInformal:
-        return CSSCounterStyle::counterForSystemSimplifiedChineseInformal(value);
+        return counterForSystemSimplifiedChineseInformal(value);
     case CSSCounterStyleDescriptors::System::SimplifiedChineseFormal:
-        return CSSCounterStyle::counterForSystemSimplifiedChineseFormal(value);
+        return counterForSystemSimplifiedChineseFormal(value);
     case CSSCounterStyleDescriptors::System::TraditionalChineseInformal:
-        return CSSCounterStyle::counterForSystemTraditionalChineseInformal(value);
+        return counterForSystemTraditionalChineseInformal(value);
     case CSSCounterStyleDescriptors::System::TraditionalChineseFormal:
-        return CSSCounterStyle::counterForSystemTraditionalChineseFormal(value);
+        return counterForSystemTraditionalChineseFormal(value);
     case CSSCounterStyleDescriptors::System::EthiopicNumeric:
-        return CSSCounterStyle::counterForSystemEthiopicNumeric(value);
+        return counterForSystemEthiopicNumeric(value);
     case CSSCounterStyleDescriptors::System::Extends:
         // CounterStyle with extends system should have been promoted to another system at this point
         ASSERT_NOT_REACHED();
@@ -360,26 +391,26 @@ String CSSCounterStyle::initialRepresentation(int value) const
     return { };
 }
 
-String CSSCounterStyle::fallbackText(int value)
+String CSSCounterStyle::fallbackText(int value, WritingMode writingMode)
 {
     if (m_isFallingBack || !fallback().get()) {
         m_isFallingBack = false;
-        return CSSCounterStyleRegistry::decimalCounter()->text(value);
+        return CSSCounterStyleRegistry::decimalCounter()->text(value, writingMode);
     }
     m_isFallingBack = true;
-    auto fallbackText = fallback()->text(value);
+    auto fallbackText = fallback()->text(value, writingMode);
     m_isFallingBack = false;
     return fallbackText;
 }
 
-String CSSCounterStyle::text(int value)
+String CSSCounterStyle::text(int value, WritingMode writingMode)
 {
     if (!isInRange(value))
-        return fallbackText(value);
+        return fallbackText(value, writingMode);
 
-    auto result = initialRepresentation(value);
+    auto result = initialRepresentation(value, writingMode);
     if (result.isNull())
-        return fallbackText(value);
+        return fallbackText(value, writingMode);
     applyPadSymbols(result, value);
     if (shouldApplyNegativeSymbols(value))
         applyNegativeSymbols(result);
@@ -421,6 +452,8 @@ bool CSSCounterStyle::isInRange(int value) const
         case CSSCounterStyleDescriptors::System::Cyclic:
         case CSSCounterStyleDescriptors::System::Numeric:
         case CSSCounterStyleDescriptors::System::Fixed:
+        case CSSCounterStyleDescriptors::System::DisclosureClosed:
+        case CSSCounterStyleDescriptors::System::DisclosureOpen:
             return true;
         case CSSCounterStyleDescriptors::System::Alphabetic:
         case CSSCounterStyleDescriptors::System::Symbolic:
@@ -447,8 +480,8 @@ bool CSSCounterStyle::isInRange(int value) const
 }
 
 CSSCounterStyle::CSSCounterStyle(const CSSCounterStyleDescriptors& descriptors, bool isPredefinedCounterStyle)
-    : m_descriptors { descriptors },
-    m_predefinedCounterStyle { isPredefinedCounterStyle }
+    : m_descriptors { descriptors }
+    , m_predefinedCounterStyle { isPredefinedCounterStyle }
 {
 }
 
@@ -457,7 +490,7 @@ Ref<CSSCounterStyle> CSSCounterStyle::create(const CSSCounterStyleDescriptors& d
     return adoptRef(*new CSSCounterStyle(descriptors, isPredefinedCounterStyle));
 }
 
-void CSSCounterStyle::setFallbackReference(RefPtr<CSSCounterStyle>&& fallback)
+void CSSCounterStyle::setFallbackReference(Ref<CSSCounterStyle>&& fallback)
 {
     m_fallbackReference = WeakPtr { fallback };
 }

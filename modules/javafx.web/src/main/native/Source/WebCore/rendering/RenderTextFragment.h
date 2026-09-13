@@ -32,7 +32,8 @@ namespace WebCore {
 // We cache offsets so that text transformations can be applied in such a way that we can recover
 // the original unaltered string from our corresponding DOM node.
 class RenderTextFragment final : public RenderText {
-    WTF_MAKE_ISO_ALLOCATED(RenderTextFragment);
+    WTF_MAKE_TZONE_ALLOCATED(RenderTextFragment);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderTextFragment);
 public:
     RenderTextFragment(Text&, const String&, int startOffset, int length);
     RenderTextFragment(Document&, const String&, int startOffset, int length);
@@ -59,21 +60,23 @@ public:
 private:
     void setTextInternal(const String&, bool force) override;
 
-    bool isTextFragment() const override { return true; }
-
-    UChar previousCharacter() const override;
+    Vector<char16_t> previousCharacter() const override;
 
     unsigned m_start;
     unsigned m_end;
     // Alternative description that can be used for accessibility instead of the native text.
     String m_altText;
     String m_contentString;
-    WeakPtr<RenderBoxModelObject> m_firstLetter;
+    SingleThreadWeakPtr<RenderBoxModelObject> m_firstLetter;
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::RenderTextFragment)
-    static bool isType(const WebCore::RenderText& renderer) { return renderer.isTextFragment(); }
-    static bool isType(const WebCore::RenderObject& renderer) { return is<WebCore::RenderText>(renderer) && isType(downcast<WebCore::RenderText>(renderer)); }
+    static bool isType(const WebCore::RenderText& renderer) { return renderer.isRenderTextFragment(); }
+    static bool isType(const WebCore::RenderObject& renderer)
+    {
+        auto* text = dynamicDowncast<WebCore::RenderText>(renderer);
+        return text && isType(*text);
+    }
 SPECIALIZE_TYPE_TRAITS_END()

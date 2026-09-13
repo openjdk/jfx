@@ -61,6 +61,9 @@ void DoesGCCheck::verifyCanGC(VM& vm)
             case Special::FTLOSRExit:
                 dataLog(" @ FTL osr exit");
                 break;
+            case Special::Termination:
+                dataLog(" @ termination");
+                break;
             case Special::NumberOfSpecials:
                 RELEASE_ASSERT_NOT_REACHED();
             }
@@ -69,7 +72,7 @@ void DoesGCCheck::verifyCanGC(VM& vm)
 
         CallFrame* callFrame = vm.topCallFrame;
         if (callFrame) {
-            if (!callFrame->isWasmFrame())
+            if (!callFrame->isNativeCalleeFrame())
                 dataLogLn(" in ", callFrame->codeBlock());
             VMInspector::dumpStack(&vm, callFrame);
         }
@@ -81,3 +84,4 @@ void DoesGCCheck::verifyCanGC(VM& vm)
 
 } // namespace DFG
 } // namespace JSC
+

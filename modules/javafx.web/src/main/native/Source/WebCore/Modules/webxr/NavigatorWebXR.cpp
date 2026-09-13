@@ -30,8 +30,11 @@
 
 #include "Navigator.h"
 #include "WebXRSystem.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NavigatorWebXR);
 
 WebXRSystem& NavigatorWebXR::xr(Navigator& navigatorObject)
 {
@@ -41,15 +44,25 @@ WebXRSystem& NavigatorWebXR::xr(Navigator& navigatorObject)
     return *navigator.m_xr;
 }
 
+WebXRSystem* NavigatorWebXR::xrIfExists(Navigator& navigator)
+{
+    return NavigatorWebXR::from(navigator).m_xr.get();
+}
+
 NavigatorWebXR& NavigatorWebXR::from(Navigator& navigator)
 {
-    auto* supplement = static_cast<NavigatorWebXR*>(Supplement<Navigator>::from(&navigator, "NavigatorWebXR"));
+    auto* supplement = static_cast<NavigatorWebXR*>(Supplement<Navigator>::from(&navigator, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<NavigatorWebXR>();
         supplement = newSupplement.get();
-        provideTo(&navigator, "NavigatorWebXR", WTFMove(newSupplement));
+        provideTo(&navigator, supplementName(), WTF::move(newSupplement));
     }
     return *supplement;
+}
+
+ASCIILiteral NavigatorWebXR::supplementName()
+{
+    return "NavigatorWebXR"_s;
 }
 
 } // namespace WebCore

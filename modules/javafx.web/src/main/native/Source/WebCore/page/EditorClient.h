@@ -26,12 +26,16 @@
 
 #pragma once
 
-#include "EditorInsertAction.h"
-#include "SerializedAttachmentData.h"
-#include "TextAffinity.h"
-#include "TextChecking.h"
-#include "UndoStep.h"
+#include <WebCore/EditorInsertAction.h>
+#include <WebCore/FrameIdentifier.h>
+#include <WebCore/SerializedAttachmentData.h>
+#include <WebCore/TextAffinity.h>
+#include <WebCore/TextChecking.h>
+#include <WebCore/UndoStep.h>
+#include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
+#include <wtf/Platform.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 #include <wtf/WeakPtr.h>
 
@@ -39,6 +43,10 @@ namespace WebCore {
 
 enum class DOMPasteAccessCategory : uint8_t;
 enum class DOMPasteAccessResponse : uint8_t;
+
+#if ENABLE(ATTACHMENT_ELEMENT)
+enum class AttachmentAssociatedElementType : uint8_t;
+#endif
 
 class SharedBuffer;
 class Document;
@@ -56,9 +64,11 @@ struct GapRects;
 struct GrammarDetail;
 struct SimpleRange;
 
-class EditorClient : public CanMakeWeakPtr<EditorClient> {
+class WEBCORE_EXPORT EditorClient : public CanMakeWeakPtr<EditorClient>, public CanMakeCheckedPtr<EditorClient> {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(EditorClient);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(EditorClient);
 public:
-    virtual ~EditorClient() = default;
+    virtual ~EditorClient();
 
     virtual bool shouldDeleteRange(const std::optional<SimpleRange>&) = 0;
     virtual bool smartInsertDeleteEnabled() = 0;
@@ -76,6 +86,7 @@ public:
     virtual bool shouldChangeSelectedRange(const std::optional<SimpleRange>& fromRange, const std::optional<SimpleRange>& toRange, Affinity, bool stillSelecting) = 0;
     virtual bool shouldRevealCurrentSelectionAfterInsertion() const { return true; };
     virtual bool shouldSuppressPasswordEcho() const { return false; };
+    virtual bool shouldRemoveDictationAlternativesAfterEditing() const { return true; }
 
     virtual bool shouldApplyStyle(const StyleProperties&, const std::optional<SimpleRange>&) = 0;
     virtual void didApplyStyle() = 0;
@@ -87,7 +98,7 @@ public:
     virtual void registerAttachments(Vector<SerializedAttachmentData>&&) { }
     virtual void registerAttachmentIdentifier(const String& /* identifier */) { }
     virtual void cloneAttachmentData(const String& /* fromIdentifier */, const String& /* toIdentifier */) { }
-    virtual void didInsertAttachmentWithIdentifier(const String& /* identifier */, const String& /* source */, bool /* hasEnclosingImage */) { }
+    virtual void didInsertAttachmentWithIdentifier(const String& /* identifier */, const String& /* source */, AttachmentAssociatedElementType /* associatedElementType */) { }
     virtual void didRemoveAttachmentWithIdentifier(const String&) { }
     virtual bool supportsClientSideAttachmentData() const { return false; }
     virtual Vector<SerializedAttachmentData> serializedAttachmentDataForIdentifiers(const Vector<String>&) { return { }; }
@@ -101,11 +112,11 @@ public:
     virtual void didEndEditing() = 0;
     virtual void willWriteSelectionToPasteboard(const std::optional<SimpleRange>&) = 0;
     virtual void didWriteSelectionToPasteboard() = 0;
-    virtual void getClientPasteboardData(const std::optional<SimpleRange>&, Vector<String>& pasteboardTypes, Vector<RefPtr<SharedBuffer>>& pasteboardData) = 0;
+    virtual void getClientPasteboardData(const std::optional<SimpleRange>&, Vector<std::pair<String, RefPtr<WebCore::SharedBuffer>>>& pasteboardTypesAndData) = 0;
     virtual void requestCandidatesForSelection(const VisibleSelection&) { }
     virtual void handleAcceptedCandidateWithSoftSpaces(TextCheckingResult) { }
 
-    virtual DOMPasteAccessResponse requestDOMPasteAccess(DOMPasteAccessCategory, const String& originIdentifier) = 0;
+    virtual DOMPasteAccessResponse requestDOMPasteAccess(DOMPasteAccessCategory, FrameIdentifier, const String& originIdentifier) = 0;
 
     // Notify an input method that a composition was voluntarily discarded by WebCore, so that it could clean up too.
     // This function is not called when a composition is closed per a request from an input method.
@@ -172,6 +183,8 @@ public:
     virtual void toggleAutomaticTextReplacement() = 0;
     virtual bool isAutomaticSpellingCorrectionEnabled() = 0;
     virtual void toggleAutomaticSpellingCorrection() = 0;
+    virtual bool isSmartListsEnabled() = 0;
+    virtual void toggleSmartLists() = 0;
 #endif
 
 #if PLATFORM(GTK)
@@ -184,7 +197,6 @@ public:
     virtual void updateSpellingUIWithMisspelledWord(const String&) = 0;
     virtual void showSpellingUI(bool show) = 0;
     virtual bool spellingUIIsShowing() = 0;
-    virtual void willSetInputMethodState() = 0;
     virtual void setInputMethodState(Element*) = 0;
 
     // Support for global selections, used on platforms like the X Window System that treat
@@ -197,6 +209,10 @@ public:
 
     virtual void willChangeSelectionForAccessibility() { }
     virtual void didChangeSelectionForAccessibility() { }
+
+#if PLATFORM(IOS_FAMILY)
+    virtual bool shouldDrawVisuallyContiguousBidiSelection() const { return false; }
+#endif
 };
 
 }

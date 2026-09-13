@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,6 +33,7 @@
     height: var(--inline-controls-bar-height);
     min-width: 44px !important;
     min-height: var(--inline-controls-bar-height) !important;
+    box-sizing: content-box !important;
 }
 
 * {
@@ -41,6 +42,7 @@
     --primary-glyph-color: rgba(255, 255, 255, 0.75);
     --secondary-glyph-color: rgba(255, 255, 255, 0.55);
     --scrubber-margin: 5px;
+    --inline-controls-border-radius: 23px;
 }
 
 :host(audio), :host(video.media-document.audio), * {
@@ -57,6 +59,7 @@
     -webkit-cursor-visibility: inherit;
     position: relative;
     will-change: z-index;
+    overflow: clip;
 }
 
 .media-controls-container,
@@ -86,7 +89,7 @@
     transform-origin: 0 0;
 }
 
-:host(:-webkit-animating-full-screen-transition) .media-controls {
+:host(:-internal-animating-fullscreen-transition) .media-controls {
     display: none;
 }
 

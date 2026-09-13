@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "BufferSource.h"
-#include "CryptoAlgorithmParameters.h"
+#include <WebCore/BufferSource.h>
+#include <WebCore/CryptoAlgorithmParameters.h>
 #include <wtf/Vector.h>
 
 #if ENABLE(WEB_CRYPTO)
@@ -34,6 +34,7 @@
 namespace WebCore {
 
 class CryptoAlgorithmAesCbcCfbParams final : public CryptoAlgorithmParameters {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(CryptoAlgorithmAesCbcCfbParams, WEBCORE_EXPORT);
 public:
     BufferSource iv;
 
@@ -44,7 +45,7 @@ public:
         if (!m_ivVector.isEmpty() || !iv.length())
             return m_ivVector;
 
-        m_ivVector.append(iv.data(), iv.length());
+        m_ivVector.append(iv.span());
         return m_ivVector;
     }
 

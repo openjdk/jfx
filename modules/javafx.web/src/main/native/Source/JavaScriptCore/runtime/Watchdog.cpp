@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,23 +28,18 @@
 
 #include "VM.h"
 #include <wtf/CPUTime.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Watchdog);
+
 Watchdog::Watchdog(VM* vm)
     : m_vm(vm)
-    , m_timeLimit(noTimeLimit)
-    , m_cpuDeadline(noTimeLimit)
-    , m_deadline(MonotonicTime::infinity())
-    , m_callback(nullptr)
-    , m_callbackData1(nullptr)
-    , m_callbackData2(nullptr)
-    , m_timerQueue(WorkQueue::create("jsc.watchdog.queue", WorkQueue::QOS::Utility))
 {
 }
 
-void Watchdog::setTimeLimit(Seconds limit,
-    ShouldTerminateCallback callback, void* data1, void* data2)
+void Watchdog::setTimeLimit(Seconds limit, ShouldTerminateCallback callback, void* data1, void* data2)
 {
     ASSERT(m_vm->currentThreadIsHoldingAPILock());
 
@@ -68,7 +63,7 @@ bool Watchdog::shouldTerminate(JSGlobalObject* globalObject)
     // Adding this leeway shouldn't cause a problem for other platforms
     // (since the "deadline is infinity" case should be the crucial one),
     // but it is a fact that only Windows is experiencing the issue.
-    epsilon = Seconds::fromMilliseconds(20);
+    epsilon = 20_ms;
 #endif
     if (MonotonicTime::timePointFromNow(epsilon) < m_deadline)
         return false; // Just a stale timer firing. Nothing to do.
@@ -152,11 +147,10 @@ void Watchdog::startTimer(Seconds timeLimit)
     // For the same reason, the timer may also outlive the VM that the Watchdog operates on.
     // So, we always need to null check m_vm before using it. The VM will notify the Watchdog
     // via willDestroyVM() before it goes away.
-    RefPtr<Watchdog> protectedThis = this;
-    m_timerQueue->dispatchAfter(timeLimit, [this, protectedThis] {
-        Locker locker { m_lock };
-        if (m_vm)
-            m_vm->notifyNeedWatchdogCheck();
+    VMTraps::queue().dispatchAfter(timeLimit, [protectedThis = Ref { *this }] {
+        Locker locker { protectedThis->m_lock };
+        if (protectedThis->m_vm)
+            protectedThis->m_vm->notifyNeedWatchdogCheck();
     });
 }
 

@@ -44,13 +44,12 @@ void JITLeftShiftGenerator::generateFastPath(CCallHelpers& jit)
 
     m_didEmitFastPath = true;
 
+#if USE(JSVALUE32_64)
     if (m_rightOperand.isConstInt32()) {
         // Try to do (intVar << intConstant).
         m_slowPathJumpList.append(jit.branchIfNotInt32(m_left));
-
         jit.moveValueRegs(m_left, m_result);
         jit.lshift32(CCallHelpers::Imm32(m_rightOperand.asConstInt32()), m_result.payloadGPR());
-
     } else {
         // Try to do (intConstant << intVar) or (intVar << intVar).
         m_slowPathJumpList.append(jit.branchIfNotInt32(m_right));
@@ -62,9 +61,7 @@ void JITLeftShiftGenerator::generateFastPath(CCallHelpers& jit)
         }
 
         if (m_leftOperand.isConstInt32()) {
-#if USE(JSVALUE32_64)
             jit.move(m_right.tagGPR(), m_result.tagGPR());
-#endif
             jit.move(CCallHelpers::Imm32(m_leftOperand.asConstInt32()), m_result.payloadGPR());
         } else {
             m_slowPathJumpList.append(jit.branchIfNotInt32(m_left));
@@ -73,9 +70,22 @@ void JITLeftShiftGenerator::generateFastPath(CCallHelpers& jit)
 
         jit.lshift32(rightOperandGPR, m_result.payloadGPR());
     }
-
-#if USE(JSVALUE64)
-    jit.or64(GPRInfo::numberTagRegister, m_result.payloadGPR());
+#else
+    if (m_rightOperand.isConstInt32()) {
+        // Try to do (intVar << intConstant).
+        m_slowPathJumpList.append(jit.branchIfNotInt32(m_left));
+        jit.lshift32(m_left.payloadGPR(), CCallHelpers::Imm32(m_rightOperand.asConstInt32()), m_result.payloadGPR());
+    } else {
+        // Try to do (intConstant << intVar) or (intVar << intVar).
+        m_slowPathJumpList.append(jit.branchIfNotInt32(m_right));
+        if (m_leftOperand.isConstInt32())
+            jit.lshift32(CCallHelpers::Imm32(m_leftOperand.asConstInt32()), m_right.payloadGPR(), m_result.payloadGPR());
+        else {
+            m_slowPathJumpList.append(jit.branchIfNotInt32(m_left));
+            jit.lshift32(m_left.payloadGPR(), m_right.payloadGPR(), m_result.payloadGPR());
+        }
+    }
+    jit.boxInt32(m_result.payloadGPR(), m_result);
 #endif
 }
 

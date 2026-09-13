@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -152,13 +152,13 @@ public abstract class TransformedShape extends Shape {
 
     @Override
     public boolean intersects(float x, float y, float w, float h) {
-        // TODO: Could check for rectilinear shapes, if it matters (RT-26884)
+        // TODO: Could check for rectilinear shapes, if it matters (JDK-8092003)
         return getCachedTransformedShape().intersects(x, y, w, h);
     }
 
     @Override
     public boolean contains(float x, float y, float w, float h) {
-        // TODO: Could check for rectilinear shapes, if it matters (RT-26884)
+        // TODO: Could check for rectilinear shapes, if it matters (JDK-8092003)
         return getCachedTransformedShape().contains(x, y, w, h);
     }
 

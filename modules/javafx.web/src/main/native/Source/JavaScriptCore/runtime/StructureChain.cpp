@@ -28,6 +28,8 @@
 
 #include "JSCInlines.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 const ClassInfo StructureChain::s_info = { "StructureChain"_s, nullptr, nullptr, nullptr, CREATE_METHOD_TABLE(StructureChain) };
@@ -48,7 +50,7 @@ StructureChain* StructureChain::create(VM& vm, JSObject* head)
         ++size;
     ++size; // Sentinel nullptr.
     size_t bytes = Checked<size_t>(size) * sizeof(StructureID);
-    void* vector = vm.jsValueGigacageAuxiliarySpace().allocate(vm, bytes, nullptr, AllocationFailureMode::Assert);
+    void* vector = vm.auxiliarySpace().allocate(vm, bytes, nullptr, AllocationFailureMode::Assert);
     static_assert(!StructureID().bits(), "Make sure the value we're going to memcpy below matches the default StructureID");
     memset(vector, 0, bytes);
     StructureChain* chain = new (NotNull, allocateCell<StructureChain>(vm)) StructureChain(vm, vm.structureChainStructure.get(), static_cast<StructureID*>(vector));
@@ -84,3 +86,5 @@ void StructureChain::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 DEFINE_VISIT_CHILDREN(StructureChain);
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

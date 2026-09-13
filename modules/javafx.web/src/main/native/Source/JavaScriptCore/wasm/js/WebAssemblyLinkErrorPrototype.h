@@ -25,17 +25,19 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY)
 
-#include "JSDestructibleObject.h"
-#include "JSObject.h"
+#include <JavaScriptCore/JSDestructibleObject.h>
+#include <JavaScriptCore/JSObject.h>
 
 namespace JSC {
 
 class WebAssemblyLinkErrorPrototype final : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
-    static constexpr unsigned StructureFlags = Base::StructureFlags | HasStaticPropertyTable;
+    static constexpr unsigned StructureFlags = Base::StructureFlags;
 
     template<typename CellType, SubspaceAccess>
     static GCClient::IsoSubspace* subspaceFor(VM& vm)

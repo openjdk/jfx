@@ -29,13 +29,16 @@
 
 #include "PlatformGamepad.h"
 #include "PlatformXR.h"
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
-class WebXRGamepad: public PlatformGamepad {
+class WebXRGamepad final : public PlatformGamepad {
+    WTF_MAKE_TZONE_ALLOCATED(WebXRGamepad);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WebXRGamepad);
 public:
-    WebXRGamepad(double timestamp, double connectTime, const PlatformXR::Device::FrameData::InputSource&);
+    WebXRGamepad(double timestamp, double connectTime, const PlatformXR::FrameData::InputSource&);
 
 private:
     const Vector<SharedGamepadValue>& axisValues() const final { return m_axes; }

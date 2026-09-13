@@ -64,6 +64,7 @@ class BuiltinsSeparateHeaderGenerator(BuiltinsGenerator):
         sections.append(Template(Templates.HeaderIncludeGuard).substitute(args))
         if conditional_guard is not None:
             sections.append("#if %s" % conditional_guard)
+        sections.append(Template(Templates.RequiredHeaderIncludes).substitute(args))
         sections.append(self.generate_secondary_header_includes())
         sections.append(self.generate_forward_declarations())
         sections.append(Template(Templates.NamespaceTop).substitute(args))
@@ -129,7 +130,8 @@ class FunctionExecutable;
 extern const int s_%(codeName)sLength;
 extern const JSC::ConstructAbility s_%(codeName)sConstructAbility;
 extern const JSC::ConstructorKind s_%(codeName)sConstructorKind;
-extern const JSC::ImplementationVisibility s_%(codeName)sImplementationVisibility;""" % function_args)
+extern const JSC::ImplementationVisibility s_%(codeName)sImplementationVisibility;
+extern const JSC::InlineAttribute s_%(codeName)sInlineAttribute;""" % function_args)
 
         return lines
 

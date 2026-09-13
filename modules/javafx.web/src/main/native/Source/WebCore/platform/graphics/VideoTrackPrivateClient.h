@@ -27,18 +27,25 @@
 
 #if ENABLE(VIDEO)
 
-#include "TrackPrivateBaseClient.h"
+#include <WebCore/TrackPrivateBaseClient.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 struct PlatformVideoTrackConfiguration;
 
 class VideoTrackPrivateClient : public TrackPrivateBaseClient {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(VideoTrackPrivateClient);
 public:
+    constexpr Type type() const final { return Type::Video; }
     virtual void selectedChanged(bool) = 0;
     virtual void configurationChanged(const PlatformVideoTrackConfiguration&) = 0;
 };
 
 }
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::VideoTrackPrivateClient)
+static bool isType(const WebCore::TrackPrivateBaseClient& track) { return track.type() == WebCore::TrackPrivateBaseClient::Type::Video; }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

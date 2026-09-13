@@ -31,7 +31,9 @@
 #include "config.h"
 #include "DOMFormData.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
+#include "ExceptionOr.h"
 #include "HTMLFormControlElement.h"
 #include "HTMLFormElement.h"
 
@@ -54,14 +56,14 @@ ExceptionOr<Ref<DOMFormData>> DOMFormData::create(ScriptExecutionContext& contex
     if (submitter) {
         control = dynamicDowncast<HTMLFormControlElement>(*submitter);
         if (!control || !control->isSubmitButton())
-            return Exception { TypeError, "The specified element is not a submit button."_s };
+            return Exception { ExceptionCode::TypeError, "The specified element is not a submit button."_s };
         if (control->form() != form)
-            return Exception { NotFoundError, "The specified element is not owned by this form element."_s };
+            return Exception { ExceptionCode::NotFoundError, "The specified element is not owned by this form element."_s };
     }
-    auto result = form->constructEntryList(control.get(), WTFMove(formData), nullptr);
+    auto result = form->constructEntryList(control.get(), WTF::move(formData), nullptr);
 
     if (!result)
-        return Exception { InvalidStateError, "Already constructing Form entry list."_s };
+        return Exception { ExceptionCode::InvalidStateError, "Already constructing Form entry list."_s };
 
     return result.releaseNonNull();
 }
@@ -93,13 +95,12 @@ static auto createFileEntry(const String& name, Blob& blob, const String& filena
 {
     auto usvName = replaceUnpairedSurrogatesWithReplacementCharacter(String(name));
 
-    if (!blob.isFile())
-        return { usvName, File::create(blob.scriptExecutionContext(), blob, filename.isNull() ? "blob"_s : filename) };
-
+    if (RefPtr file = dynamicDowncast<File>(blob)) {
     if (!filename.isNull())
-        return { usvName, File::create(blob.scriptExecutionContext(), downcast<File>(blob), filename) };
-
-    return { usvName, RefPtr<File> { &downcast<File>(blob) } };
+            return { usvName, File::create(blob.protectedScriptExecutionContext().get(), *file, filename) };
+        return { usvName, WTF::move(file) };
+    }
+    return { usvName, File::create(blob.protectedScriptExecutionContext().get(), blob, filename.isNull() ? "blob"_s : filename) };
 }
 
 void DOMFormData::append(const String& name, const String& value)
@@ -174,7 +175,7 @@ void DOMFormData::set(const String& name, Item&& item)
     }
 
     if (initialMatchLocation) {
-        m_items[*initialMatchLocation] = WTFMove(item);
+        m_items[*initialMatchLocation] = WTF::move(item);
 
         m_items.removeAllMatching([&name] (const auto& item) {
             return item.name == name;
@@ -182,7 +183,7 @@ void DOMFormData::set(const String& name, Item&& item)
         return;
     }
 
-    m_items.append(WTFMove(item));
+    m_items.append(WTF::move(item));
 }
 
 DOMFormData::Iterator::Iterator(DOMFormData& target)

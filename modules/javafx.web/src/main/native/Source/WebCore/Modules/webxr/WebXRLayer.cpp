@@ -28,11 +28,12 @@
 
 #if ENABLE(WEBXR)
 
-#include <wtf/IsoMallocInlines.h>
+#include "ContextDestructionObserverInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WebXRLayer);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebXRLayer);
 
 WebXRLayer::WebXRLayer(ScriptExecutionContext* context)
     : ContextDestructionObserver(context)
@@ -41,6 +42,11 @@ WebXRLayer::WebXRLayer(ScriptExecutionContext* context)
 }
 
 WebXRLayer::~WebXRLayer() = default;
+
+ScriptExecutionContext* WebXRLayer::scriptExecutionContext() const
+{
+    return ContextDestructionObserver::scriptExecutionContext();
+}
 
 } // namespace WebCore
 

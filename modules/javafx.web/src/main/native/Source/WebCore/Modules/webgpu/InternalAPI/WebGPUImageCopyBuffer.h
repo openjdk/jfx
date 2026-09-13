@@ -25,15 +25,19 @@
 
 #pragma once
 
-#include "WebGPUImageDataLayout.h"
+#include <WebCore/WebGPUBuffer.h>
+#include <WebCore/WebGPUImageDataLayout.h>
 #include <wtf/Ref.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore::WebGPU {
 
 class Buffer;
 
 struct ImageCopyBuffer : public ImageDataLayout {
-    Buffer& buffer;
+    WeakRef<Buffer> buffer;
+
+    Ref<Buffer> protectedBuffer() const { return buffer.get(); }
 };
 
 } // namespace WebCore::WebGPU

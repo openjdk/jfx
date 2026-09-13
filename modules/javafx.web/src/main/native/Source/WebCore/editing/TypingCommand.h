@@ -26,6 +26,7 @@
 #pragma once
 
 #include "TextInsertionBaseCommand.h"
+#include <wtf/CheckedRef.h>
 
 namespace WebCore {
 
@@ -56,21 +57,21 @@ public:
         IsAutocompletion = 1 << 5,
     };
 
-    static void deleteSelection(Document&, OptionSet<Option> = { }, TextCompositionType = TextCompositionType::None);
-    static void deleteKeyPressed(Document&, OptionSet<Option> = { }, TextGranularity = TextGranularity::CharacterGranularity);
-    static void forwardDeleteKeyPressed(Document&, OptionSet<Option> = { }, TextGranularity = TextGranularity::CharacterGranularity);
-    static void insertText(Document&, const String&, OptionSet<Option>, TextCompositionType = TextCompositionType::None);
-    static void insertText(Document&, const String&, const VisibleSelection&, OptionSet<Option>, TextCompositionType = TextCompositionType::None);
-    static void insertLineBreak(Document&, OptionSet<Option>);
-    static void insertParagraphSeparator(Document&, OptionSet<Option>);
-    static void insertParagraphSeparatorInQuotedContent(Document&);
+    static void deleteSelection(Ref<Document>&&, OptionSet<Option> = { }, TextCompositionType = TextCompositionType::None);
+    static void deleteKeyPressed(Ref<Document>&&, OptionSet<Option> = { }, TextGranularity = TextGranularity::CharacterGranularity);
+    static void forwardDeleteKeyPressed(Ref<Document>&&, OptionSet<Option> = { }, TextGranularity = TextGranularity::CharacterGranularity);
+    static void insertText(Ref<Document>&&, const String&, Event* triggeringEvent, OptionSet<Option>, TextCompositionType = TextCompositionType::None);
+    static void insertText(Ref<Document>&&, const String&, Event* triggeringEvent, const VisibleSelection&, OptionSet<Option>, TextCompositionType = TextCompositionType::None);
+    static void insertLineBreak(Ref<Document>&&, OptionSet<Option>);
+    static void insertParagraphSeparator(Ref<Document>&&, OptionSet<Option>);
+    static void insertParagraphSeparatorInQuotedContent(Ref<Document>&&);
     static void closeTyping(Document&);
 #if PLATFORM(IOS_FAMILY)
     static void ensureLastEditCommandHasCurrentSelectionIfOpenForMoreTyping(Document&, const VisibleSelection&);
 #endif
 
-    void insertText(const String &text, bool selectInsertedText);
-    void insertTextRunWithoutNewlines(const String &text, bool selectInsertedText);
+    void insertText(const String&, bool selectInsertedText);
+    void insertTextRunWithoutNewlines(const String&, bool selectInsertedText);
     void insertLineBreak();
     void insertParagraphSeparatorInQuotedContent();
     void insertParagraphSeparator();
@@ -79,25 +80,26 @@ public:
     void deleteSelection(bool smartDelete);
     void setCompositionType(TextCompositionType type) { m_compositionType = type; }
     void setIsAutocompletion(bool isAutocompletion) { m_isAutocompletion = isAutocompletion; }
+    bool triggeringEventIsUntrusted() const { return m_triggeringEventIsUntrusted; }
+    void setTriggeringEventIsUntrusted(bool value) { m_triggeringEventIsUntrusted = value; }
 
 #if PLATFORM(IOS_FAMILY)
     void setEndingSelectionOnLastInsertCommand(const VisibleSelection& selection);
 #endif
 
 private:
-    static Ref<TypingCommand> create(Document& document, Type command, const String& text = emptyString(), OptionSet<Option> options = { }, TextGranularity granularity = TextGranularity::CharacterGranularity, TextCompositionType compositionType = TextCompositionType::None)
+    static Ref<TypingCommand> create(Ref<Document>&& document, Type command, const String& text = emptyString(), OptionSet<Option> options = { }, TextGranularity granularity = TextGranularity::CharacterGranularity, TextCompositionType compositionType = TextCompositionType::None)
     {
-        return adoptRef(*new TypingCommand(document, command, text, options, granularity, compositionType));
+        return adoptRef(*new TypingCommand(WTF::move(document), command, text, options, granularity, compositionType));
     }
 
-    static Ref<TypingCommand> create(Document& document, Type command, const String& text, OptionSet<Option> options, TextCompositionType compositionType)
+    static Ref<TypingCommand> create(Ref<Document>&& document, Type command, const String& text, OptionSet<Option> options, TextCompositionType compositionType)
     {
-        return adoptRef(*new TypingCommand(document, command, text, options, TextGranularity::CharacterGranularity, compositionType));
+        return adoptRef(*new TypingCommand(WTF::move(document), command, text, options, TextGranularity::CharacterGranularity, compositionType));
     }
 
-    TypingCommand(Document&, Type, const String& text, OptionSet<Option>, TextGranularity, TextCompositionType);
+    TypingCommand(Ref<Document>&&, Type, const String& text, OptionSet<Option>, TextGranularity, TextCompositionType);
 
-    bool smartDelete() const { return m_smartDelete; }
     void setSmartDelete(bool smartDelete) { m_smartDelete = smartDelete; }
     bool isOpenForMoreTyping() const { return m_openForMoreTyping; }
     void closeTyping() { m_openForMoreTyping = false; }
@@ -162,6 +164,11 @@ private:
 
     bool m_shouldRetainAutocorrectionIndicator;
     bool m_shouldPreventSpellChecking;
+    bool m_triggeringEventIsUntrusted { false };
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::TypingCommand)
+    static bool isType(const WebCore::CompositeEditCommand& command) { return command.isTypingCommand(); }
+SPECIALIZE_TYPE_TRAITS_END()

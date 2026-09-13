@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,16 @@
 
 package test.javafx.scene.control;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 
+import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableCell;
@@ -39,12 +42,10 @@ import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.control.skin.TreeTableRowSkin;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
 public class TreeTableRowTest {
@@ -63,14 +64,15 @@ public class TreeTableRowTest {
 
     StageLoader stageLoader;
 
-    @After
+    @AfterEach
     public void after() {
         if (stageLoader != null) {
             stageLoader.dispose();
         }
     }
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         cell = new TreeTableRow<>();
 
         root = new TreeItem<>(ROOT);
@@ -229,7 +231,7 @@ public class TreeTableRowTest {
     // Above were the simple tests. Now we check various circumstances
     // to make sure the item is updated correctly.
 
-    @Ignore // TODO file bug!
+    @Disabled // TODO file bug!
     @Test public void itemIsUpdatedWhenItWasOutOfRangeButUpdatesToTreeTableViewItemsMakesItInRange() {
         cell.updateIndex(4);
         cell.updateTreeTableView(tree);
@@ -237,7 +239,7 @@ public class TreeTableRowTest {
         assertSame("Pumpkin", cell.getItem());
     }
 
-    @Ignore // TODO file bug!
+    @Disabled // TODO file bug!
     @Test public void itemIsUpdatedWhenItWasInRangeButUpdatesToTreeTableViewItemsMakesItOutOfRange() {
         cell.updateIndex(2);
         cell.updateTreeTableView(tree);
@@ -247,7 +249,7 @@ public class TreeTableRowTest {
         assertNull(cell.getItem());
     }
 
-    @Ignore // TODO file bug!
+    @Disabled // TODO file bug!
     @Test public void itemIsUpdatedWhenTreeTableViewItemsIsUpdated() {
         // set cell index to point to 'Apples'
         cell.updateIndex(1);
@@ -261,7 +263,7 @@ public class TreeTableRowTest {
         assertEquals("Lime", cell.getItem());
     }
 
-    @Ignore // TODO file bug!
+    @Disabled // TODO file bug!
     @Test public void itemIsUpdatedWhenTreeTableViewItemsHasNewItemInsertedBeforeIndex() {
         cell.updateIndex(2);
         cell.updateTreeTableView(tree);
@@ -281,7 +283,7 @@ public class TreeTableRowTest {
 //        assertEquals(other, cell.getItem());
 //    }
 
-    @Ignore // TODO file bug!
+    @Disabled // TODO file bug!
     @Test public void itemIsUpdatedWhenTreeTableViewItemsIsReplaced() {
         cell.updateIndex(1);
         cell.updateTreeTableView(tree);
@@ -300,7 +302,7 @@ public class TreeTableRowTest {
         assertEquals("Juice", cell.getItem());
     }
 
-    @Ignore // TODO file bug!
+    @Disabled // TODO file bug!
     @Test public void replaceItemsWithANull() {
         cell.updateIndex(0);
         cell.updateTreeTableView(tree);
@@ -317,7 +319,7 @@ public class TreeTableRowTest {
 //        assertListenerListDoesNotContain(model, treeener);
 //    }
 //
-    @Ignore // TODO file bug!
+    @Disabled // TODO file bug!
     @Test public void replaceANullItemsWithNotNull() {
         cell.updateIndex(1);
         cell.updateTreeTableView(tree);
@@ -347,7 +349,7 @@ public class TreeTableRowTest {
         assertFalse(other.isSelected());
     }
 
-    @Ignore // TODO file bug!
+    @Disabled // TODO file bug!
     @Test public void changesToSelectionOnSelectionModelAreReflectedInCells() {
         cell.updateTreeTableView(tree);
         cell.updateIndex(0);
@@ -384,7 +386,7 @@ public class TreeTableRowTest {
 //        assertTrue(other.isSelected());
 //    }
 
-    @Ignore // TODO file bug!
+    @Disabled // TODO file bug!
     @Test public void changesToSelectionOnSelectionModelAreReflectedInCells_MultipleSelection() {
         tree.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         cell.updateTreeTableView(tree);
@@ -484,7 +486,7 @@ public class TreeTableRowTest {
         assertFalse(other.isFocused());
     }
 
-    @Ignore // TODO file bug!
+    @Disabled // TODO file bug!
     @Test public void changesToFocusOnFocusModelAreReflectedInCells() {
         cell.updateTreeTableView(tree);
         cell.updateIndex(0);
@@ -599,7 +601,7 @@ public class TreeTableRowTest {
         assertNull(tree.getEditingCell());
     }
 
-    @Ignore // TODO file bug!
+    @Disabled // TODO file bug!
     @Test public void editCellWithTreeResultsInUpdatedEditingIndexProperty() {
         tree.setEditable(true);
         cell.updateTreeTableView(tree);
@@ -695,7 +697,7 @@ public class TreeTableRowTest {
         assertFalse(cell.isEditing());
     }
 
-    @Ignore // TODO file bug!
+    @Disabled // TODO file bug!
     @Test public void movingTreeCellEditingIndexCausesCurrentlyInEditCellToCancel() {
         tree.setEditable(true);
         cell.updateTreeTableView(tree);
@@ -764,19 +766,19 @@ public class TreeTableRowTest {
 //        @Override public TreeItem<String> getModelItem(int index) {
 //            return index == 0 ? root : root.getChildren().get(index - 1);
 //        }
-////
-////        @Override protected void focus(int index) {
-////            // no op
-////        }
-////
-////        @Override protected int getFocusedIndex() {
-////            return tree.getFocusModel().getFocusedIndex();
-////        }
-////
-////        @Override
-////        public void select(int row, TreeTableColumn<String, ?> column) {
-////            //To change body of implemented methods use File | Settings | File Templates.
-////        }
+//--
+//--        @Override protected void focus(int index) {
+//--            // no op
+//--        }
+//--
+//--        @Override protected int getFocusedIndex() {
+//--            return tree.getFocusModel().getFocusedIndex();
+//--        }
+//--
+//--        @Override
+//--        public void select(int row, TreeTableColumn<String, ?> column) {
+//--            //To change body of implemented methods use File | Settings | File Templates.
+//--        }
 //    };
 //
 //    private final class FocusModelMock extends TreeTableView.TreeTableViewFocusModel {
@@ -938,5 +940,82 @@ public class TreeTableRowTest {
         assertFalse(c1.isSelected());
         assertTrue(c2.isSelected());
         assertFalse(row.isSelected()); // JDK-8292353 failure
+    }
+
+    /**
+     * Same index and underlying item should not cause the updateItem(..) method to be called.
+     */
+    @Test
+    public void testSameIndexAndItemShouldNotUpdateItem() {
+        AtomicInteger counter = new AtomicInteger();
+
+        TreeTableView<String> tree = ControlUtils.createTreeTableView();
+        tree.setRowFactory(view -> new TreeTableRow<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                counter.incrementAndGet();
+                super.updateItem(item, empty);
+            }
+        });
+
+        stageLoader = new StageLoader(tree);
+
+        counter.set(0);
+        TreeTableRow<String> row = ControlUtils.getTreeTableRow(tree, 0);
+        row.updateIndex(0);
+
+        assertEquals(0, counter.get());
+    }
+
+    /**
+     * The contract of a {@link TreeTableRow} is that isItemChanged(..)
+     * is called when the index is 'changed' to the same number as the old one, to evaluate if we need to call
+     * updateItem(..).
+     */
+    @Test
+    public void testSameIndexIsItemsChangedShouldBeCalled() {
+        AtomicBoolean isItemChangedCalled = new AtomicBoolean();
+
+        TreeTableView<String> tree = ControlUtils.createTreeTableView();
+        tree.setRowFactory(view -> new TreeTableRow<>() {
+            @Override
+            protected boolean isItemChanged(String oldItem, String newItem) {
+                isItemChangedCalled.set(true);
+                return super.isItemChanged(oldItem, newItem);
+            }
+        });
+
+        stageLoader = new StageLoader(tree);
+
+        TreeTableRow<String> row = ControlUtils.getTreeTableRow(tree, 0);
+        row.updateIndex(0);
+
+        assertTrue(isItemChangedCalled.get());
+    }
+
+    @Test
+    void testUpdateRowIndexManually() {
+        TreeTableView<String> table = ControlUtils.createTreeTableView();
+
+        TreeTableRow<String> row = new TreeTableRow<>();
+        row.updateTreeTableView(table);
+
+        stageLoader = new StageLoader(row);
+
+        row.updateIndex(0);
+
+        List<TreeTableCell<String, String>> cells = row.getChildrenUnmodifiable().stream()
+                .filter(TreeTableCell.class::isInstance).map(e -> (TreeTableCell<String, String>) e).toList();
+        for (TreeTableCell<String, String> cell : cells) {
+            assertEquals(0, cell.getIndex());
+        }
+
+        row.updateIndex(1);
+
+        cells = row.getChildrenUnmodifiable().stream()
+                .filter(TreeTableCell.class::isInstance).map(e -> (TreeTableCell<String, String>) e).toList();
+        for (TreeTableCell<String, String> cell : cells) {
+            assertEquals(1, cell.getIndex());
+        }
     }
 }

@@ -26,16 +26,15 @@
 #include "config.h"
 #include "RFC8941.h"
 
-#include "ParsingUtilities.h"
 #include "RFC7230.h"
+#include <wtf/text/Base64.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/StringParsingBuffer.h>
 #include <wtf/text/StringView.h>
 
 namespace RFC8941 {
-
-using namespace WebCore;
 
 template<typename CharacterType> constexpr bool isEndOfToken(CharacterType character)
 {
@@ -48,14 +47,14 @@ template<typename CharacterType> constexpr bool isEndOfKey(CharacterType charact
 }
 
 // Parsing a key (https://datatracker.ietf.org/doc/html/rfc8941#section-4.2.3.3).
-template<typename CharType> static StringView parseKey(StringParsingBuffer<CharType>& buffer)
+template<typename CharType> static StringView parseKey(StringParsingBuffer<CharType>& buffer LIFETIME_BOUND)
 {
     if (buffer.atEnd() || !isASCIILower(*buffer))
         return { };
-    auto keyStart = buffer.position();
+    auto keyStart = buffer.span();
     ++buffer;
     skipUntil<isEndOfKey>(buffer);
-    return StringView(keyStart, buffer.position() - keyStart);
+    return keyStart.first(buffer.position() - keyStart.data());
 }
 
 // Parsing a String (https://datatracker.ietf.org/doc/html/rfc8941#section-4.2.5).
@@ -85,14 +84,74 @@ template<typename CharType> static std::optional<String> parseString(StringParsi
     return std::nullopt;
 }
 
+// Parsing an Integer or Decimal (https://datatracker.ietf.org/doc/html/rfc8941#section-4.2.4).
+template<typename CharType> static std::optional<BareItem> parseNumber(StringParsingBuffer<CharType>& buffer)
+{
+    bool isNegative = false;
+    if (skipExactly(buffer, '-'))
+        isNegative = true;
+
+    int64_t integerValue = 0;
+    size_t integerDigits = 0;
+    constexpr size_t maxIntegerDigits = 15;
+    while (buffer.hasCharactersRemaining() && isASCIIDigit(*buffer)) {
+        if (++integerDigits > maxIntegerDigits)
+            return std::nullopt;
+        integerValue = (integerValue * 10) + (*buffer - '0');
+        ++buffer;
+    }
+    if (!integerDigits)
+        return std::nullopt;
+    if (!skipExactly(buffer, '.'))
+        return isNegative ? -integerValue : integerValue;
+
+    constexpr size_t maxDecimalIntegerDigits = 12;
+    if (integerDigits > maxDecimalIntegerDigits)
+        return std::nullopt;
+    double fractionalValue = 0.0;
+    size_t fractionalDigits = 0;
+    constexpr size_t maxFractionalDigits = 3;
+    double divisor = 1.0;
+    while (buffer.hasCharactersRemaining() && isASCIIDigit(*buffer)) {
+        if (++fractionalDigits > maxFractionalDigits)
+            return std::nullopt;
+        divisor *= 10.0;
+        fractionalValue = fractionalValue * 10.0 + (*buffer - '0');
+        ++buffer;
+    }
+    if (!fractionalDigits)
+        return std::nullopt;
+    double decimalValue = integerValue + (fractionalValue / divisor);
+    return isNegative ? -decimalValue : decimalValue;
+}
+
 // Parsing a Token (https://datatracker.ietf.org/doc/html/rfc8941#section-4.2.6).
 template<typename CharType> static std::optional<Token> parseToken(StringParsingBuffer<CharType>& buffer)
 {
     if (buffer.atEnd() || (!isASCIIAlpha(*buffer) && *buffer != '*'))
         return std::nullopt;
-    auto tokenStart = buffer.position();
+    auto tokenStart = buffer.span();
     skipUntil<isEndOfToken>(buffer);
-    return Token { String(tokenStart, buffer.position() - tokenStart) };
+    return Token { String(tokenStart.first(buffer.position() - tokenStart.data())) };
+}
+
+// Parsing a Byte Sequence (https://datatracker.ietf.org/doc/html/rfc8941#section-4.2.7).
+template<typename CharType> static std::optional<Vector<uint8_t>> parseByteSequence(StringParsingBuffer<CharType>& buffer)
+{
+    if (!skipExactly(buffer, ':'))
+        return std::nullopt;
+    auto begin = buffer.span();
+    skipUntil(buffer, ':');
+    auto byteSequence = begin.first(buffer.position() - begin.data());
+    if (!skipExactly(buffer, ':'))
+        return std::nullopt;
+    if (byteSequence.empty())
+        return Vector<uint8_t>();
+
+    auto decoded = base64Decode(StringView(byteSequence));
+    if (!decoded)
+        return std::nullopt;
+    return WTF::move(*decoded);
 }
 
 // Parsing a Boolean (https://datatracker.ietf.org/doc/html/rfc8941#section-4.2.8).
@@ -113,13 +172,16 @@ template<typename CharType> static std::optional<BareItem> parseBareItem(StringP
     if (buffer.atEnd())
         return std::nullopt;
     CharType c = *buffer;
+    if (c == ':')
+        return parseByteSequence(buffer);
     if (c == '"')
         return parseString(buffer);
     if (isASCIIAlpha(c) || c == '*')
         return parseToken(buffer);
     if (c == '?')
         return parseBoolean(buffer);
-    // FIXME: The specification supports parsing other types.
+    if (c == '-' || isASCIIDigit(c))
+        return parseNumber(buffer);
     return std::nullopt;
 }
 
@@ -139,11 +201,11 @@ template<typename CharType> static std::optional<Parameters> parseParameters(Str
             auto parsedValue = parseBareItem(buffer);
             if (!parsedValue)
                 return std::nullopt;
-            value = WTFMove(*parsedValue);
+            value = WTF::move(*parsedValue);
         }
-        parameters.set(key.toString(), WTFMove(value));
+        parameters.set(key.toString(), WTF::move(value));
     }
-    return Parameters { WTFMove(parameters) };
+    return Parameters { WTF::move(parameters) };
 }
 
 // Parsing an item (https://datatracker.ietf.org/doc/html/rfc8941#section-4.2.3).
@@ -157,7 +219,7 @@ template<typename CharType> static std::optional<std::pair<BareItem, Parameters>
     if (!parameters)
         return std::nullopt;
 
-    return std::pair { WTFMove(*bareItem), WTFMove(*parameters) };
+    return std::pair { WTF::move(*bareItem), WTF::move(*parameters) };
 }
 
 // Parsing an Inner List (https://datatracker.ietf.org/doc/html/rfc8941#section-4.2.1.2).
@@ -176,12 +238,12 @@ template<typename CharType> static std::optional<std::pair<InnerList, Parameters
             auto parameters = parseParameters(buffer);
             if (!parameters)
                 return std::nullopt;
-            return std::pair { WTFMove(list), WTFMove(*parameters) };
+            return std::pair { WTF::move(list), WTF::move(*parameters) };
         }
         auto item = parseItem(buffer);
         if (!item)
             return std::nullopt;
-        list.append(WTFMove(*item));
+        list.append(WTF::move(*item));
         if (buffer.atEnd() || (*buffer != ')' && *buffer != ' '))
             break;
     }
@@ -209,15 +271,15 @@ template<typename CharType> static std::optional<HashMap<String, std::pair<ItemO
             auto parsedMember = parseItemOrInnerList(buffer);
             if (!parsedMember)
                 return std::nullopt;
-            member = WTFMove(*parsedMember);
+            member = WTF::move(*parsedMember);
         } else {
             BareItem value = true;
             auto parameters = parseParameters(buffer);
             if (!parameters)
                 return std::nullopt;
-            member = std::pair { WTFMove(value), WTFMove(*parameters) };
+            member = std::pair { WTF::move(value), WTF::move(*parameters) };
         }
-        dictionary.set(key.toString(), WTFMove(member));
+        dictionary.set(key.toString(), WTF::move(member));
         skipWhile<isTabOrSpace>(buffer);
         if (buffer.atEnd())
             return dictionary;
@@ -231,13 +293,35 @@ template<typename CharType> static std::optional<HashMap<String, std::pair<ItemO
     return dictionary;
 }
 
+// Parsing a list (https://datatracker.ietf.org/doc/html/rfc8941#section-4.2.1).
+template<typename CharType> static std::optional<Vector<std::pair<ItemOrInnerList, Parameters>>> parseList(StringParsingBuffer<CharType>& buffer)
+{
+    Vector<std::pair<ItemOrInnerList, Parameters>> list;
+    while (buffer.hasCharactersRemaining()) {
+        auto member = parseItemOrInnerList(buffer);
+        if (!member)
+            return std::nullopt;
+        list.append(WTF::move(*member));
+        skipWhile<isTabOrSpace>(buffer);
+        if (buffer.atEnd())
+            return list;
+        if (!skipExactly(buffer, ','))
+            return std::nullopt;
+        skipWhile<isTabOrSpace>(buffer);
+        if (buffer.atEnd())
+            return std::nullopt;
+    }
+    ASSERT(list.isEmpty());
+    return list;
+}
+
 // https://datatracker.ietf.org/doc/html/rfc8941#section-4.2 with type "item".
 std::optional<std::pair<BareItem, Parameters>> parseItemStructuredFieldValue(StringView header)
 {
     if (header.isEmpty())
         return std::nullopt;
 
-    return readCharactersForParsing(WTFMove(header), [](auto buffer) -> std::optional<std::pair<BareItem, Parameters>> {
+    return readCharactersForParsing(WTF::move(header), [](auto buffer) -> std::optional<std::pair<BareItem, Parameters>> {
         skipWhile(buffer, ' ');
 
         auto item = parseItem(buffer);
@@ -248,7 +332,28 @@ std::optional<std::pair<BareItem, Parameters>> parseItemStructuredFieldValue(Str
 
         if (buffer.hasCharactersRemaining())
             return std::nullopt;
-        return WTFMove(*item);
+        return WTF::move(*item);
+    });
+}
+
+// https://datatracker.ietf.org/doc/html/rfc8941#section-4.2 with type "list".
+std::optional<Vector<std::pair<ItemOrInnerList, Parameters>>> parseListStructuredFieldValue(StringView header)
+{
+    if (header.isEmpty())
+        return std::nullopt;
+
+    return readCharactersForParsing(WTF::move(header), [](auto buffer) -> std::optional<Vector<std::pair<ItemOrInnerList, Parameters>>> {
+        skipWhile(buffer, ' ');
+
+        auto list = parseList(buffer);
+        if (!list)
+            return std::nullopt;
+
+        skipWhile(buffer, ' ');
+
+        if (buffer.hasCharactersRemaining())
+            return std::nullopt;
+        return WTF::move(*list);
     });
 }
 
@@ -258,7 +363,7 @@ std::optional<HashMap<String, std::pair<ItemOrInnerList, Parameters>>> parseDict
     if (header.isEmpty())
         return std::nullopt;
 
-    return readCharactersForParsing(WTFMove(header), [](auto buffer) -> std::optional<HashMap<String, std::pair<ItemOrInnerList, Parameters>>> {
+    return readCharactersForParsing(WTF::move(header), [](auto buffer) -> std::optional<HashMap<String, std::pair<ItemOrInnerList, Parameters>>> {
         skipWhile(buffer, ' ');
 
         auto dictionary = parseDictionary(buffer);
@@ -269,7 +374,7 @@ std::optional<HashMap<String, std::pair<ItemOrInnerList, Parameters>>> parseDict
 
         if (buffer.hasCharactersRemaining())
             return std::nullopt;
-        return WTFMove(*dictionary);
+        return WTF::move(*dictionary);
     });
 }
 

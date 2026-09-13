@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2010 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,8 +26,9 @@
 #include "config.h"
 #include "AccessibilityMenuListOption.h"
 
-#include "AXObjectCache.h"
+#include "AXObjectCacheInlines.h"
 #include "AccessibilityMenuListPopup.h"
+#include "AccessibilityObjectInlines.h"
 #include "Document.h"
 #include "HTMLNames.h"
 #include "HTMLOptionElement.h"
@@ -37,39 +38,41 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-AccessibilityMenuListOption::AccessibilityMenuListOption(HTMLOptionElement& element)
-    : m_element(element)
+AccessibilityMenuListOption::AccessibilityMenuListOption(AXID axID, HTMLOptionElement& element, AXObjectCache& cache)
+    : AccessibilityNodeObject(axID, &element, cache)
     , m_parent(nullptr)
 {
 }
 
-Ref<AccessibilityMenuListOption> AccessibilityMenuListOption::create(HTMLOptionElement& element)
+Ref<AccessibilityMenuListOption> AccessibilityMenuListOption::create(AXID axID, HTMLOptionElement& element, AXObjectCache& cache)
 {
-    return adoptRef(*new AccessibilityMenuListOption(element));
+    return adoptRef(*new AccessibilityMenuListOption(axID, element, cache));
+}
+
+HTMLOptionElement* AccessibilityMenuListOption::optionElement() const
+{
+    return downcast<HTMLOptionElement>(node());
 }
 
 Element* AccessibilityMenuListOption::actionElement() const
 {
-    return m_element.get();
-}
-
-Node* AccessibilityMenuListOption::node() const
-{
-    return m_element.get();
+    return downcast<Element>(node());
 }
 
 bool AccessibilityMenuListOption::isEnabled() const
 {
-    return m_element && !m_element->ownElementDisabled();
+    RefPtr optionElement = this->optionElement();
+    return optionElement && !optionElement->ownElementDisabled();
 }
 
 bool AccessibilityMenuListOption::isVisible() const
 {
-    if (!m_element)
+    WeakPtr optionElement = this->optionElement();
+    if (!optionElement)
         return false;
 
     // In a single-option select with the popup collapsed, only the selected item is considered visible.
-    auto ownerSelectElement = m_element->document().axObjectCache()->getOrCreate(m_element->ownerSelectElement());
+    RefPtr ownerSelectElement = optionElement->document().axObjectCache()->getOrCreate(optionElement->ownerSelectElement());
     return ownerSelectElement && (!ownerSelectElement->isOffScreen() || isSelected());
 }
 
@@ -81,7 +84,8 @@ bool AccessibilityMenuListOption::isOffScreen() const
 
 bool AccessibilityMenuListOption::isSelected() const
 {
-    return m_element && m_element->selected();
+    RefPtr optionElement = this->optionElement();
+    return optionElement && optionElement->selected();
 }
 
 void AccessibilityMenuListOption::setSelected(bool selected)
@@ -89,7 +93,8 @@ void AccessibilityMenuListOption::setSelected(bool selected)
     if (!canSetSelectedAttribute())
         return;
 
-    m_element->setSelected(selected);
+    if (RefPtr optionElement = this->optionElement())
+        optionElement->setSelected(selected);
 }
 
 bool AccessibilityMenuListOption::canSetSelectedAttribute() const
@@ -97,30 +102,29 @@ bool AccessibilityMenuListOption::canSetSelectedAttribute() const
     return isEnabled();
 }
 
-bool AccessibilityMenuListOption::computeAccessibilityIsIgnored() const
+bool AccessibilityMenuListOption::computeIsIgnored() const
 {
-    return accessibilityIsIgnoredByDefault();
+    return isIgnoredByDefault();
 }
 
 LayoutRect AccessibilityMenuListOption::elementRect() const
 {
-    AccessibilityObject* parent = parentObject();
+    RefPtr parent = parentObject();
     // Our parent should've been set to be a menu-list popup before this method is called.
-    ASSERT(parent && parent->isMenuListPopup());
+    AX_ASSERT(parent && parent->isMenuListPopup());
     if (!parent)
         return boundingBoxRect();
 
-    AccessibilityObject* grandparent = parent->parentObject();
-    if (!grandparent)
-        return boundingBoxRect();
-    ASSERT(grandparent->isMenuList());
+    RefPtr grandparent = parent->parentObject();
+    AX_ASSERT(!grandparent || grandparent->isMenuList());
 
-    return grandparent->elementRect();
+    return grandparent ? grandparent->elementRect() : boundingBoxRect();
 }
 
 String AccessibilityMenuListOption::stringValue() const
 {
-    return m_element ? m_element->label() : String();
+    RefPtr optionElement = this->optionElement();
+    return optionElement ? optionElement->label() : String();
 }
 
 } // namespace WebCore

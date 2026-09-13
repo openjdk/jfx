@@ -37,8 +37,8 @@
 #include "SharedBufferChunkReader.h"
 #include <wtf/HashMap.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
-#include <wtf/text/StringConcatenate.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
@@ -72,7 +72,7 @@ static KeyValueMap retrieveKeyValuePairs(WebCore::SharedBufferChunkReader& buffe
             // This is not a key value pair, ignore.
             continue;
         }
-        key = StringView(line).left(semicolonIndex).trim(isUnicodeCompatibleASCIIWhitespace<UChar>).convertToASCIILowercase();
+        key = StringView(line).left(semicolonIndex).trim(isUnicodeCompatibleASCIIWhitespace<char16_t>).convertToASCIILowercase();
         value.append(StringView(line).substring(semicolonIndex + 1));
     }
     // Store the last property if there is one.
@@ -104,8 +104,8 @@ RefPtr<MIMEHeader> MIMEHeader::parseHeader(SharedBufferChunkReader& buffer)
                 LOG_ERROR("No boundary found in multipart MIME header.");
                 return nullptr;
             }
-            mimeHeader->m_endOfPartBoundary = "--" + mimeHeader->m_endOfPartBoundary;
-            mimeHeader->m_endOfDocumentBoundary = mimeHeader->m_endOfPartBoundary + "--";
+            mimeHeader->m_endOfPartBoundary = makeString("--"_s, mimeHeader->m_endOfPartBoundary);
+            mimeHeader->m_endOfDocumentBoundary = makeString(mimeHeader->m_endOfPartBoundary, "--"_s);
         }
     }
 
@@ -122,7 +122,7 @@ RefPtr<MIMEHeader> MIMEHeader::parseHeader(SharedBufferChunkReader& buffer)
 
 MIMEHeader::Encoding MIMEHeader::parseContentTransferEncoding(StringView text)
 {
-    auto encoding = text.trim(isUnicodeCompatibleASCIIWhitespace<UChar>);
+    auto encoding = text.trim(isUnicodeCompatibleASCIIWhitespace<char16_t>);
     if (equalLettersIgnoringASCIICase(encoding, "base64"_s))
         return Base64;
     if (equalLettersIgnoringASCIICase(encoding, "quoted-printable"_s))

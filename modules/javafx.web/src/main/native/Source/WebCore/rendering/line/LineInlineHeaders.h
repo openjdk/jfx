@@ -26,24 +26,12 @@
 #include "LineInfo.h"
 #include "RenderBoxInlines.h"
 #include "RenderBoxModelObjectInlines.h"
-#include "RenderLayer.h"
 #include "RenderObjectInlines.h"
+#include "RenderLayer.h"
 
 namespace WebCore {
 
 enum WhitespacePosition : bool { LeadingWhitespace, TrailingWhitespace };
-
-inline bool hasInlineDirectionBordersPaddingOrMargin(const RenderInline& flow)
-{
-    // Where an empty inline is split across anonymous blocks we should only give lineboxes to the 'sides' of the
-    // inline that have borders, padding or margin.
-    bool shouldApplyStartBorderPaddingOrMargin = !flow.parent()->isAnonymousBlock() || !flow.isContinuation();
-    if (shouldApplyStartBorderPaddingOrMargin && (flow.borderStart() || flow.marginStart() || flow.paddingStart()))
-        return true;
-
-    bool shouldApplyEndBorderPaddingOrMargin = !flow.parent()->isAnonymousBlock() || flow.isContinuation() || !flow.inlineContinuation();
-    return shouldApplyEndBorderPaddingOrMargin && (flow.borderEnd() || flow.marginEnd() || flow.paddingEnd());
-}
 
 inline const RenderStyle& lineStyle(const RenderObject& renderer, const LineInfo& lineInfo)
 {
@@ -71,7 +59,8 @@ inline bool shouldCollapseWhiteSpace(const RenderStyle* style, const LineInfo& l
     // If a space (U+0020) at the end of a line has 'white-space' set to 'normal', 'nowrap', or 'pre-line', it is also removed.
     // If spaces (U+0020) or tabs (U+0009) at the end of a line have 'white-space' set to 'pre-wrap', UAs may visually collapse them.
     return style->collapseWhiteSpace()
-        || (whitespacePosition == TrailingWhitespace && style->whiteSpace() == WhiteSpace::PreWrap && (!lineInfo.isEmpty() || !lineInfo.previousLineBrokeCleanly()));
+        || (whitespacePosition == TrailingWhitespace && style->whiteSpaceCollapse() == WhiteSpaceCollapse::Preserve
+            && style->textWrapMode() == TextWrapMode::Wrap && !lineInfo.isEmpty());
 }
 
 inline bool skipNonBreakingSpace(const LegacyInlineIterator& it, const LineInfo& lineInfo)
@@ -84,59 +73,28 @@ inline bool skipNonBreakingSpace(const LegacyInlineIterator& it, const LineInfo&
     // Do not skip a non-breaking space if it is the first character
     // on a line after a clean line break (or on the first line, since previousLineBrokeCleanly starts off
     // |true|).
-    if (lineInfo.isEmpty() && lineInfo.previousLineBrokeCleanly())
+    if (lineInfo.isEmpty())
         return false;
 
     return true;
 }
 
-inline bool alwaysRequiresLineBox(const RenderInline& flow)
-{
-    // FIXME: Right now, we only allow line boxes for inlines that are truly empty.
-    // We need to fix this, though, because at the very least, inlines containing only
-    // ignorable whitespace should should also have line boxes.
-    return isEmptyInline(flow) && hasInlineDirectionBordersPaddingOrMargin(flow);
-}
-
 inline bool requiresLineBox(const LegacyInlineIterator& it, const LineInfo& lineInfo = LineInfo(), WhitespacePosition whitespacePosition = LeadingWhitespace)
 {
-    if (it.renderer()->isFloatingOrOutOfFlowPositioned())
-        return false;
-
-    if (it.renderer()->isBR())
-        return true;
-
     bool rendererIsEmptyInline = false;
-    if (is<RenderInline>(*it.renderer())) {
-        const auto& inlineRenderer = downcast<RenderInline>(*it.renderer());
-        if (!alwaysRequiresLineBox(inlineRenderer) && !requiresLineBoxForContent(inlineRenderer, lineInfo))
+    if (auto* inlineRenderer = dynamicDowncast<RenderInline>(*it.renderer())) {
+        if (!requiresLineBoxForContent(*inlineRenderer, lineInfo))
             return false;
-        rendererIsEmptyInline = isEmptyInline(inlineRenderer);
+        rendererIsEmptyInline = isEmptyInline(*inlineRenderer);
     }
 
     if (!shouldCollapseWhiteSpace(&it.renderer()->style(), lineInfo, whitespacePosition))
         return true;
 
-    UChar current = it.current();
-    bool notJustWhitespace = current != ' ' && current != '\t' && current != softHyphen && (current != '\n' || it.renderer()->preservesNewline()) && !skipNonBreakingSpace(it, lineInfo);
+    char16_t current = it.current();
+    auto preservesNewline = !it.renderer()->isRenderSVGInlineText() && it.renderer()->style().preserveNewline();
+    bool notJustWhitespace = current != ' ' && current != '\t' && current != softHyphen && (current != '\n' || preservesNewline) && !skipNonBreakingSpace(it, lineInfo);
     return notJustWhitespace || rendererIsEmptyInline;
-}
-
-inline void setStaticPositions(RenderBlockFlow& block, RenderBox& child, IndentTextOrNot shouldIndentText)
-{
-    // FIXME: The math here is actually not really right. It's a best-guess approximation that
-    // will work for the common cases
-    RenderElement* containerBlock = child.container();
-    LayoutUnit blockHeight = block.logicalHeight();
-    if (is<RenderInline>(*containerBlock)) {
-        // A relative positioned inline encloses us. In this case, we also have to determine our
-        // position as though we were an inline. Set |staticInlinePosition| and |staticBlockPosition| on the relative positioned
-        // inline so that we can obtain the value later.
-        downcast<RenderInline>(*containerBlock).layer()->setStaticInlinePosition(block.startAlignedOffsetForLine(blockHeight, DoNotIndentText));
-        downcast<RenderInline>(*containerBlock).layer()->setStaticBlockPosition(blockHeight);
-    }
-    block.updateStaticInlinePositionForChild(child, blockHeight, shouldIndentText);
-    child.layer()->setStaticBlockPosition(blockHeight);
 }
 
 } // namespace WebCore

@@ -31,25 +31,30 @@
 #include "WebXRPose.h"
 #include "WebXRRigidTransform.h"
 #include "WebXRSession.h"
-#include <wtf/IsoMalloc.h>
 #include <wtf/Ref.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class WebXRJointPose : public WebXRPose {
-    WTF_MAKE_ISO_ALLOCATED(WebXRJointPose);
+    WTF_MAKE_TZONE_ALLOCATED(WebXRJointPose);
 public:
     static Ref<WebXRJointPose> create(Ref<WebXRRigidTransform>&&, bool emulatedPosition, float radius);
-    ~WebXRJointPose() = default;
 
     float radius() const { return m_radius; }
 
 private:
     WebXRJointPose(Ref<WebXRRigidTransform>&&, bool emulatedPosition, float radius);
 
+    bool isWebXRJointPose() const final { return true; }
+
     float m_radius { 0 };
 };
 
 }
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebXRJointPose)
+    static bool isType(const WebCore::WebXRPose& pose) { return pose.isWebXRJointPose(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif

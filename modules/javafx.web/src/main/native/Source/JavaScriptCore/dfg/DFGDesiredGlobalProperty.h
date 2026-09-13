@@ -56,15 +56,14 @@ public:
     JSGlobalObject* globalObject() const { return m_globalObject; }
     unsigned identifierNumber() const { return m_identifierNumber; }
 
-    bool operator==(const DesiredGlobalProperty& other) const
-    {
-        return m_globalObject == other.m_globalObject && m_identifierNumber == other.m_identifierNumber;
-    }
+    friend bool operator==(const DesiredGlobalProperty&, const DesiredGlobalProperty&) = default;
 
     bool isHashTableDeletedValue() const
     {
         return !m_globalObject && m_identifierNumber == UINT_MAX;
     }
+
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
 
     unsigned hash() const
     {
@@ -86,18 +85,9 @@ private:
     unsigned m_identifierNumber { 0 };
 };
 
-struct DesiredGlobalPropertyHash {
-    static unsigned hash(const DesiredGlobalProperty& key) { return key.hash(); }
-    static bool equal(const DesiredGlobalProperty& a, const DesiredGlobalProperty& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } } // namespace JSC::DFG
 
 namespace WTF {
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::DFG::DesiredGlobalProperty> : JSC::DFG::DesiredGlobalPropertyHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::DFG::DesiredGlobalProperty> : SimpleClassHashTraits<JSC::DFG::DesiredGlobalProperty> { };

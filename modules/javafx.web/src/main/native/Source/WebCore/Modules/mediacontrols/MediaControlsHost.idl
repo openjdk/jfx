@@ -29,7 +29,7 @@ enum DeviceType {
     "tvout"
 };
 
-[Conditional=MODERN_MEDIA_CONTROLS] enum SourceType {
+[Conditional=VIDEO] enum SourceType {
     "file",
     "hls",
     "media-source",
@@ -40,8 +40,10 @@ enum DeviceType {
 };
 
 [
-    Conditional=MEDIA_CONTROLS_SCRIPT,
+    Conditional=VIDEO,
+    JSCustomMarkFunction,
     LegacyNoInterfaceObject,
+    ExportMacro=WEBCORE_EXPORT,
 ] interface MediaControlsHost {
     readonly attribute DOMString layoutTraitsClassName;
     readonly attribute DOMString mediaControlsContainerClassName;
@@ -52,15 +54,21 @@ enum DeviceType {
     DOMString displayNameForTrack((TextTrack or AudioTrack)? track);
     readonly attribute TextTrack captionMenuOffItem;
     readonly attribute TextTrack captionMenuAutomaticItem;
+    readonly attribute TextTrack captionMenuOnItem;
     readonly attribute DOMString captionDisplayMode;
     undefined setSelectedTextTrack(TextTrack? track);
-    readonly attribute HTMLElement textTrackContainer;
+    readonly attribute Element? textTrackContainer;
     readonly attribute boolean allowsInlineMediaPlayback;
     readonly attribute boolean supportsFullscreen;
     readonly attribute boolean isVideoLayerInline;
     readonly attribute boolean userGestureRequired;
     readonly attribute boolean isInMediaDocument;
     readonly attribute boolean shouldForceControlsDisplay;
+    readonly attribute boolean supportsSeeking;
+    readonly attribute boolean inWindowFullscreen;
+    readonly attribute boolean supportsRewind;
+    readonly attribute boolean needsChromeMediaControlsPseudoElement;
+    readonly attribute boolean isMediaControlsMacInlineSizeSpecsEnabled;
 
     readonly attribute DOMString externalDeviceDisplayName;
     readonly attribute DeviceType externalDeviceType;
@@ -70,13 +78,18 @@ enum DeviceType {
     undefined updateTextTrackContainer();
     undefined enteredFullscreen();
     undefined exitedFullscreen();
+    undefined presentationModeChanged();
 
     DOMString generateUUID();
 
-    [Conditional=MODERN_MEDIA_CONTROLS] readonly attribute SourceType? sourceType;
+    readonly attribute SourceType? sourceType;
 
-    [Conditional=MODERN_MEDIA_CONTROLS] readonly attribute DOMString shadowRootCSSText;
-    [Conditional=MODERN_MEDIA_CONTROLS] DOMString base64StringForIconNameAndType(DOMString iconName, DOMString iconType);
-    [Conditional=MODERN_MEDIA_CONTROLS] DOMString formattedStringForDuration(unrestricted double durationInSeconds);
-    [Conditional=MODERN_MEDIA_CONTROLS&MEDIA_CONTROLS_CONTEXT_MENUS, EnabledBySetting=MediaControlsContextMenusEnabled] boolean showMediaControlsContextMenu(HTMLElement target, JSON options, VoidCallback callback);
+    readonly attribute sequence<DOMString> shadowRootStyleSheets;
+    DOMString base64StringForIconNameAndType(DOMString iconName, DOMString iconType);
+    [Conditional=MEDIA_CONTROLS_CONTEXT_MENUS, EnabledBySetting=MediaControlsContextMenusEnabled] boolean showMediaControlsContextMenu(HTMLElement target, JSON options, VoidCallback callback);
+    [Conditional=MEDIA_CONTROLS_CONTEXT_MENUS, EnabledBySetting=MediaControlsContextMenusEnabled, ImplementedAs=mediaControlsContextMenuItemsForBindings] sequence<MediaControlsContextMenuItem> mediaControlsContextMenuItems(JSON options);
+
+    [Conditional=MEDIA_SESSION] undefined ensureMediaSessionObserver();
+
+    [Custom] attribute any controller;
 };

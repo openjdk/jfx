@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,7 +35,6 @@
 
 extern void printAndReleaseResources(HWND hwnd, HGLRC hglrc,
         HDC hdc, LPCTSTR szAppName, char *message);
-extern void initializeDrawableInfo(DrawableInfo *dInfo);
 
 /*
  * Class:     com_sun_prism_es2_WinGLDrawable
@@ -56,7 +55,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_WinGLDrawable_nCreateDrawable
         fprintf(stderr, "nCreateHdc: Invalid hwnd");
         return 0;
     }
-    // TODO: Need to get the screen info in pfInfo to handle multi-monitor case. (RT-27445)
+    // TODO: Need to get the screen info in pfInfo to handle multi-monitor case. (JDK-8092267)
     hdc = GetDC(hwnd);
 
     if (!SetPixelFormat(hdc, pfInfo->pixelFormat, NULL)) {
@@ -73,7 +72,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_WinGLDrawable_nCreateDrawable
     }
 
     /* initialize the structure */
-    initializeDrawableInfo(dInfo);
+    memset(dInfo, 0, sizeof(DrawableInfo));
 
     dInfo->hdc = hdc;
     dInfo->hwnd = hwnd;
@@ -102,7 +101,7 @@ JNIEXPORT jlong JNICALL Java_com_sun_prism_es2_WinGLDrawable_nGetDummyDrawable
     }
 
     /* initialize the structure */
-    initializeDrawableInfo(dInfo);
+    memset(dInfo, 0, sizeof(DrawableInfo));
 
     // Use the dummyHdc that was already created in the pfInfo
     // since this is an non-onscreen drawable.
@@ -125,4 +124,24 @@ JNIEXPORT jboolean JNICALL Java_com_sun_prism_es2_WinGLDrawable_nSwapBuffers
         return JNI_FALSE;
     }
     return SwapBuffers(dInfo->hdc) ? JNI_TRUE : JNI_FALSE;
+}
+
+
+/*
+ * Class:     com_sun_prism_es2_WinGLDrawable
+ * Method:    nReleaseDrawable
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_com_sun_prism_es2_WinGLDrawable_nReleaseDrawable
+(JNIEnv *env, jclass class, jlong nativeDInfo) {
+    DrawableInfo *dInfo = (DrawableInfo *) jlong_to_ptr(nativeDInfo);
+    if (dInfo == NULL) {
+        return;
+    }
+
+    if ((dInfo->hdc != NULL) && (dInfo->hwnd != NULL)) {
+        ReleaseDC(dInfo->hwnd, dInfo->hdc);
+    }
+
+    free(dInfo);
 }

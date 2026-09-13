@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,6 +24,7 @@
  */
 package com.oracle.tools.fx.monkey.tools;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -32,16 +33,21 @@ import java.util.List;
 import java.util.Set;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.SelectionMode;
 import javafx.scene.control.ToolBar;
 import javafx.scene.control.TreeItem;
 import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
+import javafx.scene.control.TreeTablePosition;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.input.Clipboard;
+import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.DataFormat;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.text.Text;
 import com.oracle.tools.fx.monkey.util.FX;
+import com.oracle.tools.fx.monkey.util.Utils;
 
 /**
  * Clipboard Viewer
@@ -57,12 +63,15 @@ public class ClipboardViewer extends BorderPane {
         control = new TreeTableView<>(root);
         control.setColumnResizePolicy(TreeTableView.CONSTRAINED_RESIZE_POLICY_SUBSEQUENT_COLUMNS);
         control.getSelectionModel().setCellSelectionEnabled(true);
+        control.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        // TODO disable column reordering
         control.setShowRoot(false);
         {
             TreeTableColumn<Entry, String> c = new TreeTableColumn<>();
             c.setText("Data Format");
             c.setMinWidth(100);
-            c.setMaxWidth(200);
+            c.setPrefWidth(200);
+            c.setMaxWidth(300);
             c.setCellValueFactory((f) -> {
                 var t = f.getValue();
                 if (t != null) {
@@ -85,6 +94,7 @@ public class ClipboardViewer extends BorderPane {
                     protected void updateItem(String text, boolean empty) {
                         super.updateItem(text, empty);
                         Text t = new Text(text);
+                        t.setStyle("-fx-font-family:Monospace;");
                         t.wrappingWidthProperty().bind(widthProperty());
                         setPrefHeight(USE_COMPUTED_SIZE);
                         setGraphic(t);
@@ -104,9 +114,9 @@ public class ClipboardViewer extends BorderPane {
             });
             control.getColumns().add(c);
         }
+        FX.setPopupMenu(control, this::createPopupMenu);
 
-        Button addButton = new Button("Reload");
-        addButton.setOnAction((ev) -> reload());
+        Button addButton = FX.button("Reload", this::reload);
 
         ToolBar tp = new ToolBar(addButton);
 
@@ -116,7 +126,39 @@ public class ClipboardViewer extends BorderPane {
         reload();
     }
 
-    private void reload() {
+    private ContextMenu createPopupMenu() {
+        ContextMenu m = new ContextMenu();
+        FX.item(m, "Copy", this::copy);
+        return m;
+    }
+
+    private void copy() {
+        StringBuilder sb = null;
+        List<TreeTablePosition<Entry, ?>> sel = control.getSelectionModel().getSelectedCells();
+        for (TreeTablePosition<Entry, ?> p : sel) {
+            Entry en = p.getTreeItem().getValue();
+            if (en != null) {
+                int col = p.getColumn();
+
+                if (sb == null) {
+                    sb = new StringBuilder();
+                }
+
+                String s = (col == 0) ? en.text.get() : en.text2.get();
+                sb.append(s);
+                sb.append("\n");
+            }
+        }
+
+        if (sb != null) {
+            String text = sb.toString();
+            ClipboardContent cc = new ClipboardContent();
+            cc.putString(text);
+            Clipboard.getSystemClipboard().setContent(cc);
+        }
+    }
+
+    public void reload() {
         Set<DataFormat> expanded = getExpandedItems();
         Clipboard c = Clipboard.getSystemClipboard();
         List<DataFormat> formats = new ArrayList<>(c.getContentTypes());
@@ -132,7 +174,13 @@ public class ClipboardViewer extends BorderPane {
             TreeItem<Entry> item = new TreeItem<>(new Entry(f, f.toString(), null));
             items.add(item);
 
-            Object x = c.getContent(f);
+            Object x;
+            try {
+                x = c.getContent(f);
+            } catch(Throwable e) {
+                x = "Error getting clipboard content for " + f + "\n" + e;
+            }
+
             String val = convert(x);
             item.getChildren().add(new TreeItem<>(new Entry(f, null, val)));
 
@@ -155,7 +203,14 @@ public class ClipboardViewer extends BorderPane {
     }
 
     private static String convert(Object x) {
-        // String, ByteBuffer
+        if (x == null) {
+            return null;
+        } else if (x instanceof byte[] b) {
+            return Utils.hex(b, 0L);
+        } else if(x instanceof ByteBuffer bb) {
+            byte[] b = bb.array();
+            return Utils.hex(b, 0L);
+        }
         return x.toString();
     }
 

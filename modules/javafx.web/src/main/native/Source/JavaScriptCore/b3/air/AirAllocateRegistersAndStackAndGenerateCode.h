@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,8 @@
 #include "AirLiveness.h"
 #include "AirTmpMap.h"
 #include <wtf/Nonmovable.h>
+#include <wtf/SequesteredMalloc.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
@@ -40,7 +42,7 @@ namespace B3 { namespace Air {
 class Code;
 
 class GenerateAndAllocateRegisters {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(GenerateAndAllocateRegisters);
     WTF_MAKE_NONMOVABLE(GenerateAndAllocateRegisters);
 
     struct TmpData {
@@ -82,7 +84,7 @@ private:
     size_t m_globalInstIndex;
     IndexMap<Reg, Tmp>* m_currentAllocation { nullptr };
     TmpMap<size_t> m_liveRangeEnd;
-    HashMap<size_t, Vector<Tmp, 2>> m_tmpsToRelease;
+    UncheckedKeyHashMap<size_t, Vector<Tmp, 2>> m_tmpsToRelease;
     RegisterSet m_namedUsedRegs;
     RegisterSet m_namedDefdRegs;
     RegisterSetBuilder m_earlyClobber;
@@ -94,10 +96,10 @@ private:
     struct PatchSpillData {
         MacroAssembler::Jump jump;
         MacroAssembler::Label continueLabel;
-        HashMap<Tmp, Arg*> defdTmps;
+        UncheckedKeyHashMap<Tmp, Arg*> defdTmps;
     };
 
-    HashMap<BasicBlock*, PatchSpillData> m_blocksAfterTerminalPatchForSpilling;
+    UncheckedKeyHashMap<BasicBlock*, PatchSpillData> m_blocksAfterTerminalPatchForSpilling;
 };
 
 } } } // namespace JSC::B3::Air

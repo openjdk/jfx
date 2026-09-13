@@ -26,29 +26,31 @@
 #include "config.h"
 #include "WebMResourceClient.h"
 
-#if ENABLE(ALTERNATE_WEBM_PLAYER)
+#if ENABLE(COCOA_WEBM_PLAYER)
 
 #include "ResourceError.h"
 #include "ResourceRequest.h"
 #include "ResourceResponse.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebMResourceClient);
+
 RefPtr<WebMResourceClient> WebMResourceClient::create(WebMResourceClientParent& parent, PlatformMediaResourceLoader& loader, ResourceRequest&& request)
 {
-    auto resource = loader.requestResource(WTFMove(request), PlatformMediaResourceLoader::LoadOption::DisallowCaching);
+    auto resource = loader.requestResource(WTF::move(request), PlatformMediaResourceLoader::LoadOption::DisallowCaching);
     if (!resource)
         return nullptr;
-    auto* resourcePointer = resource.get();
-    auto client = adoptRef(*new WebMResourceClient { parent, resource.releaseNonNull() });
+    auto client = adoptRef(*new WebMResourceClient { parent, Ref { *resource } });
     auto result = client.copyRef();
-    resourcePointer->setClient(WTFMove(client));
+    resource->setClient(WTF::move(client));
     return result;
 }
 
 WebMResourceClient::WebMResourceClient(WebMResourceClientParent& parent, Ref<PlatformMediaResource>&& resource)
     : m_parent(parent)
-    , m_resource(WTFMove(resource))
+    , m_resource(WTF::move(resource))
 {
 }
 
@@ -57,36 +59,36 @@ void WebMResourceClient::stop()
     if (!m_resource)
         return;
 
-    auto resource = WTFMove(m_resource);
-    resource->stop();
-    resource->setClient(nullptr);
+    auto resource = WTF::move(m_resource);
+    resource->shutdown();
+}
+
+void WebMResourceClient::responseReceived(PlatformMediaResource&, const ResourceResponse& response, CompletionHandler<void(ShouldContinuePolicyCheck)>&& completionHandler)
+{
+    RefPtr parent = m_parent.get();
+    if (parent)
+        parent->dataLengthReceived(response.expectedContentLength());
+    completionHandler(parent ? ShouldContinuePolicyCheck::Yes : ShouldContinuePolicyCheck::No);
 }
 
 void WebMResourceClient::dataReceived(PlatformMediaResource&, const SharedBuffer& buffer)
 {
-    if (!m_parent)
-        return;
-
-    m_buffer.append(buffer);
-    m_parent->dataReceived(buffer);
+    if (RefPtr parent = m_parent.get())
+        parent->dataReceived(buffer);
 }
 
 void WebMResourceClient::loadFailed(PlatformMediaResource&, const ResourceError& error)
 {
-    if (!m_parent)
-        return;
-
-    m_parent->loadFailed(error);
+    if (RefPtr parent = m_parent.get())
+        parent->loadFailed(error);
 }
 
 void WebMResourceClient::loadFinished(PlatformMediaResource&, const NetworkLoadMetrics&)
 {
-    if (!m_parent)
-        return;
-
-    m_parent->loadFinished(*m_buffer.get());
+    if (RefPtr parent = m_parent.get())
+        parent->loadFinished();
 }
 
 } // namespace WebCore
 
-#endif // ENABLE(ALTERNATE_WEBM_PLAYER)
+#endif // ENABLE(COCOA_WEBM_PLAYER)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2018, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,14 @@
 
 package test.javafx.scene.web;
 
-import static org.junit.Assert.assertTrue;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import org.junit.jupiter.api.Test;
 
 public class MathMLRenderTest extends TestBase {
 
     @Test public void testTokenHeight() throws Exception {
         loadContent("<!doctype html><html><body><math><mo>=</mo></math></body></html>");
         int height = (int) executeScript("document.getElementsByTagName('mo')[0].clientHeight");
-        assertTrue("MathML token height is lesser than expected " + height, height > 1);
+        assertTrue(height > 1, "MathML token height is lesser than expected " + height);
     }
 }

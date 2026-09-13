@@ -23,12 +23,12 @@
 
 #pragma once
 
-#include "FormState.h"
-#include "FormSubmission.h"
-#include "HTMLElement.h"
-#include "RadioButtonGroups.h"
+#include <WebCore/FormState.h>
+#include <WebCore/FormSubmission.h>
+#include <WebCore/HTMLElement.h>
+#include <WebCore/RadioButtonGroups.h>
 #include <memory>
-#include <wtf/IsoMalloc.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakHashSet.h>
 
 namespace WebCore {
@@ -42,7 +42,8 @@ class HTMLImageElement;
 class ValidatedFormListedElement;
 
 class HTMLFormElement final : public HTMLElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLFormElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLFormElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLFormElement);
 public:
     static Ref<HTMLFormElement> create(Document&);
     static Ref<HTMLFormElement> create(const QualifiedName&, Document&);
@@ -56,15 +57,13 @@ public:
     bool isSupportedPropertyIndex(unsigned index) const { return index < length(); }
     WEBCORE_EXPORT unsigned length() const;
     HTMLElement* item(unsigned index);
-    std::optional<std::variant<RefPtr<RadioNodeList>, RefPtr<Element>>> namedItem(const AtomString&);
+    std::optional<Variant<RefPtr<RadioNodeList>, RefPtr<Element>>> namedItem(const AtomString&);
     Vector<AtomString> supportedPropertyNames() const;
 
     String enctype() const { return m_attributes.encodingType(); }
-    WEBCORE_EXPORT void setEnctype(const AtomString&);
 
     bool shouldAutocomplete() const;
 
-    WEBCORE_EXPORT void setAutocomplete(const AtomString&);
     WEBCORE_EXPORT const AtomString& autocomplete() const;
 
     void registerFormListedElement(FormListedElement&);
@@ -83,7 +82,6 @@ public:
     WEBCORE_EXPORT void reset();
 
     void submitImplicitly(Event&, bool fromImplicitSubmissionTrigger);
-    bool formWouldHaveSecureSubmission(const String& url);
 
     String name() const;
 
@@ -93,10 +91,8 @@ public:
     void setAcceptCharset(const String&);
 
     WEBCORE_EXPORT String action() const;
-    WEBCORE_EXPORT void setAction(const AtomString&);
-
     WEBCORE_EXPORT String method() const;
-    WEBCORE_EXPORT void setMethod(const AtomString&);
+    bool isMethodPost() const { return method() == "post"_s; }
 
     DOMTokenList& relList();
 
@@ -125,6 +121,7 @@ public:
     static HTMLFormElement* findClosestFormAncestor(const Element&);
 
     RefPtr<DOMFormData> constructEntryList(RefPtr<HTMLFormControlElement>&&, Ref<DOMFormData>&&, StringPairVector*);
+    const FormSubmission::Attributes& attributes() const { return m_attributes; }
 
 private:
     HTMLFormElement(const QualifiedName&, Document&);
@@ -152,7 +149,7 @@ private:
     // Validates each of the controls, and stores controls of which 'invalid'
     // event was not canceled to the specified vector. Returns true if there
     // are any invalid controls in this form.
-    bool checkInvalidControlsAndCollectUnhandled(Vector<RefPtr<ValidatedFormListedElement>>&);
+    bool checkInvalidControlsAndCollectUnhandled(Vector<Ref<ValidatedFormListedElement>>&);
 
     RefPtr<HTMLElement> elementFromPastNamesMap(const AtomString&) const;
     void addToPastNamesMap(FormAssociatedElement&, const AtomString& pastName);
@@ -178,7 +175,8 @@ private:
     Vector<WeakPtr<HTMLImageElement, WeakPtrImplWithEventTargetData>> m_imageElements;
     WeakHashSet<HTMLElement, WeakPtrImplWithEventTargetData> m_invalidFormControls;
     WeakPtr<FormSubmission> m_plannedFormSubmission;
-    std::unique_ptr<DOMTokenList> m_relList;
+    const std::unique_ptr<DOMTokenList> m_relList;
+    RefPtr<HTMLFormControlsCollection> m_controlsCollection;
 
     unsigned m_listedElementsBeforeIndex { 0 };
     unsigned m_listedElementsAfterIndex { 0 };

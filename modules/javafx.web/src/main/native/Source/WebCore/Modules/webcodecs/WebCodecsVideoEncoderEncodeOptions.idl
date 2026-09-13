@@ -25,6 +25,7 @@
 
 [
     Conditional=WEB_CODECS,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary WebCodecsVideoEncoderEncodeOptions {
   boolean keyFrame = false;
 };

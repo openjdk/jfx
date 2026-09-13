@@ -25,7 +25,9 @@
 
 #pragma once
 
+#include <cstdint>
 #include <wtf/EnumClassOperatorOverloads.h>
+#include <wtf/StdLibExtras.h>
 
 namespace JSC {
 
@@ -40,7 +42,7 @@ OVERLOAD_BITWISE_OPERATORS_FOR_ENUM_CLASS_WITH_INTERGRALS(IterationMode);
 
 struct IterationModeMetadata {
     uint8_t seenModes { 0 };
-    static ptrdiff_t offsetOfSeenModes() { return OBJECT_OFFSETOF(IterationModeMetadata, seenModes); }
+    static constexpr ptrdiff_t offsetOfSeenModes() { return OBJECT_OFFSETOF(IterationModeMetadata, seenModes); }
     static_assert(sizeof(decltype(seenModes)) == sizeof(IterationMode));
 };
 

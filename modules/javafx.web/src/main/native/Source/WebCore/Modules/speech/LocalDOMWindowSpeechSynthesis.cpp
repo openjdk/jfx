@@ -33,45 +33,51 @@
 
 #if ENABLE(SPEECH_SYNTHESIS)
 
+#include "Document.h"
 #include "LocalDOMWindow.h"
+#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "Page.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-LocalDOMWindowSpeechSynthesis::LocalDOMWindowSpeechSynthesis(LocalDOMWindow* window)
-    : LocalDOMWindowProperty(window)
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LocalDOMWindowSpeechSynthesis);
+
+LocalDOMWindowSpeechSynthesis::LocalDOMWindowSpeechSynthesis(DOMWindow* window)
+    : LocalDOMWindowProperty(dynamicDowncast<LocalDOMWindow>(window))
 {
 }
 
 LocalDOMWindowSpeechSynthesis::~LocalDOMWindowSpeechSynthesis() = default;
 
-const char* LocalDOMWindowSpeechSynthesis::supplementName()
-{
-    return "LocalDOMWindowSpeechSynthesis";
-}
-
 // static
-LocalDOMWindowSpeechSynthesis* LocalDOMWindowSpeechSynthesis::from(LocalDOMWindow* window)
+LocalDOMWindowSpeechSynthesis* LocalDOMWindowSpeechSynthesis::from(DOMWindow* window)
 {
-    auto* supplement = static_cast<LocalDOMWindowSpeechSynthesis*>(Supplement<LocalDOMWindow>::from(window, supplementName()));
+    RefPtr localWindow = dynamicDowncast<LocalDOMWindow>(window);
+    if (!localWindow)
+        return nullptr;
+    auto* supplement = downcast<LocalDOMWindowSpeechSynthesis>(Supplement<LocalDOMWindow>::from(localWindow.get(), supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<LocalDOMWindowSpeechSynthesis>(window);
         supplement = newSupplement.get();
-        provideTo(window, supplementName(), WTFMove(newSupplement));
+        provideTo(localWindow.get(), supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }
 
 // static
-SpeechSynthesis* LocalDOMWindowSpeechSynthesis::speechSynthesis(LocalDOMWindow& window)
+SpeechSynthesis* LocalDOMWindowSpeechSynthesis::speechSynthesis(DOMWindow& window)
 {
     return LocalDOMWindowSpeechSynthesis::from(&window)->speechSynthesis();
 }
 
 SpeechSynthesis* LocalDOMWindowSpeechSynthesis::speechSynthesis()
 {
-    if (!m_speechSynthesis && frame() && frame()->document())
-        m_speechSynthesis = SpeechSynthesis::create(*frame()->document());
+    if (!m_speechSynthesis && frame()) {
+        if (RefPtr document = frame()->document())
+            m_speechSynthesis = SpeechSynthesis::create(*document);
+    }
     return m_speechSynthesis.get();
 }
 

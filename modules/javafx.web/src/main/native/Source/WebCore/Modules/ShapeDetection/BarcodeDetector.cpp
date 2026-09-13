@@ -30,12 +30,15 @@
 #include "BarcodeFormat.h"
 #include "Chrome.h"
 #include "DetectedBarcode.h"
-#include "Document.h"
+#include "DocumentPage.h"
 #include "ImageBitmap.h"
 #include "ImageBitmapOptions.h"
+#include "ImageBuffer.h"
+#include "JSDOMConvertDictionary.h"
+#include "JSDOMConvertEnumeration.h"
+#include "JSDOMConvertSequences.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSDetectedBarcode.h"
-#include "Page.h"
 #include "ScriptExecutionContext.h"
 #include "WorkerGlobalScope.h"
 
@@ -43,28 +46,27 @@ namespace WebCore {
 
 ExceptionOr<Ref<BarcodeDetector>> BarcodeDetector::create(ScriptExecutionContext& scriptExecutionContext, const BarcodeDetectorOptions& barcodeDetectorOptions)
 {
-    if (is<Document>(scriptExecutionContext)) {
-        const auto& document = downcast<Document>(scriptExecutionContext);
-        const auto* page = document.page();
+    if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext)) {
+        RefPtr page = document->page();
         if (!page)
-            return Exception { AbortError };
+            return Exception { ExceptionCode::AbortError };
         auto backing = page->chrome().createBarcodeDetector(barcodeDetectorOptions.convertToBacking());
         if (!backing)
-            return Exception { AbortError };
+            return Exception { ExceptionCode::AbortError };
         return adoptRef(*new BarcodeDetector(backing.releaseNonNull()));
     }
 
     if (is<WorkerGlobalScope>(scriptExecutionContext)) {
         // FIXME: https://bugs.webkit.org/show_bug.cgi?id=255380 Make the Shape Detection API work in Workers
-        return Exception { AbortError };
+        return Exception { ExceptionCode::AbortError };
     }
 
-    return Exception { AbortError };
+    return Exception { ExceptionCode::AbortError };
 }
 
 
 BarcodeDetector::BarcodeDetector(Ref<ShapeDetection::BarcodeDetector>&& backing)
-    : m_backing(WTFMove(backing))
+    : m_backing(WTF::move(backing))
 {
 }
 
@@ -72,12 +74,11 @@ BarcodeDetector::~BarcodeDetector() = default;
 
 ExceptionOr<void> BarcodeDetector::getSupportedFormats(ScriptExecutionContext& scriptExecutionContext, GetSupportedFormatsPromise&& promise)
 {
-    if (is<Document>(scriptExecutionContext)) {
-        const auto& document = downcast<Document>(scriptExecutionContext);
-        const auto* page = document.page();
+    if (RefPtr document = dynamicDowncast<Document>(scriptExecutionContext)) {
+        RefPtr page = document->page();
         if (!page)
-            return Exception { AbortError };
-        page->chrome().getBarcodeDetectorSupportedFormats(([promise = WTFMove(promise)](Vector<ShapeDetection::BarcodeFormat>&& barcodeFormats) mutable {
+            return Exception { ExceptionCode::AbortError };
+        page->chrome().getBarcodeDetectorSupportedFormats(([promise = WTF::move(promise)](Vector<ShapeDetection::BarcodeFormat>&& barcodeFormats) mutable {
             promise.resolve(barcodeFormats.map([](auto format) {
                 return convertFromBacking(format);
             }));
@@ -87,27 +88,33 @@ ExceptionOr<void> BarcodeDetector::getSupportedFormats(ScriptExecutionContext& s
 
     if (is<WorkerGlobalScope>(scriptExecutionContext)) {
         // FIXME: https://bugs.webkit.org/show_bug.cgi?id=255380 Make the Shape Detection API work in Workers
-        return Exception { AbortError };
+        return Exception { ExceptionCode::AbortError };
     }
 
-    return Exception { AbortError };
+    return Exception { ExceptionCode::AbortError };
 }
 
 void BarcodeDetector::detect(ScriptExecutionContext& scriptExecutionContext, ImageBitmap::Source&& source, DetectPromise&& promise)
 {
-    ImageBitmap::createCompletionHandler(scriptExecutionContext, WTFMove(source), { }, [backing = m_backing.copyRef(), promise = WTFMove(promise)](ExceptionOr<Ref<ImageBitmap>>&& imageBitmap) mutable {
+    ImageBitmap::createCompletionHandler(scriptExecutionContext, WTF::move(source), { }, [backing = m_backing.copyRef(), promise = WTF::move(promise)](ExceptionOr<Ref<ImageBitmap>>&& imageBitmap) mutable {
         if (imageBitmap.hasException()) {
             promise.resolve({ });
             return;
         }
 
-        auto imageBuffer = imageBitmap.releaseReturnValue()->takeImageBuffer();
+        // FIXME: This is a safer cpp false positive (rdar://160082559).
+        SUPPRESS_UNCOUNTED_ARG RefPtr imageBuffer = imageBitmap.releaseReturnValue()->takeImageBuffer();
         if (!imageBuffer) {
             promise.resolve({ });
             return;
         }
+        RefPtr image = imageBuffer->copyNativeImage();
+        if (!image) {
+            promise.resolve({ });
+            return;
+        }
 
-        backing->detect(imageBuffer.releaseNonNull(), [promise = WTFMove(promise)](Vector<ShapeDetection::DetectedBarcode>&& detectedBarcodes) mutable {
+        backing->detect(image.releaseNonNull(), [promise = WTF::move(promise)](Vector<ShapeDetection::DetectedBarcode>&& detectedBarcodes) mutable {
             promise.resolve(detectedBarcodes.map([](const auto& detectedBarcode) {
                 return convertFromBacking(detectedBarcode);
             }));

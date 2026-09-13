@@ -28,12 +28,14 @@
 
 #include "CSSCounterStyleDescriptors.h"
 #include "CSSPropertyParser.h"
+#include "CSSPropertyParserConsumer+CounterStyles.h"
 #include "CSSStyleSheet.h"
 #include "CSSTokenizer.h"
 #include "CSSValuePair.h"
 #include "MutableStyleProperties.h"
 #include "StyleProperties.h"
 #include "StylePropertiesInlines.h"
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -41,13 +43,13 @@ namespace WebCore {
 StyleRuleCounterStyle::StyleRuleCounterStyle(const AtomString& name, CSSCounterStyleDescriptors&& descriptors)
     : StyleRuleBase(StyleRuleType::CounterStyle)
     , m_name(name)
-    , m_descriptors(WTFMove(descriptors))
+    , m_descriptors(WTF::move(descriptors))
 {
 }
 
 Ref<StyleRuleCounterStyle> StyleRuleCounterStyle::create(const AtomString& name, CSSCounterStyleDescriptors&& descriptors)
 {
-    return adoptRef(*new StyleRuleCounterStyle(name, WTFMove(descriptors)));
+    return adoptRef(*new StyleRuleCounterStyle(name, WTF::move(descriptors)));
 }
 
 CSSCounterStyleDescriptors::System toCounterStyleSystemEnum(const CSSValue* system)
@@ -76,6 +78,10 @@ CSSCounterStyleDescriptors::System toCounterStyleSystemEnum(const CSSValue* syst
         return CSSCounterStyleDescriptors::System::Numeric;
     case CSSValueAdditive:
         return CSSCounterStyleDescriptors::System::Additive;
+    case CSSValueInternalDisclosureClosed:
+        return CSSCounterStyleDescriptors::System::DisclosureClosed;
+    case CSSValueInternalDisclosureOpen:
+        return CSSCounterStyleDescriptors::System::DisclosureOpen;
     case CSSValueInternalSimplifiedChineseInformal:
         return CSSCounterStyleDescriptors::System::SimplifiedChineseInformal;
     case CSSValueInternalSimplifiedChineseFormal:
@@ -112,46 +118,46 @@ CSSCounterStyleRule::~CSSCounterStyleRule() = default;
 String CSSCounterStyleRule::cssText() const
 {
     String systemText = system();
-    const char* systemPrefix = systemText.isEmpty() ? "" : " system: ";
-    const char* systemSuffix = systemText.isEmpty() ? "" : ";";
+    const auto systemPrefix = systemText.isEmpty() ? ""_s : " system: "_s;
+    const auto systemSuffix = systemText.isEmpty() ? ""_s : ";"_s;
 
     String symbolsText = symbols();
-    const char* symbolsPrefix = symbolsText.isEmpty() ? "" : " symbols: ";
-    const char* symbolsSuffix = symbolsText.isEmpty() ? "" : ";";
+    const auto symbolsPrefix = symbolsText.isEmpty() ? ""_s : " symbols: "_s;
+    const auto symbolsSuffix = symbolsText.isEmpty() ? ""_s : ";"_s;
 
     String additiveSymbolsText = additiveSymbols();
-    const char* additiveSymbolsPrefix = additiveSymbolsText.isEmpty() ? "" : " additive-symbols: ";
-    const char* additiveSymbolsSuffix = additiveSymbolsText.isEmpty() ? "" : ";";
+    const auto additiveSymbolsPrefix = additiveSymbolsText.isEmpty() ? ""_s : " additive-symbols: "_s;
+    const auto additiveSymbolsSuffix = additiveSymbolsText.isEmpty() ? ""_s : ";"_s;
 
     String negativeText = negative();
-    const char* negativePrefix = negativeText.isEmpty() ? "" : " negative: ";
-    const char* negativeSuffix = negativeText.isEmpty() ? "" : ";";
+    const auto negativePrefix = negativeText.isEmpty() ? ""_s : " negative: "_s;
+    const auto negativeSuffix = negativeText.isEmpty() ? ""_s : ";"_s;
 
     String prefixText = prefix();
-    const char* prefixTextPrefix = prefixText.isEmpty() ? "" : " prefix: ";
-    const char* prefixTextSuffix = prefixText.isEmpty() ? "" : ";";
+    const auto prefixTextPrefix = prefixText.isEmpty() ? ""_s : " prefix: "_s;
+    const auto prefixTextSuffix = prefixText.isEmpty() ? ""_s : ";"_s;
 
     String suffixText = suffix();
-    const char* suffixTextPrefix = suffixText.isEmpty() ? "" : " suffix: ";
-    const char* suffixTextSuffix = suffixText.isEmpty() ? "" : ";";
+    const auto suffixTextPrefix = suffixText.isEmpty() ? ""_s : " suffix: "_s;
+    const auto suffixTextSuffix = suffixText.isEmpty() ? ""_s : ";"_s;
 
     String padText = pad();
-    const char* padPrefix = padText.isEmpty() ? "" : " pad: ";
-    const char* padSuffix = padText.isEmpty() ? "" : ";";
+    const auto padPrefix = padText.isEmpty() ? ""_s : " pad: "_s;
+    const auto padSuffix = padText.isEmpty() ? ""_s : ";"_s;
 
     String rangeText = range();
-    const char* rangePrefix = rangeText.isEmpty() ? "" : " range: ";
-    const char* rangeSuffix = rangeText.isEmpty() ? "" : ";";
+    const auto rangePrefix = rangeText.isEmpty() ? ""_s : " range: "_s;
+    const auto rangeSuffix = rangeText.isEmpty() ? ""_s : ";"_s;
 
     String fallbackText = fallback();
-    const char* fallbackPrefix = fallbackText.isEmpty() ? "" : " fallback: ";
-    const char* fallbackSuffix = fallbackText.isEmpty() ? "" : ";";
+    const auto fallbackPrefix = fallbackText.isEmpty() ? ""_s : " fallback: "_s;
+    const auto fallbackSuffix = fallbackText.isEmpty() ? ""_s : ";"_s;
 
     String speakAsText = speakAs();
-    const char* speakAsPrefix = speakAsText.isEmpty() ? "" : " speak-as: ";
-    const char* speakAsSuffix = speakAsText.isEmpty() ? "" : ";";
+    const auto speakAsPrefix = speakAsText.isEmpty() ? ""_s : " speak-as: "_s;
+    const auto speakAsSuffix = speakAsText.isEmpty() ? ""_s : ";"_s;
 
-    return makeString("@counter-style ", name(), " {",
+    return makeString("@counter-style "_s, name(), " {"_s,
         systemPrefix, systemText, systemSuffix,
         symbolsPrefix, symbolsText, symbolsSuffix,
         additiveSymbolsPrefix, additiveSymbolsText, additiveSymbolsSuffix,
@@ -162,7 +168,7 @@ String CSSCounterStyleRule::cssText() const
         rangePrefix, rangeText, rangeSuffix,
         fallbackPrefix, fallbackText, fallbackSuffix,
         speakAsPrefix, speakAsText, speakAsSuffix,
-    " }");
+    " }"_s);
 }
 
 void CSSCounterStyleRule::reattach(StyleRuleBase& rule)
@@ -170,11 +176,9 @@ void CSSCounterStyleRule::reattach(StyleRuleBase& rule)
     m_counterStyleRule = downcast<StyleRuleCounterStyle>(rule);
 }
 
-RefPtr<CSSValue> CSSCounterStyleRule::cssValueFromText(CSSPropertyID propertyID, const String& valueText)
+RefPtr<CSSValue> CSSCounterStyleRule::cssValueFromText(CSSPropertyID propertyID, const String& string)
 {
-    auto tokenizer = CSSTokenizer(valueText);
-    auto tokenRange = tokenizer.tokenRange();
-    return CSSPropertyParser::parseCounterStyleDescriptor(propertyID, tokenRange, parserContext());
+    return CSSPropertyParser::parseCounterStyleDescriptor(propertyID, string, parserContext());
 }
 
 // https://drafts.csswg.org/css-counter-styles-3/#dom-csscounterstylerule-name
@@ -186,7 +190,7 @@ void CSSCounterStyleRule::setName(const String& text)
     if (!name)
         return;
     CSSStyleSheet::RuleMutationScope mutationScope(this);
-    mutableDescriptors().setName(WTFMove(name));
+    mutableDescriptors().setName(WTF::move(name));
 }
 
 void CSSCounterStyleRule::setSystem(const String& text)
@@ -199,9 +203,9 @@ void CSSCounterStyleRule::setSystem(const String& text)
     // and abort these steps.
     // (It's okay to change an aspect of the algorithm, like the first symbol value of a `fixed` system.)
     // https://www.w3.org/TR/css-counter-styles-3/#the-csscounterstylerule-interface
-    auto systemData = extractSystemDataFromCSSValue(WTFMove(systemValue), system);
+    auto systemData = extractSystemDataFromCSSValue(WTF::move(systemValue), system);
     CSSStyleSheet::RuleMutationScope mutationScope(this);
-    mutableDescriptors().setSystemData(WTFMove(systemData));
+    mutableDescriptors().setSystemData(WTF::move(systemData));
 }
 
 void CSSCounterStyleRule::setNegative(const String& text)
@@ -219,7 +223,7 @@ void CSSCounterStyleRule::setPrefix(const String& text)
     if (!newValue)
         return;
     CSSStyleSheet::RuleMutationScope mutationScope(this);
-    mutableDescriptors().setPrefix(symbolFromCSSValue(WTFMove(newValue)));
+    mutableDescriptors().setPrefix(symbolFromCSSValue(WTF::move(newValue)));
 }
 
 void CSSCounterStyleRule::setSuffix(const String& text)
@@ -228,7 +232,7 @@ void CSSCounterStyleRule::setSuffix(const String& text)
     if (!newValue)
         return;
     CSSStyleSheet::RuleMutationScope mutationScope(this);
-    mutableDescriptors().setSuffix(symbolFromCSSValue(WTFMove(newValue)));
+    mutableDescriptors().setSuffix(symbolFromCSSValue(WTF::move(newValue)));
 }
 
 void CSSCounterStyleRule::setRange(const String& text)

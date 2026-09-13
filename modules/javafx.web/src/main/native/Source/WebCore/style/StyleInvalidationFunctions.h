@@ -41,15 +41,13 @@ inline void traverseRuleFeaturesInShadowTree(Element& element, TraverseFunction&
         return;
 
     auto& shadowRuleSets = element.shadowRoot()->styleScope().resolver().ruleSets();
-    bool hasHostPseudoClassRulesMatchingInShadowTree = false;
     bool hasHostPseudoClassRule = shadowRuleSets.hasMatchingUserOrAuthorStyle([&] (auto& style) {
-        hasHostPseudoClassRulesMatchingInShadowTree = style.hasHostPseudoClassRulesMatchingInShadowTree();
-        return !style.hostPseudoClassRules().isEmpty();
+        return !style.hostPseudoClassRules().isEmpty() || style.hasHostPseudoClassRulesMatchingInShadowTree();
     });
-    if (!hasHostPseudoClassRule && !hasHostPseudoClassRulesMatchingInShadowTree)
+    if (!hasHostPseudoClassRule)
         return;
 
-    function(shadowRuleSets.features(), hasHostPseudoClassRulesMatchingInShadowTree);
+    function(shadowRuleSets.features(), false);
 }
 
 template <typename TraverseFunction>
@@ -72,15 +70,13 @@ inline void traverseRuleFeatures(Element& element, TraverseFunction&& function)
 
     auto mayAffectShadowTree = [&] {
         if (element.shadowRoot() && element.shadowRoot()->isUserAgentShadowRoot()) {
-            if (ruleSets.hasMatchingUserOrAuthorStyle([] (auto& style) { return style.hasShadowPseudoElementRules(); }))
+            if (ruleSets.hasMatchingUserOrAuthorStyle([] (auto& style) { return style.hasUserAgentPartRules(); }))
                 return true;
 #if ENABLE(VIDEO)
             if (element.isMediaElement() && ruleSets.hasMatchingUserOrAuthorStyle([] (auto& style) { return !style.cuePseudoRules().isEmpty(); }))
                 return true;
 #endif
         }
-        if (is<HTMLSlotElement>(element) && ruleSets.hasMatchingUserOrAuthorStyle([] (auto& style) { return !style.slottedPseudoElementRules().isEmpty(); }))
-            return true;
         return false;
     };
 

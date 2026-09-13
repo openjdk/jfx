@@ -23,6 +23,8 @@
 #error "Only <glib-object.h> can be included directly."
 #endif
 
+#ifndef __GI_SCANNER__
+
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GClosure, g_closure_unref)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GEnumClass, g_type_class_unref)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GFlagsClass, g_type_class_unref)
@@ -31,3 +33,5 @@ G_DEFINE_AUTOPTR_CLEANUP_FUNC(GInitiallyUnowned, g_object_unref)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GParamSpec, g_param_spec_unref)
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GTypeClass, g_type_class_unref)
 G_DEFINE_AUTO_CLEANUP_CLEAR_FUNC(GValue, g_value_unset)
+
+#endif /* __GI_SCANNER__ */

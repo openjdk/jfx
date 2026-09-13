@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -71,22 +71,17 @@ static void keyButton(jint code, gboolean press)
 {
     Display *xdisplay = gdk_x11_get_default_xdisplay();
     gint gdk_keyval = find_gdk_keyval_for_glass_keycode(code);
-    GdkKeymapKey *keys;
-    gint n_keys;
     if (gdk_keyval == -1) {
         return;
     }
-    gdk_keymap_get_entries_for_keyval(gdk_keymap_get_default(),
-            gdk_keyval, &keys, &n_keys);
-    if (n_keys < 1) {
+    int keycode = find_gdk_keycode_for_keyval(gdk_keyval);
+    if (keycode == -1) {
         return;
     }
-
     XTestFakeKeyEvent(xdisplay,
-                      keys[0].keycode,
+                      keycode,
                       press ? True : False,
                       CurrentTime);
-    g_free(keys);
     XSync(xdisplay, False);
 }
 

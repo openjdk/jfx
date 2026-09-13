@@ -32,6 +32,8 @@
 #include <wtf/Hasher.h>
 #include <wtf/PtrTag.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace WTF {
 
 // FunctionAttributes and FunctionCallConvention are only needed because x86 builds
@@ -70,6 +72,8 @@ public:
     // We need to declare this in this non-template base. Otherwise, every use of
     // AlreadyTaggedValueTag will require a specialized template qualification.
     enum AlreadyTaggedValueTag { AlreadyTaggedValue };
+
+    friend bool operator==(FunctionPtrBase, FunctionPtrBase) = default;
 };
 
 template<PtrTag tag, typename Out, typename... In, FunctionAttributes attr>
@@ -83,6 +87,12 @@ public:
     constexpr FunctionPtr(Out(*ptr)(In...))
         : m_ptr(encode(ptr))
     { }
+
+#if OS(WINDOWS) && (!PLATFORM(JAVA) || !CPU(X86))
+    constexpr FunctionPtr(Out(SYSV_ABI *ptr)(In...))
+        : m_ptr(encode(ptr))
+    { }
+#endif
 
 // MSVC doesn't seem to treat functions with different calling conventions as
 // different types; these methods already defined for fastcall, below.
@@ -127,7 +137,7 @@ public:
     explicit operator bool() const { return !!m_ptr; }
     bool operator!() const { return !m_ptr; }
 
-    bool operator==(const FunctionPtr& other) const { return m_ptr == other.m_ptr; }
+    friend bool operator==(FunctionPtr, FunctionPtr) = default;
 
     FunctionPtr& operator=(Ptr ptr)
     {
@@ -148,9 +158,11 @@ public:
         return *this;
     }
 
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
 protected:
     FunctionPtr(AlreadyTaggedValueTag, void* ptr)
-        : m_ptr(bitwise_cast<Ptr>(ptr))
+        : m_ptr(std::bit_cast<Ptr>(ptr))
     {
         assertIsNullOrTaggedWith<tag>(ptr);
     }
@@ -198,3 +210,5 @@ void add(Hasher& hasher, const FunctionPtr<tag, Out(In...), attr>& ptr)
 
 using WTF::FunctionAttributes;
 using WTF::FunctionPtr;
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

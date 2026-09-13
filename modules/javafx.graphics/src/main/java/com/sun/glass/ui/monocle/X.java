@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,6 @@ package com.sun.glass.ui.monocle;
 
 import com.sun.glass.utils.NativeLibLoader;
 import java.nio.ByteBuffer;
-import java.security.Permission;
 
 /**
  * X provides access to Xlib function calls. Except where noted, each
@@ -41,26 +40,14 @@ class X {
         NativeLibLoader.loadLibrary("glass_monocle_x11");
     }
 
-    private static Permission permission = new RuntimePermission("loadLibrary.*");
-
     private static X instance = new X();
 
     /**
-     * Obtains the single instance of X. Calling this method requires
-     * the RuntimePermission "loadLibrary.*".
+     * Obtains the single instance of X.
      *
      */
     static X getX() {
-        checkPermissions();
         return instance;
-    }
-
-    private static void checkPermissions() {
-        @SuppressWarnings("removal")
-        SecurityManager security = System.getSecurityManager();
-        if (security != null) {
-            security.checkPermission(permission);
-        }
     }
 
     static final long None = 0l;

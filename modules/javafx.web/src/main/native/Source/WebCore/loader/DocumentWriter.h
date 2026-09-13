@@ -28,8 +28,8 @@
 
 #pragma once
 
-#include "NavigationAction.h"
-#include "ScriptExecutionContextIdentifier.h"
+#include <WebCore/NavigationAction.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -49,7 +49,7 @@ public:
     void replaceDocumentWithResultOfExecutingJavascriptURL(const String&, Document* ownerDocument);
 
     bool begin();
-    bool begin(const URL&, bool dispatchWindowObjectAvailable = true, Document* ownerDocument = nullptr, ScriptExecutionContextIdentifier = { }, const NavigationAction* triggeringAction = nullptr);
+    bool begin(const URL&, bool dispatchWindowObjectAvailable = true, Document* ownerDocument = nullptr, std::optional<ScriptExecutionContextIdentifier> = std::nullopt, const NavigationAction* triggeringAction = nullptr);
     void addData(const SharedBuffer&);
     void insertDataSynchronously(const String&); // For an internal use only to prevent the parser from yielding.
     WEBCORE_EXPORT void end();
@@ -62,6 +62,8 @@ public:
     const String& mimeType() const { return m_mimeType; }
     void setMIMEType(const String& type) { m_mimeType = type; }
 
+    Ref<TextResourceDecoder> protectedDecoder();
+
     // Exposed for DocumentParser::appendBytes.
     TextResourceDecoder& decoder();
     void reportDataReceived();
@@ -69,8 +71,9 @@ public:
     void setDocumentWasLoadedAsPartOfNavigation();
 
 private:
-    Ref<Document> createDocument(const URL&, ScriptExecutionContextIdentifier);
+    Ref<Document> createDocument(const URL&, std::optional<ScriptExecutionContextIdentifier>);
     void clear();
+    RefPtr<DocumentParser> protectedParser() const;
 
     WeakPtr<LocalFrame> m_frame;
 

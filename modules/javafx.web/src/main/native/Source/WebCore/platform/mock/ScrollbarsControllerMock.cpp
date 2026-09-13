@@ -1,6 +1,6 @@
 /*
  * Copyright (c) 2016 Igalia S.L.
- * Copyright (c) 2021 Apple Inc.
+ * Copyright (c) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -33,12 +33,16 @@
 #include "ScrollbarsControllerMock.h"
 
 #include "ScrollableArea.h"
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollbarsControllerMock);
+
 ScrollbarsControllerMock::ScrollbarsControllerMock(ScrollableArea& scrollableArea, Function<void(const String&)>&& logger)
     : ScrollbarsController(scrollableArea)
-    , m_logger(WTFMove(logger))
+    , m_logger(WTF::move(logger))
 {
 }
 
@@ -86,26 +90,26 @@ void ScrollbarsControllerMock::mouseExitedContentArea()
     ScrollbarsController::mouseExitedContentArea();
 }
 
-const char* ScrollbarsControllerMock::scrollbarPrefix(Scrollbar* scrollbar) const
+ASCIILiteral ScrollbarsControllerMock::scrollbarPrefix(Scrollbar* scrollbar) const
 {
-    return scrollbar == m_verticalScrollbar ? "Vertical" : scrollbar == m_horizontalScrollbar ? "Horizontal" : "Unknown";
+    return scrollbar == m_verticalScrollbar ? "Vertical"_s : scrollbar == m_horizontalScrollbar ? "Horizontal"_s : "Unknown"_s;
 }
 
 void ScrollbarsControllerMock::mouseEnteredScrollbar(Scrollbar* scrollbar) const
 {
-    m_logger(makeString("mouseEntered", scrollbarPrefix(scrollbar), "Scrollbar"));
+    m_logger(makeString("mouseEntered"_s, scrollbarPrefix(scrollbar), "Scrollbar"_s));
     ScrollbarsController::mouseEnteredScrollbar(scrollbar);
 }
 
 void ScrollbarsControllerMock::mouseExitedScrollbar(Scrollbar* scrollbar) const
 {
-    m_logger(makeString("mouseExited", scrollbarPrefix(scrollbar), "Scrollbar"));
+    m_logger(makeString("mouseExited"_s, scrollbarPrefix(scrollbar), "Scrollbar"_s));
     ScrollbarsController::mouseExitedScrollbar(scrollbar);
 }
 
 void ScrollbarsControllerMock::mouseIsDownInScrollbar(Scrollbar* scrollbar, bool isPressed) const
 {
-    m_logger(makeString(isPressed ? "mouseIsDownIn" : "mouseIsUpIn", scrollbarPrefix(scrollbar), "Scrollbar"));
+    m_logger(makeString(isPressed ? "mouseIsDownIn"_s : "mouseIsUpIn"_s, scrollbarPrefix(scrollbar), "Scrollbar"_s));
     ScrollbarsController::mouseIsDownInScrollbar(scrollbar, isPressed);
 }
 

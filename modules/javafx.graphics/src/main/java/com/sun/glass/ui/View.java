@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,12 +26,11 @@ package com.sun.glass.ui;
 
 import com.sun.glass.events.MouseEvent;
 import com.sun.glass.events.ViewEvent;
-
+import com.sun.javafx.tk.HeaderAreaType;
 import java.lang.annotation.Native;
 import java.lang.ref.WeakReference;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Map;
+import java.util.function.Supplier;
 
 public abstract class View {
 
@@ -44,8 +43,7 @@ public abstract class View {
     @Native public final static byte IME_ATTR_TARGET_NOTCONVERTED   = 0x03;
     @Native public final static byte IME_ATTR_INPUT_ERROR           = 0x04;
 
-    @SuppressWarnings("removal")
-    final static boolean accessible = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+    final static boolean accessible = ((Supplier<Boolean>) () -> {
         String force = System.getProperty("glass.accessible.force");
         if (force != null) return Boolean.parseBoolean(force);
 
@@ -60,16 +58,18 @@ public abstract class View {
         } catch (Exception e) {
             return false;
         }
-    });
+    }).get();
 
     public static class EventHandler {
         public void handleViewEvent(View view, long time, int type) {
         }
-        public void handleKeyEvent(View view, long time, int action,
+        public boolean handleKeyEvent(View view, long time, int action,
                 int keyCode, char[] keyChars, int modifiers) {
+            return false;
         }
-        public void handleMenuEvent(View view, int x, int y, int xAbs,
+        public boolean handleMenuEvent(View view, int x, int y, int xAbs,
                 int yAbs, boolean isKeyboardTrigger) {
+            return false;
         }
         public void handleMouseEvent(View view, long time, int type, int button,
                                      int x, int y, int xAbs, int yAbs,
@@ -364,6 +364,18 @@ public abstract class View {
                                             int yAbs) {
         }
 
+        /**
+         * Returns the header area type at the specified coordinates, or {@code null}
+         * if the specified coordinates do not intersect with a header area.
+         *
+         * @param x the X coordinate
+         * @param y the Y coordinate
+         * @return the header area type, or {@code null}
+         */
+        public HeaderAreaType pickHeaderArea(double x, double y) {
+            return null;
+        }
+
         public Accessible getSceneAccessible() {
             return null;
         }
@@ -386,7 +398,7 @@ public abstract class View {
 
     protected abstract void _enableInputMethodEvents(long ptr, boolean enable);
     protected void _finishInputMethodComposition(long ptr) {
-        // Action needed only on Windows.
+        // Action needed only on some platforms.
     }
 
     /*
@@ -528,41 +540,57 @@ public abstract class View {
         this.eventHandler = eventHandler;
     }
 
+    protected boolean shouldHandleEvent() {
+        // Don't send any more events if the application has shutdown
+        if (Application.GetApplication() == null) {
+            return false;
+        }
+
+        return this.eventHandler != null;
+    }
+
     //-------- EVENTS --------//
 
     private void handleViewEvent(long time, int type) {
-        if (this.eventHandler != null) {
+        if (shouldHandleEvent()) {
             this.eventHandler.handleViewEvent(this, time, type);
         }
     }
 
-    private void handleKeyEvent(long time, int action,
+    private boolean handleKeyEvent(long time, int action,
             int keyCode, char[] keyChars, int modifiers) {
-        if (this.eventHandler != null) {
-            this.eventHandler.handleKeyEvent(this, time, action, keyCode, keyChars, modifiers);
+        if (shouldHandleEvent()) {
+            return this.eventHandler.handleKeyEvent(this, time, action, keyCode, keyChars, modifiers);
         }
+        return false;
     }
 
-    private void handleMouseEvent(long time, int type, int button, int x, int y,
-                                  int xAbs, int yAbs,
-                                  int modifiers, boolean isPopupTrigger,
-                                  boolean isSynthesized) {
-        if (eventHandler != null) {
+    protected void handleMouseEvent(long time, int type, int button, int x, int y,
+                                    int xAbs, int yAbs,
+                                    int modifiers, boolean isPopupTrigger,
+                                    boolean isSynthesized) {
+        if (shouldHandleEvent()) {
             eventHandler.handleMouseEvent(this, time, type, button, x, y, xAbs,
                                           yAbs, modifiers,
                                           isPopupTrigger, isSynthesized);
         }
     }
 
-    private void handleMenuEvent(int x, int y, int xAbs, int yAbs, boolean isKeyboardTrigger) {
-        if (this.eventHandler != null) {
-            this.eventHandler.handleMenuEvent(this, x, y, xAbs, yAbs, isKeyboardTrigger);
+    protected boolean handleNonClientMouseEvent(long time, int type, int button, int x, int y,
+                                                int xAbs, int yAbs, int modifiers, int clickCount) {
+        return false;
+    }
+
+    protected boolean handleMenuEvent(int x, int y, int xAbs, int yAbs, boolean isKeyboardTrigger) {
+        if (shouldHandleEvent()) {
+            return this.eventHandler.handleMenuEvent(this, x, y, xAbs, yAbs, isKeyboardTrigger);
         }
+        return false;
     }
 
     public void handleBeginTouchEvent(View view, long time, int modifiers,
                                       boolean isDirect, int touchEventCount) {
-        if (eventHandler != null) {
+        if (shouldHandleEvent()) {
             eventHandler.handleBeginTouchEvent(view, time, modifiers, isDirect,
                     touchEventCount);
         }
@@ -571,13 +599,13 @@ public abstract class View {
     public void handleNextTouchEvent(View view, long time, int type,
                                      long touchId, int x, int y, int xAbs,
                                      int yAbs) {
-        if (eventHandler != null) {
+        if (shouldHandleEvent()) {
             eventHandler.handleNextTouchEvent(view, time, type, touchId, x, y, xAbs, yAbs);
         }
     }
 
     public void handleEndTouchEvent(View view, long time) {
-        if (eventHandler != null) {
+        if (shouldHandleEvent()) {
             eventHandler.handleEndTouchEvent(view, time);
         }
     }
@@ -589,7 +617,7 @@ public abstract class View {
                                          double dx, double dy, double totaldx,
                                          double totaldy, double multiplierX,
                                          double multiplierY) {
-        if (eventHandler != null) {
+        if (shouldHandleEvent()) {
             eventHandler.handleScrollGestureEvent(view, time, type, modifiers, isDirect,
                     isInertia, touchCount, x, y, xAbs, yAbs,
                     dx, dy, totaldx, totaldy, multiplierX, multiplierY);
@@ -603,7 +631,7 @@ public abstract class View {
                                        int originyAbs, double scale,
                                        double expansion, double totalscale,
                                        double totalexpansion) {
-        if (eventHandler != null) {
+        if (shouldHandleEvent()) {
             eventHandler.handleZoomGestureEvent(view, time, type, modifiers, isDirect,
                                      isInertia, originx, originy, originxAbs,
                                      originyAbs, scale, expansion, totalscale,
@@ -617,7 +645,7 @@ public abstract class View {
                                          int originy, int originxAbs,
                                          int originyAbs, double dangle,
                                          double totalangle) {
-        if (eventHandler != null) {
+        if (shouldHandleEvent()) {
             eventHandler.handleRotateGestureEvent(view, time, type, modifiers, isDirect,
                     isInertia, originx, originy, originxAbs,
                     originyAbs, dangle, totalangle);
@@ -629,7 +657,7 @@ public abstract class View {
                                         boolean isInertia, int touchCount,
                                         int dir, int originx, int originy,
                                         int originxAbs, int originyAbs) {
-        if (eventHandler != null) {
+        if (shouldHandleEvent()) {
             eventHandler.handleSwipeGestureEvent(view, time, type, modifiers, isDirect,
                     isInertia, touchCount, dir, originx,
                     originy, originxAbs, originyAbs);
@@ -639,7 +667,7 @@ public abstract class View {
     private void handleInputMethodEvent(long time, String text, int[] clauseBoundary,
                 int[] attrBoundary, byte[] attrValue,
                 int commitCount, int cursorPos) {
-        if (this.eventHandler != null) {
+        if (shouldHandleEvent()) {
             this.eventHandler.handleInputMethodEvent(time, text, clauseBoundary,
                 attrBoundary, attrValue,
                 commitCount, cursorPos);
@@ -659,7 +687,7 @@ public abstract class View {
     }
 
     private double[] getInputMethodCandidatePos(int offset) {
-        if (this.eventHandler != null) {
+        if (shouldHandleEvent()) {
             return this.eventHandler.getInputMethodCandidatePos(offset);
         }
         return null;
@@ -667,20 +695,20 @@ public abstract class View {
 
     private void handleDragStart(int button, int x, int y, int xAbs, int yAbs,
             ClipboardAssistance dropSourceAssistant) {
-        if (this.eventHandler != null) {
+        if (shouldHandleEvent()) {
             this.eventHandler.handleDragStart(this, button, x, y, xAbs, yAbs, dropSourceAssistant);
         }
     }
 
     private void handleDragEnd(int performedAction) {
-        if (this.eventHandler != null) {
+        if (shouldHandleEvent()) {
             this.eventHandler.handleDragEnd(this, performedAction);
         }
     }
 
     private int handleDragEnter(int x, int y, int xAbs, int yAbs,
             int recommendedDropAction, ClipboardAssistance dropTargetAssistant) {
-        if (this.eventHandler != null) {
+        if (shouldHandleEvent()) {
             return this.eventHandler.handleDragEnter(this, x, y, xAbs, yAbs, recommendedDropAction, dropTargetAssistant);
         } else {
             return recommendedDropAction;
@@ -689,7 +717,7 @@ public abstract class View {
 
     private int handleDragOver(int x, int y, int xAbs, int yAbs,
             int recommendedDropAction, ClipboardAssistance dropTargetAssistant) {
-        if (this.eventHandler != null) {
+        if (shouldHandleEvent()) {
             return this.eventHandler.handleDragOver(this, x, y, xAbs, yAbs, recommendedDropAction, dropTargetAssistant);
         } else {
             return recommendedDropAction;
@@ -697,14 +725,14 @@ public abstract class View {
     }
 
     private void handleDragLeave(ClipboardAssistance dropTargetAssistant) {
-        if (this.eventHandler != null) {
+        if (shouldHandleEvent()) {
             this.eventHandler.handleDragLeave(this, dropTargetAssistant);
         }
     }
 
     private int handleDragDrop(int x, int y, int xAbs, int yAbs,
             int recommendedDropAction, ClipboardAssistance dropTargetAssistant) {
-        if (this.eventHandler != null) {
+        if (shouldHandleEvent()) {
             return this.eventHandler.handleDragDrop(this, x, y, xAbs, yAbs, recommendedDropAction, dropTargetAssistant);
         } else {
             return Clipboard.ACTION_NONE;
@@ -742,12 +770,12 @@ public abstract class View {
         _end(this.ptr);
     }
 
-    protected abstract int _getNativeFrameBuffer(long ptr);
+    protected abstract long _getNativeFrameBuffer(long ptr);
 
     /**
      * Called on the renderer thread and must be between lock and unlock
      */
-    public int getNativeFrameBuffer() {
+    public long getNativeFrameBuffer() {
         return _getNativeFrameBuffer(this.ptr);
     }
 
@@ -902,15 +930,6 @@ public abstract class View {
     protected void notifyMouse(int type, int button, int x, int y, int xAbs,
                                int yAbs, int modifiers, boolean isPopupTrigger,
                                boolean isSynthesized) {
-        // gznote: optimize - only call for undecorated Windows!
-        if (this.window != null) {
-            // handled by window (programmatical move/resize)
-            if (this.window.handleMouseEvent(type, button, x, y, xAbs, yAbs)) {
-                // The evnet has been processed by Glass
-                return;
-            }
-        }
-
         long now = System.nanoTime();
         if (type == MouseEvent.DOWN) {
             View lastClickedView = View.lastClickedView == null ? null : View.lastClickedView.get();
@@ -934,6 +953,20 @@ public abstract class View {
             lastClickedTime = now;
         }
 
+        // If this is an extended window, we give the non-client handler the first chance to handle the event.
+        // Note that a full-screen window has no non-client area, and thus the non-client event handler
+        // is not notified.
+        boolean handled = window != null
+            && window.isExtendedWindow()
+            && !isSynthesized
+            && !inFullscreen
+            && shouldHandleEvent()
+            && handleNonClientMouseEvent(now, type, button, x, y, xAbs, yAbs, modifiers, clickCount);
+
+        if (handled) {
+            return;
+        }
+
         handleMouseEvent(now, type, button, x, y, xAbs, yAbs,
                          modifiers, isPopupTrigger, isSynthesized);
 
@@ -955,7 +988,7 @@ public abstract class View {
             int defaultLines, int defaultChars,
             double xMultiplier, double yMultiplier)
     {
-        if (this.eventHandler != null) {
+        if (shouldHandleEvent()) {
             this.eventHandler.handleScrollEvent(this, System.nanoTime(),
                     x, y, xAbs, yAbs, deltaX, deltaY, modifiers, lines, chars,
                     defaultLines, defaultChars, xMultiplier, yMultiplier);
@@ -964,6 +997,10 @@ public abstract class View {
 
     protected void notifyKey(int type, int keyCode, char[] keyChars, int modifiers) {
         handleKeyEvent(System.nanoTime(), type, keyCode, keyChars, modifiers);
+    }
+
+    protected boolean notifyKeyAndReturnConsumed(int type, int keyCode, char[] keyChars, int modifiers) {
+        return handleKeyEvent(System.nanoTime(), type, keyCode, keyChars, modifiers);
     }
 
     protected void notifyInputMethod(String text, int[] clauseBoundary,

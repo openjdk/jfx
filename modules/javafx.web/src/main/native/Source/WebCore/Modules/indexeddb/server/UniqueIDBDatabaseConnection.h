@@ -25,11 +25,12 @@
 
 #pragma once
 
-#include "UniqueIDBDatabase.h"
+#include <WebCore/IDBDatabaseConnectionIdentifier.h>
+#include <WebCore/UniqueIDBDatabase.h>
 #include <wtf/HashMap.h>
 #include <wtf/Identified.h>
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
@@ -44,16 +45,18 @@ class ServerOpenDBRequest;
 class UniqueIDBDatabase;
 class UniqueIDBDatabaseTransaction;
 
-class UniqueIDBDatabaseConnection : public RefCounted<UniqueIDBDatabaseConnection>, public Identified<UniqueIDBDatabaseConnection>, public CanMakeWeakPtr<UniqueIDBDatabaseConnection> {
+class UniqueIDBDatabaseConnection : public RefCountedAndCanMakeWeakPtr<UniqueIDBDatabaseConnection>, public Identified<IDBDatabaseConnectionIdentifier> {
 public:
     static Ref<UniqueIDBDatabaseConnection> create(UniqueIDBDatabase&, ServerOpenDBRequest&);
 
-    ~UniqueIDBDatabaseConnection();
+    WEBCORE_EXPORT ~UniqueIDBDatabaseConnection();
 
     const IDBResourceIdentifier& openRequestIdentifier() { return m_openRequestIdentifier; }
-    UniqueIDBDatabase* database() { return m_database.get(); }
-    UniqueIDBDatabaseManager* manager();
     IDBConnectionToClient& connectionToClient() { return m_connectionToClient; }
+    UniqueIDBDatabase* database() { return m_database.get(); }
+    WEBCORE_EXPORT CheckedPtr<UniqueIDBDatabase> checkedDatabase();
+    UniqueIDBDatabaseManager* manager();
+    Ref<IDBConnectionToClient> protectedConnectionToClient();
 
     WEBCORE_EXPORT void connectionPendingCloseFromClient();
     WEBCORE_EXPORT void connectionClosedFromClient();
@@ -63,7 +66,7 @@ public:
     bool hasNonFinishedTransactions() const;
 
     void fireVersionChangeEvent(const IDBResourceIdentifier& requestIdentifier, uint64_t requestedVersion);
-    UniqueIDBDatabaseTransaction& createVersionChangeTransaction(uint64_t newVersion);
+    Ref<UniqueIDBDatabaseTransaction> createVersionChangeTransaction(uint64_t newVersion);
 
     WEBCORE_EXPORT void establishTransaction(const IDBTransactionInfo&);
     void didAbortTransaction(UniqueIDBDatabaseTransaction&, const IDBError&);
@@ -89,12 +92,12 @@ private:
 
     WeakPtr<UniqueIDBDatabase> m_database;
     WeakPtr<UniqueIDBDatabaseManager> m_manager;
-    Ref<IDBConnectionToClient> m_connectionToClient;
+    const Ref<IDBConnectionToClient> m_connectionToClient;
     IDBResourceIdentifier m_openRequestIdentifier;
 
     bool m_closePending { false };
 
-    HashMap<IDBResourceIdentifier, RefPtr<UniqueIDBDatabaseTransaction>> m_transactionMap;
+    HashMap<IDBResourceIdentifier, Ref<UniqueIDBDatabaseTransaction>> m_transactionMap;
 };
 
 } // namespace IDBServer

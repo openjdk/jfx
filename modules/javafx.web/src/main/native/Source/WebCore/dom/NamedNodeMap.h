@@ -24,16 +24,17 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
-#include "ScriptWrappable.h"
+#include <WebCore/Element.h>
+#include <WebCore/ScriptWrappable.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
 class Attr;
-class Element;
+template<typename> class ExceptionOr;
 
 class NamedNodeMap final : public ScriptWrappable {
-    WTF_MAKE_ISO_ALLOCATED(NamedNodeMap);
+    WTF_MAKE_TZONE_ALLOCATED(NamedNodeMap);
 public:
     explicit NamedNodeMap(Element& element)
         : m_element(element)
@@ -55,10 +56,11 @@ public:
 
     Vector<String> supportedPropertyNames() const;
 
-    Element& element() { return m_element; }
+    Element& element();
+    Ref<Element> protectedElement() const;
 
 private:
-    Element& m_element;
+    WeakRef<Element, WeakPtrImplWithEventTargetData> m_element;
 };
 
 } // namespace WebCore

@@ -35,7 +35,7 @@ class FinalizationRegistryConstructor final : public InternalFunction {
 public:
     using Base = InternalFunction;
 
-    static FinalizationRegistryConstructor* create(VM& vm, Structure* structure, FinalizationRegistryPrototype* prototype, GetterSetter*)
+    static FinalizationRegistryConstructor* create(VM& vm, Structure* structure, FinalizationRegistryPrototype* prototype)
     {
         FinalizationRegistryConstructor* constructor = new (NotNull, allocateCell<FinalizationRegistryConstructor>(vm)) FinalizationRegistryConstructor(vm, structure);
         constructor->finishCreation(vm, prototype);
@@ -44,10 +44,7 @@ public:
 
     DECLARE_INFO;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(InternalFunctionType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
 private:
     FinalizationRegistryConstructor(VM&, Structure*);

@@ -53,14 +53,20 @@ enum PromotedLocationKind {
     ArgumentCountPLoc,
     ArgumentPLoc,
     ArgumentsCalleePLoc,
+    // FIXME: All these Array/ArrayButterfly properties don't need to be exclusive to Arrays and could work just as well on objects.
+    ArrayButterflyPLoc,
+    // FIXME: This is the same as IndexedPropertyPLoc and should be deduplicated.
+    ArrayIndexedPropertyPLoc,
+    // This is distinct from PublicLengthPLoc because PhantomNewButterflyWithSize needs to know how big the Array is.
+    ArrayButterflyPublicLengthPLoc,
     ClosureVarPLoc,
     InternalFieldObjectPLoc,
     FunctionActivationPLoc,
     FunctionExecutablePLoc,
     IndexedPropertyPLoc,
     NamedPropertyPLoc,
-    PublicLengthPLoc,
     StructurePLoc,
+    PublicLengthPLoc,
     VectorLengthPLoc,
     SpreadPLoc,
     NewArrayWithSpreadArgumentPLoc,
@@ -99,21 +105,23 @@ public:
         return m_kind + m_info;
     }
 
-    bool operator==(const PromotedLocationDescriptor& other) const
-    {
-        return m_kind == other.m_kind
-            && m_info == other.m_info;
-    }
+    friend bool operator==(const PromotedLocationDescriptor&, const PromotedLocationDescriptor&) = default;
 
     bool isHashTableDeletedValue() const
     {
         return m_kind == InvalidPromotedLocationKind && m_info;
     }
 
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
+    // These are the locations / values that are strictly needed to allocate the object. When
+    // object allocation sinking is breaking cycles for materialization, edges marked
+    // !neededForMaterialization are prioritized.
     bool neededForMaterialization() const
     {
         switch (kind()) {
         case NamedPropertyPLoc:
+        case ArrayIndexedPropertyPLoc:
         case ClosureVarPLoc:
         case RegExpObjectLastIndexPLoc:
         case InternalFieldObjectPLoc:
@@ -129,12 +137,6 @@ public:
 private:
     PromotedLocationKind m_kind;
     unsigned m_info;
-};
-
-struct PromotedLocationDescriptorHash {
-    static unsigned hash(const PromotedLocationDescriptor& key) { return key.hash(); }
-    static bool equal(const PromotedLocationDescriptor& a, const PromotedLocationDescriptor& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
 };
 
 class PromotedHeapLocation {
@@ -179,16 +181,14 @@ public:
         return m_meta.hash() + WTF::PtrHash<Node*>::hash(m_base);
     }
 
-    bool operator==(const PromotedHeapLocation& other) const
-    {
-        return m_base == other.m_base
-            && m_meta == other.m_meta;
-    }
+    friend bool operator==(const PromotedHeapLocation&, const PromotedHeapLocation&) = default;
 
     bool isHashTableDeletedValue() const
     {
         return m_meta.isHashTableDeletedValue();
     }
+
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
 
     void dump(PrintStream& out) const;
 
@@ -197,28 +197,14 @@ private:
     PromotedLocationDescriptor m_meta;
 };
 
-struct PromotedHeapLocationHash {
-    static unsigned hash(const PromotedHeapLocation& key) { return key.hash(); }
-    static bool equal(const PromotedHeapLocation& a, const PromotedHeapLocation& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } } // namespace JSC::DFG
 
 namespace WTF {
-
-void printInternal(PrintStream&, JSC::DFG::PromotedLocationKind);
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::DFG::PromotedHeapLocation> : JSC::DFG::PromotedHeapLocationHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::DFG::PromotedHeapLocation> : SimpleClassHashTraits<JSC::DFG::PromotedHeapLocation> {
     static constexpr bool emptyValueIsZero = false;
 };
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::DFG::PromotedLocationDescriptor> : JSC::DFG::PromotedLocationDescriptorHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::DFG::PromotedLocationDescriptor> : SimpleClassHashTraits<JSC::DFG::PromotedLocationDescriptor> {

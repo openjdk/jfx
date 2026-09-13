@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2022 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "JSSegmentedVariableObject.h"
+#include <JavaScriptCore/JSSegmentedVariableObject.h>
 
 namespace JSC {
 
@@ -54,17 +54,14 @@ public:
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
 
     static void destroy(JSCell*);
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
 
     bool isEmpty() const { return !symbolTable()->size(); }
     bool isConstVariable(UniquedStringImpl*);
 
     DECLARE_INFO;
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject)
-    {
-        return Structure::create(vm, globalObject, jsNull(), TypeInfo(GlobalLexicalEnvironmentType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*);
 
 private:
     JSGlobalLexicalEnvironment(VM& vm, Structure* structure, JSScope* scope)

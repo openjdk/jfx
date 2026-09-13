@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,6 +30,7 @@
 #if ENABLE(JIT)
 
 #include "SnippetParams.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
@@ -39,12 +40,12 @@ class AccessCaseSnippetParams final : public SnippetParams {
 public:
     friend class InlineCacheCompiler;
     AccessCaseSnippetParams(VM& vm, Vector<Value>&& regs, Vector<GPRReg>&& gpScratch, Vector<FPRReg>&& fpScratch)
-        : SnippetParams(vm, WTFMove(regs), WTFMove(gpScratch), WTFMove(fpScratch))
+        : SnippetParams(vm, WTF::move(regs), WTF::move(gpScratch), WTF::move(fpScratch))
     {
     }
 
     class SlowPathCallGenerator {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED(SlowPathCallGenerator);
     public:
         virtual ~SlowPathCallGenerator() { }
         virtual CCallHelpers::JumpList generate(InlineCacheCompiler&, const RegisterSetBuilder& usedRegistersBySnippet, CCallHelpers&) = 0;

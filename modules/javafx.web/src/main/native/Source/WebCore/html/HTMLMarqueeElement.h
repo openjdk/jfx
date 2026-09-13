@@ -22,17 +22,22 @@
 
 #pragma once
 
-#include "ActiveDOMObject.h"
-#include "HTMLElement.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/HTMLElement.h>
 
 namespace WebCore {
 
 class RenderMarquee;
 
 class HTMLMarqueeElement final : public HTMLElement, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(HTMLMarqueeElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLMarqueeElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLMarqueeElement);
 public:
     static Ref<HTMLMarqueeElement> create(const QualifiedName&, Document&);
+
+    // ActiveDOMObject.
+    void ref() const final { HTMLElement::ref(); }
+    void deref() const final { HTMLElement::deref(); }
 
     int minimumDelay() const;
 
@@ -51,15 +56,18 @@ public:
     WEBCORE_EXPORT int loop() const;
     WEBCORE_EXPORT ExceptionOr<void> setLoop(int);
 
+    bool hasRenderMarquee() const { return renderMarquee(); }
+
 private:
     HTMLMarqueeElement(const QualifiedName&, Document&);
 
     bool hasPresentationalHintsForAttribute(const QualifiedName&) const final;
     void collectPresentationalHintsForAttribute(const QualifiedName&, const AtomString&, MutableStyleProperties&) final;
 
+    // ActiveDOMObject.
+    void didMoveToNewDocument(Document& oldDocument, Document& newDocument) final;
     void suspend(ReasonForSuspension) final;
     void resume() final;
-    const char* activeDOMObjectName() const final { return "HTMLMarqueeElement"; }
 
     RenderMarquee* renderMarquee() const;
 };

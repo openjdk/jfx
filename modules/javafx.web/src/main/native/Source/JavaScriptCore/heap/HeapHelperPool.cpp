@@ -27,6 +27,7 @@
 #include "HeapHelperPool.h"
 
 #include <mutex>
+#include <wtf/NeverDestroyed.h>
 #include "Options.h"
 
 namespace JSC {
@@ -34,19 +35,20 @@ namespace JSC {
 ParallelHelperPool& heapHelperPool()
 {
     static std::once_flag initializeHelperPoolOnceFlag;
-    static ParallelHelperPool* helperPool;
+    static LazyNeverDestroyed<Ref<ParallelHelperPool>> helperPool;
     std::call_once(
         initializeHelperPoolOnceFlag,
         [] {
 #if OS(LINUX)
-            const char* threadName = "HeapHelper";
+            constexpr auto threadName = "HeapHelper"_s;
 #else
-            const char* threadName = "Heap Helper Thread";
+            constexpr auto threadName = "Heap Helper Thread"_s;
 #endif
-            helperPool = new ParallelHelperPool(threadName);
-            helperPool->ensureThreads(Options::numberOfGCMarkers() - 1);
+            Ref pool = ParallelHelperPool::create(threadName);
+            pool->ensureThreads(Options::numberOfGCMarkers() - 1);
+            helperPool.construct(WTF::move(pool));
         });
-    return *helperPool;
+    return helperPool.get().get();
 }
 
 } // namespace JSC

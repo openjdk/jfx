@@ -22,19 +22,21 @@
 
 #pragma once
 
-#include "FilterEffect.h"
+#include <WebCore/FilterEffect.h>
 
 namespace WebCore {
 
-enum class MorphologyOperatorType {
+enum class MorphologyOperatorType : uint8_t {
     Unknown,
     Erode,
     Dilate
 };
 
-class FEMorphology : public FilterEffect {
+class FEMorphology final : public FilterEffect {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(FEMorphology);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FEMorphology);
 public:
-    WEBCORE_EXPORT static Ref<FEMorphology> create(MorphologyOperatorType, float radiusX, float radiusY);
+    WEBCORE_EXPORT static Ref<FEMorphology> create(MorphologyOperatorType, float radiusX, float radiusY, DestinationColorSpace = DestinationColorSpace::SRGB());
 
     bool operator==(const FEMorphology&) const;
 
@@ -48,14 +50,16 @@ public:
     bool setRadiusY(float);
 
 private:
-    FEMorphology(MorphologyOperatorType, float radiusX, float radiusY);
+    FEMorphology(MorphologyOperatorType, float radiusX, float radiusY, DestinationColorSpace);
 
     bool operator==(const FilterEffect& other) const override { return areEqual<FEMorphology>(*this, other); }
 
     FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
 
-    bool resultIsAlphaImage(const FilterImageVector& inputs) const override;
+    bool resultIsAlphaImage(std::span<const Ref<FilterImage>> inputs) const override;
 
+    OptionSet<FilterRenderingMode> supportedFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) const override;
+    std::unique_ptr<FilterEffectApplier> createAcceleratedApplier() const override;
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
 
     WTF::TextStream& externalRepresentation(WTF::TextStream&, FilterRepresentation) const override;
@@ -67,18 +71,4 @@ private:
 
 } // namespace WebCore
 
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::MorphologyOperatorType> {
-    using values = EnumValues<
-        WebCore::MorphologyOperatorType,
-
-        WebCore::MorphologyOperatorType::Unknown,
-        WebCore::MorphologyOperatorType::Erode,
-        WebCore::MorphologyOperatorType::Dilate
-    >;
-};
-
-} // namespace WTF
-
-SPECIALIZE_TYPE_TRAITS_FILTER_EFFECT(FEMorphology)
+SPECIALIZE_TYPE_TRAITS_FILTER_FUNCTION(FEMorphology)

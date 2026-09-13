@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Google Inc. All rights reserved.
+ * Copyright (C) 2009-2014 Google Inc. All rights reserved.
  * Copyright (C) 2013 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -38,6 +38,7 @@
 #include "SecurityOriginData.h"
 #include <wtf/Deque.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -45,6 +46,8 @@ static String getDatabaseIdentifier(SQLTransaction& transaction)
 {
     return transaction.database().securityOrigin().databaseIdentifier();
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SQLTransactionCoordinator);
 
 SQLTransactionCoordinator::SQLTransactionCoordinator()
     : m_isShuttingDown(false)
@@ -120,8 +123,8 @@ void SQLTransactionCoordinator::shutdown()
         // Clean up transactions that have reached "lockAcquired":
         // Transaction phase 4 cleanup. See comment on "What happens if a
         // transaction is interrupted?" at the top of SQLTransactionBackend.cpp.
-        if (info.activeWriteTransaction)
-            info.activeWriteTransaction->notifyDatabaseThreadIsShuttingDown();
+        if (RefPtr transaction = info.activeWriteTransaction)
+            transaction->notifyDatabaseThreadIsShuttingDown();
         for (auto& transaction : info.activeReadTransactions)
             transaction->notifyDatabaseThreadIsShuttingDown();
 
@@ -129,7 +132,7 @@ void SQLTransactionCoordinator::shutdown()
         // Transaction phase 3 cleanup. See comment on "What happens if a
         // transaction is interrupted?" at the top of SQLTransactionBackend.cpp.
         while (!info.pendingTransactions.isEmpty()) {
-            RefPtr<SQLTransaction> transaction = info.pendingTransactions.first();
+            RefPtr transaction = info.pendingTransactions.takeFirst();
             transaction->notifyDatabaseThreadIsShuttingDown();
         }
     }

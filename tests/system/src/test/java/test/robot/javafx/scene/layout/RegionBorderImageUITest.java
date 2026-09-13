@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,10 +24,13 @@
 
 package test.robot.javafx.scene.layout;
 
-import org.junit.Test;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
  */
+@Timeout(value=20000, unit=TimeUnit.MILLISECONDS)
 public class RegionBorderImageUITest extends RegionUITestBase {
     @Test public void dummy() {
 
@@ -65,7 +68,7 @@ public class RegionBorderImageUITest extends RegionUITestBase {
 //        System.out.println("WHAT");
 //    }
 //
-    @Test(timeout = 20000)
+    @Test
     public void test4() {
         setStyle(
                 "-fx-border-image-source: url('test/robot/javafx/scene/layout/border-stretch.png');" +

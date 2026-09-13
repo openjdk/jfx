@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,12 +25,10 @@
 
 #pragma once
 
-#ifndef UIScriptContext_h
-#define UIScriptContext_h
-
 #include <JavaScriptCore/JSRetainPtr.h>
 #include <wtf/HashMap.h>
 #include <wtf/Ref.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -43,6 +41,8 @@ class UIScriptController;
 
 class UIScriptContextDelegate {
 public:
+    virtual ~UIScriptContextDelegate() = default;
+
     virtual void uiScriptDidComplete(const String& result, unsigned callbackID) = 0;
 };
 
@@ -68,16 +68,16 @@ typedef enum  {
     CallbackTypeDidShowContactPicker,
     CallbackTypeDidHideContactPicker,
     CallbackTypeWillStartInputSession,
+    CallbackTypeDidPresentViewController,
     CallbackTypeNonPersistent = firstNonPersistentCallbackID
 } CallbackType;
 
-class UIScriptContext {
-    WTF_MAKE_FAST_ALLOCATED;
-    WTF_MAKE_NONCOPYABLE(UIScriptContext);
+class UIScriptContext : public RefCounted<UIScriptContext>, public CanMakeWeakPtr<UIScriptContext> {
 public:
     using UIScriptControllerFactory = Ref<UIScriptController> (*)(UIScriptContext&);
 
-    UIScriptContext(UIScriptContextDelegate&, UIScriptControllerFactory);
+    static Ref<UIScriptContext> create(UIScriptContextDelegate& delegate, UIScriptControllerFactory factory) { return adoptRef(*new UIScriptContext(delegate, WTF::move(factory))); }
+
     ~UIScriptContext();
 
     void runUIScript(const String& script, unsigned scriptCallbackID);
@@ -85,7 +85,7 @@ public:
 
     // For one-shot tasks callbacks.
     unsigned prepareForAsyncTask(JSValueRef taskCallback, CallbackType);
-    void asyncTaskComplete(unsigned taskCallbackID);
+    void asyncTaskComplete(unsigned taskCallbackID, std::initializer_list<JSValueRef> arguments = { });
 
     // For persistent callbacks.
     unsigned registerCallback(JSValueRef taskCallback, CallbackType);
@@ -100,7 +100,9 @@ public:
     JSGlobalContextRef jsContext() const { return m_context.get(); }
 
 private:
-    JSRetainPtr<JSGlobalContextRef> m_context;
+    UIScriptContext(UIScriptContextDelegate&, UIScriptControllerFactory);
+
+    const JSRetainPtr<JSGlobalContextRef> m_context;
 
     bool hasOutstandingAsyncTasks() const { return !m_callbacks.isEmpty(); }
     bool currentParentCallbackIsPendingCompletion() const { return m_uiScriptResultsPendingCompletion.contains(m_currentScriptCallbackID); }
@@ -122,5 +124,3 @@ private:
 };
 
 }
-
-#endif // UIScriptContext_h

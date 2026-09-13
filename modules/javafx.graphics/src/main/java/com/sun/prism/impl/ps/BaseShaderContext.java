@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -192,6 +192,8 @@ public abstract class BaseShaderContext extends BaseContext {
         private float lastConst5 = Float.NaN;
         private float lastConst6 = Float.NaN;
         private boolean lastState3D = false;
+
+        public Texture[] getLastTextures() { return lastTextures; }
     }
 
     @Override
@@ -719,7 +721,7 @@ public abstract class BaseShaderContext extends BaseContext {
         }
     }
 
-    private void setTexture(int texUnit, Texture tex) {
+    protected void setTexture(int texUnit, Texture tex) {
         if (checkDisposed()) return;
 
         if (tex != null) tex.assertLocked();
@@ -735,7 +737,7 @@ public abstract class BaseShaderContext extends BaseContext {
         if (checkDisposed()) return;
 
         lcdBuffer = factory.createRTTexture(width, height, Texture.WrapMode.CLAMP_NOT_NEEDED);
-        // TODO: RT-29488 we need to track the uses of the LCD buffer,
+        // TODO: JDK-8091015 we need to track the uses of the LCD buffer,
         // but the flow of control through the text methods is
         // not straight-forward enough for a simple set of lock/unlock
         // fixes at this time.
@@ -826,7 +828,7 @@ public abstract class BaseShaderContext extends BaseContext {
 
     @Override
     protected void releaseRenderTarget() {
-        // Null out hard references that cause memory leak reported in RT-17304
+        // Null out hard references that cause memory leak reported in JDK-8116598
         if (state != null) {
             state.lastRenderTarget = null;
             for (int i=0; i<state.lastTextures.length; i++) {

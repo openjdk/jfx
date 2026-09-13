@@ -22,11 +22,13 @@
 #include "config.h"
 #include "SVGTextLayoutEngineBaseline.h"
 
-#include "FontCascade.h"
-#include "RenderElement.h"
+#include "NodeInlines.h"
+#include "RenderElementInlines.h"
+#include "RenderSVGInlineText.h"
+#include "RenderStyle+GettersInlines.h"
 #include "SVGLengthContext.h"
-#include "SVGRenderStyle.h"
 #include "SVGTextMetrics.h"
+#include "StylePrimitiveNumericTypes+Evaluation.h"
 
 namespace WebCore {
 
@@ -35,39 +37,29 @@ SVGTextLayoutEngineBaseline::SVGTextLayoutEngineBaseline(const FontCascade& font
 {
 }
 
-float SVGTextLayoutEngineBaseline::calculateBaselineShift(const SVGRenderStyle& style, SVGElement* context) const
+float SVGTextLayoutEngineBaseline::calculateBaselineShift(const RenderStyle& style) const
 {
-    if (style.baselineShift() == BaselineShift::Length) {
-        auto baselineShiftValueLength = style.baselineShiftValue();
-        if (baselineShiftValueLength.lengthType() == SVGLengthType::Percentage)
-            return baselineShiftValueLength.valueAsPercentage() * m_font.size();
-
-        SVGLengthContext lengthContext(context);
-        return baselineShiftValueLength.value(lengthContext);
-    }
-
-    switch (style.baselineShift()) {
-    case BaselineShift::Baseline:
+    return WTF::switchOn(style.baselineShift(),
+        [](const CSS::Keyword::Baseline&) -> float {
         return 0;
-    case BaselineShift::Sub:
-        return -m_font.metricsOfPrimaryFont().floatHeight() / 2;
-    case BaselineShift::Super:
-        return m_font.metricsOfPrimaryFont().floatHeight() / 2;
-    case BaselineShift::Length:
-        break;
+        },
+        [&](const CSS::Keyword::Sub&) -> float {
+            return -m_font->metricsOfPrimaryFont().height() / 2;
+        },
+        [&](const CSS::Keyword::Super&) -> float {
+            return m_font->metricsOfPrimaryFont().height() / 2;
+        },
+        [&](const Style::SVGBaselineShift::Length& length) -> float {
+            return Style::evaluate<float>(length, m_font->size(), Style::ZoomNeeded { });
     }
-    ASSERT_NOT_REACHED();
-    return 0;
+    );
 }
 
-AlignmentBaseline SVGTextLayoutEngineBaseline::dominantBaselineToAlignmentBaseline(bool isVerticalText, const RenderObject* textRenderer) const
+AlignmentBaseline SVGTextLayoutEngineBaseline::dominantBaselineToAlignmentBaseline(bool isVerticalText, const RenderElement& textRenderer) const
 {
-    ASSERT(textRenderer);
-    ASSERT(textRenderer->parent());
+    ASSERT(textRenderer.parent());
 
-    const SVGRenderStyle& svgStyle = textRenderer->style().svgStyle();
-
-    DominantBaseline baseline = svgStyle.dominantBaseline();
+    DominantBaseline baseline = textRenderer.style().dominantBaseline();
     if (baseline == DominantBaseline::Auto) {
         if (isVerticalText)
             baseline = DominantBaseline::Central;
@@ -80,9 +72,9 @@ AlignmentBaseline SVGTextLayoutEngineBaseline::dominantBaselineToAlignmentBaseli
         // FIXME: The dominant-baseline and the baseline-table components are set by determining the predominant script of the character data content.
         return AlignmentBaseline::Alphabetic;
     case DominantBaseline::NoChange:
-        return dominantBaselineToAlignmentBaseline(isVerticalText, textRenderer->parent());
+        return dominantBaselineToAlignmentBaseline(isVerticalText, *textRenderer.parent());
     case DominantBaseline::ResetSize:
-        return dominantBaselineToAlignmentBaseline(isVerticalText, textRenderer->parent());
+        return dominantBaselineToAlignmentBaseline(isVerticalText, *textRenderer.parent());
     case DominantBaseline::Ideographic:
         return AlignmentBaseline::Ideographic;
     case DominantBaseline::Alphabetic:
@@ -101,46 +93,45 @@ AlignmentBaseline SVGTextLayoutEngineBaseline::dominantBaselineToAlignmentBaseli
         return AlignmentBaseline::TextBeforeEdge;
     default:
         ASSERT_NOT_REACHED();
-        return AlignmentBaseline::Auto;
+        return AlignmentBaseline::Baseline;
     }
 }
 
-float SVGTextLayoutEngineBaseline::calculateAlignmentBaselineShift(bool isVerticalText, const RenderObject& textRenderer) const
+float SVGTextLayoutEngineBaseline::calculateAlignmentBaselineShift(bool isVerticalText, const RenderSVGInlineText& textRenderer) const
 {
-    const RenderObject* textRendererParent = textRenderer.parent();
+    auto* textRendererParent = textRenderer.parent();
     ASSERT(textRendererParent);
 
-    AlignmentBaseline baseline = textRenderer.style().svgStyle().alignmentBaseline();
-    if (baseline == AlignmentBaseline::Auto || baseline == AlignmentBaseline::Baseline) {
-        baseline = dominantBaselineToAlignmentBaseline(isVerticalText, textRendererParent);
-        ASSERT(baseline != AlignmentBaseline::Auto && baseline != AlignmentBaseline::Baseline);
+    AlignmentBaseline baseline = textRenderer.style().alignmentBaseline();
+    if (baseline == AlignmentBaseline::Baseline) {
+        baseline = dominantBaselineToAlignmentBaseline(isVerticalText, *textRendererParent);
+        ASSERT(baseline != AlignmentBaseline::Baseline);
     }
 
-    const FontMetrics& fontMetrics = m_font.metricsOfPrimaryFont();
+    const FontMetrics& fontMetrics = m_font->metricsOfPrimaryFont();
+    float ascent = fontMetrics.ascent();
+    float descent = fontMetrics.descent();
 
     // Note: http://wiki.apache.org/xmlgraphics-fop/LineLayout/AlignmentHandling
     switch (baseline) {
     case AlignmentBaseline::BeforeEdge:
     case AlignmentBaseline::TextBeforeEdge:
-        return fontMetrics.floatAscent();
+        return ascent;
     case AlignmentBaseline::Middle:
-        return fontMetrics.xHeight() / 2;
+        return fontMetrics.xHeight().value_or(0.f) / 2;
     case AlignmentBaseline::Central:
-        return (fontMetrics.floatAscent() - fontMetrics.floatDescent()) / 2;
+        return (ascent - descent) / 2;
     case AlignmentBaseline::AfterEdge:
     case AlignmentBaseline::TextAfterEdge:
     case AlignmentBaseline::Ideographic:
-        return -fontMetrics.floatDescent();
+        return -descent;
     case AlignmentBaseline::Alphabetic:
         return 0;
     case AlignmentBaseline::Hanging:
-        return fontMetrics.floatAscent() * 8 / 10.f;
+        return ascent * 8 / 10.f;
     case AlignmentBaseline::Mathematical:
-        return fontMetrics.floatAscent() / 2;
+        return ascent / 2;
     case AlignmentBaseline::Baseline:
-        ASSERT_NOT_REACHED();
-        return 0;
-    case AlignmentBaseline::Auto:
         ASSERT_NOT_REACHED();
         return 0;
     }
@@ -148,10 +139,11 @@ float SVGTextLayoutEngineBaseline::calculateAlignmentBaselineShift(bool isVertic
     return 0;
 }
 
-float SVGTextLayoutEngineBaseline::calculateGlyphOrientationAngle(bool isVerticalText, const SVGRenderStyle& style, const UChar& character) const
+float SVGTextLayoutEngineBaseline::calculateGlyphOrientationAngle(bool isVerticalText, const RenderStyle& style, const char16_t& character) const
 {
-    switch (isVerticalText ? style.glyphOrientationVertical() : style.glyphOrientationHorizontal()) {
-    case GlyphOrientation::Auto:
+    if (isVerticalText) {
+        return Style::valueRepresentation(style.glyphOrientationVertical(),
+            [&](const CSS::Keyword::Auto&) {
         // Spec: Fullwidth ideographic and fullwidth Latin text will be set with a glyph-orientation of 0-degrees.
         // Text which is not fullwidth will be set with a glyph-orientation of 90-degrees.
         // FIXME: There's not an accurate way to tell if text is fullwidth by looking at a single character.
@@ -159,25 +151,26 @@ float SVGTextLayoutEngineBaseline::calculateGlyphOrientationAngle(bool isVertica
         case U_EA_NEUTRAL:
         case U_EA_HALFWIDTH:
         case U_EA_NARROW:
-            return 90;
+                    return 90.0f;
         case U_EA_AMBIGUOUS:
         case U_EA_FULLWIDTH:
         case U_EA_WIDE:
-            return 0;
+                    return 0.0f;
         }
         ASSERT_NOT_REACHED();
-        break;
-    case GlyphOrientation::Degrees90:
-        return 90;
-    case GlyphOrientation::Degrees180:
-        return 180;
-    case GlyphOrientation::Degrees270:
-        return 270;
-    case GlyphOrientation::Degrees0:
-        return 0;
+                return 0.0f;
+            },
+            [](const Style::Angle<>& angle) {
+                return Style::evaluate<float>(angle);
+            }
+        );
+    } else {
+        return Style::valueRepresentation(style.glyphOrientationHorizontal(),
+            [](const Style::Angle<>& angle) {
+                return Style::evaluate<float>(angle);
+            }
+        );
     }
-    ASSERT_NOT_REACHED();
-    return 0;
 }
 
 static inline bool glyphOrientationIsMultiplyOf180Degrees(float orientationAngle)
@@ -197,14 +190,16 @@ float SVGTextLayoutEngineBaseline::calculateGlyphAdvanceAndOrientation(bool isVe
     // Spec: If if the 'glyph-orientation-vertical' results in an orientation angle that is not a multiple of
     // 180 degrees, then the current text position is incremented according to the horizontal metrics of the glyph.
 
-    const FontMetrics& fontMetrics = m_font.metricsOfPrimaryFont();
+    const FontMetrics& fontMetrics = m_font->metricsOfPrimaryFont();
+    float ascent = fontMetrics.ascent();
+    float descent = fontMetrics.descent();
 
     // Vertical orientation handling.
     if (isVerticalText) {
-        float ascentMinusDescent = fontMetrics.floatAscent() - fontMetrics.floatDescent();
+        float ascentMinusDescent = ascent - descent;
         if (!angle) {
             xOrientationShift = (ascentMinusDescent - metrics.width()) / 2;
-            yOrientationShift = fontMetrics.floatAscent();
+            yOrientationShift = ascent;
         } else if (angle == 180)
             xOrientationShift = (ascentMinusDescent + metrics.width()) / 2;
         else if (angle == 270) {
@@ -224,7 +219,7 @@ float SVGTextLayoutEngineBaseline::calculateGlyphAdvanceAndOrientation(bool isVe
         yOrientationShift = -metrics.width();
     else if (angle == 180) {
         xOrientationShift = metrics.width();
-        yOrientationShift = -fontMetrics.floatAscent();
+        yOrientationShift = -ascent;
     } else if (angle == 270)
         xOrientationShift = metrics.width();
 

@@ -70,6 +70,7 @@
 
 #pragma once
 
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/WTFString.h>
 
 #include <time.h>
@@ -95,14 +96,14 @@ struct ListState {
         , carryBufferLength(0)
         , numLines(0)
     {
-        memset(&nowFTPTime, 0, sizeof(FTPTime));
+        zeroBytes(nowFTPTime);
     }
 
     double      now;               /* needed for year determination */
     FTPTime     nowFTPTime;
     char        listStyle;         /* LISTing style */
     bool        parsedOne;         /* returned anything yet? */
-    char        carryBuffer[84];   /* for VMS multiline */
+    std::array<Latin1Character, 84> carryBuffer;   /* for VMS multiline */
     int         carryBufferLength; /* length of name in carry_buf */
     int64_t     numLines;          /* number of lines seen */
 };
@@ -126,29 +127,24 @@ struct ListResult
     {
         valid = false;
         type = FTPJunkEntry;
-        filename = nullptr;
-        filenameLength = 0;
-        linkname = nullptr;
-        linknameLength = 0;
+        filename = { };
+        linkname = { };
         fileSize = { };
         caseSensitive = false;
-        memset(&modifiedTime, 0, sizeof(FTPTime));
+        zeroBytes(modifiedTime);
     }
 
     bool valid;
     FTPEntryType type;
 
-    const char* filename;
-    uint32_t filenameLength;
-
-    const char* linkname;
-    uint32_t linknameLength;
+    std::span<Latin1Character> filename;
+    std::span<Latin1Character> linkname;
 
     String fileSize;
     FTPTime modifiedTime;
     bool caseSensitive; // file system is definitely case insensitive
 };
 
-FTPEntryType parseOneFTPLine(const char* inputLine, ListState&, ListResult&);
+FTPEntryType parseOneFTPLine(std::span<Latin1Character> inputLine, ListState&, ListResult&);
 
 } // namespace WebCore

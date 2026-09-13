@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,10 @@
 
 package test.javafx.scene;
 
-import static org.junit.Assert.assertTrue;
-
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicLong;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.scene.Scene;
@@ -38,11 +36,9 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
-
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 /**
@@ -86,14 +82,14 @@ public class NodeTreeShowingTest {
         }
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
-        Util.shutdown(stage);
+        Util.shutdown();
     }
 
     private StackPane createNodesRecursively(int count, int level) {
@@ -160,6 +156,6 @@ public class NodeTreeShowingTest {
 
         // NOTE : 800 mSec is not a benchmark value
         // It is good enough to catch the regression in performance, if any
-        assertTrue("Time to add/remove " + loopCount + " nodes in a large Scene is more than 800 mSec (" + bestMillis.get() + ")", bestMillis.get() <= 800);
+        assertTrue(bestMillis.get() <= 800, "Time to add/remove " + loopCount + " nodes in a large Scene is more than 800 mSec (" + bestMillis.get() + ")");
     }
 }

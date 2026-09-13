@@ -29,21 +29,21 @@
 #if ENABLE(MEDIA_STREAM)
 
 #include "CaptureDeviceWithCapabilities.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(InputDeviceInfo);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InputDeviceInfo);
 
 InputDeviceInfo::InputDeviceInfo(CaptureDeviceWithCapabilities&& deviceWithCapabilities, String&& saltedDeviceId, String&& saltedGroupId)
-    : MediaDeviceInfo(deviceWithCapabilities.device.label(), WTFMove(saltedDeviceId), WTFMove(saltedGroupId), toMediaDeviceInfoKind(deviceWithCapabilities.device.type()))
-    , m_capabilities(WTFMove(deviceWithCapabilities.capabilities))
+    : MediaDeviceInfo(deviceWithCapabilities.device.label(), WTF::move(saltedDeviceId), WTF::move(saltedGroupId), toMediaDeviceInfoKind(deviceWithCapabilities.device.type()))
+    , m_capabilities(WTF::move(deviceWithCapabilities.capabilities))
 {
 }
 
 MediaTrackCapabilities InputDeviceInfo::getCapabilities() const
 {
-    return toMediaTrackCapabilities(m_capabilities, groupId());
+    return toMediaTrackCapabilities(m_capabilities);
 }
 
 } // namespace WebCore

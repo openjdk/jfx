@@ -63,7 +63,7 @@ struct call_context
 #if FFI_EXEC_TRAMPOLINE_TABLE
 
 #ifdef __MACH__
-#ifdef HAVE_PTRAUTH
+#ifdef HAVE_ARM64E_PTRAUTH
 #include <ptrauth.h>
 #endif
 #include <mach/vm_param.h>
@@ -386,51 +386,64 @@ extend_hfa_type (void *dest, void *src, int h)
   ssize_t f = h - AARCH64_RET_S4;
   void *x0;
 
+#define BTI_J "hint #36"
   asm volatile (
 "adr    %0, 0f\n"
-"       add     %0, %0, %1\n"
-"       br      %0\n"
-"0:     ldp     s16, s17, [%3]\n"       /* S4 */
-"       ldp     s18, s19, [%3, #8]\n"
-"       b       4f\n"
-"       ldp     s16, s17, [%3]\n"       /* S3 */
-"       ldr     s18, [%3, #8]\n"
-"       b       3f\n"
-"       ldp     s16, s17, [%3]\n"       /* S2 */
-"       b       2f\n"
-"       nop\n"
-"       ldr     s16, [%3]\n"            /* S1 */
-"       b       1f\n"
-"       nop\n"
-"       ldp     d16, d17, [%3]\n"       /* D4 */
-"       ldp     d18, d19, [%3, #16]\n"
-"       b       4f\n"
-"       ldp     d16, d17, [%3]\n"       /* D3 */
-"       ldr     d18, [%3, #16]\n"
-"       b       3f\n"
-"       ldp     d16, d17, [%3]\n"       /* D2 */
-"       b       2f\n"
-"       nop\n"
-"       ldr     d16, [%3]\n"            /* D1 */
-"       b       1f\n"
-"       nop\n"
-"       ldp     q16, q17, [%3]\n"       /* Q4 */
-"       ldp     q18, q19, [%3, #32]\n"
-"       b       4f\n"
-"       ldp     q16, q17, [%3]\n"       /* Q3 */
-"       ldr     q18, [%3, #32]\n"
-"       b       3f\n"
-"       ldp     q16, q17, [%3]\n"       /* Q2 */
-"       b       2f\n"
-"       nop\n"
-"       ldr     q16, [%3]\n"            /* Q1 */
-"       b       1f\n"
-"4:     str     q19, [%2, #48]\n"
-"3:     str     q18, [%2, #32]\n"
-"2:     str     q17, [%2, #16]\n"
-"1:     str     q16, [%2]"
+"  add  %0, %0, %1\n"
+"  br  %0\n"
+"0:  "BTI_J"\n"      /* S4 */
+"  ldp  s16, s17, [%3]\n"
+"  ldp  s18, s19, [%3, #8]\n"
+"  b  4f\n"
+"  "BTI_J"\n"      /* S3 */
+"  ldp  s16, s17, [%3]\n"
+"  ldr  s18, [%3, #8]\n"
+"  b  3f\n"
+"  "BTI_J"\n"      /* S2 */
+"  ldp  s16, s17, [%3]\n"
+"  b  2f\n"
+"  nop\n"
+"  "BTI_J"\n"      /* S1 */
+"  ldr  s16, [%3]\n"
+"  b  1f\n"
+"  nop\n"
+"  "BTI_J"\n"      /* D4 */
+"  ldp  d16, d17, [%3]\n"
+"  ldp  d18, d19, [%3, #16]\n"
+"  b  4f\n"
+"  "BTI_J"\n"      /* D3 */
+"  ldp  d16, d17, [%3]\n"
+"  ldr  d18, [%3, #16]\n"
+"  b  3f\n"
+"  "BTI_J"\n"      /* D2 */
+"  ldp  d16, d17, [%3]\n"
+"  b  2f\n"
+"  nop\n"
+"  "BTI_J"\n"      /* D1 */
+"  ldr  d16, [%3]\n"
+"  b  1f\n"
+"  nop\n"
+"  "BTI_J"\n"      /* Q4 */
+"  ldp  q16, q17, [%3]\n"
+"  ldp  q18, q19, [%3, #32]\n"
+"  b  4f\n"
+"  "BTI_J"\n"      /* Q3 */
+"  ldp  q16, q17, [%3]\n"
+"  ldr  q18, [%3, #32]\n"
+"  b  3f\n"
+"  "BTI_J"\n"      /* Q2 */
+"  ldp  q16, q17, [%3]\n"
+"  b  2f\n"
+"  nop\n"
+"  "BTI_J"\n"      /* Q1 */
+"  ldr  q16, [%3]\n"
+"  b  1f\n"
+"4:  str  q19, [%2, #48]\n"
+"3:  str  q18, [%2, #32]\n"
+"2:  str  q17, [%2, #16]\n"
+"1:  str  q16, [%2]"
     : "=&r"(x0)
-    : "r"(f * 12), "r"(dest), "r"(src)
+    : "r"(f * 16), "r"(dest), "r"(src)
     : "memory", "v16", "v17", "v18", "v19");
 }
 #endif
@@ -632,7 +645,10 @@ extern void ffi_call_SYSV (struct call_context *context, void *frame,
                void *closure) FFI_HIDDEN;
 
 /* Call a function with the provided arguments and capture the return
-   value.  */
+   value.
+   n.b. ffi_call_SYSV will steal the alloca'd `stack` variable here for use
+   _as its own stack_ - so we need to compile this function without ASAN */
+FFI_ASAN_NO_SANITIZE
 static void
 ffi_call_int (ffi_cif *cif, void (*fn)(void), void *orig_rvalue,
           void **avalue, void *closure)
@@ -669,7 +685,7 @@ ffi_call_int (ffi_cif *cif, void (*fn)(void), void *orig_rvalue,
   else if (flags & AARCH64_RET_NEED_COPY)
     rsize = 16;
 
-  /* Allocate consectutive stack for everything we'll need.
+  /* Allocate consecutive stack for everything we'll need.
      The frame uses 40 bytes for: lr, fp, rvalue, flags, sp */
   context = alloca (sizeof(struct call_context) + stack_bytes + 40 + rsize);
   stack = context + 1;
@@ -864,7 +880,7 @@ ffi_prep_closure_loc (ffi_closure *closure,
 
 #if FFI_EXEC_TRAMPOLINE_TABLE
 # ifdef __MACH__
-#  ifdef HAVE_PTRAUTH
+#  ifdef HAVE_ARM64E_PTRAUTH
   codeloc = ptrauth_auth_data(codeloc, ptrauth_key_function_pointer, 0);
 #  endif
   void **config = (void **)((uint8_t *)codeloc - PAGE_MAX_SIZE);

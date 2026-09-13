@@ -34,9 +34,10 @@
 #include <sys/time.h>
 #include <vector>
 #include <wtf/MonotonicTime.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 #if PLATFORM(PLAYSTATION)
-#include <showmap.h>
+#include <memory-extra/showmap.h>
 #endif
 
 static void description()
@@ -51,18 +52,16 @@ struct Footprint {
     static std::optional<Footprint> now()
     {
 #if PLATFORM(PLAYSTATION)
-        showmap::Result result;
+        memory_extra::showmap::Result<4> result;
+        auto* entry = result.entry("SceNKFastMalloc");
         result.collect();
-        if (auto* entry = result.entry("SceNKFastMalloc")) {
             return Footprint {
-                static_cast<uint64_t>(entry->effectiveRss()),
+            static_cast<uint64_t>(entry->rss),
                 static_cast<uint64_t>(entry->vss)
             };
-        }
 #else
 #error "No testmem implementation for this platform."
 #endif
-        return std::nullopt;
     }
 };
 
@@ -93,7 +92,7 @@ int main(int argc, char* argv[])
 
     size_t iterations = 20;
     if (argc >= 3) {
-        int iters = atoi(argv[2]);
+        int iters = parseInteger<int>(unsafeSpan(argv[2])).value_or(0);
         if (iters < 0) {
             printf("Iterations argument must be >= 0");
             exit(1);

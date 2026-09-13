@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,25 +30,25 @@ import static test.com.sun.javafx.test.TestHelper.assertSimilar;
 import static test.com.sun.javafx.test.TestHelper.box;
 import javafx.scene.shape.Rectangle;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class NodeBoundsTest {
 
-    public @Test
-    void testBoundsForLeafNode() {
+    @Test
+    public void testBoundsForLeafNode() {
         Rectangle rect = new Rectangle(10, 10, 50, 50);
         assertSimilar(box(10, 10, 50, 50), rect.getBoundsInLocal());
     }
 
-    public @Test
-    void testBounds3DForLeafNode() {
+    @Test
+    public void testBounds3DForLeafNode() {
         Rectangle rect = new Rectangle(10, 10, 50, 50);
         rect.setTranslateZ(30);
         assertSimilar(box(10, 10, 30, 50, 50, 30), rect.getBoundsInLocal());
     }
 
-    public @Test
-    void testBoundsForInvisibleLeafNode() {
+    @Test
+    public void testBoundsForInvisibleLeafNode() {
         Rectangle rect = new Rectangle(10, 10, 50, 50);
         rect.setVisible(false);
 
@@ -64,8 +64,8 @@ public class NodeBoundsTest {
         assertBoundsEqual(rect.getBoundsInLocal(), rect.getBoundsInParent());
     }
 
-    public @Test
-    void testBoundsForLeafNodeUpdatesWhenGeomChanges() {
+    @Test
+    public void testBoundsForLeafNodeUpdatesWhenGeomChanges() {
         Rectangle rect = new Rectangle();
 
         assertBoundsEqual(box(0, 0, 0, 0), rect.getBoundsInLocal());

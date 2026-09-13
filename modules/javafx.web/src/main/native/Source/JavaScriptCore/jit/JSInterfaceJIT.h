@@ -25,18 +25,20 @@
 
 #pragma once
 
-#include "BytecodeConventions.h"
-#include "CCallHelpers.h"
-#include "FPRInfo.h"
-#include "GPRInfo.h"
-#include "JSCJSValue.h"
-#include "JSString.h"
-#include "MacroAssembler.h"
+#include <JavaScriptCore/BytecodeConventions.h>
+#include <JavaScriptCore/CCallHelpers.h>
+#include <JavaScriptCore/FPRInfo.h>
+#include <JavaScriptCore/GPRInfo.h>
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/JSString.h>
+#include <JavaScriptCore/MacroAssembler.h>
+#include <wtf/TZoneMalloc.h>
 
 #if ENABLE(JIT)
 
 namespace JSC {
     class JSInterfaceJIT : public CCallHelpers, public GPRInfo, public JSRInfo, public FPRInfo {
+        WTF_MAKE_TZONE_NON_HEAP_ALLOCATABLE(JSInterfaceJIT);
     public:
 
         JSInterfaceJIT(VM* vm = nullptr, CodeBlock* codeBlock = nullptr)

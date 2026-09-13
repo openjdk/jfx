@@ -26,14 +26,14 @@
 #include "config.h"
 #include "CSSMathNegate.h"
 
-#include "CSSCalcNegateNode.h"
+#include "CSSCalcTree.h"
 #include "CSSNumericValue.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CSSMathNegate);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSMathNegate);
 
 static CSSNumericType copyType(const CSSNumberish& numberish)
 {
@@ -49,7 +49,7 @@ static CSSNumericType copyType(const CSSNumberish& numberish)
 
 CSSMathNegate::CSSMathNegate(CSSNumberish&& numberish)
     : CSSMathValue(copyType(numberish))
-    , m_value(rectifyNumberish(WTFMove(numberish)))
+    , m_value(rectifyNumberish(WTF::move(numberish)))
 {
 }
 
@@ -57,7 +57,7 @@ void CSSMathNegate::serialize(StringBuilder& builder, OptionSet<SerializationArg
 {
     // https://drafts.css-houdini.org/css-typed-om/#calc-serialization
     if (!arguments.contains(SerializationArguments::WithoutParentheses))
-        builder.append(arguments.contains(SerializationArguments::Nested) ? "(" : "calc(");
+        builder.append(arguments.contains(SerializationArguments::Nested) ? "("_s : "calc("_s);
     builder.append('-');
     m_value->serialize(builder, arguments);
     if (!arguments.contains(SerializationArguments::WithoutParentheses))
@@ -84,11 +84,18 @@ bool CSSMathNegate::equals(const CSSNumericValue& other) const
     return m_value->equals(otherNegate->value());
 }
 
-RefPtr<CSSCalcExpressionNode> CSSMathNegate::toCalcExpressionNode() const
+std::optional<CSSCalc::Child> CSSMathNegate::toCalcTreeNode() const
 {
-    if (auto value = m_value->toCalcExpressionNode())
-        return CSSCalcNegateNode::create(value.releaseNonNull());
-    return nullptr;
+    auto child = m_value->toCalcTreeNode();
+    if (!child)
+        return std::nullopt;
+
+    auto negate = CSSCalc::Negate { .a = WTF::move(*child) };
+    auto type = CSSCalc::toType(negate);
+    if (!type)
+        return std::nullopt;
+
+    return CSSCalc::makeChild(WTF::move(negate), *type);
 }
 
 } // namespace WebCore

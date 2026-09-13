@@ -24,7 +24,6 @@
 */
 
 [
-    EnabledBySetting=DialogElementEnabled,
     Exposed=Window,
 ] interface HTMLDialogElement : HTMLElement {
     [CEReactions=Needed, Reflect] attribute boolean open;
@@ -32,4 +31,5 @@
     [CEReactions=Needed] undefined show();
     [CEReactions=Needed] undefined showModal();
     [CEReactions=Needed] undefined close(optional DOMString returnValue);
+    [CEReactions=Needed] undefined requestClose(optional DOMString returnValue);
 };

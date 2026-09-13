@@ -78,7 +78,7 @@
 GstByteWriter *
 gst_byte_writer_new (void)
 {
-  GstByteWriter *ret = g_slice_new0 (GstByteWriter);
+  GstByteWriter *ret = g_new0 (GstByteWriter, 1);
 
   ret->owned = TRUE;
   return ret;
@@ -111,7 +111,7 @@ gst_byte_writer_new_with_size (guint size, gboolean fixed)
 
 /**
  * gst_byte_writer_new_with_data: (skip)
- * @data: Memory area for writing
+ * @data: (array length=size): Memory area for writing
  * @size: Size of @data in bytes
  * @initialized: If %TRUE the complete data can be read from the beginning
  *
@@ -289,7 +289,7 @@ gst_byte_writer_free (GstByteWriter * writer)
   g_return_if_fail (writer != NULL);
 
   gst_byte_writer_reset (writer);
-  g_slice_free (GstByteWriter, writer);
+  g_free (writer);
 }
 
 /**
@@ -301,7 +301,7 @@ gst_byte_writer_free (GstByteWriter * writer)
  *
  * Free-function: g_free
  *
- * Returns: (transfer full): the current data. g_free() after usage.
+ * Returns: (transfer full) (array): the current data. g_free() after usage.
  */
 guint8 *
 gst_byte_writer_free_and_get_data (GstByteWriter * writer)
@@ -311,7 +311,7 @@ gst_byte_writer_free_and_get_data (GstByteWriter * writer)
   g_return_val_if_fail (writer != NULL, NULL);
 
   data = gst_byte_writer_reset_and_get_data (writer);
-  g_slice_free (GstByteWriter, writer);
+  g_free (writer);
 
   return data;
 }
@@ -336,7 +336,7 @@ gst_byte_writer_free_and_get_buffer (GstByteWriter * writer)
   g_return_val_if_fail (writer != NULL, NULL);
 
   buffer = gst_byte_writer_reset_and_get_buffer (writer);
-  g_slice_free (GstByteWriter, writer);
+  g_free (writer);
 
   return buffer;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,14 +29,14 @@ import com.sun.javafx.binding.ContentBinding;
 import javafx.beans.binding.Bindings;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ContentBindingListTest {
 
@@ -47,7 +47,7 @@ public class ContentBindingListTest {
     private List<Integer> list1;
     private List<Integer> list2;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         list0 = new ArrayList<>();
         list1 = new ArrayList<>(Arrays.asList(0));
@@ -84,19 +84,25 @@ public class ContentBindingListTest {
         assertEquals(list2_sorted, op2);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testBind_Null_X() {
-        Bindings.bindContent(null, op2);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.bindContent(null, op2);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testBind_X_Null() {
-        Bindings.bindContent(op1, null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.bindContent(op1, null);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testBind_X_Self() {
-        Bindings.bindContent(op2, op2);
+        assertThrows(IllegalArgumentException.class, () -> {
+            Bindings.bindContent(op2, op2);
+        });
     }
 
     @Test
@@ -123,20 +129,27 @@ public class ContentBindingListTest {
         assertEquals(list1, op2);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testUnbind_Null_X() {
-        Bindings.unbindContent(null, op2);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.unbindContent(null, op2);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testUnbind_X_Null() {
-        Bindings.unbindContent(op1, null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.unbindContent(op1, null);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testUnbind_X_Self() {
-        Bindings.unbindContent(op2, op2);
+        assertThrows(IllegalArgumentException.class, () -> {
+            Bindings.unbindContent(op2, op2);
+        });
     }
+
 
     @Test
     public void testChaining() {
@@ -174,7 +187,7 @@ public class ContentBindingListTest {
     }
 
     @Test
-    public void testEquals() {
+     public void testEquals() {
         final Object golden = ContentBinding.bind(op1, op2);
         ContentBinding.unbind(op1, op2);
 
@@ -187,7 +200,7 @@ public class ContentBindingListTest {
         ContentBinding.unbind(op2, op3);
         assertFalse(golden.equals(ContentBinding.bind(op2, op3)));
         ContentBinding.unbind(op2, op3);
-    }
+     }
 
     @Test
     public void testEqualsWithGCedProperty() {
@@ -209,8 +222,8 @@ public class ContentBindingListTest {
         final Thread.UncaughtExceptionHandler exceptionHandler =
                 Thread.currentThread().getUncaughtExceptionHandler();
         Thread.currentThread().setUncaughtExceptionHandler((t, e) -> {
-                throw new AssertionError("We don't expect any exceptions in this test!", e);
-            }
+                    throw new AssertionError("We don't expect any exceptions in this test!", e);
+                }
         );
 
         ContentBinding.bind(op1, op2);

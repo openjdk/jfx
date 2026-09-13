@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,9 +24,6 @@
  */
 
 package javafx.application;
-
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 /**
  * Class that is extended to define an optional preloader for a
@@ -106,14 +103,7 @@ import java.security.PrivilegedAction;
  */
 public abstract class Preloader extends Application {
 
-    // Too bad this isn't already available in a Java core class
-    private static final String lineSeparator;
-
-    static {
-        @SuppressWarnings("removal")
-        String prop = AccessController.doPrivileged((PrivilegedAction<String>) () -> System.getProperty("line.separator"));
-        lineSeparator = prop != null ? prop : "\n";
-    }
+    private static final String lineSeparator = System.lineSeparator();
 
     /**
      * Constructor for subclasses to call.
@@ -202,8 +192,8 @@ public abstract class Preloader extends Application {
 //     * @param info the UI notification
 //     */
 //    public void handleUINotification(UINotification info) {
-//        // TODO RT-19601: not used for now pending completion of JRE work
-////        System.err.println("Preloader: handleUINotification = " + info);
+//        // TODO JDK-8091711: not used for now pending completion of JRE work
+//--        System.err.println("Preloader: handleUINotification = " + info);
 //    }
 
     // ------------------------------------------------------------------------
@@ -431,7 +421,7 @@ public abstract class Preloader extends Application {
 //     * application launch. In particular proxy and security dialogs
 //     */
 //    public static class UINotification implements PreloaderNotification {
-//       //TODO RT-19601: implementation pending JRE work
+//       //TODO JDK-8091711: implementation pending JRE work
 //    }
 
 }

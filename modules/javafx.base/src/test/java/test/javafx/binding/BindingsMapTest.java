@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,12 +33,12 @@ import javafx.beans.property.StringProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableMap;
-import test.com.sun.javafx.binding.ErrorLoggingUtiltity;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import test.com.sun.javafx.binding.ErrorLoggingUtility;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class BindingsMapTest {
 
@@ -56,12 +56,12 @@ public class BindingsMapTest {
     private ObservableMap<String, Object> map2;
     private StringProperty index;
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() {
-        ErrorLoggingUtiltity.reset();
+        ErrorLoggingUtility.reset();
     }
 
-    @Before
+    @BeforeEach
     public void setUp() {
         property = new SimpleMapProperty<>();
         map1 = FXCollections.observableHashMap();
@@ -90,10 +90,13 @@ public class BindingsMapTest {
         assertEquals(0, size.get());
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testSize_Null() {
-        Bindings.size((ObservableMap<String, Object>) null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.size((ObservableMap<String, Object>) null);
+        });
     }
+
 
     @Test
     public void testIsEmpty() {
@@ -114,10 +117,13 @@ public class BindingsMapTest {
         assertTrue(empty.get());
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testIsEmpty_Null() {
-        Bindings.isEmpty((ObservableMap<String, Object>) null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.isEmpty((ObservableMap<String, Object>) null);
+        });
     }
+
 
     @Test
     public void testIsNotEmpty() {
@@ -138,10 +144,13 @@ public class BindingsMapTest {
         assertFalse(notEmpty.get());
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testIsNotEmpty_Null() {
-        Bindings.isNotEmpty((ObservableMap<String, Object>) null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.isNotEmpty((ObservableMap<String, Object>) null);
+        });
     }
+
 
     @Test
     public void testValueAt_Constant() {
@@ -182,10 +191,13 @@ public class BindingsMapTest {
         assertNull(binding2.get());
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testValueAt_Constant_Null() {
-        Bindings.valueAt(null, key1);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.valueAt(null, key1);
+        });
     }
+
 
     @Test
     public void testValueAt_Variable() {
@@ -239,15 +251,21 @@ public class BindingsMapTest {
         assertNull(binding.get());
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testValueAt_Variable_Null() {
-        Bindings.valueAt((ObservableMap<String, Object>)null, index);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.valueAt((ObservableMap<String, Object>)null, index);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+
+    @Test
     public void testValueAt_Variable_Null_2() {
-        Bindings.valueAt(property, (ObservableValue<String>)null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.valueAt(property, (ObservableValue<String>)null);
+        });
     }
+
 
     @Test
     public void testBooleanValueAt_Constant() {
@@ -267,53 +285,43 @@ public class BindingsMapTest {
         DependencyUtils.checkDependencies(binding1.getDependencies(), localProperty);
         DependencyUtils.checkDependencies(binding2.getDependencies(), localProperty);
         assertEquals(defaultData, binding0.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap1);
         assertEquals(localData1, binding0.get());
         assertEquals(localData2, binding1.get());
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.remove(key2);
         assertEquals(localData1, binding0.get());
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap2);
         assertEquals(defaultData, binding0.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.put(key1, localData2);
         localProperty.put(key2, localData2);
         assertEquals(localData2, binding0.get());
         assertEquals(localData2, binding1.get());
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(null);
         assertEquals(defaultData, binding0.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testBooleanValueAt_Constant_Null() {
-        Bindings.booleanValueAt(null, key1);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.booleanValueAt(null, key1);
+        });
     }
+
 
     @Test
     public void testBooleanValueAt_Variable() {
@@ -331,73 +339,67 @@ public class BindingsMapTest {
 
         index.set(null);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap1);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData1, binding.get());
         index.set(key2);
         assertEquals(localData2, binding.get());
         index.set(key3);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.remove(key2);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData1, binding.get());
         index.set(key2);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap2);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.put(key1, localData2);
         localProperty.put(key2, localData2);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData2, binding.get());
         index.set(key2);
         assertEquals(localData2, binding.get());
         index.set(key3);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(null);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testBooleanValueAt_Variable_Null() {
-        Bindings.booleanValueAt((ObservableMap<String, Boolean>)null, index);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.booleanValueAt((ObservableMap<String, Boolean>)null, index);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+
+    @Test
     public void testBooleanValueAt_Variable_Null_2() {
-        final MapProperty<String, Boolean> localProperty = new SimpleMapProperty<>();
-        Bindings.booleanValueAt(localProperty, (ObservableValue<String>)null);
+        assertThrows(NullPointerException.class, () -> {
+            final MapProperty<String, Boolean> localProperty = new SimpleMapProperty<>();
+            Bindings.booleanValueAt(localProperty, (ObservableValue<String>)null);
+        });
     }
+
 
     @Test
     public void testDoubleValueAt_Constant() {
@@ -417,53 +419,43 @@ public class BindingsMapTest {
         DependencyUtils.checkDependencies(binding1.getDependencies(), localProperty);
         DependencyUtils.checkDependencies(binding2.getDependencies(), localProperty);
         assertEquals(defaultData, binding0.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap1);
         assertEquals(localData1, binding0.get(), EPSILON_DOUBLE);
         assertEquals(localData2, binding1.get(), EPSILON_DOUBLE);
         assertEquals(defaultData, binding2.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.remove(key2);
         assertEquals(localData1, binding0.get(), EPSILON_DOUBLE);
         assertEquals(defaultData, binding1.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap2);
         assertEquals(defaultData, binding0.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.put(key1, localData2);
         localProperty.put(key2, localData2);
         assertEquals(localData2, binding0.get(), EPSILON_DOUBLE);
         assertEquals(localData2, binding1.get(), EPSILON_DOUBLE);
         assertEquals(defaultData, binding2.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(null);
         assertEquals(defaultData, binding0.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testDoubleValueAt_Constant_Null() {
-        Bindings.doubleValueAt(null, key1);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.doubleValueAt(null, key1);
+        });
     }
+
 
     @Test
     public void testDoubleValueAt_Variable() {
@@ -481,73 +473,67 @@ public class BindingsMapTest {
 
         index.set(null);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap1);
         index.set(null);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData1, binding.get(), EPSILON_DOUBLE);
         index.set(key2);
         assertEquals(localData2, binding.get(), EPSILON_DOUBLE);
         index.set(key3);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.remove(key2);
         index.set(null);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData1, binding.get(), EPSILON_DOUBLE);
         index.set(key2);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap2);
         index.set(null);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.put(key1, localData2);
         localProperty.put(key2, localData2);
         index.set(null);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData2, binding.get(), EPSILON_DOUBLE);
         index.set(key2);
         assertEquals(localData2, binding.get(), EPSILON_DOUBLE);
         index.set(key3);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(null);
         index.set(null);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get(), EPSILON_DOUBLE);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testDoubleValueAt_Variable_Null_1() {
-        Bindings.doubleValueAt((ObservableMap<String, Double>)null, index);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.doubleValueAt((ObservableMap<String, Double>)null, index);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+
+    @Test
     public void testDoubleValueAt_Variable_Null_2() {
-        final MapProperty<String, Double> localProperty = new SimpleMapProperty<>();
-        Bindings.doubleValueAt(localProperty, (ObservableValue<String>)null);
+        assertThrows(NullPointerException.class, () -> {
+            final MapProperty<String, Double> localProperty = new SimpleMapProperty<>();
+            Bindings.doubleValueAt(localProperty, (ObservableValue<String>)null);
+        });
     }
+
 
     @Test
     public void testFloatValueAt_Constant() {
@@ -567,53 +553,43 @@ public class BindingsMapTest {
         DependencyUtils.checkDependencies(binding1.getDependencies(), localProperty);
         DependencyUtils.checkDependencies(binding2.getDependencies(), localProperty);
         assertEquals(defaultData, binding0.get(), EPSILON_FLOAT);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get(), EPSILON_FLOAT);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get(), EPSILON_FLOAT);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap1);
         assertEquals(localData1, binding0.get(), EPSILON_FLOAT);
         assertEquals(localData2, binding1.get(), EPSILON_FLOAT);
         assertEquals(defaultData, binding2.get(), EPSILON_FLOAT);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.remove(key2);
         assertEquals(localData1, binding0.get(), EPSILON_FLOAT);
         assertEquals(defaultData, binding1.get(), EPSILON_FLOAT);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get(), EPSILON_FLOAT);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap2);
         assertEquals(defaultData, binding0.get(), EPSILON_FLOAT);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get(), EPSILON_FLOAT);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get(), EPSILON_FLOAT);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.put(key1, localData2);
         localProperty.put(key2, localData2);
         assertEquals(localData2, binding0.get(), EPSILON_FLOAT);
         assertEquals(localData2, binding1.get(), EPSILON_FLOAT);
         assertEquals(defaultData, binding2.get(), EPSILON_FLOAT);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(null);
         assertEquals(defaultData, binding0.get(), EPSILON_FLOAT);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get(), EPSILON_FLOAT);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get(), EPSILON_FLOAT);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testFloatValueAt_Constant_Null() {
-        Bindings.floatValueAt(null, key1);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.floatValueAt(null, key1);
+        });
     }
+
 
     @Test
     public void testFloatValueAt_Variable() {
@@ -631,73 +607,67 @@ public class BindingsMapTest {
 
         index.set(null);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap1);
         index.set(null);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData1, binding.get(), EPSILON_FLOAT);
         index.set(key2);
         assertEquals(localData2, binding.get(), EPSILON_FLOAT);
         index.set(key3);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.remove(key2);
         index.set(null);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData1, binding.get(), EPSILON_FLOAT);
         index.set(key2);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap2);
         index.set(null);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.put(key1, localData2);
         localProperty.put(key2, localData2);
         index.set(null);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData2, binding.get(), EPSILON_FLOAT);
         index.set(key2);
         assertEquals(localData2, binding.get(), EPSILON_FLOAT);
         index.set(key3);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(null);
         index.set(null);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get(), EPSILON_FLOAT);
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testFloatValueAt_Variable_Null_1() {
-        Bindings.floatValueAt((ObservableMap<String, Float>)null, index);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.floatValueAt((ObservableMap<String, Float>)null, index);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+
+    @Test
     public void testFloatValueAt_Variable_Null_2() {
-        final MapProperty<String, Float> localProperty = new SimpleMapProperty<>();
-        Bindings.floatValueAt(localProperty, (ObservableValue<String>)null);
+        assertThrows(NullPointerException.class, () -> {
+            final MapProperty<String, Float> localProperty = new SimpleMapProperty<>();
+            Bindings.floatValueAt(localProperty, (ObservableValue<String>)null);
+        });
     }
+
 
     @Test
     public void testIntegerValueAt_Constant() {
@@ -717,53 +687,43 @@ public class BindingsMapTest {
         DependencyUtils.checkDependencies(binding1.getDependencies(), localProperty);
         DependencyUtils.checkDependencies(binding2.getDependencies(), localProperty);
         assertEquals(defaultData, binding0.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap1);
         assertEquals(localData1, binding0.get());
         assertEquals(localData2, binding1.get());
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.remove(key2);
         assertEquals(localData1, binding0.get());
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap2);
         assertEquals(defaultData, binding0.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.put(key1, localData2);
         localProperty.put(key2, localData2);
         assertEquals(localData2, binding0.get());
         assertEquals(localData2, binding1.get());
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(null);
         assertEquals(defaultData, binding0.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testIntegerValueAt_Constant_Null() {
-        Bindings.integerValueAt(null, key1);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.integerValueAt(null, key1);
+        });
     }
+
 
     @Test
     public void testIntegerValueAt_Variable() {
@@ -781,73 +741,67 @@ public class BindingsMapTest {
 
         index.set(null);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap1);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData1, binding.get());
         index.set(key2);
         assertEquals(localData2, binding.get());
         index.set(key3);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.remove(key2);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData1, binding.get());
         index.set(key2);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap2);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.put(key1, localData2);
         localProperty.put(key2, localData2);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData2, binding.get());
         index.set(key2);
         assertEquals(localData2, binding.get());
         index.set(key3);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(null);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testIntegerValueAt_Variable_Null_1() {
-        Bindings.integerValueAt((ObservableMap<String, Integer>)null, index);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.integerValueAt((ObservableMap<String, Integer>)null, index);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+
+    @Test
     public void testIntegerValueAt_Variable_Null_2() {
-        final MapProperty<String, Integer> localProperty = new SimpleMapProperty<>();
-        Bindings.integerValueAt(localProperty, (ObservableValue<String>)null);
+        assertThrows(NullPointerException.class, () -> {
+            final MapProperty<String, Integer> localProperty = new SimpleMapProperty<>();
+            Bindings.integerValueAt(localProperty, (ObservableValue<String>)null);
+        });
     }
+
 
     @Test
     public void testLongValueAt_Constant() {
@@ -867,53 +821,43 @@ public class BindingsMapTest {
         DependencyUtils.checkDependencies(binding1.getDependencies(), localProperty);
         DependencyUtils.checkDependencies(binding2.getDependencies(), localProperty);
         assertEquals(defaultData, binding0.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap1);
         assertEquals(localData1, binding0.get());
         assertEquals(localData2, binding1.get());
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.remove(key2);
         assertEquals(localData1, binding0.get());
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap2);
         assertEquals(defaultData, binding0.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.put(key1, localData2);
         localProperty.put(key2, localData2);
         assertEquals(localData2, binding0.get());
         assertEquals(localData2, binding1.get());
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(null);
         assertEquals(defaultData, binding0.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding1.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         assertEquals(defaultData, binding2.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testLongValueAt_Constant_Null() {
-        Bindings.longValueAt(null, key1);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.longValueAt(null, key1);
+        });
     }
+
 
     @Test
     public void testLongValueAt_Variable() {
@@ -931,73 +875,67 @@ public class BindingsMapTest {
 
         index.set(null);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap1);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData1, binding.get());
         index.set(key2);
         assertEquals(localData2, binding.get());
         index.set(key3);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.remove(key2);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData1, binding.get());
         index.set(key2);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(localMap2);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.put(key1, localData2);
         localProperty.put(key2, localData2);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(localData2, binding.get());
         index.set(key2);
         assertEquals(localData2, binding.get());
         index.set(key3);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
 
         localProperty.set(null);
         index.set(null);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
         index.set(key1);
         assertEquals(defaultData, binding.get());
-        ErrorLoggingUtiltity.checkFine(NullPointerException.class);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testLongValueAt_Variable_Null() {
-        Bindings.longValueAt((ObservableMap<String, Long>)null, index);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.longValueAt((ObservableMap<String, Long>)null, index);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+
+    @Test
     public void testLongValueAt_Variable_Null_2() {
-        final MapProperty<String, Long> localProperty = new SimpleMapProperty<>();
-        Bindings.longValueAt(localProperty, (ObservableValue<String>)null);
+        assertThrows(NullPointerException.class, () -> {
+            final MapProperty<String, Long> localProperty = new SimpleMapProperty<>();
+            Bindings.longValueAt(localProperty, (ObservableValue<String>)null);
+        });
     }
+
 
     @Test
     public void testStringValueAt_Constant() {
@@ -1047,10 +985,13 @@ public class BindingsMapTest {
         assertEquals(defaultData, binding2.get());
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testStringValueAt_Constant_Null() {
-        Bindings.stringValueAt(null, key1);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.stringValueAt(null, key1);
+        });
     }
+
 
     @Test
     public void testStringValueAt_Variable() {
@@ -1113,16 +1054,19 @@ public class BindingsMapTest {
         assertEquals(defaultData, binding.get());
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testStringValueAt_Variable_Null() {
-        Bindings.stringValueAt((ObservableMap<String, String>)null, index);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.stringValueAt((ObservableMap<String, String>)null, index);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+
+    @Test
     public void testStringValueAt_Variable_Null_2() {
-        final MapProperty<String, String> localProperty = new SimpleMapProperty<>();
-        Bindings.stringValueAt(localProperty, (ObservableValue<String>)null);
+        assertThrows(NullPointerException.class, () -> {
+            final MapProperty<String, String> localProperty = new SimpleMapProperty<>();
+            Bindings.stringValueAt(localProperty, (ObservableValue<String>)null);
+        });
     }
-
-
 }

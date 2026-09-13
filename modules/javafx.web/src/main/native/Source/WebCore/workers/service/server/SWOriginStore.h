@@ -25,15 +25,14 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
-#include "SecurityOriginData.h"
+#include <WebCore/SecurityOriginData.h>
 #include <wtf/HashMap.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class SWOriginStore {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(SWOriginStore, WEBCORE_EXPORT);
 public:
     virtual ~SWOriginStore() = default;
 
@@ -53,5 +52,3 @@ private:
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

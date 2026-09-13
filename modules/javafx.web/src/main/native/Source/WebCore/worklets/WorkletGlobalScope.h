@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,10 +27,11 @@
 #pragma once
 
 #include "Document.h"
-#include "ExceptionOr.h"
+#include "EventTargetInterfaces.h"
 #include "FetchRequestCredentials.h"
 #include "ScriptExecutionContext.h"
 #include "ScriptSourceCode.h"
+#include "Settings.h"
 #include "WorkerOrWorkletGlobalScope.h"
 #include "WorkerOrWorkletScriptController.h"
 #include <JavaScriptCore/ConsoleMessage.h>
@@ -48,17 +49,16 @@ class WorkerScriptLoader;
 
 struct WorkletParameters;
 
-enum WorkletGlobalScopeIdentifierType { };
+enum class WorkletGlobalScopeIdentifierType { };
 using WorkletGlobalScopeIdentifier = ObjectIdentifier<WorkletGlobalScopeIdentifierType>;
 
 class WorkletGlobalScope : public WorkerOrWorkletGlobalScope {
-    WTF_MAKE_ISO_ALLOCATED(WorkletGlobalScope);
+    WTF_MAKE_TZONE_ALLOCATED(WorkletGlobalScope);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(WorkletGlobalScope);
 public:
     virtual ~WorkletGlobalScope();
 
-#if ENABLE(CSS_PAINTING_API)
     virtual bool isPaintWorkletGlobalScope() const { return false; }
-#endif
 #if ENABLE(WEB_AUDIO)
     virtual bool isAudioWorkletGlobalScope() const { return false; }
 #endif
@@ -68,6 +68,7 @@ public:
     MessagePortChannelProvider& messagePortChannelProvider();
 
     const URL& url() const final { return m_url; }
+    const URL& cookieURL() const final { return url(); }
 
     void evaluate();
 
@@ -96,7 +97,7 @@ private:
     IDBClient::IDBConnectionProxy* idbConnectionProxy() final { ASSERT_NOT_REACHED(); return nullptr; }
 
     // EventTarget.
-    EventTargetInterface eventTargetInterface() const final { return WorkletGlobalScopeEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::WorkletGlobalScope; }
 
     bool isWorkletGlobalScope() const final { return true; }
 
@@ -105,30 +106,31 @@ private:
     void addConsoleMessage(MessageSource, MessageLevel, const String&, unsigned long) final;
 
     EventTarget* errorEventTarget() final { return this; }
-
-#if ENABLE(WEB_CRYPTO)
-    bool wrapCryptoKey(const Vector<uint8_t>&, Vector<uint8_t>&) final { RELEASE_ASSERT_NOT_REACHED(); return false; }
-    bool unwrapCryptoKey(const Vector<uint8_t>&, Vector<uint8_t>&) final { RELEASE_ASSERT_NOT_REACHED(); return false; }
+#if !PLATFORM(JAVA)
+    std::optional<Vector<uint8_t>> serializeAndWrapCryptoKey(CryptoKeyData&&) final { RELEASE_ASSERT_NOT_REACHED(); return std::nullopt; }
+    std::optional<Vector<uint8_t>> unwrapCryptoKey(const Vector<uint8_t>&) final { RELEASE_ASSERT_NOT_REACHED(); return std::nullopt; }
 #endif
     URL completeURL(const String&, ForceUTF8 = ForceUTF8::No) const final;
     String userAgent(const URL&) const final;
-    const Settings::Values& settingsValues() const final { return m_settingsValues; }
+    const SettingsValues& settingsValues() const final { return m_settingsValues; }
 
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
 
-    Ref<SecurityOrigin> m_topOrigin;
+    const Ref<SecurityOrigin> m_topOrigin;
 
     URL m_url;
     JSC::RuntimeFlags m_jsRuntimeFlags;
     std::optional<ScriptSourceCode> m_code;
 
-    std::unique_ptr<WorkerMessagePortChannelProvider> m_messagePortChannelProvider;
+    const RefPtr<WorkerMessagePortChannelProvider> m_messagePortChannelProvider;
 
-    Settings::Values m_settingsValues;
+    SettingsValues m_settingsValues;
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WorkletGlobalScope)
 static bool isType(const WebCore::ScriptExecutionContext& context) { return context.isWorkletGlobalScope(); }
+static bool isType(const WebCore::WorkerOrWorkletGlobalScope& context) { return context.isWorkletGlobalScope(); }
+static bool isType(const WebCore::EventTarget& context) { return context.eventTargetInterface() == WebCore::EventTargetInterfaceType::WorkletGlobalScope; }
 SPECIALIZE_TYPE_TRAITS_END()

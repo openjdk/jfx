@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -91,7 +91,7 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
         addDefaultChildMap(getInputMap(), expandCollapseInputMap);
 
 
-        // Fix for RT-16565
+        // Fix for JDK-8128723
         control.selectionModelProperty().addListener(weakSelectionModelListener);
         if (getSelectionModel() != null) {
             control.getSelectionModel().getSelectedCells().addListener(selectedCellsListener);
@@ -177,7 +177,7 @@ public class TreeTableViewBehavior<T> extends TableViewBehaviorBase<TreeTableVie
 
     /** {@inheritDoc} */
     @Override protected void selectAllToFocus(boolean setAnchorToFocusIndex) {
-        // Fix for RT-31241
+        // Fix for JDK-8123409
         if (getNode().getEditingCell() != null) return;
 
         super.selectAllToFocus(setAnchorToFocusIndex);

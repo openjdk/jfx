@@ -30,31 +30,34 @@
 #include "WorkerDebuggerProxy.h"
 #include "WorkerOrWorkletGlobalScope.h"
 #include "WorkerThread.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace Inspector;
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WorkerNetworkAgent);
+
 WorkerNetworkAgent::WorkerNetworkAgent(WorkerAgentContext& context)
-    : InspectorNetworkAgent(context)
+    : InspectorNetworkAgent(context, { Ref { context.globalScope.get() }->settingsValues().inspectorMaximumResourcesContentSize, Ref { context.globalScope.get() }->settingsValues().inspectorSupportsShowingCertificate })
     , m_globalScope(context.globalScope)
 {
-    ASSERT(context.globalScope.isContextThread());
+    ASSERT(context.globalScope->isContextThread());
 }
 
 WorkerNetworkAgent::~WorkerNetworkAgent() = default;
 
-Protocol::Network::LoaderId WorkerNetworkAgent::loaderIdentifier(DocumentLoader*)
+Inspector::Protocol::Network::LoaderId WorkerNetworkAgent::loaderIdentifier(DocumentLoader*)
 {
     return { };
 }
 
-Protocol::Network::FrameId WorkerNetworkAgent::frameIdentifier(DocumentLoader*)
+Inspector::Protocol::Network::FrameId WorkerNetworkAgent::frameIdentifier(DocumentLoader*)
 {
     return { };
 }
 
-Vector<WebSocket*> WorkerNetworkAgent::activeWebSockets()
+Vector<Ref<WebSocket>> WorkerNetworkAgent::activeWebSockets()
 {
     // FIXME: <https://webkit.org/b/168475> Web Inspector: Correctly display worker's WebSockets
     return { };
@@ -62,7 +65,7 @@ Vector<WebSocket*> WorkerNetworkAgent::activeWebSockets()
 
 void WorkerNetworkAgent::setResourceCachingDisabledInternal(bool disabled)
 {
-    if (auto* workerDebuggerProxy = m_globalScope.workerOrWorkletThread()->workerDebuggerProxy())
+    if (auto* workerDebuggerProxy = Ref { m_globalScope.get() }->workerOrWorkletThread()->workerDebuggerProxy())
         workerDebuggerProxy->setResourceCachingDisabledByWebInspector(disabled);
 }
 
@@ -75,14 +78,14 @@ bool WorkerNetworkAgent::setEmulatedConditionsInternal(std::optional<int>&& /* b
 
 #endif // ENABLE(INSPECTOR_NETWORK_THROTTLING)
 
-ScriptExecutionContext* WorkerNetworkAgent::scriptExecutionContext(Protocol::ErrorString&, const Protocol::Network::FrameId&)
+ScriptExecutionContext* WorkerNetworkAgent::scriptExecutionContext(Inspector::Protocol::ErrorString&, const Inspector::Protocol::Network::FrameId&)
 {
-    return &m_globalScope;
+    return m_globalScope.ptr();
 }
 
 void WorkerNetworkAgent::addConsoleMessage(std::unique_ptr<Inspector::ConsoleMessage>&& message)
 {
-    m_globalScope.addConsoleMessage(WTFMove(message));
+    Ref { m_globalScope.get() }->addConsoleMessage(WTF::move(message));
 }
 
 } // namespace WebCore

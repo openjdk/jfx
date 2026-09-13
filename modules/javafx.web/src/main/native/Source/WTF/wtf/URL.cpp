@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Research In Motion Limited. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -28,6 +28,7 @@
 #include <wtf/URL.h>
 
 #include "URLParser.h"
+#include <ranges>
 #include <stdio.h>
 #include <unicode/uidna.h>
 #include <wtf/FileSystem.h>
@@ -39,6 +40,7 @@
 #include <wtf/StdLibExtras.h>
 #include <wtf/UUID.h>
 #include <wtf/text/CString.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/StringToIntegerConversion.h>
@@ -69,10 +71,10 @@ URL::URL(const URL& base, const String& relative, const URLTextEncoding* encodin
 
 URL::URL(String&& absoluteURL, const URLTextEncoding* encoding)
 {
-    *this = URLParser(WTFMove(absoluteURL), URL(), encoding).result();
+    *this = URLParser(WTF::move(absoluteURL), URL(), encoding).result();
 }
 
-static bool shouldTrimFromURL(UChar character)
+static bool shouldTrimFromURL(char16_t character)
 {
     // Ignore leading/trailing whitespace and control characters.
     return character <= ' ';
@@ -87,12 +89,12 @@ URL URL::isolatedCopy() const &
 
 URL URL::isolatedCopy() &&
 {
-    URL result { WTFMove(*this) };
-    result.m_string = WTFMove(result.m_string).isolatedCopy();
+    URL result { WTF::move(*this) };
+    result.m_string = WTF::move(result.m_string).isolatedCopy();
     return result;
 }
 
-StringView URL::lastPathComponent() const
+StringView URL::lastPathComponent() const LIFETIME_BOUND
 {
     if (!hasPath())
         return { };
@@ -128,6 +130,23 @@ bool URL::hasLocalScheme() const
         || protocolIsData();
 }
 
+bool URL::hasFetchScheme() const
+{
+    // https://fetch.spec.whatwg.org/#fetch-scheme
+    return protocolIsInHTTPFamily()
+        || protocolIsAbout()
+        || protocolIsBlob()
+        || protocolIsData()
+        || protocolIsFile();
+}
+
+bool URL::protocolIsSecure() const
+{
+    // Note: FTPS is not considered secure for WebKit purposes.
+    return protocolIs("https"_s)
+        || protocolIs("wss"_s);
+}
+
 unsigned URL::pathStart() const
 {
     unsigned start = m_hostEnd + m_portLength;
@@ -138,7 +157,7 @@ unsigned URL::pathStart() const
     return start;
 }
 
-StringView URL::protocol() const
+StringView URL::protocol() const LIFETIME_BOUND
 {
     if (!m_isValid)
         return { };
@@ -146,7 +165,7 @@ StringView URL::protocol() const
     return StringView(m_string).left(m_schemeEnd);
 }
 
-StringView URL::host() const
+StringView URL::host() const LIFETIME_BOUND
 {
     if (!m_isValid)
         return { };
@@ -178,7 +197,7 @@ String URL::protocolHostAndPort() const
     );
 }
 
-static std::optional<LChar> decodeEscapeSequence(StringView input, unsigned index, unsigned length)
+static std::optional<Latin1Character> decodeEscapeSequence(StringView input, unsigned index, unsigned length)
 {
     if (index + 3 > length || input[index] != '%')
         return std::nullopt;
@@ -198,21 +217,21 @@ static String decodeEscapeSequencesFromParsedURL(StringView input)
         return input.toString();
 
     // FIXME: This 100 is arbitrary. Should make a histogram of how this function is actually used to choose a better value.
-    Vector<LChar, 100> percentDecoded;
+    Vector<Latin1Character, 100> percentDecoded;
     percentDecoded.reserveInitialCapacity(length);
     for (unsigned i = 0; i < length; ) {
         if (auto decodedCharacter = decodeEscapeSequence(input, i, length)) {
-            percentDecoded.uncheckedAppend(*decodedCharacter);
+            percentDecoded.append(*decodedCharacter);
             i += 3;
         } else {
-            percentDecoded.uncheckedAppend(input[i]);
+            percentDecoded.append(input[i]);
             ++i;
     }
     }
 
     // FIXME: Is UTF-8 always the correct encoding?
     // FIXME: This returns a null string when we encounter an invalid UTF-8 sequence. Is that OK?
-    return String::fromUTF8(percentDecoded.data(), percentDecoded.size());
+    return String::fromUTF8(percentDecoded.span());
 }
 
 String URL::user() const
@@ -225,12 +244,12 @@ String URL::password() const
     return decodeEscapeSequencesFromParsedURL(encodedPassword());
 }
 
-StringView URL::encodedUser() const
+StringView URL::encodedUser() const LIFETIME_BOUND
 {
     return StringView(m_string).substring(m_userStart, m_userEnd - m_userStart);
 }
 
-StringView URL::encodedPassword() const
+StringView URL::encodedPassword() const LIFETIME_BOUND
 {
     if (m_passwordEnd == m_userEnd)
         return { };
@@ -238,7 +257,7 @@ StringView URL::encodedPassword() const
     return StringView(m_string).substring(m_userEnd + 1, m_passwordEnd - m_userEnd - 1);
 }
 
-StringView URL::fragmentIdentifier() const
+StringView URL::fragmentIdentifier() const LIFETIME_BOUND
 {
     if (!hasFragmentIdentifier())
         return { };
@@ -247,7 +266,7 @@ StringView URL::fragmentIdentifier() const
 }
 
 // https://wicg.github.io/scroll-to-text-fragment/#the-fragment-directive
-String URL::consumefragmentDirective()
+String URL::consumeFragmentDirective()
 {
     ASCIILiteral fragmentDirectiveDelimiter = ":~:"_s;
     auto fragment = fragmentIdentifier();
@@ -259,7 +278,11 @@ String URL::consumefragmentDirective()
 
     auto fragmentDirective = fragment.substring(fragmentDirectiveStart + fragmentDirectiveDelimiter.length()).toString();
 
-    setFragmentIdentifier(fragment.left(fragmentDirectiveStart));
+    auto remainingFragment = fragment.left(fragmentDirectiveStart);
+    if (remainingFragment.isEmpty())
+        removeFragmentIdentifier();
+    else
+        setFragmentIdentifier(remainingFragment);
 
     return fragmentDirective;
 }
@@ -380,7 +403,7 @@ bool URL::protocolIs(StringView protocol) const
     return true;
 }
 
-StringView URL::query() const
+StringView URL::query() const LIFETIME_BOUND
 {
     if (m_queryEnd == m_pathEnd)
         return { };
@@ -388,7 +411,7 @@ StringView URL::query() const
     return StringView(m_string).substring(m_pathEnd + 1, m_queryEnd - (m_pathEnd + 1));
 }
 
-StringView URL::path() const
+StringView URL::path() const LIFETIME_BOUND
 {
     if (!m_isValid)
         return { };
@@ -398,7 +421,6 @@ StringView URL::path() const
 
 bool URL::setProtocol(StringView newProtocol)
 {
-    // Firefox and IE remove everything after the first ':'.
     auto newProtocolPrefix = newProtocol.left(newProtocol.find(':'));
     auto newProtocolCanonicalized = URLParser::maybeCanonicalizeScheme(newProtocolPrefix);
     if (!newProtocolCanonicalized)
@@ -408,6 +430,9 @@ bool URL::setProtocol(StringView newProtocol)
         parse(makeString(*newProtocolCanonicalized, ':', m_string));
         return true;
     }
+
+    if (URLParser::isSpecialScheme(this->protocol()) != URLParser::isSpecialScheme(*newProtocolCanonicalized))
+        return true;
 
     if ((m_passwordEnd != m_userStart || port()) && *newProtocolCanonicalized == "file"_s)
         return true;
@@ -422,7 +447,7 @@ bool URL::setProtocol(StringView newProtocol)
 // Appends the punycoded hostname identified by the given string and length to
 // the output buffer. The result will not be null terminated.
 // Return value of false means error in encoding.
-static bool appendEncodedHostname(Vector<UChar, 512>& buffer, StringView string)
+static bool appendEncodedHostname(Vector<char16_t, 512>& buffer, StringView string)
 {
     // hostnameBuffer needs to be big enough to hold an IDN-encoded name.
     // For host names bigger than this, we won't do IDN encoding, which is almost certainly OK.
@@ -431,14 +456,15 @@ static bool appendEncodedHostname(Vector<UChar, 512>& buffer, StringView string)
         return true;
     }
 
-    UChar hostnameBuffer[URLParser::hostnameBufferLength];
+    std::array<char16_t, URLParser::hostnameBufferLength> hostnameBuffer;
     UErrorCode error = U_ZERO_ERROR;
     UIDNAInfo processingDetails = UIDNA_INFO_INITIALIZER;
-    int32_t numCharactersConverted = uidna_nameToASCII(&URLParser::internationalDomainNameTranscoder(),
-        string.upconvertedCharacters(), string.length(), hostnameBuffer, URLParser::hostnameBufferLength, &processingDetails, &error);
+    // struct UIDNA is forward declared in WTF/icu/unicode/uidna.h.
+    SUPPRESS_FORWARD_DECL_ARG int32_t numCharactersConverted = uidna_nameToASCII(&URLParser::internationalDomainNameTranscoder(),
+        string.upconvertedCharacters(), string.length(), hostnameBuffer.data(), hostnameBuffer.size(), &processingDetails, &error);
 
     if (U_SUCCESS(error) && !(processingDetails.errors & ~URLParser::allowedNameToASCIIErrors) && numCharactersConverted) {
-        buffer.append(hostnameBuffer, numCharactersConverted);
+        buffer.append(std::span { hostnameBuffer }.first(numCharactersConverted));
         return true;
     }
     return false;
@@ -458,40 +484,45 @@ unsigned URL::credentialsEnd() const
     return end;
 }
 
-static bool forwardSlashHashOrQuestionMark(UChar c)
+static bool forwardSlashHashOrQuestionMark(char16_t c)
 {
     return c == '/'
         || c == '#'
         || c == '?';
 }
 
-static bool slashHashOrQuestionMark(UChar c)
+static bool slashHashOrQuestionMark(char16_t c)
 {
     return forwardSlashHashOrQuestionMark(c) || c == '\\';
 }
 
-void URL::setHost(StringView newHost)
+bool URL::setHost(StringView newHost)
 {
-    if (!m_isValid)
-        return;
-
-    if (newHost.contains(':') && !newHost.startsWith('['))
-        return;
+    if (!m_isValid || hasOpaquePath())
+        return false;
 
     if (auto index = newHost.find(hasSpecialScheme() ? slashHashOrQuestionMark : forwardSlashHashOrQuestionMark); index != notFound)
         newHost = newHost.left(index);
 
-    Vector<UChar, 512> encodedHostName;
+    if (newHost.contains('@'))
+        return false;
+
+    if (newHost.contains(':') && !newHost.startsWith('['))
+        return false;
+
+    Vector<char16_t, 512> encodedHostName;
     if (hasSpecialScheme() && !appendEncodedHostname(encodedHostName, newHost))
-        return;
+        return false;
 
     bool slashSlashNeeded = m_userStart == m_schemeEnd + 1U;
     parse(makeString(
         StringView(m_string).left(hostStart()),
         slashSlashNeeded ? "//"_s : ""_s,
-        hasSpecialScheme() ? StringView(encodedHostName.data(), encodedHostName.size()) : newHost,
+        hasSpecialScheme() ? StringView(encodedHostName.span()) : newHost,
         StringView(m_string).substring(m_hostEnd)
     ));
+
+    return m_isValid;
 }
 
 void URL::setPort(std::optional<uint16_t> port)
@@ -512,29 +543,52 @@ void URL::setPort(std::optional<uint16_t> port)
     ));
 }
 
+static unsigned countASCIIDigits(StringView string)
+{
+    unsigned length = string.length();
+    for (unsigned count = 0; count < length; ++count) {
+        if (!isASCIIDigit(string[count]))
+            return count;
+    }
+    return length;
+}
+
 void URL::setHostAndPort(StringView hostAndPort)
 {
-    if (!m_isValid)
+    if (!m_isValid || hasOpaquePath())
         return;
 
-    auto hostName = hostAndPort;
-    StringView portString;
-    auto colonIndex = hostName.reverseFind(':');
-    if (colonIndex != notFound) {
-        portString = hostName.substring(colonIndex + 1);
-        hostName = hostName.left(colonIndex);
-        // Multiple colons are acceptable only in case of IPv6.
-        if (hostName.contains(':') && !hostName.startsWith('['))
+    if (auto index = hostAndPort.find(hasSpecialScheme() ? slashHashOrQuestionMark : forwardSlashHashOrQuestionMark); index != notFound)
+        hostAndPort = hostAndPort.left(index);
+
+    auto colonIndex = hostAndPort.reverseFind(':');
+    if (!colonIndex)
             return;
+
+    auto ipv6Separator = hostAndPort.reverseFind(']');
+    if (colonIndex == notFound || (ipv6Separator != notFound && ipv6Separator > colonIndex)) {
+        setHost(hostAndPort);
+            return;
+    }
+
+    auto portString = hostAndPort.substring(colonIndex + 1);
+    auto hostName = hostAndPort.left(colonIndex);
+    if (hostName.contains('@'))
+        return;
+    // Multiple colons are acceptable only in case of IPv6.
+    if (hostName.contains(':') && ipv6Separator == notFound)
+        return;
+
+    unsigned portLength = countASCIIDigits(portString);
+    if (!portLength) {
+        setHost(hostName);
+        return;
+    }
+    portString = portString.left(portLength);
         if (!parseInteger<uint16_t>(portString))
             portString = { };
-    }
-    if (hostName.isEmpty()) {
-        remove(hostStart(), pathStart() - hostStart());
-        return;
-    }
 
-    Vector<UChar, 512> encodedHostName;
+    Vector<char16_t, 512> encodedHostName;
     if (hasSpecialScheme() && !appendEncodedHostname(encodedHostName, hostName))
         return;
 
@@ -542,27 +596,32 @@ void URL::setHostAndPort(StringView hostAndPort)
     parse(makeString(
         StringView(m_string).left(hostStart()),
         slashSlashNeeded ? "//"_s : ""_s,
-        hasSpecialScheme() ? StringView(encodedHostName.data(), encodedHostName.size()) : hostName,
+        hasSpecialScheme() ? StringView(encodedHostName.span()) : hostName,
         portString.isEmpty() ? ""_s : ":"_s,
         portString,
         StringView(m_string).substring(pathStart())
     ));
 }
 
+void URL::removeHostAndPort()
+{
+    if (m_isValid)
+        remove(hostStart(), pathStart() - hostStart());
+}
+
 template<typename StringType>
-static String percentEncodeCharacters(const StringType& input, bool(*shouldEncode)(UChar))
+static String percentEncodeCharacters(const StringType& input, bool(*shouldEncode)(char16_t))
 {
     auto encode = [shouldEncode] (const StringType& input) {
-        auto result = input.tryGetUTF8([&](std::span<const char> span) -> String {
-        StringBuilder builder;
-            for (unsigned j = 0; j < span.size(); j++) {
-                auto c = span[j];
-            if (shouldEncode(c)) {
-                builder.append('%');
-                builder.append(upperNibbleToASCIIHexDigit(c));
-                builder.append(lowerNibbleToASCIIHexDigit(c));
-            } else
+        auto result = input.tryGetUTF8([&](std::span<const char8_t> span) -> String {
+            StringBuilder builder(OverflowPolicy::RecordOverflow);
+            for (char c : span) {
+                if (shouldEncode(c))
+                    builder.append('%', upperNibbleToASCIIHexDigit(c), lowerNibbleToASCIIHexDigit(c));
+                else
                 builder.append(c);
+                if (builder.hasOverflowed())
+                    return { };
         }
         return builder.toString();
         });
@@ -571,7 +630,7 @@ static String percentEncodeCharacters(const StringType& input, bool(*shouldEncod
     };
 
     for (size_t i = 0; i < input.length(); ++i) {
-        if (UNLIKELY(shouldEncode(input[i])))
+        if (shouldEncode(input[i])) [[unlikely]]
             return encode(input);
     }
     if constexpr (std::is_same_v<StringType, StringView>)
@@ -582,12 +641,12 @@ static String percentEncodeCharacters(const StringType& input, bool(*shouldEncod
 
 void URL::parse(String&& string)
 {
-    *this = URLParser(WTFMove(string)).result();
+    *this = URLParser(WTF::move(string)).result();
 }
 
 void URL::parseAllowingC0AtEnd(String&& string)
 {
-    *this = URLParser(WTFMove(string), { }, URLTextEncodingSentinelAllowingC0AtEnd).result();
+    *this = URLParser(WTF::move(string), { }, URLTextEncodingSentinelAllowingC0AtEnd).result();
 }
 
 void URL::remove(unsigned start, unsigned length)
@@ -598,7 +657,7 @@ void URL::remove(unsigned start, unsigned length)
     ASSERT(length <= m_string.length() - start);
 
     auto stringAfterRemoval = makeStringByRemoving(std::exchange(m_string, { }), start, length);
-    parse(WTFMove(stringAfterRemoval));
+    parse(WTF::move(stringAfterRemoval));
 }
 
 void URL::setUser(StringView newUser)
@@ -661,22 +720,12 @@ void URL::setFragmentIdentifier(StringView identifier)
     parseAllowingC0AtEnd(makeString(StringView(m_string).left(m_queryEnd), '#', identifier));
 }
 
-void URL::maybeTrimTrailingSpacesFromOpaquePath()
-{
-    if (!m_isValid || !hasOpaquePath() || hasFragmentIdentifier() || hasQuery())
-        return;
-
-    parse(makeString(StringView(m_string).left(m_pathEnd)));
-}
-
 void URL::removeFragmentIdentifier()
 {
     if (!m_isValid)
         return;
 
         m_string = m_string.left(m_queryEnd);
-
-    maybeTrimTrailingSpacesFromOpaquePath();
 }
 
 void URL::removeQueryAndFragmentIdentifier()
@@ -686,8 +735,6 @@ void URL::removeQueryAndFragmentIdentifier()
 
     m_string = m_string.left(m_pathEnd);
     m_queryEnd = m_pathEnd;
-
-    maybeTrimTrailingSpacesFromOpaquePath();
 }
 
 void URL::setQuery(StringView newQuery)
@@ -704,14 +751,11 @@ void URL::setQuery(StringView newQuery)
         newQuery,
         StringView(m_string).substring(m_queryEnd)
     ));
-
-    if (newQuery.isNull())
-        maybeTrimTrailingSpacesFromOpaquePath();
 }
 
 static String escapePathWithoutCopying(StringView path)
 {
-    auto questionMarkOrNumberSignOrNonASCII = [] (UChar character) {
+    auto questionMarkOrNumberSignOrNonASCII = [] (char16_t character) {
         return character == '?' || character == '#' || !isASCII(character);
     };
     return percentEncodeCharacters(path, questionMarkOrNumberSignOrNonASCII);
@@ -731,7 +775,7 @@ void URL::setPath(StringView path)
     ));
 }
 
-StringView URL::viewWithoutQueryOrFragmentIdentifier() const
+StringView URL::viewWithoutQueryOrFragmentIdentifier() const LIFETIME_BOUND
 {
     if (!m_isValid)
         return m_string;
@@ -739,7 +783,7 @@ StringView URL::viewWithoutQueryOrFragmentIdentifier() const
     return StringView(m_string).left(pathEnd());
 }
 
-StringView URL::viewWithoutFragmentIdentifier() const
+StringView URL::viewWithoutFragmentIdentifier() const LIFETIME_BOUND
 {
     if (!m_isValid)
         return m_string;
@@ -816,10 +860,15 @@ String encodeWithURLEscapeSequences(const String& input)
     return percentEncodeCharacters(input, URLParser::isInUserInfoEncodeSet);
 }
 
-static bool protocolIsInternal(StringView string, ASCIILiteral protocolLiteral)
+String percentEncodeFragmentDirectiveSpecialCharacters(const String& input)
 {
-    assertProtocolIsGood(protocolLiteral);
-    auto* protocol = protocolLiteral.characters();
+    return percentEncodeCharacters(input, URLParser::isSpecialCharacterForFragmentDirective);
+}
+
+static bool protocolIsInternal(StringView string, ASCIILiteral protocol)
+{
+    assertProtocolIsGood(protocol);
+    size_t protocolIndex = 0;
     bool isLeading = true;
     for (auto codeUnit : string.codeUnits()) {
         if (isLeading) {
@@ -833,9 +882,10 @@ static bool protocolIsInternal(StringView string, ASCIILiteral protocolLiteral)
             continue;
         }
 
-        char expectedCharacter = *protocol++;
-        if (!expectedCharacter)
+
+        if (protocolIndex == protocol.length())
             return codeUnit == ':';
+        char expectedCharacter = protocol[protocolIndex++];
         if (!isASCIIAlphaCaselessEqual(codeUnit, expectedCharacter))
             return false;
     }
@@ -851,7 +901,7 @@ bool protocolIs(StringView string, ASCIILiteral protocol)
 
 void URL::print() const
 {
-    printf("%s\n", m_string.utf8().data());
+    SAFE_PRINTF("%s\n", m_string.utf8());
 }
 
 #endif
@@ -861,26 +911,23 @@ void URL::dump(PrintStream& out) const
     out.print(m_string);
 }
 
-String URL::strippedForUseAsReferrer() const
+URL::StripResult URL::strippedForUseAsReferrer() const
 {
     if (!m_isValid)
-        return m_string;
+        return { m_string, false };
 
     unsigned end = credentialsEnd();
 
     if (m_userStart == end && m_queryEnd == m_string.length())
-        return m_string;
+        return { m_string, false };
 
-    return makeString(
-        StringView(m_string).left(m_userStart),
-        StringView(m_string).substring(end, m_queryEnd - end)
-    );
+    return { makeString(StringView(m_string).left(m_userStart), StringView(m_string).substring(end, m_queryEnd - end)), true };
 }
 
-String URL::strippedForUseAsReferrerWithExplicitPort() const
+URL::StripResult URL::strippedForUseAsReferrerWithExplicitPort() const
 {
     if (!m_isValid)
-        return m_string;
+        return { m_string, false };
 
     // Custom ports will appear in the URL string:
     if (m_portLength)
@@ -893,9 +940,9 @@ String URL::strippedForUseAsReferrerWithExplicitPort() const
     unsigned end = credentialsEnd();
 
     if (m_userStart == end && m_queryEnd == m_string.length())
-        return makeString(StringView(m_string).left(m_hostEnd), ':', static_cast<unsigned>(*port), StringView(m_string).substring(pathStart()));
+        return { makeString(StringView(m_string).left(m_hostEnd), ':', static_cast<unsigned>(*port), StringView(m_string).substring(pathStart())), true };
 
-    return makeString(StringView(m_string).left(m_hostEnd), ':', static_cast<unsigned>(*port), StringView(m_string).substring(end, m_queryEnd - end));
+    return { makeString(StringView(m_string).left(m_hostEnd), ':', static_cast<unsigned>(*port), StringView(m_string).substring(end, m_queryEnd - end)), true };
 }
 
 String URL::strippedForUseAsReport() const
@@ -932,22 +979,14 @@ bool protocolIsInHTTPFamily(StringView url)
 static StaticStringImpl aboutBlankString { "about:blank" };
 const URL& aboutBlankURL()
 {
-    static LazyNeverDestroyed<URL> staticBlankURL;
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [&] {
-        staticBlankURL.construct(&aboutBlankString);
-    });
+    static NeverDestroyed<URL> staticBlankURL { &aboutBlankString };
     return staticBlankURL;
 }
 
 static StaticStringImpl aboutSrcDocString { "about:srcdoc" };
 const URL& aboutSrcDocURL()
 {
-    static LazyNeverDestroyed<URL> staticSrcDocURL;
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [&] {
-        staticSrcDocURL.construct(&aboutSrcDocString);
-    });
+    static NeverDestroyed<URL> staticSrcDocURL { &aboutSrcDocString };
     return staticSrcDocURL;
 }
 
@@ -959,9 +998,10 @@ bool portAllowed(const URL& url)
     if (!port)
         return true;
 
-    // This blocked port list matches the port blocking that Mozilla implements.
-    // See http://www.mozilla.org/projects/netlib/PortBanning.html for more information.
-    static const uint16_t blockedPortList[] = {
+    // This blocked port list is defined by the Fetch spec, with the addition of port 0.
+    // See https://fetch.spec.whatwg.org/#port-blocking for more information.
+    static constexpr auto blockedPortList = std::to_array<uint16_t>({
+        0,    // reserved
         1,    // tcpmux
         7,    // echo
         9,    // discard
@@ -1044,7 +1084,7 @@ bool portAllowed(const URL& url)
         6679, // Alternate IRC SSL [Apple addition]
         6697, // IRC+SSL [Apple addition]
         10080, // amanda
-    };
+    });
 
     // If the port is not in the blocked port list, allow it.
     ASSERT(std::is_sorted(std::begin(blockedPortList), std::end(blockedPortList)));
@@ -1104,7 +1144,7 @@ URL URL::fileURLWithFileSystemPath(StringView path)
     ));
 }
 
-StringView URL::queryWithLeadingQuestionMark() const
+StringView URL::queryWithLeadingQuestionMark() const LIFETIME_BOUND
 {
     if (m_queryEnd <= m_pathEnd)
         return { };
@@ -1112,7 +1152,7 @@ StringView URL::queryWithLeadingQuestionMark() const
     return StringView(m_string).substring(m_pathEnd, m_queryEnd - m_pathEnd);
 }
 
-StringView URL::fragmentIdentifierWithLeadingNumberSign() const
+StringView URL::fragmentIdentifierWithLeadingNumberSign() const LIFETIME_BOUND
 {
     if (!m_isValid || m_string.length() <= m_queryEnd)
         return { };
@@ -1129,14 +1169,6 @@ bool URL::isAboutSrcDoc() const
 {
     return protocolIsAbout() && path() == "srcdoc"_s;
 }
-
-TextStream& operator<<(TextStream& ts, const URL& url)
-{
-    ts << url.string();
-    return ts;
-}
-
-#if !PLATFORM(COCOA) && !USE(SOUP)
 
 static bool isIPv4Address(StringView string)
 {
@@ -1170,7 +1202,7 @@ static bool isIPv4Address(StringView string)
     return (count == 4);
 }
 
-static bool isIPv6Address(StringView string)
+bool URL::isIPv6Address(StringView string)
 {
     enum SkipState { None, WillSkip, Skipping, Skipped, Final };
     auto skipState = None;
@@ -1222,6 +1254,8 @@ static bool isIPv6Address(StringView string)
     return (count == 8 && skipState == None) || skipState == Skipped || skipState == Final;
 }
 
+#if !PLATFORM(COCOA) && !USE(SOUP)
+
 bool URL::hostIsIPAddress(StringView host)
 {
     return host.contains(':') ? isIPv6Address(host) : isIPv4Address(host);
@@ -1246,7 +1280,7 @@ Vector<KeyValuePair<String, String>> differingQueryParameters(const URL& firstUR
         return firstQueryParameters;
 
     auto compare = [] (const KeyValuePair<String, String>& a, const KeyValuePair<String, String>& b) {
-        if (int result = codePointCompare(a.key, b.key))
+        if (auto result = codePointCompare(a.key, b.key); is_neq(result))
             return result;
         return codePointCompare(a.value, b.value);
 
@@ -1255,19 +1289,19 @@ Vector<KeyValuePair<String, String>> differingQueryParameters(const URL& firstUR
         return compare(a, b) < 0;
     };
 
-    std::sort(firstQueryParameters.begin(), firstQueryParameters.end(), comparesLessThan);
-    std::sort(secondQueryParameters.begin(), secondQueryParameters.end(), comparesLessThan);
+    std::ranges::sort(firstQueryParameters, comparesLessThan);
+    std::ranges::sort(secondQueryParameters, comparesLessThan);
     size_t totalFirstQueryParameters = firstQueryParameters.size();
     size_t totalSecondQueryParameters = secondQueryParameters.size();
     size_t indexInFirstQueryParameters = 0;
     size_t indexInSecondQueryParameters = 0;
     Vector<KeyValuePair<String, String>> differingQueryParameters;
     while (indexInFirstQueryParameters < totalFirstQueryParameters && indexInSecondQueryParameters < totalSecondQueryParameters) {
-        int comparison = compare(firstQueryParameters[indexInFirstQueryParameters], secondQueryParameters[indexInSecondQueryParameters]);
-        if (comparison < 0) {
+        auto comparison = compare(firstQueryParameters[indexInFirstQueryParameters], secondQueryParameters[indexInSecondQueryParameters]);
+        if (is_lt(comparison)) {
             differingQueryParameters.append(firstQueryParameters[indexInFirstQueryParameters]);
             indexInFirstQueryParameters++;
-        } else if (comparison > 0) {
+        } else if (is_gt(comparison)) {
             differingQueryParameters.append(secondQueryParameters[indexInSecondQueryParameters]);
             indexInSecondQueryParameters++;
         } else {
@@ -1289,7 +1323,7 @@ Vector<KeyValuePair<String, String>> differingQueryParameters(const URL& firstUR
     return differingQueryParameters;
 }
 
-static StringView substringIgnoringQueryAndFragments(const URL& url)
+static StringView substringIgnoringQueryAndFragments(const URL& url LIFETIME_BOUND)
 {
     if (!url.isValid())
         return StringView(url.string());
@@ -1307,12 +1341,12 @@ Vector<String> removeQueryParameters(URL& url, const HashSet<String>& keysToRemo
     if (keysToRemove.isEmpty())
         return { };
 
-    return removeQueryParameters(url, [&](auto& parameter) {
-        return keysToRemove.contains(parameter);
+    return removeQueryParameters(url, [&](auto& key, auto&) {
+        return keysToRemove.contains(key);
     });
 }
 
-Vector<String> removeQueryParameters(URL& url, Function<bool(const String&)>&& shouldRemove)
+Vector<String> removeQueryParameters(URL& url, NOESCAPE const Function<bool(const String&, const String&)>& shouldRemove)
 {
     if (!url.hasQuery())
         return { };
@@ -1328,12 +1362,12 @@ Vector<String> removeQueryParameters(URL& url, Function<bool(const String&)>&& s
         if (key.isEmpty())
             continue;
 
-        if (shouldRemove(key)) {
+        if (shouldRemove(key, nameAndValue->value)) {
             removedParameters.append(key);
             continue;
     }
 
-        queryWithoutRemovalKeys.append(queryWithoutRemovalKeys.isEmpty() ? "" : "&", bytes);
+        queryWithoutRemovalKeys.append(queryWithoutRemovalKeys.isEmpty() ? ""_s : "&"_s, bytes);
     }
 
     if (!removedParameters.isEmpty())

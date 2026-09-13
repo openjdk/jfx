@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,10 +25,10 @@
 
 #pragma once
 
-#if ENABLE(WEB_CODECS) && USE(LIBWEBRTC)
+#if USE(LIBWEBRTC)
 
-#include "VideoDecoder.h"
-#include <wtf/FastMalloc.h>
+#include <WebCore/VideoDecoder.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
@@ -36,27 +36,31 @@ namespace WebCore {
 class LibWebRTCVPXInternalVideoDecoder;
 
 class LibWebRTCVPXVideoDecoder : public VideoDecoder {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(LibWebRTCVPXVideoDecoder);
 public:
     enum class Type {
         VP8,
         VP9,
+        VP9_P2,
+#if ENABLE(AV1)
         AV1
+#endif
     };
-    static void create(Type, CreateCallback&&, OutputCallback&&, PostTaskCallback&&);
+    static void create(Type, const Config&, CreateCallback&&, OutputCallback&&);
 
-    LibWebRTCVPXVideoDecoder(Type, OutputCallback&&, PostTaskCallback&&);
     ~LibWebRTCVPXVideoDecoder();
 
 private:
-    void decode(EncodedFrame&&, DecodeCallback&&) final;
-    void flush(Function<void()>&&) final;
+    LibWebRTCVPXVideoDecoder(Type, const Config&, OutputCallback&&);
+
+    Ref<DecodePromise> decode(EncodedFrame&&) final;
+    Ref<GenericPromise> flush() final;
     void reset() final;
     void close() final;
 
-    Ref<LibWebRTCVPXInternalVideoDecoder> m_internalDecoder;
+    const Ref<LibWebRTCVPXInternalVideoDecoder> m_internalDecoder;
 };
 
 }
 
-#endif // ENABLE(WEB_CODECS) && USE(LIBWEBRTC)
+#endif // USE(LIBWEBRTC)

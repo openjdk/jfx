@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,29 +33,29 @@
 #include "EventNames.h"
 #include <JavaScriptCore/GenericTypedArrayViewInlines.h>
 #include <JavaScriptCore/TypedArrayAdaptors.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(AudioProcessingEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(AudioProcessingEvent);
 
 Ref<AudioProcessingEvent> AudioProcessingEvent::create(const AtomString& eventType, AudioProcessingEventInit&& eventInitDict)
 {
     RELEASE_ASSERT(eventInitDict.inputBuffer);
     RELEASE_ASSERT(eventInitDict.outputBuffer);
-    return adoptRef(*new AudioProcessingEvent(eventType, WTFMove(eventInitDict)));
+    return adoptRef(*new AudioProcessingEvent(eventType, WTF::move(eventInitDict)));
 }
 
 AudioProcessingEvent::AudioProcessingEvent(RefPtr<AudioBuffer>&& inputBuffer, RefPtr<AudioBuffer>&& outputBuffer, double playbackTime)
-    : Event(eventNames().audioprocessEvent, CanBubble::Yes, IsCancelable::No)
-    , m_inputBuffer(WTFMove(inputBuffer))
-    , m_outputBuffer(WTFMove(outputBuffer))
+    : Event(EventInterfaceType::AudioProcessingEvent, eventNames().audioprocessEvent, CanBubble::Yes, IsCancelable::No)
+    , m_inputBuffer(WTF::move(inputBuffer))
+    , m_outputBuffer(WTF::move(outputBuffer))
     , m_playbackTime(playbackTime)
 {
 }
 
 AudioProcessingEvent::AudioProcessingEvent(const AtomString& eventType, AudioProcessingEventInit&& eventInitDict)
-    : Event(eventType, eventInitDict, IsTrusted::No)
+    : Event(EventInterfaceType::AudioProcessingEvent, eventType, eventInitDict, IsTrusted::No)
     , m_inputBuffer(eventInitDict.inputBuffer.releaseNonNull())
     , m_outputBuffer(eventInitDict.outputBuffer.releaseNonNull())
     , m_playbackTime(eventInitDict.playbackTime)
@@ -63,11 +63,6 @@ AudioProcessingEvent::AudioProcessingEvent(const AtomString& eventType, AudioPro
 }
 
 AudioProcessingEvent::~AudioProcessingEvent() = default;
-
-EventInterface AudioProcessingEvent::eventInterface() const
-{
-    return AudioProcessingEventInterfaceType;
-}
 
 } // namespace WebCore
 

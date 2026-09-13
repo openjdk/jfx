@@ -45,7 +45,7 @@ static inline const char* pas_page_config_kind_get_string(pas_page_config_kind p
     case pas_page_config_kind_bitfit:
         return "bitfit";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

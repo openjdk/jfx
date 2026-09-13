@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,20 +31,19 @@
 #include "AirCode.h"
 #include "AirGenerationContext.h"
 #include "B3ValueInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC { namespace B3 {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(StackmapSpecial);
 
 using Arg = Air::Arg;
 using Inst = Air::Inst;
 using Tmp = Air::Tmp;
 
-StackmapSpecial::StackmapSpecial()
-{
-}
+StackmapSpecial::StackmapSpecial() = default;
 
-StackmapSpecial::~StackmapSpecial()
-{
-}
+StackmapSpecial::~StackmapSpecial() = default;
 
 void StackmapSpecial::reportUsedRegisters(Inst& inst, const RegisterSetBuilder& usedRegisters)
 {
@@ -91,6 +90,11 @@ void StackmapSpecial::forEachArgImpl(
         Arg& arg = inst.args[i + numIgnoredAirArgs];
         ConstrainedValue child = value->constrainedChild(i + numIgnoredB3Args);
 
+#if USE(JSVALUE32_64)
+        // LowerInt64 should have lowered this argument already.
+        RELEASE_ASSERT(child.value()->type() != Int64 || child.rep().isStack() || child.rep().isStackArgument());
+#endif
+
         Arg::Role role;
         switch (roleMode) {
         case ForceLateUseUnlessRecoverable:
@@ -99,7 +103,7 @@ void StackmapSpecial::forEachArgImpl(
                 role = Arg::LateColdUse;
                 break;
             }
-            FALLTHROUGH;
+            [[fallthrough]];
         case SameAsRep:
             switch (child.rep().kind()) {
             case ValueRep::WarmAny:
@@ -123,7 +127,10 @@ void StackmapSpecial::forEachArgImpl(
             case ValueRep::LateColdAny:
                 role = Arg::LateColdUse;
                 break;
-            default:
+#if USE(JSVALUE32_64)
+            case ValueRep::RegisterPair:
+#endif
+            case ValueRep::SomeEarlyRegister:
                 RELEASE_ASSERT_NOT_REACHED();
                 break;
             }
@@ -135,7 +142,6 @@ void StackmapSpecial::forEachArgImpl(
                 // The role can only be some kind of def if we did SomeRegisterWithClobber, which is
                 // only allowed for patchpoints. Patchpoints don't use the defArgWidth feature.
                 RELEASE_ASSERT(!Arg::isAnyDef(role));
-
                 if (Arg::isWarmUse(role))
                     role = Arg::LateUse;
                 else
@@ -272,10 +278,15 @@ bool StackmapSpecial::isArgValidForRep(Air::Code& code, const Air::Arg& arg, con
                 return true;
         }
         return false;
-    default:
+#if USE(JSVALUE32_64)
+    case ValueRep::RegisterPair:
+#endif
+    case ValueRep::Stack:
+    case ValueRep::Constant:
         RELEASE_ASSERT_NOT_REACHED();
         return false;
     }
+    RELEASE_ASSERT_NOT_REACHED();
 }
 
 ValueRep StackmapSpecial::repForArg(Air::Code& code, const Arg& arg)
@@ -290,7 +301,7 @@ ValueRep StackmapSpecial::repForArg(Air::Code& code, const Arg& arg)
         break;
     case Arg::ExtendedOffsetAddr:
         ASSERT(arg.base() == Tmp(GPRInfo::callFrameRegister));
-        FALLTHROUGH;
+        [[fallthrough]];
     case Arg::Addr:
         if (arg.base() == Tmp(GPRInfo::callFrameRegister))
             return ValueRep::stack(arg.offset());

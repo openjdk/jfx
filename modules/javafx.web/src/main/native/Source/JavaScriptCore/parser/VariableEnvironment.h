@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2019 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,11 +25,12 @@
 
 #pragma once
 
-#include "Identifier.h"
-#include <variant>
+#include <JavaScriptCore/Identifier.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
 #include <wtf/IteratorRange.h>
+#include <wtf/PackedRefPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
@@ -43,8 +44,9 @@ public:
     ALWAYS_INLINE bool isImported() const { return m_bits & IsImported; }
     ALWAYS_INLINE bool isImportedNamespace() const { return m_bits & IsImportedNamespace; }
     ALWAYS_INLINE bool isFunction() const { return m_bits & IsFunction; }
+    ALWAYS_INLINE bool isFunctionDeclaration() const { return m_bits & IsFunctionDeclaration; }
     ALWAYS_INLINE bool isParameter() const { return m_bits & IsParameter; }
-    ALWAYS_INLINE bool isSloppyModeHoistingCandidate() const { return m_bits & IsSloppyModeHoistingCandidate; }
+    ALWAYS_INLINE bool isSloppyModeHoistedFunction() const { return m_bits & IsSloppyModeHoistedFunction; }
     ALWAYS_INLINE bool isPrivateField() const { return m_bits & IsPrivateField; }
     ALWAYS_INLINE bool isPrivateMethod() const { return m_bits & IsPrivateMethod; }
     ALWAYS_INLINE bool isPrivateSetter() const { return m_bits & IsPrivateSetter; }
@@ -58,8 +60,9 @@ public:
     ALWAYS_INLINE void setIsImported() { m_bits |= IsImported; }
     ALWAYS_INLINE void setIsImportedNamespace() { m_bits |= IsImportedNamespace; }
     ALWAYS_INLINE void setIsFunction() { m_bits |= IsFunction; }
+    ALWAYS_INLINE void setIsFunctionDeclaration() { m_bits |= IsFunctionDeclaration; }
     ALWAYS_INLINE void setIsParameter() { m_bits |= IsParameter; }
-    ALWAYS_INLINE void setIsSloppyModeHoistingCandidate() { m_bits |= IsSloppyModeHoistingCandidate; }
+    ALWAYS_INLINE void setIsSloppyModeHoistedFunction() { m_bits |= IsSloppyModeHoistedFunction; }
     ALWAYS_INLINE void setIsPrivateField() { m_bits |= IsPrivateField; }
     ALWAYS_INLINE void setIsPrivateMethod() { m_bits |= IsPrivateMethod; }
     ALWAYS_INLINE void setIsPrivateSetter() { m_bits |= IsPrivateSetter; }
@@ -69,10 +72,7 @@ public:
 
     uint16_t bits() const { return m_bits; }
 
-    bool operator==(const VariableEnvironmentEntry& other) const
-    {
-        return m_bits == other.m_bits;
-    }
+    friend bool operator==(const VariableEnvironmentEntry&, const VariableEnvironmentEntry&) = default;
 
     void dump(PrintStream&) const;
 
@@ -87,11 +87,12 @@ private:
         IsImportedNamespace = 1 << 6,
         IsFunction = 1 << 7,
         IsParameter = 1 << 8,
-        IsSloppyModeHoistingCandidate = 1 << 9,
+        IsSloppyModeHoistedFunction = 1 << 9,
         IsPrivateField = 1 << 10,
         IsPrivateMethod = 1 << 11,
         IsPrivateGetter = 1 << 12,
         IsPrivateSetter = 1 << 13,
+        IsFunctionDeclaration = 1 << 14,
     };
     uint16_t m_bits { 0 };
 };
@@ -119,10 +120,7 @@ public:
 
     uint16_t bits() const { return m_bits; }
 
-    bool operator==(const PrivateNameEntry& other) const
-    {
-        return m_bits == other.m_bits;
-    }
+    friend bool operator==(const PrivateNameEntry&, const PrivateNameEntry&) = default;
 
     enum Traits : uint16_t {
         None = 0,
@@ -140,20 +138,20 @@ struct PrivateNameEntryHashTraits : HashTraits<PrivateNameEntry> {
     static constexpr bool needsDestruction = false;
 };
 
-typedef HashMap<PackedRefPtr<UniquedStringImpl>, PrivateNameEntry, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>, PrivateNameEntryHashTraits> PrivateNameEnvironment;
+typedef UncheckedKeyHashMap<PackedRefPtr<UniquedStringImpl>, PrivateNameEntry, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>, PrivateNameEntryHashTraits> PrivateNameEnvironment;
 
 class VariableEnvironment {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(VariableEnvironment);
 private:
-    typedef HashMap<PackedRefPtr<UniquedStringImpl>, VariableEnvironmentEntry, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>, VariableEnvironmentEntryHashTraits> Map;
+    typedef UncheckedKeyHashMap<PackedRefPtr<UniquedStringImpl>, VariableEnvironmentEntry, IdentifierRepHash, HashTraits<RefPtr<UniquedStringImpl>>, VariableEnvironmentEntryHashTraits> Map;
 
 public:
 
     VariableEnvironment() { }
     VariableEnvironment(VariableEnvironment&& other)
-        : m_map(WTFMove(other.m_map))
+        : m_map(WTF::move(other.m_map))
         , m_isEverythingCaptured(other.m_isEverythingCaptured)
-        , m_rareData(WTFMove(other.m_rareData))
+        , m_rareData(WTF::move(other.m_rareData))
     {
     }
     VariableEnvironment(const VariableEnvironment& other)
@@ -182,18 +180,18 @@ public:
 
     ALWAYS_INLINE unsigned size() const { return m_map.size() + privateNamesSize(); }
     ALWAYS_INLINE unsigned mapSize() const { return m_map.size(); }
-    ALWAYS_INLINE bool contains(const RefPtr<UniquedStringImpl>& identifier) const { return m_map.contains(identifier); }
-    ALWAYS_INLINE bool remove(const RefPtr<UniquedStringImpl>& identifier) { return m_map.remove(identifier); }
-    ALWAYS_INLINE Map::iterator find(const RefPtr<UniquedStringImpl>& identifier) { return m_map.find(identifier); }
-    ALWAYS_INLINE Map::const_iterator find(const RefPtr<UniquedStringImpl>& identifier) const { return m_map.find(identifier); }
+    ALWAYS_INLINE bool contains(const UniquedStringImpl* identifier) const { return m_map.contains(identifier); }
+    ALWAYS_INLINE bool remove(const UniquedStringImpl* identifier) { return m_map.remove(identifier); }
+    ALWAYS_INLINE Map::iterator find(const UniquedStringImpl* identifier) { return m_map.find(identifier); }
+    ALWAYS_INLINE Map::const_iterator find(const UniquedStringImpl* identifier) const { return m_map.find(identifier); }
     void swap(VariableEnvironment& other);
-    void markVariableAsCapturedIfDefined(const RefPtr<UniquedStringImpl>& identifier);
-    void markVariableAsCaptured(const RefPtr<UniquedStringImpl>& identifier);
+    void markVariableAsCapturedIfDefined(const UniquedStringImpl* identifier);
+    void markVariableAsCaptured(const UniquedStringImpl* identifier);
     void markAllVariablesAsCaptured();
     bool hasCapturedVariables() const;
     bool captures(UniquedStringImpl* identifier) const;
-    void markVariableAsImported(const RefPtr<UniquedStringImpl>& identifier);
-    void markVariableAsExported(const RefPtr<UniquedStringImpl>& identifier);
+    void markVariableAsImported(const UniquedStringImpl* identifier);
+    void markVariableAsExported(const UniquedStringImpl* identifier);
 
     bool isEverythingCaptured() const { return m_isEverythingCaptured; }
     bool isEmpty() const { return !m_map.size() && !privateNamesSize(); }
@@ -302,11 +300,11 @@ public:
     }
 
     struct RareData {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_MAKE_STRUCT_TZONE_ALLOCATED(RareData);
 
         RareData() { }
         RareData(RareData&& other)
-            : m_privateNames(WTFMove(other.m_privateNames))
+            : m_privateNames(WTF::move(other.m_privateNames))
         {
         }
         RareData(const RareData&) = default;
@@ -333,17 +331,17 @@ private:
     std::unique_ptr<VariableEnvironment::RareData> m_rareData;
 };
 
-using TDZEnvironment = HashSet<RefPtr<UniquedStringImpl>, IdentifierRepHash>;
+using TDZEnvironment = UncheckedKeyHashSet<RefPtr<UniquedStringImpl>, IdentifierRepHash>;
 
 class CompactTDZEnvironment {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(CompactTDZEnvironment);
     WTF_MAKE_NONCOPYABLE(CompactTDZEnvironment);
 
     friend class CachedCompactTDZEnvironment;
 
     using Compact = Vector<PackedRefPtr<UniquedStringImpl>>;
     using Inflated = TDZEnvironment;
-    using Variables = std::variant<Compact, Inflated>;
+    using Variables = Variant<Compact, Inflated>;
 
 public:
     CompactTDZEnvironment(const TDZEnvironment&);
@@ -444,7 +442,7 @@ public:
         }
         Handle& operator=(Handle&& other)
         {
-            Handle handle(WTFMove(other));
+            Handle handle(WTF::move(other));
             swap(handle);
             return *this;
         }
@@ -485,19 +483,19 @@ private:
 
     Handle get(CompactTDZEnvironment*, bool& isNewEntry);
 
-    HashMap<CompactTDZEnvironmentKey, unsigned> m_map;
+    UncheckedKeyHashMap<CompactTDZEnvironmentKey, unsigned> m_map;
 };
 
 class TDZEnvironmentLink : public RefCounted<TDZEnvironmentLink> {
     TDZEnvironmentLink(CompactTDZEnvironmentMap::Handle handle, RefPtr<TDZEnvironmentLink> parent)
-        : m_handle(WTFMove(handle))
-        , m_parent(WTFMove(parent))
+        : m_handle(WTF::move(handle))
+        , m_parent(WTF::move(parent))
     { }
 
 public:
     static RefPtr<TDZEnvironmentLink> create(CompactTDZEnvironmentMap::Handle handle, RefPtr<TDZEnvironmentLink> parent)
     {
-        return adoptRef(new TDZEnvironmentLink(WTFMove(handle), WTFMove(parent)));
+        return adoptRef(new TDZEnvironmentLink(WTF::move(handle), WTF::move(parent)));
     }
 
     bool contains(UniquedStringImpl* impl) const { return m_handle.environment().toTDZEnvironment().contains(impl); }

@@ -32,13 +32,17 @@
 #include "DeviceMotionEvent.h"
 #include "EventNames.h"
 #include "Page.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DeviceMotionClient);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DeviceMotionController);
+
 DeviceMotionController::DeviceMotionController(DeviceMotionClient& client)
-    : DeviceController(client)
+    : m_client(client)
 {
-    deviceMotionClient().setController(this);
+    client.setController(this);
 }
 
 #if PLATFORM(IOS_FAMILY)
@@ -48,13 +52,13 @@ DeviceMotionController::DeviceMotionController(DeviceMotionClient& client)
 
 void DeviceMotionController::suspendUpdates()
 {
-    m_client.stopUpdating();
+    m_client->stopUpdating();
 }
 
 void DeviceMotionController::resumeUpdates()
 {
-    if (!m_listeners.isEmpty())
-        m_client.startUpdating();
+    if (hasListeners())
+        m_client->startUpdating();
 }
 
 #endif
@@ -64,36 +68,37 @@ void DeviceMotionController::didChangeDeviceMotion(DeviceMotionData* deviceMotio
     dispatchDeviceEvent(DeviceMotionEvent::create(eventNames().devicemotionEvent, deviceMotionData));
 }
 
-DeviceMotionClient& DeviceMotionController::deviceMotionClient()
-{
-    return static_cast<DeviceMotionClient&>(m_client);
-}
-
 bool DeviceMotionController::hasLastData()
 {
-    return deviceMotionClient().lastMotion();
+    return checkedClient()->lastMotion();
 }
 
 RefPtr<Event> DeviceMotionController::getLastEvent()
 {
-    return DeviceMotionEvent::create(eventNames().devicemotionEvent, deviceMotionClient().lastMotion());
-}
-
-const char* DeviceMotionController::supplementName()
-{
-    return "DeviceMotionController";
+    RefPtr lastMotion = checkedClient()->lastMotion();
+    return DeviceMotionEvent::create(eventNames().devicemotionEvent, lastMotion.get());
 }
 
 DeviceMotionController* DeviceMotionController::from(Page* page)
 {
-    return static_cast<DeviceMotionController*>(Supplement<Page>::from(page, supplementName()));
+    return downcast<DeviceMotionController>(Supplement<Page>::from(page, supplementName()));
 }
 
 bool DeviceMotionController::isActiveAt(Page* page)
 {
-    if (DeviceMotionController* self = DeviceMotionController::from(page))
+    if (CheckedPtr self = DeviceMotionController::from(page))
         return self->isActive();
     return false;
+}
+
+DeviceClient& DeviceMotionController::client()
+{
+    return m_client.get();
+}
+
+CheckedRef<DeviceMotionClient> DeviceMotionController::checkedClient()
+{
+    return m_client.get();
 }
 
 } // namespace WebCore

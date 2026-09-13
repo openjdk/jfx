@@ -34,8 +34,11 @@
 #include "Event.h"
 #include "Node.h"
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScopedEventQueue);
 
 ScopedEventQueue& ScopedEventQueue::singleton()
 {
@@ -43,22 +46,19 @@ ScopedEventQueue& ScopedEventQueue::singleton()
     return scopedEventQueue;
 }
 
-void ScopedEventQueue::enqueueEvent(Ref<Event>&& event)
+void ScopedEventQueue::enqueueEvent(ScopedEvent&& event)
 {
-    ASSERT(is<Node>(event->target()));
-    auto& target = downcast<Node>(*event->target());
-    ScopedEvent scopedEvent = { WTFMove(event), target };
     if (m_scopingLevel)
-        m_queuedEvents.append(WTFMove(scopedEvent));
+        m_queuedEvents.append(WTF::move(event));
     else
-        dispatchEvent(scopedEvent);
+        dispatchEvent(event);
 }
 
 void ScopedEventQueue::dispatchEvent(const ScopedEvent& event) const
 {
-    if (event.event->eventInterface() == MutationEventInterfaceType && event.target->isInShadowTree())
+    if (event.event->interfaceType() == EventInterfaceType::MutationEvent && event.target->isInShadowTree())
         return;
-    event.target->dispatchEvent(event.event);
+    Ref { event.target.get() }->dispatchEvent(event.event);
 }
 
 void ScopedEventQueue::dispatchAllEvents()

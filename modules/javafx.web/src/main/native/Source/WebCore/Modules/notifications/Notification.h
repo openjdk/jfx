@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2009 Google Inc. All rights reserved.
- * Copyright (C) 2009, 2011, 2012, 2016, 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2009-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -33,17 +33,20 @@
 
 #if ENABLE(NOTIFICATIONS)
 
-#include "ActiveDOMObject.h"
-#include "EventTarget.h"
-#include "NotificationDirection.h"
-#include "NotificationPermission.h"
-#include "NotificationResources.h"
-#include "ScriptExecutionContextIdentifier.h"
-#include "SerializedScriptValue.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/EventTargetInterfaces.h>
+#include <WebCore/NotificationDirection.h>
+#include <WebCore/NotificationPayload.h>
+#include <WebCore/NotificationPermission.h>
+#include <WebCore/NotificationResources.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/SerializedScriptValue.h>
+#include <WebCore/WritingMode.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/URL.h>
 #include <wtf/UUID.h>
-#include "WritingMode.h"
+#include <wtf/WallTime.h>
 
 namespace WebCore {
 
@@ -56,7 +59,7 @@ class NotificationResourcesLoader;
 struct NotificationData;
 
 class Notification final : public RefCounted<Notification>, public ActiveDOMObject, public EventTarget {
-    WTF_MAKE_ISO_ALLOCATED_EXPORT(Notification, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(Notification, WEBCORE_EXPORT);
 public:
     using Permission = NotificationPermission;
     using Direction = NotificationDirection;
@@ -68,19 +71,33 @@ public:
         String tag;
         String icon;
         JSC::JSValue data;
+        RefPtr<SerializedScriptValue> serializedData;
+        RefPtr<JSON::Value> jsonData;
         std::optional<bool> silent;
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+        String navigate;
+#endif
     };
     // For JS constructor only.
     static ExceptionOr<Ref<Notification>> create(ScriptExecutionContext&, String&& title, Options&&);
 
     static ExceptionOr<Ref<Notification>> createForServiceWorker(ScriptExecutionContext&, String&& title, Options&&, const URL&);
     static Ref<Notification> create(ScriptExecutionContext&, NotificationData&&);
+    static Ref<Notification> create(ScriptExecutionContext&, const URL& registrationURL, const NotificationPayload&);
 
     WEBCORE_EXPORT virtual ~Notification();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     void show(CompletionHandler<void()>&& = [] { });
     void close();
 
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    const URL& navigate() const { return m_navigate; }
+#endif
     const String& title() const { return m_title; }
     Direction dir() const { return m_direction; }
     const String& body() const { return m_body; }
@@ -102,13 +119,11 @@ public:
     static Permission permission(ScriptExecutionContext&);
     static void requestPermission(Document&, RefPtr<NotificationPermissionCallback>&&, Ref<DeferredPromise>&&);
 
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    using ActiveDOMObject::protectedScriptExecutionContext;
 
     WEBCORE_EXPORT NotificationData data() const;
     RefPtr<NotificationResources> resources() const { return m_resources; }
-
-    using RefCounted::ref;
-    using RefCounted::deref;
 
     void markAsShown();
     void showSoon();
@@ -117,19 +132,20 @@ public:
 
     bool isPersistent() const { return !m_serviceWorkerRegistrationURL.isNull(); }
 
+    WEBCORE_EXPORT static void setOverridePersistentNotificationMinimumLifetime(Seconds);
+
     WEBCORE_EXPORT static void ensureOnNotificationThread(ScriptExecutionContextIdentifier, WTF::UUID notificationIdentifier, Function<void(Notification*)>&&);
     WEBCORE_EXPORT static void ensureOnNotificationThread(const NotificationData&, Function<void(Notification*)>&&);
 
 private:
-    Notification(ScriptExecutionContext&, WTF::UUID, String&& title, Options&&, Ref<SerializedScriptValue>&&);
+    Notification(ScriptExecutionContext&, WTF::UUID, const String& title, Options&&, Ref<SerializedScriptValue>&&);
 
     NotificationClient* clientFromContext();
-    EventTargetInterface eventTargetInterface() const final { return NotificationEventTargetInterfaceType; }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::Notification; }
 
     void stopResourcesLoader();
 
     // ActiveDOMObject
-    const char* activeDOMObjectName() const final;
     void suspend(ReasonForSuspension);
     void stop() final;
     bool virtualHasPendingActivity() const final;
@@ -141,13 +157,16 @@ private:
 
     WTF::UUID m_identifier;
 
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    URL m_navigate;
+#endif
     String m_title;
     Direction m_direction;
     String m_lang;
     String m_body;
     String m_tag;
     URL m_icon;
-    Ref<SerializedScriptValue> m_dataForBindings;
+    const Ref<SerializedScriptValue> m_dataForBindings;
     std::optional<bool> m_silent;
 
     enum State { Idle, Showing, Closed };
@@ -161,10 +180,13 @@ private:
     };
     NotificationSource m_notificationSource;
     URL m_serviceWorkerRegistrationURL;
+    WallTime m_creationTime;
     std::unique_ptr<NotificationResourcesLoader> m_resourcesLoader;
     RefPtr<NotificationResources> m_resources;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(Notification)
 
 #endif // ENABLE(NOTIFICATIONS)

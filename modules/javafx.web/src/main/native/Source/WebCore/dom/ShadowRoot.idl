@@ -1,5 +1,5 @@
 /*
-* Copyright (C) 2015 Apple Inc. All rights reserved.
+* Copyright (C) 2015-2025 Apple Inc. All rights reserved.
 *
 * Redistribution and use in source and binary forms, with or without
 * modification, are permitted provided that the following conditions
@@ -23,15 +23,21 @@
 * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+// https://dom.spec.whatwg.org/#interface-shadowroot
+
 [
-    JSGenerateToJSObject,
     JSGenerateToNativeObject,
     Exposed=Window
 ] interface ShadowRoot : DocumentFragment {
     readonly attribute ShadowRootMode mode;
     readonly attribute boolean delegatesFocus;
-    [ImplementedAs=slotAssignmentMode, EnabledBySetting=ImperativeSlotAPIEnabled] readonly attribute SlotAssignmentMode slotAssignment;
-    readonly attribute Element host;
+    [ImplementedAs=slotAssignmentMode] readonly attribute SlotAssignmentMode slotAssignment;
+    [ImplementedAs=isClonable] readonly attribute boolean clonable;
+    readonly attribute boolean serializable;
+    // FIXME: `host` should not be nullable.
+    readonly attribute Element? host;
+    [EnabledBySetting=ScopedCustomElementRegistryEnabled, ImplementedAs=registryForBindings] readonly attribute CustomElementRegistry? customElementRegistry;
+    [EnabledBySetting=ShadowRootReferenceTargetEnabled] attribute [AtomString] DOMString referenceTarget;
     attribute EventHandler onslotchange;
 };
 

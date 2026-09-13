@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,22 +28,29 @@
 #if ENABLE(DFG_JIT)
 
 #include "DFGDominators.h"
-#include <wtf/FastMalloc.h>
 #include <wtf/NaturalLoops.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC { namespace DFG {
 
 template <typename CFGKind>
 class NaturalLoops : public WTF::NaturalLoops<CFGKind> {
     WTF_MAKE_NONCOPYABLE(NaturalLoops);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_TEMPLATE(NaturalLoops);
 public:
     NaturalLoops(Graph& graph)
         : WTF::NaturalLoops<CFGKind>(selectCFG<CFGKind>(graph), ensureDominatorsForCFG<CFGKind>(graph), validationEnabled())
     {
     }
+
+    NaturalLoops(Graph& graph, Dominators<CFGKind>& dominators)
+        : WTF::NaturalLoops<CFGKind>(selectCFG<CFGKind>(graph), dominators, validationEnabled())
+    {
+    }
 };
+
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_TEMPLATE_IMPL(template<typename CFGKind>, NaturalLoops<CFGKind>);
 
 using SSANaturalLoop = WTF::NaturalLoop<SSACFG>;
 using CPSNaturalLoop = WTF::NaturalLoop<CPSCFG>;

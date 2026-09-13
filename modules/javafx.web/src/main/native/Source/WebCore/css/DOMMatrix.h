@@ -33,7 +33,7 @@ class ScriptExecutionContext;
 
 class DOMMatrix : public DOMMatrixReadOnly {
 public:
-    static ExceptionOr<Ref<DOMMatrix>> create(ScriptExecutionContext&, std::optional<std::variant<String, Vector<double>>>&&);
+    static ExceptionOr<Ref<DOMMatrix>> create(ScriptExecutionContext&, std::optional<Variant<String, Vector<double>>>&&);
 
     static Ref<DOMMatrix> create(const TransformationMatrix& matrix, Is2D is2D)
     {
@@ -42,7 +42,7 @@ public:
 
     static Ref<DOMMatrix> create(TransformationMatrix&& matrix, Is2D is2D)
     {
-        return adoptRef(*new DOMMatrix(WTFMove(matrix), is2D));
+        return adoptRef(*new DOMMatrix(WTF::move(matrix), is2D));
     }
 
     static ExceptionOr<Ref<DOMMatrix>> fromMatrix(DOMMatrixInit&&);

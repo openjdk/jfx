@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-enum RealtimeMediaSourceIdentifierType { };
+struct RealtimeMediaSourceIdentifierType;
 using RealtimeMediaSourceIdentifier = ObjectIdentifier<RealtimeMediaSourceIdentifierType>;
 
 }

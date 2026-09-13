@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,11 +27,12 @@
 #pragma once
 
 #include "FormattingContext.h"
+#include "LayoutBoxGeometry.h"
 #include "LayoutUnits.h"
+#include "StylePrimitiveNumericTypes.h"
 #include <wtf/HashMap.h>
-#include <wtf/IsoMalloc.h>
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/ListHashSet.h>
+#include <wtf/Variant.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -38,8 +40,39 @@ namespace Layout {
 class Box;
 class ElementBox;
 
+// Cell represents a <td> or <th>. It can span multiple slots in the grid.
+class TableGridCell final : public CanMakeWeakPtr<TableGridCell>, public CanMakeCheckedPtr<TableGridCell> {
+    WTF_MAKE_TZONE_ALLOCATED(TableGridCell);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(TableGridCell);
+public:
+    TableGridCell(const ElementBox&, SlotPosition, CellSpan);
+
+    size_t startColumn() const { return m_position.column; }
+    size_t endColumn() const { return m_position.column + m_span.column; }
+
+    size_t startRow() const { return m_position.row; }
+    size_t endRow() const { return m_position.row + m_span.row; }
+
+    size_t columnSpan() const { return m_span.column; }
+    size_t rowSpan() const { return m_span.row; }
+
+    SlotPosition position() const { return m_position; }
+    CellSpan span() const { return m_span; }
+
+    void setBaseline(InlineLayoutUnit baseline) { m_baseline = baseline; }
+    InlineLayoutUnit baseline() const { return m_baseline; }
+
+    const ElementBox& box() const { return *m_layoutBox.get(); }
+
+private:
+    CheckedPtr<const ElementBox> m_layoutBox;
+    SlotPosition m_position;
+    CellSpan m_span;
+    InlineLayoutUnit m_baseline { 0 };
+};
+
 class TableGrid {
-    WTF_MAKE_ISO_ALLOCATED(TableGrid);
+    WTF_MAKE_TZONE_ALLOCATED(TableGrid);
 public:
     TableGrid();
 
@@ -53,8 +86,8 @@ public:
     void setVerticalSpacing(LayoutUnit verticalSpacing) { m_verticalSpacing = verticalSpacing; }
     LayoutUnit verticalSpacing() const { return m_verticalSpacing; }
 
-    void setCollapsedBorder(const Edges& collapsedBorder) { m_collapsedBorder = collapsedBorder; }
-    std::optional<Edges> collapsedBorder() const { return m_collapsedBorder; }
+    void setCollapsedBorder(const BoxGeometry::Edges& collapsedBorder) { m_collapsedBorder = collapsedBorder; }
+    std::optional<BoxGeometry::Edges> collapsedBorder() const { return m_collapsedBorder; }
 
     void setWidthConstraints(IntrinsicWidthConstraints intrinsicWidthConstraints) { m_intrinsicWidthConstraints = intrinsicWidthConstraints; }
     std::optional<IntrinsicWidthConstraints> widthConstraints() const { return m_intrinsicWidthConstraints; }
@@ -63,6 +96,8 @@ public:
     // Column represents a vertical set of slots in the grid. A column has horizontal position and width.
     class Column {
     public:
+        using ComputedLogicalWidth = Variant<CSS::Keyword::Auto, Style::Length<CSS::Nonnegative, float>, Style::Percentage<CSS::Nonnegative, float>>;
+
         Column(const ElementBox*);
 
         void setUsedLogicalLeft(LayoutUnit);
@@ -71,15 +106,15 @@ public:
         void setUsedLogicalWidth(LayoutUnit);
         LayoutUnit usedLogicalWidth() const;
 
-        void setComputedLogicalWidth(Length&&);
-        const Length& computedLogicalWidth() const { return m_computedLogicalWidth; }
+        void setComputedLogicalWidth(ComputedLogicalWidth&&);
+        const ComputedLogicalWidth& computedLogicalWidth() const { return m_computedLogicalWidth; }
 
         const ElementBox* box() const { return m_layoutBox.get(); }
 
     private:
         LayoutUnit m_usedLogicalWidth;
         LayoutUnit m_usedLogicalLeft;
-        Length m_computedLogicalWidth;
+        ComputedLogicalWidth m_computedLogicalWidth;
         CheckedPtr<const ElementBox> m_layoutBox;
 
 #if ASSERT_ENABLED
@@ -141,44 +176,14 @@ public:
         RowList m_rowList;
     };
 
-    // Cell represents a <td> or <th>. It can span multiple slots in the grid.
-    class Cell : public CanMakeWeakPtr<Cell> {
-        WTF_MAKE_ISO_ALLOCATED_INLINE(Cell);
-    public:
-        Cell(const ElementBox&, SlotPosition, CellSpan);
-
-        size_t startColumn() const { return m_position.column; }
-        size_t endColumn() const { return m_position.column + m_span.column; }
-
-        size_t startRow() const { return m_position.row; }
-        size_t endRow() const { return m_position.row + m_span.row; }
-
-        size_t columnSpan() const { return m_span.column; }
-        size_t rowSpan() const { return m_span.row; }
-
-        SlotPosition position() const { return m_position; }
-        CellSpan span() const { return m_span; }
-
-        void setBaseline(InlineLayoutUnit baseline) { m_baseline = baseline; }
-        InlineLayoutUnit baseline() const { return m_baseline; }
-
-        const ElementBox& box() const { return *m_layoutBox.get(); }
-
-    private:
-        CheckedPtr<const ElementBox> m_layoutBox;
-        SlotPosition m_position;
-        CellSpan m_span;
-        InlineLayoutUnit m_baseline { 0 };
-    };
-
     class Slot {
     public:
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Slot);
         Slot() = default;
-        Slot(Cell&, bool isColumnSpanned, bool isRowSpanned);
+        Slot(TableGridCell&, bool isColumnSpanned, bool isRowSpanned);
 
-        const Cell& cell() const { return *m_cell; }
-        Cell& cell() { return *m_cell; }
+        const TableGridCell& cell() const { return *m_cell; }
+        TableGridCell& cell() { return *m_cell; }
 
         const IntrinsicWidthConstraints& widthConstraints() const { return m_widthConstraints; }
         void setWidthConstraints(const IntrinsicWidthConstraints& widthConstraints) { m_widthConstraints = widthConstraints; }
@@ -195,7 +200,7 @@ public:
         bool isRowSpanned() const { return m_isRowSpanned; }
 
     private:
-        WeakPtr<Cell> m_cell;
+        WeakPtr<TableGridCell> m_cell;
         bool m_isColumnSpanned { false };
         bool m_isRowSpanned { false };
         IntrinsicWidthConstraints m_widthConstraints;
@@ -207,7 +212,7 @@ public:
     const Rows& rows() const { return m_rows; }
     Rows& rows() { return m_rows; }
 
-    using Cells = ListHashSet<std::unique_ptr<Cell>>;
+    using Cells = ListHashSet<std::unique_ptr<TableGridCell>>;
     Cells& cells() { return m_cells; }
 
     Slot* slot(SlotPosition);
@@ -225,13 +230,12 @@ private:
     LayoutUnit m_horizontalSpacing;
     LayoutUnit m_verticalSpacing;
     std::optional<IntrinsicWidthConstraints> m_intrinsicWidthConstraints;
-    std::optional<Edges> m_collapsedBorder;
+    std::optional<BoxGeometry::Edges> m_collapsedBorder;
 };
 
-inline void TableGrid::Column::setComputedLogicalWidth(Length&& computedLogicalWidth)
+inline void TableGrid::Column::setComputedLogicalWidth(TableGrid::Column::ComputedLogicalWidth&& computedLogicalWidth)
 {
-    ASSERT(computedLogicalWidth.type() == LengthType::Fixed || computedLogicalWidth.type() == LengthType::Percent || computedLogicalWidth.type() == LengthType::Relative);
-    m_computedLogicalWidth = WTFMove(computedLogicalWidth);
+    m_computedLogicalWidth = WTF::move(computedLogicalWidth);
 }
 
 inline void TableGrid::Column::setUsedLogicalWidth(LayoutUnit usedLogicalWidth)

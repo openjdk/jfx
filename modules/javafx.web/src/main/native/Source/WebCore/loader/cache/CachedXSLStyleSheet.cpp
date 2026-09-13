@@ -37,12 +37,17 @@ namespace WebCore {
 #if ENABLE(XSLT)
 
 CachedXSLStyleSheet::CachedXSLStyleSheet(CachedResourceRequest&& request, PAL::SessionID sessionID, const CookieJar* cookieJar)
-    : CachedResource(WTFMove(request), Type::XSLStyleSheet, sessionID, cookieJar)
+    : CachedResource(WTF::move(request), Type::XSLStyleSheet, sessionID, cookieJar)
     , m_decoder(TextResourceDecoder::create("text/xsl"_s))
 {
 }
 
 CachedXSLStyleSheet::~CachedXSLStyleSheet() = default;
+
+RefPtr<TextResourceDecoder> CachedXSLStyleSheet::protectedDecoder() const
+{
+    return m_decoder;
+}
 
 void CachedXSLStyleSheet::didAddClient(CachedResourceClient& client)
 {
@@ -53,21 +58,21 @@ void CachedXSLStyleSheet::didAddClient(CachedResourceClient& client)
 
 void CachedXSLStyleSheet::setEncoding(const String& chs)
 {
-    m_decoder->setEncoding(chs, TextResourceDecoder::EncodingFromHTTPHeader);
+    protectedDecoder()->setEncoding(chs, TextResourceDecoder::EncodingFromHTTPHeader);
 }
 
-String CachedXSLStyleSheet::encoding() const
+ASCIILiteral CachedXSLStyleSheet::encoding() const
 {
-    return String::fromLatin1(m_decoder->encoding().name());
+    return protectedDecoder()->encoding().name();
 }
 
 void CachedXSLStyleSheet::finishLoading(const FragmentedSharedBuffer* data, const NetworkLoadMetrics& metrics)
 {
     if (data) {
-        auto contiguousData = data->makeContiguous();
+        Ref contiguousData = data->makeContiguous();
         setEncodedSize(data->size());
-        m_sheet = m_decoder->decodeAndFlush(contiguousData->data(), encodedSize());
-        m_data = WTFMove(contiguousData);
+        m_sheet = protectedDecoder()->decodeAndFlush(contiguousData->span());
+        m_data = WTF::move(contiguousData);
     } else {
         m_data = nullptr;
         setEncodedSize(0);
@@ -76,14 +81,14 @@ void CachedXSLStyleSheet::finishLoading(const FragmentedSharedBuffer* data, cons
     checkNotify(metrics);
 }
 
-void CachedXSLStyleSheet::checkNotify(const NetworkLoadMetrics&)
+void CachedXSLStyleSheet::checkNotify(const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess)
 {
     if (isLoading())
         return;
 
     CachedResourceClientWalker<CachedStyleSheetClient> walker(*this);
-    while (CachedStyleSheetClient* c = walker.next())
-        c->setXSLStyleSheet(m_resourceRequest.url().string(), response().url(), m_sheet);
+    while (RefPtr client = walker.next())
+        client->setXSLStyleSheet(m_resourceRequest.url().string(), response().url(), m_sheet);
 }
 
 #endif

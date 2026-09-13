@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "SimpleRange.h"
 
 #include "CharacterData.h"
+#include "BoundaryPointInlines.h"
 #include "HTMLFrameOwnerElement.h"
 #include "LocalFrame.h"
 #include "NodeTraversal.h"
@@ -41,19 +42,31 @@ SimpleRange::SimpleRange(const BoundaryPoint& start, const BoundaryPoint& end)
 }
 
 SimpleRange::SimpleRange(BoundaryPoint&& start, BoundaryPoint&& end)
-    : start(WTFMove(start))
-    , end(WTFMove(end))
+    : start(WTF::move(start))
+    , end(WTF::move(end))
 {
 }
 
-bool operator==(const SimpleRange& a, const SimpleRange& b)
+String SimpleRange::debugDescription() const
 {
-    return a.start == b.start && a.end == b.end;
+    return makeString("{start: "_s, start.debugDescription(), ", end: "_s, end.debugDescription(), '}');
+}
+
+WeakSimpleRange::WeakSimpleRange(const WeakBoundaryPoint& start, const WeakBoundaryPoint& end)
+    : start(start)
+    , end(end)
+{
+}
+
+WeakSimpleRange::WeakSimpleRange(WeakBoundaryPoint&& start, WeakBoundaryPoint&& end)
+    : start(WTF::move(start))
+    , end(WTF::move(end))
+{
 }
 
 std::optional<SimpleRange> makeRangeSelectingNode(Node& node)
 {
-    auto parent = node.parentNode();
+    RefPtr parent = node.parentNode();
     if (!parent)
         return std::nullopt;
     unsigned offset = node.computeNodeIndex();
@@ -123,8 +136,9 @@ void IntersectingNodeIterator::advance()
 
 void IntersectingNodeIterator::advanceSkippingChildren()
 {
-    ASSERT(m_node);
-    m_node = m_node->contains(m_pastLastNode.get()) ? nullptr : NodeTraversal::nextSkippingChildren(*m_node);
+    RefPtr node = m_node;
+    ASSERT(node);
+    m_node = node->contains(m_pastLastNode.get()) ? nullptr : NodeTraversal::nextSkippingChildren(*node);
     enforceEndInvariant();
 }
 
@@ -160,7 +174,7 @@ template<> bool contains<ComposedTree>(const SimpleRange& range, const std::opti
     return point && contains<ComposedTree>(range, *point);
 }
 
-bool containsForTesting(TreeType type, const SimpleRange& range, const BoundaryPoint& point)
+bool contains(TreeType type, const SimpleRange& range, const BoundaryPoint& point)
 {
     switch (type) {
     case Tree:
@@ -203,7 +217,7 @@ template<TreeType treeType> bool contains(const SimpleRange& outerRange, const S
 template bool contains<Tree>(const SimpleRange&, const SimpleRange&);
 template bool contains<ComposedTree>(const SimpleRange&, const SimpleRange&);
 
-bool containsForTesting(TreeType type, const SimpleRange& outerRange, const SimpleRange& innerRange)
+bool contains(TreeType type, const SimpleRange& outerRange, const SimpleRange& innerRange)
 {
     switch (type) {
     case Tree:
@@ -268,7 +282,7 @@ template<TreeType treeType> bool contains(const SimpleRange& range, const Node& 
 template bool contains<Tree>(const SimpleRange&, const Node&);
 template bool contains<ComposedTree>(const SimpleRange&, const Node&);
 
-bool containsForTesting(TreeType type, const SimpleRange& range, const Node& node)
+bool contains(TreeType type, const SimpleRange& range, const Node& node)
 {
     switch (type) {
     case Tree:

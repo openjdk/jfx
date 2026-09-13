@@ -22,10 +22,10 @@
 
 #pragma once
 
-#include "CallFrame.h"
-#include "JSCJSValue.h"
-#include "JSCast.h"
-#include "Structure.h"
+#include <JavaScriptCore/CallFrame.h>
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/JSCast.h>
+#include <JavaScriptCore/Structure.h>
 
 namespace JSC {
 
@@ -43,10 +43,7 @@ public:
 
     JSValue value() const { return m_value.get(); }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(APIValueWrapperType, StructureFlags), info());
-    }
+    static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_EXPORT_INFO;
 

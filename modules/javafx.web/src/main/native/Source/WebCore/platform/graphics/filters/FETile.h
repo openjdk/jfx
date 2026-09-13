@@ -22,21 +22,25 @@
 
 #pragma once
 
-#include "FilterEffect.h"
+#include <WebCore/FilterEffect.h>
 
 namespace WebCore {
 
-class FETile : public FilterEffect {
+class FETile final : public FilterEffect {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(FETile);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FETile);
 public:
-    WEBCORE_EXPORT static Ref<FETile> create();
+    WEBCORE_EXPORT static Ref<FETile> create(DestinationColorSpace = DestinationColorSpace::SRGB());
 
 private:
-    FETile();
+    explicit FETile(DestinationColorSpace);
 
     FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
 
-    bool resultIsAlphaImage(const FilterImageVector& inputs) const override;
+    bool resultIsAlphaImage(std::span<const Ref<FilterImage>> inputs) const override;
 
+    OptionSet<FilterRenderingMode> supportedFilterRenderingModes(OptionSet<FilterRenderingMode>) const override;
+    std::unique_ptr<FilterEffectApplier> createAcceleratedApplier() const override;
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
 
     WTF::TextStream& externalRepresentation(WTF::TextStream&, FilterRepresentation) const override;
@@ -44,4 +48,4 @@ private:
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_FILTER_EFFECT(FETile)
+SPECIALIZE_TYPE_TRAITS_FILTER_FUNCTION(FETile)

@@ -54,7 +54,7 @@ static inline const char* pas_local_allocator_kind_get_string(pas_local_allocato
     case pas_local_allocator_view_cache_kind:
         return "view_cache";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 
@@ -69,7 +69,7 @@ static inline bool pas_local_allocator_kind_is_stopped(pas_local_allocator_kind 
     case pas_local_allocator_view_cache_kind:
         return false;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return false;
 }
 

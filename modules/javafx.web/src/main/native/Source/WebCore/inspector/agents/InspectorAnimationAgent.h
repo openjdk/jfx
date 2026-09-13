@@ -28,41 +28,45 @@
 #include "ComputedEffectTiming.h"
 #include "InspectorWebAgentBase.h"
 #include "Timer.h"
+#include <JavaScriptCore/InjectedScriptManager.h>
 #include <JavaScriptCore/InspectorBackendDispatchers.h>
 #include <JavaScriptCore/InspectorFrontendDispatchers.h>
 #include <JavaScriptCore/InspectorProtocolObjects.h>
+#include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
-#include <wtf/RobinHoodHashMap.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakHashMap.h>
 
 namespace WebCore {
 
 class AnimationEffect;
-class DeclarativeAnimation;
 class Element;
 class Event;
 class KeyframeEffect;
 class LocalFrame;
 class Page;
+class StyleOriginatedAnimation;
 class WebAnimation;
 class WeakPtrImplWithEventTargetData;
 
 struct Styleable;
 
-class InspectorAnimationAgent final : public InspectorAgentBase, public Inspector::AnimationBackendDispatcherHandler {
+class InspectorAnimationAgent final : public InspectorAgentBase, public Inspector::AnimationBackendDispatcherHandler, public CanMakeCheckedPtr<InspectorAnimationAgent> {
     WTF_MAKE_NONCOPYABLE(InspectorAnimationAgent);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(InspectorAnimationAgent);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(InspectorAnimationAgent);
 public:
     InspectorAnimationAgent(PageAgentContext&);
     ~InspectorAnimationAgent();
 
     // InspectorAgentBase
-    void didCreateFrontendAndBackend(Inspector::FrontendRouter*, Inspector::BackendDispatcher*);
+    void didCreateFrontendAndBackend();
     void willDestroyFrontendAndBackend(Inspector::DisconnectReason);
 
     // AnimationBackendDispatcherHandler
     Inspector::Protocol::ErrorStringOr<void> enable();
     Inspector::Protocol::ErrorStringOr<void> disable();
+    Inspector::Protocol::ErrorStringOr<RefPtr<Inspector::Protocol::Animation::Effect>> requestEffect(const Inspector::Protocol::Animation::AnimationId&);
     Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::DOM::Styleable>> requestEffectTarget(const Inspector::Protocol::Animation::AnimationId&);
     Inspector::Protocol::ErrorStringOr<Ref<Inspector::Protocol::Runtime::RemoteObject>> resolveAnimation(const Inspector::Protocol::Animation::AnimationId&, const String& objectGroup);
     Inspector::Protocol::ErrorStringOr<void> startTracking();
@@ -87,28 +91,33 @@ private:
     void animationDestroyedTimerFired();
     void reset();
 
-    void stopTrackingDeclarativeAnimation(DeclarativeAnimation&);
+    void stopTrackingStyleOriginatedAnimation(StyleOriginatedAnimation&);
 
-    std::unique_ptr<Inspector::AnimationFrontendDispatcher> m_frontendDispatcher;
-    RefPtr<Inspector::AnimationBackendDispatcher> m_backendDispatcher;
+    const UniqueRef<Inspector::AnimationFrontendDispatcher> m_frontendDispatcher;
+    const Ref<Inspector::AnimationBackendDispatcher> m_backendDispatcher;
 
     Inspector::InjectedScriptManager& m_injectedScriptManager;
-    Page& m_inspectedPage;
+    WeakRef<Page> m_inspectedPage;
 
-    MemoryCompactRobinHoodHashMap<String, WebAnimation*> m_animationIdMap;
+    // FIXME <https://webkit.org/b/303593>: Animation should not be destroyed before notifying this agent to unbind it.
+    // The value type should be WeakRef or CheckedRef instead.
+    HashMap<Inspector::Protocol::Animation::AnimationId, WeakPtr<WebAnimation, WeakPtrImplWithEventTargetData>> m_animationIdMap;
 
     WeakHashMap<WebAnimation, Ref<Inspector::Protocol::Console::StackTrace>, WeakPtrImplWithEventTargetData> m_animationsPendingBinding;
     Timer m_animationBindingTimer;
 
-    Vector<String> m_removedAnimationIds;
+    Vector<Inspector::Protocol::Animation::AnimationId> m_removedAnimationIds;
     Timer m_animationDestroyedTimer;
 
-    struct TrackedDeclarativeAnimationData {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
-        String trackingAnimationId;
+    struct TrackedStyleOriginatedAnimationData {
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(TrackedStyleOriginatedAnimationData);
+        Inspector::Protocol::Animation::AnimationId trackingAnimationId;
         ComputedEffectTiming lastComputedTiming;
     };
-    HashMap<DeclarativeAnimation*, UniqueRef<TrackedDeclarativeAnimationData>> m_trackedDeclarativeAnimationData;
+    HashMap<StyleOriginatedAnimation*, UniqueRef<TrackedStyleOriginatedAnimationData>> m_trackedStyleOriginatedAnimationData;
+
+    WeakHashSet<WebAnimation, WeakPtrImplWithEventTargetData> m_animationsIgnoringEffectChanges;
+    WeakHashSet<WebAnimation, WeakPtrImplWithEventTargetData> m_animationsIgnoringTargetChanges;
 };
 
 } // namespace WebCore

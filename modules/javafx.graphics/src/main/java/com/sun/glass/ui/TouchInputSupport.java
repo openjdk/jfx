@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -109,7 +109,7 @@ public class TouchInputSupport
 
         view.notifyEndTouchEvent();
 
-        // RT-21288. Notify outer world when touch point count changes
+        // JDK-8102493. Notify outer world when touch point count changes
         if (curTouchCount != 0 && touchCount != 0 && curTouchCount != touchCount &&
                 listener != null) {
             listener.touchCountChanged(this, curView, curModifiers, curIsDirect);

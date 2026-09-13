@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2007 Nikolas Zimmermann <zimmermann@kde.org>
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -20,10 +21,12 @@
 #include "config.h"
 #include "RenderSVGTextPath.h"
 
+#include "ContainerNodeInlines.h"
 #include "FloatQuad.h"
 #include "RenderBlock.h"
 #include "RenderBoxModelObjectInlines.h"
 #include "RenderLayer.h"
+#include "RenderObjectInlines.h"
 #include "RenderSVGInlineInlines.h"
 #include "RenderSVGShape.h"
 #include "SVGElementTypeHelpers.h"
@@ -34,16 +37,21 @@
 #include "SVGPathElement.h"
 #include "SVGRootInlineBox.h"
 #include "SVGTextPathElement.h"
-#include <wtf/IsoMallocInlines.h>
+#include "Settings.h"
+#include "StyleTransformResolver.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGTextPath);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderSVGTextPath);
 
 RenderSVGTextPath::RenderSVGTextPath(SVGTextPathElement& element, RenderStyle&& style)
-    : RenderSVGInline(element, WTFMove(style))
+    : RenderSVGInline(Type::SVGTextPath, element, WTF::move(style))
 {
+    ASSERT(isRenderSVGTextPath());
 }
+
+RenderSVGTextPath::~RenderSVGTextPath() = default;
 
 SVGTextPathElement& RenderSVGTextPath::textPathElement() const
 {
@@ -58,28 +66,26 @@ SVGGeometryElement* RenderSVGTextPath::targetElement() const
 
 Path RenderSVGTextPath::layoutPath() const
 {
-    auto element = targetElement();
+    RefPtr element = targetElement();
     if (!is<SVGGeometryElement>(element))
         return { };
 
-    auto path = pathFromGraphicsElement(element);
+    auto path = pathFromGraphicsElement(*element);
 
     // Spec:  The transform attribute on the referenced 'path' element represents a
     // supplemental transformation relative to the current user coordinate system for
     // the current 'text' element, including any adjustments to the current user coordinate
     // system due to a possible transform attribute on the current 'text' element.
     // http://www.w3.org/TR/SVG/text.html#TextPathElement
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
     if (element->renderer() && document().settings().layerBasedSVGEngineEnabled()) {
         auto& renderer = downcast<RenderSVGShape>(*element->renderer());
-        if (auto* layer = renderer.layer()) {
-            const auto& layerTransform = layer->currentTransform(RenderStyle::individualTransformOperations()).toAffineTransform();
+        if (CheckedPtr layer = renderer.layer()) {
+            const auto& layerTransform = layer->currentTransform(Style::TransformResolver::individualTransformOperations).toAffineTransform();
             if (!layerTransform.isIdentity())
                 path.transform(layerTransform);
             return path;
         }
     }
-#endif
 
     path.transform(element->animatedLocalTransform());
     return path;

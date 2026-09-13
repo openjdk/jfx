@@ -26,8 +26,6 @@
 
 #pragma once
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-
 #include <optional>
 
 namespace WebCore {
@@ -44,6 +42,7 @@ struct DateTimeFieldsState {
 
     std::optional<unsigned> year;
     std::optional<unsigned> month;
+    std::optional<unsigned> week;
     std::optional<unsigned> dayOfMonth;
     std::optional<unsigned> hour;
     std::optional<unsigned> minute;
@@ -53,5 +52,3 @@ struct DateTimeFieldsState {
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(DATE_AND_TIME_INPUT_TYPES)

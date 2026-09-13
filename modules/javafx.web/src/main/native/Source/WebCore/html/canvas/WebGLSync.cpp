@@ -29,38 +29,46 @@
 #include "WebGLSync.h"
 
 #include "HTMLCanvasElement.h"
-#include "WebGLContextGroup.h"
 #include "WebGLRenderingContextBase.h"
 #include <wtf/Lock.h>
 #include <wtf/Locker.h>
 
 namespace WebCore {
 
-Ref<WebGLSync> WebGLSync::create(WebGLRenderingContextBase& ctx)
+Ref<WebGLSync> WebGLSync::createLost()
 {
-    return adoptRef(*new WebGLSync(ctx));
+    return adoptRef(*new WebGLSync { });
+}
+
+Ref<WebGLSync> WebGLSync::create(WebGLRenderingContextBase& context)
+{
+    auto object = context.graphicsContextGL()->fenceSync(GraphicsContextGL::SYNC_GPU_COMMANDS_COMPLETE, 0);
+    if (!object)
+        return createLost();
+    return adoptRef(*new WebGLSync { context, object });
 }
 
 WebGLSync::~WebGLSync()
 {
-    if (!hasGroupOrContext())
+    if (!m_context)
         return;
 
     runDestructor();
 }
 
-WebGLSync::WebGLSync(WebGLRenderingContextBase& ctx)
-    : WebGLSharedObject(ctx)
-    , m_sync(ctx.graphicsContextGL()->fenceSync(GraphicsContextGL::SYNC_GPU_COMMANDS_COMPLETE, 0))
+WebGLSync::WebGLSync(WebGLRenderingContextBase& context, GCGLsync object)
+    : WebGLObject(context, static_cast<PlatformGLObject>(-1)) // This value is unused because the sync object is a pointer type, but it needs to be non-zero or other parts of the code will assume the object is invalid.
+    , m_sync(object)
 {
-    // This value is unused because the sync object is a pointer type, but it needs to be non-zero
-    // or other parts of the code will assume the object is invalid.
-    setObject(-1);
 }
 
-void WebGLSync::deleteObjectImpl(const AbstractLocker&, GraphicsContextGL* context3d, PlatformGLObject object)
+WebGLSync::WebGLSync()
+    : m_sync(nullptr)
 {
-    UNUSED_PARAM(object);
+}
+
+void WebGLSync::deleteObjectImpl(const AbstractLocker&, GraphicsContextGL* context3d, PlatformGLObject)
+{
     context3d->deleteSync(m_sync);
     m_sync = nullptr;
 }
@@ -99,7 +107,9 @@ bool WebGLSync::isSignaled() const
 
 void WebGLSync::scheduleAllowCacheUpdate(WebGLRenderingContextBase& context)
 {
-    context.canvasBase().queueTaskKeepingObjectAlive(TaskSource::WebGL, [protectedThis = Ref { *this }]() {
+    if (!m_sync)
+        return;
+    context.protectedCanvasBase()->queueTaskKeepingObjectAlive(TaskSource::WebGL, [protectedThis = Ref { *this }](auto&) {
         protectedThis->m_allowCacheUpdate = true;
     });
 }

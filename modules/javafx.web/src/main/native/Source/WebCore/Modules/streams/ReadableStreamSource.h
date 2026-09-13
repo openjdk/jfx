@@ -28,20 +28,22 @@
 
 #pragma once
 
-#include "JSDOMPromiseDeferredForward.h"
 #include "ReadableStreamDefaultController.h"
+#include <WebCore/JSDOMPromiseDeferredForward.h>
+#include <wtf/AbstractRefCounted.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-class ReadableStreamSource : public RefCounted<ReadableStreamSource> {
+class ReadableStreamSource : public AbstractRefCounted {
 public:
-    ReadableStreamSource();
-    virtual ~ReadableStreamSource();
+    WEBCORE_EXPORT ReadableStreamSource();
+    WEBCORE_EXPORT virtual ~ReadableStreamSource();
 
     void start(ReadableStreamDefaultController&&, DOMPromiseDeferred<void>&&);
     void pull(DOMPromiseDeferred<void>&&);
     void cancel(JSC::JSValue);
+    void error(JSC::JSGlobalObject&, JSC::JSValue);
 
     bool isPulling() const { return !!m_promise; }
 
@@ -52,22 +54,30 @@ protected:
     void startFinished();
     void pullFinished();
     void cancelFinished();
-    void clean();
+    WEBCORE_EXPORT void clean();
 
     virtual void setActive() = 0;
     virtual void setInactive() = 0;
 
     virtual void doStart() = 0;
     virtual void doPull() = 0;
-    virtual void doCancel() = 0;
+    virtual void doCancel(JSC::JSValue) = 0;
 
 private:
     std::unique_ptr<DOMPromiseDeferred<void>> m_promise;
     std::optional<ReadableStreamDefaultController> m_controller;
 };
 
-class SimpleReadableStreamSource
+class RefCountedReadableStreamSource
     : public ReadableStreamSource
+    , public RefCounted<RefCountedReadableStreamSource> {
+public:
+    void ref() const override { RefCounted::ref(); }
+    void deref() const override { RefCounted::deref(); }
+};
+
+class SimpleReadableStreamSource
+    : public RefCountedReadableStreamSource
     , public CanMakeWeakPtr<SimpleReadableStreamSource> {
 public:
     static Ref<SimpleReadableStreamSource> create() { return adoptRef(*new SimpleReadableStreamSource); }
@@ -83,7 +93,7 @@ private:
     void setInactive() final { }
     void doStart() final { }
     void doPull() final { }
-    void doCancel() final;
+    void doCancel(JSC::JSValue) final;
 
     bool m_isCancelled { false };
 };

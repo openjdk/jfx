@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -32,7 +32,6 @@
 package com.javafx.experiments.shape3d;
 
 import java.util.Arrays;
-
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleObjectProperty;
@@ -44,8 +43,8 @@ import javafx.scene.shape.CullFace;
 import javafx.scene.shape.DrawMode;
 import javafx.scene.shape.MeshView;
 import javafx.scene.shape.TriangleMesh;
-import static javafx.scene.shape.TriangleMesh.*;
-import static com.javafx.experiments.shape3d.SubdivisionMesh.*;
+import com.javafx.experiments.shape3d.SubdivisionMesh.BoundaryMode;
+import com.javafx.experiments.shape3d.SubdivisionMesh.MapBorderMode;
 
 /**
  * A MeshView node for Polygon Meshes
@@ -271,7 +270,7 @@ public class PolygonMeshView extends Parent {
         if(isWireframe) {
             // The current triangleMesh implementation gives buggy behavior when the size of faces are shrunken
             // Create a new TriangleMesh as a work around
-            // [JIRA] (RT-31178)
+            // [JIRA] (JDK-8117423)
             if (texCoordsDirty || facesDirty || pointsSizeDirty) {
                 triangleMesh = new TriangleMesh();
                 pointsDirty = pointsSizeDirty = texCoordsDirty = facesDirty = true; // to fill in the new triangle mesh
@@ -341,7 +340,7 @@ public class PolygonMeshView extends Parent {
         } else {
             // The current triangleMesh implementation gives buggy behavior when the size of faces are shrunken
             // Create a new TriangleMesh as a work around
-            // [JIRA] (RT-31178)
+            // [JIRA] (JDK-8117423)
             if (texCoordsDirty || facesDirty || pointsSizeDirty) {
                 triangleMesh = new TriangleMesh();
                 pointsDirty = pointsSizeDirty = texCoordsDirty = facesDirty = true; // to fill in the new triangle mesh

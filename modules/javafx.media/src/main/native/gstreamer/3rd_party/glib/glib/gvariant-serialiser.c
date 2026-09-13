@@ -762,7 +762,8 @@ gvs_variable_sized_array_get_child (GVariantSerialised value,
    * Don’t bother checking if the highest known-good offset is lower than the
    * highest checked offset, as that means there’s an invalid element at that
    * index, so there’s no need to check further. */
-  if (index_ > value.checked_offsets_up_to &&
+  if (offsets.array != NULL &&
+      index_ > value.checked_offsets_up_to &&
       value.ordered_offsets_up_to == value.checked_offsets_up_to)
     {
       switch (offsets.offset_size)
@@ -903,6 +904,8 @@ gvs_variable_sized_array_is_normal (GVariantSerialised value)
   if (value.size != 0 && offsets.length == 0)
     return FALSE;
 
+  g_assert (value.size != 0 || offsets.length == 0);
+
   child.type_info = g_variant_type_info_element (value.type_info);
   g_variant_type_info_query (child.type_info, &alignment, NULL);
   child.depth = value.depth + 1;
@@ -946,6 +949,7 @@ gvs_variable_sized_array_is_normal (GVariantSerialised value)
   return TRUE;
 }
 
+#ifndef GSTREAMER_LITE
 /* Tuples {{{2
  *
  * Since tuples can contain a mix of variable- and fixed-sized items,
@@ -1339,6 +1343,7 @@ gvs_tuple_is_normal (GVariantSerialised value)
 
   return TRUE;
 }
+#endif // GSTREAMER_LITE
 
 /* Variants {{{2
  *
@@ -1501,6 +1506,7 @@ gvs_variant_is_normal (GVariantSerialised value)
       }                                                 \
   }
 
+#ifndef GSTREAMER_LITE
 #define DISPATCH_CASES(type_info, before, after) \
   switch (g_variant_type_info_get_type_char (type_info))        \
     {                                                           \
@@ -1521,6 +1527,22 @@ gvs_variant_is_normal (GVariantSerialised value)
           before ## variant ## after                            \
         }                                                       \
     }
+#else // GSTREAMER_LITE
+#define DISPATCH_CASES(type_info, before, after) \
+  switch (g_variant_type_info_get_type_char (type_info))        \
+    {                                                           \
+      case G_VARIANT_TYPE_INFO_CHAR_MAYBE:                      \
+        DISPATCH_FIXED (type_info, before, _maybe ## after)     \
+                                                                \
+      case G_VARIANT_TYPE_INFO_CHAR_ARRAY:                      \
+        DISPATCH_FIXED (type_info, before, _array ## after)     \
+                                                                \
+      case G_VARIANT_TYPE_INFO_CHAR_VARIANT:                    \
+        {                                                       \
+          before ## variant ## after                            \
+        }                                                       \
+    }
+#endif // GSTREAMER_LITE
 
 /* Serializer entry points {{{2
  *

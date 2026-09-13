@@ -50,7 +50,7 @@ private:
 inline JSValue StringRecursionChecker::performCheck()
 {
     VM& vm = getVM(m_globalObject);
-    if (UNLIKELY(!vm.isSafeToRecurseSoft()))
+    if (!vm.isSafeToRecurseSoft()) [[unlikely]]
         return throwStackOverflowError();
 
     bool alreadyVisited = false;

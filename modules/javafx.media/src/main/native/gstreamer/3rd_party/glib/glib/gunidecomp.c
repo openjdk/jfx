@@ -19,43 +19,6 @@
  * along with this library; if not, see <http://www.gnu.org/licenses/>.
  */
 
-/**
- * SECTION:unicode
- * @Title: Unicode Manipulation
- * @Short_description: functions operating on Unicode characters and
- *     UTF-8 strings
- * @See_also: g_locale_to_utf8(), g_locale_from_utf8()
- *
- * This section describes a number of functions for dealing with
- * Unicode characters and strings. There are analogues of the
- * traditional `ctype.h` character classification and case conversion
- * functions, UTF-8 analogues of some string utility functions,
- * functions to perform normalization, case conversion and collation
- * on UTF-8 strings and finally functions to convert between the UTF-8,
- * UTF-16 and UCS-4 encodings of Unicode.
- *
- * The implementations of the Unicode functions in GLib are based
- * on the Unicode Character Data tables, which are available from
- * [www.unicode.org](http://www.unicode.org/).
- *
- *  * Unicode 4.0 was added in GLib 2.8
- *  * Unicode 4.1 was added in GLib 2.10
- *  * Unicode 5.0 was added in GLib 2.12
- *  * Unicode 5.1 was added in GLib 2.16.3
- *  * Unicode 6.0 was added in GLib 2.30
- *  * Unicode 6.1 was added in GLib 2.32
- *  * Unicode 6.2 was added in GLib 2.36
- *  * Unicode 6.3 was added in GLib 2.40
- *  * Unicode 7.0 was added in GLib 2.42
- *  * Unicode 8.0 was added in GLib 2.48
- *  * Unicode 9.0 was added in GLib 2.50.1
- *  * Unicode 10.0 was added in GLib 2.54
- *  * Unicode 11.10 was added in GLib 2.58
- *  * Unicode 12.0 was added in GLib 2.62
- *  * Unicode 12.1 was added in GLib 2.62
- *  * Unicode 13.0 was added in GLib 2.66
- */
-
 #include "config.h"
 
 #include <stdlib.h>
@@ -63,6 +26,7 @@
 #include "gunicode.h"
 #include "gunidecomp.h"
 #include "gmem.h"
+#include "gtestutils.h"
 #include "gunicomp.h"
 #include "gunicodeprivate.h"
 
@@ -347,7 +311,7 @@ combine (gunichar  a,
 
   index_b = COMPOSE_INDEX(b);
 
-  if (index_b >= COMPOSE_SECOND_SINGLE_START)
+  if (index_b >= COMPOSE_SECOND_SINGLE_START && index_b < COMPOSE_EITHER_START)
     {
       if (a == compose_second_single[index_b - COMPOSE_SECOND_SINGLE_START][0])
   {
@@ -370,6 +334,18 @@ combine (gunichar  a,
   }
     }
 
+  if (index_a >= COMPOSE_EITHER_START &&
+      index_b >= COMPOSE_EITHER_START)
+    {
+      gunichar res = compose_either_array[index_a - COMPOSE_EITHER_START][index_b - COMPOSE_EITHER_START];
+
+      if (res)
+        {
+          *result = res;
+          return TRUE;
+        }
+    }
+
   return FALSE;
 }
 
@@ -387,6 +363,8 @@ _g_utf8_normalize_wc (const gchar    *str,
   gboolean do_compose = (mode == G_NORMALIZE_NFC ||
        mode == G_NORMALIZE_NFKC);
 
+  /* Do a first pass to work out the length of the normalised string so we can
+   * allocate a buffer. */
   n_wc = 0;
   p = str;
   while ((max_len < 0 || p < str + max_len) && *p)
@@ -437,8 +415,10 @@ _g_utf8_normalize_wc (const gchar    *str,
       p = next;
     }
 
+  /* Allocate the buffer for the result. */
   wc_buffer = g_new (gunichar, n_wc + 1);
 
+  /* Do another pass to fill the buffer with the normalised string. */
   last_start = 0;
   n_wc = 0;
   p = str;
@@ -469,16 +449,16 @@ _g_utf8_normalize_wc (const gchar    *str,
             wc_buffer[n_wc++] = wc;
         }
 
-      if (n_wc > 0)
-  {
-    cc = COMBINING_CLASS (wc_buffer[old_n_wc]);
+      /* Each code path above *must* have appended at least gunichar to wc_buffer. */
+      g_assert (n_wc > old_n_wc);
 
-    if (cc == 0)
-      {
-        g_unicode_canonical_ordering (wc_buffer + last_start, n_wc - last_start);
-        last_start = old_n_wc;
-      }
-  }
+      cc = COMBINING_CLASS (wc_buffer[old_n_wc]);
+
+      if (cc == 0)
+        {
+          g_unicode_canonical_ordering (wc_buffer + last_start, n_wc - last_start);
+          last_start = old_n_wc;
+        }
 
       p = g_utf8_next_char (p);
     }
@@ -629,10 +609,10 @@ decompose_hangul_step (gunichar  ch,
  * decompositions. It does, however, include algorithmic
  * Hangul Jamo decomposition, as well as 'singleton'
  * decompositions which replace a character by a single
- * other character. In the case of singletons *@b will
+ * other character. In the case of singletons `*b` will
  * be set to zero.
  *
- * If @ch is not decomposable, *@a is set to @ch and *@b
+ * If @ch is not decomposable, `*a` is set to @ch and `*b`
  * is set to zero.
  *
  * Note that the way Unicode decomposition pairs are

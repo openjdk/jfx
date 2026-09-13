@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/Compiler.h>
+
 #if USE(CG)
 #include <wtf/RetainPtr.h>
 typedef struct CGImage* CGImageRef;

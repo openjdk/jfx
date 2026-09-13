@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Google Inc. All Rights Reserved.
+ * Copyright (C) 2012 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,51 +27,65 @@
 #include "IdTargetObserverRegistry.h"
 
 #include "IdTargetObserver.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-void IdTargetObserverRegistry::addObserver(const AtomString& id, IdTargetObserver* observer)
+WTF_MAKE_TZONE_ALLOCATED_IMPL(IdTargetObserverRegistry);
+
+IdTargetObserverRegistry::IdTargetObserverRegistry() = default;
+
+IdTargetObserverRegistry::~IdTargetObserverRegistry() = default;
+
+void IdTargetObserverRegistry::addObserver(const AtomString& id, IdTargetObserver& observer)
 {
     if (id.isEmpty())
         return;
 
-    IdToObserverSetMap::AddResult result = m_registry.add(id.impl(), nullptr);
-    if (result.isNewEntry)
-        result.iterator->value = makeUnique<ObserverSet>();
+    IdToObserverSetMap::AddResult result = m_registry.ensure(id, [] {
+        return makeUnique<ObserverSet>();
+    });
 
-    result.iterator->value->add(observer);
+    result.iterator->value->observers.add(observer);
 }
 
-void IdTargetObserverRegistry::removeObserver(const AtomString& id, IdTargetObserver* observer)
+void IdTargetObserverRegistry::removeObserver(const AtomString& id, IdTargetObserver& observer)
 {
     if (id.isEmpty() || m_registry.isEmpty())
         return;
 
-    IdToObserverSetMap::iterator iter = m_registry.find(id.impl());
+    IdToObserverSetMap::iterator iter = m_registry.find(id);
 
-    ObserverSet* set = iter->value.get();
-    set->remove(observer);
-    if (set->isEmpty() && set != m_notifyingObserversInSet)
+    CheckedPtr set = iter->value.get();
+    set->observers.remove(observer);
+    if (set->observers.isEmpty() && set != m_notifyingObserversInSet) {
+        set = nullptr;
         m_registry.remove(iter);
+    }
 }
 
-void IdTargetObserverRegistry::notifyObserversInternal(const AtomStringImpl& id)
+void IdTargetObserverRegistry::notifyObserversInternal(Element& element, const AtomString& id)
 {
     ASSERT(!m_registry.isEmpty());
 
-    m_notifyingObserversInSet = m_registry.get(&id);
+    m_notifyingObserversInSet = m_registry.get(id);
     if (!m_notifyingObserversInSet)
         return;
 
-    for (auto& observer : copyToVector(*m_notifyingObserversInSet)) {
-        if (m_notifyingObserversInSet->contains(observer))
-            observer->idTargetChanged();
+    for (auto& observer : copyToVector(m_notifyingObserversInSet->observers)) {
+        if (m_notifyingObserversInSet->observers.contains(observer))
+            observer->idTargetChanged(element);
     }
 
-    if (m_notifyingObserversInSet->isEmpty())
-        m_registry.remove(&id);
-
+    bool hasRemainingObservers = !m_notifyingObserversInSet->observers.isEmpty();
     m_notifyingObserversInSet = nullptr;
+
+    if (!hasRemainingObservers)
+        m_registry.remove(id);
 }
+
+IdTargetObserverRegistry::ObserverSet::ObserverSet() = default;
+
+IdTargetObserverRegistry::ObserverSet::~ObserverSet() = default;
 
 } // namespace WebCore

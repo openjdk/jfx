@@ -33,11 +33,11 @@
 namespace WebCore {
 
 class ApplePayValidateMerchantEvent final : public Event {
-    WTF_MAKE_ISO_ALLOCATED(ApplePayValidateMerchantEvent);
+    WTF_MAKE_TZONE_ALLOCATED(ApplePayValidateMerchantEvent);
 public:
     static Ref<ApplePayValidateMerchantEvent> create(const AtomString& type, URL&& validationURL)
     {
-        return adoptRef(*new ApplePayValidateMerchantEvent(type, WTFMove(validationURL)));
+        return adoptRef(*new ApplePayValidateMerchantEvent(type, WTF::move(validationURL)));
     }
 
     virtual ~ApplePayValidateMerchantEvent();
@@ -46,9 +46,6 @@ public:
 
 private:
     ApplePayValidateMerchantEvent(const AtomString& type, URL&& validationURL);
-
-    // Event.
-    EventInterface eventInterface() const override;
 
     const URL m_validationURL;
 };

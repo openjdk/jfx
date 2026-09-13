@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,8 +29,6 @@ import java.io.IOException;
 import java.net.CookieHandler;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -42,9 +40,7 @@ final class CookieJar {
     }
 
     private static void fwkPut(String url, String cookie) {
-        @SuppressWarnings("removal")
-        CookieHandler handler =
-            AccessController.doPrivileged((PrivilegedAction<CookieHandler>) CookieHandler::getDefault);
+        CookieHandler handler = CookieHandler.getDefault();
         if (handler != null) {
             URI uri = null;
             try {
@@ -66,9 +62,7 @@ final class CookieJar {
     }
 
     private static String fwkGet(String url, boolean includeHttpOnlyCookies) {
-        @SuppressWarnings("removal")
-        CookieHandler handler =
-            AccessController.doPrivileged((PrivilegedAction<CookieHandler>) CookieHandler::getDefault);
+        CookieHandler handler = CookieHandler.getDefault();
         if (handler != null) {
             URI uri = null;
             try {
@@ -109,7 +103,7 @@ final class CookieJar {
     private static URI rewriteToFilterOutHttpOnlyCookies(URI uri)
         throws URISyntaxException
     {
-        // RT-12200, RT-31072: Rewrite the 'https' scheme to
+        // JDK-8112702, JDK-8119520: Rewrite the 'https' scheme to
         // 'javascripts' to filter out HttpOnly cookies but
         // keep Secure cookies. Rewrite any other scheme
         // to 'javascript' to filter out both HttpOnly and

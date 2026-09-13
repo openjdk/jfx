@@ -26,6 +26,7 @@
 #include "RenderBlockFlow.h"
 #include "RenderChildIterator.h"
 #include "RenderInline.h"
+#include "RenderListMarker.h"
 #include "RenderText.h"
 #include "UnicodeBidi.h"
 #include <wtf/StdLibExtras.h>
@@ -101,14 +102,14 @@ public:
     inline bool atTextParagraphSeparator() const;
     inline bool atParagraphSeparator() const;
 
-    UChar current() const;
-    UChar previousInSameNode() const;
+    char16_t current() const;
+    char16_t previousInSameNode() const;
     ALWAYS_INLINE UCharDirection direction() const;
 
 private:
-    UChar characterAt(unsigned) const;
+    char16_t characterAt(unsigned) const;
 
-    UCharDirection surrogateTextDirection(UChar currentCodeUnit) const;
+    UCharDirection surrogateTextDirection(char16_t currentCodeUnit) const;
 
     RenderElement* m_root { nullptr };
     RenderObject* m_renderer { nullptr };
@@ -129,11 +130,11 @@ inline bool operator==(const LegacyInlineIterator& it1, const LegacyInlineIterat
     return it1.offset() == it2.offset() && it1.renderer() == it2.renderer();
 }
 
-static inline UCharDirection embedCharFromDirection(TextDirection direction, UnicodeBidi unicodeBidi)
+static inline UCharDirection embedCharFromDirection(WritingMode writingMode, UnicodeBidi unicodeBidi)
 {
     if (unicodeBidi == UnicodeBidi::Embed)
-        return direction == TextDirection::RTL ? U_RIGHT_TO_LEFT_EMBEDDING : U_LEFT_TO_RIGHT_EMBEDDING;
-    return direction == TextDirection::RTL ? U_RIGHT_TO_LEFT_OVERRIDE : U_LEFT_TO_RIGHT_OVERRIDE;
+        return writingMode.isBidiRTL() ? U_RIGHT_TO_LEFT_EMBEDDING : U_LEFT_TO_RIGHT_EMBEDDING;
+    return writingMode.isBidiRTL() ? U_RIGHT_TO_LEFT_OVERRIDE : U_LEFT_TO_RIGHT_OVERRIDE;
 }
 
 template <class Observer>
@@ -142,7 +143,7 @@ static inline void notifyObserverEnteredObject(Observer* observer, RenderObject*
     if (!observer || !object || !object->isRenderInline())
         return;
 
-    const RenderStyle& style = object->style();
+    auto& style = downcast<RenderInline>(*object).style();
     auto unicodeBidi = style.unicodeBidi();
     if (unicodeBidi == UnicodeBidi::Normal) {
         // http://dev.w3.org/csswg/css3-writing-modes/#unicode-bidi
@@ -160,7 +161,7 @@ static inline void notifyObserverEnteredObject(Observer* observer, RenderObject*
     }
 
     if (!observer->inIsolate())
-        observer->embed(embedCharFromDirection(style.direction(), unicodeBidi), FromStyleOrDOM);
+        observer->embed(embedCharFromDirection(style.writingMode(), unicodeBidi), FromStyleOrDOM);
 }
 
 template <class Observer>
@@ -169,7 +170,7 @@ static inline void notifyObserverWillExitObject(Observer* observer, RenderObject
     if (!observer || !object || !object->isRenderInline())
         return;
 
-    auto unicodeBidi = object->style().unicodeBidi();
+    auto unicodeBidi = downcast<RenderInline>(*object).style().unicodeBidi();
     if (unicodeBidi == UnicodeBidi::Normal)
         return; // Nothing to do for unicode-bidi: normal
     if (isIsolated(unicodeBidi)) {
@@ -185,7 +186,7 @@ static inline void notifyObserverWillExitObject(Observer* observer, RenderObject
 static inline bool isIteratorTarget(RenderObject* object)
 {
     ASSERT(object); // The iterator will of course return 0, but its not an expected argument to this function.
-    return object->isTextOrLineBreak() || object->isFloating() || object->isOutOfFlowPositioned() || object->isReplacedOrInlineBlock();
+    return object->isRenderTextOrLineBreak() || object->isFloating() || object->isOutOfFlowPositioned() || object->isBlockLevelReplacedOrAtomicInline();
 }
 
 template <class Observer>
@@ -217,8 +218,13 @@ static inline RenderObject* nextInlineRendererSkippingEmpty(RenderElement& root,
         if (!next)
             break;
 
-        if (isIteratorTarget(next) || (is<RenderInline>(*next) && isEmptyInline(downcast<RenderInline>(*next))))
+        if (isIteratorTarget(next))
             break;
+
+        auto* renderInline = dynamicDowncast<RenderInline>(*next);
+        if (renderInline && isEmptyInline(*renderInline))
+            break;
+
         current = next;
     }
 
@@ -238,9 +244,9 @@ static inline RenderObject* firstInlineRendererSkippingEmpty(RenderElement& root
     if (!renderer)
         return nullptr;
 
-    if (is<RenderInline>(*renderer)) {
+    if (auto* renderInline = dynamicDowncast<RenderInline>(*renderer)) {
         notifyObserverEnteredObject(resolver, renderer);
-        if (!isEmptyInline(downcast<RenderInline>(*renderer)))
+        if (!isEmptyInline(*renderInline))
             renderer = nextInlineRendererSkippingEmpty(root, renderer, resolver);
         else {
             // Never skip empty inlines.
@@ -275,8 +281,9 @@ inline void LegacyInlineIterator::incrementByCodePointInTextNode()
         ++m_pos;
         return;
     }
-    UChar32 character;
-    U16_NEXT(text.characters16(), m_pos, text.length(), character);
+    char32_t character;
+    auto characters = text.span16();
+    U16_NEXT(characters, m_pos, text.length(), character);
 }
 
 inline void LegacyInlineIterator::setOffset(unsigned position)
@@ -297,9 +304,9 @@ inline void LegacyInlineIterator::increment(InlineBidiResolver* resolver)
 {
     if (!m_renderer)
         return;
-    if (is<RenderText>(*m_renderer)) {
+    if (auto* textRenderer = dynamicDowncast<RenderText>(*m_renderer)) {
         fastIncrementInTextNode();
-        if (m_pos < downcast<RenderText>(*m_renderer).text().length())
+        if (m_pos < textRenderer->text().length())
             return;
     }
     // next can return nullptr
@@ -324,38 +331,38 @@ inline bool LegacyInlineIterator::atEnd() const
     return !m_renderer;
 }
 
-inline UChar LegacyInlineIterator::characterAt(unsigned index) const
+inline char16_t LegacyInlineIterator::characterAt(unsigned index) const
 {
-    if (!is<RenderText>(m_renderer))
+    auto* textRenderer = dynamicDowncast<RenderText>(m_renderer);
+    if (!textRenderer)
         return 0;
-
-    return downcast<RenderText>(*m_renderer).characterAt(index);
+    return textRenderer->characterAt(index);
 }
 
-inline UChar LegacyInlineIterator::current() const
+inline char16_t LegacyInlineIterator::current() const
 {
     return characterAt(m_pos);
 }
 
-inline UChar LegacyInlineIterator::previousInSameNode() const
+inline char16_t LegacyInlineIterator::previousInSameNode() const
 {
     return characterAt(m_pos - 1);
 }
 
 ALWAYS_INLINE UCharDirection LegacyInlineIterator::direction() const
 {
-    if (UNLIKELY(!m_renderer))
+    if (!m_renderer) [[unlikely]]
         return U_OTHER_NEUTRAL;
 
-    if (LIKELY(is<RenderText>(*m_renderer))) {
-        UChar codeUnit = downcast<RenderText>(*m_renderer).characterAt(m_pos);
-        if (LIKELY(U16_IS_SINGLE(codeUnit)))
+    if (auto* textRenderer = dynamicDowncast<RenderText>(*m_renderer); textRenderer) [[likely]] {
+        char16_t codeUnit = textRenderer->characterAt(m_pos);
+        if (U16_IS_SINGLE(codeUnit)) [[likely]]
             return u_charDirection(codeUnit);
         return surrogateTextDirection(codeUnit);
     }
 
-    if (m_renderer->isListMarker())
-        return m_renderer->style().isLeftToRightDirection() ? U_LEFT_TO_RIGHT : U_RIGHT_TO_LEFT;
+    if (CheckedPtr listMarkerRenderer = dynamicDowncast<RenderListMarker>(*m_renderer))
+        return listMarkerRenderer->writingMode().isBidiLTR() ? U_LEFT_TO_RIGHT : U_RIGHT_TO_LEFT;
 
     return U_OTHER_NEUTRAL;
 }
@@ -368,7 +375,9 @@ inline void InlineBidiResolver::incrementInternal()
 
 static inline bool isIsolatedInline(RenderObject& object)
 {
-    return object.isRenderInline() && isIsolated(object.style().unicodeBidi());
+    if (CheckedPtr inlineBox = dynamicDowncast<RenderInline>(object))
+        return isIsolated(inlineBox->style().unicodeBidi());
+    return false;
 }
 
 static inline RenderObject* highestContainingIsolateWithinRoot(RenderObject& initialObject, RenderObject* root)
@@ -401,7 +410,7 @@ static inline void addPlaceholderRunForIsolatedInline(InlineBidiResolver& resolv
     // ASSERT here that we didn't create multiple objects for the same inline.
     resolver.setWhitespaceCollapsingTransitionForIsolatedRun(*isolatedRun, resolver.whitespaceCollapsingState().currentTransition());
     resolver.isolatedRuns().append(BidiIsolatedRun(obj, pos, root, *isolatedRun));
-    resolver.runs().appendRun(WTFMove(isolatedRun));
+    resolver.runs().appendRun(WTF::move(isolatedRun));
 }
 
 class IsolateTracker {

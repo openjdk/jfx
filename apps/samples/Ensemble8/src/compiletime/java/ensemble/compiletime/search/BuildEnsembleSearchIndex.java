@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2017, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -261,7 +261,7 @@ public class BuildEnsembleSearchIndex {
         if (classDescriptionMatcher.find()) {
             classDescription = cleanHTML(classDescriptionMatcher.group(1));
         }
-        ///System.out.println("classDescription = " + classDescription);
+        //System.out.println("classDescription = " + classDescription);
         // write class entry to index
         docs.add(createDocument(documentType,
                 new TextField("name", className, Field.Store.YES),
@@ -367,7 +367,7 @@ public class BuildEnsembleSearchIndex {
                 //System.out.println("                    description = " + description);
                 //System.out.println("                    url = " + url);
                 enumUrl = url + "#" + enumName;
-                ///System.out.println("                    oracle url = " + url);
+                //System.out.println("                    oracle url = " + url);
                 // write class entry to index
                 docs.add(createDocument(DocumentType.ENUM,
                         new TextField("name", enumName, Field.Store.YES),

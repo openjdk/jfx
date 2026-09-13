@@ -40,12 +40,12 @@ void JSUndoItem::visitAdditionalChildren(Visitor& visitor)
 
 DEFINE_VISIT_ADDITIONAL_CHILDREN(JSUndoItem);
 
-bool JSUndoItemOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, JSC::AbstractSlotVisitor& visitor, const char** reason)
+bool JSUndoItemOwner::isReachableFromOpaqueRoots(JSC::Handle<JSC::Unknown> handle, void*, JSC::AbstractSlotVisitor& visitor, ASCIILiteral* reason)
 {
-    if (UNLIKELY(reason))
-        *reason = "Document is an opaque root.";
+    if (reason) [[unlikely]]
+        *reason = "Document is an opaque root."_s;
 
-    auto* documentForUndoItem = JSC::jsCast<JSUndoItem*>(handle.slot()->asCell())->wrapped().document();
+    SUPPRESS_UNCHECKED_LOCAL auto* documentForUndoItem = JSC::jsCast<JSUndoItem*>(handle.slot()->asCell())->wrapped().document();
     return containsWebCoreOpaqueRoot(visitor, documentForUndoItem);
 }
 

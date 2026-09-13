@@ -27,13 +27,13 @@
 
 #if ENABLE(VIDEO)
 
-#include <wtf/WeakPtr.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
 class VideoTrack;
 
-class VideoTrackClient : public CanMakeWeakPtr<VideoTrackClient> {
+class VideoTrackClient : public AbstractRefCountedAndCanMakeWeakPtr<VideoTrackClient> {
 public:
     virtual ~VideoTrackClient() = default;
     virtual void videoTrackIdChanged(VideoTrack&) { }
@@ -41,6 +41,7 @@ public:
     virtual void videoTrackLabelChanged(VideoTrack&) { }
     virtual void videoTrackLanguageChanged(VideoTrack&) { }
     virtual void videoTrackSelectedChanged(VideoTrack&) { }
+    virtual void videoTrackConfigurationChanged(VideoTrack&) { }
     virtual void willRemoveVideoTrack(VideoTrack&) { }
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,9 +27,6 @@ package com.sun.glass.ui;
 
 import static javafx.scene.AccessibleAttribute.PARENT;
 import static javafx.scene.AccessibleAttribute.ROLE;
-import java.security.AccessControlContext;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.SceneHelper;
 import com.sun.javafx.tk.quantum.QuantumToolkit;
@@ -38,6 +35,8 @@ import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+
+import java.util.function.Supplier;
 
 public abstract class Accessible {
 
@@ -51,9 +50,6 @@ public abstract class Accessible {
 
         public void executeAction(AccessibleAction action, Object... parameters) {
         }
-
-        @SuppressWarnings("removal")
-        public abstract AccessControlContext getAccessControlContext();
     }
 
     public EventHandler getEventHandler() {
@@ -122,25 +118,10 @@ public abstract class Accessible {
         return null;
     }
 
-    /*
-     * IMPORTANT: Calling to the user code should not proceed if
-     * this method returns NULL.
-     */
-    @SuppressWarnings("removal")
-    private final AccessControlContext getAccessControlContext() {
-        AccessControlContext acc = null;
-        try {
-            acc = eventHandler.getAccessControlContext();
-        } catch (Exception e) {
-            /* The node was already removed from the scene */
-        }
-        return acc;
-    }
-
-    private class GetAttribute implements PrivilegedAction<Object> {
+    private class GetAttribute implements Supplier<Object> {
         AccessibleAttribute attribute;
         Object[] parameters;
-        @Override public Object run() {
+        @Override public Object get() {
             Object result = eventHandler.getAttribute(attribute, parameters);
             if (result != null) {
                 Class<?> clazz = attribute.getReturnType();
@@ -162,21 +143,16 @@ public abstract class Accessible {
 
     private GetAttribute getAttribute = new GetAttribute();
 
-    @SuppressWarnings("removal")
     public Object getAttribute(AccessibleAttribute attribute, Object... parameters) {
-        AccessControlContext acc = getAccessControlContext();
-        if (acc == null) return null;
-        return QuantumToolkit.runWithoutRenderLock(() -> {
-            getAttribute.attribute = attribute;
-            getAttribute.parameters = parameters;
-            return AccessController.doPrivileged(getAttribute, acc);
-        });
+        getAttribute.attribute = attribute;
+        getAttribute.parameters = parameters;
+        return QuantumToolkit.runWithoutRenderLock(getAttribute);
     }
 
-    private class ExecuteAction implements PrivilegedAction<Void> {
+    private class ExecuteAction implements Supplier<Void> {
         AccessibleAction action;
         Object[] parameters;
-        @Override public Void run() {
+        @Override public Void get() {
             eventHandler.executeAction(action, parameters);
             return null;
         }
@@ -184,15 +160,10 @@ public abstract class Accessible {
 
     private ExecuteAction executeAction = new ExecuteAction();
 
-    @SuppressWarnings("removal")
     public void executeAction(AccessibleAction action, Object... parameters) {
-        AccessControlContext acc = getAccessControlContext();
-        if (acc == null) return;
-        QuantumToolkit.runWithoutRenderLock(() -> {
-            executeAction.action = action;
-            executeAction.parameters = parameters;
-            return AccessController.doPrivileged(executeAction, acc);
-        });
+        executeAction.action = action;
+        executeAction.parameters = parameters;
+        QuantumToolkit.runWithoutRenderLock(executeAction);
     }
 
     public abstract void sendNotification(AccessibleAttribute notification);

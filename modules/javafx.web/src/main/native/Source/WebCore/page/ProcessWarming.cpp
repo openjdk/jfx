@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,12 +43,11 @@
 #include "XLinkNames.h"
 #include "XMLNSNames.h"
 #include "XMLNames.h"
-
-#if ENABLE(GPU_DRIVER_PREWARMING)
-#include "GPUPrewarming.h"
-#endif
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(PrewarmInformation);
 
 void ProcessWarming::initializeNames()
 {
@@ -81,20 +80,16 @@ void ProcessWarming::prewarmGlobally()
 #if ENABLE(TELEPHONE_NUMBER_DETECTION)
     TelephoneNumberDetector::prewarm();
 #endif
-
-#if ENABLE(GPU_DRIVER_PREWARMING)
-    prewarmGPU();
-#endif
 }
 
 WebCore::PrewarmInformation ProcessWarming::collectPrewarmInformation()
 {
-    return { FontCache::forCurrentThread().collectPrewarmInformation() };
+    return { FontCache::forCurrentThread()->collectPrewarmInformation() };
 }
 
 void ProcessWarming::prewarmWithInformation(PrewarmInformation&& prewarmInfo)
 {
-    FontCache::forCurrentThread().prewarm(WTFMove(prewarmInfo.fontCache));
+    FontCache::forCurrentThread()->prewarm(WTF::move(prewarmInfo.fontCache));
 }
 
 }

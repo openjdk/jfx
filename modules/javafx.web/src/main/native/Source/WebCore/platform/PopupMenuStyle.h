@@ -25,10 +25,8 @@
 
 #pragma once
 
-#include "Color.h"
-#include "FontCascade.h"
-#include "Length.h"
-#include <wtf/EnumTraits.h>
+#include <WebCore/Color.h>
+#include <WebCore/FontCascade.h>
 
 namespace WebCore {
 
@@ -36,21 +34,21 @@ class PopupMenuStyle {
 public:
     enum PopupMenuType { SelectPopup, AutofillPopup };
     enum BackgroundColorType { DefaultBackgroundColor, CustomBackgroundColor };
-    enum PopupMenuSize {
-        PopupMenuSizeNormal,
-        PopupMenuSizeSmall,
-        PopupMenuSizeMini,
-        PopupMenuSizeLarge,
+    enum class Size : uint8_t {
+        Normal,
+        Small,
+        Mini,
+        Large,
     };
 
-    PopupMenuStyle(const Color& foreground, const Color& background, const FontCascade& font, bool visible, bool isDisplayNone, bool hasDefaultAppearance, Length textIndent, TextDirection textDirection, bool hasTextDirectionOverride, BackgroundColorType backgroundColorType = DefaultBackgroundColor, PopupMenuType menuType = SelectPopup, PopupMenuSize menuSize = PopupMenuSizeNormal)
+    PopupMenuStyle(const Color& foreground, const Color& background, const FontCascade& font, const String& language, bool visible, bool isDisplayNone, bool hasDefaultAppearance, TextDirection textDirection, bool hasTextDirectionOverride, BackgroundColorType backgroundColorType = DefaultBackgroundColor, PopupMenuType menuType = SelectPopup, Size menuSize = Size::Normal)
         : m_foregroundColor(foreground)
         , m_backgroundColor(background)
         , m_font(font)
+        , m_language(language)
         , m_visible(visible)
         , m_isDisplayNone(isDisplayNone)
         , m_hasDefaultAppearance(hasDefaultAppearance)
-        , m_textIndent(textIndent)
         , m_textDirection(textDirection)
         , m_hasTextDirectionOverride(hasTextDirectionOverride)
         , m_backgroundColorType(backgroundColorType)
@@ -62,43 +60,30 @@ public:
     const Color& foregroundColor() const { return m_foregroundColor; }
     const Color& backgroundColor() const { return m_backgroundColor; }
     const FontCascade& font() const { return m_font; }
+    CheckedRef<const FontCascade> checkedFont() const { return font(); }
+    const String& language() const { return m_language; }
     bool isVisible() const { return m_visible; }
     bool isDisplayNone() const { return m_isDisplayNone; }
     bool hasDefaultAppearance() const { return m_hasDefaultAppearance; }
-    Length textIndent() const { return m_textIndent; }
     TextDirection textDirection() const { return m_textDirection; }
     bool hasTextDirectionOverride() const { return m_hasTextDirectionOverride; }
     BackgroundColorType backgroundColorType() const { return m_backgroundColorType; }
     PopupMenuType menuType() const { return m_menuType; }
-    PopupMenuSize menuSize() const { return m_menuSize; }
+    Size menuSize() const { return m_menuSize; }
 
 private:
     Color m_foregroundColor;
     Color m_backgroundColor;
     FontCascade m_font;
+    String m_language;
     bool m_visible;
     bool m_isDisplayNone;
     bool m_hasDefaultAppearance;
-    Length m_textIndent;
     TextDirection m_textDirection;
     bool m_hasTextDirectionOverride;
     BackgroundColorType m_backgroundColorType;
     PopupMenuType m_menuType;
-    PopupMenuSize m_menuSize;
+    Size m_menuSize;
 };
 
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::PopupMenuStyle::PopupMenuSize> {
-    using values = EnumValues<
-        WebCore::PopupMenuStyle::PopupMenuSize,
-        WebCore::PopupMenuStyle::PopupMenuSize::PopupMenuSizeNormal,
-        WebCore::PopupMenuStyle::PopupMenuSize::PopupMenuSizeSmall,
-        WebCore::PopupMenuStyle::PopupMenuSize::PopupMenuSizeMini,
-        WebCore::PopupMenuStyle::PopupMenuSize::PopupMenuSizeLarge
-    >;
-};
-
-} // namespace WTF

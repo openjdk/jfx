@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,34 +29,45 @@
 #include <optional>
 #include <wtf/MachSendRight.h>
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+namespace WebGPU {
+class Device;
 
-class GPUCompositorIntegration : public RefCounted<GPUCompositorIntegration> {
+enum class TextureFormat : uint8_t;
+}
+
+class DestinationColorSpace;
+class ImageBuffer;
+
+class GPUCompositorIntegration : public RefCountedAndCanMakeWeakPtr<GPUCompositorIntegration> {
 public:
     static Ref<GPUCompositorIntegration> create(Ref<WebGPU::CompositorIntegration>&& backing)
     {
-        return adoptRef(*new GPUCompositorIntegration(WTFMove(backing)));
+        return adoptRef(*new GPUCompositorIntegration(WTF::move(backing)));
     }
 
 #if PLATFORM(COCOA)
-    Vector<MachSendRight> recreateRenderBuffers(int width, int height) const;
+    Vector<MachSendRight> recreateRenderBuffers(int width, int height, WebCore::DestinationColorSpace&&, WebCore::AlphaPremultiplication, WebCore::WebGPU::TextureFormat, unsigned bufferCount, WebCore::WebGPU::Device&) const;
 #endif
 
-    void prepareForDisplay(CompletionHandler<void()>&&);
+    void prepareForDisplay(uint32_t frameIndex, CompletionHandler<void()>&&);
 
     WebGPU::CompositorIntegration& backing() { return m_backing; }
     const WebGPU::CompositorIntegration& backing() const { return m_backing; }
 
+    void paintCompositedResultsToCanvas(WebCore::ImageBuffer&, uint32_t);
+    void updateContentsHeadroom(float);
+
 private:
     GPUCompositorIntegration(Ref<WebGPU::CompositorIntegration>&& backing)
-        : m_backing(WTFMove(backing))
+        : m_backing(WTF::move(backing))
     {
     }
 
-    Ref<WebGPU::CompositorIntegration> m_backing;
+    const Ref<WebGPU::CompositorIntegration> m_backing;
 };
 
 }

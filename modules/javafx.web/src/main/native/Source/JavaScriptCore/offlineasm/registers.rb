@@ -33,21 +33,16 @@ GPRS =
      "t5",
      "t6",
      "t7",
+     "t8",
+     "t9",
+     "t10",
+     "t11",
+     "t12",
      "cfr",
-     "a0",
-     "a1",
-     "a2",
-     "a3",
-     "a4",
-     "a5",
-     "a6",
-     "a7",
-     "r0",
-     "r1",
      "sp",
      "lr",
      "pc",
-     # 64-bit only registers:
+     "zr",
      "csr0",
      "csr1",
      "csr2",
@@ -70,10 +65,8 @@ FPRS =
      "ft3",
      "ft4",
      "ft5",
-     "fa0",
-     "fa1",
-     "fa2",
-     "fa3",
+     "ft6",
+     "ft7",
      "csfr0",
      "csfr1",
      "csfr2",
@@ -86,47 +79,56 @@ FPRS =
      "csfr9",
      "csfr10",
      "csfr11",
-     "fr"
     ]
 
-WASM_GPRS =
+VECS =
     [
-     "wa0",
-     "wa1",
-     "wa2",
-     "wa3",
-     "wa4",
-     "wa5",
-     "wa6",
-     "wa7",
+     "v0",
+     "v0_b",
+     "v0_h",
+     "v0_i",
+     "v0_q",
+     "v1",
+     "v1_b",
+     "v1_h",
+     "v1_i",
+     "v1_q",
+     "v2",
+     "v2_b",
+     "v2_h",
+     "v2_i",
+     "v2_q",
+     "v3",
+     "v3_b",
+     "v3_h",
+     "v3_i",
+     "v3_q",
+     "v4",
+     "v4_b",
+     "v4_h",
+     "v4_i",
+     "v4_q",
+     "v5",
+     "v5_b",
+     "v5_h",
+     "v5_i",
+     "v5_q",
+     "v6",
+     "v6_b",
+     "v6_h",
+     "v6_i",
+     "v6_q",
+     "v7",
+     "v7_b",
+     "v7_h",
+     "v7_i",
+     "v7_q",
     ]
 
-WASM_FPRS =
-    [
-     "wfa0",
-     "wfa1",
-     "wfa2",
-     "wfa3",
-     "wfa4",
-     "wfa5",
-     "wfa6",
-     "wfa7",
-    ]
-
-WASM_SCRATCHS =
-    [
-     "ws0",
-     "ws1",
-     # archtecture specific registers:
-     "ws2",
-     "ws3",
-    ]
-
-REGISTERS = GPRS + FPRS + WASM_GPRS + WASM_FPRS + WASM_SCRATCHS
+REGISTERS = GPRS + FPRS + VECS
 
 GPR_PATTERN = Regexp.new('\\A((' + GPRS.join(')|(') + '))\\Z')
 FPR_PATTERN = Regexp.new('\\A((' + FPRS.join(')|(') + '))\\Z')
-WASM_GPR_PATTERN = Regexp.new('\\A((' + WASM_GPRS.join(')|(') + '))\\Z')
-WASM_FPR_PATTERN = Regexp.new('\\A((' + WASM_FPRS.join(')|(') + '))\\Z')
+VEC_PATTERN = Regexp.new('\\A((' + VECS.join(')|(') + '))\\Z')
 
 REGISTER_PATTERN = Regexp.new('\\A((' + REGISTERS.join(')|(') + '))\\Z')

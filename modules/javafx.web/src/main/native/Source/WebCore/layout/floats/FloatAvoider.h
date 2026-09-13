@@ -25,42 +25,42 @@
 
 #pragma once
 
-#include "LayoutBox.h"
-#include "LayoutBoxGeometry.h"
-#include "LayoutPoint.h"
-#include "LayoutUnits.h"
-#include <wtf/IsoMalloc.h>
+#include <WebCore/LayoutBox.h>
+#include <WebCore/LayoutBoxGeometry.h>
+#include <WebCore/LayoutPoint.h>
+#include <WebCore/LayoutUnits.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 namespace Layout {
 
 class FloatAvoider {
-    WTF_MAKE_ISO_ALLOCATED(FloatAvoider);
+    WTF_MAKE_TZONE_ALLOCATED(FloatAvoider);
 public:
-    FloatAvoider(LayoutPoint absoluteTopLeft, LayoutUnit borderBoxWidth, const Edges& margin, HorizontalEdges containingBlockAbsoluteContentBox, bool isFloatingPositioned, bool isLeftAligned);
+    FloatAvoider(LayoutPoint absoluteTopLeft, LayoutUnit borderBoxWidth, const BoxGeometry::Edges& margin, BoxGeometry::HorizontalEdges containingBlockAbsoluteContentBox, bool isFloatingPositioned, bool isLeftAligned);
     virtual ~FloatAvoider() = default;
 
-    void setHorizontalPosition(LayoutUnit);
-    void setVerticalPosition(LayoutUnit);
-    void resetHorizontalPosition() { m_absoluteTopLeft.setX(initialHorizontalPosition()); }
+    void setInlineStart(LayoutUnit);
+    void setBlockStart(LayoutUnit);
+    void resetInlineStart() { m_absoluteTopLeft.setX(initialInlineStart()); }
 
     bool overflowsContainingBlock() const;
 
-    LayoutUnit top() const;
-    LayoutUnit left() const;
-    LayoutUnit right() const;
+    LayoutUnit blockStart() const;
+    LayoutUnit inlineStart() const;
+    LayoutUnit inlineEnd() const;
 
-    bool isLeftAligned() const { return m_isLeftAligned; }
+    bool isStartAligned() const { return m_isStartAligned; }
 
 private:
     LayoutUnit borderBoxWidth() const { return m_borderBoxWidth; }
-    LayoutUnit initialHorizontalPosition() const;
+    LayoutUnit initialInlineStart() const;
 
-    LayoutUnit marginBefore() const { return m_margin.vertical.top; }
-    LayoutUnit marginAfter() const { return m_margin.vertical.bottom; }
-    LayoutUnit marginStart() const { return m_margin.horizontal.left; }
-    LayoutUnit marginEnd() const { return m_margin.horizontal.right; }
+    LayoutUnit marginBefore() const { return m_margin.vertical.before; }
+    LayoutUnit marginAfter() const { return m_margin.vertical.after; }
+    LayoutUnit marginStart() const { return m_margin.horizontal.start; }
+    LayoutUnit marginEnd() const { return m_margin.horizontal.end; }
     LayoutUnit marginBoxWidth() const { return marginStart() + borderBoxWidth() + marginEnd(); }
 
     bool isFloatingBox() const { return m_isFloatingPositioned; }
@@ -70,34 +70,34 @@ private:
     LayoutPoint m_absoluteTopLeft;
     // Note that float avoider should work with no height value.
     LayoutUnit m_borderBoxWidth;
-    Edges m_margin;
-    HorizontalEdges m_containingBlockAbsoluteContentBox;
+    BoxGeometry::Edges m_margin;
+    BoxGeometry::HorizontalEdges m_containingBlockAbsoluteContentBox;
     bool m_isFloatingPositioned { true };
-    bool m_isLeftAligned { true };
+    bool m_isStartAligned { true };
 };
 
-inline LayoutUnit FloatAvoider::top() const
+inline LayoutUnit FloatAvoider::blockStart() const
 {
-    auto top = m_absoluteTopLeft.y();
+    auto blockStart = m_absoluteTopLeft.y();
     if (isFloatingBox())
-        top -= marginBefore();
-    return top;
+        blockStart -= marginBefore();
+    return blockStart;
 }
 
-inline LayoutUnit FloatAvoider::left() const
+inline LayoutUnit FloatAvoider::inlineStart() const
 {
-    auto left = m_absoluteTopLeft.x();
+    auto inlineStart = m_absoluteTopLeft.x();
     if (isFloatingBox())
-        left -= marginStart();
-    return left;
+        inlineStart -= marginStart();
+    return inlineStart;
 }
 
-inline LayoutUnit FloatAvoider::right() const
+inline LayoutUnit FloatAvoider::inlineEnd() const
 {
-    auto right = left() + borderBoxWidth();
+    auto inlineEnd = inlineStart() + borderBoxWidth();
     if (isFloatingBox())
-        right += marginEnd();
-    return right;
+        inlineEnd += marginEnd();
+    return inlineEnd;
 }
 
 }

@@ -25,19 +25,30 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if ENABLE(SPEECH_SYNTHESIS)
 
-#include "PlatformSpeechSynthesisVoice.h"
+#include <WebCore/PlatformSpeechSynthesisVoice.h>
+#include <wtf/AbstractRefCounted.h>
 #include <wtf/MonotonicTime.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-class PlatformSpeechSynthesisUtteranceClient {
+class PlatformSpeechSynthesisUtteranceClient : public CanMakeWeakPtr<PlatformSpeechSynthesisUtteranceClient>, public AbstractRefCounted {
+public:
+    virtual ~PlatformSpeechSynthesisUtteranceClient() = default;
+    virtual void eventOccurred(const AtomString& type, unsigned long charIndex, unsigned long charLength, const String& name) = 0;
+
+    virtual bool isSpeechSynthesisUtterance() const { return false; }
+
+protected:
+    PlatformSpeechSynthesisUtteranceClient() = default;
 };
 
 class PlatformSpeechSynthesisUtterance : public RefCounted<PlatformSpeechSynthesisUtterance> {
 public:
-    WEBCORE_EXPORT static Ref<PlatformSpeechSynthesisUtterance> create(PlatformSpeechSynthesisUtteranceClient&);
+    WEBCORE_EXPORT static Ref<PlatformSpeechSynthesisUtterance> create(PlatformSpeechSynthesisUtteranceClient*);
 
     const String& text() const { return m_text; }
     void setText(const String& text) { m_text = text; }
@@ -63,18 +74,17 @@ public:
     MonotonicTime startTime() const { return m_startTime; }
     void setStartTime(MonotonicTime startTime) { m_startTime = startTime; }
 
-    PlatformSpeechSynthesisUtteranceClient* client() const { return m_client; }
-    void setClient(PlatformSpeechSynthesisUtteranceClient* client) { m_client = client; }
+    PlatformSpeechSynthesisUtteranceClient* client() const { return m_client.get(); }
 
-#if PLATFORM(COCOA)
+#ifdef __OBJC__
     id wrapper() const { return m_wrapper.get(); }
     void setWrapper(id utterance) { m_wrapper = utterance; }
 #endif
 
 private:
-    explicit PlatformSpeechSynthesisUtterance(PlatformSpeechSynthesisUtteranceClient&);
+    explicit PlatformSpeechSynthesisUtterance(PlatformSpeechSynthesisUtteranceClient*);
 
-    PlatformSpeechSynthesisUtteranceClient* m_client;
+    WeakPtr<PlatformSpeechSynthesisUtteranceClient> m_client;
     String m_text;
     String m_lang;
     RefPtr<PlatformSpeechSynthesisVoice> m_voice;

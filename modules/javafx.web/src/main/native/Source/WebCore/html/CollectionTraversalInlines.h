@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include "CollectionTraversal.h"
-#include "ElementChildIteratorInlines.h"
-#include "TypedElementDescendantIteratorInlines.h"
+#include <WebCore/CollectionTraversal.h>
+#include <WebCore/ElementChildIteratorInlines.h>
+#include <WebCore/HTMLOptionsCollectionInlines.h>
+#include <WebCore/TypedElementDescendantIteratorInlines.h>
 
 namespace WebCore {
 
@@ -81,6 +82,70 @@ inline void CollectionTraversal<CollectionTraversalType::Descendants>::traverseB
     }
 }
 
+// CollectionTraversal::WeakPtrDescendants
+
+template <typename CollectionClass>
+inline auto CollectionTraversal<CollectionTraversalType::WeakPtrDescendants>::begin(const CollectionClass& collection, ContainerNode& rootNode) -> Iterator
+{
+    auto it = descendantsOfType<Element>(rootNode).begin();
+    while (it && !collection.elementMatches(*it))
+        ++it;
+    if (!it)
+        return nullptr;
+    return WeakPtr { *it };
+}
+
+template <typename CollectionClass>
+inline auto CollectionTraversal<CollectionTraversalType::WeakPtrDescendants>::last(const CollectionClass& collection, ContainerNode& rootNode) -> Iterator
+{
+    ElementDescendantIterator<Element> it { rootNode, ElementTraversal::lastWithin(rootNode) };
+    while (it && !collection.elementMatches(*it))
+        --it;
+    if (!it)
+        return nullptr;
+    return WeakPtr { *it };
+}
+
+template <typename CollectionClass>
+inline void CollectionTraversal<CollectionTraversalType::WeakPtrDescendants>::traverseForward(const CollectionClass& collection, Iterator& current, unsigned count, unsigned& traversedCount)
+{
+    ASSERT(collection.elementMatches(*current));
+    ElementDescendantIterator<Element> iterator { collection.rootNode(), current.get() };
+    for (traversedCount = 0; traversedCount < count; ++traversedCount) {
+        do {
+            ++iterator;
+            if (!iterator) {
+                current = nullptr;
+                return;
+            }
+        } while (!collection.elementMatches(*iterator));
+    }
+    if (iterator)
+        current = *iterator;
+    else
+        current = nullptr;
+}
+
+template <typename CollectionClass>
+inline void CollectionTraversal<CollectionTraversalType::WeakPtrDescendants>::traverseBackward(const CollectionClass& collection, Iterator& current, unsigned count)
+{
+    ASSERT(collection.elementMatches(*current));
+    ElementDescendantIterator<Element> iterator { collection.rootNode(), current.get() };
+    for (; count; --count) {
+        do {
+            --iterator;
+            if (!iterator) {
+                current = nullptr;
+                return;
+            }
+        } while (!collection.elementMatches(*iterator));
+    }
+    if (iterator)
+        current = *iterator;
+    else
+        current = nullptr;
+}
+
 // CollectionTraversal::ChildrenOnly
 
 template <typename CollectionClass>
@@ -97,7 +162,10 @@ inline auto CollectionTraversal<CollectionTraversalType::ChildrenOnly>::begin(co
 template <typename CollectionClass>
 inline auto CollectionTraversal<CollectionTraversalType::ChildrenOnly>::last(const CollectionClass& collection, ContainerNode& rootNode) -> Iterator
 {
-    auto it = childrenOfType<Element>(rootNode).begin();
+    auto* lastElement = childrenOfType<Element>(rootNode).last();
+    if (!lastElement)
+        return childrenOfType<Element>(rootNode).begin();
+    auto it = childrenOfType<Element>(rootNode).beginAt(*lastElement);
     while (it && !collection.elementMatches(*it))
         --it;
     // Drop iterator assertions because HTMLCollections / NodeList use a fine-grained invalidation scheme.

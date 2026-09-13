@@ -34,8 +34,6 @@ struct SourcePosition {
 };
 
 struct SourceSpan {
-    // FIXME: we could possibly skip lineOffset and recompute it only when trying to show an error
-    // This would shrink the AST size by 32 bits per AST node, at the cost of a bit of code complexity in the error toString function.
     unsigned line;
     unsigned lineOffset;
     unsigned offset;
@@ -54,13 +52,7 @@ struct SourceSpan {
         : SourceSpan(start.line, start.lineOffset, start.offset, end.offset - start.offset)
     { }
 
-    constexpr bool operator==(const SourceSpan& other) const
-    {
-        return (line == other.line
-            && lineOffset == other.lineOffset
-            && offset == other.offset
-            && length == other.length);
-    }
+    friend constexpr bool operator==(const SourceSpan&, const SourceSpan&) = default;
 };
 
 }

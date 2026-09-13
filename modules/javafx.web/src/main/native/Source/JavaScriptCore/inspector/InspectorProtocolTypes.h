@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2013 Apple Inc. All rights reserved.
  * Copyright (C) 2011 The Chromium Authors. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -56,7 +56,7 @@ template<typename T> struct BindingTraits<JSON::ArrayOf<T>> {
         auto array = value->asArray();
         BindingTraits<JSON::ArrayOf<T>>::assertValueHasExpectedType(array.get());
         static_assert(sizeof(JSON::ArrayOf<T>) == sizeof(JSON::Array), "type cast problem");
-        return static_reference_cast<JSON::ArrayOf<T>>(static_reference_cast<JSON::ArrayBase>(array.releaseNonNull()));
+        return unsafeRefDowncast<JSON::ArrayOf<T>>(upcast<JSON::ArrayBase>(array.releaseNonNull()));
     }
 
     static void assertValueHasExpectedType(JSON::Value* value)

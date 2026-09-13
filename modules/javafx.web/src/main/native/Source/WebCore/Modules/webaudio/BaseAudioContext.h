@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google Inc. All rights reserved.
- * Copyright (C) 2016-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,6 +31,7 @@
 #include "AudioDestinationNode.h"
 #include "AudioIOCallback.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "JSDOMPromiseDeferredForward.h"
 #include "NoiseInjectionPolicy.h"
 #include "OscillatorType.h"
@@ -72,6 +73,7 @@ class DynamicsCompressorNode;
 class GainNode;
 class IIRFilterNode;
 class MediaElementAudioSourceNode;
+class MediaSessionManagerInterface;
 class OscillatorNode;
 class PannerNode;
 class PeriodicWave;
@@ -94,32 +96,35 @@ class BaseAudioContext
     , public LoggerHelper
 #endif
 {
-    WTF_MAKE_ISO_ALLOCATED(BaseAudioContext);
+    WTF_MAKE_TZONE_ALLOCATED(BaseAudioContext);
 public:
-    virtual ~BaseAudioContext();
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
-    // Reconcile ref/deref which are defined both in ThreadSafeRefCounted and EventTarget.
-    using ThreadSafeRefCounted::ref;
-    using ThreadSafeRefCounted::deref;
+    virtual ~BaseAudioContext();
 
     // This is used for lifetime testing.
     WEBCORE_EXPORT static bool isContextAlive(uint64_t contextID);
     uint64_t contextID() const { return m_contextID; }
 
     Document* document() const;
+    RefPtr<Document> protectedDocument() const;
     bool isInitialized() const { return m_isInitialized; }
 
     virtual bool isOfflineContext() const = 0;
     virtual AudioDestinationNode& destination() = 0;
+    Ref<AudioDestinationNode> protectedDestination() { return destination(); }
     virtual const AudioDestinationNode& destination() const = 0;
+    Ref<const AudioDestinationNode> protectedDestination() const { return destination(); }
+#if PLATFORM(IOS_FAMILY)
+    virtual const String& sceneIdentifier() const { return nullString(); }
+#endif
 
     size_t currentSampleFrame() const { return destination().currentSampleFrame(); }
     double currentTime() const { return destination().currentTime(); }
     float sampleRate() const { return destination().sampleRate(); }
 
     // Asynchronous audio file data decoding.
-    void decodeAudioData(Ref<JSC::ArrayBuffer>&&, RefPtr<AudioBufferCallback>&&, RefPtr<AudioBufferCallback>&&);
-    void decodeAudioData(Ref<JSC::ArrayBuffer>&&, RefPtr<AudioBufferCallback>&&, RefPtr<AudioBufferCallback>&&, std::optional<Ref<DeferredPromise>>&&);
+    void decodeAudioData(Ref<JSC::ArrayBuffer>&&, RefPtr<AudioBufferCallback>&&, RefPtr<AudioBufferCallback>&&, Ref<DeferredPromise>&&);
 
     AudioListener& listener() { return m_listener; }
 
@@ -151,6 +156,10 @@ public:
     ExceptionOr<Ref<IIRFilterNode>> createIIRFilter(ScriptExecutionContext&, Vector<double>&& feedforward, Vector<double>&& feedback);
     ExceptionOr<Ref<AudioBuffer>> createBuffer(unsigned numberOfChannels, unsigned length, float sampleRate);
 
+    // ActiveDOMObject.
+    void ref() const override { ThreadSafeRefCounted::ref(); }
+    void deref() const override { ThreadSafeRefCounted::deref(); }
+
     // Called at the start of each render quantum.
     void handlePreRenderTasks(const AudioIOPosition& outputPosition);
 
@@ -162,6 +171,10 @@ public:
     // We schedule deletion of all marked nodes at the end of each realtime render quantum.
     void markForDeletion(AudioNode&);
     void deleteMarkedNodes();
+    // In some cases, a node marked for deletion may get ref'd. We need to make sure we no
+    // longer mark the node for deletion or it may get deleted while someone is holding a
+    // Ref / RefPtr to it.
+    void unmarkForDeletion(AudioNode&);
 
     void addTailProcessingNode(AudioNode&);
     void removeTailProcessingNode(AudioNode&);
@@ -178,13 +191,13 @@ public:
     // Thread Safety and Graph Locking:
     //
 
-    void setAudioThread(Thread& thread) { m_audioThread = &thread; } // FIXME: check either not initialized or the same
-    bool isAudioThread() const { return m_audioThread == &Thread::current(); }
+    void setAudioThread(Thread& thread) { m_audioThreadUID = thread.uid(); } // FIXME: check either not initialized or the same
+    bool isAudioThread() const { return m_audioThreadUID == Thread::currentSingleton().uid(); }
 
     // Returns true only after the audio thread has been started and then shutdown.
     bool isAudioThreadFinished() const { return m_isAudioThreadFinished; }
 
-    RecursiveLock& graphLock() { return m_graphLock; }
+    RecursiveLock& graphLock() const { return m_graphLock; }
 
     // Returns true if this thread owns the context's lock.
     bool isGraphOwner() const { return m_graphLock.isOwner(); }
@@ -205,6 +218,7 @@ public:
 
     // EventTarget
     ScriptExecutionContext* scriptExecutionContext() const final;
+    using ActiveDOMObject::protectedScriptExecutionContext;
 
     virtual void sourceNodeWillBeginPlayback(AudioNode&);
     // When a source node has no more processing to do (has finished playing), then it tells the context to dereference it.
@@ -212,10 +226,10 @@ public:
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const override { return m_logger.get(); }
-    const void* logIdentifier() const final { return m_logIdentifier; }
+    uint64_t logIdentifier() const override { return m_logIdentifier; }
     WTFLogChannel& logChannel() const final;
-    const void* nextAudioNodeLogIdentifier() { return childLogIdentifier(m_logIdentifier, ++m_nextAudioNodeIdentifier); }
-    const void* nextAudioParameterLogIdentifier() { return childLogIdentifier(m_logIdentifier, ++m_nextAudioParameterIdentifier); }
+    uint64_t nextAudioNodeLogIdentifier() { return childLogIdentifier(m_logIdentifier, ++m_nextAudioNodeIdentifier); }
+    uint64_t nextAudioParameterLogIdentifier() { return childLogIdentifier(m_logIdentifier, ++m_nextAudioParameterIdentifier); }
 #endif
 
     void postTask(Function<void()>&&);
@@ -232,7 +246,7 @@ public:
     void addAudioParamDescriptors(const String& processorName, Vector<AudioParamDescriptor>&&);
     const MemoryCompactRobinHoodHashMap<String, Vector<AudioParamDescriptor>>& parameterDescriptorMap() const { return m_parameterDescriptorMap; }
 
-    NoiseInjectionPolicy noiseInjectionPolicy() const { return m_noiseInjectionPolicy; }
+    OptionSet<NoiseInjectionPolicy> noiseInjectionPolicies() const { return m_noiseInjectionPolicies; }
 
 protected:
     explicit BaseAudioContext(Document&);
@@ -240,13 +254,23 @@ protected:
     virtual void uninitialize();
 
 #if !RELEASE_LOG_DISABLED
-    const char* logClassName() const final { return "BaseAudioContext"; }
+    ASCIILiteral logClassName() const final { return "BaseAudioContext"_s; }
 #endif
 
     void addReaction(State, DOMPromiseDeferred<void>&&);
     void setState(State);
 
     void clear();
+
+    RefPtr<MediaSessionManagerInterface> mediaSessionManagerIfExists() const;
+    RefPtr<MediaSessionManagerInterface> mediaSessionManager() const;
+
+    // ActiveDOMObject.
+    void stop() override;
+
+protected:
+    // Only accessed when the graph lock is held.
+    const Vector<AudioConnectionRef<AudioNode>>& referencedSourceNodes() const { return m_referencedSourceNodes; }
 
 private:
     void scheduleNodeDeletion();
@@ -259,12 +283,9 @@ private:
     void handleDeferredDecrementConnectionCounts();
 
     // EventTarget
-    EventTargetInterface eventTargetInterface() const final;
+    enum EventTargetInterfaceType eventTargetInterface() const final;
     void refEventTarget() override { ref(); }
     void derefEventTarget() override { deref(); }
-
-    // ActiveDOMObject API.
-    void stop() override;
 
     // When the context goes away, there might still be some sources which haven't finished playing.
     // Make sure to dereference them here.
@@ -279,34 +300,34 @@ private:
     void disableOutputsForFinishedTailProcessingNodes();
 
 #if !RELEASE_LOG_DISABLED
-    Ref<Logger> m_logger;
-    const void* m_logIdentifier;
+    const Ref<const Logger> m_logger;
+    const uint64_t m_logIdentifier;
     uint64_t m_nextAudioNodeIdentifier { 0 };
     uint64_t m_nextAudioParameterIdentifier { 0 };
 #endif
 
     uint64_t m_contextID;
 
-    Ref<AudioWorklet> m_worklet;
+    const Ref<AudioWorklet> m_worklet;
 
     // Either accessed when the graph lock is held, or on the main thread when the audio thread has finished.
-    Vector<AudioConnectionRefPtr<AudioNode>> m_referencedSourceNodes;
+    Vector<AudioConnectionRef<AudioNode>> m_referencedSourceNodes;
 
     // Accumulate nodes which need to be deleted here.
     // This is copied to m_nodesToDelete at the end of a render cycle in handlePostRenderTasks(), where we're assured of a stable graph
     // state which will have no references to any of the nodes in m_nodesToDelete once the context lock is released
     // (when handlePostRenderTasks() has completed).
-    Vector<AudioNode*> m_nodesMarkedForDeletion;
+    Vector<CheckedPtr<AudioNode>> m_nodesMarkedForDeletion;
 
     class TailProcessingNode {
     public:
-        TailProcessingNode(AudioNode& node)
+        explicit TailProcessingNode(AudioNode& node)
             : m_node(&node)
         {
             ASSERT(!node.isTailProcessing());
             node.setIsTailProcessing(true);
         }
-        TailProcessingNode(TailProcessingNode&& other)
+        explicit TailProcessingNode(TailProcessingNode&& other)
             : m_node(std::exchange(other.m_node, nullptr))
         { }
         ~TailProcessingNode()
@@ -316,8 +337,9 @@ private:
         }
         TailProcessingNode& operator=(const TailProcessingNode&) = delete;
         TailProcessingNode& operator=(TailProcessingNode&&) = delete;
+        CheckedPtr<AudioNode> checkedNode() const { return m_node.get(); }
         AudioNode* operator->() const { return m_node.get(); }
-        bool operator==(const TailProcessingNode& other) const { return m_node == other.m_node; }
+        friend bool operator==(const TailProcessingNode&, const TailProcessingNode&) = default;
         bool operator==(const AudioNode& node) const { return m_node == &node; }
     private:
         RefPtr<AudioNode> m_node;
@@ -330,25 +352,25 @@ private:
     Vector<TailProcessingNode> m_finishedTailProcessingNodes;
 
     // They will be scheduled for deletion (on the main thread) at the end of a render cycle (in realtime thread).
-    Vector<AudioNode*> m_nodesToDelete;
+    Vector<CheckedPtr<AudioNode>> m_nodesToDelete;
 
     // Only accessed when the graph lock is held.
-    HashSet<AudioSummingJunction*> m_dirtySummingJunctions;
-    HashSet<AudioNodeOutput*> m_dirtyAudioNodeOutputs;
+    HashSet<CheckedPtr<AudioSummingJunction>> m_dirtySummingJunctions;
+    HashSet<CheckedPtr<AudioNodeOutput>> m_dirtyAudioNodeOutputs;
 
     // For the sake of thread safety, we maintain a seperate Vector of automatic pull nodes for rendering in m_renderingAutomaticPullNodes.
     // It will be copied from m_automaticPullNodes by updateAutomaticPullNodes() at the very start or end of the rendering quantum.
-    HashSet<AudioNode*> m_automaticPullNodes;
-    Vector<AudioNode*> m_renderingAutomaticPullNodes;
+    HashSet<CheckedPtr<AudioNode>> m_automaticPullNodes;
+    Vector<CheckedPtr<AudioNode>> m_renderingAutomaticPullNodes;
     // Only accessed in the audio thread.
-    Vector<AudioNode*> m_deferredBreakConnectionList;
+    Vector<CheckedPtr<AudioNode>> m_deferredBreakConnectionList;
     Vector<Vector<DOMPromiseDeferred<void>>> m_stateReactions;
 
-    Ref<AudioListener> m_listener;
+    const Ref<AudioListener> m_listener;
 
-    std::atomic<Thread*> m_audioThread;
+    std::atomic<uint32_t> m_audioThreadUID { 0 };
 
-    RecursiveLock m_graphLock;
+    mutable RecursiveLock m_graphLock;
 
     std::unique_ptr<AsyncAudioDecoder> m_audioDecoder;
 
@@ -371,9 +393,11 @@ private:
     bool m_isAudioThreadFinished { false };
     bool m_automaticPullNodesNeedUpdating { false };
     bool m_hasFinishedAudioSourceNodes { false };
-    NoiseInjectionPolicy m_noiseInjectionPolicy { NoiseInjectionPolicy::None };
+    OptionSet<NoiseInjectionPolicy> m_noiseInjectionPolicies;
 };
 
 } // WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(BaseAudioContext)
 
 #endif // ENABLE(WEB_AUDIO)

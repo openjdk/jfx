@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,7 +54,6 @@ import com.sun.javafx.logging.PlatformLogger.Level;
 
 import java.io.ByteArrayInputStream;
 import java.io.FileNotFoundException;
-import java.io.FilePermission;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.ref.Reference;
@@ -69,16 +68,9 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
-import java.security.AccessControlContext;
-import java.security.AccessController;
 import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.PermissionCollection;
-import java.security.PrivilegedAction;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
-import java.security.ProtectionDomain;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -89,8 +81,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.WeakHashMap;
-import java.util.jar.JarEntry;
-import java.util.jar.JarFile;
 
 /**
  * Contains the stylesheet state for a single scene. This includes both the
@@ -258,11 +248,11 @@ final public class StyleManager {
     // public for testing
     public boolean hasDefaultUserAgentStylesheet = false;
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     // stylesheet handling
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
     /*
      * A container for stylesheets and the Parents or Scenes that use them.
@@ -537,7 +527,7 @@ final public class StyleManager {
         if (parent == null) return;
 
         synchronized (styleLock) {
-            // RT-34863 - clean up CSS cache when Parent is removed from scene-graph
+            // JDK-8094828 - clean up CSS cache when Parent is removed from scene-graph
             CacheContainer removedContainer = cacheContainerMap.remove(parent);
             if (removedContainer != null) {
                 removedContainer.clearCache();
@@ -749,11 +739,11 @@ final public class StyleManager {
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     // Image caching
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
     private final static class ImageCache {
         private Map<String, SoftReference<Image>> imageCache = new HashMap<>();
@@ -768,7 +758,7 @@ final public class StyleManager {
                 if (image == null) {
                     try {
                         image = new Image(url);
-                        // RT-31865
+                        // JDK-8117908
                         if (image.isError()) {
                             final PlatformLogger logger = getLogger();
                             if (logger != null && logger.isLoggable(Level.WARNING)) {
@@ -846,11 +836,11 @@ final public class StyleManager {
         return imageCache.getCachedImage(url);
     }
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     // Stylesheet loading
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
 
     private static final String skinPrefix = "com/sun/javafx/scene/control/skin/";
@@ -946,143 +936,14 @@ final public class StyleManager {
         return new byte[0];
     }
 
-    @SuppressWarnings("removal")
     public static Stylesheet loadStylesheet(final String fname) {
-        try {
-            return loadStylesheetUnPrivileged(fname);
-        } catch (java.security.AccessControlException ace) {
-
-            // FIXME: JIGSAW -- we no longer are in a jar file, so this code path
-            // is obsolete and needs to be redone or eliminated. Fortunately, I
-            // don't think it is actually needed.
-            System.err.println("WARNING: security exception trying to load: " + fname);
-
-            /*
-            ** we got an access control exception, so
-            ** we could be running with a security manager.
-            ** we'll allow the app to read a css file from our runtime jar,
-            ** and give it one more chance.
-            */
-
-            /*
-            ** check that there are enough chars after the !/ to have a valid .css or .bss file name
-            */
-            if ((fname.length() < 7) && (fname.indexOf("!/") < fname.length()-7)) {
-                return null;
-            }
-
-            /*
-            **
-            ** first check that it's actually looking for the same runtime jar
-            ** that we're running from, and not some other file.
-            */
-            try {
-                URI requestedFileUrI = new URI(fname);
-
-                /*
-                ** is the requested file in a jar
-                */
-                if ("jar".equals(requestedFileUrI.getScheme())) {
-                    /*
-                    ** let's check that the css file is being requested from our
-                    ** runtime jar
-                    */
-                    URI styleManagerJarURI = AccessController.doPrivileged((PrivilegedExceptionAction<URI>) () -> StyleManager.class.getProtectionDomain().getCodeSource().getLocation().toURI());
-
-                    final String styleManagerJarPath = styleManagerJarURI.getSchemeSpecificPart();
-                    String requestedFilePath = requestedFileUrI.getSchemeSpecificPart();
-                    String requestedFileJarPart = requestedFilePath.substring(requestedFilePath.indexOf('/'), requestedFilePath.indexOf("!/"));
-                    /*
-                    ** it's the correct jar, check it's a file access
-                    ** strip off the leading jar
-                    */
-                    if (styleManagerJarPath.equals(requestedFileJarPart)) {
-                        /*
-                        ** strip off the leading "jar",
-                        ** the css file name is past the last '!'
-                        */
-                        String requestedFileJarPathNoLeadingSlash = fname.substring(fname.indexOf("!/")+2);
-                        /*
-                        ** check that it's looking for a css file in the runtime jar
-                        */
-                        if (fname.endsWith(".css") || fname.endsWith(".bss")) {
-                            /*
-                            ** set up a read permission for the jar
-                            */
-                            FilePermission perm = new FilePermission(styleManagerJarPath, "read");
-
-                            PermissionCollection perms = perm.newPermissionCollection();
-                            perms.add(perm);
-                            AccessControlContext permsAcc = new AccessControlContext(
-                                new ProtectionDomain[] {
-                                    new ProtectionDomain(null, perms)
-                                });
-                            /*
-                            ** check that the jar file exists, and that we're allowed to
-                            ** read it.
-                            */
-                            JarFile jar = null;
-                            try {
-                                jar = AccessController.doPrivileged((PrivilegedExceptionAction<JarFile>) () -> new JarFile(styleManagerJarPath), permsAcc);
-                            } catch (PrivilegedActionException pae) {
-                                /*
-                                ** we got either a FileNotFoundException or an IOException
-                                ** in the privileged read. Return the same error as we
-                                ** would have returned if the css file hadn't of existed.
-                                */
-                                return null;
-                            }
-                            if (jar != null) {
-                                /*
-                                ** check that the file is in the jar
-                                */
-                                JarEntry entry = jar.getJarEntry(requestedFileJarPathNoLeadingSlash);
-                                if (entry != null) {
-                                    /*
-                                    ** allow read access to the jar
-                                    */
-                                    return AccessController.doPrivileged(
-                                            (PrivilegedAction<Stylesheet>) () -> loadStylesheetUnPrivileged(fname), permsAcc);
-                                }
-                            }
-                        }
-                    }
-                }
-                /*
-                ** no matter what happen, we return the same error that would
-                ** be returned if the css file hadn't of existed.
-                ** That way there in no information leaked.
-                */
-                return null;
-            }
-            /*
-            ** no matter what happen, we return the same error that would
-            ** be returned if the css file hadn't of existed.
-            ** That way there in no information leaked.
-            */
-            catch (java.net.URISyntaxException e) {
-                return null;
-            }
-            catch (java.security.PrivilegedActionException e) {
-                return null;
-            }
-       }
-    }
-
-
-    private static Stylesheet loadStylesheetUnPrivileged(final String fname) {
-
         synchronized (styleLock) {
-            @SuppressWarnings("removal")
-            Boolean parse = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-
-                final String bss = System.getProperty("binary.css");
-                // binary.css is true by default.
-                // parse only if the file is not a .bss
-                // and binary.css is set to false
-                return (!fname.endsWith(".bss") && bss != null) ?
+            final String bss = System.getProperty("binary.css");
+            // binary.css is true by default.
+            // parse only if the file is not a .bss
+            // and binary.css is set to false
+            Boolean parse = (!fname.endsWith(".bss") && bss != null) ?
                     !Boolean.valueOf(bss) : Boolean.FALSE;
-            });
 
             try {
                 final String ext = (parse) ? (".css") : (".bss");
@@ -1104,7 +965,7 @@ final public class StyleManager {
 
                     if ((url != null) && !parse) {
                         try {
-                            // RT-36332: if loadBinary throws an IOException, make sure to try .css
+                            // JDK-8095691: if loadBinary throws an IOException, make sure to try .css
                             stylesheet = Stylesheet.loadBinary(url);
                         } catch (IOException ignored) {
                         }
@@ -1241,11 +1102,11 @@ final public class StyleManager {
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     // User Agent stylesheet handling
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
 
     /**
@@ -1330,7 +1191,7 @@ final public class StyleManager {
      * @param scene Only used in CssError for tracking back to the scene that loaded the stylesheet
      * @param url  The file URL, either relative or absolute, as a String.
      */
-    // For RT-20643
+    // For JDK-8127659
     public void addUserAgentStylesheet(Scene scene, String url) {
 
         final String fname = (url != null) ? url.trim() : null;
@@ -1415,7 +1276,7 @@ final public class StyleManager {
      * @param scene Only used in CssError for tracking back to the scene that loaded the stylesheet
      * @param url  The file URL, either relative or absolute, as a String.
      */
-    // For RT-20643
+    // For JDK-8127659
     public void setDefaultUserAgentStylesheet(Scene scene, String url) {
 
         final String fname = (url != null) ? url.trim() : null;
@@ -1606,7 +1467,7 @@ final public class StyleManager {
                         list.add(container);
                     }
 
-                    // RT-22565: remember that this parent or scene uses this stylesheet.
+                    // JDK-8117492: remember that this parent or scene uses this stylesheet.
                     // Later, if the cache is cleared, the parent or scene is told to
                     // reapply css.
                     container.parentUsers.add(parent);
@@ -1618,7 +1479,7 @@ final public class StyleManager {
                     // stylesheetContainerMap anyway as this will prevent further
                     // attempts to parse the file
                     container = new StylesheetContainer(fname, stylesheet);
-                    // RT-22565: remember that this parent or scene uses this stylesheet.
+                    // JDK-8117492: remember that this parent or scene uses this stylesheet.
                     // Later, if the cache is cleared, the parent or scene is told to
                     // reapply css.
                     container.parentUsers.add(parent);
@@ -1768,22 +1629,19 @@ final public class StyleManager {
 
             key.className = cname;
             key.id = id;
+            key.styleClasses = FixedCapacitySet.of(styleClasses.size());
             for(int n=0, nMax=styleClasses.size(); n<nMax; n++) {
 
                 final String styleClass = styleClasses.get(n);
                 if (styleClass == null || styleClass.isEmpty()) continue;
 
-                key.styleClasses.add(StyleClassSet.getStyleClass(styleClass));
+                key.styleClasses.add(styleClass);
             }
 
             Map<Key, Cache> cacheMap = cacheContainer.getCacheMap(parentStylesheets,regionUserAgentStylesheet);
             Cache cache = cacheMap.get(key);
 
-            if (cache != null) {
-                // key will be reused, so clear the styleClasses for next use
-                key.styleClasses.clear();
-
-            } else {
+            if (cache == null) {
 
                 // If the cache is null, then we need to create a new Cache and
                 // add it to the cache map
@@ -1914,11 +1772,11 @@ final public class StyleManager {
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     // CssError reporting
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
     private static ObservableList<CssParser.ParseError> errors = null;
     /**
@@ -1951,11 +1809,11 @@ final public class StyleManager {
         return errors;
     }
 
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
     //
     // Classes and routines for mapping styles to a Node
     //
-    ////////////////////////////////////////////////////////////////////////////
+    //--------------------------------------------------------------------------
 
     private static List<String> cacheMapKey;
 
@@ -2307,11 +2165,7 @@ final public class StyleManager {
         // necessary.
         String className;
         String id;
-        final StyleClassSet styleClasses;
-
-        private Key() {
-            styleClasses = new StyleClassSet();
-        }
+        Set<String> styleClasses;
 
         @Override
         public boolean equals(Object o) {

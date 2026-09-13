@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "HTMLElement.h"
+#include <WebCore/HTMLElement.h>
 
 namespace WebCore {
 
@@ -35,10 +35,12 @@ class HTMLTableRowsCollection;
 class HTMLTableSectionElement;
 
 class HTMLTableElement final : public HTMLElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLTableElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLTableElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLTableElement);
 public:
     static Ref<HTMLTableElement> create(Document&);
     static Ref<HTMLTableElement> create(const QualifiedName&, Document&);
+    ~HTMLTableElement();
 
     WEBCORE_EXPORT RefPtr<HTMLTableCaptionElement> caption() const;
     WEBCORE_EXPORT ExceptionOr<void> setCaption(RefPtr<HTMLTableCaptionElement>&&);
@@ -56,7 +58,7 @@ public:
     WEBCORE_EXPORT Ref<HTMLTableSectionElement> createTBody();
     WEBCORE_EXPORT Ref<HTMLTableCaptionElement> createCaption();
     WEBCORE_EXPORT void deleteCaption();
-    WEBCORE_EXPORT ExceptionOr<Ref<HTMLElement>> insertRow(int index = -1);
+    WEBCORE_EXPORT ExceptionOr<Ref<HTMLTableRowElement>> insertRow(int index = -1);
     WEBCORE_EXPORT ExceptionOr<void> deleteRow(int index);
 
     WEBCORE_EXPORT Ref<HTMLCollection> rows();

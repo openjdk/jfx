@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,12 +29,13 @@
 #if ENABLE(FTL_JIT)
 
 #include "LinkBuffer.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC { namespace FTL {
 
-LazySlowPath::~LazySlowPath()
-{
-}
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LazySlowPath);
+
+LazySlowPath::~LazySlowPath() = default;
 
 void LazySlowPath::initialize(
     CodeLocationJump<JSInternalPtrTag> patchableJump, CodeLocationLabel<JSInternalPtrTag> done,
@@ -62,11 +63,11 @@ void LazySlowPath::generate(CodeBlock* codeBlock)
 
     m_generator->run(jit, params);
 
-    LinkBuffer linkBuffer(jit, codeBlock, LinkBuffer::Profile::FTL, JITCompilationMustSucceed);
-    linkBuffer.link(params.doneJumps, m_done);
+    params.doneJumps.linkThunk(m_done, &jit);
     if (m_exceptionTarget)
-        linkBuffer.link(exceptionJumps, m_exceptionTarget);
-    m_stub = FINALIZE_CODE_FOR(codeBlock, linkBuffer, JITStubRoutinePtrTag, "Lazy slow path call stub");
+        exceptionJumps.linkThunk(m_exceptionTarget, &jit);
+    LinkBuffer linkBuffer(jit, codeBlock, LinkBuffer::Profile::FTLThunk, JITCompilationMustSucceed);
+    m_stub = FINALIZE_CODE_FOR(codeBlock, linkBuffer, JITStubRoutinePtrTag, nullptr, "Lazy slow path call stub");
 
     MacroAssembler::repatchJump(m_patchableJump, CodeLocationLabel<JITStubRoutinePtrTag>(m_stub.code()));
 }

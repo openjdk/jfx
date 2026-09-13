@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,14 +25,18 @@
 
 #include "config.h"
 #include "ImageDecoder.h"
-#if !PLATFORM(JAVA) && (!USE(CG) || USE(AVIF))
+
+#include "ImageFrame.h"
+#if !PLATFORM(JAVA)
 #include "ScalableImageDecoder.h"
 #endif
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if USE(CG)
 #include "ImageDecoderCG.h"
-#elif PLATFORM(JAVA)
+#endif
+#if PLATFORM(JAVA)
 #include "ImageDecoderJava.h"
 #endif
 
@@ -46,12 +50,19 @@
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ImageDecoder);
+
 #if ENABLE(GPU_PROCESS) && HAVE(AVASSETREADER)
 using FactoryVector = Vector<ImageDecoder::ImageDecoderFactory>;
 
+static RefPtr<ImageDecoder> createInProcessImageDecoderAVFObjC(FragmentedSharedBuffer& buffer, const String& mimeType, AlphaOption alphaOption, GammaAndColorProfileOption gammaOption)
+{
+    return ImageDecoderAVFObjC::create(buffer, mimeType, alphaOption, gammaOption, ProcessIdentity { ProcessIdentity::CurrentProcess });
+}
+
 static void platformRegisterFactories(FactoryVector& factories)
 {
-    factories.append({ ImageDecoderAVFObjC::supportsMediaType, ImageDecoderAVFObjC::canDecodeType, ImageDecoderAVFObjC::create });
+    factories.append({ ImageDecoderAVFObjC::supportsMediaType, ImageDecoderAVFObjC::canDecodeType, createInProcessImageDecoderAVFObjC });
 }
 
 static FactoryVector& installedFactories()
@@ -67,7 +78,7 @@ static FactoryVector& installedFactories()
 
 void ImageDecoder::installFactory(ImageDecoder::ImageDecoderFactory&& factory)
 {
-    installedFactories().append(WTFMove(factory));
+    installedFactories().append(WTF::move(factory));
 }
 
 void ImageDecoder::resetFactories()
@@ -106,20 +117,20 @@ RefPtr<ImageDecoder> ImageDecoder::create(FragmentedSharedBuffer& data, const St
 #endif
 
 #if USE(CG)
-#if USE(AVIF)
     // ScalableImageDecoder is used on CG ports for some specific image formats which the platform doesn't support directly.
     if (auto imageDecoder = ScalableImageDecoder::create(data, alphaOption, gammaAndColorProfileOption))
         return imageDecoder;
-#endif
     return ImageDecoderCG::create(data, alphaOption, gammaAndColorProfileOption);
-#elif USE(DIRECT2D)
-    return ImageDecoderDirect2D::create(data, alphaOption, gammaAndColorProfileOption);
 #elif PLATFORM(JAVA)
     return ImageDecoderJava::create(data, alphaOption, gammaAndColorProfileOption);
 #else
     return ScalableImageDecoder::create(data, alphaOption, gammaAndColorProfileOption);
 #endif
 }
+
+ImageDecoder::ImageDecoder() = default;
+
+ImageDecoder::~ImageDecoder() = default;
 
 bool ImageDecoder::supportsMediaType(MediaType type)
 {
@@ -157,4 +168,20 @@ bool ImageDecoder::supportsMediaType(MediaType type)
     return false;
 }
 
+bool ImageDecoder::fetchFrameMetaDataAtIndex(size_t index, SubsamplingLevel subsamplingLevel, const DecodingOptions& options, ImageFrame& frame) const
+{
+    if (options.hasSizeForDrawing()) {
+        ASSERT(frame.hasNativeImage(options.shouldDecodeToHDR()));
+        frame.m_size = frame.nativeImage(options.shouldDecodeToHDR())->size();
+    } else
+        frame.m_size = frameSizeAtIndex(index, subsamplingLevel);
+
+    frame.m_densityCorrectedSize = frameDensityCorrectedSizeAtIndex(index);
+    frame.m_subsamplingLevel = subsamplingLevel;
+    frame.m_hasAlpha = frameHasAlphaAtIndex(index);
+    frame.m_orientation = frameOrientationAtIndex(index);
+    frame.m_decodingStatus = frameIsCompleteAtIndex(index) ? DecodingStatus::Complete : DecodingStatus::Partial;
+    return true;
 }
+
+} // namespace WebCore

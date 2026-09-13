@@ -25,6 +25,12 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
+#if !BUSE(TZONE)
+
 #include "IsoHeap.h"
 #include "IsoPage.h"
 #include "IsoSharedConfig.h"
@@ -40,7 +46,7 @@ public:
     BEXPORT static IsoSharedPage* tryCreate();
 
     template<typename Config, typename Type>
-    void free(const LockHolder&, api::IsoHeap<Type>&, void*);
+    void free(const LockHolder&, api::IsoHeapBase<Type>&, void*);
     VariadicBumpAllocator startAllocating(const LockHolder&);
     void stopAllocating(const LockHolder&);
 
@@ -61,3 +67,6 @@ uint8_t* indexSlotFor(void* ptr)
 } // namespace bmalloc
 
 #endif
+#endif // !BUSE(TZONE)
+
+#endif // __cplusplus

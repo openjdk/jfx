@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,7 @@
 
 package test.javafx.scene;
 
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 
 import javafx.event.EventHandler;
 import javafx.geometry.Point2D;
@@ -36,12 +35,7 @@ import javafx.scene.input.InputMethodRequests;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Rotate;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-
 import com.sun.javafx.event.EventHandlerManager;
-import test.com.sun.javafx.test.PropertiesTestBase;
 import javafx.geometry.NodeOrientation;
 import javafx.scene.CacheHint;
 import javafx.scene.Cursor;
@@ -49,10 +43,12 @@ import javafx.scene.DepthTest;
 import javafx.scene.Group;
 import javafx.scene.Node;
 
-@RunWith(Parameterized.class)
+import org.junit.jupiter.params.provider.Arguments;
+import test.com.sun.javafx.test.PropertiesTestBase;
+
 public final class Node_properties_Test extends PropertiesTestBase {
-    @Parameters
-    public static Collection data() {
+
+    public static Stream<Arguments> data() {
         final Group testParent = new Group();
         final Node testNode = new Rectangle();
         testParent.getChildren().add(testNode);
@@ -61,7 +57,7 @@ public final class Node_properties_Test extends PropertiesTestBase {
                 event -> {
                 };
 
-        return Arrays.asList(new Object[] {
+        return Stream.of(
 //            config(testNode, "parent", , ),
 //            config(testNode, "scene", , ),
             config(testNode, "id", "rect_1", "rect_2"),
@@ -156,10 +152,6 @@ public final class Node_properties_Test extends PropertiesTestBase {
                    testNode, "effectiveNodeOrientation",
                        NodeOrientation.LEFT_TO_RIGHT,
                        NodeOrientation.RIGHT_TO_LEFT)
-        });
-    }
-
-    public Node_properties_Test(final Configuration configuration) {
-        super(configuration);
+        );
     }
 }

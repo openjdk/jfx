@@ -23,24 +23,20 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PathUtilities_h
-#define PathUtilities_h
+#pragma once
 
-#include "Path.h"
-#include "WritingMode.h"
-#include <wtf/Vector.h>
+#include <WebCore/FloatRoundedRect.h>
+#include <wtf/Forward.h>
 
 namespace WebCore {
-class BorderData;
+
+class Path;
 
 class PathUtilities {
 public:
     WEBCORE_EXPORT static Path pathWithShrinkWrappedRects(const Vector<FloatRect>& rects, float radius);
+    WEBCORE_EXPORT static Path pathWithShrinkWrappedRects(const Vector<FloatRect>&, const CornerRadii&);
     WEBCORE_EXPORT static Vector<Path> pathsWithShrinkWrappedRects(const Vector<FloatRect>& rects, float radius);
-
-    static Path pathWithShrinkWrappedRectsForOutline(const Vector<FloatRect>&, const BorderData&, float outlineOffset, TextDirection, WritingMode, float deviceScaleFactor);
 };
 
-}
-
-#endif
+} // namespace WebCore

@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/AbstractCanMakeCheckedPtr.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -32,13 +34,15 @@ namespace WebCore {
 class CanvasBase;
 class FloatRect;
 
-class CanvasObserver : public CanMakeWeakPtr<CanvasObserver> {
+class CanvasObserver : public CanMakeWeakPtr<CanvasObserver>, public AbstractCanMakeCheckedPtr {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(CanvasObserver);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(CanvasObserver);
 public:
     virtual ~CanvasObserver() = default;
 
     virtual bool isStyleCanvasImage() const { return false; }
 
-    virtual void canvasChanged(CanvasBase&, const std::optional<FloatRect>& changedRect) = 0;
+    virtual void canvasChanged(CanvasBase&, const FloatRect& changedRect) = 0;
     virtual void canvasResized(CanvasBase&) = 0;
     virtual void canvasDestroyed(CanvasBase&) = 0;
 };

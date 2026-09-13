@@ -33,10 +33,10 @@ namespace JSC {
 
 CheckPrivateBrandVariant::CheckPrivateBrandVariant(CacheableIdentifier identifier, const StructureSet& structureSet)
     : m_structureSet(structureSet)
-    , m_identifier(WTFMove(identifier))
+    , m_identifier(WTF::move(identifier))
 { }
 
-CheckPrivateBrandVariant::~CheckPrivateBrandVariant() { }
+CheckPrivateBrandVariant::~CheckPrivateBrandVariant() = default;
 
 bool CheckPrivateBrandVariant::attemptToMerge(const CheckPrivateBrandVariant& other)
 {

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2011 Daniel Bates (dbates@intudata.com). All Rights Reserved.
- * Copyright (c) 2012 Google, inc.  All Rights Reserved.
+ * Copyright (C) 2011 Daniel Bates (dbates@intudata.com). All rights reserved.
+ * Copyright (c) 2012 Google, inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -60,7 +60,7 @@ struct Unicode16BitEscapeSequence {
         StringBuilder builder;
         builder.reserveCapacity(numberOfSequences);
         while (numberOfSequences--) {
-            UChar codeUnit = (toASCIIHexValue(run[2]) << 12) | (toASCIIHexValue(run[3]) << 8) | (toASCIIHexValue(run[4]) << 4) | toASCIIHexValue(run[5]);
+            char16_t codeUnit = (toASCIIHexValue(run[2]) << 12) | (toASCIIHexValue(run[3]) << 8) | (toASCIIHexValue(run[4]) << 4) | toASCIIHexValue(run[5]);
             builder.append(codeUnit);
             run = run.substring(SequenceSize);
         }
@@ -96,24 +96,23 @@ struct URLEscapeSequence {
         return runEnd;
     }
 
-    static Vector<char, 512> decodeRun(StringView run)
+    static Vector<uint8_t, 512> decodeRun(StringView run)
     {
         // For URL escape sequences, we know that findEndOfRun() has given us a run where every %-sign introduces
         // a valid escape sequence, but there may be characters between the sequences.
-        Vector<char, 512> buffer;
+        Vector<uint8_t, 512> buffer;
         buffer.grow(run.length()); // Unescaping hex sequences only makes the length smaller.
-        char* p = buffer.data();
+        size_t bufferIndex = 0;
         while (!run.isEmpty()) {
             if (run[0] == '%') {
-                *p++ = (toASCIIHexValue(run[1]) << 4) | toASCIIHexValue(run[2]);
+                buffer[bufferIndex++] = (toASCIIHexValue(run[1]) << 4) | toASCIIHexValue(run[2]);
                 run = run.substring(SequenceSize);
             } else {
-                *p++ = run[0];
+                buffer[bufferIndex++] = run[0];
                 run = run.substring(1);
             }
         }
-        ASSERT(buffer.size() >= static_cast<size_t>(p - buffer.data())); // Prove buffer not overrun.
-        buffer.shrink(p - buffer.data());
+        buffer.shrink(bufferIndex);
         return buffer;
     }
 
@@ -121,8 +120,8 @@ struct URLEscapeSequence {
     {
         auto buffer = decodeRun(run);
         if (!encoding.isValid())
-            return PAL::UTF8Encoding().decode(buffer.data(), buffer.size());
-        return encoding.decode(buffer.data(), buffer.size());
+            return PAL::UTF8Encoding().decode(buffer.span());
+        return encoding.decode(buffer.span());
     }
 };
 
@@ -146,18 +145,15 @@ String decodeEscapeSequences(StringView string, const TextEncoding& encoding)
         if (decoded.isEmpty())
             continue;
 
-        result.append(string.substring(decodedPosition, encodedRunPosition - decodedPosition));
-        result.append(decoded);
+        result.append(string.substring(decodedPosition, encodedRunPosition - decodedPosition), decoded);
         decodedPosition = encodedRunEnd;
     }
     result.append(string.substring(decodedPosition, length - decodedPosition));
     return result.toString();
 }
 
-inline Vector<uint8_t> decodeURLEscapeSequencesAsData(StringView string, const TextEncoding& encoding)
+inline Vector<uint8_t> decodeURLEscapeSequencesAsData(StringView string)
 {
-    ASSERT(encoding.isValid());
-
     Vector<uint8_t> result;
     size_t decodedPosition = 0;
     size_t searchPosition = 0;
@@ -174,7 +170,7 @@ inline Vector<uint8_t> decodeURLEscapeSequencesAsData(StringView string, const T
         }
 
         // Strings are encoded as requested.
-        result.appendVector(encoding.encode(string.substring(decodedPosition, encodedRunPosition - decodedPosition), PAL::UnencodableHandling::URLEncodedEntities));
+        result.appendVector(PAL::UTF8Encoding().encodeForURLParsing(string.substring(decodedPosition, encodedRunPosition - decodedPosition)));
 
         if (encodedRunPosition == notFound)
             return result;
@@ -189,4 +185,3 @@ inline Vector<uint8_t> decodeURLEscapeSequencesAsData(StringView string, const T
 }
 
 } // namespace PAL
-

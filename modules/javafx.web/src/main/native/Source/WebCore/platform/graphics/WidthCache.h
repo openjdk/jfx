@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,13 +26,17 @@
 #ifndef WidthCache_h
 #define WidthCache_h
 
-#include "TextRun.h"
+#include <WebCore/TextRun.h>
+#include <WebCore/TextSpacing.h>
 #include <wtf/Forward.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/HashSet.h>
 #include <wtf/Hasher.h>
 #include <wtf/MemoryPressureHandler.h>
+#include <wtf/ZippedRange.h>
 #include <wtf/text/StringCommon.h>
+#include <wtf/text/StringImpl.h>
+#include <wtf/text/WYHash.h>
 
 namespace WebCore {
 
@@ -43,74 +47,62 @@ private:
     // Used to optimize small strings as hash table keys. Avoids malloc'ing an out-of-line StringImpl.
     class SmallStringKey {
     public:
-        static unsigned capacity() { return s_capacity; }
+        static constexpr unsigned capacity() { return s_capacity; }
 
-        SmallStringKey()
-            : m_length(s_emptyValueLength)
+        constexpr SmallStringKey() = default;
+
+        constexpr SmallStringKey(WTF::HashTableDeletedValueType)
+            : m_hashAndLength(s_deletedValueLength)
         {
         }
 
-        SmallStringKey(WTF::HashTableDeletedValueType)
-            : m_length(s_deletedValueLength)
+        ALWAYS_INLINE SmallStringKey(StringView string)
         {
-        }
-
-        template<typename CharacterType> SmallStringKey(CharacterType* characters, unsigned short length)
-            : m_length(length)
-        {
+            unsigned length = string.length();
             ASSERT(length <= s_capacity);
-
-            StringHasher hasher;
-
-            bool remainder = length & 1;
-            length >>= 1;
-
-            unsigned i = 0;
-            while (length--) {
-                m_characters[i] = characters[i];
-                m_characters[i + 1] = characters[i + 1];
-                hasher.addCharactersAssumingAligned(characters[i], characters[i + 1]);
-                i += 2;
-            }
-
-            if (remainder) {
-                m_characters[i] = characters[i];
-                hasher.addCharacter(characters[i]);
-            }
-
-            m_hash = hasher.hash();
+            if (string.is8Bit())
+                copySmallCharacters(std::span { m_characters }, string.span8());
+            else
+                copySmallCharacters(std::span { m_characters }, string.span16());
+            m_hashAndLength = WYHash::computeHashAndMaskTop8Bits(std::span<const char16_t> { m_characters }.first(s_capacity)) | (length << 24);
         }
 
-        const UChar* characters() const { return m_characters; }
-        unsigned short length() const { return m_length; }
-        unsigned hash() const { return m_hash; }
+        const char16_t* characters() const { return m_characters.data(); }
+        unsigned length() const { return m_hashAndLength >> 24; }
+        unsigned hash() const { return m_hashAndLength & 0x00ffffffU; }
 
-        bool isHashTableDeletedValue() const { return m_length == s_deletedValueLength; }
-        bool isHashTableEmptyValue() const { return m_length == s_emptyValueLength; }
+        bool isHashTableDeletedValue() const { return m_hashAndLength == s_deletedValueLength; }
+        bool isHashTableEmptyValue() const { return !m_hashAndLength; }
+        // Empty and deleted values have lengths that are not equal to any valid length.
+        static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
+        friend bool operator==(const SmallStringKey&, const SmallStringKey&) = default;
 
     private:
-        static const unsigned s_capacity = 15;
-        static const unsigned s_emptyValueLength = s_capacity + 1;
-        static const unsigned s_deletedValueLength = s_capacity + 2;
+        static constexpr unsigned s_capacity = 16;
+        static constexpr unsigned s_deletedValueLength = s_capacity + 1;
 
-        unsigned m_hash;
-        unsigned short m_length;
-        UChar m_characters[s_capacity];
-    };
+        template<typename CharacterType>
+        ALWAYS_INLINE static void copySmallCharacters(std::span<char16_t, s_capacity> destination, std::span<const CharacterType> source)
+        {
+            if constexpr (std::is_same_v<CharacterType, char16_t>)
+                memcpySpan(destination, source);
+            else {
+                for (auto [sourceCharacter, destinationCharacter] : zippedRange(source, destination))
+                    destinationCharacter = sourceCharacter;
+            }
+        }
 
-    struct SmallStringKeyHash {
-        static unsigned hash(const SmallStringKey& key) { return key.hash(); }
-        static bool equal(const SmallStringKey& a, const SmallStringKey& b) { return a == b; }
-        static const bool safeToCompareToEmptyOrDeleted = true; // Empty and deleted values have lengths that are not equal to any valid length.
+        std::array<char16_t, s_capacity> m_characters { };
+        unsigned m_hashAndLength { 0 };
     };
 
     struct SmallStringKeyHashTraits : SimpleClassHashTraits<SmallStringKey> {
-        static const bool hasIsEmptyValueFunction = true;
+        static constexpr bool emptyValueIsZero = true;
+        static constexpr bool hasIsEmptyValueFunction = true;
         static bool isEmptyValue(const SmallStringKey& key) { return key.isHashTableEmptyValue(); }
-        static const int minimumTableSize = 16;
+        static constexpr int minimumTableSize = 16;
     };
-
-    friend bool operator==(const SmallStringKey&, const SmallStringKey&);
 
 public:
     WidthCache()
@@ -121,23 +113,25 @@ public:
 
     float* add(StringView text, float entry)
     {
-        if (MemoryPressureHandler::singleton().isUnderMemoryPressure())
+        unsigned length = text.length();
+
+        // Do not allow length = 0. This allows SmallStringKey empty-value-is-zero.
+        if (!length) [[unlikely]]
             return nullptr;
 
-        if (text.length() > SmallStringKey::capacity())
+        if (length > SmallStringKey::capacity())
             return nullptr;
 
         if (m_countdown > 0) {
             --m_countdown;
             return nullptr;
         }
+
         return addSlowCase(text, entry);
     }
 
-    float* add(const TextRun& run, float entry, bool hasKerningOrLigatures, bool hasWordSpacingOrLetterSpacing, GlyphOverflow* glyphOverflow)
+    float* add(const TextRun& run, float entry, bool hasKerningOrLigatures, bool hasWordSpacingOrLetterSpacing, bool hasTextSpacing, GlyphOverflow* glyphOverflow)
     {
-        if (MemoryPressureHandler::singleton().isUnderMemoryPressure())
-            return nullptr;
         // The width cache is not really profitable unless we're doing expensive glyph transformations.
         if (!hasKerningOrLigatures)
             return nullptr;
@@ -150,15 +144,11 @@ public:
         // If we allow tabs and a tab occurs inside a word, the width of the word varies based on its position on the line.
         if (run.allowTabs())
             return nullptr;
-        if (run.length() > SmallStringKey::capacity())
+        // width calculation with text-spacing depends on context of adjacent characters.
+        if (hasTextSpacing && invalidateCacheForTextSpacing(run))
             return nullptr;
 
-        if (m_countdown > 0) {
-            --m_countdown;
-            return nullptr;
-        }
-
-        return addSlowCase(run.text(), entry);
+        return add(run.text(), entry);
     }
 
     void clear()
@@ -171,21 +161,21 @@ private:
 
     float* addSlowCase(StringView text, float entry)
     {
-        int length = text.length();
+        if (MemoryPressureHandler::singleton().isUnderMemoryPressure())
+            return nullptr;
+
+        unsigned length = text.length();
         bool isNewEntry;
         float* value;
         if (length == 1) {
-            SingleCharMap::AddResult addResult = m_singleCharMap.fastAdd(text[0], entry);
+            // The map use 0 for empty key, thus we do +1 here to avoid conflicting against empty key.
+            // This is fine since the key is uint32_t while character is char16_t. So +1 never causes overflow.
+            uint32_t character = text[0];
+            auto addResult = m_singleCharMap.fastAdd(character + 1, entry);
             isNewEntry = addResult.isNewEntry;
             value = &addResult.iterator->value;
         } else {
-            SmallStringKey smallStringKey;
-            if (text.is8Bit())
-                smallStringKey = SmallStringKey(text.characters8(), length);
-            else
-                smallStringKey = SmallStringKey(text.characters16(), length);
-
-            Map::AddResult addResult = m_map.fastAdd(smallStringKey, entry);
+            auto addResult = m_map.fastAdd(text, entry);
             isNewEntry = addResult.isNewEntry;
             value = &addResult.iterator->value;
         }
@@ -210,39 +200,36 @@ private:
         return nullptr;
     }
 
-    typedef HashMap<SmallStringKey, float, SmallStringKeyHash, SmallStringKeyHashTraits> Map;
-    typedef HashMap<uint32_t, float, DefaultHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>> SingleCharMap;
-    static const int s_minInterval = -3; // A cache hit pays for about 3 cache misses.
-    static const int s_maxInterval = 20; // Sampling at this interval has almost no overhead.
+    // returns true if cache is/was invalidated
+    bool invalidateCacheForTextSpacing(const TextRun& textRun)
+    {
+        if (m_hasSeenIdeograph)
+            return true;
+        const auto& text = textRun.textAsString();
+        for (unsigned index = 0; index < text.length(); ++index) {
+            if (TextSpacing::isIdeograph(text.characterAt(index))) {
+                m_hasSeenIdeograph = true;
+                clear();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    using Map = HashMap<SmallStringKey, float, DefaultHash<SmallStringKey>, SmallStringKeyHashTraits, WTF::FloatWithZeroEmptyKeyHashTraits<float>>;
+    using SingleCharMap = HashMap<uint32_t, float, DefaultHash<uint32_t>, HashTraits<uint32_t>, WTF::FloatWithZeroEmptyKeyHashTraits<float>>;
+
+    static constexpr int s_minInterval = -3; // A cache hit pays for about 3 cache misses.
+    static constexpr int s_maxInterval = 20; // Sampling at this interval has almost no overhead.
     static constexpr unsigned s_maxSize = 500000; // Just enough to guard against pathological growth.
 
     int m_interval;
     int m_countdown;
     SingleCharMap m_singleCharMap;
     Map m_map;
+    bool m_hasSeenIdeograph;
 };
-
-#if PLATFORM(JAVA)
-inline bool check_equal(const UChar* a, const UChar* b, unsigned length)
-{
-    for (unsigned i = 0; i < length; ++i) {
-        if (a[i] != b[i])
-            return false;
-    }
-    return true;
-}
-#endif
-
-inline bool operator==(const WidthCache::SmallStringKey& a, const WidthCache::SmallStringKey& b)
-{
-    if (a.length() != b.length())
-        return false;
-#if PLATFORM(JAVA)
-    return check_equal(a.characters(), b.characters(), a.length());
-#else
-    return equal(a.characters(), b.characters(), a.length());
-#endif
-}
 
 } // namespace WebCore
 

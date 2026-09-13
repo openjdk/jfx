@@ -26,7 +26,8 @@
 #pragma once
 
 #include "CSSPropertyNames.h"
-#include "DeclarativeAnimation.h"
+#include "StyleOriginatedAnimation.h"
+#include "StyleTransition.h"
 #include "Styleable.h"
 #include "WebAnimationTypes.h"
 #include <wtf/Markable.h>
@@ -36,39 +37,42 @@
 
 namespace WebCore {
 
-class Animation;
 class RenderStyle;
 
-class CSSTransition final : public DeclarativeAnimation {
-    WTF_MAKE_ISO_ALLOCATED(CSSTransition);
+class CSSTransition final : public StyleOriginatedAnimation {
+    WTF_MAKE_TZONE_ALLOCATED(CSSTransition);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(CSSTransition);
 public:
-    static Ref<CSSTransition> create(const Styleable&, AnimatableProperty, MonotonicTime generationTime, const Animation&, const RenderStyle& oldStyle, const RenderStyle& newStyle, Seconds delay, Seconds duration, const RenderStyle& reversingAdjustedStartStyle, double);
-    ~CSSTransition() = default;
+    static Ref<CSSTransition> create(const Styleable&, const AnimatableCSSProperty&, MonotonicTime generationTime, const Style::Transition&, const RenderStyle& oldStyle, const RenderStyle& newStyle, Seconds delay, Seconds duration, const RenderStyle& reversingAdjustedStartStyle, double);
+
+    virtual ~CSSTransition();
 
     const AtomString transitionProperty() const;
-    AnimatableProperty property() const { return m_property; }
+    AnimatableCSSProperty property() const { return m_property; }
     MonotonicTime generationTime() const { return m_generationTime; }
-    std::optional<Seconds> timelineTimeAtCreation() const { return m_timelineTimeAtCreation; }
     const RenderStyle& targetStyle() const { return *m_targetStyle; }
-    const RenderStyle& currentStyle() const { return *m_currentStyle; }
     const RenderStyle& reversingAdjustedStartStyle() const { return *m_reversingAdjustedStartStyle; }
     double reversingShorteningFactor() const { return m_reversingShorteningFactor; }
 
+    const Style::Transition& backingStyleTransition() const { return m_backingStyleTransition; }
+
 private:
-    CSSTransition(const Styleable&, AnimatableProperty, MonotonicTime generationTime, const Animation&, const RenderStyle& oldStyle, const RenderStyle& targetStyle, const RenderStyle& reversingAdjustedStartStyle, double);
+    CSSTransition(const Styleable&, const AnimatableCSSProperty&, MonotonicTime generationTime, const Style::Transition&, const RenderStyle& targetStyle, const RenderStyle& reversingAdjustedStartStyle, double);
     void setTimingProperties(Seconds delay, Seconds duration);
-    Ref<DeclarativeAnimationEvent> createEvent(const AtomString& eventType, std::optional<Seconds> scheduledTime, double elapsedTime, PseudoId) final;
-    void resolve(RenderStyle& targetStyle, const Style::ResolutionContext&, std::optional<Seconds>) final;
+    Ref<StyleOriginatedAnimationEvent> createEvent(const AtomString& eventType, std::optional<Seconds> scheduledTime, double elapsedTime, const std::optional<Style::PseudoElementIdentifier>&) final;
     void animationDidFinish() final;
     bool isCSSTransition() const final { return true; }
 
-    AnimatableProperty m_property;
+    AnimationPlayState backingAnimationPlayState() const final;
+    TimingFunction* backingAnimationTimingFunction() const final;
+
+    AnimatableCSSProperty m_property;
     MonotonicTime m_generationTime;
-    Markable<Seconds, Seconds::MarkableTraits> m_timelineTimeAtCreation;
     std::unique_ptr<RenderStyle> m_targetStyle;
-    std::unique_ptr<RenderStyle> m_currentStyle;
     std::unique_ptr<RenderStyle> m_reversingAdjustedStartStyle;
     double m_reversingShorteningFactor;
+
+    Style::Transition m_backingStyleTransition;
 
 };
 

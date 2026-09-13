@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,14 +30,14 @@
 #include "CryptoAlgorithmParameters.h"
 #include <JavaScriptCore/JSObject.h>
 #include <JavaScriptCore/Strong.h>
-#include <variant>
 
 namespace WebCore {
 
 class CryptoAlgorithmHmacKeyParams final : public CryptoAlgorithmParameters {
+    WTF_MAKE_TZONE_ALLOCATED(CryptoAlgorithmHmacKeyParams);
 public:
     // FIXME: Consider merging hash and hashIdentifier.
-    std::variant<JSC::Strong<JSC::JSObject>, String> hash;
+    Variant<JSC::Strong<JSC::JSObject>, String> hash;
     CryptoAlgorithmIdentifier hashIdentifier;
     std::optional<size_t> length;
 

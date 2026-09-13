@@ -80,7 +80,7 @@ public:
     void removeIf(const Functor& functor)
     {
         m_map.removeIf(
-            [&] (HashMap<Value*, Matches>::KeyValuePairType& entry) -> bool {
+            [&] (UncheckedKeyHashMap<Value*, Matches>::KeyValuePairType& entry) -> bool {
                 entry.value.removeAllMatching(
                     [&] (Value* value) -> bool {
                         if (MemoryValue* memory = value->as<MemoryValue>())
@@ -102,14 +102,11 @@ public:
     template<typename Functor>
     MemoryValue* find(Value* ptr, const Functor& functor)
     {
-        if (B3EliminateCommonSubexpressionsInternal::verbose)
-            dataLog("        Looking for ", pointerDump(ptr), " in ", *this, "\n");
+        dataLogLnIf(B3EliminateCommonSubexpressionsInternal::verbose, "        Looking for ", pointerDump(ptr), " in ", *this);
         if (Matches* matches = find(ptr)) {
-            if (B3EliminateCommonSubexpressionsInternal::verbose)
-                dataLog("        Matches: ", pointerListDump(*matches), "\n");
+            dataLogLnIf(B3EliminateCommonSubexpressionsInternal::verbose, "        Matches: ", pointerListDump(*matches));
             for (Value* candidateValue : *matches) {
-                if (B3EliminateCommonSubexpressionsInternal::verbose)
-                    dataLog("        Having candidate: ", pointerDump(candidateValue), "\n");
+                dataLogLnIf(B3EliminateCommonSubexpressionsInternal::verbose, "        Having candidate: ", pointerDump(candidateValue));
                 if (MemoryValue* candidateMemory = candidateValue->as<MemoryValue>()) {
                     if (functor(candidateMemory))
                         return candidateMemory;
@@ -121,11 +118,11 @@ public:
 
     void dump(PrintStream& out) const
     {
-        out.print("{");
+        out.print("{"_s);
         CommaPrinter comma;
         for (auto& entry : m_map)
-            out.print(comma, pointerDump(entry.key), "=>", pointerListDump(entry.value));
-        out.print("}");
+            out.print(comma, pointerDump(entry.key), "=>"_s, pointerListDump(entry.value));
+        out.print("}"_s);
     }
 
 private:
@@ -133,7 +130,7 @@ private:
     // - It cannot be a MemoryValue* because the key is imprecise. Many MemoryValues could have the
     //   same key while being unaliased.
     // - It can't be a MemoryMatches array because the MemoryValue*'s could be turned into Identity's.
-    HashMap<Value*, Matches> m_map;
+    UncheckedKeyHashMap<Value*, Matches> m_map;
 };
 
 struct ImpureBlockData {
@@ -153,7 +150,7 @@ struct ImpureBlockData {
     MemoryValueMap memoryValuesAtTail;
 
     // This Maps x->y in "y = WasmAddress(@x)"
-    HashMap<Value*, Value*> m_candidateWasmAddressesAtTail;
+    UncheckedKeyHashMap<Value*, Value*> m_candidateWasmAddressesAtTail;
 };
 
 class CSE {
@@ -168,8 +165,7 @@ public:
 
     bool run()
     {
-        if (B3EliminateCommonSubexpressionsInternal::verbose)
-            dataLog("B3 before CSE:\n", m_proc);
+        dataLogIf(B3EliminateCommonSubexpressionsInternal::verbose, "B3 before CSE:\n", m_proc);
 
         m_proc.resetValueOwners();
 
@@ -204,16 +200,14 @@ public:
                 }
             }
 
-            if (B3EliminateCommonSubexpressionsInternal::verbose)
-                dataLog("Block ", *block, ": ", data, "\n");
+            dataLogLnIf(B3EliminateCommonSubexpressionsInternal::verbose, "Block ", *block, ": ", data);
         }
 
         // Perform CSE. This edits code.
         Vector<BasicBlock*> postOrder = m_proc.blocksInPostOrder();
         for (unsigned i = postOrder.size(); i--;) {
             m_block = postOrder[i];
-            if (B3EliminateCommonSubexpressionsInternal::verbose)
-                dataLog("Looking at ", *m_block, ":\n");
+            dataLogLnIf(B3EliminateCommonSubexpressionsInternal::verbose, "Looking at ", *m_block, ":");
 
             m_data = ImpureBlockData();
             for (m_index = 0; m_index < m_block->size(); ++m_index) {
@@ -238,8 +232,7 @@ public:
             m_insertionSet.execute(block);
         }
 
-        if (B3EliminateCommonSubexpressionsInternal::verbose)
-            dataLog("B3 after CSE:\n", m_proc);
+        dataLogIf(B3EliminateCommonSubexpressionsInternal::verbose, "B3 after CSE:\n", m_proc);
 
         return m_changed;
     }
@@ -278,6 +271,12 @@ private:
 
         if (memory)
             processMemoryAfterClobber(memory);
+
+        // The reads info should be updated even the block is processed
+        // since the dominated store nodes may dependent on the data
+        // read from the processed block. Note that there is no need to
+        // update reads info if the node is deleted.
+        m_data.reads.add(m_value->effects().reads);
     }
 
     // Return true if we got rid of the operation. If you changed IR in this function, you have to
@@ -327,6 +326,9 @@ private:
 
         data.memoryValuesAtTail.removeIf(
             [&] (MemoryValue* memory) {
+                // If memory reads is immutable, clobbering never changes the result.
+                if (memory->readsMutability() == Mutability::Immutable)
+                    return false;
                 return memory->range().overlaps(writes);
             });
     }
@@ -556,8 +558,7 @@ private:
         // expensive, but in the overwhelming majority of cases it will almost immediately hit an
         // operation that interferes.
 
-        if (B3EliminateCommonSubexpressionsInternal::verbose)
-            dataLog(*m_value, ": looking forward for stores to ", *ptr, "...\n");
+        dataLogLnIf(B3EliminateCommonSubexpressionsInternal::verbose, *m_value, ": looking forward for stores to ", *ptr, "...");
 
         // First search forward in this basic block.
         // FIXME: It would be cool to get rid of this linear search. It's not super critical since
@@ -626,8 +627,7 @@ private:
         if (matches.isEmpty())
             return false;
 
-        if (B3EliminateCommonSubexpressionsInternal::verbose)
-            dataLog("Eliminating ", *m_value, " due to ", pointerListDump(matches), "\n");
+        dataLogLnIf(B3EliminateCommonSubexpressionsInternal::verbose, "Eliminating ", *m_value, " due to ", pointerListDump(matches));
 
         m_changed = true;
 
@@ -635,8 +635,7 @@ private:
             MemoryValue* dominatingMatch = matches[0];
             RELEASE_ASSERT(m_dominators.dominates(dominatingMatch->owner, m_block));
 
-            if (B3EliminateCommonSubexpressionsInternal::verbose)
-                dataLog("    Eliminating using ", *dominatingMatch, "\n");
+            dataLogLnIf(B3EliminateCommonSubexpressionsInternal::verbose, "    Eliminating using ", *dominatingMatch);
             Vector<Value*> extraValues;
             if (Value* value = replace(dominatingMatch, extraValues)) {
                 for (Value* extraValue : extraValues)
@@ -659,8 +658,7 @@ private:
 
         VariableValue* get = m_insertionSet.insert<VariableValue>(
             m_index, Get, m_value->origin(), variable);
-        if (B3EliminateCommonSubexpressionsInternal::verbose)
-            dataLog("    Inserting get of value: ", *get, "\n");
+        dataLogLnIf(B3EliminateCommonSubexpressionsInternal::verbose, "    Inserting get of value: ", *get);
         m_value->replaceWithIdentity(get);
 
         for (MemoryValue* match : matches) {
@@ -684,26 +682,23 @@ private:
     template<typename Filter>
     MemoryMatches findMemoryValue(Value* ptr, HeapRange range, const Filter& filter)
     {
-        if (B3EliminateCommonSubexpressionsInternal::verbose) {
-            dataLog(*m_value, ": looking backward for ", *ptr, "...\n");
-            dataLog("    Full value: ", deepDump(m_value), "\n");
+        if constexpr (B3EliminateCommonSubexpressionsInternal::verbose) {
+            dataLogLn(*m_value, ": looking backward for ", *ptr, "...");
+            dataLogLn("    Full value: ", deepDump(m_value));
         }
 
         if (m_value->as<MemoryValue>()->hasFence()) {
-            if (B3EliminateCommonSubexpressionsInternal::verbose)
-                dataLog("    Giving up because fences.\n");
+            dataLogLnIf(B3EliminateCommonSubexpressionsInternal::verbose, "    Giving up because fences.");
             return { };
         }
 
         if (MemoryValue* match = m_data.memoryValuesAtTail.find(ptr, filter)) {
-            if (B3EliminateCommonSubexpressionsInternal::verbose)
-                dataLog("    Found ", *match, " locally.\n");
+            dataLogLnIf(B3EliminateCommonSubexpressionsInternal::verbose, "    Found ", *match, " locally.");
             return { match };
         }
 
         if (m_data.writes.overlaps(range)) {
-            if (B3EliminateCommonSubexpressionsInternal::verbose)
-                dataLog("    Giving up because of writes.\n");
+            dataLogLnIf(B3EliminateCommonSubexpressionsInternal::verbose, "    Giving up because of writes.");
             return { };
         }
 
@@ -713,30 +708,25 @@ private:
         MemoryMatches matches;
 
         while (BasicBlock* block = worklist.pop()) {
-            if (B3EliminateCommonSubexpressionsInternal::verbose)
-                dataLog("    Looking at ", *block, "\n");
+            dataLogLnIf(B3EliminateCommonSubexpressionsInternal::verbose, "    Looking at ", *block);
 
             ImpureBlockData& data = m_impureBlockData[block];
 
             MemoryValue* match = data.memoryValuesAtTail.find(ptr, filter);
-            if (B3EliminateCommonSubexpressionsInternal::verbose)
-                dataLog("    Consdering match: ", pointerDump(match), "\n");
+            dataLogLnIf(B3EliminateCommonSubexpressionsInternal::verbose, "    Consdering match: ", pointerDump(match));
             if (match && match != m_value) {
-                if (B3EliminateCommonSubexpressionsInternal::verbose)
-                    dataLog("    Found match: ", *match, "\n");
+                dataLogLnIf(B3EliminateCommonSubexpressionsInternal::verbose, "    Found match: ", *match);
                 matches.append(match);
                 continue;
             }
 
             if (data.writes.overlaps(range)) {
-                if (B3EliminateCommonSubexpressionsInternal::verbose)
-                    dataLog("    Giving up because of writes.\n");
+                dataLogLnIf(B3EliminateCommonSubexpressionsInternal::verbose, "    Giving up because of writes.");
                 return { };
             }
 
             if (!block->numPredecessors()) {
-                if (B3EliminateCommonSubexpressionsInternal::verbose)
-                    dataLog("    Giving up because it's live at root.\n");
+                dataLogLnIf(B3EliminateCommonSubexpressionsInternal::verbose, "    Giving up because it's live at root.");
                 // This essentially proves that this is live at the prologue. That means that we
                 // cannot reliably optimize this case.
                 return { };
@@ -745,8 +735,7 @@ private:
             worklist.pushAll(block->predecessors());
         }
 
-        if (B3EliminateCommonSubexpressionsInternal::verbose)
-            dataLog("    Got matches: ", pointerListDump(matches), "\n");
+        dataLogLnIf(B3EliminateCommonSubexpressionsInternal::verbose, "    Got matches: ", pointerListDump(matches));
         return matches;
     }
 
@@ -755,8 +744,7 @@ private:
         Value* ptr = wasmAddress->child(0);
 
         if (Value* replacement = m_data.m_candidateWasmAddressesAtTail.get(ptr)) {
-            if (B3EliminateCommonSubexpressionsInternal::verbose)
-                dataLog("    Replacing WasmAddress: ", *wasmAddress, " with ", *replacement, "\n");
+            dataLogLnIf(B3EliminateCommonSubexpressionsInternal::verbose, "    Replacing WasmAddress: ", *wasmAddress, " with ", *replacement);
             wasmAddress->replaceWithIdentity(replacement);
             m_changed = true;
             return;
@@ -800,8 +788,7 @@ private:
         }
 
         if (candidateReplacement) {
-            if (B3EliminateCommonSubexpressionsInternal::verbose)
-                dataLog("    Replacing WasmAddress: ", *wasmAddress, " with ", *candidateReplacement, "\n");
+            dataLogLnIf(B3EliminateCommonSubexpressionsInternal::verbose, "    Replacing WasmAddress: ", *wasmAddress, " with ", *candidateReplacement);
             wasmAddress->replaceWithIdentity(candidateReplacement);
             m_changed = true;
         }
@@ -820,7 +807,7 @@ private:
     unsigned m_index;
     Value* m_value;
 
-    HashMap<Value*, Vector<Value*>> m_sets;
+    UncheckedKeyHashMap<Value*, Vector<Value*>> m_sets;
 
     InsertionSet m_insertionSet;
 
@@ -831,7 +818,7 @@ private:
 
 bool eliminateCommonSubexpressions(Procedure& proc)
 {
-    PhaseScope phaseScope(proc, "eliminateCommonSubexpressions");
+    PhaseScope phaseScope(proc, "eliminateCommonSubexpressions"_s);
 
     CSE cse(proc);
     return cse.run();

@@ -28,19 +28,20 @@
 
 #if ENABLE(WEBXR)
 
+#include "ContextDestructionObserverInlines.h"
 #include "DOMPointReadOnly.h"
 #include "Document.h"
 #include "WebXRRigidTransform.h"
 #include "WebXRSession.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WebXRSpace);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebXRSpace);
 
 WebXRSpace::WebXRSpace(Document& document, Ref<WebXRRigidTransform>&& offset)
     : ContextDestructionObserver(&document)
-    , m_originOffset(WTFMove(offset))
+    , m_originOffset(WTF::move(offset))
 {
 }
 
@@ -66,23 +67,10 @@ std::optional<bool> WebXRSpace::isPositionEmulated() const
     return xrSession->isPositionEmulated();
 }
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WebXRViewerSpace);
-
-WebXRViewerSpace::WebXRViewerSpace(Document& document, WebXRSession& session)
-    : WebXRSpace(document, WebXRRigidTransform::create())
-    , m_session(session)
+ScriptExecutionContext* WebXRSpace::scriptExecutionContext() const
 {
+    return ContextDestructionObserver::scriptExecutionContext();
 }
-
-WebXRViewerSpace::~WebXRViewerSpace() = default;
-
-std::optional<TransformationMatrix> WebXRViewerSpace::nativeOrigin() const
-{
-    if (!m_session)
-        return std::nullopt;
-    return WebXRFrame::matrixFromPose(m_session->frameData().origin);
-}
-
 
 } // namespace WebCore
 

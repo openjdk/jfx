@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -19,14 +19,15 @@
 
 #pragma once
 
-#include "BlobData.h"
-#include <variant>
+#include <WebCore/BlobData.h>
+#include <optional>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/Forward.h>
-#include <wtf/IsoMalloc.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/URL.h>
 #include <wtf/Vector.h>
+#include <wtf/WallTime.h>
 #include <wtf/text/WTFString.h>
 
 namespace PAL {
@@ -43,19 +44,19 @@ class SharedBuffer;
 struct FormDataElement {
     struct EncodedFileData;
     struct EncodedBlobData;
-    using Data = std::variant<Vector<uint8_t>, EncodedFileData, EncodedBlobData>;
+    using Data = Variant<Vector<uint8_t>, EncodedFileData, EncodedBlobData>;
 
     FormDataElement() = default;
     explicit FormDataElement(Data&& data)
-        : data(WTFMove(data)) { }
+        : data(WTF::move(data)) { }
     explicit FormDataElement(Vector<uint8_t>&& array)
-        : data(WTFMove(array)) { }
+        : data(WTF::move(array)) { }
     FormDataElement(const String& filename, int64_t fileStart, int64_t fileLength, std::optional<WallTime> expectedFileModificationTime)
         : data(EncodedFileData { filename, fileStart, fileLength, expectedFileModificationTime }) { }
     explicit FormDataElement(const URL& blobURL)
         : data(EncodedBlobData { blobURL }) { }
 
-    uint64_t lengthInBytes(const Function<uint64_t(const URL&)>&) const;
+    uint64_t lengthInBytes(NOESCAPE const Function<uint64_t(const URL&)>&) const;
     uint64_t lengthInBytes() const;
 
     FormDataElement isolatedCopy() const;
@@ -73,22 +74,13 @@ struct FormDataElement {
             return { filename.isolatedCopy(), fileStart, fileLength, expectedFileModificationTime };
         }
 
-        bool operator==(const EncodedFileData& other) const
-        {
-            return filename == other.filename
-                && fileStart == other.fileStart
-                && fileLength == other.fileLength
-                && expectedFileModificationTime == other.expectedFileModificationTime;
-        }
+        friend bool operator==(const EncodedFileData&, const EncodedFileData&) = default;
     };
 
     struct EncodedBlobData {
         URL url;
 
-        bool operator==(const EncodedBlobData& other) const
-        {
-            return url == other.url;
-        }
+        friend bool operator==(const EncodedBlobData&, const EncodedBlobData&) = default;
     };
 
     bool operator==(const FormDataElement& other) const
@@ -119,12 +111,12 @@ private:
     friend class FormData;
     FormDataForUpload(FormData&, Vector<String>&&);
 
-    Ref<FormData> m_data;
+    const Ref<FormData> m_data;
     Vector<String> m_temporaryZipFiles;
 };
 
 class FormData final : public RefCounted<FormData> {
-    WTF_MAKE_ISO_ALLOCATED_EXPORT(FormData, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(FormData, WEBCORE_EXPORT);
 public:
     enum class EncodingType : uint8_t {
         FormURLEncoded, // for application/x-www-form-urlencoded
@@ -133,11 +125,10 @@ public:
     };
 
     WEBCORE_EXPORT static Ref<FormData> create();
-    WEBCORE_EXPORT static Ref<FormData> create(const void*, size_t);
+    WEBCORE_EXPORT static Ref<FormData> create(std::span<const uint8_t>);
     WEBCORE_EXPORT static Ref<FormData> create(const CString&);
     WEBCORE_EXPORT static Ref<FormData> create(Vector<uint8_t>&&);
-    WEBCORE_EXPORT static Ref<FormData> create(Vector<WebCore::FormDataElement>&&, uint64_t identifier, bool alwaysStream, Vector<char>&& boundary);
-    static Ref<FormData> create(const Vector<char>&);
+    WEBCORE_EXPORT static Ref<FormData> create(Vector<WebCore::FormDataElement>&&, uint64_t identifier, bool alwaysStream, Vector<uint8_t>&& boundary);
     static Ref<FormData> create(const Vector<uint8_t>&);
     static Ref<FormData> create(const DOMFormData&, EncodingType = EncodingType::FormURLEncoded);
     static Ref<FormData> createMultiPart(const DOMFormData&);
@@ -148,7 +139,7 @@ public:
     Ref<FormData> copy() const;
     WEBCORE_EXPORT Ref<FormData> isolatedCopy() const;
 
-    WEBCORE_EXPORT void appendData(const void* data, size_t);
+    WEBCORE_EXPORT void appendData(std::span<const uint8_t> data);
     void appendFile(const String& filePath);
     WEBCORE_EXPORT void appendFileRange(const String& filename, long long start, long long length, std::optional<WallTime> expectedModificationTime);
     WEBCORE_EXPORT void appendBlob(const URL& blobURL);
@@ -165,7 +156,7 @@ public:
 
     bool isEmpty() const { return m_elements.isEmpty(); }
     const Vector<FormDataElement>& elements() const { return m_elements; }
-    const Vector<char>& boundary() const { return m_boundary; }
+    const Vector<uint8_t>& boundary() const { return m_boundary; }
 
     WEBCORE_EXPORT RefPtr<SharedBuffer> asSharedBuffer() const;
 
@@ -193,12 +184,12 @@ public:
     WEBCORE_EXPORT URL asBlobURL() const;
 
 private:
-    friend struct IPC::ArgumentCoder<FormData, void>;
+    friend struct IPC::ArgumentCoder<FormData>;
     FormData() = default;
     FormData(const FormData&);
 
-    void appendMultiPartFileValue(const File&, Vector<char>& header, PAL::TextEncoding&);
-    void appendMultiPartStringValue(const String&, Vector<char>& header, PAL::TextEncoding&);
+    void appendMultiPartFileValue(const File&, Vector<uint8_t>& header, PAL::TextEncoding&);
+    void appendMultiPartStringValue(const String&, Vector<uint8_t>& header, PAL::TextEncoding&);
     void appendMultiPartKeyValuePairItems(const DOMFormData&);
     void appendNonMultiPartKeyValuePairItems(const DOMFormData&, EncodingType);
 
@@ -206,7 +197,7 @@ private:
 
     int64_t m_identifier { 0 };
     bool m_alwaysStream { false };
-    Vector<char> m_boundary;
+    Vector<uint8_t> m_boundary;
     mutable std::optional<uint64_t> m_lengthInBytes;
 };
 

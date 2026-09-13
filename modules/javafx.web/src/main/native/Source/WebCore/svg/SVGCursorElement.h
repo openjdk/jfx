@@ -24,13 +24,15 @@
 #include "SVGElement.h"
 #include "SVGTests.h"
 #include "SVGURIReference.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class StyleCursorImage;
 
 class SVGCursorElement final : public SVGElement, public SVGTests, public SVGURIReference {
-    WTF_MAKE_ISO_ALLOCATED(SVGCursorElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGCursorElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGCursorElement);
 public:
     static Ref<SVGCursorElement> create(const QualifiedName&, Document&);
 
@@ -45,10 +47,10 @@ public:
     SVGAnimatedLength& xAnimated() { return m_x; }
     SVGAnimatedLength& yAnimated() { return m_y; }
 
+    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGCursorElement, SVGElement, SVGTests, SVGURIReference>;
+
 private:
     SVGCursorElement(const QualifiedName&, Document&);
-
-    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGCursorElement, SVGElement, SVGTests, SVGURIReference>;
 
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     void svgAttributeChanged(const QualifiedName&) final;
@@ -60,7 +62,7 @@ private:
 
     Ref<SVGAnimatedLength> m_x { SVGAnimatedLength::create(this, SVGLengthMode::Width) };
     Ref<SVGAnimatedLength> m_y { SVGAnimatedLength::create(this, SVGLengthMode::Height) };
-    HashSet<StyleCursorImage*> m_clients;
+    WeakHashSet<StyleCursorImage> m_clients;
 };
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,12 +33,12 @@ import javafx.concurrent.Worker;
 import javafx.concurrent.Worker.State;
 import javafx.scene.web.WebEngine;
 import static javafx.concurrent.Worker.State.*;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import org.junit.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.Test;
 
 public class LoadNotificationsTest extends TestBase {
 
@@ -89,11 +89,9 @@ public class LoadNotificationsTest extends TestBase {
     private void checkRunning(boolean oldValue, boolean newValue) {
         State state = getEngine().getLoadWorker().getState();
         if (newValue) {
-            assertTrue("LoadWorker.running should be false",
-                    state == SCHEDULED || state == RUNNING);
+            assertTrue(state == SCHEDULED || state == RUNNING, "LoadWorker.running should be false");
         } else {
-            assertTrue("LoadWorker.running should be true",
-                    state == SUCCEEDED || state == FAILED);
+            assertTrue(state == SUCCEEDED || state == FAILED, "LoadWorker.running should be true");
         }
     }
 
@@ -112,62 +110,55 @@ public class LoadNotificationsTest extends TestBase {
         try {
             switch (newValue) {
                 case READY:
-                    assertEquals("LoadWorker.totalWork", -1, worker.getTotalWork(), 0);
-                    assertEquals("LoadWorker.workDone", -1, worker.getWorkDone(), 0);
-                    assertEquals("LoadWorker.progress", -1, worker.getProgress(), 0);
-                    assertNull("LoadWorker.exception should be null", worker.getException());
-                    assertEquals("LoadWorker.message", "", worker.getMessage());
+                    assertEquals(-1, worker.getTotalWork(), 0, "LoadWorker.totalWork");
+                    assertEquals(-1, worker.getWorkDone(), 0, "LoadWorker.workDone");
+                    assertEquals(-1, worker.getProgress(), 0, "LoadWorker.progress");
+                    assertNull(worker.getException(), "LoadWorker.exception should be null");
+                    assertEquals("", worker.getMessage(), "LoadWorker.message");
                     break;
                 case SCHEDULED:
                 case RUNNING:
-                    assertEquals("LoadWorker.state",
-                            (newValue == RUNNING ? SCHEDULED : READY),
-                            oldValue);
-                    assertEquals("LoadWorker.totalWork", 100.0, worker.getTotalWork(), 0);
-                    assertEquals("LoadWorker.workDone", 0.0, worker.getWorkDone(), 0);
-                    assertEquals("LoadWorker.progress", 0.0, worker.getProgress(), 0);
-                    assertNull("LoadWorker.exception should be null", worker.getException());
-                    assertTrue("LoadWorker.message should read 'Loading [url]'",
-                            worker.getMessage().matches("Loading .*" + currentUrl));
+                    assertEquals((newValue == RUNNING ? SCHEDULED : READY), oldValue, "LoadWorker.state");
+                    assertEquals(100.0, worker.getTotalWork(), 0, "LoadWorker.totalWork");
+                    assertEquals(0.0, worker.getWorkDone(), 0, "LoadWorker.workDone");
+                    assertEquals(0.0, worker.getProgress(), 0, "LoadWorker.progress");
+                    assertNull(worker.getException(), "LoadWorker.exception should be null");
+                    assertTrue(worker.getMessage().matches("Loading .*" + currentUrl), "LoadWorker.message should read 'Loading [url]'");
 
-                    assertNull("WebEngine.document should be null", web.getDocument());
+                    assertNull(web.getDocument(), "WebEngine.document should be null");
                     /*
                     The following assert causes test failure after JDK-8268849.
                     An issue is raised: JDK-8269912, to investigate the failure.
-                    // assertNull("WebEngine.title should be null", web.getTitle());
+                    // assertNull(web.getTitle(), "WebEngine.title should be null");
                     */
-                    assertTrue("WebEngine.location should be set",
-                            web.getLocation().endsWith(currentUrl));
+                    assertTrue(web.getLocation().endsWith(currentUrl), "WebEngine.location should be set");
                     break;
                 case SUCCEEDED:
-                    assertEquals("LoadWorker.state", RUNNING, oldValue);
-                    assertEquals("LoadWorker.totalWork", 100.0, worker.getTotalWork(), 0);
-                    assertEquals("LoadWorker.workDone", 100.0, worker.getWorkDone(), 0);
-                    assertEquals("LoadWorker.progress", 1.0, worker.getProgress(), 0);
-                    assertNull("LoadWorker.exception should be null", worker.getException());
-                    assertTrue("LoadWorker.message should read 'Loading complete'",
-                            worker.getMessage().startsWith("Loading complete"));
+                    assertEquals(RUNNING, oldValue, "LoadWorker.state");
+                    assertEquals(100.0, worker.getTotalWork(), 0, "LoadWorker.totalWork");
+                    assertEquals(100.0, worker.getWorkDone(), 0, "LoadWorker.workDone");
+                    assertEquals(1.0, worker.getProgress(), 0, "LoadWorker.progress");
+                    assertNull(worker.getException(), "LoadWorker.exception should be null");
+                    assertTrue(worker.getMessage().startsWith("Loading complete"), "LoadWorker.message should read 'Loading complete'");
 
-                    assertNotNull("WebEngine.document should be set", web.getDocument());
-                    assertTrue("WebEngine.location should be set",
-                            web.getLocation().endsWith(currentUrl));
+                    assertNotNull(web.getDocument(), "WebEngine.document should be set");
+                    assertTrue(web.getLocation().endsWith(currentUrl), "WebEngine.location should be set");
                     /*
                     This commented code block causes test failure after JDK-8268849.
                     An issue is raised: JDK-8269912, to investigate the failure.
 
                     if (currentUrl == "about:blank") {
-                        assertNull("WebEngine.title should be null", web.getTitle());
+                        assertNull(web.getTitle(), "WebEngine.title should be null");
                     } else {
-                        assertNotNull("WebEngine.title should be set", web.getTitle());
+                        assertNotNull(web.getTitle(), "WebEngine.title should be set");
                     }
                     */
                     break;
                 case FAILED:
-                    assertEquals("LoadWorker.state", RUNNING, oldValue);
-                    assertEquals("LoadWorker.totalWork", 100.0, worker.getTotalWork(), 0);
-                    assertNotNull("LoadWorker.exception should be set", worker.getException());
-                    assertTrue("LoadWorker.message should read 'Loading failed'",
-                            worker.getMessage().startsWith("Loading failed"));
+                    assertEquals(RUNNING, oldValue, "LoadWorker.state");
+                    assertEquals(100.0, worker.getTotalWork(), 0, "LoadWorker.totalWork");
+                    assertNotNull(worker.getException(), "LoadWorker.exception should be set");
+                    assertTrue(worker.getMessage().startsWith("Loading failed"), "LoadWorker.message should read 'Loading failed'");
                     break;
                 default:
                     fail("Unexpected LoadWorker.state == " + newValue);
@@ -185,10 +176,9 @@ public class LoadNotificationsTest extends TestBase {
 
         // check that we have transitioned through all relevant states
         // (order of states is checked in the changed() method)
-        assertTrue("State.READY was never set", log.contains(READY));
-        assertTrue("State.SCHEDULED was never set", log.contains(SCHEDULED));
-        assertTrue("State.RUNNING was never set", log.contains(RUNNING));
-        assertTrue("Neither State.SUCCEEDED nor State.FAILED has been set",
-                log.contains(SUCCEEDED) || log.contains(FAILED));
+        assertTrue(log.contains(READY), "State.READY was never set");
+        assertTrue(log.contains(SCHEDULED), "State.SCHEDULED was never set");
+        assertTrue(log.contains(RUNNING), "State.RUNNING was never set");
+        assertTrue(log.contains(SUCCEEDED) || log.contains(FAILED), "Neither State.SUCCEEDED nor State.FAILED has been set");
     }
 }

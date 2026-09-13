@@ -24,13 +24,18 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
-#include "PointerID.h"
+#include <WebCore/DoublePoint.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/MouseEventTypes.h>
+#include <WebCore/PointerID.h>
 #include <wtf/HashMap.h>
+#include <wtf/Platform.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class Document;
+class DoublePoint;
 class Element;
 class EventTarget;
 class IntPoint;
@@ -39,10 +44,11 @@ class Page;
 class PlatformTouchEvent;
 class PointerEvent;
 class WindowProxy;
+template<typename> class ExceptionOr;
 
 class PointerCaptureController {
     WTF_MAKE_NONCOPYABLE(PointerCaptureController);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PointerCaptureController);
 public:
     explicit PointerCaptureController(Page&);
 
@@ -57,16 +63,19 @@ public:
 
     RefPtr<PointerEvent> pointerEventForMouseEvent(const MouseEvent&, PointerID, const String& pointerType);
 
-#if ENABLE(TOUCH_EVENTS) && (PLATFORM(IOS_FAMILY) || PLATFORM(WPE))
-    void dispatchEventForTouchAtIndex(EventTarget&, const PlatformTouchEvent&, unsigned, bool isPrimary, WindowProxy&, const IntPoint&);
+#if ENABLE(TOUCH_EVENTS) && (PLATFORM(IOS_FAMILY) || PLATFORM(WPE) || PLATFORM(GTK))
+    void dispatchEventForTouchAtIndex(EventTarget&, const PlatformTouchEvent&, unsigned, bool isPrimary, WindowProxy&, const DoublePoint&);
 #endif
 
     WEBCORE_EXPORT void touchWithIdentifierWasRemoved(PointerID);
     bool hasCancelledPointerEventForIdentifier(PointerID) const;
     bool preventsCompatibilityMouseEventsForIdentifier(PointerID) const;
     void dispatchEvent(PointerEvent&, EventTarget*);
-    WEBCORE_EXPORT void cancelPointer(PointerID, const IntPoint&);
+    WEBCORE_EXPORT void cancelPointer(PointerID, const IntPoint&, PointerEvent* existingCancelEvent = nullptr);
     void processPendingPointerCapture(PointerID);
+    // Used for mouse presses that trigger contextmenu, causing
+    // the matching release to be suppressed.
+    WEBCORE_EXPORT void clearUnmatchedMouseDown(PointerID);
 
 private:
     struct CapturingData : public RefCounted<CapturingData> {
@@ -75,14 +84,15 @@ private:
             return adoptRef(*new CapturingData(pointerType));
         }
 
+        WeakPtr<Document, WeakPtrImplWithEventTargetData> activeDocument;
         RefPtr<Element> pendingTargetOverride;
         RefPtr<Element> targetOverride;
-#if ENABLE(TOUCH_EVENTS) && (PLATFORM(IOS_FAMILY) || PLATFORM(WPE))
+#if ENABLE(TOUCH_EVENTS) && (PLATFORM(IOS_FAMILY) || PLATFORM(WPE) || PLATFORM(GTK))
         RefPtr<Element> previousTarget;
 #endif
         bool hasAnyElement() const {
             return pendingTargetOverride || targetOverride
-#if ENABLE(TOUCH_EVENTS) && (PLATFORM(IOS_FAMILY) || PLATFORM(WPE))
+#if ENABLE(TOUCH_EVENTS) && (PLATFORM(IOS_FAMILY) || PLATFORM(WPE) || PLATFORM(GTK))
                 || previousTarget
 #endif
                 ;
@@ -97,7 +107,7 @@ private:
         bool isPrimary { false };
         bool preventsCompatibilityMouseEvents { false };
         bool pointerIsPressed { false };
-        short previousMouseButton { -1 };
+        MouseButton previousMouseButton { MouseButton::PointerHasNotChanged };
 
     private:
         CapturingData(const String& pointerType)
@@ -112,7 +122,10 @@ private:
     void updateHaveAnyCapturingElement();
     void elementWasRemovedSlow(Element&);
 
-    Page& m_page;
+    void dispatchOverOrOutEvent(const AtomString&, EventTarget*, const PlatformTouchEvent&, unsigned index, bool isPrimary, WindowProxy&, DoublePoint);
+    void dispatchEnterOrLeaveEvent(const AtomString&, Element&, const PlatformTouchEvent&, unsigned index, bool isPrimary, WindowProxy&, DoublePoint);
+
+    WeakPtr<Page> m_page;
     // While PointerID is defined as int32_t, we use int64_t here so that we may use a value outside of the int32_t range to have safe
     // empty and removed values, allowing any int32_t to be provided through the API for lookup in this hashmap.
     using PointerIdToCapturingDataMap = HashMap<int64_t, Ref<CapturingData>, IntHash<int64_t>, WTF::SignedWithZeroKeyHashTraits<int64_t>>;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "CryptoAlgorithmIdentifier.h"
+#include <WebCore/CryptoAlgorithmIdentifier.h>
 #include <wtf/TypeCasts.h>
 #include <wtf/text/WTFString.h>
 
@@ -34,9 +34,9 @@
 namespace WebCore {
 
 class CryptoAlgorithmParameters {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(CryptoAlgorithmParameters, WEBCORE_EXPORT);
 public:
-    enum class Class {
+    enum class Class : uint8_t {
         None,
         AesCbcCfbParams,
         AesCtrParams,
@@ -53,6 +53,7 @@ public:
         RsaKeyGenParams,
         RsaOaepParams,
         RsaPssParams,
+        X25519Params,
     };
 
     // FIXME: Consider merging name and identifier.

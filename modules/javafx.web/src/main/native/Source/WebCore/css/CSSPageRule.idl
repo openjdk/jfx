@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006, 2007 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Samuel Weinig <sam.weinig@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
@@ -18,12 +18,15 @@
  * Boston, MA 02110-1301, USA.
  */
 
-// Introduced in DOM Level 2:
+// https://drafts.csswg.org/cssom/#csspagerule
+
+typedef USVString CSSOMString;
+
+// FIXME: This should inherit from CSSGroupRule.
 [
     Exposed=Window
 ] interface CSSPageRule : CSSRule {
-    attribute DOMString? selectorText;
-
-    [PutForwards=cssText] readonly attribute CSSStyleDeclaration style;
+    attribute CSSOMString selectorText;
+    [SameObject, PutForwards=cssText] readonly attribute CSSPageDescriptors style;
 };
 

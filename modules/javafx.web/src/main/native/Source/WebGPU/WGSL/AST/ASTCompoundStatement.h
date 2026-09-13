@@ -35,15 +35,18 @@ public:
     using Ref = std::reference_wrapper<CompoundStatement>;
 
     NodeKind kind() const override;
+    Attribute::List& attributes() { return m_attributes; }
     Statement::List& statements() { return m_statements; }
     const Statement::List& statements() const { return m_statements; }
 
 private:
-    CompoundStatement(SourceSpan span, Statement::List&& statements)
+    CompoundStatement(SourceSpan span, Attribute::List&& attributes, Statement::List&& statements)
         : Statement(span)
-        , m_statements(WTFMove(statements))
+        , m_attributes(WTF::move(attributes))
+        , m_statements(WTF::move(statements))
     { }
 
+    Attribute::List m_attributes;
     Statement::List m_statements;
 };
 

@@ -35,17 +35,12 @@
 namespace WebCore {
 namespace MQ {
 
-MediaQueryParser::MediaQueryParser(const MediaQueryParserContext& context)
-    : GenericMediaQueryParser(context)
-{
-}
-
 Vector<const FeatureSchema*> MediaQueryParser::featureSchemas()
 {
     return Features::allSchemas();
 }
 
-MediaQueryList MediaQueryParser::parse(const String& string, const MediaQueryParserContext& context)
+MediaQueryList MediaQueryParser::parse(const String& string, const CSSParserContext& context)
 {
     auto tokenizer = CSSTokenizer::tryCreate(string);
     if (!tokenizer)
@@ -55,29 +50,26 @@ MediaQueryList MediaQueryParser::parse(const String& string, const MediaQueryPar
     return parse(range, context);
 }
 
-MediaQueryList MediaQueryParser::parse(CSSParserTokenRange range, const MediaQueryParserContext& context)
+MediaQueryList MediaQueryParser::parse(CSSParserTokenRange range, const CSSParserContext& context)
 {
-    MediaQueryParser parser { context };
-    return parser.consumeMediaQueryList(range);
+    return consumeMediaQueryList(range, context);
 }
 
-std::optional<MediaQuery> MediaQueryParser::parseCondition(CSSParserTokenRange range, const MediaQueryParserContext& context)
+std::optional<MediaQuery> MediaQueryParser::parseCondition(CSSParserTokenRange range, const CSSParserContext& context)
 {
     range.consumeWhitespace();
 
     if (range.atEnd())
         return MediaQuery { { }, allAtom() };
 
-    MediaQueryParser parser { context };
-
-    auto condition = parser.consumeCondition(range);
+    auto condition = consumeCondition(range, context);
     if (!condition)
         return { };
 
     return MediaQuery { { }, { }, condition };
 }
 
-MediaQueryList MediaQueryParser::consumeMediaQueryList(CSSParserTokenRange& range)
+MediaQueryList MediaQueryParser::consumeMediaQueryList(CSSParserTokenRange& range, const CSSParserContext& context)
 {
     range.consumeWhitespace();
 
@@ -87,14 +79,14 @@ MediaQueryList MediaQueryParser::consumeMediaQueryList(CSSParserTokenRange& rang
     MediaQueryList list;
 
     while (true) {
-        auto begin = range.begin();
+        auto begin = range;
         while (!range.atEnd() && range.peek().type() != CommaToken)
             range.consumeComponentValue();
 
-        auto subrange = range.makeSubRange(begin, &range.peek());
+        auto subrange = begin.rangeUntil(range);
 
         auto consumeMediaQueryOrNotAll = [&] {
-            if (auto query = consumeMediaQuery(subrange))
+            if (auto query = consumeMediaQuery(subrange, context))
                 return *query;
             // "A media query that does not match the grammar in the previous section must be replaced by not all during parsing."
             return MediaQuery { Prefix::Not, allAtom() };
@@ -110,12 +102,12 @@ MediaQueryList MediaQueryParser::consumeMediaQueryList(CSSParserTokenRange& rang
     return list;
 }
 
-std::optional<MediaQuery> MediaQueryParser::consumeMediaQuery(CSSParserTokenRange& range)
+std::optional<MediaQuery> MediaQueryParser::consumeMediaQuery(CSSParserTokenRange& range, const CSSParserContext& context)
 {
     // <media-condition>
 
     auto rangeCopy = range;
-    if (auto condition = consumeCondition(range)) {
+    if (auto condition = consumeCondition(range, context)) {
         if (!range.atEnd())
             return { };
         return MediaQuery { { }, { }, condition };
@@ -170,7 +162,7 @@ std::optional<MediaQuery> MediaQueryParser::consumeMediaQuery(CSSParserTokenRang
 
     range.consumeIncludingWhitespace();
 
-    auto condition = consumeCondition(range);
+    auto condition = consumeCondition(range, context);
     if (!condition)
         return { };
 
@@ -183,12 +175,12 @@ std::optional<MediaQuery> MediaQueryParser::consumeMediaQuery(CSSParserTokenRang
     return MediaQuery { prefix, mediaType, condition };
 }
 
-const FeatureSchema* MediaQueryParser::schemaForFeatureName(const AtomString& name) const
+const FeatureSchema* MediaQueryParser::schemaForFeatureName(const AtomString& name, const CSSParserContext& context, State& state)
 {
-    auto* schema = GenericMediaQueryParser<MediaQueryParser>::schemaForFeatureName(name);
+    auto* schema = GenericMediaQueryParser<MediaQueryParser>::schemaForFeatureName(name, context, state);
 
     if (schema == &Features::prefersDarkInterface()) {
-        if (!m_context.useSystemAppearance && !isUASheetBehavior(m_context.mode))
+        if (!context.useSystemAppearance && !isUASheetBehavior(context.mode))
             return nullptr;
     }
 
@@ -197,11 +189,7 @@ const FeatureSchema* MediaQueryParser::schemaForFeatureName(const AtomString& na
 
 void serialize(StringBuilder& builder, const MediaQueryList& list)
 {
-    for (auto& query : list) {
-        if (&query != &list.first())
-            builder.append(", ");
-        serialize(builder, query);
-    }
+    builder.append(interleave(list, serialize, ", "_s));
 }
 
 void serialize(StringBuilder& builder, const MediaQuery& query)
@@ -209,10 +197,10 @@ void serialize(StringBuilder& builder, const MediaQuery& query)
     if (query.prefix) {
         switch (*query.prefix) {
         case Prefix::Not:
-            builder.append("not ");
+            builder.append("not "_s);
             break;
         case Prefix::Only:
-            builder.append("only ");
+            builder.append("only "_s);
             break;
         }
     }
@@ -220,7 +208,7 @@ void serialize(StringBuilder& builder, const MediaQuery& query)
     if (!query.mediaType.isEmpty() && (!query.condition || query.prefix || query.mediaType != allAtom())) {
         serializeIdentifier(query.mediaType, builder);
         if (query.condition)
-            builder.append(" and ");
+            builder.append(" and "_s);
     }
 
     if (query.condition)

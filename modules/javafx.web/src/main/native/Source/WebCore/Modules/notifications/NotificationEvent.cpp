@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,37 +26,35 @@
 #include "config.h"
 #include "NotificationEvent.h"
 
-#include <wtf/IsoMallocInlines.h>
-
 #if ENABLE(NOTIFICATION_EVENT)
+
+#include "EventTargetInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(NotificationEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NotificationEvent);
 
 Ref<NotificationEvent> NotificationEvent::create(const AtomString& type, Init&& init, IsTrusted isTrusted)
 {
-    auto* notification = init.notification.get();
-    ASSERT(notification);
+    Ref notification = init.notification.releaseNonNull();
     auto action = init.action;
-    return adoptRef(*new NotificationEvent(type, WTFMove(init), notification, action, isTrusted));
+    return adoptRef(*new NotificationEvent(type, WTF::move(init), WTF::move(notification), action, isTrusted));
 }
 
-Ref<NotificationEvent> NotificationEvent::create(const AtomString& type, Notification* notification, const String& action, IsTrusted isTrusted)
+Ref<NotificationEvent> NotificationEvent::create(const AtomString& type, Ref<Notification>&& notification, const String& action, IsTrusted isTrusted)
 {
-    return adoptRef(*new NotificationEvent(type, { }, notification, action, isTrusted));
+    return adoptRef(*new NotificationEvent(type, { }, WTF::move(notification), action, isTrusted));
 }
 
-NotificationEvent::NotificationEvent(const AtomString& type, NotificationEventInit&& eventInit, Notification* notification, const String& action, IsTrusted isTrusted)
-    : ExtendableEvent(type, WTFMove(eventInit), isTrusted)
-    , m_notification(notification)
+NotificationEvent::NotificationEvent(const AtomString& type, NotificationEventInit&& eventInit, Ref<Notification>&& notification, const String& action, IsTrusted isTrusted)
+    : ExtendableEvent(EventInterfaceType::NotificationEvent, type, WTF::move(eventInit), isTrusted)
+    , m_notification(WTF::move(notification))
     , m_action(action)
 {
 }
 
-NotificationEvent::~NotificationEvent()
-{
-}
+NotificationEvent::~NotificationEvent() = default;
 
 } // namespace WebCore
 

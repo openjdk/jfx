@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,19 +33,19 @@ import javafx.scene.shape.Rectangle;
 import javafx.scene.transform.Scale;
 import javafx.scene.transform.Translate;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public class LayoutBoundsTest {
 
-    public @Test
-    void testLayoutBoundsForLeafNode() {
+    @Test
+    public void testLayoutBoundsForLeafNode() {
         Rectangle rect = new Rectangle(10, 10, 100, 100);
 
         assertBoundsEqual(box(10, 10, 100, 100), rect.getLayoutBounds());
     }
 
-    public @Test
-    void testLayoutBoundsUpdatedForLeafNode() {
+    @Test
+    public void testLayoutBoundsUpdatedForLeafNode() {
         Rectangle rect = new Rectangle(10, 10, 100, 100);
 
         rect.setWidth(200);
@@ -55,8 +55,8 @@ public class LayoutBoundsTest {
         assertBoundsEqual(box(20, 10, 200, 100), rect.getLayoutBounds());
     }
 
-    public @Test
-    void testEffectNotIncludedInLayoutBounds() {
+    @Test
+    public void testEffectNotIncludedInLayoutBounds() {
         Rectangle rect = new Rectangle(10, 10, 100, 100);
         DropShadow ds = new DropShadow();
         ds.setOffsetY(5);
@@ -66,16 +66,16 @@ public class LayoutBoundsTest {
         assertBoundsEqual(box(10, 10, 100, 100), rect.getLayoutBounds());
     }
 
-    public @Test
-    void testClipNotIncludedInLayoutBounds() {
+    @Test
+    public void testClipNotIncludedInLayoutBounds() {
         Rectangle rect = new Rectangle(10, 10, 100, 100);
         rect.setClip(new Rectangle(25, 25, 25, 25));
 
         assertBoundsEqual(box(10, 10, 100, 100), rect.getLayoutBounds());
     }
 
-    public @Test
-    void testTransformsNotIncludedInLayoutBounds() {
+    @Test
+    public void testTransformsNotIncludedInLayoutBounds() {
         Rectangle rect = new Rectangle(10, 10, 100, 100);
         rect.getTransforms().add(new Scale(2, 15));
         rect.getTransforms().add(new Translate(20, 30));
@@ -91,8 +91,8 @@ public class LayoutBoundsTest {
         assertBoundsEqual(box(10, 10, 100, 100), rect.getLayoutBounds());
     }
 
-    public @Test
-    void testLayoutBoundsForGroup() {
+    @Test
+    public void testLayoutBoundsForGroup() {
         Group group = new Group(new Rectangle(10, 10, 100, 100), new Rectangle(
                 110, 10, 200, 100));
         assertBoundsEqual(box(10, 10, 300, 100), group.getLayoutBounds());
@@ -104,8 +104,8 @@ public class LayoutBoundsTest {
         assertBoundsEqual(box(50, 10, 260, 200), group.getLayoutBounds());
     }
 
-    public @Test
-    void testEffectOnLayoutBoundsForGroup() {
+    @Test
+    public void testEffectOnLayoutBoundsForGroup() {
         Rectangle r1 = new Rectangle(10, 10, 100, 100);
         DropShadow ds1 = new DropShadow();
         ds1.setOffsetX(5);
@@ -123,8 +123,8 @@ public class LayoutBoundsTest {
         assertBoundsEqual(box(6, 6, 304, 118), group.getLayoutBounds());
     }
 
-    public @Test
-    void testClipOnLayoutBoundsForGroup() {
+    @Test
+    public void testClipOnLayoutBoundsForGroup() {
         Rectangle r1 = new Rectangle(10, 10, 100, 100);
         r1.setClip(new Rectangle(60, 60, 50, 100));
         Group group = new Group(r1, new Rectangle(110, 10, 200, 100));
@@ -136,8 +136,8 @@ public class LayoutBoundsTest {
         assertBoundsEqual(box(60, 10, 250, 100), group.getLayoutBounds());
     }
 
-    public @Test
-    void testTransformsOnLayoutBoundsForGroup() {
+    @Test
+    public void testTransformsOnLayoutBoundsForGroup() {
         Rectangle r1 = new Rectangle(10, 10, 100, 100);
         r1.getTransforms().add(new Scale(2, 2));
         Group group = new Group(r1, new Rectangle(120, 20, 200, 100));

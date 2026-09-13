@@ -82,11 +82,16 @@ struct _GstOsxAudioSink
   GstAudioBaseSink sink;
 
   AudioDeviceID device_id;
+  char *unique_id;
 
   AudioUnit audiounit;
   double volume;
 
   guint channels;
+
+#if !TARGET_OS_OSX
+  gboolean configure_session;
+#endif
 };
 
 struct _GstOsxAudioSinkClass
@@ -95,6 +100,8 @@ struct _GstOsxAudioSinkClass
 };
 
 GType gst_osx_audio_sink_get_type (void);
+
+GST_ELEMENT_REGISTER_DECLARE (osxaudiosink);
 
 G_END_DECLS
 

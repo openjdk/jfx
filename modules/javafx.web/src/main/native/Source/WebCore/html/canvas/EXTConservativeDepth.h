@@ -26,18 +26,22 @@
 #pragma once
 
 #include "WebGLExtension.h"
+#include "WebGLRenderingContextBase.h"
+#include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
-class EXTConservativeDepth final : public WebGLExtension {
-    WTF_MAKE_ISO_ALLOCATED(EXTConservativeDepth);
+class EXTConservativeDepth final : public WebGLExtension<WebGLRenderingContextBase> {
+    WTF_MAKE_TZONE_ALLOCATED(EXTConservativeDepth);
+    WTF_MAKE_NONCOPYABLE(EXTConservativeDepth);
 public:
     explicit EXTConservativeDepth(WebGLRenderingContextBase&);
-    virtual ~EXTConservativeDepth();
-
-    ExtensionName getName() const override;
+    ~EXTConservativeDepth();
 
     static bool supported(GraphicsContextGL&);
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_WEBGL_EXTENSION(EXTConservativeDepth)

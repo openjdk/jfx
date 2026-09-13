@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -66,7 +66,7 @@ public class ControlAcceleratorSupport {
 
     public static void addAcceleratorsIntoScene(ObservableList<MenuItem> items, Node anchor) {
         // we allow an empty items list as we install listeners later on - if
-        // we return on empty, the listener is never installed (leading to RT-39249)
+        // we return on empty, the listener is never installed (leading to JDK-8094496)
         if (items == null/* || items.isEmpty()*/) {
             return;
         }

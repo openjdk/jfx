@@ -103,6 +103,7 @@ unsigned Arg::jsHash() const
         break;
     case Imm:
     case BitImm:
+    case FPImm32:
     case ZeroReg:
     case CallArg:
     case RelCond:
@@ -114,8 +115,15 @@ unsigned Arg::jsHash() const
         break;
     case BigImm:
     case BitImm64:
+    case FPImm64:
         result += static_cast<unsigned>(m_offset);
         result += static_cast<unsigned>(m_offset >> 32);
+        break;
+    case FPImm128:
+        result += static_cast<unsigned>(m_offset);
+        result += static_cast<unsigned>(m_offset >> 32);
+        result += static_cast<unsigned>(m_additional);
+        result += static_cast<unsigned>(m_additional >> 32);
         break;
     case SimpleAddr:
         result += m_base.internalValue();
@@ -166,6 +174,15 @@ void Arg::dump(PrintStream& out) const
     case BitImm64:
         out.printf("$0x%llx", static_cast<long long unsigned>(m_offset));
         return;
+    case FPImm32:
+        out.print("$", m_offset);
+        return;
+    case FPImm64:
+        out.printf("$0x%llx", static_cast<long long unsigned>(m_offset));
+        return;
+    case FPImm128:
+        out.print(asV128());
+        return;
     case ZeroReg:
         out.print("%xzr");
         return;
@@ -182,6 +199,8 @@ void Arg::dump(PrintStream& out) const
         if (offset())
             out.print(offset());
         out.print("(", base(), ",", index());
+        if (extend() != MacroAssembler::Extend::None)
+            out.print(",", extend());
         if (scale() != 1)
             out.print(",", scale());
         out.print(")");
@@ -254,6 +273,15 @@ void printInternal(PrintStream& out, Arg::Kind kind)
         return;
     case Arg::BitImm64:
         out.print("BitImm64");
+        return;
+    case Arg::FPImm32:
+        out.print("FPImm32");
+        return;
+    case Arg::FPImm64:
+        out.print("FPImm64");
+        return;
+    case Arg::FPImm128:
+        out.print("FPImm128");
         return;
     case Arg::ZeroReg:
         out.print("ZeroReg");

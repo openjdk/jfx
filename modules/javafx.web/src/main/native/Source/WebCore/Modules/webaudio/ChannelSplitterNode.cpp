@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,16 +31,17 @@
 #include "AudioContext.h"
 #include "AudioNodeInput.h"
 #include "AudioNodeOutput.h"
-#include <wtf/IsoMallocInlines.h>
+#include "ExceptionOr.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(ChannelSplitterNode);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ChannelSplitterNode);
 
 ExceptionOr<Ref<ChannelSplitterNode>> ChannelSplitterNode::create(BaseAudioContext& context, const ChannelSplitterOptions& options)
 {
     if (options.numberOfOutputs > AudioContext::maxNumberOfChannels || !options.numberOfOutputs)
-        return Exception { IndexSizeError, "Number of outputs is not in the allowed range"_s };
+        return Exception { ExceptionCode::IndexSizeError, "Number of outputs is not in the allowed range"_s };
 
     auto splitter = adoptRef(*new ChannelSplitterNode(context, options.numberOfOutputs));
 
@@ -65,23 +66,23 @@ ChannelSplitterNode::ChannelSplitterNode(BaseAudioContext& context, unsigned num
 
 void ChannelSplitterNode::process(size_t framesToProcess)
 {
-    AudioBus* source = input(0)->bus();
-    ASSERT(source);
-    ASSERT_UNUSED(framesToProcess, framesToProcess == source->length());
+    CheckedPtr firstInput = input(0);
+    AudioBus& source = firstInput->bus();
+    ASSERT_UNUSED(framesToProcess, framesToProcess == source.length());
 
-    unsigned numberOfSourceChannels = source->numberOfChannels();
+    unsigned numberOfSourceChannels = source.numberOfChannels();
 
     for (unsigned i = 0; i < numberOfOutputs(); ++i) {
-        AudioBus* destination = output(i)->bus();
-        ASSERT(destination);
+        CheckedPtr currentOutput = output(i);
+        AudioBus& destination = currentOutput->bus();
 
         if (i < numberOfSourceChannels) {
             // Split the channel out if it exists in the source.
             // It would be nice to avoid the copy and simply pass along pointers, but this becomes extremely difficult with fanout and fanin.
-            destination->channel(0)->copyFrom(source->channel(i));
-        } else if (output(i)->renderingFanOutCount() > 0) {
+            destination.channel(0)->copyFrom(source.channel(i));
+        } else if (currentOutput->renderingFanOutCount() > 0) {
             // Only bother zeroing out the destination if it's connected to anything
-            destination->zero();
+            destination.zero();
         }
     }
 }
@@ -89,7 +90,7 @@ void ChannelSplitterNode::process(size_t framesToProcess)
 ExceptionOr<void> ChannelSplitterNode::setChannelCount(unsigned channelCount)
 {
     if (channelCount != numberOfOutputs())
-        return Exception { InvalidStateError, "Channel count must be set to number of outputs."_s };
+        return Exception { ExceptionCode::InvalidStateError, "Channel count must be set to number of outputs."_s };
 
     return AudioNode::setChannelCount(channelCount);
 }
@@ -97,7 +98,7 @@ ExceptionOr<void> ChannelSplitterNode::setChannelCount(unsigned channelCount)
 ExceptionOr<void> ChannelSplitterNode::setChannelCountMode(ChannelCountMode mode)
 {
     if (mode != ChannelCountMode::Explicit)
-        return Exception { InvalidStateError, "Channel count mode cannot be changed from explicit."_s };
+        return Exception { ExceptionCode::InvalidStateError, "Channel count mode cannot be changed from explicit."_s };
 
     return AudioNode::setChannelCountMode(mode);
 }
@@ -105,7 +106,7 @@ ExceptionOr<void> ChannelSplitterNode::setChannelCountMode(ChannelCountMode mode
 ExceptionOr<void> ChannelSplitterNode::setChannelInterpretation(ChannelInterpretation interpretation)
 {
     if (interpretation != ChannelInterpretation::Discrete)
-        return Exception { InvalidStateError, "Channel interpretation cannot be changed from discrete."_s };
+        return Exception { ExceptionCode::InvalidStateError, "Channel interpretation cannot be changed from discrete."_s };
 
     return AudioNode::setChannelInterpretation(interpretation);
 }

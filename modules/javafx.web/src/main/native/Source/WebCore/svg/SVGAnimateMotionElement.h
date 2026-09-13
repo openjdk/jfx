@@ -28,7 +28,8 @@ namespace WebCore {
 class AffineTransform;
 
 class SVGAnimateMotionElement final : public SVGAnimationElement {
-    WTF_MAKE_ISO_ALLOCATED(SVGAnimateMotionElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGAnimateMotionElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGAnimateMotionElement);
 public:
     static Ref<SVGAnimateMotionElement> create(const QualifiedName&, Document&);
     void updateAnimationPath();
@@ -59,6 +60,7 @@ private:
     void buildTransformForProgress(AffineTransform*, float percentage);
 
     void updateAnimationMode() override;
+    void childrenChanged(const ChildChange&) final;
 
     // Note: we do not support percentage values for to/from coords as the spec implies we should (opera doesn't either)
     FloatPoint m_fromPoint;

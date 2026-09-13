@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "CascadeLevel.h"
 #include "MatchResult.h"
 #include "WebAnimationTypes.h"
-#include <bitset>
+#include <wtf/BitSet.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -37,109 +37,141 @@ class StyleResolver;
 namespace Style {
 
 class PropertyCascade {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PropertyCascade);
 public:
+    using PropertyBitSet = WTF::BitSet<lastLowPriorityProperty + 1>;
+
     enum class PropertyType : uint8_t {
         NonInherited = 1 << 0,
         Inherited = 1 << 1,
-        VariableReference = 1 << 2,
+        ExplicitlyInherited = 1 << 2,
         AfterAnimation = 1 << 3,
-        AfterTransition = 1 << 4
+        AfterTransition = 1 << 4,
+        StartingStyle = 1 << 5,
+        NonCacheable = 1 << 6,
     };
-    static constexpr OptionSet<PropertyType> allProperties() { return { PropertyType::NonInherited,  PropertyType::Inherited }; }
 
-    PropertyCascade(const MatchResult&, CascadeLevel, OptionSet<PropertyType> includedProperties, const HashSet<AnimatableProperty>* = nullptr);
-    PropertyCascade(const PropertyCascade&, CascadeLevel, std::optional<ScopeOrdinal> rollbackScope = { }, std::optional<CascadeLayerPriority> maximumCascadeLayerPriorityForRollback = { });
+    enum class Origin : uint8_t {
+        UserAgent,
+        User,
+        Author,
+        PositionFallback
+    };
+
+    static constexpr OptionSet<PropertyType> normalPropertyTypes() { return { PropertyType::NonInherited,  PropertyType::Inherited }; }
+    static constexpr OptionSet<PropertyType> startingStylePropertyTypes() { return normalPropertyTypes() | PropertyType::StartingStyle; }
+
+    struct IncludedProperties {
+        OptionSet<PropertyType> types;
+        // Ids are mutually exclusive with types. They are low-priority only and have any cascade aliases resolved.
+        Vector<CSSPropertyID, 4> ids { };
+
+        bool isEmpty() const { return !types && ids.isEmpty(); }
+    };
+
+    static IncludedProperties normalProperties() { return { normalPropertyTypes() }; }
+
+    PropertyCascade(const MatchResult&, IncludedProperties&&, const HashSet<AnimatableCSSProperty>* = nullptr, const StyleProperties* positionTryFallbackProperties = nullptr);
+    PropertyCascade(const PropertyCascade&, Origin, std::optional<ScopeOrdinal> rollbackScope = { }, std::optional<CascadeLayerPriority> maximumCascadeLayerPriorityForRollback = { });
 
     ~PropertyCascade();
 
     struct Property {
         CSSPropertyID id;
-        CascadeLevel cascadeLevel;
+        Origin origin;
         ScopeOrdinal styleScopeOrdinal;
         CascadeLayerPriority cascadeLayerPriority;
         FromStyleAttribute fromStyleAttribute;
         std::array<CSSValue*, 3> cssValue; // Values for link match states MatchDefault, MatchLink and MatchVisited
+        std::array<Origin, 3> origins;
     };
 
-    bool isEmpty() const { return m_propertyIsPresent.none() && !m_seenDeferredPropertyCount; }
+    bool isEmpty() const { return m_propertyIsPresent.isEmpty() && !m_seenLogicalGroupPropertyCount; }
 
     bool hasNormalProperty(CSSPropertyID) const;
     const Property& normalProperty(CSSPropertyID) const;
 
-    bool hasDeferredProperty(CSSPropertyID) const;
-    const Property& deferredProperty(CSSPropertyID) const;
-    const Property* lastDeferredPropertyResolvingRelated(CSSPropertyID, TextDirection, WritingMode) const;
+    bool hasLogicalGroupProperty(CSSPropertyID) const;
+    const Property& logicalGroupProperty(CSSPropertyID) const;
+    const Property* lastPropertyResolvingLogicalPropertyPair(CSSPropertyID, WritingMode) const;
 
     bool hasCustomProperty(const AtomString&) const;
     const Property& customProperty(const AtomString&) const;
 
-    std::span<const CSSPropertyID> deferredPropertyIDs() const;
+    std::span<const CSSPropertyID> logicalGroupPropertyIDs() const;
     const HashMap<AtomString, Property>& customProperties() const { return m_customProperties; }
 
-    const HashSet<AnimatableProperty> overriddenAnimatedProperties() const;
+    const HashSet<AnimatableCSSProperty> overriddenAnimatedProperties() const;
+
+    PropertyBitSet& propertyIsPresent() { return m_propertyIsPresent; }
+    const PropertyBitSet& propertyIsPresent() const { return m_propertyIsPresent; }
+
+    bool applyLowPriorityOnly() const { return !m_includedProperties.ids.isEmpty(); }
 
 private:
     void buildCascade();
-    bool addNormalMatches(CascadeLevel);
-    void addImportantMatches(CascadeLevel);
-    bool addMatch(const MatchedProperties&, CascadeLevel, bool important);
+    bool addNormalMatches(Origin);
+    void addImportantMatches(Origin);
+    bool addMatch(const MatchedProperties&, Origin, IsImportant);
     bool shouldApplyAfterAnimation(const StyleProperties::PropertyReference&);
+    void addPositionTryFallbackProperties();
 
-    void set(CSSPropertyID, CSSValue&, const MatchedProperties&, CascadeLevel);
-    void setDeferred(CSSPropertyID, CSSValue&, const MatchedProperties&, CascadeLevel);
-    static void setPropertyInternal(Property&, CSSPropertyID, CSSValue&, const MatchedProperties&, CascadeLevel);
+    void set(CSSPropertyID, CSSValue&, const MatchedProperties&, Origin);
+    void setLogicalGroupProperty(CSSPropertyID, CSSValue&, const MatchedProperties&, Origin);
+    static void setPropertyInternal(Property&, CSSPropertyID, CSSValue&, const MatchedProperties&, Origin);
 
     bool hasProperty(CSSPropertyID, const CSSValue&);
+    bool mayOverrideExistingProperty(CSSPropertyID, const CSSValue&);
 
-    unsigned deferredPropertyIndex(CSSPropertyID) const;
-    void setDeferredPropertyIndex(CSSPropertyID, unsigned);
-    void sortDeferredPropertyIDs();
+    unsigned logicalGroupPropertyIndex(CSSPropertyID) const;
+    void setLogicalGroupPropertyIndex(CSSPropertyID, unsigned);
+    void sortLogicalGroupPropertyIDs();
 
     const MatchResult& m_matchResult;
-    const OptionSet<PropertyType> m_includedProperties;
-    const CascadeLevel m_maximumCascadeLevel;
+    const IncludedProperties m_includedProperties;
+    const Origin m_maximumOrigin;
     const std::optional<ScopeOrdinal> m_rollbackScope;
     const std::optional<CascadeLayerPriority> m_maximumCascadeLayerPriorityForRollback;
 
     struct AnimationLayer {
-        AnimationLayer(const HashSet<AnimatableProperty>&);
+        AnimationLayer(const HashSet<AnimatableCSSProperty>&);
 
-        const HashSet<AnimatableProperty>& properties;
-        HashSet<AnimatableProperty> overriddenProperties;
+        const HashSet<AnimatableCSSProperty>& properties;
+        HashSet<AnimatableCSSProperty> overriddenProperties;
         bool hasCustomProperties { false };
         bool hasFontSize { false };
         bool hasLineHeight { false };
     };
     std::optional<AnimationLayer> m_animationLayer;
+    std::optional<MatchedProperties> m_positionTryFallbackProperties;
 
     // The CSSPropertyID enum is sorted like this:
     // 1. CSSPropertyInvalid and CSSPropertyCustom.
     // 2. Normal longhand properties (high priority ones followed by low priority ones).
-    // 3. Deferred longhand properties.
+    // 3. Longhand properties in a logical property group.
     // 4. Shorthand properties.
     //
-    // 'm_properties' is used for both normal and deferred longhands, so it has size 'lastDeferredProperty + 1'.
+    // 'm_properties' is used for both normal and logical longhands, so it has size 'lastLogicalGroupProperty + 1'.
     // It could actually be 2 units smaller, but then we would have to subtract 'firstCSSProperty', which may not be worth it.
-    // 'm_propertyIsPresent' is not used for deferred properties, so we only need to cover up to the last low priority one.
-    std::array<Property, lastDeferredProperty + 1> m_properties;
-    std::bitset<lastLowPriorityProperty + 1> m_propertyIsPresent;
+    // 'm_propertyIsPresent' is not used for logical group properties, so we only need to cover up to the last low priority one.
+    std::array<Property, lastLogicalGroupProperty + 1> m_properties;
+    PropertyBitSet m_propertyIsPresent;
 
-    static constexpr unsigned deferredPropertyCount = lastDeferredProperty - firstDeferredProperty + 1;
-    std::array<unsigned, deferredPropertyCount> m_deferredPropertyIndices { };
-    unsigned m_lastIndexForDeferred { 0 };
-    std::array<CSSPropertyID, deferredPropertyCount> m_deferredPropertyIDs { };
-    unsigned m_seenDeferredPropertyCount { 0 };
-    CSSPropertyID m_lowestSeenDeferredProperty { lastDeferredProperty };
-    CSSPropertyID m_highestSeenDeferredProperty { firstDeferredProperty };
+    static constexpr unsigned logicalGroupPropertyCount = lastLogicalGroupProperty - firstLogicalGroupProperty + 1;
+    std::array<unsigned, logicalGroupPropertyCount> m_logicalGroupPropertyIndices { };
+    unsigned m_lastIndexForLogicalGroup { 0 };
+    std::array<CSSPropertyID, logicalGroupPropertyCount> m_logicalGroupPropertyIDs { };
+    unsigned m_seenLogicalGroupPropertyCount { 0 };
+    CSSPropertyID m_lowestSeenLogicalGroupProperty { lastLogicalGroupProperty };
+    CSSPropertyID m_highestSeenLogicalGroupProperty { firstLogicalGroupProperty };
 
     HashMap<AtomString, Property> m_customProperties;
 };
 
 inline bool PropertyCascade::hasNormalProperty(CSSPropertyID id) const
 {
-    ASSERT(id < firstDeferredProperty);
-    return m_propertyIsPresent[id];
+    ASSERT(id < firstLogicalGroupProperty);
+    return m_propertyIsPresent.get(id);
 }
 
 inline const PropertyCascade::Property& PropertyCascade::normalProperty(CSSPropertyID id) const
@@ -148,34 +180,34 @@ inline const PropertyCascade::Property& PropertyCascade::normalProperty(CSSPrope
     return m_properties[id];
 }
 
-inline unsigned PropertyCascade::deferredPropertyIndex(CSSPropertyID id) const
+inline unsigned PropertyCascade::logicalGroupPropertyIndex(CSSPropertyID id) const
 {
-    ASSERT(id >= firstDeferredProperty);
-    ASSERT(id <= lastDeferredProperty);
-    return m_deferredPropertyIndices[id - firstDeferredProperty];
+    ASSERT(id >= firstLogicalGroupProperty);
+    ASSERT(id <= lastLogicalGroupProperty);
+    return m_logicalGroupPropertyIndices[id - firstLogicalGroupProperty];
 }
 
-inline void PropertyCascade::setDeferredPropertyIndex(CSSPropertyID id, unsigned index)
+inline void PropertyCascade::setLogicalGroupPropertyIndex(CSSPropertyID id, unsigned index)
 {
-    ASSERT(id >= firstDeferredProperty);
-    ASSERT(id <= lastDeferredProperty);
-    m_deferredPropertyIndices[id - firstDeferredProperty] = index;
+    ASSERT(id >= firstLogicalGroupProperty);
+    ASSERT(id <= lastLogicalGroupProperty);
+    m_logicalGroupPropertyIndices[id - firstLogicalGroupProperty] = index;
 }
 
-inline bool PropertyCascade::hasDeferredProperty(CSSPropertyID id) const
+inline bool PropertyCascade::hasLogicalGroupProperty(CSSPropertyID id) const
 {
-    return deferredPropertyIndex(id);
+    return logicalGroupPropertyIndex(id);
 }
 
-inline const PropertyCascade::Property& PropertyCascade::deferredProperty(CSSPropertyID id) const
+inline const PropertyCascade::Property& PropertyCascade::logicalGroupProperty(CSSPropertyID id) const
 {
-    ASSERT(hasDeferredProperty(id));
+    ASSERT(hasLogicalGroupProperty(id));
     return m_properties[id];
 }
 
-inline std::span<const CSSPropertyID> PropertyCascade::deferredPropertyIDs() const
+inline std::span<const CSSPropertyID> PropertyCascade::logicalGroupPropertyIDs() const
 {
-    return { m_deferredPropertyIDs.data(), m_seenDeferredPropertyCount };
+    return std::span { m_logicalGroupPropertyIDs }.first(m_seenLogicalGroupPropertyCount);
 }
 
 inline bool PropertyCascade::hasCustomProperty(const AtomString& name) const
@@ -189,5 +221,5 @@ inline const PropertyCascade::Property& PropertyCascade::customProperty(const At
     return m_customProperties.find(name)->value;
 }
 
-}
-}
+} // namespace Style
+} // namespace WebCore

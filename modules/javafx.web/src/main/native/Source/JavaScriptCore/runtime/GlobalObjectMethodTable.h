@@ -21,6 +21,7 @@
 
 #pragma once
 
+#include <JavaScriptCore/Exception.h>
 #include <wtf/Forward.h>
 
 namespace JSC {
@@ -37,7 +38,10 @@ class JSValue;
 class Microtask;
 class RuntimeFlags;
 class SourceOrigin;
+class Structure;
+class QueuedTask;
 
+enum class CompilationType;
 enum class ScriptExecutionStatus;
 
 enum class JSPromiseRejectionOperation : unsigned {
@@ -49,7 +53,7 @@ struct GlobalObjectMethodTable {
     bool (*supportsRichSourceInfo)(const JSGlobalObject*);
     bool (*shouldInterruptScript)(const JSGlobalObject*);
     RuntimeFlags (*javaScriptRuntimeFlags)(const JSGlobalObject*);
-    void (*queueMicrotaskToEventLoop)(JSGlobalObject&, Ref<Microtask>&&);
+    void (*queueMicrotaskToEventLoop)(JSGlobalObject&, QueuedTask&&);
     bool (*shouldInterruptScriptBeforeTimeout)(const JSGlobalObject*);
 
     JSInternalPromise* (*moduleLoaderImportModule)(JSGlobalObject*, JSModuleLoader*, JSString*, JSValue, const SourceOrigin&);
@@ -65,11 +69,14 @@ struct GlobalObjectMethodTable {
     JSObject* (*currentScriptExecutionOwner)(JSGlobalObject*);
 
     ScriptExecutionStatus (*scriptExecutionStatus)(JSGlobalObject*, JSObject* scriptExecutionOwner);
-    void (*reportViolationForUnsafeEval)(JSGlobalObject*, JSString*);
+    void (*reportViolationForUnsafeEval)(JSGlobalObject*, const String&);
     String (*defaultLanguage)();
     JSPromise* (*compileStreaming)(JSGlobalObject*, JSValue);
     JSPromise* (*instantiateStreaming)(JSGlobalObject*, JSValue, JSObject*);
     JSGlobalObject* (*deriveShadowRealmGlobalObject)(JSGlobalObject*);
+    String (*codeForEval)(JSGlobalObject*, JSValue);
+    bool (*canCompileStrings)(JSGlobalObject*, CompilationType, String, const ArgList&);
+    Structure* (*trustedScriptStructure)(JSGlobalObject*);
 };
 
 } // namespace JSC

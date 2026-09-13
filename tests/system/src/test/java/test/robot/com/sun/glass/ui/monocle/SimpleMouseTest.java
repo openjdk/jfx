@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,27 +25,26 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLogShim;
-import test.robot.com.sun.glass.ui.monocle.TestApplication;
 import javafx.geometry.Rectangle2D;
 import javafx.stage.Screen;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import com.sun.glass.ui.monocle.TestLogShim;
 import test.com.sun.glass.ui.monocle.TestRunnable;
 
 public class SimpleMouseTest {
 
     private UInput ui;
-    @Rule public TestName name = new TestName();
 
-    @Before public void setUpScreen() throws Exception {
+    @BeforeEach
+    public void setUpScreen(TestInfo t) throws Exception {
         TestLogShim.reset();
-        TestLogShim.log(name.getMethodName());
+        // get test name from the junit5
+        TestLogShim.log(t.getDisplayName());
         TestApplication.showFullScreenScene();
         TestApplication.addMouseListeners();
         TestApplication.movePointerTo(300, 300);
@@ -66,7 +65,8 @@ public class SimpleMouseTest {
         ui.processLine("CREATE");
     }
 
-    @After public void destroyDevice() throws Exception {
+    @AfterEach
+    public void destroyDevice() throws Exception {
         if (ui != null) {
             ui.waitForQuiet();
             try {
@@ -133,7 +133,7 @@ public class SimpleMouseTest {
         new TestRunnable() {
             @Override
             public void test() {
-                Assert.assertEquals(3, TestLogShim.countLogContaining("Scroll: 1"));
+                Assertions.assertEquals(3, TestLogShim.countLogContaining("Scroll: 1"));
             }
         }.invokeAndWaitUntilSuccess(3000l);
         TestLogShim.reset();
@@ -147,7 +147,7 @@ public class SimpleMouseTest {
         new TestRunnable() {
             @Override
             public void test() {
-                Assert.assertEquals(3, TestLogShim.countLogContaining("Scroll: -1"));
+                Assertions.assertEquals(3, TestLogShim.countLogContaining("Scroll: -1"));
             }
         }.invokeAndWaitUntilSuccess(3000l);
     }
@@ -176,7 +176,7 @@ public class SimpleMouseTest {
 
     @Test
     public void testDragLookahead() throws Exception {
-        Assume.assumeTrue(TestApplication.isMonocle());
+        Assumptions.assumeTrue(TestApplication.isMonocle());
         TestApplication.showFullScreenScene();
         TestApplication.addMouseListeners();
         TestLogShim.reset();
@@ -222,12 +222,12 @@ public class SimpleMouseTest {
         TestLogShim.waitForLog("Mouse released: %d, %d", x3, y3);
         TestLogShim.waitForLog("Mouse dragged: %d, %d", x3, y3);
         // Check that moves in between were filtered
-        Assert.assertTrue(TestLogShim.countLogContaining("Mouse dragged") <= (x2 - x1) / 10);
+        Assertions.assertTrue(TestLogShim.countLogContaining("Mouse dragged") <= (x2 - x1) / 10);
     }
 
     @Test
     public void testMoveLookahead() throws Exception {
-        Assume.assumeTrue(TestApplication.isMonocle());
+        Assumptions.assumeTrue(TestApplication.isMonocle());
         TestApplication.showFullScreenScene();
         TestApplication.addMouseListeners();
         TestLogShim.reset();
@@ -266,11 +266,11 @@ public class SimpleMouseTest {
         // Check that the final point reported is correct
         TestLogShim.waitForLog("Mouse moved: %d, %d", x3, y3);
         // Check that moves in between were filtered
-        Assert.assertTrue(TestLogShim.countLogContaining("Mouse moved") <= (x2 - x1) / 10);
+        Assertions.assertTrue(TestLogShim.countLogContaining("Mouse moved") <= (x2 - x1) / 10);
         // Check that we didn't get any other events
-        Assert.assertEquals(0, TestLogShim.countLogContaining("Mouse pressed"));
-        Assert.assertEquals(0, TestLogShim.countLogContaining("Mouse released"));
-        Assert.assertEquals(0, TestLogShim.countLogContaining("Mouse clicked"));
+        Assertions.assertEquals(0, TestLogShim.countLogContaining("Mouse pressed"));
+        Assertions.assertEquals(0, TestLogShim.countLogContaining("Mouse released"));
+        Assertions.assertEquals(0, TestLogShim.countLogContaining("Mouse clicked"));
     }
 
     @Test
@@ -318,7 +318,7 @@ public class SimpleMouseTest {
     public void testGrab2() throws Exception {
         TestApplication.showInMiddleOfScreen();
         TestApplication.addMouseListeners();
-        Assume.assumeTrue(TestApplication.isMonocle());
+        Assumptions.assumeTrue(TestApplication.isMonocle());
         Rectangle2D r = TestApplication.getScreenBounds();
         final int width = (int) r.getWidth();
         final int height = (int) r.getHeight();

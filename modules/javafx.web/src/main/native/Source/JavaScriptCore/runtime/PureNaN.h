@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <bit>
+#include <limits>
 #include <wtf/Assertions.h>
 #include <wtf/StdLibExtras.h>
 
@@ -62,30 +64,38 @@ namespace JSC {
 // test. We say that a NaN is "impure" if attempting to tag it would result in a value
 // that would look like something other than a double.
 
-// Returns some kind of pure NaN.
-inline double pureNaN()
+// Some kind of pure NaN.
+// Be sure that we define exactly the kind of NaN that is safe. We engineer the bits
+// ourselves to ensure that it's !isImpureNaN(). FWIW, this is what
+// numeric_limits<double>::quiet_NaN() returns on Mac/X86_64. But AFAICT there is
+// no guarantee that quiet_NaN would return a pureNaN on all platforms. For example,
+// the docs appear to imply that quiet_NaN could even return a double with the
+// signaling bit set on hardware that doesn't do signaling. That would probably
+// never happen, but it's healthy to be paranoid.
+static constexpr uint64_t PNaNAsBits { 0x7ff8000000000000ULL };
+static constexpr double PNaN { std::bit_cast<double>(PNaNAsBits) };
+static constexpr uint64_t ImpureNaNAsBits { 0xffff000000000000ULL };
+static constexpr double ImpureNaN { std::bit_cast<double>(ImpureNaNAsBits) };
+static constexpr size_t JSValueDoubleEncodeOffsetBit { 49 };
+static constexpr uint64_t JSValueDoubleEncodeOffset { 1ULL << JSValueDoubleEncodeOffsetBit };
+static constexpr uint64_t JSValueNumberTag { 0xfffe000000000000ULL };
+
+inline constexpr bool isImpureNaN(double value)
 {
-    // Be sure that we return exactly the kind of NaN that is safe. We engineer the bits
-    // ourselves to ensure that it's !isImpureNaN(). FWIW, this is what
-    // numeric_limits<double>::quiet_NaN() returns on Mac/X86_64. But AFAICT there is
-    // no guarantee that quiet_NaN would return a pureNaN on all platforms. For example,
-    // the docs appear to imply that quiet_NaN could even return a double with the
-    // signaling bit set on hardware that doesn't do signaling. That would probably
-    // never happen, but it's healthy to be paranoid.
-    return bitwise_cast<double>(0x7ff8000000000000ll);
+    // Impure when encoded double is not recognized as double.
+    uint64_t bits = std::bit_cast<uint64_t>(value);
+    bits += JSValueDoubleEncodeOffset;
+    uint64_t mask = bits & JSValueNumberTag;
+    return !mask || mask == JSValueNumberTag;
 }
 
-#define PNaN (pureNaN())
-
-inline bool isImpureNaN(double value)
-{
-    // Tests if the double value would break JSVALUE64 encoding, which is the most
-    // aggressive kind of encoding that we currently use.
-    return bitwise_cast<uint64_t>(value) >= 0xfffe000000000000llu;
-}
+static_assert(!isImpureNaN(std::numeric_limits<double>::quiet_NaN()));
+static_assert(!isImpureNaN(-std::numeric_limits<double>::quiet_NaN()));
+static_assert(!isImpureNaN(PNaN));
+static_assert(!isImpureNaN(-PNaN));
 
 // If the given value is NaN then return a NaN that is known to be pure.
-inline double purifyNaN(double value)
+inline constexpr double purifyNaN(double value)
 {
     if (value != value)
         return PNaN;

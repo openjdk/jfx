@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,11 +32,9 @@
 #include "DFGNode.h"
 #include "LinkBuffer.h"
 #include "WasmOpcodeOrigin.h"
+#include <wtf/TZoneMallocInlines.h>
 
-#if COMPILER(MSVC)
-// See https://msdn.microsoft.com/en-us/library/4wz07268.aspx
-#pragma warning(disable: 4333)
-#endif
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -104,19 +102,19 @@ PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(VM& vm)
 { }
 
 PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(PCToCodeOriginMapBuilder&& other)
-    : m_codeRanges(WTFMove(other.m_codeRanges))
+    : m_codeRanges(WTF::move(other.m_codeRanges))
     , m_shouldBuildMapping(other.m_shouldBuildMapping)
 { }
 
 #if ENABLE(FTL_JIT)
-PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(JSTag, VM& vm, B3::PCToOriginMap b3PCToOriginMap)
+PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(JSTag, VM& vm, const B3::PCToOriginMap& b3PCToOriginMap)
     : m_shouldBuildMapping(vm.shouldBuilderPCToCodeOriginMapping())
 {
     if (!m_shouldBuildMapping)
         return;
 
     for (const B3::PCToOriginMap::OriginRange& originRange : b3PCToOriginMap.ranges()) {
-        DFG::Node* node = bitwise_cast<DFG::Node*>(originRange.origin.data());
+        DFG::Node* node = originRange.origin.dfgOrigin();
         if (node)
             appendItem(originRange.label, node->origin.semantic);
         else
@@ -125,20 +123,16 @@ PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(JSTag, VM& vm, B3::PCToOrigin
 }
 #endif
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
-PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(WasmTag, B3::PCToOriginMap b3PCToOriginMap)
+#if ENABLE(WEBASSEMBLY_OMGJIT)
+PCToCodeOriginMapBuilder::PCToCodeOriginMapBuilder(WasmTag, const B3::PCToOriginMap& b3PCToOriginMap)
     : m_shouldBuildMapping(true)
 {
     for (const B3::PCToOriginMap::OriginRange& originRange : b3PCToOriginMap.ranges()) {
         B3::Origin b3Origin = originRange.origin;
         if (b3Origin) {
-#if USE(JSVALUE64)
             Wasm::OpcodeOrigin wasmOrigin { b3Origin };
             // We stash the location into a BytecodeIndex.
             appendItem(originRange.label, CodeOrigin(BytecodeIndex(wasmOrigin.location())));
-#elif USE(JSVALUE32_64)
-            UNREACHABLE_FOR_PLATFORM(); // Needs porting
-#endif
         } else
             appendItem(originRange.label, PCToCodeOriginMapBuilder::defaultCodeOrigin());
     }
@@ -193,7 +187,7 @@ PCToCodeOriginMap::PCToCodeOriginMap(PCToCodeOriginMapBuilder&& builder, LinkBuf
     void* lastPCValue = nullptr;
     auto buildPCTable = [&] (void* pcValue) {
         RELEASE_ASSERT(pcValue > lastPCValue);
-        uintptr_t delta = bitwise_cast<uintptr_t>(pcValue) - bitwise_cast<uintptr_t>(lastPCValue);
+        uintptr_t delta = std::bit_cast<uintptr_t>(pcValue) - std::bit_cast<uintptr_t>(lastPCValue);
         RELEASE_ASSERT(delta != sentinelPCDelta);
         lastPCValue = pcValue;
         if (delta > std::numeric_limits<uint8_t>::max()) {
@@ -219,7 +213,7 @@ PCToCodeOriginMap::PCToCodeOriginMap(PCToCodeOriginMapBuilder&& builder, LinkBuf
         int8_t hasInlineCallFrameByte = codeOrigin.inlineCallFrame() ? 1 : 0;
         codeOriginCompressor.write<int8_t>(hasInlineCallFrameByte);
         if (hasInlineCallFrameByte)
-            codeOriginCompressor.write<uintptr_t>(bitwise_cast<uintptr_t>(codeOrigin.inlineCallFrame()));
+            codeOriginCompressor.write<uintptr_t>(std::bit_cast<uintptr_t>(codeOrigin.inlineCallFrame()));
     };
 
     m_pcRangeStart = linkBuffer.locationOf<NoPtrTag>(builder.m_codeRanges.first().start).dataLocation<uintptr_t>();
@@ -230,8 +224,8 @@ PCToCodeOriginMap::PCToCodeOriginMap(PCToCodeOriginMapBuilder&& builder, LinkBuf
         PCToCodeOriginMapBuilder::CodeRange& codeRange = builder.m_codeRanges[i];
         void* start = linkBuffer.locationOf<NoPtrTag>(codeRange.start).dataLocation();
         void* end = linkBuffer.locationOf<NoPtrTag>(codeRange.end).dataLocation();
-        ASSERT(m_pcRangeStart <= bitwise_cast<uintptr_t>(start));
-        ASSERT(m_pcRangeEnd >= bitwise_cast<uintptr_t>(end) - 1);
+        ASSERT(m_pcRangeStart <= std::bit_cast<uintptr_t>(start));
+        ASSERT(m_pcRangeEnd >= std::bit_cast<uintptr_t>(end) - 1);
         if (start == end)
             ASSERT(i == builder.m_codeRanges.size() - 1);
         if (i > 0)
@@ -247,6 +241,8 @@ PCToCodeOriginMap::PCToCodeOriginMap(PCToCodeOriginMapBuilder&& builder, LinkBuf
     m_compressedCodeOriginsSize = codeOriginCompressor.m_offset;
     m_compressedCodeOrigins = static_cast<uint8_t*>(fastRealloc(codeOriginCompressor.m_buffer, m_compressedCodeOriginsSize));
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PCToCodeOriginMap);
 
 PCToCodeOriginMap::~PCToCodeOriginMap()
 {
@@ -266,7 +262,7 @@ double PCToCodeOriginMap::memorySize()
 
 std::optional<CodeOrigin> PCToCodeOriginMap::findPC(void* pc) const
 {
-    uintptr_t pcAsInt = bitwise_cast<uintptr_t>(pc);
+    uintptr_t pcAsInt = std::bit_cast<uintptr_t>(pc);
     if (!(m_pcRangeStart <= pcAsInt && pcAsInt <= m_pcRangeEnd))
         return std::nullopt;
 
@@ -302,7 +298,7 @@ std::optional<CodeOrigin> PCToCodeOriginMap::findPC(void* pc) const
             int8_t hasInlineFrame = codeOriginReader.read<int8_t>();
             ASSERT(hasInlineFrame == 0 || hasInlineFrame == 1);
             if (hasInlineFrame)
-                currentInlineCallFrame = bitwise_cast<InlineCallFrame*>(codeOriginReader.read<uintptr_t>());
+                currentInlineCallFrame = std::bit_cast<InlineCallFrame*>(codeOriginReader.read<uintptr_t>());
             else
                 currentInlineCallFrame = nullptr;
         }
@@ -321,5 +317,7 @@ std::optional<CodeOrigin> PCToCodeOriginMap::findPC(void* pc) const
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(JIT)

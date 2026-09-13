@@ -26,16 +26,18 @@
 #pragma once
 
 #include "TextCodec.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace PAL {
 
 class TextCodecUserDefined final : public TextCodec {
+    WTF_MAKE_TZONE_ALLOCATED(TextCodecUserDefined);
 public:
     static void registerEncodingNames(EncodingNameRegistrar);
     static void registerCodecs(TextCodecRegistrar);
 
 private:
-    String decode(const char*, size_t length, bool flush, bool stopOnError, bool& sawError) final;
+    String decode(std::span<const uint8_t>, bool flush, bool stopOnError, bool& sawError) final;
     Vector<uint8_t> encode(StringView, UnencodableHandling) const final;
 };
 

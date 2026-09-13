@@ -24,10 +24,9 @@
 */
 
 [
-    Conditional=SERVICE_WORKER,
     JSGenerateToJSObject,
-]
-dictionary NavigationPreloadState {
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary NavigationPreloadState {
     boolean enabled = false;
     ByteString headerValue;
 };

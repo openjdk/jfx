@@ -26,7 +26,10 @@
 #pragma once
 
 #include <CoreFoundation/CoreFoundation.h>
+#include <CoreText/CTFontDescriptor.h>
+#include <objc/objc.h>
 #include <wtf/Assertions.h>
+#include <wtf/RetainPtr.h>
 
 #ifndef CF_BRIDGED_TYPE
 #define CF_BRIDGED_TYPE(T)
@@ -35,33 +38,6 @@
 namespace WTF {
 
 template <typename> struct CFTypeTrait;
-
-#define WTF_DECLARE_CF_TYPE_TRAIT(ClassName) \
-template <> \
-struct WTF::CFTypeTrait<ClassName##Ref> { \
-    static inline CFTypeID typeID(void) { return ClassName##GetTypeID(); } \
-};
-
-WTF_DECLARE_CF_TYPE_TRAIT(CFArray);
-WTF_DECLARE_CF_TYPE_TRAIT(CFBoolean);
-WTF_DECLARE_CF_TYPE_TRAIT(CFData);
-WTF_DECLARE_CF_TYPE_TRAIT(CFDictionary);
-WTF_DECLARE_CF_TYPE_TRAIT(CFNumber);
-WTF_DECLARE_CF_TYPE_TRAIT(CFString);
-WTF_DECLARE_CF_TYPE_TRAIT(CFURL);
-
-#define WTF_DECLARE_CF_MUTABLE_TYPE_TRAIT(ClassName, MutableClassName) \
-template <> \
-struct WTF::CFTypeTrait<MutableClassName##Ref> { \
-    static inline CFTypeID typeID(void) { return ClassName##GetTypeID(); } \
-};
-
-WTF_DECLARE_CF_MUTABLE_TYPE_TRAIT(CFArray, CFMutableArray);
-WTF_DECLARE_CF_MUTABLE_TYPE_TRAIT(CFData, CFMutableData);
-WTF_DECLARE_CF_MUTABLE_TYPE_TRAIT(CFDictionary, CFMutableDictionary);
-WTF_DECLARE_CF_MUTABLE_TYPE_TRAIT(CFString, CFMutableString);
-
-#undef WTF_DECLARE_CF_MUTABLE_TYPE_TRAIT
 
 // Use dynamic_cf_cast<> instead of checked_cf_cast<> when actively checking CF types,
 // similar to dynamic_cast<> in C++. Be sure to include a nullptr check.
@@ -100,7 +76,59 @@ template<typename T> T checked_cf_cast(CFTypeRef object)
     return static_cast<T>(const_cast<CF_BRIDGED_TYPE(id) void*>(object));
 }
 
+// Use bridgeCFCast to convert from id -> CF without ref churn.
+
+inline CFTypeRef bridgeCFCast(id object)
+{
+#ifdef __OBJC__
+    return (__bridge CFTypeRef)object;
+#else
+    return reinterpret_cast<CFTypeRef>(object);
+#endif
+}
+
+// Use bridge_id_cast to convert from CF -> id without ref churn.
+
+inline id bridge_id_cast(CFTypeRef object)
+{
+#ifdef __OBJC__
+    return (__bridge id)object;
+#else
+    return reinterpret_cast<id>(const_cast<void*>(object));
+#endif
+}
+
 } // namespace WTF
 
+#define WTF_DECLARE_CF_TYPE_TRAIT(ClassName) \
+template <> \
+struct WTF::CFTypeTrait<ClassName##Ref> { \
+    static inline CFTypeID typeID(void) { return ClassName##GetTypeID(); } \
+};
+
+WTF_DECLARE_CF_TYPE_TRAIT(CFArray);
+WTF_DECLARE_CF_TYPE_TRAIT(CFBoolean);
+WTF_DECLARE_CF_TYPE_TRAIT(CFData);
+WTF_DECLARE_CF_TYPE_TRAIT(CFDictionary);
+WTF_DECLARE_CF_TYPE_TRAIT(CFNumber);
+WTF_DECLARE_CF_TYPE_TRAIT(CFString);
+WTF_DECLARE_CF_TYPE_TRAIT(CFURL);
+WTF_DECLARE_CF_TYPE_TRAIT(CTFontDescriptor);
+
+#define WTF_DECLARE_CF_MUTABLE_TYPE_TRAIT(ClassName, MutableClassName) \
+template <> \
+struct WTF::CFTypeTrait<MutableClassName##Ref> { \
+    static inline CFTypeID typeID(void) { return ClassName##GetTypeID(); } \
+};
+
+WTF_DECLARE_CF_MUTABLE_TYPE_TRAIT(CFArray, CFMutableArray);
+WTF_DECLARE_CF_MUTABLE_TYPE_TRAIT(CFData, CFMutableData);
+WTF_DECLARE_CF_MUTABLE_TYPE_TRAIT(CFDictionary, CFMutableDictionary);
+WTF_DECLARE_CF_MUTABLE_TYPE_TRAIT(CFString, CFMutableString);
+
+#undef WTF_DECLARE_CF_MUTABLE_TYPE_TRAIT
+
+using WTF::bridgeCFCast;
+using WTF::bridge_id_cast;
 using WTF::checked_cf_cast;
 using WTF::dynamic_cf_cast;

@@ -66,27 +66,16 @@ struct UnlinkedStructureStubInfo : JSC::UnlinkedStructureStubInfo {
     GPRReg m_extraTagGPR { InvalidGPRReg };
     GPRReg m_extra2TagGPR { InvalidGPRReg };
 #endif
-    bool hasConstantIdentifier { false };
 };
 
 struct UnlinkedCallLinkInfo : JSC::UnlinkedCallLinkInfo {
-    void setUpCall(CallLinkInfo::CallType callType, GPRReg calleeGPR)
+    void setUpCall(CallLinkInfo::CallType callType)
     {
         this->callType = callType;
-        this->calleeGPR = calleeGPR;
-    }
-
-    void setFrameShuffleData(const CallFrameShuffleData& shuffleData)
-    {
-        m_frameShuffleData = makeUnique<CallFrameShuffleData>(shuffleData);
-        m_frameShuffleData->shrinkToFit();
     }
 
     CodeOrigin codeOrigin;
     CallLinkInfo::CallType callType { CallLinkInfo::CallType::None };
-    GPRReg callLinkInfoGPR { InvalidGPRReg };
-    GPRReg calleeGPR { InvalidGPRReg };
-    std::unique_ptr<CallFrameShuffleData> m_frameShuffleData;
 };
 
 class LinkerIR {
@@ -94,9 +83,8 @@ class LinkerIR {
 public:
     using Constant = unsigned;
 
-    enum class Type : uint16_t {
+    enum class Type : uint8_t {
         Invalid,
-        StructureStubInfo,
         CallLinkInfo,
         CellPointer,
         NonCellPointer,
@@ -105,23 +93,30 @@ public:
         // WatchpointSet.
         HavingABadTimeWatchpointSet,
         MasqueradesAsUndefinedWatchpointSet,
+        ArrayBufferDetachWatchpointSet,
         ArrayIteratorProtocolWatchpointSet,
+        SetIteratorProtocolWatchpointSet,
         NumberToStringWatchpointSet,
         StructureCacheClearedWatchpointSet,
+        StringToStringWatchpointSet,
+        StringValueOfWatchpointSet,
         StringSymbolReplaceWatchpointSet,
+        StringSymbolToPrimitiveWatchpointSet,
         RegExpPrimordialPropertiesWatchpointSet,
+        PromiseThenWatchpointSet,
         ArraySpeciesWatchpointSet,
         ArrayPrototypeChainIsSaneWatchpointSet,
         StringPrototypeChainIsSaneWatchpointSet,
         ObjectPrototypeChainIsSaneWatchpointSet,
+        PromiseSpeciesWatchpointSet,
     };
 
-    using Value = CompactPointerTuple<void*, Type>;
+    using Value = JITConstant<Type>;
 
     struct ValueHash {
         static unsigned hash(const Value& p)
         {
-            return computeHash(p.type(), p.pointer());
+            return p.hash();
         }
 
         static bool equal(const Value& a, const Value& b)
@@ -147,7 +142,7 @@ public:
     LinkerIR& operator=(LinkerIR&&) = default;
 
     LinkerIR(Vector<Value>&& constants)
-        : m_constants(WTFMove(constants))
+        : m_constants(WTF::move(constants))
     {
     }
 
@@ -158,21 +153,20 @@ private:
     FixedVector<Value> m_constants;
 };
 
-class JITData final : public TrailingArray<JITData, void*> {
-    WTF_MAKE_FAST_ALLOCATED;
+class JITData final : public ButterflyArray<JITData, StructureStubInfo, void*> {
     friend class JSC::LLIntOffsetsExtractor;
 public:
-    using Base = TrailingArray<JITData, void*>;
+    using Base = ButterflyArray<JITData, StructureStubInfo, void*>;
     using ExitVector = FixedVector<MacroAssemblerCodeRef<OSRExitPtrTag>>;
 
-    static ptrdiff_t offsetOfExits() { return OBJECT_OFFSETOF(JITData, m_exits); }
-    static ptrdiff_t offsetOfIsInvalidated() { return OBJECT_OFFSETOF(JITData, m_isInvalidated); }
+    static constexpr ptrdiff_t offsetOfExits() { return OBJECT_OFFSETOF(JITData, m_exits); }
+    static constexpr ptrdiff_t offsetOfIsInvalidated() { return OBJECT_OFFSETOF(JITData, m_isInvalidated); }
 
     static std::unique_ptr<JITData> tryCreate(VM&, CodeBlock*, const JITCode&, ExitVector&& exits);
 
     void setExitCode(unsigned exitIndex, MacroAssemblerCodeRef<OSRExitPtrTag> code)
     {
-        m_exits[exitIndex] = WTFMove(code);
+        m_exits[exitIndex] = WTF::move(code);
     }
     const MacroAssemblerCodeRef<OSRExitPtrTag>& exitCode(unsigned exitIndex) const { return m_exits[exitIndex]; }
 
@@ -183,19 +177,52 @@ public:
         m_isInvalidated = 1;
     }
 
-    FixedVector<StructureStubInfo>& stubInfos() { return m_stubInfos; }
+    auto stubInfos() -> decltype(leadingSpan())
+    {
+        return leadingSpan();
+    }
+
+    StructureStubInfo& stubInfo(unsigned index)
+    {
+        auto span = stubInfos();
+        return span[span.size() - index - 1];
+    }
+
     FixedVector<OptimizingCallLinkInfo>& callLinkInfos() { return m_callLinkInfos; }
 
+    UpperTierExecutionCounter& tierUpCounter() { return m_tierUpCounter; }
+    const UpperTierExecutionCounter& tierUpCounter() const { return m_tierUpCounter; }
+
+    uint8_t neverExecutedEntry() const { return m_neverExecutedEntry; }
+
+    static constexpr ptrdiff_t offsetOfGlobalObject() { return OBJECT_OFFSETOF(JITData, m_globalObject); }
+    static constexpr ptrdiff_t offsetOfStackOffset() { return OBJECT_OFFSETOF(JITData, m_stackOffset); }
+    static constexpr ptrdiff_t offsetOfDummyArrayProfile() { return OBJECT_OFFSETOF(JITData, m_dummyArrayProfile); }
+    static constexpr ptrdiff_t offsetOfTierUpCounter() { return OBJECT_OFFSETOF(JITData, m_tierUpCounter) + OBJECT_OFFSETOF(UpperTierExecutionCounter, m_counter); }
+    static constexpr ptrdiff_t offsetOfTierUpActiveThreshold() { return OBJECT_OFFSETOF(JITData, m_tierUpCounter) + OBJECT_OFFSETOF(UpperTierExecutionCounter, m_activeThreshold); }
+    static constexpr ptrdiff_t offsetOfTierUpTotalCount() { return OBJECT_OFFSETOF(JITData, m_tierUpCounter) + OBJECT_OFFSETOF(UpperTierExecutionCounter, m_totalCount); }
+    static constexpr ptrdiff_t offsetOfNeverExecutedEntry() { return OBJECT_OFFSETOF(JITData, m_neverExecutedEntry); }
+
+    explicit JITData(unsigned stubInfoSize, unsigned poolSize, const JITCode&, ExitVector&&);
+
+    void finalizeUnconditionally()
+    {
+        m_dummyArrayProfile.clear();
+    }
+
 private:
-    explicit JITData(const JITCode&, ExitVector&&);
 
     bool tryInitialize(VM&, CodeBlock*, const JITCode&);
 
-    FixedVector<StructureStubInfo> m_stubInfos;
+    JSGlobalObject* m_globalObject { nullptr }; // This is not marked since owner CodeBlock will mark JSGlobalObject.
+    intptr_t m_stackOffset { 0 };
+    ArrayProfile m_dummyArrayProfile { };
+    UpperTierExecutionCounter m_tierUpCounter;
     FixedVector<OptimizingCallLinkInfo> m_callLinkInfos;
     FixedVector<CodeBlockJettisoningWatchpoint> m_watchpoints;
     ExitVector m_exits;
     uint8_t m_isInvalidated { 0 };
+    uint8_t m_neverExecutedEntry { 1 };
 };
 
 class JITCode final : public DirectJITCode {
@@ -204,6 +231,7 @@ public:
     ~JITCode() final;
 
     CommonData* dfgCommon() final;
+    const CommonData* dfgCommon() const final;
     JITCode* dfg() final;
     bool isUnlinked() const { return common.isUnlinked(); }
 
@@ -240,7 +268,7 @@ public:
 
     void validateReferences(const TrackedReferences&) final;
 
-    void shrinkToFit(const ConcurrentJSLocker&) final;
+    void shrinkToFit() final;
 
     RegisterSetBuilder liveRegistersToPreserveAtExceptionHandlingCallSite(CodeBlock*, CallSiteIndex) final;
 #if ENABLE(FTL_JIT)
@@ -249,7 +277,7 @@ public:
     void clearOSREntryBlockAndResetThresholds(CodeBlock* dfgCodeBlock);
 #endif
 
-    static ptrdiff_t commonDataOffset() { return OBJECT_OFFSETOF(JITCode, common); }
+    static constexpr ptrdiff_t commonDataOffset() { return OBJECT_OFFSETOF(JITCode, common); }
 
     std::optional<CodeOrigin> findPC(CodeBlock*, void* pc) final;
 
@@ -274,19 +302,15 @@ public:
     LinkerIR m_linkerIR;
 
 #if ENABLE(FTL_JIT)
-    uint8_t neverExecutedEntry { 1 };
-
-    UpperTierExecutionCounter tierUpCounter;
-
-    // For osrEntryPoint that are in inner loop, this maps their bytecode to the bytecode
+    // For osrEntrypoint that are in inner loop, this maps their bytecode to the bytecode
     // of the outerloop entry points in order (from innermost to outermost).
     //
     // The key may not always be a target for OSR Entry but the list in the value is guaranteed
     // to be usable for OSR Entry.
-    HashMap<BytecodeIndex, FixedVector<BytecodeIndex>> tierUpInLoopHierarchy;
+    UncheckedKeyHashMap<BytecodeIndex, FixedVector<BytecodeIndex>> tierUpInLoopHierarchy;
 
     // Map each bytecode of CheckTierUpAndOSREnter to its stream index.
-    HashMap<BytecodeIndex, unsigned> bytecodeIndexToStreamIndex;
+    UncheckedKeyHashMap<BytecodeIndex, unsigned> bytecodeIndexToStreamIndex;
 
     enum class TriggerReason : uint8_t {
         DontTrigger,
@@ -297,7 +321,7 @@ public:
     // Map each bytecode of CheckTierUpAndOSREnter to its trigger forcing OSR Entry.
     // This can never be modified after it has been initialized since the addresses of the triggers
     // are used by the JIT.
-    HashMap<BytecodeIndex, TriggerReason> tierUpEntryTriggers;
+    UncheckedKeyHashMap<BytecodeIndex, TriggerReason> tierUpEntryTriggers;
 
     WriteBarrier<CodeBlock> m_osrEntryBlock;
     unsigned osrEntryRetry { 0 };
@@ -307,7 +331,7 @@ public:
 
 inline std::unique_ptr<JITData> JITData::tryCreate(VM& vm, CodeBlock* codeBlock, const JITCode& jitCode, ExitVector&& exits)
 {
-    auto result = std::unique_ptr<JITData> { new (NotNull, fastMalloc(Base::allocationSize(jitCode.m_linkerIR.size()))) JITData(jitCode, WTFMove(exits)) };
+    auto result = std::unique_ptr<JITData> { createImpl(jitCode.m_unlinkedStubInfos.size(), jitCode.m_linkerIR.size(), jitCode, WTF::move(exits)) };
     if (result->tryInitialize(vm, codeBlock, jitCode))
         return result;
     return nullptr;

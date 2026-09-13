@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2000, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2000, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,10 +26,7 @@
 package test.javafx.scene.input;
 
 import com.sun.javafx.scene.SceneHelper;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
 
-import java.security.AccessControlContext;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -44,11 +41,6 @@ import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
 import javafx.util.Pair;
-
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
 
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.TKClipboard;
@@ -69,11 +61,17 @@ import javafx.scene.input.DragboardShim;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.input.PickResult;
 import javafx.scene.input.TransferMode;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DragAndDropTest {
 
@@ -82,7 +80,7 @@ public class DragAndDropTest {
     private boolean detected;
     private Node dragSource;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         counter = 0;
         detected = false;
@@ -90,7 +88,7 @@ public class DragAndDropTest {
         ((StubToolkit) Toolkit.getToolkit()).setDndDelegate(toolkit);
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         ((StubToolkit) Toolkit.getToolkit()).setDndDelegate(null);
         toolkit = null;
@@ -935,8 +933,8 @@ public class DragAndDropTest {
             event.setDropCompleted(true);
         });
         src.getParent().setOnDragDone(event -> {
-            Assert.assertEquals(TransferMode.MOVE, event.getTransferMode());
-            Assert.assertEquals(TransferMode.MOVE, event.getAcceptedTransferMode());
+            assertEquals(TransferMode.MOVE, event.getTransferMode());
+            assertEquals(TransferMode.MOVE, event.getAcceptedTransferMode());
             counter++;
         });
 
@@ -1449,16 +1447,16 @@ public class DragAndDropTest {
         n.setOnDragDetected(stringSource(TransferMode.ANY));
         n.setOnDragOver(event -> {
             counter++;
-            Assert.assertEquals(52, event.getX(), 0.00001);
-            Assert.assertEquals(52, event.getY(), 0.00001);
-            Assert.assertEquals(0, event.getZ(), 0.00001);
+            assertEquals(52, event.getX(), 0.00001);
+            assertEquals(52, event.getY(), 0.00001);
+            assertEquals(0, event.getZ(), 0.00001);
         });
 
         n.getScene().setOnDragOver(event -> {
             counter++;
-            Assert.assertEquals(52, event.getX(), 0.00001);
-            Assert.assertEquals(52, event.getY(), 0.00001);
-            Assert.assertEquals(50, event.getZ(), 0.00001);
+            assertEquals(52, event.getX(), 0.00001);
+            assertEquals(52, event.getY(), 0.00001);
+            assertEquals(50, event.getZ(), 0.00001);
         });
 
         SceneHelper.processMouseEvent(n.getScene(),
@@ -1615,10 +1613,6 @@ public class DragAndDropTest {
         private Image image;
         private double offsetX;
         private double offsetY;
-
-        @Override
-        public void setSecurityContext(@SuppressWarnings("removal") AccessControlContext ctx) {
-        }
 
         @Override
         public Object getContent(DataFormat df) {

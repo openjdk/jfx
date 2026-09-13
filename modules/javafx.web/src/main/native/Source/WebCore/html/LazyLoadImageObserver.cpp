@@ -30,9 +30,13 @@
 #include "IntersectionObserverCallback.h"
 #include "IntersectionObserverEntry.h"
 #include "LocalFrame.h"
+#include "NodeDocument.h"
 #include <limits>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(LazyLoadImageObserver);
 
 class LazyImageLoadIntersectionObserverCallback final : public IntersectionObserverCallback {
 public:
@@ -42,34 +46,38 @@ public:
     }
 
 private:
+    LazyImageLoadIntersectionObserverCallback(Document& document)
+        : IntersectionObserverCallback(&document)
+    {
+    }
+
     bool hasCallback() const final { return true; }
 
-    CallbackResult<void> handleEvent(IntersectionObserver&, const Vector<Ref<IntersectionObserverEntry>>& entries, IntersectionObserver&) final
+    CallbackResult<void> invoke(IntersectionObserver&, const Vector<Ref<IntersectionObserverEntry>>& entries, IntersectionObserver&) final
     {
         ASSERT(!entries.isEmpty());
 
         for (auto& entry : entries) {
             if (!entry->isIntersecting())
                 continue;
-            auto* element = entry->target();
-            if (is<HTMLImageElement>(element)) {
-                downcast<HTMLImageElement>(*element).loadDeferredImage();
+            if (RefPtr element = dynamicDowncast<HTMLImageElement>(entry->target())) {
+                element->loadDeferredImage();
                 element->document().lazyLoadImageObserver().unobserve(*element, element->document());
             }
         }
         return { };
     }
 
-    LazyImageLoadIntersectionObserverCallback(Document& document)
-        : IntersectionObserverCallback(&document)
+    CallbackResult<void> invokeRethrowingException(IntersectionObserver& thisObserver, const Vector<Ref<IntersectionObserverEntry>>& entries, IntersectionObserver& observer) final
     {
+        return invoke(thisObserver, entries, observer);
     }
 };
 
 void LazyLoadImageObserver::observe(Element& element)
 {
     auto& observer = element.document().lazyLoadImageObserver();
-    auto* intersectionObserver = observer.intersectionObserver(element.document());
+    auto* intersectionObserver = observer.intersectionObserver(element.protectedDocument());
     if (!intersectionObserver)
         return;
     intersectionObserver->observe(element);
@@ -85,9 +93,9 @@ IntersectionObserver* LazyLoadImageObserver::intersectionObserver(Document& docu
 {
     if (!m_observer) {
         auto callback = LazyImageLoadIntersectionObserverCallback::create(document);
-        static NeverDestroyed<const String> lazyLoadingRootMarginFallback(MAKE_STATIC_STRING_IMPL("100%"));
-        IntersectionObserver::Init options { &document, lazyLoadingRootMarginFallback, { } };
-        auto observer = IntersectionObserver::create(document, WTFMove(callback), WTFMove(options));
+        static NeverDestroyed<const String> lazyLoadingScrollMarginFallback(MAKE_STATIC_STRING_IMPL("100%"));
+        IntersectionObserver::Init options { std::nullopt, { }, lazyLoadingScrollMarginFallback, { } };
+        auto observer = IntersectionObserver::create(document, WTF::move(callback), WTF::move(options));
         if (observer.hasException())
             return nullptr;
         m_observer = observer.returnValue().ptr();

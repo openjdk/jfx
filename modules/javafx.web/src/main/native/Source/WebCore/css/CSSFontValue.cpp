@@ -22,29 +22,30 @@
 #include "CSSFontValue.h"
 
 #include "CSSFontStyleWithAngleValue.h"
+#include "CSSPrimitiveValue.h"
 #include "CSSValueList.h"
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-String CSSFontValue::customCSSText() const
+String CSSFontValue::customCSSText(const CSS::SerializationContext& context) const
 {
     // font variant weight size / line-height family
     StringBuilder result;
     if (style)
-        result.append(style->cssText());
+        result.append(style->cssText(context));
     if (variant)
-        result.append(result.isEmpty() ? "" : " ", variant->cssText());
+        result.append(result.isEmpty() ? ""_s : " "_s, variant->cssText(context));
     if (weight)
-        result.append(result.isEmpty() ? "" : " ", weight->cssText());
-    if (stretch)
-        result.append(result.isEmpty() ? "" : " ", stretch->cssText());
+        result.append(result.isEmpty() ? ""_s : " "_s, weight->cssText(context));
+    if (width)
+        result.append(result.isEmpty() ? ""_s : " "_s, width->cssText(context));
     if (size)
-        result.append(result.isEmpty() ? "" : " ", size->cssText());
+        result.append(result.isEmpty() ? ""_s : " "_s, size->cssText(context));
     if (lineHeight)
-        result.append(size ? " / " : result.isEmpty() ? "" : " ", lineHeight->cssText());
+        result.append(size ? " / "_s : result.isEmpty() ? ""_s : " "_s, lineHeight->cssText(context));
     if (family)
-        result.append(result.isEmpty() ? "" : " ", family->cssText());
+        result.append(result.isEmpty() ? ""_s : " "_s, family->cssText(context));
     return result.toString();
 }
 
@@ -53,10 +54,43 @@ bool CSSFontValue::equals(const CSSFontValue& other) const
     return compareCSSValuePtr(style, other.style)
         && compareCSSValuePtr(variant, other.variant)
         && compareCSSValuePtr(weight, other.weight)
-        && compareCSSValuePtr(stretch, other.stretch)
+        && compareCSSValuePtr(width, other.width)
         && compareCSSValuePtr(size, other.size)
         && compareCSSValuePtr(lineHeight, other.lineHeight)
         && compareCSSValuePtr(family, other.family);
+}
+
+IterationStatus CSSFontValue::customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>& func) const
+{
+    if (style) {
+        if (func(*style) == IterationStatus::Done)
+            return IterationStatus::Done;
+    }
+    if (variant) {
+        if (func(*variant) == IterationStatus::Done)
+            return IterationStatus::Done;
+    }
+    if (weight) {
+        if (func(*weight) == IterationStatus::Done)
+            return IterationStatus::Done;
+    }
+    if (width) {
+        if (func(*width) == IterationStatus::Done)
+            return IterationStatus::Done;
+    }
+    if (size) {
+        if (func(*size) == IterationStatus::Done)
+            return IterationStatus::Done;
+    }
+    if (lineHeight) {
+        if (func(*lineHeight) == IterationStatus::Done)
+            return IterationStatus::Done;
+    }
+    if (family) {
+        if (func(*family) == IterationStatus::Done)
+            return IterationStatus::Done;
+    }
+    return IterationStatus::Continue;
 }
 
 }

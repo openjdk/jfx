@@ -25,9 +25,12 @@
 
 #pragma once
 
-#include "FontPlatformData.h"
+#include <WebCore/FontPlatformData.h>
+#include <WebCore/RenderingResourceIdentifier.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/Platform.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if PLATFORM(WIN)
 #include <wtf/text/WTFString.h>
@@ -41,10 +44,12 @@ typedef const struct __CTFontDescriptor* CTFontDescriptorRef;
 #include "TextFlags.h"
 #include "RenderStyleConstants.h"
 #include <wtf/java/JavaRef.h> // todo tav remove when building w/ pch
-#else
+#elif USE(CAIRO)
 #include "RefPtrCairo.h"
 
 typedef struct FT_FaceRec_*  FT_Face;
+#elif USE(SKIA)
+#include <skia/core/SkTypeface.h>
 #endif
 
 namespace WebCore {
@@ -54,48 +59,72 @@ class FontDescription;
 class FontCreationContext;
 enum class FontTechnology : uint8_t;
 
-template <typename T> class FontTaggedSettings;
-typedef FontTaggedSettings<int> FontFeatureSettings;
+template<typename> class FontTaggedSettings;
+using FontFeatureSettings = FontTaggedSettings<int>;
+
+struct FontCustomPlatformSerializedData {
+    Ref<SharedBuffer> fontFaceData;
+    String itemInCollection;
+    RenderingResourceIdentifier renderingResourceIdentifier;
+};
 
 struct FontCustomPlatformData : public RefCounted<FontCustomPlatformData> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(FontCustomPlatformData);
     WTF_MAKE_NONCOPYABLE(FontCustomPlatformData);
 public:
-#if PLATFORM(WIN)
+    WEBCORE_EXPORT static RefPtr<FontCustomPlatformData> create(SharedBuffer&, const String&);
+    WEBCORE_EXPORT static RefPtr<FontCustomPlatformData> createMemorySafe(SharedBuffer&, const String&);
+
+#if PLATFORM(WIN) && USE(CAIRO)
     FontCustomPlatformData(const String& name, FontPlatformData::CreationData&&);
 #elif USE(CORE_TEXT)
     FontCustomPlatformData(CTFontDescriptorRef fontDescriptor, FontPlatformData::CreationData&& creationData)
         : fontDescriptor(fontDescriptor)
-        , creationData(WTFMove(creationData))
+        , creationData(WTF::move(creationData))
         , m_renderingResourceIdentifier(RenderingResourceIdentifier::generate())
     {
     }
-#elif PLATFORM(JAVA)
-    FontCustomPlatformData(const JLObject& data);
-#else
+#elif USE(CAIRO)
     FontCustomPlatformData(FT_Face, FontPlatformData::CreationData&&);
+#elif USE(SKIA)
+    FontCustomPlatformData(sk_sp<SkTypeface>&&, FontPlatformData::CreationData&&);
+#endif
+#if PLATFORM(JAVA)
+    FontCustomPlatformData(const JLObject& data, FontPlatformData::CreationData&&);
 #endif
     WEBCORE_EXPORT ~FontCustomPlatformData();
 
     FontPlatformData fontPlatformData(const FontDescription&, bool bold, bool italic, const FontCreationContext&);
 
+    WEBCORE_EXPORT FontCustomPlatformSerializedData serializedData() const;
+    WEBCORE_EXPORT static std::optional<Ref<FontCustomPlatformData>> tryMakeFromSerializationData(FontCustomPlatformSerializedData&&, bool);
+
+#if USE(SKIA)
+    sk_sp<SkTypeface> retrieveOrAddCachedTypeface(const Vector<SkFontArguments::VariationPosition::Coordinate>&);
+    void clearVariationTypefacesCache() const;
+    void clearUnusedVariationTypefacesCacheEntries() const;
+#endif
+
     static bool supportsFormat(const String&);
     static bool supportsTechnology(const FontTechnology&);
 
-#if PLATFORM(WIN)
+#if PLATFORM(WIN) && USE(CAIRO)
     String name;
-    FontPlatformData::CreationData creationData;
 #elif USE(CORE_TEXT)
     RetainPtr<CTFontDescriptorRef> fontDescriptor;
-    FontPlatformData::CreationData creationData;
-#elif PLATFORM(JAVA)
-        JGObject m_data;
-#else
+#elif USE(CAIRO)
     RefPtr<cairo_font_face_t> m_fontFace;
+#elif USE(SKIA)
+    sk_sp<SkTypeface> m_typeface;
+    mutable HashMap<unsigned, sk_sp<SkTypeface>> m_variationTypefacesCache;
 #endif
-
+    FontPlatformData::CreationData creationData;
+#if PLATFORM(JAVA)
+    JGObject m_data;
+#endif
+    RenderingResourceIdentifier m_renderingResourceIdentifier;
 };
-
+#if PLATFORM(JAVA)
 WEBCORE_EXPORT RefPtr<FontCustomPlatformData> createFontCustomPlatformData(SharedBuffer&, const String&);
-
+#endif
 } // namespace WebCore

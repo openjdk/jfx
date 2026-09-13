@@ -20,16 +20,17 @@
 
 #pragma once
 
+#include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakHashSet.h>
 
 namespace WebCore {
 
 class Document;
 class Element;
-class RenderSVGResourceContainer;
 class SVGElement;
 class SVGFontFaceElement;
 class SVGResourcesCache;
@@ -38,8 +39,10 @@ class SVGSVGElement;
 class SVGUseElement;
 class WeakPtrImplWithEventTargetData;
 
-class SVGDocumentExtensions {
-    WTF_MAKE_NONCOPYABLE(SVGDocumentExtensions); WTF_MAKE_FAST_ALLOCATED;
+class SVGDocumentExtensions final : public CanMakeCheckedPtr<SVGDocumentExtensions> {
+    WTF_MAKE_TZONE_ALLOCATED(SVGDocumentExtensions);
+    WTF_MAKE_NONCOPYABLE(SVGDocumentExtensions);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGDocumentExtensions);
 public:
     explicit SVGDocumentExtensions(Document&);
     ~SVGDocumentExtensions();
@@ -57,7 +60,7 @@ public:
     void reportWarning(const String&);
     void reportError(const String&);
 
-    SVGResourcesCache& resourcesCache() { return *m_resourcesCache; }
+    SVGResourcesCache& resourcesCache() { return m_resourcesCache; }
 
     void addElementToRebuild(SVGElement&);
     void removeElementToRebuild(SVGElement&);
@@ -70,10 +73,12 @@ public:
     void unregisterSVGFontFaceElement(SVGFontFaceElement&);
 
 private:
-    Document& m_document;
+    Ref<Document> protectedDocument() const;
+
+    WeakRef<Document, WeakPtrImplWithEventTargetData> m_document;
     WeakHashSet<SVGSVGElement, WeakPtrImplWithEventTargetData> m_timeContainers; // For SVG 1.2 support this will need to be made more general.
     WeakHashSet<SVGFontFaceElement, WeakPtrImplWithEventTargetData> m_svgFontFaceElements;
-    std::unique_ptr<SVGResourcesCache> m_resourcesCache;
+    const UniqueRef<SVGResourcesCache> m_resourcesCache;
 
     Vector<Ref<SVGElement>> m_rebuildElements;
     bool m_areAnimationsPaused;

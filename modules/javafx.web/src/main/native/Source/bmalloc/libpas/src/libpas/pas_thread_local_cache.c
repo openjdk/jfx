@@ -32,18 +32,20 @@
 #include "pas_all_heap_configs.h"
 #include "pas_bitvector.h"
 #include "pas_committed_pages_vector.h"
-#include "pas_debug_heap.h"
 #include "pas_heap_lock.h"
 #include "pas_large_utility_free_heap.h"
 #include "pas_log.h"
-#include "pas_monotonic_time.h"
 #include "pas_scavenger.h"
-#include "pas_segregated_size_directory_inlines.h"
-#include "pas_segregated_page.h"
+#include "pas_segregated_deallocation_mode.h"
+#include "pas_segregated_page_inlines.h"
+#include "pas_system_heap.h"
 #include "pas_thread_local_cache_layout.h"
 #include "pas_thread_local_cache_node.h"
 #include "pas_thread_suspend_lock.h"
+#include "pas_zero_memory.h"
+#if !PAS_OS(WINDOWS)
 #include <unistd.h>
+#endif
 #if PAS_OS(DARWIN)
 #include <mach/thread_act.h>
 #endif
@@ -54,7 +56,11 @@
 PAS_BEGIN_EXTERN_C;
 
 #if PAS_HAVE_THREAD_KEYWORD
+#if PAS_OS(WINDOWS)
+__declspec(thread) void* pas_thread_local_cache_pointer = NULL;
+#else
 __thread void* pas_thread_local_cache_pointer = NULL;
+#endif
 #endif
 
 pas_fast_tls pas_thread_local_cache_fast_tls = PAS_FAST_TLS_INITIALIZER;
@@ -172,7 +178,7 @@ static pas_thread_local_cache* allocate_cache(unsigned allocator_index_capacity)
     size = pas_thread_local_cache_size_for_allocator_index_capacity(allocator_index_capacity);
 
     if (verbose)
-        printf("Cache size: %zu\n", size);
+        pas_log("Cache size: %zu\n", size);
 
     result = (pas_thread_local_cache*)pas_large_utility_free_heap_allocate_with_alignment(
         size, pas_alignment_create_traditional(pas_page_malloc_alignment()), "pas_thread_local_cache");
@@ -340,7 +346,7 @@ pas_local_allocator_result pas_thread_local_cache_get_local_allocator_slow(
         new_thread_local_cache = allocate_cache(index_capacity);
 
         if (verbose)
-            printf("[%d] Reallocating TLC %p -> %p\n", getpid(), thread_local_cache, new_thread_local_cache);
+            pas_log("[%d] Reallocating TLC %p -> %p\n", getpid(), thread_local_cache, new_thread_local_cache);
 
         new_thread_local_cache->node = thread_local_cache->node;
 
@@ -495,7 +501,7 @@ pas_thread_local_cache_get_local_allocator_if_can_set_cache_for_possibly_uniniti
     unsigned allocator_index,
     const pas_heap_config* heap_config)
 {
-    if (!pas_thread_local_cache_can_set() || pas_debug_heap_is_enabled(heap_config->kind))
+    if (!pas_thread_local_cache_can_set() || pas_system_heap_should_supplant_bmalloc(heap_config->kind))
         return pas_local_allocator_result_create_failure();
 
     return pas_thread_local_cache_get_local_allocator_for_possibly_uninitialized_index(
@@ -667,7 +673,7 @@ process_deallocation_log_with_config(pas_thread_local_cache* cache,
 
     for (;;) {
         uintptr_t begin;
-        begin = encoded_begin >> PAS_SEGREGATED_PAGE_CONFIG_KIND_AND_ROLE_NUM_BITS;
+        begin = encoded_begin & ~PAS_SEGREGATED_PAGE_CONFIG_KIND_AND_ROLE_MASK;
 
         switch (page_config.kind) {
         case pas_segregated_page_config_kind_null:
@@ -675,7 +681,7 @@ process_deallocation_log_with_config(pas_thread_local_cache* cache,
             break;
 
         case pas_segregated_page_config_kind_pas_utility_small:
-            PAS_ASSERT(!"Should not be reached");
+            PAS_ASSERT_NOT_REACHED();
             break;
 
         default:
@@ -693,7 +699,7 @@ process_deallocation_log_with_config(pas_thread_local_cache* cache,
             return;
 
         encoded_begin = cache->deallocation_log[--*index];
-        if (PAS_UNLIKELY((encoded_begin & PAS_SEGREGATED_PAGE_CONFIG_KIND_AND_ROLE_MASK)
+        if (PAS_UNLIKELY((encoded_begin & PAS_SEGREGATED_PAGE_CONFIG_KIND_AND_ROLE_MASK) >> PAS_SEGREGATED_PAGE_CONFIG_KIND_AND_ROLE_SHIFT
             != pas_segregated_page_config_kind_and_role_create(page_config.kind, role))) {
             ++*index;
             return;
@@ -719,7 +725,7 @@ static PAS_ALWAYS_INLINE void flush_deallocation_log_without_resetting(
         encoded_begin = thread_local_cache->deallocation_log[--index];
 
         switch ((pas_segregated_page_config_kind_and_role)
-                (encoded_begin & PAS_SEGREGATED_PAGE_CONFIG_KIND_AND_ROLE_MASK)) {
+                ((encoded_begin & PAS_SEGREGATED_PAGE_CONFIG_KIND_AND_ROLE_MASK) >> PAS_SEGREGATED_PAGE_CONFIG_KIND_AND_ROLE_SHIFT)) {
 #define PAS_DEFINE_SEGREGATED_PAGE_CONFIG_KIND(name, value) \
         case pas_segregated_page_config_kind_ ## name ## _and_shared_role: \
             process_deallocation_log_with_config( \
@@ -824,7 +830,7 @@ static void suspend(pas_thread_local_cache* cache, scavenger_thread_suspend_data
     thread_suspend_data->did_suspend = true;
 
     if (verbose)
-        printf("Suspending TLC %p with thread %p.\n", cache, cache->thread);
+        pas_log("Suspending TLC %p with thread %p.\n", cache, cache->thread);
 
     thread = cache->thread;
     PAS_ASSERT(thread);

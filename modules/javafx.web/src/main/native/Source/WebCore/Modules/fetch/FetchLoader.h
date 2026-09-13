@@ -28,9 +28,10 @@
 
 #pragma once
 
-#include "ThreadableLoader.h"
-#include "ThreadableLoaderClient.h"
-#include "URLKeepingBlobAlive.h"
+#include <WebCore/ThreadableLoader.h>
+#include <WebCore/ThreadableLoaderClient.h>
+#include <WebCore/URLKeepingBlobAlive.h>
+#include <wtf/CheckedPtr.h>
 #include <wtf/URL.h>
 
 namespace WebCore {
@@ -42,10 +43,12 @@ class FetchRequest;
 class ScriptExecutionContext;
 class FragmentedSharedBuffer;
 
-class WEBCORE_EXPORT FetchLoader final : public ThreadableLoaderClient {
+DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(FetchLoader);
+class WEBCORE_EXPORT FetchLoader final : public RefCounted<FetchLoader>, public ThreadableLoaderClient {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(FetchLoader, FetchLoader);
 public:
-    FetchLoader(FetchLoaderClient&, FetchBodyConsumer*);
-    ~FetchLoader() = default;
+    static Ref<FetchLoader> create(FetchLoaderClient&, FetchBodyConsumer*);
+    ~FetchLoader();
 
     RefPtr<FragmentedSharedBuffer> startStreaming();
 
@@ -56,17 +59,23 @@ public:
 
     bool isStarted() const { return m_isStarted; }
 
-private:
-    // ThreadableLoaderClient API.
-    void didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse&) final;
-    void didReceiveData(const SharedBuffer&) final;
-    void didFinishLoading(ResourceLoaderIdentifier, const NetworkLoadMetrics&) final;
-    void didFail(const ResourceError&) final;
+    // ThreadableLoaderClient.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
 private:
-    FetchLoaderClient& m_client;
+    FetchLoader(FetchLoaderClient&, FetchBodyConsumer*);
+
+    // ThreadableLoaderClient API.
+    void didReceiveResponse(ScriptExecutionContextIdentifier, std::optional<ResourceLoaderIdentifier>, const ResourceResponse&) final;
+    void didReceiveData(const SharedBuffer&) final;
+    void didFinishLoading(ScriptExecutionContextIdentifier, std::optional<ResourceLoaderIdentifier>, const NetworkLoadMetrics&) final;
+    void didFail(std::optional<ScriptExecutionContextIdentifier>, const ResourceError&) final;
+
+private:
+    WeakPtr<FetchLoaderClient> m_client;
     RefPtr<ThreadableLoader> m_loader;
-    FetchBodyConsumer* m_consumer;
+    WeakPtr<FetchBodyConsumer> m_consumer;
     bool m_isStarted { false };
     URLKeepingBlobAlive m_urlForReading;
 };

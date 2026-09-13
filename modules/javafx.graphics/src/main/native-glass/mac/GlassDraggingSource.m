@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -53,9 +53,11 @@
     return self->dragOperation;
 }
 
-- (GlassDraggingSource*)initWithOperation:(NSDragOperation)operation
+- (GlassDraggingSource*)initWithOperation:(NSDragOperation)operation delegate:(id<GlassDragSourceDelegate>)delegate
 {
     dragOperation = operation;
+    // The delegate retains this object
+    dragDelegate = delegate;
     return self;
 }
 
@@ -69,6 +71,8 @@
 
 - (void)draggingSession:(NSDraggingSession *)session endedAtPoint:(NSPoint)screenPoint operation:(NSDragOperation)operation
 {
+    LOG("Dragging session ended");
+    [dragDelegate draggingEnded: operation];
 }
 
 - (BOOL)ignoreModifierKeysForDraggingSession:(NSDraggingSession *)session

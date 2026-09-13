@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2020 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc.  All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,47 @@
 
 #pragma once
 
+#include <WebCore/WebCoreLogDefinitions.h>
 #include <wtf/Assertions.h>
 #include <wtf/Forward.h>
+#include <wtf/StdLibExtras.h>
+
+#define COMMA() ,
+#define OPTIONAL_ARGS(...) __VA_OPT__(COMMA() SAFE_PRINTF_TYPE(__VA_ARGS__))
+#define OPTIONAL_ARGS_UNSAFE(...) __VA_OPT__(COMMA() __VA_ARGS__)
+
+#if ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
+#include <WebCore/LogClient.h>
+
+#define RELEASE_LOG_FORWARDABLE_WITH_FALLBACK(fallback, category, logMessage, ...) do { \
+    if (auto& client = logClient()) \
+        client->logMessage(__VA_ARGS__); \
+    else \
+        fallback(category, MESSAGE_##logMessage OPTIONAL_ARGS(__VA_ARGS__)); \
+} while (0)
+
+#define RELEASE_LOG_FORWARDABLE_WITH_FALLBACK_UNSAFE_ARGS(fallback, category, logMessage, ...) do { \
+    if (auto& client = logClient()) \
+        client->logMessage(__VA_ARGS__); \
+    else \
+        fallback(category, MESSAGE_##logMessage OPTIONAL_ARGS_UNSAFE(__VA_ARGS__)); \
+} while (0)
+
+#define RELEASE_LOG_FORWARDABLE_UNSAFE_ARGS(category, logMessage, ...) RELEASE_LOG_FORWARDABLE_WITH_FALLBACK_UNSAFE_ARGS(RELEASE_LOG, category, logMessage, __VA_ARGS__)
+#define RELEASE_LOG_ERROR_FORWARDABLE_UNSAFE_ARGS(category, logMessage, ...) RELEASE_LOG_FORWARDABLE_WITH_FALLBACK_UNSAFE_ARGS(RELEASE_LOG_ERROR, category, logMessage, __VA_ARGS__)
+
+#define RELEASE_LOG_FORWARDABLE(category, logMessage, ...) RELEASE_LOG_FORWARDABLE_WITH_FALLBACK(RELEASE_LOG, category, logMessage, __VA_ARGS__)
+#define RELEASE_LOG_INFO_FORWARDABLE(category, logMessage, ...) RELEASE_LOG_FORWARDABLE_WITH_FALLBACK(RELEASE_LOG_INFO, category, logMessage, __VA_ARGS__)
+#define RELEASE_LOG_ERROR_FORWARDABLE(category, logMessage, ...) RELEASE_LOG_FORWARDABLE_WITH_FALLBACK(RELEASE_LOG_ERROR, category, logMessage, __VA_ARGS__)
+#define RELEASE_LOG_FAULT_FORWARDABLE(category, logMessage, ...) RELEASE_LOG_FORWARDABLE_WITH_FALLBACK(RELEASE_LOG_FAULT, category, logMessage, __VA_ARGS__)
+#else
+#define RELEASE_LOG_FORWARDABLE_UNSAFE_ARGS(category, logMessage, ...) RELEASE_LOG(category, MESSAGE_##logMessage OPTIONAL_ARGS_UNSAFE(__VA_ARGS__))
+#define RELEASE_LOG_ERROR_FORWARDABLE_UNSAFE_ARGS(category, logMessage, ...) RELEASE_LOG_ERROR(category, MESSAGE_##logMessage OPTIONAL_ARGS_UNSAFE(__VA_ARGS__))
+#define RELEASE_LOG_FORWARDABLE(category, logMessage, ...) RELEASE_LOG(category, MESSAGE_##logMessage OPTIONAL_ARGS(__VA_ARGS__))
+#define RELEASE_LOG_INFO_FORWARDABLE(category, logMessage, ...) RELEASE_LOG_INFO(category, MESSAGE_##logMessage OPTIONAL_ARGS(__VA_ARGS__))
+#define RELEASE_LOG_ERROR_FORWARDABLE(category, logMessage, ...) RELEASE_LOG_ERROR(category, MESSAGE_##logMessage OPTIONAL_ARGS(__VA_ARGS__))
+#define RELEASE_LOG_FAULT_FORWARDABLE(category, logMessage, ...) RELEASE_LOG_FAULT(category, MESSAGE_##logMessage OPTIONAL_ARGS(__VA_ARGS__))
+#endif // ENABLE(LOGD_BLOCKING_IN_WEBCONTENT)
 
 namespace WebCore {
 
@@ -50,8 +89,10 @@ namespace WebCore {
     M(CompositingOverlap) \
     M(ContentFiltering) \
     M(ContentObservation) \
+    M(ContentVisibility) \
     M(Crypto) \
     M(DatabaseTracker) \
+    M(DigitalCredentials) \
     M(DisplayLink) \
     M(DisplayLists) \
     M(DragAndDrop) \
@@ -63,20 +104,25 @@ namespace WebCore {
     M(EventRegions) \
     M(FileAPI) \
     M(Filters) \
+    M(FingerprintingMitigation) \
     M(Fonts) \
     M(Frames) \
     M(FTP) \
     M(Fullscreen) \
     M(Gamepad) \
+    M(GraphicsBuffer) \
+    M(HDR) \
     M(HID) \
     M(History) \
     M(IOSurface) \
     M(IconDatabase) \
     M(Images) \
+    M(Immersive) \
     M(IndexedDB) \
     M(IndexedDBOperations) \
     M(Inspector) \
     M(IntersectionObserver) \
+    M(LargestContentfulPaint) \
     M(Layers) \
     M(Layout) \
     M(LazyLoading) \
@@ -84,6 +130,7 @@ namespace WebCore {
     M(Loading) \
     M(Media) \
     M(MediaCaptureSamples) \
+    M(MediaPerformance) \
     M(MediaQueries) \
     M(MediaSource) \
     M(MediaStream) \
@@ -91,10 +138,13 @@ namespace WebCore {
     M(MemoryPressure) \
     M(MessagePorts) \
     M(ModelElement) \
+    M(NativePromise) \
+    M(Navigation) \
     M(Network) \
     M(NotYetImplemented) \
     M(OverlayScrollbars) \
     M(PerformanceLogging) \
+    M(PerformanceTimeline) \
     M(PlatformLeaks) \
     M(Plugins) \
     M(PopupBlocking) \
@@ -104,12 +154,15 @@ namespace WebCore {
     M(Progress) \
     M(Push) \
     M(RemoteInspector) \
+    M(RenderBlocking) \
     M(RequestAnimationFrame) \
     M(ResizeObserver) \
     M(ResourceLoading) \
     M(ResourceLoadObserver) \
     M(ResourceLoadStatistics) \
+    M(ResourceMonitoring) \
     M(ScrollAnimations) \
+    M(ScrollAnchoring) \
     M(ScrollSnap) \
     M(Scrolling) \
     M(ScrollingTree) \
@@ -118,20 +171,27 @@ namespace WebCore {
     M(Services) \
     M(ServiceWorker) \
     M(SharedWorker) \
+    M(SiteIsolation) \
     M(SpellingAndGrammar) \
     M(SQLDatabase) \
     M(Storage) \
     M(StorageAPI) \
+    M(Style) \
     M(StyleSheets) \
     M(SVG) \
+    M(Testing) \
     M(TextAutosizing) \
+    M(TextDecoding) \
     M(TextFragment) \
     M(TextManipulation) \
     M(TextShaping) \
     M(Tiling) \
     M(Threading) \
+    M(WritingTools) \
     M(URLParser) \
     M(Viewports) \
+    M(ViewTransitions) \
+    M(VirtualMemory) \
     M(WebAudio) \
     M(WebGL) \
     M(WebRTC) \

@@ -32,19 +32,22 @@
 #include "JSCInlines.h"
 #include "WeakHandleOwner.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(WeakBlock);
 
-WeakBlock* WeakBlock::create(Heap& heap, CellContainer container)
+WeakBlock* WeakBlock::create(JSC::Heap& heap, CellContainer container)
 {
     heap.didAllocateBlock(WeakBlock::blockSize);
     return new (NotNull, WeakBlockMalloc::malloc(blockSize)) WeakBlock(container);
 
 }
 
-void WeakBlock::destroy(Heap& heap, WeakBlock* block)
+void WeakBlock::destroy(JSC::Heap& heap, WeakBlock* block)
 {
+    RELEASE_ASSERT(!block->next() && !block->prev());
     block->~WeakBlock();
     WeakBlockMalloc::free(block);
     heap.didFreeBlock(WeakBlock::blockSize);
@@ -116,9 +119,9 @@ void WeakBlock::specializedVisit(ContainerType& container, Visitor& visitor)
         if (visitor.isMarked(container, jsValue.asCell()))
             continue;
 
-        const char* reason = "";
-        const char** reasonPtr = nullptr;
-        if (UNLIKELY(heapAnalyzer))
+        ASCIILiteral reason = ""_s;
+        ASCIILiteral* reasonPtr = nullptr;
+        if (heapAnalyzer) [[unlikely]]
             reasonPtr = &reason;
 
         typename Visitor::ReferrerContext context(visitor, Visitor::OpaqueRoot);
@@ -128,7 +131,7 @@ void WeakBlock::specializedVisit(ContainerType& container, Visitor& visitor)
 
         visitor.appendUnbarriered(jsValue);
 
-        if (UNLIKELY(heapAnalyzer)) {
+        if (heapAnalyzer) [[unlikely]] {
             if (jsValue.isCell())
                 heapAnalyzer->setOpaqueRootReachabilityReasonForCell(jsValue.asCell(), *reasonPtr);
         }
@@ -180,3 +183,5 @@ void WeakBlock::reap()
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

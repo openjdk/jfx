@@ -1,6 +1,6 @@
 /*
  * Copyright 2016 The Chromium Authors. All rights reserved.
- * Copyright (C) 2020, Apple Inc. All rights reserved.
+ * Copyright (C) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,12 +29,13 @@
 #include "IIRFilterOptions.h"
 #include "IIRProcessor.h"
 #include <JavaScriptCore/Forward.h>
-#include <wtf/IsoMalloc.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class IIRFilterNode final : public AudioBasicProcessorNode {
-    WTF_MAKE_ISO_ALLOCATED(IIRFilterNode);
+    WTF_MAKE_TZONE_ALLOCATED(IIRFilterNode);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(IIRFilterNode);
 public:
     static ExceptionOr<Ref<IIRFilterNode>> create(ScriptExecutionContext&, BaseAudioContext&, IIRFilterOptions&&);
 
@@ -43,7 +44,9 @@ public:
 private:
     IIRFilterNode(BaseAudioContext&, const Vector<double>& feedforward, const Vector<double>& feedback, bool isFilterStable);
 
-    IIRProcessor* iirProcessor() { return static_cast<IIRProcessor*>(processor()); }
+    IIRProcessor* iirProcessor() { return downcast<IIRProcessor>(processor()); }
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_AUDIONODE(IIRFilterNode, NodeTypeIIRFilter);

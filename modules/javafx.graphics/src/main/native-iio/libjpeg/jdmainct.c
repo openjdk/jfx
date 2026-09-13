@@ -2,7 +2,7 @@
  * jdmainct.c
  *
  * Copyright (C) 1994-1996, Thomas G. Lane.
- * Modified 2002-2016 by Guido Vollbeding.
+ * Modified 2002-2020 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -172,7 +172,7 @@ alloc_funny_pointers (j_decompress_ptr cinfo)
    */
   mainp->xbuffer[0] = (JSAMPIMAGE) (*cinfo->mem->alloc_small)
     ((j_common_ptr) cinfo, JPOOL_IMAGE,
-                cinfo->num_components * 2 * SIZEOF(JSAMPARRAY));
+     cinfo->num_components * 2 * SIZEOF(JSAMPARRAY));
   mainp->xbuffer[1] = mainp->xbuffer[0] + cinfo->num_components;
 
   for (ci = 0, compptr = cinfo->comp_info; ci < cinfo->num_components;
@@ -457,8 +457,8 @@ process_data_crank_post (j_decompress_ptr cinfo, JSAMPARRAY output_buf,
              JDIMENSION *out_row_ctr, JDIMENSION out_rows_avail)
 {
   (*cinfo->post->post_process_data) (cinfo, (JSAMPIMAGE) NULL,
-                     (JDIMENSION *) NULL, (JDIMENSION) 0,
-                     output_buf, out_row_ctr, out_rows_avail);
+            (JDIMENSION *) NULL, (JDIMENSION) 0,
+            output_buf, out_row_ctr, out_rows_avail);
 }
 
 #endif /* QUANT_2PASS_SUPPORTED */

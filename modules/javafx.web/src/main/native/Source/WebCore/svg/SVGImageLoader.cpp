@@ -29,6 +29,8 @@
 
 namespace WebCore {
 
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(SVGImageLoader);
+
 SVGImageLoader::SVGImageLoader(SVGImageElement& element)
     : ImageLoader(element)
 {
@@ -39,17 +41,9 @@ SVGImageLoader::~SVGImageLoader() = default;
 void SVGImageLoader::dispatchLoadEvent()
 {
     if (image()->errorOccurred())
-        element().dispatchEvent(Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
+        protectedElement()->dispatchEvent(Event::create(eventNames().errorEvent, Event::CanBubble::No, Event::IsCancelable::No));
     else
-        downcast<SVGImageElement>(ImageLoader::element()).sendLoadEventIfPossible();
-}
-
-String SVGImageLoader::sourceURI(const AtomString& attribute) const
-{
-    URL base = element().baseURI();
-    if (base != aboutBlankURL())
-        return URL(base, attribute).string();
-    return element().document().completeURL(attribute).string();
+        downcast<SVGImageElement>(ImageLoader::protectedElement())->sendLoadEventIfPossible();
 }
 
 }

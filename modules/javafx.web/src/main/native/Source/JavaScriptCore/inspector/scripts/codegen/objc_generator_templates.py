@@ -102,7 +102,7 @@ ${commandDeclarations}
 
     BackendDispatcherHeaderDomainHandlerObjCDeclaration = (
     """class ObjCInspector${domainName}BackendDispatcher final : public Alternate${domainName}BackendDispatcher {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ObjCInspector${domainName}BackendDispatcher);
 public:
     ObjCInspector${domainName}BackendDispatcher(id<${objcPrefix}${domainName}DomainHandler> handler) { m_delegate = handler; }
 ${commandDeclarations}
@@ -144,8 +144,8 @@ ${invocation}
     _${variableNamePrefix}Handler = handler;
 
     auto alternateDispatcher = makeUnique<ObjCInspector${domainName}BackendDispatcher>(handler);
-    auto alternateAgent = makeUnique<AlternateDispatchableAgent<${domainName}BackendDispatcher, Alternate${domainName}BackendDispatcher>>("${domainName}"_s, *_controller, WTFMove(alternateDispatcher));
-    _controller->registerAlternateAgent(WTFMove(alternateAgent));
+    auto alternateAgent = makeUniqueRef<AlternateDispatchableAgent<${domainName}BackendDispatcher, Alternate${domainName}BackendDispatcher>>("${domainName}"_s, *_controller, WTF::move(alternateDispatcher));
+    _controller->registerAlternateAgent(WTF::move(alternateAgent));
 }
 
 - (id<${objcPrefix}${domainName}DomainHandler>)${variableNamePrefix}Handler

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,9 +27,10 @@
 
 #if ENABLE(WIRELESS_PLAYBACK_TARGET)
 
-#include "ActiveDOMObject.h"
-#include "EventTarget.h"
-#include "WebCoreOpaqueRoot.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/EventTargetInterfaces.h>
+#include <WebCore/WebCoreOpaqueRoot.h>
 #include <wtf/HashMap.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/Ref.h>
@@ -48,10 +49,15 @@ class RemotePlayback final
     , public ActiveDOMObject
     , public EventTarget
 {
-    WTF_MAKE_ISO_ALLOCATED(RemotePlayback);
+    WTF_MAKE_TZONE_ALLOCATED(RemotePlayback);
 public:
     static Ref<RemotePlayback> create(HTMLMediaElement&);
     ~RemotePlayback();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     void watchAvailability(Ref<RemotePlaybackAvailabilityCallback>&&, Ref<DeferredPromise>&&);
     void cancelWatchAvailability(std::optional<int32_t> id, Ref<DeferredPromise>&&);
@@ -72,40 +78,36 @@ public:
 
     void invalidate();
 
-    using RefCounted::ref;
-    using RefCounted::deref;
-
     WebCoreOpaqueRoot opaqueRootConcurrently() const;
     Node* ownerNode() const;
 
 private:
     explicit RemotePlayback(HTMLMediaElement&);
 
-    void refEventTarget() final { ref(); }
-    void derefEventTarget() final { deref(); }
-
     void setState(State);
     void establishConnection();
     void disconnect();
 
-    // ActiveDOMObject.
-    const char* activeDOMObjectName() const final;
-
     // EventTarget.
-    EventTargetInterface eventTargetInterface() const final { return RemotePlaybackEventTargetInterfaceType; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::RemotePlayback; }
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    void refEventTarget() final { ref(); }
+    void derefEventTarget() final { deref(); }
+
+    // ActiveDOMObject
+    void stop() final;
 
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const { return m_logger.get(); }
-    const void* logIdentifier() const { return m_logIdentifier; }
+    uint64_t logIdentifier() const { return m_logIdentifier; }
     WTFLogChannel& logChannel() const;
-    const char* logClassName() const { return "RemotePlayback"; }
+    ASCIILiteral logClassName() const { return "RemotePlayback"_s; }
 
-    Ref<const Logger> m_logger;
-    const void* m_logIdentifier { nullptr };
+    const Ref<const Logger> m_logger;
+    uint64_t m_logIdentifier { 0 };
 #endif
 
-    WeakPtr<HTMLMediaElement, WeakPtrImplWithEventTargetData> m_mediaElement;
+    WeakPtr<HTMLMediaElement> m_mediaElement;
     uint32_t m_nextId { 0 };
 
     using CallbackMap = HashMap<int32_t, Ref<RemotePlaybackAvailabilityCallback>>;
@@ -119,6 +121,9 @@ private:
     bool m_available { false };
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(RemotePlayback)
 
 #endif // ENABLE(WIRELESS_PLAYBACK_TARGET)
+

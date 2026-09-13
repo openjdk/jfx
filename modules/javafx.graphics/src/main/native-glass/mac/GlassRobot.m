@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -111,8 +111,11 @@ static inline void PostGlassKeyEvent(jint code, BOOL keyPressed)
     if (GetMacKey(code, &macCode)) {
         // Using CGEvent API proved to be problematic - events for some keys were missing sometimes.
         // So we use the A11Y API instead - just as we do in AWT. It works fine in all cases.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         AXUIElementRef elem = AXUIElementCreateSystemWide();
         AXUIElementPostKeyboardEvent(elem, (CGCharCode)0, macCode, keyPressed);
+#pragma clang diagnostic pop
         CFRelease(elem);
     }
 }
@@ -393,6 +396,7 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getPixelColor
     LOG("Java_com_sun_glass_ui_mac_MacRobot__1getPixelColor");
 
     jint color = 0;
+    CGColorRef origColor = NULL;
 
     GLASS_ASSERT_MAIN_JAVA_THREAD(env);
     GLASS_POOL_ENTER
@@ -408,16 +412,35 @@ JNIEXPORT jint JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getPixelColor
                 CFDataRef data = CGDataProviderCopyData(provider);
                 if (data != NULL)
                 {
-                    jint *pixels = (jint*)CFDataGetBytePtr(data);
+                    uint32_t *pixels = (uint32_t*)CFDataGetBytePtr(data);
                     if (pixels != NULL)
                     {
-                        color = *pixels;
+                        uint32_t pixel = *pixels;
+                        CGFloat components[4];
+                        components[0] = (CGFloat)((pixel & 0x00FF0000) >> 16) / 255.0;
+                        components[1] = (CGFloat)((pixel & 0x0000FF00) >> 8) / 255.0;
+                        components[2] = (CGFloat)((pixel & 0x000000FF)) / 255.0;
+                        components[3] = (CGFloat)((pixel & 0xFF000000) >> 24) / 255.0;
+                        origColor = CGColorCreate(CGImageGetColorSpace(screenImage), components);
                     }
                 }
                 CFRelease(data);
             }
             CGImageRelease(screenImage);
         }
+    }
+
+    if (origColor != NULL) {
+        CGColorSpaceRef sRGBSpace = CGColorSpaceCreateWithName(kCGColorSpaceSRGB);
+        CGColorRef correctedColor = CGColorCreateCopyByMatchingToColorSpace(sRGBSpace, kCGRenderingIntentAbsoluteColorimetric, origColor, NULL);
+        const CGFloat* components = CGColorGetComponents(correctedColor);
+        color  = ((jint)(round(components[3] * 255)) & 0xFF) << 24;
+        color |= ((jint)(round(components[0] * 255)) & 0xFF) << 16;
+        color |= ((jint)(round(components[1] * 255)) & 0xFF) << 8;
+        color |= ((jint)(round(components[2] * 255)) & 0xFF);
+        CGColorSpaceRelease(sRGBSpace);
+        CGColorRelease(correctedColor);
+        CGColorRelease(origColor);
     }
     GLASS_POOL_EXIT;
 
@@ -473,7 +496,7 @@ JNIEXPORT jobject JNICALL Java_com_sun_glass_ui_mac_MacRobot__1getScreenCapture
                 {
                     // create a graphics context around the Java int array
                     CGColorSpaceRef picColorSpace = CGColorSpaceCreateWithName(
-                            kCGColorSpaceGenericRGB);
+                            kCGColorSpaceSRGB);
                     CGContextRef jPicContextRef = CGBitmapContextCreate(
                             javaPixels,
                             pixWidth, pixHeight,

@@ -30,6 +30,9 @@
 
 #pragma once
 
+#include <span>
+#include <wtf/text/ASCIILiteral.h>
+
 namespace PAL {
 
 class TextEncoding;
@@ -38,8 +41,6 @@ class TextEncoding;
 // hintEncodingName, detect the most likely character encoding.
 // The way hintEncodingName is used is up to an implementation.
 // Currently, the only caller sets it to the parent frame encoding.
-bool detectTextEncoding(const char* data, size_t len,
-    const char* hintEncodingName,
-    TextEncoding* detectedEncoding);
+bool detectTextEncoding(std::span<const uint8_t> data, ASCIILiteral hintEncodingName, TextEncoding* detectedEncoding);
 
 } // namespace PAL

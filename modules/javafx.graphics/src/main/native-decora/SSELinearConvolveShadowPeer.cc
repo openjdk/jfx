@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -78,7 +78,7 @@ Java_com_sun_scenario_effect_impl_sw_sse_SSELinearConvolveShadowPeer_filterVecto
                     jint ix = (jint) sampx;
                     jint iy = (jint) sampy;
                     if (ix < srcw && iy < srch) {
-                        // TODO: linear interp the alphas... (RT-27407)
+                        // TODO: linear interp the alphas... (JDK-8091113)
                         jint argb = srcPixels[iy * srcscan + ix];
                         sum += ((jfloat) ((argb >> 24) & 0xff)) * weights[i];
                     }

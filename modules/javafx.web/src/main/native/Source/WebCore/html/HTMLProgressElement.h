@@ -28,7 +28,8 @@ class ProgressValueElement;
 class RenderProgress;
 
 class HTMLProgressElement final : public HTMLElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLProgressElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLProgressElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLProgressElement);
 public:
     static const double IndeterminatePosition;
     static const double InvalidPosition;
@@ -36,23 +37,22 @@ public:
     static Ref<HTMLProgressElement> create(const QualifiedName&, Document&);
 
     double value() const;
-    void setValue(double);
 
     double max() const;
     void setMax(double);
 
     double position() const;
 
+    bool isDevolvableWidget() const override { return true; }
+
 private:
-    constexpr static auto CreateHTMLProgressElement = CreateHTMLElement | NodeFlag::HasCustomStyleResolveCallbacks;
     HTMLProgressElement(const QualifiedName&, Document&);
     virtual ~HTMLProgressElement();
 
-    bool shouldAppearIndeterminate() const final;
+    bool matchesIndeterminatePseudoClass() const final;
     bool isLabelable() const final { return true; }
 
     RenderPtr<RenderElement> createElementRenderer(RenderStyle&&, const RenderTreePosition&) final;
-    bool childShouldCreateRenderer(const Node&) const final;
     RenderProgress* renderProgress() const;
 
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
@@ -66,7 +66,9 @@ private:
 
     bool canContainRangeEndPoint() const final { return false; }
 
-    ProgressValueElement* m_value;
+    RefPtr<ProgressValueElement> protectedValueElement();
+
+    WeakPtr<ProgressValueElement, WeakPtrImplWithEventTargetData> m_valueElement;
     bool m_isDeterminate { false };
 };
 

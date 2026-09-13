@@ -37,14 +37,17 @@ BytecodeSequence::BytecodeSequence(CodeBlock* codeBlock)
 {
     StringPrintStream out;
 
-    for (unsigned i = 0; i < codeBlock->numberOfArgumentValueProfiles(); ++i) {
-        ConcurrentJSLocker locker(codeBlock->m_lock);
-        CString description = codeBlock->valueProfileForArgument(i).briefDescription(locker);
+    {
+        unsigned index = 0;
+        ConcurrentJSLocker locker(codeBlock->valueProfileLock());
+        for (auto& profile : codeBlock->argumentValueProfiles()) {
+            CString description = profile.briefDescription(locker);
         if (!description.length())
             continue;
         out.reset();
-        out.print("arg", i, ": ", description);
+            out.print("arg", index++, ": ", description);
         m_header.append(out.toCString());
+    }
     }
 
     ICStatusMap statusMap;
@@ -60,9 +63,7 @@ BytecodeSequence::BytecodeSequence(CodeBlock* codeBlock)
     }
 }
 
-BytecodeSequence::~BytecodeSequence()
-{
-}
+BytecodeSequence::~BytecodeSequence() = default;
 
 unsigned BytecodeSequence::indexForBytecodeIndex(unsigned bytecodeIndex) const
 {
@@ -76,15 +77,15 @@ const Bytecode& BytecodeSequence::forBytecodeIndex(unsigned bytecodeIndex) const
 
 void BytecodeSequence::addSequenceProperties(Dumper& dumper, JSON::Object& result) const
 {
-    auto header = JSON::Array::create();
-    for (unsigned i = 0; i < m_header.size(); ++i)
-        header->pushString(String::fromUTF8(m_header[i]));
-    result.setValue(dumper.keys().m_header, WTFMove(header));
+    Ref jsonHeader = JSON::Array::create();
+    for (auto& header : m_header)
+        jsonHeader->pushString(String::fromUTF8(header.span()));
+    result.setValue(dumper.keys().m_header, WTF::move(jsonHeader));
 
-    auto sequence = JSON::Array::create();
-    for (unsigned i = 0; i < m_sequence.size(); ++i)
-        sequence->pushValue(m_sequence[i].toJSON(dumper));
-    result.setValue(dumper.keys().m_bytecode, WTFMove(sequence));
+    Ref jsonSequence = JSON::Array::create();
+    for (auto& sequence : m_sequence)
+        jsonSequence->pushValue(sequence.toJSON(dumper));
+    result.setValue(dumper.keys().m_bytecode, WTF::move(jsonSequence));
 }
 
 } } // namespace JSC::Profiler

@@ -27,6 +27,7 @@
 #include "StorageManager.h"
 
 #include "ClientOrigin.h"
+#include "ContextDestructionObserverInlines.h"
 #include "Document.h"
 #include "ExceptionOr.h"
 #include "FileSystemDirectoryHandle.h"
@@ -38,11 +39,11 @@
 #include "SecurityOrigin.h"
 #include "WorkerGlobalScope.h"
 #include "WorkerStorageConnection.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(StorageManager);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(StorageManager);
 
 Ref<StorageManager> StorageManager::create(NavigatorBase& navigator)
 {
@@ -54,95 +55,102 @@ StorageManager::StorageManager(NavigatorBase& navigator)
 {
 }
 
+StorageManager::~StorageManager() = default;
+
 struct ConnectionInfo {
-    StorageConnection& connection;
+    ThreadSafeWeakPtr<StorageConnection> connection;
     ClientOrigin origin;
 };
 
-static ExceptionOr<ConnectionInfo> connectionInfo(NavigatorBase* navigator)
+static ExceptionOr<ConnectionInfo> connectionInfo(NavigatorBase* navigator, ExceptionCode exceptionCodeForNoAccess)
 {
     if (!navigator)
-        return Exception { InvalidStateError, "Navigator does not exist"_s };
+        return Exception { ExceptionCode::InvalidStateError, "Navigator does not exist"_s };
 
-    auto context = navigator->scriptExecutionContext();
+    RefPtr context = navigator->scriptExecutionContext();
     if (!context)
-        return Exception { InvalidStateError, "Context is invalid"_s };
+        return Exception { ExceptionCode::InvalidStateError, "Context is invalid"_s };
 
     if (context->canAccessResource(ScriptExecutionContext::ResourceType::StorageManager) == ScriptExecutionContext::HasResourceAccess::No)
-        return Exception { TypeError, "Context not access storage"_s };
+        return Exception { exceptionCodeForNoAccess, "Context not access storage"_s };
 
-    auto* origin = context->securityOrigin();
+    RefPtr origin = context->securityOrigin();
     ASSERT(origin);
 
-    if (is<Document>(context)) {
-        if (auto* connection = downcast<Document>(context)->storageConnection())
-            return ConnectionInfo { *connection, { context->topOrigin().data(), origin->data() } };
+    if (RefPtr document = dynamicDowncast<Document>(*context)) {
+        if (RefPtr connection = document->storageConnection())
+            return ConnectionInfo { *connection, { document->topOrigin().data(), origin->data() } };
 
-        return Exception { InvalidStateError, "Connection is invalid"_s };
+        return Exception { ExceptionCode::InvalidStateError, "Connection is invalid"_s };
     }
 
-    if (is<WorkerGlobalScope>(context))
-        return ConnectionInfo { downcast<WorkerGlobalScope>(context)->storageConnection(), { context->topOrigin().data(), origin->data() } };
+    if (RefPtr globalScope = dynamicDowncast<WorkerGlobalScope>(*context))
+        return ConnectionInfo { globalScope->storageConnection(), { globalScope->topOrigin().data(), origin->data() } };
 
-    return Exception { NotSupportedError };
+    return Exception { ExceptionCode::NotSupportedError };
 }
 
 void StorageManager::persisted(DOMPromiseDeferred<IDLBoolean>&& promise)
 {
-    auto connectionInfoOrException = connectionInfo(m_navigator.get());
+    auto connectionInfoOrException = connectionInfo(protectedNavigator().get(), ExceptionCode::TypeError);
     if (connectionInfoOrException.hasException())
         return promise.reject(connectionInfoOrException.releaseException());
 
     auto connectionInfo = connectionInfoOrException.releaseReturnValue();
-    connectionInfo.connection.getPersisted(WTFMove(connectionInfo.origin), [promise = WTFMove(promise)](bool persisted) mutable {
+    connectionInfo.connection.get()->getPersisted(WTF::move(connectionInfo.origin), [promise = WTF::move(promise)](bool persisted) mutable {
         promise.resolve(persisted);
     });
 }
 
 void StorageManager::persist(DOMPromiseDeferred<IDLBoolean>&& promise)
 {
-    auto connectionInfoOrException = connectionInfo(m_navigator.get());
+    auto connectionInfoOrException = connectionInfo(protectedNavigator().get(), ExceptionCode::TypeError);
     if (connectionInfoOrException.hasException())
         return promise.reject(connectionInfoOrException.releaseException());
 
     auto connectionInfo = connectionInfoOrException.releaseReturnValue();
-    connectionInfo.connection.persist(connectionInfo.origin, [promise = WTFMove(promise)](bool persisted) mutable {
+    connectionInfo.connection.get()->persist(connectionInfo.origin, [promise = WTF::move(promise)](bool persisted) mutable {
         promise.resolve(persisted);
     });
 }
 
 void StorageManager::estimate(DOMPromiseDeferred<IDLDictionary<StorageEstimate>>&& promise)
 {
-    auto connectionInfoOrException = connectionInfo(m_navigator.get());
+    auto connectionInfoOrException = connectionInfo(protectedNavigator().get(), ExceptionCode::TypeError);
     if (connectionInfoOrException.hasException())
         return promise.reject(connectionInfoOrException.releaseException());
 
     auto connectionInfo = connectionInfoOrException.releaseReturnValue();
-    connectionInfo.connection.getEstimate(WTFMove(connectionInfo.origin), [promise = WTFMove(promise)](auto&& result) mutable {
-        promise.settle(WTFMove(result));
+    connectionInfo.connection.get()->getEstimate(WTF::move(connectionInfo.origin), [promise = WTF::move(promise)](ExceptionOr<StorageEstimate>&& result) mutable {
+        promise.settle(WTF::move(result));
     });
 }
 
-void StorageManager::fileSystemAccessGetDirectory(DOMPromiseDeferred<IDLInterface<FileSystemDirectoryHandle>>&& promise)
+void StorageManager::fileSystemGetDirectory(DOMPromiseDeferred<IDLInterface<FileSystemDirectoryHandle>>&& promise)
 {
-    auto connectionInfoOrException = connectionInfo(m_navigator.get());
+    auto connectionInfoOrException = connectionInfo(protectedNavigator().get(), ExceptionCode::SecurityError);
     if (connectionInfoOrException.hasException())
         return promise.reject(connectionInfoOrException.releaseException());
 
     auto connectionInfo = connectionInfoOrException.releaseReturnValue();
-    connectionInfo.connection.fileSystemGetDirectory(WTFMove(connectionInfo.origin), [promise = WTFMove(promise), weakNavigator = m_navigator](auto&& result) mutable {
+    connectionInfo.connection.get()->fileSystemGetDirectory(WTF::move(connectionInfo.origin), [promise = WTF::move(promise), weakNavigator = m_navigator](auto&& result) mutable {
         if (result.hasException())
             return promise.reject(result.releaseException());
 
         auto [identifier, connection] = result.releaseReturnValue();
-        auto* context = weakNavigator ? weakNavigator->scriptExecutionContext() : nullptr;
+        RefPtr context = weakNavigator ? weakNavigator->scriptExecutionContext() : nullptr;
         if (!context) {
             connection->closeHandle(identifier);
-            return promise.reject(Exception { InvalidStateError, "Context has stopped"_s });
+            return promise.reject(Exception { ExceptionCode::InvalidStateError, "Context has stopped"_s });
         }
 
         promise.resolve(FileSystemDirectoryHandle::create(*context, { }, identifier, Ref { *connection }));
     });
+}
+
+RefPtr<NavigatorBase> StorageManager::protectedNavigator() const
+{
+    return m_navigator.get();
 }
 
 } // namespace WebCore

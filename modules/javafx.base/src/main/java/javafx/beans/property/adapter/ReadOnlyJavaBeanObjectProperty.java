@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,10 +32,6 @@ import javafx.beans.property.ReadOnlyObjectPropertyBase;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.UndeclaredThrowableException;
-
-import java.security.AccessController;
-import java.security.AccessControlContext;
-import java.security.PrivilegedAction;
 
 /**
  * A {@code ReadOnlyJavaBeanObjectProperty} provides an adapter between a regular
@@ -87,9 +83,6 @@ public final class ReadOnlyJavaBeanObjectProperty<T> extends ReadOnlyObjectPrope
     private final ReadOnlyPropertyDescriptor<T> descriptor;
     private final ReadOnlyPropertyDescriptor<T>.ReadOnlyListener listener;
 
-    @SuppressWarnings("removal")
-    private final AccessControlContext acc = AccessController.getContext();
-
     ReadOnlyJavaBeanObjectProperty(ReadOnlyPropertyDescriptor<T> descriptor, Object bean) {
         this.descriptor = descriptor;
         this.listener = descriptor.new ReadOnlyListener(bean, this);
@@ -104,18 +97,15 @@ public final class ReadOnlyJavaBeanObjectProperty<T> extends ReadOnlyObjectPrope
      * property throws an {@code IllegalAccessException} or an
      * {@code InvocationTargetException}.
      */
-    @SuppressWarnings("removal")
     @Override
     public T get() {
-        return AccessController.doPrivileged((PrivilegedAction<T>) () -> {
-            try {
-                return (T)MethodHelper.invoke(descriptor.getGetter(), getBean(), (Object[])null);
-            } catch (IllegalAccessException e) {
-                throw new UndeclaredThrowableException(e);
-            } catch (InvocationTargetException e) {
-                throw new UndeclaredThrowableException(e);
-            }
-        }, acc);
+        try {
+            return (T)MethodHelper.invoke(descriptor.getGetter(), getBean(), (Object[])null);
+        } catch (IllegalAccessException e) {
+            throw new UndeclaredThrowableException(e);
+        } catch (InvocationTargetException e) {
+            throw new UndeclaredThrowableException(e);
+        }
     }
 
     /**

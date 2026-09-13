@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,7 +63,7 @@ void main()
 
     // Note: The breaking of a vector and scale computation statement into
     //       2 separate statements is intentional to workaround a shader
-    //       compiler bug on the Freescale iMX6 platform. See RT-37789 for details.
+    //       compiler bug on the Freescale iMX6 platform. See JDK-8097444 for details.
     vec3 t1 = tangent.xyz * tangent.yzx;
          t1 *= 2.0;
     vec3 t2 = tangent.zxy * tangent.www;

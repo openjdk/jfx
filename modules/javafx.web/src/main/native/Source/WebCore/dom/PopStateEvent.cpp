@@ -30,21 +30,27 @@
 #include "EventNames.h"
 #include "History.h"
 #include <JavaScriptCore/JSCInlines.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(PopStateEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PopStateEvent);
+
+PopStateEvent::PopStateEvent()
+    : Event(EventInterfaceType::PopStateEvent)
+{
+}
 
 PopStateEvent::PopStateEvent(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
-    : Event(type, initializer, isTrusted)
+    : Event(EventInterfaceType::PopStateEvent, type, initializer, isTrusted)
     , m_state(initializer.state)
+    , m_hasUAVisualTransition(initializer.hasUAVisualTransition)
 {
 }
 
 PopStateEvent::PopStateEvent(RefPtr<SerializedScriptValue>&& serializedState, History* history)
-    : Event(eventNames().popstateEvent, CanBubble::No, IsCancelable::No)
-    , m_serializedState(WTFMove(serializedState))
+    : Event(EventInterfaceType::PopStateEvent, eventNames().popstateEvent, CanBubble::No, IsCancelable::No)
+    , m_serializedState(WTF::move(serializedState))
     , m_history(history)
 {
 }
@@ -53,7 +59,7 @@ PopStateEvent::~PopStateEvent() = default;
 
 Ref<PopStateEvent> PopStateEvent::create(RefPtr<SerializedScriptValue>&& serializedState, History* history)
 {
-    return adoptRef(*new PopStateEvent(WTFMove(serializedState), history));
+    return adoptRef(*new PopStateEvent(WTF::move(serializedState), history));
 }
 
 Ref<PopStateEvent> PopStateEvent::create(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
@@ -76,11 +82,6 @@ RefPtr<SerializedScriptValue> PopStateEvent::trySerializeState(JSC::JSGlobalObje
     }
 
     return m_serializedState;
-}
-
-EventInterface PopStateEvent::eventInterface() const
-{
-    return PopStateEventInterfaceType;
 }
 
 } // namespace WebCore

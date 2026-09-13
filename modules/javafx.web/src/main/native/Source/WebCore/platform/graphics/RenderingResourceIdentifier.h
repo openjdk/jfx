@@ -29,7 +29,7 @@
 
 namespace WebCore {
 
-enum RenderingResourceIdentifierType { };
+struct RenderingResourceIdentifierType;
 using RenderingResourceIdentifier = AtomicObjectIdentifier<RenderingResourceIdentifierType>;
 
 } // namespace WebCore

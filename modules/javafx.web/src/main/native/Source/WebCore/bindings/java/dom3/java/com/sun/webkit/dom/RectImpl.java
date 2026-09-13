@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,6 +36,8 @@ public class RectImpl implements Rect {
         SelfDisposer(final long peer) {
             this.peer = peer;
         }
+
+        @Override
         public void dispose() {
             RectImpl.dispose(peer);
         }
@@ -78,21 +80,25 @@ public class RectImpl implements Rect {
 
 
 // Attributes
+    @Override
     public CSSPrimitiveValue getTop() {
         return CSSPrimitiveValueImpl.getImpl(getTopImpl(getPeer()));
     }
     native static long getTopImpl(long peer);
 
+    @Override
     public CSSPrimitiveValue getRight() {
         return CSSPrimitiveValueImpl.getImpl(getRightImpl(getPeer()));
     }
     native static long getRightImpl(long peer);
 
+    @Override
     public CSSPrimitiveValue getBottom() {
         return CSSPrimitiveValueImpl.getImpl(getBottomImpl(getPeer()));
     }
     native static long getBottomImpl(long peer);
 
+    @Override
     public CSSPrimitiveValue getLeft() {
         return CSSPrimitiveValueImpl.getImpl(getLeftImpl(getPeer()));
     }

@@ -38,11 +38,14 @@ namespace JSC { namespace DFG {
 
 // This phase is run at the end of BytecodeParsing, so the graph isn't in a fully formed state.
 // For example, we can't access the predecessor list of any basic blocks yet.
-
-class BackwardsPropagationPhase {
+//
+// Note that, so far, this phase should only be used in the byte code parsing phase
+// or after the fix up phases. We don't want to validate graph since
+// unreachable blocks won't be removed until the end of the parsing phase.
+class BackwardsPropagationPhase : public Phase {
 public:
     BackwardsPropagationPhase(Graph& graph)
-        : m_graph(graph)
+        : Phase(graph, "backwards propagation"_s, !graph.afterFixup())
         , m_flagsAtHead(graph)
     {
     }
@@ -117,12 +120,13 @@ private:
         case ValueBitXor:
         case ValueBitLShift:
         case ValueBitRShift:
+        case ValueBitURShift:
         case ArithBitAnd:
         case ArithBitOr:
         case ArithBitXor:
         case ArithBitLShift:
         case ArithBitRShift:
-        case BitURShift: {
+        case ArithBitURShift: {
             return true;
         }
 
@@ -132,6 +136,10 @@ private:
                 return true;
             return false;
         }
+
+        case Int52Rep:
+            // Do not decrease timeToLive since it is just propagating to the caller (not increasing the leaves of the tree).
+            return isNotNegZero(node->child1().node(), timeToLive);
 
         default:
             return false;
@@ -158,14 +166,6 @@ private:
     }
 
     template<int power>
-    bool isWithinPowerOfTwoNonRecursive(Node* node)
-    {
-        if (!node->isNumberConstant())
-            return false;
-        return isWithinPowerOfTwoForConstant<power>(node);
-    }
-
-    template<int power>
     bool isWithinPowerOfTwo(Node* node)
     {
         switch (node->op()) {
@@ -180,8 +180,16 @@ private:
             if (power > 31)
                 return true;
 
-            return isWithinPowerOfTwoNonRecursive<power>(node->child1().node())
-                || isWithinPowerOfTwoNonRecursive<power>(node->child2().node());
+            // (x & mask) is only bounded by |mask| when mask is non-negative; a negative
+            // mask preserves the sign bit and the result can span the full int32 range.
+            auto isNonNegativeMaskWithinPower = [](Node* operand) {
+                if (!operand->isNumberConstant())
+                    return false;
+                double immediate = operand->asNumber();
+                return immediate >= 0 && immediate < (static_cast<int64_t>(1) << power);
+            };
+            return isNonNegativeMaskWithinPower(node->child1().node())
+                || isNonNegativeMaskWithinPower(node->child2().node());
         }
 
         case ArithBitOr:
@@ -195,7 +203,8 @@ private:
 
         case ArithBitRShift:
         case ValueBitRShift:
-        case BitURShift: {
+        case ArithBitURShift:
+        case ValueBitURShift: {
             if (power > 31)
                 return true;
 
@@ -321,7 +330,8 @@ private:
         case ArithBitLShift:
         case ArithBitRShift:
         case ValueBitRShift:
-        case BitURShift:
+        case ArithBitURShift:
+        case ValueBitURShift:
         case ArithIMul: {
             flags |= NodeBytecodeUsesAsInt;
             flags &= ~(NodeBytecodeUsesAsNumber | NodeBytecodeNeedsNegZero | NodeBytecodeNeedsNaNOrInfinity | NodeBytecodeUsesAsOther);
@@ -331,6 +341,7 @@ private:
             break;
         }
 
+        case StringAt:
         case StringCharAt:
         case StringCharCodeAt:
         case StringCodePointAt: {
@@ -410,7 +421,7 @@ private:
         }
 
         case ArithClz32: {
-            flags &= ~(NodeBytecodeUsesAsNumber | NodeBytecodeNeedsNegZero | NodeBytecodeNeedsNaNOrInfinity | NodeBytecodeUsesAsOther | ~NodeBytecodePrefersArrayIndex);
+            flags &= ~(NodeBytecodeUsesAsNumber | NodeBytecodeNeedsNegZero | NodeBytecodeNeedsNaNOrInfinity | NodeBytecodeUsesAsOther | NodeBytecodePrefersArrayIndex);
             flags |= NodeBytecodeUsesAsInt;
             node->child1()->mergeFlags(flags);
             break;
@@ -502,6 +513,7 @@ private:
             break;
         }
 
+        case MultiGetByVal:
         case EnumeratorGetByVal:
         case GetByVal:
         case GetByValMegamorphic: {
@@ -511,9 +523,10 @@ private:
         }
 
         case NewTypedArray:
+        case NewTypedArrayBuffer:
         case NewArrayWithSize:
-        case NewArrayWithConstantSize:
-        case NewArrayWithSpecies: {
+        case NewArrayWithSpecies:
+        case NewArrayWithSizeAndStructure: {
             // Negative zero is not observable. NaN versus undefined are only observable
             // in that you would get a different exception message. So, like, whatever: we
             // claim here that NaN v. undefined is observable.
@@ -523,7 +536,9 @@ private:
 
         case ToString:
         case CallStringConstructor: {
-            node->child1()->mergeFlags(NodeBytecodeUsesAsNumber | NodeBytecodeUsesAsOther | NodeBytecodeNeedsNaNOrInfinity);
+            if (typeFilterFor(node->child1().useKind()) & SpecOther)
+                node->child1()->mergeFlags(NodeBytecodeUsesAsOther);
+            node->child1()->mergeFlags(NodeBytecodeUsesAsNumber | NodeBytecodeNeedsNaNOrInfinity);
             break;
         }
 
@@ -591,8 +606,52 @@ private:
         }
 
         case Identity:
-            // This would be trivial to handle but we just assert that we cannot see these yet.
-            RELEASE_ASSERT_NOT_REACHED();
+            ASSERT(m_graph.afterFixup());
+            node->child1()->mergeFlags(flags);
+            break;
+
+        case Int52Rep: {
+            ASSERT(m_graph.afterFixup());
+            auto& edge = node->child1();
+            if (edge->hasDoubleResult()) {
+                if (bytecodeCanIgnoreNegativeZero(node->arithNodeFlags()))
+                    edge.setUseKind(DoubleRepRealUse);
+                else
+                    edge.setUseKind(DoubleRepAnyIntUse);
+            } else if (!edge->shouldSpeculateInt32ForArithmetic()) {
+                if (bytecodeCanIgnoreNegativeZero(node->arithNodeFlags()))
+                    edge.setUseKind(RealNumberUse);
+                else
+                    edge.setUseKind(AnyIntUse);
+            }
+            // The results of these nodes are pure unboxed integers. Then, we
+            // should definitely tell their children that you will be used as an integer.
+            flags |= NodeBytecodeUsesAsInt;
+            node->child1()->mergeFlags(flags);
+            break;
+        }
+
+        case ValueToInt32:
+        case DoubleAsInt32:
+            ASSERT(m_graph.afterFixup());
+            // The results of these nodes are pure unboxed integers. Then, we
+            // should definitely tell their children that you will be used as an integer.
+            flags |= NodeBytecodeUsesAsInt;
+            node->child1()->mergeFlags(flags);
+            break;
+
+        case DoubleRep:
+        case PurifyNaN:
+            ASSERT(m_graph.afterFixup());
+            // The result of the node is pure unboxed floating point values.
+            node->child1()->mergeFlags(NodeBytecodeUsesAsNumber);
+            break;
+
+        case BooleanToNumber:
+            ASSERT(m_graph.afterFixup());
+            // The result of BooleanToNumber can be either an unboxed integer or a JSValue.
+            if (node->child1().useKind() == BooleanUse)
+                node->child1()->mergeFlags(NodeBytecodeUsesAsInt);
             break;
 
         // Note: ArithSqrt, ArithUnary and other math intrinsics don't have special
@@ -607,16 +666,15 @@ private:
         }
     }
 
-    Graph& m_graph;
     bool m_allowNestedOverflowingAdditions;
 
     BlockMap<Operands<NodeFlags>> m_flagsAtHead;
     Operands<NodeFlags> m_currentFlags;
 };
 
-void performBackwardsPropagation(Graph& graph)
+bool performBackwardsPropagation(Graph& graph)
 {
-    BackwardsPropagationPhase(graph).run();
+    return runPhase<BackwardsPropagationPhase>(graph);
 }
 
 } } // namespace JSC::DFG

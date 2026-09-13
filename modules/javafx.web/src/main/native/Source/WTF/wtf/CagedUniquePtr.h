@@ -29,15 +29,15 @@
 
 namespace WTF {
 
-template<Gigacage::Kind kind, typename T, bool shouldTag = false>
-class CagedUniquePtr : public CagedPtr<kind, T, shouldTag> {
+template<Gigacage::Kind kind, typename T>
+class CagedUniquePtr : public CagedPtr<kind, T> {
     static_assert(std::is_trivially_destructible<T>::value, "We expect the contents of a caged pointer to be trivially destructable.");
 public:
-    using Base = CagedPtr<kind, T, shouldTag>;
+    using Base = CagedPtr<kind, T>;
     CagedUniquePtr() = default;
 
-    CagedUniquePtr(T* ptr, size_t size)
-        : Base(ptr, size)
+    CagedUniquePtr(T* ptr)
+        : Base(ptr)
     { }
 
     CagedUniquePtr(CagedUniquePtr&& ptr)
@@ -49,21 +49,27 @@ public:
     template<typename... Arguments>
     static CagedUniquePtr create(size_t length, Arguments&&... arguments)
     {
-        T* result = static_cast<T*>(Gigacage::malloc(kind, sizeof(T) * length));
+        std::span<T> result = unsafeMakeSpan(
+            static_cast<T*>(
+                Gigacage::malloc(
+                    kind, checkedProduct<size_t>(sizeof(T), length))), length);
         while (length--)
-            new (result + length) T(arguments...);
-        return CagedUniquePtr(result, length);
+            new (&result[length]) T(arguments...);
+        return CagedUniquePtr(result.data());
     }
 
     template<typename... Arguments>
     static CagedUniquePtr tryCreate(size_t length, Arguments&&... arguments)
     {
-        T* result = static_cast<T*>(Gigacage::tryMalloc(kind, sizeof(T) * length));
-        if (!result)
+        std::span<T> result = unsafeMakeSpan(
+            static_cast<T*>(
+                Gigacage::tryMalloc(
+                    kind, checkedProduct<size_t>(sizeof(T), length))), length);
+        if (!result.data())
             return { };
         while (length--)
-            new (result + length) T(arguments...);
-        return CagedUniquePtr(result, length);
+            new (&result[length]) T(arguments...);
+        return CagedUniquePtr(result.data());
     }
 
     CagedUniquePtr& operator=(CagedUniquePtr&& ptr)

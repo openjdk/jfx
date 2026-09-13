@@ -35,16 +35,17 @@
 #include "AudioContext.h"
 #include "AudioNodeInput.h"
 #include "AudioNodeOutput.h"
-#include <wtf/IsoMallocInlines.h>
+#include "ExceptionOr.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(ChannelMergerNode);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ChannelMergerNode);
 
 ExceptionOr<Ref<ChannelMergerNode>> ChannelMergerNode::create(BaseAudioContext& context, const ChannelMergerOptions& options)
 {
     if (options.numberOfInputs > AudioContext::maxNumberOfChannels || !options.numberOfInputs)
-        return Exception { IndexSizeError, "Number of inputs is not in the allowed range."_s };
+        return Exception { ExceptionCode::IndexSizeError, "Number of inputs is not in the allowed range."_s };
 
     auto merger = adoptRef(*new ChannelMergerNode(context, options.numberOfInputs));
 
@@ -72,16 +73,16 @@ ChannelMergerNode::ChannelMergerNode(BaseAudioContext& context, unsigned numberO
 
 void ChannelMergerNode::process(size_t framesToProcess)
 {
-    AudioNodeOutput* output = this->output(0);
+    CheckedPtr output = this->output(0);
     ASSERT(output);
-    ASSERT_UNUSED(framesToProcess, framesToProcess == output->bus()->length());
+    ASSERT_UNUSED(framesToProcess, framesToProcess == output->bus().length());
     ASSERT(numberOfInputs() == output->numberOfChannels());
 
     // Merge all the channels from all the inputs into one output.
     for (unsigned i = 0; i < numberOfInputs(); ++i) {
-        AudioNodeInput* input = this->input(i);
+        CheckedPtr input = this->input(i);
         ASSERT(input->numberOfChannels() == 1u);
-        auto* outputChannel = output->bus()->channel(i);
+        auto* outputChannel = output->bus().channel(i);
         if (input->isConnected()) {
             // The mixing rules will be applied so multiple channels are down-
             // mixed to mono (when the mixing rule is defined). Note that only
@@ -90,7 +91,7 @@ void ChannelMergerNode::process(size_t framesToProcess)
             //
             // See:
             // http://webaudio.github.io/web-audio-api/#channel-up-mixing-and-down-mixing
-            auto* inputChannel = input->bus()->channel(0);
+            auto* inputChannel = input->bus().channel(0);
             outputChannel->copyFrom(inputChannel);
         } else {
             // If input is unconnected, fill zeros in the channel.
@@ -102,7 +103,7 @@ void ChannelMergerNode::process(size_t framesToProcess)
 ExceptionOr<void> ChannelMergerNode::setChannelCount(unsigned channelCount)
 {
     if (channelCount != 1)
-        return Exception { InvalidStateError, "Channel count cannot be changed from 1."_s };
+        return Exception { ExceptionCode::InvalidStateError, "Channel count cannot be changed from 1."_s };
 
     return AudioNode::setChannelCount(channelCount);
 }
@@ -110,7 +111,7 @@ ExceptionOr<void> ChannelMergerNode::setChannelCount(unsigned channelCount)
 ExceptionOr<void> ChannelMergerNode::setChannelCountMode(ChannelCountMode mode)
 {
     if (mode != ChannelCountMode::Explicit)
-        return Exception { InvalidStateError, "Channel count mode cannot be changed from explicit."_s };
+        return Exception { ExceptionCode::InvalidStateError, "Channel count mode cannot be changed from explicit."_s };
 
     return AudioNode::setChannelCountMode(mode);
 }

@@ -30,7 +30,7 @@
 
 #include "JSCryptoKey.h"
 #include "JSDOMPromiseDeferred.h"
-#include <JavaScriptCore/JSBigInt.h>
+#include <JavaScriptCore/JSBigIntInlines.h>
 
 namespace WebCore {
 using namespace JSC;
@@ -40,33 +40,38 @@ JSValue JSRTCRtpSFrameTransform::setEncryptionKey(JSGlobalObject& lexicalGlobalO
     auto& vm = getVM(&lexicalGlobalObject);
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(callFrame.argumentCount() < 1)) {
+    if (callFrame.argumentCount() < 1) [[unlikely]] {
         throwVMError(&lexicalGlobalObject, throwScope, createNotEnoughArgumentsError(&lexicalGlobalObject));
         return jsUndefined();
     }
 
     EnsureStillAliveScope argument0 = callFrame.uncheckedArgument(0);
-    auto key = convert<IDLInterface<CryptoKey>>(lexicalGlobalObject, argument0.value(), [](auto& lexicalGlobalObject, auto& scope) {
-        throwArgumentTypeError(lexicalGlobalObject, scope, 0, "key", "SFrameTransform", "setEncryptionKey", "CryptoKey");
+    auto keyConversionResult = convert<IDLInterface<CryptoKey>>(lexicalGlobalObject, argument0.value(), [](auto& lexicalGlobalObject, auto& scope) {
+        throwArgumentTypeError(lexicalGlobalObject, scope, 0, "key"_s, "SFrameTransform"_s, "setEncryptionKey"_s, "CryptoKey"_s);
     });
-    RETURN_IF_EXCEPTION(throwScope, jsUndefined());
+    if (keyConversionResult.hasException(throwScope)) [[unlikely]]
+        return jsUndefined();
 
     EnsureStillAliveScope argument1 = callFrame.argument(1);
     std::optional<uint64_t> keyID;
     if (!argument1.value().isUndefined()) {
         if (argument1.value().isBigInt()) {
             if (argument1.value().asHeapBigInt()->length() > 1) {
-                throwException(&lexicalGlobalObject, throwScope, createDOMException(&lexicalGlobalObject, RangeError, "Not a 64 bits integer"_s));
+                throwException(&lexicalGlobalObject, throwScope, createDOMException(&lexicalGlobalObject, ExceptionCode::RangeError, "Not a 64 bits integer"_s));
                 return jsUndefined();
             }
             keyID = JSBigInt::toBigUInt64(argument1.value());
-        } else
-            keyID = std::optional<Converter<IDLUnsignedLongLong>::ReturnType>(convert<IDLUnsignedLongLong>(lexicalGlobalObject, argument1.value()));
+        } else {
+            auto keyIDConversionResult = convert<IDLUnsignedLongLong>(lexicalGlobalObject, argument1.value());
+            if (keyIDConversionResult.hasException(throwScope)) [[unlikely]]
+                return jsUndefined();
+            keyID = keyIDConversionResult.releaseReturnValue();
+        }
     }
     RETURN_IF_EXCEPTION(throwScope, jsUndefined());
     throwScope.release();
 
-    wrapped().setEncryptionKey(*key, keyID, WTFMove(promise));
+    wrapped().setEncryptionKey(keyConversionResult.releaseReturnValue(), keyID, WTF::move(promise));
     return jsUndefined();
 }
 

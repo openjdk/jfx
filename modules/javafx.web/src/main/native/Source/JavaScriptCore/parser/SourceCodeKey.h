@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
  * Copyright (C) 2015 Yusuke Suzuki <utatane.tea@gmail.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,8 +26,9 @@
 
 #pragma once
 
-#include "ParserModes.h"
-#include "UnlinkedSourceCode.h"
+#include <JavaScriptCore/ExecutableInfo.h>
+#include <JavaScriptCore/ParserModes.h>
+#include <JavaScriptCore/UnlinkedSourceCode.h>
 #include <wtf/HashTraits.h>
 
 namespace JSC {
@@ -41,7 +42,7 @@ public:
     SourceCodeFlags() = default;
 
     SourceCodeFlags(
-        SourceCodeType codeType, JSParserStrictMode strictMode, JSParserScriptMode scriptMode,
+        SourceCodeType codeType, LexicallyScopedFeatures lexicallyScopedFeatures, JSParserScriptMode scriptMode,
         DerivedContextType derivedContextType, EvalContextType evalContextType, bool isArrowFunctionContext,
         OptionSet<CodeGenerationMode> codeGenerationMode)
         : m_flags(
@@ -51,15 +52,12 @@ public:
             (static_cast<unsigned>(evalContextType) << 3) |
             (static_cast<unsigned>(derivedContextType) << 2) |
             (static_cast<unsigned>(codeType) << 1) |
-            (static_cast<unsigned>(strictMode))
+            (static_cast<unsigned>(lexicallyScopedFeatures & StrictModeLexicallyScopedFeature))
         )
     {
     }
 
-    inline bool operator==(const SourceCodeFlags& rhs) const
-    {
-        return m_flags == rhs.m_flags;
-    }
+    friend bool operator==(const SourceCodeFlags&, const SourceCodeFlags&) = default;
 
     unsigned bits() { return m_flags; }
 
@@ -68,6 +66,7 @@ private:
 };
 
 class SourceCodeKey {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(SourceCodeKey);
     friend class CachedSourceCodeKey;
 
 public:
@@ -76,12 +75,12 @@ public:
     }
 
     SourceCodeKey(
-        const UnlinkedSourceCode& sourceCode, const String& name, SourceCodeType codeType, JSParserStrictMode strictMode,
+        const UnlinkedSourceCode& sourceCode, const String& name, SourceCodeType codeType, LexicallyScopedFeatures lexicallyScopedFeatures,
         JSParserScriptMode scriptMode, DerivedContextType derivedContextType, EvalContextType evalContextType, bool isArrowFunctionContext,
         OptionSet<CodeGenerationMode> codeGenerationMode, std::optional<int> functionConstructorParametersEndPosition)
             : m_sourceCode(sourceCode)
             , m_name(name)
-            , m_flags(codeType, strictMode, scriptMode, derivedContextType, evalContextType, isArrowFunctionContext, codeGenerationMode)
+            , m_flags(codeType, lexicallyScopedFeatures, scriptMode, derivedContextType, evalContextType, isArrowFunctionContext, codeGenerationMode)
             , m_functionConstructorParametersEndPosition(functionConstructorParametersEndPosition.value_or(-1))
             , m_hash(sourceCode.hash() ^ m_flags.bits())
     {
@@ -108,6 +107,8 @@ public:
 
     StringView host() const { return m_sourceCode.provider().sourceOrigin().url().host(); }
 
+    int functionConstructorParametersEndPosition() const { return m_functionConstructorParametersEndPosition; }
+
     bool operator==(const SourceCodeKey& other) const
     {
         return m_hash == other.m_hash
@@ -116,14 +117,8 @@ public:
             && m_functionConstructorParametersEndPosition == other.m_functionConstructorParametersEndPosition
             && m_name == other.m_name
             && host() == other.host()
-            && string() == other.string();
+            && (m_sourceCode == other.m_sourceCode || string() == other.string());
     }
-
-    struct Hash {
-        static unsigned hash(const SourceCodeKey& key) { return key.hash(); }
-        static bool equal(const SourceCodeKey& a, const SourceCodeKey& b) { return a == b; }
-        static constexpr bool safeToCompareToEmptyOrDeleted = false;
-    };
 
     struct HashTraits : SimpleClassHashTraits<SourceCodeKey> {
         static constexpr bool hasIsEmptyValueFunction = true;

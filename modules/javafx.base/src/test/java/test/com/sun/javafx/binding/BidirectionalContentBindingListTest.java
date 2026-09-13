@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,14 +29,14 @@ import com.sun.javafx.binding.BidirectionalContentBinding;
 import javafx.beans.binding.Bindings;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class BidirectionalContentBindingListTest {
 
@@ -47,7 +47,7 @@ public class BidirectionalContentBindingListTest {
     private List<Integer> list1;
     private List<Integer> list2;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         list0 = new ArrayList<>();
         list1 = new ArrayList<>(Arrays.asList(-1));
@@ -100,19 +100,25 @@ public class BidirectionalContentBindingListTest {
         assertEquals(list2_sorted, op2);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testBind_Null_X() {
-        Bindings.bindContentBidirectional(null, op2);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.bindContentBidirectional(null, op2);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testBind_X_Null() {
-        Bindings.bindContentBidirectional(op1, null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.bindContentBidirectional(op1, null);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testBind_X_Self() {
-        Bindings.bindContentBidirectional(op1, op1);
+        assertThrows(IllegalArgumentException.class, () -> {
+            Bindings.bindContentBidirectional(op1, op1);
+        });
     }
 
     @Test
@@ -158,19 +164,25 @@ public class BidirectionalContentBindingListTest {
         assertEquals(list2, op2);
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testUnbind_Null_X() {
-        Bindings.unbindContentBidirectional(null, op2);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.unbindContentBidirectional(null, op2);
+        });
     }
 
-    @Test(expected = NullPointerException.class)
+    @Test
     public void testUnbind_X_Null() {
-        Bindings.unbindContentBidirectional(op1, null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.unbindContentBidirectional(op1, null);
+        });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testUnbind_X_Self() {
-        Bindings.unbindContentBidirectional(op1, op1);
+        assertThrows(IllegalArgumentException.class, () -> {
+            Bindings.unbindContentBidirectional(op1, op1);
+        });
     }
 
     @Test

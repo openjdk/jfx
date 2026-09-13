@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "Options.h"
+#include <JavaScriptCore/JSExportMacros.h>
 #include <wtf/NumberOfCores.h>
 #include <wtf/StdIntExtras.h>
 
@@ -49,6 +49,11 @@ constexpr bool isARM_THUMB2()
 #else
     return false;
 #endif
+}
+
+constexpr bool hasUnalignedFPMemoryAccess()
+{
+    return !isARM_THUMB2();
 }
 
 constexpr bool isARM64()
@@ -115,15 +120,6 @@ constexpr bool isX86_64_AVX()
 }
 #endif
 
-constexpr bool isMIPS()
-{
-#if CPU(MIPS)
-    return true;
-#else
-    return false;
-#endif
-}
-
 constexpr bool isRISCV64()
 {
 #if CPU(RISCV64)
@@ -178,30 +174,11 @@ constexpr bool isRegister32Bit()
     return registerSize() == 4;
 }
 
-inline bool optimizeForARMv7IDIVSupported()
-{
-    return isARMv7IDIVSupported() && Options::useArchitectureSpecificOptimizations();
-}
-
-inline bool optimizeForARM64()
-{
-    return isARM64() && Options::useArchitectureSpecificOptimizations();
-}
-
-inline bool optimizeForX86()
-{
-    return isX86() && Options::useArchitectureSpecificOptimizations();
-}
-
-inline bool optimizeForX86_64()
-{
-    return isX86_64() && Options::useArchitectureSpecificOptimizations();
-}
-
-inline bool hasSensibleDoubleToInt()
-{
-    return optimizeForX86();
-}
+inline bool optimizeForARMv7IDIVSupported();
+inline bool optimizeForARM64();
+inline bool optimizeForX86();
+inline bool optimizeForX86_64();
+inline bool hasSensibleDoubleToInt();
 
 #if PLATFORM(MAC) || PLATFORM(MACCATALYST)
 bool isKernOpenSource();
@@ -229,7 +206,7 @@ constexpr size_t prologueStackPointerDelta()
 #elif CPU(X86_64)
     // Prologue only saves the framePointerRegister
     return sizeof(CPURegister);
-#elif CPU(ARM_THUMB2) || CPU(ARM64) || CPU(MIPS) || CPU(RISCV64)
+#elif CPU(ARM_THUMB2) || CPU(ARM64) || CPU(RISCV64)
     // Prologue saves the framePointerRegister and linkRegister
     return 2 * sizeof(CPURegister);
 #else

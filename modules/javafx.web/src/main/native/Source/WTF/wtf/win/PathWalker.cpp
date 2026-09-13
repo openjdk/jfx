@@ -26,6 +26,7 @@
 #include "config.h"
 #include <wtf/win/PathWalker.h>
 
+#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTF {
@@ -33,7 +34,7 @@ namespace WTF {
 PathWalker::PathWalker(const String& directory, const String& pattern)
 {
     String path = makeString(directory, '\\', pattern);
-    m_handle = ::FindFirstFileW(path.wideCharacters().data(), &m_data);
+    m_handle = ::FindFirstFileW(path.wideCharacters().span().data(), &m_data);
 }
 
 PathWalker::~PathWalker()

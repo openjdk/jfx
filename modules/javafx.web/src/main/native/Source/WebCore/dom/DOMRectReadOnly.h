@@ -25,21 +25,22 @@
 
 #pragma once
 
-#include "DOMRectInit.h"
-#include "FloatConversion.h"
-#include "FloatRect.h"
-#include "ScriptWrappable.h"
-#include <wtf/IsoMalloc.h>
+#include <WebCore/DOMRectInit.h>
+#include <WebCore/FloatConversion.h>
+#include <WebCore/FloatRect.h>
+#include <WebCore/ScriptWrappable.h>
 #include <wtf/MathExtras.h>
+#include <wtf/NoVirtualDestructorBase.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class WebCoreOpaqueRoot;
 
-class DOMRectReadOnly : public ScriptWrappable, public RefCounted<DOMRectReadOnly> {
-    WTF_MAKE_ISO_ALLOCATED_EXPORT(DOMRectReadOnly, WEBCORE_EXPORT);
+class DOMRectReadOnly : public ScriptWrappable, public RefCounted<DOMRectReadOnly>, public NoVirtualDestructorBase {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(DOMRectReadOnly, WEBCORE_EXPORT);
 public:
     static Ref<DOMRectReadOnly> create(double x, double y, double width, double height) { return adoptRef(*new DOMRectReadOnly(x, y, width, height)); }
     static Ref<DOMRectReadOnly> fromRect(const DOMRectInit& init) { return create(init.x, init.y, init.width, init.height); }

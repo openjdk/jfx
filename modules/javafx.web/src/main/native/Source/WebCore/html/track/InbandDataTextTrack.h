@@ -35,20 +35,21 @@ namespace WebCore {
 class DataCue;
 
 class InbandDataTextTrack final : public InbandTextTrack {
-    WTF_MAKE_ISO_ALLOCATED(InbandDataTextTrack);
+    WTF_MAKE_TZONE_ALLOCATED(InbandDataTextTrack);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(InbandDataTextTrack);
 public:
-    static Ref<InbandDataTextTrack> create(Document&, InbandTextTrackPrivate&);
+    static Ref<InbandDataTextTrack> create(ScriptExecutionContext&, InbandTextTrackPrivate&);
     virtual ~InbandDataTextTrack();
 
 private:
-    InbandDataTextTrack(Document&, InbandTextTrackPrivate&);
+    InbandDataTextTrack(ScriptExecutionContext&, InbandTextTrackPrivate&);
 
-    void addDataCue(const MediaTime& start, const MediaTime& end, const void*, unsigned) final;
+    void addDataCue(const MediaTime& start, const MediaTime& end, std::span<const uint8_t>) final;
 
     bool shouldPurgeCuesFromUnbufferedRanges() const final { return true; }
 
 #if !RELEASE_LOG_DISABLED
-    const char* logClassName() const final { return "DataCue"; }
+    ASCIILiteral logClassName() const final { return "DataCue"_s; }
 #endif
 
 #if ENABLE(DATACUE_VALUE)
@@ -59,7 +60,7 @@ private:
 
     RefPtr<DataCue> findIncompleteCue(const SerializedPlatformDataCue&);
 
-    Vector<RefPtr<DataCue>> m_incompleteCueMap;
+    Vector<Ref<DataCue>> m_incompleteCueMap;
 #endif
 };
 

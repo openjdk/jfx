@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,57 +26,60 @@
 package test.javafx.scene.control;
 
 import javafx.scene.control.TextArea;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 /**
  * Test for interplay of ENTER/ESCAPE handlers on TextArea with
  * default/cancel button actions.
  */
 public class TextAreaDefaultCancelButtonTest extends DefaultCancelButtonTestBase<TextArea> {
-
-    public TextAreaDefaultCancelButtonTest(ButtonType buttonType,
-            boolean consume, boolean registerAfterShowing) {
-        super(buttonType, consume, registerAfterShowing);
+    /**
+     * Overridden to back out for ENTER (which is handled internally always)
+     */
+    @ParameterizedTest
+    @MethodSource("parameters")
+    @Override
+    public void testFallbackFilter(ButtonType buttonType, boolean consume, boolean registerAfterShowing) {
+        if (isEnter(buttonType)) return;
+        super.testFallbackFilter(buttonType, consume, registerAfterShowing);
     }
 
     /**
      * Overridden to back out for ENTER (which is handled internally always)
      */
+    @ParameterizedTest
+    @MethodSource("parameters")
     @Override
-    public void testFallbackFilter() {
-        if (isEnter()) return;
-        super.testFallbackFilter();
+    public void testFallbackHandler(ButtonType buttonType, boolean consume, boolean registerAfterShowing) {
+        if (isEnter(buttonType)) return;
+        super.testFallbackHandler(buttonType, consume, registerAfterShowing);
     }
 
     /**
      * Overridden to back out for ENTER (which is handled internally always)
      */
+    @ParameterizedTest
+    @MethodSource("parameters")
     @Override
-    public void testFallbackHandler() {
-        if (isEnter()) return;
-        super.testFallbackHandler();
+    public void testFallbackSingletonHandler(ButtonType buttonType, boolean consume, boolean registerAfterShowing) {
+        if (isEnter(buttonType)) return;
+        super.testFallbackSingletonHandler(buttonType, consume, registerAfterShowing);
     }
 
     /**
      * Overridden to back out for ENTER (which is handled internally always)
      */
+    @ParameterizedTest
+    @MethodSource("parameters")
     @Override
-    public void testFallbackSingletonHandler() {
-        if (isEnter()) return;
-        super.testFallbackSingletonHandler();
-    }
-
-    /**
-     * Overridden to back out for ENTER (which is handled internally always)
-     */
-    @Override
-    public void testFallbackNoHandler() {
-        if (isEnter()) return;
-        super.testFallbackNoHandler();
+    public void testFallbackNoHandler(ButtonType buttonType, boolean consume, boolean registerAfterShowing) {
+        if (isEnter(buttonType)) return;
+        super.testFallbackNoHandler(buttonType, consume, registerAfterShowing);
     }
 
     @Override
     protected TextArea createControl() {
         return new TextArea();
     }
-
 }

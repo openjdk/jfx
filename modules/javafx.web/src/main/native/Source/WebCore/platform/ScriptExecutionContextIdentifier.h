@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "ProcessQualified.h"
+#include <WebCore/ProcessQualified.h>
 #include <wtf/Forward.h>
 #include <wtf/UUID.h>
 
@@ -34,15 +34,10 @@ namespace WebCore {
 template <>
 class ProcessQualified<WTF::UUID> {
 public:
-    static ProcessQualified generate() { return { WTF::UUID::createVersion4(), Process::identifier() }; }
-
-    ProcessQualified()
-        : m_object(WTF::UUID::emptyValue)
-    {
-    }
+    static ProcessQualified generate() { return { WTF::UUID::createVersion4Weak(), Process::identifier() }; }
 
     ProcessQualified(WTF::UUID object, ProcessIdentifier processIdentifier)
-        : m_object(WTFMove(object))
+        : m_object(WTF::move(object))
         , m_processIdentifier(processIdentifier)
     {
     }
@@ -53,14 +48,14 @@ public:
     {
     }
 
-    operator bool() const { return !!m_object; }
+    explicit operator bool() const { return !!m_object; }
 
     const WTF::UUID& object() const { return m_object; }
     ProcessIdentifier processIdentifier() const { return m_processIdentifier; }
 
     bool isHashTableDeletedValue() const { return m_processIdentifier.isHashTableDeletedValue(); }
 
-    bool operator==(const ProcessQualified& other) const { return m_object == other.m_object && m_processIdentifier == other.m_processIdentifier; }
+    friend bool operator==(const ProcessQualified&, const ProcessQualified&) = default;
 
     String toString() const { return m_object.toString(); }
 
@@ -94,10 +89,21 @@ template<typename Decoder> std::optional<ProcessQualified<WTF::UUID>> ProcessQua
 template <>
 inline TextStream& operator<<(TextStream& ts, const ProcessQualified<WTF::UUID>& processQualified)
 {
-    ts << "ProcessQualified(" << processQualified.processIdentifier().toUInt64() << '-' << processQualified.object().toString() << ')';
+    ts << "ProcessQualified("_s << processQualified.processIdentifier().toUInt64() << '-' << processQualified.object().toString() << ')';
     return ts;
 }
 
 using ScriptExecutionContextIdentifier = ProcessQualified<WTF::UUID>;
 
-}
+} // namespace WebCore
+
+namespace WTF {
+
+
+template<>
+struct MarkableTraits<WebCore::ProcessQualified<UUID>> {
+    static bool isEmptyValue(const WebCore::ProcessQualified<UUID>& identifier) { return MarkableTraits<UUID>::isEmptyValue(identifier.object()); }
+    static WebCore::ProcessQualified<UUID> emptyValue() { return { MarkableTraits<UUID>::emptyValue(), MarkableTraits<WebCore::ProcessIdentifier>::emptyValue() }; }
+};
+
+} // namespace WTF

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2010 Nokia Corporation and/or its subsidiary(-ies).
  * Copyright (C) 2012, Samsung Electronics. All rights reserved.
  *
@@ -21,14 +21,17 @@
 
 #pragma once
 
-#include "Cursor.h"
-#include "DisabledAdaptations.h"
-#include "FocusDirection.h"
-#include "HostWindow.h"
+#include <WebCore/Cursor.h>
+#include <WebCore/DisabledAdaptations.h>
+#include <WebCore/FocusDirection.h>
+#include <WebCore/HostWindow.h>
+#include <WebCore/ImageBufferFormat.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 #include <wtf/FunctionDispatcher.h>
+#include <wtf/Platform.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 #include <wtf/Vector.h>
 
@@ -51,6 +54,7 @@ namespace WebGPU {
 class GPU;
 }
 
+enum class BroadcastFocusedElement : bool;
 enum class PlatformEventModifier : uint8_t;
 enum class TextDirection : bool;
 
@@ -64,6 +68,7 @@ class DateTimeChooserClient;
 class FileChooser;
 class FileIconLoader;
 class FloatRect;
+class Frame;
 class Element;
 class Geolocation;
 class HitTestResult;
@@ -79,14 +84,26 @@ class SearchPopupMenu;
 class WorkerClient;
 
 struct AppHighlight;
+struct AriaNotifyData;
 struct ContactInfo;
 struct ContactsRequestData;
-struct DateTimeChooserParameters;
+struct FocusOptions;
+struct LiveRegionAnnouncementData;
 struct ShareDataWithParsedURL;
 struct ViewportArguments;
 struct WindowFeatures;
 
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+class SecurityOriginData;
+
+struct DigitalCredentialsRequestData;
+struct DigitalCredentialsResponseData;
+struct ExceptionData;
+struct MobileDocumentRequest;
+#endif
+
 class Chrome : public HostWindow {
+    WTF_MAKE_TZONE_ALLOCATED(Chrome);
 public:
     Chrome(Page&, UniqueRef<ChromeClient>&&);
     virtual ~Chrome();
@@ -100,22 +117,28 @@ public:
     void invalidateContentsForSlowScroll(const IntRect&) override;
     void scroll(const IntSize&, const IntRect&, const IntRect&) override;
     IntPoint screenToRootView(const IntPoint&) const override;
+    IntPoint rootViewToScreen(const IntPoint&) const override;
     IntRect rootViewToScreen(const IntRect&) const override;
     IntPoint accessibilityScreenToRootView(const IntPoint&) const override;
     IntRect rootViewToAccessibilityScreen(const IntRect&) const override;
     PlatformPageClient platformPageClient() const override;
+#if PLATFORM(IOS_FAMILY)
+    void relayAccessibilityNotification(String&&, RetainPtr<NSData>&&) const override;
+    void relayAriaNotifyNotification(AriaNotifyData&&) const;
+    void relayLiveRegionNotification(LiveRegionAnnouncementData&&) const;
+#endif
     void setCursor(const Cursor&) override;
     void setCursorHiddenUntilMouseMoves(bool) override;
 
-    RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, PixelFormat, bool avoidBackendSizeCheck = false) const override;
+    RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, ImageBufferFormat) const override;
     RefPtr<WebCore::ImageBuffer> sinkIntoImageBuffer(std::unique_ptr<WebCore::SerializedImageBuffer>) override;
 
 #if ENABLE(WEBGL)
     RefPtr<GraphicsContextGL> createGraphicsContextGL(const GraphicsContextGLAttributes&) const override;
 #endif
-
-    RefPtr<WebGPU::GPU> createGPUForWebGPU() const;
-
+#if HAVE(WEBGPU_IMPLEMENTATION)
+    RefPtr<WebGPU::GPU> createGPUForWebGPU() const override;
+#endif
     RefPtr<ShapeDetection::BarcodeDetector> createBarcodeDetector(const ShapeDetection::BarcodeDetectorOptions&) const;
     void getBarcodeDetectorSupportedFormats(CompletionHandler<void(Vector<ShapeDetection::BarcodeFormat>&&)>&&) const;
     RefPtr<ShapeDetection::FaceDetector> createFaceDetector(const ShapeDetection::FaceDetectorOptions&) const;
@@ -127,9 +150,10 @@ public:
     FloatSize screenSize() const override;
     FloatSize availableScreenSize() const override;
     FloatSize overrideScreenSize() const override;
+    FloatSize overrideAvailableScreenSize() const override;
 
     void scrollContainingScrollViewsToRevealRect(const IntRect&) const;
-    void scrollMainFrameToRevealRect(const IntRect&) const;
+    WEBCORE_EXPORT void scrollMainFrameToRevealRect(const IntRect&) const;
 
     void contentsSizeChanged(LocalFrame&, const IntSize&) const;
 
@@ -144,10 +168,10 @@ public:
     bool canTakeFocus(FocusDirection) const;
     void takeFocus(FocusDirection);
 
-    void focusedElementChanged(Element*);
-    void focusedFrameChanged(LocalFrame*);
+    void focusedElementChanged(Element*, LocalFrame*, FocusOptions, BroadcastFocusedElement);
+    void focusedFrameChanged(Frame*);
 
-    WEBCORE_EXPORT Page* createWindow(LocalFrame&, const WindowFeatures&, const NavigationAction&);
+    WEBCORE_EXPORT RefPtr<Page> createWindow(LocalFrame&, const String& openedMainFrameName, const WindowFeatures&, const NavigationAction&);
     WEBCORE_EXPORT void show();
 
     bool canRunModal() const;
@@ -168,15 +192,16 @@ public:
     void setResizable(bool);
 
     bool canRunBeforeUnloadConfirmPanel();
-    bool runBeforeUnloadConfirmPanel(const String& message, LocalFrame&);
+    bool runBeforeUnloadConfirmPanel(String&& message, LocalFrame&);
 
     void closeWindow();
 
     void runJavaScriptAlert(LocalFrame&, const String&);
     bool runJavaScriptConfirm(LocalFrame&, const String&);
     bool runJavaScriptPrompt(LocalFrame&, const String& message, const String& defaultValue, String& result);
+#if PLATFORM(JAVA)
     WEBCORE_EXPORT void setStatusbarText(LocalFrame&, const String&);
-
+#endif
     void mouseDidMoveOverElement(const HitTestResult&, OptionSet<PlatformEventModifier>);
 
     WEBCORE_EXPORT bool print(LocalFrame&);
@@ -184,27 +209,23 @@ public:
     WEBCORE_EXPORT void enableSuddenTermination();
     WEBCORE_EXPORT void disableSuddenTermination();
 
-#if ENABLE(INPUT_TYPE_COLOR)
-    std::unique_ptr<ColorChooser> createColorChooser(ColorChooserClient&, const Color& initialColor);
-#endif
+    RefPtr<ColorChooser> createColorChooser(ColorChooserClient&, const Color& initialColor);
 
-#if ENABLE(DATALIST_ELEMENT)
-    std::unique_ptr<DataListSuggestionPicker> createDataListSuggestionPicker(DataListSuggestionsClient&);
-#endif
+    RefPtr<DataListSuggestionPicker> createDataListSuggestionPicker(DataListSuggestionsClient&);
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-    std::unique_ptr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&);
-#endif
+    RefPtr<DateTimeChooser> createDateTimeChooser(DateTimeChooserClient&);
 
     std::unique_ptr<WorkerClient> createWorkerClient(SerialFunctionDispatcher&);
 
-#if ENABLE(APP_HIGHLIGHTS)
-    void storeAppHighlight(AppHighlight&&) const;
+    void runOpenPanel(LocalFrame&, FileChooser&);
+    void showShareSheet(ShareDataWithParsedURL&&, CompletionHandler<void(bool)>&&);
+    void showContactPicker(ContactsRequestData&&, CompletionHandler<void(std::optional<Vector<ContactInfo>>&&)>&&);
+
+#if HAVE(DIGITAL_CREDENTIALS_UI)
+    void showDigitalCredentialsPicker(const DigitalCredentialsRequestData&, WTF::CompletionHandler<void(Expected<WebCore::DigitalCredentialsResponseData, WebCore::ExceptionData>&&)>&&);
+    void dismissDigitalCredentialsPicker(CompletionHandler<void(bool)>&&);
 #endif
 
-    void runOpenPanel(LocalFrame&, FileChooser&);
-    void showShareSheet(ShareDataWithParsedURL&, CompletionHandler<void(bool)>&&);
-    void showContactPicker(const ContactsRequestData&, CompletionHandler<void(std::optional<Vector<ContactInfo>>&&)>&&);
     void loadIconForFiles(const Vector<String>&, FileIconLoader&);
 
     void dispatchDisabledAdaptationsDidChange(const OptionSet<DisabledAdaptations>&) const;
@@ -235,11 +256,11 @@ public:
 
 private:
     void notifyPopupOpeningObservers() const;
+    Ref<Page> protectedPage() const;
 
-    Page& m_page;
-    UniqueRef<ChromeClient> m_client;
-    // FIXME: This should be WeakPtr<PopupOpeningObserver>.
-    Vector<PopupOpeningObserver*> m_popupOpeningObservers;
+    WeakRef<Page> m_page;
+    const UniqueRef<ChromeClient> m_client;
+    Vector<WeakPtr<PopupOpeningObserver>> m_popupOpeningObservers;
 #if PLATFORM(IOS_FAMILY)
     bool m_isDispatchViewportDataDidChangeSuppressed { false };
 #endif

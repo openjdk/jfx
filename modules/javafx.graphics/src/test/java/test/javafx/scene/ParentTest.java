@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package test.javafx.scene;
 
+import com.sun.javafx.scene.LayoutFlags;
 import com.sun.javafx.scene.NodeHelper;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.sg.prism.NGGroup;
@@ -33,32 +34,43 @@ import com.sun.javafx.geom.PickRay;
 import com.sun.javafx.scene.input.PickResultChooser;
 
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import javafx.beans.property.Property;
 import javafx.scene.Group;
 import javafx.scene.GroupShim;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.ParentShim;
 import javafx.scene.Scene;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ParentTest {
     private StubToolkit toolkit;
     private Stage stage;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         toolkit = (StubToolkit) Toolkit.getToolkit();
         stage = new Stage();
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         stage.close();
     }
@@ -273,6 +285,22 @@ public class ParentTest {
     }
 
     @Test
+    public void testSortChildren() {
+        Rectangle rect1 = new Rectangle();
+        rect1.setId("1");
+        Rectangle rect2 = new Rectangle();
+        rect2.setId("2");
+        Rectangle rect3 = new Rectangle();
+        rect3.setId("3");
+
+        Group g = new Group();
+        g.getChildren().addAll(rect3, rect1, rect2);
+        g.getChildren().sort(Comparator.comparing(node -> node.getId()));
+
+        assertEquals(List.of(rect1, rect2, rect3), g.getChildren());
+    }
+
+    @Test
     public void testGetChildrenUnmodifiable() {
         Rectangle rect1 = new Rectangle();
         Rectangle rect2 = new Rectangle();
@@ -375,35 +403,41 @@ public class ParentTest {
         }
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testAddingNullChild() {
-        Group g = new Group();
-        ParentShim.getChildren(g).add(null);
+        assertThrows(NullPointerException.class, () -> {
+            Group g = new Group();
+            ParentShim.getChildren(g).add(null);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testNullCheckIsDoneBeforeTestForDuplicates() {
-        Group g = new Group();
-        ParentShim.getChildren(g).addAll(null, new Rectangle(), null);
+        assertThrows(NullPointerException.class, () -> {
+            Group g = new Group();
+            ParentShim.getChildren(g).addAll(null, new Rectangle(), null);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testAddingClipNodeTwice() {
-        Group g = new Group();
+        assertThrows(IllegalArgumentException.class, () -> {
+            Group g = new Group();
 
-        Node clipParent = new Rectangle();
-        Node clipNode = new Rectangle();
+            Node clipParent = new Rectangle();
+            Node clipNode = new Rectangle();
 
-        clipParent.setClip(clipNode);
-        try {
-            // try to add node which is already set as a clip
+            clipParent.setClip(clipNode);
+            try {
+                // try to add node which is already set as a clip
+                ParentShim.getChildren(g).add(clipNode);
+                fail();
+            } catch (IllegalArgumentException e) {
+            }
+
+            // try again
             ParentShim.getChildren(g).add(clipNode);
-            fail();
-        } catch (IllegalArgumentException e) {
-        }
-
-        // try again
-        ParentShim.getChildren(g).add(clipNode);
+        });
     }
 
     @Test
@@ -426,17 +460,19 @@ public class ParentTest {
         ParentShim.getChildren(g).add(clipNode);
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testFalsePermutation() {
-        Group g = new Group();
+        assertThrows(IllegalArgumentException.class, () -> {
+            Group g = new Group();
 
-        Rectangle r1 = new Rectangle();
-        Rectangle r2 = new Rectangle();
-        Rectangle r3 = new Rectangle();
-        Rectangle r4 = new Rectangle();
+            Rectangle r1 = new Rectangle();
+            Rectangle r2 = new Rectangle();
+            Rectangle r3 = new Rectangle();
+            Rectangle r4 = new Rectangle();
 
-        ParentShim.getChildren(g).addAll(r1, r2, r3, r4);
-        ParentShim.getChildren(g).setAll(r1, r2, r2, r4);
+            ParentShim.getChildren(g).addAll(r1, r2, r3, r4);
+            ParentShim.getChildren(g).setAll(r1, r2, r2, r4);
+        });
     }
 
     @Test
@@ -478,7 +514,31 @@ public class ParentTest {
         stage.setScene(scene);
         stage.show();
 
-        // there are assertions tested down the stack (see RT-21746)
+        // there are assertions tested down the stack (see JDK-8115729)
+    }
+
+    @Test
+    public void needsLayoutPropertyIsReadOnly() {
+        assertThrows(
+            ClassCastException.class,
+            () -> { var _ = (Property<Boolean>)new Group().needsLayoutProperty(); });
+    }
+
+    @Test
+    public void isNeedsLayoutReturnsCorrectValueInListener() {
+         var g = new Group();
+         g.layout();
+         assertFalse(g.isNeedsLayout());
+
+         boolean[] flags = new boolean[2];
+         g.needsLayoutProperty().subscribe(value -> {
+             flags[0] = value;
+             flags[1] = g.isNeedsLayout();
+         });
+
+         ParentShim.setNeedsLayout(g, true);
+         assertTrue(flags[0]);
+         assertTrue(flags[1]);
     }
 
     private static class LGroup extends Group {
@@ -499,7 +559,91 @@ public class ParentTest {
         public void clear() {
             layoutCalled = false;
         }
+    }
 
+    /**
+     * Checks if layout flags are always consistent, even when a 2nd layout
+     * pass is requested due to a modification while layout was running.
+     *
+     * This test needs at least a layout tree of 4 levels deep due to
+     * how the layout flags are propagated:
+     * - Node will force another layout on the PARENT of sibling
+     * - Parent code will then ask for another layout on its parent
+     * - If forceParentLayout flag is not propagated, then this does
+     *   not continue up to the root, leaving the root clean.
+     */
+    @Test
+    public void layoutPositionModificationDuringLayoutPassShouldNotLeaveLayoutFlagsInInconsistentState() {
+        AtomicBoolean modifySiblingDuringLayout = new AtomicBoolean();
+        HBox sibling = new HBox();
+        HBox leaf = new HBox() {
+            @Override
+            protected void layoutChildren() {
+                super.layoutChildren();
+
+                /*
+                 * Sometimes layout code modifies a sibling's position,
+                 * in which case Node will force its parent to do another
+                 * layout in a next pass (see layoutX and layoutY properties).
+                 *
+                 * The layout flags should not become inconsistent
+                 * when it does so.
+                 */
+
+                if (modifySiblingDuringLayout.get()) {
+                    sibling.setLayoutX(100);
+                }
+            }
+        };
+        VBox level2 = new VBox(leaf, sibling);
+        HBox level1 = new HBox(level2);
+        VBox root = new VBox(level1);
+
+        // Assert default state after controls are created:
+        assertEquals(LayoutFlags.NEEDS_LAYOUT, ParentShim.getLayoutFlag(root));
+        assertEquals(LayoutFlags.NEEDS_LAYOUT, ParentShim.getLayoutFlag(level1));
+        assertEquals(LayoutFlags.NEEDS_LAYOUT, ParentShim.getLayoutFlag(level2));
+        assertEquals(LayoutFlags.NEEDS_LAYOUT, ParentShim.getLayoutFlag(leaf));
+        assertEquals(LayoutFlags.NEEDS_LAYOUT, ParentShim.getLayoutFlag(sibling));
+
+        root.layout();
+
+        // Assert that all is clean after a layout pass:
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(root));
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(level1));
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(level2));
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(leaf));
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(sibling));
+
+        leaf.requestLayout();
+
+        // Assert that all nodes between leaf and root are marked as needing layout:
+        assertEquals(LayoutFlags.NEEDS_LAYOUT, ParentShim.getLayoutFlag(root));
+        assertEquals(LayoutFlags.NEEDS_LAYOUT, ParentShim.getLayoutFlag(level1));
+        assertEquals(LayoutFlags.NEEDS_LAYOUT, ParentShim.getLayoutFlag(level2));
+        assertEquals(LayoutFlags.NEEDS_LAYOUT, ParentShim.getLayoutFlag(leaf));
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(sibling));
+
+        // Trigger a layout that does a modification that needs a 2nd pass:
+        modifySiblingDuringLayout.set(true);
+        root.layout();
+
+        // Assert that the parent of the sibling, all the way to the root are marked as needing another layout pass:
+        assertEquals(LayoutFlags.NEEDS_LAYOUT, ParentShim.getLayoutFlag(root));
+        assertEquals(LayoutFlags.NEEDS_LAYOUT, ParentShim.getLayoutFlag(level1));
+        assertEquals(LayoutFlags.NEEDS_LAYOUT, ParentShim.getLayoutFlag(level2));
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(leaf));
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(sibling));
+
+        root.layout();
+
+        // Assert that after another layout pass all are clean again:
+        // Note: we still modify the sibling, but since its layoutX is unchanged now, no further pass is triggered
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(root));
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(level1));
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(level2));
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(leaf));
+        assertEquals(LayoutFlags.CLEAN, ParentShim.getLayoutFlag(sibling));
     }
 
     @Test

@@ -30,6 +30,7 @@
 #include <WebCore/BackForwardClient.h>
 #include <wtf/HashSet.h>
 #include <wtf/Vector.h>
+#include "HistoryItem.h"
 
 #include <wtf/java/JavaRef.h>
 
@@ -42,6 +43,7 @@ public:
     virtual ~BackForwardList();
 
     void addItem(Ref<WebCore::HistoryItem>&&) override;
+    void setChildItem(WebCore::BackForwardFrameItemIdentifier, Ref<WebCore::HistoryItem>&&) override;
     void goBack();
     void goForward();
     void goToItem(WebCore::HistoryItem&) override;
@@ -49,10 +51,11 @@ public:
     RefPtr<WebCore::HistoryItem> backItem();
     RefPtr<WebCore::HistoryItem> currentItem();
     RefPtr<WebCore::HistoryItem> forwardItem();
-    RefPtr<WebCore::HistoryItem> itemAtIndex(int) override;
-
-    void backListWithLimit(int, HistoryItemVector&);
-    void forwardListWithLimit(int, HistoryItemVector&);
+    RefPtr<WebCore::HistoryItem> itemAtIndex(int, WebCore::FrameIdentifier) override;
+    Vector<Ref<WebCore::HistoryItem>> allItems(WebCore::FrameIdentifier) override { return m_entries; }
+    RefPtr<WebCore::HistoryItem> itemAtIndex(int) ;
+    void backListWithLimit(int, Vector<Ref<WebCore::HistoryItem>>&);
+    void forwardListWithLimit(int, Vector<Ref<WebCore::HistoryItem>>&);
 
     int capacity();
     void setCapacity(int);
@@ -61,6 +64,8 @@ public:
     unsigned backListCount() const override;
     unsigned forwardListCount() const override;
     bool containsItem(const WebCore::HistoryItem&) const override;
+    void goToProvisionalItem(const WebCore::HistoryItem&) override;
+    void clearProvisionalItem(const WebCore::HistoryItem&) override;
 
     void close() override;
     bool closed();
@@ -77,6 +82,7 @@ private:
     HistoryItemVector m_entries;
     HistoryItemHashSet m_entryHash;
     unsigned m_current;
+    unsigned m_provisional;
     unsigned m_capacity;
     bool m_closed;
     bool m_enabled;

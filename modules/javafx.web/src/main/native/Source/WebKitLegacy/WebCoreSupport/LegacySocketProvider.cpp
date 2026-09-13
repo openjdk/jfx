@@ -26,8 +26,15 @@
 #import "LegacySocketProvider.h"
 
 #import "WebSocketChannel.h"
+#import <WebCore/WebTransportSession.h>
+#import <wtf/CompletionHandler.h>
 
 RefPtr<WebCore::ThreadableWebSocketChannel> LegacySocketProvider::createWebSocketChannel(WebCore::Document& document, WebCore::WebSocketChannelClient& client)
 {
     return WebCore::WebSocketChannel::create(document, client, *this);
+}
+
+std::pair<RefPtr<WebCore::WebTransportSession>, Ref<WebCore::WebTransportSessionPromise>> LegacySocketProvider::initializeWebTransportSession(WebCore::ScriptExecutionContext&, WebCore::WebTransportSessionClient&, const URL&, const WebCore::WebTransportOptions&)
+{
+    return { nullptr, WebCore::WebTransportSessionPromise::createAndReject() };
 }

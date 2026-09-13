@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,79 +35,93 @@ import javafx.scene.Node;
 import test.javafx.scene.NodeTest;
 import javafx.scene.paint.Paint;
 import javafx.scene.shape.Rectangle;
-import org.junit.Test;
 
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static test.com.sun.javafx.test.TestHelper.assertSimilar;
-import static org.junit.Assert.*;
 
 public class RectangleTest {
 
-    @Test public void testPropertyPropagation_visible() throws Exception {
+    @Test
+    public void testPropertyPropagation_visible() throws Exception {
         final Rectangle node = new StubRectangle();
         NodeTest.testBooleanPropertyPropagation(node, "visible", false, true);
     }
 
-    @Test public void testPropertyPropagation_x() throws Exception {
+    @Test
+    public void testPropertyPropagation_x() throws Exception {
         final Rectangle node = new StubRectangle();
         NodeTest.testDoublePropertyPropagation(node, "x", 100, 200);
     }
 
-    @Test public void testPropertyPropagation_y() throws Exception {
+    @Test
+    public void testPropertyPropagation_y() throws Exception {
         final Rectangle node = new StubRectangle();
         NodeTest.testDoublePropertyPropagation(node, "y", 100, 200);
     }
 
-    @Test public void testPropertyPropagation_width() throws Exception {
+    @Test
+    public void testPropertyPropagation_width() throws Exception {
         final Rectangle node = new StubRectangle();
         NodeTest.testDoublePropertyPropagation(node, "width", 100, 200);
     }
 
-    @Test public void testPropertyPropagation_height() throws Exception {
+    @Test
+    public void testPropertyPropagation_height() throws Exception {
         final Rectangle node = new StubRectangle();
         NodeTest.testDoublePropertyPropagation(node, "height", 100, 200);
     }
 
-    @Test public void testPropertyPropagation_arcWidth() throws Exception {
+    @Test
+    public void testPropertyPropagation_arcWidth() throws Exception {
         final Rectangle node = new StubRectangle();
         NodeTest.testDoublePropertyPropagation(node, "arcWidth", 100, 200);
     }
 
-    @Test public void testPropertyPropagation_arcHeight() throws Exception {
+    @Test
+    public void testPropertyPropagation_arcHeight() throws Exception {
         final Rectangle node = new StubRectangle();
         NodeTest.testDoublePropertyPropagation(node, "arcHeight", 100, 200);
     }
 
-    @Test public void testBoundPropertySync_X() throws Exception {
+    @Test
+    public void testBoundPropertySync_X() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubRectangle(200.0, 100.0),
                 "x", "x", 10.0);
     }
 
-    @Test public void testBoundPropertySync_Y() throws Exception {
+    @Test
+    public void testBoundPropertySync_Y() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubRectangle(200.0, 100.0),
                 "y", "y", 20.0);
     }
 
-    @Test public void testBoundPropertySync_Width() throws Exception {
+    @Test
+    public void testBoundPropertySync_Width() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubRectangle(200.0, 100.0),
                 "width", "width", 300.0);
     }
 
-    @Test public void testBoundPropertySync_Height() throws Exception {
+    @Test
+    public void testBoundPropertySync_Height() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubRectangle(200.0, 100.0),
                 "height", "height", 200.0);
     }
 
-    @Test public void testBoundPropertySync_ArcWidth() throws Exception {
+    @Test
+    public void testBoundPropertySync_ArcWidth() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubRectangle(200.0, 100.0),
                 "arcWidth", "arcWidth", 10.0);
     }
 
-    @Test public void testBoundPropertySync_ArcHeight() throws Exception {
+    @Test
+    public void testBoundPropertySync_ArcHeight() throws Exception {
         NodeTest.assertDoublePropertySynced(
                 new StubRectangle(200.0, 100.0),
                 "arcHeight", "arcHeight", 30.0);
@@ -125,7 +139,8 @@ public class RectangleTest {
                 original.getHeight(), original.getWidth()), r.getBoundsInParent());
     }
 
-    @Test public void toStringShouldReturnNonEmptyString() {
+    @Test
+    public void toStringShouldReturnNonEmptyString() {
         String s = new StubRectangle().toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());

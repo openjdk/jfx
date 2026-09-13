@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,14 +26,14 @@
 package test.com.sun.javafx.scene.layout.region;
 
 import javafx.scene.layout.BackgroundRepeat;
-import org.junit.Test;
 import javafx.css.ParsedValue;
 import com.sun.javafx.css.ParsedValueImpl;
 import com.sun.javafx.scene.layout.region.RepeatStruct;
-
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
 import com.sun.javafx.scene.layout.region.RepeatStructConverter;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /**
  */
@@ -41,7 +41,8 @@ public class BackgroundRepeatConverterTest {
     /*
         -fx-background-repeat:
      */
-    @Test public void scenario1() {
+    @Test
+    public void scenario1() {
         ParsedValueImpl<ParsedValue<String,BackgroundRepeat>[][], RepeatStruct[]> value =
                 new ParsedValueImpl<>(
                         new ParsedValueImpl[0][0], null
@@ -74,7 +75,8 @@ public class BackgroundRepeatConverterTest {
     /*
         -fx-background-repeat: repeat round
      */
-    @Test public void scenario3() {
+    @Test
+    public void scenario3() {
         ParsedValue<String,BackgroundRepeat>[][] values = new ParsedValueImpl[][] {
                 { new ParsedValueImpl("repeat", null), new ParsedValueImpl("round", null) }
         };
@@ -92,7 +94,8 @@ public class BackgroundRepeatConverterTest {
     /*
         -fx-background-repeat: space no-repeat
      */
-    @Test public void scenario4() {
+    @Test
+    public void scenario4() {
         ParsedValue<String,BackgroundRepeat>[][] values = new ParsedValueImpl[][] {
                 { new ParsedValueImpl("space", null), new ParsedValueImpl("no-repeat", null) }
         };
@@ -110,7 +113,8 @@ public class BackgroundRepeatConverterTest {
     /*
         -fx-background-repeat: no-repeat repeat, space round
      */
-    @Test public void scenario5() {
+    @Test
+    public void scenario5() {
         ParsedValue<String,BackgroundRepeat>[][] values = new ParsedValueImpl[][] {
                 { new ParsedValueImpl("no-repeat", null), new ParsedValueImpl("repeat", null) },
                 { new ParsedValueImpl("space", null), new ParsedValueImpl("round", null) }

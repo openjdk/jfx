@@ -31,7 +31,7 @@ namespace WTF {
 
 template<typename DerivedTime>
 class GenericTimeMixin {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(GenericTimeMixin);
 public:
     // Call this if you know for sure that the double represents the time according to the
     // same time source as DerivedTime. It must be in seconds.
@@ -42,6 +42,10 @@ public:
 
     static constexpr DerivedTime infinity() { return fromRawSeconds(std::numeric_limits<double>::infinity()); }
     static constexpr DerivedTime nan() { return fromRawSeconds(std::numeric_limits<double>::quiet_NaN()); }
+
+    bool isNaN() const { return std::isnan(m_value); }
+    bool isInfinity() const { return std::isinf(m_value); }
+    bool isFinite() const { return std::isfinite(m_value); }
 
     constexpr Seconds secondsSinceEpoch() const { return Seconds(m_value); }
 
@@ -84,34 +88,7 @@ public:
         return Seconds(m_value - other.m_value);
     }
 
-    constexpr bool operator==(const GenericTimeMixin& other) const
-    {
-        return m_value == other.m_value;
-    }
-
-    constexpr bool operator!=(const GenericTimeMixin& other) const
-    {
-        return m_value != other.m_value;
-    }
-    constexpr bool operator<(const GenericTimeMixin& other) const
-    {
-        return m_value < other.m_value;
-    }
-
-    constexpr bool operator>(const GenericTimeMixin& other) const
-    {
-        return m_value > other.m_value;
-    }
-
-    constexpr bool operator<=(const GenericTimeMixin& other) const
-    {
-        return m_value <= other.m_value;
-    }
-
-    constexpr bool operator>=(const GenericTimeMixin& other) const
-    {
-        return m_value >= other.m_value;
-    }
+    friend constexpr auto operator<=>(GenericTimeMixin, GenericTimeMixin) = default;
 
     DerivedTime isolatedCopy() const
     {
@@ -120,7 +97,7 @@ public:
 
     static constexpr DerivedTime timePointFromNow(Seconds relativeTimeFromNow)
     {
-        if (std::isinf(relativeTimeFromNow))
+        if (relativeTimeFromNow.isInfinity())
             return DerivedTime::fromRawSeconds(relativeTimeFromNow.value());
         return DerivedTime::now() + relativeTimeFromNow;
     }

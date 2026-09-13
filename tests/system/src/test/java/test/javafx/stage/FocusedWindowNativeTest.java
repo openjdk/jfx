@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,13 +26,13 @@
 package test.javafx.stage;
 
 import javafx.application.Platform;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class FocusedWindowNativeTest extends FocusedWindowTestBase {
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         initFXBase();
     }
@@ -42,7 +42,7 @@ public class FocusedWindowNativeTest extends FocusedWindowTestBase {
         testClosedFocusedStageLeakBase();
     }
 
-    @AfterClass
+    @AfterAll
     public static void teardownOnce() {
         Platform.runLater(() -> {
             Platform.exit();

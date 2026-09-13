@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,16 +25,18 @@
 
 package test.com.sun.javafx.application;
 
-import com.sun.javafx.application.PlatformImpl;
-import com.sun.javafx.application.PlatformImplShim;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static test.util.Util.TIMEOUT;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import javafx.application.Platform;
-import junit.framework.AssertionFailedError;
-
-import static org.junit.Assert.*;
-import static test.util.Util.TIMEOUT;
-
+import com.sun.javafx.application.PlatformImpl;
+import com.sun.javafx.application.PlatformImplShim;
 
 /**
  * Test program for PlatformImpl
@@ -55,12 +57,10 @@ public class TaskbarAppCommon {
 
         try {
             if (!launchLatch.await(TIMEOUT, TimeUnit.MILLISECONDS)) {
-                throw new AssertionFailedError("Timeout waiting for Platform to start");
+                fail("Timeout waiting for Platform to start");
             }
         } catch (InterruptedException ex) {
-            AssertionFailedError err = new AssertionFailedError("Unexpected exception");
-            err.initCause(ex);
-            throw err;
+            fail(ex);
         }
         assertEquals(0, launchLatch.getCount());
         final CountDownLatch exitLatch = PlatformImplShim.test_getPlatformExitLatch();

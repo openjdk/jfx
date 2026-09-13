@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,21 +25,22 @@
 
 package test.robot.javafx.embed.swing;
 
-import test.robot.javafx.embed.swing.RT30650GUI;
-import junit.framework.Assert;
-import org.junit.Test;
-
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 /**
- * RT-30650: SwingNode is not Resizable
+ * JDK-8120292: SwingNode is not Resizable
  */
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class RT30650Test {
 
-    @Test(timeout = 15000)
+    @Test
     public void test() {
         assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8196606
-        Assert.assertTrue(RT30650GUI.test());
+        Assertions.assertTrue(RT30650GUI.test());
 
         System.out.println("Passed.");
     }

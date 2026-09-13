@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,28 +33,23 @@ import javafx.scene.Scene;
 import javafx.scene.SubScene;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
 
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-@RunWith(Parameterized.class)
 public class TreeShowingPropertyTest {
-    private final Parent root;
-    private final Node node;
-    private final TreeShowingProperty property;
+    private Parent root;
+    private Node node;
+    private TreeShowingProperty property;
 
-    @Parameters
-    public static Collection<Object[]> parameters() {
+    public static Stream<Supplier<RootAndNodeToTest>> parameters() {
         Supplier<RootAndNodeToTest> supplier1 = () -> {
             Node node = new StackPane();
             return new RootAndNodeToTest(new StackPane(node), node);
@@ -65,7 +60,10 @@ public class TreeShowingPropertyTest {
             return new RootAndNodeToTest(new StackPane(new SubScene(node, 100.0, 100.0)), node);
         };
 
-        return Arrays.asList(new Object[][] { { supplier1 }, { supplier2 } });
+        return Stream.of(
+            supplier1,
+            supplier2
+        );
     }
 
     static class RootAndNodeToTest {
@@ -78,7 +76,7 @@ public class TreeShowingPropertyTest {
         Node nodeToTest;
     }
 
-    public TreeShowingPropertyTest(Supplier<RootAndNodeToTest> nodeSupplier) {
+    private void setUp(Supplier<RootAndNodeToTest> nodeSupplier) {
         RootAndNodeToTest nodes = nodeSupplier.get();
 
         this.root = nodes.root;
@@ -86,13 +84,17 @@ public class TreeShowingPropertyTest {
         this.property = new TreeShowingProperty(this.node);
     }
 
-    @Test
-    public void nodeNotAttachedToSceneShouldNotBeShowing() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void nodeNotAttachedToSceneShouldNotBeShowing(Supplier<RootAndNodeToTest> nodeSupplier) {
+        setUp(nodeSupplier);
         assertFalse(property.get());
     }
 
-    @Test
-    public void getShouldTrackChangesInShowingStateForGivenNode() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void getShouldTrackChangesInShowingStateForGivenNode(Supplier<RootAndNodeToTest> nodeSupplier) {
+        setUp(nodeSupplier);
         assertFalse(property.get());  // not showing initially as not attached to a Scene
 
         Scene scene = new Scene(root);
@@ -113,8 +115,10 @@ public class TreeShowingPropertyTest {
         assertFalse(property.get());  // not showing again as Window is hidden
     }
 
-    @Test
-    public void changeListenerShouldRegisterAndUnregisterCorrectly() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void changeListenerShouldRegisterAndUnregisterCorrectly(Supplier<RootAndNodeToTest> nodeSupplier) {
+        setUp(nodeSupplier);
         AtomicReference<Boolean> state = new AtomicReference<>();
         ChangeListener<Boolean> listener = (obs, old, current) -> state.set(current);
 
@@ -135,8 +139,10 @@ public class TreeShowingPropertyTest {
         assertNull(state.getAndSet(null));  // no change fired as listener was unregistered
     }
 
-    @Test
-    public void invalidationListenerShouldRegisterAndUnregisterCorrectly() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void invalidationListenerShouldRegisterAndUnregisterCorrectly(Supplier<RootAndNodeToTest> nodeSupplier) {
+        setUp(nodeSupplier);
         AtomicReference<Boolean> state = new AtomicReference<>();
         InvalidationListener listener = obs -> state.set(true);
 
@@ -158,8 +164,10 @@ public class TreeShowingPropertyTest {
         assertNull(state.getAndSet(null));  // expect no invalidation as listener was unregistered
     }
 
-    @Test
-    public void changeListenerShouldTrackShowingState() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void changeListenerShouldTrackShowingState(Supplier<RootAndNodeToTest> nodeSupplier) {
+        setUp(nodeSupplier);
         AtomicReference<Boolean> state = new AtomicReference<>();
 
         property.addListener((obs, old, current) -> state.set(current));
@@ -216,8 +224,10 @@ public class TreeShowingPropertyTest {
         assertTrue(state.getAndSet(null));  // making root part of a different visible scene should trigger showing change
     }
 
-    @Test
-    public void invalidationListenerShouldNotifyOfChangesInShowingState() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void invalidationListenerShouldNotifyOfChangesInShowingState(Supplier<RootAndNodeToTest> nodeSupplier) {
+        setUp(nodeSupplier);
         AtomicReference<Boolean> state = new AtomicReference<>();
 
         property.addListener(obs -> state.set(true));
@@ -287,8 +297,10 @@ public class TreeShowingPropertyTest {
         assertTrue(state.getAndSet(null));  // making root part of a different visible scene should trigger invalidation
     }
 
-    @Test
-    public void disposeShouldUnregisterListenersOnGivenNode() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void disposeShouldUnregisterListenersOnGivenNode(Supplier<RootAndNodeToTest> nodeSupplier) {
+        setUp(nodeSupplier);
         AtomicReference<Boolean> state = new AtomicReference<>();
 
         property.addListener((obs, old, current) -> state.set(current));

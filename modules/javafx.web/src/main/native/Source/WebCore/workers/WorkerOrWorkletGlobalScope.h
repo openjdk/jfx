@@ -25,13 +25,16 @@
 
 #pragma once
 
-#include "EventTarget.h"
-#include "FetchOptions.h"
-#include "ScriptExecutionContext.h"
-#include "WorkerThreadType.h"
+#include <WebCore/EventTarget.h>
+#include <WebCore/EventTargetInlines.h>
+#include <WebCore/FetchOptions.h>
+#include <WebCore/ScriptExecutionContext.h>
+#include <WebCore/WorkerThreadType.h>
+#include <pal/SessionID.h>
 
 namespace WebCore {
 
+class ContentSecurityPolicyResponseHeaders;
 class EventLoopTaskGroup;
 class ScriptModuleLoader;
 class WorkerEventLoop;
@@ -39,26 +42,28 @@ class WorkerInspectorController;
 class WorkerOrWorkletScriptController;
 class WorkerOrWorkletThread;
 
-class WorkerOrWorkletGlobalScope : public ScriptExecutionContext, public RefCounted<WorkerOrWorkletGlobalScope>, public EventTarget {
-    WTF_MAKE_ISO_ALLOCATED(WorkerOrWorkletGlobalScope);
+enum class AdvancedPrivacyProtections : uint16_t;
+enum class NoiseInjectionPolicy : uint8_t;
+
+class WorkerOrWorkletGlobalScope : public RefCounted<WorkerOrWorkletGlobalScope>, public ScriptExecutionContext, public EventTarget {
+    WTF_MAKE_TZONE_ALLOCATED(WorkerOrWorkletGlobalScope);
     WTF_MAKE_NONCOPYABLE(WorkerOrWorkletGlobalScope);
 public:
     virtual ~WorkerOrWorkletGlobalScope();
 
-    using ScriptExecutionContext::weakPtrFactory;
-    using ScriptExecutionContext::WeakValueType;
-    using ScriptExecutionContext::WeakPtrImplType;
+    USING_CAN_MAKE_WEAKPTR(ScriptExecutionContext);
 
     bool isClosing() const { return m_isClosing; }
-    WorkerOrWorkletThread* workerOrWorkletThread() const { return m_thread; }
+    RefPtr<WorkerOrWorkletThread> workerOrWorkletThread() const;
 
     WorkerOrWorkletScriptController* script() const { return m_script.get(); }
     void clearScript();
 
     JSC::VM& vm() final;
-    WorkerInspectorController& inspectorController() const { return *m_inspectorController; }
+    JSC::VM* vmIfExists() const final;
+    WorkerInspectorController& inspectorController() const { return m_inspectorController; }
 
-    ScriptModuleLoader& moduleLoader() { return *m_moduleLoader; }
+    ScriptModuleLoader& moduleLoader() { return m_moduleLoader; }
 
     // ScriptExecutionContext.
     EventLoopTaskGroup& eventLoop() final;
@@ -66,7 +71,7 @@ public:
     void postTask(Task&&) final; // Executes the task on context's thread asynchronously.
     std::optional<PAL::SessionID> sessionID() const final { return m_sessionID; }
 
-    // Defined specifcially for WorkerOrWorkletGlobalScope for cooperation with
+    // Defined specifically for WorkerOrWorkletGlobalScope for cooperation with
     // WorkerEventLoop and WorkerRunLoop, not part of ScriptExecutionContext.
     void postTaskForMode(Task&&, const String&);
 
@@ -81,9 +86,13 @@ public:
     virtual FetchOptions::Destination destination() const = 0;
     ReferrerPolicy referrerPolicy() const final { return m_referrerPolicy; }
     std::optional<uint64_t> noiseInjectionHashSalt() const final { return m_noiseInjectionHashSalt; }
+    OptionSet<NoiseInjectionPolicy> noiseInjectionPolicies() const final;
+    OptionSet<AdvancedPrivacyProtections> advancedPrivacyProtections() const final { return m_advancedPrivacyProtections; }
 
 protected:
-    WorkerOrWorkletGlobalScope(WorkerThreadType, PAL::SessionID, Ref<JSC::VM>&&, ReferrerPolicy, WorkerOrWorkletThread*, std::optional<uint64_t>,  ScriptExecutionContextIdentifier = { });
+    WorkerOrWorkletGlobalScope(WorkerThreadType, PAL::SessionID, Ref<JSC::VM>&&, ReferrerPolicy, WorkerOrWorkletThread*, std::optional<uint64_t>, OptionSet<AdvancedPrivacyProtections>, std::optional<ScriptExecutionContextIdentifier> = std::nullopt);
+
+    void applyContentSecurityPolicyResponseHeaders(const ContentSecurityPolicyResponseHeaders&);
 
     // ScriptExecutionContext.
     bool isJSExecutionForbidden() const final;
@@ -94,8 +103,7 @@ private:
     // ScriptExecutionContext.
     void disableEval(const String& errorMessage) final;
     void disableWebAssembly(const String& errorMessage) final;
-    void refScriptExecutionContext() final { ref(); }
-    void derefScriptExecutionContext() final { deref(); }
+    void setTrustedTypesEnforcement(JSC::TrustedTypesEnforcement) final;
 
     // EventTarget.
     ScriptExecutionContext* scriptExecutionContext() const final { return const_cast<WorkerOrWorkletGlobalScope*>(this); }
@@ -106,20 +114,22 @@ private:
     NotificationClient* notificationClient() override { return nullptr; }
 #endif
 
+    uint32_t m_contextThreadUID { 0 };
     std::unique_ptr<WorkerOrWorkletScriptController> m_script;
-    std::unique_ptr<ScriptModuleLoader> m_moduleLoader;
-    WorkerOrWorkletThread* m_thread;
-    RefPtr<WorkerEventLoop> m_eventLoop;
-    std::unique_ptr<EventLoopTaskGroup> m_defaultTaskGroup;
-    std::unique_ptr<WorkerInspectorController> m_inspectorController;
+    const UniqueRef<ScriptModuleLoader> m_moduleLoader;
+    ThreadSafeWeakPtr<WorkerOrWorkletThread> m_thread;
+    const RefPtr<WorkerEventLoop> m_eventLoop;
+    const std::unique_ptr<EventLoopTaskGroup> m_defaultTaskGroup;
+    const UniqueRef<WorkerInspectorController> m_inspectorController;
     PAL::SessionID m_sessionID;
     ReferrerPolicy m_referrerPolicy;
     bool m_isClosing { false };
     std::optional<uint64_t> m_noiseInjectionHashSalt;
+    OptionSet<AdvancedPrivacyProtections> m_advancedPrivacyProtections;
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WorkerOrWorkletGlobalScope)
-    static bool isType(const WebCore::ScriptExecutionContext& context) { return context.isWorkerGlobalScope() || context.isWorkletGlobalScope(); }
+    static bool isType(const WebCore::ScriptExecutionContext& context) { return context.isWorkerOrWorkletGlobalScope(); }
 SPECIALIZE_TYPE_TRAITS_END()

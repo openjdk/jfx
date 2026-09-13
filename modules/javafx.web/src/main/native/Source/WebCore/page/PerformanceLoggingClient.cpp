@@ -26,18 +26,23 @@
 #include "config.h"
 #include "PerformanceLoggingClient.h"
 
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
+
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PerformanceLoggingClient);
 
 String PerformanceLoggingClient::synchronousScrollingReasonsAsString(OptionSet<SynchronousScrollingReason> reasons)
 {
     if (reasons.isEmpty())
         return emptyString();
 
-    auto string = makeString(reasons.contains(SynchronousScrollingReason::ForcedOnMainThread) ? "forced," : "",
-        reasons.contains(SynchronousScrollingReason::HasSlowRepaintObjects) ? "slow-repaint objects," : "",
-        reasons.contains(SynchronousScrollingReason::HasViewportConstrainedObjectsWithoutSupportingFixedLayers) ? "viewport-constrained objects," : "",
-        reasons.contains(SynchronousScrollingReason::HasNonLayerViewportConstrainedObjects) ? "non-layer viewport-constrained objects," : "",
-        reasons.contains(SynchronousScrollingReason::IsImageDocument) ? "image document," : "");
+    auto string = makeString(reasons.contains(SynchronousScrollingReason::ForcedOnMainThread) ? "forced,"_s : ""_s,
+        reasons.contains(SynchronousScrollingReason::HasSlowRepaintObjects) ? "slow-repaint objects,"_s : ""_s,
+        reasons.contains(SynchronousScrollingReason::HasViewportConstrainedObjectsWithoutSupportingFixedLayers) ? "viewport-constrained objects,"_s : ""_s,
+        reasons.contains(SynchronousScrollingReason::HasNonLayerViewportConstrainedObjects) ? "non-layer viewport-constrained objects,"_s : ""_s,
+        reasons.contains(SynchronousScrollingReason::IsImageDocument) ? "image document,"_s : ""_s);
 
     // Strip the trailing comma.
     return string.left(string.length() - 1);

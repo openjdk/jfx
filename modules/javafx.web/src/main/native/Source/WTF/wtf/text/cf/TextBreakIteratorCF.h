@@ -20,13 +20,16 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #include <wtf/text/cf/TextBreakIteratorCFCharacterCluster.h>
 #include <wtf/text/cf/TextBreakIteratorCFStringTokenizer.h>
+
+#if PLATFORM(COCOA)
 
 namespace WTF {
 
 class TextBreakIteratorCF {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(TextBreakIteratorCF);
 public:
     enum class Mode {
         ComposedCharacter,
@@ -49,10 +52,10 @@ public:
     TextBreakIteratorCF& operator=(const TextBreakIteratorCF&) = delete;
     TextBreakIteratorCF& operator=(TextBreakIteratorCF&&) = default;
 
-    void setText(StringView string, const UChar* priorContext, unsigned priorContextLength)
+    void setText(StringView string, std::span<const char16_t> priorContext)
     {
         return switchOn(m_backing, [&](auto& iterator) {
-            return iterator.setText(string, { priorContext, priorContextLength });
+            return iterator.setText(string, priorContext);
         });
     }
 
@@ -78,7 +81,7 @@ public:
     }
 
 private:
-    using BackingVariant = std::variant<TextBreakIteratorCFCharacterCluster, TextBreakIteratorCFStringTokenizer>;
+    using BackingVariant = Variant<TextBreakIteratorCFCharacterCluster, TextBreakIteratorCFStringTokenizer>;
 
     static BackingVariant mapModeToBackingIterator(StringView string, StringView priorContext, Mode mode, const AtomString& locale)
     {
@@ -104,3 +107,5 @@ private:
 };
 
 } // namespace WTF
+
+#endif // PLATFORM(COCOA)

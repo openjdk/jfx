@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2021 Apple, Inc. All rights reserved.
+ * Copyright (C) 2013-2024 Apple, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,9 +44,10 @@ JSMapIterator* JSMapIterator::createWithInitialValues(VM& vm, Structure* structu
 void JSMapIterator::finishCreation(VM& vm, JSMap* iteratedObject, IterationKind kind)
 {
     Base::finishCreation(vm);
-    internalField(Field::MapBucket).set(vm, this, iteratedObject->head());
-    internalField(Field::IteratedObject).set(vm, this, iteratedObject);
-    internalField(Field::Kind).set(vm, this, jsNumber(static_cast<int32_t>(kind)));
+    setEntry(vm, 0);
+    setIteratedObject(vm, iteratedObject);
+    internalField(Field::Storage).set(vm, this, iteratedObject->storage());
+    internalField(Field::Kind).setWithoutWriteBarrier(jsNumber(static_cast<int32_t>(kind)));
 }
 
 void JSMapIterator::finishCreation(VM& vm)
@@ -67,13 +68,38 @@ void JSMapIterator::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 
 DEFINE_VISIT_CHILDREN(JSMapIterator);
 
-JSValue JSMapIterator::createPair(JSGlobalObject* globalObject, JSValue key, JSValue value)
+
+JSC_DEFINE_HOST_FUNCTION(mapIteratorPrivateFuncMapIteratorNext, (JSGlobalObject * globalObject, CallFrame* callFrame))
 {
-    MarkedArgumentBuffer args;
-    args.append(key);
-    args.append(value);
-    ASSERT(!args.hasOverflowed());
-    return constructArray(globalObject, static_cast<ArrayAllocationProfile*>(nullptr), args);
+    ASSERT(callFrame->argument(0).isCell());
+
+    VM& vm = globalObject->vm();
+    JSCell* cell = callFrame->uncheckedArgument(0).asCell();
+    if (cell == vm.orderedHashTableSentinel())
+        return JSValue::encode(cell);
+    return JSValue::encode(jsCast<JSMapIterator*>(cell)->next(vm));
+}
+
+JSC_DEFINE_HOST_FUNCTION(mapIteratorPrivateFuncMapIteratorKey, (JSGlobalObject * globalObject, CallFrame* callFrame))
+{
+    ASSERT(callFrame->argument(0).isCell());
+
+    VM& vm = globalObject->vm();
+    JSCell* cell = callFrame->uncheckedArgument(0).asCell();
+    if (cell == vm.orderedHashTableSentinel())
+        return JSValue::encode(cell);
+    return JSValue::encode(jsCast<JSMapIterator*>(cell)->peekKey(vm));
+}
+
+JSC_DEFINE_HOST_FUNCTION(mapIteratorPrivateFuncMapIteratorValue, (JSGlobalObject * globalObject, CallFrame* callFrame))
+{
+    ASSERT(callFrame->argument(0).isCell());
+
+    VM& vm = globalObject->vm();
+    JSCell* cell = callFrame->uncheckedArgument(0).asCell();
+    if (cell == vm.orderedHashTableSentinel())
+        return JSValue::encode(cell);
+    return JSValue::encode(jsCast<JSMapIterator*>(cell)->peekValue(vm));
 }
 
 }

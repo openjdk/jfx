@@ -25,9 +25,11 @@
 
 #pragma once
 
-#include "AnimationFrameRate.h"
-#include "DisplayRefreshMonitorClient.h"
+#include <WebCore/AnimationFrameRate.h>
+#include <WebCore/DisplayRefreshMonitorClient.h>
 #include <wtf/Seconds.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
@@ -35,7 +37,8 @@ class Page;
 class Timer;
 
 class RenderingUpdateScheduler final : public DisplayRefreshMonitorClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(RenderingUpdateScheduler);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderingUpdateScheduler);
 public:
     static std::unique_ptr<RenderingUpdateScheduler> create(Page& page)
     {
@@ -43,6 +46,7 @@ public:
     }
 
     RenderingUpdateScheduler(Page&);
+    ~RenderingUpdateScheduler();
 
     void adjustRenderingUpdateFrequency();
     void scheduleRenderingUpdate();
@@ -61,10 +65,10 @@ private:
 
     void triggerRenderingUpdate();
 
-    Page& m_page;
+    WeakRef<Page> m_page;
     std::unique_ptr<Timer> m_refreshTimer;
     unsigned m_rescheduledRenderingUpdateCount { 0 };
     bool m_useTimer { false };
 };
 
-}
+} // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,6 +47,14 @@ public class ByteBgr {
             ToByteBgrObj = BaseByteToByteConverter.create(accessor);
         }
         return ToByteBgrObj;
+    }
+
+    private static ByteToBytePixelConverter ToByteRgbObj;
+    public static ByteToBytePixelConverter ToByteRgbConverter() {
+        if (ToByteRgbObj == null) {
+            ToByteRgbObj = new BaseByteToByteConverter.SwapThreeByteConverter(ByteBgr.getter, ByteRgb.setter);
+        }
+        return ToByteRgbObj;
     }
 
     public static ByteToBytePixelConverter ToByteBgraConverter() {

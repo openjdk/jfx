@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,29 @@ package test.javafx.scene.control;
 
 import javafx.css.CssMetaData;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
-
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.Arguments;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertTimeout;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.params.provider.Arguments;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -49,11 +71,6 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Pane;
 import javafx.scene.shape.Rectangle;
 import javafx.stage.Stage;
-import static org.junit.Assert.*;
-
-
-import org.junit.Before;
-import org.junit.Test;
 
 /**
  *
@@ -73,7 +90,8 @@ public class ToolbarTest {
     private static final double EXPANDED_CHILDREN_SIZE = 250.0;
     private static final double ORIGINAL_CHILDREN_SIZE = 100.0;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         tk = Toolkit.getToolkit();
 
         assertTrue(tk instanceof StubToolkit);  // Ensure it's StubToolkit
@@ -252,6 +270,73 @@ public class ToolbarTest {
         testOverflowVisibility();
     }
 
+    @Test
+    public void overflowDoesNotOverlapWithItems() {
+        Rectangle node3 = new Rectangle(2.0, 4.0);
+        Rectangle node4 = new Rectangle(2.0, 4.0);
+
+        node1.setId("node1");
+        node2.setId("node2");
+        node3.setId("node3");
+        node4.setId("node4");
+
+        // Make the width of the node dependent on whether it is added to the scene
+        node1.sceneProperty().addListener((ov, o, n) -> {
+            if (n == null) {
+                setFixSize(node1, 0);
+            } else {
+                setFixSize(node1, ORIGINAL_CHILDREN_SIZE);
+            }
+        });
+
+        initializeToolBar();
+        toolBar.getItems().addAll(node3, node4);
+
+        setFixSize(toolBar, ORIGINAL_CHILDREN_SIZE * 4 + 50);
+        setFixSize(node1, ORIGINAL_CHILDREN_SIZE);
+        setFixSize(node2, ORIGINAL_CHILDREN_SIZE);
+        setFixSize(node3, ORIGINAL_CHILDREN_SIZE);
+        setFixSize(node4, ORIGINAL_CHILDREN_SIZE);
+
+        // Resize toolbar
+        setFixSize(toolBar, ORIGINAL_CHILDREN_SIZE * 3);
+
+        checkNodeBoundsWithinToolbar(node1);
+        checkNodeBoundsWithinToolbar(node2);
+        checkNodeBoundsWithinToolbar(node3);
+        checkNodeBoundsWithinToolbar(node4);
+    }
+
+
+    private void checkNodeBoundsWithinToolbar(Node node) {
+        if (node.getScene() != toolBar.getScene()) {
+            // Currently, a node that does not fit into the toolbar is removed from the toolbar and from the the scene.
+            // Although this is an implementation detail, we use it here to check whether the node is visible in the toolbar or has been moved behind the overflow button.
+            return;
+        }
+
+        double nodeX = node.getLayoutX();
+        double nodeWidth = node.prefWidth(-1);
+
+        Pane overflowButton = getOverflowButton();
+        if (overflowButton.getScene() != null && overflowButton.isVisible()) {
+            assertTrue(
+                nodeX + nodeWidth < overflowButton.getLayoutX(),
+                "'" + node.getId() + "' is overlapping the overflowButton." +
+                " The node " + "<" + nodeX + ".." + (nodeX + nodeWidth) + ">."
+                + " The overflow button " + "<" + overflowButton.getLayoutX() + ".."
+                + (overflowButton.getLayoutX() + overflowButton.getWidth()) + ">"
+            );
+        }
+
+        assertTrue(
+            nodeX + nodeWidth < toolBar.getWidth(),
+            "'" + node.getId() + "' bounds are outside the toolbar." +
+            " The node " + "<" + nodeX + ".." + (nodeX + nodeWidth) + ">."
+            + " The toolbar width " + toolBar.getWidth()
+        );
+    }
+
     private void initializeToolBar() {
         root = new StackPane(toolBar);
         root.setPrefSize(400, 400);
@@ -295,14 +380,18 @@ public class ToolbarTest {
     }
 
     private void assertOverflowNotShown() {
-        Pane pane = (Pane) toolBar.queryAccessibleAttribute(AccessibleAttribute.OVERFLOW_BUTTON);
+        Pane pane = getOverflowButton();
         assertNotNull(pane);
         assertFalse(pane.isVisible());
     }
 
     private void assertOverflowShown() {
-        Pane pane = (Pane) toolBar.queryAccessibleAttribute(AccessibleAttribute.OVERFLOW_BUTTON);
+        Pane pane = getOverflowButton();
         assertNotNull(pane);
         assertTrue(pane.isVisible());
+    }
+
+    private Pane getOverflowButton() {
+        return (Pane) toolBar.queryAccessibleAttribute(AccessibleAttribute.OVERFLOW_BUTTON);
     }
 }

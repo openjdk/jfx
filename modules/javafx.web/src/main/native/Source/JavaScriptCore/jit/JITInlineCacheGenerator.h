@@ -25,15 +25,18 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(JIT)
 
-#include "AssemblyHelpers.h"
-#include "CCallHelpers.h"
-#include "CodeOrigin.h"
-#include "JITOperationValidation.h"
-#include "JITOperations.h"
-#include "JSCJSValue.h"
-#include "RegisterSet.h"
+#include <JavaScriptCore/AssemblyHelpers.h>
+#include <JavaScriptCore/CCallHelpers.h>
+#include <JavaScriptCore/CacheableIdentifier.h>
+#include <JavaScriptCore/CodeOrigin.h>
+#include <JavaScriptCore/JITOperationValidation.h>
+#include <JavaScriptCore/JITOperations.h>
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/RegisterSet.h>
 
 namespace JSC {
 namespace DFG {
@@ -41,7 +44,6 @@ class JITCompiler;
 struct UnlinkedStructureStubInfo;
 }
 
-class CacheableIdentifier;
 class CallSiteIndex;
 class CodeBlock;
 class JIT;
@@ -50,9 +52,10 @@ struct UnlinkedStructureStubInfo;
 struct BaselineUnlinkedStructureStubInfo;
 
 enum class AccessType : int8_t;
+enum class CacheType : int8_t;
 enum class JITType : uint8_t;
 
-using CompileTimeStructureStubInfo = std::variant<StructureStubInfo*, BaselineUnlinkedStructureStubInfo*, DFG::UnlinkedStructureStubInfo*>;
+using CompileTimeStructureStubInfo = Variant<StructureStubInfo*, BaselineUnlinkedStructureStubInfo*, DFG::UnlinkedStructureStubInfo*>;
 
 class JITInlineCacheGenerator {
 protected:
@@ -70,35 +73,45 @@ public:
 
     CCallHelpers::Label slowPathBegin() const { return m_slowPathBegin; }
 
+    void reportBaselineDataICSlowPathBegin(CCallHelpers::Label slowPathBegin)
+    {
+        m_slowPathBegin = slowPathBegin;
+    }
+
     void finalize(
         LinkBuffer& fastPathLinkBuffer, LinkBuffer& slowPathLinkBuffer,
         CodeLocationLabel<JITStubRoutinePtrTag> start);
 
-    void generateBaselineDataICFastPath(JIT&, unsigned stubInfoConstant, GPRReg stubInfoGPR);
-#if ENABLE(DFG_JIT)
-    void generateDFGDataICFastPath(DFG::JITCompiler&, unsigned stubInfoConstant, GPRReg stubInfoGPR);
-#endif
-
-    UnlinkedStructureStubInfo* m_unlinkedStubInfo { nullptr };
-    unsigned m_unlinkedStubInfoConstantIndex { std::numeric_limits<unsigned>::max() };
+    JSC::UnlinkedStructureStubInfo* m_unlinkedStubInfo { nullptr };
 
     template<typename StubInfo>
-    static void setUpStubInfoImpl(StubInfo& stubInfo, AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters)
+    static void setUpStubInfoImpl(StubInfo& stubInfo, CodeBlock* codeBlock, AccessType accessType, CacheType cacheType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters)
     {
         stubInfo.accessType = accessType;
+        stubInfo.preconfiguredCacheType = cacheType;
         if constexpr (std::is_same_v<std::decay_t<StubInfo>, BaselineUnlinkedStructureStubInfo>) {
             stubInfo.bytecodeIndex = codeOrigin.bytecodeIndex();
             UNUSED_PARAM(callSiteIndex);
             UNUSED_PARAM(usedRegisters);
+            UNUSED_PARAM(codeBlock);
         } else {
             stubInfo.codeOrigin = codeOrigin;
             stubInfo.callSiteIndex = callSiteIndex;
             stubInfo.usedRegisters = usedRegisters.buildScalarRegisterSet();
-            stubInfo.hasConstantIdentifier = true;
+        }
+        if constexpr (std::is_same_v<std::decay_t<StubInfo>, StructureStubInfo>) {
+            if (codeOrigin.inlineCallFrame())
+                stubInfo.m_globalObject = baselineCodeBlockForInlineCallFrame(codeOrigin.inlineCallFrame())->globalObject();
+            else
+                stubInfo.m_globalObject = codeBlock->globalObject();
         }
     }
 
+    AccessType accessType() const { return m_accessType; }
+
 protected:
+    void generateDataICFastPath(CCallHelpers&, GPRReg stubInfoGPR);
+
     StructureStubInfo* m_stubInfo { nullptr };
     AccessType m_accessType;
 
@@ -128,11 +141,12 @@ public:
         LinkBuffer& fastPathLinkBuffer, LinkBuffer& slowPathLinkBuffer);
 
     template<typename StubInfo>
-    static void setUpStubInfoImpl(StubInfo& stubInfo,
-        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
+    static void setUpStubInfoImpl(StubInfo& stubInfo, CodeBlock* codeBlock,
+        AccessType accessType, CacheType cacheType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters, CacheableIdentifier propertyName,
         JSValueRegs baseRegs, JSValueRegs valueRegs, GPRReg stubInfoGPR)
     {
-        JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters);
+        JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, codeBlock, accessType, cacheType, codeOrigin, callSiteIndex, usedRegisters);
+        stubInfo.m_identifier = propertyName;
         if constexpr (!std::is_same_v<std::decay_t<StubInfo>, BaselineUnlinkedStructureStubInfo>) {
             stubInfo.m_baseGPR = baseRegs.payloadGPR();
             stubInfo.m_valueGPR = valueRegs.payloadGPR();
@@ -168,24 +182,22 @@ public:
 
     JITGetByIdGenerator(
         CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, const RegisterSetBuilder& usedRegisters, CacheableIdentifier,
-        JSValueRegs base, JSValueRegs value, GPRReg stubInfoGPR, AccessType);
+        JSValueRegs base, JSValueRegs value, GPRReg stubInfoGPR, AccessType, CacheType);
 
-    void generateFastPath(CCallHelpers&, GPRReg scratchGPR);
-    void generateBaselineDataICFastPath(JIT&, unsigned stubInfoConstant, GPRReg stubInfoGPR);
-#if ENABLE(DFG_JIT)
-    void generateDFGDataICFastPath(DFG::JITCompiler&, unsigned stubInfoConstant, JSValueRegs baseJSR, JSValueRegs resultJSR, GPRReg stubInfoGPR, GPRReg scratchGPR);
-#endif
+    void generateFastPath(CCallHelpers&);
+    void generateDataICFastPath(CCallHelpers&);
 
     template<typename StubInfo>
-    static void setUpStubInfo(StubInfo& stubInfo,
-        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
+    static void setUpStubInfo(StubInfo& stubInfo, CodeBlock* codeBlock,
+        AccessType accessType, CacheType cacheType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters, CacheableIdentifier propertyName,
         JSValueRegs baseRegs, JSValueRegs valueRegs, GPRReg stubInfoGPR)
     {
-        JITByIdGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters, baseRegs, valueRegs, stubInfoGPR);
+        JITByIdGenerator::setUpStubInfoImpl(stubInfo, codeBlock, accessType, cacheType, codeOrigin, callSiteIndex, usedRegisters, propertyName, baseRegs, valueRegs, stubInfoGPR);
     }
 
 private:
     bool m_isLengthAccess;
+    CacheType m_cacheType;
 };
 
 class JITGetByIdWithThisGenerator final : public JITByIdGenerator {
@@ -196,18 +208,15 @@ public:
         CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, const RegisterSetBuilder& usedRegisters, CacheableIdentifier,
         JSValueRegs value, JSValueRegs base, JSValueRegs thisRegs, GPRReg stubInfoGPR);
 
-    void generateFastPath(CCallHelpers&, GPRReg scratchGPR);
-    void generateBaselineDataICFastPath(JIT&, unsigned stubInfoConstant, GPRReg stubInfoGPR);
-#if ENABLE(DFG_JIT)
-    void generateDFGDataICFastPath(DFG::JITCompiler&, unsigned stubInfoConstant, JSValueRegs baseJSR, JSValueRegs resultJSR, GPRReg stubInfoGPR, GPRReg scratchGPR);
-#endif
+    void generateFastPath(CCallHelpers&);
+    void generateDataICFastPath(CCallHelpers&);
 
     template<typename StubInfo>
-    static void setUpStubInfo(StubInfo& stubInfo,
-        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
+    static void setUpStubInfo(StubInfo& stubInfo, CodeBlock* codeBlock,
+        AccessType accessType, CacheType cacheType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters, CacheableIdentifier propertyName,
         JSValueRegs valueRegs, JSValueRegs baseRegs, JSValueRegs thisRegs, GPRReg stubInfoGPR)
     {
-        JITByIdGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters, baseRegs, valueRegs, stubInfoGPR);
+        JITByIdGenerator::setUpStubInfoImpl(stubInfo, codeBlock, accessType, cacheType, codeOrigin, callSiteIndex, usedRegisters, propertyName, baseRegs, valueRegs, stubInfoGPR);
         if constexpr (!std::is_same_v<std::decay_t<StubInfo>, BaselineUnlinkedStructureStubInfo>) {
             stubInfo.m_extraGPR = thisRegs.payloadGPR();
 #if USE(JSVALUE32_64)
@@ -224,30 +233,21 @@ public:
 
     JITPutByIdGenerator(
         CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, const RegisterSetBuilder& usedRegisters, CacheableIdentifier,
-        JSValueRegs base, JSValueRegs value, GPRReg stubInfoGPR, GPRReg scratch, ECMAMode, AccessType);
+        JSValueRegs base, JSValueRegs value, GPRReg stubInfoGPR, GPRReg scratch, AccessType);
 
-    void generateFastPath(CCallHelpers&, GPRReg scratchGPR, GPRReg scratch2GPR);
-    void generateBaselineDataICFastPath(JIT&, unsigned stubInfoConstant, GPRReg stubInfoGPR);
-#if ENABLE(DFG_JIT)
-    void generateDFGDataICFastPath(DFG::JITCompiler&, unsigned stubInfoConstant, JSValueRegs baseJSR, JSValueRegs valueJSR, GPRReg stubInfoGPR, GPRReg scratchGPR, GPRReg scratch2GPR);
-#endif
-
-    V_JITOperation_GSsiJJC slowPathFunction();
+    void generateFastPath(CCallHelpers&);
+    void generateDataICFastPath(CCallHelpers&);
 
     template<typename StubInfo>
-    static void setUpStubInfo(StubInfo& stubInfo,
-        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
-        JSValueRegs baseRegs, JSValueRegs valueRegs, GPRReg stubInfoGPR, GPRReg scratchGPR, ECMAMode ecmaMode)
+    static void setUpStubInfo(StubInfo& stubInfo, CodeBlock* codeBlock,
+        AccessType accessType, CacheType cacheType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters, CacheableIdentifier propertyName,
+        JSValueRegs baseRegs, JSValueRegs valueRegs, GPRReg stubInfoGPR, GPRReg scratchGPR)
     {
-        JITByIdGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters, baseRegs, valueRegs, stubInfoGPR);
+        JITByIdGenerator::setUpStubInfoImpl(stubInfo, codeBlock, accessType, cacheType, codeOrigin, callSiteIndex, usedRegisters, propertyName, baseRegs, valueRegs, stubInfoGPR);
         if constexpr (!std::is_same_v<std::decay_t<StubInfo>, BaselineUnlinkedStructureStubInfo>)
             stubInfo.usedRegisters.remove(scratchGPR);
         else
             UNUSED_PARAM(scratchGPR);
-        if constexpr (!std::is_same_v<std::decay_t<StubInfo>, StructureStubInfo>)
-            stubInfo.ecmaMode = ecmaMode;
-        else
-            UNUSED_PARAM(ecmaMode);
         }
 };
 
@@ -258,7 +258,7 @@ public:
 
     JITPutByValGenerator(
         CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, AccessType, const RegisterSetBuilder& usedRegisters,
-        JSValueRegs base, JSValueRegs property, JSValueRegs result, GPRReg arrayProfileGPR, GPRReg stubInfoGPR, ECMAMode);
+        JSValueRegs base, JSValueRegs property, JSValueRegs result, GPRReg arrayProfileGPR, GPRReg stubInfoGPR);
 
     CCallHelpers::Jump slowPathJump() const
     {
@@ -269,13 +269,14 @@ public:
     void finalize(LinkBuffer& fastPathLinkBuffer, LinkBuffer& slowPathLinkBuffer);
 
     void generateFastPath(CCallHelpers&);
+    void generateDataICFastPath(CCallHelpers&);
 
     template<typename StubInfo>
-    static void setUpStubInfo(StubInfo& stubInfo,
-        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
-        JSValueRegs baseRegs, JSValueRegs propertyRegs, JSValueRegs valueRegs, GPRReg arrayProfileGPR, GPRReg stubInfoGPR, ECMAMode ecmaMode)
+    static void setUpStubInfo(StubInfo& stubInfo, CodeBlock* codeBlock,
+        AccessType accessType, CacheType cacheType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
+        JSValueRegs baseRegs, JSValueRegs propertyRegs, JSValueRegs valueRegs, GPRReg arrayProfileGPR, GPRReg stubInfoGPR)
     {
-        JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters);
+        JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, codeBlock, accessType, cacheType, codeOrigin, callSiteIndex, usedRegisters);
         if constexpr (!std::is_same_v<std::decay_t<StubInfo>, BaselineUnlinkedStructureStubInfo>) {
             stubInfo.m_baseGPR = baseRegs.payloadGPR();
             stubInfo.m_extraGPR = propertyRegs.payloadGPR();
@@ -290,7 +291,6 @@ public:
             stubInfo.m_valueTagGPR = valueRegs.tagGPR();
             stubInfo.m_extraTagGPR = propertyRegs.tagGPR();
 #endif
-            stubInfo.hasConstantIdentifier = false;
         } else {
             UNUSED_PARAM(baseRegs);
             UNUSED_PARAM(propertyRegs);
@@ -298,10 +298,6 @@ public:
             UNUSED_PARAM(stubInfoGPR);
             UNUSED_PARAM(arrayProfileGPR);
         }
-        if constexpr (!std::is_same_v<std::decay_t<StubInfo>, StructureStubInfo>)
-            stubInfo.ecmaMode = ecmaMode;
-        else
-            UNUSED_PARAM(ecmaMode);
     }
 
     JSValueRegs m_base;
@@ -316,7 +312,7 @@ public:
     JITDelByValGenerator() = default;
 
     JITDelByValGenerator(
-        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, const RegisterSetBuilder& usedRegisters,
+        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, AccessType, const RegisterSetBuilder& usedRegisters,
         JSValueRegs base, JSValueRegs property, JSValueRegs result, GPRReg stubInfoGPR);
 
     CCallHelpers::Jump slowPathJump() const
@@ -329,13 +325,14 @@ public:
         LinkBuffer& fastPathLinkBuffer, LinkBuffer& slowPathLinkBuffer);
 
     void generateFastPath(CCallHelpers&);
+    void generateDataICFastPath(CCallHelpers&);
 
     template<typename StubInfo>
-    static void setUpStubInfo(StubInfo& stubInfo,
-        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
+    static void setUpStubInfo(StubInfo& stubInfo, CodeBlock* codeBlock,
+        AccessType accessType, CacheType cacheType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
         JSValueRegs baseRegs, JSValueRegs propertyRegs, JSValueRegs resultRegs, GPRReg stubInfoGPR)
     {
-        JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters);
+        JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, codeBlock, accessType, cacheType, codeOrigin, callSiteIndex, usedRegisters);
         if constexpr (!std::is_same_v<std::decay_t<StubInfo>, BaselineUnlinkedStructureStubInfo>) {
             stubInfo.m_baseGPR = baseRegs.payloadGPR();
             stubInfo.m_extraGPR = propertyRegs.payloadGPR();
@@ -346,7 +343,6 @@ public:
             stubInfo.m_valueTagGPR = resultRegs.tagGPR();
             stubInfo.m_extraTagGPR = propertyRegs.tagGPR();
 #endif
-            stubInfo.hasConstantIdentifier = false;
         } else {
             UNUSED_PARAM(baseRegs);
             UNUSED_PARAM(propertyRegs);
@@ -364,7 +360,7 @@ public:
     JITDelByIdGenerator() = default;
 
     JITDelByIdGenerator(
-        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, const RegisterSetBuilder& usedRegisters, CacheableIdentifier,
+        CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, AccessType, const RegisterSetBuilder& usedRegisters, CacheableIdentifier,
         JSValueRegs base, JSValueRegs result, GPRReg stubInfoGPR);
 
     CCallHelpers::Jump slowPathJump() const
@@ -377,30 +373,15 @@ public:
         LinkBuffer& fastPathLinkBuffer, LinkBuffer& slowPathLinkBuffer);
 
     void generateFastPath(CCallHelpers&);
+    void generateDataICFastPath(CCallHelpers&);
 
     template<typename StubInfo>
-    static void setUpStubInfo(StubInfo& stubInfo,
-        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
+    static void setUpStubInfo(StubInfo& stubInfo, CodeBlock* codeBlock,
+        AccessType accessType, CacheType cacheType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters, CacheableIdentifier propertyName,
         JSValueRegs baseRegs, JSValueRegs resultRegs, GPRReg stubInfoGPR)
     {
-        JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters);
-        if constexpr (!std::is_same_v<std::decay_t<StubInfo>, BaselineUnlinkedStructureStubInfo>) {
-            stubInfo.m_baseGPR = baseRegs.payloadGPR();
-            stubInfo.m_extraGPR = InvalidGPRReg;
-            stubInfo.m_valueGPR = resultRegs.payloadGPR();
-            stubInfo.m_stubInfoGPR = stubInfoGPR;
-#if USE(JSVALUE32_64)
-            stubInfo.m_baseTagGPR = baseRegs.tagGPR();
-            stubInfo.m_valueTagGPR = resultRegs.tagGPR();
-            stubInfo.m_extraTagGPR = InvalidGPRReg;
-#endif
-            stubInfo.hasConstantIdentifier = true;
-        } else {
-            UNUSED_PARAM(baseRegs);
-            UNUSED_PARAM(resultRegs);
-            UNUSED_PARAM(stubInfoGPR);
+        JITByIdGenerator::setUpStubInfoImpl(stubInfo, codeBlock, accessType, cacheType, codeOrigin, callSiteIndex, usedRegisters, propertyName, baseRegs, resultRegs, stubInfoGPR);
         }
-    }
 
     CCallHelpers::PatchableJump m_slowPathJump;
 };
@@ -412,7 +393,7 @@ public:
 
     JITInByValGenerator(
         CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, AccessType, const RegisterSetBuilder& usedRegisters,
-        JSValueRegs base, JSValueRegs property, JSValueRegs result, GPRReg stubInfoGPR);
+        JSValueRegs base, JSValueRegs property, JSValueRegs result, GPRReg arrayProfileGPR, GPRReg stubInfoGPR);
 
     CCallHelpers::Jump slowPathJump() const
     {
@@ -424,24 +405,28 @@ public:
         LinkBuffer& fastPathLinkBuffer, LinkBuffer& slowPathLinkBuffer);
 
     void generateFastPath(CCallHelpers&);
+    void generateDataICFastPath(CCallHelpers&);
 
     template<typename StubInfo>
-    static void setUpStubInfo(StubInfo& stubInfo,
-        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
-        JSValueRegs baseRegs, JSValueRegs propertyRegs, JSValueRegs resultRegs, GPRReg stubInfoGPR)
+    static void setUpStubInfo(StubInfo& stubInfo, CodeBlock* codeBlock,
+        AccessType accessType, CacheType cacheType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
+        JSValueRegs baseRegs, JSValueRegs propertyRegs, JSValueRegs resultRegs, GPRReg arrayProfileGPR, GPRReg stubInfoGPR)
     {
-        JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters);
+        JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, codeBlock, accessType, cacheType, codeOrigin, callSiteIndex, usedRegisters);
         if constexpr (!std::is_same_v<std::decay_t<StubInfo>, BaselineUnlinkedStructureStubInfo>) {
             stubInfo.m_baseGPR = baseRegs.payloadGPR();
             stubInfo.m_extraGPR = propertyRegs.payloadGPR();
             stubInfo.m_valueGPR = resultRegs.payloadGPR();
             stubInfo.m_stubInfoGPR = stubInfoGPR;
+            if constexpr (!std::is_same_v<std::decay_t<StubInfo>, DFG::UnlinkedStructureStubInfo>)
+                stubInfo.m_arrayProfileGPR = arrayProfileGPR;
+            else
+                UNUSED_PARAM(arrayProfileGPR);
 #if USE(JSVALUE32_64)
             stubInfo.m_baseTagGPR = baseRegs.tagGPR();
             stubInfo.m_valueTagGPR = resultRegs.tagGPR();
             stubInfo.m_extraTagGPR = propertyRegs.tagGPR();
 #endif
-            stubInfo.hasConstantIdentifier = false;
         } else {
             UNUSED_PARAM(baseRegs);
             UNUSED_PARAM(propertyRegs);
@@ -461,18 +446,15 @@ public:
         CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, const RegisterSetBuilder& usedRegisters, CacheableIdentifier,
         JSValueRegs base, JSValueRegs value, GPRReg stubInfoGPR);
 
-    void generateFastPath(CCallHelpers&, GPRReg scratchGPR);
-    void generateBaselineDataICFastPath(JIT&, unsigned stubInfoConstant, GPRReg stubInfoGPR);
-#if ENABLE(DFG_JIT)
-    void generateDFGDataICFastPath(DFG::JITCompiler&, unsigned stubInfoConstant, JSValueRegs baseJSR, JSValueRegs resultJSR, GPRReg stubInfoGPR, GPRReg scratchGPR);
-#endif
+    void generateFastPath(CCallHelpers&);
+    void generateDataICFastPath(CCallHelpers&);
 
     template<typename StubInfo>
-    static void setUpStubInfo(StubInfo& stubInfo,
-        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
+    static void setUpStubInfo(StubInfo& stubInfo, CodeBlock* codeBlock,
+        AccessType accessType, CacheType cacheType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters, CacheableIdentifier propertyName,
         JSValueRegs baseRegs, JSValueRegs valueRegs, GPRReg stubInfoGPR)
     {
-        JITByIdGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters, baseRegs, valueRegs, stubInfoGPR);
+        JITByIdGenerator::setUpStubInfoImpl(stubInfo, codeBlock, accessType, cacheType, codeOrigin, callSiteIndex, usedRegisters, propertyName, baseRegs, valueRegs, stubInfoGPR);
     }
 };
 
@@ -487,6 +469,7 @@ public:
         bool prototypeIsKnownObject = false);
 
     void generateFastPath(CCallHelpers&);
+    void generateDataICFastPath(CCallHelpers&);
 
     CCallHelpers::Jump slowPathJump() const
     {
@@ -497,11 +480,11 @@ public:
     void finalize(LinkBuffer& fastPathLinkBuffer, LinkBuffer& slowPathLinkBuffer);
 
     template<typename StubInfo>
-    static void setUpStubInfo(StubInfo& stubInfo,
-        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
+    static void setUpStubInfo(StubInfo& stubInfo, CodeBlock* codeBlock,
+        AccessType accessType, CacheType cacheType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
         GPRReg resultGPR, GPRReg valueGPR, GPRReg prototypeGPR, GPRReg stubInfoGPR, bool prototypeIsKnownObject)
     {
-        JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters);
+        JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, codeBlock, accessType, cacheType, codeOrigin, callSiteIndex, usedRegisters);
         stubInfo.prototypeIsKnownObject = prototypeIsKnownObject;
         if constexpr (!std::is_same_v<std::decay_t<StubInfo>, BaselineUnlinkedStructureStubInfo>) {
             stubInfo.m_baseGPR = valueGPR;
@@ -513,8 +496,6 @@ public:
             stubInfo.m_valueTagGPR = InvalidGPRReg;
             stubInfo.m_extraTagGPR = InvalidGPRReg;
 #endif
-            stubInfo.usedRegisters.remove(resultGPR);
-            stubInfo.hasConstantIdentifier = false;
         } else {
             UNUSED_PARAM(valueGPR);
             UNUSED_PARAM(resultGPR);
@@ -533,7 +514,7 @@ public:
 
     JITGetByValGenerator(
         CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, AccessType, const RegisterSetBuilder& usedRegisters,
-        JSValueRegs base, JSValueRegs property, JSValueRegs result, GPRReg stubInfoGPR);
+        JSValueRegs base, JSValueRegs property, JSValueRegs result, GPRReg arrayProfileGPR, GPRReg stubInfoGPR);
 
     CCallHelpers::Jump slowPathJump() const
     {
@@ -545,26 +526,30 @@ public:
         LinkBuffer& fastPathLinkBuffer, LinkBuffer& slowPathLinkBuffer);
 
     void generateFastPath(CCallHelpers&);
+    void generateDataICFastPath(CCallHelpers&);
 
     void generateEmptyPath(CCallHelpers&);
 
     template<typename StubInfo>
-    static void setUpStubInfo(StubInfo& stubInfo,
-        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
-        JSValueRegs baseRegs, JSValueRegs propertyRegs, JSValueRegs resultRegs, GPRReg stubInfoGPR)
+    static void setUpStubInfo(StubInfo& stubInfo, CodeBlock* codeBlock,
+        AccessType accessType, CacheType cacheType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
+        JSValueRegs baseRegs, JSValueRegs propertyRegs, JSValueRegs resultRegs, GPRReg arrayProfileGPR, GPRReg stubInfoGPR)
     {
-        JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters);
+        JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, codeBlock, accessType, cacheType, codeOrigin, callSiteIndex, usedRegisters);
         if constexpr (!std::is_same_v<std::decay_t<StubInfo>, BaselineUnlinkedStructureStubInfo>) {
             stubInfo.m_baseGPR = baseRegs.payloadGPR();
             stubInfo.m_extraGPR = propertyRegs.payloadGPR();
             stubInfo.m_valueGPR = resultRegs.payloadGPR();
             stubInfo.m_stubInfoGPR = stubInfoGPR;
+            if constexpr (!std::is_same_v<std::decay_t<StubInfo>, DFG::UnlinkedStructureStubInfo>)
+                stubInfo.m_arrayProfileGPR = arrayProfileGPR;
+            else
+                UNUSED_PARAM(arrayProfileGPR);
 #if USE(JSVALUE32_64)
             stubInfo.m_baseTagGPR = baseRegs.tagGPR();
             stubInfo.m_valueTagGPR = resultRegs.tagGPR();
             stubInfo.m_extraTagGPR = propertyRegs.tagGPR();
 #endif
-            stubInfo.hasConstantIdentifier = false;
         } else {
             UNUSED_PARAM(baseRegs);
             UNUSED_PARAM(propertyRegs);
@@ -586,7 +571,7 @@ public:
 
     JITGetByValWithThisGenerator(
         CodeBlock*, CompileTimeStructureStubInfo, JITType, CodeOrigin, CallSiteIndex, AccessType, const RegisterSetBuilder& usedRegisters,
-        JSValueRegs base, JSValueRegs property, JSValueRegs thisRegs, JSValueRegs result, GPRReg stubInfoGPR);
+        JSValueRegs base, JSValueRegs property, JSValueRegs thisRegs, JSValueRegs result, GPRReg arrayProfileGPR, GPRReg stubInfoGPR);
 
     CCallHelpers::Jump slowPathJump() const
     {
@@ -597,28 +582,32 @@ public:
     void finalize(LinkBuffer& fastPathLinkBuffer, LinkBuffer& slowPathLinkBuffer);
 
     void generateFastPath(CCallHelpers&);
+    void generateDataICFastPath(CCallHelpers&);
 
     void generateEmptyPath(CCallHelpers&);
 
     template<typename StubInfo>
-    static void setUpStubInfo(StubInfo& stubInfo,
-        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
-        JSValueRegs baseRegs, JSValueRegs propertyRegs, JSValueRegs thisRegs, JSValueRegs resultRegs, GPRReg stubInfoGPR)
+    static void setUpStubInfo(StubInfo& stubInfo, CodeBlock* codeBlock,
+        AccessType accessType, CacheType cacheType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
+        JSValueRegs baseRegs, JSValueRegs propertyRegs, JSValueRegs thisRegs, JSValueRegs resultRegs, GPRReg arrayProfileGPR, GPRReg stubInfoGPR)
     {
-        JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters);
+        JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, codeBlock, accessType, cacheType, codeOrigin, callSiteIndex, usedRegisters);
         if constexpr (!std::is_same_v<std::decay_t<StubInfo>, BaselineUnlinkedStructureStubInfo>) {
             stubInfo.m_baseGPR = baseRegs.payloadGPR();
             stubInfo.m_extraGPR = thisRegs.payloadGPR();
             stubInfo.m_valueGPR = resultRegs.payloadGPR();
             stubInfo.m_extra2GPR = propertyRegs.payloadGPR();
             stubInfo.m_stubInfoGPR = stubInfoGPR;
+            if constexpr (!std::is_same_v<std::decay_t<StubInfo>, DFG::UnlinkedStructureStubInfo>)
+                stubInfo.m_arrayProfileGPR = arrayProfileGPR;
+            else
+                UNUSED_PARAM(arrayProfileGPR);
 #if USE(JSVALUE32_64)
             stubInfo.m_baseTagGPR = baseRegs.tagGPR();
             stubInfo.m_valueTagGPR = resultRegs.tagGPR();
             stubInfo.m_extraTagGPR = thisRegs.tagGPR();
             stubInfo.m_extra2TagGPR = propertyRegs.tagGPR();
 #endif
-            stubInfo.hasConstantIdentifier = false;
         } else {
             UNUSED_PARAM(baseRegs);
             UNUSED_PARAM(propertyRegs);
@@ -653,13 +642,14 @@ public:
         LinkBuffer& fastPathLinkBuffer, LinkBuffer& slowPathLinkBuffer);
 
     void generateFastPath(CCallHelpers&);
+    void generateDataICFastPath(CCallHelpers&);
 
     template<typename StubInfo>
-    static void setUpStubInfo(StubInfo& stubInfo,
-        AccessType accessType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
+    static void setUpStubInfo(StubInfo& stubInfo, CodeBlock* codeBlock,
+        AccessType accessType, CacheType cacheType, CodeOrigin codeOrigin, CallSiteIndex callSiteIndex, const RegisterSetBuilder& usedRegisters,
         JSValueRegs baseRegs, JSValueRegs brandRegs, GPRReg stubInfoGPR)
     {
-        JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, accessType, codeOrigin, callSiteIndex, usedRegisters);
+        JITInlineCacheGenerator::setUpStubInfoImpl(stubInfo, codeBlock, accessType, cacheType, codeOrigin, callSiteIndex, usedRegisters);
         if constexpr (!std::is_same_v<std::decay_t<StubInfo>, BaselineUnlinkedStructureStubInfo>) {
             stubInfo.m_baseGPR = baseRegs.payloadGPR();
             stubInfo.m_extraGPR = brandRegs.payloadGPR();
@@ -670,7 +660,6 @@ public:
             stubInfo.m_extraTagGPR = brandRegs.tagGPR();
             stubInfo.m_valueTagGPR = InvalidGPRReg;
 #endif
-            stubInfo.hasConstantIdentifier = false;
         } else {
             UNUSED_PARAM(baseRegs);
             UNUSED_PARAM(brandRegs);

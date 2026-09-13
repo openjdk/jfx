@@ -31,27 +31,30 @@
 
 #pragma once
 
-#if ENABLE(INPUT_TYPE_COLOR)
-
 #include "BaseClickableWithKeyInputType.h"
 #include "ColorChooser.h"
 #include "ColorChooserClient.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class ColorInputType final : public BaseClickableWithKeyInputType, private ColorChooserClient {
+    WTF_MAKE_TZONE_ALLOCATED(ColorInputType);
 public:
     static Ref<ColorInputType> create(HTMLInputElement& element)
     {
         return adoptRef(*new ColorInputType(element));
     }
 
-    Vector<Color> suggestedColors() const;
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
+    bool supportsAlpha() const final;
+    Vector<Color> suggestedColors() const final;
     Color valueAsColor() const;
     void selectColor(StringView);
 
     virtual ~ColorInputType();
-    bool typeMismatchFor(const String&) const final;
 
     void detach() final;
 
@@ -65,32 +68,33 @@ private:
     void didChooseColor(const Color&) final;
     void didEndChooser() final;
     IntRect elementRectRelativeToRootView() const final;
+    std::optional<FrameIdentifier> rootFrameID() const final;
     bool isMouseFocusable() const final;
-    bool isKeyboardFocusable(KeyboardEvent*) const final;
-    bool isPresentingAttachedView() const final;
+    bool isKeyboardFocusable(const FocusEventData&) const final;
+    bool isPresentingAttachedView() const final { return m_popupIsVisible; }
     const AtomString& formControlType() const final;
-    bool supportsRequired() const final;
-    String fallbackValue() const final;
-    String sanitizeValue(const String&) const final;
+    bool supportsRequired() const final { return false; }
+    ValueOrReference<String> fallbackValue() const final;
+    ValueOrReference<String> sanitizeValue(const String& value LIFETIME_BOUND) const final;
     void createShadowSubtree() final;
     void setValue(const String&, bool valueChanged, TextFieldEventBehavior, TextControlSetValueSelection) final;
     void attributeChanged(const QualifiedName&) final;
     void handleDOMActivateEvent(Event&) final;
     void showPicker() final;
-    bool allowsShowPickerAcrossFrames() final;
+    bool allowsShowPickerAcrossFrames() final { return true; }
     void elementDidBlur() final;
-    bool shouldRespectListAttribute() final;
-    bool shouldResetOnDocumentActivation() final;
+    bool shouldRespectListAttribute() final { return true; }
+    bool shouldResetOnDocumentActivation() final { return true; }
 
     void endColorChooser();
+    void setPopupIsVisible(bool);
     void updateColorSwatch();
     HTMLElement* shadowColorSwatch() const;
 
-    std::unique_ptr<ColorChooser> m_chooser;
+    RefPtr<ColorChooser> m_chooser;
+    bool m_popupIsVisible { false };
 };
 
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_INPUT_TYPE(ColorInputType, Type::Color)
-
-#endif // ENABLE(INPUT_TYPE_COLOR)

@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "ResourceResponse.h"
-#include "SharedBuffer.h"
+#include <WebCore/ResourceResponse.h>
+#include <WebCore/SharedBuffer.h>
 #include <wtf/URL.h>
 
 namespace WebCore {
@@ -39,10 +39,10 @@ public:
 
     SubstituteData() = default;
 
-        SubstituteData(RefPtr<FragmentedSharedBuffer>&& content, const URL& failingURL, const ResourceResponse& response, SessionHistoryVisibility shouldRevealToSessionHistory)
-            : m_content(WTFMove(content))
-            , m_failingURL(failingURL)
-            , m_response(response)
+    SubstituteData(RefPtr<FragmentedSharedBuffer>&& content, URL&& failingURL, ResourceResponse&& response, SessionHistoryVisibility shouldRevealToSessionHistory)
+        : m_content(WTF::move(content))
+        , m_failingURL(WTF::move(failingURL))
+        , m_response(WTF::move(response))
             , m_shouldRevealToSessionHistory(shouldRevealToSessionHistory)
         {
         }
@@ -50,7 +50,8 @@ public:
         bool isValid() const { return m_content != nullptr; }
     SessionHistoryVisibility shouldRevealToSessionHistory() const { return m_shouldRevealToSessionHistory; }
 
-    const RefPtr<FragmentedSharedBuffer>& content() const { return m_content; }
+    FragmentedSharedBuffer* content() const { return m_content.get(); }
+    RefPtr<FragmentedSharedBuffer> protectedContent() const { return m_content; }
         const String& mimeType() const { return m_response.mimeType(); }
         const String& textEncoding() const { return m_response.textEncodingName(); }
         const URL& failingURL() const { return m_failingURL; }

@@ -33,16 +33,16 @@
 #include "JSCellInlines.h"
 #include "JSWebAssemblyInstance.h"
 #include "SlotVisitorInlines.h"
+#include "WasmTypeDefinitionInlines.h"
 
 namespace JSC {
 
 const ClassInfo WebAssemblyFunctionBase::s_info = { "WebAssemblyFunctionBase"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(WebAssemblyFunctionBase) };
 
-WebAssemblyFunctionBase::WebAssemblyFunctionBase(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure, JSWebAssemblyInstance* instance, WasmToWasmImportableFunction importableFunction, RefPtr<const Wasm::RTT> rtt)
+WebAssemblyFunctionBase::WebAssemblyFunctionBase(VM& vm, NativeExecutable* executable, JSGlobalObject* globalObject, Structure* structure, Wasm::WasmOrJSImportableFunction&& importableFunction, Wasm::WasmOrJSImportableFunctionCallLinkInfo* callLinkInfo)
     : Base(vm, executable, globalObject, structure)
-    , m_instance(instance, WriteBarrierEarlyInit)
-    , m_importableFunction(importableFunction)
-    , m_rtt(rtt)
+    , m_importableFunction(WTF::move(importableFunction))
+    , m_callLinkInfo(callLinkInfo)
 { }
 
 template<typename Visitor>
@@ -51,7 +51,7 @@ void WebAssemblyFunctionBase::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     WebAssemblyFunctionBase* thisObject = jsCast<WebAssemblyFunctionBase*>(cell);
     ASSERT_GC_OBJECT_INHERITS(thisObject, info());
     Base::visitChildren(thisObject, visitor);
-    visitor.append(thisObject->m_instance);
+    visitor.append(thisObject->m_importableFunction.targetInstance);
 }
 
 DEFINE_VISIT_CHILDREN(WebAssemblyFunctionBase);
@@ -60,6 +60,11 @@ void WebAssemblyFunctionBase::finishCreation(VM& vm, NativeExecutable* executabl
 {
     Base::finishCreation(vm, executable, length, name);
     ASSERT(inherits(info()));
+}
+
+const Wasm::FunctionSignature& WebAssemblyFunctionBase::signature() const
+{
+    return Wasm::TypeInformation::getFunctionSignature(typeIndex());
 }
 
 } // namespace JSC

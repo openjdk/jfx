@@ -45,26 +45,33 @@ PutByVariant& PutByVariant::operator=(const PutByVariant& other)
     m_newStructure = other.m_newStructure;
     m_conditionSet = other.m_conditionSet;
     m_offset = other.m_offset;
+    m_viaGlobalProxy = other.m_viaGlobalProxy;
     if (other.m_callLinkStatus)
         m_callLinkStatus = makeUnique<CallLinkStatus>(*other.m_callLinkStatus);
     else
         m_callLinkStatus = nullptr;
+    m_customAccessorSetter = other.m_customAccessorSetter;
+    if (other.m_domAttribute)
+        m_domAttribute = WTF::makeUnique<DOMAttributeAnnotation>(*other.m_domAttribute);
+    else
+        m_domAttribute = nullptr;
     m_identifier = other.m_identifier;
     return *this;
 }
 
-PutByVariant PutByVariant::replace(CacheableIdentifier identifier, const StructureSet& structure, PropertyOffset offset)
+PutByVariant PutByVariant::replace(CacheableIdentifier identifier, const StructureSet& structure, PropertyOffset offset, bool viaGlobalProxy)
 {
-    PutByVariant result(WTFMove(identifier));
+    PutByVariant result(WTF::move(identifier));
     result.m_kind = Replace;
     result.m_oldStructure = structure;
     result.m_offset = offset;
+    result.m_viaGlobalProxy = viaGlobalProxy;
     return result;
 }
 
 PutByVariant PutByVariant::transition(CacheableIdentifier identifier, const StructureSet& oldStructure, Structure* newStructure, const ObjectPropertyConditionSet& conditionSet, PropertyOffset offset)
 {
-    PutByVariant result(WTFMove(identifier));
+    PutByVariant result(WTF::move(identifier));
     result.m_kind = Transition;
     result.m_oldStructure = oldStructure;
     result.m_newStructure = newStructure;
@@ -73,23 +80,37 @@ PutByVariant PutByVariant::transition(CacheableIdentifier identifier, const Stru
     return result;
 }
 
-PutByVariant PutByVariant::setter(CacheableIdentifier identifier, const StructureSet& structure, PropertyOffset offset, const ObjectPropertyConditionSet& conditionSet, std::unique_ptr<CallLinkStatus> callLinkStatus)
+PutByVariant PutByVariant::setter(CacheableIdentifier identifier, const StructureSet& structure, PropertyOffset offset, bool viaGlobalProxy, const ObjectPropertyConditionSet& conditionSet, std::unique_ptr<CallLinkStatus> callLinkStatus)
 {
-    PutByVariant result(WTFMove(identifier));
+    PutByVariant result(WTF::move(identifier));
     result.m_kind = Setter;
     result.m_oldStructure = structure;
     result.m_conditionSet = conditionSet;
     result.m_offset = offset;
-    result.m_callLinkStatus = WTFMove(callLinkStatus);
+    result.m_viaGlobalProxy = viaGlobalProxy;
+    result.m_callLinkStatus = WTF::move(callLinkStatus);
+    return result;
+}
+
+PutByVariant PutByVariant::customSetter(CacheableIdentifier identifier, const StructureSet& structure, bool viaGlobalProxy, const ObjectPropertyConditionSet& conditionSet, CodePtr<CustomAccessorPtrTag> customAccessorSetter, std::unique_ptr<DOMAttributeAnnotation>&& domAttribute)
+{
+    PutByVariant result(WTF::move(identifier));
+    result.m_kind = CustomAccessorSetter;
+    result.m_oldStructure = structure;
+    result.m_conditionSet = conditionSet;
+    result.m_offset = invalidOffset;
+    result.m_viaGlobalProxy = viaGlobalProxy;
+    result.m_customAccessorSetter = customAccessorSetter;
+    result.m_domAttribute = WTF::move(domAttribute);
     return result;
 }
 
 PutByVariant PutByVariant::proxy(CacheableIdentifier identifier, const StructureSet& structure, std::unique_ptr<CallLinkStatus> callLinkStatus)
 {
-    PutByVariant result(WTFMove(identifier));
+    PutByVariant result(WTF::move(identifier));
     result.m_kind = Proxy;
     result.m_oldStructure = structure;
-    result.m_callLinkStatus = WTFMove(callLinkStatus);
+    result.m_callLinkStatus = WTF::move(callLinkStatus);
     return result;
 }
 
@@ -130,6 +151,7 @@ bool PutByVariant::writesStructures() const
     switch (kind()) {
     case Transition:
     case Setter:
+    case CustomAccessorSetter:
     case Proxy:
         return true;
     default:
@@ -143,6 +165,7 @@ bool PutByVariant::reallocatesStorage() const
     case Transition:
         return oldStructureForTransition()->outOfLineCapacity() != newStructure()->outOfLineCapacity();
     case Setter:
+    case CustomAccessorSetter:
     case Proxy:
         return true;
     default:
@@ -152,7 +175,7 @@ bool PutByVariant::reallocatesStorage() const
 
 bool PutByVariant::makesCalls() const
 {
-    return kind() == Setter || kind() == Proxy;
+    return kind() == Setter || kind() == CustomAccessorSetter || kind() == Proxy;
 }
 
 bool PutByVariant::attemptToMerge(const PutByVariant& other)
@@ -164,6 +187,9 @@ bool PutByVariant::attemptToMerge(const PutByVariant& other)
         return false;
 
     if (m_offset != other.m_offset)
+        return false;
+
+    if (m_viaGlobalProxy != other.m_viaGlobalProxy)
         return false;
 
     switch (m_kind) {
@@ -207,6 +233,9 @@ bool PutByVariant::attemptToMerge(const PutByVariant& other)
             if (m_newStructure != other.m_newStructure)
                 return false;
 
+            if (m_conditionSet.isEmpty() != other.m_conditionSet.isEmpty())
+                return false;
+
             ObjectPropertyConditionSet mergedConditionSet;
             if (!m_conditionSet.isEmpty()) {
                 mergedConditionSet = m_conditionSet.mergedWith(other.m_conditionSet);
@@ -248,6 +277,35 @@ bool PutByVariant::attemptToMerge(const PutByVariant& other)
         return true;
     }
 
+    case CustomAccessorSetter: {
+        if (other.m_kind != CustomAccessorSetter)
+            return false;
+
+        if (m_customAccessorSetter != other.m_customAccessorSetter)
+            return false;
+
+        if (m_domAttribute || other.m_domAttribute) {
+            if (!(m_domAttribute && other.m_domAttribute))
+                return false;
+            if (*m_domAttribute != *other.m_domAttribute)
+                return false;
+        }
+
+        if (m_conditionSet.isEmpty() != other.m_conditionSet.isEmpty())
+            return false;
+
+        ObjectPropertyConditionSet mergedConditionSet;
+        if (!m_conditionSet.isEmpty()) {
+            mergedConditionSet = m_conditionSet.mergedWith(other.m_conditionSet);
+            if (!mergedConditionSet.isValid() || !mergedConditionSet.hasOneSlotBaseCondition())
+                return false;
+        }
+        m_conditionSet = mergedConditionSet;
+
+        m_oldStructure.merge(other.m_oldStructure);
+        return true;
+    }
+
     case Proxy: {
         if (other.m_kind != Proxy)
             return false;
@@ -274,6 +332,7 @@ bool PutByVariant::attemptToMergeTransitionWithReplace(const PutByVariant& repla
     ASSERT(m_kind == Transition);
     ASSERT(replace.m_kind == Replace);
     ASSERT(m_offset == replace.m_offset);
+    ASSERT(!replace.viaGlobalProxy());
     ASSERT(!replace.writesStructures());
     ASSERT(!replace.reallocatesStorage());
     ASSERT(replace.conditionSet().isEmpty());
@@ -332,15 +391,17 @@ void PutByVariant::dump(PrintStream& out) const
 void PutByVariant::dumpInContext(PrintStream& out, DumpContext* context) const
 {
     out.print("<");
-    out.print("id='", m_identifier, "', ");
+    out.print("id='", m_identifier, "'");
     switch (kind()) {
     case NotSet:
         out.print("empty>");
         return;
 
     case Replace:
-        out.print(
-            "Replace: ", inContext(structure(), context), ", offset = ", offset(), ", ", ">");
+        out.print("Replace: ", inContext(structure(), context));
+        out.print(", offset = ", m_offset);
+        out.print(", viaGlobalProxy = ", m_viaGlobalProxy);
+        out.print(">");
         return;
 
     case Transition:
@@ -355,7 +416,16 @@ void PutByVariant::dumpInContext(PrintStream& out, DumpContext* context) const
             "Setter: ", inContext(structure(), context), ", [",
             inContext(m_conditionSet, context), "]");
         out.print(", offset = ", m_offset);
+        out.print(", viaGlobalProxy = ", m_viaGlobalProxy);
         out.print(", call = ", *m_callLinkStatus);
+        out.print(">");
+        return;
+
+    case CustomAccessorSetter:
+        out.print(
+            "CustomAccessorSetter: ", inContext(structure(), context), ", [",
+            inContext(m_conditionSet, context), "]");
+        out.print(", viaGlobalProxy = ", m_viaGlobalProxy);
         out.print(">");
         return;
 

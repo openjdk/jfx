@@ -25,44 +25,49 @@
 
 #pragma once
 
-#include "CryptoKey.h"
-#include "CryptoKeyPair.h"
-#include "ExceptionOr.h"
-
+#include <WebCore/CryptoKey.h>
+#include <WebCore/CryptoKeyPair.h>
 #if ENABLE(WEB_CRYPTO)
-
+#include <wtf/Platform.h>
 #if OS(DARWIN) && !PLATFORM(GTK)
-#include "CommonCryptoUtilities.h"
-
-typedef CCECCryptorRef PlatformECKey;
-namespace WebCore {
-struct CCECCryptorRefDeleter {
-    void operator()(CCECCryptorRef key) const { CCECCryptorRelease(key); }
-};
+#include <WebCore/CommonCryptoUtilities.h>
+#if !defined(CLANG_WEBKIT_BRANCH)
+namespace pal {
+class ECKey;
 }
-typedef std::unique_ptr<typename std::remove_pointer<CCECCryptorRef>::type, WebCore::CCECCryptorRefDeleter> PlatformECKeyContainer;
+
+namespace WebCore {
+using PlatformECKeyContainer = UniqueRef<pal::ECKey>;
+}
+#else
+namespace WebCore {
+using PlatformECKeyContainer = std::unique_ptr<std::monostate>;
+}
+#endif
 #endif
 
 #if USE(GCRYPT)
 #include <pal/crypto/gcrypt/Handle.h>
-
-typedef gcry_sexp_t PlatformECKey;
-typedef std::unique_ptr<typename std::remove_pointer<gcry_sexp_t>::type, PAL::GCrypt::HandleDeleter<gcry_sexp_t>> PlatformECKeyContainer;
+namespace WebCore {
+using PlatformECKeyContainer = std::unique_ptr<typename std::remove_pointer<gcry_sexp_t>::type, PAL::GCrypt::HandleDeleter<gcry_sexp_t>>;
+}
 #endif
 
 #if USE(OPENSSL)
 #include "crypto/openssl/OpenSSLCryptoUniquePtr.h"
-typedef EVP_PKEY* PlatformECKey;
-typedef WebCore::EvpPKeyPtr PlatformECKeyContainer;
+namespace WebCore {
+using PlatformECKeyContainer = WebCore::EvpPKeyPtr;
+}
 #endif
 
 namespace WebCore {
 
 struct JsonWebKey;
+template<typename> class ExceptionOr;
 
 class CryptoKeyEC final : public CryptoKey {
 public:
-    enum class NamedCurve {
+    enum class NamedCurve : uint8_t {
         P256,
         P384,
         P521,
@@ -70,9 +75,9 @@ public:
 
     static Ref<CryptoKeyEC> create(CryptoAlgorithmIdentifier identifier, NamedCurve curve, CryptoKeyType type, PlatformECKeyContainer&& platformKey, bool extractable, CryptoKeyUsageBitmap usages)
     {
-        return adoptRef(*new CryptoKeyEC(identifier, curve, type, WTFMove(platformKey), extractable, usages));
+        return adoptRef(*new CryptoKeyEC(identifier, curve, type, WTF::move(platformKey), extractable, usages));
     }
-    virtual ~CryptoKeyEC() = default;
+    virtual ~CryptoKeyEC();
 
     WEBCORE_EXPORT static ExceptionOr<CryptoKeyPair> generatePair(CryptoAlgorithmIdentifier, const String& curve, bool extractable, CryptoKeyUsageBitmap);
     WEBCORE_EXPORT static RefPtr<CryptoKeyEC> importRaw(CryptoAlgorithmIdentifier, const String& curve, Vector<uint8_t>&& keyData, bool extractable, CryptoKeyUsageBitmap);
@@ -89,15 +94,16 @@ public:
     size_t keySizeInBytes() const { return std::ceil(keySizeInBits() / 8.); }
     NamedCurve namedCurve() const { return m_curve; }
     String namedCurveString() const;
-    PlatformECKey platformKey() const { return m_platformKey.get(); }
+    const PlatformECKeyContainer& platformKey() const { return m_platformKey; }
+
     static bool isValidECAlgorithm(CryptoAlgorithmIdentifier);
 
 private:
     CryptoKeyEC(CryptoAlgorithmIdentifier, NamedCurve, CryptoKeyType, PlatformECKeyContainer&&, bool extractable, CryptoKeyUsageBitmap);
 
     CryptoKeyClass keyClass() const final { return CryptoKeyClass::EC; }
-
     KeyAlgorithm algorithm() const final;
+    CryptoKey::Data data() const final;
 
     static bool platformSupportedCurve(NamedCurve);
     static std::optional<CryptoKeyPair> platformGeneratePair(CryptoAlgorithmIdentifier, NamedCurve, bool extractable, CryptoKeyUsageBitmap);

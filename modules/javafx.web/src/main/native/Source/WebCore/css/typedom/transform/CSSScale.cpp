@@ -39,60 +39,54 @@
 #include "CSSUnits.h"
 #include "DOMMatrix.h"
 #include "ExceptionOr.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CSSScale);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSScale);
 
 static bool isValidScaleCoord(const CSSNumericValue& coord)
 {
-    if (auto* mathValue = dynamicDowncast<CSSMathValue>(coord)) {
-        auto node = mathValue->toCalcExpressionNode();
-        if (!node)
-            return false;
-        auto resolvedType = node->primitiveType();
-        return resolvedType == CSSUnitType::CSS_NUMBER || resolvedType == CSSUnitType::CSS_INTEGER;
-    }
     return coord.type().matchesNumber();
 }
 
 ExceptionOr<Ref<CSSScale>> CSSScale::create(CSSNumberish x, CSSNumberish y, std::optional<CSSNumberish>&& z)
 {
-    auto rectifiedX = CSSNumericValue::rectifyNumberish(WTFMove(x));
-    auto rectifiedY = CSSNumericValue::rectifyNumberish(WTFMove(y));
-    auto rectifiedZ = z ? CSSNumericValue::rectifyNumberish(WTFMove(*z)) : Ref<CSSNumericValue> { CSSUnitValue::create(1.0, CSSUnitType::CSS_NUMBER) };
+    auto rectifiedX = CSSNumericValue::rectifyNumberish(WTF::move(x));
+    auto rectifiedY = CSSNumericValue::rectifyNumberish(WTF::move(y));
+    auto rectifiedZ = z ? CSSNumericValue::rectifyNumberish(WTF::move(*z)) : Ref<CSSNumericValue> { CSSUnitValue::create(1.0, CSSUnitType::CSS_NUMBER) };
 
     // https://drafts.css-houdini.org/css-typed-om/#dom-cssscale-cssscale
     if (!isValidScaleCoord(rectifiedX) || !isValidScaleCoord(rectifiedY) || !isValidScaleCoord(rectifiedZ))
-        return Exception { TypeError };
+        return Exception { ExceptionCode::TypeError };
 
-    return adoptRef(*new CSSScale(z ? Is2D::No : Is2D::Yes, WTFMove(rectifiedX), WTFMove(rectifiedY), WTFMove(rectifiedZ)));
+    return adoptRef(*new CSSScale(z ? Is2D::No : Is2D::Yes, WTF::move(rectifiedX), WTF::move(rectifiedY), WTF::move(rectifiedZ)));
 }
 
-ExceptionOr<Ref<CSSScale>> CSSScale::create(CSSFunctionValue& cssFunctionValue)
+ExceptionOr<Ref<CSSScale>> CSSScale::create(Ref<const CSSFunctionValue> cssFunctionValue, Document& document)
 {
-    auto makeScale = [&](const Function<ExceptionOr<Ref<CSSScale>>(Vector<RefPtr<CSSNumericValue>>&&)>& create, size_t minNumberOfComponents, std::optional<size_t> maxNumberOfComponents = std::nullopt) -> ExceptionOr<Ref<CSSScale>> {
+    auto makeScale = [&](NOESCAPE const Function<ExceptionOr<Ref<CSSScale>>(Vector<RefPtr<CSSNumericValue>>&&)>& create, size_t minNumberOfComponents, std::optional<size_t> maxNumberOfComponents = std::nullopt) -> ExceptionOr<Ref<CSSScale>> {
         Vector<RefPtr<CSSNumericValue>> components;
-        for (auto& componentCSSValue : cssFunctionValue) {
-            auto valueOrException = CSSStyleValueFactory::reifyValue(componentCSSValue, std::nullopt);
+        for (Ref componentCSSValue : cssFunctionValue.get()) {
+            auto valueOrException = CSSStyleValueFactory::reifyValue(document, componentCSSValue, std::nullopt);
             if (valueOrException.hasException())
                 return valueOrException.releaseException();
-            if (!is<CSSNumericValue>(valueOrException.returnValue()))
-                return Exception { TypeError, "Expected a CSSNumericValue."_s };
-            components.append(downcast<CSSNumericValue>(valueOrException.releaseReturnValue().ptr()));
+            RefPtr numericValue = dynamicDowncast<CSSNumericValue>(valueOrException.releaseReturnValue());
+            if (!numericValue)
+                return Exception { ExceptionCode::TypeError, "Expected a CSSNumericValue."_s };
+            components.append(WTF::move(numericValue));
         }
         if (!maxNumberOfComponents)
             maxNumberOfComponents = minNumberOfComponents;
         auto numberOfComponents = components.size();
         if (numberOfComponents < minNumberOfComponents || numberOfComponents > maxNumberOfComponents) {
             ASSERT_NOT_REACHED();
-            return Exception { TypeError, "Unexpected number of values."_s };
+            return Exception { ExceptionCode::TypeError, "Unexpected number of values."_s };
         }
-        return create(WTFMove(components));
+        return create(WTF::move(components));
     };
 
-    switch (cssFunctionValue.name()) {
+    switch (cssFunctionValue->name()) {
     case CSSValueScaleX:
         return makeScale([](Vector<RefPtr<CSSNumericValue>>&& components) {
             return CSSScale::create(components[0], CSSNumericFactory::number(1), std::nullopt);
@@ -121,36 +115,36 @@ ExceptionOr<Ref<CSSScale>> CSSScale::create(CSSFunctionValue& cssFunctionValue)
 
 CSSScale::CSSScale(CSSTransformComponent::Is2D is2D, Ref<CSSNumericValue> x, Ref<CSSNumericValue> y, Ref<CSSNumericValue> z)
     : CSSTransformComponent(is2D)
-    , m_x(WTFMove(x))
-    , m_y(WTFMove(y))
-    , m_z(WTFMove(z))
+    , m_x(WTF::move(x))
+    , m_y(WTF::move(y))
+    , m_z(WTF::move(z))
 {
 }
 
 void CSSScale::setX(CSSNumberish x)
 {
-    m_x = CSSNumericValue::rectifyNumberish(WTFMove(x));
+    m_x = CSSNumericValue::rectifyNumberish(WTF::move(x));
 }
 
 void CSSScale::setY(CSSNumberish y)
 {
-    m_y = CSSNumericValue::rectifyNumberish(WTFMove(y));
+    m_y = CSSNumericValue::rectifyNumberish(WTF::move(y));
 }
 
 void CSSScale::setZ(CSSNumberish z)
 {
-    m_z = CSSNumericValue::rectifyNumberish(WTFMove(z));
+    m_z = CSSNumericValue::rectifyNumberish(WTF::move(z));
 }
 
 void CSSScale::serialize(StringBuilder& builder) const
 {
     // https://drafts.css-houdini.org/css-typed-om/#serialize-a-cssscale
-    builder.append(is2D() ? "scale(" : "scale3d(");
+    builder.append(is2D() ? "scale("_s : "scale3d("_s);
     m_x->serialize(builder);
-    builder.append(", ");
+    builder.append(", "_s);
     m_y->serialize(builder);
     if (!is2D()) {
-        builder.append(", ");
+        builder.append(", "_s);
         m_z->serialize(builder);
     }
     builder.append(')');
@@ -158,21 +152,24 @@ void CSSScale::serialize(StringBuilder& builder) const
 
 ExceptionOr<Ref<DOMMatrix>> CSSScale::toMatrix()
 {
-    if (!is<CSSUnitValue>(m_x) || !is<CSSUnitValue>(m_y) || !is<CSSUnitValue>(m_z))
-        return Exception { TypeError };
+    RefPtr xUnitValue = dynamicDowncast<CSSUnitValue>(m_x);
+    RefPtr yUnitValue = dynamicDowncast<CSSUnitValue>(m_y);
+    RefPtr zUnitValue = dynamicDowncast<CSSUnitValue>(m_z);
+    if (!xUnitValue || !yUnitValue || !zUnitValue)
+        return Exception { ExceptionCode::TypeError };
 
     TransformationMatrix matrix { };
 
-    auto x = downcast<CSSUnitValue>(m_x.get()).value();
-    auto y = downcast<CSSUnitValue>(m_y.get()).value();
-    auto z = downcast<CSSUnitValue>(m_z.get()).value();
+    auto x = xUnitValue->value();
+    auto y = yUnitValue->value();
+    auto z = zUnitValue->value();
 
     if (is2D())
         matrix.scaleNonUniform(x, y);
     else
         matrix.scale3d(x, y, z);
 
-    return { DOMMatrix::create(WTFMove(matrix), is2D() ? DOMMatrixReadOnly::Is2D::Yes : DOMMatrixReadOnly::Is2D::No) };
+    return { DOMMatrix::create(WTF::move(matrix), is2D() ? DOMMatrixReadOnly::Is2D::Yes : DOMMatrixReadOnly::Is2D::No) };
 }
 
 RefPtr<CSSValue> CSSScale::toCSSValue() const

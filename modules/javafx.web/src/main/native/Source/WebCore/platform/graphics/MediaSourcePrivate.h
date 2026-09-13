@@ -32,53 +32,132 @@
 
 #if ENABLE(MEDIA_SOURCE)
 
-#include "MediaPlayer.h"
+#include <WebCore/MediaPlayer.h>
+#include <WebCore/PlatformTimeRanges.h>
+#include <WebCore/TrackInfo.h>
 #include <wtf/Forward.h>
-#include <wtf/RefCounted.h>
+#include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
 class ContentType;
+class MediaPlayerPrivateInterface;
 class SourceBufferPrivate;
+#if ENABLE(LEGACY_ENCRYPTED_MEDIA)
+class LegacyCDMSession;
+#endif
+enum class MediaSourceReadyState;
+struct MediaSourceConfiguration;
 
-class MediaSourcePrivate : public RefCounted<MediaSourcePrivate> {
+enum class MediaSourcePrivateAddStatus : uint8_t {
+        Ok,
+        NotSupported,
+    ReachedIdLimit,
+    InvalidState
+};
+
+enum class MediaSourcePrivateEndOfStreamStatus : uint8_t {
+    NoError,
+    NetworkError,
+    DecodeError
+};
+
+class WEBCORE_EXPORT MediaSourcePrivate
+    : public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<MediaSourcePrivate> {
 public:
     typedef Vector<String> CodecsArray;
 
-    MediaSourcePrivate() = default;
-    virtual ~MediaSourcePrivate() = default;
+    using AddStatus = MediaSourcePrivateAddStatus;
+    using EndOfStreamStatus = MediaSourcePrivateEndOfStreamStatus;
 
-    enum class AddStatus : uint8_t {
-        Ok,
-        NotSupported,
-        ReachedIdLimit
-    };
-    virtual AddStatus addSourceBuffer(const ContentType&, bool webMParserEnabled, RefPtr<SourceBufferPrivate>&) = 0;
-    virtual void durationChanged(const MediaTime&) = 0;
-    virtual void bufferedChanged(const PlatformTimeRanges&) { }
-    enum EndOfStreamStatus { EosNoError, EosNetworkError, EosDecodeError };
-    virtual void markEndOfStream(EndOfStreamStatus) = 0;
-    virtual void unmarkEndOfStream() = 0;
-    virtual bool isEnded() const = 0;
+    explicit MediaSourcePrivate(MediaSourcePrivateClient&);
+    virtual ~MediaSourcePrivate();
 
-    virtual MediaPlayer::ReadyState readyState() const = 0;
-    virtual void setReadyState(MediaPlayer::ReadyState) = 0;
+    RefPtr<MediaSourcePrivateClient> client() const;
+    virtual RefPtr<MediaPlayerPrivateInterface> player() const = 0;
+    virtual void setPlayer(MediaPlayerPrivateInterface*) = 0;
+    virtual void shutdown();
+    // Implementation override must be thread-safe. For the base implementation to be thread-safe, player() must be a ThreadSafeRefCounted object.
+    virtual MediaTime currentTime() const;
+    virtual bool timeIsProgressing() const;
 
-    virtual void setIsSeeking(bool isSeeking) { m_isSeeking = isSeeking; }
-    virtual void waitForSeekCompleted() = 0;
-    virtual void seekCompleted() = 0;
+    virtual constexpr MediaPlatformType platformType() const = 0;
+    virtual AddStatus addSourceBuffer(const ContentType&, const MediaSourceConfiguration&, RefPtr<SourceBufferPrivate>&) = 0;
+    virtual void removeSourceBuffer(SourceBufferPrivate&);
+    Vector<Ref<SourceBufferPrivate>> sourceBuffers() const;
+    void sourceBufferPrivateDidChangeActiveState(SourceBufferPrivate&, bool active);
+    virtual void notifyActiveSourceBuffersChanged() = 0;
+    virtual void durationChanged(const MediaTime&); // Base class method must be called in overrides. Must be thread-safe
+    virtual void bufferedChanged(const PlatformTimeRanges&); // Base class method must be called in overrides. Must be thread-safe.
+    void trackBufferedChanged(SourceBufferPrivate&, Vector<PlatformTimeRanges>&&);
+
+    MediaPlayer::ReadyState mediaPlayerReadyState() const;
+    virtual void setMediaPlayerReadyState(MediaPlayer::ReadyState);
+    virtual void markEndOfStream(EndOfStreamStatus);
+    virtual void unmarkEndOfStream() { m_isEnded = false; }
+    bool isEnded() const { return m_isEnded; }
+
+    virtual MediaSourceReadyState readyState() const { return m_readyState; }
+    virtual void setReadyState(MediaSourceReadyState readyState) { m_readyState = readyState; }
+    void setLiveSeekableRange(const PlatformTimeRanges&);
+    const PlatformTimeRanges& liveSeekableRange() const;
+    void clearLiveSeekableRange();
+
+    Ref<MediaTimePromise> waitForTarget(const SeekTarget&);
+    void seekToTime(const MediaTime&);
 
     virtual void setTimeFudgeFactor(const MediaTime& fudgeFactor) { m_timeFudgeFactor = fudgeFactor; }
     MediaTime timeFudgeFactor() const { return m_timeFudgeFactor; }
 
-    bool isSeeking() const { return m_isSeeking; }
+    MediaTime duration() const;
+    PlatformTimeRanges buffered() const;
+    PlatformTimeRanges seekable() const;
 
-    bool hasFutureTime(const MediaTime& currentTime, const MediaTime& duration, const PlatformTimeRanges&) const;
+    bool hasBufferedData() const;
+    bool hasFutureTime(const MediaTime& currentTime) const;
+    static constexpr MediaTime futureDataThreshold() { return MediaTime { 1001, 24000 }; }
+    bool hasFutureTime(const MediaTime& currentTime, const MediaTime& threshold) const;
+    bool hasAudio() const;
+    bool hasVideo() const;
+    using TracksType = OptionSet<TrackInfoTrackType>;
+    void tracksTypeChanged(SourceBufferPrivate&, TracksType);
+    virtual bool supportsTracksTypeChanged() const { return false; }
+
+    void setStreaming(bool value) { m_streaming = value; }
+    bool streaming() const { return m_streaming; }
+    void setStreamingAllowed(bool value) { m_streamingAllowed = value; }
+    bool streamingAllowed() const { return m_streamingAllowed; }
+
+protected:
+    MediaSourcePrivate(MediaSourcePrivateClient&, WorkQueue&);
+    void ensureOnDispatcher(Function<void()>&&) const;
+    void ensureOnDispatcherSync(NOESCAPE Function<void()>&&) const;
+
+    mutable Lock m_lock;
+    // FIXME: This should be a Vector<Ref<SourceBufferPrivate>>
+    Vector<RefPtr<SourceBufferPrivate>> m_sourceBuffers WTF_GUARDED_BY_LOCK(m_lock);
+    Vector<SourceBufferPrivate*> m_activeSourceBuffers WTF_GUARDED_BY_CAPABILITY(m_dispatcher.get());
+    std::atomic<bool> m_isEnded { false }; // Set on MediaSource's dispatcher.
+    std::atomic<MediaSourceReadyState> m_readyState; // Set on MediaSource's dispatcher.
+    std::atomic<WebCore::MediaPlayer::ReadyState> m_mediaPlayerReadyState { WebCore::MediaPlayer::ReadyState::HaveNothing };
+
+    const Ref<WorkQueue> m_dispatcher; // SerialFunctionDispatcher the SourceBufferPrivate/MediaSourcePrivate is running on.
 
 private:
+    void updateBufferedRanges();
+    void updateTracksType();
+
+    MediaTime m_duration WTF_GUARDED_BY_LOCK(m_lock) { MediaTime::invalidTime() };
+    PlatformTimeRanges m_buffered WTF_GUARDED_BY_LOCK(m_lock);
+    HashMap<SourceBufferPrivate*, Vector<PlatformTimeRanges>> m_bufferedRanges;
+    PlatformTimeRanges m_liveSeekable WTF_GUARDED_BY_LOCK(m_lock);
+    std::atomic<bool> m_streaming { false };
+    std::atomic<bool> m_streamingAllowed { false };
     MediaTime m_timeFudgeFactor;
-    bool m_isSeeking { false };
+    HashMap<SourceBufferPrivate*, TracksType> m_tracksTypes WTF_GUARDED_BY_CAPABILITY(m_dispatcher.get());
+    std::atomic<TracksType> m_tracksCombinedTypes;
+    const ThreadSafeWeakPtr<MediaSourcePrivateClient> m_client;
 };
 
 String convertEnumerationToString(MediaSourcePrivate::AddStatus);
@@ -98,30 +177,12 @@ struct LogArgument<WebCore::MediaSourcePrivate::AddStatus> {
     }
 };
 
-template<> struct EnumTraits<WebCore::MediaSourcePrivate::AddStatus> {
-    using values = EnumValues<
-        WebCore::MediaSourcePrivate::AddStatus,
-        WebCore::MediaSourcePrivate::AddStatus::Ok,
-        WebCore::MediaSourcePrivate::AddStatus::NotSupported,
-        WebCore::MediaSourcePrivate::AddStatus::ReachedIdLimit
-    >;
-};
-
 template <>
 struct LogArgument<WebCore::MediaSourcePrivate::EndOfStreamStatus> {
     static String toString(const WebCore::MediaSourcePrivate::EndOfStreamStatus status)
     {
         return convertEnumerationToString(status);
     }
-};
-
-template<> struct EnumTraits<WebCore::MediaSourcePrivate::EndOfStreamStatus> {
-    using values = EnumValues<
-        WebCore::MediaSourcePrivate::EndOfStreamStatus,
-        WebCore::MediaSourcePrivate::EndOfStreamStatus::EosNoError,
-        WebCore::MediaSourcePrivate::EndOfStreamStatus::EosNetworkError,
-        WebCore::MediaSourcePrivate::EndOfStreamStatus::EosDecodeError
-    >;
 };
 
 } // namespace WTF

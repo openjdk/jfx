@@ -27,11 +27,12 @@
 
 #if ENABLE(PREVIEW_CONVERTER)
 
-#include "ResourceError.h"
-#include "ResourceResponse.h"
-#include "SharedBuffer.h"
-#include <wtf/RefCounted.h>
+#include <WebCore/ResourceError.h>
+#include <WebCore/ResourceResponse.h>
+#include <WebCore/SharedBuffer.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RetainPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -45,7 +46,7 @@ class ResourceRequest;
 struct PreviewConverterClient;
 struct PreviewConverterProvider;
 
-struct PreviewPlatformDelegate : CanMakeWeakPtr<PreviewPlatformDelegate> {
+struct PreviewPlatformDelegate : AbstractRefCountedAndCanMakeWeakPtr<PreviewPlatformDelegate> {
     virtual ~PreviewPlatformDelegate() = default;
 
     virtual void delegateDidReceiveData(const FragmentedSharedBuffer&) = 0;
@@ -54,7 +55,7 @@ struct PreviewPlatformDelegate : CanMakeWeakPtr<PreviewPlatformDelegate> {
 };
 
 class PreviewConverter final : private PreviewPlatformDelegate, public RefCounted<PreviewConverter> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(PreviewConverter);
     WTF_MAKE_NONCOPYABLE(PreviewConverter);
 public:
     static Ref<PreviewConverter> create(const ResourceResponse& response, PreviewConverterProvider& provider)
@@ -65,6 +66,10 @@ public:
     WEBCORE_EXPORT static bool supportsMIMEType(const String& mimeType);
 
     ~PreviewConverter();
+
+    // PreviewPlatformDelegate.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
 
     ResourceRequest safeRequest(const ResourceRequest&) const;
     ResourceResponse previewResponse() const;

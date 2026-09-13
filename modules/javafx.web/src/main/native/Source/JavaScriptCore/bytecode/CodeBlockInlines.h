@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,29 +33,19 @@
 
 namespace JSC {
 
+#define CODEBLOCK_MAGIC 0xc0deb10c
+
 template<typename Functor>
 void CodeBlock::forEachValueProfile(const Functor& func)
 {
-    for (unsigned i = 0; i < numberOfArgumentValueProfiles(); ++i)
-        func(valueProfileForArgument(i), true);
+    for (auto& profile : argumentValueProfiles())
+        func(profile, true);
 
     if (m_metadata) {
-#define VISIT(__op) \
-        m_metadata->forEach<__op>([&] (auto& metadata) { func(metadata.m_profile, false); });
-        FOR_EACH_OPCODE_WITH_VALUE_PROFILE(VISIT)
-#undef VISIT
-
-        m_metadata->forEach<OpIteratorOpen>([&] (auto& metadata) {
-            func(metadata.m_iterableProfile, false);
-            func(metadata.m_iteratorProfile, false);
-            func(metadata.m_nextProfile, false);
-        });
-
-        m_metadata->forEach<OpIteratorNext>([&] (auto& metadata) {
-            func(metadata.m_nextResultProfile, false);
-            func(metadata.m_doneProfile, false);
-            func(metadata.m_valueProfile, false);
-        });
+        auto wrapper = [&] (ValueProfile& profile) {
+            func(profile, false);
+        };
+        m_metadata->forEachValueProfile(wrapper);
     }
 }
 
@@ -129,6 +119,13 @@ ALWAYS_INLINE StringJumpTable& CodeBlock::dfgStringSwitchJumpTable(int tableInde
 {
     ASSERT(jitType() == JITType::DFGJIT);
     return static_cast<DFG::JITCode*>(m_jitCode.get())->m_stringSwitchJumpTables[tableIndex];
+}
+#endif
+
+#if ASSERT_ENABLED
+ALWAYS_INLINE bool CodeBlock::wasDestructed()
+{
+    return m_magic != CODEBLOCK_MAGIC;
 }
 #endif
 

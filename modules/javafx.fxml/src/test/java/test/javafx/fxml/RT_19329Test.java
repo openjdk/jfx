@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,11 +27,15 @@ package test.javafx.fxml;
 
 import java.io.IOException;
 import javafx.fxml.FXMLLoader;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class RT_19329Test {
-    @Test(expected=IOException.class)
+    @Test
     public void testIncludeException() throws IOException {
-        FXMLLoader.load(getClass().getResource("rt_19329.fxml"));
+        assertThrows(IOException.class, () -> {
+            FXMLLoader.load(getClass().getResource("rt_19329.fxml"));
+        });
     }
 }

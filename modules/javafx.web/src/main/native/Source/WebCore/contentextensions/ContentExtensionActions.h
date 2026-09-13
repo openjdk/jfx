@@ -25,9 +25,12 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(CONTENT_EXTENSIONS)
 
-#include "ContentExtensionStringSerialization.h"
+#include <WebCore/ContentExtensionStringSerialization.h>
+#include <system_error>
 #include <wtf/JSONValues.h>
 #include <wtf/Hasher.h>
 
@@ -43,7 +46,7 @@ using SerializedActionByte = uint8_t;
 
 template<typename T> struct ActionWithoutMetadata {
     T isolatedCopy() const { return { }; }
-    bool operator==(const ActionWithoutMetadata&) const { return true; }
+    friend bool operator==(const ActionWithoutMetadata&, const ActionWithoutMetadata&) = default;
     void serialize(Vector<uint8_t>&) const { }
     static T deserialize(std::span<const uint8_t>) { return { }; }
     static size_t serializedLength(std::span<const uint8_t>) { return 0; }
@@ -52,8 +55,8 @@ template<typename T> struct ActionWithoutMetadata {
 template<typename T> struct ActionWithStringMetadata {
     String string;
     T isolatedCopy() const & { return { { string.isolatedCopy() } }; }
-    T isolatedCopy() && { return { { WTFMove(string).isolatedCopy() } }; }
-    bool operator==(const ActionWithStringMetadata& other) const { return other.string == this->string; }
+    T isolatedCopy() && { return { { WTF::move(string).isolatedCopy() } }; }
+    friend bool operator==(const ActionWithStringMetadata&, const ActionWithStringMetadata&) = default;
     void serialize(Vector<uint8_t>& vector) const { serializeString(vector, string); }
     static T deserialize(std::span<const uint8_t> span) { return { { deserializeString(span) } }; }
     static size_t serializedLength(std::span<const uint8_t> span) { return stringSerializedLength(span); }
@@ -64,6 +67,7 @@ struct BlockCookiesAction : public ActionWithoutMetadata<BlockCookiesAction> { }
 struct CSSDisplayNoneSelectorAction : public ActionWithStringMetadata<CSSDisplayNoneSelectorAction> { };
 struct NotifyAction : public ActionWithStringMetadata<NotifyAction> { };
 struct IgnorePreviousRulesAction : public ActionWithoutMetadata<IgnorePreviousRulesAction> { };
+struct IgnoreFollowingRulesAction : public ActionWithoutMetadata<IgnoreFollowingRulesAction> { };
 struct MakeHTTPSAction : public ActionWithoutMetadata<MakeHTTPSAction> { };
 
 struct WEBCORE_EXPORT ModifyHeadersAction {
@@ -75,31 +79,31 @@ struct WEBCORE_EXPORT ModifyHeadersAction {
             String value;
 
             AppendOperation isolatedCopy() const & { return { header.isolatedCopy(), value.isolatedCopy() }; }
-            AppendOperation isolatedCopy() && { return { WTFMove(header).isolatedCopy(), WTFMove(value).isolatedCopy() }; }
-            bool operator==(const AppendOperation& other) const { return other.header == this->header && other.value == this->value; }
+            AppendOperation isolatedCopy() && { return { WTF::move(header).isolatedCopy(), WTF::move(value).isolatedCopy() }; }
+            friend bool operator==(const AppendOperation&, const AppendOperation&) = default;
         };
         struct SetOperation {
             String header;
             String value;
 
             SetOperation isolatedCopy() const & { return { header.isolatedCopy(), value.isolatedCopy() }; }
-            SetOperation isolatedCopy() && { return { WTFMove(header).isolatedCopy(), WTFMove(value).isolatedCopy() }; }
-            bool operator==(const SetOperation& other) const { return other.header == this->header && other.value == this->value; }
+            SetOperation isolatedCopy() && { return { WTF::move(header).isolatedCopy(), WTF::move(value).isolatedCopy() }; }
+            friend bool operator==(const SetOperation&, const SetOperation&) = default;
         };
         struct RemoveOperation {
             String header;
 
             RemoveOperation isolatedCopy() const & { return { header.isolatedCopy() }; }
-            RemoveOperation isolatedCopy() && { return { WTFMove(header).isolatedCopy() }; }
-            bool operator==(const RemoveOperation& other) const { return other.header == this->header; }
+            RemoveOperation isolatedCopy() && { return { WTF::move(header).isolatedCopy() }; }
+            friend bool operator==(const RemoveOperation&, const RemoveOperation&) = default;
         };
-        using OperationVariant = std::variant<AppendOperation, SetOperation, RemoveOperation>;
+        using OperationVariant = Variant<AppendOperation, SetOperation, RemoveOperation>;
         OperationVariant operation;
 
         static Expected<ModifyHeaderInfo, std::error_code> parse(const JSON::Value&);
         ModifyHeaderInfo isolatedCopy() const &;
         ModifyHeaderInfo isolatedCopy() &&;
-        bool operator==(const ModifyHeaderInfo&) const;
+        friend bool operator==(const ModifyHeaderInfo&, const ModifyHeaderInfo&) = default;
         void serialize(Vector<uint8_t>&) const;
         static ModifyHeaderInfo deserialize(std::span<const uint8_t>);
         static size_t serializedLength(std::span<const uint8_t>);
@@ -113,8 +117,8 @@ struct WEBCORE_EXPORT ModifyHeadersAction {
 
     ModifyHeadersAction(Vector<ModifyHeaderInfo>&& requestHeaders, Vector<ModifyHeaderInfo>&& responseHeaders, uint32_t priority)
         : hashTableType(HashTableType::Full)
-        , requestHeaders(WTFMove(requestHeaders))
-        , responseHeaders(WTFMove(responseHeaders))
+        , requestHeaders(WTF::move(requestHeaders))
+        , responseHeaders(WTF::move(responseHeaders))
         , priority(priority) { }
 
     enum EmptyValueTag { EmptyValue };
@@ -122,11 +126,12 @@ struct WEBCORE_EXPORT ModifyHeadersAction {
     ModifyHeadersAction(EmptyValueTag) : hashTableType(HashTableType::Empty) { }
     ModifyHeadersAction(DeletedValueTag) : hashTableType(HashTableType::Deleted) { }
     bool isDeletedValue() const { return hashTableType == HashTableType::Deleted; }
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
 
     static Expected<ModifyHeadersAction, std::error_code> parse(const JSON::Object&);
     ModifyHeadersAction isolatedCopy() const &;
     ModifyHeadersAction isolatedCopy() &&;
-    bool operator==(const ModifyHeadersAction&) const;
+    friend bool operator==(const ModifyHeadersAction&, const ModifyHeadersAction&) = default;
     void serialize(Vector<uint8_t>&) const;
     static ModifyHeadersAction deserialize(std::span<const uint8_t>);
     static size_t serializedLength(std::span<const uint8_t>);
@@ -138,18 +143,18 @@ struct WEBCORE_EXPORT RedirectAction {
         String extensionPath;
 
         ExtensionPathAction isolatedCopy() const & { return { extensionPath.isolatedCopy() }; }
-        ExtensionPathAction isolatedCopy() && { return { WTFMove(extensionPath).isolatedCopy() }; }
-        bool operator==(const ExtensionPathAction& other) const { return other.extensionPath == this->extensionPath; }
+        ExtensionPathAction isolatedCopy() && { return { WTF::move(extensionPath).isolatedCopy() }; }
+        friend bool operator==(const ExtensionPathAction&, const ExtensionPathAction&) = default;
     };
     struct RegexSubstitutionAction {
         String regexSubstitution;
         String regexFilter;
 
         RegexSubstitutionAction isolatedCopy() const & { return { regexSubstitution.isolatedCopy(), regexFilter.isolatedCopy() }; }
-        RegexSubstitutionAction isolatedCopy() && { return { WTFMove(regexSubstitution).isolatedCopy(), WTFMove(regexFilter).isolatedCopy() }; }
+        RegexSubstitutionAction isolatedCopy() && { return { WTF::move(regexSubstitution).isolatedCopy(), WTF::move(regexFilter).isolatedCopy() }; }
         void serialize(Vector<uint8_t>&) const;
         static RegexSubstitutionAction deserialize(std::span<const uint8_t>);
-        bool operator==(const RegexSubstitutionAction& other) const { return other.regexSubstitution == this->regexSubstitution && other.regexFilter == this->regexFilter; }
+        friend bool operator==(const RegexSubstitutionAction&, const RegexSubstitutionAction&) = default;
         WEBCORE_EXPORT void applyToURL(URL&) const;
     };
     struct URLTransformAction {
@@ -161,8 +166,8 @@ struct WEBCORE_EXPORT RedirectAction {
 
                 static Expected<QueryKeyValue, std::error_code> parse(const JSON::Value&);
                 QueryKeyValue isolatedCopy() const & { return { key.isolatedCopy(), replaceOnly, value.isolatedCopy() }; }
-                QueryKeyValue isolatedCopy() && { return { WTFMove(key).isolatedCopy(), replaceOnly, WTFMove(value).isolatedCopy() }; }
-                bool operator==(const QueryKeyValue&) const;
+                QueryKeyValue isolatedCopy() && { return { WTF::move(key).isolatedCopy(), replaceOnly, WTF::move(value).isolatedCopy() }; }
+                friend bool operator==(const QueryKeyValue&, const QueryKeyValue&) = default;
                 void serialize(Vector<uint8_t>&) const;
                 static QueryKeyValue deserialize(std::span<const uint8_t>);
                 static size_t serializedLength(std::span<const uint8_t>);
@@ -174,7 +179,7 @@ struct WEBCORE_EXPORT RedirectAction {
             static Expected<QueryTransform, std::error_code> parse(const JSON::Object&);
             QueryTransform isolatedCopy() const &;
             QueryTransform isolatedCopy() &&;
-            bool operator==(const QueryTransform&) const;
+            friend bool operator==(const QueryTransform&, const QueryTransform&) = default;
             void serialize(Vector<uint8_t>&) const;
             static QueryTransform deserialize(std::span<const uint8_t>);
             static size_t serializedLength(std::span<const uint8_t>);
@@ -186,7 +191,7 @@ struct WEBCORE_EXPORT RedirectAction {
         String password;
         String path;
         std::optional<std::optional<uint16_t>> port;
-        using QueryTransformVariant = std::variant<String, QueryTransform>;
+        using QueryTransformVariant = Variant<String, QueryTransform>;
         QueryTransformVariant queryTransform;
         String scheme;
         String username;
@@ -194,7 +199,7 @@ struct WEBCORE_EXPORT RedirectAction {
         static Expected<URLTransformAction, std::error_code> parse(const JSON::Object&);
         URLTransformAction isolatedCopy() const &;
         URLTransformAction isolatedCopy() &&;
-        bool operator==(const URLTransformAction&) const;
+        friend bool operator==(const URLTransformAction&, const URLTransformAction&) = default;
         void serialize(Vector<uint8_t>&) const;
         static URLTransformAction deserialize(std::span<const uint8_t>);
         static size_t serializedLength(std::span<const uint8_t>);
@@ -204,43 +209,88 @@ struct WEBCORE_EXPORT RedirectAction {
         String url;
 
         URLAction isolatedCopy() const & { return { url.isolatedCopy() }; }
-        URLAction isolatedCopy() && { return { WTFMove(url).isolatedCopy() }; }
-        bool operator==(const URLAction& other) const { return other.url == this->url; }
+        URLAction isolatedCopy() && { return { WTF::move(url).isolatedCopy() }; }
+        friend bool operator==(const URLAction&, const URLAction&) = default;
     };
 
     enum class HashTableType : uint8_t { Empty, Deleted, Full } hashTableType;
-    using ActionVariant = std::variant<ExtensionPathAction, RegexSubstitutionAction, URLTransformAction, URLAction>;
+    using ActionVariant = Variant<ExtensionPathAction, RegexSubstitutionAction, URLTransformAction, URLAction>;
     ActionVariant action;
 
     RedirectAction(ActionVariant&& action)
         : hashTableType(HashTableType::Full)
-        , action(WTFMove(action)) { }
+        , action(WTF::move(action)) { }
 
     enum EmptyValueTag { EmptyValue };
     enum DeletedValueTag { DeletedValue };
     RedirectAction(EmptyValueTag) : hashTableType(HashTableType::Empty) { }
     RedirectAction(DeletedValueTag) : hashTableType(HashTableType::Deleted) { }
     bool isDeletedValue() const { return hashTableType == HashTableType::Deleted; }
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
 
     static Expected<RedirectAction, std::error_code> parse(const JSON::Object&, const String& urlFilter);
     RedirectAction isolatedCopy() const &;
     RedirectAction isolatedCopy() &&;
-    bool operator==(const RedirectAction&) const;
+    friend bool operator==(const RedirectAction&, const RedirectAction&) = default;
     void serialize(Vector<uint8_t>&) const;
     static RedirectAction deserialize(std::span<const uint8_t>);
     static size_t serializedLength(std::span<const uint8_t>);
     void applyToRequest(ResourceRequest&, const URL&);
+    void modifyURL(URL& originalURL, const URL& extensionBaseURL);
 };
 
-using ActionData = std::variant<
+struct ReportIdentifierAction : public ActionWithStringMetadata<ReportIdentifierAction> {
+    double identifier;
+
+    ReportIdentifierAction(String string)
+    : ActionWithStringMetadata<ReportIdentifierAction> { { WTF::move(string) } }
+    , identifier(0)
+    {
+    }
+
+    ReportIdentifierAction(String string, double identifier)
+    : ActionWithStringMetadata<ReportIdentifierAction> { { WTF::move(string) } }
+    , identifier(identifier)
+    {
+    }
+
+    ReportIdentifierAction isolatedCopy() const & { return { string.isolatedCopy(), identifier }; }
+    ReportIdentifierAction isolatedCopy() && { return { WTF::move(string).isolatedCopy(), identifier }; }
+    friend bool operator==(const ReportIdentifierAction&, const ReportIdentifierAction&) = default;
+
+    void serialize(Vector<uint8_t>& vector) const
+    {
+        vector.reserveCapacity(vector.size() + sizeof(identifier));
+        vector.append(asByteSpan(identifier));
+
+        ActionWithStringMetadata<ReportIdentifierAction>::serialize(vector);
+    }
+
+    static ReportIdentifierAction deserialize(std::span<const uint8_t> span)
+    {
+        ReportIdentifierAction value = ActionWithStringMetadata<ReportIdentifierAction>::deserialize(span.subspan(sizeof(identifier)));
+        value.identifier = reinterpretCastSpanStartTo<double>(span);
+
+        return value;
+    }
+
+    static size_t serializedLength(std::span<const uint8_t> span)
+    {
+        return ActionWithStringMetadata<ReportIdentifierAction>::serializedLength(span.subspan(sizeof(identifier))) + sizeof(identifier);
+    }
+};
+
+using ActionData = Variant<
     BlockLoadAction,
     BlockCookiesAction,
     CSSDisplayNoneSelectorAction,
     NotifyAction,
     IgnorePreviousRulesAction,
+    IgnoreFollowingRulesAction,
     MakeHTTPSAction,
     ModifyHeadersAction,
-    RedirectAction
+    RedirectAction,
+    ReportIdentifierAction
 >;
 
 inline void add(Hasher& hasher, const ModifyHeadersAction::ModifyHeaderInfo::AppendOperation& operation)
@@ -307,20 +357,7 @@ inline void add(Hasher& hasher, const ModifyHeadersAction& action)
 
 namespace WTF {
 
-template<> struct DefaultHash<WebCore::ContentExtensions::RedirectAction> {
-    using Action = WebCore::ContentExtensions::RedirectAction;
-    static uint32_t hash(const Action& action) { return computeHash(action); }
-    static bool equal(const Action& a, const Action& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
 template<> struct HashTraits<WebCore::ContentExtensions::RedirectAction> : public CustomHashTraits<WebCore::ContentExtensions::RedirectAction> { };
-
-template<> struct DefaultHash<WebCore::ContentExtensions::ModifyHeadersAction> {
-    using Action = WebCore::ContentExtensions::ModifyHeadersAction;
-    static uint32_t hash(const Action& action) { return computeHash(action); }
-    static bool equal(const Action& a, const Action& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
 template<> struct HashTraits<WebCore::ContentExtensions::ModifyHeadersAction> : public CustomHashTraits<WebCore::ContentExtensions::ModifyHeadersAction> { };
 
 } // namespace WTF

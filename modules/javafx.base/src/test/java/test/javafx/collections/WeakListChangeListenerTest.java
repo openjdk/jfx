@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,21 +27,24 @@ package test.javafx.collections;
 
 import com.sun.javafx.collections.NonIterableChange;
 import com.sun.javafx.collections.ObservableListWrapper;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.WeakListChangeListener;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class WeakListChangeListenerTest {
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testConstructWithNull() {
-        new WeakListChangeListener<>(null);
+        assertThrows(NullPointerException.class, () -> {
+            new WeakListChangeListener<>(null);
+        });
     }
+
 
     @Test
     public void testHandle() {

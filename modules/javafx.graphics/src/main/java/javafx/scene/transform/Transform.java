@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1446,7 +1446,7 @@ public abstract class Transform implements Cloneable, EventTarget {
      * The coordinates are stored in the arrays starting at the specified
      * offset in the order <code>[x0, y0, z0, x1, y1, z1, ..., xn, yn, zn]</code>.
      * @param srcPts the array containing the source point coordinates.
-     * Each point is stored as a tiplet of x,&nbsp;y,&nbsp;z coordinates.
+     * Each point is stored as a triplet of x,&nbsp;y,&nbsp;z coordinates.
      * @param srcOff the offset to the first point to be transformed
      * in the source array
      * @param dstPts the array into which the transformed point coordinates

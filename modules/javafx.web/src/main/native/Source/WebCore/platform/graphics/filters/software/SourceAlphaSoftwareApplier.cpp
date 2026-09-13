@@ -25,18 +25,21 @@
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
 #include "SourceAlpha.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-bool SourceAlphaSoftwareApplier::apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SourceAlphaSoftwareApplier);
+
+bool SourceAlphaSoftwareApplier::apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const
 {
     auto& input = inputs[0].get();
 
-    auto resultImage = result.imageBuffer();
+    RefPtr resultImage = result.imageBuffer();
     if (!resultImage)
         return false;
 
-    auto inputImage = input.imageBuffer();
+    RefPtr inputImage = input.imageBuffer();
     if (!inputImage)
         return false;
 
@@ -44,7 +47,7 @@ bool SourceAlphaSoftwareApplier::apply(const Filter&, const FilterImageVector& i
     auto& filterContext = resultImage->context();
 
     filterContext.fillRect(imageRect, Color::black);
-    filterContext.drawImageBuffer(*inputImage, IntPoint(), CompositeOperator::DestinationIn);
+    filterContext.drawImageBuffer(*inputImage, IntPoint(), { CompositeOperator::DestinationIn });
     return true;
 }
 

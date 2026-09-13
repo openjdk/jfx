@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,14 +27,13 @@
 
 #if ENABLE(WEB_CODECS)
 
-#include "ActiveDOMObject.h"
-#include "EventTarget.h"
+#include "EventTargetInterfaces.h"
+#include "ExceptionOr.h"
 #include "JSDOMPromiseDeferredForward.h"
 #include "VideoDecoder.h"
-#include "WebCodecsCodecState.h"
+#include "WebCodecsBase.h"
 #include "WebCodecsEncodedVideoChunkType.h"
 #include "WebCodecsVideoDecoderSupport.h"
-#include <wtf/Deque.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -43,11 +42,8 @@ class WebCodecsEncodedVideoChunk;
 class WebCodecsErrorCallback;
 class WebCodecsVideoFrameOutputCallback;
 
-class WebCodecsVideoDecoder
-    : public RefCounted<WebCodecsVideoDecoder>
-    , public ActiveDOMObject
-    , public EventTarget {
-    WTF_MAKE_ISO_ALLOCATED(WebCodecsVideoDecoder);
+class WebCodecsVideoDecoder : public WebCodecsBase {
+    WTF_MAKE_TZONE_ALLOCATED(WebCodecsVideoDecoder);
 public:
     ~WebCodecsVideoDecoder();
 
@@ -58,8 +54,10 @@ public:
 
     static Ref<WebCodecsVideoDecoder> create(ScriptExecutionContext&, Init&&);
 
-    WebCodecsCodecState state() const { return m_state; }
-    size_t decodeQueueSize() const { return m_decodeQueueSize; }
+    size_t decodeQueueSize() const { return codecQueueSize(); }
+
+    WebCodecsVideoFrameOutputCallback& outputCallbackConcurrently() { return m_output.get(); }
+    WebCodecsErrorCallback& errorCallbackConcurrently() { return m_error.get(); }
 
     ExceptionOr<void> configure(ScriptExecutionContext&, WebCodecsVideoDecoderConfig&&);
     ExceptionOr<void> decode(Ref<WebCodecsEncodedVideoChunk>&&);
@@ -69,47 +67,31 @@ public:
 
     static void isConfigSupported(ScriptExecutionContext&, WebCodecsVideoDecoderConfig&&, Ref<DeferredPromise>&&);
 
-    using RefCounted::ref;
-    using RefCounted::deref;
-
 private:
     WebCodecsVideoDecoder(ScriptExecutionContext&, Init&&);
+    size_t maximumCodecOperationsEnqueued() const final { return 4; }
 
-    // ActiveDOMObject API.
+    // ActiveDOMObject.
     void stop() final;
-    const char* activeDOMObjectName() const final;
     void suspend(ReasonForSuspension) final;
-    bool virtualHasPendingActivity() const final;
 
-    // EventTarget
-    void refEventTarget() final { ref(); }
-    void derefEventTarget() final { deref(); }
-    EventTargetInterface eventTargetInterface() const final { return WebCodecsVideoDecoderEventTargetInterfaceType; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    // EventTarget.
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::WebCodecsVideoDecoder; }
 
     ExceptionOr<void> closeDecoder(Exception&&);
     ExceptionOr<void> resetDecoder(const Exception&);
-    void setInternalDecoder(UniqueRef<VideoDecoder>&&);
-    void scheduleDequeueEvent();
+    void setInternalDecoder(Ref<VideoDecoder>&&);
 
-    void queueControlMessageAndProcess(Function<void()>&&);
-    void processControlMessageQueue();
-
-    WebCodecsCodecState m_state { WebCodecsCodecState::Unconfigured };
-    size_t m_decodeQueueSize { 0 };
-    size_t m_beingDecodedQueueSize { 0 };
-    Ref<WebCodecsVideoFrameOutputCallback> m_output;
-    Ref<WebCodecsErrorCallback> m_error;
-    std::unique_ptr<VideoDecoder> m_internalDecoder;
-    bool m_dequeueEventScheduled { false };
-    Deque<Ref<DeferredPromise>> m_pendingFlushPromises;
-    size_t m_clearFlushPromiseCount { 0 };
+    const Ref<WebCodecsVideoFrameOutputCallback> m_output;
+    const Ref<WebCodecsErrorCallback> m_error;
+    RefPtr<VideoDecoder> m_internalDecoder;
+    Vector<Ref<DeferredPromise>> m_pendingFlushPromises;
     bool m_isKeyChunkRequired { false };
-    Deque<Function<void()>> m_controlMessageQueue;
-    bool m_isMessageQueueBlocked { false };
-    bool m_isFlushing { false };
+    size_t m_decoderCount { 0 };
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(WebCodecsVideoDecoder)
 
 #endif

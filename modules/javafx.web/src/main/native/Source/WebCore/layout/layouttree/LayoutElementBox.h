@@ -25,24 +25,29 @@
 
 #pragma once
 
-#include "LayoutBox.h"
-#include <wtf/IsoMalloc.h>
+#include <WebCore/LayoutBox.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
 
 class CachedImage;
+class RenderElement;
 class RenderStyle;
 
 namespace Layout {
 
 class ElementBox : public Box {
-    WTF_MAKE_ISO_ALLOCATED(ElementBox);
+    WTF_MAKE_TZONE_ALLOCATED(ElementBox);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ElementBox);
 public:
-    ElementBox(ElementAttributes&&, RenderStyle&&, std::unique_ptr<RenderStyle>&& firstLineStyle = nullptr, OptionSet<BaseTypeFlag> = { ElementBoxFlag });
+    ElementBox(ElementAttributes&&, RenderStyle&&, std::unique_ptr<RenderStyle>&& firstLineStyle = nullptr, EnumSet<BaseTypeFlag> = { ElementBoxFlag });
 
-    enum class ListMarkerAttribute : uint8_t { Image = 1 << 0, Outside = 1 << 1 };
-    ElementBox(ElementAttributes&&, OptionSet<ListMarkerAttribute>, RenderStyle&&, std::unique_ptr<RenderStyle>&& firstLineStyle = nullptr);
+    enum class ListMarkerAttribute : bool {
+        Image,
+        Outside,
+    };
+    ElementBox(ElementAttributes&&, EnumSet<ListMarkerAttribute>, RenderStyle&&, std::unique_ptr<RenderStyle>&& firstLineStyle = nullptr);
 
     struct ReplacedAttributes {
         LayoutSize intrinsicSize;
@@ -56,9 +61,11 @@ public:
     const Box* firstChild() const { return m_firstChild.get(); }
     const Box* firstInFlowChild() const;
     const Box* firstInFlowOrFloatingChild() const;
+    const Box* firstOutOfFlowChild() const;
     const Box* lastChild() const { return m_lastChild.get(); }
     const Box* lastInFlowChild() const;
     const Box* lastInFlowOrFloatingChild() const;
+    const Box* lastOutOfFlowChild() const;
 
     // FIXME: This is currently needed for style updates.
     Box* firstChild() { return m_firstChild.get(); }
@@ -66,6 +73,7 @@ public:
     bool hasChild() const { return firstChild(); }
     bool hasInFlowChild() const { return firstInFlowChild(); }
     bool hasInFlowOrFloatingChild() const { return firstInFlowOrFloatingChild(); }
+    bool hasOutOfFlowChild() const;
 
     void appendChild(UniqueRef<Box>);
     void insertChild(UniqueRef<Box>, Box* beforeChild = nullptr);
@@ -82,19 +90,29 @@ public:
     LayoutUnit intrinsicRatio() const;
     bool hasAspectRatio() const;
 
+    void setListMarkerAttributes(EnumSet<ListMarkerAttribute> listMarkerAttributes) { m_replacedData->listMarkerAttributes = listMarkerAttributes; }
+
     bool isListMarkerImage() const { return m_replacedData && m_replacedData->listMarkerAttributes.contains(ListMarkerAttribute::Image); }
     bool isListMarkerOutside() const { return m_replacedData && m_replacedData->listMarkerAttributes.contains(ListMarkerAttribute::Outside); }
 
+    // FIXME: This is temporary until after list marker content is accessible by IFC (webkit.org/b/294342)
+    void setListMarkerLayoutBounds(std::pair<float, float> layoutBounds) { m_replacedData->layoutBounds = layoutBounds; }
+    std::pair<float, float> layoutBoundsForListMarker() const { return m_replacedData ? m_replacedData->layoutBounds : std::pair<float, float>(); }
+
     // FIXME: This doesn't belong.
     CachedImage* cachedImage() const { return m_replacedData ? m_replacedData->cachedImage : nullptr; }
+
+    RenderElement* rendererForIntegration() const;
 
 private:
     friend class Box;
 
     struct ReplacedData {
-        WTF_MAKE_STRUCT_FAST_ALLOCATED;
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(ReplacedData);
 
-        OptionSet<ListMarkerAttribute> listMarkerAttributes;
+        EnumSet<ListMarkerAttribute> listMarkerAttributes;
+        std::pair<float, float> layoutBounds;
+
         std::optional<LayoutSize> intrinsicSize;
         std::optional<LayoutUnit> intrinsicRatio;
         CachedImage* cachedImage { nullptr };

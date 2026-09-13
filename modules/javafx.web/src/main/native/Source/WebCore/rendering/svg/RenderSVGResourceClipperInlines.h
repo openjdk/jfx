@@ -30,14 +30,14 @@
 
 namespace WebCore {
 
-inline SVGClipPathElement& RenderSVGResourceClipper::clipPathElement() const
+inline Ref<SVGClipPathElement> RenderSVGResourceClipper::protectedClipPathElement() const
 {
     return downcast<SVGClipPathElement>(nodeForNonAnonymous());
 }
 
 inline SVGUnitTypes::SVGUnitType RenderSVGResourceClipper::clipPathUnits() const
 {
-    return clipPathElement().clipPathUnits();
+    return protectedClipPathElement()->clipPathUnits();
 }
 
 } // namespace WebCore

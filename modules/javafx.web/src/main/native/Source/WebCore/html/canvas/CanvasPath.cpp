@@ -37,11 +37,14 @@
 
 #include "AffineTransform.h"
 #include "DOMPointInit.h"
+#include "ExceptionOr.h"
 #include "FloatRect.h"
 #include "FloatRoundedRect.h"
 #include "FloatSize.h"
 #include <algorithm>
+#include <numbers>
 #include <wtf/MathExtras.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
@@ -50,8 +53,10 @@ void CanvasPath::closePath()
     if (m_path.isEmpty())
         return;
 
-    FloatRect boundRect = m_path.fastBoundingRect();
-    if (boundRect.width() || boundRect.height())
+    // The closePath() method, when invoked, must do nothing if the object's path has no subpaths.
+    // Otherwise, it must mark the last subpath as closed, create a new subpath whose first point
+    // is the same as the previous subpath's first point, and finally add this new subpath to the path.
+    if (m_path.hasSubpaths())
         m_path.closeSubpath();
 }
 
@@ -59,7 +64,7 @@ void CanvasPath::moveTo(float x, float y)
 {
     if (!std::isfinite(x) || !std::isfinite(y))
         return;
-    if (!hasInvertibleTransform())
+    if (!hasInvertibleTransform()) [[unlikely]]
         return;
     m_path.moveTo(FloatPoint(x, y));
 }
@@ -73,7 +78,7 @@ void CanvasPath::lineTo(float x, float y)
 {
     if (!std::isfinite(x) || !std::isfinite(y))
         return;
-    if (!hasInvertibleTransform())
+    if (!hasInvertibleTransform()) [[unlikely]]
         return;
 
     FloatPoint p1 = FloatPoint(x, y);
@@ -87,7 +92,7 @@ void CanvasPath::quadraticCurveTo(float cpx, float cpy, float x, float y)
 {
     if (!std::isfinite(cpx) || !std::isfinite(cpy) || !std::isfinite(x) || !std::isfinite(y))
         return;
-    if (!hasInvertibleTransform())
+    if (!hasInvertibleTransform()) [[unlikely]]
         return;
     if (m_path.isEmpty())
         m_path.moveTo(FloatPoint(cpx, cpy));
@@ -102,7 +107,7 @@ void CanvasPath::bezierCurveTo(float cp1x, float cp1y, float cp2x, float cp2y, f
 {
     if (!std::isfinite(cp1x) || !std::isfinite(cp1y) || !std::isfinite(cp2x) || !std::isfinite(cp2y) || !std::isfinite(x) || !std::isfinite(y))
         return;
-    if (!hasInvertibleTransform())
+    if (!hasInvertibleTransform()) [[unlikely]]
         return;
     if (m_path.isEmpty())
         m_path.moveTo(FloatPoint(cp1x, cp1y));
@@ -120,9 +125,9 @@ ExceptionOr<void> CanvasPath::arcTo(float x1, float y1, float x2, float y2, floa
         return { };
 
     if (r < 0)
-        return Exception { IndexSizeError };
+        return Exception { ExceptionCode::IndexSizeError };
 
-    if (!hasInvertibleTransform())
+    if (!hasInvertibleTransform()) [[unlikely]]
         return { };
 
     FloatPoint p1 = FloatPoint(x1, y1);
@@ -140,21 +145,19 @@ ExceptionOr<void> CanvasPath::arcTo(float x1, float y1, float x2, float y2, floa
 
 static void normalizeAngles(float& startAngle, float& endAngle, bool anticlockwise)
 {
-    float newStartAngle = startAngle;
+    constexpr auto twoPiFloat = 2 * std::numbers::pi_v<float>;
+    float newStartAngle = fmodf(startAngle, twoPiFloat);
     if (newStartAngle < 0)
-        newStartAngle = (2 * piFloat) + fmodf(newStartAngle, -(2 * piFloat));
-    else
-        newStartAngle = fmodf(newStartAngle, 2 * piFloat);
+        newStartAngle += twoPiFloat;
 
     float delta = newStartAngle - startAngle;
     startAngle = newStartAngle;
     endAngle = endAngle + delta;
-    ASSERT(newStartAngle >= 0 && (newStartAngle < 2 * piFloat || WTF::areEssentiallyEqual<float>(newStartAngle, 2 * piFloat)));
-
-    if (anticlockwise && startAngle - endAngle >= 2 * piFloat)
-        endAngle = startAngle - 2 * piFloat;
-    else if (!anticlockwise && endAngle - startAngle >= 2 * piFloat)
-        endAngle = startAngle + 2 * piFloat;
+    ASSERT(newStartAngle >= 0 && (newStartAngle < twoPiFloat || WTF::areEssentiallyEqual<float>(newStartAngle, twoPiFloat)));
+    if (anticlockwise && startAngle - endAngle >= twoPiFloat)
+        endAngle = startAngle - twoPiFloat;
+    else if (!anticlockwise && endAngle - startAngle >= twoPiFloat)
+        endAngle = startAngle + twoPiFloat;
 }
 
 ExceptionOr<void> CanvasPath::arc(float x, float y, float radius, float startAngle, float endAngle, bool anticlockwise)
@@ -163,9 +166,9 @@ ExceptionOr<void> CanvasPath::arc(float x, float y, float radius, float startAng
         return { };
 
     if (radius < 0)
-        return Exception { IndexSizeError };
+        return Exception { ExceptionCode::IndexSizeError };
 
-    if (!hasInvertibleTransform())
+    if (!hasInvertibleTransform()) [[unlikely]]
         return { };
 
     normalizeAngles(startAngle, endAngle, anticlockwise);
@@ -186,16 +189,16 @@ ExceptionOr<void> CanvasPath::ellipse(float x, float y, float radiusX, float rad
         return { };
 
     if (radiusX < 0 || radiusY < 0)
-        return Exception { IndexSizeError };
+        return Exception { ExceptionCode::IndexSizeError };
 
-    if (!hasInvertibleTransform())
+    if (!hasInvertibleTransform()) [[unlikely]]
         return { };
 
     normalizeAngles(startAngle, endAngle, anticlockwise);
 
     if ((!radiusX && !radiusY) || startAngle == endAngle) {
         AffineTransform transform;
-        transform.translate(x, y).rotate(rad2deg(rotation));
+        transform.translate(x, y).rotateRadians(rotation);
 
         lineTo(transform.mapPoint(FloatPoint(radiusX * cosf(startAngle), radiusY * sinf(startAngle))));
         return { };
@@ -203,7 +206,7 @@ ExceptionOr<void> CanvasPath::ellipse(float x, float y, float radiusX, float rad
 
     if (!radiusX || !radiusY) {
         AffineTransform transform;
-        transform.translate(x, y).rotate(rad2deg(rotation));
+        transform.translate(x, y).rotateRadians(rotation);
 
         lineTo(transform.mapPoint(FloatPoint(radiusX * cosf(startAngle), radiusY * sinf(startAngle))));
 
@@ -225,7 +228,7 @@ ExceptionOr<void> CanvasPath::ellipse(float x, float y, float radiusX, float rad
 
 void CanvasPath::rect(float x, float y, float width, float height)
 {
-    if (!hasInvertibleTransform())
+    if (!hasInvertibleTransform()) [[unlikely]]
         return;
 
     if (!std::isfinite(x) || !std::isfinite(y) || !std::isfinite(width) || !std::isfinite(height))
@@ -241,10 +244,10 @@ void CanvasPath::rect(float x, float y, float width, float height)
 
 ExceptionOr<void> CanvasPath::roundRect(float x, float y, float width, float height, const RadiusVariant& radii)
 {
-    return roundRect(x, y, width, height, std::span(&radii, 1));
+    return roundRect(x, y, width, height, singleElementSpan(radii));
 }
 
-ExceptionOr<void> CanvasPath::roundRect(float x, float y, float width, float height, const std::span<const RadiusVariant>& radii)
+ExceptionOr<void> CanvasPath::roundRect(float x, float y, float width, float height, std::span<const RadiusVariant> radii)
 {
     // Based on Nov 5th 2021 version of https://html.spec.whatwg.org/multipage/canvas.html#dom-context-2d-roundrect
     // 1. If any of x, y, w, or h are infinite or NaN, then return.
@@ -254,7 +257,7 @@ ExceptionOr<void> CanvasPath::roundRect(float x, float y, float width, float hei
 
     // 2. If radii is not a list of size one, two, three, or four, then throw a RangeError.
     if (radii.size() > 4 || radii.empty())
-        return Exception { RangeError, makeString("radii must contain at least 1 element, up to 4. It contained ", radii.size(), " elements.") };
+        return Exception { ExceptionCode::RangeError, makeString("radii must contain at least 1 element, up to 4. It contained "_s, radii.size(), " elements."_s) };
 
     // 3. Let normalizedRadii be an empty list.
     Vector<FloatPoint, 4> normalizedRadii;
@@ -273,7 +276,7 @@ ExceptionOr<void> CanvasPath::roundRect(float x, float y, float width, float hei
 
                 // 4.1.2 If radius["x"] or radius["y"] is negative, then throw a RangeError.
                 if (point.x < 0 || point.y < 0)
-                    return Exception { RangeError, makeString("radius point coordinates must be positive") };
+                    return Exception { ExceptionCode::RangeError, "radius point coordinates must be positive"_s };
 
                 // 4.1.3 Otherwise, append radius to normalizedRadii.
                 normalizedRadii.append({ static_cast<float>(point.x), static_cast<float>(point.y) });
@@ -290,7 +293,7 @@ ExceptionOr<void> CanvasPath::roundRect(float x, float y, float width, float hei
 
                 // 4.2.2 If radius is negative, then throw a RangeError.
                 if (radiusValue < 0)
-                    return Exception { RangeError, makeString("radius value must be positive") };
+                    return Exception { ExceptionCode::RangeError, "radius value must be positive"_s };
 
                 // 4.2.3 Otherwise append «[ "x" → radius, "y" → radius ]» to normalizedRadii.
                 normalizedRadii.append({ static_cast<float>(radiusValue), static_cast<float>(radiusValue) });

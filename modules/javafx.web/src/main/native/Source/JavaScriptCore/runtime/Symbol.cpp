@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2015-2016 Yusuke Suzuki <utatane.tea@gmail.com>.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,6 +29,7 @@
 
 #include "JSCJSValueInlines.h"
 #include "SymbolObject.h"
+#include <wtf/text/MakeString.h>
 
 namespace JSC {
 
@@ -83,9 +84,12 @@ void Symbol::destroy(JSCell* cell)
     static_cast<Symbol*>(cell)->Symbol::~Symbol();
 }
 
-String Symbol::descriptiveString() const
+Expected<String, ErrorTypeWithExtension> Symbol::tryGetDescriptiveString() const
 {
-    return makeString("Symbol("_s, StringView(m_privateName.uid()), ')');
+    String description = tryMakeString("Symbol("_s, StringView(m_privateName.uid()), ')');
+    if (!description)
+        return makeUnexpected(ErrorTypeWithExtension::OutOfMemoryError);
+    return description;
 }
 
 String Symbol::description() const

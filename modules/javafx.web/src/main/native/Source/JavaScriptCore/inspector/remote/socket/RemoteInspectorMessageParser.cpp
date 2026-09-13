@@ -42,29 +42,30 @@ namespace Inspector {
 */
 
 MessageParser::MessageParser(Function<void(Vector<uint8_t>&&)>&& listener)
-    : m_listener(WTFMove(listener))
+    : m_listener(WTF::move(listener))
 {
 }
 
-Vector<uint8_t> MessageParser::createMessage(const uint8_t* data, size_t size)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+Vector<uint8_t> MessageParser::createMessage(std::span<const uint8_t> data)
 {
-    if (!data || !size || size > UINT_MAX)
+    if (data.empty() || data.size() > std::numeric_limits<uint32_t>::max())
         return Vector<uint8_t>();
 
-    auto messageBuffer = Vector<uint8_t>(size + sizeof(uint32_t));
-    uint32_t uintSize = static_cast<uint32_t>(size);
-    uint32_t nboSize = htonl(uintSize);
+    auto messageBuffer = Vector<uint8_t>(data.size() + sizeof(uint32_t));
+    uint32_t nboSize = htonl(static_cast<uint32_t>(data.size()));
     memcpy(&messageBuffer[0], &nboSize, sizeof(uint32_t));
-    memcpy(&messageBuffer[sizeof(uint32_t)], data, uintSize);
+    memcpy(&messageBuffer[sizeof(uint32_t)], data.data(), data.size());
     return messageBuffer;
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
-void MessageParser::pushReceivedData(const uint8_t* data, size_t size)
+void MessageParser::pushReceivedData(std::span<const uint8_t> data)
 {
-    if (!data || !size || !m_listener)
+    if (data.empty() || !m_listener)
         return;
 
-    m_buffer.append(data, size);
+    m_buffer.append(data);
 
     if (!parse())
         clearReceivedData();
@@ -75,6 +76,7 @@ void MessageParser::clearReceivedData()
     m_buffer.clear();
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 bool MessageParser::parse()
 {
     while (m_buffer.size() >= sizeof(uint32_t)) {
@@ -96,13 +98,14 @@ bool MessageParser::parse()
         auto dataBuffer = Vector<uint8_t>(dataSize);
         memcpy(&dataBuffer[0], &m_buffer[sizeof(uint32_t)], dataSize);
 
-        m_listener(WTFMove(dataBuffer));
+        m_listener(WTF::move(dataBuffer));
 
-        m_buffer.remove(0, messageSize);
+        m_buffer.removeAt(0, messageSize);
     }
 
     return true;
 }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 } // namespace Inspector
 

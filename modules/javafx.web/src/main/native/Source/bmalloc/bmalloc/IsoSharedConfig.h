@@ -25,6 +25,13 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
+#if !BUSE(TZONE)
+
+#include "BPlatform.h"
 #include "IsoConfig.h"
 
 #if !BUSE(LIBPAS)
@@ -36,3 +43,6 @@ static constexpr unsigned alignmentForIsoSharedAllocation = 16;
 } // namespace bmalloc
 
 #endif
+#endif // !BUSE(TZONE)
+
+#endif // __cplusplus

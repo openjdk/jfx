@@ -24,7 +24,7 @@
 
 #pragma once
 
-#include "TransformOperation.h"
+#include <WebCore/TransformOperation.h>
 #include <wtf/Ref.h>
 
 namespace WebCore {
@@ -40,7 +40,7 @@ public:
 
     WEBCORE_EXPORT static Ref<RotateTransformOperation> create(double, double, double, double, TransformOperation::Type);
 
-    Ref<TransformOperation> clone() const override
+    Ref<TransformOperation> clone() const final
     {
         return adoptRef(*new RotateTransformOperation(m_x, m_y, m_z, m_angle, type()));
     }
@@ -53,28 +53,29 @@ public:
     TransformOperation::Type primitiveType() const final { return type() == Type::Rotate ? Type::Rotate : Type::Rotate3D; }
 
     bool operator==(const RotateTransformOperation& other) const { return operator==(static_cast<const TransformOperation&>(other)); }
-    bool operator==(const TransformOperation&) const override;
+    bool operator==(const TransformOperation&) const final;
 
-    Ref<TransformOperation> blend(const TransformOperation* from, const BlendingContext&, bool blendToIdentity = false) final;
+    Ref<TransformOperation> blend(const TransformOperation* from, const BlendingContext&, bool blendToIdentity = false) const final;
 
-    bool isIdentity() const final { return !m_angle; }
-
-    bool isRepresentableIn2D() const final { return (!m_x && !m_y) || !m_angle; }
-
-private:
-    bool isAffectedByTransformOrigin() const override { return !isIdentity(); }
-
-    bool apply(TransformationMatrix& transform, const FloatSize& /*borderBoxSize*/) const override
+    void apply(TransformationMatrix& transform) const final
     {
         if (type() == TransformOperation::Type::Rotate)
             transform.rotate(m_angle);
         else
             transform.rotate3d(m_x, m_y, m_z, m_angle);
-        return false;
+    }
+
+    void applyUnrounded(TransformationMatrix& transform) const final
+    {
+        if (type() == TransformOperation::Type::Rotate)
+            transform.rotate(m_angle, TransformationMatrix::RotationSnapping::None);
+        else
+            transform.rotate3d(m_x, m_y, m_z, m_angle, TransformationMatrix::RotationSnapping::None);
     }
 
     void dump(WTF::TextStream&) const final;
 
+private:
     RotateTransformOperation(double, double, double, double, TransformOperation::Type);
 
     double m_x;

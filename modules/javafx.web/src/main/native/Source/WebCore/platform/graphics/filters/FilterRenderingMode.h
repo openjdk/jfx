@@ -32,7 +32,7 @@ namespace WebCore {
 enum class FilterRenderingMode : uint8_t {
     Software        = 1 << 0,
     Accelerated     = 1 << 1,
-    GraphicsContext = 1 << 2
+    GraphicsContext = 1 << 2,
 };
 
 constexpr OptionSet<FilterRenderingMode> allFilterRenderingModes = {
@@ -41,18 +41,6 @@ constexpr OptionSet<FilterRenderingMode> allFilterRenderingModes = {
     FilterRenderingMode::GraphicsContext
 };
 
+WTF::TextStream& operator<<(WTF::TextStream&, FilterRenderingMode);
+
 } // namespace WebCore
-
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::FilterRenderingMode> {
-    using values = EnumValues<
-        WebCore::FilterRenderingMode,
-
-        WebCore::FilterRenderingMode::Software,
-        WebCore::FilterRenderingMode::Accelerated,
-        WebCore::FilterRenderingMode::GraphicsContext
-    >;
-};
-
-} // namespace WTF

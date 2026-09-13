@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -46,11 +46,13 @@ private:
     void doReapply() override;
     void executeApply();
 
+    RefPtr<HTMLElement> protectedDummySpan() const { return m_dummySpan; }
+
 #ifndef NDEBUG
-    void getNodesInCommand(HashSet<Ref<Node>>&) override;
+    void getNodesInCommand(NodeSet&) override;
 #endif
 
-    Ref<Element> m_element;
+    const Ref<Element> m_element;
     RefPtr<HTMLElement> m_dummySpan;
 };
 

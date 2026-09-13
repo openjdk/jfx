@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -39,11 +39,13 @@ public class UIEventImpl extends EventImpl implements UIEvent {
 
 
 // Attributes
+    @Override
     public AbstractView getView() {
         return DOMWindowImpl.getImpl(getViewImpl(getPeer()));
     }
     native static long getViewImpl(long peer);
 
+    @Override
     public int getDetail() {
         return getDetailImpl(getPeer());
     }
@@ -86,6 +88,7 @@ public class UIEventImpl extends EventImpl implements UIEvent {
 
 
 // Functions
+    @Override
     public void initUIEvent(String type
         , boolean canBubble
         , boolean cancelable

@@ -26,23 +26,27 @@
 #pragma once
 
 #include <wtf/RetainPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 typedef struct CGColorSpace *CGColorSpaceRef;
 typedef struct CGImage* CGImageRef;
 typedef struct OpaqueVTPixelBufferConformer* VTPixelBufferConformerRef;
-typedef struct __CVBuffer *CVPixelBufferRef;
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer *CVPixelBufferRef;
 
 namespace WebCore {
 
 class PixelBufferConformerCV {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(PixelBufferConformerCV, WEBCORE_EXPORT);
 public:
     WEBCORE_EXPORT PixelBufferConformerCV(CFDictionaryRef attributes);
+    WEBCORE_EXPORT PixelBufferConformerCV(uint32_t format);
     WEBCORE_EXPORT RetainPtr<CVPixelBufferRef> convert(CVPixelBufferRef);
     WEBCORE_EXPORT RetainPtr<CGImageRef> createImageFromPixelBuffer(CVPixelBufferRef);
     static WEBCORE_EXPORT RetainPtr<CGImageRef> imageFrom32BGRAPixelBuffer(RetainPtr<CVPixelBufferRef>&&, CGColorSpaceRef);
 
 private:
+    static RetainPtr<VTPixelBufferConformerRef> createPixelConformer(CFDictionaryRef attributes);
+
     RetainPtr<VTPixelBufferConformerRef> m_pixelConformer;
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -118,6 +118,7 @@ public abstract class MNodeType extends MObject {
         return false;
     }
 
+    @Override
     public void accept(MEnv.Visitor visitor) {
         visitor.visitNodeType(this);
         for (MAttribute attr : attributes.values()) {

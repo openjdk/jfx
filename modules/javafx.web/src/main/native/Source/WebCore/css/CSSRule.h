@@ -22,8 +22,9 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
-#include "StyleRuleType.h"
+#include <WebCore/CSSParserEnum.h>
+#include <WebCore/StyleRuleType.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TypeCasts.h>
 
 namespace WebCore {
@@ -35,14 +36,22 @@ class StyleRuleWithNesting;
 
 struct CSSParserContext;
 
-class CSSRule : public RefCounted<CSSRule> {
+template<typename> class ExceptionOr;
+
+namespace CSS {
+struct SerializationContext;
+}
+
+class CSSRule : public RefCountedAndCanMakeWeakPtr<CSSRule> {
 public:
     virtual ~CSSRule() = default;
 
     WEBCORE_EXPORT unsigned short typeForCSSOM() const;
 
     virtual StyleRuleType styleRuleType() const = 0;
+    virtual bool isGroupingRule() const { return false; }
     virtual String cssText() const = 0;
+    virtual String cssText(const CSS::SerializationContext&) const { return cssText(); }
     virtual void reattach(StyleRuleBase&) = 0;
 
     void setParentStyleSheet(CSSStyleSheet*);
@@ -50,7 +59,9 @@ public:
     CSSStyleSheet* parentStyleSheet() const;
     CSSRule* parentRule() const { return m_parentIsRule ? m_parentRule : nullptr; }
     bool hasStyleRuleAncestor() const;
+    CSSParserEnum::NestedContext nestedContext() const;
     virtual RefPtr<StyleRuleWithNesting> prepareChildStyleRuleForNesting(StyleRule&);
+    virtual void getChildStyleSheets(HashSet<Ref<CSSStyleSheet>>&) { }
 
     WEBCORE_EXPORT ExceptionOr<void> setCssText(const String&);
 

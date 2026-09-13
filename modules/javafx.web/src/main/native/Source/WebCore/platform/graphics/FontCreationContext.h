@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "FontFeatureValues.h"
-#include "FontPaletteValues.h"
-#include "FontSelectionAlgorithm.h"
-#include "FontTaggedSettings.h"
+#include <WebCore/FontFeatureValues.h>
+#include <WebCore/FontPaletteValues.h>
+#include <WebCore/FontSelectionAlgorithm.h>
+#include <WebCore/FontTaggedSettings.h>
 #include <wtf/PointerComparison.h>
 
 namespace WebCore {
@@ -134,7 +134,7 @@ inline void add(Hasher& hasher, const FontCreationContext& fontCreationContext)
 {
     if (fontCreationContext.fontFaceFeatures())
         add(hasher, *fontCreationContext.fontFaceFeatures());
-    add(hasher, fontCreationContext.fontFaceCapabilities().tied());
+    add(hasher, fontCreationContext.fontFaceCapabilities());
     if (fontCreationContext.fontPaletteValues())
         add(hasher, *fontCreationContext.fontPaletteValues());
     if (fontCreationContext.fontFeatureValues())

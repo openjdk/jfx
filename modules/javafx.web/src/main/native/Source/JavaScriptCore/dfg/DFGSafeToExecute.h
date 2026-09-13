@@ -67,10 +67,13 @@ public:
         case RegExpObjectUse:
         case PromiseObjectUse:
         case ProxyObjectUse:
+        case GlobalProxyUse:
         case DerivedArrayUse:
         case DateObjectUse:
         case MapObjectUse:
         case SetObjectUse:
+        case MapIteratorObjectUse:
+        case SetIteratorObjectUse:
         case WeakMapObjectUse:
         case WeakSetObjectUse:
         case DataViewObjectUse:
@@ -107,6 +110,7 @@ public:
                 m_result = false;
             return;
 
+        case KnownStorageUse:
         case KnownCellUse:
             if (m_state.forNode(edge).m_type & ~SpecCell)
                 m_result = false;
@@ -205,7 +209,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case ArithBitXor:
     case ArithBitLShift:
     case ArithBitRShift:
-    case BitURShift:
+    case ArithBitURShift:
     case ValueToInt32:
     case UInt32ToNumber:
     case DoubleAsInt32:
@@ -222,6 +226,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case ArithPow:
     case ArithSqrt:
     case ArithFRound:
+    case ArithF16Round:
     case ArithRound:
     case ArithFloor:
     case ArithCeil:
@@ -235,9 +240,11 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case CheckArray:
     case CheckArrayOrEmpty:
     case GetScope:
+    case GetEvalScope:
     case SkipScope:
     case GetGlobalObject:
     case GetGlobalThis:
+    case UnwrapGlobalProxy:
     case GetClosureVar:
     case GetGlobalVar:
     case GetGlobalLexicalVariable:
@@ -257,8 +264,11 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case SameValue:
     case CheckTypeInfoFlags:
     case ParseInt:
+    case ToIntegerOrInfinity:
+    case ToLength:
     case OverridesHasInstance:
     case IsEmpty:
+    case IsEmptyStorage:
     case TypeOfIsUndefined:
     case TypeOfIsObject:
     case TypeOfIsFunction:
@@ -296,6 +306,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case CheckVarargs:
     case ValueRep:
     case DoubleRep:
+    case PurifyNaN:
     case Int52Rep:
     case BooleanToNumber:
     case FiatInt52:
@@ -310,11 +321,17 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case StringSlice:
     case StringSubstring:
     case ToLowerCase:
-    case GetMapBucket:
-    case GetMapBucketHead:
-    case GetMapBucketNext:
-    case LoadKeyFromMapBucket:
-    case LoadValueFromMapBucket:
+    case MapGet:
+    case LoadMapValue:
+    case MapStorage:
+    case MapStorageOrSentinel:
+    case MapIterationNext:
+    case MapIterationEntry:
+    case MapIterationEntryKey:
+    case MapIterationEntryValue:
+    case MapIteratorNext:
+    case MapIteratorKey:
+    case MapIteratorValue:
     case ExtractValueFromWeakMapGet:
     case WeakMapGet:
     case AtomicsIsLockFree:
@@ -324,18 +341,21 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case DataViewGetInt:
     case DataViewGetFloat:
     case ResolveRope:
-    case GetWebAssemblyInstanceExports:
     case NumberIsNaN:
+    case NumberIsFinite:
+    case NumberIsSafeInteger:
     case StringIndexOf:
         return true;
 
+    case GlobalIsFinite:
     case GlobalIsNaN:
-        return node->child1().useKind() == DoubleRepUse;
+        return false;
 
     case GetButterfly:
         return state.forNode(node->child1()).isType(SpecObject);
 
     case ArraySlice:
+    case ArrayIncludes:
     case ArrayIndexOf: {
         // You could plausibly move this code around as long as you proved the
         // incoming array base structure is an original array at the hoisted location.
@@ -386,25 +406,38 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case GetByValMegamorphic:
     case GetIndexedPropertyStorage:
     case GetArrayLength:
+    case GetUndetachedTypeArrayLength:
     case GetTypedArrayLengthAsInt52:
     case GetVectorLength:
     case ArrayPop:
+    case StringAt:
     case StringCharAt:
     case StringCharCodeAt:
     case StringCodePointAt:
         return node->arrayMode().alreadyChecked(graph, node, state.forNode(graph.child(node, 0)));
 
+    // We can make them non conservative by checking the condition safely.
+    case MultiGetByVal:
+    case MultiPutByVal:
+        return false;
+
     case ArrayPush:
         return node->arrayMode().alreadyChecked(graph, node, state.forNode(graph.varArgChild(node, 1)));
 
+    case DataViewGetByteLength:
+    case DataViewGetByteLengthAsInt52:
+        return !(state.forNode(node->child1()).m_type & ~(SpecDataViewObject));
+
     case CheckDetached:
+        return !(state.forNode(node->child1()).m_type & ~(SpecTypedArrayView | SpecDataViewObject));
+
     case GetTypedArrayByteOffset:
     case GetTypedArrayByteOffsetAsInt52:
         return !(state.forNode(node->child1()).m_type & ~(SpecTypedArrayView));
 
     case PutByValDirect:
     case PutByVal:
-    case PutByValAlias:
+    case PutByValDirectResolved:
     case PutByValMegamorphic:
         return node->arrayMode().modeForPut().alreadyChecked(
             graph, node, state.forNode(graph.varArgChild(node, 0)));
@@ -434,6 +467,22 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
             if (checkOffset != desiredOffset || !(attributes & PropertyAttribute::Accessor))
                 return false;
         }
+        return true;
+    }
+
+    case GetWebAssemblyInstanceExports: {
+        if (!state.forNode(node->child1()).isType(SpecCell))
+            return false;
+
+        StructureAbstractValue& value = state.forNode(node->child1()).m_structure;
+        if (value.isInfinite())
+            return false;
+        for (unsigned i = value.size(); i--;) {
+            Structure* structure = value[i].get();
+            if (structure->typeInfo().type() != WebAssemblyInstanceType)
+                return false;
+        }
+
         return true;
     }
 
@@ -579,6 +628,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case RegExpTestInline:
     case RegExpMatchFast:
     case RegExpMatchFastGlobal:
+    case RegExpSearch:
     case Call:
     case DirectCall:
     case TailCallInlinedCaller:
@@ -591,6 +641,9 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case TailCallForwardVarargsInlinedCaller:
     case ConstructVarargs:
     case CallWasm:
+    case TailCallInlinedCallerWasm:
+    case CallCustomAccessorGetter:
+    case CallCustomAccessorSetter:
     case VarargsLength:
     case LoadVarargs:
     case CallForwardVarargs:
@@ -600,21 +653,27 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case NewAsyncGenerator:
     case NewArray:
     case NewArrayWithSize:
-    case NewArrayWithConstantSize:
+    case NewArrayWithButterfly:
+    case NewButterflyWithSize:
     case NewArrayWithSpecies:
+    case NewArrayWithSizeAndStructure:
     case NewArrayBuffer:
     case NewArrayWithSpread:
     case NewInternalFieldObject:
     case Spread:
-    case NewRegexp:
+    case NewRegExp:
+    case NewMap:
+    case NewSet:
     case NewSymbol:
     case ProfileType:
     case ProfileControlFlow:
     case InstanceOf:
+    case InstanceOfMegamorphic:
     case InstanceOfCustom:
     case CallObjectConstructor:
     case ToPrimitive:
     case ToPropertyKey:
+    case ToPropertyKeyOrNumber:
     case ToNumber:
     case ToNumeric:
     case ToObject:
@@ -622,8 +681,11 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case NumberToStringWithRadix:
     case SetFunctionName:
     case NewStringObject:
+    case NewRegExpUntyped:
     case InByVal:
+    case InByValMegamorphic:
     case InById:
+    case InByIdMegamorphic:
     case EnumeratorInByVal:
     case EnumeratorHasOwnProperty:
     case HasPrivateName:
@@ -660,6 +722,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case LogShadowChickenPrologue:
     case LogShadowChickenTail:
     case NewTypedArray:
+    case NewTypedArrayBuffer:
     case Unreachable:
     case ClearCatchLocals:
     case CheckTierUpInLoop:
@@ -672,15 +735,18 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case MultiDeleteByOffset:
     case GetPropertyEnumerator:
     case PhantomNewObject:
+    case PhantomNewArrayWithButterfly:
+    case PhantomNewButterflyWithSize:
     case PhantomNewFunction:
     case PhantomNewGeneratorFunction:
     case PhantomNewAsyncGeneratorFunction:
     case PhantomNewAsyncFunction:
     case PhantomNewInternalFieldObject:
     case PhantomCreateActivation:
-    case PhantomNewRegexp:
+    case PhantomNewRegExp:
     case PutHint:
     case MaterializeNewObject:
+    case MaterializeNewArrayWithButterfly:
     case MaterializeCreateActivation:
     case MaterializeNewInternalFieldObject:
     case PhantomDirectArguments:
@@ -714,10 +780,17 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case GetInternalField:
     case PutInternalField:
     case DataViewSet:
+    case ResolvePromiseFirstResolving:
+    case RejectPromiseFirstResolving:
+    case FulfillPromiseFirstResolving:
+    case PromiseResolve:
+    case PromiseReject:
+    case PromiseThen:
     case SetAdd:
     case MapSet:
     case MapOrSetDelete:
     case StringReplace:
+    case StringReplaceAll:
     case StringReplaceRegExp:
     case ArithRandom:
     case ArithIMul:
@@ -725,7 +798,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case StringLocaleCompare:
     case FunctionBind:
     case DateSetTime:
-    case ArraySpliceExtract:
+    case ArraySplice:
         return false;
 
     case StringReplaceString:
@@ -740,6 +813,7 @@ bool safeToExecute(AbstractStateType& state, Graph& graph, Node* node, bool igno
     case ValueBitOr:
     case ValueBitLShift:
     case ValueBitRShift:
+    case ValueBitURShift:
     case ValueAdd:
     case ValueSub:
     case ValueMul:

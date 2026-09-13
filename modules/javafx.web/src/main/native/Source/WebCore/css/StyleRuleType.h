@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,7 +30,6 @@ namespace WebCore {
 // https://w3c.github.io/csswg-drafts/cssom-1/#the-cssrule-interface
 
 enum class StyleRuleType : uint8_t {
-    Unknown = 0,
     Style = 1,
     Charset = 2,
     Import = 3,
@@ -44,16 +43,23 @@ enum class StyleRuleType : uint8_t {
     CounterStyle = 11,
     Supports = 12,
     FontFeatureValues = 14,
-    // Numbers above 15 are not exposed to the web.
-    LayerBlock = 16,
+    // Numbers above 14 are not exposed to the web.
+    ViewTransition = 15,
+    LayerBlock,
     LayerStatement,
     Container,
     FontPaletteValues,
     FontFeatureValuesBlock,
     Property,
     StyleWithNesting,
+    Scope,
+    StartingStyle,
+    NestedDeclarations,
+    PositionTry,
+    Function,
+    FunctionDeclarations,
 };
 
-static constexpr auto firstUnexposedStyleRuleType = StyleRuleType::LayerBlock;
+static constexpr auto firstUnexposedStyleRuleType = StyleRuleType::ViewTransition;
 
 } // namespace WebCore

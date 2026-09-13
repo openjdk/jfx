@@ -25,11 +25,12 @@
 
 #pragma once
 
-#include "AffineTransform.h"
-#include "FloatSize.h"
+#include <WebCore/AffineTransform.h>
+#include <WebCore/FloatSize.h>
+#include <wtf/TZoneMalloc.h>
 
 typedef struct OpaqueVTImageRotationSession* VTImageRotationSessionRef;
-typedef struct __CVBuffer *CVPixelBufferRef;
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer *CVPixelBufferRef;
 typedef struct __CVPixelBufferPool* CVPixelBufferPoolRef;
 
 namespace WebCore {
@@ -37,13 +38,14 @@ namespace WebCore {
 class VideoFrame;
 
 class ImageRotationSessionVT final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(ImageRotationSessionVT, WEBCORE_EXPORT);
 public:
     struct RotationProperties {
         bool flipX { false };
         bool flipY { false };
         unsigned angle { 0 };
 
+        friend bool operator==(const RotationProperties&, const RotationProperties&) = default;
         bool isIdentity() const { return !flipX && !flipY && !angle; }
     };
 
@@ -52,7 +54,7 @@ public:
 
     ImageRotationSessionVT(AffineTransform&&, FloatSize, IsCGImageCompatible, ShouldUseIOSurface = ShouldUseIOSurface::Yes);
     ImageRotationSessionVT(const RotationProperties&, FloatSize, IsCGImageCompatible, ShouldUseIOSurface = ShouldUseIOSurface::Yes);
-    ImageRotationSessionVT() = default;
+    WEBCORE_EXPORT explicit ImageRotationSessionVT(ShouldUseIOSurface = ShouldUseIOSurface::Yes);
 
     const std::optional<AffineTransform>& transform() const { return m_transform; }
     const RotationProperties& rotationProperties() const { return m_rotationProperties; }
@@ -60,6 +62,7 @@ public:
     const FloatSize& rotatedSize() { return m_rotatedSize; }
 
     RetainPtr<CVPixelBufferRef> rotate(CVPixelBufferRef);
+    RefPtr<VideoFrame> applyRotation(VideoFrame&, IsCGImageCompatible = IsCGImageCompatible::No);
     WEBCORE_EXPORT RetainPtr<CVPixelBufferRef> rotate(VideoFrame&, const RotationProperties&, IsCGImageCompatible);
 
 private:
@@ -75,10 +78,5 @@ private:
     RetainPtr<CVPixelBufferPoolRef> m_rotationPool;
     bool m_shouldUseIOSurface { true };
 };
-
-inline bool operator==(const ImageRotationSessionVT::RotationProperties& rotation1, const ImageRotationSessionVT::RotationProperties& rotation2)
-{
-    return rotation1.flipX == rotation2.flipX && rotation1.flipY == rotation2.flipY && rotation1.angle == rotation2.angle;
-}
 
 }

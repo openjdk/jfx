@@ -70,11 +70,14 @@ const TestFeatures& TestOptions::defaults()
             { "CanvasUsesAcceleratedDrawing", true },
             { "ColorFilterEnabled", true },
             { "CustomPasteboardDataEnabled", true },
+            { "DOMAudioSessionEnabled", true },
             { "DOMPasteAllowed", true },
+            { "DOMTestingAPIsEnabled", true },
             { "DeveloperExtrasEnabled", true },
             { "DirectoryUploadEnabled", true },
             { "DownloadAttributeEnabled", true },
             { "EncryptedMediaAPIEnabled", true },
+            { "EnumeratedARIAAttributeReflectionEnabled", false },
             { "FullScreenEnabled", true },
             { "GamepadsEnabled", true },
             { "HiddenPageCSSAnimationSuspensionEnabled", false },
@@ -83,14 +86,16 @@ const TestFeatures& TestOptions::defaults()
             { "JavaScriptCanOpenWindowsAutomatically", true },
             { "LargeImageAsyncDecodingEnabled", false },
             { "LinkPreloadEnabled", true },
+            { "ManagedMediaSourceEnabled", true },
+            { "ManagedMediaSourceNeedsAirPlay", true },
             { "MediaCapabilitiesEnabled", true },
             { "MediaDataLoadsAutomatically", true },
             { "MediaDevicesEnabled", true },
             { "MediaPreloadingEnabled", true },
+            { "MediaRecorderEnabled", true },
             { "MockScrollbarsEnabled", true },
             { "NeedsStorageAccessFromFileURLsQuirk", false },
-            { "OfflineWebApplicationCacheEnabled", true },
-            { "PaintTimingEnabled", true },
+            { "PeerConnectionVideoScalingAdaptationDisabled", true },
             { "PushAPIEnabled", true },
             { "ReferrerPolicyAttributeEnabled", true },
             { "RemotePlaybackEnabled", true },
@@ -106,9 +111,7 @@ const TestFeatures& TestOptions::defaults()
             { "UsesBackForwardCache", false },
             { "VisualViewportAPIEnabled", true },
             { "WebAudioEnabled", true },
-#if ENABLE(WEBGL)
-            { "WebGLUsingMetal", true },
-#endif
+            { "WebRTCEncodedTransformEnabled", true },
             { "WebSQLEnabled", true },
             { "XSSAuditorEnabled", false },
 
@@ -116,12 +119,11 @@ const TestFeatures& TestOptions::defaults()
             // should either enable them or stop exposing them (as we do with with preferences).
             // All other experimental features are automatically enabled regardless of their specified defaults.
             { "AsyncClipboardAPIEnabled", false },
-            { "CSSOMViewSmoothScrollingEnabled", false },
             { "ContactPickerAPIEnabled", false },
             { "CoreMathMLEnabled", false },
+            { "DigitalCredentialsEnabled", false },
             { "GenericCueAPIEnabled", false },
-            { "IsLoggedInAPIEnabled", false },
-            { "LazyIframeLoadingEnabled", false },
+            { "LoginStatusAPIEnabled", false },
             { "LazyImageLoadingEnabled", false },
             { "RequestIdleCallbackEnabled", false },
             { "WebAuthenticationEnabled", false },
@@ -129,21 +131,16 @@ const TestFeatures& TestOptions::defaults()
             // These are WebPreference values that must always be set as they may
             // differ from the default set in the WebPreferences*.yaml configuration.
             { "AcceleratedDrawingEnabled", false },
-            { "AllowCrossOriginSubresourcesToAskForCredentials", false },
             { "AllowFileAccessFromFileURLs", true },
             { "AllowTopNavigationToDataURLs", true },
             { "AllowUniversalAccessFromFileURLs", true },
-            { "AspectRatioEnabled", true },
             { "AsyncClipboardAPIEnabled", false },
             { "AttachmentElementEnabled", false },
             { "AttachmentWideLayoutEnabled", false },
-            { "CSSContainmentEnabled", false },
             { "CSSCounterStyleAtRuleImageSymbolsEnabled", false },
             { "CSSGradientInterpolationColorSpacesEnabled", true },
             { "CSSGradientPremultipliedAlphaInterpolationEnabled", true },
             { "CSSInputSecurityEnabled", true },
-            { "CSSOMViewSmoothScrollingEnabled", false },
-            { "CSSTextAlignLastEnabled", true },
             { "CSSTextJustifyEnabled", true },
             { "CanvasColorSpaceEnabled", true },
             { "ColorFilterEnabled", false },
@@ -151,22 +148,19 @@ const TestFeatures& TestOptions::defaults()
             { "CoreMathMLEnabled", false },
             { "DOMPasteAllowed", true },
             { "DeveloperExtrasEnabled", true },
+            { "EnumeratedARIAAttributeReflectionEnabled", false },
             { "HiddenPageDOMTimerThrottlingEnabled", false },
-            { "IntersectionObserverEnabled", false },
             { "JavaScriptCanAccessClipboard", true },
             { "JavaScriptCanOpenWindowsAutomatically", true },
             { "JavaScriptEnabled", true },
-            { "KeygenElementEnabled", false },
             { "LayoutFormattingContextIntegrationEnabled", true },
             { "LoadsImagesAutomatically", true },
             { "MainContentUserGestureOverrideEnabled", false },
-            { "MenuItemElementEnabled", false },
             { "MockScrollbarsControllerEnabled", false },
             { "ModernMediaControlsEnabled", true },
             { "NeedsStorageAccessFromFileURLsQuirk", false },
             { "OverscrollBehaviorEnabled", true },
             { "PerformanceNavigationTimingAPIEnabled", true },
-            { "PluginsEnabled", true },
             { "PrivateClickMeasurementEnabled", false },
             { "RequestIdleCallbackEnabled", false },
             { "SelectionAcrossShadowBoundariesEnabled", true },
@@ -180,6 +174,7 @@ const TestFeatures& TestOptions::defaults()
 #if ENABLE(GPU_PROCESS) && ENABLE(WEBGL)
             { "UseGPUProcessForWebGLEnabled", false },
 #endif
+            { "SupportHDRDisplayEnabled", true },
         };
 #if PLATFORM(WIN)
         features.uint32WebPreferenceFeatures = {
@@ -213,6 +208,10 @@ const std::unordered_map<std::string, TestHeaderKeyType>& TestOptions::keyTypeMa
 
         { "additionalSupportedImageTypes", TestHeaderKeyType::StringTestRunner },
         { "jscOptions", TestHeaderKeyType::StringTestRunner },
+        { "captionDisplayMode", TestHeaderKeyType::StringTestRunner },
+
+        { "insecureUpgradePort", TestHeaderKeyType::UInt16TestRunner },
+        { "secureUpgradePort", TestHeaderKeyType::UInt16TestRunner },
     };
 
     return map;
@@ -234,6 +233,11 @@ template<typename T> T featureValue(std::string key, T defaultValue, const std::
 bool TestOptions::boolTestRunnerFeatureValue(std::string key, bool defaultValue) const
 {
     return featureValue(key, defaultValue, m_features.boolTestRunnerFeatures);
+}
+
+uint16_t TestOptions::uint16TestRunnerFeatureValue(std::string key, uint16_t defaultValue) const
+{
+    return featureValue(key, defaultValue, m_features.uint16TestRunnerFeatures);
 }
 
 std::string TestOptions::stringTestRunnerFeatureValue(std::string key, std::string defaultValue) const

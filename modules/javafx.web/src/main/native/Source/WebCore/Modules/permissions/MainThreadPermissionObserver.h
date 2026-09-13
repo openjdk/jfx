@@ -33,17 +33,29 @@
 #include "PermissionState.h"
 #include "PermissionStatus.h"
 #include "ScriptExecutionContextIdentifier.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class Page;
+class RegistrableDomain;
 
-class MainThreadPermissionObserver final : public PermissionObserver {
+class MainThreadPermissionObserver final : public PermissionObserver, public CanMakeCheckedPtr<MainThreadPermissionObserver> {
     WTF_MAKE_NONCOPYABLE(MainThreadPermissionObserver);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(MainThreadPermissionObserver);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MainThreadPermissionObserver);
 public:
-    MainThreadPermissionObserver(WeakPtr<PermissionStatus, WeakPtrImplWithEventTargetData>&&, ScriptExecutionContextIdentifier, PermissionState, PermissionDescriptor, PermissionQuerySource, WeakPtr<Page>&&, ClientOrigin&&);
+    MainThreadPermissionObserver(ThreadSafeWeakPtr<PermissionStatus>&&, ScriptExecutionContextIdentifier, PermissionState, PermissionDescriptor, PermissionQuerySource, WeakPtr<Page>&&, ClientOrigin&&);
     ~MainThreadPermissionObserver();
+
+    void addChangeListener(const RegistrableDomain& topFrameDomain, const RegistrableDomain& subFrameDomain) final;
+    void removeChangeListener(const RegistrableDomain& topFrameDomain, const RegistrableDomain& subFrameDomain) final;
+
+    uint32_t checkedPtrCount() const final { return CanMakeCheckedPtr::checkedPtrCount(); }
+    uint32_t checkedPtrCountWithoutThreadCheck() const final { return CanMakeCheckedPtr::checkedPtrCountWithoutThreadCheck(); }
+    void incrementCheckedPtrCount() const final { CanMakeCheckedPtr::incrementCheckedPtrCount(); }
+    void decrementCheckedPtrCount() const final { CanMakeCheckedPtr::decrementCheckedPtrCount(); }
+    void setDidBeginCheckedPtrDeletion() final { CanMakeCheckedPtr::setDidBeginCheckedPtrDeletion(); }
 
 private:
     // PermissionObserver
@@ -54,7 +66,7 @@ private:
     PermissionQuerySource source() const final { return m_source; }
     const WeakPtr<Page>& page() const final { return m_page; }
 
-    WeakPtr<PermissionStatus, WeakPtrImplWithEventTargetData> m_permissionStatus;
+    ThreadSafeWeakPtr<PermissionStatus> m_permissionStatus;
     ScriptExecutionContextIdentifier m_contextIdentifier;
     PermissionState m_state;
     PermissionDescriptor m_descriptor;

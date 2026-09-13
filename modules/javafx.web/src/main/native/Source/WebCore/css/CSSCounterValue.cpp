@@ -1,4 +1,4 @@
-/**
+/*
  * Copyright (C) 2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,21 +29,22 @@
 #include "CSSMarkup.h"
 #include "CSSPrimitiveValue.h"
 #include <wtf/PointerComparison.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-CSSCounterValue::CSSCounterValue(AtomString identifier, AtomString separator, RefPtr<CSSValue> counterStyle)
-    : CSSValue(CounterClass)
-    , m_identifier(WTFMove(identifier))
-    , m_separator(WTFMove(separator))
-    , m_counterStyle(WTFMove(counterStyle))
+CSSCounterValue::CSSCounterValue(AtomString&& identifier, AtomString&& separator, Ref<CSSValue>&& counterStyle)
+    : CSSValue(ClassType::Counter)
+    , m_identifier(WTF::move(identifier))
+    , m_separator(WTF::move(separator))
+    , m_counterStyle(WTF::move(counterStyle))
 {
 }
 
-Ref<CSSCounterValue> CSSCounterValue::create(AtomString identifier, AtomString separator, RefPtr<CSSValue> counterStyle)
+Ref<CSSCounterValue> CSSCounterValue::create(AtomString identifier, AtomString separator, Ref<CSSValue> counterStyle)
 {
-    return adoptRef(*new CSSCounterValue(WTFMove(identifier), WTFMove(separator), WTFMove(counterStyle)));
+    return adoptRef(*new CSSCounterValue(WTF::move(identifier), WTF::move(separator), WTF::move(counterStyle)));
 }
 
 bool CSSCounterValue::equals(const CSSCounterValue& other) const
@@ -51,24 +52,22 @@ bool CSSCounterValue::equals(const CSSCounterValue& other) const
     return m_identifier == other.m_identifier && m_separator == other.m_separator && arePointingToEqualData(m_counterStyle, other.m_counterStyle);
 }
 
-String CSSCounterValue::customCSSText() const
+String CSSCounterValue::customCSSText(const CSS::SerializationContext&) const
 {
-    auto listStyleSeparator = m_counterStyle->valueID() == CSSValueDecimal ? ""_s : ", "_s;
-    auto listStyleLiteral = m_counterStyle->valueID() == CSSValueDecimal ? ""_s : counterStyleCSSText();
+    bool isDecimal = m_counterStyle->valueID() == CSSValueDecimal || (m_counterStyle->isCustomIdent() && m_counterStyle->customIdent() == "decimal"_s);
+    auto styleSeparator = isDecimal ? ""_s : ", "_s;
+    auto styleLiteral = isDecimal ? ""_s : counterStyleCSSText();
     if (m_separator.isEmpty())
-        return makeString("counter("_s, m_identifier, listStyleSeparator, listStyleLiteral, ')');
+        return makeString("counter("_s, m_identifier, styleSeparator, styleLiteral, ')');
     StringBuilder result;
     result.append("counters("_s, m_identifier, ", "_s);
     serializeString(m_separator, result);
-    result.append(listStyleSeparator, listStyleLiteral, ')');
+    result.append(styleSeparator, styleLiteral, ')');
     return result.toString();
 }
 
 String CSSCounterValue::counterStyleCSSText() const
 {
-    if (!m_counterStyle)
-        return emptyString();
-
     if (m_counterStyle->isValueID())
         return nameString(m_counterStyle->valueID()).string();
     if (m_counterStyle->isCustomIdent())

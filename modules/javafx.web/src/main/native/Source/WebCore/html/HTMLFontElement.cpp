@@ -32,13 +32,14 @@
 #include "MutableStyleProperties.h"
 #include "NodeName.h"
 #include "StyleProperties.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLFontElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLFontElement);
 
 using namespace HTMLNames;
 
@@ -55,25 +56,20 @@ Ref<HTMLFontElement> HTMLFontElement::create(const QualifiedName& tagName, Docum
 
 // http://www.whatwg.org/specs/web-apps/current-work/multipage/rendering.html#fonts-and-colors
 template <typename CharacterType>
-static bool parseFontSize(const CharacterType* characters, unsigned length, int& size)
+static bool parseFontSize(std::span<const CharacterType> characters, int& size)
 {
 
     // Step 1
     // Step 2
-    const CharacterType* position = characters;
-    const CharacterType* end = characters + length;
-
     // Step 3
-    while (position < end) {
-        if (!isASCIIWhitespace(*position))
+    while (!characters.empty()) {
+        if (!skipExactly<isASCIIWhitespace>(characters))
             break;
-        ++position;
     }
 
     // Step 4
-    if (position == end)
+    if (characters.empty())
         return false;
-    ASSERT_WITH_SECURITY_IMPLICATION(position < end);
 
     // Step 5
     enum {
@@ -82,14 +78,14 @@ static bool parseFontSize(const CharacterType* characters, unsigned length, int&
         Absolute
     } mode;
 
-    switch (*position) {
+    switch (characters.front()) {
     case '+':
         mode = RelativePlus;
-        ++position;
+        skip(characters, 1);
         break;
     case '-':
         mode = RelativeMinus;
-        ++position;
+        skip(characters, 1);
         break;
     default:
         mode = Absolute;
@@ -99,10 +95,10 @@ static bool parseFontSize(const CharacterType* characters, unsigned length, int&
     // Step 6
     StringBuilder digits;
     digits.reserveCapacity(16);
-    while (position < end) {
-        if (!isASCIIDigit(*position))
+    while (!characters.empty()) {
+        if (!isASCIIDigit(characters.front()))
             break;
-        digits.append(*position++);
+        digits.append(consume(characters));
     }
 
     // Step 7
@@ -136,9 +132,9 @@ static bool parseFontSize(const String& input, int& size)
         return false;
 
     if (input.is8Bit())
-        return parseFontSize(input.characters8(), input.length(), size);
+        return parseFontSize(input.span8(), size);
 
-    return parseFontSize(input.characters16(), input.length(), size);
+    return parseFontSize(input.span16(), size);
 }
 
 bool HTMLFontElement::cssValueFromFontSizeNumber(const String& s, CSSValueID& size)
@@ -204,7 +200,7 @@ void HTMLFontElement::collectPresentationalHintsForAttribute(const QualifiedName
     case AttributeNames::faceAttr:
         if (!value.isEmpty()) {
         if (auto fontFaceValue = CSSValuePool::singleton().createFontFaceValue(value))
-            style.setProperty(CSSProperty(CSSPropertyFontFamily, WTFMove(fontFaceValue)));
+                style.setProperty(CSSProperty(CSSPropertyFontFamily, fontFaceValue.releaseNonNull()));
         }
         break;
     default:

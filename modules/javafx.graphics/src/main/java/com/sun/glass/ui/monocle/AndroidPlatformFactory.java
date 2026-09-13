@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,17 +25,11 @@
 
 package com.sun.glass.ui.monocle;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-
-
 class AndroidPlatformFactory extends NativePlatformFactory {
 
     @Override
     protected boolean matches() {
-       @SuppressWarnings("removal")
-       String platform = AccessController.doPrivileged(
-                (PrivilegedAction<String>) () -> System.getProperty("javafx.platform"));
+       String platform = System.getProperty("javafx.platform");
         return platform != null && platform.equals("android");
     }
 

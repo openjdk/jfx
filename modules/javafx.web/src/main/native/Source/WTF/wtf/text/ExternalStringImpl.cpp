@@ -28,27 +28,27 @@
 
 namespace WTF {
 
-WTF_EXPORT_PRIVATE Ref<ExternalStringImpl> ExternalStringImpl::create(const LChar* characters, unsigned length, ExternalStringImplFreeFunction&& free)
+WTF_EXPORT_PRIVATE Ref<ExternalStringImpl> ExternalStringImpl::create(std::span<const Latin1Character> characters, ExternalStringImplFreeFunction&& free)
 {
-    return adoptRef(*new ExternalStringImpl(characters, length, WTFMove(free)));
+    return adoptRef(*new ExternalStringImpl(characters, WTF::move(free)));
 }
 
-WTF_EXPORT_PRIVATE Ref<ExternalStringImpl> ExternalStringImpl::create(const UChar* characters, unsigned length, ExternalStringImplFreeFunction&& free)
+WTF_EXPORT_PRIVATE Ref<ExternalStringImpl> ExternalStringImpl::create(std::span<const char16_t> characters, ExternalStringImplFreeFunction&& free)
 {
-    return adoptRef(*new ExternalStringImpl(characters, length, WTFMove(free)));
+    return adoptRef(*new ExternalStringImpl(characters, WTF::move(free)));
 }
 
-ExternalStringImpl::ExternalStringImpl(const LChar* characters, unsigned length, ExternalStringImplFreeFunction&& free)
-    : StringImpl(characters, length, ConstructWithoutCopying)
-    , m_free(WTFMove(free))
+ExternalStringImpl::ExternalStringImpl(std::span<const Latin1Character> characters, ExternalStringImplFreeFunction&& free)
+    : StringImpl(characters, ConstructWithoutCopying)
+    , m_free(WTF::move(free))
 {
     ASSERT(m_free);
     m_hashAndFlags = (m_hashAndFlags & ~s_hashMaskBufferOwnership) | BufferExternal;
 }
 
-ExternalStringImpl::ExternalStringImpl(const UChar* characters, unsigned length, ExternalStringImplFreeFunction&& free)
-    : StringImpl(characters, length, ConstructWithoutCopying)
-    , m_free(WTFMove(free))
+ExternalStringImpl::ExternalStringImpl(std::span<const char16_t> characters, ExternalStringImplFreeFunction&& free)
+    : StringImpl(characters, ConstructWithoutCopying)
+    , m_free(WTF::move(free))
 {
     ASSERT(m_free);
     m_hashAndFlags = (m_hashAndFlags & ~s_hashMaskBufferOwnership) | BufferExternal;

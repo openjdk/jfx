@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,39 +27,29 @@
 
 #include <array>
 #include <wtf/FastBitVector.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
 #define FOR_EACH_BLOCK_DIRECTORY_BIT(macro) \
     macro(live, Live) /* The set of block indices that have actual blocks. */\
-    macro(empty, Empty) /* The set of all blocks that have no live objects. */ \
+    macro(empty, Empty) /* The set of all blocks that have no live objects and are not free listed. */ \
     macro(allocated, Allocated) /* The set of all blocks that are full of live objects. */\
-    macro(canAllocateButNotEmpty, CanAllocateButNotEmpty) /* The set of all blocks are neither empty nor retired (i.e. are more than minMarkedBlockUtilization full). */ \
+    macro(canAllocate, CanAllocate) /* The set of all blocks are live and not retired (i.e. are more than minMarkedBlockUtilization full). Note: This also implies they wouldn't be allocated. */ \
     macro(destructible, Destructible) /* The set of all blocks that may have destructors to run. */\
     macro(eden, Eden) /* The set of all blocks that have new objects since the last GC. */\
     macro(unswept, Unswept) /* The set of all blocks that could be swept by the incremental sweeper. */\
+    macro(inUse, InUse) /* This tells us if a block is currently being allocated from or swept. This acts like a lock bit. */\
     \
     /* These are computed during marking. */\
     macro(markingNotEmpty, MarkingNotEmpty) /* The set of all blocks that are not empty. */ \
     macro(markingRetired, MarkingRetired) /* The set of all blocks that are retired. */
 
-// FIXME: We defined canAllocateButNotEmpty and empty to be exclusive:
-//
-//     canAllocateButNotEmpty & empty == 0
-//
-// Instead of calling it canAllocate and making it inclusive:
-//
-//     canAllocate & empty == empty
-//
-// The latter is probably better. I'll leave it to a future bug to fix that, since breathing on
-// this code leads to regressions for days, and it's not clear that making this change would
-// improve perf since it would not change the collector's behavior, and either way the directory
-// has to look at both bitvectors.
-// https://bugs.webkit.org/show_bug.cgi?id=162121
-
 class BlockDirectoryBits {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(BlockDirectoryBits);
 public:
     static constexpr unsigned bitsPerSegment = 32;
     static constexpr unsigned segmentShift = 5;
@@ -85,7 +75,7 @@ public:
 
     template<Kind kind>
     class BlockDirectoryBitVectorWordView {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(BlockDirectoryBitVectorWordView);
     public:
         using ViewType = BlockDirectoryBitVectorWordView;
 
@@ -186,11 +176,11 @@ public:
     } \
     BlockDirectoryBitVectorView<Kind::capitalBitName> lowerBitName() const \
     { \
-        return BlockDirectoryBitVectorView<Kind::capitalBitName>(BlockDirectoryBitVectorWordView<Kind::capitalBitName>(m_segments.data(), m_numBits)); \
+        return BlockDirectoryBitVectorView<Kind::capitalBitName>(BlockDirectoryBitVectorWordView<Kind::capitalBitName>(m_segments.span().data(), m_numBits)); \
     } \
     BlockDirectoryBitVectorRef<Kind::capitalBitName> lowerBitName() \
     { \
-        return BlockDirectoryBitVectorRef<Kind::capitalBitName>(BlockDirectoryBitVectorWordView<Kind::capitalBitName>(m_segments.data(), m_numBits)); \
+        return BlockDirectoryBitVectorRef<Kind::capitalBitName>(BlockDirectoryBitVectorWordView<Kind::capitalBitName>(m_segments.span().data(), m_numBits)); \
     }
     FOR_EACH_BLOCK_DIRECTORY_BIT(BLOCK_DIRECTORY_BIT_ACCESSORS)
 #undef BLOCK_DIRECTORY_BIT_ACCESSORS
@@ -226,4 +216,8 @@ private:
     unsigned m_numBits { 0 };
 };
 
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<BlockDirectoryBits::Kind kind>, BlockDirectoryBits::BlockDirectoryBitVectorWordView<kind>);
+
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

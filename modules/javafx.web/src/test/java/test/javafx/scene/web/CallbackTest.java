@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,7 +27,7 @@ package test.javafx.scene.web;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -42,22 +42,20 @@ import javafx.scene.web.WebEngine;
 import javafx.scene.web.WebEvent;
 import javafx.util.Callback;
 
-import org.junit.Test;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Disabled;
 
 
 public class CallbackTest extends TestBase {
     final static String JS_ALERT = "alert('MESSAGE');";
     final static String JS_CONFIRM = "confirm('MESSAGE');";
     final static String JS_PROMPT = "prompt('MESSAGE', 'DEFAULT');";
-    final static String JS_OPEN =
-            "window.open('', '', 'menubar=0, status=1, toolbar=0, resizable=1');";
+    final static String JS_OPEN = "window.open('', '', 'menubar=0, status=1, toolbar=0, resizable=1');";
     final static String JS_OPEN_DEFAULT = "window.open('');";
     final static String JS_CLOSE = "window.close();";
     final static String JS_STATUS = "window.status = 'STATUS'";
 
-    final static String HTML_ONLOAD =
-            "<html><body onload=\"ONLOAD\"></body></html>";
+    final static String HTML_ONLOAD = "<html><body onload=\"ONLOAD\"></body></html>";
 
     final static String ALERT = "onAlert";
     final static String RESIZED = "onResized";
@@ -122,7 +120,7 @@ public class CallbackTest extends TestBase {
         popupUi.checkCalled(VISIBILITY_CHANGED, true);
     }
 
-    // Tests that no exceptions occur when createPopupHandler is null (RT-15512).
+    // Tests that no exceptions occur when createPopupHandler is null (JDK-8113962).
     // Exceptions are cleared in native code and we cannot catch them at Java
     // level. So we check stderr output to detect them.
     @Test public void testNullPopupHandler() {
@@ -137,7 +135,7 @@ public class CallbackTest extends TestBase {
         checkErrorOutput(bytes);
     }
 
-    // Tests that no exceptions occur when createPopupHandler returns null (RT-15512).
+    // Tests that no exceptions occur when createPopupHandler returns null (JDK-8113962).
     // See comment to testNullPopupHandler().
     @Test public void testBlockingPopupHandler() {
         PrintStream err = System.err;
@@ -159,7 +157,7 @@ public class CallbackTest extends TestBase {
         }
     }
 
-    @Ignore("JDK-8290238")
+    @Disabled("JDK-8290238")
     @Test public void testCloseWindow() {
         clear();
         executeScript(JS_CLOSE);
@@ -196,8 +194,7 @@ public class CallbackTest extends TestBase {
         mainUi.checkCalled(CONFIRM, message);
 
         clear();
-        script = JS_PROMPT.replaceAll("MESSAGE", message)
-                       .replaceAll("DEFAULT", defaultValue);
+        script = JS_PROMPT.replaceAll("MESSAGE", message).replaceAll("DEFAULT", defaultValue);
         executeScript(script);
         mainUi.checkCalled(PROMPT, message, defaultValue);
 
@@ -278,8 +275,7 @@ public class CallbackTest extends TestBase {
         public final EventHandler<WebEvent<Rectangle2D>> onResized =
                 ev -> {
                     Rectangle2D r = ev.getData();
-                    called(RESIZED, r.getMinX(), r.getMinY(),
-                                    r.getWidth(), r.getHeight());
+                    called(RESIZED, r.getMinX(), r.getMinY(), r.getWidth(), r.getHeight());
                 };
 
         public final EventHandler<WebEvent<Boolean>> onVisibilityChanged =

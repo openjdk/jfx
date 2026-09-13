@@ -27,9 +27,8 @@
 #include "FontAttributeChanges.h"
 
 #include "CSSPropertyNames.h"
-#include "CSSShadowValue.h"
+#include "CSSTextShadowPropertyValue.h"
 #include "CSSValueKeywords.h"
-#include "CSSValueList.h"
 #include "CSSValuePool.h"
 #include "EditAction.h"
 #include "EditingStyle.h"
@@ -39,12 +38,12 @@
 namespace WebCore {
 
 FontChanges::FontChanges(String&& fontName, String&& fontFamily, std::optional<double>&& fontSize, std::optional<double>&& fontSizeDelta, std::optional<bool>&& bold, std::optional<bool>&& italic)
-    : m_fontName(WTFMove(fontName))
-    , m_fontFamily(WTFMove(fontFamily))
-    , m_fontSize(WTFMove(fontSize))
-    , m_fontSizeDelta(WTFMove(fontSizeDelta))
-    , m_bold(WTFMove(bold))
-    , m_italic(WTFMove(italic))
+    : m_fontName(WTF::move(fontName))
+    , m_fontFamily(WTF::move(fontFamily))
+    , m_fontSize(WTF::move(fontSize))
+    , m_fontSizeDelta(WTF::move(fontSizeDelta))
+    , m_bold(WTF::move(bold))
+    , m_italic(WTF::move(italic))
 {
     ASSERT(!m_fontSize || !m_fontSizeDelta);
 }
@@ -89,26 +88,35 @@ Ref<MutableStyleProperties> FontChanges::createStyleProperties() const
     return style;
 }
 
-static RefPtr<CSSValueList> cssValueListForShadow(const FontShadow& shadow)
+static RefPtr<CSSValue> cssValueForTextShadow(const FontShadow& shadow)
 {
     if (shadow.offset.isZero() && !shadow.blurRadius)
         return nullptr;
 
-    auto width = CSSPrimitiveValue::create(shadow.offset.width(), CSSUnitType::CSS_PX);
-    auto height = CSSPrimitiveValue::create(shadow.offset.height(), CSSUnitType::CSS_PX);
-    auto blurRadius = CSSPrimitiveValue::create(shadow.blurRadius, CSSUnitType::CSS_PX);
-    auto color = CSSValuePool::singleton().createColorValue(shadow.color);
-    return CSSValueList::createCommaSeparated(CSSShadowValue::create(WTFMove(width), WTFMove(height), WTFMove(blurRadius), { }, { }, WTFMove(color)));
+    auto color = CSS::Color { CSS::ResolvedColor { shadow.color } };
+    auto width = CSS::Length<CSS::AllUnzoomed> { CSS::LengthUnit::Px, shadow.offset.width() };
+    auto height = CSS::Length<CSS::AllUnzoomed> { CSS::LengthUnit::Px, shadow.offset.height() };
+    auto blur = CSS::Length<CSS::NonnegativeUnzoomed> { CSS::LengthUnit::Px, shadow.blurRadius };
+
+    CSS::TextShadowProperty::List list {
+        CSS::TextShadow {
+            .color = WTF::move(color),
+            .location = { WTF::move(width), WTF::move(height) },
+            .blur = WTF::move(blur),
+        }
+    };
+
+    return CSSTextShadowPropertyValue::create(CSS::TextShadowProperty { WTF::move(list) });
 }
 
 FontAttributeChanges::FontAttributeChanges(std::optional<VerticalAlignChange>&& verticalAlign, std::optional<Color>&& backgroundColor, std::optional<Color>&& foregroundColor, std::optional<FontShadow>&& shadow, std::optional<bool>&& strikeThrough, std::optional<bool>&& underline, FontChanges&& fontChanges)
-    : m_verticalAlign(WTFMove(verticalAlign))
-    , m_backgroundColor(WTFMove(backgroundColor))
-    , m_foregroundColor(WTFMove(foregroundColor))
-    , m_shadow(WTFMove(shadow))
-    , m_strikeThrough(WTFMove(strikeThrough))
-    , m_underline(WTFMove(underline))
-    , m_fontChanges(WTFMove(fontChanges))
+    : m_verticalAlign(WTF::move(verticalAlign))
+    , m_backgroundColor(WTF::move(backgroundColor))
+    , m_foregroundColor(WTF::move(foregroundColor))
+    , m_shadow(WTF::move(shadow))
+    , m_strikeThrough(WTF::move(strikeThrough))
+    , m_underline(WTF::move(underline))
+    , m_fontChanges(WTF::move(fontChanges))
 {
 }
 
@@ -136,8 +144,8 @@ Ref<EditingStyle> FontAttributeChanges::createEditingStyle() const
         style->setProperty(CSSPropertyColor, cssValuePool.createColorValue(*m_foregroundColor));
 
     if (m_shadow) {
-        if (auto shadowValue = cssValueListForShadow(*m_shadow))
-            style->setProperty(CSSPropertyTextShadow, WTFMove(shadowValue));
+        if (auto shadowValue = cssValueForTextShadow(*m_shadow))
+            style->setProperty(CSSPropertyTextShadow, shadowValue.releaseNonNull());
         else
             style->setProperty(CSSPropertyTextShadow, CSSValueNone);
     }

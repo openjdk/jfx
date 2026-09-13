@@ -36,7 +36,6 @@
 #include "IOSurface.h"
 #include "OffscreenCanvas.h"
 #include "PlatformCALayer.h"
-#include <variant>
 #include <wtf/MachSendRight.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
@@ -44,18 +43,13 @@
 
 namespace WebCore {
 
+class Document;
 class GPUDisplayBufferDisplayDelegate;
 
 class GPUCanvasContextCocoa final : public GPUCanvasContext {
-    WTF_MAKE_ISO_ALLOCATED(GPUCanvasContextCocoa);
+    WTF_MAKE_TZONE_ALLOCATED(GPUCanvasContextCocoa);
 public:
-#if ENABLE(OFFSCREEN_CANVAS)
-    using CanvasType = std::variant<RefPtr<HTMLCanvasElement>, RefPtr<OffscreenCanvas>>;
-#else
-    using CanvasType = std::variant<RefPtr<HTMLCanvasElement>>;
-#endif
-
-    static std::unique_ptr<GPUCanvasContextCocoa> create(CanvasBase&, GPU&);
+    static std::unique_ptr<GPUCanvasContextCocoa> create(CanvasBase&, GPU&, Document*);
 
     DestinationColorSpace colorSpace() const override;
     bool compositingResultsNeedUpdating() const override { return m_compositingResultsNeedsUpdating; }
@@ -63,25 +57,27 @@ public:
     bool needsPreparationForDisplay() const override { return true; }
     void prepareForDisplay() override;
     PixelFormat pixelFormat() const override;
-    void reshape(int width, int height) override;
+    bool isOpaque() const override;
+    void didUpdateCanvasSizeProperties(bool) override;
 
-    // FIXME: implement these to allow for painting
-    void prepareForDisplayWithPaint() override { }
-    void paintRenderingResultsToCanvas() override { }
+    RefPtr<ImageBuffer> surfaceBufferToImageBuffer(SurfaceBuffer) override;
+    bool isSurfaceBufferTransparentBlack(SurfaceBuffer) const final { return false; }
+
     // GPUCanvasContext methods:
     CanvasType canvas() override;
-    void configure(GPUCanvasConfiguration&&) override;
+    ExceptionOr<void> configure(GPUCanvasConfiguration&&) override;
     void unconfigure() override;
-    RefPtr<GPUTexture> getCurrentTexture() override;
+    std::optional<GPUCanvasConfiguration> getConfiguration() const override;
+    ExceptionOr<Ref<GPUTexture>> getCurrentTexture() override;
+    RefPtr<ImageBuffer> transferToImageBuffer() override;
 
-    bool isWebGPU() const override { return true; }
-    const char* activeDOMObjectName() const override
-    {
-        return "GPUCanvasElement";
-    }
+#if HAVE(SUPPORT_HDR_DISPLAY) && ENABLE(PIXEL_FORMAT_RGBA16F)
+    void setDynamicRangeLimit(PlatformDynamicRangeLimit) override;
+    std::optional<double> getEffectiveDynamicRangeLimitValue() const override;
+#endif
 
 private:
-    explicit GPUCanvasContextCocoa(CanvasBase&, GPU&);
+    explicit GPUCanvasContextCocoa(CanvasBase&, Ref<GPUCompositorIntegration>&&, Ref<GPUPresentationContext>&&, Document*);
 
     void markContextChangedAndNotifyCanvasObservers();
 
@@ -90,26 +86,46 @@ private:
         return static_cast<bool>(m_configuration);
     }
 
+    CanvasType htmlOrOffscreenCanvas() const;
+    ExceptionOr<void> configure(GPUCanvasConfiguration&&, bool);
+    void present(uint32_t frameIndex);
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    float computeContentsHeadroom();
+    void updateContentsHeadroom();
+    void updateScreenHeadroom(float, bool suppressEDR);
+    void updateScreenHeadroomFromScreenProperties();
+#endif // HAVE(SUPPORT_HDR_DISPLAY)
+    void updateMemoryCost() const;
+
     struct Configuration {
         Ref<GPUDevice> device;
         GPUTextureFormat format { GPUTextureFormat::R8unorm };
         GPUTextureUsageFlags usage { GPUTextureUsage::RENDER_ATTACHMENT };
         Vector<GPUTextureFormat> viewFormats;
         GPUPredefinedColorSpace colorSpace { GPUPredefinedColorSpace::SRGB };
-        GPUCanvasCompositingAlphaMode compositingAlphaMode { GPUCanvasCompositingAlphaMode::Opaque };
+        GPUCanvasToneMapping toneMapping;
+        GPUCanvasAlphaMode compositingAlphaMode { GPUCanvasAlphaMode::Opaque };
         Vector<MachSendRight> renderBuffers;
         unsigned frameCount { 0 };
     };
     std::optional<Configuration> m_configuration;
 
-    Ref<GPUDisplayBufferDisplayDelegate> m_layerContentsDisplayDelegate;
-    Ref<GPUCompositorIntegration> m_compositorIntegration;
-    Ref<GPUPresentationContext> m_presentationContext;
+    const Ref<GPUDisplayBufferDisplayDelegate> m_layerContentsDisplayDelegate;
+    const Ref<GPUCompositorIntegration> m_compositorIntegration;
+    const Ref<GPUPresentationContext> m_presentationContext;
     RefPtr<GPUTexture> m_currentTexture;
 
-    int m_width { 0 };
-    int m_height { 0 };
+    GPUIntegerCoordinate m_width { 0 };
+    GPUIntegerCoordinate m_height { 0 };
+#if HAVE(SUPPORT_HDR_DISPLAY)
+    using ScreenPropertiesChangedObserver = Observer<void(PlatformDisplayID)>;
+    RefPtr<ScreenPropertiesChangedObserver> m_screenPropertiesChangedObserver;
+    PlatformDynamicRangeLimit m_dynamicRangeLimit { PlatformDynamicRangeLimit::initialValue() };
+    float m_currentEDRHeadroom { 1 };
+    bool m_suppressEDR { false };
+#endif // HAVE(SUPPORT_HDR_DISPLAY)
     bool m_compositingResultsNeedsUpdating { false };
+    RefPtr<ImageBuffer> m_readDisplayBuffer;
 };
 
 } // namespace WebCore

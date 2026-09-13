@@ -23,6 +23,8 @@
 
 #include "LocalDOMWindowProperty.h"
 #include "Supplementable.h"
+#include <wtf/CheckedRef.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -30,26 +32,32 @@ class Geolocation;
 class Navigator;
 
 class NavigatorGeolocation : public Supplement<Navigator> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(NavigatorGeolocation);
 public:
     explicit NavigatorGeolocation(Navigator&);
     virtual ~NavigatorGeolocation();
     static NavigatorGeolocation* from(Navigator&);
 
-    static Geolocation* geolocation(Navigator&);
-    Geolocation* geolocation() const;
+    static Geolocation& geolocation(Navigator&);
+    static Geolocation* optionalGeolocation(Navigator&);
+    Geolocation& geolocation() const;
 
 #if PLATFORM(IOS_FAMILY)
     void resetAllGeolocationPermission();
 #endif // PLATFORM(IOS_FAMILY)
 
 private:
-    static const char* supplementName();
+    static ASCIILiteral supplementName() { return "NavigatorGeolocation"_s; }
+    bool isNavigatorGeolocation() const final { return true; }
 
-    mutable RefPtr<Geolocation> m_geolocation;
-    Navigator& m_navigator;
+    const RefPtr<Geolocation> m_geolocation;
+    const CheckedRef<Navigator> m_navigator;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::NavigatorGeolocation)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isNavigatorGeolocation(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(GEOLOCATION)

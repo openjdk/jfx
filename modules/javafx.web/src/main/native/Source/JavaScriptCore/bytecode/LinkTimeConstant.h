@@ -25,7 +25,8 @@
 
 #pragma once
 
-#include "JSCBuiltins.h"
+#include <JavaScriptCore/JSCBuiltins.h>
+#include <cstdint>
 
 namespace JSC {
 
@@ -36,63 +37,82 @@ class JSGlobalObject;
     JSC_FOREACH_BUILTIN_LINK_TIME_CONSTANT(v) \
     v(throwTypeErrorFunction, nullptr) \
     v(importModule, nullptr) \
-    v(mapBucketHead, nullptr) \
-    v(mapBucketNext, nullptr) \
-    v(mapBucketKey, nullptr) \
-    v(mapBucketValue, nullptr) \
-    v(setBucketHead, nullptr) \
-    v(setBucketNext, nullptr) \
-    v(setBucketKey, nullptr) \
-    v(setClone, nullptr) \
+    v(mapStorage, nullptr) \
+    v(mapIterationNext, nullptr) \
+    v(mapIterationEntry, nullptr) \
+    v(mapIterationEntryKey, nullptr) \
+    v(mapIterationEntryValue, nullptr) \
+    v(mapIteratorNext, nullptr) \
+    v(mapIteratorKey, nullptr) \
+    v(mapIteratorValue, nullptr) \
+    v(setStorage, nullptr) \
+    v(setIterationNext, nullptr) \
+    v(setIterationEntry, nullptr) \
+    v(setIterationEntryKey, nullptr) \
+    v(setIteratorNext, nullptr) \
+    v(setIteratorKey, nullptr) \
     v(setPrototypeDirect, nullptr) \
     v(setPrototypeDirectOrThrow, nullptr) \
     v(copyDataProperties, nullptr) \
-    v(enqueueJob, nullptr) \
+    v(cloneObject, nullptr) \
+    v(resolvePromise, nullptr) \
+    v(rejectPromise, nullptr) \
+    v(fulfillPromise, nullptr) \
+    v(resolvePromiseWithFirstResolvingFunctionCallCheck, nullptr) \
+    v(rejectPromiseWithFirstResolvingFunctionCallCheck, nullptr) \
+    v(fulfillPromiseWithFirstResolvingFunctionCallCheck, nullptr) \
+    v(resolveWithInternalMicrotaskForAsyncAwait, nullptr) \
+    v(asyncGeneratorQueueEnqueue, nullptr) \
+    v(asyncGeneratorQueueDequeueResolve, nullptr) \
+    v(asyncGeneratorQueueDequeueReject, nullptr) \
+    v(driveAsyncFunction, nullptr) \
+    v(newHandledRejectedPromise, nullptr) \
+    v(promiseEmptyOnFulfilled, nullptr) \
+    v(promiseEmptyOnRejected, nullptr) \
+    v(promiseResolve, nullptr) \
+    v(promiseReject, nullptr) \
+    v(performPromiseThen, nullptr) \
     v(makeTypeError, nullptr) \
     v(AggregateError, nullptr) \
     v(typedArrayLength, nullptr) \
-    v(typedArrayClone, nullptr) \
-    v(typedArrayContentType, nullptr) \
-    v(typedArrayGetOriginalConstructor, nullptr) \
-    v(typedArraySort, nullptr) \
+    v(toIntegerOrInfinity, nullptr) \
+    v(toLength, nullptr) \
     v(isTypedArrayView, nullptr) \
     v(isSharedTypedArrayView, nullptr) \
     v(isResizableOrGrowableSharedTypedArrayView, nullptr) \
     v(typedArrayFromFast, nullptr) \
     v(isDetached, nullptr) \
-    v(typedArrayDefaultComparator, nullptr) \
     v(isBoundFunction, nullptr) \
+    v(isFinite, nullptr) \
     v(hasInstanceBoundFunction, nullptr) \
     v(instanceOf, nullptr) \
     v(BuiltinLog, nullptr) \
     v(BuiltinDescribe, nullptr) \
     v(RegExp, nullptr) \
+    v(Iterator, nullptr) \
     v(min, nullptr) \
-    v(trunc, nullptr) \
     v(Promise, nullptr) \
     v(InternalPromise, nullptr) \
     v(defaultPromiseThen, nullptr) \
     v(repeatCharacter, nullptr) \
     v(isArray, nullptr) \
     v(isArraySlow, nullptr) \
-    v(concatMemcpy, nullptr) \
-    v(appendMemcpy, nullptr) \
-    v(hostPromiseRejectionTracker, nullptr) \
     v(Set, nullptr) \
     v(Map, nullptr) \
-    v(thisTimeValue, nullptr) \
-    v(importMapStatus, nullptr) \
     v(importInRealm, nullptr) \
+    v(evalFunction, nullptr) \
     v(evalInRealm, nullptr) \
     v(moveFunctionToRealm, nullptr) \
     v(isConstructor, nullptr) \
     v(sameValue, nullptr) \
     v(regExpProtoFlagsGetter, nullptr) \
     v(regExpProtoGlobalGetter, nullptr) \
+    v(regExpProtoHasIndicesGetter, nullptr) \
     v(regExpProtoIgnoreCaseGetter, nullptr) \
     v(regExpProtoMultilineGetter, nullptr) \
     v(regExpProtoSourceGetter, nullptr) \
     v(regExpProtoStickyGetter, nullptr) \
+    v(regExpProtoDotAllGetter, nullptr) \
     v(regExpProtoUnicodeGetter, nullptr) \
     v(regExpProtoUnicodeSetsGetter, nullptr) \
     v(regExpBuiltinExec, nullptr) \
@@ -103,7 +123,6 @@ class JSGlobalObject;
     v(regExpSplitFast, nullptr) \
     v(regExpPrototypeSymbolMatch, nullptr) \
     v(regExpPrototypeSymbolReplace, nullptr) \
-    v(regExpTestFast, nullptr) \
     v(stringIncludesInternal, nullptr) \
     v(stringIndexOfInternal, nullptr) \
     v(stringSplitFast, nullptr) \
@@ -111,7 +130,6 @@ class JSGlobalObject;
     v(handleNegativeProxyHasTrapResult, nullptr) \
     v(handlePositiveProxySetTrapResult, nullptr) \
     v(handleProxyGetTrapResult, nullptr) \
-    v(dateTimeFormat, nullptr) \
     v(webAssemblyCompileStreamingInternal, nullptr) \
     v(webAssemblyInstantiateStreamingInternal, nullptr) \
     v(Object, nullptr) \
@@ -124,7 +142,7 @@ class JSGlobalObject;
     v(sentinelString, nullptr) \
     v(createRemoteFunction, nullptr) \
     v(isRemoteFunction, nullptr) \
-    v(arraySort, nullptr) \
+    v(arrayFromFastWithoutMapFn, nullptr) \
     v(jsonParse, nullptr) \
     v(jsonStringify, nullptr) \
     v(String, nullptr) \
@@ -135,10 +153,19 @@ class JSGlobalObject;
     v(Uint16Array, nullptr) \
     v(Int32Array, nullptr) \
     v(Uint32Array, nullptr) \
+    v(Float16Array, nullptr) \
     v(Float32Array, nullptr) \
     v(Float64Array, nullptr) \
     v(BigInt64Array, nullptr) \
     v(BigUint64Array, nullptr) \
+    v(wrapForValidIteratorCreate, nullptr) \
+    v(asyncFromSyncIteratorCreate, nullptr) \
+    v(regExpStringIteratorCreate, nullptr) \
+    v(iteratorHelperCreate, nullptr) \
+    v(ReferenceError, nullptr) \
+    v(SuppressedError, nullptr) \
+    v(DisposableStack, nullptr) \
+    v(AsyncDisposableStack, nullptr) \
 
 
 #define DECLARE_LINK_TIME_CONSTANT(name, code) name,

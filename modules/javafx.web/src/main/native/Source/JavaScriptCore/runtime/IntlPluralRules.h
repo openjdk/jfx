@@ -44,7 +44,7 @@ class IntlPluralRules final : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
 
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
 
     static void destroy(JSCell* cell)
     {
@@ -62,38 +62,31 @@ public:
 
     DECLARE_INFO;
 
+    DECLARE_VISIT_CHILDREN;
+
     template<typename IntlType>
     friend void setNumberFormatDigitOptions(JSGlobalObject*, IntlType*, JSObject*, unsigned minimumFractionDigitsDefault, unsigned maximumFractionDigitsDefault, IntlNotation);
     template<typename IntlType>
     friend void appendNumberFormatDigitOptionsToSkeleton(IntlType*, StringBuilder&);
+    template<typename IntlType>
+    friend void appendNumberFormatNotationOptionsToSkeleton(IntlType*, StringBuilder&);
 
     void initializePluralRules(JSGlobalObject*, JSValue locales, JSValue options);
     JSValue select(JSGlobalObject*, double value) const;
-    JSObject* resolvedOptions(JSGlobalObject*) const;
-
-#if HAVE(ICU_U_NUMBER_RANGE_FORMATTER)
     JSValue selectRange(JSGlobalObject*, double start, double end) const;
-#endif
+    JSObject* resolvedOptions(JSGlobalObject*) const;
 
 private:
     IntlPluralRules(VM&, Structure*);
     DECLARE_DEFAULT_FINISH_CREATION;
-    DECLARE_VISIT_CHILDREN;
 
     static Vector<String> localeData(const String&, RelevantExtensionKey);
 
     enum class Type : bool { Cardinal, Ordinal };
 
     std::unique_ptr<UPluralRules, UPluralRulesDeleter> m_pluralRules;
-#if HAVE(ICU_U_NUMBER_FORMATTER)
     std::unique_ptr<UNumberFormatter, UNumberFormatterDeleter> m_numberFormatter;
-#if HAVE(ICU_U_NUMBER_RANGE_FORMATTER)
     std::unique_ptr<UNumberRangeFormatter, UNumberRangeFormatterDeleter> m_numberRangeFormatter;
-#endif
-#else
-    using UNumberFormatDeleter = ICUDeleter<unum_close>;
-    std::unique_ptr<UNumberFormat, UNumberFormatDeleter> m_numberFormat;
-#endif
 
     String m_locale;
     unsigned m_minimumIntegerDigits { 1 };
@@ -102,8 +95,11 @@ private:
     unsigned m_minimumSignificantDigits { 0 };
     unsigned m_maximumSignificantDigits { 0 };
     unsigned m_roundingIncrement { 1 };
+    IntlTrailingZeroDisplay m_trailingZeroDisplay { IntlTrailingZeroDisplay::Auto };
+    RoundingMode m_roundingMode { RoundingMode::HalfExpand };
     IntlRoundingType m_roundingType { IntlRoundingType::FractionDigits };
     Type m_type { Type::Cardinal };
+    IntlNotation m_notation { IntlNotation::Standard };
 };
 
 } // namespace JSC

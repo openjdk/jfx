@@ -27,9 +27,15 @@
 #include "SubresourceIntegrity.h"
 
 #include "CachedResource.h"
-#include "ParsingUtilities.h"
+#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "ResourceCryptographicDigest.h"
 #include "SharedBuffer.h"
+#include "SubresourceLoader.h"
+#include "ViolationReportType.h"
+#include <wtf/text/Base64.h>
+#include <wtf/text/MakeString.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringParsingBuffer.h>
 
 namespace WebCore {
@@ -73,7 +79,7 @@ public:
         if (!buffer.atEnd() && !isASCIIWhitespace(*buffer))
             return false;
 
-        m_digests->append(WTFMove(*digest));
+        m_digests->append(WTF::move(*digest));
         return true;
     }
 
@@ -102,8 +108,7 @@ std::optional<Vector<EncodedResourceCryptographicDigest>> parseIntegrityMetadata
 
     std::optional<Vector<EncodedResourceCryptographicDigest>> result;
 
-    readCharactersForParsing(integrityMetadata, [&result] (auto buffer) {
-        using CharacterType = typename decltype(buffer)::CharacterType;
+    readCharactersForParsing(integrityMetadata, [&result]<typename CharacterType> (StringParsingBuffer<CharacterType> buffer) {
         splitOnSpaces(buffer, IntegrityMetadataParser<CharacterType> { result });
     });
 
@@ -134,7 +139,7 @@ static Vector<EncodedResourceCryptographicDigest> strongestMetadataFromSet(Vecto
         // 1. If result is the empty set, add item to result and set strongest to item, skip to the next item.
         if (result.isEmpty()) {
             strongest = item.algorithm;
-            result.append(WTFMove(item));
+            result.append(WTF::move(item));
             continue;
         }
 
@@ -149,16 +154,102 @@ static Vector<EncodedResourceCryptographicDigest> strongestMetadataFromSet(Vecto
         //    to item, set result to the empty set, and add item to result.
         auto priority = prioritizedHashFunction(currentAlgorithm, newAlgorithm);
         if (!priority)
-            result.append(WTFMove(item));
+            result.append(WTF::move(item));
         else if (priority.value() == newAlgorithm) {
             strongest = item.algorithm;
 
             result.clear();
-            result.append(WTFMove(item));
+            result.append(WTF::move(item));
         }
     }
 
     return result;
+}
+
+static Ref<FormData> createReportFormData(const String& type, const URL& url, const String& userAgent, NOESCAPE const Function<void(JSON::Object&)>& populateBody)
+{
+    auto body = JSON::Object::create();
+    populateBody(body);
+
+    // https://www.w3.org/TR/reporting-1/#queue-report, step 2.3.1.
+    auto reportObject = JSON::Object::create();
+    reportObject->setObject("body"_s, WTF::move(body));
+    reportObject->setString("type"_s, type);
+    reportObject->setString("user_agent"_s, userAgent);
+    // The spec allows user agents to delay report sending, in order to reduce impact on the user and potential overhead. See https://www.w3.org/TR/reporting-1/#delivery
+    // Currently we're not taking advantage of that, so setting the `age` to 0 to indicate immediate delivery.
+    reportObject->setInteger("age"_s, 0);
+    reportObject->setInteger("attempts"_s, 0);
+    if (url.isValid())
+        reportObject->setString("url"_s, url.strippedForUseAsReferrer().string);
+
+    auto reportList = JSON::Array::create();
+    reportList->pushObject(reportObject);
+
+    return FormData::create(reportList->toJSONString().utf8());
+}
+
+static String addHashPrefix(ResourceCryptographicDigest::Algorithm algorithm, StringView hash)
+{
+    switch (algorithm) {
+    case ResourceCryptographicDigest::Algorithm::SHA256:
+        return makeString("sha256-"_s, hash);
+    case ResourceCryptographicDigest::Algorithm::SHA384:
+        return makeString("sha384-"_s, hash);
+    case ResourceCryptographicDigest::Algorithm::SHA512:
+        return makeString("sha512-"_s, hash);
+    }
+    ASSERT_NOT_REACHED();
+    return String();
+}
+
+static std::optional<ResourceCryptographicDigest::Algorithm> findStrongestAlgorithm(HashAlgorithmSet algorithmSet)
+{
+    for (int i = ResourceCryptographicDigest::algorithmCount - 1; i >= 0; --i) {
+        uint8_t algorithm = (1 << i);
+        if (algorithmSet & algorithm)
+            return static_cast<ResourceCryptographicDigest::Algorithm>(algorithm);
+    }
+    return std::nullopt;
+}
+
+void reportHashesIfNeeded(const CachedResource& resource)
+{
+    RefPtr loader = resource.loader();
+    if (!loader)
+        return;
+    RefPtr frame = loader->frame();
+    if (!frame)
+        return;
+    RefPtr document = frame->document();
+    if (!document)
+        return;
+
+    CheckedRef csp = *document->contentSecurityPolicy();
+    URL documentURL = document->url();
+
+    auto& hashesToReport = csp->hashesToReport();
+    if (hashesToReport.isEmpty())
+        return;
+
+    bool canExposeHashes = isResponseEligible(resource);
+    for (auto& [algorithmSet, fixedEndpoints] : hashesToReport) {
+        auto hashAlgorithm = findStrongestAlgorithm(algorithmSet);
+        if (!hashAlgorithm)
+            return;
+
+        String hash = ""_s;
+        if (canExposeHashes)
+            hash = addHashPrefix(hashAlgorithm.value(), base64EncodeToString(resource.cryptographicDigest(hashAlgorithm.value()).value));
+        Ref report = createReportFormData("csp-hash"_s, documentURL, document->httpUserAgent(), [&](auto& body) {
+            body.setString("documentURL"_s, documentURL.strippedForUseAsReferrer().string);
+            body.setString("subresourceURL"_s, resource.url().strippedForUseAsReferrer().string);
+            body.setString("hash"_s, hash);
+            body.setString("type"_s, "subresource"_s);
+            body.setString("destination"_s, "script"_s);
+        });
+        document->sendReportToEndpoints(documentURL, { }, fixedEndpoints, WTF::move(report), ViolationReportType::CSPHashReport);
+    }
 }
 
 bool matchIntegrityMetadataSlow(const CachedResource& resource, const String& integrityMetadataList)
@@ -179,7 +270,7 @@ bool matchIntegrityMetadataSlow(const CachedResource& resource, const String& in
         return true;
 
     // 5. Let metadata be the result of getting the strongest metadata from parsedMetadata.
-    auto metadata = strongestMetadataFromSet(WTFMove(*parsedMetadata));
+    auto metadata = strongestMetadataFromSet(WTF::move(*parsedMetadata));
 
     // 6. For each item in metadata:
     for (auto& item : metadata) {
@@ -203,12 +294,12 @@ bool matchIntegrityMetadataSlow(const CachedResource& resource, const String& in
 String integrityMismatchDescription(const CachedResource& resource, const String& integrityMetadata)
 {
     auto resourceURL = resource.url().stringCenterEllipsizedToLength();
-    if (auto resourceBuffer = resource.resourceBuffer()) {
-        return makeString(resourceURL, ". Failed integrity metadata check. Content length: ", resourceBuffer->size(), ", Expected content length: ",
-            resource.response().expectedContentLength(), ", Expected metadata: ", integrityMetadata);
+    if (RefPtr resourceBuffer = resource.resourceBuffer()) {
+        return makeString(resourceURL, ". Failed integrity metadata check. Content length: "_s, resourceBuffer->size(), ", Expected content length: "_s,
+            resource.response().expectedContentLength(), ", Expected metadata: "_s, integrityMetadata);
     }
-    return makeString(resourceURL, ". Failed integrity metadata check. Content length: (no content), Expected content length: ",
-        resource.response().expectedContentLength(), ", Expected metadata: ", integrityMetadata);
+    return makeString(resourceURL, ". Failed integrity metadata check. Content length: (no content), Expected content length: "_s,
+        resource.response().expectedContentLength(), ", Expected metadata: "_s, integrityMetadata);
 }
 
 }

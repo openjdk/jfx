@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,8 @@
 
 #pragma once
 
-#include "GraphicsContext.h"
+#include <WebCore/GraphicsContext.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
@@ -35,7 +36,8 @@ namespace WebCore {
 // Any state that is returned by GraphicsContext methods will be retrieved from the primary context.
 
 class WEBCORE_EXPORT BifurcatedGraphicsContext : public GraphicsContext {
-    WTF_FORBID_HEAP_ALLOCATION;
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(BifurcatedGraphicsContext, WEBCORE_EXPORT);
+    WTF_MAKE_NONCOPYABLE(BifurcatedGraphicsContext);
 public:
     BifurcatedGraphicsContext(GraphicsContext& primaryContext, GraphicsContext& secondaryContext);
     ~BifurcatedGraphicsContext();
@@ -49,8 +51,8 @@ public:
 
     const DestinationColorSpace& colorSpace() const final;
 
-    void save() final;
-    void restore() final;
+    void save(GraphicsContextState::Purpose = GraphicsContextState::Purpose::SaveRestore) final;
+    void restore(GraphicsContextState::Purpose = GraphicsContextState::Purpose::SaveRestore) final;
 
     void drawRect(const FloatRect&, float borderThickness = 1) final;
     void drawLine(const FloatPoint&, const FloatPoint&) final;
@@ -65,13 +67,16 @@ public:
     void strokePath(const Path&) final;
 
     void beginTransparencyLayer(float opacity) final;
+    void beginTransparencyLayer(CompositeOperator, BlendMode) final;
     void endTransparencyLayer() final;
 
     void applyDeviceScaleFactor(float factor) final;
 
     using GraphicsContext::fillRect;
-    void fillRect(const FloatRect&) final;
+    void fillRect(const FloatRect&, RequiresClipToRect) final;
     void fillRect(const FloatRect&, const Color&) final;
+    void fillRect(const FloatRect&, Gradient&) final;
+    void fillRect(const FloatRect&, Gradient&, const AffineTransform&, RequiresClipToRect) final;
     void fillRoundedRectImpl(const FloatRoundedRect&, const Color&) final;
     void fillRectWithRoundedHole(const FloatRect&, const FloatRoundedRect& roundedHoleRect, const Color&) final;
     void clearRect(const FloatRect&) final;
@@ -105,17 +110,16 @@ public:
     void setLineJoin(LineJoin) final;
     void setMiterLimit(float) final;
 
-    void drawNativeImageInternal(NativeImage&, const FloatSize& selfSize, const FloatRect& destRect, const FloatRect& srcRect, const ImagePaintingOptions& = { }) final;
-    bool needsCachedNativeImageInvalidationWorkaround(RenderingMode) final;
+    void drawNativeImage(NativeImage&, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions = { }) final;
     void drawSystemImage(SystemImage&, const FloatRect&) final;
-    void drawPattern(NativeImage&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { }) final;
-    ImageDrawResult drawImage(Image&, const FloatRect& destination, const FloatRect& source, const ImagePaintingOptions& = { ImageOrientation::Orientation::FromImage }) final;
-    ImageDrawResult drawTiledImage(Image&, const FloatRect& destination, const FloatPoint& source, const FloatSize& tileSize, const FloatSize& spacing, const ImagePaintingOptions& = { }) final;
-    ImageDrawResult drawTiledImage(Image&, const FloatRect& destination, const FloatRect& source, const FloatSize& tileScaleFactor, Image::TileRule, Image::TileRule, const ImagePaintingOptions& = { }) final;
+    void drawPattern(NativeImage&, const FloatRect& destRect, const FloatRect& tileRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions = { }) final;
+    ImageDrawResult drawImage(Image&, const FloatRect& destination, const FloatRect& source, ImagePaintingOptions = { ImageOrientation::Orientation::FromImage }) final;
+    ImageDrawResult drawTiledImage(Image&, const FloatRect& destination, const FloatPoint& source, const FloatSize& tileSize, const FloatSize& spacing, ImagePaintingOptions = { }) final;
+    ImageDrawResult drawTiledImage(Image&, const FloatRect& destination, const FloatRect& source, const FloatSize& tileScaleFactor, Image::TileRule, Image::TileRule, ImagePaintingOptions = { }) final;
     void drawControlPart(ControlPart&, const FloatRoundedRect& borderRect, float deviceScaleFactor, const ControlStyle&) final;
 
 #if ENABLE(VIDEO)
-    void paintFrameForMedia(MediaPlayer&, const FloatRect& destination) final;
+    void drawVideoFrame(const VideoFrame&, const FloatRect& destination, WebCore::ImageOrientation, bool shouldDiscardAlpha) final;
 #endif
 
     using GraphicsContext::scale;
@@ -132,14 +136,16 @@ public:
     void drawFocusRing(const Vector<FloatRect>&, float outlineOffset, float outlineWidth, const Color&) final;
 
     FloatSize drawText(const FontCascade&, const TextRun&, const FloatPoint&, unsigned from = 0, std::optional<unsigned> to = std::nullopt) final;
-    void drawGlyphs(const Font&, const GlyphBufferGlyph*, const GlyphBufferAdvance*, unsigned numGlyphs, const FloatPoint&, FontSmoothingMode) final;
-    void drawDecomposedGlyphs(const Font&, const DecomposedGlyphs&) final;
+    void drawGlyphs(const Font&, std::span<const GlyphBufferGlyph>, std::span<const GlyphBufferAdvance>, const FloatPoint&, FontSmoothingMode) final;
     void drawEmphasisMarks(const FontCascade&, const TextRun&, const AtomString& mark, const FloatPoint&, unsigned from = 0, std::optional<unsigned> to = std::nullopt) final;
-    void drawBidiText(const FontCascade&, const TextRun&, const FloatPoint&, FontCascade::CustomFontNotReadyAction = FontCascade::DoNotPaintIfFontNotReady) final;
+    void drawBidiText(const FontCascade&, const TextRun&, const FloatPoint&, FontCascade::CustomFontNotReadyAction = FontCascade::CustomFontNotReadyAction::DoNotPaintIfFontNotReady) final;
 
-    void drawLinesForText(const FloatPoint&, float thickness, const DashArray& widths, bool printing, bool doubleLines, StrokeStyle) final;
+    void drawLinesForText(const FloatPoint&, float thickness, std::span<const FloatSegment>, bool isPrinting, bool doubleLines, StrokeStyle) final;
 
     void drawDotsForDocumentMarker(const FloatRect&, DocumentMarkerLineStyle) final;
+
+    void beginPage(const FloatRect&) final;
+    void endPage() final;
 
     void setURLForRect(const URL&, const FloatRect&) final;
 

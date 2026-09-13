@@ -33,14 +33,14 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "ActiveDOMObject.h"
-#include "EventNames.h"
-#include "EventTarget.h"
-#include "ExceptionOr.h"
-#include "IDLTypes.h"
-#include "MediaTrackConstraints.h"
-#include "RealtimeMediaSourceCenter.h"
-#include "UserMediaClient.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/EventNames.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/EventTargetInterfaces.h>
+#include <WebCore/IDLTypes.h>
+#include <WebCore/MediaTrackConstraints.h>
+#include <WebCore/RealtimeMediaSourceCenter.h>
+#include <WebCore/UserMediaClient.h>
 #include <wtf/RobinHoodHashMap.h>
 #include <wtf/RunLoop.h>
 #include <wtf/WeakPtr.h>
@@ -58,11 +58,16 @@ struct MediaTrackSupportedConstraints;
 template<typename IDLType> class DOMPromiseDeferred;
 
 class MediaDevices final : public RefCounted<MediaDevices>, public ActiveDOMObject, public EventTarget {
-    WTF_MAKE_ISO_ALLOCATED(MediaDevices);
+    WTF_MAKE_TZONE_ALLOCATED(MediaDevices);
 public:
     static Ref<MediaDevices> create(Document&);
 
     ~MediaDevices();
+
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     Document* document() const;
 
@@ -77,25 +82,23 @@ public:
     };
 
     struct StreamConstraints {
-        std::variant<bool, MediaTrackConstraints> video;
-        std::variant<bool, MediaTrackConstraints> audio;
+        Variant<bool, MediaTrackConstraints> video;
+        Variant<bool, MediaTrackConstraints> audio;
     };
     void getUserMedia(StreamConstraints&&, Promise&&);
 
     struct DisplayMediaStreamConstraints {
-        std::variant<bool, MediaTrackConstraints> video;
-        std::variant<bool, MediaTrackConstraints> audio;
+        Variant<bool, MediaTrackConstraints> video;
+        Variant<bool, MediaTrackConstraints> audio;
     };
     void getDisplayMedia(DisplayMediaStreamConstraints&&, Promise&&);
 
     void enumerateDevices(EnumerateDevicesPromise&&);
     MediaTrackSupportedConstraints getSupportedConstraints();
 
-    String deviceIdToPersistentId(const String& deviceId) const { return m_audioOutputDeviceIdToPersistentId.get(deviceId); }
-    String hashedGroupId(const String& groupId);
+    String deviceIdToPersistentId(const String&) const;
 
-    using RefCounted<MediaDevices>::ref;
-    using RefCounted<MediaDevices>::deref;
+    void willStartMediaCapture(bool microphone, bool camera);
 
 private:
     explicit MediaDevices(Document&);
@@ -109,13 +112,12 @@ private:
     friend class JSMediaDevicesOwner;
 
     // ActiveDOMObject
-    const char* activeDOMObjectName() const final;
     void stop() final;
     bool virtualHasPendingActivity() const final;
 
     // EventTarget.
-    EventTargetInterface eventTargetInterface() const final { return MediaDevicesEventTargetInterfaceType; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::MediaDevices; }
+    ScriptExecutionContext* scriptExecutionContext() const final;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
@@ -126,20 +128,26 @@ private:
     };
     bool computeUserGesturePriviledge(GestureAllowedRequest);
 
+    enum class UserActivation : bool { No, Yes };
+    void queueTaskForDeviceChangeEvent(UserActivation);
+
     RunLoop::Timer m_scheduledEventTimer;
-    UserMediaClient::DeviceChangeObserverToken m_deviceChangeToken;
+    Markable<UserMediaClient::DeviceChangeObserverToken> m_deviceChangeToken;
     const EventNames& m_eventNames; // Need to cache this so we can use it from GC threads.
     bool m_listeningForDeviceChanges { false };
-
-    String m_groupIdHashSalt;
 
     OptionSet<GestureAllowedRequest> m_requestTypesForCurrentGesture;
     WeakPtr<UserGestureToken> m_currentGestureToken;
 
     MemoryCompactRobinHoodHashMap<String, String> m_audioOutputDeviceIdToPersistentId;
     String m_audioOutputDeviceId;
+
+    bool m_hasRestrictedCameraDevices { true };
+    bool m_hasRestrictedMicrophoneDevices { true };
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(MediaDevices)
 
 #endif // ENABLE(MEDIA_STREAM)

@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "CodeBlock.h"
-#include "PackedCellPtr.h"
-#include "Watchpoint.h"
+#include <JavaScriptCore/CodeBlock.h>
+#include <JavaScriptCore/PackedCellPtr.h>
+#include <JavaScriptCore/Watchpoint.h>
 
 namespace JSC {
 
@@ -35,19 +35,19 @@ class CodeBlockJettisoningWatchpoint final : public Watchpoint {
 public:
     CodeBlockJettisoningWatchpoint(CodeBlock* codeBlock = nullptr)
         : Watchpoint(Watchpoint::Type::CodeBlockJettisoning)
-        , m_codeBlock(codeBlock)
+        , m_owner(codeBlock)
     {
     }
 
     void initialize(CodeBlock* codeBlock)
     {
-        m_codeBlock = codeBlock;
+        m_owner = codeBlock;
     }
 
     void fireInternal(VM&, const FireDetail&);
 
 private:
-    PackedCellPtr<CodeBlock> m_codeBlock;
+    PackedCellPtr<CodeBlock> m_owner;
 };
 
 } // namespace JSC

@@ -1,4 +1,4 @@
-# Copyright (C) 2011-2021 Apple Inc. All rights reserved.
+# Copyright (C) 2011-2023 Apple Inc. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions
@@ -68,11 +68,15 @@ class CodeOrigin
     end
 
     def debugDirective
-        $emitWinAsm ? nil : "\".loc #{@sourceFile.fileNumber} #{lineNumber}\\n\""
+        "\".loc #{@sourceFile.fileNumber} #{lineNumber}\\n\""
     end
 
     def to_s
         "#{@sourceFile.basename}:#{lineNumber}"
+    end
+
+    def labelStringExtension
+        "#{@sourceFile.basename.sub(/\./, "_")}_#{lineNumber}"
     end
 end
 
@@ -160,7 +164,23 @@ def lex(str, file)
     while not str.empty?
         case str
         when /\A\#([^\n]*)/
-            # comment, ignore
+            # ASM style single line comment, ignore
+        when /\A\/\*(\*(?!\/)|[^*])*\*\//
+            # C-style block comment, ignore
+            whitespaceFound = true
+            str = $~.post_match
+            comment = $&
+            done = comment.empty?
+            while not done
+                case comment
+                when /\n/
+                    lineNumber += 1
+                    comment = $~.post_match
+                else
+                    done = true
+                end
+            end
+            next
         when /\A\/\/\ ?([^\n]*)/
             # annotation
             annotation = $1
@@ -359,7 +379,9 @@ class Parser
     
     def parseVariable
         if isRegister(@tokens[@idx])
-            if @tokens[@idx] =~ FPR_PATTERN || @tokens[@idx] =~ WASM_FPR_PATTERN
+            if @tokens[@idx] =~ VEC_PATTERN
+                result = VecRegisterID.forName(@tokens[@idx].codeOrigin, @tokens[@idx].string)
+            elsif @tokens[@idx] =~ FPR_PATTERN
                 result = FPRegisterID.forName(@tokens[@idx].codeOrigin, @tokens[@idx].string)
             else
                 result = RegisterID.forName(@tokens[@idx].codeOrigin, @tokens[@idx].string)
@@ -482,9 +504,10 @@ class Parser
             @idx += 1
             BitnotImmediate.new(@tokens[@idx - 1].codeOrigin, parseExpressionAtom)
         elsif @tokens[@idx] == "("
+            originalIndex = @idx
             @idx += 1
             result = parseExpression
-            parseError unless @tokens[@idx] == ")"
+            parseError("expected ')' to match #{@tokens[originalIndex]}") unless @tokens[@idx] == ")"
             @idx += 1
             result
         elsif isInteger @tokens[@idx]
@@ -715,6 +738,14 @@ class Parser
                 name = @tokens[@idx].string
                 @idx += 1
                 Label.setAsGlobal(codeOrigin, name)
+            elsif @tokens[@idx] == "globalexport"
+                codeOrigin = @tokens[@idx].codeOrigin
+                @idx += 1
+                skipNewLine
+                parseError unless isLabel(@tokens[@idx])
+                name = @tokens[@idx].string
+                @idx += 1
+                Label.setAsGlobalExport(codeOrigin, name)
             elsif @tokens[@idx] == "unalignedglobal"
                 codeOrigin = @tokens[@idx].codeOrigin
                 @idx += 1
@@ -723,6 +754,25 @@ class Parser
                 name = @tokens[@idx].string
                 @idx += 1
                 Label.setAsUnalignedGlobal(codeOrigin, name)
+            elsif @tokens[@idx] == "aligned"
+                codeOrigin = @tokens[@idx].codeOrigin
+                @idx += 1
+                skipNewLine
+                parseError unless isLabel(@tokens[@idx])
+                name = @tokens[@idx].string
+                @idx += 1
+                align = @tokens[@idx].string
+                align = Variable.forName(codeOrigin, align) if align !=~ /[0-9]+/
+                @idx += 1
+                Label.setAsAligned(codeOrigin, name, align)
+            elsif @tokens[@idx] == "unalignedglobalexport"
+                codeOrigin = @tokens[@idx].codeOrigin
+                @idx += 1
+                skipNewLine
+                parseError unless isLabel(@tokens[@idx])
+                name = @tokens[@idx].string
+                @idx += 1
+                Label.setAsUnalignedGlobalExport(codeOrigin, name)
             elsif isInstruction @tokens[@idx]
                 codeOrigin = @tokens[@idx].codeOrigin
                 name = @tokens[@idx].string

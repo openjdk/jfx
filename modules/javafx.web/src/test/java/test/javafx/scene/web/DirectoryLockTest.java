@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,12 +33,12 @@ import java.nio.channels.FileLock;
 import java.nio.channels.OverlappingFileLockException;
 import java.util.ArrayList;
 import javafx.scene.web.DirectoryLockShim;
-import org.junit.After;
-import org.junit.AfterClass;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.AfterAll;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
 public class DirectoryLockTest {
 
@@ -55,7 +55,7 @@ public class DirectoryLockTest {
     private final ArrayList<DirectoryLockShim> createdLocks = new ArrayList<>();
 
 
-    @BeforeClass
+    @BeforeAll
     public static void beforeClass() throws IOException {
         for (File dir : DIRS) {
             dir.mkdirs();
@@ -69,7 +69,7 @@ public class DirectoryLockTest {
         }
     }
 
-    @AfterClass
+    @AfterAll
     public static void afterClass() throws IOException {
         preLockedLock.release();
         preLockedRaf.close();
@@ -79,7 +79,7 @@ public class DirectoryLockTest {
     }
 
 
-    @After
+    @AfterEach
     public void after() {
         for (DirectoryLockShim lock : createdLocks) {
             lock.close();
@@ -220,7 +220,7 @@ public class DirectoryLockTest {
 
 
     private DirectoryLockShim createLock(File directory)
-        throws IOException, DirectoryLockShim.DirectoryAlreadyInUseException
+            throws IOException, DirectoryLockShim.DirectoryAlreadyInUseException
     {
         DirectoryLockShim lock = new DirectoryLockShim(directory);
         createdLocks.add(lock);

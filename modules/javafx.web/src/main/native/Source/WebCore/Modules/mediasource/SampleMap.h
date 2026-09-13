@@ -26,7 +26,7 @@
 #pragma once
 
 #include <wtf/MediaTime.h>
-#include <wtf/RefPtr.h>
+#include <wtf/Ref.h>
 #include <wtf/StdMap.h>
 
 namespace WebCore {
@@ -37,7 +37,7 @@ class SampleMap;
 class PresentationOrderSampleMap {
     friend class SampleMap;
 public:
-    using MapType = StdMap<MediaTime, RefPtr<MediaSample>>;
+    using MapType = StdMap<MediaTime, Ref<MediaSample>>;
     typedef MapType::iterator iterator;
     typedef MapType::const_iterator const_iterator;
     typedef MapType::reverse_iterator reverse_iterator;
@@ -45,26 +45,26 @@ public:
     typedef std::pair<iterator, iterator> iterator_range;
     typedef MapType::value_type value_type;
 
-    iterator begin() { return m_samples.begin(); }
-    const_iterator begin() const { return m_samples.begin(); }
-    iterator end() { return m_samples.end(); }
-    const_iterator end() const { return m_samples.end(); }
-    reverse_iterator rbegin() { return m_samples.rbegin(); }
-    const_reverse_iterator rbegin() const { return m_samples.rbegin(); }
-    reverse_iterator rend() { return m_samples.rend(); }
-    const_reverse_iterator rend() const { return m_samples.rend(); }
+    iterator begin() LIFETIME_BOUND { return m_samples.begin(); }
+    const_iterator begin() const LIFETIME_BOUND { return m_samples.begin(); }
+    iterator end() LIFETIME_BOUND { return m_samples.end(); }
+    const_iterator end() const LIFETIME_BOUND { return m_samples.end(); }
+    reverse_iterator rbegin() LIFETIME_BOUND { return m_samples.rbegin(); }
+    const_reverse_iterator rbegin() const LIFETIME_BOUND { return m_samples.rbegin(); }
+    reverse_iterator rend() LIFETIME_BOUND { return m_samples.rend(); }
+    const_reverse_iterator rend() const LIFETIME_BOUND { return m_samples.rend(); }
 
     size_t size() const { return m_samples.size(); }
 
-    WEBCORE_EXPORT iterator findSampleWithPresentationTime(const MediaTime&);
-    WEBCORE_EXPORT iterator findSampleContainingPresentationTime(const MediaTime&);
-    WEBCORE_EXPORT iterator findSampleContainingOrAfterPresentationTime(const MediaTime&);
-    WEBCORE_EXPORT iterator findSampleStartingOnOrAfterPresentationTime(const MediaTime&);
-    WEBCORE_EXPORT iterator findSampleStartingAfterPresentationTime(const MediaTime&);
-    WEBCORE_EXPORT reverse_iterator reverseFindSampleContainingPresentationTime(const MediaTime&);
-    WEBCORE_EXPORT reverse_iterator reverseFindSampleBeforePresentationTime(const MediaTime&);
-    WEBCORE_EXPORT iterator_range findSamplesBetweenPresentationTimes(const MediaTime&, const MediaTime&);
-    WEBCORE_EXPORT iterator_range findSamplesBetweenPresentationTimesFromEnd(const MediaTime&, const MediaTime&);
+    WEBCORE_EXPORT iterator findSampleWithPresentationTime(const MediaTime&) LIFETIME_BOUND;
+    WEBCORE_EXPORT iterator findSampleContainingPresentationTime(const MediaTime&) LIFETIME_BOUND;
+    WEBCORE_EXPORT iterator findSampleContainingOrAfterPresentationTime(const MediaTime&) LIFETIME_BOUND;
+    WEBCORE_EXPORT iterator findSampleStartingOnOrAfterPresentationTime(const MediaTime&) LIFETIME_BOUND;
+    WEBCORE_EXPORT iterator findSampleStartingAfterPresentationTime(const MediaTime&) LIFETIME_BOUND;
+    WEBCORE_EXPORT reverse_iterator reverseFindSampleContainingPresentationTime(const MediaTime&) LIFETIME_BOUND;
+    WEBCORE_EXPORT reverse_iterator reverseFindSampleBeforePresentationTime(const MediaTime&) LIFETIME_BOUND;
+    WEBCORE_EXPORT iterator_range findSamplesBetweenPresentationTimes(const MediaTime&, const MediaTime&) LIFETIME_BOUND;
+    WEBCORE_EXPORT iterator_range findSamplesBetweenPresentationTimesFromEnd(const MediaTime&, const MediaTime&) LIFETIME_BOUND;
 
 private:
     MapType m_samples;
@@ -74,7 +74,7 @@ class DecodeOrderSampleMap {
     friend class SampleMap;
 public:
     typedef std::pair<MediaTime, MediaTime> KeyType;
-    using MapType = StdMap<KeyType, RefPtr<MediaSample>>;
+    using MapType = StdMap<KeyType, Ref<MediaSample>>;
     typedef MapType::iterator iterator;
     typedef MapType::const_iterator const_iterator;
     typedef MapType::reverse_iterator reverse_iterator;
@@ -83,25 +83,26 @@ public:
     typedef std::pair<reverse_iterator, reverse_iterator> reverse_iterator_range;
     typedef MapType::value_type value_type;
 
-    iterator begin() { return m_samples.begin(); }
-    const_iterator begin() const { return m_samples.begin(); }
-    iterator end() { return m_samples.end(); }
-    const_iterator end() const { return m_samples.end(); }
-    reverse_iterator rbegin() { return m_samples.rbegin(); }
-    const_reverse_iterator rbegin() const { return m_samples.rbegin(); }
-    reverse_iterator rend() { return m_samples.rend(); }
-    const_reverse_iterator rend() const { return m_samples.rend(); }
-    size_t size() const { return m_samples.size(); }
+    iterator begin() LIFETIME_BOUND { return m_samples.begin(); }
+    const_iterator begin() const LIFETIME_BOUND { return m_samples.begin(); }
+    iterator end() LIFETIME_BOUND { return m_samples.end(); }
+    const_iterator end() const LIFETIME_BOUND { return m_samples.end(); }
+    reverse_iterator rbegin() LIFETIME_BOUND { return m_samples.rbegin(); }
+    const_reverse_iterator rbegin() const LIFETIME_BOUND { return m_samples.rbegin(); }
+    reverse_iterator rend() LIFETIME_BOUND { return m_samples.rend(); }
+    const_reverse_iterator rend() const LIFETIME_BOUND { return m_samples.rend(); }
+    size_t size() const LIFETIME_BOUND { return m_samples.size(); }
 
-    WEBCORE_EXPORT iterator findSampleWithDecodeKey(const KeyType&);
-    WEBCORE_EXPORT iterator findSampleAfterDecodeKey(const KeyType&);
-    WEBCORE_EXPORT reverse_iterator reverseFindSampleWithDecodeKey(const KeyType&);
-    WEBCORE_EXPORT reverse_iterator findSyncSamplePriorToPresentationTime(const MediaTime&, const MediaTime& threshold = MediaTime::positiveInfiniteTime());
-    WEBCORE_EXPORT reverse_iterator findSyncSamplePriorToDecodeIterator(reverse_iterator);
-    WEBCORE_EXPORT iterator findSyncSampleAfterPresentationTime(const MediaTime&, const MediaTime& threshold = MediaTime::positiveInfiniteTime());
-    WEBCORE_EXPORT iterator findSyncSampleAfterDecodeIterator(iterator);
-    WEBCORE_EXPORT reverse_iterator_range findDependentSamples(MediaSample*);
-    WEBCORE_EXPORT iterator_range findSamplesBetweenDecodeKeys(const KeyType&, const KeyType&);
+    WEBCORE_EXPORT iterator findSampleWithDecodeKey(const KeyType&) LIFETIME_BOUND;
+    WEBCORE_EXPORT iterator findSampleAfterDecodeKey(const KeyType&) LIFETIME_BOUND;
+    WEBCORE_EXPORT reverse_iterator reverseFindSampleWithDecodeKey(const KeyType&) LIFETIME_BOUND;
+    WEBCORE_EXPORT reverse_iterator findSyncSamplePriorToPresentationTime(const MediaTime&, const MediaTime& threshold = MediaTime::positiveInfiniteTime()) LIFETIME_BOUND;
+    WEBCORE_EXPORT reverse_iterator findSyncSamplePriorToDecodeIterator(reverse_iterator) LIFETIME_BOUND;
+    WEBCORE_EXPORT iterator findSyncSampleAfterPresentationTime(const MediaTime&, const MediaTime& threshold = MediaTime::positiveInfiniteTime()) LIFETIME_BOUND;
+    WEBCORE_EXPORT iterator findSyncSamplePriorToDecodeKey(const KeyType&) LIFETIME_BOUND;
+    WEBCORE_EXPORT iterator findSyncSampleAfterDecodeIterator(iterator) LIFETIME_BOUND;
+    WEBCORE_EXPORT reverse_iterator_range findDependentSamples(const MediaSample&) LIFETIME_BOUND;
+    WEBCORE_EXPORT Vector<value_type> findSamplesBetweenDecodeKeys(const KeyType&, const KeyType&);
 
 private:
     MapType m_samples;
@@ -115,17 +116,17 @@ public:
     WEBCORE_EXPORT bool empty() const;
     size_t size() const { return m_decodeOrder.m_samples.size(); }
     WEBCORE_EXPORT void clear();
-    WEBCORE_EXPORT void addSample(MediaSample&);
-    WEBCORE_EXPORT void removeSample(MediaSample*);
+    WEBCORE_EXPORT void addSample(Ref<MediaSample>&&);
+    WEBCORE_EXPORT void removeSample(const MediaSample&);
     size_t sizeInBytes() const { return m_totalSize; }
 
     template<typename I>
     void addRange(I begin, I end);
 
-    DecodeOrderSampleMap& decodeOrder() { return m_decodeOrder; }
-    const DecodeOrderSampleMap& decodeOrder() const { return m_decodeOrder; }
-    PresentationOrderSampleMap& presentationOrder() { return m_decodeOrder.m_presentationOrder; }
-    const PresentationOrderSampleMap& presentationOrder() const { return m_decodeOrder.m_presentationOrder; }
+    DecodeOrderSampleMap& decodeOrder() LIFETIME_BOUND { return m_decodeOrder; }
+    const DecodeOrderSampleMap& decodeOrder() const LIFETIME_BOUND { return m_decodeOrder; }
+    PresentationOrderSampleMap& presentationOrder() LIFETIME_BOUND { return m_decodeOrder.m_presentationOrder; }
+    const PresentationOrderSampleMap& presentationOrder() const LIFETIME_BOUND { return m_decodeOrder.m_presentationOrder; }
 
 private:
     DecodeOrderSampleMap m_decodeOrder;
@@ -136,7 +137,7 @@ template<typename I>
 inline void SampleMap::addRange(I begin, I end)
 {
     for (I iter = begin; iter != end; ++iter)
-        addSample(*iter->second);
+        addSample(iter->second.copyRef());
 }
 
 } // namespace WebCore

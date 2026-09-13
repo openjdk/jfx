@@ -35,6 +35,15 @@
  * used by a downstream decrypter element to recover the original unencrypted
  * frame.
  *
+ * In addition to the #GstProtectionMeta demuxers signal encrypted streams with
+ * specific caps. The caps #GstStructure name will usually depend on the
+ * encryption scheme, for instance Common Encryption will be signaled with
+ * `application/x-cenc`. To prevent loss of information the media type of the
+ * decrypted stream will be stored in a `original-media-type` string field.
+ * Downstream elements can re-use that information, for instance decryptors can
+ * set their source pad caps according to the `original-media-type` received on
+ * their sink pad.
+ *
  * Since: 1.6
  */
 

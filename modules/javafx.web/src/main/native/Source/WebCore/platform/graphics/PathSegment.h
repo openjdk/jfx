@@ -25,14 +25,14 @@
 
 #pragma once
 
-#include "PathSegmentData.h"
+#include <WebCore/PathSegmentData.h>
 #include <wtf/Function.h>
 
 namespace WebCore {
 
 class PathSegment {
 public:
-    using Data = std::variant<
+    using Data = Variant<
         PathMoveTo,
 
         PathLineTo,
@@ -41,10 +41,12 @@ public:
         PathArcTo,
 
         PathArc,
+        PathClosedArc,
         PathEllipse,
         PathEllipseInRect,
         PathRect,
         PathRoundedRect,
+        PathContinuousRoundedRect,
 
         PathDataLine,
         PathDataQuadCurve,
@@ -58,14 +60,16 @@ public:
 
     bool operator==(const PathSegment&) const = default;
 
-    const Data& data() const { return m_data; }
-    bool isCloseSubPath() const { return std::holds_alternative<PathCloseSubpath>(m_data); }
+    const Data& data() const & { return m_data; }
+    Data&& data() && { return WTF::move(m_data); }
+    bool closesSubpath() const { return std::holds_alternative<PathCloseSubpath>(m_data) || std::holds_alternative<PathClosedArc>(m_data); }
 
     FloatPoint calculateEndPoint(const FloatPoint& currentPoint, FloatPoint& lastMoveToPoint) const;
+    std::optional<FloatPoint> tryGetEndPointWithoutContext() const;
+
+    FloatRect fastBoundingRect() const;
     void extendFastBoundingRect(const FloatPoint& currentPoint, const FloatPoint& lastMoveToPoint, FloatRect& boundingRect) const;
     void extendBoundingRect(const FloatPoint& currentPoint, const FloatPoint& lastMoveToPoint, FloatRect& boundingRect) const;
-
-    void addToImpl(PathImpl&) const;
 
     bool canApplyElements() const;
     bool applyElements(const PathElementApplier&) const;
@@ -81,4 +85,9 @@ using PathSegmentApplier = Function<void(const PathSegment&)>;
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const PathSegment&);
 
+
+inline PathSegment::PathSegment(Data&& data)
+    : m_data(WTF::move(data))
+{
+}
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,8 +28,10 @@
 
 #include "AXObjectCache.h"
 #include "CompositeEditCommand.h"
+#include "ContainerNodeInlines.h"
 #include "Document.h"
 #include "Editing.h"
+#include "NodeDocument.h"
 #include "RenderElement.h"
 #include "Text.h"
 
@@ -37,8 +39,8 @@ namespace WebCore {
 
 AppendNodeCommand::AppendNodeCommand(Ref<ContainerNode>&& parent, Ref<Node>&& node, EditAction editingAction)
     : SimpleEditCommand(parent->document(), editingAction)
-    , m_parent(WTFMove(parent))
-    , m_node(WTFMove(node))
+    , m_parent(WTF::move(parent))
+    , m_node(WTF::move(node))
 {
     ASSERT(!m_node->parentNode());
 }
@@ -60,7 +62,7 @@ void AppendNodeCommand::doUnapply()
 }
 
 #ifndef NDEBUG
-void AppendNodeCommand::getNodesInCommand(HashSet<Ref<Node>>& nodes)
+void AppendNodeCommand::getNodesInCommand(NodeSet& nodes)
 {
     addNodeAndDescendants(m_parent.ptr(), nodes);
     addNodeAndDescendants(m_node.ptr(), nodes);

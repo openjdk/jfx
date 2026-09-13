@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "ClientOrigin.h"
-#include "SecurityOriginData.h"
+#include <WebCore/ClientOrigin.h>
+#include <WebCore/SecurityOriginData.h>
 #include <wtf/ArgumentCoder.h>
 
 namespace WebCore {
@@ -62,10 +62,7 @@ public:
         return m_databaseName.isNull();
     }
 
-    bool operator==(const IDBDatabaseIdentifier& other) const
-    {
-        return other.m_databaseName == m_databaseName && other.m_origin == m_origin && other.m_isTransient == m_isTransient;
-    }
+    friend bool operator==(const IDBDatabaseIdentifier&, const IDBDatabaseIdentifier&) = default;
 
     const String& databaseName() const { return m_databaseName; }
     const ClientOrigin& origin() const { return m_origin; }
@@ -73,6 +70,7 @@ public:
 
     String databaseDirectoryRelativeToRoot(const String& rootDirectory, ASCIILiteral versionString = "v1"_s) const;
     WEBCORE_EXPORT static String databaseDirectoryRelativeToRoot(const ClientOrigin&, const String& rootDirectory, ASCIILiteral versionString);
+    WEBCORE_EXPORT static String optionalDatabaseDirectoryRelativeToRoot(const ClientOrigin&, const String& rootDirectory, ASCIILiteral versionString);
 
 #if !LOG_DISABLED
     String loggingString() const;
@@ -81,7 +79,7 @@ public:
     bool isRelatedToOrigin(const SecurityOriginData& other) const { return m_origin.isRelated(other); }
 
 private:
-    friend struct IPC::ArgumentCoder<IDBDatabaseIdentifier, void>;
+    friend struct IPC::ArgumentCoder<IDBDatabaseIdentifier>;
 
     String m_databaseName;
     ClientOrigin m_origin;
@@ -92,12 +90,6 @@ inline void add(Hasher& hasher, const IDBDatabaseIdentifier& identifier)
 {
     add(hasher, identifier.databaseName(), identifier.origin(), identifier.isTransient());
 }
-
-struct IDBDatabaseIdentifierHash {
-    static unsigned hash(const IDBDatabaseIdentifier& a) { return computeHash(a); }
-    static bool equal(const IDBDatabaseIdentifier& a, const IDBDatabaseIdentifier& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = false;
-};
 
 struct IDBDatabaseIdentifierHashTraits : SimpleClassHashTraits<IDBDatabaseIdentifier> {
     static const bool hasIsEmptyValueFunction = true;
@@ -110,6 +102,5 @@ struct IDBDatabaseIdentifierHashTraits : SimpleClassHashTraits<IDBDatabaseIdenti
 namespace WTF {
 
 template<> struct HashTraits<WebCore::IDBDatabaseIdentifier> : WebCore::IDBDatabaseIdentifierHashTraits { };
-template<> struct DefaultHash<WebCore::IDBDatabaseIdentifier> : WebCore::IDBDatabaseIdentifierHash { };
 
 } // namespace WTF

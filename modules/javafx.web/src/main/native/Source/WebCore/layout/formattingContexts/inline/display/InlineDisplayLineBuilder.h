@@ -25,35 +25,42 @@
 
 #pragma once
 
-#include "InlineDisplayLine.h"
+#include "BlockLayoutState.h"
 #include "InlineFormattingContext.h"
 #include "InlineLineBuilder.h"
+#include <WebCore/InlineDisplayLine.h>
 
 namespace WebCore {
 namespace Layout {
 
+class InlineLayoutState;
 class LineBox;
 
 class InlineDisplayLineBuilder {
 public:
-    InlineDisplayLineBuilder(const InlineFormattingContext&);
+    InlineDisplayLineBuilder(InlineFormattingContext&, const ConstraintsForInlineContent&);
 
-    InlineDisplay::Line build(const LineBuilder::LayoutResult&, const LineBox&, const ConstraintsForInlineContent&, bool lineIsFullyTruncatedInBlockDirection) const;
+    InlineDisplay::Line build(const LineLayoutResult&, const LineBox&, bool lineIsFullyTruncatedInBlockDirection) const;
 
-    static std::optional<FloatRect> trailingEllipsisVisualRectAfterTruncation(LineEndingEllipsisPolicy, const InlineDisplay::Line&, InlineDisplay::Boxes&, bool isLastLineWithInlineContent);
+    static std::optional<InlineDisplay::Line::Ellipsis> applyEllipsisIfNeeded(LineEndingTruncationPolicy, InlineDisplay::Line&, InlineDisplay::Boxes&, bool isLegacyLineClamp);
+    static void addLegacyLineClampTrailingLinkBoxIfApplicable(const InlineFormattingContext&, const InlineLayoutState&, InlineDisplay::Content&);
+    static bool hasTrailingLineWithBlockContent(const InlineDisplay::Lines&);
 
 private:
     struct EnclosingLineGeometry {
         InlineDisplay::Line::EnclosingTopAndBottom enclosingTopAndBottom;
         InlineRect contentOverflowRect;
     };
-    EnclosingLineGeometry collectEnclosingLineGeometry(const LineBuilder::LayoutResult&, const LineBox&, const InlineRect& lineBoxRect) const;
+    EnclosingLineGeometry collectEnclosingLineGeometry(const LineLayoutResult&, const LineBox&, const InlineRect& lineBoxRect) const;
 
+    const ConstraintsForInlineContent& constraints() const { return m_constraints; }
     const InlineFormattingContext& formattingContext() const { return m_inlineFormattingContext; }
+    InlineFormattingContext& formattingContext() { return m_inlineFormattingContext; }
     const Box& root() const { return formattingContext().root(); }
-    LayoutState& layoutState() const { return formattingContext().layoutState(); }
 
-    const InlineFormattingContext& m_inlineFormattingContext;
+private:
+    InlineFormattingContext& m_inlineFormattingContext;
+    const ConstraintsForInlineContent& m_constraints;
 };
 
 }

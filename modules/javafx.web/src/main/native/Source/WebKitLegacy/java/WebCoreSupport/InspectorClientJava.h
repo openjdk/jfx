@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,22 +26,22 @@
 #pragma once
 
 #include <JavaScriptCore/InspectorFrontendChannel.h>
-#include <WebCore/InspectorClient.h>
+#include <WebCore/InspectorBackendClient.h>
 #include <WebCore/PlatformJavaClasses.h>
 
 namespace WebCore {
 
 class InspectorClientJava final
-    : public InspectorClient,
+    : public InspectorBackendClient,
       public Inspector::FrontendChannel
 {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(InspectorClientJava);
 public:
     InspectorClientJava(const JLObject &webPage);
 
     void inspectedPageDestroyed() override;
 
-    Inspector::FrontendChannel* openLocalFrontend(InspectorController*) override;
+    Inspector::FrontendChannel* openLocalFrontend(PageInspectorController*) override;
     void bringFrontendToFront() override;
 
     void highlight() override;

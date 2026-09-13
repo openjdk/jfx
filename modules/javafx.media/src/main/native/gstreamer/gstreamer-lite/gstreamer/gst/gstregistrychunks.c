@@ -38,6 +38,9 @@
 #include <gst/gstdeviceproviderfactory.h>
 #endif // GSTREAMER_LITE
 #include <gst/gstdynamictypefactory.h>
+#ifndef GSTREAMER_LITE
+#include <gst/gstmetafactory.h>
+#endif // GSTREAMER_LITE
 #include <gst/gsturi.h>
 #include <gst/gstinfo.h>
 #include <gst/gstenumtypes.h>
@@ -118,12 +121,9 @@ void
 _priv_gst_registry_chunk_free (GstRegistryChunk * chunk)
 {
   if (!(chunk->flags & GST_REGISTRY_CHUNK_FLAG_CONST)) {
-    if ((chunk->flags & GST_REGISTRY_CHUNK_FLAG_MALLOC))
-      g_free (chunk->data);
-    else
-      g_slice_free1 (chunk->size, chunk->data);
+    g_free (chunk->data);
   }
-  g_slice_free (GstRegistryChunk, chunk);
+  g_free (chunk);
 }
 
 /*
@@ -143,7 +143,7 @@ gst_registry_chunks_save_const_string (GList ** list, const gchar * str)
     str = "";
   }
 
-  chunk = g_slice_new (GstRegistryChunk);
+  chunk = g_new (GstRegistryChunk, 1);
   chunk->data = (gpointer) str;
   chunk->size = strlen ((gchar *) chunk->data) + 1;
   chunk->flags = GST_REGISTRY_CHUNK_FLAG_CONST;
@@ -164,10 +164,10 @@ gst_registry_chunks_save_string (GList ** list, gchar * str)
 {
   GstRegistryChunk *chunk;
 
-  chunk = g_slice_new (GstRegistryChunk);
+  chunk = g_new (GstRegistryChunk, 1);
   chunk->data = str;
   chunk->size = strlen ((gchar *) chunk->data) + 1;
-  chunk->flags = GST_REGISTRY_CHUNK_FLAG_MALLOC;
+  chunk->flags = GST_REGISTRY_CHUNK_FLAG_NONE;
   chunk->align = FALSE;
   *list = g_list_prepend (*list, chunk);
   return TRUE;
@@ -185,7 +185,7 @@ gst_registry_chunks_make_data (gpointer data, gulong size)
 {
   GstRegistryChunk *chunk;
 
-  chunk = g_slice_new (GstRegistryChunk);
+  chunk = g_new (GstRegistryChunk, 1);
   chunk->data = data;
   chunk->size = size;
   chunk->flags = GST_REGISTRY_CHUNK_FLAG_NONE;
@@ -208,7 +208,7 @@ gst_registry_chunks_save_pad_template (GList ** list,
   GstRegistryChunkPadTemplate *pt;
   GstRegistryChunk *chk;
 
-  pt = g_slice_new (GstRegistryChunkPadTemplate);
+  pt = g_new (GstRegistryChunkPadTemplate, 1);
   chk =
       gst_registry_chunks_make_data (pt, sizeof (GstRegistryChunkPadTemplate));
 
@@ -253,7 +253,7 @@ gst_registry_chunks_save_feature (GList ** list, GstPluginFeature * feature)
     /* Initialize with zeroes because of struct padding and
      * valgrind complaining about copying uninitialized memory
      */
-    ef = g_slice_new0 (GstRegistryChunkElementFactory);
+    ef = g_new0 (GstRegistryChunkElementFactory, 1);
     pf_size = sizeof (GstRegistryChunkElementFactory);
     chk = gst_registry_chunks_make_data (ef, pf_size);
     ef->npadtemplates = ef->ninterfaces = ef->nuriprotocols = 0;
@@ -313,7 +313,7 @@ gst_registry_chunks_save_feature (GList ** list, GstPluginFeature * feature)
     /* Initialize with zeroes because of struct padding and
      * valgrind complaining about copying uninitialized memory
      */
-    tff = g_slice_new0 (GstRegistryChunkTypeFindFactory);
+    tff = g_new0 (GstRegistryChunkTypeFindFactory, 1);
     pf_size = sizeof (GstRegistryChunkTypeFindFactory);
     chk = gst_registry_chunks_make_data (tff, pf_size);
     tff->nextensions = 0;
@@ -348,7 +348,7 @@ gst_registry_chunks_save_feature (GList ** list, GstPluginFeature * feature)
     /* Initialize with zeroes because of struct padding and
      * valgrind complaining about copying uninitialized memory
      */
-    tff = g_slice_new0 (GstRegistryChunkDeviceProviderFactory);
+    tff = g_new0 (GstRegistryChunkDeviceProviderFactory, 1);
     chk =
         gst_registry_chunks_make_data (tff,
         sizeof (GstRegistryChunkDeviceProviderFactory));
@@ -363,17 +363,24 @@ gst_registry_chunks_save_feature (GList ** list, GstPluginFeature * feature)
     /* Initialize with zeroes because of struct padding and
      * valgrind complaining about copying uninitialized memory
      */
-    pf = g_slice_new0 (GstRegistryChunkPluginFeature);
+    pf = g_new0 (GstRegistryChunkPluginFeature, 1);
     pf_size = sizeof (GstRegistryChunkPluginFeature);
     chk = gst_registry_chunks_make_data (pf, pf_size);
   } else if (GST_IS_DYNAMIC_TYPE_FACTORY (feature)) {
     GstRegistryChunkDynamicTypeFactory *tmp;
 
-    tmp = g_slice_new0 (GstRegistryChunkDynamicTypeFactory);
+    tmp = g_new0 (GstRegistryChunkDynamicTypeFactory, 1);
     chk =
         gst_registry_chunks_make_data (tmp,
         sizeof (GstRegistryChunkDynamicTypeFactory));
     pf = (GstRegistryChunkPluginFeature *) tmp;
+#ifndef GSTREAMER_LITE
+  } else if (GST_IS_META_FACTORY (feature)) {
+    pf = g_new0 (GstRegistryChunkPluginFeature, 1);
+    chk =
+        gst_registry_chunks_make_data (pf,
+        sizeof (GstRegistryChunkPluginFeature));
+#endif // GSTREAMER_LITE
   } else {
     GST_WARNING_OBJECT (feature, "unhandled feature type '%s'", type_name);
   }
@@ -391,8 +398,8 @@ gst_registry_chunks_save_feature (GList ** list, GstPluginFeature * feature)
 
   /* Errors */
 fail:
-  g_slice_free (GstRegistryChunk, chk);
-  g_slice_free1 (pf_size, pf);
+  g_free (chk);
+  g_free (pf);
   return FALSE;
 }
 
@@ -403,7 +410,7 @@ gst_registry_chunks_save_plugin_dep (GList ** list, GstPluginDep * dep)
   GstRegistryChunk *chk;
   gchar **s;
 
-  ed = g_slice_new (GstRegistryChunkDep);
+  ed = g_new (GstRegistryChunkDep, 1);
   chk = gst_registry_chunks_make_data (ed, sizeof (GstRegistryChunkDep));
 
   ed->flags = dep->flags;
@@ -445,7 +452,7 @@ _priv_gst_registry_chunks_save_plugin (GList ** list, GstRegistry * registry,
   GList *plugin_features = NULL;
   GList *walk;
 
-  pe = g_slice_new (GstRegistryChunkPluginElement);
+  pe = g_new (GstRegistryChunkPluginElement, 1);
   chk =
       gst_registry_chunks_make_data (pe,
       sizeof (GstRegistryChunkPluginElement));
@@ -485,6 +492,14 @@ _priv_gst_registry_chunks_save_plugin (GList ** list, GstRegistry * registry,
     gst_registry_chunks_save_const_string (list, "");
   }
 
+  /* pack status info */
+  if (plugin->priv->status_info) {
+    gchar *status_str = gst_structure_to_string (plugin->priv->status_info);
+    gst_registry_chunks_save_string (list, status_str);
+  } else {
+    gst_registry_chunks_save_const_string (list, "");
+  }
+
   /* pack plugin element strings */
   gst_registry_chunks_save_const_string (list,
       (plugin->desc.release_datetime) ? plugin->desc.release_datetime : "");
@@ -506,8 +521,8 @@ _priv_gst_registry_chunks_save_plugin (GList ** list, GstRegistry * registry,
   /* Errors */
 fail:
   gst_plugin_feature_list_free (plugin_features);
-  g_slice_free (GstRegistryChunk, chk);
-  g_slice_free (GstRegistryChunkPluginElement, pe);
+  g_free (chk);
+  g_free (pe);
   return FALSE;
 }
 
@@ -531,7 +546,7 @@ gst_registry_chunks_load_pad_template (GstElementFactory * factory, gchar ** in,
       *in);
   unpack_element (*in, pt, GstRegistryChunkPadTemplate, end, fail);
 
-  template = g_slice_new (GstStaticPadTemplate);
+  template = g_new (GstStaticPadTemplate, 1);
   template->presence = pt->presence;
   template->direction = (GstPadDirection) pt->direction;
   template->static_caps.caps = NULL;
@@ -547,7 +562,7 @@ gst_registry_chunks_load_pad_template (GstElementFactory * factory, gchar ** in,
 fail:
   GST_INFO ("Reading pad template failed");
   if (template)
-    g_slice_free (GstStaticPadTemplate, template);
+    g_free (template);
   return FALSE;
 }
 
@@ -731,6 +746,11 @@ gst_registry_chunks_load_feature (GstRegistry * registry, gchar ** in,
     unpack_element (*in, tmp, GstRegistryChunkDynamicTypeFactory, end, fail);
 
     pf = (GstRegistryChunkPluginFeature *) tmp;
+#ifndef GSTREAMER_LITE
+  } else if (GST_IS_META_FACTORY (feature)) {
+    align (*in);
+    unpack_element (*in, pf, GstRegistryChunkPluginFeature, end, fail);
+#endif // GSTREAMER_LITE
   } else {
     GST_WARNING ("unhandled factory type : %s", G_OBJECT_TYPE_NAME (feature));
     goto fail;
@@ -790,7 +810,7 @@ gst_registry_chunks_load_plugin_dep (GstPlugin * plugin, gchar ** in,
   GST_LOG_OBJECT (plugin, "Unpacking GstRegistryChunkDep from %p", *in);
   unpack_element (*in, d, GstRegistryChunkDep, end, fail);
 
-  dep = g_slice_new (GstPluginDep);
+  dep = g_new (GstPluginDep, 1);
 
   dep->env_hash = d->env_hash;
   dep->stat_hash = d->stat_hash;
@@ -835,6 +855,7 @@ _priv_gst_registry_chunks_load_plugin (GstRegistry * registry, gchar ** in,
   gchar *start = *in;
 #endif
   GstRegistryChunkPluginElement *pe;
+  const gchar *status_str = NULL;
   const gchar *cache_str = NULL;
   GstPlugin *plugin = NULL;
   guint i, n;
@@ -874,6 +895,11 @@ _priv_gst_registry_chunks_load_plugin (GstRegistry * registry, gchar ** in,
 
   if (plugin->desc.release_datetime[0] == '\0')
     plugin->desc.release_datetime = NULL;
+
+  /* unpack status info */
+  unpack_string_nocopy (*in, status_str, end, fail);
+  if (status_str != NULL && *status_str != '\0')
+    plugin->priv->status_info = gst_structure_from_string (status_str, NULL);
 
   /* unpack cache data */
   unpack_string_nocopy (*in, cache_str, end, fail);
@@ -932,7 +958,7 @@ _priv_gst_registry_chunks_save_global_header (GList ** list,
   GstRegistryChunkGlobalHeader *hdr;
   GstRegistryChunk *chk;
 
-  hdr = g_slice_new (GstRegistryChunkGlobalHeader);
+  hdr = g_new (GstRegistryChunkGlobalHeader, 1);
   chk = gst_registry_chunks_make_data (hdr,
       sizeof (GstRegistryChunkGlobalHeader));
 

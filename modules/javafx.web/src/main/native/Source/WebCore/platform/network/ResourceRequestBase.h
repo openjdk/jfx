@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003, 2006 Apple Inc.  All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Samuel Weinig <sam.weinig@gmail.com>
  * Copyright (C) 2009, 2012 Google Inc. All rights reserved.
  *
@@ -27,15 +27,21 @@
 
 #pragma once
 
-#include "FormData.h"
-#include "FrameLoaderTypes.h"
-#include "HTTPHeaderMap.h"
-#include "IntRect.h"
-#include "ResourceLoadPriority.h"
+#include <WebCore/FormData.h>
+#include <WebCore/FrameLoaderTypes.h>
+#include <WebCore/HTTPHeaderMap.h>
+#include <WebCore/IntRect.h>
+#include <WebCore/ResourceLoadPriority.h>
+#include <optional>
 #include <wtf/EnumTraits.h>
+#include <wtf/Platform.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/URL.h>
+#include <wtf/WallTime.h>
 
 namespace WebCore {
+
+enum class IPAddressSpace : bool;
 
 enum class ResourceRequestCachePolicy : uint8_t {
     UseProtocolCachePolicy, // normal load, equivalent to fetch "default" cache mode.
@@ -55,10 +61,11 @@ class ResourceRequest;
 class ResourceResponse;
 
 enum class ResourceRequestRequester : uint8_t { Unspecified, Main, XHR, Fetch, Media, Model, ImportScripts, Ping, Beacon, EventSource };
+enum class ShouldUpgradeLocalhostAndIPAddress : bool { No, Yes };
 
 // Do not use this type directly.  Use ResourceRequest instead.
 class ResourceRequestBase {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ResourceRequestBase);
 public:
 
     enum class SameSiteDisposition : uint8_t { Unspecified, SameSite, CrossSite };
@@ -66,13 +73,13 @@ public:
     struct RequestData {
         RequestData() { }
 
-        RequestData(const URL& url, const URL& firstPartyForCookies, double timeoutInterval, const String& httpMethod, const HTTPHeaderMap& httpHeaderFields, const Vector<String>& responseContentDispositionEncodingFallbackArray, const ResourceRequestCachePolicy& cachePolicy, const SameSiteDisposition& sameSiteDisposition, const ResourceLoadPriority& priority, const ResourceRequestRequester& requester, bool allowCookies, bool isTopSite, bool isAppInitiated = true, bool privacyProxyFailClosedForUnreachableNonMainHosts = false, bool useAdvancedPrivacyProtections = false)
-            : m_url(url)
-            , m_firstPartyForCookies(firstPartyForCookies)
+        RequestData(URL&& url, URL&& firstPartyForCookies, double timeoutInterval, String&& httpMethod, HTTPHeaderMap&& httpHeaderFields, Vector<String>&& responseContentDispositionEncodingFallbackArray, ResourceRequestCachePolicy cachePolicy, SameSiteDisposition sameSiteDisposition, ResourceLoadPriority priority, ResourceRequestRequester requester, bool allowCookies, bool isTopSite, bool isAppInitiated = true, bool privacyProxyFailClosedForUnreachableNonMainHosts = false, bool useAdvancedPrivacyProtections = false, bool didFilterLinkDecoration = false, bool isPrivateTokenUsageByThirdPartyAllowed = false, bool wasSchemeOptimisticallyUpgraded = false, IPAddressSpace targetAddressSpace = IPAddressSpace::Public)
+            : m_url(WTF::move(url))
+            , m_firstPartyForCookies(WTF::move(firstPartyForCookies))
             , m_timeoutInterval(timeoutInterval)
-            , m_httpMethod(httpMethod)
-            , m_httpHeaderFields(httpHeaderFields)
-            , m_responseContentDispositionEncodingFallbackArray(responseContentDispositionEncodingFallbackArray)
+            , m_httpMethod(WTF::move(httpMethod))
+            , m_httpHeaderFields(WTF::move(httpHeaderFields))
+            , m_responseContentDispositionEncodingFallbackArray(WTF::move(responseContentDispositionEncodingFallbackArray))
             , m_cachePolicy(cachePolicy)
             , m_sameSiteDisposition(sameSiteDisposition)
             , m_priority(priority)
@@ -82,11 +89,15 @@ public:
             , m_isAppInitiated(isAppInitiated)
             , m_privacyProxyFailClosedForUnreachableNonMainHosts(privacyProxyFailClosedForUnreachableNonMainHosts)
             , m_useAdvancedPrivacyProtections(useAdvancedPrivacyProtections)
+            , m_didFilterLinkDecoration(didFilterLinkDecoration)
+            , m_isPrivateTokenUsageByThirdPartyAllowed(isPrivateTokenUsageByThirdPartyAllowed)
+            , m_wasSchemeOptimisticallyUpgraded(wasSchemeOptimisticallyUpgraded)
+            , m_targetAddressSpace(targetAddressSpace)
         {
         }
 
-        RequestData(const URL& url, ResourceRequestCachePolicy cachePolicy)
-            : m_url(url)
+        RequestData(URL&& url, ResourceRequestCachePolicy cachePolicy)
+            : m_url(WTF::move(url))
             , m_cachePolicy(cachePolicy)
         {
         }
@@ -106,10 +117,14 @@ public:
         bool m_isAppInitiated : 1 { true };
         bool m_privacyProxyFailClosedForUnreachableNonMainHosts : 1 { false };
         bool m_useAdvancedPrivacyProtections : 1 { false };
+        bool m_didFilterLinkDecoration : 1 { false };
+        bool m_isPrivateTokenUsageByThirdPartyAllowed : 1 { false };
+        bool m_wasSchemeOptimisticallyUpgraded : 1 { false };
+        IPAddressSpace m_targetAddressSpace { IPAddressSpace::Public };
     };
 
     ResourceRequestBase(RequestData&& requestData)
-        : m_requestData(WTFMove(requestData))
+        : m_requestData(WTF::move(requestData))
         , m_resourceRequestUpdated(true)
         , m_platformRequestUpdated(false)
         , m_resourceRequestBodyUpdated(true)
@@ -125,7 +140,7 @@ public:
     WEBCORE_EXPORT bool isEmpty() const;
 
     WEBCORE_EXPORT const URL& url() const;
-    WEBCORE_EXPORT void setURL(const URL& url);
+    WEBCORE_EXPORT void setURL(URL&&, bool didFilterLinkDecoration = false);
 
     void redirectAsGETIfNeeded(const ResourceRequestBase &, const ResourceResponse&);
 
@@ -139,6 +154,7 @@ public:
 
     WEBCORE_EXPORT double timeoutInterval() const; // May return 0 when using platform default.
     WEBCORE_EXPORT void setTimeoutInterval(double);
+    WEBCORE_EXPORT void resetTimeoutInterval();
 
     WEBCORE_EXPORT const URL& firstPartyForCookies() const;
     WEBCORE_EXPORT void setFirstPartyForCookies(const URL&);
@@ -238,6 +254,9 @@ public:
     ResourceRequestRequester requester() const { return m_requestData.m_requester; }
     void setRequester(ResourceRequestRequester requester) { m_requestData.m_requester = requester; }
 
+    IPAddressSpace targetAddressSpace() const { return m_requestData.m_targetAddressSpace; }
+    void setTargetAddressSpace(IPAddressSpace targetAddressSpace) { m_requestData.m_targetAddressSpace = targetAddressSpace; }
+
     // Who initiated the request so the Inspector can associate it with a context. E.g. a Web Worker.
     String initiatorIdentifier() const { return m_initiatorIdentifier; }
     void setInitiatorIdentifier(const String& identifier) { m_initiatorIdentifier = identifier; }
@@ -246,11 +265,14 @@ public:
     const std::optional<int>& inspectorInitiatorNodeIdentifier() const { return m_inspectorInitiatorNodeIdentifier; }
     void setInspectorInitiatorNodeIdentifier(int inspectorInitiatorNodeIdentifier) { m_inspectorInitiatorNodeIdentifier = inspectorInitiatorNodeIdentifier; }
 
-    void upgradeToHTTPS();
-
 #if !PLATFORM(COCOA) && !USE(SOUP)
     bool encodingRequiresPlatformData() const { return true; }
 #endif
+
+    static bool upgradeInsecureRequest(URL&);
+    static bool upgradeInsecureRequestIfNeeded(URL&, ShouldUpgradeLocalhostAndIPAddress, const std::optional<uint16_t>&);
+    void upgradeInsecureRequest();
+    void upgradeInsecureRequestIfNeeded(ShouldUpgradeLocalhostAndIPAddress, const std::optional<uint16_t>&);
 
     WEBCORE_EXPORT static double defaultTimeoutInterval(); // May return 0 when using platform default.
     WEBCORE_EXPORT static void setDefaultTimeoutInterval(double);
@@ -266,6 +288,15 @@ public:
     bool useAdvancedPrivacyProtections() const { return m_requestData.m_useAdvancedPrivacyProtections; }
     WEBCORE_EXPORT void setUseAdvancedPrivacyProtections(bool);
 
+    bool didFilterLinkDecoration() const { return m_requestData.m_didFilterLinkDecoration; }
+    WEBCORE_EXPORT void setDidFilterLinkDecoration(bool);
+
+    bool isPrivateTokenUsageByThirdPartyAllowed() const { return m_requestData.m_isPrivateTokenUsageByThirdPartyAllowed; }
+    void setIsPrivateTokenUsageByThirdPartyAllowed(bool);
+
+    bool wasSchemeOptimisticallyUpgraded() const { return m_requestData.m_wasSchemeOptimisticallyUpgraded; }
+    void setWasSchemeOptimisticallyUpgraded(bool);
+
 protected:
     // Used when ResourceRequest is initialized from a platform representation of the request
     ResourceRequestBase()
@@ -278,8 +309,8 @@ protected:
     {
     }
 
-    ResourceRequestBase(const URL& url, ResourceRequestCachePolicy policy)
-        : m_requestData({ url, policy })
+    ResourceRequestBase(URL&& url, ResourceRequestCachePolicy policy)
+        : m_requestData({ WTF::move(url), policy })
         , m_resourceRequestUpdated(true)
         , m_platformRequestUpdated(false)
         , m_resourceRequestBodyUpdated(true)

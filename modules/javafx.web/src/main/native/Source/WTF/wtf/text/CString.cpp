@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2003-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,8 +30,9 @@
 #include <string.h>
 #include <wtf/CheckedArithmetic.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/StringCommon.h>
-#include <wtf/text/StringHasher.h>
+#include <wtf/text/SuperFastHash.h>
 
 namespace WTF {
 
@@ -41,52 +42,68 @@ Ref<CStringBuffer> CStringBuffer::createUninitialized(size_t length)
 {
     // The +1 is for the terminating null character.
     size_t size = Checked<size_t>(sizeof(CStringBuffer)) + length + 1U;
-    auto* stringBuffer = static_cast<CStringBuffer*>(CStringBufferMalloc::malloc(size));
-    return adoptRef(*new (NotNull, stringBuffer) CStringBuffer(length));
+    auto* stringBuffer = CStringBufferMalloc::malloc(size);
+
+    Ref buffer = adoptRef(*new (NotNull, stringBuffer) CStringBuffer(length));
+    buffer->mutableSpanIncludingNullTerminator()[length] = '\0';
+    return buffer;
 }
 
-CString::CString(const char* str)
+CString::CString(ASCIILiteral string)
 {
-    if (!str)
+    if (!string)
         return;
 
-    init(str, strlen(str));
+    init(string.span());
 }
 
-CString::CString(const char* str, size_t length)
+CString::CString(const char* string)
 {
-    if (!str) {
-        ASSERT(!length);
+    if (!string)
+        return;
+
+    init(unsafeSpan(string));
+}
+
+CString::CString(std::span<const char> string)
+{
+    if (!string.data()) {
+        ASSERT(string.empty());
         return;
     }
 
-    init(str, length);
+    init(string);
 }
 
-void CString::init(const char* str, size_t length)
+void CString::init(std::span<const char> string)
 {
-    ASSERT(str);
+    ASSERT(string.data());
 
-    m_buffer = CStringBuffer::createUninitialized(length);
-    memcpy(m_buffer->mutableData(), str, length);
-    m_buffer->mutableData()[length] = '\0';
+    m_buffer = CStringBuffer::createUninitialized(string.size());
+    memcpySpan(m_buffer->mutableSpan(), string);
 }
 
-char* CString::mutableData()
+std::span<char> CString::mutableSpan() LIFETIME_BOUND
 {
     copyBufferIfNeeded();
     if (!m_buffer)
-        return nullptr;
-    return m_buffer->mutableData();
+        return { };
+    return m_buffer->mutableSpan();
 }
 
-CString CString::newUninitialized(size_t length, char*& characterBuffer)
+std::span<char> CString::mutableSpanIncludingNullTerminator() LIFETIME_BOUND
+{
+    copyBufferIfNeeded();
+    if (!m_buffer)
+        return { };
+    return m_buffer->mutableSpanIncludingNullTerminator();
+}
+
+CString CString::newUninitialized(size_t length, std::span<char>& characterBuffer)
 {
     CString result;
     result.m_buffer = CStringBuffer::createUninitialized(length);
-    char* bytes = result.m_buffer->mutableData();
-    bytes[length] = '\0';
-    characterBuffer = bytes;
+    characterBuffer = result.m_buffer->mutableSpan();
     return result;
 }
 
@@ -95,10 +112,10 @@ void CString::copyBufferIfNeeded()
     if (!m_buffer || m_buffer->hasOneRef())
         return;
 
-    RefPtr<CStringBuffer> buffer = WTFMove(m_buffer);
+    RefPtr<CStringBuffer> buffer = WTF::move(m_buffer);
     size_t length = buffer->length();
     m_buffer = CStringBuffer::createUninitialized(length);
-    memcpy(m_buffer->mutableData(), buffer->data(), length + 1);
+    memcpySpan(m_buffer->mutableSpanIncludingNullTerminator(), buffer->spanIncludingNullTerminator());
 }
 
 bool CString::isSafeToSendToAnotherThread() const
@@ -111,8 +128,8 @@ void CString::grow(size_t newLength)
     ASSERT(newLength > length());
 
     auto newBuffer = CStringBuffer::createUninitialized(newLength);
-    memcpy(newBuffer->mutableData(), m_buffer->data(), length() + 1);
-    m_buffer = WTFMove(newBuffer);
+    memcpySpan(newBuffer->mutableSpanIncludingNullTerminator(), m_buffer->spanIncludingNullTerminator());
+    m_buffer = WTF::move(newBuffer);
 }
 
 bool operator==(const CString& a, const CString& b)
@@ -121,25 +138,25 @@ bool operator==(const CString& a, const CString& b)
         return false;
     if (a.length() != b.length())
         return false;
-    return equal(reinterpret_cast<const LChar*>(a.data()), reinterpret_cast<const LChar*>(b.data()), a.length());
+    return equal(byteCast<Latin1Character>(a.span()).data(), byteCast<Latin1Character>(b.span()));
 }
 
-bool operator==(const CString& a, const char* b)
+bool operator==(const CString& a, ASCIILiteral b)
 {
-    if (a.isNull() != !b)
+    if (a.isNull() != b.isNull())
         return false;
-    if (!b)
-        return true;
-    return !strcmp(a.data(), b);
+    if (a.length() != b.length())
+        return false;
+    return equal(byteCast<Latin1Character>(a.span()).data(), b.span8());
 }
 
 unsigned CString::hash() const
 {
     if (isNull())
         return 0;
-    StringHasher hasher;
-    for (const char* ptr = data(); *ptr; ++ptr)
-        hasher.addCharacter(*ptr);
+    SuperFastHash hasher;
+    for (auto character : span())
+        hasher.addCharacter(character);
     return hasher.hash();
 }
 
@@ -149,7 +166,7 @@ bool operator<(const CString& a, const CString& b)
         return !b.isNull();
     if (b.isNull())
         return false;
-    return strcmp(a.data(), b.data()) < 0;
+    return is_lt(compareSpans(a.span(), b.span()));
 }
 
 bool CStringHash::equal(const CString& a, const CString& b)
@@ -159,6 +176,32 @@ bool CStringHash::equal(const CString& a, const CString& b)
     if (b.isHashTableDeletedValue())
         return false;
     return a == b;
+}
+
+enum class ASCIICase { Lower, Upper };
+
+template<ASCIICase type>
+CString convertASCIICase(std::span<const char8_t> input)
+{
+    if (input.empty())
+        return CString(""_s);
+
+    std::span<char> characters;
+    auto result = CString::newUninitialized(input.size(), characters);
+    size_t i = 0;
+    for (auto character : input)
+        characters[i++] = type == ASCIICase::Lower ? toASCIILower(character) : toASCIIUpper(character);
+    return result;
+}
+
+CString convertToASCIILowercase(std::span<const char8_t> string)
+{
+    return convertASCIICase<ASCIICase::Lower>(string);
+}
+
+CString convertToASCIIUppercase(std::span<const char8_t> string)
+{
+    return convertASCIICase<ASCIICase::Upper>(string);
 }
 
 } // namespace WTF

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2017 Apple Inc.  All rights reserved.
+ * Copyright (C) 2006-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,14 +27,13 @@
 #include "IconLoader.h"
 
 #include "CachedRawResource.h"
-#include "CachedResourceLoader.h"
 #include "CachedResourceRequest.h"
 #include "CachedResourceRequestInitiatorTypes.h"
-#include "Document.h"
 #include "DocumentLoader.h"
+#include "DocumentResourceLoader.h"
 #include "FrameDestructionObserverInlines.h"
 #include "FrameLoader.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameLoaderClient.h"
 #include "Logging.h"
 #include "ResourceRequest.h"
@@ -42,6 +41,11 @@
 #include <wtf/text/CString.h>
 
 namespace WebCore {
+
+Ref<IconLoader> IconLoader::create(DocumentLoader& documentLoader, const URL& url)
+{
+    return adoptRef(*new IconLoader(documentLoader, url));
+}
 
 IconLoader::IconLoader(DocumentLoader& documentLoader, const URL& url)
     : m_documentLoader(documentLoader)
@@ -59,11 +63,11 @@ void IconLoader::startLoading()
     if (m_resource)
         return;
 
-    auto* frame = m_documentLoader->frame();
+    RefPtr frame = m_documentLoader ? m_documentLoader->frame() : nullptr;
     if (!frame)
         return;
 
-    ResourceRequest resourceRequest = m_url;
+    ResourceRequest resourceRequest = URL { m_url };
     resourceRequest.setPriority(ResourceLoadPriority::Low);
 #if !ERROR_DISABLED
     // Copy this because we may want to access it after transferring the
@@ -72,7 +76,7 @@ void IconLoader::startLoading()
     auto resourceRequestURL = resourceRequest.url();
 #endif
 
-    CachedResourceRequest request(WTFMove(resourceRequest), ResourceLoaderOptions(
+    CachedResourceRequest request(WTF::move(resourceRequest), ResourceLoaderOptions(
         SendCallbackPolicy::SendCallbacks,
         ContentSniffingPolicy::SniffContent,
         DataBufferingPolicy::BufferData,
@@ -88,35 +92,33 @@ void IconLoader::startLoading()
 
     request.setInitiatorType(cachedResourceRequestInitiatorTypes().icon);
 
-    auto cachedResource = frame->document()->cachedResourceLoader().requestIcon(WTFMove(request));
+    auto cachedResource = frame->protectedDocument()->protectedCachedResourceLoader()->requestIcon(WTF::move(request));
     m_resource = cachedResource.value_or(nullptr);
-    if (m_resource)
-        m_resource->addClient(*this);
+    if (CachedResourceHandle resource = m_resource)
+        resource->addClient(*this);
     else
         LOG_ERROR("Failed to start load for icon at url %s (error: %s)", resourceRequestURL.string().ascii().data(), cachedResource.error().localizedDescription().utf8().data());
 }
 
 void IconLoader::stopLoading()
 {
-    if (m_resource) {
-        m_resource->removeClient(*this);
-        m_resource = nullptr;
-    }
+    if (CachedResourceHandle resource = std::exchange(m_resource, nullptr))
+        resource->removeClient(*this);
 }
 
-void IconLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
+void IconLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess)
 {
     ASSERT_UNUSED(resource, &resource == m_resource);
 
     // If we got a status code indicating an invalid response, then lets
     // ignore the data and not try to decode the error page as an icon.
-    auto* data = m_resource->resourceBuffer();
+    RefPtr data = m_resource->resourceBuffer();
     int status = m_resource->response().httpStatusCode();
     if (status && (status < 200 || status > 299))
         data = nullptr;
 
-    constexpr uint8_t pdfMagicNumber[] = { '%', 'P', 'D', 'F' };
-    if (data && data->startsWith(std::span(pdfMagicNumber, std::size(pdfMagicNumber)))) {
+    constexpr std::array<uint8_t, 4> pdfMagicNumber { '%', 'P', 'D', 'F' };
+    if (data && data->startsWith(pdfMagicNumber)) {
         LOG(IconDatabase, "IconLoader::finishLoading() - Ignoring icon at %s because it appears to be a PDF", m_resource->url().string().ascii().data());
         data = nullptr;
     }
@@ -125,7 +127,8 @@ void IconLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetri
 
     // DocumentLoader::finishedLoadingIcon destroys this IconLoader as it finishes. This will automatically
     // trigger IconLoader::stopLoading() during destruction, so we should just return here.
-    m_documentLoader->finishedLoadingIcon(*this, data);
+    if (RefPtr documentLoader = m_documentLoader.get())
+        documentLoader->finishedLoadingIcon(*this, data.get());
 }
 
 }

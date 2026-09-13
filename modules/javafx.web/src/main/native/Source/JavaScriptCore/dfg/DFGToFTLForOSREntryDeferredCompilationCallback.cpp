@@ -39,9 +39,7 @@ ToFTLForOSREntryDeferredCompilationCallback::ToFTLForOSREntryDeferredCompilation
 {
 }
 
-ToFTLForOSREntryDeferredCompilationCallback::~ToFTLForOSREntryDeferredCompilationCallback()
-{
-}
+ToFTLForOSREntryDeferredCompilationCallback::~ToFTLForOSREntryDeferredCompilationCallback() = default;
 
 Ref<ToFTLForOSREntryDeferredCompilationCallback>ToFTLForOSREntryDeferredCompilationCallback::create(JITCode::TriggerReason* forcedOSREntryTrigger)
 {
@@ -68,21 +66,21 @@ void ToFTLForOSREntryDeferredCompilationCallback::compilationDidComplete(
     JITCode* jitCode = profiledDFGCodeBlock->jitCode()->dfg();
 
     switch (result) {
-    case CompilationSuccessful: {
+    case CompilationResult::CompilationSuccessful: {
         jitCode->setOSREntryBlock(codeBlock->vm(), profiledDFGCodeBlock, codeBlock);
         BytecodeIndex osrEntryBytecode = codeBlock->jitCode()->ftlForOSREntry()->bytecodeIndex();
         jitCode->tierUpEntryTriggers.set(osrEntryBytecode, JITCode::TriggerReason::CompilationDone);
         break;
     }
-    case CompilationFailed:
+    case CompilationResult::CompilationFailed:
         jitCode->osrEntryRetry = 0;
         jitCode->abandonOSREntry = true;
         profiledDFGCodeBlock->jitCode()->dfg()->setOptimizationThresholdBasedOnCompilationResult(
             profiledDFGCodeBlock, result);
         break;
-    case CompilationDeferred:
+    case CompilationResult::CompilationDeferred:
         RELEASE_ASSERT_NOT_REACHED();
-    case CompilationInvalidated:
+    case CompilationResult::CompilationInvalidated:
         jitCode->osrEntryRetry = 0;
         break;
     }

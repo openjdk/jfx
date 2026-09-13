@@ -56,20 +56,15 @@ public:
     unsigned inlineCapacity() const { return m_inlineCapacity; }
     const ClassInfo* classInfo() const { return m_classInfo; }
 
-    bool operator==(const PrototypeKey& other) const
-    {
-        return m_prototype == other.m_prototype
-            && m_executable == other.m_executable
-            && m_inlineCapacity == other.m_inlineCapacity
-            && m_classInfo == other.m_classInfo;
-    }
+    friend bool operator==(const PrototypeKey&, const PrototypeKey&) = default;
 
     explicit operator bool() const { return *this != PrototypeKey(); }
     bool isHashTableDeletedValue() const { return *this == PrototypeKey(WTF::HashTableDeletedValue); }
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
 
     unsigned hash() const
     {
-        return WTF::IntHash<uintptr_t>::hash(bitwise_cast<uintptr_t>(m_prototype) ^ bitwise_cast<uintptr_t>(m_executable) ^ bitwise_cast<uintptr_t>(m_classInfo)) + m_inlineCapacity;
+        return WTF::IntHash<uintptr_t>::hash(std::bit_cast<uintptr_t>(m_prototype) ^ std::bit_cast<uintptr_t>(m_executable) ^ std::bit_cast<uintptr_t>(m_classInfo)) + m_inlineCapacity;
     }
 
 private:
@@ -81,18 +76,9 @@ private:
     const ClassInfo* m_classInfo { nullptr };
 };
 
-struct PrototypeKeyHash {
-    static unsigned hash(const PrototypeKey& key) { return key.hash(); }
-    static bool equal(const PrototypeKey& a, const PrototypeKey& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } // namespace JSC
 
 namespace WTF {
-
-template<typename> struct DefaultHash;
-template<> struct DefaultHash<JSC::PrototypeKey> : JSC::PrototypeKeyHash { };
 
 template<typename> struct HashTraits;
 template<> struct HashTraits<JSC::PrototypeKey> : SimpleClassHashTraits<JSC::PrototypeKey> { };

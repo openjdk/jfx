@@ -41,7 +41,7 @@ class ReplaceNodeWithSpanCommand : public SimpleEditCommand {
 public:
     static Ref<ReplaceNodeWithSpanCommand> create(Ref<HTMLElement>&& element)
     {
-        return adoptRef(*new ReplaceNodeWithSpanCommand(WTFMove(element)));
+        return adoptRef(*new ReplaceNodeWithSpanCommand(WTF::move(element)));
     }
 
     HTMLElement* spanElement() { return m_spanElement.get(); }
@@ -52,11 +52,13 @@ private:
     void doApply() override;
     void doUnapply() override;
 
+    RefPtr<HTMLElement> protectedSpanElement() const { return m_spanElement; }
+
 #ifndef NDEBUG
-    void getNodesInCommand(HashSet<Ref<Node>>&) override;
+    void getNodesInCommand(NodeSet&) override;
 #endif
 
-    Ref<HTMLElement> m_elementToReplace;
+    const Ref<HTMLElement> m_elementToReplace;
     RefPtr<HTMLElement> m_spanElement;
 };
 

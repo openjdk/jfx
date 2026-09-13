@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,7 +33,7 @@ class GPUSupportedLimits : public RefCounted<GPUSupportedLimits> {
 public:
     static Ref<GPUSupportedLimits> create(Ref<WebGPU::SupportedLimits>&& backing)
     {
-        return adoptRef(*new GPUSupportedLimits(WTFMove(backing)));
+        return adoptRef(*new GPUSupportedLimits(WTF::move(backing)));
     }
 
     uint32_t maxTextureDimension1D() const;
@@ -41,6 +41,7 @@ public:
     uint32_t maxTextureDimension3D() const;
     uint32_t maxTextureArrayLayers() const;
     uint32_t maxBindGroups() const;
+    uint32_t maxBindGroupsPlusVertexBuffers() const;
     uint32_t maxBindingsPerBindGroup() const;
     uint32_t maxDynamicUniformBuffersPerPipelineLayout() const;
     uint32_t maxDynamicStorageBuffersPerPipelineLayout() const;
@@ -73,11 +74,11 @@ public:
 
 private:
     GPUSupportedLimits(Ref<WebGPU::SupportedLimits>&& backing)
-        : m_backing(WTFMove(backing))
+        : m_backing(WTF::move(backing))
     {
     }
 
-    Ref<WebGPU::SupportedLimits> m_backing;
+    const Ref<WebGPU::SupportedLimits> m_backing;
 };
 
 }

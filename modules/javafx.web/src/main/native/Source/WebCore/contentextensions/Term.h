@@ -27,8 +27,8 @@
 
 #if ENABLE(CONTENT_EXTENSIONS)
 
-#include "ContentExtensionsDebugging.h"
-#include "NFA.h"
+#include <WebCore/ContentExtensionsDebugging.h>
+#include <WebCore/NFA.h>
 #include <unicode/utypes.h>
 #include <wtf/ASCIICType.h>
 #include <wtf/Hasher.h>
@@ -74,14 +74,14 @@ public:
     bool isValid() const;
 
     // CharacterSet terms only.
-    void addCharacter(UChar character, bool isCaseSensitive);
+    void addCharacter(char16_t character, bool isCaseSensitive);
 
     // Group terms only.
     void extendGroupSubpattern(const Term&);
 
     void quantify(const AtomQuantifier&);
 
-    ImmutableCharNFANodeBuilder generateGraph(NFA&, ImmutableCharNFANodeBuilder& source, const ActionList& finalActions) const;
+    ImmutableCharNFANodeBuilder generateGraph(NFA&, ImmutableCharNFANodeBuilder& source, ActionList&& finalActions) const;
     void generateGraph(NFA&, ImmutableCharNFANodeBuilder& source, uint32_t destination) const;
 
     bool isEndOfLineAssertion() const;
@@ -133,13 +133,13 @@ private:
 
     class CharacterSet {
     public:
-        void set(UChar character)
+        void set(char16_t character)
         {
             RELEASE_ASSERT(character < 128);
             m_characters[character / 64] |= (uint64_t(1) << (character % 64));
         }
 
-        bool get(UChar character) const
+        bool get(char16_t character) const
         {
             RELEASE_ASSERT(character < 128);
             return m_characters[character / 64] & (uint64_t(1) << (character % 64));
@@ -158,12 +158,7 @@ private:
             return WTF::bitCount(m_characters[0]) + WTF::bitCount(m_characters[1]);
         }
 
-        bool operator==(const CharacterSet& other) const
-        {
-            return other.m_inverted == m_inverted
-                && other.m_characters[0] == m_characters[0]
-                && other.m_characters[1] == m_characters[1];
-        }
+        friend bool operator==(const CharacterSet&, const CharacterSet&) = default;
 
     private:
         friend void add(Hasher&, const CharacterSet&);
@@ -176,10 +171,7 @@ private:
     struct Group {
         Vector<Term> terms;
 
-        bool operator==(const Group& other) const
-        {
-            return other.terms == terms;
-        }
+        friend bool operator==(const Group&, const Group&) = default;
     };
     friend void add(Hasher&, const Term::Group&);
 
@@ -246,12 +238,12 @@ inline String Term::toString() const
     case TermType::CharacterSet: {
         StringBuilder builder;
         builder.append('[');
-        for (UChar c = 0; c < 128; c++) {
+        for (char16_t c = 0; c < 128; c++) {
             if (m_atomData.characterSet.get(c)) {
                 if (isASCIIPrintable(c) && !isUnicodeCompatibleASCIIWhitespace(c))
                     builder.append(c);
                 else
-                    builder.append("\\u", c);
+                    builder.append("\\u"_s, c);
             }
         }
         builder.append(']');
@@ -286,7 +278,7 @@ inline Term::Term(UniversalTransitionTag)
     : m_termType(TermType::CharacterSet)
 {
     new (NotNull, &m_atomData.characterSet) CharacterSet();
-    for (UChar i = 1; i < 128; ++i)
+    for (char16_t i = 1; i < 128; ++i)
         m_atomData.characterSet.set(i);
 }
 
@@ -327,17 +319,17 @@ inline Term::Term(const Term& other)
 }
 
 inline Term::Term(Term&& other)
-    : m_termType(WTFMove(other.m_termType))
-    , m_quantifier(WTFMove(other.m_quantifier))
+    : m_termType(WTF::move(other.m_termType))
+    , m_quantifier(WTF::move(other.m_quantifier))
 {
     switch (m_termType) {
     case TermType::Empty:
         break;
     case TermType::CharacterSet:
-        new (NotNull, &m_atomData.characterSet) CharacterSet(WTFMove(other.m_atomData.characterSet));
+        new (NotNull, &m_atomData.characterSet) CharacterSet(WTF::move(other.m_atomData.characterSet));
         break;
     case TermType::Group:
-        new (NotNull, &m_atomData.group) Group(WTFMove(other.m_atomData.group));
+        new (NotNull, &m_atomData.group) Group(WTF::move(other.m_atomData.group));
         break;
     }
     other.destroy();
@@ -358,7 +350,7 @@ inline bool Term::isValid() const
     return m_termType != TermType::Empty;
 }
 
-inline void Term::addCharacter(UChar character, bool isCaseSensitive)
+inline void Term::addCharacter(char16_t character, bool isCaseSensitive)
 {
     ASSERT(isASCII(character));
 
@@ -388,11 +380,11 @@ inline void Term::quantify(const AtomQuantifier& quantifier)
     m_quantifier = quantifier;
 }
 
-inline ImmutableCharNFANodeBuilder Term::generateGraph(NFA& nfa, ImmutableCharNFANodeBuilder& source, const ActionList& finalActions) const
+inline ImmutableCharNFANodeBuilder Term::generateGraph(NFA& nfa, ImmutableCharNFANodeBuilder& source, ActionList&& finalActions) const
 {
     ImmutableCharNFANodeBuilder newEnd(nfa);
     generateGraph(nfa, source, newEnd.nodeId());
-    newEnd.setActions(finalActions.begin(), finalActions.end());
+    newEnd.setActions(WTF::move(finalActions));
     return newEnd;
 }
 
@@ -534,7 +526,7 @@ inline Term& Term::operator=(const Term& other)
 inline Term& Term::operator=(Term&& other)
 {
     destroy();
-    new (NotNull, this) Term(WTFMove(other));
+    new (NotNull, this) Term(WTF::move(other));
     return *this;
 }
 
@@ -591,28 +583,28 @@ inline void Term::generateSubgraphForAtom(NFA& nfa, ImmutableCharNFANodeBuilder&
         break;
     case TermType::CharacterSet: {
         if (!m_atomData.characterSet.inverted()) {
-            UChar i = 0;
+            char16_t i = 0;
             while (true) {
                 while (i < 128 && !m_atomData.characterSet.get(i))
                     ++i;
                 if (i == 128)
                     break;
 
-                UChar start = i;
+                char16_t start = i;
                 ++i;
                 while (i < 128 && m_atomData.characterSet.get(i))
                     ++i;
                 source.addTransition(start, i - 1, destination);
             }
         } else {
-            UChar i = 1;
+            char16_t i = 1;
             while (true) {
                 while (i < 128 && m_atomData.characterSet.get(i))
                     ++i;
                 if (i == 128)
                     break;
 
-                UChar start = i;
+                char16_t start = i;
                 ++i;
                 while (i < 128 && !m_atomData.characterSet.get(i))
                     ++i;
@@ -637,7 +629,7 @@ inline void Term::generateSubgraphForAtom(NFA& nfa, ImmutableCharNFANodeBuilder&
         for (unsigned i = 1; i < m_atomData.group.terms.size() - 1; ++i) {
             const Term& currentTerm = m_atomData.group.terms[i];
             ImmutableCharNFANodeBuilder newNode = currentTerm.generateGraph(nfa, lastTarget, ActionList());
-            lastTarget = WTFMove(newNode);
+            lastTarget = WTF::move(newNode);
         }
         const Term& lastTerm = m_atomData.group.terms.last();
         lastTerm.generateGraph(nfa, lastTarget, destination);

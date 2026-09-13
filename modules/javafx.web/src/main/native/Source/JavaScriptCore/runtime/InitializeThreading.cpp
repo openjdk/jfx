@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,29 +30,43 @@
 #include "InitializeThreading.h"
 
 #include "AssemblyComments.h"
+#include "AssertInvariants.h"
 #include "ExecutableAllocator.h"
-#include "InPlaceInterpreter.h"
 #include "JITOperationList.h"
 #include "JSCConfig.h"
 #include "JSCPtrTag.h"
 #include "LLIntData.h"
+#include "NativeCalleeRegistry.h"
 #include "Options.h"
 #include "StructureAlignedMemoryAllocator.h"
 #include "SuperSampler.h"
+#include "VMManager.h"
 #include "VMTraps.h"
-#include "WasmCalleeRegistry.h"
 #include "WasmCapabilities.h"
+#include "WasmExecutionHandler.h"
 #include "WasmFaultSignalHandler.h"
 #include "WasmThunks.h"
 #include <mutex>
-#include <wtf/GenerateProfiles.h>
 #include <wtf/Threading.h>
 #include <wtf/threads/Signals.h>
+
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
 #if !USE(SYSTEM_MALLOC)
 #include <bmalloc/BPlatform.h>
 #if BUSE(LIBPAS)
 #include <bmalloc/pas_scavenger.h>
+#endif
+#endif
+
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
+
+#if ENABLE(LLVM_PROFILE_GENERATION)
+#if PLATFORM(IOS_FAMILY)
+#include <wtf/LLVMProfilingUtils.h>
+extern "C" char __llvm_profile_filename[] = "%t/WebKitPGO/JavaScriptCore_%m_pid%p%c.profraw";
+#else
+extern "C" char __llvm_profile_filename[] = "/private/tmp/WebKitPGO/JavaScriptCore_%m_pid%p%c.profraw";
 #endif
 #endif
 
@@ -64,11 +78,18 @@ enum class JSCProfileTag { };
 
 void initialize()
 {
+    initialize([] {
+        // No extra options customization needed by default.
+    });
+}
+
+void initializeWithOptionsCustomization(const ScopedLambda<void()>& optionsCustomizationCallback)
+{
     static std::once_flag onceFlag;
 
-    std::call_once(onceFlag, [] {
+    std::call_once(onceFlag, [&] {
         WTF::initialize();
-        Options::initialize();
+        Options::initialize(optionsCustomizationCallback);
 
         initializePtrTagLookup();
 
@@ -103,43 +124,40 @@ void initialize()
         JITOperationList::populatePointersInJavaScriptCore();
 
         AssemblyCommentRegistry::initialize();
-#if ENABLE(WEBASSEMBLY)
-        if (Options::useWasmIPInt())
-            IPInt::initialize();
-#endif
         LLInt::initialize();
-        DisallowGC::initialize();
+        AssertNoGC::initialize();
 
         initializeSuperSampler();
-        Thread& thread = Thread::current();
+        auto& thread = Thread::currentSingleton();
         thread.setSavedLastStackTop(thread.stack().origin());
 
-#if ENABLE(WEBASSEMBLY)
+        NativeCalleeRegistry::initialize();
+#if ENABLE(WEBASSEMBLY) && ENABLE(JIT)
         if (Wasm::isSupported()) {
             Wasm::Thunks::initialize();
-            Wasm::CalleeRegistry::initialize();
         }
 #endif
 
         if (VM::isInMiniMode())
-            WTF::fastEnableMiniMode();
+            WTF::fastEnableMiniMode(Options::forceMiniVMMode());
 
         if (Wasm::isSupported() || !Options::usePollingTraps()) {
-        // JSLock::lock() can call registerThreadForMachExceptionHandling() which crashes if this has not been called first.
-            initializeSignalHandling();
-
             if (!Options::usePollingTraps())
         VMTraps::initializeSignals();
-            if (Wasm::isSupported())
+            if (Wasm::isSupported()) {
         Wasm::prepareSignalingMemory();
-        } else
-            disableSignalHandling();
+#if ENABLE(WEBASSEMBLY)
+                VMManager::setWasmDebuggerOnStop(Wasm::wasmDebuggerOnStopCallback);
+                VMManager::setWasmDebuggerOnResume(Wasm::wasmDebuggerOnResumeCallback);
+#endif
+            }
+        }
+
+        assertInvariants();
 
         WTF::compilerFence();
         RELEASE_ASSERT(!g_jscConfig.initializeHasBeenCalled);
         g_jscConfig.initializeHasBeenCalled = true;
-
-        WTF::registerProfileGenerationCallback<JSCProfileTag>("JavaScriptCore");
     });
 }
 

@@ -25,10 +25,11 @@
 
 #include "AffineTransform.h"
 #include "CommonAtomStrings.h"
+#include "ContainerNodeInlines.h"
 #include "ElementChildIteratorInlines.h"
+#include "LegacyRenderSVGResource.h"
 #include "PathTraversalState.h"
 #include "RenderLayerModelObject.h"
-#include "RenderSVGResource.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGImageElement.h"
 #include "SVGMPathElement.h"
@@ -37,14 +38,15 @@
 #include "SVGPathData.h"
 #include "SVGPathElement.h"
 #include "SVGPathUtilities.h"
-#include <wtf/IsoMallocInlines.h>
+#include "Settings.h"
 #include <wtf/MathExtras.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringView.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGAnimateMotionElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGAnimateMotionElement);
 
 using namespace SVGNames;
 
@@ -125,10 +127,9 @@ void SVGAnimateMotionElement::updateAnimationPath()
     m_animationPath = Path();
     bool foundMPath = false;
 
-    for (auto& mPath : childrenOfType<SVGMPathElement>(*this)) {
-        auto pathElement = mPath.pathElement();
-        if (pathElement) {
-            m_animationPath = pathFromGraphicsElement(pathElement.get());
+    for (Ref mPath : childrenOfType<SVGMPathElement>(*this)) {
+        if (RefPtr pathElement = mPath->pathElement()) {
+            m_animationPath = pathFromGraphicsElement(*pathElement);
             foundMPath = true;
             break;
         }
@@ -254,16 +255,14 @@ void SVGAnimateMotionElement::applyResultsToTarget()
         return;
 
     auto updateTargetElement = [](SVGElement& element) {
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
         if (element.document().settings().layerBasedSVGEngineEnabled()) {
-            if (auto* layerRenderer = dynamicDowncast<RenderLayerModelObject>(element.renderer()))
+            if (CheckedPtr layerRenderer = dynamicDowncast<RenderLayerModelObject>(element.renderer()))
                 layerRenderer->updateHasSVGTransformFlags();
             // TODO: [LBSE] Avoid relayout upon transform changes (not possible in legacy, but should be in LBSE).
             element.updateSVGRendererForElementChange();
             return;
         }
-#endif
-        if (auto* renderer = element.renderer())
+        if (CheckedPtr renderer = element.renderer())
             renderer->setNeedsTransformUpdate();
         element.updateSVGRendererForElementChange();
     };
@@ -292,8 +291,7 @@ std::optional<float> SVGAnimateMotionElement::calculateDistance(const String& fr
     auto to = parsePoint(toString);
     if (!to)
         return { };
-    auto diff = *to - *from;
-    return std::hypot(diff.width(), diff.height());
+    return (*to - *from).diagonalLength();
 }
 
 void SVGAnimateMotionElement::updateAnimationMode()
@@ -302,6 +300,25 @@ void SVGAnimateMotionElement::updateAnimationMode()
         setAnimationMode(AnimationMode::Path);
     else
         SVGAnimationElement::updateAnimationMode();
+}
+
+void SVGAnimateMotionElement::childrenChanged(const ChildChange& change)
+{
+    SVGElement::childrenChanged(change);
+    switch (change.type) {
+    case ChildChange::Type::ElementRemoved:
+    case ChildChange::Type::AllChildrenRemoved:
+    case ChildChange::Type::AllChildrenReplaced:
+        updateAnimationPath();
+        break;
+    case ChildChange::Type::ElementInserted:
+    case ChildChange::Type::TextInserted:
+    case ChildChange::Type::TextRemoved:
+    case ChildChange::Type::TextChanged:
+    case ChildChange::Type::NonContentsChildInserted:
+    case ChildChange::Type::NonContentsChildRemoved:
+        break;
+    }
 }
 
 }

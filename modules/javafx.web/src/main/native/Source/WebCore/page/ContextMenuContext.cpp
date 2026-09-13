@@ -38,11 +38,13 @@ ContextMenuContext::~ContextMenuContext() = default;
 
 ContextMenuContext& ContextMenuContext::operator=(const ContextMenuContext&) = default;
 
-ContextMenuContext::ContextMenuContext(Type type, const HitTestResult& hitTestResult, Event* event)
+ContextMenuContext::ContextMenuContext(Type type, const HitTestResult& hitTestResult, RefPtr<Event>&& event)
     : m_type(type)
     , m_hitTestResult(hitTestResult)
-    , m_event(event)
+    , m_event(WTF::move(event))
     , m_hasEntireImage(hitTestResult.hasEntireImage())
+    , m_allowsFollowingLink(hitTestResult.allowsFollowingLink())
+    , m_allowsFollowingImageURL(hitTestResult.allowsFollowingImageURL())
 {
 }
 

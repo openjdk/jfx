@@ -34,21 +34,21 @@
 #include "TextEncoding.h"
 #include <unicode/ucnv.h>
 #include <unicode/ucsdet.h>
+#include <wtf/text/icu/UnicodeExtras.h>
 
 namespace PAL {
 
-bool detectTextEncoding(const char* data, size_t len,
-    const char* hintEncodingName,
-    TextEncoding* detectedEncoding)
+bool detectTextEncoding(std::span<const uint8_t> data, ASCIILiteral hintEncodingName, TextEncoding* detectedEncoding)
 {
     *detectedEncoding = TextEncoding();
-    int matchesCount = 0;
     UErrorCode status = U_ZERO_ERROR;
-    UCharsetDetector* detector = ucsdet_open(&status);
+    // UCharsetDetector is declared in <unicode/ucsdet.h> as:
+    // `typedef struct UCharsetDetector UCharsetDetector;`
+    SUPPRESS_FORWARD_DECL_MEMBER UCharsetDetector* detector = ucsdet_open(&status);
     if (U_FAILURE(status))
         return false;
-    ucsdet_enableInputFilter(detector, true);
-    ucsdet_setText(detector, data, static_cast<int32_t>(len), &status);
+    SUPPRESS_FORWARD_DECL_ARG ucsdet_enableInputFilter(detector, true);
+    SUPPRESS_FORWARD_DECL_ARG ucsdet_setText(detector, byteCast<char>(data.data()), static_cast<int32_t>(data.size()), &status);
     if (U_FAILURE(status))
         return false;
 
@@ -62,14 +62,14 @@ bool detectTextEncoding(const char* data, size_t len,
     // limited set of candidate encodings.
     // Below is a partial implementation of the first part of what's outlined
     // above.
-    const UCharsetMatch** matches = ucsdet_detectAll(detector, &matchesCount, &status);
+    SUPPRESS_FORWARD_DECL_ARG auto matches = ucsdet_detectAll_span(detector, &status);
     if (U_FAILURE(status)) {
-        ucsdet_close(detector);
+        SUPPRESS_FORWARD_DECL_ARG ucsdet_close(detector);
         return false;
     }
 
-    const char* encoding = 0;
-    if (hintEncodingName) {
+    const char* encoding = nullptr;
+    if (!hintEncodingName.isNull()) {
         TextEncoding hintEncoding(hintEncodingName);
         // 10 is the minimum confidence value consistent with the codepoint
         // allocation in a given encoding. The size of a chunk passed to
@@ -80,20 +80,20 @@ bool detectTextEncoding(const char* data, size_t len,
         // setting an arbitrary threshold, we have to scan all the encodings
         // consistent with the data.
         const int32_t kThreshold = 10;
-        for (int i = 0; i < matchesCount; ++i) {
-            int32_t confidence = ucsdet_getConfidence(matches[i], &status);
+        for (auto* match : matches) {
+            int32_t confidence = ucsdet_getConfidence(match, &status);
             if (U_FAILURE(status)) {
                 status = U_ZERO_ERROR;
                 continue;
             }
             if (confidence < kThreshold)
                 break;
-            const char* matchEncoding = ucsdet_getName(matches[i], &status);
+            const char* matchEncoding = ucsdet_getName(match, &status);
             if (U_FAILURE(status)) {
                 status = U_ZERO_ERROR;
                 continue;
             }
-            if (TextEncoding(matchEncoding) == hintEncoding) {
+            if (TextEncoding(StringView::fromLatin1(matchEncoding)) == hintEncoding) {
                 encoding = hintEncodingName;
                 break;
             }
@@ -103,14 +103,14 @@ bool detectTextEncoding(const char* data, size_t len,
     // This can happen, say, when a parent frame in EUC-JP refers to
     // a child frame in Shift_JIS and both frames do NOT specify the encoding
     // making us resort to auto-detection (when it IS turned on).
-    if (!encoding && matchesCount > 0)
+    if (!encoding && !matches.empty())
         encoding = ucsdet_getName(matches[0], &status);
     if (U_SUCCESS(status)) {
-        *detectedEncoding = TextEncoding(encoding);
-        ucsdet_close(detector);
+        *detectedEncoding = TextEncoding(StringView::fromLatin1(encoding));
+        SUPPRESS_FORWARD_DECL_ARG ucsdet_close(detector);
         return true;
     }
-    ucsdet_close(detector);
+    SUPPRESS_FORWARD_DECL_ARG ucsdet_close(detector);
     return false;
 }
 

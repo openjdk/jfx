@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,12 +26,9 @@
 package test.javafx.scene.control;
 
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Application;
 import javafx.application.Platform;
-import javafx.collections.ObservableList;
-import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
+import javafx.scene.Scene;
 import javafx.scene.chart.AreaChart;
 import javafx.scene.chart.BubbleChart;
 import javafx.scene.chart.CategoryAxis;
@@ -42,20 +39,15 @@ import javafx.scene.chart.StackedAreaChart;
 import javafx.scene.chart.StackedBarChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.chart.XYChart.Series;
-import javafx.scene.control.Button;
-import javafx.scene.input.MouseButton;
 import javafx.scene.layout.VBox;
-import javafx.scene.Scene;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
-
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import test.util.Util;
 
 public class XYChartExceptionOnAddingRemovedSeriesTest {
@@ -95,13 +87,13 @@ public class XYChartExceptionOnAddingRemovedSeriesTest {
     public void testLineChartExceptionOnAddingRemovedSeries() throws Throwable {
         Util.waitForLatch(startupLatch, 5, "Timeout waiting for stage to layout.");
 
-        Assert.assertEquals(1, lineChart.getData().size());
+        Assertions.assertEquals(1, lineChart.getData().size());
 
         lineSeriesLatch.countDown();
         addRemovedSeriesLineChart();
         Util.waitForLatch(lineSeriesLatch, 5, "Timeout waiting for series to be added.");
 
-        Assert.assertEquals(1, lineChart.getData().size());
+        Assertions.assertEquals(1, lineChart.getData().size());
     }
 
     private void addRemovedSeriesLineChart() {
@@ -109,7 +101,7 @@ public class XYChartExceptionOnAddingRemovedSeriesTest {
             vBox.getChildren().clear();
             vBox.getChildren().add(lineChart);
             Series<Number, Number> removedSeries = lineChart.getData().remove(0);
-            Assert.assertEquals(0, lineChart.getData().size());
+            Assertions.assertEquals(0, lineChart.getData().size());
             lineChart.getData().add(removedSeries);
 
         });
@@ -117,13 +109,13 @@ public class XYChartExceptionOnAddingRemovedSeriesTest {
 
     @Test
     public void testAreaChartExceptionOnAddingRemovedSeries() throws Throwable {
-        Assert.assertEquals(1, areaChart.getData().size());
+        Assertions.assertEquals(1, areaChart.getData().size());
 
         areaChartLatch.countDown();
         addRemovedSeriesAreaChart();
         Util.waitForLatch(areaChartLatch, 5, "Timeout waiting for series to be added.");
 
-        Assert.assertEquals(1, areaChart.getData().size());
+        Assertions.assertEquals(1, areaChart.getData().size());
     }
 
     private void addRemovedSeriesAreaChart() {
@@ -131,20 +123,20 @@ public class XYChartExceptionOnAddingRemovedSeriesTest {
             vBox.getChildren().clear();
             vBox.getChildren().add(areaChart);
             Series<Number, Number> removedSeries = areaChart.getData().remove(0);
-            Assert.assertEquals(0, areaChart.getData().size());
+            Assertions.assertEquals(0, areaChart.getData().size());
             areaChart.getData().add(removedSeries);
         });
     }
 
     @Test
     public void testBubbleChartExceptionOnAddingRemovedSeries() throws Throwable {
-        Assert.assertEquals(1, bubbleChart.getData().size());
+        Assertions.assertEquals(1, bubbleChart.getData().size());
 
         bubbleChartLatch.countDown();
         addRemovedSeriesBubbleChart();
         Util.waitForLatch(bubbleChartLatch, 5, "Timeout waiting for series to be added.");
 
-        Assert.assertEquals(1, bubbleChart.getData().size());
+        Assertions.assertEquals(1, bubbleChart.getData().size());
     }
 
     private void addRemovedSeriesBubbleChart() {
@@ -152,20 +144,20 @@ public class XYChartExceptionOnAddingRemovedSeriesTest {
             vBox.getChildren().clear();
             vBox.getChildren().add(bubbleChart);
             Series<Number, Number> removedSeries = bubbleChart.getData().remove(0);
-            Assert.assertEquals(0, bubbleChart.getData().size());
+            Assertions.assertEquals(0, bubbleChart.getData().size());
             bubbleChart.getData().add(removedSeries);
         });
     }
 
     @Test
     public void testScatterChartExceptionOnAddingRemovedSeries() throws Throwable {
-        Assert.assertEquals(1, scatterChart.getData().size());
+        Assertions.assertEquals(1, scatterChart.getData().size());
 
         scatterChartLatch.countDown();
         addRemovedSeriesScatterChart();
         Util.waitForLatch(scatterChartLatch, 5, "Timeout waiting for series to be added.");
 
-        Assert.assertEquals(1, scatterChart.getData().size());
+        Assertions.assertEquals(1, scatterChart.getData().size());
     }
 
     private void addRemovedSeriesScatterChart() {
@@ -173,20 +165,20 @@ public class XYChartExceptionOnAddingRemovedSeriesTest {
             vBox.getChildren().clear();
             vBox.getChildren().add(scatterChart);
             Series<Number, Number> removedSeries = scatterChart.getData().remove(0);
-            Assert.assertEquals(0, scatterChart.getData().size());
+            Assertions.assertEquals(0, scatterChart.getData().size());
             scatterChart.getData().add(removedSeries);
         });
     }
 
     @Test
     public void testStackedAreaChartExceptionOnAddingRemovedSeries() throws Throwable {
-        Assert.assertEquals(1, stackedAreaChart.getData().size());
+        Assertions.assertEquals(1, stackedAreaChart.getData().size());
 
         stackedAreaChartLatch.countDown();
         addRemovedSeriesStackedAreaChart();
         Util.waitForLatch(stackedAreaChartLatch, 5, "Timeout waiting for series to be added.");
 
-        Assert.assertEquals(1, stackedAreaChart.getData().size());
+        Assertions.assertEquals(1, stackedAreaChart.getData().size());
     }
 
     private void addRemovedSeriesStackedAreaChart() {
@@ -194,20 +186,20 @@ public class XYChartExceptionOnAddingRemovedSeriesTest {
             vBox.getChildren().clear();
             vBox.getChildren().add(stackedAreaChart);
             Series<Number, Number> removedSeries = stackedAreaChart.getData().remove(0);
-            Assert.assertEquals(0, stackedAreaChart.getData().size());
+            Assertions.assertEquals(0, stackedAreaChart.getData().size());
             stackedAreaChart.getData().add(removedSeries);
         });
     }
 
     @Test
     public void testStackedBarChartExceptionOnAddingRemovedSeries() throws Throwable {
-        Assert.assertEquals(1, stackedBarChart.getData().size());
+        Assertions.assertEquals(1, stackedBarChart.getData().size());
 
         stackedBarChartLatch.countDown();
         addRemovedSeriesStackedBarChart();
         Util.waitForLatch(stackedBarChartLatch, 5, "Timeout waiting for series to be added.");
 
-        Assert.assertEquals(1, stackedBarChart.getData().size());
+        Assertions.assertEquals(1, stackedBarChart.getData().size());
     }
 
     private void addRemovedSeriesStackedBarChart() {
@@ -215,22 +207,22 @@ public class XYChartExceptionOnAddingRemovedSeriesTest {
             vBox.getChildren().clear();
             vBox.getChildren().add(stackedBarChart);
             Series<String, Number> removedSeries = stackedBarChart.getData().remove(0);
-            Assert.assertEquals(0, stackedBarChart.getData().size());
+            Assertions.assertEquals(0, stackedBarChart.getData().size());
             stackedBarChart.getData().add(removedSeries);
         });
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void initFX() throws Exception {
         Util.launch(startupLatch, TestApp.class);
     }
 
-    @AfterClass
+    @AfterAll
     public static void exit() {
-        Util.shutdown(stage);
+        Util.shutdown();
     }
 
-    @Before
+    @BeforeEach
     public void setup() {
         Util.runAndWait(() -> {
             Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
@@ -243,7 +235,7 @@ public class XYChartExceptionOnAddingRemovedSeriesTest {
         });
     }
 
-    @After
+    @AfterEach
     public void cleanup() {
         Util.runAndWait(() -> {
             Thread.currentThread().setUncaughtExceptionHandler(null);

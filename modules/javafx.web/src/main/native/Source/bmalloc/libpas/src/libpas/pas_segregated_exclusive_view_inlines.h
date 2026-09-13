@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 Apple Inc. All rights reserved.
+ * Copyright (c) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -36,6 +36,8 @@
 #include "pas_thread_local_cache.h"
 #include "pas_thread_local_cache_node.h"
 
+#if LIBPAS_ENABLED
+
 PAS_BEGIN_EXTERN_C;
 
 static PAS_ALWAYS_INLINE void pas_segregated_exclusive_view_did_start_allocating(
@@ -48,7 +50,7 @@ static PAS_ALWAYS_INLINE void pas_segregated_exclusive_view_did_start_allocating
 {
     /* This is called with the page lock held. */
 
-    static const bool verbose = false;
+    static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_SEGREGATED_HEAPS);
 
     PAS_UNUSED_PARAM(view);
     PAS_UNUSED_PARAM(global_directory);
@@ -78,7 +80,7 @@ static PAS_ALWAYS_INLINE void pas_segregated_exclusive_view_did_stop_allocating(
     pas_segregated_page_config page_config,
     bool should_notify_eligibility)
 {
-    static const bool verbose = false;
+    static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_SEGREGATED_HEAPS);
 
     unsigned view_index;
     bool should_notify_emptiness;
@@ -126,7 +128,7 @@ static PAS_ALWAYS_INLINE void pas_segregated_exclusive_view_note_eligibility(
     pas_thread_local_cache* cache,
     pas_segregated_page_config page_config)
 {
-    static const bool verbose = false;
+    static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_SEGREGATED_HEAPS);
 
     pas_segregated_size_directory* size_directory;
     pas_segregated_directory* directory;
@@ -134,8 +136,11 @@ static PAS_ALWAYS_INLINE void pas_segregated_exclusive_view_note_eligibility(
     size_directory = pas_compact_segregated_size_directory_ptr_load_non_null(&view->directory);
     directory = &size_directory->base;
 
-    if (verbose)
+    if (verbose) {
+        // Without this comment the style checker gets caught in a loop here
+        // for some reason, objecting both to including and excluding braces
         pas_log("Noting eligibility in exclusive %p/%p.\n", view, page);
+    }
 
     if (page->lock_ptr)
         pas_lock_testing_assert_held(page->lock_ptr);
@@ -216,5 +221,5 @@ static PAS_ALWAYS_INLINE void pas_segregated_exclusive_view_note_eligibility(
 
 PAS_END_EXTERN_C;
 
+#endif /* LIBPAS_ENABLED */
 #endif /* PAS_SEGREGATED_EXCLUSIVE_VIEW_INLINES_H */
-

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,9 @@
 
 #include "common.h"
 
-#define  _SILENCE_STDEXT_HASH_DEPRECATION_WARNINGS
-#include <hash_map>
-#include <hash_set>
+#include <unordered_map>
+#include <unordered_set>
+#include <string>
 
 // The following is derived from _HASH_SEED, which is an internal constant from
 // include/xhash; since this is an internal constant we define our own rather
@@ -79,18 +79,22 @@ bool operator == (const FORMATETC &fr, const FORMATETC &fl) {
          && fr.tymed    == fl.tymed;
 }
 
-size_t hash_value(const FORMATETC &fr)
+template<>
+struct std::hash<FORMATETC>
 {
-    size_t _Val = size_t(fr.cfFormat) << 21;
-    _Val += size_t(fr.dwAspect);
-    _Val <<= 5;
-    _Val += size_t(fr.lindex);
-    _Val <<= 7;
-    _Val += size_t(fr.ptd);
-    _Val >>= 13;
-    _Val += size_t(fr.tymed);
-    return _Val ^ GLASS_HASH_SEED;
-}
+    std::size_t operator()(const FORMATETC& fr) const noexcept
+    {
+        size_t _Val = size_t(fr.cfFormat) << 21;
+        _Val += size_t(fr.dwAspect);
+        _Val <<= 5;
+        _Val += size_t(fr.lindex);
+        _Val <<= 7;
+        _Val += size_t(fr.ptd);
+        _Val >>= 13;
+        _Val += size_t(fr.tymed);
+        return _Val ^ GLASS_HASH_SEED;
+    }
+};
 
 //NB! There are two suffixes for mimes:
 // ";locale" - the ASCII/UTF8 version of mime type that is not transferred to Java
@@ -138,16 +142,21 @@ Mime2oscfstrPair pairs[] = {
     {MS_FILE_CONTENT, CFSTR_FILECONTENTS},
 };
 
-inline size_t hash_value(const _bstr_t &_Str) {
-    return stdext::hash_value((const wchar_t *)_Str);
-}
+template<>
+struct std::hash<_bstr_t>
+{
+    std::size_t operator()(const _bstr_t& k) const noexcept
+    {
+        // TODO It would be faster to use wstring_view here, but it is in C++17 and above
+        return std::hash<std::wstring>()(std::wstring(static_cast<const wchar_t*>(k)));
+    }
+};
 
-
-typedef stdext::hash_map<_bstr_t, CLIPFORMAT> MIME2OSCF;
-typedef stdext::hash_map<CLIPFORMAT, _bstr_t> OSCF2MIME;
-typedef stdext::hash_map<FORMATETC, _bstr_t> FMC2MIME;
-typedef stdext::hash_map<FORMATETC, STGMEDIUM> FMC2DATA;
-typedef stdext::hash_set<_bstr_t> HASH_STR_SET;
+typedef std::unordered_map<_bstr_t, CLIPFORMAT> MIME2OSCF;
+typedef std::unordered_map<CLIPFORMAT, _bstr_t> OSCF2MIME;
+typedef std::unordered_map<FORMATETC, _bstr_t> FMC2MIME;
+typedef std::unordered_map<FORMATETC, STGMEDIUM> FMC2DATA;
+typedef std::unordered_set<_bstr_t> HASH_STR_SET;
 
 MIME2OSCF mime2oscf;
 OSCF2MIME oscf2mime;
@@ -403,6 +412,14 @@ HRESULT PopMemory(
                 //as well as corrupted format
                 cdata = 0;
             }
+        } else if (CF_UNICODETEXT == cf){
+            for (int i = 0; i < cdata - 1; i += 2) {
+                jbyte *pos = me.getMem() + i;
+                if (*(pos) == 0 && *(pos + 1) == 0) {
+                    cdata = i;
+                    break;
+                }
+            }
         }
         if (0 != cdata) {
             *pret = env->NewByteArray((jsize)cdata);
@@ -523,6 +540,7 @@ HRESULT PushImage(
     jint cdata = env->GetArrayLength(data);
     if (cdata < 8) {
         OLE_HRT(E_INVALIDARG)
+        OLE_RETURN_HR
     }
 
     jint w, h;
@@ -531,16 +549,27 @@ HRESULT PushImage(
     w = BSWAP_32(w);
     h = BSWAP_32(h);
 
-    int numPixels = w*h;
     OLE_HRT(checkJavaException(env))
-    if (cdata < (numPixels*4 + 8)) {
+    OLE_RETURN_HR_IF_FAILED
+
+    if (w <= 0 || h <= 0 || w > (INT_MAX / 4) / h) {
         OLE_HRT(E_INVALIDARG)
+        OLE_RETURN_HR
+    }
+
+    int numPixels = w*h;
+
+    if ((cdata - 8) < (numPixels * 4)) {
+        OLE_HRT(E_INVALIDARG)
+        OLE_RETURN_HR
     }
     jbyte *pBytes;
     Bitmap bitmap(w, h, (void **)&pBytes);
     OLE_CHECK_NOTNULL((HBITMAP)bitmap)
+    OLE_RETURN_HR_IF_FAILED
     env->GetByteArrayRegion(data, 8, numPixels*4, pBytes);
     OLE_HRT(checkJavaException(env))
+    OLE_RETURN_HR_IF_FAILED
 
     psm->hGlobal = bitmap.GetGlobalDIB();
     psm->tymed = TYMED_HGLOBAL;
@@ -1516,7 +1545,15 @@ HRESULT setDragImage(IDataObject *p)
         w = BSWAP_32(w);
         h = BSWAP_32(h);
 
+        if (w <= 0 || h <= 0 || w > (INT_MAX / 4) / h) {
+            return E_INVALIDARG;
+        }
+
         jsize bmpSize = w*h*4;
+        if (bmpSize > INT_MAX - header_size) {
+            return E_INVALIDARG;
+        }
+
         if (me.size() < jsize(header_size + bmpSize))
             return E_INVALIDARG;
 
@@ -1532,7 +1569,15 @@ HRESULT setDragImage(IDataObject *p)
         w = abs(lpbi->bmiHeader.biWidth);
         h = abs(lpbi->bmiHeader.biHeight);
 
+        if (w == 0 || h == 0 || w > (INT_MAX / 4) / h) {
+            return E_INVALIDARG;
+        }
+
         jsize bmpSize = w*h*4;
+        if (lpbi->bmiHeader.biSize > (DWORD)(INT_MAX - bmpSize)) {
+            return E_INVALIDARG;
+        }
+
         if (me.size() < jsize(bmpSize + lpbi->bmiHeader.biSize))
             return E_INVALIDARG;
 

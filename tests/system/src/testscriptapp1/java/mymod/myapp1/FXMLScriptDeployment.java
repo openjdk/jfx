@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,19 +25,17 @@
 
 package myapp1;
 
-import java.io.IOException;
+import static myapp1.Constants.ERROR_ASSERTION_FAILURE;
+import static myapp1.Constants.ERROR_NONE;
+import static myapp1.Constants.ERROR_UNEXPECTED_EXCEPTION;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
 import java.util.TreeMap;
-
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXMLLoader;
-import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
@@ -45,11 +43,6 @@ import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.AnchorPane;
 import javafx.stage.Stage;
-
-import javax.script.Bindings;
-import javax.script.ScriptContext;
-
-import static myapp1.Constants.*;
 import pseudoScriptEngine.InvocationInfos;
 import pseudoScriptEngine.RgfPseudoScriptEngine;
 

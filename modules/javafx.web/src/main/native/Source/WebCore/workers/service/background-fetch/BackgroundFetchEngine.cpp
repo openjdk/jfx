@@ -26,8 +26,6 @@
 #include "config.h"
 #include "BackgroundFetchEngine.h"
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "BackgroundFetchInformation.h"
 #include "BackgroundFetchRecordInformation.h"
 #include "ExceptionData.h"
@@ -35,8 +33,11 @@
 #include "RetrieveRecordsOptions.h"
 #include "SWServerRegistration.h"
 #include "SWServerToContextConnection.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(BackgroundFetchEngine);
 
 BackgroundFetchEngine::BackgroundFetchEngine(SWServer& server)
     : m_server(server)
@@ -49,50 +50,50 @@ void BackgroundFetchEngine::startBackgroundFetch(SWServerRegistration& registrat
 {
     auto iterator = m_fetches.find(registration.key());
     if (iterator == m_fetches.end()) {
-        m_store->initializeFetches(registration.key(), [weakThis = WeakPtr { *this }, registration = WeakPtr { registration }, backgroundFetchIdentifier, requests = WTFMove(requests), options = WTFMove(options), callback = WTFMove(callback)]() mutable {
+        m_store->initializeFetches(registration.key(), [weakThis = WeakPtr { *this }, registration = WeakPtr { registration }, backgroundFetchIdentifier, requests = WTF::move(requests), options = WTF::move(options), callback = WTF::move(callback)]() mutable {
             if (!weakThis || !registration) {
-                callback(makeUnexpected(ExceptionData { InvalidStateError, "BackgroundFetchEngine is gone"_s }));
+                callback(makeUnexpected(ExceptionData { ExceptionCode::InvalidStateError, "BackgroundFetchEngine is gone"_s }));
                 return;
             }
             weakThis->m_fetches.ensure(registration->key(), [] {
                 return FetchesMap();
             });
-            weakThis->startBackgroundFetch(*registration, backgroundFetchIdentifier, WTFMove(requests), WTFMove(options), WTFMove(callback));
+            weakThis->startBackgroundFetch(*registration, backgroundFetchIdentifier, WTF::move(requests), WTF::move(options), WTF::move(callback));
         });
         return;
     }
 
-    auto result = iterator->value.ensure(backgroundFetchIdentifier, [&]() mutable {
-        return makeUnique<BackgroundFetch>(registration, backgroundFetchIdentifier, WTFMove(requests), WTFMove(options), Ref { m_store }, [weakThis = WeakPtr { *this }](auto& fetch) {
+    auto result = iterator->value.ensure(backgroundFetchIdentifier, [&]() {
+        return BackgroundFetch::create(registration, backgroundFetchIdentifier, WTF::move(requests), WTF::move(options), Ref { m_store }, [weakThis = WeakPtr { *this }](auto& fetch) {
             if (weakThis)
                 weakThis->notifyBackgroundFetchUpdate(fetch);
         });
     });
     if (!result.isNewEntry) {
-        callback(makeUnexpected(ExceptionData { TypeError, "A background fetch registration already exists"_s }));
+        callback(makeUnexpected(ExceptionData { ExceptionCode::TypeError, "A background fetch registration already exists"_s }));
         return;
     }
 
-    auto& fetch = *result.iterator->value;
-    fetch.doStore([server = m_server, fetch = WeakPtr { fetch }, callback = WTFMove(callback)](auto result) mutable {
+    auto fetch = result.iterator->value;
+    fetch->doStore([server = m_server, fetch = WeakPtr { fetch }, callback = WTF::move(callback)](auto result) mutable {
         if (!fetch || !server) {
-            callback(makeUnexpected(ExceptionData { TypeError, "Background fetch is gone"_s }));
+            callback(makeUnexpected(ExceptionData { ExceptionCode::TypeError, "Background fetch is gone"_s }));
             return;
         }
         switch (result) {
         case BackgroundFetchStore::StoreResult::QuotaError:
-            callback(makeUnexpected(ExceptionData { QuotaExceededError, "Background fetch requested space is above quota"_s }));
+            callback(makeUnexpected(ExceptionData { ExceptionCode::QuotaExceededError, "Background fetch requested space is above quota"_s }));
             break;
         case BackgroundFetchStore::StoreResult::InternalError:
-            callback(makeUnexpected(ExceptionData { TypeError, "Background fetch store operation failed"_s }));
+            callback(makeUnexpected(ExceptionData { ExceptionCode::TypeError, "Background fetch store operation failed"_s }));
             break;
         case BackgroundFetchStore::StoreResult::OK:
             if (!fetch->pausedFlagIsSet()) {
-                fetch->perform([server = WTFMove(server)](auto& client, auto& request, auto responseDataSize, auto& origin) mutable {
-                    return server ? server->createBackgroundFetchRecordLoader(client, request, responseDataSize, origin) : nullptr;
+                fetch->perform([server = WTF::move(server)](auto& client, auto& request, auto responseDataSize, auto& origin) mutable {
+                    return server ? RefPtr { server->createBackgroundFetchRecordLoader(client, request, responseDataSize, origin) } : nullptr;
                 });
             }
-            callback(fetch->information());
+            callback(std::optional { fetch->information() });
             break;
         };
     });
@@ -101,8 +102,9 @@ void BackgroundFetchEngine::startBackgroundFetch(SWServerRegistration& registrat
 // https://wicg.github.io/background-fetch/#update-background-fetch-instance-algorithm
 void BackgroundFetchEngine::notifyBackgroundFetchUpdate(BackgroundFetch& fetch)
 {
+    RefPtr server = m_server.get();
     auto information = fetch.information();
-    auto* registration = m_server->getRegistration(information.registrationIdentifier);
+    RefPtr registration = server->getRegistration(information.registrationIdentifier);
     if (!registration)
         return;
 
@@ -115,7 +117,7 @@ void BackgroundFetchEngine::notifyBackgroundFetchUpdate(BackgroundFetch& fetch)
         return;
 
     // FIXME: We should delay events if the service worker (or related page) is not running.
-    m_server->fireBackgroundFetchEvent(*registration, WTFMove(information), [weakFetch = WeakPtr { fetch }]() {
+    server->fireBackgroundFetchEvent(*registration, WTF::move(information), [weakFetch = WeakPtr { fetch }]() {
         if (weakFetch)
             weakFetch->unsetRecordsAvailableFlag();
     });
@@ -125,15 +127,15 @@ void BackgroundFetchEngine::backgroundFetchInformation(SWServerRegistration& reg
 {
     auto iterator = m_fetches.find(registration.key());
     if (iterator == m_fetches.end()) {
-        m_store->initializeFetches(registration.key(), [weakThis = WeakPtr { *this }, registration = WeakPtr { registration }, backgroundFetchIdentifier, callback = WTFMove(callback)]() mutable {
+        m_store->initializeFetches(registration.key(), [weakThis = WeakPtr { *this }, registration = WeakPtr { registration }, backgroundFetchIdentifier, callback = WTF::move(callback)]() mutable {
             if (!weakThis || !registration) {
-                callback(makeUnexpected(ExceptionData { InvalidStateError, "BackgroundFetchEngine is gone"_s }));
+                callback(makeUnexpected(ExceptionData { ExceptionCode::InvalidStateError, "BackgroundFetchEngine is gone"_s }));
                 return;
             }
             weakThis->m_fetches.ensure(registration->key(), [] {
                 return FetchesMap();
             });
-            weakThis->backgroundFetchInformation(*registration, backgroundFetchIdentifier, WTFMove(callback));
+            weakThis->backgroundFetchInformation(*registration, backgroundFetchIdentifier, WTF::move(callback));
         });
         return;
     }
@@ -141,10 +143,10 @@ void BackgroundFetchEngine::backgroundFetchInformation(SWServerRegistration& reg
     auto& map = iterator->value;
     auto fetchIterator = map.find(backgroundFetchIdentifier);
     if (fetchIterator == map.end()) {
-        callback(BackgroundFetchInformation { });
+        callback(std::optional<BackgroundFetchInformation> { });
         return;
     }
-    callback(fetchIterator->value->information());
+    callback(std::optional { fetchIterator->value->information() });
 }
 
 // https://wicg.github.io/background-fetch/#dom-backgroundfetchmanager-getids
@@ -152,7 +154,7 @@ void BackgroundFetchEngine::backgroundFetchIdentifiers(SWServerRegistration& reg
 {
     auto iterator = m_fetches.find(registration.key());
     if (iterator == m_fetches.end()) {
-        m_store->initializeFetches(registration.key(), [weakThis = WeakPtr { *this }, registration = WeakPtr { registration }, callback = WTFMove(callback)]() mutable {
+        m_store->initializeFetches(registration.key(), [weakThis = WeakPtr { *this }, registration = WeakPtr { registration }, callback = WTF::move(callback)]() mutable {
             if (!weakThis || !registration) {
                 callback({ });
                 return;
@@ -160,18 +162,17 @@ void BackgroundFetchEngine::backgroundFetchIdentifiers(SWServerRegistration& reg
             weakThis->m_fetches.ensure(registration->key(), [] {
                 return FetchesMap();
             });
-            weakThis->backgroundFetchIdentifiers(*registration, WTFMove(callback));
+            weakThis->backgroundFetchIdentifiers(*registration, WTF::move(callback));
         });
         return;
     }
 
-    Vector<String> identifiers;
-    identifiers.reserveInitialCapacity(iterator->value.size());
-    for (auto& keyValue : iterator->value) {
+    Vector<String> identifiers = WTF::compactMap(iterator->value, [](auto& keyValue) -> std::optional<String> {
         if (keyValue.value->isActive())
-            identifiers.uncheckedAppend(keyValue.key);
-    }
-    callback(WTFMove(identifiers));
+            return keyValue.key;
+        return std::nullopt;
+    });
+    callback(WTF::move(identifiers));
 }
 
 // https://wicg.github.io/background-fetch/#background-fetch-registration-abort starting from step 3
@@ -179,7 +180,7 @@ void BackgroundFetchEngine::abortBackgroundFetch(SWServerRegistration& registrat
 {
     auto iterator = m_fetches.find(registration.key());
     if (iterator == m_fetches.end()) {
-        m_store->initializeFetches(registration.key(), [weakThis = WeakPtr { *this }, registration = WeakPtr { registration }, backgroundFetchIdentifier, callback = WTFMove(callback)]() mutable {
+        m_store->initializeFetches(registration.key(), [weakThis = WeakPtr { *this }, registration = WeakPtr { registration }, backgroundFetchIdentifier, callback = WTF::move(callback)]() mutable {
             if (!weakThis || !registration) {
                 callback(false);
                 return;
@@ -187,7 +188,7 @@ void BackgroundFetchEngine::abortBackgroundFetch(SWServerRegistration& registrat
             weakThis->m_fetches.ensure(registration->key(), [] {
                 return FetchesMap();
             });
-            weakThis->abortBackgroundFetch(*registration, backgroundFetchIdentifier, WTFMove(callback));
+            weakThis->abortBackgroundFetch(*registration, backgroundFetchIdentifier, WTF::move(callback));
         });
         return;
     }
@@ -198,7 +199,7 @@ void BackgroundFetchEngine::abortBackgroundFetch(SWServerRegistration& registrat
         callback(false);
         return;
     }
-    callback(fetchIterator->value->abort());
+    callback(Ref { fetchIterator->value }->abort());
 }
 
 // https://wicg.github.io/background-fetch/#dom-backgroundfetchregistration-matchall starting from step 3
@@ -206,7 +207,7 @@ void BackgroundFetchEngine::matchBackgroundFetch(SWServerRegistration& registrat
 {
     auto iterator = m_fetches.find(registration.key());
     if (iterator == m_fetches.end()) {
-        m_store->initializeFetches(registration.key(), [weakThis = WeakPtr { *this }, registration = WeakPtr { registration }, backgroundFetchIdentifier, options = WTFMove(options), callback = WTFMove(callback)]() mutable {
+        m_store->initializeFetches(registration.key(), [weakThis = WeakPtr { *this }, registration = WeakPtr { registration }, backgroundFetchIdentifier, options = WTF::move(options), callback = WTF::move(callback)]() mutable {
             if (!weakThis || !registration) {
                 callback({ });
                 return;
@@ -214,7 +215,7 @@ void BackgroundFetchEngine::matchBackgroundFetch(SWServerRegistration& registrat
             weakThis->m_fetches.ensure(registration->key(), [] {
                 return FetchesMap();
             });
-            weakThis->matchBackgroundFetch(*registration, backgroundFetchIdentifier, WTFMove(options), WTFMove(callback));
+            weakThis->matchBackgroundFetch(*registration, backgroundFetchIdentifier, WTF::move(options), WTF::move(callback));
         });
         return;
     }
@@ -225,20 +226,18 @@ void BackgroundFetchEngine::matchBackgroundFetch(SWServerRegistration& registrat
         callback({ });
         return;
     }
-    fetchIterator->value->match(options, [weakThis = WeakPtr { *this }, callback = WTFMove(callback)](auto&& records) mutable {
+    Ref { fetchIterator->value }->match(options, [weakThis = WeakPtr { *this }, callback = WTF::move(callback)](auto&& records) mutable {
         if (!weakThis) {
             callback({ });
             return;
         }
-        Vector<BackgroundFetchRecordInformation> recordsInformation;
-        recordsInformation.reserveInitialCapacity(records.size());
-        for (auto& record : records) {
+        auto recordsInformation = WTF::map(WTF::move(records), [&](auto&& record) {
             // FIXME: We need a way to remove the record from m_records.
             auto information = record->information();
-            weakThis->m_records.add(information.identifier, WTFMove(record));
-            recordsInformation.uncheckedAppend(WTFMove(information));
-        }
-        callback(WTFMove(recordsInformation));
+            weakThis->m_records.add(information.identifier, WTF::move(record));
+            return information;
+        });
+        callback(WTF::move(recordsInformation));
     });
 }
 
@@ -253,27 +252,27 @@ void BackgroundFetchEngine::remove(SWServerRegistration& registration)
 
 void BackgroundFetchEngine::retrieveRecordResponse(BackgroundFetchRecordIdentifier recordIdentifier, RetrieveRecordResponseCallback&& callback)
 {
-    auto record = m_records.get(recordIdentifier);
+    RefPtr record = m_records.get(recordIdentifier);
     if (!record) {
-        callback(makeUnexpected(ExceptionData { InvalidStateError, "Record not found"_s }));
+        callback(makeUnexpected(ExceptionData { ExceptionCode::InvalidStateError, "Record not found"_s }));
         return;
     }
-    record->retrieveResponse(m_store.get(), WTFMove(callback));
+    record->retrieveResponse(m_store.get(), WTF::move(callback));
 }
 
 void BackgroundFetchEngine::retrieveRecordResponseBody(BackgroundFetchRecordIdentifier recordIdentifier, RetrieveRecordResponseBodyCallback&& callback)
 {
-    auto record = m_records.get(recordIdentifier);
+    RefPtr record = m_records.get(recordIdentifier);
     if (!record) {
         callback(makeUnexpected(ResourceError { errorDomainWebKitInternal, 0, { }, "Record not found"_s }));
         return;
     }
-    record->retrieveRecordResponseBody(m_store.get(), WTFMove(callback));
+    record->retrieveRecordResponseBody(m_store.get(), WTF::move(callback));
 }
 
 void BackgroundFetchEngine::addFetchFromStore(std::span<const uint8_t> data, CompletionHandler<void(const ServiceWorkerRegistrationKey&, const String&)>&& callback)
 {
-    auto fetch = BackgroundFetch::createFromStore(data, *m_server, m_store.get(), [weakThis = WeakPtr { *this }](auto& fetch) {
+    auto fetch = BackgroundFetch::createFromStore(data, Ref { *m_server }, m_store.get(), [weakThis = WeakPtr { *this }](auto& fetch) {
         if (weakThis)
             weakThis->notifyBackgroundFetchUpdate(fetch);
     });
@@ -291,18 +290,18 @@ void BackgroundFetchEngine::addFetchFromStore(std::span<const uint8_t> data, Com
 
     auto backgroundFetchIdentifier = fetch->identifier();
     ASSERT(!fetchMap.contains(backgroundFetchIdentifier));
-    fetchMap.add(WTFMove(backgroundFetchIdentifier), WTFMove(fetch));
+    fetchMap.add(WTF::move(backgroundFetchIdentifier), fetch.releaseNonNull());
 }
 
 void BackgroundFetchEngine::abortBackgroundFetch(const ServiceWorkerRegistrationKey& key, const String& identifier)
 {
-    if (auto *registration = m_server ? m_server->getRegistration(key) : nullptr)
+    if (RefPtr registration = m_server ? Ref { *m_server }->getRegistration(key) : nullptr)
         abortBackgroundFetch(*registration, identifier, [](auto) { });
 }
 
 void BackgroundFetchEngine::pauseBackgroundFetch(const ServiceWorkerRegistrationKey& key, const String& identifier)
 {
-    auto* registration = m_server ? m_server->getRegistration(key) : nullptr;
+    RefPtr registration = m_server ? Ref { *m_server }->getRegistration(key) : nullptr;
     if (!registration)
         return;
 
@@ -315,12 +314,12 @@ void BackgroundFetchEngine::pauseBackgroundFetch(const ServiceWorkerRegistration
     if (fetchIterator == map.end())
         return;
 
-    fetchIterator->value->pause();
+    Ref { fetchIterator->value }->pause();
 }
 
 void BackgroundFetchEngine::resumeBackgroundFetch(const ServiceWorkerRegistrationKey& key, const String& identifier)
 {
-    auto* registration = m_server ? m_server->getRegistration(key) : nullptr;
+    RefPtr registration = m_server ? Ref { *m_server }->getRegistration(key) : nullptr;
     if (!registration)
         return;
 
@@ -333,14 +332,15 @@ void BackgroundFetchEngine::resumeBackgroundFetch(const ServiceWorkerRegistratio
     if (fetchIterator == map.end())
         return;
 
-    fetchIterator->value->resume([server = m_server](auto& client, auto& request, auto responseDataSize, auto& origin) mutable {
-        return server ? server->createBackgroundFetchRecordLoader(client, request, responseDataSize, origin) : nullptr;
+    Ref { fetchIterator->value }->resume([server = m_server](auto& client, auto& request, auto responseDataSize, auto& origin) mutable {
+        return server ? RefPtr { server->createBackgroundFetchRecordLoader(client, request, responseDataSize, origin) } : nullptr;
     });
 }
 
 void BackgroundFetchEngine::clickBackgroundFetch(const ServiceWorkerRegistrationKey& key, const String& backgroundFetchIdentifier)
 {
-    auto* registration = m_server ? m_server->getRegistration(key) : nullptr;
+    RefPtr server = m_server.get();
+    RefPtr registration = m_server ? server->getRegistration(key) : nullptr;
     if (!registration)
         return;
 
@@ -353,7 +353,7 @@ void BackgroundFetchEngine::clickBackgroundFetch(const ServiceWorkerRegistration
     if (fetchIterator == map.end())
         return;
 
-    m_server->fireBackgroundFetchClickEvent(*registration, fetchIterator->value->information());
+    server->fireBackgroundFetchClickEvent(*registration, fetchIterator->value->information());
 }
 
 WeakPtr<BackgroundFetch> BackgroundFetchEngine::backgroundFetch(const ServiceWorkerRegistrationKey& key, const String& identifier) const
@@ -366,5 +366,3 @@ WeakPtr<BackgroundFetch> BackgroundFetchEngine::backgroundFetch(const ServiceWor
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

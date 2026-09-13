@@ -22,16 +22,16 @@
 #include "config.h"
 #include "SVGViewElement.h"
 
+#include "LegacyRenderSVGResource.h"
 #include "RenderElement.h"
-#include "RenderSVGResource.h"
 #include "SVGNames.h"
 #include "SVGSVGElement.h"
 #include "SVGStringList.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SVGViewElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGViewElement);
 
 inline SVGViewElement::SVGViewElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -48,7 +48,7 @@ Ref<SVGViewElement> SVGViewElement::create(const QualifiedName& tagName, Documen
 void SVGViewElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     SVGFitToViewBox::parseAttribute(name, newValue);
-    SVGZoomAndPan::parseAttribute(name, newValue);
+    SVGZoomAndPan::parseAttribute(*this, name, newValue);
     SVGElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 
@@ -59,10 +59,11 @@ void SVGViewElement::svgAttributeChanged(const QualifiedName& attrName)
         return;
 
     if (SVGFitToViewBox::isKnownAttribute(attrName)) {
-        if (!m_targetElement)
+        RefPtr targetElement = m_targetElement.get();
+        if (!targetElement)
             return;
-        m_targetElement->inheritViewAttributes(*this);
-        m_targetElement->updateSVGRendererForElementChange();
+        targetElement->inheritViewAttributes(*this);
+        targetElement->updateSVGRendererForElementChange();
         return;
     }
 

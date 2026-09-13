@@ -41,7 +41,7 @@ class Document;
 enum class LinkIconType : uint8_t;
 
 struct LinkRelAttribute {
-    Markable<LinkIconType, EnumMarkableTraits<LinkIconType>> iconType;
+    Markable<LinkIconType> iconType;
     bool isStyleSheet : 1 { false };
     bool isAlternate : 1 { false };
     bool isDNSPrefetch : 1 { false };
@@ -52,27 +52,17 @@ struct LinkRelAttribute {
 #if ENABLE(APPLICATION_MANIFEST)
     bool isApplicationManifest : 1 { false };
 #endif
+    bool isInternalResourceLink : 1 { false };
+#if ENABLE(WEB_PAGE_SPATIAL_BACKDROP)
+    bool isSpatialBackdrop : 1 { false };
+#endif
 
     LinkRelAttribute() = default;
     LinkRelAttribute(Document&, StringView);
 
+    friend bool operator==(const LinkRelAttribute&, const LinkRelAttribute&) = default;
+
     static bool isSupported(Document&, StringView);
 };
-
-inline bool operator==(const LinkRelAttribute& left, const LinkRelAttribute& right)
-{
-    return left.iconType == right.iconType
-        && left.isStyleSheet == right.isStyleSheet
-        && left.isAlternate == right.isAlternate
-        && left.isDNSPrefetch == right.isDNSPrefetch
-        && left.isLinkModulePreload == right.isLinkModulePreload
-        && left.isLinkPreload == right.isLinkPreload
-        && left.isLinkPreconnect == right.isLinkPreconnect
-        && left.isLinkPrefetch == right.isLinkPrefetch
-#if ENABLE(APPLICATION_MANIFEST)
-        && left.isApplicationManifest == right.isApplicationManifest
-#endif
-        ;
-}
 
 }

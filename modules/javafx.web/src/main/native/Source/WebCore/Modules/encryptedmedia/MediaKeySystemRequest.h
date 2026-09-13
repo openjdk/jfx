@@ -26,12 +26,13 @@
 
 #if ENABLE(ENCRYPTED_MEDIA)
 
-#include "ActiveDOMObject.h"
-#include "IDLTypes.h"
-#include "JSDOMPromiseDeferredForward.h"
-#include "MediaKeySystemRequestIdentifier.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/IDLTypes.h>
+#include <WebCore/JSDOMPromiseDeferredForward.h>
+#include <WebCore/MediaKeySystemRequestIdentifier.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
+#include <wtf/Identified.h>
 #include <wtf/ObjectIdentifier.h>
 #include <wtf/UniqueRef.h>
 
@@ -42,16 +43,18 @@ class MediaKeySystem;
 
 template <typename IDLType> class DOMPromiseDeferred;
 
-class MediaKeySystemRequest : public RefCounted<MediaKeySystemRequest>, public ActiveDOMObject {
+class MediaKeySystemRequest : public RefCounted<MediaKeySystemRequest>, public ActiveDOMObject, public Identified<MediaKeySystemRequestIdentifier> {
 public:
-    WEBCORE_EXPORT static Ref<MediaKeySystemRequest> create(Document&, const String& keySystem, Ref<DeferredPromise>&&);
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
+    WEBCORE_EXPORT static Ref<MediaKeySystemRequest> create(Document&, const String& keySystem, RefPtr<DeferredPromise>&&);
     virtual ~MediaKeySystemRequest();
 
-    void setAllowCallback(CompletionHandler<void(Ref<DeferredPromise>&&)>&& callback) { m_allowCompletionHandler = WTFMove(callback); }
-    MediaKeySystemRequestIdentifier identifier() const { return m_identifier; }
+    void setAllowCallback(CompletionHandler<void(String&& mediaKeysHashSalt, RefPtr<DeferredPromise>&&)>&& callback) { m_allowCompletionHandler = WTF::move(callback); }
     WEBCORE_EXPORT void start();
 
-    WEBCORE_EXPORT void allow(CompletionHandler<void()>&&);
+    WEBCORE_EXPORT void allow(String&& mediaKeysHashSalt);
     WEBCORE_EXPORT void deny(const String& errorMessage = emptyString());
 
     WEBCORE_EXPORT SecurityOrigin* topLevelDocumentOrigin() const;
@@ -60,17 +63,15 @@ public:
     const String keySystem() const { return m_keySystem; }
 
 private:
-    MediaKeySystemRequest(Document&, const String& keySystem, Ref<DeferredPromise>&&);
+    MediaKeySystemRequest(Document&, const String& keySystem, RefPtr<DeferredPromise>&&);
 
+    // ActiveDOMObject.
     void stop() final;
-    const char* activeDOMObjectName() const final;
-
-    MediaKeySystemRequestIdentifier m_identifier;
 
     String m_keySystem;
-    Ref<DeferredPromise> m_promise;
+    RefPtr<DeferredPromise> m_promise;
 
-    CompletionHandler<void(Ref<DeferredPromise>&&)> m_allowCompletionHandler;
+    CompletionHandler<void(String&&, RefPtr<DeferredPromise>&&)> m_allowCompletionHandler;
 };
 
 } // namespace WebCore

@@ -25,5 +25,11 @@
 
 #pragma once
 
-#include "GenericTypedArrayView.h"
-#include "TypedArrayAdaptors.h"
+#include <wtf/Compiler.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
+#include <JavaScriptCore/GenericTypedArrayView.h>
+#include <JavaScriptCore/TypedArrayAdaptors.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

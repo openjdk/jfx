@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,7 +54,7 @@ public class Settings {
 
         // It seems no longer necessary to force loading of PrimaryTimer to pick
         // up the hi-res timer workaround. Also, this is causing some init
-        // order problems (RT-5572), so it's being commented out.
+        // order problems (JDK-8107671), so it's being commented out.
         // Object obj = ToolkitAccessor.getPrimaryTimer();
     }
 

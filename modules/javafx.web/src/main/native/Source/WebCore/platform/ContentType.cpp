@@ -27,19 +27,42 @@
 
 #include "config.h"
 #include "ContentType.h"
+#include "MIMETypeRegistry.h"
 #include <wtf/JSONValues.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/URL.h>
 
 namespace WebCore {
 
 ContentType::ContentType(String&& contentType)
-    : m_type(WTFMove(contentType))
+    : m_type(WTF::move(contentType))
 {
 }
 
 ContentType::ContentType(const String& contentType)
     : m_type(contentType)
 {
+}
+
+ContentType::ContentType(const String& contentType, bool typeWasInferredFromExtension)
+    : m_type(contentType)
+    , m_typeWasInferredFromExtension(typeWasInferredFromExtension)
+{
+}
+
+ContentType ContentType::fromURL(const URL& url)
+{
+    ASSERT(isMainThread());
+
+    auto lastPathComponent = url.lastPathComponent();
+    size_t pos = lastPathComponent.reverseFind('.');
+    if (pos != notFound) {
+        auto extension = lastPathComponent.substring(pos + 1);
+        String mediaType = MIMETypeRegistry::mediaMIMETypeForExtension(extension);
+        if (!mediaType.isEmpty())
+            return ContentType(WTF::move(mediaType), true);
+    }
+    return ContentType();
 }
 
 const String& ContentType::codecsParameter()
@@ -86,7 +109,7 @@ String ContentType::parameter(const String& parameterName) const
         start = equalSignPosition + 1;
         end = m_type.find(';', start);
     }
-    return StringView { m_type }.substring(start, end - start).trim(isASCIIWhitespace<UChar>).toString();
+    return StringView { m_type }.substring(start, end - start).trim(isASCIIWhitespace<char16_t>).toString();
 }
 
 String ContentType::containerType() const
@@ -100,7 +123,7 @@ static inline Vector<String> splitParameters(StringView parametersView)
 {
     Vector<String> result;
     for (auto view : parametersView.split(','))
-        result.append(view.trim(isASCIIWhitespace<UChar>).toString());
+        result.append(view.trim(isASCIIWhitespace<char16_t>).toString());
     return result;
 }
 

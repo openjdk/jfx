@@ -24,9 +24,11 @@
 
 #pragma once
 
+#include "SVGAttributeAnimator.h"
 #include "SVGSMILElement.h"
 #include "SVGTests.h"
 #include "UnitBezier.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -38,15 +40,16 @@ class TimeContainer;
 enum AnimatedPropertyValueType { RegularPropertyValue, CurrentColorValue, InheritValue };
 
 class SVGAnimationElement : public SVGSMILElement, public SVGTests {
-    WTF_MAKE_ISO_ALLOCATED(SVGAnimationElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGAnimationElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGAnimationElement);
 public:
-    float getStartTime() const;
+    ExceptionOr<float> getStartTime() const;
     float getCurrentTime() const;
-    float getSimpleDuration() const;
+    ExceptionOr<float> getSimpleDuration() const;
 
-    void beginElement();
+    void beginElement() { beginElementAt(0); }
     void beginElementAt(float offset);
-    void endElement();
+    void endElement() { endElementAt(0); }
     void endElementAt(float offset);
 
     static bool isTargetAttributeCSSProperty(SVGElement*, const QualifiedName&);
@@ -79,10 +82,10 @@ public:
     enum class AttributeType : uint8_t { CSS, XML, Auto };
     AttributeType attributeType() const { return m_attributeType; }
 
+    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGAnimationElement, SVGElement, SVGTests>;
+
 protected:
     SVGAnimationElement(const QualifiedName&, Document&);
-
-    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGAnimationElement, SVGElement, SVGTests>;
 
     virtual void resetAnimation();
 
@@ -111,6 +114,8 @@ protected:
 private:
     void animationAttributeChanged() override;
     void setAttributeType(const AtomString&);
+
+    bool isSVGAnimationElement() const final { return true; }
 
     virtual bool setFromAndToValues(const String& fromString, const String& toString) = 0;
     virtual bool setFromAndByValues(const String& fromString, const String& byString) = 0;
@@ -144,3 +149,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SVGAnimationElement)
+    static bool isType(const WebCore::SVGElement& element) { return element.isSVGAnimationElement(); }
+SPECIALIZE_TYPE_TRAITS_END()

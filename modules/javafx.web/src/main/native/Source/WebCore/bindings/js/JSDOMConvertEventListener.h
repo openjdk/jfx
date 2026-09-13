@@ -25,26 +25,26 @@
 
 #pragma once
 
-#include "IDLTypes.h"
-#include "JSDOMConvertBase.h"
+#include <WebCore/IDLTypes.h>
+#include <WebCore/JSDOMConvertBase.h>
 
 namespace WebCore {
 
 template<typename T> struct Converter<IDLEventListener<T>> : DefaultConverter<IDLEventListener<T>> {
-    using ReturnType = RefPtr<T>;
+    using Result = ConversionResult<IDLEventListener<T>>;
 
     template<typename ExceptionThrower = DefaultExceptionThrower>
-    static ReturnType convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, JSC::JSObject& thisObject, ExceptionThrower&& exceptionThrower = ExceptionThrower())
+    static Result convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value, JSC::JSObject& thisObject, ExceptionThrower&& exceptionThrower = ExceptionThrower())
     {
         auto scope = DECLARE_THROW_SCOPE(JSC::getVM(&lexicalGlobalObject));
 
-        if (UNLIKELY(!value.isObject())) {
+        if (!value.isObject()) [[unlikely]] {
             exceptionThrower(lexicalGlobalObject, scope);
-            return nullptr;
+            return Result::exception();
         }
 
-        bool isAttribute = false;
-        return T::create(*asObject(value), thisObject, isAttribute, currentWorld(lexicalGlobalObject));
+        constexpr bool isAttribute = false;
+        return Result { T::create(*asObject(value), thisObject, isAttribute, currentWorld(lexicalGlobalObject)) };
     }
 };
 

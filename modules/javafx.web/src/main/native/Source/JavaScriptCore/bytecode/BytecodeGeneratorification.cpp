@@ -78,7 +78,7 @@ public:
                 auto bytecode = instruction->as<OpYield>();
                 unsigned liveCalleeLocalsIndex = bytecode.m_yieldPoint;
                 if (liveCalleeLocalsIndex >= m_yields.size())
-                    m_yields.resize(liveCalleeLocalsIndex + 1);
+                    m_yields.grow(liveCalleeLocalsIndex + 1);
                 YieldData& data = m_yields[liveCalleeLocalsIndex];
                 data.point = instruction.offset();
                 data.argument = bytecode.m_argument;
@@ -93,7 +93,7 @@ public:
                 data.m_scope = bytecode.m_scope;
                 data.m_symbolTable = bytecode.m_symbolTable;
                 data.m_initialValue = bytecode.m_initialValue;
-                m_generatorFrameData = WTFMove(data);
+                m_generatorFrameData = WTF::move(data);
                 break;
             }
 
@@ -147,7 +147,7 @@ private:
         // It means that, the register can be retrieved even if the immediate previous op_save does not save it.
 
         if (m_storages.size() <= index)
-            m_storages.resize(index + 1);
+            m_storages.grow(index + 1);
         if (std::optional<Storage> storage = m_storages[index])
             return *storage;
 
@@ -220,13 +220,14 @@ void BytecodeGeneratorification::run()
         auto& jumpTable = m_codeBlock->addUnlinkedSwitchJumpTable();
         jumpTable.m_min = 0;
         jumpTable.m_branchOffsets = FixedVector<int32_t>(m_yields.size() + 1);
-        std::fill(jumpTable.m_branchOffsets.begin(), jumpTable.m_branchOffsets.end(), 0);
+        std::ranges::fill(jumpTable.m_branchOffsets, 0);
         jumpTable.add(0, nextToEnterPoint.offset());
         for (unsigned i = 0; i < m_yields.size(); ++i)
             jumpTable.add(i + 1, m_yields[i].point);
+        jumpTable.m_defaultOffset = nextToEnterPoint.offset();
 
         rewriter.insertFragmentBefore(nextToEnterPoint, [&] (BytecodeRewriter::Fragment& fragment) {
-            fragment.appendInstruction<OpSwitchImm>(switchTableIndex, BoundLabel(nextToEnterPoint.offset()), state);
+            fragment.appendInstruction<OpSwitchImm>(switchTableIndex, state);
         });
     }
 
@@ -266,7 +267,8 @@ void BytecodeGeneratorification::run()
                     storage.identifierIndex, // identifier
                     GetPutInfo(DoNotThrowIfNotFound, ResolvedClosureVar, InitializationMode::NotInitialization, m_bytecodeGenerator.ecmaMode()), // info
                     0, // local scope depth
-                    storage.scopeOffset.offset() // scope offset
+                    storage.scopeOffset.offset(), // scope offset
+                    m_bytecodeGenerator.nextValueProfileIndex()
                 );
             });
         });
@@ -288,7 +290,7 @@ void BytecodeGeneratorification::run()
 
 void performGeneratorification(BytecodeGenerator& bytecodeGenerator, UnlinkedCodeBlockGenerator* codeBlock, JSInstructionStreamWriter& instructions, SymbolTable* generatorFrameSymbolTable, int generatorFrameSymbolTableIndex)
 {
-    if (UNLIKELY(Options::dumpBytecodesBeforeGeneratorification())) {
+    if (Options::dumpBytecodesBeforeGeneratorification()) [[unlikely]] {
         dataLogLn("Bytecodes before generatorification");
         CodeBlockBytecodeDumper<UnlinkedCodeBlockGenerator>::dumpBlock(codeBlock, instructions, WTF::dataFile());
     }
@@ -296,7 +298,7 @@ void performGeneratorification(BytecodeGenerator& bytecodeGenerator, UnlinkedCod
     BytecodeGeneratorification pass(bytecodeGenerator, codeBlock, instructions, generatorFrameSymbolTable, generatorFrameSymbolTableIndex);
     pass.run();
 
-    if (UNLIKELY(Options::dumpBytecodesBeforeGeneratorification())) {
+    if (Options::dumpBytecodesBeforeGeneratorification()) [[unlikely]] {
         dataLogLn("Bytecodes after generatorification");
         CodeBlockBytecodeDumper<UnlinkedCodeBlockGenerator>::dumpBlock(codeBlock, instructions, WTF::dataFile());
     }

@@ -258,7 +258,7 @@ GstFlowReturn   gst_audio_encoder_finish_frame (GstAudioEncoder * enc,
 GST_AUDIO_API
 GstCaps *       gst_audio_encoder_proxy_getcaps (GstAudioEncoder * enc,
                                                  GstCaps         * caps,
-                                                 GstCaps         * filter);
+                                                 GstCaps         * filter) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_AUDIO_API
 gboolean        gst_audio_encoder_set_output_format  (GstAudioEncoder    * enc,
@@ -269,7 +269,7 @@ gboolean        gst_audio_encoder_negotiate          (GstAudioEncoder * enc);
 
 GST_AUDIO_API
 GstBuffer *     gst_audio_encoder_allocate_output_buffer (GstAudioEncoder * enc,
-                                                          gsize             size);
+                                                          gsize             size) G_GNUC_WARN_UNUSED_RESULT;
 
 /* context parameters */
 

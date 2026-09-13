@@ -34,16 +34,17 @@ namespace WebCore {
 class MathMLRowElement;
 
 class RenderMathMLMath final : public RenderMathMLRow {
-    WTF_MAKE_ISO_ALLOCATED(RenderMathMLMath);
+    WTF_MAKE_TZONE_ALLOCATED(RenderMathMLMath);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderMathMLMath);
 public:
     RenderMathMLMath(MathMLRowElement&, RenderStyle&&);
+    virtual ~RenderMathMLMath();
 
 private:
-    bool isRenderMathMLMath() const final { return true; }
     ASCIILiteral renderName() const final { return "RenderMathMLMath"_s; }
 
     void centerChildren(LayoutUnit contentWidth);
-    void layoutBlock(bool relayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) final;
+    void layoutBlock(RelayoutChildren, LayoutUnit pageLogicalHeight = 0_lu) final;
 };
 
 }

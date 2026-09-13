@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "JSCJSValue.h"
-#include "PropertySlot.h"
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/PropertySlot.h>
 #include <wtf/Assertions.h>
 
 namespace JSC {
@@ -34,7 +34,7 @@ namespace JSC {
 class JSObject;
 class JSFunction;
 
-using CustomAccessorValueFunc = FunctionPtr<CustomAccessorPtrTag, bool(JSGlobalObject*, EncodedJSValue, EncodedJSValue, PropertyName)>;
+using CustomAccessorValueFunc = FunctionPtr<CustomAccessorPtrTag, bool(JSGlobalObject*, EncodedJSValue, EncodedJSValue, PropertyName), FunctionAttributes::JITOperation>;
 
 class PutPropertySlot {
 public:

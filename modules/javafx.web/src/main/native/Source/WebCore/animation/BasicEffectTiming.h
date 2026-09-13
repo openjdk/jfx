@@ -25,17 +25,18 @@
 
 #pragma once
 
-#include "AnimationEffectPhase.h"
+#include <WebCore/AnimationEffectPhase.h>
+#include <WebCore/WebAnimationTime.h>
 #include <wtf/Markable.h>
 #include <wtf/Seconds.h>
 
 namespace WebCore {
 
 struct BasicEffectTiming {
-    Markable<Seconds, Seconds::MarkableTraits> localTime;
-    Markable<Seconds, Seconds::MarkableTraits> activeTime;
-    Seconds endTime;
-    Seconds activeDuration;
+    std::optional<WebAnimationTime> localTime;
+    std::optional<WebAnimationTime> activeTime;
+    WebAnimationTime endTime;
+    WebAnimationTime activeDuration;
     AnimationEffectPhase phase;
 };
 

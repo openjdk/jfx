@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,7 +33,7 @@
 #include "JSCellInlines.h"
 #include "JSGlobalObject.h"
 #include "Options.h"
-#include "VMInspectorInlines.h"
+#include "VMManager.h"
 #include <wtf/DataLog.h>
 
 #if OS(DARWIN)
@@ -64,6 +64,8 @@ PrintStream& logFile()
 #endif
 }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 void logF(const char* format, ...)
 {
     va_list argList;
@@ -80,6 +82,8 @@ void logLnF(const char* format, ...)
     va_end(argList);
     logFile().println();
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 Random::Random(VM& vm)
 {
@@ -114,7 +118,7 @@ bool Random::reloadAndCheckShouldAuditSlow(VM& vm)
 void auditCellMinimallySlow(VM&, JSCell* cell)
 {
     if (Gigacage::contains(cell)) {
-        if (cell->type() != JSImmutableButterflyType) {
+        if (cell->type() != JSCellButterflyType) {
             if (IntegrityInternal::verbose)
                 dataLogLn("Integrity ERROR: Bad cell ", RawPointer(cell), " ", JSValue(cell));
             CRASH();
@@ -175,10 +179,10 @@ JSValue doAudit(JSValue value)
 
 bool Analyzer::analyzeVM(VM& vm, Analyzer::Action action)
 {
-    IA_ASSERT_WITH_ACTION(VMInspector::isValidVM(&vm), {
-        VMInspector::dumpVMs();
+    IA_ASSERT_WITH_ACTION(VMManager::isValidVM(&vm), {
+        VMManager::dumpVMs();
         if (action == Action::LogAndCrash)
-            RELEASE_ASSERT(VMInspector::isValidVM(&vm));
+            RELEASE_ASSERT(VMManager::isValidVM(&vm));
         else
             return false;
     }, "Invalid VM %p", &vm);
@@ -250,7 +254,7 @@ bool Analyzer::analyzeCell(VM& vm, JSCell* cell, Analyzer::Action action)
     }
 
     JSType cellType = cell->type();
-    if (cell->type() != JSImmutableButterflyType)
+    if (cell->type() != JSCellButterflyType)
         AUDIT_VERIFY(!Gigacage::contains(cell), "cell %p cell.type %d", cell, cellType);
 
     WeakSet& weakSet = cell->cellContainer().weakSet();
@@ -271,7 +275,7 @@ bool Analyzer::analyzeCell(VM& vm, JSCell* cell, Analyzer::Action action)
         "cell %p cell.type %d structureID.bits 0x%x", cell, cellType, structureID.bits());
     if (action == Analyzer::Action::LogAndCrash) {
         // structure should be pointing to readable memory. Force a read.
-        WTF::opaque(*bitwise_cast<uintptr_t*>(structure));
+        WTF::opaque(*std::bit_cast<uintptr_t*>(structure));
     }
 
     const ClassInfo* classInfo = structure->classInfoForCells();
@@ -289,13 +293,6 @@ bool Analyzer::analyzeCell(VM& vm, JSCell* cell, Analyzer::Action action)
     if (cell->isObject()) {
         AUDIT_VERIFY(jsDynamicCast<JSObject*>(cell),
             "cell %p cell.type %d", cell, cell->type());
-
-        if (Gigacage::isEnabled(Gigacage::JSValue)) {
-            JSObject* object = bitwise_cast<JSObject*>(cell);
-            const Butterfly* butterfly = object->butterfly();
-            AUDIT_VERIFY(!butterfly || Gigacage::isCaged(Gigacage::JSValue, butterfly),
-                "cell %p cell.type %d butterfly %p", cell, cell->type(), butterfly);
-        }
     }
 
     return true;
@@ -306,7 +303,7 @@ bool Analyzer::analyzeCell(JSCell* cell, Analyzer::Action action)
     if (!cell)
         return cell;
 
-    JSValue value = JSValue::decode(static_cast<EncodedJSValue>(bitwise_cast<uintptr_t>(cell)));
+    JSValue value = JSValue::decode(static_cast<EncodedJSValue>(std::bit_cast<uintptr_t>(cell)));
     AUDIT_VERIFY(value.isCell(), "Invalid cell address: cell %p", cell);
 
     VM& vm = cell->vm();

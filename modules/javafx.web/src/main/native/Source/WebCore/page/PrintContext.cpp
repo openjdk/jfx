@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2007 Alp Toker <alp@atoker.com>
- * Copyright (C) 2007-2023 Apple Inc.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -21,21 +21,35 @@
 #include "config.h"
 #include "PrintContext.h"
 
+#include "AXIsolatedTree.h"
+#include "AXObjectCacheInlines.h"
 #include "CommonAtomStrings.h"
+#include "ContainerNodeInlines.h"
+#include "DocumentView.h"
 #include "ElementTraversal.h"
+#include "FrameDestructionObserverInlines.h"
 #include "GraphicsContext.h"
-#include "LengthBox.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameView.h"
 #include "Logging.h"
-#include "RenderStyleInlines.h"
+#include "NodeDocument.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderView.h"
-#include "StyleInheritedData.h"
+#include "Settings.h"
 #include "StyleResolver.h"
 #include "StyleScope.h"
-#include <wtf/text/StringConcatenateNumbers.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PrintContext);
+
+Ref<PrintContext> PrintContext::create(LocalFrame* frame)
+{
+    return adoptRef(*new PrintContext(frame));
+}
 
 PrintContext::PrintContext(LocalFrame* frame)
     : FrameDestructionObserver(frame)
@@ -76,8 +90,8 @@ void PrintContext::computePageRects(const FloatRect& printRect, float headerHeig
     outPageHeight = pageHeight; // this is the height of the page adjusted by margins
     pageHeight -= headerHeight + footerHeight;
 
-    if (pageHeight <= 0) {
-        LOG_ERROR("pageHeight has bad value %.2f", pageHeight);
+    if (pageWidth <= 0 || pageHeight <= 0) {
+        LOG_ERROR("pageSize has bad values: width=%.2f height=%.2f", pageWidth, pageHeight);
         return;
     }
 
@@ -88,16 +102,25 @@ FloatBoxExtent PrintContext::computedPageMargin(FloatBoxExtent printMargin)
 {
     if (!frame() || !frame()->document())
         return printMargin;
-    if (!frame()->settings().pageAtRuleSupportEnabled())
+    if (!frame()->settings().pageAtRuleMarginDescriptorsEnabled())
         return printMargin;
     // FIXME Currently no pseudo class is supported.
     auto style = frame()->document()->styleScope().resolver().styleForPage(0);
 
-    float pixelToPointScaleFactor = 1 / CSSPrimitiveValue::conversionToCanonicalUnitsScaleFactor(CSSUnitType::CSS_PT).value();
-    return { style->marginTop().isAuto() ? printMargin.top() : style->marginTop().value() * pixelToPointScaleFactor,
-        style->marginRight().isAuto() ? printMargin.right() : style->marginRight().value() * pixelToPointScaleFactor,
-        style->marginBottom().isAuto() ? printMargin.bottom() : style->marginBottom().value() * pixelToPointScaleFactor,
-        style->marginLeft().isAuto() ? printMargin.left() : style->marginLeft().value() * pixelToPointScaleFactor };
+    float pixelToPointScaleFactor = 1.0f / CSS::pixelsPerPt;
+
+    auto marginTop = style->marginTop().tryFixed();
+    auto marginRight = style->marginRight().tryFixed();
+    auto marginBottom = style->marginBottom().tryFixed();
+    auto marginLeft = style->marginLeft().tryFixed();
+    const auto& zoomFactor = style->usedZoomForLength();
+
+    return {
+        marginTop ? marginTop->resolveZoom(zoomFactor) * pixelToPointScaleFactor : printMargin.top(),
+        marginRight ? marginRight->resolveZoom(zoomFactor) * pixelToPointScaleFactor : printMargin.right(),
+        marginBottom ? marginBottom->resolveZoom(zoomFactor) * pixelToPointScaleFactor : printMargin.bottom(),
+        marginLeft ? marginLeft->resolveZoom(zoomFactor) * pixelToPointScaleFactor : printMargin.left(),
+    };
 }
 
 FloatSize PrintContext::computedPageSize(FloatSize pageSize, FloatBoxExtent printMargin)
@@ -134,7 +157,7 @@ void PrintContext::computePageRectsWithPageSizeInternal(const FloatSize& pageSiz
     int pageWidth = pageSizeInPixels.width();
     int pageHeight = pageSizeInPixels.height();
 
-    bool isHorizontal = view->style().isHorizontalWritingMode();
+    bool isHorizontal = view->writingMode().isHorizontal();
 
     int docLogicalHeight = isHorizontal ? docRect.height() : docRect.width();
     int pageLogicalHeight = isHorizontal ? pageHeight : pageWidth;
@@ -145,25 +168,25 @@ void PrintContext::computePageRectsWithPageSizeInternal(const FloatSize& pageSiz
     int blockDirectionStart;
     int blockDirectionEnd;
     if (isHorizontal) {
-        if (view->style().isFlippedBlocksWritingMode()) {
+        if (view->writingMode().isBlockFlipped()) {
             blockDirectionStart = docRect.maxY();
             blockDirectionEnd = docRect.y();
         } else {
             blockDirectionStart = docRect.y();
             blockDirectionEnd = docRect.maxY();
         }
-        inlineDirectionStart = view->style().isLeftToRightDirection() ? docRect.x() : docRect.maxX();
-        inlineDirectionEnd = view->style().isLeftToRightDirection() ? docRect.maxX() : docRect.x();
+        inlineDirectionStart = view->writingMode().isInlineLeftToRight() ? docRect.x() : docRect.maxX();
+        inlineDirectionEnd = view->writingMode().isInlineLeftToRight() ? docRect.maxX() : docRect.x();
     } else {
-        if (view->style().isFlippedBlocksWritingMode()) {
+        if (view->writingMode().isBlockFlipped()) {
             blockDirectionStart = docRect.maxX();
             blockDirectionEnd = docRect.x();
         } else {
             blockDirectionStart = docRect.x();
             blockDirectionEnd = docRect.maxX();
         }
-        inlineDirectionStart = view->style().isLeftToRightDirection() ? docRect.y() : docRect.maxY();
-        inlineDirectionEnd = view->style().isLeftToRightDirection() ? docRect.maxY() : docRect.y();
+        inlineDirectionStart = view->writingMode().isInlineTopToBottom() ? docRect.y() : docRect.maxY();
+        inlineDirectionEnd = view->writingMode().isInlineTopToBottom() ? docRect.maxY() : docRect.y();
     }
 
     unsigned pageCount = ceilf((float)docLogicalHeight / pageLogicalHeight);
@@ -206,7 +229,7 @@ void PrintContext::begin(float width, float height)
     FloatSize minLayoutSize = frame->resizePageRectsKeepingRatio(originalPageSize, FloatSize(width * minimumShrinkFactor(), height * minimumShrinkFactor()));
 
     // This changes layout, so callers need to make sure that they don't paint to screen while in printing mode.
-    frame->setPrinting(true, minLayoutSize, originalPageSize, maximumShrinkFactor() / minimumShrinkFactor(), AdjustViewSize);
+    frame->setPrinting(true, minLayoutSize, originalPageSize, maximumShrinkFactor() / minimumShrinkFactor(), AdjustViewSize::Yes);
 }
 
 float PrintContext::computeAutomaticScaleFactor(const FloatSize& availablePaperSize)
@@ -220,7 +243,7 @@ float PrintContext::computeAutomaticScaleFactor(const FloatSize& availablePaperS
 
     bool useViewWidth = true;
     if (frame.document() && frame.document()->renderView())
-        useViewWidth = frame.document()->renderView()->style().isHorizontalWritingMode();
+        useViewWidth = frame.document()->renderView()->writingMode().isHorizontal();
 
     float viewLogicalWidth = useViewWidth ? frame.view()->contentsWidth() : frame.view()->contentsHeight();
     if (viewLogicalWidth < 1)
@@ -253,7 +276,7 @@ void PrintContext::spoolPage(GraphicsContext& ctx, int pageNumber, float width)
     ctx.translate(-pageRect.x(), -pageRect.y());
     ctx.clip(pageRect);
     frame.view()->paintContents(ctx, pageRect);
-    outputLinkedDestinations(ctx, *frame.document(), pageRect);
+    outputLinkedDestinations(ctx, *frame.protectedDocument(), pageRect);
     ctx.restore();
 }
 
@@ -283,7 +306,7 @@ void PrintContext::end()
     auto& frame = *this->frame();
     ASSERT(m_isPrinting);
     m_isPrinting = false;
-    frame.setPrinting(false, FloatSize(), FloatSize(), 0, AdjustViewSize);
+    frame.setPrinting(false, FloatSize(), FloatSize(), 0, AdjustViewSize::Yes);
     m_linkedDestinations = nullptr;
 }
 
@@ -306,17 +329,17 @@ int PrintContext::pageNumberForElement(Element* element, const FloatSize& pageSi
 
     auto* frame = element->document().frame();
     FloatRect pageRect(FloatPoint(0, 0), pageSizeInPixels);
-    PrintContext printContext(frame);
-    printContext.begin(pageRect.width(), pageRect.height());
+    Ref printContext = PrintContext::create(frame);
+    printContext->begin(pageRect.width(), pageRect.height());
     FloatSize scaledPageSize = pageSizeInPixels;
     scaledPageSize.scale(frame->view()->contentsSize().width() / pageRect.width());
-    printContext.computePageRectsWithPageSize(scaledPageSize, false);
+    printContext->computePageRectsWithPageSize(scaledPageSize, false);
 
     int top = roundToInt(box->offsetTop());
     int left = roundToInt(box->offsetLeft());
     size_t pageNumber = 0;
-    for (; pageNumber < printContext.pageCount(); pageNumber++) {
-        const IntRect& page = printContext.pageRect(pageNumber);
+    for (; pageNumber < printContext->pageCount(); pageNumber++) {
+        const IntRect& page = printContext->pageRect(pageNumber);
         if (page.x() <= left && left < page.maxX() && page.y() <= top && top < page.maxY())
             return pageNumber;
     }
@@ -325,9 +348,9 @@ int PrintContext::pageNumberForElement(Element* element, const FloatSize& pageSi
 
 void PrintContext::collectLinkedDestinations(Document& document)
 {
-    for (Element* child = document.documentElement(); child; child = ElementTraversal::next(*child)) {
+    for (RefPtr child = document.documentElement(); child; child = ElementTraversal::next(*child)) {
         String outAnchorName;
-        if (Element* element = child->findAnchorElementForLink(outAnchorName))
+        if (RefPtr element = child->findAnchorElementForLink(outAnchorName))
             m_linkedDestinations->add(outAnchorName, *element);
     }
 }
@@ -357,35 +380,63 @@ void PrintContext::outputLinkedDestinations(GraphicsContext& graphicsContext, Do
     }
 }
 
-String PrintContext::pageProperty(LocalFrame* frame, const char* propertyName, int pageNumber)
+String PrintContext::pageProperty(LocalFrame* frame, const String& propertyName, int pageNumber)
 {
     ASSERT(frame);
     ASSERT(frame->document());
 
     Ref protectedFrame { *frame };
 
-    auto& document = *frame->document();
-    PrintContext printContext(frame);
-    printContext.begin(800); // Any width is OK here.
-    document.updateLayout();
-    auto style = document.styleScope().resolver().styleForPage(pageNumber);
+    RefPtr document = frame->document();
+    Ref printContext = PrintContext::create(frame);
+    printContext->begin(800); // Any width is OK here.
+    document->updateLayout();
+    auto style = document->styleScope().resolver().styleForPage(pageNumber);
 
     // Implement formatters for properties we care about.
-    if (!strcmp(propertyName, "margin-left")) {
-        if (style->marginLeft().isAuto())
+    if (propertyName == "margin-left"_s) {
+        if (auto marginLeft = style->marginLeft().tryFixed())
+            return makeString(marginLeft->resolveZoom(style->usedZoomForLength()));
             return autoAtom();
-        return String::number(style->marginLeft().value());
     }
-    if (!strcmp(propertyName, "line-height"))
-        return String::number(style->lineHeight().value());
-    if (!strcmp(propertyName, "font-size"))
-        return String::number(style->fontDescription().computedSize());
-    if (!strcmp(propertyName, "font-family"))
+    if (propertyName == "line-height"_s) {
+        return WTF::switchOn(style->lineHeight(),
+            [&](const CSS::Keyword::Normal&) -> String {
+                return "0"_s;
+            },
+            [&](const Style::LineHeight::Fixed& fixed) -> String {
+                return makeString(fixed.resolveZoom(style->usedZoomForLength()));
+            },
+            [&](const Style::LineHeight::Percentage& percentage) -> String {
+                return makeString(percentage.value);
+            },
+            [&](const Style::LineHeight::Calc&) -> String {
+                return "0"_s;
+            }
+        );
+    }
+    if (propertyName == "font-size"_s)
+        return makeString(style->fontDescription().computedSize());
+    if (propertyName == "font-family"_s)
         return style->fontDescription().firstFamily();
-    if (!strcmp(propertyName, "size"))
-        return makeString(style->pageSize().width.value(), ' ', style->pageSize().height.value());
+    if (propertyName == "size"_s) {
+        return WTF::switchOn(style->pageSize(),
+            [&](const CSS::Keyword::Auto&) -> String {
+                return "auto"_s;
+            },
+            [&](const CSS::Keyword::Landscape&) -> String {
+                return "landscape"_s;
+            },
+            [&](const CSS::Keyword::Portrait&) -> String {
+                return "portrait"_s;
+            },
+            [&](const Style::PageSize::Lengths& lengths) {
+                return makeString(lengths.width().resolveZoom(Style::ZoomNeeded { }), ' ', lengths.height().resolveZoom(Style::ZoomNeeded { }));
+            }
+        );
+    }
 
-    return makeString("pageProperty() unimplemented for: ", propertyName);
+    return makeString("pageProperty() unimplemented for: "_s, propertyName);
 }
 
 bool PrintContext::isPageBoxVisible(LocalFrame* frame, int pageNumber)
@@ -398,7 +449,7 @@ String PrintContext::pageSizeAndMarginsInPixels(LocalFrame* frame, int pageNumbe
     IntSize pageSize(width, height);
     frame->document()->pageSizeAndMarginsInPixels(pageNumber, pageSize, marginTop, marginRight, marginBottom, marginLeft);
 
-    return makeString('(', pageSize.width(), ", ", pageSize.height(), ") ", marginTop, ' ', marginRight, ' ', marginBottom, ' ', marginLeft);
+    return makeString('(', pageSize.width(), ", "_s, pageSize.height(), ") "_s, marginTop, ' ', marginRight, ' ', marginBottom, ' ', marginLeft);
 }
 
 bool PrintContext::beginAndComputePageRectsWithPageSize(LocalFrame& frame, const FloatSize& pageSizeInPixels)
@@ -421,23 +472,23 @@ int PrintContext::numberOfPages(LocalFrame& frame, const FloatSize& pageSizeInPi
 {
     Ref protectedFrame { frame };
 
-    PrintContext printContext(&frame);
-    if (!printContext.beginAndComputePageRectsWithPageSize(frame, pageSizeInPixels))
+    Ref printContext = PrintContext::create(&frame);
+    if (!printContext->beginAndComputePageRectsWithPageSize(frame, pageSizeInPixels))
         return -1;
 
-    return printContext.pageCount();
+    return printContext->pageCount();
 }
 
 void PrintContext::spoolAllPagesWithBoundaries(LocalFrame& frame, GraphicsContext& graphicsContext, const FloatSize& pageSizeInPixels)
 {
     Ref protectedFrame { frame };
 
-    PrintContext printContext(&frame);
-    if (!printContext.beginAndComputePageRectsWithPageSize(frame, pageSizeInPixels))
+    Ref printContext = PrintContext::create(&frame);
+    if (!printContext->beginAndComputePageRectsWithPageSize(frame, pageSizeInPixels))
         return;
 
     const float pageWidth = pageSizeInPixels.width();
-    const Vector<IntRect>& pageRects = printContext.pageRects();
+    const Vector<IntRect>& pageRects = printContext->pageRects();
     int totalHeight = pageRects.size() * (pageSizeInPixels.height() + 1) - 1;
 
     // Fill the whole background by white.
@@ -464,7 +515,7 @@ void PrintContext::spoolAllPagesWithBoundaries(LocalFrame& frame, GraphicsContex
 
         graphicsContext.save();
         graphicsContext.translate(0, currentHeight);
-        printContext.spoolPage(graphicsContext, pageIndex, pageWidth);
+        printContext->spoolPage(graphicsContext, pageIndex, pageWidth);
         graphicsContext.restore();
 
         currentHeight += pageSizeInPixels.height() + 1;

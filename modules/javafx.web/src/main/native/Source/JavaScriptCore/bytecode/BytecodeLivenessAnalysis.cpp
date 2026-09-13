@@ -31,15 +31,19 @@
 #include "CodeBlock.h"
 #include "FullBytecodeLiveness.h"
 #include "JSCJSValueInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(BytecodeLivenessAnalysis);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FullBytecodeLiveness);
 
 BytecodeLivenessAnalysis::BytecodeLivenessAnalysis(CodeBlock* codeBlock)
     : m_graph(codeBlock, codeBlock->instructions())
 {
     runLivenessFixpoint(codeBlock, codeBlock->instructions(), m_graph);
 
-    if (UNLIKELY(Options::dumpBytecodeLivenessResults()))
+    if (Options::dumpBytecodeLivenessResults()) [[unlikely]]
         dumpResults(codeBlock);
 }
 
@@ -176,9 +180,11 @@ WTF::BitSet<maxNumCheckpointTmps> tmpLivenessForCheckpoint(const CodeBlock& code
     switch (codeBlock.instructions().at(bytecodeIndex)->opcodeID()) {
     case op_call_varargs:
     case op_tail_call_varargs:
-    case op_construct_varargs: {
+    case op_construct_varargs:
+    case op_super_construct_varargs: {
         static_assert(enumValuesEqualAsIntegral(OpCallVarargs::makeCall, OpTailCallVarargs::makeCall) && enumValuesEqualAsIntegral(OpCallVarargs::argCountIncludingThis, OpTailCallVarargs::argCountIncludingThis));
         static_assert(enumValuesEqualAsIntegral(OpCallVarargs::makeCall, OpConstructVarargs::makeCall) && enumValuesEqualAsIntegral(OpCallVarargs::argCountIncludingThis, OpConstructVarargs::argCountIncludingThis));
+        static_assert(enumValuesEqualAsIntegral(OpCallVarargs::makeCall, OpSuperConstructVarargs::makeCall) && enumValuesEqualAsIntegral(OpCallVarargs::argCountIncludingThis, OpSuperConstructVarargs::argCountIncludingThis));
         if (checkpoint == OpCallVarargs::makeCall)
             result.set(OpCallVarargs::argCountIncludingThis);
         return result;
@@ -188,6 +194,9 @@ WTF::BitSet<maxNumCheckpointTmps> tmpLivenessForCheckpoint(const CodeBlock& code
     }
     case op_iterator_next: {
         result.set(OpIteratorNext::nextResult);
+        return result;
+    }
+    case op_instanceof: {
         return result;
     }
     default:

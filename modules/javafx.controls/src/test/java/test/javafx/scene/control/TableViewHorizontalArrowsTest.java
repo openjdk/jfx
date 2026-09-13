@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,43 +25,37 @@
 
 package test.javafx.scene.control;
 
-import java.util.Arrays;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static test.com.sun.javafx.scene.control.infrastructure.KeyModifier.getShortcutKey;
 import java.util.Collection;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-import static org.junit.Assert.*;
-import static test.com.sun.javafx.scene.control.infrastructure.KeyModifier.*;
-
-import com.sun.javafx.util.Utils;
+import java.util.List;
 import javafx.geometry.NodeOrientation;
-import javafx.scene.input.KeyCode;
 import javafx.scene.control.SelectionMode;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TablePosition;
 import javafx.scene.control.TableView;
+import javafx.scene.input.KeyCode;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import com.sun.javafx.util.Utils;
 import test.com.sun.javafx.scene.control.behavior.TableViewAnchorRetriever;
 import test.com.sun.javafx.scene.control.infrastructure.KeyEventFirer;
 import test.com.sun.javafx.scene.control.infrastructure.KeyModifier;
 import test.com.sun.javafx.scene.control.infrastructure.StageLoader;
 
-
 /**
  * Test basic horizontal navigation mappings for TableView.
  * It is parameterized on NodeOrientation
  */
-@RunWith(Parameterized.class)
 public class TableViewHorizontalArrowsTest {
-    @Parameterized.Parameters
-    public static Collection<?> implementations() {
-        return Arrays.asList(new Object[][] {
-            {NodeOrientation.LEFT_TO_RIGHT},
-            {NodeOrientation.RIGHT_TO_LEFT}
-        });
+    private static Collection<NodeOrientation> parameters() {
+        return List.of(
+            NodeOrientation.LEFT_TO_RIGHT,
+            NodeOrientation.RIGHT_TO_LEFT
+        );
     }
 
     private TableView<String> tableView;
@@ -78,12 +72,10 @@ public class TableViewHorizontalArrowsTest {
     private StageLoader stageLoader;
     private NodeOrientation orientation;
 
-    public TableViewHorizontalArrowsTest(NodeOrientation val) {
-        orientation = val;
-    }
-
-    @Before
-    public void setup() {
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    public void setup(NodeOrientation orientation) {
+        this.orientation = orientation;
         tableView = new TableView<>();
         tableView.setNodeOrientation(orientation);
         sm = tableView.getSelectionModel();
@@ -107,7 +99,7 @@ public class TableViewHorizontalArrowsTest {
         stageLoader.getStage().show();
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         tableView.getSkin().dispose();
         stageLoader.dispose();
@@ -119,8 +111,7 @@ public class TableViewHorizontalArrowsTest {
      * sets the tableView's orientation to the new toggled value
      */
     private void toggleNodeOrientation() {
-        orientation = (orientation == NodeOrientation.LEFT_TO_RIGHT?
-            NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.LEFT_TO_RIGHT);
+        orientation = (orientation == NodeOrientation.LEFT_TO_RIGHT ? NodeOrientation.RIGHT_TO_LEFT : NodeOrientation.LEFT_TO_RIGHT);
         tableView.setNodeOrientation(orientation);
     }
 
@@ -165,44 +156,54 @@ public class TableViewHorizontalArrowsTest {
 
     // ----------------------- Tests ----------------------------
 
-    @Test
-    public void testForwardSelect() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testForwardSelect(NodeOrientation orientation) {
+        setup(orientation);
         sm.select(0, col0);
         forward();
-        assertTrue("next cell must be selected", sm.isSelected(0, col1));
-        assertFalse("old cell not be selected", sm.isSelected(0, col0));
+        assertTrue(sm.isSelected(0, col1), "next cell must be selected");
+        assertFalse(sm.isSelected(0, col0), "old cell not be selected");
     }
 
-    @Test
-    public void testBackwardSelect() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testBackwardSelect(NodeOrientation orientation) {
+        setup(orientation);
         sm.select(0, col4);
         backward();
-        assertTrue("next cell must be selected", sm.isSelected(0, col3));
-        assertFalse("old cell not be selected", sm.isSelected(0, col4));
+        assertTrue(sm.isSelected(0, col3), "next cell must be selected");
+        assertFalse(sm.isSelected(0, col4), "old cell not be selected");
     }
 
-    @Test
-    public void testForwardFocus() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testForwardFocus(NodeOrientation orientation) {
+        setup(orientation);
         sm.select(0, col0);
         forward(getShortcutKey());
-        assertTrue("selected cell must still be selected", sm.isSelected(0, col0));
-        assertFalse("next cell must not be selected", sm.isSelected(0, col1));
+        assertTrue(sm.isSelected(0, col0), "selected cell must still be selected");
+        assertFalse(sm.isSelected(0, col1), "next cell must not be selected");
         TablePosition<?, ?> focusedCell = fm.getFocusedCell();
-        assertEquals("focused cell must moved to next", col1, focusedCell.getTableColumn());
+        assertEquals(col1, focusedCell.getTableColumn(), "focused cell must moved to next");
     }
 
-    @Test
-    public void testBackwardFocus() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testBackwardFocus(NodeOrientation orientation) {
+        setup(orientation);
         sm.select(0, col4);
         backward(getShortcutKey());
-        assertTrue("selected cell must still be selected", sm.isSelected(0, col4));
-        assertFalse("previous cell must not be selected", sm.isSelected(0, col3));
+        assertTrue(sm.isSelected(0, col4), "selected cell must still be selected");
+        assertFalse(sm.isSelected(0, col3), "previous cell must not be selected");
         TablePosition<?, ?> focusedCell = fm.getFocusedCell();
-        assertEquals("focused cell must moved to prev", col3, focusedCell.getTableColumn());
+        assertEquals(col3, focusedCell.getTableColumn(), "focused cell must moved to prev");
     }
 
-    @Test
-    public void testChangeOrientationSimpleForwardSelect() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testChangeOrientationSimpleForwardSelect(NodeOrientation orientation) {
+        setup(orientation);
         sm.select(0, col0);
         forward();
         assertTrue(sm.isSelected(0, col1));
@@ -217,8 +218,10 @@ public class TableViewHorizontalArrowsTest {
         assertTrue(sm.isSelected(0, col2));
     }
 
-    @Test
-    public void testChangeOrientationSimpleBackwardSelect() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testChangeOrientationSimpleBackwardSelect(NodeOrientation orientation) {
+        setup(orientation);
         sm.select(0, col4);
         backward();
         assertTrue(sm.isSelected(0, col3));
@@ -232,64 +235,85 @@ public class TableViewHorizontalArrowsTest {
         assertTrue(sm.isSelected(0, col2));
     }
 
-    @Test public void testShiftBackwardWhenAtFirstCol() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testShiftBackwardWhenAtFirstCol(NodeOrientation orientation) {
+        setup(orientation);
         sm.select(0, col0);
         backward(KeyModifier.SHIFT);
 
-        assertTrue("Selected cell remains selected", sm.isSelected(0, col0));
+        assertTrue(sm.isSelected(0, col0), "Selected cell remains selected");
 
         // We are at the first colum, there is no backward cell
-        assertFalse("sanity - forward cell must not be selected", sm.isSelected(0, col1));
+        assertFalse(sm.isSelected(0, col1), "sanity - forward cell must not be selected");
     }
 
-    @Test public void testShiftForwardWhenAtFirstCol() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testShiftForwardWhenAtFirstCol(NodeOrientation orientation) {
+        setup(orientation);
         sm.select(0, col0);
         forward(KeyModifier.SHIFT);
 
-        assertTrue("Selected cell remains selected", sm.isSelected(0, col0));
-        assertTrue("forward cell must also be selected", sm.isSelected(0, col1));
+        assertTrue(sm.isSelected(0, col0), "Selected cell remains selected");
+        assertTrue(sm.isSelected(0, col1), "forward cell must also be selected");
     }
 
-    @Test public void testShiftBackwardWhenAtLastCol() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testShiftBackwardWhenAtLastCol(NodeOrientation orientation) {
+        setup(orientation);
         sm.select(0, col4);
         backward(KeyModifier.SHIFT);
-        assertTrue("Selected cell remains selected", sm.isSelected(0, col4));
-        assertTrue("backward cell must also be selected", sm.isSelected(0, col3));
+        assertTrue(sm.isSelected(0, col4), "Selected cell remains selected");
+        assertTrue(sm.isSelected(0, col3), "backward cell must also be selected");
     }
 
-    @Test public void testShiftForwardWhenAtLastCol() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testShiftForwardWhenAtLastCol(NodeOrientation orientation) {
+        setup(orientation);
         sm.select(0, col4);
         forward(KeyModifier.SHIFT);
-        assertTrue("Selected cell remains selected", sm.isSelected(0, col4));
+        assertTrue(sm.isSelected(0, col4), "Selected cell remains selected");
 
         // We are at the last colum, there is no forward cell
-        assertFalse("sanity - backward cell must not be selected", sm.isSelected(0, col3));
+        assertFalse(sm.isSelected(0, col3), "sanity - backward cell must not be selected");
     }
 
-    @Test public void testCtrlBackwardDoesNotMoveRowFocus() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testCtrlBackwardDoesNotMoveRowFocus(NodeOrientation orientation) {
+        setup(orientation);
         // Select first row
         sm.clearAndSelect(0);
         assertTrue(fm.isFocused(0));
 
         backward(KeyModifier.getShortcutKey());
 
-        assertTrue("Focus should not change", fm.isFocused(0));
-        assertTrue("Selection should not change", sm.isSelected(0));
+        assertTrue(fm.isFocused(0), "Focus should not change");
+        assertTrue(sm.isSelected(0), "Selection should not change");
     }
 
-    @Test public void testCtrlForwardDoesNotMoveRowFocus() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testCtrlForwardDoesNotMoveRowFocus(NodeOrientation orientation) {
+        setup(orientation);
         // Select first row
         sm.clearAndSelect(0);
         assertTrue(fm.isFocused(0));
 
         forward(KeyModifier.getShortcutKey());
 
-        assertTrue("Focus should not change", fm.isFocused(0));
-        assertTrue("Selection should not change", sm.isSelected(0));
+        assertTrue(fm.isFocused(0), "Focus should not change");
+        assertTrue(sm.isSelected(0), "Selection should not change");
     }
 
-    // Tests for discontinuous multiple cell selection (RT-18951)
-    @Test public void test_rt18591_select_forward_then_backward() {
+    // Tests for discontinuous multiple cell selection (JDK-8120523)
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_rt18591_select_forward_then_backward(NodeOrientation orientation) {
+        setup(orientation);
         sm.select(0, col0);
 
         forward(KeyModifier.getShortcutKey());
@@ -312,7 +336,6 @@ public class TableViewHorizontalArrowsTest {
         assertTrue(sm.isSelected(0, col4));
         assertTrue(isAnchor(0,2));
 
-
         backward(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
         backward(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
         backward(KeyModifier.SHIFT, KeyModifier.getShortcutKey());
@@ -324,7 +347,10 @@ public class TableViewHorizontalArrowsTest {
         assertTrue(sm.isSelected(0, col4));
     }
 
-    @Test public void test_rt18591_select_backward_then_forward() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_rt18591_select_backward_then_forward(NodeOrientation orientation) {
+        setup(orientation);
         sm.select(0, col4);
 
         backward(KeyModifier.getShortcutKey());
@@ -359,7 +385,10 @@ public class TableViewHorizontalArrowsTest {
         assertTrue(sm.isSelected(0, col0));
     }
 
-    @Test public void test_rt18536_forward_focus_and_selectAll() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_rt18536_forward_focus_and_selectAll(NodeOrientation orientation) {
+        setup(orientation);
         // Test shift selection when focus is elsewhere (so as to select a range)
         sm.clearAndSelect(1, col0);
 
@@ -379,7 +408,10 @@ public class TableViewHorizontalArrowsTest {
         assertTrue(sm.isSelected(1, col4));
     }
 
-    @Test public void test_rt18536_backward_focus_and_selectAll() {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void test_rt18536_backward_focus_and_selectAll(NodeOrientation orientation) {
+        setup(orientation);
         // Test shift selection when focus is elsewhere (so as to select a range)
         sm.clearAndSelect(1, col4);
 

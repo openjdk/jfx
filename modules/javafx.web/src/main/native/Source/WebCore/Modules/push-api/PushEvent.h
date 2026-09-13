@@ -25,31 +25,56 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
-#include "ExtendableEvent.h"
-#include "PushEventInit.h"
+#include <WebCore/ExtendableEvent.h>
+#include <WebCore/Notification.h>
+#include <WebCore/NotificationData.h>
+#include <WebCore/PushEventInit.h>
 
 namespace WebCore {
 
 class PushMessageData;
 
 class PushEvent final : public ExtendableEvent {
-    WTF_MAKE_ISO_ALLOCATED(PushEvent);
+    WTF_MAKE_TZONE_ALLOCATED(PushEvent);
 public:
     static Ref<PushEvent> create(const AtomString&, PushEventInit&&, IsTrusted = IsTrusted::No);
     static Ref<PushEvent> create(const AtomString&, ExtendableEventInit&&, std::optional<Vector<uint8_t>>&&, IsTrusted);
     ~PushEvent();
 
-    EventInterface eventInterface() const final { return PushEventInterfaceType; }
     PushMessageData* data() { return m_data.get(); }
+
+#if ENABLE(DECLARATIVE_WEB_PUSH) && ENABLE(NOTIFICATIONS)
+    static Ref<PushEvent> create(const AtomString&, ExtendableEventInit&&, Ref<Notification>, std::optional<uint64_t> appBadge, IsTrusted);
+
+    Notification* notification();
+    std::optional<uint64_t> appBadge();
+
+    Notification* proposedNotification() const { return m_proposedNotification.get(); }
+    std::optional<uint64_t> proposedAppBadge() const { return m_proposedAppBadge; }
+
+    void setUpdatedNotification(Notification* notification) { m_updatedNotification = notification; }
+    std::optional<NotificationData> updatedNotificationData() const;
+
+    void setUpdatedAppBadge(std::optional<uint64_t>&& updatedAppBadge) { m_updatedAppBadge = WTF::move(updatedAppBadge); }
+    const std::optional<std::optional<uint64_t>>& updatedAppBadge() const { return m_updatedAppBadge; }
+#endif // ENABLE(DECLARATIVE_WEB_PUSH) && ENABLE(NOTIFICATIONS)
 
 private:
     PushEvent(const AtomString&, ExtendableEventInit&&, std::optional<Vector<uint8_t>>&&, IsTrusted);
 
     RefPtr<PushMessageData> m_data;
+
+#if ENABLE(DECLARATIVE_WEB_PUSH) && ENABLE(NOTIFICATIONS)
+    PushEvent(const AtomString&, ExtendableEventInit&&, std::optional<Vector<uint8_t>>&&, RefPtr<Notification>, std::optional<uint64_t> appBadge, IsTrusted);
+
+    RefPtr<Notification> m_proposedNotification;
+    std::optional<uint64_t> m_proposedAppBadge;
+
+    RefPtr<Notification> m_updatedNotification;
+    std::optional<std::optional<uint64_t>> m_updatedAppBadge;
+#endif // ENABLE(DECLARATIVE_WEB_PUSH) && ENABLE(NOTIFICATIONS)
 };
 
 } // namespace WebCore
 
-#endif // ENABLE(SERVICE_WORKER)
+SPECIALIZE_TYPE_TRAITS_EXTENDABLEEVENT(PushEvent)

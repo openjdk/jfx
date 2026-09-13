@@ -39,9 +39,9 @@ namespace JSC {
 
 const ClassInfo IntlSegments::s_info = { "Object"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(IntlSegments) };
 
-IntlSegments* IntlSegments::create(VM& vm, Structure* structure, std::unique_ptr<UBreakIterator, UBreakIteratorDeleter>&& segmenter, Box<Vector<UChar>>&& buffer, JSString* string, IntlSegmenter::Granularity granularity)
+IntlSegments* IntlSegments::create(VM& vm, Structure* structure, std::unique_ptr<UBreakIterator, UBreakIteratorDeleter>&& segmenter, Box<Vector<char16_t>>&& buffer, JSString* string, IntlSegmenter::Granularity granularity)
 {
-    auto* object = new (NotNull, allocateCell<IntlSegments>(vm)) IntlSegments(vm, structure, WTFMove(segmenter), WTFMove(buffer), granularity, string);
+    auto* object = new (NotNull, allocateCell<IntlSegments>(vm)) IntlSegments(vm, structure, WTF::move(segmenter), WTF::move(buffer), granularity, string);
     object->finishCreation(vm);
     return object;
 }
@@ -51,10 +51,10 @@ Structure* IntlSegments::createStructure(VM& vm, JSGlobalObject* globalObject, J
     return Structure::create(vm, globalObject, prototype, TypeInfo(ObjectType, StructureFlags), info());
 }
 
-IntlSegments::IntlSegments(VM& vm, Structure* structure, std::unique_ptr<UBreakIterator, UBreakIteratorDeleter>&& segmenter, Box<Vector<UChar>>&& buffer, IntlSegmenter::Granularity granularity, JSString* string)
+IntlSegments::IntlSegments(VM& vm, Structure* structure, std::unique_ptr<UBreakIterator, UBreakIteratorDeleter>&& segmenter, Box<Vector<char16_t>>&& buffer, IntlSegmenter::Granularity granularity, JSString* string)
     : Base(vm, structure)
-    , m_segmenter(WTFMove(segmenter))
-    , m_buffer(WTFMove(buffer))
+    , m_segmenter(WTF::move(segmenter))
+    , m_buffer(WTF::move(buffer))
     , m_string(string, WriteBarrierEarlyInit)
     , m_granularity(granularity)
 {
@@ -101,7 +101,7 @@ JSObject* IntlSegments::createSegmentIterator(JSGlobalObject* globalObject)
     }
 
     ubrk_first(segmenter.get());
-    return IntlSegmentIterator::create(vm, globalObject->segmentIteratorStructure(), WTFMove(segmenter), m_buffer, m_string.get(), m_granularity);
+    return IntlSegmentIterator::create(vm, globalObject->segmentIteratorStructure(), WTF::move(segmenter), m_buffer, m_string.get(), m_granularity);
 }
 
 template<typename Visitor>

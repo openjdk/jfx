@@ -65,7 +65,7 @@ default_func (TaskData * tdata, GstTaskPool * pool)
 
   func = tdata->func;
   user_data = tdata->user_data;
-  g_slice_free (TaskData, tdata);
+  g_free (tdata);
 
   func (user_data);
 }
@@ -102,7 +102,7 @@ default_push (GstTaskPool * pool, GstTaskPoolFunction func,
 {
   TaskData *tdata;
 
-  tdata = g_slice_new (TaskData);
+  tdata = g_new (TaskData, 1);
   tdata->func = func;
   tdata->user_data = user_data;
 
@@ -110,10 +110,9 @@ default_push (GstTaskPool * pool, GstTaskPoolFunction func,
   if (pool->pool)
     g_thread_pool_push (pool->pool, tdata, error);
   else {
-    g_slice_free (TaskData, tdata);
+    g_free (tdata);
     g_set_error_literal (error, GST_CORE_ERROR, GST_CORE_ERROR_FAILED,
         "No thread pool");
-
   }
   GST_OBJECT_UNLOCK (pool);
 
@@ -234,8 +233,8 @@ gst_task_pool_cleanup (GstTaskPool * pool)
 /**
  * gst_task_pool_push:
  * @pool: a #GstTaskPool
- * @func: (scope async): the function to call
- * @user_data: (closure): data to pass to @func
+ * @func: (scope async) (closure user_data): the function to call
+ * @user_data: data to pass to @func
  * @error: return location for an error
  *
  * Start the execution of a new thread from @pool.
@@ -324,6 +323,67 @@ gst_task_pool_dispose_handle (GstTaskPool * pool, gpointer id)
     klass->dispose_handle (pool, id);
 }
 
+/**
+ * gst_context_set_task_pool:
+ * @context: a #GstContext
+ * @pool: (transfer none) (nullable): a #GstTaskPool or %NULL to unset
+ *
+ * Sets @pool on @context as the task pool to be shared between elements.
+ * If @pool is %NULL, any previously set task pool will be removed from
+ * the context.
+ *
+ * Since: 1.28
+ */
+void
+gst_context_set_task_pool (GstContext * context, GstTaskPool * pool)
+{
+  GstStructure *s;
+
+  g_return_if_fail (context != NULL);
+  g_return_if_fail (gst_context_is_writable (context));
+  g_return_if_fail (pool == NULL || GST_IS_TASK_POOL (pool));
+
+  s = gst_context_writable_structure (context);
+  if (pool)
+    gst_structure_set (s, "pool", GST_TYPE_TASK_POOL, pool, NULL);
+  else
+    gst_structure_remove_field (s, "pool");
+}
+
+/**
+ * gst_context_get_task_pool:
+ * @context: a #GstContext
+ * @pool: (out) (transfer full) (nullable): a #GstTaskPool
+ *
+ * Gets the task pool from @context.
+ *
+ * Returns: %TRUE if a task pool was set on @context
+ *
+ * Since: 1.28
+ */
+gboolean
+gst_context_get_task_pool (GstContext * context, GstTaskPool ** pool)
+{
+  const GValue *v;
+
+  g_return_val_if_fail (pool != NULL, FALSE);
+  g_return_val_if_fail (context != NULL, FALSE);
+  g_return_val_if_fail (gst_context_has_context_type (context,
+          GST_TASK_POOL_CONTEXT_TYPE), FALSE);
+
+  v = gst_structure_get_value (gst_context_get_structure (context), "pool");
+
+  if (v) {
+    g_return_val_if_fail (g_type_is_a (v->g_type, GST_TYPE_TASK_POOL), FALSE);
+
+    *pool = g_value_dup_object (v);
+    return TRUE;
+  }
+
+  *pool = NULL;
+  return FALSE;
+}
+
 typedef struct
 {
   gboolean done;
@@ -349,7 +409,7 @@ shared_task_data_unref (SharedTaskData * tdata)
   if (g_atomic_int_dec_and_test (&tdata->refcount)) {
     g_mutex_clear (&tdata->done_lock);
     g_cond_clear (&tdata->done_cond);
-    g_slice_free (SharedTaskData, tdata);
+    g_free (tdata);
   }
 }
 
@@ -389,7 +449,7 @@ shared_push (GstTaskPool * pool, GstTaskPoolFunction func,
     goto done;
   }
 
-  ret = g_slice_new (SharedTaskData);
+  ret = g_new (SharedTaskData, 1);
 
   ret->done = FALSE;
   ret->func = func;

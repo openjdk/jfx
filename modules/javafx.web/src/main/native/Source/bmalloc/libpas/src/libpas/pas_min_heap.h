@@ -28,6 +28,7 @@
 
 #include "pas_allocation_config.h"
 #include "pas_utils.h"
+#include "pas_zero_memory.h"
 #include <stdio.h>
 
 PAS_BEGIN_EXTERN_C;
@@ -260,7 +261,7 @@ PAS_BEGIN_EXTERN_C;
         \
         size_t index = config.get_index(&element); \
         PAS_ASSERT(index); \
-        PAS_ASSERT(!bcmp(name##_get_ptr_by_index(min_heap, index), &element, sizeof(type))); \
+        PAS_ASSERT(!memcmp(name##_get_ptr_by_index(min_heap, index), &element, sizeof(type))); \
         name##_remove_by_index(min_heap, index); \
     } \
     \

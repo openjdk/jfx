@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2011, 2012, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2008-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,20 +35,17 @@
 #include "HTMLNames.h"
 #include "HTMLTableElement.h"
 #include "HTMLTableRowElement.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLTableRowsCollection);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLTableRowsCollection);
 
 static inline void assertRowIsInTable(HTMLTableElement& table, HTMLTableRowElement* row)
 {
 #if ASSERT_ENABLED
-    UNUSED_PARAM(table);
-    UNUSED_PARAM(row);
-#else // not ASSERT_ENABLED
     if (!row)
         return;
     if (row->parentNode() == &table)
@@ -56,6 +53,9 @@ static inline void assertRowIsInTable(HTMLTableElement& table, HTMLTableRowEleme
     ASSERT(row->parentNode());
     ASSERT(row->parentNode()->hasTagName(theadTag) || row->parentNode()->hasTagName(tbodyTag) || row->parentNode()->hasTagName(tfootTag));
     ASSERT(row->parentNode()->parentNode() == &table);
+#else
+    UNUSED_PARAM(table);
+    UNUSED_PARAM(row);
 #endif // not ASSERT_ENABLED
 }
 
@@ -102,8 +102,8 @@ HTMLTableRowElement* HTMLTableRowsCollection::rowAfter(HTMLTableElement& table, 
     else if (isInSection(*previous, tbodyTag))
         child = ElementTraversal::nextSibling(*previous->parentNode());
     for (; child; child = ElementTraversal::nextSibling(*child)) {
-        if (is<HTMLTableRowElement>(*child))
-            return downcast<HTMLTableRowElement>(child.get());
+        if (auto* row = dynamicDowncast<HTMLTableRowElement>(*child))
+            return row;
         if (child->hasTagName(tbodyTag)) {
             if (auto row = childrenOfType<HTMLTableRowElement>(*child).first())
                 return row;
@@ -135,8 +135,8 @@ HTMLTableRowElement* HTMLTableRowsCollection::lastRow(HTMLTableElement& table)
     }
 
     for (auto* child = ElementTraversal::lastChild(table); child; child = ElementTraversal::previousSibling(*child)) {
-        if (is<HTMLTableRowElement>(*child))
-            return downcast<HTMLTableRowElement>(child);
+        if (auto* row = dynamicDowncast<HTMLTableRowElement>(*child))
+            return row;
         if (child->hasTagName(tbodyTag)) {
             if (auto* row = childrenOfType<HTMLTableRowElement>(*child).last())
                 return row;
@@ -166,7 +166,7 @@ Ref<HTMLTableRowsCollection> HTMLTableRowsCollection::create(HTMLTableElement& t
 
 Element* HTMLTableRowsCollection::customElementAfter(Element* previous) const
 {
-    return rowAfter(const_cast<HTMLTableElement&>(tableElement()), downcast<HTMLTableRowElement>(previous));
+    return rowAfter(protectedTableElement().get(), downcast<HTMLTableRowElement>(previous));
 }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,8 +34,13 @@
 #include "CCallHelpers.h"
 #include "Disassembler.h"
 #include "LinkBuffer.h"
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC { namespace B3 { namespace Air {
+
+WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED_IMPL(Disassembler);
 
 void Disassembler::startEntrypoint(CCallHelpers& jit)
 {
@@ -72,7 +77,7 @@ void Disassembler::addInst(Inst* inst, MacroAssembler::Label start, MacroAssembl
 void Disassembler::dump(Code& code, PrintStream& out, LinkBuffer& linkBuffer, const char* airPrefix, const char* asmPrefix, const ScopedLambda<void(Inst&)>& doToEachInst)
 {
     void* codeStart = linkBuffer.entrypoint<DisassemblyPtrTag>().untaggedPtr();
-    void* codeEnd = bitwise_cast<uint8_t*>(codeStart) +  linkBuffer.size();
+    void* codeEnd = std::bit_cast<uint8_t*>(codeStart) +  linkBuffer.size();
 
     auto dumpAsmRange = [&] (CCallHelpers::Label startLabel, CCallHelpers::Label endLabel) {
         RELEASE_ASSERT(startLabel.isSet());
@@ -110,8 +115,19 @@ void Disassembler::dump(Code& code, PrintStream& out, LinkBuffer& linkBuffer, co
     // this later if we find a strong use for it.
     out.print(tierName, "# Late paths\n");
     dumpAsmRange(m_latePathStart, m_latePathEnd);
+
+    {
+        CodeLocationLabel<DisassemblyPtrTag> start = linkBuffer.locationOf<DisassemblyPtrTag>(m_latePathEnd);
+        size_t dumpedSize = start.dataLocation<uintptr_t>() - linkBuffer.entrypoint<DisassemblyPtrTag>().dataLocation<uintptr_t>();
+        if (dumpedSize < linkBuffer.size()) {
+            out.print(tierName, "# Remaining\n");
+            disassemble(start, linkBuffer.size() - dumpedSize, codeStart, codeEnd, asmPrefix, out);
+        }
+    }
 }
 
 } } } // namespace JSC::B3::Air
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(B3_JIT)

@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include "IDLTypes.h"
-#include "JSDOMConvertBase.h"
+#include <JavaScriptCore/JSGlobalObject.h>
+#include <WebCore/IDLTypes.h>
+#include <WebCore/JSDOMConvertBase.h>
 #include <wtf/WallTime.h>
 
 namespace WebCore {
@@ -35,9 +36,17 @@ JSC::JSValue jsDate(JSC::JSGlobalObject&, WallTime value);
 WallTime valueToDate(JSC::JSGlobalObject&, JSC::JSValue); // NaN if the value can't be converted to a date.
 
 template<> struct Converter<IDLDate> : DefaultConverter<IDLDate> {
-    static WallTime convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
+    using Result = ConversionResult<IDLDate>;
+
+    static Result convert(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
     {
-        return valueToDate(lexicalGlobalObject, value);
+        auto& vm = lexicalGlobalObject.vm();
+        auto scope = DECLARE_THROW_SCOPE(vm);
+
+        auto result = valueToDate(lexicalGlobalObject, value);
+        RETURN_IF_EXCEPTION(scope, Result::exception());
+
+        return Result { WTF::move(result) };
     }
 };
 
@@ -45,7 +54,6 @@ template<> struct JSConverter<IDLDate> {
     static constexpr bool needsState = true;
     static constexpr bool needsGlobalObject = false;
 
-    // FIXME: This should be taking a JSDOMGlobalObject and passing it to jsDate.
     static JSC::JSValue convert(JSC::JSGlobalObject& lexicalGlobalObject, WallTime value)
     {
         return jsDate(lexicalGlobalObject, value);

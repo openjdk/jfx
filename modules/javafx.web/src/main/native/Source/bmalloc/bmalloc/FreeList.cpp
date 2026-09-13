@@ -23,7 +23,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "BPlatform.h"
 #include "FreeList.h"
+
+#if !BUSE(TZONE)
 
 #include "FreeListInlines.h"
 
@@ -31,13 +34,9 @@
 
 namespace bmalloc {
 
-FreeList::FreeList()
-{
-}
+FreeList::FreeList() = default;
 
-FreeList::~FreeList()
-{
-}
+FreeList::~FreeList() = default;
 
 void FreeList::clear()
 {
@@ -84,3 +83,4 @@ bool FreeList::contains(void* target) const
 } // namespace JSC
 
 #endif
+#endif // !BUSE(TZONE)

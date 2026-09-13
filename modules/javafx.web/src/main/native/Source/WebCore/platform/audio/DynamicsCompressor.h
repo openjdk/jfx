@@ -32,7 +32,8 @@
 #include "DynamicsCompressorKernel.h"
 #include "ZeroPole.h"
 #include <memory>
-#include <wtf/UniqueArray.h>
+#include <wtf/FixedVector.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -44,7 +45,7 @@ class AudioBus;
 // making the sound richer, fuller, and more controlled.
 
 class DynamicsCompressor final {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(DynamicsCompressor);
     WTF_MAKE_NONCOPYABLE(DynamicsCompressor);
 public:
     enum {
@@ -66,7 +67,7 @@ public:
 
     DynamicsCompressor(float sampleRate, unsigned numberOfChannels);
 
-    void process(const AudioBus* sourceBus, AudioBus* destinationBus, unsigned framesToProcess);
+    void process(const AudioBus& sourceBus, AudioBus& destinationBus, unsigned framesToProcess);
     void reset();
     void setNumberOfChannels(unsigned);
 
@@ -88,13 +89,16 @@ protected:
     unsigned m_numberOfChannels;
 
     // m_parameters holds the tweakable compressor parameters.
-    float m_parameters[ParamLast];
+    std::array<float, ParamLast> m_parameters;
     void initializeParameters();
+
+    std::span<const std::span<const float>> sourceChannels() const { return m_sourceChannels.span(); }
+    std::span<std::span<float>> destinationChannels() { return m_destinationChannels.mutableSpan(); }
 
     float m_sampleRate;
 
-    UniqueArray<const float*> m_sourceChannels;
-    UniqueArray<float*> m_destinationChannels;
+    FixedVector<std::span<const float>> m_sourceChannels;
+    FixedVector<std::span<float>> m_destinationChannels;
 
     // The core compressor.
     DynamicsCompressorKernel m_compressor;

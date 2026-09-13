@@ -34,11 +34,15 @@
 
 #include "MutationObserverRegistration.h"
 #include "MutationRecord.h"
+#include "NodeInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MutationObserverInterestGroup);
+
 inline MutationObserverInterestGroup::MutationObserverInterestGroup(HashMap<Ref<MutationObserver>, MutationRecordDeliveryOptions>&& observers, MutationRecordDeliveryOptions oldValueFlag)
-    : m_observers(WTFMove(observers))
+    : m_observers(WTF::move(observers))
     , m_oldValueFlag(oldValueFlag)
 {
     ASSERT(!m_observers.isEmpty());
@@ -51,7 +55,7 @@ std::unique_ptr<MutationObserverInterestGroup> MutationObserverInterestGroup::cr
     if (observers.isEmpty())
         return nullptr;
 
-    return makeUnique<MutationObserverInterestGroup>(WTFMove(observers), oldValueFlag);
+    return makeUnique<MutationObserverInterestGroup>(WTF::move(observers), oldValueFlag);
 }
 
 bool MutationObserverInterestGroup::isOldValueRequested() const
@@ -67,9 +71,9 @@ void MutationObserverInterestGroup::enqueueMutationRecord(Ref<MutationRecord>&& 
 {
     RefPtr<MutationRecord> mutationWithNullOldValue;
     for (auto& observerOptionsPair : m_observers) {
-        auto& observer = observerOptionsPair.key.get();
+        Ref observer = observerOptionsPair.key.get();
         if (hasOldValue(observerOptionsPair.value)) {
-            observer.enqueueMutationRecord(mutation.copyRef());
+            observer->enqueueMutationRecord(mutation.copyRef());
             continue;
         }
         if (!mutationWithNullOldValue) {
@@ -78,7 +82,7 @@ void MutationObserverInterestGroup::enqueueMutationRecord(Ref<MutationRecord>&& 
             else
                 mutationWithNullOldValue = MutationRecord::createWithNullOldValue(mutation).ptr();
         }
-        observer.enqueueMutationRecord(*mutationWithNullOldValue);
+        observer->enqueueMutationRecord(*mutationWithNullOldValue);
     }
 }
 

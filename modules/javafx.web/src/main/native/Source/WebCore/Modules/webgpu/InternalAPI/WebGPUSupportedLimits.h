@@ -39,6 +39,7 @@ public:
         uint32_t maxTextureDimension3D,
         uint32_t maxTextureArrayLayers,
         uint32_t maxBindGroups,
+        uint32_t maxBindGroupsPlusVertexBuffers,
         uint32_t maxBindingsPerBindGroup,
         uint32_t maxDynamicUniformBuffersPerPipelineLayout,
         uint32_t maxDynamicStorageBuffersPerPipelineLayout,
@@ -64,7 +65,11 @@ public:
         uint32_t maxComputeWorkgroupSizeX,
         uint32_t maxComputeWorkgroupSizeY,
         uint32_t maxComputeWorkgroupSizeZ,
-        uint32_t maxComputeWorkgroupsPerDimension)
+        uint32_t maxComputeWorkgroupsPerDimension,
+        uint32_t maxStorageBuffersInFragmentStage,
+        uint32_t maxStorageTexturesInFragmentStage,
+        uint32_t maxStorageBuffersInVertexStage,
+        uint32_t maxStorageTexturesInVertexStage)
     {
         return adoptRef(*new SupportedLimits(
             maxTextureDimension1D,
@@ -72,6 +77,7 @@ public:
             maxTextureDimension3D,
             maxTextureArrayLayers,
             maxBindGroups,
+            maxBindGroupsPlusVertexBuffers,
             maxBindingsPerBindGroup,
             maxDynamicUniformBuffersPerPipelineLayout,
             maxDynamicStorageBuffersPerPipelineLayout,
@@ -97,7 +103,11 @@ public:
             maxComputeWorkgroupSizeX,
             maxComputeWorkgroupSizeY,
             maxComputeWorkgroupSizeZ,
-            maxComputeWorkgroupsPerDimension));
+            maxComputeWorkgroupsPerDimension,
+            maxStorageBuffersInFragmentStage,
+            maxStorageTexturesInFragmentStage,
+            maxStorageBuffersInVertexStage,
+            maxStorageTexturesInVertexStage));
     }
 
     static Ref<SupportedLimits> clone(const SupportedLimits& limits)
@@ -108,6 +118,7 @@ public:
             limits.maxTextureDimension3D(),
             limits.maxTextureArrayLayers(),
             limits.maxBindGroups(),
+            limits.maxBindGroupsPlusVertexBuffers(),
             limits.maxBindingsPerBindGroup(),
             limits.maxDynamicUniformBuffersPerPipelineLayout(),
             limits.maxDynamicStorageBuffersPerPipelineLayout(),
@@ -133,7 +144,11 @@ public:
             limits.maxComputeWorkgroupSizeX(),
             limits.maxComputeWorkgroupSizeY(),
             limits.maxComputeWorkgroupSizeZ(),
-            limits.maxComputeWorkgroupsPerDimension()));
+            limits.maxComputeWorkgroupsPerDimension(),
+            limits.maxStorageBuffersInFragmentStage(),
+            limits.maxStorageTexturesInFragmentStage(),
+            limits.maxStorageBuffersInVertexStage(),
+            limits.maxStorageTexturesInVertexStage()));
     }
 
     uint32_t maxTextureDimension1D() const { return m_maxTextureDimension1D; }
@@ -141,6 +156,7 @@ public:
     uint32_t maxTextureDimension3D() const { return m_maxTextureDimension3D; }
     uint32_t maxTextureArrayLayers() const { return m_maxTextureArrayLayers; }
     uint32_t maxBindGroups() const { return m_maxBindGroups; }
+    uint32_t maxBindGroupsPlusVertexBuffers() const { return m_maxBindGroupsPlusVertexBuffers; }
     uint32_t maxBindingsPerBindGroup() const { return m_maxBindingsPerBindGroup; }
     uint32_t maxDynamicUniformBuffersPerPipelineLayout() const { return m_maxDynamicUniformBuffersPerPipelineLayout; }
     uint32_t maxDynamicStorageBuffersPerPipelineLayout() const { return m_maxDynamicStorageBuffersPerPipelineLayout; }
@@ -167,6 +183,10 @@ public:
     uint32_t maxComputeWorkgroupSizeY() const { return m_maxComputeWorkgroupSizeY; }
     uint32_t maxComputeWorkgroupSizeZ() const { return m_maxComputeWorkgroupSizeZ; }
     uint32_t maxComputeWorkgroupsPerDimension() const { return m_maxComputeWorkgroupsPerDimension; }
+    uint32_t maxStorageBuffersInFragmentStage() const { return m_maxStorageBuffersInFragmentStage; }
+    uint32_t maxStorageTexturesInFragmentStage() const { return m_maxStorageTexturesInFragmentStage; }
+    uint32_t maxStorageBuffersInVertexStage() const { return m_maxStorageBuffersInVertexStage; }
+    uint32_t maxStorageTexturesInVertexStage() const { return m_maxStorageTexturesInVertexStage; }
 
 private:
     SupportedLimits(
@@ -175,6 +195,7 @@ private:
         uint32_t maxTextureDimension3D,
         uint32_t maxTextureArrayLayers,
         uint32_t maxBindGroups,
+        uint32_t maxBindGroupsPlusVertexBuffers,
         uint32_t maxBindingsPerBindGroup,
         uint32_t maxDynamicUniformBuffersPerPipelineLayout,
         uint32_t maxDynamicStorageBuffersPerPipelineLayout,
@@ -200,12 +221,17 @@ private:
         uint32_t maxComputeWorkgroupSizeX,
         uint32_t maxComputeWorkgroupSizeY,
         uint32_t maxComputeWorkgroupSizeZ,
-        uint32_t maxComputeWorkgroupsPerDimension)
+        uint32_t maxComputeWorkgroupsPerDimension,
+        uint32_t maxStorageBuffersInFragmentStage,
+        uint32_t maxStorageTexturesInFragmentStage,
+        uint32_t maxStorageBuffersInVertexStage,
+        uint32_t maxStorageTexturesInVertexStage)
             : m_maxTextureDimension1D(maxTextureDimension1D)
             , m_maxTextureDimension2D(maxTextureDimension2D)
             , m_maxTextureDimension3D(maxTextureDimension3D)
             , m_maxTextureArrayLayers(maxTextureArrayLayers)
             , m_maxBindGroups(maxBindGroups)
+            , m_maxBindGroupsPlusVertexBuffers(maxBindGroupsPlusVertexBuffers)
             , m_maxBindingsPerBindGroup(maxBindingsPerBindGroup)
             , m_maxDynamicUniformBuffersPerPipelineLayout(maxDynamicUniformBuffersPerPipelineLayout)
             , m_maxDynamicStorageBuffersPerPipelineLayout(maxDynamicStorageBuffersPerPipelineLayout)
@@ -232,6 +258,10 @@ private:
             , m_maxComputeWorkgroupSizeY(maxComputeWorkgroupSizeY)
             , m_maxComputeWorkgroupSizeZ(maxComputeWorkgroupSizeZ)
             , m_maxComputeWorkgroupsPerDimension(maxComputeWorkgroupsPerDimension)
+            , m_maxStorageBuffersInFragmentStage(maxStorageBuffersInFragmentStage)
+            , m_maxStorageTexturesInFragmentStage(maxStorageTexturesInFragmentStage)
+            , m_maxStorageBuffersInVertexStage(maxStorageBuffersInVertexStage)
+            , m_maxStorageTexturesInVertexStage(maxStorageTexturesInVertexStage)
     {
     }
 
@@ -245,6 +275,7 @@ private:
     uint32_t m_maxTextureDimension3D { 0 };
     uint32_t m_maxTextureArrayLayers { 0 };
     uint32_t m_maxBindGroups { 0 };
+    uint32_t m_maxBindGroupsPlusVertexBuffers { 0 };
     uint32_t m_maxBindingsPerBindGroup { 0 };
     uint32_t m_maxDynamicUniformBuffersPerPipelineLayout { 0 };
     uint32_t m_maxDynamicStorageBuffersPerPipelineLayout { 0 };
@@ -271,6 +302,10 @@ private:
     uint32_t m_maxComputeWorkgroupSizeY { 0 };
     uint32_t m_maxComputeWorkgroupSizeZ { 0 };
     uint32_t m_maxComputeWorkgroupsPerDimension { 0 };
+    uint32_t m_maxStorageBuffersInFragmentStage { 0 };
+    uint32_t m_maxStorageTexturesInFragmentStage { 0 };
+    uint32_t m_maxStorageBuffersInVertexStage { 0 };
+    uint32_t m_maxStorageTexturesInVertexStage { 0 };
 };
 
 } // namespace WebCore::WebGPU

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2019 Apple Inc.  All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include "ExceptionOr.h"
 #include "SVGAnimatedProperty.h"
 #include "SVGSharedPrimitiveProperty.h"
 
@@ -145,14 +146,14 @@ protected:
     {
     }
 
-    RefPtr<SVGSharedPrimitiveProperty<PropertyType>>& ensureAnimVal()
+    SVGSharedPrimitiveProperty<PropertyType>& ensureAnimVal()
     {
         if (!m_animVal)
             m_animVal = SVGSharedPrimitiveProperty<PropertyType>::create(m_baseVal->value());
-        return m_animVal;
+        return *m_animVal;
     }
 
-    Ref<SVGSharedPrimitiveProperty<PropertyType>> m_baseVal;
+    const Ref<SVGSharedPrimitiveProperty<PropertyType>> m_baseVal;
     mutable RefPtr<SVGSharedPrimitiveProperty<PropertyType>> m_animVal;
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,10 +28,11 @@
 
 #pragma once
 
-#include "CachedResourceLoader.h"
-#include "FrameLoaderTypes.h"
-#include "ResourceLoader.h"
+#include <WebCore/CachedResourceLoader.h>
+#include <WebCore/FrameLoaderTypes.h>
+#include <WebCore/ResourceLoader.h>
 #include <wtf/CompletionHandler.h>
+#include <wtf/Platform.h>
 #include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
@@ -50,17 +51,20 @@ public:
     virtual ~SubresourceLoader();
 
     void cancelIfNotFinishing();
-    bool isSubresourceLoader() const override;
-    CachedResource* cachedResource() const override { return m_resource.get(); };
+    bool isSubresourceLoader() const final;
+    CachedResource* cachedResource() const final { return m_resource.get(); };
+    CachedResourceHandle<CachedResource> protectedCachedResource() const { return cachedResource(); }
+
     WEBCORE_EXPORT const HTTPHeaderMap* originalHeaders() const;
 
     const SecurityOrigin* origin() const { return m_origin.get(); }
     SecurityOrigin* origin() { return m_origin.get(); }
+    RefPtr<SecurityOrigin> protectedOrigin() const;
 #if PLATFORM(IOS_FAMILY)
-    void startLoading() override;
+    void startLoading() final;
 
     // FIXME: What is an "iOS" original request? Why is it necessary?
-    const ResourceRequest& iOSOriginalRequest() const override { return m_iOSOriginalRequest; }
+    const ResourceRequest& iOSOriginalRequest() const final { return m_iOSOriginalRequest; }
 #endif
 
     unsigned redirectCount() const { return m_redirectCount; }
@@ -71,27 +75,27 @@ public:
     void clearRequestCountTracker() { m_requestCountTracker = std::nullopt; }
     void resetRequestCountTracker(CachedResourceLoader& loader, const CachedResource& resource) { m_requestCountTracker = RequestCountTracker { loader, resource }; }
 
+    void willSendRequestInternal(ResourceRequest&&, const ResourceResponse& redirectResponse, CompletionHandler<void(ResourceRequest&&)>&&) final;
+    void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) final;
+    void didReceiveResponse(ResourceResponse&&, CompletionHandler<void()>&& policyCompletionHandler) final;
+    void didReceiveBuffer(const FragmentedSharedBuffer&, long long encodedDataLength, DataPayloadType) final;
+    void didFinishLoading(const NetworkLoadMetrics&) final;
+    void didFail(const ResourceError&) final;
+    void willCancel(const ResourceError&) final;
+    void didCancel(LoadWillContinueInAnotherProcess) final;
+
 private:
     SubresourceLoader(LocalFrame&, CachedResource&, const ResourceLoaderOptions&);
 
-    void init(ResourceRequest&&, CompletionHandler<void(bool)>&&) override;
-
-    void willSendRequestInternal(ResourceRequest&&, const ResourceResponse& redirectResponse, CompletionHandler<void(ResourceRequest&&)>&&) override;
-    void didSendData(unsigned long long bytesSent, unsigned long long totalBytesToBeSent) override;
-    void didReceiveResponse(const ResourceResponse&, CompletionHandler<void()>&& policyCompletionHandler) override;
-    void didReceiveBuffer(const FragmentedSharedBuffer&, long long encodedDataLength, DataPayloadType) override;
-    void didFinishLoading(const NetworkLoadMetrics&) override;
-    void didFail(const ResourceError&) override;
-    void willCancel(const ResourceError&) override;
-    void didCancel(const ResourceError&) override;
+    void init(ResourceRequest&&, CompletionHandler<void(bool)>&&) final;
 
     void updateReferrerPolicy(const String&);
 
 #if PLATFORM(COCOA)
-    void willCacheResponseAsync(ResourceHandle*, NSCachedURLResponse*, CompletionHandler<void(NSCachedURLResponse *)>&&) override;
+    void willCacheResponseAsync(ResourceHandle*, NSCachedURLResponse*, CompletionHandler<void(NSCachedURLResponse *)>&&) final;
 #endif
 
-    void releaseResources() override;
+    void releaseResources() final;
 
     bool responseHasHTTPStatusCodeError() const;
     Expected<void, String> checkResponseCrossOriginAccessControl(const ResourceResponse&);
@@ -105,7 +109,7 @@ private:
 
 #if USE(QUICK_LOOK)
     bool shouldCreatePreviewLoaderForResponse(const ResourceResponse&) const;
-    void didReceivePreviewResponse(const ResourceResponse&) override;
+    void didReceivePreviewResponse(ResourceResponse&&) final;
 #endif
 
     enum SubresourceLoaderState {
@@ -118,9 +122,7 @@ private:
     };
 
     class RequestCountTracker {
-#if !COMPILER(MSVC)
-        WTF_MAKE_FAST_ALLOCATED;
-#endif
+        WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(RequestCountTracker, Loader);
     public:
         RequestCountTracker(CachedResourceLoader&, const CachedResource&);
         RequestCountTracker(RequestCountTracker&&);
@@ -128,7 +130,7 @@ private:
         ~RequestCountTracker();
     private:
         WeakPtr<CachedResourceLoader> m_cachedResourceLoader;
-        WeakPtr<const CachedResource> m_resource;
+        WeakPtr<CachedResource> m_resource;
     };
 
 #if PLATFORM(IOS_FAMILY)
@@ -139,6 +141,7 @@ private:
     std::optional<RequestCountTracker> m_requestCountTracker;
     RefPtr<SecurityOrigin> m_origin;
     CompletionHandler<void()> m_policyForResponseCompletionHandler;
+    ResourceResponse m_previousPartResponse;
     unsigned m_redirectCount { 0 };
     bool m_loadingMultipartContent { false };
     bool m_inAsyncResponsePolicyCheck { false };

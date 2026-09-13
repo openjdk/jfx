@@ -25,12 +25,17 @@
 
 #pragma once
 
+#include <cstdint>
+
 namespace JSC {
 
-enum DestructionMode : int8_t {
+enum class DestructionMode : uint8_t {
     DoesNotNeedDestruction,
-    NeedsDestruction
+    NeedsDestruction,
+    MayNeedDestruction,
 };
+
+using enum DestructionMode;
 
 } // namespace JSC
 

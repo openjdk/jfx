@@ -162,6 +162,7 @@
     || defined(__ARM_ARCH_6J__) \
     || defined(__ARM_ARCH_6K__) \
     || defined(__ARM_ARCH_6Z__) \
+    || defined(__ARM_ARCH_6KZ__) \
     || defined(__ARM_ARCH_6ZK__) \
     || defined(__ARM_ARCH_6T2__) \
     || defined(__ARMV6__)
@@ -254,7 +255,7 @@
 #  error "Cannot use both of WTF_CPU_ARM_TRADITIONAL and WTF_CPU_ARM_THUMB2 platforms"
 #endif /* !defined(WTF_CPU_ARM_TRADITIONAL) && !defined(WTF_CPU_ARM_THUMB2) */
 
-#if defined(__ARM_NEON__) && !defined(WTF_CPU_ARM_NEON)
+#if (defined(__ARM_NEON__) || defined(__ARM_NEON)) && !defined(WTF_CPU_ARM_NEON)
 #define WTF_CPU_ARM_NEON 1
 #endif
 
@@ -301,7 +302,6 @@
 #define WTF_CPU_NEEDS_ALIGNED_ACCESS 1
 #endif
 
-#if COMPILER(GCC_COMPATIBLE)
 /* __LP64__ is not defined on 64bit Windows since it uses LLP64. Using __SIZEOF_POINTER__ is simpler. */
 #if __SIZEOF_POINTER__ == 8
 #define WTF_CPU_ADDRESS64 1
@@ -309,22 +309,6 @@
 #define WTF_CPU_ADDRESS32 1
 #else
 #error "Unsupported pointer width"
-#endif
-#elif COMPILER(MSVC)
-#if defined(_WIN64)
-#define WTF_CPU_ADDRESS64 1
-#else
-#define WTF_CPU_ADDRESS32 1
-#endif
-#else
-/* This is the most generic way. But in OS(DARWIN), Platform.h can be included by sandbox definition file (.sb).
- * At that time, we cannot include "stdint.h" header. So in the case of known compilers, we use predefined constants instead. */
-#include <stdint.h>
-#if UINTPTR_MAX > UINT32_MAX
-#define WTF_CPU_ADDRESS64 1
-#else
-#define WTF_CPU_ADDRESS32 1
-#endif
 #endif
 
 /* CPU general purpose register width. */
@@ -338,7 +322,6 @@
 
 /* CPU(BIG_ENDIAN) or CPU(MIDDLE_ENDIAN) or neither, as appropriate. */
 
-#if COMPILER(GCC_COMPATIBLE)
 #if __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
 #define WTF_CPU_BIG_ENDIAN 1
 #elif __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
@@ -347,41 +330,6 @@
 #define WTF_CPU_MIDDLE_ENDIAN 1
 #else
 #error "Unknown endian"
-#endif
-#else
-#if defined(WIN32) || defined(_WIN32)
-/* Windows only have little endian architecture. */
-#define WTF_CPU_LITTLE_ENDIAN 1
-#else
-#include <sys/types.h>
-#if __has_include(<endian.h>)
-#include <endian.h>
-#if __BYTE_ORDER == __BIG_ENDIAN
-#define WTF_CPU_BIG_ENDIAN 1
-#elif __BYTE_ORDER == __LITTLE_ENDIAN
-#define WTF_CPU_LITTLE_ENDIAN 1
-#elif __BYTE_ORDER == __PDP_ENDIAN
-#define WTF_CPU_MIDDLE_ENDIAN 1
-#else
-#error "Unknown endian"
-#endif
-#else
-#if __has_include(<machine/endian.h>)
-#include <machine/endian.h>
-#else
-#include <sys/endian.h>
-#endif
-#if BYTE_ORDER == BIG_ENDIAN
-#define WTF_CPU_BIG_ENDIAN 1
-#elif BYTE_ORDER == LITTLE_ENDIAN
-#define WTF_CPU_LITTLE_ENDIAN 1
-#elif BYTE_ORDER == PDP_ENDIAN
-#define WTF_CPU_MIDDLE_ENDIAN 1
-#else
-#error "Unknown endian"
-#endif
-#endif
-#endif
 #endif
 
 #if !CPU(LITTLE_ENDIAN) && !CPU(BIG_ENDIAN)

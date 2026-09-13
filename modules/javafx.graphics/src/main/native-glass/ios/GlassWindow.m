@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -829,16 +829,27 @@ jlong _1createWindow(JNIEnv *env, jobject jWindow, jlong jOwnerPtr, jlong jScree
 
 
         if (mainWindow == nil) {
-            //We have to remove rootViewController of splashscreen UIWindow in order to avoid
-            //StatusBar orientation change ...
-            UIWindow *splashScreen = [[UIApplication sharedApplication] keyWindow];
-            splashScreen.rootViewController = nil;
-
             GLASS_LOG("SCREEN: %@", screen);
             CGRect applicationFrame = [screen bounds];
-            GLASS_LOG("FRAME: %@", applicationFrame);
+            GLASS_LOG("FRAME: %.1f %.1f", applicationFrame.size.width, applicationFrame.size.height);
 
-            mainWindow = [[GlassMainWindow alloc] initWithFrame:applicationFrame];
+            // Remove rootViewController of the initial UIWindow in order to avoid
+            // StatusBar orientation changes, initialize our mainWindow (GlassMainWindow), and
+            // set our own rootViewController (GlassViewController).
+            UIWindow *initialWindow;
+            UIWindowScene *windowScene = (UIWindowScene *)[[UIApplication sharedApplication] connectedScenes].allObjects.firstObject;
+            if (windowScene) {
+                initialWindow = windowScene.windows.firstObject;
+                if (initialWindow) {
+                    mainWindow = [[GlassMainWindow alloc] initWithWindowScene:windowScene];
+                }
+            }
+            if (!initialWindow) {
+                // fallback if no windowScene (very unlikely), or no initialWindow (if no SceneDelegate is used, for instance) are found:
+                initialWindow = [[UIApplication sharedApplication] keyWindow];
+                mainWindow = [[GlassMainWindow alloc] initWithFrame:applicationFrame];
+            }
+            initialWindow.rootViewController = nil;
             mainWindowHost = [[GlassMainView alloc] initWithFrame:CGRectMake(0.0, 0.0, applicationFrame.size.width, applicationFrame.size.height)];
 
             // Set GlassViewController - responsible for orientation change, etc.
@@ -1030,7 +1041,7 @@ JNIEXPORT jboolean JNICALL Java_com_sun_glass_ui_ios_IosWindow__1setView
 
         if (window->view != nil)
         {
-            window->suppressWindowMoveEvent = YES; // RT-11215
+            window->suppressWindowMoveEvent = YES; // JDK-8111165
             {
                 CGRect viewFrame = [window->view bounds];
                 if ((viewFrame.size.width != 0.0f) && (viewFrame.size.height != 0.0f))
@@ -1581,60 +1592,6 @@ JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosWindow__1toBack
     {
         GlassWindow *window = getGlassWindow(env, windowPtr);
         [window orderBack];
-    }
-    GLASS_POOL_EXIT;
-    GLASS_CHECK_EXCEPTION(env);
-}
-
-
-/*
- * Class:     com_sun_glass_ui_ios_IosWindow
- * Method:    _enterModal
- * Signature: (J)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosWindow__1enterModal
-(JNIEnv *env, jobject jwindow, jlong windowPtr) {
-    GLASS_LOG("Java_com_sun_glass_ui_ios_IosWindow__1enterModal called.");
-    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    GLASS_POOL_ENTER;
-    {
-        // implementation omes here
-    }
-    GLASS_POOL_EXIT;
-    GLASS_CHECK_EXCEPTION(env);
-}
-
-
-/*
- * Class:     com_sun_glass_ui_ios_IosWindow
- * Method:    _enterModalWithWindow
- * Signature: (JJ)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosWindow__1enterModalWithWindow
-(JNIEnv *env, jobject jwindow, jlong windowPtr, jlong window) {
-    GLASS_LOG("Java_com_sun_glass_ui_ios_IosWindow__1enterModalWithWindow called.");
-    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    GLASS_POOL_ENTER;
-    {
-        // implemenation comes here
-    }
-    GLASS_POOL_EXIT;
-    GLASS_CHECK_EXCEPTION(env);
-}
-
-
-/*
- * Class:     com_sun_glass_ui_ios_IosWindow
- * Method:    _exitModal
- * Signature: (J)V
- */
-JNIEXPORT void JNICALL Java_com_sun_glass_ui_ios_IosWindow__1exitModal
-(JNIEnv *env, jobject jwindow, jlong windowPtr) {
-    GLASS_LOG("Java_com_sun_glass_ui_ios_IosWindow__1exitModal called.");
-    GLASS_ASSERT_MAIN_JAVA_THREAD(env);
-    GLASS_POOL_ENTER;
-    {
-        // implementation comes here
     }
     GLASS_POOL_EXIT;
     GLASS_CHECK_EXCEPTION(env);

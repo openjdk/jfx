@@ -22,20 +22,21 @@
 
 #pragma once
 
-#include "CallData.h"
-#include "CellState.h"
-#include "ConstructData.h"
-#include "EnumerationMode.h"
-#include "Heap.h"
-#include "HeapCell.h"
-#include "IndexingType.h"
-#include "JSLock.h"
-#include "JSTypeInfo.h"
-#include "SlotVisitor.h"
-#include "SlotVisitorMacros.h"
-#include "SubspaceAccess.h"
-#include "TypedArrayType.h"
-#include "WriteBarrier.h"
+#include <JavaScriptCore/CallData.h>
+#include <JavaScriptCore/CellState.h>
+#include <JavaScriptCore/ConstructData.h>
+#include <JavaScriptCore/DestructionMode.h>
+#include <JavaScriptCore/EnumerationMode.h>
+#include <JavaScriptCore/Heap.h>
+#include <JavaScriptCore/HeapCell.h>
+#include <JavaScriptCore/IndexingType.h>
+#include <JavaScriptCore/JSLock.h>
+#include <JavaScriptCore/JSTypeInfo.h>
+#include <JavaScriptCore/SlotVisitor.h>
+#include <JavaScriptCore/SlotVisitorMacros.h>
+#include <JavaScriptCore/SubspaceAccess.h>
+#include <JavaScriptCore/TypedArrayType.h>
+#include <JavaScriptCore/WriteBarrier.h>
 
 namespace JSC {
 
@@ -50,7 +51,7 @@ class JSGlobalObject;
 class LLIntOffsetsExtractor;
 class PropertyDescriptor;
 class PropertyName;
-class PropertyNameArray;
+class PropertyNameArrayBuilder;
 class Structure;
 class JSCellLock;
 
@@ -90,6 +91,9 @@ template<typename T> void* tryAllocateCell(VM&, GCDeferralContext*, size_t = siz
 #endif
 
 class JSCell : public HeapCell {
+    WTF_ALLOW_COMPACT_POINTERS;
+    WTF_MAKE_NONCOPYABLE(JSCell);
+    WTF_MAKE_NONMOVABLE(JSCell);
     friend class JSValue;
     friend class MarkedBlock;
     template<typename T>
@@ -98,20 +102,20 @@ class JSCell : public HeapCell {
 public:
     static constexpr unsigned StructureFlags = 0;
 
-    static constexpr bool needsDestruction = false;
+    static constexpr DestructionMode needsDestruction = DoesNotNeedDestruction;
 
-    static constexpr uint8_t numberOfLowerTierCells = 8;
+    static constexpr uint8_t numberOfLowerTierPreciseCells = 8;
 
     static constexpr size_t atomSize = 16; // This needs to be larger or equal to 16.
 
     static constexpr bool isResizableOrGrowableSharedTypedArray = false;
 
-    static JSCell* seenMultipleCalleeObjects() { return bitwise_cast<JSCell*>(static_cast<uintptr_t>(1)); }
+    static JSCell* seenMultipleCalleeObjects() { return std::bit_cast<JSCell*>(static_cast<uintptr_t>(1)); }
 
     enum CreatingEarlyCellTag { CreatingEarlyCell };
     JSCell(CreatingEarlyCellTag);
     enum CreatingWellDefinedBuiltinCellTag { CreatingWellDefinedBuiltinCell };
-    JSCell(CreatingWellDefinedBuiltinCellTag, StructureID, int32_t typeInfoBlob);
+    JSCell(CreatingWellDefinedBuiltinCellTag, StructureID, uint32_t typeInfoBlob);
 
     JS_EXPORT_PRIVATE static void destroy(JSCell*);
 
@@ -226,17 +230,17 @@ public:
         return WTF::atomicCompareExchangeStrong(&m_cellState, oldState, newState);
     }
 
-    static ptrdiff_t structureIDOffset()
+    static constexpr ptrdiff_t structureIDOffset()
     {
         return OBJECT_OFFSETOF(JSCell, m_structureID);
     }
 
-    static ptrdiff_t typeInfoFlagsOffset()
+    static constexpr ptrdiff_t typeInfoFlagsOffset()
     {
         return OBJECT_OFFSETOF(JSCell, m_flags);
     }
 
-    static ptrdiff_t typeInfoTypeOffset()
+    static constexpr ptrdiff_t typeInfoTypeOffset()
     {
         return OBJECT_OFFSETOF(JSCell, m_type);
     }
@@ -244,12 +248,12 @@ public:
     // DO NOT store to this field. Always use a CAS loop, since some bits are flipped using CAS
     // from other threads due to the internal lock. One exception: you don't need the CAS if the
     // object has not escaped yet.
-    static ptrdiff_t indexingTypeAndMiscOffset()
+    static constexpr ptrdiff_t indexingTypeAndMiscOffset()
     {
         return OBJECT_OFFSETOF(JSCell, m_indexingTypeAndMisc);
     }
 
-    static ptrdiff_t cellStateOffset()
+    static constexpr ptrdiff_t cellStateOffset()
     {
         return OBJECT_OFFSETOF(JSCell, m_cellState);
     }
@@ -264,8 +268,8 @@ protected:
     void finishCreation(VM&, Structure*, CreatingEarlyCellTag);
 
     // Dummy implementations of override-able static functions for classes to put in their MethodTable
-    static NO_RETURN_DUE_TO_CRASH void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
-    static NO_RETURN_DUE_TO_CRASH void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    static NO_RETURN_DUE_TO_CRASH void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
+    static NO_RETURN_DUE_TO_CRASH void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
 
     static NO_RETURN_DUE_TO_CRASH bool preventExtensions(JSObject*, JSGlobalObject*);
     static NO_RETURN_DUE_TO_CRASH bool isExtensible(JSObject*, JSGlobalObject*);
@@ -284,10 +288,15 @@ private:
     JS_EXPORT_PRIVATE JSObject* toObjectSlow(JSGlobalObject*) const;
 
     StructureID m_structureID;
+    union {
+        uint32_t m_blob;
+        struct {
     IndexingType m_indexingTypeAndMisc; // DO NOT store to this field. Always CAS.
     JSType m_type;
     TypeInfo::InlineTypeFlags m_flags;
     CellState m_cellState;
+        };
+    };
 };
 
 class JSCellLock : public JSCell {

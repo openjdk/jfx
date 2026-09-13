@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,22 +25,24 @@
 
 package test.com.sun.webkit;
 
-import com.sun.javafx.PlatformUtil;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.io.File;
-import static java.util.Arrays.asList;
+import java.util.ArrayList;
 import java.util.List;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assume.assumeTrue;
-import org.junit.Test;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import com.sun.javafx.PlatformUtil;
 
 /**
  * @test
  * @bug 8264990
  * @summary Check if access to local storage works without causing a segfault
  */
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class LocalStorageAccessTest {
-    @Test (timeout = 15000)
+    @Test
     public void testMainThreadDoesNotSegfault() throws Exception {
         if (PlatformUtil.isWindows()) {
             assumeTrue(Boolean.getBoolean("unstable.test")); // JDK-8265661
@@ -62,13 +64,16 @@ public class LocalStorageAccessTest {
         final String javaLibraryPath = System.getProperty("java.library.path");
         final String workerJavaCmd = System.getProperty("worker.java.cmd");
 
-        final List<String> cmd = asList(
-            workerJavaCmd,
+        final List<String> cmd = new ArrayList<>();
+        cmd.add(workerJavaCmd);
+
+        cmd.addAll(List.of(
+            "--enable-native-access=ALL-UNNAMED",
             "-cp", appModulePath + "/mymod",
             "-Djava.library.path=" + javaLibraryPath,
             "-Dmodule.path=" + appModulePath + "/mymod" + File.pathSeparator + workerModulePath,
             "myapp7.LocalStorageAccessWithModuleLayerLauncher"
-        );
+        ));
 
         final ProcessBuilder builder = new ProcessBuilder(cmd);
 
@@ -77,6 +82,6 @@ public class LocalStorageAccessTest {
         Process process = builder.start();
         int retVal = process.waitFor();
 
-        assertEquals("Process did not exit cleanly", 0, retVal);
+        assertEquals(0, retVal, "Process did not exit cleanly");
     }
 }

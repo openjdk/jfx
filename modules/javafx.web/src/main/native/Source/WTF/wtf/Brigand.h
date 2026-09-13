@@ -38,7 +38,7 @@
 #elif _MSC_VER == 1800
 #define BRIGAND_COMP_MSVC_2013
 #endif
-#elif __GNUC__
+#elif defined(__GNUC__)
 #ifndef __clang__
 #define BRIGAND_COMP_GCC
 #else
@@ -48,6 +48,7 @@
 
 #define BRIGAND_NO_BOOST_SUPPORT 1
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -55,6 +56,7 @@
 #include <tuple>
 #include <type_traits>
 #include <utility>
+#include <wtf/StdLibExtras.h>
 
 #if !defined(BRIGAND_NO_BOOST_SUPPORT)
 #include <boost/fusion/container/vector/vector_fwd.hpp>
@@ -452,11 +454,11 @@ namespace brigand
 {
 namespace detail
 {
-    constexpr std::size_t count_bools(bool const * const begin, bool const * const end,
-        std::size_t n)
+    constexpr std::size_t count_bools(std::span<const bool> data)
     {
-        return begin == end ? n : detail::count_bools(begin + 1, end, n + *begin);
+        return std::ranges::count(data, true);
     }
+
     template <bool... Bs>
     struct template_count_bools
     {
@@ -502,20 +504,20 @@ namespace lazy
     template <template<typename...> class S, typename... Ts, typename Pred>
     struct count_if<S<Ts...>, Pred>
     {
-        static constexpr bool s_v[] = { ::brigand::apply<Pred, Ts>::type::value... };
-        using type = brigand::size_t<::brigand::detail::count_bools(s_v, s_v + sizeof...(Ts), 0u)>;
+        static constexpr auto s_v = std::to_array<bool>({ ::brigand::apply<Pred, Ts>::type::value... });
+        using type = brigand::size_t<::brigand::detail::count_bools(s_v)>;
     };
     template <template <typename...> class S, typename... Ts, template <typename...> class F>
     struct count_if<S<Ts...>, bind<F, _1>>
     {
-        static constexpr bool s_v[] = { F<Ts>::value... };
-        using type = brigand::size_t<::brigand::detail::count_bools(s_v, s_v + sizeof...(Ts), 0u)>;
+        static constexpr auto s_v = std::to_array<bool>({ F<Ts>::value... });
+        using type = brigand::size_t<::brigand::detail::count_bools(s_v)>;
     };
     template <template <typename...> class S, typename... Ts, template <typename...> class F>
     struct count_if<S<Ts...>, F<_1>>
     {
-        static constexpr bool s_v[] = { F<Ts>::type::value... };
-        using type = brigand::size_t<::brigand::detail::count_bools(s_v, s_v + sizeof...(Ts), 0u)>;
+        static constexpr auto s_v = std::to_array<bool>({ F<Ts>::type::value... });
+        using type = brigand::size_t<::brigand::detail::count_bools(s_v)>;
     };
 #else
     template <template <typename...> class S, typename... Ts, typename Pred>
@@ -2477,7 +2479,8 @@ namespace brigand
     inline operator value_type() const
     {
       value_type that;
-      std::memcpy(&that, &parent::value, sizeof(value_type));
+      static_assert(sizeof(that) == sizeof(parent::value));
+      memcpySpan(asMutableByteSpan(that), asByteSpan(parent::value));
       return that;
     }
   };

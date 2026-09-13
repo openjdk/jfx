@@ -27,16 +27,16 @@
 #include "config.h"
 #include "DateTimeNumericFieldElement.h"
 
-#if ENABLE(DATE_AND_TIME_INPUT_TYPES)
-
 #include "EventNames.h"
 #include "FontCascade.h"
 #include "HTMLNames.h"
 #include "KeyboardEvent.h"
+#include "PathOperation.h"
 #include "PlatformLocale.h"
 #include "RenderBlock.h"
-#include "RenderStyleSetters.h"
-#include <wtf/IsoMallocInlines.h>
+#include "RenderStyle+SettersInlines.h"
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
@@ -53,18 +53,19 @@ bool DateTimeNumericFieldElement::Range::isInRange(int value) const
     return value >= minimum && value <= maximum;
 }
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(DateTimeNumericFieldElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DateTimeNumericFieldElement);
 
-DateTimeNumericFieldElement::DateTimeNumericFieldElement(Document& document, FieldOwner& fieldOwner, const Range& range, int placeholder)
+DateTimeNumericFieldElement::DateTimeNumericFieldElement(Document& document, DateTimeFieldElementFieldOwner& fieldOwner, const Range& range, int placeholder)
     : DateTimeFieldElement(document, fieldOwner)
     , m_range(range)
     , m_placeholder(formatValue(placeholder))
+    , m_placeholderValue(placeholder)
 {
 }
 
 void DateTimeNumericFieldElement::adjustMinInlineSize(RenderStyle& style) const
 {
-    auto& font = style.fontCascade();
+    CheckedRef font = style.fontCascade();
 
     unsigned length = 2;
     if (m_range.maximum > 999)
@@ -77,13 +78,10 @@ void DateTimeNumericFieldElement::adjustMinInlineSize(RenderStyle& style) const
     float inlineSize = 0;
     for (char c = '0'; c <= '9'; ++c) {
         auto numberString = locale.convertToLocalizedNumber(makeString(pad(c, length, makeString(c))));
-        inlineSize = std::max(inlineSize, font.width(RenderBlock::constructTextRun(numberString, style)));
+        inlineSize = std::max(inlineSize, font->width(RenderBlock::constructTextRun(numberString, style)));
     }
 
-    if (style.isHorizontalWritingMode())
-        style.setMinWidth({ inlineSize, LengthType::Fixed });
-    else
-        style.setMinHeight({ inlineSize, LengthType::Fixed });
+    style.setLogicalMinWidth(Style::MinimumSize::Fixed { inlineSize / style.usedZoomForLength().value });
 }
 
 int DateTimeNumericFieldElement::maximum() const
@@ -105,11 +103,6 @@ String DateTimeNumericFieldElement::formatValue(int value) const
 bool DateTimeNumericFieldElement::hasValue() const
 {
     return m_hasValue;
-}
-
-void DateTimeNumericFieldElement::initialize(const AtomString& pseudo)
-{
-    DateTimeFieldElement::initialize(pseudo);
 }
 
 void DateTimeNumericFieldElement::setEmptyValue(EventBehavior eventBehavior)
@@ -137,8 +130,9 @@ void DateTimeNumericFieldElement::setValueAsIntegerByStepping(int value)
 
 void DateTimeNumericFieldElement::setARIAValueAttributesWithInteger(int value)
 {
-    setAttributeWithoutSynchronization(HTMLNames::aria_valuenowAttr, AtomString::number(value));
-    setAttributeWithoutSynchronization(HTMLNames::aria_valuetextAttr, AtomString::number(value));
+    auto string = AtomString::number(value);
+    setAttributeWithoutSynchronization(HTMLNames::aria_valuenowAttr, string);
+    setAttributeWithoutSynchronization(HTMLNames::aria_valuetextAttr, string);
 }
 
 void DateTimeNumericFieldElement::stepDown()
@@ -157,9 +151,11 @@ void DateTimeNumericFieldElement::stepUp()
     setValueAsIntegerByStepping(newValue);
 }
 
-String DateTimeNumericFieldElement::value() const
+ValueOrReference<String> DateTimeNumericFieldElement::value() const
 {
-    return m_hasValue ? formatValue(m_value) : emptyString();
+    if (m_hasValue)
+        return formatValue(m_value);
+    return emptyString();
 }
 
 String DateTimeNumericFieldElement::placeholderValue() const
@@ -167,18 +163,13 @@ String DateTimeNumericFieldElement::placeholderValue() const
     return m_placeholder;
 }
 
-int DateTimeNumericFieldElement::valueAsInteger() const
-{
-    return m_hasValue ? m_value : -1;
-}
-
 void DateTimeNumericFieldElement::handleKeyboardEvent(KeyboardEvent& keyboardEvent)
 {
     if (keyboardEvent.type() != eventNames().keypressEvent)
         return;
 
-    auto charCode = static_cast<UChar>(keyboardEvent.charCode());
-    String number = localeForOwner().convertFromLocalizedNumber(String(&charCode, 1));
+    auto charCode = static_cast<char16_t>(keyboardEvent.charCode());
+    String number = localeForOwner().convertFromLocalizedNumber(span(charCode));
     int digit = number[0] - '0';
     if (digit < 0 || digit > 9)
         return;
@@ -207,5 +198,3 @@ void DateTimeNumericFieldElement::handleBlurEvent(Event& event)
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(DATE_AND_TIME_INPUT_TYPES)

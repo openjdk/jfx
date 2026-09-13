@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,8 @@
 
 #include "B3Dominators.h"
 #include <wtf/NaturalLoops.h>
+#include <wtf/SequesteredMalloc.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC { namespace B3 {
 
@@ -36,10 +38,15 @@ typedef WTF::NaturalLoop<CFG> NaturalLoop;
 
 class NaturalLoops : public WTF::NaturalLoops<CFG> {
     WTF_MAKE_NONCOPYABLE(NaturalLoops);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(NaturalLoops);
 public:
     NaturalLoops(Procedure& proc)
         : WTF::NaturalLoops<CFG>(proc.cfg(), proc.dominators())
+    {
+    }
+
+    NaturalLoops(Procedure& proc, Dominators& dominators)
+        : WTF::NaturalLoops<CFG>(proc.cfg(), dominators)
     {
     }
 };

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 RDK Management  All rights reserved.
+ * Copyright (C) 2020 RDK Management All rights reserved.
  * Copyright (C) 2022 Igalia S.L.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,17 +29,18 @@
 
 #if ENABLE(GAMEPAD) && USE(LIBWPE)
 
+#if WPE_CHECK_VERSION(1, 13, 90)
+
 #include "GamepadLibWPE.h"
 #include "GamepadProviderClient.h"
 #include "Logging.h"
 #include <inttypes.h>
-#include <wpe/wpe.h>
 #include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
 static const Seconds connectionDelayInterval { 500_ms };
-static const Seconds inputNotificationDelay { 50_ms };
+static const Seconds inputNotificationDelay { 5_ms };
 
 GamepadProviderLibWPE& GamepadProviderLibWPE::singleton()
 {
@@ -49,8 +50,8 @@ GamepadProviderLibWPE& GamepadProviderLibWPE::singleton()
 
 GamepadProviderLibWPE::GamepadProviderLibWPE()
     : m_provider(wpe_gamepad_provider_create(), wpe_gamepad_provider_destroy)
-    , m_initialGamepadsConnectedTimer(RunLoop::current(), this, &GamepadProviderLibWPE::initialGamepadsConnectedTimerFired)
-    , m_inputNotificationTimer(RunLoop::current(), this, &GamepadProviderLibWPE::inputNotificationTimerFired)
+    , m_initialGamepadsConnectedTimer(RunLoop::currentSingleton(), "GamepadProviderLibWPE::InitialGamepadsConnectedTimer"_s, this, &GamepadProviderLibWPE::initialGamepadsConnectedTimerFired)
+    , m_inputNotificationTimer(RunLoop::currentSingleton(), "GamepadProviderLibWPE::InputNotificationTimer"_s, this, &GamepadProviderLibWPE::inputNotificationTimerFired)
 {
     static const struct wpe_gamepad_provider_client_interface s_client = {
         // connected
@@ -132,7 +133,7 @@ void GamepadProviderLibWPE::gamepadConnected(uintptr_t id)
         m_gamepadVector.grow(index + 1);
 
     m_gamepadVector[index] = gamepad.get();
-    m_gamepadMap.set(id, WTFMove(gamepad));
+    m_gamepadMap.set(id, WTF::move(gamepad));
 
     if (!m_initialGamepadsConnected) {
         // This added device is the result of us starting to monitor gamepads.
@@ -235,4 +236,5 @@ void GamepadProviderLibWPE::stopEffects(unsigned, const String&, CompletionHandl
 
 } // namespace WebCore
 
-#endif // ENABLE(GAMEPAD) && USE(LIBWPE)
+#endif // ENABLE(GAMEPAD) && USE(LIBWPE) && WPE_CHECK_VERSION(1, 13, 90)
+#endif // ENABLE(GAMEPAD) && USE(LIBWPE) && WPE_CHECK_VERSION(1, 13, 90)

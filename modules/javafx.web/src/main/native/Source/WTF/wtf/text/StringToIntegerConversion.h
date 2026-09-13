@@ -26,41 +26,39 @@
 #pragma once
 
 #include <wtf/CheckedArithmetic.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringView.h>
 
 namespace WTF {
 
-// The parseInteger function template allows leading and trailing spaces as defined by isUnicodeCompatibleASCIIWhitespace, and, after the leading spaces, allows a single leading "+".
+// The parseInteger function template may allow leading and trailing spaces as defined by isUnicodeCompatibleASCIIWhitespace, and, after the leading spaces, allows a single leading "+".
 // The parseIntegerAllowingTrailingJunk function template is like parseInteger, but allows any characters after the integer.
 
 // FIXME: Should we add a version that does not allow "+"?
 // FIXME: Should we add a version that allows other definitions of spaces, like isASCIIWhitespace or isASCIIWhitespaceWithoutFF?
-// FIXME: Should we add a version that does not allow leading and trailing spaces?
 
-template<typename IntegralType> std::optional<IntegralType> parseInteger(StringView, uint8_t base = 10);
+enum class ParseIntegerWhitespacePolicy : bool { Disallow, Allow };
+
+template<typename IntegralType> std::optional<IntegralType> parseInteger(StringView, uint8_t base = 10, ParseIntegerWhitespacePolicy = ParseIntegerWhitespacePolicy::Allow);
 template<typename IntegralType> std::optional<IntegralType> parseIntegerAllowingTrailingJunk(StringView, uint8_t base = 10);
+template<typename IntegralType, typename CharacterType> std::optional<IntegralType> parseInteger(std::span<const CharacterType>, uint8_t base = 10, ParseIntegerWhitespacePolicy = ParseIntegerWhitespacePolicy::Allow);
+template<typename IntegralType, typename CharacterType> std::optional<IntegralType> parseIntegerAllowingTrailingJunk(std::span<const CharacterType>, uint8_t base = 10);
 
-enum class TrailingJunkPolicy { Disallow, Allow };
+enum class TrailingJunkPolicy : bool { Disallow, Allow };
 
-template<typename IntegralType, typename CharacterType> std::optional<IntegralType> parseInteger(const CharacterType* data, size_t length, uint8_t base, TrailingJunkPolicy policy)
+template<typename IntegralType, typename CharacterType> std::optional<IntegralType> parseInteger(std::span<const CharacterType> data, uint8_t base, TrailingJunkPolicy policy, ParseIntegerWhitespacePolicy whitespacePolicy = ParseIntegerWhitespacePolicy::Allow)
 {
-    if (!data)
+    if (!data.data())
         return std::nullopt;
 
-    while (length && isUnicodeCompatibleASCIIWhitespace(*data)) {
-        --length;
-        ++data;
-    }
+    if (whitespacePolicy == ParseIntegerWhitespacePolicy::Allow)
+        skipWhile<isUnicodeCompatibleASCIIWhitespace>(data);
 
     bool isNegative = false;
-    if (std::is_signed_v<IntegralType> && length && *data == '-') {
-        --length;
-        ++data;
+    if (std::is_signed_v<IntegralType> && skipExactly(data, '-'))
         isNegative = true;
-    } else if (length && *data == '+') {
-        --length;
-        ++data;
-    }
+    else
+        skipExactly(data, '+');
 
     auto isCharacterAllowedInBase = [] (auto character, auto base) {
         if (isASCIIDigit(character))
@@ -68,46 +66,59 @@ template<typename IntegralType, typename CharacterType> std::optional<IntegralTy
         return toASCIILowerUnchecked(character) >= 'a' && toASCIILowerUnchecked(character) < 'a' + std::min(base - 10, 26);
     };
 
-    if (!(length && isCharacterAllowedInBase(*data, base)))
+    if (!(!data.empty() && isCharacterAllowedInBase(data.front(), base)))
         return std::nullopt;
 
     Checked<IntegralType, RecordOverflow> value;
     do {
-        IntegralType digitValue = isASCIIDigit(*data) ? *data - '0' : toASCIILowerUnchecked(*data) - 'a' + 10;
+        auto c = consume(data);
+        IntegralType digitValue = isASCIIDigit(c) ? c - '0' : toASCIILowerUnchecked(c) - 'a' + 10;
         value *= static_cast<IntegralType>(base);
         if (isNegative)
             value -= digitValue;
         else
             value += digitValue;
-    } while (--length && isCharacterAllowedInBase(*++data, base));
+    } while (!data.empty() && isCharacterAllowedInBase(data.front(), base));
 
-    if (UNLIKELY(value.hasOverflowed()))
+    if (value.hasOverflowed()) [[unlikely]]
         return std::nullopt;
 
     if (policy == TrailingJunkPolicy::Disallow) {
-        while (length && isUnicodeCompatibleASCIIWhitespace(*data)) {
-            --length;
-            ++data;
-        }
-        if (length)
+        if (whitespacePolicy == ParseIntegerWhitespacePolicy::Allow)
+            skipWhile<isUnicodeCompatibleASCIIWhitespace>(data);
+        if (!data.empty())
             return std::nullopt;
     }
 
     return value.value();
 }
 
-template<typename IntegralType> std::optional<IntegralType> parseInteger(StringView string, uint8_t base)
+template<typename IntegralType, typename CharacterType>
+std::optional<IntegralType> parseInteger(std::span<const CharacterType> data, uint8_t base, ParseIntegerWhitespacePolicy whitespacePolicy)
 {
-    if (string.is8Bit())
-        return parseInteger<IntegralType>(string.characters8(), string.length(), base, TrailingJunkPolicy::Disallow);
-    return parseInteger<IntegralType>(string.characters16(), string.length(), base, TrailingJunkPolicy::Disallow);
+    return parseInteger<IntegralType>(data, base, TrailingJunkPolicy::Disallow, whitespacePolicy);
 }
 
-template<typename IntegralType> std::optional<IntegralType> parseIntegerAllowingTrailingJunk(StringView string, uint8_t base)
+template<typename IntegralType, typename CharacterType>
+std::optional<IntegralType> parseIntegerAllowingTrailingJunk(std::span<const CharacterType> data, uint8_t base)
+{
+    return parseInteger<IntegralType>(data, base, TrailingJunkPolicy::Allow);
+}
+
+template<typename IntegralType>
+std::optional<IntegralType> parseInteger(StringView string, uint8_t base, ParseIntegerWhitespacePolicy whitespacePolicy)
 {
     if (string.is8Bit())
-        return parseInteger<IntegralType>(string.characters8(), string.length(), base, TrailingJunkPolicy::Allow);
-    return parseInteger<IntegralType>(string.characters16(), string.length(), base, TrailingJunkPolicy::Allow);
+        return parseInteger<IntegralType>(string.span8(), base, whitespacePolicy);
+    return parseInteger<IntegralType>(string.span16(), base, whitespacePolicy);
+}
+
+template<typename IntegralType>
+std::optional<IntegralType> parseIntegerAllowingTrailingJunk(StringView string, uint8_t base)
+{
+    if (string.is8Bit())
+        return parseIntegerAllowingTrailingJunk<IntegralType>(string.span8(), base);
+    return parseIntegerAllowingTrailingJunk<IntegralType>(string.span16(), base);
 }
 
 }

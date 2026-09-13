@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,7 +47,6 @@ import javafx.stage.StageStyle;
 import javafx.stage.Window;
 import java.io.File;
 import java.io.InputStream;
-import java.security.AccessControlContext;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -102,17 +101,18 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
-    public TKStage createTKStage(Window peerWindow, boolean securityDialog, StageStyle stageStyle, boolean primary, Modality modality, TKStage owner, boolean rtl, @SuppressWarnings("removal") AccessControlContext acc) {
+    public TKStage createTKStage(Window peerWindow, StageStyle stageStyle, boolean primary,
+                                 Modality modality, TKStage owner, boolean rtl, boolean darkFrame) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    public TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner, @SuppressWarnings("removal") AccessControlContext acc) {
+    public TKStage createTKPopupStage(Window peerWindow, StageStyle popupStyle, TKStage owner) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
     @Override
-    public TKStage createTKEmbeddedStage(HostInterface host, @SuppressWarnings("removal") AccessControlContext acc) {
+    public TKStage createTKEmbeddedStage(HostInterface host) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -132,7 +132,12 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
-    public AsyncOperation loadImageAsync(AsyncOperationListener<? extends ImageLoader> listener, String url, double width, double height, boolean preserveRatio, boolean smooth) {
+    public AsyncOperation loadImageAsync(AsyncOperationListener<ImageLoader> listener, String url, double width, double height, boolean preserveRatio, boolean smooth) {
+        throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
+    public AsyncOperation loadImageAsync(AsyncOperationListener<ImageLoader> listener, InputStream stream, double width, double height, boolean preserveRatio, boolean smooth) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 
@@ -226,7 +231,7 @@ final public class DummyToolkit extends Toolkit {
     }
 
     @Override
-    public int getKeyCodeForChar(String character) {
+    public int getKeyCodeForChar(String character, int hint) {
         throw new UnsupportedOperationException("Not supported yet.");
     }
 

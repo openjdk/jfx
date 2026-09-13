@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "FloatSize.h"
-#include "Image.h"
+#include <WebCore/FloatSize.h>
+#include <WebCore/Image.h>
 
 namespace WebCore {
 
@@ -36,18 +36,19 @@ public:
     bool usesContainerSize() const override { return true; }
     bool hasRelativeWidth() const override { return true; }
     bool hasRelativeHeight() const override { return true; }
-    void computeIntrinsicDimensions(Length& intrinsicWidth, Length& intrinsicHeight, FloatSize& intrinsicRatio) override;
+    void computeIntrinsicDimensions(float& intrinsicWidth, float& intrinsicHeight, FloatSize& intrinsicRatio) override;
 
     FloatSize size(ImageOrientation = ImageOrientation::Orientation::FromImage) const override { return m_size; }
 
 protected:
-    ImageDrawResult draw(GraphicsContext&, const FloatRect& dstRect, const FloatRect& srcRect, const ImagePaintingOptions& = { }) override = 0;
-    void drawPattern(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, const ImagePaintingOptions& = { }) override = 0;
+    ImageDrawResult draw(GraphicsContext&, const FloatRect& dstRect, const FloatRect& srcRect, ImagePaintingOptions = { }) override = 0;
+    void drawPattern(GraphicsContext&, const FloatRect& destRect, const FloatRect& srcRect, const AffineTransform& patternTransform, const FloatPoint& phase, const FloatSize& spacing, ImagePaintingOptions = { }) override = 0;
 
     // FIXME: Implement this to be less conservative.
     bool currentFrameKnownToBeOpaque() const override { return false; }
+    bool currentFrameIsComplete() const override { return true; }
 
-    GeneratedImage() { }
+    GeneratedImage() = default;
 
 private:
     bool isGeneratedImage() const override { return true; }

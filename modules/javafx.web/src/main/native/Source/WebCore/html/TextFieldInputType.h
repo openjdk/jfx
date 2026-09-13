@@ -37,6 +37,7 @@
 #include "DataListSuggestionsClient.h"
 #include "InputType.h"
 #include "SpinButtonElement.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -45,12 +46,15 @@ class TextControlInnerTextElement;
 
 // The class represents types of which UI contain text fields.
 // It supports not only the types for BaseTextInputType but also type=number.
-class TextFieldInputType : public InputType, protected SpinButtonElement::SpinButtonOwner, protected AutoFillButtonElement::AutoFillButtonOwner
-#if ENABLE(DATALIST_ELEMENT)
-    , private DataListSuggestionsClient, protected DataListButtonElement::DataListButtonOwner
-#endif
+class TextFieldInputType : public InputType, protected SpinButtonOwner, protected AutoFillButtonElement::AutoFillButtonOwner
+    , protected DataListSuggestionsClient, protected DataListButtonElement::DataListButtonOwner
 {
+    WTF_MAKE_TZONE_ALLOCATED(TextFieldInputType);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(TextFieldInputType);
 public:
+    void ref() const override { InputType::ref(); }
+    void deref() const override { InputType::deref(); }
+
     bool valueMissing(const String&) const final;
 
 protected:
@@ -58,44 +62,40 @@ protected:
     virtual ~TextFieldInputType();
     ShouldCallBaseEventHandler handleKeydownEvent(KeyboardEvent&) override;
     void handleKeydownEventForSpinButton(KeyboardEvent&);
-#if ENABLE(DATALIST_ELEMENT)
     void handleClickEvent(MouseEvent&) final;
-#endif
 
     HTMLElement* containerElement() const final;
     HTMLElement* innerBlockElement() const final;
     RefPtr<TextControlInnerTextElement> innerTextElement() const final;
     HTMLElement* innerSpinButtonElement() const final;
     HTMLElement* autoFillButtonElement() const final;
-#if ENABLE(DATALIST_ELEMENT)
     HTMLElement* dataListButtonElement() const final;
-#endif
 
-    virtual bool needsContainer() const;
+    virtual bool needsContainer() const { return false; }
     void createShadowSubtree() override;
-    void destroyShadowSubtree() override;
+    void removeShadowSubtree() override;
     void attributeChanged(const QualifiedName&) override;
     void disabledStateChanged() final;
     void readOnlyStateChanged() final;
-    bool supportsReadOnly() const final;
+    bool supportsReadOnly() const final { return true; }
     void handleFocusEvent(Node* oldFocusedNode, FocusDirection) final;
     void handleBlurEvent() final;
     void setValue(const String&, bool valueChanged, TextFieldEventBehavior, TextControlSetValueSelection) override;
     void updateInnerTextValue() final;
-    String sanitizeValue(const String&) const override;
+    ValueOrReference<String> sanitizeValue(const String& value LIFETIME_BOUND) const override;
 
     virtual String convertFromVisibleValue(const String&) const;
     virtual void didSetValueByUserEdit();
 
 private:
-    bool isKeyboardFocusable(KeyboardEvent*) const final;
+    bool isKeyboardFocusable(const FocusEventData&) const final;
     bool isMouseFocusable() const final;
     bool isEmptyValue() const final;
-    void handleBeforeTextInsertedEvent(BeforeTextInsertedEvent&) final;
+    void handleBeforeTextInsertedEvent(BeforeTextInsertedEvent&) override;
     void forwardEvent(Event&) final;
     bool shouldSubmitImplicitly(Event&) final;
     RenderPtr<RenderElement> createInputRenderer(RenderStyle&&) override;
-    bool shouldUseInputMethod() const override;
+    bool shouldUseInputMethod() const override { return true; }
     bool shouldRespectListAttribute() override;
     HTMLElement* placeholderElement() const final;
     void updatePlaceholderText() final;
@@ -105,10 +105,9 @@ private:
     void updateAutoFillButton() final;
     void elementDidBlur() final;
 
-    // SpinButtonElement::SpinButtonOwner functions.
+    // SpinButtonOwner functions.
     void focusAndSelectSpinButtonOwner() final;
     bool shouldSpinButtonRespondToMouseEvents() const final;
-    bool shouldSpinButtonRespondToWheelEvents() const final;
     void spinButtonStepDown() final;
     void spinButtonStepUp() final;
 
@@ -124,13 +123,15 @@ private:
     void createContainer(PreserveSelectionRange = PreserveSelectionRange::Yes);
     void createAutoFillButton(AutoFillButtonType);
 
-#if ENABLE(DATALIST_ELEMENT)
     void createDataListDropdownIndicator();
-    bool isPresentingAttachedView() const final;
-    bool isFocusingWithDataListDropdown() const final;
+    bool isPresentingAttachedView() const final { return m_popupIsVisible; }
+    void setPopupIsVisible(bool);
+    bool isFocusingWithDataListDropdown() const final { return m_isFocusingWithDataListDropdown; }
     void dataListMayHaveChanged() final;
     void displaySuggestions(DataListSuggestionActivationType);
     void closeSuggestions();
+
+    void showPicker() override;
 
     // DataListSuggestionsClient
     IntRect elementRectInRootViewCoordinates() const final;
@@ -138,15 +139,13 @@ private:
     void didSelectDataListOption(const String&) final;
     void didCloseSuggestions() final;
 
-    bool shouldOnlyShowDataListDropdownButtonWhenFocusedOrEdited() const;
-
     void dataListButtonElementWasClicked() final;
     bool m_isFocusingWithDataListDropdown { false };
+    bool m_popupIsVisible { false };
     RefPtr<DataListButtonElement> m_dataListDropdownIndicator;
 
     std::pair<String, Vector<DataListSuggestion>> m_cachedSuggestions;
-    std::unique_ptr<DataListSuggestionPicker> m_suggestionPicker;
-#endif
+    RefPtr<DataListSuggestionPicker> m_suggestionPicker;
 
     RefPtr<HTMLElement> m_container;
     RefPtr<HTMLElement> m_innerBlock;
@@ -154,7 +153,7 @@ private:
     RefPtr<HTMLElement> m_placeholder;
     RefPtr<SpinButtonElement> m_innerSpinButton;
     RefPtr<HTMLElement> m_capsLockIndicator;
-    RefPtr<HTMLElement> m_autoFillButton;
+    RefPtr<AutoFillButtonElement> m_autoFillButton;
 };
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020-2021 Apple Inc. All rights reserved.
+ * Copyright (c) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,6 +37,8 @@
 #include "pas_fast_path_allocation_result.h"
 #include "pas_segregated_size_directory_inlines.h"
 
+#if LIBPAS_ENABLED
+
 PAS_BEGIN_EXTERN_C;
 
 PAS_API bool pas_bitfit_allocator_commit_view(pas_bitfit_view* view,
@@ -56,9 +58,10 @@ pas_bitfit_allocator_try_allocate(pas_bitfit_allocator* allocator,
                                   pas_local_allocator* local_allocator,
                                   size_t size,
                                   size_t alignment,
+                                  pas_allocation_mode allocation_mode,
                                   pas_bitfit_page_config config)
 {
-    static const bool verbose = false;
+    static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_BITFIT_HEAPS);
 
     pas_bitfit_view* view;
 
@@ -148,7 +151,7 @@ pas_bitfit_allocator_try_allocate(pas_bitfit_allocator* allocator,
                 pas_log("About to allocate in view %p, page %p.\n", view, page);
 
             bitfit_result = pas_bitfit_page_allocate(
-                page, view, size, alignment, config, commit_lock_hold_mode, &bytes_committed);
+                page, view, size, alignment, allocation_mode, config, commit_lock_hold_mode, &bytes_committed);
 
             if (need_to_lock_commit_lock)
                 pas_lock_unlock(&view->commit_lock);
@@ -202,5 +205,5 @@ pas_bitfit_allocator_try_allocate(pas_bitfit_allocator* allocator,
 
 PAS_END_EXTERN_C;
 
+#endif /* LIBPAS_ENABLED */
 #endif /* PAS_BITFIT_ALLOCATOR_INLINES_H */
-

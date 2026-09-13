@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -83,8 +83,16 @@ public:
 
     inline CStreamCallbacks* GetCallbacks() { return m_pStreamCallbacks; }
 
+    inline void SetAudioCallbacks(CStreamCallbacks *callbacks) { m_pAudioStreamCallbacks = callbacks; }
+    inline CStreamCallbacks* GetAudioCallbacks() { return m_pAudioStreamCallbacks; }
+
 protected:
     CStreamCallbacks *m_pStreamCallbacks;
+    // Callbacks to read separate audio stream. Current use case is HLS.
+    // ContentType of CLocatorStream is set to content type of main URL.
+    // Actual media mimetype of stream is read via HLS_PROP_GET_MIMETYPE property for HLS.
+    // For non-HLS streams media mimetype is same as contentType.
+    CStreamCallbacks *m_pAudioStreamCallbacks;
 };
 
 #endif // _LOCATOR_STREAM_H_

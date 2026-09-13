@@ -33,21 +33,20 @@
 #include "ProbeContext.h"
 #include <wtf/PrintStream.h>
 #include <wtf/ScopedLambda.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
 
-const double MacroAssembler::twoToThe32 = (double)0x100000000ull;
-
 void MacroAssembler::jitAssert(const ScopedLambda<Jump(void)>& functor)
 {
-    if (Options::enableJITDebugAssertions()) {
+    if (Options::useJITDebugAssertions()) {
         Jump passed = functor();
         breakpoint();
         passed.link(this);
     }
 }
 
-static void stdFunctionCallback(Probe::Context& context)
+static void SYSV_ABI stdFunctionCallback(Probe::Context& context)
 {
     auto func = context.arg<const Function<void(Probe::Context&)>*>();
     (*func)(context);
@@ -55,7 +54,7 @@ static void stdFunctionCallback(Probe::Context& context)
 
 void MacroAssembler::probeDebug(Function<void(Probe::Context&)> func)
 {
-    probe(tagCFunction<JITProbePtrTag>(stdFunctionCallback), new Function<void(Probe::Context&)>(WTFMove(func)));
+    probe(tagCFunction<JITProbePtrTag>(stdFunctionCallback), new Function<void(Probe::Context&)>(WTF::move(func)));
 }
 
 } // namespace JSC
@@ -104,6 +103,9 @@ void printInternal(PrintStream& out, MacroAssembler::RelationalCondition cond)
 void printInternal(PrintStream& out, MacroAssembler::ResultCondition cond)
 {
     switch (cond) {
+    case MacroAssembler::Carry:
+        out.print("Carry");
+        return;
     case MacroAssembler::Overflow:
         out.print("Overflow");
         return;

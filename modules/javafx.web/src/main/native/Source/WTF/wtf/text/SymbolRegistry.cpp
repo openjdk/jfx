@@ -38,19 +38,15 @@ SymbolRegistry::SymbolRegistry(Type type)
 
 SymbolRegistry::~SymbolRegistry()
 {
-    for (auto& key : m_table) {
-        ASSERT(key->isSymbol());
-        static_cast<SymbolImpl*>(key.get())->asRegisteredSymbolImpl()->clearSymbolRegistry();
-    }
+    for (auto& key : m_table)
+        downcast<SymbolImpl>(key.get())->asRegisteredSymbolImpl()->clearSymbolRegistry();
 }
 
 Ref<RegisteredSymbolImpl> SymbolRegistry::symbolForKey(const String& rep)
 {
     auto addResult = m_table.add(rep.impl());
-    if (!addResult.isNewEntry) {
-        ASSERT(addResult.iterator->get()->isSymbol());
-        return *static_cast<SymbolImpl*>(addResult.iterator->get())->asRegisteredSymbolImpl();
-    }
+    if (!addResult.isNewEntry)
+        return *downcast<SymbolImpl>(addResult.iterator->get())->asRegisteredSymbolImpl();
 
     RefPtr<RegisteredSymbolImpl> symbol;
     if (m_symbolType == Type::PrivateSymbol)
@@ -64,15 +60,15 @@ Ref<RegisteredSymbolImpl> SymbolRegistry::symbolForKey(const String& rep)
 
 // When removing a registered symbol from the table, we know it's already the one in the table, so no need for a string equality check.
 struct SymbolRegistryTableRemovalHashTranslator {
-    static unsigned hash(RegisteredSymbolImpl* key) { return key->hash(); }
-    static bool equal(const RefPtr<StringImpl>& a, const RegisteredSymbolImpl* b) { return a.get() == b; }
+    static unsigned hash(const RegisteredSymbolImpl* key) { return key->hash(); }
+    static bool equal(const RefPtr<StringImpl>& a, const RegisteredSymbolImpl* b) { return a == b; }
 };
 
 void SymbolRegistry::remove(RegisteredSymbolImpl& uid)
 {
     ASSERT(uid.symbolRegistry() == this);
     auto iterator = m_table.find<SymbolRegistryTableRemovalHashTranslator>(&uid);
-    ASSERT_WITH_MESSAGE(iterator != m_table.end(), "The string being removed is registered in the string table of an other thread!");
+    ASSERT_WITH_MESSAGE(iterator != m_table.end(), "The string being removed is registered in the string table of another thread!");
     m_table.remove(iterator);
 }
 

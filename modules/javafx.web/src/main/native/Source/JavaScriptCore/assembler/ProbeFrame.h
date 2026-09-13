@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(ASSEMBLER)
 
 #include "CallFrame.h"
@@ -36,7 +38,7 @@ namespace Probe {
 class Frame {
 public:
     Frame(void* frameBase, Stack& stack)
-        : m_frameBase { reinterpret_cast<uint8_t*>(frameBase) }
+        : m_frameBase { static_cast<uint8_t*>(frameBase) }
         , m_stack { stack }
     { }
 

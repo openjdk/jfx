@@ -25,38 +25,88 @@
 
 #pragma once
 
-#include "ClientOrigin.h"
-#include "Document.h"
-#include "FocusOptions.h"
-#include "FrameDestructionObserverInlines.h"
-#include "MediaProducer.h"
-#include "SecurityOrigin.h"
-#include "TextResourceDecoder.h"
-#include "WebCoreOpaqueRoot.h"
+#include <WebCore/ClientOrigin.h>
+#include <WebCore/Document.h>
+#include <WebCore/DocumentParser.h>
+#include <WebCore/DocumentSyncData.h>
+#include <WebCore/Element.h>
+#include <WebCore/ExtensionStyleSheets.h>
+#include <WebCore/FrameSelection.h>
+#include <WebCore/NodeIterator.h>
+#include <WebCore/ReportingScope.h>
+#include <WebCore/SecurityOrigin.h>
+#include <WebCore/TextResourceDecoder.h>
+#include <WebCore/UndoManager.h>
 
 namespace WebCore {
 
 inline PAL::TextEncoding Document::textEncoding() const
 {
-    if (auto* decoder = this->decoder())
+    if (RefPtr decoder = this->decoder())
         return decoder->encoding();
     return PAL::TextEncoding();
 }
 
-inline AtomString Document::encoding() const { return AtomString::fromLatin1(textEncoding().domName()); }
+inline ASCIILiteral Document::encoding() const
+{
+    return textEncoding().domName();
+}
 
-inline String Document::charset() const { return Document::encoding(); }
+inline ASCIILiteral Document::charset() const
+{
+    return Document::encoding();
+}
+
+inline ExtensionStyleSheets& Document::extensionStyleSheets()
+{
+    if (!m_extensionStyleSheets)
+        return ensureExtensionStyleSheets();
+    return *m_extensionStyleSheets;
+}
+
+inline CheckedRef<ExtensionStyleSheets> Document::checkedExtensionStyleSheets()
+{
+    return extensionStyleSheets();
+}
+
+inline VisitedLinkState& Document::visitedLinkState() const
+{
+    if (!m_visitedLinkState)
+        return const_cast<Document&>(*this).ensureVisitedLinkState();
+    return *m_visitedLinkState;
+}
+
+inline ScriptRunner& Document::scriptRunner()
+{
+    if (!m_scriptRunner)
+        return ensureScriptRunner();
+    return *m_scriptRunner;
+}
+
+inline ScriptModuleLoader& Document::moduleLoader()
+{
+    if (!m_moduleLoader)
+        return ensureModuleLoader();
+    return *m_moduleLoader;
+}
+
+inline CSSFontSelector& Document::fontSelector()
+{
+    if (!m_fontSelector)
+        return ensureFontSelector();
+    return *m_fontSelector;
+}
+
+inline const CSSFontSelector& Document::fontSelector() const
+{
+    if (!m_fontSelector)
+        return const_cast<Document&>(*this).ensureFontSelector();
+    return *m_fontSelector;
+}
 
 inline const Document* Document::templateDocument() const
 {
     return m_templateDocumentHost ? this : m_templateDocument.get();
-}
-
-inline AXObjectCache* Document::existingAXObjectCache() const
-{
-    if (!hasEverCreatedAnAXObjectCache)
-        return nullptr;
-    return existingAXObjectCacheSlow();
 }
 
 inline Ref<Document> Document::create(const Settings& settings, const URL& url)
@@ -66,62 +116,75 @@ inline Ref<Document> Document::create(const Settings& settings, const URL& url)
     return document;
 }
 
+bool Document::hasNodeIterators() const
+{
+    return !m_nodeIterators.isEmptyIgnoringNullReferences();
+}
+
 inline void Document::invalidateAccessKeyCache()
 {
-    if (UNLIKELY(m_accessKeyCache))
+    if (m_accessKeyCache) [[unlikely]]
         invalidateAccessKeyCacheSlowCase();
-}
-
-inline bool Document::isCapturing() const
-{
-    return MediaProducer::isCapturing(m_mediaState);
-}
-
-inline bool Document::hasMutationObserversOfType(MutationObserverOptionType type) const
-{
-    return m_mutationObserverTypes.containsAny(type);
 }
 
 inline ClientOrigin Document::clientOrigin() const { return { topOrigin().data(), securityOrigin().data() }; }
 
-inline bool Document::isSameOriginAsTopDocument() const { return securityOrigin().isSameOriginAs(topOrigin()); }
-
-inline bool Document::shouldMaskURLForBindings(const URL& urlToMask) const
-{
-    if (LIKELY(urlToMask.protocolIsInHTTPFamily()))
-        return false;
-    return shouldMaskURLForBindingsInternal(urlToMask);
-}
-
-inline const URL& Document::maskedURLForBindingsIfNeeded(const URL& url) const
-{
-    if (UNLIKELY(shouldMaskURLForBindings(url)))
-        return maskedURLForBindings();
-    return url;
-}
-
-// These functions are here because they require the Document class definition and we want to inline them.
-
-inline ScriptExecutionContext* Node::scriptExecutionContext() const
-{
-    return &document().contextDocument();
-}
-
-inline bool Document::hasBrowsingContext() const
-{
-    return !!frame();
-}
-
-inline WebCoreOpaqueRoot Node::opaqueRoot() const
-{
-    // FIXME: Possible race?
-    // https://bugs.webkit.org/show_bug.cgi?id=165713
-    if (isConnected())
-        return WebCoreOpaqueRoot { &document() };
-    return traverseToOpaqueRoot();
-}
 
 inline bool Document::wasLastFocusByClick() const { return m_latestFocusTrigger == FocusTrigger::Click; }
 
+inline RefPtr<DocumentParser> Document::protectedParser() const
+{
+    return m_parser;
+}
+
+inline RefPtr<Element> Document::protectedDocumentElement() const
+{
+    return m_documentElement;
+}
+
+inline UndoManager& Document::undoManager() const
+{
+    if (!m_undoManager)
+        return const_cast<Document&>(*this).ensureUndoManager();
+    return *m_undoManager;
+}
+
+inline Ref<UndoManager> Document::protectedUndoManager() const
+{
+    return undoManager();
+}
+
+inline ReportingScope& Document::reportingScope() const
+{
+    if (!m_reportingScope)
+        return const_cast<Document&>(*this).ensureReportingScope();
+    return *m_reportingScope;
+}
+
+inline Ref<ReportingScope> Document::protectedReportingScope() const
+{
+    return reportingScope();
+}
+
+inline RefPtr<TextResourceDecoder> Document::protectedDecoder() const
+{
+    return m_decoder;
+}
+
+inline RefPtr<Element> Document::protectedFocusedElement() const
+{
+    return m_focusedElement;
+}
+
+inline Ref<DocumentSyncData> Document::syncData()
+{
+    return m_syncData.get();
+}
+
+// FIXME: Move to FrameSelectionInlines.h
+RefPtr<Document> FrameSelection::protectedDocument() const
+{
+    return m_document.get();
+}
 
 } // namespace WebCore

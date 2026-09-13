@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,19 +28,21 @@
 #if HAVE(WEBGPU_IMPLEMENTATION)
 
 #include "WebGPUBindGroup.h"
+#include "WebGPUExternalTexture.h"
 #include "WebGPUPtr.h"
 #include <WebGPU/WebGPU.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore::WebGPU {
 
 class ConvertToBackingContext;
 
 class BindGroupImpl final : public BindGroup {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(BindGroupImpl);
 public:
     static Ref<BindGroupImpl> create(WebGPUPtr<WGPUBindGroup>&& bindGroup, ConvertToBackingContext& convertToBackingContext)
     {
-        return adoptRef(*new BindGroupImpl(WTFMove(bindGroup), convertToBackingContext));
+        return adoptRef(*new BindGroupImpl(WTF::move(bindGroup), convertToBackingContext));
     }
 
     virtual ~BindGroupImpl();
@@ -56,13 +58,19 @@ private:
     BindGroupImpl& operator=(BindGroupImpl&&) = delete;
 
     WGPUBindGroup backing() const { return m_backing.get(); }
+    bool isBindGroupImpl() const final { return true; }
 
     void setLabelInternal(const String&) final;
+    bool updateExternalTextures(ExternalTexture&) final;
 
     WebGPUPtr<WGPUBindGroup> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebGPU::BindGroupImpl)
+    static bool isType(const WebCore::WebGPU::BindGroup& bindGroup) { return bindGroup.isBindGroupImpl(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

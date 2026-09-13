@@ -26,10 +26,10 @@
 #include "config.h"
 #include "ResourceCryptographicDigest.h"
 
-#include "ParsingUtilities.h"
 #include "SharedBuffer.h"
 #include <pal/crypto/CryptoDigest.h>
 #include <wtf/text/Base64.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringParsingBuffer.h>
 
 namespace WebCore {
@@ -61,31 +61,31 @@ template<typename CharacterType> static std::optional<ResourceCryptographicDiges
     if (!skipExactly(buffer, '-'))
         return std::nullopt;
 
-    auto beginHashValue = buffer.position();
+    auto beginHashValue = buffer.span();
     skipWhile<isBase64OrBase64URLCharacter>(buffer);
     skipExactly(buffer, '=');
     skipExactly(buffer, '=');
 
-    if (buffer.position() == beginHashValue)
+    if (buffer.position() == beginHashValue.data())
         return std::nullopt;
 
-    StringView hashValue(beginHashValue, buffer.position() - beginHashValue);
+    StringView hashValue(beginHashValue.first(buffer.position() - beginHashValue.data()));
 
     if (auto digest = base64Decode(hashValue))
-        return ResourceCryptographicDigest { *algorithm, WTFMove(*digest) };
+        return ResourceCryptographicDigest { *algorithm, WTF::move(*digest) };
 
     if (auto digest = base64URLDecode(hashValue))
-        return ResourceCryptographicDigest { *algorithm, WTFMove(*digest) };
+        return ResourceCryptographicDigest { *algorithm, WTF::move(*digest) };
 
     return std::nullopt;
 }
 
-std::optional<ResourceCryptographicDigest> parseCryptographicDigest(StringParsingBuffer<UChar>& buffer)
+std::optional<ResourceCryptographicDigest> parseCryptographicDigest(StringParsingBuffer<char16_t>& buffer)
 {
     return parseCryptographicDigestImpl(buffer);
 }
 
-std::optional<ResourceCryptographicDigest> parseCryptographicDigest(StringParsingBuffer<LChar>& buffer)
+std::optional<ResourceCryptographicDigest> parseCryptographicDigest(StringParsingBuffer<Latin1Character>& buffer)
 {
     return parseCryptographicDigestImpl(buffer);
 }
@@ -102,23 +102,23 @@ template<typename CharacterType> static std::optional<EncodedResourceCryptograph
     if (!skipExactly(buffer, '-'))
         return std::nullopt;
 
-    auto beginHashValue = buffer.position();
+    auto beginHashValue = buffer.span();
     skipWhile<isBase64OrBase64URLCharacter>(buffer);
     skipExactly(buffer, '=');
     skipExactly(buffer, '=');
 
-    if (buffer.position() == beginHashValue)
+    if (buffer.position() == beginHashValue.data())
         return std::nullopt;
 
-    return EncodedResourceCryptographicDigest { *algorithm, String(beginHashValue, buffer.position() - beginHashValue) };
+    return EncodedResourceCryptographicDigest { *algorithm, beginHashValue.first(buffer.position() - beginHashValue.data()) };
 }
 
-std::optional<EncodedResourceCryptographicDigest> parseEncodedCryptographicDigest(StringParsingBuffer<UChar>& buffer)
+std::optional<EncodedResourceCryptographicDigest> parseEncodedCryptographicDigest(StringParsingBuffer<char16_t>& buffer)
 {
     return parseEncodedCryptographicDigestImpl(buffer);
 }
 
-std::optional<EncodedResourceCryptographicDigest> parseEncodedCryptographicDigest(StringParsingBuffer<LChar>& buffer)
+std::optional<EncodedResourceCryptographicDigest> parseEncodedCryptographicDigest(StringParsingBuffer<Latin1Character>& buffer)
 {
     return parseEncodedCryptographicDigestImpl(buffer);
 }
@@ -126,10 +126,10 @@ std::optional<EncodedResourceCryptographicDigest> parseEncodedCryptographicDiges
 std::optional<ResourceCryptographicDigest> decodeEncodedResourceCryptographicDigest(const EncodedResourceCryptographicDigest& encodedDigest)
 {
     if (auto digest = base64Decode(encodedDigest.digest))
-        return ResourceCryptographicDigest { encodedDigest.algorithm, WTFMove(*digest) };
+        return ResourceCryptographicDigest { encodedDigest.algorithm, WTF::move(*digest) };
 
     if (auto digest = base64URLDecode(encodedDigest.digest))
-        return ResourceCryptographicDigest { encodedDigest.algorithm, WTFMove(*digest) };
+        return ResourceCryptographicDigest { encodedDigest.algorithm, WTF::move(*digest) };
 
     return std::nullopt;
 }
@@ -148,10 +148,10 @@ static PAL::CryptoDigest::Algorithm toCryptoDigestAlgorithm(ResourceCryptographi
     return PAL::CryptoDigest::Algorithm::SHA_512;
 }
 
-ResourceCryptographicDigest cryptographicDigestForBytes(ResourceCryptographicDigest::Algorithm algorithm, const void* bytes, size_t length)
+ResourceCryptographicDigest cryptographicDigestForBytes(ResourceCryptographicDigest::Algorithm algorithm, std::span<const uint8_t> bytes)
 {
     auto cryptoDigest = PAL::CryptoDigest::create(toCryptoDigestAlgorithm(algorithm));
-    cryptoDigest->addBytes(bytes, length);
+    cryptoDigest->addBytes(bytes);
     return { algorithm, cryptoDigest->computeHash() };
 }
 
@@ -159,8 +159,8 @@ ResourceCryptographicDigest cryptographicDigestForSharedBuffer(ResourceCryptogra
 {
     auto cryptoDigest = PAL::CryptoDigest::create(toCryptoDigestAlgorithm(algorithm));
     if (buffer) {
-        buffer->forEachSegment([&](auto& segment) {
-            cryptoDigest->addBytes(segment.data(), segment.size());
+        buffer->forEachSegment([&](auto segment) {
+            cryptoDigest->addBytes(segment);
         });
     }
     return { algorithm, cryptoDigest->computeHash() };

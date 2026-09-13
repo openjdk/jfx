@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,8 +35,13 @@
 #include "LinkBuffer.h"
 #include "ProfilerCompilation.h"
 #include <wtf/StringPrintStream.h>
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(JITDisassembler);
 
 JITDisassembler::JITDisassembler(CodeBlock *codeBlock)
     : m_codeBlock(codeBlock)
@@ -45,17 +50,15 @@ JITDisassembler::JITDisassembler(CodeBlock *codeBlock)
 {
 }
 
-JITDisassembler::~JITDisassembler()
-{
-}
+JITDisassembler::~JITDisassembler() = default;
 
 void JITDisassembler::dump(PrintStream& out, LinkBuffer& linkBuffer)
 {
     m_codeStart = linkBuffer.entrypoint<DisassemblyPtrTag>().untaggedPtr();
-    m_codeEnd = bitwise_cast<uint8_t*>(m_codeStart) + linkBuffer.size();
+    m_codeEnd = std::bit_cast<uint8_t*>(m_codeStart) + linkBuffer.size();
 
     dumpHeader(out, linkBuffer);
-    dumpDisassembly(out, linkBuffer, m_startOfCode, m_labelForBytecodeIndexInMainPath[0]);
+    dumpDisassembly(out, linkBuffer, m_startOfCode, m_labelForBytecodeIndexInMainPath[0].first);
 
     dumpForInstructions(out, linkBuffer, "    ", m_labelForBytecodeIndexInMainPath, firstSlowLabel());
     out.print("    (End Of Main Path)\n");
@@ -77,13 +80,13 @@ void JITDisassembler::reportToProfiler(Profiler::Compilation* compilation, LinkB
     dumpHeader(out, linkBuffer);
     compilation->addDescription(Profiler::CompiledBytecode(Profiler::OriginStack(), out.toCString()));
     out.reset();
-    dumpDisassembly(out, linkBuffer, m_startOfCode, m_labelForBytecodeIndexInMainPath[0]);
+    dumpDisassembly(out, linkBuffer, m_startOfCode, m_labelForBytecodeIndexInMainPath[0].first);
     compilation->addDescription(Profiler::CompiledBytecode(Profiler::OriginStack(), out.toCString()));
 
     reportInstructions(compilation, linkBuffer, "    ", m_labelForBytecodeIndexInMainPath, firstSlowLabel());
-    compilation->addDescription(Profiler::CompiledBytecode(Profiler::OriginStack(), "    (End Of Main Path)\n"));
+    compilation->addDescription(Profiler::CompiledBytecode(Profiler::OriginStack(), "    (End Of Main Path)\n"_s));
     reportInstructions(compilation, linkBuffer, "    (S) ", m_labelForBytecodeIndexInSlowPath, m_endOfSlowPath);
-    compilation->addDescription(Profiler::CompiledBytecode(Profiler::OriginStack(), "    (End Of Slow Path)\n"));
+    compilation->addDescription(Profiler::CompiledBytecode(Profiler::OriginStack(), "    (End Of Slow Path)\n"_s));
     out.reset();
     dumpDisassembly(out, linkBuffer, m_endOfSlowPath, m_endOfCode);
     compilation->addDescription(Profiler::CompiledBytecode(Profiler::OriginStack(), out.toCString()));
@@ -100,21 +103,21 @@ MacroAssembler::Label JITDisassembler::firstSlowLabel()
 {
     MacroAssembler::Label firstSlowLabel;
     for (unsigned i = 0; i < m_labelForBytecodeIndexInSlowPath.size(); ++i) {
-        if (m_labelForBytecodeIndexInSlowPath[i].isSet()) {
-            firstSlowLabel = m_labelForBytecodeIndexInSlowPath[i];
+        if (m_labelForBytecodeIndexInSlowPath[i].first.isSet()) {
+            firstSlowLabel = m_labelForBytecodeIndexInSlowPath[i].first;
             break;
         }
     }
     return firstSlowLabel.isSet() ? firstSlowLabel : m_endOfSlowPath;
 }
 
-Vector<JITDisassembler::DumpedOp> JITDisassembler::dumpVectorForInstructions(LinkBuffer& linkBuffer, const char* prefix, Vector<MacroAssembler::Label>& labels, MacroAssembler::Label endLabel)
+Vector<JITDisassembler::DumpedOp> JITDisassembler::dumpVectorForInstructions(LinkBuffer& linkBuffer, const char* prefix, Vector<std::pair<MacroAssembler::Label, CString>>& labels, MacroAssembler::Label endLabel)
 {
     StringPrintStream out;
     Vector<DumpedOp> result;
 
     for (unsigned i = 0; i < labels.size();) {
-        if (!labels[i].isSet()) {
+        if (!labels[i].first.isSet()) {
             i++;
             continue;
         }
@@ -123,14 +126,16 @@ Vector<JITDisassembler::DumpedOp> JITDisassembler::dumpVectorForInstructions(Lin
         result.last().bytecodeIndex = BytecodeIndex(i);
         out.print(prefix);
         m_codeBlock->dumpBytecode(out, i);
+        if (!labels[i].second.isNull())
+            out.println(" ", labels[i].second);
         for (unsigned nextIndex = i + 1; ; nextIndex++) {
             if (nextIndex >= labels.size()) {
-                dumpDisassembly(out, linkBuffer, labels[i], endLabel);
+                dumpDisassembly(out, linkBuffer, labels[i].first, endLabel);
                 result.last().disassembly = out.toCString();
                 return result;
             }
-            if (labels[nextIndex].isSet()) {
-                dumpDisassembly(out, linkBuffer, labels[i], labels[nextIndex]);
+            if (labels[nextIndex].first.isSet()) {
+                dumpDisassembly(out, linkBuffer, labels[i].first, labels[nextIndex].first);
                 result.last().disassembly = out.toCString();
                 i = nextIndex;
                 break;
@@ -141,7 +146,7 @@ Vector<JITDisassembler::DumpedOp> JITDisassembler::dumpVectorForInstructions(Lin
     return result;
 }
 
-void JITDisassembler::dumpForInstructions(PrintStream& out, LinkBuffer& linkBuffer, const char* prefix, Vector<MacroAssembler::Label>& labels, MacroAssembler::Label endLabel)
+void JITDisassembler::dumpForInstructions(PrintStream& out, LinkBuffer& linkBuffer, const char* prefix, Vector<std::pair<MacroAssembler::Label, CString>>& labels, MacroAssembler::Label endLabel)
 {
     Vector<DumpedOp> dumpedOps = dumpVectorForInstructions(linkBuffer, prefix, labels, endLabel);
 
@@ -149,7 +154,7 @@ void JITDisassembler::dumpForInstructions(PrintStream& out, LinkBuffer& linkBuff
         out.print(dumpedOps[i].disassembly);
 }
 
-void JITDisassembler::reportInstructions(Profiler::Compilation* compilation, LinkBuffer& linkBuffer, const char* prefix, Vector<MacroAssembler::Label>& labels, MacroAssembler::Label endLabel)
+void JITDisassembler::reportInstructions(Profiler::Compilation* compilation, LinkBuffer& linkBuffer, const char* prefix, Vector<std::pair<MacroAssembler::Label, CString>>& labels, MacroAssembler::Label endLabel)
 {
     Vector<DumpedOp> dumpedOps = dumpVectorForInstructions(linkBuffer, prefix, labels, endLabel);
 
@@ -170,5 +175,6 @@ void JITDisassembler::dumpDisassembly(PrintStream& out, LinkBuffer& linkBuffer, 
 
 } // namespace JSC
 
-#endif // ENABLE(JIT)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
+#endif // ENABLE(JIT)

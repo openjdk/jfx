@@ -33,10 +33,17 @@
 #include "FloatSize.h"
 #include "FontCascade.h"
 #include "FontCascadeDescription.h"
+#include "FontCascadeInlines.h"
+#include "FontSelector.h"
 #include "GraphicsContext.h"
 #include "Path.h"
+#include "TextRun.h"
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InspectorOverlayLabel);
 
 static constexpr float labelPadding = 4;
 static constexpr float labelArrowSize = 6;
@@ -44,7 +51,7 @@ static constexpr float labelAdditionalLineSpacing = 1;
 static constexpr float labelContentDecorationBorderedLeadingAndTrailingPadding = 1;
 
 InspectorOverlayLabel::InspectorOverlayLabel(Vector<Content>&& contents, FloatPoint location, Color backgroundColor, Arrow arrow)
-    : m_contents(WTFMove(contents))
+    : m_contents(WTF::move(contents))
     , m_location(location)
     , m_backgroundColor(backgroundColor)
     , m_arrow(arrow)
@@ -63,7 +70,7 @@ static FontCascade systemFont()
     fontDescription.setWeight(FontSelectionValue(500));
     fontDescription.setComputedSize(12);
 
-    FontCascade font(WTFMove(fontDescription), 0, 0);
+    FontCascade font(WTF::move(fontDescription));
     font.update(nullptr);
     return font;
 }
@@ -206,11 +213,11 @@ struct ComputedContentRun {
 
 Path InspectorOverlayLabel::draw(GraphicsContext& context, float maximumLineWidth)
 {
-    constexpr UChar ellipsis = 0x2026;
+    constexpr char16_t ellipsis = 0x2026;
 
     auto font = systemFont();
-    float lineHeight = font.metricsOfPrimaryFont().floatHeight();
-    float lineDescent = font.metricsOfPrimaryFont().floatDescent();
+    float lineHeight = font.metricsOfPrimaryFont().height();
+    float lineDescent = font.metricsOfPrimaryFont().descent();
 
     Vector<ComputedContentRun> computedContentRuns;
 
@@ -346,7 +353,7 @@ Path InspectorOverlayLabel::draw(GraphicsContext& context, float maximumLineWidt
                 textPosition.y() + yOffset - lineHeight + lineDescent,
                 computedContentRun.computedWidth + (labelContentDecorationBorderedLeadingAndTrailingPadding * 2),
                 lineHeight,
-            }, FloatRoundedRect::Radii(2));
+            }, CornerRadii(2));
 
             Path backgroundPath;
             backgroundPath.addRoundedRect(backgroundRect);
@@ -375,7 +382,7 @@ Path InspectorOverlayLabel::draw(GraphicsContext& context, float maximumLineWidt
 FloatSize InspectorOverlayLabel::expectedSize(const Vector<Content>& contents, Arrow::Direction direction)
 {
     auto font = systemFont();
-    float lineHeight = font.metricsOfPrimaryFont().floatHeight();
+    float lineHeight = font.metricsOfPrimaryFont().height();
 
     float longestLineWidth = 0;
     int currentLine = 0;
@@ -393,7 +400,7 @@ FloatSize InspectorOverlayLabel::expectedSize(const Vector<Content>& contents, A
             if (text.isEmpty())
                 continue;
 
-            currentLineWidth += font.width(TextRun(text));
+            currentLineWidth += font.width(text);
             if (currentLineWidth > longestLineWidth)
                 longestLineWidth = currentLineWidth;
         }

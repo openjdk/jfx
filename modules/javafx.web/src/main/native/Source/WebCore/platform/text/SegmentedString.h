@@ -20,14 +20,11 @@
 #pragma once
 
 #include <wtf/Deque.h>
+#include <wtf/text/ParsingUtilities.h>
 #include <wtf/text/StringView.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
-
-// FIXME: This should not start with "k".
-// FIXME: This is a shared tokenizer concept, not a SegmentedString concept, but this is the only common header for now.
-constexpr LChar kEndOfFileMarker = 0;
 
 class SegmentedString {
 public:
@@ -55,7 +52,7 @@ public:
 
     void setExcludeLineNumbers();
 
-    bool isEmpty() const { return !m_currentSubstring.length; }
+    bool isEmpty() const { return !m_currentSubstring.length(); }
     unsigned length() const;
 
     bool isClosed() const { return m_isClosed; }
@@ -65,14 +62,14 @@ public:
     void advancePastNewline(); // Faster than calling advance when we know the current character is a newline.
 
     enum AdvancePastResult { DidNotMatch, DidMatch, NotEnoughCharacters };
-    template<unsigned length> AdvancePastResult advancePast(const char (&literal)[length]) { return advancePast<length, false>(literal); }
-    template<unsigned length> AdvancePastResult advancePastLettersIgnoringASCIICase(const char (&literal)[length]) { return advancePast<length, true>(literal); }
+    AdvancePastResult advancePast(ASCIILiteral literal) { return advancePast<false>(literal); }
+    AdvancePastResult advancePastLettersIgnoringASCIICase(ASCIILiteral literal) { return advancePast<true>(literal); }
 
     unsigned numberOfCharactersConsumed() const;
 
     String toString() const;
 
-    UChar currentCharacter() const { return m_currentCharacter; }
+    char16_t currentCharacter() const { return m_currentCharacter; }
 
     OrdinalNumber currentColumn() const;
     OrdinalNumber currentLine() const;
@@ -87,20 +84,25 @@ private:
         Substring(String&&);
         explicit Substring(StringView);
 
-        UChar currentCharacter() const;
-        UChar currentCharacterPreIncrement();
+        char16_t currentCharacter() const;
+        char16_t currentCharacterPreIncrement();
 
         unsigned numberOfCharactersConsumed() const;
         void appendTo(StringBuilder&) const;
 
+        unsigned length() const { return s.currentCharacter8.size(); }
+        void clear() { s.currentCharacter8 = { }; }
+
         String underlyingString; // Optional, may be null.
         unsigned originalLength { 0 };
-        unsigned length { 0 };
-        union {
-            const LChar* currentCharacter8;
-            const UChar* currentCharacter16;
-        };
-        bool is8Bit;
+        union CharactersSpan {
+            CharactersSpan()
+                : currentCharacter8()
+            { }
+            std::span<const Latin1Character> currentCharacter8;
+            std::span<const char16_t> currentCharacter16;
+        } s;
+        bool is8Bit { true };
         bool doNotExcludeLineNumbers { true };
     };
 
@@ -126,18 +128,18 @@ private:
     void updateAdvanceFunctionPointersForEmptyString();
     void updateAdvanceFunctionPointersForSingleCharacterSubstring();
 
-    void decrementAndCheckLength();
+    void updateAdvanceFunctionPointersIfNecessary();
 
     template<typename CharacterType> static bool characterMismatch(CharacterType, char, bool lettersIgnoringASCIICase);
-    template<unsigned length, bool lettersIgnoringASCIICase> AdvancePastResult advancePast(const char (&literal)[length]);
-    AdvancePastResult advancePastSlowCase(const char* literal, bool lettersIgnoringASCIICase);
+    template<bool lettersIgnoringASCIICase> AdvancePastResult advancePast(ASCIILiteral);
+    AdvancePastResult advancePastSlowCase(ASCIILiteral, bool lettersIgnoringASCIICase);
 
     Substring m_currentSubstring;
     Deque<Substring> m_otherSubstrings;
 
     bool m_isClosed { false };
 
-    UChar m_currentCharacter { 0 };
+    char16_t m_currentCharacter { 0 };
 
     unsigned m_numberOfCharactersConsumedPriorToCurrentSubstring { 0 };
     unsigned m_numberOfCharactersConsumedPriorToCurrentLine { 0 };
@@ -150,61 +152,64 @@ private:
 
 inline SegmentedString::Substring::Substring(StringView passedStringView)
     : originalLength(passedStringView.length())
-    , length(passedStringView.length())
 {
-    if (length) {
+    if (!passedStringView.isEmpty()) {
         is8Bit = passedStringView.is8Bit();
         if (is8Bit)
-            currentCharacter8 = passedStringView.characters8();
+            s.currentCharacter8 = passedStringView.span8();
         else
-            currentCharacter16 = passedStringView.characters16();
+            s.currentCharacter16 = passedStringView.span16();
     }
 }
 
 inline SegmentedString::Substring::Substring(String&& passedString)
-    : underlyingString(WTFMove(passedString))
+    : underlyingString(WTF::move(passedString))
     , originalLength(underlyingString.length())
-    , length(underlyingString.length())
 {
-    if (length) {
+    if (!underlyingString.isEmpty()) {
         is8Bit = underlyingString.impl()->is8Bit();
         if (is8Bit)
-            currentCharacter8 = underlyingString.impl()->characters8();
+            s.currentCharacter8 = underlyingString.impl()->span8();
         else
-            currentCharacter16 = underlyingString.impl()->characters16();
+            s.currentCharacter16 = underlyingString.impl()->span16();
     }
 }
 
 inline unsigned SegmentedString::Substring::numberOfCharactersConsumed() const
 {
-    return originalLength - length;
+    return originalLength - length();
 }
 
-ALWAYS_INLINE UChar SegmentedString::Substring::currentCharacter() const
+ALWAYS_INLINE char16_t SegmentedString::Substring::currentCharacter() const
 {
-    ASSERT(length);
-    return is8Bit ? *currentCharacter8 : *currentCharacter16;
+    ASSERT(length());
+    return is8Bit ? char16_t { s.currentCharacter8.front() } : s.currentCharacter16.front();
 }
 
-ALWAYS_INLINE UChar SegmentedString::Substring::currentCharacterPreIncrement()
+ALWAYS_INLINE char16_t SegmentedString::Substring::currentCharacterPreIncrement()
 {
-    ASSERT(length);
-    return is8Bit ? *++currentCharacter8 : *++currentCharacter16;
+    ASSERT(length());
+    if (is8Bit) {
+        skip(s.currentCharacter8, 1);
+        return s.currentCharacter8[0];
+    }
+    skip(s.currentCharacter16, 1);
+    return s.currentCharacter16[0];
 }
 
 inline SegmentedString::SegmentedString(StringView stringView)
     : m_currentSubstring(stringView)
 {
-    if (m_currentSubstring.length) {
+    if (m_currentSubstring.length()) {
         m_currentCharacter = m_currentSubstring.currentCharacter();
         updateAdvanceFunctionPointers();
     }
 }
 
 inline SegmentedString::SegmentedString(String&& string)
-    : m_currentSubstring(WTFMove(string))
+    : m_currentSubstring(WTF::move(string))
 {
-    if (m_currentSubstring.length) {
+    if (m_currentSubstring.length()) {
         m_currentCharacter = m_currentSubstring.currentCharacter();
         updateAdvanceFunctionPointers();
     }
@@ -215,18 +220,20 @@ inline SegmentedString::SegmentedString(const String& string)
 {
 }
 
-ALWAYS_INLINE void SegmentedString::decrementAndCheckLength()
+ALWAYS_INLINE void SegmentedString::updateAdvanceFunctionPointersIfNecessary()
 {
-    ASSERT(m_currentSubstring.length > 1);
-    if (UNLIKELY(--m_currentSubstring.length == 1))
+    ASSERT(m_currentSubstring.length() >= 1);
+    if (m_currentSubstring.length() == 1) [[unlikely]]
         updateAdvanceFunctionPointersForSingleCharacterSubstring();
 }
 
+
 ALWAYS_INLINE void SegmentedString::advanceWithoutUpdatingLineNumber()
 {
-    if (LIKELY(m_fastPathFlags & Use8BitAdvance)) {
-        m_currentCharacter = *++m_currentSubstring.currentCharacter8;
-        decrementAndCheckLength();
+    if (m_fastPathFlags & Use8BitAdvance) [[likely]] {
+        skip(m_currentSubstring.s.currentCharacter8, 1);
+        m_currentCharacter = m_currentSubstring.s.currentCharacter8[0];
+        updateAdvanceFunctionPointersIfNecessary();
         return;
     }
 
@@ -247,12 +254,13 @@ inline void SegmentedString::processPossibleNewline()
 
 inline void SegmentedString::advance()
 {
-    if (LIKELY(m_fastPathFlags & Use8BitAdvance)) {
-        ASSERT(m_currentSubstring.length > 1);
+    if (m_fastPathFlags & Use8BitAdvance) [[likely]] {
+        ASSERT(m_currentSubstring.length() > 1);
         bool lastCharacterWasNewline = m_currentCharacter == '\n';
-        m_currentCharacter = *++m_currentSubstring.currentCharacter8;
-        bool haveOneCharacterLeft = --m_currentSubstring.length == 1;
-        if (LIKELY(!(lastCharacterWasNewline | haveOneCharacterLeft)))
+        skip(m_currentSubstring.s.currentCharacter8, 1);
+        m_currentCharacter = m_currentSubstring.s.currentCharacter8[0];
+        bool haveOneCharacterLeft = m_currentSubstring.s.currentCharacter8.size() == 1;
+        if (!(lastCharacterWasNewline | haveOneCharacterLeft)) [[likely]]
             return;
         if (lastCharacterWasNewline & !!(m_fastPathFlags & Use8BitAdvanceAndUpdateLineNumbers))
             startNewLine();
@@ -273,9 +281,9 @@ ALWAYS_INLINE void SegmentedString::advancePastNonNewline()
 inline void SegmentedString::advancePastNewline()
 {
     ASSERT(m_currentCharacter == '\n');
-    if (m_currentSubstring.length > 1) {
+    if (m_currentSubstring.length() > 1) {
         m_currentCharacter = m_currentSubstring.currentCharacterPreIncrement();
-        decrementAndCheckLength();
+        updateAdvanceFunctionPointersIfNecessary();
         if (m_currentSubstring.doNotExcludeLineNumbers)
             startNewLine();
         return;
@@ -294,28 +302,27 @@ template<typename CharacterType> ALWAYS_INLINE bool SegmentedString::characterMi
     return lettersIgnoringASCIICase ? !isASCIIAlphaCaselessEqual(a, b) : a != b;
 }
 
-template<unsigned lengthIncludingTerminator, bool lettersIgnoringASCIICase> SegmentedString::AdvancePastResult SegmentedString::advancePast(const char (&literal)[lengthIncludingTerminator])
+template<bool lettersIgnoringASCIICase> SegmentedString::AdvancePastResult SegmentedString::advancePast(ASCIILiteral literal)
 {
-    constexpr unsigned length = lengthIncludingTerminator - 1;
+    unsigned length = literal.length();
     ASSERT(!literal[length]);
-    ASSERT(!strchr(literal, '\n'));
-    if (length + 1 < m_currentSubstring.length) {
+    ASSERT(!WTF::contains(literal.span(), '\n'));
+    if (length + 1 < m_currentSubstring.length()) {
         if (m_currentSubstring.is8Bit) {
             for (unsigned i = 0; i < length; ++i) {
-                if (characterMismatch(m_currentSubstring.currentCharacter8[i], literal[i], lettersIgnoringASCIICase))
+                if (characterMismatch(m_currentSubstring.s.currentCharacter8[i], literal[i], lettersIgnoringASCIICase))
                     return DidNotMatch;
             }
-            m_currentSubstring.currentCharacter8 += length;
-            m_currentCharacter = *m_currentSubstring.currentCharacter8;
+            skip(m_currentSubstring.s.currentCharacter8, length);
+            m_currentCharacter = m_currentSubstring.s.currentCharacter8[0];
         } else {
             for (unsigned i = 0; i < length; ++i) {
-                if (characterMismatch(m_currentSubstring.currentCharacter16[i], literal[i], lettersIgnoringASCIICase))
+                if (characterMismatch(m_currentSubstring.s.currentCharacter16[i], literal[i], lettersIgnoringASCIICase))
                     return DidNotMatch;
             }
-            m_currentSubstring.currentCharacter16 += length;
-            m_currentCharacter = *m_currentSubstring.currentCharacter16;
+            skip(m_currentSubstring.s.currentCharacter16, length);
+            m_currentCharacter = m_currentSubstring.s.currentCharacter16[0];
         }
-        m_currentSubstring.length -= length;
         return DidMatch;
     }
     return advancePastSlowCase(literal, lettersIgnoringASCIICase);
@@ -323,7 +330,7 @@ template<unsigned lengthIncludingTerminator, bool lettersIgnoringASCIICase> Segm
 
 inline void SegmentedString::updateAdvanceFunctionPointers()
 {
-    if (m_currentSubstring.length > 1) {
+    if (m_currentSubstring.length() > 1) {
         if (m_currentSubstring.is8Bit) {
             m_fastPathFlags = Use8BitAdvance;
             if (m_currentSubstring.doNotExcludeLineNumbers)
@@ -339,7 +346,7 @@ inline void SegmentedString::updateAdvanceFunctionPointers()
         return;
     }
 
-    if (!m_currentSubstring.length) {
+    if (!m_currentSubstring.length()) {
         updateAdvanceFunctionPointersForEmptyString();
         return;
     }

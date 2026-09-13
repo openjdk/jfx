@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,16 @@
 
 package test.launchertest;
 
-import javafx.application.Application;
+import static test.launchertest.Constants.ERROR_PRELOADER_CLASS_INIT_WRONG_THREAD;
+import static test.launchertest.Constants.ERROR_PRELOADER_CONSTRUCTOR_WRONG_THREAD;
+import static test.launchertest.Constants.ERROR_PRELOADER_INIT_WRONG_THREAD;
+import static test.launchertest.Constants.ERROR_PRELOADER_START_WRONG_THREAD;
+import static test.launchertest.Constants.ERROR_PRELOADER_STOP_WRONG_THREAD;
+import static test.launchertest.Constants.ERROR_TOOLKIT_NOT_RUNNING;
+import static test.launchertest.Constants.ERROR_UNEXPECTED_EXCEPTION;
 import javafx.application.Platform;
 import javafx.application.Preloader;
 import javafx.stage.Stage;
-
-import static test.launchertest.Constants.*;
 
 /**
  * Test application with no main method. This is launched by MainLauncherTest.

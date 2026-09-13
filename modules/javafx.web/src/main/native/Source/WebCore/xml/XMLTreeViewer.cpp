@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2011-2014 Google Inc. All rights reserved.
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
  * Copyright (C) 2013 Samsung Electronics. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -32,6 +33,7 @@
 
 #if ENABLE(XSLT)
 
+#include "CSSPrimitiveValue.h"
 #include "Document.h"
 #include "Element.h"
 #include "FrameDestructionObserverInlines.h"
@@ -54,14 +56,15 @@ XMLTreeViewer::XMLTreeViewer(Document& document)
 
 void XMLTreeViewer::transformDocumentToTreeView()
 {
-    String scriptString = StringImpl::createWithoutCopying(XMLViewer_js, sizeof(XMLViewer_js));
-    m_document.frame()->script().evaluateIgnoringException(ScriptSourceCode(scriptString));
-    m_document.frame()->script().evaluateIgnoringException(ScriptSourceCode(AtomString("prepareWebKitXMLViewer('This XML file does not appear to have any style information associated with it. The document tree is shown below.');"_s)));
+    String scriptString = StringImpl::createWithoutCopying(XMLViewer_js);
+    Ref document = m_document.get();
+    RefPtr frame = document->frame();
+    frame->checkedScript()->evaluateIgnoringException(ScriptSourceCode(scriptString, JSC::SourceTaintedOrigin::Untainted));
+    frame->checkedScript()->evaluateIgnoringException(ScriptSourceCode(AtomString("prepareWebKitXMLViewer('This XML file does not appear to have any style information associated with it. The document tree is shown below.');"_s), JSC::SourceTaintedOrigin::Untainted));
 
-    String cssString = StringImpl::createWithoutCopying(XMLViewer_css, sizeof(XMLViewer_css));
-    auto text = m_document.createTextNode(WTFMove(cssString));
-    m_document.getElementById(String("xml-viewer-style"_s))->appendChild(text);
-    m_document.styleScope().didChangeActiveStyleSheetCandidates();
+    String cssString = StringImpl::createWithoutCopying(XMLViewer_css);
+    Ref text = document->createTextNode(WTF::move(cssString));
+    document->getElementById(String("xml-viewer-style"_s))->appendChild(WTF::move(text));
 }
 
 } // namespace WebCore

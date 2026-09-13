@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,15 +25,15 @@
 
 #pragma once
 
-#include "ControlPart.h"
-#include "IntRect.h"
+#include <WebCore/ControlPart.h>
+#include <WebCore/IntRect.h>
 
 namespace WebCore {
 
 class SliderTrackPart : public ControlPart {
 public:
     static Ref<SliderTrackPart> create(StyleAppearance);
-    WEBCORE_EXPORT static Ref<SliderTrackPart> create(StyleAppearance, const IntSize& thumbSize, const IntRect& trackBounds, Vector<double>&& tickRatios);
+    WEBCORE_EXPORT static Ref<SliderTrackPart> create(StyleAppearance, const IntSize& thumbSize, const IntRect& trackBounds, Vector<double>&& tickRatios, double thumbPosition);
 
     IntSize thumbSize() const { return m_thumbSize; }
     void setThumbSize(IntSize thumbSize) { m_thumbSize = thumbSize; }
@@ -42,20 +42,22 @@ public:
     void setTrackBounds(IntRect trackBounds) { m_trackBounds = trackBounds; }
 
     const Vector<double>& tickRatios() const { return m_tickRatios; }
-    void setTickRatios(Vector<double>&& tickRatios) { m_tickRatios = WTFMove(tickRatios); }
+    void setTickRatios(Vector<double>&& tickRatios) { m_tickRatios = WTF::move(tickRatios); }
 
-#if ENABLE(DATALIST_ELEMENT)
+    double thumbPosition() const { return m_thumbPosition; }
+    void setThumbPosition(double thumbPosition) { m_thumbPosition = thumbPosition; }
+
     void drawTicks(GraphicsContext&, const FloatRect&, const ControlStyle&) const;
-#endif
 
 private:
-    SliderTrackPart(StyleAppearance, const IntSize& thumbSize, const IntRect& trackBounds, Vector<double>&& tickRatios);
+    SliderTrackPart(StyleAppearance, const IntSize& thumbSize, const IntRect& trackBounds, Vector<double>&& tickRatios, double thumbPosition);
 
     std::unique_ptr<PlatformControl> createPlatformControl() override;
 
     IntSize m_thumbSize;
     IntRect m_trackBounds;
     Vector<double> m_tickRatios;
+    double m_thumbPosition;
 };
 
 } // namespace WebCore

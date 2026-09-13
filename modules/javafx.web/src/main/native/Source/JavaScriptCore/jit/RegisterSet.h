@@ -25,16 +25,20 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if !ENABLE(C_LOOP)
 
-#include "FPRInfo.h"
-#include "GPRInfo.h"
-#include "MacroAssembler.h"
-#include "MemoryMode.h"
-#include "Reg.h"
-#include "Width.h"
+#include <JavaScriptCore/FPRInfo.h>
+#include <JavaScriptCore/GPRInfo.h>
+#include <JavaScriptCore/MacroAssembler.h>
+#include <JavaScriptCore/MemoryMode.h>
+#include <JavaScriptCore/Reg.h>
+#include <JavaScriptCore/Width.h>
 #include <wtf/BitSet.h>
 #include <wtf/CommaPrinter.h>
+
+#include <ranges>
 
 namespace JSC {
 
@@ -61,12 +65,20 @@ public:
         setMany(regs...);
     }
 
+    static RegisterSetBuilder fromIterable(const std::ranges::range auto& regs)
+    {
+        RegisterSetBuilder result;
+        for (auto reg : regs)
+            result.setAny(reg);
+        return result;
+    }
+
     inline constexpr RegisterSetBuilder& add(Reg reg, Width width)
     {
-        ASSERT(!!reg);
+        ASSERT_UNDER_CONSTEXPR_CONTEXT(!!reg);
         m_bits.set(reg.index());
 
-        if (UNLIKELY(width > conservativeWidthWithoutVectors(reg) && conservativeWidth(reg) > conservativeWidthWithoutVectors(reg)))
+        if (width > conservativeWidthWithoutVectors(reg) && conservativeWidth(reg) > conservativeWidthWithoutVectors(reg)) [[unlikely]]
             m_upperBits.set(reg.index());
         return *this;
     }
@@ -86,9 +98,7 @@ public:
 
     inline constexpr RegisterSetBuilder& remove(Reg reg)
     {
-
-
-        ASSERT(!!reg);
+        ASSERT_UNDER_CONSTEXPR_CONTEXT(!!reg);
         m_bits.clear(reg.index());
         m_upperBits.clear(reg.index());
         return *this;
@@ -126,9 +136,9 @@ public:
         return *this;
     }
 
-    inline constexpr RegisterSet buildAndValidate() const WARN_UNUSED_RETURN;
-    inline constexpr RegisterSet buildWithLowerBits() const WARN_UNUSED_RETURN;
-    inline constexpr ScalarRegisterSet buildScalarRegisterSet() const WARN_UNUSED_RETURN;
+    [[nodiscard]] inline constexpr RegisterSet buildAndValidate() const;
+    [[nodiscard]] inline constexpr RegisterSet buildWithLowerBits() const;
+    [[nodiscard]] inline constexpr ScalarRegisterSet buildScalarRegisterSet() const;
     inline constexpr size_t numberOfSetRegisters() const;
     inline size_t numberOfSetGPRs() const;
     inline size_t numberOfSetFPRs() const;
@@ -152,7 +162,7 @@ public:
     void dump(PrintStream& out) const
     {
         CommaPrinter comma;
-        out.print("[");
+        out.print("["_s);
         for (Reg reg = Reg::first(); reg <= Reg::last(); reg = reg.next()) {
             if (!m_bits.get(reg.index()) && !m_upperBits.get(reg.index()))
                 continue;
@@ -165,13 +175,13 @@ public:
             else
                 out.print("↑");
         }
-        out.print("]");
+        out.print("]"_s);
     }
 
-    inline constexpr bool operator==(const RegisterSetBuilder& other) const { return m_bits == other.m_bits && m_upperBits == other.m_upperBits; }
+    friend constexpr bool operator==(const RegisterSetBuilder&, const RegisterSetBuilder&) = default;
 
 protected:
-    inline constexpr void setAny(Reg reg) { ASSERT(!reg.isFPR()); add(reg, IgnoreVectors); }
+    inline constexpr void setAny(Reg reg) { ASSERT_UNDER_CONSTEXPR_CONTEXT(!reg.isFPR()); add(reg, IgnoreVectors); }
     inline constexpr void setAny(JSValueRegs regs) { add(regs, IgnoreVectors); }
     inline constexpr void setAny(const RegisterSetBuilder& set) { merge(set); }
     inline constexpr void setMany() { }
@@ -207,9 +217,12 @@ public:
     JS_EXPORT_PRIVATE static RegisterSet dfgCalleeSaveRegisters(); // Registers saved and used by the DFG JIT.
     JS_EXPORT_PRIVATE static RegisterSet ftlCalleeSaveRegisters(); // Registers that might be saved and used by the FTL JIT.
     JS_EXPORT_PRIVATE static RegisterSet stubUnavailableRegisters(); // The union of callee saves and special registers.
-    JS_EXPORT_PRIVATE static RegisterSet argumentGPRS();
+    JS_EXPORT_PRIVATE static RegisterSet argumentGPRs();
+    JS_EXPORT_PRIVATE static RegisterSet argumentFPRs();
 #if ENABLE(WEBASSEMBLY)
     JS_EXPORT_PRIVATE static RegisterSet wasmPinnedRegisters();
+    JS_EXPORT_PRIVATE static RegisterSet ipintCalleeSaveRegisters(); // Registers saved and used by the IPInt.
+    JS_EXPORT_PRIVATE static RegisterSet bbqCalleeSaveRegisters(); // Registers saved and used by the BBQ JIT.
 #endif
     JS_EXPORT_PRIVATE static RegisterSetBuilder registersToSaveForJSCall(RegisterSetBuilder live);
     JS_EXPORT_PRIVATE static RegisterSetBuilder registersToSaveForCCall(RegisterSetBuilder live);
@@ -229,10 +242,19 @@ class RegisterSet final {
 public:
     constexpr RegisterSet() = default;
 
+    template<typename RegType, typename... Regs>
+    constexpr explicit inline RegisterSet(RegType reg, Regs... regs)
+        : RegisterSet(regs...)
+    {
+        add(reg, IgnoreVectors);
+    }
+
     inline constexpr bool contains(Reg reg, Width width) const
     {
-        ASSERT(m_bits.count() >= m_upperBits.count());
-        if (LIKELY(width < conservativeWidth(reg)) || conservativeWidth(reg) <= conservativeWidthWithoutVectors(reg))
+        ASSERT_UNDER_CONSTEXPR_CONTEXT(m_bits.count() >= m_upperBits.count());
+        if (width < conservativeWidth(reg)) [[likely]]
+            return m_bits.get(reg.index());
+        if (conservativeWidth(reg) <= conservativeWidthWithoutVectors(reg))
             return m_bits.get(reg.index());
         return m_bits.get(reg.index()) && m_upperBits.get(reg.index());
     }
@@ -258,7 +280,7 @@ public:
 
     inline constexpr size_t numberOfSetRegisters() const
     {
-        ASSERT(m_bits.count() >= m_upperBits.count());
+        ASSERT_UNDER_CONSTEXPR_CONTEXT(m_bits.count() >= m_upperBits.count());
         return m_bits.count();
     }
 
@@ -281,26 +303,26 @@ public:
 
     inline constexpr bool isEmpty() const
     {
-        ASSERT(m_bits.count() >= m_upperBits.count());
+        ASSERT_UNDER_CONSTEXPR_CONTEXT(m_bits.count() >= m_upperBits.count());
         return m_bits.isEmpty();
     }
 
     inline constexpr RegisterSet& includeWholeRegisterWidth()
     {
-        ASSERT(m_bits.count() >= m_upperBits.count());
+        ASSERT_UNDER_CONSTEXPR_CONTEXT(m_bits.count() >= m_upperBits.count());
         m_upperBits.merge(m_bits);
         return *this;
     }
 
-    inline constexpr ScalarRegisterSet buildScalarRegisterSet() const WARN_UNUSED_RETURN;
+    [[nodiscard]] inline constexpr ScalarRegisterSet buildScalarRegisterSet() const;
 
     template<typename Func>
     inline constexpr void forEach(const Func& func) const
     {
-        ASSERT(m_bits.count() >= m_upperBits.count());
+        ASSERT_UNDER_CONSTEXPR_CONTEXT(m_bits.count() >= m_upperBits.count());
         m_bits.forEachSetBit(
             [&] (size_t index) {
-                ASSERT(m_bits.get(index) >= m_upperBits.get(index));
+                ASSERT_UNDER_CONSTEXPR_CONTEXT(m_bits.get(index) >= m_upperBits.get(index));
                 func(Reg::fromIndex(index));
             });
     }
@@ -308,51 +330,42 @@ public:
     template<typename Func>
     inline constexpr void forEachWithWidth(const Func& func) const
         {
-        ASSERT(m_bits.count() >= m_upperBits.count());
+        ASSERT_UNDER_CONSTEXPR_CONTEXT(m_bits.count() >= m_upperBits.count());
         m_bits.forEachSetBit(
             [&] (size_t index) {
-                ASSERT(m_bits.get(index) >= m_upperBits.get(index));
+                ASSERT_UNDER_CONSTEXPR_CONTEXT(m_bits.get(index) >= m_upperBits.get(index));
                 Reg reg = Reg::fromIndex(index);
                 Width includedWidth = m_upperBits.get(index) ? conservativeWidth(reg) : conservativeWidthWithoutVectors(reg);
                 func(reg, includedWidth);
             });
         }
 
-    class iterator {
+    class iterator : public RegisterBitSet::iterator {
+        WTF_FORBID_HEAP_ALLOCATION;
+        using Base = RegisterBitSet::iterator;
     public:
-        inline constexpr iterator() { }
+        // FIXME: It seems like these shouldn't be necessary but Clang complains about them missing for the static_casts in begin()/end() below.
+        constexpr iterator(const Base& base) : Base(base) { }
 
-        inline constexpr iterator(const RegisterBitSet::iterator& iter)
-            : m_iter(iter)
-        {
-        }
+        inline constexpr Reg reg() const { return Reg::fromIndex(Base::operator*()); }
+        inline constexpr Reg operator*() const { return reg(); }
 
-        inline constexpr Reg operator*() const { return Reg::fromIndex(*m_iter); }
+        inline constexpr bool isGPR() const { return reg().isGPR(); }
+        inline constexpr bool isFPR() const { return reg().isFPR(); }
 
-        iterator& operator++()
-        {
-            ++m_iter;
-            return *this;
-        }
-
-        inline constexpr bool operator==(const iterator& other) const
-        {
-            return m_iter == other.m_iter;
-        }
-
-    private:
-        RegisterBitSet::iterator m_iter;
+        inline constexpr GPRReg gpr() const { return reg().gpr(); }
+        inline constexpr FPRReg fpr() const { return reg().fpr(); }
     };
 
-    inline constexpr iterator begin() const { return iterator(m_bits.begin()); }
-    inline constexpr iterator end() const { return iterator(m_bits.end()); }
+    inline constexpr iterator begin() const LIFETIME_BOUND { return static_cast<iterator>(m_bits.begin()); }
+    inline constexpr iterator end() const LIFETIME_BOUND { return static_cast<iterator>(m_bits.end()); }
 
     inline constexpr RegisterSet& add(Reg reg, Width width)
     {
-        ASSERT(!!reg);
+        ASSERT_UNDER_CONSTEXPR_CONTEXT(!!reg);
         m_bits.set(reg.index());
 
-        if (UNLIKELY(width > conservativeWidthWithoutVectors(reg) && conservativeWidth(reg) > conservativeWidthWithoutVectors(reg)))
+        if (width > conservativeWidthWithoutVectors(reg) && conservativeWidth(reg) > conservativeWidthWithoutVectors(reg)) [[unlikely]]
             m_upperBits.set(reg.index());
         return *this;
     }
@@ -372,7 +385,7 @@ public:
 
     inline constexpr RegisterSet& remove(Reg reg)
     {
-        ASSERT(!!reg);
+        ASSERT_UNDER_CONSTEXPR_CONTEXT(!!reg);
         m_bits.clear(reg.index());
         m_upperBits.clear(reg.index());
         return *this;
@@ -392,14 +405,14 @@ public:
     {
         m_bits.merge(other.m_bits);
         m_upperBits.merge(other.m_upperBits);
-        ASSERT(m_bits.count() >= m_upperBits.count());
+        ASSERT_UNDER_CONSTEXPR_CONTEXT(m_bits.count() >= m_upperBits.count());
         return *this;
     }
 
     void dump(PrintStream& out) const
     {
         CommaPrinter comma;
-        out.print("[");
+        out.print("["_s);
         for (Reg reg = Reg::first(); reg <= Reg::last(); reg = reg.next()) {
             if (!m_bits.get(reg.index()) && !m_upperBits.get(reg.index()))
                 continue;
@@ -412,10 +425,10 @@ public:
             else
                 out.print("↑");
         }
-        out.print("]");
+        out.print("]"_s);
     }
 
-    inline constexpr bool operator==(const RegisterSet& other) const { return m_bits == other.m_bits && m_upperBits == other.m_upperBits; }
+    friend constexpr bool operator==(const RegisterSet&, const RegisterSet&) = default;
 
 private:
     RegisterBitSet m_bits = { };
@@ -434,7 +447,7 @@ constexpr RegisterSet RegisterSetBuilder::buildAndValidate() const
         if (!m_bits.get(reg.index()) && !m_upperBits.get(reg.index()))
             continue;
 
-        ASSERT(!m_upperBits.get(reg.index()) || m_bits.get(reg.index()));
+        ASSERT_UNDER_CONSTEXPR_CONTEXT(!m_upperBits.get(reg.index()) || m_bits.get(reg.index()));
     }
 #endif
     return RegisterSet(*this);
@@ -462,10 +475,10 @@ public:
     constexpr ScalarRegisterSet() { }
 
     inline constexpr unsigned hash() const { return m_bits.hash(); }
-    inline uint64_t bitsForDebugging() const { return *m_bits.storage(); }
-    inline constexpr bool operator==(const ScalarRegisterSet& other) const { return m_bits == other.m_bits; }
+    inline uint64_t bitsForDebugging() const { return m_bits.storage()[0]; }
+    friend constexpr bool operator==(const ScalarRegisterSet&, const ScalarRegisterSet&) = default;
 
-    inline constexpr RegisterSet toRegisterSet() const WARN_UNUSED_RETURN
+    [[nodiscard]] inline constexpr RegisterSet toRegisterSet() const
     {
         RegisterSet result;
         m_bits.forEachSetBit(
@@ -477,7 +490,7 @@ public:
 
     inline constexpr void add(Reg reg, IgnoreVectorsTag)
     {
-        ASSERT(!!reg);
+        ASSERT_UNDER_CONSTEXPR_CONTEXT(!!reg);
         m_bits.set(reg.index());
     }
 
@@ -490,13 +503,13 @@ public:
 
     inline constexpr void remove(Reg reg)
     {
-        ASSERT(!!reg);
+        ASSERT_UNDER_CONSTEXPR_CONTEXT(!!reg);
         m_bits.clear(reg.index());
     }
 
     inline constexpr bool contains(Reg reg, IgnoreVectorsTag) const
     {
-        ASSERT(!!reg);
+        ASSERT_UNDER_CONSTEXPR_CONTEXT(!!reg);
         return m_bits.get(reg.index());
     }
 
@@ -517,6 +530,14 @@ public:
     inline constexpr size_t numberOfSetRegisters() const
     {
         return m_bits.count();
+    }
+
+    template<typename Func>
+    inline constexpr void forEachReg(const Func& func) const
+    {
+        m_bits.forEachSetBit([&] (size_t index) {
+            func(Reg::fromIndex(index));
+        });
     }
 
     void dump(PrintStream& out) const { toRegisterSet().dump(out); }

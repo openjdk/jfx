@@ -25,18 +25,18 @@
 
 #pragma once
 
-#include "AbstractSlotVisitor.h"
-#include "JSCJSValue.h"
-#include "MarkedBlock.h"
-#include "VisitRaceKey.h"
-#include "Weak.h"
+#include <JavaScriptCore/AbstractSlotVisitor.h>
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/MarkedBlock.h>
+#include <JavaScriptCore/VisitRaceKey.h>
+#include <JavaScriptCore/Weak.h>
 #include <memory>
 #include <wtf/BitSet.h>
 #include <wtf/Deque.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/HashMap.h>
 #include <wtf/RefPtr.h>
 #include <wtf/SharedTask.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WTF {
 
@@ -55,7 +55,7 @@ using WTF::StackTrace;
 
 class VerifierSlotVisitor : public AbstractSlotVisitor {
     WTF_MAKE_NONCOPYABLE(VerifierSlotVisitor);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(VerifierSlotVisitor);
     using Base = AbstractSlotVisitor;
 public:
     using ReferrerToken = AbstractSlotVisitor::ReferrerToken;
@@ -115,9 +115,16 @@ public:
 
     JS_EXPORT_PRIVATE void dumpMarkerData(HeapCell*);
 
+    bool doneMarking() { return m_doneMarking; }
+    void setDoneMarking()
+    {
+        ASSERT(!m_doneMarking);
+        m_doneMarking = true;
+    }
+
 private:
     class MarkedBlockData {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_TZONE_ALLOCATED(MarkedBlockData);
         WTF_MAKE_NONCOPYABLE(MarkedBlockData);
     public:
         using AtomsBitSet = WTF::BitSet<MarkedBlock::atomsPerBlock>;
@@ -140,7 +147,7 @@ private:
     };
 
     class PreciseAllocationData {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_TZONE_ALLOCATED(PreciseAllocationData);
         WTF_MAKE_NONCOPYABLE(PreciseAllocationData);
     public:
         PreciseAllocationData(PreciseAllocation*);
@@ -155,7 +162,7 @@ private:
     };
 
     class OpaqueRootData {
-        WTF_MAKE_FAST_ALLOCATED;
+        WTF_MAKE_TZONE_ALLOCATED(OpaqueRootData);
         WTF_MAKE_NONCOPYABLE(OpaqueRootData);
     public:
         OpaqueRootData() = default;
@@ -167,9 +174,9 @@ private:
         MarkerData m_marker;
     };
 
-    using MarkedBlockMap = HashMap<MarkedBlock*, std::unique_ptr<MarkedBlockData>>;
-    using PreciseAllocationMap = HashMap<PreciseAllocation*, std::unique_ptr<PreciseAllocationData>>;
-    using OpaqueRootMap = HashMap<void*, std::unique_ptr<OpaqueRootData>>;
+    using MarkedBlockMap = UncheckedKeyHashMap<MarkedBlock*, std::unique_ptr<MarkedBlockData>>;
+    using PreciseAllocationMap = UncheckedKeyHashMap<PreciseAllocation*, std::unique_ptr<PreciseAllocationData>>;
+    using OpaqueRootMap = UncheckedKeyHashMap<void*, std::unique_ptr<OpaqueRootData>>;
 
     void appendToMarkStack(JSCell*);
     void appendSlow(JSCell* cell) { setMarkedAndAppendToMarkStack(cell); }
@@ -187,6 +194,7 @@ private:
     MarkedBlockMap m_markedBlockMap;
     ConcurrentPtrHashSet m_opaqueRootStorage;
     Deque<RefPtr<SharedTask<void(AbstractSlotVisitor&)>>, 32> m_constraintTasks;
+    bool m_doneMarking { false };
 };
 
 } // namespace JSC

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,8 +26,8 @@
 package test.com.sun.javafx.application;
 
 import javafx.application.Platform;
-import org.junit.Test;
-import org.junit.AfterClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Test;
 import test.util.memory.JMemoryBuddy;
 
 public class PlatformStartupMemoryLeakTest {
@@ -47,7 +47,7 @@ public class PlatformStartupMemoryLeakTest {
         });
     }
 
-    @AfterClass
+    @AfterAll
     public static void tearDown() {
         Platform.exit();
     }

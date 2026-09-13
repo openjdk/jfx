@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2020, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,8 +26,8 @@
 package test.com.sun.webkit.network;
 
 import com.sun.webkit.network.PublicSuffixesShim;
-import org.junit.Test;
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * A test for the {@link PublicSuffixes} class.
@@ -99,7 +99,7 @@ public class PublicSuffixesTest {
      * Tests a given domain.
      */
     private static void test(String domain, boolean expectedResult) {
-        assertEquals("Unexpected result, domain: [" + domain + "],",
-                expectedResult, PublicSuffixesShim.isPublicSuffix(domain));
+        assertEquals(expectedResult, PublicSuffixesShim.isPublicSuffix(domain),
+                "Unexpected result, domain: [" + domain + "],");
     }
 }

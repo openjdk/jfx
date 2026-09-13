@@ -25,10 +25,8 @@
 
 // https://drafts.css-houdini.org/css-typed-om/#cssstylepropertymap
 [
-    EnabledBySetting=CSSTypedOMEnabled,
     Exposed=Window,
-    SkipVTableValidation,
-    JSGenerateToJSObject
+    SkipVTableValidation
 ] interface StylePropertyMap : StylePropertyMapReadOnly {
     [CallWith=CurrentDocument] undefined set([AtomString] USVString property, (CSSStyleValue or USVString)... values);
     [CallWith=CurrentDocument] undefined append([AtomString] USVString property, (CSSStyleValue or USVString)... values);

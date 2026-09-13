@@ -27,7 +27,7 @@
 
 #include "IDLTypes.h"
 #include "StorageEstimate.h"
-#include <wtf/IsoMalloc.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -38,16 +38,19 @@ template<typename> class DOMPromiseDeferred;
 template<typename> class ExceptionOr;
 
 class StorageManager : public RefCounted<StorageManager> {
-    WTF_MAKE_ISO_ALLOCATED(StorageManager);
+    WTF_MAKE_TZONE_ALLOCATED(StorageManager);
 public:
     static Ref<StorageManager> create(NavigatorBase&);
+    ~StorageManager();
     void persisted(DOMPromiseDeferred<IDLBoolean>&&);
     void persist(DOMPromiseDeferred<IDLBoolean>&&);
     using Estimate = StorageEstimate;
     void estimate(DOMPromiseDeferred<IDLDictionary<Estimate>>&&);
-    void fileSystemAccessGetDirectory(DOMPromiseDeferred<IDLInterface<FileSystemDirectoryHandle>>&&);
+    void fileSystemGetDirectory(DOMPromiseDeferred<IDLInterface<FileSystemDirectoryHandle>>&&);
 
 private:
+    RefPtr<NavigatorBase> protectedNavigator() const;
+
     explicit StorageManager(NavigatorBase&);
     WeakPtr<NavigatorBase> m_navigator;
 };

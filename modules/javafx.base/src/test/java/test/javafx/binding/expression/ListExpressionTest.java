@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,12 +35,12 @@ import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleListProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import test.com.sun.javafx.binding.ErrorLoggingUtiltity;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import test.com.sun.javafx.binding.ErrorLoggingUtility;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ListExpressionTest {
 
@@ -54,7 +54,7 @@ public class ListExpressionTest {
     private ListProperty<Integer> op1;
     private ListProperty<Integer> op2;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         opNull = new SimpleListProperty<>();
         opEmpty = new SimpleListProperty<>(FXCollections.<Integer>observableArrayList());
@@ -62,9 +62,9 @@ public class ListExpressionTest {
         op2 = new SimpleListProperty<>(FXCollections.observableArrayList(data2_0, data2_1));
     }
 
-    @BeforeClass
+    @BeforeAll
     public static void setUpClass() {
-        ErrorLoggingUtiltity.reset();
+        ErrorLoggingUtility.reset();
     }
 
     @Test
@@ -78,64 +78,67 @@ public class ListExpressionTest {
     @Test
     public void testValueAt_Constant() {
         assertNull(opNull.valueAt(0).get());
-        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
         assertNull(opEmpty.valueAt(0).get());
-        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
 
         assertEquals(data1_0, op1.valueAt(0).get());
         assertNull(op1.valueAt(1).get());
-        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
 
         assertEquals(data2_0, op2.valueAt(0).get());
         assertEquals(data2_1, op2.valueAt(1).get());
         assertNull(op2.valueAt(2).get());
-        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testValueAt_Constant_NegativeIndex() {
-        op1.valueAt(-1);
+        assertThrows(IllegalArgumentException.class, () -> {
+            op1.valueAt(-1);
+        });
     }
+
 
     @Test
     public void testValueAt_Variable() {
         final IntegerProperty index = new SimpleIntegerProperty(-1);
 
         assertNull(opNull.valueAt(index).get());
-        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
         assertNull(opEmpty.valueAt(index).get());
-        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
         assertNull(op1.valueAt(index).get());
-        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
         assertNull(op2.valueAt(index).get());
-        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
 
         index.set(0);
         assertNull(opNull.valueAt(index).get());
-        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
         assertNull(opEmpty.valueAt(index).get());
-        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
         assertEquals(data1_0, op1.valueAt(index).get());
         assertEquals(data2_0, op2.valueAt(index).get());
 
         index.set(1);
         assertNull(opNull.valueAt(index).get());
-        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
         assertNull(opEmpty.valueAt(index).get());
-        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
         assertNull(op1.valueAt(index).get());
-        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
         assertEquals(data2_1, op2.valueAt(index).get());
 
         index.set(2);
         assertNull(opNull.valueAt(index).get());
-        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
         assertNull(opEmpty.valueAt(index).get());
-        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
         assertNull(op1.valueAt(index).get());
-        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
         assertNull(op2.valueAt(index).get());
-        ErrorLoggingUtiltity.checkFine(IndexOutOfBoundsException.class);
+        ErrorLoggingUtility.checkFine(IndexOutOfBoundsException.class);
     }
 
     @Test

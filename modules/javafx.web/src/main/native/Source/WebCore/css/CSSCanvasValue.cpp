@@ -27,20 +27,21 @@
 #include "CSSCanvasValue.h"
 
 #include "StyleCanvasImage.h"
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
 CSSCanvasValue::CSSCanvasValue(String&& name)
-    : CSSValue { CanvasClass }
-    , m_name { WTFMove(name) }
+    : CSSValue { ClassType::Canvas }
+    , m_name { WTF::move(name) }
 {
 }
 
 CSSCanvasValue::~CSSCanvasValue() = default;
 
-String CSSCanvasValue::customCSSText() const
+String CSSCanvasValue::customCSSText(const CSS::SerializationContext&) const
 {
-    return makeString("-webkit-canvas(", m_name, ')');
+    return makeString("-webkit-canvas("_s, m_name, ')');
 }
 
 bool CSSCanvasValue::equals(const CSSCanvasValue& other) const
@@ -48,7 +49,7 @@ bool CSSCanvasValue::equals(const CSSCanvasValue& other) const
     return m_name == other.m_name;
 }
 
-RefPtr<StyleImage> CSSCanvasValue::createStyleImage(Style::BuilderState&) const
+RefPtr<StyleImage> CSSCanvasValue::createStyleImage(const Style::BuilderState&) const
 {
     if (m_cachedStyleImage)
         return m_cachedStyleImage;

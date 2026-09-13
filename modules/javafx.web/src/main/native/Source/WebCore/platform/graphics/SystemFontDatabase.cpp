@@ -25,12 +25,20 @@
 
 #include "config.h"
 #include "SystemFontDatabase.h"
+#include "WebKitFontFamilyNames.h"
 
 namespace WebCore {
 
 SystemFontDatabase::SystemFontDatabase() = default;
 
 #if PLATFORM(JAVA)
+
+SystemFontDatabase& SystemFontDatabase::singleton()
+{
+    static NeverDestroyed<SystemFontDatabase> database;
+    return database.get();
+}
+
 void SystemFontDatabase::platformInvalidate()
 {
  // not implemented

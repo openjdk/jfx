@@ -20,6 +20,7 @@
 
 #pragma once
 
+#include <wtf/HashTraits.h>
 #include <wtf/Ref.h>
 
 namespace WTF {
@@ -28,7 +29,7 @@ template <typename T>
 class DataRef {
 public:
     DataRef(Ref<T>&& data)
-        : m_data(WTFMove(data))
+        : m_data(WTF::move(data))
     {
     }
 
@@ -48,35 +49,35 @@ public:
 
     DataRef replace(DataRef&& other)
     {
-        return m_data.replace(WTFMove(other.m_data));
+        return m_data.replace(WTF::move(other.m_data));
     }
 
-    operator const T&() const
+    operator const T&() const LIFETIME_BOUND
     {
         return m_data;
     }
 
-    const T* ptr() const
+    const T* ptr() const LIFETIME_BOUND
     {
         return m_data.ptr();
     }
 
-    const T& get() const
+    const T& get() const LIFETIME_BOUND
     {
         return m_data;
     }
 
-    const T& operator*() const
+    const T& operator*() const LIFETIME_BOUND
     {
         return m_data;
     }
 
-    const T* operator->() const
+    const T* operator->() const LIFETIME_BOUND
     {
         return m_data.ptr();
     }
 
-    T& access()
+    T& access() LIFETIME_BOUND
     {
         if (!m_data->hasOneRef())
             m_data = m_data->copy();
@@ -88,8 +89,35 @@ public:
         return m_data.ptr() == other.m_data.ptr() || m_data.get() == other.m_data.get();
     }
 
+    DataRef(HashTableDeletedValueType)
+        : m_data(HashTableDeletedValue)
+    {
+    }
+    bool isHashTableDeletedValue() const { return m_data.isHashTableDeletedValue(); }
+
+    DataRef(HashTableEmptyValueType)
+        : m_data(HashTableEmptyValue)
+    {
+    }
+    bool isHashTableEmptyValue() const { return m_data.isHashTableEmptyValue(); }
+    static T* hashTableEmptyValue() { return nullptr; }
+
 private:
     Ref<T> m_data;
+};
+
+template<typename T> struct HashTraits<DataRef<T>> : SimpleClassHashTraits<DataRef<T>> {
+    static constexpr bool emptyValueIsZero = true;
+    static DataRef<T> emptyValue() { return HashTableEmptyValue; }
+
+    template <typename>
+    static void constructEmptyValue(DataRef<T>& slot)
+    {
+        new (NotNull, std::addressof(slot)) DataRef<T>(HashTableEmptyValue);
+    }
+
+    static constexpr bool hasIsEmptyValueFunction = true;
+    static bool isEmptyValue(const DataRef<T>& value) { return value.isHashTableEmptyValue(); }
 };
 
 } // namespace WTF

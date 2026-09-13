@@ -34,21 +34,26 @@
 
 #if ENABLE(WEB_RTC)
 
+#include "ContextDestructionObserverInlines.h"
+#include "Logging.h"
 #include "RTCPeerConnection.h"
-#include <wtf/IsoMallocInlines.h>
+#include "ScriptWrappableInlines.h"
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RTCRtpTransceiver);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RTCRtpTransceiver);
 
 RTCRtpTransceiver::RTCRtpTransceiver(Ref<RTCRtpSender>&& sender, Ref<RTCRtpReceiver>&& receiver, std::unique_ptr<RTCRtpTransceiverBackend>&& backend)
     : m_direction(RTCRtpTransceiverDirection::Sendrecv)
-    , m_sender(WTFMove(sender))
-    , m_receiver(WTFMove(receiver))
-    , m_backend(WTFMove(backend))
+    , m_sender(WTF::move(sender))
+    , m_receiver(WTF::move(receiver))
+    , m_backend(WTF::move(backend))
 {
 }
+
+RTCRtpTransceiver::~RTCRtpTransceiver() = default;
 
 String RTCRtpTransceiver::mid() const
 {
@@ -107,7 +112,7 @@ void RTCRtpTransceiver::setConnection(RTCPeerConnection& connection)
 ExceptionOr<void> RTCRtpTransceiver::stop()
 {
     if (!m_connection || m_connection->isClosed())
-        return Exception { InvalidStateError, "RTCPeerConnection is closed"_s };
+        return Exception { ExceptionCode::InvalidStateError, "RTCPeerConnection is closed"_s };
 
     if (m_stopped)
         return { };
@@ -126,6 +131,12 @@ ExceptionOr<void> RTCRtpTransceiver::setCodecPreferences(const Vector<RTCRtpCode
 {
     if (!m_backend)
         return { };
+
+    RefPtr connection = m_connection;
+    if (!connection || connection->isClosed())
+        return { };
+
+    RELEASE_LOG_INFO(WebRTC, "RTCRtpTransceiver::setCodecPreferences");
     return m_backend->setCodecPreferences(codecs);
 }
 
@@ -138,7 +149,7 @@ bool RTCRtpTransceiver::stopped() const
 
 void RtpTransceiverSet::append(Ref<RTCRtpTransceiver>&& transceiver)
 {
-    m_transceivers.append(WTFMove(transceiver));
+    m_transceivers.append(WTF::move(transceiver));
 }
 
 Vector<std::reference_wrapper<RTCRtpSender>> RtpTransceiverSet::senders() const

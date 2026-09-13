@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,11 +29,6 @@ import com.sun.javafx.scene.SceneHelper;
 import test.com.sun.javafx.pgstub.StubScene;
 import javafx.event.Event;
 import javafx.scene.Group;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
 import javafx.scene.Scene;
 import javafx.scene.shape.Rectangle;
 import javafx.geometry.Point3D;
@@ -41,12 +36,17 @@ import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.PickResult;
 import javafx.stage.Stage;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ContextMenuEventTest {
 
-    @Test public void testShortConstructor() {
+    @Test
+    public void testShortConstructor() {
         Rectangle node = new Rectangle(10, 10);
         node.setTranslateX(3);
         node.setTranslateY(2);
@@ -76,7 +76,8 @@ public class ContextMenuEventTest {
         assertTrue(e.isKeyboardTrigger());
     }
 
-    @Test public void testShortConstructorWithoutPickResult() {
+    @Test
+    public void testShortConstructorWithoutPickResult() {
         ContextMenuEvent e = new ContextMenuEvent(
                 ContextMenuEvent.CONTEXT_MENU_REQUESTED, 10, 20, 30, 40,
                 false, null);
@@ -96,7 +97,8 @@ public class ContextMenuEventTest {
         assertSame(Event.NULL_SOURCE_TARGET, e.getTarget());
     }
 
-    @Test public void testLongConstructor() {
+    @Test
+    public void testLongConstructor() {
         Rectangle node = new Rectangle(10, 10);
         node.setTranslateX(3);
         node.setTranslateY(2);
@@ -129,7 +131,8 @@ public class ContextMenuEventTest {
     }
 
 
-    @Test public void testLongConstructorWithoutPickResult() {
+    @Test
+    public void testLongConstructorWithoutPickResult() {
         Rectangle n1 = new Rectangle(10, 10);
         Rectangle n2 = new Rectangle(10, 10);
         ContextMenuEvent e = new ContextMenuEvent(n1, n2,
@@ -152,7 +155,8 @@ public class ContextMenuEventTest {
         assertEquals(0, e.getPickResult().getIntersectedPoint().getZ(), 10e-20);
     }
 
-    @Test public void mouseTriggerKeepsCoordinates() {
+    @Test
+    public void mouseTriggerKeepsCoordinates() {
         Rectangle rect = new Rectangle(100, 100);
         rect.setTranslateX(100);
         rect.setTranslateY(100);
@@ -164,12 +168,12 @@ public class ContextMenuEventTest {
         rect.requestFocus();
 
         rect.setOnContextMenuRequested(event -> {
-            Assert.assertEquals(1.0, event.getX(), 0.0001);
-            Assert.assertEquals(101, event.getSceneX(), 0.0001);
-            Assert.assertEquals(201, event.getScreenX(), 0.0001);
-            Assert.assertEquals(2.0, event.getY(), 0.0001);
-            Assert.assertEquals(102, event.getSceneY(), 0.0001);
-            Assert.assertEquals(202, event.getScreenY(), 0.0001);
+            assertEquals(1.0, event.getX(), 0.0001);
+            assertEquals(101, event.getSceneX(), 0.0001);
+            assertEquals(201, event.getScreenX(), 0.0001);
+            assertEquals(2.0, event.getY(), 0.0001);
+            assertEquals(102, event.getSceneY(), 0.0001);
+            assertEquals(202, event.getScreenY(), 0.0001);
             assertFalse(event.isKeyboardTrigger());
         });
 
@@ -177,7 +181,8 @@ public class ContextMenuEventTest {
                 101, 102, 201, 202, false);
     }
 
-    @Test public void keyTriggerSetsCoordinatesToFocusOwner() {
+    @Test
+    public void keyTriggerSetsCoordinatesToFocusOwner() {
         Rectangle rect = new Rectangle(100, 100);
         rect.setTranslateX(100);
         rect.setTranslateY(100);
@@ -189,12 +194,12 @@ public class ContextMenuEventTest {
         rect.requestFocus();
 
         rect.setOnContextMenuRequested(event -> {
-            Assert.assertEquals(25.0, event.getX(), 0.0001);
-            Assert.assertEquals(125, event.getSceneX(), 0.0001);
-            Assert.assertEquals(225, event.getScreenX(), 0.0001);
-            Assert.assertEquals(50.0, event.getY(), 0.0001);
-            Assert.assertEquals(150, event.getSceneY(), 0.0001);
-            Assert.assertEquals(250, event.getScreenY(), 0.0001);
+            assertEquals(25.0, event.getX(), 0.0001);
+            assertEquals(125, event.getSceneX(), 0.0001);
+            assertEquals(225, event.getScreenX(), 0.0001);
+            assertEquals(50.0, event.getY(), 0.0001);
+            assertEquals(150, event.getSceneY(), 0.0001);
+            assertEquals(250, event.getScreenY(), 0.0001);
             assertTrue(event.isKeyboardTrigger());
         });
 
@@ -216,24 +221,24 @@ public class ContextMenuEventTest {
         rect.requestFocus();
 
         rect.setOnContextMenuRequested(event -> {
-            Assert.assertEquals(1.0, event.getX(), 0.0001);
-            Assert.assertEquals(101, event.getSceneX(), 0.0001);
-            Assert.assertEquals(201, event.getScreenX(), 0.0001);
-            Assert.assertEquals(2.0, event.getY(), 0.0001);
-            Assert.assertEquals(102, event.getSceneY(), 0.0001);
-            Assert.assertEquals(202, event.getScreenY(), 0.0001);
-            Assert.assertEquals(0, event.getZ(), 0.0001);
+            assertEquals(1.0, event.getX(), 0.0001);
+            assertEquals(101, event.getSceneX(), 0.0001);
+            assertEquals(201, event.getScreenX(), 0.0001);
+            assertEquals(2.0, event.getY(), 0.0001);
+            assertEquals(102, event.getSceneY(), 0.0001);
+            assertEquals(202, event.getScreenY(), 0.0001);
+            assertEquals(0, event.getZ(), 0.0001);
             assertFalse(event.isKeyboardTrigger());
         });
 
         scene.setOnContextMenuRequested(event -> {
-            Assert.assertEquals(101.0, event.getX(), 0.0001);
-            Assert.assertEquals(101, event.getSceneX(), 0.0001);
-            Assert.assertEquals(201, event.getScreenX(), 0.0001);
-            Assert.assertEquals(102.0, event.getY(), 0.0001);
-            Assert.assertEquals(102, event.getSceneY(), 0.0001);
-            Assert.assertEquals(202, event.getScreenY(), 0.0001);
-            Assert.assertEquals(50, event.getZ(), 0.0001);
+            assertEquals(101.0, event.getX(), 0.0001);
+            assertEquals(101, event.getSceneX(), 0.0001);
+            assertEquals(201, event.getScreenX(), 0.0001);
+            assertEquals(102.0, event.getY(), 0.0001);
+            assertEquals(102, event.getSceneY(), 0.0001);
+            assertEquals(202, event.getScreenY(), 0.0001);
+            assertEquals(50, event.getZ(), 0.0001);
             assertFalse(event.isKeyboardTrigger());
         });
 
@@ -241,7 +246,8 @@ public class ContextMenuEventTest {
                 101, 102, 201, 202, false);
     }
 
-    @Test public void pickResultIsFromEventCoordinates() {
+    @Test
+    public void pickResultIsFromEventCoordinates() {
         final Rectangle rect = new Rectangle(100, 100);
         rect.setTranslateX(100);
         rect.setTranslateY(100);

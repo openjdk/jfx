@@ -29,8 +29,10 @@
 #include "config.h"
 #include "AccessibilityListBoxOption.h"
 
-#include "AXObjectCache.h"
-#include "AccessibilityListBox.h"
+#include "AXLoggerBase.h"
+#include "AXObjectCacheInlines.h"
+#include "AccessibilityObjectInlines.h"
+#include "ContainerNodeInlines.h"
 #include "ElementInlines.h"
 #include "HTMLNames.h"
 #include "HTMLOptGroupElement.h"
@@ -38,48 +40,40 @@
 #include "HTMLSelectElement.h"
 #include "IntRect.h"
 #include "RenderListBox.h"
+#include "RenderObjectInlines.h"
 
 namespace WebCore {
 
 using namespace HTMLNames;
 
-AccessibilityListBoxOption::AccessibilityListBoxOption(HTMLElement& element)
-    : m_optionElement(element)
+AccessibilityListBoxOption::AccessibilityListBoxOption(AXID axID, HTMLElement& element, AXObjectCache& cache)
+    : AccessibilityNodeObject(axID, &element, cache)
 {
 }
 
 AccessibilityListBoxOption::~AccessibilityListBoxOption() = default;
 
-Ref<AccessibilityListBoxOption> AccessibilityListBoxOption::create(HTMLElement& element)
+Ref<AccessibilityListBoxOption> AccessibilityListBoxOption::create(AXID axID, HTMLElement& element, AXObjectCache& cache)
 {
-    return adoptRef(*new AccessibilityListBoxOption(element));
+    return adoptRef(*new AccessibilityListBoxOption(axID, element, cache));
 }
 
 bool AccessibilityListBoxOption::isEnabled() const
 {
-    if (is<HTMLOptGroupElement>(m_optionElement))
-        return false;
-
-    if (equalLettersIgnoringASCIICase(getAttribute(aria_disabledAttr), "true"_s))
-        return false;
-
-    if (m_optionElement->hasAttributeWithoutSynchronization(disabledAttr))
-        return false;
-
-    return true;
+    return !(is<HTMLOptGroupElement>(m_node.get())
+        || equalLettersIgnoringASCIICase(getAttribute(aria_disabledAttr), "true"_s)
+        || hasAttribute(disabledAttr));
 }
 
 bool AccessibilityListBoxOption::isSelected() const
 {
-    if (!is<HTMLOptionElement>(m_optionElement))
-        return false;
-
-    return downcast<HTMLOptionElement>(*m_optionElement).selected();
+    RefPtr option = dynamicDowncast<HTMLOptionElement>(m_node.get());
+    return option && option->selected();
 }
 
 bool AccessibilityListBoxOption::isSelectedOptionActive() const
 {
-    HTMLSelectElement* listBoxParentNode = listBoxOptionParentNode();
+    RefPtr listBoxParentNode = listBoxOptionParentNode();
     if (!listBoxParentNode)
         return false;
 
@@ -88,93 +82,88 @@ bool AccessibilityListBoxOption::isSelectedOptionActive() const
 
 LayoutRect AccessibilityListBoxOption::elementRect() const
 {
-    LayoutRect rect;
-    if (!m_optionElement)
-        return rect;
+    if (!m_node)
+        return { };
 
-    HTMLSelectElement* listBoxParentNode = listBoxOptionParentNode();
+    RefPtr listBoxParentNode = listBoxOptionParentNode();
     if (!listBoxParentNode)
-        return rect;
+        return { };
 
-    RenderElement* listBoxRenderer = listBoxParentNode->renderer();
+    CheckedPtr listBoxRenderer = dynamicDowncast<RenderListBox>(listBoxParentNode->renderer());
     if (!listBoxRenderer)
-        return rect;
+        return { };
 
-    LayoutRect parentRect = listBoxRenderer->document().axObjectCache()->getOrCreate(listBoxRenderer)->boundingBoxRect();
+    WeakPtr cache = listBoxRenderer->document().axObjectCache();
+    RefPtr listbox = cache ? cache->getOrCreate(*listBoxRenderer) : nullptr;
+    if (!listbox)
+        return { };
+
+    auto parentRect = listbox->boundingBoxRect();
     int index = listBoxOptionIndex();
     if (index != -1)
-        rect = downcast<RenderListBox>(*listBoxRenderer).itemBoundingBoxRect(parentRect.location(), index);
-
-    return rect;
+        return listBoxRenderer->itemBoundingBoxRect(parentRect.location(), index);
+    return { };
 }
 
-bool AccessibilityListBoxOption::computeAccessibilityIsIgnored() const
+bool AccessibilityListBoxOption::computeIsIgnored() const
 {
-    if (!m_optionElement)
+    if (!m_node || isIgnoredByDefault())
         return true;
 
-    if (accessibilityIsIgnoredByDefault())
-        return true;
-
-    auto* parent = parentObject();
-    return parent ? parent->accessibilityIsIgnored() : true;
+    RefPtr parent = parentObject();
+    return parent ? parent->isIgnored() : true;
 }
 
 bool AccessibilityListBoxOption::canSetSelectedAttribute() const
 {
-    if (!is<HTMLOptionElement>(m_optionElement))
+    RefPtr optionElement = dynamicDowncast<HTMLOptionElement>(m_node.get());
+    if (!optionElement)
         return false;
 
-    if (m_optionElement->isDisabledFormControl())
+    if (optionElement->isDisabledFormControl())
         return false;
 
-    HTMLSelectElement* selectElement = listBoxOptionParentNode();
-    if (selectElement && selectElement->isDisabledFormControl())
-        return false;
-
-    return true;
+    RefPtr selectElement = listBoxOptionParentNode();
+    return !selectElement || !selectElement->isDisabledFormControl();
 }
 
 String AccessibilityListBoxOption::stringValue() const
 {
-    if (!m_optionElement)
-        return String();
+    if (!m_node)
+        return { };
 
-    const AtomString& ariaLabel = getAttribute(aria_labelAttr);
-    if (!ariaLabel.isNull())
+    auto ariaLabel = getAttributeTrimmed(aria_labelAttr);
+    if (!ariaLabel.isEmpty())
         return ariaLabel;
 
-    if (is<HTMLOptionElement>(*m_optionElement))
-        return downcast<HTMLOptionElement>(*m_optionElement).label();
+    if (RefPtr option = dynamicDowncast<HTMLOptionElement>(*m_node))
+        return option->label();
 
-    if (is<HTMLOptGroupElement>(*m_optionElement))
-        return downcast<HTMLOptGroupElement>(*m_optionElement).groupLabelText();
+    if (RefPtr optgroup = dynamicDowncast<HTMLOptGroupElement>(*m_node))
+        return optgroup->groupLabelText();
 
-    return String();
+    return { };
 }
 
 Element* AccessibilityListBoxOption::actionElement() const
 {
-    return m_optionElement.get();
-}
-
-Node* AccessibilityListBoxOption::node() const
-{
-    return m_optionElement.get();
+    AX_ASSERT(is<HTMLElement>(m_node.get()));
+    return dynamicDowncast<Element>(m_node.get());
 }
 
 AccessibilityObject* AccessibilityListBoxOption::parentObject() const
 {
-    HTMLSelectElement* parentNode = listBoxOptionParentNode();
+    RefPtr parentNode = listBoxOptionParentNode();
     if (!parentNode)
         return nullptr;
 
-    return m_optionElement->document().axObjectCache()->getOrCreate(parentNode);
+    CheckedPtr cache = m_node->document().axObjectCache();
+    return cache ? cache->getOrCreate(*parentNode) : nullptr;
 }
 
 void AccessibilityListBoxOption::setSelected(bool selected)
 {
-    HTMLSelectElement* selectElement = listBoxOptionParentNode();
+    RefPtr selectElement = listBoxOptionParentNode();
     if (!selectElement)
         return;
 
@@ -192,32 +181,33 @@ void AccessibilityListBoxOption::setSelected(bool selected)
 
 HTMLSelectElement* AccessibilityListBoxOption::listBoxOptionParentNode() const
 {
-    if (!m_optionElement)
+    if (!m_node)
         return nullptr;
 
-    if (is<HTMLOptionElement>(*m_optionElement))
-        return downcast<HTMLOptionElement>(*m_optionElement).ownerSelectElement();
+    if (RefPtr option = dynamicDowncast<HTMLOptionElement>(*m_node))
+        return option->ownerSelectElement();
 
-    if (is<HTMLOptGroupElement>(*m_optionElement))
-        return downcast<HTMLOptGroupElement>(*m_optionElement).ownerSelectElement();
+    if (RefPtr optgroup = dynamicDowncast<HTMLOptGroupElement>(*m_node))
+        return optgroup->ownerSelectElement();
 
     return nullptr;
 }
 
 int AccessibilityListBoxOption::listBoxOptionIndex() const
 {
-    if (!m_optionElement)
+    if (!m_node)
         return -1;
 
-    HTMLSelectElement* selectElement = listBoxOptionParentNode();
+    RefPtr selectElement = listBoxOptionParentNode();
     if (!selectElement)
         return -1;
 
     const auto& listItems = selectElement->listItems();
     unsigned length = listItems.size();
-    for (unsigned i = 0; i < length; i++)
-        if (listItems[i] == m_optionElement)
+    for (unsigned i = 0; i < length; i++) {
+        if (listItems[i] == m_node)
             return i;
+    }
 
     return -1;
 }

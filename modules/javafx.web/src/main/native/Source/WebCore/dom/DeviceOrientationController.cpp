@@ -1,6 +1,7 @@
 /*
  * Copyright 2010, The Android Open Source Project
  * Copyright (C) 2012 Samsung Electronics. All rights reserved.
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,23 +33,22 @@
 #include "DeviceOrientationEvent.h"
 #include "EventNames.h"
 #include "Page.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DeviceOrientationClient);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DeviceOrientationController);
+
 DeviceOrientationController::DeviceOrientationController(DeviceOrientationClient& client)
-    : DeviceController(client)
+    : m_client(client)
 {
-    deviceOrientationClient().setController(this);
+    client.setController(this);
 }
 
 void DeviceOrientationController::didChangeDeviceOrientation(DeviceOrientationData* orientation)
 {
     dispatchDeviceEvent(DeviceOrientationEvent::create(eventNames().deviceorientationEvent, orientation));
-}
-
-DeviceOrientationClient& DeviceOrientationController::deviceOrientationClient()
-{
-    return static_cast<DeviceOrientationClient&>(m_client);
 }
 
 #if PLATFORM(IOS_FAMILY)
@@ -58,44 +58,50 @@ DeviceOrientationClient& DeviceOrientationController::deviceOrientationClient()
 
 void DeviceOrientationController::suspendUpdates()
 {
-    m_client.stopUpdating();
+    m_client->stopUpdating();
 }
 
 void DeviceOrientationController::resumeUpdates()
 {
-    if (!m_listeners.isEmpty())
-        m_client.startUpdating();
+    if (hasListeners())
+        m_client->startUpdating();
 }
 
 #else
 
 bool DeviceOrientationController::hasLastData()
 {
-    return deviceOrientationClient().lastOrientation();
+    return checkedClient()->lastOrientation();
 }
 
 RefPtr<Event> DeviceOrientationController::getLastEvent()
 {
-    return DeviceOrientationEvent::create(eventNames().deviceorientationEvent, deviceOrientationClient().lastOrientation());
+    RefPtr orientation = checkedClient()->lastOrientation();
+    return DeviceOrientationEvent::create(eventNames().deviceorientationEvent, orientation.get());
 }
 
 #endif // PLATFORM(IOS_FAMILY)
 
-const char* DeviceOrientationController::supplementName()
-{
-    return "DeviceOrientationController";
-}
-
 DeviceOrientationController* DeviceOrientationController::from(Page* page)
 {
-    return static_cast<DeviceOrientationController*>(Supplement<Page>::from(page, supplementName()));
+    return downcast<DeviceOrientationController>(Supplement<Page>::from(page, supplementName()));
 }
 
 bool DeviceOrientationController::isActiveAt(Page* page)
 {
-    if (DeviceOrientationController* self = DeviceOrientationController::from(page))
+    if (CheckedPtr self = DeviceOrientationController::from(page))
         return self->isActive();
     return false;
+}
+
+DeviceClient& DeviceOrientationController::client()
+{
+    return m_client.get();
+}
+
+CheckedRef<DeviceOrientationClient> DeviceOrientationController::checkedClient()
+{
+    return m_client.get();
 }
 
 } // namespace WebCore

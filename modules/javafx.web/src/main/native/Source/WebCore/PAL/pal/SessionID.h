@@ -26,6 +26,7 @@
 #pragma once
 
 #include <optional>
+#include <pal/ExportMacros.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/HashTraits.h>
 
@@ -68,40 +69,20 @@ public:
     bool isValid() const { return isValidSessionIDValue(m_identifier); }
     bool isEphemeral() const { return m_identifier & EphemeralSessionMask && m_identifier != HashTableDeletedValueID; }
     bool isHashTableDeletedValue() const { return m_identifier == HashTableDeletedValueID; }
+    bool isHashTableEmptyValue() const { return m_identifier == HashTableEmptyValueID; }
 
     uint64_t toUInt64() const { return m_identifier; }
-    bool operator==(SessionID sessionID) const { return m_identifier == sessionID.m_identifier; }
+    friend bool operator==(SessionID, SessionID) = default;
     bool isAlwaysOnLoggingAllowed() const { return !isEphemeral(); }
-
-    template<class Encoder> void encode(Encoder&) const;
-    template<class Decoder> static std::optional<SessionID> decode(Decoder&);
 
     SessionID isolatedCopy() const { return *this; }
 
     explicit operator bool() const { return m_identifier; }
 
-private:
     static bool isValidSessionIDValue(uint64_t sessionID) { return sessionID != HashTableEmptyValueID && sessionID != HashTableDeletedValueID; }
-
+private:
     uint64_t m_identifier;
 };
-
-template<class Encoder>
-void SessionID::encode(Encoder& encoder) const
-{
-    ASSERT(isValid());
-    encoder << m_identifier;
-}
-
-template<class Decoder>
-std::optional<SessionID> SessionID::decode(Decoder& decoder)
-{
-    std::optional<uint64_t> sessionID;
-    decoder >> sessionID;
-    if (!sessionID || !isValidSessionIDValue(*sessionID))
-        return std::nullopt;
-    return SessionID { *sessionID };
-}
 
 } // namespace PAL
 
@@ -115,6 +96,7 @@ struct SessionIDHash {
 
 template<> struct HashTraits<PAL::SessionID> : GenericHashTraits<PAL::SessionID> {
     static PAL::SessionID emptyValue() { return PAL::SessionID(HashTableEmptyValue); }
+    static bool isEmptyValue(const PAL::SessionID& value) { return value.isHashTableEmptyValue(); }
     static void constructDeletedValue(PAL::SessionID& slot) { new (NotNull, &slot) PAL::SessionID(HashTableDeletedValue); }
     static bool isDeletedValue(const PAL::SessionID& slot) { return slot.isHashTableDeletedValue(); }
 };

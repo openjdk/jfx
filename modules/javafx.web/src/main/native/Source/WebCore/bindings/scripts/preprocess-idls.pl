@@ -183,7 +183,7 @@ using namespace JSC;
 
 class DOMIsoSubspaces {
     WTF_MAKE_NONCOPYABLE(DOMIsoSubspaces);
-    WTF_MAKE_FAST_ALLOCATED(DOMIsoSubspaces);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(DOMIsoSubspaces);
 public:
     DOMIsoSubspaces() = default;
 END
@@ -199,7 +199,7 @@ using namespace JSC;
 
 class DOMClientIsoSubspaces {
     WTF_MAKE_NONCOPYABLE(DOMClientIsoSubspaces);
-    WTF_MAKE_FAST_ALLOCATED(DOMClientIsoSubspaces);
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(DOMClientIsoSubspaces);
 public:
     DOMClientIsoSubspaces() = default;
 END
@@ -332,7 +332,7 @@ foreach my $idlFileName (sort keys %idlFileNameHash) {
 }
 
 # Generate partial interfaces for Constructors.
-GeneratePartialInterface("LocalDOMWindow", $windowConstructorsCode, $windowConstructorsFile);
+GeneratePartialInterface("DOMWindow", $windowConstructorsCode, $windowConstructorsFile);
 GeneratePartialInterface("WorkerGlobalScope", $workerGlobalScopeConstructorsCode, $workerGlobalScopeConstructorsFile);
 GeneratePartialInterface("ShadowRealmGlobalScope", $shadowRealmGlobalScopeConstructorsCode, $shadowRealmGlobalScopeConstructorsFile);
 GeneratePartialInterface("DedicatedWorkerGlobalScope", $dedicatedWorkerGlobalScopeConstructorsCode, $dedicatedWorkerGlobalScopeConstructorsFile);
@@ -363,7 +363,7 @@ if ($constructorsHeaderFile) {
     $constructorsHeaderCode .= "\n";
     $constructorsHeaderCode .= "class DOMConstructors {\n";
     $constructorsHeaderCode .= "    WTF_MAKE_NONCOPYABLE(DOMConstructors);\n";
-    $constructorsHeaderCode .= "    WTF_MAKE_FAST_ALLOCATED(DOMConstructors);\n";
+    $constructorsHeaderCode .= "    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(DOMConstructors);\n";
     $constructorsHeaderCode .= "public:\n";
     $constructorsHeaderCode .= "    using ConstructorArray = std::array<JSC::WriteBarrier<JSC::JSObject>, numberOfDOMConstructors>;\n";
     $constructorsHeaderCode .= "    DOMConstructors() = default;\n";
@@ -390,12 +390,12 @@ foreach my $idlFilePath (sort keys %supplementalDependencies) {
 # Outputs the dependency.
 # The format of a supplemental dependency file:
 #
-# LocalDOMWindow.idl P.idl Q.idl R.idl
+# DOMWindow.idl P.idl Q.idl R.idl
 # Document.idl S.idl
 # Event.idl
 # ...
 #
-# The above indicates that LocalDOMWindow.idl is supplemented by P.idl, Q.idl and R.idl,
+# The above indicates that DOMWindow.idl is supplemented by P.idl, Q.idl and R.idl,
 # Document.idl is supplemented by S.idl, and Event.idl is supplemented by no IDLs.
 my $dependencies = "";
 foreach my $idlFilePath (sort keys %supplementals) {
@@ -490,7 +490,7 @@ sub GenerateConstructorAttributes
     my $globalContext = shift;
 
     # FIXME: Rather than being ConditionalForWorker=FOO, we need a syntax like ConditionalForContext=(Worker:FOO).
-    if ($extendedAttributes->{"ConditionalForWorker"} && $globalContext eq "Worker") {
+    if ($extendedAttributes->{"ConditionalForWorker"} && ($globalContext eq "Worker" || $globalContext eq "DedicatedWorker" )) {
       my $conditionalForWorker = $extendedAttributes->{"ConditionalForWorker"};
       my $existingConditional = $extendedAttributes->{"Conditional"};
       if ($existingConditional) {
@@ -513,7 +513,7 @@ sub GenerateConstructorAttributes
     my $code = "    ";
     my @extendedAttributesList;
     foreach my $attributeName (sort keys %{$extendedAttributes}) {
-      next unless ($attributeName eq "Conditional" || $attributeName eq "EnabledByDeprecatedGlobalSetting" || $attributeName eq "EnabledForWorld"
+      next unless ($attributeName eq "Conditional" || $attributeName eq "EnabledByDeprecatedGlobalSetting" || $attributeName eq "EnabledForWorld" || $attributeName eq "EnabledForGlobalObject"
         || $attributeName eq "EnabledBySetting" || $attributeName eq "SecureContext" || $attributeName eq "PrivateIdentifier"
         || $attributeName eq "PublicIdentifier" || $attributeName eq "DisabledByQuirk" || $attributeName eq "EnabledByQuirk"
         || $attributeName eq "EnabledForContext") || $attributeName eq "LegacyFactoryFunctionEnabledBySetting";

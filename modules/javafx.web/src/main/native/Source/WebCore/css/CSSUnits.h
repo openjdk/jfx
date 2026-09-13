@@ -27,14 +27,40 @@ class TextStream;
 
 namespace WebCore {
 
+namespace CSS {
+
+// We always assume 96 CSS pixels in a CSS inch. This is the cold hard truth of the Web.
+// At high DPI, we may scale a CSS pixel, but the ratio of the CSS pixel to the so-called
+// "absolute" CSS length units like inch and pt is always fixed and never changes.
+constexpr double pixelsPerInch = 96;
+
+constexpr double pointsPerInch = 72;
+constexpr double picasPerInch = 6;
+constexpr double mmPerInch = 25.4;
+constexpr double cmPerInch = 2.54;
+constexpr double QPerInch = 25.4 * 4.0;
+
+constexpr double pixelsPerCm = pixelsPerInch / cmPerInch;
+constexpr double pixelsPerMm = pixelsPerInch / mmPerInch;
+constexpr double pixelsPerQ = pixelsPerInch / QPerInch;
+constexpr double pixelsPerPt = pixelsPerInch / pointsPerInch;
+constexpr double pixelsPerPc = pixelsPerInch / picasPerInch;
+constexpr double dppxPerX = 1.0;
+constexpr double dppxPerDpi = 1.0 / pixelsPerInch;
+constexpr double dppxPerDpcm = cmPerInch / pixelsPerInch;
+constexpr double secondsPerMillisecond = 1.0 / 1000.0;
+constexpr double hertzPerKilohertz = 1000.0;
+
+}
+
 // FIXME: No need to use all capitals and a CSS prefix on all these names. Should fix that.
 enum class CSSUnitType : uint8_t {
     CSS_UNKNOWN,
     CSS_NUMBER,
     CSS_INTEGER,
     CSS_PERCENTAGE,
-    CSS_EMS,
-    CSS_EXS,
+    CSS_EM,
+    CSS_EX,
     CSS_PX,
     CSS_CM,
     CSS_MM,
@@ -50,10 +76,8 @@ enum class CSSUnitType : uint8_t {
     CSS_KHZ,
     CSS_DIMENSION,
     CSS_STRING,
-    CSS_URI,
     CSS_IDENT,
     CSS_ATTR,
-    CSS_RGBCOLOR,
 
     CSS_VW,
     CSS_VH,
@@ -80,7 +104,7 @@ enum class CSSUnitType : uint8_t {
     CSS_DVB,
     CSS_DVI,
     FirstViewportCSSUnitType = CSS_VW,
-    LastViewporCSSUnitType = CSS_DVI,
+    LastViewportCSSUnitType = CSS_DVI,
 
     CSS_CQW,
     CSS_CQH,
@@ -95,25 +119,26 @@ enum class CSSUnitType : uint8_t {
     CSS_DPCM,
     CSS_FR,
     CSS_Q,
-    CSS_LHS,
-    CSS_RLHS,
+    CSS_LH,
+    CSS_RLH,
 
     CustomIdent,
 
     CSS_TURN,
-    CSS_REMS,
-    CSS_CHS,
+    CSS_REM,
+    CSS_REX,
+    CSS_CAP,
+    CSS_RCAP,
+    CSS_CH,
+    CSS_RCH,
     CSS_IC,
-
-    CSS_COUNTER_NAME,
+    CSS_RIC,
 
     CSS_CALC,
-    CSS_CALC_PERCENTAGE_WITH_NUMBER,
+    CSS_CALC_PERCENTAGE_WITH_ANGLE,
     CSS_CALC_PERCENTAGE_WITH_LENGTH,
 
     CSS_FONT_FAMILY,
-
-    CSS_UNRESOLVED_COLOR,
 
     CSS_PROPERTY_ID,
     CSS_VALUE_ID,
@@ -122,7 +147,7 @@ enum class CSSUnitType : uint8_t {
     // The basic idea is that a stylesheet can use the value __qem (for quirky em) instead of em.
     // When the quirky value is used, if you're in quirks mode, the margin will collapse away
     // inside a table cell. This quirk is specified in the HTML spec but our impl is different.
-    CSS_QUIRKY_EMS
+    CSS_QUIRKY_EM
 
     // Note that CSSValue allocates 7 bits for m_primitiveUnitType, so there can be no value here > 127.
 };
@@ -144,6 +169,8 @@ enum class CSSUnitCategory : uint8_t {
 CSSUnitCategory unitCategory(CSSUnitType);
 CSSUnitType canonicalUnitTypeForCategory(CSSUnitCategory);
 CSSUnitType canonicalUnitTypeForUnitType(CSSUnitType);
+double conversionToCanonicalUnitsScaleFactor(CSSUnitType);
+bool conversionToCanonicalUnitRequiresConversionData(CSSUnitType);
 
 WTF::TextStream& operator<<(WTF::TextStream&, CSSUnitCategory);
 WTF::TextStream& operator<<(WTF::TextStream&, CSSUnitType);

@@ -24,30 +24,47 @@
  */
 
 #include "config.h"
-#include "ObjectIdentifier.h"
+#include <wtf/ObjectIdentifier.h>
 
-#include "MainThread.h"
 #include <atomic>
+#include <wtf/MainThread.h>
+#include <wtf/PrintStream.h>
+#include <wtf/text/TextStream.h>
 
 namespace WTF {
 
-uint64_t ObjectIdentifierMainThreadAccessTraits::generateIdentifierInternal()
+uint64_t ObjectIdentifierMainThreadAccessTraits<uint64_t>::generateIdentifierInternal()
 {
     ASSERT(isMainThread()); // You should use AtomicObjectIdentifier if you're hitting this assertion.
     static uint64_t current = 0;
     return ++current;
 }
 
-uint64_t ObjectIdentifierThreadSafeAccessTraits::generateIdentifierInternal()
+void printInternal(PrintStream& out, const ObjectIdentifierGenericBase<uint64_t>& identifier)
+{
+    out.print(identifier.toRawValue());
+}
+
+uint64_t ObjectIdentifierThreadSafeAccessTraits<uint64_t>::generateIdentifierInternal()
 {
     static std::atomic<uint64_t> current;
     return ++current;
 }
 
-TextStream& operator<<(TextStream& ts, const ObjectIdentifierGenericBase& identifier)
+UUID ObjectIdentifierMainThreadAccessTraits<UUID>::generateIdentifierInternal()
 {
-    ts << identifier.toUInt64();
-    return ts;
+    ASSERT(isMainThread()); // You should use AtomicObjectIdentifier if you're hitting this assertion.
+    return UUID::createVersion4();
+}
+
+UUID ObjectIdentifierThreadSafeAccessTraits<UUID>::generateIdentifierInternal()
+{
+    return UUID::createVersion4();
+}
+
+void printInternal(PrintStream& out, const ObjectIdentifierGenericBase<UUID>& identifier)
+{
+    out.print(identifier.toRawValue());
 }
 
 } // namespace WTF

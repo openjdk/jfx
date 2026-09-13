@@ -27,20 +27,23 @@
 #include "SpeechRecognition.h"
 
 #include "ClientOrigin.h"
-#include "Document.h"
+#include "ContextDestructionObserverInlines.h"
+#include "DocumentPage.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
+#include "ExceptionOr.h"
 #include "FrameDestructionObserverInlines.h"
-#include "Page.h"
+#include "PermissionsPolicy.h"
 #include "SpeechRecognitionError.h"
 #include "SpeechRecognitionErrorEvent.h"
 #include "SpeechRecognitionEvent.h"
 #include "SpeechRecognitionResultData.h"
 #include "SpeechRecognitionResultList.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(SpeechRecognition);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SpeechRecognition);
 
 Ref<SpeechRecognition> SpeechRecognition::create(Document& document)
 {
@@ -52,8 +55,8 @@ Ref<SpeechRecognition> SpeechRecognition::create(Document& document)
 SpeechRecognition::SpeechRecognition(Document& document)
     : ActiveDOMObject(document)
 {
-    if (auto* page = document.page()) {
-        m_connection = &page->speechRecognitionConnection();
+    if (RefPtr page = document.page()) {
+        lazyInitialize(m_connection, Ref { page->speechRecognitionConnection() });
         m_connection->registerClient(*this);
     }
 }
@@ -66,19 +69,23 @@ void SpeechRecognition::suspend(ReasonForSuspension)
 ExceptionOr<void> SpeechRecognition::startRecognition()
 {
     if (m_state != State::Inactive)
-        return Exception { InvalidStateError, "Recognition is being started or already started"_s };
+        return Exception { ExceptionCode::InvalidStateError, "Recognition is being started or already started"_s };
 
     if (!m_connection)
-        return Exception { UnknownError, "Recognition does not have a valid connection"_s };
+        return Exception { ExceptionCode::UnknownError, "Recognition does not have a valid connection"_s };
 
-    auto& document = downcast<Document>(*scriptExecutionContext());
-    auto* frame = document.frame();
-    if (!frame)
-        return Exception { UnknownError, "Recognition is not in a valid frame"_s };
+    Ref document = downcast<Document>(*scriptExecutionContext());
+    RefPtr frame = document->frame();
+    if (!frame || !document->frameID())
+        return Exception { ExceptionCode::UnknownError, "Recognition is not in a valid frame"_s };
 
-    auto optionalFrameIdentifier = document.frameID();
-    auto frameIdentifier = optionalFrameIdentifier ? *optionalFrameIdentifier : FrameIdentifier { };
-    m_connection->start(identifier(), m_lang, m_continuous, m_interimResults, m_maxAlternatives, ClientOrigin { document.topOrigin().data(), document.securityOrigin().data() }, frameIdentifier);
+    auto frameIdentifier = *document->frameID();
+    if (!PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::Microphone, document.get(), PermissionsPolicy::ShouldReportViolation::No)) {
+        didError({ SpeechRecognitionErrorType::NotAllowed, "Permission is denied"_s });
+        return { };
+    }
+
+    m_connection->start(identifier(), m_lang, m_continuous, m_interimResults, m_maxAlternatives, ClientOrigin { document->topOrigin().data(), document->securityOrigin().data() }, frameIdentifier);
     m_state = State::Starting;
     return { };
 }
@@ -101,11 +108,6 @@ void SpeechRecognition::abortRecognition()
     m_state = State::Aborting;
 }
 
-const char* SpeechRecognition::activeDOMObjectName() const
-{
-    return "SpeechRecognition";
-}
-
 void SpeechRecognition::stop()
 {
     abortRecognition();
@@ -114,8 +116,8 @@ void SpeechRecognition::stop()
         return;
     m_connection->unregisterClient(*this);
 
-    auto& document = downcast<Document>(*scriptExecutionContext());
-    document.setActiveSpeechRecognition(nullptr);
+    Ref document = downcast<Document>(*scriptExecutionContext());
+    document->setActiveSpeechRecognition(nullptr);
 }
 
 void SpeechRecognition::didStart()
@@ -128,8 +130,8 @@ void SpeechRecognition::didStart()
 
 void SpeechRecognition::didStartCapturingAudio()
 {
-    auto& document = downcast<Document>(*scriptExecutionContext());
-    document.setActiveSpeechRecognition(this);
+    Ref document = downcast<Document>(*scriptExecutionContext());
+    document->setActiveSpeechRecognition(this);
 
     queueTaskToDispatchEvent(*this, TaskSource::Speech, Event::create(eventNames().audiostartEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
@@ -156,8 +158,8 @@ void SpeechRecognition::didStopCapturingSound()
 
 void SpeechRecognition::didStopCapturingAudio()
 {
-    auto& document = downcast<Document>(*scriptExecutionContext());
-    document.setActiveSpeechRecognition(nullptr);
+    Ref document = downcast<Document>(*scriptExecutionContext());
+    document->setActiveSpeechRecognition(nullptr);
 
     queueTaskToDispatchEvent(*this, TaskSource::Speech, Event::create(eventNames().audioendEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
@@ -176,18 +178,18 @@ void SpeechRecognition::didReceiveResult(Vector<SpeechRecognitionResultData>&& r
     auto firstChangedIndex = allResults.size();
     for (auto resultData : resultDatas) {
         auto alternatives = WTF::map(resultData.alternatives, [](auto& alternativeData) {
-            return SpeechRecognitionAlternative::create(WTFMove(alternativeData.transcript), alternativeData.confidence);
+            return SpeechRecognitionAlternative::create(WTF::move(alternativeData.transcript), alternativeData.confidence);
         });
 
-        auto newResult = SpeechRecognitionResult::create(WTFMove(alternatives), resultData.isFinal);
+        auto newResult = SpeechRecognitionResult::create(WTF::move(alternatives), resultData.isFinal);
         if (resultData.isFinal)
             m_finalResults.append(newResult);
 
-        allResults.append(WTFMove(newResult));
+        allResults.append(WTF::move(newResult));
     }
 
-    auto resultList = SpeechRecognitionResultList::create(WTFMove(allResults));
-    queueTaskToDispatchEvent(*this, TaskSource::Speech, SpeechRecognitionEvent::create(eventNames().resultEvent, firstChangedIndex, WTFMove(resultList)));
+    auto resultList = SpeechRecognitionResultList::create(WTF::move(allResults));
+    queueTaskToDispatchEvent(*this, TaskSource::Speech, SpeechRecognitionEvent::create(eventNames().resultEvent, firstChangedIndex, WTF::move(resultList)));
 }
 
 void SpeechRecognition::didError(const SpeechRecognitionError& error)
@@ -206,8 +208,16 @@ void SpeechRecognition::didEnd()
     queueTaskToDispatchEvent(*this, TaskSource::Speech, Event::create(eventNames().endEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
-SpeechRecognition::~SpeechRecognition()
+SpeechRecognition::~SpeechRecognition() = default;
+
+ScriptExecutionContext* SpeechRecognition::scriptExecutionContext() const
 {
+    return ActiveDOMObject::scriptExecutionContext();
+}
+
+bool SpeechRecognition::virtualHasPendingActivity() const
+{
+    return m_state != State::Inactive && hasEventListeners();
 }
 
 } // namespace WebCore

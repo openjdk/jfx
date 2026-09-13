@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,8 +29,9 @@ import com.sun.javafx.tk.quantum.WindowStageShim;
 import com.sun.prism.Image;
 import java.util.ArrayList;
 import java.util.List;
-import org.junit.Assert;
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class WindowStageTest {
 
@@ -49,16 +50,16 @@ public class WindowStageTest {
 
         // sanity check
         Image image = WindowStageShim.findBestImage(images, 16, 16);
-        Assert.assertEquals(16, image.getWidth());
+        assertEquals(16, image.getWidth());
         image = WindowStageShim.findBestImage(images, 48, 48);
-        Assert.assertEquals(48, image.getWidth());
+        assertEquals(48, image.getWidth());
 
-        //RT-39045
+        //JDK-8096579
         image = WindowStageShim.findBestImage(images, 32, 32);
-        Assert.assertEquals(32, image.getWidth());
+        assertEquals(32, image.getWidth());
 
         // scaling up 32 pixels by 4 is better than 48 by 2+2/3
         image = WindowStageShim.findBestImage(images, 128, 128);
-        Assert.assertEquals(32, image.getWidth());
+        assertEquals(32, image.getWidth());
     }
 }

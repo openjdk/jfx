@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -31,9 +31,16 @@
 #include "config.h"
 #include "ScriptBuffer.h"
 
+#include <wtf/StdLibExtras.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
+
+ScriptBuffer::ScriptBuffer(RefPtr<const FragmentedSharedBuffer>&& buffer)
+{
+    if (buffer)
+        append(*buffer);
+}
 
 ScriptBuffer::ScriptBuffer(const String& string)
 {
@@ -51,21 +58,23 @@ String ScriptBuffer::toString() const
         return String();
 
     StringBuilder builder;
-    m_buffer.get()->forEachSegment([&](auto& segment) {
-        builder.append(String::fromUTF8(segment.data(), segment.size()));
+    m_buffer.protectedBuffer()->forEachSegment([&](auto segment) {
+        builder.append(byteCast<char8_t>(segment));
     });
     return builder.toString();
 }
 
 bool ScriptBuffer::containsSingleFileMappedSegment() const
 {
-    return m_buffer && m_buffer.get()->hasOneSegment() && m_buffer.get()->begin()->segment->containsMappedFileData();
+    return m_buffer.hasOneSegment() && m_buffer.begin()->segment->containsMappedFileData();
 }
 
 void ScriptBuffer::append(const String& string)
 {
-    auto result = string.tryGetUTF8([&](std::span<const char> span) -> bool {
-        m_buffer.append(span.data(), span.size());
+    if (string.isEmpty())
+        return;
+    auto result = string.tryGetUTF8([&](std::span<const char8_t> span) -> bool {
+        m_buffer.append(span);
         return true;
     });
     RELEASE_ASSERT(result);
@@ -74,15 +83,6 @@ void ScriptBuffer::append(const String& string)
 void ScriptBuffer::append(const FragmentedSharedBuffer& buffer)
 {
     m_buffer.append(buffer);
-}
-
-bool operator==(const ScriptBuffer& a, const ScriptBuffer& b)
-{
-    if (a.buffer() == b.buffer())
-        return true;
-    if (!a.buffer() || !b.buffer())
-        return false;
-    return *a.buffer() == *b.buffer();
 }
 
 } // namespace WebCore

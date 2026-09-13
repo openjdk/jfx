@@ -28,44 +28,39 @@
 #if ENABLE(WEBGL)
 #include "WebGLDrawBuffers.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WebGLDrawBuffers);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebGLDrawBuffers);
 
 WebGLDrawBuffers::WebGLDrawBuffers(WebGLRenderingContextBase& context)
-    : WebGLExtension(context)
+    : WebGLExtension(context, WebGLExtensionName::WebGLDrawBuffers)
 {
-    context.graphicsContextGL()->ensureExtensionEnabled("GL_EXT_draw_buffers"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::EXT_draw_buffers);
 }
 
 WebGLDrawBuffers::~WebGLDrawBuffers() = default;
 
-WebGLExtension::ExtensionName WebGLDrawBuffers::getName() const
-{
-    return WebGLExtension::WebGLDrawBuffersName;
-}
-
 bool WebGLDrawBuffers::supported(WebGLRenderingContextBase& context)
 {
-    return context.graphicsContextGL()->supportsExtension("GL_EXT_draw_buffers"_s);
+    return context.graphicsContextGL()->supportsExtension(GCGLExtension::EXT_draw_buffers);
 }
 
 void WebGLDrawBuffers::drawBuffersWEBGL(const Vector<GCGLenum>& buffers)
 {
-    auto context = WebGLExtensionScopedContext(this);
-    if (context.isLost())
+    if (isContextLost())
         return;
+    Ref context = this->context();
     GCGLsizei n = buffers.size();
-    const GCGLenum* bufs = buffers.data();
+    auto bufs = buffers.span();
     if (!context->m_framebufferBinding) {
         if (n != 1) {
-            context->synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "drawBuffersWEBGL", "more or fewer than one buffer");
+            context->synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "drawBuffersWEBGL"_s, "more or fewer than one buffer"_s);
             return;
         }
         if (bufs[0] != GraphicsContextGL::BACK && bufs[0] != GraphicsContextGL::NONE) {
-            context->synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "drawBuffersWEBGL", "BACK or NONE");
+            context->synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "drawBuffersWEBGL"_s, "BACK or NONE"_s);
             return;
         }
         // Because the backbuffer is simulated on all current WebKit ports, we need to change BACK to COLOR_ATTACHMENT0.
@@ -73,17 +68,17 @@ void WebGLDrawBuffers::drawBuffersWEBGL(const Vector<GCGLenum>& buffers)
         context->graphicsContextGL()->drawBuffersEXT(value);
         context->setBackDrawBuffer(bufs[0]);
     } else {
-        if (n > context->getMaxDrawBuffers()) {
-            context->synthesizeGLError(GraphicsContextGL::INVALID_VALUE, "drawBuffersWEBGL", "more than max draw buffers");
+        if (n > context->maxDrawBuffers()) {
+            context->synthesizeGLError(GraphicsContextGL::INVALID_VALUE, "drawBuffersWEBGL"_s, "more than max draw buffers"_s);
             return;
         }
         for (GCGLsizei i = 0; i < n; ++i) {
             if (bufs[i] != GraphicsContextGL::NONE && bufs[i] != GraphicsContextGL::COLOR_ATTACHMENT0_EXT + i) {
-                context->synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "drawBuffersWEBGL", "COLOR_ATTACHMENTi_EXT or NONE");
+                context->synthesizeGLError(GraphicsContextGL::INVALID_OPERATION, "drawBuffersWEBGL"_s, "COLOR_ATTACHMENTi_EXT or NONE"_s);
                 return;
             }
         }
-        context->m_framebufferBinding->drawBuffers(buffers);
+        context->protectedFramebufferBinding()->drawBuffers(buffers);
     }
 }
 

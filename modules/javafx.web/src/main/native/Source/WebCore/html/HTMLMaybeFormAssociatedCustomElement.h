@@ -25,19 +25,17 @@
 
 #pragma once
 
-#include "HTMLElement.h"
+#include <WebCore/HTMLElement.h>
 
 namespace WebCore {
 
 class FormAssociatedCustomElement;
 
 class HTMLMaybeFormAssociatedCustomElement final : public HTMLElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLMaybeFormAssociatedCustomElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLMaybeFormAssociatedCustomElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLMaybeFormAssociatedCustomElement);
 public:
     static Ref<HTMLMaybeFormAssociatedCustomElement> create(const QualifiedName& tagName, Document&);
-
-    using Node::ref;
-    using Node::deref;
 
     bool isMaybeFormAssociatedCustomElement() const final { return true; }
     bool isFormListedElement() const final;
@@ -59,7 +57,7 @@ public:
     bool isDisabledFormControl() const final;
 
     void setInterfaceIsFormAssociated();
-    bool hasFormAssociatedInterface() const { return hasNodeFlag(NodeFlag::HasFormAssociatedCustomElementInterface); }
+    bool hasFormAssociatedInterface() const { return hasEventTargetFlag(EventTargetFlag::HasFormAssociatedCustomElementInterface); }
 
     void willUpgradeFormAssociated();
     void didUpgradeFormAssociated();
@@ -82,5 +80,9 @@ static_assert(sizeof(HTMLMaybeFormAssociatedCustomElement) == sizeof(HTMLElement
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::HTMLMaybeFormAssociatedCustomElement)
     static bool isType(const WebCore::Element& element) { return element.isMaybeFormAssociatedCustomElement(); }
-    static bool isType(const WebCore::Node& node) { return is<WebCore::Element>(node) && isType(downcast<WebCore::Element>(node)); }
+    static bool isType(const WebCore::Node& node)
+    {
+        auto* element = dynamicDowncast<WebCore::Element>(node);
+        return element && isType(*element);
+    }
 SPECIALIZE_TYPE_TRAITS_END()

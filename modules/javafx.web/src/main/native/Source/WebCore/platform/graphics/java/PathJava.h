@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -38,18 +38,18 @@ class PathStream;
 
 class PathJava final : public PathImpl {
 public:
-    static UniqueRef<PathJava> create();
-    static UniqueRef<PathJava> create(const PathStream&);
-    static UniqueRef<PathJava> create(RefPtr<RQRef>&&, std::unique_ptr<PathStream>&& = nullptr);
+    static Ref<PathJava> create();
+    static Ref<PathJava> create(std::span<const PathSegment> segments);
+    static Ref<PathJava> create(RefPtr<RQRef>&&, RefPtr<PathStream>&& = nullptr);
 
     PathJava();
-    PathJava(RefPtr<RQRef>&&, std::unique_ptr<PathStream>&&);
+    PathJava(RefPtr<RQRef>&&, RefPtr<PathStream>&&);
 
     PlatformPathPtr platformPath() const;
-
-    bool operator==(const PathImpl&) const final;
+    static PlatformPathPtr emptyPlatformPath();
 
     void addPath(const PathJava&, const AffineTransform&);
+    bool definitelyEqual(const PathImpl&) const final;
 
     bool applyElements(const PathElementApplier&) const final;
 
@@ -61,26 +61,24 @@ public:
     FloatRect strokeBoundingRect(const Function<void(GraphicsContext&)>& strokeStyleApplier) const;
 
 private:
-    UniqueRef<PathImpl> clone() const final;
-
-    void moveTo(const FloatPoint&) final;
-
-    void addLineTo(const FloatPoint&) final;
-    void addQuadCurveTo(const FloatPoint& controlPoint, const FloatPoint& endPoint) final;
-    void addBezierCurveTo(const FloatPoint& controlPoint1, const FloatPoint& controlPoint2, const FloatPoint& endPoint) final;
-    void addArcTo(const FloatPoint& point1, const FloatPoint& point2, float radius) final;
-
-    void addArc(const FloatPoint&, float radius, float startAngle, float endAngle, RotationDirection) final;
-    void addEllipse(const FloatPoint&, float radiusX, float radiusY, float rotation, float startAngle, float endAngle, RotationDirection) final;
-    void addEllipseInRect(const FloatRect&) final;
-    void addRect(const FloatRect&) final;
-    void addRoundedRect(const FloatRoundedRect&, PathRoundedRect::Strategy) final;
-
-    void closeSubpath() final;
+    Ref<PathImpl> copy() const final;
+    void add(PathMoveTo) final;
+    void add(PathLineTo) final;
+    void add(PathQuadCurveTo) final;
+    void add(PathBezierCurveTo) final;
+    void add(PathArcTo) final;
+    void add(PathArc) final;
+    void add(PathClosedArc) final;
+    void add(PathEllipse) final;
+    void add(PathEllipseInRect) final;
+    void add(PathRect) final;
+    void add(PathRoundedRect) final;
+    void add(PathContinuousRoundedRect) final;
+    void add(PathCloseSubpath) final;
 
     void applySegments(const PathSegmentApplier&) const final;
 
-    bool isEmpty() const final;
+    bool isEmpty() const;
 
     FloatPoint currentPoint() const final;
 
@@ -88,7 +86,7 @@ private:
     FloatRect boundingRect() const final;
 
     RefPtr<RQRef> m_platformPath;
-    std::unique_ptr<PathStream> m_elementsStream;
+    RefPtr<PathStream> m_elementsStream;
 };
 
 } // namespace WebCore

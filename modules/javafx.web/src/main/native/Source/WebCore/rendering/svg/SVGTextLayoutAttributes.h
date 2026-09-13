@@ -1,5 +1,7 @@
 /*
  * Copyright (C) Research In Motion Limited 2010-2011. All rights reserved.
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2015 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -19,10 +21,11 @@
 
 #pragma once
 
-#include "SVGTextMetrics.h"
+#include <WebCore/SVGTextMetrics.h>
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
@@ -46,19 +49,20 @@ public:
     explicit SVGTextLayoutAttributes(RenderSVGInlineText&);
 
     void clear();
-    void dump() const;
-    static float emptyValue();
+    static constexpr float emptyValue() { return std::numeric_limits<float>::quiet_NaN(); }
+    static bool isEmptyValue(float value) { return std::isnan(value); }
 
-    RenderSVGInlineText& context() { return m_context; }
-    const RenderSVGInlineText& context() const { return m_context; }
+    RenderSVGInlineText& context();
+    const RenderSVGInlineText& context() const;
 
     SVGCharacterDataMap& characterDataMap() { return m_characterDataMap; }
     const SVGCharacterDataMap& characterDataMap() const { return m_characterDataMap; }
 
     Vector<SVGTextMetrics>& textMetricsValues() { return m_textMetricsValues; }
+    const Vector<SVGTextMetrics>& textMetricsValues() const { return m_textMetricsValues; }
 
 private:
-    RenderSVGInlineText& m_context;
+    SingleThreadWeakRef<RenderSVGInlineText> m_context;
     SVGCharacterDataMap m_characterDataMap;
     Vector<SVGTextMetrics> m_textMetricsValues;
 };

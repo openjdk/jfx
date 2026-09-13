@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2021, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,13 +25,10 @@
 
 package test.javafx.scene.control;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import static javafx.scene.control.TableColumn.*;
-import static org.junit.Assert.*;
-
+import static javafx.scene.control.TableColumn.editAnyEvent;
+import static javafx.scene.control.TableColumn.editCommitEvent;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -40,6 +37,9 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableColumn.CellEditEvent;
 import javafx.scene.control.TablePosition;
 import javafx.scene.control.TableView;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test cell edit event for TableColumn: must not throw NPE in accessors (JDK-8269871).
@@ -71,32 +71,32 @@ public class CellEditEventOfTableColumnTest {
     @Test
     public void testNullTablePositionGetTableView() {
         CellEditEvent<String, String> ev = new CellEditEvent<>(table, null, editAnyEvent(), null);
-        assertNull("table must be null for null pos", ev.getTableView());
+        assertNull(ev.getTableView(), "table must be null for null pos");
     }
 
     @Test
     public void testNullTablePositionGetTableColumn() {
         CellEditEvent<String, String> ev = new CellEditEvent<>(table, null, editAnyEvent(), null);
-        assertNull("column must be null for null pos", ev.getTableColumn());
+        assertNull(ev.getTableColumn(), "column must be null for null pos");
     }
 
     @Test
     public void testNullTablePositionGetOldValue() {
         CellEditEvent<String, String> ev = new CellEditEvent<>(table, null, editAnyEvent(), null);
-        assertNull("oldValue must be null for null pos", ev.getOldValue());
+        assertNull(ev.getOldValue(), "oldValue must be null for null pos");
     }
 
     @Test
     public void testNullTablePositionGetRowValue() {
         CellEditEvent<String, String> ev = new CellEditEvent<>(table, null, editAnyEvent(), null);
-        assertNull("rowValue must be null for null pos", ev.getRowValue());
+        assertNull(ev.getRowValue(), "rowValue must be null for null pos");
     }
 
     @Test
     public void testNullTablePositionGetNewValue() {
         String editedValue = "edited";
         CellEditEvent<String, String> ev = new CellEditEvent<>(table, null, editAnyEvent(), editedValue);
-        assertEquals("editedValue must be available for null pos", editedValue, ev.getNewValue());
+        assertEquals(editedValue, ev.getNewValue(), "editedValue must be available for null pos");
     }
 
     @Test
@@ -104,7 +104,7 @@ public class CellEditEventOfTableColumnTest {
         String editedValue = "edited";
         TablePosition<String, String> pos = new TablePosition<>(null, 1, editingColumn);
         CellEditEvent<String, String> ev = new CellEditEvent<>(table, pos, editAnyEvent(), editedValue);
-        assertNull("rowValue must be null for null pos", ev.getRowValue());
+        assertNull(ev.getRowValue(), "rowValue must be null for null pos");
     }
 
 //---------- event source
@@ -163,7 +163,8 @@ public class CellEditEventOfTableColumnTest {
 
 //------------ init
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
             if (throwable instanceof RuntimeException) {
                 throw (RuntimeException)throwable;
@@ -179,9 +180,8 @@ public class CellEditEventOfTableColumnTest {
         table.getColumns().addAll(editingColumn);
     }
 
-    @After
+    @AfterEach
     public void cleanup() {
         Thread.currentThread().setUncaughtExceptionHandler(null);
     }
-
 }

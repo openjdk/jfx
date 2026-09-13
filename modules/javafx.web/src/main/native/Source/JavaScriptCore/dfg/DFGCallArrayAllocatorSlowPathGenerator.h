@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,7 @@
 namespace JSC { namespace DFG {
 
 class CallArrayAllocatorSlowPathGenerator final : public JumpingSlowPathGenerator<MacroAssembler::JumpList> {
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(CallArrayAllocatorSlowPathGenerator);
 public:
     CallArrayAllocatorSlowPathGenerator(
         MacroAssembler::JumpList from, SpeculativeJIT* jit, P_JITOperation_VmStZB function,
@@ -53,12 +54,7 @@ private:
     void generateInternal(SpeculativeJIT* jit) final
     {
         linkFrom(jit);
-        for (unsigned i = 0; i < m_plans.size(); ++i)
-            jit->silentSpill(m_plans[i]);
-        jit->callOperation(m_function, m_resultGPR, SpeculativeJIT::TrustedImmPtr(&jit->vm()), m_structure, m_size, m_storageGPR);
-        for (unsigned i = m_plans.size(); i--;)
-            jit->silentFill(m_plans[i]);
-        jit->exceptionCheck();
+        jit->callOperationWithSilentSpill(m_plans.span(), m_function, m_resultGPR, SpeculativeJIT::TrustedImmPtr(&jit->vm()), m_structure, m_size, m_storageGPR);
         jit->loadPtr(MacroAssembler::Address(m_resultGPR, JSObject::butterflyOffset()), m_storageGPR);
         jumpTo(jit);
     }
@@ -72,6 +68,7 @@ private:
 };
 
 class CallArrayAllocatorWithVariableSizeSlowPathGenerator final : public JumpingSlowPathGenerator<MacroAssembler::JumpList> {
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(CallArrayAllocatorWithVariableSizeSlowPathGenerator);
 public:
     CallArrayAllocatorWithVariableSizeSlowPathGenerator(
         MacroAssembler::JumpList from, SpeculativeJIT* jit, P_JITOperation_GStZB function,
@@ -92,8 +89,7 @@ private:
     void generateInternal(SpeculativeJIT* jit) final
     {
         linkFrom(jit);
-        for (unsigned i = 0; i < m_plans.size(); ++i)
-            jit->silentSpill(m_plans[i]);
+        jit->silentSpill(m_plans);
         GPRReg scratchGPR = AssemblyHelpers::selectScratchGPR(m_sizeGPR, m_storageGPR);
         if (m_contiguousStructure.get() != m_arrayStorageOrContiguousStructure.get()) {
             MacroAssembler::Jump bigLength = jit->branch32(MacroAssembler::AboveOrEqual, m_sizeGPR, MacroAssembler::TrustedImm32(MIN_ARRAY_STORAGE_CONSTRUCTION_LENGTH));
@@ -104,10 +100,15 @@ private:
             done.link(jit);
         } else
             jit->move(SpeculativeJIT::TrustedImmPtr(m_contiguousStructure), scratchGPR);
-        jit->callOperation(m_function, m_resultGPR, m_globalObject, scratchGPR, m_sizeGPR, m_storageGPR);
-        for (unsigned i = m_plans.size(); i--;)
-            jit->silentFill(m_plans[i]);
-        jit->exceptionCheck();
+        jit->setupArguments<decltype(m_function)>(m_globalObject, scratchGPR, m_sizeGPR, m_storageGPR);
+        jit->appendCall(m_function);
+        std::optional<GPRReg> exception = jit->tryHandleOrGetExceptionUnderSilentSpill<decltype(m_function)>(m_plans, m_resultGPR);
+        jit->setupResults(m_resultGPR);
+        jit->silentFill(m_plans);
+
+        if (exception)
+            jit->exceptionCheck(*exception);
+
         jumpTo(jit);
     }
 
@@ -122,6 +123,7 @@ private:
 };
 
 class CallArrayAllocatorWithVariableStructureVariableSizeSlowPathGenerator final : public JumpingSlowPathGenerator<MacroAssembler::JumpList> {
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(CallArrayAllocatorWithVariableStructureVariableSizeSlowPathGenerator);
 public:
     CallArrayAllocatorWithVariableStructureVariableSizeSlowPathGenerator(
         MacroAssembler::JumpList from, SpeculativeJIT* jit, P_JITOperation_GStZB function,
@@ -141,12 +143,7 @@ private:
     void generateInternal(SpeculativeJIT* jit) final
     {
         linkFrom(jit);
-        for (unsigned i = 0; i < m_plans.size(); ++i)
-            jit->silentSpill(m_plans[i]);
-        jit->callOperation(m_function, m_resultGPR, m_globalObject, m_structureGPR, m_sizeGPR, m_storageGPR);
-        for (unsigned i = m_plans.size(); i--;)
-            jit->silentFill(m_plans[i]);
-        jit->exceptionCheck();
+        jit->callOperationWithSilentSpill(m_plans, m_function, m_resultGPR, m_globalObject, m_structureGPR, m_sizeGPR, m_storageGPR);
         jumpTo(jit);
     }
 

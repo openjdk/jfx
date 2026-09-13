@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "EventTrackingRegions.h"
+#include <wtf/text/TextStream.h>
 
 #include "EventNames.h"
 
@@ -33,6 +34,12 @@ namespace WebCore {
 ASCIILiteral EventTrackingRegions::eventName(EventType eventType)
 {
     switch (eventType) {
+    case EventType::Gesturechange:
+        return "gesturechange"_s;
+    case EventType::Gestureend:
+        return "gestureend"_s;
+    case EventType::Gesturestart:
+        return "gesturestart"_s;
     case EventType::Mousedown:
         return "mousedown"_s;
     case EventType::Mousemove:
@@ -72,6 +79,12 @@ ASCIILiteral EventTrackingRegions::eventName(EventType eventType)
 const AtomString& EventTrackingRegions::eventNameAtomString(const EventNames& eventNames, EventType eventType)
 {
     switch (eventType) {
+    case EventType::Gesturechange:
+        return eventNames.gesturechangeEvent;
+    case EventType::Gestureend:
+        return eventNames.gestureendEvent;
+    case EventType::Gesturestart:
+        return eventNames.gesturestartEvent;
     case EventType::Mousedown:
         return eventNames.mousedownEvent;
     case EventType::Mousemove:
@@ -108,7 +121,7 @@ const AtomString& EventTrackingRegions::eventNameAtomString(const EventNames& ev
     return nullAtom();
 }
 
-TrackingType EventTrackingRegions::trackingTypeForPoint(EventType eventType, const IntPoint& point)
+TrackingType EventTrackingRegions::trackingTypeForPoint(EventType eventType, const IntPoint& point) const
 {
     auto synchronousRegionIterator = eventSpecificSynchronousDispatchRegions.find(eventType);
     if (synchronousRegionIterator != eventSpecificSynchronousDispatchRegions.end()) {
@@ -150,10 +163,13 @@ void EventTrackingRegions::unite(const EventTrackingRegions& eventTrackingRegion
         uniteSynchronousRegion(slot.key, slot.value);
 }
 
-bool operator==(const EventTrackingRegions& a, const EventTrackingRegions& b)
+TextStream& operator<<(TextStream& ts, const EventTrackingRegions& region)
 {
-    return a.asynchronousDispatchRegion == b.asynchronousDispatchRegion
-        && a.eventSpecificSynchronousDispatchRegions == b.eventSpecificSynchronousDispatchRegions;
+    if (!region.asynchronousDispatchRegion.isEmpty())
+        ts << " asynchronousDispatchRegion: " << region.asynchronousDispatchRegion;
+    for (auto& slot : region.eventSpecificSynchronousDispatchRegions)
+        ts << "eventSpecificSynchronousDispatchRegions: eventName: " << EventTrackingRegions::eventName(slot.key) << " eventRect: " << slot.value;
+    return ts;
 }
 
 } // namespace WebCore

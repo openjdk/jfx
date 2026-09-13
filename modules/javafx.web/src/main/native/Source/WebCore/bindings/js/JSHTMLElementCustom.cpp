@@ -36,6 +36,7 @@
 #include "JSHTMLElementWrapperFactory.h"
 #include "JSNodeCustom.h"
 #include "LocalDOMWindow.h"
+#include "NodeDocument.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/InternalFunction.h>
 #include <JavaScriptCore/JSWithScope.h>
@@ -52,9 +53,9 @@ EncodedJSValue constructJSHTMLElement(JSGlobalObject* lexicalGlobalObject, CallF
     auto* jsConstructor = jsCast<JSDOMConstructorBase*>(callFrame.jsCallee());
     ASSERT(jsConstructor);
 
-    auto* context = jsConstructor->scriptExecutionContext();
+    CheckedPtr context = jsConstructor->scriptExecutionContext();
     if (!context)
-        return throwConstructorScriptExecutionContextUnavailableError(*lexicalGlobalObject, scope, "HTMLElement");
+        return throwConstructorScriptExecutionContextUnavailableError(*lexicalGlobalObject, scope, "HTMLElement"_s);
     ASSERT(context->isDocument());
 
     auto* newTarget = callFrame.newTarget().getObject();
@@ -65,36 +66,38 @@ EncodedJSValue constructJSHTMLElement(JSGlobalObject* lexicalGlobalObject, CallF
     if (newTarget == htmlElementConstructorValue)
         return throwVMTypeError(lexicalGlobalObject, scope, "new.target is not a valid custom element constructor"_s);
 
-    auto& document = downcast<Document>(*context);
+    Ref document = downcast<Document>(*context);
 
-    auto* window = document.domWindow();
+    RefPtr registry = document->activeCustomElementRegistry();
+    if (!registry) {
+        RefPtr window = document->window();
     if (!window)
         return throwVMTypeError(lexicalGlobalObject, scope, "new.target is not a valid custom element constructor"_s);
 
-    auto* registry = window->customElementRegistry();
+        registry = window->customElementRegistry();
     if (!registry)
         return throwVMTypeError(lexicalGlobalObject, scope, "new.target is not a valid custom element constructor"_s);
+    }
 
-    auto* elementInterface = registry->findInterface(newTarget);
+    RefPtr elementInterface = registry->findInterface(newTarget);
     if (!elementInterface)
         return throwVMTypeError(lexicalGlobalObject, scope, "new.target does not define a custom element"_s);
 
     if (!elementInterface->isUpgradingElement()) {
-        Ref<Document> protectedDocument(document);
-        Ref<JSCustomElementInterface> protectedElementInterface(*elementInterface);
-
         Structure* baseStructure = getDOMStructure<JSHTMLElement>(vm, *newTargetGlobalObject);
         auto* newElementStructure = InternalFunction::createSubclassStructure(lexicalGlobalObject, newTarget, baseStructure);
         RETURN_IF_EXCEPTION(scope, { });
 
-        Ref<HTMLElement> element = elementInterface->createElement(document);
+        Ref element = elementInterface->createElement(document);
+        if (registry->isScoped())
+            CustomElementRegistry::addToScopedCustomElementRegistryMap(element, *registry);
         element->setIsDefinedCustomElement(*elementInterface);
         auto* jsElement = JSHTMLElement::create(newElementStructure, newTargetGlobalObject, element.get());
         cacheWrapper(newTargetGlobalObject->world(), element.ptr(), jsElement);
         return JSValue::encode(jsElement);
     }
 
-    Element* elementToUpgrade = elementInterface->lastElementInConstructionStack();
+    RefPtr elementToUpgrade = elementInterface->lastElementInConstructionStack();
     if (!elementToUpgrade) {
         throwTypeError(lexicalGlobalObject, scope, "Cannot instantiate a custom element inside its own constructor during upgrades"_s);
         return JSValue::encode(jsUndefined());
@@ -117,7 +120,7 @@ EncodedJSValue constructJSHTMLElement(JSGlobalObject* lexicalGlobalObject, CallF
 
 JSScope* JSHTMLElement::pushEventHandlerScope(JSGlobalObject* lexicalGlobalObject, JSScope* scope) const
 {
-    HTMLElement& element = wrapped();
+    CheckedRef element = wrapped();
 
     // The document is put on first, fall back to searching it only after the element and form.
     // FIXME: This probably may use the wrong global object. If this is called from a native
@@ -126,10 +129,10 @@ JSScope* JSHTMLElement::pushEventHandlerScope(JSGlobalObject* lexicalGlobalObjec
     // https://bugs.webkit.org/show_bug.cgi?id=134932
     VM& vm = lexicalGlobalObject->vm();
 
-    scope = JSWithScope::create(vm, lexicalGlobalObject, scope, asObject(toJS(lexicalGlobalObject, globalObject(), element.document())));
+    scope = JSWithScope::create(vm, lexicalGlobalObject, scope, asObject(toJS(lexicalGlobalObject, globalObject(), element->document())));
 
     // The form is next, searched before the document, but after the element itself.
-    if (auto* formAssociated = element.asFormAssociatedElement()) {
+    if (auto* formAssociated = element->asFormAssociatedElement()) {
         if (RefPtr form = formAssociated->form())
         scope = JSWithScope::create(vm, lexicalGlobalObject, scope, asObject(toJS(lexicalGlobalObject, globalObject(), *form)));
     }
@@ -154,7 +157,7 @@ JSValue toJSNewlyCreated(JSGlobalObject*, JSDOMGlobalObject* globalObject, Ref<H
         ASSERT(!globalObject->vm().exceptionForInspection());
     }
     ASSERT(!getCachedWrapper(globalObject->world(), element));
-    return createJSHTMLWrapper(globalObject, WTFMove(element));
+    return createJSHTMLWrapper(globalObject, WTF::move(element));
 }
 
 } // namespace WebCore

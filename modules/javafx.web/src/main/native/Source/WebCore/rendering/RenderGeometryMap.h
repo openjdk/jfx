@@ -34,6 +34,7 @@
 
 namespace WebCore {
 
+class RenderElement;
 class RenderFragmentedFlow;
 class RenderLayer;
 class RenderLayerModelObject;
@@ -73,15 +74,10 @@ struct RenderGeometryMapStep {
 class RenderGeometryMap {
     WTF_MAKE_NONCOPYABLE(RenderGeometryMap);
 public:
-    explicit RenderGeometryMap(OptionSet<MapCoordinatesMode> = UseTransforms, bool useCSS3DTransformInterop = false);
+    explicit RenderGeometryMap(OptionSet<MapCoordinatesMode> = UseTransforms);
     ~RenderGeometryMap();
 
     OptionSet<MapCoordinatesMode> mapCoordinatesFlags() const { return m_mapCoordinatesFlags; }
-
-    FloatPoint absolutePoint(const FloatPoint& p) const
-    {
-        return mapToContainer(p, nullptr);
-    }
 
     FloatRect absoluteRect(const FloatRect& rect) const
     {
@@ -97,7 +93,7 @@ public:
     // Called by code walking the renderer or layer trees.
     void pushMappingsToAncestor(const RenderLayer*, const RenderLayer* ancestorLayer, bool respectTransforms = true);
     void popMappingsToAncestor(const RenderLayer*);
-    void pushMappingsToAncestor(const RenderObject*, const RenderLayerModelObject* ancestorRenderer);
+    void pushMappingsToAncestor(const RenderElement*, const RenderLayerModelObject* ancestorRenderer);
     void popMappingsToAncestor(const RenderLayerModelObject*);
 
     // The following methods should only be called by renderers inside a call to pushMappingsToAncestor().
@@ -130,7 +126,6 @@ private:
     RenderGeometryMapSteps m_mapping;
     LayoutSize m_accumulatedOffset;
     OptionSet<MapCoordinatesMode> m_mapCoordinatesFlags;
-    bool m_useCSS3DTransformInterop { false };
 #if ASSERT_ENABLED
     bool m_accumulatedOffsetMightBeSaturated { false };
 #endif

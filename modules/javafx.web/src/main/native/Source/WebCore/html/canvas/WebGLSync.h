@@ -28,14 +28,14 @@
 #if ENABLE(WEBGL)
 
 #include "GraphicsContextGL.h"
-#include "WebGLSharedObject.h"
+#include "WebGLObject.h"
 
 namespace WebCore {
 
-class WebGLSync final : public WebGLSharedObject {
+class WebGLSync final : public WebGLObject {
 public:
     virtual ~WebGLSync();
-
+    static Ref<WebGLSync> createLost();
     static Ref<WebGLSync> create(WebGLRenderingContextBase&);
 
     void updateCache(WebGLRenderingContextBase&);
@@ -43,14 +43,17 @@ public:
     bool isSignaled() const;
     void scheduleAllowCacheUpdate(WebGLRenderingContextBase&);
 
+    bool isUsable() const { return object() && !isDeleted(); }
+    bool isInitialized() const { return true; }
 private:
-    WebGLSync(WebGLRenderingContextBase&);
+    WebGLSync(WebGLRenderingContextBase&, GCGLsync);
+    WebGLSync();
+
+    void deleteObjectImpl(const AbstractLocker&, GraphicsContextGL*, PlatformGLObject) override;
 
     bool m_allowCacheUpdate = { false };
     GCGLint m_syncStatus = { GraphicsContextGL::UNSIGNALED };
     GCGLsync m_sync;
-
-    void deleteObjectImpl(const AbstractLocker&, GraphicsContextGL*, PlatformGLObject) override;
 };
 
 } // namespace WebCore

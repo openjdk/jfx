@@ -25,86 +25,52 @@
 
 #include "config.h"
 #include "SourceBrush.h"
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 
-SourceBrush::SourceBrush(const Color& color, std::optional<Brush>&& brush)
-    : m_color(color)
-    , m_brush(WTFMove(brush))
-{
-}
-
 const AffineTransform& SourceBrush::gradientSpaceTransform() const
 {
-    if (!m_brush)
-        return identity;
-    if (auto* logicalGradient = std::get_if<Brush::LogicalGradient>(&m_brush->brush))
+    if (auto* logicalGradient = std::get_if<SourceBrushLogicalGradient>(&m_patternGradient))
         return logicalGradient->spaceTransform;
     return identity;
 }
 
 Gradient* SourceBrush::gradient() const
 {
-    if (!m_brush)
-        return nullptr;
-    if (auto* logicalGradient = std::get_if<Brush::LogicalGradient>(&m_brush->brush)) {
-        if (auto* gradient = std::get_if<Ref<Gradient>>(&logicalGradient->gradient))
-            return gradient->ptr();
-    }
+    if (auto* logicalGradient = std::get_if<SourceBrushLogicalGradient>(&m_patternGradient))
+        return logicalGradient->gradient.ptr();
     return nullptr;
-}
-
-std::optional<RenderingResourceIdentifier> SourceBrush::gradientIdentifier() const
-{
-    if (!m_brush)
-        return std::nullopt;
-
-    auto* gradient = std::get_if<Brush::LogicalGradient>(&m_brush->brush);
-    if (!gradient)
-        return std::nullopt;
-
-    return WTF::switchOn(gradient->gradient,
-        [] (const Ref<Gradient>& gradient) -> std::optional<RenderingResourceIdentifier> {
-            if (!gradient->hasValidRenderingResourceIdentifier())
-                return std::nullopt;
-            return gradient->renderingResourceIdentifier();
-        },
-        [] (RenderingResourceIdentifier renderingResourceIdentifier) -> std::optional<RenderingResourceIdentifier> {
-            return renderingResourceIdentifier;
-        }
-    );
 }
 
 Pattern* SourceBrush::pattern() const
 {
-    if (!m_brush)
-        return nullptr;
-    if (auto* pattern = std::get_if<Ref<Pattern>>(&m_brush->brush))
+    if (auto* pattern = std::get_if<Ref<Pattern>>(&m_patternGradient))
         return pattern->ptr();
     return nullptr;
 }
 
 void SourceBrush::setGradient(Ref<Gradient>&& gradient, const AffineTransform& spaceTransform)
 {
-    m_brush = Brush { Brush::LogicalGradient { { WTFMove(gradient) }, spaceTransform } };
+    m_patternGradient = SourceBrushLogicalGradient { WTF::move(gradient), spaceTransform };
 }
 
 void SourceBrush::setPattern(Ref<Pattern>&& pattern)
 {
-    m_brush = Brush { Brush::Variant { std::in_place_type<Ref<Pattern>>, WTFMove(pattern) } };
+    m_patternGradient.emplace<Ref<Pattern>>(WTF::move(pattern));
 }
 
 WTF::TextStream& operator<<(TextStream& ts, const SourceBrush& brush)
 {
-    ts.dumpProperty("color", brush.color());
+    ts.dumpProperty("color"_s, brush.color());
 
-    if (auto gradient = brush.gradient()) {
-        ts.dumpProperty("gradient", *gradient);
-        ts.dumpProperty("gradient-space-transform", brush.gradientSpaceTransform());
+    if (RefPtr gradient = brush.gradient()) {
+        ts.dumpProperty("gradient"_s, *gradient);
+        ts.dumpProperty("gradient-space-transform"_s, brush.gradientSpaceTransform());
     }
 
-    if (auto pattern = brush.pattern())
-        ts.dumpProperty("pattern", pattern);
+    if (RefPtr pattern = brush.pattern())
+        ts.dumpProperty("pattern"_s, pattern.get());
 
     return ts;
 }

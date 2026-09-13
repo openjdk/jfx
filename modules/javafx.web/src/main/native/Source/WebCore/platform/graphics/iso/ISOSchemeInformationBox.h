@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "ISOBox.h"
+#include <WebCore/ISOBox.h>
 
 namespace WebCore {
 
@@ -34,7 +34,7 @@ public:
     ISOSchemeInformationBox();
     ~ISOSchemeInformationBox();
 
-    static FourCC boxTypeName() { return "schi"; }
+    static FourCC boxTypeName() { return std::span { "schi" }; }
 
     const ISOBox* schemeSpecificData() const { return m_schemeSpecificData.get(); }
 

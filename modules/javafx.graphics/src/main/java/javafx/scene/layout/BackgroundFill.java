@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,10 +25,13 @@
 
 package javafx.scene.layout;
 
+import com.sun.javafx.util.InterpolationUtils;
+import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
 import javafx.geometry.Insets;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
+import java.util.Objects;
 
 /**
  * The fill and associated properties that direct how to fill the background of a
@@ -41,24 +44,28 @@ import javafx.scene.paint.Paint;
  * When applied to a Region with a defined shape, the corner radii are ignored.
  * @since JavaFX 8.0
  */
-public final class BackgroundFill {
+public final class BackgroundFill implements Interpolatable<BackgroundFill> {
     /**
      * The Paint to use for filling the background of the {@link Region}.
      * This value will never be null.
+     *
      * @return the Paint to use for filling the background of the {@link Region}
+     * @interpolationType see {@link Paint}
      */
     public final Paint getFill() { return fill; }
-    final Paint fill;
+    private final Paint fill;
 
     /**
      * The Radii to use for representing the four radii of the
      * BackgroundFill. Each corner can therefore be independently
      * specified. This will never be null. The radii values will
      * never be negative.
+     *
      * @return the Radii to use for representing the four radii of the BackgroundFill
+     * @interpolationType <a href="../../animation/Interpolatable.html#default">default</a>
      */
     public final CornerRadii getRadii() { return radii; }
-    final CornerRadii radii;
+    private final CornerRadii radii;
 
     /**
      * The Insets to use for this fill. Each inset indicates at what
@@ -66,10 +73,12 @@ public final class BackgroundFill {
      * The insets will never be null, but the values may be negative
      * in order to position the border beyond the natural bounds
      * (that is, (0, 0, width, height)) of the Region.
+     *
      * @return the Insets to use for this fill
+     * @interpolationType <a href="../../animation/Interpolatable.html#default">default</a>
      */
     public final Insets getInsets() { return insets; }
-    final Insets insets;
+    private final Insets insets;
 
     /**
      * A cached hash for improved performance on subsequent hash or
@@ -101,6 +110,51 @@ public final class BackgroundFill {
         result = 31 * result + this.radii.hashCode();
         result = 31 * result + this.insets.hashCode();
         hash = result;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws NullPointerException {@inheritDoc}
+     * @since 24
+     */
+    @Override
+    public BackgroundFill interpolate(BackgroundFill endValue, double t) {
+        Objects.requireNonNull(endValue, "endValue cannot be null");
+
+        // We don't check equals(endValue) here to prevent unnecessary equality checks,
+        // and only check for equality with 'this' or 'endValue' after interpolation.
+        if (t == 0) {
+            return this;
+        }
+
+        if (t == 1) {
+            return endValue;
+        }
+
+        // CornerRadii, Insets and Paint are implemented such that interpolate() always returns the
+        // existing instance if the intermediate value is equal to the start value or the end value,
+        // which allows us to use an identity comparison in place of a value comparison to determine
+        // equality.
+        CornerRadii newRadii = radii.interpolate(endValue.radii, t);
+        Insets newInsets = insets.interpolate(endValue.insets, t);
+        Paint newFill = InterpolationUtils.interpolatePaint(fill, endValue.fill, t);
+
+        if (isSame(newFill, newRadii, newInsets)) {
+            return this;
+        }
+
+        if (endValue.isSame(newFill, newRadii, newInsets)) {
+            return endValue;
+        }
+
+        return new BackgroundFill(newFill, newRadii, newInsets);
+    }
+
+    private boolean isSame(Paint fill, CornerRadii radii, Insets insets) {
+        return this.fill == fill
+            && this.radii == radii
+            && this.insets == insets;
     }
 
     /**

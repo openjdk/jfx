@@ -25,12 +25,13 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if ENABLE(ASYNC_SCROLLING)
 
-#include "ScrollSnapOffsetsInfo.h"
-#include "ScrollTypes.h"
-#include "ScrollingCoordinator.h"
-#include "ScrollingStateNode.h"
+#include <WebCore/ScrollSnapOffsetsInfo.h>
+#include <WebCore/ScrollTypes.h>
+#include <WebCore/ScrollingCoordinator.h>
+#include <WebCore/ScrollingStateNode.h>
 
 #if PLATFORM(COCOA)
 OBJC_CLASS NSScrollerImp;
@@ -38,15 +39,22 @@ OBJC_CLASS NSScrollerImp;
 
 namespace WebCore {
 
+#if USE(COORDINATED_GRAPHICS_ASYNC_SCROLLBAR)
+class ScrollerImpAdwaita;
+#endif
+
 struct ScrollbarHoverState {
+#if USE(COORDINATED_GRAPHICS_ASYNC_SCROLLBAR)
+    ScrollbarPart hoveredPartInHorizontalScrollbar { NoPart };
+    ScrollbarPart hoveredPartInVerticalScrollbar { NoPart };
+    ScrollbarPart pressedPartInHorizontalScrollbar { NoPart };
+    ScrollbarPart pressedPartInVerticalScrollbar { NoPart };
+#else
     bool mouseIsOverHorizontalScrollbar { false };
     bool mouseIsOverVerticalScrollbar { false };
+#endif
 
-    bool operator==(const ScrollbarHoverState& other) const
-    {
-        return mouseIsOverHorizontalScrollbar == other.mouseIsOverHorizontalScrollbar
-            && mouseIsOverVerticalScrollbar == other.mouseIsOverVerticalScrollbar;
-    }
+    friend bool operator==(const ScrollbarHoverState&, const ScrollbarHoverState&) = default;
 };
 
 struct MouseLocationState {
@@ -60,6 +68,7 @@ struct ScrollbarEnabledState {
 };
 
 class ScrollingStateScrollingNode : public ScrollingStateNode {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(ScrollingStateScrollingNode, WEBCORE_EXPORT);
 public:
     virtual ~ScrollingStateScrollingNode();
 
@@ -125,12 +134,18 @@ public:
 #if PLATFORM(MAC)
     NSScrollerImp *verticalScrollerImp() const { return m_verticalScrollerImp.get(); }
     NSScrollerImp *horizontalScrollerImp() const { return m_horizontalScrollerImp.get(); }
+#elif USE(COORDINATED_GRAPHICS_ASYNC_SCROLLBAR)
+    ScrollerImpAdwaita* verticalScrollerImp() const { return m_verticalScrollerImp; }
+    ScrollerImpAdwaita* horizontalScrollerImp() const { return m_horizontalScrollerImp; }
 #endif
     ScrollbarHoverState scrollbarHoverState() const { return m_scrollbarHoverState; }
     WEBCORE_EXPORT void setScrollbarHoverState(ScrollbarHoverState);
 
     ScrollbarEnabledState scrollbarEnabledState() const { return m_scrollbarEnabledState; }
     WEBCORE_EXPORT void setScrollbarEnabledState(ScrollbarOrientation, bool);
+
+    const std::optional<ScrollbarColor>& scrollbarColor() const { return m_scrollbarColor; }
+    WEBCORE_EXPORT void setScrollbarColor(std::optional<ScrollbarColor>);
 
     void setScrollerImpsFromScrollbars(Scrollbar* verticalScrollbar, Scrollbar* horizontalScrollbar);
 
@@ -140,7 +155,55 @@ public:
     WEBCORE_EXPORT void setMouseMovedInContentArea(const MouseLocationState&);
     const MouseLocationState& mouseLocationState() const { return m_mouseLocationState; }
 
+    WEBCORE_EXPORT void setScrollbarLayoutDirection(UserInterfaceLayoutDirection);
+    UserInterfaceLayoutDirection scrollbarLayoutDirection() const { return m_scrollbarLayoutDirection; }
+
+    WEBCORE_EXPORT void setScrollbarWidth(ScrollbarWidth);
+    ScrollbarWidth scrollbarWidth() const { return m_scrollbarWidth; }
+
+    WEBCORE_EXPORT void setUseDarkAppearanceForScrollbars(bool);
+    bool useDarkAppearanceForScrollbars() const { return m_useDarkAppearanceForScrollbars; }
+
+#if USE(COORDINATED_GRAPHICS_ASYNC_SCROLLBAR)
+    void setScrollbarOpacity(float);
+    float scrollbarOpacity() const { return m_scrollbarOpacity; };
+#endif
+
 protected:
+    ScrollingStateScrollingNode(
+        ScrollingNodeType,
+        ScrollingNodeID,
+        Vector<Ref<ScrollingStateNode>>&&,
+        OptionSet<ScrollingStateNodeProperty>,
+        std::optional<PlatformLayerIdentifier>,
+        FloatSize scrollableAreaSize,
+        FloatSize totalContentsSize,
+        FloatSize reachableContentsSize,
+        FloatPoint scrollPosition,
+        IntPoint scrollOrigin,
+        ScrollableAreaParameters&&,
+#if ENABLE(SCROLLING_THREAD)
+        OptionSet<SynchronousScrollingReason>,
+#endif
+        RequestedScrollData&&,
+        FloatScrollSnapOffsetsInfo&&,
+        std::optional<unsigned> currentHorizontalSnapPointIndex,
+        std::optional<unsigned> currentVerticalSnapPointIndex,
+        bool isMonitoringWheelEvents,
+        std::optional<PlatformLayerIdentifier> scrollContainerLayer,
+        std::optional<PlatformLayerIdentifier> scrolledContentsLayer,
+        std::optional<PlatformLayerIdentifier> horizontalScrollbarLayer,
+        std::optional<PlatformLayerIdentifier> verticalScrollbarLayer,
+        bool mouseIsOverContentArea,
+        MouseLocationState&&,
+        ScrollbarHoverState&&,
+        ScrollbarEnabledState&&,
+        std::optional<ScrollbarColor>&&,
+        UserInterfaceLayoutDirection,
+        ScrollbarWidth,
+        bool useDarkAppearanceForScrollbars,
+        RequestedKeyboardScrollData&&
+    );
     ScrollingStateScrollingNode(ScrollingStateTree&, ScrollingNodeType, ScrollingNodeID);
     ScrollingStateScrollingNode(const ScrollingStateScrollingNode&, ScrollingStateTree&);
 
@@ -170,17 +233,27 @@ private:
 #if PLATFORM(MAC)
     RetainPtr<NSScrollerImp> m_verticalScrollerImp;
     RetainPtr<NSScrollerImp> m_horizontalScrollerImp;
+#elif USE(COORDINATED_GRAPHICS_ASYNC_SCROLLBAR)
+    RefPtr<ScrollerImpAdwaita> m_verticalScrollerImp;
+    RefPtr<ScrollerImpAdwaita> m_horizontalScrollerImp;
 #endif
 
+    std::optional<ScrollbarColor> m_scrollbarColor;
     ScrollableAreaParameters m_scrollableAreaParameters;
     RequestedScrollData m_requestedScrollData;
     RequestedKeyboardScrollData m_keyboardScrollData;
 #if ENABLE(SCROLLING_THREAD)
     OptionSet<SynchronousScrollingReason> m_synchronousScrollingReasons;
 #endif
+    UserInterfaceLayoutDirection m_scrollbarLayoutDirection { UserInterfaceLayoutDirection::LTR };
+    ScrollbarWidth m_scrollbarWidth { ScrollbarWidth::Auto };
+
+    bool m_useDarkAppearanceForScrollbars { false };
     bool m_isMonitoringWheelEvents { false };
     bool m_mouseIsOverContentArea { false };
-
+#if USE(COORDINATED_GRAPHICS_ASYNC_SCROLLBAR)
+    float m_scrollbarOpacity { 1 };
+#endif
 };
 
 } // namespace WebCore

@@ -27,8 +27,11 @@
 #include <wtf/ParkingLot.h>
 
 #include <mutex>
+#include <ranges>
 #include <wtf/DataLog.h>
+#include <wtf/FixedVector.h>
 #include <wtf/HashFunctions.h>
+#include <wtf/NeverDestroyed.h>
 #include <wtf/StringPrintStream.h>
 #include <wtf/ThreadSpecific.h>
 #include <wtf/Threading.h>
@@ -42,21 +45,28 @@ namespace {
 
 static constexpr bool verbose = false;
 
+template<typename... Types>
+static void dataLogForCurrentThread(const Types&... values)
+{
+    StringPrintStream stream;
+    SUPPRESS_UNCOUNTED_ARG stream.print(Thread::currentSingleton());
+    stream.print(values...);
+    dataLog(stream.toString());
+}
+
 struct ThreadData : public ThreadSafeRefCounted<ThreadData> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ThreadData);
 public:
 
     ThreadData();
     ~ThreadData();
-
-    Ref<Thread> thread;
 
     Mutex parkingLock;
     ThreadCondition parkingCondition;
 
     const void* address { nullptr };
 
-    ThreadData* nextInQueue { nullptr };
+    RefPtr<ThreadData> nextInQueue;
 
     intptr_t token { 0 };
 };
@@ -68,17 +78,17 @@ enum class DequeueResult {
 };
 
 struct Bucket {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Bucket);
 public:
     Bucket()
-        : random(static_cast<unsigned>(bitwise_cast<intptr_t>(this))) // Cannot use default seed since that recurses into Lock.
+        : random(static_cast<unsigned>(std::bit_cast<intptr_t>(this))) // Cannot use default seed since that recurses into Lock.
     {
     }
 
     void enqueue(ThreadData* data)
     {
         if (verbose)
-            dataLog(toString(Thread::current(), ": enqueueing ", RawPointer(data), " with address = ", RawPointer(data->address), " onto ", RawPointer(this), "\n"));
+            dataLogForCurrentThread(": enqueueing ", RawPointer(data), " with address = ", RawPointer(data->address), " onto ", RawPointer(this), "\n");
         ASSERT(data->address);
         ASSERT(!data->nextInQueue);
 
@@ -96,11 +106,11 @@ public:
     void genericDequeue(const Functor& functor)
     {
         if (verbose)
-            dataLog(toString(Thread::current(), ": dequeueing from bucket at ", RawPointer(this), "\n"));
+            dataLogForCurrentThread(": dequeueing from bucket at ", RawPointer(this), "\n");
 
         if (!queueHead) {
             if (verbose)
-                dataLog(toString(Thread::current(), ": empty.\n"));
+                dataLogForCurrentThread(": empty.\n");
             return;
         }
 
@@ -127,8 +137,8 @@ public:
         // queueTail to previous, which in this case is queueHead - thus making the queue look like a
         // proper one-element queue with queueHead == queueTail.
         bool shouldContinue = true;
-        ThreadData** currentPtr = &queueHead;
-        ThreadData* previous = nullptr;
+        RefPtr<ThreadData>* currentPtr = &queueHead;
+        RefPtr<ThreadData> previous;
 
         MonotonicTime time = MonotonicTime::now();
         bool timeToBeFair = false;
@@ -138,25 +148,25 @@ public:
         bool didDequeue = false;
 
         while (shouldContinue) {
-            ThreadData* current = *currentPtr;
+            RefPtr current = *currentPtr;
             if (verbose)
-                dataLog(toString(Thread::current(), ": got thread ", RawPointer(current), "\n"));
+                dataLogForCurrentThread(": got thread ", RawPointer(current), "\n");
             if (!current)
                 break;
             DequeueResult result = functor(current, timeToBeFair);
             switch (result) {
             case DequeueResult::Ignore:
                 if (verbose)
-                    dataLog(toString(Thread::current(), ": currentPtr = ", RawPointer(currentPtr), ", *currentPtr = ", RawPointer(*currentPtr), "\n"));
+                    dataLogForCurrentThread(": currentPtr = ", RawPointer(currentPtr), ", *currentPtr = ", RawPointer(*currentPtr), "\n");
                 previous = current;
                 currentPtr = &(*currentPtr)->nextInQueue;
                 break;
             case DequeueResult::RemoveAndStop:
                 shouldContinue = false;
-                FALLTHROUGH;
+                [[fallthrough]];
             case DequeueResult::RemoveAndContinue:
                 if (verbose)
-                    dataLog(toString(Thread::current(), ": dequeueing ", RawPointer(current), " from ", RawPointer(this), "\n"));
+                    dataLogForCurrentThread(": dequeueing ", RawPointer(current), " from ", RawPointer(this), "\n");
                 if (current == queueTail)
                     queueTail = previous;
                 didDequeue = true;
@@ -183,8 +193,8 @@ public:
         return result;
     }
 
-    ThreadData* queueHead { nullptr };
-    ThreadData* queueTail { nullptr };
+    RefPtr<ThreadData> queueHead;
+    RefPtr<ThreadData> queueTail;
 
     // This lock protects the entire bucket. Thou shall not make changes to Bucket without holding
     // this lock.
@@ -206,40 +216,34 @@ Vector<Hashtable*>* hashtables;
 WordLock hashtablesLock;
 
 struct Hashtable {
-    unsigned size;
-    Atomic<Bucket*> data[1];
+    WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED(Hashtable);
 
-    static Hashtable* create(unsigned size)
+    Hashtable(unsigned size)
+        : data(size)
     {
         ASSERT(size >= 1);
-
-        Hashtable* result = static_cast<Hashtable*>(
-            fastZeroedMalloc(sizeof(Hashtable) + sizeof(Atomic<Bucket*>) * (size - 1)));
-        result->size = size;
 
         {
             // This is not fast and it's not data-access parallel, but that's fine, because
             // hashtable resizing is guaranteed to be rare and it will never happen in steady
             // state.
-            WordLockHolder locker(hashtablesLock);
+            Locker locker(hashtablesLock);
             if (!hashtables)
                 hashtables = new Vector<Hashtable*>();
-            hashtables->append(result);
+            hashtables->append(this);
         }
-
-        return result;
     }
 
-    static void destroy(Hashtable* hashtable)
+    ~Hashtable()
     {
         {
             // This is not fast, but that's OK. See comment in create().
-            WordLockHolder locker(hashtablesLock);
-            hashtables->removeFirst(hashtable);
+            Locker locker(hashtablesLock);
+            hashtables->removeFirst(this);
         }
-
-        fastFree(hashtable);
     }
+
+    FixedVector<Atomic<Bucket*>> data;
 };
 
 Atomic<Hashtable*> hashtable;
@@ -265,14 +269,12 @@ Hashtable* ensureHashtable()
             return currentHashtable;
 
         if (!currentHashtable) {
-            currentHashtable = Hashtable::create(maxLoadFactor);
-            if (hashtable.compareExchangeWeak(nullptr, currentHashtable)) {
+            auto currentHashtable = makeUnique<Hashtable>(maxLoadFactor);
+            if (hashtable.compareExchangeWeak(nullptr, currentHashtable.get())) {
                 if (verbose)
-                    dataLog(toString(Thread::current(), ": created initial hashtable ", RawPointer(currentHashtable), "\n"));
-                return currentHashtable;
+                    dataLogForCurrentThread(": created initial hashtable ", RawPointer(currentHashtable.get()), "\n");
+                return currentHashtable.release(); // Leak the hash table.
             }
-
-            Hashtable::destroy(currentHashtable);
         }
     }
 }
@@ -290,7 +292,7 @@ Vector<Bucket*> lockHashtable()
         // Now find all of the buckets. This makes sure that the hashtable is full of buckets so that
         // we can lock all of the buckets, not just the ones that are materialized.
         Vector<Bucket*> buckets;
-        for (unsigned i = currentHashtable->size; i--;) {
+        for (unsigned i = currentHashtable->data.size(); i--;) {
             Atomic<Bucket*>& bucketPointer = currentHashtable->data[i];
 
             for (;;) {
@@ -309,26 +311,32 @@ Vector<Bucket*> lockHashtable()
             }
         }
 
+IGNORE_CLANG_WARNINGS_BEGIN("thread-safety")
         // Now lock the buckets in the right order.
-        std::sort(buckets.begin(), buckets.end());
+        std::ranges::sort(buckets);
         for (Bucket* bucket : buckets)
             bucket->lock.lock();
+IGNORE_CLANG_WARNINGS_END
 
         // If the hashtable didn't change (wasn't rehashed) while we were locking it, then we own it
         // now.
         if (hashtable.load() == currentHashtable)
             return buckets;
 
+IGNORE_CLANG_WARNINGS_BEGIN("thread-safety")
         // The hashtable rehashed. Unlock everything and try again.
         for (Bucket* bucket : buckets)
             bucket->lock.unlock();
+IGNORE_CLANG_WARNINGS_END
     }
 }
 
 void unlockHashtable(const Vector<Bucket*>& buckets)
 {
+IGNORE_CLANG_WARNINGS_BEGIN("thread-safety")
     for (Bucket* bucket : buckets)
         bucket->lock.unlock();
+IGNORE_CLANG_WARNINGS_END
 }
 
 // Rehash the hashtable to handle numThreads threads.
@@ -341,9 +349,9 @@ void ensureHashtableSize(unsigned numThreads)
 
     // First do a fast check to see if rehashing is needed.
     Hashtable* oldHashtable = hashtable.load();
-    if (oldHashtable && static_cast<double>(oldHashtable->size) / static_cast<double>(numThreads) >= maxLoadFactor) {
+    if (oldHashtable && static_cast<double>(oldHashtable->data.size()) / static_cast<double>(numThreads) >= maxLoadFactor) {
         if (verbose)
-            dataLog(toString(Thread::current(), ": no need to rehash because ", oldHashtable->size, " / ", numThreads, " >= ", maxLoadFactor, "\n"));
+            dataLogForCurrentThread(": no need to rehash because ", oldHashtable->data.size(), " / ", numThreads, " >= ", maxLoadFactor, "\n");
         return;
     }
 
@@ -354,9 +362,9 @@ void ensureHashtableSize(unsigned numThreads)
     // lockHashtable() creates an initial hashtable for us.
     oldHashtable = hashtable.load();
     RELEASE_ASSERT(oldHashtable);
-    if (static_cast<double>(oldHashtable->size) / static_cast<double>(numThreads) >= maxLoadFactor) {
+    if (static_cast<double>(oldHashtable->data.size()) / static_cast<double>(numThreads) >= maxLoadFactor) {
         if (verbose)
-            dataLog(toString(Thread::current(), ": after locking, no need to rehash because ", oldHashtable->size, " / ", numThreads, " >= ", maxLoadFactor, "\n"));
+            dataLogForCurrentThread(": after locking, no need to rehash because ", oldHashtable->data.size(), " / ", numThreads, " >= ", maxLoadFactor, "\n");
         unlockHashtable(bucketsToUnlock);
         return;
     }
@@ -365,25 +373,25 @@ void ensureHashtableSize(unsigned numThreads)
 
     // OK, now we resize. First we gather all thread datas from the old hashtable. These thread datas
     // are placed into the vector in queue order.
-    Vector<ThreadData*> threadDatas;
+    Vector<RefPtr<ThreadData>> threadDatas;
     for (Bucket* bucket : reusableBuckets) {
-        while (ThreadData* threadData = bucket->dequeue())
-            threadDatas.append(threadData);
+        while (RefPtr threadData = bucket->dequeue())
+            threadDatas.append(WTF::move(threadData));
     }
 
     unsigned newSize = numThreads * growthFactor * maxLoadFactor;
-    RELEASE_ASSERT(newSize > oldHashtable->size);
+    RELEASE_ASSERT(newSize > oldHashtable->data.size());
 
-    Hashtable* newHashtable = Hashtable::create(newSize);
+    auto newHashtable = makeUnique<Hashtable>(newSize);
     if (verbose)
-        dataLog(toString(Thread::current(), ": created new hashtable: ", RawPointer(newHashtable), "\n"));
-    for (ThreadData* threadData : threadDatas) {
+        dataLogForCurrentThread(": created new hashtable: ", RawPointer(newHashtable.get()), "\n");
+    for (auto& threadData : threadDatas) {
         if (verbose)
-            dataLog(toString(Thread::current(), ": rehashing thread data ", RawPointer(threadData), " with address = ", RawPointer(threadData->address), "\n"));
+            dataLogForCurrentThread(": rehashing thread data ", RawPointer(threadData), " with address = ", RawPointer(threadData->address), "\n");
         unsigned hash = hashAddress(threadData->address);
-        unsigned index = hash % newHashtable->size;
+        unsigned index = hash % newHashtable->data.size();
         if (verbose)
-            dataLog(toString(Thread::current(), ": index = ", index, "\n"));
+            dataLogForCurrentThread(": index = ", index, "\n");
         Bucket* bucket = newHashtable->data[index].load();
         if (!bucket) {
             if (reusableBuckets.isEmpty())
@@ -400,7 +408,7 @@ void ensureHashtableSize(unsigned numThreads)
     // number of enqueued threads right now is low but the high watermark of the number of threads
     // enqueued was high. We place these buckets into the hashtable basically at random, just to
     // make sure we don't leak them.
-    for (unsigned i = 0; i < newHashtable->size && !reusableBuckets.isEmpty(); ++i) {
+    for (unsigned i = 0; i < newHashtable->data.size() && !reusableBuckets.isEmpty(); ++i) {
         Atomic<Bucket*>& bucketPtr = newHashtable->data[i];
         if (bucketPtr.load())
             continue;
@@ -414,14 +422,13 @@ void ensureHashtableSize(unsigned numThreads)
     // OK, right now the old hashtable is locked up and the new hashtable is ready to rock and
     // roll. After we install the new hashtable, we can release all bucket locks.
 
-    bool result = hashtable.compareExchangeStrong(oldHashtable, newHashtable) == oldHashtable;
+    bool result = hashtable.compareExchangeStrong(oldHashtable, newHashtable.release()) == oldHashtable; // Leak the hash table.
     RELEASE_ASSERT(result);
 
     unlockHashtable(bucketsToUnlock);
 }
 
 ThreadData::ThreadData()
-    : thread(Thread::current())
 {
     unsigned currentNumThreads;
     for (;;) {
@@ -445,30 +452,23 @@ ThreadData::~ThreadData()
 
 ThreadData* myThreadData()
 {
-    static ThreadSpecific<RefPtr<ThreadData>, CanBeGCThread::True>* threadData;
-    static std::once_flag initializeOnce;
-    std::call_once(
-        initializeOnce,
-        [] {
-            threadData = new ThreadSpecific<RefPtr<ThreadData>, CanBeGCThread::True>();
-        });
+    static NeverDestroyed<ThreadSpecific<RefPtr<ThreadData>, CanBeGCThread::True>> threadData;
 
-    RefPtr<ThreadData>& result = **threadData;
-
+    RefPtr<ThreadData>& result = *threadData.get();
     if (!result)
         result = adoptRef(new ThreadData());
 
-    return result.get();
+    return result;
 }
 
 template<typename Functor>
-bool enqueue(const void* address, const Functor& functor)
+bool enqueue(const void* address, NOESCAPE const Functor& functor)
 {
     unsigned hash = hashAddress(address);
 
     for (;;) {
         Hashtable* myHashtable = ensureHashtable();
-        unsigned index = hash % myHashtable->size;
+        unsigned index = hash % myHashtable->data.size();
         Atomic<Bucket*>& bucketPointer = myHashtable->data[index];
         Bucket* bucket;
         for (;;) {
@@ -483,7 +483,7 @@ bool enqueue(const void* address, const Functor& functor)
             break;
         }
         if (verbose)
-            dataLog(toString(Thread::current(), ": enqueueing onto bucket ", RawPointer(bucket), " with index ", index, " for address ", RawPointer(address), " with hash ", hash, "\n"));
+            dataLogForCurrentThread(": enqueueing onto bucket ", RawPointer(bucket), " with index ", index, " for address ", RawPointer(address), " with hash ", hash, "\n");
         bucket->lock.lock();
 
         // At this point the hashtable could have rehashed under us.
@@ -492,11 +492,11 @@ bool enqueue(const void* address, const Functor& functor)
             continue;
         }
 
-        ThreadData* threadData = functor();
+        RefPtr<ThreadData> threadData = functor();
         bool result;
         if (threadData) {
             if (verbose)
-                dataLog(toString(Thread::current(), ": proceeding to enqueue ", RawPointer(threadData), "\n"));
+                dataLogForCurrentThread(": proceeding to enqueue ", RawPointer(threadData), "\n");
             bucket->enqueue(threadData);
             result = true;
         } else
@@ -520,7 +520,7 @@ bool dequeue(
 
     for (;;) {
         Hashtable* myHashtable = ensureHashtable();
-        unsigned index = hash % myHashtable->size;
+        unsigned index = hash % myHashtable->data.size();
         Atomic<Bucket*>& bucketPointer = myHashtable->data[index];
         Bucket* bucket = bucketPointer.load();
         if (!bucket) {
@@ -565,9 +565,9 @@ NEVER_INLINE ParkingLot::ParkResult ParkingLot::parkConditionallyImpl(
     const TimeWithDynamicClockType& timeout)
 {
     if (verbose)
-        dataLog(toString(Thread::current(), ": parking.\n"));
+        dataLogForCurrentThread(": parking.\n");
 
-    ThreadData* me = myThreadData();
+    RefPtr me = myThreadData();
     me->token = 0;
 
     // Guard against someone calling parkConditionally() recursively from beforeSleep().
@@ -658,7 +658,7 @@ NEVER_INLINE ParkingLot::ParkResult ParkingLot::parkConditionallyImpl(
 NEVER_INLINE ParkingLot::UnparkResult ParkingLot::unparkOne(const void* address)
 {
     if (verbose)
-        dataLog(toString(Thread::current(), ": unparking one.\n"));
+        dataLogForCurrentThread(": unparking one.\n");
 
     UnparkResult result;
 
@@ -703,7 +703,7 @@ NEVER_INLINE void ParkingLot::unparkOneImpl(
     const ScopedLambda<intptr_t(ParkingLot::UnparkResult)>& callback)
 {
     if (verbose)
-        dataLog(toString(Thread::current(), ": unparking one the hard way.\n"));
+        dataLogForCurrentThread(": unparking one the hard way.\n");
 
     RefPtr<ThreadData> threadData;
     bool timeToBeFair = false;
@@ -748,7 +748,7 @@ NEVER_INLINE unsigned ParkingLot::unparkCount(const void* address, unsigned coun
         return 0;
 
     if (verbose)
-        dataLog(toString(Thread::current(), ": unparking count = ", count, " from ", RawPointer(address), ".\n"));
+        dataLogForCurrentThread(": unparking count = ", count, " from ", RawPointer(address), ".\n");
 
     Vector<RefPtr<ThreadData>, 8> threadDatas;
     dequeue(
@@ -758,7 +758,7 @@ NEVER_INLINE unsigned ParkingLot::unparkCount(const void* address, unsigned coun
         BucketMode::IgnoreEmpty,
         [&] (ThreadData* element, bool) {
             if (verbose)
-                dataLog(toString(Thread::current(), ": Observing element with address = ", RawPointer(element->address), "\n"));
+                dataLogForCurrentThread(": Observing element with address = ", RawPointer(element->address), "\n");
             if (element->address != address)
                 return DequeueResult::Ignore;
             threadDatas.append(element);
@@ -768,9 +768,9 @@ NEVER_INLINE unsigned ParkingLot::unparkCount(const void* address, unsigned coun
         },
         [] (bool) { });
 
-    for (RefPtr<ThreadData>& threadData : threadDatas) {
+    for (auto& threadData : threadDatas) {
         if (verbose)
-            dataLog(toString(Thread::current(), ": unparking ", RawPointer(threadData.get()), " with address ", RawPointer(threadData->address), "\n"));
+            dataLogForCurrentThread(": unparking ", RawPointer(threadData), " with address ", RawPointer(threadData->address), "\n");
         ASSERT(threadData->address);
         {
             MutexLocker locker(threadData->parkingLock);
@@ -780,7 +780,7 @@ NEVER_INLINE unsigned ParkingLot::unparkCount(const void* address, unsigned coun
     }
 
     if (verbose)
-        dataLog(toString(Thread::current(), ": done unparking.\n"));
+        dataLogForCurrentThread(": done unparking.\n");
 
     return threadDatas.size();
 }
@@ -790,21 +790,25 @@ NEVER_INLINE void ParkingLot::unparkAll(const void* address)
     unparkCount(address, UINT_MAX);
 }
 
-NEVER_INLINE void ParkingLot::forEachImpl(const ScopedLambda<void(Thread&, const void*)>& callback)
+NEVER_INLINE void ParkingLot::forEachImpl(const ScopedLambda<void(uintptr_t, const void*)>& callback)
 {
     Vector<Bucket*> bucketsToUnlock = lockHashtable();
 
     Hashtable* currentHashtable = hashtable.load();
-    for (unsigned i = currentHashtable->size; i--;) {
+    for (unsigned i = currentHashtable->data.size(); i--;) {
         Bucket* bucket = currentHashtable->data[i].load();
         if (!bucket)
             continue;
-        for (ThreadData* currentThreadData = bucket->queueHead; currentThreadData; currentThreadData = currentThreadData->nextInQueue)
-            callback(currentThreadData->thread.get(), currentThreadData->address);
+        for (RefPtr currentThreadData = bucket->queueHead; currentThreadData; currentThreadData = currentThreadData->nextInQueue)
+            callback(reinterpret_cast<uintptr_t>(static_cast<ThreadData*>(currentThreadData)), currentThreadData->address);
     }
 
     unlockHashtable(bucketsToUnlock);
 }
 
-} // namespace WTF
+uintptr_t ParkingLot::currentThreadID()
+{
+    return reinterpret_cast<uintptr_t>(myThreadData());
+}
 
+} // namespace WTF

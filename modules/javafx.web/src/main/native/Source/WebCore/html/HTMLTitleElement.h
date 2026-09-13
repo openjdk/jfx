@@ -22,13 +22,14 @@
 
 #pragma once
 
-#include "HTMLElement.h"
-#include "StringWithDirection.h"
+#include <WebCore/HTMLElement.h>
+#include <WebCore/StringWithDirection.h>
 
 namespace WebCore {
 
 class HTMLTitleElement final : public HTMLElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLTitleElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLTitleElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLTitleElement);
 public:
     static Ref<HTMLTitleElement> create(const QualifiedName&, Document&);
 
@@ -36,6 +37,8 @@ public:
     WEBCORE_EXPORT void setText(String&&);
 
     const StringWithDirection& textWithDirection() const { return m_title; }
+
+    void didFinishInsertingNode() final;
 
 private:
     HTMLTitleElement(const QualifiedName&, Document&);

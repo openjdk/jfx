@@ -49,7 +49,7 @@
 GST_DEBUG_CATEGORY_STATIC (GST_CAT_DEFAULT);
 
 #define _do_init \
-  GST_DEBUG_CATEGORY_INIT (GST_CAT_DEFAULT, "timed value control source", 0, \
+  GST_DEBUG_CATEGORY_INIT (GST_CAT_DEFAULT, "timedvaluecontrolsource", 0, \
     "timed value control source base class")
 
 #define gst_timed_value_control_source_parent_class parent_class
@@ -78,7 +78,7 @@ gst_control_point_free (GstControlPoint * cp)
 {
   g_return_if_fail (cp);
 
-  g_slice_free (GstControlPoint, cp);
+  g_free (cp);
 }
 
 /**
@@ -92,7 +92,7 @@ gst_control_point_free (GstControlPoint * cp)
 GstControlPoint *
 gst_control_point_copy (GstControlPoint * cp)
 {
-  return g_slice_dup (GstControlPoint, cp);
+  return g_memdup2 (cp, sizeof (GstControlPoint));
 }
 
 GType
@@ -171,7 +171,7 @@ _make_new_cp (GstTimedValueControlSource * self, GstClockTime timestamp,
   GstControlPoint *cp;
 
   /* create a new GstControlPoint */
-  cp = g_slice_new0 (GstControlPoint);
+  cp = g_new0 (GstControlPoint, 1);
   cp->timestamp = timestamp;
   cp->value = value;
 
@@ -343,7 +343,7 @@ gst_timed_value_control_source_unset (GstTimedValueControlSource * self,
     /* Iter contains the iter right after timestamp, i.e.
      * we need to get the previous one and check the timestamp
      */
-    cp = g_slice_dup (GstControlPoint, g_sequence_get (iter));
+    cp = g_memdup2 (g_sequence_get (iter), sizeof (GstControlPoint));
     g_sequence_remove (iter);
     self->nvalues--;
     self->valid_cache = FALSE;
@@ -354,7 +354,7 @@ gst_timed_value_control_source_unset (GstTimedValueControlSource * self,
   if (cp) {
     g_signal_emit (self,
         gst_timed_value_control_source_signals[VALUE_REMOVED_SIGNAL], 0, cp);
-    g_slice_free (GstControlPoint, cp);
+    g_free (cp);
   }
 
   return res;
@@ -394,11 +394,13 @@ _append_control_point (GstControlPoint * cp, GQueue * res)
  * gst_timed_value_control_source_get_all:
  * @self: the #GstTimedValueControlSource to get the list from
  *
- * Returns a read-only copy of the list of #GstTimedValue for the given property.
+ * Returns a read-only copy of the list of #GstControlPoint for the given property.
  * Free the list after done with it.
  *
- * Returns: (transfer container) (element-type GstTimedValue): a copy
+ * Returns: (transfer container) (element-type GstControlPoint): a copy
  * of the list, or %NULL if the property isn't handled by the controller
+ *
+ * Deprecated: 1.28: Use gst_timed_value_control_source_list_control_points() instead.
  */
 GList *
 gst_timed_value_control_source_get_all (GstTimedValueControlSource * self)
@@ -413,6 +415,65 @@ gst_timed_value_control_source_get_all (GstTimedValueControlSource * self)
   g_mutex_unlock (&self->lock);
 
   return res.head;
+}
+
+typedef struct
+{
+  GstTimedValue *array;
+  gsize index;
+} AppendTimedValueData;
+
+static void
+_append_timed_value (GstControlPoint * cp, AppendTimedValueData * data)
+{
+  data->array[data->index].timestamp = cp->timestamp;
+  data->array[data->index].value = cp->value;
+  data->index++;
+}
+
+/**
+ * gst_timed_value_control_source_list_control_points:
+ * @self: the #GstTimedValueControlSource to get the list from
+ * @n_control_points: (out): location to store the number of control points
+ *
+ * Returns an array of #GstTimedValue representing the control points
+ * that have been set on this control source. To modify the value of a
+ * control point, use #gst_timed_value_control_source_set.
+ *
+ * Returns: (transfer full) (array length=n_control_points) (nullable): an array of
+ * control points, or %NULL if no control points are set.
+ *
+ * Since: 1.28
+ */
+GstTimedValue *
+gst_timed_value_control_source_list_control_points (GstTimedValueControlSource *
+    self, gsize * n_control_points)
+{
+  GstTimedValue *array;
+  AppendTimedValueData data;
+
+  g_return_val_if_fail (GST_IS_TIMED_VALUE_CONTROL_SOURCE (self), NULL);
+  g_return_val_if_fail (n_control_points != NULL, NULL);
+
+  g_mutex_lock (&self->lock);
+
+  if (!self->values || self->nvalues == 0) {
+    g_mutex_unlock (&self->lock);
+    *n_control_points = 0;
+    return NULL;
+  }
+
+  array = g_new (GstTimedValue, self->nvalues);
+  data.array = array;
+  data.index = 0;
+
+  g_sequence_foreach (self->values, (GFunc) _append_timed_value, &data);
+
+  *n_control_points = self->nvalues;
+
+  g_mutex_unlock (&self->lock);
+
+  return array;
 }
 
 /**

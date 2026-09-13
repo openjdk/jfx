@@ -33,6 +33,8 @@
     readonly attribute Uint8Array initData;
 };
 
-dictionary WebKitMediaKeyNeededEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary WebKitMediaKeyNeededEventInit : EventInit {
     Uint8Array? initData = null;
 };

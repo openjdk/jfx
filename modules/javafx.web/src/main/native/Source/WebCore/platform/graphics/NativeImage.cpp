@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Apple Inc.  All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,36 +25,67 @@
 
 #include "config.h"
 #include "NativeImage.h"
+
+#include "FloatRect.h"
 #include "GraphicsContext.h"
+#include "ImageBuffer.h"
+#include "RenderingMode.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-RefPtr<NativeImage> NativeImage::create(PlatformImagePtr&& platformImage, RenderingResourceIdentifier renderingResourceIdentifier)
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NativeImage);
+
+#if !USE(CG) && !USE(SKIA)
+RefPtr<NativeImage> NativeImage::create(PlatformImagePtr&& platformImage)
 {
     if (!platformImage)
         return nullptr;
-    return adoptRef(*new NativeImage(WTFMove(platformImage), renderingResourceIdentifier));
+    return adoptRef(*new NativeImage(WTF::move(platformImage)));
 }
 
-NativeImage::NativeImage(PlatformImagePtr&& platformImage, RenderingResourceIdentifier renderingResourceIdentifier)
-    : RenderingResource(renderingResourceIdentifier)
-    , m_platformImage(WTFMove(platformImage))
+RefPtr<NativeImage> NativeImage::createTransient(PlatformImagePtr&& image)
 {
-    ASSERT(m_platformImage);
-}
-
-#if PLATFORM(JAVA)
-void NativeImage::draw(GraphicsContext& context, const FloatSize& imageSize, const FloatRect& destinationRect, const FloatRect& sourceRect, const ImagePaintingOptions& options)
-{
-    context.drawNativeImageInternal(*this, imageSize, destinationRect, sourceRect, options);
+    return create(WTF::move(image));
 }
 #endif
-void NativeImage::setPlatformImage(PlatformImagePtr&& platformImage)
+
+#if !USE(SKIA)
+NativeImage::NativeImage(PlatformImagePtr&& platformImage)
+    : m_platformImage(WTF::move(platformImage))
 {
-    ASSERT(platformImage);
-    m_platformImage = WTFMove(platformImage);
+    computeHeadroom();
+}
+#endif
+
+
+NativeImage::~NativeImage()
+{
+    for (CheckedRef observer : m_observers)
+        observer->willDestroyNativeImage(*this);
 }
 
+const PlatformImagePtr& NativeImage::platformImage() const
+{
+    return m_platformImage;
+}
 
+bool NativeImage::hasHDRContent() const
+{
+    return colorSpace().usesITUR_2100TF();
+}
+
+void NativeImage::replacePlatformImage(PlatformImagePtr&& platformImage)
+{
+    ASSERT(platformImage);
+    m_platformImage = WTF::move(platformImage);
+    computeHeadroom();
+}
+
+#if !USE(CG)
+void NativeImage::computeHeadroom()
+{
+}
+#endif
 
 } // namespace WebCore

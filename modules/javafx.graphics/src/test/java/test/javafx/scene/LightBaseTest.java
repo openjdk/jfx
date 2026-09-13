@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2019, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package test.javafx.scene;
 
-import static org.junit.Assert.*;
-
 import javafx.collections.ObservableList;
 import javafx.scene.Group;
 import javafx.scene.Node;
@@ -38,9 +36,11 @@ import javafx.scene.shape.Shape3D;
 import javafx.scene.shape.Sphere;
 import javafx.stage.Stage;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.sg.prism.NGLightBaseShim;
@@ -89,13 +89,13 @@ public class LightBaseTest {
     private StubToolkit toolkit = (StubToolkit) Toolkit.getToolkit();
     private Stage stage = new Stage();
 
-    @Before
+    @BeforeEach
     public void setUp() {
         stage.setScene(new Scene(root));
         stage.show();
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         stage.close();
     }
@@ -123,228 +123,228 @@ public class LightBaseTest {
     }
 
     private void verifyInitialState() {
-        assertTrue("Scope list should be empty", scope.isEmpty());
-        assertTrue("Exclusion scope should be empty", exclusionScope.isEmpty());
+        assertTrue(scope.isEmpty(), "Scope list should be empty");
+        assertTrue(exclusionScope.isEmpty(), "Exclusion scope should be empty");
 
         toolkit.fireTestPulse();
-        assertTrue(SCOPE_EMPTY_AFFECTED, isAffected(shape1));
-        assertTrue(SCOPE_EMPTY_AFFECTED, isAffected(shape2));
-        assertTrue(SCOPE_EMPTY_AFFECTED, isAffected(shape3));
-        assertTrue(SCOPE_EMPTY_AFFECTED, isAffected(shape4));
+        assertTrue(isAffected(shape1), SCOPE_EMPTY_AFFECTED);
+        assertTrue(isAffected(shape2), SCOPE_EMPTY_AFFECTED);
+        assertTrue(isAffected(shape3), SCOPE_EMPTY_AFFECTED);
+        assertTrue(isAffected(shape4), SCOPE_EMPTY_AFFECTED);
     }
 
     private void addShape1ToScope() {
         scope.add(shape1);
-        assertTrue(ADD_SCOPE, scope.contains(shape1)); // shape1
-        assertFalse(NO_CHANGE_EXC_SCOPE, exclusionScope.contains(shape1));
+        assertTrue(scope.contains(shape1)); // shap, ADD_SCOPEe1
+        assertFalse(exclusionScope.contains(shape1), NO_CHANGE_EXC_SCOPE);
 
-        assertTrue(CHANGE_DIRTY, isDrawModeDirty(shape1));
+        assertTrue(isDrawModeDirty(shape1), CHANGE_DIRTY);
         // shapes 2-4 fell out of scope when it ceased being empty so they need a redraw (depending on their parents'
         // inclusion in the scopes too). However, we are testing here only markChildrenDirty. Redraw happens anyway for
         // all shapes through the scene when NodeHelper.markDirty is called.
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape2));
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape3));
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape4));
+        assertFalse(isDrawModeDirty(shape2), NO_CHANGE_NOT_DIRTY);
+        assertFalse(isDrawModeDirty(shape3), NO_CHANGE_NOT_DIRTY);
+        assertFalse(isDrawModeDirty(shape4), NO_CHANGE_NOT_DIRTY);
 
         toolkit.fireTestPulse();
-        assertTrue(IN_SCOPE_AFFECTED, isAffected(shape1));
-        assertFalse(NOT_IN_SCOPE_NOT_AFFECTED, isAffected(shape2));
-        assertFalse(NOT_IN_SCOPE_NOT_AFFECTED, isAffected(shape3));
-        assertFalse(NOT_IN_SCOPE_NOT_AFFECTED, isAffected(shape4));
+        assertTrue(isAffected(shape1), IN_SCOPE_AFFECTED);
+        assertFalse(isAffected(shape2), NOT_IN_SCOPE_NOT_AFFECTED);
+        assertFalse(isAffected(shape3), NOT_IN_SCOPE_NOT_AFFECTED);
+        assertFalse(isAffected(shape4), NOT_IN_SCOPE_NOT_AFFECTED);
     }
 
     private void addParent1ToScope() {
         scope.add(parent1);
-        assertTrue(ADD_SCOPE, scope.contains(parent1)); // shape1, parent1
-        assertFalse(NO_CHANGE_EXC_SCOPE, exclusionScope.contains(parent1));
+        assertTrue(scope.contains(parent1)); // shape1, paren, ADD_SCOPEt1
+        assertFalse(exclusionScope.contains(parent1), NO_CHANGE_EXC_SCOPE);
 
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape1));
-        assertTrue(PARENT_CHANGE_DIRTY, isDrawModeDirty(shape2));
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape3));
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape4));
+        assertFalse(isDrawModeDirty(shape1), NO_CHANGE_NOT_DIRTY);
+        assertTrue(isDrawModeDirty(shape2), PARENT_CHANGE_DIRTY);
+        assertFalse(isDrawModeDirty(shape3), NO_CHANGE_NOT_DIRTY);
+        assertFalse(isDrawModeDirty(shape4), NO_CHANGE_NOT_DIRTY);
 
         toolkit.fireTestPulse();
-        assertTrue(IN_SCOPE_AFFECTED, isAffected(shape1));
-        assertTrue(PARENT_IN_SCOPE_AFFECTED, isAffected(shape2));
-        assertFalse(NOT_IN_SCOPE_NOT_AFFECTED, isAffected(shape3));
-        assertFalse(NOT_IN_SCOPE_NOT_AFFECTED, isAffected(shape4));
+        assertTrue(isAffected(shape1), IN_SCOPE_AFFECTED);
+        assertTrue(isAffected(shape2), PARENT_IN_SCOPE_AFFECTED);
+        assertFalse(isAffected(shape3), NOT_IN_SCOPE_NOT_AFFECTED);
+        assertFalse(isAffected(shape4), NOT_IN_SCOPE_NOT_AFFECTED);
     }
 
     private void addShape2ToExcScope() {
         exclusionScope.add(shape2);
-        assertFalse(NO_CHANGE_SCOPE, scope.contains(shape2)); // shape1, parent1
-        assertTrue(ADD_EXC_SCOPE, exclusionScope.contains(shape2)); // shape2
+        assertFalse(scope.contains(shape2)); // shape1, paren, NO_CHANGE_SCOPEt1
+        assertTrue(exclusionScope.contains(shape2)); // shap, ADD_EXC_SCOPEe2
 
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape1));
-        assertTrue(CHANGE_DIRTY, isDrawModeDirty(shape2));
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape3));
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape4));
+        assertFalse(isDrawModeDirty(shape1), NO_CHANGE_NOT_DIRTY);
+        assertTrue(isDrawModeDirty(shape2), CHANGE_DIRTY);
+        assertFalse(isDrawModeDirty(shape3), NO_CHANGE_NOT_DIRTY);
+        assertFalse(isDrawModeDirty(shape4), NO_CHANGE_NOT_DIRTY);
 
         toolkit.fireTestPulse();
-        assertTrue(IN_SCOPE_AFFECTED, isAffected(shape1));
-        assertFalse(IN_EXC_SCOPE_NOT_AFFECTED, isAffected(shape2));
-        assertFalse(NOT_IN_SCOPE_NOT_AFFECTED, isAffected(shape3));
-        assertFalse(NOT_IN_SCOPE_NOT_AFFECTED, isAffected(shape4));
+        assertTrue(isAffected(shape1), IN_SCOPE_AFFECTED);
+        assertFalse(isAffected(shape2), IN_EXC_SCOPE_NOT_AFFECTED);
+        assertFalse(isAffected(shape3), NOT_IN_SCOPE_NOT_AFFECTED);
+        assertFalse(isAffected(shape4), NOT_IN_SCOPE_NOT_AFFECTED);
     }
 
     private void addRootToScope() {
         scope.add(root);
-        assertTrue(ADD_SCOPE, scope.contains(root)); // shape1, parent1, root
-        assertFalse(NO_CHANGE_EXC_SCOPE, exclusionScope.contains(root)); // shape2
+        assertTrue(scope.contains(root)); // shape1, parent1, ro, ADD_SCOPEot
+        assertFalse(exclusionScope.contains(root)); // shap, NO_CHANGE_EXC_SCOPEe2
 
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape1));
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape2));
-        assertTrue(PARENT_CHANGE_DIRTY, isDrawModeDirty(shape3));
-        assertTrue(PARENT_CHANGE_DIRTY, isDrawModeDirty(shape4));
+        assertFalse(isDrawModeDirty(shape1), NO_CHANGE_NOT_DIRTY);
+        assertFalse(isDrawModeDirty(shape2), NO_CHANGE_NOT_DIRTY);
+        assertTrue(isDrawModeDirty(shape3), PARENT_CHANGE_DIRTY);
+        assertTrue(isDrawModeDirty(shape4), PARENT_CHANGE_DIRTY);
 
         toolkit.fireTestPulse();
-        assertTrue(IN_SCOPE_AFFECTED, isAffected(shape1));
-        assertFalse(IN_EXC_SCOPE_NOT_AFFECTED, isAffected(shape2));
-        assertTrue(PARENT_IN_SCOPE_AFFECTED, isAffected(shape3));
-        assertTrue(PARENT_IN_SCOPE_AFFECTED, isAffected(shape4));
+        assertTrue(isAffected(shape1), IN_SCOPE_AFFECTED);
+        assertFalse(isAffected(shape2), IN_EXC_SCOPE_NOT_AFFECTED);
+        assertTrue(isAffected(shape3), PARENT_IN_SCOPE_AFFECTED);
+        assertTrue(isAffected(shape4), PARENT_IN_SCOPE_AFFECTED);
     }
 
     private void moveParent1ToExcScope() {
         exclusionScope.add(parent1);
-        assertFalse(SILENT_REMOVE_SCOPE, scope.contains(parent1)); // shape1, root
-        assertTrue(ADD_EXC_SCOPE, exclusionScope.contains(parent1)); // shape2, parent1
+        assertFalse(scope.contains(parent1)); // shape1, ro, SILENT_REMOVE_SCOPEot
+        assertTrue(exclusionScope.contains(parent1)); // shape2, paren, ADD_EXC_SCOPEt1
 
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape1));
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape2));
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape3));
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape4));
+        assertFalse(isDrawModeDirty(shape1), NO_CHANGE_NOT_DIRTY);
+        assertFalse(isDrawModeDirty(shape2), NO_CHANGE_NOT_DIRTY);
+        assertFalse(isDrawModeDirty(shape3), NO_CHANGE_NOT_DIRTY);
+        assertFalse(isDrawModeDirty(shape4), NO_CHANGE_NOT_DIRTY);
 
         toolkit.fireTestPulse();
-        assertTrue(IN_SCOPE_AFFECTED, isAffected(shape1));
-        assertFalse(IN_EXC_SCOPE_NOT_AFFECTED, isAffected(shape2));
-        assertTrue(PARENT_IN_SCOPE_AFFECTED, isAffected(shape3));
-        assertTrue(PARENT_IN_SCOPE_AFFECTED, isAffected(shape4));
+        assertTrue(isAffected(shape1), IN_SCOPE_AFFECTED);
+        assertFalse(isAffected(shape2), IN_EXC_SCOPE_NOT_AFFECTED);
+        assertTrue(isAffected(shape3), PARENT_IN_SCOPE_AFFECTED);
+        assertTrue(isAffected(shape4), PARENT_IN_SCOPE_AFFECTED);
     }
 
     private void moveShape2ToScope() {
         scope.add(shape2);
-        assertTrue(ADD_SCOPE, scope.contains(shape2)); // shape1, root, shape2
-        assertFalse(SILENT_REMOVE_EXC_SCOPE, exclusionScope.contains(shape2)); // parent1
+        assertTrue(scope.contains(shape2)); // shape1, root, shap, ADD_SCOPEe2
+        assertFalse(exclusionScope.contains(shape2)); // paren, SILENT_REMOVE_EXC_SCOPEt1
 
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape1));
-        assertTrue(CHANGE_DIRTY, isDrawModeDirty(shape2));
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape3));
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape4));
+        assertFalse(isDrawModeDirty(shape1), NO_CHANGE_NOT_DIRTY);
+        assertTrue(isDrawModeDirty(shape2), CHANGE_DIRTY);
+        assertFalse(isDrawModeDirty(shape3), NO_CHANGE_NOT_DIRTY);
+        assertFalse(isDrawModeDirty(shape4), NO_CHANGE_NOT_DIRTY);
 
         toolkit.fireTestPulse();
-        assertTrue(IN_SCOPE_AFFECTED, isAffected(shape1));
-        assertTrue(IN_SCOPE_AFFECTED, isAffected(shape2));
-        assertTrue(PARENT_IN_SCOPE_AFFECTED, isAffected(shape3));
-        assertTrue(PARENT_IN_SCOPE_AFFECTED, isAffected(shape4));
+        assertTrue(isAffected(shape1), IN_SCOPE_AFFECTED);
+        assertTrue(isAffected(shape2), IN_SCOPE_AFFECTED);
+        assertTrue(isAffected(shape3), PARENT_IN_SCOPE_AFFECTED);
+        assertTrue(isAffected(shape4), PARENT_IN_SCOPE_AFFECTED);
     }
 
     private void removeShape1FromScope() {
         scope.remove(shape1);
-        assertFalse(REMOVE_SCOPE, scope.contains(shape1)); // root, shape2
-        assertFalse(NO_CHANGE_EXC_SCOPE, exclusionScope.contains(shape1)); // parent1
+        assertFalse(scope.contains(shape1)); // root, shap, REMOVE_SCOPEe2
+        assertFalse(exclusionScope.contains(shape1)); // paren, NO_CHANGE_EXC_SCOPEt1
 
-        assertTrue(CHANGE_DIRTY, isDrawModeDirty(shape1));
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape2));
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape3));
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape4));
+        assertTrue(isDrawModeDirty(shape1), CHANGE_DIRTY);
+        assertFalse(isDrawModeDirty(shape2), NO_CHANGE_NOT_DIRTY);
+        assertFalse(isDrawModeDirty(shape3), NO_CHANGE_NOT_DIRTY);
+        assertFalse(isDrawModeDirty(shape4), NO_CHANGE_NOT_DIRTY);
 
         toolkit.fireTestPulse();
-        assertFalse(PARENT_IN_EXC_SCOPE_NOT_AFFECTED, isAffected(shape1));
-        assertTrue(IN_SCOPE_AFFECTED, isAffected(shape2));
-        assertTrue(PARENT_IN_SCOPE_AFFECTED, isAffected(shape3));
-        assertTrue(PARENT_IN_SCOPE_AFFECTED, isAffected(shape4));
+        assertFalse(isAffected(shape1), PARENT_IN_EXC_SCOPE_NOT_AFFECTED);
+        assertTrue(isAffected(shape2), IN_SCOPE_AFFECTED);
+        assertTrue(isAffected(shape3), PARENT_IN_SCOPE_AFFECTED);
+        assertTrue(isAffected(shape4), PARENT_IN_SCOPE_AFFECTED);
     }
 
     private void removeRootFromScope() {
         scope.remove(root);
-        assertFalse(REMOVE_SCOPE, scope.contains(root)); // shape2
-        assertFalse(NO_CHANGE_EXC_SCOPE, exclusionScope.contains(root)); // parent1
+        assertFalse(scope.contains(root)); // shap, REMOVE_SCOPEe2
+        assertFalse(exclusionScope.contains(root)); // paren, NO_CHANGE_EXC_SCOPEt1
 
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape1));
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape2));
-        assertTrue(PARENT_CHANGE_DIRTY, isDrawModeDirty(shape3));
-        assertTrue(PARENT_CHANGE_DIRTY, isDrawModeDirty(shape4));
+        assertFalse(isDrawModeDirty(shape1), NO_CHANGE_NOT_DIRTY);
+        assertFalse(isDrawModeDirty(shape2), NO_CHANGE_NOT_DIRTY);
+        assertTrue(isDrawModeDirty(shape3), PARENT_CHANGE_DIRTY);
+        assertTrue(isDrawModeDirty(shape4), PARENT_CHANGE_DIRTY);
 
         toolkit.fireTestPulse();
-        assertFalse(PARENT_IN_EXC_SCOPE_NOT_AFFECTED, isAffected(shape1));
-        assertTrue(IN_SCOPE_AFFECTED, isAffected(shape2));
-        assertFalse(NOT_IN_SCOPE_NOT_AFFECTED, isAffected(shape3));
-        assertFalse(NOT_IN_SCOPE_NOT_AFFECTED, isAffected(shape4));
+        assertFalse(isAffected(shape1), PARENT_IN_EXC_SCOPE_NOT_AFFECTED);
+        assertTrue(isAffected(shape2), IN_SCOPE_AFFECTED);
+        assertFalse(isAffected(shape3), NOT_IN_SCOPE_NOT_AFFECTED);
+        assertFalse(isAffected(shape4), NOT_IN_SCOPE_NOT_AFFECTED);
     }
 
     private void moveShape2ToExcScope() {
         exclusionScope.add(shape2);
-        assertFalse(SILENT_REMOVE_SCOPE, scope.contains(shape2));
-        assertTrue(ADD_EXC_SCOPE, exclusionScope.contains(shape2)); // parent1, shape2
+        assertFalse(scope.contains(shape2), SILENT_REMOVE_SCOPE);
+        assertTrue(exclusionScope.contains(shape2)); // parent1, shap, ADD_EXC_SCOPEe2
 
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape1));
-        assertTrue(CHANGE_DIRTY, isDrawModeDirty(shape2));
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape3));
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape4));
+        assertFalse(isDrawModeDirty(shape1), NO_CHANGE_NOT_DIRTY);
+        assertTrue(isDrawModeDirty(shape2), CHANGE_DIRTY);
+        assertFalse(isDrawModeDirty(shape3), NO_CHANGE_NOT_DIRTY);
+        assertFalse(isDrawModeDirty(shape4), NO_CHANGE_NOT_DIRTY);
 
         toolkit.fireTestPulse();
-        assertFalse(PARENT_IN_EXC_SCOPE_NOT_AFFECTED, isAffected(shape1));
-        assertFalse(IN_EXC_SCOPE_NOT_AFFECTED, isAffected(shape2));
-        assertTrue(SCOPE_EMPTY_AFFECTED, isAffected(shape3));
-        assertTrue(SCOPE_EMPTY_AFFECTED, isAffected(shape4));
+        assertFalse(isAffected(shape1), PARENT_IN_EXC_SCOPE_NOT_AFFECTED);
+        assertFalse(isAffected(shape2), IN_EXC_SCOPE_NOT_AFFECTED);
+        assertTrue(isAffected(shape3), SCOPE_EMPTY_AFFECTED);
+        assertTrue(isAffected(shape4), SCOPE_EMPTY_AFFECTED);
     }
 
     private void moveParent1ToScope() {
         scope.add(parent1);
-        assertTrue(ADD_SCOPE, scope.contains(parent1)); // parent1
-        assertFalse(SILENT_REMOVE_EXC_SCOPE, exclusionScope.contains(parent1)); // shape2
+        assertTrue(scope.contains(parent1)); // paren, ADD_SCOPEt1
+        assertFalse(exclusionScope.contains(parent1)); // shap, SILENT_REMOVE_EXC_SCOPEe2
 
-        assertTrue(PARENT_CHANGE_DIRTY, isDrawModeDirty(shape1));
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape2));
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape3));
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape4));
+        assertTrue(isDrawModeDirty(shape1), PARENT_CHANGE_DIRTY);
+        assertFalse(isDrawModeDirty(shape2), NO_CHANGE_NOT_DIRTY);
+        assertFalse(isDrawModeDirty(shape3), NO_CHANGE_NOT_DIRTY);
+        assertFalse(isDrawModeDirty(shape4), NO_CHANGE_NOT_DIRTY);
 
         toolkit.fireTestPulse();
-        assertTrue(PARENT_IN_SCOPE_AFFECTED, isAffected(shape1));
-        assertFalse(IN_EXC_SCOPE_NOT_AFFECTED, isAffected(shape2));
-        assertFalse(NOT_IN_SCOPE_NOT_AFFECTED, isAffected(shape3));
-        assertFalse(NOT_IN_SCOPE_NOT_AFFECTED, isAffected(shape4));
+        assertTrue(isAffected(shape1), PARENT_IN_SCOPE_AFFECTED);
+        assertFalse(isAffected(shape2), IN_EXC_SCOPE_NOT_AFFECTED);
+        assertFalse(isAffected(shape3), NOT_IN_SCOPE_NOT_AFFECTED);
+        assertFalse(isAffected(shape4), NOT_IN_SCOPE_NOT_AFFECTED);
     }
 
     private void removeShape2FromExcScope() {
         exclusionScope.remove(shape2);
-        assertFalse(NO_CHANGE_SCOPE, scope.contains(shape2)); // parent1
-        assertFalse(REMOVE_EXC_SCOPE, exclusionScope.contains(shape2));
+        assertFalse(scope.contains(shape2)); // paren, NO_CHANGE_SCOPEt1
+        assertFalse(exclusionScope.contains(shape2), REMOVE_EXC_SCOPE);
 
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape1));
-        assertTrue(CHANGE_DIRTY, isDrawModeDirty(shape2));
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape3));
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape4));
+        assertFalse(isDrawModeDirty(shape1), NO_CHANGE_NOT_DIRTY);
+        assertTrue(isDrawModeDirty(shape2), CHANGE_DIRTY);
+        assertFalse(isDrawModeDirty(shape3), NO_CHANGE_NOT_DIRTY);
+        assertFalse(isDrawModeDirty(shape4), NO_CHANGE_NOT_DIRTY);
 
         toolkit.fireTestPulse();
-        assertTrue(PARENT_IN_SCOPE_AFFECTED, isAffected(shape1));
-        assertTrue(PARENT_IN_SCOPE_AFFECTED, isAffected(shape2));
-        assertFalse(NOT_IN_SCOPE_NOT_AFFECTED, isAffected(shape3));
-        assertFalse(NOT_IN_SCOPE_NOT_AFFECTED, isAffected(shape4));
+        assertTrue(isAffected(shape1), PARENT_IN_SCOPE_AFFECTED);
+        assertTrue(isAffected(shape2), PARENT_IN_SCOPE_AFFECTED);
+        assertFalse(isAffected(shape3), NOT_IN_SCOPE_NOT_AFFECTED);
+        assertFalse(isAffected(shape4), NOT_IN_SCOPE_NOT_AFFECTED);
     }
 
     private void removeParent1FromScope() {
         scope.remove(parent1);
-        assertFalse(REMOVE_SCOPE, scope.contains(parent1));
-        assertFalse(NO_CHANGE_EXC_SCOPE, exclusionScope.contains(parent1));
+        assertFalse(scope.contains(parent1), REMOVE_SCOPE);
+        assertFalse(exclusionScope.contains(parent1), NO_CHANGE_EXC_SCOPE);
 
-        assertTrue(PARENT_CHANGE_DIRTY, isDrawModeDirty(shape1));
-        assertTrue(PARENT_CHANGE_DIRTY, isDrawModeDirty(shape2));
+        assertTrue(isDrawModeDirty(shape1), PARENT_CHANGE_DIRTY);
+        assertTrue(isDrawModeDirty(shape2), PARENT_CHANGE_DIRTY);
         // Shapes 3 and 4 require redraw because scope became empty, but they are not marked dirty by markChildrenDirty
         // because they or their parents didn't change scope.
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape3));
-        assertFalse(NO_CHANGE_NOT_DIRTY, isDrawModeDirty(shape4));
+        assertFalse(isDrawModeDirty(shape3), NO_CHANGE_NOT_DIRTY);
+        assertFalse(isDrawModeDirty(shape4), NO_CHANGE_NOT_DIRTY);
 
         toolkit.fireTestPulse();
-        assertTrue(SCOPE_EMPTY_AFFECTED, isAffected(shape1));
-        assertTrue(SCOPE_EMPTY_AFFECTED, isAffected(shape2));
-        assertTrue(SCOPE_EMPTY_AFFECTED, isAffected(shape3));
-        assertTrue(SCOPE_EMPTY_AFFECTED, isAffected(shape4));
+        assertTrue(isAffected(shape1), SCOPE_EMPTY_AFFECTED);
+        assertTrue(isAffected(shape2), SCOPE_EMPTY_AFFECTED);
+        assertTrue(isAffected(shape3), SCOPE_EMPTY_AFFECTED);
+        assertTrue(isAffected(shape4), SCOPE_EMPTY_AFFECTED);
     }
 
     private void verifyEmpty() {
-        assertTrue("Scope is empty", scope.isEmpty());
-        assertTrue("Exclusion scope is empty", exclusionScope.isEmpty());
+        assertTrue(scope.isEmpty(), "Scope is empty");
+        assertTrue(exclusionScope.isEmpty(), "Exclusion scope is empty");
     }
 
     private boolean isAffected(Shape3D shape) {

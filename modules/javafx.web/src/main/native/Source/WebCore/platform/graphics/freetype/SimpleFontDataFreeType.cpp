@@ -40,9 +40,9 @@
 #include "FontCache.h"
 #include "FontDescription.h"
 #include "GlyphBuffer.h"
+#include "NotImplemented.h"
 #include "OpenTypeTypes.h"
 #include "RefPtrCairo.h"
-#include "UTF16UChar32Iterator.h"
 #include <cairo-ft.h>
 #include <cairo.h>
 #include <fontconfig/fcfreetype.h>
@@ -208,7 +208,14 @@ RefPtr<Font> Font::platformCreateScaledFont(const FontDescription& fontDescripti
         m_platformData.syntheticOblique(),
         fontDescription.orientation(),
         m_platformData.customPlatformData()),
-        origin(), Interstitial::No);
+        origin(), IsInterstitial::No);
+}
+
+RefPtr<Font> Font::platformCreateHalfWidthFont() const
+{
+    // FIXME: https://bugs.webkit.org/show_bug.cgi?id=281333 : implement half width font for this platform.
+    notImplemented();
+    return nullptr;
 }
 
 void Font::determinePitch()
@@ -230,7 +237,7 @@ bool Font::variantCapsSupportedForSynthesis(FontVariantCaps fontVariantCaps) con
     }
 }
 
-bool Font::platformSupportsCodePoint(UChar32 character, std::optional<UChar32> variation) const
+bool Font::platformSupportsCodePoint(char32_t character, std::optional<char32_t> variation) const
 {
     CairoFtFaceLocker cairoFtFaceLocker(m_platformData.scaledFont());
     if (FT_Face face = cairoFtFaceLocker.ftFace())

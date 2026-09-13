@@ -29,74 +29,24 @@
 #include <stdio.h>
 #include <wtf/MonotonicTime.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/linux/CurrentProcessMemoryStatus.h>
 #include <wtf/text/StringView.h>
 
 namespace WTF {
 
 static const Seconds s_memoryFootprintUpdateInterval = 1_s;
 
-template<typename Functor>
-static void forEachLine(FILE* file, Functor functor)
-{
-    char* buffer = nullptr;
-    size_t size = 0;
-    while (getline(&buffer, &size, file) != -1) {
-        functor(buffer);
-    }
-    free(buffer);
-}
-
-static size_t computeMemoryFootprint()
-{
-    FILE* file = fopen("/proc/self/smaps", "r");
-    if (!file)
-        return 0;
-
-    unsigned long totalPrivateDirtyInKB = 0;
-    bool isAnonymous = false;
-    forEachLine(file, [&] (char* buffer) {
-        {
-            unsigned long start;
-            unsigned long end;
-            unsigned long offset;
-            unsigned long inode;
-            char dev[32];
-            char perms[5];
-            char path[7];
-            int scannedCount = sscanf(buffer, "%lx-%lx %4s %lx %31s %lu %6s", &start, &end, perms, &offset, dev, &inode, path);
-            if (scannedCount == 6) {
-                isAnonymous = true;
-                return;
-            }
-            if (scannedCount == 7) {
-                auto pathString = StringView::fromLatin1(path);
-                isAnonymous = pathString == "[heap]"_s || pathString.startsWith("[stack"_s);
-                return;
-            }
-        }
-
-        if (!isAnonymous)
-            return;
-
-        unsigned long privateDirtyInKB;
-        if (sscanf(buffer, "Private_Dirty: %lu", &privateDirtyInKB) == 1)
-            totalPrivateDirtyInKB += privateDirtyInKB;
-    });
-    fclose(file);
-    return totalPrivateDirtyInKB * KB;
-}
-
 size_t memoryFootprint()
 {
-    static size_t footprint = 0;
+    static ProcessMemoryStatus memoryStatus;
     static MonotonicTime previousUpdateTime = { };
     Seconds elapsed = MonotonicTime::now() - previousUpdateTime;
     if (elapsed >= s_memoryFootprintUpdateInterval) {
-        footprint = computeMemoryFootprint();
+        currentProcessMemoryStatus(memoryStatus);
         previousUpdateTime = MonotonicTime::now();
     }
 
-    return footprint;
+    return memoryStatus.resident;
 }
 
 } // namespace WTF

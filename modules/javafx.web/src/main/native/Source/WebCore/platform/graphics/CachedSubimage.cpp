@@ -28,8 +28,12 @@
 
 #include "GeometryUtilities.h"
 #include "GraphicsContext.h"
+#include "ImageBuffer.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CachedSubimage);
 
 static FloatRect calculateCachedSubimageSourceRect(GraphicsContext& context, const FloatRect& destinationRect, const FloatRect& sourceRect, const FloatRect& imageRect)
 {
@@ -76,7 +80,7 @@ std::unique_ptr<CachedSubimage> CachedSubimage::createPixelated(GraphicsContext&
 }
 
 CachedSubimage::CachedSubimage(Ref<ImageBuffer>&& imageBuffer, const FloatSize& scaleFactor, const FloatRect& destinationRect, const FloatRect& sourceRect)
-    : m_imageBuffer(WTFMove(imageBuffer))
+    : m_imageBuffer(WTF::move(imageBuffer))
     , m_scaleFactor(scaleFactor)
     , m_destinationRect(destinationRect)
     , m_sourceRect(sourceRect)
@@ -104,7 +108,7 @@ void CachedSubimage::draw(GraphicsContext& context, const FloatRect& destination
     auto scaleFactor = destinationRect.size() / sourceRect.size();
     sourceRectScaled.scale(scaleFactor * context.scaleFactor());
 
-    m_imageBuffer->draw(context, destinationRect, sourceRectScaled, { });
+    context.drawImageBuffer(m_imageBuffer.get(), destinationRect, sourceRectScaled, { });
 }
 
 } // namespace WebCore

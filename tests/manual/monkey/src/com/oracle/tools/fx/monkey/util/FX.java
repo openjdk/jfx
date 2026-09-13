@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,17 +25,38 @@
 package com.oracle.tools.fx.monkey.util;
 
 import java.util.List;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import javafx.application.Platform;
+import javafx.beans.property.BooleanProperty;
+import javafx.event.EventHandler;
+import javafx.geometry.Insets;
+import javafx.print.PrinterJob;
 import javafx.scene.Node;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
+import javafx.scene.control.Button;
+import javafx.scene.control.CheckMenuItem;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Control;
 import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.RadioMenuItem;
 import javafx.scene.control.SeparatorMenuItem;
 import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.Tooltip;
 import javafx.scene.input.KeyCombination;
+import javafx.scene.input.MouseEvent;
+import javafx.scene.input.PickResult;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
+import javafx.scene.paint.Color;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
@@ -53,39 +74,68 @@ public class FX {
 
     public static Menu menu(MenuBar b, String text) {
         Menu m = new Menu(text);
-        applyMnemonic(m);
+        m.setMnemonicParsing(false);
         b.getMenus().add(m);
         return m;
     }
 
+    public static Menu menu(ContextMenu cm, String text) {
+        Menu m = new Menu(text);
+        m.setMnemonicParsing(false);
+        cm.getItems().add(m);
+        return m;
+    }
+
+    public static final MenuItem menuItem(String text, Runnable action) {
+        MenuItem mi = new MenuItem(text);
+        if (action == null) {
+            mi.setDisable(true);
+        } else {
+            mi.setOnAction((ev) -> action.run());
+        }
+        return mi;
+    }
+
     public static MenuItem item(MenuBar b, String text, Runnable action) {
         MenuItem mi = new MenuItem(text);
-        applyMnemonic(mi);
-        mi.setOnAction((ev) -> action.run());
+        mi.setMnemonicParsing(false);
+        if (action == null) {
+            mi.setDisable(true);
+        } else {
+            mi.setOnAction((ev) -> action.run());
+        }
         lastMenu(b).getItems().add(mi);
         return mi;
     }
 
+    public static CheckMenuItem checkItem(MenuBar b, String name, BooleanProperty prop) {
+        CheckMenuItem mi = new CheckMenuItem(name);
+        mi.selectedProperty().bindBidirectional(prop);
+        lastMenu(b).getItems().add(mi);
+        return mi;
+    }
+
+    public static CheckMenuItem checkItem(ContextMenu m, String name, boolean selected, Consumer<Boolean> client) {
+        CheckMenuItem mi = new CheckMenuItem(name);
+        mi.setSelected(selected);
+        mi.selectedProperty().addListener((s, p, on) -> {
+            client.accept(on);
+        });
+        m.getItems().add(mi);
+        return mi;
+    }
+
     public static MenuItem item(MenuBar b, MenuItem mi) {
-        applyMnemonic(mi);
+        mi.setMnemonicParsing(false);
         lastMenu(b).getItems().add(mi);
         return mi;
     }
 
     public static MenuItem item(MenuBar b, String text) {
         MenuItem mi = new MenuItem(text);
-        applyMnemonic(mi);
+        mi.setMnemonicParsing(false);
         lastMenu(b).getItems().add(mi);
         return mi;
-    }
-
-    private static void applyMnemonic(MenuItem m) {
-        String text = m.getText();
-        if (text != null) {
-            if (text.contains("_")) {
-                m.setMnemonicParsing(true);
-            }
-        }
     }
 
     private static Menu lastMenu(MenuBar b) {
@@ -99,12 +149,37 @@ public class FX {
         return s;
     }
 
+    public static final SeparatorMenuItem separator(ContextMenu m) {
+        SeparatorMenuItem s = new SeparatorMenuItem();
+        m.getItems().add(s);
+        return s;
+    }
+
     public static RadioMenuItem radio(MenuBar b, String text, KeyCombination accelerator, ToggleGroup g) {
         RadioMenuItem mi = new RadioMenuItem(text);
         mi.setAccelerator(accelerator);
         mi.setToggleGroup(g);
         lastMenu(b).getItems().add(mi);
         return mi;
+    }
+
+    public static MenuItem item(ContextMenu cm, String text, Runnable action) {
+        MenuItem mi = new MenuItem(text);
+        mi.setMnemonicParsing(false);
+        if (action == null) {
+            mi.setDisable(true);
+        } else {
+            mi.setOnAction((ev) -> {
+                action.run();
+                ev.consume();
+            });
+        }
+        cm.getItems().add(mi);
+        return mi;
+    }
+
+    public static MenuItem item(ContextMenu m, String name) {
+        return item(m, name, null);
     }
 
     public static void add(GridPane p, Node n, int col, int row) {
@@ -124,19 +199,22 @@ public class FX {
         return cb.getSelectionModel().getSelectedItem();
     }
 
-    public static Window getParentWindow(Object nodeOrWindow) {
-        if (nodeOrWindow == null) {
+    public static Window getParentWindow(Object x) {
+        if (x == null) {
             return null;
-        } else if (nodeOrWindow instanceof Window w) {
+        } else if (x instanceof Window w) {
             return w;
-        } else if (nodeOrWindow instanceof Node n) {
+        } else if (x instanceof Node n) {
             Scene s = n.getScene();
             if (s != null) {
                 return s.getWindow();
             }
             return null;
+        } else if (x instanceof MenuItem m) {
+            ContextMenu cm = m.getParentPopup();
+            return cm == null ? null : cm.getOwnerWindow();
         } else {
-            throw new Error("Node or Window only");
+            throw new Error("Node, Window, or MenuItem only: " + x);
         }
     }
 
@@ -192,5 +270,203 @@ public class FX {
 
     public static boolean isMac() {
         return MAC;
+    }
+
+    /**
+     * attach a popup menu to a node.
+     * WARNING: sometimes, as the case is with TableView/FxTable header,
+     * the requested node gets created by the skin at some later time.
+     * In this case, additional dance must be performed, see for example
+     * FxTable.setHeaderPopupMenu()
+     */
+    // https://github.com/andy-goryachev/MP3Player/blob/8b0ff12460e19850b783b961f214eacf5e1cdaf8/src/goryachev/fx/FX.java#L1251
+    public static void setPopupMenu(Node owner, Supplier<ContextMenu> generator) {
+        setPopupMenuLocal(owner, generator);
+    }
+
+    public static void setPopupMenu(Node owner, Function<PickResult,ContextMenu> generator) {
+        setPopupMenuLocal(owner, generator);
+    }
+
+    private static void setPopupMenuLocal(Node owner, Object generator) {
+        if (owner == null) {
+            throw new NullPointerException("cannot attach popup menu to null");
+        }
+
+        owner.setOnContextMenuRequested((ev) -> {
+            if (generator != null) {
+                ContextMenu m;
+                if (generator instanceof Supplier sup) {
+                    m = (ContextMenu)sup.get();
+                } else if (generator instanceof Function func) {
+                    PickResult pick = ev.getPickResult();
+                    m = (ContextMenu)func.apply(pick);
+                } else {
+                    m = null;
+                }
+
+                if (m != null) {
+                    if (m.getItems().size() > 0) {
+                        Platform.runLater(() -> {
+                            // javafx does not dismiss the popup when the user
+                            // clicks on the owner node
+                            EventHandler<MouseEvent> li = new EventHandler<MouseEvent>() {
+                                @Override
+                                public void handle(MouseEvent event) {
+                                    m.hide();
+                                    owner.removeEventFilter(MouseEvent.MOUSE_PRESSED, this);
+                                    event.consume();
+                                }
+                            };
+
+                            owner.addEventFilter(MouseEvent.MOUSE_PRESSED, li);
+                            m.show(owner, ev.getScreenX(), ev.getScreenY());
+                        });
+                        ev.consume();
+                    }
+                }
+                ev.consume();
+            }
+        });
+    }
+
+    public static void tooltip(Control n, String text) {
+        if (text != null) {
+            n.setTooltip(new Tooltip(text));
+        }
+    }
+
+    public static Button button(String text, String tooltip, Runnable r) {
+        Button b = button(text, r);
+        tooltip(b, tooltip);
+        return b;
+    }
+
+    public static Button button(String text, Runnable r) {
+        Button b = new Button(text);
+        if (r == null) {
+            b.setDisable(true);
+        } else {
+            b.setOnAction((ev) -> r.run());
+        }
+        return b;
+    }
+
+    public static void style(Node n, String style) {
+        n.getStyleClass().add(style);
+    }
+
+    public static void style(Node n, String style, boolean on) {
+        if (on) {
+            n.getStyleClass().add(style);
+        } else {
+            n.getStyleClass().remove(style);
+        }
+    }
+
+    // borrowed from
+    // https://github.com/andy-goryachev/AppFramework/blob/1e9f2197ce510a77ec5f719a2cb7112b0b6cf7be/src/goryachev/fx/FX.java#L1081
+    // with the author's permission
+    /** returns a parent of the specified type, or null.  if node is an instance of the specified class, returns node */
+    public static <T> T getAncestorOfClass(Class<T> c, Node node) {
+        if (Window.class.isAssignableFrom(c)) {
+            Scene sc = node.getScene();
+            if (sc != null) {
+                Window w = sc.getWindow();
+                while (w != null) {
+                    if (w.getClass().isAssignableFrom(c)) {
+                        return (T)w;
+                    }
+
+                    // the window can be a dialog, check the owner
+                    if (w instanceof Stage stage) {
+                        w = stage.getOwner();
+                    }
+                }
+            }
+            return null;
+        } else {
+            while (node != null) {
+                if (c.isInstance(node)) {
+                    return (T)node;
+                }
+
+                node = node.getParent();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Creates a new color with the same RGB values and the specified alpha (opacity).
+     *
+     * @param c the color to borrow RGB values from
+     * @param alpha the opacity
+     * @return the new color instance
+     */
+    public static Color alpha(Color c, double alpha) {
+        return new Color(c.getRed(), c.getGreen(), c.getBlue(), alpha);
+    }
+
+    public static Menu menu(Menu menu, String text) {
+        Menu m = new Menu(text);
+        m.setMnemonicParsing(false);
+        menu.getItems().add(m);
+        return m;
+    }
+
+    public static MenuItem item(Menu m, String text) {
+        MenuItem mi = new MenuItem(text);
+        mi.setMnemonicParsing(false);
+        m.getItems().add(mi);
+        return mi;
+    }
+
+    public static MenuItem item(Menu m, String text, Runnable action) {
+        MenuItem mi = new MenuItem(text);
+        mi.setMnemonicParsing(false);
+        if (action == null) {
+            mi.setDisable(true);
+        } else {
+            mi.setOnAction((ev) -> action.run());
+        }
+        m.getItems().add(mi);
+        return mi;
+    }
+
+    public static HBox buttonBar(Node... buttons) {
+        HBox hb = new HBox(5);
+        hb.setPadding(new Insets(5, 10, 5, 10));
+        for (Node b: buttons) {
+            if (b == null) {
+                Region spacer = new Region();
+                HBox.setHgrow(spacer, Priority.ALWAYS);
+                hb.getChildren().add(spacer);
+            } else {
+                hb.getChildren().add(b);
+            }
+        }
+        return hb;
+    }
+
+    public static void print(Node n) {
+        if (n == null) {
+            return;
+        }
+        Window w = FX.getParentWindow(n);
+        PrinterJob job = PrinterJob.createPrinterJob();
+        System.out.println("PrinterJob: " + job);
+        if (job == null) {
+            Alert a = new Alert(AlertType.ERROR, "No printers found.");
+            a.initOwner(w);
+            a.showAndWait();
+        } else {
+            boolean ready = job.showPrintDialog(w);
+            if (ready) {
+                job.printPage(n);
+                job.endJob();
+            }
+            System.out.println("Done: " + ready);
+        }
     }
 }

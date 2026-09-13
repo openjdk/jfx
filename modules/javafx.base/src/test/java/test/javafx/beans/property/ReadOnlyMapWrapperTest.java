@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -31,8 +31,8 @@ import test.javafx.beans.value.ChangeListenerMock;
 import javafx.beans.value.ObservableObjectValueStub;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableMap;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.Collections;
 import javafx.beans.property.MapProperty;
@@ -40,7 +40,7 @@ import javafx.beans.property.ReadOnlyMapProperty;
 import javafx.beans.property.ReadOnlyMapWrapper;
 import javafx.beans.property.SimpleMapProperty;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ReadOnlyMapWrapperTest {
 
@@ -56,7 +56,7 @@ public class ReadOnlyMapWrapperTest {
     private ChangeListenerMock<Object> internalChangeListener;
     private ChangeListenerMock<Object> publicChangeListener;
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
         property = new ReadOnlyMapWrapperMock();
         readOnlyProperty = property.getReadOnlyProperty();
@@ -319,12 +319,15 @@ public class ReadOnlyMapWrapperTest {
         publicChangeListener.check(readOnlyProperty, VALUE_2, VALUE_1, 2);
     }
 
-    @Test(expected=RuntimeException.class)
+    @Test
     public void testMapBoundValue() {
-        final MapProperty<Object, Object> v = new SimpleMapProperty<>(VALUE_1);
-        property.bind(v);
-        property.set(VALUE_1);
+        assertThrows(RuntimeException.class, () -> {
+            final MapProperty<Object, Object> v = new SimpleMapProperty<>(VALUE_1);
+            property.bind(v);
+            property.set(VALUE_1);
+        });
     }
+
 
     @Test
     public void testLazyBind_primitive() {
@@ -550,10 +553,13 @@ public class ReadOnlyMapWrapperTest {
         publicChangeListener.check(readOnlyProperty, VALUE_2, VALUE_1, 1);
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testBindToNull() {
-        property.bind(null);
+        assertThrows(NullPointerException.class, () -> {
+            property.bind(null);
+        });
     }
+
 
     @Test
     public void testRebind() {

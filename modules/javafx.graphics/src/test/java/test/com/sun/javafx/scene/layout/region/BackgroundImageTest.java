@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,15 @@
 
 package test.com.sun.javafx.scene.layout.region;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for the BackgroundImage class
  */
 public class BackgroundImageTest {
 
-    @Test public void dummy() { }
+    @Test
+    public void dummy() { }
 
 //    @Test public void valuesAreSetCorrectly() {
 //        Image image = new Image("http://dummyUrl", true);

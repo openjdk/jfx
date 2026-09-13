@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {
@@ -35,7 +36,8 @@ namespace WebCore {
 class ResourceError;
 class ResourceResponse;
 
-class FetchLoaderClient {
+class FetchLoaderClient : public AbstractRefCountedAndCanMakeWeakPtr<FetchLoaderClient> {
+    WTF_MAKE_TZONE_ALLOCATED(FetchLoaderClient);
 public:
     virtual ~FetchLoaderClient() = default;
 

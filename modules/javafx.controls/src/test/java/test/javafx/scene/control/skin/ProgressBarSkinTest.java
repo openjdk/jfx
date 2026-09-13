@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,16 +25,11 @@
 
 package test.javafx.scene.control.skin;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import java.lang.ref.WeakReference;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-
-import com.sun.javafx.tk.Toolkit;
-
-import static org.junit.Assert.*;
-
 import javafx.beans.value.ObservableValue;
 import javafx.scene.Scene;
 import javafx.scene.control.ProgressBar;
@@ -43,6 +38,10 @@ import javafx.scene.control.skin.ProgressBarSkin;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
 import test.com.sun.javafx.pgstub.StubToolkit;
 
 /**
@@ -54,7 +53,8 @@ public class ProgressBarSkinTest {
     private Stage stage;
     private StackPane root;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         progressbar = new ProgressBar();
         skin = new ProgressBarSkinMock(progressbar);
         progressbar.setSkin(skin);
@@ -72,7 +72,7 @@ public class ProgressBarSkinTest {
         stage.setScene(scene);
     }
 
-    @After
+    @AfterEach
     public void cleanup() {
         if (stage != null) {
             stage.hide();
@@ -98,11 +98,9 @@ public class ProgressBarSkinTest {
         // fire to force layout
         Toolkit.getToolkit().firePulse();
 
-        assertEquals("progressbar fills root", root.getWidth(),
-                progressbar.getWidth(), 0.5);
+        assertEquals(root.getWidth(), progressbar.getWidth(), 0.5, "progressbar fills root");
         Region innerBar = (Region) progressbar.lookup(".bar");
-        assertEquals("inner bar width updated",
-                progressbar.getWidth() * progress, innerBar.getWidth(), 0.5);
+        assertEquals(progressbar.getWidth() * progress, innerBar.getWidth(), 0.5, "inner bar width updated");
     }
 
     WeakReference<Skin<?>> weakSkinRef;
@@ -114,7 +112,7 @@ public class ProgressBarSkinTest {
         weakSkinRef = new WeakReference<>(progressbar.getSkin());
         progressbar.setSkin(null);
         attemptGC(10);
-        assertNull("skin must be gc'ed", weakSkinRef.get());
+        assertNull(weakSkinRef.get(), "skin must be gc'ed");
     }
 
     private void attemptGC(int n) {
@@ -128,7 +126,7 @@ public class ProgressBarSkinTest {
             try {
                 Thread.sleep(500);
             } catch (InterruptedException e) {
-               System.err.println("InterruptedException occurred during Thread.sleep()");
+                fail(e);
             }
         }
     }

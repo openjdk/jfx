@@ -27,6 +27,8 @@
 
 #include <limits.h>
 #include <stdint.h>
+#include <wtf/Assertions.h>
+#include <wtf/Compiler.h>
 
 namespace WTF {
 class PrintStream;
@@ -218,13 +220,9 @@ struct JSTextPosition {
     JSTextPosition operator-(unsigned adjustment) const { return *this + (- static_cast<int>(adjustment)); }
 
     operator int() const { return offset; }
+    explicit operator bool() const { return *this != JSTextPosition(); }
 
-    bool operator==(const JSTextPosition& other) const
-    {
-        return line == other.line
-            && offset == other.offset
-            && lineStartOffset == other.lineStartOffset;
-    }
+    friend bool operator==(const JSTextPosition&, const JSTextPosition&) = default;
 
     int column() const { return offset - lineStartOffset; }
     void checkConsistency()
@@ -279,9 +277,18 @@ struct JSTokenLocation {
 struct JSToken {
     JSTokenType m_type { ERRORTOK };
     JSTokenData m_data { { nullptr, nullptr, false } };
-    JSTokenLocation m_location;
     JSTextPosition m_startPosition;
     JSTextPosition m_endPosition;
+
+    JSTokenLocation location() const
+    {
+        JSTokenLocation result;
+        result.line = m_startPosition.line;
+        result.lineStartOffset = m_startPosition.lineStartOffset;
+        result.startOffset = m_startPosition.offset;
+        result.endOffset = m_endPosition.offset;
+        return result;
+    }
 
     void dump(WTF::PrintStream&) const;
 };

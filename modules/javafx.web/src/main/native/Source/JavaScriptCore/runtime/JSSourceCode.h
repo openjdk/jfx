@@ -26,8 +26,8 @@
 
 #pragma once
 
-#include "JSObject.h"
-#include "SourceCode.h"
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/SourceCode.h>
 
 namespace JSC {
 
@@ -36,7 +36,7 @@ public:
     using Base = JSCell;
 
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
 
     DECLARE_EXPORT_INFO;
 
@@ -46,21 +46,18 @@ public:
         return vm.sourceCodeSpace<mode>();
     }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(JSSourceCodeType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     static JSSourceCode* create(VM& vm, Structure* structure, SourceCode&& sourceCode)
     {
-        auto* result = new (NotNull, allocateCell<JSSourceCode>(vm)) JSSourceCode(vm, structure, WTFMove(sourceCode));
+        auto* result = new (NotNull, allocateCell<JSSourceCode>(vm)) JSSourceCode(vm, structure, WTF::move(sourceCode));
         result->finishCreation(vm);
         return result;
     }
 
     static JSSourceCode* create(VM& vm, SourceCode&& sourceCode)
     {
-        return create(vm, vm.sourceCodeStructure.get(), WTFMove(sourceCode));
+        return create(vm, vm.sourceCodeStructure.get(), WTF::move(sourceCode));
     }
 
     const SourceCode& sourceCode() const
@@ -73,7 +70,7 @@ public:
 private:
     JSSourceCode(VM& vm, Structure* structure, SourceCode&& sourceCode)
         : Base(vm, structure)
-        , m_sourceCode(WTFMove(sourceCode))
+        , m_sourceCode(WTF::move(sourceCode))
     {
     }
 

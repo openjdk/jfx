@@ -30,10 +30,16 @@
 #include "config.h"
 #include "FontCascadeCache.h"
 
+#include "CSSFontSelector.h"
 #include "FontCache.h"
 #include "FontCascadeDescription.h"
+#include <wtf/RefPtr.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FontDescriptionKeyRareData);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FontCascadeCache);
 
 FontFamilyName::FontFamilyName() = default;
 
@@ -59,17 +65,9 @@ bool operator==(const FontFamilyName& a, const FontFamilyName& b)
     return (a.string().isNull() || b.string().isNull()) ? a.string() == b.string() : FontCascadeDescription::familyNamesAreEqual(a.string(), b.string());
 }
 
-bool operator==(const FontCascadeCacheKey& a, const FontCascadeCacheKey& b)
-{
-    return a.fontDescriptionKey == b.fontDescriptionKey
-        && a.fontSelectorId == b.fontSelectorId
-        && a.fontSelectorVersion == b.fontSelectorVersion
-        && a.families == b.families;
-}
-
 FontCascadeCache& FontCascadeCache::forCurrentThread()
 {
-    return FontCache::forCurrentThread().fontCascadeCache();
+    return FontCache::forCurrentThread()->fontCascadeCache();
 }
 
 void FontCascadeCache::invalidate()
@@ -93,35 +91,41 @@ void FontCascadeCache::pruneUnreferencedEntries()
 void FontCascadeCache::pruneSystemFallbackFonts()
 {
     for (auto& entry : m_entries.values())
-        entry->fonts->pruneSystemFallbacks();
+        Ref { entry->fonts }->pruneSystemFallbacks();
 }
 
 static FontCascadeCacheKey makeFontCascadeCacheKey(const FontCascadeDescription& description, FontSelector* fontSelector)
 {
-    FontCascadeCacheKey key;
-    key.fontDescriptionKey = FontDescriptionKey(description);
     unsigned familyCount = description.familyCount();
-    key.families.reserveInitialCapacity(familyCount);
-    for (unsigned i = 0; i < familyCount; ++i)
-        key.families.uncheckedAppend(description.familyAt(i));
-    key.fontSelectorId = fontSelector ? fontSelector->uniqueId() : 0;
-    key.fontSelectorVersion = fontSelector ? fontSelector->version() : 0;
-    return key;
+    auto hasComplexFontSelector = fontSelector && !fontSelector->isSimpleFontSelectorForDescription();
+    return FontCascadeCacheKey {
+        FontDescriptionKey(description),
+        Vector<FontFamilyName, 3>(familyCount, [&](size_t i) { return description.familyAt(i); }),
+        hasComplexFontSelector ? fontSelector->uniqueId() : 0,
+        hasComplexFontSelector ? fontSelector->version() : 0,
+        hasComplexFontSelector
+    };
 }
 
-Ref<FontCascadeFonts> FontCascadeCache::retrieveOrAddCachedFonts(const FontCascadeDescription& fontDescription, RefPtr<FontSelector>&& fontSelector)
+Ref<FontCascadeFonts> FontCascadeCache::retrieveOrAddCachedFonts(const FontCascadeDescription& fontDescription, FontSelector* fontSelector)
 {
-    auto key = makeFontCascadeCacheKey(fontDescription, fontSelector.get());
+    auto key = makeFontCascadeCacheKey(fontDescription, fontSelector);
     auto addResult = m_entries.add(key, nullptr);
     if (!addResult.isNewEntry)
         return addResult.iterator->value->fonts.get();
 
     auto& newEntry = addResult.iterator->value;
-    newEntry = makeUnique<FontCascadeCacheEntry>(FontCascadeCacheEntry { WTFMove(key), FontCascadeFonts::create(WTFMove(fontSelector)) });
-    Ref<FontCascadeFonts> glyphs = newEntry->fonts.get();
+    newEntry = makeUnique<FontCascadeCacheEntry>(FontCascadeCacheEntry { WTF::move(key), FontCascadeFonts::create() });
+    Ref<FontCascadeFonts> fonts = newEntry->fonts.get();
 
+
+#if !PLATFORM(IOS_FAMILY)
+    static constexpr unsigned unreferencedPruneInterval = 1000;
+    static constexpr int maximumEntries = 5000;
+#else
     static constexpr unsigned unreferencedPruneInterval = 50;
     static constexpr int maximumEntries = 400;
+#endif
     static unsigned pruneCounter;
     // Referenced FontCascadeFonts would exist anyway so pruning them saves little memory.
     if (!(++pruneCounter % unreferencedPruneInterval))
@@ -129,7 +133,7 @@ Ref<FontCascadeFonts> FontCascadeCache::retrieveOrAddCachedFonts(const FontCasca
     // Prevent pathological growth.
     if (m_entries.size() > maximumEntries)
         m_entries.remove(m_entries.random());
-    return glyphs;
+    return fonts;
 }
 
 } // namespace WebCore

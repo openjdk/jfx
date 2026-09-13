@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2020 Apple Inc. All rights reserved.
+ * Copyright (c) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,8 @@
 #include "pas_segregated_heap.h"
 #include "pas_segregated_size_directory.h"
 #include "pas_thread_local_cache.h"
+
+#if LIBPAS_ENABLED
 
 PAS_BEGIN_EXTERN_C;
 
@@ -116,7 +118,7 @@ static PAS_ALWAYS_INLINE pas_allocator_index
 pas_segregated_size_directory_num_allocator_indices_for_config(
     pas_segregated_page_config config)
 {
-    static const bool verbose = false;
+    static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_SEGREGATED_HEAPS);
 
     size_t size;
 
@@ -151,7 +153,7 @@ pas_segregated_size_directory_take_first_eligible_impl(
     pas_segregated_view (*create_new_view_callback)(
         pas_segregated_directory_iterate_config* config))
 {
-    static const bool verbose = false;
+    static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_SEGREGATED_HEAPS);
 
     bool did_find_something;
     const pas_segregated_page_config* page_config_ptr;
@@ -231,5 +233,5 @@ pas_segregated_size_directory_take_first_eligible_impl(
 
 PAS_END_EXTERN_C;
 
+#endif /* LIBPAS_ENABLED */
 #endif /* PAS_SEGREGATED_GLOBAL_SIZE_DIRECTORY_INLINES_H */
-

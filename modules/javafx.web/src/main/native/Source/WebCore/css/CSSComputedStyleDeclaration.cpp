@@ -26,42 +26,66 @@
 #include "CSSComputedStyleDeclaration.h"
 
 #include "CSSProperty.h"
-#include "CSSPropertyAnimation.h"
 #include "CSSPropertyParser.h"
-#include "CSSSelector.h"
+#include "CSSSelectorParser.h"
+#include "CSSSerializationContext.h"
 #include "CSSValuePool.h"
 #include "ComposedTreeAncestorIterator.h"
-#include "ComputedStyleExtractor.h"
 #include "DeprecatedCSSOMValue.h"
+#include "NodeDocument.h"
+#include "NodeInlines.h"
 #include "RenderBox.h"
 #include "RenderBoxModelObject.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
+#include "Settings.h"
+#include "ShorthandSerializer.h"
 #include "StylePropertiesInlines.h"
 #include "StylePropertyShorthand.h"
 #include "StyleScope.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CSSComputedStyleDeclaration);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSComputedStyleDeclaration);
 
-CSSComputedStyleDeclaration::CSSComputedStyleDeclaration(Element& element, bool allowVisitedStyle, StringView pseudoElementName)
+CSSComputedStyleDeclaration::CSSComputedStyleDeclaration(Element& element, AllowVisited allowVisited)
     : m_element(element)
-    , m_allowVisitedStyle(allowVisitedStyle)
+    , m_allowVisitedStyle(allowVisited == AllowVisited::Yes)
 {
-    StringView name = pseudoElementName;
-    if (name.startsWith(':'))
-        name = name.substring(1);
-    if (name.startsWith(':'))
-        name = name.substring(1);
-    m_pseudoElementSpecifier = CSSSelector::pseudoId(CSSSelector::parsePseudoElementType(name));
+}
+
+CSSComputedStyleDeclaration::CSSComputedStyleDeclaration(Element& element, IsEmpty isEmpty)
+    : m_element(element)
+    , m_isEmpty(isEmpty == IsEmpty::Yes)
+{
+}
+
+CSSComputedStyleDeclaration::CSSComputedStyleDeclaration(Element& element, const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier)
+    : m_element(element)
+    , m_pseudoElementIdentifier(pseudoElementIdentifier)
+{
 }
 
 CSSComputedStyleDeclaration::~CSSComputedStyleDeclaration() = default;
 
-Ref<CSSComputedStyleDeclaration> CSSComputedStyleDeclaration::create(Element& element, bool allowVisitedStyle, StringView pseudoElementName)
+Ref<CSSComputedStyleDeclaration> CSSComputedStyleDeclaration::create(Element& element, AllowVisited allowVisited)
 {
-    return adoptRef(*new CSSComputedStyleDeclaration(element, allowVisitedStyle, pseudoElementName));
+    return adoptRef(*new CSSComputedStyleDeclaration(element, allowVisited));
+}
+
+Ref<CSSComputedStyleDeclaration> CSSComputedStyleDeclaration::create(Element& element, const std::optional<Style::PseudoElementIdentifier>& pseudoElementIdentifier)
+{
+    return adoptRef(*new CSSComputedStyleDeclaration(element, pseudoElementIdentifier));
+}
+
+Ref<CSSComputedStyleDeclaration> CSSComputedStyleDeclaration::createEmpty(Element& element)
+{
+    return adoptRef(*new CSSComputedStyleDeclaration(element, IsEmpty::Yes));
+}
+
+Style::Extractor CSSComputedStyleDeclaration::extractor() const
+{
+    return Style::Extractor(m_element.ptr(), m_allowVisitedStyle, m_pseudoElementIdentifier);
 }
 
 String CSSComputedStyleDeclaration::cssText() const
@@ -71,26 +95,14 @@ String CSSComputedStyleDeclaration::cssText() const
 
 ExceptionOr<void> CSSComputedStyleDeclaration::setCssText(const String&)
 {
-    return Exception { NoModificationAllowedError };
-}
-
-// In CSS 2.1 the returned object should actually contain the "used values"
-// rather then the "computed values" (despite the name saying otherwise).
-//
-// See;
-// http://www.w3.org/TR/CSS21/cascade.html#used-value
-// http://www.w3.org/TR/DOM-Level-2-Style/css.html#CSS-CSSStyleDeclaration
-// https://developer.mozilla.org/en-US/docs/Web/API/Window/getComputedStyle#Notes
-RefPtr<CSSValue> CSSComputedStyleDeclaration::getPropertyCSSValue(CSSPropertyID propertyID, ComputedStyleExtractor::UpdateLayout updateLayout) const
-{
-    if (!isExposed(propertyID, settings()))
-        return nullptr;
-    return ComputedStyleExtractor(m_element.ptr(), m_allowVisitedStyle, m_pseudoElementSpecifier).propertyValue(propertyID, updateLayout);
+    return Exception { ExceptionCode::NoModificationAllowedError };
 }
 
 Ref<MutableStyleProperties> CSSComputedStyleDeclaration::copyProperties() const
 {
-    return ComputedStyleExtractor(m_element.ptr(), m_allowVisitedStyle, m_pseudoElementSpecifier).copyProperties();
+    if (m_isEmpty)
+        return MutableStyleProperties::create();
+    return extractor().copyProperties();
 }
 
 const Settings* CSSComputedStyleDeclaration::settings() const
@@ -100,22 +112,25 @@ const Settings* CSSComputedStyleDeclaration::settings() const
 
 const FixedVector<CSSPropertyID>& CSSComputedStyleDeclaration::exposedComputedCSSPropertyIDs() const
 {
-    return m_element->document().exposedComputedCSSPropertyIDs();
+    return protectedElement()->protectedDocument()->exposedComputedCSSPropertyIDs();
 }
 
 String CSSComputedStyleDeclaration::getPropertyValue(CSSPropertyID propertyID) const
 {
-    auto value = getPropertyCSSValue(propertyID);
-    if (!value)
+    if (m_isEmpty)
         return emptyString(); // FIXME: Should this be null instead, as it is in StyleProperties::getPropertyValue?
-    return value->cssText();
+
+    return extractor().propertyValueSerialization(propertyID, CSS::defaultSerializationContext());
 }
 
 unsigned CSSComputedStyleDeclaration::length() const
 {
-    ComputedStyleExtractor::updateStyleIfNeededForProperty(m_element.get(), CSSPropertyCustom);
+    if (m_isEmpty)
+        return 0;
 
-    auto* style = m_element->computedStyle(m_pseudoElementSpecifier);
+    Style::Extractor::updateStyleIfNeededForProperty(m_element.get(), CSSPropertyCustom);
+
+    CheckedPtr style = protectedElement()->computedStyle(m_pseudoElementIdentifier);
     if (!style)
         return 0;
 
@@ -124,27 +139,30 @@ unsigned CSSComputedStyleDeclaration::length() const
 
 String CSSComputedStyleDeclaration::item(unsigned i) const
 {
+    if (m_isEmpty)
+        return String();
+
     if (i >= length())
         return String();
 
     if (i < exposedComputedCSSPropertyIDs().size())
         return nameString(exposedComputedCSSPropertyIDs().at(i));
 
-    auto* style = m_element->computedStyle(m_pseudoElementSpecifier);
+    CheckedPtr style = protectedElement()->computedStyle(m_pseudoElementIdentifier);
     if (!style)
         return String();
 
-    const auto& inheritedCustomProperties = style->inheritedCustomProperties();
+    Ref inheritedCustomProperties = style->inheritedCustomProperties();
 
     // FIXME: findKeyAtIndex does a linear search for the property name, so if
     // we are called in a loop over all item indexes, we'll spend quadratic time
     // searching for keys.
 
-    if (i < exposedComputedCSSPropertyIDs().size() + inheritedCustomProperties.size())
-        return inheritedCustomProperties.findKeyAtIndex(i - exposedComputedCSSPropertyIDs().size());
+    if (i < exposedComputedCSSPropertyIDs().size() + inheritedCustomProperties->size())
+        return inheritedCustomProperties->findKeyAtIndex(i - exposedComputedCSSPropertyIDs().size());
 
-    const auto& nonInheritedCustomProperties = style->nonInheritedCustomProperties();
-    return nonInheritedCustomProperties.findKeyAtIndex(i - inheritedCustomProperties.size() - exposedComputedCSSPropertyIDs().size());
+    Ref nonInheritedCustomProperties = style->nonInheritedCustomProperties();
+    return nonInheritedCustomProperties->findKeyAtIndex(i - inheritedCustomProperties->size() - exposedComputedCSSPropertyIDs().size());
 }
 
 CSSRule* CSSComputedStyleDeclaration::parentRule() const
@@ -152,38 +170,46 @@ CSSRule* CSSComputedStyleDeclaration::parentRule() const
         return nullptr;
 }
 
-CSSRule* CSSComputedStyleDeclaration::cssRules() const
+CSSRuleList* CSSComputedStyleDeclaration::cssRules() const
 {
     return nullptr;
 }
 
 RefPtr<DeprecatedCSSOMValue> CSSComputedStyleDeclaration::getPropertyCSSValue(const String& propertyName)
 {
+    if (m_isEmpty)
+        return nullptr;
+
     if (isCustomPropertyName(propertyName)) {
-        auto value = ComputedStyleExtractor(m_element.ptr(), m_allowVisitedStyle, m_pseudoElementSpecifier).customPropertyValue(AtomString { propertyName });
+        auto value = extractor().customPropertyValue(AtomString { propertyName });
         if (!value)
             return nullptr;
         return value->createDeprecatedCSSOMWrapper(*this);
     }
 
-    CSSPropertyID propertyID = cssPropertyID(propertyName);
+    auto propertyID = cssPropertyID(propertyName);
     if (!propertyID)
         return nullptr;
-    auto value = getPropertyCSSValue(propertyID);
+
+    auto value = extractor().propertyValue(propertyID);
     if (!value)
         return nullptr;
     return value->createDeprecatedCSSOMWrapper(*this);
 }
 
-String CSSComputedStyleDeclaration::getPropertyValue(const String &propertyName)
+String CSSComputedStyleDeclaration::getPropertyValue(const String& propertyName)
 {
-    if (isCustomPropertyName(propertyName))
-        return ComputedStyleExtractor(m_element.ptr(), m_allowVisitedStyle, m_pseudoElementSpecifier).customPropertyText(AtomString { propertyName });
+    if (m_isEmpty)
+        return String();
 
-    CSSPropertyID propertyID = cssPropertyID(propertyName);
+    if (isCustomPropertyName(propertyName))
+        return extractor().customPropertyValueSerialization(AtomString { propertyName }, CSS::defaultSerializationContext());
+
+    auto propertyID = cssPropertyID(propertyName);
     if (!propertyID)
         return String();
-    return getPropertyValue(propertyID);
+
+    return extractor().propertyValueSerialization(propertyID, CSS::defaultSerializationContext());
 }
 
 String CSSComputedStyleDeclaration::getPropertyPriority(const String&)
@@ -204,12 +230,12 @@ bool CSSComputedStyleDeclaration::isPropertyImplicit(const String&)
 
 ExceptionOr<void> CSSComputedStyleDeclaration::setProperty(const String&, const String&, const String&)
 {
-    return Exception { NoModificationAllowedError };
+    return Exception { ExceptionCode::NoModificationAllowedError };
 }
 
 ExceptionOr<String> CSSComputedStyleDeclaration::removeProperty(const String&)
 {
-    return Exception { NoModificationAllowedError };
+    return Exception { ExceptionCode::NoModificationAllowedError };
 }
 
 String CSSComputedStyleDeclaration::getPropertyValueInternal(CSSPropertyID propertyID)
@@ -217,9 +243,9 @@ String CSSComputedStyleDeclaration::getPropertyValueInternal(CSSPropertyID prope
     return getPropertyValue(propertyID);
 }
 
-ExceptionOr<void> CSSComputedStyleDeclaration::setPropertyInternal(CSSPropertyID, const String&, bool)
+ExceptionOr<void> CSSComputedStyleDeclaration::setPropertyInternal(CSSPropertyID, const String&, IsImportant)
 {
-    return Exception { NoModificationAllowedError };
+    return Exception { ExceptionCode::NoModificationAllowedError };
 }
 
 } // namespace WebCore

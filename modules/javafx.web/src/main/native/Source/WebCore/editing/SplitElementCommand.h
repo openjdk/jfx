@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2006, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -33,7 +33,7 @@ class SplitElementCommand : public SimpleEditCommand {
 public:
     static Ref<SplitElementCommand> create(Ref<Element>&& element, Ref<Node>&& splitPointChild)
     {
-        return adoptRef(*new SplitElementCommand(WTFMove(element), WTFMove(splitPointChild)));
+        return adoptRef(*new SplitElementCommand(WTF::move(element), WTF::move(splitPointChild)));
     }
 
 private:
@@ -45,12 +45,14 @@ private:
     void executeApply();
 
 #ifndef NDEBUG
-    void getNodesInCommand(HashSet<Ref<Node>>&) override;
+    void getNodesInCommand(NodeSet&) override;
 #endif
 
+    RefPtr<Element> protectedElement1() const { return m_element1; }
+
     RefPtr<Element> m_element1;
-    Ref<Element> m_element2;
-    Ref<Node> m_atChild;
+    const Ref<Element> m_element2;
+    const Ref<Node> m_atChild;
 };
 
 } // namespace WebCore

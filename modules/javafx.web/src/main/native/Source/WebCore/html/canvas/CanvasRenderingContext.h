@@ -27,12 +27,13 @@
 
 #include "CanvasBase.h"
 #include "GraphicsLayerContentsDisplayDelegate.h"
+#include "ImageBuffer.h"
 #include "ScriptWrappable.h"
 #include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
-#include <wtf/IsoMalloc.h>
 #include <wtf/Lock.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/StringHash.h>
 
 namespace WebCore {
@@ -50,54 +51,107 @@ class SVGImageElement;
 class WebGLObject;
 enum class PixelFormat : uint8_t;
 
-class CanvasRenderingContext : public ScriptWrappable, public CanMakeWeakPtr<CanvasRenderingContext>, public CanMakeCheckedPtr {
+class CanvasRenderingContext : public ScriptWrappable, public CanMakeWeakPtr<CanvasRenderingContext> {
     WTF_MAKE_NONCOPYABLE(CanvasRenderingContext);
-    WTF_MAKE_ISO_ALLOCATED(CanvasRenderingContext);
+    WTF_MAKE_TZONE_ALLOCATED(CanvasRenderingContext);
 public:
     virtual ~CanvasRenderingContext();
 
     static HashSet<CanvasRenderingContext*>& instances() WTF_REQUIRES_LOCK(instancesLock());
     static Lock& instancesLock() WTF_RETURNS_LOCK(s_instancesLock);
 
-    void ref();
-    WEBCORE_EXPORT void deref();
+    WEBCORE_EXPORT void ref() const;
+    WEBCORE_EXPORT void deref() const;
 
     CanvasBase& canvasBase() const { return m_canvas; }
+    Ref<CanvasBase> protectedCanvasBase() const { return m_canvas.get(); }
 
-    virtual bool is2dBase() const { return false; }
-    virtual bool is2d() const { return false; }
-    virtual bool isWebGL1() const { return false; }
-    virtual bool isWebGL2() const { return false; }
+    bool is2dBase() const { return is2d() || isOffscreen2d() || isPaint(); }
+    bool is2d() const { return m_type == Type::CanvasElement2D; }
+    bool isWebGL1() const { return m_type == Type::WebGL1; }
+    bool isWebGL2() const { return m_type == Type::WebGL2; }
     bool isWebGL() const { return isWebGL1() || isWebGL2(); }
-    virtual bool isWebGPU() const { return false; }
-    virtual bool isGPUBased() const { return false; }
-    virtual bool isAccelerated() const { return false; }
-    virtual bool isBitmapRenderer() const { return false; }
-    virtual bool isPlaceholder() const { return false; }
-    virtual bool isOffscreen2d() const { return false; }
-    virtual bool isPaint() const { return false; }
+    bool isWebGPU() const { return m_type == Type::WebGPU; }
+    bool isGPUBased() const { return isWebGPU() || isWebGL(); }
+    bool isBitmapRenderer() const { return m_type == Type::BitmapRenderer; }
+    bool isPlaceholder() const { return m_type == Type::Placeholder; }
+    bool isOffscreen2d() const { return m_type == Type::Offscreen2D; }
+    bool isPaint() const { return m_type == Type::Paint; }
 
     virtual void clearAccumulatedDirtyRect() { }
 
-    // Called before paintRenderingResultsToCanvas if paintRenderingResultsToCanvas is
-    // used for compositing purposes.
-    virtual void prepareForDisplayWithPaint() { }
-    virtual void paintRenderingResultsToCanvas() { }
+    // Called when the canvas size properties are assigned.
+    // The canvas will already have the new size.
+    virtual void didUpdateCanvasSizeProperties(bool sizeChanged) = 0;
+
+    // Canvas 2DContext drawing buffer is the same as display buffer.
+    // WebGL, WebGPU draws to drawing buffer. The draw buffer is then swapped to
+    // display buffer during preparation and compositor composites the display buffer.
+    // toDataURL and similar functions from JS execution reads the drawing buffer.
+    // Web Inspector and similar reads from the engine reads both.
+    enum class SurfaceBuffer : uint8_t {
+        DrawingBuffer,
+        DisplayBuffer
+    };
+
+    // Draws the source buffer to the canvasBase().buffer().
+    virtual RefPtr<ImageBuffer> surfaceBufferToImageBuffer(SurfaceBuffer) = 0;
+    virtual bool isSurfaceBufferTransparentBlack(SurfaceBuffer) const = 0;
+    bool delegatesDisplay() const;
     virtual RefPtr<GraphicsLayerContentsDisplayDelegate> layerContentsDisplayDelegate();
     virtual void setContentsToLayer(GraphicsLayer&);
+
+    // Returns the drawing buffer and runs the compositing steps of transferToImageBitmap.
+    virtual RefPtr<ImageBuffer> transferToImageBuffer();
 
     bool hasActiveInspectorCanvasCallTracer() const { return m_hasActiveInspectorCanvasCallTracer; }
     void setHasActiveInspectorCanvasCallTracer(bool hasActiveInspectorCanvasCallTracer) { m_hasActiveInspectorCanvasCallTracer = hasActiveInspectorCanvasCallTracer; }
 
+    // Returns true if there are pending deferred operations that might consume memory.
+    virtual bool hasDeferredOperations() const { return false; }
+
+    // Called periodically if needsFlush() was true when canvas change happened.
+    virtual void flushDeferredOperations() { }
+
     virtual bool compositingResultsNeedUpdating() const { return false; }
     virtual bool needsPreparationForDisplay() const { return false; }
+    // Swaps the current drawing buffer to display buffer.
     virtual void prepareForDisplay() { }
 
     virtual PixelFormat pixelFormat() const;
     virtual DestinationColorSpace colorSpace() const;
+    virtual bool isOpaque() const;
+    virtual bool willReadFrequently() const;
+    virtual std::optional<RenderingMode> renderingModeForTesting() const { return std::nullopt; }
+
+#if ENABLE(PIXEL_FORMAT_RGBA16F)
+    bool isHDR() const { return pixelFormat() == PixelFormat::RGBA16F; }
+    virtual void setDynamicRangeLimit(PlatformDynamicRangeLimit) { };
+#endif
+    virtual std::optional<double> getEffectiveDynamicRangeLimitValue() const { return std::nullopt; };
+
+    void setIsInPreparationForDisplayOrFlush(bool flag) { m_isInPreparationForDisplayOrFlush = flag; }
+    bool isInPreparationForDisplayOrFlush() const { return m_isInPreparationForDisplayOrFlush; }
+
+    void updateMemoryCost(size_t newMemoryCost) const;
+    size_t memoryCost() const;
+#if ENABLE(RESOURCE_USAGE)
+    size_t externalMemoryCost() const;
+#endif
 
 protected:
-    explicit CanvasRenderingContext(CanvasBase&);
+    enum class Type : uint8_t {
+        CanvasElement2D,
+        Offscreen2D,
+        Paint,
+        BitmapRenderer,
+        Placeholder,
+        WebGL1,
+        WebGL2,
+        WebGPU,
+    };
+
+    explicit CanvasRenderingContext(CanvasBase&, Type);
     bool taintsOrigin(const CanvasPattern*);
     bool taintsOrigin(const CanvasBase*);
     bool taintsOrigin(const CachedImage*);
@@ -109,18 +163,23 @@ protected:
 
     template<class T> void checkOrigin(const T* arg)
     {
-        if (m_canvas.originClean() && taintsOrigin(arg))
-            m_canvas.setOriginTainted();
+        if (m_canvas->originClean() && taintsOrigin(arg))
+            m_canvas->setOriginTainted();
     }
     void checkOrigin(const URL&);
     void checkOrigin(const CSSStyleImageValue&);
 
+    mutable std::atomic<size_t> m_memoryCost { 0 };
+
+    bool m_isInPreparationForDisplayOrFlush { false };
     bool m_hasActiveInspectorCanvasCallTracer { false };
 
 private:
     static Lock s_instancesLock;
 
-    CanvasBase& m_canvas;
+    WeakRef<CanvasBase> m_canvas;
+    const Type m_type;
+
 };
 
 } // namespace WebCore

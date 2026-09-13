@@ -43,7 +43,6 @@ typedef (double or CSSNumericValue) CSSNumberish;
 [
     ActiveDOMObject,
     InterfaceName=Animation,
-    CustomToJSObject,
     ExportMacro=WEBCORE_EXPORT,
     Exposed=Window
 ] interface WebAnimation : EventTarget {
@@ -51,10 +50,13 @@ typedef (double or CSSNumericValue) CSSNumberish;
 
     attribute DOMString id;
     [ImplementedAs=bindingsEffect] attribute AnimationEffect? effect;
-    [EnabledConditionallyReadWriteBySetting=WebAnimationsMutableTimelinesEnabled] attribute AnimationTimeline? timeline;
+    [ImplementedAs=bindingsTimeline] attribute AnimationTimeline? timeline;
     [ImplementedAs=bindingsStartTime] attribute CSSNumberish? startTime;
     [ImplementedAs=bindingsCurrentTime] attribute CSSNumberish? currentTime;
+    [ImplementedAs=bindingsRangeStart] attribute (TimelineRangeOffset or CSSNumericValue or CSSKeywordValue or DOMString) rangeStart;
+    [ImplementedAs=bindingsRangeEnd] attribute (TimelineRangeOffset or CSSNumericValue or CSSKeywordValue or DOMString) rangeEnd;
     attribute double playbackRate;
+    readonly attribute double? overallProgress;
     [ImplementedAs=bindingsFrameRate, EnabledBySetting=WebAnimationsCustomFrameRateEnabled] attribute (FramesPerSecond or AnimationFrameRatePreset) frameRate;
     [ImplementedAs=bindingsPlayState] readonly attribute AnimationPlayState playState;
     [ImplementedAs=bindingsReplaceState] readonly attribute AnimationReplaceState replaceState;

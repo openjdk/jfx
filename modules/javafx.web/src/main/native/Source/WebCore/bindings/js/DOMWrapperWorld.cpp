@@ -22,11 +22,14 @@
 #include "DOMWrapperWorld.h"
 
 #include "CommonVM.h"
-#include "JSLocalDOMWindow.h"
 #include "WebCoreJSClientData.h"
 #include "WindowProxy.h"
+#include <JavaScriptCore/HeapCellInlines.h>
+#include <JavaScriptCore/JSCJSValueCellInlines.h>
+#include <JavaScriptCore/JSCellInlines.h>
+#include <JavaScriptCore/SlotVisitorInlines.h>
+#include <JavaScriptCore/WeakInlines.h>
 #include <wtf/MainThread.h>
-
 
 namespace WebCore {
 using namespace JSC;
@@ -38,14 +41,14 @@ DOMWrapperWorld::DOMWrapperWorld(JSC::VM& vm, Type type, const String& name)
 {
     VM::ClientData* clientData = m_vm.clientData;
     ASSERT(clientData);
-    static_cast<JSVMClientData*>(clientData)->rememberWorld(*this);
+    downcast<JSVMClientData>(clientData)->rememberWorld(*this);
 }
 
 DOMWrapperWorld::~DOMWrapperWorld()
 {
     VM::ClientData* clientData = m_vm.clientData;
     ASSERT(clientData);
-    static_cast<JSVMClientData*>(clientData)->forgetWorld(*this);
+    downcast<JSVMClientData>(clientData)->forgetWorld(*this);
 
     // These items are created lazily.
     while (!m_jsWindowProxies.isEmpty())
@@ -65,14 +68,19 @@ DOMWrapperWorld& normalWorld(JSC::VM& vm)
 {
     VM::ClientData* clientData = vm.clientData;
     ASSERT(clientData);
-    return static_cast<JSVMClientData*>(clientData)->normalWorld();
+    return downcast<JSVMClientData>(clientData)->normalWorldSingleton();
 }
 
-DOMWrapperWorld& mainThreadNormalWorld()
+DOMWrapperWorld& mainThreadNormalWorldSingleton()
 {
     ASSERT(isMainThread());
-    static DOMWrapperWorld& cachedNormalWorld = normalWorld(commonVM());
-    return cachedNormalWorld;
+    static NeverDestroyed<Ref<DOMWrapperWorld>> cachedNormalWorld = normalWorld(commonVM());
+    return cachedNormalWorld->get();
+}
+
+bool isWorldCompatible(JSC::JSGlobalObject& lexicalGlobalObject, JSC::JSValue value)
+{
+    return !value.isObject() || &worldForDOMObject(*value.getObject()) == &currentWorld(lexicalGlobalObject);
 }
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,6 +33,8 @@ import java.nio.IntBuffer;
  * A {@link PixelFormat} object representing a pixel format that can store
  * full colors and so can be used as a destination format to write pixel
  * data from an arbitrary image.
+ *
+ * @param <T> the type of the buffer
  * @since JavaFX 2.2
  */
 public abstract class WritablePixelFormat<T extends Buffer>

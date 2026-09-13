@@ -25,20 +25,24 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
 #include "ScriptWrappable.h"
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
 class Element;
+class WeakPtrImplWithEventTargetData;
+template<typename> class ExceptionOr;
 
 class DatasetDOMStringMap final : public ScriptWrappable {
-    WTF_MAKE_ISO_ALLOCATED(DatasetDOMStringMap);
+    WTF_MAKE_TZONE_ALLOCATED(DatasetDOMStringMap);
 public:
     explicit DatasetDOMStringMap(Element& element)
         : m_element(element)
     {
     }
+
+    ~DatasetDOMStringMap();
 
     void ref();
     void deref();
@@ -50,12 +54,13 @@ public:
     ExceptionOr<void> setNamedItem(const String& name, const AtomString& value);
     bool deleteNamedProperty(const String& name);
 
-    Element& element() { return m_element; }
+    Element& element() { return m_element.get(); }
+    Ref<Element> protectedElement() const;
 
 private:
     const AtomString* item(const String& name) const;
 
-    Element& m_element;
+    WeakRef<Element, WeakPtrImplWithEventTargetData> m_element;
 };
 
 } // namespace WebCore

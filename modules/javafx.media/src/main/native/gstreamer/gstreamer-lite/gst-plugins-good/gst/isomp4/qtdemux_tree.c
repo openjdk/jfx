@@ -88,6 +88,30 @@ qtdemux_tree_get_child_by_index (GNode * node, guint index)
 }
 
 GNode *
+qtdemux_tree_get_child_by_index_full (GNode * node, guint index,
+    GstByteReader * parser)
+{
+  GNode *child;
+  guint8 *buffer;
+  guint32 child_len;
+
+  child = g_node_nth_child (node, index);
+  if (child) {
+    buffer = (guint8 *) child->data;
+
+    if (parser) {
+      child_len = QT_UINT32 (buffer);
+      if (G_UNLIKELY (child_len < (4 + 4)))
+        return NULL;
+      /* FIXME: must verify if atom length < parent atom length */
+      gst_byte_reader_init (parser, buffer + (4 + 4), child_len - (4 + 4));
+    }
+    return child;
+  }
+  return NULL;
+}
+
+GNode *
 qtdemux_tree_get_sibling_by_type_full (GNode * node, guint32 fourcc,
     GstByteReader * parser)
 {

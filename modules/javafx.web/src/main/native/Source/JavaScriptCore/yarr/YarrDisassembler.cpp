@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,8 +31,13 @@
 #include "Disassembler.h"
 #include "LinkBuffer.h"
 #include <wtf/StringPrintStream.h>
+#include <wtf/TZoneMallocInlines.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC { namespace Yarr {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(YarrDisassembler);
 
 static constexpr char s_spaces[] = "                        ";
 static constexpr unsigned s_maxIndent = sizeof(s_spaces) - 1;
@@ -52,14 +57,12 @@ YarrDisassembler::YarrDisassembler(YarrJITInfo* yarrJITInfo)
 {
 }
 
-YarrDisassembler::~YarrDisassembler()
-{
-}
+YarrDisassembler::~YarrDisassembler() = default;
 
 void YarrDisassembler::dump(PrintStream& out, LinkBuffer& linkBuffer)
 {
     m_codeStart = linkBuffer.entrypoint<DisassemblyPtrTag>().untaggedPtr();
-    m_codeEnd = bitwise_cast<uint8_t*>(m_codeStart) + linkBuffer.size();
+    m_codeEnd = std::bit_cast<uint8_t*>(m_codeStart) + linkBuffer.size();
 
     dumpHeader(out, linkBuffer);
     dumpDisassembly(out, indentString(), linkBuffer, m_startOfCode, m_labelForGenerateYarrOp[0]);
@@ -151,5 +154,6 @@ void YarrDisassembler::dumpDisassembly(PrintStream& out, const char* prefix, Lin
 
 }} // namespace Yarr namespace JSC
 
-#endif // ENABLE(JIT)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
+#endif // ENABLE(JIT)

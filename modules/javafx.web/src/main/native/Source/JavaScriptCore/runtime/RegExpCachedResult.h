@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "MatchResult.h"
-#include "SlotVisitorMacros.h"
-#include "WriteBarrier.h"
+#include <JavaScriptCore/MatchResult.h>
+#include <JavaScriptCore/SlotVisitorMacros.h>
+#include <JavaScriptCore/WriteBarrier.h>
 
 namespace JSC {
 
@@ -46,7 +46,7 @@ class RegExp;
 // m_reifiedResult and m_reifiedInput hold the cached results.
 class RegExpCachedResult {
 public:
-    inline void record(VM&, JSObject* owner, RegExp*, JSString* input, MatchResult);
+    inline void record(VM&, JSObject* owner, RegExp*, JSString* input, MatchResult, bool oneCharacterMatch);
 
     JSArray* lastResult(JSGlobalObject*, JSObject* owner);
     void setInput(JSGlobalObject*, JSObject* owner, JSString*);
@@ -63,14 +63,18 @@ public:
 
     // m_lastRegExp would be nullptr when RegExpCachedResult is not reified.
     // If we find m_lastRegExp is nullptr, it means this should hold the empty RegExp.
-    static ptrdiff_t offsetOfLastRegExp() { return OBJECT_OFFSETOF(RegExpCachedResult, m_lastRegExp); }
-    static ptrdiff_t offsetOfLastInput() { return OBJECT_OFFSETOF(RegExpCachedResult, m_lastInput); }
-    static ptrdiff_t offsetOfResult() { return OBJECT_OFFSETOF(RegExpCachedResult, m_result); }
-    static ptrdiff_t offsetOfReified() { return OBJECT_OFFSETOF(RegExpCachedResult, m_reified); }
+    static constexpr ptrdiff_t offsetOfLastRegExp() { return OBJECT_OFFSETOF(RegExpCachedResult, m_lastRegExp); }
+    static constexpr ptrdiff_t offsetOfLastInput() { return OBJECT_OFFSETOF(RegExpCachedResult, m_lastInput); }
+    static constexpr ptrdiff_t offsetOfResult() { return OBJECT_OFFSETOF(RegExpCachedResult, m_result); }
+    static constexpr ptrdiff_t offsetOfReified() { return OBJECT_OFFSETOF(RegExpCachedResult, m_reified); }
+    static constexpr ptrdiff_t offsetOfOneCharacterMatch() { return OBJECT_OFFSETOF(RegExpCachedResult, m_oneCharacterMatch); }
+
+    MatchResult result() const { return m_result; }
 
 private:
     MatchResult m_result { 0, 0 };
     bool m_reified { false };
+    bool m_oneCharacterMatch { false };
     WriteBarrier<JSString> m_lastInput;
     WriteBarrier<RegExp> m_lastRegExp;
     WriteBarrier<JSArray> m_reifiedResult;

@@ -1,17 +1,21 @@
-/*
- * Summary: internal interfaces for XML Path Language implementation
- * Description: internal interfaces for XML Path Language implementation
+/**
+ * @file
+ *
+ * @brief internal interfaces for XML Path Language implementation
+ *
+ * internal interfaces for XML Path Language implementation
  *              used to build new modules on top of XPath like XPointer and
  *              XSLT
  *
- * Copy: See Copyright for the status of this software.
+ * @copyright See Copyright for the status of this software.
  *
- * Author: Daniel Veillard
+ * @author Daniel Veillard
  */
 
 #ifndef __XML_XPATH_INTERNALS_H__
 #define __XML_XPATH_INTERNALS_H__
 
+#include <stdio.h>
 #include <libxml/xmlversion.h>
 #include <libxml/xpath.h>
 
@@ -21,6 +25,19 @@
 extern "C" {
 #endif
 
+/**
+ * Push a value on the stack
+ *
+ * @deprecated Use #xmlXPathValuePush
+ */
+#define valuePush xmlXPathValuePush
+/**
+ * Pop a value from the stack
+ *
+ * @deprecated Use #xmlXPathValuePop
+ */
+#define valuePop xmlXPathValuePop
+
 /************************************************************************
  *                                                                      *
  *                      Helpers                                         *
@@ -29,180 +46,158 @@ extern "C" {
 
 /*
  * Many of these macros may later turn into functions. They
- * shouldn't be used in #ifdef's preprocessor instructions.
+ * shouldn't be used in \#ifdef's preprocessor instructions.
  */
 /**
- * xmlXPathSetError:
- * @ctxt:  an XPath parser context
- * @err:  an xmlXPathError code
- *
  * Raises an error.
+ *
+ * @param ctxt  an XPath parser context
+ * @param err  an xmlXPathError code
  */
 #define xmlXPathSetError(ctxt, err)                                     \
     { xmlXPatherror((ctxt), __FILE__, __LINE__, (err));                 \
       if ((ctxt) != NULL) (ctxt)->error = (err); }
 
 /**
- * xmlXPathSetArityError:
- * @ctxt:  an XPath parser context
- *
  * Raises an XPATH_INVALID_ARITY error.
+ *
+ * @param ctxt  an XPath parser context
  */
 #define xmlXPathSetArityError(ctxt)                                     \
     xmlXPathSetError((ctxt), XPATH_INVALID_ARITY)
 
 /**
- * xmlXPathSetTypeError:
- * @ctxt:  an XPath parser context
- *
  * Raises an XPATH_INVALID_TYPE error.
+ *
+ * @param ctxt  an XPath parser context
  */
 #define xmlXPathSetTypeError(ctxt)                                      \
     xmlXPathSetError((ctxt), XPATH_INVALID_TYPE)
 
 /**
- * xmlXPathGetError:
- * @ctxt:  an XPath parser context
- *
  * Get the error code of an XPath context.
  *
- * Returns the context error.
+ * @param ctxt  an XPath parser context
+ * @returns the context error.
  */
 #define xmlXPathGetError(ctxt)    ((ctxt)->error)
 
 /**
- * xmlXPathCheckError:
- * @ctxt:  an XPath parser context
- *
  * Check if an XPath error was raised.
  *
- * Returns true if an error has been raised, false otherwise.
+ * @param ctxt  an XPath parser context
+ * @returns true if an error has been raised, false otherwise.
  */
 #define xmlXPathCheckError(ctxt)  ((ctxt)->error != XPATH_EXPRESSION_OK)
 
 /**
- * xmlXPathGetDocument:
- * @ctxt:  an XPath parser context
- *
  * Get the document of an XPath context.
  *
- * Returns the context document.
+ * @param ctxt  an XPath parser context
+ * @returns the context document.
  */
 #define xmlXPathGetDocument(ctxt)       ((ctxt)->context->doc)
 
 /**
- * xmlXPathGetContextNode:
- * @ctxt: an XPath parser context
- *
  * Get the context node of an XPath context.
  *
- * Returns the context node.
+ * @param ctxt  an XPath parser context
+ * @returns the context node.
  */
 #define xmlXPathGetContextNode(ctxt)    ((ctxt)->context->node)
 
-XMLPUBFUN int XMLCALL
-                xmlXPathPopBoolean      (xmlXPathParserContextPtr ctxt);
-XMLPUBFUN double XMLCALL
-                xmlXPathPopNumber       (xmlXPathParserContextPtr ctxt);
-XMLPUBFUN xmlChar * XMLCALL
-                xmlXPathPopString       (xmlXPathParserContextPtr ctxt);
-XMLPUBFUN xmlNodeSetPtr XMLCALL
-                xmlXPathPopNodeSet      (xmlXPathParserContextPtr ctxt);
-XMLPUBFUN void * XMLCALL
-                xmlXPathPopExternal     (xmlXPathParserContextPtr ctxt);
+XMLPUBFUN int
+                xmlXPathPopBoolean      (xmlXPathParserContext *ctxt);
+XMLPUBFUN double
+                xmlXPathPopNumber       (xmlXPathParserContext *ctxt);
+XMLPUBFUN xmlChar *
+                xmlXPathPopString       (xmlXPathParserContext *ctxt);
+XMLPUBFUN xmlNodeSet *
+                xmlXPathPopNodeSet      (xmlXPathParserContext *ctxt);
+XMLPUBFUN void *
+                xmlXPathPopExternal     (xmlXPathParserContext *ctxt);
 
 /**
- * xmlXPathReturnBoolean:
- * @ctxt:  an XPath parser context
- * @val:  a boolean
+ * Pushes the boolean `val` on the context stack.
  *
- * Pushes the boolean @val on the context stack.
+ * @param ctxt  an XPath parser context
+ * @param val  a boolean
  */
 #define xmlXPathReturnBoolean(ctxt, val)                                \
     valuePush((ctxt), xmlXPathNewBoolean(val))
 
 /**
- * xmlXPathReturnTrue:
- * @ctxt:  an XPath parser context
- *
  * Pushes true on the context stack.
+ *
+ * @param ctxt  an XPath parser context
  */
 #define xmlXPathReturnTrue(ctxt)   xmlXPathReturnBoolean((ctxt), 1)
 
 /**
- * xmlXPathReturnFalse:
- * @ctxt:  an XPath parser context
- *
  * Pushes false on the context stack.
+ *
+ * @param ctxt  an XPath parser context
  */
 #define xmlXPathReturnFalse(ctxt)  xmlXPathReturnBoolean((ctxt), 0)
 
 /**
- * xmlXPathReturnNumber:
- * @ctxt:  an XPath parser context
- * @val:  a double
+ * Pushes the double `val` on the context stack.
  *
- * Pushes the double @val on the context stack.
+ * @param ctxt  an XPath parser context
+ * @param val  a double
  */
 #define xmlXPathReturnNumber(ctxt, val)                                 \
     valuePush((ctxt), xmlXPathNewFloat(val))
 
 /**
- * xmlXPathReturnString:
- * @ctxt:  an XPath parser context
- * @str:  a string
+ * Pushes the string `str` on the context stack.
  *
- * Pushes the string @str on the context stack.
+ * @param ctxt  an XPath parser context
+ * @param str  a string
  */
 #define xmlXPathReturnString(ctxt, str)                                 \
     valuePush((ctxt), xmlXPathWrapString(str))
 
 /**
- * xmlXPathReturnEmptyString:
- * @ctxt:  an XPath parser context
- *
  * Pushes an empty string on the stack.
+ *
+ * @param ctxt  an XPath parser context
  */
 #define xmlXPathReturnEmptyString(ctxt)                                 \
     valuePush((ctxt), xmlXPathNewCString(""))
 
 /**
- * xmlXPathReturnNodeSet:
- * @ctxt:  an XPath parser context
- * @ns:  a node-set
+ * Pushes the node-set `ns` on the context stack.
  *
- * Pushes the node-set @ns on the context stack.
+ * @param ctxt  an XPath parser context
+ * @param ns  a node-set
  */
 #define xmlXPathReturnNodeSet(ctxt, ns)                                 \
     valuePush((ctxt), xmlXPathWrapNodeSet(ns))
 
 /**
- * xmlXPathReturnEmptyNodeSet:
- * @ctxt:  an XPath parser context
- *
  * Pushes an empty node-set on the context stack.
+ *
+ * @param ctxt  an XPath parser context
  */
 #define xmlXPathReturnEmptyNodeSet(ctxt)                                \
     valuePush((ctxt), xmlXPathNewNodeSet(NULL))
 
 /**
- * xmlXPathReturnExternal:
- * @ctxt:  an XPath parser context
- * @val:  user data
- *
  * Pushes user data on the context stack.
+ *
+ * @param ctxt  an XPath parser context
+ * @param val  user data
  */
 #define xmlXPathReturnExternal(ctxt, val)                               \
     valuePush((ctxt), xmlXPathWrapExternal(val))
 
 /**
- * xmlXPathStackIsNodeSet:
- * @ctxt: an XPath parser context
- *
  * Check if the current value on the XPath stack is a node set or
  * an XSLT value tree.
  *
- * Returns true if the current object on the stack is a node-set.
+ * @param ctxt  an XPath parser context
+ * @returns true if the current object on the stack is a node-set.
  */
 #define xmlXPathStackIsNodeSet(ctxt)                                    \
     (((ctxt)->value != NULL)                                            \
@@ -210,99 +205,85 @@ XMLPUBFUN void * XMLCALL
          || ((ctxt)->value->type == XPATH_XSLT_TREE)))
 
 /**
- * xmlXPathStackIsExternal:
- * @ctxt: an XPath parser context
- *
  * Checks if the current value on the XPath stack is an external
  * object.
  *
- * Returns true if the current object on the stack is an external
+ * @param ctxt  an XPath parser context
+ * @returns true if the current object on the stack is an external
  * object.
  */
 #define xmlXPathStackIsExternal(ctxt)                                   \
         ((ctxt->value != NULL) && (ctxt->value->type == XPATH_USERS))
 
 /**
- * xmlXPathEmptyNodeSet:
- * @ns:  a node-set
- *
  * Empties a node-set.
+ *
+ * @param ns  a node-set
  */
 #define xmlXPathEmptyNodeSet(ns)                                        \
     { while ((ns)->nodeNr > 0) (ns)->nodeTab[--(ns)->nodeNr] = NULL; }
 
 /**
- * CHECK_ERROR:
- *
  * Macro to return from the function if an XPath error was detected.
  */
 #define CHECK_ERROR                                                     \
     if (ctxt->error != XPATH_EXPRESSION_OK) return
 
 /**
- * CHECK_ERROR0:
- *
  * Macro to return 0 from the function if an XPath error was detected.
  */
 #define CHECK_ERROR0                                                    \
     if (ctxt->error != XPATH_EXPRESSION_OK) return(0)
 
 /**
- * XP_ERROR:
- * @X:  the error code
- *
  * Macro to raise an XPath error and return.
+ *
+ * @param X  the error code
  */
 #define XP_ERROR(X)                                                     \
     { xmlXPathErr(ctxt, X); return; }
 
 /**
- * XP_ERROR0:
- * @X:  the error code
- *
  * Macro to raise an XPath error and return 0.
+ *
+ * @param X  the error code
  */
 #define XP_ERROR0(X)                                                    \
     { xmlXPathErr(ctxt, X); return(0); }
 
 /**
- * CHECK_TYPE:
- * @typeval:  the XPath type
- *
  * Macro to check that the value on top of the XPath stack is of a given
  * type.
+ *
+ * @param typeval  the XPath type
  */
 #define CHECK_TYPE(typeval)                                             \
     if ((ctxt->value == NULL) || (ctxt->value->type != typeval))        \
         XP_ERROR(XPATH_INVALID_TYPE)
 
 /**
- * CHECK_TYPE0:
- * @typeval:  the XPath type
- *
  * Macro to check that the value on top of the XPath stack is of a given
  * type. Return(0) in case of failure
+ *
+ * @param typeval  the XPath type
  */
 #define CHECK_TYPE0(typeval)                                            \
     if ((ctxt->value == NULL) || (ctxt->value->type != typeval))        \
         XP_ERROR0(XPATH_INVALID_TYPE)
 
 /**
- * CHECK_ARITY:
- * @x:  the number of expected args
- *
  * Macro to check that the number of args passed to an XPath function matches.
+ *
+ * @param x  the number of expected args
  */
 #define CHECK_ARITY(x)                                                  \
     if (ctxt == NULL) return;                                           \
     if (nargs != (x))                                                   \
         XP_ERROR(XPATH_INVALID_ARITY);                                  \
-    if (ctxt->valueNr < ctxt->valueFrame + (x))                         \
+    if (ctxt->valueNr < (x))                                            \
         XP_ERROR(XPATH_STACK_ERROR);
 
 /**
- * CAST_TO_STRING:
- *
  * Macro to try to cast the value on the top of the XPath stack to a string.
  */
 #define CAST_TO_STRING                                                  \
@@ -310,8 +291,6 @@ XMLPUBFUN void * XMLCALL
         xmlXPathStringFunction(ctxt, 1);
 
 /**
- * CAST_TO_NUMBER:
- *
  * Macro to try to cast the value on the top of the XPath stack to a number.
  */
 #define CAST_TO_NUMBER                                                  \
@@ -319,8 +298,6 @@ XMLPUBFUN void * XMLCALL
         xmlXPathNumberFunction(ctxt, 1);
 
 /**
- * CAST_TO_BOOLEAN:
- *
  * Macro to try to cast the value on the top of the XPath stack to a boolean.
  */
 #define CAST_TO_BOOLEAN                                                 \
@@ -331,8 +308,8 @@ XMLPUBFUN void * XMLCALL
  * Variable Lookup forwarding.
  */
 
-XMLPUBFUN void XMLCALL
-        xmlXPathRegisterVariableLookup  (xmlXPathContextPtr ctxt,
+XMLPUBFUN void
+        xmlXPathRegisterVariableLookup  (xmlXPathContext *ctxt,
                                          xmlXPathVariableLookupFunc f,
                                          void *data);
 
@@ -340,289 +317,289 @@ XMLPUBFUN void XMLCALL
  * Function Lookup forwarding.
  */
 
-XMLPUBFUN void XMLCALL
-            xmlXPathRegisterFuncLookup  (xmlXPathContextPtr ctxt,
+XMLPUBFUN void
+            xmlXPathRegisterFuncLookup  (xmlXPathContext *ctxt,
                                          xmlXPathFuncLookupFunc f,
                                          void *funcCtxt);
 
 /*
  * Error reporting.
  */
-XMLPUBFUN void XMLCALL
-                xmlXPatherror   (xmlXPathParserContextPtr ctxt,
+XMLPUBFUN void
+                xmlXPatherror   (xmlXPathParserContext *ctxt,
                                  const char *file,
                                  int line,
                                  int no);
 
-XMLPUBFUN void XMLCALL
-                xmlXPathErr     (xmlXPathParserContextPtr ctxt,
+XMLPUBFUN void
+                xmlXPathErr     (xmlXPathParserContext *ctxt,
                                  int error);
 
 #ifdef LIBXML_DEBUG_ENABLED
-XMLPUBFUN void XMLCALL
+XMLPUBFUN void
                 xmlXPathDebugDumpObject (FILE *output,
-                                         xmlXPathObjectPtr cur,
+                                         xmlXPathObject *cur,
                                          int depth);
-XMLPUBFUN void XMLCALL
+XMLPUBFUN void
             xmlXPathDebugDumpCompExpr(FILE *output,
-                                         xmlXPathCompExprPtr comp,
+                                         xmlXPathCompExpr *comp,
                                          int depth);
 #endif
 /**
  * NodeSet handling.
  */
-XMLPUBFUN int XMLCALL
-                xmlXPathNodeSetContains         (xmlNodeSetPtr cur,
-                                                 xmlNodePtr val);
-XMLPUBFUN xmlNodeSetPtr XMLCALL
-                xmlXPathDifference              (xmlNodeSetPtr nodes1,
-                                                 xmlNodeSetPtr nodes2);
-XMLPUBFUN xmlNodeSetPtr XMLCALL
-                xmlXPathIntersection            (xmlNodeSetPtr nodes1,
-                                                 xmlNodeSetPtr nodes2);
+XMLPUBFUN int
+                xmlXPathNodeSetContains         (xmlNodeSet *cur,
+                                                 xmlNode *val);
+XMLPUBFUN xmlNodeSet *
+                xmlXPathDifference              (xmlNodeSet *nodes1,
+                                                 xmlNodeSet *nodes2);
+XMLPUBFUN xmlNodeSet *
+                xmlXPathIntersection            (xmlNodeSet *nodes1,
+                                                 xmlNodeSet *nodes2);
 
-XMLPUBFUN xmlNodeSetPtr XMLCALL
-                xmlXPathDistinctSorted          (xmlNodeSetPtr nodes);
-XMLPUBFUN xmlNodeSetPtr XMLCALL
-                xmlXPathDistinct                (xmlNodeSetPtr nodes);
+XMLPUBFUN xmlNodeSet *
+                xmlXPathDistinctSorted          (xmlNodeSet *nodes);
+XMLPUBFUN xmlNodeSet *
+                xmlXPathDistinct                (xmlNodeSet *nodes);
 
-XMLPUBFUN int XMLCALL
-                xmlXPathHasSameNodes            (xmlNodeSetPtr nodes1,
-                                                 xmlNodeSetPtr nodes2);
+XMLPUBFUN int
+                xmlXPathHasSameNodes            (xmlNodeSet *nodes1,
+                                                 xmlNodeSet *nodes2);
 
-XMLPUBFUN xmlNodeSetPtr XMLCALL
-                xmlXPathNodeLeadingSorted       (xmlNodeSetPtr nodes,
-                                                 xmlNodePtr node);
-XMLPUBFUN xmlNodeSetPtr XMLCALL
-                xmlXPathLeadingSorted           (xmlNodeSetPtr nodes1,
-                                                 xmlNodeSetPtr nodes2);
-XMLPUBFUN xmlNodeSetPtr XMLCALL
-                xmlXPathNodeLeading             (xmlNodeSetPtr nodes,
-                                                 xmlNodePtr node);
-XMLPUBFUN xmlNodeSetPtr XMLCALL
-                xmlXPathLeading                 (xmlNodeSetPtr nodes1,
-                                                 xmlNodeSetPtr nodes2);
+XMLPUBFUN xmlNodeSet *
+                xmlXPathNodeLeadingSorted       (xmlNodeSet *nodes,
+                                                 xmlNode *node);
+XMLPUBFUN xmlNodeSet *
+                xmlXPathLeadingSorted           (xmlNodeSet *nodes1,
+                                                 xmlNodeSet *nodes2);
+XMLPUBFUN xmlNodeSet *
+                xmlXPathNodeLeading             (xmlNodeSet *nodes,
+                                                 xmlNode *node);
+XMLPUBFUN xmlNodeSet *
+                xmlXPathLeading                 (xmlNodeSet *nodes1,
+                                                 xmlNodeSet *nodes2);
 
-XMLPUBFUN xmlNodeSetPtr XMLCALL
-                xmlXPathNodeTrailingSorted      (xmlNodeSetPtr nodes,
-                                                 xmlNodePtr node);
-XMLPUBFUN xmlNodeSetPtr XMLCALL
-                xmlXPathTrailingSorted          (xmlNodeSetPtr nodes1,
-                                                 xmlNodeSetPtr nodes2);
-XMLPUBFUN xmlNodeSetPtr XMLCALL
-                xmlXPathNodeTrailing            (xmlNodeSetPtr nodes,
-                                                 xmlNodePtr node);
-XMLPUBFUN xmlNodeSetPtr XMLCALL
-                xmlXPathTrailing                (xmlNodeSetPtr nodes1,
-                                                 xmlNodeSetPtr nodes2);
+XMLPUBFUN xmlNodeSet *
+                xmlXPathNodeTrailingSorted      (xmlNodeSet *nodes,
+                                                 xmlNode *node);
+XMLPUBFUN xmlNodeSet *
+                xmlXPathTrailingSorted          (xmlNodeSet *nodes1,
+                                                 xmlNodeSet *nodes2);
+XMLPUBFUN xmlNodeSet *
+                xmlXPathNodeTrailing            (xmlNodeSet *nodes,
+                                                 xmlNode *node);
+XMLPUBFUN xmlNodeSet *
+                xmlXPathTrailing                (xmlNodeSet *nodes1,
+                                                 xmlNodeSet *nodes2);
 
 
 /**
  * Extending a context.
  */
 
-XMLPUBFUN int XMLCALL
-                xmlXPathRegisterNs              (xmlXPathContextPtr ctxt,
+XMLPUBFUN int
+                xmlXPathRegisterNs              (xmlXPathContext *ctxt,
                                                  const xmlChar *prefix,
                                                  const xmlChar *ns_uri);
-XMLPUBFUN const xmlChar * XMLCALL
-                xmlXPathNsLookup                (xmlXPathContextPtr ctxt,
+XMLPUBFUN const xmlChar *
+                xmlXPathNsLookup                (xmlXPathContext *ctxt,
                                                  const xmlChar *prefix);
-XMLPUBFUN void XMLCALL
-                xmlXPathRegisteredNsCleanup     (xmlXPathContextPtr ctxt);
+XMLPUBFUN void
+                xmlXPathRegisteredNsCleanup     (xmlXPathContext *ctxt);
 
-XMLPUBFUN int XMLCALL
-                xmlXPathRegisterFunc            (xmlXPathContextPtr ctxt,
+XMLPUBFUN int
+                xmlXPathRegisterFunc            (xmlXPathContext *ctxt,
                                                  const xmlChar *name,
                                                  xmlXPathFunction f);
-XMLPUBFUN int XMLCALL
-                xmlXPathRegisterFuncNS          (xmlXPathContextPtr ctxt,
+XMLPUBFUN int
+                xmlXPathRegisterFuncNS          (xmlXPathContext *ctxt,
                                                  const xmlChar *name,
                                                  const xmlChar *ns_uri,
                                                  xmlXPathFunction f);
-XMLPUBFUN int XMLCALL
-                xmlXPathRegisterVariable        (xmlXPathContextPtr ctxt,
+XMLPUBFUN int
+                xmlXPathRegisterVariable        (xmlXPathContext *ctxt,
                                                  const xmlChar *name,
-                                                 xmlXPathObjectPtr value);
-XMLPUBFUN int XMLCALL
-                xmlXPathRegisterVariableNS      (xmlXPathContextPtr ctxt,
+                                                 xmlXPathObject *value);
+XMLPUBFUN int
+                xmlXPathRegisterVariableNS      (xmlXPathContext *ctxt,
                                                  const xmlChar *name,
                                                  const xmlChar *ns_uri,
-                                                 xmlXPathObjectPtr value);
-XMLPUBFUN xmlXPathFunction XMLCALL
-                xmlXPathFunctionLookup          (xmlXPathContextPtr ctxt,
+                                                 xmlXPathObject *value);
+XMLPUBFUN xmlXPathFunction
+                xmlXPathFunctionLookup          (xmlXPathContext *ctxt,
                                                  const xmlChar *name);
-XMLPUBFUN xmlXPathFunction XMLCALL
-                xmlXPathFunctionLookupNS        (xmlXPathContextPtr ctxt,
+XMLPUBFUN xmlXPathFunction
+                xmlXPathFunctionLookupNS        (xmlXPathContext *ctxt,
                                                  const xmlChar *name,
                                                  const xmlChar *ns_uri);
-XMLPUBFUN void XMLCALL
-                xmlXPathRegisteredFuncsCleanup  (xmlXPathContextPtr ctxt);
-XMLPUBFUN xmlXPathObjectPtr XMLCALL
-                xmlXPathVariableLookup          (xmlXPathContextPtr ctxt,
+XMLPUBFUN void
+                xmlXPathRegisteredFuncsCleanup  (xmlXPathContext *ctxt);
+XMLPUBFUN xmlXPathObject *
+                xmlXPathVariableLookup          (xmlXPathContext *ctxt,
                                                  const xmlChar *name);
-XMLPUBFUN xmlXPathObjectPtr XMLCALL
-                xmlXPathVariableLookupNS        (xmlXPathContextPtr ctxt,
+XMLPUBFUN xmlXPathObject *
+                xmlXPathVariableLookupNS        (xmlXPathContext *ctxt,
                                                  const xmlChar *name,
                                                  const xmlChar *ns_uri);
-XMLPUBFUN void XMLCALL
-                xmlXPathRegisteredVariablesCleanup(xmlXPathContextPtr ctxt);
+XMLPUBFUN void
+                xmlXPathRegisteredVariablesCleanup(xmlXPathContext *ctxt);
 
 /**
  * Utilities to extend XPath.
  */
-XMLPUBFUN xmlXPathParserContextPtr XMLCALL
+XMLPUBFUN xmlXPathParserContext *
                   xmlXPathNewParserContext      (const xmlChar *str,
-                                                 xmlXPathContextPtr ctxt);
-XMLPUBFUN void XMLCALL
-                xmlXPathFreeParserContext       (xmlXPathParserContextPtr ctxt);
+                                                 xmlXPathContext *ctxt);
+XMLPUBFUN void
+                xmlXPathFreeParserContext       (xmlXPathParserContext *ctxt);
 
-/* TODO: remap to xmlXPathValuePop and Push. */
-XMLPUBFUN xmlXPathObjectPtr XMLCALL
-                valuePop                        (xmlXPathParserContextPtr ctxt);
-XMLPUBFUN int XMLCALL
-                valuePush                       (xmlXPathParserContextPtr ctxt,
-                                                 xmlXPathObjectPtr value);
+XMLPUBFUN xmlXPathObject *
+                xmlXPathValuePop                (xmlXPathParserContext *ctxt);
+XMLPUBFUN int
+                xmlXPathValuePush               (xmlXPathParserContext *ctxt,
+                                                 xmlXPathObject *value);
 
-XMLPUBFUN xmlXPathObjectPtr XMLCALL
+XMLPUBFUN xmlXPathObject *
                 xmlXPathNewString               (const xmlChar *val);
-XMLPUBFUN xmlXPathObjectPtr XMLCALL
+XMLPUBFUN xmlXPathObject *
                 xmlXPathNewCString              (const char *val);
-XMLPUBFUN xmlXPathObjectPtr XMLCALL
+XMLPUBFUN xmlXPathObject *
                 xmlXPathWrapString              (xmlChar *val);
-XMLPUBFUN xmlXPathObjectPtr XMLCALL
+XMLPUBFUN xmlXPathObject *
                 xmlXPathWrapCString             (char * val);
-XMLPUBFUN xmlXPathObjectPtr XMLCALL
+XMLPUBFUN xmlXPathObject *
                 xmlXPathNewFloat                (double val);
-XMLPUBFUN xmlXPathObjectPtr XMLCALL
+XMLPUBFUN xmlXPathObject *
                 xmlXPathNewBoolean              (int val);
-XMLPUBFUN xmlXPathObjectPtr XMLCALL
-                xmlXPathNewNodeSet              (xmlNodePtr val);
-XMLPUBFUN xmlXPathObjectPtr XMLCALL
-                xmlXPathNewValueTree            (xmlNodePtr val);
-XMLPUBFUN int XMLCALL
-                xmlXPathNodeSetAdd              (xmlNodeSetPtr cur,
-                                                 xmlNodePtr val);
-XMLPUBFUN int XMLCALL
-                xmlXPathNodeSetAddUnique        (xmlNodeSetPtr cur,
-                                                 xmlNodePtr val);
-XMLPUBFUN int XMLCALL
-                xmlXPathNodeSetAddNs            (xmlNodeSetPtr cur,
-                                                 xmlNodePtr node,
-                                                 xmlNsPtr ns);
-XMLPUBFUN void XMLCALL
-                xmlXPathNodeSetSort             (xmlNodeSetPtr set);
+XMLPUBFUN xmlXPathObject *
+                xmlXPathNewNodeSet              (xmlNode *val);
+XMLPUBFUN xmlXPathObject *
+                xmlXPathNewValueTree            (xmlNode *val);
+XMLPUBFUN int
+                xmlXPathNodeSetAdd              (xmlNodeSet *cur,
+                                                 xmlNode *val);
+XMLPUBFUN int
+                xmlXPathNodeSetAddUnique        (xmlNodeSet *cur,
+                                                 xmlNode *val);
+XMLPUBFUN int
+                xmlXPathNodeSetAddNs            (xmlNodeSet *cur,
+                                                 xmlNode *node,
+                                                 xmlNs *ns);
+XMLPUBFUN void
+                xmlXPathNodeSetSort             (xmlNodeSet *set);
 
-XMLPUBFUN void XMLCALL
-                xmlXPathRoot                    (xmlXPathParserContextPtr ctxt);
-XMLPUBFUN void XMLCALL
-                xmlXPathEvalExpr                (xmlXPathParserContextPtr ctxt);
-XMLPUBFUN xmlChar * XMLCALL
-                xmlXPathParseName               (xmlXPathParserContextPtr ctxt);
-XMLPUBFUN xmlChar * XMLCALL
-                xmlXPathParseNCName             (xmlXPathParserContextPtr ctxt);
+XMLPUBFUN void
+                xmlXPathRoot                    (xmlXPathParserContext *ctxt);
+XML_DEPRECATED
+XMLPUBFUN void
+                xmlXPathEvalExpr                (xmlXPathParserContext *ctxt);
+XMLPUBFUN xmlChar *
+                xmlXPathParseName               (xmlXPathParserContext *ctxt);
+XMLPUBFUN xmlChar *
+                xmlXPathParseNCName             (xmlXPathParserContext *ctxt);
 
 /*
  * Existing functions.
  */
-XMLPUBFUN double XMLCALL
+XMLPUBFUN double
                 xmlXPathStringEvalNumber        (const xmlChar *str);
-XMLPUBFUN int XMLCALL
-                xmlXPathEvaluatePredicateResult (xmlXPathParserContextPtr ctxt,
-                                                 xmlXPathObjectPtr res);
-XMLPUBFUN void XMLCALL
-                xmlXPathRegisterAllFunctions    (xmlXPathContextPtr ctxt);
-XMLPUBFUN xmlNodeSetPtr XMLCALL
-                xmlXPathNodeSetMerge            (xmlNodeSetPtr val1,
-                                                 xmlNodeSetPtr val2);
-XMLPUBFUN void XMLCALL
-                xmlXPathNodeSetDel              (xmlNodeSetPtr cur,
-                                                 xmlNodePtr val);
-XMLPUBFUN void XMLCALL
-                xmlXPathNodeSetRemove           (xmlNodeSetPtr cur,
+XMLPUBFUN int
+                xmlXPathEvaluatePredicateResult (xmlXPathParserContext *ctxt,
+                                                 xmlXPathObject *res);
+XMLPUBFUN void
+                xmlXPathRegisterAllFunctions    (xmlXPathContext *ctxt);
+XMLPUBFUN xmlNodeSet *
+                xmlXPathNodeSetMerge            (xmlNodeSet *val1,
+                                                 xmlNodeSet *val2);
+XMLPUBFUN void
+                xmlXPathNodeSetDel              (xmlNodeSet *cur,
+                                                 xmlNode *val);
+XMLPUBFUN void
+                xmlXPathNodeSetRemove           (xmlNodeSet *cur,
                                                  int val);
-XMLPUBFUN xmlXPathObjectPtr XMLCALL
-                xmlXPathNewNodeSetList          (xmlNodeSetPtr val);
-XMLPUBFUN xmlXPathObjectPtr XMLCALL
-                xmlXPathWrapNodeSet             (xmlNodeSetPtr val);
-XMLPUBFUN xmlXPathObjectPtr XMLCALL
+XMLPUBFUN xmlXPathObject *
+                xmlXPathNewNodeSetList          (xmlNodeSet *val);
+XMLPUBFUN xmlXPathObject *
+                xmlXPathWrapNodeSet             (xmlNodeSet *val);
+XMLPUBFUN xmlXPathObject *
                 xmlXPathWrapExternal            (void *val);
 
-XMLPUBFUN int XMLCALL xmlXPathEqualValues(xmlXPathParserContextPtr ctxt);
-XMLPUBFUN int XMLCALL xmlXPathNotEqualValues(xmlXPathParserContextPtr ctxt);
-XMLPUBFUN int XMLCALL xmlXPathCompareValues(xmlXPathParserContextPtr ctxt, int inf, int strict);
-XMLPUBFUN void XMLCALL xmlXPathValueFlipSign(xmlXPathParserContextPtr ctxt);
-XMLPUBFUN void XMLCALL xmlXPathAddValues(xmlXPathParserContextPtr ctxt);
-XMLPUBFUN void XMLCALL xmlXPathSubValues(xmlXPathParserContextPtr ctxt);
-XMLPUBFUN void XMLCALL xmlXPathMultValues(xmlXPathParserContextPtr ctxt);
-XMLPUBFUN void XMLCALL xmlXPathDivValues(xmlXPathParserContextPtr ctxt);
-XMLPUBFUN void XMLCALL xmlXPathModValues(xmlXPathParserContextPtr ctxt);
+XMLPUBFUN int xmlXPathEqualValues(xmlXPathParserContext *ctxt);
+XMLPUBFUN int xmlXPathNotEqualValues(xmlXPathParserContext *ctxt);
+XMLPUBFUN int xmlXPathCompareValues(xmlXPathParserContext *ctxt, int inf, int strict);
+XMLPUBFUN void xmlXPathValueFlipSign(xmlXPathParserContext *ctxt);
+XMLPUBFUN void xmlXPathAddValues(xmlXPathParserContext *ctxt);
+XMLPUBFUN void xmlXPathSubValues(xmlXPathParserContext *ctxt);
+XMLPUBFUN void xmlXPathMultValues(xmlXPathParserContext *ctxt);
+XMLPUBFUN void xmlXPathDivValues(xmlXPathParserContext *ctxt);
+XMLPUBFUN void xmlXPathModValues(xmlXPathParserContext *ctxt);
 
-XMLPUBFUN int XMLCALL xmlXPathIsNodeType(const xmlChar *name);
+XMLPUBFUN int xmlXPathIsNodeType(const xmlChar *name);
 
 /*
  * Some of the axis navigation routines.
  */
-XMLPUBFUN xmlNodePtr XMLCALL xmlXPathNextSelf(xmlXPathParserContextPtr ctxt,
-                        xmlNodePtr cur);
-XMLPUBFUN xmlNodePtr XMLCALL xmlXPathNextChild(xmlXPathParserContextPtr ctxt,
-                        xmlNodePtr cur);
-XMLPUBFUN xmlNodePtr XMLCALL xmlXPathNextDescendant(xmlXPathParserContextPtr ctxt,
-                        xmlNodePtr cur);
-XMLPUBFUN xmlNodePtr XMLCALL xmlXPathNextDescendantOrSelf(xmlXPathParserContextPtr ctxt,
-                        xmlNodePtr cur);
-XMLPUBFUN xmlNodePtr XMLCALL xmlXPathNextParent(xmlXPathParserContextPtr ctxt,
-                        xmlNodePtr cur);
-XMLPUBFUN xmlNodePtr XMLCALL xmlXPathNextAncestorOrSelf(xmlXPathParserContextPtr ctxt,
-                        xmlNodePtr cur);
-XMLPUBFUN xmlNodePtr XMLCALL xmlXPathNextFollowingSibling(xmlXPathParserContextPtr ctxt,
-                        xmlNodePtr cur);
-XMLPUBFUN xmlNodePtr XMLCALL xmlXPathNextFollowing(xmlXPathParserContextPtr ctxt,
-                        xmlNodePtr cur);
-XMLPUBFUN xmlNodePtr XMLCALL xmlXPathNextNamespace(xmlXPathParserContextPtr ctxt,
-                        xmlNodePtr cur);
-XMLPUBFUN xmlNodePtr XMLCALL xmlXPathNextAttribute(xmlXPathParserContextPtr ctxt,
-                        xmlNodePtr cur);
-XMLPUBFUN xmlNodePtr XMLCALL xmlXPathNextPreceding(xmlXPathParserContextPtr ctxt,
-                        xmlNodePtr cur);
-XMLPUBFUN xmlNodePtr XMLCALL xmlXPathNextAncestor(xmlXPathParserContextPtr ctxt,
-                        xmlNodePtr cur);
-XMLPUBFUN xmlNodePtr XMLCALL xmlXPathNextPrecedingSibling(xmlXPathParserContextPtr ctxt,
-                        xmlNodePtr cur);
+XMLPUBFUN xmlNode *xmlXPathNextSelf(xmlXPathParserContext *ctxt,
+                        xmlNode *cur);
+XMLPUBFUN xmlNode *xmlXPathNextChild(xmlXPathParserContext *ctxt,
+                        xmlNode *cur);
+XMLPUBFUN xmlNode *xmlXPathNextDescendant(xmlXPathParserContext *ctxt,
+                        xmlNode *cur);
+XMLPUBFUN xmlNode *xmlXPathNextDescendantOrSelf(xmlXPathParserContext *ctxt,
+                        xmlNode *cur);
+XMLPUBFUN xmlNode *xmlXPathNextParent(xmlXPathParserContext *ctxt,
+                        xmlNode *cur);
+XMLPUBFUN xmlNode *xmlXPathNextAncestorOrSelf(xmlXPathParserContext *ctxt,
+                        xmlNode *cur);
+XMLPUBFUN xmlNode *xmlXPathNextFollowingSibling(xmlXPathParserContext *ctxt,
+                        xmlNode *cur);
+XMLPUBFUN xmlNode *xmlXPathNextFollowing(xmlXPathParserContext *ctxt,
+                        xmlNode *cur);
+XMLPUBFUN xmlNode *xmlXPathNextNamespace(xmlXPathParserContext *ctxt,
+                        xmlNode *cur);
+XMLPUBFUN xmlNode *xmlXPathNextAttribute(xmlXPathParserContext *ctxt,
+                        xmlNode *cur);
+XMLPUBFUN xmlNode *xmlXPathNextPreceding(xmlXPathParserContext *ctxt,
+                        xmlNode *cur);
+XMLPUBFUN xmlNode *xmlXPathNextAncestor(xmlXPathParserContext *ctxt,
+                        xmlNode *cur);
+XMLPUBFUN xmlNode *xmlXPathNextPrecedingSibling(xmlXPathParserContext *ctxt,
+                        xmlNode *cur);
 /*
  * The official core of XPath functions.
  */
-XMLPUBFUN void XMLCALL xmlXPathLastFunction(xmlXPathParserContextPtr ctxt, int nargs);
-XMLPUBFUN void XMLCALL xmlXPathPositionFunction(xmlXPathParserContextPtr ctxt, int nargs);
-XMLPUBFUN void XMLCALL xmlXPathCountFunction(xmlXPathParserContextPtr ctxt, int nargs);
-XMLPUBFUN void XMLCALL xmlXPathIdFunction(xmlXPathParserContextPtr ctxt, int nargs);
-XMLPUBFUN void XMLCALL xmlXPathLocalNameFunction(xmlXPathParserContextPtr ctxt, int nargs);
-XMLPUBFUN void XMLCALL xmlXPathNamespaceURIFunction(xmlXPathParserContextPtr ctxt, int nargs);
-XMLPUBFUN void XMLCALL xmlXPathStringFunction(xmlXPathParserContextPtr ctxt, int nargs);
-XMLPUBFUN void XMLCALL xmlXPathStringLengthFunction(xmlXPathParserContextPtr ctxt, int nargs);
-XMLPUBFUN void XMLCALL xmlXPathConcatFunction(xmlXPathParserContextPtr ctxt, int nargs);
-XMLPUBFUN void XMLCALL xmlXPathContainsFunction(xmlXPathParserContextPtr ctxt, int nargs);
-XMLPUBFUN void XMLCALL xmlXPathStartsWithFunction(xmlXPathParserContextPtr ctxt, int nargs);
-XMLPUBFUN void XMLCALL xmlXPathSubstringFunction(xmlXPathParserContextPtr ctxt, int nargs);
-XMLPUBFUN void XMLCALL xmlXPathSubstringBeforeFunction(xmlXPathParserContextPtr ctxt, int nargs);
-XMLPUBFUN void XMLCALL xmlXPathSubstringAfterFunction(xmlXPathParserContextPtr ctxt, int nargs);
-XMLPUBFUN void XMLCALL xmlXPathNormalizeFunction(xmlXPathParserContextPtr ctxt, int nargs);
-XMLPUBFUN void XMLCALL xmlXPathTranslateFunction(xmlXPathParserContextPtr ctxt, int nargs);
-XMLPUBFUN void XMLCALL xmlXPathNotFunction(xmlXPathParserContextPtr ctxt, int nargs);
-XMLPUBFUN void XMLCALL xmlXPathTrueFunction(xmlXPathParserContextPtr ctxt, int nargs);
-XMLPUBFUN void XMLCALL xmlXPathFalseFunction(xmlXPathParserContextPtr ctxt, int nargs);
-XMLPUBFUN void XMLCALL xmlXPathLangFunction(xmlXPathParserContextPtr ctxt, int nargs);
-XMLPUBFUN void XMLCALL xmlXPathNumberFunction(xmlXPathParserContextPtr ctxt, int nargs);
-XMLPUBFUN void XMLCALL xmlXPathSumFunction(xmlXPathParserContextPtr ctxt, int nargs);
-XMLPUBFUN void XMLCALL xmlXPathFloorFunction(xmlXPathParserContextPtr ctxt, int nargs);
-XMLPUBFUN void XMLCALL xmlXPathCeilingFunction(xmlXPathParserContextPtr ctxt, int nargs);
-XMLPUBFUN void XMLCALL xmlXPathRoundFunction(xmlXPathParserContextPtr ctxt, int nargs);
-XMLPUBFUN void XMLCALL xmlXPathBooleanFunction(xmlXPathParserContextPtr ctxt, int nargs);
+XMLPUBFUN void xmlXPathLastFunction(xmlXPathParserContext *ctxt, int nargs);
+XMLPUBFUN void xmlXPathPositionFunction(xmlXPathParserContext *ctxt, int nargs);
+XMLPUBFUN void xmlXPathCountFunction(xmlXPathParserContext *ctxt, int nargs);
+XMLPUBFUN void xmlXPathIdFunction(xmlXPathParserContext *ctxt, int nargs);
+XMLPUBFUN void xmlXPathLocalNameFunction(xmlXPathParserContext *ctxt, int nargs);
+XMLPUBFUN void xmlXPathNamespaceURIFunction(xmlXPathParserContext *ctxt, int nargs);
+XMLPUBFUN void xmlXPathStringFunction(xmlXPathParserContext *ctxt, int nargs);
+XMLPUBFUN void xmlXPathStringLengthFunction(xmlXPathParserContext *ctxt, int nargs);
+XMLPUBFUN void xmlXPathConcatFunction(xmlXPathParserContext *ctxt, int nargs);
+XMLPUBFUN void xmlXPathContainsFunction(xmlXPathParserContext *ctxt, int nargs);
+XMLPUBFUN void xmlXPathStartsWithFunction(xmlXPathParserContext *ctxt, int nargs);
+XMLPUBFUN void xmlXPathSubstringFunction(xmlXPathParserContext *ctxt, int nargs);
+XMLPUBFUN void xmlXPathSubstringBeforeFunction(xmlXPathParserContext *ctxt, int nargs);
+XMLPUBFUN void xmlXPathSubstringAfterFunction(xmlXPathParserContext *ctxt, int nargs);
+XMLPUBFUN void xmlXPathNormalizeFunction(xmlXPathParserContext *ctxt, int nargs);
+XMLPUBFUN void xmlXPathTranslateFunction(xmlXPathParserContext *ctxt, int nargs);
+XMLPUBFUN void xmlXPathNotFunction(xmlXPathParserContext *ctxt, int nargs);
+XMLPUBFUN void xmlXPathTrueFunction(xmlXPathParserContext *ctxt, int nargs);
+XMLPUBFUN void xmlXPathFalseFunction(xmlXPathParserContext *ctxt, int nargs);
+XMLPUBFUN void xmlXPathLangFunction(xmlXPathParserContext *ctxt, int nargs);
+XMLPUBFUN void xmlXPathNumberFunction(xmlXPathParserContext *ctxt, int nargs);
+XMLPUBFUN void xmlXPathSumFunction(xmlXPathParserContext *ctxt, int nargs);
+XMLPUBFUN void xmlXPathFloorFunction(xmlXPathParserContext *ctxt, int nargs);
+XMLPUBFUN void xmlXPathCeilingFunction(xmlXPathParserContext *ctxt, int nargs);
+XMLPUBFUN void xmlXPathRoundFunction(xmlXPathParserContext *ctxt, int nargs);
+XMLPUBFUN void xmlXPathBooleanFunction(xmlXPathParserContext *ctxt, int nargs);
 
 /**
  * Really internal functions
  */
-XMLPUBFUN void XMLCALL xmlXPathNodeSetFreeNs(xmlNsPtr ns);
+XMLPUBFUN void xmlXPathNodeSetFreeNs(xmlNs *ns);
 
 #ifdef __cplusplus
 }

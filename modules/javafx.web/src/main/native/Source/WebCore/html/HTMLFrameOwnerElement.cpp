@@ -22,25 +22,31 @@
 #include "config.h"
 #include "HTMLFrameOwnerElement.h"
 
+#include "ContainerNodeInlines.h"
+#include "FrameInlines.h"
 #include "FrameLoader.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
+#include "FrameDestructionObserverInlines.h"
+#include "NodeInlines.h"
 #include "RemoteFrame.h"
 #include "RemoteFrameClient.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderWidget.h"
 #include "SVGDocument.h"
 #include "SVGElementTypeHelpers.h"
 #include "ScriptController.h"
 #include "ShadowRoot.h"
 #include "StyleTreeResolver.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/Ref.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLFrameOwnerElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLFrameOwnerElement);
 
-HTMLFrameOwnerElement::HTMLFrameOwnerElement(const QualifiedName& tagName, Document& document, ConstructionType constructionType)
+HTMLFrameOwnerElement::HTMLFrameOwnerElement(const QualifiedName& tagName, Document& document, OptionSet<TypeFlag> constructionType)
     : HTMLElement(tagName, document, constructionType)
 {
 }
@@ -49,9 +55,7 @@ RenderWidget* HTMLFrameOwnerElement::renderWidget() const
 {
     // HTMLObjectElement and HTMLEmbedElement may return arbitrary renderers
     // when using fallback content.
-    if (!is<RenderWidget>(renderer()))
-        return nullptr;
-    return downcast<RenderWidget>(renderer());
+    return dynamicDowncast<RenderWidget>(renderer());
 }
 
 void HTMLFrameOwnerElement::setContentFrame(Frame& frame)
@@ -80,17 +84,24 @@ void HTMLFrameOwnerElement::clearContentFrame()
 void HTMLFrameOwnerElement::disconnectContentFrame()
 {
     if (RefPtr frame = m_contentFrame.get()) {
-        if (frame->settings().siteIsolationEnabled())
-            frame->broadcastFrameRemovalToOtherProcesses();
+        if (RefPtr innerDocument = contentDocument())
+            innerDocument->willBeDisconnectedFromFrame(protectedDocument());
         frame->frameDetached();
+        if (frame == m_contentFrame.get())
         frame->disconnectOwnerElement();
+        RELEASE_ASSERT_WITH_SECURITY_IMPLICATION(frame != m_contentFrame.get());
     }
 }
 
 HTMLFrameOwnerElement::~HTMLFrameOwnerElement()
 {
-    if (m_contentFrame)
-        m_contentFrame->disconnectOwnerElement();
+    if (RefPtr contentFrame = m_contentFrame.get())
+        contentFrame->disconnectOwnerElement();
+}
+
+RefPtr<Frame> HTMLFrameOwnerElement::protectedContentFrame() const
+{
+    return m_contentFrame.get();
 }
 
 Document* HTMLFrameOwnerElement::contentDocument() const
@@ -108,11 +119,13 @@ WindowProxy* HTMLFrameOwnerElement::contentWindow() const
 void HTMLFrameOwnerElement::setSandboxFlags(SandboxFlags flags)
 {
     m_sandboxFlags = flags;
+    if (RefPtr contentFrame = m_contentFrame.get())
+        contentFrame->updateSandboxFlags(flags, Frame::NotifyUIProcess::Yes);
 }
 
-bool HTMLFrameOwnerElement::isKeyboardFocusable(KeyboardEvent* event) const
+bool HTMLFrameOwnerElement::isKeyboardFocusable(const FocusEventData& focusEventData) const
 {
-    return m_contentFrame && HTMLElement::isKeyboardFocusable(event);
+    return m_contentFrame && HTMLElement::isKeyboardFocusable(focusEventData);
 }
 
 Document* HTMLFrameOwnerElement::getSVGDocument() const
@@ -136,10 +149,12 @@ void HTMLFrameOwnerElement::scheduleInvalidateStyleAndLayerComposition()
 
 bool HTMLFrameOwnerElement::isProhibitedSelfReference(const URL& completeURL) const
 {
+    if (completeURL.isAboutBlank() || completeURL.isAboutSrcDoc())
+        return false;
     // We allow one level of self-reference because some websites depend on that, but we don't allow more than one.
     bool foundOneSelfReference = false;
-    for (Frame* frame = document().frame(); frame; frame = frame->tree().parent()) {
-        auto* localFrame = dynamicDowncast<LocalFrame>(frame);
+    for (RefPtr<Frame> frame = document().frame(); frame; frame = frame->tree().parent()) {
+        RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
         if (!localFrame)
             continue;
         // Use creationURL() because url() can be changed via History.replaceState() so it's not reliable.
@@ -154,7 +169,7 @@ bool HTMLFrameOwnerElement::isProhibitedSelfReference(const URL& completeURL) co
 
 bool SubframeLoadingDisabler::canLoadFrame(HTMLFrameOwnerElement& owner)
 {
-    for (RefPtr<ContainerNode> node = &owner; node; node = node->parentOrShadowHostNode()) {
+    for (RefPtr<ContainerNode> node = owner; node; node = node->parentOrShadowHostNode()) {
         if (disabledSubtreeRoots().contains(node.get()))
             return false;
     }

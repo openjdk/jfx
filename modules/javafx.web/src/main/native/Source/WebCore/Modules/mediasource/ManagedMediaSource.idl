@@ -31,11 +31,13 @@ enum PreferredQuality {
 
 [
     ActiveDOMObject,
-    Conditional=MANAGED_MEDIA_SOURCE,
+    Conditional=MEDIA_SOURCE,
+    ConditionalForWorker=MEDIA_SOURCE_IN_WORKERS,
     EnabledBySetting=ManagedMediaSourceEnabled,
-    Exposed=Window
+    EnabledForContext,
+    Exposed=(Window,DedicatedWorker)
 ] interface ManagedMediaSource : MediaSource {
-    [CallWith=CurrentScriptExecutionContext] constructor();
+    [CallWith=CurrentScriptExecutionContext] constructor(optional MediaSourceInit init);
 
     readonly attribute PreferredQuality quality;
     attribute EventHandler onqualitychange;

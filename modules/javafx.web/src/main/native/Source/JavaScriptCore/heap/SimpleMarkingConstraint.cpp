@@ -25,22 +25,23 @@
 
 #include "config.h"
 #include "SimpleMarkingConstraint.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SimpleMarkingConstraint);
 
 SimpleMarkingConstraint::SimpleMarkingConstraint(
     CString abbreviatedName, CString name,
     MarkingConstraintExecutorPair&& executors,
     ConstraintVolatility volatility, ConstraintConcurrency concurrency,
     ConstraintParallelism parallelism)
-    : MarkingConstraint(WTFMove(abbreviatedName), WTFMove(name), volatility, concurrency, parallelism)
-    , m_executors(WTFMove(executors))
+    : MarkingConstraint(WTF::move(abbreviatedName), WTF::move(name), volatility, concurrency, parallelism)
+    , m_executors(WTF::move(executors))
 {
 }
 
-SimpleMarkingConstraint::~SimpleMarkingConstraint()
-{
-}
+SimpleMarkingConstraint::~SimpleMarkingConstraint() = default;
 
 template<typename Visitor>
 void SimpleMarkingConstraint::executeImplImpl(Visitor& visitor)

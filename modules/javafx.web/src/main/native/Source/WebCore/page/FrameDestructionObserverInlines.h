@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2022 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,12 +25,17 @@
 
 #pragma once
 
-#include "FrameDestructionObserver.h"
-#include "LocalFrame.h"
+#include <WebCore/FrameDestructionObserver.h>
+#include <WebCore/LocalFrame.h>
 
 namespace WebCore {
 
 inline LocalFrame* FrameDestructionObserver::frame() const
+{
+    return m_frame.get();
+}
+
+inline RefPtr<LocalFrame> FrameDestructionObserver::protectedFrame() const
 {
     return m_frame.get();
 }

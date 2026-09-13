@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008, 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2023 Apple Inc. All rights reserved.
  * Copyright (C) 2008 Matt Lilek <webkit@mattlilek.com>
  * Copyright (C) 2009, 2010 Google Inc. All rights reserved.
  *
@@ -30,12 +30,12 @@
 
 #pragma once
 
-#include "ConsoleTypes.h"
-#include "Strong.h"
-#include <wtf/FastMalloc.h>
+#include <JavaScriptCore/ConsoleTypes.h>
+#include <JavaScriptCore/Strong.h>
 #include <wtf/Forward.h>
 #include <wtf/Logger.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/WTFString.h>
 
 namespace JSC {
@@ -52,17 +52,17 @@ class InjectedScriptManager;
 class ScriptArguments;
 class ScriptCallStack;
 
-class JS_EXPORT_PRIVATE ConsoleMessage {
+class ConsoleMessage {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(ConsoleMessage, JS_EXPORT_PRIVATE);
     WTF_MAKE_NONCOPYABLE(ConsoleMessage);
-    WTF_MAKE_FAST_ALLOCATED;
 public:
-    ConsoleMessage(MessageSource, MessageType, MessageLevel, const String& message, unsigned long requestIdentifier = 0, WallTime timestamp = { });
-    ConsoleMessage(MessageSource, MessageType, MessageLevel, const String& message, const String& url, unsigned line, unsigned column, JSC::JSGlobalObject* = nullptr, unsigned long requestIdentifier = 0, WallTime timestamp = { });
-    ConsoleMessage(MessageSource, MessageType, MessageLevel, const String& message, Ref<ScriptCallStack>&&, unsigned long requestIdentifier = 0, WallTime timestamp = { });
+    JS_EXPORT_PRIVATE ConsoleMessage(MessageSource, MessageType, MessageLevel, const String& message, unsigned long requestIdentifier = 0, WallTime timestamp = { });
+    JS_EXPORT_PRIVATE ConsoleMessage(MessageSource, MessageType, MessageLevel, const String& message, const String& url, unsigned line, unsigned column, JSC::JSGlobalObject* = nullptr, unsigned long requestIdentifier = 0, WallTime timestamp = { });
+    JS_EXPORT_PRIVATE ConsoleMessage(MessageSource, MessageType, MessageLevel, const String& message, Ref<ScriptCallStack>&&, unsigned long requestIdentifier = 0, WallTime timestamp = { });
     ConsoleMessage(MessageSource, MessageType, MessageLevel, const String& message, Ref<ScriptArguments>&&, Ref<ScriptCallStack>&&, unsigned long requestIdentifier = 0, WallTime timestamp = { });
-    ConsoleMessage(MessageSource, MessageType, MessageLevel, const String& message, Ref<ScriptArguments>&&, JSC::JSGlobalObject* = nullptr, unsigned long requestIdentifier = 0, WallTime timestamp = { });
-    ConsoleMessage(MessageSource, MessageType, MessageLevel, Vector<JSONLogValue>&&, JSC::JSGlobalObject*, unsigned long requestIdentifier = 0, WallTime timestamp = { });
-    ~ConsoleMessage();
+    JS_EXPORT_PRIVATE ConsoleMessage(MessageSource, MessageType, MessageLevel, const String& message, Ref<ScriptArguments>&&, JSC::JSGlobalObject* = nullptr, unsigned long requestIdentifier = 0, WallTime timestamp = { });
+    JS_EXPORT_PRIVATE ConsoleMessage(MessageSource, MessageType, MessageLevel, Vector<JSONLogValue>&&, JSC::JSGlobalObject*, unsigned long requestIdentifier = 0, WallTime timestamp = { });
+    JS_EXPORT_PRIVATE ~ConsoleMessage();
 
     void addToFrontend(ConsoleFrontendDispatcher&, InjectedScriptManager&, bool generatePreview);
     void updateRepeatCountInConsole(ConsoleFrontendDispatcher&);
@@ -76,18 +76,18 @@ public:
     unsigned column() const { return m_column; }
     WallTime timestamp() const { return m_timestamp; }
 
-    JSC::JSGlobalObject* globalObject() const;
+    JS_EXPORT_PRIVATE JSC::JSGlobalObject* globalObject() const;
 
     void incrementCount() { ++m_repeatCount; }
 
-    const RefPtr<ScriptArguments>& arguments() const { return m_arguments; }
+    ScriptArguments* arguments() const { return m_arguments.get(); }
     unsigned argumentCount() const;
 
     bool isEqual(ConsoleMessage* msg) const;
 
-    void clear();
+    JS_EXPORT_PRIVATE void clear();
 
-    String toString() const;
+    JS_EXPORT_PRIVATE String toString() const;
 
 private:
     void autogenerateMetadata(JSC::JSGlobalObject* = nullptr);

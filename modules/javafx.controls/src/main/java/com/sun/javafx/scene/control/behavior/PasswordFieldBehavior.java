@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -37,7 +37,7 @@ public class PasswordFieldBehavior extends TextFieldBehavior {
         super(passwordField);
     }
 
-    // RT-18711 & RT-18854: Stub out word based navigation and editing
+    // JDK-8127160 & JDK-8127849: Stub out word based navigation and editing
     // for security reasons.
     @Override
     protected void deletePreviousWord() { }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,16 +25,20 @@
 
 package test.javafx.collections;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInstance;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.ListIterator;
 
-import static org.junit.Assert.assertEquals;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.Arguments;
+import java.util.stream.Stream;
 
 
 /**
@@ -46,98 +50,109 @@ import org.junit.runners.Parameterized;
  * after mutating the sublist via the iterator.
  *
  */
-@RunWith(Parameterized.class)
+
 public class ObservableSubListIteratorTest extends ObservableListIteratorTest {
 
     // ========== Test Fixture ==========
 
     List<String> fullList;
 
-    public ObservableSubListIteratorTest(final Callable<? extends List<String>> listFactory) {
-        super(listFactory);
+    public static Stream<Arguments> createParameters() {
+        return Stream.of(
+                Arguments.of(TestedObservableLists.ARRAY_LIST),
+                Arguments.of(TestedObservableLists.LINKED_LIST),
+                Arguments.of(TestedObservableLists.VETOABLE_LIST),
+                Arguments.of(TestedObservableLists.CHECKED_OBSERVABLE_ARRAY_LIST),
+                Arguments.of(TestedObservableLists.SYNCHRONIZED_OBSERVABLE_ARRAY_LIST)
+        );
     }
 
-    @Parameterized.Parameters
-    public static Collection createParameters() {
-        Object[][] data = new Object[][] {
-            { TestedObservableLists.ARRAY_LIST },
-            { TestedObservableLists.LINKED_LIST },
-            { TestedObservableLists.VETOABLE_LIST },
-            { TestedObservableLists.CHECKED_OBSERVABLE_ARRAY_LIST },
-            { TestedObservableLists.SYNCHRONIZED_OBSERVABLE_ARRAY_LIST }
-         };
-        return Arrays.asList(data);
-    }
-
-    @Before @Override
-    public void setup() throws Exception {
-        list = listFactory.call();
-        list.addAll(
-            Arrays.asList("P", "Q", "a", "b", "c", "d", "e", "f", "R", "S"));
-        fullList = list;
-        list = fullList.subList(2, 8);
-        iter = list.listIterator();
+    private void setup(Callable<? extends List<String>> listFactory) throws Exception {
+        this.listFactory = listFactory;
+        this.list = listFactory.call();
+        this.list.addAll(Arrays.asList("P", "Q", "a", "b", "c", "d", "e", "f", "R", "S"));
+        this.fullList = list;
+        this.list = fullList.subList(2, 8);
+        this.iter = list.listIterator();
     }
 
     // ========== Sublist Iterator Tests ==========
 
-    @Test
-    public void testSubAddBeginning() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSubAddBeginning(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter.add("X");
         assertEquals("[P, Q, X, a, b, c, d, e, f, R, S]", fullList.toString());
     }
 
-    @Test
-    public void testSubAddMiddle() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSubAddMiddle(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         advance(iter, 3);
         iter.add("X");
         assertEquals("[P, Q, a, b, c, X, d, e, f, R, S]", fullList.toString());
     }
 
-    @Test
-    public void testSubAddEnd() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSubAddEnd(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         toEnd(iter);
         iter.add("X");
         assertEquals("[P, Q, a, b, c, d, e, f, X, R, S]", fullList.toString());
     }
 
-    @Test
-    public void testSubRemoveBeginning() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSubRemoveBeginning(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter.next();
         iter.remove();
         assertEquals("[P, Q, b, c, d, e, f, R, S]", fullList.toString());
     }
 
-    @Test
-    public void testSubRemoveMiddle() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSubRemoveMiddle(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         advance(iter, 3);
         iter.remove();
         assertEquals("[P, Q, a, b, d, e, f, R, S]", fullList.toString());
     }
 
-    @Test
-    public void testSubRemoveEnd() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSubRemoveEnd(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         toEnd(iter);
         iter.remove();
         assertEquals("[P, Q, a, b, c, d, e, R, S]", fullList.toString());
     }
 
-    @Test
-    public void testSubSetBeginning() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSubSetBeginning(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         iter.next();
         iter.set("X");
         assertEquals("[P, Q, X, b, c, d, e, f, R, S]", fullList.toString());
     }
 
-    @Test
-    public void testSubSetMiddle() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSubSetMiddle(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         advance(iter, 3);
         iter.set("X");
         assertEquals("[P, Q, a, b, X, d, e, f, R, S]", fullList.toString());
     }
 
-    @Test
-    public void testSubSetEnd() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void testSubSetEnd(Callable<? extends List<String>> listFactory) throws Exception {
+        setup(listFactory);
         toEnd(iter);
         iter.set("X");
         assertEquals("[P, Q, a, b, c, d, e, X, R, S]", fullList.toString());

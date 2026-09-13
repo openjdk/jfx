@@ -1,7 +1,7 @@
 /*
  *  Copyright (C) 1999-2000 Harri Porten (porten@kde.org)
  *  Copyright (C) 2001 Peter Kelly (pmk@post.com)
- *  Copyright (C) 2003-2021 Apple Inc. All rights reserved.
+ *  Copyright (C) 2003-2024 Apple Inc. All rights reserved.
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -21,10 +21,10 @@
 
 #pragma once
 
-#include "BlockDirectory.h"
-#include "MarkedBlock.h"
-#include "MarkedBlockSet.h"
-#include "PreciseAllocation.h"
+#include <JavaScriptCore/BlockDirectory.h>
+#include <JavaScriptCore/MarkedBlock.h>
+#include <JavaScriptCore/MarkedBlockSet.h>
+#include <JavaScriptCore/PreciseAllocation.h>
 #include <array>
 #include <wtf/Bag.h>
 #include <wtf/HashSet.h>
@@ -96,7 +96,7 @@ public:
     MarkedSpace(Heap*);
     ~MarkedSpace();
 
-    Heap& heap() const;
+    JSC::Heap& heap() const;
 
     void lastChanceToFinalize(); // Must call stopAllocatingForGood first.
     void freeMemory();
@@ -108,7 +108,7 @@ public:
     void reapWeakSets();
 
     template<typename Visitor>
-    Ref<SharedTask<void(Visitor&)>> forEachWeakInParallel();
+    Ref<SharedTask<void(Visitor&)>> forEachWeakInParallel(Visitor&);
 
     MarkedBlockSet& blocks() { return m_blocks; }
 
@@ -124,7 +124,7 @@ public:
 
     void prepareForConservativeScan();
 
-    typedef HashSet<MarkedBlock*>::iterator BlockIterator;
+    typedef UncheckedKeyHashSet<MarkedBlock*>::iterator BlockIterator;
 
     template<typename Functor> void forEachLiveCell(HeapIterationScope&, const Functor&);
     template<typename Functor> void forEachDeadCell(HeapIterationScope&, const Functor&);
@@ -133,11 +133,13 @@ public:
 
     void shrink();
     void freeBlock(MarkedBlock::Handle*);
-    void freeOrShrinkBlock(MarkedBlock::Handle*);
 
     void didAddBlock(MarkedBlock::Handle*);
     void didConsumeFreeList(MarkedBlock::Handle*);
     void didAllocateInBlock(MarkedBlock::Handle*);
+
+    // FIXME: rdar://139998916
+    MarkedBlock::Handle* findMarkedBlockHandleDebug(MarkedBlock*);
 
     void beginMarking();
     void endMarking();
@@ -154,11 +156,13 @@ public:
 
     HeapVersion markingVersion() const { return m_markingVersion; }
     HeapVersion newlyAllocatedVersion() const { return m_newlyAllocatedVersion; }
+    HeapVersion edenVersion() const { return m_edenVersion; }
 
+    void registerPreciseAllocation(PreciseAllocation*, bool isNewAllocation);
     const Vector<PreciseAllocation*>& preciseAllocations() const { return m_preciseAllocations; }
     unsigned preciseAllocationsNurseryOffset() const { return m_preciseAllocationsNurseryOffset; }
     unsigned preciseAllocationsOffsetForThisCollection() const { return m_preciseAllocationsOffsetForThisCollection; }
-    HashSet<HeapCell*>* preciseAllocationSet() const { return m_preciseAllocationSet.get(); }
+    std::optional<UncheckedKeyHashSet<HeapCell*>>& preciseAllocationSet() { return m_preciseAllocationSet; }
 
     void enablePreciseAllocationTracking();
 
@@ -202,7 +206,7 @@ private:
 
     Vector<Subspace*> m_subspaces;
 
-    std::unique_ptr<HashSet<HeapCell*>> m_preciseAllocationSet;
+    std::optional<UncheckedKeyHashSet<HeapCell*>> m_preciseAllocationSet;
     Vector<PreciseAllocation*> m_preciseAllocations;
     unsigned m_preciseAllocationsNurseryOffset { 0 };
     unsigned m_preciseAllocationsOffsetForThisCollection { 0 };
@@ -214,6 +218,7 @@ private:
     size_t m_capacity { 0 };
     HeapVersion m_markingVersion { initialVersion };
     HeapVersion m_newlyAllocatedVersion { initialVersion };
+    HeapVersion m_edenVersion { initialVersion };
     bool m_isIterating { false };
     bool m_isMarking { false };
     Lock m_directoryLock;

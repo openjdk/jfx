@@ -30,10 +30,10 @@ typedef (CSSNumberish or CSSKeywordish) CSSColorPercent;
 
 // https://drafts.css-houdini.org/css-typed-om/#cssrgb
 [
-    EnabledBySetting=CSSTypedOMEnabled&CSSTypedOMColorEnabled,
+    EnabledBySetting=CSSTypedOMColorEnabled,
     Exposed=(Window,Worker,PaintWorklet/*,LayoutWorklet*/),
     JSGenerateToNativeObject,
-] interface CSSRGB : CSSColorValue {
+] interface CSSRGB : CSSOMColorValue {
     constructor(CSSColorRGBComp r, CSSColorRGBComp g, CSSColorRGBComp b, optional CSSColorPercent alpha = 1.0);
     attribute CSSColorRGBComp r;
     attribute CSSColorRGBComp g;

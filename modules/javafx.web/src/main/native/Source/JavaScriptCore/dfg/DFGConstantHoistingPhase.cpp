@@ -40,7 +40,7 @@ namespace {
 class ConstantHoistingPhase : public Phase {
 public:
     ConstantHoistingPhase(Graph& graph)
-        : Phase(graph, "constant hoisting")
+        : Phase(graph, "constant hoisting"_s)
     {
     }
 
@@ -50,14 +50,15 @@ public:
 
         m_graph.clearReplacements();
 
-        HashMap<FrozenValue*, Node*> jsValues;
-        HashMap<FrozenValue*, Node*> doubleValues;
-        HashMap<FrozenValue*, Node*> int52Values;
+        UncheckedKeyHashMap<FrozenValue*, Node*> jsValues;
+        UncheckedKeyHashMap<FrozenValue*, Node*> doubleValues;
+        UncheckedKeyHashMap<FrozenValue*, Node*> int52Values;
+        UncheckedKeyHashMap<void*, Node*> storagePointerValues;
 
-        auto valuesFor = [&] (NodeType op) -> HashMap<FrozenValue*, Node*>& {
+        auto valuesFor = [&] (NodeType op) -> UncheckedKeyHashMap<FrozenValue*, Node*>& {
             // Use a roundabout approach because clang thinks that this closure returning a
             // reference to a stack-allocated value in outer scope is a bug. It's not.
-            HashMap<FrozenValue*, Node*>* result;
+            UncheckedKeyHashMap<FrozenValue*, Node*>* result;
 
             switch (op) {
             case JSConstant:
@@ -89,8 +90,18 @@ public:
                 case JSConstant:
                 case DoubleConstant:
                 case Int52Constant: {
-                    HashMap<FrozenValue*, Node*>& values = valuesFor(node->op());
+                    UncheckedKeyHashMap<FrozenValue*, Node*>& values = valuesFor(node->op());
                     auto result = values.add(node->constant(), node);
+                    if (result.isNewEntry)
+                        node->origin = m_graph.block(0)->at(0)->origin;
+                    else {
+                        node->setReplacement(result.iterator->value);
+                        toFree.append(node);
+                    }
+                    break;
+                }
+                case ConstantStoragePointer: {
+                    auto result = storagePointerValues.add(node->storagePointer(), node);
                     if (result.isNewEntry)
                         node->origin = m_graph.block(0)->at(0)->origin;
                     else {
@@ -109,13 +120,14 @@ public:
 
         // Insert the constants into the root block.
         InsertionSet insertionSet(m_graph);
-        auto insertConstants = [&] (const HashMap<FrozenValue*, Node*>& values) {
-            for (auto& entry : values)
-                insertionSet.insert(0, entry.value);
+        auto insertConstants = [&] (const auto& map) {
+            for (auto& value : map.values())
+                insertionSet.insert(0, value);
         };
         insertConstants(jsValues);
         insertConstants(doubleValues);
         insertConstants(int52Values);
+        insertConstants(storagePointerValues);
         insertionSet.execute(m_graph.block(0));
 
         // Perform all of the substitutions. We want all instances of the removed constants to

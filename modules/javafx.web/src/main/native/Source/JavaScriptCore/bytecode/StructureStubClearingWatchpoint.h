@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,25 +28,47 @@
 #if ENABLE(JIT)
 
 #include "AdaptiveInferredPropertyValueWatchpointBase.h"
+#include "CodeBlock.h"
 #include "ObjectPropertyCondition.h"
+#include "PackedCellPtr.h"
 #include "Watchpoint.h"
 #include <wtf/Bag.h>
-#include <wtf/FastMalloc.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
 class CodeBlock;
 class StructureStubInfo;
-class WatchpointsOnStructureStubInfo;
+
+class StructureStubInfoClearingWatchpoint final : public Watchpoint {
+    WTF_MAKE_NONCOPYABLE(StructureStubInfoClearingWatchpoint);
+    WTF_MAKE_TZONE_ALLOCATED(StructureStubInfoClearingWatchpoint);
+public:
+    StructureStubInfoClearingWatchpoint(CodeBlock* owner, StructureStubInfo& stubInfo)
+        : Watchpoint(Watchpoint::Type::StructureStubInfoClearing)
+        , m_owner(owner)
+        , m_stubInfo(stubInfo)
+    {
+    }
+
+    ~StructureStubInfoClearingWatchpoint();
+
+    void fireInternal(VM&, const FireDetail&);
+
+private:
+    PackedCellPtr<CodeBlock> m_owner;
+    StructureStubInfo& m_stubInfo;
+};
 
 class StructureTransitionStructureStubClearingWatchpoint final : public Watchpoint {
     WTF_MAKE_NONCOPYABLE(StructureTransitionStructureStubClearingWatchpoint);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(StructureTransitionStructureStubClearingWatchpoint);
 public:
-    StructureTransitionStructureStubClearingWatchpoint(const ObjectPropertyCondition& key, WatchpointsOnStructureStubInfo& holder)
+    StructureTransitionStructureStubClearingWatchpoint(PolymorphicAccessJITStubRoutine* owner, const ObjectPropertyCondition& key, WatchpointSet& watchpointSet)
         : Watchpoint(Watchpoint::Type::StructureTransitionStructureStubClearing)
-        , m_holder(&holder)
+        , m_owner(owner)
+        , m_watchpointSet(watchpointSet)
         , m_key(key)
     {
     }
@@ -54,62 +76,32 @@ public:
     void fireInternal(VM&, const FireDetail&);
 
 private:
-    PackedPtr<WatchpointsOnStructureStubInfo> m_holder;
+    PolymorphicAccessJITStubRoutine* m_owner;
+    const Ref<WatchpointSet> m_watchpointSet;
     ObjectPropertyCondition m_key;
 };
 
 class AdaptiveValueStructureStubClearingWatchpoint final : public AdaptiveInferredPropertyValueWatchpointBase {
     using Base = AdaptiveInferredPropertyValueWatchpointBase;
     WTF_MAKE_NONCOPYABLE(AdaptiveValueStructureStubClearingWatchpoint);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(AdaptiveValueStructureStubClearingWatchpoint);
 
+    bool isValid() const final { return !m_owner->ownerIsDead(); }
     void handleFire(VM&, const FireDetail&) final;
 
 public:
-    AdaptiveValueStructureStubClearingWatchpoint(const ObjectPropertyCondition& key, WatchpointsOnStructureStubInfo& holder)
+    AdaptiveValueStructureStubClearingWatchpoint(PolymorphicAccessJITStubRoutine* owner, const ObjectPropertyCondition& key, WatchpointSet& watchpointSet)
         : Base(key)
-        , m_holder(&holder)
+        , m_owner(owner)
+        , m_watchpointSet(watchpointSet)
     {
         RELEASE_ASSERT(key.condition().kind() == PropertyCondition::Equivalence);
     }
 
 
 private:
-    PackedPtr<WatchpointsOnStructureStubInfo> m_holder;
-};
-
-class WatchpointsOnStructureStubInfo final {
-    WTF_MAKE_NONCOPYABLE(WatchpointsOnStructureStubInfo);
-    WTF_MAKE_FAST_ALLOCATED;
-public:
-    WatchpointsOnStructureStubInfo(CodeBlock* codeBlock, StructureStubInfo* stubInfo)
-        : m_codeBlock(codeBlock)
-        , m_stubInfo(stubInfo)
-    {
-    }
-
-    using Node = std::variant<StructureTransitionStructureStubClearingWatchpoint, AdaptiveValueStructureStubClearingWatchpoint>;
-
-    Node& addWatchpoint(const ObjectPropertyCondition& key);
-
-    static void ensureReferenceAndInstallWatchpoint(
-        std::unique_ptr<WatchpointsOnStructureStubInfo>& holderRef,
-        CodeBlock*, StructureStubInfo*, const ObjectPropertyCondition& key);
-    static Watchpoint* ensureReferenceAndAddWatchpoint(
-        std::unique_ptr<WatchpointsOnStructureStubInfo>& holderRef,
-        CodeBlock*, StructureStubInfo*);
-
-    CodeBlock* codeBlock() const { return m_codeBlock; }
-    StructureStubInfo* stubInfo() const { return m_stubInfo; }
-
-    bool isValid() const;
-
-private:
-    CodeBlock* const m_codeBlock;
-    StructureStubInfo* const m_stubInfo;
-    // FIXME: use less memory for the entries in this Bag:
-    // https://bugs.webkit.org/show_bug.cgi?id=202380
-    Bag<std::variant<StructureTransitionStructureStubClearingWatchpoint, AdaptiveValueStructureStubClearingWatchpoint>> m_watchpoints;
+    PolymorphicAccessJITStubRoutine* m_owner;
+    const Ref<WatchpointSet> m_watchpointSet;
 };
 
 } // namespace JSC

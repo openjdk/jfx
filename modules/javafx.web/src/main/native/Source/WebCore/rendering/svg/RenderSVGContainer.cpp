@@ -25,35 +25,33 @@
 #include "config.h"
 #include "RenderSVGContainer.h"
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "GraphicsContext.h"
 #include "HitTestRequest.h"
 #include "HitTestResult.h"
 #include "LayoutRepainter.h"
+#include "RenderElementStyleInlines.h"
 #include "RenderIterator.h"
 #include "RenderLayer.h"
 #include "RenderTreeBuilder.h"
 #include "RenderView.h"
 #include "SVGContainerLayout.h"
 #include "SVGLayerTransformUpdater.h"
-#include "SVGRenderingContext.h"
-#include "SVGResources.h"
-#include "SVGResourcesCache.h"
-#include <wtf/IsoMallocInlines.h>
+#include "SVGVisitedRendererTracking.h"
 #include <wtf/SetForScope.h>
 #include <wtf/StackStats.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGContainer);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderSVGContainer);
 
-RenderSVGContainer::RenderSVGContainer(Document& document, RenderStyle&& style)
-    : RenderSVGModelObject(document, WTFMove(style))
+RenderSVGContainer::RenderSVGContainer(Type type, Document& document, RenderStyle&& style, OptionSet<SVGModelObjectFlag> svgFlags)
+    : RenderSVGModelObject(type, document, WTF::move(style), svgFlags | SVGModelObjectFlag::IsContainer)
 {
 }
 
-RenderSVGContainer::RenderSVGContainer(SVGElement& element, RenderStyle&& style)
-    : RenderSVGModelObject(element, WTFMove(style))
+RenderSVGContainer::RenderSVGContainer(Type type, SVGElement& element, RenderStyle&& style, OptionSet<SVGModelObjectFlag> svgFlags)
+    : RenderSVGModelObject(type, element, WTF::move(style), svgFlags | SVGModelObjectFlag::IsContainer)
 {
 }
 
@@ -64,7 +62,8 @@ void RenderSVGContainer::layout()
     StackStats::LayoutCheckPoint layoutCheckPoint;
     ASSERT(needsLayout());
 
-    LayoutRepainter repainter(*this, checkForRepaintDuringLayout(), RepaintOutlineBounds::No);
+    auto checkForRepaintOverride = isRenderSVGResourceMarker() ? std::make_optional(LayoutRepainter::CheckForRepaint::No) : std::nullopt;
+    LayoutRepainter repainter(*this, checkForRepaintOverride);
 
     // Update layer transform before laying out children (SVG needs access to the transform matrices during layout for on-screen text font-size calculations).
     // Eventually re-update if the transform reference box, relevant for transform-origin, has changed during layout.
@@ -80,10 +79,6 @@ void RenderSVGContainer::layout()
         layoutChildren();
     }
 
-    // Invalidate all resources of this client if our layout changed.
-    if (everHadLayout() && needsLayout())
-        SVGResourcesCache::clientLayoutChanged(*this);
-
     repainter.repaintAfterLayout();
     clearNeedsLayout();
 }
@@ -91,10 +86,11 @@ void RenderSVGContainer::layout()
 void RenderSVGContainer::layoutChildren()
 {
     SVGContainerLayout containerLayout(*this);
-    containerLayout.layoutChildren(selfNeedsLayout() || SVGRenderSupport::filtersForceContainerLayout(*this));
+    containerLayout.layoutChildren(selfNeedsLayout());
 
     SVGBoundingBoxComputation boundingBoxComputation(*this);
     m_objectBoundingBox = boundingBoxComputation.computeDecoratedBoundingBox(SVGBoundingBoxComputation::objectBoundingBoxDecoration, &m_objectBoundingBoxValid);
+    m_strokeBoundingBox = std::nullopt;
 
     if (auto objectBoundingBoxWithoutTransformations = overridenObjectBoundingBoxWithoutTransformations())
         m_objectBoundingBoxWithoutTransformations = objectBoundingBoxWithoutTransformations.value();
@@ -103,10 +99,20 @@ void RenderSVGContainer::layoutChildren()
         m_objectBoundingBoxWithoutTransformations = boundingBoxComputation.computeDecoratedBoundingBox(objectBoundingBoxDecorationWithoutTransformations);
     }
 
-    m_strokeBoundingBox = boundingBoxComputation.computeDecoratedBoundingBox(SVGBoundingBoxComputation::strokeBoundingBoxDecoration);
     setCurrentSVGLayoutRect(enclosingLayoutRect(m_objectBoundingBoxWithoutTransformations));
 
     containerLayout.positionChildrenRelativeToContainer();
+}
+
+FloatRect RenderSVGContainer::strokeBoundingBox() const
+{
+    if (!m_strokeBoundingBox) {
+        // Initialize m_strokeBoundingBox before calling computeDecoratedBoundingBox, since recursively referenced markers can cause us to re-enter here.
+        m_strokeBoundingBox = FloatRect { };
+        SVGBoundingBoxComputation boundingBoxComputation(*this);
+        m_strokeBoundingBox = boundingBoxComputation.computeDecoratedBoundingBox(SVGBoundingBoxComputation::strokeBoundingBoxDecoration);
+    }
+    return *m_strokeBoundingBox;
 }
 
 void RenderSVGContainer::paint(PaintInfo& paintInfo, const LayoutPoint& paintOffset)
@@ -116,15 +122,13 @@ void RenderSVGContainer::paint(PaintInfo& paintInfo, const LayoutPoint& paintOff
         return;
 
     if (paintInfo.phase == PaintPhase::ClippingMask) {
-        // FIXME: [LBSE] Upstream SVGRenderSupport changes
-        // SVGRenderSupport::paintSVGClippingMask(*this, paintInfo);
+        paintSVGClippingMask(paintInfo, objectBoundingBox());
         return;
     }
 
     auto adjustedPaintOffset = paintOffset + currentSVGLayoutLocation();
     if (paintInfo.phase == PaintPhase::Mask) {
-        // FIXME: [LBSE] Upstream SVGRenderSupport changes
-        // SVGRenderSupport::paintSVGMask(*this, paintInfo, adjustedPaintOffset);
+        paintSVGMask(paintInfo, adjustedPaintOffset);
         return;
     }
 
@@ -134,8 +138,7 @@ void RenderSVGContainer::paint(PaintInfo& paintInfo, const LayoutPoint& paintOff
         return;
 
     if (paintInfo.phase == PaintPhase::Outline || paintInfo.phase == PaintPhase::SelfOutline) {
-        // FIXME: [LBSE] Upstream outline painting
-        // paintSVGOutline(paintInfo, adjustedPaintOffset);
+        paintSVGOutline(paintInfo, adjustedPaintOffset);
         return;
     }
 
@@ -151,22 +154,30 @@ bool RenderSVGContainer::nodeAtPoint(const HitTestRequest& request, HitTestResul
     if (!locationInContainer.intersects(visualOverflowRect))
         return false;
 
+    static NeverDestroyed<SVGVisitedRendererTracking::VisitedSet> s_visitedSet;
+
+    SVGVisitedRendererTracking recursionTracking(s_visitedSet);
+    if (recursionTracking.isVisiting(*this))
+        return false;
+
+    SVGVisitedRendererTracking::Scope recursionScope(recursionTracking, *this);
+
     auto localPoint = locationInContainer.point();
     auto coordinateSystemOriginTranslation = nominalSVGLayoutLocation() - adjustedLocation;
     localPoint.move(coordinateSystemOriginTranslation);
 
-    if (!SVGRenderSupport::pointInClippingArea(*this, localPoint))
+    if (!pointInSVGClippingArea(localPoint))
         return false;
 
     // Give RenderSVGViewportContainer a chance to apply its viewport clip.
     if (!pointIsInsideViewportClip(localPoint))
         return false;
 
-    SVGHitTestCycleDetectionScope hitTestScope(*this);
+
     for (auto* child = lastChild(); child; child = child->previousSibling()) {
         if (!child->hasLayer() && child->nodeAtPoint(request, result, locationInContainer, adjustedLocation, hitTestAction)) {
             updateHitTestResult(result, locationInContainer.point() - toLayoutSize(adjustedLocation));
-            if (result.addNodeToListBasedTestResult(child->node(), request, locationInContainer, visualOverflowRect) == HitTestProgress::Stop)
+            if (result.addNodeToListBasedTestResult(child->protectedNode().get(), request, locationInContainer, visualOverflowRect) == HitTestProgress::Stop)
                 return true;
         }
     }
@@ -174,15 +185,22 @@ bool RenderSVGContainer::nodeAtPoint(const HitTestRequest& request, HitTestResul
     // Accessibility wants to return SVG containers, if appropriate.
     if (request.type() & HitTestRequest::Type::AccessibilityHitTest && m_objectBoundingBox.contains(localPoint)) {
         updateHitTestResult(result, locationInContainer.point() - toLayoutSize(adjustedLocation));
-        if (result.addNodeToListBasedTestResult(nodeForHitTest(), request, locationInContainer, visualOverflowRect) == HitTestProgress::Stop)
+        if (result.addNodeToListBasedTestResult(protectedNodeForHitTest().get(), request, locationInContainer, visualOverflowRect) == HitTestProgress::Stop)
             return true;
     }
 
-    // Spec: Only graphical elements can be targeted by the mouse, period.
+    // pointer-events=bounding-box makes it possible for containers to be direct targets.
+    if (style().pointerEvents() == PointerEvents::BoundingBox) {
+        if (!isObjectBoundingBoxValid())
+            return false;
+        if (objectBoundingBox().contains(localPoint)) {
+            updateHitTestResult(result, LayoutPoint(localPoint));
+            return true;
+        }
+    }
     // 16.4: "If there are no graphics elements whose relevant graphics content is under the pointer (i.e., there is no target element), the event is not dispatched."
     return false;
 }
 
 }
 
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

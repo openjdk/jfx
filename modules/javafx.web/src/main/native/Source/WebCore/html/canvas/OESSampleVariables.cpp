@@ -28,28 +28,23 @@
 #if ENABLE(WEBGL)
 #include "OESSampleVariables.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(OESSampleVariables);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(OESSampleVariables);
 
 OESSampleVariables::OESSampleVariables(WebGLRenderingContextBase& context)
-    : WebGLExtension(context)
+    : WebGLExtension(context, WebGLExtensionName::OESSampleVariables)
 {
-    context.graphicsContextGL()->ensureExtensionEnabled("GL_OES_sample_variables"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::OES_sample_variables);
 }
 
 OESSampleVariables::~OESSampleVariables() = default;
 
-WebGLExtension::ExtensionName OESSampleVariables::getName() const
-{
-    return OESSampleVariablesName;
-}
-
 bool OESSampleVariables::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_OES_sample_variables"_s);
+    return context.supportsExtension(GCGLExtension::OES_sample_variables);
 }
 
 } // namespace WebCore

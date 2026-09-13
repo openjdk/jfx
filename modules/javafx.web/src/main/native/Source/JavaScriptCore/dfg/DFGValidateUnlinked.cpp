@@ -40,7 +40,7 @@ class ValidateUnlinked final : public Phase {
 
 public:
     ValidateUnlinked(Graph& graph)
-        : Phase(graph, "uDFG validation")
+        : Phase(graph, "uDFG validation"_s)
     {
     }
 
@@ -65,7 +65,7 @@ bool ValidateUnlinked::validateNode(Node* node)
 {
     JSGlobalObject* globalObject = m_graph.globalObjectFor(node->origin.semantic);
     if (globalObject != m_graph.m_codeBlock->globalObject()) {
-        if (UNLIKELY(Options::dumpUnlinkedDFGValidation())) {
+        if (Options::dumpUnlinkedDFGValidation()) [[unlikely]] {
             m_graph.logAssertionFailure(node, __FILE__, __LINE__, WTF_PRETTY_FUNCTION, "Bad GlobalObject");
             dataLogLn(RawPointer(globalObject), " != ", RawPointer(m_graph.m_codeBlock->globalObject()));
         }

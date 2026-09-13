@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2005, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2005, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,20 +25,15 @@
 
 package com.sun.javafx.reflect;
 
+import com.sun.javafx.SecurityUtil;
 import java.security.AllPermission;
-import java.security.AccessController;
 import java.security.PermissionCollection;
 import java.security.SecureClassLoader;
-import java.security.PrivilegedExceptionAction;
 import java.security.CodeSource;
 import java.io.InputStream;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Modifier;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
 
 
 class Trampoline {
@@ -53,13 +48,11 @@ class Trampoline {
         }
     }
 
-    @SuppressWarnings("removal")
     private static void ensureInvocableMethod(Method m)
         throws InvocationTargetException
     {
         Class<?> clazz = m.getDeclaringClass();
-        if (clazz.equals(AccessController.class) ||
-            clazz.equals(Method.class) ||
+        if (clazz.equals(Method.class) ||
             clazz.getName().startsWith("java.lang.invoke."))
             throw new InvocationTargetException(
                 new UnsupportedOperationException("invocation not supported"));
@@ -77,6 +70,12 @@ class Trampoline {
  * Create a trampoline class.
  */
 public final class MethodUtil extends SecureClassLoader {
+
+    static {
+        // Check for security manager (throws exception if enabled)
+        SecurityUtil.checkSecurityManager();
+    }
+
     private static final String MISC_PKG = "com.sun.javafx.reflect.";
     private static final String TRAMPOLINE = MISC_PKG + "Trampoline";
     private static final Method bounce = getTrampoline();
@@ -94,163 +93,6 @@ public final class MethodUtil extends SecureClassLoader {
     public static Method[] getMethods(Class<?> cls) {
         ReflectUtil.checkPackageAccess(cls);
         return cls.getMethods();
-    }
-
-    /*
-     * Discover the public methods on public classes
-     * and interfaces accessible to any caller by calling
-     * Class.getMethods() and walking towards Object until
-     * we're done.
-     */
-    /*public*/
-    @SuppressWarnings("removal")
-    static Method[] getPublicMethods(Class<?> cls) {
-        // compatibility for update release
-        if (System.getSecurityManager() == null) {
-            return cls.getMethods();
-        }
-        Map<Signature, Method> sigs = new HashMap<>();
-        while (cls != null) {
-            boolean done = getInternalPublicMethods(cls, sigs);
-            if (done) {
-                break;
-            }
-            getInterfaceMethods(cls, sigs);
-            cls = cls.getSuperclass();
-        }
-        return sigs.values().toArray(new Method[sigs.size()]);
-    }
-
-    /*
-     * Process the immediate interfaces of this class or interface.
-     */
-    private static void getInterfaceMethods(Class<?> cls,
-                                            Map<Signature, Method> sigs) {
-        Class<?>[] intfs = cls.getInterfaces();
-        for (int i=0; i < intfs.length; i++) {
-            Class<?> intf = intfs[i];
-            boolean done = getInternalPublicMethods(intf, sigs);
-            if (!done) {
-                getInterfaceMethods(intf, sigs);
-            }
-        }
-    }
-
-    /*
-     *
-     * Process the methods in this class or interface
-     */
-    private static boolean getInternalPublicMethods(Class<?> cls,
-                                                    Map<Signature, Method> sigs) {
-        Method[] methods = null;
-        try {
-            /*
-             * This class or interface is non-public so we
-             * can't use any of it's methods. Go back and
-             * try again with a superclass or superinterface.
-             */
-            if (!Modifier.isPublic(cls.getModifiers())) {
-                return false;
-            }
-            if (!ReflectUtil.isPackageAccessible(cls)) {
-                return false;
-            }
-
-            methods = cls.getMethods();
-        } catch (SecurityException se) {
-            return false;
-        }
-
-        /*
-         * Check for inherited methods with non-public
-         * declaring classes. They might override and hide
-         * methods from their superclasses or
-         * superinterfaces.
-         */
-        boolean done = true;
-        for (int i=0; i < methods.length; i++) {
-            Class<?> dc = methods[i].getDeclaringClass();
-            if (!Modifier.isPublic(dc.getModifiers())) {
-                done = false;
-                break;
-            }
-        }
-
-        if (done) {
-            /*
-             * We're done. Spray all the methods into
-             * the list and then we're out of here.
-             */
-            for (int i=0; i < methods.length; i++) {
-                addMethod(sigs, methods[i]);
-            }
-        } else {
-            /*
-             * Simulate cls.getDeclaredMethods() by
-             * stripping away inherited methods.
-             */
-            for (int i=0; i < methods.length; i++) {
-                Class<?> dc = methods[i].getDeclaringClass();
-                if (cls.equals(dc)) {
-                    addMethod(sigs, methods[i]);
-                }
-            }
-        }
-        return done;
-    }
-
-    private static void addMethod(Map<Signature, Method> sigs, Method method) {
-        Signature signature = new Signature(method);
-        if (!sigs.containsKey(signature)) {
-            sigs.put(signature, method);
-        } else if (!method.getDeclaringClass().isInterface()){
-            /*
-             * Superclasses beat interfaces.
-             */
-            Method old = sigs.get(signature);
-            if (old.getDeclaringClass().isInterface()) {
-                sigs.put(signature, method);
-            }
-        }
-    }
-
-    /**
-     * A class that represents the unique elements of a method that will be a
-     * key in the method cache.
-     */
-    private static class Signature {
-        private final String methodName;
-        private final Class<?>[] argClasses;
-        private final int hashCode;
-
-        Signature(Method m) {
-            this.methodName = m.getName();
-            this.argClasses = m.getParameterTypes();
-            this.hashCode = methodName.hashCode() + Arrays.hashCode(argClasses);
-        }
-
-        @Override public int hashCode() {
-            return hashCode;
-        }
-
-        @Override public boolean equals(Object o2) {
-            if (this == o2) {
-                return true;
-            }
-            Signature that = (Signature)o2;
-            if (!(methodName.equals(that.methodName))) {
-                return false;
-            }
-            if (argClasses.length != that.argClasses.length) {
-                return false;
-            }
-            for (int i = 0; i < argClasses.length; i++) {
-                if (!(argClasses[i] == that.argClasses[i])) {
-                  return false;
-                }
-            }
-            return true;
-        }
     }
 
 
@@ -288,22 +130,15 @@ public final class MethodUtil extends SecureClassLoader {
         }
     }
 
-    @SuppressWarnings("removal")
     private static Method getTrampoline() {
         try {
-            return AccessController.doPrivileged(
-                new PrivilegedExceptionAction<Method>() {
-                    @Override
-                    public Method run() throws Exception {
-                        Class<?> t = getTrampolineClass();
-                        Class<?>[] types = {
-                            Method.class, Object.class, Object[].class
-                        };
-                        Method b = t.getDeclaredMethod("invoke", types);
-                        b.setAccessible(true);
-                        return b;
-                    }
-                });
+            Class<?> t = getTrampolineClass();
+            Class<?>[] types = {
+                Method.class, Object.class, Object[].class
+            };
+            Method b = t.getDeclaredMethod("invoke", types);
+            b.setAccessible(true);
+            return b;
         } catch (Exception e) {
             throw new InternalError("bouncer cannot be found", e);
         }

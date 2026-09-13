@@ -36,6 +36,7 @@
 #include "SyntheticModuleRecord.h"
 #include "VMTrapsInlines.h"
 #include "WebAssemblyModuleRecord.h"
+#include <wtf/text/MakeString.h>
 
 namespace JSC {
 namespace AbstractModuleRecordInternal {
@@ -78,9 +79,9 @@ void AbstractModuleRecord::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 
 DEFINE_VISIT_CHILDREN(AbstractModuleRecord);
 
-void AbstractModuleRecord::appendRequestedModule(const Identifier& moduleName, RefPtr<ScriptFetchParameters>&& assertions)
+void AbstractModuleRecord::appendRequestedModule(const Identifier& moduleName, RefPtr<ScriptFetchParameters>&& attributes)
 {
-    m_requestedModules.append({ moduleName.impl(), WTFMove(assertions) });
+    m_requestedModules.append({ moduleName.impl(), WTF::move(attributes) });
 }
 
 void AbstractModuleRecord::addStarExportEntry(const Identifier& moduleName)
@@ -496,7 +497,7 @@ auto AbstractModuleRecord::resolveExportImpl(JSGlobalObject* globalObject, const
     //  4. Once we follow star links, we should not retrieve the result from the cache and should not cache the result.
     //  5. Once we see star links, even if we have not yet traversed that star link path, we should disable caching.
 
-    using ResolveSet = WTF::HashSet<ResolveQuery, ResolveQuery::Hash, ResolveQuery::HashTraits>;
+    using ResolveSet = WTF::UncheckedKeyHashSet<ResolveQuery, ResolveQuery::Hash, ResolveQuery::HashTraits>;
     enum class Type { Query, IndirectFallback, GatherStars };
     struct Task {
         ResolveQuery query;
@@ -719,7 +720,7 @@ static void getExportedNames(JSGlobalObject* globalObject, AbstractModuleRecord*
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    HashSet<AbstractModuleRecord*> exportStarSet;
+    UncheckedKeyHashSet<AbstractModuleRecord*> exportStarSet;
     Vector<AbstractModuleRecord*, 8> pendingModules;
 
     pendingModules.append(root);
@@ -775,12 +776,12 @@ JSModuleNamespaceObject* AbstractModuleRecord::getModuleNamespace(JSGlobalObject
             break;
 
         case Resolution::Type::Resolved:
-            resolutions.append({ WTFMove(ident), resolution });
+            resolutions.append({ WTF::move(ident), resolution });
             break;
         }
     }
 
-    auto* moduleNamespaceObject = JSModuleNamespaceObject::create(globalObject, globalObject->moduleNamespaceObjectStructure(), this, WTFMove(resolutions));
+    auto* moduleNamespaceObject = JSModuleNamespaceObject::create(globalObject, globalObject->moduleNamespaceObjectStructure(), this, WTF::move(resolutions));
     RETURN_IF_EXCEPTION(scope, nullptr);
 
     // Materialize *namespace* slot with module namespace object unless the module environment is not yet materialized, in which case we'll do it in setModuleEnvironment
@@ -872,7 +873,7 @@ void AbstractModuleRecord::dump()
 
     dataLog("    Dependencies: ", m_requestedModules.size(), " modules\n");
     for (const auto& request : m_requestedModules)
-        dataLogLn("      module(", printableName(request.m_specifier), "),assertions(", RawPointer(request.m_assertions.get()), ")");
+        dataLogLn("      module(", printableName(request.m_specifier), "),attributes(", RawPointer(request.m_attributes.get()), ")");
 
     dataLog("    Import: ", m_importEntries.size(), " entries\n");
     for (const auto& pair : m_importEntries) {

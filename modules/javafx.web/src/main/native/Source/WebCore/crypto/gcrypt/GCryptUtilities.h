@@ -58,7 +58,9 @@ static const std::array<uint8_t, 1> s_asn1Version0 { { 0x00 } };
 static const std::array<uint8_t, 1> s_asn1Version1 { { 0x01 } };
 
 static const std::array<uint8_t, 1> s_ecUncompressedFormatLeadingByte { { 0x04 } };
+static const std::array<uint8_t, 1> s_x25519UncompressedFormatLeadingByte { { 0x40 } };
 
+IGNORE_CLANG_WARNINGS_BEGIN("unsafe-buffer-usage-in-libc-call")
 template<size_t N>
 static inline bool matches(const void* lhs, size_t size, const std::array<uint8_t, N>& rhs)
 {
@@ -67,10 +69,11 @@ static inline bool matches(const void* lhs, size_t size, const std::array<uint8_
 
     return !std::memcmp(lhs, rhs.data(), rhs.size());
 }
+IGNORE_CLANG_WARNINGS_END
 
 } // namespace CryptoConstants
 
-std::optional<const char*> hashAlgorithmName(CryptoAlgorithmIdentifier);
+ASCIILiteral hashAlgorithmName(CryptoAlgorithmIdentifier);
 
 std::optional<int> hmacAlgorithm(CryptoAlgorithmIdentifier);
 std::optional<int> digestAlgorithm(CryptoAlgorithmIdentifier);

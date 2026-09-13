@@ -27,6 +27,7 @@
 #include "ISOTrackEncryptionBox.h"
 
 #include <JavaScriptCore/DataView.h>
+#include <wtf/StdLibExtras.h>
 
 using JSC::DataView;
 
@@ -86,7 +87,7 @@ bool ISOTrackEncryptionBox::parsePayload(DataView& view, unsigned& offset)
     if (keyIDBuffer->byteLength() < 16)
         return false;
 
-    memcpy(m_defaultKID.data(), keyIDBuffer->data(), 16);
+    memcpySpan(m_defaultKID.mutableSpan(), keyIDBuffer->span().first(16));
 
     if (m_defaultIsProtected == 1 && !m_defaultPerSampleIVSize) {
         int8_t defaultConstantIVSize = 0;
@@ -99,9 +100,9 @@ bool ISOTrackEncryptionBox::parsePayload(DataView& view, unsigned& offset)
             int8_t character = 0;
             if (!checkedRead<int8_t>(character, view, offset, BigEndian))
                 return false;
-            defaultConstantIV.uncheckedAppend(character);
+            defaultConstantIV.append(character);
         }
-        m_defaultConstantIV = WTFMove(defaultConstantIV);
+        m_defaultConstantIV = WTF::move(defaultConstantIV);
     }
 
     return true;

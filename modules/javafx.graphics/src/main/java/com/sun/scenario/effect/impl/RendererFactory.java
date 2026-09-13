@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,8 +26,6 @@
 package com.sun.scenario.effect.impl;
 
 import java.lang.reflect.Method;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import com.sun.javafx.PlatformUtil;
 import com.sun.scenario.effect.FilterContext;
 
@@ -179,40 +177,37 @@ class RendererFactory {
         return r;
     }
 
-    @SuppressWarnings("removal")
     static Renderer createRenderer(final FilterContext fctx) {
-        return AccessController.doPrivileged((PrivilegedAction<Renderer>) () -> {
-            Renderer r = null;
-            // Class.getSimpleName is not available on CDC
-            String klassName = fctx.getClass().getName();
-            String simpleName = klassName.substring(klassName.lastIndexOf(".") + 1);
+        Renderer r = null;
+        // Class.getSimpleName is not available on CDC
+        String klassName = fctx.getClass().getName();
+        String simpleName = klassName.substring(klassName.lastIndexOf(".") + 1);
 
-            if (simpleName.equals("PrFilterContext") && tryPrism) {
-                r = createPrismRenderer(fctx);
-            }
-            // check to see whether one of the hardware accelerated
-            // Java 2D pipelines is in use and exposes the necessary
-            // "resource sharing layer" APIs (only in Sun's JDK 6u10 and above)
-            if (r == null && tryRSL && isRSLAvailable(fctx)) {
-                // try locating an RSLRenderer (need to use reflection in case
-                // certain RSL backend classes are not available;
-                // this step will trigger lazy downloading of impl jars
-                // via JNLP, if not already available)
-                r = createRSLRenderer(fctx);
-            }
-            if (r == null && tryJOGL) {
-                // next try the JOGL renderer
-                r = createJOGLRenderer(fctx);
-            }
-            if (r == null && trySIMD) {
-                // next try the SSE renderer
-                r = getSSERenderer();
-            }
-            if (r == null) {
-                // otherwise, fall back on the Java/CPU renderer
-                r = getJavaRenderer(fctx);
-            }
-            return r;
-        });
+        if (simpleName.equals("PrFilterContext") && tryPrism) {
+            r = createPrismRenderer(fctx);
+        }
+        // check to see whether one of the hardware accelerated
+        // Java 2D pipelines is in use and exposes the necessary
+        // "resource sharing layer" APIs (only in Sun's JDK 6u10 and above)
+        if (r == null && tryRSL && isRSLAvailable(fctx)) {
+            // try locating an RSLRenderer (need to use reflection in case
+            // certain RSL backend classes are not available;
+            // this step will trigger lazy downloading of impl jars
+            // via JNLP, if not already available)
+            r = createRSLRenderer(fctx);
+        }
+        if (r == null && tryJOGL) {
+            // next try the JOGL renderer
+            r = createJOGLRenderer(fctx);
+        }
+        if (r == null && trySIMD) {
+            // next try the SSE renderer
+            r = getSSERenderer();
+        }
+        if (r == null) {
+            // otherwise, fall back on the Java/CPU renderer
+            r = getJavaRenderer(fctx);
+        }
+        return r;
     }
 }

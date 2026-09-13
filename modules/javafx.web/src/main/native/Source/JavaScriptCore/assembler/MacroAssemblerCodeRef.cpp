@@ -55,14 +55,14 @@ CString MacroAssemblerCodeRefBase::disassembly(CodePtr<DisassemblyPtrTag> codePt
 
 bool shouldDumpDisassemblyFor(CodeBlock* codeBlock)
 {
-    if (codeBlock && JITCode::isOptimizingJIT(codeBlock->jitType()) && Options::dumpDFGDisassembly())
+    if (codeBlock && JSC::JITCode::isOptimizingJIT(codeBlock->jitType()) && Options::dumpDFGDisassembly())
         return true;
     return Options::dumpDisassembly();
 }
 
 bool shouldDumpDisassemblyFor(Wasm::CompilationMode mode)
 {
-    if (Options::asyncDisassembly() || Options::dumpDisassembly() || Options::dumpWasmDisassembly())
+    if (Options::dumpDisassembly() || Options::dumpWasmDisassembly())
         return true;
     if (Wasm::isAnyBBQ(mode))
         return Options::dumpBBQDisassembly();

@@ -41,7 +41,7 @@ static inline void shrinkToFit(T& segmentedVector)
 
 template<typename Traits>
 BytecodeGeneratorBase<Traits>::BytecodeGeneratorBase(typename Traits::CodeBlock codeBlock, uint32_t virtualRegisterCountForCalleeSaves)
-    : m_codeBlock(WTFMove(codeBlock))
+    : m_codeBlock(WTF::move(codeBlock))
 {
     allocateCalleeSaveSpace(virtualRegisterCountForCalleeSaves);
 }
@@ -178,6 +178,18 @@ RegisterID* BytecodeGeneratorBase<Traits>::newTemporary()
     RegisterID* result = newRegister();
     result->setTemporary();
     return result;
+}
+
+template<typename Traits>
+template<typename Functor>
+void BytecodeGeneratorBase<Traits>::newTemporaries(size_t count, const Functor& func)
+{
+    reclaimFreeRegisters();
+    for (size_t index = 0; index < count; ++index) {
+        RegisterID* result = newRegister();
+        result->setTemporary();
+        func(result);
+    }
 }
 
 // Adds an anonymous local var slot. To give this slot a name, add it to symbolTable().

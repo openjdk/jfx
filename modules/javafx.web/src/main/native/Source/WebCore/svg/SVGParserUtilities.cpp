@@ -2,7 +2,8 @@
  * Copyright (C) 2002, 2003 The Karbon Developers
  * Copyright (C) 2006 Alexander Kellett <lypanov@kde.org>
  * Copyright (C) 2006, 2007 Rob Buis <buis@kde.org>
- * Copyright (C) 2007-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2018 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -32,7 +33,7 @@
 
 namespace WebCore {
 
-template <typename FloatType> static inline bool isValidRange(const FloatType& x)
+template <typename FloatType> static inline bool isValidRange(const FloatType x)
 {
     static const FloatType max = std::numeric_limits<FloatType>::max();
     return x >= -max && x <= max;
@@ -44,16 +45,8 @@ template <typename FloatType> static inline bool isValidRange(const FloatType& x
 // FIXME: Can this be shared/replaced with number parsing in WTF?
 template <typename CharacterType, typename FloatType = float> static std::optional<FloatType> genericParseNumber(StringParsingBuffer<CharacterType>& buffer, SuffixSkippingPolicy skip = SuffixSkippingPolicy::Skip)
 {
-    FloatType number = 0;
-    FloatType integer = 0;
-    FloatType decimal = 0;
-    FloatType frac = 1;
-    FloatType exponent = 0;
-    int sign = 1;
-    int expsign = 1;
-    auto start = buffer.position();
-
     // read the sign
+    int sign = 1;
     if (buffer.hasCharactersRemaining() && *buffer == '+')
         ++buffer;
     else if (buffer.hasCharactersRemaining() && *buffer == '-') {
@@ -65,16 +58,17 @@ template <typename CharacterType, typename FloatType = float> static std::option
         return std::nullopt;
 
     // read the integer part, build right-to-left
-    auto ptrStartIntPart = buffer.position();
+    auto spanDigitsStart = buffer.span();
 
     // Advance to first non-digit.
     skipWhile<isASCIIDigit>(buffer);
 
-    if (buffer.position() != ptrStartIntPart) {
-        auto ptrScanIntPart = buffer.position() - 1;
+    FloatType integer = 0;
+    if (buffer.position() > spanDigitsStart.data()) {
+        size_t indexScanIntPart = buffer.position() - spanDigitsStart.data();
         FloatType multiplier = 1;
-        while (ptrScanIntPart >= ptrStartIntPart) {
-            integer += multiplier * static_cast<FloatType>(*(ptrScanIntPart--) - '0');
+        for (size_t i = indexScanIntPart; i > 0; --i) {
+            integer += multiplier * static_cast<FloatType>(spanDigitsStart[i - 1] - '0');
             multiplier *= 10;
         }
         // Bail out early if this overflows.
@@ -83,6 +77,7 @@ template <typename CharacterType, typename FloatType = float> static std::option
     }
 
     // read the decimals
+    FloatType decimal = 0;
     if (buffer.hasCharactersRemaining() && *buffer == '.') {
         ++buffer;
 
@@ -90,47 +85,63 @@ template <typename CharacterType, typename FloatType = float> static std::option
         if (buffer.atEnd() || !isASCIIDigit(*buffer))
             return std::nullopt;
 
-        while (buffer.hasCharactersRemaining() && isASCIIDigit(*buffer))
-            decimal += (*(buffer++) - '0') * (frac *= static_cast<FloatType>(0.1));
+        FloatType frac = 1;
+        while (buffer.hasCharactersRemaining() && isASCIIDigit(*buffer)) {
+            frac *= static_cast<FloatType>(0.1);
+            decimal += (*(buffer++) - '0') * frac;
+    }
     }
 
+    // When we get here we should have consumed either a digit for the integer
+    // part or a fractional part (with at least one digit after the '.'.)
+    ASSERT(spanDigitsStart.data() != buffer.position());
+
+    FloatType number = 0;
+    number = integer + decimal;
+    number *= sign;
+
     // read the exponent part
-    if (buffer.position() != start && buffer.position() + 1 < buffer.end() && (*buffer == 'e' || *buffer == 'E')
+    if (buffer.span().size() > 1 && (*buffer == 'e' || *buffer == 'E')
         && (buffer[1] != 'x' && buffer[1] != 'm')) {
         ++buffer;
 
         // read the sign of the exponent
+        bool exponentIsNegative = false;
         if (*buffer == '+')
             ++buffer;
         else if (*buffer == '-') {
             ++buffer;
-            expsign = -1;
+            exponentIsNegative = true;
         }
 
         // There must be an exponent
         if (buffer.atEnd() || !isASCIIDigit(*buffer))
             return std::nullopt;
 
+        FloatType exponent = 0;
         while (buffer.hasCharactersRemaining() && isASCIIDigit(*buffer)) {
             exponent *= static_cast<FloatType>(10);
             exponent += *buffer++ - '0';
         }
-        // Make sure exponent is valid.
-        if (!isValidRange(exponent) || exponent > std::numeric_limits<FloatType>::max_exponent)
+
+        // FIXME: This is unnecessairly strict - the position of the decimal point
+        // is not taken into account when limiting 'exponent'.
+        if (exponentIsNegative)
+            exponent = -exponent;
+        // Fail if the exponent is greater than the largest positive power of ten
+        // (that would yield a representable float).
+        if (exponent > std::numeric_limits<FloatType>::max_exponent10)
             return std::nullopt;
-    }
 
-    number = integer + decimal;
-    number *= sign;
-
+        // If the exponent is smaller than smallest negative power of 10 (that
+        // would yield a representable float), then rely on the pow()+rounding to
+        // produce a reasonable result (likely zero.)
     if (exponent)
-        number *= static_cast<FloatType>(pow(10.0, expsign * static_cast<int>(exponent)));
+            number *= static_cast<FloatType>(std::pow(10.0, exponent));
+    }
 
     // Don't return Infinity() or NaN().
     if (!isValidRange(number))
-        return std::nullopt;
-
-    if (start == buffer.position())
         return std::nullopt;
 
     if (skip == SuffixSkippingPolicy::Skip)
@@ -139,12 +150,12 @@ template <typename CharacterType, typename FloatType = float> static std::option
     return number;
 }
 
-std::optional<float> parseNumber(StringParsingBuffer<LChar>& buffer, SuffixSkippingPolicy skip)
+std::optional<float> parseNumber(StringParsingBuffer<Latin1Character>& buffer, SuffixSkippingPolicy skip)
 {
     return genericParseNumber(buffer, skip);
 }
 
-std::optional<float> parseNumber(StringParsingBuffer<UChar>& buffer, SuffixSkippingPolicy skip)
+std::optional<float> parseNumber(StringParsingBuffer<char16_t>& buffer, SuffixSkippingPolicy skip)
 {
     return genericParseNumber(buffer, skip);
 }
@@ -182,12 +193,12 @@ template <typename CharacterType> std::optional<bool> genericParseArcFlag(String
     return flag;
 }
 
-std::optional<bool> parseArcFlag(StringParsingBuffer<LChar>& buffer)
+std::optional<bool> parseArcFlag(StringParsingBuffer<Latin1Character>& buffer)
 {
     return genericParseArcFlag(buffer);
 }
 
-std::optional<bool> parseArcFlag(StringParsingBuffer<UChar>& buffer)
+std::optional<bool> parseArcFlag(StringParsingBuffer<char16_t>& buffer)
 {
     return genericParseArcFlag(buffer);
 }
@@ -262,35 +273,35 @@ std::optional<HashSet<String>> parseGlyphName(StringView string)
 {
     // FIXME: Parsing error detection is missing.
 
-    return readCharactersForParsing(string, [](auto buffer) -> HashSet<String> {
+    return readCharactersForParsing(string, [](auto buffer) {
         skipOptionalSVGSpaces(buffer);
 
         HashSet<String> values;
 
         while (buffer.hasCharactersRemaining()) {
             // Leading and trailing white space, and white space before and after separators, will be ignored.
-            auto inputStart = buffer.position();
+            auto inputStart = buffer.span();
 
             skipUntil(buffer, ',');
 
-            if (buffer.position() == inputStart)
+            if (buffer.position() == inputStart.data())
                 break;
 
-            // walk backwards from the ; to ignore any whitespace
-            auto inputEnd = buffer.position() - 1;
-            while (inputStart < inputEnd && isSVGSpace(*inputEnd))
-                --inputEnd;
+            // Walk backwards from the ; to ignore any whitespace.
+            size_t index = buffer.position() - inputStart.data();
+            while (index > 0 && isASCIIWhitespace(inputStart[index - 1]))
+                --index;
 
-            values.add(String(inputStart, inputEnd - inputStart + 1));
+            values.add(inputStart.first(index));
             skipOptionalSVGSpacesOrDelimiter(buffer, ',');
         }
         return values;
     });
-
 }
 
-template<typename CharacterType> static std::optional<UnicodeRange> parseUnicodeRange(StringParsingBuffer<CharacterType> buffer)
+template<typename CharacterType> static std::optional<UnicodeRange> parseUnicodeRange(std::span<const CharacterType> span)
 {
+    StringParsingBuffer buffer { span };
     unsigned length = buffer.lengthRemaining();
     if (length < 2 || buffer[0] != 'U' || buffer[1] != '+')
         return std::nullopt;
@@ -378,10 +389,10 @@ std::optional<std::pair<UnicodeRanges, HashSet<String>>> parseKerningUnicodeStri
                 break;
 
             // Try to parse unicode range first
-            if (auto range = parseUnicodeRange(StringParsingBuffer { inputStart, buffer.position() }))
-                rangeList.append(WTFMove(*range));
+            if (auto range = parseUnicodeRange(std::span { inputStart, buffer.position() }))
+                rangeList.append(WTF::move(*range));
             else
-                stringList.add(String(inputStart, buffer.position() - inputStart));
+                stringList.add(String({ inputStart, buffer.position() }));
 
             if (buffer.atEnd())
                 break;
@@ -389,7 +400,7 @@ std::optional<std::pair<UnicodeRanges, HashSet<String>>> parseKerningUnicodeStri
             ++buffer;
         }
 
-        return std::make_pair(WTFMove(rangeList), WTFMove(stringList));
+        return std::make_pair(WTF::move(rangeList), WTF::move(stringList));
     });
 }
 
@@ -406,12 +417,12 @@ template <typename CharacterType> static std::optional<FloatPoint> genericParseF
     return FloatPoint { *x, *y };
 }
 
-std::optional<FloatPoint> parseFloatPoint(StringParsingBuffer<LChar>& buffer)
+std::optional<FloatPoint> parseFloatPoint(StringParsingBuffer<Latin1Character>& buffer)
 {
     return genericParseFloatPoint(buffer);
 }
 
-std::optional<FloatPoint> parseFloatPoint(StringParsingBuffer<UChar>& buffer)
+std::optional<FloatPoint> parseFloatPoint(StringParsingBuffer<char16_t>& buffer)
 {
     return genericParseFloatPoint(buffer);
 }

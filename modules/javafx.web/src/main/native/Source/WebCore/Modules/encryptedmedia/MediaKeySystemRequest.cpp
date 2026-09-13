@@ -27,7 +27,8 @@
 
 #if ENABLE(ENCRYPTED_MEDIA)
 
-#include "Document.h"
+#include "ContextDestructionObserverInlines.h"
+#include "DocumentPage.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSMediaKeySystemAccess.h"
 #include "LocalFrame.h"
@@ -40,44 +41,42 @@
 
 namespace WebCore {
 
-Ref<MediaKeySystemRequest> MediaKeySystemRequest::create(Document& document, const String& keySystem, Ref<DeferredPromise>&& promise)
+Ref<MediaKeySystemRequest> MediaKeySystemRequest::create(Document& document, const String& keySystem, RefPtr<DeferredPromise>&& promise)
 {
-    auto result = adoptRef(*new MediaKeySystemRequest(document, keySystem, WTFMove(promise)));
+    auto result = adoptRef(*new MediaKeySystemRequest(document, keySystem, WTF::move(promise)));
     result->suspendIfNeeded();
     return result;
 }
 
-MediaKeySystemRequest::MediaKeySystemRequest(Document& document, const String& keySystem, Ref<DeferredPromise>&& promise)
+MediaKeySystemRequest::MediaKeySystemRequest(Document& document, const String& keySystem, RefPtr<DeferredPromise>&& promise)
     : ActiveDOMObject(document)
-    , m_identifier(MediaKeySystemRequestIdentifier::generate())
     , m_keySystem(keySystem)
-    , m_promise(WTFMove(promise))
+    , m_promise(WTF::move(promise))
 {
 }
 
 MediaKeySystemRequest::~MediaKeySystemRequest()
 {
     if (m_allowCompletionHandler)
-        m_allowCompletionHandler(WTFMove(m_promise));
+        m_allowCompletionHandler({ }, WTF::move(m_promise));
 }
 
 SecurityOrigin* MediaKeySystemRequest::topLevelDocumentOrigin() const
 {
-    auto* context = scriptExecutionContext();
+    RefPtr context = scriptExecutionContext();
     return context ? &context->topOrigin() : nullptr;
 }
 
 void MediaKeySystemRequest::start()
 {
-    auto* context = scriptExecutionContext();
-    ASSERT(context);
-    if (!context) {
+    RefPtr document = this->document();
+    ASSERT(document);
+    if (!document) {
         deny();
         return;
     }
 
-    auto& document = downcast<Document>(*context);
-    auto* controller = MediaKeySystemController::from(document.page());
+    auto* controller = MediaKeySystemController::from(document->protectedPage().get());
     if (!controller) {
         deny();
         return;
@@ -86,12 +85,14 @@ void MediaKeySystemRequest::start()
     controller->requestMediaKeySystem(*this);
 }
 
-void MediaKeySystemRequest::allow(CompletionHandler<void()>&& completionHandler)
+void MediaKeySystemRequest::allow(String&& mediaKeysHashSalt)
 {
-    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [this, handler = WTFMove(completionHandler)]() mutable {
-        auto completionHandler = WTFMove(m_allowCompletionHandler);
-        completionHandler(WTFMove(m_promise));
-        handler();
+    if (!scriptExecutionContext())
+        return;
+
+    queueTaskKeepingObjectAlive(*this, TaskSource::UserInteraction, [mediaKeysHashSalt = WTF::move(mediaKeysHashSalt)](auto& request) mutable {
+        if (auto allowCompletionHandler = std::exchange(request.m_allowCompletionHandler, { }))
+            allowCompletionHandler(WTF::move(mediaKeysHashSalt), WTF::move(request.m_promise));
     });
 }
 
@@ -100,23 +101,22 @@ void MediaKeySystemRequest::deny(const String& message)
     if (!scriptExecutionContext())
         return;
 
-    ExceptionCode code = NotSupportedError;
+    RefPtr promise = m_promise;
+    if (!promise)
+        return;
+
+    ExceptionCode code = ExceptionCode::NotSupportedError;
     if (!message.isEmpty())
-        m_promise->reject(code, message);
+        promise->reject(code, message);
     else
-        m_promise->reject(code);
+        promise->reject(code);
 }
 
 void MediaKeySystemRequest::stop()
 {
-    auto& document = downcast<Document>(*scriptExecutionContext());
-    if (auto* controller = MediaKeySystemController::from(document.page()))
+    Ref document = *this->document();
+    if (auto* controller = MediaKeySystemController::from(document->protectedPage().get()))
         controller->cancelMediaKeySystemRequest(*this);
-}
-
-const char* MediaKeySystemRequest::activeDOMObjectName() const
-{
-    return "MediaKeySystemRequest";
 }
 
 Document* MediaKeySystemRequest::document() const

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,9 @@
 
 package javafx.scene.chart;
 
+import java.util.Iterator;
 import javafx.animation.FadeTransition;
 import javafx.animation.ParallelTransition;
-import javafx.application.Platform;
 import javafx.beans.NamedArg;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -35,13 +35,13 @@ import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
 import javafx.scene.layout.StackPane;
 import javafx.util.Duration;
-
 import com.sun.javafx.charts.Legend.LegendItem;
-
-import java.util.Iterator;
 
 /**
  * Chart type that plots symbols for the data points in a series.
+ *
+ * @param <X> the X axis value type
+ * @param <Y> the Y axis value type
  * @since JavaFX 2.0
  */
 public class ScatterChart<X,Y> extends XYChart<X,Y> {
@@ -82,7 +82,7 @@ public class ScatterChart<X,Y> extends XYChart<X,Y> {
             symbol = new StackPane();
             symbol.setAccessibleRole(AccessibleRole.TEXT);
             symbol.setAccessibleRoleDescription("Point");
-            symbol.focusTraversableProperty().bind(Platform.accessibilityActiveProperty());
+            symbol.setFocusTraversable(isAccessibilityActive());
             item.setNode(symbol);
         }
         // set symbol styles

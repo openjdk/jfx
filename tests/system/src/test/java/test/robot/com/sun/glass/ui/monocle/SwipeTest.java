@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,28 +25,26 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLogShim;
-import test.robot.com.sun.glass.ui.monocle.TestApplication;
-import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
-import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
-import com.sun.javafx.PlatformUtil;
-import javafx.scene.input.GestureEvent;
-import org.junit.Assert;
-import org.junit.Assume;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.runners.Parameterized;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.CountDownLatch;
+import javafx.scene.input.GestureEvent;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import com.sun.glass.ui.monocle.TestLogShim;
+import com.sun.javafx.PlatformUtil;
 import test.com.sun.glass.ui.monocle.TestRunnable;
+import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
+import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
 
-public class SwipeTest extends ParameterizedTestBase {
+public final class SwipeTest extends ParameterizedTestBase {
 
     static {
         System.setProperty("com.sun.javafx.isEmbedded", "true");
@@ -106,6 +104,7 @@ public class SwipeTest extends ParameterizedTestBase {
             this.expectedSwipe = expectedSwipe;
         }
 
+        @Override
         public String toString() {
             return "SwipeTestCase["
                     + "length=" + length
@@ -118,32 +117,29 @@ public class SwipeTest extends ParameterizedTestBase {
         }
     }
 
-    public SwipeTest(TestTouchDevice device, SwipeTestCase testCase) throws Exception {
-        super(device);
-        this.testCase = testCase;
-        TestLogShim.format("Starting test with %s, %s", device, testCase);
-        TestApplication.getStage();
-        TestRunnable.invokeAndWait(() -> {
-            Assume.assumeTrue(
-                    TestApplication.isMonocle() || TestApplication.isLens());
-            Assume.assumeTrue(PlatformUtil.isEmbedded());
-        });
-    }
-
-    @Parameterized.Parameters
-    public static Collection<Object[]> data() {
-        List<Object[]> params = new ArrayList<>();
+    private static Collection<Arguments> parameters() {
+        List<Arguments> params = new ArrayList<>();
         List<TestTouchDevice> devices = TestTouchDevices.getTouchDevices();
         for (TestTouchDevice device : devices) {
             for (SwipeTestCase testCase : TEST_CASES) {
-                params.add(new Object[] { device, testCase });
+                params.add(Arguments.of(device, testCase));
             }
         }
         return params;
     }
 
-    @Before
-    public void addListener() throws Exception {
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    public void init(TestTouchDevice device, SwipeTestCase testCase) throws Exception {
+        createDevice(device, null);
+
+        TestLogShim.format("Starting test with %s, %s", device, testCase);
+        TestApplication.getStage();
+        TestRunnable.invokeAndWait(() -> {
+            Assumptions.assumeTrue(TestApplication.isMonocle() || TestApplication.isLens());
+            Assumptions.assumeTrue(PlatformUtil.isEmbedded());
+        });
+
         TestApplication.getStage().getScene().addEventHandler(
                 GestureEvent.ANY,
                 e -> TestLogShim.format("%s at %.0f, %.0f",
@@ -166,7 +162,9 @@ public class SwipeTest extends ParameterizedTestBase {
      * @param amplitude of the sine wave, in pixels
      * @param wavelength of the sine wave, in pixels
      */
-    private CountDownLatch generatePoints(int p,
+    private CountDownLatch generatePoints(
+                                TestTouchDevice device,
+                                int p,
                                 int x1, int y1,
                                 double length,
                                 double theta,
@@ -214,16 +212,18 @@ public class SwipeTest extends ParameterizedTestBase {
         return latch;
     }
 
-    @Test
-    @Ignore("RT-37709")
-    public void testSwipe() throws Exception {
+    @Disabled("JDK-8093869")
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void testSwipe(TestTouchDevice device, SwipeTestCase testCase) throws Exception {
+        init(device, testCase);
         final int x = (int) Math.round(width * 0.5);
         final int y = (int) Math.round(height * 0.5);
         // tap
         int p = device.addPoint(x, y);
         device.sync();
         // swipe
-        generatePoints(p, x, y,
+        generatePoints(device, p, x, y,
                        testCase.length,
                        testCase.theta,
                        testCase.time,
@@ -239,10 +239,10 @@ public class SwipeTest extends ParameterizedTestBase {
         TestLogShim.waitForLogContaining("Touch pressed");
         TestLogShim.waitForLogContaining("Touch released");
         if (testCase.expectedSwipe == null) {
-            Assert.assertEquals(0, TestLogShim.countLogContaining("SWIPE"));
+            Assertions.assertEquals(0, TestLogShim.countLogContaining("SWIPE"));
         } else {
             TestLogShim.waitForLogContaining(testCase.expectedSwipe);
-            Assert.assertEquals(1, TestLogShim.countLogContaining("SWIPE"));
+            Assertions.assertEquals(1, TestLogShim.countLogContaining("SWIPE"));
         }
     }
 

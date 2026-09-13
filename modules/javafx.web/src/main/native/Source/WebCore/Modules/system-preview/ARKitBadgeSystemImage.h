@@ -25,22 +25,26 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if USE(SYSTEM_PREVIEW)
 
-#include "Image.h"
-#include "NativeImage.h"
-#include "SystemImage.h"
+#include <WebCore/Image.h>
+#include <WebCore/NativeImage.h>
+#include <WebCore/SystemImage.h>
 #include <optional>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/Forward.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 
 OBJC_CLASS CIContext;
 
 namespace WebCore {
 
 class WEBCORE_EXPORT ARKitBadgeSystemImage final : public SystemImage {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(ARKitBadgeSystemImage, WEBCORE_EXPORT);
 public:
     static Ref<ARKitBadgeSystemImage> create(Image& image)
     {
@@ -57,15 +61,15 @@ public:
     void draw(GraphicsContext&, const FloatRect&) const final;
 
     Image* image() const { return m_image.get(); }
-    void setImage(Image& image) { m_image = &image; }
+    void setImage(Image& image) { m_image = image; }
 
     RenderingResourceIdentifier imageIdentifier() const;
 
 private:
-    friend struct IPC::ArgumentCoder<ARKitBadgeSystemImage, void>;
+    friend struct IPC::ArgumentCoder<ARKitBadgeSystemImage>;
     ARKitBadgeSystemImage(Image& image)
         : SystemImage(SystemImageType::ARKitBadge)
-        , m_image(&image)
+        , m_image(image)
         , m_imageSize(image.size())
     {
     }
@@ -78,7 +82,7 @@ private:
     }
 
     RefPtr<Image> m_image;
-    RenderingResourceIdentifier m_renderingResourceIdentifier;
+    Markable<RenderingResourceIdentifier> m_renderingResourceIdentifier;
     FloatSize m_imageSize;
 };
 

@@ -25,6 +25,9 @@
 
 #include <glib.h>
 
+#include <gst/gstbytearrayinterface.h>
+#include <gst/gststructure.h>
+
 G_BEGIN_DECLS
 
 typedef struct _GstMeta GstMeta;
@@ -80,6 +83,7 @@ typedef enum {
  * @flag: the #GstMetaFlags to clear.
  *
  * Clears a metadata flag.
+ *
  */
 #define GST_META_FLAG_UNSET(meta,flag)         (GST_META_FLAGS (meta) &= ~(flag))
 
@@ -116,14 +120,30 @@ struct _GstMeta {
 };
 
 /**
- * GstCustomMeta:
+ * GstCustomMeta.structure:
  *
- * Simple typing wrapper around #GstMeta
+ * #GstStructure containing custom metadata.
+ *
+ * Since: 1.24
+ */
+
+/**
+ * GstCustomMeta:
+ * @meta: parent #GstMeta
+ * @structure: a #GstStructure containing custom metadata. (Since: 1.24)
+ *
+ * Extra custom metadata. The @structure field is the same as returned by
+ * gst_custom_meta_get_structure().
+ *
+ * Since 1.24 it can be serialized using gst_meta_serialize() and
+ * gst_meta_deserialize(), but only if the #GstStructure does not contain any
+ * fields that cannot be serialized, see %GST_SERIALIZE_FLAG_STRICT.
  *
  * Since: 1.20
  */
 typedef struct {
   GstMeta meta;
+  GstStructure *structure;
 } GstCustomMeta;
 
 #include <gst/gstbuffer.h>
@@ -228,6 +248,101 @@ typedef gboolean (*GstCustomMetaTransformFunction) (GstBuffer *transbuf,
                                                     GQuark type, gpointer data, gpointer user_data);
 
 /**
+ * GstMetaSerializeFunction:
+ * @meta: a #GstMeta
+ * @data: #GstByteArrayInterface to append serialization data
+ * @version: (out): version of the serialization format
+ *
+ * Serialize @meta into a format that can be stored or transmitted and later
+ * deserialized by #GstMetaDeserializeFunction.
+ *
+ * By default version is set to 0, it should be bumped if incompatible changes
+ * are made to the format so %GstMetaDeserializeFunction can deserialize each
+ * version.
+ *
+ * Returns: %TRUE on success, %FALSE otherwise.
+ *
+ * Since: 1.24
+ */
+typedef gboolean (*GstMetaSerializeFunction) (const GstMeta *meta,
+    GstByteArrayInterface *data, guint8 *version);
+
+/**
+ * GstMetaDeserializeFunction:
+ * @info: #GstMetaInfo of the meta
+ * @buffer: a #GstBuffer
+ * @data: data obtained from #GstMetaSerializeFunction
+ * @size: size of data to avoid buffer overflow
+ *
+ * Recreate a #GstMeta from serialized data returned by
+ * #GstMetaSerializeFunction and add it to @buffer.
+ *
+ * Returns: (transfer none) (nullable): the metadata owned by @buffer, or %NULL.
+ *
+ * Since: 1.24
+ */
+typedef GstMeta *(*GstMetaDeserializeFunction) (const GstMetaInfo *info,
+    GstBuffer *buffer, const guint8 *data, gsize size, guint8 version);
+
+/**
+ * GstMetaClearFunction:
+ * @buffer: a #GstBuffer
+ * @meta: a #GstMeta
+ *
+ * Clears the content of the meta. This will be called by the GstBufferPool
+ * when a pooled buffer is returned.
+ *
+ * Since: 1.24
+ */
+typedef void (*GstMetaClearFunction) (GstBuffer *buffer, GstMeta *meta);
+
+/**
+ * GstAllocationMetaParamsAggregator:
+ * @aggregated_params: This structure will be updated with the
+ *                     combined parameters from both @params0 and @params1.
+ * @params0: a #GstStructure containing the new parameters to be aggregated.
+ * @params1: a #GstStructure containing the new parameters to be aggregated.
+ *
+ * The aggregator function will combine the parameters from @params0 and @param1
+ * and write the result back into @aggregated_params.
+ *
+ * Returns: %TRUE if the parameters were successfully aggregated, %FALSE otherwise.
+ *
+ * Since: 1.26
+ */
+typedef gboolean (*GstAllocationMetaParamsAggregator) (GstStructure ** aggregated_params,
+                                                       const GstStructure * params0,
+                                                       const GstStructure * params1);
+
+/**
+ * GstMetaInfo.serialize_func:
+ *
+ * Function for serializing the metadata, or %NULL if not supported by this
+ * meta.
+ *
+ * Since: 1.24
+ */
+
+/**
+ * GstMetaInfo.deserialize_func:
+ *
+ * Function for deserializing the metadata, or %NULL if not supported by this
+ * meta.
+ *
+ * Since: 1.24
+ */
+
+/**
+ * GstMetaInfo.clear_func:
+ *
+ * Function for clearing the metadata, or %NULL if not supported by this
+ * meta. This is called by the buffer pool when a buffer is returned for
+ * pooled metas.
+ *
+ * Since: 1.24
+ */
+
+/**
  * GstMetaInfo:
  * @api: tag identifying the metadata structure and api
  * @type: type identifying the implementor of the api
@@ -235,6 +350,10 @@ typedef gboolean (*GstCustomMetaTransformFunction) (GstBuffer *transbuf,
  * @init_func: function for initializing the metadata
  * @free_func: function for freeing the metadata
  * @transform_func: function for transforming the metadata
+ * @serialize_func: function for serializing the metadata into a #GstStructure,
+ *  or %NULL if not supported by this meta. (Since 1.24)
+ * @deserialize_func: function for deserializing the metadata from a
+ *  #GstStructure, or %NULL if not supported by this meta. (Since 1.24)
  *
  * The #GstMetaInfo provides information about a specific metadata
  * structure.
@@ -247,6 +366,9 @@ struct _GstMetaInfo {
   GstMetaInitFunction        init_func;
   GstMetaFreeFunction        free_func;
   GstMetaTransformFunction   transform_func;
+  GstMetaSerializeFunction   serialize_func;
+  GstMetaDeserializeFunction deserialize_func;
+  GstMetaClearFunction       clear_func;
 
   /* No padding needed, GstMetaInfo is always allocated by GStreamer and is
    * not subclassable or stack-allocatable, so we can extend it as we please
@@ -260,6 +382,16 @@ GST_API
 gboolean             gst_meta_api_type_has_tag  (GType api, GQuark tag);
 
 GST_API
+gboolean             gst_meta_api_type_aggregate_params (GType api,
+                                                         GstStructure ** aggregated_params,
+                                                         const GstStructure * params0,
+                                                         const GstStructure * params1);
+
+GST_API
+void                 gst_meta_api_type_set_params_aggregator (GType api,
+                                                              GstAllocationMetaParamsAggregator aggregator);
+
+GST_API
 const GstMetaInfo *  gst_meta_register          (GType api, const gchar *impl,
                                                  gsize size,
                                                  GstMetaInitFunction      init_func,
@@ -267,9 +399,19 @@ const GstMetaInfo *  gst_meta_register          (GType api, const gchar *impl,
                                                  GstMetaTransformFunction transform_func);
 
 GST_API
+GstMetaInfo *        gst_meta_info_new (GType api,
+                                        const gchar *impl,
+                                        gsize size);
+GST_API
+const GstMetaInfo *  gst_meta_info_register (GstMetaInfo *info);
+
+GST_API
 const GstMetaInfo *  gst_meta_register_custom   (const gchar *name, const gchar **tags,
                                                  GstCustomMetaTransformFunction transform_func,
                                                  gpointer user_data, GDestroyNotify destroy_data);
+
+GST_API
+const GstMetaInfo *  gst_meta_register_custom_simple (const gchar *name);
 
 GST_API
 gboolean             gst_meta_info_is_custom    (const GstMetaInfo *info);
@@ -287,11 +429,28 @@ GST_API
 const gchar* const*  gst_meta_api_type_get_tags (GType api);
 
 GST_API
+gboolean             gst_meta_api_type_tags_contain_only (GType api, const gchar ** valid_tags);
+
+GST_API
 guint64              gst_meta_get_seqnum        (const GstMeta * meta);
 
 GST_API
 gint                 gst_meta_compare_seqnum    (const GstMeta * meta1,
                                                  const GstMeta * meta2);
+
+#ifndef GSTREAMER_LITE
+GST_API
+gboolean             gst_meta_serialize         (const GstMeta *meta,
+                                                 GstByteArrayInterface *data);
+GST_API
+gboolean             gst_meta_serialize_simple  (const GstMeta *meta,
+                                                 GByteArray *data);
+GST_API
+GstMeta *            gst_meta_deserialize       (GstBuffer *buffer,
+                                                 const guint8 *data,
+                                                 gsize size,
+                                                 guint32 *consumed);
+#endif // GSTREAMER_LITE
 
 /* some default tags */
 

@@ -25,8 +25,6 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "ServiceWorkerClient.h"
 #include "VisibilityState.h"
 
@@ -39,7 +37,7 @@ class ServiceWorkerWindowClient final : public ServiceWorkerClient {
 public:
     static Ref<ServiceWorkerWindowClient> create(ServiceWorkerGlobalScope& context, ServiceWorkerClientData&& data)
     {
-        return adoptRef(*new ServiceWorkerWindowClient(context, WTFMove(data)));
+        return adoptRef(*new ServiceWorkerWindowClient(context, WTF::move(data)));
     }
 
     VisibilityState visibilityState() const { return data().isVisible ? VisibilityState::Visible : VisibilityState::Hidden; }
@@ -58,5 +56,3 @@ private:
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ServiceWorkerWindowClient)
     static bool isType(const WebCore::ServiceWorkerClient& client) { return client.type() == WebCore::ServiceWorkerClientType::Window; }
 SPECIALIZE_TYPE_TRAITS_END()
-
-#endif // ENABLE(SERVICE_WORKER)

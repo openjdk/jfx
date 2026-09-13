@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,23 +25,29 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.scene.control.SizeLimitedList;
+import static javafx.scene.input.KeyCode.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.collections.WeakListChangeListener;
 import javafx.event.EventHandler;
 import javafx.geometry.NodeOrientation;
-import javafx.scene.control.*;
-import com.sun.javafx.scene.control.inputmap.InputMap;
-import com.sun.javafx.scene.control.inputmap.KeyBinding;
+import javafx.scene.control.Control;
+import javafx.scene.control.SelectionMode;
+import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TableFocusModel;
+import javafx.scene.control.TablePositionBase;
+import javafx.scene.control.TableSelectionModel;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.util.Callback;
-import java.util.ArrayList;
-import java.util.List;
 import com.sun.javafx.PlatformUtil;
-import static javafx.scene.input.KeyCode.*;
-import static com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
+import com.sun.javafx.scene.control.SizeLimitedList;
+import com.sun.javafx.scene.control.inputmap.InputMap;
+import com.sun.javafx.scene.control.inputmap.InputMap.KeyMapping;
+import com.sun.javafx.scene.control.inputmap.KeyBinding;
 
 public abstract class TableViewBehaviorBase<C extends Control, T, TC extends TableColumnBase<T,?>> extends BehaviorBase<C> {
 
@@ -60,7 +66,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
 
     private final EventHandler<KeyEvent> keyEventListener = e -> {
         if (!e.isConsumed()) {
-            // RT-12751: we want to keep an eye on the user holding down the shift key,
+            // JDK-8114799: we want to keep an eye on the user holding down the shift key,
             // so that we know when they enter/leave multiple selection mode. This
             // changes what happens when certain key combinations are pressed.
             isShiftDown = e.getEventType() == KeyEvent.KEY_PRESSED && e.isShiftDown();
@@ -154,6 +160,11 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
                 new KeyMapping(KP_LEFT,e -> { if(isRTL()) selectRightCell(); else selectLeftCell(); }),
                 new KeyMapping(RIGHT, e -> { if(isRTL()) selectLeftCell(); else selectRightCell(); }),
                 new KeyMapping(KP_RIGHT, e -> { if(isRTL()) selectLeftCell(); else selectRightCell(); }),
+
+                new KeyMapping(new KeyBinding(RIGHT).shortcut().alt(), e -> horizontalUnitScroll(true)),
+                new KeyMapping(new KeyBinding(LEFT).shortcut().alt(), e -> horizontalUnitScroll(false)),
+                new KeyMapping(new KeyBinding(UP).shortcut().alt(), e -> verticalUnitScroll(false)),
+                new KeyMapping(new KeyBinding(DOWN).shortcut().alt(), e -> verticalUnitScroll(true)),
 
                 new KeyMapping(UP, e -> selectPreviousRow()),
                 new KeyMapping(KP_UP, e -> selectPreviousRow()),
@@ -423,6 +434,8 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
         onSelectLeftCell = null;
         onFocusRightCell = null;
         onFocusLeftCell = null;
+        onHorizontalUnitScroll = null;
+        onVerticalUnitScroll = null;
 
         super.dispose();
     }
@@ -1077,7 +1090,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
             if (sm.isCellSelectionEnabled()) {
                 sm.selectRange(leadIndex, col, leadSelectedIndex, col);
             } else {
-                // fix for RT-34407
+                // fix for JDK-8097503
                 int adjust = leadIndex < leadSelectedIndex ? 1 : -1;
                 sm.selectRange(leadIndex, leadSelectedIndex + adjust);
             }
@@ -1114,7 +1127,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
             if (sm.isCellSelectionEnabled()) {
                 sm.selectRange(leadIndex, col, leadSelectedIndex, col);
             } else {
-                // fix for RT-34407
+                // fix for JDK-8097503
                 int adjust = leadIndex < leadSelectedIndex ? 1 : -1;
                 sm.selectRange(leadIndex, leadSelectedIndex + adjust);
             }
@@ -1147,7 +1160,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
     // be re-enabled then.
     /*
     protected void moveToLeftMostColumn() {
-        // Functionality as described in RT-12752
+        // Functionality as described in JDK-8112552
         if (onMoveToLeftMostColumn != null) onMoveToLeftMostColumn.run();
 
         TableSelectionModel sm = getSelectionModel();
@@ -1163,7 +1176,7 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
     }
 
     protected void moveToRightMostColumn() {
-        // Functionality as described in RT-12752
+        // Functionality as described in JDK-8112552
         if (onMoveToRightMostColumn != null) onMoveToRightMostColumn.run();
 
         TableSelectionModel sm = getSelectionModel();
@@ -1354,5 +1367,28 @@ public abstract class TableViewBehaviorBase<C extends Control, T, TC extends Tab
 
     private EventHandler<KeyEvent> focusTraverseRight() {
         return FocusTraversalInputMap::traverseRight;
+    }
+
+    private Consumer<Boolean> onHorizontalUnitScroll;
+    private Consumer<Boolean> onVerticalUnitScroll;
+
+    public void setOnHorizontalUnitScroll(Consumer<Boolean> f) {
+        onHorizontalUnitScroll = f;
+    }
+
+    public void setOnVerticalUnitScroll(Consumer<Boolean> f) {
+        onVerticalUnitScroll = f;
+    }
+
+    private void horizontalUnitScroll(boolean right) {
+        if (onHorizontalUnitScroll != null) {
+            onHorizontalUnitScroll.accept(right);
+        }
+    }
+
+    private void verticalUnitScroll(boolean down) {
+        if (onVerticalUnitScroll != null) {
+            onVerticalUnitScroll.accept(down);
+        }
     }
 }

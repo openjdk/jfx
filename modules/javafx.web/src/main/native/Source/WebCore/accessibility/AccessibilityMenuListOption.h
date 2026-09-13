@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2010 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,28 +25,29 @@
 
 #pragma once
 
+#include "AccessibilityNodeObject.h"
 #include "AccessibilityObject.h"
 
 namespace WebCore {
 
 class HTMLOptionElement;
 
-class AccessibilityMenuListOption final : public AccessibilityObject {
+class AccessibilityMenuListOption final : public AccessibilityNodeObject {
 public:
-    static Ref<AccessibilityMenuListOption> create(HTMLOptionElement&);
+    static Ref<AccessibilityMenuListOption> create(AXID, HTMLOptionElement&, AXObjectCache&);
     void setParent(AccessibilityObject* parent) { m_parent = parent; }
 
 private:
-    explicit AccessibilityMenuListOption(HTMLOptionElement&);
+    explicit AccessibilityMenuListOption(AXID, HTMLOptionElement&, AXObjectCache&);
 
     bool isMenuListOption() const final { return true; }
 
-    AccessibilityRole roleValue() const final { return AccessibilityRole::MenuListOption; }
+    AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::MenuListOption; }
     bool canHaveChildren() const final { return false; }
     AccessibilityObject* parentObject() const final { return m_parent.get(); }
 
+    HTMLOptionElement* optionElement() const;
     Element* actionElement() const final;
-    Node* node() const final;
     bool isEnabled() const final;
     bool isVisible() const final;
     bool isOffScreen() const final;
@@ -55,9 +56,8 @@ private:
     bool canSetSelectedAttribute() const final;
     LayoutRect elementRect() const final;
     String stringValue() const final;
-    bool computeAccessibilityIsIgnored() const final;
+    bool computeIsIgnored() const final;
 
-    WeakPtr<HTMLOptionElement, WeakPtrImplWithEventTargetData> m_element;
     WeakPtr<AccessibilityObject> m_parent;
 };
 

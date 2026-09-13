@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,19 +33,19 @@
 - (void)_sendJavaWindowMoveToAnotherScreenEventIfNeeded;
 - (void)_sendJavaWindowMoveEventForFrame:(NSRect)frame;
 - (void)_sendJavaWindowResizeEvent:(int)type forFrame:(NSRect)frame;
+- (void)_sendJavaWindowNotifyScaleChanged:(CGFloat)newScale;
 
 - (id)_initWithContentRect:(NSRect)contentRect styleMask:(NSUInteger)windowStyle screen:(NSScreen *)screen jwindow:(jobject)jwindow;
-- (NSWindow*)_getCurrentWindow;
 - (void)_ungrabFocus;
 + (void)_resetGrab;
++ (BOOL)_hasGrab;
 - (void)_checkUngrab;
 - (void)_grabFocus;
-- (void)_setResizable;
+- (void)_setResizable:(bool)resizable;
 - (NSRect)_constrainFrame:(NSRect)frame;
 - (void)_setVisible;
 - (void)_setBounds:(jint)x y:(jint)y xSet:(jboolean)xSet ySet:(jboolean)ySet w:(jint)w h:(jint)h cw:(jint)cw ch:(jint)ch;
 - (void)_setWindowFrameWithRect:(NSRect)rect withDisplay:(jboolean)display withAnimate:(jboolean)animate;
-- (void)_restorePreZoomedRect;
 - (NSScreen*)_getScreen;
 
 - (void)_setFlipFrame:(NSRect)frameRect display:(BOOL)displayFlag animate:(BOOL)animateFlag;

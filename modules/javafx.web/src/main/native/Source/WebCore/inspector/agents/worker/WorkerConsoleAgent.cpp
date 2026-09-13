@@ -27,15 +27,18 @@
 #include "WorkerConsoleAgent.h"
 
 #include "WorkerOrWorkletGlobalScope.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace Inspector;
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WorkerConsoleAgent);
+
 WorkerConsoleAgent::WorkerConsoleAgent(WorkerAgentContext& context)
     : WebConsoleAgent(context)
 {
-    ASSERT(context.globalScope.isContextThread());
+    ASSERT(context.globalScope->isContextThread());
 }
 
 WorkerConsoleAgent::~WorkerConsoleAgent() = default;

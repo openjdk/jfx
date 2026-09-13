@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,7 @@ import javafx.css.StyleableProperty;
 import javafx.scene.Node;
 import javafx.scene.paint.Color;
 import javafx.scene.paint.Paint;
+import javafx.scene.text.Text;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -58,6 +59,7 @@ import com.sun.javafx.geom.transform.Affine3D;
 import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.scene.DirtyBits;
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.shape.AbstractShape;
 import com.sun.javafx.scene.shape.ShapeHelper;
 import com.sun.javafx.sg.prism.NGShape;
 import com.sun.javafx.tk.Toolkit;
@@ -87,11 +89,6 @@ import java.lang.ref.WeakReference;
  * </ul>
  * </ul>
  *
- * <p>
- * An application should not extend the Shape class directly. Doing so may lead to
- * an UnsupportedOperationException being thrown.
- * </p>
- *
  * <h2>Interaction with coordinate systems</h2>
  * Most nodes tend to have only integer translations applied to them and
  * quite often they are defined using integer coordinates as well.  For
@@ -120,7 +117,9 @@ import java.lang.ref.WeakReference;
  * the shape.
  * @since JavaFX 2.0
  */
-public abstract class Shape extends Node {
+public abstract sealed class Shape extends Node
+        permits AbstractShape, Arc, Circle, CubicCurve, Ellipse, Line, Path, Polygon,
+                Polyline, QuadCurve, Rectangle, SVGPath, Text {
 
     static {
         // This is used by classes in different packages to get access to

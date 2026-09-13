@@ -26,13 +26,20 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
+#include <wtf/RefPtr.h>
+
+namespace WTF {
+
+class String;
+
+} // namespace WTF
 
 namespace WebCore {
 
 class Database;
 class DatabaseCallback;
 class LocalDOMWindow;
+template<typename> class ExceptionOr;
 
 class LocalDOMWindowWebDatabase {
 public:

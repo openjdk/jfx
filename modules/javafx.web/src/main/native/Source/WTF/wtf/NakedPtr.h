@@ -33,7 +33,7 @@ namespace WTF {
 // used uninitialized.
 
 template <typename T> class NakedPtr {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(NakedPtr);
 public:
     ALWAYS_INLINE NakedPtr() : m_ptr(nullptr) { }
     ALWAYS_INLINE NakedPtr(T* ptr) : m_ptr(ptr) { }
@@ -89,14 +89,14 @@ template<typename T> template<typename U> inline NakedPtr<T>& NakedPtr<T>::opera
 
 template<typename T> inline NakedPtr<T>& NakedPtr<T>::operator=(NakedPtr&& o)
 {
-    NakedPtr ptr = WTFMove(o);
+    NakedPtr ptr = WTF::move(o);
     swap(ptr);
     return *this;
 }
 
 template<typename T> template<typename U> inline NakedPtr<T>& NakedPtr<T>::operator=(NakedPtr<U>&& o)
 {
-    NakedPtr ptr = WTFMove(o);
+    NakedPtr ptr = WTF::move(o);
     swap(ptr);
     return *this;
 }

@@ -27,16 +27,19 @@
 #include "FEFlood.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-bool FEFloodSoftwareApplier::apply(const Filter&, const FilterImageVector&, FilterImage& result) const
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FEFloodSoftwareApplier);
+
+bool FEFloodSoftwareApplier::apply(const Filter&, std::span<const Ref<FilterImage>>, FilterImage& result) const
 {
-    auto resultImage = result.imageBuffer();
+    RefPtr resultImage = result.imageBuffer();
     if (!resultImage)
         return false;
 
-    auto color = m_effect.floodColor().colorWithAlphaMultipliedBy(m_effect.floodOpacity());
+    auto color = m_effect->floodColor().colorWithAlphaMultipliedBy(m_effect->floodOpacity());
     resultImage->context().fillRect(FloatRect(FloatPoint(), result.absoluteImageRect().size()), color);
 
     return true;

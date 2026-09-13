@@ -33,30 +33,30 @@ namespace WebCore {
 
 Ref<SliderTrackPart> SliderTrackPart::create(StyleAppearance type)
 {
-    return adoptRef(*new SliderTrackPart(type, { }, { }, { }));
+    return adoptRef(*new SliderTrackPart(type, { }, { }, { }, 0));
 }
 
-Ref<SliderTrackPart> SliderTrackPart::create(StyleAppearance type, const IntSize& thumbSize, const IntRect& trackBounds, Vector<double>&& tickRatios)
+Ref<SliderTrackPart> SliderTrackPart::create(StyleAppearance type, const IntSize& thumbSize, const IntRect& trackBounds, Vector<double>&& tickRatios, double thumbPosition)
 {
-    return adoptRef(*new SliderTrackPart(type, thumbSize, trackBounds, WTFMove(tickRatios)));
+    return adoptRef(*new SliderTrackPart(type, thumbSize, trackBounds, WTF::move(tickRatios), thumbPosition));
 }
 
-SliderTrackPart::SliderTrackPart(StyleAppearance type, const IntSize& thumbSize, const IntRect& trackBounds, Vector<double>&& tickRatios)
+SliderTrackPart::SliderTrackPart(StyleAppearance type, const IntSize& thumbSize, const IntRect& trackBounds, Vector<double>&& tickRatios, double thumbPosition)
     : ControlPart(type)
     , m_thumbSize(thumbSize)
     , m_trackBounds(trackBounds)
-    , m_tickRatios(WTFMove(tickRatios))
+    , m_tickRatios(WTF::move(tickRatios))
+    , m_thumbPosition(thumbPosition)
 {
     ASSERT(type == StyleAppearance::SliderHorizontal || type == StyleAppearance::SliderVertical);
 }
 
-#if ENABLE(DATALIST_ELEMENT)
 void SliderTrackPart::drawTicks(GraphicsContext& context, const FloatRect& rect, const ControlStyle& style) const
 {
     if (m_tickRatios.isEmpty())
         return;
 
-    static constexpr IntSize sliderTickSize = { 1, 3 };
+    static constexpr FloatSize sliderTickSize = { 1, 3 };
     static constexpr int sliderTickOffsetFromTrackCenter = -9;
 
     bool isHorizontal = type() == StyleAppearance::SliderHorizontal;
@@ -88,11 +88,11 @@ void SliderTrackPart::drawTicks(GraphicsContext& context, const FloatRect& rect,
     context.setFillColor(style.textColor);
 
     bool isVerticalWritingMode = style.states.contains(ControlStyle::State::VerticalWritingMode);
-    bool isRightToLeft = style.states.contains(ControlStyle::State::RightToLeft);
-    bool isReversedInlineDirection = (!isHorizontal && !isVerticalWritingMode) || isRightToLeft;
+    bool isInlineFlippedWritingMode = style.states.contains(ControlStyle::State::InlineFlippedWritingMode);
+    bool isInlineFlipped = (!isHorizontal && !isVerticalWritingMode) || isInlineFlippedWritingMode;
 
     for (auto tickRatio : m_tickRatios) {
-        double value = isReversedInlineDirection ? 1.0 - tickRatio : tickRatio;
+        double value = isInlineFlipped ? 1.0 - tickRatio : tickRatio;
         double tickPosition = round(tickRegionMargin + tickRegionWidth * value);
         if (isHorizontal)
             tickRect.setX(tickPosition);
@@ -101,7 +101,6 @@ void SliderTrackPart::drawTicks(GraphicsContext& context, const FloatRect& rect,
         context.fillRect(tickRect);
     }
 }
-#endif
 
 std::unique_ptr<PlatformControl> SliderTrackPart::createPlatformControl()
 {

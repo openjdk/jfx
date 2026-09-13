@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,7 +57,7 @@ public class WebColorFieldSkin extends InputFieldSkin {
             updateText();
         });
 
-        // RT-37494: Force the major text direction to LTR, so that '#' is always
+        // JDK-8095846: Force the major text direction to LTR, so that '#' is always
         // on the left side of the text. A special style is used in CSS to keep
         // the text right-aligned when in RTL mode.
         getTextField().setNodeOrientation(NodeOrientation.LEFT_TO_RIGHT);

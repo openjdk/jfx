@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2006-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2006 Samuel Weinig <sam.weinig@gmail.com>
  *
  * This library is free software; you can redistribute it and/or
@@ -18,19 +18,24 @@
  * Boston, MA 02110-1301, USA.
  */
 
+// https://drafts.csswg.org/cssom/#the-stylesheet-interface
+
 [
-    CustomToJSObject,
     ExportToWrappedFunction,
     Exposed=Window,
     GenerateIsReachable,
     JSCustomHeader,
     JSCustomMarkFunction,
 ] interface StyleSheet {
+    // FIXME: `type` should not be nullable.
     readonly attribute DOMString? type;
-    attribute boolean disabled;
-    readonly attribute Node ownerNode;
-    readonly attribute StyleSheet parentStyleSheet;
-    readonly attribute DOMString? href;
+    readonly attribute USVString? href;
+    // FIXME: `ownerNode` should be a `(Element or ProcessingInstruction)?`.
+    readonly attribute Node? ownerNode;
+    // FIXME: `parentStyleSheet` should be a `CSSStyleSheet?`.
+    readonly attribute StyleSheet? parentStyleSheet;
     readonly attribute DOMString? title;
-    [SameObject, PutForwards=mediaText] readonly attribute MediaList media;
+    // FIXME: `media` should not be nullable.
+    [SameObject, PutForwards=mediaText] readonly attribute MediaList? media;
+    attribute boolean disabled;
 };

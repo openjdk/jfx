@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2020 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2012-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Patrick Gansterer <paroga@paroga.com>
  *
  * This library is free software; you can redistribute it and/or
@@ -21,9 +21,14 @@
 
 #pragma once
 
+#include <array>
+#include <cstdint>
+#include <span>
 #include <string>
 #include <wtf/Forward.h>
-#include <wtf/text/LChar.h>
+#include <wtf/MathExtras.h>
+#include <wtf/StdLibExtras.h>
+#include <wtf/text/Latin1Character.h>
 
 namespace WTF {
 
@@ -34,26 +39,24 @@ template<typename> struct IntegerToStringConversionTrait;
 template<typename T, typename UnsignedIntegerType, PositiveOrNegativeNumber NumberType, typename AdditionalArgumentType>
 static typename IntegerToStringConversionTrait<T>::ReturnType numberToStringImpl(UnsignedIntegerType number, AdditionalArgumentType additionalArgument)
 {
-    LChar buf[sizeof(UnsignedIntegerType) * 3 + 1];
-    LChar* end = std::end(buf);
-    LChar* p = end;
-
+    std::array<Latin1Character, sizeof(UnsignedIntegerType) * 3 + 1> buffer;
+    auto index = buffer.size();
     do {
-        *--p = static_cast<LChar>((number % 10) + '0');
+        buffer[--index] = static_cast<Latin1Character>((number % 10) + '0');
         number /= 10;
     } while (number);
 
     if (NumberType == NegativeNumber)
-        *--p = '-';
+        buffer[--index] = '-';
 
-    return IntegerToStringConversionTrait<T>::flush(p, static_cast<unsigned>(end - p), additionalArgument);
+    return IntegerToStringConversionTrait<T>::flush(std::span { buffer }.subspan(index), additionalArgument);
 }
 
 template<typename T, typename SignedIntegerType>
 inline typename IntegerToStringConversionTrait<T>::ReturnType numberToStringSigned(SignedIntegerType number, typename IntegerToStringConversionTrait<T>::AdditionalArgumentType* additionalArgument = nullptr)
 {
     if (number < 0)
-        return numberToStringImpl<T, typename std::make_unsigned_t<SignedIntegerType>, NegativeNumber>(-static_cast<typename std::make_unsigned_t<SignedIntegerType>>(number), additionalArgument);
+        return numberToStringImpl<T, typename std::make_unsigned_t<SignedIntegerType>, NegativeNumber>(-unsignedCast(number), additionalArgument);
     return numberToStringImpl<T, typename std::make_unsigned_t<SignedIntegerType>, PositiveNumber>(number, additionalArgument);
 }
 
@@ -64,35 +67,33 @@ inline typename IntegerToStringConversionTrait<T>::ReturnType numberToStringUnsi
 }
 
 template<typename CharacterType, typename UnsignedIntegerType, PositiveOrNegativeNumber NumberType>
-static void writeIntegerToBufferImpl(UnsignedIntegerType number, CharacterType* destination)
+static void writeIntegerToBufferImpl(UnsignedIntegerType number, std::span<CharacterType> destination)
 {
     static_assert(!std::is_same_v<bool, std::remove_cv_t<UnsignedIntegerType>>, "'bool' not supported");
-    LChar buf[sizeof(UnsignedIntegerType) * 3 + 1];
-    LChar* end = std::end(buf);
-    LChar* p = end;
-
+    std::array<Latin1Character, sizeof(UnsignedIntegerType) * 3 + 1> buffer;
+    auto index = buffer.size();
     do {
-        *--p = static_cast<LChar>((number % 10) + '0');
+        buffer[--index] = static_cast<Latin1Character>((number % 10) + '0');
         number /= 10;
     } while (number);
 
     if (NumberType == NegativeNumber)
-        *--p = '-';
+        buffer[--index] = '-';
 
-    while (p < end)
-        *destination++ = static_cast<CharacterType>(*p++);
+    for (size_t i = 0; i < buffer.size() - index; ++i)
+        destination[i] = static_cast<CharacterType>(buffer[index + i]);
 }
 
 template<typename CharacterType, typename IntegerType>
-inline void writeIntegerToBuffer(IntegerType integer, CharacterType* destination)
+inline void writeIntegerToBuffer(IntegerType integer, std::span<CharacterType> destination)
 {
     static_assert(std::is_integral_v<IntegerType>);
     if constexpr (std::is_same_v<IntegerType, bool>)
         return writeIntegerToBufferImpl<CharacterType, uint8_t, PositiveNumber>(integer ? 1 : 0, destination);
     else if constexpr (std::is_signed_v<IntegerType>) {
         if (integer < 0)
-            return writeIntegerToBufferImpl<CharacterType, typename std::make_unsigned_t<IntegerType>, NegativeNumber>(std::make_unsigned_t<IntegerType>(-integer), destination);
-        return writeIntegerToBufferImpl<CharacterType, typename std::make_unsigned_t<IntegerType>, PositiveNumber>(std::make_unsigned_t<IntegerType>(integer), destination);
+            return writeIntegerToBufferImpl<CharacterType, typename std::make_unsigned_t<IntegerType>, NegativeNumber>(WTF::negate(integer), destination);
+        return writeIntegerToBufferImpl<CharacterType, typename std::make_unsigned_t<IntegerType>, PositiveNumber>(unsignedCast(integer), destination);
     } else
         return writeIntegerToBufferImpl<CharacterType, IntegerType, PositiveNumber>(integer, destination);
 }
@@ -123,17 +124,17 @@ constexpr unsigned lengthOfIntegerAsString(IntegerType integer)
     }
     else if constexpr (std::is_signed_v<IntegerType>) {
         if (integer < 0)
-            return lengthOfIntegerAsStringImpl<typename std::make_unsigned_t<IntegerType>, NegativeNumber>(std::make_unsigned_t<IntegerType>(-integer));
-        return lengthOfIntegerAsStringImpl<typename std::make_unsigned_t<IntegerType>, PositiveNumber>(std::make_unsigned_t<IntegerType>(integer));
+            return lengthOfIntegerAsStringImpl<typename std::make_unsigned_t<IntegerType>, NegativeNumber>(WTF::negate(integer));
+        return lengthOfIntegerAsStringImpl<typename std::make_unsigned_t<IntegerType>, PositiveNumber>(unsignedCast(integer));
     } else
         return lengthOfIntegerAsStringImpl<IntegerType, PositiveNumber>(integer);
 }
 
 template<size_t N>
-struct IntegerToStringConversionTrait<Vector<LChar, N>> {
-    using ReturnType = Vector<LChar, N>;
+struct IntegerToStringConversionTrait<Vector<Latin1Character, N>> {
+    using ReturnType = Vector<Latin1Character, N>;
     using AdditionalArgumentType = void;
-    static ReturnType flush(LChar* characters, unsigned length, void*) { return { characters, length }; }
+    static ReturnType flush(std::span<const Latin1Character> characters, void*) { return characters; }
 };
 
 } // namespace WTF

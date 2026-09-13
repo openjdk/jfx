@@ -32,7 +32,9 @@
 #include "AirArgInlines.h"
 #include "AirCode.h"
 #include "AirInst.h"
+#include "AirInstInlines.h"
 #include "AirPhaseScope.h"
+#include "CCallHelpers.h"
 #include <wtf/Range.h>
 
 namespace JSC { namespace B3 { namespace Air {
@@ -239,14 +241,14 @@ static bool tryStorePair(Code& code, BasicBlock* block, unsigned current, Inst& 
             int64_t targetOffsetFromFP = targetOffset - code.frameSize();
 
             if (isValidOffset(instOffsetFromFP) && targetOffsetFromFP == (instOffsetFromFP + bytesForWidth(instWidth))) {
-                Inst newInst(pairOpcode, target.origin, inst.args[0], target.args[0], Arg::addr(Air::Tmp(GPRInfo::callFrameRegister), instOffsetFromFP));
+                Inst newInst(pairOpcode, target.origin, inst.args[0], target.args[0], Arg::addr(Air::Tmp(GPRInfo::callFrameRegister), static_cast<int32_t>(instOffsetFromFP)));
                 logFound(newInst);
                 target = newInst;
                 return true;
             }
 
             if (isValidOffset(targetOffsetFromFP) && (targetOffsetFromFP + bytesForWidth(instWidth)) == instOffsetFromFP) {
-                Inst newInst(pairOpcode, target.origin, target.args[0], inst.args[0], Arg::addr(Air::Tmp(GPRInfo::callFrameRegister), targetOffsetFromFP));
+                Inst newInst(pairOpcode, target.origin, target.args[0], inst.args[0], Arg::addr(Air::Tmp(GPRInfo::callFrameRegister), static_cast<int32_t>(targetOffsetFromFP)));
                 logFound(newInst);
                 target = newInst;
                 return true;
@@ -261,7 +263,7 @@ bool optimizePairedLoadStore(Code& code)
 {
     constexpr bool verbose = false;
 
-    PhaseScope phaseScope(code, "optimizePairedLoadStore");
+    PhaseScope phaseScope(code, "optimizePairedLoadStore"_s);
 
     if (verbose) {
         dataLog("Air before an iteration of optimizePairedLoadStore:\n");
@@ -288,7 +290,7 @@ bool optimizePairedLoadStore(Code& code)
                     if ((inst.args[1].base() == Tmp(CCallHelpers::stackPointerRegister) || inst.args[1].base() == Tmp(CCallHelpers::framePointerRegister)) && !inst.kind.spill)
                         continue;
                     if (tryStorePair(code, block, index, inst)) {
-                        block->insts().remove(index);
+                        block->insts().removeAt(index);
                         changed = true;
                     }
                     continue;

@@ -30,6 +30,7 @@
 #include "BaselineJITCode.h"
 #include "CallLinkInfo.h"
 #include "CodeBlockJettisoningWatchpoint.h"
+#include "ConcatKeyAtomStringCache.h"
 #include "DFGAdaptiveInferredPropertyValueWatchpoint.h"
 #include "DFGAdaptiveStructureWatchpoint.h"
 #include "DFGCodeOriginPool.h"
@@ -111,7 +112,7 @@ public:
 
     void validateReferences(const TrackedReferences&);
 
-    static ptrdiff_t frameRegisterCountOffset() { return OBJECT_OFFSETOF(CommonData, frameRegisterCount); }
+    static constexpr ptrdiff_t frameRegisterCountOffset() { return OBJECT_OFFSETOF(CommonData, frameRegisterCount); }
 
     void clearWatchpoints();
 
@@ -127,11 +128,13 @@ public:
     FixedVector<AdaptiveStructureWatchpoint> m_adaptiveStructureWatchpoints;
     FixedVector<AdaptiveInferredPropertyValueWatchpoint> m_adaptiveInferredPropertyValueWatchpoints;
     std::unique_ptr<PCToCodeOriginMap> m_pcToCodeOriginMap;
-    RecordedStatuses recordedStatuses;
+    std::unique_ptr<RecordedStatuses> recordedStatuses;
     FixedVector<JumpReplacement> m_jumpReplacements;
     FixedVector<std::unique_ptr<BoyerMooreHorspoolTable<uint8_t>>> m_stringSearchTable8;
+    FixedVector<std::unique_ptr<ConcatKeyAtomStringCache>> m_concatKeyAtomStringCaches;
     Bag<StructureStubInfo> m_stubInfos;
     Bag<OptimizingCallLinkInfo> m_callLinkInfos;
+    Bag<DirectCallLinkInfo> m_directCallLinkInfos;
     Yarr::YarrBoyerMooreData m_boyerMooreData;
 
     ScratchBuffer* catchOSREntryBuffer;

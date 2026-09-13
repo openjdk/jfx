@@ -26,10 +26,17 @@
 #include "config.h"
 #include "PageHeapAgent.h"
 
+#include "CustomElementRegistry.h"
+#include "JSCustomElementInterface.h"
+#include "JSElement.h"
+#include "JSNode.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace Inspector;
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PageHeapAgent);
 
 PageHeapAgent::PageHeapAgent(PageAgentContext& context)
     : WebHeapAgent(context)
@@ -39,20 +46,49 @@ PageHeapAgent::PageHeapAgent(PageAgentContext& context)
 
 PageHeapAgent::~PageHeapAgent() = default;
 
-Protocol::ErrorStringOr<void> PageHeapAgent::enable()
+Inspector::Protocol::ErrorStringOr<void> PageHeapAgent::enable()
 {
     auto result = WebHeapAgent::enable();
 
-    m_instrumentingAgents.setEnabledPageHeapAgent(this);
+    Ref { m_instrumentingAgents.get() }->setEnabledPageHeapAgent(this);
 
     return result;
 }
 
-Protocol::ErrorStringOr<void> PageHeapAgent::disable()
+Inspector::Protocol::ErrorStringOr<void> PageHeapAgent::disable()
 {
-    m_instrumentingAgents.setEnabledPageHeapAgent(nullptr);
+    Ref { m_instrumentingAgents.get() }->setEnabledPageHeapAgent(nullptr);
 
     return WebHeapAgent::disable();
+}
+
+String PageHeapAgent::heapSnapshotBuilderOverrideClassName(const JSC::HeapSnapshotBuilder& builder, JSC::JSCell* cell, const String& currentClassName)
+{
+    if (currentClassName == "HTMLElement"_s) {
+        if (auto* jsElement = jsDynamicCast<JSElement*>(cell)) {
+            Ref element = jsElement->wrapped();
+            if (element->isDefinedCustomElement()) {
+                if (RefPtr customElementRegistry = element->customElementRegistry()) {
+                    if (RefPtr customElementInterface = customElementRegistry->findInterface(element)) {
+                        if (JSC::JSObject* customElementConstructorObject = customElementInterface->constructor()) {
+                            if (JSC::JSFunction* customElementConstructorFunction = jsDynamicCast<JSC::JSFunction*>(customElementConstructorObject)) {
+                                String customElementClassName = customElementConstructorFunction->calculatedDisplayName(customElementConstructorFunction->vm());
+                                if (!customElementClassName.isNull())
+                                    return customElementClassName;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return JSC::HeapSnapshotBuilder::Client::heapSnapshotBuilderOverrideClassName(builder, cell, currentClassName);
+}
+
+bool PageHeapAgent::heapSnapshotBuilderIsElement(const JSC::HeapSnapshotBuilder&, JSC::JSCell* cell)
+{
+    return jsDynamicCast<JSNode*>(cell);
 }
 
 void PageHeapAgent::mainFrameNavigated()

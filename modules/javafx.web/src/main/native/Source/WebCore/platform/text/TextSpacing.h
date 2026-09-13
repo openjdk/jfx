@@ -24,63 +24,137 @@
  */
 
 #pragma once
+#include <unicode/umachine.h>
 #include <wtf/Forward.h>
+#include <wtf/text/CharacterProperties.h>
 #include <wtf/text/TextStream.h>
+#include <wtf/unicode/CharacterNames.h>
 
 namespace WebCore {
 
-struct TextSpacingTrim {
+class Font;
+class TextSpacingTrim;
 
-enum class TrimType: uint8_t {
-    Auto = 0,
-    SpaceAll // equivalent to None in text-spacing shorthand
+namespace TextSpacing {
+
+enum class CharacterClass : uint8_t {
+    Undefined = 0,
+    Ideograph = 1 << 0,
+    NonIdeographLetter = 1 << 1,
+    NonIdeographNumeral = 1 << 2,
+    FullWidthOpeningPunctuation = 1 << 3,
+    FullWidthClosingPunctuation = 1 << 4,
+    FullWidthMiddleDotPunctuation = 1 << 5,
+    FullWidthColonPunctuation = 1 << 6,
+    FullWidthDotPunctuation = 1 << 7
 };
 
-bool isAuto() const { return m_trim == TrimType::Auto; }
-bool isSpaceAll() const { return m_trim == TrimType::SpaceAll; }
-bool operator==(const TextSpacingTrim& other) const
-{
-    return m_trim == other.m_trim;
-}
-TrimType m_trim { TrimType::SpaceAll };
+struct CharactersData {
+    char32_t previousCharacter { 0 };
+    char32_t currentCharacter { 0 };
+    char32_t nextCharacter { 0 };
+    CharacterClass previousCharacterClass { };
+    CharacterClass currentCharacterClass { };
+    CharacterClass nextCharacterClass { };
+};
+
+// Classes are defined at https://www.w3.org/TR/css-text-4/#text-spacing-classes
+CharacterClass characterClass(char32_t character);
+struct SpacingState {
+    bool operator==(const SpacingState&) const = default;
+    CharacterClass lastCharacterClassFromPreviousRun { CharacterClass::Undefined };
+};
+
+bool isIdeograph(char32_t character);
+
+RefPtr<Font> getHalfWidthFontIfNeeded(const Font&, const TextSpacingTrim&, CharactersData&);
+} // namespace TextSpacing
+
+class TextSpacingTrim {
+public:
+    enum class TrimType : uint8_t {
+        SpaceAll = 0, // equivalent to None in text-spacing shorthand
+        TrimAll,
+        Auto
+    };
+
+    TextSpacingTrim() = default;
+    TextSpacingTrim(TrimType trimType)
+        : m_trim(trimType)
+        { }
+
+    bool isAuto() const { return m_trim == TrimType::Auto; }
+    bool isSpaceAll() const { return m_trim == TrimType::SpaceAll; }
+    bool shouldTrimSpacing(const TextSpacing::CharactersData&) const;
+    friend bool operator==(const TextSpacingTrim&, const TextSpacingTrim&) = default;
+    constexpr TrimType type() const { return m_trim; }
+private:
+    TrimType m_trim { TrimType::SpaceAll };
 };
 
 inline WTF::TextStream& operator<<(WTF::TextStream& ts, const TextSpacingTrim& value)
 {
     // FIXME: add remaining values;
-    switch (value.m_trim) {
+    switch (value.type()) {
     case TextSpacingTrim::TrimType::Auto:
-        return ts << "auto";
+        return ts << "auto"_s;
     case TextSpacingTrim::TrimType::SpaceAll:
-        return ts << "space-all";
-    }
+        return ts << "space-all"_s;
+    case TextSpacingTrim::TrimType::TrimAll:
+        return ts << "trim-all"_s;
+        }
     return ts;
 }
 
-struct TextAutospace {
-enum class TextAutospaceType: uint8_t {
-    Auto = 0,
-    NoAutospace // equivalent to None in text-spacing shorthand
-};
+class TextAutospace {
+public:
+    enum class Type: uint8_t {
+        Auto = 1 << 0,
+        IdeographAlpha = 1 << 1,
+        IdeographNumeric = 1 << 2,
+        Normal = 1 << 3
+    };
 
-bool isAuto() const { return m_autoSpace == TextAutospaceType::Auto; }
-bool isNoAutospace() const { return m_autoSpace == TextAutospaceType::NoAutospace; }
-bool operator==(const TextAutospace& other) const
-{
-    return m_autoSpace == other.m_autoSpace;
-}
-TextAutospaceType m_autoSpace { TextAutospaceType::NoAutospace };
+    using Options = OptionSet<Type>;
+
+    constexpr TextAutospace() = default;
+    constexpr TextAutospace(Options options)
+        : m_options(options)
+    {
+    }
+
+    constexpr bool isAuto() const { return m_options.contains(Type::Auto); }
+    constexpr bool isNoAutospace() const { return m_options.isEmpty(); }
+    constexpr bool isNormal() const { return m_options.contains(Type::Normal); }
+    constexpr bool hasIdeographAlpha() const { return m_options.containsAny({ Type::IdeographAlpha, Type::Normal }); }
+    constexpr bool hasIdeographNumeric() const { return m_options.containsAny({ Type::IdeographNumeric, Type::Normal }); }
+    constexpr Options options() { return m_options; }
+
+    bool operator==(const TextAutospace&) const = default;
+
+    bool shouldApplySpacing(TextSpacing::CharacterClass firstCharacterClass, TextSpacing::CharacterClass secondCharacterClass) const;
+    bool shouldApplySpacing(char32_t firstCharacter, char32_t secondCharacter) const;
+    static float textAutospaceSize(const Font&);
+
+private:
+    Options m_options { };
 };
 
 inline WTF::TextStream& operator<<(WTF::TextStream& ts, const TextAutospace& value)
 {
     // FIXME: add remaining values;
-    switch (value.m_autoSpace) {
-    case TextAutospace::TextAutospaceType::Auto:
-        return ts << "auto";
-    case TextAutospace::TextAutospaceType::NoAutospace:
-        return ts << "no-autospace";
-    }
+    if (value.isAuto())
+        return ts << "auto"_s;
+    if (value.isNoAutospace())
+        return ts << "no-autospace"_s;
+    if (value.isNormal())
+        return ts << "normal"_s;
+    if (value.hasIdeographAlpha())
+        ts << "ideograph-alpha"_s;
+    if (value.hasIdeographNumeric())
+        ts << "ideograph-numeric"_s;
     return ts;
 }
+
+
 } // namespace WebCore

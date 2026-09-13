@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
- * Copyright (C) 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,6 +32,7 @@
 #include "Crypto.h"
 
 #include "Document.h"
+#include "ExceptionOr.h"
 #include "SubtleCrypto.h"
 #include <JavaScriptCore/ArrayBufferView.h>
 #include <wtf/CryptographicallyRandomNumber.h>
@@ -57,14 +58,14 @@ Crypto::~Crypto() = default;
 ExceptionOr<void> Crypto::getRandomValues(ArrayBufferView& array)
 {
     if (!isInt(array.getType()) && !isBigInt(array.getType()))
-        return Exception { TypeMismatchError };
+        return Exception { ExceptionCode::TypeMismatchError };
     if (array.byteLength() > 65536)
-        return Exception { QuotaExceededError };
+        return Exception { ExceptionCode::QuotaExceededError };
 #if OS(DARWIN)
     auto rc = CCRandomGenerateBytes(array.baseAddress(), array.byteLength());
     RELEASE_ASSERT(rc == kCCSuccess);
 #else
-    cryptographicallyRandomValues(array.baseAddress(), array.byteLength());
+    cryptographicallyRandomValues(array.mutableSpan());
 #endif
     return { };
 }
@@ -74,13 +75,4 @@ String Crypto::randomUUID() const
     return createVersion4UUIDString();
 }
 
-#if ENABLE(WEB_CRYPTO)
-
-SubtleCrypto& Crypto::subtle()
-{
-    return m_subtle;
-}
-
-#endif
-
-}
+} // namespace WebCore

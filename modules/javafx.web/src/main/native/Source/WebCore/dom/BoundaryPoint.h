@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "Node.h"
+#include <WebCore/Node.h>
 
 namespace WebCore {
 
@@ -35,7 +35,10 @@ struct BoundaryPoint {
 
     BoundaryPoint(Ref<Node>&&, unsigned);
 
-    Document& document() const;
+    inline Document& document() const; // Defined in BoundaryPointInlines.h
+    inline Ref<Document> protectedDocument() const; // Defined in BoundaryPointInlines.h
+
+    String debugDescription() const;
 };
 
 bool operator==(const BoundaryPoint&, const BoundaryPoint&);
@@ -43,6 +46,7 @@ bool operator==(const BoundaryPoint&, const BoundaryPoint&);
 WTF::TextStream& operator<<(WTF::TextStream&, const BoundaryPoint&);
 
 template<TreeType = Tree> std::partial_ordering treeOrder(const BoundaryPoint&, const BoundaryPoint&);
+template<> WEBCORE_EXPORT std::partial_ordering treeOrder<ComposedTree>(const BoundaryPoint&, const BoundaryPoint&);
 
 WEBCORE_EXPORT std::optional<BoundaryPoint> makeBoundaryPointBeforeNode(Node&);
 WEBCORE_EXPORT std::optional<BoundaryPoint> makeBoundaryPointAfterNode(Node&);
@@ -52,14 +56,9 @@ BoundaryPoint makeBoundaryPointAfterNodeContents(Node&);
 WEBCORE_EXPORT std::partial_ordering treeOrderForTesting(TreeType, const BoundaryPoint&, const BoundaryPoint&);
 
 inline BoundaryPoint::BoundaryPoint(Ref<Node>&& container, unsigned offset)
-    : container(WTFMove(container))
+    : container(WTF::move(container))
     , offset(offset)
 {
-}
-
-inline Document& BoundaryPoint::document() const
-{
-    return container->document();
 }
 
 inline bool operator==(const BoundaryPoint& a, const BoundaryPoint& b)
@@ -72,9 +71,19 @@ inline BoundaryPoint makeBoundaryPointBeforeNodeContents(Node& node)
     return { node, 0 };
 }
 
-inline BoundaryPoint makeBoundaryPointAfterNodeContents(Node& node)
+inline BoundaryPoint makeBoundaryPointAfterNodeContents(Node&);
+
+struct WeakBoundaryPoint {
+    WeakPtr<Node, Node::WeakPtrImplType> container;
+    unsigned offset { 0 };
+
+    WeakBoundaryPoint(WeakPtr<Node, Node::WeakPtrImplType>&&, unsigned);
+};
+
+inline WeakBoundaryPoint::WeakBoundaryPoint(WeakPtr<Node, Node::WeakPtrImplType>&& container, unsigned offset)
+    : container(WTF::move(container))
+    , offset(offset)
 {
-    return { node, node.length() };
 }
 
 }

@@ -2,7 +2,7 @@
  * Copyright (C) 2001 Peter Kelly (pmk@post.com)
  * Copyright (C) 2001 Tobias Anton (anton@stud.fbi.fh-darmstadt.de)
  * Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2003-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -23,8 +23,12 @@
 
 #pragma once
 
-#include "EventListener.h"
+#include <WebCore/EventListener.h>
+#include <wtf/Forward.h>
 #include <wtf/Ref.h>
+#include <wtf/RefCounted.h>
+#include <wtf/RefPtr.h>
+#include <wtf/StdLibExtras.h>
 
 namespace WebCore {
 
@@ -32,20 +36,22 @@ namespace WebCore {
 class RegisteredEventListener : public RefCounted<RegisteredEventListener> {
 public:
     struct Options {
-        Options(bool capture = false, bool passive = false, bool once = false)
+        Options(bool capture = false, bool passive = false, bool once = false, bool trustedOnly = false)
             : capture(capture)
             , passive(passive)
             , once(once)
+            , trustedOnly(trustedOnly)
         { }
 
         bool capture;
         bool passive;
         bool once;
+        bool trustedOnly;
     };
 
     static Ref<RegisteredEventListener> create(Ref<EventListener>&& listener, const Options& options)
     {
-        return adoptRef(*new RegisteredEventListener(WTFMove(listener), options));
+        return adoptRef(*new RegisteredEventListener(WTF::move(listener), options));
     }
 
     EventListener& callback() const { return m_callback; }
@@ -53,6 +59,7 @@ public:
     bool isPassive() const { return m_isPassive; }
     bool isOnce() const { return m_isOnce; }
     bool wasRemoved() const { return m_wasRemoved; }
+    bool trustedOnly() const { return m_trustedOnly; }
 
     void markAsRemoved() { m_wasRemoved = true; }
 
@@ -62,7 +69,8 @@ private:
         , m_isPassive(options.passive)
         , m_isOnce(options.once)
         , m_wasRemoved(false)
-        , m_callback(WTFMove(listener))
+        , m_trustedOnly(options.trustedOnly)
+        , m_callback(WTF::move(listener))
     {
     }
 
@@ -70,7 +78,8 @@ private:
     bool m_isPassive : 1;
     bool m_isOnce : 1;
     bool m_wasRemoved : 1;
-    Ref<EventListener> m_callback;
+    bool m_trustedOnly : 1;
+    const Ref<EventListener> m_callback;
 };
 
 } // namespace WebCore

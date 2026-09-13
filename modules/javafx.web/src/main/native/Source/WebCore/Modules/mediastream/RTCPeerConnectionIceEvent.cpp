@@ -29,27 +29,27 @@
 
 #include "EventNames.h"
 #include "RTCIceCandidate.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RTCPeerConnectionIceEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RTCPeerConnectionIceEvent);
 
 Ref<RTCPeerConnectionIceEvent> RTCPeerConnectionIceEvent::create(CanBubble canBubble, IsCancelable cancelable, RefPtr<RTCIceCandidate>&& candidate, String&& serverURL)
 {
-    return adoptRef(*new RTCPeerConnectionIceEvent(eventNames().icecandidateEvent, canBubble, cancelable, WTFMove(candidate), WTFMove(serverURL)));
+    return adoptRef(*new RTCPeerConnectionIceEvent(eventNames().icecandidateEvent, canBubble, cancelable, WTF::move(candidate), WTF::move(serverURL)));
 }
 
 Ref<RTCPeerConnectionIceEvent> RTCPeerConnectionIceEvent::create(const AtomString& type, Init&& init)
 {
     return adoptRef(*new RTCPeerConnectionIceEvent(type, init.bubbles ? CanBubble::Yes : CanBubble::No,
-        init.cancelable ? IsCancelable::Yes : IsCancelable::No, WTFMove(init.candidate), WTFMove(init.url)));
+        init.cancelable ? IsCancelable::Yes : IsCancelable::No, WTF::move(init.candidate), WTF::move(init.url)));
 }
 
 RTCPeerConnectionIceEvent::RTCPeerConnectionIceEvent(const AtomString& type, CanBubble canBubble, IsCancelable cancelable, RefPtr<RTCIceCandidate>&& candidate, String&& serverURL)
-    : Event(type, canBubble, cancelable)
-    , m_candidate(WTFMove(candidate))
-    , m_url(WTFMove(serverURL))
+    : Event(EventInterfaceType::RTCPeerConnectionIceEvent, type, canBubble, cancelable)
+    , m_candidate(WTF::move(candidate))
+    , m_url(WTF::move(serverURL))
 {
 }
 
@@ -58,11 +58,6 @@ RTCPeerConnectionIceEvent::~RTCPeerConnectionIceEvent() = default;
 RTCIceCandidate* RTCPeerConnectionIceEvent::candidate() const
 {
     return m_candidate.get();
-}
-
-EventInterface RTCPeerConnectionIceEvent::eventInterface() const
-{
-    return RTCPeerConnectionIceEventInterfaceType;
 }
 
 } // namespace WebCore

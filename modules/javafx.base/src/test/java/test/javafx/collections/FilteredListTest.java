@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,8 @@
 package test.javafx.collections;
 
 import com.sun.javafx.collections.ObservableListWrapper;
+
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -36,9 +38,11 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ObservableListWrapperShim;
 import javafx.collections.transformation.FilteredList;
-import static org.junit.Assert.*;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 public class FilteredListTest {
 
@@ -46,7 +50,7 @@ public class FilteredListTest {
     private MockListObserver<String> mlo;
     private FilteredList<String> filteredList;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         list = FXCollections.observableArrayList();
         list.addAll("a", "c", "d", "c");
@@ -54,6 +58,19 @@ public class FilteredListTest {
         mlo = new MockListObserver<>();
         filteredList = new FilteredList<>(list, predicate);
         filteredList.addListener(mlo);
+
+        Thread.currentThread().setUncaughtExceptionHandler((thread, throwable) -> {
+            if (throwable instanceof RuntimeException) {
+                throw (RuntimeException)throwable;
+            } else {
+                Thread.currentThread().getThreadGroup().uncaughtException(thread, throwable);
+            }
+        });
+    }
+
+    @AfterEach
+    void tearDown() {
+        Thread.currentThread().setUncaughtExceptionHandler(null);
     }
 
     @Test
@@ -70,7 +87,7 @@ public class FilteredListTest {
     public void test_rt35857_retainFiltered() {
         ObservableList<String> copyFiltered = FXCollections.observableArrayList(filteredList);
         list.retainAll(filteredList);
-        assertEquals("sanity: filteredList unchanged", copyFiltered, filteredList);
+        assertEquals(copyFiltered, filteredList, "sanity: filteredList unchanged");
         assertEquals(filteredList, list);
     }
 
@@ -305,5 +322,51 @@ public class FilteredListTest {
         assertEquals(list.size(), filteredList.size());
         assertEquals(list, filteredList);
         compareIndices();
+    }
+
+    @Test
+    public void testGetSourceIndexOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, () -> filteredList.getSourceIndex(-1));
+        assertThrows(IndexOutOfBoundsException.class, () -> filteredList.getSourceIndex(filteredList.size()));
+        assertDoesNotThrow(() -> filteredList.getSourceIndex(filteredList.size() - 1));
+    }
+
+    @Test
+    public void testGetViewIndexOutOfBounds() {
+        assertThrows(IndexOutOfBoundsException.class, () -> filteredList.getViewIndex(-1));
+        assertThrows(IndexOutOfBoundsException.class, () -> filteredList.getViewIndex(list.size()));
+        assertDoesNotThrow(() -> filteredList.getViewIndex(filteredList.size()));
+    }
+
+    @Test
+    public void testSortedThenFilteredListDoesNotThrowIOOBE() {
+        ObservableList<Long> numbers = FXCollections.observableArrayList();
+
+        ObservableList<Long> sortedList = numbers.sorted(Long::compare);
+        ObservableList<Long> filteredList = sortedList.filtered(_ -> true);
+
+        numbers.add(0L);
+        numbers.addAll(List.of(0L, 4L, 8L, 2L, 6L, 0L, 4L, 8L, 2L, 6L, 0L));
+
+        assertDoesNotThrow(() -> numbers.subList(0, numbers.size() - 1).clear());
+
+        assertEquals(List.of(0L), filteredList);
+        assertEquals(List.of(0L), sortedList);
+    }
+
+    @Test
+    public void testMoveItemDoesNotThrowAIOOBE() {
+        var list = new ObservableListWrapper<>(new ArrayList<>(List.of(1L)));
+        FilteredList<Long> filteredList = new FilteredList<>(list);
+
+        list.add(2L);
+        assertEquals(List.of(1L, 2L), filteredList);
+
+        ObservableListWrapperShim.beginChange(list);
+        list.remove(2L);
+        list.addFirst(2L);
+        assertDoesNotThrow(() -> ObservableListWrapperShim.endChange(list));
+
+        assertEquals(List.of(2L, 1L), filteredList);
     }
 }

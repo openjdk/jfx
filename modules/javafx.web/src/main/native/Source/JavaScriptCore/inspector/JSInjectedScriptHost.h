@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,7 +35,7 @@ class JSInjectedScriptHost final : public JSC::JSNonFinalObject {
 public:
     using Base = JSC::JSNonFinalObject;
     static constexpr unsigned StructureFlags = Base::StructureFlags;
-    static constexpr bool needsDestruction = true;
+    static constexpr JSC::DestructionMode needsDestruction = JSC::NeedsDestruction;
 
     template<typename CellType, JSC::SubspaceAccess mode>
     static JSC::GCClient::IsoSubspace* subspaceFor(JSC::VM& vm)
@@ -52,7 +52,7 @@ public:
 
     static JSInjectedScriptHost* create(JSC::VM& vm, JSC::Structure* structure, Ref<InjectedScriptHost>&& impl)
     {
-        JSInjectedScriptHost* instance = new (NotNull, JSC::allocateCell<JSInjectedScriptHost>(vm)) JSInjectedScriptHost(vm, structure, WTFMove(impl));
+        JSInjectedScriptHost* instance = new (NotNull, JSC::allocateCell<JSInjectedScriptHost>(vm)) JSInjectedScriptHost(vm, structure, WTF::move(impl));
         instance->finishCreation(vm);
         return instance;
     }
@@ -73,7 +73,7 @@ public:
     JSC::JSValue isPromiseRejectedWithNativeGetterTypeError(JSC::JSGlobalObject*, JSC::CallFrame*);
     JSC::JSValue subtype(JSC::JSGlobalObject*, JSC::CallFrame*);
     JSC::JSValue functionDetails(JSC::JSGlobalObject*, JSC::CallFrame*);
-    JSC::JSValue getOwnPrivatePropertyDescriptors(JSC::JSGlobalObject*, JSC::CallFrame*);
+    JSC::JSValue getOwnPrivatePropertySymbols(JSC::JSGlobalObject*, JSC::CallFrame*);
     JSC::JSValue getInternalProperties(JSC::JSGlobalObject*, JSC::CallFrame*);
     JSC::JSValue proxyTargetValue(JSC::CallFrame*);
     JSC::JSValue weakRefTargetValue(JSC::JSGlobalObject*, JSC::CallFrame*);
@@ -89,7 +89,7 @@ private:
     JSInjectedScriptHost(JSC::VM&, JSC::Structure*, Ref<InjectedScriptHost>&&);
     DECLARE_DEFAULT_FINISH_CREATION;
 
-    Ref<InjectedScriptHost> m_wrapped;
+    const Ref<InjectedScriptHost> m_wrapped;
 };
 
 } // namespace Inspector

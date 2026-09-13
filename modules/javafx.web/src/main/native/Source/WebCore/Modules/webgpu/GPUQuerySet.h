@@ -25,18 +25,21 @@
 
 #pragma once
 
+#include "GPUQuerySetDescriptor.h"
+#include "GPUQueryType.h"
 #include "WebGPUQuerySet.h"
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-class GPUQuerySet : public RefCounted<GPUQuerySet> {
+class GPUQuerySet : public RefCountedAndCanMakeWeakPtr<GPUQuerySet> {
 public:
-    static Ref<GPUQuerySet> create(Ref<WebGPU::QuerySet>&& backing)
+    static Ref<GPUQuerySet> create(Ref<WebGPU::QuerySet>&& backing, const GPUQuerySetDescriptor& descriptor)
     {
-        return adoptRef(*new GPUQuerySet(WTFMove(backing)));
+        return adoptRef(*new GPUQuerySet(WTF::move(backing), descriptor));
     }
 
     String label() const;
@@ -47,13 +50,14 @@ public:
     WebGPU::QuerySet& backing() { return m_backing; }
     const WebGPU::QuerySet& backing() const { return m_backing; }
 
-private:
-    GPUQuerySet(Ref<WebGPU::QuerySet>&& backing)
-        : m_backing(WTFMove(backing))
-    {
-    }
+    GPUQueryType type() const;
+    GPUSize32Out count() const;
 
-    Ref<WebGPU::QuerySet> m_backing;
+private:
+    GPUQuerySet(Ref<WebGPU::QuerySet>&& backing, const GPUQuerySetDescriptor&);
+
+    const Ref<WebGPU::QuerySet> m_backing;
+    const GPUQuerySetDescriptor m_descriptor;
 };
 
 }

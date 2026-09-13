@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "ElementIterator.h"
+#include <WebCore/ElementIterator.h>
 
 namespace WebCore {
 
@@ -73,7 +73,7 @@ public:
     inline ElementType* last() const;
 
 private:
-    const ContainerNode& m_root;
+    CheckedRef<const ContainerNode> m_root;
 };
 
 template<typename ElementType> class InclusiveElementDescendantRange {
@@ -88,7 +88,7 @@ public:
     inline ElementType* last() const;
 
 private:
-    const ContainerNode& m_root;
+    CheckedRef<const ContainerNode> m_root;
 };
 
 template<typename ElementType> class DoubleElementDescendantRange {
@@ -132,10 +132,10 @@ public:
     inline Iterator begin() const;
     static constexpr std::nullptr_t end() { return nullptr; }
 
-    inline ElementType* first() const;
+    inline RefPtr<ElementType> first() const;
 
 private:
-    const ContainerNode& m_root;
+    CheckedRef<const ContainerNode> m_root;
 };
 
 // ElementDescendantIterator
@@ -162,14 +162,14 @@ template<typename ElementType> InclusiveElementDescendantRange<ElementType>::Inc
 // DoubleElementDescendantRange
 
 template<typename ElementType> DoubleElementDescendantRange<ElementType>::DoubleElementDescendantRange(SingleAdapter&& first, SingleAdapter&& second)
-    : m_pair(WTFMove(first), WTFMove(second))
+    : m_pair(WTF::move(first), WTF::move(second))
 {
 }
 
 // DoubleElementDescendantIterator
 
 template<typename ElementType> DoubleElementDescendantIterator<ElementType>::DoubleElementDescendantIterator(SingleIterator&& first, SingleIterator&& second)
-    : m_pair(WTFMove(first), WTFMove(second))
+    : m_pair(WTF::move(first), WTF::move(second))
 {
 }
 

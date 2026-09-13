@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,17 +28,22 @@ package test.javafx.scene.control;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-
 import com.sun.javafx.tk.Toolkit;
-
+import javafx.scene.text.Text;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Disabled;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static javafx.scene.input.KeyCode.*;
 import static javafx.scene.input.KeyEvent.*;
 import static java.util.stream.Collectors.*;
-import static org.junit.Assert.*;
 import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
 
 import javafx.beans.property.ObjectProperty;
@@ -72,7 +77,8 @@ public class TextFieldTest {
     private TextField txtField;//Empty string
     private TextField dummyTxtField;//With string value
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         txtField = new TextField();
         dummyTxtField = new TextField("dummy");
         setUncaughtExceptionHandler();
@@ -219,17 +225,17 @@ public class TextFieldTest {
     @Test public void checkPromptTextPropertyBind() {
         StringProperty strPr = new SimpleStringProperty("value");
         txtField.promptTextProperty().bind(strPr);
-        assertTrue("PromptText cannot be bound", txtField.getPromptText().equals("value"));
+        assertTrue(txtField.getPromptText().equals("value"), "PromptText cannot be bound");
         strPr.setValue("newvalue");
-        assertTrue("PromptText cannot be bound", txtField.getPromptText().equals("newvalue"));
+        assertTrue(txtField.getPromptText().equals("newvalue"), "PromptText cannot be bound");
     }
 
     @Test public void checkTextPropertyBind() {
         StringProperty strPr = new SimpleStringProperty("value");
         txtField.textProperty().bind(strPr);
-        assertEquals("Text cannot be bound", txtField.getText(), "value");
+        assertEquals(txtField.getText(), "value", "Text cannot be bound");
         strPr.setValue("newvalue");
-        assertEquals("Text cannot be bound", txtField.getText(),  "newvalue");
+        assertEquals(txtField.getText(),  "newvalue", "Text cannot be bound");
     }
 
     @Test public void checkOnActionPropertyBind() {
@@ -241,6 +247,59 @@ public class TextFieldTest {
         txtField.onActionProperty().bind(op);
         assertEquals(ev, op.getValue());
     }
+
+    @Test
+    public void testPromptTextWithBindingWithLineBreaks() {
+        initStage();
+        txtField.setSkin(new TextFieldSkin(txtField));
+        String promptWithLineBreaks = "Prompt\nwith\nLineBreaks";
+        StringProperty promptProperty = new SimpleStringProperty(promptWithLineBreaks);
+        txtField.promptTextProperty().bind(promptProperty);
+        root.getChildren().add(txtField);
+        Text promptNode = TextInputSkinShim.getPromptNode(txtField);
+        assertEquals(promptWithLineBreaks.replace("\n",""), promptNode.getText());
+        txtField.promptTextProperty().unbind();
+    }
+
+    @Test
+    public void testPromptTextWithBindingWithoutLineBreaks() {
+        initStage();
+        txtField.setSkin(new TextFieldSkin(txtField));
+        String promptWithoutLineBreaks = "Prompt without LineBreaks";
+        StringProperty promptProperty = new SimpleStringProperty(promptWithoutLineBreaks);
+        txtField.promptTextProperty().bind(promptProperty);
+        root.getChildren().add(txtField);
+        Text promptNode = TextInputSkinShim.getPromptNode(txtField);
+        assertEquals(promptWithoutLineBreaks, promptNode.getText());
+        txtField.promptTextProperty().unbind();
+    }
+
+    @Test
+    public void testPromptTextWhenSettingValueWithLineBreaks() {
+        initStage();
+        txtField.setSkin(new TextFieldSkin(txtField));
+        String promptWithoutLineBreaks = "Prompt without LineBreaks";
+        String promptWithLineBreaks = "Prompt\nwith\nLineBreaks";
+        txtField.setPromptText(promptWithoutLineBreaks);
+        root.getChildren().add(txtField);
+        Text promptNode = TextInputSkinShim.getPromptNode(txtField);
+        assertEquals(promptWithoutLineBreaks, promptNode.getText());
+        txtField.setPromptText(promptWithLineBreaks);
+        assertEquals(promptWithLineBreaks.replace("\n",""), promptNode.getText());
+    }
+
+    @Test
+    public void testPromptTextWithNullValue() {
+        initStage();
+        txtField.setSkin(new TextFieldSkin(txtField));
+        String promptWithNull = null;
+        StringProperty promptPropertyNull = new SimpleStringProperty(promptWithNull);
+        txtField.promptTextProperty().bind(promptPropertyNull);
+        root.getChildren().add(txtField);
+        Text promptNode = TextInputSkinShim.getPromptNode(txtField);
+        assertNull(promptNode);
+    }
+
     /*********************************************************************
      * Miscellaneous Tests                                               *
      ********************************************************************/
@@ -349,7 +408,7 @@ public class TextFieldTest {
      * Unfixed part of JDK-8145515, reported as regression JDK-8229914: eventFilter
      * on editor not notified for ENTER pressed.
      */
-    @Ignore("JDK-8229914")
+    @Disabled("JDK-8229914")
     @Test
     public void testEditorInComboBoxEnterPressedFilter() {
         initStage();
@@ -382,7 +441,7 @@ public class TextFieldTest {
         KeyCode key = ENTER;
         KeyEventFirer keyFirer = new KeyEventFirer(txtField);
         keyFirer.doKeyPress(key);
-        assertEquals("event count", 3, events.size());
+        assertEquals(3, events.size(), "event count");
         List<Object> sources = events.stream()
                 .map(e -> e.getSource())
                 .collect(toList());
@@ -403,7 +462,7 @@ public class TextFieldTest {
         KeyCode key = ESCAPE;
         KeyEventFirer keyFirer = new KeyEventFirer(txtField);
         keyFirer.doKeyPress(key);
-        assertEquals("event count", 3, events.size());
+        assertEquals(3, events.size(), "event count");
         List<Object> sources = events.stream()
                 .map(e -> e.getSource())
                 .collect(toList());
@@ -463,8 +522,8 @@ public class TextFieldTest {
         stage.show();
         KeyEventFirer keyboard = new KeyEventFirer(txtField);
         keyboard.doKeyPress(ENTER);
-        assertEquals("actionHandler must be notified", 1, actions.size());
-        assertTrue("action must be consumed ", actions.get(0).isConsumed());
+        assertEquals(1, actions.size(), "actionHandler must be notified");
+        assertTrue(actions.get(0).isConsumed(), "action must be consumed ");
     }
 
     @Test public void replaceSelectionWithFilteredCharacters() {
@@ -564,11 +623,11 @@ public class TextFieldTest {
         stage.show();
 
         assertTrue(txtField.getWidth() > TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
-        assertEquals(TextInputSkinShim.getTextTranslateX(txtField), 0, 0.0);
+        assertEquals(1, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
 
         txtField.setText("This is a long text. this is  long text.");
         assertTrue(txtField.getWidth() < TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
-        assertEquals(0, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
+        assertEquals(1, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
     }
 
     @Test
@@ -587,7 +646,7 @@ public class TextFieldTest {
 
         txtField.setText("This is a long text. this is  long text.");
         assertTrue(txtField.getWidth() < TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
-        assertEquals(0, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
+        assertEquals(1, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
     }
 
     @Test
@@ -606,7 +665,7 @@ public class TextFieldTest {
 
         txtField.setText("This is a long text. this is  long text.");
         assertTrue(txtField.getWidth() < TextInputSkinShim.getTextNode(txtField).getLayoutBounds().getWidth());
-        assertEquals(0, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
+        assertEquals(1, TextInputSkinShim.getTextTranslateX(txtField), 0.0);
     }
 
     @Test public void stripInvalidCharacters() {
@@ -614,6 +673,28 @@ public class TextFieldTest {
         char[] c = new char[]{0x7F, 0xA, 0x9, 0x00, 0x05, 0x10, 0x19};
         txtField.setText(String.valueOf(c));
         assertEquals("", txtField.getText());
+    }
+
+    //Test for JDK-8273657
+    @Test
+    public void testTextSelectionOnAddingTextField() {
+        initStage();
+        txtField.setSkin(new TextFieldSkin(txtField));
+        txtField.setText("A short text");
+        stage.show();
+
+        root.getChildren().add(txtField);
+        txtField.requestFocus();
+
+        assertEquals(0, txtField.getSelection().getStart());
+        assertEquals(txtField.getText().length(), txtField.getSelection().getEnd());
+
+        root.getChildren().remove(txtField);
+        root.getChildren().add(txtField);
+        txtField.requestFocus();
+
+        assertEquals(0, txtField.getSelection().getStart());
+        assertEquals(txtField.getText().length(), txtField.getSelection().getEnd());
     }
 
     private Change upperCase(Change change) {
@@ -639,7 +720,7 @@ public class TextFieldTest {
         stage.setScene(scene);
     }
 
-    @After
+    @AfterEach
     public void cleanup() {
         if (stage != null) {
             stage.hide();

@@ -28,23 +28,26 @@
 #include "CSSImageSetOptionValue.h"
 #include "CSSImageSetValue.h"
 #include "CSSPrimitiveValue.h"
-#include "Document.h"
+#include "DocumentPage.h"
 #include "MIMETypeRegistry.h"
 #include "Page.h"
 #include "StyleInvalidImage.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(StyleImageSet);
 
 Ref<StyleImageSet> StyleImageSet::create(Vector<ImageWithScale>&& images, Vector<size_t>&& sortedIndices)
 {
     ASSERT(images.size() == sortedIndices.size());
-    return adoptRef(*new StyleImageSet(WTFMove(images), WTFMove(sortedIndices)));
+    return adoptRef(*new StyleImageSet(WTF::move(images), WTF::move(sortedIndices)));
 }
 
 StyleImageSet::StyleImageSet(Vector<ImageWithScale>&& images, Vector<size_t>&& sortedIndices)
     : StyleMultiImage { Type::ImageSet }
-    , m_images { WTFMove(images) }
-    , m_sortedIndices { WTFMove(sortedIndices) }
+    , m_images { WTF::move(images) }
+    , m_sortedIndices { WTF::move(sortedIndices) }
 {
 }
 
@@ -52,7 +55,8 @@ StyleImageSet::~StyleImageSet() = default;
 
 bool StyleImageSet::operator==(const StyleImage& other) const
 {
-    return is<StyleImageSet>(other) && equals(downcast<StyleImageSet>(other));
+    auto* otherImageSet = dynamicDowncast<StyleImageSet>(other);
+    return otherImageSet && equals(*otherImageSet);
 }
 
 bool StyleImageSet::equals(const StyleImageSet& other) const
@@ -62,13 +66,10 @@ bool StyleImageSet::equals(const StyleImageSet& other) const
 
 Ref<CSSValue> StyleImageSet::computedStyleValue(const RenderStyle& style) const
 {
-    CSSValueListBuilder builder;
-    builder.reserveInitialCapacity(m_images.size());
-
-    for (auto& image : m_images)
-        builder.uncheckedAppend(CSSImageSetOptionValue::create(image.image->computedStyleValue(style), CSSPrimitiveValue::create(image.scaleFactor, CSSUnitType::CSS_DPPX), image.mimeType));
-
-    return CSSImageSetValue::create(WTFMove(builder));
+    auto builder = WTF::map<CSSValueListBuilderInlineCapacity>(m_images, [&](auto& image) -> Ref<CSSValue> {
+        return CSSImageSetOptionValue::create(image.image->computedStyleValue(style), CSSPrimitiveValue::create(image.scaleFactor, CSSUnitType::CSS_DPPX), image.mimeType);
+    });
+    return CSSImageSetValue::create(WTF::move(builder));
 }
 
 ImageWithScale StyleImageSet::selectBestFitImage(const Document& document)

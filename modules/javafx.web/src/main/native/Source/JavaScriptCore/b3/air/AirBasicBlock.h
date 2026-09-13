@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -30,8 +30,9 @@
 #include "AirFrequentedBlock.h"
 #include "AirInst.h"
 #include "B3SuccessorCollection.h"
-#include <wtf/FastMalloc.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/SequesteredMalloc.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC { namespace B3 {
 
@@ -46,7 +47,7 @@ class PhaseInsertionSet;
 
 class BasicBlock {
     WTF_MAKE_NONCOPYABLE(BasicBlock);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_SEQUESTERED_ARENA_ALLOCATED(BasicBlock);
 public:
     static const char* const dumpPrefix;
     static constexpr unsigned uninsertedIndex = UINT_MAX;
@@ -62,21 +63,21 @@ public:
     void setIndex(unsigned index) { m_index = index; }
 
     unsigned size() const { return m_insts.size(); }
-    InstList::iterator begin() { return m_insts.begin(); }
-    InstList::iterator end() { return m_insts.end(); }
-    InstList::const_iterator begin() const { return m_insts.begin(); }
-    InstList::const_iterator end() const { return m_insts.end(); }
+    InstList::iterator begin() LIFETIME_BOUND { return m_insts.begin(); }
+    InstList::iterator end() LIFETIME_BOUND { return m_insts.end(); }
+    InstList::const_iterator begin() const LIFETIME_BOUND { return m_insts.begin(); }
+    InstList::const_iterator end() const LIFETIME_BOUND { return m_insts.end(); }
 
-    const Inst& at(unsigned index) const { return m_insts[index]; }
-    Inst& at(unsigned index) { return m_insts[index]; }
+    const Inst& at(unsigned index) const LIFETIME_BOUND { return m_insts[index]; }
+    Inst& at(unsigned index) LIFETIME_BOUND { return m_insts[index]; }
 
-    Inst* get(unsigned index)
+    Inst* get(unsigned index) LIFETIME_BOUND
     {
         return index < size() ? &at(index) : nullptr;
     }
 
-    const Inst& last() const { return m_insts.last(); }
-    Inst& last() { return m_insts.last(); }
+    const Inst& last() const LIFETIME_BOUND { return m_insts.last(); }
+    Inst& last() LIFETIME_BOUND { return m_insts.last(); }
 
     void resize(unsigned size) { m_insts.resize(size); }
 

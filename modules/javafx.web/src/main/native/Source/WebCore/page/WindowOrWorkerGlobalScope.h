@@ -38,6 +38,9 @@ struct StructuredSerializeOptions;
 
 class WindowOrWorkerGlobalScope {
 public:
+    static ExceptionOr<String> btoa(const String&);
+    static ExceptionOr<String> atob(const String&);
+
     static void reportError(JSDOMGlobalObject&, JSC::JSValue);
     static ExceptionOr<JSC::JSValue> structuredClone(JSDOMGlobalObject& lexicalGlobalObject, JSDOMGlobalObject& relevantGlobalObject, JSC::JSValue, StructuredSerializeOptions&&);
 };

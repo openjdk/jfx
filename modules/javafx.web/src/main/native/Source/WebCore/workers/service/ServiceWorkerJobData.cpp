@@ -28,43 +28,32 @@
 
 #include <wtf/CrossThreadCopier.h>
 
-#if ENABLE(SERVICE_WORKER)
-
 namespace WebCore {
 
-static inline ServiceWorkerOrClientIdentifier serviceWorkerOrClientIdentifier(const ServiceWorkerOrClientIdentifier& localSourceContext)
-{
-    return WTF::switchOn(localSourceContext, [&](ScriptExecutionContextIdentifier contextIdentifier) -> ServiceWorkerOrClientIdentifier {
-        return contextIdentifier;
-    }, [&](ServiceWorkerIdentifier serviceWorkerIdentifier) -> ServiceWorkerOrClientIdentifier {
-        return serviceWorkerIdentifier;
-    });
-}
-
 ServiceWorkerJobData::ServiceWorkerJobData(SWServerConnectionIdentifier connectionIdentifier, const ServiceWorkerOrClientIdentifier& localSourceContext)
-    : sourceContext(serviceWorkerOrClientIdentifier(localSourceContext))
+    : sourceContext(localSourceContext)
     , m_identifier { connectionIdentifier, ServiceWorkerJobIdentifier::generate() }
 {
 }
 
 ServiceWorkerJobData::ServiceWorkerJobData(Identifier identifier, const ServiceWorkerOrClientIdentifier& localSourceContext)
-    : sourceContext(serviceWorkerOrClientIdentifier(localSourceContext))
+    : sourceContext(localSourceContext)
     , m_identifier { identifier }
 {
 }
 
 ServiceWorkerJobData::ServiceWorkerJobData(WebCore::ServiceWorkerJobDataIdentifier&& identifier, URL&& scriptURL, URL&& clientCreationURL, WebCore::SecurityOriginData&& topOrigin, URL&& scopeURL, WebCore::ServiceWorkerOrClientIdentifier&& sourceContext, WebCore::WorkerType workerType, WebCore::ServiceWorkerJobType type, String&& domainForCachePartition, bool isFromServiceWorkerPage, std::optional<WebCore::ServiceWorkerRegistrationOptions>&& registrationOptions)
-    : scriptURL(WTFMove(scriptURL))
-    , clientCreationURL(WTFMove(clientCreationURL))
-    , topOrigin(WTFMove(topOrigin))
-    , scopeURL(WTFMove(scopeURL))
-    , sourceContext(WTFMove(sourceContext))
+    : scriptURL(WTF::move(scriptURL))
+    , clientCreationURL(WTF::move(clientCreationURL))
+    , topOrigin(WTF::move(topOrigin))
+    , scopeURL(WTF::move(scopeURL))
+    , sourceContext(WTF::move(sourceContext))
     , workerType(workerType)
     , type(type)
-    , domainForCachePartition(WTFMove(domainForCachePartition))
+    , domainForCachePartition(WTF::move(domainForCachePartition))
     , isFromServiceWorkerPage(isFromServiceWorkerPage)
-    , registrationOptions(WTFMove(registrationOptions))
-    , m_identifier(WTFMove(identifier))
+    , registrationOptions(WTF::move(registrationOptions))
+    , m_identifier(WTF::move(identifier))
 {
 }
 
@@ -72,7 +61,7 @@ ServiceWorkerRegistrationKey ServiceWorkerJobData::registrationKey() const
 {
     URL scope = scopeURL;
     scope.removeFragmentIdentifier();
-    return { SecurityOriginData { topOrigin }, WTFMove(scope) };
+    return { SecurityOriginData { topOrigin }, WTF::move(scope) };
 }
 
 std::optional<ScriptExecutionContextIdentifier> ServiceWorkerJobData::serviceWorkerPageIdentifier() const
@@ -84,9 +73,7 @@ std::optional<ScriptExecutionContextIdentifier> ServiceWorkerJobData::serviceWor
 
 ServiceWorkerJobData ServiceWorkerJobData::isolatedCopy() const
 {
-    ServiceWorkerJobData result;
-    result.m_identifier = identifier();
-    result.sourceContext = sourceContext;
+    ServiceWorkerJobData result { identifier(), sourceContext };
     result.workerType = workerType;
     result.type = type;
     result.isFromServiceWorkerPage = isFromServiceWorkerPage;
@@ -127,5 +114,3 @@ bool ServiceWorkerJobData::isEquivalent(const ServiceWorkerJobData& job) const
 }
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

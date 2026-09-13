@@ -25,10 +25,11 @@
 
 #pragma once
 
-#include "LocalDOMWindow.h"
-#include <wtf/URL.h>
-#include "ScriptCachedFrameData.h"
+#include <WebCore/LocalDOMWindow.h>
+#include <WebCore/ScriptCachedFrameData.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/URL.h>
 #include <wtf/UniqueRef.h>
 
 namespace WebCore {
@@ -37,6 +38,7 @@ class CachedFrame;
 class CachedFramePlatformData;
 class Document;
 class DocumentLoader;
+class FrameView;
 class LocalFrameView;
 class Node;
 enum class HasInsecureContent : bool;
@@ -48,31 +50,35 @@ public:
     void restore();
 
     Document* document() const { return m_document.get(); }
-    LocalFrameView* view() const { return m_view.get(); }
+    FrameView* view() const { return m_view.get(); }
+    RefPtr<FrameView> protectedView() const;
     const URL& url() const { return m_url; }
     bool isMainFrame() { return m_isMainFrame; }
 
 protected:
-    CachedFrameBase(LocalFrame&);
+    CachedFrameBase(Frame&);
     ~CachedFrameBase();
 
     void pruneDetachedChildFrames();
 
     RefPtr<Document> m_document;
     RefPtr<DocumentLoader> m_documentLoader;
-    RefPtr<LocalFrameView> m_view;
+    RefPtr<FrameView> m_view;
     URL m_url;
     std::unique_ptr<ScriptCachedFrameData> m_cachedFrameScriptData;
     std::unique_ptr<CachedFramePlatformData> m_cachedFramePlatformData;
     bool m_isMainFrame;
 
     Vector<UniqueRef<CachedFrame>> m_childFrames;
+
+private:
+    void initializeWithLocalFrame(LocalFrame&);
 };
 
 class CachedFrame : private CachedFrameBase {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(CachedFrame);
 public:
-    explicit CachedFrame(LocalFrame&);
+    explicit CachedFrame(Frame&);
 
     void open();
     void clear();
@@ -87,6 +93,7 @@ public:
 
     using CachedFrameBase::document;
     using CachedFrameBase::view;
+    using CachedFrameBase::protectedView;
     using CachedFrameBase::url;
     DocumentLoader* documentLoader() const { return m_documentLoader.get(); }
 

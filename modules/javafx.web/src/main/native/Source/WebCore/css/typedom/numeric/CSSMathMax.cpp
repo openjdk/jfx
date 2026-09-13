@@ -26,38 +26,37 @@
 #include "config.h"
 #include "CSSMathMax.h"
 
-#include "CSSCalcOperationNode.h"
+#include "CSSCalcTree.h"
 #include "CSSNumericArray.h"
 #include "ExceptionOr.h"
-#include <wtf/Algorithms.h>
 #include <wtf/FixedVector.h>
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CSSMathMax);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSMathMax);
 
 ExceptionOr<Ref<CSSMathMax>> CSSMathMax::create(FixedVector<CSSNumberish>&& numberishes)
 {
-    return create(WTF::map(WTFMove(numberishes), rectifyNumberish));
+    return create(WTF::map(WTF::move(numberishes), rectifyNumberish));
 }
 
 ExceptionOr<Ref<CSSMathMax>> CSSMathMax::create(Vector<Ref<CSSNumericValue>>&& values)
 {
     if (values.isEmpty())
-        return Exception { SyntaxError };
+        return Exception { ExceptionCode::SyntaxError };
 
     auto type = CSSNumericType::addTypes(values);
     if (!type)
-        return Exception { TypeError };
+        return Exception { ExceptionCode::TypeError };
 
-    return adoptRef(*new CSSMathMax(WTFMove(values), WTFMove(*type)));
+    return adoptRef(*new CSSMathMax(WTF::move(values), WTF::move(*type)));
 }
 
 CSSMathMax::CSSMathMax(Vector<Ref<CSSNumericValue>>&& values, CSSNumericType&& type)
-    : CSSMathValue(WTFMove(type))
-    , m_values(CSSNumericArray::create(WTFMove(values)))
+    : CSSMathValue(WTF::move(type))
+    , m_values(CSSNumericArray::create(WTF::move(values)))
 {
 }
 
@@ -70,10 +69,10 @@ void CSSMathMax::serialize(StringBuilder& builder, OptionSet<SerializationArgume
 {
     // https://drafts.css-houdini.org/css-typed-om/#calc-serialization
     if (!arguments.contains(SerializationArguments::WithoutParentheses))
-        builder.append("max(");
+        builder.append("max("_s);
     m_values->forEach([&](auto& numericValue, bool first) {
         if (!first)
-            builder.append(", ");
+            builder.append(", "_s);
         numericValue.serialize(builder, { SerializationArguments::Nested, SerializationArguments::WithoutParentheses });
     });
     if (!arguments.contains(SerializationArguments::WithoutParentheses))
@@ -94,22 +93,25 @@ auto CSSMathMax::toSumValue() const -> std::optional<SumValue>
             || (*currentValue)[0].units != (*currentMax)[0].units)
             return std::nullopt;
         if ((*currentValue)[0].value > (*currentMax)[0].value)
-            currentMax = WTFMove(currentValue);
+            currentMax = WTF::move(currentValue);
     }
     return currentMax;
 }
 
-RefPtr<CSSCalcExpressionNode> CSSMathMax::toCalcExpressionNode() const
+std::optional<CSSCalc::Child> CSSMathMax::toCalcTreeNode() const
 {
-    Vector<Ref<CSSCalcExpressionNode>> values;
-    values.reserveInitialCapacity(m_values->length());
-    for (auto& value : m_values->array()) {
-        if (auto valueNode = value->toCalcExpressionNode())
-            values.append(valueNode.releaseNonNull());
-    }
-    if (values.isEmpty())
-        return nullptr;
-    return CSSCalcOperationNode::createMinOrMaxOrClamp(CalcOperator::Max, WTFMove(values), CalculationCategory::Length);
+    CSSCalc::Children children = WTF::compactMap(m_values->array(), [](auto& child) {
+        return child->toCalcTreeNode();
+    });
+    if (children.isEmpty())
+        return std::nullopt;
+
+    auto max = CSSCalc::Max { .children = WTF::move(children) };
+    auto type = CSSCalc::toType(max);
+    if (!type)
+        return std::nullopt;
+
+    return CSSCalc::makeChild(WTF::move(max), *type);
 }
 
 } // namespace WebCore

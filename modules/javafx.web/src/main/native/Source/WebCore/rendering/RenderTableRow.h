@@ -4,7 +4,8 @@
  *           (C) 1998 Waldo Bastian (bastian@kde.org)
  *           (C) 1999 Lars Knoll (knoll@kde.org)
  *           (C) 1999 Antti Koivisto (koivisto@kde.org)
- * Copyright (C) 2003, 2004, 2005, 2006, 2009 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
+ * Copyright (C) 2016 Google Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -32,10 +33,12 @@ static const unsigned unsetRowIndex = 0x7FFFFFFF;
 static const unsigned maxRowIndex = 0x7FFFFFFE; // 2,147,483,646
 
 class RenderTableRow final : public RenderBox {
-    WTF_MAKE_ISO_ALLOCATED(RenderTableRow);
+    WTF_MAKE_TZONE_ALLOCATED(RenderTableRow);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderTableRow);
 public:
     RenderTableRow(Element&, RenderStyle&&);
     RenderTableRow(Document&, RenderStyle&&);
+    virtual ~RenderTableRow();
 
     RenderTableRow* nextRow() const;
     RenderTableRow* previousRow() const;
@@ -46,9 +49,6 @@ public:
     RenderTable* table() const;
 
     void paintOutlineForRowIfNeeded(PaintInfo&, const LayoutPoint&);
-
-    static RenderPtr<RenderTableRow> createAnonymousWithParentRenderer(const RenderTableSection&);
-    RenderPtr<RenderBox> createAnonymousBoxWithSameTypeAs(const RenderBox&) const override;
 
     void setRowIndex(unsigned);
     bool rowIndexWasSet() const { return m_rowIndex != unsetRowIndex; }
@@ -65,18 +65,27 @@ public:
 
     void didInsertTableCell(RenderTableCell& child, RenderObject* beforeChild);
 
+    // Whether a row has opaque background depends on many factors, e.g. border spacing, border collapsing, missing cells, etc.
+    // For simplicity, just conservatively assume all table rows are not opaque.
+    bool foregroundIsKnownToBeOpaqueInRect(const LayoutRect&, unsigned) const override { return false; }
+    bool backgroundIsKnownToBeOpaqueInRect(const LayoutRect&) const override { return false; }
+
 private:
     static RenderPtr<RenderTableRow> createTableRowWithStyle(Document&, const RenderStyle&);
 
-    ASCIILiteral renderName() const override { return (isAnonymous() || isPseudoElement()) ? "RenderTableRow (anonymous)"_s : "RenderTableRow"_s; }
+    ASCIILiteral renderName() const override;
     bool canHaveChildren() const override { return true; }
-    void willBeRemovedFromTree(IsInternalMove) override;
+    void willBeRemovedFromTree() override;
     void layout() override;
+
     LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const override;
+    RepaintRects rectsForRepaintingAfterLayout(const RenderLayerModelObject* repaintContainer, RepaintOutlineBounds) const override;
+    void computeIntrinsicLogicalWidths(LayoutUnit&, LayoutUnit&) const override { }
+
     bool requiresLayer() const final;
     void paint(PaintInfo&, const LayoutPoint&) override;
     void imageChanged(WrappedImagePtr, const IntRect* = 0) override;
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) override;
 
     void firstChild() const = delete;
     void lastChild() const = delete;
@@ -88,7 +97,7 @@ private:
 
 inline void RenderTableRow::setRowIndex(unsigned rowIndex)
 {
-    if (UNLIKELY(rowIndex > maxRowIndex))
+    if (rowIndex > maxRowIndex) [[unlikely]]
         CRASH();
     m_rowIndex = rowIndex;
 }
@@ -129,4 +138,4 @@ inline RenderTableRow* RenderTableSection::lastRow() const
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTableRow, isTableRow())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderTableRow, isRenderTableRow())

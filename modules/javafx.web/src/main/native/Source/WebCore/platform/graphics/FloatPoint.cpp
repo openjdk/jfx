@@ -34,9 +34,12 @@
 #include "TransformationMatrix.h"
 #include <limits>
 #include <math.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(FloatPoint);
 
 FloatPoint::FloatPoint(const IntPoint& p) : m_x(p.x()), m_y(p.y())
 {
@@ -92,7 +95,7 @@ FloatPoint FloatPoint::narrowPrecision(double x, double y)
 TextStream& operator<<(TextStream& ts, const FloatPoint& p)
 {
     // FIXME: callers should use the NumberRespectingIntegers flag.
-    return ts << "(" << TextStream::FormatNumberRespectingIntegers(p.x()) << "," << TextStream::FormatNumberRespectingIntegers(p.y()) << ")";
+    return ts << '(' << TextStream::FormatNumberRespectingIntegers(p.x()) << ',' << TextStream::FormatNumberRespectingIntegers(p.y()) << ')';
 }
 
 Ref<JSON::Object> FloatPoint::toJSONObject() const

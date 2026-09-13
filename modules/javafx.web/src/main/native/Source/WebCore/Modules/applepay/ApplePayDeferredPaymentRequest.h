@@ -27,12 +27,13 @@
 
 #if ENABLE(APPLE_PAY_DEFERRED_PAYMENTS)
 
-#include "ExceptionOr.h"
 #include <WebCore/ApplePayLineItem.h>
 #include <wtf/WallTime.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
+
+template<typename> class ExceptionOr;
 
 struct ApplePayDeferredPaymentRequest final {
     String billingAgreement;

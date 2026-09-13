@@ -1,6 +1,6 @@
 /*
  * (C) 1999-2003 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2004, 2006, 2007 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -56,11 +56,11 @@ public:
 private:
     StyleSheetList(Document&);
     StyleSheetList(ShadowRoot&);
-    const Vector<RefPtr<StyleSheet>>& styleSheets() const;
+    const Vector<Ref<StyleSheet>>& styleSheets() const;
 
     WeakPtr<Document, WeakPtrImplWithEventTargetData> m_document;
-    ShadowRoot* m_shadowRoot { nullptr };
-    Vector<RefPtr<StyleSheet>> m_detachedStyleSheets;
+    WeakPtr<ShadowRoot, WeakPtrImplWithEventTargetData> m_shadowRoot;
+    Vector<Ref<StyleSheet>> m_detachedStyleSheets;
 };
 
 } // namespace WebCore

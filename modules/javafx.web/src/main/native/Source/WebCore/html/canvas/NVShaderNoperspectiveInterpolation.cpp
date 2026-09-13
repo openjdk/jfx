@@ -28,28 +28,23 @@
 #if ENABLE(WEBGL)
 #include "NVShaderNoperspectiveInterpolation.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(NVShaderNoperspectiveInterpolation);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NVShaderNoperspectiveInterpolation);
 
 NVShaderNoperspectiveInterpolation::NVShaderNoperspectiveInterpolation(WebGLRenderingContextBase& context)
-    : WebGLExtension(context)
+    : WebGLExtension(context, WebGLExtensionName::NVShaderNoperspectiveInterpolation)
 {
-    context.graphicsContextGL()->ensureExtensionEnabled("GL_NV_shader_noperspective_interpolation"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::NV_shader_noperspective_interpolation);
 }
 
 NVShaderNoperspectiveInterpolation::~NVShaderNoperspectiveInterpolation() = default;
 
-WebGLExtension::ExtensionName NVShaderNoperspectiveInterpolation::getName() const
-{
-    return NVShaderNoperspectiveInterpolationName;
-}
-
 bool NVShaderNoperspectiveInterpolation::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_NV_shader_noperspective_interpolation"_s);
+    return context.supportsExtension(GCGLExtension::NV_shader_noperspective_interpolation);
 }
 
 } // namespace WebCore

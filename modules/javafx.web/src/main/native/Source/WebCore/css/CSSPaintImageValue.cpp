@@ -27,34 +27,31 @@
 #include "config.h"
 #include "CSSPaintImageValue.h"
 
-#if ENABLE(CSS_PAINTING_API)
-
 #include "CSSVariableData.h"
 #include "StylePaintImage.h"
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
 
 CSSPaintImageValue::CSSPaintImageValue(String&& name, Ref<CSSVariableData>&& arguments)
-    : CSSValue { PaintImageClass }
-    , m_name { WTFMove(name) }
-    , m_arguments { WTFMove(arguments) }
+    : CSSValue { ClassType::PaintImage }
+    , m_name { WTF::move(name) }
+    , m_arguments { WTF::move(arguments) }
 {
 }
 
 CSSPaintImageValue::~CSSPaintImageValue() = default;
 
-String CSSPaintImageValue::customCSSText() const
+String CSSPaintImageValue::customCSSText(const CSS::SerializationContext&) const
 {
     // FIXME: This should include the arguments too.
-    return makeString("paint(", m_name, ')');
+    return makeString("paint("_s, m_name, ')');
 }
 
-RefPtr<StyleImage> CSSPaintImageValue::createStyleImage(Style::BuilderState&) const
+RefPtr<StyleImage> CSSPaintImageValue::createStyleImage(const Style::BuilderState&) const
 {
     return StylePaintImage::create(m_name, m_arguments);
 }
 
 } // namespace WebCore
-
-#endif

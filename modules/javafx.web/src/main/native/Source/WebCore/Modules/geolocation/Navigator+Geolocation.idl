@@ -20,7 +20,9 @@
 // https://w3c.github.io/geolocation-api/#navigator_interface
 [
     Conditional=GEOLOCATION,
+    EnabledBySetting=GeolocationAPIEnabled,
     ImplementedBy=NavigatorGeolocation
 ] partial interface Navigator {
     readonly attribute Geolocation geolocation;
 };
+

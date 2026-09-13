@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "JSGenericTypedArrayViewPrototype.h"
-#include "JSTypedArrays.h"
+#include <JavaScriptCore/JSGenericTypedArrayViewPrototype.h>
+#include <JavaScriptCore/JSTypedArrays.h>
 
 namespace JSC {
 
@@ -37,6 +37,7 @@ typedef JSGenericTypedArrayViewPrototype<JSUint8Array> JSUint8ArrayPrototype;
 typedef JSGenericTypedArrayViewPrototype<JSUint8ClampedArray> JSUint8ClampedArrayPrototype;
 typedef JSGenericTypedArrayViewPrototype<JSUint16Array> JSUint16ArrayPrototype;
 typedef JSGenericTypedArrayViewPrototype<JSUint32Array> JSUint32ArrayPrototype;
+typedef JSGenericTypedArrayViewPrototype<JSFloat16Array> JSFloat16ArrayPrototype;
 typedef JSGenericTypedArrayViewPrototype<JSFloat32Array> JSFloat32ArrayPrototype;
 typedef JSGenericTypedArrayViewPrototype<JSFloat64Array> JSFloat64ArrayPrototype;
 typedef JSGenericTypedArrayViewPrototype<JSBigInt64Array> JSBigInt64ArrayPrototype;

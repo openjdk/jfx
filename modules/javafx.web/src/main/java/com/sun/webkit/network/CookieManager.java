@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -150,7 +150,7 @@ public final class CookieManager extends CookieHandler {
                 continue;
             }
             ExtendedTime currentTime = ExtendedTime.currentTime();
-            // RT-15907: Process the list of headers in reverse order,
+            // JDK-8118580: Process the list of headers in reverse order,
             // effectively restoring the order in which the headers were
             // received from the server. This is a temporary workaround for
             // http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=7059532

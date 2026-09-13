@@ -25,15 +25,20 @@
 #include "SVGGraphicsElement.h"
 #include "SVGURIReference.h"
 #include "SharedStringHash.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class DOMTokenList;
 
+enum class Relation : uint8_t;
+
 class SVGAElement final : public SVGGraphicsElement, public SVGURIReference {
-    WTF_MAKE_ISO_ALLOCATED(SVGAElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGAElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGAElement);
 public:
     static Ref<SVGAElement> create(const QualifiedName&, Document&);
+    ~SVGAElement();
 
     AtomString target() const final { return AtomString { m_target->currentValue() }; }
     Ref<SVGAnimatedString>& targetAnimated() { return m_target; }
@@ -57,9 +62,11 @@ private:
     String title() const final;
     void defaultEventHandler(Event&) final;
 
+    bool hasRel(Relation) const;
+
     bool supportsFocus() const final;
     bool isMouseFocusable() const final;
-    bool isKeyboardFocusable(KeyboardEvent*) const final;
+    bool isKeyboardFocusable(const FocusEventData&) const final;
     bool isURLAttribute(const Attribute&) const final;
     bool canStartSelection() const final;
     int defaultTabIndex() const final;
@@ -68,10 +75,12 @@ private:
 
     Ref<SVGAnimatedString> m_target { SVGAnimatedString::create(this) };
 
+    OptionSet<Relation> m_linkRelations;
+
     // This is computed only once and must not be affected by subsequent URL changes.
     mutable std::optional<SharedStringHash> m_storedVisitedLinkHash;
 
-    std::unique_ptr<DOMTokenList> m_relList;
+    const std::unique_ptr<DOMTokenList> m_relList;
 };
 
 } // namespace WebCore

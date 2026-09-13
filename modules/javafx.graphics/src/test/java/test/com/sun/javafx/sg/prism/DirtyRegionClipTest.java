@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,8 +26,8 @@ package test.com.sun.javafx.sg.prism;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
+import java.util.stream.Stream;
 
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.DirtyRegionContainer;
@@ -36,13 +36,11 @@ import com.sun.javafx.geom.transform.BaseTransform;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGRectangle;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-@RunWith(Parameterized.class)
 public class DirtyRegionClipTest extends DirtyRegionTestBase {
 
     /**
@@ -55,8 +53,7 @@ public class DirtyRegionClipTest extends DirtyRegionTestBase {
      * change to the node's geometry is, such that the test code can create the
      * union and test for the appropriate dirty region for this specific node.
      */
-    @Parameterized.Parameters
-    public static Collection createParameters() {
+    public static Stream<Arguments> createParameters() {
         // This polluter will translate the test node in a positive direction
         final Polluter pollutePositiveTranslation = new Polluter() {
             { tx = BaseTransform.getTranslateInstance(50, 50); }
@@ -66,7 +63,7 @@ public class DirtyRegionClipTest extends DirtyRegionTestBase {
 
         // We will populate this list with the parameters with which we will test.
         // Each Object[] within the params is composed of a Creator and a Polluter.
-        List<Object[]> params = new ArrayList<>();
+        Stream<Arguments> params = Stream.empty();
         // A standard list of polluters which applies to all tests
         List<Polluter> polluters = Arrays.asList(new Polluter[]{
                 pollutePositiveTranslation
@@ -74,10 +71,13 @@ public class DirtyRegionClipTest extends DirtyRegionTestBase {
 
         // Construct the Creator / Polluter pair for Groups
         for (final Polluter polluter : polluters) {
-            params.add(new Object[] {new Creator() {
-                @Override public NGNode create() { return createGroup(createRectangle(0, 0, 100, 100)); }
-                @Override public String toString() { return "Group with one Rectangle"; }
-            }, polluter});
+            params = appendArgument(params, Arguments.of(
+                new Creator() {
+                    @Override public NGNode create() { return createGroup(createRectangle(0, 0, 100, 100)); }
+                    @Override public String toString() { return "Group with one Rectangle"; }
+                },
+                polluter
+            ));
         }
 
         // Construct the Creator / Polluter pair for Rectangles
@@ -91,17 +91,16 @@ public class DirtyRegionClipTest extends DirtyRegionTestBase {
             @Override public String toString() { return "Pollute Rectangle Geometry"; }
         });
         for (final Polluter polluter : rectanglePolluters) {
-            params.add(new Object[] {new Creator() {
-                @Override public NGNode create() { return createRectangle(0, 0, 100, 100); }
-                @Override public String toString() { return "Rectangle"; }
-            }, polluter});
+            params = appendArgument(params, Arguments.of(
+                new Creator() {
+                    @Override public NGNode create() { return createRectangle(0, 0, 100, 100); }
+                    @Override public String toString() { return "Rectangle"; }
+                },
+                polluter
+            ));
         }
         // Return the populated params collection
         return params;
-    }
-
-    public DirtyRegionClipTest(Creator creator, Polluter polluter) {
-        super(creator, polluter);
     }
 
     /**
@@ -109,8 +108,15 @@ public class DirtyRegionClipTest extends DirtyRegionTestBase {
      * of the root node. They may end up overlapping when they become dirty,
      * but they don't start out that way! Each node is placed where it belongs
      * in the grid by translating them into place.
+     *
+     * NOTE: This was a parametrized test initializer with @BeforeEach flag, but
+     * JUnit5 does not support parametrized classes yet. Make this a @BeforeEach
+     * method once it does.
      */
-    @Before public void setUp() {
+    @Override
+    protected void setUp(Creator creator, Polluter polluter) {
+        super.setUp(creator, polluter);
+
         // create the grid
         NGNode[] content = new NGNode[9];
         for (int row=0; row<3; row++) {
@@ -128,9 +134,14 @@ public class DirtyRegionClipTest extends DirtyRegionTestBase {
         // clean them all up so that when we perform the test, it is from the
         // starting point of a completely cleaned tree
         root.render(TestGraphics.TEST_GRAPHICS);
+        root.clearDirty();
     }
 
-    @Test public void sanityCheck() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void sanityCheck(Creator creator, Polluter polluter) {
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+
         NGNode node = root.getChildren().get(0);
         assertEquals(new RectBounds(0, 0, 100, 100), node.getContentBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM));
         assertEquals(new RectBounds(0, 0, 100, 100), node.getCompleteBounds(new RectBounds(), BaseTransform.IDENTITY_TRANSFORM));
@@ -148,7 +159,11 @@ public class DirtyRegionClipTest extends DirtyRegionTestBase {
      * Dirty region bounds are bigger than clip bounds and whole clip lies
      * inside the dirty region.
      */
-    @Test public void dirtyRegionContainsClip() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void dirtyRegionContainsClip(Creator creator, Polluter polluter) {
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+
         windowClip = new RectBounds(115, 115, 120, 120);
 
         NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
@@ -158,7 +173,11 @@ public class DirtyRegionClipTest extends DirtyRegionTestBase {
     /**
      * Dirty region bounds partially overlap with clip bounds.
      */
-    @Test public void dirtyRegionPartiallyOverlapsClip() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void dirtyRegionPartiallyOverlapsClip(Creator creator, Polluter polluter) {
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+
         windowClip = new RectBounds(90, 90, 120, 120);
 
         NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
@@ -169,7 +188,11 @@ public class DirtyRegionClipTest extends DirtyRegionTestBase {
      * Dirty region bounds are smaller than clip bounds and the dirty region
      * lies inside the clip.
      */
-    @Test public void dirtyRegionDoesNotContainClip() {
+    @ParameterizedTest
+    @MethodSource("createParameters")
+    public void dirtyRegionDoesNotContainClip(Creator creator, Polluter polluter) {
+        setUp(creator, polluter); // NOTE: JUnit5 does not (yet) support parametrized classes. Revert those changes once it does.
+
         NGNode middleChild = root.getChildren().get(root.getChildren().size()/2);
         assertContainsClip(root, polluter.polluteAndGetExpectedBounds(middleChild), DirtyRegionContainer.DTR_OK);
     }

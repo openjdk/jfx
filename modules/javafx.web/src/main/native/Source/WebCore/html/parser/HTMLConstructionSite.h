@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Google, Inc. All Rights Reserved.
+ * Copyright (C) 2010 Google, Inc. All rights reserved.
  * Copyright (C) 2011 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,10 +26,12 @@
 
 #pragma once
 
+#include "ContainerNodeInlines.h"
 #include "Document.h"
-#include "FragmentScriptingPermission.h"
 #include "HTMLElementStack.h"
 #include "HTMLFormattingElementList.h"
+#include "ParserContentPolicy.h"
+#include <wtf/CheckedRef.h>
 #include <wtf/FixedVector.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RefPtr.h>
@@ -73,6 +75,10 @@ struct HTMLConstructionSiteTask {
         return downcast<ContainerNode>(child.get());
     }
 
+    Ref<ContainerNode> protectedNonNullParent() const { return *parent; }
+    Ref<Node> protectedNonNullChild() const { return *child; }
+    Ref<Node> protectedNonNullNextChild() const { return *nextChild; }
+
     Operation operation;
     RefPtr<ContainerNode> parent;
     RefPtr<Node> nextChild;
@@ -95,18 +101,19 @@ enum WhitespaceMode {
 };
 
 class AtomHTMLToken;
-struct CustomElementConstructionData;
+class CustomElementRegistry;
 class Document;
 class Element;
 class HTMLFormElement;
 class HTMLTemplateElement;
 class JSCustomElementInterface;
+struct CustomElementConstructionData;
 
 class HTMLConstructionSite {
     WTF_MAKE_NONCOPYABLE(HTMLConstructionSite);
 public:
     HTMLConstructionSite(Document&, OptionSet<ParserContentPolicy>, unsigned maximumDOMTreeDepth);
-    HTMLConstructionSite(DocumentFragment&, OptionSet<ParserContentPolicy>, unsigned maximumDOMTreeDepth);
+    HTMLConstructionSite(DocumentFragment&, OptionSet<ParserContentPolicy>, unsigned maximumDOMTreeDepth, CustomElementRegistry*);
     ~HTMLConstructionSite();
 
     void executeQueuedTasks();
@@ -156,13 +163,18 @@ public:
 
     bool inQuirksMode() { return m_inQuirksMode; }
 
+    bool hasReachedMaxDOMTreeDepth() const { return m_hasReachedMaxDOMTreeDepth; }
+
     bool isEmpty() const { return !m_openElements.stackDepth(); }
     Element& currentElement() const { return m_openElements.top(); }
     ContainerNode& currentNode() const { return m_openElements.topNode(); }
+    Ref<ContainerNode> protectedCurrentNode() const { return m_openElements.topNode(); }
     ElementName currentElementName() const { return m_openElements.topElementName(); }
     HTMLStackItem& currentStackItem() const { return m_openElements.topStackItem(); }
     HTMLStackItem* oneBelowTop() const { return m_openElements.oneBelowTop(); }
+    TreeScope& treeScopeForCurrentNode();
     Document& ownerDocumentForCurrentNode();
+    Ref<Document> protectedOwnerDocumentForCurrentNode() { return ownerDocumentForCurrentNode(); }
     HTMLElementStack& openElements() const { return m_openElements; }
     HTMLFormattingElementList& activeFormattingElements() const { return m_activeFormattingElements; }
     bool currentIsRootNode() { return &m_openElements.topNode() == &m_openElements.rootNode(); }
@@ -177,7 +189,7 @@ public:
     OptionSet<ParserContentPolicy> parserContentPolicy() { return m_parserContentPolicy; }
 
 #if ENABLE(TELEPHONE_NUMBER_DETECTION)
-    bool isTelephoneNumberParsingEnabled() { return m_document.isTelephoneNumberParsingEnabled(); }
+    bool isTelephoneNumberParsingEnabled() { return document().isTelephoneNumberParsingEnabled(); }
 #endif
 
     class RedirectToFosterParentGuard {
@@ -194,6 +206,8 @@ public:
     static bool isFormattingTag(TagName);
 
 private:
+    Document& document() const { return m_document.get(); }
+
     // In the common case, this queue will have only one task because most
     // tokens produce only one DOM mutation.
     typedef Vector<HTMLConstructionSiteTask, 1> TaskQueue;
@@ -201,25 +215,30 @@ private:
     void setCompatibilityMode(DocumentCompatibilityMode);
     void setCompatibilityModeFromDoctype(const AtomString& name, const String& publicId, const String& systemId);
 
-    void attachLater(ContainerNode& parent, Ref<Node>&& child, bool selfClosing = false);
+    void attachLater(Ref<ContainerNode>&& parent, Ref<Node>&& child, bool selfClosing = false);
 
     void findFosterSite(HTMLConstructionSiteTask&);
 
-    RefPtr<HTMLElement> createHTMLElementOrFindCustomElementInterface(AtomHTMLToken&, JSCustomElementInterface**);
+    std::tuple<RefPtr<HTMLElement>, RefPtr<JSCustomElementInterface>, RefPtr<CustomElementRegistry>> createHTMLElementOrFindCustomElementInterface(AtomHTMLToken&);
     Ref<HTMLElement> createHTMLElement(AtomHTMLToken&);
     Ref<Element> createElement(AtomHTMLToken&, const AtomString& namespaceURI);
 
     void mergeAttributesFromTokenIntoElement(AtomHTMLToken&&, Element&);
     void dispatchDocumentElementAvailableIfNeeded();
 
-    Document& m_document;
+    Ref<Document> protectedDocument() const;
+    Ref<ContainerNode> protectedAttachmentRoot() const;
+
+    // m_head has to be destroyed after destroying CheckedRef of m_document and m_attachmentRoot
+    HTMLStackItem m_head;
+
+    WeakRef<Document, WeakPtrImplWithEventTargetData> m_document;
 
     // This is the root ContainerNode to which the parser attaches all newly
     // constructed nodes. It points to a DocumentFragment when parsing fragments
     // and a Document in all other cases.
-    ContainerNode& m_attachmentRoot;
+    WeakRef<ContainerNode, WeakPtrImplWithEventTargetData> m_attachmentRoot;
 
-    HTMLStackItem m_head;
     RefPtr<HTMLFormElement> m_form;
     mutable HTMLElementStack m_openElements;
     mutable HTMLFormattingElementList m_activeFormattingElements;
@@ -227,6 +246,7 @@ private:
     TaskQueue m_taskQueue;
 
     OptionSet<ParserContentPolicy> m_parserContentPolicy;
+    RefPtr<CustomElementRegistry> m_registry;
     bool m_isParsingFragment;
 
     // http://www.whatwg.org/specs/web-apps/current-work/multipage/tokenization.html#parsing-main-intable
@@ -238,6 +258,11 @@ private:
     unsigned m_maximumDOMTreeDepth;
 
     bool m_inQuirksMode;
+
+    bool m_hasReachedMaxDOMTreeDepth { false };
+
+    std::unique_ptr<StringBuilder> m_textNodeBuffer;
+    RefPtr<Text> m_currentTextNode;
 };
 
 } // namespace WebCore

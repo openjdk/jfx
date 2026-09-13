@@ -48,7 +48,7 @@ const GlobalObjectMethodTable* JSWorkletGlobalScopeBase::globalObjectMethodTable
     &supportsRichSourceInfo,
     &shouldInterruptScript,
     &javaScriptRuntimeFlags,
-    nullptr, // queueMicrotaskToEventLoop
+        &queueMicrotaskToEventLoop,
     &shouldInterruptScriptBeforeTimeout,
     &moduleLoaderImportModule,
     &moduleLoaderResolve,
@@ -69,13 +69,16 @@ const GlobalObjectMethodTable* JSWorkletGlobalScopeBase::globalObjectMethodTable
     nullptr,
 #endif
     deriveShadowRealmGlobalObject,
+        codeForEval,
+        canCompileStrings,
+        trustedScriptStructure,
     };
     return &table;
 };
 
 JSWorkletGlobalScopeBase::JSWorkletGlobalScopeBase(JSC::VM& vm, JSC::Structure* structure, RefPtr<WorkletGlobalScope>&& impl)
     : JSDOMGlobalObject(vm, structure, normalWorld(vm), globalObjectMethodTable())
-    , m_wrapped(WTFMove(impl))
+    , m_wrapped(WTF::move(impl))
 {
 }
 
@@ -100,7 +103,8 @@ DEFINE_VISIT_CHILDREN(JSWorkletGlobalScopeBase);
 
 void JSWorkletGlobalScopeBase::destroy(JSCell* cell)
 {
-    static_cast<JSWorkletGlobalScopeBase*>(cell)->JSWorkletGlobalScopeBase::~JSWorkletGlobalScopeBase();
+    // We cannot rely on jsCast() during JSObject destruction.
+    SUPPRESS_MEMORY_UNSAFE_CAST static_cast<JSWorkletGlobalScopeBase*>(cell)->JSWorkletGlobalScopeBase::~JSWorkletGlobalScopeBase();
 }
 
 ScriptExecutionContext* JSWorkletGlobalScopeBase::scriptExecutionContext() const
@@ -114,7 +118,7 @@ JSC::ScriptExecutionStatus JSWorkletGlobalScopeBase::scriptExecutionStatus(JSC::
     return jsCast<JSWorkletGlobalScopeBase*>(globalObject)->scriptExecutionContext()->jscScriptExecutionStatus();
 }
 
-void JSWorkletGlobalScopeBase::reportViolationForUnsafeEval(JSC::JSGlobalObject* globalObject, JSC::JSString* source)
+void JSWorkletGlobalScopeBase::reportViolationForUnsafeEval(JSC::JSGlobalObject* globalObject, const String& source)
 {
     return JSGlobalObject::reportViolationForUnsafeEval(globalObject, source);
 }
@@ -138,6 +142,11 @@ RuntimeFlags JSWorkletGlobalScopeBase::javaScriptRuntimeFlags(const JSGlobalObje
 {
     auto* thisObject = jsCast<const JSWorkletGlobalScopeBase*>(object);
     return thisObject->m_wrapped->jsRuntimeFlags();
+}
+
+void JSWorkletGlobalScopeBase::queueMicrotaskToEventLoop(JSGlobalObject& object, JSC::QueuedTask&& task)
+{
+    return Base::queueMicrotaskToEventLoop(object, WTF::move(task));
 }
 
 JSValue toJS(JSGlobalObject* lexicalGlobalObject, JSDOMGlobalObject*, WorkletGlobalScope& workletGlobalScope)

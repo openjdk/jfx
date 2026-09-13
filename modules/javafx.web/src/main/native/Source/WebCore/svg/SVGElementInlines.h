@@ -26,9 +26,16 @@
 #pragma once
 
 #include "ElementInlines.h"
+#include "SVGAnimatedString.h"
 #include "SVGElement.h"
+#include "SVGPropertyRegistry.h"
 
 namespace WebCore {
+
+inline void SVGElement::detachAllProperties()
+{
+    propertyRegistry().detachAllProperties();
+}
 
 inline void SVGElement::setAnimatedSVGAttributesAreDirty()
 {
@@ -41,6 +48,11 @@ inline void SVGElement::setPresentationalHintStyleIsDirty()
     invalidateStyle();
 }
 
+inline AtomString SVGElement::className() const
+{
+    return AtomString { m_className->currentValue() };
+}
+
 inline bool Element::hasTagName(const SVGQualifiedName& tagName) const
 {
     return ContainerNode::hasTagName(tagName);
@@ -48,7 +60,8 @@ inline bool Element::hasTagName(const SVGQualifiedName& tagName) const
 
 inline bool Node::hasTagName(const SVGQualifiedName& name) const
 {
-    return isSVGElement() && downcast<SVGElement>(*this).hasTagName(name);
+    auto* svgElement = dynamicDowncast<SVGElement>(*this);
+    return svgElement && svgElement->hasTagName(name);
 }
 
 }

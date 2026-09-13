@@ -28,62 +28,98 @@
 
 #if ENABLE(APPLICATION_MANIFEST)
 
-#include "CSSParser.h"
+#include "CSSPropertyParserConsumer+Color.h"
 #include "Color.h"
-#include "Document.h"
+#include "DocumentPage.h"
 #include "SecurityOrigin.h"
 #include <JavaScriptCore/ConsoleMessage.h>
 #include <optional>
 #include <wtf/SortedArrayMap.h>
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
 ApplicationManifest ApplicationManifestParser::parse(Document& document, const String& source, const URL& manifestURL, const URL& documentURL)
 {
     ApplicationManifestParser parser { &document };
-    return parser.parseManifest(source, manifestURL, documentURL);
+    auto object = parser.createJSONObject(source);
+    if (!object)
+        object = JSON::Object::create();
+
+    return parser.parseManifest(*object, source, manifestURL, documentURL);
 }
 
 ApplicationManifest ApplicationManifestParser::parse(const String& source, const URL& manifestURL, const URL& documentURL)
 {
     ApplicationManifestParser parser { nullptr };
-    return parser.parseManifest(source, manifestURL, documentURL);
+    auto object = parser.createJSONObject(source);
+    if (!object)
+        object = JSON::Object::create();
+
+    return parser.parseManifest(*object, source, manifestURL, documentURL);
 }
 
-ApplicationManifestParser::ApplicationManifestParser(RefPtr<Document> document)
-    : m_document(document)
+std::optional<ApplicationManifest> ApplicationManifestParser::parseWithValidation(const String& source, const URL& manifestURL, const URL& documentURL)
+{
+    if (!manifestURL.isValid() || !documentURL.isValid())
+        return std::nullopt;
+
+    ApplicationManifestParser parser { nullptr };
+    auto object = parser.createJSONObject(source);
+    if (!object)
+        return std::nullopt;
+
+    return parser.parseManifest(*object, source, manifestURL, documentURL);
+}
+
+ApplicationManifestParser::ApplicationManifestParser(RefPtr<Document>&& document)
+    : m_document(WTF::move(document))
 {
 }
 
-ApplicationManifest ApplicationManifestParser::parseManifest(const String& text, const URL& manifestURL, const URL& documentURL)
+RefPtr<JSON::Object> ApplicationManifestParser::createJSONObject(const String& text)
 {
-    m_manifestURL = manifestURL;
-
     auto jsonValue = JSON::Value::parseJSON(text);
     if (!jsonValue) {
         logDeveloperWarning("The manifest is not valid JSON data."_s);
-        jsonValue = JSON::Object::create();
+        return nullptr;
     }
 
-    auto manifest = jsonValue->asObject();
-    if (!manifest) {
+    auto jsontObject = jsonValue->asObject();
+    if (!jsontObject) {
         logDeveloperWarning("The manifest is not a JSON value of type \"object\"."_s);
-        manifest = JSON::Object::create();
+        return nullptr;
     }
 
+    return jsontObject;
+}
+
+ApplicationManifest ApplicationManifestParser::parseManifest(const JSON::Object& manifest, const String& text, const URL& manifestURL, const URL& documentURL)
+{
+    m_manifestURL = manifestURL;
     ApplicationManifest parsedManifest;
 
-    parsedManifest.startURL = parseStartURL(*manifest, documentURL);
-    parsedManifest.display = parseDisplay(*manifest);
-    parsedManifest.name = parseName(*manifest);
-    parsedManifest.description = parseDescription(*manifest);
-    parsedManifest.shortName = parseShortName(*manifest);
-    parsedManifest.scope = parseScope(*manifest, documentURL, parsedManifest.startURL);
-    parsedManifest.backgroundColor = parseColor(*manifest, "background_color"_s);
-    parsedManifest.themeColor = parseColor(*manifest, "theme_color"_s);
-    parsedManifest.icons = parseIcons(*manifest);
-    parsedManifest.id = parseId(*manifest, parsedManifest.startURL);
-    parsedManifest.orientation = parseOrientation(*manifest);
+    parsedManifest.rawJSON = text;
+    parsedManifest.manifestURL = manifestURL;
+    parsedManifest.startURL = parseStartURL(manifest, documentURL);
+    parsedManifest.dir = parseDir(manifest);
+    parsedManifest.display = parseDisplay(manifest);
+    parsedManifest.name = parseName(manifest);
+    parsedManifest.description = parseDescription(manifest);
+    parsedManifest.shortName = parseShortName(manifest);
+    if (auto parsedScope = parseScope(manifest, documentURL, parsedManifest.startURL))
+        parsedManifest.scope = WTF::move(*parsedScope);
+    else {
+        parsedManifest.scope = URL { parsedManifest.startURL, "./"_s };
+        parsedManifest.isDefaultScope = true;
+    }
+    parsedManifest.backgroundColor = parseColor(manifest, "background_color"_s);
+    parsedManifest.themeColor = parseColor(manifest, "theme_color"_s);
+    parsedManifest.categories = parseCategories(manifest);
+    parsedManifest.icons = parseIcons(manifest);
+    parsedManifest.shortcuts = parseShortcuts(manifest);
+    parsedManifest.id = parseId(manifest, parsedManifest.startURL);
+    parsedManifest.orientation = parseOrientation(manifest);
 
     if (m_document)
         m_document->processApplicationManifest(parsedManifest);
@@ -138,6 +174,33 @@ URL ApplicationManifestParser::parseStartURL(const JSON::Object& manifest, const
     return startURL;
 }
 
+ApplicationManifest::Direction ApplicationManifestParser::parseDir(const JSON::Object& manifest)
+{
+    using enum ApplicationManifest::Direction;
+
+    auto value = manifest.getValue("dir"_s);
+    if (!value)
+        return Auto;
+
+    auto stringValue = value->asString();
+    if (!stringValue) {
+        logManifestPropertyNotAString("dir"_s);
+        return Auto;
+    }
+
+    static constexpr SortedArrayMap directions { std::to_array<std::pair<ComparableLettersLiteral, ApplicationManifest::Direction>>({
+        { "auto"_s, Auto },
+        { "ltr"_s, LTR },
+        { "rtl"_s, RTL },
+    }) };
+
+    if (auto* dirValue = directions.tryGet(StringView(stringValue).trim(isASCIIWhitespace<char16_t>)))
+        return *dirValue;
+
+    logDeveloperWarning(makeString('"', stringValue, "\" is not a valid dir."_s));
+    return Auto;
+}
+
 ApplicationManifest::Display ApplicationManifestParser::parseDisplay(const JSON::Object& manifest)
 {
     auto value = manifest.getValue("display"_s);
@@ -150,15 +213,14 @@ ApplicationManifest::Display ApplicationManifestParser::parseDisplay(const JSON:
         return ApplicationManifest::Display::Browser;
     }
 
-    static constexpr std::pair<ComparableLettersLiteral, ApplicationManifest::Display> displayValueMappings[] = {
-        { "browser", ApplicationManifest::Display::Browser },
-        { "fullscreen", ApplicationManifest::Display::Fullscreen },
-        { "minimal-ui", ApplicationManifest::Display::MinimalUI },
-        { "standalone", ApplicationManifest::Display::Standalone },
-    };
-    static constexpr SortedArrayMap displayValues { displayValueMappings };
+    static constexpr SortedArrayMap displayValues { std::to_array<std::pair<ComparableLettersLiteral, ApplicationManifest::Display>>({
+        { "browser"_s, ApplicationManifest::Display::Browser },
+        { "fullscreen"_s, ApplicationManifest::Display::Fullscreen },
+        { "minimal-ui"_s, ApplicationManifest::Display::MinimalUI },
+        { "standalone"_s, ApplicationManifest::Display::Standalone },
+    }) };
 
-    if (auto* displayValue = displayValues.tryGet(StringView(stringValue).trim(isUnicodeCompatibleASCIIWhitespace<UChar>)))
+    if (auto* displayValue = displayValues.tryGet(StringView(stringValue).trim(isASCIIWhitespace<char16_t>)))
         return *displayValue;
 
     logDeveloperWarning(makeString("\""_s, stringValue, "\" is not a valid display mode."_s));
@@ -177,20 +239,18 @@ const std::optional<ScreenOrientationLockType> ApplicationManifestParser::parseO
         return std::nullopt;
     }
 
-    static constexpr std::pair<ComparableLettersLiteral, WebCore::ScreenOrientationLockType> orientationValueMappings[] = {
-        { "any", WebCore::ScreenOrientationLockType::Any },
-        { "landscape", WebCore::ScreenOrientationLockType::Landscape },
-        { "landscape-primary", WebCore::ScreenOrientationLockType::LandscapePrimary },
-        { "landscape-secondary", WebCore::ScreenOrientationLockType::LandscapeSecondary },
-        { "natural", WebCore::ScreenOrientationLockType::Natural },
-        { "portrait", WebCore::ScreenOrientationLockType::Portrait },
-        { "portrait-primary", WebCore::ScreenOrientationLockType::PortraitPrimary },
-        { "portrait-secondary", WebCore::ScreenOrientationLockType::PortraitSecondary },
-    };
+    static SortedArrayMap orientationValues { std::to_array<std::pair<ComparableLettersLiteral, WebCore::ScreenOrientationLockType>>({
+        { "any"_s, WebCore::ScreenOrientationLockType::Any },
+        { "landscape"_s, WebCore::ScreenOrientationLockType::Landscape },
+        { "landscape-primary"_s, WebCore::ScreenOrientationLockType::LandscapePrimary },
+        { "landscape-secondary"_s, WebCore::ScreenOrientationLockType::LandscapeSecondary },
+        { "natural"_s, WebCore::ScreenOrientationLockType::Natural },
+        { "portrait"_s, WebCore::ScreenOrientationLockType::Portrait },
+        { "portrait-primary"_s, WebCore::ScreenOrientationLockType::PortraitPrimary },
+        { "portrait-secondary"_s, WebCore::ScreenOrientationLockType::PortraitSecondary },
+    }) };
 
-    static SortedArrayMap orientationValues { orientationValueMappings };
-
-    if (auto* orientationValue = orientationValues.tryGet(StringView(stringValue).trim(isUnicodeCompatibleASCIIWhitespace<UChar>)))
+    if (auto* orientationValue = orientationValues.tryGet(StringView(stringValue).trim(isASCIIWhitespace<char16_t>)))
         return *orientationValue;
 
     logDeveloperWarning(makeString("\""_s, stringValue, "\" is not a valid orientation."_s));
@@ -212,6 +272,31 @@ String ApplicationManifestParser::parseShortName(const JSON::Object& manifest)
     return parseGenericString(manifest, "short_name"_s);
 }
 
+Vector<String> ApplicationManifestParser::parseCategories(const JSON::Object& manifest)
+{
+    auto manifestCategories = manifest.getValue("categories"_s);
+
+    Vector<String> categoryResources;
+    if (!manifestCategories)
+        return categoryResources;
+
+    auto manifestCategoriesArray = manifestCategories->asArray();
+    if (!manifestCategoriesArray) {
+        logDeveloperWarning("The value of categories is not a valid array."_s);
+        return categoryResources;
+    }
+
+    for (const auto& categoryValue : *manifestCategoriesArray) {
+        auto categoryObject = categoryValue->asString();
+        if (!categoryObject)
+            continue;
+
+        categoryResources.append(WTF::move(categoryObject));
+    }
+
+    return categoryResources;
+}
+
 Vector<ApplicationManifest::Icon> ApplicationManifestParser::parseIcons(const JSON::Object& manifest)
 {
     auto manifestIcons = manifest.getValue("icons"_s);
@@ -228,12 +313,11 @@ Vector<ApplicationManifest::Icon> ApplicationManifestParser::parseIcons(const JS
 
     for (const auto& iconValue : *manifestIconsArray) {
         ApplicationManifest::Icon currentIcon;
-        auto iconObject = iconValue->asObject();
-        if (!iconObject)
+        RefPtr iconJSON = iconValue->asObject();
+        if (!iconJSON)
             continue;
-        const auto& iconJSON = *iconObject;
 
-        auto srcValue = iconJSON.getValue("src"_s);
+        auto srcValue = iconJSON->getValue("src"_s);
         if (!srcValue)
             continue;
         auto srcStringValue = srcValue->asString();
@@ -250,11 +334,11 @@ Vector<ApplicationManifest::Icon> ApplicationManifestParser::parseIcons(const JS
         }
         currentIcon.src = srcURL;
 
-        currentIcon.sizes = parseGenericString(iconJSON, "sizes"_s).split(' ');
+        currentIcon.sizes = parseGenericString(*iconJSON, "sizes"_s).split(' ');
 
-        currentIcon.type = parseGenericString(iconJSON, "type"_s);
+        currentIcon.type = parseGenericString(*iconJSON, "type"_s);
 
-        auto purposeValue = iconJSON.getValue("purpose"_s);
+        auto purposeValue = iconJSON->getValue("purpose"_s);
         OptionSet<ApplicationManifest::Icon::Purpose> purposes;
 
         if (!purposeValue) {
@@ -267,7 +351,7 @@ Vector<ApplicationManifest::Icon> ApplicationManifestParser::parseIcons(const JS
                 purposes.add(ApplicationManifest::Icon::Purpose::Any);
                 currentIcon.purposes = purposes;
             } else {
-                for (auto keyword : StringView(purposeStringValue).trim(isUnicodeCompatibleASCIIWhitespace<UChar>).splitAllowingEmptyEntries(' ')) {
+                for (auto keyword : StringView(purposeStringValue).trim(isASCIIWhitespace<char16_t>).splitAllowingEmptyEntries(' ')) {
                     if (equalLettersIgnoringASCIICase(keyword, "monochrome"_s))
                         purposes.add(ApplicationManifest::Icon::Purpose::Monochrome);
                     else if (equalLettersIgnoringASCIICase(keyword, "maskable"_s))
@@ -285,10 +369,56 @@ Vector<ApplicationManifest::Icon> ApplicationManifestParser::parseIcons(const JS
             }
         }
 
-        imageResources.append(WTFMove(currentIcon));
+        imageResources.append(WTF::move(currentIcon));
     }
 
     return imageResources;
+}
+
+Vector<ApplicationManifest::Shortcut> ApplicationManifestParser::parseShortcuts(const JSON::Object& manifest)
+{
+    auto manifestShortcuts = manifest.getValue("shortcuts"_s);
+
+    Vector<ApplicationManifest::Shortcut> shortcutResources;
+    if (!manifestShortcuts)
+        return shortcutResources;
+
+    auto manifestShortcutsArray = manifestShortcuts->asArray();
+    if (!manifestShortcutsArray) {
+        logDeveloperWarning("The value of shortcuts is not a valid array."_s);
+        return shortcutResources;
+    }
+
+    for (const auto& shortcutValue : *manifestShortcutsArray) {
+        ApplicationManifest::Shortcut currentShortcut;
+        RefPtr shortcutJSON = shortcutValue->asObject();
+        if (!shortcutJSON)
+            continue;
+
+        auto urlValue = shortcutJSON->getValue("url"_s);
+        if (!urlValue)
+            continue;
+        auto urlStringValue = urlValue->asString();
+        if (!urlStringValue) {
+            logManifestPropertyNotAString("url"_s);
+            continue;
+        }
+
+        URL shortcutURL(m_manifestURL, urlStringValue);
+        if (shortcutURL.isEmpty())
+            continue;
+        if (!shortcutURL.isValid()) {
+            logManifestPropertyInvalidURL("url"_s);
+            continue;
+        }
+        currentShortcut.url = WTF::move(shortcutURL);
+        currentShortcut.name = parseGenericString(*shortcutJSON, "name"_s);
+        currentShortcut.icons = parseIcons(*shortcutJSON);
+
+        shortcutResources.append(WTF::move(currentShortcut));
+    }
+
+    return shortcutResources;
 }
 
 static bool isInScope(const URL& scopeURL, const URL& targetURL)
@@ -342,50 +472,52 @@ URL ApplicationManifestParser::parseId(const JSON::Object& manifest, const URL& 
     if (!protocolHostAndPortAreEqual(idURL, startURL))
         return startURL;
 
+    idURL.removeFragmentIdentifier();
+
     return idURL;
 }
 
-URL ApplicationManifestParser::parseScope(const JSON::Object& manifest, const URL& documentURL, const URL& startURL)
+std::optional<URL> ApplicationManifestParser::parseScope(const JSON::Object& manifest, const URL& documentURL, const URL& startURL)
 {
-    URL defaultScope { startURL, "./"_s };
-
     auto value = manifest.getValue("scope"_s);
     if (!value)
-        return defaultScope;
+        return std::nullopt;
 
     auto stringValue = value->asString();
     if (!stringValue) {
         logManifestPropertyNotAString("scope"_s);
-        return defaultScope;
+        return std::nullopt;
     }
 
     if (stringValue.isEmpty())
-        return defaultScope;
+        return std::nullopt;
 
     URL scopeURL(m_manifestURL, stringValue);
     if (!scopeURL.isValid()) {
         logManifestPropertyInvalidURL("scope"_s);
-        return defaultScope;
+        return std::nullopt;
     }
 
     if (!protocolHostAndPortAreEqual(scopeURL, documentURL)) {
         auto scopeURLOrigin = SecurityOrigin::create(scopeURL);
         auto documentOrigin = SecurityOrigin::create(documentURL);
         logDeveloperWarning(makeString("The scope's origin of \""_s, scopeURLOrigin->toString(), "\" is different from the document's origin of \""_s, documentOrigin->toString(), "\"."_s));
-        return defaultScope;
+        return std::nullopt;
     }
 
     if (!isInScope(scopeURL, startURL)) {
         logDeveloperWarning("The start URL is not within scope of the provided scope URL."_s);
-        return defaultScope;
+        return std::nullopt;
     }
+
+    scopeURL.removeQueryAndFragmentIdentifier();
 
     return scopeURL;
 }
 
 Color ApplicationManifestParser::parseColor(const JSON::Object& manifest, const String& propertyName)
 {
-    return CSSParser::parseColorWithoutContext(parseGenericString(manifest, propertyName));
+    return CSSPropertyParserHelpers::deprecatedParseColorRawWithoutContext(parseGenericString(manifest, propertyName));
 }
 
 String ApplicationManifestParser::parseGenericString(const JSON::Object& manifest, const String& propertyName)

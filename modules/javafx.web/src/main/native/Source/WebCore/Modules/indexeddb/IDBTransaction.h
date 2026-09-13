@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,17 +25,20 @@
 
 #pragma once
 
-#include "EventTarget.h"
-#include "IDBActiveDOMObject.h"
-#include "IDBError.h"
-#include "IDBGetAllRecordsData.h"
-#include "IDBGetRecordData.h"
-#include "IDBKeyRangeData.h"
-#include "IDBOpenDBRequest.h"
-#include "IDBTransactionInfo.h"
-#include "IDBTransactionMode.h"
-#include "IndexedDB.h"
-#include "Timer.h"
+#include <WebCore/EventTarget.h>
+#include <WebCore/EventTargetInterfaces.h>
+#include <WebCore/IDBActiveDOMObject.h>
+#include <WebCore/IDBError.h>
+#include <WebCore/IDBGetAllRecordsData.h>
+#include <WebCore/IDBGetRecordData.h>
+#include <WebCore/IDBIndexIdentifier.h>
+#include <WebCore/IDBKeyRangeData.h>
+#include <WebCore/IDBObjectStoreIdentifier.h>
+#include <WebCore/IDBOpenDBRequest.h>
+#include <WebCore/IDBTransactionInfo.h>
+#include <WebCore/IDBTransactionMode.h>
+#include <WebCore/IndexedDB.h>
+#include <WebCore/Timer.h>
 #include <wtf/Deque.h>
 #include <wtf/HashMap.h>
 #include <wtf/Lock.h>
@@ -65,10 +68,12 @@ class TransactionOperation;
 }
 
 class IDBTransaction final : public ThreadSafeRefCounted<IDBTransaction>, public EventTarget, public IDBActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED_EXPORT(IDBTransaction, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(IDBTransaction, WEBCORE_EXPORT);
 public:
     static Ref<IDBTransaction> create(IDBDatabase&, const IDBTransactionInfo&);
     static Ref<IDBTransaction> create(IDBDatabase&, const IDBTransactionInfo&, IDBOpenDBRequest&);
+
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     static uint64_t generateOperationID();
 
@@ -78,21 +83,19 @@ public:
     Ref<DOMStringList> objectStoreNames() const;
     IDBTransactionMode mode() const { return m_info.mode(); }
     IDBTransactionDurability durability() const { return m_info.durability(); }
-    IDBDatabase* db();
+    IDBDatabase& db();
     DOMException* error() const;
     ExceptionOr<Ref<IDBObjectStore>> objectStore(const String& name);
     ExceptionOr<void> abort();
     ExceptionOr<void> commit();
 
-    EventTargetInterface eventTargetInterface() const final { return IDBTransactionEventTargetInterfaceType; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::IDBTransaction; }
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    using ActiveDOMObject::protectedScriptExecutionContext;
     void refEventTarget() final { ThreadSafeRefCounted::ref(); }
     void derefEventTarget() final { ThreadSafeRefCounted::deref(); }
     using EventTarget::dispatchEvent;
     void dispatchEvent(Event&) final;
-
-    using ThreadSafeRefCounted<IDBTransaction>::ref;
-    using ThreadSafeRefCounted<IDBTransaction>::deref;
 
     const IDBTransactionInfo& info() const { return m_info; }
     IDBDatabase& database() { return m_database.get(); }
@@ -127,7 +130,7 @@ public:
     void iterateCursor(IDBCursor&, const IDBIterateCursorData&);
 
     void deleteObjectStore(const String& objectStoreName);
-    void deleteIndex(uint64_t objectStoreIdentifier, const String& indexName);
+    void deleteIndex(IDBObjectStoreIdentifier, const String& indexName);
 
     void addRequest(IDBRequest&);
     void removeRequest(IDBRequest&);
@@ -147,8 +150,9 @@ public:
     bool didDispatchAbortOrCommit() const { return m_didDispatchAbortOrCommit; }
 
     IDBClient::IDBConnectionProxy& connectionProxy();
-
+    Ref<IDBClient::IDBConnectionProxy> protectedConnectionProxy();
     void connectionClosedFromServer(const IDBError&);
+    void generateIndexKeyForRecord(const IDBResourceIdentifier& requestIdentifier, const IDBIndexInfo&, const std::optional<IDBKeyPath>&, const IDBKeyData&, const IDBValue&, std::optional<int64_t> recordID);
 
     template<typename Visitor> void visitReferencedObjectStores(Visitor&) const;
 
@@ -156,12 +160,13 @@ public:
 
     // ActiveDOMObject.
     void stop() final;
+    void ref() const final { ThreadSafeRefCounted::ref(); }
+    void deref() const final { ThreadSafeRefCounted::deref(); }
 
 private:
     IDBTransaction(IDBDatabase&, const IDBTransactionInfo&, IDBOpenDBRequest*);
 
     // ActiveDOMObject.
-    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
     void commitInternal();
@@ -182,25 +187,25 @@ private:
 
     Ref<IDBRequest> requestIndexRecord(IDBIndex&, IndexedDB::IndexRecordType, const IDBKeyRangeData&);
 
-    void commitOnServer(IDBClient::TransactionOperation&, uint64_t pendingRequestCount);
+    void commitOnServer(IDBClient::TransactionOperation&, uint64_t handledRequestResultsCount);
     void abortOnServerAndCancelRequests(IDBClient::TransactionOperation&);
 
     void createObjectStoreOnServer(IDBClient::TransactionOperation&, const IDBObjectStoreInfo&);
     void didCreateObjectStoreOnServer(const IDBResultData&);
 
-    void renameObjectStoreOnServer(IDBClient::TransactionOperation&, const uint64_t& objectStoreIdentifier, const String& newName);
+    void renameObjectStoreOnServer(IDBClient::TransactionOperation&, IDBObjectStoreIdentifier, const String& newName);
     void didRenameObjectStoreOnServer(const IDBResultData&);
 
     void createIndexOnServer(IDBClient::TransactionOperation&, const IDBIndexInfo&);
     void didCreateIndexOnServer(const IDBResultData&);
 
-    void renameIndexOnServer(IDBClient::TransactionOperation&, const uint64_t& objectStoreIdentifier, const uint64_t& indexIdentifier, const String& newName);
+    void renameIndexOnServer(IDBClient::TransactionOperation&, IDBObjectStoreIdentifier, IDBIndexIdentifier, const String& newName);
     void didRenameIndexOnServer(const IDBResultData&);
 
-    void clearObjectStoreOnServer(IDBClient::TransactionOperation&, const uint64_t& objectStoreIdentifier);
+    void clearObjectStoreOnServer(IDBClient::TransactionOperation&, IDBObjectStoreIdentifier);
     void didClearObjectStoreOnServer(IDBRequest&, const IDBResultData&);
 
-    void putOrAddOnServer(IDBClient::TransactionOperation&, RefPtr<IDBKey>, RefPtr<SerializedScriptValue>, const IndexedDB::ObjectStoreOverwriteMode&);
+    void putOrAddOnServer(IDBClient::TransactionOperation&, const IDBObjectStoreInfo&, RefPtr<IDBKey>&&, Ref<SerializedScriptValue>&&, const IndexedDB::ObjectStoreOverwriteMode&);
     void didPutOrAddOnServer(IDBRequest&, const IDBResultData&);
 
     void getRecordOnServer(IDBClient::TransactionOperation&, const IDBGetRecordData&);
@@ -218,7 +223,7 @@ private:
     void deleteObjectStoreOnServer(IDBClient::TransactionOperation&, const String& objectStoreName);
     void didDeleteObjectStoreOnServer(const IDBResultData&);
 
-    void deleteIndexOnServer(IDBClient::TransactionOperation&, const uint64_t& objectStoreIdentifier, const String& indexName);
+    void deleteIndexOnServer(IDBClient::TransactionOperation&, IDBObjectStoreIdentifier, const String& indexName);
     void didDeleteIndexOnServer(const IDBResultData&);
 
     Ref<IDBRequest> doRequestOpenCursor(Ref<IDBCursor>&&);
@@ -236,8 +241,11 @@ private:
     void completeCursorRequest(IDBRequest&, const IDBResultData&);
 
     void trySchedulePendingOperationTimer();
+    void addCursorRequest(IDBRequest&);
 
-    Ref<IDBDatabase> m_database;
+    void assertCurrentThreadAccessThreadLocalData() const;
+
+    const Ref<IDBDatabase> m_database;
     IDBTransactionInfo m_info;
 
     IndexedDB::TransactionState m_state { IndexedDB::TransactionState::Inactive };
@@ -247,16 +255,17 @@ private:
     RefPtr<DOMException> m_domError;
 
     RefPtr<IDBOpenDBRequest> m_openDBRequest;
+    WeakHashSet<IDBRequest, WeakPtrImplWithEventTargetData> m_cursorRequests;
 
-    Deque<RefPtr<IDBClient::TransactionOperation>> m_pendingTransactionOperationQueue;
-    Deque<IDBClient::TransactionOperation*> m_transactionOperationsInProgressQueue;
-    Deque<RefPtr<IDBClient::TransactionOperation>> m_abortQueue;
-    HashMap<RefPtr<IDBClient::TransactionOperation>, IDBResultData> m_transactionOperationResultMap;
-    HashMap<IDBResourceIdentifier, RefPtr<IDBClient::TransactionOperation>> m_transactionOperationMap;
+    Deque<Ref<IDBClient::TransactionOperation>> m_pendingTransactionOperationQueue;
+    Deque<Ref<IDBClient::TransactionOperation>> m_transactionOperationsInProgressQueue;
+    Deque<Ref<IDBClient::TransactionOperation>> m_abortQueue;
+    HashMap<Ref<IDBClient::TransactionOperation>, IDBResultData> m_transactionOperationResultMap;
+    HashMap<IDBResourceIdentifier, Ref<IDBClient::TransactionOperation>> m_transactionOperationMap;
 
     mutable Lock m_referencedObjectStoreLock;
     HashMap<String, std::unique_ptr<IDBObjectStore>> m_referencedObjectStores WTF_GUARDED_BY_LOCK(m_referencedObjectStoreLock);
-    HashMap<uint64_t, std::unique_ptr<IDBObjectStore>> m_deletedObjectStores;
+    HashMap<IDBObjectStoreIdentifier, std::unique_ptr<IDBObjectStore>> m_deletedObjectStores;
 
     HashSet<RefPtr<IDBRequest>> m_openRequests;
     RefPtr<IDBRequest> m_currentlyCompletingRequest;
@@ -267,6 +276,7 @@ private:
     uint64_t m_lastWriteOperationID { 0 };
     std::optional<IDBResourceIdentifier> m_lastTransactionOperationBeforeCommit;
     std::optional<IDBError> m_commitResult;
+    uint64_t m_handledRequestResultsCount { 0 };
 };
 
 class TransactionActivator {
@@ -275,18 +285,40 @@ public:
     TransactionActivator(IDBTransaction* transaction)
         : m_transaction(transaction)
     {
-        if (m_transaction)
-            m_transaction->activate();
+        if (transaction)
+            transaction->activate();
     }
 
     ~TransactionActivator()
     {
-        if (m_transaction)
-            m_transaction->deactivate();
+        if (RefPtr transaction = m_transaction)
+            transaction->deactivate();
     }
 
 private:
-    IDBTransaction* m_transaction;
+    RefPtr<IDBTransaction> m_transaction;
 };
 
+#if !ASSERT_ENABLED
+ALWAYS_INLINE void IDBTransaction::assertCurrentThreadAccessThreadLocalData() const
+{
+}
+#endif
+
+inline bool IDBTransaction::isActive() const
+{
+    assertCurrentThreadAccessThreadLocalData();
+    return m_state == IndexedDB::TransactionState::Active;
+}
+
+inline bool IDBTransaction::isFinishedOrFinishing() const
+{
+    assertCurrentThreadAccessThreadLocalData();
+    return m_state == IndexedDB::TransactionState::Committing
+        || m_state == IndexedDB::TransactionState::Aborting
+        || m_state == IndexedDB::TransactionState::Finished;
+}
+
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(IDBTransaction)

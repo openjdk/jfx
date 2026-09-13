@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2016, Oracle and/or its affiliates.
+ * Copyright (c) 2008, 2025, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -76,12 +76,9 @@ public class HTMLEditorApp extends Application {
         htmlEditor = new HTMLEditor();
         htmlEditor.setHtmlText(INITIAL_TEXT);
 
-        ScrollPane htmlSP = new ScrollPane();
-        htmlSP.setFitToWidth(true);
-        htmlSP.setPrefWidth(htmlEditor.prefWidth(-1)); // Workaround of RT-21495
-        htmlSP.setPrefHeight(245);
-        htmlSP.setVbarPolicy(ScrollBarPolicy.NEVER);
-        htmlSP.setContent(htmlEditor);
+        VBox htmlVB = new VBox();
+        htmlVB.setPrefHeight(245);
+        htmlVB.getChildren().add(htmlEditor);
 
         final Label htmlLabel = new Label();
         htmlLabel.setWrapText(true);
@@ -99,7 +96,7 @@ public class HTMLEditorApp extends Application {
         VBox vRoot = new VBox();
         vRoot.setAlignment(Pos.CENTER);
         vRoot.setSpacing(5);
-        vRoot.getChildren().addAll(htmlSP, showHTMLButton, scrollPane);
+        vRoot.getChildren().addAll(htmlVB, showHTMLButton, scrollPane);
 
         return vRoot;
     }

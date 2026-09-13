@@ -25,47 +25,27 @@
 
 #pragma once
 
-#include "BigIntPrototype.h"
-#include "BrandedStructure.h"
-#include "JSArrayBufferView.h"
-#include "JSCJSValueInlines.h"
-#include "JSGlobalObject.h"
-#include "PropertyTable.h"
-#include "StringPrototype.h"
-#include "Structure.h"
-#include "StructureChain.h"
-#include "StructureRareDataInlines.h"
-#include "Watchpoint.h"
+#include <JavaScriptCore/BigIntPrototype.h>
+#include <JavaScriptCore/BrandedStructure.h>
+#include <JavaScriptCore/JSArrayBufferView.h>
+#include <JavaScriptCore/JSCJSValueInlines.h>
+#include <JavaScriptCore/JSGlobalObject.h>
+#include <JavaScriptCore/JSObjectInlines.h>
+#include <JavaScriptCore/PropertyTable.h>
+#include <JavaScriptCore/StringPrototype.h>
+#include <JavaScriptCore/Structure.h>
+#include <JavaScriptCore/StructureChain.h>
+#include <JavaScriptCore/StructureRareDataInlines.h>
+#include <JavaScriptCore/SymbolPrototype.h>
+#include <JavaScriptCore/Watchpoint.h>
+#include <JavaScriptCore/WebAssemblyGCStructure.h>
+#include <JavaScriptCore/WriteBarrierInlines.h>
 #include <wtf/CompactRefPtr.h>
 #include <wtf/Threading.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
-
-class DeferredStructureTransitionWatchpointFire final : public DeferredWatchpointFire {
-    WTF_MAKE_NONCOPYABLE(DeferredStructureTransitionWatchpointFire);
-public:
-    DeferredStructureTransitionWatchpointFire(VM& vm, Structure* structure)
-        : DeferredWatchpointFire()
-        , m_vm(vm)
-        , m_structure(structure)
-    {
-    }
-
-    ~DeferredStructureTransitionWatchpointFire()
-    {
-        if (watchpointsToFire().state() == IsWatched)
-            fireAllSlow();
-    }
-
-    const Structure* structure() const { return m_structure; }
-
-
-private:
-    JS_EXPORT_PRIVATE void fireAllSlow();
-
-    VM& m_vm;
-    const Structure* m_structure;
-};
 
 inline Structure* Structure::create(VM& vm, JSGlobalObject* globalObject, JSValue prototype, const TypeInfo& typeInfo, const ClassInfo* classInfo, IndexingType indexingModeIncludingHistory, unsigned inlineCapacity)
 {
@@ -93,13 +73,44 @@ inline Structure* Structure::createStructure(VM& vm)
 inline Structure* Structure::create(VM& vm, Structure* previous, DeferredStructureTransitionWatchpointFire* deferred)
 {
     ASSERT(vm.structureStructure);
-    Structure* newStructure;
-    if (previous->isBrandedStructure())
-        newStructure = new (NotNull, allocateCell<BrandedStructure>(vm)) BrandedStructure(vm, jsCast<BrandedStructure*>(previous));
-    else
-        newStructure = new (NotNull, allocateCell<Structure>(vm)) Structure(vm, previous);
-    newStructure->finishCreation(vm, previous, deferred);
-    return newStructure;
+    switch (previous->variant()) {
+    case StructureVariant::Normal: {
+        auto* result = new (NotNull, allocateCell<Structure>(vm)) Structure(vm, previous->variant(), previous);
+        result->finishCreation(vm, previous, deferred);
+        return result;
+    }
+    case StructureVariant::Branded: {
+        auto* result = new (NotNull, allocateCell<BrandedStructure>(vm)) BrandedStructure(vm, jsCast<BrandedStructure*>(previous));
+        result->finishCreation(vm, previous, deferred);
+        return result;
+    }
+    case StructureVariant::WebAssemblyGC: {
+#if ENABLE(WEBASSEMBLY)
+        auto* result = new (NotNull, allocateCell<WebAssemblyGCStructure>(vm)) WebAssemblyGCStructure(vm, jsCast<WebAssemblyGCStructure*>(previous));
+        result->finishCreation(vm, previous, deferred);
+        return result;
+#else
+        return nullptr;
+#endif
+    }
+    default:
+        RELEASE_ASSERT_NOT_REACHED();
+        return nullptr;
+    }
+}
+
+template<typename CellType, SubspaceAccess>
+inline GCClient::IsoSubspace* Structure::subspaceFor(VM& vm)
+{
+    return &vm.structureSpace();
+}
+
+inline void Structure::finishCreation(VM& vm, CreatingEarlyCellTag)
+{
+    Base::finishCreation(vm, this, CreatingEarlyCell);
+    ASSERT(m_prototype);
+    ASSERT(m_prototype.isNull());
+    ASSERT(!vm.structureStructure);
 }
 
 inline bool Structure::mayInterceptIndexedAccesses() const
@@ -130,7 +141,7 @@ inline bool Structure::holesMustForwardToPrototype(JSObject* base) const
     ASSERT(base->structure() == this);
     if (typeInfo().type() == ArrayType) {
         JSGlobalObject* globalObject = this->globalObject();
-        if (LIKELY(globalObject->isOriginalArrayStructure(const_cast<Structure*>(this)) && globalObject->arrayPrototypeChainIsSane()))
+        if (globalObject->isOriginalArrayStructure(const_cast<Structure*>(this)) && globalObject->arrayPrototypeChainIsSane()) [[likely]]
             return false;
     }
 
@@ -217,7 +228,7 @@ void Structure::forEachPropertyConcurrently(const Functor& functor)
 
     bool didFindStructure = findStructuresAndMapForMaterialization(structures, tableStructure, table);
 
-    HashSet<UniquedStringImpl*> seenProperties;
+    UncheckedKeyHashSet<UniquedStringImpl*> seenProperties;
 
     for (auto* structure : structures) {
         if (!structure->m_transitionPropertyName || seenProperties.contains(structure->m_transitionPropertyName.get()))
@@ -306,19 +317,19 @@ inline bool Structure::transitivelyTransitionedFrom(Structure* structureToFind)
     return false;
 }
 
-inline void Structure::setCachedPropertyNames(VM& vm, CachedPropertyNamesKind kind, JSImmutableButterfly* cached)
+inline void Structure::setCachedPropertyNames(VM& vm, CachedPropertyNamesKind kind, JSCellButterfly* cached)
 {
     ensureRareData(vm)->setCachedPropertyNames(vm, kind, cached);
 }
 
-inline JSImmutableButterfly* Structure::cachedPropertyNames(CachedPropertyNamesKind kind) const
+inline JSCellButterfly* Structure::cachedPropertyNames(CachedPropertyNamesKind kind) const
 {
     if (!hasRareData())
         return nullptr;
     return rareData()->cachedPropertyNames(kind);
 }
 
-inline JSImmutableButterfly* Structure::cachedPropertyNamesIgnoringSentinel(CachedPropertyNamesKind kind) const
+inline JSCellButterfly* Structure::cachedPropertyNamesIgnoringSentinel(CachedPropertyNamesKind kind) const
 {
     if (!hasRareData())
         return nullptr;
@@ -396,7 +407,7 @@ inline bool Structure::isValid(JSGlobalObject* globalObject, StructureChain* cac
 
 inline void Structure::didReplaceProperty(PropertyOffset offset)
 {
-    if (LIKELY(!isWatchingReplacement()))
+    if (!isWatchingReplacement()) [[likely]]
         return;
     didReplacePropertySlow(offset);
 }
@@ -503,6 +514,10 @@ inline PropertyOffset Structure::add(VM& vm, PropertyName propertyName, unsigned
     checkConsistency();
     if (attributes & PropertyAttribute::DontEnum || propertyName.isSymbol())
         setIsQuickPropertyAccessAllowedForEnumeration(false);
+    if (attributes & PropertyAttribute::ReadOnly)
+        setContainsReadOnlyProperties();
+    if (attributes & PropertyAttribute::DontEnum)
+        setHasNonEnumerableProperties(true);
     if (attributes & PropertyAttribute::DontDelete) {
         setHasNonConfigurableProperties(true);
         if (attributes & PropertyAttribute::ReadOnlyOrAccessorOrCustomAccessorOrValue)
@@ -510,6 +525,8 @@ inline PropertyOffset Structure::add(VM& vm, PropertyName propertyName, unsigned
     }
     if (propertyName == vm.propertyNames->underscoreProto)
         setHasUnderscoreProtoPropertyExcludingOriginalProto(true);
+    else if (propertyName == vm.propertyNames->then)
+        setHasSpecialProperties(true);
 
     auto rep = propertyName.uid();
 
@@ -598,8 +615,10 @@ inline PropertyOffset Structure::attributeChange(VM& vm, PropertyName propertyNa
     if (offset == invalidOffset)
         return offset;
 
-    if (attributes & PropertyAttribute::DontEnum)
+    if (attributes & PropertyAttribute::DontEnum) {
+        setHasNonEnumerableProperties(true);
         setIsQuickPropertyAccessAllowedForEnumeration(false);
+    }
     if (attributes & PropertyAttribute::DontDelete) {
         setHasNonConfigurableProperties(true);
         if (attributes & PropertyAttribute::ReadOnlyOrAccessorOrCustomAccessorOrValue)
@@ -655,6 +674,10 @@ ALWAYS_INLINE auto Structure::addOrReplacePropertyWithoutTransition(VM& vm, Prop
     checkConsistency();
     if (newAttributes & PropertyAttribute::DontEnum || propertyName.isSymbol())
         setIsQuickPropertyAccessAllowedForEnumeration(false);
+    if (newAttributes & PropertyAttribute::ReadOnly)
+        setContainsReadOnlyProperties();
+    if (newAttributes & PropertyAttribute::DontEnum)
+        setHasNonEnumerableProperties(true);
     if (newAttributes & PropertyAttribute::DontDelete) {
         setHasNonConfigurableProperties(true);
         if (newAttributes & PropertyAttribute::ReadOnlyOrAccessorOrCustomAccessorOrValue)
@@ -662,13 +685,15 @@ ALWAYS_INLINE auto Structure::addOrReplacePropertyWithoutTransition(VM& vm, Prop
     }
     if (propertyName == vm.propertyNames->underscoreProto)
         setHasUnderscoreProtoPropertyExcludingOriginalProto(true);
+    else if (propertyName == vm.propertyNames->then)
+        setHasSpecialProperties(true);
 
     PropertyOffset newOffset = table->nextOffset(m_inlineCapacity);
 
     m_propertyHash = m_propertyHash ^ rep->existingSymbolAwareHash();
     m_seenProperties.add(CompactPtr<UniquedStringImpl>::encode(rep));
 
-    auto [offset, attributes, result] = table->addAfterFind(vm, PropertyTableEntry(rep, newOffset, newAttributes), WTFMove(findResult));
+    auto [offset, attributes, result] = table->addAfterFind(vm, PropertyTableEntry(rep, newOffset, newAttributes), WTF::move(findResult));
     ASSERT_UNUSED(result, result);
     ASSERT_UNUSED(offset, offset == newOffset);
     UNUSED_VARIABLE(attributes);
@@ -740,7 +765,7 @@ ALWAYS_INLINE bool Structure::shouldConvertToPolyProto(const Structure* a, const
     // the same executable.
     const Box<InlineWatchpointSet>& aInlineWatchpointSet = a->rareData()->sharedPolyProtoWatchpoint();
     const Box<InlineWatchpointSet>& bInlineWatchpointSet = b->rareData()->sharedPolyProtoWatchpoint();
-    if (aInlineWatchpointSet.get() != bInlineWatchpointSet.get() || !aInlineWatchpointSet)
+    if (!aInlineWatchpointSet || !bInlineWatchpointSet || aInlineWatchpointSet.get() != bInlineWatchpointSet.get())
         return false;
     ASSERT(aInlineWatchpointSet && bInlineWatchpointSet && aInlineWatchpointSet.get() == bInlineWatchpointSet.get());
 
@@ -784,7 +809,7 @@ inline Structure* Structure::nonPropertyTransition(VM& vm, Structure* structure,
     return nonPropertyTransitionSlow(vm, structure, transitionKind, deferred);
 }
 
-inline Structure* Structure::addPropertyTransitionToExistingStructureImpl(Structure* structure, UniquedStringImpl* uid, unsigned attributes, PropertyOffset& offset)
+ALWAYS_INLINE Structure* Structure::addPropertyTransitionToExistingStructureImpl(Structure* structure, UniquedStringImpl* uid, unsigned attributes, PropertyOffset& offset)
 {
     ASSERT(!structure->isDictionary());
     ASSERT(structure->isObject());
@@ -815,21 +840,35 @@ ALWAYS_INLINE Structure* Structure::addPropertyTransitionToExistingStructureConc
     return addPropertyTransitionToExistingStructureImpl(structure, uid, attributes, offset);
 }
 
+ALWAYS_INLINE StructureTransitionTable::Hash::Key StructureTransitionTable::Hash::createKeyFromStructure(Structure* structure)
+{
+    switch (structure->transitionKind()) {
+    case TransitionKind::ChangePrototype:
+        return StructureTransitionTable::Hash::createKey(structure->storedPrototype().isNull() ? nullptr : asObject(structure->storedPrototype()), structure->transitionPropertyAttributes(), structure->transitionKind());
+    default:
+        return StructureTransitionTable::Hash::createKey(structure->m_transitionPropertyName.get(), structure->transitionPropertyAttributes(), structure->transitionKind());
+    }
+}
+
 inline Structure* StructureTransitionTable::trySingleTransition() const
 {
     uintptr_t pointer = m_data;
     if (pointer & UsingSingleSlotFlag)
-        return bitwise_cast<Structure*>(pointer & ~UsingSingleSlotFlag);
+        return std::bit_cast<Structure*>(pointer & ~UsingSingleSlotFlag);
     return nullptr;
 }
 
-inline Structure* StructureTransitionTable::get(UniquedStringImpl* rep, unsigned attributes, TransitionKind transitionKind) const
+inline Structure* StructureTransitionTable::get(PointerKey rep, unsigned attributes, TransitionKind transitionKind) const
 {
     if (isUsingSingleSlot()) {
         auto* transition = trySingleTransition();
-        return (transition && transition->m_transitionPropertyName == rep && transition->transitionPropertyAttributes() == attributes && transition->transitionKind() == transitionKind) ? transition : nullptr;
+        if (!transition)
+            return nullptr;
+        if (Hash::createKeyFromStructure(transition) != Hash::createKey(rep, attributes, transitionKind))
+            return nullptr;
+        return transition;
     }
-    return map()->get(StructureTransitionTable::Hash::Key(rep, attributes, transitionKind));
+    return map()->get(StructureTransitionTable::Hash::createKey(rep, attributes, transitionKind));
 }
 
 inline void StructureTransitionTable::finalizeUnconditionally(VM& vm, CollectionScope)
@@ -848,20 +887,13 @@ inline void Structure::clearCachedPrototypeChain()
     rareData()->clearCachedPropertyNameEnumerator();
 }
 
-ALWAYS_INLINE bool Structure::canPerformFastPropertyEnumeration() const
+ALWAYS_INLINE bool Structure::canPerformFastPropertyEnumerationCommon() const
 {
     if (typeInfo().overridesGetOwnPropertySlot())
         return false;
     if (typeInfo().overridesAnyFormOfGetOwnPropertyNames())
         return false;
-    // FIXME: Indexed properties can be handled.
-    // https://bugs.webkit.org/show_bug.cgi?id=185358
-
-    if (hasIndexedProperties(indexingType()))
-        return false;
     if (hasAnyKindOfGetterSetterProperties())
-        return false;
-    if (hasReadOnlyOrGetterSetterPropertiesExcludingProto())
         return false;
     if (isUncacheableDictionary())
         return false;
@@ -871,4 +903,18 @@ ALWAYS_INLINE bool Structure::canPerformFastPropertyEnumeration() const
     return true;
 }
 
+ALWAYS_INLINE bool Structure::canPerformFastPropertyEnumeration() const
+{
+    if (!canPerformFastPropertyEnumerationCommon())
+        return false;
+    // FIXME: Indexed properties can be handled.
+    // https://bugs.webkit.org/show_bug.cgi?id=185358
+
+    if (hasIndexedProperties(indexingType()))
+        return false;
+    return true;
+}
+
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

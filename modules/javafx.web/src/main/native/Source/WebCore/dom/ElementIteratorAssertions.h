@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "Document.h"
-#include "ScriptDisallowedScope.h"
+#include <WebCore/NodeDocument.h>
+#include <WebCore/ScriptDisallowedScope.h>
 
 namespace WebCore {
 
@@ -38,7 +38,7 @@ public:
     void clear();
 
 private:
-    const Document* m_document;
+    WeakPtr<const Document, WeakPtrImplWithEventTargetData> m_document;
     uint64_t m_initialDOMTreeVersion;
     std::optional<ScriptDisallowedScope> m_eventDispatchAssertion;
 };

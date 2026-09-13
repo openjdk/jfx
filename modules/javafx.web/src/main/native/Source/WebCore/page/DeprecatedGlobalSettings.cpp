@@ -27,7 +27,6 @@
 #include "DeprecatedGlobalSettings.h"
 
 #include "AudioSession.h"
-#include "HTMLMediaElement.h"
 #include "MediaPlayer.h"
 #include "MediaStrategy.h"
 #include "PlatformMediaSessionManager.h"
@@ -40,66 +39,33 @@
 
 namespace WebCore {
 
-DeprecatedGlobalSettings& DeprecatedGlobalSettings::shared()
+DeprecatedGlobalSettings& DeprecatedGlobalSettings::singleton()
 {
     static NeverDestroyed<DeprecatedGlobalSettings> deprecatedGlobalSettings;
     return deprecatedGlobalSettings;
 }
 
-#if ENABLE(VORBIS)
-void DeprecatedGlobalSettings::setVorbisDecoderEnabled(bool isEnabled)
-{
-    shared().m_vorbisDecoderEnabled = isEnabled;
-    PlatformMediaSessionManager::setVorbisDecoderEnabled(isEnabled);
-}
-#endif
-
-#if ENABLE(OPUS)
-void DeprecatedGlobalSettings::setOpusDecoderEnabled(bool isEnabled)
-{
-    shared().m_opusDecoderEnabled = isEnabled;
-    PlatformMediaSessionManager::setOpusDecoderEnabled(isEnabled);
-}
-#endif
-
-#if ENABLE(MEDIA_SOURCE) && (HAVE(AVSAMPLEBUFFERVIDEOOUTPUT) || USE(GSTREAMER))
-void DeprecatedGlobalSettings::setMediaSourceInlinePaintingEnabled(bool isEnabled)
-{
-    shared().m_mediaSourceInlinePaintingEnabled = isEnabled;
-#if HAVE(AVSAMPLEBUFFERVIDEOOUTPUT)
-    MediaSessionManagerCocoa::setMediaSourceInlinePaintingEnabled(isEnabled);
-#endif
-}
-#endif
-
-#if PLATFORM(WIN)
-void DeprecatedGlobalSettings::setShouldUseHighResolutionTimers(bool shouldUseHighResolutionTimers)
-{
-    shared().m_shouldUseHighResolutionTimers = shouldUseHighResolutionTimers;
-}
-#endif
-
 #if USE(AVFOUNDATION)
 void DeprecatedGlobalSettings::setAVFoundationEnabled(bool enabled)
 {
-    if (shared().m_AVFoundationEnabled == enabled)
+    if (singleton().m_AVFoundationEnabled == enabled)
         return;
 
-    shared().m_AVFoundationEnabled = enabled;
-    platformStrategies()->mediaStrategy().resetMediaEngines();
+    singleton().m_AVFoundationEnabled = enabled;
+    platformStrategies()->mediaStrategy()->resetMediaEngines();
 }
 #endif
 
 #if USE(GSTREAMER)
 void DeprecatedGlobalSettings::setGStreamerEnabled(bool enabled)
 {
-    if (shared().m_GStreamerEnabled == enabled)
+    if (singleton().m_GStreamerEnabled == enabled)
         return;
 
-    shared().m_GStreamerEnabled = enabled;
+    singleton().m_GStreamerEnabled = enabled;
 
 #if ENABLE(VIDEO)
-    platformStrategies()->mediaStrategy().resetMediaEngines();
+    platformStrategies()->mediaStrategy()->resetMediaEngines();
 #endif
 }
 #endif
@@ -110,40 +76,35 @@ void DeprecatedGlobalSettings::setGStreamerEnabled(bool enabled)
 // correctly, which may cause the platform to follow dangling pointers.
 void DeprecatedGlobalSettings::setMockScrollbarsEnabled(bool flag)
 {
-    shared().m_mockScrollbarsEnabled = flag;
+    singleton().m_mockScrollbarsEnabled = flag;
     // FIXME: This should update scroll bars in existing pages.
 }
 
 void DeprecatedGlobalSettings::setUsesOverlayScrollbars(bool flag)
 {
-    shared().m_usesOverlayScrollbars = flag;
+    singleton().m_usesOverlayScrollbars = flag;
     // FIXME: This should update scroll bars in existing pages.
 }
 
 void DeprecatedGlobalSettings::setTrackingPreventionEnabled(bool flag)
 {
-    shared().m_trackingPreventionEnabled = flag;
+    singleton().m_trackingPreventionEnabled = flag;
 }
 
 #if PLATFORM(IOS_FAMILY)
 void DeprecatedGlobalSettings::setAudioSessionCategoryOverride(unsigned sessionCategory)
 {
-    AudioSession::sharedSession().setCategoryOverride(static_cast<AudioSession::CategoryType>(sessionCategory));
+    AudioSession::singleton().setCategoryOverride(static_cast<AudioSession::CategoryType>(sessionCategory));
 }
 
 unsigned DeprecatedGlobalSettings::audioSessionCategoryOverride()
 {
-    return static_cast<unsigned>(AudioSession::sharedSession().categoryOverride());
-}
-
-void DeprecatedGlobalSettings::setNetworkDataUsageTrackingEnabled(bool trackingEnabled)
-{
-    shared().m_networkDataUsageTrackingEnabled = trackingEnabled;
+    return static_cast<unsigned>(AudioSession::singleton().categoryOverride());
 }
 
 void DeprecatedGlobalSettings::setNetworkInterfaceName(const String& networkInterfaceName)
 {
-    shared().m_networkInterfaceName = networkInterfaceName;
+    singleton().m_networkInterfaceName = networkInterfaceName;
 }
 #endif
 
@@ -161,12 +122,21 @@ bool DeprecatedGlobalSettings::shouldManageAudioSessionCategory()
 
 void DeprecatedGlobalSettings::setAllowsAnySSLCertificate(bool allowAnySSLCertificate)
 {
-    shared().m_allowsAnySSLCertificate = allowAnySSLCertificate;
+    singleton().m_allowsAnySSLCertificate = allowAnySSLCertificate;
 }
 
 bool DeprecatedGlobalSettings::allowsAnySSLCertificate()
 {
-    return shared().m_allowsAnySSLCertificate;
+    return singleton().m_allowsAnySSLCertificate;
 }
+
+#if ENABLE(WEB_PUSH_NOTIFICATIONS)
+
+bool DeprecatedGlobalSettings::builtInNotificationsEnabled()
+{
+    return singleton().m_builtInNotificationsEnabled;
+}
+
+#endif
 
 } // namespace WebCore

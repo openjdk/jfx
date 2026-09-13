@@ -24,6 +24,7 @@
  */
 
 typedef USVString CSSOMString;
+typedef (double? or TimelineRangeOffset or DOMString) KeyframeOffset;
 
 [
     Exposed=Window,
@@ -34,29 +35,34 @@ typedef USVString CSSOMString;
 
     attribute Element? target;
     attribute CSSOMString? pseudoElement;
-    [EnabledBySetting=WebAnimationsIterationCompositeEnabled] attribute IterationCompositeOperation iterationComposite;
-    [EnabledBySetting=WebAnimationsCompositeOperationsEnabled, ImplementedAs=bindingsComposite] attribute CompositeOperation composite;
+    attribute IterationCompositeOperation iterationComposite;
+    [ImplementedAs=bindingsComposite] attribute CompositeOperation composite;
     [Custom] sequence<object> getKeyframes();
     [CallWith=CurrentGlobalObject&CurrentDocument, ImplementedAs=setBindingsKeyframes] undefined setKeyframes(object? keyframes);
 };
 
-dictionary BasePropertyIndexedKeyframe {
-    (sequence<double?> or double?) offset = [];
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary BasePropertyIndexedKeyframe {
+    (sequence<KeyframeOffset> or KeyframeOffset) offset = [];
     (sequence<DOMString> or DOMString) easing = [];
     (sequence<CompositeOperationOrAuto> or CompositeOperationOrAuto) composite = [];
 };
 
-dictionary BaseKeyframe {
-    double? offset = null;
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary BaseKeyframe {
+    KeyframeOffset offset = null;
     DOMString easing = "linear";
     CompositeOperationOrAuto composite = "auto";
 };
 
 [
-    JSGenerateToJSObject
+    JSGenerateToJSObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary BaseComputedKeyframe {
-     double? offset = null;
-     double computedOffset;
+     KeyframeOffset offset = null;
+     unrestricted double computedOffset;
      DOMString easing = "linear";
      CompositeOperationOrAuto composite = "auto";
 };

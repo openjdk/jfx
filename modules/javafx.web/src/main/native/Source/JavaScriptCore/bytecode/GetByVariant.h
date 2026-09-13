@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,10 +27,12 @@
 
 #include "CacheableIdentifier.h"
 #include "CallLinkStatus.h"
+#include "JSFunctionInlines.h"
 #include "ObjectPropertyConditionSet.h"
 #include "PropertyOffset.h"
 #include "StructureSet.h"
 #include <wtf/Box.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 namespace DOMJIT {
@@ -42,11 +44,11 @@ class GetByStatus;
 struct DumpContext;
 
 class GetByVariant {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(GetByVariant);
 public:
     GetByVariant(
         CacheableIdentifier,
-        const StructureSet& = StructureSet(), PropertyOffset = invalidOffset,
+        const StructureSet& = StructureSet(), bool viaGlobalProxy = false, PropertyOffset = invalidOffset,
         const ObjectPropertyConditionSet& = ObjectPropertyConditionSet(),
         std::unique_ptr<CallLinkStatus> = nullptr,
         JSFunction* = nullptr,
@@ -88,6 +90,8 @@ public:
 
     bool overlaps(const GetByVariant& other)
     {
+        if (m_viaGlobalProxy != other.m_viaGlobalProxy)
+            return true;
         if (!!m_identifier != !!other.m_identifier)
             return true;
         if (m_identifier) {
@@ -97,6 +101,8 @@ public:
         return structureSet().overlaps(other.structureSet());
     }
 
+    bool viaGlobalProxy() const { return m_viaGlobalProxy; }
+
 private:
     friend class GetByStatus;
 
@@ -104,6 +110,7 @@ private:
 
     StructureSet m_structureSet;
     ObjectPropertyConditionSet m_conditionSet;
+    bool m_viaGlobalProxy { false };
     PropertyOffset m_offset;
     std::unique_ptr<CallLinkStatus> m_callLinkStatus;
     JSFunction* m_intrinsicFunction;

@@ -24,7 +24,9 @@
 
 #include "CSSLayerBlockRule.h"
 #include "CSSMarkup.h"
+#include "CSSSerializationContext.h"
 #include "CSSStyleSheet.h"
+#include "CachedCSSStyleSheet.h"
 #include "MediaList.h"
 #include "MediaQueryParser.h"
 #include "StyleRuleImport.h"
@@ -32,6 +34,8 @@
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSImportRule);
 
 CSSImportRule::CSSImportRule(StyleRuleImport& importRule, CSSStyleSheet* parent)
     : CSSRule(parent)
@@ -61,25 +65,33 @@ MediaList& CSSImportRule::media() const
 
 String CSSImportRule::layerName() const
 {
-    auto name = m_importRule.get().cascadeLayerName();
+    auto name = m_importRule->cascadeLayerName();
     if (!name)
         return { };
 
     return stringFromCascadeLayerName(*name);
 }
 
-String CSSImportRule::cssText() const
+String CSSImportRule::supportsText() const
+{
+    return m_importRule->supportsText();
+}
+
+String CSSImportRule::cssTextInternal(const String& urlString) const
 {
     StringBuilder builder;
-
-    builder.append("@import ", serializeURL(m_importRule.get().href()));
+    builder.append("@import "_s, serializeURL(urlString));
 
     if (auto layerName = this->layerName(); !layerName.isNull()) {
         if (layerName.isEmpty())
-            builder.append(" layer");
+            builder.append(" layer"_s);
         else
-            builder.append(" layer(", layerName, ')');
+            builder.append(" layer("_s, layerName, ')');
     }
+
+    auto supports = supportsText();
+    if (!supports.isNull())
+        builder.append(" supports("_s, WTF::move(supports), ')');
 
     if (!mediaQueries().isEmpty()) {
         builder.append(' ');
@@ -87,17 +99,44 @@ String CSSImportRule::cssText() const
     }
 
     builder.append(';');
-
     return builder.toString();
+}
+
+String CSSImportRule::cssText() const
+{
+    return cssTextInternal(m_importRule->href());
+}
+
+String CSSImportRule::cssText(const CSS::SerializationContext& context) const
+{
+    if (RefPtr sheet = styleSheet()) {
+        auto urlString = context.replacementURLStringsForCSSStyleSheet.get(*sheet);
+        if (!urlString.isEmpty())
+            return cssTextInternal(urlString);
+    }
+
+    auto urlString = m_importRule->href();
+    auto replacementURLString = context.replacementURLStrings.get(urlString);
+    return replacementURLString.isEmpty() ? cssTextInternal(urlString) : cssTextInternal(replacementURLString);
 }
 
 CSSStyleSheet* CSSImportRule::styleSheet() const
 {
     if (!m_importRule.get().styleSheet())
         return nullptr;
+
+    std::optional<bool> isOriginClean;
+    if (const auto* cachedSheet = m_importRule->cachedCSSStyleSheet())
+        isOriginClean = cachedSheet->isCORSSameOrigin();
+
     if (!m_styleSheetCSSOMWrapper)
-        m_styleSheetCSSOMWrapper = CSSStyleSheet::create(*m_importRule.get().styleSheet(), const_cast<CSSImportRule*>(this));
+        m_styleSheetCSSOMWrapper = CSSStyleSheet::create(*m_importRule.get().styleSheet(), const_cast<CSSImportRule*>(this), isOriginClean);
     return m_styleSheetCSSOMWrapper.get();
+}
+
+RefPtr<CSSStyleSheet> CSSImportRule::protectedStyleSheet() const
+{
+    return styleSheet();
 }
 
 void CSSImportRule::reattach(StyleRuleBase&)
@@ -113,8 +152,17 @@ const MQ::MediaQueryList& CSSImportRule::mediaQueries() const
 
 void CSSImportRule::setMediaQueries(MQ::MediaQueryList&& queries)
 {
-    m_importRule->setMediaQueries(WTFMove(queries));
+    m_importRule->setMediaQueries(WTF::move(queries));
 }
 
+void CSSImportRule::getChildStyleSheets(HashSet<Ref<CSSStyleSheet>>& childStyleSheets)
+{
+    RefPtr sheet = styleSheet();
+    if (!sheet)
+        return;
+
+    if (childStyleSheets.add(*sheet).isNewEntry)
+        sheet->getChildStyleSheets(childStyleSheets);
+}
 
 } // namespace WebCore

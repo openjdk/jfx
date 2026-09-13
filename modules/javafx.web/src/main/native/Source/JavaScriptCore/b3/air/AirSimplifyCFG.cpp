@@ -37,7 +37,7 @@ bool simplifyCFG(Code& code)
 {
     constexpr bool verbose = false;
 
-    PhaseScope phaseScope(code, "simplifyCFG");
+    PhaseScope phaseScope(code, "simplifyCFG"_s);
 
     // We have three easy simplification rules:
     //
@@ -133,10 +133,10 @@ bool simplifyCFG(Code& code)
                     // Append the full contents of the successor to the predecessor.
                     block->insts().reserveCapacity(block->size() + successor->size());
                     for (Inst& inst : *successor)
-                        block->appendInst(WTFMove(inst));
+                        block->appendInst(WTF::move(inst));
 
                     // Make sure that our successors are the successor's successors.
-                    block->successors() = WTFMove(successor->successors());
+                    block->successors() = WTF::move(successor->successors());
 
                     // Make sure that the successor has nothing left in it except an oops.
                     successor->resize(1);

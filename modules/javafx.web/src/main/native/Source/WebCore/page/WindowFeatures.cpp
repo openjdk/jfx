@@ -42,7 +42,7 @@ static std::optional<bool> boolFeature(const DialogFeaturesMap&, ASCIILiteral ke
 static std::optional<float> floatFeature(const DialogFeaturesMap&, ASCIILiteral key, float min, float max);
 
 // https://html.spec.whatwg.org/#feature-separator
-static bool isSeparator(UChar character, FeatureMode mode)
+static bool isSeparator(char16_t character, FeatureMode mode)
 {
     if (mode == FeatureMode::Viewport)
         return character == ' ' || character == '\t' || character == '\n' || character == '\r' || character == '=' || character == ',';
@@ -53,24 +53,18 @@ static bool isSeparator(UChar character, FeatureMode mode)
 
 WindowFeatures parseWindowFeatures(StringView featuresString)
 {
-    // The IE rule is: all features except for channelmode and fullscreen default to YES, but
-    // if the user specifies a feature string, all features default to NO. (There is no public
-    // standard that applies to this method.)
-    //
-    // <http://msdn.microsoft.com/workshop/author/dhtml/reference/methods/open_0.asp>
-    // We always allow a window to be resized, which is consistent with Firefox.
-
     WindowFeatures features;
 
     if (featuresString.isEmpty())
         return features;
-
+#if PLATFORM(JAVA)
     features.menuBarVisible = false;
     features.statusBarVisible = false;
     features.toolBarVisible = false;
     features.locationBarVisible = false;
     features.scrollbarsVisible = false;
     features.noopener = false;
+#endif
 
     processFeaturesString(featuresString, FeatureMode::Window, [&features](StringView key, StringView value) {
         setWindowFeature(features, key, value);
@@ -82,7 +76,7 @@ WindowFeatures parseWindowFeatures(StringView featuresString)
 // Window: https://html.spec.whatwg.org/#concept-window-open-features-tokenize
 // Viewport: https://developer.apple.com/library/content/documentation/AppleApplications/Reference/SafariHTMLRef/Articles/MetaTags.html#//apple_ref/doc/uid/TP40008193-SW6
 // FIXME: We should considering aligning Viewport feature parsing with Window features parsing.
-void processFeaturesString(StringView features, FeatureMode mode, const Function<void(StringView type, StringView value)>& callback)
+void processFeaturesString(StringView features, FeatureMode mode, NOESCAPE const Function<void(StringView type, StringView value)>& callback)
 {
     unsigned length = features.length();
     for (unsigned i = 0; i < length; ) {
@@ -120,7 +114,7 @@ OptionSet<DisabledAdaptations> parseDisabledAdaptations(StringView disabledAdapt
 {
     OptionSet<DisabledAdaptations> disabledAdaptations;
     for (auto name : disabledAdaptationsString.split(',')) {
-        auto trimmedName = name.trim(isUnicodeCompatibleASCIIWhitespace<UChar>);
+        auto trimmedName = name.trim(isUnicodeCompatibleASCIIWhitespace<char16_t>);
         if (equalIgnoringASCIICase(trimmedName, watchAdaptationName()))
             disabledAdaptations.add(DisabledAdaptations::Watch);
     }
@@ -147,6 +141,8 @@ static void setWindowFeature(WindowFeatures& features, StringView key, StringVie
         features.width = numericValue;
     else if (equalLettersIgnoringASCIICase(key, "height"_s) || equalLettersIgnoringASCIICase(key, "innerheight"_s))
         features.height = numericValue;
+    else if (equalLettersIgnoringASCIICase(key, "popup"_s))
+        features.popup = numericValue;
     else if (equalLettersIgnoringASCIICase(key, "menubar"_s))
         features.menuBarVisible = numericValue;
     else if (equalLettersIgnoringASCIICase(key, "toolbar"_s))
@@ -159,12 +155,21 @@ static void setWindowFeature(WindowFeatures& features, StringView key, StringVie
         features.fullscreen = numericValue;
     else if (equalLettersIgnoringASCIICase(key, "scrollbars"_s))
         features.scrollbarsVisible = numericValue;
+    else if (equalLettersIgnoringASCIICase(key, "resizable"_s))
+        features.resizable = numericValue;
     else if (equalLettersIgnoringASCIICase(key, "noopener"_s))
         features.noopener = numericValue;
     else if (equalLettersIgnoringASCIICase(key, "noreferrer"_s))
         features.noreferrer = numericValue;
+#if PLATFORM(JAVA)
     else if (numericValue == 1)
         features.additionalFeatures.append(key.toString());
+#endif
+    else if (key.length() || value.length()) {
+        features.hasAdditionalFeatures = true;
+        if (numericValue == 1)
+        features.additionalFeatures.append(key.toString());
+    }
 }
 
 WindowFeatures parseDialogFeatures(StringView dialogFeaturesString, const FloatRect& screenAvailableRect)
@@ -258,16 +263,16 @@ static DialogFeaturesMap parseDialogFeaturesMap(StringView string)
         if (separatorPosition == notFound)
             separatorPosition = colonPosition;
 
-        auto key = featureString.left(separatorPosition).trim(isUnicodeCompatibleASCIIWhitespace<UChar>).toString();
+        auto key = featureString.left(separatorPosition).trim(isUnicodeCompatibleASCIIWhitespace<char16_t>).toString();
 
         // Null string for value indicates key without value.
         String value;
         if (separatorPosition != notFound) {
-            auto valueView = featureString.substring(separatorPosition + 1).trim(isUnicodeCompatibleASCIIWhitespace<UChar>);
+            auto valueView = featureString.substring(separatorPosition + 1).trim(isUnicodeCompatibleASCIIWhitespace<char16_t>);
             value = valueView.left(valueView.find(' ')).toString();
         }
 
-        features.set(WTFMove(key), WTFMove(value));
+        features.set(WTF::move(key), WTF::move(value));
     }
 
     return features;

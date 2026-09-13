@@ -23,33 +23,42 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef PlatformSpeechSynthesizer_h
-#define PlatformSpeechSynthesizer_h
+#pragma once
 
+#include <wtf/Platform.h>
 #if ENABLE(SPEECH_SYNTHESIS)
 
-#include "PlatformSpeechSynthesisVoice.h"
+#include <WebCore/PlatformSpeechSynthesisVoice.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/RefPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakPtr.h>
 
 #if PLATFORM(COCOA)
 #include <wtf/RetainPtr.h>
+OBJC_CLASS NSArray;
 OBJC_CLASS WebSpeechSynthesisWrapper;
 #endif
 
 namespace WebCore {
+
+#if USE(SPIEL)
+class SpielSpeechWrapper;
+#endif
 
 enum class SpeechBoundary : uint8_t {
     SpeechWordBoundary,
     SpeechSentenceBoundary
 };
 
-#if USE(GSTREAMER)
+#if USE(FLITE) && USE(GSTREAMER)
 class GstSpeechSynthesisWrapper;
 #endif
 class PlatformSpeechSynthesisUtterance;
 
-class PlatformSpeechSynthesizerClient {
+class PlatformSpeechSynthesizerClient : public AbstractRefCountedAndCanMakeWeakPtr<PlatformSpeechSynthesizerClient> {
 public:
     virtual void didStartSpeaking(PlatformSpeechSynthesisUtterance&) = 0;
     virtual void didFinishSpeaking(PlatformSpeechSynthesisUtterance&) = 0;
@@ -62,8 +71,8 @@ protected:
     virtual ~PlatformSpeechSynthesizerClient() = default;
 };
 
-class WEBCORE_EXPORT PlatformSpeechSynthesizer : public RefCounted<PlatformSpeechSynthesizer> {
-    WTF_MAKE_FAST_ALLOCATED;
+class WEBCORE_EXPORT PlatformSpeechSynthesizer : public RefCountedAndCanMakeWeakPtr<PlatformSpeechSynthesizer> {
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(PlatformSpeechSynthesizer, WEBCORE_EXPORT);
 public:
     WEBCORE_EXPORT static Ref<PlatformSpeechSynthesizer> create(PlatformSpeechSynthesizerClient&);
 
@@ -71,34 +80,40 @@ public:
     // Seems wasteful. Would be nice to find a better way.
     WEBCORE_EXPORT virtual ~PlatformSpeechSynthesizer();
 
-    const Vector<RefPtr<PlatformSpeechSynthesisVoice>>& voiceList() const;
+    const Vector<Ref<PlatformSpeechSynthesisVoice>>& voiceList() const;
     virtual void speak(RefPtr<PlatformSpeechSynthesisUtterance>&&);
     virtual void pause();
     virtual void resume();
     virtual void cancel();
     virtual void resetState();
+    virtual void voicesDidChange();
 
-    PlatformSpeechSynthesizerClient& client() const { return m_speechSynthesizerClient; }
+    RefPtr<PlatformSpeechSynthesizerClient> client() const;
 
 protected:
     explicit PlatformSpeechSynthesizer(PlatformSpeechSynthesizerClient&);
-    Vector<RefPtr<PlatformSpeechSynthesisVoice>> m_voiceList;
+    Vector<Ref<PlatformSpeechSynthesisVoice>> m_voiceList;
 
 private:
     virtual void initializeVoiceList();
+    virtual void resetVoiceList();
+
+#if PLATFORM(COCOA)
+    void appendVoices(NSArray *);
+#endif
 
     bool m_voiceListIsInitialized { false };
-    PlatformSpeechSynthesizerClient& m_speechSynthesizerClient;
+    WeakPtr<PlatformSpeechSynthesizerClient> m_speechSynthesizerClient;
 
 #if PLATFORM(COCOA)
     RetainPtr<WebSpeechSynthesisWrapper> m_platformSpeechWrapper;
-#elif USE(GSTREAMER)
-    std::unique_ptr<GstSpeechSynthesisWrapper> m_platformSpeechWrapper { nullptr };
+#elif USE(FLITE) && USE(GSTREAMER)
+    std::unique_ptr<GstSpeechSynthesisWrapper> m_platformSpeechWrapper;
+#elif USE(SPIEL)
+    std::unique_ptr<SpielSpeechWrapper> m_platformSpeechWrapper;
 #endif
 };
 
 } // namespace WebCore
 
 #endif // ENABLE(SPEECH_SYNTHESIS)
-
-#endif // PlatformSpeechSynthesizer_h

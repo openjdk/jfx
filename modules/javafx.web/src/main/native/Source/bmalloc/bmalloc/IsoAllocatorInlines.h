@@ -25,6 +25,12 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
+#if !BUSE(TZONE)
+
 #include "BInline.h"
 #include "EligibilityResult.h"
 #include "IsoAllocator.h"
@@ -41,9 +47,7 @@ IsoAllocator<Config>::IsoAllocator(IsoHeapImpl<Config>&)
 }
 
 template<typename Config>
-IsoAllocator<Config>::~IsoAllocator()
-{
-}
+IsoAllocator<Config>::~IsoAllocator() = default;
 
 template<typename Config>
 void* IsoAllocator<Config>::allocate(IsoHeapImpl<Config>& heap, bool abortOnFailure)
@@ -105,3 +109,6 @@ void IsoAllocator<Config>::scavenge(IsoHeapImpl<Config>& heap)
 } // namespace bmalloc
 
 #endif
+#endif // !BUSE(TZONE)
+
+#endif // __cplusplus

@@ -26,12 +26,13 @@
 #pragma once
 
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore::WebGPU {
 
-class PipelineLayout : public RefCounted<PipelineLayout> {
+class PipelineLayout : public RefCountedAndCanMakeWeakPtr<PipelineLayout> {
 public:
     virtual ~PipelineLayout() = default;
 
@@ -39,9 +40,12 @@ public:
 
     void setLabel(String&& label)
     {
-        m_label = WTFMove(label);
+        m_label = WTF::move(label);
         setLabelInternal(m_label);
     }
+
+    virtual bool isRemotePipelineLayoutProxy() const { return false; }
+    virtual bool isPipelineLayoutImpl() const { return false; }
 
 protected:
     PipelineLayout() = default;

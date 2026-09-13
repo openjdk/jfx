@@ -25,15 +25,16 @@
 
 #pragma once
 
-#if USE(LIBWEBRTC)
+#if USE(LIBWEBRTC) && ENABLE(AV1)
 
-ALLOW_UNUSED_PARAMETERS_BEGIN
-ALLOW_COMMA_BEGIN
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_BEGIN
 
+// FIXME: Modularize WebRTC
+IGNORE_CLANG_WARNINGS_BEGIN("non-modular-include-in-module")
 #include <webrtc/api/video_codecs/video_decoder.h>
+IGNORE_CLANG_WARNINGS_END
 
-ALLOW_UNUSED_PARAMETERS_END
-ALLOW_COMMA_END
+WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 
 namespace WebCore {
 
@@ -41,4 +42,4 @@ WEBCORE_EXPORT UniqueRef<webrtc::VideoDecoder> createLibWebRTCDav1dDecoder();
 
 } // namespace WebCore
 
-#endif
+#endif // USE(LIBWEBRTC) && ENABLE(AV1)

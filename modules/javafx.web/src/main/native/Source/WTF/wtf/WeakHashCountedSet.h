@@ -31,7 +31,7 @@ namespace WTF {
 
 template<typename Value, typename WeakPtrImpl = DefaultWeakPtrImpl>
 class WeakHashCountedSet {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(WeakHashCountedSet);
 private:
     using ImplType = WeakHashMap<Value, unsigned, WeakPtrImpl>;
 public:
@@ -63,6 +63,11 @@ public:
     // Returns true if the value is removed.
     bool remove(const ValueType&);
     bool remove(iterator);
+
+    // Removes the value, regardless of its count.
+    // Returns true if a value was removed.
+    bool removeAll(const ValueType&);
+    bool removeAll(iterator);
 
     // Clears the whole set.
     void clear() { m_impl.clear(); }
@@ -111,6 +116,29 @@ inline bool WeakHashCountedSet<Value, WeakPtrImpl>::remove(iterator it)
     return true;
 }
 
+template<typename Value, typename WeakPtrImpl>
+inline bool WeakHashCountedSet<Value, WeakPtrImpl>::removeAll(const ValueType& value)
+{
+    return removeAll(find(value));
+}
+
+template<typename Value, typename WeakPtrImpl>
+inline bool WeakHashCountedSet<Value, WeakPtrImpl>::removeAll(iterator it)
+{
+    if (it == end())
+        return false;
+
+    m_impl.remove(it);
+    return true;
+}
+
+template<typename Value, typename WeakMapImpl>
+size_t containerSize(const WeakHashCountedSet<Value, WeakMapImpl>& container) { return container.computeSize(); }
+
+template<typename Value>
+using SingleThreadWeakHashCountedSet = WeakHashCountedSet<Value, SingleThreadWeakPtrImpl>;
+
 } // namespace WTF
 
+using WTF::SingleThreadWeakHashCountedSet;
 using WTF::WeakHashCountedSet;

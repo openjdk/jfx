@@ -40,7 +40,7 @@ struct Node;
 // FIXME: If we ever want to compare if two nodes clobber each other, we should
 // have a SmallClobberSet, which just keeps an array of the AbstractHeaps and
 // satisfies overlaps() requests by looping over all of them. This will probably
-// be faster than a full HashMap in a lot of cases. Or, maybe, we could have
+// be faster than a full UncheckedKeyHashMap in a lot of cases. Or, maybe, we could have
 // ClobberSet be smart and use a vector so long as it was small.
 
 class ClobberSet {
@@ -58,20 +58,20 @@ public:
     // Calls useful for debugging the ClobberSet.
     // Do not call for non debugging purpose. Otherwise, you must handle DOMState hierarchy carefully.
 
-    HashSet<AbstractHeap> direct() const;
-    HashSet<AbstractHeap> super() const;
+    UncheckedKeyHashSet<AbstractHeap> direct() const;
+    UncheckedKeyHashSet<AbstractHeap> super() const;
 
     void dump(PrintStream&) const;
 
 private:
     bool contains(AbstractHeap) const;
 
-    HashSet<AbstractHeap> setOf(bool direct) const;
+    UncheckedKeyHashSet<AbstractHeap> setOf(bool direct) const;
 
     // Maps heap to:
     // true --> it's a direct clobber
     // false --> it's just a supertype of a direct clobber
-    HashMap<AbstractHeap, bool> m_clobbers;
+    UncheckedKeyHashMap<AbstractHeap, bool> m_clobbers;
 };
 
 class ClobberSetAdd {

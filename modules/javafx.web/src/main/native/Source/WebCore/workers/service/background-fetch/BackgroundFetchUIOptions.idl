@@ -24,7 +24,7 @@
  */
 
 [
-    Conditional=SERVICE_WORKER,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary BackgroundFetchUIOptions {
     sequence<ImageResource> icons;
     DOMString title;

@@ -1,55 +1,62 @@
-## IBM International Components for Unicode (ICU4C) v73.1
+## IBM International Components for Unicode (ICU4C) v77.1
 
 ### ICU License
-```
 
-UNICODE, INC. LICENSE AGREEMENT - DATA FILES AND SOFTWARE
-
-See Terms of Use <https://www.unicode.org/copyright.html>
-for definitions of Unicode Inc.’s Data Files and Software.
-
-NOTICE TO USER: Carefully read the following legal agreement.
-BY DOWNLOADING, INSTALLING, COPYING OR OTHERWISE USING UNICODE INC.'S
-DATA FILES ("DATA FILES"), AND/OR SOFTWARE ("SOFTWARE"),
-YOU UNEQUIVOCALLY ACCEPT, AND AGREE TO BE BOUND BY, ALL OF THE
-TERMS AND CONDITIONS OF THIS AGREEMENT.
-IF YOU DO NOT AGREE, DO NOT DOWNLOAD, INSTALL, COPY, DISTRIBUTE OR USE
-THE DATA FILES OR SOFTWARE.
+UNICODE LICENSE V3
 
 COPYRIGHT AND PERMISSION NOTICE
 
-Copyright © 1991-2023 Unicode, Inc. All rights reserved.
-Distributed under the Terms of Use in https://www.unicode.org/copyright.html.
+```
 
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of the Unicode data files and any associated documentation
-(the "Data Files") or Unicode software and any associated documentation
-(the "Software") to deal in the Data Files or Software
-without restriction, including without limitation the rights to use,
-copy, modify, merge, publish, distribute, and/or sell copies of
-the Data Files or Software, and to permit persons to whom the Data Files
-or Software are furnished to do so, provided that either
-(a) this copyright and permission notice appear with all copies
-of the Data Files or Software, or
-(b) this copyright and permission notice appear in associated
-Documentation.
+Copyright (C) 1996-2016, International Business Machines
+Copyright (C) 1996-2017, International Business Machines Corporation
+Copyright (C) 1996-2016, International Business Machines Corporation and others. All Rights Reserved.
+Copyright (C) 2007 Google Inc. All rights reserved.
+Copyright (C) 2016 and later: Unicode, Inc. and others.
+Copyright (C) 2001-2004 and onwards Google Inc.
+Copyright (C) 1999-2013 IBM Corp. All rights reserved.
+Copyright (C) IBM Corporation, 2000-2016. All rights reserved.
+Copyright (C) 2006-2012 the V8 project authors. All rights reserved.
+Copyright (C) 2001-2015 IBM and others. All rights reserved.
+Copyright (C) 2010 , Yahoo! Inc.
+Copyright (C) 2008-2014, Google, International Business Machines Corporation and others. All Rights Reserved.
+Copyright (C) 2008-2015, Google, International Business Machines Corporation
 
-THE DATA FILES AND SOFTWARE ARE PROVIDED "AS IS", WITHOUT WARRANTY OF
-ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
-WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-NONINFRINGEMENT OF THIRD PARTY RIGHTS.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS
-NOTICE BE LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL
-DAMAGES, OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE,
-DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
-TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
-PERFORMANCE OF THE DATA FILES OR SOFTWARE.
+NOTICE TO USER: Carefully read the following legal agreement. BY
+DOWNLOADING, INSTALLING, COPYING OR OTHERWISE USING DATA FILES, AND/OR
+SOFTWARE, YOU UNEQUIVOCALLY ACCEPT, AND AGREE TO BE BOUND BY, ALL OF THE
+TERMS AND CONDITIONS OF THIS AGREEMENT. IF YOU DO NOT AGREE, DO NOT
+DOWNLOAD, INSTALL, COPY, DISTRIBUTE OR USE THE DATA FILES OR SOFTWARE.
 
-Except as contained in this notice, the name of a copyright holder
-shall not be used in advertising or otherwise to promote the sale,
-use or other dealings in these Data Files or Software without prior
-written authorization of the copyright holder.
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of data files and any associated documentation (the "Data Files") or
+software and any associated documentation (the "Software") to deal in the
+Data Files or Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, and/or sell
+copies of the Data Files or Software, and to permit persons to whom the
+Data Files or Software are furnished to do so, provided that either (a)
+this copyright and permission notice appear with all copies of the Data
+Files or Software, or (b) this copyright and permission notice appear in
+associated Documentation.
 
+THE DATA FILES AND SOFTWARE ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY
+KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT OF
+THIRD PARTY RIGHTS.
+
+IN NO EVENT SHALL THE COPYRIGHT HOLDER OR HOLDERS INCLUDED IN THIS NOTICE
+BE LIABLE FOR ANY CLAIM, OR ANY SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES,
+OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
+WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,
+ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THE DATA
+FILES OR SOFTWARE.
+
+Except as contained in this notice, the name of a copyright holder shall
+not be used in advertising or otherwise to promote the sale, use or other
+dealings in these Data Files or Software without prior written
+authorization of the copyright holder.
+
+SPDX-License-Identifier: Unicode-3.0
 ----------------------------------------------------------------------
 
 Third-Party Software Licenses
@@ -64,7 +71,7 @@ ICU License - ICU 1.8.1 to ICU 57.1
 
 COPYRIGHT AND PERMISSION NOTICE
 
-Copyright (c) 1995-2016 International Business Machines Corporation and others
+Copyright (C) 1995-2016 International Business Machines Corporation and others
 All rights reserved.
 
 Permission is hereby granted, free of charge, to any person obtaining
@@ -153,8 +160,8 @@ Chinese/Japanese Word Break Dictionary Data (cjdict.txt)
  #  ---------COPYING.libtabe ---- BEGIN--------------------
  #
  #  /*
- #   * Copyright (c) 1999 TaBE Project.
- #   * Copyright (c) 1999 Pai-Hsiang Hsiao.
+ #   * Copyright (C) 1999 TaBE Project.
+ #   * Copyright (C) 1999 Pai-Hsiang Hsiao.
  #   * All rights reserved.
  #   *
  #   * Redistribution and use in source and binary forms, with or without
@@ -186,7 +193,7 @@ Chinese/Japanese Word Break Dictionary Data (cjdict.txt)
  #   */
  #
  #  /*
- #   * Copyright (c) 1999 Computer Systems and Communication Lab,
+ #   * Copyright (C) 1999 Computer Systems and Communication Lab,
  #   *                    Institute of Information Science, Academia
  #       *                    Sinica. All rights reserved.
  #   *
@@ -307,7 +314,7 @@ Lao Word Break Dictionary Data (laodict.txt)
 
  # Copyright (C) 2016 and later: Unicode, Inc. and others.
  # License & terms of use: http://www.unicode.org/copyright.html
- # Copyright (c) 2015 International Business Machines Corporation
+ # Copyright (C) 2015 International Business Machines Corporation
  # and others. All Rights Reserved.
  #
  # Project: https://github.com/rober42539/lao-dictionary
@@ -347,14 +354,14 @@ Lao Word Break Dictionary Data (laodict.txt)
 
 Burmese Word Break Dictionary Data (burmesedict.txt)
 
- #  Copyright (c) 2014 International Business Machines Corporation
+ #  Copyright (C) 2014 International Business Machines Corporation
  #  and others. All Rights Reserved.
  #
  #  This list is part of a project hosted at:
  #    github.com/kanyawtech/myanmar-karen-word-lists
  #
  #  --------------------------------------------------------------------------
- #  Copyright (c) 2013, LeRoy Benjamin Sharon
+ #  Copyright (C) 2013, LeRoy Benjamin Sharon
  #  All rights reserved.
  #
  #  Redistribution and use in source and binary forms, with or without
@@ -443,58 +450,30 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ----------------------------------------------------------------------
 
-File: install-sh (only for ICU4C)
+JSON parsing library (nlohmann/json)
 
+File: vendor/json/upstream/single_include/nlohmann/json.hpp (only for ICU4C)
 
-Copyright 1991 by the Massachusetts Institute of Technology
+MIT License
 
-Permission to use, copy, modify, distribute, and sell this software and its
-documentation for any purpose is hereby granted without fee, provided that
-the above copyright notice appear in all copies and that both that
-copyright notice and this permission notice appear in supporting
-documentation, and that the name of M.I.T. not be used in advertising or
-publicity pertaining to distribution of the software without specific,
-written prior permission.  M.I.T. makes no representations about the
-suitability of this software for any purpose.  It is provided "as is"
-without express or implied warranty.
+Copyright (C) 2013-2022 Niels Lohmann
 
-----------------------------------------------------------------------
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-File: selfmt.cpp
-File: selfmt.h
-File: selfmtimpl.h
-File: umsg.h
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-Copyright (c) 1995-2016 International Business Machines Corporation and others
-All rights reserved.
-Copyright (C) 2010 , Yahoo! Inc.
-
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, and/or sell copies of the Software, and to permit persons
-to whom the Software is furnished to do so, provided that the above
-copyright notice(s) and this permission notice appear in all copies of
-the Software and that both the above copyright notice(s) and this
-permission notice appear in supporting documentation.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
-OF THIRD PARTY RIGHTS. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
-HOLDERS INCLUDED IN THIS NOTICE BE LIABLE FOR ANY CLAIM, OR ANY
-SPECIAL INDIRECT OR CONSEQUENTIAL DAMAGES, OR ANY DAMAGES WHATSOEVER
-RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF
-CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN
-CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-
-Except as contained in this notice, the name of a copyright holder
-shall not be used in advertising or otherwise to promote the sale, use
-or other dealings in this Software without prior written authorization
-of the copyright holder.
-
-All trademarks and registered trademarks mentioned herein are the
-property of their respective owners.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 
 ```

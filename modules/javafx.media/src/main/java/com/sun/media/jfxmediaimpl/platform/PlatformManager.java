@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,8 +32,6 @@ import com.sun.media.jfxmedia.MetadataParser;
 import com.sun.media.jfxmedia.locator.Locator;
 import com.sun.media.jfxmedia.logging.Logger;
 import com.sun.media.jfxmediaimpl.platform.java.JavaPlatform;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -43,18 +41,11 @@ import java.lang.reflect.Method;
  * Core media platform management code.
  */
 public final class PlatformManager {
-    private static String enabledPlatforms;
-    static {
-        @SuppressWarnings("removal")
-        var dummy = AccessController.doPrivileged((PrivilegedAction) () -> {
-            getPlatformSettings();
-            return null;
-        });
-    }
+    private static String enabledPlatforms = getPlatformSettings();
 
-    private static void getPlatformSettings() {
+    private static String getPlatformSettings() {
         // get enabled platforms, comma separated list, e.g., -Djfxmedia.platforms=GSTPlatform,OSXPlatform
-        enabledPlatforms = System.getProperty("jfxmedia.platforms", "").toLowerCase();
+        return System.getProperty("jfxmedia.platforms", "").toLowerCase();
     }
 
     private static boolean isPlatformEnabled(String name) {

@@ -46,7 +46,7 @@ pas_page_emptiness_kind_get_inverted(pas_page_emptiness_kind kind)
     case pas_page_full_emptiness:
         return pas_page_partial_emptiness;
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return pas_page_partial_emptiness;
 }
 
@@ -59,7 +59,7 @@ pas_page_emptiness_kind_get_string(pas_page_emptiness_kind kind)
     case pas_page_full_emptiness:
         return "full";
     }
-    PAS_ASSERT(!"Should not be reached");
+    PAS_ASSERT_NOT_REACHED();
     return NULL;
 }
 

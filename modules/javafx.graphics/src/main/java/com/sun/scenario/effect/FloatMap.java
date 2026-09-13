@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -203,7 +203,7 @@ public class FloatMap {
             cacheValid = true;
         }
 
-        // RT-27553
+        // JDK-8090740
         // TODO: ideally this method wouldn't be public in the first place,
         // but even worse, we're assuming that it is called on the QFT from
         // HWTwoSamplerPeer.filter()...

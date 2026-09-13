@@ -3,7 +3,7 @@
  * Copyright (C) 2000 Frederik Holljen (frederik.holljen@hig.no)
  * Copyright (C) 2001 Peter Kelly (pmk@post.com)
  * Copyright (C) 2006 Samuel Weinig (sam.weinig@gmail.com)
- * Copyright (C) 2004, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2004-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -24,13 +24,12 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
+#include <WebCore/ExceptionOr.h>
+#include <WebCore/Node.h>
+#include <WebCore/NodeFilter.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
-
-class Node;
-class NodeFilter;
 
 class NodeIteratorBase {
 public:
@@ -42,11 +41,25 @@ public:
 
 protected:
     NodeIteratorBase(Node&, unsigned whatToShow, RefPtr<NodeFilter>&&);
-    ExceptionOr<unsigned short> acceptNode(Node&);
+    ExceptionOr<unsigned short> acceptNode(Node& node)
+    {
+        // https://dom.spec.whatwg.org/#concept-node-filter
+        if (!m_filter)
+            return matchesWhatToShow(node) ? NodeFilter::FILTER_ACCEPT : NodeFilter::FILTER_SKIP;
+        return acceptNodeSlowCase(node);
+    }
+
+    bool matchesWhatToShow(const Node& node) const
+    {
+        unsigned nodeMask = 1 << (node.nodeType() - 1);
+        return nodeMask & m_whatToShow;
+    }
 
 private:
-    Ref<Node> m_root;
-    RefPtr<NodeFilter> m_filter;
+    ExceptionOr<unsigned short> acceptNodeSlowCase(Node&);
+
+    const Ref<Node> m_root;
+    const RefPtr<NodeFilter> m_filter;
     unsigned m_whatToShow;
     bool m_isActive { false };
 };

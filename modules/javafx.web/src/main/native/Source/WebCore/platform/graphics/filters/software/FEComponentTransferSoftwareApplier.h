@@ -23,6 +23,7 @@
 #pragma once
 
 #include "FilterEffectApplier.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -31,24 +32,14 @@ class PixelBuffer;
 struct ComponentTransferFunction;
 
 class FEComponentTransferSoftwareApplier final : public FilterEffectConcreteApplier<FEComponentTransfer> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(FEComponentTransferSoftwareApplier);
     using Base = FilterEffectConcreteApplier<FEComponentTransfer>;
 
 public:
     using Base::Base;
 
 private:
-    bool apply(const Filter&, const FilterImageVector& inputs, FilterImage& result) const final;
-
-    using LookupTable = std::array<uint8_t, 256>;
-
-    static void computeIdentityTable(LookupTable&, const ComponentTransferFunction&);
-    static void computeTabularTable(LookupTable&, const ComponentTransferFunction&);
-    static void computeDiscreteTable(LookupTable&, const ComponentTransferFunction&);
-    static void computeLinearTable(LookupTable&, const ComponentTransferFunction&);
-    static void computeGammaTable(LookupTable&, const ComponentTransferFunction&);
-
-    static LookupTable computeLookupTable(const ComponentTransferFunction&);
+    bool apply(const Filter&, std::span<const Ref<FilterImage>> inputs, FilterImage& result) const final;
 
     void applyPlatform(PixelBuffer&) const;
 };

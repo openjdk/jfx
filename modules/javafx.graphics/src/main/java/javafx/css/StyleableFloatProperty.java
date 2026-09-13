@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,14 @@
 
 package javafx.css;
 
+import com.sun.javafx.css.StyleablePropertyHelper;
+import com.sun.javafx.css.TransitionMediator;
+import com.sun.javafx.css.TransitionDefinition;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.tk.Toolkit;
 import javafx.beans.property.FloatPropertyBase;
 import javafx.beans.value.ObservableValue;
+import javafx.scene.Node;
 
 /**
  * This class extends {@code FloatPropertyBase} and provides a partial
@@ -44,6 +50,15 @@ import javafx.beans.value.ObservableValue;
  */
 public abstract class StyleableFloatProperty
     extends FloatPropertyBase implements StyleableProperty<Number> {
+
+    static {
+        StyleablePropertyHelper.setFloatAccessor(new StyleablePropertyHelper.Accessor() {
+            @Override
+            public boolean equalsEndValue(StyleableProperty<?> property, Object value) {
+                return ((StyleableFloatProperty)property).equalsEndValue(value);
+            }
+        });
+    }
 
     /**
      * The constructor of the {@code StyleableFloatProperty}.
@@ -65,7 +80,23 @@ public abstract class StyleableFloatProperty
     /** {@inheritDoc} */
     @Override
     public void applyStyle(StyleOrigin origin, Number v) {
-        setValue(v);
+        // If the value is applied for the first time, we don't start a transition.
+        TransitionDefinition transition = getBean() instanceof Node node && !NodeHelper.isInitialCssState(node) ?
+            NodeHelper.findTransitionDefinition(node, getCssMetaData()) : null;
+
+        float newValue = v != null ? v.floatValue() : 0;
+
+        if (transition == null) {
+            set(newValue);
+        } else if (mediator == null || mediator.endValue != newValue) {
+            // We only start a new transition if the new target value is different from the target
+            // value of the existing transition. This scenario can sometimes happen when a CSS value
+            // is redundantly applied, which would cause unexpected animations if we allowed the new
+            // transition to interrupt the existing transition.
+            mediator = new TransitionMediatorImpl(get(), newValue);
+            mediator.run(transition, getCssMetaData().getProperty(), Toolkit.getToolkit().getPrimaryTimer().nanos());
+        }
+
         this.origin = origin;
     }
 
@@ -73,20 +104,77 @@ public abstract class StyleableFloatProperty
     @Override
     public void bind(ObservableValue<? extends Number> observable) {
         super.bind(observable);
-        origin = StyleOrigin.USER;
+        onUserChange();
     }
 
     /** {@inheritDoc} */
     @Override
     public void set(float v) {
         super.set(v);
-        origin = StyleOrigin.USER;
+        onUserChange();
     }
 
     /** {@inheritDoc} */
     @Override
     public StyleOrigin getStyleOrigin() { return origin; }
 
-    private StyleOrigin origin = null;
+    private void onUserChange() {
+        origin = StyleOrigin.USER;
 
+        if (mediator != null) {
+            mediator.cancel();
+        }
+    }
+
+    private boolean equalsEndValue(Object value) {
+        if (!(value instanceof Float floatValue)) {
+            return false;
+        }
+
+        float endValue = mediator != null ? mediator.endValue : get();
+        return Float.compare(floatValue, endValue) == 0;
+    }
+
+    private StyleOrigin origin;
+    private TransitionMediatorImpl mediator;
+
+    private class TransitionMediatorImpl extends TransitionMediator {
+        private final float startValue;
+        private final float endValue;
+        private float reversingAdjustedStartValue;
+
+        public TransitionMediatorImpl(float startValue, float endValue) {
+            this.startValue = startValue;
+            this.endValue = endValue;
+            this.reversingAdjustedStartValue = startValue;
+        }
+
+        @Override
+        public void onUpdate(double progress) {
+            StyleableFloatProperty.super.set(
+                progress != 1 ? startValue + (endValue - startValue) * (float)progress : endValue);
+        }
+
+        @Override
+        public void onStop() {
+            mediator = null;
+        }
+
+        @Override
+        public StyleableProperty<?> getStyleableProperty() {
+            return StyleableFloatProperty.this;
+        }
+
+        @Override
+        public boolean updateReversingAdjustedStartValue(TransitionMediator existingMediator) {
+            var mediator = (TransitionMediatorImpl)existingMediator;
+
+            if (mediator.reversingAdjustedStartValue == endValue) {
+                reversingAdjustedStartValue = mediator.endValue;
+                return true;
+            }
+
+            return false;
+        }
+    }
 }

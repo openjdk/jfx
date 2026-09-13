@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "GPRInfo.h"
-#include "JSCJSValue.h"
-#include "ResultType.h"
-#include "TagRegistersMode.h"
+#include <JavaScriptCore/GPRInfo.h>
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/ResultType.h>
+#include <JavaScriptCore/TagRegistersMode.h>
 
 namespace JSC {
 
@@ -53,7 +53,7 @@ struct ObservedType {
     constexpr ObservedType withNonNumber() const { return ObservedType(m_bits | TypeNonNumber); }
     constexpr ObservedType withoutNonNumber() const { return ObservedType(m_bits & ~TypeNonNumber); }
 
-    constexpr bool operator==(const ObservedType& other) const { return m_bits == other.m_bits; }
+    friend constexpr bool operator==(const ObservedType&, const ObservedType&) = default;
 
     static constexpr uint8_t TypeEmpty = 0x0;
     static constexpr uint8_t TypeInt32 = 0x1;
@@ -180,6 +180,10 @@ protected:
 
     BitfieldType m_bits { 0 }; // We take care to update m_bits only in a single operation. We don't ever store an inconsistent bit representation to it.
 };
+
+#if ENABLE(JIT)
+extern template class ArithProfile<uint16_t>;
+#endif
 
 /* This class stores the following components in 16 bits:
  * - ObservedResults

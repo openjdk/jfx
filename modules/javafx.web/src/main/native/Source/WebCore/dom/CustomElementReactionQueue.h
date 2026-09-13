@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,11 +25,14 @@
 
 #pragma once
 
-#include "CustomElementFormValue.h"
-#include "GCReachableRef.h"
-#include "QualifiedName.h"
+#include <WebCore/CustomElementFormValue.h>
+#include <WebCore/Element.h>
+#include <WebCore/GCReachableRef.h>
+#include <WebCore/QualifiedName.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/text/AtomString.h>
 
@@ -49,7 +52,7 @@ class HTMLFormElement;
 class JSCustomElementInterface;
 
 class CustomElementReactionQueueItem {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(CustomElementReactionQueueItem);
     WTF_MAKE_NONCOPYABLE(CustomElementReactionQueueItem);
 public:
     enum class Type : uint8_t {
@@ -79,7 +82,7 @@ public:
     using AttributeChangedPayload = std::tuple<QualifiedName, AtomString, AtomString>;
     using FormDisabledPayload = bool;
     using FormStateRestorePayload = CustomElementFormValue;
-    using Payload = std::optional<std::variant<AdoptedPayload, AttributeChangedPayload, FormAssociatedPayload, FormDisabledPayload, FormStateRestorePayload>>;
+    using Payload = std::optional<Variant<AdoptedPayload, AttributeChangedPayload, FormAssociatedPayload, FormDisabledPayload, FormStateRestorePayload>>;
 
     CustomElementReactionQueueItem();
     CustomElementReactionQueueItem(CustomElementReactionQueueItem&&);
@@ -95,26 +98,28 @@ private:
 
 // https://html.spec.whatwg.org/multipage/custom-elements.html#element-queue
 class CustomElementQueue {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(CustomElementQueue);
     WTF_MAKE_NONCOPYABLE(CustomElementQueue);
 public:
-    CustomElementQueue();
-    ~CustomElementQueue();
+    CustomElementQueue() = default;
+    ~CustomElementQueue() { ASSERT(isEmpty()); }
 
+    bool isEmpty() const { return m_elements.isEmpty(); }
     void add(Element&);
-    void processQueue(JSC::JSGlobalObject*);
+    WEBCORE_EXPORT void processQueue(JSC::JSGlobalObject*);
 
-    Vector<GCReachableRef<Element>, 4> takeElements();
+    Vector<Ref<Element>, 4> takeElements();
 
 private:
     void invokeAll();
 
-    Vector<GCReachableRef<Element>, 4> m_elements;
+    Vector<Ref<Element>, 4> m_elements;
     bool m_invoking { false };
 };
 
-class CustomElementReactionQueue {
-    WTF_MAKE_FAST_ALLOCATED;
+class CustomElementReactionQueue final : public CanMakeCheckedPtr<CustomElementReactionQueue> {
+    WTF_MAKE_TZONE_ALLOCATED(CustomElementReactionQueue);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(CustomElementReactionQueue);
     WTF_MAKE_NONCOPYABLE(CustomElementReactionQueue);
 public:
     CustomElementReactionQueue(JSCustomElementInterface&);
@@ -155,7 +160,7 @@ private:
 
     using Item = CustomElementReactionQueueItem;
 
-    Ref<JSCustomElementInterface> m_interface;
+    const Ref<JSCustomElementInterface> m_interface;
     Vector<Item, 1> m_items;
     bool m_elementInternalsAttached { false };
 };
@@ -223,17 +228,15 @@ public:
 
     ALWAYS_INLINE ~CustomElementReactionStack()
     {
-        if (UNLIKELY(m_queue))
-            processQueue(m_state);
+        if (!m_queue.isEmpty()) [[unlikely]]
+            m_queue.processQueue(m_state);
         s_currentProcessingStack = m_previousProcessingStack;
     }
 
-    Vector<GCReachableRef<Element>, 4> takeElements();
+    Vector<Ref<Element>, 4> takeElements() { return m_queue.takeElements(); }
 
 private:
-    WEBCORE_EXPORT void processQueue(JSC::JSGlobalObject*);
-
-    CustomElementQueue* m_queue { nullptr }; // Use raw pointer to avoid generating delete in the destructor.
+    CustomElementQueue m_queue;
     CustomElementReactionStack* const m_previousProcessingStack;
     JSC::JSGlobalObject* const m_state;
 

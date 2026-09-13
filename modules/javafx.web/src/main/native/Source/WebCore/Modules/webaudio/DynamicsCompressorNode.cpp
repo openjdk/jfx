@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2011, Google Inc. All rights reserved.
- * Copyright (C) 2020, Apple Inc. All rights reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
+ * Copyright (C) 2020 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,14 +34,15 @@
 #include "AudioNodeOutput.h"
 #include "AudioUtilities.h"
 #include "DynamicsCompressor.h"
-#include <wtf/IsoMallocInlines.h>
+#include "ExceptionOr.h"
+#include <wtf/TZoneMallocInlines.h>
 
 // Set output to stereo by default.
 static constexpr unsigned defaultNumberOfOutputChannels = 2;
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(DynamicsCompressorNode);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DynamicsCompressorNode);
 
 ExceptionOr<Ref<DynamicsCompressorNode>> DynamicsCompressorNode::create(BaseAudioContext& context, const DynamicsCompressorOptions& options)
 {
@@ -75,8 +76,8 @@ DynamicsCompressorNode::~DynamicsCompressorNode()
 
 void DynamicsCompressorNode::process(size_t framesToProcess)
 {
-    AudioBus* outputBus = output(0)->bus();
-    ASSERT(outputBus);
+    CheckedPtr firstOutput = output(0);
+    AudioBus& outputBus = firstOutput->bus();
 
     float threshold = m_threshold->finalValue();
     float knee = m_knee->finalValue();
@@ -90,21 +91,22 @@ void DynamicsCompressorNode::process(size_t framesToProcess)
     m_dynamicsCompressor->setParameterValue(DynamicsCompressor::ParamAttack, attack);
     m_dynamicsCompressor->setParameterValue(DynamicsCompressor::ParamRelease, release);
 
-    m_dynamicsCompressor->process(input(0)->bus(), outputBus, framesToProcess);
+    m_dynamicsCompressor->process(checkedInput(0)->bus(), outputBus, framesToProcess);
 
     setReduction(m_dynamicsCompressor->parameterValue(DynamicsCompressor::ParamReduction));
 }
 
 void DynamicsCompressorNode::processOnlyAudioParams(size_t framesToProcess)
 {
-    float values[AudioUtilities::renderQuantumSize];
+    std::array<float, AudioUtilities::renderQuantumSize> values;
     ASSERT(framesToProcess <= AudioUtilities::renderQuantumSize);
 
-    m_threshold->calculateSampleAccurateValues(values, framesToProcess);
-    m_knee->calculateSampleAccurateValues(values, framesToProcess);
-    m_ratio->calculateSampleAccurateValues(values, framesToProcess);
-    m_attack->calculateSampleAccurateValues(values, framesToProcess);
-    m_release->calculateSampleAccurateValues(values, framesToProcess);
+    auto valuesSpan = std::span { values }.first(framesToProcess);
+    m_threshold->calculateSampleAccurateValues(valuesSpan);
+    m_knee->calculateSampleAccurateValues(valuesSpan);
+    m_ratio->calculateSampleAccurateValues(valuesSpan);
+    m_attack->calculateSampleAccurateValues(valuesSpan);
+    m_release->calculateSampleAccurateValues(valuesSpan);
 }
 
 void DynamicsCompressorNode::initialize()
@@ -144,14 +146,14 @@ bool DynamicsCompressorNode::requiresTailProcessing() const
 ExceptionOr<void> DynamicsCompressorNode::setChannelCount(unsigned count)
 {
     if (count > 2)
-        return Exception { NotSupportedError, "DynamicsCompressorNode's channel count cannot be greater than 2"_s };
+        return Exception { ExceptionCode::NotSupportedError, "DynamicsCompressorNode's channel count cannot be greater than 2"_s };
     return AudioNode::setChannelCount(count);
 }
 
 ExceptionOr<void> DynamicsCompressorNode::setChannelCountMode(ChannelCountMode mode)
 {
     if (mode == ChannelCountMode::Max)
-        return Exception { NotSupportedError, "DynamicsCompressorNode's channel count mode cannot be set to 'max'"_s };
+        return Exception { ExceptionCode::NotSupportedError, "DynamicsCompressorNode's channel count mode cannot be set to 'max'"_s };
     return AudioNode::setChannelCountMode(mode);
 }
 

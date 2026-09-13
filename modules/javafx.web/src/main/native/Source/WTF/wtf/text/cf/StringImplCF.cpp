@@ -34,10 +34,18 @@ namespace WTF {
 
 namespace StringWrapperCFAllocator {
 
-    DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StringWrapperCFAllocator);
+    DECLARE_ALLOCATOR_WITH_HEAP_IDENTIFIER_AND_EXPORT(StringWrapperCFAllocator, WTF_INTERNAL);
     DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(StringWrapperCFAllocator);
 
-    static StringImpl* currentString;
+    static RefPtr<StringImpl>& currentString()
+    {
+        static NeverDestroyed<RefPtr<StringImpl>> currentString;
+        return currentString;
+    }
+
+    struct StringImplWrapper {
+        RefPtr<StringImpl> m_stringImpl;
+    };
 
     static const void* retain(const void* info)
     {
@@ -57,39 +65,30 @@ namespace StringWrapperCFAllocator {
 
     static void* allocate(CFIndex size, CFOptionFlags, void*)
     {
-        StringImpl* underlyingString = nullptr;
-        if (isMainThread()) {
-            underlyingString = currentString;
-            if (underlyingString) {
-                currentString = nullptr;
-                underlyingString->ref(); // Balanced by call to deref in deallocate below.
-            }
-        }
-        StringImpl** header = static_cast<StringImpl**>(StringWrapperCFAllocatorMalloc::malloc(sizeof(StringImpl*) + size));
-        *header = underlyingString;
-        return header + 1;
+        RefPtr<StringImpl> underlyingString;
+        if (isMainThread())
+            underlyingString = std::exchange(currentString(), nullptr);
+
+        auto [ wrapper, trailingBytes ] = createWithTrailingBytes<StringImplWrapper, StringWrapperCFAllocatorMalloc>(size, StringImplWrapper { WTF::move(underlyingString) });
+        return trailingBytes;
     }
 
     static void* reallocate(void* pointer, CFIndex newSize, CFOptionFlags, void*)
     {
-        size_t newAllocationSize = sizeof(StringImpl*) + newSize;
-        StringImpl** header = static_cast<StringImpl**>(pointer) - 1;
-        ASSERT(!*header);
-        header = static_cast<StringImpl**>(StringWrapperCFAllocatorMalloc::realloc(header, newAllocationSize));
-        return header + 1;
+        auto [ prevWrapper, prevTrailingBytes ] = fromTrailingBytes<StringImplWrapper>(pointer);
+        auto [ wrapper, trailingBytes ] = reallocWithTrailingBytes<StringImplWrapper, StringWrapperCFAllocatorMalloc>(prevWrapper, newSize);
+        ASSERT(!wrapper->m_stringImpl);
+        return trailingBytes;
     }
 
     static void deallocate(void* pointer, void*)
     {
-        StringImpl** header = static_cast<StringImpl**>(pointer) - 1;
-        if (!*header)
-            StringWrapperCFAllocatorMalloc::free(header);
+        auto [ wrapper, trailingBytes ] = fromTrailingBytes<StringImplWrapper>(pointer);
+        if (!wrapper->m_stringImpl)
+            destroyWithTrailingBytes<StringImplWrapper, StringWrapperCFAllocatorMalloc>(wrapper);
         else {
-            ensureOnMainThread([header] {
-                StringImpl* underlyingString = *header;
-                ASSERT(underlyingString);
-                underlyingString->deref(); // Balanced by call to ref in allocate above.
-                StringWrapperCFAllocatorMalloc::free(header);
+            ensureOnMainThread([wrapper = wrapper] {
+                destroyWithTrailingBytes<StringImplWrapper, StringWrapperCFAllocatorMalloc>(wrapper);
             });
         }
     }
@@ -104,9 +103,11 @@ namespace StringWrapperCFAllocator {
         return size;
     }
 
-    static CFAllocatorRef allocator()
+    static CFAllocatorRef allocatorSingleton()
     {
+        ASSERT(isMainThread());
         static NeverDestroyed allocator = [] {
+            initializeMainThread();
             CFAllocatorContext context = { 0, nullptr, retain, release, copyDescription, allocate, reallocate, deallocate, preferredSize };
             return adoptCF(CFAllocatorCreate(nullptr, &context));
         }();
@@ -118,23 +119,28 @@ namespace StringWrapperCFAllocator {
 RetainPtr<CFStringRef> StringImpl::createCFString()
 {
     if (!m_length || !isMainThread()) {
-        if (is8Bit())
-            return adoptCF(CFStringCreateWithBytes(nullptr, characters8(), m_length, kCFStringEncodingISOLatin1, false));
-        return adoptCF(CFStringCreateWithCharacters(nullptr, reinterpret_cast<const UniChar*>(characters16()), m_length));
+        if (is8Bit()) {
+            auto characters = span8();
+            return adoptCF(CFStringCreateWithBytes(nullptr, byteCast<UInt8>(characters.data()), characters.size(), kCFStringEncodingISOLatin1, false));
+        }
+        auto characters = span16();
+        return adoptCF(CFStringCreateWithCharacters(nullptr, reinterpret_cast<const UniChar*>(characters.data()), characters.size()));
     }
-    CFAllocatorRef allocator = StringWrapperCFAllocator::allocator();
 
     // Put pointer to the StringImpl in a global so the allocator can store it with the CFString.
-    ASSERT(!StringWrapperCFAllocator::currentString);
-    StringWrapperCFAllocator::currentString = this;
+    ASSERT(!StringWrapperCFAllocator::currentString());
+    StringWrapperCFAllocator::currentString() = this;
 
     RetainPtr<CFStringRef> string;
-    if (is8Bit())
-        string = adoptCF(CFStringCreateWithBytesNoCopy(allocator, characters8(), m_length, kCFStringEncodingISOLatin1, false, kCFAllocatorNull));
-    else
-        string = adoptCF(CFStringCreateWithCharactersNoCopy(allocator, reinterpret_cast<const UniChar*>(characters16()), m_length, kCFAllocatorNull));
-    // CoreFoundation might not have to allocate anything, we clear currentString in case we did not execute allocate().
-    StringWrapperCFAllocator::currentString = nullptr;
+    if (is8Bit()) {
+        auto characters = span8();
+        string = adoptCF(CFStringCreateWithBytesNoCopy(StringWrapperCFAllocator::allocatorSingleton(), byteCast<UInt8>(characters.data()), characters.size(), kCFStringEncodingISOLatin1, false, kCFAllocatorNull));
+    } else {
+        auto characters = span16();
+        string = adoptCF(CFStringCreateWithCharactersNoCopy(StringWrapperCFAllocator::allocatorSingleton(), reinterpret_cast<const UniChar*>(characters.data()), characters.size(), kCFAllocatorNull));
+    }
+    // CoreFoundation might not have to allocate anything, we clear currentString() in case we did not execute allocate().
+    StringWrapperCFAllocator::currentString() = nullptr;
 
     return string;
 }

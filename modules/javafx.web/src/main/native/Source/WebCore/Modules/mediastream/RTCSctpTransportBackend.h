@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc.
+ * Copyright (C) 2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,11 +27,17 @@
 #if ENABLE(WEB_RTC)
 
 #include "RTCSctpTransportState.h"
-#include <wtf/WeakPtr.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
 class RTCDtlsTransportBackend;
+
+class RTCSctpTransportBackendClient : public AbstractRefCountedAndCanMakeWeakPtr<RTCSctpTransportBackendClient> {
+public:
+    virtual ~RTCSctpTransportBackendClient() = default;
+    virtual void onStateChanged(RTCSctpTransportState, std::optional<double>, std::optional<unsigned short>) = 0;
+};
 
 class RTCSctpTransportBackend {
 public:
@@ -40,12 +46,7 @@ public:
     virtual const void* backend() const = 0;
     virtual UniqueRef<RTCDtlsTransportBackend> dtlsTransportBackend() = 0;
 
-    class Client : public CanMakeWeakPtr<Client> {
-    public:
-        virtual ~Client() = default;
-        virtual void onStateChanged(RTCSctpTransportState, std::optional<double>, std::optional<unsigned short>) = 0;
-    };
-    virtual void registerClient(Client&) = 0;
+    virtual void registerClient(RTCSctpTransportBackendClient&) = 0;
     virtual void unregisterClient() = 0;
 };
 

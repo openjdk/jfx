@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, Google Inc. All rights reserved.
+ * Copyright (c) 2012-2013 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,9 +30,9 @@
 
 #pragma once
 
-#include "FloatSize.h"
-#include "IntSize.h"
-#include "LayoutUnit.h"
+#include <WebCore/FloatSize.h>
+#include <WebCore/IntSize.h>
+#include <WebCore/LayoutUnit.h>
 
 namespace WTF {
 class TextStream;
@@ -49,7 +49,7 @@ enum AspectRatioFit {
 
 class LayoutSize {
 public:
-    LayoutSize() { }
+    LayoutSize() = default;
     LayoutSize(const IntSize& size) : m_width(size.width()), m_height(size.height()) { }
     template<typename T, typename U> LayoutSize(T width, U height) : m_width(width), m_height(height) { }
 
@@ -144,6 +144,7 @@ public:
         return m_width.mightBeSaturated() || m_height.mightBeSaturated();
     }
 
+    friend bool operator==(const LayoutSize&, const LayoutSize&) = default;
 private:
     LayoutUnit m_width;
     LayoutUnit m_height;
@@ -178,11 +179,6 @@ inline LayoutSize operator-(const LayoutSize& size)
     return LayoutSize(-size.width(), -size.height());
 }
 
-inline bool operator==(const LayoutSize& a, const LayoutSize& b)
-{
-    return a.width() == b.width() && a.height() == b.height();
-}
-
 inline IntSize flooredIntSize(const LayoutSize& s)
 {
     return IntSize(s.width().floor(), s.height().floor());
@@ -209,6 +205,14 @@ inline FloatSize roundSizeToDevicePixels(const LayoutSize& size, float pixelSnap
 }
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const LayoutSize&);
+
+struct LayoutSizeLimits {
+    LayoutSize m_min;
+    LayoutSize m_max;
+    LayoutSize clamp(const LayoutSize& size) { return size.constrainedBetween(m_min, m_max); }
+    bool fits(const LayoutSize& size) { return size == clamp(size); }
+    LayoutSize distance(const LayoutSize& size) { return size - clamp(size); }
+};
 
 } // namespace WebCore
 

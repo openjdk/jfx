@@ -26,15 +26,15 @@
 #include "config.h"
 #include "SynchronousStopTheWorldMutatorScheduler.h"
 
+#include <wtf/TZoneMallocInlines.h>
+
 namespace JSC {
 
-SynchronousStopTheWorldMutatorScheduler::SynchronousStopTheWorldMutatorScheduler()
-{
-}
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SynchronousStopTheWorldMutatorScheduler);
 
-SynchronousStopTheWorldMutatorScheduler::~SynchronousStopTheWorldMutatorScheduler()
-{
-}
+SynchronousStopTheWorldMutatorScheduler::SynchronousStopTheWorldMutatorScheduler() = default;
+
+SynchronousStopTheWorldMutatorScheduler::~SynchronousStopTheWorldMutatorScheduler() = default;
 
 MutatorScheduler::State SynchronousStopTheWorldMutatorScheduler::state() const
 {

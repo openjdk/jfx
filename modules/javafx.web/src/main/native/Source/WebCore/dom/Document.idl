@@ -30,7 +30,6 @@ typedef (
 typedef (HTMLScriptElement or SVGScriptElement) HTMLOrSVGScriptElement;
 
 [
-    CustomToJSObject,
     CustomHeapSnapshot,
     DOMJIT,
     ExportMacro=WEBCORE_EXPORT,
@@ -41,6 +40,9 @@ typedef (HTMLScriptElement or SVGScriptElement) HTMLOrSVGScriptElement;
 ] interface Document : Node {
     [CallWith=CurrentDocument] constructor();
 
+    [CallWith=CurrentDocument] static Document parseHTMLUnsafe((TrustedHTML or DOMString) html);
+
+    [SameObject, ImplementedAs=fragmentDirectiveForBindings, EnabledBySetting=ScrollToTextFragmentFeatureDetectionEnabled] readonly attribute FragmentDirective fragmentDirective;
     [SameObject] readonly attribute DOMImplementation implementation;
     [ImplementedAs=urlForBindings] readonly attribute USVString URL;
     [ImplementedAs=urlForBindings] readonly attribute USVString documentURI;
@@ -53,19 +55,21 @@ typedef (HTMLScriptElement or SVGScriptElement) HTMLOrSVGScriptElement;
     readonly attribute DocumentType? doctype;
     [DOMJIT=Getter] readonly attribute Element? documentElement;
 
+    [NewObject, ImplementedAs=createElementForBindings] Element createElement([AtomString] DOMString localName, optional (DOMString or ElementCreationOptions) options = {});
+    [NewObject] Element createElementNS([AtomString] DOMString? namespaceURI, [AtomString] DOMString qualifiedName, optional (DOMString or ElementCreationOptions) options = {});
     HTMLCollection getElementsByTagName([AtomString] DOMString qualifiedName);
     HTMLCollection getElementsByTagNameNS([AtomString] DOMString? namespaceURI, [AtomString] DOMString localName);
     HTMLCollection getElementsByClassName([AtomString] DOMString classNames);
 
-    [NewObject, ImplementedAs=createElementForBindings] Element createElement([AtomString] DOMString localName);
-    [NewObject] Element createElementNS([AtomString] DOMString? namespaceURI, [AtomString] DOMString qualifiedName);
+    [EnabledBySetting=ScopedCustomElementRegistryEnabled, ImplementedAs=customElementRegistryForBindings] readonly attribute CustomElementRegistry? customElementRegistry;
+
     [NewObject] DocumentFragment createDocumentFragment();
     [NewObject] Text createTextNode(DOMString data);
     [NewObject] CDATASection createCDATASection(DOMString data);
     [NewObject] Comment createComment(DOMString data);
     [NewObject] ProcessingInstruction createProcessingInstruction(DOMString target, DOMString data);
 
-    [CEReactions=Needed, NewObject] Node importNode(Node node, optional boolean deep = false);
+    [CEReactions=Needed, NewObject] Node importNode(Node node, optional (boolean or ImportNodeOptions) options = false);
     [CEReactions=Needed] Node adoptNode(Node node);
 
     [NewObject] Attr createAttribute([AtomString] DOMString localName);
@@ -85,10 +89,13 @@ typedef (HTMLScriptElement or SVGScriptElement) HTMLOrSVGScriptElement;
     attribute boolean xmlStandalone;
 
     // Non standard: It has been superseeded by caretPositionFromPoint which we do not implement yet.
-    Range caretRangeFromPoint(optional long x = 0, optional long y = 0);
+    Range? caretRangeFromPoint(optional long x = 0, optional long y = 0);
 
     // Non standard: It has been dropped from Blink already.
     RenderingContext? getCSSCanvasContext(DOMString contextId, DOMString name, long width, long height);
+
+    [EnabledBySetting=IsARIANotifyEnabled] undefined ariaNotify(DOMString announcement);
+    [EnabledBySetting=IsARIANotifyEnabled] undefined ariaNotify(DOMString announcement, AriaNotifyOptions options);
 };
 
 enum DocumentReadyState { "loading", "interactive", "complete" };

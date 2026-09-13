@@ -22,6 +22,7 @@
 #include "HTMLMeterElement.h"
 
 #include "Attribute.h"
+#include "ContainerNodeInlines.h"
 #include "ElementInlines.h"
 #include "ElementIterator.h"
 #include "HTMLDivElement.h"
@@ -29,18 +30,20 @@
 #include "HTMLNames.h"
 #include "HTMLParserIdioms.h"
 #include "HTMLStyleElement.h"
+#include "NodeDocument.h"
 #include "NodeName.h"
 #include "Page.h"
 #include "RenderMeter.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderTheme.h"
-#include "ShadowPseudoIds.h"
 #include "ShadowRoot.h"
+#include "UserAgentParts.h"
 #include "UserAgentStyleSheets.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLMeterElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLMeterElement);
 
 using namespace HTMLNames;
 
@@ -54,17 +57,17 @@ HTMLMeterElement::~HTMLMeterElement() = default;
 
 Ref<HTMLMeterElement> HTMLMeterElement::create(const QualifiedName& tagName, Document& document)
 {
-    Ref<HTMLMeterElement> meter = adoptRef(*new HTMLMeterElement(tagName, document));
+    Ref meter = adoptRef(*new HTMLMeterElement(tagName, document));
     meter->ensureUserAgentShadowRoot();
     return meter;
 }
 
 RenderPtr<RenderElement> HTMLMeterElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    if (!RenderTheme::singleton().supportsMeter(style.effectiveAppearance(), *this))
-        return RenderElement::createFor(*this, WTFMove(style));
+    if (!RenderTheme::singleton().supportsMeter(style.usedAppearance()))
+        return RenderElement::createFor(*this, WTF::move(style));
 
-    return createRenderer<RenderMeter>(*this, WTFMove(style));
+    return createRenderer<RenderMeter>(*this, WTF::move(style));
 }
 
 bool HTMLMeterElement::childShouldCreateRenderer(const Node& child) const
@@ -91,66 +94,36 @@ void HTMLMeterElement::attributeChanged(const QualifiedName& name, const AtomStr
 
 double HTMLMeterElement::min() const
 {
-    return parseToDoubleForNumberType(attributeWithoutSynchronization(minAttr), 0);
-}
-
-void HTMLMeterElement::setMin(double min)
-{
-    setAttributeWithoutSynchronization(minAttr, AtomString::number(min));
+    return parseHTMLFloatingPointNumberValue(attributeWithoutSynchronization(minAttr), 0);
 }
 
 double HTMLMeterElement::max() const
 {
-    return std::max(parseToDoubleForNumberType(attributeWithoutSynchronization(maxAttr), std::max(1.0, min())), min());
-}
-
-void HTMLMeterElement::setMax(double max)
-{
-    setAttributeWithoutSynchronization(maxAttr, AtomString::number(max));
+    return std::max(parseHTMLFloatingPointNumberValue(attributeWithoutSynchronization(maxAttr), std::max(1.0, min())), min());
 }
 
 double HTMLMeterElement::value() const
 {
-    double value = parseToDoubleForNumberType(attributeWithoutSynchronization(valueAttr), 0);
+    double value = parseHTMLFloatingPointNumberValue(attributeWithoutSynchronization(valueAttr), 0);
     return std::min(std::max(value, min()), max());
-}
-
-void HTMLMeterElement::setValue(double value)
-{
-    setAttributeWithoutSynchronization(valueAttr, AtomString::number(value));
 }
 
 double HTMLMeterElement::low() const
 {
-    double low = parseToDoubleForNumberType(attributeWithoutSynchronization(lowAttr), min());
+    double low = parseHTMLFloatingPointNumberValue(attributeWithoutSynchronization(lowAttr), min());
     return std::min(std::max(low, min()), max());
-}
-
-void HTMLMeterElement::setLow(double low)
-{
-    setAttributeWithoutSynchronization(lowAttr, AtomString::number(low));
 }
 
 double HTMLMeterElement::high() const
 {
-    double high = parseToDoubleForNumberType(attributeWithoutSynchronization(highAttr), max());
+    double high = parseHTMLFloatingPointNumberValue(attributeWithoutSynchronization(highAttr), max());
     return std::min(std::max(high, low()), max());
-}
-
-void HTMLMeterElement::setHigh(double high)
-{
-    setAttributeWithoutSynchronization(highAttr, AtomString::number(high));
 }
 
 double HTMLMeterElement::optimum() const
 {
-    double optimum = parseToDoubleForNumberType(attributeWithoutSynchronization(optimumAttr), (max() + min()) / 2);
-    return std::min(std::max(optimum, min()), max());
-}
-
-void HTMLMeterElement::setOptimum(double optimum)
-{
-    setAttributeWithoutSynchronization(optimumAttr, AtomString::number(optimum));
+    double optimum = parseHTMLFloatingPointNumberValue(attributeWithoutSynchronization(optimumAttr), std::midpoint(min(), max()));
+    return std::clamp(optimum, min(), max());
 }
 
 HTMLMeterElement::GaugeRegion HTMLMeterElement::gaugeRegion() const
@@ -202,15 +175,15 @@ static void setValueClass(HTMLElement& element, HTMLMeterElement::GaugeRegion ga
     switch (gaugeRegion) {
     case HTMLMeterElement::GaugeRegionOptimum:
         element.setAttribute(HTMLNames::classAttr, "optimum"_s);
-        element.setPseudo(ShadowPseudoIds::webkitMeterOptimumValue());
+        element.setUserAgentPart(UserAgentParts::webkitMeterOptimumValue());
         return;
     case HTMLMeterElement::GaugeRegionSuboptimal:
         element.setAttribute(HTMLNames::classAttr, "suboptimum"_s);
-        element.setPseudo(ShadowPseudoIds::webkitMeterSuboptimumValue());
+        element.setUserAgentPart(UserAgentParts::webkitMeterSuboptimumValue());
         return;
     case HTMLMeterElement::GaugeRegionEvenLessGood:
         element.setAttribute(HTMLNames::classAttr, "even-less-good"_s);
-        element.setPseudo(ShadowPseudoIds::webkitMeterEvenLessGoodValue());
+        element.setUserAgentPart(UserAgentParts::webkitMeterEvenLessGoodValue());
         return;
     default:
         ASSERT_NOT_REACHED();
@@ -219,44 +192,45 @@ static void setValueClass(HTMLElement& element, HTMLMeterElement::GaugeRegion ga
 
 void HTMLMeterElement::didElementStateChange()
 {
-    m_value->setInlineStyleProperty(CSSPropertyInlineSize, valueRatio()*100, CSSUnitType::CSS_PERCENTAGE);
-    setValueClass(*m_value, gaugeRegion());
+    Ref valueElement = *m_valueElement;
+    valueElement->setInlineStyleProperty(CSSPropertyInlineSize, valueRatio() * 100, CSSUnitType::CSS_PERCENTAGE);
+    setValueClass(valueElement, gaugeRegion());
 
-    if (RenderMeter* render = renderMeter())
-        render->updateFromElement();
+    if (CheckedPtr renderer = renderMeter())
+        renderer->updateFromElement();
 }
 
 RenderMeter* HTMLMeterElement::renderMeter() const
 {
-    if (is<RenderMeter>(renderer()))
-        return downcast<RenderMeter>(renderer());
-    return nullptr;
+    return dynamicDowncast<RenderMeter>(renderer());
 }
 
 void HTMLMeterElement::didAddUserAgentShadowRoot(ShadowRoot& root)
 {
-    ASSERT(!m_value);
+    ASSERT(!m_valueElement);
 
-    static MainThreadNeverDestroyed<const String> shadowStyle(StringImpl::createWithoutCopying(meterElementShadowUserAgentStyleSheet, sizeof(meterElementShadowUserAgentStyleSheet)));
+    static MainThreadNeverDestroyed<const String> shadowStyle(StringImpl::createWithoutCopying(meterElementShadowUserAgentStyleSheet));
 
-    auto style = HTMLStyleElement::create(HTMLNames::styleTag, document(), false);
+    Ref document = this->document();
+    Ref style = HTMLStyleElement::create(HTMLNames::styleTag, document, false);
     style->setTextContent(String { shadowStyle });
-    root.appendChild(WTFMove(style));
+    root.appendChild(WTF::move(style));
 
     // Pseudos are set to allow author styling.
-    auto inner = HTMLDivElement::create(document());
+    Ref inner = HTMLDivElement::create(document);
     inner->setIdAttribute("inner"_s);
-    inner->setPseudo(ShadowPseudoIds::webkitMeterInnerElement());
+    inner->setUserAgentPart(UserAgentParts::webkitMeterInnerElement());
     root.appendChild(inner);
 
-    auto bar = HTMLDivElement::create(document());
+    Ref bar = HTMLDivElement::create(document);
     bar->setIdAttribute("bar"_s);
-    bar->setPseudo(ShadowPseudoIds::webkitMeterBar());
+    bar->setUserAgentPart(UserAgentParts::webkitMeterBar());
     inner->appendChild(bar);
 
-    m_value = HTMLDivElement::create(document());
-    m_value->setIdAttribute("value"_s);
-    bar->appendChild(*m_value);
+    Ref valueElement = HTMLDivElement::create(document);
+    valueElement->setIdAttribute("value"_s);
+    bar->appendChild(valueElement);
+    m_valueElement = WTF::move(valueElement);
 
     didElementStateChange();
 }

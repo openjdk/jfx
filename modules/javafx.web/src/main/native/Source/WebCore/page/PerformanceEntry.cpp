@@ -31,7 +31,7 @@
 #include "config.h"
 #include "PerformanceEntry.h"
 
-#include "DeprecatedGlobalSettings.h"
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
@@ -53,16 +53,24 @@ std::optional<PerformanceEntry::Type> PerformanceEntry::parseEntryTypeString(con
 
     if (entryType == "mark"_s)
         return std::optional<Type>(Type::Mark);
+
     if (entryType == "measure"_s)
         return std::optional<Type>(Type::Measure);
 
     if (entryType == "resource"_s)
         return std::optional<Type>(Type::Resource);
 
-    if (DeprecatedGlobalSettings::paintTimingEnabled()) {
         if (entryType == "paint"_s)
             return std::optional<Type>(Type::Paint);
-    }
+
+    if (entryType == "event"_s)
+        return std::optional<Type>(Type::Event);
+
+    if (entryType == "first-input"_s)
+        return std::optional<Type>(Type::FirstInput);
+
+    if (entryType == "largest-contentful-paint"_s)
+        return std::optional<Type>(Type::LargestContentfulPaint);
 
     return std::nullopt;
 }

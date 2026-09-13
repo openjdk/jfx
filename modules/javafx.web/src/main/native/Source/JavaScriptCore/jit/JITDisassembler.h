@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,10 +25,13 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(JIT)
 
-#include "BytecodeIndex.h"
-#include "MacroAssembler.h"
+#include <JavaScriptCore/BytecodeIndex.h>
+#include <JavaScriptCore/MacroAssembler.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 #include <wtf/text/CString.h>
 
@@ -42,19 +45,19 @@ class Compilation;
 }
 
 class JITDisassembler {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(JITDisassembler);
 public:
     JITDisassembler(CodeBlock*);
     ~JITDisassembler();
 
     void setStartOfCode(MacroAssembler::Label label) { m_startOfCode = label; }
-    void setForBytecodeMainPath(unsigned bytecodeIndex, MacroAssembler::Label label)
+    void setForBytecodeMainPath(unsigned bytecodeIndex, MacroAssembler::Label label, const CString& string = CString())
     {
-        m_labelForBytecodeIndexInMainPath[bytecodeIndex] = label;
+        m_labelForBytecodeIndexInMainPath[bytecodeIndex] = std::make_pair(label, string);
     }
-    void setForBytecodeSlowPath(unsigned bytecodeIndex, MacroAssembler::Label label)
+    void setForBytecodeSlowPath(unsigned bytecodeIndex, MacroAssembler::Label label, const CString& string = CString())
     {
-        m_labelForBytecodeIndexInSlowPath[bytecodeIndex] = label;
+        m_labelForBytecodeIndexInSlowPath[bytecodeIndex] = std::make_pair(label, string);
     }
     void setEndOfSlowPath(MacroAssembler::Label label) { m_endOfSlowPath = label; }
     void setEndOfCode(MacroAssembler::Label label) { m_endOfCode = label; }
@@ -71,17 +74,17 @@ private:
         BytecodeIndex bytecodeIndex;
         CString disassembly;
     };
-    Vector<DumpedOp> dumpVectorForInstructions(LinkBuffer&, const char* prefix, Vector<MacroAssembler::Label>& labels, MacroAssembler::Label endLabel);
+    Vector<DumpedOp> dumpVectorForInstructions(LinkBuffer&, const char* prefix, Vector<std::pair<MacroAssembler::Label, CString>>& labels, MacroAssembler::Label endLabel);
 
-    void dumpForInstructions(PrintStream&, LinkBuffer&, const char* prefix, Vector<MacroAssembler::Label>& labels, MacroAssembler::Label endLabel);
-    void reportInstructions(Profiler::Compilation*, LinkBuffer&, const char* prefix, Vector<MacroAssembler::Label>& labels, MacroAssembler::Label endLabel);
+    void dumpForInstructions(PrintStream&, LinkBuffer&, const char* prefix, Vector<std::pair<MacroAssembler::Label, CString>>& labels, MacroAssembler::Label endLabel);
+    void reportInstructions(Profiler::Compilation*, LinkBuffer&, const char* prefix, Vector<std::pair<MacroAssembler::Label, CString>>& labels, MacroAssembler::Label endLabel);
 
     void dumpDisassembly(PrintStream&, LinkBuffer&, MacroAssembler::Label from, MacroAssembler::Label to);
 
     CodeBlock* const m_codeBlock;
     MacroAssembler::Label m_startOfCode;
-    Vector<MacroAssembler::Label> m_labelForBytecodeIndexInMainPath;
-    Vector<MacroAssembler::Label> m_labelForBytecodeIndexInSlowPath;
+    Vector<std::pair<MacroAssembler::Label, CString>> m_labelForBytecodeIndexInMainPath;
+    Vector<std::pair<MacroAssembler::Label, CString>> m_labelForBytecodeIndexInSlowPath;
     MacroAssembler::Label m_endOfSlowPath;
     MacroAssembler::Label m_endOfCode;
     void* m_codeStart { nullptr };

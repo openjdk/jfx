@@ -26,10 +26,14 @@
 #include "config.h"
 #include "WakeLock.h"
 
+#include "ClientOrigin.h"
+#include "ContextDestructionObserverInlines.h"
+#include "DocumentEventLoop.h"
 #include "DocumentInlines.h"
+#include "DocumentPage.h"
+#include "DocumentWindow.h"
 #include "EventLoop.h"
 #include "Exception.h"
-#include "FeaturePolicy.h"
 #include "JSDOMPromiseDeferred.h"
 #include "JSWakeLockSentinel.h"
 #include "LocalDOMWindow.h"
@@ -37,6 +41,8 @@
 #include "PermissionController.h"
 #include "PermissionQuerySource.h"
 #include "PermissionState.h"
+#include "PermissionsPolicy.h"
+#include "VisibilityState.h"
 #include "WakeLockManager.h"
 #include "WakeLockSentinel.h"
 
@@ -50,24 +56,24 @@ WakeLock::WakeLock(Document* document)
 // https://www.w3.org/TR/screen-wake-lock/#the-request-method
 void WakeLock::request(WakeLockType lockType, Ref<DeferredPromise>&& promise)
 {
-    auto* document = this->document();
+    RefPtr document = this->document();
     if (!document || !document->isFullyActive() || !document->page()) {
-        promise->reject(Exception { NotAllowedError, "Document is not fully active"_s });
+        promise->reject(Exception { ExceptionCode::NotAllowedError, "Document is not fully active"_s });
         return;
     }
-    if (!isFeaturePolicyAllowedByDocumentAndAllOwners(FeaturePolicy::Type::ScreenWakeLock, *document, LogFeaturePolicyFailure::Yes)) {
-        promise->reject(Exception { NotAllowedError, "'screen-wake-lock' is not allowed by Feature-Policy"_s });
+    if (!PermissionsPolicy::isFeatureEnabled(PermissionsPolicy::Feature::ScreenWakeLock, *document, PermissionsPolicy::ShouldReportViolation::Yes)) {
+        promise->reject(Exception { ExceptionCode::NotAllowedError, "'screen-wake-lock' is not allowed by Feature-Policy"_s });
         return;
     }
     if (document->visibilityState() == VisibilityState::Hidden) {
-        promise->reject(Exception { NotAllowedError, "Document is hidden"_s });
+        promise->reject(Exception { ExceptionCode::NotAllowedError, "Document is hidden"_s });
         return;
     }
 
     // FIXME: The permission check can likely be dropped once the specification gets updated to only
     // require transient activation (https://github.com/w3c/screen-wake-lock/pull/326).
-    bool hasTransientActivation = document->domWindow() && document->domWindow()->hasTransientActivation();
-    PermissionController::shared().query(document->clientOrigin(), PermissionDescriptor { PermissionName::ScreenWakeLock }, *document->page(), PermissionQuerySource::Window, [this, protectedThis = Ref { *this }, document = Ref { *document }, hasTransientActivation, promise = WTFMove(promise), lockType](std::optional<PermissionState> permission) mutable {
+    bool hasTransientActivation = document->window() && document->protectedWindow()->hasTransientActivation();
+    PermissionController::singleton().query(document->clientOrigin(), PermissionDescriptor { PermissionName::ScreenWakeLock }, *document->page(), PermissionQuerySource::Window, [this, protectedThis = Ref { *this }, document = Ref { *document }, hasTransientActivation, promise = WTF::move(promise), lockType](std::optional<PermissionState> permission) mutable {
         if (!permission || *permission == PermissionState::Prompt) {
             if (hasTransientActivation || m_wasPreviouslyAuthorizedDueToTransientActivation) {
                 m_wasPreviouslyAuthorizedDueToTransientActivation = true;
@@ -76,22 +82,22 @@ void WakeLock::request(WakeLockType lockType, Ref<DeferredPromise>&& promise)
                 permission = PermissionState::Denied;
         } else if (*permission == PermissionState::Denied)
             m_wasPreviouslyAuthorizedDueToTransientActivation = false;
-        document->eventLoop().queueTask(TaskSource::ScreenWakelock, [protectedThis = WTFMove(protectedThis), document = WTFMove(document), promise = WTFMove(promise), lockType, permission]() mutable {
+        document->checkedEventLoop()->queueTask(TaskSource::ScreenWakelock, [protectedThis = WTF::move(protectedThis), document = WTF::move(document), promise = WTF::move(promise), lockType, permission]() mutable {
             if (permission == PermissionState::Denied) {
-                promise->reject(Exception { NotAllowedError, "Permission was denied"_s });
+                promise->reject(Exception { ExceptionCode::NotAllowedError, "Permission was denied"_s });
                 return;
             }
             if (!document->isFullyActive()) {
-                promise->reject(Exception { NotAllowedError, "Document is not fully active"_s });
+                promise->reject(Exception { ExceptionCode::NotAllowedError, "Document is not fully active"_s });
                 return;
             }
             if (document->visibilityState() == VisibilityState::Hidden) {
-                promise->reject(Exception { NotAllowedError, "Document is hidden"_s });
+                promise->reject(Exception { ExceptionCode::NotAllowedError, "Document is hidden"_s });
                 return;
             }
             auto lock = WakeLockSentinel::create(document, lockType);
             promise->resolve<IDLInterface<WakeLockSentinel>>(lock.get());
-            document->wakeLockManager().addWakeLock(WTFMove(lock), document->pageID());
+            document->protectedWakeLockManager()->addWakeLock(WTF::move(lock), document->pageID());
         });
     });
 }

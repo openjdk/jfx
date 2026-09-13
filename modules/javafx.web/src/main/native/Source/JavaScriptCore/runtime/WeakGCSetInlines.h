@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "HeapInlines.h"
-#include "WeakGCSet.h"
-#include "WeakInlines.h"
+#include <JavaScriptCore/HeapInlines.h>
+#include <JavaScriptCore/WeakGCSet.h>
+#include <JavaScriptCore/WeakInlines.h>
 
 namespace JSC {
 
@@ -42,28 +42,6 @@ template<typename ValueArg, typename HashArg, typename TraitsArg>
 inline WeakGCSet<ValueArg, HashArg, TraitsArg>::~WeakGCSet()
 {
     m_vm.heap.unregisterWeakGCHashTable(this);
-}
-
-template<typename ValueArg, typename HashArg, typename TraitsArg>
-inline typename WeakGCSet<ValueArg, HashArg, TraitsArg>::iterator WeakGCSet<ValueArg, HashArg, TraitsArg>::find(const ValueType& value)
-{
-    iterator it = m_set.find(value);
-    iterator end = m_set.end();
-    if (it != end && !*it) // Found a zombie value.
-        return end;
-    return it;
-}
-
-template<typename ValueArg, typename HashArg, typename TraitsArg>
-inline typename WeakGCSet<ValueArg, HashArg, TraitsArg>::const_iterator WeakGCSet<ValueArg, HashArg, TraitsArg>::find(const ValueType& value) const
-{
-    return const_cast<WeakGCSet*>(this)->find(value);
-}
-
-template<typename ValueArg, typename HashArg, typename TraitsArg>
-inline bool WeakGCSet<ValueArg, HashArg, TraitsArg>::contains(const ValueType& value) const
-{
-    return find(value) != m_set.end();
 }
 
 template<typename ValueArg, typename HashArg, typename TraitsArg>

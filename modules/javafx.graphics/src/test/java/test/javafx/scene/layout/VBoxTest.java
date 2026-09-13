@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,6 @@
 
 package test.javafx.scene.layout;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -36,35 +33,42 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.shape.Rectangle;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
 public class VBoxTest {
     VBox vbox;
 
-    @Before public void setUp() {
+    @BeforeEach
+    public void setUp() {
         this.vbox = new VBox();
     }
 
-    @Test public void testVBoxDefaults() {
+    @Test
+    public void testVBoxDefaults() {
         assertEquals(0, vbox.getSpacing(), 1e-100);
         assertTrue(vbox.isFillWidth());
         assertEquals(Pos.TOP_LEFT, vbox.getAlignment());
     }
 
-    @Test public void testVBoxNulls() {
+    @Test
+    public void testVBoxNulls() {
         vbox.setAlignment(null);
 
         // this musn't throw NPE
         vbox.autosize();
         vbox.layout();
 
-        assertNull(null, vbox.getAlignment());
-        assertNull(null, vbox.alignmentProperty().get());
+        assertNull(vbox.getAlignment());
+        assertNull(vbox.alignmentProperty().get());
     }
 
-    @Test public void testSimpleVBox() {
+    @Test
+    public void testSimpleVBox() {
         MockResizable child1 = new MockResizable(100,200, 300,400, 500,600);
         Rectangle child2 = new Rectangle(100, 100);
         ParentShim.getChildren(vbox).addAll(child1, child2);
@@ -97,7 +101,8 @@ public class VBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVBoxSpacing() {
+    @Test
+    public void testVBoxSpacing() {
         vbox.setSpacing(10);
         MockResizable child1 = new MockResizable(100,200, 300,400, 500,600);
         Rectangle child2 = new Rectangle(100, 100);
@@ -131,7 +136,8 @@ public class VBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVBoxFillWidth() {
+    @Test
+    public void testVBoxFillWidth() {
         vbox.setFillWidth(false);
         vbox.setAlignment(Pos.TOP_CENTER);
         MockResizable child1 = new MockResizable(100,100, 200,300, 500,600);
@@ -166,7 +172,8 @@ public class VBoxTest {
         assertEquals(400, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVBoxAlignmentTopLeft() {
+    @Test
+    public void testVBoxAlignmentTopLeft() {
         MockResizable child1 = new MockResizable(300,400);
         Rectangle child2 = new Rectangle(100, 100);
         ParentShim.getChildren(vbox).addAll(child1, child2);
@@ -184,7 +191,8 @@ public class VBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVBoxAlignmentTopCenter() {
+    @Test
+    public void testVBoxAlignmentTopCenter() {
         MockResizable child1 = new MockResizable(300,400);
         Rectangle child2 = new Rectangle(100, 100);
         ParentShim.getChildren(vbox).addAll(child1, child2);
@@ -202,7 +210,8 @@ public class VBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVBoxAlignmentTopRight() {
+    @Test
+    public void testVBoxAlignmentTopRight() {
         MockResizable child1 = new MockResizable(300,400);
         Rectangle child2 = new Rectangle(100, 100);
         ParentShim.getChildren(vbox).addAll(child1, child2);
@@ -220,7 +229,8 @@ public class VBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVBoxAlignmentCenterLeft() {
+    @Test
+    public void testVBoxAlignmentCenterLeft() {
         MockResizable child1 = new MockResizable(300,400);
         Rectangle child2 = new Rectangle(100, 100);
         ParentShim.getChildren(vbox).addAll(child1, child2);
@@ -238,7 +248,8 @@ public class VBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVBoxAlignmentCenter() {
+    @Test
+    public void testVBoxAlignmentCenter() {
         MockResizable child1 = new MockResizable(300,400);
         Rectangle child2 = new Rectangle(100, 100);
         ParentShim.getChildren(vbox).addAll(child1, child2);
@@ -256,7 +267,8 @@ public class VBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVBoxAlignmentCenterRight() {
+    @Test
+    public void testVBoxAlignmentCenterRight() {
         MockResizable child1 = new MockResizable(300,400);
         Rectangle child2 = new Rectangle(100, 100);
         ParentShim.getChildren(vbox).addAll(child1, child2);
@@ -274,7 +286,8 @@ public class VBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVBoxAlignmentBottomLeft() {
+    @Test
+    public void testVBoxAlignmentBottomLeft() {
         MockResizable child1 = new MockResizable(300,400);
         Rectangle child2 = new Rectangle(100, 100);
         ParentShim.getChildren(vbox).addAll(child1, child2);
@@ -292,7 +305,8 @@ public class VBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVBoxAlignmentBottomCenter() {
+    @Test
+    public void testVBoxAlignmentBottomCenter() {
         MockResizable child1 = new MockResizable(300,400);
         Rectangle child2 = new Rectangle(100, 100);
         ParentShim.getChildren(vbox).addAll(child1, child2);
@@ -310,7 +324,8 @@ public class VBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVBoxAlignmentBottomRight() {
+    @Test
+    public void testVBoxAlignmentBottomRight() {
         MockResizable child1 = new MockResizable(300,400);
         Rectangle child2 = new Rectangle(100, 100);
         ParentShim.getChildren(vbox).addAll(child1, child2);
@@ -328,7 +343,8 @@ public class VBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVBoxContentBiasNullNoChildHasContentBias() {
+    @Test
+    public void testVBoxContentBiasNullNoChildHasContentBias() {
         Rectangle r = new Rectangle(100,100);
         MockResizable child = new MockResizable(100,200);
         ParentShim.getChildren(vbox).addAll(r, child);
@@ -339,7 +355,8 @@ public class VBoxTest {
         assertEquals(300, vbox.prefHeight(200), 0);
     }
 
-    @Test public void testVBoxContentBiasHORIZONTALifChildHORIZONTAL() {
+    @Test
+    public void testVBoxContentBiasHORIZONTALifChildHORIZONTAL() {
         Rectangle r = new Rectangle(100,100);
         MockBiased biased = new MockBiased(Orientation.HORIZONTAL, 100, 200);
         MockResizable child = new MockResizable(100,100);
@@ -348,7 +365,8 @@ public class VBoxTest {
         assertEquals(Orientation.HORIZONTAL, vbox.getContentBias());
     }
 
-    @Test public void testVBoxWithHorizontalContentBiasAtPrefSize() {
+    @Test
+    public void testVBoxWithHorizontalContentBiasAtPrefSize() {
         Rectangle rect = new Rectangle(100,100);
         MockBiased biased = new MockBiased(Orientation.HORIZONTAL, 100, 200);
         MockResizable resizable = new MockResizable(100,100);
@@ -374,7 +392,8 @@ public class VBoxTest {
         assertEquals(100, resizable.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVBoxWithHorizontalContentBiasWithHorizontalShrinking() {
+    @Test
+    public void testVBoxWithHorizontalContentBiasWithHorizontalShrinking() {
         Rectangle rect = new Rectangle(100,100);
         MockBiased biased = new MockBiased(Orientation.HORIZONTAL, 100, 200);
         MockResizable resizable = new MockResizable(100,100);
@@ -399,7 +418,8 @@ public class VBoxTest {
         assertEquals(100, resizable.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVBoxWithHorizontalContentBiasWithHorizontalGrowing() {
+    @Test
+    public void testVBoxWithHorizontalContentBiasWithHorizontalGrowing() {
         Rectangle rect = new Rectangle(100,100);
         MockBiased biased = new MockBiased(Orientation.HORIZONTAL, 100, 200);
         MockResizable resizable = new MockResizable(100,100);
@@ -424,7 +444,8 @@ public class VBoxTest {
         assertEquals(100, resizable.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVBoxContentBiasVERTICALIfChildVERTICAL() {
+    @Test
+    public void testVBoxContentBiasVERTICALIfChildVERTICAL() {
         Rectangle r = new Rectangle(100,100);
         MockBiased biased = new MockBiased(Orientation.VERTICAL, 100, 200);
         MockResizable child = new MockResizable(100,100);
@@ -433,7 +454,8 @@ public class VBoxTest {
         assertEquals(Orientation.VERTICAL, vbox.getContentBias());
     }
 
-    @Test public void testVBoxWithVerticalContentBiasAtPrefSize() {
+    @Test
+    public void testVBoxWithVerticalContentBiasAtPrefSize() {
         Rectangle rect = new Rectangle(100,100);
         MockBiased biased = new MockBiased(Orientation.VERTICAL, 100, 200);
         MockResizable resizable = new MockResizable(100,100);
@@ -459,7 +481,8 @@ public class VBoxTest {
         assertEquals(100, resizable.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVBoxWithVerticalContentBiasWithVerticalShrinking() {
+    @Test
+    public void testVBoxWithVerticalContentBiasWithVerticalShrinking() {
         Rectangle rect = new Rectangle(100,100);
         MockBiased biased = new MockBiased(Orientation.VERTICAL, 100, 200);
         MockResizable resizable = new MockResizable(100,100);
@@ -484,7 +507,8 @@ public class VBoxTest {
         assertEquals(50, resizable.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVBoxWithVerticalContentBiasWithVerticalGrowingFillWidthFalse() {
+    @Test
+    public void testVBoxWithVerticalContentBiasWithVerticalGrowingFillWidthFalse() {
         vbox.setFillWidth(false);
         Rectangle rect = new Rectangle(100,100);
         MockBiased biased = new MockBiased(Orientation.VERTICAL, 100, 200);
@@ -512,7 +536,8 @@ public class VBoxTest {
         assertEquals(100, resizable.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVBoxWithVerticalContentBiasWithVerticalGrowingFillWidthTrue() {
+    @Test
+    public void testVBoxWithVerticalContentBiasWithVerticalGrowingFillWidthTrue() {
         vbox.setFillWidth(true);
         Rectangle rect = new Rectangle(100,100);
         MockBiased biased = new MockBiased(Orientation.VERTICAL, 100, 200);
@@ -540,7 +565,8 @@ public class VBoxTest {
         assertEquals(100, resizable.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVBoxContentBiasHORIZONTALIfChildHORIZONTALAndFillWidthTrue() {
+    @Test
+    public void testVBoxContentBiasHORIZONTALIfChildHORIZONTALAndFillWidthTrue() {
         vbox.setFillWidth(true);
         Rectangle r = new Rectangle(100,100);
         MockBiased biased = new MockBiased(Orientation.HORIZONTAL, 100, 200);
@@ -555,7 +581,8 @@ public class VBoxTest {
 
 //    These test are no longer valid.  If a content bias is set getContentBias()
 //    should never return null.
-//    @Test public void testVBoxContentBiasNullIfChildHORIZONTALAndFillWidthFalse() {
+//    @Test
+//    public void testVBoxContentBiasNullIfChildHORIZONTALAndFillWidthFalse() {
 //        vbox.setFillWidth(false);
 //        Rectangle r = new Rectangle(100,100);
 //        MockBiased biased = new MockBiased(Orientation.HORIZONTAL, 100, 200);
@@ -568,7 +595,8 @@ public class VBoxTest {
 //        assertEquals(400, vbox.prefHeight(200), 0);
 //    }
 //
-//    @Test public void testVBoxContentBiasNullIfChildVERTICALAndFillWidthTrue() {
+//    @Test
+//    public void testVBoxContentBiasNullIfChildVERTICALAndFillWidthTrue() {
 //        vbox.setFillWidth(true);
 //        Rectangle r = new Rectangle(100,100);
 //        MockBiased biased = new MockBiased(Orientation.VERTICAL, 200, 100);
@@ -581,7 +609,8 @@ public class VBoxTest {
 //        assertEquals(200, vbox.prefWidth(200), 0);
 //    }
 //
-//    @Test public void testVBoxContentBiasNullIfChildVERTICALAndFillWidthFalse() {
+//    @Test
+//    public void testVBoxContentBiasNullIfChildVERTICALAndFillWidthFalse() {
 //        vbox.setFillWidth(false);
 //        Rectangle r = new Rectangle(100,100);
 //        MockBiased biased = new MockBiased(Orientation.VERTICAL, 200, 100);
@@ -594,7 +623,8 @@ public class VBoxTest {
 //        assertEquals(200, vbox.prefWidth(200), 0);
 //    }
 
-    @Test public void testVBoxSetMarginConstraint() {
+    @Test
+    public void testVBoxSetMarginConstraint() {
         MockResizable child1 = new MockResizable(100,200, 300,400, 500,600);
 
         assertNull(VBox.getMargin(child1));
@@ -607,7 +637,8 @@ public class VBoxTest {
         assertNull(VBox.getMargin(child1));
     }
 
-    @Test public void testVBoxMarginConstraint() {
+    @Test
+    public void testVBoxMarginConstraint() {
         VBox vbox = new VBox();
         MockResizable child1 = new MockResizable(100,200, 300,400, 500,600);
         Rectangle child2 = new Rectangle(100, 100);
@@ -643,7 +674,8 @@ public class VBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVBoxSetVgrowConstraint() {
+    @Test
+    public void testVBoxSetVgrowConstraint() {
         MockResizable child1 = new MockResizable(100,200, 300,400, 500,600);
 
         assertNull(VBox.getVgrow(child1));
@@ -655,7 +687,8 @@ public class VBoxTest {
         assertNull(VBox.getVgrow(child1));
     }
 
-    @Test public void testVBoxHgrowConstraint() {
+    @Test
+    public void testVBoxHgrowConstraint() {
         VBox vbox = new VBox();
         MockResizable child1 = new MockResizable(100,200, 300,400, 500,600);
         Rectangle child2 = new Rectangle(100, 100);
@@ -691,7 +724,8 @@ public class VBoxTest {
         assertEquals(100, child2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVBoxWithHorizontalBiasedChild() {
+    @Test
+    public void testVBoxWithHorizontalBiasedChild() {
         VBox vbox = new VBox();
 
         MockBiased biased = new MockBiased(Orientation.HORIZONTAL, 100,100);
@@ -715,7 +749,8 @@ public class VBoxTest {
         assertEquals(200, biased2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testVBoxWithVerticalBiasedChild() {
+    @Test
+    public void testVBoxWithVerticalBiasedChild() {
         VBox vbox = new VBox();
 
         MockBiased biased = new MockBiased(Orientation.VERTICAL, 100,100);
@@ -742,7 +777,8 @@ public class VBoxTest {
         assertEquals(200, biased2.getLayoutBounds().getHeight(), 1e-100);
     }
 
-    @Test public void testMaxHeightHonoredWhenGrowing() {
+    @Test
+    public void testMaxHeightHonoredWhenGrowing() {
         MockRegion child = new MockRegion(10,10,100,100,300,300);
         MockRegion child2 = new MockRegion(10,10,100,100,200,200);
         VBox.setVgrow(child, Priority.ALWAYS);
@@ -758,7 +794,8 @@ public class VBoxTest {
         assertEquals(300, child2.getLayoutY(), 0);
     }
 
-    @Test public void testLayoutWhenChildrenAreRemoved_RT19406() {
+    @Test
+    public void testLayoutWhenChildrenAreRemoved_RT19406() {
         Rectangle child1 = new Rectangle(100,100);
         Rectangle child2 = new Rectangle(100, 100);
         ParentShim.getChildren(vbox).addAll(child1, child2);

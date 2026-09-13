@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -33,8 +33,9 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableValue;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public abstract class WhenTestBase<T, P extends WritableValue<T> & ObservableValue<T>> {
 
@@ -70,7 +71,7 @@ public abstract class WhenTestBase<T, P extends WritableValue<T> & ObservableVal
         this.properties = properties;
     }
 
-    @Before
+    @BeforeEach
     public void setUp() {
         cond.set(false);
         p0.setValue(v0);
@@ -186,28 +187,43 @@ public abstract class WhenTestBase<T, P extends WritableValue<T> & ObservableVal
         }
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void test_Null() {
-        Bindings.when(null);
+        assertThrows(NullPointerException.class, () -> {
+            Bindings.when(null);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+
+    @Test
     public void test_Null_expression() {
-        generatePropertyProperty(null, p0);
+        assertThrows(NullPointerException.class, () -> {
+            generatePropertyProperty(null, p0);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+
+    @Test
     public void test_expression_Null() {
-        generatePropertyProperty(p0, null);
+        assertThrows(NullPointerException.class, () -> {
+            generatePropertyProperty(p0, null);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+
+    @Test
     public void test_Null_primitive() {
-        generatePropertyPrimitive(null, v1);
+        assertThrows(NullPointerException.class, () -> {
+            generatePropertyPrimitive(null, v1);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+
+    @Test
     public void test_primitive_Null() {
-        generatePrimitiveProperty(v0, null);
+        assertThrows(NullPointerException.class, () -> {
+            generatePrimitiveProperty(v0, null);
+        });
     }
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -57,11 +57,12 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 
-import static org.junit.Assert.*;
-
-import org.junit.After;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class Node_cssStyleMap_Test {
 
@@ -89,7 +90,7 @@ public class Node_cssStyleMap_Test {
                 break;
             }
         }
-        assertNotNull(pname, declaration);
+        assertNotNull(declaration, pname);
 
         Style style = null;
         for(Style s : styles) {
@@ -98,7 +99,7 @@ public class Node_cssStyleMap_Test {
                 break;
             }
         }
-        assertNotNull(pname, style);
+        assertNotNull(style, pname);
 
         assert(style.getDeclaration() == declaration);
 
@@ -113,12 +114,12 @@ public class Node_cssStyleMap_Test {
         sm.hasDefaultUserAgentStylesheet = false;
     }
 
-    @After
+    @AfterEach
     public void cleanup() {
         resetStyleManager();
     }
 
-    @Ignore("JDK-8234241")
+    @Disabled("JDK-8234241")
     @Test
     public void testStyleMap() {
 
@@ -330,7 +331,7 @@ public class Node_cssStyleMap_Test {
         StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
         Scene scene = new Scene(group);
 
-        group.applyCss(); // TODO: force StyleHelper to be created, remove pending RT-34812
+        group.applyCss(); // TODO: force StyleHelper to be created, remove pending JDK-8095679
 
         int nExpected = expectedStyles.size();
         assert(nExpected > 0);

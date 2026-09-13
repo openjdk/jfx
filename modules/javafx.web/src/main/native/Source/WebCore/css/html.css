@@ -2,7 +2,7 @@
  * The default style sheet used to render HTML.
  *
  * Copyright (C) 2000 Lars Knoll (knoll@kde.org)
- * Copyright (C) 2003-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2003-2025 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -25,9 +25,7 @@
 
 html {
     display: block;
-#if defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT
     color: CanvasText;
-#endif
 }
 
 /* children of the <head> element all have display:none as below */
@@ -45,10 +43,8 @@ body {
 
 p {
     display: block;
-    margin-block-start: 1__qem;
-    margin-block-end: 1__qem;
-    margin-inline-start: 0;
-    margin-inline-end: 0;
+    margin-block: 1__qem;
+    margin-inline: 0;
 }
 
 address, article, aside, div, footer, header, hgroup, main, nav, search, section {
@@ -58,14 +54,13 @@ address, article, aside, div, footer, header, hgroup, main, nav, search, section
 marquee {
     display: inline-block;
     text-align: initial;
+    overflow: hidden !important;
 }
 
 blockquote {
     display: block;
-    margin-block-start: 1__qem;
-    margin-block-end: 1em;
-    margin-inline-start: 40px;
-    margin-inline-end: 40px;
+    margin-block: 1__qem 1em;
+    margin-inline: 40px;
 }
 
 figcaption {
@@ -74,10 +69,8 @@ figcaption {
 
 figure {
     display: block;
-    margin-block-start: 1em;
-    margin-block-end: 1em;
-    margin-inline-start: 40px;
-    margin-inline-end: 40px;
+    margin-block: 1em;
+    margin-inline: 40px;
 }
 
 q {
@@ -101,12 +94,9 @@ center {
 hr {
     display: block;
     overflow: hidden;
-    unicode-bidi: isolate;
     color: gray;
-    margin-block-start: 0.5em;
-    margin-block-end: 0.5em;
-    margin-inline-start: auto;
-    margin-inline-end: auto;
+    margin-block: 0.5em;
+    margin-inline: auto;
     border-style: inset;
     border-width: 1px;
 }
@@ -123,10 +113,41 @@ abbr[title], acronym[title] {
     inset: 0;
 }
 
+/* dialog */
+
+dialog {
+    position: absolute;
+    inset-inline: 0;
+    width: fit-content;
+    height: fit-content;
+    margin: auto;
+    border: solid;
+    padding: 1em;
+    background-color: Canvas;
+    color: CanvasText;
+    display: none;
+}
+
+dialog[open] {
+    display: block;
+}
+
+dialog:modal {
+    position: fixed;
+    overflow: auto;
+    inset-block: 0;
+    max-width: calc(100% - 6px - 2em);
+    max-height: calc(100% - 6px - 2em);
+    visibility: visible;
+}
+
+dialog::backdrop {
+    background: rgba(0, 0, 0, 0.1);
+}
 
 /* media elements */
 
-body:-webkit-full-page-media {
+body:-internal-media-document {
     background-color: rgb(38, 38, 38);
 }
 
@@ -152,89 +173,47 @@ audio:not([controls]) {
 h1 {
     display: block;
     font-size: 2em;
-    margin-block-start: 0.67__qem;
-    margin-block-end: 0.67em;
-    margin-inline-start: 0;
-    margin-inline-end: 0;
+    margin-block: 0.67__qem 0.67em;
+    margin-inline: 0;
     font-weight: bold;
-}
-
-:is(article, aside, nav, section) h1 {
-    font-size: 1.5em;
-    margin-block-start: 0.83__qem;
-    margin-block-end: 0.83em;
-}
-
-:is(article, aside, nav, section) :is(article, aside, nav, section) h1 {
-    font-size: 1.17em;
-    margin-block-start: 1__qem;
-    margin-block-end: 1em;
-}
-
-:is(article, aside, nav, section) :is(article, aside, nav, section) :is(article, aside, nav, section) h1 {
-    font-size: 1.00em;
-    margin-block-start: 1.33__qem;
-    margin-block-end: 1.33em;
-}
-
-:is(article, aside, nav, section) :is(article, aside, nav, section) :is(article, aside, nav, section) :is(article, aside, nav, section) h1 {
-    font-size: .83em;
-    margin-block-start: 1.67__qem;
-    margin-block-end: 1.67em;
-}
-
-:is(article, aside, nav, section) :is(article, aside, nav, section) :is(article, aside, nav, section) :is(article, aside, nav, section) :is(article, aside, nav, section) h1 {
-    font-size: .67em;
-    margin-block-start: 2.33__qem;
-    margin-block-end: 2.33em;
 }
 
 h2 {
     display: block;
     font-size: 1.5em;
-    margin-block-start: 0.83__qem;
-    margin-block-end: 0.83em;
-    margin-inline-start: 0;
-    margin-inline-end: 0;
+    margin-block: 0.83__qem 0.83em;
+    margin-inline: 0;
     font-weight: bold;
 }
 
 h3 {
     display: block;
     font-size: 1.17em;
-    margin-block-start: 1__qem;
-    margin-block-end: 1em;
-    margin-inline-start: 0;
-    margin-inline-end: 0;
+    margin-block: 1__qem 1em;
+    margin-inline: 0;
     font-weight: bold;
 }
 
 h4 {
     display: block;
-    margin-block-start: 1.33__qem;
-    margin-block-end: 1.33em;
-    margin-inline-start: 0;
-    margin-inline-end: 0;
+    margin-block: 1.33__qem 1.33em;
+    margin-inline: 0;
     font-weight: bold;
 }
 
 h5 {
     display: block;
     font-size: .83em;
-    margin-block-start: 1.67__qem;
-    margin-block-end: 1.67em;
-    margin-inline-start: 0;
-    margin-inline-end: 0;
+    margin-block: 1.67__qem 1.67em;
+    margin-inline: 0;
     font-weight: bold;
 }
 
 h6 {
     display: block;
     font-size: .67em;
-    margin-block-start: 2.33__qem;
-    margin-block-end: 2.33em;
-    margin-inline-start: 0;
-    margin-inline-end: 0;
+    margin-block: 2.33__qem 2.33em;
+    margin-inline: 0;
     font-weight: bold;
 }
 
@@ -244,7 +223,6 @@ table {
     display: table;
     border-collapse: separate;
     border-spacing: 2px;
-    border-color: gray;
     text-indent: initial;
     box-sizing: border-box;
 }
@@ -311,16 +289,14 @@ caption {
 ul, menu, dir {
     display: block;
     list-style-type: disc;
-    margin-block-start: 1__qem;
-    margin-block-end: 1em;
+    margin-block: 1__qem 1em;
     padding-inline-start: 40px;
 }
 
 ol {
     display: block;
     list-style-type: decimal;
-    margin-block-start: 1__qem;
-    margin-block-end: 1em;
+    margin-block: 1__qem 1em;
     padding-inline-start: 40px;
 }
 
@@ -330,8 +306,7 @@ li {
 }
 
 :is(dir, dl, menu, ol, ul) :is(dir, dl, menu, ol, ul) {
-    margin-block-start: 0;
-    margin-block-end: 0;
+    margin-block: 0;
 }
 
 :is(dir, menu, ol, ul) :is(dir, menu, ul) {
@@ -349,8 +324,7 @@ dd {
 
 dl {
     display: block;
-    margin-block-start: 1__qem;
-    margin-block-end: 1em;
+    margin-block: 1__qem 1em;
 }
 
 dt {
@@ -365,6 +339,7 @@ dt {
     font-variant-numeric: tabular-nums;
     white-space: pre;
     text-transform: none;
+    text-indent: 0px !important;
 }
 
 /* form elements */
@@ -379,19 +354,15 @@ label {
 }
 
 legend {
-    padding-inline-start: 2px;
-    padding-inline-end: 2px;
+    padding-inline: 2px;
     border: none;
 }
 
 fieldset {
     display: block;
-    margin-inline-start: 2px;
-    margin-inline-end: 2px;
-    padding-block-start: 0.35em;
-    padding-inline-start: 0.75em;
-    padding-inline-end: 0.75em;
-    padding-block-end: 0.625em;
+    margin-inline: 2px;
+    padding-block: 0.35em 0.625em;
+    padding-inline: 0.75em;
     border: 2px groove ThreeDFace;
     min-inline-size: min-content;
 }
@@ -400,9 +371,8 @@ button {
     appearance: auto;
 }
 
-/* Every time a new control is supported in vertical writing mode, it should be removed from here and added in the horizontalFormControls.css rule */
-select, button, input:is([type="button"], [type="submit"], [type="reset"], [type="file"]) {
-    writing-mode: horizontal-tb !important;
+::-internal-writing-suggestions {
+    color: color-mix(in srgb, currentColor 50%, transparent);
 }
 
 input, textarea, select, button {
@@ -430,17 +400,13 @@ textarea,
 #endif
 input {
     appearance: auto;
-#if defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT
     color: CanvasText;
     background-color: Canvas;
-#else
-    background-color: white;
-#endif
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
-    border-radius: 5px;
     border: 1px solid -apple-system-secondary-label;
     font: 11px system-ui;
-    padding: 0.2em 0.5em 0.3em 0.5em;
+    padding-block: 0.2em 0.3em;
+    padding-inline: 0.5em;
 #else
     border: 2px inset gray;
     padding: 1px;
@@ -450,17 +416,15 @@ input {
     cursor: auto;
 }
 
-#if defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT
 @media (prefers-dark-interface) {
     input {
         background-color: transparent;
     }
 
-    input::-webkit-loading-auto-fill-button {
+    input::-internal-loading-auto-fill-button {
         background-image: url('data:image/svg+xml,<svg width="22" height="12" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" xml:space="preserve"><path fill="rgb(55,55,55)" d="M19.36,12.64L19.36,12.64c-0.88-0.88-0.88-2.3,0-3.18l4.6-4.6c0.88-0.88,2.3-0.88,3.18,0l0,0c0.88,0.88,0.88,2.3,0,3.18l-4.6,4.6C21.66,13.52,20.24,13.52,19.36,12.64z"><animate attributeName="fill" begin="0s" dur="1s" values="rgb(201,201,201);rgb(55,55,55)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(76,76,76)" d="M20.75,16L20.75,16c0-1.24,1.01-2.25,2.25-2.25l6.5,0c1.24,0,2.25,1.01,2.25,2.25v0c0,1.24-1.01,2.25-2.25,2.25l-6.5,0C21.76,18.25,20.75,17.24,20.75,16z"><animate attributeName="fill" begin="0.125s" dur="1s" values="rgb(201,201,201);rgb(55,55,55)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(97,97,97)" d="M27.14,27.14L27.14,27.14c-0.88,0.88-2.3,0.88-3.18,0l-4.6-4.6c-0.88-0.88-0.88-2.3,0-3.18l0,0c0.88-0.88,2.3-0.88,3.18,0l4.6,4.6C28.02,24.83,28.02,26.26,27.14,27.14z"><animate attributeName="fill" begin="0.25s" dur="1s" values="rgb(201,201,201);rgb(55,55,55)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(118,118,118)" d="M16,31.75L16,31.75c-1.24,0-2.25-1.01-2.25-2.25l0-6.5c0-1.24,1.01-2.25,2.25-2.25h0c1.24,0,2.25,1.01,2.25,2.25l0,6.5C18.25,30.74,17.24,31.75,16,31.75z"><animate attributeName="fill" begin="0.375s" dur="1s" values="rgb(201,201,201);rgb(55,55,55)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(138,138,138)" d="M4.86,27.14L4.86,27.14c-0.88-0.88-0.88-2.3,0-3.18l4.6-4.6c0.88-0.88,2.3-0.88,3.18,0l0,0c0.88,0.88,0.88,2.3,0,3.18l-4.6,4.6C7.17,28.02,5.74,28.02,4.86,27.14z"><animate attributeName="fill" begin="0.5s" dur="1s" values="rgb(201,201,201);rgb(55,55,55)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(159,159,159)" d="M0.25,16L0.25,16c0-1.24,1.01-2.25,2.25-2.25l6.5,0c1.24,0,2.25,1.01,2.25,2.25v0c0,1.24-1.01,2.25-2.25,2.25l-6.5,0C1.26,18.25,0.25,17.24,0.25,16z"><animate attributeName="fill" begin="0.625s" dur="1s" values="rgb(201,201,201);rgb(55,55,55)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(180,180,180)" d="M12.64,12.64L12.64,12.64c-0.88,0.88-2.3,0.88-3.18,0l-4.6-4.6c-0.88-0.88-0.88-2.3,0-3.18l0,0c0.88-0.88,2.3-0.88,3.18,0l4.6,4.6C13.52,10.34,13.52,11.76,12.64,12.64z"><animate attributeName="fill" begin="0.75s" dur="1s" values="rgb(201,201,201);rgb(55,55,55)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(201,201,201)" d="M16,11.25L16,11.25c-1.24,0-2.25-1.01-2.25-2.25l0-6.5c0-1.24,1.01-2.25,2.25-2.25h0c1.24,0,2.25,1.01,2.25,2.25l0,6.5C18.25,10.24,17.24,11.25,16,11.25z"><animate attributeName="fill" begin="0.875s" dur="1s" values="rgb(201,201,201);rgb(55,55,55)" calcMode="linear" repeatCount="indefinite" /></path></svg>');
     }
 }
-#endif
 
 input[type="search"] {
     box-sizing: border-box;
@@ -474,6 +438,7 @@ input::-webkit-textfield-decoration-container {
     display: flex;
     align-items: center;
     content: none !important;
+    writing-mode: inherit !important;
 }
 
 input[type="search"]::-webkit-search-cancel-button,
@@ -483,7 +448,8 @@ input[type="search"]::-webkit-search-results-decoration {
     display: block;
     flex: none;
     align-self: flex-start;
-    margin: auto 0;
+    margin-block: auto;
+    margin-inline: 0;
 }
 
 input[type="search"]::-webkit-search-results-button {
@@ -492,11 +458,11 @@ input[type="search"]::-webkit-search-results-button {
     flex: none;
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
     align-self: flex-start;
-    margin: auto 0;
+    margin-block: auto;
+    margin-inline: 0;
 #endif
 }
 
-#if defined(ENABLE_DATE_AND_TIME_INPUT_TYPES) && ENABLE_DATE_AND_TIME_INPUT_TYPES
 input:is([type="date"], [type="time"], [type="datetime-local"], [type="month"], [type="week"]) {
     align-items: center;
     display: inline-flex;
@@ -504,7 +470,8 @@ input:is([type="date"], [type="time"], [type="datetime-local"], [type="month"], 
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
     border: 1px solid -webkit-control-background;
     font-family: system-ui;
-    padding: 0.2em 0.5em;
+    padding-block: 0.2em;
+    padding-inline: 0.5em;
 #if defined(WTF_PLATFORM_VISION) && WTF_PLATFORM_VISION
     background-color: rgba(0, 0, 0, 0.04);
     color: CanvasText;
@@ -529,15 +496,15 @@ input:is([type="date"], [type="time"], [type="datetime-local"], [type="month"], 
 }
 #endif
 
-#endif
-
 input::-webkit-date-and-time-value {
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
     margin: 0px;
     text-align: center;
-    width: 100%;
+    inline-size: 100%;
 #else
-    margin: 1px 24px 1px 4px;
+    margin-block: 1px;
+    margin-inline-start: 4px;
+    margin-inline-end: 24px;
     white-space: pre;
 #endif
 }
@@ -625,7 +592,7 @@ input::-webkit-strong-password-auto-fill-button {
     pointer-events: none !important;
     text-align: right !important;
     color: rgba(0, 0, 0, 0.8) !important;
-    padding-left: 6px !important;
+    padding-inline-start: 6px !important;
     white-space: nowrap !important;
 }
 
@@ -634,16 +601,14 @@ input::-webkit-credentials-auto-fill-button {
     background-image: url('data:image/svg+xml,%3Csvg xmlns%3D"http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg" viewBox%3D"0 0 26 26"%3E%3Cpath d%3D"m8.692 1h8.617c2.675 0 3.644.278 4.622.801s1.745 1.29 2.268 2.268.801 1.948.801 4.622v8.617c0 2.675-.278 3.644-.801 4.622s-1.29 1.745-2.268 2.268-1.948.801-4.622.801h-8.617c-2.675 0-3.644-.278-4.622-.801s-1.745-1.29-2.268-2.268-.801-1.948-.801-4.622v-8.616c0-2.675.278-3.644.801-4.622s1.29-1.745 2.268-2.268 1.948-.801 4.622-.801z" fill%3D"%23e5e5e5" opacity%3D".64"%2F%3E%3Cpath d%3D"m9.838 8.318c-.308 0-.57-.108-.787-.325s-.325-.478-.325-.785.108-.57.323-.787.478-.325.789-.325c.303 0 .564.109.782.327s.327.48.327.785c0 .306-.109.568-.327.785s-.479.325-.782.325zm0-3.84c-.59 0-1.139.108-1.648.324s-.956.517-1.341.903-.686.833-.904 1.341-.326 1.055-.326 1.641c0 .571.106 1.112.317 1.622s.51.961.896 1.352.841.698 1.366.918v6.082c0 .101.018.196.054.287s.092.173.167.247l1.122 1.077c.083.078.19.12.32.126s.244-.039.343-.136l1.998-1.998c.104-.105.155-.227.153-.365s-.054-.26-.157-.365l-1.094-1.083 1.555-1.553c.101-.102.151-.223.149-.361-.001-.138-.054-.26-.158-.365l-1.488-1.496c.929-.411 1.644-.964 2.142-1.66.499-.696.748-1.472.748-2.329 0-.581-.109-1.126-.327-1.635s-.52-.956-.905-1.341-.833-.687-1.343-.905-1.057-.327-1.639-.327z" opacity%3D".78"%2F%3E%3Cpath d%3D"m19.091 15.574c.108-.002.207-.023.296-.064.09-.041.179-.105.268-.193l2.462-2.522c.126-.124.189-.278.189-.46 0-.124-.03-.237-.091-.34s-.141-.185-.242-.245c-.101-.061-.212-.091-.334-.091-.187 0-.352.073-.495.22l-2.165 2.249h.232l-2.175-2.249c-.145-.147-.311-.22-.497-.22-.122 0-.234.03-.334.091-.101.061-.182.142-.242.245-.061.103-.091.216-.091.34 0 .09.015.173.046.248s.078.146.14.212l2.467 2.521c.171.171.36.256.565.256z" opacity%3D".75"%2F%3E%3C%2Fsvg%3E');
     width: 24px;
     height: 24px;
-    margin-left: 2px;
-    margin-right: 1px;
+    margin-inline: 2px 1px;
     mix-blend-mode: luminosity;
 #else
     mask-image: url('data:image/svg+xml,<svg viewBox="0 0 44 24" xmlns="http://www.w3.org/2000/svg"><path d="M 30.25 9.25 L 36.5 15.75 L 42.75 9.25" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M 16 3.5 C 16 2.672 16.672 2 17.5 2 C 18.3 2 19 2.7 19 3.5 C 19 4.3 18.3 5 17.5 5 C 16.7 5 16 4.3 16 3.5 Z M 11 6.5 C 11 10.1 13.9 13 17.5 13 C 21.1 13 24 10.1 24 6.5 C 24 2.9 21.1 0 17.5 0 C 13.9 0 11 2.9 11 6.5 Z"/><path d="M 20 17.3 L 20 18.6 L 20.9 19.9 C 21 20 21 20 21 20 L 17.7 23.8 C 17.7 23.8 17.7 23.8 17.7 23.8 C 17.5 23.9 17.4 23.9 17.3 23.8 L 15 21 L 15 11 L 20 11 L 20 14.8 L 21 15.9 C 21 16 21 16 20.9 16.1 L 20 17.3 Z M 17 13 L 17 21.3 L 17.5 21.8 L 18 21.3 L 18 13 L 17 13 Z"/></svg>');
     mask-size: 22px 12px;
     width: 22px;
     height: 12px;
-    margin-left: 3px;
-    margin-right: 2px;
+    margin-inline: 3px 2px;
     background-color: black;
 #endif
     flex: none;
@@ -667,16 +632,11 @@ input::-webkit-credentials-auto-fill-button:active {
 }
 
 input::-webkit-contacts-auto-fill-button {
-#if (defined(HAVE_ALTERNATE_ICONS) && HAVE_ALTERNATE_ICONS)
     mask-image: url('data:image/svg+xml,<svg viewBox="0 0 44 24" xmlns="http://www.w3.org/2000/svg"><path d="M 30.25 9.25 L 36.5 15.75 L 42.75 9.25" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M 12 24 C 18.5647 24 24 18.5529 24 12 C 24 5.4353 18.553 0 11.9883 0 C 5.4353 0 0 5.4353 0 12 C 0 18.5529 5.4471 24 12 24 Z M 12 16.0118 C 8.4706 16.0118 5.7412 17.2706 4.5529 18.6823 C 2.9647 16.9176 2.0118 14.5765 2.0118 12 C 2.0118 6.447 6.4353 2 11.9883 2 C 17.5412 2 21.9883 6.447 22 12 C 22.0119 14.5765 21.0471 16.9176 19.4589 18.6941 C 18.2706 17.2823 15.5412 16.0118 12 16.0118 Z M 12 14.0118 C 14.2588 14.0353 16.0353 12.1059 16.0353 9.5765 C 16.0353 7.2 14.2588 5.2235 12 5.2235 C 9.7412 5.2235 7.9529 7.2 7.9647 9.5765 C 7.9765 12.1059 9.7412 13.9882 12 14.0118 Z"/></svg>');
-#else
-    mask-image: url('data:image/svg+xml,<svg viewBox="0 0 44 24" xmlns="http://www.w3.org/2000/svg"><path d="M 30.25 9.25 L 36.5 15.75 L 42.75 9.25" fill="none" stroke="black" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="11" fill="none" stroke="black" stroke-width="2"/><path d="M 12 11.5 C 10.3 11.5 9 10.1 9 8.2 C 9 6.5 10.3 5 12 5 C 13.6 5 15 6.5 15 8.2 C 15 10.1 13.6 11.5 12 11.5 Z M 6.6 18 C 6.2 18 6 17.7 6 17.4 C 6 16.2 7.9 13 12 13 C 16.1 13 18 16.2 18 17.4 C 18 17.7 17.8 18 17.4 18 L 6.6 18 Z"/></svg>');
-#endif
     mask-size: 22px 12px;
     width: 22px;
     height: 12px;
-    margin-left: 3px;
-    margin-right: 2px;
+    margin-inline: 3px 2px;
     background-color: black;
     flex: none;
     -webkit-user-select: none;
@@ -695,8 +655,7 @@ input::-webkit-credit-card-auto-fill-button {
     mask-size: 22px 12px;
     width: 22px;
     height: 12px;
-    margin-left: 3px;
-    margin-right: 2px;
+    margin-inline: 3px 2px;
     background-color: black;
     flex: none;
     -webkit-user-select: none;
@@ -710,18 +669,16 @@ input::-webkit-credit-card-auto-fill-button:active {
     background-color: rgb(0, 60, 219);
 }
 
-input::-webkit-loading-auto-fill-button {
+input::-internal-loading-auto-fill-button {
     background-image: url('data:image/svg+xml,<svg width="22" height="12" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" xml:space="preserve"><path fill="rgb(55,55,55)" d="M19.36,12.64L19.36,12.64c-0.88-0.88-0.88-2.3,0-3.18l4.6-4.6c0.88-0.88,2.3-0.88,3.18,0l0,0c0.88,0.88,0.88,2.3,0,3.18l-4.6,4.6C21.66,13.52,20.24,13.52,19.36,12.64z"><animate attributeName="fill" begin="0s" dur="1s" values="rgb(86,86,86);rgb(207,207,207)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(76,76,76)" d="M20.75,16L20.75,16c0-1.24,1.01-2.25,2.25-2.25l6.5,0c1.24,0,2.25,1.01,2.25,2.25v0c0,1.24-1.01,2.25-2.25,2.25l-6.5,0C21.76,18.25,20.75,17.24,20.75,16z"><animate attributeName="fill" begin="0.125s" dur="1s" values="rgb(86,86,86);rgb(207,207,207)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(97,97,97)" d="M27.14,27.14L27.14,27.14c-0.88,0.88-2.3,0.88-3.18,0l-4.6-4.6c-0.88-0.88-0.88-2.3,0-3.18l0,0c0.88-0.88,2.3-0.88,3.18,0l4.6,4.6C28.02,24.83,28.02,26.26,27.14,27.14z"><animate attributeName="fill" begin="0.25s" dur="1s" values="rgb(86,86,86);rgb(207,207,207)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(118,118,118)" d="M16,31.75L16,31.75c-1.24,0-2.25-1.01-2.25-2.25l0-6.5c0-1.24,1.01-2.25,2.25-2.25h0c1.24,0,2.25,1.01,2.25,2.25l0,6.5C18.25,30.74,17.24,31.75,16,31.75z"><animate attributeName="fill" begin="0.375s" dur="1s" values="rgb(86,86,86);rgb(207,207,207)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(138,138,138)" d="M4.86,27.14L4.86,27.14c-0.88-0.88-0.88-2.3,0-3.18l4.6-4.6c0.88-0.88,2.3-0.88,3.18,0l0,0c0.88,0.88,0.88,2.3,0,3.18l-4.6,4.6C7.17,28.02,5.74,28.02,4.86,27.14z"><animate attributeName="fill" begin="0.5s" dur="1s" values="rgb(86,86,86);rgb(207,207,207)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(159,159,159)" d="M0.25,16L0.25,16c0-1.24,1.01-2.25,2.25-2.25l6.5,0c1.24,0,2.25,1.01,2.25,2.25v0c0,1.24-1.01,2.25-2.25,2.25l-6.5,0C1.26,18.25,0.25,17.24,0.25,16z"><animate attributeName="fill" begin="0.625s" dur="1s" values="rgb(86,86,86);rgb(207,207,207)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(180,180,180)" d="M12.64,12.64L12.64,12.64c-0.88,0.88-2.3,0.88-3.18,0l-4.6-4.6c-0.88-0.88-0.88-2.3,0-3.18l0,0c0.88-0.88,2.3-0.88,3.18,0l4.6,4.6C13.52,10.34,13.52,11.76,12.64,12.64z"><animate attributeName="fill" begin="0.75s" dur="1s" values="rgb(86,86,86);rgb(207,207,207)" calcMode="linear" repeatCount="indefinite" /></path><path fill="rgb(201,201,201)" d="M16,11.25L16,11.25c-1.24,0-2.25-1.01-2.25-2.25l0-6.5c0-1.24,1.01-2.25,2.25-2.25h0c1.24,0,2.25,1.01,2.25,2.25l0,6.5C18.25,10.24,17.24,11.25,16,11.25z"><animate attributeName="fill" begin="0.875s" dur="1s" values="rgb(86,86,86);rgb(207,207,207)" calcMode="linear" repeatCount="indefinite" /></path></svg>');
     width: 22px;
     height: 12px;
-    margin-left: 3px;
-    margin-right: 2px;
+    margin-inline: 3px 2px;
     flex: none;
     -webkit-user-select: none;
 }
 
 input::-webkit-caps-lock-indicator {
-    appearance: auto;
     content: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17"><path fill="black" fill-opacity="0.4" d="M12.5 0.5A 4 4 0 0 1 16.5 4.5L 16.5 12.5A 4 4 0 0 1 12.5 16.5L 4.5 16.5A 4 4 0 0 1 0.5 12.5L 0.5 4.5A 4 4 0 0 1 4.5 0.5L 12.5 0.5M 8.5 2L 4 7L 6.25 7L 6.25 10.25L 10.75 10.25L 10.75 7L 13 7L 8.5 2M 10.75 12L 6.25 12L 6.25 14.25L 10.75 14.25L 10.75 12"/></svg>');
     max-width: 17px;
     align-self: stretch;
@@ -729,7 +686,6 @@ input::-webkit-caps-lock-indicator {
     -webkit-user-select: none;
 }
 
-#if defined(ENABLE_DATALIST_ELEMENT) && ENABLE_DATALIST_ELEMENT
 input::-webkit-list-button {
     appearance: auto;
     display: block;
@@ -739,26 +695,19 @@ input::-webkit-list-button {
     flex: none;
     -webkit-user-select: none;
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
-    width: 11px;
     /* Make it easier to hit the button on iOS */
     padding: 7px;
     margin: -7px;
 #else
-    width: 16px;
-    height: 100%;
+    block-size: 100%;
 #endif
 }
-#endif
 
 textarea {
     appearance: auto;
 #if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
-#if defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT
     color: CanvasText;
     background-color: Canvas;
-#else
-    background-color: white;
-#endif
     border: 1px solid;
     -webkit-rtl-ordering: logical;
     -webkit-user-select: text;
@@ -770,11 +719,9 @@ textarea {
     /* On iOS we want to inherit the left and right padding for consistency with
      other form controls (e.g. <input type="text">). We want to override the top
      and bottom padding to ensure we have a symmetric look for text areas. */
-    padding-top: 2px;
-    padding-bottom: 2px;
+    padding-block: 2px;
 #endif
-    flex-direction: column;
-    resize: auto;
+    resize: -internal-textarea-auto;
     cursor: auto;
     white-space: pre-wrap;
     word-wrap: break-word;
@@ -787,6 +734,7 @@ textarea {
     pointer-events: none !important;
     text-orientation: inherit !important;
     writing-mode: inherit !important;
+    position: static !important;
 }
 
 input::placeholder {
@@ -833,15 +781,67 @@ input:-webkit-autofill, input:-webkit-autofill-strong-password, input:-webkit-au
     color: #000000 !important;
 }
 
+:autofill {
+    field-sizing: fixed !important;
+}
+
 input:is([type="radio"], [type="checkbox"]) {
     margin: 3px 2px;
-#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
-    border: initial;
     box-sizing: border-box;
+    border: initial;
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+    width: 16px;
+    height: 16px;
+    padding: 0px;
+    /* We want to be as close to background:transparent as possible without actually being transparent */
+    background-color: rgba(255, 255, 255, 0.01);
 #else
     padding: initial;
     background-color: initial;
-    border: initial;
+#endif
+}
+
+input[type="checkbox"] {
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+    border-radius: 5px;
+#endif
+}
+
+input[type="radio"] {
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+    border-radius: 50%;
+#endif
+}
+
+input[type="checkbox"]:indeterminate {
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+    background: rgba(0, 0, 0, 0.8);
+#endif
+}
+
+input[type="checkbox"]:indeterminate:disabled {
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+    opacity: initial;
+    background: rgba(0, 0, 0, 0.8);
+#endif
+}
+
+input:is([type="checkbox"], [type="radio"]):checked {
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+    border-color: rgba(255, 255, 255, 0.0);
+#endif
+}
+
+input:is([type="checkbox"], [type="radio"]):disabled {
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+    opacity: initial;
+#endif
+}
+
+input:is([type="checkbox"], [type="radio"]):checked:disabled {
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+    opacity: initial;
+    background: rgba(0, 0, 0, 0.8);
 #endif
 }
 
@@ -856,16 +856,16 @@ input[type="file"]::file-selector-button {
 }
 
 input:is([type="button"], [type="submit"], [type="reset"]), input[type="file"]::file-selector-button, button {
-    align-items: flex-start;
     text-align: center;
     cursor: default;
+    padding-inline: 6px;
 #if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
     color: ButtonText;
-    padding: 2px 6px 3px 6px;
+    padding-block: 2px 3px;
     border: 2px outset ButtonFace;
     background-color: ButtonFace;
 #else
-    padding: 0 1.0em;
+    padding-block: 0; /* override input padding */
     border: 1px solid -webkit-control-background;
     font: 11px system-ui;
     color: -apple-system-blue;
@@ -893,7 +893,6 @@ button[type="submit"], button[type="submit"]:active,
 button[type="menu"], button[type="menu"]:active {
     background-color: -apple-system-blue;
     color: white;
-    font-weight: bold;
 }
 
 #endif
@@ -912,7 +911,6 @@ input[type="range"]::-webkit-slider-container, input[type="range"]::-webkit-medi
     flex: 1;
     box-sizing: border-box;
     display: flex;
-    align-contents: center;
     min-width: 0;
 }
 
@@ -990,68 +988,28 @@ select:disabled {
 
 #endif
 
-input[type="checkbox"] {
-#if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
-    box-sizing: border-box;
-#else
-    border-radius: 5px;
-    width: 16px;
-    height: 16px;
-    padding: 0px;
-    /* We want to be as close to background:transparent as possible without actually being transparent */
-    background-color: rgba(255, 255, 255, 0.01);
-#endif
-}
-
-#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
-input[type="radio"] {
-    appearance: auto;
-    border-radius: 50%;
-    width: 16px;
-    height: 16px;
-    padding: 0px;
-    /* We want to be as close to background:transparent as possible without actually being transparent */
-    background-color: rgba(255, 255, 255, 0.01);
-}
-
-input[type="checkbox"]:indeterminate {
-    background: rgba(0, 0, 0, 0.8);
-}
-
-input[type="checkbox"]:indeterminate:disabled {
-    opacity: initial;
-    background: rgba(0, 0, 0, 0.8);
-}
-
-input:is([type="checkbox"], [type="radio"]):checked {
-    border-color: rgba(255, 255, 255, 0.0);
-}
-
-input:is([type="checkbox"], [type="radio"]):disabled {
-    opacity: initial;
-}
-
-input:is([type="checkbox"], [type="radio"]):checked:disabled {
-    opacity: initial;
-    background: rgba(0, 0, 0, 0.8);
-}
-#endif
-
-#if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
-input[type="radio"] {
-    box-sizing: border-box;
-}
-#endif
-
-#if defined(ENABLE_INPUT_TYPE_COLOR) && ENABLE_INPUT_TYPE_COLOR
-
-#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
 input[type="color"] {
+    appearance: auto;
+    box-sizing: border-box;
+    outline: none;
+#if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
+    width: 28px;
+    height: 28px;
     padding: 3px;
-}
+    border: initial;
+    border-radius: 50%;
+#else
+    inline-size: 44px;
+    block-size: 23px;
 #endif
+}
+
+input[type="color"]::-internal-color-swatch-overlay {
+    appearance: auto;
+}
 
 input[type="color"]::-webkit-color-swatch-wrapper {
+    appearance: auto;
     display: flex;
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
     border-radius: inherit;
@@ -1066,6 +1024,7 @@ input[type="color"]::-webkit-color-swatch-wrapper {
 }
 
 input[type="color"]::-webkit-color-swatch {
+    appearance: auto;
     background-color: #000000;
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
     border-radius: inherit;
@@ -1075,8 +1034,6 @@ input[type="color"]::-webkit-color-swatch {
     flex: 1;
 }
 
-#endif // defined(ENABLE_INPUT_TYPE_COLOR) && ENABLE_INPUT_TYPE_COLOR
-
 select {
     box-sizing: border-box;
     appearance: auto;
@@ -1084,7 +1041,8 @@ select {
     letter-spacing: normal;
     word-spacing: normal;
     line-height: normal;
-    padding: 0 0.4em 0 0.4em;
+    padding-block: 0;
+    padding-inline: 0.4em;
     color: -apple-system-blue;
     font: 11px system-ui;
     border: 1px solid -webkit-control-background;
@@ -1097,13 +1055,8 @@ select {
 #else
     border-radius: 5px;
     border: 1px solid;
-#if defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT
     color: CanvasText;
     background-color: Canvas;
-#else
-    color: black;
-    background-color: white;
-#endif /* defined(HAVE_OS_DARK_MODE_SUPPORT) && HAVE_OS_DARK_MODE_SUPPORT */
 #endif
     align-items: center;
     white-space: pre;
@@ -1113,7 +1066,8 @@ select {
 
 #if !(defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY)
 select:is([size], [multiple]), select[size][multiple] {
-    align-items: flex-start;
+    align-items: normal;
+    cursor: auto;
     border: 1px inset gray;
     border-radius: initial;
     white-space: initial;
@@ -1252,7 +1206,7 @@ u, ins {
 }
 
 strong, b {
-    font-weight: bold;
+    font-weight: bolder;
 }
 
 i, cite, em, var, address, dfn {
@@ -1267,7 +1221,8 @@ pre, xmp, plaintext, listing {
     display: block;
     font-family: monospace;
     white-space: pre;
-    margin: 1__qem 0;
+    margin-block: 1__qem;
+    margin-inline: 0;
 }
 
 mark {
@@ -1312,18 +1267,18 @@ nobr {
 }
 
 /* Read-only text fields do not show a focus ring but do still receive focus */
-html:focus, body:focus, input[readonly]:focus, applet:focus, embed:focus, iframe:focus, object:focus {
+html:focus-visible, body:focus-visible, input[readonly]:focus, embed:focus-visible, iframe:focus-visible, object:focus-visible {
     outline: none;
 }
 
 #if !defined(WTF_PLATFORM_IOS_FAMILY) || !WTF_PLATFORM_IOS_FAMILY
-input:focus, textarea:focus, select:focus {
+input:focus-visible, textarea:focus-visible, select:focus-visible {
     outline-offset: -2px;
 }
 #endif
 
-input:is([type="button"], [type="checkbox"], [type="file"], [type="hidden"], [type="image"], [type="radio"], [type="reset"], [type="search"], [type="submit"]):focus,
-input[type="file"]:focus::file-selector-button {
+input:is([type="button"], [type="checkbox"], [type="file"], [type="hidden"], [type="image"], [type="radio"], [type="reset"], [type="search"], [type="submit"]):focus-visible,
+input[type="file"]:focus-visible::file-selector-button {
     outline-offset: 0;
 }
 
@@ -1342,24 +1297,46 @@ area:any-link {
 }
 
 /* HTML5 ruby elements */
-
-ruby, rt {
-    text-indent: 0; /* blocks used for ruby rendering should not trigger this */
+/* Note that text-tracks.css contains a subset of this ruby styling for WebVTT elements. It should be kept in sync. */
+ruby {
+    display: ruby;
 }
 
-rt {
+ruby, rt {
+    text-indent: 0;
+}
+
+ruby > rt {
+    display: ruby-text;
+    font-size: -webkit-ruby-text;
+    text-align: start;
     line-height: normal;
     text-emphasis: none;
 }
 
-ruby > rt {
-    display: block;
-    font-size: -webkit-ruby-text;
-    text-align: start;
-}
-
 ruby > rp {
     display: none;
+}
+
+/* Avoid wrapping children of implicit ruby bases. We don't support <rb> or <rbc>, avoid giving them any behaviors. */
+ruby > :not(rb, rbc, ruby) {
+    white-space: nowrap;
+}
+
+/* https://html.spec.whatwg.org/#the-details-and-summary-elements */
+
+details, summary {
+    display: block;
+}
+
+details > summary:first-of-type {
+    display: list-item;
+    counter-increment: list-item 0;
+    list-style: disclosure-closed inside;
+}
+
+details[open] > summary:first-of-type {
+    list-style-type: disclosure-open;
 }
 
 /* other elements */
@@ -1376,29 +1353,14 @@ iframe {
     border: 2px inset;
 }
 
-details {
-    display: block;
-}
-
-summary {
-    display: block;
-}
-
-summary::-webkit-details-marker {
-    display: inline-block;
-    width: 0.66em;
-    height: 0.66em;
-    margin-inline-end: 0.4em;
-}
-
-bdi, output {
+hr, bdi, output {
     unicode-bidi: isolate;
 }
 
 input[type=tel i]:dir(ltr) { direction: ltr; }
 
-bdo {
-    unicode-bidi: bidi-override;
+bdo, bdo[dir] {
+    unicode-bidi: isolate-override;
 }
 
 slot {
@@ -1406,7 +1368,7 @@ slot {
 }
 
 #if defined(WTF_PLATFORM_IOS_FAMILY) && WTF_PLATFORM_IOS_FAMILY
-applet, embed, object, img {
+embed, object, img {
     -webkit-tap-highlight-color: rgba(0, 0, 0, 0);
 }
 :any-link img {
@@ -1441,4 +1403,31 @@ applet, embed, object, img {
 /* https://drafts.csswg.org/css-text-decor-4/#text-decoration-skipping */
 ins, del {
     text-decoration-skip: none;
+}
+
+/* https://drafts.csswg.org/css-text-decor-4/#default-stylesheet */
+/* set language-appropriate default emphasis mark position */
+:root:lang(zh), [lang|=zh] {
+    text-emphasis-position: under right;
+}
+[lang|=ja], [lang|=ko] {
+    text-emphasis-position: over right;
+}
+
+/* set language-appropriate default underline position */
+:root:lang(ja), [lang|=ja],
+:root:lang(mn), [lang|=mn],
+:root:lang(ko), [lang|=ko] {
+    text-underline-position: right;
+}
+:root:lang(zh), [lang|=zh] {
+    text-underline-position: left;
+}
+
+:root::spelling-error {
+    text-decoration-line: spelling-error;
+}
+
+:root::grammar-error {
+    text-decoration-line: grammar-error;
 }

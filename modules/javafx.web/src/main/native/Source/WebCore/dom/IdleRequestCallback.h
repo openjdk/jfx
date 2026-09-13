@@ -37,7 +37,15 @@ class IdleRequestCallback : public RefCounted<IdleRequestCallback>, public Activ
 public:
     using ActiveDOMCallback::ActiveDOMCallback;
 
-    virtual CallbackResult<void> handleEvent(IdleDeadline&) = 0;
+    // ContextDestructionObserver.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
+    virtual CallbackResult<void> invoke(IdleDeadline&) = 0;
+    virtual CallbackResult<void> invokeRethrowingException(IdleDeadline&) = 0;
+
+private:
+    virtual bool hasCallback() const = 0;
 };
 
 } // namespace WebCore

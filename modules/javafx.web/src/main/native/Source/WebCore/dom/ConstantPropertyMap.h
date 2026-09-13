@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,14 +29,20 @@
 #include <wtf/HashMap.h>
 #include <wtf/Ref.h>
 #include <wtf/Seconds.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/WeakRef.h>
 #include <wtf/text/AtomString.h>
 #include <wtf/text/AtomStringHash.h>
 
 namespace WebCore {
 
-class CSSCustomPropertyValue;
 class CSSVariableData;
 class Document;
+class WeakPtrImplWithEventTargetData;
+
+namespace Style {
+class CustomProperty;
+}
 
 enum class ConstantProperty {
     SafeAreaInsetTop,
@@ -51,11 +57,11 @@ enum class ConstantProperty {
 };
 
 class ConstantPropertyMap {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ConstantPropertyMap);
 public:
     explicit ConstantPropertyMap(Document&);
 
-    typedef HashMap<AtomString, Ref<CSSCustomPropertyValue>> Values;
+    using Values = HashMap<AtomString, Ref<const Style::CustomProperty>>;
     const Values& values() const;
 
     void didChangeSafeAreaInsets();
@@ -71,9 +77,11 @@ private:
     void updateConstantsForSafeAreaInsets();
     void updateConstantsForFullscreen();
 
+    Ref<Document> protectedDocument() const;
+
     std::optional<Values> m_values;
 
-    Document& m_document;
+    WeakRef<Document, WeakPtrImplWithEventTargetData> m_document;
 };
 
 } // namespace WebCore

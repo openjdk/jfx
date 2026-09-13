@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,6 +26,7 @@
 package com.sun.javafx.scene.traversal;
 
 import javafx.geometry.NodeOrientation;
+import javafx.scene.TraversalDirection;
 
 /**
  * Specifies the direction of traversal.
@@ -65,5 +66,16 @@ public enum Direction {
             }
         }
         return this;
+    }
+
+    public static Direction of(TraversalDirection d) {
+        return switch (d) {
+        case DOWN -> DOWN;
+        case LEFT -> LEFT;
+        case NEXT -> NEXT;
+        case PREVIOUS -> PREVIOUS;
+        case RIGHT -> RIGHT;
+        case UP -> UP;
+        };
     }
 }

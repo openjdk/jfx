@@ -42,13 +42,13 @@ public:
     NodeFlowProjection() { }
 
     NodeFlowProjection(Node* node)
-        : m_word(bitwise_cast<uintptr_t>(node))
+        : m_word(std::bit_cast<uintptr_t>(node))
     {
         ASSERT(kind() == Primary);
     }
 
     NodeFlowProjection(Node* node, Kind kind)
-        : m_word(bitwise_cast<uintptr_t>(node) | (kind == Shadow ? shadowBit : 0))
+        : m_word(std::bit_cast<uintptr_t>(node) | (kind == Shadow ? shadowBit : 0))
     {
         ASSERT(this->kind() == kind);
     }
@@ -62,7 +62,7 @@ public:
 
     Kind kind() const { return (m_word & shadowBit) ? Shadow : Primary; }
 
-    Node* node() const { return bitwise_cast<Node*>(m_word & ~shadowBit); }
+    Node* node() const { return std::bit_cast<Node*>(m_word & ~shadowBit); }
 
     Node& operator*() const { return *node(); }
     Node* operator->() const { return node(); }
@@ -72,10 +72,7 @@ public:
         return m_word;
     }
 
-    bool operator==(NodeFlowProjection other) const
-    {
-        return m_word == other.m_word;
-    }
+    friend bool operator==(const NodeFlowProjection&, const NodeFlowProjection&) = default;
 
     bool operator<(NodeFlowProjection other) const
     {
@@ -104,6 +101,8 @@ public:
         return *this == NodeFlowProjection(WTF::HashTableDeletedValue);
     }
 
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
     // Phi shadow projections can become invalid because the Phi might be folded to something else.
     bool isStillValid() const
     {
@@ -126,18 +125,9 @@ public:
     uintptr_t m_word { 0 };
 };
 
-struct NodeFlowProjectionHash {
-    static unsigned hash(NodeFlowProjection key) { return key.hash(); }
-    static bool equal(NodeFlowProjection a, NodeFlowProjection b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } } // namespace JSC::DFG
 
 namespace WTF {
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::DFG::NodeFlowProjection> : JSC::DFG::NodeFlowProjectionHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::DFG::NodeFlowProjection> : SimpleClassHashTraits<JSC::DFG::NodeFlowProjection> { };

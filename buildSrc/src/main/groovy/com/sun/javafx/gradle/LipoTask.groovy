@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,11 +27,21 @@ import org.gradle.api.DefaultTask
 import org.gradle.api.tasks.InputDirectory
 import org.gradle.api.tasks.OutputFile
 import org.gradle.api.tasks.TaskAction
+import org.gradle.process.ExecOperations
 
+import javax.inject.Inject
 
 class LipoTask extends DefaultTask {
     @InputDirectory File libDir;
     @OutputFile File lib;
+
+    private final ExecOperations execOperations;
+
+    @Inject
+    LipoTask(ExecOperations execOperations) {
+        this.execOperations = execOperations;
+    }
+
     @TaskAction void compile() {
         List<String> libNames = [];
         List<File> files = libDir.listFiles();
@@ -43,10 +53,10 @@ class LipoTask extends DefaultTask {
             }
         }
         // Create a fat library (.a)
-        project.exec({
-            commandLine("lipo", "-create", "-output", "$lib");
-            args(libNames);
-        });
+        execOperations.exec { spec ->
+            spec.commandLine("lipo", "-create", "-output", "$lib");
+            spec.args(libNames);
+        }
     }
 }
 

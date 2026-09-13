@@ -32,6 +32,37 @@ namespace WebCore {
 
 NetworkLoadMetrics::NetworkLoadMetrics() = default;
 
+NetworkLoadMetrics::NetworkLoadMetrics(MonotonicTime&& redirectStart, MonotonicTime&& fetchStart, MonotonicTime&& domainLookupStart, MonotonicTime&& domainLookupEnd, MonotonicTime&& connectStart, MonotonicTime&& secureConnectionStart, MonotonicTime&& connectEnd, MonotonicTime&& requestStart, MonotonicTime&& responseStart, MonotonicTime&& responseEnd, MonotonicTime&& workerStart, MonotonicTime&& firstInterimResponseStart, String&& protocol, uint16_t redirectCount, bool complete, bool cellular, bool expensive, bool constrained, bool multipath, bool isReusedConnection, bool failsTAOCheck, bool hasCrossOriginRedirect, bool fromPrefetch, bool fromCache, PrivacyStance privacyStance, uint64_t responseBodyBytesReceived, uint64_t responseBodyDecodedSize, RefPtr<AdditionalNetworkLoadMetricsForWebInspector>&& additionalNetworkLoadMetricsForWebInspector)
+    : redirectStart(WTF::move(redirectStart))
+    , fetchStart(WTF::move(fetchStart))
+    , domainLookupStart(WTF::move(domainLookupStart))
+    , domainLookupEnd(WTF::move(domainLookupEnd))
+    , connectStart(WTF::move(connectStart))
+    , secureConnectionStart(WTF::move(secureConnectionStart))
+    , connectEnd(WTF::move(connectEnd))
+    , requestStart(WTF::move(requestStart))
+    , responseStart(WTF::move(responseStart))
+    , responseEnd(WTF::move(responseEnd))
+    , workerStart(WTF::move(workerStart))
+    , firstInterimResponseStart(WTF::move(firstInterimResponseStart))
+    , protocol(protocol)
+    , redirectCount(redirectCount)
+    , complete(complete)
+    , cellular(cellular)
+    , expensive(expensive)
+    , constrained(constrained)
+    , multipath(multipath)
+    , isReusedConnection(isReusedConnection)
+    , failsTAOCheck(failsTAOCheck)
+    , hasCrossOriginRedirect(hasCrossOriginRedirect)
+    , fromPrefetch(fromPrefetch)
+    , fromCache(fromCache)
+    , privacyStance(privacyStance)
+    , responseBodyBytesReceived(responseBodyBytesReceived)
+    , responseBodyDecodedSize(responseBodyDecodedSize)
+    , additionalNetworkLoadMetricsForWebInspector(WTF::move(additionalNetworkLoadMetricsForWebInspector))
+{
+}
 
 void NetworkLoadMetrics::updateFromFinalMetrics(const NetworkLoadMetrics& other)
 {
@@ -46,6 +77,9 @@ void NetworkLoadMetrics::updateFromFinalMetrics(const NetworkLoadMetrics& other)
     MonotonicTime originalResponseStart = responseStart;
     MonotonicTime originalResponseEnd = responseEnd;
     MonotonicTime originalWorkerStart = workerStart;
+    MonotonicTime originalFirstInterimResponseStart = firstInterimResponseStart;
+    bool originalFromPrefetch = fromPrefetch;
+    bool originalFromCache = fromCache;
 
     *this = other;
 
@@ -71,6 +105,12 @@ void NetworkLoadMetrics::updateFromFinalMetrics(const NetworkLoadMetrics& other)
         responseEnd = originalResponseEnd;
     if (!workerStart)
         workerStart = originalWorkerStart;
+    if (!firstInterimResponseStart)
+        firstInterimResponseStart = originalFirstInterimResponseStart;
+    if (!fromPrefetch)
+        fromPrefetch = originalFromPrefetch;
+    if (!fromCache)
+        fromCache = originalFromCache;
 
     if (!responseEnd)
         responseEnd = MonotonicTime::now();
@@ -114,6 +154,7 @@ NetworkLoadMetrics NetworkLoadMetrics::isolatedCopy() const
     copy.responseStart = responseStart.isolatedCopy();
     copy.responseEnd = responseEnd.isolatedCopy();
     copy.workerStart = workerStart.isolatedCopy();
+    copy.firstInterimResponseStart = firstInterimResponseStart.isolatedCopy();
 
     copy.protocol = protocol.isolatedCopy();
 
@@ -127,16 +168,38 @@ NetworkLoadMetrics NetworkLoadMetrics::isolatedCopy() const
     copy.isReusedConnection = isReusedConnection;
     copy.failsTAOCheck = failsTAOCheck;
     copy.hasCrossOriginRedirect = hasCrossOriginRedirect;
+    copy.fromPrefetch = fromPrefetch;
+    copy.fromCache = fromCache;
 
     copy.privacyStance = privacyStance;
 
     copy.responseBodyBytesReceived = responseBodyBytesReceived;
     copy.responseBodyDecodedSize = responseBodyDecodedSize;
 
-    if (additionalNetworkLoadMetricsForWebInspector)
-        copy.additionalNetworkLoadMetricsForWebInspector = additionalNetworkLoadMetricsForWebInspector->isolatedCopy();
+    if (RefPtr metrics = additionalNetworkLoadMetricsForWebInspector)
+        copy.additionalNetworkLoadMetricsForWebInspector = metrics->isolatedCopy();
 
     return copy;
+}
+
+Ref<AdditionalNetworkLoadMetricsForWebInspector> AdditionalNetworkLoadMetricsForWebInspector::create(NetworkLoadPriority&& priority, String&& remoteAddress, String&& connectionIdentifier, String&& tlsProtocol, String&& tlsCipher, HTTPHeaderMap&& requestHeaders, uint64_t requestHeaderBytesSent, uint64_t responseHeaderBytesReceived, uint64_t requestBodyBytesSent, bool isProxyConnection)
+{
+    return adoptRef(*new AdditionalNetworkLoadMetricsForWebInspector(WTF::move(priority), WTF::move(remoteAddress), WTF::move(connectionIdentifier), WTF::move(tlsProtocol), WTF::move(tlsCipher), WTF::move(requestHeaders), requestHeaderBytesSent, responseHeaderBytesReceived, requestBodyBytesSent, isProxyConnection));
+}
+
+AdditionalNetworkLoadMetricsForWebInspector::AdditionalNetworkLoadMetricsForWebInspector(NetworkLoadPriority&& priority, String&& remoteAddress, String&& connectionIdentifier, String&& tlsProtocol, String&& tlsCipher, HTTPHeaderMap&& requestHeaders, uint64_t requestHeaderBytesSent, uint64_t responseHeaderBytesReceived, uint64_t requestBodyBytesSent, bool isProxyConnection)
+    : priority(WTF::move(priority))
+    , remoteAddress(WTF::move(remoteAddress))
+    , connectionIdentifier(WTF::move(connectionIdentifier))
+    , tlsProtocol(WTF::move(tlsProtocol))
+    , tlsCipher(WTF::move(tlsCipher))
+    , requestHeaders(WTF::move(requestHeaders))
+    , requestHeaderBytesSent(requestHeaderBytesSent)
+    , responseHeaderBytesReceived(responseHeaderBytesReceived)
+    , requestBodyBytesSent(requestBodyBytesSent)
+    , isProxyConnection(isProxyConnection)
+{
+
 }
 
 } // namespace WebCore

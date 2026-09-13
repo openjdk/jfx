@@ -24,6 +24,9 @@
 
 #pragma once
 
+#include <wtf/EnumTraits.h>
+#include <wtf/text/TextStream.h>
+
 namespace WebCore {
 namespace Style {
 
@@ -41,13 +44,19 @@ enum class ScopeOrdinal : int8_t {
 inline ScopeOrdinal& operator++(ScopeOrdinal& ordinal)
 {
     ASSERT(ordinal < ScopeOrdinal::SlotLimit);
-    return ordinal = static_cast<ScopeOrdinal>(static_cast<int8_t>(ordinal) + 1);
+    return ordinal = static_cast<ScopeOrdinal>(enumToUnderlyingType(ordinal) + 1);
 }
 
 inline ScopeOrdinal& operator--(ScopeOrdinal& ordinal)
 {
     ASSERT(ordinal > ScopeOrdinal::ContainingHostLimit);
-    return ordinal = static_cast<ScopeOrdinal>(static_cast<int8_t>(ordinal) - 1);
+    return ordinal = static_cast<ScopeOrdinal>(enumToUnderlyingType(ordinal) - 1);
+}
+
+inline TextStream& operator<<(TextStream& ts, const ScopeOrdinal scopeOrdinal)
+{
+    ts << static_cast<int8_t>(scopeOrdinal);
+    return ts;
 }
 
 }

@@ -33,7 +33,7 @@
 
 namespace WebCore {
 
-enum CSSAtRuleID {
+enum CSSAtRuleID : uint8_t {
     CSSAtRuleInvalid = 0,
 
     CSSAtRuleCharset,
@@ -43,8 +43,9 @@ enum CSSAtRuleID {
     CSSAtRuleMedia,
     CSSAtRuleNamespace,
     CSSAtRulePage,
+    CSSAtRulePositionTry,
     CSSAtRuleSupports,
-    CSSAtRuleViewport,
+    CSSAtRuleViewTransition,
 
     CSSAtRuleWebkitKeyframes,
     CSSAtRuleCounterStyle,
@@ -61,6 +62,9 @@ enum CSSAtRuleID {
     CSSAtRuleAnnotation,
 
     CSSAtRuleFontPaletteValues,
+    CSSAtRuleScope,
+    CSSAtRuleStartingStyle,
+    CSSAtRuleFunction,
 };
 
 CSSAtRuleID cssAtRuleID(StringView name);

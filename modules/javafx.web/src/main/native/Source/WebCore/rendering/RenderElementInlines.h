@@ -19,123 +19,113 @@
 
 #pragma once
 
-#include "RenderElement.h"
-#include "RenderObjectInlines.h"
+#include <WebCore/PseudoElement.h>
+#include <WebCore/RenderBox.h>
+#include <WebCore/RenderObjectDocument.h>
+#include <WebCore/RenderObjectNode.h>
+#include <WebCore/RenderStyle+GettersInlines.h>
+#include <WebCore/StyleOpacity.h>
+#include <WebCore/StyleShapeOutside.h>
 
 namespace WebCore {
 
-inline Overflow RenderElement::effectiveOverflowBlockDirection() const { return style().isHorizontalWritingMode() ? effectiveOverflowY() : effectiveOverflowX(); }
-inline Overflow RenderElement::effectiveOverflowInlineDirection() const { return style().isHorizontalWritingMode() ? effectiveOverflowX() : effectiveOverflowY(); }
-inline bool RenderElement::hasBackdropFilter() const { return style().hasBackdropFilter(); }
-inline bool RenderElement::hasBackground() const { return style().hasBackground(); }
-inline bool RenderElement::hasBlendMode() const { return style().hasBlendMode(); }
-inline bool RenderElement::hasClip() const { return isOutOfFlowPositioned() && style().hasClip(); }
-inline bool RenderElement::hasClipOrNonVisibleOverflow() const { return hasClip() || hasNonVisibleOverflow(); }
-inline bool RenderElement::hasClipPath() const { return style().clipPath(); }
-inline bool RenderElement::hasFilter() const { return style().hasFilter(); }
-inline bool RenderElement::hasHiddenBackface() const { return style().backfaceVisibility() == BackfaceVisibility::Hidden; }
-inline bool RenderElement::hasMask() const { return style().hasMask(); }
-inline bool RenderElement::hasOutline() const { return style().hasOutline() || hasOutlineAnnotation(); }
-inline bool RenderElement::hasShapeOutside() const { return style().shapeOutside(); }
-inline bool RenderElement::isTransparent() const { return style().hasOpacity(); }
-inline float RenderElement::opacity() const { return style().opacity(); }
-inline FloatRect RenderElement::transformReferenceBoxRect() const { return transformReferenceBoxRect(style()); }
-inline FloatRect RenderElement::transformReferenceBoxRect(const RenderStyle& style) const { return referenceBoxRect(transformBoxToCSSBoxType(style.transformBox())); }
+inline Overflow RenderElement::effectiveOverflowBlockDirection() const { return writingMode().isHorizontal() ? effectiveOverflowY() : effectiveOverflowX(); }
+inline Overflow RenderElement::effectiveOverflowInlineDirection() const { return writingMode().isHorizontal() ? effectiveOverflowX() : effectiveOverflowY(); }
+inline Element* RenderElement::element() const { return downcast<Element>(RenderObject::node()); }
+inline RefPtr<Element> RenderElement::protectedElement() const { return element(); }
+inline Element* RenderElement::nonPseudoElement() const { return downcast<Element>(RenderObject::nonPseudoNode()); }
+inline RefPtr<Element> RenderElement::protectedNonPseudoElement() const { return nonPseudoElement(); }
 
-inline bool RenderElement::canContainAbsolutelyPositionedObjects() const
+inline bool RenderElement::isFixedPositioned() const
 {
-    return isRenderView()
-        || style().position() != PositionType::Static
-        || (canEstablishContainingBlockWithTransform() && hasTransformRelatedProperty())
-        || (isRenderBlock() && style().willChange() && style().willChange()->createsContainingBlockForAbsolutelyPositioned()) // FIXME: will-change should create containing blocks on inline boxes (bug 225035)
-        || isSVGForeignObjectOrLegacySVGForeignObject()
-        || shouldApplyLayoutOrPaintContainment();
+    return isOutOfFlowPositioned() && style().position() == PositionType::Fixed;
 }
 
-inline bool RenderElement::canContainFixedPositionObjects() const
+inline bool RenderElement::isAbsolutelyPositioned() const
 {
-    return isRenderView()
-        || (canEstablishContainingBlockWithTransform() && hasTransformRelatedProperty())
-        || (isRenderBlock() && style().willChange() && style().willChange()->createsContainingBlockForOutOfFlowPositioned()) // FIXME: will-change should create containing blocks on inline boxes (bug 225035)
-        || isSVGForeignObjectOrLegacySVGForeignObject()
-        || shouldApplyLayoutOrPaintContainment();
+    return isOutOfFlowPositioned() && style().position() == PositionType::Absolute;
 }
 
-inline bool RenderElement::createsGroupForStyle(const RenderStyle& style)
+inline bool RenderElement::isBlockLevelBox() const
 {
-    return style.hasOpacity() || style.hasMask() || style.clipPath() || style.hasFilter() || style.hasBackdropFilter() || style.hasBlendMode();
+    // block-level boxes are boxes that participate in a block formatting context.
+    auto* renderBox = dynamicDowncast<RenderBox>(*this);
+    if (!renderBox)
+        return false;
+
+    if (renderBox->isFlexItem() || renderBox->isGridItem() || renderBox->isRenderTableCell())
+        return false;
+    return style().isDisplayBlockLevel();
 }
 
-inline bool RenderElement::shouldApplyAnyContainment() const
+inline bool RenderElement::isAnonymousBlock() const
 {
-    return shouldApplyLayoutOrPaintContainment() || shouldApplySizeOrStyleContainment(style().containsSizeOrInlineSize() || style().containsStyle());
+    return isAnonymous()
+        && (style().display() == DisplayType::Block || style().display() == DisplayType::Box)
+        && !style().pseudoElementType()
+        && isRenderBlock()
+#if ENABLE(MATHML)
+        && !isRenderMathMLBlock()
+#endif
+        && !isRenderListMarker()
+        && !isRenderFragmentedFlow()
+        && !isRenderMultiColumnSet()
+        && !isRenderView()
+        && !isViewTransitionContainingBlock();
 }
 
-inline bool RenderElement::shouldApplyInlineSizeContainment() const
+inline bool RenderElement::isBlockContainer() const
 {
-    return isSkippedContentRoot() || shouldApplySizeOrStyleContainment(style().containsInlineSize());
+    auto display = style().display();
+    return (display == DisplayType::Block
+        || display == DisplayType::InlineBlock
+        || display == DisplayType::FlowRoot
+        || display == DisplayType::ListItem
+        || display == DisplayType::TableCell
+        || display == DisplayType::TableCaption) && !isRenderReplaced();
 }
 
-inline bool RenderElement::shouldApplyLayoutContainment() const
+inline bool RenderElement::isBlockBox() const
 {
-    return shouldApplyLayoutOrPaintContainment(style().containsLayout() || style().contentVisibility() != ContentVisibility::Visible);
+    // A block-level box that is also a block container.
+    return isBlockLevelBox() && isBlockContainer();
 }
 
-inline bool RenderElement::shouldApplyLayoutOrPaintContainment(bool containsAccordingToStyle) const
+inline bool RenderElement::hasPotentiallyScrollableOverflow() const
 {
-    return containsAccordingToStyle && (!isInline() || isAtomicInlineLevelBox()) && !isRubyText() && (!isTablePart() || isRenderBlockFlow());
+    // We only need to test one overflow dimension since 'visible' and 'clip' always get accompanied
+    // with 'clip' or 'visible' in the other dimension (see Style::Adjuster::adjust).
+    return hasNonVisibleOverflow() && style().overflowX() != Overflow::Clip && style().overflowX() != Overflow::Visible;
 }
 
-inline bool RenderElement::shouldApplyLayoutOrPaintContainment() const
+inline bool RenderElement::isBeforeContent() const
 {
-    return shouldApplyLayoutOrPaintContainment(style().containsLayoutOrPaint() || style().contentVisibility() != ContentVisibility::Visible);
+    // Text nodes don't have their own styles, so ignore the style on a text node.
+    // if (isRenderText())
+    //     return false;
+    if (style().pseudoElementType() != PseudoElementType::Before)
+        return false;
+    return true;
 }
 
-inline bool RenderElement::shouldApplyPaintContainment() const
+inline bool RenderElement::isAfterContent() const
 {
-    return shouldApplyLayoutOrPaintContainment(style().containsPaint() || style().contentVisibility() != ContentVisibility::Visible);
+    // Text nodes don't have their own styles, so ignore the style on a text node.
+    // if (isRenderText())
+    //     return false;
+    if (style().pseudoElementType() != PseudoElementType::After)
+        return false;
+    return true;
 }
 
-inline bool RenderElement::shouldApplySizeContainment() const
+inline bool RenderElement::isBeforeOrAfterContent() const
 {
-    return isSkippedContentRoot() || shouldApplySizeOrStyleContainment(style().containsSize());
+    return isBeforeContent() || isAfterContent();
 }
 
-inline bool RenderElement::shouldApplySizeOrInlineSizeContainment() const
+inline Element* RenderElement::generatingElement() const
 {
-    return isSkippedContentRoot() || shouldApplySizeOrStyleContainment(style().containsSizeOrInlineSize());
-}
-
-inline bool RenderElement::shouldApplySizeOrStyleContainment(bool containsAccordingToStyle) const
-{
-    return containsAccordingToStyle && (!isInline() || isAtomicInlineLevelBox()) && !isRubyText() && (!isTablePart() || isTableCaption()) && !isTable();
-}
-
-inline bool RenderElement::shouldApplyStyleContainment() const
-{
-    return shouldApplySizeOrStyleContainment(style().containsStyle() || style().contentVisibility() != ContentVisibility::Visible);
-}
-
-inline bool RenderElement::visibleToHitTesting(const std::optional<HitTestRequest>& request) const
-{
-    return style().visibility() == Visibility::Visible
-        && !isSkippedContent()
-        && ((request && request->ignoreCSSPointerEventsProperty()) || style().effectivePointerEvents() != PointerEvents::None);
-}
-
-inline int adjustForAbsoluteZoom(int value, const RenderElement& renderer)
-{
-    return adjustForAbsoluteZoom(value, renderer.style());
-}
-
-inline LayoutSize adjustLayoutSizeForAbsoluteZoom(LayoutSize size, const RenderElement& renderer)
-{
-    return adjustLayoutSizeForAbsoluteZoom(size, renderer.style());
-}
-
-inline LayoutUnit adjustLayoutUnitForAbsoluteZoom(LayoutUnit value, const RenderElement& renderer)
-{
-    return adjustLayoutUnitForAbsoluteZoom(value, renderer.style());
+    return isPseudoElement() ? downcast<PseudoElement>(*element()).hostElement() : element();
 }
 
 } // namespace WebCore

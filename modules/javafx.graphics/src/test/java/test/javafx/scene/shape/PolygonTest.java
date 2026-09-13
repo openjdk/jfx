@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,20 +35,25 @@ import javafx.collections.ObservableList;
 import javafx.scene.Node;
 import test.javafx.scene.NodeTest;
 import javafx.scene.shape.Polygon;
-import org.junit.Test;
 
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static test.com.sun.javafx.test.TestHelper.assertBoundsEqual;
 import static test.com.sun.javafx.test.TestHelper.box;
-import static org.junit.Assert.*;
 
 public class PolygonTest {
-    @Test public void testPropertyPropagation_emptyPoints() {
+    @Test
+    public void testPropertyPropagation_emptyPoints() {
         final StubPolygon polygon = new StubPolygon();
         NodeTest.callSyncPGNode(polygon);
         assertPGPolygonPointsEquals(polygon, new double[0]);
     }
 
-    @Test public void testPropertyPropagation_pointsEvenLength() {
+    @Test
+    public void testPropertyPropagation_pointsEvenLength() {
         final double[] initialPoints = { 10, 20, 100, 200, 200, 100, 50, 10 };
 
         final StubPolygon polygon = new StubPolygon(initialPoints);
@@ -63,7 +68,8 @@ public class PolygonTest {
         assertPGPolygonPointsEquals(polygon, 10, 100, 200, 100, 50, 10);
     }
 
-    @Test public void testPropertyPropagation_pointsOddLength() {
+    @Test
+    public void testPropertyPropagation_pointsOddLength() {
         final double[] initialPoints = { 10, 20, 100, 200, 200 };
 
         final StubPolygon polygon = new StubPolygon(initialPoints);
@@ -78,17 +84,20 @@ public class PolygonTest {
         assertPGPolygonPointsEquals(polygon, 10, 20, 100, 200, 200, 100, 50);
     }
 
-    @Test public void testPropertyPropagation_visible() throws Exception {
+    @Test
+    public void testPropertyPropagation_visible() throws Exception {
         final StubPolygon polygon = new StubPolygon();
         NodeTest.testBooleanPropertyPropagation(polygon, "visible", false, true);
     }
 
-    @Test public void testBounds_emptyPoints() {
+    @Test
+    public void testBounds_emptyPoints() {
         final StubPolygon polygon = new StubPolygon();
         assertBoundsEqual(box(0, 0, -1, -1), polygon.getBoundsInLocal());
     }
 
-    @Test public void testBounds_evenPointsLength() {
+    @Test
+    public void testBounds_evenPointsLength() {
         final double[] initialPoints = { 100, 100, 200, 100, 200, 200 };
 
         final StubPolygon polygon = new StubPolygon(initialPoints);
@@ -101,7 +110,8 @@ public class PolygonTest {
         assertBoundsEqual(box(100, 100, 100, 200), polygon.getBoundsInLocal());
     }
 
-    @Test public void testBounds_oddPointsLength() {
+    @Test
+    public void testBounds_oddPointsLength() {
         final double[] initialPoints = {
             100, 100, 200, 100, 200, 200, 150, 300
         };
@@ -115,7 +125,8 @@ public class PolygonTest {
         assertBoundsEqual(box(100, 100, 100, 100), polygon.getBoundsInLocal());
     }
 
-    @Test public void testConfigShape() throws Exception {
+    @Test
+    public void testConfigShape() throws Exception {
         final StubPolygon polygon =
                 new StubPolygon(new double[] { 0, 0, 0, 1, 1, 1, 1, 0 });
         final Path2D path = (Path2D) ShapeHelper.configShape(polygon);
@@ -146,7 +157,8 @@ public class PolygonTest {
         }
     }
 
-    @Test public void toStringShouldReturnNonEmptyString() {
+    @Test
+    public void toStringShouldReturnNonEmptyString() {
         String s = new Polygon().toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());

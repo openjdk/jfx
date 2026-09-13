@@ -25,6 +25,9 @@
 
 #pragma once
 
+#include <WebCore/LayoutElementBox.h>
+#include <WebCore/StyleFlexBasis.h>
+
 namespace WebCore {
 namespace Layout {
 
@@ -35,8 +38,9 @@ public:
 
         std::optional<LayoutUnit> definiteFlexBasis;
 
-        LayoutUnit maximumUsedSize;
-        LayoutUnit minimumUsedSize;
+        std::optional<LayoutUnit> size;
+        std::optional<LayoutUnit> maximumSize;
+        std::optional<LayoutUnit> minimumSize;
 
         std::optional<LayoutUnit> marginStart;
         std::optional<LayoutUnit> marginEnd;
@@ -65,23 +69,25 @@ public:
         bool hasSizeAuto { false };
     };
 
-    LogicalFlexItem(const ElementBox&, const MainAxisGeometry&, const CrossAxisGeometry&, bool hasAspectRatio, bool isOrhogonal);
+    LogicalFlexItem(const ElementBox&, const MainAxisGeometry&, const CrossAxisGeometry&, bool hasAspectRatio, bool isOrthogonal);
     LogicalFlexItem() = default;
 
     const MainAxisGeometry& mainAxis() const { return m_mainAxisGeometry; }
     const CrossAxisGeometry& crossAxis() const { return m_crossAxisGeometry; }
 
-    float growFactor() const { return style().flexGrow(); }
-    float shrinkFactor() const { return style().flexShrink(); }
+    float growFactor() const { return style().flexGrow().value; }
+    float shrinkFactor() const { return style().flexShrink().value; }
 
     bool hasContentFlexBasis() const { return style().flexBasis().isContent(); }
     bool hasAvailableSpaceDependentFlexBasis() const { return false; }
     bool hasAspectRatio() const { return m_hasAspectRatio; }
-    bool isOrhogonal() const { return m_isOrhogonal; }
+    bool isOrthogonal() const { return m_isOrthogonal; }
     bool isContentBoxBased() const { return style().boxSizing() == BoxSizing::ContentBox; }
 
     const ElementBox& layoutBox() const { return *m_layoutBox; }
+    CheckedRef<const ElementBox> checkedLayoutBox() const { return *m_layoutBox; }
     const RenderStyle& style() const { return layoutBox().style(); }
+    WritingMode writingMode() const { return style().writingMode(); }
 
 private:
     CheckedPtr<const ElementBox> m_layoutBox;
@@ -89,15 +95,15 @@ private:
     MainAxisGeometry m_mainAxisGeometry;
     CrossAxisGeometry m_crossAxisGeometry;
     bool m_hasAspectRatio { false };
-    bool m_isOrhogonal { false };
+    bool m_isOrthogonal { false };
 };
 
-inline LogicalFlexItem::LogicalFlexItem(const ElementBox& flexItem, const MainAxisGeometry& mainGeometry, const CrossAxisGeometry& crossGeometry, bool hasAspectRatio, bool isOrhogonal)
+inline LogicalFlexItem::LogicalFlexItem(const ElementBox& flexItem, const MainAxisGeometry& mainGeometry, const CrossAxisGeometry& crossGeometry, bool hasAspectRatio, bool isOrthogonal)
     : m_layoutBox(flexItem)
     , m_mainAxisGeometry(mainGeometry)
     , m_crossAxisGeometry(crossGeometry)
     , m_hasAspectRatio(hasAspectRatio)
-    , m_isOrhogonal(isOrhogonal)
+    , m_isOrthogonal(isOrthogonal)
 {
 }
 

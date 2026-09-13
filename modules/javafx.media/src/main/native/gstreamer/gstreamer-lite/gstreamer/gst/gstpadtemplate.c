@@ -548,6 +548,7 @@ gst_pad_template_set_property (GObject * object, guint prop_id,
   /* these properties are all construct-only */
   switch (prop_id) {
     case PROP_NAME_TEMPLATE:
+      /* G_PARAM_CONSTRUCT_ONLY */
       GST_PAD_TEMPLATE_NAME_TEMPLATE (object) = g_value_dup_string (value);
       break;
     case PROP_DIRECTION:
@@ -559,6 +560,7 @@ gst_pad_template_set_property (GObject * object, guint prop_id,
           (GstPadPresence) g_value_get_enum (value);
       break;
     case PROP_CAPS:
+      /* G_PARAM_CONSTRUCT_ONLY */
       GST_PAD_TEMPLATE_CAPS (object) = g_value_dup_boxed (value);
       if (GST_PAD_TEMPLATE_CAPS (object) != NULL) {
         /* GstPadTemplate are usually leaked so are their caps */

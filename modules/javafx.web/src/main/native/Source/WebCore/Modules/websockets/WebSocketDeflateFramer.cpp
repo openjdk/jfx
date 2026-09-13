@@ -34,13 +34,14 @@
 #include "WebSocketExtensionProcessor.h"
 #include "WebSocketFrame.h"
 #include <wtf/HashMap.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
 
 class WebSocketExtensionDeflateFrame final : public WebSocketExtensionProcessor {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WebSocketExtensionDeflateFrame);
 public:
     explicit WebSocketExtensionDeflateFrame(WebSocketDeflateFramer&);
 
@@ -54,6 +55,8 @@ private:
 #endif
     String m_failureReason;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebSocketExtensionDeflateFrame);
 
 // FXIME: Remove vendor prefix after the specification matured.
 WebSocketExtensionDeflateFrame::WebSocketExtensionDeflateFrame(WebSocketDeflateFramer& framer)
@@ -117,6 +120,8 @@ bool WebSocketExtensionDeflateFrame::processResponse(const HashMap<String, Strin
 #endif
 }
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DeflateResultHolder);
+
 DeflateResultHolder::DeflateResultHolder(WebSocketDeflateFramer& framer)
     : m_framer(framer)
 {
@@ -132,6 +137,8 @@ void DeflateResultHolder::fail(const String& failureReason)
     m_succeeded = false;
     m_failureReason = failureReason;
 }
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InflateResultHolder);
 
 InflateResultHolder::InflateResultHolder(WebSocketDeflateFramer& framer)
     : m_framer(framer)
@@ -172,15 +179,14 @@ std::unique_ptr<DeflateResultHolder> WebSocketDeflateFramer::deflate(WebSocketFr
 {
 #if !PLATFORM(JAVA)
     auto result = makeUnique<DeflateResultHolder>(*this);
-    if (!enabled() || !WebSocketFrame::isNonControlOpCode(frame.opCode) || !frame.payloadLength)
+    if (!enabled() || !WebSocketFrame::isNonControlOpCode(frame.opCode) || !frame.payload.size())
         return result;
-    if (!m_deflater->addBytes(frame.payload, frame.payloadLength) || !m_deflater->finish()) {
+    if (!m_deflater->addBytes(frame.payload) || !m_deflater->finish()) {
         result->fail("Failed to compress frame"_s);
         return result;
     }
     frame.compress = true;
-    frame.payload = m_deflater->data();
-    frame.payloadLength = m_deflater->size();
+    frame.payload = m_deflater->span();
     return result;
 #else
     UNUSED_PARAM(frame);
@@ -210,13 +216,12 @@ std::unique_ptr<InflateResultHolder> WebSocketDeflateFramer::inflate(WebSocketFr
         result->fail("Received unexpected compressed frame"_s);
         return result;
     }
-    if (!m_inflater->addBytes(frame.payload, frame.payloadLength) || !m_inflater->finish()) {
+    if (!m_inflater->addBytes(frame.payload) || !m_inflater->finish()) {
         result->fail("Failed to decompress frame"_s);
         return result;
     }
     frame.compress = false;
-    frame.payload = m_inflater->data();
-    frame.payloadLength = m_inflater->size();
+    frame.payload = m_inflater->span();
     return result;
 #else
     return result;

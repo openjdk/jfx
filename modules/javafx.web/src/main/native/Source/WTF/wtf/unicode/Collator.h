@@ -28,7 +28,13 @@
 
 #pragma once
 
+#include <wtf/Compiler.h>
+
+DECLARE_SYSTEM_HEADER
+
 #include <unicode/uconfig.h>
+#include <wtf/ExportMacros.h>
+#include <wtf/FastMalloc.h>
 #include <wtf/Noncopyable.h>
 
 struct UCharIterator;
@@ -41,18 +47,18 @@ class StringView;
 #if UCONFIG_NO_COLLATION
 
 class Collator {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Collator);
 public:
     explicit Collator(const char* = nullptr, bool = false) { }
 
     WTF_EXPORT_PRIVATE static int collate(StringView, StringView);
-    WTF_EXPORT_PRIVATE static int collateUTF8(const char*, const char*);
+    WTF_EXPORT_PRIVATE static int collate(const char8_t*, const char8_t*);
 };
 
 #else
 
 class Collator {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Collator);
     WTF_MAKE_NONCOPYABLE(Collator);
 public:
     // The value nullptr is a special one meaning the system default locale.
@@ -61,7 +67,7 @@ public:
     WTF_EXPORT_PRIVATE ~Collator();
 
     WTF_EXPORT_PRIVATE int collate(StringView, StringView) const;
-    WTF_EXPORT_PRIVATE int collateUTF8(const char*, const char*) const;
+    WTF_EXPORT_PRIVATE int collate(const char8_t*, const char8_t*) const;
 
 private:
     char* m_locale;

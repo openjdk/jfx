@@ -25,16 +25,19 @@
 
 #pragma once
 
-#include "AffineTransform.h"
-#include "IntRect.h"
+#include <WebCore/AffineTransform.h>
+#include <WebCore/IntRect.h>
 #include <wtf/CheckedPtr.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
 class Path;
 
-class RegionContext : public CanMakeCheckedPtr {
+class RegionContext : public CanMakeCheckedPtr<RegionContext, WTF::DefaultedOperatorEqual::No, WTF::CheckedPtrDeleteCheckException::Yes> {
+    WTF_MAKE_TZONE_ALLOCATED(RegionContext);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RegionContext);
 public:
     virtual ~RegionContext() = default;
 

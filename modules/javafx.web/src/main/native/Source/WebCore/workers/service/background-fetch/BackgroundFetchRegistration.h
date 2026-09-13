@@ -25,13 +25,12 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include "ActiveDOMObject.h"
 #include "BackgroundFetchFailureReason.h"
 #include "BackgroundFetchInformation.h"
 #include "BackgroundFetchResult.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "JSDOMPromiseDeferred.h"
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
@@ -45,8 +44,11 @@ struct BackgroundFetchRecordInformation;
 struct CacheQueryOptions;
 
 class BackgroundFetchRegistration final : public RefCounted<BackgroundFetchRegistration>, public EventTarget, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(BackgroundFetchRegistration);
+    WTF_MAKE_TZONE_ALLOCATED(BackgroundFetchRegistration);
 public:
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
     static Ref<BackgroundFetchRegistration> create(ScriptExecutionContext&, BackgroundFetchInformation&&);
     ~BackgroundFetchRegistration();
 
@@ -61,7 +63,7 @@ public:
     BackgroundFetchFailureReason failureReason() const { return m_information.failureReason; }
     bool recordsAvailable() const { return m_information.recordsAvailable; }
 
-    using RequestInfo = std::variant<RefPtr<FetchRequest>, String>;
+    using RequestInfo = Variant<RefPtr<FetchRequest>, String>;
 
     void abort(ScriptExecutionContext&, DOMPromiseDeferred<IDLBoolean>&&);
     void match(ScriptExecutionContext&, RequestInfo&&, const CacheQueryOptions&, DOMPromiseDeferred<IDLInterface<BackgroundFetchRecord>>&&);
@@ -69,22 +71,18 @@ public:
 
     void updateInformation(const BackgroundFetchInformation&);
 
-    using RefCounted::ref;
-    using RefCounted::deref;
-
 private:
     BackgroundFetchRegistration(ScriptExecutionContext&, BackgroundFetchInformation&&);
 
     ServiceWorkerRegistrationIdentifier registrationIdentifier() const { return m_information.registrationIdentifier; }
 
     // EventTarget
-    EventTargetInterface eventTargetInterface() const final { return BackgroundFetchRegistrationEventTargetInterfaceType; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::BackgroundFetchRegistration; }
+    ScriptExecutionContext* scriptExecutionContext() const final;
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
 
     // ActiveDOMObject
-    const char* activeDOMObjectName() const final;
     void stop() final;
     bool virtualHasPendingActivity() const final;
 
@@ -93,4 +91,4 @@ private:
 
 } // namespace WebCore
 
-#endif // ENABLE(SERVICE_WORKER)
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(BackgroundFetchRegistration)

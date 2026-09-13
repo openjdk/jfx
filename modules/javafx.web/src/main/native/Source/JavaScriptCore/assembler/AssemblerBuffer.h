@@ -25,30 +25,39 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(ASSEMBLER)
 
-#include "ExecutableAllocator.h"
-#include "JITCompilationEffort.h"
-#include "SecureARM64EHashPinsInlines.h"
-#include "stdint.h"
+#include <JavaScriptCore/ExecutableAllocator.h>
+#include <JavaScriptCore/JITCompilationEffort.h>
+#include <JavaScriptCore/SecureARM64EHashPinsInlines.h>
+#include <stdint.h>
 #include <string.h>
 #include <wtf/Assertions.h>
 #include <wtf/FastMalloc.h>
-#if CPU(ARM64E)
+#if ENABLE(JIT_SIGN_ASSEMBLER_BUFFER)
 #include <wtf/PtrTag.h>
 #endif
 #include <wtf/StdLibExtras.h>
 #include <wtf/ThreadSpecific.h>
 #include <wtf/UnalignedAccess.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
-    class AssemblerData;
+    enum class AssemblerDataType : uint8_t { Code, Hashes };
+    template<AssemblerDataType>
+    class AssemblerDataImpl;
 
-    typedef ThreadSpecific<AssemblerData, WTF::CanBeGCThread::True> ThreadSpecificAssemblerData;
-
+    using AssemblerData = AssemblerDataImpl<AssemblerDataType::Code>;
+    using ThreadSpecificAssemblerData = ThreadSpecific<AssemblerData, WTF::CanBeGCThread::True>;
     JS_EXPORT_PRIVATE ThreadSpecificAssemblerData& threadSpecificAssemblerData();
-#if CPU(ARM64E)
-    JS_EXPORT_PRIVATE ThreadSpecificAssemblerData& threadSpecificAssemblerHashes();
+
+#if ENABLE(JIT_SIGN_ASSEMBLER_BUFFER)
+    using AssemblerHashes = AssemblerDataImpl<AssemblerDataType::Hashes>;
+    using ThreadSpecificAssemblerHashes = ThreadSpecific<AssemblerHashes, WTF::CanBeGCThread::True>;
+    JS_EXPORT_PRIVATE ThreadSpecificAssemblerHashes& threadSpecificAssemblerHashes();
 #endif
 
     class LinkBuffer;
@@ -75,8 +84,8 @@ namespace JSC {
 
         inline uint32_t offset() const
         {
-#if CPU(ARM64E)
-            return static_cast<uint32_t>(untagInt(m_offset, bitwise_cast<PtrTag>(this)));
+#if ENABLE(JIT_SIGN_ASSEMBLER_BUFFER)
+            return static_cast<uint32_t>(untagInt(m_offset, std::bit_cast<PtrTag>(this)));
 #else
             return m_offset;
 #endif
@@ -85,42 +94,46 @@ namespace JSC {
     private:
         inline void setOffset(uint32_t offset)
         {
-#if CPU(ARM64E)
-            m_offset = tagInt(static_cast<uint64_t>(offset), bitwise_cast<PtrTag>(this));
+#if ENABLE(JIT_SIGN_ASSEMBLER_BUFFER)
+            m_offset = tagInt(static_cast<uint64_t>(offset), std::bit_cast<PtrTag>(this));
 #else
             m_offset = offset;
 #endif
         }
 
-#if CPU(ARM64E)
+#if ENABLE(JIT_SIGN_ASSEMBLER_BUFFER)
         uint64_t m_offset;
 #else
         uint32_t m_offset;
 #endif
     };
 
-    class AssemblerData {
-        WTF_MAKE_NONCOPYABLE(AssemblerData);
+    template<AssemblerDataType type>
+    class AssemblerDataImpl {
+        WTF_MAKE_NONCOPYABLE(AssemblerDataImpl);
         static constexpr size_t InlineCapacity = 128;
     public:
-        AssemblerData()
+        AssemblerDataImpl()
             : m_buffer(m_inlineBuffer)
             , m_capacity(InlineCapacity)
         {
+#if ENABLE(JIT_SCAN_ASSEMBLER_BUFFER_FOR_ZEROES)
+            // This makes it easier to know (at zero-scan time) that zeroes we
+            // see were indeed written there, rather than just being 'leftover'
+            // from initialization
+            poisonInlineBuffer();
+#endif
+            if constexpr (type == AssemblerDataType::Code)
+                takeBufferIfLarger(*threadSpecificAssemblerData());
+#if ENABLE(JIT_SIGN_ASSEMBLER_BUFFER)
+            if constexpr (type == AssemblerDataType::Hashes)
+                takeBufferIfLarger(*threadSpecificAssemblerHashes());
+#else
+            static_assert(type != AssemblerDataType::Hashes);
+#endif
         }
 
-        AssemblerData(size_t initialCapacity)
-        {
-            if (initialCapacity <= InlineCapacity) {
-                m_capacity = InlineCapacity;
-                m_buffer = m_inlineBuffer;
-            } else {
-                m_capacity = initialCapacity;
-                m_buffer = static_cast<char*>(AssemblerDataMalloc::malloc(m_capacity));
-            }
-        }
-
-        AssemblerData(AssemblerData&& other)
+        AssemblerDataImpl(AssemblerDataImpl&& other)
         {
             if (other.isInlineBuffer()) {
                 ASSERT(other.m_capacity == InlineCapacity);
@@ -134,7 +147,7 @@ namespace JSC {
             other.m_capacity = InlineCapacity;
         }
 
-        AssemblerData& operator=(AssemblerData&& other)
+        AssemblerDataImpl& operator=(AssemblerDataImpl&& other)
         {
             if (m_buffer && !isInlineBuffer())
                 AssemblerDataMalloc::free(m_buffer);
@@ -152,7 +165,7 @@ namespace JSC {
             return *this;
         }
 
-        void takeBufferIfLarger(AssemblerData&& other)
+        void takeBufferIfLarger(AssemblerDataImpl& other)
         {
             if (other.isInlineBuffer())
                 return;
@@ -170,8 +183,16 @@ namespace JSC {
             other.m_capacity = InlineCapacity;
         }
 
-        ~AssemblerData()
+        ~AssemblerDataImpl()
         {
+            if constexpr (type == AssemblerDataType::Code)
+                threadSpecificAssemblerData()->takeBufferIfLarger(*this);
+#if ENABLE(JIT_SIGN_ASSEMBLER_BUFFER)
+            if constexpr (type == AssemblerDataType::Hashes)
+                threadSpecificAssemblerHashes()->takeBufferIfLarger(*this);
+#else
+            static_assert(type != AssemblerDataType::Hashes);
+#endif
             clear();
         }
 
@@ -190,7 +211,8 @@ namespace JSC {
 
         void grow(unsigned extraCapacity = 0)
         {
-            m_capacity = m_capacity + m_capacity / 2 + extraCapacity;
+            auto capacity = Checked<unsigned>(m_capacity) + m_capacity / 2 + extraCapacity;
+            m_capacity = capacity.value();
             if (isInlineBuffer()) {
                 m_buffer = static_cast<char*>(AssemblerDataMalloc::malloc(m_capacity));
                 memcpy(m_buffer, m_inlineBuffer, InlineCapacity);
@@ -199,13 +221,24 @@ namespace JSC {
         }
 
     private:
+        void poisonInlineBuffer()
+        {
+            // On x86 this is the HLT instruction, which will raise SIGSEGV
+            // when executed in userspace. This is preferable to INT3 (0xCC) as
+            // we use 0xCC for alignment padding.
+            // On ARM64 this results in the illegal instrucion 0xF4F4F4F4 and
+            // will thus raise SIGILL.
+            constexpr const uint8_t poisonByte = 0xF4;
+            memset(m_inlineBuffer, poisonByte, InlineCapacity);
+        }
+
         bool isInlineBuffer() const { return m_buffer == m_inlineBuffer; }
         char* m_buffer;
         char m_inlineBuffer[InlineCapacity];
         unsigned m_capacity;
     };
 
-#if CPU(ARM64E)
+#if ENABLE(JIT_SIGN_ASSEMBLER_BUFFER)
     enum class ShouldSign : bool { No, Yes };
     template <ShouldSign shouldSign>
     class ARM64EHash {
@@ -287,41 +320,32 @@ namespace JSC {
         uint64_t m_hash;
         bool m_initializedPin { false };
     };
-#endif // CPU(ARM64E)
+#endif // ENABLE(JIT_SIGN_ASSEMBLER_BUFFER)
 
     class AssemblerBuffer {
     public:
         AssemblerBuffer()
             : m_storage()
-            , m_index(0)
-#if CPU(ARM64E)
+#if ENABLE(JIT_SIGN_ASSEMBLER_BUFFER)
             , m_hash()
             , m_hashes()
 #endif
         {
-            auto& threadSpecificData = threadSpecificAssemblerData();
-            m_storage.takeBufferIfLarger(WTFMove(*threadSpecificData));
-#if CPU(ARM64E)
-            auto& threadSpecificHashes = threadSpecificAssemblerHashes();
-            m_hashes.takeBufferIfLarger(WTFMove(*threadSpecificHashes));
+#if ENABLE(JIT_SIGN_ASSEMBLER_BUFFER)
             ASSERT(m_storage.capacity() == m_hashes.capacity());
 #endif
         }
 
         ~AssemblerBuffer()
         {
-#if CPU(ARM64E)
+#if ENABLE(JIT_SIGN_ASSEMBLER_BUFFER)
             ASSERT(m_storage.capacity() == m_hashes.capacity());
-            auto& threadSpecificHashes = threadSpecificAssemblerHashes();
-            threadSpecificHashes->takeBufferIfLarger(WTFMove(m_hashes));
 #endif
-            auto& threadSpecificData = threadSpecificAssemblerData();
-            threadSpecificData->takeBufferIfLarger(WTFMove(m_storage));
         }
 
         bool isAvailable(unsigned space)
         {
-            return m_index + space <= m_storage.capacity();
+            return static_cast<uint64_t>(m_index) + space <= m_storage.capacity();
         }
 
         void ensureSpace(unsigned space)
@@ -371,13 +395,13 @@ namespace JSC {
 
         AssemblerData&& releaseAssemblerData()
         {
-            return WTFMove(m_storage);
+            return WTF::move(m_storage);
         }
 
-#if CPU(ARM64E)
-        AssemblerData&& releaseAssemblerHashes()
+#if ENABLE(JIT_SIGN_ASSEMBLER_BUFFER)
+        AssemblerHashes&& releaseAssemblerHashes()
         {
-            return WTFMove(m_hashes);
+            return WTF::move(m_hashes);
         }
 #endif
 
@@ -419,9 +443,11 @@ namespace JSC {
             template<typename IntegralType>
             void putIntegralUnchecked(IntegralType value)
             {
-                ASSERT(m_index + sizeof(IntegralType) <= m_buffer.m_storage.capacity());
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+                ASSERT(static_cast<uint64_t>(m_index) + sizeof(IntegralType) <= m_buffer.m_storage.capacity());
                 WTF::unalignedStore<IntegralType>(m_storageBuffer + m_index, value);
                 m_index += sizeof(IntegralType);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
             }
             AssemblerBuffer& m_buffer;
             char* m_storageBuffer;
@@ -437,7 +463,7 @@ namespace JSC {
         void* data() const { return m_storage.buffer(); }
 #endif
 
-#if CPU(ARM64E)
+#if ENABLE(JIT_SIGN_ASSEMBLER_BUFFER)
         ARM64EHash<ShouldSign::Yes>& arm64eHash() { return m_hash; }
 #endif
 
@@ -445,8 +471,8 @@ namespace JSC {
         template<typename IntegralType>
         void putIntegral(IntegralType value)
         {
-            unsigned nextIndex = m_index + sizeof(IntegralType);
-            if (UNLIKELY(nextIndex > m_storage.capacity()))
+            auto nextIndex = Checked<unsigned>(m_index) + sizeof(IntegralType);
+            if (nextIndex.value() > m_storage.capacity()) [[unlikely]]
                 outOfLineGrow();
             putIntegralUnchecked<IntegralType>(value);
         }
@@ -454,9 +480,10 @@ namespace JSC {
         template<typename IntegralType>
         void putIntegralUnchecked(IntegralType value)
         {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 #if CPU(ARM64)
             static_assert(sizeof(value) == 4);
-#if CPU(ARM64E)
+#if ENABLE(JIT_SIGN_ASSEMBLER_BUFFER)
             uint32_t hash = m_hash.update(value, m_index / sizeof(IntegralType));
             WTF::unalignedStore<uint32_t>(m_hashes.buffer() + m_index, hash);
 #endif
@@ -464,13 +491,14 @@ namespace JSC {
             ASSERT(isAvailable(sizeof(IntegralType)));
             WTF::unalignedStore<IntegralType>(m_storage.buffer() + m_index, value);
             m_index += sizeof(IntegralType);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         }
 
     private:
         void grow(int extraCapacity = 0)
         {
             m_storage.grow(extraCapacity);
-#if CPU(ARM64E)
+#if ENABLE(JIT_SIGN_ASSEMBLER_BUFFER)
             m_hashes.grow(extraCapacity);
 #endif
         }
@@ -478,7 +506,7 @@ namespace JSC {
         NEVER_INLINE void outOfLineGrow()
         {
             m_storage.grow();
-#if CPU(ARM64E)
+#if ENABLE(JIT_SIGN_ASSEMBLER_BUFFER)
             m_hashes.grow();
 #endif
         }
@@ -489,13 +517,15 @@ namespace JSC {
         friend LinkBuffer;
 
         AssemblerData m_storage;
-        unsigned m_index;
-#if CPU(ARM64E)
+        unsigned m_index { 0 };
+#if ENABLE(JIT_SIGN_ASSEMBLER_BUFFER)
         ARM64EHash<ShouldSign::Yes> m_hash;
-        AssemblerData m_hashes;
+        AssemblerHashes m_hashes;
 #endif
     };
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(ASSEMBLER)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,34 +25,30 @@
 
 package test.javafx.util.converter;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.math.BigDecimal;
-import java.math.BigInteger;
-import static org.junit.Assert.assertEquals;
+
+import org.junit.jupiter.api.Test;
+
 import javafx.util.converter.BigDecimalStringConverter;
 
-import org.junit.Before;
-import org.junit.Test;
-
-/**
- */
 public class BigDecimalStringConverterTest {
-    private BigDecimalStringConverter converter;
 
-    private final BigDecimal bigDecimal = new BigDecimal(BigInteger.TEN);
+    private static final BigDecimalStringConverter CONVERTER = new BigDecimalStringConverter();
 
-    @Before public void setup() {
-        converter = new BigDecimalStringConverter();
+    @Test
+    void fromString_testValidStringInput() {
+        assertEquals(BigDecimal.TEN, CONVERTER.fromString("10"));
     }
 
-    @Test public void fromString_testValidStringInput() {
-        assertEquals(bigDecimal, converter.fromString("10"));
+    @Test
+    void fromString_testValidStringInputWithWhiteSpace() {
+        assertEquals(BigDecimal.TEN, CONVERTER.fromString("      10      "));
     }
 
-    @Test public void fromString_testValidStringInputWithWhiteSpace() {
-        assertEquals(bigDecimal, converter.fromString("      10      "));
-    }
-
-    @Test public void toString_testStringInput() {
-        assertEquals("10", converter.toString(bigDecimal));
+    @Test
+    void toString_testStringInput() {
+        assertEquals("10", CONVERTER.toString(BigDecimal.TEN));
     }
 }

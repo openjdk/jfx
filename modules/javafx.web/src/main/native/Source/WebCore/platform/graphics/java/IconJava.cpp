@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -63,7 +63,7 @@ void Icon::paint(GraphicsContext& gc, const FloatRect& rect)
 {
     gc.platformContext()->rq().freeSpace(16)
     << (jint)com_sun_webkit_graphics_GraphicsDecoder_DRAWICON
-    << *m_jicon << (jint)rect.x() <<  (jint)rect.y();
+    << m_jicon << (jint)rect.x() <<  (jint)rect.y();
 }
 
 } // namespace WebCore

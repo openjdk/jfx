@@ -54,16 +54,6 @@ typedef enum {
   G_CHECKSUM_SHA384
 } GChecksumType;
 
-/**
- * GChecksum:
- *
- * An opaque structure representing a checksumming operation.
- *
- * To create a new GChecksum, use g_checksum_new(). To free
- * a GChecksum, use g_checksum_free().
- *
- * Since: 2.16
- */
 typedef struct _GChecksum       GChecksum;
 
 GLIB_AVAILABLE_IN_ALL

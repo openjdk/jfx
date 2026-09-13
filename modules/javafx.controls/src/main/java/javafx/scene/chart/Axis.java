@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -54,6 +54,7 @@ import javafx.geometry.Dimension2D;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
 import javafx.geometry.Side;
+import javafx.scene.Scene;
 import javafx.scene.control.Label;
 import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
@@ -75,6 +76,8 @@ import javafx.util.Duration;
  * Some examples of concrete subclasses include {@link NumberAxis} whose axis plots data
  * in numbers and {@link CategoryAxis} whose values / ticks represent string
  * categories along its axis.
+ *
+ * @param<T> the axis data type
  * @since JavaFX 2.0
  */
 public abstract class Axis<T> extends Region {
@@ -418,7 +421,7 @@ public abstract class Axis<T> extends Region {
     // -------------- METHODS ------------------------------------------------------------------------------------------
 
     /**
-     * See if the current range is valid, if it is not then any range dependent calulcations need to redone on the next layout pass
+     * See if the current range is valid, if it is not then any range dependent calculations need to redone on the next layout pass
      *
      * @return true if current range calculations are valid
      */
@@ -431,13 +434,16 @@ public abstract class Axis<T> extends Region {
     protected final void invalidateRange() { rangeValid = false; }
 
     /**
-     * This is used to check if any given animation should run. It returns true if animation is enabled and the node
-     * is visible and in a scene.
+     * This is used to check if any given animation should run. It returns true if animation is enabled, the node
+     * is visible and in a scene, and reduced-motion mode is not enabled.
      *
-     * @return true if animations should happen
+     * @return {@code true} if animations should run, {@code false} otherwise
      */
     protected final boolean shouldAnimate(){
-        return getAnimated() && NodeHelper.isTreeShowing(this);
+        return getAnimated()
+            && NodeHelper.isTreeShowing(this)
+            && getScene() instanceof Scene scene
+            && !scene.getPreferences().isReducedMotion();
     }
 
     /**
@@ -651,7 +657,7 @@ public abstract class Axis<T> extends Region {
                 // auto range
                 range = autoRange(length);
                 // set current range to new range
-                setRange(range, getAnimated() && !isFirstPass && NodeHelper.isTreeShowing(this) && rangeInvalid);
+                setRange(range, shouldAnimate() && !isFirstPass && rangeInvalid);
             } else {
                 range = getRange();
             }
@@ -696,8 +702,6 @@ public abstract class Axis<T> extends Region {
                 }
             }
 
-            // call tick marks updated to inform subclasses that we have updated tick marks
-            tickMarksUpdated();
             // mark all done
             oldLength = length;
             rangeValid = true;
@@ -706,7 +710,7 @@ public abstract class Axis<T> extends Region {
         if (lengthDiffers || rangeInvalid || measureInvalid || tickLabelsVisibleInvalid) {
             measureInvalid = false;
             tickLabelsVisibleInvalid = false;
-            // RT-12272 : tick labels overlapping
+            // JDK-8112169 : tick labels overlapping
             // first check if all visible labels fit, if not, retain every nth label
             labelsToSkip.clear();
             int numLabelsToSkip = 0;
@@ -748,6 +752,9 @@ public abstract class Axis<T> extends Region {
                 }
             }
             updateTickMarks(side, length);
+
+            // call tick marks updated to inform subclasses that we have updated tick marks
+            tickMarksUpdated();
         }
     }
 
@@ -977,6 +984,8 @@ public abstract class Axis<T> extends Region {
     /**
      * TickMark represents the label text, its associated properties for each tick
      * along the Axis.
+     *
+     * @param <T> the axis data type
      * @since JavaFX 2.0
      */
     public static final class TickMark<T> {

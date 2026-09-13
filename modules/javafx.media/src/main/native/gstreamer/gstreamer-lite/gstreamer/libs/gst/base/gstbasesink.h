@@ -58,6 +58,20 @@ G_BEGIN_DECLS
 #define GST_BASE_SINK_PREROLL_SIGNAL(obj)     g_cond_signal (GST_BASE_SINK_GET_PREROLL_COND (obj));
 #define GST_BASE_SINK_PREROLL_BROADCAST(obj)  g_cond_broadcast (GST_BASE_SINK_GET_PREROLL_COND (obj));
 
+/**
+ * GST_BASE_SINK_FLOW_DROPPED:
+ *
+ * A #GstFlowReturn that can be returned from
+ * #GstBaseSinkClass::render to indicate that the output buffer was not
+ * rendered.
+ *
+ * Note that this is currently not support for #GstBaseSinkClass::render_list
+ * virtual method.
+ *
+ * Since: 1.24
+ */
+#define GST_BASE_SINK_FLOW_DROPPED     GST_FLOW_CUSTOM_SUCCESS
+
 typedef struct _GstBaseSink GstBaseSink;
 typedef struct _GstBaseSinkClass GstBaseSinkClass;
 typedef struct _GstBaseSinkPrivate GstBaseSinkPrivate;
@@ -273,7 +287,7 @@ GstClockTimeDiff gst_base_sink_get_ts_offset    (GstBaseSink *sink);
 /* last sample */
 
 GST_BASE_API
-GstSample *     gst_base_sink_get_last_sample   (GstBaseSink *sink);
+GstSample *     gst_base_sink_get_last_sample   (GstBaseSink *sink) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_BASE_API
 void            gst_base_sink_set_last_sample_enabled (GstBaseSink *sink, gboolean enabled);
@@ -336,7 +350,7 @@ GstFlowReturn   gst_base_sink_wait              (GstBaseSink *sink, GstClockTime
                                                  GstClockTimeDiff *jitter);
 
 GST_BASE_API
-GstStructure    *gst_base_sink_get_stats (GstBaseSink * sink);
+GstStructure    *gst_base_sink_get_stats (GstBaseSink * sink) G_GNUC_WARN_UNUSED_RESULT;
 
 G_DEFINE_AUTOPTR_CLEANUP_FUNC(GstBaseSink, gst_object_unref)
 

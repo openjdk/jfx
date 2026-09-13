@@ -28,7 +28,7 @@
 
 #include "FontCascade.h"
 #include "InlineSoftLineBreakItem.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "TextUtil.h"
 #include <wtf/unicode/CharacterNames.h>
 
@@ -89,7 +89,7 @@ bool InlineTextItem::isZeroWidthSpaceSeparator() const
 
 bool InlineTextItem::isQuirkNonBreakingSpace() const
 {
-    if (style().nbspMode() != NBSPMode::Space || style().textWrap() == TextWrap::NoWrap || style().whiteSpaceCollapse() == WhiteSpaceCollapse::BreakSpaces)
+    if (style().nbspMode() != NBSPMode::Space || style().textWrapMode() == TextWrapMode::NoWrap || style().whiteSpaceCollapse() == WhiteSpaceCollapse::BreakSpaces)
         return false;
     return m_length && inlineTextBox().content()[start()] == noBreakSpace;
 }

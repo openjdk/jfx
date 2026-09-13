@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2005-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,13 +28,14 @@
 
 #include "CompositeEditCommand.h"
 #include "Element.h"
+#include "NodeDocument.h"
 #include <wtf/Assertions.h>
 
 namespace WebCore {
 
 SetNodeAttributeCommand::SetNodeAttributeCommand(Ref<Element>&& element, const QualifiedName& attribute, const AtomString& value)
     : SimpleEditCommand(element->document())
-    , m_element(WTFMove(element))
+    , m_element(WTF::move(element))
     , m_attribute(attribute)
     , m_value(value)
 {
@@ -49,12 +50,11 @@ void SetNodeAttributeCommand::doApply()
 void SetNodeAttributeCommand::doUnapply()
 {
     m_element->setAttribute(m_attribute, m_oldValue);
-    AtomStringImpl* nullString = nullptr;
-    m_oldValue = nullString;
+    m_oldValue = { };
 }
 
 #ifndef NDEBUG
-void SetNodeAttributeCommand::getNodesInCommand(HashSet<Ref<Node>>& nodes)
+void SetNodeAttributeCommand::getNodesInCommand(NodeSet& nodes)
 {
     addNodeAndDescendants(m_element.ptr(), nodes);
 }

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "CPU.h"
+#include <JavaScriptCore/CPU.h>
 #include <wtf/StdLibExtras.h>
 
 namespace JSC {
@@ -38,7 +38,7 @@ struct UGPRPair {
     UCPURegister first;
     UCPURegister second;
 };
-static_assert(sizeof(UGPRPair) >= sizeof(void*) * 2, "UGPRPair should fit in two machine registers");
+static_assert(sizeof(UGPRPair) == sizeof(UCPURegister) * 2, "UGPRPair should fit in two machine registers");
 
 constexpr UGPRPair makeUGPRPair(UCPURegister first, UCPURegister second) { return { first, second }; }
 
@@ -62,7 +62,11 @@ inline void decodeResult(UGPRPair result, size_t& a, size_t& b)
 #else // USE(JSVALUE32_64)
 using UGPRPair = uint64_t;
 
+#if CPU(BIG_ENDIAN)
+constexpr UGPRPair makeUGPRPair(UCPURegister first, UCPURegister second) { return static_cast<uint64_t>(first) << 32 | second; }
+#else
 constexpr UGPRPair makeUGPRPair(UCPURegister first, UCPURegister second) { return static_cast<uint64_t>(second) << 32 | first; }
+#endif
 
 typedef union {
     struct {
@@ -90,8 +94,8 @@ inline void decodeResult(UGPRPair result, size_t& a, size_t& b)
 {
     UGPRPairEncoding u;
     u.i = result;
-    a = bitwise_cast<size_t>(u.pair.a);
-    b = bitwise_cast<size_t>(u.pair.b);
+    a = std::bit_cast<size_t>(u.pair.a);
+    b = std::bit_cast<size_t>(u.pair.b);
 }
 
 #endif // USE(JSVALUE32_64)

@@ -33,16 +33,15 @@ namespace WebCore {
 
 EnterKeyHint enterKeyHintForAttributeValue(StringView value)
 {
-    static constexpr std::pair<PackedLettersLiteral<uint64_t>, EnterKeyHint> mappings[] = {
-        { "done", EnterKeyHint::Done },
-        { "enter", EnterKeyHint::Enter },
-        { "go", EnterKeyHint::Go },
-        { "next", EnterKeyHint::Next },
-        { "previous", EnterKeyHint::Previous },
-        { "search", EnterKeyHint::Search },
-        { "send", EnterKeyHint::Send }
-    };
-    static constexpr SortedArrayMap enterKeyHints { mappings };
+    static constexpr SortedArrayMap enterKeyHints { std::to_array<std::pair<PackedLettersLiteral<uint64_t>, EnterKeyHint>>({
+        { "done"_s, EnterKeyHint::Done },
+        { "enter"_s, EnterKeyHint::Enter },
+        { "go"_s, EnterKeyHint::Go },
+        { "next"_s, EnterKeyHint::Next },
+        { "previous"_s, EnterKeyHint::Previous },
+        { "search"_s, EnterKeyHint::Search },
+        { "send"_s, EnterKeyHint::Send }
+    }) };
     return enterKeyHints.get(value, EnterKeyHint::Unspecified);
 }
 

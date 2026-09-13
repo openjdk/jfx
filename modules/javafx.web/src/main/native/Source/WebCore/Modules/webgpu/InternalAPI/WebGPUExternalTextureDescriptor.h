@@ -25,33 +25,30 @@
 
 #pragma once
 
-#include "WebGPUObjectDescriptorBase.h"
-#include "WebGPUPredefinedColorSpace.h"
+#include <WebCore/MediaPlayerIdentifier.h>
+#include <WebCore/VideoFrame.h>
+#include <WebCore/WebGPUObjectDescriptorBase.h>
+#include <WebCore/WebGPUPredefinedColorSpace.h>
+#include <wtf/Platform.h>
 #include <wtf/Vector.h>
 
 #if ENABLE(VIDEO) && PLATFORM(COCOA)
-typedef struct __CVBuffer* CVPixelBufferRef;
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer* CVPixelBufferRef;
 #endif
 
 namespace WebCore::WebGPU {
 
-struct HTMLVideoElementIdentifier {
-    uint64_t identifier;
-};
-struct WebCodecsVideoFrameIdentifier {
-    std::pair<uint64_t, uint64_t> identifier;
-};
-
-using VideoSourceIdentifier = std::variant<HTMLVideoElementIdentifier, WebCodecsVideoFrameIdentifier>;
+#if ENABLE(VIDEO) && PLATFORM(COCOA)
+using VideoSourceIdentifier = Variant<std::optional<WebCore::MediaPlayerIdentifier>, RefPtr<WebCore::VideoFrame>, RetainPtr<CVPixelBufferRef>>;
+#elif ENABLE(VIDEO)
+using VideoSourceIdentifier = Variant<std::optional<WebCore::MediaPlayerIdentifier>, RefPtr<WebCore::VideoFrame>, void*>;
+#else
+using VideoSourceIdentifier = Variant<std::optional<WebCore::MediaPlayerIdentifier>, void*>;
+#endif
 
 struct ExternalTextureDescriptor : public ObjectDescriptorBase {
-    VideoSourceIdentifier mediaIdentifier;
+    VideoSourceIdentifier videoBacking;
     PredefinedColorSpace colorSpace { PredefinedColorSpace::SRGB };
-#if ENABLE(VIDEO) && PLATFORM(COCOA)
-    RetainPtr<CVPixelBufferRef> pixelBuffer { nullptr };
-#else
-    void *pixelBuffer { nullptr };
-#endif
 };
 
 } // namespace WebCore::WebGPU

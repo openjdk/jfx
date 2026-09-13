@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Google Inc. All Rights Reserved.
+ * Copyright (C) 2011 Google Inc. All rights reserved.
  * Copyright (C) 2020 Metrological Group B.V.
  * Copyright (C) 2020 Igalia S.L.
  *
@@ -30,6 +30,7 @@
 
 #if ENABLE(OFFSCREEN_CANVAS_IN_WORKERS)
 
+#include "InspectorInstrumentation.h"
 #include "Performance.h"
 #include "RequestAnimationFrameCallback.h"
 #include "WorkerGlobalScope.h"
@@ -54,11 +55,6 @@ WorkerAnimationController::WorkerAnimationController(WorkerGlobalScope& workerGl
 WorkerAnimationController::~WorkerAnimationController()
 {
     ASSERT(!hasPendingActivity());
-}
-
-const char* WorkerAnimationController::activeDOMObjectName() const
-{
-    return "WorkerAnimationController";
 }
 
 bool WorkerAnimationController::virtualHasPendingActivity() const
@@ -92,7 +88,9 @@ WorkerAnimationController::CallbackId WorkerAnimationController::requestAnimatio
     WorkerAnimationController::CallbackId callbackId = ++m_nextAnimationCallbackId;
     callback->m_firedOrCancelled = false;
     callback->m_id = callbackId;
-    m_animationCallbacks.append(WTFMove(callback));
+    m_animationCallbacks.append(WTF::move(callback));
+
+    InspectorInstrumentation::didRequestAnimationFrame(m_workerGlobalScope.get(), callbackId);
 
     scheduleAnimation();
 
@@ -105,7 +103,8 @@ void WorkerAnimationController::cancelAnimationFrame(CallbackId callbackId)
         auto& callback = m_animationCallbacks[i];
         if (callback->m_id == callbackId) {
             callback->m_firedOrCancelled = true;
-            m_animationCallbacks.remove(i);
+            m_animationCallbacks.removeAt(i);
+            InspectorInstrumentation::didCancelAnimationFrame(m_workerGlobalScope.get(), callbackId);
             return;
         }
     }
@@ -117,14 +116,14 @@ void WorkerAnimationController::scheduleAnimation()
         return;
 
     Seconds animationInterval = RequestAnimationFrameCallback::fullSpeedAnimationInterval;
-    Seconds scheduleDelay = std::max(animationInterval - Seconds::fromMilliseconds(m_workerGlobalScope.performance().now() - m_lastAnimationFrameTimestamp), 0_s);
+    Seconds scheduleDelay = std::max(animationInterval - Seconds::fromMilliseconds(m_workerGlobalScope->protectedPerformance()->now() - m_lastAnimationFrameTimestamp), 0_s);
 
     m_animationTimer.startOneShot(scheduleDelay);
 }
 
 void WorkerAnimationController::animationTimerFired()
 {
-    m_lastAnimationFrameTimestamp = m_workerGlobalScope.performance().now();
+    m_lastAnimationFrameTimestamp = m_workerGlobalScope->protectedPerformance()->now();
     serviceRequestAnimationFrameCallbacks(m_lastAnimationFrameTimestamp);
 }
 
@@ -141,7 +140,9 @@ void WorkerAnimationController::serviceRequestAnimationFrameCallbacks(DOMHighRes
         if (callback->m_firedOrCancelled)
             continue;
         callback->m_firedOrCancelled = true;
-        callback->handleEvent(timestamp);
+        InspectorInstrumentation::willFireAnimationFrame(m_workerGlobalScope.get(), callback->m_id);
+        callback->invoke(timestamp);
+        InspectorInstrumentation::didFireAnimationFrame(m_workerGlobalScope.get(), callback->m_id);
     }
 
     // Remove any callbacks we fired from the list of pending callbacks.

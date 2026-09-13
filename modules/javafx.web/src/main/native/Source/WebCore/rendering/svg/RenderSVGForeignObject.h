@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2006 Apple Inc.
+ * Copyright (C) 2006 Apple Inc. All rights reserved.
  * Copyright (C) 2009 Google, Inc.
  * Copyright (C) 2020, 2021, 2022 Igalia S.L.
  *
@@ -21,7 +21,6 @@
 
 #pragma once
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "AffineTransform.h"
 #include "FloatPoint.h"
 #include "FloatRect.h"
@@ -33,12 +32,14 @@ namespace WebCore {
 class SVGForeignObjectElement;
 
 class RenderSVGForeignObject final : public RenderSVGBlock {
-    WTF_MAKE_ISO_ALLOCATED(RenderSVGForeignObject);
+    WTF_MAKE_TZONE_ALLOCATED(RenderSVGForeignObject);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGForeignObject);
 public:
     RenderSVGForeignObject(SVGForeignObjectElement&, RenderStyle&&);
     virtual ~RenderSVGForeignObject();
 
     SVGForeignObjectElement& foreignObjectElement() const;
+    Ref<SVGForeignObjectElement> protectedForeignObjectElement() const;
 
     void paint(PaintInfo&, const LayoutPoint&) override;
 
@@ -46,19 +47,17 @@ public:
 
     FloatRect objectBoundingBox() const final { return m_viewport; }
     FloatRect strokeBoundingBox() const final { return m_viewport; }
-    FloatRect repaintRectInLocalCoordinates() const final { return SVGBoundingBoxComputation::computeRepaintBoundingBox(*this); }
+    FloatRect repaintRectInLocalCoordinates(RepaintRectCalculation = RepaintRectCalculation::Fast) const final { return SVGBoundingBoxComputation::computeRepaintBoundingBox(*this); }
+    FloatRect decoratedBoundingBox() const final { return m_viewport; }
 
 private:
-    bool isSVGForeignObject() const override { return true; }
     void graphicsElement() const = delete;
     ASCIILiteral renderName() const override { return "RenderSVGForeignObject"_s; }
-
-    LayoutPoint paintingLocation() const { return toLayoutPoint(location() - flooredLayoutPoint(m_viewport.minXMinYCorner())); }
 
     void updateLogicalWidth() override;
     LogicalExtentComputedValues computeLogicalHeight(LayoutUnit logicalHeight, LayoutUnit logicalTop) const override;
 
-    LayoutRect overflowClipRect(const LayoutPoint& location, RenderFragmentContainer* = nullptr, OverlayScrollbarSizeRelevancy = IgnoreOverlayScrollbarSize, PaintPhase = PaintPhase::BlockBackground) const final;
+    LayoutRect overflowClipRect(const LayoutPoint& location, OverlayScrollbarSizeRelevancy = OverlayScrollbarSizeRelevancy::IgnoreOverlayScrollbarSize, PaintPhase = PaintPhase::BlockBackground) const final;
 
     void updateFromStyle() final;
 
@@ -67,14 +66,11 @@ private:
     // fixed position content uses the <fO> as ancestor layer (when computing offsets from the container).
     bool needsHasSVGTransformFlags() const final { return true; }
 
-    void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption>) const final;
+    void applyTransform(TransformationMatrix&, const RenderStyle&, const FloatRect& boundingBox, OptionSet<Style::TransformResolverOption>) const final;
 
     FloatRect m_viewport;
-    AffineTransform m_supplementalLayerTransform;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGForeignObject, isSVGForeignObject())
-
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGForeignObject, isRenderSVGForeignObject())

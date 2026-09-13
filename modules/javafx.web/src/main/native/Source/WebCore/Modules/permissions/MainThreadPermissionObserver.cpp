@@ -31,36 +31,51 @@
 #include "PermissionController.h"
 #include "PermissionState.h"
 #include "ScriptExecutionContext.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-MainThreadPermissionObserver::MainThreadPermissionObserver(WeakPtr<PermissionStatus, WeakPtrImplWithEventTargetData>&& permissionStatus, ScriptExecutionContextIdentifier contextIdentifier, PermissionState state, PermissionDescriptor descriptor, PermissionQuerySource source, WeakPtr<Page>&& page, ClientOrigin&& origin)
-    : m_permissionStatus(WTFMove(permissionStatus))
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MainThreadPermissionObserver);
+
+MainThreadPermissionObserver::MainThreadPermissionObserver(ThreadSafeWeakPtr<PermissionStatus>&& permissionStatus, ScriptExecutionContextIdentifier contextIdentifier, PermissionState state, PermissionDescriptor descriptor, PermissionQuerySource source, WeakPtr<Page>&& page, ClientOrigin&& origin)
+    : m_permissionStatus(WTF::move(permissionStatus))
     , m_contextIdentifier(contextIdentifier)
     , m_state(state)
     , m_descriptor(descriptor)
     , m_source(source)
-    , m_page(WTFMove(page))
-    , m_origin(WTFMove(origin))
+    , m_page(WTF::move(page))
+    , m_origin(WTF::move(origin))
 {
     ASSERT(isMainThread());
-    PermissionController::shared().addObserver(*this);
+    PermissionController::singleton().addObserver(*this);
 }
 
 MainThreadPermissionObserver::~MainThreadPermissionObserver()
 {
     ASSERT(isMainThread());
-    PermissionController::shared().removeObserver(*this);
+    PermissionController::singleton().removeObserver(*this);
 }
 
 void MainThreadPermissionObserver::stateChanged(PermissionState newPermissionState)
 {
     m_state = newPermissionState;
 
-    ScriptExecutionContext::ensureOnContextThread(m_contextIdentifier, [permissionStatus = m_permissionStatus, newPermissionState](auto&) {
-        if (permissionStatus)
+    ScriptExecutionContext::ensureOnContextThread(m_contextIdentifier, [weakPermissionStatus = m_permissionStatus, newPermissionState](auto&) {
+        if (RefPtr permissionStatus = weakPermissionStatus.get())
             permissionStatus->stateChanged(newPermissionState);
     });
+}
+
+void MainThreadPermissionObserver::addChangeListener(const RegistrableDomain& topFrameDomain, const RegistrableDomain& subFrameDomain)
+{
+    ASSERT(isMainThread());
+    PermissionController::singleton().addChangeListener(m_descriptor.name, topFrameDomain, subFrameDomain);
+}
+
+void MainThreadPermissionObserver::removeChangeListener(const RegistrableDomain& topFrameDomain, const RegistrableDomain& subFrameDomain)
+{
+    ASSERT(isMainThread());
+    PermissionController::singleton().removeChangeListener(m_descriptor.name, topFrameDomain, subFrameDomain);
 }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,7 +25,7 @@
 
 #pragma once
 
-#if ENABLE(WEBASSEMBLY_B3JIT)
+#if ENABLE(WEBASSEMBLY_OMGJIT)
 
 #include "WasmCallee.h"
 #include "WasmContext.h"
@@ -44,17 +44,17 @@ public:
     using Base = Plan;
 
     bool hasWork() const final { return !m_completed; }
-    void work(CompilationEffort) final;
+    void work() final;
     bool multiThreaded() const final { return false; }
 
     // Note: CompletionTask should not hold a reference to the Plan otherwise there will be a reference cycle.
-    OSREntryPlan(VM&, Ref<Module>&&, Ref<Callee>&&, uint32_t functionIndex, std::optional<bool> hasExceptionHandlers, uint32_t loopIndex, MemoryMode, CompletionTask&&);
+    OSREntryPlan(VM&, Ref<Module>&&, Ref<Callee>&&, FunctionCodeIndex functionIndex, uint32_t loopIndex, MemoryMode, CompletionTask&&);
 
 private:
     // For some reason friendship doesn't extend to parent classes...
     using Base::m_lock;
 
-    void dumpDisassembly(CompilationContext&, LinkBuffer&, unsigned functionIndex, const TypeDefinition&, unsigned functionIndexSpace);
+    void dumpDisassembly(CompilationContext&, LinkBuffer&, const TypeDefinition&, FunctionSpaceIndex functionIndexSpace);
     bool isComplete() const final { return m_completed; }
     void complete() WTF_REQUIRES_LOCK(m_lock) final
     {
@@ -62,15 +62,14 @@ private:
         runCompletionTasks();
     }
 
-    Ref<Module> m_module;
-    Ref<CalleeGroup> m_calleeGroup;
-    Ref<Callee> m_callee;
+    const Ref<Module> m_module;
+    const Ref<CalleeGroup> m_calleeGroup;
+    const Ref<Callee> m_callee;
     bool m_completed { false };
-    std::optional<bool> m_hasExceptionHandlers;
-    uint32_t m_functionIndex;
+    FunctionCodeIndex m_functionIndex;
     uint32_t m_loopIndex;
 };
 
 } } // namespace JSC::Wasm
 
-#endif // ENABLE(WEBASSEMBLY_B3JIT)
+#endif // ENABLE(WEBASSEMBLY_OMGJIT)

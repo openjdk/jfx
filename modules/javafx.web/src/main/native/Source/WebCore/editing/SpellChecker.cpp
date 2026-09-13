@@ -27,8 +27,8 @@
 #include "config.h"
 #include "SpellChecker.h"
 
-#include "Document.h"
 #include "DocumentMarkerController.h"
+#include "DocumentPage.h"
 #include "Editing.h"
 #include "Editor.h"
 #include "EditorClient.h"
@@ -40,8 +40,12 @@
 #include "Settings.h"
 #include "TextCheckerClient.h"
 #include "TextIterator.h"
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/SetForScope.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SpellChecker);
 
 SpellCheckRequest::SpellCheckRequest(const SimpleRange& checkingRange, const SimpleRange& automaticReplacementRange, const SimpleRange& paragraphRange, const String& text, OptionSet<TextCheckingType> options, TextCheckingProcessType type)
     : m_checkingRange(checkingRange)
@@ -73,7 +77,7 @@ void SpellCheckRequest::didSucceed(const Vector<TextCheckingResult>& results)
         return;
 
     Ref<SpellCheckRequest> protectedThis(*this);
-    m_checker->didCheckSucceed(m_requestData.identifier().value(), results);
+    m_checker->didCheckSucceed(m_requestData.identifier().value(), results, m_existingResults, m_checkingRange);
     m_checker = nullptr;
 }
 
@@ -95,13 +99,18 @@ void SpellCheckRequest::setCheckerAndIdentifier(SpellChecker* requester, TextChe
     m_requestData.m_identifier = identifier;
 }
 
+void SpellCheckRequest::setExistingResults(const Vector<TextCheckingResult>& existingResults)
+{
+    m_existingResults = existingResults;
+}
+
 void SpellCheckRequest::requesterDestroyed()
 {
     m_checker = nullptr;
 }
 
-SpellChecker::SpellChecker(Document& document)
-    : m_document(document)
+SpellChecker::SpellChecker(Editor& editor)
+    : m_editor(editor)
     , m_timerToProcessQueuedRequest(*this, &SpellChecker::timerFiredToProcessQueuedRequest)
 {
 }
@@ -114,9 +123,19 @@ SpellChecker::~SpellChecker()
         queue->requesterDestroyed();
 }
 
+void SpellChecker::ref() const
+{
+    m_editor->ref();
+}
+
+void SpellChecker::deref() const
+{
+    m_editor->deref();
+}
+
 TextCheckerClient* SpellChecker::client() const
 {
-    Page* page = m_document.page();
+    RefPtr page = document().page();
     if (!page)
         return nullptr;
     return page->editorClient().textChecker();
@@ -133,7 +152,7 @@ void SpellChecker::timerFiredToProcessQueuedRequest()
 
 bool SpellChecker::isAsynchronousEnabled() const
 {
-    return m_document.settings().asynchronousSpellCheckingEnabled();
+    return document().settings().asynchronousSpellCheckingEnabled();
 }
 
 bool SpellChecker::canCheckAsynchronously(const SimpleRange& range) const
@@ -144,16 +163,16 @@ bool SpellChecker::canCheckAsynchronously(const SimpleRange& range) const
 bool SpellChecker::isCheckable(const SimpleRange& range) const
 {
     bool foundRenderer = false;
-    for (auto& node : intersectingNodes(range)) {
-        if (node.renderer()) {
+    for (Ref node : intersectingNodes(range)) {
+        if (node->renderer()) {
             foundRenderer = true;
             break;
         }
     }
     if (!foundRenderer)
         return false;
-    auto& node = range.start.container.get();
-    return !is<Element>(node) || downcast<Element>(node).isSpellCheckingEnabled();
+    RefPtr element = dynamicDowncast<Element>(range.start.container.get());
+    return !element || element->isSpellCheckingEnabled();
 }
 
 void SpellChecker::requestCheckingFor(Ref<SpellCheckRequest>&& request)
@@ -168,11 +187,23 @@ void SpellChecker::requestCheckingFor(Ref<SpellCheckRequest>&& request)
     request->setCheckerAndIdentifier(this, identifier);
 
     if (m_timerToProcessQueuedRequest.isActive() || m_processingRequest) {
-        enqueueRequest(WTFMove(request));
+        enqueueRequest(WTF::move(request));
         return;
     }
 
-    invokeRequest(WTFMove(request));
+    invokeRequest(WTF::move(request));
+}
+
+void SpellChecker::requestExtendedCheckingFor(Ref<SpellCheckRequest>&& request, const Vector<TextCheckingResult>& results)
+{
+    if (m_inRecheck)
+        return;
+
+    auto identifier = TextCheckingRequestIdentifier::generate();
+    request->setCheckerAndIdentifier(this, identifier);
+    request->setExistingResults(results);
+
+    client()->requestExtendedCheckingOfString(WTF::move(request), protectedDocument()->selection().selection());
 }
 
 void SpellChecker::invokeRequest(Ref<SpellCheckRequest>&& request)
@@ -180,8 +211,8 @@ void SpellChecker::invokeRequest(Ref<SpellCheckRequest>&& request)
     ASSERT(!m_processingRequest);
     if (!client())
         return;
-    m_processingRequest = WTFMove(request);
-    client()->requestCheckingOfString(*m_processingRequest, m_document.selection().selection());
+    m_processingRequest = WTF::move(request);
+    client()->requestCheckingOfString(*m_processingRequest, protectedDocument()->selection().selection());
 }
 
 void SpellChecker::enqueueRequest(Ref<SpellCheckRequest>&& request)
@@ -190,25 +221,55 @@ void SpellChecker::enqueueRequest(Ref<SpellCheckRequest>&& request)
         if (request->rootEditableElement() != queue->rootEditableElement())
             continue;
 
-        queue = WTFMove(request);
+        queue = WTF::move(request);
         return;
     }
 
-    m_requestQueue.append(WTFMove(request));
+    m_requestQueue.append(WTF::move(request));
 }
 
-void SpellChecker::didCheck(TextCheckingRequestIdentifier identifier, const Vector<TextCheckingResult>& results)
+static bool containsGrammarResult(TextCheckingResult result, const Vector<TextCheckingResult>& existingResults)
 {
-    ASSERT(m_processingRequest);
-    ASSERT(m_processingRequest->data().identifier() == identifier);
-    if (m_processingRequest->data().identifier() != identifier) {
-        m_requestQueue.clear();
+    bool foundIt = false;
+    for (TextCheckingResult existingResult : existingResults) {
+        if (!existingResult.type.containsOnly({ TextCheckingType::Grammar }) || result.range.location != existingResult.range.location || result.range.length != existingResult.range.length || result.details.size() != existingResult.details.size())
+            continue;
+        bool detailsMatch = true;
+        for (auto [detail, existingResultDetail] : zippedRange(result.details, existingResult.details)) {
+            if (!detailsMatch)
+                break;
+            detailsMatch = std::tie(detail.range.location, detail.range.length, detail.guesses) == std::tie(existingResultDetail.range.location, existingResultDetail.range.length, existingResultDetail.guesses);
+        }
+        if (detailsMatch)
+            foundIt = true;
+    }
+    return foundIt;
+}
+
+static bool containsAdditionalGrammarResults(const Vector<TextCheckingResult>& results, const Vector<TextCheckingResult>& existingResults)
+{
+    for (const auto& result : results) {
+        if (result.type.containsOnly({ TextCheckingType::Grammar }) && !containsGrammarResult(result, existingResults))
+            return true;
+    }
+    return false;
+}
+
+void SpellChecker::didCheck(TextCheckingRequestIdentifier identifier, const Vector<TextCheckingResult>& results, const Vector<TextCheckingResult>& existingResults, const std::optional<SimpleRange>& range)
+{
+    if (!m_processingRequest || m_processingRequest->data().identifier() != identifier) {
+        // This is the extended checking case
+        if (!range || !containsAdditionalGrammarResults(results, existingResults))
+            return;
+        VisibleSelection selection = VisibleSelection(*range);
+        SetForScope isRecheckingForScope(m_inRecheck, true);
+        protectedDocument()->editor().markMisspellingsAndBadGrammar(selection);
         return;
     }
 
-    m_document.editor().markAndReplaceFor(*m_processingRequest, results);
+    protectedDocument()->editor().markAndReplaceFor(*m_processingRequest, results);
 
-    if (m_lastProcessedIdentifier.toUInt64() < identifier.toUInt64())
+    if (!m_lastProcessedIdentifier || *m_lastProcessedIdentifier < identifier)
         m_lastProcessedIdentifier = identifier;
 
     m_processingRequest = nullptr;
@@ -216,24 +277,36 @@ void SpellChecker::didCheck(TextCheckingRequestIdentifier identifier, const Vect
         m_timerToProcessQueuedRequest.startOneShot(0_s);
 }
 
-void SpellChecker::didCheckSucceed(TextCheckingRequestIdentifier identifier, const Vector<TextCheckingResult>& results)
+Document& SpellChecker::document() const
 {
+    return m_editor->document();
+}
+
+Ref<Document> SpellChecker::protectedDocument() const
+{
+    return m_editor->document();
+}
+
+void SpellChecker::didCheckSucceed(TextCheckingRequestIdentifier identifier, const Vector<TextCheckingResult>& results, const Vector<TextCheckingResult>& existingResults, const std::optional<SimpleRange>& range)
+{
+    if (m_processingRequest) {
     TextCheckingRequestData requestData = m_processingRequest->data();
     if (requestData.identifier() == identifier) {
-        OptionSet<DocumentMarker::MarkerType> markerTypes;
+        OptionSet<DocumentMarkerType> markerTypes;
         if (requestData.checkingTypes().contains(TextCheckingType::Spelling))
-            markerTypes.add(DocumentMarker::Spelling);
+            markerTypes.add(DocumentMarkerType::Spelling);
         if (requestData.checkingTypes().contains(TextCheckingType::Grammar))
-            markerTypes.add(DocumentMarker::Grammar);
+            markerTypes.add(DocumentMarkerType::Grammar);
         if (!markerTypes.isEmpty())
             removeMarkers(m_processingRequest->checkingRange(), markerTypes);
     }
-    didCheck(identifier, results);
+    }
+    didCheck(identifier, results, existingResults, range);
 }
 
 void SpellChecker::didCheckCancel(TextCheckingRequestIdentifier identifier)
 {
-    didCheck(identifier, Vector<TextCheckingResult>());
+    didCheck(identifier, Vector<TextCheckingResult>(), Vector<TextCheckingResult>(), std::nullopt);
 }
 
 } // namespace WebCore

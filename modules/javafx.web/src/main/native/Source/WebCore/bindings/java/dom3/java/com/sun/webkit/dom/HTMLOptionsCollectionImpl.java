@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,6 +50,7 @@ public class HTMLOptionsCollectionImpl extends HTMLCollectionImpl {
     }
     native static void setSelectedIndexImpl(long peer, int value);
 
+    @Override
     public int getLength() {
         return getLengthImpl(getPeer());
     }
@@ -62,6 +63,7 @@ public class HTMLOptionsCollectionImpl extends HTMLCollectionImpl {
 
 
 // Functions
+    @Override
     public Node namedItem(String name)
     {
         return NodeImpl.getImpl(namedItemImpl(getPeer()
@@ -83,6 +85,7 @@ public class HTMLOptionsCollectionImpl extends HTMLCollectionImpl {
         , int index);
 
 
+    @Override
     public Node item(int index)
     {
         return NodeImpl.getImpl(itemImpl(getPeer()

@@ -87,7 +87,11 @@ JSC_DEFINE_HOST_FUNCTION(webAssemblyGlobalProtoFuncType, (JSGlobalObject* global
     JSWebAssemblyGlobal* global = getGlobal(globalObject, vm, callFrame->thisValue());
     RETURN_IF_EXCEPTION(throwScope, encodedJSValue());
 
-    RELEASE_AND_RETURN(throwScope, JSValue::encode(global->type(globalObject)));
+    JSObject* typeDescriptor = global->type(globalObject);
+    if (!typeDescriptor)
+        return throwVMTypeError(globalObject, throwScope, "WebAssembly.Global.prototype.type unable to produce type descriptor for the given global"_s);
+
+    RELEASE_AND_RETURN(throwScope, JSValue::encode(typeDescriptor));
 }
 
 JSC_DEFINE_HOST_FUNCTION(webAssemblyGlobalProtoGetterFuncValue, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -105,7 +109,7 @@ JSC_DEFINE_HOST_FUNCTION(webAssemblyGlobalProtoSetterFuncValue, (JSGlobalObject*
     VM& vm = globalObject->vm();
     auto throwScope = DECLARE_THROW_SCOPE(vm);
 
-    if (UNLIKELY(callFrame->argumentCount() < 1))
+    if (callFrame->argumentCount() < 1) [[unlikely]]
         return JSValue::encode(throwException(globalObject, throwScope, createNotEnoughArgumentsError(globalObject)));
 
     JSWebAssemblyGlobal* global = getGlobal(globalObject, vm, callFrame->thisValue());

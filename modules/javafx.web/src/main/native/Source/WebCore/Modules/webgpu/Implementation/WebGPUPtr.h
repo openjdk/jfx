@@ -44,21 +44,21 @@ struct WebGPUPtrTraits {
     static ALWAYS_INLINE void swap(StorageType& a, StorageType& b) { std::swap(a, b); }
     static ALWAYS_INLINE WGPUT unwrap(const StorageType& ptr) { return ptr; }
 
-    static StorageType hashTableDeletedValue() { return bitwise_cast<StorageType>(static_cast<uintptr_t>(-1)); }
+    static StorageType hashTableDeletedValue() { return std::bit_cast<StorageType>(static_cast<uintptr_t>(-1)); }
     static ALWAYS_INLINE bool isHashTableDeletedValue(const StorageType& ptr) { return ptr == hashTableDeletedValue(); }
 };
 
 template <typename T, void (*reference)(T), void(*release)(T)> struct BaseWebGPURefDerefTraits {
     static ALWAYS_INLINE T refIfNotNull(T t)
     {
-        if (LIKELY(t))
+        if (t) [[likely]]
             reference(t);
         return t;
     }
 
     static ALWAYS_INLINE void derefIfNotNull(T t)
     {
-        if (LIKELY(t))
+        if (t) [[likely]]
             release(t);
     }
 };
@@ -75,6 +75,7 @@ template <> struct WebGPURefDerefTraits<WGPUComputePassEncoder> : public BaseWeb
 template <> struct WebGPURefDerefTraits<WGPUComputePipeline> : public BaseWebGPURefDerefTraits<WGPUComputePipeline, wgpuComputePipelineReference, wgpuComputePipelineRelease> { };
 template <> struct WebGPURefDerefTraits<WGPUDevice> : public BaseWebGPURefDerefTraits<WGPUDevice, wgpuDeviceReference, wgpuDeviceRelease> { };
 template <> struct WebGPURefDerefTraits<WGPUInstance> : public BaseWebGPURefDerefTraits<WGPUInstance, wgpuInstanceReference, wgpuInstanceRelease> { };
+template <> struct WebGPURefDerefTraits<WGPUDDMesh> : public BaseWebGPURefDerefTraits<WGPUDDMesh, wgpuDDMeshReference, wgpuDDMeshRelease> { };
 template <> struct WebGPURefDerefTraits<WGPUPipelineLayout> : public BaseWebGPURefDerefTraits<WGPUPipelineLayout, wgpuPipelineLayoutReference, wgpuPipelineLayoutRelease> { };
 template <> struct WebGPURefDerefTraits<WGPUQuerySet> : public BaseWebGPURefDerefTraits<WGPUQuerySet, wgpuQuerySetReference, wgpuQuerySetRelease> { };
 template <> struct WebGPURefDerefTraits<WGPUQueue> : public BaseWebGPURefDerefTraits<WGPUQueue, wgpuQueueReference, wgpuQueueRelease> { };
@@ -89,6 +90,10 @@ template <> struct WebGPURefDerefTraits<WGPUSwapChain> : public BaseWebGPURefDer
 template <> struct WebGPURefDerefTraits<WGPUTexture> : public BaseWebGPURefDerefTraits<WGPUTexture, wgpuTextureReference, wgpuTextureRelease> { };
 template <> struct WebGPURefDerefTraits<WGPUTextureView> : public BaseWebGPURefDerefTraits<WGPUTextureView, wgpuTextureViewReference, wgpuTextureViewRelease> { };
 template <> struct WebGPURefDerefTraits<WGPUExternalTexture> : public BaseWebGPURefDerefTraits<WGPUExternalTexture, wgpuExternalTextureReference, wgpuExternalTextureRelease> { };
+template <> struct WebGPURefDerefTraits<WGPUXRBinding> : public BaseWebGPURefDerefTraits<WGPUXRBinding, wgpuXRBindingReference, wgpuXRBindingRelease> { };
+template <> struct WebGPURefDerefTraits<WGPUXRProjectionLayer> : public BaseWebGPURefDerefTraits<WGPUXRProjectionLayer, wgpuXRProjectionLayerReference, wgpuXRProjectionLayerRelease> { };
+template <> struct WebGPURefDerefTraits<WGPUXRSubImage> : public BaseWebGPURefDerefTraits<WGPUXRSubImage, wgpuXRSubImageReference, wgpuXRSubImageRelease> { };
+template <> struct WebGPURefDerefTraits<WGPUXRView> : public BaseWebGPURefDerefTraits<WGPUXRView, wgpuXRViewReference, wgpuXRViewRelease> { };
 
 template <typename T> using WebGPUPtr = RefPtr<std::remove_pointer_t<T>, WebGPUPtrTraits<T>, WebGPURefDerefTraits<T>>;
 

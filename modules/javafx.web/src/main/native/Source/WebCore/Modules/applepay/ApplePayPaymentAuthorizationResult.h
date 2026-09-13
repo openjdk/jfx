@@ -27,8 +27,8 @@
 
 #if ENABLE(APPLE_PAY)
 
-#include "ApplePayError.h"
-#include "ApplePayPaymentOrderDetails.h"
+#include <WebCore/ApplePayError.h>
+#include <WebCore/ApplePayPaymentOrderDetails.h>
 #include <optional>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
@@ -47,7 +47,7 @@ struct ApplePayPaymentAuthorizationResult {
     static constexpr Status PINLockout = 7;
 
     Status status; // required
-    Vector<RefPtr<ApplePayError>> errors;
+    Vector<Ref<ApplePayError>> errors;
 
 #if ENABLE(APPLE_PAY_PAYMENT_ORDER_DETAILS)
     std::optional<ApplePayPaymentOrderDetails> orderDetails;

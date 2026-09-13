@@ -30,22 +30,33 @@
 
 #include "BitmapImage.h"
 #include "CachedImage.h"
-#include "CachedResourceLoader.h"
-#include "Document.h"
+#include "DocumentResourceLoader.h"
+#include "ExceptionOr.h"
 #include "GraphicsContext.h"
 #include "Image.h"
 #include "ImageBuffer.h"
+#include "IntSize.h"
 #include "MediaImage.h"
 #include "MediaMetadataInit.h"
 #include "SpaceSplitString.h"
+#include <ranges>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/URL.h>
+#include <wtf/text/StringToIntegerConversion.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ArtworkImageLoader);
+
+Ref<ArtworkImageLoader> ArtworkImageLoader::create(Document& document, const String& src, ArtworkImageLoaderCallback&& callback)
+{
+    return adoptRef(*new ArtworkImageLoader(document, src, WTF::move(callback)));
+}
 
 ArtworkImageLoader::ArtworkImageLoader(Document& document, const String& src, ArtworkImageLoaderCallback&& callback)
     : m_document(document)
     , m_src(src)
-    , m_callback(WTFMove(callback))
+    , m_callback(WTF::move(callback))
 {
 }
 
@@ -59,24 +70,28 @@ void ArtworkImageLoader::requestImageResource()
 {
     ASSERT(!m_cachedImage, "Can only call requestImageResource once");
     ResourceLoaderOptions options = CachedResourceLoader::defaultCachedResourceOptions();
-    options.contentSecurityPolicyImposition = m_document.isInUserAgentShadowTree() ? ContentSecurityPolicyImposition::SkipPolicyCheck : ContentSecurityPolicyImposition::DoPolicyCheck;
+    RefPtr document = m_document.get();
+    options.contentSecurityPolicyImposition = document->isInUserAgentShadowTree() ? ContentSecurityPolicyImposition::SkipPolicyCheck : ContentSecurityPolicyImposition::DoPolicyCheck;
 
-    CachedResourceRequest request(ResourceRequest(m_document.completeURL(m_src)), options);
-    request.setInitiatorType(AtomString { m_document.documentURI() });
-    m_cachedImage = m_document.cachedResourceLoader().requestImage(WTFMove(request)).value_or(nullptr);
+    CachedResourceRequest request(ResourceRequest(document->completeURL(m_src)), options);
+    request.setInitiatorType(AtomString { document->documentURI() });
+    m_cachedImage = document->protectedCachedResourceLoader()->requestImage(WTF::move(request)).value_or(nullptr);
 
     if (m_cachedImage)
         m_cachedImage->addClient(*this);
 }
 
-void ArtworkImageLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&)
+void ArtworkImageLoader::notifyFinished(CachedResource& resource, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess)
 {
     ASSERT_UNUSED(resource, &resource == m_cachedImage);
     if (m_cachedImage->loadFailedOrCanceled() || m_cachedImage->errorOccurred() || !m_cachedImage->image()) {
         m_callback(nullptr);
         return;
     }
-    m_callback(m_cachedImage->image());
+    Ref image = *m_cachedImage->image();
+    image->subresourcesAreFinished(nullptr, [image, callback = std::exchange(m_callback, { })]() mutable {
+        callback(image.ptr());
+    });
 }
 
 ExceptionOr<Ref<MediaMetadata>> MediaMetadata::create(ScriptExecutionContext& context, std::optional<MediaMetadataInit>&& init)
@@ -89,10 +104,18 @@ ExceptionOr<Ref<MediaMetadata>> MediaMetadata::create(ScriptExecutionContext& co
 #if ENABLE(MEDIA_SESSION_PLAYLIST)
         metadata->setTrackIdentifier(init->trackIdentifier);
 #endif
-        auto possibleException = metadata->setArtwork(context, WTFMove(init->artwork));
+        auto possibleException = metadata->setArtwork(context, WTF::move(init->artwork));
         if (possibleException.hasException())
             return Exception { possibleException.exception() };
     }
+    return metadata;
+}
+
+Ref<MediaMetadata> MediaMetadata::create(MediaSession& session, Vector<URL>&& images)
+{
+    auto metadata = adoptRef(*new MediaMetadata);
+    metadata->m_defaultImages = WTF::move(images);
+    metadata->setMediaSession(session);
     return metadata;
 }
 
@@ -141,39 +164,129 @@ void MediaMetadata::setAlbum(const String& album)
 
 ExceptionOr<void> MediaMetadata::setArtwork(ScriptExecutionContext& context, Vector<MediaImage>&& artwork)
 {
+    ASSERT(!m_defaultImages.size());
     Vector<MediaImage> resolvedArtwork;
     resolvedArtwork.reserveInitialCapacity(artwork.size());
     for (auto& image : artwork) {
         auto resolvedSrc = context.completeURL(image.src);
         if (!resolvedSrc.isValid())
-            return Exception { TypeError };
-        resolvedArtwork.uncheckedAppend(MediaImage { resolvedSrc.string(), image.sizes, image.type });
+            return Exception { ExceptionCode::TypeError };
+        resolvedArtwork.append(MediaImage { resolvedSrc.string(), image.sizes, image.type });
     }
 
-    m_metadata.artwork = WTFMove(resolvedArtwork);
-
+    m_metadata.artwork = WTF::move(resolvedArtwork);
     refreshArtworkImage();
 
     metadataUpdated();
     return { };
 }
 
+// We attempt to give a score to the image dimensions. This score is between 0 and 1.
+// A negative score indicates an invalid image
+// A score of 0 is for images smaller than the minimum size
+// A score of 1 indicates an image of ideal size with an aspect ratio of 1 (square)
+// The closer to the ideal size, the higher the score.
+static float imageDimensionsScore(int width, int height, int minimumSize, int idealSize)
+{
+
+    IntSize size { width, height };
+    if (size.isEmpty())
+        return -1;
+
+    if (size.maxDimension() <= minimumSize)
+        return 0; // Ignore images that are too small.
+
+    // We account for the aspect ratio in scoring the "best" artwork.
+    // We prefer artwork's images with a square AR.
+    double longEdge = size.maxDimension();
+    double shortEdge = size.minDimension();
+    auto aspectRatioCoefficient = shortEdge / longEdge;
+
+    if (longEdge < idealSize)
+        return aspectRatioCoefficient * (0.8 * (longEdge - minimumSize) / (idealSize - minimumSize) + 0.2);
+    return aspectRatioCoefficient * (1.0 * idealSize / longEdge);
+}
+
 void MediaMetadata::refreshArtworkImage()
 {
-    const auto& mediaImages = m_metadata.artwork;
-    if (mediaImages.isEmpty()) {
+    static_assert(s_minimumSize < s_idealSize);
+
         m_artworkLoader = nullptr;
+
+    if (!m_session)
         return;
+
+    m_artworkImageSrc = String();
+    m_artworkImage = nullptr;
+
+    size_t numArtworks = m_defaultImages.size() ? m_defaultImages.size() : m_metadata.artwork.size();
+    if (!numArtworks)
+        return;
+
+    // First look into the artwork's sizes attributes to attempt to determine the best score.
+    Vector<Pair> artworks(numArtworks, [&](size_t index) -> Pair {
+        if (m_defaultImages.size())
+            return { -1, m_defaultImages[index].string() };
+        auto size = [&](const String& sizes) -> IntSize {
+            if (sizes.isEmpty())
+                return { };
+            if (equalIgnoringASCIICase(sizes, "any"_s))
+                return { s_idealSize, s_idealSize }; // We prefer image tagged with "any" size.
+            IntSize size;
+            for (auto element : StringView(sizes).split(' ')) {
+                if (element.isEmpty())
+                    continue;
+                auto posX = element.findIgnoringASCIICase("x"_s);
+                if (posX == notFound || !posX)
+                    return { };
+                std::optional<uint32_t> width = parseInteger<uint32_t>(element.left(posX));
+                std::optional<uint32_t> height = parseInteger<uint32_t>(element.right(posX));
+                if (!width || !height)
+                    return { };
+
+                IntSize newSize { int(*width), int(*height) };
+                if (size.maxDimension() < newSize.maxDimension())
+                    size = newSize;
     }
-    if (!m_session || !m_session->document() || mediaImages[0].src == m_artworkImageSrc)
+            return size;
+        }(m_metadata.artwork[index].sizes);
+        return { imageDimensionsScore(size.width(), size.height(), s_minimumSize, s_idealSize), m_metadata.artwork[index].src };
+    });
+
+    std::ranges::sort(artworks, std::ranges::greater { }, &Pair::score);
+
+    tryNextArtworkImage(0, WTF::move(artworks));
+}
+
+void MediaMetadata::tryNextArtworkImage(uint32_t index, Vector<Pair>&& artworks)
+{
+    if (!m_session)
         return;
-    // FIXME: Implement a heuristic to retrieve the "best" image.
-    m_artworkImageSrc = mediaImages[0].src;
-    m_artworkLoader = makeUnique<ArtworkImageLoader>(*m_session->document(), m_artworkImageSrc, [this](Image* image) {
-        if (!image || !image->data())
+    RefPtr document = m_session->document();
+    if (!document)
             return;
-        setArtworkImage(image);
-        metadataUpdated();
+
+    String artworkImageSrc = artworks[index].src;
+
+    m_artworkLoader = ArtworkImageLoader::create(*document, artworkImageSrc, [weakThis = WeakPtr { *this }, index, artworkImageSrc, artworks = WTF::move(artworks)](Image* image) mutable {
+        RefPtr strongThis = weakThis;
+        if (!strongThis)
+            return;
+        if (image && image->data() && image->width() && image->height()) {
+            IntSize size { int(image->width()), int(image->height()) };
+            float imageScore = imageDimensionsScore(size.width(), size.height(), s_minimumSize, s_idealSize);
+            if (!index || (strongThis->m_artworkImage && (imageDimensionsScore(strongThis->m_artworkImage->width(), strongThis->m_artworkImage->height(), s_minimumSize, s_idealSize) < imageScore))) {
+                strongThis->m_artworkImageSrc = artworkImageSrc;
+                strongThis->setArtworkImage(image);
+                strongThis->metadataUpdated();
+            }
+            // If selection from `sizes` attribute yielded a valid image, or we have downloaded an image bigger than the ideal size we stop.
+            if (artworks[index].score >= 0 || size.maxDimension() >= s_idealSize)
+                return;
+        }
+
+        if (++index < artworks.size())
+            strongThis->tryNextArtworkImage(index, WTF::move(artworks));
     });
     m_artworkLoader->requestImageResource();
 }
@@ -197,7 +310,7 @@ void MediaMetadata::setTrackIdentifier(const String& identifier)
 void MediaMetadata::metadataUpdated()
 {
     if (m_session)
-        m_session->metadataUpdated();
+        m_session->metadataUpdated(*this);
 }
 
 }

@@ -22,10 +22,15 @@
 #include "ArgList.h"
 
 #include "JSCJSValueInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 using std::min;
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ArgList);
 
 void MarkedVectorBase::addMarkSet(JSValue v)
 {
@@ -42,7 +47,7 @@ void MarkedVectorBase::addMarkSet(JSValue v)
 
 void ArgList::getSlice(int startIndex, ArgList& result) const
 {
-    if (startIndex <= 0 || startIndex >= m_argCount) {
+    if (startIndex <= 0 || static_cast<unsigned>(startIndex) >= m_argCount) {
         result = ArgList();
         return;
     }
@@ -57,7 +62,7 @@ void MarkedVectorBase::markLists(Visitor& visitor, ListSet& markSet)
     ListSet::iterator end = markSet.end();
     for (ListSet::iterator it = markSet.begin(); it != end; ++it) {
         MarkedVectorBase* list = *it;
-        for (int i = 0; i < list->m_size; ++i)
+        for (unsigned i = 0; i < list->m_size; ++i)
             visitor.appendUnbarriered(JSValue::decode(list->slotFor(i)));
     }
 }
@@ -69,7 +74,7 @@ auto MarkedVectorBase::slowEnsureCapacity(size_t requestedCapacity) -> Status
 {
     setNeedsOverflowCheck();
     auto checkedNewCapacity = CheckedInt32(requestedCapacity);
-    if (UNLIKELY(checkedNewCapacity.hasOverflowed()))
+    if (checkedNewCapacity.hasOverflowed()) [[unlikely]]
         return Status::Overflowed;
     return expandCapacity(checkedNewCapacity);
 }
@@ -78,28 +83,28 @@ auto MarkedVectorBase::expandCapacity() -> Status
 {
     setNeedsOverflowCheck();
     auto checkedNewCapacity = CheckedInt32(m_capacity) * 2;
-    if (UNLIKELY(checkedNewCapacity.hasOverflowed()))
+    if (checkedNewCapacity.hasOverflowed()) [[unlikely]]
         return Status::Overflowed;
     return expandCapacity(checkedNewCapacity);
 }
 
-auto MarkedVectorBase::expandCapacity(int newCapacity) -> Status
+auto MarkedVectorBase::expandCapacity(unsigned newCapacity) -> Status
 {
     setNeedsOverflowCheck();
     ASSERT(m_capacity < newCapacity);
     auto checkedSize = CheckedSize(newCapacity) * sizeof(EncodedJSValue);
-    if (UNLIKELY(checkedSize.hasOverflowed()))
+    if (checkedSize.hasOverflowed()) [[unlikely]]
         return Status::Overflowed;
-    EncodedJSValue* newBuffer = static_cast<EncodedJSValue*>(Gigacage::tryMalloc(Gigacage::JSValue, checkedSize));
+    EncodedJSValue* newBuffer = static_cast<EncodedJSValue*>(FastMalloc::tryMalloc(checkedSize));
     if (!newBuffer)
         return Status::Overflowed;
-    for (int i = 0; i < m_size; ++i) {
+    for (unsigned i = 0; i < m_size; ++i) {
         newBuffer[i] = m_buffer[i];
         addMarkSet(JSValue::decode(m_buffer[i]));
     }
 
     if (EncodedJSValue* base = mallocBase())
-        Gigacage::free(Gigacage::JSValue, base);
+        FastMalloc::free(base);
 
     m_buffer = newBuffer;
     m_capacity = newCapacity;
@@ -123,3 +128,5 @@ auto MarkedVectorBase::slowAppend(JSValue v) -> Status
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

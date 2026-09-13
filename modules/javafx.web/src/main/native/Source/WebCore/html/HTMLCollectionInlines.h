@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,8 +25,9 @@
 
 #pragma once
 
-#include "HTMLCollection.h"
-#include "LiveNodeListInlines.h"
+#include <WebCore/HTMLCollection.h>
+#include <WebCore/LiveNodeListInlines.h>
+#include <WebCore/TreeScopeInlines.h>
 
 namespace WebCore {
 
@@ -37,12 +38,12 @@ inline ContainerNode& HTMLCollection::rootNode() const
     return ownerNode();
 }
 
-inline const Vector<Element*>* CollectionNamedElementCache::findElementsWithId(const AtomString& id) const
+inline const Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>* CollectionNamedElementCache::findElementsWithId(const AtomString& id) const
 {
     return find(m_idMap, id);
 }
 
-inline const Vector<Element*>* CollectionNamedElementCache::findElementsWithName(const AtomString& name) const
+inline const Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>* CollectionNamedElementCache::findElementsWithName(const AtomString& name) const
 {
     return find(m_nameMap, name);
 }
@@ -66,7 +67,7 @@ inline void CollectionNamedElementCache::didPopulate()
         reportExtraMemoryAllocatedForCollectionIndexCache(cost);
 }
 
-inline const Vector<Element*>* CollectionNamedElementCache::find(const StringToElementsMap& map, const AtomString& key) const
+inline const Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>* CollectionNamedElementCache::find(const StringToElementsMap& map, const AtomString& key) const
 {
     ASSERT(m_didPopulate);
     auto it = map.find(key.impl());
@@ -77,12 +78,12 @@ inline void CollectionNamedElementCache::append(StringToElementsMap& map, const 
 {
     if (!m_idMap.contains(key.impl()) && !m_nameMap.contains(key.impl()))
         m_propertyNames.append(key);
-    map.add(key.impl(), Vector<Element*>()).iterator->value.append(&element);
+    map.add(key.impl(), Vector<WeakRef<Element, WeakPtrImplWithEventTargetData>>()).iterator->value.append(element);
 }
 
 inline bool HTMLCollection::isRootedAtTreeScope() const
 {
-    return m_rootType == IsRootedAtTreeScope;
+    return static_cast<bool>(m_rootType) == static_cast<bool>(RootType::AtTreeScope);
 }
 
 inline NodeListInvalidationType HTMLCollection::invalidationType() const
@@ -90,14 +91,14 @@ inline NodeListInvalidationType HTMLCollection::invalidationType() const
     return static_cast<NodeListInvalidationType>(m_invalidationType);
 }
 
-inline CollectionType HTMLCollection::type() const
-{
-    return static_cast<CollectionType>(m_collectionType);
-}
-
 inline Document& HTMLCollection::document() const
 {
     return m_ownerNode->document();
+}
+
+inline Ref<Document> HTMLCollection::protectedDocument() const
+{
+    return document();
 }
 
 inline void HTMLCollection::invalidateCacheForAttribute(const QualifiedName& attributeName)
@@ -105,12 +106,12 @@ inline void HTMLCollection::invalidateCacheForAttribute(const QualifiedName& att
     if (shouldInvalidateTypeOnAttributeChange(invalidationType(), attributeName))
         invalidateCache();
     else if (hasNamedElementCache() && (attributeName == HTMLNames::idAttr || attributeName == HTMLNames::nameAttr))
-        invalidateNamedElementCache(document());
+        invalidateNamedElementCache(protectedDocument().get());
 }
 
 inline void HTMLCollection::invalidateCache()
 {
-    invalidateCacheForDocument(document());
+    invalidateCacheForDocument(protectedDocument().get());
 }
 
 inline bool HTMLCollection::hasNamedElementCache() const
@@ -125,9 +126,9 @@ inline void HTMLCollection::setNamedItemCache(std::unique_ptr<CollectionNamedEle
     cache->didPopulate();
     {
         Locker locker { m_namedElementCacheAssignmentLock };
-        m_namedElementCache = WTFMove(cache);
+        m_namedElementCache = WTF::move(cache);
     }
-    document().collectionCachedIdNameMap(*this);
+    protectedDocument()->collectionCachedIdNameMap(*this);
 }
 
 inline const CollectionNamedElementCache& HTMLCollection::namedItemCaches() const

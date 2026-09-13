@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,12 +25,12 @@
 
 package test.javafx.scene.chart;
 
-import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.scene.chart.XYChart;
 import javafx.scene.chart.XYChartShim;
-import static org.junit.Assert.assertEquals;
+import test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils;
 
 abstract public class XYNumberChartsTestBase extends XYChartTestBase {
     XYChart<Number, Number> chart;

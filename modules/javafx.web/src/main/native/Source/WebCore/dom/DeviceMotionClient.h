@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Apple Inc. All rights reserved.
+ * Copyright (C) 2010-2024 Apple Inc. All rights reserved.
  * Copyright (C) 2012 Samsung Electronics. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,13 +36,22 @@ class DeviceMotionData;
 class Page;
 
 class DeviceMotionClient : public DeviceClient {
+    WTF_MAKE_TZONE_ALLOCATED(DeviceMotionClient);
     WTF_MAKE_NONCOPYABLE(DeviceMotionClient);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DeviceMotionClient);
 public:
     DeviceMotionClient() = default;
     virtual ~DeviceMotionClient() = default;
     virtual void setController(DeviceMotionController*) = 0;
     virtual DeviceMotionData* lastMotion() const = 0;
     virtual void deviceMotionControllerDestroyed() = 0;
+
+    bool isDeviceMotionClient() const final { return true; }
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::DeviceMotionClient)
+static bool isType(const WebCore::DeviceClient& DeviceClient) { return DeviceClient.isDeviceMotionClient(); }
+SPECIALIZE_TYPE_TRAITS_END()
+

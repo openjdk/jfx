@@ -114,6 +114,7 @@ struct _GstPipelinePrivate
   /* with LOCK */
   gboolean auto_flush_bus;
   gboolean is_live;
+  GstClockTime min_latency;
 
   /* when we need to update stream_time or clock when going back to
    * PLAYING*/
@@ -234,6 +235,7 @@ gst_pipeline_init (GstPipeline * pipeline)
   pipeline->priv->latency = DEFAULT_LATENCY;
 
   pipeline->priv->is_live = FALSE;
+  pipeline->priv->min_latency = GST_CLOCK_TIME_NONE;
 
   /* create and set a default bus */
   bus = gst_bus_new ();
@@ -398,7 +400,6 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
 {
   GstStateChangeReturn result = GST_STATE_CHANGE_SUCCESS;
   GstPipeline *pipeline = GST_PIPELINE_CAST (element);
-  GstClock *clock;
 
   switch (transition) {
     case GST_STATE_CHANGE_NULL_TO_NULL:
@@ -450,6 +451,7 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
       /* only do this for top-level, however */
       if (GST_OBJECT_PARENT (element) == NULL &&
           (update_clock || last_start_time != start_time)) {
+        GstClock *clock = NULL;
         GST_DEBUG_OBJECT (pipeline, "Need to update start_time");
 
         /* when going to PLAYING, select a clock when needed. If we just got
@@ -462,8 +464,7 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
               "Don't need to update clock, using old clock.");
           /* only try to ref if cur_clock is not NULL */
           if (cur_clock)
-            gst_object_ref (cur_clock);
-          clock = cur_clock;
+            clock = gst_object_ref (cur_clock);
         }
 
         if (clock) {
@@ -477,8 +478,17 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
           /* now distribute the clock (which could be NULL). If some
            * element refuses the clock, this will return FALSE and
            * we effectively fail the state change. */
-          if (!gst_element_set_clock (element, clock))
-            goto invalid_clock;
+          if (!gst_element_set_clock (element, clock)) {
+            /* selected clock was not accepted by some element */
+            GST_ELEMENT_ERROR (pipeline, CORE, CLOCK,
+                (_("Selected clock cannot be used in pipeline.")),
+                ("Pipeline cannot operate with selected clock"));
+            GST_DEBUG_OBJECT (pipeline,
+                "Pipeline cannot operate with selected clock %p", clock);
+            gst_clear_object (&clock);
+            gst_clear_object (&cur_clock);
+            return GST_STATE_CHANGE_FAILURE;
+          }
 
           /* if we selected and distributed a new clock, let the app
            * know about it */
@@ -486,8 +496,7 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
               gst_message_new_new_clock (GST_OBJECT_CAST (element), clock));
         }
 
-        if (clock)
-          gst_object_unref (clock);
+        gst_clear_object (&clock);
 
         if (start_time != GST_CLOCK_TIME_NONE && now != GST_CLOCK_TIME_NONE) {
           GstClockTime new_base_time = now - start_time + delay;
@@ -507,8 +516,7 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
             "NOT adjusting base_time because we selected one before");
       }
 
-      if (cur_clock)
-        gst_object_unref (cur_clock);
+      gst_clear_object (&cur_clock);
       break;
     }
     case GST_STATE_CHANGE_PLAYING_TO_PAUSED:
@@ -519,7 +527,10 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
       break;
     }
     case GST_STATE_CHANGE_PAUSED_TO_READY:
+      GST_OBJECT_LOCK (element);
       pipeline->priv->is_live = FALSE;
+      pipeline->priv->min_latency = GST_CLOCK_TIME_NONE;
+      GST_OBJECT_UNLOCK (element);
       reset_start_time (pipeline, 0);
       break;
     case GST_STATE_CHANGE_READY_TO_NULL:
@@ -529,9 +540,11 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
   result = GST_ELEMENT_CLASS (parent_class)->change_state (element, transition);
 
   if (GST_STATE_TRANSITION_NEXT (transition) == GST_STATE_PAUSED) {
+    GST_OBJECT_LOCK (element);
     pipeline->priv->is_live = result == GST_STATE_CHANGE_NO_PREROLL;
     GST_INFO_OBJECT (pipeline, "pipeline is%slive",
         pipeline->priv->is_live ? " " : " not ");
+    GST_OBJECT_UNLOCK (element);
   }
 
   switch (transition) {
@@ -583,21 +596,6 @@ gst_pipeline_change_state (GstElement * element, GstStateChange transition)
     }
   }
   return result;
-
-  /* ERRORS */
-invalid_clock:
-  {
-    /* we generate this error when the selected clock was not
-     * accepted by some element */
-    GST_ELEMENT_ERROR (pipeline, CORE, CLOCK,
-        (_("Selected clock cannot be used in pipeline.")),
-        ("Pipeline cannot operate with selected clock"));
-    GST_DEBUG_OBJECT (pipeline,
-        "Pipeline cannot operate with selected clock %p", clock);
-    if (clock)
-      gst_object_unref (clock);
-    return GST_STATE_CHANGE_FAILURE;
-  }
 }
 
 /* intercept the bus messages from our children. We watch for the ASYNC_START
@@ -621,6 +619,7 @@ gst_pipeline_handle_message (GstBin * bin, GstMessage * message)
     case GST_MESSAGE_RESET_TIME:
     {
       GstClockTime running_time;
+      gboolean is_live;
 
       gst_message_parse_reset_time (message, &running_time);
 
@@ -628,9 +627,12 @@ gst_pipeline_handle_message (GstBin * bin, GstMessage * message)
        * children. */
       reset_start_time (pipeline, running_time);
 
+      GST_OBJECT_LOCK (pipeline);
+      is_live = pipeline->priv->is_live;
+      GST_OBJECT_UNLOCK (pipeline);
+
       /* If we are live, sample a new base_time immediately */
-      if (pipeline->priv->is_live
-          && GST_STATE_TARGET (pipeline) == GST_STATE_PLAYING) {
+      if (is_live && GST_STATE_TARGET (pipeline) == GST_STATE_PLAYING) {
         gst_pipeline_change_state (GST_ELEMENT (pipeline),
             GST_STATE_CHANGE_PAUSED_TO_PLAYING);
       }
@@ -682,9 +684,6 @@ gst_pipeline_do_latency (GstBin * bin)
   latency = pipeline->priv->latency;
   GST_OBJECT_UNLOCK (pipeline);
 
-  if (latency == GST_CLOCK_TIME_NONE)
-    return GST_BIN_CLASS (parent_class)->do_latency (bin);
-
   GST_DEBUG_OBJECT (pipeline, "querying latency");
 
   query = gst_query_new_latency ();
@@ -707,13 +706,27 @@ gst_pipeline_do_latency (GstBin * bin)
               GST_TIME_ARGS (max_latency), GST_TIME_ARGS (min_latency)));
     }
 
-    if (latency < min_latency) {
-      /* This is a problematic situation as we will most likely drop lots of
-       * data if we configure a too low latency */
-      GST_ELEMENT_WARNING (pipeline, CORE, CLOCK, (NULL),
-          ("Configured latency is lower than detected minimum latency: configured %"
-              GST_TIME_FORMAT " < min %" GST_TIME_FORMAT,
-              GST_TIME_ARGS (latency), GST_TIME_ARGS (min_latency)));
+    /* If no static latency was configured then select the minimum latency */
+    if (latency == GST_CLOCK_TIME_NONE) {
+      latency = min_latency;
+    } else {
+      if (latency < min_latency) {
+        /* This is a problematic situation as we will most likely drop lots of
+         * data if we configure a too low latency */
+        GST_ELEMENT_WARNING (pipeline, CORE, CLOCK, (NULL),
+            ("Configured latency is lower than detected minimum latency: configured %"
+                GST_TIME_FORMAT " < min %" GST_TIME_FORMAT,
+                GST_TIME_ARGS (latency), GST_TIME_ARGS (min_latency)));
+      }
+      if (max_latency < latency) {
+        /* and this is basically the same check as further above. There is not
+         * enough buffering and the pipeline might not work correctly. */
+        GST_ELEMENT_WARNING (pipeline, CORE, CLOCK, (NULL),
+            ("Impossible to configure latency: max %" GST_TIME_FORMAT
+                " < configured %" GST_TIME_FORMAT
+                ". Add queues or other buffering elements.",
+                GST_TIME_ARGS (max_latency), GST_TIME_ARGS (latency)));
+      }
     }
   } else {
     /* this is not a real problem, we just don't configure any latency. */
@@ -722,17 +735,23 @@ gst_pipeline_do_latency (GstBin * bin)
   gst_query_unref (query);
 
 
-  /* configure latency on elements */
-  res =
-      gst_element_send_event (GST_ELEMENT_CAST (pipeline),
-      gst_event_new_latency (latency));
-  if (res) {
-    GST_INFO_OBJECT (pipeline, "configured latency of %" GST_TIME_FORMAT,
-        GST_TIME_ARGS (latency));
-  } else {
-    GST_WARNING_OBJECT (pipeline,
-        "did not really configure latency of %" GST_TIME_FORMAT,
-        GST_TIME_ARGS (latency));
+  if (latency != GST_CLOCK_TIME_NONE) {
+    GST_OBJECT_LOCK (pipeline);
+    pipeline->priv->min_latency = latency;
+    GST_OBJECT_UNLOCK (pipeline);
+
+    /* configure latency on elements */
+    res =
+        gst_element_send_event (GST_ELEMENT_CAST (pipeline),
+        gst_event_new_latency (latency));
+    if (res) {
+      GST_INFO_OBJECT (pipeline, "configured latency of %" GST_TIME_FORMAT,
+          GST_TIME_ARGS (latency));
+    } else {
+      GST_WARNING_OBJECT (pipeline,
+          "did not really configure latency of %" GST_TIME_FORMAT,
+          GST_TIME_ARGS (latency));
+    }
   }
 
   return res;
@@ -1167,4 +1186,53 @@ gst_pipeline_handle_instant_rate (GstPipeline * pipeline, gdouble rate,
   gst_event_set_seqnum (event, seqnum);
 
   return gst_element_send_event (GST_ELEMENT_CAST (pipeline), event);
+}
+
+/**
+ * gst_pipeline_is_live:
+ * @pipeline: a #GstPipeline
+ *
+ * Check if @pipeline is live.
+ *
+ * Returns: %TRUE if @pipeline is live, %FALSE if not or if it did not reach the PAUSED state yet.
+ *
+ * MT safe.
+ *
+ * Since: 1.24
+ */
+gboolean
+gst_pipeline_is_live (GstPipeline * pipeline)
+{
+  gboolean is_live;
+
+  GST_OBJECT_LOCK (pipeline);
+  is_live = pipeline->priv->is_live;
+  GST_OBJECT_UNLOCK (pipeline);
+
+  return is_live;
+}
+
+/**
+ * gst_pipeline_get_configured_latency:
+ * @pipeline: a #GstPipeline
+ *
+ * Return the configured latency on @pipeline.
+ *
+ * Returns: @pipeline configured latency, or %GST_CLOCK_TIME_NONE if none has been configured
+ * because @pipeline did not reach the PLAYING state yet.
+ *
+ * MT safe.
+ *
+ * Since: 1.24
+ */
+GstClockTime
+gst_pipeline_get_configured_latency (GstPipeline * pipeline)
+{
+  GstClockTime min_latency;
+
+  GST_OBJECT_LOCK (pipeline);
+  min_latency = pipeline->priv->min_latency;
+  GST_OBJECT_UNLOCK (pipeline);
+
+  return min_latency;
 }

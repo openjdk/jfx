@@ -25,22 +25,23 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(JIT)
 
-#include "AssemblyHelpers.h"
-#include "FPRInfo.h"
-#include "GPRInfo.h"
-#include "StackAlignment.h"
+#include <JavaScriptCore/AssemblyHelpers.h>
+#include <JavaScriptCore/DisallowMacroScratchRegisterUsage.h>
+#include <JavaScriptCore/FPRInfo.h>
+#include <JavaScriptCore/GPRInfo.h>
+#include <JavaScriptCore/OperationResult.h>
+#include <JavaScriptCore/StackAlignment.h>
 #include <wtf/FunctionTraits.h>
 #include <wtf/ScopedLambda.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
-#if CPU(MIPS) || (OS(WINDOWS) && CPU(X86_64))
-#define POKE_ARGUMENT_OFFSET 4
-#else
 #define POKE_ARGUMENT_OFFSET 0
-#endif
 
 class CallFrame;
 class Structure;
@@ -49,6 +50,7 @@ class RegisteredStructure;
 };
 
 class CCallHelpers : public AssemblyHelpers {
+    WTF_MAKE_TZONE_ALLOCATED(CCallHelpers);
 public:
     CCallHelpers(CodeBlock* codeBlock = nullptr)
         : AssemblyHelpers(codeBlock)
@@ -89,10 +91,45 @@ public:
         poke(GPRInfo::nonArgGPR0, POKE_ARGUMENT_OFFSET + argumentIndex - GPRInfo::numberOfArgumentRegisters);
     }
 
-private:
+    enum class ShuffleStatus : uint8_t {
+        ToMove,
+        BeingMoved,
+        Moved
+    };
 
-    template<unsigned NumberOfRegisters, typename RegType>
-    ALWAYS_INLINE void setupStubArgs(std::array<RegType, NumberOfRegisters> destinations, std::array<RegType, NumberOfRegisters> sources)
+    template<typename RegType, size_t N, typename RegPair = std::pair<RegType, RegType>>
+    void emitShuffleMove(Vector<RegPair, N>& moves, Vector<ShuffleStatus, N>& status, unsigned index, RegType scratch)
+    {
+        status[index] = ShuffleStatus::BeingMoved;
+        for (unsigned i = 0; i < moves.size(); i ++) {
+            if (moves[i].first == moves[index].second) {
+                ASSERT(i != index);
+                switch (status[i]) {
+                case ShuffleStatus::ToMove:
+                    emitShuffleMove(moves, status, i, scratch);
+                    break;
+                case ShuffleStatus::BeingMoved: {
+                    if constexpr (std::is_same_v<RegType, FPRegisterID>)
+                        moveDouble(moves[i].first, scratch);
+                    else
+                        move(moves[i].first, scratch);
+                    moves[i].first = scratch;
+                    break;
+                }
+                case ShuffleStatus::Moved:
+                    break;
+                }
+            }
+        }
+        if constexpr (std::is_same_v<RegType, FPRegisterID>)
+            moveDouble(moves[index].first, moves[index].second);
+        else
+            move(moves[index].first, moves[index].second);
+        status[index] = ShuffleStatus::Moved;
+    }
+
+    template<typename RegType, unsigned NumberOfRegisters>
+    ALWAYS_INLINE void shuffleRegisters(std::array<RegType, NumberOfRegisters> sources, std::array<RegType, NumberOfRegisters> destinations)
     {
         if (ASSERT_ENABLED) {
             RegisterSetBuilder set;
@@ -101,7 +138,7 @@ private:
             ASSERT_WITH_MESSAGE(set.numberOfSetRegisters() == NumberOfRegisters, "Destinations should not be aliased.");
         }
 
-        typedef std::pair<RegType, RegType> RegPair;
+        using RegPair = std::pair<RegType, RegType>;
         Vector<RegPair, NumberOfRegisters> pairs;
 
         // if constexpr avoids warnings when NumberOfRegisters is 0.
@@ -116,109 +153,48 @@ private:
             UNUSED_PARAM(destinations);
         }
 
-#if ASSERT_ENABLED
-        auto numUniqueSources = [&] () -> unsigned {
-            RegisterSetBuilder set;
-            for (auto& pair : pairs) {
-                RegType source = pair.first;
-                set.add(source, IgnoreVectors);
-            }
-            return set.numberOfSetRegisters();
-        };
+        Vector<ShuffleStatus, NumberOfRegisters> status;
+        status.fill(ShuffleStatus::ToMove, pairs.size());
 
-        auto numUniqueDests = [&] () -> unsigned {
-            RegisterSetBuilder set;
-            for (auto& pair : pairs) {
-                RegType dest = pair.second;
-                set.add(dest, IgnoreVectors);
-            }
-            return set.numberOfSetRegisters();
-        };
-#endif
+        RELEASE_ASSERT(m_allowScratchRegister); // We absolutely need one for the recursive shuffle algorithm.
+        auto scratch = scratchRegister();
 
-        while (pairs.size()) {
-            RegisterSet freeDestinations;
-            for (auto& pair : pairs) {
-                RegType dest = pair.second;
-                freeDestinations.add(dest, IgnoreVectors);
-            }
-            for (auto& pair : pairs) {
-                RegType source = pair.first;
-                freeDestinations.remove(source);
-            }
-
-            if (freeDestinations.numberOfSetRegisters()) {
-                bool madeMove = false;
-                for (unsigned i = 0; i < pairs.size(); i++) {
-                    auto& pair = pairs[i];
-                    RegType source = pair.first;
-                    RegType dest = pair.second;
-                    if (freeDestinations.contains(dest, IgnoreVectors)) {
-                        // This means that this setup function cannot handle SIMD vectors as a part of parameters.
-                        // Now, this is guaranteed that we ensure FP parameter is always `double`.
-                        if constexpr (std::is_same_v<RegType, FPRReg>)
-                            moveDouble(source, dest);
+        {
+            DisallowMacroScratchRegisterUsage disallowScratch(*this);
+            for (size_t i = 0; i < pairs.size(); i ++) {
+                if (status[i] == ShuffleStatus::ToMove) {
+                    if constexpr (std::is_same_v<RegType, RegisterID>)
+                        emitShuffleMove(pairs, status, i, scratch);
                         else
-                        move(source, dest);
-                        pairs.remove(i);
-                        madeMove = true;
-                        break;
+                        emitShuffleMove(pairs, status, i, fpTempRegister);
                     }
                 }
-                ASSERT_UNUSED(madeMove, madeMove);
-                continue;
             }
-
-            ASSERT(numUniqueDests() == numUniqueSources());
-            ASSERT(numUniqueDests() == pairs.size());
-            // The set of source and destination registers are equivalent sets. This means we don't have
-            // any free destination registers that won't also clobber a source. We get around this by
-            // exchanging registers.
-
-            RegType source = pairs[0].first;
-            RegType dest = pairs[0].second;
-            if constexpr (std::is_same_v<RegType, FPRReg>)
-                swapDouble(source, dest);
-            else
-            swap(source, dest);
-            pairs.remove(0);
-
-            RegType newSource = source;
-            for (auto& pair : pairs) {
-                RegType source = pair.first;
-                if (source == dest) {
-                    pair.first = newSource;
-                    break;
                 }
-            }
 
-            // We may have introduced pairs that have the same source and destination. Remove those now.
-            for (unsigned i = 0; i < pairs.size(); i++) {
-                auto& pair = pairs[i];
-                if (pair.first == pair.second) {
-                    pairs.remove(i);
-                    i--;
-                }
-            }
-        }
-    }
-
-#if CPU(MIPS)
-    template<unsigned NumCrossSources, unsigned NumberOfRegisters>
-    ALWAYS_INLINE void setupStubCrossArgs(std::array<GPRReg, NumberOfRegisters> destinations, std::array<FPRReg, NumberOfRegisters> sources) {
-        if constexpr (NumCrossSources) {
-        for (unsigned i = 0; i < NumCrossSources; i++) {
-            GPRReg dest = destinations[i];
-            FPRReg source = sources[i];
-
-            moveDouble(source, dest);
-        }
-    }
-        UNUSED_PARAM(destinations);
-        UNUSED_PARAM(sources);
-    }
+    template<unsigned NumberOfJSRs>
+    ALWAYS_INLINE void shuffleJSRs(std::array<JSValueRegs, NumberOfJSRs> sources, std::array<JSValueRegs, NumberOfJSRs> destinations)
+    {
+#if USE(JSVALUE64)
+        constexpr unsigned NumberOfRegisters = NumberOfJSRs;
+#else
+        constexpr unsigned NumberOfRegisters = NumberOfJSRs * 2;
 #endif
+        std::array<GPRReg, NumberOfRegisters> sourceRegs;
+        std::array<GPRReg, NumberOfRegisters> destinationRegs;
 
+        for (unsigned i = 0; i < NumberOfJSRs; ++i) {
+            sourceRegs[i] = sources[i].payloadGPR();
+            destinationRegs[i] = destinations[i].payloadGPR();
+#if !USE(JSVALUE64)
+            sourceRegs[i + NumberOfJSRs] = sources[i].tagGPR();
+            destinationRegs[i + NumberOfJSRs] = destinations[i].tagGPR();
+#endif
+        }
+        shuffleRegisters<GPRReg, NumberOfRegisters>(sourceRegs, destinationRegs);
+    }
+
+private:
     template<typename RegType>
     using InfoTypeForReg = decltype(toInfoFromReg(RegType(-1)));
 
@@ -317,13 +293,8 @@ private:
             return ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke + 1>(*this);
         }
 
-#if OS(WINDOWS) && CPU(X86_64)
-        unsigned argCount(GPRReg) { return numGPRArgs + numFPRArgs; }
-        unsigned argCount(FPRReg) { return numGPRArgs + numFPRArgs; }
-#else
         unsigned argCount(GPRReg) { return numGPRArgs + extraGPRArgs; }
         unsigned argCount(FPRReg) { return numFPRArgs; }
-#endif
 
         // store GPR -> GPR assignments
         std::array<GPRReg, GPRInfo::numberOfRegisters> gprSources;
@@ -367,11 +338,10 @@ private:
 
         currentGPRArgument += extraGPRArgs;
         currentFPRArgument -= numCrossSources;
-#if !(OS(WINDOWS) && CPU(X86_64))
+
         IGNORE_WARNINGS_BEGIN("type-limits")
         ASSERT(currentGPRArgument >= GPRInfo::numberOfArgumentRegisters || currentFPRArgument >= FPRInfo::numberOfArgumentRegisters);
         IGNORE_WARNINGS_END
-#endif
 
         unsigned pokeOffset = POKE_ARGUMENT_OFFSET + extraPoke;
         pokeOffset += std::max(currentGPRArgument, numberOfGPArgumentRegisters) - numberOfGPArgumentRegisters;
@@ -383,7 +353,7 @@ private:
     ALWAYS_INLINE void pokeForArgument(ArgType arg, unsigned currentGPRArgument, unsigned currentFPRArgument, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke)
     {
         unsigned pokeOffset = calculatePokeOffset(currentGPRArgument, currentFPRArgument, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke);
-        if constexpr (std::is_base_of_v<ConstantMaterializer, ArgType>)
+        if constexpr (std::derived_from<ArgType, ConstantMaterializer>)
             arg.store(*this, addressForPoke(pokeOffset));
         else
             poke(arg, pokeOffset);
@@ -410,26 +380,18 @@ private:
 
     // Avoid MSVC optimization time explosion associated with __forceinline in recursive templates.
     template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke, typename RegType, typename... Args>
-    ALWAYS_INLINE_EXCEPT_MSVC void marshallArgumentRegister(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, RegType arg, Args... args)
+    ALWAYS_INLINE void marshallArgumentRegister(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, RegType arg, Args... args)
     {
         using InfoType = InfoTypeForReg<RegType>;
         unsigned numArgRegisters = InfoType::numberOfArgumentRegisters;
-#if OS(WINDOWS) && CPU(X86_64)
-        unsigned currentArgCount = argSourceRegs.argCount(arg) + (std::is_same<RESULT_TYPE, UGPRPair>::value ? 1 : 0);
-#else
         unsigned currentArgCount = argSourceRegs.argCount(arg);
-#endif
         if (currentArgCount < numArgRegisters) {
             auto updatedArgSourceRegs = argSourceRegs.pushRegArg(arg, InfoType::toArgumentRegister(currentArgCount));
             setupArgumentsImpl<OperationType>(updatedArgSourceRegs, args...);
             return;
         }
 
-#if OS(WINDOWS) && CPU(X86_64)
-        pokeForArgument(arg, numGPRArgs + (std::is_same<RESULT_TYPE, UGPRPair>::value ? 1 : 0), numFPRArgs, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke);
-#else
         pokeForArgument(arg, numGPRArgs, numFPRArgs, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke);
-#endif
         setupArgumentsImpl<OperationType>(argSourceRegs.addStackArg(arg), args...);
     }
 
@@ -459,25 +421,14 @@ private:
     }
 
 #else // USE(JSVALUE64)
-#if CPU(ARM_THUMB2) || CPU(MIPS)
+#if CPU(ARM_THUMB2)
 
     template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke, typename... Args>
     void setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, FPRReg arg, Args... args)
     {
         static_assert(std::is_same_v<CURRENT_ARGUMENT_TYPE, double>, "We should only be passing FPRRegs to a double. We use moveDouble / loadDouble / storeDouble exclusively");
 
-        // MIPS and ARM (hardfp, which we require) pass FP arguments in FP registers.
-#if CPU(MIPS)
-        unsigned numberOfFPArgumentRegisters = FPRInfo::numberOfArgumentRegisters;
-        unsigned currentFPArgCount = argSourceRegs.argCount(arg);
-
-        // MIPS can only use FP argument registers if it isn't preceeded by any GP argument.
-        if (currentFPArgCount < numberOfFPArgumentRegisters && !numGPRArgs) {
-            auto updatedArgSourceRegs = argSourceRegs.pushRegArg(arg, FPRInfo::toArgumentRegister(currentFPArgCount));
-            setupArgumentsImpl<OperationType>(updatedArgSourceRegs.addGPRExtraArg().addGPRExtraArg(), args...);
-            return;
-        }
-#elif CPU(ARM_THUMB2)
+        // ARM (hardfp, which we require) passes FP arguments in FP registers.
         unsigned numberOfFPArgumentRegisters = FPRInfo::numberOfArgumentRegisters;
         unsigned currentFPArgCount = argSourceRegs.argCount(arg);
 
@@ -486,31 +437,6 @@ private:
             setupArgumentsImpl<OperationType>(updatedArgSourceRegs, args...);
             return;
         }
-#endif
-
-#if CPU(MIPS)
-        // On MIPS arguments can be passed in GP registers.
-        unsigned numberOfGPArgumentRegisters = GPRInfo::numberOfArgumentRegisters;
-        unsigned currentGPArgCount = argSourceRegs.argCount(GPRInfo::regT0);
-        unsigned alignedGPArgCount = roundUpToMultipleOf<2>(currentGPArgCount);
-
-        if (alignedGPArgCount + 1 < numberOfGPArgumentRegisters) {
-            auto updatedArgSourceRegs = argSourceRegs.pushRegArg(arg, GPRInfo::toArgumentRegister(alignedGPArgCount));
-
-            if (alignedGPArgCount > currentGPArgCount)
-                setupArgumentsImpl<OperationType>(updatedArgSourceRegs.addGPRExtraArg().addGPRExtraArg().addGPRExtraArg(), args...);
-            else
-                setupArgumentsImpl<OperationType>(updatedArgSourceRegs.addGPRExtraArg().addGPRExtraArg(), args...);
-
-            return;
-        }
-
-        if (currentGPArgCount < numberOfGPArgumentRegisters) {
-            pokeForArgument(arg, numGPRArgs, numFPRArgs, numCrossSources, extraGPRArgs + 1, nonArgGPRs, extraPoke);
-            setupArgumentsImpl<OperationType>(argSourceRegs.addGPRExtraArg().addStackArg(arg).addPoke(), args...);
-            return;
-        }
-#endif
 
         // Otherwise pass FP argument on stack.
         if (stackAligned(numGPRArgs, numFPRArgs, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke)) {
@@ -523,8 +449,8 @@ private:
     }
 
     template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke, typename... Args>
-    std::enable_if_t<sizeof(CURRENT_ARGUMENT_TYPE) <= 4>
-    setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, GPRReg arg, Args... args)
+        requires (sizeof(CURRENT_ARGUMENT_TYPE) <= 4)
+    void setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, GPRReg arg, Args... args)
     {
         unsigned numArgRegisters = GPRInfo::numberOfArgumentRegisters;
         unsigned currentArgCount = argSourceRegs.argCount(arg);
@@ -560,8 +486,8 @@ private:
     }
 
     template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke, typename... Args>
-    std::enable_if_t<std::is_same<CURRENT_ARGUMENT_TYPE, EncodedJSValue>::value>
-    setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, CellValue payload, Args... args)
+        requires std::same_as<CURRENT_ARGUMENT_TYPE, EncodedJSValue>
+    void setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, CellValue payload, Args... args)
     {
         unsigned numArgRegisters = GPRInfo::numberOfArgumentRegisters;
         unsigned currentArgCount = argSourceRegs.argCount(payload.gpr());
@@ -582,8 +508,8 @@ private:
     }
 
     template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke, typename... Args>
-    std::enable_if_t<std::is_same<CURRENT_ARGUMENT_TYPE, EncodedJSValue>::value>
-    setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, JSValueRegs arg, Args... args)
+        requires std::same_as<CURRENT_ARGUMENT_TYPE, EncodedJSValue>
+    void setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, JSValueRegs arg, Args... args)
     {
         unsigned numArgRegisters = GPRInfo::numberOfArgumentRegisters;
         unsigned currentArgCount = argSourceRegs.argCount(arg.tagGPR());
@@ -603,89 +529,65 @@ private:
             pokeArgumentsAligned<OperationType>(argSourceRegs, arg.payloadGPR(), arg.tagGPR(), args...);
     }
 
-#endif // CPU(ARM_THUMB2) || CPU(MIPS)
+#endif // CPU(ARM_THUMB2)
 #endif // USE(JSVALUE64)
 
     template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke, typename Arg, typename... Args>
-    ALWAYS_INLINE std::enable_if_t<
-        std::is_base_of<TrustedImm, Arg>::value
-        || std::is_convertible<Arg, TrustedImm>::value> // We have this since DFGSpeculativeJIT has it's own implementation of TrustedImmPtr
-    setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Arg arg, Args... args)
+        requires WTF::DerivedFromOrConvertibleTo<Arg, TrustedImm> // DerivedFromOrConvertibleTo instead of derived_from since DFGSpeculativeJIT has its own implementation of TrustedImmPtr
+    ALWAYS_INLINE void setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Arg arg, Args... args)
     {
         // Right now this only supports non-floating point immediate arguments since we never call operations with non-register values.
         // If we ever needed to support immediate floating point arguments we would need to duplicate this logic for both types, which sounds
         // gross so it's probably better to do that marshalling before the call operation...
-        static_assert(!std::is_floating_point<CURRENT_ARGUMENT_TYPE>::value, "We don't support immediate floats/doubles in setupArguments");
+        static_assert(!std::is_floating_point_v<CURRENT_ARGUMENT_TYPE>, "We don't support immediate floats/doubles in setupArguments");
         auto numArgRegisters = GPRInfo::numberOfArgumentRegisters;
-#if OS(WINDOWS) && CPU(X86_64)
-        auto currentArgCount = numGPRArgs + numFPRArgs + (std::is_same<RESULT_TYPE, UGPRPair>::value ? 1 : 0);
-#else
         auto currentArgCount = numGPRArgs + extraGPRArgs;
-#endif
         if (currentArgCount < numArgRegisters) {
             setupArgumentsImpl<OperationType>(argSourceRegs.addGPRArg(), args...);
             move(arg, GPRInfo::toArgumentRegister(currentArgCount));
             return;
         }
 
-#if OS(WINDOWS) && CPU(X86_64)
-        pokeForArgument(arg, numGPRArgs + (std::is_same<RESULT_TYPE, UGPRPair>::value ? 1 : 0), numFPRArgs, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke);
-#else
         pokeForArgument(arg, numGPRArgs, numFPRArgs, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke);
-#endif
         setupArgumentsImpl<OperationType>(argSourceRegs.addGPRArg(), args...);
     }
 
     template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke, typename Arg, typename... Args>
-    ALWAYS_INLINE std::enable_if_t<
-        std::is_same<CURRENT_ARGUMENT_TYPE, Arg>::value
-        && std::is_integral<CURRENT_ARGUMENT_TYPE>::value
-        && (sizeof(CURRENT_ARGUMENT_TYPE) <= 4)>
-    setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Arg arg, Args... args)
+        requires (std::same_as<CURRENT_ARGUMENT_TYPE, Arg> && std::integral<CURRENT_ARGUMENT_TYPE> && sizeof(CURRENT_ARGUMENT_TYPE) <= 4)
+    ALWAYS_INLINE void setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Arg arg, Args... args)
     {
         setupArgumentsImpl<OperationType>(argSourceRegs, TrustedImm32(arg), args...);
     }
 
     template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke, typename Arg, typename... Args>
-    ALWAYS_INLINE std::enable_if_t<
-        std::is_same<CURRENT_ARGUMENT_TYPE, Arg>::value
-        && std::is_integral<CURRENT_ARGUMENT_TYPE>::value
-        && (sizeof(CURRENT_ARGUMENT_TYPE) == 8)>
-    setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Arg arg, Args... args)
+        requires (std::same_as<CURRENT_ARGUMENT_TYPE, Arg> && std::integral<CURRENT_ARGUMENT_TYPE> && sizeof(CURRENT_ARGUMENT_TYPE) == 8)
+    ALWAYS_INLINE void setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Arg arg, Args... args)
     {
         setupArgumentsImpl<OperationType>(argSourceRegs, TrustedImm64(arg), args...);
     }
 
     template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke, typename Arg, typename... Args>
-    ALWAYS_INLINE std::enable_if_t<
-        std::is_pointer<CURRENT_ARGUMENT_TYPE>::value
-        && std::is_same<Arg, std::nullptr_t>::value>
-    setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Arg arg, Args... args)
+        requires (std::is_pointer_v<CURRENT_ARGUMENT_TYPE> && std::same_as<Arg, std::nullptr_t>)
+    ALWAYS_INLINE void setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Arg arg, Args... args)
     {
         setupArgumentsImpl<OperationType>(argSourceRegs, TrustedImmPtr(arg), args...);
     }
 
     // Special case DFG::RegisteredStructure because it's really annoying to deal with otherwise...
     template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke, typename Arg, typename... Args>
-    ALWAYS_INLINE std::enable_if_t<
-        std::is_same<CURRENT_ARGUMENT_TYPE, Structure*>::value
-        && std::is_same<Arg, DFG::RegisteredStructure>::value>
-    setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Arg arg, Args... args)
+        requires (std::same_as<CURRENT_ARGUMENT_TYPE, Structure*> && std::same_as<Arg, DFG::RegisteredStructure>)
+    ALWAYS_INLINE void setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Arg arg, Args... args)
     {
         setupArgumentsImpl<OperationType>(argSourceRegs, TrustedImmPtr(arg.get()), args...);
     }
 
     template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke, typename Arg, typename... Args>
-    ALWAYS_INLINE std::enable_if_t<std::is_base_of_v<ConstantMaterializer, Arg>>
-    setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Arg arg, Args... args)
+        requires std::derived_from<Arg, ConstantMaterializer>
+    ALWAYS_INLINE void setupArgumentsImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Arg arg, Args... args)
     {
-        static_assert(!std::is_floating_point<CURRENT_ARGUMENT_TYPE>::value, "We don't support immediate floats/doubles in setupArguments");
+        static_assert(!std::is_floating_point_v<CURRENT_ARGUMENT_TYPE>, "We don't support immediate floats/doubles in setupArguments");
         auto numArgRegisters = GPRInfo::numberOfArgumentRegisters;
-#if OS(WINDOWS) && CPU(X86_64)
-        auto currentArgCount = numGPRArgs + numFPRArgs + (std::is_same<RESULT_TYPE, UGPRPair>::value ? 1 : 0);
-#else
         auto currentArgCount = numGPRArgs + extraGPRArgs;
-#endif
         if (currentArgCount < numArgRegisters) {
             setupArgumentsImpl<OperationType>(argSourceRegs.addGPRArg(), args...);
             arg.materialize(*this, GPRInfo::toArgumentRegister(currentArgCount));
@@ -693,11 +595,7 @@ private:
         }
 
 
-#if OS(WINDOWS) && CPU(X86_64)
-        pokeForArgument(arg, numGPRArgs + (std::is_same<RESULT_TYPE, UGPRPair>::value ? 1 : 0), numFPRArgs, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke);
-#else
         pokeForArgument(arg, numGPRArgs, numFPRArgs, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke);
-#endif
         setupArgumentsImpl<OperationType>(argSourceRegs.addGPRArg(), args...);
     }
 
@@ -716,7 +614,7 @@ private:
         // arguments should be passed through FPRRegs. This is asserted in the invocation of the lastly-called
         // setupArgumentsImpl(ArgCollection<>) overload, by matching the number of handled GPR and FPR arguments
         // with the corresponding count of properly-typed arguments for this operation.
-        if (!std::is_same_v<ArgumentType, double>) {
+        if constexpr (!std::is_same_v<ArgumentType, double>) {
             // RV64 calling convention requires all 32-bit values to be sign-extended into the whole register.
             // JSC JIT is tailored for other ISAs that pass these values in 32-bit-wide registers, which RISC-V
             // doesn't support, so any 32-bit value passed in argument registers has to be manually sign-extended.
@@ -760,30 +658,20 @@ private:
         static_assert(gprArgsCount<TraitsType>(std::make_index_sequence<TraitsType::arity>()) == numGPRArgs);
         static_assert(fprArgsCount<TraitsType>(std::make_index_sequence<TraitsType::arity>()) == numFPRArgs);
 
-        setupStubArgs<numGPRSources, GPRReg>(clampArrayToSize<numGPRSources, GPRReg>(argSourceRegs.gprDestinations), clampArrayToSize<numGPRSources, GPRReg>(argSourceRegs.gprSources));
-#if CPU(MIPS)
-        setupStubCrossArgs<numCrossSources>(argSourceRegs.crossDestinations, argSourceRegs.crossSources);
-#else
+        shuffleRegisters<GPRReg, numGPRSources>(clampArrayToSize<numGPRSources, GPRReg>(argSourceRegs.gprSources), clampArrayToSize<numGPRSources, GPRReg>(argSourceRegs.gprDestinations));
         static_assert(!numCrossSources, "shouldn't be used on this architecture.");
-#endif
-        setupStubArgs<numFPRSources, FPRReg>(clampArrayToSize<numFPRSources, FPRReg>(argSourceRegs.fprDestinations), clampArrayToSize<numFPRSources, FPRReg>(argSourceRegs.fprSources));
 
-#if OS(WINDOWS) && CPU(X86_64)
-        if constexpr (std::is_same<RESULT_TYPE, UGPRPair>::value) {
-            unsigned pokeOffset = calculatePokeOffset(numGPRArgs + /* implicit first parameter */ 1, numFPRArgs, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke);
-            addPtr(TrustedImm32(pokeOffset * sizeof(CPURegister)), stackPointerRegister, GPRInfo::argumentGPR0);
-        }
-#endif
+        shuffleRegisters<FPRReg, numFPRSources>(clampArrayToSize<numFPRSources, FPRReg>(argSourceRegs.fprSources), clampArrayToSize<numFPRSources, FPRReg>(argSourceRegs.fprDestinations));
     }
 
     template<typename OperationType, unsigned numGPRArgs, unsigned numGPRSources, unsigned numFPRArgs, unsigned numFPRSources, unsigned numCrossSources, unsigned extraGPRArgs, unsigned nonArgGPRs, unsigned extraPoke, typename... Args>
     ALWAYS_INLINE void setupArgumentsEntryImpl(ArgCollection<numGPRArgs, numGPRSources, numFPRArgs, numFPRSources, numCrossSources, extraGPRArgs, nonArgGPRs, extraPoke> argSourceRegs, Args... args)
     {
         using FirstArgumentType = typename FunctionTraits<OperationType>::template ArgumentType<0>;
-        if constexpr (std::is_same<FirstArgumentType, CallFrame*>::value) {
+        if constexpr (std::same_as<FirstArgumentType, CallFrame*>) {
 #if USE(JSVALUE64)
             // This only really works for 64-bit since jsvalue regs mess things up for 32-bit...
-            static_assert(FunctionTraits<OperationType>::cCallArity() == sizeof...(Args) + 1, "Basic sanity check");
+            static_assert(FunctionTraits<OperationType>::cCallArity() == sizeof...(Args) + 1, "Basic sanity check; Did you explicitly pass callFrameRegister for the first argument?");
 #endif
             setupArgumentsImpl<OperationType>(argSourceRegs, GPRInfo::callFrameRegister, args...);
         } else {
@@ -820,7 +708,7 @@ public:
         setupArgumentsEntryImpl<OperationType>(ArgCollection<0, 0, 0, 0, 0, 0, 0, 0>().pushNonArg(address.base, GPRInfo::nonArgGPR0), args...);
     }
 
-    void setupResults(GPRReg destA, GPRReg destB)
+    void setupResults(GPRReg destA, GPRReg destB = InvalidGPRReg)
     {
         GPRReg srcA = GPRInfo::returnValueGPR;
         GPRReg srcB = GPRInfo::returnValueGPR2;
@@ -850,6 +738,12 @@ public:
 #endif
     }
 
+    void setupResults(FPRReg destA)
+    {
+        if (destA != InvalidFPRReg)
+            moveDouble(FPRInfo::returnValueFPR, destA);
+    }
+
     void jumpToExceptionHandler(VM& vm)
     {
         // genericUnwind() leaves the handler CallFrame* in vm->callFrameForCatch,
@@ -858,20 +752,48 @@ public:
         farJump(GPRInfo::regT1, ExceptionHandlerPtrTag);
     }
 
-    void prepareForTailCallSlow(GPRReg preservedGPR1 = InvalidGPRReg, GPRReg preservedGPR2 = InvalidGPRReg)
+#if USE(JSVALUE64)
+    template<typename T>
+    requires (isExceptionOperationResult<T>)
+    static constexpr GPRReg operationExceptionRegister()
     {
-        RegisterSet preserved;
-        if (preservedGPR1 != InvalidGPRReg)
-            preserved.add(preservedGPR1, IgnoreVectors);
-        if (preservedGPR2 != InvalidGPRReg)
-            preserved.add(preservedGPR2, IgnoreVectors);
+        static_assert(assertNotOperationSignature<T>);
+        if constexpr (std::is_floating_point_v<typename T::ResultType> || std::is_same_v<typename T::ResultType, void>)
+            return GPRInfo::returnValueGPR;
+        else
+        return GPRInfo::returnValueGPR2;
+    }
+#else
+    template<typename T>
+    requires (isExceptionOperationResult<T>)
+    static constexpr GPRReg operationExceptionRegister()
+    {
+        static_assert(assertNotOperationSignature<T>);
+        if constexpr (std::is_same_v<T, ExceptionOperationResult<void>>)
+            return GPRInfo::returnValueGPR;
+        else
+        return GPRInfo::returnValueGPR2;
+    }
+#endif
 
+    template<typename T>
+    requires (!isExceptionOperationResult<T>)
+    static constexpr GPRReg operationExceptionRegister()
+    {
+        static_assert(assertNotOperationSignature<T>);
+        return InvalidGPRReg;
+    }
+
+    void prepareForTailCallSlow(RegisterSet preserved = { })
+    {
         GPRReg temp1 = selectScratchGPR(preserved);
         preserved.add(temp1, IgnoreVectors);
         GPRReg temp2 = selectScratchGPR(preserved);
         preserved.add(temp2, IgnoreVectors);
+#if CPU(ARM64E)
         GPRReg temp3 = selectScratchGPR(preserved);
-
+        preserved.add(temp3, IgnoreVectors);
+#endif
         ASSERT(!preserved.numberOfSetFPRs());
 
         GPRReg newFramePointer = temp1;
@@ -920,25 +842,20 @@ public:
             mul32(TrustedImm32(sizeof(Register)), newFrameSizeGPR, newFrameSizeGPR);
         }
 
-        GPRReg tempGPR = temp3;
-        ASSERT(tempGPR != newFramePointer && tempGPR != newFrameSizeGPR);
-
         // We don't need the current frame beyond this point. Masquerade as our
         // caller.
 #if CPU(ARM_THUMB2) || CPU(ARM64) || CPU(RISCV64)
         loadPtr(Address(framePointerRegister, CallFrame::returnPCOffset()), linkRegister);
         subPtr(TrustedImm32(2 * sizeof(void*)), newFrameSizeGPR);
 #if CPU(ARM64E)
+        GPRReg tempGPR = temp3;
+        ASSERT(tempGPR != newFramePointer && tempGPR != newFrameSizeGPR);
         addPtr(TrustedImm32(sizeof(CallerFrameAndPC)), MacroAssembler::framePointerRegister, tempGPR);
         untagPtr(tempGPR, linkRegister);
         validateUntaggedPtr(linkRegister, tempGPR);
 #endif
-#elif CPU(MIPS)
-        loadPtr(Address(framePointerRegister, sizeof(void*)), returnAddressRegister);
-        subPtr(TrustedImm32(2 * sizeof(void*)), newFrameSizeGPR);
 #elif CPU(X86_64)
-        loadPtr(Address(framePointerRegister, sizeof(void*)), tempGPR);
-        push(tempGPR);
+        push(Address(framePointerRegister, sizeof(void*)));
         subPtr(TrustedImm32(sizeof(void*)), newFrameSizeGPR);
 #else
         UNREACHABLE_FOR_PLATFORM();
@@ -946,19 +863,63 @@ public:
         subPtr(newFrameSizeGPR, newFramePointer);
         loadPtr(Address(framePointerRegister), framePointerRegister);
 
-
         // We need to move the newFrameSizeGPR slots above the stack pointer by
         // newFramePointer registers. We use pointer-sized chunks.
         MacroAssembler::Label copyLoop(label());
 
         subPtr(TrustedImm32(sizeof(void*)), newFrameSizeGPR);
-        loadPtr(BaseIndex(stackPointerRegister, newFrameSizeGPR, TimesOne), tempGPR);
-        storePtr(tempGPR, BaseIndex(newFramePointer, newFrameSizeGPR, TimesOne));
-
+        transferPtr(BaseIndex(stackPointerRegister, newFrameSizeGPR, TimesOne), BaseIndex(newFramePointer, newFrameSizeGPR, TimesOne));
         branchTest32(MacroAssembler::NonZero, newFrameSizeGPR).linkTo(copyLoop, this);
 
         // Ready for a jump!
         move(newFramePointer, stackPointerRegister);
+    }
+
+    static Address addressOfCalleeCalleeFromCallerPerspective(int offset)
+    {
+        CCallHelpers::Address calleeFrame = CCallHelpers::Address(MacroAssembler::stackPointerRegister, 0);
+        return calleeFrame.withOffset(CallFrameSlot::callee * static_cast<int>(sizeof(Register)))
+            // calleeFrame is from the caller's perspective
+            .withOffset(-safeCast<int>(sizeof(CallerFrameAndPC)))
+            .withOffset(PayloadOffset)
+            .withOffset(offset);
+    }
+
+    // This function is used to store the wasm callee in case this function hasn't tiered up yet.
+    // The IPInt is going to expect this so that the common entrypoint can read bytecode/metadata.
+    void storeWasmCalleeToCalleeCallFrame(RegisterID value, int offset = 0)
+    {
+        JIT_COMMENT(*this, "< Store Callee's wasm callee");
+        auto addr = CCallHelpers::addressOfCalleeCalleeFromCallerPerspective(offset);
+#if USE(JSVALUE64)
+        storePtr(value, addr);
+#elif USE(JSVALUE32_64)
+        store32(value, addr.withOffset(PayloadOffset));
+        store32(TrustedImm32(JSValue::NativeCalleeTag), addr.withOffset(TagOffset));
+#else
+#error "Unsupported configuration"
+#endif
+    }
+
+    void storeWasmCalleeToCalleeCallFrame(CalleeBits boxedCallee)
+    {
+        JIT_COMMENT(*this, "> ", RawPointer(boxedCallee.asNativeCallee()));
+        storeWasmCalleeToCalleeCallFrame(TrustedImmPtr(boxedCallee.rawPtr()));
+    }
+
+    void storeWasmCalleeToCalleeCallFrame(TrustedImmPtr imm, int offset = 0)
+    {
+        JIT_COMMENT(*this, "Store Callee's wasm callee");
+        auto addr = CCallHelpers::addressOfCalleeCalleeFromCallerPerspective(offset);
+#if USE(JSVALUE64)
+        store64(imm, addr);
+#elif USE(JSVALUE32_64)
+        move(imm, scratchRegister());
+        store32(scratchRegister(), addr.withOffset(PayloadOffset));
+        store32(TrustedImm32(JSValue::NativeCalleeTag), addr.withOffset(TagOffset));
+#else
+#error "Unsupported configuration"
+#endif
     }
 
     // These operations clobber all volatile registers. They assume that there is room on the top of
@@ -973,8 +934,6 @@ public:
 
     // Leaves behind a pointer to the Packet we should write to in shadowPacket.
     void ensureShadowChickenPacket(VM&, GPRReg shadowPacket, GPRReg scratch1NonArgGPR, GPRReg scratch2);
-
-    static void emitJITCodeOver(CodePtr<JSInternalPtrTag> where, ScopedLambda<void(CCallHelpers&)>, const char*);
 
     void emitCTIThunkPrologue(bool returnAddressAlreadyTagged = false);
     void emitCTIThunkEpilogue();

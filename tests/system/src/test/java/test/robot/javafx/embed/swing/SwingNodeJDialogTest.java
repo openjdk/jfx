@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2017, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,14 +25,26 @@
 
 package test.robot.javafx.embed.swing;
 
-import org.junit.Test;
-import test.util.Util;
-
-import javax.swing.SwingUtilities;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import java.lang.reflect.InvocationTargetException;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import javax.swing.SwingUtilities;
 
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import test.util.Util;
+
+@Timeout(value=15000, unit=TimeUnit.MILLISECONDS)
 public class SwingNodeJDialogTest extends SwingNodeBase {
+
+    @BeforeAll
+    public static void init() throws Exception {
+        if (Util.isOnWayland()) {
+            assumeTrue(Runtime.version().feature() >= 24);
+        }
+    }
 
     @Test
     public void testJDialogAbove() throws InterruptedException, InvocationTargetException {

@@ -32,16 +32,17 @@
 #include "BlobURL.h"
 #include "LegacySchemeRegistry.h"
 #include "OriginAccessEntry.h"
-#include "PublicSuffix.h"
-#include "RuntimeApplicationChecks.h"
+#include "PublicSuffixStore.h"
 #include "SecurityPolicy.h"
 #include <pal/text/TextEncoding.h>
 #include "ThreadableBlobRegistry.h"
 #include <wtf/FileSystem.h>
 #include <wtf/MainThread.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/RuntimeApplicationChecks.h>
 #include <wtf/StdLibExtras.h>
 #include <wtf/URL.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 #if PLATFORM(COCOA)
@@ -51,6 +52,7 @@
 namespace WebCore {
 
 constexpr unsigned maximumURLSize = 0x04000000;
+constexpr unsigned maximumFragmentIdentifierSize = 2u * 1024u * 1024u;
 
 bool SecurityOrigin::shouldIgnoreHost(const URL& url)
 {
@@ -132,7 +134,7 @@ SecurityOrigin::SecurityOrigin(const URL& url)
 }
 
 SecurityOrigin::SecurityOrigin(SecurityOriginData&& data)
-    : m_data(WTFMove(data))
+    : m_data(WTF::move(data))
 {
     initializeShared(m_data.toURL());
 }
@@ -206,6 +208,12 @@ Ref<SecurityOrigin> SecurityOrigin::createOpaque()
     Ref<SecurityOrigin> origin(adoptRef(*new SecurityOrigin));
     ASSERT(origin.get().isOpaque());
     return origin;
+}
+
+SecurityOrigin& SecurityOrigin::opaqueOrigin()
+{
+    static NeverDestroyed<Ref<SecurityOrigin>> origin { createOpaque() };
+    return origin.get();
 }
 
 Ref<SecurityOrigin> SecurityOrigin::createNonLocalWithAllowedFilePath(const URL& url, const String& filePath)
@@ -282,12 +290,12 @@ bool SecurityOrigin::isSameOriginDomain(const SecurityOrigin& other) const
     }
 
     if (canAccess && isLocal())
-        canAccess = passesFileCheck(other);
+        canAccess = hasLocalUnseparatedPath(other);
 
     return canAccess;
 }
 
-bool SecurityOrigin::passesFileCheck(const SecurityOrigin& other) const
+bool SecurityOrigin::hasLocalUnseparatedPath(const SecurityOrigin& other) const
 {
     ASSERT(isLocal() && other.isLocal());
 
@@ -358,11 +366,15 @@ static bool isFeedWithNestedProtocolInHTTPFamily(const URL& url)
 bool SecurityOrigin::canDisplay(const URL& url, const OriginAccessPatterns& patterns) const
 {
     ASSERT(!isInNetworkProcess());
+
+    if (url.string().length() > maximumURLSize)
+        return false;
+
+    if (url.fragmentIdentifier().length() > maximumFragmentIdentifierSize)
+        return false;
+
     if (m_universalAccess)
         return true;
-
-    if (url.pathEnd() > maximumURLSize)
-        return false;
 
 #if !PLATFORM(IOS_FAMILY) && !ENABLE(BUBBLEWRAP_SANDBOX)
     if (m_data.protocol() == "file"_s && url.protocolIsFile() && !FileSystem::filesHaveSameVolume(m_filePath, url.fileSystemPath()))
@@ -395,10 +407,10 @@ bool SecurityOrigin::canDisplay(const URL& url, const OriginAccessPatterns& patt
 SecurityOrigin::Policy SecurityOrigin::canShowNotifications() const
 {
     if (m_universalAccess)
-        return AlwaysAllow;
+        return Policy::AlwaysAllow;
     if (isOpaque())
-        return AlwaysDeny;
-    return Ask;
+        return Policy::AlwaysDeny;
+    return Policy::Ask;
 }
 
 bool SecurityOrigin::isSameOriginAs(const SecurityOrigin& other) const
@@ -414,7 +426,6 @@ bool SecurityOrigin::isSameOriginAs(const SecurityOrigin& other) const
 
 bool SecurityOrigin::isSameSiteAs(const SecurityOrigin& other) const
 {
-#if ENABLE(PUBLIC_SUFFIX_LIST)
     // https://html.spec.whatwg.org/#same-site
     if (isOpaque() != other.isOpaque())
         return false;
@@ -424,14 +435,11 @@ bool SecurityOrigin::isSameSiteAs(const SecurityOrigin& other) const
     if (isOpaque())
         return isSameOriginAs(other);
 
-    auto topDomain = topPrivatelyControlledDomain(domain());
+    auto topDomain = PublicSuffixStore::singleton().topPrivatelyControlledDomain(domain());
     if (topDomain.isEmpty())
         return host() == other.host();
 
-    return topDomain == topPrivatelyControlledDomain(other.domain());
-#else
-    return isSameOriginAs(other);
-#endif // ENABLE(PUBLIC_SUFFIX_LIST)
+    return topDomain == PublicSuffixStore::singleton().topPrivatelyControlledDomain(other.domain());
 }
 
 bool SecurityOrigin::isMatchingRegistrableDomainSuffix(const String& domainSuffix, bool treatIPAddressAsDomain) const
@@ -448,11 +456,7 @@ bool SecurityOrigin::isMatchingRegistrableDomainSuffix(const String& domainSuffi
     if (domainSuffix.length() == host().length())
         return true;
 
-#if ENABLE(PUBLIC_SUFFIX_LIST)
-    return !isPublicSuffix(domainSuffix);
-#else
-    return true;
-#endif
+    return !PublicSuffixStore::singleton().isPublicSuffix(domainSuffix);
 }
 
 bool SecurityOrigin::isPotentiallyTrustworthy() const
@@ -562,7 +566,7 @@ Ref<SecurityOrigin> SecurityOrigin::createFromString(const String& originString)
 Ref<SecurityOrigin> SecurityOrigin::create(const String& protocol, const String& host, std::optional<uint16_t> port)
 {
     String decodedHost = PAL::decodeURLEscapeSequences(host);
-    auto origin = create(URL { protocol + "://" + host + "/" });
+    auto origin = create(URL { makeString(protocol, "://"_s, host, '/') });
     if (port && !WTF::isDefaultPortForProtocol(*port, protocol))
         origin->m_data.setPort(port);
     return origin;
@@ -570,15 +574,15 @@ Ref<SecurityOrigin> SecurityOrigin::create(const String& protocol, const String&
 
 Ref<SecurityOrigin> SecurityOrigin::create(SecurityOriginData&& data)
 {
-    return adoptRef(*new SecurityOrigin(WTFMove(data)));
+    return adoptRef(*new SecurityOrigin(WTF::move(data)));
 }
 
 Ref<SecurityOrigin> SecurityOrigin::create(WebCore::SecurityOriginData&& data, String&& domain, String&& filePath, bool universalAccess, bool domainWasSetInDOM, bool canLoadLocalResources, bool enforcesFilePathSeparation, bool needsStorageAccessFromFileURLsQuirk, std::optional<bool> isPotentiallyTrustworthy, bool isLocal)
 {
     auto origin = adoptRef(*new SecurityOrigin);
-    origin->m_data = WTFMove(data);
-    origin->m_domain = WTFMove(domain);
-    origin->m_filePath = WTFMove(filePath);
+    origin->m_data = WTF::move(data);
+    origin->m_domain = WTF::move(domain);
+    origin->m_filePath = WTF::move(filePath);
     origin->m_universalAccess = universalAccess;
     origin->m_domainWasSetInDOM = domainWasSetInDOM;
     origin->m_canLoadLocalResources = canLoadLocalResources;
@@ -589,22 +593,21 @@ Ref<SecurityOrigin> SecurityOrigin::create(WebCore::SecurityOriginData&& data, S
     return origin;
 }
 
-// FIXME: other should be a const SecurityOrigin& because we assume it is non-null.
-bool SecurityOrigin::equal(const SecurityOrigin* other) const
+bool SecurityOrigin::equal(const SecurityOrigin& other) const
 {
-    if (other == this)
+    if (&other == this)
         return true;
 
-    if (isOpaque() || other->isOpaque())
-        return data().opaqueOriginIdentifier() == other->data().opaqueOriginIdentifier();
+    if (isOpaque() || other.isOpaque())
+        return data().opaqueOriginIdentifier() == other.data().opaqueOriginIdentifier();
 
-    if (!isSameSchemeHostPort(*other))
+    if (!isSameSchemeHostPort(other))
         return false;
 
-    if (m_domainWasSetInDOM != other->m_domainWasSetInDOM)
+    if (m_domainWasSetInDOM != other.m_domainWasSetInDOM)
         return false;
 
-    if (m_domainWasSetInDOM && m_domain != other->m_domain)
+    if (m_domainWasSetInDOM && m_domain != other.m_domain)
         return false;
 
     return true;
@@ -615,10 +618,16 @@ bool SecurityOrigin::isSameSchemeHostPort(const SecurityOrigin& other) const
     if (m_data != other.m_data)
         return false;
 
-    if (isLocal() && !passesFileCheck(other))
+    if (isLocal() && !hasLocalUnseparatedPath(other))
         return false;
 
     return true;
+}
+
+bool SecurityOrigin::isLocalhostAddress(StringView host)
+{
+    // FIXME: Ensure that localhost resolves to the loopback address.
+    return equalLettersIgnoringASCIICase(host, "localhost"_s) || host.endsWithIgnoringASCIICase(".localhost"_s);
 }
 
 bool SecurityOrigin::isLocalHostOrLoopbackIPAddress(StringView host)
@@ -626,8 +635,7 @@ bool SecurityOrigin::isLocalHostOrLoopbackIPAddress(StringView host)
     if (isLoopbackIPAddress(host))
         return true;
 
-    // FIXME: Ensure that localhost resolves to the loopback address.
-    if (equalLettersIgnoringASCIICase(host, "localhost"_s) || host.endsWithIgnoringASCIICase(".localhost"_s))
+    if (isLocalhostAddress(host))
         return true;
 
     return false;

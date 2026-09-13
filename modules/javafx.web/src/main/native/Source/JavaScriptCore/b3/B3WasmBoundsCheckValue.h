@@ -30,6 +30,8 @@
 #include "B3Value.h"
 #include "CCallHelpers.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC { namespace B3 {
 
 class WasmBoundsCheckValue final : public Value {
@@ -48,7 +50,7 @@ public:
         size_t maximum;
     };
 
-    unsigned offset() const { return m_offset; }
+    uint64_t offset() const { return m_offset; }
     Type boundsType() const { return m_boundsType; }
     Bounds bounds() const { return m_bounds; }
 
@@ -61,18 +63,20 @@ private:
     friend class Procedure;
     friend class Value;
 
-    static Opcode opcodeFromConstructor(Origin, GPRReg, Value*, unsigned) { return WasmBoundsCheck; }
-    JS_EXPORT_PRIVATE WasmBoundsCheckValue(Origin, GPRReg pinnedGPR, Value* ptr, unsigned offset);
+    static Opcode opcodeFromConstructor(Origin, GPRReg, Value*, uint64_t) { return WasmBoundsCheck; }
+    JS_EXPORT_PRIVATE WasmBoundsCheckValue(Origin, GPRReg pinnedGPR, Value* ptr, uint64_t offset);
 
-    static Opcode opcodeFromConstructor(Origin, Value*, unsigned, size_t) { return WasmBoundsCheck; }
-    JS_EXPORT_PRIVATE WasmBoundsCheckValue(Origin, Value* ptr, unsigned offset, size_t maximum);
+    static Opcode opcodeFromConstructor(Origin, Value*, uint64_t, size_t) { return WasmBoundsCheck; }
+    JS_EXPORT_PRIVATE WasmBoundsCheckValue(Origin, Value* ptr, uint64_t offset, size_t maximum);
 
-    unsigned m_offset;
+    uint64_t m_offset;
     Type m_boundsType;
     Bounds m_bounds;
 
 };
 
 } } // namespace JSC::B3
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(B3_JIT)

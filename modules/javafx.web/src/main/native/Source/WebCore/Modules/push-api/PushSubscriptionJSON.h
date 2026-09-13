@@ -25,9 +25,7 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
-#include "EpochTimeStamp.h"
+#include <WebCore/EpochTimeStamp.h>
 
 #include <optional>
 #include <wtf/KeyValuePair.h>
@@ -42,5 +40,3 @@ struct PushSubscriptionJSON {
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

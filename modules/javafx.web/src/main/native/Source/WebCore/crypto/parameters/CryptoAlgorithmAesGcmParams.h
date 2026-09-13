@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,6 +34,7 @@
 namespace WebCore {
 
 class CryptoAlgorithmAesGcmParams final : public CryptoAlgorithmParameters {
+    WTF_MAKE_TZONE_ALLOCATED(CryptoAlgorithmAesGcmParams);
 public:
     BufferSource iv;
     // Use additionalDataVector() instead of additionalData. The label will be gone once additionalDataVector() is called.
@@ -47,7 +48,7 @@ public:
         if (!m_ivVector.isEmpty() || !iv.length())
             return m_ivVector;
 
-        m_ivVector.append(iv.data(), iv.length());
+        m_ivVector.append(iv.span());
         return m_ivVector;
     }
 
@@ -56,12 +57,11 @@ public:
         if (!m_additionalDataVector.isEmpty() || !additionalData)
             return m_additionalDataVector;
 
-        BufferSource additionalDataBuffer = WTFMove(*additionalData);
-        additionalData = std::nullopt;
+        BufferSource additionalDataBuffer = *std::exchange(additionalData, std::nullopt);
         if (!additionalDataBuffer.length())
             return m_additionalDataVector;
 
-        m_additionalDataVector.append(additionalDataBuffer.data(), additionalDataBuffer.length());
+        m_additionalDataVector.append(additionalDataBuffer.span());
         return m_additionalDataVector;
     }
 

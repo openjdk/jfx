@@ -27,7 +27,7 @@
 
 #if ENABLE(WEBGL)
 
-#include "GraphicsContextGL.h"
+#include <WebCore/GraphicsContextGL.h>
 #include <wtf/HashCountedSet.h>
 #include <wtf/HashMap.h>
 #include <wtf/HashTraits.h>

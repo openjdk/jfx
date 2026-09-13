@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,9 +27,10 @@
 #if ENABLE(WEB_AUDIO)
 
 #include "AudioUtilities.h"
-#include <wtf/CryptographicallyRandomNumber.h>
+#include <random>
+#include <wtf/HashFunctions.h>
 #include <wtf/MathExtras.h>
-#include <wtf/WeakRandom.h>
+#include <wtf/WeakRandomNumber.h>
 
 namespace WebCore {
 
@@ -77,11 +78,28 @@ size_t timeToSampleFrame(double time, double sampleRate, SampleFrameRounding rou
     return static_cast<size_t>(frame);
 }
 
-void applyNoise(float* values, size_t numberOfElementsToProcess, float magnitude)
+void applyNoise(std::span<float> values, float standardDeviation)
 {
-    WeakRandom generator;
-    for (size_t i = 0; i < numberOfElementsToProcess; ++i)
-        values[i] *= 1 + magnitude * (2 * generator.get() - 1);
+    std::random_device device;
+    std::mt19937 generator(device());
+    std::normal_distribution<float> distribution(1, standardDeviation);
+
+    constexpr auto maximumTableSize = 2048;
+    constexpr auto minimumTableSize = 1024;
+
+    size_t unusedCellCount = weakRandomNumber<uint32_t>() % (maximumTableSize - minimumTableSize);
+    size_t tableSize = maximumTableSize - unusedCellCount;
+
+    // Avoid heap allocations on the rendering thread.
+    std::array<float, maximumTableSize> multipliers;
+    multipliers.fill(std::numeric_limits<float>::infinity());
+
+    for (auto& value : values) {
+        auto& multiplier = multipliers[DefaultHash<double>::hash(value) % tableSize];
+        if (std::isinf(multiplier))
+            multiplier = distribution(generator);
+        value *= multiplier;
+    }
 }
 
 } // AudioUtilites

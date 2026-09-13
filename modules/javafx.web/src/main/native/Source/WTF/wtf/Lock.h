@@ -31,6 +31,11 @@
 #include <wtf/Noncopyable.h>
 #include <wtf/Seconds.h>
 #include <wtf/ThreadSafetyAnalysis.h>
+#include <wtf/ThreadSanitizerSupport.h>
+
+#if ENABLE(UNFAIR_LOCK)
+#include <os/lock.h>
+#endif
 
 namespace TestWebKitAPI {
 struct LockInspector;
@@ -56,19 +61,23 @@ typedef LockAlgorithm<uint8_t, 1, 2> DefaultLockAlgorithm;
 // use lock capability annotations defined in ThreadSafetyAnalysis.h.
 class WTF_CAPABILITY_LOCK Lock {
     WTF_MAKE_NONCOPYABLE(Lock);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Lock);
 public:
     constexpr Lock() = default;
 
     void lock() WTF_ACQUIRES_LOCK()
     {
-        if (UNLIKELY(!DefaultLockAlgorithm::lockFastAssumingZero(m_byte)))
+        if (!DefaultLockAlgorithm::lockFastAssumingZero(m_byte)) [[unlikely]]
             lockSlow();
+        TSAN_ANNOTATE_HAPPENS_AFTER(this);
     }
 
     bool tryLock() WTF_ACQUIRES_LOCK_IF(true) // NOLINT: Intentional deviation to support std::scoped_lock.
     {
-        return DefaultLockAlgorithm::tryLock(m_byte);
+        bool success = DefaultLockAlgorithm::tryLock(m_byte);
+        if (success)
+            TSAN_ANNOTATE_HAPPENS_AFTER(this);
+        return success;
     }
 
     // Need this version for std::unique_lock.
@@ -89,7 +98,8 @@ public:
     // guarantees that long critical sections always get a fair lock.
     void unlock() WTF_RELEASES_LOCK()
     {
-        if (UNLIKELY(!DefaultLockAlgorithm::unlockFastAssumingZero(m_byte)))
+        TSAN_ANNOTATE_HAPPENS_BEFORE(this);
+        if (!DefaultLockAlgorithm::unlockFastAssumingZero(m_byte)) [[unlikely]]
             unlockSlow();
     }
 
@@ -100,13 +110,14 @@ public:
     // want.
     void unlockFairly() WTF_RELEASES_LOCK()
     {
-        if (UNLIKELY(!DefaultLockAlgorithm::unlockFastAssumingZero(m_byte)))
+        TSAN_ANNOTATE_HAPPENS_BEFORE(this);
+        if (!DefaultLockAlgorithm::unlockFastAssumingZero(m_byte)) [[unlikely]]
             unlockFairlySlow();
     }
 
     void safepoint()
     {
-        if (UNLIKELY(!DefaultLockAlgorithm::safepointFast(m_byte)))
+        if (!DefaultLockAlgorithm::safepointFast(m_byte)) [[unlikely]]
             safepointSlow();
     }
 
@@ -118,6 +129,11 @@ public:
     bool isLocked() const
     {
         return isHeld();
+    }
+
+    void assertIsOwner() const
+    {
+        ASSERT(isHeld());
     }
 
 private:
@@ -145,64 +161,38 @@ private:
 // declaration.
 inline void assertIsHeld(const Lock& lock) WTF_ASSERTS_ACQUIRED_LOCK(lock) { ASSERT_UNUSED(lock, lock.isHeld()); }
 
-// Locker specialization to use with Lock.
-// Non-movable simple scoped lock holder.
-// Example: Locker locker { m_lock };
-template <>
-class WTF_CAPABILITY_SCOPED_LOCK Locker<Lock> : public AbstractLocker {
+#if ENABLE(UNFAIR_LOCK)
+class WTF_CAPABILITY_LOCK UnfairLock {
+    WTF_MAKE_NONCOPYABLE(UnfairLock);
 public:
-    explicit Locker(Lock& lock) WTF_ACQUIRES_LOCK(lock)
-        : m_lock(lock)
-        , m_isLocked(true)
+    void lock() WTF_ACQUIRES_LOCK()
     {
-        m_lock.lock();
+        os_unfair_lock_lock(&m_lock);
+        TSAN_ANNOTATE_HAPPENS_AFTER(this);
     }
-    Locker(AdoptLockTag, Lock& lock) WTF_REQUIRES_LOCK(lock)
-        : m_lock(lock)
-        , m_isLocked(true)
+    void unlock() WTF_RELEASES_LOCK()
     {
+        TSAN_ANNOTATE_HAPPENS_BEFORE(this);
+        os_unfair_lock_unlock(&m_lock);
     }
-    ~Locker() WTF_RELEASES_LOCK()
+    void assertIsOwner() const
     {
-        if (m_isLocked)
-            m_lock.unlock();
+        os_unfair_lock_assert_owner(&m_lock);
     }
-    void unlockEarly() WTF_RELEASES_LOCK()
-    {
-        ASSERT(m_isLocked);
-        m_isLocked = false;
-        m_lock.unlock();
-    }
-    Locker(const Locker<Lock>&) = delete;
-    Locker& operator=(const Locker<Lock>&) = delete;
+
+    UnfairLock() = default;
 
 private:
-    // Support DropLockForScope even though it doesn't support thread safety analysis.
-    template<typename>
-    friend class DropLockForScope;
-
-    void lock() WTF_ACQUIRES_LOCK(m_lock)
-    {
-        m_lock.lock();
-        compilerFence();
-    }
-
-    void unlock() WTF_RELEASES_LOCK(m_lock)
-    {
-        compilerFence();
-        m_lock.unlock();
-    }
-
-    Lock& m_lock;
-    bool m_isLocked { false };
+    os_unfair_lock m_lock = OS_UNFAIR_LOCK_INIT;
 };
 
-Locker(Lock&) -> Locker<Lock>;
-Locker(AdoptLockTag, Lock&) -> Locker<Lock>;
-
-using LockHolder = Locker<Lock>;
+inline void assertIsHeld(const UnfairLock& lock) WTF_ASSERTS_ACQUIRED_LOCK(lock) { lock.assertIsOwner(); }
+#endif // ENABLE(UNFAIR_LOCK)
 
 } // namespace WTF
 
 using WTF::Lock;
-using WTF::LockHolder;
+
+#if ENABLE(UNFAIR_LOCK)
+using WTF::UnfairLock;
+#endif

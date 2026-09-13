@@ -25,33 +25,49 @@
 
 #pragma once
 
-#if ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(IOS_FAMILY)
+#if ENABLE(WIRELESS_PLAYBACK_TARGET)
 
-#include "MediaPlaybackTarget.h"
+#include <WebCore/MediaPlaybackTarget.h>
+#include <wtf/Forward.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-class MediaPlaybackTargetMock : public MediaPlaybackTarget {
-public:
-    WEBCORE_EXPORT static Ref<MediaPlaybackTarget> create(const String&, MediaPlaybackTargetContext::MockState);
-
-    virtual ~MediaPlaybackTargetMock();
-
-    TargetType targetType() const final { return MediaPlaybackTarget::TargetType::Mock; }
-    const MediaPlaybackTargetContext& targetContext() const final { return m_context; }
-
-    MediaPlaybackTargetContext::MockState state() const { return m_context.mockState(); }
-
-protected:
-    MediaPlaybackTargetMock(const String&, MediaPlaybackTargetContext::MockState);
-
-    MediaPlaybackTargetContext m_context;
+enum class MediaPlaybackTargetMockState : uint8_t {
+    Unknown = 0,
+    OutputDeviceUnavailable = 1,
+    OutputDeviceAvailable = 2,
 };
 
-MediaPlaybackTargetMock* toMediaPlaybackTargetMock(MediaPlaybackTarget*);
-const MediaPlaybackTargetMock* toMediaPlaybackTargetMock(const MediaPlaybackTarget*);
+class MediaPlaybackTargetMock final : public MediaPlaybackTarget {
+public:
+    using State = MediaPlaybackTargetMockState;
 
+    WEBCORE_EXPORT static Ref<MediaPlaybackTargetMock> create(const String& mockDeviceName, State);
+
+    ~MediaPlaybackTargetMock();
+
+    State state() const { return m_mockState; }
+
+private:
+    MediaPlaybackTargetMock(const String& mockDeviceName, State);
+
+    // MediaPlaybackTarget
+    String deviceName() const final { return m_mockDeviceName; }
+    bool hasActiveRoute() const final { return !m_mockDeviceName.isEmpty(); }
+    bool supportsRemoteVideoPlayback() const final { return !m_mockDeviceName.isEmpty(); }
+
+    String m_mockDeviceName;
+    State m_mockState;
+};
+
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::MediaPlaybackTargetMock)
+static bool isType(const WebCore::MediaPlaybackTarget& target)
+{
+    return target.type() ==  WebCore::MediaPlaybackTargetType::Mock;
 }
+SPECIALIZE_TYPE_TRAITS_END()
 
-#endif // ENABLE(WIRELESS_PLAYBACK_TARGET) && !PLATFORM(IOS_FAMILY)
+#endif // ENABLE(WIRELESS_PLAYBACK_TARGET)

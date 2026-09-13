@@ -34,34 +34,37 @@
 #include <wtf/CompletionHandler.h>
 #include <wtf/LoggerHelper.h>
 #include <wtf/NeverDestroyed.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/UUID.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/StringView.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MockMediaSessionCoordinator);
+
 Ref<MockMediaSessionCoordinator> MockMediaSessionCoordinator::create(ScriptExecutionContext& context, RefPtr<StringCallback>&& listener)
 {
-    return adoptRef(*new MockMediaSessionCoordinator(context, WTFMove(listener)));
+    return adoptRef(*new MockMediaSessionCoordinator(context, WTF::move(listener)));
 }
 
 MockMediaSessionCoordinator::MockMediaSessionCoordinator(ScriptExecutionContext& context, RefPtr<StringCallback>&& listener)
     : m_context(context)
-    , m_stateChangeListener(WTFMove(listener))
+    , m_stateChangeListener(WTF::move(listener))
 {
 }
 
 std::optional<Exception> MockMediaSessionCoordinator::result() const
 {
     if (m_failCommands)
-        return Exception { InvalidStateError };
+        return Exception { ExceptionCode::InvalidStateError };
 
     return std::nullopt;
 }
 
 void MockMediaSessionCoordinator::join(CompletionHandler<void(std::optional<Exception>&&)>&& callback)
 {
-    m_context->postTask([this, callback = WTFMove(callback)] (ScriptExecutionContext&) mutable {
+    m_context->postTask([this, callback = WTF::move(callback)] (ScriptExecutionContext&) mutable {
         callback(result());
     });
 }
@@ -73,7 +76,7 @@ void MockMediaSessionCoordinator::leave()
 void MockMediaSessionCoordinator::seekTo(double time, CompletionHandler<void(std::optional<Exception>&&)>&& callback)
 {
     ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER, time);
-    m_context->postTask([this, callback = WTFMove(callback)] (ScriptExecutionContext&) mutable {
+    m_context->postTask([this, callback = WTF::move(callback)] (ScriptExecutionContext&) mutable {
         callback(result());
     });
 }
@@ -81,7 +84,7 @@ void MockMediaSessionCoordinator::seekTo(double time, CompletionHandler<void(std
 void MockMediaSessionCoordinator::play(CompletionHandler<void(std::optional<Exception>&&)>&& callback)
 {
     ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER);
-    m_context->postTask([this, callback = WTFMove(callback)] (ScriptExecutionContext&) mutable {
+    m_context->postTask([this, callback = WTF::move(callback)] (ScriptExecutionContext&) mutable {
         callback(result());
     });
 }
@@ -89,7 +92,7 @@ void MockMediaSessionCoordinator::play(CompletionHandler<void(std::optional<Exce
 void MockMediaSessionCoordinator::pause(CompletionHandler<void(std::optional<Exception>&&)>&& callback)
 {
     ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER);
-    m_context->postTask([this, callback = WTFMove(callback)] (ScriptExecutionContext&) mutable {
+    m_context->postTask([this, callback = WTF::move(callback)] (ScriptExecutionContext&) mutable {
         callback(result());
     });
 }
@@ -97,7 +100,7 @@ void MockMediaSessionCoordinator::pause(CompletionHandler<void(std::optional<Exc
 void MockMediaSessionCoordinator::setTrack(const String&, CompletionHandler<void(std::optional<Exception>&&)>&& callback)
 {
     ALWAYS_LOG_IF_POSSIBLE(LOGIDENTIFIER);
-    m_context->postTask([this, callback = WTFMove(callback)] (ScriptExecutionContext&) mutable {
+    m_context->postTask([this, callback = WTF::move(callback)] (ScriptExecutionContext&) mutable {
         callback(result());
     });
 }

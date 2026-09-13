@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 Yusuke Suzuki <utatane.tea@gmail.com>.
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,11 +27,13 @@
 #pragma once
 
 #include "AdaptiveInferredPropertyValueWatchpointBase.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
 template<typename WatchpointSet>
 class ObjectPropertyChangeAdaptiveWatchpoint final : public AdaptiveInferredPropertyValueWatchpointBase {
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(ObjectPropertyChangeAdaptiveWatchpoint);
 public:
     using Base = AdaptiveInferredPropertyValueWatchpointBase;
     ObjectPropertyChangeAdaptiveWatchpoint(JSCell* owner, const ObjectPropertyCondition& condition, WatchpointSet& watchpointSet)
@@ -44,7 +47,7 @@ public:
 private:
     bool isValid() const final
     {
-        return m_owner->isLive();
+        return !m_owner->isPendingDestruction();
     }
 
     void handleFire(VM& vm, const FireDetail&) final
@@ -55,5 +58,7 @@ private:
     JSCell* m_owner;
     WatchpointSet& m_watchpointSet;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<typename WatchpointSet>, ObjectPropertyChangeAdaptiveWatchpoint<WatchpointSet>);
 
 } // namespace JSC

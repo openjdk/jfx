@@ -20,10 +20,11 @@
 
 #pragma once
 
-#include <wtf/EnumTraits.h>
+#include <wtf/Platform.h>
 #include <wtf/RefCounted.h>
 #include <wtf/URL.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakRef.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
 
@@ -31,34 +32,13 @@ namespace WebCore {
 
 class Page;
 
-enum class PluginLoadClientPolicy : uint8_t {
-    // No client-specific plug-in load policy has been defined. The plug-in should be visible in navigator.plugins and WebKit should synchronously
-    // ask the client whether the plug-in should be loaded.
-    Undefined = 0,
-
-    // The plug-in module should be blocked from being instantiated. The plug-in should be hidden in navigator.plugins.
-    Block,
-
-    // WebKit should synchronously ask the client whether the plug-in should be loaded. The plug-in should be visible in navigator.plugins.
-    Ask,
-
-    // The plug-in module may be loaded if WebKit is not blocking it.
-    Allow,
-
-    // The plug-in module should be loaded irrespective of whether WebKit has asked it to be blocked.
-    AllowAlways,
-};
-
 struct MimeClassInfo {
     AtomString type;
     String desc;
     Vector<String> extensions;
-};
 
-inline bool operator==(const MimeClassInfo& a, const MimeClassInfo& b)
-{
-    return a.type == b.type && a.desc == b.desc && a.extensions == b.extensions;
-}
+    friend bool operator==(const MimeClassInfo&, const MimeClassInfo&) = default;
+};
 
 struct PluginInfo {
     String name;
@@ -67,22 +47,13 @@ struct PluginInfo {
     Vector<MimeClassInfo> mimes;
     bool isApplicationPlugin { false };
 
-    PluginLoadClientPolicy clientLoadPolicy { PluginLoadClientPolicy::Undefined };
-
     String bundleIdentifier;
 #if PLATFORM(MAC)
     String versionString;
 #endif
-};
 
-inline bool operator==(PluginInfo& a, PluginInfo& b)
-{
-    bool result = a.name == b.name && a.file == b.file && a.desc == b.desc && a.mimes == b.mimes && a.isApplicationPlugin == b.isApplicationPlugin && a.clientLoadPolicy == b.clientLoadPolicy && a.bundleIdentifier == b.bundleIdentifier;
-#if PLATFORM(MAC)
-    result = result && a.versionString == b.versionString;
-#endif
-    return result;
-}
+    friend bool operator==(const PluginInfo&, const PluginInfo&) = default;
+};
 
 struct SupportedPluginIdentifier {
     String matchingDomain;
@@ -117,7 +88,7 @@ private:
     void initPlugins();
 
 protected:
-    Page& m_page;
+    WeakRef<Page> m_page;
     Vector<PluginInfo> m_plugins;
     std::optional<Vector<SupportedPluginIdentifier>> m_supportedPluginIdentifiers;
 

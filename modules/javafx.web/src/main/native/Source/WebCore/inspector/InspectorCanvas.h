@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,17 +26,24 @@
 
 #pragma once
 
-#include "InspectorCanvasCallTracer.h"
+#include "CanvasRenderingContext2DBase.h"
+#include "InspectorCanvasProcessedArguments.h"
+#include "WebGL2RenderingContext.h"
+#include "WebGLRenderingContextBase.h"
 #include <JavaScriptCore/AsyncStackTrace.h>
 #include <JavaScriptCore/InspectorProtocolObjects.h>
 #include <JavaScriptCore/ScriptCallFrame.h>
 #include <JavaScriptCore/ScriptCallStack.h>
-#include <variant>
 #include <wtf/HashSet.h>
+#include <wtf/WeakRef.h>
+
+namespace JSC {
+class JSValue;
+class JSGlobalObject;
+}
 
 namespace WebCore {
 
-class CSSStyleImageValue;
 class CanvasGradient;
 class CanvasPattern;
 class Element;
@@ -45,8 +53,11 @@ class HTMLVideoElement;
 class ImageBitmap;
 class ImageData;
 class OffscreenCanvas;
+class CSSStyleImageValue;
 
-class InspectorCanvas final : public RefCounted<InspectorCanvas> {
+template<typename> struct InspectorCanvasArgumentProcessor;
+
+class InspectorCanvas final : public RefCountedAndCanMakeWeakPtr<InspectorCanvas> {
 public:
     static Ref<InspectorCanvas> create(CanvasRenderingContext&);
 
@@ -68,13 +79,7 @@ public:
     bool hasRecordingData() const;
     bool currentFrameHasData() const;
 
-    // InspectorCanvasCallTracer
-#define PROCESS_ARGUMENT_DECLARATION(ArgumentType) \
-    std::optional<InspectorCanvasCallTracer::ProcessedArgument> processArgument(ArgumentType); \
-// end of PROCESS_ARGUMENT_DECLARATION
-    FOR_EACH_INSPECTOR_CANVAS_CALL_TRACER_ARGUMENT(PROCESS_ARGUMENT_DECLARATION)
-#undef PROCESS_ARGUMENT_DECLARATION
-    void recordAction(String&&, InspectorCanvasCallTracer::ProcessedArguments&& = { });
+    void recordAction(String&&, InspectorCanvasProcessedArguments&& = { });
 
     Ref<JSON::ArrayOf<Inspector::Protocol::Recording::Frame>> releaseFrames() { return m_frames.releaseNonNull(); }
 
@@ -97,11 +102,13 @@ public:
     Inspector::Protocol::ErrorStringOr<String> getContentAsDataURL() { return getContentAsDataURL(m_context); };
 
 private:
+    template<typename> friend struct InspectorCanvasArgumentProcessor;
+
     explicit InspectorCanvas(CanvasRenderingContext&);
 
     void appendActionSnapshotIfNeeded();
 
-    using DuplicateDataVariant = std::variant<
+    using DuplicateDataVariant = Variant<
         RefPtr<CanvasGradient>,
         RefPtr<CanvasPattern>,
         RefPtr<HTMLCanvasElement>,
@@ -125,14 +132,14 @@ private:
     Ref<JSON::Value> valueIndexForData(DuplicateDataVariant);
     String stringIndexForKey(const String&);
     Ref<Inspector::Protocol::Recording::InitialState> buildInitialState();
-    Ref<JSON::ArrayOf<JSON::Value>> buildAction(String&&, InspectorCanvasCallTracer::ProcessedArguments&& = { });
+    Ref<JSON::ArrayOf<JSON::Value>> buildAction(String&&, InspectorCanvasProcessedArguments&& = { });
     Ref<JSON::ArrayOf<JSON::Value>> buildArrayForCanvasGradient(const CanvasGradient&);
     Ref<JSON::ArrayOf<JSON::Value>> buildArrayForCanvasPattern(const CanvasPattern&);
     Ref<JSON::ArrayOf<JSON::Value>> buildArrayForImageData(const ImageData&);
 
     String m_identifier;
 
-    CheckedRef<CanvasRenderingContext> m_context;
+    WeakRef<CanvasRenderingContext> m_context;
 
     RefPtr<Inspector::Protocol::Recording::InitialState> m_initialState;
     RefPtr<JSON::ArrayOf<Inspector::Protocol::Recording::Frame>> m_frames;

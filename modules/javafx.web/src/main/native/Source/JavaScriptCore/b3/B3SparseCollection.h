@@ -57,9 +57,14 @@ public:
 
         value->m_index = index;
         ASSERT(!m_vector[index]);
-        new (NotNull, &m_vector[index]) std::unique_ptr<T>(WTFMove(value));
+        new (NotNull, &m_vector[index]) std::unique_ptr<T>(WTF::move(value));
 
         return result;
+    }
+
+    T* cloneAndAdd(const T& node)
+    {
+        return add(makeUnique<T>(node));
     }
 
     template<typename... Arguments>
@@ -103,7 +108,7 @@ public:
 
             auto& value = m_vector[endIndex];
             value->m_index = holeIndex;
-            m_vector[holeIndex] = WTFMove(value);
+            m_vector[holeIndex] = WTF::move(value);
             ++holeIndex;
         }
 

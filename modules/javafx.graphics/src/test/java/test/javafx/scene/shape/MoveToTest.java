@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -36,25 +36,31 @@ import test.javafx.scene.NodeTest;
 import javafx.scene.Scene;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.Path;
-import org.junit.Test;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class MoveToTest {
 
-    @Test public void testAddTo() throws Exception {
+    @Test
+    public void testAddTo() throws Exception {
         //TODO
     }
 
-    @Test public void testSetGetX() throws Exception {
+    @Test
+    public void testSetGetX() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new MoveTo(), "x", 123.2, 0.0);
     }
 
-    @Test public void testSetGetY() throws Exception {
+    @Test
+    public void testSetGetY() throws Exception {
         TestUtils.testDoublePropertyGetterSetter(new MoveTo(), "y", 123.2, 0.0);
     }
 
-    @Test public void testDoubleBoundPropertySynced_X() {
+    @Test
+    public void testDoubleBoundPropertySynced_X() {
         double expected = 123.4;
         MoveTo moveTo = new MoveTo(10.0, 10.0);
         DoubleProperty v = new SimpleDoubleProperty(10.0);
@@ -75,7 +81,8 @@ public class MoveToTest {
         assertEquals(expected, coords[0], 0.001);
     }
 
-     @Test public void testDoubleBoundPropertySynced_Y() {
+     @Test
+     public void testDoubleBoundPropertySynced_Y() {
          double expected = 432.1;
         MoveTo moveTo = new MoveTo(10.0, 10.0);
         DoubleProperty v = new SimpleDoubleProperty(10.0);
@@ -96,7 +103,8 @@ public class MoveToTest {
         assertEquals(expected, coords[1], 0.001);
     }
 
-    @Test public void toStringShouldReturnNonEmptyString() {
+    @Test
+    public void toStringShouldReturnNonEmptyString() {
         String s = new MoveTo().toString();
         assertNotNull(s);
         assertFalse(s.isEmpty());

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,21 +25,23 @@
 
 package com.sun.javafx.scene.layout.region;
 
+import com.sun.javafx.util.InterpolationUtils;
+import javafx.animation.Interpolatable;
 import javafx.scene.text.Font;
-
 import javafx.css.Size;
 import javafx.css.SizeUnits;
 import javafx.css.ParsedValue;
 import javafx.css.StyleConverter;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
+import java.util.Objects;
 
 /**
  * Similar to Insets but with flag denoting values are proportional.
  * If proportional is true, then the values represent fractions or percentages
- * and are in the range 0..1, although this is not enforced.
+ * where 0 corresponds to 0%, and 1 corresponds to 100%.
  */
-public class Margins {
+public final class Margins implements Interpolatable<Margins> {
 
     // lazy, thread-safe instantiation
     private static class Holder {
@@ -68,6 +70,51 @@ public class Margins {
         this.bottom = bottom;
         this.left = left;
         this.proportional = proportional;
+    }
+
+    @Override
+    public Margins interpolate(Margins endValue, double t) {
+        Objects.requireNonNull(endValue, "endValue cannot be null");
+
+        if (t == 0 || equals(endValue)) {
+            return this;
+        }
+
+        if (t == 1) {
+            return endValue;
+        }
+
+        if (proportional != endValue.proportional) {
+            return InterpolationUtils.interpolateDiscrete(this, endValue, t);
+        }
+
+        return new Margins(
+            Math.max(0, InterpolationUtils.interpolate(top, endValue.top, t)),
+            Math.max(0, InterpolationUtils.interpolate(right, endValue.right, t)),
+            Math.max(0, InterpolationUtils.interpolate(bottom, endValue.bottom, t)),
+            Math.max(0, InterpolationUtils.interpolate(left, endValue.left, t)),
+            proportional);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Margins margins)) return false;
+        return Double.compare(top, margins.top) == 0
+            && Double.compare(right, margins.right) == 0
+            && Double.compare(bottom, margins.bottom) == 0
+            && Double.compare(left, margins.left) == 0
+            && proportional == margins.proportional;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = Double.hashCode(top);
+        result = 31 * result + Double.hashCode(right);
+        result = 31 * result + Double.hashCode(bottom);
+        result = 31 * result + Double.hashCode(left);
+        result = 31 * result + Boolean.hashCode(proportional);
+        return result;
     }
 
     @Override

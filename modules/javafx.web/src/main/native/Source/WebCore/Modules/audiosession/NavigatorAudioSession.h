@@ -29,6 +29,7 @@
 
 #include "Supplementable.h"
 #include <wtf/Forward.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -36,20 +37,25 @@ class DOMAudioSession;
 class Navigator;
 
 class NavigatorAudioSession final : public Supplement<Navigator> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(NavigatorAudioSession);
 public:
     NavigatorAudioSession();
     ~NavigatorAudioSession();
 
-    static RefPtr<DOMAudioSession> audioSession(Navigator&);
+    static Ref<DOMAudioSession> audioSession(Navigator&);
 
 private:
     static NavigatorAudioSession* from(Navigator&);
-    static const char* supplementName();
+    static ASCIILiteral supplementName() { return "NavigatorAudioSession"_s; }
+    bool isNavigatorAudioSession() const final { return true; }
 
-    RefPtr<DOMAudioSession> m_audioSession;
+    const RefPtr<DOMAudioSession> m_audioSession;
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::NavigatorAudioSession)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isNavigatorAudioSession(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(DOM_AUDIO_SESSION)

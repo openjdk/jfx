@@ -35,7 +35,6 @@
 #include "pas_page_malloc.h"
 #include "pas_random.h"
 #include "pas_segregated_directory_inlines.h"
-#include "pas_segregated_page_inlines.h"
 #include "pas_segregated_page_config.h"
 #include "pas_segregated_partial_view.h"
 #include "pas_segregated_shared_handle.h"
@@ -74,7 +73,7 @@ static PAS_ALWAYS_INLINE bool
 find_first_eligible_consider_view(
     pas_segregated_directory_iterate_config* config)
 {
-    static const bool verbose = false;
+    static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_SEGREGATED_HEAPS);
 
     find_first_eligible_data* data;
     pas_segregated_shared_view* view;
@@ -115,7 +114,7 @@ pas_segregated_shared_view* pas_segregated_shared_page_directory_find_first_elig
     unsigned alignment,
     pas_lock_hold_mode heap_lock_hold_mode)
 {
-    static const bool verbose = false;
+    static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_SEGREGATED_HEAPS);
 
     pas_segregated_directory* directory;
     const pas_segregated_page_config* page_config_ptr;
@@ -218,7 +217,7 @@ static bool
 take_last_empty_consider_view(
     pas_segregated_directory_iterate_config* config)
 {
-    static const bool verbose = false;
+    static const bool verbose = PAS_SHOULD_LOG(PAS_LOG_SEGREGATED_HEAPS);
 
     /* We put our take_last_empty logic in consider_view because should_consider_view_parallel
        cannot really tell if a page can be taken. */

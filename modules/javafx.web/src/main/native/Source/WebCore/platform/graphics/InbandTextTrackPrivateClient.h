@@ -27,14 +27,15 @@
 
 #if ENABLE(VIDEO)
 
-#include "Color.h"
-#include "InbandGenericCue.h"
-#include "TrackPrivateBase.h"
+#include <WebCore/Color.h>
+#include <WebCore/InbandGenericCue.h>
+#include <WebCore/TrackPrivateBase.h>
 #include <wtf/JSONValues.h>
 #include <wtf/MediaTime.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(DATACUE_VALUE)
-#include "SerializedPlatformDataCue.h"
+#include <WebCore/SerializedPlatformDataCue.h>
 #endif
 
 namespace WebCore {
@@ -43,10 +44,13 @@ class InbandTextTrackPrivate;
 class ISOWebVTTCue;
 
 class InbandTextTrackPrivateClient : public TrackPrivateBaseClient {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(InbandTextTrackPrivateClient);
 public:
     virtual ~InbandTextTrackPrivateClient() = default;
 
-    virtual void addDataCue(const MediaTime& start, const MediaTime& end, const void*, unsigned) = 0;
+    constexpr Type type() const final { return Type::Text; }
+
+    virtual void addDataCue(const MediaTime& start, const MediaTime& end, std::span<const uint8_t>) = 0;
 
 #if ENABLE(DATACUE_VALUE)
     virtual void addDataCue(const MediaTime& start, const MediaTime& end, Ref<SerializedPlatformDataCue>&&, const String&) = 0;
@@ -59,10 +63,14 @@ public:
     virtual void removeGenericCue(InbandGenericCue&) = 0;
 
     virtual void parseWebVTTFileHeader(String&&) { ASSERT_NOT_REACHED(); }
-    virtual void parseWebVTTCueData(const uint8_t* data, unsigned length) = 0;
+    virtual void parseWebVTTCueData(std::span<const uint8_t>) = 0;
     virtual void parseWebVTTCueData(ISOWebVTTCue&&) = 0;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::InbandTextTrackPrivateClient)
+static bool isType(const WebCore::TrackPrivateBaseClient& track) { return track.type() == WebCore::TrackPrivateBaseClient::Type::Text; }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(VIDEO)

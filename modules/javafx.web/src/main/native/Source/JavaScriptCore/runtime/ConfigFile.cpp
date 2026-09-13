@@ -42,6 +42,8 @@
 #include <unistd.h>
 #endif
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
 
 static const size_t s_processNameMax = 128;
@@ -315,7 +317,7 @@ void ConfigFile::parse()
                     while (*p && !isUnicodeCompatibleASCIIWhitespace(*p) && *p != '=')
                         p++;
 
-                    builder.appendCharacters(optionNameStart, p - optionNameStart);
+                    builder.append(std::span { optionNameStart, p });
 
                     while (*p && isUnicodeCompatibleASCIIWhitespace(*p) && *p != '=')
                         p++;
@@ -337,8 +339,7 @@ void ConfigFile::parse()
                     while (*p && !isUnicodeCompatibleASCIIWhitespace(*p))
                         p++;
 
-                    builder.appendCharacters(optionValueStart, p - optionValueStart);
-                    builder.append('\n');
+                    builder.append(std::span { optionValueStart, p }, '\n');
 
                     while (*p && isUnicodeCompatibleASCIIWhitespace(*p))
                         p++;
@@ -530,3 +531,5 @@ void processConfigFile(const char* configFilename, const char* processName, cons
 }
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

@@ -46,7 +46,7 @@
 
 namespace {
 
-NO_RETURN void usage()
+[[noreturn]] void usage()
 {
     printf("Usage: LockFairnessTest yieldspinlock|pausespinlock|wordlock|lock|barginglock|bargingwordlock|thunderlock|thunderwordlock|cascadelock|cascadewordlockhandofflock|unfairlock|mutex|all <num threads> <seconds per test> <microseconds in critical section>\n");
     exit(1);
@@ -64,14 +64,14 @@ struct Benchmark {
         std::unique_ptr<unsigned[]> counts = makeUniqueWithoutFastMallocCheck<unsigned[]>(numThreads);
         std::unique_ptr<RefPtr<Thread>[]> threads = makeUniqueWithoutFastMallocCheck<RefPtr<Thread>[]>(numThreads);
 
-        volatile bool keepGoing = true;
+        std::atomic<bool> keepGoing = true;
 
         lock.lock();
 
         for (unsigned threadIndex = numThreads; threadIndex--;) {
             counts[threadIndex] = 0;
             threads[threadIndex] = Thread::create(
-                "Benchmark Thread",
+                "Benchmark Thread"_s,
                 [&, threadIndex] () {
                     if (!microsecondsInCriticalSection) {
                         while (keepGoing) {

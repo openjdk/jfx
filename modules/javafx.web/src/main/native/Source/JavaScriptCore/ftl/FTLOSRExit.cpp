@@ -30,6 +30,7 @@
 
 #include "B3StackmapGenerationParams.h"
 #include "FTLJITCode.h"
+#include "FTLSlowPathCall.h"
 #include "FTLState.h"
 
 namespace JSC { namespace FTL {
@@ -85,8 +86,12 @@ Ref<OSRExitHandle> OSRExitDescriptor::prepareOSRExitHandle(
     FixedVector<B3::ValueRep> valueReps(params.size() - offset);
     for (unsigned i = offset, indexInValueReps = 0; i < params.size(); ++i, ++indexInValueReps)
         valueReps[indexInValueReps] = params[i];
+    OSRExit exit(this, exitKind, nodeOrigin.forExit, nodeOrigin.semantic, nodeOrigin.wasHoisted, dfgNodeIndex, WTF::move(valueReps));
+    if (exitKind == WillThrowOutOfMemoryError)
+        exit.m_exitCallSiteIndex = callSiteIndexForCodeOrigin(state, nodeOrigin.semantic);
+
     unsigned index = state.jitCode->m_osrExit.size();
-    state.jitCode->m_osrExit.append(OSRExit(this, exitKind, nodeOrigin.forExit, nodeOrigin.semantic, nodeOrigin.wasHoisted, dfgNodeIndex, WTFMove(valueReps)));
+    state.jitCode->m_osrExit.append(WTF::move(exit));
     return adoptRef(*new OSRExitHandle(index, state.jitCode.get()));
 }
 
@@ -95,7 +100,7 @@ OSRExit::OSRExit(
     CodeOrigin codeOriginForExitProfile, bool wasHoisted, uint32_t dfgNodeIndex, FixedVector<B3::ValueRep>&& valueReps)
     : OSRExitBase(exitKind, codeOrigin, codeOriginForExitProfile, wasHoisted, dfgNodeIndex)
     , m_descriptor(descriptor)
-    , m_valueReps(WTFMove(valueReps))
+    , m_valueReps(WTF::move(valueReps))
 {
 }
 

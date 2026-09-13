@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,9 +26,6 @@
 package test.javafx.stage;
 
 import com.sun.javafx.stage.WindowHelper;
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertTrue;
-import static junit.framework.Assert.assertNotNull;
 
 import javafx.beans.InvalidationListener;
 import javafx.beans.property.DoubleProperty;
@@ -36,9 +33,6 @@ import javafx.beans.property.SimpleDoubleProperty;
 import javafx.collections.ObservableList;
 import javafx.scene.Scene;
 import javafx.scene.layout.Region;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 import test.com.sun.javafx.pgstub.StubStage;
 import test.com.sun.javafx.pgstub.StubToolkit;
 import com.sun.javafx.tk.TKStage;
@@ -48,17 +42,25 @@ import javafx.stage.Window;
 
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 public final class WindowTest {
     private StubToolkit toolkit;
     private Stage testWindow;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         toolkit = (StubToolkit) Toolkit.getToolkit();
         testWindow = new Stage();
     }
 
-    @After
+    @AfterEach
     public void afterTest() {
         testWindow.hide();
         testWindow = null;
@@ -82,7 +84,8 @@ public final class WindowTest {
         assertEquals(1.0f, peer.opacity);
     }
 
-    @Test public void testProperties() {
+    @Test
+    public void testProperties() {
         javafx.collections.ObservableMap<Object, Object> properties = testWindow.getProperties();
 
         /* If we ask for it, we should get it.
@@ -111,7 +114,8 @@ public final class WindowTest {
         return (StubStage) unkPeer;
     }
 
-    @Test public void testGetWindowsIsObservable() {
+    @Test
+    public void testGetWindowsIsObservable() {
         ObservableList<Window> windows = Window.getWindows();
 
         final int initialWindowCount = windows.size();
@@ -138,28 +142,34 @@ public final class WindowTest {
         windows.removeListener(listener);
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testGetWindowsIsUnmodifiable_add() {
-        Stage anotherTestWindow = new Stage();
-        Window.getWindows().add(anotherTestWindow);
+        assertThrows(UnsupportedOperationException.class, () -> {
+            Stage anotherTestWindow = new Stage();
+            Window.getWindows().add(anotherTestWindow);
+        });
     }
 
-    @Test(expected = UnsupportedOperationException.class)
+    @Test
     public void testGetWindowsIsUnmodifiable_removeShowingWindow() {
-        testWindow.show();
-        Window.getWindows().remove(testWindow);
+        assertThrows(UnsupportedOperationException.class, () -> {
+            testWindow.show();
+            Window.getWindows().remove(testWindow);
+        });
     }
 
     // There is no UOE here because the window being removed is not in the list of windows,
     // so no modification of the windows list occurs.
-    @Test public void testGetWindowsIsUnmodifiable_removeNonShowingWindow_emptyList() {
+    @Test
+    public void testGetWindowsIsUnmodifiable_removeNonShowingWindow_emptyList() {
         Stage anotherTestWindow = new Stage();
         Window.getWindows().remove(anotherTestWindow);
     }
 
     // There is no UOE here because the window being removed is not in the list of windows,
     // so no modification of the windows list occurs.
-    @Test public void testGetWindowsIsUnmodifiable_removeNonShowingWindow_nonEmptyList() {
+    @Test
+    public void testGetWindowsIsUnmodifiable_removeNonShowingWindow_nonEmptyList() {
         ObservableList<Window> windows = Window.getWindows();
 
         final int initialWindowCount = windows.size();

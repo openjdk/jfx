@@ -35,6 +35,9 @@
 
 namespace WTF {
 
+// We shouldn't use this class in new code and should just use std::unique_ptr. It's the same when T has no destructor and MallocPtr is likely the wrong
+// container if T does.
+// FIXME: Remove this class https://bugs.webkit.org/show_bug.cgi?id=294022
 template<typename T, typename Malloc = FastMalloc> class MallocPtr {
     WTF_MAKE_NONCOPYABLE(MallocPtr);
 public:
@@ -54,12 +57,12 @@ public:
         Malloc::free(m_ptr);
     }
 
-    T* get() const
+    T* get() const LIFETIME_BOUND
     {
         return m_ptr;
     }
 
-    T *leakPtr() WARN_UNUSED_RETURN
+    [[nodiscard]] T* leakPtr()
     {
         return std::exchange(m_ptr, nullptr);
     }
@@ -74,20 +77,20 @@ public:
         return !m_ptr;
     }
 
-    T& operator*() const
+    T& operator*() const LIFETIME_BOUND
     {
         ASSERT(m_ptr);
         return *m_ptr;
     }
 
-    T* operator->() const
+    T* operator->() const LIFETIME_BOUND
     {
         return m_ptr;
     }
 
     MallocPtr& operator=(MallocPtr&& other)
     {
-        MallocPtr ptr = WTFMove(other);
+        MallocPtr ptr = WTF::move(other);
         swap(ptr);
 
         return *this;

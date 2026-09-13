@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2021-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,14 +25,39 @@
 
 #pragma once
 
-#include "HashMapImplInlines.h"
-#include "JSMap.h"
+#include <JavaScriptCore/JSMap.h>
 
 namespace JSC {
+
+inline Structure* JSMap::createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
+{
+    return Structure::create(vm, globalObject, prototype, TypeInfo(JSMapType, StructureFlags), info());
+}
 
 ALWAYS_INLINE void JSMap::set(JSGlobalObject* globalObject, JSValue key, JSValue value)
 {
     add(globalObject, key, value);
+}
+
+ALWAYS_INLINE bool JSMap::isIteratorProtocolFastAndNonObservable()
+{
+    JSGlobalObject* globalObject = this->globalObject();
+    if (!globalObject->isMapPrototypeIteratorProtocolFastAndNonObservable())
+        return false;
+
+    VM& vm = globalObject->vm();
+    Structure* structure = this->structure();
+    // This is the fast case. Many maps will be an original map.
+    if (structure == globalObject->mapStructure())
+        return true;
+
+    if (getPrototypeDirect() != globalObject->mapPrototype())
+        return false;
+
+    if (getDirectOffset(vm, vm.propertyNames->iteratorSymbol) != invalidOffset)
+        return false;
+
+    return true;
 }
 
 } // namespace JSC

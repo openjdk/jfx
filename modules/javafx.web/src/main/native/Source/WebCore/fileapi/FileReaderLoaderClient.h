@@ -30,13 +30,13 @@
 
 #pragma once
 
-#include "ExceptionCode.h"
-#include "SharedBuffer.h"
-#include <wtf/WeakPtr.h>
+#include <WebCore/ExceptionCode.h>
+#include <WebCore/SharedBuffer.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
-class FileReaderLoaderClient : public CanMakeWeakPtr<FileReaderLoaderClient> {
+class FileReaderLoaderClient : public AbstractRefCountedAndCanMakeWeakPtr<FileReaderLoaderClient> {
 public:
     virtual ~FileReaderLoaderClient() = default;
 

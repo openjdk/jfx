@@ -22,12 +22,12 @@
 
 #pragma once
 
-#include "FilterEffect.h"
+#include <WebCore/FilterEffect.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
-enum ChannelSelectorType {
+enum class ChannelSelectorType : uint8_t {
     CHANNEL_UNKNOWN = 0,
     CHANNEL_R = 1,
     CHANNEL_G = 2,
@@ -35,9 +35,11 @@ enum ChannelSelectorType {
     CHANNEL_A = 4
 };
 
-class FEDisplacementMap : public FilterEffect {
+class FEDisplacementMap final : public FilterEffect {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(FEDisplacementMap);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(FEDisplacementMap);
 public:
-    WEBCORE_EXPORT static Ref<FEDisplacementMap> create(ChannelSelectorType xChannelSelector, ChannelSelectorType yChannelSelector, float scale);
+    WEBCORE_EXPORT static Ref<FEDisplacementMap> create(ChannelSelectorType xChannelSelector, ChannelSelectorType yChannelSelector, float scale, DestinationColorSpace = DestinationColorSpace::SRGB());
 
     bool operator==(const FEDisplacementMap&) const;
 
@@ -50,8 +52,10 @@ public:
     float scale() const { return m_scale; }
     bool setScale(float);
 
+    static IntOutsets calculateOutsets(const FloatSize& maxDisplacement);
+
 private:
-    FEDisplacementMap(ChannelSelectorType xChannelSelector, ChannelSelectorType yChannelSelector, float);
+    FEDisplacementMap(ChannelSelectorType xChannelSelector, ChannelSelectorType yChannelSelector, float, DestinationColorSpace);
 
     bool operator==(const FilterEffect& other) const override { return areEqual<FEDisplacementMap>(*this, other); }
 
@@ -59,9 +63,11 @@ private:
 
     FloatRect calculateImageRect(const Filter&, std::span<const FloatRect> inputImageRects, const FloatRect& primitiveSubregion) const override;
 
-    const DestinationColorSpace& resultColorSpace(const FilterImageVector&) const override;
-    void transformInputsColorSpace(const FilterImageVector& inputs) const override;
+    const DestinationColorSpace& resultColorSpace(std::span<const Ref<FilterImage>>) const override;
+    void transformInputsColorSpace(std::span<const Ref<FilterImage>> inputs) const override;
 
+    OptionSet<FilterRenderingMode> supportedFilterRenderingModes(OptionSet<FilterRenderingMode>) const override;
+    std::unique_ptr<FilterEffectApplier> createAcceleratedApplier() const override;
     std::unique_ptr<FilterEffectApplier> createSoftwareApplier() const override;
 
     WTF::TextStream& externalRepresentation(WTF::TextStream&, FilterRepresentation) const override;
@@ -73,20 +79,4 @@ private:
 
 } // namespace WebCore
 
-namespace WTF {
-
-template<> struct EnumTraits<WebCore::ChannelSelectorType> {
-    using values = EnumValues<
-        WebCore::ChannelSelectorType,
-
-        WebCore::CHANNEL_UNKNOWN,
-        WebCore::CHANNEL_R,
-        WebCore::CHANNEL_G,
-        WebCore::CHANNEL_B,
-        WebCore::CHANNEL_A
-    >;
-};
-
-} // namespace WTF
-
-SPECIALIZE_TYPE_TRAITS_FILTER_EFFECT(FEDisplacementMap)
+SPECIALIZE_TYPE_TRAITS_FILTER_FUNCTION(FEDisplacementMap)

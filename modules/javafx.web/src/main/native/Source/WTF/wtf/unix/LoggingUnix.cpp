@@ -20,19 +20,22 @@
  */
 
 #include "config.h"
+
+#if !OS(ANDROID)
+
 #include "Logging.h"
 
 #if !LOG_DISABLED || !RELEASE_LOG_DISABLED
 
 #include "LogInitialization.h"
-#include <string.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/WTFString.h>
 
 namespace WTF {
 
 String logLevelString()
 {
-    char* logEnv = getenv("WEBKIT_DEBUG");
+    const char* logEnv = getenv("WEBKIT_DEBUG");
 
     // Disable all log channels if WEBKIT_DEBUG is unset.
     if (!logEnv || !*logEnv)
@@ -49,3 +52,5 @@ String logLevelString()
 } // namespace WTF
 
 #endif // !LOG_DISABLED || !RELEASE_LOG_DISABLED
+
+#endif // !OS(ANDROID)

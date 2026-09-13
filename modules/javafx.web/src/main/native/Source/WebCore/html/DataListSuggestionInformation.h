@@ -25,11 +25,8 @@
 
 #pragma once
 
-#include "IntRect.h"
-#include <wtf/EnumTraits.h>
+#include <WebCore/IntRect.h>
 #include <wtf/Vector.h>
-
-#if ENABLE(DATALIST_ELEMENT)
 
 namespace WebCore {
 
@@ -37,6 +34,7 @@ enum class DataListSuggestionActivationType : uint8_t {
     ControlClicked,
     IndicatorClicked,
     TextChanged,
+    DataListMayHaveChanged,
 };
 
 struct DataListSuggestion {
@@ -51,5 +49,3 @@ struct DataListSuggestionInformation {
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(DATALIST_ELEMENT)

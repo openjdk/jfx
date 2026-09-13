@@ -27,6 +27,8 @@
     Conditional=APPLE_PAY,
     ExportMacro=WEBCORE_EXPORT,
     JSGenerateToJSObject,
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ApplePaySetupConfiguration {
     DOMString merchantIdentifier;
     DOMString referrerIdentifier;

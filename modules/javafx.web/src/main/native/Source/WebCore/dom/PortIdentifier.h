@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "ProcessIdentifier.h"
+#include <WebCore/ProcessIdentifier.h>
 
 namespace WebCore {
 
-enum PortIdentifierType { };
+enum class PortIdentifierType { };
 using PortIdentifier = AtomicObjectIdentifier<PortIdentifierType>;
 
 }

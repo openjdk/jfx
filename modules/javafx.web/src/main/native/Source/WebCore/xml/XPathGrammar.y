@@ -35,10 +35,7 @@
 #include "XPathStep.h"
 #include "XPathVariableReference.h"
 
-#if COMPILER(MSVC)
-// See https://msdn.microsoft.com/en-us/library/1wea5zwe.aspx
-#pragma warning(disable: 4701)
-#endif
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 #define YYMALLOC fastMalloc
 #define YYFREE fastFree
@@ -173,9 +170,9 @@ Step:
         std::unique_ptr<WebCore::XPath::Step::NodeTest> nodeTest($1);
         std::unique_ptr<Vector<std::unique_ptr<WebCore::XPath::Expression>>> predicateList($2);
         if (predicateList)
-            $$ = new WebCore::XPath::Step(WebCore::XPath::Step::ChildAxis, WTFMove(*nodeTest), WTFMove(*predicateList));
+            $$ = new WebCore::XPath::Step(WebCore::XPath::Step::ChildAxis, WTF::move(*nodeTest), WTF::move(*predicateList));
         else
-            $$ = new WebCore::XPath::Step(WebCore::XPath::Step::ChildAxis, WTFMove(*nodeTest));
+            $$ = new WebCore::XPath::Step(WebCore::XPath::Step::ChildAxis, WTF::move(*nodeTest));
     }
     |
     NAMETEST OptionalPredicateList
@@ -191,7 +188,7 @@ Step:
         }
 
         if (predicateList)
-            $$ = new WebCore::XPath::Step(WebCore::XPath::Step::ChildAxis, WebCore::XPath::Step::NodeTest(WebCore::XPath::Step::NodeTest::NameTest, localName, namespaceURI), WTFMove(*predicateList));
+            $$ = new WebCore::XPath::Step(WebCore::XPath::Step::ChildAxis, WebCore::XPath::Step::NodeTest(WebCore::XPath::Step::NodeTest::NameTest, localName, namespaceURI), WTF::move(*predicateList));
         else
             $$ = new WebCore::XPath::Step(WebCore::XPath::Step::ChildAxis, WebCore::XPath::Step::NodeTest(WebCore::XPath::Step::NodeTest::NameTest, localName, namespaceURI));
     }
@@ -202,9 +199,9 @@ Step:
         std::unique_ptr<Vector<std::unique_ptr<WebCore::XPath::Expression>>> predicateList($3);
 
         if (predicateList)
-            $$ = new WebCore::XPath::Step($1, WTFMove(*nodeTest), WTFMove(*predicateList));
+            $$ = new WebCore::XPath::Step($1, WTF::move(*nodeTest), WTF::move(*predicateList));
         else
-            $$ = new WebCore::XPath::Step($1, WTFMove(*nodeTest));
+            $$ = new WebCore::XPath::Step($1, WTF::move(*nodeTest));
     }
     |
     AxisSpecifier NAMETEST OptionalPredicateList
@@ -220,7 +217,7 @@ Step:
         }
 
         if (predicateList)
-            $$ = new WebCore::XPath::Step($1, WebCore::XPath::Step::NodeTest(WebCore::XPath::Step::NodeTest::NameTest, localName, namespaceURI), WTFMove(*predicateList));
+            $$ = new WebCore::XPath::Step($1, WebCore::XPath::Step::NodeTest(WebCore::XPath::Step::NodeTest::NameTest, localName, namespaceURI), WTF::move(*predicateList));
         else
             $$ = new WebCore::XPath::Step($1, WebCore::XPath::Step::NodeTest(WebCore::XPath::Step::NodeTest::NameTest, localName, namespaceURI));
     }
@@ -331,7 +328,7 @@ PrimaryExpr:
     LITERAL
     {
         String literal = adoptRef($1);
-        $$ = new WebCore::XPath::StringExpression(WTFMove(literal));
+        $$ = new WebCore::XPath::StringExpression(WTF::move(literal));
     }
     |
     NUMBER
@@ -356,7 +353,7 @@ FunctionCall:
     {
         String name = adoptRef($1);
         std::unique_ptr<Vector<std::unique_ptr<WebCore::XPath::Expression>>> argumentList($3);
-        $$ = WebCore::XPath::Function::create(name, WTFMove(*argumentList)).release();
+        $$ = WebCore::XPath::Function::create(name, WTF::move(*argumentList)).release();
         if (!$$)
             YYABORT;
     }
@@ -417,7 +414,7 @@ FilterExpr:
     PrimaryExpr PredicateList
     {
         std::unique_ptr<Vector<std::unique_ptr<WebCore::XPath::Expression>>> predicateList($2);
-        $$ = new WebCore::XPath::Filter(std::unique_ptr<WebCore::XPath::Expression>($1), WTFMove(*predicateList));
+        $$ = new WebCore::XPath::Filter(std::unique_ptr<WebCore::XPath::Expression>($1), WTF::move(*predicateList));
     }
     ;
 
@@ -426,7 +423,7 @@ OrExpr:
     |
     OrExpr OR AndExpr
     {
-        $$ = new WebCore::XPath::LogicalOp(WebCore::XPath::LogicalOp::OP_Or, std::unique_ptr<WebCore::XPath::Expression>($1), std::unique_ptr<WebCore::XPath::Expression>($3));
+        $$ = new WebCore::XPath::LogicalOp(WebCore::XPath::LogicalOp::Opcode::Or, std::unique_ptr<WebCore::XPath::Expression>($1), std::unique_ptr<WebCore::XPath::Expression>($3));
     }
     ;
 
@@ -435,7 +432,7 @@ AndExpr:
     |
     AndExpr AND EqualityExpr
     {
-        $$ = new WebCore::XPath::LogicalOp(WebCore::XPath::LogicalOp::OP_And, std::unique_ptr<WebCore::XPath::Expression>($1), std::unique_ptr<WebCore::XPath::Expression>($3));
+        $$ = new WebCore::XPath::LogicalOp(WebCore::XPath::LogicalOp::Opcode::And, std::unique_ptr<WebCore::XPath::Expression>($1), std::unique_ptr<WebCore::XPath::Expression>($3));
     }
     ;
 
@@ -462,12 +459,12 @@ AdditiveExpr:
     |
     AdditiveExpr PLUS MultiplicativeExpr
     {
-        $$ = new WebCore::XPath::NumericOp(WebCore::XPath::NumericOp::OP_Add, std::unique_ptr<WebCore::XPath::Expression>($1), std::unique_ptr<WebCore::XPath::Expression>($3));
+        $$ = new WebCore::XPath::NumericOp(WebCore::XPath::NumericOp::Opcode::Add, std::unique_ptr<WebCore::XPath::Expression>($1), std::unique_ptr<WebCore::XPath::Expression>($3));
     }
     |
     AdditiveExpr MINUS MultiplicativeExpr
     {
-        $$ = new WebCore::XPath::NumericOp(WebCore::XPath::NumericOp::OP_Sub, std::unique_ptr<WebCore::XPath::Expression>($1), std::unique_ptr<WebCore::XPath::Expression>($3));
+        $$ = new WebCore::XPath::NumericOp(WebCore::XPath::NumericOp::Opcode::Sub, std::unique_ptr<WebCore::XPath::Expression>($1), std::unique_ptr<WebCore::XPath::Expression>($3));
     }
     ;
 
@@ -490,3 +487,5 @@ UnaryExpr:
     ;
 
 %%
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

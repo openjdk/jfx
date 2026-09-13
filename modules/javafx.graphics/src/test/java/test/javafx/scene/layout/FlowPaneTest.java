@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package test.javafx.scene.layout;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
 import javafx.geometry.HPos;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
@@ -36,15 +34,19 @@ import javafx.scene.Node;
 import javafx.scene.ParentShim;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.shape.Rectangle;
-import org.junit.Before;
+import javafx.scene.text.Text;
+import javafx.scene.text.TextFlow;
 
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 
 public class FlowPaneTest {
     FlowPane flowpane;
 
-    @Before public void setUp() {
+    @BeforeEach public void setUp() {
         this.flowpane = new FlowPane();
     }
 
@@ -855,11 +857,156 @@ public class FlowPaneTest {
         ParentShim.getChildren(flowpane).add(child);
 
         flowpane.resize(100,100);
-        System.out.println("******************");
         flowpane.layout();
-        System.out.println("*****************");
 
         assertEquals(200, child.getWidth(), 1e-100);
         assertEquals(200, child.getHeight(), 1e-100);
+    }
+
+    @Test
+    void shouldFlowBiasedControlsCorrectly() {
+        MockBiased c1 = new MockBiased(Orientation.HORIZONTAL, 100, 100);
+        MockBiased c2 = new MockBiased(Orientation.HORIZONTAL, 100, 100);
+        MockBiased c3 = new MockBiased(Orientation.HORIZONTAL, 100, 100);
+
+        flowpane.getChildren().setAll(c1, c2, c3);
+
+        flowpane.resize(100, 300);
+        flowpane.layout();
+
+        LayoutAssertions.assertBounds(
+            """
+            +------------+
+            | 1: 100x100 |
+            +------------+
+            | 2: 100x100 |
+            +------------+
+            | 3: 100x100 |
+            +------------+
+            """,
+            flowpane
+        );
+
+        flowpane.resize(200, 200);
+        flowpane.layout();
+
+        LayoutAssertions.assertBounds(
+            """
+            +------------+------------+
+            | 1: 100x100 | 2: 100x100 |
+            +------------+------------+
+            | 3: 100x100 |
+            +------------+
+            """,
+            flowpane
+        );
+
+        flowpane.resize(300, 100);
+        flowpane.layout();
+
+        LayoutAssertions.assertBounds(
+            """
+            +------------+------------+------------+
+            | 1: 100x100 | 2: 100x100 | 3: 100x100 |
+            +------------+------------+------------+
+            """,
+            flowpane
+        );
+
+        flowpane.resize(300, 200);
+        flowpane.layout();
+
+        LayoutAssertions.assertBounds(
+            """
+            +------------+------------+------------+
+            | 1: 100x100 | 2: 100x100 | 3: 100x100 |
+            +------------+------------+------------+
+            |                0x100                 |
+            +--------------------------------------+
+            """,
+            flowpane
+        );
+
+        FlowPane.setMargin(c2, new Insets(1, 2, 3, 4));
+        flowpane.resize(306, 204);
+        flowpane.layout();
+
+        LayoutAssertions.assertBounds(
+            """
+            +------------+--------------------+------------+
+            |     0x2    |          1         |     0x2    |
+            +------------+   +------------+   +------------+
+            | 1: 100x100 | 4 | 2: 100x100 | 2 | 3: 100x100 |
+            +------------+   +------------+   +------------+
+            |     0x2    |          3         |     0x2    |
+            +------------+--------------------+------------+
+            |                     0x100                    |
+            +----------------------------------------------+
+            """,
+            flowpane
+        );
+    }
+
+    @Test
+    void shouldFlowBiasedControlsCorrectlyWithMaxWidthTextFlows() {
+        TextFlow c1 = createTextFlow();
+        TextFlow c2 = createTextFlow();
+        TextFlow c3 = createTextFlow();
+
+        flowpane.getChildren().setAll(c1, c2, c3);
+
+        flowpane.resize(204, 288);
+        flowpane.layout();
+
+        LayoutAssertions.assertBounds(
+            """
+            +-----------+
+            | 1: 204x96 |
+            +-----------+
+            | 2: 204x96 |
+            +-----------+
+            | 3: 204x96 |
+            +-----------+
+            """,
+            flowpane
+        );
+
+        flowpane.resize(404, 192);
+        flowpane.layout();
+
+        LayoutAssertions.assertBounds(
+            """
+            +-----------+------+-----------+
+            | 1: 204x96 | -4x0 | 2: 204x96 |
+            +-----------+------+-----------+
+            | 3: 204x96 |
+            +-----------+
+            """,
+            flowpane
+        );
+
+        flowpane.resize(604, 96);
+        flowpane.layout();
+
+        LayoutAssertions.assertBounds(
+            """
+            +-----------+------+-----------+------+-----------+
+            | 1: 204x96 | -4x0 | 2: 204x96 | -4x0 | 3: 204x96 |
+            +-----------+------+-----------+------+-----------+
+            """,
+            flowpane
+        );
+    }
+
+    private static TextFlow createTextFlow() {
+        TextFlow textFlow = new TextFlow(
+            new Text("this is a long text that will be wrapped"),
+            new Text("this is a long text that will be wrapped"),
+            new Text("this is a long text that will be wrapped")
+        );
+
+        textFlow.setMaxWidth(200);
+
+        return textFlow;
     }
 }

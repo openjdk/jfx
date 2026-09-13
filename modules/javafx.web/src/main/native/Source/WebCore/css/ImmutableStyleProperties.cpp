@@ -27,44 +27,102 @@
 
 #include "CSSCustomPropertyValue.h"
 #include "StylePropertiesInlines.h"
+#include <wtf/HashMap.h>
+#include <wtf/Hasher.h>
+#include <wtf/IndexedRange.h>
+#include <wtf/NeverDestroyed.h>
 
 namespace WebCore {
 
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(ImmutableStyleProperties);
 
-ImmutableStyleProperties::ImmutableStyleProperties(const CSSProperty* properties, unsigned length, CSSParserMode mode)
-    : StyleProperties(mode, length)
+ImmutableStyleProperties::ImmutableStyleProperties(std::span<const CSSProperty> properties, CSSParserMode mode)
+    : StyleProperties(mode, properties.size())
 {
-    auto* metadataArray = const_cast<StylePropertyMetadata*>(this->metadataArray());
-    auto* valueArray = bitwise_cast<PackedPtr<CSSValue>*>(this->valueArray());
-    for (unsigned i = 0; i < length; ++i) {
-        metadataArray[i] = properties[i].metadata();
-        auto* value = properties[i].value();
-        valueArray[i] = value;
+    auto metadataSpan = spanConstCast<StylePropertyMetadata>(this->metadataSpan());
+    auto valueSpan = this->valueSpan();
+    for (auto [i, property] : indexedRange(properties)) {
+        metadataSpan[i] = property.metadata();
+        RefPtr value = property.value();
+        valueSpan[i] = value.get();
         value->ref();
     }
 }
 
 ImmutableStyleProperties::~ImmutableStyleProperties()
 {
-    auto* valueArray = bitwise_cast<PackedPtr<CSSValue>*>(this->valueArray());
-    for (unsigned i = 0; i < m_arraySize; ++i)
-        valueArray[i]->deref();
+    for (auto& value : valueSpan())
+        value->deref();
 }
 
-Ref<ImmutableStyleProperties> ImmutableStyleProperties::create(const CSSProperty* properties, unsigned count, CSSParserMode mode)
+Ref<ImmutableStyleProperties> ImmutableStyleProperties::create(std::span<const CSSProperty> properties, CSSParserMode mode)
 {
-    void* slot = ImmutableStylePropertiesMalloc::malloc(objectSize(count));
-    return adoptRef(*new (NotNull, slot) ImmutableStyleProperties(properties, count, mode));
+    void* slot = ImmutableStylePropertiesMalloc::malloc(objectSize(properties.size()));
+    return adoptRef(*new (NotNull, slot) ImmutableStyleProperties(properties, mode));
+}
+
+static auto& deduplicationMap()
+{
+    static NeverDestroyed<HashMap<unsigned, Ref<ImmutableStyleProperties>, AlreadyHashed>> map;
+    return map.get();
+}
+
+Ref<ImmutableStyleProperties> ImmutableStyleProperties::createDeduplicating(std::span<const CSSProperty> properties, CSSParserMode mode)
+{
+    static constexpr auto maximumDeduplicationMapSize = 1024u;
+    if (deduplicationMap().size() >= maximumDeduplicationMapSize)
+        deduplicationMap().remove(deduplicationMap().random());
+
+    auto computeHash = [&] {
+        Hasher hasher;
+        add(hasher, mode);
+        for (auto& property : properties) {
+            if (!property.value()->addHash(hasher))
+                return 0u;
+            add(hasher, property.id(), property.isImportant());
+        }
+        return hasher.hash();
+    };
+
+    auto hash = computeHash();
+    if (!hash)
+        return create(properties, mode);
+
+    auto result = deduplicationMap().ensure(AlreadyHashed::avoidDeletedValue(hash), [&] {
+        return create(properties, mode);
+    });
+
+    auto isEqual = [&](auto& existingValue) {
+        if (existingValue.propertyCount() != properties.size())
+            return false;
+        if (existingValue.cssParserMode() != mode)
+            return false;
+        for (auto [i, property] : indexedRange(properties)) {
+            if (existingValue.propertyAt(i).toCSSProperty() != property)
+                return false;
+        }
+        return true;
+    };
+
+    if (!result.isNewEntry && !isEqual(result.iterator->value.get()))
+        return create(properties, mode);
+
+    return result.iterator->value;
+}
+
+void ImmutableStyleProperties::clearDeduplicationMap()
+{
+    deduplicationMap().clear();
 }
 
 int ImmutableStyleProperties::findPropertyIndex(CSSPropertyID propertyID) const
 {
     // Convert here propertyID into an uint16_t to compare it with the metadata's m_propertyID to avoid
     // the compiler converting it to an int multiple times in the loop.
-    uint16_t id = static_cast<uint16_t>(propertyID);
-    for (int n = m_arraySize - 1 ; n >= 0; --n) {
-        if (metadataArray()[n].m_propertyID == id)
+    uint16_t id = enumToUnderlyingType(propertyID);
+    auto metadataSpan = this->metadataSpan();
+    for (int n = metadataSpan.size() - 1 ; n >= 0; --n) {
+        if (metadataSpan[n].m_propertyID == id)
             return n;
     }
     return -1;
@@ -72,10 +130,12 @@ int ImmutableStyleProperties::findPropertyIndex(CSSPropertyID propertyID) const
 
 int ImmutableStyleProperties::findCustomPropertyIndex(StringView propertyName) const
 {
-    for (int n = m_arraySize - 1 ; n >= 0; --n) {
-        if (metadataArray()[n].m_propertyID == CSSPropertyCustom) {
+    auto metadataSpan = this->metadataSpan();
+    auto valueSpan = this->valueSpan();
+    for (int n = metadataSpan.size() - 1 ; n >= 0; --n) {
+        if (metadataSpan[n].m_propertyID == CSSPropertyCustom) {
             // We found a custom property. See if the name matches.
-            auto* value = valueArray()[n].get();
+            auto* value = valueSpan[n].get();
             if (!value)
                 continue;
             if (downcast<CSSCustomPropertyValue>(*value).name() == propertyName)

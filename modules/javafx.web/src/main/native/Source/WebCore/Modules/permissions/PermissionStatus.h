@@ -28,6 +28,7 @@
 #include "ActiveDOMObject.h"
 #include "ClientOrigin.h"
 #include "EventTarget.h"
+#include "EventTargetInterfaces.h"
 #include "MainThreadPermissionObserverIdentifier.h"
 #include "Page.h"
 #include "PermissionDescriptor.h"
@@ -39,8 +40,8 @@ namespace WebCore {
 
 class ScriptExecutionContext;
 
-class PermissionStatus final : public ActiveDOMObject, public RefCounted<PermissionStatus>, public EventTarget  {
-    WTF_MAKE_ISO_ALLOCATED(PermissionStatus);
+class PermissionStatus final : public ActiveDOMObject, public ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr<PermissionStatus>, public EventTarget  {
+    WTF_MAKE_TZONE_ALLOCATED(PermissionStatus);
 public:
     static Ref<PermissionStatus> create(ScriptExecutionContext&, PermissionState, PermissionDescriptor, PermissionQuerySource, WeakPtr<Page>&&);
     ~PermissionStatus();
@@ -50,19 +51,19 @@ public:
 
     void stateChanged(PermissionState);
 
-    using RefCounted::ref;
-    using RefCounted::deref;
+    // ActiveDOMObject.
+    void ref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::ref(); }
+    void deref() const final { ThreadSafeRefCountedAndCanMakeThreadSafeWeakPtr::deref(); }
 
 private:
     PermissionStatus(ScriptExecutionContext&, PermissionState, PermissionDescriptor, PermissionQuerySource, WeakPtr<Page>&&);
 
     // ActiveDOMObject
-    const char* activeDOMObjectName() const final;
     bool virtualHasPendingActivity() const final;
 
     // EventTarget
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
-    EventTargetInterface eventTargetInterface() const final { return PermissionStatusEventTargetInterfaceType; }
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::PermissionStatus; }
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
     void eventListenersDidChange() final;
@@ -70,7 +71,9 @@ private:
     PermissionState m_state;
     PermissionDescriptor m_descriptor;
     MainThreadPermissionObserverIdentifier m_mainThreadPermissionObserverIdentifier;
-    std::atomic<bool> m_hasChangeEventListener;
+    bool m_hasChangeEventListener { false };
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(PermissionStatus)

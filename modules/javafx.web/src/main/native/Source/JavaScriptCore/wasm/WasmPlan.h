@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,9 +28,10 @@
 #if ENABLE(WEBASSEMBLY)
 
 #include "CompilationResult.h"
-#include "WasmB3IRGenerator.h"
+#include "WasmIPIntTierUpCounter.h"
 #include "WasmJS.h"
 #include "WasmModuleInformation.h"
+#include "WasmOMGIRGenerator.h"
 #include <wtf/Bag.h>
 #include <wtf/CrossThreadCopier.h>
 #include <wtf/SharedTask.h>
@@ -58,41 +59,48 @@ public:
     JS_EXPORT_PRIVATE Plan(VM&, CompletionTask&&);
     virtual JS_EXPORT_PRIVATE ~Plan();
 
-    // If you guarantee the ordering here, you can rely on FIFO of the
-    // completion tasks being called.
-    void addCompletionTask(VM&, CompletionTask&&);
+    // If you guarantee the ordering here, you can rely on FIFO of the completion tasks being called.
+    // Return false if the task plan is already completed.
+    bool addCompletionTaskIfNecessary(VM&, CompletionTask&&);
 
     void setMode(MemoryMode mode) { m_mode = mode; }
-    MemoryMode mode() const { return m_mode; }
+    ALWAYS_INLINE MemoryMode mode() const { return m_mode; }
 
     String errorMessage() const { return crossThreadCopy(m_errorMessage); }
+    CompilationError error() const { return m_error; }
 
-    bool WARN_UNUSED_RETURN failed() const { return !m_errorMessage.isNull(); }
+    [[nodiscard]] bool failed() const { return !m_errorMessage.isNull(); }
     virtual bool hasWork() const = 0;
-    enum CompilationEffort { All, Partial };
-    virtual void work(CompilationEffort = All) = 0;
+    virtual void work() = 0;
     virtual bool multiThreaded() const = 0;
 
-    void waitForCompletion();
+    JS_EXPORT_PRIVATE void waitForCompletion();
     // Returns true if it cancelled the plan.
     bool tryRemoveContextAndCancelIfLast(VM&);
 
 protected:
     void runCompletionTasks() WTF_REQUIRES_LOCK(m_lock);
-    void fail(String&& errorMessage) WTF_REQUIRES_LOCK(m_lock);
+    void fail(String&& errorMessage, CompilationError = CompilationError::Default) WTF_REQUIRES_LOCK(m_lock);
 
     virtual bool isComplete() const = 0;
     virtual void complete() WTF_REQUIRES_LOCK(m_lock) = 0;
+
+    CString signpostMessage(CompilationMode, uint32_t functionIndexSpace) const;
+    void beginCompilerSignpost(CompilationMode, uint32_t functionIndexSpace) const;
+    void beginCompilerSignpost(const Callee&) const;
+    void endCompilerSignpost(CompilationMode, uint32_t functionIndexSpace) const;
+    void endCompilerSignpost(const Callee&) const;
 
     MemoryMode m_mode { MemoryMode::BoundsChecking };
     Lock m_lock;
     Condition m_completed;
 
-    Ref<ModuleInformation> m_moduleInformation;
+    Ref<ModuleInformation> m_moduleInformation; // noconst
 
     Vector<std::pair<VM*, CompletionTask>, 1> m_completionTasks;
 
     String m_errorMessage;
+    CompilationError m_error { CompilationError::Default };
 };
 
 

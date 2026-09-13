@@ -25,9 +25,20 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
+#if !BUSE(TZONE)
+
 #include "IsoPage.h"
 
 #if !BUSE(LIBPAS)
+
+/* avoid conflict with symbol from X11 headers */
+#ifdef Success
+#undef Success
+#endif
 
 namespace bmalloc {
 
@@ -39,7 +50,7 @@ enum class EligibilityKind {
 
 template<typename Config>
 struct EligibilityResult {
-    EligibilityResult() { }
+    EligibilityResult() = default;
 
     EligibilityResult(EligibilityKind);
     EligibilityResult(IsoPage<Config>*);
@@ -51,3 +62,6 @@ struct EligibilityResult {
 } // namespace bmalloc
 
 #endif
+#endif // !BUSE(TZONE)
+
+#endif // __cplusplus

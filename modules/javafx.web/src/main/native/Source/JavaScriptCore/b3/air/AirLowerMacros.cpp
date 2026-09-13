@@ -37,11 +37,13 @@
 #include "B3ProcedureInlines.h"
 #include "B3ValueInlines.h"
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC { namespace B3 { namespace Air {
 
 void lowerMacros(Code& code)
 {
-    PhaseScope phaseScope(code, "Air::lowerMacros");
+    PhaseScope phaseScope(code, "Air::lowerMacros"_s);
 
     InsertionSet insertionSet(code);
     for (BasicBlock* block : code) {
@@ -68,12 +70,12 @@ void lowerMacros(Code& code)
                 };
                 for (unsigned i = 1; i < value->numChildren(); ++i) {
                     Value* child = value->child(i);
-                    for (unsigned j = 0; j < cCallArgumentRegisterCount(child); j++)
+                    for (unsigned j = 0; j < cCallArgumentRegisterCount(child->type()); j++)
                         addNextPair(cCallArgumentRegisterWidth(child->type()));
                 }
                 ASSERT(offset = inst.args.size());
 
-                if (UNLIKELY(hasRegisterSource))
+                if (hasRegisterSource) [[unlikely]]
                     insertionSet.insertInst(instIndex, createShuffle(inst.origin, Vector<ShufflePair>(shufflePairs)));
                 else {
                     // If none of the inputs are registers, then we can efficiently lower this
@@ -299,9 +301,10 @@ void lowerMacros(Code& code)
                 auto* origin = inst.origin;
 
                 Tmp tmp = code.newTmp(GP);
+                Tmp vtmp = code.newTmp(FP);
 
-                insertionSet.insert(instIndex, VectorUnsignedMax, origin, Arg::simdInfo({ SIMDLane::i32x4, SIMDSignMode::None }), vec, vec);
-                insertionSet.insert(instIndex, MoveFloatTo32, origin, vec, tmp);
+                insertionSet.insert(instIndex, VectorUnsignedMax, origin, Arg::simdInfo({ SIMDLane::i32x4, SIMDSignMode::None }), vec, vtmp);
+                insertionSet.insert(instIndex, MoveFloatTo32, origin, vtmp, tmp);
                 insertionSet.insert(instIndex, Compare32, origin, Arg::relCond(MacroAssembler::NotEqual), tmp, Arg::imm(0), dst);
 
                 inst = Inst();
@@ -423,7 +426,8 @@ void lowerMacros(Code& code)
 
             switch (inst.kind.opcode) {
             case ColdCCall:
-                if (code.optLevel() < 2)
+                // FIXME: ARM can't currently handle ColdCCalls.
+                if (code.optLevel() < 2 || isARM_THUMB2())
                     handleCall();
                 break;
             case CCall:
@@ -466,5 +470,6 @@ void lowerMacros(Code& code)
 
 } } } // namespace JSC::B3::Air
 
-#endif // ENABLE(B3_JIT)
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
+#endif // ENABLE(B3_JIT)

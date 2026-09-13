@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,12 +25,13 @@
 
 #pragma once
 
-#include "GCAssertions.h"
-#include "HandleTypes.h"
-#include "StructureID.h"
+#include <JavaScriptCore/GCAssertions.h>
+#include <JavaScriptCore/HandleTypes.h>
+#include <JavaScriptCore/StructureID.h>
 #include <type_traits>
 #include <wtf/RawPtrTraits.h>
 #include <wtf/RawValueTraits.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace JSC {
 
@@ -167,25 +168,29 @@ public:
 
     JSValue get() const
     {
+#if USE(JSVALUE64) || !ENABLE(CONCURRENT_JS)
         return JSValue::decode(m_value);
+#else
+        return JSValue::decodeConcurrent(&m_value);
+#endif
     }
     void clear() { m_value = JSValue::encode(JSValue()); }
     void setUndefined() { m_value = JSValue::encode(jsUndefined()); }
     void setStartingValue(JSValue value) { m_value = JSValue::encode(value); }
     bool isNumber() const { return get().isNumber(); }
     bool isInt32() const { return get().isInt32(); }
-    bool isObject() const { return get().isObject(); }
-    bool isNull() const { return get().isNull(); }
-    bool isGetterSetter() const { return get().isGetterSetter(); }
-    bool isCustomGetterSetter() const { return get().isCustomGetterSetter(); }
+    inline bool isObject() const; // Defined in WriteBarrierInlines.h
+    inline bool isNull() const; // Defined in WriteBarrierInlines.h
+    inline bool isGetterSetter() const; // Defined in WriteBarrierInlines.h
+    inline bool isCustomGetterSetter() const; // Defined in WriteBarrierInlines.h
 
     JSValue* slot() const
     {
-        return bitwise_cast<JSValue*>(&m_value);
+        return std::bit_cast<JSValue*>(&m_value);
     }
 
-    int32_t* tagPointer() { return &bitwise_cast<EncodedValueDescriptor*>(&m_value)->asBits.tag; }
-    int32_t* payloadPointer() { return &bitwise_cast<EncodedValueDescriptor*>(&m_value)->asBits.payload; }
+    int32_t* tagPointer() { return &std::bit_cast<EncodedValueDescriptor*>(&m_value)->asBits.tag; }
+    int32_t* payloadPointer() { return &std::bit_cast<EncodedValueDescriptor*>(&m_value)->asBits.payload; }
 
     explicit operator bool() const { return !!get(); }
     bool operator!() const { return !get(); }
@@ -196,7 +201,7 @@ private:
 
 template <typename T, typename Traits = WriteBarrierTraitsSelect<T>>
 class WriteBarrier : public WriteBarrierBase<T, Traits> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(WriteBarrier);
 public:
     WriteBarrier()
     {
@@ -226,11 +231,19 @@ public:
     }
 };
 
+#define TZONE_TEMPLATE_PARAMS template <typename T, typename Traits>
+#define TZONE_TYPE WriteBarrier<T, Traits>
+
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL_WITH_MULTIPLE_OR_SPECIALIZED_PARAMETERS();
+
+#undef TZONE_TEMPLATE_PARAMS
+#undef TZONE_TYPE
+
 enum UndefinedWriteBarrierTagType { UndefinedWriteBarrierTag };
 enum NullWriteBarrierTagType { NullWriteBarrierTag };
 template <>
 class WriteBarrier<Unknown, RawValueTraits<Unknown>> : public WriteBarrierBase<Unknown, RawValueTraits<Unknown>> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE(WriteBarrier);
 public:
     WriteBarrier()
     {

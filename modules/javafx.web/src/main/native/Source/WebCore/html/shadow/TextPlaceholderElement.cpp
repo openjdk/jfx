@@ -26,13 +26,17 @@
 #include "config.h"
 #include "TextPlaceholderElement.h"
 
+#include "CSSPropertyNames.h"
+#include "CSSUnits.h"
+#include "CSSValueKeywords.h"
 #include "HTMLNames.h"
 #include "HTMLTextFormControlElement.h"
-#include <wtf/IsoMallocInlines.h>
+#include "LayoutSize.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(TextPlaceholderElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextPlaceholderElement);
 
 Ref<TextPlaceholderElement> TextPlaceholderElement::create(Document& document, const LayoutSize& size)
 {
@@ -43,9 +47,10 @@ TextPlaceholderElement::TextPlaceholderElement(Document& document, const LayoutS
     : HTMLDivElement { HTMLNames::divTag, document }
 {
     // FIXME: Move to User Agent stylesheet. See <https://webkit.org/b/208745>.
-    setInlineStyleProperty(CSSPropertyDisplay, size.width() ? CSSValueInlineBlock : CSSValueBlock, false);
-    setInlineStyleProperty(CSSPropertyVerticalAlign, CSSValueTop, false);
-    setInlineStyleProperty(CSSPropertyVisibility, CSSValueHidden, true);
+    setInlineStyleProperty(CSSPropertyDisplay, size.width() ? CSSValueInlineBlock : CSSValueBlock);
+    setInlineStyleProperty(CSSPropertyVerticalAlign, CSSValueTop);
+    setInlineStyleProperty(CSSPropertyVisibility, CSSValueHidden, IsImportant::Yes);
+    if (size.width())
     setInlineStyleProperty(CSSPropertyWidth, size.width(), CSSUnitType::CSS_PX);
     setInlineStyleProperty(CSSPropertyHeight, size.height(), CSSUnitType::CSS_PX);
 }
@@ -53,8 +58,8 @@ TextPlaceholderElement::TextPlaceholderElement(Document& document, const LayoutS
 auto TextPlaceholderElement::insertedIntoAncestor(InsertionType insertionType, ContainerNode& parentOfInsertedTree) -> InsertedIntoAncestorResult
 {
     if (insertionType.treeScopeChanged) {
-        if (RefPtr shadowHost = parentOfInsertedTree.shadowHost(); is<HTMLTextFormControlElement>(shadowHost))
-            downcast<HTMLTextFormControlElement>(*shadowHost).setCanShowPlaceholder(false);
+        if (RefPtr shadowHost = dynamicDowncast<HTMLTextFormControlElement>(parentOfInsertedTree.shadowHost()))
+            shadowHost->setCanShowPlaceholder(false);
     }
     return HTMLDivElement::insertedIntoAncestor(insertionType, parentOfInsertedTree);
 }
@@ -62,8 +67,8 @@ auto TextPlaceholderElement::insertedIntoAncestor(InsertionType insertionType, C
 void TextPlaceholderElement::removedFromAncestor(RemovalType removalType, ContainerNode& oldParentOfRemovedTree)
 {
     if (removalType.treeScopeChanged) {
-        if (RefPtr shadowHost = oldParentOfRemovedTree.shadowHost(); is<HTMLTextFormControlElement>(shadowHost))
-            downcast<HTMLTextFormControlElement>(*shadowHost).setCanShowPlaceholder(true);
+        if (RefPtr shadowHost = dynamicDowncast<HTMLTextFormControlElement>(oldParentOfRemovedTree.shadowHost()))
+            shadowHost->setCanShowPlaceholder(true);
     }
     HTMLDivElement::removedFromAncestor(removalType, oldParentOfRemovedTree);
 }

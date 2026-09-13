@@ -31,13 +31,16 @@
 #include "HTMLCanvasElement.h"
 #include "InspectorInstrumentation.h"
 #include "RenderElement.h"
+#include "RenderObjectInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(StyleCanvasImage);
+
 StyleCanvasImage::StyleCanvasImage(String&& name)
     : StyleGeneratedImage { Type::CanvasImage, StyleCanvasImage::isFixedSize }
-    , m_name { WTFMove(name) }
-    , m_element { nullptr }
+    , m_name { WTF::move(name) }
 {
 }
 
@@ -49,7 +52,8 @@ StyleCanvasImage::~StyleCanvasImage()
 
 bool StyleCanvasImage::operator==(const StyleImage& other) const
 {
-    return is<StyleCanvasImage>(other) && equals(downcast<StyleCanvasImage>(other));
+    auto* otherCanvasImage = dynamicDowncast<StyleCanvasImage>(other);
+    return otherCanvasImage && equals(*otherCanvasImage);
 }
 
 bool StyleCanvasImage::equals(const StyleCanvasImage& other) const
@@ -71,14 +75,14 @@ void StyleCanvasImage::load(CachedResourceLoader&, const ResourceLoaderOptions&)
 {
 }
 
-RefPtr<Image> StyleCanvasImage::image(const RenderElement* renderer, const FloatSize&) const
+RefPtr<Image> StyleCanvasImage::image(const RenderElement* renderer, const FloatSize&, const GraphicsContext&, bool) const
 {
     if (!renderer)
         return &Image::nullImage();
 
     ASSERT(clients().contains(const_cast<RenderElement&>(*renderer)));
     RefPtr element = this->element(renderer->document());
-    if (!element || !element->buffer())
+    if (!element)
         return nullptr;
     return element->copiedImage();
 }
@@ -108,15 +112,12 @@ void StyleCanvasImage::didRemoveClient(RenderElement& renderer)
         InspectorInstrumentation::didChangeCSSCanvasClientNodes(*element);
 }
 
-void StyleCanvasImage::canvasChanged(CanvasBase& canvasBase, const std::optional<FloatRect>& changedRect)
+void StyleCanvasImage::canvasChanged(CanvasBase& canvasBase, const FloatRect& changedRect)
 {
     ASSERT_UNUSED(canvasBase, is<HTMLCanvasElement>(canvasBase));
     ASSERT_UNUSED(canvasBase, m_element == &downcast<HTMLCanvasElement>(canvasBase));
 
-    if (!changedRect)
-        return;
-
-    auto imageChangeRect = enclosingIntRect(changedRect.value());
+    auto imageChangeRect = enclosingIntRect(changedRect);
     for (auto entry : clients()) {
         auto& client = entry.key;
         client.imageChanged(static_cast<WrappedImagePtr>(this), &imageChangeRect);
@@ -149,7 +150,7 @@ HTMLCanvasElement* StyleCanvasImage::element(Document& document) const
             return nullptr;
         m_element->addObserver(const_cast<StyleCanvasImage&>(*this));
     }
-    return m_element;
+    return m_element.get();
 }
 
 } // namespace WebCore

@@ -115,9 +115,15 @@ JSValue IntlSegmenter::segment(JSGlobalObject* globalObject, JSValue stringValue
 
     JSString* jsString = stringValue.toString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    String string = jsString->value(globalObject);
+    auto string = jsString->value(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
-    auto upconvertedCharacters = Box<Vector<UChar>>::create(string.charactersWithoutNullTermination());
+    auto expectedCharacters = string->charactersWithoutNullTermination();
+    if (!expectedCharacters) {
+        throwOutOfMemoryError(globalObject, scope);
+        return { };
+    }
+
+    auto upconvertedCharacters = Box<Vector<char16_t>>::create(expectedCharacters.value());
 
     UErrorCode status = U_ZERO_ERROR;
     auto segmenter = std::unique_ptr<UBreakIterator, UBreakIteratorDeleter>(cloneUBreakIterator(m_segmenter.get(), &status));
@@ -125,13 +131,13 @@ JSValue IntlSegmenter::segment(JSGlobalObject* globalObject, JSValue stringValue
         throwTypeError(globalObject, scope, "failed to initialize Segments"_s);
         return { };
     }
-    ubrk_setText(segmenter.get(), upconvertedCharacters->data(), upconvertedCharacters->size(), &status);
+    ubrk_setText(segmenter.get(), upconvertedCharacters->span().data(), upconvertedCharacters->size(), &status);
     if (U_FAILURE(status)) {
         throwTypeError(globalObject, scope, "failed to initialize Segments"_s);
         return { };
     }
 
-    return IntlSegments::create(vm, globalObject->segmentsStructure(), WTFMove(segmenter), WTFMove(upconvertedCharacters), jsString, m_granularity);
+    return IntlSegments::create(vm, globalObject->segmentsStructure(), WTF::move(segmenter), WTF::move(upconvertedCharacters), jsString, m_granularity);
 }
 
 // https://tc39.es/proposal-intl-segmenter/#sec-intl.segmenter.prototype.resolvedoptions
@@ -161,8 +167,11 @@ ASCIILiteral IntlSegmenter::granularityString(Granularity granularity)
 JSObject* IntlSegmenter::createSegmentDataObject(JSGlobalObject* globalObject, JSString* string, int32_t startIndex, int32_t endIndex, UBreakIterator& segmenter, Granularity granularity)
 {
     VM& vm = globalObject->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
     JSObject* result = constructEmptyObject(globalObject);
-    result->putDirect(vm, vm.propertyNames->segment, jsSubstring(globalObject, string, startIndex, endIndex - startIndex));
+    JSString* substring = jsSubstring(globalObject, string, startIndex, endIndex - startIndex);
+    RETURN_IF_EXCEPTION(scope, nullptr);
+    result->putDirect(vm, vm.propertyNames->segment, substring);
     result->putDirect(vm, vm.propertyNames->index, jsNumber(startIndex));
     result->putDirect(vm, vm.propertyNames->input, string);
     if (granularity == IntlSegmenter::Granularity::Word) {

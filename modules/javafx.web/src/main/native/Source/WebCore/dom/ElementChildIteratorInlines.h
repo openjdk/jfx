@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "ElementChildIterator.h"
-#include "ElementIteratorInlines.h"
+#include <WebCore/ElementChildIterator.h>
+#include <WebCore/ElementIteratorInlines.h>
 
 namespace WebCore {
 
@@ -69,8 +69,8 @@ inline ElementType* ElementChildRange<ElementType>::last() const
 template <typename ElementType>
 inline ElementChildIterator<ElementType> ElementChildRange<ElementType>::beginAt(ElementType& child) const
 {
-    ASSERT(child.parentNode() == &m_parent);
-    return ElementChildIterator<ElementType>(m_parent, &child);
+    ASSERT(child.parentNode() == m_parent.ptr());
+    return ElementChildIterator<ElementType>(m_parent.get(), &child);
 }
 
 }

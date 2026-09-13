@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,10 +32,15 @@
 #include "EditorClient.h"
 #include "ImageOverlayController.h"
 #include "LocalFrame.h"
+#include "RenderObjectInlines.h"
 #include "RenderView.h"
 #include "ServicesOverlayController.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SelectionGeometryGatherer);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SelectionGeometryGatherer::Notifier);
 
 SelectionGeometryGatherer::SelectionGeometryGatherer(RenderView& renderView)
     : m_renderView(renderView)
@@ -68,12 +73,13 @@ SelectionGeometryGatherer::Notifier::Notifier(SelectionGeometryGatherer& gathere
 
 SelectionGeometryGatherer::Notifier::~Notifier()
 {
-    auto page = m_gatherer.m_renderView.view().frame().page();
+    Ref frame = m_gatherer.m_renderView->frame();
+    RefPtr page = frame->page();
     if (!page)
         return;
 
-    page->servicesOverlayController().selectionRectsDidChange(m_gatherer.boundingRects(), m_gatherer.m_gapRects, m_gatherer.isTextOnly());
-    page->imageOverlayController().selectionQuadsDidChange(m_gatherer.m_renderView.frame(), m_gatherer.m_quads);
+    page->protectedServicesOverlayController()->selectionRectsDidChange(m_gatherer.boundingRects(), m_gatherer.m_gapRects, m_gatherer.isTextOnly());
+    page->protectedImageOverlayController()->selectionQuadsDidChange(frame, m_gatherer.m_quads);
 }
 
 Vector<LayoutRect> SelectionGeometryGatherer::boundingRects() const

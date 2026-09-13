@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,13 +27,26 @@ package javafx.scene.paint;
 
 import com.sun.javafx.beans.event.AbstractNotifyListener;
 import com.sun.javafx.tk.Toolkit;
+import javafx.animation.Interpolatable;
 
 /**
  * Base class for a color or gradients used to fill shapes and backgrounds when
  * rendering the scene graph.
+ * <p>
+ * Linear interpolation is supported between the following heterogeneous paint combinations:
+ * <ul>
+ *     <li>{@link Color} ↔ {@link LinearGradient}
+ *     <li>{@link Color} ↔ {@link RadialGradient}
+ * </ul>
+ * Heterogeneous paint interpolation converts the {@code Color} to a visually identical gradient
+ * paint, and then performs a linear interpolation between the two gradient paints.
+ * If heterogeneous paints cannot be interpolated as described, the paints are interpolated
+ * <a href="../../animation/Interpolatable.html#discrete">as discrete</a>.
+ *
  * @since JavaFX 2.0
  */
-public abstract class Paint {
+public abstract sealed class Paint implements Interpolatable<Paint>
+                                   permits Color, LinearGradient, RadialGradient, ImagePattern {
 
     static {
         Toolkit.setPaintAccessor(new Toolkit.PaintAccessor() {

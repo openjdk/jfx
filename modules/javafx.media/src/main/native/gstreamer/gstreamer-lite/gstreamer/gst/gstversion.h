@@ -54,13 +54,13 @@ G_BEGIN_DECLS
  *
  * The minor version of GStreamer at compile time:
  */
-#define GST_VERSION_MINOR (14)
+#define GST_VERSION_MINOR (28)
 /**
  * GST_VERSION_MICRO:
  *
  * The micro version of GStreamer at compile time:
  */
-#define GST_VERSION_MICRO (4)
+#define GST_VERSION_MICRO (3)
 /**
  * GST_VERSION_NANO:
  *
@@ -77,14 +77,17 @@ G_BEGIN_DECLS
  *
  * Check whether a GStreamer version equal to or greater than
  * major.minor.micro is present.
+ *
+ * Note: Since version 1.22 this macro can no longer be used to check that
+ * current git version maps to the next version. So for instance,
+ * GST_CHECK_VERSION(1, 22, 0) on a git checkout of the 1.21 development version
+ * will expand to `FALSE`.
  */
-#define GST_CHECK_VERSION(major,minor,micro)    \
+#define GST_CHECK_VERSION(major,minor,micro) \
     (GST_VERSION_MAJOR > (major) || \
      (GST_VERSION_MAJOR == (major) && GST_VERSION_MINOR > (minor)) || \
      (GST_VERSION_MAJOR == (major) && GST_VERSION_MINOR == (minor) && \
-      GST_VERSION_MICRO >= (micro)) || \
-     (GST_VERSION_MAJOR == (major) && GST_VERSION_MINOR == (minor) && \
-      GST_VERSION_MICRO + 1 == (micro) && GST_VERSION_NANO > 0))
+      GST_VERSION_MICRO >= (micro)))
 
 G_END_DECLS
 

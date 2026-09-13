@@ -26,31 +26,39 @@
 #include "config.h"
 #include "HTMLButtonElement.h"
 
+#include "CommandEvent.h"
 #include "CommonAtomStrings.h"
 #include "DOMFormData.h"
 #include "ElementInlines.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
 #include "HTMLFormElement.h"
 #include "HTMLNames.h"
 #include "KeyboardEvent.h"
 #include "RenderButton.h"
-#include <wtf/IsoMallocInlines.h>
+#include "RenderStyle+GettersInlines.h"
+#include "Settings.h"
 #include <wtf/SetForScope.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(SERVICE_CONTROLS)
 #include "ImageControlsMac.h"
 #endif
 
+#if ENABLE(SPATIAL_IMAGE_CONTROLS)
+#include "SpatialImageControls.h"
+#endif
+
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(HTMLButtonElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLButtonElement);
 
 using namespace HTMLNames;
 
 inline HTMLButtonElement::HTMLButtonElement(const QualifiedName& tagName, Document& document, HTMLFormElement* form)
     : HTMLFormControlElement(tagName, document, form)
-    , m_type(SUBMIT)
+    , m_type(Type::Submit)
     , m_isActivatedSubmit(false)
 {
     ASSERT(hasTagName(buttonTag));
@@ -66,18 +74,12 @@ Ref<HTMLButtonElement> HTMLButtonElement::create(Document& document)
     return adoptRef(*new HTMLButtonElement(buttonTag, document, nullptr));
 }
 
-void HTMLButtonElement::setType(const AtomString& type)
-{
-    setAttributeWithoutSynchronization(typeAttr, type);
-}
-
 RenderPtr<RenderElement> HTMLButtonElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition& position)
 {
     // https://html.spec.whatwg.org/multipage/rendering.html#button-layout
-    DisplayType display = style.display();
-    if (display == DisplayType::InlineGrid || display == DisplayType::Grid || display == DisplayType::InlineFlex || display == DisplayType::Flex)
-        return HTMLFormControlElement::createElementRenderer(WTFMove(style), position);
-    return createRenderer<RenderButton>(*this, WTFMove(style));
+    if (style.isDisplayFlexibleOrGridFormattingContextBox())
+        return HTMLFormControlElement::createElementRenderer(WTF::move(style), position);
+    return createRenderer<RenderButton>(*this, WTF::move(style));
 }
 
 int HTMLButtonElement::defaultTabIndex() const
@@ -88,11 +90,11 @@ int HTMLButtonElement::defaultTabIndex() const
 const AtomString& HTMLButtonElement::formControlType() const
 {
     switch (m_type) {
-    case SUBMIT:
+    case Type::Submit:
         return submitAtom();
-    case BUTTON:
+    case Type::Button:
         return HTMLNames::buttonTag->localName();
-    case RESET:
+    case Type::Reset:
         return resetAtom();
     }
 
@@ -113,21 +115,146 @@ bool HTMLButtonElement::hasPresentationalHintsForAttribute(const QualifiedName& 
 
 void HTMLButtonElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
-    if (name == typeAttr) {
-        Type oldType = m_type;
-        if (equalLettersIgnoringASCIICase(newValue, "reset"_s))
-            m_type = RESET;
-        else if (equalLettersIgnoringASCIICase(newValue, "button"_s))
-            m_type = BUTTON;
+    if (name == typeAttr)
+        computeType(newValue);
+    else if ((name == commandAttr || name == commandforAttr) && document().settings().commandAttributesEnabled())
+        computeType(attributeWithoutSynchronization(HTMLNames::typeAttr));
         else
-            m_type = SUBMIT;
-        if (oldType != m_type) {
-            updateWillValidateAndValidity();
-            if (form() && (oldType == SUBMIT || m_type == SUBMIT))
-                form()->resetDefaultButton();
-        }
-    } else
         HTMLFormControlElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
+}
+
+RefPtr<Element> HTMLButtonElement::commandForElement() const
+{
+    auto canInvoke = [](const HTMLFormControlElement& element) -> bool {
+        if (!element.document().settings().commandAttributesEnabled())
+            return false;
+        return is<HTMLButtonElement>(element);
+    };
+
+    if (!canInvoke(*this))
+        return nullptr;
+
+    return elementForAttributeInternal(commandforAttr);
+}
+
+static const AtomString& togglePopoverAtom()
+{
+    static MainThreadNeverDestroyed<const AtomString> identifier("toggle-popover"_s);
+    return identifier;
+}
+
+static const AtomString& showPopoverAtom()
+{
+    static MainThreadNeverDestroyed<const AtomString> identifier("show-popover"_s);
+    return identifier;
+}
+
+static const AtomString& hidePopoverAtom()
+{
+    static MainThreadNeverDestroyed<const AtomString> identifier("hide-popover"_s);
+    return identifier;
+}
+
+static const AtomString& closeAtom()
+{
+    static MainThreadNeverDestroyed<const AtomString> identifier("close"_s);
+    return identifier;
+}
+
+static const AtomString& requestCloseAtom()
+{
+    static MainThreadNeverDestroyed<const AtomString> identifier("request-close"_s);
+    return identifier;
+}
+
+static const AtomString& showModalAtom()
+{
+    static MainThreadNeverDestroyed<const AtomString> identifier("show-modal"_s);
+    return identifier;
+}
+
+CommandType HTMLButtonElement::commandType() const
+{
+    auto action = attributeWithoutSynchronization(HTMLNames::commandAttr);
+    if (action.isNull() || action.isEmpty())
+        return CommandType::Invalid;
+
+    if (equalIgnoringASCIICase(action, togglePopoverAtom()))
+        return CommandType::TogglePopover;
+
+    if (equalIgnoringASCIICase(action, showPopoverAtom()))
+        return CommandType::ShowPopover;
+
+    if (equalIgnoringASCIICase(action, hidePopoverAtom()))
+        return CommandType::HidePopover;
+
+    if (equalIgnoringASCIICase(action, showModalAtom()))
+        return CommandType::ShowModal;
+
+    if (equalIgnoringASCIICase(action, closeAtom()))
+        return CommandType::Close;
+
+    if (equalIgnoringASCIICase(action, requestCloseAtom()))
+        return CommandType::RequestClose;
+
+    if (action.startsWith("--"_s))
+        return CommandType::Custom;
+
+    return CommandType::Invalid;
+}
+
+void HTMLButtonElement::handleCommand()
+{
+    RefPtr invokee = commandForElement();
+    if (!invokee)
+        return;
+
+    auto commandRaw = attributeWithoutSynchronization(HTMLNames::commandAttr);
+    auto command = commandType();
+
+    if (command == CommandType::Invalid)
+        return;
+
+    if (command != CommandType::Custom && !invokee->isValidCommandType(command))
+        return;
+
+    CommandEvent::Init init;
+    init.bubbles = false;
+    init.cancelable = true;
+    init.source = this;
+    init.command = commandRaw.isNull() ? emptyAtom() : commandRaw;
+
+    Ref event = CommandEvent::create(eventNames().commandEvent, init,
+        CommandEvent::IsTrusted::Yes);
+    invokee->dispatchEvent(event);
+
+    if (!event->defaultPrevented() && command != CommandType::Custom)
+        invokee->handleCommandInternal(*this, command);
+}
+
+const AtomString& HTMLButtonElement::command() const
+{
+    switch (commandType()) {
+    case CommandType::TogglePopover:
+        return togglePopoverAtom();
+    case CommandType::ShowPopover:
+        return showPopoverAtom();
+    case CommandType::HidePopover:
+        return hidePopoverAtom();
+    case CommandType::Close:
+        return closeAtom();
+    case CommandType::RequestClose:
+        return requestCloseAtom();
+    case CommandType::ShowModal:
+        return showModalAtom();
+    case CommandType::Custom:
+        return attributeWithoutSynchronization(HTMLNames::commandAttr);
+    case CommandType::Invalid:
+        return emptyAtom();
+    }
+
+    ASSERT_NOT_REACHED();
+    return nullAtom();
 }
 
 void HTMLButtonElement::defaultEventHandler(Event& event)
@@ -136,52 +263,64 @@ void HTMLButtonElement::defaultEventHandler(Event& event)
     if (ImageControlsMac::handleEvent(*this, event))
         return;
 #endif
+#if ENABLE(SPATIAL_IMAGE_CONTROLS)
+    if (SpatialImageControls::handleEvent(*this, event))
+        return;
+#endif
     auto& eventNames = WebCore::eventNames();
     if (event.type() == eventNames.DOMActivateEvent && !isDisabledFormControl()) {
-        RefPtr<HTMLFormElement> protectedForm(form());
-
-        if (protectedForm) {
+        if (form()) {
             // Update layout before processing form actions in case the style changes
             // the Form or button relationships.
-            document().updateLayoutIgnorePendingStylesheets();
+            protectedDocument()->updateLayoutIgnorePendingStylesheets();
 
-            if (auto currentForm = form()) {
-                if (m_type == SUBMIT)
+            if (RefPtr currentForm = form()) {
+                if (m_type == Type::Submit)
                     currentForm->submitIfPossible(&event, this);
 
-                if (m_type == RESET)
+                if (m_type == Type::Reset)
                     currentForm->reset();
             }
 
-            if (m_type == SUBMIT || m_type == RESET)
+            if (m_type == Type::Submit || m_type == Type::Reset) {
                 event.setDefaultHandled();
-        } else
-            handlePopoverTargetAction();
+                return;
+        }
+
+            if (m_type == Type::Button && !equalLettersIgnoringASCIICase(attributeWithoutSynchronization(HTMLNames::typeAttr), "button"_s))
+                return;
+        }
+
+        if (commandForElement()) {
+            handleCommand();
+            return;
     }
 
-    if (is<KeyboardEvent>(event)) {
-        KeyboardEvent& keyboardEvent = downcast<KeyboardEvent>(event);
-        if (keyboardEvent.type() == eventNames.keydownEvent && keyboardEvent.keyIdentifier() == "U+0020"_s) {
+        handlePopoverTargetAction(event.protectedTarget().get());
+    }
+
+    if (RefPtr keyboardEvent = dynamicDowncast<KeyboardEvent>(event)) {
+        if (keyboardEvent->type() == eventNames.keydownEvent && keyboardEvent->keyIdentifier() == "U+0020"_s) {
             setActive(true);
             // No setDefaultHandled() - IE dispatches a keypress in this case.
             return;
         }
-        if (keyboardEvent.type() == eventNames.keypressEvent) {
-            switch (keyboardEvent.charCode()) {
+        if (keyboardEvent->type() == eventNames.keypressEvent) {
+            switch (keyboardEvent->charCode()) {
                 case '\r':
-                    dispatchSimulatedClick(&keyboardEvent);
-                    keyboardEvent.setDefaultHandled();
+                    dispatchSimulatedClick(keyboardEvent.get());
+                    keyboardEvent->setDefaultHandled();
                     return;
                 case ' ':
                     // Prevent scrolling down the page.
-                    keyboardEvent.setDefaultHandled();
+                    keyboardEvent->setDefaultHandled();
                     return;
             }
         }
-        if (keyboardEvent.type() == eventNames.keyupEvent && keyboardEvent.keyIdentifier() == "U+0020"_s) {
+        if (keyboardEvent->type() == eventNames.keyupEvent && keyboardEvent->keyIdentifier() == "U+0020"_s) {
             if (active())
-                dispatchSimulatedClick(&keyboardEvent);
-            keyboardEvent.setDefaultHandled();
+                dispatchSimulatedClick(keyboardEvent.get());
+            keyboardEvent->setDefaultHandled();
             return;
         }
     }
@@ -198,12 +337,13 @@ bool HTMLButtonElement::isSuccessfulSubmitButton() const
 {
     // HTML spec says that buttons must have names to be considered successful.
     // However, other browsers do not impose this constraint.
-    return m_type == SUBMIT;
+    return m_type == Type::Submit;
 }
 
 bool HTMLButtonElement::matchesDefaultPseudoClass() const
 {
-    return isSuccessfulSubmitButton() && form() && form()->defaultButton() == this;
+    RefPtr form = this->form();
+    return isSuccessfulSubmitButton() && form && form->defaultButton() == this;
 }
 
 bool HTMLButtonElement::isActivatedSubmit() const
@@ -218,7 +358,7 @@ void HTMLButtonElement::setActivatedSubmit(bool flag)
 
 bool HTMLButtonElement::appendFormData(DOMFormData& formData)
 {
-    if (m_type != SUBMIT || name().isEmpty() || !m_isActivatedSubmit)
+    if (m_type != Type::Submit || name().isEmpty() || !m_isActivatedSubmit)
         return false;
     formData.append(name(), value());
     return true;
@@ -236,17 +376,40 @@ const AtomString& HTMLButtonElement::value() const
 
 bool HTMLButtonElement::computeWillValidate() const
 {
-    return m_type == SUBMIT && HTMLFormControlElement::computeWillValidate();
+    return m_type == Type::Submit && HTMLFormControlElement::computeWillValidate();
 }
 
 bool HTMLButtonElement::isSubmitButton() const
 {
-    return m_type == SUBMIT;
+    return m_type == Type::Submit;
 }
 
 bool HTMLButtonElement::isExplicitlySetSubmitButton() const
 {
     return isSubmitButton() && hasAttributeWithoutSynchronization(HTMLNames::typeAttr);
+}
+
+void HTMLButtonElement::computeType(const AtomString& typeAttrValue)
+{
+    auto oldType = m_type;
+    if (equalLettersIgnoringASCIICase(typeAttrValue, "reset"_s))
+        m_type = Type::Reset;
+    else if (equalLettersIgnoringASCIICase(typeAttrValue, "button"_s))
+        m_type = Type::Button;
+    else if (equalLettersIgnoringASCIICase(typeAttrValue, "submit"_s))
+        m_type = Type::Submit;
+    else if (document().settings().commandAttributesEnabled()) {
+        if (hasAttributeWithoutSynchronization(HTMLNames::commandAttr) || hasAttributeWithoutSynchronization(HTMLNames::commandforAttr))
+            m_type = Type::Button;
+        else
+            m_type = Type::Submit;
+    } else
+        m_type = Type::Submit;
+    if (oldType != m_type) {
+        updateWillValidateAndValidity();
+        if (RefPtr currentForm = form(); currentForm && (oldType == Type::Submit || m_type == Type::Submit))
+            currentForm->resetDefaultButton();
+    }
 }
 
 } // namespace

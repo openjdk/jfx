@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <wtf/ASCIICType.h>
 #include <wtf/Ref.h>
 #include <wtf/RefCounted.h>
 #include <wtf/text/WTFString.h>
@@ -35,19 +36,21 @@ class GPUAdapterInfo : public RefCounted<GPUAdapterInfo> {
 public:
     static Ref<GPUAdapterInfo> create(String&& name)
     {
-        return adoptRef(*new GPUAdapterInfo(WTFMove(name)));
+        return adoptRef(*new GPUAdapterInfo(WTF::move(name)));
     }
 
-    String vendor() const { auto v = m_name.split(' '); return v.size() ? v[0] : ""_s; }
-    String architecture() const { return ""_s; }
-    String device() const { return m_name; }
-    String description() const { return ""_s; }
+    String vendor() const { auto v = m_name.split(' '); return v.size() ? normalizedIdentifier(v[0]) : ""_s; }
+    String architecture() const { return vendor(); }
+    String device() const { return vendor(); }
+    String description() const { return vendor(); }
+    bool isFallbackAdapter() const { return false; }
 
 private:
     GPUAdapterInfo(String&& name)
         : m_name(name)
     {
     }
+    static String normalizedIdentifier(const String& s) { return s.convertToLowercaseWithoutLocale().removeCharacters([](auto c) { return !isASCIIAlphanumeric(c); }); }
 
     String m_name;
 };

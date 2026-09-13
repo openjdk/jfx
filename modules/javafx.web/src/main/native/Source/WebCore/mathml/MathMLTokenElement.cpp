@@ -30,19 +30,21 @@
 
 #if ENABLE(MATHML)
 
+#include "ContainerNodeInlines.h"
 #include "HTTPParsers.h"
 #include "MathMLNames.h"
 #include "RenderMathMLToken.h"
-#include <wtf/IsoMallocInlines.h>
+#include "RenderStyle+GettersInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(MathMLTokenElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MathMLTokenElement);
 
 using namespace MathMLNames;
 
 MathMLTokenElement::MathMLTokenElement(const QualifiedName& tagName, Document& document)
-    : MathMLPresentationElement(tagName, document, CreateMathMLTokenElement)
+    : MathMLPresentationElement(tagName, document, TypeFlag::HasCustomStyleResolveCallbacks)
 {
 }
 
@@ -54,41 +56,28 @@ Ref<MathMLTokenElement> MathMLTokenElement::create(const QualifiedName& tagName,
 void MathMLTokenElement::didAttachRenderers()
 {
     MathMLPresentationElement::didAttachRenderers();
-    auto* mathmlRenderer = renderer();
-    if (is<RenderMathMLToken>(mathmlRenderer))
-        downcast<RenderMathMLToken>(*mathmlRenderer).updateTokenContent();
+    if (CheckedPtr mathmlRenderer = dynamicDowncast<RenderMathMLToken>(renderer()))
+        mathmlRenderer->updateTokenContent();
 }
 
 void MathMLTokenElement::childrenChanged(const ChildChange& change)
 {
     MathMLPresentationElement::childrenChanged(change);
-    auto* mathmlRenderer = renderer();
-    if (is<RenderMathMLToken>(mathmlRenderer))
-        downcast<RenderMathMLToken>(*mathmlRenderer).updateTokenContent();
+    if (CheckedPtr mathmlRenderer = dynamicDowncast<RenderMathMLToken>(renderer()))
+        mathmlRenderer->updateTokenContent();
 }
 
 RenderPtr<RenderElement> MathMLTokenElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
     ASSERT(hasTagName(MathMLNames::miTag) || hasTagName(MathMLNames::mnTag) || hasTagName(MathMLNames::msTag) || hasTagName(MathMLNames::mtextTag));
 
-    return createRenderer<RenderMathMLToken>(*this, WTFMove(style));
+    return createRenderer<RenderMathMLToken>(RenderObject::Type::MathMLToken, *this, WTF::move(style));
 }
 
 bool MathMLTokenElement::childShouldCreateRenderer(const Node& child) const
 {
     // The HTML specification defines <mi>, <mo>, <mn>, <ms> and <mtext> as insertion points.
     return StyledElement::childShouldCreateRenderer(child);
-}
-
-std::optional<UChar32> MathMLTokenElement::convertToSingleCodePoint(StringView string)
-{
-    auto codePoints = string.trim(isASCIIWhitespaceWithoutFF<UChar>).codePoints();
-    auto iterator = codePoints.begin();
-    if (iterator == codePoints.end())
-        return std::nullopt;
-    std::optional<UChar32> character = *iterator;
-    ++iterator;
-    return iterator == codePoints.end() ? character : std::nullopt;
 }
 
 }

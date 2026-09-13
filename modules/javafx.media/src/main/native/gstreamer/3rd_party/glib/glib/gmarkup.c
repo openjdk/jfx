@@ -38,60 +38,6 @@
 #include "glibintl.h"
 #include "gthread.h"
 
-/**
- * SECTION:markup
- * @Title: Simple XML Subset Parser
- * @Short_description: parses a subset of XML
- * @See_also: [XML Specification](http://www.w3.org/TR/REC-xml/)
- *
- * The "GMarkup" parser is intended to parse a simple markup format
- * that's a subset of XML. This is a small, efficient, easy-to-use
- * parser. It should not be used if you expect to interoperate with
- * other applications generating full-scale XML, and must not be used if you
- * expect to parse untrusted input. However, it's very
- * useful for application data files, config files, etc. where you
- * know your application will be the only one writing the file.
- * Full-scale XML parsers should be able to parse the subset used by
- * GMarkup, so you can easily migrate to full-scale XML at a later
- * time if the need arises.
- *
- * GMarkup is not guaranteed to signal an error on all invalid XML;
- * the parser may accept documents that an XML parser would not.
- * However, XML documents which are not well-formed (which is a
- * weaker condition than being valid. See the
- * [XML specification](http://www.w3.org/TR/REC-xml/)
- * for definitions of these terms.) are not considered valid GMarkup
- * documents.
- *
- * Simplifications to XML include:
- *
- * - Only UTF-8 encoding is allowed
- *
- * - No user-defined entities
- *
- * - Processing instructions, comments and the doctype declaration
- *   are "passed through" but are not interpreted in any way
- *
- * - No DTD or validation
- *
- * The markup format does support:
- *
- * - Elements
- *
- * - Attributes
- *
- * - 5 standard entities: &amp; &lt; &gt; &quot; &apos;
- *
- * - Character references
- *
- * - Sections marked as CDATA
-
- * ## An example parser # {#example}
- *
- * Here is an example for a markup parser:
- * [markup-example.c](https://gitlab.gnome.org/GNOME/glib/-/blob/HEAD/glib/tests/markup-example.c)
- */
-
 G_DEFINE_QUARK (g-markup-error-quark, g_markup_error)
 
 typedef enum
@@ -449,6 +395,7 @@ propagate_error (GMarkupParseContext  *context,
 #define IS_COMMON_NAME_END_CHAR(c) \
   ((c) == '=' || (c) == '/' || (c) == '>' || (c) == ' ')
 
+#ifndef GSTREAMER_LITE
 static gboolean
 slow_name_validate (GMarkupParseContext  *context,
                     const gchar          *name,
@@ -532,6 +479,7 @@ name_validate (GMarkupParseContext  *context,
  slow_validate:
   return slow_name_validate (context, name, error);
 }
+#endif // GSTREAMER_LITE
 
 static gboolean
 text_validate (GMarkupParseContext  *context,
@@ -1014,6 +962,7 @@ clear_attributes (GMarkupParseContext *context)
  * are unwound on exit - otherwise we grow & blow the stack
  * with large documents
  */
+#ifndef GSTREAMER_LITE
 static inline void
 emit_start_element (GMarkupParseContext  *context,
                     GError              **error)
@@ -1111,6 +1060,7 @@ emit_end_element (GMarkupParseContext  *context,
 
   pop_tag (context);
 }
+#endif // GSTREAMER_LITE
 
 /**
  * g_markup_parse_context_parse:
@@ -1132,6 +1082,7 @@ emit_end_element (GMarkupParseContext  *context,
  *
  * Returns: %FALSE if an error occurred, %TRUE on success
  */
+#ifndef GSTREAMER_LITE
 gboolean
 g_markup_parse_context_parse (GMarkupParseContext  *context,
                               const gchar          *text,
@@ -1765,6 +1716,7 @@ g_markup_parse_context_parse (GMarkupParseContext  *context,
 
   return context->state != STATE_ERROR;
 }
+#endif // GSTREAMER_LITE
 
 /**
  * g_markup_parse_context_end_parse:
@@ -1939,7 +1891,7 @@ g_markup_parse_context_get_element (GMarkupParseContext *context)
  * would merely return the name of the element that is being
  * processed.
  *
- * Returns: the element stack, which must not be modified
+ * Returns: (element-type utf8): the element stack, which must not be modified
  *
  * Since: 2.16
  */
@@ -2700,14 +2652,14 @@ g_markup_parse_boolean (const char  *string,
  * @G_MARKUP_COLLECT_STRDUP: as with %G_MARKUP_COLLECT_STRING, but
  *     expects a parameter of type (char **) and g_strdup()s the
  *     returned pointer. The pointer must be freed with g_free()
- * @G_MARKUP_COLLECT_BOOLEAN: expects a parameter of type (gboolean *)
+ * @G_MARKUP_COLLECT_BOOLEAN: expects a parameter of type (`gboolean *`)
  *     and parses the attribute value as a boolean. Sets %FALSE if the
  *     attribute isn't present. Valid boolean values consist of
  *     (case-insensitive) "false", "f", "no", "n", "0" and "true", "t",
  *     "yes", "y", "1"
  * @G_MARKUP_COLLECT_TRISTATE: as with %G_MARKUP_COLLECT_BOOLEAN, but
  *     in the case of a missing attribute a value is set that compares
- *     equal to neither %FALSE nor %TRUE G_MARKUP_COLLECT_OPTIONAL is
+ *     equal to neither %FALSE nor %TRUE %G_MARKUP_COLLECT_OPTIONAL is
  *     implied
  * @G_MARKUP_COLLECT_OPTIONAL: can be bitwise ORed with the other fields.
  *     If present, allows the attribute not to appear. A default value

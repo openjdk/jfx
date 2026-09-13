@@ -29,22 +29,30 @@
 
 #include "TextTrackList.h"
 
+#include "EventTargetInterfaces.h"
 #include "InbandTextTrack.h"
 #include "InbandTextTrackPrivate.h"
 #include "LoadableTextTrack.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(TextTrackList);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextTrackList);
 
 TextTrackList::TextTrackList(ScriptExecutionContext* context)
-    : TrackListBase(context, TrackListBase::TextTrackList)
+    : TrackListBase(context)
 {
 }
 
-TextTrackList::~TextTrackList()
+TextTrackList::~TextTrackList() = default;
+
+void TextTrackList::setOpaqueRoot(TrackOpaqueRoot& trackOpaqueRoot)
 {
+    TrackListBase::setOpaqueRoot(trackOpaqueRoot);
+    for (Ref track : m_addTrackTracks)
+        track->setOpaqueRoot(trackOpaqueRoot);
+    for (Ref track : m_elementTracks)
+        track->setOpaqueRoot(trackOpaqueRoot);
 }
 
 unsigned TextTrackList::length() const
@@ -54,8 +62,8 @@ unsigned TextTrackList::length() const
 
 int TextTrackList::getTrackIndex(TextTrack& textTrack)
 {
-    if (is<LoadableTextTrack>(textTrack))
-        return downcast<LoadableTextTrack>(textTrack).trackElementIndex();
+    if (auto* loadableTextTrack = dynamicDowncast<LoadableTextTrack>(textTrack))
+        return loadableTextTrack->trackElementIndex();
 
     if (textTrack.trackType() == TextTrack::AddTrack)
         return m_elementTracks.size() + m_addTrackTracks.find(&textTrack);
@@ -74,25 +82,25 @@ int TextTrackList::getTrackIndexRelativeToRenderedTracks(TextTrack& textTrack)
     int trackIndex = 0;
 
     for (auto& elementTrack : m_elementTracks) {
-        if (!downcast<TextTrack>(*elementTrack).isRendered())
+        if (!downcast<TextTrack>(elementTrack.get()).isRendered())
             continue;
-        if (elementTrack == &textTrack)
+        if (elementTrack.ptr() == &textTrack)
             return trackIndex;
         ++trackIndex;
     }
 
     for (auto& addTrack : m_addTrackTracks) {
-        if (!downcast<TextTrack>(*addTrack).isRendered())
+        if (!downcast<TextTrack>(addTrack.get()).isRendered())
             continue;
-        if (addTrack == &textTrack)
+        if (addTrack.ptr() == &textTrack)
             return trackIndex;
         ++trackIndex;
     }
 
     for (auto& inbandTrack : m_inbandTracks) {
-        if (!downcast<TextTrack>(*inbandTrack).isRendered())
+        if (!downcast<TextTrack>(inbandTrack.get()).isRendered())
             continue;
-        if (inbandTrack == &textTrack)
+        if (inbandTrack.ptr() == &textTrack)
             return trackIndex;
         ++trackIndex;
     }
@@ -110,51 +118,61 @@ TextTrack* TextTrackList::item(unsigned index) const
     // resource), in the order defined by the media resource's format specification.
 
     if (index < m_elementTracks.size())
-        return downcast<TextTrack>(m_elementTracks[index].get());
+        return downcast<TextTrack>(m_elementTracks[index].ptr());
 
     index -= m_elementTracks.size();
     if (index < m_addTrackTracks.size())
-        return downcast<TextTrack>(m_addTrackTracks[index].get());
+        return downcast<TextTrack>(m_addTrackTracks[index].ptr());
 
     index -= m_addTrackTracks.size();
     if (index < m_inbandTracks.size())
-        return downcast<TextTrack>(m_inbandTracks[index].get());
+        return downcast<TextTrack>(m_inbandTracks[index].ptr());
 
     return nullptr;
 }
 
-TextTrack* TextTrackList::getTrackById(const AtomString& id)
+RefPtr<TextTrack> TextTrackList::getTrackById(const AtomString& id) const
 {
     // 4.8.10.12.5 Text track API
     // The getTrackById(id) method must return the first TextTrack in the
     // TextTrackList object whose id IDL attribute would return a value equal
     // to the value of the id argument.
     for (unsigned i = 0; i < length(); ++i) {
-        auto& track = *item(i);
-        if (track.id() == id)
-            return &track;
+        Ref track = *item(i);
+        if (track->id() == id)
+            return track;
     }
 
     // When no tracks match the given argument, the method must return null.
     return nullptr;
 }
 
+RefPtr<TextTrack> TextTrackList::getTrackById(TrackID id) const
+{
+    for (unsigned i = 0; i < length(); ++i) {
+        Ref track = *item(i);
+        if (track->trackId() == id)
+            return track;
+    }
+    return nullptr;
+}
+
 void TextTrackList::invalidateTrackIndexesAfterTrack(TextTrack& track)
 {
-    Vector<RefPtr<TrackBase>>* tracks = nullptr;
+    Vector<Ref<TrackBase>>* tracks = nullptr;
 
     switch (track.trackType()) {
     case TextTrack::TrackElement:
         tracks = &m_elementTracks;
         for (auto& addTrack : m_addTrackTracks)
-            downcast<TextTrack>(addTrack.get())->invalidateTrackIndex();
+            downcast<TextTrack>(addTrack.get()).invalidateTrackIndex();
         for (auto& inbandTrack : m_inbandTracks)
-            downcast<TextTrack>(inbandTrack.get())->invalidateTrackIndex();
+            downcast<TextTrack>(inbandTrack.get()).invalidateTrackIndex();
         break;
     case TextTrack::AddTrack:
         tracks = &m_addTrackTracks;
         for (auto& inbandTrack : m_inbandTracks)
-            downcast<TextTrack>(inbandTrack.get())->invalidateTrackIndex();
+            downcast<TextTrack>(inbandTrack.get()).invalidateTrackIndex();
         break;
     case TextTrack::InBand:
         tracks = &m_inbandTracks;
@@ -168,21 +186,21 @@ void TextTrackList::invalidateTrackIndexesAfterTrack(TextTrack& track)
         return;
 
     for (size_t i = index; i < tracks->size(); ++i)
-        downcast<TextTrack>(*tracks->at(index)).invalidateTrackIndex();
+        downcast<TextTrack>(tracks->at(index).get()).invalidateTrackIndex();
 }
 
 void TextTrackList::append(Ref<TextTrack>&& track)
 {
     if (track->trackType() == TextTrack::AddTrack)
-        m_addTrackTracks.append(track.ptr());
-    else if (is<LoadableTextTrack>(track)) {
+        m_addTrackTracks.append(track.copyRef());
+    else if (auto* textTrack = dynamicDowncast<LoadableTextTrack>(track.get())) {
         // Insert tracks added for <track> element in tree order.
-        size_t index = downcast<LoadableTextTrack>(track.get()).trackElementIndex();
-        m_elementTracks.insert(index, track.ptr());
+        size_t index = textTrack->trackElementIndex();
+        m_elementTracks.insert(index, track.copyRef());
     } else if (track->trackType() == TextTrack::InBand) {
         // Insert tracks added for in-band in the media file order.
         size_t index = downcast<InbandTextTrack>(track.get()).inbandTrackIndex();
-        m_inbandTracks.insert(index, track.ptr());
+        m_inbandTracks.insert(index, track.copyRef());
     } else
         ASSERT_NOT_REACHED();
 
@@ -191,13 +209,13 @@ void TextTrackList::append(Ref<TextTrack>&& track)
     if (!track->trackList())
         track->setTrackList(*this);
 
-    scheduleAddTrackEvent(WTFMove(track));
+    scheduleAddTrackEvent(WTF::move(track));
 }
 
 void TextTrackList::remove(TrackBase& track, bool scheduleEvent)
 {
     auto& textTrack = downcast<TextTrack>(track);
-    Vector<RefPtr<TrackBase>>* tracks = nullptr;
+    Vector<Ref<TrackBase>>* tracks = nullptr;
     switch (textTrack.trackType()) {
     case TextTrack::TrackElement:
         tracks = &m_elementTracks;
@@ -221,16 +239,16 @@ void TextTrackList::remove(TrackBase& track, bool scheduleEvent)
     if (track.trackList() == this)
         track.clearTrackList();
 
-    Ref<TrackBase> trackRef = *(*tracks)[index];
-    tracks->remove(index);
+    Ref trackRef = (*tracks)[index];
+    tracks->removeAt(index);
 
     if (scheduleEvent)
-        scheduleRemoveTrackEvent(WTFMove(trackRef));
+        scheduleRemoveTrackEvent(WTF::move(trackRef));
 }
 
 bool TextTrackList::contains(TrackBase& track) const
 {
-    const Vector<RefPtr<TrackBase>>* tracks = nullptr;
+    const Vector<Ref<TrackBase>>* tracks = nullptr;
     switch (downcast<TextTrack>(track).trackType()) {
     case TextTrack::TrackElement:
         tracks = &m_elementTracks;
@@ -245,17 +263,12 @@ bool TextTrackList::contains(TrackBase& track) const
         ASSERT_NOT_REACHED();
     }
 
-    return tracks->find(&track) != notFound;
+    return tracks->contains(&track);
 }
 
-EventTargetInterface TextTrackList::eventTargetInterface() const
+enum EventTargetInterfaceType TextTrackList::eventTargetInterface() const
 {
-    return TextTrackListEventTargetInterfaceType;
-}
-
-const char* TextTrackList::activeDOMObjectName() const
-{
-    return "TextTrackList";
+    return EventTargetInterfaceType::TextTrackList;
 }
 
 } // namespace WebCore

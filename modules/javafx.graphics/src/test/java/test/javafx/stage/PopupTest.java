@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -47,11 +47,6 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.shape.Rectangle;
-import junit.framework.Assert;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 import javafx.scene.Node;
@@ -62,7 +57,14 @@ import javafx.stage.Screen;
 import javafx.stage.Stage;
 import javafx.stage.Window;
 
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import test.com.sun.javafx.stage.PopupRootHelper;
 
 public class PopupTest {
@@ -72,7 +74,7 @@ public class PopupTest {
     private Scene scene;
     private boolean done = false;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         stage = new Stage();
         scene = new Scene(new Group(), 500, 500);
@@ -82,7 +84,7 @@ public class PopupTest {
         toolkit = (StubToolkit) Toolkit.getToolkit();
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         stage.hide();
         toolkit.resetScreens();
@@ -451,7 +453,7 @@ public class PopupTest {
         assertTrue(done);
     }
 
-    @Ignore("JDK-8234161")
+    @Disabled("JDK-8234161")
     @Test
     public void testPeerListener() {
         Popup p = new Popup();
@@ -698,50 +700,62 @@ public class PopupTest {
         }
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testShowWithNullOwner() {
-        final Popup popup = new Popup();
-        popup.show(null);
+        assertThrows(NullPointerException.class, () -> {
+            final Popup popup = new Popup();
+            popup.show(null);
+        });
     }
 
-    @Test(expected=NullPointerException.class)
+    @Test
     public void testShowXYWithNullOwner() {
-        final Popup popup = new Popup();
-        popup.show((Window) null, 10, 10);
+        assertThrows(NullPointerException.class, () -> {
+            final Popup popup = new Popup();
+            popup.show((Window) null, 10, 10);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testShowWithOwnerThatWouldCreateCycle1() {
-        final Popup popup = new Popup();
-        popup.show(popup);
+        assertThrows(IllegalArgumentException.class, () -> {
+            final Popup popup = new Popup();
+            popup.show(popup);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testShowWithOwnerThatWouldCreateCycle2() {
-        final Popup popup1 = new Popup();
-        final Popup popup2 = new Popup();
+        assertThrows(IllegalArgumentException.class, () -> {
+            final Popup popup1 = new Popup();
+            final Popup popup2 = new Popup();
 
-        popup1.show(stage);
-        popup2.show(popup1);
-        popup1.hide();
-        popup1.show(popup2);
+            popup1.show(stage);
+            popup2.show(popup1);
+            popup1.hide();
+            popup1.show(popup2);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testShowXYWithOwnerThatWouldCreateCycle1() {
-        final Popup popup = new Popup();
-        popup.show(popup, 10, 20);
+        assertThrows(IllegalArgumentException.class, () -> {
+            final Popup popup = new Popup();
+            popup.show(popup, 10, 20);
+        });
     }
 
-    @Test(expected=IllegalArgumentException.class)
+    @Test
     public void testShowXYWithOwnerThatWouldCreateCycle2() {
-        final Popup popup1 = new Popup();
-        final Popup popup2 = new Popup();
+        assertThrows(IllegalArgumentException.class, () -> {
+            final Popup popup1 = new Popup();
+            final Popup popup2 = new Popup();
 
-        popup1.show(stage);
-        popup2.show(popup1);
-        popup1.hide();
-        popup1.show(popup2, 10, 20);
+            popup1.show(stage);
+            popup2.show(popup1);
+            popup1.hide();
+            popup1.show(popup2, 10, 20);
+        });
     }
 
     @Test
@@ -766,13 +780,13 @@ public class PopupTest {
         final Popup popup = new Popup();
 
         final Parent oldRoot = popup.getScene().getRoot();
-        Assert.assertTrue(oldRoot.getStyleClass().contains("popup"));
+        assertTrue(oldRoot.getStyleClass().contains("popup"));
 
         final Group newRoot = new Group(new Rectangle(0, 0, 200, 300));
         popup.getScene().setRoot(newRoot);
 
-        Assert.assertTrue(newRoot.getStyleClass().contains("popup"));
-        Assert.assertFalse(oldRoot.getStyleClass().contains("popup"));
+        assertTrue(newRoot.getStyleClass().contains("popup"));
+        assertFalse(oldRoot.getStyleClass().contains("popup"));
 
         System.out.println(javafx.scene.shape.Sphere.class.getResource("Sphere.class"));
     }

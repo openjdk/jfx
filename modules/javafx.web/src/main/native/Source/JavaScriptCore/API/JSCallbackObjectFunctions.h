@@ -211,7 +211,7 @@ bool JSCallbackObject<Parent>::getOwnPropertySlot(JSObject* object, JSGlobalObje
         String className = thisObject->classRef()->className();
         if (className.isEmpty())
             className = thisObject->className();
-        slot.setValue(thisObject, static_cast<unsigned>(PropertyAttribute::DontEnum), jsString(vm, WTFMove(className)));
+        slot.setValue(thisObject, static_cast<unsigned>(PropertyAttribute::DontEnum), jsString(vm, WTF::move(className)));
         return true;
     }
 
@@ -249,7 +249,7 @@ EncodedJSValue JSCallbackObject<Parent>::customToPrimitive(JSGlobalObject* globa
                 return throwVMError(globalObject, scope, toJS(globalObject, exception));
             if (result) {
                 JSValue jsResult = toJS(globalObject, result);
-                if (UNLIKELY(jsResult.isObject()))
+                if (jsResult.isObject()) [[unlikely]]
                     return JSValue::encode(asObject(jsResult)->ordinaryToPrimitive(globalObject, hint));
                 return JSValue::encode(jsResult);
             }
@@ -271,7 +271,7 @@ bool JSCallbackObject<Parent>::put(JSCell* cell, JSGlobalObject* globalObject, P
     RefPtr<OpaqueJSString> propertyNameRef;
     JSValueRef valueRef = toRef(globalObject, value);
 
-    if (UNLIKELY(isThisValueAltered(slot, thisObject)))
+    if (isThisValueAltered(slot, thisObject)) [[unlikely]]
         RELEASE_AND_RETURN(scope, Parent::put(thisObject, globalObject, propertyName, value, slot));
 
     if (StringImpl* name = propertyName.uid()) {
@@ -459,6 +459,7 @@ CallData JSCallbackObject<Parent>::getConstructData(JSCell* cell)
             constructData.type = CallData::Type::Native;
             constructData.native.function = getConstructFunction();
             constructData.native.isBoundFunction = false;
+            constructData.native.isWasm = false;
             break;
         }
     }
@@ -478,15 +479,14 @@ EncodedJSValue JSCallbackObject<Parent>::constructImpl(JSGlobalObject* globalObj
     for (JSClassRef jsClass = jsCast<JSCallbackObject<Parent>*>(constructor)->classRef(); jsClass; jsClass = jsClass->parentClass) {
         if (JSObjectCallAsConstructorCallback callAsConstructor = jsClass->callAsConstructor) {
             size_t argumentCount = callFrame->argumentCount();
-            Vector<JSValueRef, 16> arguments;
-            arguments.reserveInitialCapacity(argumentCount);
-            for (size_t i = 0; i < argumentCount; ++i)
-                arguments.uncheckedAppend(toRef(globalObject, callFrame->uncheckedArgument(i)));
+            Vector<JSValueRef, 16> arguments(argumentCount, [&](size_t i) {
+                return toRef(globalObject, callFrame->uncheckedArgument(i));
+            });
             JSValueRef exception = nullptr;
             JSObject* result;
             {
                 JSLock::DropAllLocks dropAllLocks(globalObject);
-                result = toJS(callAsConstructor(execRef, constructorRef, argumentCount, arguments.data(), &exception));
+                result = toJS(callAsConstructor(execRef, constructorRef, argumentCount, arguments.span().data(), &exception));
             }
             if (exception) {
                 throwException(globalObject, scope, toJS(globalObject, exception));
@@ -537,6 +537,7 @@ CallData JSCallbackObject<Parent>::getCallData(JSCell* cell)
             callData.type = CallData::Type::Native;
             callData.native.function = getCallFunction();
             callData.native.isBoundFunction = false;
+            callData.native.isWasm = false;
             break;
         }
     }
@@ -556,15 +557,15 @@ EncodedJSValue JSCallbackObject<Parent>::callImpl(JSGlobalObject* globalObject, 
     for (JSClassRef jsClass = jsCast<JSCallbackObject<Parent>*>(toJS(functionRef))->classRef(); jsClass; jsClass = jsClass->parentClass) {
         if (JSObjectCallAsFunctionCallback callAsFunction = jsClass->callAsFunction) {
             size_t argumentCount = callFrame->argumentCount();
-            Vector<JSValueRef, 16> arguments;
-            arguments.reserveInitialCapacity(argumentCount);
-            for (size_t i = 0; i < argumentCount; ++i)
-                arguments.uncheckedAppend(toRef(globalObject, callFrame->uncheckedArgument(i)));
+            Vector<JSValueRef, 16> arguments(argumentCount, [&](size_t i) {
+                return toRef(globalObject, callFrame->uncheckedArgument(i));
+            });
+
             JSValueRef exception = nullptr;
             JSValue result;
             {
                 JSLock::DropAllLocks dropAllLocks(globalObject);
-                result = toJS(globalObject, callAsFunction(execRef, functionRef, thisObjRef, argumentCount, arguments.data(), &exception));
+                result = toJS(globalObject, callAsFunction(execRef, functionRef, thisObjRef, argumentCount, arguments.span().data(), &exception));
             }
             if (exception) {
                 throwException(globalObject, scope, toJS(globalObject, exception));
@@ -579,7 +580,7 @@ EncodedJSValue JSCallbackObject<Parent>::callImpl(JSGlobalObject* globalObject, 
 }
 
 template <class Parent>
-void JSCallbackObject<Parent>::getOwnSpecialPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, DontEnumPropertiesMode mode)
+void JSCallbackObject<Parent>::getOwnSpecialPropertyNames(JSObject* object, JSGlobalObject* globalObject, PropertyNameArrayBuilder& propertyNames, DontEnumPropertiesMode mode)
 {
     VM& vm = getVM(globalObject);
     JSCallbackObject* thisObject = jsCast<JSCallbackObject*>(object);

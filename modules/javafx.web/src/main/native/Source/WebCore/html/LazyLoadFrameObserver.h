@@ -26,6 +26,7 @@
 #pragma once
 
 #include "IntersectionObserver.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -34,7 +35,7 @@ class Element;
 class HTMLIFrameElement;
 
 class LazyLoadFrameObserver {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(LazyLoadFrameObserver);
 public:
     LazyLoadFrameObserver(HTMLIFrameElement&);
 
@@ -44,11 +45,13 @@ public:
     AtomString frameURL() const { return m_frameURL; }
     ReferrerPolicy referrerPolicy() const { return m_referrerPolicy; }
 
+    void update(const AtomString& frameURL, const ReferrerPolicy&);
+
 private:
     IntersectionObserver* intersectionObserver(Document&);
     bool isObserved(Element&) const;
 
-    HTMLIFrameElement& m_element;
+    WeakRef<HTMLIFrameElement, WeakPtrImplWithEventTargetData> m_element;
     AtomString m_frameURL;
     ReferrerPolicy m_referrerPolicy;
     RefPtr<IntersectionObserver> m_observer;

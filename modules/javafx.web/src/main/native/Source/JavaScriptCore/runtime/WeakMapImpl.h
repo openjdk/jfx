@@ -27,12 +27,18 @@
 #pragma once
 
 #include "ExceptionHelpers.h"
-#include "HashMapImpl.h"
+#include "HashMapHelper.h"
 #include "JSObject.h"
-#include <wtf/JSValueMalloc.h>
 #include <wtf/MallocPtr.h>
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+
 namespace JSC {
+
+enum class HashTableType {
+    Key,
+    KeyValue
+};
 
 struct WeakMapBucketDataKey {
     static const HashTableType Type = HashTableType::Key;
@@ -50,6 +56,12 @@ struct WeakMapBucketDataKeyValue {
 };
 static_assert(sizeof(WeakMapBucketDataKeyValue) == 16);
 
+template<typename T>
+concept WeakMapBucketSameAsDataKeyValue = std::same_as<T, WeakMapBucketDataKeyValue>;
+
+template<typename T>
+concept WeakMapBucketSameAsDataKey = std::same_as<T, WeakMapBucketDataKey>;
+
 ALWAYS_INLINE uint32_t jsWeakMapHash(JSCell* key);
 ALWAYS_INLINE uint32_t nextCapacityAfterBatchRemoval(uint32_t capacity, uint32_t keyCount);
 
@@ -61,55 +73,55 @@ public:
         m_data.key.set(vm, owner, key);
     }
 
-    template <typename T = Data>
-    ALWAYS_INLINE typename std::enable_if<std::is_same<T, WeakMapBucketDataKeyValue>::value>::type setValue(VM& vm, JSCell* owner, JSValue value)
+    template<WeakMapBucketSameAsDataKeyValue T = Data>
+    ALWAYS_INLINE void setValue(VM& vm, JSCell* owner, JSValue value)
     {
         m_data.value.set(vm, owner, value);
     }
-    template <typename T = Data>
-    ALWAYS_INLINE typename std::enable_if<std::is_same<T, WeakMapBucketDataKey>::value>::type setValue(VM&, JSCell*, JSValue) { }
+    template<WeakMapBucketSameAsDataKey T = Data>
+    ALWAYS_INLINE void setValue(VM&, JSCell*, JSValue) { }
 
     ALWAYS_INLINE JSCell* key() const { return m_data.key.get(); }
 
-    template <typename T = Data>
-    ALWAYS_INLINE typename std::enable_if<std::is_same<T, WeakMapBucketDataKeyValue>::value, JSValue>::type value() const
+    template<WeakMapBucketSameAsDataKeyValue T = Data>
+    ALWAYS_INLINE JSValue value() const
     {
         return m_data.value.get();
     }
-    template <typename T = Data>
-    ALWAYS_INLINE typename std::enable_if<std::is_same<T, WeakMapBucketDataKey>::value, JSValue>::type value() const { return JSValue(); }
+    template<WeakMapBucketSameAsDataKey T = Data>
+    ALWAYS_INLINE JSValue value() const { return JSValue(); }
 
-    template <typename T = Data>
-    ALWAYS_INLINE typename std::enable_if<std::is_same<T, WeakMapBucketDataKeyValue>::value>::type copyFrom(const WeakMapBucket& from)
+    template<WeakMapBucketSameAsDataKeyValue T = Data>
+    ALWAYS_INLINE void copyFrom(const WeakMapBucket& from)
     {
         m_data.key.copyFrom(from.m_data.key);
         m_data.value.setWithoutWriteBarrier(from.m_data.value.get());
     }
-    template <typename T = Data>
-    ALWAYS_INLINE typename std::enable_if<std::is_same<T, WeakMapBucketDataKey>::value>::type copyFrom(const WeakMapBucket& from)
+    template<WeakMapBucketSameAsDataKey T = Data>
+    ALWAYS_INLINE void copyFrom(const WeakMapBucket& from)
     {
         m_data.key.copyFrom(from.m_data.key);
     }
 
-    static ptrdiff_t offsetOfKey()
+    static constexpr ptrdiff_t offsetOfKey()
     {
         return OBJECT_OFFSETOF(WeakMapBucket, m_data) + OBJECT_OFFSETOF(Data, key);
     }
 
-    template <typename T = Data>
-    static typename std::enable_if<std::is_same<T, WeakMapBucketDataKeyValue>::value, ptrdiff_t>::type offsetOfValue()
+    template<WeakMapBucketSameAsDataKeyValue T = Data>
+    static ptrdiff_t offsetOfValue()
     {
         return OBJECT_OFFSETOF(WeakMapBucket, m_data) + OBJECT_OFFSETOF(Data, value);
     }
 
-    template <typename T = Data>
-    ALWAYS_INLINE static typename std::enable_if<std::is_same<T, WeakMapBucketDataKeyValue>::value, JSValue>::type extractValue(const WeakMapBucket& bucket)
+    template<WeakMapBucketSameAsDataKeyValue T = Data>
+    ALWAYS_INLINE static JSValue extractValue(const WeakMapBucket& bucket)
     {
         return bucket.value();
     }
 
-    template <typename T = Data>
-    ALWAYS_INLINE static typename std::enable_if<std::is_same<T, WeakMapBucketDataKey>::value, JSValue>::type extractValue(const WeakMapBucket&)
+    template<WeakMapBucketSameAsDataKey T = Data>
+    ALWAYS_INLINE static JSValue extractValue(const WeakMapBucket&)
     {
         return JSValue();
     }
@@ -121,7 +133,7 @@ public:
 
     static JSCell* deletedKey()
     {
-        return bitwise_cast<JSCell*>(static_cast<uintptr_t>(-3));
+        return std::bit_cast<JSCell*>(static_cast<uintptr_t>(-3));
     }
 
     bool isDeleted()
@@ -135,20 +147,20 @@ public:
         clearValue();
     }
 
-    template <typename T = Data, typename Visitor>
-    ALWAYS_INLINE typename std::enable_if<std::is_same<T, WeakMapBucketDataKeyValue>::value>::type visitAggregate(Visitor& visitor)
+    template<WeakMapBucketSameAsDataKeyValue T = Data, typename Visitor>
+    ALWAYS_INLINE void visitAggregate(Visitor& visitor)
     {
         visitor.append(m_data.value);
     }
 
 private:
-    template <typename T = Data>
-    ALWAYS_INLINE typename std::enable_if<std::is_same<T, WeakMapBucketDataKeyValue>::value>::type clearValue()
+    template<WeakMapBucketSameAsDataKeyValue T = Data>
+    ALWAYS_INLINE void clearValue()
     {
         m_data.value.clear();
     }
-    template <typename T = Data>
-    ALWAYS_INLINE typename std::enable_if<std::is_same<T, WeakMapBucketDataKey>::value>::type clearValue() { }
+    template<WeakMapBucketSameAsDataKey T = Data>
+    ALWAYS_INLINE void clearValue() { }
 
     Data m_data;
 };
@@ -165,13 +177,13 @@ public:
 
     ALWAYS_INLINE BucketType* buffer() const
     {
-        return bitwise_cast<BucketType*>(this);
+        return std::bit_cast<BucketType*>(this);
     }
 
-    static MallocPtr<WeakMapBuffer, JSValueMalloc> create(uint32_t capacity)
+    static MallocPtr<WeakMapBuffer> create(uint32_t capacity)
     {
         size_t allocationSize = WeakMapBuffer::allocationSize(capacity);
-        auto buffer = MallocPtr<WeakMapBuffer, JSValueMalloc>::malloc(allocationSize);
+        auto buffer = MallocPtr<WeakMapBuffer>::malloc(allocationSize);
         buffer->reset(capacity);
         return buffer;
     }
@@ -190,7 +202,7 @@ class WeakMapImpl : public JSNonFinalObject {
 public:
     using BucketType = WeakMapBucketType;
 
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
     static void destroy(JSCell*);
 
     DECLARE_VISIT_CHILDREN;
@@ -207,34 +219,58 @@ public:
     }
 
     // WeakMap operations must not cause GC. We model operations in DFG based on this guarantee.
-    // This guarantee is ensured by DisallowGC.
+    // This guarantee is ensured by AssertNoGC.
 
-    template <typename T = WeakMapBucketType>
-    ALWAYS_INLINE typename std::enable_if<std::is_same<T, WeakMapBucket<WeakMapBucketDataKeyValue>>::value, JSValue>::type get(JSCell* key)
+    template<typename T = WeakMapBucketType>
+        requires std::same_as<T, WeakMapBucket<WeakMapBucketDataKeyValue>>
+    ALWAYS_INLINE JSValue get(JSCell* key)
     {
-        DisallowGC disallowGC;
+        AssertNoGC assertNoGC;
         if (WeakMapBucketType* bucket = findBucket(key))
             return bucket->value();
         return jsUndefined();
     }
 
+    template<typename T = WeakMapBucketType>
+        requires std::same_as<T, WeakMapBucket<WeakMapBucketDataKeyValue>>
+    ALWAYS_INLINE JSValue getBucket(JSCell* key, uint32_t hash, size_t index)
+    {
+        UNUSED_PARAM(key);
+        UNUSED_PARAM(hash);
+        ASSERT(jsWeakMapHash(key) == hash);
+
+        WeakMapBucketType* bucket = buffer() + index;
+        ASSERT(bucket);
+        ASSERT(findBucket(key, hash) == bucket);
+
+        return bucket->value();
+    }
+
+    ALWAYS_INLINE std::pair<size_t, bool> findBucketIndex(JSCell* key, uint32_t hash)
+    {
+        return findBucketIndexAlreadyHashed(key, hash);
+    }
+
     ALWAYS_INLINE WeakMapBucketType* findBucket(JSCell* key, uint32_t hash)
     {
-        return findBucketAlreadyHashed(key, hash);
+        if (auto [index, exists] = findBucketIndexAlreadyHashed(key, hash); exists)
+            return buffer() + index;
+        return nullptr;
     }
 
     ALWAYS_INLINE bool has(JSCell* key)
     {
-        DisallowGC disallowGC;
+        AssertNoGC assertNoGC;
         return !!findBucket(key);
     }
 
     ALWAYS_INLINE void add(VM&, JSCell* key, JSValue = JSValue());
     ALWAYS_INLINE void add(VM&, JSCell* key, JSValue, uint32_t hash);
+    ALWAYS_INLINE void addBucket(VM&, JSCell* key, JSValue, uint32_t hash, size_t index);
 
     ALWAYS_INLINE bool remove(JSCell* key)
     {
-        DisallowGC disallowGC;
+        AssertNoGC assertNoGC;
         WeakMapBucketType* bucket = findBucket(key);
         if (!bucket)
             return false;
@@ -258,24 +294,24 @@ public:
 
     void takeSnapshot(MarkedArgumentBuffer&, unsigned limit = 0);
 
-    static ptrdiff_t offsetOfBuffer()
+    static constexpr ptrdiff_t offsetOfBuffer()
     {
         return OBJECT_OFFSETOF(WeakMapImpl<WeakMapBucketType>, m_buffer);
     }
 
-    static ptrdiff_t offsetOfCapacity()
+    static constexpr ptrdiff_t offsetOfCapacity()
     {
         return OBJECT_OFFSETOF(WeakMapImpl<WeakMapBucketType>, m_capacity);
     }
 
     static constexpr bool isWeakMap()
     {
-        return std::is_same<WeakMapBucketType, JSC::WeakMapBucket<WeakMapBucketDataKeyValue>>::value;
+        return std::same_as<WeakMapBucketType, JSC::WeakMapBucket<WeakMapBucketDataKeyValue>>;
     }
 
     static constexpr bool isWeakSet()
     {
-        return std::is_same<WeakMapBucketType, JSC::WeakMapBucket<WeakMapBucketDataKey>>::value;
+        return std::same_as<WeakMapBucketType, JSC::WeakMapBucket<WeakMapBucketDataKey>>;
     }
 
     template<typename CellType, SubspaceAccess mode>
@@ -351,7 +387,7 @@ private:
         ++m_keyCount;
     }
 
-    ALWAYS_INLINE WeakMapBucketType* findBucketAlreadyHashed(JSCell* key, uint32_t hash)
+    ALWAYS_INLINE std::pair<size_t, bool> findBucketIndexAlreadyHashed(JSCell* key, uint32_t hash)
     {
         const uint32_t mask = m_capacity - 1;
         uint32_t index = hash & mask;
@@ -361,12 +397,12 @@ private:
         while (!bucket->isEmpty()) {
             if (canUseBucket(bucket, key)) {
                 ASSERT(!bucket->isDeleted());
-                return buffer + index;
+                return { index, true };
             }
             index = (index + 1) & mask;
             bucket = buffer + index;
         }
-        return nullptr;
+        return { index, false };
     }
 
     enum class RehashMode { Normal, RemoveBatching };
@@ -408,10 +444,12 @@ private:
     template<typename Appender>
     void takeSnapshotInternal(unsigned limit, Appender);
 
-    MallocPtr<WeakMapBufferType, JSValueMalloc> m_buffer;
+    MallocPtr<WeakMapBufferType> m_buffer;
     uint32_t m_capacity { 0 };
     uint32_t m_keyCount { 0 };
     uint32_t m_deleteCount { 0 };
 };
 
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Google Inc. All Rights Reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  * Copyright (C) 2015-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -30,8 +30,11 @@
 #include "HTMLNames.h"
 #include <pal/text/TextCodec.h>
 #include <pal/text/TextEncodingRegistry.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLMetaCharsetParser);
 
 using namespace HTMLNames;
 
@@ -55,6 +58,10 @@ static StringView extractCharset(StringView value)
         while (pos < length && value[pos] <= ' ')
             ++pos;
 
+        // Ensure we're in bounds before checking for '='.
+        if (pos >= length)
+            break;
+
         if (value[pos] != '=')
             continue;
 
@@ -63,7 +70,7 @@ static StringView extractCharset(StringView value)
         while (pos < length && value[pos] <= ' ')
             ++pos;
 
-        UChar quoteMark = 0;
+        char16_t quoteMark = 0;
         if (pos < length && (value[pos] == '"' || value[pos] == '\''))
             quoteMark = value[pos++];
 
@@ -85,7 +92,7 @@ static StringView extractCharset(StringView value)
 bool HTMLMetaCharsetParser::processMeta(HTMLToken& token)
 {
     auto attributes = token.attributes().map([](auto& attribute) {
-        return std::pair { StringView { attribute.name.data(), static_cast<unsigned>(attribute.name.size()) }, StringView { attribute.value.data(), static_cast<unsigned>(attribute.value.size()) } };
+        return std::pair { StringView { attribute.name.span() }, StringView { attribute.value.span() } };
     });
     m_encoding = encodingFromMetaAttributes(attributes);
     return m_encoding.isValid();
@@ -117,12 +124,12 @@ PAL::TextEncoding HTMLMetaCharsetParser::encodingFromMetaAttributes(std::span<co
     }
 
     if (mode == Charset || (mode == Pragma && gotPragma))
-        return charset.trim(isASCIIWhitespace<UChar>);
+        return charset.trim(isASCIIWhitespace<char16_t>);
 
     return PAL::TextEncoding();
 }
 
-bool HTMLMetaCharsetParser::checkForMetaCharset(const char* data, size_t length)
+bool HTMLMetaCharsetParser::checkForMetaCharset(std::span<const uint8_t> data)
 {
     if (m_doneChecking)
         return true;
@@ -150,12 +157,12 @@ bool HTMLMetaCharsetParser::checkForMetaCharset(const char* data, size_t length)
     constexpr int bytesToCheckUnconditionally = 1024;
 
     bool ignoredSawErrorFlag;
-    m_input.append(m_codec->decode(data, length, false, false, ignoredSawErrorFlag));
+    m_input.append(m_codec->decode(data, false, false, ignoredSawErrorFlag));
 
     while (auto token = m_tokenizer.nextToken(m_input)) {
         bool isEnd = token->type() == HTMLToken::Type::EndTag;
         if (isEnd || token->type() == HTMLToken::Type::StartTag) {
-            auto knownTagName = AtomString::lookUp(token->name().data(), token->name().size());
+            auto knownTagName = AtomString::lookUp(token->name().span());
             if (!isEnd) {
                 m_tokenizer.updateStateFor(knownTagName);
                 if (knownTagName == metaTag && processMeta(*token)) {

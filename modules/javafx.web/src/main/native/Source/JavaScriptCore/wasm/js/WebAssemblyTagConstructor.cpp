@@ -56,7 +56,7 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyTag, (JSGlobalObject* globalObjec
     if (!signatureObject.isObject())
         return throwVMTypeError(globalObject, scope, "WebAssembly.Tag constructor expects a tag type with the 'parameters' property."_s);
 
-    Vector<Wasm::Type> parameters;
+    Vector<Wasm::Type, 16> parameters;
     forEachInIterable(globalObject, signatureObject, [&] (auto& vm, auto* globalObject, JSValue nextType) -> void {
         auto scope = DECLARE_THROW_SCOPE(vm);
 
@@ -71,10 +71,12 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyTag, (JSGlobalObject* globalObjec
             type = Wasm::Types::F32;
         else if (valueString == "f64"_s)
             type = Wasm::Types::F64;
+        else if (valueString == "v128"_s)
+            type = Wasm::Types::V128;
         else if (valueString == "funcref"_s || valueString == "anyfunc"_s)
-            type = Wasm::Types::Funcref;
+            type = Wasm::funcrefType();
         else if (valueString == "externref"_s)
-            type = Wasm::Types::Externref;
+            type = Wasm::externrefType();
         else {
             throwTypeError(globalObject, scope, "WebAssembly.Tag constructor expects the 'parameters' field of the first argument to be a sequence of WebAssembly value types."_s);
             return;
@@ -87,14 +89,14 @@ JSC_DEFINE_HOST_FUNCTION(constructJSWebAssemblyTag, (JSGlobalObject* globalObjec
     RefPtr<Wasm::TypeDefinition> typeDefinition = Wasm::TypeInformation::typeDefinitionForFunction({ }, parameters);
     Structure* structure = JSC_GET_DERIVED_STRUCTURE(vm, webAssemblyTagStructure, asObject(callFrame->newTarget()), callFrame->jsCallee());
     RETURN_IF_EXCEPTION(scope, { });
-    RELEASE_AND_RETURN(scope, JSValue::encode(JSWebAssemblyTag::create(vm, globalObject, structure, Wasm::Tag::create(*typeDefinition).get())));
+    RELEASE_AND_RETURN(scope, JSValue::encode(JSWebAssemblyTag::create(vm, globalObject, structure, Wasm::Tag::create(typeDefinition.releaseNonNull()).get())));
 }
 
 JSC_DEFINE_HOST_FUNCTION(callJSWebAssemblyTag, (JSGlobalObject* globalObject, CallFrame*))
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "WebAssembly.Tag"));
+    return JSValue::encode(throwConstructorCannotBeCalledAsFunctionTypeError(globalObject, scope, "WebAssembly.Tag"_s));
 }
 
 WebAssemblyTagConstructor* WebAssemblyTagConstructor::create(VM& vm, Structure* structure, WebAssemblyTagPrototype* thisPrototype)

@@ -25,18 +25,11 @@
 
 #pragma once
 
-#include "DecomposedGlyphs.h"
-#include "DisplayListItemBuffer.h"
-#include "DisplayListItemType.h"
-#include "DisplayListResourceHeap.h"
-#include "Filter.h"
-#include "FloatRect.h"
-#include "Font.h"
-#include "GraphicsContext.h"
-#include "ImageBuffer.h"
-#include <wtf/FastMalloc.h>
-#include <wtf/HashSet.h>
+#include <WebCore/DisplayListItems.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
@@ -45,101 +38,39 @@ class TextStream;
 }
 
 namespace WebCore {
-
 namespace DisplayList {
 
-class DisplayList {
-    WTF_MAKE_NONCOPYABLE(DisplayList); WTF_MAKE_FAST_ALLOCATED;
-    friend class RecorderImpl;
-    friend class Replayer;
+// Note: currently this class is not usable from multiple threads due to the underlying objects, such
+// Font instances, not being thread-safe.
+class DisplayList final : public ThreadSafeRefCounted<DisplayList>, public CanMakeThreadSafeCheckedPtr<DisplayList> {
+    WTF_MAKE_TZONE_ALLOCATED(DisplayList);
+    WTF_MAKE_NONCOPYABLE(DisplayList);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DisplayList);
 public:
-    WEBCORE_EXPORT DisplayList();
-    WEBCORE_EXPORT DisplayList(DisplayList&&);
-    WEBCORE_EXPORT DisplayList(ItemBufferHandles&&);
-
+    static Ref<const DisplayList> create(Vector<Item>&& items)
+    {
+        return adoptRef(*new DisplayList(WTF::move(items)));
+    }
     WEBCORE_EXPORT ~DisplayList();
 
-    WEBCORE_EXPORT DisplayList& operator=(DisplayList&&);
-
-    void dump(WTF::TextStream&) const;
-
-    WEBCORE_EXPORT void clear();
-    WEBCORE_EXPORT bool isEmpty() const;
-    WEBCORE_EXPORT size_t sizeInBytes() const;
+    std::span<const Item> items() const LIFETIME_BOUND { return m_items.span(); }
 
     WEBCORE_EXPORT String asText(OptionSet<AsTextFlag>) const;
+    void dump(WTF::TextStream&) const;
 
-    const ResourceHeap& resourceHeap() const { return m_resourceHeap; }
-
-    WEBCORE_EXPORT void setItemBufferReadingClient(ItemBufferReadingClient*);
-    WEBCORE_EXPORT void setItemBufferWritingClient(ItemBufferWritingClient*);
-    WEBCORE_EXPORT void prepareToAppend(ItemBufferHandle&&);
-
-    void shrinkToFit();
-
-#if !defined(NDEBUG) || !LOG_DISABLED
-    CString description() const;
-    WEBCORE_EXPORT void dump() const;
-#endif
-
-    WEBCORE_EXPORT void forEachItemBuffer(Function<void(const ItemBufferHandle&)>&&) const;
-
-    template<typename T, class... Args> void append(Args&&... args);
-    void append(ItemHandle);
-
-    class Iterator;
-
-    WEBCORE_EXPORT Iterator begin() const;
-    WEBCORE_EXPORT Iterator end() const;
+    void addObserver(WeakRef<RenderingResourceObserver>&& observer) const
+    {
+        m_observers.add(WTF::move(observer));
+    }
 
 private:
-    ItemBuffer* itemBufferIfExists() const { return m_items.get(); }
-    WEBCORE_EXPORT ItemBuffer& itemBuffer();
+    WEBCORE_EXPORT DisplayList(Vector<Item>&& items);
 
-    void cacheImageBuffer(WebCore::ImageBuffer& imageBuffer)
-    {
-        m_resourceHeap.add(imageBuffer.renderingResourceIdentifier(), Ref { imageBuffer });
-    }
-
-    void cacheNativeImage(NativeImage& image)
-    {
-        m_resourceHeap.add(image.renderingResourceIdentifier(), Ref { image });
-    }
-
-    void cacheFont(Font& font)
-    {
-        m_resourceHeap.add(font.renderingResourceIdentifier(), Ref { font });
-    }
-
-    void cacheDecomposedGlyphs(DecomposedGlyphs& decomposedGlyphs)
-    {
-        m_resourceHeap.add(decomposedGlyphs.renderingResourceIdentifier(), Ref { decomposedGlyphs });
-    }
-
-    void cacheGradient(Gradient& gradient)
-    {
-        m_resourceHeap.add(gradient.renderingResourceIdentifier(), Ref { gradient });
-    }
-
-    void cacheFilter(Filter& filter)
-    {
-        m_resourceHeap.add(filter.renderingResourceIdentifier(), Ref { filter });
-    }
-
-    static bool shouldDumpForFlags(OptionSet<AsTextFlag>, ItemHandle);
-
-    LocalResourceHeap m_resourceHeap;
-    std::unique_ptr<ItemBuffer> m_items;
+    Vector<Item> m_items;
+    mutable WeakHashSet<RenderingResourceObserver> m_observers;
 };
-
-template<typename T, class... Args>
-void DisplayList::append(Args&&... args)
-{
-    itemBuffer().append<T>(std::forward<Args>(args)...);
-}
 
 WEBCORE_EXPORT WTF::TextStream& operator<<(WTF::TextStream&, const DisplayList&);
 
 } // DisplayList
-
 } // WebCore

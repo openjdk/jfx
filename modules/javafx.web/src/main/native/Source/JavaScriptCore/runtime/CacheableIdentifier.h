@@ -25,7 +25,8 @@
 
 #pragma once
 
-#include "JSCJSValue.h"
+#include <JavaScriptCore/GCOwnedDataScope.h>
+#include <JavaScriptCore/JSCJSValue.h>
 #include <wtf/text/SymbolImpl.h>
 
 namespace JSC {
@@ -44,6 +45,7 @@ public:
     template <typename CodeBlockType>
     static inline CacheableIdentifier createFromIdentifierOwnedByCodeBlock(CodeBlockType*, UniquedStringImpl*);
     static inline CacheableIdentifier createFromImmortalIdentifier(UniquedStringImpl*);
+    static inline CacheableIdentifier createFromSharedStub(UniquedStringImpl*);
     static constexpr CacheableIdentifier createFromRawBits(uintptr_t rawBits) { return CacheableIdentifier(rawBits); }
 
     CacheableIdentifier(const CacheableIdentifier&) = default;
@@ -77,6 +79,9 @@ public:
 
     static inline bool isCacheableIdentifierCell(JSCell*);
     static inline bool isCacheableIdentifierCell(JSValue);
+
+    static inline GCOwnedDataScope<const UniquedStringImpl*> getCacheableIdentifier(JSCell*);
+    static inline GCOwnedDataScope<const UniquedStringImpl*> getCacheableIdentifier(JSValue);
 
     uintptr_t rawBits() const { return m_bits; }
 

@@ -32,16 +32,34 @@
 
 namespace WebCore {
 
-PathSegment::PathSegment(Data&& data)
-    : m_data(WTFMove(data))
-{
-}
-
 FloatPoint PathSegment::calculateEndPoint(const FloatPoint& currentPoint, FloatPoint& lastMoveToPoint) const
 {
     return WTF::switchOn(m_data, [&](auto& data) {
         return data.calculateEndPoint(currentPoint, lastMoveToPoint);
     });
+}
+
+std::optional<FloatPoint> PathSegment::tryGetEndPointWithoutContext() const
+{
+    return WTF::switchOn(m_data, [&](auto& data) {
+        return data.tryGetEndPointWithoutContext();
+    });
+}
+
+FloatRect PathSegment::fastBoundingRect() const
+{
+    FloatPoint currentPoint;
+    FloatPoint lastMoveToPoint;
+
+    auto boundingRect = FloatRect::smallestRect();
+    extendFastBoundingRect(currentPoint, lastMoveToPoint, boundingRect);
+
+    if (boundingRect.isSmallest()) {
+        currentPoint = calculateEndPoint(currentPoint, lastMoveToPoint);
+        boundingRect.extend(currentPoint);
+    }
+
+    return boundingRect;
 }
 
 void PathSegment::extendFastBoundingRect(const FloatPoint& currentPoint, const FloatPoint& lastMoveToPoint, FloatRect& boundingRect) const
@@ -58,13 +76,6 @@ void PathSegment::extendBoundingRect(const FloatPoint& currentPoint, const Float
     });
 }
 
-void PathSegment::addToImpl(PathImpl& impl) const
-{
-    WTF::switchOn(m_data, [&](auto& data) {
-        data.addToImpl(impl);
-    });
-}
-
 bool PathSegment::canApplyElements() const
 {
     return WTF::switchOn(m_data, [&](auto& data) {
@@ -74,8 +85,8 @@ bool PathSegment::canApplyElements() const
 
 bool PathSegment::applyElements(const PathElementApplier& applier) const
 {
-    return WTF::switchOn(m_data, [&](auto& data) -> bool {
-        if constexpr (std::decay_t<decltype(data)>::canApplyElements) {
+    return WTF::switchOn(m_data, [&]<typename DataType>(DataType& data) -> bool {
+        if constexpr (DataType::canApplyElements) {
             data.applyElements(applier);
             return true;
         }
@@ -92,8 +103,8 @@ bool PathSegment::canTransform() const
 
 bool PathSegment::transform(const AffineTransform& transform)
 {
-    return WTF::switchOn(m_data, [&](auto& data) {
-        if constexpr (std::decay_t<decltype(data)>::canTransform) {
+    return WTF::switchOn(m_data, [&]<typename DataType>(DataType& data) {
+        if constexpr (DataType::canTransform) {
             data.transform(transform);
             return true;
         }

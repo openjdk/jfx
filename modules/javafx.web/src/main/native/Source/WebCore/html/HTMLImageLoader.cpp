@@ -39,6 +39,8 @@
 
 namespace WebCore {
 
+DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(HTMLImageLoader);
+
 HTMLImageLoader::HTMLImageLoader(Element& element)
     : ImageLoader(element)
 {
@@ -61,7 +63,7 @@ void HTMLImageLoader::dispatchLoadEvent()
     // firing such events for PDF loads on iOS can cause confusion on some sites.
     // See rdar://107795151.
     if (auto* objectElement = dynamicDowncast<HTMLObjectElement>(element())) {
-        if (MIMETypeRegistry::isPDFOrPostScriptMIMEType(objectElement->serviceType()))
+        if (MIMETypeRegistry::isPDFMIMEType(objectElement->serviceType()))
             return;
     }
 #endif
@@ -69,22 +71,16 @@ void HTMLImageLoader::dispatchLoadEvent()
     bool errorOccurred = image()->errorOccurred();
     if (!errorOccurred && image()->response().httpStatusCode() >= 400)
         errorOccurred = is<HTMLObjectElement>(element()); // An <object> considers a 404 to be an error and should fire onerror.
-    element().dispatchEvent(Event::create(errorOccurred ? eventNames().errorEvent : eventNames().loadEvent, Event::CanBubble::No, Event::IsCancelable::No));
+    protectedElement()->dispatchEvent(Event::create(errorOccurred ? eventNames().errorEvent : eventNames().loadEvent, Event::CanBubble::No, Event::IsCancelable::No));
 }
 
-String HTMLImageLoader::sourceURI(const AtomString& attr) const
-{
-    // FIXME: trimming whitespace is probably redundant with the URL parser
-    return attr.string().trim(isASCIIWhitespace);
-}
-
-void HTMLImageLoader::notifyFinished(CachedResource&, const NetworkLoadMetrics& metrics)
+void HTMLImageLoader::notifyFinished(CachedResource&, const NetworkLoadMetrics& metrics, LoadWillContinueInAnotherProcess loadWillContinueInAnotherProcess)
 {
     ASSERT(image());
     CachedImage& cachedImage = *image();
 
     Ref<Element> protect(element());
-    ImageLoader::notifyFinished(cachedImage, metrics);
+    ImageLoader::notifyFinished(cachedImage, metrics, loadWillContinueInAnotherProcess);
 
     bool loadError = cachedImage.errorOccurred() || cachedImage.response().httpStatusCode() >= 400;
     if (!loadError) {
@@ -97,8 +93,10 @@ void HTMLImageLoader::notifyFinished(CachedResource&, const NetworkLoadMetrics& 
         }
     }
 
-    if (loadError && is<HTMLObjectElement>(element()))
-        downcast<HTMLObjectElement>(element()).renderFallbackContent();
+    if (loadError) {
+        if (RefPtr objectElement = dynamicDowncast<HTMLObjectElement>(element()))
+            objectElement->renderFallbackContent();
+    }
 }
 
 }

@@ -269,9 +269,6 @@ gst_aac_parse_set_src_caps (GstAacParse * aacparse, GstCaps * sink_caps)
   if (peercaps)
     gst_caps_unref (peercaps);
 
-  aacparse->last_parsed_channels = 0;
-  aacparse->last_parsed_sample_rate = 0;
-
   GST_DEBUG_OBJECT (aacparse, "setting src caps: %" GST_PTR_FORMAT, src_caps);
 
   res = gst_pad_set_caps (GST_BASE_PARSE (aacparse)->srcpad, src_caps);
@@ -544,6 +541,118 @@ gst_aac_parse_get_audio_sample_rate (GstAacParse * aacparse, GstBitReader * br,
   return TRUE;
 }
 
+static gboolean
+gst_aac_parse_program_config_element (GstAacParse * aacparse,
+    GstBitReader * br, gint * channels)
+{
+  guint8 G_GNUC_UNUSED element_instance_tag;
+  guint8 G_GNUC_UNUSED object_type;
+  guint8 G_GNUC_UNUSED sampling_frequency_index;
+  guint8 num_front_channel_elements;
+  guint8 num_side_channel_elements;
+  guint8 num_back_channel_elements;
+  guint8 num_lfe_channel_elements;
+  guint8 program_config_skipping_data;
+  guint8 mixdown_present_skipflag;
+  guint8 is_cpe;
+  guint8 total_num_channel_elements;
+  guint8 total_num_channel;
+  guint8 channel_element_tag;
+
+  if (!gst_bit_reader_get_bits_uint8 (br, &element_instance_tag, 4))
+    return FALSE;
+  if (!gst_bit_reader_get_bits_uint8 (br, &object_type, 2))
+    return FALSE;
+  if (!gst_bit_reader_get_bits_uint8 (br, &sampling_frequency_index, 4))
+    return FALSE;
+  if (!gst_bit_reader_get_bits_uint8 (br, &num_front_channel_elements, 4))
+    return FALSE;
+  if (!gst_bit_reader_get_bits_uint8 (br, &num_side_channel_elements, 4))
+    return FALSE;
+  if (!gst_bit_reader_get_bits_uint8 (br, &num_back_channel_elements, 4))
+    return FALSE;
+  if (!gst_bit_reader_get_bits_uint8 (br, &num_lfe_channel_elements, 2))
+    return FALSE;
+
+  // skip num_assoc_data_elements + num_valid_cc_elements
+  if (!gst_bit_reader_get_bits_uint8 (br, &program_config_skipping_data, 7))
+    return FALSE;
+
+  if (!gst_bit_reader_get_bits_uint8 (br, &mixdown_present_skipflag, 1))
+    return FALSE;
+
+  // skip mono_mixdown_element_number
+  if (mixdown_present_skipflag)
+    if (!gst_bit_reader_get_bits_uint8 (br, &program_config_skipping_data, 4))
+      return FALSE;
+
+  if (!gst_bit_reader_get_bits_uint8 (br, &mixdown_present_skipflag, 1))
+    return FALSE;
+
+  // skip stereo_mixdown_element_number
+  if (mixdown_present_skipflag)
+    if (!gst_bit_reader_get_bits_uint8 (br, &program_config_skipping_data, 4))
+      return FALSE;
+
+  if (!gst_bit_reader_get_bits_uint8 (br, &mixdown_present_skipflag, 1))
+    return FALSE;
+
+  // skip matrix_mixdown_idx + pseudo_surround_enable
+  if (mixdown_present_skipflag) {
+    if (!gst_bit_reader_get_bits_uint8 (br, &program_config_skipping_data, 3))
+      return FALSE;
+  }
+
+  total_num_channel_elements =
+      num_front_channel_elements + num_side_channel_elements +
+      num_back_channel_elements;
+
+  total_num_channel = total_num_channel_elements + num_lfe_channel_elements;
+  // If cpe (coupled), then each single channel element represents two channels
+  for (guint8 i = 0; i < total_num_channel_elements; i++) {
+    if (!gst_bit_reader_get_bits_uint8 (br, &is_cpe, 1))
+      return FALSE;
+    if (is_cpe)
+      total_num_channel += 1;
+    if (!gst_bit_reader_get_bits_uint8 (br, &channel_element_tag, 4))
+      return FALSE;
+  }
+
+  *channels = total_num_channel;
+  GST_LOG_OBJECT (aacparse, "total channels : %d", *channels);
+
+  return TRUE;
+}
+
+static gboolean
+gst_aac_parse_ga_specific_config (GstAacParse * aacparse,
+    GstBitReader * br, gint * channels, guint8 channel_configuration)
+{
+  guint8 G_GNUC_UNUSED frame_length_flag;
+  guint8 depends_on_core_coder;
+  guint32 G_GNUC_UNUSED core_coder_delay;
+  guint8 G_GNUC_UNUSED extension_flag;
+
+  if (!gst_bit_reader_get_bits_uint8 (br, &frame_length_flag, 1))
+    return FALSE;
+  if (!gst_bit_reader_get_bits_uint8 (br, &depends_on_core_coder, 1))
+    return FALSE;
+
+  if (depends_on_core_coder) {
+    if (!gst_bit_reader_get_bits_uint32 (br, &core_coder_delay, 14))
+      return FALSE;
+  }
+
+  if (!gst_bit_reader_get_bits_uint8 (br, &extension_flag, 1))
+    return FALSE;
+
+  if (!channel_configuration) {
+    return gst_aac_parse_program_config_element (aacparse, br, channels);
+  }
+
+  return TRUE;
+}
+
 /* See table 1.13 in ISO/IEC 14496-3 */
 static gboolean
 gst_aac_parse_read_audio_specific_config (GstAacParse * aacparse,
@@ -567,8 +676,6 @@ gst_aac_parse_read_audio_specific_config (GstAacParse * aacparse,
     return FALSE;
   *channels = loas_channels_table[channel_configuration];
   GST_LOG_OBJECT (aacparse, "channel_configuration: %d", channel_configuration);
-  if (!*channels)
-    return FALSE;
 
   if (audio_object_type == 5 || audio_object_type == 29) {
     extension_audio_object_type = 5;
@@ -617,6 +724,32 @@ gst_aac_parse_read_audio_specific_config (GstAacParse * aacparse,
       return FALSE;
     *frame_samples = frame_flag ? 960 : 1024;
   }
+
+  switch (audio_object_type) {
+    case 1:
+    case 2:
+    case 3:
+    case 4:
+    case 6:
+    case 7:
+    case 17:
+    case 19:
+    case 20:
+    case 21:
+    case 22:
+    case 23:
+      if (!gst_aac_parse_ga_specific_config (aacparse, br, channels,
+              channel_configuration)) {
+        GST_WARNING_OBJECT (aacparse, "Error parsing GASpecificConfig");
+        return FALSE;
+      }
+      break;
+    default:
+      break;
+  }
+
+  if (!*channels)
+    return FALSE;
 
   /* There's LOTS of stuff next, but we ignore it for now as we have
      what we want (sample rate and number of channels */
@@ -1345,6 +1478,8 @@ gst_aac_parse_handle_frame (GstBaseParse * parse,
   if (G_UNLIKELY (!ret))
     goto exit;
 
+  ret = framesize <= map.size;
+
   if (aacparse->header_type == DSPAAC_HEADER_ADTS) {
     /* see above */
     frame->overhead = 7;
@@ -1359,10 +1494,7 @@ gst_aac_parse_handle_frame (GstBaseParse * parse,
       aacparse->sample_rate = rate;
       aacparse->channels = channels;
 
-      if (!gst_aac_parse_set_src_caps (aacparse, NULL)) {
-        /* If linking fails, we need to return appropriate error */
-        ret = GST_FLOW_NOT_LINKED;
-      }
+      gst_aac_parse_set_src_caps (aacparse, NULL);
 
       gst_base_parse_set_frame_rate (GST_BASE_PARSE (aacparse),
           aacparse->sample_rate, aacparse->frame_samples, 2, 2);
@@ -1399,10 +1531,7 @@ gst_aac_parse_handle_frame (GstBaseParse * parse,
        before knowing about rate/channels. */
     if (setcaps
         || !gst_pad_has_current_caps (GST_BASE_PARSE_SRC_PAD (aacparse))) {
-      if (!gst_aac_parse_set_src_caps (aacparse, NULL)) {
-        /* If linking fails, we need to return appropriate error */
-        ret = GST_FLOW_NOT_LINKED;
-      }
+      gst_aac_parse_set_src_caps (aacparse, NULL);
 
       gst_base_parse_set_frame_rate (GST_BASE_PARSE (aacparse),
           aacparse->sample_rate, aacparse->frame_samples, 2, 2);
@@ -1413,7 +1542,8 @@ gst_aac_parse_handle_frame (GstBaseParse * parse,
       && aacparse->output_header_type == DSPAAC_HEADER_ADTS) {
     if (!gst_aac_parse_prepend_adts_headers (aacparse, frame)) {
       GST_ERROR_OBJECT (aacparse, "Failed to prepend ADTS headers to frame");
-      ret = GST_FLOW_ERROR;
+      gst_buffer_unmap (buffer, &map);
+      return GST_FLOW_ERROR;
     }
   }
 
@@ -1430,7 +1560,7 @@ exit:
       *skipsize = 1;
   }
 
-  if (ret && framesize <= map.size) {
+  if (ret) {
     return gst_base_parse_finish_frame (parse, frame, framesize);
   }
 

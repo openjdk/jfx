@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2020, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,9 +25,11 @@
 
 package test.javafx.scene.control.skin;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import java.util.ArrayList;
 import java.util.List;
-
 import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.Tab;
@@ -36,12 +38,10 @@ import javafx.scene.control.skin.TabPaneSkin;
 import javafx.scene.control.skin.TabPaneSkinShim;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
-import static org.junit.Assert.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 /**
  * Testing sync'ing of tab headers with tabs.
@@ -66,7 +66,7 @@ public class TabPaneSkinHeaderOrderTest {
         assertSyncTabHeaders();
     }
 
-    @Ignore("JDK-8245528")
+    @Disabled("JDK-8245528")
     @Test
     public void testSetExistingTabAtDifferentIndex() {
         Tab t5 = tabPane.getTabs().get(4);
@@ -74,7 +74,7 @@ public class TabPaneSkinHeaderOrderTest {
         assertSyncTabHeaders();
     }
 
-    @Ignore("JDK-8245528")
+    @Disabled("JDK-8245528")
     // Does not fail in system test with tab header animations not disabled.
     // Does not fail with even number of tabs.
     // Looks like that it fails in scenarios when an existing tab's position is
@@ -197,14 +197,14 @@ public class TabPaneSkinHeaderOrderTest {
         assertSyncTabHeaders();
     }
 
-    @Ignore("JDK-8245528")
+    @Disabled("JDK-8245528")
     @Test
     public void testAddSingleExistingTab() {
         tabPane.getTabs().add(1, tabPane.getTabs().get(3));
         assertSyncTabHeaders();
     }
 
-    @Ignore("JDK-8245528")
+    @Disabled("JDK-8245528")
     @Test
     public void testAddMultipleExistingTabsAtBeginning() {
         List<Tab> added = List.of(tabPane.getTabs().get(3),
@@ -251,12 +251,12 @@ public class TabPaneSkinHeaderOrderTest {
     }
 
     protected void assertSyncHeaders(List<Tab> tabs, List<Node> headers) {
-        assertEquals("sanity: same size", tabs.size(), headers.size());
+        assertEquals(tabs.size(), headers.size(), "sanity: same size");
         for (int i = 0; i < tabs.size(); i++) {
             Tab headerTab = (Tab) headers.get(i).getProperties().get(Tab.class);
-            assertSame("tab at " + i + ", is: " + tabs.get(i).getText()
-                + " but in header it is: " + headerTab.getText(),
-                tabs.get(i), headerTab);
+            assertSame(
+                tabs.get(i), headerTab,
+                "tab at " + i + ", is: " + tabs.get(i).getText() + " but in header it is: " + headerTab.getText());
         }
     }
 
@@ -269,12 +269,12 @@ public class TabPaneSkinHeaderOrderTest {
         assertEquals(expected, root.getChildren());
     }
 
-    @After
+    @AfterEach
     public void cleanup() {
         stage.hide();
     }
 
-    @Before
+    @BeforeEach
     public void setup() {
         root = new VBox();
         scene = new Scene(root);

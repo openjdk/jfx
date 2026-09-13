@@ -36,21 +36,21 @@
 namespace WebCore {
 
 class TouchEvent final : public MouseRelatedEvent {
-    WTF_MAKE_ISO_ALLOCATED(TouchEvent);
+    WTF_MAKE_TZONE_ALLOCATED(TouchEvent);
 public:
     virtual ~TouchEvent();
 
     static Ref<TouchEvent> create(TouchList* touches, TouchList* targetTouches, TouchList* changedTouches,
-        const AtomString& type, RefPtr<WindowProxy>&& view, const IntPoint& globalLocation, OptionSet<Modifier> modifiers)
+        const AtomString& type, RefPtr<WindowProxy>&& view, const DoublePoint& globalLocation, OptionSet<Modifier> modifiers)
     {
-        return adoptRef(*new TouchEvent(touches, targetTouches, changedTouches, type, WTFMove(view), globalLocation, modifiers));
+        return adoptRef(*new TouchEvent(touches, targetTouches, changedTouches, type, WTF::move(view), globalLocation, modifiers));
     }
     static Ref<TouchEvent> createForBindings()
     {
         return adoptRef(*new TouchEvent);
     }
 
-    struct Init : MouseRelatedEventInit {
+    struct Init : EventModifierInit {
         RefPtr<TouchList> touches;
         RefPtr<TouchList> targetTouches;
         RefPtr<TouchList> changedTouches;
@@ -61,9 +61,6 @@ public:
         return adoptRef(*new TouchEvent(type, initializer, isTrusted));
     }
 
-    void initTouchEvent(TouchList* touches, TouchList* targetTouches, TouchList* changedTouches, const AtomString& type,
-        RefPtr<WindowProxy>&&, int screenX, int screenY, int clientX, int clientY, bool ctrlKey, bool altKey, bool shiftKey, bool metaKey);
-
     TouchList* touches() const { return m_touches.get(); }
     TouchList* targetTouches() const { return m_targetTouches.get(); }
     TouchList* changedTouches() const { return m_changedTouches.get(); }
@@ -72,14 +69,10 @@ public:
     void setTargetTouches(RefPtr<TouchList>&& targetTouches) { m_targetTouches = targetTouches; }
     void setChangedTouches(RefPtr<TouchList>&& changedTouches) { m_changedTouches = changedTouches; }
 
-    bool isTouchEvent() const override;
-
-    EventInterface eventInterface() const override;
-
 private:
     TouchEvent();
     TouchEvent(TouchList* touches, TouchList* targetTouches, TouchList* changedTouches, const AtomString& type,
-        RefPtr<WindowProxy>&&, const IntPoint& globalLocation, OptionSet<Modifier>);
+        RefPtr<WindowProxy>&&, const DoublePoint& globalLocation, OptionSet<Modifier>);
     TouchEvent(const AtomString&, const Init&, IsTrusted);
 
     RefPtr<TouchList> m_touches;

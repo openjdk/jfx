@@ -57,6 +57,7 @@ gst_video_mastering_display_info_init (GstVideoMasteringDisplayInfo * minfo)
   memset (minfo, 0, sizeof (GstVideoMasteringDisplayInfo));
 }
 
+#ifndef GSTREAMER_LITE
 /**
  * gst_video_mastering_display_info_from_string:
  * @minfo: (out): a #GstVideoMasteringDisplayInfo
@@ -132,6 +133,7 @@ out:
 
   return ret;
 }
+#endif // GSTREAMER_LITE
 
 /**
  * gst_video_mastering_display_info_to_string:
@@ -189,6 +191,7 @@ gst_video_mastering_display_info_is_equal (const GstVideoMasteringDisplayInfo *
   return TRUE;
 }
 
+#ifndef GSTREAMER_LITE
 /**
  * gst_video_mastering_display_info_from_caps:
  * @minfo: a #GstVideoMasteringDisplayInfo
@@ -218,6 +221,7 @@ gst_video_mastering_display_info_from_caps (GstVideoMasteringDisplayInfo *
 
   return gst_video_mastering_display_info_from_string (minfo, s);
 }
+#endif // GSTREAMER_LITE
 
 /**
  * gst_video_mastering_display_info_add_to_caps:
@@ -266,6 +270,7 @@ gst_video_content_light_level_init (GstVideoContentLightLevel * linfo)
   memset (linfo, 0, sizeof (GstVideoContentLightLevel));
 }
 
+#ifndef GSTREAMER_LITE
 /**
  * gst_video_content_light_level_from_string:
  * @linfo: a #GstVideoContentLightLevel
@@ -313,6 +318,7 @@ out:
 
   return ret;
 }
+#endif // GSTREAMER_LITE
 
 /**
  * gst_video_content_light_level_to_string:
@@ -357,6 +363,7 @@ gst_video_content_light_level_is_equal (const GstVideoContentLightLevel * linfo,
       other->max_frame_average_light_level);
 }
 
+#ifndef GSTREAMER_LITE
 /**
  * gst_video_content_light_level_from_caps:
  * @linfo: a #GstVideoContentLightLevel
@@ -385,6 +392,7 @@ gst_video_content_light_level_from_caps (GstVideoContentLightLevel * linfo,
 
   return gst_video_content_light_level_from_string (linfo, s);
 }
+#endif // GSTREAMER_LITE
 
 /**
  * gst_video_content_light_level_add_to_caps:

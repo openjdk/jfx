@@ -25,18 +25,16 @@
 
 #pragma once
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
-
 #include "RenderSVGModelObjectInlines.h"
 #include "RenderSVGShape.h"
+#include "RenderStyle+GettersInlines.h"
 #include "SVGGraphicsElement.h"
-#include "SVGRenderStyle.h"
 
 namespace WebCore {
 
 inline bool RenderSVGShape::hasNonScalingStroke() const
 {
-    return style().svgStyle().vectorEffect() == VectorEffect::NonScalingStroke;
+    return style().vectorEffect() == VectorEffect::NonScalingStroke;
 }
 
 inline SVGGraphicsElement& RenderSVGShape::graphicsElement() const
@@ -44,6 +42,9 @@ inline SVGGraphicsElement& RenderSVGShape::graphicsElement() const
     return downcast<SVGGraphicsElement>(RenderSVGModelObject::element());
 }
 
-} // namespace WebCore
+inline Ref<SVGGraphicsElement> RenderSVGShape::protectedGraphicsElement() const
+{
+    return graphicsElement();
+}
 
-#endif // LAYER_BASED_SVG_ENGINE
+} // namespace WebCore

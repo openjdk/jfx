@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,8 +32,11 @@ import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import static org.junit.Assert.*;
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class ImageLoaderScalingTest {
     // if true, the test will write original and scaled PNG files to the current directory
@@ -71,11 +74,9 @@ public class ImageLoaderScalingTest {
                     if (writeFiles) {
                         writeImages(img, expectedImg);
                     }
-                    throw new org.junit.ComparisonFailure(
-                        "pixel " + x + ", " + y + " does not match",
-                        String.format("0x%08X", expected),
-                        String.format("0x%08X", actual)
-                    );
+                    fail(String.format("pixel " + x + ", " + y + " does not match; expected 0x%08X, actual 0x%08X",
+                        expected, actual
+                    ));
                 }
             }
         }

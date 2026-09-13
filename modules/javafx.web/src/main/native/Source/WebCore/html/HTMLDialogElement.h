@@ -26,22 +26,25 @@
 #pragma once
 
 #include "HTMLElement.h"
+#include "ToggleEventTask.h"
 
 namespace WebCore {
 
 class HTMLDialogElement final : public HTMLElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLDialogElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLDialogElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLDialogElement);
 public:
     template<typename... Args> static Ref<HTMLDialogElement> create(Args&&... args) { return adoptRef(*new HTMLDialogElement(std::forward<Args>(args)...)); }
 
-    bool isOpen() const { return hasAttribute(HTMLNames::openAttr); }
+    bool isOpen() const;
 
     const String& returnValue() const { return m_returnValue; }
-    void setReturnValue(String&& value) { m_returnValue = WTFMove(value); }
+    void setReturnValue(String&& value) { m_returnValue = WTF::move(value); }
 
     ExceptionOr<void> show();
     ExceptionOr<void> showModal();
     void close(const String&);
+    void requestClose(const String&);
 
     bool isModal() const { return m_isModal; };
 
@@ -49,15 +52,26 @@ public:
 
     void runFocusingSteps();
 
+    bool isValidCommandType(const CommandType) final;
+    bool handleCommandInternal(HTMLButtonElement& invoker, const CommandType&) final;
+
+    void queueDialogToggleEventTask(ToggleState oldState, ToggleState newState);
+
 private:
     HTMLDialogElement(const QualifiedName&, Document&);
 
     void removedFromAncestor(RemovalType, ContainerNode& oldParentOfRemovedTree) final;
     void setIsModal(bool newValue);
+    bool supportsFocus() const final;
+
+    void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
 
     String m_returnValue;
     bool m_isModal { false };
+    bool m_isOpen { false };
     WeakPtr<Element, WeakPtrImplWithEventTargetData> m_previouslyFocusedElement;
+
+    RefPtr<ToggleEventTask> m_toggleEventTask;
 };
 
 } // namespace WebCore

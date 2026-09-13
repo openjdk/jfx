@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,15 +26,10 @@
 
 #pragma once
 
-#include "CSSValue.h"
-#include "CSSVariableData.h"
-#include "CSSVariableReferenceValue.h"
-#include "Length.h"
-#include "StyleColor.h"
-#include "StyleImage.h"
-#include "TransformOperation.h"
-#include <wtf/PointerComparison.h>
-#include <wtf/URL.h>
+#include <WebCore/CSSValue.h>
+#include <WebCore/CSSVariableData.h>
+#include <WebCore/CSSVariableReferenceValue.h>
+#include <WebCore/CSSWideKeyword.h>
 
 namespace WebCore {
 
@@ -41,88 +37,47 @@ class CSSParserToken;
 
 class CSSCustomPropertyValue final : public CSSValue {
 public:
-    struct NumericSyntaxValue {
-        double value;
-        CSSUnitType unitType;
-
-        bool operator==(const NumericSyntaxValue& other) const { return value == other.value && unitType == other.unitType; }
-    };
-
-    struct TransformSyntaxValue {
-        RefPtr<TransformOperation> transform;
-        bool operator==(const TransformSyntaxValue& other) const { return arePointingToEqualData(transform, other.transform); }
-    };
-
-    using SyntaxValue = std::variant<Length, NumericSyntaxValue, StyleColor, RefPtr<StyleImage>, URL, String, TransformSyntaxValue>;
-
-    struct SyntaxValueList {
-        Vector<SyntaxValue> values;
-        ValueSeparator separator;
-
-        bool operator==(const SyntaxValueList& other) const { return values == other.values && separator == other.separator; }
-    };
-
-    using VariantValue = std::variant<std::monostate, Ref<CSSVariableReferenceValue>, CSSValueID, Ref<CSSVariableData>, SyntaxValue, SyntaxValueList>;
+    using VariantValue = Variant<
+        Ref<CSSVariableReferenceValue>,
+        Ref<CSSVariableData>,
+        CSSWideKeyword
+    >;
 
     static Ref<CSSCustomPropertyValue> createEmpty(const AtomString& name);
-
-    static Ref<CSSCustomPropertyValue> createUnresolved(const AtomString& name, Ref<CSSVariableReferenceValue>&& value)
-    {
-        return adoptRef(*new CSSCustomPropertyValue(name, VariantValue { std::in_place_type<Ref<CSSVariableReferenceValue>>, WTFMove(value) }));
-    }
-
-    static Ref<CSSCustomPropertyValue> createUnresolved(const AtomString& name, CSSValueID value)
-    {
-        return adoptRef(*new CSSCustomPropertyValue(name, { value }));
-    }
-
-    static Ref<CSSCustomPropertyValue> createWithID(const AtomString& name, CSSValueID);
-
-    static Ref<CSSCustomPropertyValue> createSyntaxAll(const AtomString& name, Ref<CSSVariableData>&& value)
-    {
-        return adoptRef(*new CSSCustomPropertyValue(name, VariantValue { std::in_place_type<Ref<CSSVariableData>>, WTFMove(value) }));
-    }
-
-    static Ref<CSSCustomPropertyValue> createForSyntaxValue(const AtomString& name, SyntaxValue&& syntaxValue)
-    {
-        return adoptRef(*new CSSCustomPropertyValue(name, VariantValue { WTFMove(syntaxValue) }));
-    }
-
-    static Ref<CSSCustomPropertyValue> createForSyntaxValueList(const AtomString& name, SyntaxValueList&& syntaxValueList)
-    {
-        return adoptRef(*new CSSCustomPropertyValue(name, VariantValue { WTFMove(syntaxValueList) }));
-    }
-
-    String customCSSText() const;
+    static Ref<CSSCustomPropertyValue> createUnresolved(const AtomString& name, Ref<CSSVariableReferenceValue>&&);
+    static Ref<CSSCustomPropertyValue> createSyntaxAll(const AtomString& name, Ref<CSSVariableData>&&);
+    static Ref<CSSCustomPropertyValue> createWithCSSWideKeyword(const AtomString& name, CSSWideKeyword);
 
     const AtomString& name() const { return m_name; }
-    bool isResolved() const { return !std::holds_alternative<Ref<CSSVariableReferenceValue>>(m_value); }
-    bool isUnset() const { return std::holds_alternative<CSSValueID>(m_value) && std::get<CSSValueID>(m_value) == CSSValueUnset; }
-    bool isInvalid() const { return std::holds_alternative<CSSValueID>(m_value) && std::get<CSSValueID>(m_value) == CSSValueInvalid; }
-    bool isInherit() const { return std::holds_alternative<CSSValueID>(m_value) && std::get<CSSValueID>(m_value) == CSSValueInherit; }
-    bool isCurrentColor() const;
-    bool containsCSSWideKeyword() const;
-
     const VariantValue& value() const { return m_value; }
-
-    const Vector<CSSParserToken>& tokens() const;
-
-    bool equals(const CSSCustomPropertyValue&) const;
 
     Ref<const CSSVariableData> asVariableData() const;
 
+    bool isCurrentColor() const;
+
+    bool isVariableReference() const;
+    bool isVariableData() const;
+    bool isCSSWideKeyword() const;
+
+    std::optional<CSSWideKeyword> tryCSSWideKeyword() const;
+
+    String customCSSText(const CSS::SerializationContext&) const;
+    bool equals(const CSSCustomPropertyValue&) const;
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const;
+
 private:
     CSSCustomPropertyValue(const AtomString& name, VariantValue&& value)
-        : CSSValue(CustomPropertyClass)
+        : CSSValue(ClassType::CustomProperty)
         , m_name(name)
-        , m_value(WTFMove(value))
+        , m_value(WTF::move(value))
     {
     }
+
+    const Vector<CSSParserToken>& tokens() const;
 
     const AtomString m_name;
     const VariantValue m_value;
     mutable String m_cachedCSSText;
-    mutable RefPtr<CSSVariableData> m_cachedTokens;
 };
 
 } // namespace WebCore

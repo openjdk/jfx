@@ -26,14 +26,18 @@
 #include "config.h"
 #include "CustomPaintCanvas.h"
 
-#if ENABLE(CSS_PAINTING_API)
-
+#include "BitmapImage.h"
 #include "CanvasRenderingContext.h"
+#include "ContextDestructionObserverInlines.h"
 #include "ImageBitmap.h"
 #include "PaintRenderingContext2D.h"
 #include "ScriptExecutionContext.h"
+#include "ScriptWrappableInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CustomPaintCanvas);
 
 Ref<CustomPaintCanvas> CustomPaintCanvas::create(ScriptExecutionContext& context, unsigned width, unsigned height)
 {
@@ -41,7 +45,7 @@ Ref<CustomPaintCanvas> CustomPaintCanvas::create(ScriptExecutionContext& context
 }
 
 CustomPaintCanvas::CustomPaintCanvas(ScriptExecutionContext& context, unsigned width, unsigned height)
-    : CanvasBase(IntSize(width, height), context.noiseInjectionHashSalt())
+    : CanvasBase(IntSize(width, height), context)
     , ContextDestructionObserver(&context)
 {
 }
@@ -49,60 +53,42 @@ CustomPaintCanvas::CustomPaintCanvas(ScriptExecutionContext& context, unsigned w
 CustomPaintCanvas::~CustomPaintCanvas()
 {
     notifyObserversCanvasDestroyed();
-
-    m_context = nullptr; // Ensure this goes away before the ImageBuffer.
-    setImageBuffer(nullptr);
 }
 
 RefPtr<PaintRenderingContext2D> CustomPaintCanvas::getContext()
 {
-    if (m_context)
-        return &downcast<PaintRenderingContext2D>(*m_context);
-
-    m_context = PaintRenderingContext2D::create(*this);
-    downcast<PaintRenderingContext2D>(*m_context).setUsesDisplayListDrawing(true);
-
-    return &downcast<PaintRenderingContext2D>(*m_context);
+    if (!m_context)
+        m_context = PaintRenderingContext2D::create(*this);
+    return m_context.get();
 }
 
-void CustomPaintCanvas::replayDisplayList(GraphicsContext* ctx) const
+void CustomPaintCanvas::replayDisplayList(GraphicsContext& target)
 {
-    ASSERT(!m_destinationGraphicsContext);
     if (!width() || !height())
         return;
-
     // FIXME: Using an intermediate buffer is not needed if there are no composite operations.
-    auto clipBounds = ctx->clipBounds();
-
-    auto image = ctx->createAlignedImageBuffer(clipBounds.size());
+    auto clipBounds = target.clipBounds();
+    auto image = target.createAlignedImageBuffer(clipBounds.size());
     if (!image)
         return;
-
-    m_destinationGraphicsContext = &image->context();
-    m_destinationGraphicsContext->translate(-clipBounds.location());
+    auto& imageTarget = image->context();
+    imageTarget.translate(-clipBounds.location());
     if (m_context)
-        m_context->paintRenderingResultsToCanvas();
-    m_destinationGraphicsContext = nullptr;
-
-    ctx->drawImageBuffer(*image, clipBounds);
+        m_context->replayDisplayList(imageTarget);
+    target.drawImageBuffer(*image, clipBounds);
 }
 
 Image* CustomPaintCanvas::copiedImage() const
 {
-    ASSERT(!m_destinationGraphicsContext);
     if (!width() || !height())
         return nullptr;
-
-    m_copiedBuffer = ImageBuffer::create(size(), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
-    if (!m_copiedBuffer)
-        return nullptr;
-
-    m_destinationGraphicsContext = &m_copiedBuffer->context();
-    if (m_context)
-        m_context->paintRenderingResultsToCanvas();
-    m_destinationGraphicsContext = nullptr;
-
-    m_copiedImage = m_copiedBuffer->copyImage(DontCopyBackingStore, PreserveResolution::Yes);
+    m_copiedImage = nullptr;
+    auto buffer = ImageBuffer::create(size(), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
+    if (buffer) {
+        if (m_context)
+            m_context->replayDisplayList(buffer->context());
+        m_copiedImage = BitmapImage::create(ImageBuffer::sinkIntoNativeImage(buffer));
+    }
     return m_copiedImage.get();
 }
 
@@ -111,15 +97,15 @@ void CustomPaintCanvas::clearCopiedImage() const
     m_copiedImage = nullptr;
 }
 
-GraphicsContext* CustomPaintCanvas::drawingContext() const
+std::unique_ptr<CSSParserContext> CustomPaintCanvas::createCSSParserContext() const
 {
-    return m_destinationGraphicsContext;
+    // FIXME: Rather than using a default CSSParserContext, there should be one exposed via ScriptExecutionContext.
+    return makeUnique<CSSParserContext>(HTMLStandardMode);
 }
 
-GraphicsContext* CustomPaintCanvas::existingDrawingContext() const
+ScriptExecutionContext* CustomPaintCanvas::canvasBaseScriptExecutionContext() const
 {
-    return drawingContext();
+    return ContextDestructionObserver::scriptExecutionContext();
 }
 
-}
-#endif
+} // namespace WebCore

@@ -36,11 +36,13 @@
 #include "SerializedNFA.h"
 #include <wtf/DataLog.h>
 #include <wtf/HashSet.h>
+#include <wtf/IndexedRange.h>
 
 namespace WebCore {
 
 namespace ContentExtensions {
 
+typedef HashSet<unsigned, DefaultHash<unsigned>, WTF::UnsignedWithZeroKeyHashTraits<unsigned>> NFANodeIndexSet;
 typedef MutableRange<signed char, NFANodeIndexSet> NFANodeRange;
 typedef MutableRangeList<signed char, NFANodeIndexSet> NFANodeRangeList;
 typedef MutableRangeList<signed char, NFANodeIndexSet, 128> PreallocatedNFANodeRangeList;
@@ -75,9 +77,8 @@ static inline void epsilonClosureExcludingSelf(const SerializedNFA& nfa, unsigne
 
 static NFANodeClosures resolveEpsilonClosures(const SerializedNFA& nfa)
 {
-    NFANodeClosures nfaNodeClosures;
     unsigned nfaGraphSize = nfa.nodes().size();
-    nfaNodeClosures.resize(nfaGraphSize);
+    NFANodeClosures nfaNodeClosures(nfaGraphSize);
 
     for (unsigned nodeId = 0; nodeId < nfaGraphSize; ++nodeId)
         epsilonClosureExcludingSelf(nfa, nodeId, nfaNodeClosures[nodeId]);
@@ -90,18 +91,18 @@ static ALWAYS_INLINE void extendSetWithClosure(const NFANodeClosures& nfaNodeClo
     ASSERT(set.contains(nodeId));
     const UniqueNodeList& nodeClosure = nfaNodeClosures[nodeId];
     if (!nodeClosure.isEmpty())
-        set.add(nodeClosure.begin(), nodeClosure.end());
+        set.addAll(nodeClosure);
 }
 
 struct UniqueNodeIdSetImpl {
-    unsigned* buffer()
+    std::span<unsigned> buffer()
     {
-        return m_buffer;
+        return unsafeMakeSpan(m_buffer, m_size);
     }
 
-    const unsigned* buffer() const
+    std::span<const unsigned> buffer() const
     {
-        return m_buffer;
+        return unsafeMakeSpan(m_buffer, m_size);
     }
 
     unsigned m_size;
@@ -137,11 +138,10 @@ public:
         m_uniqueNodeIdSetBuffer->m_hash = hash;
         m_uniqueNodeIdSetBuffer->m_dfaNodeId = dfaNodeId;
 
-        unsigned* buffer = m_uniqueNodeIdSetBuffer->buffer();
-        for (unsigned nodeId : nodeIdSet) {
-            *buffer = nodeId;
-            ++buffer;
-        }
+        auto buffer = m_uniqueNodeIdSetBuffer->buffer();
+        size_t bufferIndex = 0;
+        for (unsigned nodeId : nodeIdSet)
+            buffer[bufferIndex++] = nodeId;
     }
 
     UniqueNodeIdSet(UniqueNodeIdSet&& other)
@@ -162,16 +162,13 @@ public:
         fastFree(m_uniqueNodeIdSetBuffer);
     }
 
-    bool operator==(const UniqueNodeIdSet& other) const
-    {
-        return m_uniqueNodeIdSetBuffer == other.m_uniqueNodeIdSetBuffer;
-    }
+    friend bool operator==(const UniqueNodeIdSet&, const UniqueNodeIdSet&) = default;
 
     bool operator==(const NodeIdSet& other) const
     {
         if (m_uniqueNodeIdSetBuffer->m_size != static_cast<unsigned>(other.size()))
             return false;
-        unsigned* buffer = m_uniqueNodeIdSetBuffer->buffer();
+        auto buffer = m_uniqueNodeIdSetBuffer->buffer();
         for (unsigned i = 0; i < m_uniqueNodeIdSetBuffer->m_size; ++i) {
             if (!other.contains(buffer[i]))
                 return false;
@@ -210,7 +207,7 @@ struct UniqueNodeIdSetHashHashTraits : public WTF::CustomHashTraits<UniqueNodeId
     static const int minimumTableSize = 128;
 };
 
-typedef HashSet<std::unique_ptr<UniqueNodeIdSet>, UniqueNodeIdSetHash, UniqueNodeIdSetHashHashTraits> UniqueNodeIdSetTable;
+using UniqueNodeIdSetTable = HashSet<std::unique_ptr<UniqueNodeIdSet>, UniqueNodeIdSetHash, UniqueNodeIdSetHashHashTraits>;
 
 struct NodeIdSetToUniqueNodeIdSetSource {
     NodeIdSetToUniqueNodeIdSetSource(DFA& dfa, const SerializedNFA& nfa, const NodeIdSet& nodeIdSet)
@@ -278,8 +275,7 @@ struct DataConverterWithEpsilonClosure {
         NFANodeIndexSet result;
         for (unsigned nodeId : iterable) {
             result.add(nodeId);
-            const UniqueNodeList& nodeClosure = nfaNodeclosures[nodeId];
-            result.add(nodeClosure.begin(), nodeClosure.end());
+            result.addAll(nfaNodeclosures[nodeId]);
         }
         return result;
     }
@@ -289,10 +285,8 @@ struct DataConverterWithEpsilonClosure {
     {
         for (unsigned nodeId : iterable) {
             auto addResult = destination.add(nodeId);
-            if (addResult.isNewEntry) {
-                const UniqueNodeList& nodeClosure = nfaNodeclosures[nodeId];
-                destination.add(nodeClosure.begin(), nodeClosure.end());
-            }
+            if (addResult.isNewEntry)
+                destination.addAll(nfaNodeclosures[nodeId]);
         }
     }
 };
@@ -301,7 +295,7 @@ static inline void createCombinedTransition(PreallocatedNFANodeRangeList& combin
 {
     combinedRangeList.clear();
 
-    const unsigned* buffer = sourceNodeSet.buffer();
+    auto buffer = sourceNodeSet.buffer();
 
     DataConverterWithEpsilonClosure converter { nfaNodeclosures };
     for (unsigned i = 0; i < sourceNodeSet.m_size; ++i) {
@@ -323,7 +317,7 @@ static ALWAYS_INLINE unsigned getOrCreateDFANode(const NodeIdSet& nfaNodeSet, co
 
 std::optional<DFA> NFAToDFA::convert(NFA&& nfa)
 {
-    auto serializedNFA = SerializedNFA::serialize(WTFMove(nfa));
+    auto serializedNFA = SerializedNFA::serialize(WTF::move(nfa));
     if (!serializedNFA)
         return std::nullopt;
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -228,15 +228,11 @@ public class CommonDialogs {
     }
 
     private static String convertFolder(File folder) {
-        if (folder != null) {
-            if (folder.isDirectory()) {
-                try {
-                    return folder.getCanonicalPath();
-                } catch (IOException e) {
-                    throw new IllegalArgumentException("Unable to get a canonical path for folder", e);
-                }
-            } else {
-                throw new IllegalArgumentException("Folder parameter must be a valid folder");
+        if (folder != null && folder.isDirectory()) {
+            try {
+                return folder.getCanonicalPath();
+            } catch (IOException e) {
+                // Do not propagate the exception and let the platfrom decide what folder to use as initial directory.
             }
         }
 

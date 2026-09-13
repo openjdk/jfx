@@ -77,36 +77,6 @@ static GMemVTable glib_mem_vtable = {
   realloc,
 };
 
-/**
- * SECTION:memory
- * @Short_Description: general memory-handling
- * @Title: Memory Allocation
- *
- * These functions provide support for allocating and freeing memory.
- *
- * If any call to allocate memory using functions g_new(), g_new0(), g_renew(),
- * g_malloc(), g_malloc0(), g_malloc0_n(), g_realloc(), and g_realloc_n()
- * fails, the application is terminated. This also means that there is no
- * need to check if the call succeeded. On the other hand, the `g_try_...()` family
- * of functions returns %NULL on failure that can be used as a check
- * for unsuccessful memory allocation. The application is not terminated
- * in this case.
- *
- * As all GLib functions and data structures use `g_malloc()` internally, unless
- * otherwise specified, any allocation failure will result in the application
- * being terminated.
- *
- * It's important to match g_malloc() (and wrappers such as g_new()) with
- * g_free(), g_slice_alloc() (and wrappers such as g_slice_new()) with
- * g_slice_free(), plain malloc() with free(), and (if you're using C++)
- * new with delete and new[] with delete[]. Otherwise bad things can happen,
- * since these allocators may use different memory pools (and new/delete call
- * constructors and destructors).
- *
- * Since GLib 2.46 g_malloc() is hardcoded to always use the system malloc
- * implementation.
- */
-
 /* --- functions --- */
 /**
  * g_malloc:
@@ -274,7 +244,7 @@ g_free_sized (void   *mem,
  * g_clear_pointer: (skip)
  * @pp: (nullable) (not optional) (inout) (transfer full): a pointer to a
  *   variable, struct member etc. holding a pointer
- * @destroy: a function to which a gpointer can be passed, to destroy *@pp
+ * @destroy: a function to which a gpointer can be passed, to destroy `*pp`
  *
  * Clears a reference to a variable.
  *
@@ -287,9 +257,32 @@ g_free_sized (void   *mem,
  * A macro is also included that allows this function to be used without
  * pointer casts. This will mask any warnings about incompatible function types
  * or calling conventions, so you must ensure that your @destroy function is
- * compatible with being called as `GDestroyNotify` using the standard calling
- * convention for the platform that GLib was compiled for; otherwise the program
- * will experience undefined behaviour.
+ * compatible with being called as [callback@GLib.DestroyNotify] using the
+ * standard calling convention for the platform that GLib was compiled for;
+ * otherwise the program will experience undefined behaviour.
+ *
+ * Examples of this kind of undefined behaviour include using many Windows Win32
+ * APIs, as well as many if not all OpenGL and Vulkan calls on 32-bit Windows,
+ * which typically use the `__stdcall` calling convention rather than the
+ * `__cdecl` calling convention.
+ *
+ * The affected functions can be used by wrapping them in a
+ * [callback@GLib.DestroyNotify] that is declared with the standard calling
+ * convention:
+ *
+ * ```c
+ * // Wrapper needed to avoid mismatched calling conventions on Windows
+ * static void
+ * destroy_sync (void *sync)
+ * {
+ *   glDeleteSync (sync);
+ * }
+ *
+ * // …
+ *
+ * g_clear_pointer (&sync, destroy_sync);
+ * ```
+
  *
  * Since: 2.34
  **/

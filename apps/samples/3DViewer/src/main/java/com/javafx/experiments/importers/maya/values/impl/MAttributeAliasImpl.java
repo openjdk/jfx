@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -49,10 +49,12 @@ public class MAttributeAliasImpl extends MDataImpl implements MAttributeAlias {
         super(type);
     }
 
+    @Override
     public Map getMapping() {
         return map;
     }
 
+    @Override
     public void parse(Iterator<String> values) {
         int count = 0;
         List<String> list = new ArrayList();

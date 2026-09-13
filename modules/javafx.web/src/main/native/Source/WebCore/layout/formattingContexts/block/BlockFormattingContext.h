@@ -30,7 +30,7 @@
 #include "BlockFormattingState.h"
 #include "FormattingContext.h"
 #include <wtf/HashMap.h>
-#include <wtf/IsoMalloc.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -45,16 +45,17 @@ class FloatingContext;
 // This class implements the layout logic for block formatting contexts.
 // https://www.w3.org/TR/CSS22/visuren.html#block-formatting
 class BlockFormattingContext : public FormattingContext {
-    WTF_MAKE_ISO_ALLOCATED(BlockFormattingContext);
+    WTF_MAKE_TZONE_ALLOCATED(BlockFormattingContext);
 public:
     BlockFormattingContext(const ElementBox& formattingContextRoot, BlockFormattingState&);
 
     void layoutInFlowContent(const ConstraintsForInFlowContent&) override;
+    void layoutOutOfFlowContent(const ConstraintsForOutOfFlowContent&);
     LayoutUnit usedContentHeight() const override;
 
-    const BlockFormattingState& formattingState() const { return downcast<BlockFormattingState>(FormattingContext::formattingState()); }
-    const BlockFormattingGeometry& formattingGeometry() const final { return m_blockFormattingGeometry; }
-    const BlockFormattingQuirks& formattingQuirks() const override { return m_blockFormattingQuirks; }
+    const BlockFormattingState& formattingState() const { return m_blockFormattingState; }
+    const BlockFormattingGeometry& formattingGeometry() const { return m_blockFormattingGeometry; }
+    const BlockFormattingQuirks& formattingQuirks() const { return m_blockFormattingQuirks; }
 
 protected:
     struct ConstraintsPair {
@@ -80,19 +81,25 @@ protected:
     std::optional<LayoutUnit> usedAvailableWidthForFloatAvoider(const FloatingContext&, const ElementBox&, const ConstraintsPair&);
     void updateMarginAfterForPreviousSibling(const ElementBox&);
 
-    BlockFormattingState& formattingState() { return downcast<BlockFormattingState>(FormattingContext::formattingState()); }
+    void collectOutOfFlowDescendantsIfNeeded();
+    void computeOutOfFlowVerticalGeometry(const Box&, const ConstraintsForOutOfFlowContent&);
+    void computeOutOfFlowHorizontalGeometry(const Box&, const ConstraintsForOutOfFlowContent&);
+    void computeBorderAndPadding(const Box&, const HorizontalConstraints&);
+
+    BlockFormattingState& formattingState() { return m_blockFormattingState; }
     BlockMarginCollapse marginCollapse() const;
 
 #if ASSERT_ENABLED
-    void setPrecomputedMarginBefore(const ElementBox& layoutBox, const PrecomputedMarginBefore& precomputedMarginBefore) { m_precomputedMarginBeforeList.set(&layoutBox, precomputedMarginBefore); }
-    PrecomputedMarginBefore precomputedMarginBefore(const ElementBox& layoutBox) const { return m_precomputedMarginBeforeList.get(&layoutBox); }
-    bool hasPrecomputedMarginBefore(const ElementBox& layoutBox) const { return m_precomputedMarginBeforeList.contains(&layoutBox); }
+    void setPrecomputedMarginBefore(const ElementBox& layoutBox, const PrecomputedMarginBefore& precomputedMarginBefore) { m_precomputedMarginBeforeList.set(layoutBox, precomputedMarginBefore); }
+    PrecomputedMarginBefore precomputedMarginBefore(const ElementBox& layoutBox) const { return m_precomputedMarginBeforeList.get(layoutBox); }
+    bool hasPrecomputedMarginBefore(const ElementBox& layoutBox) const { return m_precomputedMarginBeforeList.contains(layoutBox); }
 #endif
 
 private:
 #if ASSERT_ENABLED
-    HashMap<const ElementBox*, PrecomputedMarginBefore> m_precomputedMarginBeforeList;
+    HashMap<CheckedRef<const ElementBox>, PrecomputedMarginBefore> m_precomputedMarginBeforeList;
 #endif
+    BlockFormattingState& m_blockFormattingState;
     const BlockFormattingGeometry m_blockFormattingGeometry;
     const BlockFormattingQuirks m_blockFormattingQuirks;
 };

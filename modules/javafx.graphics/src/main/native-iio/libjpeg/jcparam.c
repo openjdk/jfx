@@ -2,7 +2,7 @@
  * jcparam.c
  *
  * Copyright (C) 1991-1998, Thomas G. Lane.
- * Modified 2003-2019 by Guido Vollbeding.
+ * Modified 2003-2025 by Guido Vollbeding.
  * This file is part of the Independent JPEG Group's software.
  * For conditions of distribution and use, see the accompanying README file.
  *
@@ -62,8 +62,9 @@ jpeg_add_quant_table (j_compress_ptr cinfo, int which_tbl,
 
 
 /* These are the sample quantization tables given in JPEG spec section K.1.
- * The spec says that the values given produce "good" quality, and
- * when divided by 2, "very good" quality.
+ * NOTE: chrominance DC value is changed from 17 to 16 for lossless support.
+ * The spec says that the values given produce "good" quality,
+ * and when divided by 2, "very good" quality.
  */
 static const unsigned int std_luminance_quant_tbl[DCTSIZE2] = {
   16,  11,  10,  16,  24,  40,  51,  61,
@@ -214,7 +215,7 @@ jpeg_set_defaults (j_compress_ptr cinfo)
 
   cinfo->scale_num = 1;        /* 1:1 scaling */
   cinfo->scale_denom = 1;
-  cinfo->data_precision = BITS_IN_JSAMPLE;
+  cinfo->data_precision = JPEG_DATA_PRECISION;
   /* Set up two quantization tables using default quality of 75 */
   jpeg_set_quality(cinfo, 75, TRUE);
   /* Reset standard Huffman tables */
@@ -282,6 +283,7 @@ jpeg_set_defaults (j_compress_ptr cinfo)
 
   /* No color transform */
   cinfo->color_transform = JCT_NONE;
+  cinfo->LSE_maxtrans = MAXJSAMPLE; /* Default LSE MAXTRANS value */
 
   /* Choose JPEG colorspace based on input space, set defaults accordingly */
 

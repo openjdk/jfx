@@ -26,28 +26,28 @@
 #include "config.h"
 #include "CSSReflectValue.h"
 
-#include "CSSPrimitiveValue.h"
+#include <wtf/text/MakeString.h>
 
 namespace WebCore {
 
-CSSReflectValue::CSSReflectValue(CSSValueID direction, Ref<CSSPrimitiveValue> offset, RefPtr<CSSValue> mask)
-    : CSSValue(ReflectClass)
+CSSReflectValue::CSSReflectValue(CSSValueID direction, Ref<CSSValue> offset, RefPtr<CSSValue> mask)
+    : CSSValue(ClassType::Reflect)
     , m_direction(direction)
-    , m_offset(WTFMove(offset))
-    , m_mask(WTFMove(mask))
+    , m_offset(WTF::move(offset))
+    , m_mask(WTF::move(mask))
 {
 }
 
-Ref<CSSReflectValue> CSSReflectValue::create(CSSValueID direction, Ref<CSSPrimitiveValue> offset, RefPtr<CSSValue> mask)
+Ref<CSSReflectValue> CSSReflectValue::create(CSSValueID direction, Ref<CSSValue> offset, RefPtr<CSSValue> mask)
 {
-    return adoptRef(*new CSSReflectValue(direction, WTFMove(offset), WTFMove(mask)));
+    return adoptRef(*new CSSReflectValue(direction, WTF::move(offset), WTF::move(mask)));
 }
 
-String CSSReflectValue::customCSSText() const
+String CSSReflectValue::customCSSText(const CSS::SerializationContext& context) const
 {
     if (m_mask)
-        return makeString(nameLiteral(m_direction), ' ', m_offset->cssText(), ' ', m_mask->cssText());
-    return makeString(nameLiteral(m_direction), ' ', m_offset->cssText());
+        return makeString(nameLiteral(m_direction), ' ', m_offset->cssText(context), ' ', m_mask->cssText(context));
+    return makeString(nameLiteral(m_direction), ' ', m_offset->cssText(context));
 }
 
 bool CSSReflectValue::equals(const CSSReflectValue& other) const

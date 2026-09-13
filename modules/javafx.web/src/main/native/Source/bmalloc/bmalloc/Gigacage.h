@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "Algorithm.h"
 #include "BAssert.h"
 #include "BExport.h"
@@ -32,7 +34,7 @@
 #include "BPlatform.h"
 #include "GigacageConfig.h"
 #include "Sizes.h"
-#include "StdLibExtras.h"
+#include <bit>
 #include <cstddef>
 #include <inttypes.h>
 
@@ -55,8 +57,6 @@ BINLINE const char* name(Kind kind)
     switch (kind) {
     case Primitive:
         return "Primitive";
-    case JSValue:
-        return "JSValue";
     case NumberOfKinds:
         break;
     }
@@ -64,12 +64,15 @@ BINLINE const char* name(Kind kind)
     return nullptr;
 }
 
-constexpr bool hasCapacityToUseLargeGigacage = BOS_EFFECTIVE_ADDRESS_WIDTH > 36;
+#if BPLATFORM(IOS_FAMILY) || BCPU(ADDRESS32)
+constexpr bool hasCapacityToUseLargeGigacage = false;
+#else
+constexpr bool hasCapacityToUseLargeGigacage = true;
+#endif
 
 #if GIGACAGE_ENABLED
 
-constexpr size_t primitiveGigacageSize = (hasCapacityToUseLargeGigacage ? 32 : 2) * bmalloc::Sizes::GB;
-constexpr size_t jsValueGigacageSize = (hasCapacityToUseLargeGigacage ? 16 : 2) * bmalloc::Sizes::GB;
+constexpr size_t primitiveGigacageSize = (hasCapacityToUseLargeGigacage ? 64 : 16) * bmalloc::Sizes::GB;
 constexpr size_t maximumCageSizeReductionForSlide = hasCapacityToUseLargeGigacage ? 4 * bmalloc::Sizes::GB : bmalloc::Sizes::GB / 4;
 
 
@@ -83,20 +86,18 @@ constexpr size_t maximumCageSizeReductionForSlide = hasCapacityToUseLargeGigacag
 
 
 static_assert(bmalloc::isPowerOfTwo(primitiveGigacageSize));
-static_assert(bmalloc::isPowerOfTwo(jsValueGigacageSize));
 static_assert(primitiveGigacageSize > maximumCageSizeReductionForSlide);
-static_assert(jsValueGigacageSize > maximumCageSizeReductionForSlide);
 
 constexpr size_t gigacageSizeToMask(size_t size) { return size - 1; }
 
 constexpr size_t primitiveGigacageMask = gigacageSizeToMask(primitiveGigacageSize);
-constexpr size_t jsValueGigacageMask = gigacageSizeToMask(jsValueGigacageSize);
 
 // These constants are needed by the LLInt.
-constexpr ptrdiff_t offsetOfPrimitiveGigacageBasePtr = Kind::Primitive * sizeof(void*);
-constexpr ptrdiff_t offsetOfJSValueGigacageBasePtr = Kind::JSValue * sizeof(void*);
+constexpr ptrdiff_t offsetOfPrimitiveGigacageBasePtr = static_cast<ptrdiff_t>(Primitive) * sizeof(void*);
 
 extern "C" BEXPORT bool disablePrimitiveGigacageRequested;
+
+BALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 BINLINE bool isEnabled() { return g_gigacageConfig.isEnabled; }
 
@@ -136,16 +137,14 @@ BINLINE void* basePtr(Kind kind)
 BINLINE void* addressOfBasePtr(Kind kind)
 {
     RELEASE_BASSERT(kind < NumberOfKinds);
-    return &g_gigacageConfig.basePtrs[kind];
+    return &g_gigacageConfig.basePtrs[static_cast<size_t>(kind)];
 }
 
-BINLINE size_t maxSize(Kind kind)
+BINLINE constexpr size_t maxSize(Kind kind)
 {
     switch (kind) {
     case Primitive:
         return static_cast<size_t>(primitiveGigacageSize);
-    case JSValue:
-        return static_cast<size_t>(jsValueGigacageSize);
     case NumberOfKinds:
         break;
     }
@@ -158,7 +157,7 @@ BINLINE size_t alignment(Kind kind)
     return maxSize(kind);
 }
 
-BINLINE size_t mask(Kind kind)
+BINLINE constexpr size_t mask(Kind kind)
 {
     return gigacageSizeToMask(maxSize(kind));
 }
@@ -171,7 +170,6 @@ template<typename Func>
 void forEachKind(const Func& func)
 {
     func(Primitive);
-    func(JSValue);
 }
 
 template<typename T>
@@ -206,6 +204,8 @@ BINLINE bool contains(const void* ptr)
     return static_cast<size_t>(p - start) < g_gigacageConfig.totalSize;
 }
 
+BALLOW_UNSAFE_BUFFER_USAGE_END
+
 BEXPORT bool shouldBeEnabled();
 
 #else // GIGACAGE_ENABLED
@@ -236,5 +236,4 @@ BINLINE void removePrimitiveDisableCallback(void (*)(void*), void*) { }
 
 } // namespace Gigacage
 
-
-
+#endif

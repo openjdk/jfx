@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,8 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY)
 
 #include <queue>
@@ -32,6 +34,7 @@
 #include <wtf/AutomaticThread.h>
 #include <wtf/PrintStream.h>
 #include <wtf/PriorityQueue.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/Vector.h>
 
 namespace JSC {
@@ -43,7 +46,7 @@ namespace Wasm {
 class Plan;
 
 class Worklist {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(Worklist);
 public:
     Worklist();
     ~Worklist();
@@ -59,7 +62,6 @@ public:
         Compilation,
         Preparation
     };
-    const char* priorityString(Priority);
 
     void dump(PrintStream&) const;
 
@@ -86,7 +88,7 @@ private:
     }
 
     Box<Lock> m_lock;
-    Ref<AutomaticThreadCondition> m_planEnqueued;
+    const Ref<AutomaticThreadCondition> m_planEnqueued;
     // Technically, this could overflow but that's unlikely. Even if it did, we will just compile things of the same
     // Priority it the wrong order, which isn't wrong, just suboptimal.
     Ticket m_lastGrantedTicket { 0 };

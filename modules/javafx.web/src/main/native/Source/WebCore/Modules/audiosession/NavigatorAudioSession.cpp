@@ -28,43 +28,38 @@
 
 #if ENABLE(DOM_AUDIO_SESSION)
 
+#include "ContextDestructionObserverInlines.h"
 #include "DOMAudioSession.h"
 #include "Navigator.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-NavigatorAudioSession::NavigatorAudioSession()
-{
-}
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NavigatorAudioSession);
 
-NavigatorAudioSession::~NavigatorAudioSession()
-{
-}
+NavigatorAudioSession::NavigatorAudioSession() = default;
 
-RefPtr<DOMAudioSession> NavigatorAudioSession::audioSession(Navigator& navigator)
+NavigatorAudioSession::~NavigatorAudioSession() = default;
+
+Ref<DOMAudioSession> NavigatorAudioSession::audioSession(Navigator& navigator)
 {
     auto* navigatorAudioSession = NavigatorAudioSession::from(navigator);
     if (!navigatorAudioSession->m_audioSession)
-        navigatorAudioSession->m_audioSession = DOMAudioSession::create(navigator.scriptExecutionContext());
-    return navigatorAudioSession->m_audioSession;
+        lazyInitialize(navigatorAudioSession->m_audioSession, DOMAudioSession::create(navigator.protectedScriptExecutionContext().get()));
+    return *navigatorAudioSession->m_audioSession;
 }
 
 NavigatorAudioSession* NavigatorAudioSession::from(Navigator& navigator)
 {
-    auto* supplement = static_cast<NavigatorAudioSession*>(Supplement<Navigator>::from(&navigator, supplementName()));
+    auto* supplement = downcast<NavigatorAudioSession>(Supplement<Navigator>::from(&navigator, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<NavigatorAudioSession>();
         supplement = newSupplement.get();
-        provideTo(&navigator, supplementName(), WTFMove(newSupplement));
+        provideTo(&navigator, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }
 
-const char* NavigatorAudioSession::supplementName()
-{
-    return "NavigatorAudioSession";
-}
-
-}
+} // namespace WebCore
 
 #endif // ENABLE(DOM_AUDIO_SESSION)

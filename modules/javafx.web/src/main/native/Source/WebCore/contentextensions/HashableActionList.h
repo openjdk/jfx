@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,6 +25,7 @@
 
 #pragma once
 
+#include <ranges>
 #include <wtf/Hasher.h>
 #include <wtf/Vector.h>
 
@@ -44,9 +45,9 @@ struct HashableActionList {
         : actions(otherActions)
         , state(Valid)
     {
-        std::sort(actions.begin(), actions.end());
-        StringHasher hasher;
-        hasher.addCharactersAssumingAligned(reinterpret_cast<const UChar*>(actions.data()), actions.size() * sizeof(uint64_t) / sizeof(UChar));
+        std::ranges::sort(actions);
+        SuperFastHash hasher;
+        hasher.addCharactersAssumingAligned(reinterpret_cast<const char16_t*>(actions.span().data()), actions.size() * sizeof(uint64_t) / sizeof(char16_t));
         hash = hasher.hash();
     }
 

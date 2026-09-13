@@ -28,10 +28,10 @@
 #include "CSSStyleSheet.h"
 #include "ContentType.h"
 #include "DeprecatedGlobalSettings.h"
+#include "DocumentPage.h"
 #include "DocumentType.h"
 #include "Element.h"
 #include "FTPDirectoryDocument.h"
-#include "FragmentScriptingPermission.h"
 #include "FrameLoader.h"
 #include "HTMLDocument.h"
 #include "HTMLHeadElement.h"
@@ -45,11 +45,12 @@
 #include "MediaPlayer.h"
 #include "MediaQueryParser.h"
 #include "PDFDocument.h"
-#include "Page.h"
+#include "ParserContentPolicy.h"
 #include "PluginData.h"
 #include "PluginDocument.h"
 #include "SVGDocument.h"
 #include "SVGNames.h"
+#include "ScriptWrappableInlines.h"
 #include "SecurityOrigin.h"
 #include "SecurityOriginPolicy.h"
 #include "Settings.h"
@@ -57,8 +58,8 @@
 #include "Text.h"
 #include "TextDocument.h"
 #include "XMLDocument.h"
-#include <wtf/IsoMallocInlines.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(MODEL_ELEMENT)
 #include "ModelDocument.h"
@@ -68,7 +69,12 @@ namespace WebCore {
 
 using namespace HTMLNames;
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(DOMImplementation);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(DOMImplementation);
+
+Ref<Document> DOMImplementation::protectedDocument()
+{
+    return m_document.get();
+}
 
 DOMImplementation::DOMImplementation(Document& document)
     : m_document(document)
@@ -80,7 +86,7 @@ ExceptionOr<Ref<DocumentType>> DOMImplementation::createDocumentType(const AtomS
     auto parseResult = Document::parseQualifiedName(qualifiedName);
     if (parseResult.hasException())
         return parseResult.releaseException();
-    return DocumentType::create(m_document, qualifiedName, publicId, systemId);
+    return DocumentType::create(protectedDocument(), qualifiedName, publicId, systemId);
 }
 
 static inline Ref<XMLDocument> createXMLDocument(const String& namespaceURI, const Settings& settings)
@@ -92,20 +98,21 @@ static inline Ref<XMLDocument> createXMLDocument(const String& namespaceURI, con
         document = XMLDocument::createXHTML(nullptr, settings, URL());
     else
         document = XMLDocument::create(nullptr, settings, URL());
-    document->setParserContentPolicy({ ParserContentPolicy::AllowScriptingContent, ParserContentPolicy::AllowPluginContent });
+    document->setParserContentPolicy({ ParserContentPolicy::AllowScriptingContent });
     return document.releaseNonNull();
 }
 
 ExceptionOr<Ref<XMLDocument>> DOMImplementation::createDocument(const AtomString& namespaceURI, const AtomString& qualifiedName, DocumentType* documentType)
 {
-    auto document = createXMLDocument(namespaceURI, m_document.settings());
-    document->setParserContentPolicy({ ParserContentPolicy::AllowScriptingContent, ParserContentPolicy::AllowPluginContent });
-    document->setContextDocument(m_document.contextDocument());
-    document->setSecurityOriginPolicy(m_document.securityOriginPolicy());
+    Ref thisDocument = m_document.get();
+    Ref document = createXMLDocument(namespaceURI, thisDocument->settings());
+    document->setParserContentPolicy({ ParserContentPolicy::AllowScriptingContent });
+    document->setContextDocument(thisDocument->contextDocument());
+    document->setSecurityOriginPolicy(thisDocument->securityOriginPolicy());
 
     RefPtr<Element> documentElement;
     if (!qualifiedName.isEmpty()) {
-        ASSERT(!document->domWindow()); // If domWindow is not null, createElementNS could find CustomElementRegistry and arbitrary scripts.
+        ASSERT(!document->window()); // If domWindow is not null, createElementNS could find CustomElementRegistry and arbitrary scripts.
         auto result = document->createElementNS(namespaceURI, qualifiedName);
         if (result.hasException())
             return result.releaseException();
@@ -125,28 +132,29 @@ Ref<CSSStyleSheet> DOMImplementation::createCSSStyleSheet(const String&, const S
     // FIXME: Title should be set.
     // FIXME: Media could have wrong syntax, in which case we should generate an exception.
     auto sheet = CSSStyleSheet::create(StyleSheetContents::create());
-    sheet->setMediaQueries(MQ::MediaQueryParser::parse(media, { }));
+    sheet->setMediaQueries(MQ::MediaQueryParser::parse(media, strictCSSParserContext()));
     return sheet;
 }
 
 Ref<HTMLDocument> DOMImplementation::createHTMLDocument(String&& title)
 {
-    auto document = HTMLDocument::create(nullptr, m_document.settings(), URL(), { });
-    document->setParserContentPolicy({ ParserContentPolicy::AllowScriptingContent, ParserContentPolicy::AllowPluginContent });
+    Ref thisDocument = m_document.get();
+    Ref document = HTMLDocument::create(nullptr, thisDocument->settings(), URL(), { });
+    document->setParserContentPolicy({ ParserContentPolicy::AllowScriptingContent });
     document->open();
-    document->write(nullptr, { "<!doctype html><html><head></head><body></body></html>"_s });
+    document->write(nullptr, FixedVector<String> { "<!doctype html><html><head></head><body></body></html>"_s });
     if (!title.isNull()) {
         auto titleElement = HTMLTitleElement::create(titleTag, document);
-        titleElement->appendChild(document->createTextNode(WTFMove(title)));
+        titleElement->appendChild(document->createTextNode(WTF::move(title)));
         ASSERT(document->head());
-        document->head()->appendChild(titleElement);
+        document->protectedHead()->appendChild(titleElement);
     }
-    document->setContextDocument(m_document.contextDocument());
-    document->setSecurityOriginPolicy(m_document.securityOriginPolicy());
+    document->setContextDocument(thisDocument->contextDocument());
+    document->setSecurityOriginPolicy(thisDocument->securityOriginPolicy());
     return document;
 }
 
-Ref<Document> DOMImplementation::createDocument(const String& contentType, LocalFrame* frame, const Settings& settings, const URL& url, ScriptExecutionContextIdentifier documentIdentifier)
+Ref<Document> DOMImplementation::createDocument(const String& contentType, LocalFrame* frame, const Settings& settings, const URL& url, std::optional<ScriptExecutionContextIdentifier> documentIdentifier)
 {
     // FIXME: Inelegant to have this here just because this is the home of DOM APIs for creating documents.
     // This is internal, not a DOM API. Maybe we should put it in a new class called DocumentFactory,
@@ -166,7 +174,7 @@ Ref<Document> DOMImplementation::createDocument(const String& contentType, Local
 #endif
 
     bool isImage = MIMETypeRegistry::isSupportedImageMIMEType(contentType);
-    if (frame && isImage && !MIMETypeRegistry::isPDFOrPostScriptMIMEType(contentType))
+    if (frame && isImage && !MIMETypeRegistry::isPDFMIMEType(contentType))
         return ImageDocument::create(*frame, url);
 
     // The "image documents for subframe PDFs" mode will override a PDF plug-in.
@@ -174,10 +182,7 @@ Ref<Document> DOMImplementation::createDocument(const String& contentType, Local
         return ImageDocument::create(*frame, url);
 
 #if ENABLE(VIDEO)
-    MediaEngineSupportParameters parameters;
-    parameters.type = ContentType { contentType };
-    parameters.url = url;
-    if (MediaPlayer::supportsType(parameters) != MediaPlayer::SupportsType::IsNotSupported)
+    if (MIMETypeRegistry::isSupportedMediaMIMEType(contentType))
         return MediaDocument::create(frame, settings, url);
 #endif
 
@@ -191,14 +196,9 @@ Ref<Document> DOMImplementation::createDocument(const String& contentType, Local
         return FTPDirectoryDocument::create(frame, settings, url);
 #endif
 
-    if (frame && frame->loader().client().shouldAlwaysUsePluginDocument(contentType))
-        return PluginDocument::create(*frame, url);
-
     // The following is the relatively costly lookup that requires initializing the plug-in database.
     if (frame && frame->page()) {
-        auto allowedPluginTypes = frame->arePluginsEnabled()
-            ? PluginData::AllPlugins : PluginData::OnlyApplicationPlugins;
-        if (frame->page()->pluginData().supportsWebVisibleMimeType(contentType, allowedPluginTypes))
+        if (frame->protectedPage()->protectedPluginData()->supportsWebVisibleMimeType(contentType, PluginData::OnlyApplicationPlugins))
             return PluginDocument::create(*frame, url);
     }
 

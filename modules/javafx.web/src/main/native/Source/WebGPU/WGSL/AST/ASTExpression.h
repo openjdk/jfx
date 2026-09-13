@@ -27,10 +27,14 @@
 
 #include "ASTBuilder.h"
 #include "ASTNode.h"
+#include "ConstantValue.h"
 #include <wtf/ReferenceWrapperVector.h>
 
 namespace WGSL {
+class BoundsCheckVisitor;
 class ConstantRewriter;
+class EntryPointRewriter;
+class PointerRewriter;
 class RewriteGlobalVariables;
 class TypeChecker;
 struct Type;
@@ -39,7 +43,10 @@ namespace AST {
 
 class Expression : public Node {
     WGSL_AST_BUILDER_NODE(Expression);
+    friend BoundsCheckVisitor;
     friend ConstantRewriter;
+    friend EntryPointRewriter;
+    friend PointerRewriter;
     friend RewriteGlobalVariables;
     friend TypeChecker;
 
@@ -52,13 +59,18 @@ public:
 
     const Type* inferredType() const { return m_inferredType; }
 
+    const std::optional<ConstantValue>& constantValue() const { return m_constantValue; }
+    void setConstantValue(ConstantValue value) { m_constantValue = value; }
+
 protected:
     Expression(SourceSpan span)
         : Node(span)
     { }
 
-private:
     const Type* m_inferredType { nullptr };
+
+private:
+    std::optional<ConstantValue> m_constantValue { std::nullopt };
 };
 
 } // namespace AST
@@ -70,7 +82,6 @@ static bool isType(const WGSL::AST::Node& node)
     switch (node.kind()) {
         // Expressions
     case WGSL::AST::NodeKind::BinaryExpression:
-    case WGSL::AST::NodeKind::BitcastExpression:
     case WGSL::AST::NodeKind::IndexAccessExpression:
     case WGSL::AST::NodeKind::CallExpression:
     case WGSL::AST::NodeKind::IdentifierExpression:
@@ -81,6 +92,7 @@ static bool isType(const WGSL::AST::Node& node)
     case WGSL::AST::NodeKind::AbstractIntegerLiteral:
     case WGSL::AST::NodeKind::BoolLiteral:
     case WGSL::AST::NodeKind::Float32Literal:
+    case WGSL::AST::NodeKind::Float16Literal:
     case WGSL::AST::NodeKind::Signed32Literal:
     case WGSL::AST::NodeKind::Unsigned32Literal:
         return true;

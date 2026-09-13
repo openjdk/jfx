@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2016 Apple Inc. All rights reserved.
+ * Copyright (C) 2013-2026 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,12 +27,16 @@
 
 #if ENABLE(CONTENT_FILTERING)
 
-#include "CachedResourceHandle.h"
-#include "PlatformContentFilter.h"
-#include "ResourceError.h"
+#include <WebCore/CachedResourceHandle.h>
+#include <WebCore/LoaderMalloc.h>
+#include <WebCore/PlatformContentFilter.h>
+#include <WebCore/ResourceError.h>
 #include <functional>
+#include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
+#include <wtf/RefCounted.h>
 #include <wtf/UniqueRef.h>
+#include <wtf/WorkQueue.h>
 
 namespace WebCore {
 
@@ -43,14 +47,13 @@ class ResourceRequest;
 class ResourceResponse;
 class SubstituteData;
 
-class ContentFilter {
-    WTF_MAKE_FAST_ALLOCATED;
+class ContentFilter : public RefCounted<ContentFilter> {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(ContentFilter, Loader);
     WTF_MAKE_NONCOPYABLE(ContentFilter);
-
 public:
     template <typename T> static void addType() { types().append(type<T>()); }
 
-    WEBCORE_EXPORT static std::unique_ptr<ContentFilter> create(ContentFilterClient&);
+    WEBCORE_EXPORT static RefPtr<ContentFilter> create(ContentFilterClient&);
     WEBCORE_EXPORT ~ContentFilter();
 
     static constexpr ASCIILiteral urlScheme() { return "x-apple-content-filter"_s; }
@@ -60,10 +63,11 @@ public:
     WEBCORE_EXPORT void stopFilteringMainResource();
 
     WEBCORE_EXPORT bool continueAfterWillSendRequest(ResourceRequest&, const ResourceResponse&);
+    WEBCORE_EXPORT void continueAfterWillSendRequest(ResourceRequest&&, const ResourceResponse&, CompletionHandler<void(ResourceRequest&&)>&&);
     WEBCORE_EXPORT bool continueAfterResponseReceived(const ResourceResponse&);
-    WEBCORE_EXPORT bool continueAfterDataReceived(const SharedBuffer&, size_t encodedDataLength);
+    enum class FromDocumentLoader : bool { No, Yes };
+    WEBCORE_EXPORT bool continueAfterDataReceived(const SharedBuffer&, FromDocumentLoader = FromDocumentLoader::No);
     WEBCORE_EXPORT bool continueAfterNotifyFinished(const URL& resourceURL);
-    bool continueAfterDataReceived(const SharedBuffer&);
     bool continueAfterNotifyFinished(CachedResource&);
 
     static bool continueAfterSubstituteDataRequest(const DocumentLoader& activeLoader, const SubstituteData&);
@@ -77,36 +81,62 @@ public:
 
     WEBCORE_EXPORT static const URL& blockedPageURL();
 
+#if HAVE(AUDIT_TOKEN)
+    WEBCORE_EXPORT void setHostProcessAuditToken(const std::optional<audit_token_t>&);
+#endif
+
+#if HAVE(WEBCONTENTRESTRICTIONS)
+    static bool isWebContentRestrictionsUnblockURL(const URL&);
+#endif
+
 private:
     using State = PlatformContentFilter::State;
 
+    class ContentFilterCallbackAggregator : public ThreadSafeRefCounted<ContentFilterCallbackAggregator> {
+    public:
+        static auto create(ContentFilter& contentFilter, const ResourceRequest& request, CompletionHandler<void(ResourceRequest&&)>&& callback) { return adoptRef(*new ContentFilterCallbackAggregator(contentFilter, request, WTF::move(callback))); }
+
+        ~ContentFilterCallbackAggregator();
+
+        void didReceivePlatformContentFilterDecision(PlatformContentFilter&, String&&);
+
+    private:
+        ContentFilterCallbackAggregator(ContentFilter&, const ResourceRequest&, CompletionHandler<void(ResourceRequest&&)>&&);
+
+        RefPtr<ContentFilter> m_contentFilter;
+        ResourceRequest m_request;
+        CompletionHandler<void(ResourceRequest&&)> m_callback;
+        unsigned m_numberOfFiltersAllowed { 0 };
+        bool m_isBlocked { false };
+    };
+
     struct Type {
-        Function<UniqueRef<PlatformContentFilter>()> create;
+        Function<Ref<PlatformContentFilter>(const PlatformContentFilter::FilterParameters&)> create;
     };
     template <typename T> static Type type();
     WEBCORE_EXPORT static Vector<Type>& types();
 
-    using Container = Vector<UniqueRef<PlatformContentFilter>>;
-    friend std::unique_ptr<ContentFilter> std::make_unique<ContentFilter>(Container&&, ContentFilterClient&);
+    using Container = Vector<Ref<PlatformContentFilter>>;
     ContentFilter(Container&&, ContentFilterClient&);
 
     template <typename Function> void forEachContentFilterUntilBlocked(Function&&);
     void didDecide(State);
-    void deliverResourceData(const SharedBuffer&, size_t encodedDataLength = 0);
+    void deliverResourceData(const SharedBuffer&);
     void deliverStoredResourceData();
+
+    Ref<ContentFilterClient> protectedClient() const;
 
     URL url();
 
     Container m_contentFilters;
-    ContentFilterClient& m_client;
+    WeakPtr<ContentFilterClient> m_client;
     URL m_mainResourceURL;
     struct ResourceDataItem {
         RefPtr<const SharedBuffer> buffer;
-        size_t encodedDataLength;
     };
     Vector<ResourceDataItem> m_buffers;
     CachedResourceHandle<CachedRawResource> m_mainResource;
-    const PlatformContentFilter* m_blockingContentFilter { nullptr };
+    ThreadSafeWeakPtr<const PlatformContentFilter> m_blockingContentFilter;
     State m_state { State::Stopped };
     ResourceError m_blockedError;
     bool m_isLoadingBlockedPage { false };

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,6 @@
 
 package com.sun.prism.impl;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.Properties;
 import java.util.StringTokenizer;
@@ -41,6 +39,7 @@ public final class PrismSettings {
     public static final boolean verbose;
     public static final boolean debug;
     public static final boolean trace;
+    public static final boolean metalDebug;
     public static final boolean printAllocs;
     public static final boolean isVsyncEnabled;
     public static final boolean dirtyOptsEnabled;
@@ -51,6 +50,7 @@ public final class PrismSettings {
     public static final boolean cacheComplexShapes;
     public static final boolean useNewImageLoader;
     public static final List<String> tryOrder;
+    public static final String defaultPipeline;
     public static final int prismStatFrequency;
     public static final RasterizerType rasterizerSpec;
     public static final String refType;
@@ -68,7 +68,6 @@ public final class PrismSettings {
     public static final boolean disableRegionCaching;
     public static final boolean forcePow2;
     public static final boolean noClampToZero;
-    public static final boolean disableD3D9Ex;
     public static final boolean allowHiDPIScaling;
     public static final long maxVram;
     public static final long targetVram;
@@ -113,10 +112,7 @@ public final class PrismSettings {
     }
 
     static {
-        @SuppressWarnings("removal")
-        final Properties systemProperties =
-                (Properties) AccessController.doPrivileged(
-                        (PrivilegedAction) () -> System.getProperties());
+        final Properties systemProperties = System.getProperties();
 
         /* Vsync */
         isVsyncEnabled  = getBoolean(systemProperties, "prism.vsync", true)
@@ -137,7 +133,7 @@ public final class PrismSettings {
         dirtyRegionCount = Utils.clamp(0, getInt(systemProperties, "prism.dirtyregioncount", 6, null), 15);
 
         // Scrolling cache optimization
-        // Disabled as a workaround for RT-39755.
+        // Disabled as a workaround for JDK-8093860.
         scrollCacheOpt = getBoolean(systemProperties, "prism.scrollcacheopt", false);
 
         /* Dirty region optimizations */
@@ -192,6 +188,8 @@ public final class PrismSettings {
         /* Trace output*/
         trace = getBoolean(systemProperties, "prism.trace", false);
 
+        metalDebug = getBoolean(systemProperties, "prism.metalDebug", false);
+
         /* Print texture allocation data */
         printAllocs = getBoolean(systemProperties, "prism.printallocs", false);
 
@@ -203,24 +201,26 @@ public final class PrismSettings {
         /* Force GPU, if GPU is PS 3 capable, disable GPU qualification check. */
         forceGPU = getBoolean(systemProperties, "prism.forceGPU", false);
 
-        String order = systemProperties.getProperty("prism.order");
         String[] tryOrderArr;
+        if (PlatformUtil.isWindows()) {
+            tryOrderArr = new String[] { "d3d", "sw" };
+        } else if (PlatformUtil.isMac()) {
+            tryOrderArr = new String[] { "mtl", "es2", "sw" };
+        } else if (PlatformUtil.isIOS()) {
+            tryOrderArr = new String[] { "es2" };
+        } else if (PlatformUtil.isAndroid()) {
+                tryOrderArr = new String[] { "es2" };
+        } else if (PlatformUtil.isLinux()) {
+            tryOrderArr = new String[] { "es2", "sw" };
+        } else {
+            tryOrderArr = new String[] { "sw" };
+        }
+
+        defaultPipeline = tryOrderArr[0];
+
+        String order = systemProperties.getProperty("prism.order");
         if (order != null) {
             tryOrderArr = split(order, ",");
-        } else {
-            if (PlatformUtil.isWindows()) {
-                tryOrderArr = new String[] { "d3d", "sw" };
-            } else if (PlatformUtil.isMac()) {
-                tryOrderArr = new String[] { "es2", "sw" };
-            } else if (PlatformUtil.isIOS()) {
-                tryOrderArr = new String[] { "es2" };
-            } else if (PlatformUtil.isAndroid()) {
-                    tryOrderArr = new String[] { "es2" };
-            } else if (PlatformUtil.isLinux()) {
-                tryOrderArr = new String[] { "es2", "sw" };
-            } else {
-                tryOrderArr = new String[] { "sw" };
-            }
         }
 
         tryOrder = List.of(tryOrderArr);
@@ -302,7 +302,7 @@ public final class PrismSettings {
          * value. A value of <= 0 will disable this clamping, causing the
          * limit reported by the card to be used without modification.
          *
-         * See RT-21998. This is a workaround for the fact that we don't
+         * See JDK-8117239. This is a workaround for the fact that we don't
          * yet handle the case where a texture allocation fails during
          * rendering of a very large tiled image.
          */
@@ -326,8 +326,6 @@ public final class PrismSettings {
                                           "prism.disableRegionCaching",
                                           false);
 
-        disableD3D9Ex = getBoolean(systemProperties, "prism.disableD3D9Ex", false);
-
         disableEffects = getBoolean(systemProperties, "prism.disableEffects", false);
 
         glyphCacheWidth = getInt(systemProperties, "prism.glyphCacheWidth", 1024,
@@ -348,6 +346,9 @@ public final class PrismSettings {
 
         // Force uploading painter (e.g., to avoid Linux live-resize jittering)
         forceUploadingPainter = getBoolean(systemProperties, "prism.forceUploadingPainter", false);
+        if (verbose) {
+            printBooleanOption(forceUploadingPainter, "Forcing UploadingPainter");
+        }
 
         // Force the use of fragment shader that does alpha testing (i.e. discard if alpha == 0.0)
         forceAlphaTestShader = getBoolean(systemProperties, "prism.forceAlphaTestShader", false);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019-2021 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2019-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,82 +27,20 @@
 #include "UnlinkedCodeBlockGenerator.h"
 
 #include "BytecodeRewriter.h"
+#include "ExpressionInfoInlines.h"
 #include "InstructionStream.h"
 #include "JSCJSValueInlines.h"
 #include "PreciseJumpTargets.h"
 #include "UnlinkedMetadataTableInlines.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace JSC {
 
-inline void UnlinkedCodeBlockGenerator::getLineAndColumn(const ExpressionRangeInfo& info, unsigned& line, unsigned& column) const
+WTF_MAKE_TZONE_ALLOCATED_IMPL(UnlinkedCodeBlockGenerator);
+
+void UnlinkedCodeBlockGenerator::addExpressionInfo(unsigned instructionOffset, unsigned divot, unsigned startOffset, unsigned endOffset, LineColumn lineColumn)
 {
-    switch (info.mode) {
-    case ExpressionRangeInfo::FatLineMode:
-        info.decodeFatLineMode(line, column);
-        break;
-    case ExpressionRangeInfo::FatColumnMode:
-        info.decodeFatColumnMode(line, column);
-        break;
-    case ExpressionRangeInfo::FatLineAndColumnMode: {
-        unsigned fatIndex = info.position;
-        const ExpressionRangeInfo::FatPosition& fatPos = m_expressionInfoFatPositions[fatIndex];
-        line = fatPos.line;
-        column = fatPos.column;
-        break;
-    }
-    } // switch
-}
-
-void UnlinkedCodeBlockGenerator::addExpressionInfo(unsigned instructionOffset, int divot, int startOffset, int endOffset, unsigned line, unsigned column)
-{
-    if (divot > ExpressionRangeInfo::MaxDivot) {
-        // Overflow has occurred, we can only give line number info for errors for this region
-        divot = 0;
-        startOffset = 0;
-        endOffset = 0;
-    } else if (startOffset > ExpressionRangeInfo::MaxOffset) {
-        // If the start offset is out of bounds we clear both offsets
-        // so we only get the divot marker. Error message will have to be reduced
-        // to line and charPosition number.
-        startOffset = 0;
-        endOffset = 0;
-    } else if (endOffset > ExpressionRangeInfo::MaxOffset) {
-        // The end offset is only used for additional context, and is much more likely
-        // to overflow (eg. function call arguments) so we are willing to drop it without
-        // dropping the rest of the range.
-        endOffset = 0;
-    }
-
-    unsigned positionMode =
-        (line <= ExpressionRangeInfo::MaxFatLineModeLine && column <= ExpressionRangeInfo::MaxFatLineModeColumn)
-        ? ExpressionRangeInfo::FatLineMode
-        : (line <= ExpressionRangeInfo::MaxFatColumnModeLine && column <= ExpressionRangeInfo::MaxFatColumnModeColumn)
-        ? ExpressionRangeInfo::FatColumnMode
-        : ExpressionRangeInfo::FatLineAndColumnMode;
-
-    ExpressionRangeInfo info;
-    info.instructionOffset = instructionOffset;
-    info.divotPoint = divot;
-    info.startOffset = startOffset;
-    info.endOffset = endOffset;
-
-    info.mode = positionMode;
-    switch (positionMode) {
-    case ExpressionRangeInfo::FatLineMode:
-        info.encodeFatLineMode(line, column);
-        break;
-    case ExpressionRangeInfo::FatColumnMode:
-        info.encodeFatColumnMode(line, column);
-        break;
-    case ExpressionRangeInfo::FatLineAndColumnMode: {
-        unsigned fatIndex = m_expressionInfoFatPositions.size();
-        ExpressionRangeInfo::FatPosition fatPos = { line, column };
-        m_expressionInfoFatPositions.append(fatPos);
-        info.position = fatIndex;
-    }
-    } // switch
-
-    m_expressionInfo.append(info);
+    m_expressionInfoEncoder.encode(instructionOffset, divot, startOffset, endOffset, lineColumn);
 }
 
 void UnlinkedCodeBlockGenerator::addTypeProfilerExpressionInfo(unsigned instructionOffset, unsigned startDivot, unsigned endDivot)
@@ -118,24 +56,24 @@ void UnlinkedCodeBlockGenerator::finalize(std::unique_ptr<JSInstructionStream> i
     ASSERT(instructions);
     {
         Locker locker { m_codeBlock->cellLock() };
-        m_codeBlock->m_instructions = WTFMove(instructions);
+        m_codeBlock->m_instructions = WTF::move(instructions);
         m_codeBlock->allocateSharedProfiles(m_numBinaryArithProfiles, m_numUnaryArithProfiles);
         m_codeBlock->m_metadata->finalize();
 
-        m_codeBlock->m_jumpTargets = WTFMove(m_jumpTargets);
-        m_codeBlock->m_identifiers = WTFMove(m_identifiers);
-        m_codeBlock->m_constantRegisters = WTFMove(m_constantRegisters);
-        m_codeBlock->m_constantsSourceCodeRepresentation = WTFMove(m_constantsSourceCodeRepresentation);
-        m_codeBlock->m_functionDecls = WTFMove(m_functionDecls);
-        m_codeBlock->m_functionExprs = WTFMove(m_functionExprs);
-        m_codeBlock->m_expressionInfo = WTFMove(m_expressionInfo);
-        m_codeBlock->m_outOfLineJumpTargets = WTFMove(m_outOfLineJumpTargets);
+        m_codeBlock->m_jumpTargets = WTF::move(m_jumpTargets);
+        m_codeBlock->m_identifiers = WTF::move(m_identifiers);
+        m_codeBlock->m_constantRegisters = WTF::move(m_constantRegisters);
+        m_codeBlock->m_constantsSourceCodeRepresentation = WTF::move(m_constantsSourceCodeRepresentation);
+        m_codeBlock->m_functionDecls = WTF::move(m_functionDecls);
+        m_codeBlock->m_functionExprs = WTF::move(m_functionExprs);
+        m_codeBlock->m_expressionInfo = m_expressionInfoEncoder.createExpressionInfo();
+
+        m_codeBlock->m_outOfLineJumpTargets = WTF::move(m_outOfLineJumpTargets);
 
         if (!m_codeBlock->m_rareData) {
             if (!m_exceptionHandlers.isEmpty()
                 || !m_unlinkedSwitchJumpTables.isEmpty()
                 || !m_unlinkedStringSwitchJumpTables.isEmpty()
-                || !m_expressionInfoFatPositions.isEmpty()
                 || !m_typeProfilerInfoMap.isEmpty()
                 || !m_opProfileControlFlowBytecodeOffsets.isEmpty()
                 || !m_bitVectors.isEmpty()
@@ -143,21 +81,20 @@ void UnlinkedCodeBlockGenerator::finalize(std::unique_ptr<JSInstructionStream> i
                 m_codeBlock->createRareDataIfNecessary(locker);
         }
         if (m_codeBlock->m_rareData) {
-            m_codeBlock->m_rareData->m_exceptionHandlers = WTFMove(m_exceptionHandlers);
-            m_codeBlock->m_rareData->m_unlinkedSwitchJumpTables = WTFMove(m_unlinkedSwitchJumpTables);
-            m_codeBlock->m_rareData->m_unlinkedStringSwitchJumpTables = WTFMove(m_unlinkedStringSwitchJumpTables);
-            m_codeBlock->m_rareData->m_expressionInfoFatPositions = WTFMove(m_expressionInfoFatPositions);
-            m_codeBlock->m_rareData->m_typeProfilerInfoMap = WTFMove(m_typeProfilerInfoMap);
-            m_codeBlock->m_rareData->m_opProfileControlFlowBytecodeOffsets = WTFMove(m_opProfileControlFlowBytecodeOffsets);
-            m_codeBlock->m_rareData->m_bitVectors = WTFMove(m_bitVectors);
-            m_codeBlock->m_rareData->m_constantIdentifierSets = WTFMove(m_constantIdentifierSets);
+            m_codeBlock->m_rareData->m_exceptionHandlers = WTF::move(m_exceptionHandlers);
+            m_codeBlock->m_rareData->m_unlinkedSwitchJumpTables = WTF::move(m_unlinkedSwitchJumpTables);
+            m_codeBlock->m_rareData->m_unlinkedStringSwitchJumpTables = WTF::move(m_unlinkedStringSwitchJumpTables);
+            m_codeBlock->m_rareData->m_typeProfilerInfoMap = WTF::move(m_typeProfilerInfoMap);
+            m_codeBlock->m_rareData->m_opProfileControlFlowBytecodeOffsets = WTF::move(m_opProfileControlFlowBytecodeOffsets);
+            m_codeBlock->m_rareData->m_bitVectors = WTF::move(m_bitVectors);
+            m_codeBlock->m_rareData->m_constantIdentifierSets = WTF::move(m_constantIdentifierSets);
         }
 
-        if (UNLIKELY(Options::returnEarlyFromInfiniteLoopsForFuzzing()))
+        if (Options::returnEarlyFromInfiniteLoopsForFuzzing()) [[unlikely]]
             m_codeBlock->initializeLoopHintExecutionCounter();
     }
     m_vm.writeBarrier(m_codeBlock.get());
-    m_vm.heap.reportExtraMemoryAllocated(m_codeBlock->m_instructions->sizeInBytes() + m_codeBlock->m_metadata->sizeInBytes());
+    m_vm.heap.reportExtraMemoryAllocated(m_codeBlock.get(), m_codeBlock->m_instructions->sizeInBytes() + m_codeBlock->metadataSizeInBytes());
 }
 
 UnlinkedHandlerInfo* UnlinkedCodeBlockGenerator::handlerForBytecodeIndex(BytecodeIndex bytecodeIndex, RequiredHandler requiredHandler)
@@ -188,14 +125,19 @@ void UnlinkedCodeBlockGenerator::applyModification(BytecodeRewriter& rewriter, J
         m_opProfileControlFlowBytecodeOffsets[i] = rewriter.adjustAbsoluteOffset(m_opProfileControlFlowBytecodeOffsets[i]);
 
     if (!m_typeProfilerInfoMap.isEmpty()) {
-        HashMap<unsigned, UnlinkedCodeBlock::RareData::TypeProfilerExpressionRange> adjustedTypeProfilerInfoMap;
+        UncheckedKeyHashMap<unsigned, UnlinkedCodeBlock::RareData::TypeProfilerExpressionRange> adjustedTypeProfilerInfoMap;
         for (auto& entry : m_typeProfilerInfoMap)
             adjustedTypeProfilerInfoMap.set(rewriter.adjustAbsoluteOffset(entry.key), entry.value);
         m_typeProfilerInfoMap.swap(adjustedTypeProfilerInfoMap);
     }
 
-    for (size_t i = 0; i < m_expressionInfo.size(); ++i)
-        m_expressionInfo[i].instructionOffset = rewriter.adjustAbsoluteOffset(m_expressionInfo[i].instructionOffset);
+    Vector<unsigned> bytecodeOffsetAdjustments;
+    rewriter.forEachLabelPoint([&] (int32_t bytecodeOffset) {
+        bytecodeOffsetAdjustments.append(bytecodeOffset);
+    });
+    m_expressionInfoEncoder.remap(WTF::move(bytecodeOffsetAdjustments), [&] (int32_t bytecodeOffset) {
+        return rewriter.adjustAbsoluteOffset(bytecodeOffset);
+    });
 
     // Then, modify the unlinked instructions.
     rewriter.applyModification();

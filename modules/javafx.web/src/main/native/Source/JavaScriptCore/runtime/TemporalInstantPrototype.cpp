@@ -44,9 +44,7 @@ static JSC_DECLARE_HOST_FUNCTION(temporalInstantPrototypeFuncToString);
 static JSC_DECLARE_HOST_FUNCTION(temporalInstantPrototypeFuncToJSON);
 static JSC_DECLARE_HOST_FUNCTION(temporalInstantPrototypeFuncToLocaleString);
 static JSC_DECLARE_HOST_FUNCTION(temporalInstantPrototypeFuncValueOf);
-static JSC_DECLARE_CUSTOM_GETTER(temporalInstantPrototypeGetterEpochSeconds);
 static JSC_DECLARE_CUSTOM_GETTER(temporalInstantPrototypeGetterEpochMilliseconds);
-static JSC_DECLARE_CUSTOM_GETTER(temporalInstantPrototypeGetterEpochMicroseconds);
 static JSC_DECLARE_CUSTOM_GETTER(temporalInstantPrototypeGetterEpochNanoseconds);
 
 }
@@ -69,9 +67,7 @@ const ClassInfo TemporalInstantPrototype::s_info = { "Temporal.Instant"_s, &Base
   toJSON             temporalInstantPrototypeFuncToJSON               DontEnum|Function 0
   toLocaleString     temporalInstantPrototypeFuncToLocaleString       DontEnum|Function 0
   valueOf            temporalInstantPrototypeFuncValueOf              DontEnum|Function 0
-  epochSeconds       temporalInstantPrototypeGetterEpochSeconds       DontEnum|ReadOnly|CustomAccessor
   epochMilliseconds  temporalInstantPrototypeGetterEpochMilliseconds  DontEnum|ReadOnly|CustomAccessor
-  epochMicroseconds  temporalInstantPrototypeGetterEpochMicroseconds  DontEnum|ReadOnly|CustomAccessor
   epochNanoseconds   temporalInstantPrototypeGetterEpochNanoseconds   DontEnum|ReadOnly|CustomAccessor
 @end
 */
@@ -165,7 +161,7 @@ JSC_DEFINE_HOST_FUNCTION(temporalInstantPrototypeFuncUntil, (JSGlobalObject* glo
     ISO8601::Duration result = instant->difference(globalObject, other, options);
     RETURN_IF_EXCEPTION(scope, { });
 
-    return JSValue::encode(TemporalDuration::create(vm, globalObject->durationStructure(), WTFMove(result)));
+    return JSValue::encode(TemporalDuration::create(vm, globalObject->durationStructure(), WTF::move(result)));
 }
 
 JSC_DEFINE_HOST_FUNCTION(temporalInstantPrototypeFuncSince, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -184,7 +180,7 @@ JSC_DEFINE_HOST_FUNCTION(temporalInstantPrototypeFuncSince, (JSGlobalObject* glo
     ISO8601::Duration result = other->difference(globalObject, instant, options);
     RETURN_IF_EXCEPTION(scope, { });
 
-    return JSValue::encode(TemporalDuration::create(vm, globalObject->durationStructure(), WTFMove(result)));
+    return JSValue::encode(TemporalDuration::create(vm, globalObject->durationStructure(), WTF::move(result)));
 }
 
 JSC_DEFINE_HOST_FUNCTION(temporalInstantPrototypeFuncRound, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -260,7 +256,7 @@ JSC_DEFINE_HOST_FUNCTION(temporalInstantPrototypeFuncToLocaleString, (JSGlobalOb
     IntlDateTimeFormat* formatter = IntlDateTimeFormat::create(vm, globalObject->dateTimeFormatStructure());
     RETURN_IF_EXCEPTION(scope, { });
 
-    formatter->initializeDateTimeFormat(globalObject, callFrame->argument(0), callFrame->argument(1));
+    formatter->initializeDateTimeFormat(globalObject, callFrame->argument(0), callFrame->argument(1), IntlDateTimeFormat::RequiredComponent::Any, IntlDateTimeFormat::Defaults::Date);
     RETURN_IF_EXCEPTION(scope, { });
 
     // FIXME: change IntlDateTimeFormat to use epochNanoseconds
@@ -275,18 +271,6 @@ JSC_DEFINE_HOST_FUNCTION(temporalInstantPrototypeFuncValueOf, (JSGlobalObject* g
     return throwVMTypeError(globalObject, scope, "Temporal.Instant.prototype.valueOf must not be called. To compare Instant values, use Temporal.Instant.compare"_s);
 }
 
-JSC_DEFINE_CUSTOM_GETTER(temporalInstantPrototypeGetterEpochSeconds, (JSGlobalObject* globalObject, EncodedJSValue thisValue, PropertyName))
-{
-    VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    TemporalInstant* instant = jsDynamicCast<TemporalInstant*>(JSValue::decode(thisValue));
-    if (!instant)
-        return throwVMTypeError(globalObject, scope, "Temporal.Instant.prototype.epochSeconds called on value that's not a Instant"_s);
-
-    return JSValue::encode(jsNumber(instant->exactTime().epochSeconds()));
-}
-
 JSC_DEFINE_CUSTOM_GETTER(temporalInstantPrototypeGetterEpochMilliseconds, (JSGlobalObject* globalObject, EncodedJSValue thisValue, PropertyName))
 {
     VM& vm = globalObject->vm();
@@ -296,19 +280,7 @@ JSC_DEFINE_CUSTOM_GETTER(temporalInstantPrototypeGetterEpochMilliseconds, (JSGlo
     if (!instant)
         return throwVMTypeError(globalObject, scope, "Temporal.Instant.prototype.epochMilliseconds called on value that's not a Instant"_s);
 
-    return JSValue::encode(jsNumber(instant->exactTime().epochMilliseconds()));
-}
-
-JSC_DEFINE_CUSTOM_GETTER(temporalInstantPrototypeGetterEpochMicroseconds, (JSGlobalObject* globalObject, EncodedJSValue thisValue, PropertyName))
-{
-    VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    TemporalInstant* instant = jsDynamicCast<TemporalInstant*>(JSValue::decode(thisValue));
-    if (!instant)
-        return throwVMTypeError(globalObject, scope, "Temporal.Instant.prototype.epochMicroseconds called on value that's not a Instant"_s);
-
-    RELEASE_AND_RETURN(scope, JSValue::encode(JSBigInt::makeHeapBigIntOrBigInt32(globalObject, instant->exactTime().epochMicroseconds())));
+    return JSValue::encode(jsNumber(instant->exactTime().floorEpochMilliseconds()));
 }
 
 JSC_DEFINE_CUSTOM_GETTER(temporalInstantPrototypeGetterEpochNanoseconds, (JSGlobalObject* globalObject, EncodedJSValue thisValue, PropertyName))

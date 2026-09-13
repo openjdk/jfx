@@ -23,8 +23,8 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+// https://wicg.github.io/background-fetch/#backgroundfetchevent
 [
-    Conditional=SERVICE_WORKER,
     EnabledBySetting=ServiceWorkersEnabled&BackgroundFetchAPIEnabled,
     Exposed=ServiceWorker
 ] interface BackgroundFetchEvent : ExtendableEvent {

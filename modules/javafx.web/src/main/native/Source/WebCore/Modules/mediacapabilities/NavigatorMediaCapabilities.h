@@ -26,6 +26,7 @@
 #pragma once
 
 #include "Supplementable.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -33,7 +34,7 @@ class MediaCapabilities;
 class Navigator;
 
 class NavigatorMediaCapabilities final : public Supplement<Navigator> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(NavigatorMediaCapabilities);
 public:
     NavigatorMediaCapabilities();
     ~NavigatorMediaCapabilities();
@@ -43,9 +44,14 @@ public:
 
     MediaCapabilities& mediaCapabilities() const;
 private:
-    static const char* supplementName();
+    static ASCIILiteral supplementName() { return "NavigatorMediaCapabilities"_s; }
+    bool isNavigatorMediaCapabilities() const final { return true; }
 
-    mutable Ref<MediaCapabilities> m_mediaCapabilities;
+    const Ref<MediaCapabilities> m_mediaCapabilities;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::NavigatorMediaCapabilities)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isNavigatorMediaCapabilities(); }
+SPECIALIZE_TYPE_TRAITS_END()

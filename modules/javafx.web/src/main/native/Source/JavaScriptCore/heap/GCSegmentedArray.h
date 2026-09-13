@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2014-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,10 +25,16 @@
 
 #pragma once
 
+#include <JavaScriptCore/JSExportMacros.h>
+#include <wtf/Compiler.h>
 #include <wtf/DebugHeap.h>
 #include <wtf/DoublyLinkedList.h>
+#include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
 #include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
@@ -51,7 +57,7 @@ public:
 
     T* data()
     {
-        return bitwise_cast<T*>(this + 1);
+        return std::bit_cast<T*>(this + 1);
     }
 
     static constexpr size_t blockSize = 4 * KB;
@@ -67,7 +73,7 @@ template <typename T> class GCSegmentedArrayIterator;
 
 template <typename T>
 class GCSegmentedArray {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_EXPORT(GCSegmentedArray, JS_EXPORT_PRIVATE);
     WTF_MAKE_NONCOPYABLE(GCSegmentedArray);
     friend class GCSegmentedArrayIterator<T>;
     friend class GCSegmentedArrayIterator<const T>;
@@ -112,6 +118,8 @@ protected:
     size_t m_top;
     size_t m_numberOfSegments;
 };
+
+WTF_MAKE_TZONE_ALLOCATED_TEMPLATE_IMPL(template<typename T>, GCSegmentedArray<T>);
 
 template <typename T>
 class GCSegmentedArrayIterator {
@@ -164,3 +172,4 @@ private:
 
 } // namespace JSC
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

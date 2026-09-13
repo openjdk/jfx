@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2012 Google, Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -37,19 +38,25 @@
 #include "HTTPHeaderValues.h"
 #include "ImageDecoder.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "MIMETypeRegistry.h"
 #include "MemoryCache.h"
 #include "OriginAccessPatterns.h"
+#include "Quirks.h"
 #include "SecurityPolicy.h"
 #include "ServiceWorkerRegistrationData.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/StringBuilder.h>
 
+#if ENABLE(LOCKDOWN_MODE_API)
+#import <pal/cocoa/LockdownModeCocoa.h>
+#endif
+
 namespace WebCore {
 
 CachedResourceRequest::CachedResourceRequest(ResourceRequest&& resourceRequest, const ResourceLoaderOptions& options, std::optional<ResourceLoadPriority> priority, String&& charset)
-    : m_resourceRequest(WTFMove(resourceRequest))
-    , m_charset(WTFMove(charset))
+    : m_resourceRequest(WTF::move(resourceRequest))
+    , m_charset(WTF::move(charset))
     , m_options(options)
     , m_priority(priority)
     , m_fragmentIdentifier(splitFragmentIdentifierFromRequestURL(m_resourceRequest))
@@ -63,7 +70,7 @@ String CachedResourceRequest::splitFragmentIdentifierFromRequestURL(ResourceRequ
     URL url = request.url();
     auto fragmentIdentifier = url.fragmentIdentifier().toString();
     url.removeFragmentIdentifier();
-    request.setURL(url);
+    request.setURL(WTF::move(url));
     return fragmentIdentifier;
 }
 
@@ -71,7 +78,7 @@ void CachedResourceRequest::setInitiator(Element& element)
 {
     ASSERT(!m_initiatorElement);
     ASSERT(m_initiatorType.isEmpty());
-    m_initiatorElement = &element;
+    m_initiatorElement = element;
 }
 
 void CachedResourceRequest::setInitiatorType(const AtomString& type)
@@ -96,26 +103,26 @@ void CachedResourceRequest::updateForAccessControl(Document& document)
 {
     ASSERT(m_options.mode == FetchOptions::Mode::Cors);
 
-    m_origin = &document.securityOrigin();
+    m_origin = document.securityOrigin();
     updateRequestForAccessControl(m_resourceRequest, *m_origin, m_options.storedCredentialsPolicy);
 }
 
-void upgradeInsecureResourceRequestIfNeeded(ResourceRequest& request, Document& document)
+void upgradeInsecureResourceRequestIfNeeded(ResourceRequest& request, Document& document, ContentSecurityPolicy::AlwaysUpgradeRequest alwaysUpgradeRequest)
 {
     URL url = request.url();
 
     ASSERT(document.contentSecurityPolicy());
-    document.contentSecurityPolicy()->upgradeInsecureRequestIfNeeded(url, ContentSecurityPolicy::InsecureRequestType::Load);
+    document.checkedContentSecurityPolicy()->upgradeInsecureRequestIfNeeded(url, ContentSecurityPolicy::InsecureRequestType::Load, alwaysUpgradeRequest);
 
     if (url == request.url())
         return;
 
-    request.setURL(url);
+    request.setURL(WTF::move(url));
 }
 
-void CachedResourceRequest::upgradeInsecureRequestIfNeeded(Document& document)
+void CachedResourceRequest::upgradeInsecureRequestIfNeeded(Document& document, ContentSecurityPolicy::AlwaysUpgradeRequest alwaysUpgradeRequest)
 {
-    upgradeInsecureResourceRequestIfNeeded(m_resourceRequest, document);
+    upgradeInsecureResourceRequestIfNeeded(m_resourceRequest, document, alwaysUpgradeRequest);
 }
 
 void CachedResourceRequest::setDomainForCachePartition(Document& document)
@@ -128,77 +135,70 @@ void CachedResourceRequest::setDomainForCachePartition(const String& domain)
     m_resourceRequest.setDomainForCachePartition(domain);
 }
 
-static constexpr ASCIILiteral acceptHeaderValueForWebPImageResource()
+static inline void appendAdditionalSupportedImageMIMETypes(StringBuilder& acceptHeader)
 {
-#if HAVE(WEBP) || USE(WEBP)
-    return "image/webp,"_s;
-#else
-    return ""_s;
-#endif
+    for (const auto& additionalSupportedImageMIMEType : MIMETypeRegistry::additionalSupportedImageMIMETypes()) {
+        acceptHeader.append(additionalSupportedImageMIMEType);
+        acceptHeader.append(',');
+    }
 }
 
-static constexpr ASCIILiteral acceptHeaderValueForAVIFImageResource()
+static inline void appendVideoImageResource(StringBuilder& acceptHeader)
 {
+    if (ImageDecoder::supportsMediaType(ImageDecoder::MediaType::Video))
+        acceptHeader.append("video/*;q=0.8,"_s);
+}
+
+static String acceptHeaderValueForImageResource(bool usingSecureProtocol)
+{
+    static MainThreadNeverDestroyed<String> staticPrefix = [] {
+        StringBuilder builder;
+// Java platform failing to decode webp image data already disabled in 619.1
+#if (HAVE(WEBP) || USE(WEBP)) && !PLATFORM(JAVA)
+        builder.append("image/webp,"_s);
+#endif
 #if HAVE(AVIF) || USE(AVIF)
-    return "image/avif,"_s;
-#else
-    return ""_s;
+        builder.append("image/avif,"_s);
 #endif
-}
-
-static constexpr ASCIILiteral acceptHeaderValueForJPEGXLImageResource()
-{
 #if HAVE(JPEGXL) || USE(JPEGXL)
-    return "image/jxl,"_s;
-#else
-    return ""_s;
+        builder.append("image/jxl,"_s);
 #endif
-}
-
-static constexpr ASCIILiteral acceptHeaderValueForHEICImageResource()
-{
 #if HAVE(HEIC)
-    return "image/heic,image/heic-sequence,"_s;
-#else
-    return ""_s;
+        builder.append("image/heic,image/heic-sequence,"_s);
 #endif
+        return builder.toString();
+    }();
+
+#if ENABLE(LOCKDOWN_MODE_API)
+    bool limitToLockdownModeSet = usingSecureProtocol && PAL::isLockdownModeEnabledForCurrentProcess();
+#else
+    static bool limitToLockdownModeSet = false;
+    UNUSED_PARAM(usingSecureProtocol);
+#endif
+
+    StringBuilder builder;
+    if (limitToLockdownModeSet)
+        builder.append("image/webp,"_s);
+    else {
+    builder.append(staticPrefix.get());
+    appendAdditionalSupportedImageMIMETypes(builder);
+    }
+    appendVideoImageResource(builder);
+    builder.append("image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5"_s);
+    return builder.toString();
 }
 
-static String acceptHeaderValueForAdditionalSupportedImageMIMETypes()
-{
-    StringBuilder sb;
-    for (const auto& additionalSupportedImageMIMEType : MIMETypeRegistry::additionalSupportedImageMIMETypes())
-        sb.append(makeString(additionalSupportedImageMIMEType, ','));
-    return sb.toString();
-}
-
-static constexpr ASCIILiteral acceptHeaderValueForVideoImageResource(bool supportsVideoImage)
-{
-    if (supportsVideoImage)
-        return "video/*;q=0.8,"_s;
-    return ""_s;
-}
-
-static String acceptHeaderValueForImageResource()
-{
-    return String(acceptHeaderValueForWebPImageResource())
-        + acceptHeaderValueForAVIFImageResource()
-        + acceptHeaderValueForJPEGXLImageResource()
-        + acceptHeaderValueForHEICImageResource()
-        + acceptHeaderValueForAdditionalSupportedImageMIMETypes()
-        + acceptHeaderValueForVideoImageResource(ImageDecoder::supportsMediaType(ImageDecoder::MediaType::Video))
-        + "image/png,image/svg+xml,image/*;q=0.8,*/*;q=0.5"_s;
-}
-
-String CachedResourceRequest::acceptHeaderValueFromType(CachedResource::Type type)
+String CachedResourceRequest::acceptHeaderValueFromType(CachedResource::Type type, bool usingSecureProtocol)
 {
     switch (type) {
     case CachedResource::Type::MainResource:
         return "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"_s;
     case CachedResource::Type::ImageResource:
-        return acceptHeaderValueForImageResource();
+        return acceptHeaderValueForImageResource(usingSecureProtocol);
     case CachedResource::Type::CSSStyleSheet:
         return "text/css,*/*;q=0.1"_s;
+    case CachedResource::Type::JSON:
+        return "application/json,*/*;q=0.5"_s;
     case CachedResource::Type::SVGDocumentResource:
         return "image/svg+xml"_s;
 #if ENABLE(XSLT)
@@ -214,7 +214,7 @@ String CachedResourceRequest::acceptHeaderValueFromType(CachedResource::Type typ
 void CachedResourceRequest::setAcceptHeaderIfNone(CachedResource::Type type)
 {
     if (!m_resourceRequest.hasHTTPHeader(HTTPHeaderName::Accept))
-        m_resourceRequest.setHTTPHeaderField(HTTPHeaderName::Accept, acceptHeaderValueFromType(type));
+        m_resourceRequest.setHTTPHeaderField(HTTPHeaderName::Accept, acceptHeaderValueFromType(type, m_resourceRequest.url().protocolIsSecure()));
 }
 
 void CachedResourceRequest::disableCachingIfNeeded()
@@ -280,14 +280,14 @@ void CachedResourceRequest::removeFragmentIdentifierIfNeeded()
 {
     URL url = MemoryCache::removeFragmentIdentifierIfNeeded(m_resourceRequest.url());
     if (url.string() != m_resourceRequest.url())
-        m_resourceRequest.setURL(url);
+        m_resourceRequest.setURL(WTF::move(url));
 }
 
 #if ENABLE(CONTENT_EXTENSIONS)
 
 void CachedResourceRequest::applyResults(ContentRuleListResults&& results, Page* page)
 {
-    ContentExtensions::applyResultsToRequest(WTFMove(results), page, m_resourceRequest);
+    ContentExtensions::applyResultsToRequest(WTF::move(results), page, m_resourceRequest);
 }
 
 #endif
@@ -301,16 +301,18 @@ void CachedResourceRequest::updateReferrerPolicy(ReferrerPolicy defaultPolicy)
 void CachedResourceRequest::updateReferrerAndOriginHeaders(FrameLoader& frameLoader)
 {
     // Implementing step 9 to 11 of https://fetch.spec.whatwg.org/#http-network-or-cache-fetch as of 16 March 2018
-    String outgoingReferrer = frameLoader.outgoingReferrer();
+    URL outgoingReferrerURL;
     if (m_resourceRequest.hasHTTPReferrer())
-        outgoingReferrer = m_resourceRequest.httpReferrer();
-    updateRequestReferrer(m_resourceRequest, m_options.referrerPolicy, outgoingReferrer, OriginAccessPatternsForWebProcess::singleton());
+        outgoingReferrerURL = URL { m_resourceRequest.httpReferrer() };
+    else
+        outgoingReferrerURL = frameLoader.outgoingReferrerURL();
+    updateRequestReferrer(m_resourceRequest, m_options.referrerPolicy, outgoingReferrerURL, OriginAccessPatternsForWebProcess::singleton());
 
     if (!m_resourceRequest.httpOrigin().isEmpty())
         return;
 
-    auto* document = frameLoader.frame().document();
-    auto actualOrigin = (document && m_options.destination == FetchOptionsDestination::EmptyString && m_initiatorType == cachedResourceRequestInitiatorTypes().fetch) ? Ref { document->securityOrigin() } : SecurityOrigin::createFromString(outgoingReferrer);
+    RefPtr document = frameLoader.frame().document();
+    auto actualOrigin = (document && m_options.destination == FetchOptionsDestination::EmptyString && m_initiatorType == cachedResourceRequestInitiatorTypes().fetch) ? Ref { document->securityOrigin() } : SecurityOrigin::create(outgoingReferrerURL);
     String outgoingOrigin;
     if (m_options.mode == FetchOptions::Mode::Cors)
         outgoingOrigin = actualOrigin->toString();
@@ -348,7 +350,6 @@ void CachedResourceRequest::setDestinationIfNotSet(FetchOptions::Destination des
     m_options.destination = destination;
 }
 
-#if ENABLE(SERVICE_WORKER)
 void CachedResourceRequest::setClientIdentifierIfNeeded(ScriptExecutionContextIdentifier clientIdentifier)
 {
     if (!m_options.clientIdentifier)
@@ -378,6 +379,5 @@ void CachedResourceRequest::setNavigationServiceWorkerRegistrationData(const std
     }
     m_options.serviceWorkerRegistrationIdentifier = data->identifier;
 }
-#endif
 
 } // namespace WebCore

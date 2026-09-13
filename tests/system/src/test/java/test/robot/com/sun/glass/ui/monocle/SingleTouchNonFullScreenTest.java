@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2014, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,19 +25,20 @@
 
 package test.robot.com.sun.glass.ui.monocle;
 
-import com.sun.glass.ui.monocle.TestLogShim;
-import test.robot.com.sun.glass.ui.monocle.TestApplication;
-import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
-import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
-import javafx.geometry.Rectangle2D;
-import javafx.scene.input.TouchEvent;
-import org.junit.*;
-import org.junit.runners.Parameterized;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import javafx.geometry.Rectangle2D;
+import javafx.scene.input.TouchEvent;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
+import com.sun.glass.ui.monocle.TestLogShim;
+import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevice;
+import test.robot.com.sun.glass.ui.monocle.input.devices.TestTouchDevices;
 
-public class SingleTouchNonFullScreenTest extends ParameterizedTestBase {
+public final class SingleTouchNonFullScreenTest extends ParameterizedTestBase {
 
     private static final TestCase[] TEST_CASES = {
             new TestCase(200, 100, 400, 300, 200, 100, 599, 399),
@@ -57,6 +58,7 @@ public class SingleTouchNonFullScreenTest extends ParameterizedTestBase {
             this.y2 = y2;
         }
 
+        @Override
         public String toString() {
             return "TestCase[stage bounds=("
                     + stageBounds.getMinX()
@@ -70,27 +72,24 @@ public class SingleTouchNonFullScreenTest extends ParameterizedTestBase {
         }
     }
 
-    public SingleTouchNonFullScreenTest(TestTouchDevice device, TestCase testCase)
-    {
-        super(device, testCase.stageBounds);
-        this.testCase = testCase;
-        TestLogShim.format("Starting test with %s, %s", device, testCase);
-    }
-
-    @Parameterized.Parameters
-    public static Collection<Object[]> data() {
-        List<Object[]> params = new ArrayList<>();
+    private static Collection<Arguments> parameters() {
+        List<Arguments> params = new ArrayList<>();
         List<TestTouchDevice> devices = TestTouchDevices.getTouchDevices();
         for (TestTouchDevice device : devices) {
             for (TestCase testCase : TEST_CASES) {
-                params.add(new Object[]{device, testCase});
+                params.add(Arguments.of(device, testCase));
             }
         }
         return params;
     }
 
-    @Before
-    public void addListener() throws Exception {
+    // @BeforeEach
+    // junit5 does not support parameterized class-level tests yet
+    public void init(TestTouchDevice device, TestCase testCase) throws Exception {
+        this.testCase = testCase;
+        createDevice(device, testCase.stageBounds);
+        TestLogShim.format("Starting test with %s, %s", device, testCase);
+
         TestApplication.getStage().getScene().addEventHandler(
                 TouchEvent.TOUCH_PRESSED,
                 e -> TestLogShim.format("Touch pressed [relative]: %.0f, %.0f",
@@ -115,13 +114,15 @@ public class SingleTouchNonFullScreenTest extends ParameterizedTestBase {
     /**
      * Touch down and up
      */
-    @Test
-    public void tap() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void tap(TestTouchDevice device, TestCase testCase) throws Exception {
+        init(device, testCase);
         final int x1 = testCase.x1;
         final int y1 = testCase.y1;
 
-        final int relX1 = x1 - (int) stageBounds.getMinX();
-        final int relY1 = y1 - (int) stageBounds.getMinY();
+        final int relX1 = x1 - (int) testCase.stageBounds.getMinX();
+        final int relY1 = y1 - (int) testCase.stageBounds.getMinY();
         // tap
         int p = device.addPoint(x1, y1);
         device.sync();
@@ -137,25 +138,29 @@ public class SingleTouchNonFullScreenTest extends ParameterizedTestBase {
         TestLogShim.waitForLog("Touch released: %d, %d", x1, y1);
 
         // Check that the touch event has one touch point.
-        Assert.assertEquals("Expected only one touch point", 0,
-                            TestLogShim.getLog().stream()
-                            .filter(s -> s.startsWith("Touch points count"))
-                            .filter(s -> !s.startsWith("Touch points count: [1]")).count());
+        Assertions.assertEquals(
+            0,
+            TestLogShim.getLog().stream()
+                .filter(s -> s.startsWith("Touch points count"))
+                .filter(s -> !s.startsWith("Touch points count: [1]")).count(),
+            "Expected only one touch point");
     }
 
     /**
      * Touch down, drag, touch up
      */
-    @Test
-    public void tapAndDrag() throws Exception {
+    @ParameterizedTest
+    @MethodSource("parameters")
+    public void tapAndDrag(TestTouchDevice device, TestCase testCase) throws Exception {
+        init(device, testCase);
         final int x1 = testCase.x1;
         final int y1 = testCase.y1;
         final int x2 = testCase.x2;
         final int y2 = testCase.y2;
-        final int relX1 = x1 - (int) stageBounds.getMinX();
-        final int relY1 = y1 - (int) stageBounds.getMinY();
-        final int relX2 = x2 - (int) stageBounds.getMinX();
-        final int relY2 = y2 - (int) stageBounds.getMinY();
+        final int relX1 = x1 - (int) testCase.stageBounds.getMinX();
+        final int relY1 = y1 - (int) testCase.stageBounds.getMinY();
+        final int relX2 = x2 - (int) testCase.stageBounds.getMinX();
+        final int relY2 = y2 - (int) testCase.stageBounds.getMinY();
         // tap
         int p = device.addPoint(x1, y1);
         device.sync();
@@ -176,9 +181,11 @@ public class SingleTouchNonFullScreenTest extends ParameterizedTestBase {
         TestLogShim.waitForLog("Touch released [relative]: %d, %d", relX2, relY2);
         TestLogShim.waitForLog("Touch released: %d, %d", x2, y2);
         // Check that the touch event has one touch point.
-        Assert.assertEquals("Expected only one touch point", 0,
-                            TestLogShim.getLog().stream()
-                            .filter(s -> s.startsWith("Touch points count"))
-                            .filter(s -> !s.startsWith("Touch points count: [1]")).count());
+        Assertions.assertEquals(
+            0,
+            TestLogShim.getLog().stream()
+                .filter(s -> s.startsWith("Touch points count"))
+                .filter(s -> !s.startsWith("Touch points count: [1]")).count(),
+                "Expected only one touch point");
     }
 }

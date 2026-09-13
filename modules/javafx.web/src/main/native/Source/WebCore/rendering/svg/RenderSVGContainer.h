@@ -23,7 +23,6 @@
 
 #pragma once
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderSVGModelObject.h"
 #include "SVGBoundingBoxComputation.h"
 
@@ -32,7 +31,8 @@ namespace WebCore {
 class SVGElement;
 
 class RenderSVGContainer : public RenderSVGModelObject {
-    WTF_MAKE_ISO_ALLOCATED(RenderSVGContainer);
+    WTF_MAKE_TZONE_ALLOCATED(RenderSVGContainer);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGContainer);
 public:
     virtual ~RenderSVGContainer();
 
@@ -44,12 +44,13 @@ public:
 
     FloatRect objectBoundingBox() const final { return m_objectBoundingBox; }
     FloatRect objectBoundingBoxWithoutTransformations() const final { return m_objectBoundingBoxWithoutTransformations; }
-    FloatRect strokeBoundingBox() const final { return m_strokeBoundingBox; }
-    FloatRect repaintRectInLocalCoordinates() const final { return SVGBoundingBoxComputation::computeRepaintBoundingBox(*this); }
+    FloatRect strokeBoundingBox() const final;
+    FloatRect repaintRectInLocalCoordinates(RepaintRectCalculation = RepaintRectCalculation::Fast) const final { return SVGBoundingBoxComputation::computeRepaintBoundingBox(*this); }
+    FloatRect decoratedBoundingBox() const final { return SVGBoundingBoxComputation::computeDecoratedBoundingBox(*this); }
 
 protected:
-    RenderSVGContainer(Document&, RenderStyle&&);
-    RenderSVGContainer(SVGElement&, RenderStyle&&);
+    RenderSVGContainer(Type, Document&, RenderStyle&&, OptionSet<SVGModelObjectFlag> = { });
+    RenderSVGContainer(Type, SVGElement&, RenderStyle&&, OptionSet<SVGModelObjectFlag> = { });
 
     ASCIILiteral renderName() const override { return "RenderSVGContainer"_s; }
     bool canHaveChildren() const final { return true; }
@@ -67,14 +68,10 @@ protected:
     bool m_didTransformToRootUpdate { false };
     FloatRect m_objectBoundingBox;
     FloatRect m_objectBoundingBoxWithoutTransformations;
-    FloatRect m_strokeBoundingBox;
-
-private:
-    bool isSVGContainer() const final { return true; }
+    mutable Markable<FloatRect> m_strokeBoundingBox;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGContainer, isSVGContainer())
+SPECIALIZE_TYPE_TRAITS_RENDER_OBJECT(RenderSVGContainer, isRenderSVGContainer())
 
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

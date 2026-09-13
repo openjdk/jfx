@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -61,6 +61,7 @@
 
 - (void)runLoop:(id)selector;
 - (BOOL)started;
+- (jobject)getPlatformPreferences;
 
 + (jobject)enterNestedEventLoopWithEnv:(JNIEnv*)env;
 + (void)leaveNestedEventLoopWithEnv:(JNIEnv*)env retValue:(jobject)retValue;
@@ -72,5 +73,7 @@
 + (jint)getKeyCodeForChar:(jchar)c;
 
 + (BOOL)syncRenderingDisabled;
+
++ (BOOL)isEmbedded;
 
 @end

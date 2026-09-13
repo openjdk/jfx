@@ -29,12 +29,14 @@
 #include "config.h"
 #include "ContentSearchUtilities.h"
 
+#include "InspectorProtocolObjects.h"
 #include "RegularExpression.h"
 #include "Yarr.h"
 #include "YarrFlags.h"
 #include "YarrInterpreter.h"
 #include <wtf/BumpPointerAllocator.h>
 #include <wtf/StdLibExtras.h>
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/TextPosition.h>
 
@@ -50,9 +52,11 @@ static String escapeStringForRegularExpressionSource(const String& text)
     StringBuilder result;
 
     for (unsigned i = 0; i < text.length(); i++) {
-        UChar character = text[i];
+        char16_t character = text[i];
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         if (isASCII(character) && strchr(regexSpecialCharacters, character))
             result.append('\\');
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
         result.append(character);
     }
 
@@ -129,21 +133,44 @@ static Ref<Protocol::GenericTypes::SearchMatch> buildObjectForSearchMatch(size_t
         .release();
 }
 
-RegularExpression createRegularExpressionForSearchString(const String& searchString, bool caseSensitive, SearchStringType type)
+Searcher createSearcherForString(const String& string, SearchType type, SearchCaseSensitive caseSensitive)
+{
+    if (type == SearchType::ExactString && caseSensitive == SearchCaseSensitive::Yes)
+        return string;
+    return createRegularExpressionForString(string, type, caseSensitive);
+}
+
+bool searcherMatchesText(const Searcher& searcher, const String& text)
+{
+    return WTF::switchOn(searcher,
+        [&] (const String& string) {
+            return string == text;
+        },
+        [&] (const RegularExpression& regex) {
+            return regex.match(text) != -1;
+        });
+}
+
+RegularExpression createRegularExpressionForString(const String& string, SearchType type, SearchCaseSensitive caseSensitive)
 {
     String pattern;
     switch (type) {
-    case SearchStringType::Regex:
-        pattern = searchString;
+    case SearchType::Regex:
+        pattern = string;
         break;
-    case SearchStringType::ExactString:
-        pattern = makeString('^', escapeStringForRegularExpressionSource(searchString), '$');
+    case SearchType::ExactString:
+        pattern = makeString('^', escapeStringForRegularExpressionSource(string), '$');
         break;
-    case SearchStringType::ContainsString:
-        pattern = escapeStringForRegularExpressionSource(searchString);
+    case SearchType::ContainsString:
+        pattern = escapeStringForRegularExpressionSource(string);
         break;
     }
-    return caseSensitive ? RegularExpression(pattern) : RegularExpression(pattern, { Flags::IgnoreCase });
+
+    OptionSet<Flags> flags;
+    if (caseSensitive == SearchCaseSensitive::No)
+        flags.add(Flags::IgnoreCase);
+
+    return RegularExpression(pattern, flags);
 }
 
 int countRegularExpressionMatches(const RegularExpression& regex, const String& content)
@@ -168,8 +195,9 @@ int countRegularExpressionMatches(const RegularExpression& regex, const String& 
 Ref<JSON::ArrayOf<Protocol::GenericTypes::SearchMatch>> searchInTextByLines(const String& text, const String& query, const bool caseSensitive, const bool isRegex)
 {
     auto result = JSON::ArrayOf<Protocol::GenericTypes::SearchMatch>::create();
-    auto searchStringType = isRegex ? ContentSearchUtilities::SearchStringType::Regex : ContentSearchUtilities::SearchStringType::ContainsString;
-    auto regex = ContentSearchUtilities::createRegularExpressionForSearchString(query, caseSensitive, searchStringType);
+    auto searchType = isRegex ? ContentSearchUtilities::SearchType::Regex : ContentSearchUtilities::SearchType::ContainsString;
+    auto searchCaseSensitive = caseSensitive ? ContentSearchUtilities::SearchCaseSensitive::Yes : ContentSearchUtilities::SearchCaseSensitive::No;
+    auto regex = ContentSearchUtilities::createRegularExpressionForString(query, searchType, searchCaseSensitive);
     for (const auto& match : getRegularExpressionMatchesByLines(regex, text))
         result->addItem(buildObjectForSearchMatch(match.first, match.second));
     return result;

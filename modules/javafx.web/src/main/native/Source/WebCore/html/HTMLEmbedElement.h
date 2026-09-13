@@ -22,12 +22,13 @@
 
 #pragma once
 
-#include "HTMLPlugInImageElement.h"
+#include <WebCore/HTMLPlugInElement.h>
 
 namespace WebCore {
 
-class HTMLEmbedElement final : public HTMLPlugInImageElement {
-    WTF_MAKE_ISO_ALLOCATED(HTMLEmbedElement);
+class HTMLEmbedElement final : public HTMLPlugInElement {
+    WTF_MAKE_TZONE_ALLOCATED(HTMLEmbedElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLEmbedElement);
 public:
     static Ref<HTMLEmbedElement> create(Document&);
     static Ref<HTMLEmbedElement> create(const QualifiedName&, Document&);
@@ -45,7 +46,7 @@ private:
 
     bool isInteractiveContent() const final { return true; }
 
-    RenderWidget* renderWidgetLoadingPlugin() const final;
+    CheckedPtr<RenderWidget> renderWidgetLoadingPlugin() const final;
 
     void updateWidget(CreatePlugins) final;
 

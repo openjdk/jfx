@@ -35,7 +35,10 @@
 #if PLATFORM(COCOA)
 #include <notify.h>
 #include <unistd.h>
+#include <wtf/darwin/DispatchExtras.h>
 #endif
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 namespace Wasm {
@@ -71,7 +74,7 @@ void WasmOpcodeCounter::dump(Atomic<uint64_t>* counter, NumberOfRegisteredOpcode
         vector.append({ (OpcodeType)i, count });
     }
 
-    std::sort(vector.begin(), vector.end(), [](Pair& a, Pair& b) {
+    std::ranges::sort(vector, [](auto& a, auto& b) {
         return b.count < a.count;
     });
 
@@ -107,7 +110,7 @@ void WasmOpcodeCounter::registerDispatch()
         dataLogF("<WASM.OP.STAT><%d> Use `notifyutil -v -p %s` to dump statistics.\n", pid, key);
 
         int token;
-        notify_register_dispatch(key, &token, dispatch_get_main_queue(), ^(int) {
+        notify_register_dispatch(key, &token, mainDispatchQueueSingleton(), ^(int) {
             WasmOpcodeCounter::singleton().dump();
         });
     });
@@ -140,5 +143,7 @@ void WasmOpcodeCounter::increment(OpType op)
 
 } // namespace JSC
 } // namespace JSC::Wasm
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEBASSEMBLY) && && ENABLE(B3_JIT)

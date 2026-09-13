@@ -29,6 +29,7 @@
 #if ENABLE(WEB_CRYPTO)
 
 #include "CryptoKeyRSA.h"
+#include "ExceptionOr.h"
 #include "OpenSSLUtilities.h"
 
 namespace WebCore {
@@ -37,32 +38,32 @@ ExceptionOr<Vector<uint8_t>> CryptoAlgorithmRSASSA_PKCS1_v1_5::platformSign(cons
 {
     const EVP_MD* md = digestAlgorithm(key.hashAlgorithmIdentifier());
     if (!md)
-        return Exception { NotSupportedError };
+        return Exception { ExceptionCode::NotSupportedError };
 
     std::optional<Vector<uint8_t>> digest = calculateDigest(md, data);
     if (!digest)
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
 
     auto ctx = EvpPKeyCtxPtr(EVP_PKEY_CTX_new(key.platformKey(), nullptr));
     if (!ctx)
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
 
     if (EVP_PKEY_sign_init(ctx.get()) <= 0)
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
 
     if (EVP_PKEY_CTX_set_rsa_padding(ctx.get(), RSA_PKCS1_PADDING) <= 0)
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
 
     if (EVP_PKEY_CTX_set_signature_md(ctx.get(), md) <= 0)
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
 
     size_t signatureLen;
-    if (EVP_PKEY_sign(ctx.get(), nullptr, &signatureLen, digest->data(), digest->size()) <= 0)
-        return Exception { OperationError };
+    if (EVP_PKEY_sign(ctx.get(), nullptr, &signatureLen, digest->span().data(), digest->size()) <= 0)
+        return Exception { ExceptionCode::OperationError };
 
     Vector<uint8_t> signature(signatureLen);
-    if (EVP_PKEY_sign(ctx.get(), signature.data(), &signatureLen, digest->data(), digest->size()) <= 0)
-        return Exception { OperationError };
+    if (EVP_PKEY_sign(ctx.get(), signature.mutableSpan().data(), &signatureLen, digest->span().data(), digest->size()) <= 0)
+        return Exception { ExceptionCode::OperationError };
     signature.shrink(signatureLen);
 
     return signature;
@@ -72,26 +73,26 @@ ExceptionOr<bool> CryptoAlgorithmRSASSA_PKCS1_v1_5::platformVerify(const CryptoK
 {
     const EVP_MD* md = digestAlgorithm(key.hashAlgorithmIdentifier());
     if (!md)
-        return Exception { NotSupportedError };
+        return Exception { ExceptionCode::NotSupportedError };
 
     std::optional<Vector<uint8_t>> digest = calculateDigest(md, data);
     if (!digest)
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
 
     auto ctx = EvpPKeyCtxPtr(EVP_PKEY_CTX_new(key.platformKey(), nullptr));
     if (!ctx)
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
 
     if (EVP_PKEY_verify_init(ctx.get()) <= 0)
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
 
     if (EVP_PKEY_CTX_set_rsa_padding(ctx.get(), RSA_PKCS1_PADDING) <= 0)
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
 
     if (EVP_PKEY_CTX_set_signature_md(ctx.get(), md) <= 0)
-        return Exception { OperationError };
+        return Exception { ExceptionCode::OperationError };
 
-    int ret = EVP_PKEY_verify(ctx.get(), signature.data(), signature.size(), digest->data(), digest->size());
+    int ret = EVP_PKEY_verify(ctx.get(), signature.span().data(), signature.size(), digest->span().data(), digest->size());
 
     return ret == 1;
 }

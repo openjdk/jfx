@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,23 +25,18 @@
 
 package test.javafx.scene.shape;
 
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 import javafx.scene.shape.CubicCurve;
 
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
-
+import org.junit.jupiter.params.provider.Arguments;
 import test.com.sun.javafx.test.PropertiesTestBase;
 
-@RunWith(Parameterized.class)
 public final class CubicCurve_properties_Test extends PropertiesTestBase {
-    @Parameters
-    public static Collection data() {
+
+    public static Stream<Arguments> data() {
         final CubicCurve testCubicCurve = new CubicCurve();
 
-        return Arrays.asList(new Object[] {
+        return Stream.of(
             config(testCubicCurve, "startX", 0.0, 100.0),
             config(testCubicCurve, "startY", 0.0, 100.0),
             config(testCubicCurve, "controlX1", 20.0, 120.0),
@@ -50,10 +45,6 @@ public final class CubicCurve_properties_Test extends PropertiesTestBase {
             config(testCubicCurve, "controlY2", 20.0, 120.0),
             config(testCubicCurve, "endX", 100.0, 200.0),
             config(testCubicCurve, "endY", 100.0, 200.0)
-        });
-    }
-
-    public CubicCurve_properties_Test(final Configuration configuration) {
-        super(configuration);
+        );
     }
 }

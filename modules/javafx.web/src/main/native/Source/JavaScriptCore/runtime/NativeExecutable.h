@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "ExecutableBase.h"
-#include "ImplementationVisibility.h"
+#include <JavaScriptCore/ExecutableBase.h>
+#include <JavaScriptCore/ImplementationVisibility.h>
 
 namespace JSC {
 
@@ -37,7 +37,7 @@ public:
     typedef ExecutableBase Base;
     static constexpr unsigned StructureFlags = Base::StructureFlags | StructureIsImmortal;
 
-    static NativeExecutable* create(VM&, Ref<JITCode>&& callThunk, TaggedNativeFunction, Ref<JITCode>&& constructThunk, TaggedNativeFunction constructor, ImplementationVisibility, const String& name);
+    static NativeExecutable* create(VM&, Ref<JSC::JITCode>&& callThunk, TaggedNativeFunction, Ref<JSC::JITCode>&& constructThunk, TaggedNativeFunction constructor, ImplementationVisibility, const String& name);
 
     static void destroy(JSCell*);
 
@@ -54,17 +54,17 @@ public:
 
     TaggedNativeFunction nativeFunctionFor(CodeSpecializationKind kind)
     {
-        if (kind == CodeForCall)
+        if (kind == CodeSpecializationKind::CodeForCall)
             return function();
-        ASSERT(kind == CodeForConstruct);
+        ASSERT(kind == CodeSpecializationKind::CodeForConstruct);
         return constructor();
     }
 
-    static ptrdiff_t offsetOfNativeFunctionFor(CodeSpecializationKind kind)
+    static constexpr ptrdiff_t offsetOfNativeFunctionFor(CodeSpecializationKind kind)
     {
-        if (kind == CodeForCall)
+        if (kind == CodeSpecializationKind::CodeForCall)
             return OBJECT_OFFSETOF(NativeExecutable, m_function);
-        ASSERT(kind == CodeForConstruct);
+        ASSERT(kind == CodeSpecializationKind::CodeForConstruct);
         return OBJECT_OFFSETOF(NativeExecutable, m_constructor);
     }
 
@@ -87,11 +87,11 @@ public:
     }
 
     JSString* asStringConcurrently() const { return m_asString.get(); }
-    static inline ptrdiff_t offsetOfAsString() { return OBJECT_OFFSETOF(NativeExecutable, m_asString); }
+    static constexpr ptrdiff_t offsetOfAsString() { return OBJECT_OFFSETOF(NativeExecutable, m_asString); }
 
 private:
     NativeExecutable(VM&, TaggedNativeFunction, TaggedNativeFunction constructor, ImplementationVisibility);
-    void finishCreation(VM&, Ref<JITCode>&& callThunk, Ref<JITCode>&& constructThunk, const String& name);
+    void finishCreation(VM&, Ref<JSC::JITCode>&& callThunk, Ref<JSC::JITCode>&& constructThunk, const String& name);
 
     JSString* toStringSlow(JSGlobalObject*);
 

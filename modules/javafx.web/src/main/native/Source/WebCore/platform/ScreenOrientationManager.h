@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "ScreenOrientationLockType.h"
-#include "ScreenOrientationType.h"
+#include <WebCore/ScreenOrientationLockType.h>
+#include <WebCore/ScreenOrientationType.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/CompletionHandler.h>
-#include <wtf/RefCounted.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
@@ -37,21 +37,21 @@ class DeferredPromise;
 class Exception;
 class ScreenOrientation;
 
-class ScreenOrientationManager : public CanMakeWeakPtr<ScreenOrientationManager> {
+class ScreenOrientationManagerObserver : public AbstractRefCountedAndCanMakeWeakPtr<ScreenOrientationManagerObserver> {
+public:
+    virtual ~ScreenOrientationManagerObserver() { }
+    virtual void screenOrientationDidChange(ScreenOrientationType) = 0;
+};
+
+class ScreenOrientationManager : public AbstractRefCountedAndCanMakeWeakPtr<ScreenOrientationManager> {
 public:
     WEBCORE_EXPORT virtual ~ScreenOrientationManager();
-
-    class Observer : public CanMakeWeakPtr<Observer> {
-    public:
-        virtual ~Observer() { }
-        virtual void screenOrientationDidChange(ScreenOrientationType) = 0;
-    };
 
     virtual ScreenOrientationType currentOrientation() = 0;
     virtual void lock(ScreenOrientationLockType, CompletionHandler<void(std::optional<Exception>&&)>&&) = 0;
     virtual void unlock() = 0;
-    virtual void addObserver(Observer&) = 0;
-    virtual void removeObserver(Observer&) = 0;
+    virtual void addObserver(ScreenOrientationManagerObserver&) = 0;
+    virtual void removeObserver(ScreenOrientationManagerObserver&) = 0;
 
     void setLockPromise(ScreenOrientation&, Ref<DeferredPromise>&&);
     ScreenOrientation* lockRequester() const;

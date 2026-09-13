@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,16 +35,17 @@ import com.sun.scenario.effect.compiler.tree.LiteralExpr;
 import com.sun.scenario.effect.compiler.tree.VariableExpr;
 import com.sun.scenario.effect.compiler.tree.VectorCtorExpr;
 import org.antlr.v4.runtime.misc.ParseCancellationException;
-import org.junit.Test;
 
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class AssignmentExprTest extends ParserBase {
 
     @Test
-    public void userVar() throws Exception {
+    public void userVar() {
         BinaryExpr tree = parseTreeFor("foo = 32.0");
         assertEquals(Type.FLOAT, tree.getResultType());
         assertEquals(BinaryOpType.EQ, tree.getOp());
@@ -57,13 +58,15 @@ public class AssignmentExprTest extends ParserBase {
         assertEquals(32.0f, val);
     }
 
-    @Test(expected = RuntimeException.class)
-    public void userROVar() throws Exception {
-        BinaryExpr tree = parseTreeFor("readonly = 32.0");
+    @Test
+    public void userROVar() {
+        assertThrows(RuntimeException.class, () -> {
+            BinaryExpr tree = parseTreeFor("readonly = 32.0");
+        });
     }
 
     @Test
-    public void coreVar() throws Exception {
+    public void coreVar() {
         BinaryExpr tree = parseTreeFor("color = float4(1.0)");
         assertEquals(Type.FLOAT4, tree.getResultType());
         assertEquals(BinaryOpType.EQ, tree.getOp());
@@ -84,7 +87,7 @@ public class AssignmentExprTest extends ParserBase {
     }
 
     @Test
-    public void coreVarField() throws Exception {
+    public void coreVarField() {
         BinaryExpr tree = parseTreeFor("color.r = 3.0");
         assertEquals(Type.FLOAT, tree.getResultType());
         assertEquals(BinaryOpType.EQ, tree.getOp());
@@ -99,22 +102,28 @@ public class AssignmentExprTest extends ParserBase {
         assertEquals(3.0f, val);
     }
 
-    @Test(expected = RuntimeException.class)
-    public void coreROVar() throws Exception {
-        parseTreeFor("pos0 = float2(1.0)");
+    @Test
+    public void coreROVar() {
+        assertThrows(RuntimeException.class, () -> {
+            parseTreeFor("pos0 = float2(1.0)");
+        });
     }
 
-    @Test(expected = RuntimeException.class)
-    public void coreROVarField() throws Exception {
-        parseTreeFor("pos0.x = 1.0");
+    @Test
+    public void coreROVarField() {
+        assertThrows(RuntimeException.class, () -> {
+            parseTreeFor("pos0.x = 1.0");
+        });
     }
 
-    @Test(expected = ParseCancellationException.class)
-    public void notAnAssignment() throws Exception {
-        parseTreeFor("const foo");
+    @Test
+    public void notAnAssignment() {
+        assertThrows(ParseCancellationException.class, () -> {
+            parseTreeFor("const foo");
+        });
     }
 
-    private BinaryExpr parseTreeFor(String text) throws Exception {
+    private BinaryExpr parseTreeFor(String text) {
         JSLParser parser = parserOver(text);
         JSLVisitor visitor = new JSLVisitor();
         SymbolTable st = visitor.getSymbolTable();

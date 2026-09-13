@@ -29,41 +29,43 @@
 #include "DataTransfer.h"
 #include "Node.h"
 #include "WindowProxy.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(InputEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(InputEvent);
 
 Ref<InputEvent> InputEvent::create(const AtomString& eventType, const String& inputType, IsCancelable cancelable, RefPtr<WindowProxy>&& view,
-    const String& data, RefPtr<DataTransfer>&& dataTransfer, const Vector<RefPtr<StaticRange>>& targetRanges, int detail, IsInputMethodComposing isInputMethodComposing)
+    const String& data, RefPtr<DataTransfer>&& dataTransfer, const Vector<Ref<StaticRange>>& targetRanges, int detail, IsInputMethodComposing isInputMethodComposing)
 {
-    return adoptRef(*new InputEvent(eventType, inputType, cancelable, WTFMove(view), data, WTFMove(dataTransfer), targetRanges, detail, isInputMethodComposing));
+    return adoptRef(*new InputEvent(eventType, inputType, cancelable, WTF::move(view), data, WTF::move(dataTransfer), targetRanges, detail, isInputMethodComposing));
 }
 
 InputEvent::InputEvent(const AtomString& eventType, const String& inputType, IsCancelable cancelable, RefPtr<WindowProxy>&& view,
-    const String& data, RefPtr<DataTransfer>&& dataTransfer, const Vector<RefPtr<StaticRange>>& targetRanges, int detail, IsInputMethodComposing isInputMethodComposing)
-    : UIEvent(eventType, CanBubble::Yes, cancelable, IsComposed::Yes, WTFMove(view), detail)
+    const String& data, RefPtr<DataTransfer>&& dataTransfer, const Vector<Ref<StaticRange>>& targetRanges, int detail, IsInputMethodComposing isInputMethodComposing)
+    : UIEvent(EventInterfaceType::InputEvent, eventType, CanBubble::Yes, cancelable, IsComposed::Yes, WTF::move(view), detail)
     , m_inputType(inputType)
     , m_data(data)
-    , m_dataTransfer(dataTransfer)
+    , m_dataTransfer(WTF::move(dataTransfer))
     , m_targetRanges(targetRanges)
     , m_isInputMethodComposing(isInputMethodComposing == IsInputMethodComposing::Yes)
 {
 }
 
 InputEvent::InputEvent(const AtomString& eventType, const Init& initializer)
-    : UIEvent(eventType, initializer)
+    : UIEvent(EventInterfaceType::InputEvent, eventType, initializer)
     , m_inputType(initializer.inputType)
     , m_data(initializer.data)
     , m_isInputMethodComposing(initializer.isComposing)
 {
 }
 
-RefPtr<DataTransfer> InputEvent::dataTransfer() const
+InputEvent::~InputEvent() = default;
+
+DataTransfer* InputEvent::dataTransfer() const
 {
-    return m_dataTransfer;
+    return m_dataTransfer.get();
 }
 
 } // namespace WebCore

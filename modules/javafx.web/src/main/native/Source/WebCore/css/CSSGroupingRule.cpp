@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Adobe Systems Incorporated. All rights reserved.
- * Copyright (C) 2012-2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -56,37 +56,59 @@ CSSGroupingRule::~CSSGroupingRule()
     }
 }
 
+Ref<const StyleRuleGroup> CSSGroupingRule::protectedGroupRule() const
+{
+    return m_groupRule;
+}
+
+Ref<StyleRuleGroup> CSSGroupingRule::protectedGroupRule()
+{
+    return m_groupRule;
+}
+
 ExceptionOr<unsigned> CSSGroupingRule::insertRule(const String& ruleString, unsigned index)
 {
     ASSERT(m_childRuleCSSOMWrappers.size() == m_groupRule->childRules().size());
 
     if (index > m_groupRule->childRules().size()) {
         // IndexSizeError: Raised if the specified index is not a valid insertion point.
-        return Exception { IndexSizeError };
+        return Exception { ExceptionCode::IndexSizeError };
     }
 
-    CSSStyleSheet* styleSheet = parentStyleSheet();
-    auto isNestedContext = hasStyleRuleAncestor() ? CSSParserEnum::IsNestedContext::Yes : CSSParserEnum::IsNestedContext::No;
-    RefPtr<StyleRuleBase> newRule = CSSParser::parseRule(parserContext(), styleSheet ? &styleSheet->contents() : nullptr, ruleString, isNestedContext);
+    RefPtr styleSheet = parentStyleSheet();
+    auto nestedContextWithCurrentRule = [&] -> CSSParserEnum::NestedContext {
+        if (m_groupRule->isStyleRule()) {
+            ASSERT_NOT_REACHED(); // This is handled in CSSStyleRule.
+            return CSSParserEnum::NestedContextType::Style;
+        }
+        if (m_groupRule->isScopeRule())
+            return CSSParserEnum::NestedContextType::Scope;
+        // Find the context in the ancestor chain.
+        return nestedContext();
+    }();
+    RefPtr newRule = CSSParser::parseRule(ruleString, parserContext(), styleSheet ? &styleSheet->contents() : nullptr, CSSParser::AllowedRules::ImportRules, nestedContextWithCurrentRule);
     if (!newRule) {
-        // SyntaxError: Raised if the specified rule has a syntax error and is unparsable.
-        return Exception { SyntaxError };
+        // CSSNestedDeclarations parsing is allowed if there is an ancestor style rule or an ancestor scope rule.
+        if (!nestedContextWithCurrentRule)
+            return Exception { ExceptionCode::SyntaxError };
+        newRule = CSSParser::parseNestedDeclarations(parserContext(), ruleString);
+        if (!newRule)
+        return Exception { ExceptionCode::SyntaxError };
     }
 
     if (newRule->isImportRule() || newRule->isNamespaceRule()) {
-        // FIXME: an HierarchyRequestError should also be thrown for a @charset or a nested
-        // @media rule. They are currently not getting parsed, resulting in a SyntaxError
+        // FIXME: an HierarchyRequestError should also be thrown for a @charset.
+        // They are currently not getting parsed, resulting in a SyntaxError
         // to get raised above.
 
         // HierarchyRequestError: Raised if the rule cannot be inserted at the specified
         // index, e.g., if an @import rule is inserted after a standard rule set or other
         // at-rule.
-        return Exception { HierarchyRequestError };
+        return Exception { ExceptionCode::HierarchyRequestError };
     }
 
-    // Nesting inside style rule only accepts style rule or group rule
-    if (hasStyleRuleAncestor() && !newRule->isStyleRule() && !newRule->isGroupRule())
-        return Exception { HierarchyRequestError };
+    if (hasStyleRuleAncestor() && !newRule->isStyleRule() && !newRule->isGroupRule() && !newRule->isNestedDeclarationsRule())
+        return Exception { ExceptionCode::HierarchyRequestError };
 
     CSSStyleSheet::RuleMutationScope mutationScope(this);
 
@@ -103,7 +125,7 @@ ExceptionOr<void> CSSGroupingRule::deleteRule(unsigned index)
     if (index >= m_groupRule->childRules().size()) {
         // IndexSizeError: Raised if the specified index does not correspond to a
         // rule in the media rule list.
-        return Exception { IndexSizeError };
+        return Exception { ExceptionCode::IndexSizeError };
     }
 
     CSSStyleSheet::RuleMutationScope mutationScope(this);
@@ -112,60 +134,52 @@ ExceptionOr<void> CSSGroupingRule::deleteRule(unsigned index)
 
     if (m_childRuleCSSOMWrappers[index])
         m_childRuleCSSOMWrappers[index]->setParentRule(nullptr);
-    m_childRuleCSSOMWrappers.remove(index);
+    m_childRuleCSSOMWrappers.removeAt(index);
 
     return { };
 }
 
-void CSSGroupingRule::appendCSSTextForItems(StringBuilder& builder) const
+void CSSGroupingRule::appendCSSTextForItemsInternal(StringBuilder& builder, StringBuilder& rules) const
 {
-    builder.append(" {");
-
-    StringBuilder decls;
-    StringBuilder rules;
-    cssTextForDeclsAndRules(decls, rules);
-
-    if (decls.isEmpty() && rules.isEmpty()) {
-        builder.append("\n}");
-        return;
-    }
-
+    builder.append(" {"_s);
     if (rules.isEmpty()) {
-        builder.append(' ', static_cast<StringView>(decls), " }");
+        builder.append("\n}"_s);
         return;
     }
 
-    if (decls.isEmpty()) {
-        builder.append(static_cast<StringView>(rules), "\n}");
-        return;
-    }
-
-    builder.append('\n', "  ", static_cast<StringView>(decls), static_cast<StringView>(rules), "\n}");
-    return;
+    builder.append(static_cast<StringView>(rules), "\n}"_s);
 }
 
-void CSSGroupingRule::cssTextForDeclsAndRules(StringBuilder& decls, StringBuilder& rules) const
+void CSSGroupingRule::appendCSSTextForItems(StringBuilder& builder) const
+{
+    StringBuilder rules;
+    cssTextForRules(rules);
+    appendCSSTextForItemsInternal(builder, rules);
+}
+
+void CSSGroupingRule::cssTextForRules(StringBuilder& rules) const
 {
     auto& childRules = m_groupRule->childRules();
-    for (unsigned index = 0 ; index < childRules.size() ; index++) {
-        // We put the declarations at the upper level when the rule:
-        // - is the first rule
-        // - has just "&" as original selector
-        // - has no child rules
-        if (!index) {
-            // It's the first rule.
-            auto childRule = childRules[index];
-            if (childRule->isStyleRuleWithNesting()) {
-                auto& nestedStyleRule = downcast<StyleRuleWithNesting>(childRule);
-                if (nestedStyleRule.originalSelectorList().hasOnlyNestingSelector() && nestedStyleRule.nestedRules().isEmpty()) {
-                    decls.append(nestedStyleRule.properties().asText());
-                    continue;
+    for (unsigned index = 0; index < childRules.size(); ++index) {
+        auto ruleText = item(index)->cssText();
+        if (!ruleText.isEmpty())
+            rules.append("\n  "_s, WTF::move(ruleText));
                 }
-            }
-        }
-        // Otherwise we print the child rule
-        auto wrappedRule = item(index);
-        rules.append("\n  ", wrappedRule->cssText());
+}
+
+void CSSGroupingRule::appendCSSTextWithReplacementURLsForItems(StringBuilder& builder, const CSS::SerializationContext& context) const
+{
+    StringBuilder rules;
+    cssTextForRulesWithReplacementURLs(rules, context);
+    appendCSSTextForItemsInternal(builder, rules);
+}
+
+void CSSGroupingRule::cssTextForRulesWithReplacementURLs(StringBuilder& rules, const CSS::SerializationContext& context) const
+{
+    auto& childRules = m_groupRule->childRules();
+    for (unsigned index = 0; index < childRules.size(); index++) {
+        RefPtr wrappedRule = item(index);
+        rules.append("\n  "_s, wrappedRule->cssText(context));
     }
 }
 
@@ -174,12 +188,9 @@ RefPtr<StyleRuleWithNesting> CSSGroupingRule::prepareChildStyleRuleForNesting(St
     CSSStyleSheet::RuleMutationScope scope(this);
     auto& rules = m_groupRule->m_childRules;
     for (size_t i = 0 ; i < rules.size() ; i++) {
-        auto& rule = rules[i];
-        if (rule.ptr() == &styleRule) {
-            auto styleRuleWithNesting = StyleRuleWithNesting::create(WTFMove(styleRule));
+        if (rules[i].ptr() == &styleRule) {
+            auto styleRuleWithNesting = StyleRuleWithNesting::create(WTF::move(styleRule));
             rules[i] = styleRuleWithNesting;
-            if (auto* styleSheet = parentStyleSheet())
-                styleSheet->contents().setHasNestingRules();
             return styleRuleWithNesting;
         }
     }
@@ -205,7 +216,7 @@ CSSRule* CSSGroupingRule::item(unsigned index) const
 CSSRuleList& CSSGroupingRule::cssRules() const
 {
     if (!m_ruleListCSSOMWrapper)
-        m_ruleListCSSOMWrapper = makeUniqueWithoutRefCountedCheck<LiveCSSRuleList<CSSGroupingRule>>(const_cast<CSSGroupingRule&>(*this));
+        lazyInitialize(m_ruleListCSSOMWrapper, makeUniqueWithoutRefCountedCheck<LiveCSSRuleList<CSSGroupingRule>>(const_cast<CSSGroupingRule&>(*this)));
     return *m_ruleListCSSOMWrapper;
 }
 

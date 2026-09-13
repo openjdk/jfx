@@ -23,9 +23,12 @@
 
 #pragma once
 
-#include "TabSize.h"
-#include "TextFlags.h"
-#include "WritingMode.h"
+#include <WebCore/TabSize.h>
+#include <WebCore/TextFlags.h>
+#include <WebCore/TextSpacing.h>
+#include <WebCore/WritingMode.h>
+#include <wtf/CheckedRef.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/text/StringView.h>
 
 namespace WebCore {
@@ -39,8 +42,9 @@ class Font;
 
 struct GlyphData;
 
-class TextRun {
-    WTF_MAKE_FAST_ALLOCATED;
+class TextRun final : public CanMakeCheckedPtr<TextRun, WTF::DefaultedOperatorEqual::No, WTF::CheckedPtrDeleteCheckException::Yes> {
+    WTF_MAKE_TZONE_ALLOCATED(TextRun);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(TextRun);
     friend void add(Hasher&, const TextRun&);
 public:
     explicit TextRun(const String& text, float xpos = 0, float expansion = 0, ExpansionBehavior expansionBehavior = ExpansionBehavior::defaultBehavior(), TextDirection direction = TextDirection::LTR, bool directionalOverride = false, bool characterScanForCodePath = true)
@@ -108,24 +112,21 @@ public:
         auto result { *this };
 
         if (is8Bit())
-            result.setText(data8(startOffset), length);
+            result.setText(subspan8(startOffset).first(length));
         else
-            result.setText(data16(startOffset), length);
+            result.setText(subspan16(startOffset).first(length));
         return result;
     }
 
-    UChar operator[](unsigned i) const { ASSERT_WITH_SECURITY_IMPLICATION(i < m_text.length()); return m_text[i]; }
-    const LChar* data8(unsigned i) const { ASSERT_WITH_SECURITY_IMPLICATION(i < m_text.length()); ASSERT(is8Bit()); return &m_text.characters8()[i]; }
-    const UChar* data16(unsigned i) const { ASSERT_WITH_SECURITY_IMPLICATION(i < m_text.length()); ASSERT(!is8Bit()); return &m_text.characters16()[i]; }
-
-    const LChar* characters8() const { ASSERT(is8Bit()); return m_text.characters8(); }
-    const UChar* characters16() const { ASSERT(!is8Bit()); return m_text.characters16(); }
+    char16_t operator[](unsigned i) const { RELEASE_ASSERT(i < m_text.length()); return m_text[i]; }
+    std::span<const Latin1Character> span8() const LIFETIME_BOUND { ASSERT(is8Bit()); return m_text.span8(); }
+    std::span<const char16_t> span16() const LIFETIME_BOUND { ASSERT(!is8Bit()); return m_text.span16(); }
+    std::span<const Latin1Character> subspan8(unsigned i) const LIFETIME_BOUND { return span8().subspan(i); }
+    std::span<const char16_t> subspan16(unsigned i) const LIFETIME_BOUND { return span16().subspan(i); }
 
     bool is8Bit() const { return m_text.is8Bit(); }
     unsigned length() const { return m_text.length(); }
 
-    void setText(const LChar* text, unsigned length) { setText({ text, length }); }
-    void setText(const UChar* text, unsigned length) { setText({ text, length }); }
     void setText(StringView text) { ASSERT(!text.isNull()); m_text = text.toStringWithoutCopying(); }
 
     float horizontalGlyphStretch() const { return m_horizontalGlyphStretch; }
@@ -150,11 +151,14 @@ public:
     void setDirection(TextDirection direction) { m_direction = static_cast<unsigned>(direction); }
     void setDirectionalOverride(bool override) { m_directionalOverride = override; }
     void setCharacterScanForCodePath(bool scan) { m_characterScanForCodePath = scan; }
-    StringView text() const { return m_text; }
+    StringView text() const LIFETIME_BOUND { return m_text; }
 
     TextRun isolatedCopy() const;
 
     const String& textAsString() const { return m_text; }
+
+    void setTextSpacingState(TextSpacing::SpacingState spacingState) { m_textSpacingState = spacingState; }
+    TextSpacing::SpacingState textSpacingState() const { return m_textSpacingState; }
 
 private:
     String m_text;
@@ -170,6 +174,9 @@ private:
 
     float m_expansion;
     ExpansionBehavior m_expansionBehavior;
+
+    TextSpacing::SpacingState m_textSpacingState;
+
     unsigned m_allowTabs : 1;
     unsigned m_direction : 1;
     unsigned m_directionalOverride : 1; // Was this direction set by an override character.
@@ -186,10 +193,12 @@ inline void TextRun::setTabSize(bool allow, const TabSize& size)
 inline TextRun TextRun::isolatedCopy() const
 {
     TextRun clone = *this;
+    // We need to ensure a deep copy here, calling `clone.m_text.isolatedCopy()`
+    // is insufficient (rdar://125823370).
     if (clone.m_text.is8Bit())
-        clone.m_text = String(clone.m_text.characters8(), clone.m_text.length());
+        clone.m_text = clone.m_text.span8();
     else
-        clone.m_text = String(clone.m_text.characters16(), clone.m_text.length());
+        clone.m_text = clone.m_text.span16();
     return clone;
 }
 

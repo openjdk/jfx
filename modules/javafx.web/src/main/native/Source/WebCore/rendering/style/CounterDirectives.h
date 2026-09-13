@@ -28,15 +28,15 @@ namespace WebCore {
 struct CounterDirectives {
     std::optional<int> resetValue;
     std::optional<int> incrementValue;
-};
+    std::optional<int> setValue;
 
-constexpr bool operator==(const CounterDirectives& a, const CounterDirectives& b)
-{
-    return a.incrementValue == b.incrementValue && a.resetValue == b.resetValue;
-}
+    constexpr bool operator==(const CounterDirectives&) const = default;
+};
 
 struct CounterDirectiveMap {
     HashMap<AtomString, CounterDirectives> map;
+
+    bool operator==(const CounterDirectiveMap&) const = default;
 };
 
 } // namespace WebCore

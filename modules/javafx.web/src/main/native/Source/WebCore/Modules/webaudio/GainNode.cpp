@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,11 +32,12 @@
 #include "AudioNodeInput.h"
 #include "AudioNodeOutput.h"
 #include "AudioUtilities.h"
-#include <wtf/IsoMallocInlines.h>
+#include "ExceptionOr.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(GainNode);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(GainNode);
 
 ExceptionOr<Ref<GainNode>> GainNode::create(BaseAudioContext& context, const GainOptions& options)
 {
@@ -68,40 +69,41 @@ void GainNode::process(size_t framesToProcess)
     // happen in the summing junction input of the AudioNode we're connected to.
     // Then we can avoid all of the following:
 
-    AudioBus* outputBus = output(0)->bus();
-    ASSERT(outputBus);
+    CheckedPtr firstOutput = output(0);
+    AudioBus& outputBus = firstOutput->bus();
 
-    if (!isInitialized() || !input(0)->isConnected())
-        outputBus->zero();
+    CheckedPtr firstInput = input(0);
+    if (!isInitialized() || !firstInput->isConnected())
+        outputBus.zero();
     else {
-        AudioBus* inputBus = input(0)->bus();
+        AudioBus& inputBus = firstInput->bus();
 
         if (gain().hasSampleAccurateValues() && gain().automationRate() == AutomationRate::ARate) {
             // Apply sample-accurate gain scaling for precise envelopes, grain windows, etc.
             ASSERT(framesToProcess <= m_sampleAccurateGainValues.size());
             if (framesToProcess <= m_sampleAccurateGainValues.size()) {
-                float* gainValues = m_sampleAccurateGainValues.data();
-                gain().calculateSampleAccurateValues(gainValues, framesToProcess);
-                outputBus->copyWithSampleAccurateGainValuesFrom(*inputBus, gainValues, framesToProcess);
+                auto gainValues = m_sampleAccurateGainValues.span().first(framesToProcess);
+                gain().calculateSampleAccurateValues(gainValues);
+                outputBus.copyWithSampleAccurateGainValuesFrom(inputBus, gainValues);
             }
         } else {
             // Apply the gain with de-zippering into the output bus.
             float gain = this->gain().hasSampleAccurateValues() ? this->gain().finalValue() : this->gain().value();
             if (!gain) {
                 // If the gain is 0 just zero the bus.
-                outputBus->zero();
+                outputBus.zero();
             } else
-                outputBus->copyWithGainFrom(*inputBus, gain);
+                outputBus.copyWithGainFrom(inputBus, gain);
         }
     }
 }
 
 void GainNode::processOnlyAudioParams(size_t framesToProcess)
 {
-    float values[AudioUtilities::renderQuantumSize];
+    std::array<float, AudioUtilities::renderQuantumSize> values;
     ASSERT(framesToProcess <= AudioUtilities::renderQuantumSize);
 
-    m_gain->calculateSampleAccurateValues(values, framesToProcess);
+    m_gain->calculateSampleAccurateValues(std::span { values }.first(framesToProcess));
 }
 
 // FIXME: this can go away when we do mixing with gain directly in summing junction of AudioNodeInput
@@ -126,7 +128,7 @@ void GainNode::checkNumberOfChannelsForInput(AudioNodeInput* input)
 
     if (!isInitialized()) {
         // This will propagate the channel count to any nodes connected further downstream in the graph.
-        output(0)->setNumberOfChannels(numberOfChannels);
+        checkedOutput(0)->setNumberOfChannels(numberOfChannels);
         initialize();
     }
 

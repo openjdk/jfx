@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "JSObject.h"
+#include <JavaScriptCore/JSObject.h>
 
 namespace JSC {
 
@@ -28,7 +28,7 @@ class DateInstance final : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
 
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
     static void destroy(JSCell* cell)
     {
         static_cast<DateInstance*>(cell)->DateInstance::~DateInstance();
@@ -73,13 +73,10 @@ public:
         return calculateGregorianDateTimeUTC(cache);
     }
 
-    static Structure* createStructure(VM& vm, JSGlobalObject* globalObject, JSValue prototype)
-    {
-        return Structure::create(vm, globalObject, prototype, TypeInfo(JSDateType, StructureFlags), info());
-    }
+    inline static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
-    static ptrdiff_t offsetOfInternalNumber() { return OBJECT_OFFSETOF(DateInstance, m_internalNumber); }
-    static ptrdiff_t offsetOfData() { return OBJECT_OFFSETOF(DateInstance, m_data); }
+    static constexpr ptrdiff_t offsetOfInternalNumber() { return OBJECT_OFFSETOF(DateInstance, m_internalNumber); }
+    static constexpr ptrdiff_t offsetOfData() { return OBJECT_OFFSETOF(DateInstance, m_data); }
 
 private:
     JS_EXPORT_PRIVATE DateInstance(VM&, Structure*);

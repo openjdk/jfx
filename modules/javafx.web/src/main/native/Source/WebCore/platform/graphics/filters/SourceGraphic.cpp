@@ -29,34 +29,40 @@
 #include "SourceGraphicCoreImageApplier.h"
 #endif
 
+#if USE(SKIA)
+#include "SourceGraphicSkiaApplier.h"
+#endif
+
 namespace WebCore {
 
-Ref<SourceGraphic> SourceGraphic::create()
+Ref<SourceGraphic> SourceGraphic::create(DestinationColorSpace colorSpace)
 {
-    return adoptRef(*new SourceGraphic());
+    return adoptRef(*new SourceGraphic(colorSpace));
 }
 
-SourceGraphic::SourceGraphic()
-    : FilterEffect(FilterEffect::Type::SourceGraphic)
+SourceGraphic::SourceGraphic(DestinationColorSpace colorSpace)
+    : FilterEffect(FilterEffect::Type::SourceGraphic, colorSpace)
 {
 }
 
-OptionSet<FilterRenderingMode> SourceGraphic::supportedFilterRenderingModes() const
+OptionSet<FilterRenderingMode> SourceGraphic::supportedFilterRenderingModes(OptionSet<FilterRenderingMode> preferredFilterRenderingModes) const
 {
     OptionSet<FilterRenderingMode> modes = FilterRenderingMode::Software;
-#if USE(CORE_IMAGE)
+#if USE(CORE_IMAGE) || USE(SKIA)
     modes.add(FilterRenderingMode::Accelerated);
 #endif
 #if USE(GRAPHICS_CONTEXT_FILTERS)
     modes.add(FilterRenderingMode::GraphicsContext);
 #endif
-    return modes;
+    return modes & preferredFilterRenderingModes;
 }
 
 std::unique_ptr<FilterEffectApplier> SourceGraphic::createAcceleratedApplier() const
 {
 #if USE(CORE_IMAGE)
     return FilterEffectApplier::create<SourceGraphicCoreImageApplier>(*this);
+#elif USE(SKIA)
+    return FilterEffectApplier::create<SourceGraphicSkiaApplier>(*this);
 #else
     return nullptr;
 #endif
@@ -64,12 +70,16 @@ std::unique_ptr<FilterEffectApplier> SourceGraphic::createAcceleratedApplier() c
 
 std::unique_ptr<FilterEffectApplier> SourceGraphic::createSoftwareApplier() const
 {
+#if USE(SKIA)
+    return FilterEffectApplier::create<SourceGraphicSkiaApplier>(*this);
+#else
     return FilterEffectApplier::create<SourceGraphicSoftwareApplier>(*this);
+#endif
 }
 
 TextStream& SourceGraphic::externalRepresentation(TextStream& ts, FilterRepresentation) const
 {
-    ts << indent << "[SourceGraphic]\n";
+    ts << indent << "[SourceGraphic]\n"_s;
     return ts;
 }
 

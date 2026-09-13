@@ -28,7 +28,9 @@
 
 #pragma once
 
-#include "CSSPrimitiveValue.h"
+#include "CSSRayFunction.h"
+#include "CSSValue.h"
+#include "RenderStyleConstants.h"
 
 namespace WebCore {
 
@@ -36,32 +38,29 @@ namespace WebCore {
 // https://drafts.fxtf.org/motion-1/#funcdef-offset-path-ray.
 class CSSRayValue final : public CSSValue {
 public:
-    static Ref<CSSRayValue> create(Ref<CSSPrimitiveValue>&& angle, CSSValueID size, bool isContaining)
+    static Ref<CSSRayValue> create(CSS::RayFunction ray, CSSBoxType coordinateBox = CSSBoxType::BoxMissing)
     {
-        return adoptRef(*new CSSRayValue(WTFMove(angle), size, isContaining));
+        return adoptRef(*new CSSRayValue(WTF::move(ray), coordinateBox));
     }
 
-    String customCSSText() const;
 
-    Ref<CSSPrimitiveValue> angle() const { return m_angle; }
-    CSSValueID size() const { return m_size; }
-    bool isContaining() const { return m_isContaining; }
+    const CSS::RayFunction& ray() const { return m_ray; }
+    CSSBoxType coordinateBox() const { return m_coordinateBox; }
 
+    String customCSSText(const CSS::SerializationContext&) const;
     bool equals(const CSSRayValue&) const;
+    IterationStatus customVisitChildren(NOESCAPE const Function<IterationStatus(CSSValue&)>&) const;
 
 private:
-    CSSRayValue(Ref<CSSPrimitiveValue>&& angle, CSSValueID size, bool isContaining)
-        : CSSValue(RayClass)
-        , m_angle(WTFMove(angle))
-        , m_size(size)
-        , m_isContaining(isContaining)
+    CSSRayValue(CSS::RayFunction ray, CSSBoxType coordinateBox)
+        : CSSValue(ClassType::Ray)
+        , m_ray(WTF::move(ray))
+        , m_coordinateBox(coordinateBox)
     {
-        ASSERT(m_angle->isAngle());
     }
 
-    Ref<CSSPrimitiveValue> m_angle;
-    CSSValueID m_size;
-    bool m_isContaining;
+    CSS::RayFunction m_ray;
+    CSSBoxType m_coordinateBox;
 };
 
 } // namespace WebCore

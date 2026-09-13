@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include "ExceptionOr.h"
+#include "Performance.h"
 #include "PerformanceEntry.h"
 #include "PerformanceObserverCallback.h"
+#include "dom/DOMHighResTimeStamp.h"
 #include <wtf/OptionSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
@@ -37,6 +38,7 @@ namespace WebCore {
 
 class Performance;
 class ScriptExecutionContext;
+template<typename> class ExceptionOr;
 
 class PerformanceObserver : public RefCounted<PerformanceObserver> {
 public:
@@ -44,11 +46,12 @@ public:
         std::optional<Vector<String>> entryTypes;
         std::optional<String> type;
         bool buffered;
+        std::optional<DOMHighResTimeStamp> durationThreshold;
     };
 
     static Ref<PerformanceObserver> create(ScriptExecutionContext& context, Ref<PerformanceObserverCallback>&& callback)
     {
-        return adoptRef(*new PerformanceObserver(context, WTFMove(callback)));
+        return adoptRef(*new PerformanceObserver(context, WTF::move(callback)));
     }
 
     static Vector<String> supportedEntryTypes(ScriptExecutionContext&);
@@ -57,7 +60,7 @@ public:
 
     ExceptionOr<void> observe(Init&&);
     void disconnect();
-    Vector<RefPtr<PerformanceEntry>> takeRecords();
+    Vector<Ref<PerformanceEntry>> takeRecords();
 
     OptionSet<PerformanceEntry::Type> typeFilter() const { return m_typeFilter; }
 
@@ -69,14 +72,18 @@ public:
 
     bool isRegistered() const { return m_registered; }
     PerformanceObserverCallback& callback() { return m_callback.get(); }
+    Seconds durationThreshold() const { return m_durationThreshold; }
 
 private:
     PerformanceObserver(ScriptExecutionContext&, Ref<PerformanceObserverCallback>&&);
 
+    RefPtr<Performance> protectedPerformance() const;
+
     RefPtr<Performance> m_performance;
-    Vector<RefPtr<PerformanceEntry>> m_entriesToDeliver;
-    Ref<PerformanceObserverCallback> m_callback;
+    Vector<Ref<PerformanceEntry>> m_entriesToDeliver;
+    const Ref<PerformanceObserverCallback> m_callback;
     OptionSet<PerformanceEntry::Type> m_typeFilter;
+    Seconds m_durationThreshold;
     bool m_registered { false };
     bool m_isTypeObserver { false };
     bool m_hasNavigationTiming { false };

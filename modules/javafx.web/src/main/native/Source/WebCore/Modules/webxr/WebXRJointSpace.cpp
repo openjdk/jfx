@@ -31,28 +31,28 @@
 #include "WebXRFrame.h"
 #include "WebXRHand.h"
 #include "WebXRRigidTransform.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(WebXRJointSpace);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WebXRJointSpace);
 
-Ref<WebXRJointSpace> WebXRJointSpace::create(Document& document, WebXRHand& hand, XRHandJoint jointName, std::optional<PlatformXR::Device::FrameData::InputSourceHandJoint>&& joint)
+Ref<WebXRJointSpace> WebXRJointSpace::create(Document& document, WebXRHand& hand, XRHandJoint jointName, std::optional<PlatformXR::FrameData::InputSourceHandJoint>&& joint)
 {
-    return adoptRef(*new WebXRJointSpace(document, hand, jointName, WTFMove(joint)));
+    return adoptRef(*new WebXRJointSpace(document, hand, jointName, WTF::move(joint)));
 }
 
-WebXRJointSpace::WebXRJointSpace(Document& document, WebXRHand& hand, XRHandJoint jointName, std::optional<PlatformXR::Device::FrameData::InputSourceHandJoint>&& joint)
+WebXRJointSpace::WebXRJointSpace(Document& document, WebXRHand& hand, XRHandJoint jointName, std::optional<PlatformXR::FrameData::InputSourceHandJoint>&& joint)
     : WebXRSpace(document, WebXRRigidTransform::create())
     , m_hand(hand)
     , m_jointName(jointName)
-    , m_joint(WTFMove(joint))
+    , m_joint(WTF::move(joint))
 {
 }
 
 WebXRJointSpace::~WebXRJointSpace() = default;
 
-void WebXRJointSpace::updateFromJoint(const std::optional<PlatformXR::Device::FrameData::InputSourceHandJoint>& joint)
+void WebXRJointSpace::updateFromJoint(const std::optional<PlatformXR::FrameData::InputSourceHandJoint>& joint)
 {
     m_joint = joint;
 }

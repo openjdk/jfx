@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,11 @@ import com.sun.javafx.geom.PathIterator;
 import com.sun.javafx.geom.QuadCurve2D;
 import com.sun.javafx.geom.Shape;
 import com.sun.prism.BasicStroke;
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+
+import java.util.concurrent.TimeUnit;
 
 public class rt_6334Test {
     static int numcoords[] = { 2, 2, 4, 6, 0 };
@@ -71,7 +75,8 @@ public class rt_6334Test {
         }
     }
 
-    @Test(timeout=1000)
+    @Test
+    @Timeout(value=1000, unit=TimeUnit.MILLISECONDS)
     public void test_6334() {
         Path2D p = new Path2D();
         p.moveTo(304.51f, 179.78f);
@@ -88,19 +93,21 @@ public class rt_6334Test {
         return rndFlt() * 2f + 300f;
     }
 
-    @Test(timeout=5000)
+    @Test
+    @Timeout(value=5000, unit=TimeUnit.MILLISECONDS)
     public void testLines() {
         Line2D l = new Line2D();
         for (int i = 0; i < 50000; i++) {
             l.setLine(rndCoord(), rndCoord(),
-                      rndCoord(), rndCoord());
+                    rndCoord(), rndCoord());
             testPath(l, 1f);
             testPath(l, rndFlt() * 10f);
             testPath(l, 20f);
         }
     }
 
-    @Test(timeout=5000)
+    @Test
+    @Timeout(value=5000, unit=TimeUnit.MILLISECONDS)
     public void testQuads() {
         QuadCurve2D qc = new QuadCurve2D();
         for (int i = 0; i < 50000; i++) {
@@ -113,7 +120,8 @@ public class rt_6334Test {
         }
     }
 
-    @Test(timeout=5000)
+    @Test
+    @Timeout(value=5000, unit=TimeUnit.MILLISECONDS)
     public void testCubics() {
         CubicCurve2D cc = new CubicCurve2D();
         for (int i = 0; i < 50000; i++) {

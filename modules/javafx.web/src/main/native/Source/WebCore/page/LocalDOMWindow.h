@@ -26,94 +26,73 @@
 
 #pragma once
 
-#include "Base64Utilities.h"
-#include "ContextDestructionObserver.h"
-#include "DOMWindow.h"
-#include "ExceptionOr.h"
-#include "ImageBitmap.h"
-#include "LocalFrame.h"
-#include "ReducedResolutionSeconds.h"
-#include "ScrollToOptions.h"
-#include "ScrollTypes.h"
-#include "Supplementable.h"
-#include "WindowOrWorkerGlobalScope.h"
-#include "WindowPostMessageOptions.h"
-#include <JavaScriptCore/HandleTypes.h>
-#include <JavaScriptCore/Strong.h>
+#include <JavaScriptCore/HandleForward.h>
+#include <WebCore/ContextDestructionObserver.h>
+#include <WebCore/DOMHighResTimeStamp.h>
+#include <WebCore/DOMWindow.h>
+#include <WebCore/EventTargetInterfaces.h>
+#include <WebCore/PerformanceEventTimingCandidate.h>
+#include <WebCore/PushSubscriptionOwner.h>
+#include <WebCore/Supplementable.h>
+#include <WebCore/WindowOrWorkerGlobalScope.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/FixedVector.h>
 #include <wtf/Function.h>
 #include <wtf/HashSet.h>
 #include <wtf/MonotonicTime.h>
-#include <wtf/WeakPtr.h>
+#include <wtf/Platform.h>
+#include <wtf/WeakHashSet.h>
 
 namespace JSC {
 class CallFrame;
 class JSObject;
 class JSValue;
+template <typename, ShouldStrongDestructorGrabLock> class Strong;
 }
 
 namespace WebCore {
 
-class BarProp;
-class CSSRuleList;
-class CSSStyleDeclaration;
-class CookieStore;
-class Crypto;
-class CustomElementRegistry;
-class DOMApplicationCache;
-class DOMSelection;
-class DOMWrapperWorld;
-class Document;
-class Element;
-class EventListener;
-class FloatRect;
-class History;
-class IdleRequestCallback;
-class LocalDOMWindowProperty;
-class Location;
-class MediaQueryList;
-class Navigator;
-class Node;
-class NodeList;
-class Page;
-class PageConsoleClient;
-class Performance;
-class RequestAnimationFrameCallback;
-class RequestIdleCallback;
-class ScheduledAction;
-class Screen;
-class Storage;
-class StyleMedia;
-class VisualViewport;
-class WebCoreOpaqueRoot;
-class WebKitNamespace;
-class WebKitPoint;
-class WindowProxy;
+class CloseWatcherManager;
+class LocalFrame;
+class SecurityOriginData;
+struct ScrollToOptions;
+struct WindowPostMessageOptions;
 
-#if ENABLE(DEVICE_ORIENTATION)
-class DeviceMotionController;
-class DeviceOrientationController;
-#endif
+enum class PlatformEventModifier : uint8_t;
+using ReducedResolutionSeconds = Seconds;
 
-struct IdleRequestOptions;
-struct ImageBitmapOptions;
-struct MessageWithMessagePorts;
-struct WindowFeatures;
+template<typename> class ExceptionOr;
 
-enum SetLocationLocking { LockHistoryBasedOnGestureState, LockHistoryAndBackForwardList };
-enum class IncludeTargetOrigin : bool { No, Yes };
+class LocalDOMWindowObserver : public AbstractRefCountedAndCanMakeWeakPtr<LocalDOMWindowObserver> {
+public:
+    virtual ~LocalDOMWindowObserver() { }
+
+    virtual void suspendForBackForwardCache() { }
+    virtual void resumeFromBackForwardCache() { }
+    virtual void willDestroyGlobalObjectInCachedFrame() { }
+    virtual void willDestroyGlobalObjectInFrame() { }
+    virtual void willDetachGlobalObjectFromFrame() { }
+};
 
 class LocalDOMWindow final
     : public DOMWindow
     , public ContextDestructionObserver
-    , public Base64Utilities
     , public WindowOrWorkerGlobalScope
-    , public Supplementable<LocalDOMWindow> {
-    WTF_MAKE_ISO_ALLOCATED(LocalDOMWindow);
+    , public Supplementable<LocalDOMWindow>
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    , public PushSubscriptionOwner
+#endif
+    {
+    WTF_MAKE_TZONE_ALLOCATED(LocalDOMWindow);
 public:
 
     static Ref<LocalDOMWindow> create(Document& document) { return adoptRef(*new LocalDOMWindow(document)); }
     WEBCORE_EXPORT virtual ~LocalDOMWindow();
+
+    // ContextDestructionObserver.
+    void ref() const final { DOMWindow::ref(); }
+    void deref() const final { DOMWindow::deref(); }
+    USING_CAN_MAKE_WEAKPTR(DOMWindow);
 
     // In some rare cases, we'll reuse a LocalDOMWindow for a new Document. For example,
     // when a script calls window.open("..."), the browser gives JavaScript a window
@@ -124,27 +103,18 @@ public:
     // the network load. See also SecurityContext::isSecureTransitionTo.
     void didSecureTransitionTo(Document&);
 
-    class Observer {
-    public:
-        virtual ~Observer() { }
-
-        virtual void suspendForBackForwardCache() { }
-        virtual void resumeFromBackForwardCache() { }
-        virtual void willDestroyGlobalObjectInCachedFrame() { }
-        virtual void willDestroyGlobalObjectInFrame() { }
-        virtual void willDetachGlobalObjectFromFrame() { }
-    };
-
-    WEBCORE_EXPORT void registerObserver(Observer&);
-    WEBCORE_EXPORT void unregisterObserver(Observer&);
+    WEBCORE_EXPORT void registerObserver(LocalDOMWindowObserver&);
+    WEBCORE_EXPORT void unregisterObserver(LocalDOMWindowObserver&);
 
     void resetUnlessSuspendedForDocumentSuspension();
     void suspendForBackForwardCache();
     void resumeFromBackForwardCache();
 
-    WEBCORE_EXPORT LocalFrame* frame() const final;
+    WEBCORE_EXPORT Frame* frame() const final;
+    WEBCORE_EXPORT LocalFrame* localFrame() const;
+    RefPtr<LocalFrame> protectedFrame() const;
 
-    RefPtr<MediaQueryList> matchMedia(const String&);
+    RefPtr<WebCore::MediaQueryList> matchMedia(const String&);
 
     WEBCORE_EXPORT unsigned pendingUnloadEventListeners() const;
 
@@ -159,7 +129,7 @@ public:
     WEBCORE_EXPORT void setCanShowModalDialogOverride(bool);
 
     Screen& screen();
-    History& history();
+    WEBCORE_EXPORT History& history();
     Crypto& crypto() const;
     BarProp& locationbar();
     BarProp& menubar();
@@ -168,8 +138,8 @@ public:
     BarProp& statusbar();
     BarProp& toolbar();
     WEBCORE_EXPORT Navigator& navigator();
+    WEBCORE_EXPORT Ref<Navigator> protectedNavigator();
     Navigator* optionalNavigator() const { return m_navigator.get(); }
-    Navigator& clientInformation() { return navigator(); }
 
     WEBCORE_EXPORT static void overrideTransientActivationDurationForTesting(std::optional<Seconds>&&);
     void setLastActivationTimestamp(MonotonicTime lastActivationTimestamp) { m_lastActivationTimestamp = lastActivationTimestamp; }
@@ -179,30 +149,36 @@ public:
     WEBCORE_EXPORT bool hasTransientActivation() const;
     bool hasStickyActivation() const;
     WEBCORE_EXPORT bool consumeTransientActivation();
+    WEBCORE_EXPORT bool hasHistoryActionActivation() const;
+    WEBCORE_EXPORT bool consumeHistoryActionUserActivation();
+    WEBCORE_EXPORT static Seconds transientActivationDuration();
 
-    WEBCORE_EXPORT Location& location();
-    void setLocation(LocalDOMWindow& activeWindow, const URL& completedURL, SetLocationLocking = LockHistoryBasedOnGestureState);
+    struct ClickEventData {
+        MonotonicTime time;
+        OptionSet<PlatformEventModifier> modifiers;
+    };
+    void updateLastUserClickEvent(OptionSet<PlatformEventModifier>);
+    WEBCORE_EXPORT std::optional<ClickEventData> consumeLastUserClickEvent();
 
     DOMSelection* getSelection();
 
-    Element* frameElement() const;
+    HTMLFrameOwnerElement* frameElement() const;
+    RefPtr<HTMLFrameOwnerElement> protectedFrameElement() const;
 
     WEBCORE_EXPORT void focus(bool allowFocus = false);
     void focus(LocalDOMWindow& incumbentWindow);
     void blur();
-    WEBCORE_EXPORT void close();
-    void close(Document&);
     void print();
     void stop();
     bool isStopping() const { return m_isStopping; }
 
     WEBCORE_EXPORT ExceptionOr<RefPtr<WindowProxy>> open(LocalDOMWindow& activeWindow, LocalDOMWindow& firstWindow, const String& urlString, const AtomString& frameName, const String& windowFeaturesString);
 
-    void showModalDialog(const String& urlString, const String& dialogFeaturesString, LocalDOMWindow& activeWindow, LocalDOMWindow& firstWindow, const Function<void(LocalDOMWindow&)>& prepareDialogFunction);
+    void showModalDialog(const String& urlString, const String& dialogFeaturesString, LocalDOMWindow& activeWindow, LocalDOMWindow& firstWindow, NOESCAPE const Function<void(LocalDOMWindow&)>& prepareDialogFunction);
 
     void prewarmLocalStorageIfNecessary();
 
-    void alert(const String& message = emptyString());
+    void alert(const String& message);
     bool confirmForBindings(const String& message);
     String prompt(const String& message, const String& defaultValue);
 
@@ -221,8 +197,6 @@ public:
     int scrollX() const;
     int scrollY() const;
 
-    bool closed() const;
-
     unsigned length() const;
 
     AtomString name() const;
@@ -230,13 +204,12 @@ public:
 
     String status() const;
     void setStatus(const String&);
+#if PLATFORM(JAVA)
     String defaultStatus() const;
     void setDefaultStatus(const String&);
+#endif
 
-    WindowProxy* opener() const;
     void disownOpener();
-    WindowProxy* parent() const;
-    WindowProxy* top() const;
 
     String origin() const;
     SecurityOrigin* securityOrigin() const;
@@ -244,6 +217,7 @@ public:
     // DOM Level 2 AbstractView Interface
 
     WEBCORE_EXPORT Document* document() const;
+    WEBCORE_EXPORT RefPtr<Document> protectedDocument() const;
 
     // CSSOM View Module
 
@@ -261,18 +235,8 @@ public:
     RefPtr<WebKitPoint> webkitConvertPointFromPageToNode(Node*, const WebKitPoint*) const;
     RefPtr<WebKitPoint> webkitConvertPointFromNodeToPage(Node*, const WebKitPoint*) const;
 
-    PageConsoleClient* console() const;
-
-    void printErrorMessage(const String&) const;
-
-    String crossDomainAccessErrorMessage(const LocalDOMWindow& activeWindow, IncludeTargetOrigin);
-
     ExceptionOr<void> postMessage(JSC::JSGlobalObject&, LocalDOMWindow& incumbentWindow, JSC::JSValue message, WindowPostMessageOptions&&);
-    ExceptionOr<void> postMessage(JSC::JSGlobalObject& globalObject, LocalDOMWindow& incumbentWindow, JSC::JSValue message, String&& targetOrigin, Vector<JSC::Strong<JSC::JSObject>>&& transfer)
-    {
-        return postMessage(globalObject, incumbentWindow, message, WindowPostMessageOptions { WTFMove(targetOrigin), WTFMove(transfer) });
-    }
-    WEBCORE_EXPORT void postMessageFromRemoteFrame(JSC::JSGlobalObject&, std::optional<WebCore::SecurityOriginData> target, const WebCore::MessageWithMessagePorts&);
+    WEBCORE_EXPORT void postMessageFromRemoteFrame(JSC::JSGlobalObject&, RefPtr<WindowProxy>&& source, const SecurityOriginData& sourceOrigin, std::optional<WebCore::SecurityOriginData>&& targetOrigin, const WebCore::MessageWithMessagePorts&);
 
     void languagesChanged();
 
@@ -281,11 +245,11 @@ public:
     void scrollTo(const ScrollToOptions&, ScrollClamping = ScrollClamping::Clamped, ScrollSnapPointSelectionMethod = ScrollSnapPointSelectionMethod::Closest, std::optional<FloatSize> originalScrollDelta = std::nullopt) const;
     void scrollTo(double x, double y, ScrollClamping = ScrollClamping::Clamped) const;
 
-    void moveBy(float x, float y) const;
-    void moveTo(float x, float y) const;
+    void moveBy(int x, int y) const;
+    void moveTo(int x, int y) const;
 
-    void resizeBy(float x, float y) const;
-    void resizeTo(float width, float height) const;
+    void resizeBy(int x, int y) const;
+    void resizeTo(int width, int height) const;
 
     VisualViewport& visualViewport();
 
@@ -327,14 +291,20 @@ public:
 
     void finishedLoading();
 
+    // EventTiming API
+    PerformanceEventTimingCandidate initializeEventTimingEntry(Event&, EventType);
+    void finalizeEventTimingEntry(PerformanceEventTimingCandidate&, const Event&, EventType);
+    void dispatchPendingEventTimingEntries();
+    uint64_t interactionCount() { return m_interactionCount; }
+    // Misleading function names that mirror the spec; see https://github.com/w3c/event-timing/issues/158 :
+    bool hasDispatchedInputEvent() const { return m_hasDispatchedInputEvent; }
+    void setDispatchedInputEvent() { m_hasDispatchedInputEvent = true; }
+
     // HTML 5 key/value storage
     ExceptionOr<Storage*> sessionStorage();
     ExceptionOr<Storage*> localStorage();
     Storage* optionalSessionStorage() const { return m_sessionStorage.get(); }
     Storage* optionalLocalStorage() const { return m_localStorage.get(); }
-
-    DOMApplicationCache& applicationCache();
-    DOMApplicationCache* optionalApplicationCache() const { return m_applicationCache.get(); }
 
     CustomElementRegistry* customElementRegistry() { return m_customElementRegistry.get(); }
     CustomElementRegistry& ensureCustomElementRegistry();
@@ -350,6 +320,8 @@ public:
 #endif
 
     Performance& performance() const;
+    Ref<Performance> protectedPerformance() const;
+
     WEBCORE_EXPORT ReducedResolutionSeconds nowTimestamp() const;
     void freezeNowTimestamp();
     void unfreezeNowTimestamp();
@@ -381,15 +353,13 @@ public:
 #endif
 
 #if ENABLE(USER_MESSAGE_HANDLERS)
-    bool shouldHaveWebKitNamespaceForWorld(DOMWrapperWorld&);
+    bool shouldHaveWebKitNamespaceForWorld(DOMWrapperWorld&, JSC::JSGlobalObject*);
     WebKitNamespace* webkitNamespace();
 #endif
 
-    // FIXME: When this LocalDOMWindow is no longer the active LocalDOMWindow (i.e.,
-    // when its document is no longer the document that is displayed in its
-    // frame), we would like to zero out m_frame to avoid being confused
-    // by the document that is currently active in m_frame.
-    bool isCurrentlyDisplayedInFrame() const;
+    // Navigation API
+    WEBCORE_EXPORT Navigation& navigation();
+    Ref<Navigation> protectedNavigation();
 
     void willDetachDocumentFromFrame();
     void willDestroyCachedFrame();
@@ -407,29 +377,44 @@ public:
     bool mayReuseForNavigation() const { return m_mayReuseForNavigation; }
 
     Page* page() const;
-    WEBCORE_EXPORT static void forEachWindowInterestedInStorageEvents(const Function<void(LocalDOMWindow&)>&);
+    RefPtr<Page> protectedPage() const;
+
+    WEBCORE_EXPORT static void forEachWindowInterestedInStorageEvents(NOESCAPE const Function<void(LocalDOMWindow&)>&);
 
     CookieStore& cookieStore();
+
+    CloseWatcherManager& closeWatcherManager();
+
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    PushManager& pushManager();
+#endif
 
 private:
     explicit LocalDOMWindow(Document&);
 
-    ScriptExecutionContext* scriptExecutionContext() const final { return ContextDestructionObserver::scriptExecutionContext(); }
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    using ContextDestructionObserver::protectedScriptExecutionContext;
 
-    bool isLocalDOMWindow() const final { return true; }
-    bool isRemoteDOMWindow() const final { return false; }
+    void closePage() final;
     void eventListenersDidChange() final;
+    void setLocation(LocalDOMWindow& activeWindow, const URL& completedURL, NavigationHistoryBehavior, SetLocationLocking, CanNavigateState) final;
 
     bool allowedToChangeWindowGeometry() const;
 
-    static ExceptionOr<RefPtr<LocalFrame>> createWindow(const String& urlString, const AtomString& frameName, const WindowFeatures&, LocalDOMWindow& activeWindow, LocalFrame& firstFrame, LocalFrame& openerFrame, const Function<void(LocalDOMWindow&)>& prepareDialogFunction = nullptr);
-    bool isInsecureScriptAccess(LocalDOMWindow& activeWindow, const String& urlString);
+    static ExceptionOr<RefPtr<Frame>> createWindow(const String& urlString, const AtomString& frameName, const WindowFeatures&, LocalDOMWindow& activeWindow, LocalFrame& firstFrame, LocalFrame& openerFrame, NOESCAPE const Function<void(LocalDOMWindow&)>& prepareDialogFunction = nullptr);
 
 #if ENABLE(DEVICE_ORIENTATION)
     bool isAllowedToUseDeviceMotionOrOrientation(String& message) const;
     bool hasPermissionToReceiveDeviceMotionOrOrientationEvents(String& message) const;
     void failedToRegisterDeviceMotionEventListener();
 #endif
+
+    EventTimingInteractionID computeInteractionID(Event&, EventType);
+    EventTimingInteractionID currentInteractionID();
+    EventTimingInteractionID& ensureUserInteractionValue();
+    EventTimingInteractionID generateInteractionID();
+    EventTimingInteractionID generateInteractionIDWithoutIncreasingInteractionCount();
+    void queueEventTimingCandidateForDispatch(PerformanceEventTimingCandidate&);
 
     bool isSameSecurityOriginAsMainFrame() const;
 
@@ -438,13 +423,23 @@ private:
     void decrementGamepadEventListenerCount();
 #endif
 
-    void processPostMessage(JSC::JSGlobalObject&, RefPtr<Document>&&, const MessageWithMessagePorts&, RefPtr<WindowProxy>&&, RefPtr<SecurityOrigin>&&);
+    void processPostMessage(JSC::JSGlobalObject&, Ref<SecurityOrigin>&&, const MessageWithMessagePorts&, RefPtr<WindowProxy>&&, RefPtr<SecurityOrigin>&&);
+
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    bool isActive() const final { return true; }
+
+    void subscribeToPushService(const Vector<uint8_t>& applicationServerKey, DOMPromiseDeferred<IDLInterface<PushSubscription>>&&) final;
+    void unsubscribeFromPushService(std::optional<PushSubscriptionIdentifier>, DOMPromiseDeferred<IDLBoolean>&&) final;
+    void getPushSubscription(DOMPromiseDeferred<IDLNullable<IDLInterface<PushSubscription>>>&&) final;
+    void getPushPermissionState(DOMPromiseDeferred<IDLEnumeration<PushPermissionState>>&&) final;
+#endif // ENABLE(DECLARATIVE_WEB_PUSH)
+
     bool m_shouldPrintWhenFinishedLoading { false };
     bool m_suspendedForDocumentSuspension { false };
     bool m_isSuspendingObservers { false };
     std::optional<bool> m_canShowModalDialogOverride;
 
-    HashSet<Observer*> m_observers;
+    WeakHashSet<LocalDOMWindowObserver> m_observers;
 
     mutable RefPtr<Crypto> m_crypto;
     mutable RefPtr<History> m_history;
@@ -458,11 +453,37 @@ private:
     mutable RefPtr<DOMSelection> m_selection;
     mutable RefPtr<BarProp> m_statusbar;
     mutable RefPtr<BarProp> m_toolbar;
-    mutable RefPtr<Location> m_location;
     mutable RefPtr<VisualViewport> m_visualViewport;
+    mutable RefPtr<Navigation> m_navigation;
+    mutable RefPtr<CloseWatcherManager> m_closeWatcherManager;
+
+    // Equivalent to the list of PerformanceEventTiming objects mentioned in https://www.w3.org/TR/event-timing/#sec-modifications-HTML :
+    Vector<PerformanceEventTimingCandidate, 6> m_performanceEventTimingCandidates;
+
+    // FIXME: support multiple pointers by implementing m_pointerMap
+    // as an actual map with PointerID as key:
+    EventTimingInteractionID m_pointerMap;
+    std::optional<PerformanceEventTimingCandidate> m_pendingPointerDown;
+
+    bool m_contextMenuTriggered { false };
+
+    // Workaround for https://webkit.org/b/301443 causing very old timestamps to be produced:
+    Seconds m_lastInputEventStartTime;
+
+    struct PendingKeyDownState {
+        PerformanceEventTimingCandidate keyDown;
+        std::optional<PerformanceEventTimingCandidate> keyPress { std::nullopt };
+    };
+    HashMap<int64_t, PendingKeyDownState, IntHash<int64_t>, WTF::SignedWithZeroKeyHashTraits<int64_t>> m_pendingKeyDowns;
+
+    EventTimingInteractionID m_userInteractionValue;
+    uint64_t m_interactionCount { 0 };
+    bool m_hasDispatchedInputEvent { false };
 
     String m_status;
+#if PLATFORM(JAVA)
     String m_defaultStatus;
+#endif
 
 #if PLATFORM(IOS_FAMILY)
     unsigned m_scrollEventListenerCount { 0 };
@@ -478,7 +499,6 @@ private:
 
     mutable RefPtr<Storage> m_sessionStorage;
     mutable RefPtr<Storage> m_localStorage;
-    mutable RefPtr<DOMApplicationCache> m_applicationCache;
 
     RefPtr<CustomElementRegistry> m_customElementRegistry;
 
@@ -491,6 +511,9 @@ private:
     // been activated, while negative infinity indicates that a user activation-gated API has consumed the last user activation of W. The initial
     // value is positive infinity.
     MonotonicTime m_lastActivationTimestamp { MonotonicTime::infinity() };
+    MonotonicTime m_lastHistoryActionActivationTimestamp { MonotonicTime::infinity() };
+
+    std::optional<ClickEventData> m_lastUserClickEvent;
 
     bool m_wasWrappedWithoutInitializedSecurityOrigin { false };
     bool m_mayReuseForNavigation { true };
@@ -500,23 +523,25 @@ private:
 #endif
 
     RefPtr<CookieStore> m_cookieStore;
+
+#if ENABLE(DECLARATIVE_WEB_PUSH)
+    const std::unique_ptr<PushManager> m_pushManager;
+#endif
 };
 
 inline String LocalDOMWindow::status() const
 {
     return m_status;
 }
-
+#if PLATFORM(JAVA)
 inline String LocalDOMWindow::defaultStatus() const
 {
     return m_defaultStatus;
 }
-
-WebCoreOpaqueRoot root(LocalDOMWindow*);
-
+#endif
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::LocalDOMWindow)
     static bool isType(const WebCore::DOMWindow& window) { return window.isLocalDOMWindow(); }
-    static bool isType(const WebCore::EventTarget& target) { return target.eventTargetInterface() == WebCore::LocalDOMWindowEventTargetInterfaceType; }
+    static bool isType(const WebCore::EventTarget& target) { return is<WebCore::DOMWindow>(target) && is<WebCore::LocalDOMWindow>(downcast<WebCore::DOMWindow>(target)); }
 SPECIALIZE_TYPE_TRAITS_END()

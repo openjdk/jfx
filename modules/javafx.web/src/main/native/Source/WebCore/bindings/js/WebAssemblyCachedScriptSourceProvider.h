@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2022 Igalia S.L. All rights reserved.
+ * Copyright (C) 2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,17 +39,21 @@
 namespace WebCore {
 
 class WebAssemblyCachedScriptSourceProvider final : public JSC::BaseWebAssemblySourceProvider, public CachedResourceClient {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WebAssemblyCachedScriptSourceProvider);
 public:
     static Ref<WebAssemblyCachedScriptSourceProvider> create(CachedScript* cachedScript, Ref<CachedScriptFetcher>&& scriptFetcher)
     {
-        return adoptRef(*new WebAssemblyCachedScriptSourceProvider(cachedScript, JSC::SourceOrigin { cachedScript->response().url(), WTFMove(scriptFetcher) }, cachedScript->response().url().string()));
+        return adoptRef(*new WebAssemblyCachedScriptSourceProvider(cachedScript, JSC::SourceOrigin { cachedScript->response().url(), WTF::move(scriptFetcher) }, cachedScript->response().url().string()));
     }
 
     virtual ~WebAssemblyCachedScriptSourceProvider()
     {
         m_cachedScript->removeClient(*this);
     }
+
+    // CachedResourceClient.
+    void ref() const final { JSC::BaseWebAssemblySourceProvider::ref(); }
+    void deref() const final { JSC::BaseWebAssemblySourceProvider::deref(); }
 
     unsigned hash() const final { return m_cachedScript->scriptHash(); }
     StringView source() const final { return m_cachedScript->script(); }
@@ -60,18 +65,18 @@ public:
             return nullptr;
 
         if (!m_buffer->isContiguous())
-            m_buffer = m_buffer->makeContiguous();
+            m_buffer = RefPtr { m_buffer }->makeContiguous();
 
-        return downcast<SharedBuffer>(*m_buffer).data();
+        return downcast<SharedBuffer>(m_buffer)->span().data();
     }
 
-    void lockUnderlyingBuffer() final
+    void lockUnderlyingBufferImpl() final
     {
         ASSERT(!m_buffer);
         m_buffer = m_cachedScript->resourceBuffer();
     }
 
-    void unlockUnderlyingBuffer() final
+    void unlockUnderlyingBufferImpl() final
     {
         ASSERT(m_buffer);
         m_buffer = nullptr;
@@ -79,7 +84,7 @@ public:
 
 private:
     WebAssemblyCachedScriptSourceProvider(CachedScript* cachedScript, const JSC::SourceOrigin& sourceOrigin, String sourceURL)
-        : BaseWebAssemblySourceProvider(sourceOrigin, WTFMove(sourceURL))
+        : BaseWebAssemblySourceProvider(sourceOrigin, WTF::move(sourceURL))
         , m_cachedScript(cachedScript)
         , m_buffer(nullptr)
     {

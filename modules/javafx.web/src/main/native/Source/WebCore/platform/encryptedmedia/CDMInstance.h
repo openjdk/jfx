@@ -27,16 +27,15 @@
 
 #if ENABLE(ENCRYPTED_MEDIA)
 
-#include "CDMKeyStatus.h"
-#include "CDMMessageType.h"
-#include "CDMSessionType.h"
+#include <WebCore/CDMKeyStatus.h>
+#include <WebCore/CDMMessageType.h>
+#include <WebCore/CDMSessionType.h>
 #include <utility>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 #include <wtf/RefCounted.h>
-#include <wtf/ThreadSafeRefCounted.h>
 #include <wtf/TypeCasts.h>
-#include <wtf/WeakPtr.h>
 
 #if !RELEASE_LOG_DISABLED
 namespace WTF {
@@ -50,7 +49,7 @@ class CDMInstanceSession;
 struct CDMKeySystemConfiguration;
 class SharedBuffer;
 
-class CDMInstanceClient : public CanMakeWeakPtr<CDMInstanceClient> {
+class CDMInstanceClient : public AbstractRefCountedAndCanMakeWeakPtr<CDMInstanceClient> {
 public:
     virtual ~CDMInstanceClient() = default;
 
@@ -58,8 +57,30 @@ public:
 
 #if !RELEASE_LOG_DISABLED
     virtual const Logger& logger() const = 0;
-    virtual const void* logIdentifier() const = 0;
+    virtual uint64_t logIdentifier() const = 0;
 #endif
+};
+
+enum class CDMInstanceSuccessValue : bool {
+    Failed,
+    Succeeded,
+};
+
+enum class CDMInstanceAllowDistinctiveIdentifiers : bool {
+    No,
+    Yes,
+};
+
+enum class CDMInstanceAllowPersistentState : bool {
+    No,
+    Yes,
+};
+
+enum class CDMInstanceHDCPStatus : uint8_t {
+    Unknown,
+    Valid,
+    OutputRestricted,
+    OutputDownscaled,
 };
 
 // JavaScript's handle to a CDMInstance, must be used from the
@@ -72,7 +93,7 @@ public:
     virtual void clearClient() { }
 
 #if !RELEASE_LOG_DISABLED
-    virtual void setLogIdentifier(const void*) { }
+    virtual void setLogIdentifier(uint64_t) { }
 #endif
 
     enum class ImplementationType {
@@ -86,21 +107,11 @@ public:
     };
     virtual ImplementationType implementationType() const = 0;
 
-    enum SuccessValue : bool {
-        Failed,
-        Succeeded,
-    };
+    using SuccessValue = WebCore::CDMInstanceSuccessValue;
     using SuccessCallback = CompletionHandler<void(SuccessValue)>;
 
-    enum class AllowDistinctiveIdentifiers : bool {
-        No,
-        Yes,
-    };
-
-    enum class AllowPersistentState : bool {
-        No,
-        Yes,
-    };
+    using AllowDistinctiveIdentifiers = WebCore::CDMInstanceAllowDistinctiveIdentifiers;
+    using AllowPersistentState = WebCore::CDMInstanceAllowPersistentState;
 
     virtual void initializeWithConfiguration(const CDMKeySystemConfiguration&, AllowDistinctiveIdentifiers, AllowPersistentState, SuccessCallback&&) = 0;
     virtual void setServerCertificate(Ref<SharedBuffer>&&, SuccessCallback&&) = 0;
@@ -108,13 +119,8 @@ public:
     virtual const String& keySystem() const = 0;
     virtual RefPtr<CDMInstanceSession> createSession() = 0;
 
-    enum class HDCPStatus : uint8_t {
-        Unknown,
-        Valid,
-        OutputRestricted,
-        OutputDownscaled,
-    };
-    virtual SuccessValue setHDCPStatus(HDCPStatus) { return Failed; }
+    using HDCPStatus = CDMInstanceHDCPStatus;
+    virtual SuccessValue setHDCPStatus(HDCPStatus) { return SuccessValue::Failed; }
 };
 
 } // namespace WebCore

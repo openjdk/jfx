@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,7 +26,7 @@
 package test.javafx.collections;
 
 import javafx.beans.InvalidationListener;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.*;
 import java.util.function.BiConsumer;
@@ -38,7 +38,7 @@ import javafx.collections.ObservableList;
 import javafx.collections.ObservableMap;
 import javafx.collections.ObservableSet;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class FXCollectionsTest {
 
@@ -88,7 +88,7 @@ public class FXCollectionsTest {
     public void concatTest() {
         ObservableList<String> seq =
                 FXCollections.concat(FXCollections.observableArrayList("foo", "bar"),
-                FXCollections.observableArrayList("foobar"));
+                        FXCollections.observableArrayList("foobar"));
         assertArrayEquals(new String[] {"foo", "bar", "foobar"}, seq.toArray(new String[0]));
         seq = FXCollections.concat();
         assertTrue(seq.isEmpty());
@@ -206,7 +206,7 @@ public class FXCollectionsTest {
 
     @Test
     public void sortTest2() {
-    //test sort on bigger elements, so that it is sorted with mergesort and not insert sort
+        //test sort on bigger elements, so that it is sorted with mergesort and not insert sort
         String[] content = new String[] { "q", "w", "e", "r", "t", "y", "u", "i", "o", "p" };
         ObservableList<String> seq = FXCollections.observableArrayList(content);
         final MockListObserver<String> observer = new MockListObserver<>();
@@ -248,12 +248,13 @@ public class FXCollectionsTest {
         }
     }
 
-    @Test(expected=ClassCastException.class)
+    @Test
     @SuppressWarnings("unchecked")
     public void sortNotComparableTest() {
         ObservableList seq = FXCollections.observableArrayList(new Object(), new Object(), new Object());
-        FXCollections.sort(seq);
+        assertThrows(ClassCastException.class, () -> FXCollections.sort(seq));
     }
+
 
     @Test
     public void emptyObservableListTest() {

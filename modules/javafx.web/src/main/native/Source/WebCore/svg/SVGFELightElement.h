@@ -23,14 +23,15 @@
 #pragma once
 
 #include "LightSource.h"
+#include "SVGAnimatedPropertyImpl.h"
 #include "SVGElement.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
-class SVGFilter;
-
 class SVGFELightElement : public SVGElement {
-    WTF_MAKE_ISO_ALLOCATED(SVGFELightElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGFELightElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGFELightElement);
 public:
     virtual Ref<LightSource> lightSource() const = 0;
     static SVGFELightElement* findLightElement(const SVGElement*);
@@ -57,14 +58,14 @@ public:
     SVGAnimatedNumber& specularExponentAnimated() { return m_specularExponent; }
     SVGAnimatedNumber& limitingConeAngleAnimated() { return m_limitingConeAngle; }
 
+    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFELightElement, SVGElement>;
+
 protected:
     SVGFELightElement(const QualifiedName&, Document&);
 
     bool rendererIsNeeded(const RenderStyle&) override { return false; }
 
 private:
-    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGFELightElement, SVGElement>;
-
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) override;
     void svgAttributeChanged(const QualifiedName&) override;
     void childrenChanged(const ChildChange&) override;
@@ -82,3 +83,12 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SVGFELightElement)
+    static bool isType(const WebCore::SVGElement& element)
+    {
+        return element.hasTagName(WebCore::SVGNames::feDistantLightTag)
+            || element.hasTagName(WebCore::SVGNames::fePointLightTag)
+            || element.hasTagName(WebCore::SVGNames::feSpotLightTag);
+    }
+SPECIALIZE_TYPE_TRAITS_END()

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,16 +25,16 @@
 
 package test.javafx.css;
 
-import static org.junit.Assert.assertEquals;
 import javafx.geometry.Insets;
 import javafx.scene.text.Font;
-
-import org.junit.Before;
-import org.junit.Test;
 
 import javafx.css.CssParser;
 import javafx.css.ParsedValue;
 import javafx.css.Stylesheet;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 
 public class InsetsTypeTest {
@@ -58,7 +58,7 @@ public class InsetsTypeTest {
           {4.0f, 0.0f, 1.0f} }
     };
 
-    @Before
+    @BeforeEach
     public void setup() {
         css = new String[fvals.length];
         expResults = new Insets[fvals.length][];
@@ -93,10 +93,10 @@ public class InsetsTypeTest {
     }
 
     void checkInsets(String msg, Insets expResult, Insets result) {
-        assertEquals(msg + "top", expResult.getTop(), result.getTop(), 0.01);
-        assertEquals(msg + "right", expResult.getRight(), result.getRight(), 0.01);
-        assertEquals(msg + "bottom", expResult.getBottom(), result.getBottom(), 0.01);
-        assertEquals(msg + "left", expResult.getLeft(), result.getLeft(), 0.01);
+        assertEquals(expResult.getTop(), result.getTop(), 0.01, msg + "top");
+        assertEquals(expResult.getRight(), result.getRight(), 0.01, msg + "right");
+        assertEquals(expResult.getBottom(), result.getBottom(), 0.01, msg + "bottom");
+        assertEquals(expResult.getLeft(), result.getLeft(), 0.01, msg + "left");
     }
 
     @Test

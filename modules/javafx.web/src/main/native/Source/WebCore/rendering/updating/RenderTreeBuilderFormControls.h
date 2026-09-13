@@ -26,6 +26,7 @@
 #pragma once
 
 #include "RenderTreeBuilder.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
@@ -34,15 +35,15 @@ class RenderButton;
 class RenderMenuList;
 
 class RenderTreeBuilder::FormControls {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(FormControls);
 public:
     FormControls(RenderTreeBuilder&);
 
     void attach(RenderButton& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild);
     void attach(RenderMenuList& parent, RenderPtr<RenderObject> child, RenderObject* beforeChild);
 
-    RenderPtr<RenderObject> detach(RenderButton& parent, RenderObject& child) WARN_UNUSED_RETURN;
-    RenderPtr<RenderObject> detach(RenderMenuList& parent, RenderObject& child) WARN_UNUSED_RETURN;
+    [[nodiscard]] RenderPtr<RenderObject> detach(RenderButton& parent, RenderObject& child, RenderTreeBuilder::WillBeDestroyed);
+    [[nodiscard]] RenderPtr<RenderObject> detach(RenderMenuList& parent, RenderObject& child, RenderTreeBuilder::WillBeDestroyed);
 
 private:
     RenderBlock& findOrCreateParentForChild(RenderButton&);

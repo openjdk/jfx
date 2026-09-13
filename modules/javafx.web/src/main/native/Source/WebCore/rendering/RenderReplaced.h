@@ -21,17 +21,20 @@
 
 #pragma once
 
-#include "RenderBox.h"
+#include <WebCore/RenderBox.h>
 
 namespace WebCore {
 
 class RenderReplaced : public RenderBox {
-    WTF_MAKE_ISO_ALLOCATED(RenderReplaced);
+    WTF_MAKE_TZONE_ALLOCATED(RenderReplaced);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderReplaced);
 public:
     virtual ~RenderReplaced();
 
-    LayoutUnit computeReplacedLogicalWidth(ShouldComputePreferred = ComputeActual) const override;
-    LayoutUnit computeReplacedLogicalHeight(std::optional<LayoutUnit> estimatedUsedWidth = std::nullopt) const override;
+    virtual bool shouldRespectZeroIntrinsicWidth() const;
+
+    void computeReplacedOutOfFlowPositionedLogicalHeight(LogicalExtentComputedValues&) const;
+    void computeReplacedOutOfFlowPositionedLogicalWidth(LogicalExtentComputedValues&) const;
 
     LayoutRect replacedContentRect(const LayoutSize& intrinsicSize) const;
     LayoutRect replacedContentRect() const { return replacedContentRect(intrinsicSize()); }
@@ -39,20 +42,29 @@ public:
     bool setNeedsLayoutIfNeededAfterIntrinsicSizeChange();
 
     LayoutSize intrinsicSize() const final;
-
-    RoundedRect roundedContentBoxRect() const;
+    FloatSize intrinsicRatio() const;
 
     bool isContentLikelyVisibleInViewport();
-    bool needsPreferredWidthsRecalculation() const override;
+    bool shouldInvalidatePreferredWidths() const override;
 
     double computeIntrinsicAspectRatio() const;
 
-    void computeIntrinsicRatioInformation(FloatSize& intrinsicSize, FloatSize& intrinsicRatio) const override;
+    virtual bool paintsContent() const { return true; }
+
+    LayoutUnit computeReplacedLogicalHeightUsing(const Style::PreferredSize& logicalHeight) const;
+    LayoutUnit computeReplacedLogicalHeightUsing(const Style::MinimumSize& logicalHeight) const;
+    LayoutUnit computeReplacedLogicalHeightUsing(const Style::MaximumSize& logicalHeight) const;
+
+    virtual LayoutUnit computeReplacedLogicalWidth(ShouldComputePreferred  = ShouldComputePreferred::ComputeActual) const;
+    virtual LayoutUnit computeReplacedLogicalHeight(std::optional<LayoutUnit> estimatedUsedWidth = std::nullopt) const;
+
+    bool replacedMinLogicalHeightComputesAsNone() const;
+    bool replacedMaxLogicalHeightComputesAsNone() const;
 
 protected:
-    RenderReplaced(Element&, RenderStyle&&);
-    RenderReplaced(Element&, RenderStyle&&, const LayoutSize& intrinsicSize);
-    RenderReplaced(Document&, RenderStyle&&, const LayoutSize& intrinsicSize);
+    RenderReplaced(Type, Element&, RenderStyle&&, OptionSet<ReplacedFlag> = { });
+    RenderReplaced(Type, Element&, RenderStyle&&, const LayoutSize& intrinsicSize, OptionSet<ReplacedFlag> = { });
+    RenderReplaced(Type, Document&, RenderStyle&&, const LayoutSize& intrinsicSize, OptionSet<ReplacedFlag> = { });
 
     void layout() override;
 
@@ -62,7 +74,10 @@ protected:
 
     bool isSelected() const;
 
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) override;
+
+    virtual FloatSize computeIntrinsicSize() const;
+    virtual FloatSize preferredAspectRatio() const;
 
     void setIntrinsicSize(const LayoutSize& intrinsicSize) { m_intrinsicSize = intrinsicSize; }
     virtual void intrinsicSizeChanged();
@@ -74,8 +89,21 @@ protected:
 
     void willBeDestroyed() override;
 
+    virtual void layoutShadowContent(const LayoutSize&);
+
+    LayoutUnit computeReplacedLogicalWidthRespectingMinMaxWidth(LayoutUnit logicalWidth, ShouldComputePreferred = ShouldComputePreferred::ComputeActual) const;
+    template<typename T> LayoutUnit computeReplacedLogicalWidthRespectingMinMaxWidth(T logicalWidth, ShouldComputePreferred shouldComputePreferred = ShouldComputePreferred::ComputeActual) const { return computeReplacedLogicalWidthRespectingMinMaxWidth(LayoutUnit(logicalWidth), shouldComputePreferred); }
+
 private:
-    LayoutUnit computeConstrainedLogicalWidth(ShouldComputePreferred) const;
+    LayoutUnit computeConstrainedLogicalWidth() const;
+
+    template<typename SizeType> LayoutUnit computeReplacedLogicalWidthUsing(const SizeType& logicalWidth) const;
+    template<typename SizeType> LayoutUnit computeReplacedLogicalHeightUsingGeneric(const SizeType& logicalHeight) const;
+    LayoutUnit computeReplacedLogicalHeightRespectingMinMaxHeight(LayoutUnit logicalHeight) const;
+    template<typename T> LayoutUnit computeReplacedLogicalHeightRespectingMinMaxHeight(T logicalHeight) const { return computeReplacedLogicalHeightRespectingMinMaxHeight(LayoutUnit(logicalHeight)); }
+    bool replacedMinMaxLogicalHeightComputesAsNone(const auto& logicalHeight, const auto& initialLogicalHeight) const;
+
+    void computeAspectRatioAdjustedIntrinsicLogicalWidths(LayoutUnit& minLogicalWidth, LayoutUnit& maxLogicalWidth) const;
 
     virtual RenderBox* embeddedContentBox() const { return 0; }
     ASCIILiteral renderName() const override { return "RenderReplaced"_s; }
@@ -85,9 +113,9 @@ private:
     void computePreferredLogicalWidths() final;
     virtual void paintReplaced(PaintInfo&, const LayoutPoint&) { }
 
-    LayoutRect clippedOverflowRect(const RenderLayerModelObject* repaintContainer, VisibleRectContext) const override;
+    RepaintRects localRectsForRepaint(RepaintOutlineBounds) const override;
 
-    VisiblePosition positionForPoint(const LayoutPoint&, const RenderFragmentContainer*) final;
+    PositionWithAffinity positionForPoint(const LayoutPoint&, HitTestSource, const RenderFragmentContainer*) final;
 
     bool canBeSelectionLeaf() const override { return true; }
 
@@ -98,12 +126,11 @@ private:
     virtual bool shouldDrawSelectionTint() const;
 
     Color calculateHighlightColor() const;
-    bool isHighlighted(HighlightState, const HighlightData&) const;
+    bool isHighlighted(HighlightState, const RenderHighlight&) const;
 
     bool hasReplacedLogicalHeight() const;
 
     mutable LayoutSize m_intrinsicSize;
-    mutable FloatSize m_intrinsicRatio;
 };
 
 } // namespace WebCore

@@ -91,12 +91,12 @@ static void convertChecksumToPNGComment(const char* checksum, Vector<unsigned ch
     static const size_t prefixLength = sizeof(textCommentPrefix) - 1; // The -1 is for the null at the end of the char[].
     static const size_t checksumLength = 32;
 
-    bytesToAdd.append(textCommentPrefix, prefixLength);
-    bytesToAdd.append(checksum, checksumLength);
+    bytesToAdd.append(std::span { textCommentPrefix, prefixLength });
+    bytesToAdd.append(std::span { checksum, checksumLength });
 
     Vector<unsigned char> dataToCrc;
-    dataToCrc.append(textCommentPrefix + 4, prefixLength - 4); // Don't include the chunk length in the crc.
-    dataToCrc.append(checksum, checksumLength);
+    dataToCrc.append(std::span { textCommentPrefix + 4, prefixLength - 4 }); // Don't include the chunk length in the crc.
+    dataToCrc.append(std::span { checksum, checksumLength });
     unsigned crc32 = computeCrc(dataToCrc);
 
     appendIntToVector(crc32, bytesToAdd);
@@ -120,7 +120,7 @@ void printPNG(const unsigned char* data, const size_t dataLength, const char* ch
     size_t insertOffset = offsetAfterIHDRChunk(data, dataLength);
 
     fwrite(data, 1, insertOffset, testResult);
-    fwrite(bytesToAdd.data(), 1, bytesToAdd.size(), testResult);
+    fwrite(bytesToAdd.span().data(), 1, bytesToAdd.size(), testResult);
 
     const size_t bytesToWriteInOneChunk = 1 << 15;
     data += insertOffset;

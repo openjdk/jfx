@@ -30,13 +30,18 @@
 
 #pragma once
 
+#include <wtf/AbstractCanMakeCheckedPtr.h>
+
 namespace WebCore {
 
-class WorkerReportingProxy {
+class WorkerReportingProxy : public AbstractCanMakeCheckedPtr {
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(WorkerReportingProxy);
 public:
     virtual ~WorkerReportingProxy() = default;
 
     virtual void postExceptionToWorkerObject(const String& errorMessage, int lineNumber, int columnNumber, const String& sourceURL) = 0;
+
+    virtual void reportErrorToWorkerObject(const String&) = 0;
 
     // Invoked when close() is invoked on the worker context.
     virtual void workerGlobalScopeClosed() = 0;

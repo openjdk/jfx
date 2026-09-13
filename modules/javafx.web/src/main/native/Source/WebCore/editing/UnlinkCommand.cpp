@@ -30,8 +30,8 @@
 
 namespace WebCore {
 
-UnlinkCommand::UnlinkCommand(Document& document)
-    : CompositeEditCommand(document)
+UnlinkCommand::UnlinkCommand(Ref<Document>&& document)
+    : CompositeEditCommand(WTF::move(document))
 {
 }
 

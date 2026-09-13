@@ -34,7 +34,7 @@
 #include "ActiveDOMObject.h"
 #include "EventLoop.h"
 #include "EventTarget.h"
-#include "ExceptionOr.h"
+#include "EventTargetInterfaces.h"
 #include "ThreadableLoaderClient.h"
 #include "Timer.h"
 #include <wtf/URL.h>
@@ -43,17 +43,25 @@
 namespace WebCore {
 
 class MessageEvent;
+class SecurityOrigin;
 class TextResourceDecoder;
 class ThreadableLoader;
+template<typename> class ExceptionOr;
 
 class EventSource final : public RefCounted<EventSource>, public EventTarget, private ThreadableLoaderClient, public ActiveDOMObject {
-    WTF_MAKE_ISO_ALLOCATED(EventSource);
+    WTF_MAKE_TZONE_ALLOCATED(EventSource);
 public:
     struct Init {
         bool withCredentials;
     };
     static ExceptionOr<Ref<EventSource>> create(ScriptExecutionContext&, const String& url, const Init&);
     virtual ~EventSource();
+
+    // EventTarget, ThreadableLoaderClient.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
+    USING_CAN_MAKE_WEAKPTR(EventTarget);
 
     const String& url() const;
     bool withCredentials() const;
@@ -67,14 +75,12 @@ public:
 
     void close();
 
-    using RefCounted::ref;
-    using RefCounted::deref;
-
 private:
     EventSource(ScriptExecutionContext&, const URL&, const Init&);
 
-    EventTargetInterface eventTargetInterface() const final { return EventSourceEventTargetInterfaceType; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
+    enum EventTargetInterfaceType eventTargetInterface() const final { return EventTargetInterfaceType::EventSource; }
+    ScriptExecutionContext* scriptExecutionContext() const final;
+    using ActiveDOMObject::protectedScriptExecutionContext;
 
     void refEventTarget() final { ref(); }
     void derefEventTarget() final { deref(); }
@@ -83,14 +89,13 @@ private:
     void doExplicitLoadCancellation();
 
     // ThreadableLoaderClient
-    void didReceiveResponse(ResourceLoaderIdentifier, const ResourceResponse&) final;
+    void didReceiveResponse(ScriptExecutionContextIdentifier, std::optional<ResourceLoaderIdentifier>, const ResourceResponse&) final;
     void didReceiveData(const SharedBuffer&) final;
-    void didFinishLoading(ResourceLoaderIdentifier, const NetworkLoadMetrics&) final;
-    void didFail(const ResourceError&) final;
+    void didFinishLoading(ScriptExecutionContextIdentifier, std::optional<ResourceLoaderIdentifier>, const NetworkLoadMetrics&) final;
+    void didFail(std::optional<ScriptExecutionContextIdentifier>, const ResourceError&) final;
 
     // ActiveDOMObject
     void stop() final;
-    const char* activeDOMObjectName() const final;
     void suspend(ReasonForSuspension) final;
     void resume() final;
     bool virtualHasPendingActivity() const final;
@@ -112,10 +117,10 @@ private:
     bool m_withCredentials;
     State m_state { CONNECTING };
 
-    Ref<TextResourceDecoder> m_decoder;
+    const Ref<TextResourceDecoder> m_decoder;
     RefPtr<ThreadableLoader> m_loader;
     EventLoopTimerHandle m_connectTimer;
-    Vector<UChar> m_receiveBuffer;
+    Vector<char16_t> m_receiveBuffer;
     bool m_discardTrailingNewline { false };
     bool m_requestInFlight { false };
     bool m_isSuspendedForBackForwardCache { false };
@@ -123,11 +128,11 @@ private:
     bool m_shouldReconnectOnResume { false };
 
     AtomString m_eventName;
-    Vector<UChar> m_data;
+    Vector<char16_t> m_data;
     String m_currentlyParsedEventId;
     String m_lastEventId;
     uint64_t m_reconnectDelay { defaultReconnectDelay };
-    String m_eventStreamOrigin;
+    RefPtr<SecurityOrigin> m_eventStreamOrigin;
 };
 
 inline const String& EventSource::url() const
@@ -146,3 +151,5 @@ inline EventSource::State EventSource::readyState() const
 }
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENTTARGET(EventSource)

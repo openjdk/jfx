@@ -23,10 +23,13 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "BPlatform.h"
 #include "IsoMallocFallback.h"
 
-#include "DebugHeap.h"
+#if !BUSE(TZONE)
+
 #include "Environment.h"
+#include "SystemHeap.h"
 #include "bmalloc.h"
 
 namespace bmalloc { namespace IsoMallocFallback {
@@ -34,6 +37,15 @@ namespace bmalloc { namespace IsoMallocFallback {
 MallocFallbackState mallocFallbackState;
 
 namespace {
+
+static BINLINE int bstrcasecmp(const char* str1, const char* str2)
+{
+#if BOS(WINDOWS)
+    return _stricmp(str1, str2);
+#else
+    return strcasecmp(str1, str2);
+#endif
+}
 
 void determineMallocFallbackState()
 {
@@ -44,13 +56,13 @@ void determineMallocFallbackState()
             if (mallocFallbackState != MallocFallbackState::Undecided)
                 return;
 
-            if (Environment::get()->isDebugHeapEnabled()) {
+            if (Environment::get()->shouldBmallocAllocateThroughSystemHeap()) {
                 mallocFallbackState = MallocFallbackState::FallBackToMalloc;
                 return;
             }
 
             const char* env = getenv("bmalloc_IsoHeap");
-            if (env && (!strcasecmp(env, "false") || !strcasecmp(env, "no") || !strcmp(env, "0")))
+            if (env && (!bstrcasecmp(env, "false") || !bstrcasecmp(env, "no") || !strcmp(env, "0")))
                 mallocFallbackState = MallocFallbackState::FallBackToMalloc;
             else
                 mallocFallbackState = MallocFallbackState::DoNotFallBack;
@@ -60,7 +72,8 @@ void determineMallocFallbackState()
 } // anonymous namespace
 
 MallocResult tryMalloc(
-    size_t size
+    size_t size,
+    [[maybe_unused]] CompactAllocationMode mode
 #if BENABLE_MALLOC_HEAP_BREAKDOWN
     , malloc_zone_t* zone
 #endif
@@ -75,7 +88,7 @@ MallocResult tryMalloc(
 #if BENABLE_MALLOC_HEAP_BREAKDOWN
             return malloc_zone_malloc(zone, size);
 #else
-            return api::tryMalloc(size);
+            return api::tryMalloc(size, mode);
 #endif
         case MallocFallbackState::DoNotFallBack:
             return MallocResult();
@@ -111,3 +124,5 @@ bool tryFree(
 }
 
 } } // namespace bmalloc::IsoMallocFallback
+
+#endif // !BUSE(TZONE)

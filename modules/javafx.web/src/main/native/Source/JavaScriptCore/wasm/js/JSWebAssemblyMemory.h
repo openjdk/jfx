@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2024 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,10 +25,12 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY)
 
-#include "JSObject.h"
-#include "WasmMemory.h"
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/WasmMemory.h>
 #include <wtf/Ref.h>
 #include <wtf/RefPtr.h>
 
@@ -37,10 +39,11 @@ namespace JSC {
 class ArrayBuffer;
 class JSArrayBuffer;
 
+// FIXME: Merge Wasm::Memory into this now that JSWebAssemblyInstance is the only instance object.
 class JSWebAssemblyMemory final : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
-    static constexpr bool needsDestruction = true;
+    static constexpr DestructionMode needsDestruction = NeedsDestruction;
     static void destroy(JSCell*);
 
     template<typename CellType, SubspaceAccess mode>
@@ -49,23 +52,36 @@ public:
         return vm.webAssemblyMemorySpace<mode>();
     }
 
-    JS_EXPORT_PRIVATE static JSWebAssemblyMemory* tryCreate(JSGlobalObject*, VM&, Structure*);
+    JS_EXPORT_PRIVATE static JSWebAssemblyMemory* create(VM&, Structure*);
     static Structure* createStructure(VM&, JSGlobalObject*, JSValue);
 
     DECLARE_EXPORT_INFO;
 
+    DECLARE_VISIT_CHILDREN;
+
     JS_EXPORT_PRIVATE void adopt(Ref<Wasm::Memory>&&);
     Wasm::Memory& memory() { return m_memory.get(); }
     JSArrayBuffer* buffer(JSGlobalObject*);
+    JSArrayBuffer* toFixedLengthBuffer(JSGlobalObject*);
+    JSArrayBuffer* toResizableBuffer(JSGlobalObject*);
     PageCount grow(VM&, JSGlobalObject*, uint32_t delta);
     JS_EXPORT_PRIVATE void growSuccessCallback(VM&, PageCount oldPageCount, PageCount newPageCount);
 
     JSObject* type(JSGlobalObject*);
 
+    MemoryMode mode() const { return m_memory->mode(); }
+    MemorySharingMode sharingMode() const { return m_memory->sharingMode(); }
+    size_t mappedCapacity() const { return m_memory->mappedCapacity(); }
+    void* basePointer() const { return m_memory->basePointer(); }
+
+    static constexpr ptrdiff_t offsetOfMemory() { return OBJECT_OFFSETOF(JSWebAssemblyMemory, m_memory); }
+
 private:
     JSWebAssemblyMemory(VM&, Structure*);
     void finishCreation(VM&);
-    DECLARE_VISIT_CHILDREN;
+
+    void associateArrayBuffer(JSGlobalObject*, bool shouldBeFixedLength);
+    void disassociateArrayBuffer(VM&);
 
     Ref<Wasm::Memory> m_memory;
     WriteBarrier<JSArrayBuffer> m_bufferWrapper;

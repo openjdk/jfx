@@ -41,12 +41,12 @@ public:
     PaymentSessionError(RetainPtr<NSError>&&);
 
     ApplePaySessionError sessionError() const;
-    NSError *platformError() const;
+    RetainPtr<NSError> platformError() const;
 
 private:
     ApplePaySessionError unknownError() const;
 
-    RetainPtr<NSError> m_platformError;
+    const RetainPtr<NSError> m_platformError;
 };
 
 } // namespace WebCore

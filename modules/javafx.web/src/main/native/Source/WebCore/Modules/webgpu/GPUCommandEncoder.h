@@ -25,7 +25,6 @@
 
 #pragma once
 
-#include "GPUCommandBuffer.h"
 #include "GPUCommandBufferDescriptor.h"
 #include "GPUComputePassDescriptor.h"
 #include "GPUComputePassEncoder.h"
@@ -44,27 +43,37 @@
 namespace WebCore {
 
 class GPUBuffer;
+class GPUCommandBuffer;
 class GPUQuerySet;
+
+namespace WebGPU {
+class Device;
+}
 
 class GPUCommandEncoder : public RefCounted<GPUCommandEncoder> {
 public:
-    static Ref<GPUCommandEncoder> create(Ref<WebGPU::CommandEncoder>&& backing)
+    static Ref<GPUCommandEncoder> create(Ref<WebGPU::CommandEncoder>&& backing, WebGPU::Device& device)
     {
-        return adoptRef(*new GPUCommandEncoder(WTFMove(backing)));
+        return adoptRef(*new GPUCommandEncoder(WTF::move(backing), device));
     }
 
     String label() const;
     void setLabel(String&&);
 
-    Ref<GPURenderPassEncoder> beginRenderPass(const GPURenderPassDescriptor&);
-    Ref<GPUComputePassEncoder> beginComputePass(const std::optional<GPUComputePassDescriptor>&);
+    ExceptionOr<Ref<GPURenderPassEncoder>> beginRenderPass(const GPURenderPassDescriptor&);
+    ExceptionOr<Ref<GPUComputePassEncoder>> beginComputePass(const std::optional<GPUComputePassDescriptor>&);
+
+    void copyBufferToBuffer(
+        const GPUBuffer& source,
+        const GPUBuffer& destination,
+        std::optional<GPUSize64>);
 
     void copyBufferToBuffer(
         const GPUBuffer& source,
         GPUSize64 sourceOffset,
         const GPUBuffer& destination,
         GPUSize64 destinationOffset,
-        GPUSize64);
+        std::optional<GPUSize64>);
 
     void copyBufferToTexture(
         const GPUImageCopyBuffer& source,
@@ -99,18 +108,20 @@ public:
         const GPUBuffer& destination,
         GPUSize64 destinationOffset);
 
-    Ref<GPUCommandBuffer> finish(const std::optional<GPUCommandBufferDescriptor>&);
+    ExceptionOr<Ref<GPUCommandBuffer>> finish(const std::optional<GPUCommandBufferDescriptor>&);
 
     WebGPU::CommandEncoder& backing() { return m_backing; }
     const WebGPU::CommandEncoder& backing() const { return m_backing; }
+    void setBacking(WebGPU::CommandEncoder&);
 
 private:
-    GPUCommandEncoder(Ref<WebGPU::CommandEncoder>&& backing)
-        : m_backing(WTFMove(backing))
-    {
-    }
+    GPUCommandEncoder(Ref<WebGPU::CommandEncoder>&&, WebGPU::Device&);
+
+    Ref<WebGPU::CommandEncoder> protectedBacking() { return m_backing; }
 
     Ref<WebGPU::CommandEncoder> m_backing;
+    WeakPtr<WebGPU::Device> m_device;
+    std::optional<String> m_overrideLabel;
 };
 
 }

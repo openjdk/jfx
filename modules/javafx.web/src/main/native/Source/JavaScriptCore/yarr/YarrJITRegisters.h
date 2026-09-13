@@ -25,16 +25,22 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(YARR_JIT)
 
-#include "GPRInfo.h"
+#include <JavaScriptCore/GPRInfo.h>
 
 namespace JSC {
 
 namespace Yarr {
 
+enum class YarrRegisters { DefaultRegisters, AllocatedRegisters };
+
 struct YarrJITDefaultRegisters {
 public:
+    static constexpr YarrRegisters registersAssignments = YarrRegisters::DefaultRegisters;
+
 #if CPU(ARM_THUMB2)
     static constexpr GPRReg input = ARMRegisters::r0;
     static constexpr GPRReg index = ARMRegisters::r1;
@@ -59,8 +65,7 @@ public:
     static constexpr GPRReg length = ARM64Registers::x2;
     static constexpr GPRReg output = ARM64Registers::x3;
     static constexpr GPRReg matchingContext = ARM64Registers::x4;
-    static constexpr GPRReg freelistRegister = ARM64Registers::x4; // Loaded from the MatchingContextHolder in the prologue.
-    static constexpr GPRReg freelistSizeRegister = ARM64Registers::x5; // Only used during initialization.
+    static constexpr GPRReg freelistRegister = ARM64Registers::x13;
 
     // Scratch registers
     static constexpr GPRReg regT0 = ARM64Registers::x6;
@@ -70,78 +75,34 @@ public:
     static constexpr GPRReg regUnicodeInputAndTrail = ARM64Registers::x10;
     static constexpr GPRReg unicodeAndSubpatternIdTemp = ARM64Registers::x5;
     static constexpr GPRReg initialStart = ARM64Registers::x11;
-    static constexpr GPRReg supplementaryPlanesBase = ARM64Registers::x12;
-    static constexpr GPRReg leadingSurrogateTag = ARM64Registers::x13;
-    static constexpr GPRReg trailingSurrogateTag = ARM64Registers::x14;
+
+    static constexpr GPRReg firstCharacterAdditionalReadSize { ARM64Registers::x12 };
     static constexpr GPRReg endOfStringAddress = ARM64Registers::x15;
 
     static constexpr GPRReg returnRegister = ARM64Registers::x0;
     static constexpr GPRReg returnRegister2 = ARM64Registers::x1;
-
-    static constexpr MacroAssembler::TrustedImm32 surrogateTagMask = MacroAssembler::TrustedImm32(0xfffffc00);
-#elif CPU(MIPS)
-    static constexpr GPRReg input = MIPSRegisters::a0;
-    static constexpr GPRReg index = MIPSRegisters::a1;
-    static constexpr GPRReg length = MIPSRegisters::a2;
-    static constexpr GPRReg output = MIPSRegisters::a3;
-
-    // t0 is reserved for MacroAssemblerMIPS.
-    // t1 is reserved for MacroAssemblerMIPS.
-    static constexpr GPRReg regT0 = MIPSRegisters::t2;
-    static constexpr GPRReg regT1 = MIPSRegisters::t3;
-    static constexpr GPRReg regT2 = MIPSRegisters::t4;
-    static constexpr GPRReg initialStart = MIPSRegisters::t5;
-
-    static constexpr GPRReg returnRegister = MIPSRegisters::v0;
-    static constexpr GPRReg returnRegister2 = MIPSRegisters::v1;
-
 #elif CPU(X86_64)
-#if !OS(WINDOWS)
     // Argument registers
     static constexpr GPRReg input = X86Registers::edi;
     static constexpr GPRReg index = X86Registers::esi;
     static constexpr GPRReg length = X86Registers::edx;
     static constexpr GPRReg output = X86Registers::ecx;
     static constexpr GPRReg matchingContext = X86Registers::r8;
-    static constexpr GPRReg freelistRegister = X86Registers::r8; // Loaded from the MatchingContextHolder in the prologue.
-    static constexpr GPRReg freelistSizeRegister = X86Registers::r9; // Only used during initialization.
-#else
-    // If the return value doesn't fit in 64bits, its destination is pointed by rcx and the parameters are shifted.
-    // http://msdn.microsoft.com/en-us/library/7572ztz4.aspx
-    static_assert(sizeof(MatchResult) > sizeof(void*), "MatchResult does not fit in 64bits");
-    static constexpr GPRReg input = X86Registers::edx;
-    static constexpr GPRReg index = X86Registers::r8;
-    static constexpr GPRReg length = X86Registers::r9;
-    static constexpr GPRReg output = X86Registers::r10;
-#endif
+    static constexpr GPRReg freelistRegister = InvalidGPRReg;
 
     // Scratch registers
     static constexpr GPRReg regT0 = X86Registers::eax;
-#if !OS(WINDOWS)
     static constexpr GPRReg regT1 = X86Registers::r9;
     static constexpr GPRReg regT2 = X86Registers::r10;
-#else
-    static constexpr GPRReg regT1 = X86Registers::ecx;
-    static constexpr GPRReg regT2 = X86Registers::edi;
-#endif
 
     static constexpr GPRReg initialStart = X86Registers::ebx;
-#if !OS(WINDOWS)
     static constexpr GPRReg remainingMatchCount = X86Registers::r12;
-#else
-    static constexpr GPRReg remainingMatchCount = X86Registers::esi;
-#endif
     static constexpr GPRReg regUnicodeInputAndTrail = X86Registers::r13;
     static constexpr GPRReg unicodeAndSubpatternIdTemp = X86Registers::r14;
     static constexpr GPRReg endOfStringAddress = X86Registers::r15;
 
     static constexpr GPRReg returnRegister = X86Registers::eax;
     static constexpr GPRReg returnRegister2 = X86Registers::edx;
-
-    static constexpr MacroAssembler::TrustedImm32 supplementaryPlanesBase = MacroAssembler::TrustedImm32(0x10000);
-    static constexpr MacroAssembler::TrustedImm32 leadingSurrogateTag = MacroAssembler::TrustedImm32(0xd800);
-    static constexpr MacroAssembler::TrustedImm32 trailingSurrogateTag = MacroAssembler::TrustedImm32(0xdc00);
-    static constexpr MacroAssembler::TrustedImm32 surrogateTagMask = MacroAssembler::TrustedImm32(0xfffffc00);
 #elif CPU(RISCV64)
     // Argument registers
     static constexpr GPRReg input = RISCV64Registers::x10;
@@ -149,8 +110,7 @@ public:
     static constexpr GPRReg length = RISCV64Registers::x12;
     static constexpr GPRReg output = RISCV64Registers::x13;
     static constexpr GPRReg matchingContext = RISCV64Registers::x14;
-    static constexpr GPRReg freelistRegister = RISCV64Registers::x14; // Loaded from the MatchingContextHolder in the prologue.
-    static constexpr GPRReg freelistSizeRegister = RISCV64Registers::x15; // Only used during initialization.
+    static constexpr GPRReg freelistRegister = InvalidGPRReg;
 
     // Scratch registers
     static constexpr GPRReg regT0 = RISCV64Registers::x16;
@@ -164,11 +124,6 @@ public:
 
     static constexpr GPRReg returnRegister = RISCV64Registers::x10;
     static constexpr GPRReg returnRegister2 = RISCV64Registers::x11;
-
-    static constexpr MacroAssembler::TrustedImm32 supplementaryPlanesBase = MacroAssembler::TrustedImm32(0x10000);
-    static constexpr MacroAssembler::TrustedImm32 leadingSurrogateTag = MacroAssembler::TrustedImm32(0xd800);
-    static constexpr MacroAssembler::TrustedImm32 trailingSurrogateTag = MacroAssembler::TrustedImm32(0xdc00);
-    static constexpr MacroAssembler::TrustedImm32 surrogateTagMask = MacroAssembler::TrustedImm32(0xfffffc00);
 #endif
 };
 
@@ -194,10 +149,6 @@ public:
         ASSERT(noOverlap(input, index, length, output, regT0, regT1));
         ASSERT(noOverlap(returnRegister, returnRegister2));
         ASSERT(noOverlap(index, output, returnRegister));
-
-#if CPU(X86_64) && OS(WINDOWS)
-        ASSERT(noOverlap(X86Registers::ecx, returnRegister, m_regs.returnRegister2));
-#endif
 #endif
     }
 
@@ -209,7 +160,6 @@ public:
 
     GPRReg matchingContext { InvalidGPRReg };
     GPRReg freelistRegister { InvalidGPRReg };
-    GPRReg freelistSizeRegister { InvalidGPRReg };
 
     GPRReg returnRegister { InvalidGPRReg };
     GPRReg returnRegister2 { InvalidGPRReg };
@@ -227,13 +177,10 @@ public:
     GPRReg regUnicodeInputAndTrail { InvalidGPRReg };
     GPRReg unicodeAndSubpatternIdTemp { InvalidGPRReg };
     GPRReg endOfStringAddress { InvalidGPRReg };
-
-    const MacroAssembler::TrustedImm32 supplementaryPlanesBase = MacroAssembler::TrustedImm32(0x10000);
-    const MacroAssembler::TrustedImm32 leadingSurrogateTag = MacroAssembler::TrustedImm32(0xd800);
-    const MacroAssembler::TrustedImm32 trailingSurrogateTag = MacroAssembler::TrustedImm32(0xdc00);
-    const MacroAssembler::TrustedImm32 surrogateTagMask = MacroAssembler::TrustedImm32(0xfffffc00);
+    GPRReg firstCharacterAdditionalReadSize { InvalidGPRReg };
 };
 #endif
+
 
 } } // namespace JSC::Yarr
 

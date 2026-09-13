@@ -28,8 +28,14 @@
 
 #pragma once
 
+#ifdef __OBJC__
+
+#include <wtf/BlockPtr.h>
 #include <wtf/Forward.h>
 #include <wtf/Vector.h>
+#include <wtf/cocoa/SpanCocoa.h>
+#include <wtf/darwin/DispatchExtras.h>
+#include <wtf/darwin/DispatchOSObject.h>
 
 namespace WTF {
 
@@ -53,11 +59,11 @@ template<typename VectorElementType> Vector<VectorElementType> makeVector(NSArra
 // This overload of createNSArray takes a function to map each vector element to an Objective-C object.
 // The map function has the same interface as the makeNSArrayElement function above, but can be any
 // function including a lambda, a function-like object, or Function<>.
-template<typename CollectionType, typename MapFunctionType> RetainPtr<NSMutableArray> createNSArray(CollectionType&&, MapFunctionType&&);
+template<typename CollectionType, typename MapFunctionType> RetainPtr<NSMutableArray> createNSArray(CollectionType&&, NOESCAPE MapFunctionType&&);
 
 // This overload of makeVector takes a function to map each Objective-C object to a vector element.
 // Currently, the map function needs to return an Optional.
-template<typename MapFunctionType> Vector<typename std::invoke_result_t<MapFunctionType, id>::value_type> makeVector(NSArray *, MapFunctionType&&);
+template<typename MapFunctionType> Vector<typename std::invoke_result_t<MapFunctionType, id>::value_type> makeVector(NSArray *, NOESCAPE MapFunctionType&&);
 
 // Implementation details of the function templates above.
 
@@ -75,46 +81,50 @@ template<typename CollectionType> RetainPtr<NSMutableArray> createNSArray(Collec
     return array;
 }
 
-template<typename CollectionType, typename MapFunctionType> RetainPtr<NSMutableArray> createNSArray(CollectionType&& collection, MapFunctionType&& function)
+template<typename CollectionType, typename MapFunctionType> RetainPtr<NSMutableArray> createNSArray(CollectionType&& collection, NOESCAPE MapFunctionType&& function)
 {
     auto array = adoptNS([[NSMutableArray alloc] initWithCapacity:std::size(collection)]);
-    for (auto&& element : collection)
-        addUnlessNil(array.get(), getPtr(std::invoke(std::forward<MapFunctionType>(function), std::forward<decltype(element)>(element))));
+    for (auto&& element : std::forward<CollectionType>(collection)) {
+        if constexpr (std::is_rvalue_reference_v<CollectionType&&> && !std::is_const_v<std::remove_reference_t<decltype(element)>>)
+            addUnlessNil(array.get(), getPtr(function(WTF::move(element))));
+        else
+            addUnlessNil(array.get(), getPtr(function(element)));
+    }
     return array;
 }
 
 template<typename VectorElementType> Vector<VectorElementType> makeVector(NSArray *array)
 {
-    Vector<VectorElementType> vector;
-    vector.reserveInitialCapacity(array.count);
-    for (id element in array) {
+    return Vector<VectorElementType>(array.count, [&](size_t index) {
         constexpr const VectorElementType* typedNull = nullptr;
-        if (auto vectorElement = makeVectorElement(typedNull, element))
-            vector.uncheckedAppend(WTFMove(*vectorElement));
-    }
-    vector.shrinkToFit();
-    return vector;
+        return makeVectorElement(typedNull, array[index]);
+    });
 }
 
-template<typename MapFunctionType> Vector<typename std::invoke_result_t<MapFunctionType, id>::value_type> makeVector(NSArray *array, MapFunctionType&& function)
+template<typename MapFunctionType> Vector<typename std::invoke_result_t<MapFunctionType, id>::value_type> makeVector(NSArray *array, NOESCAPE MapFunctionType&& function)
 {
-    Vector<typename std::invoke_result_t<MapFunctionType, id>::value_type> vector;
-    vector.reserveInitialCapacity(array.count);
-    for (id element in array) {
-        if (auto vectorElement = std::invoke(std::forward<MapFunctionType>(function), element))
-            vector.uncheckedAppend(WTFMove(*vectorElement));
-    }
-    vector.shrinkToFit();
-    return vector;
+    return Vector<typename std::invoke_result_t<MapFunctionType, id>::value_type>(array.count, [&](size_t index) {
+        return std::invoke(std::forward<MapFunctionType>(function), array[index]);
+    });
 }
 
-inline Vector<uint8_t> vectorFromNSData(NSData* data)
+inline Vector<uint8_t> makeVector(NSData *data)
 {
-    return { reinterpret_cast<const uint8_t*>(data.bytes), data.length };
+    return span(data);
+}
+
+template<typename T>
+inline OSObjectPtr<dispatch_data_t> makeDispatchData(Vector<T>&& vector)
+{
+    auto buffer = vector.releaseBuffer();
+    auto span = buffer.span();
+    return adoptOSObject(dispatch_data_create(span.data(), span.size_bytes(), mainDispatchQueueSingleton(), makeBlockPtr([buffer = WTF::move(buffer)] { }).get()));
 }
 
 } // namespace WTF
 
 using WTF::createNSArray;
+using WTF::makeDispatchData;
 using WTF::makeVector;
-using WTF::vectorFromNSData;
+
+#endif // __OBJC__

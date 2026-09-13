@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2019 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2009-2019 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 // FIXME: The current standard says this should be annotated with 'SecureContext'.
 [
     Conditional=GEOLOCATION,
+    EnabledBySetting=GeolocationAPIEnabled,
     Exposed=Window
 ] interface GeolocationCoordinates {
     readonly attribute unrestricted double latitude;
@@ -36,6 +37,7 @@
     readonly attribute unrestricted double? altitudeAccuracy;
     readonly attribute unrestricted double? heading;
     readonly attribute unrestricted double? speed;
+    [Default] object toJSON();
     
     // Non standard.
     [EnabledBySetting=GeolocationFloorLevelEnabled] readonly attribute unrestricted double? floorLevel;

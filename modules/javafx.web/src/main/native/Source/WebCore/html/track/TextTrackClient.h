@@ -27,7 +27,7 @@
 
 #if ENABLE(VIDEO)
 
-#include <wtf/WeakPtr.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
@@ -35,7 +35,7 @@ class TextTrack;
 class TextTrackCue;
 class TextTrackCueList;
 
-class TextTrackClient : public CanMakeWeakPtr<TextTrackClient> {
+class TextTrackClient : public AbstractRefCountedAndCanMakeWeakPtr<TextTrackClient> {
 public:
     virtual ~TextTrackClient() = default;
     virtual void textTrackIdChanged(TextTrack&) { }

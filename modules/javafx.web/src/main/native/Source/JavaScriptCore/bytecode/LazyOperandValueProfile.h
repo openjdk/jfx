@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2023 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "ConcurrentJSLock.h"
-#include "Operands.h"
-#include "ValueProfile.h"
-#include "VirtualRegister.h"
+#include <JavaScriptCore/ConcurrentJSLock.h>
+#include <JavaScriptCore/Operands.h>
+#include <JavaScriptCore/ValueProfile.h>
+#include <JavaScriptCore/VirtualRegister.h>
 #include <wtf/HashMap.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/SegmentedVector.h>
@@ -62,11 +62,7 @@ public:
         return !m_operand.isValid();
     }
 
-    bool operator==(const LazyOperandValueProfileKey& other) const
-    {
-        return m_bytecodeIndex == other.m_bytecodeIndex
-            && m_operand == other.m_operand;
-    }
+    friend bool operator==(const LazyOperandValueProfileKey&, const LazyOperandValueProfileKey&) = default;
 
     unsigned hash() const
     {
@@ -89,25 +85,17 @@ public:
     {
         return !m_operand.isValid() && m_bytecodeIndex.isHashTableDeletedValue();
     }
+
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
 private:
     BytecodeIndex m_bytecodeIndex;
     Operand m_operand;
 };
 
-struct LazyOperandValueProfileKeyHash {
-    static unsigned hash(const LazyOperandValueProfileKey& key) { return key.hash(); }
-    static bool equal(
-        const LazyOperandValueProfileKey& a,
-        const LazyOperandValueProfileKey& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } // namespace JSC
 
 namespace WTF {
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::LazyOperandValueProfileKey> : JSC::LazyOperandValueProfileKeyHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::LazyOperandValueProfileKey> : public GenericHashTraits<JSC::LazyOperandValueProfileKey> {
@@ -139,44 +127,6 @@ struct LazyOperandValueProfile : public MinimalValueProfile {
 
     VirtualRegister m_operand;
     LazyOperandValueProfileKey m_key;
-
-    typedef SegmentedVector<LazyOperandValueProfile, 8> List;
-};
-
-class LazyOperandValueProfileParser;
-
-class CompressedLazyOperandValueProfileHolder {
-    WTF_MAKE_NONCOPYABLE(CompressedLazyOperandValueProfileHolder);
-public:
-    CompressedLazyOperandValueProfileHolder();
-    ~CompressedLazyOperandValueProfileHolder();
-
-    void computeUpdatedPredictions(const ConcurrentJSLocker&);
-
-    LazyOperandValueProfile* add(
-        const ConcurrentJSLocker&, const LazyOperandValueProfileKey& key);
-
-private:
-    friend class LazyOperandValueProfileParser;
-    std::unique_ptr<LazyOperandValueProfile::List> m_data;
-};
-
-class LazyOperandValueProfileParser {
-    WTF_MAKE_NONCOPYABLE(LazyOperandValueProfileParser);
-public:
-    explicit LazyOperandValueProfileParser();
-    ~LazyOperandValueProfileParser();
-
-    void initialize(
-        const ConcurrentJSLocker&, CompressedLazyOperandValueProfileHolder& holder);
-
-    LazyOperandValueProfile* getIfPresent(
-        const LazyOperandValueProfileKey& key) const;
-
-    SpeculatedType prediction(
-        const ConcurrentJSLocker&, const LazyOperandValueProfileKey& key) const;
-private:
-    HashMap<LazyOperandValueProfileKey, LazyOperandValueProfile*> m_map;
 };
 
 } // namespace JSC

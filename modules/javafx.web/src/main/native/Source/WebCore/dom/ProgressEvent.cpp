@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007, 2008 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,31 +26,26 @@
 #include "config.h"
 #include "ProgressEvent.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(ProgressEvent);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ProgressEvent);
 
-ProgressEvent::ProgressEvent(const AtomString& type, const Init& initializer, IsTrusted isTrusted)
-    : Event(type, initializer, isTrusted)
+ProgressEvent::ProgressEvent(enum EventInterfaceType eventInterface, const AtomString& type, const Init& initializer, IsTrusted isTrusted)
+    : Event(eventInterface, type, initializer, isTrusted)
     , m_lengthComputable(initializer.lengthComputable)
     , m_loaded(initializer.loaded)
     , m_total(initializer.total)
 {
 }
 
-ProgressEvent::ProgressEvent(const AtomString& type, bool lengthComputable, unsigned long long loaded, unsigned long long total)
-    : Event(type, CanBubble::No, IsCancelable::No)
+ProgressEvent::ProgressEvent(enum EventInterfaceType eventInterface, const AtomString& type, bool lengthComputable, double loaded, double total)
+    : Event(eventInterface, type, CanBubble::No, IsCancelable::No)
     , m_lengthComputable(lengthComputable)
     , m_loaded(loaded)
     , m_total(total)
 {
-}
-
-EventInterface ProgressEvent::eventInterface() const
-{
-    return ProgressEventInterfaceType;
 }
 
 }

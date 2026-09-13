@@ -26,12 +26,13 @@
 #pragma once
 
 #include "InspectorNetworkAgent.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class WorkerNetworkAgent final : public InspectorNetworkAgent {
     WTF_MAKE_NONCOPYABLE(WorkerNetworkAgent);
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(WorkerNetworkAgent);
 public:
     WorkerNetworkAgent(WorkerAgentContext&);
     ~WorkerNetworkAgent();
@@ -39,7 +40,7 @@ public:
 private:
     Inspector::Protocol::Network::LoaderId loaderIdentifier(DocumentLoader*);
     Inspector::Protocol::Network::FrameId frameIdentifier(DocumentLoader*);
-    Vector<WebSocket*> activeWebSockets() WTF_REQUIRES_LOCK(WebSocket::allActiveWebSocketsLock());
+    Vector<Ref<WebSocket>> activeWebSockets() WTF_REQUIRES_LOCK(WebSocket::allActiveWebSocketsLock());
     void setResourceCachingDisabledInternal(bool);
 #if ENABLE(INSPECTOR_NETWORK_THROTTLING)
     bool setEmulatedConditionsInternal(std::optional<int>&& bytesPerSecondLimit);
@@ -48,7 +49,7 @@ private:
     void addConsoleMessage(std::unique_ptr<Inspector::ConsoleMessage>&&);
     bool shouldForceBufferingNetworkResourceData() const { return true; }
 
-    WorkerOrWorkletGlobalScope& m_globalScope;
+    WeakRef<WorkerOrWorkletGlobalScope> m_globalScope;
 };
 
 } // namespace WebCore

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -34,14 +34,18 @@
 #include "Parser.h"
 #include "SourceCode.h"
 #include "SourceProvider.h"
+#include <wtf/Scope.h>
+#include <wtf/SystemTracing.h>
 
 using namespace JSC;
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 struct OpaqueJSScript final : public SourceProvider {
 public:
     static WTF::Ref<OpaqueJSScript> create(VM& vm, const SourceOrigin& sourceOrigin, String filename, int startingLineNumber, const String& source)
     {
-        return WTF::adoptRef(*new OpaqueJSScript(vm, sourceOrigin, WTFMove(filename), startingLineNumber, source));
+        return WTF::adoptRef(*new OpaqueJSScript(vm, sourceOrigin, WTF::move(filename), startingLineNumber, source));
     }
 
     unsigned hash() const final
@@ -54,11 +58,27 @@ public:
         return m_source.get();
     }
 
+    [[maybe_unused]] String debugDescription() const
+    {
+        auto url = sourceURL();
+        if (!url.isEmpty())
+            return url;
+
+        auto truncated = source().left(64);
+        if (size_t pos = truncated.find('\n'); pos != notFound) {
+            if (truncated.startsWith("//# sourceURL="_s))
+                truncated = truncated.substring(14, pos);
+            else
+                truncated = truncated.substring(0, pos);
+        }
+        return truncated.toString();
+    }
+
     VM& vm() const { return m_vm; }
 
 private:
     OpaqueJSScript(VM& vm, const SourceOrigin& sourceOrigin, String&& filename, int startingLineNumber, const String& source)
-        : SourceProvider(sourceOrigin, WTFMove(filename), String(), TextPosition(OrdinalNumber::fromOneBasedInt(startingLineNumber), OrdinalNumber()), SourceProviderSourceType::Program)
+        : SourceProvider(sourceOrigin, WTF::move(filename), String(), SourceTaintedOrigin::Untainted, TextPosition(OrdinalNumber::fromOneBasedInt(startingLineNumber), OrdinalNumber()), SourceProviderSourceType::Program)
         , m_vm(vm)
         , m_source(source.isNull() ? *StringImpl::empty() : *source.impl())
     {
@@ -67,15 +87,14 @@ private:
     ~OpaqueJSScript() final { }
 
     VM& m_vm;
-    Ref<StringImpl> m_source;
+    const Ref<StringImpl> m_source;
 };
 
 static bool parseScript(VM& vm, const SourceCode& source, ParserError& error)
 {
-    return !!JSC::parse<JSC::ProgramNode>(
-        vm, source, Identifier(), ImplementationVisibility::Public, JSParserBuiltinMode::NotBuiltin,
-        JSParserStrictMode::NotStrict, JSParserScriptMode::Classic, SourceParseMode::ProgramMode, SuperBinding::NotNeeded,
-        error);
+    return !!parseRootNode<ProgramNode>(
+        vm, source, ImplementationVisibility::Public, JSParserBuiltinMode::NotBuiltin,
+        NoLexicallyScopedFeatures, JSParserScriptMode::Classic, SourceParseMode::ProgramMode, error);
 }
 
 extern "C" {
@@ -92,7 +111,12 @@ JSScriptRef JSScriptCreateReferencingImmortalASCIIText(JSContextGroupRef context
     startingLineNumber = std::max(1, startingLineNumber);
 
     auto sourceURL = urlString ? URL({ }, urlString->string()) : URL();
-    auto result = OpaqueJSScript::create(vm, SourceOrigin { sourceURL }, sourceURL.string(), startingLineNumber, String(StringImpl::createWithoutCopying(source, length)));
+    auto result = OpaqueJSScript::create(vm, SourceOrigin { sourceURL }, sourceURL.string(), startingLineNumber, String(StringImpl::createWithoutCopying({ source, length })));
+
+    WTFBeginSignpost(source, JSScriptRef, "createImmortal: %" PRIVATE_LOG_STRING " (%u bytes)", result->debugDescription().ascii().data(), result->source().length());
+    auto endSignpost = makeScopeExit([&] {
+        WTFEndSignpost(source, JSScriptRef);
+    });
 
     ParserError error;
     if (!parseScript(vm, SourceCode(result.copyRef()), error)) {
@@ -115,6 +139,11 @@ JSScriptRef JSScriptCreateFromString(JSContextGroupRef contextGroup, JSStringRef
 
     auto sourceURL = urlString ? URL({ }, urlString->string()) : URL();
     auto result = OpaqueJSScript::create(vm, SourceOrigin { sourceURL }, sourceURL.string(), startingLineNumber, source->string());
+
+    WTFBeginSignpost(source, JSScriptRef, "createFromString: %" PRIVATE_LOG_STRING " (%u bytes)", result->debugDescription().ascii().data(), result->source().length());
+    auto endSignpost = makeScopeExit([&] {
+        WTFEndSignpost(source, JSScriptRef);
+    });
 
     ParserError error;
     if (!parseScript(vm, SourceCode(result.copyRef()), error)) {
@@ -149,6 +178,12 @@ JSValueRef JSScriptEvaluate(JSContextRef context, JSScriptRef script, JSValueRef
         RELEASE_ASSERT_NOT_REACHED();
         return nullptr;
     }
+
+    WTFBeginSignpost(script, JSScriptRef, "evaluate: %" PRIVATE_LOG_STRING " (%u bytes)", script->debugDescription().ascii().data(), script->source().length());
+    auto endSignpost = makeScopeExit([&] {
+        WTFEndSignpost(script, JSScriptRef);
+    });
+
     NakedPtr<Exception> internalException;
     JSValue thisValue = thisValueRef ? toJS(globalObject, thisValueRef) : jsUndefined();
     JSValue result = evaluate(globalObject, SourceCode(*script), thisValue, internalException);
@@ -162,3 +197,5 @@ JSValueRef JSScriptEvaluate(JSContextRef context, JSScriptRef script, JSValueRef
 }
 
 }
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -51,9 +51,6 @@ import java.net.URLConnection;
 import java.net.URLDecoder;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.security.AccessControlException;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -122,27 +119,15 @@ final class URLLoader extends URLLoaderBase implements Runnable {
     /**
      * {@inheritDoc}
      */
-    @SuppressWarnings("removal")
     @Override
     public void run() {
-        // Run the loader in the page's access control context
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            doRun();
-            return null;
-        }, webPage.getAccessControlContext());
-    }
-
-    /**
-     * Executes this loader.
-     */
-    private void doRun() {
         Throwable error = null;
         int errorCode = 0;
         try {
             boolean streaming = true;
             boolean connectionResetRetry = true;
             while (true) {
-                // RT-14438
+                // JDK-8114159
                 String actualUrl = url;
                 if (url.startsWith("file:")) {
                     int questionMarkPosition = url.indexOf('?');
@@ -153,7 +138,7 @@ final class URLLoader extends URLLoaderBase implements Runnable {
 
                 URL urlObject = newURL(actualUrl);
 
-                // RT-22458
+                // JDK-8126749
                 workaround7177996(urlObject);
 
                 URLConnection c = urlObject.openConnection();
@@ -163,7 +148,7 @@ final class URLLoader extends URLLoaderBase implements Runnable {
                     sendRequest(c, streaming);
                     receiveResponse(c);
                 } catch (HttpRetryException ex) {
-                    // RT-19914
+                    // JDK-8118819
                     if (streaming) {
                         streaming = false;
                         continue; // retry without streaming
@@ -186,9 +171,6 @@ final class URLLoader extends URLLoaderBase implements Runnable {
         } catch (MalformedURLException ex) {
             error = ex;
             errorCode = LoadListenerClient.MALFORMED_URL;
-        } catch (@SuppressWarnings("removal") AccessControlException ex) {
-            error = ex;
-            errorCode = LoadListenerClient.PERMISSION_DENIED;
         } catch (UnknownHostException ex) {
             error = ex;
             errorCode = LoadListenerClient.UNKNOWN_HOST;
@@ -273,7 +255,7 @@ final class URLLoader extends URLLoaderBase implements Runnable {
         // any URLConnection caches, even if someone installs them.
         // As a side effect, this fixes the problem of WebPane not
         // working well with the plug-in cache, which was one of
-        // the causes for RT-11880.
+        // the causes for JDK-8112030.
         c.setUseCaches(false);
 
         Locale loc = Locale.getDefault();
@@ -413,7 +395,7 @@ final class URLLoader extends URLLoaderBase implements Runnable {
                 return;
             }
 
-            // See RT-17435
+            // See JDK-8128279
             switch (code) {
                 case 301: // Moved Permanently
                 case 302: // Found

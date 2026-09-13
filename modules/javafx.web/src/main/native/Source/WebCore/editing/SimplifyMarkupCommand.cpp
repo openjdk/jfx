@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Apple Inc.  All rights reserved.
+ * Copyright (C) 2012-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,16 +26,18 @@
 #include "config.h"
 #include "SimplifyMarkupCommand.h"
 
+#include "ContainerNodeInlines.h"
 #include "NodeRenderStyle.h"
 #include "NodeTraversal.h"
 #include "RenderInline.h"
 #include "RenderObject.h"
 #include "RenderStyle.h"
+#include "StyleDifference.h"
 
 namespace WebCore {
 
-SimplifyMarkupCommand::SimplifyMarkupCommand(Document& document, Node* firstNode, Node* nodeAfterLast)
-    : CompositeEditCommand(document)
+SimplifyMarkupCommand::SimplifyMarkupCommand(Ref<Document>&& document, Node* firstNode, Node* nodeAfterLast)
+    : CompositeEditCommand(WTF::move(document))
     , m_firstNode(firstNode)
     , m_nodeAfterLast(nodeAfterLast)
 {
@@ -43,7 +45,7 @@ SimplifyMarkupCommand::SimplifyMarkupCommand(Document& document, Node* firstNode
 
 void SimplifyMarkupCommand::doApply()
 {
-    Node* rootNode = m_firstNode->parentNode();
+    RefPtr rootNode = m_firstNode->parentNode();
     Vector<Ref<Node>> nodesToRemove;
 
     document().updateLayoutIgnorePendingStylesheets();
@@ -52,26 +54,32 @@ void SimplifyMarkupCommand::doApply()
     // without affecting the style. The goal is to produce leaner markup even when starting
     // from a verbose fragment.
     // We look at inline elements as well as non top level divs that don't have attributes.
-    for (Node* node = m_firstNode.get(); node && node != m_nodeAfterLast; node = NodeTraversal::next(*node)) {
+    for (RefPtr node = m_firstNode.get(); node && node != m_nodeAfterLast; node = NodeTraversal::next(*node)) {
         if (node->firstChild() || (node->isTextNode() && node->nextSibling()) || !node->parentNode())
             continue;
 
-        Node* startingNode = node->parentNode();
+        RefPtr startingNode = node->parentNode();
         auto* startingStyle = startingNode->renderStyle();
         if (!startingStyle)
             continue;
-        Node* currentNode = startingNode;
-        Node* topNodeWithStartingStyle = nullptr;
+        RefPtr currentNode = startingNode;
+        RefPtr<Node> topNodeWithStartingStyle;
         while (currentNode != rootNode) {
-            if (currentNode->parentNode() != rootNode && isRemovableBlock(currentNode))
+            // FIXME: The simplification algorithm should be rewritten to eliminate redundant
+            // parents in cases where the children affect rendered content, as observed with
+            // <span><picture></picture></span>.
+            if (currentNode->hasTagName(HTMLNames::pictureTag))
+                break;
+
+            if (currentNode->parentNode() != rootNode && isRemovableBlock(currentNode.get()))
                 nodesToRemove.append(*currentNode);
 
             currentNode = currentNode->parentNode();
             if (!currentNode)
                 break;
 
-            auto* renderer = currentNode->renderer();
-            if (!is<RenderInline>(renderer) || downcast<RenderInline>(*renderer).mayAffectLayout())
+            CheckedPtr renderInline = dynamicDowncast<RenderInline>(currentNode->renderer());
+            if (!renderInline || renderInline->mayAffectLayout())
                 continue;
 
             if (currentNode->firstChild() != currentNode->lastChild()) {
@@ -79,13 +87,11 @@ void SimplifyMarkupCommand::doApply()
                 break;
             }
 
-            OptionSet<StyleDifferenceContextSensitiveProperty> contextSensitiveProperties;
-            if (currentNode->renderStyle()->diff(*startingStyle, contextSensitiveProperties) == StyleDifference::Equal)
+            if (Style::difference(*currentNode->renderStyle(), *startingStyle) == Style::DifferenceResult::Equal)
                 topNodeWithStartingStyle = currentNode;
-
         }
         if (topNodeWithStartingStyle) {
-            for (Node* node = startingNode; node && node != topNodeWithStartingStyle; node = node->parentNode())
+            for (RefPtr node = startingNode; node && node != topNodeWithStartingStyle; node = node->parentNode())
                 nodesToRemove.append(*node);
         }
     }
@@ -111,8 +117,8 @@ int SimplifyMarkupCommand::pruneSubsequentAncestorsToRemove(Vector<Ref<Node>>& n
             break;
     }
 
-    Node* highestAncestorToRemove = nodesToRemove[pastLastNodeToRemove - 1].ptr();
-    RefPtr<ContainerNode> parent = highestAncestorToRemove->parentNode();
+    Ref highestAncestorToRemove = nodesToRemove[pastLastNodeToRemove - 1].get();
+    RefPtr parent = highestAncestorToRemove->parentNode();
     if (!parent) // Parent has already been removed.
         return -1;
 
@@ -120,8 +126,8 @@ int SimplifyMarkupCommand::pruneSubsequentAncestorsToRemove(Vector<Ref<Node>>& n
         return 0;
 
     removeNode(nodesToRemove[startNodeIndex], AssumeContentIsAlwaysEditable);
-    insertNodeBefore(nodesToRemove[startNodeIndex].copyRef(), *highestAncestorToRemove, AssumeContentIsAlwaysEditable);
-    removeNode(*highestAncestorToRemove, AssumeContentIsAlwaysEditable);
+    insertNodeBefore(nodesToRemove[startNodeIndex].copyRef(), highestAncestorToRemove, AssumeContentIsAlwaysEditable);
+    removeNode(highestAncestorToRemove, AssumeContentIsAlwaysEditable);
 
     return pastLastNodeToRemove - startNodeIndex - 1;
 }

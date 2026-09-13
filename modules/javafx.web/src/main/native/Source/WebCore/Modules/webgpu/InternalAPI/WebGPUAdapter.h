@@ -25,20 +25,21 @@
 
 #pragma once
 
-#include "WebGPUDeviceDescriptor.h"
-#include "WebGPUSupportedFeatures.h"
-#include "WebGPUSupportedLimits.h"
+#include <WebCore/WebGPUDeviceDescriptor.h>
+#include <WebCore/WebGPUSupportedFeatures.h>
+#include <WebCore/WebGPUSupportedLimits.h>
 #include <optional>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore::WebGPU {
 
 class Device;
 
-class Adapter : public RefCounted<Adapter> {
+class Adapter : public RefCountedAndCanMakeWeakPtr<Adapter> {
 public:
     virtual ~Adapter() = default;
 
@@ -46,12 +47,15 @@ public:
     SupportedFeatures& features() const { return m_features; }
     SupportedLimits& limits() const { return m_limits; }
     bool isFallbackAdapter() const { return m_isFallbackAdapter; }
+    virtual bool xrCompatible() = 0;
+    virtual bool isRemoteAdapterProxy() const { return false; }
+    virtual bool isAdapterImpl() const { return false; }
 
     virtual void requestDevice(const DeviceDescriptor&, CompletionHandler<void(RefPtr<Device>&&)>&&) = 0;
 
 protected:
     Adapter(String&& name, SupportedFeatures& features, SupportedLimits& limits, bool isFallbackAdapter)
-        : m_name(WTFMove(name))
+        : m_name(WTF::move(name))
         , m_features(features)
         , m_limits(limits)
         , m_isFallbackAdapter(isFallbackAdapter)
@@ -65,8 +69,8 @@ private:
     Adapter& operator=(Adapter&&) = delete;
 
     String m_name;
-    Ref<SupportedFeatures> m_features;
-    Ref<SupportedLimits> m_limits;
+    const Ref<SupportedFeatures> m_features;
+    const Ref<SupportedLimits> m_limits;
     bool m_isFallbackAdapter;
 };
 

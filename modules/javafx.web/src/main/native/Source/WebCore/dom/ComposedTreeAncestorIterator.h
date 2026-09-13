@@ -37,22 +37,27 @@ class HTMLSlotElement;
 class ComposedTreeAncestorIterator {
 public:
     ComposedTreeAncestorIterator();
+    ComposedTreeAncestorIterator(Element& current);
     ComposedTreeAncestorIterator(Node& current);
 
     Element& operator*() { return get(); }
     Element* operator->() { return &get(); }
 
-    bool operator==(const ComposedTreeAncestorIterator& other) const { return m_current == other.m_current; }
+    friend bool operator==(ComposedTreeAncestorIterator, ComposedTreeAncestorIterator) = default;
 
-    ComposedTreeAncestorIterator& operator++() { return traverseParent(); }
+    ComposedTreeAncestorIterator& operator++()
+    {
+        m_current = traverseParent(m_current.get());
+        return *this;
+    }
 
-    Element& get() { return downcast<Element>(*m_current); }
-    ComposedTreeAncestorIterator& traverseParent();
+    Element& get() { return *m_current; }
 
 private:
     void traverseParentInShadowTree();
+    static CheckedPtr<Element> traverseParent(Node*);
 
-    Node* m_current { 0 };
+    CheckedPtr<Element> m_current;
 };
 
 inline ComposedTreeAncestorIterator::ComposedTreeAncestorIterator()
@@ -60,34 +65,29 @@ inline ComposedTreeAncestorIterator::ComposedTreeAncestorIterator()
 }
 
 inline ComposedTreeAncestorIterator::ComposedTreeAncestorIterator(Node& current)
-    : m_current(&current)
+    : m_current(traverseParent(&current))
 {
-    ASSERT(!is<ShadowRoot>(m_current));
+    ASSERT(!is<ShadowRoot>(current));
 }
 
-inline ComposedTreeAncestorIterator& ComposedTreeAncestorIterator::traverseParent()
+inline ComposedTreeAncestorIterator::ComposedTreeAncestorIterator(Element& current)
+    : m_current(&current)
 {
-    auto* parent = m_current->parentNode();
-    if (!parent) {
-        m_current = nullptr;
-        return *this;
-    }
-    if (auto shadowRoot = dynamicDowncast<ShadowRoot>(*parent)) {
-        m_current = shadowRoot->host();
-        return *this;
-    }
-    if (!is<Element>(*parent)) {
-        m_current = nullptr;
-        return *this;
-    };
+}
 
-    if (auto* shadowRoot = parent->shadowRoot()) {
-        m_current = shadowRoot->findAssignedSlot(*m_current);
-        return *this;
-    }
-
-    m_current = parent;
-    return *this;
+inline CheckedPtr<Element> ComposedTreeAncestorIterator::traverseParent(Node* current)
+{
+    RefPtr parent = current->parentNode();
+    if (!parent)
+        return nullptr;
+    if (auto* shadowRoot = dynamicDowncast<ShadowRoot>(*parent))
+        return shadowRoot->host();
+    RefPtr parentElement = dynamicDowncast<Element>(*parent);
+    if (!parentElement)
+        return nullptr;
+    if (RefPtr shadowRoot = parentElement->shadowRoot())
+        return shadowRoot->findAssignedSlot(*current);
+    return parentElement.get();
 }
 
 class ComposedTreeAncestorAdapter {
@@ -104,7 +104,7 @@ public:
             return iterator(*shadowRoot->host());
         if (auto pseudoElement = dynamicDowncast<PseudoElement>(m_node.get()))
             return iterator(*pseudoElement->hostElement());
-        return iterator(m_node).traverseParent();
+        return iterator(m_node);
     }
     iterator end()
     {
@@ -119,7 +119,7 @@ public:
     }
 
 private:
-    Ref<Node> m_node;
+    const Ref<Node> m_node;
 };
 
 // FIXME: We should have const versions too.

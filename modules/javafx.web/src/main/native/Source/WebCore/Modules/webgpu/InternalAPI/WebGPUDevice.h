@@ -25,21 +25,28 @@
 
 #pragma once
 
-#include "WebGPUComputePipeline.h"
-#include "WebGPUDeviceLostInfo.h"
-#include "WebGPUError.h"
-#include "WebGPUErrorFilter.h"
-#include "WebGPURenderPipeline.h"
-#include "WebGPUSupportedFeatures.h"
-#include "WebGPUSupportedLimits.h"
+#include <WebCore/WebGPUComputePipeline.h>
+#include <WebCore/WebGPUDeviceLostInfo.h>
+#include <WebCore/WebGPUError.h>
+#include <WebCore/WebGPUErrorFilter.h>
+#include <WebCore/WebGPURenderPipeline.h>
+#include <WebCore/WebGPUSupportedFeatures.h>
+#include <WebCore/WebGPUSupportedLimits.h>
 #include <optional>
 #include <wtf/CompletionHandler.h>
 #include <wtf/HashSet.h>
+#include <wtf/Platform.h>
 #include <wtf/Ref.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 #if HAVE(IOSURFACE)
 #include <IOSurface/IOSurfaceRef.h>
+#endif
+
+#if PLATFORM(COCOA) && ENABLE(VIDEO)
+#include <WebCore/MediaPlayerIdentifier.h>
 #endif
 
 namespace WebCore::WebGPU {
@@ -50,8 +57,10 @@ class BindGroupLayout;
 struct BindGroupLayoutDescriptor;
 class Buffer;
 struct BufferDescriptor;
+class CommandBuffer;
 class CommandEncoder;
 struct CommandEncoderDescriptor;
+class ComputePassEncoder;
 class ComputePipeline;
 struct ComputePipelineDescriptor;
 class ExternalTexture;
@@ -66,6 +75,7 @@ struct QuerySetDescriptor;
 class Queue;
 class RenderBundleEncoder;
 struct RenderBundleEncoderDescriptor;
+class RenderPassEncoder;
 class RenderPipeline;
 struct RenderPipelineDescriptor;
 class Sampler;
@@ -75,8 +85,9 @@ struct ShaderModuleDescriptor;
 class Surface;
 class Texture;
 struct TextureDescriptor;
+class XRBinding;
 
-class Device : public RefCounted<Device> {
+class Device : public RefCountedAndCanMakeWeakPtr<Device> {
 public:
     virtual ~Device() = default;
 
@@ -84,7 +95,7 @@ public:
 
     void setLabel(String&& label)
     {
-        m_label = WTFMove(label);
+        m_label = WTF::move(label);
         setLabelInternal(m_label);
     }
 
@@ -97,39 +108,48 @@ public:
 
     virtual void destroy() = 0;
 
-    virtual Ref<Buffer> createBuffer(const BufferDescriptor&) = 0;
-    virtual Ref<Texture> createTexture(const TextureDescriptor&) = 0;
-    virtual Ref<Sampler> createSampler(const SamplerDescriptor&) = 0;
-    virtual Ref<ExternalTexture> importExternalTexture(const ExternalTextureDescriptor&) = 0;
+    virtual RefPtr<XRBinding> createXRBinding() = 0;
+    virtual RefPtr<Buffer> createBuffer(const BufferDescriptor&) = 0;
+    virtual RefPtr<Texture> createTexture(const TextureDescriptor&) = 0;
+    virtual RefPtr<Sampler> createSampler(const SamplerDescriptor&) = 0;
+    virtual RefPtr<ExternalTexture> importExternalTexture(const ExternalTextureDescriptor&) = 0;
+#if PLATFORM(COCOA) && ENABLE(VIDEO)
+    virtual void updateExternalTexture(const WebCore::WebGPU::ExternalTexture&, const WebCore::MediaPlayerIdentifier&) = 0;
+#endif
 
-    virtual Ref<BindGroupLayout> createBindGroupLayout(const BindGroupLayoutDescriptor&) = 0;
-    virtual Ref<PipelineLayout> createPipelineLayout(const PipelineLayoutDescriptor&) = 0;
-    virtual Ref<BindGroup> createBindGroup(const BindGroupDescriptor&) = 0;
+    virtual RefPtr<BindGroupLayout> createBindGroupLayout(const BindGroupLayoutDescriptor&) = 0;
+    virtual RefPtr<PipelineLayout> createPipelineLayout(const PipelineLayoutDescriptor&) = 0;
+    virtual RefPtr<BindGroup> createBindGroup(const BindGroupDescriptor&) = 0;
 
-    virtual Ref<ShaderModule> createShaderModule(const ShaderModuleDescriptor&) = 0;
-    virtual Ref<ComputePipeline> createComputePipeline(const ComputePipelineDescriptor&) = 0;
-    virtual Ref<RenderPipeline> createRenderPipeline(const RenderPipelineDescriptor&) = 0;
-    virtual void createComputePipelineAsync(const ComputePipelineDescriptor&, CompletionHandler<void(RefPtr<ComputePipeline>&&)>&&) = 0;
-    virtual void createRenderPipelineAsync(const RenderPipelineDescriptor&, CompletionHandler<void(RefPtr<RenderPipeline>&&)>&&) = 0;
+    virtual RefPtr<ShaderModule> createShaderModule(const ShaderModuleDescriptor&) = 0;
+    virtual RefPtr<ComputePipeline> createComputePipeline(const ComputePipelineDescriptor&) = 0;
+    virtual RefPtr<RenderPipeline> createRenderPipeline(const RenderPipelineDescriptor&) = 0;
+    virtual void createComputePipelineAsync(const ComputePipelineDescriptor&, CompletionHandler<void(RefPtr<ComputePipeline>&&, String&&)>&&) = 0;
+    virtual void createRenderPipelineAsync(const RenderPipelineDescriptor&, CompletionHandler<void(RefPtr<RenderPipeline>&&, String&&)>&&) = 0;
 
-    virtual Ref<CommandEncoder> createCommandEncoder(const std::optional<CommandEncoderDescriptor>&) = 0;
-    virtual Ref<RenderBundleEncoder> createRenderBundleEncoder(const RenderBundleEncoderDescriptor&) = 0;
+    virtual RefPtr<CommandEncoder> createCommandEncoder(const std::optional<CommandEncoderDescriptor>&) = 0;
+    virtual RefPtr<RenderBundleEncoder> createRenderBundleEncoder(const RenderBundleEncoderDescriptor&) = 0;
 
-    virtual Ref<QuerySet> createQuerySet(const QuerySetDescriptor&) = 0;
+    virtual RefPtr<QuerySet> createQuerySet(const QuerySetDescriptor&) = 0;
 
     virtual void pushErrorScope(ErrorFilter) = 0;
-    virtual void popErrorScope(CompletionHandler<void(std::optional<Error>&&)>&&) = 0;
-    class DeviceLostClient {
-        virtual ~DeviceLostClient() = default;
-        virtual void deviceLost() = 0;
-    };
-    void registerDeviceLostClient(DeviceLostClient& client) { m_deviceLostClients.add(&client); }
-    void unregisterDeviceLostClient(DeviceLostClient& client) { m_deviceLostClients.remove(&client); }
+    virtual void popErrorScope(CompletionHandler<void(bool, std::optional<Error>&&)>&&) = 0;
+    virtual void resolveUncapturedErrorEvent(CompletionHandler<void(bool, std::optional<Error>&&)>&&) = 0;
+    virtual void resolveDeviceLostPromise(CompletionHandler<void(WebCore::WebGPU::DeviceLostReason)>&&) = 0;
+    virtual Ref<CommandEncoder> invalidCommandEncoder() = 0;
+    virtual Ref<CommandBuffer> invalidCommandBuffer() = 0;
+    virtual Ref<RenderPassEncoder> invalidRenderPassEncoder() = 0;
+    virtual Ref<ComputePassEncoder> invalidComputePassEncoder() = 0;
+    virtual void pauseAllErrorReporting(bool pause) = 0;
+
+    virtual bool isRemoteDeviceProxy() const { return false; }
+    virtual bool isDeviceImpl() const { return false; }
+    virtual Ref<BindGroupLayout> emptyBindGroupLayout() const = 0;
 
 protected:
     Device(Ref<SupportedFeatures>&& features, Ref<SupportedLimits>&& limits)
-        : m_features(WTFMove(features))
-        , m_limits(WTFMove(limits))
+        : m_features(WTF::move(features))
+        , m_limits(WTF::move(limits))
     {
     }
 
@@ -142,9 +162,8 @@ private:
     virtual void setLabelInternal(const String&) = 0;
 
     String m_label;
-    HashSet<DeviceLostClient*> m_deviceLostClients;
-    Ref<SupportedFeatures> m_features;
-    Ref<SupportedLimits> m_limits;
+    const Ref<SupportedFeatures> m_features;
+    const Ref<SupportedLimits> m_limits;
 };
 
 } // namespace WebCore::WebGPU

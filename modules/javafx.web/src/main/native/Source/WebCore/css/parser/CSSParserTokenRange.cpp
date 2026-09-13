@@ -1,5 +1,5 @@
 // Copyright 2014 The Chromium Authors. All rights reserved.
-// Copyright (C) 2016 Apple Inc. All rights reserved.
+// Copyright (C) 2016-2024 Apple Inc. All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are
@@ -42,20 +42,10 @@ CSSParserToken& CSSParserTokenRange::eofToken()
     return eofToken.get();
 }
 
-CSSParserTokenRange CSSParserTokenRange::makeSubRange(const CSSParserToken* first, const CSSParserToken* last) const
-{
-    if (first == &eofToken())
-        first = m_last;
-    if (last == &eofToken())
-        last = m_last;
-    ASSERT(first <= last);
-    return CSSParserTokenRange(first, last);
-}
-
 CSSParserTokenRange CSSParserTokenRange::consumeBlock()
 {
     ASSERT(peek().getBlockType() == CSSParserToken::BlockStart);
-    const CSSParserToken* start = &peek() + 1;
+    auto start = m_tokens.subspan(1);
     unsigned nestingLevel = 0;
     do {
         const CSSParserToken& token = consume();
@@ -63,17 +53,17 @@ CSSParserTokenRange CSSParserTokenRange::consumeBlock()
             nestingLevel++;
         else if (token.getBlockType() == CSSParserToken::BlockEnd)
             nestingLevel--;
-    } while (nestingLevel && m_first < m_last);
+    } while (nestingLevel && !m_tokens.empty());
 
     if (nestingLevel)
-        return makeSubRange(start, m_first); // Ended at EOF
-    return makeSubRange(start, m_first - 1);
+        return start.first(m_tokens.data() - start.data()); // Ended at EOF
+    return start.first(m_tokens.data() - start.data() - 1);
 }
 
 CSSParserTokenRange CSSParserTokenRange::consumeBlockCheckingForEditability(StyleSheetContents* styleSheet)
 {
     ASSERT(peek().getBlockType() == CSSParserToken::BlockStart);
-    const auto* start = &peek() + 1;
+    auto start = m_tokens.subspan(1);
     unsigned nestingLevel = 0;
     do {
         const auto& token = consume();
@@ -84,11 +74,11 @@ CSSParserTokenRange CSSParserTokenRange::consumeBlockCheckingForEditability(Styl
 
         if (styleSheet && !styleSheet->usesStyleBasedEditability() && token.type() == IdentToken && equalLettersIgnoringASCIICase(token.value(), "-webkit-user-modify"_s))
             styleSheet->parserSetUsesStyleBasedEditability();
-    } while (nestingLevel && m_first < m_last);
+    } while (nestingLevel && !m_tokens.empty());
 
     if (nestingLevel)
-        return makeSubRange(start, m_first); // Ended at EOF
-    return makeSubRange(start, m_first - 1);
+        return start.first(m_tokens.data() - start.data()); // Ended at EOF
+    return start.first(m_tokens.data() - start.data() - 1);
 }
 
 void CSSParserTokenRange::consumeComponentValue()
@@ -102,14 +92,28 @@ void CSSParserTokenRange::consumeComponentValue()
             nestingLevel++;
         else if (token.getBlockType() == CSSParserToken::BlockEnd)
             nestingLevel--;
-    } while (nestingLevel && m_first < m_last);
+    } while (nestingLevel && !m_tokens.empty());
 }
 
-String CSSParserTokenRange::serialize() const
+void CSSParserTokenRange::trimTrailingWhitespace()
+{
+    size_t i = m_tokens.size();
+    for (; i > 0 && CSSTokenizer::isWhitespace(m_tokens[i - 1].type()); --i) { }
+    dropLast(m_tokens, m_tokens.size() - i);
+}
+
+const CSSParserToken& CSSParserTokenRange::consumeLast() LIFETIME_BOUND
+{
+    if (atEnd())
+        eofToken();
+    return WTF::consumeLast(m_tokens);
+}
+
+String CSSParserTokenRange::serialize(CSSParserToken::SerializationMode mode) const
 {
     StringBuilder builder;
-    for (const CSSParserToken* it = m_first; it < m_last; ++it)
-        it->serialize(builder, it + 1 == m_last ? nullptr : it + 1);
+    for (size_t i = 0; i < m_tokens.size(); ++i)
+        m_tokens[i].serialize(builder, (i + 1) == m_tokens.size() ? nullptr : &m_tokens[i + 1], mode);
     return builder.toString();
 }
 

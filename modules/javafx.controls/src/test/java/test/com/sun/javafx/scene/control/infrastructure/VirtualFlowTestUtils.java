@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -24,21 +24,32 @@
  */
 package test.com.sun.javafx.scene.control.infrastructure;
 
+import com.sun.javafx.scene.control.LabeledText;
+import com.sun.javafx.scene.control.VirtualScrollBar;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
-import javafx.scene.control.*;
+import javafx.scene.control.Cell;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Control;
+import javafx.scene.control.IndexedCell;
+import javafx.scene.control.ListView;
+import javafx.scene.control.TableColumnBase;
+import javafx.scene.control.TableRow;
+import javafx.scene.control.TreeTableRow;
 import javafx.scene.control.skin.ComboBoxListViewSkin;
-import com.sun.javafx.scene.control.LabeledText;
 import javafx.scene.control.skin.NestedTableColumnHeader;
 import javafx.scene.control.skin.TableColumnHeader;
 import javafx.scene.control.skin.TableHeaderRow;
 import javafx.scene.control.skin.TableViewSkinBase;
 import javafx.scene.control.skin.VirtualFlow;
-import com.sun.javafx.scene.control.VirtualScrollBar;
 import javafx.util.Callback;
+
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class VirtualFlowTestUtils {
 
@@ -75,7 +86,6 @@ public class VirtualFlowTestUtils {
                 IndexedCell<?> childCell = (IndexedCell<?>)n;
                 MouseEventFirer mouse = new MouseEventFirer(childCell);
                 mouse.fireMousePressAndRelease(clickCount, modifiers);
-                mouse.dispose();
                 break;
             }
         } else {
@@ -85,11 +95,9 @@ public class VirtualFlowTestUtils {
                 MouseEventFirer mouse = new MouseEventFirer(cell);
                 mouse.fireMousePressed(cell.getWidth(), cell.getHeight() / 2.0, modifiers);
                 mouse.fireMouseReleased(cell.getWidth(), cell.getHeight() / 2.0, modifiers);
-                mouse.dispose();
             } else {
                 MouseEventFirer mouse = new MouseEventFirer(cell);
                 mouse.fireMousePressAndRelease(clickCount, modifiers);
-                mouse.dispose();
             }
         }
     }
@@ -113,10 +121,10 @@ public class VirtualFlowTestUtils {
             }
         } else {
             final String text = cell.getText();
-            assertTrue("Expected null, found '" + text + "'", text == null || text.isEmpty());
+            assertTrue(text == null || text.isEmpty(), "Expected null, found '" + text + "'");
 
             final Node graphic = cell.getGraphic();
-            assertTrue("Expected null graphic, found " + graphic, graphic == null);
+            assertTrue(graphic == null, "Expected null graphic, found " + graphic);
         }
     }
 
@@ -132,8 +140,7 @@ public class VirtualFlowTestUtils {
         } else {
             final String text = cell.getText();
             final Node graphic = cell.getGraphic();
-            assertTrue("Expected a non-null text or graphic property",
-                       (text != null && ! text.isEmpty()) || graphic != null);
+            assertTrue((text != null && ! text.isEmpty()) || graphic != null, "Expected a non-null text or graphic property");
         }
     }
 
@@ -201,11 +208,6 @@ public class VirtualFlowTestUtils {
 
             int _column = column;
 
-            // we need to account for TreeTableView having LabeledText node in the TreeTableRow
-            if (indexedCell instanceof TreeTableRow) {
-                _column++;
-            }
-
             IndexedCell cell = (IndexedCell) indexedCell.getChildrenUnmodifiable().get(_column);
             assertEquals(expected, cell.getText());
             return null;
@@ -229,7 +231,7 @@ public class VirtualFlowTestUtils {
 
             String error = "Element in row " + indexedCell.getIndex() + " has incorrect indentation. "
                     + "Expected " + expectedLayoutX + ", but found " + labeledText.getLayoutX();
-            assertEquals(error, expectedLayoutX, labeledText.getLayoutX(), 0.0);
+            assertEquals(expectedLayoutX, labeledText.getLayoutX(), 0.0, error);
             return null;
         };
 
@@ -328,16 +330,7 @@ public class VirtualFlowTestUtils {
         }
     }
 
-    public static boolean BLOCK_STAGE_LOADER_DISPOSE = false;
-
     public static VirtualFlow<?> getVirtualFlow(Control control) {
-        StageLoader sl = null;
-        boolean stageLoaderCreated = false;
-        if (control.getScene() == null) {
-            sl = new StageLoader(control);
-            stageLoaderCreated = true;
-        }
-
         VirtualFlow<?> flow;
         if (control instanceof ComboBox) {
             final ComboBox cb = (ComboBox) control;
@@ -347,8 +340,9 @@ public class VirtualFlowTestUtils {
 
         flow = (VirtualFlow<?>)control.lookup("#virtual-flow");
 
-        if (stageLoaderCreated && sl != null && ! BLOCK_STAGE_LOADER_DISPOSE) {
-            sl.dispose();
+        if (flow == null) {
+            throw new IllegalArgumentException("VirtualFlow could not be found for: " + control + ". "
+                    + "Make sure that the Control is inside a Scene.");
         }
 
         return flow;

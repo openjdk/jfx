@@ -36,12 +36,16 @@
 #include "ImageBuffer.h"
 #include "PixelBuffer.h"
 #include "Timer.h"
+#include <numbers>
+#include <wtf/CheckedPtr.h>
 #include <wtf/Lock.h>
 #include <wtf/MathExtras.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/RunLoop.h>
 #include <wtf/Scope.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/text/ParsingUtilities.h>
 
 namespace WebCore {
 
@@ -59,11 +63,12 @@ static inline int roundUpToMultipleOf32(int d)
 // ShadowBlur needs a scratch image as the buffer for the blur filter.
 // Instead of creating and destroying the buffer for every operation,
 // we create a buffer which will be automatically purged via a timer.
-class ScratchBuffer {
-    WTF_MAKE_FAST_ALLOCATED;
+class ScratchBuffer final : public CanMakeThreadSafeCheckedPtr<ScratchBuffer> {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(ScratchBuffer);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(ScratchBuffer);
 public:
     ScratchBuffer()
-        : m_purgeTimer(RunLoop::main(), this, &ScratchBuffer::purgeTimerFired)
+        : m_purgeTimer(RunLoop::mainSingleton(), "ScratchBuffer::PurgeTimer"_s, this, &ScratchBuffer::purgeTimerFired)
     {
     }
 
@@ -76,8 +81,8 @@ public:
         });
 
         // We do not need to recreate the buffer if the current buffer is large enough.
-        if (m_imageBuffer && m_imageBuffer->truncatedLogicalSize().width() >= size.width() && m_imageBuffer->truncatedLogicalSize().height() >= size.height())
-            return m_imageBuffer;
+        if (RefPtr imageBuffer = m_imageBuffer; imageBuffer && imageBuffer->truncatedLogicalSize().width() >= size.width() && imageBuffer->truncatedLogicalSize().height() >= size.height())
+            return imageBuffer;
 
         // Round to the nearest 32 pixels so we do not grow the buffer for similar sized requests.
         IntSize roundedSize(roundUpToMultipleOf32(size.width()), roundUpToMultipleOf32(size.height()));
@@ -85,11 +90,11 @@ public:
         clearScratchBuffer();
 
         // ShadowBlur is not used with accelerated drawing, so it's OK to make an unconditionally unaccelerated buffer.
-        m_imageBuffer = ImageBuffer::create(roundedSize, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
+        m_imageBuffer = ImageBuffer::create(roundedSize, RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
         return m_imageBuffer;
     }
 
-    bool setCachedShadowValues(const FloatSize& radius, const Color& color, const FloatRect& shadowRect, const FloatRoundedRect::Radii& radii, const FloatSize& layerSize) WTF_REQUIRES_LOCK(lock())
+    bool setCachedShadowValues(const FloatSize& radius, const Color& color, const FloatRect& shadowRect, const CornerRadii& radii, const FloatSize& layerSize) WTF_REQUIRES_LOCK(lock())
     {
         ASSERT(lock().isHeld());
         if (!m_lastWasInset && m_lastRadius == radius && m_lastColor == color && m_lastShadowRect == shadowRect &&  m_lastRadii == radii && m_lastLayerSize == layerSize)
@@ -105,7 +110,7 @@ public:
         return true;
     }
 
-    bool setCachedInsetShadowValues(const FloatSize& radius, const Color& color, const FloatRect& bounds, const FloatRect& shadowRect, const FloatRoundedRect::Radii& radii) WTF_REQUIRES_LOCK(lock())
+    bool setCachedInsetShadowValues(const FloatSize& radius, const Color& color, const FloatRect& bounds, const FloatRect& shadowRect, const CornerRadii& radii) WTF_REQUIRES_LOCK(lock())
     {
         ASSERT(lock().isHeld());
         if (m_lastWasInset && m_lastRadius == radius && m_lastColor == color && m_lastInsetBounds == bounds && shadowRect == m_lastShadowRect && radii == m_lastRadii)
@@ -156,7 +161,7 @@ private:
 
     FloatRect m_lastInsetBounds;
     FloatRect m_lastShadowRect;
-    FloatRoundedRect::Radii m_lastRadii;
+    CornerRadii m_lastRadii;
     Color m_lastColor;
     FloatSize m_lastRadius;
     bool m_lastWasInset { false };
@@ -239,11 +244,11 @@ void ShadowBlur::updateShadowBlurValues()
 static const int blurSumShift = 15;
 
 // Takes a two dimensional array with three rows and two columns for the lobes.
-static void calculateLobes(int lobes[][2], float blurRadius, bool shadowsIgnoreTransforms)
+static void calculateLobes(std::array<std::array<int, 2>, 3>& lobes, float blurRadius, bool shadowsIgnoreTransforms)
 {
     int diameter;
     if (shadowsIgnoreTransforms)
-        diameter = std::max(2, static_cast<int>(floorf((2 / 3.f) * blurRadius))); // Canvas shadow. FIXME: we should adjust the blur radius higher up.
+        diameter = std::max(2, truncateFloatToInt32(floorf((2 / 3.f) * blurRadius))); // Canvas shadow. FIXME: we should adjust the blur radius higher up.
     else {
         // http://dev.w3.org/csswg/css3-background/#box-shadow
         // Approximate a Gaussian blur with a standard deviation equal to half the blur radius,
@@ -251,9 +256,9 @@ static void calculateLobes(int lobes[][2], float blurRadius, bool shadowsIgnoreT
         // However, shadows rendered according to that spec will extend a little further than m_blurRadius,
         // so we apply a fudge factor to bring the radius down slightly.
         float stdDev = blurRadius / 2;
-        const float gaussianKernelFactor = 3 / 4.f * sqrtf(2 * piFloat);
+        const float gaussianKernelFactor = 3 / 4.f * sqrtf(2 * std::numbers::pi_v<float>);
         const float fudgeFactor = 0.88f;
-        diameter = std::max(2, static_cast<int>(floorf(stdDev * gaussianKernelFactor * fudgeFactor + 0.5f)));
+        diameter = std::max(2, truncateFloatToInt32(floorf(stdDev * gaussianKernelFactor * fudgeFactor + 0.5f)));
     }
 
     if (diameter & 1) {
@@ -287,27 +292,27 @@ void ShadowBlur::clear()
     m_offset = FloatSize();
 }
 
-void ShadowBlur::blurLayerImage(unsigned char* imageData, const IntSize& size, int rowStride)
+void ShadowBlur::blurLayerImage(std::span<uint8_t> imageData, const IntSize& size, int rowStride)
 {
-    const int channels[4] = { 3, 0, 1, 3 };
+    constexpr std::array channels { 3, 0, 1, 3 };
 
-    int lobes[3][2]; // indexed by pass, and left/right lobe
+    std::array<std::array<int, 2>, 3> lobes; // indexed by pass, and left/right lobe
     calculateLobes(lobes, m_blurRadius.width(), m_shadowsIgnoreTransforms);
 
     // First pass is horizontal.
-    int stride = 4;
+    size_t stride = 4;
     int delta = rowStride;
     int final = size.height();
     int dim = size.width();
 
     // Two stages: horizontal and vertical
     for (int pass = 0; pass < 2; ++pass) {
-        unsigned char* pixels = imageData;
+        auto pixels = imageData;
 
         if (!pass && !m_blurRadius.width())
             final = 0; // Do no work if horizonal blur is zero.
 
-        for (int j = 0; j < final; ++j, pixels += delta) {
+        for (int j = 0; j < final; ++j, skip(pixels, delta)) {
             // For each step, we blur the alpha in a channel and store the result
             // in another channel for the subsequent step.
             // We use sliding window algorithm to accumulate the alpha values.
@@ -322,35 +327,41 @@ void ShadowBlur::blurLayerImage(unsigned char* imageData, const IntSize& size, i
                 int alpha1 = pixels[channels[step]];
                 int alpha2 = pixels[(dim - 1) * stride + channels[step]];
 
-                unsigned char* ptr = pixels + channels[step + 1];
-                unsigned char* prev = pixels + stride + channels[step];
-                unsigned char* next = pixels + ofs * stride + channels[step];
+                auto ptr = pixels.subspan(channels[step + 1]);
+
+                // If either dimension is 1 pixel long, prev would go outside the bounds of pixels,
+                // so make it an empty subspan.
+                auto prev = (stride + channels[step] < pixels.size()) ? pixels.subspan(stride + channels[step]) : std::span<uint8_t> { };
+
+                // if image to be blurred is smaller than the box kernel size, next would go outside
+                // the bounds of pixels, so make it an empty subspan.
+                auto next = (ofs * stride + channels[step] < pixels.size()) ? pixels.subspan(ofs * stride + channels[step]) : std::span<uint8_t> { };
 
                 int i;
                 int sum = side1 * alpha1 + alpha1;
                 int limit = (dim < side2 + 1) ? dim : side2 + 1;
 
-                for (i = 1; i < limit; ++i, prev += stride)
-                    sum += *prev;
+                for (i = 1; i < limit && prev.size() >= stride; ++i, prev = prev.subspan(stride))
+                    sum += prev.front();
 
                 if (limit <= side2)
                     sum += (side2 - limit + 1) * alpha2;
 
                 limit = (side1 < dim) ? side1 : dim;
-                for (i = 0; i < limit; ptr += stride, next += stride, ++i, ++ofs) {
-                    *ptr = (sum * invCount) >> blurSumShift;
-                    sum += ((ofs < dim) ? *next : alpha2) - alpha1;
+                for (i = 0; i < limit && ptr.size() >= stride && next.size() >= stride; skip(ptr, stride), skip(next, stride), ++i, ++ofs) {
+                    ptr[0] = (sum * invCount) >> blurSumShift;
+                    sum += ((ofs < dim) ? next.front() : alpha2) - alpha1;
                 }
 
-                prev = pixels + channels[step];
-                for (; ofs < dim; ptr += stride, prev += stride, next += stride, ++i, ++ofs) {
-                    *ptr = (sum * invCount) >> blurSumShift;
-                    sum += (*next) - (*prev);
+                prev = pixels.subspan(channels[step]);
+                for (; ofs < dim && ptr.size() >= stride && prev.size() >= stride && next.size() >= stride; skip(ptr, stride), skip(prev, stride), skip(next, stride), ++i, ++ofs) {
+                    ptr[0] = (sum * invCount) >> blurSumShift;
+                    sum += next.front() - prev.front();
                 }
 
-                for (; i < dim; ptr += stride, prev += stride, ++i) {
-                    *ptr = (sum * invCount) >> blurSumShift;
-                    sum += alpha2 - (*prev);
+                for (; i < dim && ptr.size() >= stride && prev.size() >= stride; skip(ptr, stride), skip(prev, stride), ++i) {
+                    ptr[0] = (sum * invCount) >> blurSumShift;
+                    sum += alpha2 - prev.front();
                 }
             }
         }
@@ -469,11 +480,11 @@ void ShadowBlur::drawShadowBuffer(GraphicsContext& graphicsContext, ImageBuffer&
     graphicsContext.clipToImageBuffer(layerImage, FloatRect(layerOrigin, bufferSize));
     graphicsContext.setFillColor(m_color);
 
-    graphicsContext.clearShadow();
+    graphicsContext.clearDropShadow();
     graphicsContext.fillRect(FloatRect(layerOrigin, layerSize));
 }
 
-static void computeSliceSizesFromRadii(const IntSize& twiceRadius, const FloatRoundedRect::Radii& radii, int& leftSlice, int& rightSlice, int& topSlice, int& bottomSlice)
+static void computeSliceSizesFromRadii(const IntSize& twiceRadius, const CornerRadii& radii, int& leftSlice, int& rightSlice, int& topSlice, int& bottomSlice)
 {
     leftSlice = twiceRadius.width() + std::max(radii.topLeft().width(), radii.bottomLeft().width());
     rightSlice = twiceRadius.width() + std::max(radii.topRight().width(), radii.bottomRight().width());
@@ -482,7 +493,7 @@ static void computeSliceSizesFromRadii(const IntSize& twiceRadius, const FloatRo
     bottomSlice = twiceRadius.height() + std::max(radii.bottomLeft().height(), radii.bottomRight().height());
 }
 
-IntSize ShadowBlur::templateSize(const IntSize& radiusPadding, const FloatRoundedRect::Radii& radii) const
+IntSize ShadowBlur::templateSize(const IntSize& radiusPadding, const CornerRadii& radii) const
 {
     const int templateSideLength = 1;
 
@@ -507,13 +518,13 @@ void ShadowBlur::drawRectShadow(GraphicsContext& graphicsContext, const FloatRou
         },
         [&graphicsContext](ImageBuffer& image, const FloatRect& destRect, const FloatRect& srcRect) {
             GraphicsContextStateSaver stateSaver(graphicsContext);
-            graphicsContext.clearShadow();
+            graphicsContext.clearDropShadow();
             graphicsContext.drawImageBuffer(image, destRect, srcRect);
         },
         [&graphicsContext](const FloatRect& rect, const Color& color) {
             GraphicsContextStateSaver stateSaver(graphicsContext);
             graphicsContext.setFillColor(color);
-            graphicsContext.clearShadow();
+            graphicsContext.clearDropShadow();
             graphicsContext.fillRect(rect);
         });
 }
@@ -528,7 +539,7 @@ void ShadowBlur::drawInsetShadow(GraphicsContext& graphicsContext, const FloatRe
             // Note that drawing the ImageBuffer is faster than creating a Image and drawing that,
             // because ImageBuffer::draw() knows that it doesn't have to copy the image bits.
             GraphicsContextStateSaver stateSaver(graphicsContext);
-            graphicsContext.clearShadow();
+            graphicsContext.clearDropShadow();
             graphicsContext.drawImageBuffer(image, destRect, srcRect);
         },
         [&graphicsContext](const FloatRect& rect, const FloatRect& holeRect, const Color& color) {
@@ -539,7 +550,7 @@ void ShadowBlur::drawInsetShadow(GraphicsContext& graphicsContext, const FloatRe
             GraphicsContextStateSaver fillStateSaver(graphicsContext);
             graphicsContext.setFillRule(WindRule::EvenOdd);
             graphicsContext.setFillColor(color);
-            graphicsContext.clearShadow();
+            graphicsContext.clearDropShadow();
             graphicsContext.fillPath(exteriorPath);
         });
 }
@@ -604,7 +615,7 @@ void ShadowBlur::drawInsetShadow(const AffineTransform& transform, const IntRect
 
 void ShadowBlur::drawRectShadowWithoutTiling(const AffineTransform&, const FloatRoundedRect& shadowedRect, const LayerImageProperties& layerImageProperties, const DrawBufferCallback& drawBuffer)
 {
-    auto layerImage = ImageBuffer::create(expandedIntSize(layerImageProperties.layerSize), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
+    auto layerImage = ImageBuffer::create(expandedIntSize(layerImageProperties.layerSize), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
     if (!layerImage)
         return;
 
@@ -632,7 +643,7 @@ void ShadowBlur::drawRectShadowWithoutTiling(const AffineTransform&, const Float
 
 void ShadowBlur::drawInsetShadowWithoutTiling(const AffineTransform&, const FloatRect& fullRect, const FloatRoundedRect& holeRect, const LayerImageProperties& layerImageProperties, const DrawBufferCallback& drawBuffer)
 {
-    auto layerImage = ImageBuffer::create(expandedIntSize(layerImageProperties.layerSize), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
+    auto layerImage = ImageBuffer::create(expandedIntSize(layerImageProperties.layerSize), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
     if (!layerImage)
         return;
 
@@ -708,7 +719,7 @@ void ShadowBlur::drawRectShadowWithTiling(const AffineTransform& transform, cons
     UNUSED_PARAM(layerImageProperties);
 #endif
 
-    if (auto layerImageBuffer = ImageBuffer::create(templateSize, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8))
+    if (auto layerImageBuffer = ImageBuffer::create(templateSize, RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8))
         drawRectShadowWithTilingWithLayerImageBuffer(*layerImageBuffer, transform, shadowedRect, templateSize, edgeSize, drawImage, fillRect, templateShadow);
 }
 
@@ -762,7 +773,7 @@ void ShadowBlur::drawInsetShadowWithTiling(const AffineTransform& transform, con
     }
 #endif
 
-    if (auto layerImageBuffer = ImageBuffer::create(templateSize, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8))
+    if (auto layerImageBuffer = ImageBuffer::create(templateSize, RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8))
         drawInsetShadowWithTilingWithLayerImageBuffer(*layerImageBuffer, transform, fullRect, holeRect, templateSize, edgeSize, drawImage, fillRectWithHole, templateBounds, templateHole);
 }
 
@@ -806,7 +817,7 @@ void ShadowBlur::drawInsetShadowWithTilingWithLayerImageBuffer(ImageBuffer& laye
     drawLayerPieces(layerImage, destHoleBounds, holeRect.radii(), edgeSize, templateSize, drawImage);
 }
 
-void ShadowBlur::drawLayerPieces(ImageBuffer& layerImage, const FloatRect& shadowBounds, const FloatRoundedRect::Radii& radii, const IntSize& bufferPadding, const IntSize& templateSize, const DrawImageCallback& drawImage)
+void ShadowBlur::drawLayerPieces(ImageBuffer& layerImage, const FloatRect& shadowBounds, const CornerRadii& radii, const IntSize& bufferPadding, const IntSize& templateSize, const DrawImageCallback& drawImage)
 {
     const IntSize twiceRadius = IntSize(bufferPadding.width() * 2, bufferPadding.height() * 2);
 
@@ -865,7 +876,7 @@ void ShadowBlur::drawLayerPieces(ImageBuffer& layerImage, const FloatRect& shado
     drawImage(layerImage, destRect, tileRect);
 }
 
-void ShadowBlur::drawLayerPiecesAndFillCenter(ImageBuffer& layerImage, const FloatRect& shadowBounds, const FloatRoundedRect::Radii& radii, const IntSize& bufferPadding, const IntSize& templateSize, const DrawImageCallback& drawImage, const FillRectCallback& fillRect)
+void ShadowBlur::drawLayerPiecesAndFillCenter(ImageBuffer& layerImage, const FloatRect& shadowBounds, const CornerRadii& radii, const IntSize& bufferPadding, const IntSize& templateSize, const DrawImageCallback& drawImage, const FillRectCallback& fillRect)
 {
     const IntSize twiceRadius = IntSize(bufferPadding.width() * 2, bufferPadding.height() * 2);
 
@@ -897,7 +908,7 @@ void ShadowBlur::blurShadowBuffer(ImageBuffer& layerImage, const IntSize& templa
     if (!layerData)
         return;
 
-    blurLayerImage(layerData->bytes(), blurRect.size(), blurRect.width() * 4);
+    blurLayerImage(layerData->bytes(), layerData->size(), layerData->size().width() * 4);
     layerImage.putPixelBuffer(*layerData, blurRect);
 }
 
@@ -921,7 +932,7 @@ void ShadowBlur::drawShadowLayer(const AffineTransform& transform, const IntRect
 
     adjustBlurRadius(transform);
 
-    auto layerImage = ImageBuffer::create(expandedIntSize(layerImageProperties->layerSize), RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
+    auto layerImage = ImageBuffer::create(expandedIntSize(layerImageProperties->layerSize), RenderingMode::Unaccelerated, RenderingPurpose::Unspecified, 1, DestinationColorSpace::SRGB(), PixelFormat::BGRA8);
     if (!layerImage)
         return;
 

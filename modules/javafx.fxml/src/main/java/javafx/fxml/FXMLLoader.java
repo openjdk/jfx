@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -41,6 +41,7 @@ import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -83,12 +84,9 @@ import com.sun.javafx.fxml.PropertyNotFoundException;
 import com.sun.javafx.fxml.expression.Expression;
 import com.sun.javafx.fxml.expression.ExpressionValue;
 import com.sun.javafx.fxml.expression.KeyPath;
-import static com.sun.javafx.FXPermissions.MODIFY_FXML_CLASS_LOADER_PERMISSION;
 import com.sun.javafx.fxml.FXMLLoaderHelper;
 import com.sun.javafx.fxml.MethodHelper;
 import java.net.MalformedURLException;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.EnumMap;
 import java.util.Locale;
 import java.util.StringTokenizer;
@@ -105,16 +103,6 @@ import com.sun.javafx.reflect.ReflectUtil;
  * @since JavaFX 2.0
  */
 public class FXMLLoader {
-
-    // Indicates permission to get the ClassLoader
-    private static final RuntimePermission GET_CLASSLOADER_PERMISSION =
-        new RuntimePermission("getClassLoader");
-
-    // Instance of StackWalker used to get caller class (must be private)
-    @SuppressWarnings("removal")
-    private static final StackWalker walker =
-        AccessController.doPrivileged((PrivilegedAction<StackWalker>) () ->
-            StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE));
 
     // Abstract base class for elements
     private abstract class Element {
@@ -136,7 +124,7 @@ public class FXMLLoader {
             // Return true if value is a list, or if the value's type defines
             // a default property that is a list
             boolean collection;
-            if (value instanceof List<?>) {
+            if (value instanceof Collection<?>) {
                 collection = true;
             } else {
                 Class<?> type = value.getClass();
@@ -154,28 +142,28 @@ public class FXMLLoader {
 
         @SuppressWarnings("unchecked")
         public void add(Object element) {
-            // If value is a list, add element to it; otherwise, get the value
+            // If value is a collection, add element to it; otherwise, get the value
             // of the default property, which is assumed to be a list and add
             // to that (coerce to the appropriate type)
-            List<Object> list;
-            if (value instanceof List<?>) {
-                list = (List<Object>)value;
+            Collection<Object> collection;
+            if (value instanceof Collection<?>) {
+                collection = (Collection<Object>) value;
             } else {
                 Class<?> type = value.getClass();
                 DefaultProperty defaultProperty = type.getAnnotation(DefaultProperty.class);
                 String defaultPropertyName = defaultProperty.value();
 
-                // Get the list value
-                list = (List<Object>)getProperties().get(defaultPropertyName);
+                // Get the collection value
+                collection = (Collection<Object>)getProperties().get(defaultPropertyName);
 
                 // Coerce the element to the list item type
                 if (!Map.class.isAssignableFrom(type)) {
-                    Type listType = getValueAdapter().getGenericType(defaultPropertyName);
-                    element = BeanAdapter.coerce(element, BeanAdapter.getListItemType(listType));
+                    Type collectionType = getValueAdapter().getGenericType(defaultPropertyName);
+                    element = BeanAdapter.coerce(element, BeanAdapter.getCollectionItemType(collectionType));
                 }
             }
 
-            list.add(element);
+            collection.add(element);
         }
 
         public void set(Object value) throws LoadException {
@@ -497,7 +485,7 @@ public class FXMLLoader {
             // Split the string and add the values to the list
             List<Object> list = (List<Object>)valueAdapter.get(listPropertyName);
             Type listType = valueAdapter.getGenericType(listPropertyName);
-            Type itemType = BeanAdapter.getGenericListItemType(listType);
+            Type itemType = BeanAdapter.getGenericCollectionItemType(listType);
 
             if (itemType instanceof ParameterizedType) {
                 itemType = ((ParameterizedType)itemType).getRawType();
@@ -805,13 +793,13 @@ public class FXMLLoader {
             }
         }
 
-        private Object getListValue(Element parent, String listPropertyName, Object value) {
+        private Object getCollectionValue(Element parent, String listPropertyName, Object value) {
             // If possible, coerce the value to the list item type
             if (parent.isTyped()) {
                 Type listType = parent.getValueAdapter().getGenericType(listPropertyName);
 
                 if (listType != null) {
-                    Type itemType = BeanAdapter.getGenericListItemType(listType);
+                    Type itemType = BeanAdapter.getGenericCollectionItemType(listType);
 
                     if (itemType instanceof ParameterizedType) {
                         itemType = ((ParameterizedType)itemType).getRawType();
@@ -887,9 +875,9 @@ public class FXMLLoader {
                 BeanAdapter valueAdapter = getValueAdapter();
 
                 if (valueAdapter.isReadOnly(defaultPropertyName)
-                    && List.class.isAssignableFrom(valueAdapter.getType(defaultPropertyName))) {
-                    List<Object> list = (List<Object>)valueAdapter.get(defaultPropertyName);
-                    list.add(getListValue(this, defaultPropertyName, text));
+                    && Collection.class.isAssignableFrom(valueAdapter.getType(defaultPropertyName))) {
+                    Collection<Object> collection = (Collection<Object>)valueAdapter.get(defaultPropertyName);
+                    collection.add(getCollectionValue(this, defaultPropertyName, text));
                 } else {
                     valueAdapter.put(defaultPropertyName, text.trim());
                 }
@@ -1157,7 +1145,7 @@ public class FXMLLoader {
             fxmlLoader.setClassLoader(cl);
             fxmlLoader.setStaticLoad(staticLoad);
 
-            Object value = fxmlLoader.loadImpl(callerClass);
+            Object value = fxmlLoader.loadImpl();
 
             if (fx_id != null) {
                 String id = this.fx_id + CONTROLLER_SUFFIX;
@@ -1383,7 +1371,7 @@ public class FXMLLoader {
                 if (parent.isTyped()) {
                     readOnly = parent.getValueAdapter().isReadOnly(name);
                 } else {
-                // If the map already defines a value for the property, assume
+                    // If the map already defines a value for the property, assume
                     // that it is read-only
                     readOnly = parentProperties.containsKey(name);
                 }
@@ -1411,8 +1399,8 @@ public class FXMLLoader {
         public void add(Object element) {
             // Coerce the element to the list item type
             if (parent.isTyped()) {
-                Type listType = parent.getValueAdapter().getGenericType(name);
-                element = BeanAdapter.coerce(element, BeanAdapter.getListItemType(listType));
+                Type collectionType = parent.getValueAdapter().getGenericType(name);
+                element = BeanAdapter.coerce(element, BeanAdapter.getCollectionItemType(collectionType));
             }
 
             // Add the item to the list
@@ -1904,7 +1892,7 @@ public class FXMLLoader {
 
     private static BuilderFactory DEFAULT_BUILDER_FACTORY = new JavaFXBuilderFactory();
 
-    private static final Boolean ALLOW_JAVASCRIPT;
+    private static final Boolean ALLOW_JAVASCRIPT = Boolean.getBoolean("javafx.allowjs");
 
     /**
      * The character set used when character set is not explicitly specified.
@@ -2122,29 +2110,15 @@ public class FXMLLoader {
      * Contains the current javafx version.
      * @since JavaFX 8.0
      */
-    public static final String JAVAFX_VERSION;
+    public static final String JAVAFX_VERSION = System.getProperty("javafx.version");
 
     /**
-     * Contains the current fx namepsace version.
+     * Contains the current fx namespace version.
      * @since JavaFX 8.0
      */
     public static final String FX_NAMESPACE_VERSION = "1";
 
     static {
-        @SuppressWarnings("removal")
-        String tmp = AccessController.doPrivileged(new PrivilegedAction<String>() {
-            @Override
-            public String run() {
-                return System.getProperty("javafx.version");
-            }
-        });
-        JAVAFX_VERSION = tmp;
-
-        @SuppressWarnings("removal")
-        boolean tmp2 = AccessController.doPrivileged((PrivilegedAction<Boolean>)
-                () -> Boolean.getBoolean("javafx.allowjs"));
-        ALLOW_JAVASCRIPT = tmp2;
-
         FXMLLoaderHelper.setFXMLLoaderAccessor(new FXMLLoaderHelper.FXMLLoaderAccessor() {
             @Override
             public void setStaticLoad(FXMLLoader fxmlLoader, boolean staticLoad) {
@@ -2451,12 +2425,7 @@ public class FXMLLoader {
      */
     public ClassLoader getClassLoader() {
         if (classLoader == null) {
-            @SuppressWarnings("removal")
-            final SecurityManager sm = System.getSecurityManager();
-            final Class caller = (sm != null) ?
-                    walker.getCallerClass() :
-                    null;
-            return getDefaultClassLoader(caller);
+            return getDefaultClassLoader();
         }
         return classLoader;
     }
@@ -2482,7 +2451,7 @@ public class FXMLLoader {
      * Returns the static load flag.
      */
     boolean isStaticLoad() {
-        // SB-dependency: RT-21226 has been filed to track this
+        // SB-dependency: JDK-8102312 has been filed to track this
         return staticLoad;
     }
 
@@ -2492,7 +2461,7 @@ public class FXMLLoader {
      * @param staticLoad
      */
     void setStaticLoad(boolean staticLoad) {
-        // SB-dependency: RT-21226 has been filed to track this
+        // SB-dependency: JDK-8102312 has been filed to track this
         this.staticLoad = staticLoad;
     }
 
@@ -2504,7 +2473,7 @@ public class FXMLLoader {
      * @since 9
      */
     public LoadListener getLoadListener() {
-        // SB-dependency: RT-21228 has been filed to track this
+        // SB-dependency: JDK-8091571 has been filed to track this
         return loadListener;
     }
 
@@ -2516,7 +2485,7 @@ public class FXMLLoader {
      * @since 9
      */
     public final void setLoadListener(LoadListener loadListener) {
-        // SB-dependency: RT-21228 has been filed to track this
+        // SB-dependency: JDK-8091571 has been filed to track this
         this.loadListener = loadListener;
     }
 
@@ -2531,11 +2500,8 @@ public class FXMLLoader {
      *
      * @since JavaFX 2.1
      */
-    @SuppressWarnings("removal")
     public <T> T load() throws IOException {
-        return loadImpl((System.getSecurityManager() != null)
-                            ? walker.getCallerClass()
-                            : null);
+        return loadImpl();
     }
 
     /**
@@ -2547,16 +2513,11 @@ public class FXMLLoader {
      * @throws IOException if an error occurs during loading
      * @return the loaded object hierarchy
      */
-    @SuppressWarnings("removal")
     public <T> T load(InputStream inputStream) throws IOException {
-        return loadImpl(inputStream, (System.getSecurityManager() != null)
-                                         ? walker.getCallerClass()
-                                         : null);
+        return loadImpl(inputStream);
     }
 
-    private Class<?> callerClass;
-
-    private <T> T loadImpl(final Class<?> callerClass) throws IOException {
+    private <T> T loadImpl() throws IOException {
         if (location == null) {
             throw new IllegalStateException("Location is not set.");
         }
@@ -2565,7 +2526,7 @@ public class FXMLLoader {
         T value;
         try {
             inputStream = location.openStream();
-            value = loadImpl(inputStream, callerClass);
+            value = loadImpl(inputStream);
         } finally {
             if (inputStream != null) {
                 inputStream.close();
@@ -2576,14 +2537,11 @@ public class FXMLLoader {
     }
 
     @SuppressWarnings("unchecked")
-    private <T> T loadImpl(InputStream inputStream,
-                           Class<?> callerClass) throws IOException {
+    private <T> T loadImpl(InputStream inputStream) throws IOException {
         if (inputStream == null) {
             throw new NullPointerException("inputStream is null.");
         }
 
-        this.callerClass = callerClass;
-        controllerAccessor.setCallerClass(callerClass);
         try {
             clearImports();
 
@@ -2704,7 +2662,6 @@ public class FXMLLoader {
         } catch (final Exception exception) {
             throw constructLoadException(exception);
         } finally {
-            controllerAccessor.setCallerClass(null);
             // Clear controller accessor caches
             controllerAccessor.reset();
             // Clear the parser
@@ -3177,39 +3134,16 @@ public class FXMLLoader {
         return Class.forName(className, true, getDefaultClassLoader());
     }
 
-    private static boolean needsClassLoaderPermissionCheck(Class caller) {
-        if (caller == null) {
-            return false;
-        }
-        return !FXMLLoader.class.getModule().equals(caller.getModule());
-    }
-
-    private static ClassLoader getDefaultClassLoader(Class caller) {
-        if (defaultClassLoader == null) {
-            @SuppressWarnings("removal")
-            final SecurityManager sm = System.getSecurityManager();
-            if (sm != null) {
-                if (needsClassLoaderPermissionCheck(caller)) {
-                    sm.checkPermission(GET_CLASSLOADER_PERMISSION);
-                }
-            }
-            return Thread.currentThread().getContextClassLoader();
-        }
-        return defaultClassLoader;
-    }
-
     /**
      * Returns the default class loader.
      * @return the default class loader
      * @since JavaFX 2.1
      */
     public static ClassLoader getDefaultClassLoader() {
-        @SuppressWarnings("removal")
-        final SecurityManager sm = System.getSecurityManager();
-        final Class caller = (sm != null) ?
-                walker.getCallerClass() :
-                null;
-        return getDefaultClassLoader(caller);
+        if (defaultClassLoader == null) {
+            return Thread.currentThread().getContextClassLoader();
+        }
+        return defaultClassLoader;
     }
 
     /**
@@ -3222,11 +3156,6 @@ public class FXMLLoader {
     public static void setDefaultClassLoader(ClassLoader defaultClassLoader) {
         if (defaultClassLoader == null) {
             throw new NullPointerException();
-        }
-        @SuppressWarnings("removal")
-        final SecurityManager sm = System.getSecurityManager();
-        if (sm != null) {
-            sm.checkPermission(MODIFY_FXML_CLASS_LOADER_PERMISSION);
         }
 
         FXMLLoader.defaultClassLoader = defaultClassLoader;
@@ -3241,16 +3170,13 @@ public class FXMLLoader {
      * @throws IOException if an error occurs during loading
      * @return the loaded object hierarchy
      */
-    @SuppressWarnings("removal")
     public static <T> T load(URL location) throws IOException {
-        return loadImpl(location, (System.getSecurityManager() != null)
-                                      ? walker.getCallerClass()
-                                      : null);
+        return loadImpl(location);
     }
 
-    private static <T> T loadImpl(URL location, Class<?> callerClass)
+    private static <T> T loadImpl(URL location)
             throws IOException {
-        return loadImpl(location, null, callerClass);
+        return loadImpl(location, null);
     }
 
     /**
@@ -3263,19 +3189,13 @@ public class FXMLLoader {
      * @throws IOException if an error occurs during loading
      * @return the loaded object hierarchy
      */
-    @SuppressWarnings("removal")
     public static <T> T load(URL location, ResourceBundle resources)
                                      throws IOException {
-        return loadImpl(location, resources,
-                        (System.getSecurityManager() != null)
-                            ? walker.getCallerClass()
-                            : null);
+        return loadImpl(location, resources);
     }
 
-    private static <T> T loadImpl(URL location, ResourceBundle resources,
-                                  Class<?> callerClass) throws IOException {
-        return loadImpl(location, resources,  null,
-                        callerClass);
+    private static <T> T loadImpl(URL location, ResourceBundle resources) throws IOException {
+        return loadImpl(location, resources,  null);
     }
 
     /**
@@ -3289,20 +3209,15 @@ public class FXMLLoader {
      * @throws IOException if an error occurs during loading
      * @return the loaded object hierarchy
      */
-    @SuppressWarnings("removal")
     public static <T> T load(URL location, ResourceBundle resources,
                              BuilderFactory builderFactory)
                                      throws IOException {
-        return loadImpl(location, resources, builderFactory,
-                        (System.getSecurityManager() != null)
-                            ? walker.getCallerClass()
-                            : null);
+        return loadImpl(location, resources, builderFactory);
     }
 
     private static <T> T loadImpl(URL location, ResourceBundle resources,
-                                  BuilderFactory builderFactory,
-                                  Class<?> callerClass) throws IOException {
-        return loadImpl(location, resources, builderFactory, null, callerClass);
+                                  BuilderFactory builderFactory) throws IOException {
+        return loadImpl(location, resources, builderFactory, null);
     }
 
     /**
@@ -3319,23 +3234,18 @@ public class FXMLLoader {
      *
      * @since JavaFX 2.1
      */
-    @SuppressWarnings("removal")
     public static <T> T load(URL location, ResourceBundle resources,
                              BuilderFactory builderFactory,
                              Callback<Class<?>, Object> controllerFactory)
                                      throws IOException {
-        return loadImpl(location, resources, builderFactory, controllerFactory,
-                        (System.getSecurityManager() != null)
-                            ? walker.getCallerClass()
-                            : null);
+        return loadImpl(location, resources, builderFactory, controllerFactory);
     }
 
     private static <T> T loadImpl(URL location, ResourceBundle resources,
                                   BuilderFactory builderFactory,
-                                  Callback<Class<?>, Object> controllerFactory,
-                                  Class<?> callerClass) throws IOException {
+                                  Callback<Class<?>, Object> controllerFactory) throws IOException {
         return loadImpl(location, resources, builderFactory, controllerFactory,
-                        Charset.forName(DEFAULT_CHARSET_NAME), callerClass);
+                        Charset.forName(DEFAULT_CHARSET_NAME));
     }
 
     /**
@@ -3353,22 +3263,18 @@ public class FXMLLoader {
      *
      * @since JavaFX 2.1
      */
-    @SuppressWarnings("removal")
     public static <T> T load(URL location, ResourceBundle resources,
                              BuilderFactory builderFactory,
                              Callback<Class<?>, Object> controllerFactory,
                              Charset charset) throws IOException {
         return loadImpl(location, resources, builderFactory, controllerFactory,
-                        charset,
-                        (System.getSecurityManager() != null)
-                            ? walker.getCallerClass()
-                            : null);
+                        charset);
     }
 
     private static <T> T loadImpl(URL location, ResourceBundle resources,
                                   BuilderFactory builderFactory,
                                   Callback<Class<?>, Object> controllerFactory,
-                                  Charset charset, Class<?> callerClass)
+                                  Charset charset)
                                           throws IOException {
         if (location == null) {
             throw new NullPointerException("Location is required.");
@@ -3378,7 +3284,7 @@ public class FXMLLoader {
                 new FXMLLoader(location, resources, builderFactory,
                                controllerFactory, charset);
 
-        return fxmlLoader.<T>loadImpl(callerClass);
+        return fxmlLoader.loadImpl();
     }
 
     /**
@@ -3459,14 +3365,6 @@ public class FXMLLoader {
         return retVal;
     }
 
-    private static void checkClassLoaderPermission() {
-        @SuppressWarnings("removal")
-        final SecurityManager securityManager = System.getSecurityManager();
-        if (securityManager != null) {
-            securityManager.checkPermission(MODIFY_FXML_CLASS_LOADER_PERMISSION);
-        }
-    }
-
     private final ControllerAccessor controllerAccessor =
             new ControllerAccessor();
 
@@ -3484,7 +3382,6 @@ public class FXMLLoader {
         private static final int FIELDS = 1;
 
         private Object controller;
-        private ClassLoader callerClassLoader;
 
         private Map<String, List<Field>> controllerFields;
         private Map<SupportedType, Map<String, Method>> controllerMethods;
@@ -3492,16 +3389,6 @@ public class FXMLLoader {
         void setController(final Object controller) {
             if (this.controller != controller) {
                 this.controller = controller;
-                reset();
-            }
-        }
-
-        void setCallerClass(final Class<?> callerClass) {
-            final ClassLoader newCallerClassLoader =
-                    (callerClass != null) ? callerClass.getClassLoader()
-                                          : null;
-            if (callerClassLoader != newCallerClassLoader) {
-                callerClassLoader = newCallerClassLoader;
                 reset();
             }
         }
@@ -3514,11 +3401,6 @@ public class FXMLLoader {
         Map<String, List<Field>> getControllerFields() {
             if (controllerFields == null) {
                 controllerFields = new HashMap<>();
-
-                if (callerClassLoader == null) {
-                    // allow null class loader only with permission check
-                    checkClassLoaderPermission();
-                }
 
                 addAccessibleMembers(controller.getClass(),
                                      INITIAL_CLASS_ACCESS,
@@ -3536,11 +3418,6 @@ public class FXMLLoader {
                     controllerMethods.put(t, new HashMap<String, Method>());
                 }
 
-                if (callerClassLoader == null) {
-                    // allow null class loader only with permission check
-                    checkClassLoaderPermission();
-                }
-
                 addAccessibleMembers(controller.getClass(),
                                      INITIAL_CLASS_ACCESS,
                                      INITIAL_MEMBER_ACCESS,
@@ -3551,20 +3428,11 @@ public class FXMLLoader {
         }
 
         private void addAccessibleMembers(final Class<?> type,
-                                          final int prevAllowedClassAccess,
-                                          final int prevAllowedMemberAccess,
+                                          final int allowedClassAccess,
+                                          final int allowedMemberAccess,
                                           final int membersType) {
             if (type == Object.class) {
                 return;
-            }
-
-            int allowedClassAccess = prevAllowedClassAccess;
-            int allowedMemberAccess = prevAllowedMemberAccess;
-            if ((callerClassLoader != null)
-                    && (type.getClassLoader() != callerClassLoader)) {
-                // restrict further access
-                allowedClassAccess &= PUBLIC;
-                allowedMemberAccess &= PUBLIC;
             }
 
             final int classAccess = getAccess(type.getModifiers());
@@ -3580,23 +3448,11 @@ public class FXMLLoader {
                                  allowedMemberAccess,
                                  membersType);
 
-            final int finalAllowedMemberAccess = allowedMemberAccess;
-            @SuppressWarnings("removal")
-            var dummy = AccessController.doPrivileged(
-                    new PrivilegedAction<Void>() {
-                        @Override
-                        public Void run() {
-                            if (membersType == FIELDS) {
-                                addAccessibleFields(type,
-                                                    finalAllowedMemberAccess);
-                            } else {
-                                addAccessibleMethods(type,
-                                                     finalAllowedMemberAccess);
-                            }
-
-                            return null;
-                        }
-                    });
+            if (membersType == FIELDS) {
+                addAccessibleFields(type, allowedMemberAccess);
+            } else {
+                addAccessibleMethods(type, allowedMemberAccess);
+            }
         }
 
         private void addAccessibleFields(final Class<?> type,

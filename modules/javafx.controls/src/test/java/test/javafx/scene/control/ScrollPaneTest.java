@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,35 +25,39 @@
 
 package test.javafx.scene.control;
 
-import javafx.css.CssMetaData;
-import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.*;
-
-import test.com.sun.javafx.pgstub.StubToolkit;
-import com.sun.javafx.tk.Toolkit;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassDoesNotExist;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertPseudoClassExists;
+import static test.com.sun.javafx.scene.control.infrastructure.ControlTestUtils.assertStyleClassContains;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.DoubleProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.css.CssMetaData;
 import javafx.css.StyleableProperty;
 import javafx.geometry.BoundingBox;
 import javafx.geometry.Bounds;
 import javafx.scene.control.ScrollPane;
-import static org.junit.Assert.*;
-
-
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import com.sun.javafx.tk.Toolkit;
+import test.com.sun.javafx.pgstub.StubToolkit;
 
 /**
  *
  * @author srikalyc
  */
 public class ScrollPaneTest {
-    private ScrollPane scrollPane;//Empty string
+    private ScrollPane scrollPane;
 
-    @Before public void setup() {
+    @BeforeEach
+    public void setup() {
         assertTrue(Toolkit.getToolkit() instanceof StubToolkit);  // Ensure StubToolkit is loaded
 
         scrollPane = new ScrollPane();
@@ -136,117 +140,116 @@ public class ScrollPaneTest {
     @Test public void checkHBarPolicyPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<>(ScrollPane.ScrollBarPolicy.ALWAYS);
         scrollPane.hbarPolicyProperty().bind(objPr);
-        assertSame("HBarPolicyProperty cannot be bound", scrollPane.hbarPolicyProperty().getValue(), ScrollPane.ScrollBarPolicy.ALWAYS);
+        assertSame(scrollPane.hbarPolicyProperty().getValue(), ScrollPane.ScrollBarPolicy.ALWAYS, "HBarPolicyProperty cannot be bound");
         objPr.setValue(ScrollPane.ScrollBarPolicy.NEVER);
-        assertSame("HBarPolicyProperty cannot be bound", scrollPane.hbarPolicyProperty().getValue(), ScrollPane.ScrollBarPolicy.NEVER);
+        assertSame(scrollPane.hbarPolicyProperty().getValue(), ScrollPane.ScrollBarPolicy.NEVER, "HBarPolicyProperty cannot be bound");
     }
 
     @Test public void checkVBarPolicyPropertyBind() {
         ObjectProperty objPr = new SimpleObjectProperty<>(ScrollPane.ScrollBarPolicy.ALWAYS);
         scrollPane.vbarPolicyProperty().bind(objPr);
-        assertSame("VBarPolicyProperty cannot be bound", scrollPane.vbarPolicyProperty().getValue(), ScrollPane.ScrollBarPolicy.ALWAYS);
+        assertSame(scrollPane.vbarPolicyProperty().getValue(), ScrollPane.ScrollBarPolicy.ALWAYS, "VBarPolicyProperty cannot be bound");
         objPr.setValue(ScrollPane.ScrollBarPolicy.NEVER);
-        assertSame("VBarPolicyProperty cannot be bound", scrollPane.vbarPolicyProperty().getValue(), ScrollPane.ScrollBarPolicy.NEVER);
+        assertSame(scrollPane.vbarPolicyProperty().getValue(), ScrollPane.ScrollBarPolicy.NEVER, "VBarPolicyProperty cannot be bound");
     }
 
     @Test public void checkHValuePropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         scrollPane.hvalueProperty().bind(objPr);
-        assertEquals("hvalueProperty cannot be bound", scrollPane.hvalueProperty().getValue(), 2.0, 0.0);
+        assertEquals(scrollPane.hvalueProperty().getValue(), 2.0, 0.0, "hvalueProperty cannot be bound");
         objPr.setValue(5.0);
-        assertEquals("hvalueProperty cannot be bound", scrollPane.hvalueProperty().getValue(), 5.0, 0.0);
+        assertEquals(scrollPane.hvalueProperty().getValue(), 5.0, 0.0, "hvalueProperty cannot be bound");
     }
 
     @Test public void checkHminPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         scrollPane.hminProperty().bind(objPr);
-        assertEquals("hminProperty cannot be bound", scrollPane.hminProperty().getValue(), 2.0, 0.0);
+        assertEquals(scrollPane.hminProperty().getValue(), 2.0, 0.0, "hminProperty cannot be bound");
         objPr.setValue(5.0);
-        assertEquals("hminProperty cannot be bound", scrollPane.hminProperty().getValue(), 5.0, 0.0);
+        assertEquals(scrollPane.hminProperty().getValue(), 5.0, 0.0, "hminProperty cannot be bound");
     }
 
     @Test public void checkHmaxPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         scrollPane.hmaxProperty().bind(objPr);
-        assertEquals("hmaxProperty cannot be bound", scrollPane.hmaxProperty().getValue(), 2.0, 0.0);
+        assertEquals(scrollPane.hmaxProperty().getValue(), 2.0, 0.0, "hmaxProperty cannot be bound");
         objPr.setValue(5.0);
-        assertEquals("hmaxProperty cannot be bound", scrollPane.hmaxProperty().getValue(), 5.0, 0.0);
+        assertEquals(scrollPane.hmaxProperty().getValue(), 5.0, 0.0, "hmaxProperty cannot be bound");
     }
 
     @Test public void checkVValuePropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         scrollPane.vvalueProperty().bind(objPr);
-        assertEquals("vvalueProperty cannot be bound", scrollPane.vvalueProperty().getValue(), 2.0, 0.0);
+        assertEquals(scrollPane.vvalueProperty().getValue(), 2.0, 0.0, "vvalueProperty cannot be bound");
         objPr.setValue(5.0);
-        assertEquals("vvalueProperty cannot be bound", scrollPane.vvalueProperty().getValue(), 5.0, 0.0);
+        assertEquals(scrollPane.vvalueProperty().getValue(), 5.0, 0.0, "vvalueProperty cannot be bound");
     }
 
     @Test public void checkVminPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         scrollPane.vminProperty().bind(objPr);
-        assertEquals("vminProperty cannot be bound", scrollPane.vminProperty().getValue(), 2.0, 0.0);
+        assertEquals(scrollPane.vminProperty().getValue(), 2.0, 0.0, "vminProperty cannot be bound");
         objPr.setValue(5.0);
-        assertEquals("vminProperty cannot be bound", scrollPane.vminProperty().getValue(), 5.0, 0.0);
+        assertEquals(scrollPane.vminProperty().getValue(), 5.0, 0.0, "vminProperty cannot be bound");
     }
 
     @Test public void checkVmaxPropertyBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         scrollPane.vmaxProperty().bind(objPr);
-        assertEquals("vmaxProperty cannot be bound", scrollPane.vmaxProperty().getValue(), 2.0, 0.0);
+        assertEquals(scrollPane.vmaxProperty().getValue(), 2.0, 0.0, "vmaxProperty cannot be bound");
         objPr.setValue(5.0);
-        assertEquals("vmaxProperty cannot be bound", scrollPane.vmaxProperty().getValue(), 5.0, 0.0);
+        assertEquals(scrollPane.vmaxProperty().getValue(), 5.0, 0.0, "vmaxProperty cannot be bound");
     }
 
     @Test public void checkFitToWidthPropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(true);
         scrollPane.fitToWidthProperty().bind(objPr);
-        assertEquals("FitToWidth cannot be bound", scrollPane.fitToWidthProperty().getValue(), true);
+        assertEquals(scrollPane.fitToWidthProperty().getValue(), true, "FitToWidth cannot be bound");
         objPr.setValue(false);
-        assertEquals("FitToWidth cannot be bound", scrollPane.fitToWidthProperty().getValue(), false);
+        assertEquals(scrollPane.fitToWidthProperty().getValue(), false, "FitToWidth cannot be bound");
     }
 
     @Test public void checkFitToHeigtPropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(true);
         scrollPane.fitToHeightProperty().bind(objPr);
-        assertEquals("FitToHeigt cannot be bound", scrollPane.fitToHeightProperty().getValue(), true);
+        assertEquals(scrollPane.fitToHeightProperty().getValue(), true, "FitToHeigt cannot be bound");
         objPr.setValue(false);
-        assertEquals("FitToHeigt cannot be bound", scrollPane.fitToHeightProperty().getValue(), false);
+        assertEquals(scrollPane.fitToHeightProperty().getValue(), false, "FitToHeigt cannot be bound");
     }
 
     @Test public void checkPannablePropertyBind() {
         BooleanProperty objPr = new SimpleBooleanProperty(true);
         scrollPane.pannableProperty().bind(objPr);
-        assertEquals("Pannable cannot be bound", scrollPane.pannableProperty().getValue(), true);
+        assertEquals(scrollPane.pannableProperty().getValue(), true, "Pannable cannot be bound");
         objPr.setValue(false);
-        assertEquals("Pannable cannot be bound", scrollPane.pannableProperty().getValue(), false);
+        assertEquals(scrollPane.pannableProperty().getValue(), false, "Pannable cannot be bound");
     }
 
     @Test public void checkPreferredViewportWidthBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         scrollPane.prefViewportWidthProperty().bind(objPr);
-        assertEquals("prefViewportWidthProperty cannot be bound", scrollPane.prefViewportWidthProperty().getValue(), 2.0, 0.0);
+        assertEquals(scrollPane.prefViewportWidthProperty().getValue(), 2.0, 0.0, "prefViewportWidthProperty cannot be bound");
         objPr.setValue(5.0);
-        assertEquals("prefViewportWidthProperty cannot be bound", scrollPane.prefViewportWidthProperty().getValue(), 5.0, 0.0);
+        assertEquals(scrollPane.prefViewportWidthProperty().getValue(), 5.0, 0.0, "prefViewportWidthProperty cannot be bound");
     }
 
     @Test public void checkPreferredViewportHeightBind() {
         DoubleProperty objPr = new SimpleDoubleProperty(2.0);
         scrollPane.prefViewportHeightProperty().bind(objPr);
-        assertEquals("prefViewportHeightProperty cannot be bound", scrollPane.prefViewportHeightProperty().getValue(), 2.0, 0.0);
+        assertEquals(scrollPane.prefViewportHeightProperty().getValue(), 2.0, 0.0, "prefViewportHeightProperty cannot be bound");
         objPr.setValue(5.0);
-        assertEquals("prefViewportHeightProperty cannot be bound", scrollPane.prefViewportHeightProperty().getValue(), 5.0, 0.0);
+        assertEquals(scrollPane.prefViewportHeightProperty().getValue(), 5.0, 0.0, "prefViewportHeightProperty cannot be bound");
     }
 
     @Test public void checkViewportBoundsBind() {
         Bounds b = null;
         ObjectProperty objPr = new SimpleObjectProperty<>(b);
         scrollPane.viewportBoundsProperty().bind(objPr);
-        assertNull("viewportBoundsProperty cannot be bound", scrollPane.viewportBoundsProperty().getValue());
+        assertNull(scrollPane.viewportBoundsProperty().getValue(), "viewportBoundsProperty cannot be bound");
         b = new BoundingBox(0.0, 0.0, 0.0, 0.0);
         objPr.setValue(b);
-        assertSame("viewportBoundsProperty cannot be bound", scrollPane.viewportBoundsProperty().getValue(), b);
+        assertSame(scrollPane.viewportBoundsProperty().getValue(), b, "viewportBoundsProperty cannot be bound");
     }
-
 
     @Test public void hbarPolicyPropertyHasBeanReference() {
         assertSame(scrollPane, scrollPane.hbarPolicyProperty().getBean());

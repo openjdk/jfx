@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2014, Oracle and/or its affiliates.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -47,10 +47,12 @@ public class MPointerImpl extends MDataImpl implements MPointer {
         super(type);
     }
 
+    @Override
     public void setTarget(MPath path) {
         target = path;
     }
 
+    @Override
     public MPath getTarget() {
         return target;
     }
@@ -63,10 +65,12 @@ public class MPointerImpl extends MDataImpl implements MPointer {
         return target.apply();
     }
 
+    @Override
     public void parse(Iterator<String> iter) {
         // Nothing
     }
 
+    @Override
     public String toString() {
         if (target != null) {
             return target.toString();
@@ -75,6 +79,7 @@ public class MPointerImpl extends MDataImpl implements MPointer {
         }
     }
 
+    @Override
     public MNode getTargetNode() {
         return target.getTargetNode();
     }

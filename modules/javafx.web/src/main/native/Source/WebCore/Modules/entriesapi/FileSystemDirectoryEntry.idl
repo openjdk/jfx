@@ -40,7 +40,9 @@
         optional ErrorCallback? errorCallback);
 };
 
-dictionary FileSystemFlags {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary FileSystemFlags {
     boolean create = false;
     boolean exclusive = false;
 };

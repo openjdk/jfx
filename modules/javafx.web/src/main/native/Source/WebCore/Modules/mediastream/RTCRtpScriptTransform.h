@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -28,12 +28,12 @@
 #if ENABLE(WEB_RTC)
 
 #include "ActiveDOMObject.h"
-#include "EventTarget.h"
 #include "RTCRtpScriptTransformer.h"
 #include <JavaScriptCore/JSCJSValue.h>
 #include <JavaScriptCore/JSObject.h>
 #include <JavaScriptCore/Strong.h>
 #include <wtf/Lock.h>
+#include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>
 
 namespace WebCore {
@@ -44,12 +44,15 @@ class Worker;
 
 class RTCRtpScriptTransform final
     : public ThreadSafeRefCounted<RTCRtpScriptTransform, WTF::DestructionThread::Main>
-    , public ActiveDOMObject
-    , public EventTarget {
-    WTF_MAKE_ISO_ALLOCATED(RTCRtpScriptTransform);
+    , public ActiveDOMObject {
+    WTF_MAKE_TZONE_ALLOCATED(RTCRtpScriptTransform);
 public:
     static ExceptionOr<Ref<RTCRtpScriptTransform>> create(JSC::JSGlobalObject&, Worker&, JSC::JSValue, Vector<JSC::Strong<JSC::JSObject>>&&);
     ~RTCRtpScriptTransform();
+
+    // ActiveDOMObject.
+    void ref() const final { ThreadSafeRefCounted::ref(); }
+    void deref() const final { ThreadSafeRefCounted::deref(); }
 
     void setTransformer(RTCRtpScriptTransformer&);
 
@@ -59,9 +62,6 @@ public:
     void willClearBackend(RTCRtpTransformBackend&);
     void backendTransferedToNewTransform() { clear(RTCRtpScriptTransformer::ClearCallback::No); }
 
-    using ThreadSafeRefCounted::ref;
-    using ThreadSafeRefCounted::deref;
-
 private:
     RTCRtpScriptTransform(ScriptExecutionContext&, Ref<Worker>&&);
 
@@ -69,16 +69,7 @@ private:
     bool setupTransformer(Ref<RTCRtpTransformBackend>&&);
     void clear(RTCRtpScriptTransformer::ClearCallback);
 
-    // ActiveDOMObject
-    const char* activeDOMObjectName() const final { return "RTCRtpScriptTransform"; }
-
-    // EventTarget
-    EventTargetInterface eventTargetInterface() const final { return RTCRtpScriptTransformEventTargetInterfaceType; }
-    ScriptExecutionContext* scriptExecutionContext() const final { return ActiveDOMObject::scriptExecutionContext(); }
-    void refEventTarget() final { ref(); }
-    void derefEventTarget() final { deref(); }
-
-    Ref<Worker> m_worker;
+    const Ref<Worker> m_worker;
 
     bool m_isAttached { false };
     RefPtr<RTCRtpTransformBackend> m_backend;

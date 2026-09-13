@@ -33,7 +33,7 @@ namespace WebCore {
 IndexKey::IndexKey() = default;
 
 IndexKey::IndexKey(Data&& keys)
-    : m_keys(WTFMove(keys))
+    : m_keys(WTF::move(keys))
 {
 }
 
@@ -44,7 +44,7 @@ IndexKey IndexKey::isolatedCopy() const &
 
 IndexKey IndexKey::isolatedCopy() &&
 {
-    return { crossThreadCopy(WTFMove(m_keys)) };
+    return { crossThreadCopy(WTF::move(m_keys)) };
 }
 
 IDBKeyData IndexKey::asOneKey() const
@@ -87,6 +87,22 @@ Vector<IDBKeyData> IndexKey::multiEntry() const
     });
 
     return multiEntry;
+}
+
+void IndexKey::updatePlaceholderKeys(const IDBKeyData& newKeyData)
+{
+    ASSERT(newKeyData.isValid());
+
+    WTF::switchOn(m_keys, [](std::nullptr_t) {
+    }, [&](IDBKeyData& keyData) {
+        if (!keyData.isValid() && keyData.isPlaceholder())
+            keyData = newKeyData;
+    }, [&](Vector<IDBKeyData>& keyDataVector) {
+        for (auto& keyData : keyDataVector) {
+            if (!keyData.isValid() && keyData.isPlaceholder())
+                keyData = newKeyData;
+        }
+    });
 }
 
 } // namespace WebCore

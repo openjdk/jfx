@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2025, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,8 +25,10 @@
 
 package javafx.scene.layout;
 
+import com.sun.javafx.util.InterpolationUtils;
+import javafx.animation.Interpolatable;
 import javafx.beans.NamedArg;
-
+import java.util.Objects;
 
 /**
  * Defines the radii of each of the four corners of a BorderStroke. The
@@ -37,7 +39,7 @@ import javafx.beans.NamedArg;
  *
  * @since JavaFX 8.0
  */
-public class CornerRadii {
+public final class CornerRadii implements Interpolatable<CornerRadii> {
     /**
      * A CornerRadii which is entirely empty, indicating squared corners.
      * This is the default value for a BorderStroke's radii.
@@ -49,112 +51,160 @@ public class CornerRadii {
 
     /**
      * The length of the horizontal radii of the top-left corner.
+     *
      * @return the length of the horizontal radii of the top-left corner
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a> if both values are
+     *                    absolute or both values are {@link #isTopLeftHorizontalRadiusAsPercentage() percentages},
+     *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getTopLeftHorizontalRadius() { return topLeftHorizontalRadius; }
-    private double topLeftHorizontalRadius;
+    private final double topLeftHorizontalRadius;
 
     /**
      * The length of the vertical radii of the top-left corner.
+     *
      * @return the length of the vertical radii of the top-left corner
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a> if both values are
+     *                    absolute or both values are {@link #isTopLeftVerticalRadiusAsPercentage() percentages},
+     *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getTopLeftVerticalRadius() { return topLeftVerticalRadius; }
-    private double topLeftVerticalRadius;
+    private final double topLeftVerticalRadius;
 
     /**
      * The length of the vertical radii of the top-right corner.
+     *
      * @return the length of the vertical radii of the top-right corner
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a> if both values are
+     *                    absolute or both values are {@link #isTopRightVerticalRadiusAsPercentage() percentages},
+     *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getTopRightVerticalRadius() { return topRightVerticalRadius; }
-    private double topRightVerticalRadius;
+    private final double topRightVerticalRadius;
 
     /**
      * The length of the horizontal radii of the top-right corner.
+     *
      * @return the length of the horizontal radii of the top-right corner
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a> if both values are
+     *                    absolute or both values are {@link #isTopRightHorizontalRadiusAsPercentage() percentages},
+     *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getTopRightHorizontalRadius() { return topRightHorizontalRadius; }
-    private double topRightHorizontalRadius;
+    private final double topRightHorizontalRadius;
 
     /**
      * The length of the horizontal radii of the bottom-right corner.
+     *
      * @return the length of the horizontal radii of the bottom-right corner
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a> if both values are
+     *                    absolute or both values are {@link #isBottomRightHorizontalRadiusAsPercentage() percentages},
+     *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getBottomRightHorizontalRadius() { return bottomRightHorizontalRadius; }
-    private double bottomRightHorizontalRadius;
+    private final double bottomRightHorizontalRadius;
 
     /**
      * The length of the vertical radii of the bottom-right corner.
+     *
      * @return the length of the vertical radii of the bottom-right corner
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a> if both values are
+     *                    absolute or both values are {@link #isBottomRightVerticalRadiusAsPercentage() percentages},
+     *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getBottomRightVerticalRadius() { return bottomRightVerticalRadius; }
-    private double bottomRightVerticalRadius;
+    private final double bottomRightVerticalRadius;
 
     /**
      * The length of the vertical radii of the bottom-left corner.
+     *
      * @return the length of the vertical radii of the bottom-left corner
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a> if both values are
+     *                    absolute or both values are {@link #isBottomLeftVerticalRadiusAsPercentage() percentages},
+     *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getBottomLeftVerticalRadius() { return bottomLeftVerticalRadius; }
-    private double bottomLeftVerticalRadius;
+    private final double bottomLeftVerticalRadius;
 
     /**
      * The length of the horizontal radii of the bottom-left corner.
+     *
      * @return the length of the horizontal radii of the bottom-left corner
+     * @interpolationType <a href="../../animation/Interpolatable.html#linear">linear</a> if both values are
+     *                    absolute or both values are {@link #isBottomLeftHorizontalRadiusAsPercentage() percentages},
+     *                    <a href="../../animation/Interpolatable.html#discrete">discrete</a> otherwise
      */
     public final double getBottomLeftHorizontalRadius() { return bottomLeftHorizontalRadius; }
-    private double bottomLeftHorizontalRadius;
+    private final double bottomLeftHorizontalRadius;
 
     /**
-     * indicates whether {@code topLeftHorizontalRadius} is interpreted as a value or a percentage.
+     * Indicates whether {@code topLeftHorizontalRadius} is interpreted as a value or a percentage.
+     *
      * @return if true topLeftHorizontalRadius is in percentage, otherwise a value
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isTopLeftHorizontalRadiusAsPercentage() { return topLeftHorizontalRadiusAsPercentage; }
     private final boolean topLeftHorizontalRadiusAsPercentage;
 
     /**
-     * indicates whether {@code topLeftVerticalRadius} is interpreted as a value or a percentage.
+     * Indicates whether {@code topLeftVerticalRadius} is interpreted as a value or a percentage.
+     *
      * @return if true topLeftVerticalRadius is in percentage, otherwise a value
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isTopLeftVerticalRadiusAsPercentage() { return topLeftVerticalRadiusAsPercentage; }
     private final boolean topLeftVerticalRadiusAsPercentage;
 
     /**
-     * indicates whether {@code topRightVerticalRadius} is interpreted as a value or a percentage.
+     * Indicates whether {@code topRightVerticalRadius} is interpreted as a value or a percentage.
+     *
      * @return if true topRightVerticalRadius is in percentage, otherwise a value
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isTopRightVerticalRadiusAsPercentage() { return topRightVerticalRadiusAsPercentage; }
     private final boolean topRightVerticalRadiusAsPercentage;
 
     /**
-     * indicates whether {@code topRightHorizontalRadius} is interpreted as a value or a percentage.
+     * Indicates whether {@code topRightHorizontalRadius} is interpreted as a value or a percentage.
+     *
      * @return if true topRightHorizontalRadius is in percentage, otherwise a value
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isTopRightHorizontalRadiusAsPercentage() { return topRightHorizontalRadiusAsPercentage; }
     private final boolean topRightHorizontalRadiusAsPercentage;
 
     /**
-     * indicates whether {@code bottomRightHorizontalRadius} is interpreted as a value or a percentage.
+     * Indicates whether {@code bottomRightHorizontalRadius} is interpreted as a value or a percentage.
+     *
      * @return if true bottomRightHorizontalRadius is in percentage, otherwise a value
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isBottomRightHorizontalRadiusAsPercentage() { return bottomRightHorizontalRadiusAsPercentage; }
     private final boolean bottomRightHorizontalRadiusAsPercentage;
 
     /**
-     * indicates whether {@code bottomRightVerticalRadius} is interpreted as a value or a percentage.
+     * Indicates whether {@code bottomRightVerticalRadius} is interpreted as a value or a percentage.
+     *
      * @return if true bottomRightVerticalRadius is in percentage, otherwise a value
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isBottomRightVerticalRadiusAsPercentage() { return bottomRightVerticalRadiusAsPercentage; }
     private final boolean bottomRightVerticalRadiusAsPercentage;
 
     /**
-     * indicates whether {@code bottomLeftVerticalRadius} is interpreted as a value or a percentage.
+     * Indicates whether {@code bottomLeftVerticalRadius} is interpreted as a value or a percentage.
+     *
      * @return if true bottomLeftVerticalRadius is in percentage, otherwise a value
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isBottomLeftVerticalRadiusAsPercentage() { return bottomLeftVerticalRadiusAsPercentage; }
     private final boolean bottomLeftVerticalRadiusAsPercentage;
 
     /**
-     * indicates whether {@code bottomLeftHorizontalRadius} is interpreted as a value or a percentage.
+     * Indicates whether {@code bottomLeftHorizontalRadius} is interpreted as a value or a percentage.
+     *
      * @return if true bottomLeftHorizontalRadius is in percentage, otherwise a value
+     * @interpolationType <a href="../../animation/Interpolatable.html#discrete">discrete</a>
      */
     public final boolean isBottomLeftHorizontalRadiusAsPercentage() { return bottomLeftHorizontalRadiusAsPercentage; }
     private final boolean bottomLeftHorizontalRadiusAsPercentage;
@@ -167,7 +217,7 @@ public class CornerRadii {
      * @return if true each corner radius is uniformly percentage-based, otherwise not
      */
     public final boolean isUniform() { return uniform; }
-    final boolean uniform;
+    private final boolean uniform;
 
     /**
      * The cached hash code.
@@ -312,18 +362,20 @@ public class CornerRadii {
                 topRightVerticalRadiusAsPercent || topRightHorizontalRadiusAsPercent ||
                 bottomRightHorizontalRadiusAsPercent || bottomRightVerticalRadiusAsPercent ||
                 bottomLeftVerticalRadiusAsPercent || bottomLeftHorizontalRadiusAsPercent;
-        uniform = topLeftHorizontalRadius == topRightHorizontalRadius &&
-                topLeftVerticalRadius == topRightVerticalRadius &&
+        uniform = topLeftHorizontalRadius == topLeftVerticalRadius &&
+                topLeftHorizontalRadius == topRightVerticalRadius &&
+                topLeftHorizontalRadius == topRightHorizontalRadius &&
                 topLeftHorizontalRadius == bottomRightHorizontalRadius &&
-                topLeftVerticalRadius == bottomRightVerticalRadius &&
+                topLeftHorizontalRadius == bottomRightVerticalRadius &&
+                topLeftHorizontalRadius == bottomLeftVerticalRadius &&
                 topLeftHorizontalRadius == bottomLeftHorizontalRadius &&
-                topLeftVerticalRadius == bottomLeftVerticalRadius &&
+                topLeftHorizontalRadiusAsPercent == topLeftVerticalRadiusAsPercent &&
+                topLeftHorizontalRadiusAsPercent == topRightVerticalRadiusAsPercent &&
                 topLeftHorizontalRadiusAsPercent == topRightHorizontalRadiusAsPercent &&
-                topLeftVerticalRadiusAsPercent == topRightVerticalRadiusAsPercent &&
                 topLeftHorizontalRadiusAsPercent == bottomRightHorizontalRadiusAsPercent &&
-                topLeftVerticalRadiusAsPercent == bottomRightVerticalRadiusAsPercent &&
-                topLeftHorizontalRadiusAsPercent == bottomLeftHorizontalRadiusAsPercent &&
-                topLeftVerticalRadiusAsPercent == bottomLeftVerticalRadiusAsPercent;
+                topLeftHorizontalRadiusAsPercent == bottomRightVerticalRadiusAsPercent &&
+                topLeftHorizontalRadiusAsPercent == bottomLeftVerticalRadiusAsPercent &&
+                topLeftHorizontalRadiusAsPercent == bottomLeftHorizontalRadiusAsPercent;
     }
 
     private int preComputeHash() {
@@ -355,6 +407,176 @@ public class CornerRadii {
         result = 31 * result + (bottomLeftHorizontalRadiusAsPercentage ? 1 : 0);
         result = 31 * result + result;
         return result;
+    }
+
+    /**
+     * {@inheritDoc}
+     *
+     * @throws NullPointerException {@inheritDoc}
+     * @since 24
+     */
+    @Override
+    public CornerRadii interpolate(CornerRadii endValue, double t) {
+        Objects.requireNonNull(endValue, "endValue cannot be null");
+
+        if (t == 0) {
+            return this;
+        }
+
+        if (t == 1) {
+            return endValue;
+        }
+
+        if (uniform && endValue.uniform) {
+            double newRadius = interpolate(
+                this.topLeftHorizontalRadius, endValue.topLeftHorizontalRadius,
+                this.topLeftHorizontalRadiusAsPercentage, endValue.topLeftHorizontalRadiusAsPercentage, t);
+
+            boolean newRadiusAsPercentage = t < 0.5 ?
+                this.topLeftHorizontalRadiusAsPercentage :
+                endValue.topLeftHorizontalRadiusAsPercentage;
+
+            if (topLeftHorizontalRadius == newRadius
+                    && topLeftHorizontalRadiusAsPercentage == newRadiusAsPercentage) {
+                return this;
+            }
+
+            if (endValue.topLeftHorizontalRadius == newRadius
+                    && endValue.topLeftHorizontalRadiusAsPercentage == newRadiusAsPercentage) {
+                return endValue;
+            }
+
+            return new CornerRadii(newRadius, newRadiusAsPercentage);
+        }
+
+        boolean newTopLeftHorizontalRadiusAsPercentage,
+                newTopLeftVerticalRadiusAsPercentage,
+                newTopRightVerticalRadiusAsPercentage,
+                newTopRightHorizontalRadiusAsPercentage,
+                newBottomRightHorizontalRadiusAsPercentage,
+                newBottomRightVerticalRadiusAsPercentage,
+                newBottomLeftVerticalRadiusAsPercentage,
+                newBottomLeftHorizontalRadiusAsPercentage;
+
+        if (t < 0.5) {
+            newTopLeftHorizontalRadiusAsPercentage = this.topLeftHorizontalRadiusAsPercentage;
+            newTopLeftVerticalRadiusAsPercentage = this.topLeftVerticalRadiusAsPercentage;
+            newTopRightVerticalRadiusAsPercentage = this.topRightVerticalRadiusAsPercentage;
+            newTopRightHorizontalRadiusAsPercentage = this.topRightHorizontalRadiusAsPercentage;
+            newBottomRightHorizontalRadiusAsPercentage = this.bottomRightHorizontalRadiusAsPercentage;
+            newBottomRightVerticalRadiusAsPercentage = this.bottomRightVerticalRadiusAsPercentage;
+            newBottomLeftVerticalRadiusAsPercentage = this.bottomLeftVerticalRadiusAsPercentage;
+            newBottomLeftHorizontalRadiusAsPercentage = this.bottomLeftHorizontalRadiusAsPercentage;
+        } else {
+            newTopLeftHorizontalRadiusAsPercentage = endValue.topLeftHorizontalRadiusAsPercentage;
+            newTopLeftVerticalRadiusAsPercentage = endValue.topLeftVerticalRadiusAsPercentage;
+            newTopRightVerticalRadiusAsPercentage = endValue.topRightVerticalRadiusAsPercentage;
+            newTopRightHorizontalRadiusAsPercentage = endValue.topRightHorizontalRadiusAsPercentage;
+            newBottomRightHorizontalRadiusAsPercentage = endValue.bottomRightHorizontalRadiusAsPercentage;
+            newBottomRightVerticalRadiusAsPercentage = endValue.bottomRightVerticalRadiusAsPercentage;
+            newBottomLeftVerticalRadiusAsPercentage = endValue.bottomLeftVerticalRadiusAsPercentage;
+            newBottomLeftHorizontalRadiusAsPercentage = endValue.bottomLeftHorizontalRadiusAsPercentage;
+        }
+
+        double newTopLeftHorizontalRadius = interpolate(
+            this.topLeftHorizontalRadius, endValue.topLeftHorizontalRadius,
+            this.topLeftHorizontalRadiusAsPercentage, endValue.topLeftHorizontalRadiusAsPercentage, t);
+
+        double newTopLeftVerticalRadius = interpolate(
+            this.topLeftVerticalRadius, endValue.topLeftVerticalRadius,
+            this.topLeftVerticalRadiusAsPercentage, endValue.topLeftVerticalRadiusAsPercentage, t);
+
+        double newTopRightVerticalRadius = interpolate(
+            this.topRightVerticalRadius, endValue.topRightVerticalRadius,
+            this.topRightVerticalRadiusAsPercentage, endValue.topRightVerticalRadiusAsPercentage, t);
+
+        double newTopRightHorizontalRadius = interpolate(
+            this.topRightHorizontalRadius, endValue.topRightHorizontalRadius,
+            this.topRightHorizontalRadiusAsPercentage, endValue.topRightHorizontalRadiusAsPercentage, t);
+
+        double newBottomRightHorizontalRadius = interpolate(
+            this.bottomRightHorizontalRadius, endValue.bottomRightHorizontalRadius,
+            this.bottomRightHorizontalRadiusAsPercentage, endValue.bottomRightHorizontalRadiusAsPercentage, t);
+
+        double newBottomRightVerticalRadius = interpolate(
+            this.bottomRightVerticalRadius, endValue.bottomRightVerticalRadius,
+            this.bottomRightVerticalRadiusAsPercentage, endValue.bottomRightVerticalRadiusAsPercentage, t);
+
+        double newBottomLeftVerticalRadius = interpolate(
+            this.bottomLeftVerticalRadius, endValue.bottomLeftVerticalRadius,
+            this.bottomLeftVerticalRadiusAsPercentage, endValue.bottomLeftVerticalRadiusAsPercentage, t);
+
+        double newBottomLeftHorizontalRadius = interpolate(
+            this.bottomLeftHorizontalRadius, endValue.bottomLeftHorizontalRadius,
+            this.bottomLeftHorizontalRadiusAsPercentage, endValue.bottomLeftHorizontalRadiusAsPercentage, t);
+
+        if (isSame(newTopLeftHorizontalRadius, newTopLeftVerticalRadius,
+                   newTopRightVerticalRadius, newTopRightHorizontalRadius,
+                   newBottomRightHorizontalRadius, newBottomRightVerticalRadius,
+                   newBottomLeftVerticalRadius, newBottomLeftHorizontalRadius,
+                   newTopLeftHorizontalRadiusAsPercentage, newTopLeftVerticalRadiusAsPercentage,
+                   newTopRightVerticalRadiusAsPercentage, newTopRightHorizontalRadiusAsPercentage,
+                   newBottomRightHorizontalRadiusAsPercentage, newBottomRightVerticalRadiusAsPercentage,
+                   newBottomLeftVerticalRadiusAsPercentage, newBottomLeftHorizontalRadiusAsPercentage)) {
+            return this;
+        }
+
+        if (endValue.isSame(newTopLeftHorizontalRadius, newTopLeftVerticalRadius,
+                            newTopRightVerticalRadius, newTopRightHorizontalRadius,
+                            newBottomRightHorizontalRadius, newBottomRightVerticalRadius,
+                            newBottomLeftVerticalRadius, newBottomLeftHorizontalRadius,
+                            newTopLeftHorizontalRadiusAsPercentage, newTopLeftVerticalRadiusAsPercentage,
+                            newTopRightVerticalRadiusAsPercentage, newTopRightHorizontalRadiusAsPercentage,
+                            newBottomRightHorizontalRadiusAsPercentage, newBottomRightVerticalRadiusAsPercentage,
+                            newBottomLeftVerticalRadiusAsPercentage, newBottomLeftHorizontalRadiusAsPercentage)) {
+            return endValue;
+        }
+
+        return new CornerRadii(
+            newTopLeftHorizontalRadius, newTopLeftVerticalRadius,
+            newTopRightVerticalRadius, newTopRightHorizontalRadius,
+            newBottomRightHorizontalRadius, newBottomRightVerticalRadius,
+            newBottomLeftVerticalRadius, newBottomLeftHorizontalRadius,
+            newTopLeftHorizontalRadiusAsPercentage, newTopLeftVerticalRadiusAsPercentage,
+            newTopRightVerticalRadiusAsPercentage, newTopRightHorizontalRadiusAsPercentage,
+            newBottomRightHorizontalRadiusAsPercentage, newBottomRightVerticalRadiusAsPercentage,
+            newBottomLeftVerticalRadiusAsPercentage, newBottomLeftHorizontalRadiusAsPercentage);
+    }
+
+    private static double interpolate(double start, double end,
+                                      boolean startIsPercentage, boolean endIsPercentage,
+                                      double t) {
+        double value = startIsPercentage == endIsPercentage ?
+            InterpolationUtils.interpolate(start, end, t) :
+            InterpolationUtils.interpolateDiscrete(start, end, t);
+
+        return Math.max(0, value);
+    }
+
+    private boolean isSame(double topLeftHorizontalRadius, double topLeftVerticalRadius,
+                           double topRightVerticalRadius, double topRightHorizontalRadius,
+                           double bottomRightHorizontalRadius, double bottomRightVerticalRadius,
+                           double bottomLeftVerticalRadius, double bottomLeftHorizontalRadius,
+                           boolean topLeftHorizontalRadiusAsPercentage, boolean topLeftVerticalRadiusAsPercentage,
+                           boolean topRightVerticalRadiusAsPercentage, boolean topRightHorizontalRadiusAsPercentage,
+                           boolean bottomRightHorizontalRadiusAsPercentage, boolean bottomRightVerticalRadiusAsPercentage,
+                           boolean bottomLeftVerticalRadiusAsPercentage, boolean bottomLeftHorizontalRadiusAsPercentage) {
+        return this.topLeftHorizontalRadius == topLeftHorizontalRadius
+            && this.topLeftVerticalRadius == topLeftVerticalRadius
+            && this.topRightVerticalRadius == topRightVerticalRadius
+            && this.topRightHorizontalRadius == topRightHorizontalRadius
+            && this.bottomRightHorizontalRadius == bottomRightHorizontalRadius
+            && this.bottomRightVerticalRadius == bottomRightVerticalRadius
+            && this.bottomLeftVerticalRadius == bottomLeftVerticalRadius
+            && this.bottomLeftHorizontalRadius == bottomLeftHorizontalRadius
+            && this.topLeftHorizontalRadiusAsPercentage == topLeftHorizontalRadiusAsPercentage
+            && this.topLeftVerticalRadiusAsPercentage == topLeftVerticalRadiusAsPercentage
+            && this.topRightVerticalRadiusAsPercentage == topRightVerticalRadiusAsPercentage
+            && this.topRightHorizontalRadiusAsPercentage == topRightHorizontalRadiusAsPercentage
+            && this.bottomRightHorizontalRadiusAsPercentage == bottomRightHorizontalRadiusAsPercentage
+            && this.bottomRightVerticalRadiusAsPercentage == bottomRightVerticalRadiusAsPercentage
+            && this.bottomLeftVerticalRadiusAsPercentage == bottomLeftVerticalRadiusAsPercentage
+            && this.bottomLeftHorizontalRadiusAsPercentage == bottomLeftHorizontalRadiusAsPercentage;
     }
 
     /**

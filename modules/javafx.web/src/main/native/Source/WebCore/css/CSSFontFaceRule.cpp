@@ -22,9 +22,12 @@
 #include "config.h"
 #include "CSSFontFaceRule.h"
 
-#include "PropertySetCSSStyleDeclaration.h"
+#include "CSSFontFaceDescriptors.h"
+#include "CSSSerializationContext.h"
+#include "MutableStyleProperties.h"
 #include "StyleProperties.h"
 #include "StyleRule.h"
+#include <wtf/text/MakeString.h>
 #include <wtf/text/StringBuilder.h>
 
 namespace WebCore {
@@ -41,19 +44,29 @@ CSSFontFaceRule::~CSSFontFaceRule()
         m_propertiesCSSOMWrapper->clearParentRule();
 }
 
-CSSStyleDeclaration& CSSFontFaceRule::style()
+CSSFontFaceDescriptors& CSSFontFaceRule::style()
 {
     if (!m_propertiesCSSOMWrapper)
-        m_propertiesCSSOMWrapper = StyleRuleCSSStyleDeclaration::create(m_fontFaceRule->mutableProperties(), *this);
+        m_propertiesCSSOMWrapper = CSSFontFaceDescriptors::create(m_fontFaceRule->mutableProperties(), *this);
     return *m_propertiesCSSOMWrapper;
 }
 
 String CSSFontFaceRule::cssText() const
 {
-    String declarations = m_fontFaceRule->properties().asText();
+    return cssTextInternal(m_fontFaceRule->properties().asText(CSS::defaultSerializationContext()));
+}
+
+String CSSFontFaceRule::cssText(const CSS::SerializationContext& context) const
+{
+    return cssTextInternal(m_fontFaceRule->properties().asText(context));
+}
+
+String CSSFontFaceRule::cssTextInternal(const String& declarations) const
+{
     if (declarations.isEmpty())
         return "@font-face { }"_s;
-    return makeString("@font-face { ", declarations, " }");
+
+    return makeString("@font-face { "_s, declarations, " }"_s);
 }
 
 void CSSFontFaceRule::reattach(StyleRuleBase& rule)

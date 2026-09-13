@@ -25,6 +25,12 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
+#if !BUSE(TZONE)
+
 #include "IsoPageTrigger.h"
 #include "Mutex.h"
 #include <mutex>
@@ -38,8 +44,6 @@ template<typename Config> class IsoPage;
 template<IsoPageTrigger trigger>
 class DeferredTrigger {
 public:
-    DeferredTrigger() { }
-
     template<typename Config>
     void didBecome(const LockHolder&, IsoPage<Config>&);
 
@@ -53,3 +57,6 @@ private:
 } // namespace bmalloc
 
 #endif
+#endif // !BUSE(TZONE)
+
+#endif // __cplusplus

@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2011 Google Inc. All rights reserved.
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -34,28 +34,32 @@
 
 #include "DOMWrapperWorld.h"
 #include "Document.h"
+#include "FrameConsoleClient.h"
 #include "InspectorPageAgent.h"
 #include "InstrumentingAgents.h"
+#include "JSDOMWindowCustom.h"
 #include "JSExecState.h"
-#include "JSLocalDOMWindowCustom.h"
 #include "LocalFrame.h"
 #include "Page.h"
-#include "PageConsoleClient.h"
 #include "ScriptController.h"
 #include "SecurityOrigin.h"
 #include "UserGestureEmulationScope.h"
 #include <JavaScriptCore/InjectedScript.h>
 #include <JavaScriptCore/InjectedScriptManager.h>
 #include <JavaScriptCore/InspectorProtocolObjects.h>
+#include <wtf/CheckedPtr.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
 using namespace Inspector;
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PageRuntimeAgent);
+
 PageRuntimeAgent::PageRuntimeAgent(PageAgentContext& context)
     : InspectorRuntimeAgent(context)
-    , m_frontendDispatcher(makeUnique<Inspector::RuntimeFrontendDispatcher>(context.frontendRouter))
-    , m_backendDispatcher(Inspector::RuntimeBackendDispatcher::create(context.backendDispatcher, this))
+    , m_frontendDispatcher(makeUniqueRef<Inspector::RuntimeFrontendDispatcher>(context.frontendRouter))
+    , m_backendDispatcher(Inspector::RuntimeBackendDispatcher::create(Ref { context.backendDispatcher }, this))
     , m_instrumentingAgents(context.instrumentingAgents)
     , m_inspectedPage(context.inspectedPage)
 {
@@ -63,9 +67,10 @@ PageRuntimeAgent::PageRuntimeAgent(PageAgentContext& context)
 
 PageRuntimeAgent::~PageRuntimeAgent() = default;
 
-Protocol::ErrorStringOr<void> PageRuntimeAgent::enable()
+Inspector::Protocol::ErrorStringOr<void> PageRuntimeAgent::enable()
 {
-    if (m_instrumentingAgents.enabledPageRuntimeAgent() == this)
+    Ref agents = m_instrumentingAgents.get();
+    if (agents->enabledPageRuntimeAgent() == this)
         return { };
 
     auto result = InspectorRuntimeAgent::enable();
@@ -76,14 +81,14 @@ Protocol::ErrorStringOr<void> PageRuntimeAgent::enable()
     // can force creation of script state which could result in duplicate notifications.
     reportExecutionContextCreation();
 
-    m_instrumentingAgents.setEnabledPageRuntimeAgent(this);
+    agents->setEnabledPageRuntimeAgent(this);
 
     return result;
 }
 
-Protocol::ErrorStringOr<void> PageRuntimeAgent::disable()
+Inspector::Protocol::ErrorStringOr<void> PageRuntimeAgent::disable()
 {
-    m_instrumentingAgents.setEnabledPageRuntimeAgent(nullptr);
+    Ref { m_instrumentingAgents.get() }->setEnabledPageRuntimeAgent(nullptr);
 
     return InspectorRuntimeAgent::disable();
 }
@@ -96,17 +101,17 @@ void PageRuntimeAgent::frameNavigated(LocalFrame& frame)
 
 void PageRuntimeAgent::didClearWindowObjectInWorld(LocalFrame& frame, DOMWrapperWorld& world)
 {
-    auto* pageAgent = m_instrumentingAgents.enabledPageAgent();
+    CheckedPtr pageAgent = Ref { m_instrumentingAgents.get() }->enabledPageAgent();
     if (!pageAgent)
         return;
 
     notifyContextCreated(pageAgent->frameId(&frame), frame.script().globalObject(world), world);
 }
 
-InjectedScript PageRuntimeAgent::injectedScriptForEval(Protocol::ErrorString& errorString, std::optional<Protocol::Runtime::ExecutionContextId>&& executionContextId)
+InjectedScript PageRuntimeAgent::injectedScriptForEval(Inspector::Protocol::ErrorString& errorString, std::optional<Inspector::Protocol::Runtime::ExecutionContextId>&& executionContextId)
 {
     if (!executionContextId) {
-        auto* localMainFrame = dynamicDowncast<LocalFrame>(m_inspectedPage.mainFrame());
+        RefPtr localMainFrame = m_inspectedPage->localMainFrame();
         if (!localMainFrame)
             return InjectedScript();
 
@@ -124,21 +129,21 @@ InjectedScript PageRuntimeAgent::injectedScriptForEval(Protocol::ErrorString& er
 
 void PageRuntimeAgent::muteConsole()
 {
-    PageConsoleClient::mute();
+    FrameConsoleClient::mute();
 }
 
 void PageRuntimeAgent::unmuteConsole()
 {
-    PageConsoleClient::unmute();
+    FrameConsoleClient::unmute();
 }
 
 void PageRuntimeAgent::reportExecutionContextCreation()
 {
-    auto* pageAgent = m_instrumentingAgents.enabledPageAgent();
+    CheckedPtr pageAgent = Ref { m_instrumentingAgents.get() }->enabledPageAgent();
     if (!pageAgent)
         return;
 
-    m_inspectedPage.forEachFrame([&](LocalFrame& frame) {
+    m_inspectedPage->forEachLocalFrame([&](LocalFrame& frame) {
         if (!frame.script().canExecuteScripts(ReasonForCallingCanExecuteScripts::NotAboutToExecuteScript))
             return;
 
@@ -146,35 +151,35 @@ void PageRuntimeAgent::reportExecutionContextCreation()
 
         // Always send the main world first.
         auto& mainGlobalObject = mainWorldGlobalObject(frame);
-        notifyContextCreated(frameId, &mainGlobalObject, mainThreadNormalWorld());
+        notifyContextCreated(frameId, &mainGlobalObject, mainThreadNormalWorldSingleton());
 
         for (auto& jsWindowProxy : frame.windowProxy().jsWindowProxiesAsVector()) {
             auto* globalObject = jsWindowProxy->window();
             if (globalObject == &mainGlobalObject)
                 continue;
 
-            auto& securityOrigin = downcast<LocalDOMWindow>(jsWindowProxy->wrapped()).document()->securityOrigin();
-            notifyContextCreated(frameId, globalObject, jsWindowProxy->world(), &securityOrigin);
+            Ref securityOrigin = downcast<LocalDOMWindow>(jsWindowProxy->wrapped()).document()->securityOrigin();
+            notifyContextCreated(frameId, globalObject, jsWindowProxy->world(), securityOrigin.ptr());
         }
     });
 }
 
-static Protocol::Runtime::ExecutionContextType toProtocol(DOMWrapperWorld::Type type)
+static Inspector::Protocol::Runtime::ExecutionContextType toProtocol(DOMWrapperWorld::Type type)
 {
     switch (type) {
     case DOMWrapperWorld::Type::Normal:
-        return Protocol::Runtime::ExecutionContextType::Normal;
+        return Inspector::Protocol::Runtime::ExecutionContextType::Normal;
     case DOMWrapperWorld::Type::User:
-        return Protocol::Runtime::ExecutionContextType::User;
+        return Inspector::Protocol::Runtime::ExecutionContextType::User;
     case DOMWrapperWorld::Type::Internal:
-        return Protocol::Runtime::ExecutionContextType::Internal;
+        return Inspector::Protocol::Runtime::ExecutionContextType::Internal;
     }
 
     ASSERT_NOT_REACHED();
-    return Protocol::Runtime::ExecutionContextType::Internal;
+    return Inspector::Protocol::Runtime::ExecutionContextType::Internal;
 }
 
-void PageRuntimeAgent::notifyContextCreated(const Protocol::Network::FrameId& frameId, JSC::JSGlobalObject* globalObject, const DOMWrapperWorld& world, SecurityOrigin* securityOrigin)
+void PageRuntimeAgent::notifyContextCreated(const Inspector::Protocol::Network::FrameId& frameId, JSC::JSGlobalObject* globalObject, const DOMWrapperWorld& world, SecurityOrigin* securityOrigin)
 {
     auto injectedScript = injectedScriptManager().injectedScriptFor(globalObject);
     if (injectedScript.hasNoValue())
@@ -184,7 +189,7 @@ void PageRuntimeAgent::notifyContextCreated(const Protocol::Network::FrameId& fr
     if (name.isEmpty() && securityOrigin)
         name = securityOrigin->toRawString();
 
-    m_frontendDispatcher->executionContextCreated(Protocol::Runtime::ExecutionContextDescription::create()
+    m_frontendDispatcher->executionContextCreated(Inspector::Protocol::Runtime::ExecutionContextDescription::create()
         .setId(injectedScriptManager().injectedScriptIdFor(globalObject))
         .setType(toProtocol(world.type()))
         .setName(name)
@@ -192,26 +197,28 @@ void PageRuntimeAgent::notifyContextCreated(const Protocol::Network::FrameId& fr
         .release());
 }
 
-Protocol::ErrorStringOr<std::tuple<Ref<Protocol::Runtime::RemoteObject>, std::optional<bool> /* wasThrown */, std::optional<int> /* savedResultIndex */>> PageRuntimeAgent::evaluate(const String& expression, const String& objectGroup, std::optional<bool>&& includeCommandLineAPI, std::optional<bool>&& doNotPauseOnExceptionsAndMuteConsole, std::optional<Protocol::Runtime::ExecutionContextId>&& executionContextId, std::optional<bool>&& returnByValue, std::optional<bool>&& generatePreview, std::optional<bool>&& saveResult, std::optional<bool>&& emulateUserGesture)
+Inspector::Protocol::ErrorStringOr<std::tuple<Ref<Inspector::Protocol::Runtime::RemoteObject>, std::optional<bool> /* wasThrown */, std::optional<int> /* savedResultIndex */>> PageRuntimeAgent::evaluate(const String& expression, const String& objectGroup, std::optional<bool>&& includeCommandLineAPI, std::optional<bool>&& doNotPauseOnExceptionsAndMuteConsole, std::optional<Inspector::Protocol::Runtime::ExecutionContextId>&& executionContextId, std::optional<bool>&& returnByValue, std::optional<bool>&& generatePreview, std::optional<bool>&& saveResult, std::optional<bool>&& emulateUserGesture)
 {
-    Protocol::ErrorString errorString;
+    Inspector::Protocol::ErrorString errorString;
 
-    auto injectedScript = injectedScriptForEval(errorString, WTFMove(executionContextId));
+    auto injectedScript = injectedScriptForEval(errorString, WTF::move(executionContextId));
     if (injectedScript.hasNoValue())
         return makeUnexpected(errorString);
 
     UserGestureEmulationScope userGestureScope(m_inspectedPage, emulateUserGesture.value_or(false), dynamicDowncast<Document>(executionContext(injectedScript.globalObject())));
-    return InspectorRuntimeAgent::evaluate(injectedScript, expression, objectGroup, WTFMove(includeCommandLineAPI), WTFMove(doNotPauseOnExceptionsAndMuteConsole), WTFMove(returnByValue), WTFMove(generatePreview), WTFMove(saveResult), WTFMove(emulateUserGesture));
+    return InspectorRuntimeAgent::evaluate(injectedScript, expression, objectGroup, WTF::move(includeCommandLineAPI), WTF::move(doNotPauseOnExceptionsAndMuteConsole), WTF::move(returnByValue), WTF::move(generatePreview), WTF::move(saveResult), WTF::move(emulateUserGesture));
 }
 
-Protocol::ErrorStringOr<std::tuple<Ref<Protocol::Runtime::RemoteObject>, std::optional<bool> /* wasThrown */>> PageRuntimeAgent::callFunctionOn(const Protocol::Runtime::RemoteObjectId& objectId, const String& expression, RefPtr<JSON::Array>&& optionalArguments, std::optional<bool>&& doNotPauseOnExceptionsAndMuteConsole, std::optional<bool>&& returnByValue, std::optional<bool>&& generatePreview, std::optional<bool>&& emulateUserGesture)
+void PageRuntimeAgent::callFunctionOn(const Inspector::Protocol::Runtime::RemoteObjectId& objectId, const String& expression, RefPtr<JSON::Array>&& optionalArguments, std::optional<bool>&& doNotPauseOnExceptionsAndMuteConsole, std::optional<bool>&& returnByValue, std::optional<bool>&& generatePreview, std::optional<bool>&& emulateUserGesture, std::optional<bool>&& awaitPromise, Ref<CallFunctionOnCallback>&& callback)
 {
     auto injectedScript = injectedScriptManager().injectedScriptForObjectId(objectId);
-    if (injectedScript.hasNoValue())
-        return makeUnexpected("Missing injected script for given objectId"_s);
+    if (injectedScript.hasNoValue()) {
+        callback->sendFailure("Missing injected script for given objectId"_s);
+        return;
+    }
 
     UserGestureEmulationScope userGestureScope(m_inspectedPage, emulateUserGesture.value_or(false), dynamicDowncast<Document>(executionContext(injectedScript.globalObject())));
-    return InspectorRuntimeAgent::callFunctionOn(injectedScript, objectId, expression, WTFMove(optionalArguments), WTFMove(doNotPauseOnExceptionsAndMuteConsole), WTFMove(returnByValue), WTFMove(generatePreview), WTFMove(emulateUserGesture));
+    return InspectorRuntimeAgent::callFunctionOn(objectId, expression, WTF::move(optionalArguments), WTF::move(doNotPauseOnExceptionsAndMuteConsole), WTF::move(returnByValue), WTF::move(generatePreview), WTF::move(emulateUserGesture), WTF::move(awaitPromise), WTF::move(callback));
 }
 
 } // namespace WebCore

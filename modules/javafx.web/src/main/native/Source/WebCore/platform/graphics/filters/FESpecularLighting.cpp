@@ -30,13 +30,13 @@
 
 namespace WebCore {
 
-Ref<FESpecularLighting> FESpecularLighting::create(const Color& lightingColor, float surfaceScale, float specularConstant, float specularExponent, float kernelUnitLengthX, float kernelUnitLengthY, Ref<LightSource>&& lightSource)
+Ref<FESpecularLighting> FESpecularLighting::create(const Color& lightingColor, float surfaceScale, float specularConstant, float specularExponent, float kernelUnitLengthX, float kernelUnitLengthY, Ref<LightSource>&& lightSource, DestinationColorSpace colorSpace)
 {
-    return adoptRef(*new FESpecularLighting(lightingColor, surfaceScale, specularConstant, specularExponent, kernelUnitLengthX, kernelUnitLengthY, WTFMove(lightSource)));
+    return adoptRef(*new FESpecularLighting(lightingColor, surfaceScale, specularConstant, specularExponent, kernelUnitLengthX, kernelUnitLengthY, WTF::move(lightSource), colorSpace));
 }
 
-FESpecularLighting::FESpecularLighting(const Color& lightingColor, float surfaceScale, float specularConstant, float specularExponent, float kernelUnitLengthX, float kernelUnitLengthY, Ref<LightSource>&& lightSource)
-    : FELighting(FilterEffect::Type::FESpecularLighting, lightingColor, surfaceScale, 0, specularConstant, specularExponent, kernelUnitLengthX, kernelUnitLengthY, WTFMove(lightSource))
+FESpecularLighting::FESpecularLighting(const Color& lightingColor, float surfaceScale, float specularConstant, float specularExponent, float kernelUnitLengthX, float kernelUnitLengthY, Ref<LightSource>&& lightSource, DestinationColorSpace colorSpace)
+    : FELighting(FilterEffect::Type::FESpecularLighting, lightingColor, surfaceScale, 0, specularConstant, specularExponent, kernelUnitLengthX, kernelUnitLengthY, WTF::move(lightSource), colorSpace)
 {
 }
 
@@ -60,14 +60,14 @@ bool FESpecularLighting::setSpecularExponent(float specularExponent)
 
 TextStream& FESpecularLighting::externalRepresentation(TextStream& ts, FilterRepresentation representation) const
 {
-    ts << indent << "[feSpecularLighting";
+    ts << indent << "[feSpecularLighting"_s;
     FilterEffect::externalRepresentation(ts, representation);
 
-    ts << " surfaceScale=\"" << m_surfaceScale << "\"";
-    ts << " specualConstant=\"" << m_specularConstant << "\"";
-    ts << " specularExponent=\"" << m_specularExponent << "\"";
+    ts << " surfaceScale=\""_s << m_surfaceScale << '"';
+    ts << " specularConstant=\""_s << m_specularConstant << '"';
+    ts << " specularExponent=\""_s << m_specularExponent << '"';
 
-    ts << "]\n";
+    ts << "]\n"_s;
     return ts;
 }
 

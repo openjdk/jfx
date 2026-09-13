@@ -26,16 +26,17 @@
 #include "SVGSVGElement.h"
 #include "SVGStringList.h"
 #include "SVGZoomAndPan.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class SVGViewElement final : public SVGElement, public SVGFitToViewBox, public SVGZoomAndPan {
-    WTF_MAKE_ISO_ALLOCATED(SVGViewElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGViewElement);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGViewElement);
 public:
     static Ref<SVGViewElement> create(const QualifiedName&, Document&);
 
-    using SVGElement::ref;
-    using SVGElement::deref;
+    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGViewElement, SVGElement, SVGFitToViewBox>;
 
     const SVGSVGElement* targetElement() const { return m_targetElement.get(); }
     void setTargetElement(const SVGSVGElement& targetElement) { m_targetElement = targetElement; }
@@ -43,8 +44,6 @@ public:
 
 private:
     SVGViewElement(const QualifiedName&, Document&);
-
-    using PropertyRegistry = SVGPropertyOwnerRegistry<SVGViewElement, SVGElement, SVGFitToViewBox>;
 
     void attributeChanged(const QualifiedName&, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason) final;
     void svgAttributeChanged(const QualifiedName&) override;

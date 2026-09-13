@@ -25,10 +25,11 @@
 
 #pragma once
 
-#include "LegacyInlineTextBox.h"
-#include "LegacyRootInlineBox.h"
-#include "RenderText.h"
-#include "TextBoxSelectableRange.h"
+#include <WebCore/LegacyInlineTextBox.h>
+#include <WebCore/LegacyRootInlineBox.h>
+#include <WebCore/RenderSVGInlineText.h>
+#include <WebCore/SVGInlineTextBox.h>
+#include <WebCore/TextBoxSelectableRange.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
@@ -45,6 +46,8 @@ public:
     bool isText() const { return m_inlineBox->isInlineTextBox(); }
     bool isInlineBox() const { return m_inlineBox->isInlineFlowBox(); }
     bool isRootInlineBox() const { return m_inlineBox->isRootInlineBox(); }
+    bool isBlockLevelBox() const { return false; }
+    bool isAtomicInlineBox() const { return renderer().isBlockLevelReplacedOrAtomicInline(); }
 
     FloatRect visualRectIgnoringBlockDirection() const { return m_inlineBox->frameRect(); }
 
@@ -56,20 +59,25 @@ public:
 
     unsigned char bidiLevel() const { return m_inlineBox->bidiLevel(); }
 
-    bool hasHyphen() const { return inlineTextBox()->hasHyphen(); }
+    bool hasHyphen() const { return false; }
     StringView originalText() const { return StringView(inlineTextBox()->renderer().text()).substring(inlineTextBox()->start(), inlineTextBox()->len()); }
+    size_t lineIndex() const
+    {
+        size_t precedingLines = 0;
+        for (auto* rootBox = rootInlineBox().prevRootBox(); rootBox; rootBox = rootBox->prevRootBox())
+            ++precedingLines;
+        return precedingLines;
+    }
     unsigned start() const { return inlineTextBox()->start(); }
     unsigned end() const { return inlineTextBox()->end(); }
     unsigned length() const { return inlineTextBox()->len(); }
 
     TextBoxSelectableRange selectableRange() const { return inlineTextBox()->selectableRange(); }
 
-    TextRun textRun(TextRunMode mode = TextRunMode::Painting) const
+    TextRun textRun(TextRunMode = TextRunMode::Painting) const
     {
-        bool ignoreCombinedText = mode == TextRunMode::Editing;
-        bool ignoreHyphen = mode == TextRunMode::Editing;
         if (isText())
-        return inlineTextBox()->createTextRun(ignoreCombinedText, ignoreHyphen);
+            return inlineTextBox()->createTextRun();
         ASSERT_NOT_REACHED();
         return TextRun { emptyString() };
     }
@@ -77,6 +85,11 @@ public:
     const RenderObject& renderer() const
     {
         return m_inlineBox->renderer();
+    }
+
+    bool hasRenderer() const
+    {
+        return true;
     }
 
     const RenderBlockFlow& formattingContextRoot() const
@@ -91,12 +104,12 @@ public:
 
     void traverseNextTextBox() { m_inlineBox = inlineTextBox()->nextTextBox(); }
 
-    void traverseNextOnLine()
+    void traverseNextLeafOnLine()
     {
         m_inlineBox = m_inlineBox->nextLeafOnLine();
     }
 
-    void traversePreviousOnLine()
+    void traversePreviousLeafOnLine()
     {
         m_inlineBox = m_inlineBox->previousLeafOnLine();
     }
@@ -129,16 +142,70 @@ public:
     TextDirection direction() const { return bidiLevel() % 2 ? TextDirection::RTL : TextDirection::LTR; }
     bool isFirstLine() const { return !rootInlineBox().prevRootBox(); }
 
-    bool operator==(const BoxLegacyPath& other) const { return m_inlineBox == other.m_inlineBox; }
+    friend bool operator==(BoxLegacyPath, BoxLegacyPath) = default;
 
     bool atEnd() const { return !m_inlineBox; }
 
     LegacyInlineBox* legacyInlineBox() const { return const_cast<LegacyInlineBox*>(m_inlineBox); }
     const LegacyRootInlineBox& rootInlineBox() const { return m_inlineBox->root(); }
 
+    void traverseNextBoxOnLine()
+    {
+        if (auto* flowBox = dynamicDowncast<LegacyInlineFlowBox>(m_inlineBox); flowBox && flowBox->firstChild()) {
+            m_inlineBox = flowBox->firstChild();
+            return;
+        }
+
+        traverseNextBoxOnLineSkippingChildren();
+    }
+
+    void traverseNextBoxOnLineSkippingChildren()
+    {
+        if (m_inlineBox->nextOnLine()) {
+            m_inlineBox = m_inlineBox->nextOnLine();
+            return;
+        }
+
+        auto* parent = m_inlineBox->parent();
+        while (parent && !parent->nextOnLine())
+            parent = parent->parent();
+
+        m_inlineBox = parent ? parent->nextOnLine() : nullptr;
+    }
+
+    void traversePreviousBoxOnLine()
+    {
+        if (auto* flowBox = dynamicDowncast<LegacyInlineFlowBox>(m_inlineBox); flowBox && flowBox->lastChild()) {
+            m_inlineBox = flowBox->lastChild();
+            return;
+        }
+
+        traversePreviousBoxOnLineSkippingChildren();
+    }
+
+    void traversePreviousBoxOnLineSkippingChildren()
+    {
+        if (m_inlineBox->previousOnLine()) {
+            m_inlineBox = m_inlineBox->previousOnLine();
+            return;
+        }
+
+        auto* parent = m_inlineBox->parent();
+        while (parent && !parent->previousOnLine())
+            parent = parent->parent();
+
+        m_inlineBox = parent ? parent->previousOnLine() : nullptr;
+    }
+
+    const Vector<SVGTextFragment>& svgTextFragments() const
+    {
+        return svgInlineTextBox()->textFragments();
+    }
+
 private:
     const LegacyInlineTextBox* inlineTextBox() const { return downcast<LegacyInlineTextBox>(m_inlineBox); }
     const LegacyInlineFlowBox* inlineFlowBox() const { return downcast<LegacyInlineFlowBox>(m_inlineBox); }
+    const SVGInlineTextBox* svgInlineTextBox() const { return downcast<SVGInlineTextBox>(m_inlineBox); }
 
     const LegacyInlineBox* m_inlineBox { nullptr };
 };

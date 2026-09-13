@@ -27,6 +27,8 @@
     Conditional=APPLE_PAY_SHIPPING_METHOD_DATE_COMPONENTS_RANGE,
     ExportMacro=WEBCORE_EXPORT,
     JSGenerateToJSObject,
+    JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ApplePayDateComponentsRange {
     required ApplePayDateComponents startDateComponents;
     required ApplePayDateComponents endDateComponents;

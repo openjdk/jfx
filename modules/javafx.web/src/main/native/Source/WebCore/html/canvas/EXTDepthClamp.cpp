@@ -28,28 +28,23 @@
 #if ENABLE(WEBGL)
 #include "EXTDepthClamp.h"
 
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(EXTDepthClamp);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EXTDepthClamp);
 
 EXTDepthClamp::EXTDepthClamp(WebGLRenderingContextBase& context)
-    : WebGLExtension(context)
+    : WebGLExtension(context, WebGLExtensionName::EXTDepthClamp)
 {
-    context.graphicsContextGL()->ensureExtensionEnabled("GL_EXT_depth_clamp"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::EXT_depth_clamp);
 }
 
 EXTDepthClamp::~EXTDepthClamp() = default;
 
-WebGLExtension::ExtensionName EXTDepthClamp::getName() const
-{
-    return EXTDepthClampName;
-}
-
 bool EXTDepthClamp::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_EXT_depth_clamp"_s);
+    return context.supportsExtension(GCGLExtension::EXT_depth_clamp);
 }
 
 } // namespace WebCore

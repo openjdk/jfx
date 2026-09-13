@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -24,13 +24,17 @@
 
 #pragma once
 
+#include <compare>
+#include <wtf/HashFunctions.h>
+#include <wtf/HashTraits.h>
+
 namespace WTF {
 
 // An abstract number of element in a sequence. The sequence has a first element.
 // This type should be used instead of integer because 2 contradicting traditions can
 // call a first element '0' or '1' which makes integer type ambiguous.
 class OrdinalNumber {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(OrdinalNumber);
 public:
     static OrdinalNumber beforeFirst() { return OrdinalNumber(-1); }
     static OrdinalNumber fromZeroBasedInt(int zeroBasedInt) { return OrdinalNumber(zeroBasedInt); }
@@ -41,12 +45,31 @@ public:
     int zeroBasedInt() const { return m_zeroBasedValue; }
     int oneBasedInt() const { return m_zeroBasedValue + 1; }
 
-    bool operator==(OrdinalNumber other) const { return m_zeroBasedValue == other.m_zeroBasedValue; }
-    bool operator>(OrdinalNumber other) const { return m_zeroBasedValue > other.m_zeroBasedValue; }
+    friend bool operator==(OrdinalNumber, OrdinalNumber) = default;
+    friend std::strong_ordering operator<=>(OrdinalNumber, OrdinalNumber) = default;
 
 private:
     OrdinalNumber(int zeroBasedInt) : m_zeroBasedValue(zeroBasedInt) { }
     int m_zeroBasedValue;
+};
+
+template<typename T> struct DefaultHash;
+template<> struct DefaultHash<OrdinalNumber> {
+    static unsigned hash(OrdinalNumber key) { return intHash(static_cast<unsigned>(key.zeroBasedInt())); }
+    static bool equal(OrdinalNumber a, OrdinalNumber b) { return a == b; }
+    static constexpr bool safeToCompareToEmptyOrDeleted = true;
+};
+
+template<typename T> struct HashTraits;
+template<> struct HashTraits<OrdinalNumber> : GenericHashTraits<OrdinalNumber> {
+    static void constructDeletedValue(OrdinalNumber& slot)
+    {
+        slot = OrdinalNumber::beforeFirst();
+    }
+    static bool isDeletedValue(OrdinalNumber value)
+    {
+        return value == OrdinalNumber::beforeFirst();
+    }
 };
 
 }

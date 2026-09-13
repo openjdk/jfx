@@ -27,9 +27,10 @@
 [
     ActiveDOMObject,
     Conditional=WEB_CODECS,
-    EnabledBySetting=WebCodecsEnabled,
+    EnabledBySetting=WebCodecsVideoEnabled,
     Exposed=(Window,DedicatedWorker),
     InterfaceName=VideoEncoder,
+    JSCustomMarkFunction
 ] interface WebCodecsVideoEncoder : EventTarget {
     [CallWith=CurrentScriptExecutionContext] constructor(WebCodecsVideoEncoderInit init);
 
@@ -48,6 +49,7 @@
 
 [
     Conditional=WEB_CODECS,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary WebCodecsVideoEncoderInit {
     required WebCodecsEncodedVideoChunkOutputCallback output;
     required WebCodecsErrorCallback error;

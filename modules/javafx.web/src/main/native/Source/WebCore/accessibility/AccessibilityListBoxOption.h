@@ -28,46 +28,51 @@
 
 #pragma once
 
-#include "AccessibilityObject.h"
+#include "AccessibilityNodeObject.h"
 
 namespace WebCore {
 
 class HTMLElement;
 class HTMLSelectElement;
 
-class AccessibilityListBoxOption final : public AccessibilityObject {
+class AccessibilityListBoxOption final : public AccessibilityNodeObject {
 public:
-    static Ref<AccessibilityListBoxOption> create(HTMLElement&);
+    static Ref<AccessibilityListBoxOption> create(AXID, HTMLElement&, AXObjectCache&);
     virtual ~AccessibilityListBoxOption();
 
     bool isSelected() const final;
     void setSelected(bool) final;
 
 private:
-    explicit AccessibilityListBoxOption(HTMLElement&);
+    explicit AccessibilityListBoxOption(AXID, HTMLElement&, AXObjectCache&);
 
-    AccessibilityRole roleValue() const final { return AccessibilityRole::ListBoxOption; }
+    AccessibilityRole determineAccessibilityRole() final { return AccessibilityRole::ListBoxOption; }
     bool isEnabled() const final;
     bool isSelectedOptionActive() const final;
     String stringValue() const final;
     Element* actionElement() const final;
-    Node* node() const final;
     bool canSetSelectedAttribute() const final;
 
     LayoutRect elementRect() const final;
     AccessibilityObject* parentObject() const final;
 
-    bool isListBoxOption() const final { return true; }
+    bool isAccessibilityListBoxOptionInstance() const final { return true; }
+    void addChildren() final
+    {
+        m_childrenInitialized = true;
+        m_childrenDirty = false;
+        m_subtreeDirty = false;
+    }
     bool canHaveChildren() const final { return false; }
     HTMLSelectElement* listBoxOptionParentNode() const;
     int listBoxOptionIndex() const;
     IntRect listBoxOptionRect() const;
     AccessibilityObject* listBoxOptionAccessibilityObject(HTMLElement*) const;
-    bool computeAccessibilityIsIgnored() const final;
-
-    WeakPtr<HTMLElement, WeakPtrImplWithEventTargetData> m_optionElement;
+    bool computeIsIgnored() const final;
 };
 
 } // namespace WebCore
 
-SPECIALIZE_TYPE_TRAITS_ACCESSIBILITY(AccessibilityListBoxOption, isListBoxOption())
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::AccessibilityListBoxOption) \
+    static bool isType(const WebCore::AccessibilityObject& object) { return object.isAccessibilityListBoxOptionInstance(); } \
+SPECIALIZE_TYPE_TRAITS_END()

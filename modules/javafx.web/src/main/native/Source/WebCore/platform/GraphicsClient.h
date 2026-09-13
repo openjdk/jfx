@@ -25,7 +25,8 @@
 
 #pragma once
 
-#include "PlatformScreen.h"
+#include <WebCore/PlatformScreen.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -36,24 +37,39 @@ class SerializedImageBuffer;
 
 struct GraphicsContextGLAttributes;
 
-enum class PixelFormat : uint8_t;
-enum class RenderingMode : bool;
+struct ImageBufferFormat;
+enum class RenderingMode : uint8_t;
 enum class RenderingPurpose : uint8_t;
 
+namespace WebGPU {
+class GPU;
+}
+
 class GraphicsClient {
-    WTF_MAKE_NONCOPYABLE(GraphicsClient); WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(GraphicsClient);
+    WTF_MAKE_NONCOPYABLE(GraphicsClient);
 public:
     GraphicsClient() = default;
     virtual ~GraphicsClient() = default;
 
     virtual PlatformDisplayID displayID() const = 0;
 
-    virtual RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, PixelFormat, bool avoidBackendSizeCheck = false) const = 0;
 #if ENABLE(WEBGL)
     virtual RefPtr<GraphicsContextGL> createGraphicsContextGL(const GraphicsContextGLAttributes&) const = 0;
 #endif
+#if HAVE(WEBGPU_IMPLEMENTATION)
+    virtual RefPtr<WebCore::WebGPU::GPU> createGPUForWebGPU() const = 0;
+#endif
 
+private:
+    // Called by passing GraphicsClient into ImageBuffer functions.
+    virtual RefPtr<ImageBuffer> createImageBuffer(const FloatSize&, RenderingMode, RenderingPurpose, float resolutionScale, const DestinationColorSpace&, ImageBufferFormat) const = 0;
+
+    // Called by passing GraphicsClient into SerializedImageBuffer functions.
     virtual RefPtr<WebCore::ImageBuffer> sinkIntoImageBuffer(std::unique_ptr<WebCore::SerializedImageBuffer>) = 0;
+
+    friend class ImageBuffer;
+    friend class SerializedImageBuffer;
 };
 
 } // namespace WebCore

@@ -26,15 +26,13 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
 
 struct ImageResource {
     ImageResource isolatedCopy() const & { return { src.isolatedCopy(), sizes.isolatedCopy(), type.isolatedCopy(), label.isolatedCopy() }; }
-    ImageResource isolatedCopy() && { return { WTFMove(src).isolatedCopy(), WTFMove(sizes).isolatedCopy(), WTFMove(type).isolatedCopy(), WTFMove(label).isolatedCopy() }; }
+    ImageResource isolatedCopy() && { return { WTF::move(src).isolatedCopy(), WTF::move(sizes).isolatedCopy(), WTF::move(type).isolatedCopy(), WTF::move(label).isolatedCopy() }; }
 
     String src;
     String sizes;
@@ -43,5 +41,3 @@ struct ImageResource {
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

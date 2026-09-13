@@ -25,19 +25,20 @@
 
 #pragma once
 
-#include "WebGPUCommandBuffer.h"
-#include "WebGPUCommandBufferDescriptor.h"
-#include "WebGPUComputePassDescriptor.h"
-#include "WebGPUComputePassEncoder.h"
-#include "WebGPUExtent3D.h"
-#include "WebGPUImageCopyBuffer.h"
-#include "WebGPUImageCopyTexture.h"
-#include "WebGPUIntegralTypes.h"
-#include "WebGPURenderPassDescriptor.h"
-#include "WebGPURenderPassEncoder.h"
+#include <WebCore/WebGPUCommandBuffer.h>
+#include <WebCore/WebGPUCommandBufferDescriptor.h>
+#include <WebCore/WebGPUComputePassDescriptor.h>
+#include <WebCore/WebGPUComputePassEncoder.h>
+#include <WebCore/WebGPUExtent3D.h>
+#include <WebCore/WebGPUImageCopyBuffer.h>
+#include <WebCore/WebGPUImageCopyTexture.h>
+#include <WebCore/WebGPUIntegralTypes.h>
+#include <WebCore/WebGPURenderPassDescriptor.h>
+#include <WebCore/WebGPURenderPassEncoder.h>
 #include <optional>
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
+#include <wtf/WeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore::WebGPU {
@@ -45,7 +46,7 @@ namespace WebCore::WebGPU {
 class Buffer;
 class QuerySet;
 
-class CommandEncoder : public RefCounted<CommandEncoder> {
+class CommandEncoder : public RefCountedAndCanMakeWeakPtr<CommandEncoder> {
 public:
     virtual ~CommandEncoder() = default;
 
@@ -53,12 +54,12 @@ public:
 
     void setLabel(String&& label)
     {
-        m_label = WTFMove(label);
+        m_label = WTF::move(label);
         setLabelInternal(m_label);
     }
 
-    virtual Ref<RenderPassEncoder> beginRenderPass(const RenderPassDescriptor&) = 0;
-    virtual Ref<ComputePassEncoder> beginComputePass(const std::optional<ComputePassDescriptor>&) = 0;
+    virtual RefPtr<RenderPassEncoder> beginRenderPass(const RenderPassDescriptor&) = 0;
+    virtual RefPtr<ComputePassEncoder> beginComputePass(const std::optional<ComputePassDescriptor>&) = 0;
 
     virtual void copyBufferToBuffer(
         const Buffer& source,
@@ -100,7 +101,9 @@ public:
         const Buffer& destination,
         Size64 destinationOffset) = 0;
 
-    virtual Ref<CommandBuffer> finish(const CommandBufferDescriptor&) = 0;
+    virtual RefPtr<CommandBuffer> finish(const CommandBufferDescriptor&) = 0;
+    virtual bool isRemoteCommandEncoderProxy() const { return false; }
+    virtual bool isCommandEncoderImpl() const { return false; }
 
 protected:
     CommandEncoder() = default;

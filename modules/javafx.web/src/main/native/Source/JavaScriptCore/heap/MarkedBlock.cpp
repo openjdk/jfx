@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2022 Apple Inc. All rights reserved.
+ * Copyright (C) 2011-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,7 +31,14 @@
 #include "JSCJSValueInlines.h"
 #include "MarkedBlockInlines.h"
 #include "SweepingScope.h"
+#include "VMManager.h"
 #include <wtf/CommaPrinter.h>
+
+#if PLATFORM(COCOA)
+#include <wtf/cocoa/CrashReporter.h>
+#endif
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 namespace MarkedBlockInternal {
@@ -44,7 +51,7 @@ static size_t balance;
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(MarkedBlock);
 DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(MarkedBlockHandle);
 
-MarkedBlock::Handle* MarkedBlock::tryCreate(Heap& heap, AlignedMemoryAllocator* alignedMemoryAllocator)
+MarkedBlock::Handle* MarkedBlock::tryCreate(JSC::Heap& heap, AlignedMemoryAllocator* alignedMemoryAllocator)
 {
     if (computeBalance) {
         balance++;
@@ -59,7 +66,7 @@ MarkedBlock::Handle* MarkedBlock::tryCreate(Heap& heap, AlignedMemoryAllocator* 
     return new Handle(heap, alignedMemoryAllocator, blockSpace);
 }
 
-MarkedBlock::Handle::Handle(Heap& heap, AlignedMemoryAllocator* alignedMemoryAllocator, void* blockSpace)
+MarkedBlock::Handle::Handle(JSC::Heap& heap, AlignedMemoryAllocator* alignedMemoryAllocator, void* blockSpace)
     : m_alignedMemoryAllocator(alignedMemoryAllocator)
     , m_weakSet(heap.vm())
     , m_block(new (NotNull, blockSpace) MarkedBlock(heap.vm(), *this))
@@ -69,7 +76,7 @@ MarkedBlock::Handle::Handle(Heap& heap, AlignedMemoryAllocator* alignedMemoryAll
 
 MarkedBlock::Handle::~Handle()
 {
-    Heap& heap = *this->heap();
+    JSC::Heap& heap = *this->heap();
     if (computeBalance) {
         balance--;
         if (!(balance % 10))
@@ -101,14 +108,13 @@ MarkedBlock::Header::Header(VM& vm, Handle& handle)
 {
 }
 
-MarkedBlock::Header::~Header()
-{
-}
+MarkedBlock::Header::~Header() = default;
 
 void MarkedBlock::Handle::unsweepWithNoNewlyAllocated()
 {
     RELEASE_ASSERT(m_isFreeListed);
     m_isFreeListed = false;
+    m_directory->didFinishUsingBlock(this);
 }
 
 void MarkedBlock::Handle::stopAllocating(const FreeList& freeList)
@@ -117,7 +123,8 @@ void MarkedBlock::Handle::stopAllocating(const FreeList& freeList)
 
     if (MarkedBlockInternal::verbose)
         dataLog(RawPointer(this), ": MarkedBlock::Handle::stopAllocating!\n");
-    ASSERT(!directory()->isAllocated(NoLockingNecessary, this));
+    m_directory->assertIsMutatorOrMutatorIsStopped();
+    ASSERT(!m_directory->isAllocated(this));
 
     if (!isFreeListed()) {
         if (MarkedBlockInternal::verbose)
@@ -148,35 +155,44 @@ void MarkedBlock::Handle::stopAllocating(const FreeList& freeList)
         [&] (HeapCell* cell) {
             if constexpr (MarkedBlockInternal::verbose)
                 dataLog("Free cell: ", RawPointer(cell), "\n");
-            if (m_attributes.destruction == NeedsDestruction)
+            if (m_attributes.destruction != DoesNotNeedDestruction)
                 cell->zap(HeapCell::StopAllocating);
             block().clearNewlyAllocated(cell);
         });
 
     m_isFreeListed = false;
+    directory()->didFinishUsingBlock(this);
 }
 
 void MarkedBlock::Handle::lastChanceToFinalize()
 {
-    directory()->setIsAllocated(NoLockingNecessary, this, false);
-    directory()->setIsDestructible(NoLockingNecessary, this, true);
+    // Concurrent sweeper is shut down at this point.
+    m_directory->assertSweeperIsSuspended();
+    m_directory->setIsAllocated(this, false);
+    m_directory->setIsDestructible(this, true);
+    m_directory->setIsUnswept(this, true);
     blockHeader().m_marks.clearAll();
     block().clearHasAnyMarked();
     blockHeader().m_markingVersion = heap()->objectSpace().markingVersion();
     m_weakSet.lastChanceToFinalize();
     blockHeader().m_newlyAllocated.clearAll();
     blockHeader().m_newlyAllocatedVersion = heap()->objectSpace().newlyAllocatedVersion();
+    m_directory->setIsInUse(this, true);
     sweep(nullptr);
 }
 
 void MarkedBlock::Handle::resumeAllocating(FreeList& freeList)
 {
+    BlockDirectory* directory = this->directory();
+    directory->assertSweeperIsSuspended();
     {
         Locker locker { blockHeader().m_lock };
 
         if (MarkedBlockInternal::verbose)
             dataLog(RawPointer(this), ": MarkedBlock::Handle::resumeAllocating!\n");
-        ASSERT(!directory()->isAllocated(NoLockingNecessary, this));
+
+
+        ASSERT(!directory->isAllocated(this));
         ASSERT(!isFreeListed());
 
         if (!block().hasAnyNewlyAllocated()) {
@@ -188,23 +204,73 @@ void MarkedBlock::Handle::resumeAllocating(FreeList& freeList)
         }
     }
 
+    directory->setIsInUse(this, true);
+
     // Re-create our free list from before stopping allocation. Note that this may return an empty
     // freelist, in which case the block will still be Marked!
     sweep(&freeList);
 }
 
-void MarkedBlock::aboutToMarkSlow(HeapVersion markingVersion)
+#if ENABLE(MARKEDBLOCK_TEST_DUMP_INFO)
+
+inline void MarkedBlock::setupTestForDumpInfoAndCrash()
+{
+    static std::atomic<uint64_t> count = 0;
+    char* blockMem = std::bit_cast<char*>(this);
+
+    // Option set to 0 disables testing.
+    if (++count == Options::markedBlockDumpInfoCount()) {
+        memset(&header(), 0, sizeof(uintptr_t));
+        switch (Options::markedBlockDumpInfoCount() & 0xf) {
+        case 1: // Test null VM pointer.
+            dataLogLn("Zeroing MarkedBlock::Header::m_vm");
+            *const_cast<VM**>(&header().m_vm) = nullptr;
+            break;
+        case 2: // Test non-null invalid VM pointer.
+            dataLogLn("Corrupting MarkedBlock::Header::m_vm");
+            *const_cast<VM**>(&header().m_vm) = std::bit_cast<VM*>(0xdeadbeefdeadbeef);
+            break;
+        case 3: // Test contiguous and total zero byte counts: start and end zeroed.
+            dataLogLn("Zeroing start and end of MarkedBlock");
+            memset(blockMem, 0, blockSize / 4);
+            memset(blockMem + 3 * blockSize / 4, 0, blockSize / 4);
+            break;
+        case 4: // Test contiguous and total zero byte counts: entire block zeroed.
+            dataLogLn("Zeroing MarkedBlock");
+            memset(blockMem, 0, blockSize);
+            break;
+        }
+    }
+}
+
+#else
+
+inline void MarkedBlock::setupTestForDumpInfoAndCrash() { }
+
+#endif // ENABLE(MARKEDBLOCK_TEST_DUMP_INFO)
+
+void MarkedBlock::aboutToMarkSlow(HeapVersion markingVersion, HeapCell* cell)
 {
     ASSERT(vm().heap.objectSpace().isMarking());
+    setupTestForDumpInfoAndCrash();
+
     Locker locker { header().m_lock };
 
     if (!areMarksStale(markingVersion))
         return;
 
-    BlockDirectory* directory = handle().directory();
+    MarkedBlock::Handle* handle = header().handlePointerForNullCheck();
+    if (!handle) [[unlikely]]
+        dumpInfoAndCrashForInvalidHandleV2(locker, cell);
 
-    if (handle().directory()->isAllocated(Locker { directory->bitvectorLock() }, &handle())
-        || !marksConveyLivenessDuringMarking(markingVersion)) {
+    BlockDirectory* directory = handle->directory();
+    bool isAllocated;
+    {
+        Locker bitLocker { directory->bitvectorLock() };
+        isAllocated = directory->isAllocated(handle);
+    }
+
+    if (isAllocated || !marksConveyLivenessDuringMarking(markingVersion)) {
         if (MarkedBlockInternal::verbose)
             dataLog(RawPointer(this), ": Clearing marks without doing anything else.\n");
         // We already know that the block is full and is already recognized as such, or that the
@@ -237,8 +303,17 @@ void MarkedBlock::aboutToMarkSlow(HeapVersion markingVersion)
     WTF::storeStoreFence();
     header().m_markingVersion = markingVersion;
 
+    // Workaround for a clang regression <rdar://111818130>.
+#if defined(__clang__)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wthread-safety-analysis"
+#endif
     // This means we're the first ones to mark any object in this block.
-    directory->setIsMarkingNotEmpty(Locker { directory->bitvectorLock() }, &handle(), true);
+    Locker bitLocker { directory->bitvectorLock() };
+    directory->setIsMarkingNotEmpty(handle, true);
+#if defined(__clang__)
+#pragma clang diagnostic pop
+#endif
 }
 
 void MarkedBlock::resetAllocated()
@@ -289,7 +364,9 @@ void MarkedBlock::Handle::didConsumeFreeList()
         dataLog(RawPointer(this), ": MarkedBlock::Handle::didConsumeFreeList!\n");
     ASSERT(isFreeListed());
     m_isFreeListed = false;
-    directory()->setIsAllocated(NoLockingNecessary, this, true);
+    Locker bitLocker(m_directory->bitvectorLock());
+    m_directory->setIsAllocated(this, true);
+    m_directory->didFinishUsingBlock(bitLocker, this);
 }
 
 size_t MarkedBlock::markCount()
@@ -305,7 +382,8 @@ void MarkedBlock::clearHasAnyMarked()
 void MarkedBlock::noteMarkedSlow()
 {
     BlockDirectory* directory = handle().directory();
-    directory->setIsMarkingRetired(Locker { directory->bitvectorLock() }, &handle(), true);
+    Locker locker { directory->bitvectorLock() };
+    directory->setIsMarkingRetired(&handle(), true);
 }
 
 void MarkedBlock::Handle::removeFromDirectory()
@@ -374,10 +452,10 @@ void MarkedBlock::assertValidCell(VM& vm, HeapCell* cell) const
 void MarkedBlock::Handle::dumpState(PrintStream& out)
 {
     CommaPrinter comma;
+    Locker locker { directory()->bitvectorLock() };
     directory()->forEachBitVectorWithName(
-        Locker { directory()->bitvectorLock() },
         [&](auto vectorRef, const char* name) {
-            out.print(comma, name, ":", vectorRef[index()] ? "YES" : "no");
+            out.print(comma, name, ":"_s, vectorRef[index()] ? "YES"_s : "no"_s);
         });
 }
 
@@ -389,25 +467,29 @@ Subspace* MarkedBlock::Handle::subspace() const
 void MarkedBlock::Handle::sweep(FreeList* freeList)
 {
     SweepingScope sweepingScope(*heap());
+    m_directory->assertIsMutatorOrMutatorIsStopped();
+    ASSERT(m_directory->isInUse(this));
 
     SweepMode sweepMode = freeList ? SweepToFreeList : SweepOnly;
-
-    m_directory->setIsUnswept(NoLockingNecessary, this, false);
+    bool needsDestruction = m_attributes.destruction != DoesNotNeedDestruction && m_directory->isDestructible(this);
 
     m_weakSet.sweep();
 
-    bool needsDestruction = m_attributes.destruction == NeedsDestruction
-        && m_directory->isDestructible(NoLockingNecessary, this);
+    // If we don't "release" our read access without locking then the ThreadSafetyAnalysis code gets upset with the locker below.
+    m_directory->releaseAssertAcquiredBitVectorLock();
 
-    if (sweepMode == SweepOnly && !needsDestruction)
+    if (sweepMode == SweepOnly && !needsDestruction) {
+        Locker locker(m_directory->bitvectorLock());
+        m_directory->setIsUnswept(this, false);
         return;
+    }
 
-    if (m_isFreeListed) {
+    if (m_isFreeListed) [[unlikely]] {
         dataLog("FATAL: ", RawPointer(this), "->sweep: block is free-listed.\n");
         RELEASE_ASSERT_NOT_REACHED();
     }
 
-    if (isAllocated()) {
+    if (isAllocated()) [[unlikely]] {
         dataLog("FATAL: ", RawPointer(this), "->sweep: block is allocated.\n");
         RELEASE_ASSERT_NOT_REACHED();
     }
@@ -471,10 +553,111 @@ void MarkedBlock::Handle::sweep(FreeList* freeList)
     specializedSweep<false, IsEmpty, SweepOnly, BlockHasNoDestructors, DontScribble, HasNewlyAllocated, MarksStale>(freeList, emptyMode, sweepMode, BlockHasNoDestructors, scribbleMode, newlyAllocatedMode, marksMode, [] (VM&, JSCell*) { });
 }
 
-bool MarkedBlock::Handle::isFreeListedCell(const void* target) const
+NO_RETURN_DUE_TO_CRASH NEVER_INLINE void MarkedBlock::dumpInfoAndCrashForInvalidHandleV2(AbstractLocker&, HeapCell* heapCell)
 {
-    ASSERT(isFreeListed());
-    return m_directory->isFreeListedCell(target);
+    VM* blockVM = header().m_vm;
+    VM* actualVM = nullptr;
+    bool isBlockVMValid = false;
+    bool isBlockInSet = false;
+    bool isBlockInDirectory = false;
+    bool foundInBlockVM = false;
+    size_t contiguousZeroBytesHeadOfBlock = 0;
+    size_t totalZeroBytesInBlock = 0;
+    uint64_t cellFirst8Bytes = 0;
+    unsigned subspaceHash = 0;
+    MarkedBlock::Handle* handle = nullptr;
+
+    if (heapCell) {
+        uint64_t* p = std::bit_cast<uint64_t*>(heapCell);
+        cellFirst8Bytes = *p;
+    }
+
+    auto updateCrashLogMsg = [&](int line) {
+#if PLATFORM(COCOA)
+        StringPrintStream out;
+        out.printf("INVALID HANDLE [%d]: markedBlock=%p; heapCell=%p; cellFirst8Bytes=%#llx; subspaceHash=%#x; contiguousZeros=%lu; totalZeros=%lu; blockVM=%p; actualVM=%p; isBlockVMValid=%d; isBlockInSet=%d; isBlockInDir=%d; foundInBlockVM=%d;",
+            line, this, heapCell, cellFirst8Bytes, subspaceHash, contiguousZeroBytesHeadOfBlock, totalZeroBytesInBlock, blockVM, actualVM, isBlockVMValid, isBlockInSet, isBlockInDirectory, foundInBlockVM);
+        auto message = out.toCString();
+        WTF::setCrashLogMessage(message.data());
+        dataLogLn(message.data());
+#else
+        UNUSED_PARAM(line);
+#endif
+    };
+    updateCrashLogMsg(__LINE__);
+
+    char* blockStart = std::bit_cast<char*>(this);
+    bool sawNonZero = false;
+    for (auto mem = blockStart; mem < blockStart + MarkedBlock::blockSize; mem++) {
+        // Exclude the MarkedBlock::Header::m_lock from the zero scan since taking the lock writes a non-zero value.
+        auto isMLockBytes = [blockStart](char* p) ALWAYS_INLINE_LAMBDA {
+            constexpr size_t lockOffset = offsetOfHeader + OBJECT_OFFSETOF(MarkedBlock::Header, m_lock);
+            size_t offset = p - blockStart;
+            return lockOffset <= offset && offset < lockOffset + sizeof(MarkedBlock::Header::m_lock);
+        };
+        bool byteIsZero = !*mem;
+        if (byteIsZero || isMLockBytes(mem)) {
+            totalZeroBytesInBlock++;
+            if (!sawNonZero)
+                contiguousZeroBytesHeadOfBlock++;
+        } else
+            sawNonZero = true;
+    }
+    updateCrashLogMsg(__LINE__);
+
+    isBlockVMValid = VMManager::findMatchingVM([&] (VM& vm) {
+        return blockVM == &vm;
+    });
+    updateCrashLogMsg(__LINE__);
+
+    if (isBlockVMValid) {
+        MarkedSpace& objectSpace = blockVM->heap.objectSpace();
+        isBlockInSet = objectSpace.blocks().set().contains(this);
+        handle = objectSpace.findMarkedBlockHandleDebug(this);
+        isBlockInDirectory = !!handle;
+        foundInBlockVM = isBlockInSet || isBlockInDirectory;
+        updateCrashLogMsg(__LINE__);
+    }
+
+    if (!foundInBlockVM) {
+        // Search all VMs to see if this block belongs to any VM.
+        VMManager::forEachVM([&](VM& vm) {
+            if (!vm.isInService())
+                return IterationStatus::Continue;
+
+            MarkedSpace& objectSpace = vm.heap.objectSpace();
+            isBlockInSet = objectSpace.blocks().set().contains(this);
+            handle = objectSpace.findMarkedBlockHandleDebug(this);
+            isBlockInDirectory = !!handle;
+            // Either of them is true indicates that the block belongs to the VM.
+            if (isBlockInSet || isBlockInDirectory) {
+                actualVM = &vm;
+                updateCrashLogMsg(__LINE__);
+                return IterationStatus::Done;
+            }
+            return IterationStatus::Continue;
+        });
+    }
+    updateCrashLogMsg(__LINE__);
+
+    if (handle && handle->directory() && handle->directory()->subspace())
+        subspaceHash = handle->directory()->subspace()->nameHash();
+    updateCrashLogMsg(__LINE__);
+
+    uint64_t bitfield = 0xab00ab01ab020000;
+    if (!isBlockVMValid)
+        bitfield |= 1 << 7;
+    if (!isBlockInSet)
+        bitfield |= 1 << 6;
+    if (!isBlockInDirectory)
+        bitfield |= 1 << 5;
+    if (!foundInBlockVM)
+        bitfield |= 1 << 4;
+
+    static_assert(MarkedBlock::blockSize < (1ull << 32));
+    uint64_t zeroCounts = contiguousZeroBytesHeadOfBlock | (static_cast<uint64_t>(totalZeroBytesInBlock) << 32);
+
+    CRASH_WITH_INFO(heapCell, cellFirst8Bytes, zeroCounts, bitfield, subspaceHash, blockVM, actualVM);
 }
 
 } // namespace JSC
@@ -496,3 +679,4 @@ void printInternal(PrintStream& out, JSC::MarkedBlock::Handle::SweepMode mode)
 
 } // namespace WTF
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END

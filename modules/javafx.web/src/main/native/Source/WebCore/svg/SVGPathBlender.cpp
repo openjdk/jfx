@@ -1,6 +1,6 @@
 /*
  * Copyright (C) Research In Motion Limited 2010, 2011. All rights reserved.
- * Copyright (C) 2015 Apple Inc. All rights reserved.
+ * Copyright (C) 2015-2024 Apple Inc. All rights reserved.
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Library General Public
@@ -26,8 +26,11 @@
 #include "SVGPathSource.h"
 #include <functional>
 #include <wtf/SetForScope.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGPathBlender);
 
 bool SVGPathBlender::addAnimatedPath(SVGPathSource& fromSource, SVGPathSource& toSource, SVGPathConsumer& consumer, unsigned repeatCount)
 {
@@ -118,28 +121,28 @@ FloatPoint SVGPathBlender::blendAnimatedFloatPoint(const FloatPoint& fromPoint, 
     return animatedPoint;
 }
 
-template<typename Function> using InvokeResult = typename std::invoke_result_t<Function, SVGPathSource>::value_type;
+template<typename Function> using InvokeResult = typename std::invoke_result_t<Function, SVGPathSource, FloatPoint>::value_type;
 template<typename Function> using ResultPair = std::pair<InvokeResult<Function>, InvokeResult<Function>>;
-template<typename Function> static std::optional<ResultPair<Function>> pullFromSources(SVGPathSource& fromSource, SVGPathSource& toSource, Function&& function)
+template<typename Function> static std::optional<ResultPair<Function>> pullFromSources(SVGPathSource& fromSource, SVGPathSource& toSource, Function&& function, FloatPoint currentPoint)
 {
     InvokeResult<Function> fromResult;
     if (fromSource.hasMoreData()) {
-        auto parsedFrom = std::invoke(function, fromSource);
+        auto parsedFrom = std::invoke(function, fromSource, currentPoint);
         if (!parsedFrom)
             return std::nullopt;
-        fromResult = WTFMove(*parsedFrom);
+        fromResult = WTF::move(*parsedFrom);
     }
 
-    auto parsedTo = std::invoke(std::forward<Function>(function), toSource);
+    auto parsedTo = std::invoke(std::forward<Function>(function), toSource, currentPoint);
     if (!parsedTo)
         return std::nullopt;
 
-    return ResultPair<Function> { WTFMove(fromResult), WTFMove(*parsedTo) };
+    return ResultPair<Function> { WTF::move(fromResult), WTF::move(*parsedTo) };
 }
 
 bool SVGPathBlender::blendMoveToSegment(float progress)
 {
-    auto result = pullFromSources(m_fromSource, m_toSource, &SVGPathSource::parseMoveToSegment);
+    auto result = pullFromSources(m_fromSource, m_toSource, &SVGPathSource::parseMoveToSegment, m_fromCurrentPoint);
     if (!result)
         return false;
 
@@ -151,12 +154,16 @@ bool SVGPathBlender::blendMoveToSegment(float progress)
     m_consumer->moveTo(blendAnimatedFloatPoint(from.targetPoint, to.targetPoint, progress), false, m_isInFirstHalfOfAnimation ? m_fromMode : m_toMode);
     m_fromCurrentPoint = m_fromMode == AbsoluteCoordinates ? from.targetPoint : m_fromCurrentPoint + from.targetPoint;
     m_toCurrentPoint = m_toMode == AbsoluteCoordinates ? to.targetPoint : m_toCurrentPoint + to.targetPoint;
+
+    m_fromSubpathPoint = m_fromCurrentPoint;
+    m_toSubpathPoint = m_toCurrentPoint;
+
     return true;
 }
 
 bool SVGPathBlender::blendLineToSegment(float progress)
 {
-    auto result = pullFromSources(m_fromSource, m_toSource, &SVGPathSource::parseLineToSegment);
+    auto result = pullFromSources(m_fromSource, m_toSource, &SVGPathSource::parseLineToSegment, m_fromCurrentPoint);
     if (!result)
         return false;
 
@@ -173,7 +180,7 @@ bool SVGPathBlender::blendLineToSegment(float progress)
 
 bool SVGPathBlender::blendLineToHorizontalSegment(float progress)
 {
-    auto result = pullFromSources(m_fromSource, m_toSource, &SVGPathSource::parseLineToHorizontalSegment);
+    auto result = pullFromSources(m_fromSource, m_toSource, &SVGPathSource::parseLineToHorizontalSegment, m_fromCurrentPoint);
     if (!result)
         return false;
 
@@ -190,7 +197,7 @@ bool SVGPathBlender::blendLineToHorizontalSegment(float progress)
 
 bool SVGPathBlender::blendLineToVerticalSegment(float progress)
 {
-    auto result = pullFromSources(m_fromSource, m_toSource, &SVGPathSource::parseLineToVerticalSegment);
+    auto result = pullFromSources(m_fromSource, m_toSource, &SVGPathSource::parseLineToVerticalSegment, m_fromCurrentPoint);
     if (!result)
         return false;
 
@@ -207,7 +214,7 @@ bool SVGPathBlender::blendLineToVerticalSegment(float progress)
 
 bool SVGPathBlender::blendCurveToCubicSegment(float progress)
 {
-    auto result = pullFromSources(m_fromSource, m_toSource, &SVGPathSource::parseCurveToCubicSegment);
+    auto result = pullFromSources(m_fromSource, m_toSource, &SVGPathSource::parseCurveToCubicSegment, m_fromCurrentPoint);
     if (!result)
         return false;
 
@@ -227,7 +234,7 @@ bool SVGPathBlender::blendCurveToCubicSegment(float progress)
 
 bool SVGPathBlender::blendCurveToCubicSmoothSegment(float progress)
 {
-    auto result = pullFromSources(m_fromSource, m_toSource, &SVGPathSource::parseCurveToCubicSmoothSegment);
+    auto result = pullFromSources(m_fromSource, m_toSource, &SVGPathSource::parseCurveToCubicSmoothSegment, m_fromCurrentPoint);
     if (!result)
         return false;
 
@@ -246,7 +253,7 @@ bool SVGPathBlender::blendCurveToCubicSmoothSegment(float progress)
 
 bool SVGPathBlender::blendCurveToQuadraticSegment(float progress)
 {
-    auto result = pullFromSources(m_fromSource, m_toSource, &SVGPathSource::parseCurveToQuadraticSegment);
+    auto result = pullFromSources(m_fromSource, m_toSource, &SVGPathSource::parseCurveToQuadraticSegment, m_fromCurrentPoint);
     if (!result)
         return false;
 
@@ -265,7 +272,7 @@ bool SVGPathBlender::blendCurveToQuadraticSegment(float progress)
 
 bool SVGPathBlender::blendCurveToQuadraticSmoothSegment(float progress)
 {
-    auto result = pullFromSources(m_fromSource, m_toSource, &SVGPathSource::parseCurveToQuadraticSmoothSegment);
+    auto result = pullFromSources(m_fromSource, m_toSource, &SVGPathSource::parseCurveToQuadraticSmoothSegment, m_fromCurrentPoint);
     if (!result)
         return false;
 
@@ -282,7 +289,7 @@ bool SVGPathBlender::blendCurveToQuadraticSmoothSegment(float progress)
 
 bool SVGPathBlender::blendArcToSegment(float progress)
 {
-    auto result = pullFromSources(m_fromSource, m_toSource, &SVGPathSource::parseArcToSegment);
+    auto result = pullFromSources(m_fromSource, m_toSource, &SVGPathSource::parseArcToSegment, m_fromCurrentPoint);
     if (!result)
         return false;
 
@@ -319,11 +326,11 @@ bool SVGPathBlender::blendArcToSegment(float progress)
 
 static inline PathCoordinateMode coordinateModeOfCommand(const SVGPathSegType& type)
 {
-    if (type < PathSegMoveToAbs)
+    if (type < SVGPathSegType::MoveToAbs)
         return AbsoluteCoordinates;
 
     // Odd number = relative command
-    if (type % 2)
+    if (enumToUnderlyingType(type) % 2)
         return RelativeCoordinates;
 
     return AbsoluteCoordinates;
@@ -331,11 +338,11 @@ static inline PathCoordinateMode coordinateModeOfCommand(const SVGPathSegType& t
 
 static inline bool isSegmentEqual(const SVGPathSegType& fromType, const SVGPathSegType& toType, const PathCoordinateMode& fromMode, const PathCoordinateMode& toMode)
 {
-    if (fromType == toType && (fromType == PathSegUnknown || fromType == PathSegClosePath))
+    if (fromType == toType && (fromType == SVGPathSegType::Unknown || fromType == SVGPathSegType::ClosePath))
         return true;
 
-    unsigned short from = fromType;
-    unsigned short to = toType;
+    auto from = enumToUnderlyingType(fromType);
+    auto to = enumToUnderlyingType(toType);
     if (fromMode == toMode)
         return from == to;
     if (fromMode == AbsoluteCoordinates)
@@ -352,16 +359,16 @@ bool SVGPathBlender::addAnimatedPath(unsigned repeatCount)
 bool SVGPathBlender::canBlendPaths()
 {
     float progress = 0.5;
-    bool fromSourceHadData = m_fromSource.hasMoreData();
-    while (m_toSource.hasMoreData()) {
+    bool fromSourceHadData = m_fromSource->hasMoreData();
+    while (m_toSource->hasMoreData()) {
         SVGPathSegType fromCommand;
         if (fromSourceHadData) {
-            auto parsedFromCommand = m_fromSource.parseSVGSegmentType();
+            auto parsedFromCommand = m_fromSource->parseSVGSegmentType();
             if (!parsedFromCommand)
                 return false;
             fromCommand = *parsedFromCommand;
         }
-        auto parsedtoCommand = m_toSource.parseSVGSegmentType();
+        auto parsedtoCommand = m_toSource->parseSVGSegmentType();
         if (!parsedtoCommand)
             return false;
         SVGPathSegType toCommand = *parsedtoCommand;
@@ -375,62 +382,62 @@ bool SVGPathBlender::canBlendPaths()
             return false;
 
         switch (toCommand) {
-        case PathSegMoveToRel:
-        case PathSegMoveToAbs:
+        case SVGPathSegType::MoveToRel:
+        case SVGPathSegType::MoveToAbs:
             if (!blendMoveToSegment(progress))
                 return false;
             break;
-        case PathSegLineToRel:
-        case PathSegLineToAbs:
+        case SVGPathSegType::LineToRel:
+        case SVGPathSegType::LineToAbs:
             if (!blendLineToSegment(progress))
                 return false;
             break;
-        case PathSegLineToHorizontalRel:
-        case PathSegLineToHorizontalAbs:
+        case SVGPathSegType::LineToHorizontalRel:
+        case SVGPathSegType::LineToHorizontalAbs:
             if (!blendLineToHorizontalSegment(progress))
                 return false;
             break;
-        case PathSegLineToVerticalRel:
-        case PathSegLineToVerticalAbs:
+        case SVGPathSegType::LineToVerticalRel:
+        case SVGPathSegType::LineToVerticalAbs:
             if (!blendLineToVerticalSegment(progress))
                 return false;
             break;
-        case PathSegClosePath:
+        case SVGPathSegType::ClosePath:
             break;
-        case PathSegCurveToCubicRel:
-        case PathSegCurveToCubicAbs:
+        case SVGPathSegType::CurveToCubicRel:
+        case SVGPathSegType::CurveToCubicAbs:
             if (!blendCurveToCubicSegment(progress))
                 return false;
             break;
-        case PathSegCurveToCubicSmoothRel:
-        case PathSegCurveToCubicSmoothAbs:
+        case SVGPathSegType::CurveToCubicSmoothRel:
+        case SVGPathSegType::CurveToCubicSmoothAbs:
             if (!blendCurveToCubicSmoothSegment(progress))
                 return false;
             break;
-        case PathSegCurveToQuadraticRel:
-        case PathSegCurveToQuadraticAbs:
+        case SVGPathSegType::CurveToQuadraticRel:
+        case SVGPathSegType::CurveToQuadraticAbs:
             if (!blendCurveToQuadraticSegment(progress))
                 return false;
             break;
-        case PathSegCurveToQuadraticSmoothRel:
-        case PathSegCurveToQuadraticSmoothAbs:
+        case SVGPathSegType::CurveToQuadraticSmoothRel:
+        case SVGPathSegType::CurveToQuadraticSmoothAbs:
             if (!blendCurveToQuadraticSmoothSegment(progress))
                 return false;
             break;
-        case PathSegArcRel:
-        case PathSegArcAbs:
+        case SVGPathSegType::ArcRel:
+        case SVGPathSegType::ArcAbs:
             if (!blendArcToSegment(progress))
                 return false;
             break;
-        case PathSegUnknown:
+        case SVGPathSegType::Unknown:
             return false;
         }
 
         if (!fromSourceHadData)
             continue;
-        if (m_fromSource.hasMoreData() != m_toSource.hasMoreData())
+        if (m_fromSource->hasMoreData() != m_toSource->hasMoreData())
             return false;
-        if (!m_fromSource.hasMoreData() || !m_toSource.hasMoreData())
+        if (!m_fromSource->hasMoreData() || !m_toSource->hasMoreData())
             return true;
     }
 
@@ -441,16 +448,16 @@ bool SVGPathBlender::blendAnimatedPath(float progress)
 {
     m_isInFirstHalfOfAnimation = progress < 0.5f;
 
-    bool fromSourceHadData = m_fromSource.hasMoreData();
-    while (m_toSource.hasMoreData()) {
+    bool fromSourceHadData = m_fromSource->hasMoreData();
+    while (m_toSource->hasMoreData()) {
         SVGPathSegType fromCommand;
         if (fromSourceHadData) {
-            auto parsedFromCommand = m_fromSource.parseSVGSegmentType();
+            auto parsedFromCommand = m_fromSource->parseSVGSegmentType();
             if (!parsedFromCommand)
                 return false;
             fromCommand = *parsedFromCommand;
         }
-        auto parsedToCommand = m_toSource.parseSVGSegmentType();
+        auto parsedToCommand = m_toSource->parseSVGSegmentType();
         if (!parsedToCommand)
             return false;
         SVGPathSegType toCommand = *parsedToCommand;
@@ -464,63 +471,65 @@ bool SVGPathBlender::blendAnimatedPath(float progress)
             return false;
 
         switch (toCommand) {
-        case PathSegMoveToRel:
-        case PathSegMoveToAbs:
+        case SVGPathSegType::MoveToRel:
+        case SVGPathSegType::MoveToAbs:
             if (!blendMoveToSegment(progress))
                 return false;
             break;
-        case PathSegLineToRel:
-        case PathSegLineToAbs:
+        case SVGPathSegType::LineToRel:
+        case SVGPathSegType::LineToAbs:
             if (!blendLineToSegment(progress))
                 return false;
             break;
-        case PathSegLineToHorizontalRel:
-        case PathSegLineToHorizontalAbs:
+        case SVGPathSegType::LineToHorizontalRel:
+        case SVGPathSegType::LineToHorizontalAbs:
             if (!blendLineToHorizontalSegment(progress))
                 return false;
             break;
-        case PathSegLineToVerticalRel:
-        case PathSegLineToVerticalAbs:
+        case SVGPathSegType::LineToVerticalRel:
+        case SVGPathSegType::LineToVerticalAbs:
             if (!blendLineToVerticalSegment(progress))
                 return false;
             break;
-        case PathSegClosePath:
+        case SVGPathSegType::ClosePath:
             m_consumer->closePath();
+            m_fromCurrentPoint = m_fromSubpathPoint;
+            m_toCurrentPoint = m_toSubpathPoint;
             break;
-        case PathSegCurveToCubicRel:
-        case PathSegCurveToCubicAbs:
+        case SVGPathSegType::CurveToCubicRel:
+        case SVGPathSegType::CurveToCubicAbs:
             if (!blendCurveToCubicSegment(progress))
                 return false;
             break;
-        case PathSegCurveToCubicSmoothRel:
-        case PathSegCurveToCubicSmoothAbs:
+        case SVGPathSegType::CurveToCubicSmoothRel:
+        case SVGPathSegType::CurveToCubicSmoothAbs:
             if (!blendCurveToCubicSmoothSegment(progress))
                 return false;
             break;
-        case PathSegCurveToQuadraticRel:
-        case PathSegCurveToQuadraticAbs:
+        case SVGPathSegType::CurveToQuadraticRel:
+        case SVGPathSegType::CurveToQuadraticAbs:
             if (!blendCurveToQuadraticSegment(progress))
                 return false;
             break;
-        case PathSegCurveToQuadraticSmoothRel:
-        case PathSegCurveToQuadraticSmoothAbs:
+        case SVGPathSegType::CurveToQuadraticSmoothRel:
+        case SVGPathSegType::CurveToQuadraticSmoothAbs:
             if (!blendCurveToQuadraticSmoothSegment(progress))
                 return false;
             break;
-        case PathSegArcRel:
-        case PathSegArcAbs:
+        case SVGPathSegType::ArcRel:
+        case SVGPathSegType::ArcAbs:
             if (!blendArcToSegment(progress))
                 return false;
             break;
-        case PathSegUnknown:
+        case SVGPathSegType::Unknown:
             return false;
         }
 
         if (!fromSourceHadData)
             continue;
-        if (m_fromSource.hasMoreData() != m_toSource.hasMoreData())
+        if (m_fromSource->hasMoreData() != m_toSource->hasMoreData())
             return false;
-        if (!m_fromSource.hasMoreData() || !m_toSource.hasMoreData())
+        if (!m_fromSource->hasMoreData() || !m_toSource->hasMoreData())
             return true;
     }
 

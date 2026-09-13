@@ -29,17 +29,23 @@
 #include "config.h"
 #include "AccessibilityTableColumn.h"
 
-#include "AccessibilityTable.h"
+#include "AXLoggerBase.h"
+#include "AXObjectCache.h"
+#include "AccessibilityObjectInlines.h"
+#include "AccessibilityNodeObject.h"
 
 namespace WebCore {
 
-AccessibilityTableColumn::AccessibilityTableColumn() = default;
+AccessibilityTableColumn::AccessibilityTableColumn(AXID axID, AXObjectCache& cache)
+    : AccessibilityMockObject(axID, cache)
+{
+}
 
 AccessibilityTableColumn::~AccessibilityTableColumn() = default;
 
-Ref<AccessibilityTableColumn> AccessibilityTableColumn::create()
+Ref<AccessibilityTableColumn> AccessibilityTableColumn::create(AXID axID, AXObjectCache& cache)
 {
-    return adoptRef(*new AccessibilityTableColumn());
+    return adoptRef(*new AccessibilityTableColumn(axID, cache));
 }
 
 void AccessibilityTableColumn::setParent(AccessibilityObject* parent)
@@ -54,59 +60,59 @@ LayoutRect AccessibilityTableColumn::elementRect() const
     // This used to be cached during the call to addChildren(), but calling elementRect()
     // can invalidate elements, so its better to ask for this on demand.
     LayoutRect columnRect;
-    AccessibilityChildrenVector childrenCopy = m_children;
+    auto childrenCopy = const_cast<AccessibilityTableColumn*>(this)->unignoredChildren(/* updateChildrenIfNeeded */ false);
     for (const auto& cell : childrenCopy)
         columnRect.unite(cell->elementRect());
 
     return columnRect;
 }
 
-AXCoreObject* AccessibilityTableColumn::columnHeader()
+void AccessibilityTableColumn::setColumnIndex(unsigned columnIndex)
 {
-    auto* parentTable = dynamicDowncast<AccessibilityTable>(m_parent.get());
-    if (!parentTable || !parentTable->isExposable())
-        return nullptr;
+    if (m_columnIndex == columnIndex)
+        return;
+    m_columnIndex = columnIndex;
 
-        for (const auto& cell : children()) {
-        if (cell->roleValue() == AccessibilityRole::ColumnHeader)
-                return cell.get();
-        }
-        return nullptr;
+#if ENABLE(ACCESSIBILITY_ISOLATED_TREE)
+    if (CheckedPtr cache = axObjectCache())
+        cache->columnIndexChanged(*this);
+#endif
 }
 
-bool AccessibilityTableColumn::computeAccessibilityIsIgnored() const
+bool AccessibilityTableColumn::computeIsIgnored() const
 {
-    if (!m_parent)
-        return true;
-
 #if PLATFORM(IOS_FAMILY) || USE(ATSPI)
     return true;
 #endif
 
-    return m_parent->accessibilityIsIgnored();
+    return !m_parent || RefPtr { *m_parent }->isIgnored();
 }
 
 void AccessibilityTableColumn::addChildren()
 {
-    ASSERT(!m_childrenInitialized);
+    AX_ASSERT(!m_childrenInitialized);
     m_childrenInitialized = true;
 
-    auto* parentTable = dynamicDowncast<AccessibilityTable>(m_parent.get());
-    if (!parentTable || !parentTable->isExposable())
+    RefPtr parentTable = dynamicDowncast<AccessibilityNodeObject>(m_parent.get());
+    if (!parentTable || !parentTable->isExposableTable())
         return;
 
     int numRows = parentTable->rowCount();
     for (int i = 0; i < numRows; ++i) {
-        auto* cell = parentTable->cellForColumnAndRow(m_columnIndex, i);
+        RefPtr cell = parentTable->cellForColumnAndRow(m_columnIndex, i);
         if (!cell)
             continue;
 
         // make sure the last one isn't the same as this one (rowspan cells)
-        if (m_children.size() > 0 && m_children.last() == cell)
+        if (m_children.size() > 0 && m_children.last().ptr() == cell.get())
             continue;
 
-        addChild(cell);
+        addChild(*cell);
     }
+
+#ifndef NDEBUG
+    verifyChildrenIndexInParent();
+#endif
 }
 
 } // namespace WebCore

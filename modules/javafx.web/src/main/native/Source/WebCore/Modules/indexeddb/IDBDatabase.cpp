@@ -26,8 +26,11 @@
 #include "config.h"
 #include "IDBDatabase.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "DOMStringList.h"
 #include "EventNames.h"
+#include "EventTargetInlines.h"
+#include "ExceptionOr.h"
 #include "IDBConnectionProxy.h"
 #include "IDBConnectionToServer.h"
 #include "IDBIndex.h"
@@ -37,19 +40,21 @@
 #include "IDBTransaction.h"
 #include "IDBVersionChangeEvent.h"
 #include "Logging.h"
+#include "Node.h"
 #include "ScriptExecutionContext.h"
 #include <JavaScriptCore/HeapInlines.h>
-#include <wtf/IsoMallocInlines.h>
+#include <ranges>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(IDBDatabase);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(IDBDatabase);
 
 static Vector<String> sortAndRemoveDuplicates(Vector<String>&& vector)
 {
-    std::sort(vector.begin(), vector.end(), WTF::codePointCompareLessThan);
+    std::ranges::sort(vector, WTF::codePointCompareLessThan);
     removeRepeatedElements(vector);
-    return WTFMove(vector);
+    return WTF::move(vector);
 }
 
 Ref<IDBDatabase> IDBDatabase::create(ScriptExecutionContext& context, IDBClient::IDBConnectionProxy& connectionProxy, const IDBResultData& resultData)
@@ -66,8 +71,8 @@ IDBDatabase::IDBDatabase(ScriptExecutionContext& context, IDBClient::IDBConnecti
     , m_databaseConnectionIdentifier(resultData.databaseConnectionIdentifier())
     , m_eventNames(eventNames())
 {
-    LOG(IndexedDB, "IDBDatabase::IDBDatabase - Creating database %s with version %" PRIu64 " connection %" PRIu64 " (%p)", m_info.name().utf8().data(), m_info.version(), m_databaseConnectionIdentifier, this);
-    m_connectionProxy->registerDatabaseConnection(*this);
+    LOG(IndexedDB, "IDBDatabase::IDBDatabase - Creating database %s with version %" PRIu64 " connection %" PRIu64 " (%p)", m_info.name().utf8().data(), m_info.version(), m_databaseConnectionIdentifier.toUInt64(), this);
+    m_connectionProxy->registerDatabaseConnection(*this, context.identifier());
 }
 
 IDBDatabase::~IDBDatabase()
@@ -114,6 +119,11 @@ Ref<DOMStringList> IDBDatabase::objectStoreNames() const
     return objectStoreNames;
 }
 
+RefPtr<IDBTransaction> IDBDatabase::protectedVersionChangeTransaction() const
+{
+    return m_versionChangeTransaction;
+}
+
 void IDBDatabase::renameObjectStore(IDBObjectStore& objectStore, const String& newName)
 {
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
@@ -122,7 +132,7 @@ void IDBDatabase::renameObjectStore(IDBObjectStore& objectStore, const String& n
 
     m_info.renameObjectStore(objectStore.info().identifier(), newName);
 
-    m_versionChangeTransaction->renameObjectStore(objectStore, newName);
+    protectedVersionChangeTransaction()->renameObjectStore(objectStore, newName);
 }
 
 void IDBDatabase::renameIndex(IDBIndex& index, const String& newName)
@@ -134,7 +144,12 @@ void IDBDatabase::renameIndex(IDBIndex& index, const String& newName)
 
     m_info.infoForExistingObjectStore(index.objectStore().info().name())->infoForExistingIndex(index.info().identifier())->rename(newName);
 
-    m_versionChangeTransaction->renameIndex(index, newName);
+    protectedVersionChangeTransaction()->renameIndex(index, newName);
+}
+
+ScriptExecutionContext* IDBDatabase::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
 }
 
 ExceptionOr<Ref<IDBObjectStore>> IDBDatabase::createObjectStore(const String& name, ObjectStoreParameters&& parameters)
@@ -144,27 +159,28 @@ ExceptionOr<Ref<IDBObjectStore>> IDBDatabase::createObjectStore(const String& na
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
     ASSERT(!m_versionChangeTransaction || m_versionChangeTransaction->isVersionChange());
 
-    if (!m_versionChangeTransaction)
-        return Exception { InvalidStateError, "Failed to execute 'createObjectStore' on 'IDBDatabase': The database is not running a version change transaction."_s };
+    RefPtr versionChangeTransaction = m_versionChangeTransaction;
+    if (!versionChangeTransaction)
+        return Exception { ExceptionCode::InvalidStateError, "Failed to execute 'createObjectStore' on 'IDBDatabase': The database is not running a version change transaction."_s };
 
-    if (!m_versionChangeTransaction->isActive())
-        return Exception { TransactionInactiveError };
+    if (!versionChangeTransaction->isActive())
+        return Exception { ExceptionCode::TransactionInactiveError };
 
     auto& keyPath = parameters.keyPath;
     if (keyPath && !isIDBKeyPathValid(keyPath.value()))
-        return Exception { SyntaxError, "Failed to execute 'createObjectStore' on 'IDBDatabase': The keyPath option is not a valid key path."_s };
+        return Exception { ExceptionCode::SyntaxError, "Failed to execute 'createObjectStore' on 'IDBDatabase': The keyPath option is not a valid key path."_s };
 
     if (m_info.hasObjectStore(name))
-        return Exception { ConstraintError, "Failed to execute 'createObjectStore' on 'IDBDatabase': An object store with the specified name already exists."_s };
+        return Exception { ExceptionCode::ConstraintError, "Failed to execute 'createObjectStore' on 'IDBDatabase': An object store with the specified name already exists."_s };
 
     if (keyPath && parameters.autoIncrement && ((std::holds_alternative<String>(keyPath.value()) && std::get<String>(keyPath.value()).isEmpty()) || std::holds_alternative<Vector<String>>(keyPath.value())))
-        return Exception { InvalidAccessError, "Failed to execute 'createObjectStore' on 'IDBDatabase': The autoIncrement option was set but the keyPath option was empty or an array."_s };
+        return Exception { ExceptionCode::InvalidAccessError, "Failed to execute 'createObjectStore' on 'IDBDatabase': The autoIncrement option was set but the keyPath option was empty or an array."_s };
 
     // Install the new ObjectStore into the connection's metadata.
-    auto info = m_info.createNewObjectStore(name, WTFMove(keyPath), parameters.autoIncrement);
+    auto info = m_info.createNewObjectStore(name, WTF::move(keyPath), parameters.autoIncrement);
 
     // Create the actual IDBObjectStore from the transaction, which also schedules the operation server side.
-    return m_versionChangeTransaction->createObjectStore(info);
+    return versionChangeTransaction->createObjectStore(info);
 }
 
 ExceptionOr<Ref<IDBTransaction>> IDBDatabase::transaction(StringOrVectorOfStrings&& storeNames, IDBTransactionMode mode, TransactionOptions options)
@@ -174,30 +190,30 @@ ExceptionOr<Ref<IDBTransaction>> IDBDatabase::transaction(StringOrVectorOfString
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     if (m_versionChangeTransaction && !m_versionChangeTransaction->isFinishedOrFinishing())
-        return Exception { InvalidStateError, "Failed to execute 'transaction' on 'IDBDatabase': A version change transaction is running."_s };
+        return Exception { ExceptionCode::InvalidStateError, "Failed to execute 'transaction' on 'IDBDatabase': A version change transaction is running."_s };
 
     if (m_closePending)
-        return Exception { InvalidStateError, "Failed to execute 'transaction' on 'IDBDatabase': The database connection is closing."_s };
+        return Exception { ExceptionCode::InvalidStateError, "Failed to execute 'transaction' on 'IDBDatabase': The database connection is closing."_s };
 
     Vector<String> objectStores;
     if (std::holds_alternative<Vector<String>>(storeNames)) {
         // It is valid for JavaScript to pass in a list of object store names with the same name listed twice,
         // so we need to drop the duplicates.
-        objectStores = sortAndRemoveDuplicates(std::get<Vector<String>>(WTFMove(storeNames)));
+        objectStores = sortAndRemoveDuplicates(std::get<Vector<String>>(WTF::move(storeNames)));
     } else
-        objectStores = { std::get<String>(WTFMove(storeNames)) };
+        objectStores = { std::get<String>(WTF::move(storeNames)) };
 
     for (auto& objectStoreName : objectStores) {
         if (m_info.hasObjectStore(objectStoreName))
             continue;
-        return Exception { NotFoundError, "Failed to execute 'transaction' on 'IDBDatabase': One of the specified object stores was not found."_s };
+        return Exception { ExceptionCode::NotFoundError, "Failed to execute 'transaction' on 'IDBDatabase': One of the specified object stores was not found."_s };
     }
 
     if (objectStores.isEmpty())
-        return Exception { InvalidAccessError, "Failed to execute 'transaction' on 'IDBDatabase': The storeNames parameter was empty."_s };
+        return Exception { ExceptionCode::InvalidAccessError, "Failed to execute 'transaction' on 'IDBDatabase': The storeNames parameter was empty."_s };
 
     if (mode != IDBTransactionMode::Readonly && mode != IDBTransactionMode::Readwrite)
-        return Exception { TypeError };
+        return Exception { ExceptionCode::TypeError };
 
     auto info = IDBTransactionInfo::clientTransaction(m_connectionProxy.get(), objectStores, mode, options.durability);
 
@@ -206,7 +222,7 @@ ExceptionOr<Ref<IDBTransaction>> IDBDatabase::transaction(StringOrVectorOfString
 
     LOG(IndexedDB, "IDBDatabase::transaction - Added active transaction %s", info.identifier().loggingString().utf8().data());
 
-    m_activeTransactions.set(info.identifier(), transaction.ptr());
+    m_activeTransactions.set(info.identifier(), transaction);
 
     return transaction;
 }
@@ -217,24 +233,25 @@ ExceptionOr<void> IDBDatabase::deleteObjectStore(const String& objectStoreName)
 
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
-    if (!m_versionChangeTransaction)
-        return Exception { InvalidStateError, "Failed to execute 'deleteObjectStore' on 'IDBDatabase': The database is not running a version change transaction."_s };
+    RefPtr versionChangeTransaction = m_versionChangeTransaction;
+    if (!versionChangeTransaction)
+        return Exception { ExceptionCode::InvalidStateError, "Failed to execute 'deleteObjectStore' on 'IDBDatabase': The database is not running a version change transaction."_s };
 
-    if (!m_versionChangeTransaction->isActive())
-        return Exception { TransactionInactiveError };
+    if (!versionChangeTransaction->isActive())
+        return Exception { ExceptionCode::TransactionInactiveError };
 
     if (!m_info.hasObjectStore(objectStoreName))
-        return Exception { NotFoundError, "Failed to execute 'deleteObjectStore' on 'IDBDatabase': The specified object store was not found."_s };
+        return Exception { ExceptionCode::NotFoundError, "Failed to execute 'deleteObjectStore' on 'IDBDatabase': The specified object store was not found."_s };
 
     m_info.deleteObjectStore(objectStoreName);
-    m_versionChangeTransaction->deleteObjectStore(objectStoreName);
+    versionChangeTransaction->deleteObjectStore(objectStoreName);
 
     return { };
 }
 
 void IDBDatabase::close()
 {
-    LOG(IndexedDB, "IDBDatabase::close - %" PRIu64, m_databaseConnectionIdentifier);
+    LOG(IndexedDB, "IDBDatabase::close - %" PRIu64, m_databaseConnectionIdentifier.toUInt64());
 
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
@@ -248,14 +265,14 @@ void IDBDatabase::close()
 
 void IDBDatabase::didCloseFromServer(const IDBError& error)
 {
-    LOG(IndexedDB, "IDBDatabase::didCloseFromServer - %" PRIu64, m_databaseConnectionIdentifier);
+    LOG(IndexedDB, "IDBDatabase::didCloseFromServer - %" PRIu64, m_databaseConnectionIdentifier.toUInt64());
 
     connectionToServerLost(error);
 }
 
 void IDBDatabase::connectionToServerLost(const IDBError& error)
 {
-    LOG(IndexedDB, "IDBDatabase::connectionToServerLost - %" PRIu64, m_databaseConnectionIdentifier);
+    LOG(IndexedDB, "IDBDatabase::connectionToServerLost - %" PRIu64, m_databaseConnectionIdentifier.toUInt64());
 
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
@@ -274,18 +291,18 @@ void IDBDatabase::connectionToServerLost(const IDBError& error)
     errorEvent->setTarget(Ref { * this });
 
     if (scriptExecutionContext())
-        queueTaskToDispatchEvent(*this, TaskSource::DatabaseAccess, WTFMove(errorEvent));
+        queueTaskToDispatchEvent(*this, TaskSource::DatabaseAccess, WTF::move(errorEvent));
 
     auto closeEvent = Event::create(m_eventNames.closeEvent, Event::CanBubble::Yes, Event::IsCancelable::No);
     closeEvent->setTarget(Ref { * this });
 
     if (scriptExecutionContext())
-        queueTaskToDispatchEvent(*this, TaskSource::DatabaseAccess, WTFMove(closeEvent));
+        queueTaskToDispatchEvent(*this, TaskSource::DatabaseAccess, WTF::move(closeEvent));
 }
 
 void IDBDatabase::maybeCloseInServer()
 {
-    LOG(IndexedDB, "IDBDatabase::maybeCloseInServer - %" PRIu64, m_databaseConnectionIdentifier);
+    LOG(IndexedDB, "IDBDatabase::maybeCloseInServer - %" PRIu64, m_databaseConnectionIdentifier.toUInt64());
 
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
@@ -302,22 +319,16 @@ void IDBDatabase::maybeCloseInServer()
     m_connectionProxy->databaseConnectionClosed(*this);
 }
 
-const char* IDBDatabase::activeDOMObjectName() const
-{
-    ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
-    return "IDBDatabase";
-}
-
 void IDBDatabase::stop()
 {
-    LOG(IndexedDB, "IDBDatabase::stop - %" PRIu64, m_databaseConnectionIdentifier);
+    LOG(IndexedDB, "IDBDatabase::stop - %" PRIu64, m_databaseConnectionIdentifier.toUInt64());
 
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     removeAllEventListeners();
 
     for (auto& id : copyToVector(m_activeTransactions.keys())) {
-        if (auto* transaction = m_activeTransactions.get(id))
+        if (RefPtr transaction = m_activeTransactions.get(id))
             transaction->stop();
     }
 
@@ -335,9 +346,9 @@ Ref<IDBTransaction> IDBDatabase::startVersionChangeTransaction(const IDBTransact
     ASSERT(scriptExecutionContext());
 
     Ref<IDBTransaction> transaction = IDBTransaction::create(*this, info, request);
-    m_versionChangeTransaction = &transaction.get();
+    m_versionChangeTransaction = transaction.get();
 
-    m_activeTransactions.set(transaction->info().identifier(), &transaction.get());
+    m_activeTransactions.set(transaction->info().identifier(), transaction);
 
     return transaction;
 }
@@ -353,7 +364,7 @@ void IDBDatabase::didStartTransaction(IDBTransaction& transaction)
     if (m_abortingTransactions.contains(transaction.info().identifier()) || m_committingTransactions.contains(transaction.info().identifier()))
         return;
 
-    m_activeTransactions.set(transaction.info().identifier(), &transaction);
+    m_activeTransactions.set(transaction.info().identifier(), transaction);
 }
 
 void IDBDatabase::willCommitTransaction(IDBTransaction& transaction)
@@ -362,9 +373,8 @@ void IDBDatabase::willCommitTransaction(IDBTransaction& transaction)
 
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
-    auto refTransaction = m_activeTransactions.take(transaction.info().identifier());
-    ASSERT(refTransaction);
-    m_committingTransactions.set(transaction.info().identifier(), WTFMove(refTransaction));
+    RefPtr refTransaction = m_activeTransactions.take(transaction.info().identifier());
+    m_committingTransactions.set(transaction.info().identifier(), refTransaction.releaseNonNull());
 }
 
 void IDBDatabase::didCommitTransaction(IDBTransaction& transaction)
@@ -385,12 +395,11 @@ void IDBDatabase::willAbortTransaction(IDBTransaction& transaction)
 
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
-    auto refTransaction = m_activeTransactions.take(transaction.info().identifier());
+    RefPtr refTransaction = m_activeTransactions.take(transaction.info().identifier());
     if (!refTransaction)
         refTransaction = m_committingTransactions.take(transaction.info().identifier());
 
-    ASSERT(refTransaction);
-    m_abortingTransactions.set(transaction.info().identifier(), WTFMove(refTransaction));
+    m_abortingTransactions.set(transaction.info().identifier(), refTransaction.releaseNonNull());
 
     if (transaction.isVersionChange()) {
         ASSERT(transaction.originalDatabaseInfo());
@@ -447,7 +456,7 @@ void IDBDatabase::didCommitOrAbortTransaction(IDBTransaction& transaction)
 void IDBDatabase::fireVersionChangeEvent(const IDBResourceIdentifier& requestIdentifier, uint64_t requestedVersion)
 {
     uint64_t currentVersion = m_info.version();
-    LOG(IndexedDB, "IDBDatabase::fireVersionChangeEvent - current version %" PRIu64 ", requested version %" PRIu64 ", connection %" PRIu64 " (%p)", currentVersion, requestedVersion, m_databaseConnectionIdentifier, this);
+    LOG(IndexedDB, "IDBDatabase::fireVersionChangeEvent - current version %" PRIu64 ", requested version %" PRIu64 ", connection %" PRIu64 " (%p)", currentVersion, requestedVersion, m_databaseConnectionIdentifier.toUInt64(), this);
 
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
@@ -457,20 +466,22 @@ void IDBDatabase::fireVersionChangeEvent(const IDBResourceIdentifier& requestIde
     }
 
     Ref<Event> event = IDBVersionChangeEvent::create(requestIdentifier, currentVersion, requestedVersion, m_eventNames.versionchangeEvent);
-    queueTaskToDispatchEvent(*this, TaskSource::DatabaseAccess, WTFMove(event));
+    queueTaskToDispatchEvent(*this, TaskSource::DatabaseAccess, WTF::move(event));
 }
 
 void IDBDatabase::dispatchEvent(Event& event)
 {
-    LOG(IndexedDB, "IDBDatabase::dispatchEvent (%" PRIu64 ") (%p)", m_databaseConnectionIdentifier, this);
+    LOG(IndexedDB, "IDBDatabase::dispatchEvent (%" PRIu64 ") (%p)", m_databaseConnectionIdentifier.toUInt64(), this);
     ASSERT(canCurrentThreadAccessThreadLocalData(originThread()));
 
     Ref protectedThis { *this };
 
     EventTarget::dispatchEvent(event);
 
-    if (event.isVersionChangeEvent() && event.type() == m_eventNames.versionchangeEvent)
-        m_connectionProxy->didFireVersionChangeEvent(m_databaseConnectionIdentifier, downcast<IDBVersionChangeEvent>(event).requestIdentifier());
+    if (auto* versionChangeEvent = dynamicDowncast<IDBVersionChangeEvent>(event)) {
+        if (versionChangeEvent->type() == m_eventNames.versionchangeEvent)
+            m_connectionProxy->didFireVersionChangeEvent(m_databaseConnectionIdentifier, *versionChangeEvent->requestIdentifier());
+    }
 }
 
 void IDBDatabase::didCreateIndexInfo(const IDBIndexInfo& info)
@@ -489,6 +500,14 @@ void IDBDatabase::didDeleteIndexInfo(const IDBIndexInfo& info)
     auto* objectStore = m_info.infoForExistingObjectStore(info.objectStoreIdentifier());
     ASSERT(objectStore);
     objectStore->deleteIndex(info.name());
+}
+
+std::optional<ScriptExecutionContextIdentifier> IDBDatabase::scriptExecutionContextIdentifier() const
+{
+    if (RefPtr context = scriptExecutionContext())
+        return context->identifier();
+
+    return std::nullopt;
 }
 
 } // namespace WebCore

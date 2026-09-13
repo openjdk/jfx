@@ -25,15 +25,17 @@
 
 #include "CollectionIndexCache.h"
 #include "NodeList.h"
-#include <wtf/IsoMalloc.h>
+#include <wtf/CheckedRef.h>
 #include <wtf/Ref.h>
+#include <wtf/TZoneMalloc.h>
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class ContainerNode;
 
-class EmptyNodeList final : public NodeList {
-    WTF_MAKE_ISO_ALLOCATED(EmptyNodeList);
+class EmptyNodeList final : public NodeList, public CanMakeSingleThreadWeakPtr<EmptyNodeList> {
+    WTF_MAKE_TZONE_ALLOCATED(EmptyNodeList);
 public:
     static Ref<EmptyNodeList> create(Node& owner)
     {
@@ -52,11 +54,11 @@ private:
 
     bool isEmptyNodeList() const override { return true; }
 
-    Ref<Node> m_owner;
+    const Ref<Node> m_owner;
 };
 
-class ChildNodeList final : public NodeList {
-    WTF_MAKE_ISO_ALLOCATED(ChildNodeList);
+class ChildNodeList final : public NodeList, public CanMakeSingleThreadWeakPtr<ChildNodeList> {
+    WTF_MAKE_TZONE_ALLOCATED(ChildNodeList);
 public:
     static Ref<ChildNodeList> create(ContainerNode& parent)
     {
@@ -92,8 +94,16 @@ private:
 
     bool isChildNodeList() const override { return true; }
 
-    Ref<ContainerNode> m_parent;
+    const Ref<ContainerNode> m_parent;
     mutable CollectionIndexCache<ChildNodeList, Node*> m_indexCache;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::EmptyNodeList)
+    static bool isType(const WebCore::NodeList& nodeList) { return nodeList.isEmptyNodeList(); }
+SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::ChildNodeList)
+    static bool isType(const WebCore::NodeList& nodeList) { return nodeList.isChildNodeList(); }
+SPECIALIZE_TYPE_TRAITS_END()

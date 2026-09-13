@@ -25,26 +25,24 @@
 
 #pragma once
 
-#include "ProcessIdentifier.h"
+#include <WebCore/ProcessIdentifier.h>
 #include <wtf/HashTraits.h>
 #include <wtf/Hasher.h>
 #include <wtf/ObjectIdentifier.h>
 
 namespace WebCore {
 
-enum WindowIdentifierType { };
+struct WindowIdentifierType;
 using WindowIdentifier = ObjectIdentifier<WindowIdentifierType>;
 
 // Window identifier that is unique across all WebContent processes.
 struct GlobalWindowIdentifier {
     ProcessIdentifier processIdentifier;
     WindowIdentifier windowIdentifier;
-};
 
-inline bool operator==(const GlobalWindowIdentifier& a, const GlobalWindowIdentifier& b)
-{
-    return a.processIdentifier == b.processIdentifier &&  a.windowIdentifier == b.windowIdentifier;
-}
+    friend bool operator==(const GlobalWindowIdentifier&, const GlobalWindowIdentifier&) = default;
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+};
 
 inline void add(Hasher& hasher, const GlobalWindowIdentifier& identifier)
 {
@@ -55,14 +53,9 @@ inline void add(Hasher& hasher, const GlobalWindowIdentifier& identifier)
 
 namespace WTF {
 
-struct GlobalWindowIdentifierHash {
-    static unsigned hash(const WebCore::GlobalWindowIdentifier& key) { return computeHash(key); }
-    static bool equal(const WebCore::GlobalWindowIdentifier& a, const WebCore::GlobalWindowIdentifier& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = true;
-};
-
 template<> struct HashTraits<WebCore::GlobalWindowIdentifier> : GenericHashTraits<WebCore::GlobalWindowIdentifier> {
-    static WebCore::GlobalWindowIdentifier emptyValue() { return { }; }
+    static WebCore::GlobalWindowIdentifier emptyValue() { return { HashTraits<WebCore::ProcessIdentifier>::emptyValue(), HashTraits<WebCore::WindowIdentifier>::emptyValue() }; }
+    static bool isEmptyValue(const WebCore::GlobalWindowIdentifier& value) { return value.windowIdentifier.isHashTableEmptyValue(); }
 
     static void constructDeletedValue(WebCore::GlobalWindowIdentifier& slot)
     {
@@ -71,7 +64,5 @@ template<> struct HashTraits<WebCore::GlobalWindowIdentifier> : GenericHashTrait
     }
     static bool isDeletedValue(const WebCore::GlobalWindowIdentifier& slot) { return slot.windowIdentifier.isHashTableDeletedValue(); }
 };
-
-template<> struct DefaultHash<WebCore::GlobalWindowIdentifier> : GlobalWindowIdentifierHash { };
 
 } // namespace WTF

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2008, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,24 +26,25 @@
 package com.sun.scenario.effect.compiler.lexer;
 
 import com.sun.scenario.effect.compiler.JSLLexer;
-import org.junit.Test;
+
+import org.junit.jupiter.api.Test;
 
 public class FloatTest extends LexerBase {
 
     @Test
-    public void uptoOneMillion() throws Exception {
+    public void uptoOneMillion() {
         for (float i = 0f; i < 1e6; i += 1.723f) {
             assertRecognized(String.valueOf(i));
         }
     }
 
     @Test
-    public void noLeadingZero() throws Exception {
+    public void noLeadingZero() {
         assertRecognized(".1234567890");
     }
 
     @Test
-    public void badDigits() throws Exception {
+    public void badDigits() {
         assertNotRecognized("0110", "0");
     }
 

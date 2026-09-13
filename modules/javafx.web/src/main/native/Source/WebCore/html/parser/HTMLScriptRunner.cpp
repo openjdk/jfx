@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2010 Google, Inc. All Rights Reserved.
- * Copyright (C) 2010-2017 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2010 Google, Inc. All rights reserved.
+ * Copyright (C) 2010-2017 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -27,6 +27,7 @@
 #include "config.h"
 #include "HTMLScriptRunner.h"
 
+#include "CSSTokenizerInputStream.h"
 #include "Element.h"
 #include "Event.h"
 #include "EventLoop.h"
@@ -38,12 +39,16 @@
 #include "IgnoreDestructiveWriteCountIncrementer.h"
 #include "InlineClassicScript.h"
 #include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "MutationObserver.h"
 #include "NestingLevelIncrementer.h"
 #include "ScriptElement.h"
 #include "ScriptSourceCode.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(HTMLScriptRunner);
 
 using namespace HTMLNames;
 
@@ -228,7 +233,7 @@ void HTMLScriptRunner::requestDeferredScript(ScriptElement& scriptElement)
 {
     auto pendingScript = requestPendingScript(scriptElement);
     ASSERT(pendingScript->needsLoading());
-    m_scriptsToExecuteAfterParsing.append(WTFMove(pendingScript));
+    m_scriptsToExecuteAfterParsing.append(WTF::move(pendingScript));
 }
 
 // This method is meant to match the HTML5 definition of "running a script"
@@ -260,9 +265,9 @@ void HTMLScriptRunner::runScript(ScriptElement& scriptElement, const TextPositio
             m_parserBlockingScript = PendingScript::create(scriptElement, scriptStartPosition);
         else {
             if (scriptElement.scriptType() == ScriptType::Classic)
-            scriptElement.executeClassicScript(ScriptSourceCode(scriptElement.element().textContent(), documentURLForScriptExecution(m_document.get()), scriptStartPosition, JSC::SourceProviderSourceType::Program, InlineClassicScript::create(scriptElement)));
+                scriptElement.executeClassicScript(ScriptSourceCode(scriptElement.element().textContent(), scriptElement.sourceTaintedOrigin(), documentURLForScriptExecution(m_document.get()), scriptStartPosition, JSC::SourceProviderSourceType::Program, InlineClassicScript::create(scriptElement)));
             else
-                scriptElement.registerImportMap(ScriptSourceCode(scriptElement.element().textContent(), documentURLForScriptExecution(m_document.get()), scriptStartPosition, JSC::SourceProviderSourceType::ImportMap));
+                scriptElement.registerImportMap(ScriptSourceCode(scriptElement.element().textContent(), scriptElement.sourceTaintedOrigin(), documentURLForScriptExecution(m_document.get()), scriptStartPosition, JSC::SourceProviderSourceType::ImportMap));
         }
     } else
         requestParsingBlockingScript(scriptElement);

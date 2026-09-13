@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2019 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -50,25 +50,31 @@ public:
     static bool handlesIdentifier(const PaymentRequest::MethodIdentifier&);
     static bool hasActiveSession(Document&);
 
+    // ContextDestructionObserver.
+    void ref() const final { PaymentHandler::ref(); }
+    void deref() const final { PaymentHandler::deref(); }
+
 private:
     friend class PaymentHandler;
     explicit ApplePayPaymentHandler(Document&, const PaymentRequest::MethodIdentifier&, PaymentRequest&);
 
     Document& document() const;
+    Ref<Document> protectedDocument() const;
     PaymentCoordinator& paymentCoordinator() const;
+    Ref<PaymentCoordinator> protectedPaymentCoordinator() const;
 
     ExceptionOr<Vector<ApplePayShippingMethod>> computeShippingMethods() const;
     ExceptionOr<std::tuple<ApplePayLineItem, Vector<ApplePayLineItem>>> computeTotalAndLineItems() const;
-    Vector<RefPtr<ApplePayError>> computeErrors(String&& error, AddressErrors&&, PayerErrorFields&&, JSC::JSObject* paymentMethodErrors) const;
-    Vector<RefPtr<ApplePayError>> computeErrors(JSC::JSObject* paymentMethodErrors) const;
-    void computeAddressErrors(String&& error, AddressErrors&&, Vector<RefPtr<ApplePayError>>&) const;
-    void computePayerErrors(PayerErrorFields&&, Vector<RefPtr<ApplePayError>>&) const;
-    ExceptionOr<void> computePaymentMethodErrors(JSC::JSObject* paymentMethodErrors, Vector<RefPtr<ApplePayError>>&) const;
+    Vector<Ref<ApplePayError>> computeErrors(String&& error, AddressErrors&&, PayerErrorFields&&, JSC::JSObject* paymentMethodErrors) const;
+    Vector<Ref<ApplePayError>> computeErrors(JSC::JSObject* paymentMethodErrors) const;
+    void computeAddressErrors(String&& error, AddressErrors&&, Vector<Ref<ApplePayError>>&) const;
+    void computePayerErrors(PayerErrorFields&&, Vector<Ref<ApplePayError>>&) const;
+    ExceptionOr<void> computePaymentMethodErrors(JSC::JSObject* paymentMethodErrors, Vector<Ref<ApplePayError>>&) const;
     ExceptionOr<std::optional<std::tuple<PaymentDetailsModifier, ApplePayModifier>>> firstApplicableModifier() const;
 
-    ExceptionOr<void> shippingAddressUpdated(Vector<RefPtr<ApplePayError>>&& errors);
+    ExceptionOr<void> shippingAddressUpdated(Vector<Ref<ApplePayError>>&& errors);
     ExceptionOr<void> shippingOptionUpdated();
-    ExceptionOr<void> paymentMethodUpdated(Vector<RefPtr<ApplePayError>>&& errors);
+    ExceptionOr<void> paymentMethodUpdated(Vector<Ref<ApplePayError>>&& errors);
 
     // PaymentHandler
     ExceptionOr<void> convertData(Document&, JSC::JSValue) final;
@@ -94,7 +100,7 @@ private:
     void didCancelPaymentSession(PaymentSessionError&&) final;
 
     PaymentRequest::MethodIdentifier m_identifier;
-    Ref<PaymentRequest> m_paymentRequest;
+    const Ref<PaymentRequest> m_paymentRequest;
     std::optional<ApplePayRequest> m_applePayRequest;
     std::optional<ApplePayPaymentMethodType> m_selectedPaymentMethodType;
 

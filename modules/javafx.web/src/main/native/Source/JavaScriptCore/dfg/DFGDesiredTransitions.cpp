@@ -58,9 +58,7 @@ DesiredTransitions::DesiredTransitions(CodeBlock* codeBlock)
 {
 }
 
-DesiredTransitions::~DesiredTransitions()
-{
-}
+DesiredTransitions::~DesiredTransitions() = default;
 
 void DesiredTransitions::addLazily(CodeBlock* codeOriginOwner, Structure* oldStructure, Structure* newStructure)
 {
@@ -77,7 +75,7 @@ void DesiredTransitions::reallyAdd(VM& vm, CommonData* common)
     if (!transitions.isEmpty()) {
         ConcurrentJSLocker locker(m_codeBlock->m_lock);
         ASSERT(common->m_transitions.isEmpty());
-        common->m_transitions = WTFMove(transitions);
+        common->m_transitions = WTF::move(transitions);
     }
 }
 

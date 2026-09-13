@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -108,7 +108,7 @@ public class DWGlyph implements Glyph {
             rect = runAnalysis.GetAlphaTextureBounds(textureType);
             if (rect == null || rect.right - rect.left == 0 || rect.bottom - rect.top == 0) {
                 /* Check for both texture types due to some limitations with
-                 * IDWriteGlyphRunAnalysis. See RT-31587.
+                 * IDWriteGlyphRunAnalysis. See JDK-8096940.
                  */
                 rect = runAnalysis.GetAlphaTextureBounds(OS.DWRITE_TEXTURE_ALIASED_1x1);
             }

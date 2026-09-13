@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011, 2012 Google Inc. All rights reserved.
+ * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -30,65 +31,98 @@
 
 #pragma once
 
-#include "CSSValue.h"
-#include <wtf/Forward.h>
+#include <WebCore/CSSCalcTree.h>
+#include <wtf/RefCounted.h>
 #include <wtf/Ref.h>
 
 namespace WebCore {
 
-class CSSCalcExpressionNode;
+namespace Style {
+namespace Calculation {
+class Value;
+}
+}
+
+namespace CSS {
+struct PropertyParserState;
+struct Range;
+enum class Category : uint8_t;
+}
+
 class CSSCalcSymbolTable;
+class CSSCalcSymbolsAllowed;
 class CSSParserTokenRange;
 class CSSToLengthConversionData;
-class CalculationValue;
 class RenderStyle;
+
+struct CSSParserContext;
+struct CSSPropertyParserOptions;
+struct NoConversionDataRequiredToken;
 
 enum CSSValueID : uint16_t;
 
 enum class CSSUnitType : uint8_t;
-enum class CalculationCategory : uint8_t;
-enum class ValueRange : uint8_t;
 
-class CSSCalcValue final : public CSSValue {
+namespace CSSCalc {
+
+// Boxes a `CSSCalc::Tree` along with the `Style::Calculation::Category` and `CSS::Range` used to construct it.
+class Value final : public RefCounted<Value> {
 public:
-    static RefPtr<CSSCalcValue> create(CSSValueID function, const CSSParserTokenRange&, CalculationCategory destinationCategory, ValueRange, const CSSCalcSymbolTable&, bool allowsNegativePercentage = false);
-    static RefPtr<CSSCalcValue> create(CSSValueID function, const CSSParserTokenRange&, CalculationCategory destinationCategory, ValueRange);
-    static RefPtr<CSSCalcValue> create(const CalculationValue&, const RenderStyle&);
-    static Ref<CSSCalcValue> create(Ref<CSSCalcExpressionNode>&&, bool shouldClampToNonNegative = false);
-    ~CSSCalcValue();
+    static RefPtr<Value> parse(CSSParserTokenRange&, CSS::PropertyParserState&, CSS::Category, CSS::Range, CSSCalcSymbolsAllowed, CSSPropertyParserOptions);
 
-    CalculationCategory category() const;
-    double doubleValue() const;
-    double computeLengthPx(const CSSToLengthConversionData&) const;
+    static Ref<Value> create(const Style::Calculation::Value&, const RenderStyle&);
+    static Ref<Value> create(CSS::Category, CSS::Range, CSSCalc::Tree&&);
+
+    ~Value();
+
+    // Creates a copy of the CSSCalc::Tree with non-canonical dimensions and any symbols present in the provided symbol table resolved.
+    Ref<Value> copySimplified(const CSSToLengthConversionData&) const;
+    Ref<Value> copySimplified(const CSSToLengthConversionData&, const CSSCalcSymbolTable&) const;
+    Ref<Value> copySimplified(NoConversionDataRequiredToken) const;
+    Ref<Value> copySimplified(NoConversionDataRequiredToken, const CSSCalcSymbolTable&) const;
+
+    CSS::Category category() const { return m_category; }
+    CSS::Range range() const { return m_range; }
+
     CSSUnitType primitiveType() const;
 
-    Ref<CalculationValue> createCalculationValue(const CSSToLengthConversionData&) const;
-    void setPermittedValueRange(ValueRange);
+    // Returns whether the CSSCalc::Tree requires `CSSToLengthConversionData` to fully resolve.
+    bool requiresConversionData() const { return m_tree.requiresConversionData; };
+
+    double doubleValue(const CSSToLengthConversionData&) const;
+    double doubleValue(const CSSToLengthConversionData&, const CSSCalcSymbolTable&) const;
+    double doubleValue(NoConversionDataRequiredToken) const;
+    double doubleValue(NoConversionDataRequiredToken, const CSSCalcSymbolTable&) const;
+    double doubleValueDeprecated() const;
+
+    double computeLengthPx(const CSSToLengthConversionData&) const;
+    double computeLengthPx(const CSSToLengthConversionData&, const CSSCalcSymbolTable&) const;
+
+    Ref<Style::Calculation::Value> createCalculationValue(NoConversionDataRequiredToken) const;
+    Ref<Style::Calculation::Value> createCalculationValue(NoConversionDataRequiredToken, const CSSCalcSymbolTable&) const;
+    Ref<Style::Calculation::Value> createCalculationValue(const CSSToLengthConversionData&) const;
+    Ref<Style::Calculation::Value> createCalculationValue(const CSSToLengthConversionData&, const CSSCalcSymbolTable&) const;
 
     void collectComputedStyleDependencies(ComputedStyleDependencies&) const;
 
-    String customCSSText() const;
-    bool equals(const CSSCalcValue&) const;
-
-    static bool isCalcFunction(CSSValueID);
+    String cssText(const CSS::SerializationContext&) const;
+    bool equals(const Value&) const;
 
     void dump(TextStream&) const;
 
-    bool convertingToLengthRequiresNonNullStyle(int lengthConversion) const;
-
-    const CSSCalcExpressionNode& expressionNode() const { return m_expression; }
+    const CSSCalc::Tree& tree() const { return m_tree; }
 
 private:
-    explicit CSSCalcValue(Ref<CSSCalcExpressionNode>&&, bool shouldClampToNonNegative = false);
+    explicit Value(CSS::Category, CSS::Range, CSSCalc::Tree&&);
 
     double clampToPermittedRange(double) const;
 
-    const Ref<CSSCalcExpressionNode> m_expression;
-    bool m_shouldClampToNonNegative;
+    CSS::Category m_category;
+    CSS::Range m_range;
+    Tree m_tree;
 };
 
-TextStream& operator<<(TextStream&, const CSSCalcValue&);
+TextStream& operator<<(TextStream&, const Value&);
 
+} // namespace CSSCalc
 } // namespace WebCore
-
-SPECIALIZE_TYPE_TRAITS_CSS_VALUE(CSSCalcValue, isCalcValue())

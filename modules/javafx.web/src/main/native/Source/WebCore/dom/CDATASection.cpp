@@ -23,20 +23,22 @@
 #include "CDATASection.h"
 
 #include "Document.h"
-#include <wtf/IsoMallocInlines.h>
+#include "NodeDocument.h"
+#include "SerializedNode.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(CDATASection);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CDATASection);
 
 inline CDATASection::CDATASection(Document& document, String&& data)
-    : Text(document, WTFMove(data), CreateText)
+    : Text(document, WTF::move(data), CDATA_SECTION_NODE, { })
 {
 }
 
 Ref<CDATASection> CDATASection::create(Document& document, String&& data)
 {
-    return adoptRef(*new CDATASection(document, WTFMove(data)));
+    return adoptRef(*new CDATASection(document, WTF::move(data)));
 }
 
 String CDATASection::nodeName() const
@@ -44,19 +46,19 @@ String CDATASection::nodeName() const
     return "#cdata-section"_s;
 }
 
-Node::NodeType CDATASection::nodeType() const
+Ref<Node> CDATASection::cloneNodeInternal(Document& document, CloningOperation, CustomElementRegistry*) const
 {
-    return CDATA_SECTION_NODE;
+    return create(document, String { data() });
 }
 
-Ref<Node> CDATASection::cloneNodeInternal(Document& targetDocument, CloningOperation)
+SerializedNode CDATASection::serializeNode(CloningOperation) const
 {
-    return create(targetDocument, String { data() });
+    return { SerializedNode::CDATASection { data() } };
 }
 
 Ref<Text> CDATASection::virtualCreate(String&& data)
 {
-    return create(document(), WTFMove(data));
+    return create(protectedDocument(), WTF::move(data));
 }
 
 } // namespace WebCore

@@ -40,6 +40,7 @@
 #include <WebGPU/WebGPUExt.h>
 #include <cstdint>
 #include <wtf/RefCounted.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore::WebGPU {
 
@@ -57,7 +58,6 @@ enum class CompareFunction : uint8_t;
 enum class CompilationMessageType : uint8_t;
 class CompositorIntegration;
 class CompositorIntegrationImpl;
-enum class ComputePassTimestampLocation : uint8_t;
 class ComputePassEncoder;
 class ComputePipeline;
 enum class CullMode : uint8_t;
@@ -81,7 +81,6 @@ class Queue;
 class RenderBundleEncoder;
 class RenderBundle;
 class RenderPassEncoder;
-enum class RenderPassTimestampLocation : uint8_t;
 class RenderPipeline;
 class Sampler;
 enum class SamplerBindingType : uint8_t;
@@ -98,9 +97,14 @@ class TextureView;
 enum class TextureViewDimension : uint8_t;
 enum class VertexFormat : uint8_t;
 enum class VertexStepMode : uint8_t;
+enum class XREye : uint8_t;
+class XRBinding;
+class XRProjectionLayer;
+class XRSubImage;
+class XRView;
 
 class ConvertToBackingContext : public RefCounted<ConvertToBackingContext> {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(ConvertToBackingContext);
 public:
     virtual ~ConvertToBackingContext() = default;
 
@@ -110,7 +114,6 @@ public:
     WGPUBufferBindingType convertToBacking(BufferBindingType);
     WGPUCompareFunction convertToBacking(CompareFunction);
     WGPUCompilationMessageType convertToBacking(CompilationMessageType);
-    WGPUComputePassTimestampLocation convertToBacking(ComputePassTimestampLocation);
     WGPUCullMode convertToBacking(CullMode);
     WGPUErrorFilter convertToBacking(ErrorFilter);
     WGPUFeatureName convertToBacking(FeatureName);
@@ -122,7 +125,6 @@ public:
     WGPUPowerPreference convertToBacking(PowerPreference);
     WGPUPrimitiveTopology convertToBacking(PrimitiveTopology);
     WGPUQueryType convertToBacking(QueryType);
-    WGPURenderPassTimestampLocation convertToBacking(RenderPassTimestampLocation);
     WGPUSamplerBindingType convertToBacking(SamplerBindingType);
     WGPUStencilOperation convertToBacking(StencilOperation);
     WGPUStorageTextureAccess convertToBacking(StorageTextureAccess);
@@ -170,6 +172,10 @@ public:
     virtual WGPUSurface convertToBacking(const PresentationContext&) = 0;
     virtual WGPUTexture convertToBacking(const Texture&) = 0;
     virtual WGPUTextureView convertToBacking(const TextureView&) = 0;
+    virtual WGPUXRBinding convertToBacking(const XRBinding&) = 0;
+    virtual WGPUXRProjectionLayer convertToBacking(const XRProjectionLayer&) = 0;
+    virtual WGPUXRSubImage convertToBacking(const XRSubImage&) = 0;
+    virtual WGPUXRView convertToBacking(const XRView&) = 0;
 };
 
 } // namespace WebCore::WebGPU

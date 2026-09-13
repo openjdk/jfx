@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,38 +25,21 @@
 
 package javafx.embed.swt;
 
-import com.sun.glass.ui.Application;
-import com.sun.glass.ui.Pixels;
-import com.sun.javafx.cursor.CursorFrame;
-import com.sun.javafx.cursor.CursorType;
-import com.sun.javafx.embed.AbstractEvents;
-import com.sun.javafx.embed.EmbeddedSceneDSInterface;
-import com.sun.javafx.embed.EmbeddedSceneDTInterface;
-import com.sun.javafx.embed.EmbeddedSceneInterface;
-import com.sun.javafx.embed.EmbeddedStageInterface;
-import com.sun.javafx.embed.HostInterface;
-import com.sun.javafx.stage.EmbeddedWindow;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Stack;
 import java.util.concurrent.CountDownLatch;
-
 import javafx.application.Platform;
 import javafx.beans.NamedArg;
 import javafx.scene.Scene;
 import javafx.scene.input.TransferMode;
 import javafx.stage.Window;
-import javafx.util.FXPermission;
-
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.dnd.DND;
 import org.eclipse.swt.dnd.DragSource;
@@ -98,6 +81,17 @@ import org.eclipse.swt.widgets.Control;
 import org.eclipse.swt.widgets.Display;
 import org.eclipse.swt.widgets.Listener;
 import org.eclipse.swt.widgets.Shell;
+import com.sun.glass.ui.Application;
+import com.sun.glass.ui.Pixels;
+import com.sun.javafx.cursor.CursorFrame;
+import com.sun.javafx.cursor.CursorType;
+import com.sun.javafx.embed.AbstractEvents;
+import com.sun.javafx.embed.EmbeddedSceneDSInterface;
+import com.sun.javafx.embed.EmbeddedSceneDTInterface;
+import com.sun.javafx.embed.EmbeddedSceneInterface;
+import com.sun.javafx.embed.EmbeddedStageInterface;
+import com.sun.javafx.embed.HostInterface;
+import com.sun.javafx.stage.EmbeddedWindow;
 
 /**
  * {@code FXCanvas} is a component to embed JavaFX content into
@@ -138,10 +132,6 @@ import org.eclipse.swt.widgets.Shell;
  * @since JavaFX 2.0
  */
 public class FXCanvas extends Canvas {
-
-    // Internal permission used by FXCanvas (SWT interop)
-    private static final FXPermission FXCANVAS_PERMISSION =
-            new FXPermission("accessFXCanvasInternals");
 
     private HostContainer hostContainer;
     private volatile EmbeddedWindow stage;
@@ -258,8 +248,7 @@ public class FXCanvas extends Canvas {
             }
         } else if (SWT.getPlatform().equals("win32")) {
             try {
-                @SuppressWarnings("removal")
-                String autoScale = AccessController.doPrivileged((PrivilegedAction<String>)() -> System.getProperty("swt.autoScale"));
+                String autoScale = System.getProperty("swt.autoScale");
                 if (autoScale == null || ! "false".equalsIgnoreCase(autoScale)) {
                     Class dpiUtilClass = Class.forName("org.eclipse.swt.internal.DPIUtil");
                     swtDPIUtilMethod = dpiUtilClass.getMethod("getDeviceZoom");
@@ -309,7 +298,6 @@ public class FXCanvas extends Canvas {
         return null;
     }
 
-    @SuppressWarnings("removal")
     private static void initFx() {
         // NOTE: no internal "com.sun.*" packages can be accessed until after
         // the JavaFX platform is initialized. The list of needed internal
@@ -330,33 +318,27 @@ public class FXCanvas extends Canvas {
         }
         final String eventProcStr = String.valueOf(eventProc);
 
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            System.setProperty("com.sun.javafx.application.type", "FXCanvas");
-            System.setProperty("javafx.embed.isEventThread", "true");
-            if (swtDPIUtilMethod == null) {
-                System.setProperty("glass.win.uiScale", "100%");
-                System.setProperty("glass.win.renderScale", "100%");
-            } else {
-                Integer scale = 100;
-                try {
-                    scale = (Integer) swtDPIUtilMethod.invoke(null);
-                } catch (Exception e) {
-                    //Fail silently
-                }
-                System.setProperty("glass.win.uiScale", scale + "%");
-                System.setProperty("glass.win.renderScale", scale + "%");
+        System.setProperty("com.sun.javafx.application.type", "FXCanvas");
+        System.setProperty("javafx.embed.isEventThread", "true");
+        if (swtDPIUtilMethod == null) {
+            System.setProperty("glass.win.uiScale", "100%");
+            System.setProperty("glass.win.renderScale", "100%");
+        } else {
+            Integer scale = 100;
+            try {
+                scale = (Integer) swtDPIUtilMethod.invoke(null);
+            } catch (Exception e) {
+                //Fail silently
             }
-            System.setProperty("javafx.embed.eventProc", eventProcStr);
-            return null;
-        });
+            System.setProperty("glass.win.uiScale", scale + "%");
+            System.setProperty("glass.win.renderScale", scale + "%");
+        }
+        System.setProperty("javafx.embed.eventProc", eventProcStr);
 
         final CountDownLatch startupLatch = new CountDownLatch(1);
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            Platform.startup(() -> {
-                startupLatch.countDown();
-            });
-            return null;
-        }, null, FXCANVAS_PERMISSION);
+        Platform.startup(() -> {
+            startupLatch.countDown();
+        });
 
         try {
             startupLatch.await();
@@ -751,7 +733,7 @@ public class FXCanvas extends Canvas {
                 me.x, me.y,
                 los.x, los.y,
                 shift, control, alt, meta,
-                false);  // RT-32990: popup trigger not implemented
+                false);  // JDK-8089491: popup trigger not implemented
     }
 
     double totalScrollX = 0;
@@ -1057,7 +1039,7 @@ public class FXCanvas extends Canvas {
         } else {
             pixelsBuf = IntBuffer.allocate((int)Math.ceil(pWidth * newScaleFactor) *
                                            (int)Math.ceil(pHeight * newScaleFactor));
-            // The bg color may show through on resize. See RT-34380.
+            // The bg color may show through on resize. See JDK-8122273.
             RGB rgb = getBackground().getRGB();
             Arrays.fill(pixelsBuf.array(), rgb.red << 16 | rgb.green << 8 | rgb.blue);
         }
@@ -1430,7 +1412,7 @@ public class FXCanvas extends Canvas {
 
         @Override
         public boolean traverseFocusOut(boolean bln) {
-            // RT-18085: not implemented
+            // JDK-8120706: not implemented
             return true;
         }
 
@@ -1498,13 +1480,13 @@ public class FXCanvas extends Canvas {
 
         @Override
         public boolean grabFocus() {
-            // RT-27949: not implemented
+            // JDK-8094861: not implemented
             return true;
         }
 
         @Override
         public void ungrabFocus() {
-            // RT-27949: not implemented
+            // JDK-8094861: not implemented
         }
     }
 }

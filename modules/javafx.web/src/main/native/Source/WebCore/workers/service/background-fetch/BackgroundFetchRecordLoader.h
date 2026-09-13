@@ -25,10 +25,8 @@
 
 #pragma once
 
-#if ENABLE(SERVICE_WORKER)
-
 #include <span>
-#include <wtf/WeakPtr.h>
+#include <wtf/AbstractRefCountedAndCanMakeWeakPtr.h>
 
 namespace WebCore {
 
@@ -36,23 +34,21 @@ class ResourceError;
 class ResourceResponse;
 class SharedBuffer;
 
-class BackgroundFetchRecordLoader {
+class BackgroundFetchRecordLoaderClient : public AbstractRefCountedAndCanMakeWeakPtr<BackgroundFetchRecordLoaderClient> {
 public:
-    virtual ~BackgroundFetchRecordLoader() = default;
-
-    class Client : public CanMakeWeakPtr<Client> {
-    public:
-        virtual ~Client() = default;
+    virtual ~BackgroundFetchRecordLoaderClient() = default;
 
         virtual void didSendData(uint64_t) = 0;
         virtual void didReceiveResponse(ResourceResponse&&) = 0;
         virtual void didReceiveResponseBodyChunk(const SharedBuffer&) = 0;
         virtual void didFinish(const ResourceError&) = 0;
-    };
+};
+
+class BackgroundFetchRecordLoader : public AbstractRefCounted {
+public:
+    virtual ~BackgroundFetchRecordLoader() = default;
 
     virtual void abort() = 0;
 };
 
 } // namespace WebCore
-
-#endif // ENABLE(SERVICE_WORKER)

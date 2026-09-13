@@ -31,17 +31,18 @@
 #include "WebGPUPtr.h"
 #include <WebGPU/WebGPU.h>
 #include <wtf/Deque.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore::WebGPU {
 
 class ConvertToBackingContext;
 
 class BufferImpl final : public Buffer {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_MAKE_TZONE_ALLOCATED(BufferImpl);
 public:
     static Ref<BufferImpl> create(WebGPUPtr<WGPUBuffer>&& buffer, ConvertToBackingContext& convertToBackingContext)
     {
-        return adoptRef(*new BufferImpl(WTFMove(buffer), convertToBackingContext));
+        return adoptRef(*new BufferImpl(WTF::move(buffer), convertToBackingContext));
     }
 
     virtual ~BufferImpl();
@@ -57,19 +58,26 @@ private:
     BufferImpl& operator=(BufferImpl&&) = delete;
 
     WGPUBuffer backing() const { return m_backing.get(); }
+    bool isBufferImpl() const final { return true; }
 
     void mapAsync(MapModeFlags, Size64 offset, std::optional<Size64> sizeForMap, CompletionHandler<void(bool)>&&) final;
-    MappedRange getMappedRange(Size64 offset, std::optional<Size64>) final;
+    void getMappedRange(Size64 offset, std::optional<Size64>, NOESCAPE const Function<void(std::span<uint8_t>)>&) final;
+    std::span<uint8_t> getBufferContents() final;
     void unmap() final;
+    void copyFrom(std::span<const uint8_t>, size_t offset) final;
 
     void destroy() final;
 
     void setLabelInternal(const String&) final;
 
-    WebGPUPtr<WGPUBuffer> m_backing;
-    Ref<ConvertToBackingContext> m_convertToBackingContext;
+    const WebGPUPtr<WGPUBuffer> m_backing;
+    const Ref<ConvertToBackingContext> m_convertToBackingContext;
 };
 
 } // namespace WebCore::WebGPU
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebGPU::BufferImpl)
+    static bool isType(const WebCore::WebGPU::Buffer& buffer) { return buffer.isBufferImpl(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

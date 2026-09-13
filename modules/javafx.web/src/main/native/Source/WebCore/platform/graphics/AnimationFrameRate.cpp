@@ -30,7 +30,7 @@
 
 namespace WebCore {
 
-static constexpr OptionSet<ThrottlingReason> halfSpeedThrottlingReasons { ThrottlingReason::LowPowerMode, ThrottlingReason::NonInteractedCrossOriginFrame, ThrottlingReason::VisuallyIdle };
+static constexpr OptionSet<ThrottlingReason> halfSpeedThrottlingReasons { ThrottlingReason::LowPowerMode, ThrottlingReason::NonInteractedCrossOriginFrame, ThrottlingReason::VisuallyIdle, ThrottlingReason::AggressiveThermalMitigation };
 
 FramesPerSecond framesPerSecondNearestFullSpeed(FramesPerSecond nominalFramesPerSecond)
 {
@@ -102,26 +102,32 @@ TextStream& operator<<(TextStream& ts, const OptionSet<ThrottlingReason>& reason
 
     for (auto reason : reasons) {
         if (didAppend)
-            ts << "|";
+            ts << '|';
         switch (reason) {
         case ThrottlingReason::VisuallyIdle:
-            ts << "VisuallyIdle";
+            ts << "VisuallyIdle"_s;
             break;
         case ThrottlingReason::OutsideViewport:
-            ts << "OutsideViewport";
+            ts << "OutsideViewport"_s;
             break;
         case ThrottlingReason::LowPowerMode:
-            ts << "LowPowerMode";
+            ts << "LowPowerMode"_s;
             break;
         case ThrottlingReason::NonInteractedCrossOriginFrame:
-            ts << "NonInteractiveCrossOriginFrame";
+            ts << "NonInteractedCrossOriginFrame"_s;
+            break;
+        case ThrottlingReason::ThermalMitigation:
+            ts << "ThermalMitigation"_s;
+            break;
+        case ThrottlingReason::AggressiveThermalMitigation:
+            ts << "AggressiveThermalMitigation"_s;
             break;
         }
         didAppend = true;
     }
 
     if (reasons.isEmpty())
-        ts << "[Unthrottled]";
+        ts << "[Unthrottled]"_s;
     return ts;
 }
 } // namespace WebCore

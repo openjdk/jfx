@@ -25,10 +25,12 @@
 
 #pragma once
 
+#include <stddef.h>
+#include <wtf/Platform.h>
+
 namespace JSC {
 
 namespace Wasm {
-
 #if ENABLE(WEBASSEMBLY)
 void activateSignalingMemory();
 void prepareSignalingMemory();
@@ -36,5 +38,7 @@ void prepareSignalingMemory();
 inline void activateSignalingMemory() { }
 inline void prepareSignalingMemory() { }
 #endif // ENABLE(WEBASSEMBLY)
+
+ptrdiff_t maxAcceptableOffsetForNullReference();
 
 } } // namespace JSC::Wasm

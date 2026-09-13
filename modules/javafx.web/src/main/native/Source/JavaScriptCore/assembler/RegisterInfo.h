@@ -47,16 +47,12 @@
  *   dependent files (for example assembler X86Assembler.h).
  */
 
-#if CPU(X86)
-#include "X86Registers.h"
-#elif CPU(X86_64)
-#include "X86_64Registers.h"
-#elif CPU(MIPS)
-#include "MIPSRegisters.h"
+#if CPU(X86_64)
+#include <JavaScriptCore/X86_64Registers.h>
 #elif CPU(ARM_THUMB2)
-#include "ARMv7Registers.h"
+#include <JavaScriptCore/ARMv7Registers.h>
 #elif CPU(ARM64)
-#include "ARM64Registers.h"
+#include <JavaScriptCore/ARM64Registers.h>
 #else
     UNREACHABLE_FOR_PLATFORM();
 #endif

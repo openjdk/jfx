@@ -28,16 +28,14 @@
 #include <wtf/RefPtr.h>
 
 #if ENABLE(WEB_CRYPTO)
-
 namespace WebCore {
 
 class CryptoKey;
 
 struct CryptoKeyPair {
-    RefPtr<CryptoKey> publicKey;
-    RefPtr<CryptoKey> privateKey;
+    const RefPtr<CryptoKey> publicKey;
+    const RefPtr<CryptoKey> privateKey;
 };
 
 } // namespace WebCore
-
 #endif // ENABLE(WEB_CRYPTO)

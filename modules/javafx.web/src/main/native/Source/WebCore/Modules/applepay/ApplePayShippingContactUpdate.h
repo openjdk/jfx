@@ -27,16 +27,16 @@
 
 #if ENABLE(APPLE_PAY)
 
-#include "ApplePayDetailsUpdateBase.h"
-#include "ApplePayError.h"
-#include "ApplePayShippingMethod.h"
+#include <WebCore/ApplePayDetailsUpdateBase.h>
+#include <WebCore/ApplePayError.h>
+#include <WebCore/ApplePayShippingMethod.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {
 
 struct ApplePayShippingContactUpdate final : public ApplePayDetailsUpdateBase {
-    Vector<RefPtr<ApplePayError>> errors;
+    Vector<Ref<ApplePayError>> errors;
     Vector<ApplePayShippingMethod> newShippingMethods;
 };
 

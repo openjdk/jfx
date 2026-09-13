@@ -175,18 +175,22 @@ typedef gpointer GstClockID;
  *
  * Converts a #GstClockTime to a GTimeVal
  *
- * > on 32-bit systems, a timeval has a range of only 2^32 - 1 seconds,
- * > which is about 68 years.  Expect trouble if you want to schedule stuff
- * > in your pipeline for 2038.
+ * > on many 32-bit systems, a timeval has a range of only 2^32 - 1 seconds,
+ * > which is about 68 years. Expect trouble if you want to schedule stuff
+ * > in your pipeline for 2038. This macro asserts that this case does not
+ * > happen.
  */
-#define GST_TIME_TO_TIMEVAL(t,tv)                               \
-G_STMT_START {                                                  \
-  g_assert ("Value of time " #t " is out of timeval's range" && \
-      ((t) / GST_SECOND) < G_MAXLONG);                          \
-  (tv).tv_sec  = (glong) (((GstClockTime) (t)) / GST_SECOND);   \
-  (tv).tv_usec = (glong) ((((GstClockTime) (t)) -               \
-                  ((GstClockTime) (tv).tv_sec) * GST_SECOND)    \
-                 / GST_USECOND);                                \
+#define GST_TIME_TO_TIMEVAL(t,tv)                                           \
+G_STMT_START {                                                              \
+  G_STATIC_ASSERT (sizeof ((tv).tv_sec) == 4 || sizeof ((tv).tv_sec) == 8); \
+  if (sizeof ((tv).tv_sec) == 4) {                                          \
+    g_assert ("Value of time " #t " is out of timeval's range" &&           \
+        ((t) / GST_SECOND) < G_MAXINT32);                                   \
+  }                                                                         \
+  (tv).tv_sec  = (((GstClockTime) (t)) / GST_SECOND);                       \
+  (tv).tv_usec = ((((GstClockTime) (t)) -                                   \
+                  ((GstClockTime) (tv).tv_sec) * GST_SECOND)                \
+                 / GST_USECOND);                                            \
 } G_STMT_END
 
 /**
@@ -203,12 +207,15 @@ G_STMT_START {                                                  \
  *
  * Converts a #GstClockTime to a struct timespec (see `man pselect`)
  */
-#define GST_TIME_TO_TIMESPEC(t,ts)                                \
-G_STMT_START {                                                    \
-  g_assert ("Value of time " #t " is out of timespec's range" &&  \
-      ((t) / GST_SECOND) < G_MAXLONG);                            \
-  (ts).tv_sec  =  (glong) ((t) / GST_SECOND);                     \
-  (ts).tv_nsec = (glong) (((t) - (ts).tv_sec * GST_SECOND) / GST_NSECOND);        \
+#define GST_TIME_TO_TIMESPEC(t,ts)                                          \
+G_STMT_START {                                                              \
+  G_STATIC_ASSERT (sizeof ((ts).tv_sec) == 4 || sizeof ((ts).tv_sec) == 8); \
+  if (sizeof ((ts).tv_sec) == 4) {                                          \
+    g_assert ("Value of time " #t " is out of timespec's range" &&          \
+        ((t) / GST_SECOND) < G_MAXINT32);                                   \
+  }                                                                         \
+  (ts).tv_sec  =  ((t) / GST_SECOND);                                       \
+  (ts).tv_nsec = (((t) - (ts).tv_sec * GST_SECOND) / GST_NSECOND);          \
 } G_STMT_END
 
 /* timestamp debugging macros */
@@ -594,7 +601,7 @@ GST_API
 gboolean                gst_clock_set_master            (GstClock *clock, GstClock *master);
 
 GST_API
-GstClock*               gst_clock_get_master            (GstClock *clock);
+GstClock*               gst_clock_get_master            (GstClock *clock) G_GNUC_WARN_UNUSED_RESULT;
 
 GST_API
 void                    gst_clock_set_timeout           (GstClock *clock,
@@ -603,15 +610,19 @@ GST_API
 GstClockTime            gst_clock_get_timeout           (GstClock *clock);
 
 GST_API
-gboolean                gst_clock_add_observation       (GstClock *clock, GstClockTime slave,
-                                                         GstClockTime master, gdouble *r_squared);
+gboolean                gst_clock_add_observation       (GstClock *clock,
+                                                         GstClockTime observation_internal,
+                                                         GstClockTime observation_external,
+                                                         gdouble *r_squared);
 GST_API
-gboolean                gst_clock_add_observation_unapplied (GstClock *clock, GstClockTime slave,
-                                                         GstClockTime master, gdouble *r_squared,
-                                                         GstClockTime *internal,
-                                                         GstClockTime *external,
-                                                         GstClockTime *rate_num,
-                                                         GstClockTime *rate_denom);
+gboolean                gst_clock_add_observation_unapplied (GstClock *clock,
+                                                             GstClockTime observation_internal,
+                                                             GstClockTime observation_external,
+                                                             gdouble *r_squared,
+                                                             GstClockTime *internal,
+                                                             GstClockTime *external,
+                                                             GstClockTime *rate_num,
+                                                             GstClockTime *rate_denom);
 
 /* getting and adjusting internal/external time */
 
@@ -655,11 +666,11 @@ void                    gst_clock_set_synced            (GstClock * clock, gbool
 
 GST_API
 GstClockID              gst_clock_new_single_shot_id    (GstClock *clock,
-                                                         GstClockTime time);
+                                                         GstClockTime time) G_GNUC_WARN_UNUSED_RESULT;
 GST_API
 GstClockID              gst_clock_new_periodic_id       (GstClock *clock,
                                                          GstClockTime start_time,
-                                                         GstClockTime interval);
+                                                         GstClockTime interval) G_GNUC_WARN_UNUSED_RESULT;
 
 /* reference counting */
 

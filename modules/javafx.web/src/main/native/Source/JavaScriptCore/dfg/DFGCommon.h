@@ -25,11 +25,12 @@
 
 #pragma once
 
-#include "JITCompilationMode.h"
+#include <JavaScriptCore/JITCompilationMode.h>
+#include <wtf/Platform.h>
 
 #if ENABLE(DFG_JIT)
 
-#include "Options.h"
+#include <JavaScriptCore/Options.h>
 #include <limits.h>
 #include <wtf/text/StringImpl.h>
 
@@ -252,7 +253,8 @@ inline KillStatus killStatusForDoesKill(bool doesKill)
 
 enum class PlanStage {
     Initial,
-    AfterFixup
+    AfterFixup,
+    LICMAndLater
 };
 
 // If possible, this will acquire a lock to make sure that if multiple threads

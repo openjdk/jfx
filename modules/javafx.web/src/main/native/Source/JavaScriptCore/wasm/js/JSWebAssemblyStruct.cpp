@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2022-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2022-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,49 +32,39 @@
 #include "JSWebAssemblyInstance.h"
 #include "WasmFormat.h"
 #include "WasmModuleInformation.h"
-#include <wtf/MallocPtr.h>
+#include <wtf/ScopedPrintStream.h>
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace JSC {
 
 const ClassInfo JSWebAssemblyStruct::s_info = { "WebAssembly.Struct"_s, &Base::s_info, nullptr, nullptr, CREATE_METHOD_TABLE(JSWebAssemblyStruct) };
 
-JSWebAssemblyStruct::JSWebAssemblyStruct(VM& vm, Structure* structure, Ref<const Wasm::TypeDefinition>&& type, RefPtr<const Wasm::RTT> rtt)
-    : Base(vm, structure, rtt)
-    , m_type(WTFMove(type))
-    , m_payload(structType()->instancePayloadSize(), 0)
+JSWebAssemblyStruct::JSWebAssemblyStruct(VM& vm, WebAssemblyGCStructure* structure)
+    : Base(vm, structure)
+    , TrailingArrayType(structure->typeDefinition().as<Wasm::StructType>()->instancePayloadSize())
 {
+    // Make sure if another object is allocated while initializing the struct we don't crash the GC. It's *VERY* important this happens before finishCreation since that executes our mutator fence.
+    memsetSpan(span(), 0);
 }
 
-JSWebAssemblyStruct* JSWebAssemblyStruct::tryCreate(JSGlobalObject* globalObject, Structure* structure, JSWebAssemblyInstance* instance, uint32_t typeIndex, RefPtr<const Wasm::RTT> rtt)
+JSWebAssemblyStruct* JSWebAssemblyStruct::tryCreate(VM& vm, WebAssemblyGCStructure* structure)
 {
-    VM& vm = globalObject->vm();
-    auto throwScope = DECLARE_THROW_SCOPE(vm);
-
-    Ref<const Wasm::TypeDefinition> type = instance->instance().module().moduleInformation().typeSignatures[typeIndex]->expand();
-
-    if (!globalObject->webAssemblyEnabled()) {
-        throwException(globalObject, throwScope, createEvalError(globalObject, globalObject->webAssemblyDisabledErrorMessage()));
+    SUPPRESS_UNCOUNTED_LOCAL auto* structType = structure->typeDefinition().as<Wasm::StructType>();
+    auto* cell = tryAllocateCell<JSWebAssemblyStruct>(vm, TrailingArrayType::allocationSize(structType->instancePayloadSize()));
+    if (!cell) [[unlikely]]
         return nullptr;
-    }
 
-    if (!Options::useWebAssemblyGC()) {
-        throwException(globalObject, throwScope, createEvalError(globalObject, "WebAssembly GC is not enabled."_s));
-        return nullptr;
-    }
-
-    auto* structValue = new (NotNull, allocateCell<JSWebAssemblyStruct>(vm)) JSWebAssemblyStruct(vm, structure, Ref { type }, rtt);
+    auto* structValue = new (NotNull, cell) JSWebAssemblyStruct(vm, structure);
     structValue->finishCreation(vm);
     return structValue;
 }
 
-const uint8_t* JSWebAssemblyStruct::fieldPointer(uint32_t fieldIndex) const
+JSWebAssemblyStruct* JSWebAssemblyStruct::create(VM& vm, WebAssemblyGCStructure* structure)
 {
-    return m_payload.data() + structType()->offsetOfFieldInternal(fieldIndex);
-}
-
-uint8_t* JSWebAssemblyStruct::fieldPointer(uint32_t fieldIndex)
-{
-    return const_cast<uint8_t*>(const_cast<const JSWebAssemblyStruct*>(this)->fieldPointer(fieldIndex));
+    auto* result = JSWebAssemblyStruct::tryCreate(vm, structure);
+    RELEASE_ASSERT(result);
+    return result;
 }
 
 uint64_t JSWebAssemblyStruct::get(uint32_t fieldIndex) const
@@ -83,53 +73,72 @@ uint64_t JSWebAssemblyStruct::get(uint32_t fieldIndex) const
 
     const uint8_t* targetPointer = fieldPointer(fieldIndex);
 
-    // FIXME: packed types in structs not supported yet:
-    // https://bugs.webkit.org/show_bug.cgi?id=246981
+    if (fieldType(fieldIndex).type.is<Wasm::PackedType>()) {
+        switch (fieldType(fieldIndex).type.as<Wasm::PackedType>()) {
+        case Wasm::PackedType::I8:
+            return *std::bit_cast<uint8_t*>(targetPointer);
+        case Wasm::PackedType::I16:
+            return *std::bit_cast<uint16_t*>(targetPointer);
+        }
+    }
     ASSERT(fieldType(fieldIndex).type.is<Wasm::Type>());
 
     switch (fieldType(fieldIndex).type.as<Wasm::Type>().kind) {
     case TypeKind::I32:
     case TypeKind::F32:
-        return *bitwise_cast<uint32_t*>(targetPointer);
+        return *std::bit_cast<uint32_t*>(targetPointer);
     case TypeKind::I64:
     case TypeKind::F64:
-        return *bitwise_cast<const uint64_t*>(targetPointer);
+        return *std::bit_cast<const uint64_t*>(targetPointer);
+    case TypeKind::Exnref:
     case TypeKind::Externref:
     case TypeKind::Funcref:
     case TypeKind::Ref:
     case TypeKind::RefNull:
-        return JSValue::encode(bitwise_cast<WriteBarrierBase<Unknown>*>(targetPointer)->get());
+        return JSValue::encode(std::bit_cast<WriteBarrierBase<Unknown>*>(targetPointer)->get());
+    case TypeKind::V128:
+        ASSERT_NOT_REACHED("V128 values should use getVector() method");
+        return 0;
     default:
         ASSERT_NOT_REACHED();
         return 0;
     }
 }
 
-void JSWebAssemblyStruct::set(JSGlobalObject* globalObject, uint32_t fieldIndex, JSValue argument)
+v128_t JSWebAssemblyStruct::getVector(uint32_t fieldIndex) const
+{
+    const uint8_t* targetPointer = fieldPointer(fieldIndex);
+    ASSERT(fieldType(fieldIndex).type.unpacked().isV128());
+    return *std::bit_cast<const v128_t*>(targetPointer);
+}
+
+void JSWebAssemblyStruct::set(uint32_t fieldIndex, uint64_t argument)
 {
     using Wasm::TypeKind;
 
     uint8_t* targetPointer = fieldPointer(fieldIndex);
 
-    // FIXME: packed types in structs not supported yet:
-    // https://bugs.webkit.org/show_bug.cgi?id=246981
+    if (fieldType(fieldIndex).type.is<Wasm::PackedType>()) {
+        switch (fieldType(fieldIndex).type.as<Wasm::PackedType>()) {
+        case Wasm::PackedType::I8:
+            *std::bit_cast<uint8_t*>(targetPointer) = static_cast<uint8_t>(argument);
+            return;
+        case Wasm::PackedType::I16:
+            *std::bit_cast<uint16_t*>(targetPointer) = static_cast<uint16_t>(argument);
+            return;
+        }
+    }
     ASSERT(fieldType(fieldIndex).type.is<Wasm::Type>());
 
     switch (fieldType(fieldIndex).type.as<Wasm::Type>().kind) {
-    case TypeKind::I32: {
-        *bitwise_cast<int32_t*>(targetPointer) = argument.toInt32(globalObject);
-        return;
-    }
+    case TypeKind::I32:
     case TypeKind::F32: {
-        *bitwise_cast<uint32_t*>(targetPointer) = bitwise_cast<uint32_t>(argument.toFloat(globalObject));
+        *std::bit_cast<uint32_t*>(targetPointer) = static_cast<uint32_t>(argument);
         return;
     }
-    case TypeKind::I64: {
-        *bitwise_cast<uint64_t*>(targetPointer) = bitwise_cast<uint64_t>(argument.toBigInt64(globalObject));
-        return;
-    }
+    case TypeKind::I64:
     case TypeKind::F64: {
-        *bitwise_cast<uint64_t*>(targetPointer) = bitwise_cast<uint64_t>(argument.toNumber(globalObject));
+        *std::bit_cast<uint64_t*>(targetPointer) = argument;
         return;
     }
     case TypeKind::Arrayref:
@@ -138,7 +147,7 @@ void JSWebAssemblyStruct::set(JSGlobalObject* globalObject, uint32_t fieldIndex,
     case TypeKind::Funcref:
     case TypeKind::Ref:
     case TypeKind::RefNull: {
-        bitwise_cast<WriteBarrierBase<Unknown>*>(targetPointer)->set(vm(), this, argument);
+        std::bit_cast<WriteBarrierBase<Unknown>*>(targetPointer)->set(vm(), this, JSValue::decode(static_cast<EncodedJSValue>(argument)));
         return;
     }
     case TypeKind::V128:
@@ -147,10 +156,15 @@ void JSWebAssemblyStruct::set(JSGlobalObject* globalObject, uint32_t fieldIndex,
     case TypeKind::Array:
     case TypeKind::Void:
     case TypeKind::Sub:
+    case TypeKind::Subfinal:
     case TypeKind::Rec:
+    case TypeKind::Exnref:
     case TypeKind::Eqref:
     case TypeKind::Anyref:
-    case TypeKind::Nullref:
+    case TypeKind::Noexnref:
+    case TypeKind::Noneref:
+    case TypeKind::Nofuncref:
+    case TypeKind::Noexternref:
     case TypeKind::I31ref: {
         break;
     }
@@ -159,25 +173,42 @@ void JSWebAssemblyStruct::set(JSGlobalObject* globalObject, uint32_t fieldIndex,
     ASSERT_NOT_REACHED();
 }
 
+void JSWebAssemblyStruct::set(uint32_t fieldIndex, v128_t argument)
+{
+    uint8_t* targetPointer = fieldPointer(fieldIndex);
+    ASSERT(fieldType(fieldIndex).type.is<Wasm::Type>());
+    ASSERT(fieldType(fieldIndex).type.as<Wasm::Type>().kind == Wasm::TypeKind::V128);
+    *std::bit_cast<v128_t*>(targetPointer) = argument;
+}
+
 template<typename Visitor>
 void JSWebAssemblyStruct::visitChildrenImpl(JSCell* cell, Visitor& visitor)
 {
     Base::visitChildren(cell, visitor);
 
     auto* wasmStruct = jsCast<JSWebAssemblyStruct*>(cell);
-    for (unsigned i = 0; i < wasmStruct->structType()->fieldCount(); ++i) {
-        if (isRefType(wasmStruct->fieldType(i).type))
-            visitor.append(*bitwise_cast<WriteBarrier<Unknown>*>(wasmStruct->fieldPointer(i)));
+    if (!wasmStruct->structType().hasRefFieldTypes()) {
+#if ASSERT_ENABLED
+        for (unsigned i = 0; i < wasmStruct->structType().fieldCount(); ++i)
+            ASSERT(!isRefType(wasmStruct->fieldType(i).type));
+#endif
+        return;
+    }
+
+    for (unsigned i = 0; i < wasmStruct->structType().fieldCount(); ++i) {
+        auto fieldType = wasmStruct->fieldType(i).type;
+        if (isRefType(fieldType)) {
+            auto* writeBarrier = std::bit_cast<WriteBarrier<Unknown>*>(wasmStruct->fieldPointer(i));
+            validateWasmValue(JSValue::encode(writeBarrier->get()), fieldType.unpacked());
+            visitor.append(*std::bit_cast<WriteBarrier<Unknown>*>(wasmStruct->fieldPointer(i)));
+    }
     }
 }
 
 DEFINE_VISIT_CHILDREN(JSWebAssemblyStruct);
 
-void JSWebAssemblyStruct::destroy(JSCell* cell)
-{
-    static_cast<JSWebAssemblyStruct*>(cell)->JSWebAssemblyStruct::~JSWebAssemblyStruct();
-}
-
 } // namespace JSC
+
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif // ENABLE(WEBASSEMBLY)

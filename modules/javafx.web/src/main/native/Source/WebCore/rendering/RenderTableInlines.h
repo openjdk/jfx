@@ -19,37 +19,103 @@
 
 #pragma once
 
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderTable.h"
 
 namespace WebCore {
 
 inline LayoutUnit RenderTable::borderBottom() const
 {
-    if (style().isHorizontalWritingMode())
-        return style().isFlippedBlocksWritingMode() ? borderBefore() : borderAfter();
-    return style().isLeftToRightDirection() ? borderEnd() : borderStart();
+    if (writingMode().isHorizontal())
+        return writingMode().isBlockTopToBottom() ? borderAfter() : borderBefore();
+    return writingMode().isInlineTopToBottom() ? borderEnd() : borderStart();
 }
 
 inline LayoutUnit RenderTable::borderLeft() const
 {
-    if (style().isHorizontalWritingMode())
-        return style().isLeftToRightDirection() ? borderStart() : borderEnd();
-    return style().isFlippedBlocksWritingMode() ? borderAfter() : borderBefore();
+    if (writingMode().isHorizontal())
+        return writingMode().isInlineLeftToRight() ? borderStart() : borderEnd();
+    return writingMode().isBlockLeftToRight() ? borderBefore() : borderAfter();
 }
 
 inline LayoutUnit RenderTable::borderRight() const
 {
-    if (style().isHorizontalWritingMode())
-        return style().isLeftToRightDirection() ? borderEnd() : borderStart();
-    return style().isFlippedBlocksWritingMode() ? borderBefore() : borderAfter();
+    if (writingMode().isHorizontal())
+        return writingMode().isInlineLeftToRight() ? borderEnd() : borderStart();
+    return writingMode().isBlockLeftToRight() ? borderAfter() : borderBefore();
 }
 
 inline LayoutUnit RenderTable::borderTop() const
 {
-    if (style().isHorizontalWritingMode())
-        return style().isFlippedBlocksWritingMode() ? borderAfter() : borderBefore();
-    return style().isLeftToRightDirection() ? borderStart() : borderEnd();
+    if (writingMode().isHorizontal())
+        return writingMode().isBlockTopToBottom() ? borderBefore() : borderAfter();
+    return writingMode().isInlineTopToBottom() ? borderStart() : borderEnd();
+}
+
+inline RectEdges<LayoutUnit> RenderTable::borderWidths() const
+{
+    return {
+        borderTop(),
+        borderRight(),
+        borderBottom(),
+        borderLeft()
+    };
+}
+
+inline LayoutUnit RenderTable::paddingTop() const
+{
+    if (collapseBorders())
+        return { };
+    return RenderBlock::paddingTop();
+}
+
+inline LayoutUnit RenderTable::paddingBottom() const
+{
+    if (collapseBorders())
+        return { };
+    return RenderBlock::paddingBottom();
+}
+
+inline LayoutUnit RenderTable::paddingLeft() const
+{
+    if (collapseBorders())
+        return { };
+    return RenderBlock::paddingLeft();
+}
+
+inline LayoutUnit RenderTable::paddingRight() const
+{
+    if (collapseBorders())
+        return { };
+    return RenderBlock::paddingRight();
+}
+
+inline LayoutUnit RenderTable::paddingAfter() const
+{
+    if (collapseBorders())
+        return { };
+    return RenderBlock::paddingAfter();
+}
+
+inline LayoutUnit RenderTable::paddingBefore() const
+{
+    if (collapseBorders())
+        return { };
+    return RenderBlock::paddingBefore();
+}
+
+inline LayoutUnit RenderTable::paddingStart() const
+{
+    if (collapseBorders())
+        return { };
+    return RenderBlock::paddingStart();
+}
+
+inline LayoutUnit RenderTable::paddingEnd() const
+{
+    if (collapseBorders())
+        return { };
+    return RenderBlock::paddingEnd();
 }
 
 inline LayoutUnit RenderTable::bordersPaddingAndSpacingInRowDirection() const
@@ -60,30 +126,30 @@ inline LayoutUnit RenderTable::bordersPaddingAndSpacingInRowDirection() const
 
 inline LayoutUnit RenderTable::outerBorderBottom() const
 {
-    if (style().isHorizontalWritingMode())
-        return style().isFlippedBlocksWritingMode() ? outerBorderBefore() : outerBorderAfter();
-    return style().isLeftToRightDirection() ? outerBorderEnd() : outerBorderStart();
+    if (writingMode().isHorizontal())
+        return writingMode().isBlockTopToBottom() ? outerBorderAfter() : outerBorderBefore();
+    return writingMode().isInlineTopToBottom() ? outerBorderEnd() : outerBorderStart();
 }
 
 inline LayoutUnit RenderTable::outerBorderLeft() const
 {
-    if (style().isHorizontalWritingMode())
-        return style().isLeftToRightDirection() ? outerBorderStart() : outerBorderEnd();
-    return style().isFlippedBlocksWritingMode() ? outerBorderAfter() : outerBorderBefore();
+    if (writingMode().isHorizontal())
+        return writingMode().isInlineLeftToRight() ? outerBorderStart() : outerBorderEnd();
+    return writingMode().isBlockLeftToRight() ? outerBorderBefore() : outerBorderAfter();
 }
 
 inline LayoutUnit RenderTable::outerBorderRight() const
 {
-    if (style().isHorizontalWritingMode())
-        return style().isLeftToRightDirection() ? outerBorderEnd() : outerBorderStart();
-    return style().isFlippedBlocksWritingMode() ? outerBorderBefore() : outerBorderAfter();
+    if (writingMode().isHorizontal())
+        return writingMode().isInlineLeftToRight() ? outerBorderEnd() : outerBorderStart();
+    return writingMode().isBlockLeftToRight() ? outerBorderAfter() : outerBorderBefore();
 }
 
 inline LayoutUnit RenderTable::outerBorderTop() const
 {
-    if (style().isHorizontalWritingMode())
-        return style().isFlippedBlocksWritingMode() ? outerBorderAfter() : outerBorderBefore();
-    return style().isLeftToRightDirection() ? outerBorderStart() : outerBorderEnd();
+    if (writingMode().isHorizontal())
+        return writingMode().isBlockTopToBottom() ? outerBorderBefore() : outerBorderAfter();
+    return writingMode().isInlineTopToBottom() ? outerBorderStart() : borderEnd();
 }
 
 } // namespace WebCore

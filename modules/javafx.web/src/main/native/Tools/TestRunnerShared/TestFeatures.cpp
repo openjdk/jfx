@@ -27,9 +27,11 @@
 #include "TestFeatures.h"
 
 #include "TestCommand.h"
+#include "WPTFunctions.h"
 #include <fstream>
 #include <string>
 #include <wtf/StdFilesystem.h>
+#include <wtf/URL.h>
 
 namespace WTR {
 
@@ -48,6 +50,7 @@ void merge(TestFeatures& base, TestFeatures additional)
     merge(base.stringWebPreferenceFeatures, additional.stringWebPreferenceFeatures);
     merge(base.boolTestRunnerFeatures, additional.boolTestRunnerFeatures);
     merge(base.doubleTestRunnerFeatures, additional.doubleTestRunnerFeatures);
+    merge(base.uint16TestRunnerFeatures, additional.uint16TestRunnerFeatures);
     merge(base.stringTestRunnerFeatures, additional.stringTestRunnerFeatures);
     merge(base.stringVectorTestRunnerFeatures, additional.stringVectorTestRunnerFeatures);
 }
@@ -65,6 +68,8 @@ bool operator==(const TestFeatures& a, const TestFeatures& b)
     if (a.boolTestRunnerFeatures != b.boolTestRunnerFeatures)
         return false;
     if (a.doubleTestRunnerFeatures != b.doubleTestRunnerFeatures)
+        return false;
+    if (a.uint16TestRunnerFeatures != b.uint16TestRunnerFeatures)
         return false;
     if (a.stringTestRunnerFeatures != b.stringTestRunnerFeatures)
         return false;
@@ -106,20 +111,39 @@ static std::optional<double> overrideDeviceScaleFactorForTest(const std::string&
 
 static bool shouldDumpJSConsoleLogInStdErr(const std::string& pathOrURL)
 {
-    return pathContains(pathOrURL, "localhost:8800/beacon") || pathContains(pathOrURL, "localhost:9443/beacon")
-        || pathContains(pathOrURL, "localhost:8800/cors") || pathContains(pathOrURL, "localhost:9443/cors")
-        || pathContains(pathOrURL, "localhost:8800/fetch") || pathContains(pathOrURL, "localhost:9443/fetch")
-        || pathContains(pathOrURL, "localhost:8800/service-workers") || pathContains(pathOrURL, "localhost:9443/service-workers")
-        || pathContains(pathOrURL, "localhost:8800/streams/writable-streams") || pathContains(pathOrURL, "localhost:9443/streams/writable-streams")
-        || pathContains(pathOrURL, "localhost:8800/streams/piping") || pathContains(pathOrURL, "localhost:9443/streams/piping")
-        || pathContains(pathOrURL, "localhost:8800/xhr") || pathContains(pathOrURL, "localhost:9443/xhr")
-        || pathContains(pathOrURL, "localhost:8800/webrtc") || pathContains(pathOrURL, "localhost:9443/webrtc")
-        || pathContains(pathOrURL, "localhost:8800/websockets") || pathContains(pathOrURL, "localhost:9443/websockets");
+    // Disable console logging for WPT tests as it frequently causes flakiness.
+    if (auto url = URL { { }, String::fromUTF8(pathOrURL.c_str()) }; isWebPlatformTestURL(url))
+        return true;
+
+    return false;
 }
 
-static bool shouldEnableWebGPU(const std::string& pathOrURL)
+static bool shouldSetDefaultPortsForWTR(const std::string& pathOrURL)
 {
-    return pathContains(pathOrURL, "127.0.0.1:8000/webgpu");
+    return pathContains(pathOrURL, "localhost:8000/") || pathContains(pathOrURL, "localhost:8443/")
+        || pathContains(pathOrURL, "127.0.0.1:8000/") || pathContains(pathOrURL, "127.0.0.1:8443/");
+}
+
+static bool shouldSetDefaultPortsForWPT(const std::string& pathOrURL)
+{
+    return pathContains(pathOrURL, "localhost:8800/") || pathContains(pathOrURL, "localhost:9443/")
+        || pathContains(pathOrURL, "127.0.0.1:8800/") || pathContains(pathOrURL, "127.0.0.1:9443/");
+}
+
+static bool shouldEnableLockdownMode(const std::string& pathOrURL)
+{
+    return pathContains(pathOrURL, "lockdown-mode/");
+}
+
+static bool shouldEnableEnhancedSecurity(const std::string& pathOrURL)
+{
+    return pathContains(pathOrURL, "enhanced-security/");
+}
+
+static bool shouldUseBackForwardCache(const std::string& pathOrURL)
+{
+    return pathContains(pathOrURL, "navigation-api/")
+        || pathContains(pathOrURL, "websockets/back-forward-cache");
 }
 
 TestFeatures hardcodedFeaturesBasedOnPathForTest(const TestCommand& command)
@@ -138,8 +162,19 @@ TestFeatures hardcodedFeaturesBasedOnPathForTest(const TestCommand& command)
         features.doubleTestRunnerFeatures.insert({ "viewWidth", viewWidthAndHeight->first });
         features.doubleTestRunnerFeatures.insert({ "viewHeight", viewWidthAndHeight->second });
     }
-    if (shouldEnableWebGPU(command.pathOrURL))
-        features.boolWebPreferenceFeatures.insert({ "WebGPUEnabled", true });
+    if (shouldSetDefaultPortsForWTR(command.pathOrURL)) {
+        features.uint16TestRunnerFeatures.insert({ "insecureUpgradePort", 8000 });
+        features.uint16TestRunnerFeatures.insert({ "secureUpgradePort", 8443 });
+    } else if (shouldSetDefaultPortsForWPT(command.pathOrURL)) {
+        features.uint16TestRunnerFeatures.insert({ "insecureUpgradePort", 8800 });
+        features.uint16TestRunnerFeatures.insert({ "secureUpgradePort", 9443 });
+    }
+    if (shouldEnableLockdownMode(command.pathOrURL))
+        features.boolWebPreferenceFeatures.insert({ "LockdownModeEnabled", true });
+    if (shouldEnableEnhancedSecurity(command.pathOrURL))
+        features.boolTestRunnerFeatures.insert({ "enhancedSecurityEnabled", true });
+    if (shouldUseBackForwardCache(command.pathOrURL))
+        features.boolWebPreferenceFeatures.insert({ "UsesBackForwardCache", true });
 
     return features;
 }
@@ -163,6 +198,11 @@ static double parseDoubleTestHeaderValue(const std::string& value)
 static uint32_t parseUInt32TestHeaderValue(const std::string& value)
 {
     return std::stoi(value);
+}
+
+static uint16_t parseUInt16TestHeaderValue(const std::string& value)
+{
+    return static_cast<uint16_t>(std::stoul(value));
 }
 
 static std::string parseStringTestHeaderValueAsRelativePath(const std::string& value, const std::filesystem::path& testPath)
@@ -196,7 +236,7 @@ static std::vector<std::string> parseStringTestHeaderValueAsStringVector(const s
     return result;
 }
 
-bool parseTestHeaderFeature(TestFeatures& features, std::string key, std::string value, std::filesystem::path path, const std::unordered_map<std::string, TestHeaderKeyType>& keyTypeMap)
+static bool parseTestHeaderFeature(TestFeatures& features, std::string key, std::string value, std::filesystem::path path, const std::unordered_map<std::string, TestHeaderKeyType>& keyTypeMap)
 {
     auto keyType = [&keyTypeMap](auto& key) {
         auto it = keyTypeMap.find(key);
@@ -225,6 +265,9 @@ bool parseTestHeaderFeature(TestFeatures& features, std::string key, std::string
     case TestHeaderKeyType::DoubleTestRunner:
         features.doubleTestRunnerFeatures.insert_or_assign(key, parseDoubleTestHeaderValue(value));
         return true;
+    case TestHeaderKeyType::UInt16TestRunner:
+        features.uint16TestRunnerFeatures.insert_or_assign(key, parseUInt16TestHeaderValue(value));
+        return true;
     case TestHeaderKeyType::StringTestRunner:
         features.stringTestRunnerFeatures.insert_or_assign(key, value);
         return true;
@@ -245,7 +288,7 @@ bool parseTestHeaderFeature(TestFeatures& features, std::string key, std::string
     return false;
 }
 
-static TestFeatures parseTestHeaderString(const std::string& pairString, std::filesystem::path path, const std::unordered_map<std::string, TestHeaderKeyType>& keyTypeMap)
+static std::optional<TestFeatures> parseTestHeaderString(const std::string& pairString, std::filesystem::path path, const std::unordered_map<std::string, TestHeaderKeyType>& keyTypeMap)
 {
     TestFeatures features;
 
@@ -256,15 +299,21 @@ static TestFeatures parseTestHeaderString(const std::string& pairString, std::fi
             pairEnd = pairString.size();
         size_t equalsLocation = pairString.find("=", pairStart);
         if (equalsLocation == std::string::npos) {
+            if (!path.empty())
             LOG_ERROR("Malformed option in test header (could not find '=' character) in %s", path.c_str());
+            else
+                LOG_ERROR("Malformed option in --additional-header option value (could not find '=' character)");
             break;
         }
         auto key = pairString.substr(pairStart, equalsLocation - pairStart);
         auto value = pairString.substr(equalsLocation + 1, pairEnd - (equalsLocation + 1));
 
-        if (!parseTestHeaderFeature(features, key, value, path, keyTypeMap))
+        if (!parseTestHeaderFeature(features, key, value, path, keyTypeMap)) {
+            if (!path.empty())
             LOG_ERROR("Unknown key, '%s', in test header in %s", key.c_str(), path.c_str());
-
+            else
+                LOG_ERROR("Unknown key, '%s', in --additional-header option value", key.c_str());
+        }
         pairStart = pairEnd + 1;
     }
 
@@ -296,7 +345,7 @@ static TestFeatures parseTestHeader(std::filesystem::path path, const std::unord
         return { };
     }
     std::string pairString = options.substr(beginLocation + beginString.size(), endLocation - (beginLocation + beginString.size()));
-    return parseTestHeaderString(pairString, path, keyTypeMap);
+    return parseTestHeaderString(pairString, path, keyTypeMap).value_or(TestFeatures { });
 }
 
 TestFeatures featureDefaultsFromTestHeaderForTest(const TestCommand& command, const std::unordered_map<std::string, TestHeaderKeyType>& keyTypeMap)
@@ -308,7 +357,19 @@ TestFeatures featureDefaultsFromSelfComparisonHeader(const TestCommand& command,
 {
     if (command.selfComparisonHeader.empty())
         return { };
-    return parseTestHeaderString(command.selfComparisonHeader, command.absolutePath, keyTypeMap);
+    return parseTestHeaderString(command.selfComparisonHeader, command.absolutePath, keyTypeMap).value_or(TestFeatures { });
+}
+
+TestFeatures featureFromAdditionalHeaderOption(const TestCommand& command, const std::unordered_map<std::string, TestHeaderKeyType>& keyTypeMap)
+{
+    if (command.additionalHeader.empty())
+        return { };
+    return parseTestHeaderString(command.additionalHeader, std::filesystem::path(), keyTypeMap).value_or(TestFeatures { });
+}
+
+std::optional<TestFeatures> parseAdditionalHeaderString(const std::string& additionalHeader, const std::unordered_map<std::string, TestHeaderKeyType>& keyTypeMap)
+{
+    return parseTestHeaderString(additionalHeader, std::filesystem::path(), keyTypeMap);
 }
 
 } // namespace WTF

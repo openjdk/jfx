@@ -33,18 +33,19 @@
 #include "StyleProperties.h"
 #include "StyleRule.h"
 #include "UserAgentStyle.h"
+#include <ranges>
 
 namespace WebCore {
 namespace Style {
 
 static inline bool comparePageRules(const StyleRulePage* r1, const StyleRulePage* r2)
 {
-    return r1->selector()->specificityForPage() < r2->selector()->specificityForPage();
+    return r1->selector().specificityForPage() < r2->selector().specificityForPage();
 }
 
 bool PageRuleCollector::isLeftPage(int pageIndex) const
 {
-    bool isFirstPageLeft = m_rootDirection == TextDirection::RTL;
+    bool isFirstPageLeft = !m_rootWritingMode.isAnyLeftToRight();
     return (pageIndex + (isFirstPageLeft ? 1 : 0)) % 2;
 }
 
@@ -83,25 +84,25 @@ void PageRuleCollector::matchPageRules(RuleSet* rules, bool isLeftPage, bool isF
     if (matchedPageRules.isEmpty())
         return;
 
-    std::stable_sort(matchedPageRules.begin(), matchedPageRules.end(), comparePageRules);
+    std::ranges::stable_sort(matchedPageRules, comparePageRules);
 
-    m_result.authorDeclarations.reserveCapacity(m_result.authorDeclarations.size() + matchedPageRules.size());
-    for (auto* pageRule : matchedPageRules)
-        m_result.authorDeclarations.uncheckedAppend({ pageRule->properties() });
+    m_result->authorDeclarations.appendContainerWithMapping(matchedPageRules, [](auto& pageRule) {
+        return MatchedProperties { pageRule->properties() };
+    });
 }
 
-static bool checkPageSelectorComponents(const CSSSelector* selector, bool isLeftPage, bool isFirstPage, const String& pageName)
+static bool checkPageSelectorComponents(const CSSSelector& selector, bool isLeftPage, bool isFirstPage, const String& pageName)
 {
-    for (const CSSSelector* component = selector; component; component = component->tagHistory()) {
+    for (const CSSSelector* component = &selector; component; component = component->precedingInComplexSelector()) {
         if (component->match() == CSSSelector::Match::Tag) {
             const AtomString& localName = component->tagQName().localName();
             if (localName != starAtom() && localName != pageName)
                 return false;
         } else if (component->match() == CSSSelector::Match::PagePseudoClass) {
-            CSSSelector::PagePseudoClassType pseudoType = component->pagePseudoClassType();
-            if ((pseudoType == CSSSelector::PagePseudoClassLeft && !isLeftPage)
-                || (pseudoType == CSSSelector::PagePseudoClassRight && isLeftPage)
-                || (pseudoType == CSSSelector::PagePseudoClassFirst && !isFirstPage))
+            auto pseudoType = component->pagePseudoClass();
+            if ((pseudoType == CSSSelector::PagePseudoClass::Left && !isLeftPage)
+                || (pseudoType == CSSSelector::PagePseudoClass::Right && isLeftPage)
+                || (pseudoType == CSSSelector::PagePseudoClass::First && !isFirstPage))
             {
                 return false;
             }

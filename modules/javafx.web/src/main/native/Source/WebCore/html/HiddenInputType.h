@@ -31,10 +31,12 @@
 #pragma once
 
 #include "InputType.h"
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
 class HiddenInputType final : public InputType {
+    WTF_MAKE_TZONE_ALLOCATED(HiddenInputType);
 public:
     static Ref<HiddenInputType> create(HTMLInputElement& element)
     {
@@ -57,6 +59,7 @@ private:
     bool shouldRespectHeightAndWidthAttributes() final;
     void setValue(const String&, bool, TextFieldEventBehavior, TextControlSetValueSelection) final;
     bool appendFormData(DOMFormData&) const final;
+    bool dirAutoUsesValue() const final;
 };
 
 } // namespace WebCore

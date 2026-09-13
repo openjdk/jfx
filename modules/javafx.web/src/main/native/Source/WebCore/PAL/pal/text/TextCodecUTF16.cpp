@@ -26,12 +26,15 @@
 #include "config.h"
 #include "TextCodecUTF16.h"
 
+#include <wtf/TZoneMallocInlines.h>
 #include <wtf/text/CString.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/WTFString.h>
 #include <wtf/unicode/CharacterNames.h>
 
 namespace PAL {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextCodecUTF16);
 
 inline TextCodecUTF16::TextCodecUTF16(bool littleEndian)
     : m_littleEndian(littleEndian)
@@ -40,46 +43,46 @@ inline TextCodecUTF16::TextCodecUTF16(bool littleEndian)
 
 void TextCodecUTF16::registerEncodingNames(EncodingNameRegistrar registrar)
 {
-    registrar("UTF-16LE", "UTF-16LE");
-    registrar("UTF-16BE", "UTF-16BE");
+    registrar("UTF-16LE"_s, "UTF-16LE"_s);
+    registrar("UTF-16BE"_s, "UTF-16BE"_s);
 
-    registrar("ISO-10646-UCS-2", "UTF-16LE");
-    registrar("UCS-2", "UTF-16LE");
-    registrar("UTF-16", "UTF-16LE");
-    registrar("Unicode", "UTF-16LE");
-    registrar("csUnicode", "UTF-16LE");
-    registrar("unicodeFEFF", "UTF-16LE");
+    registrar("ISO-10646-UCS-2"_s, "UTF-16LE"_s);
+    registrar("UCS-2"_s, "UTF-16LE"_s);
+    registrar("UTF-16"_s, "UTF-16LE"_s);
+    registrar("Unicode"_s, "UTF-16LE"_s);
+    registrar("csUnicode"_s, "UTF-16LE"_s);
+    registrar("unicodeFEFF"_s, "UTF-16LE"_s);
 
-    registrar("unicodeFFFE", "UTF-16BE");
+    registrar("unicodeFFFE"_s, "UTF-16BE"_s);
 }
 
 void TextCodecUTF16::registerCodecs(TextCodecRegistrar registrar)
 {
-    registrar("UTF-16LE", [] {
+    registrar("UTF-16LE"_s, [] {
         return makeUnique<TextCodecUTF16>(true);
     });
-    registrar("UTF-16BE", [] {
+    registrar("UTF-16BE"_s, [] {
         return makeUnique<TextCodecUTF16>(false);
     });
 }
 
 // https://encoding.spec.whatwg.org/#shared-utf-16-decoder
-String TextCodecUTF16::decode(const char* bytes, size_t length, bool flush, bool, bool& sawError)
+String TextCodecUTF16::decode(std::span<const uint8_t> bytes, bool flush, bool, bool& sawError)
 {
-    const auto* p = reinterpret_cast<const uint8_t*>(bytes);
-    const auto* const end = p + length;
-    const auto* const endMinusOneOrNull = end ? end - 1 : nullptr;
+    size_t index = 0;
+    size_t lengthMinusOne = bytes.size() - 1;
 
     StringBuilder result;
-    result.reserveCapacity(length / 2);
+    result.reserveCapacity(bytes.size() / 2);
 
-    auto processCodeUnit = [&] (UChar codeUnit) {
+    auto processCodeUnit = [&] (char16_t codeUnit) {
         if (std::exchange(m_shouldStripByteOrderMark, false) && codeUnit == byteOrderMark)
             return;
         if (m_leadSurrogate) {
             auto leadSurrogate = *std::exchange(m_leadSurrogate, std::nullopt);
             if (U16_IS_TRAIL(codeUnit)) {
-                result.appendCharacter(U16_GET_SUPPLEMENTARY(leadSurrogate, codeUnit));
+                char32_t codePoint = U16_GET_SUPPLEMENTARY(leadSurrogate, codeUnit);
+                result.append(codePoint);
                 return;
             }
             sawError = true;
@@ -103,32 +106,29 @@ String TextCodecUTF16::decode(const char* bytes, size_t length, bool flush, bool
         processCodeUnit((first << 8) | second);
     };
 
-    if (m_leadByte && p < end) {
+    if (!bytes.empty()) {
+        if (m_leadByte && index < bytes.size()) {
         auto leadByte = *std::exchange(m_leadByte, std::nullopt);
+            auto trailByte = bytes[index++];
         if (m_littleEndian)
-            processBytesLE(leadByte, p[0]);
+                processBytesLE(leadByte, trailByte);
         else
-            processBytesBE(leadByte, p[0]);
-        p++;
+                processBytesBE(leadByte, trailByte);
     }
-
     if (m_littleEndian) {
-        while (p < endMinusOneOrNull) {
-            processBytesLE(p[0], p[1]);
-            p += 2;
-        }
+            for (; index < lengthMinusOne; index += 2)
+                processBytesLE(bytes[index], bytes[index + 1]);
     } else {
-        while (p < endMinusOneOrNull) {
-            processBytesBE(p[0], p[1]);
-            p += 2;
-        }
+            for (; index < lengthMinusOne; index += 2)
+                processBytesBE(bytes[index], bytes[index + 1]);
     }
 
-    if (p && p == endMinusOneOrNull) {
+        if (index == lengthMinusOne) {
         ASSERT(!m_leadByte);
-        m_leadByte = p[0];
+            m_leadByte = bytes[index];
     } else
-        ASSERT(!p || p == end);
+            ASSERT(index == bytes.size());
+    }
 
     if (flush) {
         m_shouldStripByteOrderMark = false;
@@ -146,17 +146,17 @@ String TextCodecUTF16::decode(const char* bytes, size_t length, bool flush, bool
 Vector<uint8_t> TextCodecUTF16::encode(StringView string, UnencodableHandling) const
 {
     Vector<uint8_t> result(WTF::checkedProduct<size_t>(string.length(), 2));
-    auto* bytes = result.data();
+    size_t index = 0;
 
     if (m_littleEndian) {
         for (auto character : string.codeUnits()) {
-            *bytes++ = character;
-            *bytes++ = character >> 8;
+            result[index++] = character;
+            result[index++] = character >> 8;
         }
     } else {
         for (auto character : string.codeUnits()) {
-            *bytes++ = character >> 8;
-            *bytes++ = character;
+            result[index++] = character >> 8;
+            result[index++] = character;
         }
     }
 

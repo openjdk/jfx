@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2016 Apple Inc. All Rights Reserved.
+ * Copyright (C) 2013-2016 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -40,6 +40,10 @@ namespace Inspector {
 bool RemoteInspector::startEnabled = true;
 #if PLATFORM(COCOA)
 std::atomic<bool> RemoteInspector::needMachSandboxExtension = false;
+#endif
+
+#if !PLATFORM(COCOA)
+RemoteInspector::~RemoteInspector() = default;
 #endif
 
 void RemoteInspector::startDisabled()
@@ -180,7 +184,7 @@ void RemoteInspector::setupFailed(TargetID targetIdentifier)
     Locker locker { m_mutex };
 
     m_targetConnectionMap.remove(targetIdentifier);
-    m_pausedAutomaticInspectionCandidates.remove(targetIdentifier);
+    m_automaticInspectionCandidates.remove(targetIdentifier);
 
     updateHasActiveDebugSession();
     updateTargetListing(targetIdentifier);
@@ -191,14 +195,7 @@ void RemoteInspector::setupCompleted(TargetID targetIdentifier)
 {
     Locker locker { m_mutex };
 
-    m_pausedAutomaticInspectionCandidates.remove(targetIdentifier);
-}
-
-bool RemoteInspector::waitingForAutomaticInspection(TargetID targetIdentifier)
-{
-    Locker locker { m_mutex };
-
-    return m_pausedAutomaticInspectionCandidates.contains(targetIdentifier);
+    m_automaticInspectionCandidates.remove(targetIdentifier);
 }
 
 void RemoteInspector::clientCapabilitiesDidChange()
@@ -216,10 +213,10 @@ void RemoteInspector::stop()
 
 TargetListing RemoteInspector::listingForTarget(const RemoteControllableTarget& target) const
 {
-    if (is<RemoteInspectionTarget>(target))
-        return listingForInspectionTarget(downcast<RemoteInspectionTarget>(target));
-    if (is<RemoteAutomationTarget>(target))
-        return listingForAutomationTarget(downcast<RemoteAutomationTarget>(target));
+    if (auto* inspectionTarget = dynamicDowncast<RemoteInspectionTarget>(target))
+        return listingForInspectionTarget(*inspectionTarget);
+    if (auto* automationTarget = dynamicDowncast<RemoteAutomationTarget>(target))
+        return listingForAutomationTarget(*automationTarget);
 
     ASSERT_NOT_REACHED();
     return nullptr;
@@ -227,10 +224,7 @@ TargetListing RemoteInspector::listingForTarget(const RemoteControllableTarget& 
 
 void RemoteInspector::updateTargetListing(TargetID targetIdentifier)
 {
-    auto target = m_targetMap.get(targetIdentifier);
-    if (!target)
-        return;
-
+    if (RefPtr target = m_targetMap.get(targetIdentifier))
     updateTargetListing(*target);
 }
 
@@ -257,9 +251,8 @@ void RemoteInspector::updateHasActiveDebugSession()
     // Legacy iOS WebKit 1 had a notification. This will need to be smarter with WebKit2.
 }
 
-RemoteInspector::Client::~Client()
-{
-}
+RemoteInspector::Client::Client() = default;
+RemoteInspector::Client::~Client() = default;
 
 } // namespace Inspector
 

@@ -17,7 +17,7 @@ Feature requests
 
 If you find yourself wishing for a feature that doesn't exist in OpenJFX, you are probably not alone. There are bound to be others out there with similar needs. Many of the features that OpenJFX has today have been added because our users saw the need. Please be aware that
 all new feature requests, including any API changes, need prior discussion on the [openjfx-dev](https://mail.openjdk.org/mailman/listinfo/openjfx-dev) mailing list, even if there is already an open
-[JBS issue](https://bugs.openjdk.org). See the [New features / API additions](#new-features--api-additions) section below for more information.
+[JBS issue](https://bugs.openjdk.org/projects/JDK). See the [New features / API additions](#new-features--api-additions) section below for more information.
 
 Contributing code and documentation changes
 -------------------------------------------
@@ -46,11 +46,11 @@ If you are a first time contributor to OpenJFX, welcome! Please do the following
 
 * Read the code review policies
 
-    Please read the entire section below on how to submit a pull request, as well as the [OpenJFX Code Review Policies](https://wiki.openjdk.org/display/OpenJFX/Code+Reviews). If this is a feature request, please note the additional requirements and expectations in the [New features / API additions](#new-features--api-additions) section at the end of this guide.
+    Please read the entire section below on how to submit a pull request, as well as the [Code Review Policies](README-code-reviews.md) page. If this is a feature request, please note the additional requirements and expectations in the [New features / API additions](#new-features--api-additions) section at the end of this guide.
 
 * File a bug in JBS for every pull request
 
-    A unique [JBS](https://bugs.openjdk.org) bug ID is needed for every
+    A unique [JBS](https://bugs.openjdk.org/projects/JDK) bug ID is needed for every
     pull request. If there isn't already a bug filed in JBS, then please
     file one at [bugreport.java.com](https://bugreport.java.com/).
     A developer with an active OpenJDK ID can file a bug directly in JBS.
@@ -63,7 +63,9 @@ Once your changes and tests are ready to submit for review:
 
 1. Test your changes
 
-    Run the test suite to make sure that nothing is broken. For most code changes, you need to provide new tests covering those changes. At least one of the new tests should fail before your proposed fix and pass after your proposed fix.
+    Run the test suite to make sure that nothing is broken. For most code changes, you need to provide new tests covering those changes. At least one of the new tests should fail before your proposed fix and pass after your proposed fix. All tests are written using [JUnit5](https://junit.org/junit5/).
+
+    Enable GitHub Actions (GHA) Workflows in your personal fork. This will allow sanity tests to run when you push code changes to your branch of your personal fork, and allow the Skara bot to report the results of the tests in the PR. Navigate to the home page of your GitHub repo, click on the "Actions" tab, and then click on the green button that says something like: "I understand my workflows, go ahead and enable them".
 
 2. Rebase your changes
 
@@ -115,7 +117,7 @@ Once your changes and tests are ready to submit for review:
 4. Code review
 
     All pull requests _must_ be reviewed according to the
-    [OpenJFX Code Review Policies](https://wiki.openjdk.org/display/OpenJFX/Code+Reviews).
+    [Code Review Policies](README-code-reviews.md) page.
     It is the responsibility of the Reviewer(s) and the Committer who
     will integrate or sponsor the change to ensure that the code review policies
     are followed, and that all concerns have been addressed.
@@ -153,11 +155,12 @@ Once your changes and tests are ready to submit for review:
     Once the review has completed as described above, you can integrate
     the PR.
 
-    A. Verify the commit message. The Skara tooling adds a comment with
-    the commit message that will be used. You can add a summary to the
-    commit message with the `/summary` command. You can add additional
-    contributors with the `/contributor` command. Commands are issued
-    by adding a comment to the PR that starts with a slash `/` character.
+    A. Verify the following: all substantive feedback has been addressed; all Reviewers
+    who have requested the chance to review have done so; the PR has been "rfr"
+    for at least 1 business day (excluding weekends and holidays);
+    the commit message is correct.
+    See the [Code Review Gudelines](README-code-reviews.md#before-you-integrate-or-sponsor-a-pr)
+    for more details.
 
     B. Issue the `/integrate` command. If you have the "Committer" role
     (or higher) in the Project, then the Skara bot will merge the change
@@ -199,8 +202,8 @@ this is a good time to discuss it. Once this step is far enough along that there
 then it's time to focus on the implementation.
 
 3. Submit a review of your proposed implementation. As noted in the
-[New features / API additions](https://wiki.openjdk.org/display/OpenJFX/Code+Reviews#CodeReviews-NewFeaturesC.Newfeatures/APIadditions.)
-section of the Code Review Policies doc, we also need a [CSR](https://wiki.openjdk.org/display/csr/Main), which documents the API change and its approval.
+[New features / API additions](README-code-reviews.md#c-new-features--api-additions)
+section of the Code Review Policies page, we also need a [CSR](https://wiki.openjdk.org/display/csr/Main), which documents the API change and its approval.
 The CSR can be reviewed in parallel. Changes in the API that arise during the review need to be reflected in the CSR, meaning
 that the final review / approval of the CSR usually happens late in the review cycle.
 You can avoid extra work by waiting to submit the CSR until the API is agreed upon and the code review for the documentation is reasonably far along.
@@ -226,16 +229,17 @@ Please also follow these formatting guidelines:
 * The rest is left to Java coding standards
 * Avoid making changes that are unrelated to the bug you are fixing. This includes fixing minor errors such as warnings, spacing / indentation, spelling errors, etc, in code that you aren't otherwise modifying as part of your fix.
 * Disable &ldquo;auto-format on save&rdquo; to prevent your IDE from making unnecessary formatting changes. This makes reviews much harder as it generates unnecessary diffs. If your IDE supports formatting only modified chunks, that is fine to do.
-* Wildcard imports &ndash; for example, `import java.util.*;` &ndash; are forbidden and may cause the build to fail. Please attempt to configure your IDE so it doesn't generate wildcard imports. An exception to this rule is that wildcard static imports in test classes are allowed, for example, `import static org.junit.Assert.*;`.
+* Wildcard imports &ndash; for example, `import java.util.*;` &ndash; are forbidden and may cause the build to fail. Please attempt to configure your IDE so it doesn't generate wildcard imports. An exception to this rule is that wildcard static imports in test classes are allowed, for example, `import static org.junit.jupiter.api.Assertions.*;`.
 * Don't worry too much about import order. Try not to change it but don't worry about fighting your IDE to stop it from doing so.
+
+New code should be formatted consistently in accordance with the above guidelines. However, please do not reformat existing code as part of a bug fix. This makes more changes for code reviewers to track and review, and can lead to merge conflicts.
 
 ### Building and testing
 
-JDK 17 (at a minimum) is required to build OpenJFX. You must have the JDK
+JDK 25 (at a minimum) is required to build OpenJFX. You must have the JDK
 installed on your system
 with the environment variable `JAVA_HOME` referencing the path to Java home for
 your JDK installation. By default, tests use the same runtime as `JAVA_HOME`.
-Currently OpenJFX will build and run on JDK 17 through JDK 21.
 
 It is possible to develop in any major Java IDE (Eclipse, IntelliJ, NetBeans). IDEs can automatically configure projects based on Gradle setup.
 

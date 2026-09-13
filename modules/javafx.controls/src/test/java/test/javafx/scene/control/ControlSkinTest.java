@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,22 +25,23 @@
 
 package test.javafx.scene.control;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import javafx.beans.InvalidationListener;
 import javafx.beans.Observable;
 import javafx.beans.property.StringProperty;
 import javafx.css.StyleableProperty;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-
 import javafx.scene.Scene;
 import javafx.scene.control.ControlShim;
 import javafx.scene.control.Skin;
 import javafx.scene.control.Tooltip;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 
 /**
  * Skin related tests for Control. This test case will construct
@@ -48,7 +49,7 @@ import org.junit.Test;
  * all together. This is done so that in the various tests, we can
  * set things up the way we want for the test.
  */
-@Ignore
+@Disabled
 public class ControlSkinTest {
     private ControlStub c;
     private SkinStub<ControlStub> s;
@@ -61,11 +62,11 @@ public class ControlSkinTest {
      *
      * By necessity, however, the skin does have a reference back to the control.
      */
-    @Before public void setUp() {
+    @BeforeEach
+    public void setUp() {
         c = new ControlStub();
         s = new SkinStub<>(c);
         t = new Tooltip();
-//        t.setSkin(new SkinStub<Tooltip>(t));
     }
 
     @Test public void controlWithNoSkinShouldReportNullEvenIfSkinKnowsAboutControl() {
@@ -102,7 +103,7 @@ public class ControlSkinTest {
         assertTrue(result[0]);
     }
 
-    @Ignore ("I need some means of being able to check whether CSS has been told this property is set manually")
+    @Disabled("I need some means of being able to check whether CSS has been told this property is set manually")
     @Test public void whenSkinIsChangedCSSIsNotified() {
     }
 
@@ -128,7 +129,9 @@ public class ControlSkinTest {
             boolean calledOnce = false;
             @Override
             public void invalidated(Observable o) {
-                if (calledOnce) org.junit.Assert.fail();
+                if (calledOnce) {
+                    fail();
+                }
                 calledOnce = true;
             }
         });
@@ -146,28 +149,28 @@ public class ControlSkinTest {
     }
 
 
-    @Ignore ("This spits out annoying debug statements, re-enable when we can disable all logging")
+    @Disabled("This spits out annoying debug statements, re-enable when we can disable all logging")
     @Test public void loadSkinClassShouldIgnoreNullNames() {
         c.setSkin(s);
         ((StyleableProperty)ControlShim.skinClassNameProperty(c)).applyStyle(null, null);
         assertSame(s, c.getSkin()); // shouldn't have changed
     }
 
-    @Ignore ("This spits out annoying debug statements, re-enable when we can disable all logging")
+    @Disabled("This spits out annoying debug statements, re-enable when we can disable all logging")
     @Test public void loadSkinClassShouldIgnoreEmptyStrings() {
         c.setSkin(s);
         ((StyleableProperty)ControlShim.skinClassNameProperty(c)).applyStyle(null, "");
         assertSame(s, c.getSkin()); // shouldn't have changed
     }
 
-    @Ignore ("This spits out annoying debug statements, re-enable when we can disable all logging")
+    @Disabled("This spits out annoying debug statements, re-enable when we can disable all logging")
     @Test public void loadSkinClassShouldIgnoreSkinsWithoutAProperConstructor() {
         c.setSkin(s);
         ((StyleableProperty)ControlShim.skinClassNameProperty(c)).applyStyle(null, "test.javafx.scene.control.ControlSkinTest$UnloadableSkinStub");
         assertSame(s, c.getSkin()); // shouldn't have changed
     }
 
-    @Ignore ("This spits out annoying debug statements, re-enable when we can disable all logging")
+    @Disabled("This spits out annoying debug statements, re-enable when we can disable all logging")
     @Test public void loadSkinClassShouldIgnoreBogusOrUnfindableSkins() {
         c.setSkin(s);
         ((StyleableProperty)ControlShim.skinClassNameProperty(c)).applyStyle(null, "test.javafx.scene.control.ControlSkinTest$FooSkinWhichDoesntExist");
@@ -195,9 +198,10 @@ public class ControlSkinTest {
         }
     }
 
-    @Test public void getUserAgentStylesheet() {
+    @Test
+    public void getUserAgentStylesheet() {
 
-        org.junit.Assume.assumeNotNull(ControlSkinTest.class.getResource("ControlSkinTest.css"));
+        Assumptions.assumeTrue(ControlSkinTest.class.getResource("ControlSkinTest.css") != null);
 
         ControlStub control = new ControlStub() {
             @Override public String getUserAgentStylesheet() {
@@ -214,12 +218,12 @@ public class ControlSkinTest {
         //  opacity set in ControlSkinTest.css
         assertEquals(.7, control.getOpacity(), 1E-6);
         assertNull(control.getSkin());
-
     }
 
-    @Test public void getUserAgentStylesheetDoesNotOverrideUserSetValue() {
+    @Test
+    public void getUserAgentStylesheetDoesNotOverrideUserSetValue() {
 
-        org.junit.Assume.assumeNotNull(ControlSkinTest.class.getResource("ControlSkinTest.css"));
+        Assumptions.assumeTrue(ControlSkinTest.class.getResource("ControlSkinTest.css") != null);
 
         ControlStub control = new ControlStub() {
             @Override public String getUserAgentStylesheet() {
@@ -236,12 +240,12 @@ public class ControlSkinTest {
         //  opacity set by setOpacity
         assertEquals(.3, control.getOpacity(), 1E-6);
         assertNull(control.getSkin());
-
     }
 
-    @Test public void getUserAgentStylesheetInlineStylePrevails() {
+    @Test
+    public void getUserAgentStylesheetInlineStylePrevails() {
 
-        org.junit.Assume.assumeNotNull(ControlSkinTest.class.getResource("ControlSkinTest.css"));
+        Assumptions.assumeTrue(ControlSkinTest.class.getResource("ControlSkinTest.css") != null);
 
         ControlStub control = new ControlStub() {
             @Override public String getUserAgentStylesheet() {
@@ -259,12 +263,12 @@ public class ControlSkinTest {
         //  opacity set by setStyle
         assertEquals(.42, control.getOpacity(), 1E-6);
         assertNull(control.getSkin());
-
     }
 
-    @Test public void getUserAgentStylesheetWithSkin() {
+    @Test
+    public void getUserAgentStylesheetWithSkin() {
 
-        org.junit.Assume.assumeNotNull(ControlSkinTest.class.getResource("ControlSkinTest.css"));
+        Assumptions.assumeTrue(ControlSkinTest.class.getResource("ControlSkinTest.css") != null);
 
         ControlStub control = new ControlStub() {
             @Override public String getUserAgentStylesheet() {
@@ -286,7 +290,5 @@ public class ControlSkinTest {
         //  opacity set in ControlSkinTest.css
         assertEquals(.85, control.getOpacity(), 1E-6);
         assertEquals(SkinStub.class, control.getSkin().getClass());
-
     }
-
 }

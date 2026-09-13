@@ -32,8 +32,11 @@
 #include "ScrollingStateTree.h"
 #include "ScrollingTree.h"
 #include "ScrollingTreeOverflowScrollingNode.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_TZONE_ALLOCATED_IMPL(ScrollingTreeOverflowScrollProxyNode);
 
 ScrollingTreeOverflowScrollProxyNode::ScrollingTreeOverflowScrollProxyNode(ScrollingTree& scrollingTree, ScrollingNodeID nodeID)
     : ScrollingTreeNode(scrollingTree, ScrollingNodeType::OverflowProxy, nodeID)
@@ -44,21 +47,20 @@ ScrollingTreeOverflowScrollProxyNode::~ScrollingTreeOverflowScrollProxyNode() = 
 
 bool ScrollingTreeOverflowScrollProxyNode::commitStateBeforeChildren(const ScrollingStateNode& stateNode)
 {
-    if (!is<ScrollingStateOverflowScrollProxyNode>(stateNode))
+    auto* overflowProxyStateNode = dynamicDowncast<ScrollingStateOverflowScrollProxyNode>(stateNode);
+    if (!overflowProxyStateNode)
         return false;
 
-    const auto& overflowProxyStateNode = downcast<ScrollingStateOverflowScrollProxyNode>(stateNode);
-
-    if (overflowProxyStateNode.hasChangedProperty(ScrollingStateNode::Property::OverflowScrollingNode))
-        m_overflowScrollingNodeID = overflowProxyStateNode.overflowScrollingNode();
+    if (overflowProxyStateNode->hasChangedProperty(ScrollingStateNode::Property::OverflowScrollingNode))
+        m_overflowScrollingNodeID = overflowProxyStateNode->overflowScrollingNode();
 
     if (m_overflowScrollingNodeID) {
-        auto& relatedNodes = scrollingTree().overflowRelatedNodes();
-        relatedNodes.ensure(m_overflowScrollingNodeID, [] {
+        auto& relatedNodes = scrollingTree()->overflowRelatedNodes();
+        relatedNodes.ensure(*m_overflowScrollingNodeID, [] {
             return Vector<ScrollingNodeID>();
         }).iterator->value.append(scrollingNodeID());
 
-        scrollingTree().activeOverflowScrollProxyNodes().add(*this);
+        scrollingTree()->activeOverflowScrollProxyNodes().add(*this);
     }
 
     return true;
@@ -66,10 +68,8 @@ bool ScrollingTreeOverflowScrollProxyNode::commitStateBeforeChildren(const Scrol
 
 FloatSize ScrollingTreeOverflowScrollProxyNode::scrollDeltaSinceLastCommit() const
 {
-    if (auto* node = scrollingTree().nodeForID(m_overflowScrollingNodeID)) {
-        if (is<ScrollingTreeOverflowScrollingNode>(node))
-            return downcast<ScrollingTreeOverflowScrollingNode>(*node).scrollDeltaSinceLastCommit();
-    }
+    if (auto* node = dynamicDowncast<ScrollingTreeOverflowScrollingNode>(scrollingTree()->nodeForID(m_overflowScrollingNodeID)))
+        return node->scrollDeltaSinceLastCommit();
 
     return { };
 }
@@ -77,27 +77,23 @@ FloatSize ScrollingTreeOverflowScrollProxyNode::scrollDeltaSinceLastCommit() con
 FloatPoint ScrollingTreeOverflowScrollProxyNode::computeLayerPosition() const
 {
     FloatPoint scrollOffset;
-    if (auto* node = scrollingTree().nodeForID(m_overflowScrollingNodeID)) {
-        if (is<ScrollingTreeOverflowScrollingNode>(node)) {
-            auto& overflowNode = downcast<ScrollingTreeOverflowScrollingNode>(*node);
-            scrollOffset = overflowNode.currentScrollOffset();
-        }
-    }
+    if (auto* node = dynamicDowncast<ScrollingTreeOverflowScrollingNode>(scrollingTree()->nodeForID(m_overflowScrollingNodeID)))
+        scrollOffset = node->currentScrollOffset();
     return scrollOffset;
 }
 
 void ScrollingTreeOverflowScrollProxyNode::dumpProperties(TextStream& ts, OptionSet<ScrollingStateTreeAsTextBehavior> behavior) const
 {
-    ts << "overflow scroll proxy node";
+    ts << "overflow scroll proxy node"_s;
     ScrollingTreeNode::dumpProperties(ts, behavior);
 
-    if (auto* relatedOverflowNode = scrollingTree().nodeForID(m_overflowScrollingNodeID)) {
-        auto scrollPosition = downcast<ScrollingTreeOverflowScrollingNode>(*relatedOverflowNode).currentScrollPosition();
-        ts.dumpProperty("related overflow scrolling node scroll position", scrollPosition);
+    if (auto* relatedOverflowNode = scrollingTree()->nodeForID(m_overflowScrollingNodeID)) {
+        if (RefPtr scrollingNode = dynamicDowncast<ScrollingTreeOverflowScrollingNode>(relatedOverflowNode))
+            ts.dumpProperty("related overflow scrolling node scroll position"_s, scrollingNode->currentScrollPosition());
     }
 
     if (behavior & ScrollingStateTreeAsTextBehavior::IncludeNodeIDs)
-        ts.dumpProperty("overflow scrolling node", m_overflowScrollingNodeID);
+        ts.dumpProperty("overflow scrolling node"_s, m_overflowScrollingNodeID);
 }
 
 } // namespace WebCore

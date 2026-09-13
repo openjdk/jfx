@@ -27,7 +27,7 @@
 
 #include <wtf/text/WTFString.h>
 
-#if USE(GLIB) && HAVE(GURI)
+#if USE(GLIB)
 #include <wtf/glib/GRefPtr.h>
 #endif
 
@@ -56,7 +56,7 @@ protected:
 };
 
 class URL {
-    WTF_MAKE_FAST_ALLOCATED;
+    WTF_DEPRECATED_MAKE_FAST_ALLOCATED(URL);
 public:
     // Generates a URL which contains a null string.
     URL() { invalidate(); }
@@ -77,11 +77,56 @@ public:
     {
     }
 
+    URL(const URL&) = default;
+    URL& operator=(const URL&) = default;
+
+    URL(URL&& other)
+        : m_string(WTF::move(other.m_string))
+        , m_isValid(other.m_isValid)
+        , m_protocolIsInHTTPFamily(other.m_protocolIsInHTTPFamily)
+        , m_hasOpaquePath(other.m_hasOpaquePath)
+        , m_portLength(other.m_portLength)
+        , m_schemeEnd(other.m_schemeEnd)
+        , m_userStart(other.m_userStart)
+        , m_userEnd(other.m_userEnd)
+        , m_passwordEnd(other.m_passwordEnd)
+        , m_hostEnd(other.m_hostEnd)
+        , m_pathAfterLastSlash(other.m_pathAfterLastSlash)
+        , m_pathEnd(other.m_pathEnd)
+        , m_queryEnd(other.m_queryEnd)
+    {
+        other.m_isValid = false;
+    }
+
+    URL& operator=(URL&& other)
+    {
+        m_string = WTF::move(other.m_string);
+        m_isValid = other.m_isValid;
+        other.m_isValid = false;
+        m_protocolIsInHTTPFamily = other.m_protocolIsInHTTPFamily;
+        m_hasOpaquePath = other.m_hasOpaquePath;
+        m_portLength = other.m_portLength;
+        m_schemeEnd = other.m_schemeEnd;
+        m_userStart = other.m_userStart;
+        m_userEnd = other.m_userEnd;
+        m_passwordEnd = other.m_passwordEnd;
+        m_hostEnd = other.m_hostEnd;
+        m_pathAfterLastSlash = other.m_pathAfterLastSlash;
+        m_pathEnd = other.m_pathEnd;
+        m_queryEnd = other.m_queryEnd;
+
+        return *this;
+    }
+
     WTF_EXPORT_PRIVATE static URL fakeURLWithRelativePart(StringView);
     WTF_EXPORT_PRIVATE static URL fileURLWithFileSystemPath(StringView);
 
-    WTF_EXPORT_PRIVATE String strippedForUseAsReferrer() const;
-    WTF_EXPORT_PRIVATE String strippedForUseAsReferrerWithExplicitPort() const;
+    struct StripResult {
+        String string;
+        bool stripped { false };
+    };
+    WTF_EXPORT_PRIVATE StripResult strippedForUseAsReferrer() const;
+    WTF_EXPORT_PRIVATE StripResult strippedForUseAsReferrerWithExplicitPort() const;
 
     // Similar to strippedForUseAsReferrer except we also remove the query component.
     WTF_EXPORT_PRIVATE String strippedForUseAsReport() const;
@@ -100,26 +145,26 @@ public:
     // when placing a URL in an if statment.
     operator bool() const = delete;
 
-    const String& string() const { return m_string; }
+    const String& string() const LIFETIME_BOUND { return m_string; }
     WTF_EXPORT_PRIVATE String stringCenterEllipsizedToLength(unsigned length = 1024) const;
 
     // Unlike user() and password(), encodedUser() and encodedPassword() don't decode escape sequences.
     // This is necessary for accurate round-tripping, because encoding doesn't encode '%' characters.
 
-    WTF_EXPORT_PRIVATE StringView protocol() const;
-    WTF_EXPORT_PRIVATE StringView encodedUser() const;
-    WTF_EXPORT_PRIVATE StringView encodedPassword() const;
-    WTF_EXPORT_PRIVATE StringView host() const;
+    WTF_EXPORT_PRIVATE StringView protocol() const LIFETIME_BOUND;
+    WTF_EXPORT_PRIVATE StringView encodedUser() const LIFETIME_BOUND;
+    WTF_EXPORT_PRIVATE StringView encodedPassword() const LIFETIME_BOUND;
+    WTF_EXPORT_PRIVATE StringView host() const LIFETIME_BOUND;
     WTF_EXPORT_PRIVATE std::optional<uint16_t> port() const;
-    WTF_EXPORT_PRIVATE StringView path() const;
-    WTF_EXPORT_PRIVATE StringView lastPathComponent() const;
-    WTF_EXPORT_PRIVATE StringView query() const;
-    WTF_EXPORT_PRIVATE StringView fragmentIdentifier() const;
+    WTF_EXPORT_PRIVATE StringView path() const LIFETIME_BOUND;
+    WTF_EXPORT_PRIVATE StringView lastPathComponent() const LIFETIME_BOUND;
+    WTF_EXPORT_PRIVATE StringView query() const LIFETIME_BOUND;
+    WTF_EXPORT_PRIVATE StringView fragmentIdentifier() const LIFETIME_BOUND;
 
-    WTF_EXPORT_PRIVATE StringView queryWithLeadingQuestionMark() const;
-    WTF_EXPORT_PRIVATE StringView fragmentIdentifierWithLeadingNumberSign() const;
-    WTF_EXPORT_PRIVATE StringView viewWithoutQueryOrFragmentIdentifier() const;
-    WTF_EXPORT_PRIVATE StringView viewWithoutFragmentIdentifier() const;
+    WTF_EXPORT_PRIVATE StringView queryWithLeadingQuestionMark() const LIFETIME_BOUND;
+    WTF_EXPORT_PRIVATE StringView fragmentIdentifierWithLeadingNumberSign() const LIFETIME_BOUND;
+    WTF_EXPORT_PRIVATE StringView viewWithoutQueryOrFragmentIdentifier() const LIFETIME_BOUND;
+    WTF_EXPORT_PRIVATE StringView viewWithoutFragmentIdentifier() const LIFETIME_BOUND;
     WTF_EXPORT_PRIVATE String stringWithoutFragmentIdentifier() const;
 
     WTF_EXPORT_PRIVATE String protocolHostAndPort() const;
@@ -146,6 +191,7 @@ public:
     WTF_EXPORT_PRIVATE bool protocolIsJavaScript() const;
     bool protocolIsInFTPFamily() const { return protocolIs("ftp"_s) || protocolIs("ftps"_s); }
     bool protocolIsInHTTPFamily() const { return m_protocolIsInHTTPFamily; }
+    WTF_EXPORT_PRIVATE bool protocolIsSecure() const;
     bool hasOpaquePath() const { return m_hasOpaquePath; }
 
     WTF_EXPORT_PRIVATE bool isAboutBlank() const;
@@ -154,12 +200,13 @@ public:
     WTF_EXPORT_PRIVATE bool isMatchingDomain(StringView) const;
 
     WTF_EXPORT_PRIVATE bool setProtocol(StringView);
-    WTF_EXPORT_PRIVATE void setHost(StringView);
+    WTF_EXPORT_PRIVATE bool setHost(StringView);
 
     WTF_EXPORT_PRIVATE void setPort(std::optional<uint16_t>);
 
     // Input is like "foo.com" or "foo.com:8000".
     WTF_EXPORT_PRIVATE void setHostAndPort(StringView);
+    WTF_EXPORT_PRIVATE void removeHostAndPort();
 
     WTF_EXPORT_PRIVATE void setUser(StringView);
     WTF_EXPORT_PRIVATE void setPassword(StringView);
@@ -175,10 +222,11 @@ public:
 
     WTF_EXPORT_PRIVATE void setFragmentIdentifier(StringView);
     WTF_EXPORT_PRIVATE void removeFragmentIdentifier();
-    WTF_EXPORT_PRIVATE String consumefragmentDirective();
+    WTF_EXPORT_PRIVATE String consumeFragmentDirective();
     WTF_EXPORT_PRIVATE void removeQueryAndFragmentIdentifier();
 
     WTF_EXPORT_PRIVATE static bool hostIsIPAddress(StringView);
+    WTF_EXPORT_PRIVATE static bool isIPv6Address(StringView);
 
     WTF_EXPORT_PRIVATE unsigned pathStart() const;
     unsigned pathEnd() const;
@@ -187,11 +235,13 @@ public:
 #if USE(CF)
     WTF_EXPORT_PRIVATE URL(CFURLRef);
     WTF_EXPORT_PRIVATE RetainPtr<CFURLRef> createCFURL() const;
+    WTF_EXPORT_PRIVATE static RetainPtr<CFURLRef> createCFURL(const String&);
 #endif
 
 #if USE(FOUNDATION)
     WTF_EXPORT_PRIVATE URL(NSURL *);
-    WTF_EXPORT_PRIVATE operator NSURL *() const;
+    WTF_EXPORT_PRIVATE RetainPtr<NSURL> createNSURL() const;
+    WTF_EXPORT_PRIVATE static NSURL *emptyNSURL();
 #endif
 
 #if PLATFORM(JAVA)
@@ -211,6 +261,7 @@ public:
 
     WTF_EXPORT_PRIVATE bool hasSpecialScheme() const;
     WTF_EXPORT_PRIVATE bool hasLocalScheme() const;
+    WTF_EXPORT_PRIVATE bool hasFetchScheme() const;
 
 private:
     friend class URLParser;
@@ -222,12 +273,10 @@ private:
     void parse(String&&);
     void parseAllowingC0AtEnd(String&&);
 
-    void maybeTrimTrailingSpacesFromOpaquePath();
-
     friend WTF_EXPORT_PRIVATE bool protocolHostAndPortAreEqual(const URL&, const URL&);
 
 #if USE(CF)
-    static RetainPtr<CFURLRef> emptyCFURL();
+    static CFURLRef emptyCFURL();
 #endif
 
     String m_string;
@@ -255,7 +304,6 @@ static_assert(sizeof(URL) == sizeof(String) + 8 * sizeof(unsigned), "URL should 
 
 bool operator==(const URL&, const URL&);
 bool operator==(const URL&, const String&);
-bool operator==(const String&, const URL&);
 
 WTF_EXPORT_PRIVATE bool equalIgnoringFragmentIdentifier(const URL&, const URL&);
 WTF_EXPORT_PRIVATE bool protocolHostAndPortAreEqual(const URL&, const URL&);
@@ -265,7 +313,7 @@ WTF_EXPORT_PRIVATE bool isEqualIgnoringQueryAndFragments(const URL&, const URL&)
 
 // Returns the parameters that were removed (including duplicates), in the order that they appear in the URL.
 WTF_EXPORT_PRIVATE Vector<String> removeQueryParameters(URL&, const HashSet<String>&);
-WTF_EXPORT_PRIVATE Vector<String> removeQueryParameters(URL&, Function<bool(const String&)>&&);
+WTF_EXPORT_PRIVATE Vector<String> removeQueryParameters(URL&, NOESCAPE const Function<bool(const String&, const String&)>&);
 
 WTF_EXPORT_PRIVATE const URL& aboutBlankURL();
 WTF_EXPORT_PRIVATE const URL& aboutSrcDocURL();
@@ -290,6 +338,7 @@ WTF_EXPORT_PRIVATE String mimeTypeFromDataURL(StringView dataURL);
 
 // FIXME: This needs a new, more specific name. The general thing named here can't be implemented correctly, since different parts of a URL need different escaping.
 WTF_EXPORT_PRIVATE String encodeWithURLEscapeSequences(const String&);
+WTF_EXPORT_PRIVATE String percentEncodeFragmentDirectiveSpecialCharacters(const String&);
 
 #ifdef __OBJC__
 
@@ -297,8 +346,6 @@ WTF_EXPORT_PRIVATE RetainPtr<id> makeNSArrayElement(const URL&);
 WTF_EXPORT_PRIVATE std::optional<URL> makeVectorElement(const URL*, id);
 
 #endif
-
-WTF_EXPORT_PRIVATE TextStream& operator<<(TextStream&, const URL&);
 
 template<> struct DefaultHash<URL>;
 template<> struct HashTraits<URL>;
@@ -313,11 +360,6 @@ inline bool operator==(const URL& a, const URL& b)
 inline bool operator==(const URL& a, const String& b)
 {
     return a.string() == b;
-}
-
-inline bool operator==(const String& a, const URL& b)
-{
-    return a == b.string();
 }
 
 inline URL::URL(HashTableDeletedValueType)

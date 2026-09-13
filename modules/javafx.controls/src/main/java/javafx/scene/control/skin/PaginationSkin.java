@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,9 +29,6 @@ import static com.sun.javafx.scene.control.skin.resources.ControlResources.getSt
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import com.sun.javafx.scene.control.ListenerHelper;
-import com.sun.javafx.scene.control.behavior.PaginationBehavior;
-import com.sun.javafx.scene.control.skin.Utils;
 import javafx.animation.Interpolator;
 import javafx.animation.KeyFrame;
 import javafx.animation.KeyValue;
@@ -61,6 +58,7 @@ import javafx.scene.AccessibleAction;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.AccessibleRole;
 import javafx.scene.Node;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Control;
 import javafx.scene.control.Label;
@@ -76,6 +74,10 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.control.ListenerHelper;
+import com.sun.javafx.scene.control.behavior.PaginationBehavior;
+import com.sun.javafx.scene.control.skin.Utils;
 
 /**
  * Default skin implementation for the {@link Pagination} control.
@@ -94,7 +96,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
     private static final Duration DURATION = new Duration(125.0);
     private static final double SWIPE_THRESHOLD = 0.30;
     private static final double TOUCH_THRESHOLD = 15;
-    private static final Interpolator interpolator = Interpolator.SPLINE(0.4829, 0.5709, 0.6803, 0.9928);
+    private static final Interpolator interpolator = Interpolator.ofSpline(0.4829, 0.5709, 0.6803, 0.9928);
 
 
 
@@ -109,7 +111,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
     private Timeline timeline;
     private Rectangle clipRect;
 
-    private NavigationControl navigation;
+    private final NavigationControl navigation;
     private int fromIndex;
     private int previousIndex;
     private int currentIndex;
@@ -127,14 +129,11 @@ public class PaginationSkin extends SkinBase<Pagination> {
     private boolean nextPageReached = false;
     private boolean setInitialDirection = false;
     private int direction;
-
     private int currentAnimatedIndex;
-    private boolean hasPendingAnimation = false;
-
+    private volatile boolean hasPendingAnimation;
     private boolean animate = true;
-
+    private DeferredRunnable deferredStartup;
     private final PaginationBehavior behavior;
-
 
 
     /* *************************************************************************
@@ -197,7 +196,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
         // sets the current page index property in control to the same value (no-op)
         resetIndexes(true);
 
-        this.navigation = new NavigationControl();
+        navigation = new NavigationControl();
 
         getChildren().addAll(currentStackPane, nextStackPane, navigation);
 
@@ -220,6 +219,11 @@ public class PaginationSkin extends SkinBase<Pagination> {
         });
 
         lh.addChangeListener(control.pageFactoryProperty(), (ev) -> {
+            if (deferredStartup != null) {
+                deferredStartup.cancel();
+                deferredStartup = null;
+            }
+
             if (animate && timeline != null) {
                 // If we are in the middle of a page animation.
                 // Speedup and finish the animation then update the page factory.
@@ -229,7 +233,12 @@ public class PaginationSkin extends SkinBase<Pagination> {
                 });
                 return;
             }
+
             resetIndiciesAndNav();
+        });
+
+        lh.addListChangeListener(control.getStyleClass(), (ch) -> {
+            navigation.updateBulletIndicatorType();
         });
 
         initializeSwipeAndTouchHandlers();
@@ -368,6 +377,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
             tooltipVisible = new StyleableBooleanProperty(DEFAULT_TOOLTIP_VISIBLE) {
                 @Override
                 protected void invalidated() {
+                    navigation.updateTooltipVisible();
                     getSkinnable().requestLayout();
                 }
 
@@ -405,12 +415,20 @@ public class PaginationSkin extends SkinBase<Pagination> {
             return;
         }
 
-        getSkinnable().setClip(null);
-        getChildren().removeAll(currentStackPane, nextStackPane, navigation);
+        if (deferredStartup != null) {
+            deferredStartup.cancel();
+        }
+
+        if (timeline != null) {
+            timeline.stop();
+        }
 
         if (behavior != null) {
             behavior.dispose();
         }
+
+        getSkinnable().setClip(null);
+        getChildren().removeAll(currentStackPane, nextStackPane, navigation);
 
         super.dispose();
     }
@@ -707,6 +725,37 @@ public class PaginationSkin extends SkinBase<Pagination> {
     }
 
     private void animateSwitchPage() {
+        if (!Platform.isFxApplicationThread()) {
+            hasPendingAnimation = true;
+            return;
+        }
+
+        if (deferredStartup != null) {
+            deferredStartup.cancel();
+            deferredStartup = null;
+        }
+
+        // If animations are disabled (including due to reduced motion), create
+        // the target page if needed and switch panes without animating.
+        if (!shouldAnimate()) {
+            if (timeline != null) {
+                timeline.stop();
+                timeline = null;
+            }
+
+            nextPageReached = false;
+            hasPendingAnimation = false;
+
+            if (!nextStackPane.isVisible()) {
+                if (!createPage(nextStackPane, currentAnimatedIndex)) {
+                    return;
+                }
+            }
+
+            swapPanes();
+            return;
+        }
+
         if (timeline != null) {
             timeline.setRate(8);
             hasPendingAnimation = true;
@@ -733,50 +782,60 @@ public class PaginationSkin extends SkinBase<Pagination> {
         nextStackPane.setCache(true);
         currentStackPane.setCache(true);
 
-        // wait one pulse then animate
-        Platform.runLater(() -> {
-            // We are handling a touch event if nextPane's translateX is not 0
-            boolean useTranslateX = nextStackPane.getTranslateX() != 0;
-            if (currentAnimatedIndex > previousIndex) {  // animate right to left
-                if (!useTranslateX) {
-                    nextStackPane.setTranslateX(currentStackPane.getWidth());
+        deferredStartup = new DeferredRunnable() {
+            @Override
+            protected void action() {
+                // We are handling a touch event if nextPane's translateX is not 0
+                boolean useTranslateX = nextStackPane.getTranslateX() != 0;
+                if (currentAnimatedIndex > previousIndex) {  // animate right to left
+                    if (!useTranslateX) {
+                        nextStackPane.setTranslateX(currentStackPane.getWidth());
+                    }
+                    nextStackPane.setVisible(true);
+                    timeline = new Timeline();
+                    KeyFrame k1 =  new KeyFrame(Duration.millis(0),
+                        new KeyValue(currentStackPane.translateXProperty(),
+                            useTranslateX ? currentStackPane.getTranslateX() : 0,
+                            interpolator),
+                        new KeyValue(nextStackPane.translateXProperty(),
+                            useTranslateX ?
+                                nextStackPane.getTranslateX() : currentStackPane.getWidth(), interpolator));
+                    KeyFrame k2 = new KeyFrame(DURATION,
+                        swipeAnimationEndEventHandler,
+                        new KeyValue(currentStackPane.translateXProperty(), -currentStackPane.getWidth(), interpolator),
+                        new KeyValue(nextStackPane.translateXProperty(), 0, interpolator));
+                    timeline.getKeyFrames().setAll(k1, k2);
+                    timeline.play();
+                } else { // animate left to right
+                    if (!useTranslateX) {
+                        nextStackPane.setTranslateX(-currentStackPane.getWidth());
+                    }
+                    nextStackPane.setVisible(true);
+                    timeline = new Timeline();
+                    KeyFrame k1 = new KeyFrame(Duration.millis(0),
+                        new KeyValue(currentStackPane.translateXProperty(),
+                            useTranslateX ? currentStackPane.getTranslateX() : 0,
+                            interpolator),
+                        new KeyValue(nextStackPane.translateXProperty(),
+                            useTranslateX ? nextStackPane.getTranslateX() : -currentStackPane.getWidth(),
+                            interpolator));
+                    KeyFrame k2 = new KeyFrame(DURATION,
+                        swipeAnimationEndEventHandler,
+                        new KeyValue(currentStackPane.translateXProperty(), currentStackPane.getWidth(), interpolator),
+                        new KeyValue(nextStackPane.translateXProperty(), 0, interpolator));
+                    timeline.getKeyFrames().setAll(k1, k2);
+                    timeline.play();
                 }
-                nextStackPane.setVisible(true);
-                timeline = new Timeline();
-                KeyFrame k1 =  new KeyFrame(Duration.millis(0),
-                    new KeyValue(currentStackPane.translateXProperty(),
-                        useTranslateX ? currentStackPane.getTranslateX() : 0,
-                        interpolator),
-                    new KeyValue(nextStackPane.translateXProperty(),
-                        useTranslateX ?
-                            nextStackPane.getTranslateX() : currentStackPane.getWidth(), interpolator));
-                KeyFrame k2 = new KeyFrame(DURATION,
-                    swipeAnimationEndEventHandler,
-                    new KeyValue(currentStackPane.translateXProperty(), -currentStackPane.getWidth(), interpolator),
-                    new KeyValue(nextStackPane.translateXProperty(), 0, interpolator));
-                timeline.getKeyFrames().setAll(k1, k2);
-                timeline.play();
-            } else { // animate left to right
-                if (!useTranslateX) {
-                    nextStackPane.setTranslateX(-currentStackPane.getWidth());
-                }
-                nextStackPane.setVisible(true);
-                timeline = new Timeline();
-                KeyFrame k1 = new KeyFrame(Duration.millis(0),
-                    new KeyValue(currentStackPane.translateXProperty(),
-                        useTranslateX ? currentStackPane.getTranslateX() : 0,
-                        interpolator),
-                    new KeyValue(nextStackPane.translateXProperty(),
-                        useTranslateX ? nextStackPane.getTranslateX() : -currentStackPane.getWidth(),
-                        interpolator));
-                KeyFrame k2 = new KeyFrame(DURATION,
-                    swipeAnimationEndEventHandler,
-                    new KeyValue(currentStackPane.translateXProperty(), currentStackPane.getWidth(), interpolator),
-                    new KeyValue(nextStackPane.translateXProperty(), 0, interpolator));
-                timeline.getKeyFrames().setAll(k1, k2);
-                timeline.play();
             }
-        });
+
+            @Override
+            protected void cleanup() {
+                deferredStartup = null;
+            }
+        };
+
+        // wait one pulse then animate
+        Platform.runLater(deferredStartup);
     }
 
     private void swapPanes() {
@@ -795,6 +854,23 @@ public class PaginationSkin extends SkinBase<Pagination> {
 
     // If the swipe hasn't reached the THRESHOLD we want to animate the clamping.
     private void animateClamping(boolean rightToLeft) {
+        if (deferredStartup != null) {
+            deferredStartup.cancel();
+            deferredStartup = null;
+        }
+
+        if (!shouldAnimate()) {
+            if (timeline != null) {
+                timeline.stop();
+                timeline = null;
+            }
+
+            currentStackPane.setTranslateX(0);
+            nextStackPane.setTranslateX(0);
+            nextStackPane.setVisible(false);
+            return;
+        }
+
         if (rightToLeft) {  // animate right to left
             timeline = new Timeline();
             KeyFrame k1 = new KeyFrame(Duration.millis(0),
@@ -820,7 +896,14 @@ public class PaginationSkin extends SkinBase<Pagination> {
         }
     }
 
-
+    private boolean shouldAnimate() {
+        Pagination skinnable = getSkinnable();
+        return animate
+            && skinnable != null
+            && NodeHelper.isTreeShowing(skinnable)
+            && skinnable.getScene() instanceof Scene scene
+            && !scene.getPreferences().isReducedMotion();
+    }
 
     /* *************************************************************************
      *                                                                         *
@@ -890,7 +973,6 @@ public class PaginationSkin extends SkinBase<Pagination> {
 
             getChildren().addAll(controlBox, pageInformation);
             initializeNavigationHandlers();
-            initializePageIndicators();
             updatePageIndex();
 
             // listen to changes to arrowButtonGap and update margins
@@ -904,6 +986,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
                     HBox.setMargin(rightArrowButton, new Insets(0, 0, 0, snapSizeX(newValue.doubleValue())));
                 }
             });
+            initializePageIndicators();
         }
 
         private void initializeNavigationHandlers() {
@@ -923,10 +1006,15 @@ public class PaginationSkin extends SkinBase<Pagination> {
                 previousIndex = old.intValue();
                 currentIndex = cur.intValue();
                 updatePageIndex();
-                if (animate) {
+                if (shouldAnimate()) {
                     currentAnimatedIndex = currentIndex;
                     animateSwitchPage();
                 } else {
+                    currentStackPane.setTranslateX(0);
+                    currentStackPane.getChildren().clear();
+                    nextStackPane.setTranslateX(0);
+                    nextStackPane.setVisible(false);
+                    nextStackPane.getChildren().clear();
                     createPage(currentStackPane, currentIndex);
                 }
             });
@@ -945,6 +1033,8 @@ public class PaginationSkin extends SkinBase<Pagination> {
                 ib.setToggleGroup(indicatorButtons);
                 controlBox.getChildren().add(ib);
             }
+            updateTooltipVisible();
+            updateBulletIndicatorType();
             controlBox.getChildren().add(rightArrowButton);
         }
 
@@ -1095,7 +1185,7 @@ public class PaginationSkin extends SkinBase<Pagination> {
                 fromIndex = toIndex - lastIndicatorButtonIndex;
             } else {
                 // We need to get the new page set if the currentIndex is out of range.
-                // This can happen if setPageIndex() is called programatically.
+                // This can happen if setPageIndex() is called programmatically.
                 if (currentIndex < fromIndex || currentIndex > toIndex) {
                     fromIndex = currentIndex - index;
                     toIndex = fromIndex + lastIndicatorButtonIndex;
@@ -1285,6 +1375,24 @@ public class PaginationSkin extends SkinBase<Pagination> {
 
             layoutInArea(controlBox, controlBoxX, controlBoxY, controlBoxWidth, controlBoxHeight, 0, controlBoxHPos, controlBoxVPos);
         }
+
+        private void updateTooltipVisible() {
+            boolean on = tooltipVisibleProperty().get();
+            for (Toggle t : indicatorButtons.getToggles()) {
+                if (t instanceof IndicatorButton b) {
+                    b.setTooltipVisible(on);
+                }
+            }
+        }
+
+        private void updateBulletIndicatorType() {
+            boolean on = getSkinnable().getStyleClass().contains(Pagination.STYLE_CLASS_BULLET);
+            for (Toggle t : indicatorButtons.getToggles()) {
+                if (t instanceof IndicatorButton b) {
+                    b.setBulletIndicatorType(on);
+                }
+            }
+        }
     }
 
     class IndicatorButton extends ToggleButton {
@@ -1293,13 +1401,6 @@ public class PaginationSkin extends SkinBase<Pagination> {
         public IndicatorButton(int pageNumber) {
             this.pageNumber = pageNumber;
             setFocusTraversable(false);
-
-            ListenerHelper lh = ListenerHelper.get(PaginationSkin.this);
-
-            lh.addListChangeListener(getSkinnable().getStyleClass(), (ch) -> {
-                setIndicatorType();
-            });
-            setIndicatorType();
 
             setOnAction(arg0 -> {
                     getNode().requestFocus();
@@ -1311,16 +1412,12 @@ public class PaginationSkin extends SkinBase<Pagination> {
                     }
             });
 
-            lh.addChangeListener(tooltipVisibleProperty(), true, (visible) -> {
-                setTooltipVisible(visible);
-            });
-
             prefHeightProperty().bind(minHeightProperty());
             setAccessibleRole(AccessibleRole.PAGE_ITEM);
         }
 
-        private void setIndicatorType() {
-            if (getSkinnable().getStyleClass().contains(Pagination.STYLE_CLASS_BULLET)) {
+        private void setBulletIndicatorType(boolean on) {
+            if (on) {
                 getStyleClass().remove("number-button");
                 getStyleClass().add("bullet-button");
                 setText(null);
@@ -1501,4 +1598,23 @@ public class PaginationSkin extends SkinBase<Pagination> {
         return getClassCssMetaData();
     }
 
+    private abstract static class DeferredRunnable implements Runnable {
+        private boolean cancelled;
+
+        @Override
+        public final void run() {
+            if (!cancelled) {
+                action();
+            }
+
+            cleanup();
+        }
+
+        public final void cancel() {
+            cancelled = true;
+        }
+
+        protected abstract void action();
+        protected abstract void cleanup();
+    }
 }

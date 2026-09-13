@@ -26,18 +26,22 @@
 #pragma once
 
 #include "WebGLExtension.h"
+#include "WebGLRenderingContextBase.h"
+#include <wtf/Noncopyable.h>
+#include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
 
-class WebGLStencilTexturing final : public WebGLExtension {
-    WTF_MAKE_ISO_ALLOCATED(WebGLStencilTexturing);
+class WebGLStencilTexturing final : public WebGLExtension<WebGLRenderingContextBase> {
+    WTF_MAKE_TZONE_ALLOCATED(WebGLStencilTexturing);
+    WTF_MAKE_NONCOPYABLE(WebGLStencilTexturing);
 public:
     explicit WebGLStencilTexturing(WebGLRenderingContextBase&);
-    virtual ~WebGLStencilTexturing();
-
-    ExtensionName getName() const override;
+    ~WebGLStencilTexturing();
 
     static bool supported(GraphicsContextGL&);
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_WEBGL_EXTENSION(WebGLStencilTexturing)

@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "DestinationColorSpace.h"
+#include "NotImplemented.h"
 
 #include <wtf/NeverDestroyed.h>
 #include <wtf/text/TextStream.h>
@@ -32,19 +33,21 @@
 #if USE(CG)
 #include "ColorSpaceCG.h"
 #include <pal/spi/cg/CoreGraphicsSPI.h>
+#elif USE(SKIA)
+#include "ColorSpaceSkia.h"
 #endif
 
 namespace WebCore {
 
+#if USE(CG) || USE(SKIA)
 #if USE(CG)
 using KnownColorSpaceAccessor = CGColorSpaceRef();
+#elif USE(SKIA)
+using KnownColorSpaceAccessor = sk_sp<SkColorSpace>();
+#endif
 template<KnownColorSpaceAccessor accessor> static const DestinationColorSpace& knownColorSpace()
 {
-    static LazyNeverDestroyed<DestinationColorSpace> colorSpace;
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
-        colorSpace.construct(accessor());
-    });
+    static NeverDestroyed<DestinationColorSpace> colorSpace { accessor() };
     return colorSpace.get();
 }
 #else
@@ -57,47 +60,72 @@ template<PlatformColorSpace::Name name> static const DestinationColorSpace& know
 
 const DestinationColorSpace& DestinationColorSpace::SRGB()
 {
-#if USE(CG)
-    return knownColorSpace<sRGBColorSpaceRef>();
+#if USE(CG) || USE(SKIA)
+    return knownColorSpace<sRGBColorSpaceSingleton>();
 #else
     return knownColorSpace<PlatformColorSpace::Name::SRGB>();
 #endif
 }
 
-#if ENABLE(DESTINATION_COLOR_SPACE_LINEAR_SRGB)
 const DestinationColorSpace& DestinationColorSpace::LinearSRGB()
 {
-#if USE(CG)
-    return knownColorSpace<linearSRGBColorSpaceRef>();
+#if USE(CG) || USE(SKIA)
+    return knownColorSpace<linearSRGBColorSpaceSingleton>();
 #else
     return knownColorSpace<PlatformColorSpace::Name::LinearSRGB>();
 #endif
 }
-#endif
 
 #if ENABLE(DESTINATION_COLOR_SPACE_DISPLAY_P3)
 const DestinationColorSpace& DestinationColorSpace::DisplayP3()
 {
-#if USE(CG)
-    return knownColorSpace<displayP3ColorSpaceRef>();
+#if USE(CG) || USE(SKIA)
+    return knownColorSpace<displayP3ColorSpaceSingleton>();
 #else
     return knownColorSpace<PlatformColorSpace::Name::DisplayP3>();
 #endif
 }
-#endif
 
-DestinationColorSpace::DestinationColorSpace(PlatformColorSpace platformColorSpace)
-    : m_platformColorSpace { WTFMove(platformColorSpace) }
+const DestinationColorSpace& DestinationColorSpace::ExtendedDisplayP3()
 {
-#if USE(CG)
-    ASSERT(m_platformColorSpace);
+#if USE(CG) || USE(SKIA)
+    return knownColorSpace<extendedDisplayP3ColorSpaceSingleton>();
+#else
+    return knownColorSpace<PlatformColorSpace::Name::ExtendedDisplayP3>();
 #endif
 }
+#endif
+
+#if ENABLE(DESTINATION_COLOR_SPACE_EXTENDED_SRGB)
+const DestinationColorSpace& DestinationColorSpace::ExtendedSRGB()
+{
+#if USE(CG) || USE(SKIA)
+    return knownColorSpace<extendedSRGBColorSpaceSingleton>();
+#else
+    return knownColorSpace<PlatformColorSpace::Name::ExtendedSRGB>();
+#endif
+}
+#endif
+
+#if ENABLE(DESTINATION_COLOR_SPACE_EXTENDED_REC_2020)
+const DestinationColorSpace& DestinationColorSpace::ExtendedRec2020()
+{
+#if USE(CG)
+    return knownColorSpace<ITUR_2020ColorSpaceSingleton>();
+#else
+    return knownColorSpace<PlatformColorSpace::Name::ExtendedRec2020>();
+#endif
+}
+#endif
 
 bool operator==(const DestinationColorSpace& a, const DestinationColorSpace& b)
 {
 #if USE(CG)
-    return CGColorSpaceEqualToColorSpace(a.platformColorSpace(), b.platformColorSpace());
+    // Do not protect the platformColorSpace here as it is not strictly required for safety and
+    // this code is performance sensitive.
+    SUPPRESS_UNRETAINED_ARG return CGColorSpaceEqualToColorSpace(a.platformColorSpace(), b.platformColorSpace());
+#elif USE(SKIA)
+    return SkColorSpace::Equals(a.platformColorSpace().get(), b.platformColorSpace().get());
 #else
     return a.platformColorSpace() == b.platformColorSpace();
 #endif
@@ -106,38 +134,105 @@ bool operator==(const DestinationColorSpace& a, const DestinationColorSpace& b)
 std::optional<DestinationColorSpace> DestinationColorSpace::asRGB() const
 {
 #if USE(CG)
-    CGColorSpaceRef colorSpace = platformColorSpace();
+    // Avoid refing colorSpace here as this is performance-sensitive code.
+    SUPPRESS_UNRETAINED_LOCAL CGColorSpaceRef colorSpace = platformColorSpace();
     if (CGColorSpaceGetModel(colorSpace) == kCGColorSpaceModelIndexed)
         colorSpace = CGColorSpaceGetBaseColorSpace(colorSpace);
 
     if (CGColorSpaceGetModel(colorSpace) != kCGColorSpaceModelRGB)
         return std::nullopt;
 
-#if HAVE(CG_COLOR_SPACE_USES_EXTENDED_RANGE)
-    if (CGColorSpaceUsesExtendedRange(colorSpace))
+    if (usesExtendedRange())
         return std::nullopt;
-#endif
 
     return DestinationColorSpace(colorSpace);
+
+#elif USE(SKIA)
+    // When using skia, we're not using color spaces consisting of custom lookup tables, so we either yield SRGB or nothing.
+    if (platformColorSpace()->isSRGB())
+        return SRGB();
+    return std::nullopt;
+
 #else
     return *this;
+#endif
+}
+
+std::optional<DestinationColorSpace> DestinationColorSpace::asExtended() const
+{
+    if (usesExtendedRange())
+        return *this;
+#if USE(CG)
+    // Avoid refing color space here as this is performance-sensitive.
+    SUPPRESS_UNRETAINED_ARG if (RetainPtr colorSpace = adoptCF(CGColorSpaceCreateExtended(platformColorSpace())))
+        return DestinationColorSpace(WTF::move(colorSpace));
+#endif
+    return std::nullopt;
+}
+
+bool DestinationColorSpace::supportsOutput() const
+{
+#if USE(CG)
+    // Avoid refing color space here as this is performance-sensitive.
+    SUPPRESS_UNRETAINED_ARG return CGColorSpaceSupportsOutput(platformColorSpace());
+#else
+    notImplemented();
+    return true;
+#endif
+}
+
+bool DestinationColorSpace::usesRGBColorModel() const
+{
+#if USE(CG)
+    // Avoid refing color space here as this is performance-sensitive.
+    SUPPRESS_UNRETAINED_ARG return CGColorSpaceGetModel(platformColorSpace()) == kCGColorSpaceModelRGB;
+#else
+    return true;
+#endif
+}
+
+bool DestinationColorSpace::usesExtendedRange() const
+{
+#if USE(CG)
+    // Avoid refing color space here as this is performance-sensitive.
+    SUPPRESS_UNRETAINED_ARG return CGColorSpaceUsesExtendedRange(platformColorSpace());
+#else
+    notImplemented();
+    return false;
+#endif
+}
+
+bool DestinationColorSpace::usesITUR_2100TF() const
+{
+#if USE(CG)
+    // Avoid refing color space here as this is performance-sensitive.
+    SUPPRESS_UNRETAINED_ARG return CGColorSpaceUsesITUR_2100TF(platformColorSpace());
+#else
+    notImplemented();
+    return false;
 #endif
 }
 
 TextStream& operator<<(TextStream& ts, const DestinationColorSpace& colorSpace)
 {
     if (colorSpace == DestinationColorSpace::SRGB())
-        ts << "sRGB";
-#if ENABLE(DESTINATION_COLOR_SPACE_LINEAR_SRGB)
+        ts << "sRGB"_s;
     else if (colorSpace == DestinationColorSpace::LinearSRGB())
-        ts << "LinearSRGB";
-#endif
+        ts << "LinearSRGB"_s;
 #if ENABLE(DESTINATION_COLOR_SPACE_DISPLAY_P3)
     else if (colorSpace == DestinationColorSpace::DisplayP3())
-        ts << "DisplayP3";
+        ts << "DisplayP3"_s;
+#endif
+#if ENABLE(DESTINATION_COLOR_SPACE_EXTENDED_SRGB)
+    else if (colorSpace == DestinationColorSpace::ExtendedSRGB())
+        ts << "ExtendedSRGB"_s;
+#endif
+#if ENABLE(DESTINATION_COLOR_SPACE_EXTENDED_REC_2020)
+    else if (colorSpace == DestinationColorSpace::ExtendedRec2020())
+        ts << "ExtendedRec2020"_s;
 #endif
 #if USE(CG)
-    else if (auto description = adoptCF(CGColorSpaceCopyICCProfileDescription(colorSpace.platformColorSpace())))
+    else if (RetainPtr description = adoptCF(CGColorSpaceCopyICCProfileDescription(colorSpace.protectedPlatformColorSpace().get())))
         ts << String(description.get());
 #endif
 

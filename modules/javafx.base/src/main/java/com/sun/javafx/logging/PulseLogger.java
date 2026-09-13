@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2009, 2021, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2009, 2024, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -27,8 +27,6 @@ package com.sun.javafx.logging;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -102,9 +100,8 @@ public class PulseLogger {
      * @return true if the user requested pulse logging by setting the system
      *         property javafx.pulseLogger to true, false otherwise.
      */
-    @SuppressWarnings("removal")
     public static boolean isPulseLoggingRequested() {
-        return AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> Boolean.getBoolean("javafx.pulseLogger"));
+        return Boolean.getBoolean("javafx.pulseLogger");
     }
 
     // Loading known loggers reflectively, in case an expected module isn't available

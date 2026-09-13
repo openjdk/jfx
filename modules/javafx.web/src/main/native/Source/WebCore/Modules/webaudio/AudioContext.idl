@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010, Google Inc. All rights reserved.
+ * Copyright (C) 2010 Google Inc. All rights reserved.
  * Copyright (C) 2011 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -34,9 +34,7 @@
     [CallWith=CurrentDocument] constructor(optional AudioContextOptions contextOptions);
 
     readonly attribute double baseLatency;
-
-    // FIXME: Add support.
-    // readonly attribute double outputLatency;
+    readonly attribute double outputLatency;
 
     AudioTimestamp getOutputTimestamp();
 

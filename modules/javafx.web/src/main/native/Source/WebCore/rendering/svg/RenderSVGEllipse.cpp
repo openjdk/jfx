@@ -27,20 +27,20 @@
 
 #include "config.h"
 #include "RenderSVGEllipse.h"
+#include "RenderObjectNode.h"
 
-#if ENABLE(LAYER_BASED_SVG_ENGINE)
 #include "RenderSVGShapeInlines.h"
 #include "SVGCircleElement.h"
 #include "SVGElementTypeHelpers.h"
 #include "SVGEllipseElement.h"
-#include <wtf/IsoMallocInlines.h>
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_ISO_ALLOCATED_IMPL(RenderSVGEllipse);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderSVGEllipse);
 
 RenderSVGEllipse::RenderSVGEllipse(SVGGraphicsElement& element, RenderStyle&& style)
-    : RenderSVGShape(element, WTFMove(style))
+    : RenderSVGShape(Type::SVGEllipse, element, WTF::move(style))
 {
 }
 
@@ -50,11 +50,13 @@ void RenderSVGEllipse::updateShapeFromElement()
 {
     // Before creating a new object we need to clear the cached bounding box
     // to avoid using garbage.
+    clearPath();
+    m_shapeType = ShapeType::Empty;
     m_fillBoundingBox = FloatRect();
-    m_strokeBoundingBox = FloatRect();
+    m_strokeBoundingBox = std::nullopt;
+    m_approximateStrokeBoundingBox = std::nullopt;
     m_center = FloatPoint();
     m_radii = FloatSize();
-    clearPath();
 
     calculateRadiiAndCenter();
 
@@ -62,37 +64,47 @@ void RenderSVGEllipse::updateShapeFromElement()
     if (m_radii.isEmpty())
         return;
 
+    if (m_radii.width() == m_radii.height())
+        m_shapeType = ShapeType::Circle;
+    else
+        m_shapeType = ShapeType::Ellipse;
+
     if (hasNonScalingStroke()) {
-        // Fallback to RenderSVGShape if shape has a non-scaling stroke.
-        RenderSVGShape::updateShapeFromElement();
+        // Fallback to path-based approach if shape has a non-scaling stroke.
+        m_fillBoundingBox = ensurePath().boundingRect();
         return;
     }
 
     m_fillBoundingBox = FloatRect(m_center.x() - m_radii.width(), m_center.y() - m_radii.height(), 2 * m_radii.width(), 2 * m_radii.height());
     m_strokeBoundingBox = m_fillBoundingBox;
-    if (style().svgStyle().hasStroke())
-        m_strokeBoundingBox.inflate(strokeWidth() / 2);
+    if (style().hasStroke())
+        m_strokeBoundingBox->inflate(strokeWidth() / 2);
 }
 
 void RenderSVGEllipse::calculateRadiiAndCenter()
 {
-    SVGLengthContext lengthContext(&graphicsElement());
+    Ref graphicsElement = this->graphicsElement();
+    SVGLengthContext lengthContext(graphicsElement.ptr());
     m_center = FloatPoint(
-        lengthContext.valueForLength(style().svgStyle().cx(), SVGLengthMode::Width),
-        lengthContext.valueForLength(style().svgStyle().cy(), SVGLengthMode::Height));
-    if (is<SVGCircleElement>(graphicsElement())) {
-        float radius = lengthContext.valueForLength(style().svgStyle().r());
+        lengthContext.valueForLength(style().cx(), Style::ZoomNeeded { }, SVGLengthMode::Width),
+        lengthContext.valueForLength(style().cy(), Style::ZoomNeeded { }, SVGLengthMode::Height));
+    if (is<SVGCircleElement>(graphicsElement)) {
+        float radius = lengthContext.valueForLength(style().r(), Style::ZoomNeeded { });
         m_radii = FloatSize(radius, radius);
         return;
     }
 
-    ASSERT(is<SVGEllipseElement>(graphicsElement()));
+    ASSERT(is<SVGEllipseElement>(graphicsElement));
 
-    Length rx = style().svgStyle().rx();
-    Length ry = style().svgStyle().ry();
+    auto& rx = style().rx();
+    auto& ry = style().ry();
     m_radii = FloatSize(
-        lengthContext.valueForLength(rx.isAuto() ? ry : rx, SVGLengthMode::Width),
-        lengthContext.valueForLength(ry.isAuto() ? rx : ry, SVGLengthMode::Height));
+        lengthContext.valueForLength(rx.isAuto() ? ry : rx, Style::ZoomNeeded { }, SVGLengthMode::Width),
+        lengthContext.valueForLength(ry.isAuto() ? rx : ry, Style::ZoomNeeded { }, SVGLengthMode::Height));
+    if (rx.isAuto())
+        m_radii.setWidth(m_radii.height());
+    else if (ry.isAuto())
+        m_radii.setHeight(m_radii.width());
 }
 
 void RenderSVGEllipse::fillShape(GraphicsContext& context) const
@@ -106,7 +118,7 @@ void RenderSVGEllipse::fillShape(GraphicsContext& context) const
 
 void RenderSVGEllipse::strokeShape(GraphicsContext& context) const
 {
-    if (!style().hasVisibleStroke())
+    if (!style().hasStroke() || !style().strokeWidth().isPossiblyPositive())
         return;
     if (hasPath()) {
         RenderSVGShape::strokeShape(context);
@@ -115,35 +127,38 @@ void RenderSVGEllipse::strokeShape(GraphicsContext& context) const
     context.strokeEllipse(m_fillBoundingBox);
 }
 
-bool RenderSVGEllipse::shapeDependentStrokeContains(const FloatPoint& point, PointCoordinateSpace pointCoordinateSpace)
+bool RenderSVGEllipse::canUseStrokeHitTestFastPath() const
 {
-    // The optimized code below does not support non-smooth strokes so we need to
-    // fall back to RenderSVGShape::shapeDependentStrokeContains in these cases.
-    if (!hasSmoothStroke() && !hasPath())
-            RenderSVGShape::updateShapeFromElement();
-
-    if (hasPath())
-        return RenderSVGShape::shapeDependentStrokeContains(point, pointCoordinateSpace);
-
-    float halfStrokeWidth = strokeWidth() / 2;
-    FloatPoint center = FloatPoint(m_center.x() - point.x(), m_center.y() - point.y());
-
-    // This works by checking if the point satisfies the ellipse equation,
-    // (x/rX)^2 + (y/rY)^2 <= 1, for the outer but not the inner stroke.
-    float xrXOuter = center.x() / (m_radii.width() + halfStrokeWidth);
-    float yrYOuter = center.y() / (m_radii.height() + halfStrokeWidth);
-    if (xrXOuter * xrXOuter + yrYOuter * yrYOuter > 1.0)
+    // Non-scaling-stroke needs special handling.
+    if (hasNonScalingStroke())
         return false;
 
-    float xrXInner = center.x() / (m_radii.width() - halfStrokeWidth);
-    float yrYInner = center.y() / (m_radii.height() - halfStrokeWidth);
-    return xrXInner * xrXInner + yrYInner * yrYInner >= 1.0;
+    // We can compute intersections with continuous strokes on circles
+    // without using a Path.
+    return m_shapeType == ShapeType::Circle && style().strokeDashArray().isNone();
 }
 
-bool RenderSVGEllipse::shapeDependentFillContains(const FloatPoint& point, const WindRule fillRule) const
+bool RenderSVGEllipse::shapeDependentStrokeContains(const FloatPoint& point, PointCoordinateSpace pointCoordinateSpace)
 {
-    if (hasPath())
-        return RenderSVGShape::shapeDependentFillContains(point, fillRule);
+    if (m_radii.isEmpty())
+        return false;
+
+    // The optimized code below does not support dash strokes and non-circle shape.
+    // Thus we fallback to path-based approach in that case.
+    if (!canUseStrokeHitTestFastPath()) {
+        ensurePath();
+        return RenderSVGShape::shapeDependentStrokeContains(point, pointCoordinateSpace);
+    }
+
+    float halfStrokeWidth = strokeWidth() / 2;
+    FloatPoint centerOffset = FloatPoint(m_center.x() - point.x(), m_center.y() - point.y());
+    return std::abs(centerOffset.length() - m_radii.width()) <= halfStrokeWidth;
+}
+
+bool RenderSVGEllipse::shapeDependentFillContains(const FloatPoint& point, const WindRule) const
+{
+    if (m_radii.isEmpty())
+        return false;
 
     FloatPoint center = FloatPoint(m_center.x() - point.x(), m_center.y() - point.y());
 
@@ -161,5 +176,3 @@ bool RenderSVGEllipse::isRenderingDisabled() const
 }
 
 }
-
-#endif // ENABLE(LAYER_BASED_SVG_ENGINE)

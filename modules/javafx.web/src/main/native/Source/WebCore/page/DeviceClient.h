@@ -26,15 +26,26 @@
 
 #pragma once
 
+#include <wtf/AbstractCanMakeCheckedPtr.h>
+#include <wtf/TZoneMallocInlines.h>
+#include <wtf/WeakPtr.h>
+
+namespace WebCore {
+class DeviceClient;
+}
+
 namespace WebCore {
 
-class DeviceClient {
-    WTF_MAKE_FAST_ALLOCATED;
+class DeviceClient : public CanMakeWeakPtr<DeviceClient>, public AbstractCanMakeCheckedPtr {
+    WTF_MAKE_TZONE_ALLOCATED_INLINE(DeviceClient);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DeviceClient);
 public:
     virtual ~DeviceClient() = default;
 
     virtual void startUpdating() = 0;
     virtual void stopUpdating() = 0;
+
+    virtual bool isDeviceMotionClient() const { return false; }
 };
 
 } // namespace WebCore

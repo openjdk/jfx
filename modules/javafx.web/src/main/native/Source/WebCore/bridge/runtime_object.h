@@ -26,8 +26,8 @@
 #ifndef KJS_RUNTIME_OBJECT_H
 #define KJS_RUNTIME_OBJECT_H
 
-#include "BridgeJSC.h"
 #include <JavaScriptCore/JSGlobalObject.h>
+#include <WebCore/BridgeJSC.h>
 
 namespace JSC {
 namespace Bindings {
@@ -38,7 +38,7 @@ class WEBCORE_EXPORT RuntimeObject : public JSNonFinalObject {
 public:
     using Base = JSNonFinalObject;
     static constexpr unsigned StructureFlags = Base::StructureFlags | OverridesGetOwnPropertySlot | OverridesGetOwnPropertyNames | OverridesGetCallData | OverridesPut | GetOwnPropertySlotMayBeWrongAboutDontEnum;
-    static constexpr bool needsDestruction = true;
+    static constexpr JSC::DestructionMode needsDestruction = JSC::NeedsDestruction;
 
     template<typename CellType, JSC::SubspaceAccess>
     static GCClient::IsoSubspace* subspaceFor(JSC::VM& vm)
@@ -50,7 +50,7 @@ public:
 
     static RuntimeObject* create(VM& vm, Structure* structure, RefPtr<Instance>&& instance)
     {
-        RuntimeObject* object = new (NotNull, allocateCell<RuntimeObject>(vm)) RuntimeObject(vm, structure, WTFMove(instance));
+        RuntimeObject* object = new (NotNull, allocateCell<RuntimeObject>(vm)) RuntimeObject(vm, structure, WTF::move(instance));
         object->finishCreation(vm);
         return object;
     }
@@ -63,7 +63,7 @@ public:
     static CallData getCallData(JSCell*);
     static CallData getConstructData(JSCell*);
 
-    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    static void getOwnPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
 
     void invalidate();
 
