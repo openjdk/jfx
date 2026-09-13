@@ -25,7 +25,7 @@
 
 package test.robot.javafx.scene;
 
-import com.sun.javafx.util.PlatformUtil;
+import com.sun.javafx.PlatformUtil;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Point2D;
@@ -246,3 +246,4 @@ public class SystemMenuBarHelpMenuTest {
 
     }
 }
+

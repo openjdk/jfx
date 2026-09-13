@@ -30,8 +30,6 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.fail;
 import java.lang.ref.WeakReference;
-
-import com.sun.javafx.util.PlatformUtil;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
@@ -102,7 +100,7 @@ public class ButtonSkinTest {
 
     @Test
     public void testMnemonicAutoParseAddition() {
-        if(!PlatformUtil.isMac()) {
+        if(!com.sun.javafx.PlatformUtil.isMac()) {
             Stage stage = new Stage();
             Scene scene = new Scene(new Group(), 500, 500);
             stage.setScene(scene);
@@ -122,7 +120,7 @@ public class ButtonSkinTest {
 
     @Test
     public void testMnemonicAutoParseAdditionRemovalOnParentChange() {
-        if(!PlatformUtil.isMac()) {
+        if(!com.sun.javafx.PlatformUtil.isMac()) {
             Stage stage = new Stage();
             Scene scene = new Scene(new Group(), 500, 500);
             stage.setScene(scene);
@@ -144,7 +142,7 @@ public class ButtonSkinTest {
 
     @Test
     public void testMnemonicDoesntDuplicateOnGraphicsChange() {
-        if(!PlatformUtil.isMac()) {
+        if(!com.sun.javafx.PlatformUtil.isMac()) {
             Stage stage = new Stage();
             Scene scene = new Scene(new Group(), 500, 500);
             stage.setScene(scene);

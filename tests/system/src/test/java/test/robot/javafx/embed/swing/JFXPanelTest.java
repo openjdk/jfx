@@ -40,7 +40,7 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import com.sun.javafx.util.PlatformUtil;
+import com.sun.javafx.PlatformUtil;
 
 public class JFXPanelTest {
     private static Robot robot;
@@ -101,3 +101,4 @@ public class JFXPanelTest {
         }
     }
 }
+

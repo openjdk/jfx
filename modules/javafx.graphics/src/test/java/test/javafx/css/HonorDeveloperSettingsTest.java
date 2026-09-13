@@ -26,7 +26,7 @@
 package test.javafx.css;
 
 import com.sun.javafx.css.StyleManager;
-import com.sun.javafx.util.PlatformUtil;
+import com.sun.javafx.PlatformUtil;
 
 import javafx.scene.Cursor;
 import javafx.scene.Group;

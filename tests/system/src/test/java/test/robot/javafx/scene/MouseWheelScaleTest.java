@@ -40,7 +40,7 @@ import javafx.stage.WindowEvent;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import com.sun.javafx.util.PlatformUtil;
+import com.sun.javafx.PlatformUtil;
 import test.util.Util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;

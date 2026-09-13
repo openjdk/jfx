@@ -31,8 +31,6 @@ import static javafx.scene.control.ContentDisplay.RIGHT;
 import static javafx.scene.control.ContentDisplay.TOP;
 import static javafx.scene.control.OverrunStyle.CLIP;
 import java.util.concurrent.atomic.AtomicBoolean;
-
-import com.sun.javafx.util.PlatformUtil;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.geometry.HPos;
@@ -969,7 +967,7 @@ public abstract class LabeledSkinBase<C extends Labeled> extends SkinBase<C> {
 
             if (cleanText != null && cleanText.length() > 0
                     && mnemonicInfo != null
-                    && !PlatformUtil.isMac()
+                    && !com.sun.javafx.PlatformUtil.isMac()
                     && getSkinnable().isMnemonicParsing()) {
                 /*
                 ** the Labeled has a MnemonicParsing property,

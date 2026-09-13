@@ -29,7 +29,7 @@ import static javafx.scene.input.KeyCode.*;
 import javafx.scene.control.TextArea;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import com.sun.javafx.util.PlatformUtil;
+import com.sun.javafx.PlatformUtil;
 
 /**
  * Tests TextArea behavior by exercising every key binding not covered by TextAreaBehaviorTest,

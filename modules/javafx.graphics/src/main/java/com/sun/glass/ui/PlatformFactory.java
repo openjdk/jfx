@@ -30,7 +30,7 @@ import com.sun.glass.ui.delegate.ClipboardDelegate;
 import com.sun.glass.ui.delegate.MenuBarDelegate;
 import com.sun.glass.ui.delegate.MenuDelegate;
 import com.sun.glass.ui.delegate.MenuItemDelegate;
-import com.sun.javafx.util.PlatformUtil;
+import com.sun.javafx.PlatformUtil;
 
 public abstract class PlatformFactory {
     private static PlatformFactory instance;

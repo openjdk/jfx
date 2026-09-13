@@ -25,7 +25,7 @@
 
 package test.com.sun.glass.ui.gtk;
 
-import com.sun.javafx.util.PlatformUtil;
+import com.sun.javafx.PlatformUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;

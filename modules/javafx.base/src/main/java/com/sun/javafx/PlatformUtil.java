@@ -23,7 +23,7 @@
  * questions.
  */
 
-package com.sun.javafx.util;
+package com.sun.javafx;
 
 import java.io.File;
 import java.io.FileInputStream;

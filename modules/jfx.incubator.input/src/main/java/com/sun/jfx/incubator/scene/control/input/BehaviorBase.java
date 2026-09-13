@@ -31,7 +31,8 @@ import javafx.event.EventType;
 import javafx.scene.TraversalDirection;
 import javafx.scene.control.Control;
 import javafx.scene.input.KeyCode;
-import com.sun.javafx.util.PlatformUtil;
+import com.sun.javafx.PlatformUtil;
+import com.sun.jfx.incubator.scene.control.input.SkinInputMap.Stateful;
 import jfx.incubator.scene.control.input.FunctionTag;
 import jfx.incubator.scene.control.input.KeyBinding;
 

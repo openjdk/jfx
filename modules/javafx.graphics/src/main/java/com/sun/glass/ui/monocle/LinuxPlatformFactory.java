@@ -25,7 +25,7 @@
 
 package com.sun.glass.ui.monocle;
 
-import com.sun.javafx.util.PlatformUtil;
+import com.sun.javafx.PlatformUtil;
 
 class LinuxPlatformFactory extends NativePlatformFactory {
 

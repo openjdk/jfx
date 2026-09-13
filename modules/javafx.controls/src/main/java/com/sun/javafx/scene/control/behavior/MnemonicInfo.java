@@ -25,7 +25,6 @@
 
 package com.sun.javafx.scene.control.behavior;
 
-import com.sun.javafx.util.PlatformUtil;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.KeyCombination;
 import java.util.Objects;
@@ -263,7 +262,7 @@ public class MnemonicInfo {
          * @param character the main key character
          */
         public MnemonicKeyCombination(String character) {
-            super(PlatformUtil.isMac()
+            super(com.sun.javafx.PlatformUtil.isMac()
                                   ? KeyCombination.META_DOWN
                                   : KeyCombination.ALT_DOWN);
             this.character = character;
