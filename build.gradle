@@ -957,7 +957,7 @@ void fetchExternalTools(String configName, List packages, File destdir, boolean 
 void ant(String conf,   // platform configuration
          String dir,    // directory to run from
          String target, // ant target
-         List<String>  params // parameters (usually -Dxxx=yyy)
+         List<String> params // parameters (usually -Dxxx=yyy)
 ) {
     // Try to use ANT_HOME
     String antHomeEnv = System.getenv("ANT_HOME")
@@ -4904,6 +4904,7 @@ project(":apps") {
         return
     }
 
+    // The apps build is Ant based, we will exec ant from gradle.
     // Download the Lucene libraries needed for the Ensemble8 app
     getConfigurations().create("lucene");
     dependencies {
