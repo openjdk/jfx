@@ -43,9 +43,7 @@ import javafx.scene.text.TextBoundsType;
 import javafx.util.Duration;
 import javafx.util.converter.NumberStringConverter;
 
-/**
- * Responsible for performance measurements.
- */
+/// Responsible for performance measurements.
 final class Benchmark {
 
     private final Environment environment;

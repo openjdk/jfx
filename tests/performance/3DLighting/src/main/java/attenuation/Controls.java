@@ -54,9 +54,7 @@ import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Transform;
 import javafx.util.converter.NumberStringConverter;
 
-/**
- * Utility class for creating adjustment controls.
- */
+/// Utility class for creating adjustment controls.
 final class Controls {
 
     static Node createLightControls(AmbientLight light) {

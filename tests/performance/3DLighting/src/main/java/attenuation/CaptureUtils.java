@@ -38,9 +38,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.image.Image;
 
-/**
- * Utility class for creating screenshots.
- */
+/// Utility class for creating screenshots.
 final class CaptureUtils {
 
     enum Format {
@@ -57,7 +55,7 @@ final class CaptureUtils {
 
     static void capture(Image fxImage, Format extension) {
         BufferedImage image = SwingFXUtils.fromFXImage(fxImage, null);
-        BufferedImage rgbImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_3BYTE_BGR);
+        var rgbImage = new BufferedImage(image.getWidth(), image.getHeight(), BufferedImage.TYPE_3BYTE_BGR);
         rgbImage.getGraphics().drawImage(image, 0, 0, null);
 
         String formatName = extension.name().toLowerCase();

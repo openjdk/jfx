@@ -38,12 +38,10 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
-/**
- * A utility application for testing 3D features, including lighting, materials, and performance.
- * <p>
- * <b>Important</b>: when measuring performance, make sure that no other application on your system is rendering heavy
- * graphics, like videos, to a screen, as this will corrupt the measurement.
- */
+/// A utility application for testing 3D features, including lighting, materials, and performance.
+///
+/// **Important**: when measuring performance, make sure that no other application on your system is rendering heavy
+/// graphics, like videos, to a screen, as this will corrupt the measurement.
 public class LightingApplication extends Application {
 
     private final Environment environment = new Environment();

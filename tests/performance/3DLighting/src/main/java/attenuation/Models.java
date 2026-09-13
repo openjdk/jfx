@@ -37,9 +37,7 @@ import javafx.scene.shape.Sphere;
 import javafx.scene.shape.TriangleMesh;
 import javafx.scene.transform.Rotate;
 
-/**
- * Utility class for creating 3D shapes.
- */
+/// Utility class for creating 3D shapes.
 final class Models {
 
     private final static double SPHERE_RADIUS = 50;
@@ -67,11 +65,9 @@ final class Models {
         return node;
     }
 
-    /**
-     * Creates a box-like structure with 3 edges.
-     *
-     * @param size distance from the center of the box to an edge
-     */
+    /// Creates a box-like structure with 3 edges.
+    ///
+    /// @param size distance from the center of the box to an edge
     private static Group createBoxes(double size) {
         var back = createBox(size);
         var right = createBox(size);

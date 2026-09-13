@@ -33,15 +33,11 @@ import javafx.scene.Group;
 import javafx.scene.PerspectiveCamera;
 import javafx.scene.SceneAntialiasing;
 import javafx.scene.SubScene;
-import javafx.scene.input.MouseButton;
-import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.Pane;
 import javafx.scene.transform.Rotate;
 import javafx.scene.transform.Translate;
 
-/**
- * Camera controls for a 3D environment.
- */
+/// Camera controls for a 3D environment.
 class CameraScene3D extends Pane {
 
     public DoubleProperty xPan = new SimpleDoubleProperty();
@@ -110,16 +106,7 @@ class CameraScene3D extends Pane {
     private final void setUIBindings() {
         setOnRotate(e -> rotate(e.getAngle()));
         setOnZoom(e -> zoom(isZoomTotal.get() ? e.getTotalZoomFactor() : e.getZoomFactor()));
-        setOnScroll(e -> {
-            // touch scroll for moving the board
-            if (e.getEventType() == ScrollEvent.SCROLL_STARTED) {
-                pan(e.getDeltaX(), e.getDeltaY());
-            }
-            // mouse scroll for zoom
-            else {
-                zoom(e.getDeltaY());
-            }
-        });
+        setOnScroll(e -> zoom(e.getDeltaY()));
 
         setOnMousePressed(e -> {
             startX = curX = e.getX();
@@ -133,16 +120,17 @@ class CameraScene3D extends Pane {
             curY = e.getY();
             double deltaX = curX - startX;
             double deltaY = curY - startY;
-            if (e.getButton() == MouseButton.PRIMARY) {
-                pan(deltaX, deltaY);
-            } else if (e.getButton() == MouseButton.SECONDARY) {
-                boolean positiveX = curX > getWidth() / 2;
-                boolean positiveY = curY > getHeight() / 2;
-                deltaX = positiveY ? -deltaX : deltaX;
-                deltaY = positiveX ? deltaY : -deltaY;
-                rotate((deltaX + deltaY)/2);
-            } else if (e.getButton() == MouseButton.MIDDLE) {
-                swivle(deltaY);
+            switch (e.getButton()) {
+                case PRIMARY -> pan(deltaX, deltaY);
+                case SECONDARY -> {
+                    boolean positiveX = curX > getWidth() / 2;
+                    boolean positiveY = curY > getHeight() / 2;
+                    deltaX = positiveY ? -deltaX : deltaX;
+                    deltaY = positiveX ? deltaY : -deltaY;
+                    rotate((deltaX + deltaY)/2);
+                }
+                case MIDDLE -> swivle(deltaY);
+                case BACK, FORWARD, NONE -> {}
             }
         });
     }

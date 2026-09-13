@@ -53,9 +53,7 @@ import javafx.scene.text.TextBoundsType;
 import javafx.stage.FileChooser;
 import javafx.stage.FileChooser.ExtensionFilter;
 
-/**
- * Utility class for creating material adjustment controls.
- */
+/// Utility class for creating material adjustment controls.
 final class MaterialControls {
 
     static final PhongMaterial MATERIAL = new PhongMaterial();

@@ -59,9 +59,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextBoundsType;
 
-/**
- * The 3D environment. Includes the lights and shapes.
- */
+/// The 3D environment. Includes the lights and shapes.
 class Environment extends CameraScene3D {
 
     // Reuse the background from the [PhongMaterial] docs instead of copying it to the resources of this project.
