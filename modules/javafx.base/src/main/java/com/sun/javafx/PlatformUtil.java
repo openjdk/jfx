@@ -65,21 +65,21 @@ public class PlatformUtil {
     /**
      * Returns true if the operating system is a form of Windows.
      */
-    public static boolean isWindows(){
+    public static boolean isWindows() {
         return WINDOWS;
     }
 
     /**
      * Returns true if the operating system is a form of Mac OS.
      */
-    public static boolean isMac(){
+    public static boolean isMac() {
         return MAC;
     }
 
     /**
      * Returns true if the operating system is a form of Linux.
      */
-    public static boolean isLinux(){
+    public static boolean isLinux() {
         return LINUX;
     }
 
@@ -90,7 +90,7 @@ public class PlatformUtil {
     /**
      * Returns true if the operating system is a form of Linux or Solaris
      */
-    public static boolean isUnix(){
+    public static boolean isUnix() {
         return LINUX || SOLARIS;
     }
 
@@ -111,14 +111,14 @@ public class PlatformUtil {
     /**
      * Returns true if the Headless glass platform is selected
      */
-    public static boolean isHeadless(){
+    public static boolean isHeadless() {
         return HEADLESS;
     }
 
     /**
      * Returns true if the operating system is iOS
      */
-    public static boolean isIOS(){
+    public static boolean isIOS() {
         return IOS;
     }
 
@@ -129,7 +129,7 @@ public class PlatformUtil {
     /**
      * Returns true if the current runtime is a statically linked image
      */
-    public static boolean isStaticBuild(){
+    public static boolean isStaticBuild() {
         return STATIC_BUILD;
     }
 

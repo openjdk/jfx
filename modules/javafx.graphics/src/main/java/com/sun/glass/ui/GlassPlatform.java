@@ -26,7 +26,7 @@ package com.sun.glass.ui;
 
 import com.sun.javafx.PlatformUtil;
 
-final class Platform {
+final class GlassPlatform {
 
     public static final String MAC = "Mac";
     public static final String WINDOWS = "Win";
