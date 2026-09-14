@@ -75,7 +75,7 @@
 # Specifies whether the applications in the "apps" directory are built or cleaned.
 # They are built with a separate Ant based build,
 # which is not needed to build or test the JavaFX modules themselves.
-# Uncomment this flag in order to no build and clean the apps.
+# Uncomment this flag in order to not build and clean the apps.
 
 #INCLUDE_APPS = false
 

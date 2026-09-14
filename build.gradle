@@ -950,7 +950,6 @@ void fetchExternalTools(String configName, List packages, File destdir, boolean 
     }
 }
 
-
 // Make a forked ANT call.
 // This needs to be forked so that ant can be used with the right JDK and updated modules
 // for testing obscure things like packaging of apps
