@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,27 +30,27 @@ import java.awt.Component;
 import java.awt.ComponentOrientation;
 import java.awt.Cursor;
 import java.awt.Dimension;
+import java.awt.EventQueue;
 import java.awt.Graphics;
-import java.awt.GraphicsConfiguration;
 import java.awt.Graphics2D;
+import java.awt.GraphicsConfiguration;
+import java.awt.GraphicsEnvironment;
+import java.awt.Insets;
 import java.awt.KeyboardFocusManager;
 import java.awt.Point;
-import java.awt.Window;
-import java.awt.Insets;
-import java.awt.EventQueue;
-import java.awt.SecondaryLoop;
-import java.awt.GraphicsEnvironment;
 import java.awt.Rectangle;
+import java.awt.SecondaryLoop;
+import java.awt.Window;
 import java.awt.event.AWTEventListener;
 import java.awt.event.ComponentEvent;
 import java.awt.event.FocusEvent;
 import java.awt.event.HierarchyEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.InputMethodEvent;
+import java.awt.event.InvocationEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseWheelEvent;
-import java.awt.event.InvocationEvent;
 import java.awt.geom.AffineTransform;
 import java.awt.im.InputMethodRequests;
 import java.awt.image.BufferedImage;
@@ -59,30 +59,27 @@ import java.nio.IntBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
 import javax.swing.JComponent;
 import javax.swing.SwingUtilities;
-
 import javafx.application.Platform;
-import javafx.geometry.Point2D;
 import javafx.geometry.NodeOrientation;
+import javafx.geometry.Point2D;
 import javafx.scene.Scene;
 import com.sun.glass.ui.Screen;
-
+import com.sun.javafx.PlatformUtil;
 import com.sun.javafx.application.PlatformImpl;
 import com.sun.javafx.cursor.CursorFrame;
-import com.sun.javafx.stage.EmbeddedWindow;
-import com.sun.javafx.tk.Toolkit;
-import com.sun.javafx.PlatformUtil;
-
-import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.embed.AbstractEvents;
 import com.sun.javafx.embed.EmbeddedSceneInterface;
 import com.sun.javafx.embed.EmbeddedStageInterface;
 import com.sun.javafx.embed.HostInterface;
-
+import com.sun.javafx.embed.swing.SwingCursors;
 import com.sun.javafx.embed.swing.SwingDnD;
 import com.sun.javafx.embed.swing.SwingEvents;
-import com.sun.javafx.embed.swing.SwingCursors;
 import com.sun.javafx.embed.swing.SwingNodeHelper;
 import com.sun.javafx.embed.swing.newimpl.JFXPanelInteropN;
+import com.sun.javafx.logging.PlatformLogger;
+import com.sun.javafx.stage.EmbeddedWindow;
+import com.sun.javafx.tk.Toolkit;
+import com.sun.javafx.util.ImageUtils;
 
 /**
 * {@code JFXPanel} is a component to embed JavaFX content into
@@ -799,9 +796,8 @@ public class JFXPanel extends JComponent {
             BufferedImage oldIm = pixelsIm;
             int newPixelW = (int) Math.ceil(pWidth * newScaleFactorX);
             int newPixelH = (int) Math.ceil(pHeight * newScaleFactorY);
-            pixelsIm = new BufferedImage(newPixelW, newPixelH,
-                                         SwingFXUtils.getBestBufferedImageType(
-                                             hScenePeer.getPixelFormat(), null, false));
+            int type = ImageUtils.getBestBufferedImageType(hScenePeer.getPixelFormat(), null, false);
+            pixelsIm = new BufferedImage(newPixelW, newPixelH, type);
             if (oldIm != null) {
                 double ratioX = newScaleFactorX / scaleFactorX;
                 double ratioY = newScaleFactorY / scaleFactorY;

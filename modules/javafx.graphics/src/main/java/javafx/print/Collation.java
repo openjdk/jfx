@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013, 2017, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2013, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,15 +35,15 @@ package javafx.print;
 public enum Collation {
 
     /**
-     * The same numbered pages are consecutive in the output,
-     * For example: 2 copies of a document with 2 pages is printed :
+     * The same numbered pages are consecutive in the output.
+     * For example, 2 copies of a document with 2 pages are printed:
      * Page 1, Page 1, Page 2, Page 2.
      */
     UNCOLLATED,
 
     /**
      * Each copy of a document is printed together.
-     * FOr example: 2 copies of a document with 2 pages is printed :
+     * For example, 2 copies of a document with 2 pages are printed:
      * Page 1, Page 2, Page 1, Page 2.
      */
     COLLATED

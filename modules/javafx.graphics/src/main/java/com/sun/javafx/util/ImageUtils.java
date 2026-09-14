@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2012, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,7 +22,8 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.jfx.incubator.scene.control.richtext.util;
+
+package com.sun.javafx.util;
 
 import java.awt.AlphaComposite;
 import java.awt.Graphics2D;
@@ -30,21 +31,24 @@ import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.awt.image.SampleModel;
 import java.awt.image.SinglePixelPackedSampleModel;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.IntBuffer;
+import java.util.Objects;
+import javax.imageio.ImageIO;
 import javafx.scene.image.Image;
 import javafx.scene.image.PixelFormat;
 import javafx.scene.image.PixelReader;
 import javafx.scene.image.PixelWriter;
 import javafx.scene.image.WritableImage;
 import javafx.scene.image.WritablePixelFormat;
-import javafx.scene.paint.Color;
 
 /**
- * Image Utilities copied from javafx.embed.swing.SwingFXUtils.
- * Avoids creating dependency on javafx.swing to javafx.controls.
+ * This class provides utility methods for converting images between
+ * AWT BufferedImage and JavaFX Image.
  */
-public class ImgUtil {
-    private ImgUtil() { } // no instances
+public class ImageUtils {
+    private ImageUtils() {} // no instances
 
     /**
      * Snapshots the specified {@link BufferedImage} and stores a copy of
@@ -122,18 +126,16 @@ public class ImgUtil {
     }
 
     /**
-     * Determine the optimal BufferedImage type to use for the specified
-     * {@code fxFormat} allowing for the specified {@code bimg} to be used
+     * Determines the optimal BufferedImage type to use for the specified
+     * {@code fxFormat}, allowing for the specified {@code bimg} to be used
      * as a potential default storage space if it is not null and is compatible.
      *
      * @param fxFormat the PixelFormat of the source FX Image
      * @param bimg an optional existing {@code BufferedImage} to be used
      *             for storage if it is compatible, or null
-     * @return
+     * @return the optimal BufferedImage type
      */
-    static int
-            getBestBufferedImageType(PixelFormat<?> fxFormat, BufferedImage bimg,
-                                     boolean isOpaque)
+    public static int getBestBufferedImageType(PixelFormat<?> fxFormat, BufferedImage bimg, boolean isOpaque)
     {
         if (bimg != null) {
             int bimgType = bimg.getType();
@@ -153,6 +155,9 @@ public class ImgUtil {
                 return bimgType;
             }
         }
+        if (isOpaque) {
+            return BufferedImage.TYPE_INT_RGB;
+        }
         switch (fxFormat.getType()) {
             default:
             case BYTE_BGRA_PRE:
@@ -171,7 +176,7 @@ public class ImgUtil {
     }
 
     /**
-     * Determine the appropriate {@link WritablePixelFormat} type that can
+     * Determines the appropriate {@link WritablePixelFormat} type that can
      * be used to transfer data into the indicated BufferedImage.
      *
      * @param bimg the BufferedImage that will be used as a destination for
@@ -198,10 +203,12 @@ public class ImgUtil {
     }
 
     private static boolean checkFXImageOpaque(PixelReader pr, int iw, int ih) {
-        for (int x = 0; x < iw; x++) {
-            for (int y = 0; y < ih; y++) {
-                Color color = pr.getColor(x,y);
-                if (color.getOpacity() != 1.0) {
+        int[] pixels = new int[iw];
+        WritablePixelFormat<IntBuffer> format = PixelFormat.getIntArgbPreInstance();
+        for (int y = 0; y < ih; y++) {
+            pr.getPixels(0, y, iw, 1, format, pixels, 0, iw);
+            for (int pixel : pixels) {
+                if ((pixel >>> 24) != 0xff) {
                     return false;
                 }
             }
@@ -251,11 +258,11 @@ public class ImgUtil {
             case INT_ARGB:
             case BYTE_BGRA_PRE:
             case BYTE_BGRA:
-                // Check fx image opacity only if
-                // supplied BufferedImage is without alpha channel
-                if (bimg != null &&
-                        (bimg.getType() == BufferedImage.TYPE_INT_BGR ||
-                         bimg.getType() == BufferedImage.TYPE_INT_RGB)) {
+            case BYTE_INDEXED:
+                boolean opacityMatters = bimg == null ||
+                        bimg.getType() == BufferedImage.TYPE_INT_BGR ||
+                        bimg.getType() == BufferedImage.TYPE_INT_RGB;
+                if (opacityMatters) {
                     srcPixelsAreOpaque = checkFXImageOpaque(pr, iw, ih);
                 }
                 break;
@@ -291,5 +298,39 @@ public class ImgUtil {
         WritablePixelFormat<IntBuffer> pf = getAssociatedPixelFormat(bimg);
         pr.getPixels(0, 0, iw, ih, pf, data, offset, scan);
         return bimg;
+    }
+
+    /**
+     * Writes the image to a byte array in one of the formats supported by ImageIO.
+     * The format string is passed to the
+     * {@link ImageIO#write(java.awt.image.RenderedImage, String, java.io.OutputStream) ImageIO.write()}
+     * method (for example, {@code "png"}).
+     *
+     * @param im the image, must not be null
+     * @param format the format string, must not be null
+     * @return a byte array containing the image in the specified format
+     * @throws IOException if an I/O error occurs, the format is not supported, or the source image is not readable
+     */
+    public static byte[] writeImage(Image im, String format) throws IOException {
+        Objects.requireNonNull(im);
+        Objects.requireNonNull(format);
+
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream(65536)) {
+            // using disk cache slows things down
+            boolean old = ImageIO.getUseCache();
+            ImageIO.setUseCache(false);
+            try {
+                BufferedImage bi = fromFXImage(im, null);
+                if (bi == null) {
+                    throw new IOException("source image is not readable");
+                }
+                if (!ImageIO.write(bi, format, out)) {
+                    throw new IOException("no image writer is found for " + format);
+                }
+            } finally {
+                ImageIO.setUseCache(old);
+            }
+            return out.toByteArray();
+        }
     }
 }
