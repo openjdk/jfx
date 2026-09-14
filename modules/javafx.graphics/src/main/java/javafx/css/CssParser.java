@@ -114,7 +114,6 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.MessageFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -4132,10 +4131,7 @@ final public class CssParser {
                     }
                 }
 
-                yield new ParsedValueImpl<>(new ParsedValueImpl[] {
-                        new ParsedValueImpl(term.token.getText(), null),
-                        new ParsedValueImpl(Arrays.asList(args), null)
-                    }, InterpolatorConverter.getInstance());
+                yield createEasingFunction(term.token.getText(), args);
             }
 
             case "steps(" -> {
@@ -4156,10 +4152,7 @@ final public class CssParser {
                     }
                 }
 
-                yield new ParsedValueImpl<>(new ParsedValueImpl[] {
-                        new ParsedValueImpl(term.token.getText(), null),
-                        new ParsedValueImpl(Arrays.asList(args), null)
-                    }, InterpolatorConverter.getInstance());
+                yield createEasingFunction(term.token.getText(), args);
             }
 
             case "linear(" -> {
@@ -4193,10 +4186,15 @@ final public class CssParser {
                     }
                 }
 
-                yield new ParsedValueImpl<>(new ParsedValueImpl[] {
-                        new ParsedValueImpl(term.token.getText(), null),
-                        new ParsedValueImpl(args, null)
-                    }, InterpolatorConverter.getInstance());
+                Object[] values = new Object[args.size() * 2];
+
+                for (int i = 0; i < args.size(); ++i) {
+                    Point2D point = args.get(i);
+                    values[i * 2] = point.getX();
+                    values[i * 2 + 1] = point.getY();
+                }
+
+                yield createEasingFunction(term.token.getText(), values);
             }
 
             default -> {
@@ -4205,6 +4203,17 @@ final public class CssParser {
                     InterpolatorConverter.getInstance());
             }
         };
+    }
+
+    private ParsedValueImpl<?, Interpolator> createEasingFunction(String name, Object[] arguments) {
+        ParsedValueImpl[] values = new ParsedValueImpl[arguments.length + 1];
+        values[0] = new ParsedValueImpl(name, null);
+
+        for (int i = 0; i < arguments.length; ++i) {
+            values[i + 1] = arguments[i] != null ? new ParsedValueImpl(arguments[i], null) : null;
+        }
+
+        return new ParsedValueImpl<>(values, InterpolatorConverter.getInstance());
     }
 
     // https://www.w3.org/TR/css-easing-2/#easing-functions
