@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2026, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -30,25 +30,46 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/**
- * RichTextArea Control demos and sample code.
- *
- * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
- * Will be removed in a future release.</b>
- *
- * @moduleGraph
- */
+package com.oracle.demo.richtext.headings;
 
-module RichTextAreaDemo {
-    exports com.oracle.demo.richtext.codearea;
-    exports com.oracle.demo.richtext.editor;
-    exports com.oracle.demo.richtext.notebook;
-    exports com.oracle.demo.richtext.rta;
-    exports com.oracle.demo.richtext.headings;
+import java.util.Optional;
 
-    requires javafx.base;
-    requires javafx.controls;
-    requires javafx.graphics;
-    requires jfx.incubator.input;
-    requires jfx.incubator.richtext;
+public record ParagraphRange(int start, int end) implements Comparable<ParagraphRange> {
+
+    public ParagraphRange {
+        if (start < 0) {
+            throw new IllegalArgumentException("start must be non-negative: " + start);
+        }
+        if (end < start) {
+            throw new IllegalArgumentException("end must not precede start: " + start + ", " + end);
+        }
+    }
+
+    public int length() {
+        return end - start;
+    }
+
+    public boolean isEmpty() {
+        return length() == 0;
+    }
+
+    public boolean contains(int modelIndex) {
+        return this.start <= modelIndex && modelIndex < this.end;
+    }
+
+    @Override
+    public int compareTo(ParagraphRange other) {
+        int result = Integer.compare(this.start, other.start);
+        if (result == 0) {
+            result = Integer.compare(this.end, other.end);
+        }
+        return result;
+    }
+
+    public static Optional<ParagraphRange> ofNextParagraph(ParagraphRange range, int max) {
+        if (range.start + 1 >= Math.min(range.end, max)) {
+            return Optional.empty();
+        }
+        return Optional.of(new ParagraphRange(range.start + 1, Math.min(range.end, max)));
+    }
 }

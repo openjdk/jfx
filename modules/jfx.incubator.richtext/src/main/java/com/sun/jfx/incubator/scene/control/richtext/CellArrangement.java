@@ -28,6 +28,7 @@
 package com.sun.jfx.incubator.scene.control.richtext;
 
 import java.util.ArrayList;
+
 import javafx.collections.ObservableList;
 import javafx.geometry.Point2D;
 import javafx.scene.Node;
@@ -38,6 +39,7 @@ import javafx.scene.text.HitInfo;
 import javafx.scene.text.TextFlow;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
 import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.skin.RowMap;
 
 /**
  * Manages TextCells in a sliding window, comprised of the visible area and some number of screenfuls
@@ -54,6 +56,9 @@ public class CellArrangement {
     private final double contentPaddingTop; // snapped
     private final double contentPaddingBottom; // snapped
     private final Origin origin;
+    private final RowMap rowMap;
+    private final int originRow;
+    private final int rowCount;
     private int visibleCount;
     private int bottomCount;
     private double unwrappedWidth;
@@ -62,13 +67,16 @@ public class CellArrangement {
     private Node[] left;
     private Node[] right;
 
-    public CellArrangement(VFlow f, double contentPaddingTop, double contentPaddingBottom) {
+    public CellArrangement(VFlow f, double contentPaddingTop, double contentPaddingBottom, RowMap rowMap) {
         this.flowWidth = f.getWidth();
         this.flowHeight = f.getViewPortHeight();
         this.origin = f.getOrigin();
         this.lineCount = f.getParagraphCount();
+        this.rowCount = f.getRowCount();
+        this.originRow = Math.min(rowMap.getViewRow(origin.index()), Math.max(0, rowCount - 1));
         this.contentPaddingTop = contentPaddingTop;
         this.contentPaddingBottom = contentPaddingBottom;
+        this.rowMap = rowMap;
     }
 
     // TODO not called right now, use it to skip reflow when not necessary
@@ -93,6 +101,7 @@ public class CellArrangement {
             ", topHeight=" + topHeight +
             ", bottomHeight=" + bottomHeight +
             ", lineCount=" + lineCount +
+            ", rowCount=" + rowCount +
             ", average=" + averageHeight() +
             ", unwrapped=" + getUnwrappedWidth() +
             "}";
@@ -129,7 +138,7 @@ public class CellArrangement {
         int btmIx = bottomIndex();
 
         int ix = binarySearch(cellY, topIx, btmIx - 1);
-        TextCell cell = getCell(ix);
+        TextCell cell = getCellForRow(ix);
         if (cell != null) {
             Region r = cell.getContent();
             double y = cellY - cell.getY() - r.snappedTopInset();
@@ -160,7 +169,15 @@ public class CellArrangement {
 
     /** returns the cell contained in this layout, or null */
     public TextCell getCell(int modelIndex) {
-        int ix = modelIndex - origin.index();
+        if (rowMap.isHidden(modelIndex)) {
+            return null;
+        }
+        return getCellForRow(rowMap.getViewRow(modelIndex));
+    }
+
+    /** Returns the cell at the given view row contained in this layout, or null */
+    public TextCell getCellForRow(int row) {
+        int ix = row - originRow;
         if (ix < 0) {
             if ((ix + topCount()) >= 0) {
                 // cells in the top part come after bottom part, and in reverse order
@@ -175,7 +192,11 @@ public class CellArrangement {
 
     /** returns a visible cell, or null */
     public TextCell getVisibleCell(int modelIndex) {
-        int ix = modelIndex - origin.index();
+        if (rowMap.isHidden(modelIndex)) {
+            return null;
+        }
+        int row = rowMap.getViewRow(modelIndex);
+        int ix = row - originRow;
         if ((ix >= 0) && (ix < visibleCount)) {
             return cells.get(ix);
         }
@@ -264,7 +285,7 @@ public class CellArrangement {
     }
 
     public double estimatedMax() {
-        return (lineCount - topCount() - bottomCount) * averageHeight() + topHeight + bottomHeight;
+        return (rowCount - topCount() - bottomCount) * averageHeight() + topHeight + bottomHeight;
     }
 
     /**
@@ -275,7 +296,7 @@ public class CellArrangement {
     private int binarySearch(double localY, int low, int high) {
         while (low <= high) {
             int mid = (low + high) >>> 1;
-            TextCell cell = getCell(mid);
+            TextCell cell = getCellForRow(mid);
             int cmp = compare(cell, localY);
             if (cmp < 0) {
                 low = mid + 1;
@@ -293,7 +314,7 @@ public class CellArrangement {
         if (localY < y) {
             return 1;
         } else if (localY >= y + cell.getCellHeight()) {
-            if (cell.getIndex() == (lineCount - 1)) {
+            if (rowMap.getViewRow(cell.getIndex()) == (rowCount - 1)) {
                 return 0;
             }
             return -1;
@@ -303,12 +324,12 @@ public class CellArrangement {
 
     /** returns a model index of the first cell in the sliding window top margin */
     public int topIndex() {
-        return origin.index() - topCount();
+        return originRow - topCount();
     }
 
     /** returns a model index of the last cell in the sliding window bottom margin + 1 */
     public int bottomIndex() {
-        return origin.index() + bottomCount;
+        return originRow + bottomCount;
     }
 
     /** returns the new origin after scrolling for delta pixels within the arrangement */
@@ -329,7 +350,7 @@ public class CellArrangement {
         }
 
         int ix = binarySearch(y, topIx, btmIx - 1);
-        TextCell cell = getCell(ix);
+        TextCell cell = getCellForRow(ix);
         double off = y - cell.getY();
 
         // do not scroll beyond the top edge

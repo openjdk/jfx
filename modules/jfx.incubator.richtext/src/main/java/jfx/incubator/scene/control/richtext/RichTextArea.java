@@ -32,6 +32,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.List;
 import java.util.Objects;
+
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyBooleanProperty;
@@ -61,6 +62,7 @@ import javafx.scene.control.Control;
 import javafx.scene.input.DataFormat;
 import javafx.util.Duration;
 import com.sun.jfx.incubator.scene.control.input.InputMapHelper;
+import com.sun.jfx.incubator.scene.control.richtext.CellArrangement;
 import com.sun.jfx.incubator.scene.control.richtext.CssStyles;
 import com.sun.jfx.incubator.scene.control.richtext.Params;
 import com.sun.jfx.incubator.scene.control.richtext.RTAccessibilityHelper;
@@ -2413,6 +2415,11 @@ public class RichTextArea extends Control {
     // package protected for testing
     VFlow vflow() {
         return RichTextAreaSkinHelper.getVFlow(this);
+    }
+
+    // package protected for testing
+    CellArrangement cellArrangement() {
+        return vflow().arrangement();
     }
 
     private RichTextAreaSkin richTextAreaSkin() {

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,21 +23,42 @@
  * questions.
  */
 
-package jfx.incubator.scene.control.richtext;
+package com.sun.jfx.incubator.scene.control.richtext;
 
-import com.sun.jfx.incubator.scene.control.richtext.CellArrangement;
-import com.sun.jfx.incubator.scene.control.richtext.VFlow;
+import java.util.function.Consumer;
+
+import jfx.incubator.scene.control.richtext.model.ContentChange;
+import jfx.incubator.scene.control.richtext.skin.RowMap;
 
 /**
- * RichTextArea shim.
+ * Manages RowMap Accessor.
  */
-public class RichTextAreaShim {
-    /** for when we need to access VFlow */
-    public static VFlow vflow(RichTextArea t) {
-        return t.vflow();
+public class RowMapHelper {
+    public interface Accessor {
+        void dispose(RowMap rowMap);
+        void onContentChange(RowMap rowMap, ContentChange change);
+        void setOnChange(RowMap rowMap, Consumer<Boolean> callback);
     }
 
-    public static CellArrangement arrangement(RichTextArea t) {
-        return t.cellArrangement();
+    private static Accessor accessor;
+
+    public static void setAccessor(Accessor a) {
+        if (accessor != null) {
+            throw new IllegalStateException();
+        }
+        accessor = a;
     }
+
+    public static void dispose(RowMap rowMap) {
+        accessor.dispose(rowMap);
+    }
+
+    public static void onContentChange(RowMap rowMap, ContentChange change) {
+        accessor.onContentChange(rowMap, change);
+    }
+
+    public static void setOnChange(RowMap rowMap, Consumer<Boolean> callback) {
+        accessor.setOnChange(rowMap, callback);
+    }
+
 }

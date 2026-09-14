@@ -102,6 +102,12 @@ unless built as a part of openjfx repository where the default value is sufficie
 		</exec>
 	</target>
 
+	<target name="run-headings-demo">
+		<exec executable="java">
+			<arg line="--module-path ${javafx.home}/lib --add-modules javafx.base,javafx.graphics,javafx.controls,jfx.incubator.input,jfx.incubator.richtext -classpath dist/${TARGET}.jar --enable-native-access=javafx.graphics com.oracle.demo.richtext.headings.HeadingsDemoApp" />
+		</exec>
+	</target>
+
 
 	<!-- alias to build-all target, to make it compatible with the rest of the apps -->
 	<target name="jar" depends="build-all" />

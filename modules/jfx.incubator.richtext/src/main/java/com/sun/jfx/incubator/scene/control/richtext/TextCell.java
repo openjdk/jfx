@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
+
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -80,7 +81,7 @@ public final class TextCell extends BorderPane {
      * @param embedsNode whether the content is a paragraph
      */
     public TextCell(int index, Region content, boolean embedsNode) {
-        Objects.nonNull(content);
+        Objects.requireNonNull(content);
         this.index = index;
         this.content = content;
         this.embedsNode = embedsNode;

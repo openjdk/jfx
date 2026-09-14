@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2023, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,7 @@
 
 package com.sun.jfx.incubator.scene.control.richtext;
 
+import java.util.Arrays;
 import java.util.Objects;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
@@ -160,7 +161,7 @@ public final class CaretInfo {
      * @return the non-null array of path elements
      */
     public final PathElement[] path() {
-        return path;
+        return Arrays.copyOf(path, path.length);
     }
 
     /**

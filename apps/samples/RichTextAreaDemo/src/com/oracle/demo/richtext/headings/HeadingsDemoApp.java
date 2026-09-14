@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023, 2024, Oracle and/or its affiliates.
+ * Copyright (c) 2026, Oracle and/or its affiliates.
  * All rights reserved. Use is subject to license terms.
  *
  * This file is available and licensed under the following license:
@@ -30,25 +30,30 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+package com.oracle.demo.richtext.headings;
+
+import javafx.application.Application;
+import javafx.stage.Stage;
+import com.oracle.demo.richtext.settings.FxSettings;
+
 /**
- * RichTextArea Control demos and sample code.
- *
- * <BR><b><a href="https://openjdk.org/jeps/11">Incubating Feature.</a>
- * Will be removed in a future release.</b>
- *
- * @moduleGraph
+ * Headings Demo Application.
+ * <p>
+ * It's a minimal app that can show and hide headings of a structured document, based on the new
+ * {@link jfx.incubator.scene.control.richtext.RichTextArea} control.
  */
+public class HeadingsDemoApp extends Application {
+    public static void main(String[] args) {
+        Application.launch(HeadingsDemoApp.class, args);
+    }
 
-module RichTextAreaDemo {
-    exports com.oracle.demo.richtext.codearea;
-    exports com.oracle.demo.richtext.editor;
-    exports com.oracle.demo.richtext.notebook;
-    exports com.oracle.demo.richtext.rta;
-    exports com.oracle.demo.richtext.headings;
+    @Override
+    public void init() {
+        FxSettings.useDirectory(".HeadingsDemoApp");
+    }
 
-    requires javafx.base;
-    requires javafx.controls;
-    requires javafx.graphics;
-    requires jfx.incubator.input;
-    requires jfx.incubator.richtext;
+    @Override
+    public void start(Stage stage) throws Exception {
+        new HeadingsWindow().show();
+    }
 }
