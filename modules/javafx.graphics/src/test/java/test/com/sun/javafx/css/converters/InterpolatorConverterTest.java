@@ -31,7 +31,6 @@ import javafx.animation.Interpolator;
 import javafx.animation.Interpolator.StepPosition;
 import javafx.css.ParsedValue;
 import javafx.geometry.Point2D;
-import java.util.List;
 import java.util.Locale;
 import org.junit.jupiter.api.Test;
 
@@ -53,7 +52,9 @@ public class InterpolatorConverterTest {
     public void testConvertLinearInterpolatorWithControlPoints() {
         var value = new ParsedValueImpl<Object, Interpolator>(new ParsedValue[] {
             new ParsedValueImpl<>("linear(", null),
-            new ParsedValueImpl<>(List.of(new Point2D(0, 0), new Point2D(0.5, 0.25), new Point2D(1, 1)), null) },
+            new ParsedValueImpl<>(0.0, null), new ParsedValueImpl<>(0.0, null),
+            new ParsedValueImpl<>(0.5, null), new ParsedValueImpl<>(0.25, null),
+            new ParsedValueImpl<>(1.0, null), new ParsedValueImpl<>(1.0, null) },
             null);
         var result = InterpolatorConverter.getInstance().convert(value, null);
         assertInterpolatorEquals(ofLinear(new Point2D(0, 0), new Point2D(0.5, 0.25), new Point2D(1, 1)), result);
@@ -112,7 +113,8 @@ public class InterpolatorConverterTest {
     public void testConvertCubicBezierInterpolator() {
         var value = new ParsedValueImpl<Object, Interpolator>(new ParsedValue[] {
             new ParsedValueImpl<>("cubic-bezier(", null),
-            new ParsedValueImpl<>(List.of(0.1, 0.2, 0.3, 0.4), null) },
+            new ParsedValueImpl<>(0.1, null), new ParsedValueImpl<>(0.2, null),
+            new ParsedValueImpl<>(0.3, null), new ParsedValueImpl<>(0.4, null) },
             null);
         var result = InterpolatorConverter.getInstance().convert(value, null);
         assertInterpolatorEquals(ofSpline(0.1, 0.2, 0.3, 0.4), result);
@@ -138,7 +140,7 @@ public class InterpolatorConverterTest {
             var cssName = "jump-" + stepPosition.toString().toLowerCase(Locale.ROOT).replace('_', '-');
             var value = new ParsedValueImpl<Object, Interpolator>(new ParsedValue[] {
                 new ParsedValueImpl<>("steps(", null),
-                new ParsedValueImpl<>(List.of(3, cssName), null) },
+                new ParsedValueImpl<>(3, null), new ParsedValueImpl<>(cssName, null) },
                 null);
             var result = InterpolatorConverter.getInstance().convert(value, null);
             assertInterpolatorEquals(ofSteps(3, stepPosition), result);
@@ -150,12 +152,14 @@ public class InterpolatorConverterTest {
         var result1 = InterpolatorConverter.getInstance().convert(
             new ParsedValueImpl<>(new ParsedValueImpl[] {
                 new ParsedValueImpl<>("cubic-bezier(", null),
-                new ParsedValueImpl<>(List.of(0.1, 0.2, 0.3, 0.4), null) }, null),
+                new ParsedValueImpl<>(0.1, null), new ParsedValueImpl<>(0.2, null),
+                new ParsedValueImpl<>(0.3, null), new ParsedValueImpl<>(0.4, null) }, null),
             null);
         var result2 = InterpolatorConverter.getInstance().convert(
             new ParsedValueImpl<>(new ParsedValueImpl[] {
                 new ParsedValueImpl<>("cubic-bezier(", null),
-                new ParsedValueImpl<>(List.of(0.1, 0.2, 0.3, 0.4), null) }, null),
+                new ParsedValueImpl<>(0.1, null), new ParsedValueImpl<>(0.2, null),
+                new ParsedValueImpl<>(0.3, null), new ParsedValueImpl<>(0.4, null) }, null),
             null);
         assertSame(result1, result2);
     }
