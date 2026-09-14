@@ -35,7 +35,8 @@ namespace WebCore {
 class DynamicsCompressor;
 
 class DynamicsCompressorNode final : public AudioNode {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(DynamicsCompressorNode);
+    WTF_MAKE_TZONE_ALLOCATED(DynamicsCompressorNode);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(DynamicsCompressorNode);
 public:
     static ExceptionOr<Ref<DynamicsCompressorNode>> create(BaseAudioContext&, const DynamicsCompressorOptions& = { });
 
@@ -62,7 +63,7 @@ public:
 
 protected:
     explicit DynamicsCompressorNode(BaseAudioContext&, const DynamicsCompressorOptions& = { });
-    virtual void setReduction(float reduction) { m_reduction = reduction; }
+    void setReduction(float reduction) { m_reduction = reduction; }
 
 private:
     double tailTime() const final;
@@ -81,3 +82,5 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_AUDIONODE(DynamicsCompressorNode, NodeTypeDynamicsCompressor);

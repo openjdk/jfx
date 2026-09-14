@@ -138,7 +138,7 @@ void ScrollLatchingController::updateAndFetchLatchingStateForFrame(LocalFrame& f
             state.isOverWidget = isOverWidget;
 
             LOG_WITH_STREAM(ScrollLatching, stream << "ScrollLatchingController::updateAndFetchLatchingStateForFrame() - pushing state for Frame " << &frame << " element " << state.wheelEventElement.get() << " scrollableArea " << state.scrollableArea);
-            m_frameStateStack.append(WTFMove(state));
+            m_frameStateStack.append(WTF::move(state));
             return;
         }
     }
@@ -266,7 +266,7 @@ void ScrollLatchingController::dump(WTF::TextStream& ts) const
 
     for (const auto& state : m_frameStateStack) {
         TextStream::GroupScope groupScope(multilineStream);
-        multilineStream.dumpProperty("frame"_s, ValueOrNull(state.frame));
+        multilineStream.dumpProperty("frame"_s, ValueOrNull(state.frame.get()));
         multilineStream.dumpProperty("element"_s, ValueOrNull(state.wheelEventElement.get()));
         multilineStream.dumpProperty("scrollable area"_s, ValueOrNull(state.scrollableArea.get()));
         multilineStream.dumpProperty("is over widget"_s, state.isOverWidget);

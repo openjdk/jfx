@@ -25,21 +25,13 @@
 
 #pragma once
 
-#include "BackgroundFetchRecordLoader.h"
-#include "ProcessIdentifier.h"
-#include "ScriptExecutionContextIdentifier.h"
+#include <WebCore/BackgroundFetchRecordLoader.h>
+#include <WebCore/ProcessIdentifier.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <wtf/AbstractCanMakeCheckedPtr.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/HashSet.h>
 #include <wtf/WeakPtr.h>
-
-namespace WebCore {
-class SWServerDelegate;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::SWServerDelegate> : std::true_type { };
-}
 
 namespace WebCore {
 
@@ -56,7 +48,7 @@ struct BackgroundFetchRequest;
 struct ServiceWorkerJobData;
 struct WorkerFetchResult;
 
-class SWServerDelegate : public CanMakeWeakPtr<SWServerDelegate> {
+class SWServerDelegate : public CanMakeWeakPtr<SWServerDelegate>, public AbstractCanMakeCheckedPtr {
 public:
     virtual ~SWServerDelegate() = default;
 

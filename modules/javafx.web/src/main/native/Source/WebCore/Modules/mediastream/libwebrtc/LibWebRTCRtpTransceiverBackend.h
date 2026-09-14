@@ -40,7 +40,7 @@ class LibWebRTCRtpTransceiverBackend final : public RTCRtpTransceiverBackend {
     WTF_MAKE_TZONE_ALLOCATED(LibWebRTCRtpTransceiverBackend);
 public:
     explicit LibWebRTCRtpTransceiverBackend(Ref<webrtc::RtpTransceiverInterface>&& rtcTransceiver)
-        : m_rtcTransceiver(WTFMove(rtcTransceiver))
+        : m_rtcTransceiver(WTF::move(rtcTransceiver))
     {
     }
 
@@ -50,6 +50,8 @@ public:
     webrtc::RtpTransceiverInterface* rtcTransceiver() { return m_rtcTransceiver.ptr(); }
 
 private:
+    bool isLibWebRTCRtpTransceiverBackend() const final { return true; }
+
     RTCRtpTransceiverDirection direction() const final;
     std::optional<RTCRtpTransceiverDirection> currentDirection() const final;
     void setDirection(RTCRtpTransceiverDirection) final;
@@ -62,5 +64,9 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::LibWebRTCRtpTransceiverBackend)
+    static bool isType(const WebCore::RTCRtpTransceiverBackend& backend) { return backend.isLibWebRTCRtpTransceiverBackend(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(WEB_RTC) && USE(LIBWEBRTC)

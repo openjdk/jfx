@@ -43,7 +43,7 @@ public:
 private:
     IdentityExpression(SourceSpan span, Expression::Ref&& expression)
         : Expression(span)
-        , m_expression(WTFMove(expression))
+        , m_expression(WTF::move(expression))
     {
         m_inferredType = m_expression.get().inferredType();
     }

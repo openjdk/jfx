@@ -36,27 +36,30 @@
 #if ENABLE(WEB_RTC)
 
 #include "RTCSessionDescriptionInit.h"
+#include "ScriptWrappableInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RTCSessionDescription);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RTCSessionDescription);
 
 inline RTCSessionDescription::RTCSessionDescription(RTCSdpType type, String&& sdp)
     : m_type(type)
-    , m_sdp(WTFMove(sdp))
+    , m_sdp(WTF::move(sdp))
 {
 }
 
 Ref<RTCSessionDescription> RTCSessionDescription::create(RTCSessionDescriptionInit&& dictionary)
 {
-    return create(dictionary.type, WTFMove(dictionary.sdp));
+    return create(dictionary.type, WTF::move(dictionary.sdp));
 }
 
 Ref<RTCSessionDescription> RTCSessionDescription::create(RTCSdpType type, String&& sdp)
 {
-    return adoptRef(*new RTCSessionDescription(type, WTFMove(sdp)));
+    return adoptRef(*new RTCSessionDescription(type, WTF::move(sdp)));
 }
+
+RTCSessionDescription::~RTCSessionDescription() = default;
 
 } // namespace WebCore
 

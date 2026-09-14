@@ -30,7 +30,6 @@
 
 #include "AudioUtilities.h"
 #include "WaveShaperProcessor.h"
-#include <JavaScriptCore/Float32Array.h>
 #include <algorithm>
 #include <wtf/MainThread.h>
 #include <wtf/StdLibExtras.h>
@@ -84,17 +83,13 @@ void WaveShaperDSPKernel::process(std::span<const float> source, std::span<float
 
 void WaveShaperDSPKernel::processCurve(std::span<const float> source, std::span<float> destination)
 {
-    ASSERT(source.data() && destination.data() && waveShaperProcessor());
-
     assertIsHeld(waveShaperProcessor()->processLock());
-    RefPtr curve = waveShaperProcessor()->curve();
-    if (!curve) {
-        // Act as "straight wire" pass-through if no curve is set.
-        memcpySpan(destination, source);
-        return;
-    }
+    processCurveWithData(source, destination, waveShaperProcessor()->curve().span());
+}
 
-    auto curveData = curve->typedMutableSpan();
+void WaveShaperDSPKernel::processCurveWithData(std::span<const float> source, std::span<float> destination, std::span<const float> curveData)
+{
+    ASSERT(source.data() && destination.data());
 
     if (curveData.empty()) {
         memcpySpan(destination, source);
@@ -103,7 +98,13 @@ void WaveShaperDSPKernel::processCurve(std::span<const float> source, std::span<
 
     // Apply waveshaping curve.
     for (auto [input, output] : zippedRange(source, destination)) {
-        float v = (curveData.size() - 1) * 0.5f * (input + 1);
+        if (!std::isfinite(input)) {
+            output = 0.0f;
+            continue;
+        }
+
+        float clampedInput = std::clamp(input, -1.0f, 1.0f);
+        float v = (curveData.size() - 1) * 0.5f * (clampedInput + 1);
         if (v < 0)
             output = curveData[0];
         else if (v >= curveData.size() - 1)
@@ -111,7 +112,7 @@ void WaveShaperDSPKernel::processCurve(std::span<const float> source, std::span<
         else {
             float k = std::floor(v);
             float f = v - k;
-            unsigned kIndex = k;
+            unsigned kIndex = static_cast<unsigned>(k);
             output = (1 - f) * curveData[kIndex] + f * curveData[kIndex + 1];
         }
     }

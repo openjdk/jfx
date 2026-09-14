@@ -24,7 +24,6 @@
 
 #include "SVGNames.h"
 #include "SVGPropertyOwner.h"
-#include "SVGRenderStyleDefs.h"
 #include "StyledElement.h"
 #include <wtf/HashMap.h>
 #include <wtf/HashSet.h>
@@ -63,14 +62,20 @@ template<typename OwnerType, typename... BaseTypes>
 class SVGPropertyOwnerRegistry;
 
 class SVGElement : public StyledElement, public SVGPropertyOwner {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGElement);
 public:
     bool isInnerSVGSVGElement() const;
     bool isOutermostSVGSVGElement() const;
 
     SVGSVGElement* ownerSVGElement() const;
-    SVGElement* viewportElement() const;
+
+    enum class ViewportElementType : uint8_t {
+        Any, // Returns first SVGSVGElement, SVGImageElement, or symbol
+        SVGSVGOnly // Returns only SVGSVGElement
+    };
+
+    SVGElement* viewportElement(ViewportElementType = ViewportElementType::Any) const;
 
     String title() const override;
     virtual bool supportsMarkers() const { return false; }
@@ -85,6 +90,7 @@ public:
     void clearHasPendingResources() { setEventTargetFlag(EventTargetFlag::HasPendingResources, false); }
     virtual void buildPendingResource() { }
 
+    virtual bool isSVGAnimationElement() const { return false; }
     virtual bool isSVGTextPositioningElement() const { return false; }
     virtual bool isSVGGraphicsElement() const { return false; }
     virtual bool isSVGGeometryElement() const { return false; }
@@ -125,7 +131,7 @@ public:
 
 
     SVGElement* correspondingElement() const;
-    RefPtr<SVGUseElement> correspondingUseElement() const;
+    SVGUseElement* correspondingUseElement() const;
 
     void setCorrespondingElement(SVGElement*);
 
@@ -184,6 +190,7 @@ public:
     SVGConditionalProcessingAttributes* conditionalProcessingAttributesIfExists() const;
 
     bool hasAssociatedSVGLayoutBox() const;
+    void invalidateInstances();
 
 protected:
     SVGElement(const QualifiedName&, Document&, UniqueRef<SVGPropertyRegistry>&&, OptionSet<TypeFlag> = { });
@@ -221,8 +228,6 @@ private:
 #ifndef NDEBUG
     virtual bool filterOutAnimatableAttribute(const QualifiedName&) const;
 #endif
-
-    void invalidateInstances();
 
     std::unique_ptr<SVGElementRareData> m_svgRareData;
 
@@ -274,11 +279,13 @@ inline SVGElement::InstanceUpdateBlocker::~InstanceUpdateBlocker()
     m_element->setInstanceUpdatesBlocked(false);
 }
 
-
-
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::SVGElement)
-    static bool isType(const WebCore::EventTarget& eventTarget) { return eventTarget.isNode() && static_cast<const WebCore::Node&>(eventTarget).isSVGElement(); }
+    static bool isType(const WebCore::EventTarget& eventTarget)
+    {
+        auto* node = dynamicDowncast<WebCore::Node>(eventTarget);
+        return node && node->isSVGElement();
+    }
     static bool isType(const WebCore::Node& node) { return node.isSVGElement(); }
 SPECIALIZE_TYPE_TRAITS_END()

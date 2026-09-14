@@ -24,10 +24,10 @@
 
 #pragma once
 
-#include "CSSBorderRadius.h"
-#include "FloatRoundedRect.h"
-#include "LayoutRoundedRect.h"
-#include "StylePrimitiveNumericTypes.h"
+#include <WebCore/CSSBorderRadius.h>
+#include <WebCore/FloatRoundedRect.h>
+#include <WebCore/LayoutRoundedRect.h>
+#include <WebCore/StylePrimitiveNumericTypes.h>
 
 namespace WebCore {
 
@@ -46,12 +46,12 @@ struct BorderRadius : RectCorners<BorderRadiusValue> {
     }
 
     BorderRadius(BorderRadiusValue topLeft, BorderRadiusValue topRight, BorderRadiusValue bottomLeft, BorderRadiusValue bottomRight)
-        : RectCorners<BorderRadiusValue> { WTFMove(topLeft), WTFMove(topRight), WTFMove(bottomLeft), WTFMove(bottomRight) }
+        : RectCorners<BorderRadiusValue> { WTF::move(topLeft), WTF::move(topRight), WTF::move(bottomLeft), WTF::move(bottomRight) }
     {
     }
 
     BorderRadius(RectCorners<BorderRadiusValue>&& corners)
-        : RectCorners<BorderRadiusValue> { WTFMove(corners) }
+        : RectCorners<BorderRadiusValue> { WTF::move(corners) }
     {
     }
 
@@ -79,9 +79,11 @@ template<> struct CSSValueConversion<BorderRadiusValue> { auto operator()(Builde
 
 // MARK: - Evaluation
 
-template<> struct Evaluation<BorderRadius> {
-    auto operator()(const BorderRadius&, FloatSize) -> FloatRoundedRect::Radii;
-    auto operator()(const BorderRadius&, LayoutSize) -> LayoutRoundedRect::Radii;
+template<> struct Evaluation<BorderRadius, CornerRadii> {
+    auto operator()(const BorderRadius&, FloatSize, ZoomNeeded) -> CornerRadii;
+};
+template<> struct Evaluation<BorderRadius, LayoutRoundedRect::Radii> {
+    auto operator()(const BorderRadius&, LayoutSize, ZoomNeeded) -> LayoutRoundedRect::Radii;
 };
 
 } // namespace Style

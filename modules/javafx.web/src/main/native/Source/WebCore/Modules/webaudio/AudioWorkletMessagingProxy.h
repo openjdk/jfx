@@ -61,6 +61,7 @@ public:
     uint32_t checkedPtrCountWithoutThreadCheck() const final { return CanMakeThreadSafeCheckedPtr<AudioWorkletMessagingProxy>::checkedPtrCountWithoutThreadCheck(); }
     void incrementCheckedPtrCount() const final { CanMakeThreadSafeCheckedPtr<AudioWorkletMessagingProxy>::incrementCheckedPtrCount(); }
     void decrementCheckedPtrCount() const final { CanMakeThreadSafeCheckedPtr<AudioWorkletMessagingProxy>::decrementCheckedPtrCount(); }
+    void setDidBeginCheckedPtrDeletion() final { CanMakeThreadSafeCheckedPtr<AudioWorkletMessagingProxy>::setDidBeginCheckedPtrDeletion(); }
 
 private:
     explicit AudioWorkletMessagingProxy(AudioWorklet&);

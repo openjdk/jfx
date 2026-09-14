@@ -46,9 +46,11 @@ public:
     StyleProperties& properties() const { return m_properties; }
     Ref<StyleProperties> protectedProperties() const { return m_properties; }
     MutableStyleProperties& mutableProperties();
+    Ref<MutableStyleProperties> protectedMutableProperties() { return mutableProperties(); }
 
 private:
     explicit StyleRulePositionTry(AtomString&& name, Ref<StyleProperties>&&);
+    StyleRulePositionTry(const StyleRulePositionTry&);
 
     AtomString m_name;
     Ref<StyleProperties> m_properties;
@@ -80,4 +82,8 @@ private:
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::StyleRulePositionTry)
 static bool isType(const WebCore::StyleRuleBase& rule) { return rule.isPositionTryRule(); }
+SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSPositionTryRule)
+static bool isType(const WebCore::CSSRule& rule) { return rule.styleRuleType() == WebCore::StyleRuleType::PositionTry; }
 SPECIALIZE_TYPE_TRAITS_END()

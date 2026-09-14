@@ -27,10 +27,10 @@
 
 #pragma once
 
-#include "Compiler.h"
-#include "Platform.h"
 #include <bit>
 #include <cstdint>
+#include <wtf/Compiler.h>
+#include <wtf/Platform.h>
 #include <wtf/text/ASCIILiteral.h>
 
 namespace WTF {

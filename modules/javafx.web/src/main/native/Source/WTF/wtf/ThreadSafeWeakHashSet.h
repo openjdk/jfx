@@ -26,8 +26,10 @@
 #pragma once
 
 #include <wtf/HashSet.h>
+#include <wtf/Lock.h>
 #include <wtf/ThreadSafeWeakPtr.h>
 #include <wtf/Vector.h>
+#include <wtf/WordLock.h>
 
 namespace WTF {
 
@@ -36,10 +38,10 @@ class ThreadSafeWeakHashSet final {
     WTF_DEPRECATED_MAKE_FAST_ALLOCATED(ThreadSafeWeakHashSet);
 public:
     ThreadSafeWeakHashSet() = default;
-    ThreadSafeWeakHashSet(ThreadSafeWeakHashSet&& other) { moveFrom(WTFMove(other)); }
+    ThreadSafeWeakHashSet(ThreadSafeWeakHashSet&& other) { moveFrom(WTF::move(other)); }
     ThreadSafeWeakHashSet& operator=(ThreadSafeWeakHashSet&& other)
     {
-        moveFrom(WTFMove(other));
+        moveFrom(WTF::move(other));
         return *this;
     }
 
@@ -52,7 +54,7 @@ public:
 
     private:
         const_iterator(Vector<Ref<T>>&& strongReferences)
-            : m_strongReferences(WTFMove(strongReferences)) { }
+            : m_strongReferences(WTF::move(strongReferences)) { }
 
     public:
         T* get() const
@@ -99,7 +101,7 @@ public:
         ControlBlockRefPtr retainedControlBlock { &value.controlBlock() };
         ASSERT(retainedControlBlock);
         amortizedCleanupIfNeeded();
-        m_set.add(std::make_pair(WTFMove(retainedControlBlock), &value));
+        m_set.add(std::make_pair(WTF::move(retainedControlBlock), &value));
     }
 
     template<typename U>
@@ -236,7 +238,7 @@ private:
     mutable HashSet<std::pair<ControlBlockRefPtr, const T*>> m_set WTF_GUARDED_BY_LOCK(m_lock);
     mutable unsigned m_operationCountSinceLastCleanup WTF_GUARDED_BY_LOCK(m_lock) { 0 };
     mutable unsigned m_maxOperationCountWithoutCleanup WTF_GUARDED_BY_LOCK(m_lock) { 0 };
-    mutable Lock m_lock;
+    mutable WordLock m_lock;
 };
 
 } // namespace WTF

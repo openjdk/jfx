@@ -29,6 +29,7 @@
 #if ENABLE(DFG_JIT)
 
 #include "CodeOrigin.h"
+#include "DFGBasicBlockInlines.h"
 #include "DFGBlockInsertionSet.h"
 #include "DFGCFAPhase.h"
 #include "DFGCloneHelper.h"
@@ -192,7 +193,7 @@ public:
             }
             loops[loopIndex] = std::tuple { &loop, depth };
         }
-        std::sort(loops.begin(), loops.end(), [&](const auto& lhs, const auto& rhs) {
+        std::ranges::sort(loops, [&](const auto& lhs, const auto& rhs) {
             return std::get<1>(lhs) > std::get<1>(rhs);
         });
         return loops;

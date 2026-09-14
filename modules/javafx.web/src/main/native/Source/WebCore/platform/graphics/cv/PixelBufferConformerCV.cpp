@@ -192,7 +192,7 @@ RetainPtr<CGImageRef> PixelBufferConformerCV::createImageFromPixelBuffer(CVPixel
     }
 
     auto colorSpace = createCGColorSpaceForCVPixelBuffer(rawBuffer);
-    return imageFrom32BGRAPixelBuffer(WTFMove(buffer), colorSpace.get());
+    return imageFrom32BGRAPixelBuffer(WTF::move(buffer), colorSpace.get());
 }
 
 RetainPtr<CGImageRef> PixelBufferConformerCV::imageFrom32BGRAPixelBuffer(RetainPtr<CVPixelBufferRef>&& buffer, CGColorSpaceRef colorSpace)
@@ -209,7 +209,7 @@ RetainPtr<CGImageRef> PixelBufferConformerCV::imageFrom32BGRAPixelBuffer(RetainP
         return nullptr;
 
     CVPixelBufferInfo* info = new CVPixelBufferInfo();
-    info->pixelBuffer = WTFMove(buffer);
+    info->pixelBuffer = WTF::move(buffer);
     info->lockCount = 0;
 
     CGDataProviderDirectCallbacks providerCallbacks = { 0, CVPixelBufferGetBytePointerCallback, CVPixelBufferReleaseBytePointerCallback, 0, CVPixelBufferReleaseInfoCallback };

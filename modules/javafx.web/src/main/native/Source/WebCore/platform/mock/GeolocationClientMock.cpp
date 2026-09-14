@@ -41,12 +41,8 @@
 namespace WebCore {
 
 GeolocationClientMock::GeolocationClientMock()
-    : m_controller(0)
-    , m_hasError(false)
-    , m_controllerTimer(*this, &GeolocationClientMock::controllerTimerFired)
+    : m_controllerTimer(*this, &GeolocationClientMock::controllerTimerFired)
     , m_permissionTimer(*this, &GeolocationClientMock::permissionTimerFired)
-    , m_isActive(false)
-    , m_permissionState(PermissionStateUnset)
 {
 }
 
@@ -55,7 +51,7 @@ GeolocationClientMock::~GeolocationClientMock()
     ASSERT(!m_isActive);
 }
 
-void GeolocationClientMock::setController(GeolocationController *controller)
+void GeolocationClientMock::setController(GeolocationController* controller)
 {
     ASSERT(controller && !m_controller);
     m_controller = controller;
@@ -63,7 +59,7 @@ void GeolocationClientMock::setController(GeolocationController *controller)
 
 void GeolocationClientMock::setPosition(GeolocationPositionData&& position)
 {
-    m_lastPosition = WTFMove(position);
+    m_lastPosition = WTF::move(position);
     clearError();
     asyncUpdateController();
 }
@@ -113,14 +109,13 @@ void GeolocationClientMock::permissionTimerFired()
 {
     ASSERT(m_permissionState != PermissionStateUnset);
     bool allowed = m_permissionState == PermissionStateAllowed;
-    GeolocationSet::iterator end = m_pendingPermission.end();
 
     // Once permission has been set (or denied) on a Geolocation object, there can be
     // no further requests for permission to the mock. Consequently the callbacks
     // which fire synchronously from Geolocation::setIsAllowed() cannot reentrantly modify
     // m_pendingPermission.
-    for (GeolocationSet::iterator it = m_pendingPermission.begin(); it != end; ++it)
-        (*it)->setIsAllowed(allowed, { });
+    for (RefPtr permission : m_pendingPermission)
+        permission->setIsAllowed(allowed, { });
     m_pendingPermission.clear();
 }
 
@@ -172,14 +167,15 @@ void GeolocationClientMock::asyncUpdateController()
 
 void GeolocationClientMock::controllerTimerFired()
 {
-    ASSERT(m_controller);
+    CheckedPtr controller = m_controller.get();
+    ASSERT(controller);
 
     if (m_lastPosition) {
         ASSERT(!m_hasError);
-        m_controller->positionChanged(*m_lastPosition);
+        controller->positionChanged(*m_lastPosition);
     } else if (m_hasError) {
         auto geolocatioError = GeolocationError::create(GeolocationError::PositionUnavailable, m_errorMessage);
-        m_controller->errorOccurred(geolocatioError.get());
+        controller->errorOccurred(geolocatioError.get());
     }
 }
 

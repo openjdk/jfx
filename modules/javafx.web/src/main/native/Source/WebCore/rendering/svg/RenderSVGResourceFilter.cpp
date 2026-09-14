@@ -26,6 +26,8 @@
 #include "config.h"
 #include "RenderSVGResourceFilter.h"
 
+#include "RenderElementInlines.h"
+#include "RenderObjectNode.h"
 #include "RenderSVGResourceFilterInlines.h"
 #include "SVGFilterElement.h"
 #include "SVGUseElement.h"
@@ -33,10 +35,10 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGResourceFilter);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderSVGResourceFilter);
 
 RenderSVGResourceFilter::RenderSVGResourceFilter(SVGElement& element, RenderStyle&& style)
-    : RenderSVGResourcePaintServer(Type::SVGResourceFilter, element, WTFMove(style))
+    : RenderSVGResourcePaintServer(Type::SVGResourceFilter, element, WTF::move(style))
 {
     ASSERT(isRenderSVGResourceFilter());
 }
@@ -46,7 +48,14 @@ RenderSVGResourceFilter::~RenderSVGResourceFilter() = default;
 FloatRect RenderSVGResourceFilter::resourceBoundingBox(const RenderObject& object, RepaintRectCalculation)
 {
     Ref filterElement = this->filterElement();
-    return SVGLengthContext::resolveRectangle<SVGFilterElement>(filterElement.ptr(), filterElement->filterUnits(), object.objectBoundingBox());
+
+    CheckedPtr renderer = dynamicDowncast<RenderElement>(object);
+    if (!renderer)
+        return SVGLengthContext::resolveRectangle(filterElement.get(), filterElement->filterUnits(), object.objectBoundingBox());
+
+    RefPtr contextElement = dynamicDowncast<SVGElement>(renderer->element());
+
+    return SVGLengthContext::resolveRectangle(contextElement.get(), filterElement.get(), filterElement->filterUnits(), object.objectBoundingBox());
 }
 
 void RenderSVGResourceFilter::invalidateFilter()

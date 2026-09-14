@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "Color.h"
-#include "FloatSize.h"
+#include <WebCore/Color.h>
+#include <WebCore/FloatSize.h>
 #include <wtf/Vector.h>
 
 namespace WTF {

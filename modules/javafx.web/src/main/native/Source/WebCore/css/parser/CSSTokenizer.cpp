@@ -34,6 +34,7 @@
 #include "CSSParserObserverWrapper.h"
 #include "CSSParserTokenRange.h"
 #include "CSSTokenizerInputStream.h"
+#include <wtf/NeverDestroyed.h>
 #include <wtf/text/StringBuilder.h>
 #include <wtf/text/StringToIntegerConversion.h>
 #include <wtf/unicode/CharacterNames.h>
@@ -48,7 +49,7 @@ String CSSTokenizer::preprocessString(const String& string)
     // we treat them all the same in the isNewline function below.
     StringImpl* oldImpl = string.impl();
     String replaced = makeStringByReplacingAll(string, '\0', replacementCharacter);
-    replaced = replaceUnpairedSurrogatesWithReplacementCharacter(WTFMove(replaced));
+    replaced = replaceUnpairedSurrogatesWithReplacementCharacter(WTF::move(replaced));
     if (replaced.impl() != oldImpl)
         registerString(replaced);
     return replaced;
@@ -129,7 +130,7 @@ CSSTokenizer::CSSTokenizer(const String& string, CSSParserObserverWrapper* wrapp
     }
 }
 
-CSSParserTokenRange CSSTokenizer::tokenRange() const
+CSSParserTokenRange CSSTokenizer::tokenRange() const LIFETIME_BOUND
 {
     return m_tokens;
 }

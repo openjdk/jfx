@@ -33,11 +33,7 @@ namespace WTF {
 
 MainThreadDispatcher& MainThreadDispatcher::singleton()
 {
-    static std::once_flag onceKey;
-    static LazyNeverDestroyed<Ref<MainThreadDispatcher>> dispatcher;
-    std::call_once(onceKey, [] {
-        dispatcher.construct(adoptRef(*new MainThreadDispatcher()));
-    });
+    static NeverDestroyed<Ref<MainThreadDispatcher>> dispatcher = adoptRef(*new MainThreadDispatcher());
     return dispatcher.get();
 }
 
@@ -48,7 +44,7 @@ bool MainThreadDispatcher::isCurrent() const
 
 void MainThreadDispatcher::dispatch(Function<void ()>&& function)
 {
-    callOnMainThread(WTFMove(function));
+    callOnMainThread(WTF::move(function));
 }
 
 } // namespace WTF

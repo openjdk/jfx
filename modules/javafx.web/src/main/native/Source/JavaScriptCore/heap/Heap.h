@@ -21,32 +21,32 @@
 
 #pragma once
 
-#include "ArrayBuffer.h"
-#include "CellState.h"
-#include "CollectionScope.h"
-#include "CollectorPhase.h"
-#include "CompleteSubspace.h"
-#include "DeleteAllCodeEffort.h"
-#include "GCConductor.h"
-#include "GCIncomingRefCountedSet.h"
-#include "GCMemoryOperations.h"
-#include "GCRequest.h"
-#include "HandleSet.h"
-#include "HeapFinalizerCallback.h"
-#include "HeapObserver.h"
-#include "IsoCellSet.h"
-#include "IsoHeapCellType.h"
-#include "IsoInlinedHeapCellType.h"
-#include "IsoSubspace.h"
-#include "JSDestructibleObjectHeapCellType.h"
-#include "MarkedBlock.h"
-#include "MarkedSpace.h"
-#include "MutatorState.h"
-#include "Options.h"
-#include "PreciseSubspace.h"
-#include "StructureID.h"
-#include "Synchronousness.h"
-#include "WeakHandleOwner.h"
+#include <JavaScriptCore/ArrayBuffer.h>
+#include <JavaScriptCore/CellState.h>
+#include <JavaScriptCore/CollectionScope.h>
+#include <JavaScriptCore/CollectorPhase.h>
+#include <JavaScriptCore/CompleteSubspace.h>
+#include <JavaScriptCore/DeleteAllCodeEffort.h>
+#include <JavaScriptCore/GCConductor.h>
+#include <JavaScriptCore/GCIncomingRefCountedSet.h>
+#include <JavaScriptCore/GCMemoryOperations.h>
+#include <JavaScriptCore/GCRequest.h>
+#include <JavaScriptCore/HandleSet.h>
+#include <JavaScriptCore/HeapFinalizerCallback.h>
+#include <JavaScriptCore/HeapObserver.h>
+#include <JavaScriptCore/IsoCellSet.h>
+#include <JavaScriptCore/IsoHeapCellType.h>
+#include <JavaScriptCore/IsoInlinedHeapCellType.h>
+#include <JavaScriptCore/IsoSubspace.h>
+#include <JavaScriptCore/JSDestructibleObjectHeapCellType.h>
+#include <JavaScriptCore/MarkedBlock.h>
+#include <JavaScriptCore/MarkedSpace.h>
+#include <JavaScriptCore/MutatorState.h>
+#include <JavaScriptCore/Options.h>
+#include <JavaScriptCore/PreciseSubspace.h>
+#include <JavaScriptCore/StructureID.h>
+#include <JavaScriptCore/Synchronousness.h>
+#include <JavaScriptCore/WeakHandleOwner.h>
 #include <wtf/AutomaticThread.h>
 #include <wtf/Box.h>
 #include <wtf/ConcurrentPtrHashSet.h>
@@ -57,6 +57,7 @@
 #include <wtf/Markable.h>
 #include <wtf/NotFound.h>
 #include <wtf/ParallelHelperPool.h>
+#include <wtf/SegmentedVector.h>
 #include <wtf/Threading.h>
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
@@ -81,7 +82,7 @@ class IncrementalSweeper;
 class JITStubRoutine;
 class JITStubRoutineSet;
 class JSCell;
-class JSImmutableButterfly;
+class JSCellButterfly;
 class JSRopeString;
 class JSString;
 class JSValue;
@@ -235,6 +236,7 @@ class Heap;
     v(float32ArraySpace, cellHeapCellType, JSFloat32Array) \
     v(float64ArraySpace, cellHeapCellType, JSFloat64Array) \
     v(functionRareDataSpace, destructibleCellHeapCellType, FunctionRareData) \
+    v(functionWithFieldsSpace, cellHeapCellType, JSFunctionWithFields) \
     v(generatorSpace, cellHeapCellType, JSGenerator) \
     v(globalObjectSpace, globalObjectHeapCellType, JSGlobalObject) \
     v(injectedScriptHostSpace, injectedScriptHostSpaceHeapCellType, Inspector::JSInjectedScriptHost) \
@@ -297,6 +299,9 @@ class Heap;
     v(weakSetSpace, weakSetHeapCellType, JSWeakSet) \
     v(withScopeSpace, cellHeapCellType, JSWithScope) \
     v(wrapForValidIteratorSpace, cellHeapCellType, JSWrapForValidIterator) \
+    v(promiseCombinatorsContextSpace, cellHeapCellType, JSPromiseCombinatorsContext) \
+    v(promiseCombinatorsGlobalContextSpace, cellHeapCellType, JSPromiseCombinatorsGlobalContext) \
+    v(promiseReactionSpace, cellHeapCellType, JSPromiseReaction) \
     v(asyncFromSyncIteratorSpace, cellHeapCellType, JSAsyncFromSyncIterator) \
     v(regExpStringIteratorSpace, cellHeapCellType, JSRegExpStringIterator) \
     v(disposableStackSpace, cellHeapCellType, JSDisposableStack) \
@@ -597,17 +602,19 @@ public:
 
     Seconds totalGCTime() const { return m_totalGCTime; }
 
-    UncheckedKeyHashMap<JSImmutableButterfly*, JSString*> immutableButterflyToStringCache;
+    UncheckedKeyHashMap<JSCellButterfly*, JSString*> immutableButterflyToStringCache;
 
     bool isMarkingForGCVerifier() const { return m_isMarkingForGCVerifier; }
 
     void setKeepVerifierSlotVisitor();
     void clearVerifierSlotVisitor();
 
-    void appendPossiblyAccessedStringFromConcurrentThreads(String&& string)
+    void appendPossiblyAccessedStringFromConcurrentThreadsOrGCOwnedDataScope(const JSString* owner, String&& string)
     {
-        m_possiblyAccessedStringsFromConcurrentThreads.append(WTFMove(string));
+        m_possiblyAccessedStringsFromConcurrentThreadsOrGCOwnedDataScope.append({ owner, WTF::move(string) });
     }
+
+    void clearConcurrentRetainedDataIfPossible();
 
     bool isInPhase(CollectorPhase phase) const { return m_currentPhase == phase; }
 
@@ -734,7 +741,6 @@ private:
     void prepareForMarking();
 
     void gatherStackRoots(ConservativeRoots&);
-    void gatherJSStackRoots(ConservativeRoots&);
     void gatherScratchBufferRoots(ConservativeRoots&);
     void beginMarking();
     void visitCompilerWorklistWeakReferences();
@@ -807,7 +813,7 @@ private:
     void dumpHeapStatisticsAtVMDestruction();
 
     static bool useGenerationalGC();
-    static bool shouldSweepSynchronously();
+    bool shouldSweepSynchronously();
 
     void verifyGC();
     void verifierMark();
@@ -888,13 +894,26 @@ private:
 
     unsigned m_barrierThreshold { Options::forceFencedBarrier() ? tautologicalThreshold : blackThreshold };
 
+#if PLATFORM(MAC)
+    Seconds m_lastFullGCLength { 2_ms };
+    Seconds m_lastEdenGCLength { 2_ms };
+#else
     Seconds m_lastFullGCLength { 10_ms };
     Seconds m_lastEdenGCLength { 10_ms };
+#endif
 
     Vector<WeakBlock*> m_logicallyEmptyWeakBlocks;
     size_t m_indexOfNextLogicallyEmptyWeakBlockToSweep { WTF::notFound };
 
-    Vector<String> m_possiblyAccessedStringsFromConcurrentThreads;
+#if ASSERT_ENABLED
+    template<typename> friend struct GCOwnedDataScope;
+    const void* m_topGCOwnedDataScope { nullptr };
+#endif
+    // Use a SegmentedVector rather than a Vector because we don't want to have to copy in order to grow the buffer.
+    // Since this list is walked once to deref all the strings
+    // We don't need fast access.
+    SegmentedVector<std::pair<const JSString*, String>, 256, 10, SegmentedVectorGrowthPolicy::Doubling> m_possiblyAccessedStringsFromConcurrentThreadsOrGCOwnedDataScope;
+   UncheckedKeyHashSet<const JSString*> m_discoveredAccessedStringsFromGCOwnedDataScope;
 
     RefPtr<GCActivityCallback> m_fullActivityCallback;
     RefPtr<GCActivityCallback> m_edenActivityCallback;
@@ -975,7 +994,7 @@ private:
     uint64_t m_gcVersion { 0 };
     Box<Lock> m_threadLock;
     const Ref<AutomaticThreadCondition> m_threadCondition; // The mutator must not wait on this. It would cause a deadlock.
-    RefPtr<AutomaticThread> m_thread;
+    const RefPtr<AutomaticThread> m_thread;
 
     RefPtr<Thread> m_collectContinuouslyThread { nullptr };
 
@@ -1070,7 +1089,7 @@ public:
     // Subspaces
     CompleteSubspace primitiveGigacageAuxiliarySpace; // Typed arrays, strings, bitvectors, etc go here.
     CompleteSubspace auxiliarySpace; // Butterflies, arrays of JSValues, etc go here.
-    CompleteSubspace immutableButterflyAuxiliarySpace; // JSImmutableButterfly goes here.
+    CompleteSubspace immutableButterflyAuxiliarySpace; // JSCellButterfly goes here.
 
     // We make cross-cutting assumptions about typed arrays being in the primitive Gigacage and butterflies
     // being in the JSValue gigacage. For some types, it's super obvious where they should go, and so we
@@ -1092,7 +1111,6 @@ public:
 
     // Whenever possible, use subspaceFor<CellType>(vm) to get one of these subspaces.
     CompleteSubspace cellSpace;
-    CompleteSubspace variableSizedCellSpace;
     CompleteSubspace destructibleObjectSpace;
 
 #define DECLARE_ISO_SUBSPACE(name, heapCellType, type) \

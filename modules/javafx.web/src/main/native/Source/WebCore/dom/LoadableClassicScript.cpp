@@ -149,7 +149,7 @@ bool LoadableNonModuleScriptBase::load(Document& document, const URL& sourceURL)
     };
 
     m_weakDocument = document;
-    CachedResourceHandle cachedScript = requestScriptWithCache(document, sourceURL, crossOriginMode(), String { integrity() }, priority(), { });
+    CachedResourceHandle cachedScript = requestScriptWithCache(document, sourceURL, FetchOptionsDestination::Script, crossOriginMode(), String { integrity() }, priority(), { });
     m_cachedScript = cachedScript;
     if (!cachedScript)
         return false;

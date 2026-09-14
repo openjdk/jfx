@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "MediaPlayerEnums.h"
+#include <WebCore/MediaPlayerEnums.h>
 
 namespace WebCore {
 
@@ -43,6 +43,16 @@ public:
         Fast,
         Precise
     } SeekType;
+};
+
+enum class HTMLMediaElementSourceType : uint8_t {
+    File,
+    HLS,
+    MediaSource,
+    ManagedMediaSource,
+    MediaStream,
+    LiveStream,
+    StoredStream,
 };
 
 String convertEnumerationToString(HTMLMediaElementEnums::ReadyState);

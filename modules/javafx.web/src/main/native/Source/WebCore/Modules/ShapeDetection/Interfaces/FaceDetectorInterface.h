@@ -31,7 +31,7 @@
 #include <wtf/Vector.h>
 
 namespace WebCore {
-class ImageBuffer;
+class NativeImage;
 }
 
 namespace WebCore::ShapeDetection {
@@ -42,7 +42,7 @@ class FaceDetector : public RefCounted<FaceDetector> {
 public:
     virtual ~FaceDetector() = default;
 
-    virtual void detect(Ref<ImageBuffer>&&, CompletionHandler<void(Vector<DetectedFace>&&)>&&) = 0;
+    virtual void detect(const NativeImage&, CompletionHandler<void(Vector<DetectedFace>&&)>&&) = 0;
 
 protected:
     FaceDetector() = default;

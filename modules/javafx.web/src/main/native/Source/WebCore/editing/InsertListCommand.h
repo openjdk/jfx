@@ -38,7 +38,7 @@ public:
 
     static Ref<InsertListCommand> create(Ref<Document>&& document, Type listType)
     {
-        return adoptRef(*new InsertListCommand(WTFMove(document), listType));
+        return adoptRef(*new InsertListCommand(WTF::move(document), listType));
     }
 
     static RefPtr<HTMLElement> insertList(Ref<Document>&&, Type);

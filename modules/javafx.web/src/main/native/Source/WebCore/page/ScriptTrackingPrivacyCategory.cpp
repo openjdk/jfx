@@ -97,7 +97,23 @@ bool shouldEnableScriptTrackingPrivacy(ScriptTrackingPrivacyCategory category, O
     if (protections.contains(AdvancedPrivacyProtections::BaselineProtections))
         return true;
 
-    return category != ScriptTrackingPrivacyCategory::FormControls;
+    switch (category) {
+    case ScriptTrackingPrivacyCategory::Audio:
+    case ScriptTrackingPrivacyCategory::Canvas:
+    case ScriptTrackingPrivacyCategory::HardwareConcurrency:
+    case ScriptTrackingPrivacyCategory::Payments:
+    case ScriptTrackingPrivacyCategory::QueryParameters:
+    case ScriptTrackingPrivacyCategory::Referrer:
+    case ScriptTrackingPrivacyCategory::ScreenOrViewport:
+    case ScriptTrackingPrivacyCategory::Speech:
+        return true;
+    case ScriptTrackingPrivacyCategory::Cookies:
+    case ScriptTrackingPrivacyCategory::LocalStorage:
+    case ScriptTrackingPrivacyCategory::FormControls:
+        return false;
+    }
+
+    return false;
 }
 
 String makeLogMessage(const URL& url, ScriptTrackingPrivacyCategory category)

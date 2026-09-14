@@ -38,6 +38,7 @@
 
 OBJC_CLASS NSURLAuthenticationChallenge;
 OBJC_CLASS NSURLConnection;
+
 typedef const struct __CFURLStorageSession* CFURLStorageSessionRef;
 #endif
 
@@ -63,7 +64,7 @@ public:
         , m_lastHTTPMethod(request.httpMethod())
         , m_partition(request.cachePartition())
         , m_failureTimer(*loader, &ResourceHandle::failureTimerFired)
-        , m_sourceOrigin(WTFMove(sourceOrigin))
+        , m_sourceOrigin(WTF::move(sourceOrigin))
         , m_contentEncodingSniffingPolicy(contentEncodingSniffingPolicy)
         , m_defersLoading(defersLoading)
         , m_shouldContentSniff(shouldContentSniff)

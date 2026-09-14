@@ -30,7 +30,8 @@
 #include "CSSGridLineNamesValue.h"
 #include "CSSSubgridValue.h"
 #include "CSSValueList.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
+#include "StylePrimitiveKeyword+Logging.h"
 #include "StylePrimitiveNumericTypes+Blending.h"
 #include "StylePrimitiveNumericTypes+CSSValueConversion.h"
 #include "StylePrimitiveNumericTypes+CSSValueCreation.h"
@@ -42,7 +43,7 @@ namespace WebCore {
 namespace Style {
 
 GridTemplateList::GridTemplateList(GridTrackList&& entries)
-    : list { WTFMove(entries) }
+    : list { WTF::move(entries) }
 {
     if (list.isEmpty())
         return;
@@ -108,15 +109,12 @@ GridTemplateList::GridTemplateList(GridTrackList&& entries)
             },
             [&](const GridTrackEntrySubgrid&) {
                 subgrid = true;
-            },
-            [&](const GridTrackEntryMasonry&) {
-                masonry = true;
             }
         );
     }
     // The parser should have rejected any <track-list> without any <track-size> as
     // this is not conformant to the syntax.
-    ASSERT(!sizes.isEmpty() || !autoRepeatSizes.isEmpty() || subgrid || masonry);
+    ASSERT(!sizes.isEmpty() || !autoRepeatSizes.isEmpty() || subgrid);
 }
 
 // MARK: - Conversion
@@ -129,10 +127,6 @@ auto CSSValueConversion<GridTemplateList>::operator()(BuilderState& state, const
     RefPtr subgridValue = dynamicDowncast<CSSSubgridValue>(value);
 
     if (RefPtr primitiveValue = dynamicDowncast<CSSPrimitiveValue>(value)) {
-        if (primitiveValue->valueID() == CSSValueMasonry) {
-            trackList.append(GridTrackEntryMasonry());
-            return { WTFMove(trackList) };
-        }
         if (primitiveValue->valueID() == CSSValueNone)
             return CSS::Keyword::None { };
     } else if (subgridValue) {
@@ -189,7 +183,7 @@ auto CSSValueConversion<GridTemplateList>::operator()(BuilderState& state, const
             repeat.type = autoRepeatID == CSSValueAutoFill ? AutoRepeatType::Fill : AutoRepeatType::Fit;
 
             buildRepeatList(currentValue, repeat.list);
-            trackList.append(WTFMove(repeat));
+            trackList.append(WTF::move(repeat));
         } else if (RefPtr repeatValue = dynamicDowncast<CSSGridIntegerRepeatValue>(currentValue)) {
             auto repetitions = clampTo(repeatValue->repetitions().resolveAsInteger(state.cssToLengthConversionData()), 1, GridPosition::max());
 
@@ -197,7 +191,7 @@ auto CSSValueConversion<GridTemplateList>::operator()(BuilderState& state, const
             repeat.repeats = repetitions;
 
             buildRepeatList(currentValue, repeat.list);
-            trackList.append(WTFMove(repeat));
+            trackList.append(WTF::move(repeat));
         } else
             trackList.append(toStyleFromCSSValue<GridTrackSize>(state, currentValue));
     };
@@ -212,7 +206,7 @@ auto CSSValueConversion<GridTemplateList>::operator()(BuilderState& state, const
     if (!trackList.isEmpty())
         ensureLineNames(trackList);
 
-    return { WTFMove(trackList) };
+    return { WTF::move(trackList) };
 }
 
 // MARK: - Blending
@@ -264,9 +258,6 @@ auto Blending<GridTemplateList>::canBlend(const GridTemplateList& from, const Gr
         },
         [](const GridTrackEntrySubgrid&) {
             return false;
-        },
-        [](const GridTrackEntryMasonry&) {
-            return false;
         }
     );
 
@@ -301,25 +292,23 @@ auto Blending<GridTemplateList>::blend(const GridTemplateList& from, const GridT
             GridTrackEntryRepeat repeatResult;
             repeatResult.repeats = repeatFrom.repeats;
             repeatResult.list = blendRepeatList(repeatFrom.list, repeatTo.list, context);
-            result.append(WTFMove(repeatResult));
+            result.append(WTF::move(repeatResult));
         },
         [&](const GridTrackEntryAutoRepeat& repeatFrom) {
             auto& repeatTo = std::get<GridTrackEntryAutoRepeat>(to.list[i]);
             GridTrackEntryAutoRepeat repeatResult;
             repeatResult.type = repeatFrom.type;
             repeatResult.list = blendRepeatList(repeatFrom.list, repeatTo.list, context);
-            result.append(WTFMove(repeatResult));
+            result.append(WTF::move(repeatResult));
         },
         [](const GridTrackEntrySubgrid&) {
-        },
-        [](const GridTrackEntryMasonry&) {
         }
     );
 
     for (i = 0; i < from.list.size(); ++i)
         WTF::visit(visitor, from.list[i]);
 
-    return GridTemplateList { WTFMove(result) };
+    return GridTemplateList { WTF::move(result) };
 }
 
 // MARK: - Logging
@@ -359,9 +348,6 @@ TextStream& operator<<(TextStream& ts, const GridTrackEntry& entry)
         },
         [&](const GridTrackEntrySubgrid&) {
             ts << "subgrid"_s;
-        },
-        [&](const GridTrackEntryMasonry&) {
-            ts << "masonry"_s;
         }
     );
     return ts;

@@ -23,8 +23,8 @@
 
 #pragma once
 
-#include "JSDOMOperation.h"
-#include "JSDOMPromiseDeferred.h"
+#include <WebCore/JSDOMOperation.h>
+#include <WebCore/JSDOMPromiseDeferred.h>
 
 namespace WebCore {
 
@@ -51,15 +51,15 @@ public:
             ASSERT_GC_OBJECT_INHERITS(thisObject, JSClass::info());
 
             // FIXME: We should refactor the binding generated code to use references for lexicalGlobalObject and thisObject.
-            return operation(&lexicalGlobalObject, &callFrame, thisObject, WTFMove(promise));
+            return operation(&lexicalGlobalObject, &callFrame, thisObject, WTF::move(promise));
         }));
     }
 
     using Operation2 = JSC::EncodedJSValue(JSC::JSGlobalObject*, JSC::CallFrame*, ClassParameter, Ref<DeferredPromise>&&, Ref<DeferredPromise>&&);
-    template<Operation2 operation, CastedThisErrorBehavior shouldThrow = CastedThisErrorBehavior::RejectPromise>
+    template<Operation2 operation, typename DictionaryType, CastedThisErrorBehavior shouldThrow = CastedThisErrorBehavior::RejectPromise>
     static JSC::EncodedJSValue callReturningPromisePair(JSC::JSGlobalObject& lexicalGlobalObject, JSC::CallFrame& callFrame, const char* operationName)
     {
-        return callPromisePairFunction(lexicalGlobalObject, callFrame, [&operationName] (JSC::JSGlobalObject& lexicalGlobalObject, JSC::CallFrame& callFrame, Ref<DeferredPromise>&& promise, Ref<DeferredPromise>&& promise2) {
+        return callPromisePairFunction<DictionaryType>(lexicalGlobalObject, callFrame, [&operationName] (JSC::JSGlobalObject& lexicalGlobalObject, JSC::CallFrame& callFrame, Ref<DeferredPromise>&& promise, Ref<DeferredPromise>&& promise2) {
             auto* thisObject = IDLOperation<JSClass>::cast(lexicalGlobalObject, callFrame);
             if constexpr (shouldThrow != CastedThisErrorBehavior::Assert) {
                 if (!thisObject) [[unlikely]]
@@ -72,7 +72,7 @@ public:
             ASSERT_GC_OBJECT_INHERITS(thisObject, JSClass::info());
 
             // FIXME: We should refactor the binding generated code to use references for lexicalGlobalObject and thisObject.
-            return operation(&lexicalGlobalObject, &callFrame, thisObject, WTFMove(promise), WTFMove(promise2));
+            return operation(&lexicalGlobalObject, &callFrame, thisObject, WTF::move(promise), WTF::move(promise2));
         });
     }
 
@@ -99,7 +99,7 @@ public:
     {
         return JSC::JSValue::encode(callPromiseFunction(lexicalGlobalObject, callFrame, [] (JSC::JSGlobalObject& lexicalGlobalObject, JSC::CallFrame& callFrame, Ref<DeferredPromise>&& promise) {
             // FIXME: We should refactor the binding generated code to use references for lexicalGlobalObject.
-            return operation(&lexicalGlobalObject, &callFrame, WTFMove(promise));
+            return operation(&lexicalGlobalObject, &callFrame, WTF::move(promise));
         }));
     }
 

@@ -27,14 +27,14 @@
 
 #include "DOMRectReadOnly.h"
 #include "DetectedTextInterface.h"
+#include "JSDOMConvertInterface.h"
+#include "JSDOMConvertNullable.h"
 #include "Point2D.h"
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
-
-struct Point2D;
 
 struct DetectedText {
     ShapeDetection::DetectedText convertToBacking() const

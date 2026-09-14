@@ -27,6 +27,7 @@
 
 #include "DestinationColorSpace.h"
 #include "FloatRect.h"
+#include <wtf/Function.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
@@ -46,7 +47,7 @@ public:
 
     virtual bool hasSourceImage() const { return false; }
 
-    virtual void beginClipAndDrawSourceImage(GraphicsContext& destinationContext, const FloatRect& repaintRect, const FloatRect& clipRect) = 0;
+    virtual void beginClipAndDrawSourceImage(GraphicsContext& destinationContext, const FloatRect& repaintRect, const FloatRect& clipRect, NOESCAPE const Function<void(GraphicsContext&)>& applyAdditionalDestinationClip = { }) = 0;
     virtual void endClipAndDrawSourceImage(GraphicsContext& destinationContext, const DestinationColorSpace&) = 0;
 
     virtual void beginDrawSourceImage(GraphicsContext& destinationContext, float opacity = 1.f) = 0;

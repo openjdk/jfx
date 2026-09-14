@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "RenderImageResource.h"
-#include "StyleImage.h"
+#include <WebCore/RenderImageResource.h>
+#include <WebCore/StyleImage.h>
 #include <wtf/RefPtr.h>
 
 namespace WebCore {
@@ -34,7 +34,7 @@ namespace WebCore {
 class RenderElement;
 
 class RenderImageResourceStyleImage final : public RenderImageResource {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderImageResourceStyleImage);
+    WTF_MAKE_TZONE_ALLOCATED(RenderImageResourceStyleImage);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderImageResourceStyleImage);
 public:
     explicit RenderImageResourceStyleImage(StyleImage&);

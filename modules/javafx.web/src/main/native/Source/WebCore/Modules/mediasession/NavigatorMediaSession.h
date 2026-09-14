@@ -27,7 +27,7 @@
 
 #if ENABLE(MEDIA_SESSION)
 
-#include "Supplementable.h"
+#include <WebCore/Supplementable.h>
 #include <wtf/CheckedRef.h>
 #include <wtf/Forward.h>
 #include <wtf/TZoneMalloc.h>
@@ -50,12 +50,17 @@ public:
 
 private:
     static NavigatorMediaSession* from(Navigator&);
-    static ASCIILiteral supplementName();
+    static ASCIILiteral supplementName() { return "NavigatorMediaSession"_s; }
+    bool isNavigatorMediaSession() const final { return true; }
 
     const RefPtr<MediaSession> m_mediaSession;
     const CheckedRef<Navigator> m_navigator;
 };
 
-}
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::NavigatorMediaSession)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isNavigatorMediaSession(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // ENABLE(MEDIA_SESSION)

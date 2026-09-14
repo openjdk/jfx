@@ -28,11 +28,11 @@
 
 #include "CSSPropertyNames.h"
 #include "CSSValuePool.h"
-#include "DocumentInlines.h"
 #include "DocumentLoader.h"
+#include "DocumentQuirks.h"
+#include "DocumentSecurityOrigin.h"
 #include "OriginAccessPatterns.h"
 #include "Page.h"
-#include "Quirks.h"
 #include "Settings.h"
 #include <wtf/NeverDestroyed.h>
 
@@ -48,16 +48,19 @@ static void applyUASheetBehaviorsToContext(CSSParserContext& context)
 {
     // FIXME: We should turn all of the features on from their WebCore Settings defaults.
     context.cssAppearanceBaseEnabled = true;
-    context.cssTextUnderlinePositionLeftRightEnabled = true;
+    context.cssTextTransformMathAutoEnabled = true;
     context.popoverAttributeEnabled = true;
     context.propertySettings.cssInputSecurityEnabled = true;
     context.propertySettings.supportHDRDisplayEnabled = true;
     context.propertySettings.viewTransitionsEnabled = true;
     context.propertySettings.cssFieldSizingEnabled = true;
+    context.cssMathDepthEnabled = true;
+    context.propertySettings.cssMathDepthEnabled = true;
 #if HAVE(CORE_MATERIAL)
     context.propertySettings.useSystemAppearance = true;
 #endif
     context.thumbAndTrackPseudoElementsEnabled = true;
+    context.cssInternalAutoBaseParsingEnabled = true;
 }
 
 CSSParserContext::CSSParserContext(CSSParserMode mode, const URL& baseURL)
@@ -76,45 +79,51 @@ CSSParserContext::CSSParserContext(const Document& document)
 }
 
 CSSParserContext::CSSParserContext(const Document& document, const URL& sheetBaseURL, ASCIILiteral charset)
-    : baseURL { sheetBaseURL.isNull() ? document.baseURL() : sheetBaseURL }
-    , charset { charset }
-    , mode { document.inQuirksMode() ? HTMLQuirksMode : HTMLStandardMode }
-    , isHTMLDocument { document.isHTMLDocument() }
-    , hasDocumentSecurityOrigin { sheetBaseURL.isNull() || document.protectedSecurityOrigin()->canRequest(baseURL, OriginAccessPatternsForWebProcess::singleton()) }
-    , useSystemAppearance { document.settings().useSystemAppearance() }
-    , counterStyleAtRuleImageSymbolsEnabled { document.settings().cssCounterStyleAtRuleImageSymbolsEnabled() }
-    , springTimingFunctionEnabled { document.settings().springTimingFunctionEnabled() }
+    : CSSParserContext(document.settings())
+{
+    baseURL = sheetBaseURL.isNull() ? document.baseURL() : sheetBaseURL;
+    this->charset = charset;
+    mode = document.inQuirksMode() ? HTMLQuirksMode : HTMLStandardMode;
+    isHTMLDocument = document.isHTMLDocument();
+    hasDocumentSecurityOrigin = sheetBaseURL.isNull() || document.protectedSecurityOrigin()->canRequest(baseURL, OriginAccessPatternsForWebProcess::singleton());
+    webkitMediaTextTrackDisplayQuirkEnabled = document.quirks().needsWebKitMediaTextTrackDisplayQuirk();
+}
+
+CSSParserContext::CSSParserContext(const Settings& settings)
+    : mode { HTMLStandardMode }
+    , useSystemAppearance { settings.useSystemAppearance() }
+    , counterStyleAtRuleImageSymbolsEnabled { settings.cssCounterStyleAtRuleImageSymbolsEnabled() }
+    , springTimingFunctionEnabled { settings.springTimingFunctionEnabled() }
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
-    , cssTransformStyleSeparatedEnabled { document.settings().cssTransformStyleSeparatedEnabled() }
+    , cssTransformStyleSeparatedEnabled { settings.cssTransformStyleSeparatedEnabled() }
 #endif
-    , masonryEnabled { document.settings().masonryEnabled() }
-    , cssAppearanceBaseEnabled { document.settings().cssAppearanceBaseEnabled() }
-    , cssPaintingAPIEnabled { document.settings().cssPaintingAPIEnabled() }
-    , cssShapeFunctionEnabled { document.settings().cssShapeFunctionEnabled() }
-    , cssTextUnderlinePositionLeftRightEnabled { document.settings().cssTextUnderlinePositionLeftRightEnabled() }
-    , cssBackgroundClipBorderAreaEnabled  { document.settings().cssBackgroundClipBorderAreaEnabled() }
-    , cssWordBreakAutoPhraseEnabled { document.settings().cssWordBreakAutoPhraseEnabled() }
-    , popoverAttributeEnabled { document.settings().popoverAttributeEnabled() }
-    , sidewaysWritingModesEnabled { document.settings().sidewaysWritingModesEnabled() }
-    , cssTextWrapPrettyEnabled { document.settings().cssTextWrapPrettyEnabled() }
-    , thumbAndTrackPseudoElementsEnabled { document.settings().thumbAndTrackPseudoElementsEnabled() }
+    , gridLanesEnabled { settings.gridLanesEnabled() }
+    , cssAppearanceBaseEnabled { settings.cssAppearanceBaseEnabled() }
+    , cssPaintingAPIEnabled { settings.cssPaintingAPIEnabled() }
+    , cssTextDecorationLineErrorValues { settings.cssTextDecorationLineErrorValues() }
+    , cssWordBreakAutoPhraseEnabled { settings.cssWordBreakAutoPhraseEnabled() }
+    , popoverAttributeEnabled { settings.popoverAttributeEnabled() }
+    , sidewaysWritingModesEnabled { settings.sidewaysWritingModesEnabled() }
+    , cssTextWrapPrettyEnabled { settings.cssTextWrapPrettyEnabled() }
+    , thumbAndTrackPseudoElementsEnabled { settings.thumbAndTrackPseudoElementsEnabled() }
 #if ENABLE(SERVICE_CONTROLS)
-    , imageControlsEnabled { document.settings().imageControlsEnabled() }
+    , imageControlsEnabled { settings.imageControlsEnabled() }
 #endif
-    , colorLayersEnabled { document.settings().cssColorLayersEnabled() }
-    , contrastColorEnabled { document.settings().cssContrastColorEnabled() }
-    , targetTextPseudoElementEnabled { document.settings().targetTextPseudoElementEnabled() }
-    , viewTransitionTypesEnabled { document.settings().viewTransitionsEnabled() && document.settings().viewTransitionTypesEnabled() }
-    , cssProgressFunctionEnabled { document.settings().cssProgressFunctionEnabled() }
-    , cssRandomFunctionEnabled { document.settings().cssRandomFunctionEnabled() }
-    , cssTreeCountingFunctionsEnabled { document.settings().cssTreeCountingFunctionsEnabled() }
-    , cssURLModifiersEnabled { document.settings().cssURLModifiersEnabled() }
-    , cssURLIntegrityModifierEnabled { document.settings().cssURLIntegrityModifierEnabled() }
-    , cssAxisRelativePositionKeywordsEnabled { document.settings().cssAxisRelativePositionKeywordsEnabled() }
-    , cssDynamicRangeLimitMixEnabled { document.settings().cssDynamicRangeLimitMixEnabled() }
-    , cssConstrainedDynamicRangeLimitEnabled { document.settings().cssConstrainedDynamicRangeLimitEnabled() }
-    , webkitMediaTextTrackDisplayQuirkEnabled { document.quirks().needsWebKitMediaTextTrackDisplayQuirk() }
-    , propertySettings { CSSPropertySettings { document.settings() } }
+    , colorLayersEnabled { settings.cssColorLayersEnabled() }
+    , targetTextPseudoElementEnabled { settings.targetTextPseudoElementEnabled() }
+    , cssProgressFunctionEnabled { settings.cssProgressFunctionEnabled() }
+    , cssRandomFunctionEnabled { settings.cssRandomFunctionEnabled() }
+    , cssTreeCountingFunctionsEnabled { settings.cssTreeCountingFunctionsEnabled() }
+    , cssURLModifiersEnabled { settings.cssURLModifiersEnabled() }
+    , cssURLIntegrityModifierEnabled { settings.cssURLIntegrityModifierEnabled() }
+    , cssAxisRelativePositionKeywordsEnabled { settings.cssAxisRelativePositionKeywordsEnabled() }
+    , cssDynamicRangeLimitMixEnabled { settings.cssDynamicRangeLimitMixEnabled() }
+    , cssConstrainedDynamicRangeLimitEnabled { settings.cssConstrainedDynamicRangeLimitEnabled() }
+    , cssTextTransformMathAutoEnabled { settings.cssTextTransformMathAutoEnabled() }
+    , cssInternalAutoBaseParsingEnabled { settings.cssInternalAutoBaseParsingEnabled() }
+    , cssMathDepthEnabled { settings.cssMathDepthEnabled() }
+    , openPseudoClassEnabled { settings.openPseudoClassEnabled() }
+    , propertySettings { CSSPropertySettings { settings } }
 {
 }
 
@@ -128,32 +137,32 @@ void add(Hasher& hasher, const CSSParserContext& context)
 #if HAVE(CORE_ANIMATION_SEPARATED_LAYERS)
         | context.cssTransformStyleSeparatedEnabled         << 5
 #endif
-        | context.masonryEnabled                            << 6
+        | context.gridLanesEnabled                          << 6
         | context.cssAppearanceBaseEnabled                  << 7
         | context.cssPaintingAPIEnabled                     << 8
-        | context.cssShapeFunctionEnabled                   << 9
-        | context.cssTextUnderlinePositionLeftRightEnabled  << 10
-        | context.cssBackgroundClipBorderAreaEnabled        << 11
-        | context.cssWordBreakAutoPhraseEnabled             << 12
-        | context.popoverAttributeEnabled                   << 13
-        | context.sidewaysWritingModesEnabled               << 14
-        | context.cssTextWrapPrettyEnabled                  << 15
-        | context.thumbAndTrackPseudoElementsEnabled        << 16
+        | context.cssWordBreakAutoPhraseEnabled             << 9
+        | context.popoverAttributeEnabled                   << 10
+        | context.sidewaysWritingModesEnabled               << 11
+        | context.cssTextWrapPrettyEnabled                  << 12
+        | context.thumbAndTrackPseudoElementsEnabled        << 13
 #if ENABLE(SERVICE_CONTROLS)
-        | context.imageControlsEnabled                      << 17
+        | context.imageControlsEnabled                      << 14
 #endif
-        | context.colorLayersEnabled                        << 18
-        | context.contrastColorEnabled                      << 19
-        | context.targetTextPseudoElementEnabled            << 20
-        | context.viewTransitionTypesEnabled                << 21
-        | context.cssProgressFunctionEnabled                << 22
-        | context.cssRandomFunctionEnabled                  << 23
-        | context.cssTreeCountingFunctionsEnabled           << 24
-        | context.cssURLModifiersEnabled                    << 25
-        | context.cssURLIntegrityModifierEnabled            << 26
-        | context.cssAxisRelativePositionKeywordsEnabled    << 27
-        | context.cssDynamicRangeLimitMixEnabled            << 28
-        | context.cssConstrainedDynamicRangeLimitEnabled    << 29;
+        | context.colorLayersEnabled                        << 15
+        | context.targetTextPseudoElementEnabled            << 16
+        | context.cssProgressFunctionEnabled                << 17
+        | context.cssRandomFunctionEnabled                  << 18
+        | context.cssTreeCountingFunctionsEnabled           << 19
+        | context.cssURLModifiersEnabled                    << 20
+        | context.cssURLIntegrityModifierEnabled            << 21
+        | context.cssAxisRelativePositionKeywordsEnabled    << 22
+        | context.cssDynamicRangeLimitMixEnabled            << 23
+        | context.cssConstrainedDynamicRangeLimitEnabled    << 24
+        | context.cssTextDecorationLineErrorValues          << 25
+        | context.cssTextTransformMathAutoEnabled           << 26
+        | context.cssInternalAutoBaseParsingEnabled         << 27
+        | context.cssMathDepthEnabled                       << 28
+        | context.openPseudoClassEnabled                    << 29;
     add(hasher, context.baseURL, context.charset, context.propertySettings, context.mode, bits);
 }
 

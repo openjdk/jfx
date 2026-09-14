@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "NetworkLoadMetrics.h"
-#include "ResourceRequest.h"
-#include "ResourceResponse.h"
+#include <WebCore/NetworkLoadMetrics.h>
+#include <WebCore/ResourceRequest.h>
+#include <WebCore/ResourceResponse.h>
 #include <wtf/Vector.h>
 
 namespace WebCore {

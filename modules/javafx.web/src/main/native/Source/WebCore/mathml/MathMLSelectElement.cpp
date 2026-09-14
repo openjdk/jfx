@@ -37,13 +37,15 @@
 #include "MathMLNames.h"
 #include "MouseEvent.h"
 #include "RenderMathMLRow.h"
+#include "RenderStyle+GettersInlines.h"
 #include "RenderTreeUpdater.h"
 #include "SVGElement.h"
+#include "Settings.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MathMLSelectElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MathMLSelectElement);
 
 using namespace MathMLNames;
 
@@ -59,7 +61,7 @@ Ref<MathMLSelectElement> MathMLSelectElement::create(const QualifiedName& tagNam
 
 RenderPtr<RenderElement> MathMLSelectElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
-    return createRenderer<RenderMathMLRow>(RenderObject::Type::MathMLRow, *this, WTFMove(style));
+    return createRenderer<RenderMathMLRow>(RenderObject::Type::MathMLRow, *this, WTF::move(style));
 }
 
 //  We recognize the following values for the encoding attribute of the <semantics> element:
@@ -87,7 +89,7 @@ bool MathMLSelectElement::isHTMLEncoding(const AtomString& value)
 
 bool MathMLSelectElement::childShouldCreateRenderer(const Node& child) const
 {
-    return MathMLElement::childShouldCreateRenderer(child) && m_selectedChild == &child;
+    return MathMLElement::childShouldCreateRenderer(child) && (document().settings().coreMathMLEnabled() || m_selectedChild == &child);
 }
 
 void MathMLSelectElement::finishParsingChildren()
@@ -131,7 +133,7 @@ int MathMLSelectElement::getSelectedActionChildAndIndex(Element*& selectedChild)
     return i;
 }
 
-Element* MathMLSelectElement::getSelectedActionChild()
+RefPtr<Element> MathMLSelectElement::getSelectedActionChild()
 {
     ASSERT(hasTagName(mactionTag));
 
@@ -154,10 +156,10 @@ Element* MathMLSelectElement::getSelectedActionChild()
         child = selectedChild;
     }
 
-    return child.get();
+    return child;
 }
 
-Element* MathMLSelectElement::getSelectedSemanticsChild()
+RefPtr<Element> MathMLSelectElement::getSelectedSemanticsChild()
 {
     ASSERT(hasTagName(semanticsTag));
 
@@ -170,7 +172,7 @@ Element* MathMLSelectElement::getSelectedSemanticsChild()
         child = child->nextElementSibling();
     } else if (!downcast<MathMLElement>(*child).isSemanticAnnotation()) {
         // The first child is a presentation MathML but not an annotation, so we can just display it.
-        return child.get();
+        return child;
     }
     // Otherwise, the first child is an <annotation> or <annotation-xml> element. This is invalid, but some people use this syntax so we take care of this case too and start the search from this first child.
 
@@ -183,7 +185,7 @@ Element* MathMLSelectElement::getSelectedSemanticsChild()
             if (child->hasAttributeWithoutSynchronization(MathMLNames::srcAttr))
                 continue;
             // Otherwise, we assume it is a text annotation that can always be displayed and we stop here.
-            return child.get();
+            return child;
         }
 
         if (child->hasTagName(MathMLNames::annotation_xmlTag)) {
@@ -193,7 +195,7 @@ Element* MathMLSelectElement::getSelectedSemanticsChild()
             // If the <annotation-xml> element has an encoding attribute describing presentation MathML, SVG or HTML we assume the content can be displayed and we stop here.
             auto& value = child->attributeWithoutSynchronization(MathMLNames::encodingAttr);
             if (isMathMLEncoding(value) || isSVGEncoding(value) || isHTMLEncoding(value))
-                return child.get();
+                return child;
         }
     }
 
@@ -203,7 +205,10 @@ Element* MathMLSelectElement::getSelectedSemanticsChild()
 
 void MathMLSelectElement::updateSelectedChild()
 {
-    auto* newSelectedChild = hasTagName(mactionTag) ? getSelectedActionChild() : getSelectedSemanticsChild();
+    if (document().settings().coreMathMLEnabled())
+        return;
+
+    RefPtr newSelectedChild = hasTagName(mactionTag) ? getSelectedActionChild() : getSelectedSemanticsChild();
 
     if (m_selectedChild == newSelectedChild)
         return;
@@ -217,7 +222,7 @@ void MathMLSelectElement::updateSelectedChild()
 
 void MathMLSelectElement::defaultEventHandler(Event& event)
 {
-    if (isAnyClick(event)) {
+    if (!document().settings().coreMathMLEnabled() && isAnyClick(event)) {
         if (attributeWithoutSynchronization(MathMLNames::actiontypeAttr) == "toggle"_s) {
             toggle();
             event.setDefaultHandled();
@@ -230,7 +235,7 @@ void MathMLSelectElement::defaultEventHandler(Event& event)
 
 bool MathMLSelectElement::willRespondToMouseClickEventsWithEditability(Editability editability) const
 {
-    return attributeWithoutSynchronization(MathMLNames::actiontypeAttr) == "toggle"_s || MathMLRowElement::willRespondToMouseClickEventsWithEditability(editability);
+    return (!document().settings().coreMathMLEnabled() && attributeWithoutSynchronization(MathMLNames::actiontypeAttr) == "toggle"_s) || MathMLRowElement::willRespondToMouseClickEventsWithEditability(editability);
 }
 
 void MathMLSelectElement::toggle()

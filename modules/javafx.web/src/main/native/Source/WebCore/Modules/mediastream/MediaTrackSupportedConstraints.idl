@@ -31,6 +31,7 @@
 [
     Conditional=MEDIA_STREAM,
     JSGenerateToJSObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary MediaTrackSupportedConstraints {
     boolean width = true;
     boolean height = true;

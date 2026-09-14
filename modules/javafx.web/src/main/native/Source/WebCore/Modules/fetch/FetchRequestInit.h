@@ -25,13 +25,13 @@
 
 #pragma once
 
-#include "AbortSignal.h"
 #include "FetchBody.h"
-#include "FetchHeaders.h"
-#include "FetchOptions.h"
-#include "IPAddressSpace.h"
-#include "RequestPriority.h"
 #include <JavaScriptCore/JSCJSValue.h>
+#include <WebCore/AbortSignal.h>
+#include <WebCore/FetchHeaders.h>
+#include <WebCore/FetchOptions.h>
+#include <WebCore/IPAddressSpace.h>
+#include <WebCore/RequestPriority.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -52,8 +52,7 @@ struct FetchRequestInit {
     std::optional<RequestPriority> priority;
     JSC::JSValue window;
     std::optional<IPAddressSpace> targetAddressSpace;
-
-    bool hasMembers() const { return !method.isEmpty() || headers || body || !referrer.isEmpty() || referrerPolicy || mode || credentials || cache || redirect || !integrity.isEmpty() || keepalive || !window.isUndefined() || !signal.isUndefined() || targetAddressSpace; }
+    bool hasMembers() const { return !method.isEmpty() || headers || body || !referrer.isEmpty() || referrerPolicy || mode || credentials || cache || redirect || !integrity.isEmpty() || keepalive || !window.isUndefined() || !signal.isUndefined() || (targetAddressSpace && *targetAddressSpace != IPAddressSpace::Public); }
 };
 
 }

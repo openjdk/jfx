@@ -32,7 +32,6 @@
 
 namespace WebCore {
 
-
 void initializeLLVMProfiling()
 {
     WTF::initializeLLVMProfiling();

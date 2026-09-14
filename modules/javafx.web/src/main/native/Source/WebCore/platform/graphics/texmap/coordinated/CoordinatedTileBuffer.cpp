@@ -56,8 +56,6 @@ WTF_IGNORE_WARNINGS_IN_THIRD_PARTY_CODE_END
 #endif
 #endif
 
-#include "PixelFormat.h"
-
 namespace WebCore {
 
 Lock CoordinatedTileBuffer::s_layersMemoryUsageLock;
@@ -135,17 +133,6 @@ CoordinatedUnacceleratedTileBuffer::CoordinatedUnacceleratedTileBuffer(const Int
     }
 }
 
-PixelFormat CoordinatedUnacceleratedTileBuffer::pixelFormat() const
-{
-#if USE(SKIA)
-    // For GPU/hybrid rendering, prefer RGBA, otherwise use BGRA.
-    if (ProcessCapabilities::canUseAcceleratedBuffers())
-        return PixelFormat::RGBA8;
-#endif
-
-    return PixelFormat::BGRA8;
-}
-
 CoordinatedUnacceleratedTileBuffer::~CoordinatedUnacceleratedTileBuffer()
 {
     const auto checkedArea = m_size.area().value() * 4;
@@ -161,10 +148,9 @@ bool CoordinatedUnacceleratedTileBuffer::tryEnsureSurface()
     if (m_surface)
         return true;
 
-    auto colorType = pixelFormat() == PixelFormat::BGRA8 ? kBGRA_8888_SkColorType : kRGBA_8888_SkColorType;
-    auto imageInfo = SkImageInfo::Make(m_size.width(), m_size.height(), colorType, kPremul_SkAlphaType, SkColorSpace::MakeSRGB());
+    auto imageInfo = SkImageInfo::Make(m_size.width(), m_size.height(), kBGRA_8888_SkColorType, kPremul_SkAlphaType, SkColorSpace::MakeSRGB());
     // FIXME: ref buffer and unref on release proc?
-    SkSurfaceProps properties = { 0, FontRenderOptions::singleton().subpixelOrder() };
+    SkSurfaceProps properties = FontRenderOptions::singleton().createSurfaceProps();
     m_surface = SkSurfaces::WrapPixels(imageInfo, data(), imageInfo.minRowBytes64(), &properties);
     return true;
 }
@@ -174,12 +160,12 @@ bool CoordinatedUnacceleratedTileBuffer::tryEnsureSurface()
 Ref<CoordinatedTileBuffer> CoordinatedAcceleratedTileBuffer::create(Ref<BitmapTexture>&& texture)
 {
     auto flags = CoordinatedTileBuffer::Flags { texture->isOpaque() ? CoordinatedTileBuffer::NoFlags : CoordinatedTileBuffer::SupportsAlpha };
-    return adoptRef(*new CoordinatedAcceleratedTileBuffer(WTFMove(texture), flags));
+    return adoptRef(*new CoordinatedAcceleratedTileBuffer(WTF::move(texture), flags));
 }
 
 CoordinatedAcceleratedTileBuffer::CoordinatedAcceleratedTileBuffer(Ref<BitmapTexture>&& texture, Flags flags)
     : CoordinatedTileBuffer(flags)
-    , m_texture(WTFMove(texture))
+    , m_texture(WTF::move(texture))
 {
 }
 
@@ -206,11 +192,19 @@ bool CoordinatedAcceleratedTileBuffer::tryEnsureSurface()
     const auto& size = m_texture->size();
     auto backendTexture = GrBackendTextures::MakeGL(size.width(), size.height(), skgpu::Mipmapped::kNo, externalTexture);
 
-    SkSurfaceProps properties = { 0, FontRenderOptions::singleton().subpixelOrder() };
+#if PLATFORM(GTK)
+    // FIXME: there's a deadlock when two rendering threads try to create a texture with MSAA enabled. So, for now
+    // we just disable MSAA for the GTK port to render tiles until we find a solution.
+    unsigned msaaSampleCount = 0;
+#else
+    unsigned msaaSampleCount = PlatformDisplay::sharedDisplay().msaaSampleCount();
+#endif
+
+    SkSurfaceProps properties = FontRenderOptions::singleton().createSurfaceProps();
     m_surface = SkSurfaces::WrapBackendTexture(PlatformDisplay::sharedDisplay().skiaGrContext(),
         backendTexture,
         kTopLeft_GrSurfaceOrigin,
-        PlatformDisplay::sharedDisplay().msaaSampleCount(),
+        msaaSampleCount,
         kRGBA_8888_SkColorType,
         SkColorSpace::MakeSRGB(),
         &properties);
@@ -220,7 +214,13 @@ bool CoordinatedAcceleratedTileBuffer::tryEnsureSurface()
 
 void CoordinatedAcceleratedTileBuffer::completePainting()
 {
-    auto* grContext = PlatformDisplay::sharedDisplay().skiaGrContext();
+    auto* recordingContext = m_surface->recordingContext();
+    auto* grContext = recordingContext ? recordingContext->asDirectContext() : nullptr;
+    if (!grContext) {
+        CoordinatedTileBuffer::completePainting();
+        return;
+    }
+
     auto& glDisplay = PlatformDisplay::sharedDisplay().glDisplay();
     if (GLFence::isSupported(glDisplay)) {
         grContext->flushAndSubmit(m_surface.get(), GrSyncCpu::kNo);

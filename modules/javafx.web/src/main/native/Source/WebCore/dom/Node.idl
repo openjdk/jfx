@@ -83,6 +83,8 @@
     [CEReactions=Needed] Node removeChild([ReturnValue] Node child);
 };
 
-dictionary GetRootNodeOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GetRootNodeOptions {
     boolean composed = false;
 };

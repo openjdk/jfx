@@ -82,13 +82,13 @@ void VideoTrack::setPrivate(VideoTrackPrivate& trackPrivate)
     m_private = trackPrivate;
     addClientToTrackPrivateBase(*this, trackPrivate);
 #if !RELEASE_LOG_DISABLED
-    m_private->setLogger(logger(), logIdentifier());
+    trackPrivate.setLogger(protectedLogger().get(), logIdentifier());
 #endif
 
-    m_private->setSelected(m_selected);
+    trackPrivate.setSelected(m_selected);
     updateKindFromPrivate();
     updateConfigurationFromPrivate();
-    setId(m_private->id());
+    setId(trackPrivate.id());
 }
 
 bool VideoTrack::isValidKind(const AtomString& value) const
@@ -107,7 +107,7 @@ void VideoTrack::setSelected(const bool selected)
         return;
 
     m_selected = selected;
-    m_private->setSelected(selected);
+    protectedPrivate()->setSelected(selected);
 
     m_clients.forEach([this] (auto& client) {
         client.videoTrackSelectedChanged(*this);
@@ -128,7 +128,7 @@ void VideoTrack::clearClient(VideoTrackClient& client)
 
 size_t VideoTrack::inbandTrackIndex()
 {
-    return m_private->trackIndex();
+    return protectedPrivate()->trackIndex();
 }
 
 void VideoTrack::selectedChanged(bool selected)
@@ -155,17 +155,17 @@ void VideoTrack::idChanged(TrackID id)
     });
 }
 
-void VideoTrack::labelChanged(const AtomString& label)
+void VideoTrack::labelChanged(const String& label)
 {
-    setLabel(label);
+    setLabel(AtomString { label.isolatedCopy() });
     m_clients.forEach([this] (auto& client) {
         client.videoTrackLabelChanged(*this);
     });
 }
 
-void VideoTrack::languageChanged(const AtomString& language)
+void VideoTrack::languageChanged(const String& language)
 {
-    setLanguage(language);
+    setLanguage(AtomString { language.isolatedCopy() });
 }
 
 void VideoTrack::willRemove()
@@ -217,7 +217,7 @@ void VideoTrack::setLanguage(const AtomString& language)
 
 void VideoTrack::updateKindFromPrivate()
 {
-    switch (m_private->kind()) {
+    switch (protectedPrivate()->kind()) {
     case VideoTrackPrivate::Kind::Alternative:
         setKind("alternative"_s);
         return;
@@ -248,11 +248,16 @@ void VideoTrack::updateConfigurationFromPrivate()
     m_configuration->setState(m_private->configuration());
 }
 
+Ref<VideoTrackPrivate> VideoTrack::protectedPrivate() const
+{
+    return m_private;
+}
+
 #if !RELEASE_LOG_DISABLED
 void VideoTrack::setLogger(const Logger& logger, uint64_t logIdentifier)
 {
     TrackBase::setLogger(logger, logIdentifier);
-    m_private->setLogger(logger, this->logIdentifier());
+    protectedPrivate()->setLogger(logger, this->logIdentifier());
 }
 #endif
 

@@ -33,7 +33,7 @@
 #include "ContentType.h"
 #include "ContextDestructionObserverInlines.h"
 #include "Document.h"
-#include "DocumentInlines.h"
+#include "DocumentPage.h"
 #include "EventNames.h"
 #include "MediaRecorderErrorEvent.h"
 #include "MediaRecorderPrivate.h"
@@ -52,7 +52,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(MediaRecorder);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MediaRecorder);
 
 MediaRecorder::CreatorFunction MediaRecorder::m_customCreator = nullptr;
 
@@ -78,14 +78,13 @@ bool MediaRecorder::isTypeSupported(Document& document, const String& value)
 
 ExceptionOr<Ref<MediaRecorder>> MediaRecorder::create(Document& document, Ref<MediaStream>&& stream, Options&& options)
 {
-    auto* page = document.page();
-    if (!page)
+    if (!document.page())
         return Exception { ExceptionCode::InvalidStateError };
 
     if (!isTypeSupported(document, options.mimeType))
         return Exception { ExceptionCode::NotSupportedError, "mimeType is not supported"_s };
 
-    auto recorder = adoptRef(*new MediaRecorder(document, WTFMove(stream), WTFMove(options)));
+    Ref recorder = adoptRef(*new MediaRecorder(document, WTF::move(stream), WTF::move(options)));
     recorder->suspendIfNeeded();
     return recorder;
 }
@@ -114,8 +113,8 @@ ExceptionOr<std::unique_ptr<MediaRecorderPrivate>> MediaRecorder::createMediaRec
 
 MediaRecorder::MediaRecorder(Document& document, Ref<MediaStream>&& stream, Options&& options)
     : ActiveDOMObject(document)
-    , m_options(WTFMove(options))
-    , m_stream(WTFMove(stream))
+    , m_options(WTF::move(options))
+    , m_stream(WTF::move(stream))
     , m_timeSliceTimer(*this, &MediaRecorder::timeSlicerTimerFired)
 {
     computeInitialBitRates();
@@ -144,6 +143,11 @@ void MediaRecorder::stop()
 {
     m_isActive = false;
     stopRecordingInternal();
+}
+
+ScriptExecutionContext* MediaRecorder::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
 }
 
 void MediaRecorder::suspend(ReasonForSuspension reason)
@@ -180,7 +184,7 @@ ExceptionOr<void> MediaRecorder::startRecording(std::optional<unsigned> timeSlic
         return result.releaseException();
 
     m_private = result.releaseReturnValue();
-    m_private->startRecording([pendingActivity = makePendingActivity(*this)](auto&& mimeTypeOrException, unsigned audioBitsPerSecond, unsigned videoBitsPerSecond) mutable {
+    checkedPrivate()->startRecording([pendingActivity = makePendingActivity(*this)](auto&& mimeTypeOrException, unsigned audioBitsPerSecond, unsigned videoBitsPerSecond) mutable {
         if (!pendingActivity->object().m_isActive)
             return;
 
@@ -189,7 +193,7 @@ ExceptionOr<void> MediaRecorder::startRecording(std::optional<unsigned> timeSlic
             queueTaskKeepingObjectAlive(pendingActivity->object(), TaskSource::Networking, [exception = mimeTypeOrException.releaseException()](auto& recorder) mutable {
                 if (!recorder.m_isActive)
                     return;
-                recorder.dispatchError(WTFMove(exception));
+                recorder.dispatchError(WTF::move(exception));
             });
             return;
         }
@@ -197,7 +201,7 @@ ExceptionOr<void> MediaRecorder::startRecording(std::optional<unsigned> timeSlic
         queueTaskKeepingObjectAlive(pendingActivity->object(), TaskSource::Networking, [mimeType = mimeTypeOrException.releaseReturnValue(), audioBitsPerSecond, videoBitsPerSecond](auto& recorder) mutable {
             if (!recorder.m_isActive)
                 return;
-            recorder.m_options.mimeType = WTFMove(mimeType);
+            recorder.m_options.mimeType = WTF::move(mimeType);
             recorder.m_options.audioBitsPerSecond = audioBitsPerSecond;
             recorder.m_options.videoBitsPerSecond = videoBitsPerSecond;
 
@@ -218,7 +222,7 @@ ExceptionOr<void> MediaRecorder::startRecording(std::optional<unsigned> timeSlic
 static inline Ref<BlobEvent> createDataAvailableEvent(ScriptExecutionContext* context, RefPtr<FragmentedSharedBuffer>&& buffer, const String& mimeType, double timeCode)
 {
     auto blob = buffer ? Blob::create(context, buffer->extractData(), mimeType) : Blob::create(context);
-    return BlobEvent::create(eventNames().dataavailableEvent, BlobEvent::Init { { false, false, false }, WTFMove(blob), timeCode }, BlobEvent::IsTrusted::Yes);
+    return BlobEvent::create(eventNames().dataavailableEvent, BlobEvent::Init { { false, false, false }, WTF::move(blob), timeCode }, BlobEvent::IsTrusted::Yes);
 }
 
 void MediaRecorder::stopRecording()
@@ -234,7 +238,7 @@ void MediaRecorder::stopRecording()
             return;
 
         RefPtr scriptExecutionContext = recorder.scriptExecutionContext();
-        recorder.dispatchEvent(createDataAvailableEvent(scriptExecutionContext.get(), WTFMove(buffer), mimeType, timeCode));
+        recorder.dispatchEvent(createDataAvailableEvent(scriptExecutionContext.get(), WTF::move(buffer), mimeType, timeCode));
 
         if (!recorder.m_isActive)
             return;
@@ -259,7 +263,7 @@ ExceptionOr<void> MediaRecorder::requestDataInternal(ReturnDataIfEmpty returnDat
     fetchData([returnDataIfEmpty](auto& recorder, auto&& buffer, auto& mimeType, auto timeCode) {
         if (returnDataIfEmpty == ReturnDataIfEmpty::Yes || !buffer->isEmpty()) {
             RefPtr scriptExecutionContext = recorder.scriptExecutionContext();
-            recorder.dispatchEvent(createDataAvailableEvent(scriptExecutionContext.get(), WTFMove(buffer), mimeType, timeCode));
+            recorder.dispatchEvent(createDataAvailableEvent(scriptExecutionContext.get(), WTF::move(buffer), mimeType, timeCode));
         }
 
         switch (recorder.state()) {
@@ -294,7 +298,7 @@ ExceptionOr<void> MediaRecorder::pauseRecording()
         m_timeSliceTimer.stop();
     }
 
-    m_private->pause([pendingActivity = makePendingActivity(*this)]() {
+    checkedPrivate()->pause([pendingActivity = makePendingActivity(*this)] {
         if (!pendingActivity->object().m_isActive)
             return;
         queueTaskKeepingObjectAlive(pendingActivity->object(), TaskSource::Networking, [](auto& recorder) mutable {
@@ -321,7 +325,7 @@ ExceptionOr<void> MediaRecorder::resumeRecording()
         m_nextFireInterval = { };
     }
 
-    m_private->resume([pendingActivity = makePendingActivity(*this)]() {
+    checkedPrivate()->resume([pendingActivity = makePendingActivity(*this)] {
         if (!pendingActivity->object().m_isActive)
             return;
         queueTaskKeepingObjectAlive(pendingActivity->object(), TaskSource::Networking, [](auto& recorder) mutable {
@@ -335,27 +339,27 @@ ExceptionOr<void> MediaRecorder::resumeRecording()
 
 void MediaRecorder::fetchData(FetchDataCallback&& callback, TakePrivateRecorder takeRecorder)
 {
-    auto& privateRecorder = *m_private;
+    CheckedRef privateRecorder = *m_private;
 
     std::unique_ptr<MediaRecorderPrivate> takenPrivateRecorder;
     if (takeRecorder == TakePrivateRecorder::Yes)
-        takenPrivateRecorder = WTFMove(m_private);
+        takenPrivateRecorder = WTF::move(m_private);
 
-    FetchDataCallback fetchDataCallback = [privateRecorder = WTFMove(takenPrivateRecorder), callback = WTFMove(callback)](auto& recorder, auto&& buffer, auto& mimeType, auto timeCode) mutable {
-        queueTaskKeepingObjectAlive(recorder, TaskSource::Networking, [buffer = WTFMove(buffer), mimeType, timeCode, callback = WTFMove(callback)](auto& recorder) mutable {
-            callback(recorder, WTFMove(buffer), mimeType, timeCode);
+    FetchDataCallback fetchDataCallback = [privateRecorder = WTF::move(takenPrivateRecorder), callback = WTF::move(callback)](auto& recorder, auto&& buffer, auto& mimeType, auto timeCode) mutable {
+        queueTaskKeepingObjectAlive(recorder, TaskSource::Networking, [buffer = WTF::move(buffer), mimeType, timeCode, callback = WTF::move(callback)](auto& recorder) mutable {
+            callback(recorder, WTF::move(buffer), mimeType, timeCode);
         });
     };
 
     if (m_isFetchingData) {
-        m_pendingFetchDataTasks.append(WTFMove(fetchDataCallback));
+        m_pendingFetchDataTasks.append(WTF::move(fetchDataCallback));
         return;
     }
 
     m_isFetchingData = true;
-    privateRecorder.fetchData([pendingActivity = makePendingActivity(*this), callback = WTFMove(fetchDataCallback)](auto&& buffer, auto& mimeType, auto timeCode) mutable {
+    privateRecorder->fetchData([pendingActivity = makePendingActivity(*this), callback = WTF::move(fetchDataCallback)](auto&& buffer, auto& mimeType, auto timeCode) mutable {
         pendingActivity->object().m_isFetchingData = false;
-        callback(pendingActivity->object(), WTFMove(buffer), mimeType, timeCode);
+        callback(pendingActivity->object(), WTF::move(buffer), mimeType, timeCode);
         for (auto& task : std::exchange(pendingActivity->object().m_pendingFetchDataTasks, { }))
             task(pendingActivity->object(), SharedBuffer::create(), mimeType, timeCode);
     });
@@ -372,12 +376,15 @@ void MediaRecorder::stopRecordingInternal(CompletionHandler<void()>&& completion
         track->removeObserver(*this);
 
     m_state = RecordingState::Inactive;
-    m_private->stop(WTFMove(completionHandler));
+    checkedPrivate()->stop(WTF::move(completionHandler));
 }
 
 void MediaRecorder::handleTrackChange()
 {
     queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [](auto& recorder) {
+        if (recorder.state() == RecordingState::Inactive)
+            return;
+
         recorder.stopRecordingInternal([pendingActivity = recorder.makePendingActivity(recorder)] {
             Ref protectedRecorder = pendingActivity->object();
             queueTaskKeepingObjectAlive(protectedRecorder.get(), TaskSource::Networking, [](auto& recorder) {
@@ -401,7 +408,7 @@ void MediaRecorder::dispatchError(Exception&& exception)
 {
     if (!m_isActive)
         return;
-    dispatchEvent(MediaRecorderErrorEvent::create(eventNames().errorEvent, WTFMove(exception)));
+    dispatchEvent(MediaRecorderErrorEvent::create(eventNames().errorEvent, WTF::move(exception)));
 }
 
 void MediaRecorder::trackEnded(MediaStreamTrackPrivate&)
@@ -413,6 +420,9 @@ void MediaRecorder::trackEnded(MediaStreamTrackPrivate&)
         return;
 
     queueTaskKeepingObjectAlive(*this, TaskSource::Networking, [](auto& recorder) {
+        if (recorder.state() == RecordingState::Inactive)
+            return;
+
         recorder.stopRecordingInternal([pendingActivity = recorder.makePendingActivity(recorder)] {
             queueTaskKeepingObjectAlive(pendingActivity->object(), TaskSource::Networking, [](auto& recorder) {
                 if (!recorder.m_isActive)
@@ -429,14 +439,14 @@ void MediaRecorder::trackEnded(MediaStreamTrackPrivate&)
 
 void MediaRecorder::trackMutedChanged(MediaStreamTrackPrivate& track)
 {
-    if (m_private)
-        m_private->trackMutedChanged(track);
+    if (CheckedPtr privateRecorder = m_private.get())
+        privateRecorder->trackMutedChanged(track);
 }
 
 void MediaRecorder::trackEnabledChanged(MediaStreamTrackPrivate& track)
 {
-    if (m_private)
-        m_private->trackEnabledChanged(track);
+    if (CheckedPtr privateRecorder = m_private.get())
+        privateRecorder->trackEnabledChanged(track);
 }
 
 bool MediaRecorder::virtualHasPendingActivity() const
@@ -449,6 +459,11 @@ void MediaRecorder::computeBitRates(const MediaStreamPrivate* stream)
     auto bitRates = MediaRecorderPrivate::computeBitRates(m_options, stream);
     m_audioBitsPerSecond = bitRates.audio;
     m_videoBitsPerSecond = bitRates.video;
+}
+
+CheckedPtr<MediaRecorderPrivate> MediaRecorder::checkedPrivate()
+{
+    return m_private.get();
 }
 
 } // namespace WebCore

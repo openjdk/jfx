@@ -36,7 +36,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TextPlaceholderElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TextPlaceholderElement);
 
 Ref<TextPlaceholderElement> TextPlaceholderElement::create(Document& document, const LayoutSize& size)
 {

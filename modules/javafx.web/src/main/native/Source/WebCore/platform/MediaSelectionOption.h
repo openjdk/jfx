@@ -53,7 +53,7 @@ struct MediaSelectionOption {
     }
 
     MediaSelectionOption isolatedCopy() const & { return { mediaType, displayName.isolatedCopy(), legibleType }; }
-    MediaSelectionOption isolatedCopy() && { return { mediaType, WTFMove(displayName).isolatedCopy(), legibleType }; }
+    MediaSelectionOption isolatedCopy() && { return { mediaType, WTF::move(displayName).isolatedCopy(), legibleType }; }
 
     MediaType mediaType { MediaType::Unknown };
     String displayName;

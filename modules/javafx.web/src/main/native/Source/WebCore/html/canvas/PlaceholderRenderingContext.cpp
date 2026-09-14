@@ -29,8 +29,10 @@
 #if ENABLE(OFFSCREEN_CANVAS)
 
 #include "ContextDestructionObserverInlines.h"
+#include "GraphicsLayer.h"
 #include "GraphicsLayerContentsDisplayDelegate.h"
 #include "HTMLCanvasElement.h"
+#include "NodeInlines.h"
 #include "OffscreenCanvas.h"
 #include <wtf/TZoneMallocInlines.h>
 
@@ -62,15 +64,15 @@ void PlaceholderRenderingContextSource::setPlaceholderBuffer(ImageBuffer& imageB
     RefPtr clone = imageBuffer.clone();
     if (!clone)
         return;
-    std::unique_ptr serializedClone = ImageBuffer::sinkIntoSerializedImageBuffer(WTFMove(clone));
+    std::unique_ptr serializedClone = ImageBuffer::sinkIntoSerializedImageBuffer(WTF::move(clone));
     if (!serializedClone)
         return;
-    callOnMainThread([weakPlaceholder = m_placeholder, buffer = WTFMove(serializedClone), bufferVersion, originClean, opaque] () mutable {
+    callOnMainThread([weakPlaceholder = m_placeholder, buffer = WTF::move(serializedClone), bufferVersion, originClean, opaque] () mutable {
         assertIsMainThread();
         RefPtr placeholder = weakPlaceholder.get();
         if (!placeholder)
             return;
-        RefPtr imageBuffer = SerializedImageBuffer::sinkIntoImageBuffer(WTFMove(buffer), placeholder->protectedCanvas()->scriptExecutionContext()->graphicsClient());
+        RefPtr imageBuffer = SerializedImageBuffer::sinkIntoImageBuffer(WTF::move(buffer), placeholder->protectedCanvas()->protectedScriptExecutionContext()->graphicsClient());
         if (!imageBuffer)
             return;
         Ref source = placeholder->source();
@@ -102,7 +104,7 @@ void PlaceholderRenderingContextSource::setContentsToLayer(GraphicsLayer& layer,
     }
 }
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PlaceholderRenderingContext);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PlaceholderRenderingContext);
 
 std::unique_ptr<PlaceholderRenderingContext> PlaceholderRenderingContext::create(HTMLCanvasElement& element)
 {
@@ -127,30 +129,43 @@ IntSize PlaceholderRenderingContext::size() const
 
 void PlaceholderRenderingContext::setContentsToLayer(GraphicsLayer& layer)
 {
-    RefPtr<ImageBuffer> buffer;
-    Ref canvas = this->canvas();
-    if (canvas->hasCreatedImageBuffer())
-        buffer = canvas->buffer();
-    m_source->setContentsToLayer(layer, buffer.get(), m_opaque);
+    m_source->setContentsToLayer(layer, m_buffer.get(), m_opaque);
 }
 
-void PlaceholderRenderingContext::setPlaceholderBuffer(Ref<ImageBuffer>&& buffer, bool originClean, bool opaque)
+void PlaceholderRenderingContext::setPlaceholderBuffer(Ref<ImageBuffer>&& newBuffer, bool originClean, bool opaque)
 {
     m_opaque = opaque;
-
-    // Transfer the drawn bitmap and its origin-clean flag to the output canvas.
+    IntSize newSize = newBuffer->truncatedLogicalSize();
+    updateMemoryCost(newBuffer->memoryCost());
+    m_buffer = WTF::move(newBuffer);
+    Ref canvas = this->canvas();
+    canvas->setSizeForControllingContext(newSize);
     if (originClean)
-        canvasBase().setOriginClean();
+        canvas->setOriginClean();
     else
-        canvasBase().setOriginTainted();
-    canvasBase().setImageBufferAndMarkDirty(WTFMove(buffer));
+        canvas->setOriginTainted();
+    canvas->didDraw(FloatRect { { }, newSize }, ShouldApplyPostProcessingToDirtyRect::No);
 }
 
-ImageBufferPixelFormat PlaceholderRenderingContext::pixelFormat() const
+PixelFormat PlaceholderRenderingContext::pixelFormat() const
 {
-    if (Ref canvas = this->canvas(); canvas->buffer())
-        return Ref { *canvas->buffer() }->pixelFormat();
+    if (RefPtr buffer = m_buffer)
+        return buffer->pixelFormat();
     return CanvasRenderingContext::pixelFormat();
+}
+
+RefPtr<ImageBuffer> PlaceholderRenderingContext::surfaceBufferToImageBuffer(SurfaceBuffer)
+{
+    return m_buffer;
+}
+
+bool PlaceholderRenderingContext::isSurfaceBufferTransparentBlack(SurfaceBuffer) const
+{
+    return !m_buffer;
+}
+
+void PlaceholderRenderingContext::didUpdateCanvasSizeProperties(bool)
+{
 }
 
 }

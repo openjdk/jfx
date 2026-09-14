@@ -88,7 +88,12 @@ private:
     };
 
     void incrementCycle() { m_currentCycle = (m_currentCycle + 1) % m_numberOfCycles; }
-    GCCycle& currentCycle() { return m_cycles[m_currentCycle]; }
+    GCCycle& currentCycle()
+    {
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
+        return m_cycles[m_currentCycle];
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
+    }
     GCCycle& cycleForIndex(int cycleIndex)
     {
         ASSERT(cycleIndex <= 0 && cycleIndex > -m_numberOfCycles);
@@ -96,7 +101,9 @@ private:
         if (cycleIndex < 0)
             cycleIndex += m_numberOfCycles;
         ASSERT(cycleIndex < m_numberOfCycles);
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
         return m_cycles[cycleIndex];
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     }
 
     CellList* cellListForGathering(Phase);

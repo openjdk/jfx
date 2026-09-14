@@ -27,8 +27,8 @@
 
 #if ENABLE(MEDIA_STREAM)
 
-#include "MeteringMode.h"
-#include "RealtimeMediaSourceSupportedConstraints.h"
+#include <WebCore/MeteringMode.h>
+#include <WebCore/RealtimeMediaSourceSupportedConstraints.h>
 #include <wtf/OptionSet.h>
 #include <wtf/RefCounted.h>
 #include <wtf/Vector.h>
@@ -92,9 +92,9 @@ public:
         , m_sampleRate(sampleRate)
         , m_sampleSize(sampleSize)
         , m_echoCancellation(echoCancellation)
-        , m_deviceId(WTFMove(deviceId))
-        , m_groupId(WTFMove(groupId))
-        , m_label(WTFMove(label))
+        , m_deviceId(WTF::move(deviceId))
+        , m_groupId(WTF::move(groupId))
+        , m_label(WTF::move(label))
         , m_displaySurface(displaySurface)
         , m_logicalSurface(logicalSurface)
         , m_whiteBalanceMode(whiteBalanceMode)
@@ -102,7 +102,7 @@ public:
         , m_torch(torch)
         , m_backgroundBlur(backgroundBlur)
         , m_powerEfficient(powerEfficient)
-        , m_supportedConstraints(WTFMove(supportedConstraints))
+        , m_supportedConstraints(WTF::move(supportedConstraints))
     {
     }
 

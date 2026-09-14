@@ -23,13 +23,13 @@
 
 #pragma once
 
+#include <WebCore/HTMLElement.h>
 #include <wtf/Forward.h>
-#include "HTMLElement.h"
 
 namespace WebCore {
 
 class HTMLQuoteElement final : public HTMLElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLQuoteElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLQuoteElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLQuoteElement);
 public:
     static Ref<HTMLQuoteElement> create(const QualifiedName&, Document&);

@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "WebGPUIntegralTypes.h"
-#include "WebGPUMapMode.h"
+#include <WebCore/WebGPUIntegralTypes.h>
+#include <WebCore/WebGPUMapMode.h>
 #include <cstdint>
 #include <optional>
 #include <wtf/CompletionHandler.h>
@@ -45,7 +45,7 @@ public:
 
     void setLabel(String&& label)
     {
-        m_label = WTFMove(label);
+        m_label = WTF::move(label);
         setLabelInternal(m_label);
     }
 
@@ -56,6 +56,10 @@ public:
     virtual void destroy() = 0;
     virtual std::span<uint8_t> getBufferContents() = 0;
     virtual void copyFrom(std::span<const uint8_t>, size_t offset) = 0;
+
+    virtual bool isRemoteBufferProxy() const { return false; }
+    virtual bool isBufferImpl() const { return false; }
+
 protected:
     Buffer() = default;
 

@@ -164,7 +164,7 @@ void RegExp::finishCreation(VM& vm)
         return;
     }
 
-    m_atom = WTFMove(pattern.m_atom);
+    m_atom = WTF::move(pattern.m_atom);
     m_specificPattern = pattern.m_specificPattern;
 
     m_numSubpatterns = pattern.m_numSubpatterns;
@@ -216,6 +216,8 @@ static std::unique_ptr<Yarr::BytecodePattern> byteCodeCompilePattern(VM* vm, Yar
 
 void RegExp::byteCodeCompileIfNecessary(VM* vm)
 {
+    Locker locker { cellLock() };
+
     if (m_regExpBytecode)
         return;
 
@@ -226,7 +228,7 @@ void RegExp::byteCodeCompileIfNecessary(VM* vm)
     }
     ASSERT(m_numSubpatterns == pattern.m_numSubpatterns);
 
-    m_atom = WTFMove(pattern.m_atom);
+    m_atom = WTF::move(pattern.m_atom);
     m_specificPattern = pattern.m_specificPattern;
 
     m_regExpBytecode = byteCodeCompilePattern(vm, pattern, m_constructionErrorCode);
@@ -247,7 +249,7 @@ void RegExp::compile(VM* vm, Yarr::CharSize charSize, std::optional<StringView> 
     }
     ASSERT(m_numSubpatterns == pattern.m_numSubpatterns);
 
-    m_atom = WTFMove(pattern.m_atom);
+    m_atom = WTF::move(pattern.m_atom);
     m_specificPattern = pattern.m_specificPattern;
 
     if (!hasCode()) {
@@ -315,7 +317,7 @@ void RegExp::compileMatchOnly(VM* vm, Yarr::CharSize charSize, std::optional<Str
     }
     ASSERT(m_numSubpatterns == pattern.m_numSubpatterns);
 
-    m_atom = WTFMove(pattern.m_atom);
+    m_atom = WTF::move(pattern.m_atom);
     m_specificPattern = pattern.m_specificPattern;
 
     if (!hasCode()) {
@@ -579,7 +581,7 @@ template <typename CharacterType>
 static inline void appendLineTerminatorEscape(StringBuilder&, CharacterType);
 
 template <>
-inline void appendLineTerminatorEscape<LChar>(StringBuilder& builder, LChar lineTerminator)
+inline void appendLineTerminatorEscape<Latin1Character>(StringBuilder& builder, Latin1Character lineTerminator)
 {
     if (lineTerminator == '\n')
         builder.append('n');

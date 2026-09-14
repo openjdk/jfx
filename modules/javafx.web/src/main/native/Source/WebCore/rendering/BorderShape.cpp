@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2024 Apple Inc. All rights reserved.
+ * Copyright (C) 2026 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,16 +36,15 @@
 #include "GraphicsContext.h"
 #include "LayoutRect.h"
 #include "LayoutRoundedRect.h"
-#include "LengthFunctions.h"
 #include "Path.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 
 namespace WebCore {
 
 BorderShape BorderShape::shapeForBorderRect(const RenderStyle& style, const LayoutRect& borderRect, RectEdges<bool> closedEdges)
 {
-    auto borderWidths = RectEdges<LayoutUnit>::map(style.borderWidth(), [](auto width) {
-        return LayoutUnit { Style::evaluate(width) };
+    auto borderWidths = RectEdges<LayoutUnit>::map(style.usedBorderWidths(), [&](auto width) {
+        return Style::evaluate<LayoutUnit>(width, Style::ZoomNeeded { });
     });
     return shapeForBorderRect(style, borderRect, borderWidths, closedEdges);
 }
@@ -60,7 +60,7 @@ BorderShape BorderShape::shapeForBorderRect(const RenderStyle& style, const Layo
     };
 
     if (style.hasBorderRadius()) {
-        auto radii = Style::evaluate(style.borderRadii(), borderRect.size());
+        auto radii = Style::evaluate<LayoutRoundedRectRadii>(style.borderRadii(), borderRect.size(), Style::ZoomNeeded { });
         radii.scale(calcBorderRadiiConstraintScaleFor(borderRect, radii));
 
         if (!closedEdges.top()) {
@@ -100,7 +100,7 @@ BorderShape BorderShape::shapeForOutsetRect(const RenderStyle& style, const Layo
     };
 
     if (style.hasBorderRadius()) {
-        auto radii = Style::evaluate(style.borderRadii(), borderRect.size());
+        auto radii = Style::evaluate<LayoutRoundedRectRadii>(style.borderRadii(), borderRect.size(), Style::ZoomNeeded { });
 
         auto leftOutset = std::max(borderRect.x() - outlineBoxRect.x(), 0_lu);
         auto topOutset = std::max(borderRect.y() - outlineBoxRect.y(), 0_lu);
@@ -139,7 +139,7 @@ BorderShape BorderShape::shapeForOutsetRect(const RenderStyle& style, const Layo
 BorderShape BorderShape::shapeForInsetRect(const RenderStyle& style, const LayoutRect& borderRect, const LayoutRect& insetRect)
 {
     if (style.hasBorderRadius()) {
-        auto radii = Style::evaluate(style.borderRadii(), borderRect.size());
+        auto radii = Style::evaluate<LayoutRoundedRectRadii>(style.borderRadii(), borderRect.size(), Style::ZoomNeeded { });
 
         auto leftInset = std::max(insetRect.x() - borderRect.x(), 0_lu);
         auto topInset = std::max(insetRect.y()- borderRect.y(), 0_lu);

@@ -85,6 +85,11 @@
     align-items: center;
 }
 
+.media-controls.adwaita.fullscreen .time-control .scrubber {
+    flex: 1 1 0%;
+    min-width: 0;
+}
+
 /* Status Label */
 
 .media-controls.adwaita.fullscreen > .controls-bar .status-label {
@@ -94,4 +99,14 @@
     bottom: 13px;
     font-size: 14px;
     text-align: center;
+}
+
+/* Time labels */
+
+.media-controls.adwaita.fullscreen .time-control.duration #time-label-remaining {
+    display: none !important;
+}
+
+.media-controls.adwaita.fullscreen .time-control.remaining #time-label-duration {
+    display: none !important;
 }

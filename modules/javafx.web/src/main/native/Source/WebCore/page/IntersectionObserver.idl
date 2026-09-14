@@ -43,7 +43,9 @@
     [ResultField=records] sequence<IntersectionObserverEntry> takeRecords();
 };
 
-dictionary IntersectionObserverInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary IntersectionObserverInit {
     (Element or Document)? root = null;
     DOMString rootMargin = "0px";
     DOMString scrollMargin = "0px";

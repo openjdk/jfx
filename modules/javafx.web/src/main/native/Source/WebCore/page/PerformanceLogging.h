@@ -28,6 +28,7 @@
 #include <wtf/HashCountedSet.h>
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
+#include <wtf/WeakRef.h>
 
 namespace WebCore {
 
@@ -55,7 +56,7 @@ public:
 private:
     static void getPlatformMemoryUsageStatistics(Vector<std::pair<ASCIILiteral, size_t>>&);
 
-    Page& m_page;
+    WeakRef<Page> m_page;
 };
 
 }

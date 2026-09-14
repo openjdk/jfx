@@ -25,9 +25,10 @@
 
 #pragma once
 
-#include "ProcessIdentifier.h"
+#include <WebCore/ProcessIdentifier.h>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/Hasher.h>
+#include <wtf/Markable.h>
 
 namespace WebCore {
 
@@ -68,7 +69,7 @@ public:
 
     WEBCORE_EXPORT IDBResourceIdentifier();
 private:
-    friend struct IPC::ArgumentCoder<IDBResourceIdentifier, void>;
+    friend struct IPC::ArgumentCoder<IDBResourceIdentifier>;
     friend struct IDBResourceIdentifierHashTraits;
     friend void add(Hasher&, const IDBResourceIdentifier&);
 
@@ -82,12 +83,6 @@ inline void add(Hasher& hasher, const IDBResourceIdentifier& identifier)
 {
     add(hasher, identifier.m_idbConnectionIdentifier, identifier.m_resourceNumber);
 }
-
-struct IDBResourceIdentifierHash {
-    static unsigned hash(const IDBResourceIdentifier& a) { return computeHash(a); }
-    static bool equal(const IDBResourceIdentifier& a, const IDBResourceIdentifier& b) { return a == b; }
-    static const bool safeToCompareToEmptyOrDeleted = false;
-};
 
 struct IDBResourceIdentifierHashTraits : WTF::CustomHashTraits<IDBResourceIdentifier> {
     static constexpr bool hasIsEmptyValueFunction = true;
@@ -120,7 +115,6 @@ struct IDBResourceIdentifierHashTraits : WTF::CustomHashTraits<IDBResourceIdenti
 namespace WTF {
 
 template<> struct HashTraits<WebCore::IDBResourceIdentifier> : WebCore::IDBResourceIdentifierHashTraits { };
-template<> struct DefaultHash<WebCore::IDBResourceIdentifier> : WebCore::IDBResourceIdentifierHash { };
 
 inline WebCore::IDBConnectionIdentifier crossThreadCopy(WebCore::IDBConnectionIdentifier identifier)
 {

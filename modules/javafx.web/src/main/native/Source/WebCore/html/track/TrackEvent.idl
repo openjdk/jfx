@@ -34,6 +34,8 @@
     readonly attribute (VideoTrack or AudioTrack or TextTrack)? track;
 };
 
-dictionary TrackEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary TrackEventInit : EventInit {
     (VideoTrack or AudioTrack or TextTrack)? track = null;
 };

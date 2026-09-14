@@ -42,7 +42,7 @@ class ThreadTimers;
 class TimerBase;
 
 struct ThreadTimerHeapItem;
-typedef Vector<RefPtr<ThreadTimerHeapItem>> ThreadTimerHeap;
+using ThreadTimerHeap = Vector<Ref<ThreadTimerHeapItem>>;
 
 // A collection of timers per thread. Kept in ThreadGlobalData.
 class ThreadTimers {
@@ -80,7 +80,7 @@ private:
 };
 
 struct ThreadTimerHeapItem : ThreadSafeRefCounted<ThreadTimerHeapItem> {
-    WTF_MAKE_COMPACT_TZONE_OR_ISO_ALLOCATED(ThreadTimerHeapItem);
+    WTF_MAKE_COMPACT_TZONE_ALLOCATED(ThreadTimerHeapItem);
 
 public:
     static RefPtr<ThreadTimerHeapItem> create(TimerBase&, MonotonicTime, unsigned);

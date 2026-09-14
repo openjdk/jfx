@@ -32,25 +32,27 @@
 #include "SVGLengthValue.h"
 #include "SVGNames.h"
 #include "SVGParsingError.h"
+#include "Settings.h"
 #include <wtf/Assertions.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGForeignObjectElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGForeignObjectElement);
 
 inline SVGForeignObjectElement::SVGForeignObjectElement(const QualifiedName& tagName, Document& document)
     : SVGGraphicsElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
 {
     ASSERT(hasTagName(SVGNames::foreignObjectTag));
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::xAttr, &SVGForeignObjectElement::m_x>();
         PropertyRegistry::registerProperty<SVGNames::yAttr, &SVGForeignObjectElement::m_y>();
         PropertyRegistry::registerProperty<SVGNames::widthAttr, &SVGForeignObjectElement::m_width>();
         PropertyRegistry::registerProperty<SVGNames::heightAttr, &SVGForeignObjectElement::m_height>();
-    });
+    }
 }
 
 Ref<SVGForeignObjectElement> SVGForeignObjectElement::create(const QualifiedName& tagName, Document& document)
@@ -104,8 +106,8 @@ RenderPtr<RenderElement> SVGForeignObjectElement::createElementRenderer(RenderSt
 {
     protectedDocument()->setMayHaveRenderedSVGForeignObjects();
     if (document().settings().layerBasedSVGEngineEnabled())
-    return createRenderer<RenderSVGForeignObject>(*this, WTFMove(style));
-    return createRenderer<LegacyRenderSVGForeignObject>(*this, WTFMove(style));
+        return createRenderer<RenderSVGForeignObject>(*this, WTF::move(style));
+    return createRenderer<LegacyRenderSVGForeignObject>(*this, WTF::move(style));
 }
 
 bool SVGForeignObjectElement::childShouldCreateRenderer(const Node& child) const

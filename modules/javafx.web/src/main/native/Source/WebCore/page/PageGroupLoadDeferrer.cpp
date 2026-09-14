@@ -23,8 +23,8 @@
 
 #include "ActiveDOMObject.h"
 #include "Document.h"
+#include "DocumentPage.h"
 #include "DocumentParser.h"
-#include "FrameInlines.h"
 #include "LocalFrame.h"
 #include "LocalFrameInlines.h"
 #include "Page.h"
@@ -43,7 +43,7 @@ PageGroupLoadDeferrer::PageGroupLoadDeferrer(Page& page, bool deferSelf)
         auto* localMainFrame = dynamicDowncast<LocalFrame>(otherPage.mainFrame());
         if (!localMainFrame)
             continue;
-        m_deferredFrames.append(localMainFrame);
+        m_deferredFrames.append(*localMainFrame);
 
                 // This code is not logically part of load deferring, but we do not want JS code executed beneath modal
                 // windows or sheets, which is exactly when PageGroupLoadDeferrer is used.

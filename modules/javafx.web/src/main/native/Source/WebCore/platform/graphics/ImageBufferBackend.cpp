@@ -130,17 +130,19 @@ void ImageBufferBackend::getPixelBuffer(const IntRect& sourceRect, std::span<con
     if (destinationRect.size() != sourceRect.size())
         destinationPixelBuffer.zeroFill();
 
+    auto sourcePixelFormat = pixelFormat();
     unsigned sourceBytesPerRow = bytesPerRow();
     ConstPixelBufferConversionView source {
-        { AlphaPremultiplication::Premultiplied, convertToPixelFormat(pixelFormat()), colorSpace() },
+        { AlphaPremultiplication::Premultiplied, sourcePixelFormat, colorSpace() },
         sourceBytesPerRow,
-        sourceData.subspan(sourceRectClipped.y() * sourceBytesPerRow + sourceRectClipped.x() * 4)
+        sourceData.subspan(sourceRectClipped.y() * sourceBytesPerRow + sourceRectClipped.x() * PixelBuffer::bytesPerPixel(sourcePixelFormat))
     };
-    unsigned destinationBytesPerRow = static_cast<unsigned>(4u * sourceRect.width());
-    size_t offset = destinationRect.y() * destinationBytesPerRow + destinationRect.x() * 4;
+
+    auto destinationBytesPerPixel = PixelBuffer::bytesPerPixel(destinationPixelBuffer.format().pixelFormat);
+    auto destinationBytesPerRow = uint32_t(sourceRect.width()) * destinationBytesPerPixel;
+    size_t offset = destinationRect.y() * destinationBytesPerRow + destinationRect.x() * destinationBytesPerPixel;
     if (offset > destinationPixelBuffer.bytes().size())
         return;
-
     PixelBufferConversionView destination {
         destinationPixelBuffer.format(),
         destinationBytesPerRow,
@@ -166,17 +168,20 @@ void ImageBufferBackend::putPixelBuffer(const PixelBufferSourceView& sourcePixel
     destinationRect.intersect(backendRect);
     sourceRectClipped.setSize(destinationRect.size());
 
-    unsigned sourceBytesPerRow = static_cast<unsigned>(4u * sourcePixelBuffer.size().width());
+    auto sourceBytesPerPixel = PixelBuffer::bytesPerPixel(sourcePixelBuffer.format().pixelFormat);
+    auto sourceBytesPerRow = uint32_t(sourcePixelBuffer.size().width()) * sourceBytesPerPixel;
     ConstPixelBufferConversionView source {
         sourcePixelBuffer.format(),
         sourceBytesPerRow,
-        sourcePixelBuffer.bytes().subspan(sourceRectClipped.y() * sourceBytesPerRow + sourceRectClipped.x() * 4)
+        sourcePixelBuffer.bytes().subspan(sourceRectClipped.y() * sourceBytesPerRow + sourceRectClipped.x() * sourceBytesPerPixel)
     };
+
+    auto destinationPixelFormat = pixelFormat();
     unsigned destinationBytesPerRow = bytesPerRow();
     PixelBufferConversionView destination {
-        { destinationAlphaFormat, convertToPixelFormat(pixelFormat()), colorSpace() },
+        { destinationAlphaFormat, destinationPixelFormat, colorSpace() },
         destinationBytesPerRow,
-        destinationData.subspan(destinationRect.y() * destinationBytesPerRow + destinationRect.x() * 4)
+        destinationData.subspan(destinationRect.y() * destinationBytesPerRow + destinationRect.x() * PixelBuffer::bytesPerPixel(destinationPixelFormat))
     };
 
     convertImagePixels(source, destination, destinationRect.size());

@@ -25,14 +25,14 @@
 
 #pragma once
 
-#include "Document.h"
-#include "ElementTargetingTypes.h"
-#include "EventTarget.h"
-#include "IntRectHash.h"
-#include "NodeIdentifier.h"
-#include "Region.h"
-#include "ScriptExecutionContextIdentifier.h"
-#include "Timer.h"
+#include <WebCore/Document.h>
+#include <WebCore/ElementTargetingTypes.h>
+#include <WebCore/EventTarget.h>
+#include <WebCore/IntRectHash.h>
+#include <WebCore/NodeIdentifier.h>
+#include <WebCore/Region.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/Timer.h>
 #include <wtf/ApproximateTime.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Ref.h>
@@ -69,6 +69,9 @@ public:
 
     WEBCORE_EXPORT RefPtr<Image> snapshotIgnoringVisibilityAdjustment(NodeIdentifier, ScriptExecutionContextIdentifier);
 
+    WEBCORE_EXPORT static RefPtr<Element> elementFromSelectors(Document&, const TargetedElementSelectors&);
+    WEBCORE_EXPORT static TargetedElementSelectors selectorsForElement(Element&);
+
 private:
     void cleanUpAdjustmentClientRects();
 
@@ -79,6 +82,7 @@ private:
         String lastSelectorIncludingPseudo;
     };
     FindElementFromSelectorsResult findElementFromSelectors(const TargetedElementSelectors&);
+    static FindElementFromSelectorsResult findElementFromSelectors(Document&, const TargetedElementSelectors&);
 
     RefPtr<Document> mainDocument() const;
 

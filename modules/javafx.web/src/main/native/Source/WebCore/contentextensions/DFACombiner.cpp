@@ -191,14 +191,14 @@ void DFACombiner::combineDFAs(unsigned minimumSize, NOESCAPE const Function<void
 
     for (unsigned i = m_dfas.size(); i--;) {
         if (m_dfas[i].graphSize() > minimumSize) {
-            handler(WTFMove(m_dfas[i]));
+            handler(WTF::move(m_dfas[i]));
             m_dfas.removeAt(i);
         }
     }
 
     while (!m_dfas.isEmpty()) {
         if (m_dfas.size() == 1) {
-            handler(WTFMove(m_dfas.first()));
+            handler(WTF::move(m_dfas.first()));
             return;
         }
 
@@ -214,7 +214,7 @@ void DFACombiner::combineDFAs(unsigned minimumSize, NOESCAPE const Function<void
         }
 
         if (c.graphSize() > minimumSize)
-            handler(WTFMove(c));
+            handler(WTF::move(c));
         else
             m_dfas.append(c);
     }

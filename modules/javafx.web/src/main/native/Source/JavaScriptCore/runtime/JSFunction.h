@@ -23,10 +23,10 @@
 
 #pragma once
 
-#include "FunctionRareData.h"
-#include "InternalFunction.h"
-#include "JSCallee.h"
-#include "JSScope.h"
+#include <JavaScriptCore/FunctionRareData.h>
+#include <JavaScriptCore/InternalFunction.h>
+#include <JavaScriptCore/JSCallee.h>
+#include <JavaScriptCore/JSScope.h>
 
 namespace JSC {
 
@@ -106,10 +106,10 @@ public:
     }
 
     // To call any of these methods include JSFunctionInlines.h
-    bool isHostFunction() const;
-    bool isNonBoundHostFunction() const;
-    FunctionExecutable* jsExecutable() const;
-    Intrinsic intrinsic() const;
+    inline bool isHostFunction() const;
+    inline bool isNonBoundHostFunction() const;
+    inline FunctionExecutable* jsExecutable() const;
+    inline Intrinsic intrinsic() const;
 
     JS_EXPORT_PRIVATE const SourceCode* sourceCode() const;
 
@@ -123,7 +123,9 @@ public:
     TaggedNativeFunction nativeConstructor();
 
     JS_EXPORT_PRIVATE static CallData getConstructData(JSCell*);
+    static CallData getConstructDataInline(JSCell*);
     JS_EXPORT_PRIVATE static CallData getCallData(JSCell*);
+    static CallData getCallDataInline(JSCell*);
 
     static constexpr ptrdiff_t offsetOfExecutableOrRareData()
     {
@@ -198,7 +200,7 @@ protected:
 #endif
 
     static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
-    static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
     static bool defineOwnProperty(JSObject*, JSGlobalObject*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
 
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);

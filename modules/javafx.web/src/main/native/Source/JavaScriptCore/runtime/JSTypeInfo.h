@@ -29,7 +29,9 @@
 // This file would be called TypeInfo.h, but that conflicts with <typeinfo.h>
 // in the STL on systems without case-sensitive file systems.
 
-#include "JSType.h"
+#include <JavaScriptCore/JSType.h>
+#include <wtf/Assertions.h>
+#include <wtf/StdLibExtras.h>
 
 namespace JSC {
 

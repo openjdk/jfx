@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "IntSize.h"
+#include <WebCore/IntSize.h>
 
 #include <wtf/Forward.h>
 #include <wtf/WorkQueue.h>
@@ -61,3 +61,4 @@ WEBCORE_EXPORT RefPtr<SharedBuffer> createIconDataFromBitmaps(Vector<Ref<Shareab
 WEBCORE_EXPORT void decodeImageWithSize(std::span<const uint8_t> data, std::optional<FloatSize>, CompletionHandler<void(RefPtr<ShareableBitmap>&&)>&&);
 
 } // namespace WebCore
+

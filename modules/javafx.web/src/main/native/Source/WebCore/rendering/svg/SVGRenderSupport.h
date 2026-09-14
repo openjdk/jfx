@@ -23,9 +23,9 @@
 
 #pragma once
 
-#include "LayoutRepainter.h"
-#include "PaintInfo.h"
-#include "RenderObject.h"
+#include <WebCore/LayoutRepainter.h>
+#include <WebCore/PaintInfo.h>
+#include <WebCore/RenderObject.h>
 
 namespace WebCore {
 
@@ -53,8 +53,18 @@ public:
     // Helper function determining wheter overflow is hidden
     static bool isOverflowHidden(const RenderElement&);
 
+    // Applies filter/clipper/masker resource effects to a geometric bounding rect.
+    // This is the preferred API for resource code (masks, gradients, clippers) that needs
+    // to compute bounds for rendering. Unlike intersectRepaintRectWithResources(), this
+    // function is semantically about geometric calculations, not repaint/invalidation.
+    static void applyResourceEffectsToRect(const RenderElement&, FloatRect&);
+
     // Calculates the repaintRect in combination with filter, clipper and masker in local coordinates.
+    // FIXME: After migrating all RepaintRectCalculation::Accurate callers to use applyResourceEffectsToRect
+    // function, we can simplify this to only handle Fast mode.
     static void intersectRepaintRectWithResources(const RenderElement&, FloatRect&, RepaintRectCalculation = RepaintRectCalculation::Fast);
+
+    static FloatRect computeContainerDecoratedBoundingBox(const RenderElement& container);
 
     // Determines whether a container needs to be laid out because it's filtered and a child is being laid out.
     static bool filtersForceContainerLayout(const RenderElement&);
@@ -73,8 +83,8 @@ public:
     static bool paintInfoIntersectsRepaintRect(const FloatRect& localRepaintRect, const AffineTransform& localTransform, const PaintInfo&);
 
     // Important functions used by nearly all SVG renderers centralizing coordinate transformations / repaint rect calculations
-    static LayoutRect clippedOverflowRectForRepaint(const RenderElement&, const RenderLayerModelObject* container, RenderObject::VisibleRectContext);
-    static std::optional<FloatRect> computeFloatVisibleRectInContainer(const RenderElement&, const FloatRect&, const RenderLayerModelObject* container, RenderObject::VisibleRectContext);
+    static LayoutRect clippedOverflowRectForRepaint(const RenderElement&, const RenderLayerModelObject* container, VisibleRectContext);
+    static std::optional<FloatRect> computeFloatVisibleRectInContainer(const RenderElement&, const FloatRect&, const RenderLayerModelObject* container, VisibleRectContext);
     static const RenderElement& localToParentTransform(const RenderElement&, AffineTransform&);
     static void mapLocalToContainer(const RenderElement&, const RenderLayerModelObject* ancestorContainer, TransformState&, bool* wasFixed);
     static const RenderElement* pushMappingToContainer(const RenderElement&, const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&);

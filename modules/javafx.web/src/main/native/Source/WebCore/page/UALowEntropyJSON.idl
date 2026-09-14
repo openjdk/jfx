@@ -26,7 +26,8 @@
 // https://wicg.github.io/ua-client-hints/#idl-index
 [
   JSGenerateToJSObject,
-  EnabledBySetting=NavigatorUserAgentDataJavaScriptAPIEnabled
+  EnabledBySetting=NavigatorUserAgentDataJavaScriptAPIEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary UALowEntropyJSON {
   sequence<NavigatorUABrandVersion> brands;
   boolean mobile;

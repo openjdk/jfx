@@ -25,19 +25,19 @@
 
 #pragma once
 
-#include "FloatRect.h"
 #include "InlineDamage.h"
 #include "InlineFormattingConstraints.h"
 #include "InlineFormattingContext.h"
 #include "InlineIteratorInlineBox.h"
-#include "InlineIteratorLineBox.h"
-#include "InlineIteratorTextBox.h"
 #include "LayoutIntegrationBoxGeometryUpdater.h"
 #include "LayoutIntegrationBoxTreeUpdater.h"
-#include "LayoutPoint.h"
-#include "LayoutState.h"
-#include "RenderObjectEnums.h"
 #include "SVGTextChunk.h"
+#include <WebCore/FloatRect.h>
+#include <WebCore/InlineIteratorLineBox.h>
+#include <WebCore/InlineIteratorTextBox.h>
+#include <WebCore/LayoutPoint.h>
+#include <WebCore/LayoutState.h>
+#include <WebCore/RenderObjectEnums.h>
 #include <wtf/CheckedPtr.h>
 
 namespace WebCore {
@@ -75,8 +75,8 @@ public:
 
     static bool canUseFor(const RenderBlockFlow&);
     static bool canUseForPreferredWidthComputation(const RenderBlockFlow&);
-    static bool shouldInvalidateLineLayoutPathAfterContentChange(const RenderBlockFlow& parent, const RenderObject& rendererWithNewContent, const LineLayout&);
-    static bool shouldInvalidateLineLayoutPathAfterTreeMutation(const RenderBlockFlow& parent, const RenderObject& renderer, const LineLayout&, bool isRemoval);
+    static bool shouldInvalidateLineLayoutAfterContentChange(const RenderBlockFlow& parent, const RenderObject& rendererWithNewContent, const LineLayout&);
+    static bool shouldInvalidateLineLayoutAfterTreeMutation(const RenderBlockFlow& parent, const RenderObject& renderer, const LineLayout&, bool isRemoval);
 
     void updateFormattingContexGeometries(LayoutUnit availableLogicalWidth);
     void updateOverflow();
@@ -87,13 +87,13 @@ public:
     bool removedFromTree(const RenderElement& parent, RenderObject& child);
     bool updateTextContent(const RenderText&, std::optional<size_t> offset, size_t oldLength);
     bool rootStyleWillChange(const RenderBlockFlow&, const RenderStyle& newStyle);
-    bool styleWillChange(const RenderElement&, const RenderStyle& newStyle, StyleDifference);
+    bool styleWillChange(const RenderElement&, const RenderStyle& newStyle, Style::Difference);
     bool boxContentWillChange(const RenderBox&);
 
     std::pair<LayoutUnit, LayoutUnit> computeIntrinsicWidthConstraints();
 
     enum class ForceFullLayout : bool { No, Yes };
-    std::optional<LayoutRect> layout(ForceFullLayout = ForceFullLayout::No);
+    std::optional<LayoutRect> layout(RenderBlockFlow::MarginInfo&, ForceFullLayout = ForceFullLayout::No);
     void paint(PaintInfo&, const LayoutPoint& paintOffset, const RenderInline* layerRenderer = nullptr);
     bool hitTest(const HitTestRequest&, HitTestResult&, const HitTestLocation&, const LayoutPoint& accumulatedOffset, HitTestAction, const RenderInline* layerRenderer = nullptr);
     void adjustForPagination();
@@ -110,10 +110,12 @@ public:
 
     bool isPaginated() const;
     size_t lineCount() const;
+    bool hasContentfulInlineOrBlockLine() const;
+    bool hasContentfulInlineLine() const;
+    bool isSelfCollapsingContent() const;
     bool hasInkOverflow() const;
-    LayoutUnit firstLinePhysicalBaseline() const;
-    LayoutUnit lastLinePhysicalBaseline() const;
-    LayoutUnit lastLineLogicalBaseline() const;
+    std::optional<LayoutUnit> firstLineBaseline() const;
+    std::optional<LayoutUnit> lastLineBaseline() const;
     LayoutRect firstInlineBoxRect(const RenderInline&) const;
     LayoutRect enclosingBorderBoxRectFor(const RenderInline&) const;
 
@@ -121,6 +123,7 @@ public:
     InlineIterator::LeafBoxIterator boxFor(const RenderElement&) const;
     InlineIterator::InlineBoxIterator firstInlineBoxFor(const RenderInline&) const;
     InlineIterator::InlineBoxIterator firstRootInlineBox() const;
+    InlineIterator::InlineBoxIterator lastRootInlineBox() const;
     InlineIterator::LineBoxIterator firstLineBox() const;
     InlineIterator::LineBoxIterator lastLineBox() const;
 
@@ -143,9 +146,11 @@ public:
 
     FloatRect applySVGTextFragments(SVGTextFragmentMap&&);
 
+    bool hasBlocks() const;
+
 private:
     void preparePlacedFloats();
-    FloatRect constructContent(const Layout::InlineLayoutState&, Layout::InlineLayoutResult&&);
+    FloatRect constructContent(const Layout::InlineLayoutState&, std::unique_ptr<Layout::InlineLayoutResult>&&);
     Vector<LineAdjustment> adjustContentForPagination(const Layout::BlockLayoutState&, bool isPartialLayout);
     void updateRenderTreePositions(const Vector<LineAdjustment>&, const Layout::InlineLayoutState&, bool didDiscardContent);
 
@@ -161,7 +166,7 @@ private:
     void clearInlineContent();
     void releaseCachesAndResetDamage();
 
-    LayoutUnit physicalBaselineForLine(const InlineDisplay::Line&) const;
+    LayoutUnit baselineForLine(const InlineDisplay::Line&) const;
 
     bool isContentConsideredStale() const;
 

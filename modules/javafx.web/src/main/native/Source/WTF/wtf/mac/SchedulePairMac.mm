@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2008, 2013 Apple Inc. All rights reserved.
+ * Copyright (C) 2007-2021 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,17 +26,13 @@
  * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#import "config.h"
-#import <wtf/SchedulePair.h>
+#pragma once
 
-namespace WTF {
+// Do not use these functions in ARC-enabled code, as they conflict with ARC's automatic memory management.
+#if !__has_feature(objc_arc)
 
-SchedulePair::SchedulePair(NSRunLoop* runLoop, CFStringRef mode)
-    : m_nsRunLoop(runLoop)
-    , m_runLoop([runLoop getCFRunLoop])
-{
-    if (mode)
-        m_mode = adoptCF(CFStringCreateCopy(0, mode));
-}
+// The class passed here is the class that implements the dealloc method that this function is called from.
+WEBCORE_EXPORT bool WebCoreObjCScheduleDeallocateOnMainThread(Class, id);
+WEBCORE_EXPORT bool WebCoreObjCScheduleDeallocateOnMainRunLoop(Class, id);
 
-} // namespace
+#endif // !__has_feature(objc_arc)

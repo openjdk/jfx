@@ -131,7 +131,7 @@ template <typename CharacterType, typename FloatType = float> static std::option
         // Fail if the exponent is greater than the largest positive power of ten
         // (that would yield a representable float).
         if (exponent > std::numeric_limits<FloatType>::max_exponent10)
-            return false;
+            return std::nullopt;
 
         // If the exponent is smaller than smallest negative power of 10 (that
         // would yield a representable float), then rely on the pow()+rounding to
@@ -150,7 +150,7 @@ template <typename CharacterType, typename FloatType = float> static std::option
     return number;
 }
 
-std::optional<float> parseNumber(StringParsingBuffer<LChar>& buffer, SuffixSkippingPolicy skip)
+std::optional<float> parseNumber(StringParsingBuffer<Latin1Character>& buffer, SuffixSkippingPolicy skip)
 {
     return genericParseNumber(buffer, skip);
 }
@@ -193,7 +193,7 @@ template <typename CharacterType> std::optional<bool> genericParseArcFlag(String
     return flag;
 }
 
-std::optional<bool> parseArcFlag(StringParsingBuffer<LChar>& buffer)
+std::optional<bool> parseArcFlag(StringParsingBuffer<Latin1Character>& buffer)
 {
     return genericParseArcFlag(buffer);
 }
@@ -390,7 +390,7 @@ std::optional<std::pair<UnicodeRanges, HashSet<String>>> parseKerningUnicodeStri
 
             // Try to parse unicode range first
             if (auto range = parseUnicodeRange(std::span { inputStart, buffer.position() }))
-                rangeList.append(WTFMove(*range));
+                rangeList.append(WTF::move(*range));
             else
                 stringList.add(String({ inputStart, buffer.position() }));
 
@@ -400,7 +400,7 @@ std::optional<std::pair<UnicodeRanges, HashSet<String>>> parseKerningUnicodeStri
             ++buffer;
         }
 
-        return std::make_pair(WTFMove(rangeList), WTFMove(stringList));
+        return std::make_pair(WTF::move(rangeList), WTF::move(stringList));
     });
 }
 
@@ -417,7 +417,7 @@ template <typename CharacterType> static std::optional<FloatPoint> genericParseF
     return FloatPoint { *x, *y };
 }
 
-std::optional<FloatPoint> parseFloatPoint(StringParsingBuffer<LChar>& buffer)
+std::optional<FloatPoint> parseFloatPoint(StringParsingBuffer<Latin1Character>& buffer)
 {
     return genericParseFloatPoint(buffer);
 }

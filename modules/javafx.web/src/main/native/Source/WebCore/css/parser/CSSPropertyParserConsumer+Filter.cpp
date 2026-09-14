@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2016-2025 Apple Inc. All rights reserved.
  * Copyright (C) 2024 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -26,11 +26,9 @@
 #include "config.h"
 #include "CSSPropertyParserConsumer+Filter.h"
 
-#include "CSSAppleColorFilterProperty.h"
-#include "CSSAppleColorFilterPropertyValue.h"
+#include "CSSAppleColorFilterValue.h"
 #include "CSSFilterFunctionDescriptor.h"
-#include "CSSFilterProperty.h"
-#include "CSSFilterPropertyValue.h"
+#include "CSSFilterValue.h"
 #include "CSSParserContext.h"
 #include "CSSParserTokenRange.h"
 #include "CSSPrimitiveValue.h"
@@ -49,7 +47,8 @@
 #include "CSSTokenizer.h"
 #include "CSSValueKeywords.h"
 #include "FilterOperations.h"
-#include "StyleFilterProperty.h"
+#include "StyleBuilderState.h"
+#include "StyleFilter.h"
 #include <wtf/text/StringView.h>
 
 namespace WebCore {
@@ -95,7 +94,7 @@ static std::optional<CSS::BlurFunction> consumeFilterBlur(CSSParserTokenRange& r
     if (!parsedValue || !args.atEnd())
         return { };
 
-    return CSS::BlurFunction { .parameters = { CSS::Blur::Parameter { WTFMove(*parsedValue) } } };
+    return CSS::BlurFunction { .parameters = { CSS::Blur::Parameter { WTF::move(*parsedValue) } } };
 }
 
 static std::optional<CSS::BrightnessFunction> consumeFilterBrightness(CSSParserTokenRange& range, CSS::PropertyParserState& state)
@@ -111,7 +110,7 @@ static std::optional<CSS::BrightnessFunction> consumeFilterBrightness(CSSParserT
     if (!parsedValue || !args.atEnd())
         return { };
 
-    return CSS::BrightnessFunction { .parameters = { CSS::Brightness::Parameter { WTFMove(*parsedValue) } } };
+    return CSS::BrightnessFunction { .parameters = { CSS::Brightness::Parameter { WTF::move(*parsedValue) } } };
 }
 
 static std::optional<CSS::ContrastFunction> consumeFilterContrast(CSSParserTokenRange& range, CSS::PropertyParserState& state)
@@ -127,7 +126,7 @@ static std::optional<CSS::ContrastFunction> consumeFilterContrast(CSSParserToken
     if (!parsedValue || !args.atEnd())
         return { };
 
-    return CSS::ContrastFunction { .parameters = { CSS::Contrast::Parameter { WTFMove(*parsedValue) } } };
+    return CSS::ContrastFunction { .parameters = { CSS::Contrast::Parameter { WTF::move(*parsedValue) } } };
 }
 
 static std::optional<CSS::DropShadowFunction> consumeFilterDropShadow(CSSParserTokenRange& range, CSS::PropertyParserState& state)
@@ -138,9 +137,9 @@ static std::optional<CSS::DropShadowFunction> consumeFilterDropShadow(CSSParserT
     auto args = consumeFunction(range);
 
     std::optional<CSS::Color> color;
-    std::optional<CSS::Length<>> x;
-    std::optional<CSS::Length<>> y;
-    std::optional<CSS::Length<CSS::Nonnegative>> stdDeviation;
+    std::optional<CSS::Length<CSS::AllUnzoomed>> x;
+    std::optional<CSS::Length<CSS::AllUnzoomed>> y;
+    std::optional<CSS::Length<CSS::NonnegativeUnzoomed>> stdDeviation;
 
     auto consumeOptionalColor = [&] -> bool {
         if (color)
@@ -148,21 +147,21 @@ static std::optional<CSS::DropShadowFunction> consumeFilterDropShadow(CSSParserT
         auto maybeColor = consumeUnresolvedColor(args, state);
         if (!maybeColor)
             return false;
-        color = WTFMove(*maybeColor);
+        color = WTF::move(*maybeColor);
         return true;
     };
 
     auto consumeLengths = [&] -> bool {
         if (x)
             return false;
-        x = MetaConsumer<CSS::Length<>>::consume(args, state);
+        x = MetaConsumer<CSS::Length<CSS::AllUnzoomed>>::consume(args, state);
         if (!x)
             return false;
-        y = MetaConsumer<CSS::Length<>>::consume(args, state);
+        y = MetaConsumer<CSS::Length<CSS::AllUnzoomed>>::consume(args, state);
         if (!y)
             return false;
 
-        stdDeviation = MetaConsumer<CSS::Length<CSS::Nonnegative>>::consume(args, state);
+        stdDeviation = MetaConsumer<CSS::Length<CSS::NonnegativeUnzoomed>>::consume(args, state);
         return true;
     };
 
@@ -177,9 +176,9 @@ static std::optional<CSS::DropShadowFunction> consumeFilterDropShadow(CSSParserT
 
     return CSS::DropShadowFunction {
         .parameters = {
-            .color = WTFMove(color),
-            .location = { WTFMove(*x), WTFMove(*y) },
-            .stdDeviation = WTFMove(stdDeviation)
+            .color = WTF::move(color),
+            .location = { WTF::move(*x), WTF::move(*y) },
+            .stdDeviation = WTF::move(stdDeviation)
         }
     };
 }
@@ -197,7 +196,7 @@ static std::optional<CSS::GrayscaleFunction> consumeFilterGrayscale(CSSParserTok
     if (!parsedValue || !args.atEnd())
         return { };
 
-    return CSS::GrayscaleFunction { .parameters = { CSS::Grayscale::Parameter { WTFMove(*parsedValue) } } };
+    return CSS::GrayscaleFunction { .parameters = { CSS::Grayscale::Parameter { WTF::move(*parsedValue) } } };
 }
 
 static std::optional<CSS::HueRotateFunction> consumeFilterHueRotate(CSSParserTokenRange& range, CSS::PropertyParserState& state)
@@ -213,7 +212,7 @@ static std::optional<CSS::HueRotateFunction> consumeFilterHueRotate(CSSParserTok
     if (!parsedValue || !args.atEnd())
         return { };
 
-    return CSS::HueRotateFunction { .parameters = { CSS::HueRotate::Parameter { WTFMove(*parsedValue) } } };
+    return CSS::HueRotateFunction { .parameters = { CSS::HueRotate::Parameter { WTF::move(*parsedValue) } } };
 }
 
 static std::optional<CSS::InvertFunction> consumeFilterInvert(CSSParserTokenRange& range, CSS::PropertyParserState& state)
@@ -229,7 +228,7 @@ static std::optional<CSS::InvertFunction> consumeFilterInvert(CSSParserTokenRang
     if (!parsedValue || !args.atEnd())
         return { };
 
-    return CSS::InvertFunction { .parameters = { CSS::Invert::Parameter { WTFMove(*parsedValue) } } };
+    return CSS::InvertFunction { .parameters = { CSS::Invert::Parameter { WTF::move(*parsedValue) } } };
 }
 
 static std::optional<CSS::OpacityFunction> consumeFilterOpacity(CSSParserTokenRange& range, CSS::PropertyParserState& state)
@@ -245,7 +244,7 @@ static std::optional<CSS::OpacityFunction> consumeFilterOpacity(CSSParserTokenRa
     if (!parsedValue || !args.atEnd())
         return { };
 
-    return CSS::OpacityFunction { .parameters = { CSS::Opacity::Parameter { WTFMove(*parsedValue) } } };
+    return CSS::OpacityFunction { .parameters = { CSS::Opacity::Parameter { WTF::move(*parsedValue) } } };
 }
 
 static std::optional<CSS::SaturateFunction> consumeFilterSaturate(CSSParserTokenRange& range, CSS::PropertyParserState& state)
@@ -261,7 +260,7 @@ static std::optional<CSS::SaturateFunction> consumeFilterSaturate(CSSParserToken
     if (!parsedValue || !args.atEnd())
         return { };
 
-    return CSS::SaturateFunction { .parameters = { CSS::Saturate::Parameter { WTFMove(*parsedValue) } } };
+    return CSS::SaturateFunction { .parameters = { CSS::Saturate::Parameter { WTF::move(*parsedValue) } } };
 }
 
 static std::optional<CSS::SepiaFunction> consumeFilterSepia(CSSParserTokenRange& range, CSS::PropertyParserState& state)
@@ -277,10 +276,10 @@ static std::optional<CSS::SepiaFunction> consumeFilterSepia(CSSParserTokenRange&
     if (!parsedValue || !args.atEnd())
         return { };
 
-    return CSS::SepiaFunction { .parameters = { CSS::Sepia::Parameter { WTFMove(*parsedValue) } } };
+    return CSS::SepiaFunction { .parameters = { CSS::Sepia::Parameter { WTF::move(*parsedValue) } } };
 }
 
-static std::optional<CSS::FilterProperty::List> consumeUnresolvedFilterValueList(CSSParserTokenRange& range, CSS::PropertyParserState& state)
+static std::optional<CSS::FilterValueList> consumeUnresolvedFilterValueList(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <filter-value-list> = [ <filter-function> | <url> ]+
     // <filter-function> = <blur()> | <brightness()> | <contrast()> | <drop-shadow()> | <grayscale()> | <hue-rotate()> | <invert()> | <opacity()> | <sepia()> | <saturate()>
@@ -288,18 +287,18 @@ static std::optional<CSS::FilterProperty::List> consumeUnresolvedFilterValueList
 
     auto rangeCopy = range;
 
-    CSS::FilterProperty::List list;
+    CSS::FilterValueList list;
 
     auto appendOnSuccess = [&](auto&& value) -> bool {
         if (!value)
             return false;
-        list.value.append(WTFMove(*value));
+        list.value.append(WTF::move(*value));
         return true;
     };
 
     do {
         if (auto url = consumeURLRaw(rangeCopy, state, { })) {
-            list.value.append(CSS::FilterReference { WTFMove(*url) });
+            list.value.append(CSS::FilterReference { WTF::move(*url) });
             continue;
         }
 
@@ -351,42 +350,42 @@ static std::optional<CSS::FilterProperty::List> consumeUnresolvedFilterValueList
 
     range = rangeCopy;
 
-    return { WTFMove(list) };
+    return { WTF::move(list) };
 }
 
-std::optional<CSS::FilterProperty> consumeUnresolvedFilter(CSSParserTokenRange& range, CSS::PropertyParserState& state)
+std::optional<CSS::Filter> consumeUnresolvedFilter(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     if (range.peek().id() == CSSValueNone) {
         range.consumeIncludingWhitespace();
-        return CSS::FilterProperty { CSS::Keyword::None { } };
+        return CSS::Filter { CSS::Keyword::None { } };
     }
     if (auto filterValueList = consumeUnresolvedFilterValueList(range, state))
-        return CSS::FilterProperty { WTFMove(*filterValueList) };
+        return CSS::Filter { WTF::move(*filterValueList) };
     return { };
 }
 
 RefPtr<CSSValue> consumeFilter(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     if (auto property = consumeUnresolvedFilter(range, state))
-        return CSSFilterPropertyValue::create({ WTFMove(*property) });
+        return CSSFilterValue::create({ WTF::move(*property) });
     return nullptr;
 }
 
 // MARK: - <-apple-color-filter>
 
-static std::optional<CSS::AppleColorFilterProperty::List> consumeUnresolvedAppleColorFilterValueList(CSSParserTokenRange& range, CSS::PropertyParserState& state)
+static std::optional<CSS::AppleColorFilter::List> consumeUnresolvedAppleColorFilterValueList(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     // <-apple-color-filter-value-list = <-apple-color-filter-function>+
     // <-apple-color-filter-function> = <-apple-invert-lightness() | <brightness()> | <contrast()> | <grayscale()> | <hue-rotate()> | <invert()> | <opacity()> | <sepia()> | <saturate()>
 
     auto rangeCopy = range;
 
-    CSS::AppleColorFilterProperty::List list;
+    CSS::AppleColorFilter::List list;
 
     auto appendOnSuccess = [&](auto&& value) -> bool {
         if (!value)
             return false;
-        list.value.append(WTFMove(*value));
+        list.value.append(WTF::move(*value));
         return true;
     };
 
@@ -435,28 +434,28 @@ static std::optional<CSS::AppleColorFilterProperty::List> consumeUnresolvedApple
 
     range = rangeCopy;
 
-    return { WTFMove(list) };
+    return { WTF::move(list) };
 }
 
-std::optional<CSS::AppleColorFilterProperty> consumeUnresolvedAppleColorFilter(CSSParserTokenRange& range, CSS::PropertyParserState& state)
+std::optional<CSS::AppleColorFilter> consumeUnresolvedAppleColorFilter(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     if (range.peek().id() == CSSValueNone) {
         range.consumeIncludingWhitespace();
-        return CSS::AppleColorFilterProperty { CSS::Keyword::None { } };
+        return CSS::AppleColorFilter { CSS::Keyword::None { } };
     }
     if (auto filterValueList = consumeUnresolvedAppleColorFilterValueList(range, state))
-        return CSS::AppleColorFilterProperty { WTFMove(*filterValueList) };
+        return CSS::AppleColorFilter { WTF::move(*filterValueList) };
     return { };
 }
 
 RefPtr<CSSValue> consumeAppleColorFilter(CSSParserTokenRange& range, CSS::PropertyParserState& state)
 {
     if (auto property = consumeUnresolvedAppleColorFilter(range, state))
-        return CSSAppleColorFilterPropertyValue::create({ WTFMove(*property) });
+        return CSSAppleColorFilterValue::create({ WTF::move(*property) });
     return nullptr;
 }
 
-std::optional<FilterOperations> parseFilterValueListOrNoneRaw(const String& string, const CSSParserContext& context, const Document& document, RenderStyle& style)
+std::optional<Style::Filter> parseFilterValueListOrNoneRaw(const String& string, const CSSParserContext& context, const Document& document, RenderStyle& style)
 {
     auto tokenizer = CSSTokenizer(string);
     auto range = tokenizer.tokenRange();
@@ -475,8 +474,8 @@ std::optional<FilterOperations> parseFilterValueListOrNoneRaw(const String& stri
     if (!range.atEnd())
         return { };
 
-    CSSToLengthConversionData conversionData { style, nullptr, nullptr, nullptr };
-    return Style::createFilterOperations(*filter, document, style, conversionData);
+    auto builderState = Style::BuilderState::create(style, Style::BuilderContext { document });
+    return Style::toStyle(*filter, *CheckedPtr { builderState.ptr() });
 }
 
 } // namespace CSSPropertyParserHelpers

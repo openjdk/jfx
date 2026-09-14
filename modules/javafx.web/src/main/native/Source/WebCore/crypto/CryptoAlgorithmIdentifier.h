@@ -54,6 +54,27 @@ enum class CryptoAlgorithmIdentifier : uint8_t {
     X25519
 };
 
-} // namespace WebCore
+inline PAL::CryptoDigestHashFunction toCKHashFunction(CryptoAlgorithmIdentifier hash)
+{
+    switch (hash) {
+    case CryptoAlgorithmIdentifier::SHA_256:
+        return PAL::CryptoDigestHashFunction::SHA_256;
+    case CryptoAlgorithmIdentifier::SHA_384:
+        return PAL::CryptoDigestHashFunction::SHA_384;
+    case CryptoAlgorithmIdentifier::SHA_512:
+        return PAL::CryptoDigestHashFunction::SHA_512;
+    case CryptoAlgorithmIdentifier::SHA_1:
+        return PAL::CryptoDigestHashFunction::SHA_1;
+    default:
+        ASSERT_NOT_REACHED();
+        return PAL::CryptoDigestHashFunction::SHA_512;
+    }
+}
 
+inline bool isValidHashParameter(CryptoAlgorithmIdentifier hash)
+{
+    return hash == CryptoAlgorithmIdentifier::SHA_1 || hash == CryptoAlgorithmIdentifier::SHA_256 || hash == CryptoAlgorithmIdentifier::SHA_512 || hash == CryptoAlgorithmIdentifier::SHA_384;
+}
+
+} // namespace WebCore
 #endif // ENABLE(WEB_CRYPTO)

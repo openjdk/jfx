@@ -38,8 +38,9 @@ namespace PAL {
 
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ThreadGlobalData);
 
-ThreadGlobalData::ThreadGlobalData()
-    : m_cachedConverterICU(makeUniqueRef<ICUConverterWrapper>())
+ThreadGlobalData::ThreadGlobalData(Type type)
+    : WTF::Thread::ClientData(type)
+    , m_cachedConverterICU(makeUniqueRef<ICUConverterWrapper>())
 {
 }
 

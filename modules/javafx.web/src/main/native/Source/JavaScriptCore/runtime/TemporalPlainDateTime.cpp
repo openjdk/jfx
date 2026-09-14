@@ -39,7 +39,7 @@ const ClassInfo TemporalPlainDateTime::s_info = { "Object"_s, &Base::s_info, nul
 
 TemporalPlainDateTime* TemporalPlainDateTime::create(VM& vm, Structure* structure, ISO8601::PlainDate&& plainDate, ISO8601::PlainTime&& plainTime)
 {
-    auto* object = new (NotNull, allocateCell<TemporalPlainDateTime>(vm)) TemporalPlainDateTime(vm, structure, WTFMove(plainDate), WTFMove(plainTime));
+    auto* object = new (NotNull, allocateCell<TemporalPlainDateTime>(vm)) TemporalPlainDateTime(vm, structure, WTF::move(plainDate), WTF::move(plainTime));
     object->finishCreation(vm);
     return object;
 }
@@ -51,8 +51,8 @@ Structure* TemporalPlainDateTime::createStructure(VM& vm, JSGlobalObject* global
 
 TemporalPlainDateTime::TemporalPlainDateTime(VM& vm, Structure* structure, ISO8601::PlainDate&& plainDate, ISO8601::PlainTime&& plainTime)
     : Base(vm, structure)
-    , m_plainDate(WTFMove(plainDate))
-    , m_plainTime(WTFMove(plainTime))
+    , m_plainDate(WTF::move(plainDate))
+    , m_plainTime(WTF::move(plainTime))
 {
 }
 
@@ -91,7 +91,7 @@ TemporalPlainDateTime* TemporalPlainDateTime::tryCreateIfValid(JSGlobalObject* g
         return { };
     }
 
-    return TemporalPlainDateTime::create(vm, structure, WTFMove(plainDate), WTFMove(plainTime));
+    return TemporalPlainDateTime::create(vm, structure, WTF::move(plainDate), WTF::move(plainTime));
 }
 
 TemporalPlainDateTime* TemporalPlainDateTime::tryCreateIfValid(JSGlobalObject* globalObject, Structure* structure, ISO8601::Duration&& duration)
@@ -105,16 +105,14 @@ TemporalPlainDateTime* TemporalPlainDateTime::tryCreateIfValid(JSGlobalObject* g
     auto plainTime = TemporalPlainTime::toPlainTime(globalObject, duration);
     RETURN_IF_EXCEPTION(scope, { });
 
-    RELEASE_AND_RETURN(scope, TemporalPlainDateTime::tryCreateIfValid(globalObject, structure, WTFMove(plainDate), WTFMove(plainTime)));
+    RELEASE_AND_RETURN(scope, TemporalPlainDateTime::tryCreateIfValid(globalObject, structure, WTF::move(plainDate), WTF::move(plainTime)));
 }
 
 // https://tc39.es/proposal-temporal/#sec-temporal-totemporaldatetime
-TemporalPlainDateTime* TemporalPlainDateTime::from(JSGlobalObject* globalObject, JSValue itemValue, std::optional<TemporalOverflow> overflowValue)
+TemporalPlainDateTime* TemporalPlainDateTime::from(JSGlobalObject* globalObject, JSValue itemValue, JSObject* options)
 {
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
-
-    auto overflow = overflowValue.value_or(TemporalOverflow::Constrain);
 
     if (itemValue.isObject()) {
         if (itemValue.inherits<TemporalPlainDateTime>())
@@ -132,17 +130,21 @@ TemporalPlainDateTime* TemporalPlainDateTime::from(JSGlobalObject* globalObject,
             return { };
         }
 
+        Variant<JSObject*, TemporalOverflow> optionsOrOverflow = TemporalOverflow::Constrain;
+        if (options)
+            optionsOrOverflow = options;
+        auto overflow = TemporalOverflow::Constrain;
+        auto plainDate = TemporalCalendar::isoDateFromFields(globalObject, asObject(itemValue), TemporalDateFormat::Date, optionsOrOverflow, overflow);
+        RETURN_IF_EXCEPTION(scope, { });
+
         constexpr bool skipRelevantPropertyCheck = true;
         auto timeDuration = TemporalPlainTime::toTemporalTimeRecord(globalObject, asObject(itemValue), skipRelevantPropertyCheck);
         RETURN_IF_EXCEPTION(scope, { });
 
-        auto plainDate = TemporalCalendar::isoDateFromFields(globalObject, asObject(itemValue), overflow);
+        auto plainTime = TemporalPlainTime::regulateTime(globalObject, WTF::move(timeDuration), overflow);
         RETURN_IF_EXCEPTION(scope, { });
 
-        auto plainTime = TemporalPlainTime::regulateTime(globalObject, WTFMove(timeDuration), overflow);
-        RETURN_IF_EXCEPTION(scope, { });
-
-        RELEASE_AND_RETURN(scope, TemporalPlainDateTime::tryCreateIfValid(globalObject, globalObject->plainDateTimeStructure(), WTFMove(plainDate), WTFMove(plainTime)));
+        RELEASE_AND_RETURN(scope, TemporalPlainDateTime::tryCreateIfValid(globalObject, globalObject->plainDateTimeStructure(), WTF::move(plainDate), WTF::move(plainTime)));
     }
 
     if (!itemValue.isString()) {
@@ -153,14 +155,19 @@ TemporalPlainDateTime* TemporalPlainDateTime::from(JSGlobalObject* globalObject,
     auto string = itemValue.toWTFString(globalObject);
     RETURN_IF_EXCEPTION(scope, { });
 
+    if (options) {
+        toTemporalOverflow(globalObject, options); // Validate overflow
+        RETURN_IF_EXCEPTION(scope, { });
+    }
+
     // https://tc39.es/proposal-temporal/#sec-temporal-parsetemporaldatetimestring
     // TemporalDateString :
     //     CalendarDateTime
-    auto dateTime = ISO8601::parseCalendarDateTime(string);
+    auto dateTime = ISO8601::parseCalendarDateTime(string, TemporalDateFormat::Date);
     if (dateTime) {
-        auto [plainDate, plainTimeOptional, timeZoneOptional, calendarOptional] = WTFMove(dateTime.value());
+        auto [plainDate, plainTimeOptional, timeZoneOptional, calendarOptional] = WTF::move(dateTime.value());
         if (!(timeZoneOptional && timeZoneOptional->m_z))
-            RELEASE_AND_RETURN(scope, TemporalPlainDateTime::tryCreateIfValid(globalObject, globalObject->plainDateTimeStructure(), WTFMove(plainDate), plainTimeOptional.value_or(ISO8601::PlainTime())));
+            RELEASE_AND_RETURN(scope, TemporalPlainDateTime::tryCreateIfValid(globalObject, globalObject->plainDateTimeStructure(), WTF::move(plainDate), plainTimeOptional.value_or(ISO8601::PlainTime())));
     }
 
     throwRangeError(globalObject, scope, "invalid date string"_s);
@@ -271,23 +278,14 @@ TemporalPlainDateTime* TemporalPlainDateTime::with(JSGlobalObject* globalObject,
         return { };
     }
 
-    auto [optionalYear, optionalMonth, optionalDay] = TemporalPlainDate::toPartialDate(globalObject, temporalDateTimeLike);
+    auto [y, m, d, optionalMonthCode, overflow, any] = TemporalPlainDate::mergeDateFields(globalObject, temporalDateTimeLike, optionsValue, year(), month(), day());
     RETURN_IF_EXCEPTION(scope, { });
 
-    JSObject* options = intlGetOptionsObject(globalObject, optionsValue);
-    RETURN_IF_EXCEPTION(scope, { });
-
-    TemporalOverflow overflow = toTemporalOverflow(globalObject, options);
-    RETURN_IF_EXCEPTION(scope, { });
-
-    bool requiresTimeProperty = !optionalYear && !optionalMonth && !optionalDay;
+    bool requiresTimeProperty = any == TemporalAnyProperties::None;
     auto [optionalHour, optionalMinute, optionalSecond, optionalMillisecond, optionalMicrosecond, optionalNanosecond] = TemporalPlainTime::toPartialTime(globalObject, temporalDateTimeLike, !requiresTimeProperty);
     RETURN_IF_EXCEPTION(scope, { });
 
-    double y = optionalYear.value_or(year());
-    double m = optionalMonth.value_or(month());
-    double d = optionalDay.value_or(day());
-    auto plainDate = TemporalCalendar::isoDateFromFields(globalObject, y, m, d, overflow);
+    auto plainDate = TemporalCalendar::isoDateFromFields(globalObject, TemporalDateFormat::Date, y, m, d, optionalMonthCode, overflow);
     RETURN_IF_EXCEPTION(scope, { });
 
     ISO8601::Duration duration { };
@@ -297,10 +295,10 @@ TemporalPlainDateTime* TemporalPlainDateTime::with(JSGlobalObject* globalObject,
     duration.setMilliseconds(optionalMillisecond.value_or(millisecond()));
     duration.setMicroseconds(optionalMicrosecond.value_or(microsecond()));
     duration.setNanoseconds(optionalNanosecond.value_or(nanosecond()));
-    auto plainTime = TemporalPlainTime::regulateTime(globalObject, WTFMove(duration), overflow);
+    auto plainTime = TemporalPlainTime::regulateTime(globalObject, WTF::move(duration), overflow);
     RETURN_IF_EXCEPTION(scope, { });
 
-    RELEASE_AND_RETURN(scope, TemporalPlainDateTime::tryCreateIfValid(globalObject, globalObject->plainDateTimeStructure(), WTFMove(plainDate), WTFMove(plainTime)));
+    RELEASE_AND_RETURN(scope, TemporalPlainDateTime::tryCreateIfValid(globalObject, globalObject->plainDateTimeStructure(), WTF::move(plainDate), WTF::move(plainTime)));
 }
 
 TemporalPlainDateTime* TemporalPlainDateTime::round(JSGlobalObject* globalObject, JSValue optionsValue)
@@ -327,24 +325,42 @@ TemporalPlainDateTime* TemporalPlainDateTime::round(JSGlobalObject* globalObject
     } else {
         options = intlGetOptionsObject(globalObject, optionsValue);
         RETURN_IF_EXCEPTION(scope, { });
+    }
 
-        smallest = temporalSmallestUnit(globalObject, options, { TemporalUnit::Year, TemporalUnit::Month, TemporalUnit::Week });
+    auto roundingIncrement = temporalRoundingIncrement(globalObject, options);
+    RETURN_IF_EXCEPTION(scope, { });
+
+    auto roundingMode = temporalRoundingMode(globalObject, options, RoundingMode::HalfExpand);
         RETURN_IF_EXCEPTION(scope, { });
+
+    if (!smallest) {
+        auto smallestUnitMaybeAuto = getTemporalUnitValuedOption(globalObject, options, vm.propertyNames->smallestUnit);
+        RETURN_IF_EXCEPTION(scope, { });
+        ASSERT(std::holds_alternative<std::optional<TemporalUnit>>(smallestUnitMaybeAuto));
+        smallest = std::get<std::optional<TemporalUnit>>(smallestUnitMaybeAuto);
         if (!smallest) {
             throwRangeError(globalObject, scope, "Cannot round without a smallestUnit option"_s);
             return { };
         }
     }
-    TemporalUnit smallestUnit = smallest.value();
 
-    auto roundingMode = temporalRoundingMode(globalObject, options, RoundingMode::HalfExpand);
+    auto smallestUnit = smallest.value();
+
+    validateTemporalUnitValue(globalObject, smallestUnit, UnitGroup::Time, AllowedUnit::Day, "smallestUnit"_s);
     RETURN_IF_EXCEPTION(scope, { });
 
-    std::optional<double> maximum = smallestUnit == TemporalUnit::Day ? 1 : maximumRoundingIncrement(smallestUnit);
-    auto increment = temporalRoundingIncrement(globalObject, options, maximum, false);
+    unsigned maximum = 1;
+    Inclusivity isInclusive = Inclusivity::Inclusive;
+    if (smallestUnit != TemporalUnit::Day) {
+        auto maximumOptional = maximumRoundingIncrement(smallestUnit);
+        ASSERT(maximumOptional);
+        maximum = maximumOptional.value();
+        isInclusive = Inclusivity::Exclusive;
+    }
+    validateTemporalRoundingIncrement(globalObject, roundingIncrement, maximum, isInclusive);
     RETURN_IF_EXCEPTION(scope, { });
 
-    auto duration = TemporalPlainTime::roundTime(m_plainTime, increment, smallestUnit, roundingMode, std::nullopt);
+    auto duration = TemporalPlainTime::roundTime(m_plainTime, roundingIncrement, smallestUnit, roundingMode, std::nullopt);
     auto plainTime = TemporalPlainTime::toPlainTime(globalObject, duration);
     RETURN_IF_EXCEPTION(scope, { });
 
@@ -360,7 +376,7 @@ TemporalPlainDateTime* TemporalPlainDateTime::round(JSGlobalObject* globalObject
     auto plainDate = TemporalPlainDate::toPlainDate(globalObject, duration);
     RETURN_IF_EXCEPTION(scope, { });
 
-    RELEASE_AND_RETURN(scope, TemporalPlainDateTime::tryCreateIfValid(globalObject, globalObject->plainDateTimeStructure(), WTFMove(plainDate), WTFMove(plainTime)));
+    RELEASE_AND_RETURN(scope, TemporalPlainDateTime::tryCreateIfValid(globalObject, globalObject->plainDateTimeStructure(), WTF::move(plainDate), WTF::move(plainTime)));
 }
 
 } // namespace JSC

@@ -32,19 +32,19 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(EXTFloatBlend);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EXTFloatBlend);
 
 EXTFloatBlend::EXTFloatBlend(WebGLRenderingContextBase& context)
     : WebGLExtension(context, WebGLExtensionName::EXTFloatBlend)
 {
-    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_EXT_float_blend"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::EXT_float_blend);
 }
 
 EXTFloatBlend::~EXTFloatBlend() = default;
 
 bool EXTFloatBlend::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_EXT_float_blend"_s);
+    return context.supportsExtension(GCGLExtension::EXT_float_blend);
 }
 
 } // namespace WebCore

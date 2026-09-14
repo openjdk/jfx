@@ -20,9 +20,11 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #include <wtf/RefCounted.h>
 #include <wtf/URL.h>
 #include <wtf/Vector.h>
+#include <wtf/WeakRef.h>
 #include <wtf/text/StringHash.h>
 #include <wtf/text/WTFString.h>
 
@@ -86,7 +88,7 @@ private:
     void initPlugins();
 
 protected:
-    Page& m_page;
+    WeakRef<Page> m_page;
     Vector<PluginInfo> m_plugins;
     std::optional<Vector<SupportedPluginIdentifier>> m_supportedPluginIdentifiers;
 

@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "TextRun.h"
+#include <WebCore/TextRun.h>
 #include <wtf/HashFunctions.h>
 #include <wtf/HashTraits.h>
 #include <wtf/Hasher.h>
@@ -58,17 +58,9 @@ inline bool TextRun::operator==(const TextRun& other) const
         && m_textSpacingState == other.m_textSpacingState;
 }
 
-struct TextRunHash {
-    static unsigned hash(const TextRun& textRun) { return computeHash(textRun); }
-    static bool equal(const TextRun& a, const TextRun& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = false;
-};
-
 } // namespace WebCore
 
 namespace WTF {
-
-template<> struct DefaultHash<WebCore::TextRun> : WebCore::TextRunHash { };
 
 template<> struct HashTraits<WebCore::TextRun> : GenericHashTraits<WebCore::TextRun> {
     static bool isDeletedValue(const WebCore::TextRun& value) { return value.isHashTableDeletedValue(); }

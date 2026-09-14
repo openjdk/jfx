@@ -21,8 +21,11 @@
 #include "config.h"
 #include "AccessibilityProgressIndicator.h"
 
-#include "AXObjectCache.h"
+#include "AXLoggerBase.h"
+#include "AXObjectCacheInlines.h"
+#include "AccessibilityObjectInlines.h"
 #include "FloatConversion.h"
+#include "FrameDestructionObserverInlines.h"
 #include "HTMLMeterElement.h"
 #include "HTMLNames.h"
 #include "HTMLProgressElement.h"
@@ -38,12 +41,23 @@ using namespace HTMLNames;
 AccessibilityProgressIndicator::AccessibilityProgressIndicator(AXID axID, RenderObject& renderer, AXObjectCache& cache)
     : AccessibilityRenderObject(axID, renderer, cache)
 {
-    ASSERT(is<RenderProgress>(renderer) || is<RenderMeter>(renderer) || is<HTMLProgressElement>(renderer.node()) || is<HTMLMeterElement>(renderer.node()));
+    AX_ASSERT(is<RenderProgress>(renderer) || is<RenderMeter>(renderer) || is<HTMLProgressElement>(renderer.node()) || is<HTMLMeterElement>(renderer.node()));
+}
+
+AccessibilityProgressIndicator::AccessibilityProgressIndicator(AXID axID, Element& element, AXObjectCache& cache)
+    : AccessibilityRenderObject(axID, element, cache)
+{
+    AX_ASSERT(is<HTMLProgressElement>(element) || is<HTMLMeterElement>(element));
 }
 
 Ref<AccessibilityProgressIndicator> AccessibilityProgressIndicator::create(AXID axID, RenderObject& renderer, AXObjectCache& cache)
 {
     return adoptRef(*new AccessibilityProgressIndicator(axID, renderer, cache));
+}
+
+Ref<AccessibilityProgressIndicator> AccessibilityProgressIndicator::create(AXID axID, Element& element, AXObjectCache& cache)
+{
+    return adoptRef(*new AccessibilityProgressIndicator(axID, element, cache));
 }
 
 bool AccessibilityProgressIndicator::computeIsIgnored() const
@@ -159,4 +173,3 @@ String AccessibilityProgressIndicator::gaugeRegionValueDescription() const
 }
 
 } // namespace WebCore
-

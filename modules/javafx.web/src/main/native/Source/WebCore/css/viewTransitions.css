@@ -29,7 +29,7 @@
 }
 
 :root::view-transition {
-    position: fixed;
+    position: absolute;
     inset: 0;
 }
 

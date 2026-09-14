@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "AnimationFrameRate.h"
-#include "DisplayRefreshMonitor.h"
-#include "PlatformScreen.h"
+#include <WebCore/AnimationFrameRate.h>
+#include <WebCore/DisplayRefreshMonitor.h>
+#include <WebCore/PlatformScreen.h>
 #include <wtf/NeverDestroyed.h>
 #include <wtf/RefPtr.h>
 #include <wtf/Vector.h>
@@ -61,9 +61,9 @@ private:
 
     size_t findMonitorForDisplayID(PlatformDisplayID) const;
     DisplayRefreshMonitor* monitorForDisplayID(PlatformDisplayID) const;
-    DisplayRefreshMonitor* monitorForClient(DisplayRefreshMonitorClient&);
+    RefPtr<DisplayRefreshMonitor> monitorForClient(DisplayRefreshMonitorClient&);
 
-    DisplayRefreshMonitor* ensureMonitorForDisplayID(PlatformDisplayID, DisplayRefreshMonitorFactory*);
+    RefPtr<DisplayRefreshMonitor> ensureMonitorForDisplayID(PlatformDisplayID, DisplayRefreshMonitorFactory*);
 
     struct DisplayRefreshMonitorWrapper {
         ~DisplayRefreshMonitorWrapper()

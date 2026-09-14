@@ -26,6 +26,7 @@
 #include "config.h"
 #include "CookieStore.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "Cookie.h"
 #include "CookieChangeEvent.h"
 #include "CookieChangeEventInit.h"
@@ -34,14 +35,13 @@
 #include "CookieListItem.h"
 #include "CookieStoreDeleteOptions.h"
 #include "CookieStoreGetOptions.h"
-#include "DocumentInlines.h"
+#include "DocumentPage.h"
 #include "EventNames.h"
 #include "EventTargetInterfaces.h"
 #include "EventTargetInlines.h"
 #include "ExceptionOr.h"
 #include "JSCookieListItem.h"
 #include "JSDOMPromiseDeferred.h"
-#include "Page.h"
 #include "PublicSuffixStore.h"
 #include "ScriptExecutionContext.h"
 #include "ScriptExecutionContextIdentifier.h"
@@ -68,7 +68,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CookieStore);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CookieStore);
 
 class CookieStore::MainThreadBridge : public ThreadSafeRefCounted<MainThreadBridge, WTF::DestructionThread::Main> {
 public:
@@ -78,8 +78,7 @@ public:
     }
 
     void get(CookieStoreGetOptions&&, URL&&, Function<void(CookieStore&, ExceptionOr<Vector<Cookie>>&&)>&&);
-    void getAll(CookieStoreGetOptions&&, URL&&, Function<void(CookieStore&, ExceptionOr<Vector<Cookie>>&&)>&&);
-    void set(CookieInit&& options, Cookie&&, URL&&, Function<void(CookieStore&, std::optional<Exception>&&)>&&);
+    void set(Cookie&&, URL&&, Function<void(CookieStore&, std::optional<Exception>&&)>&&);
 
     void detach() { m_cookieStore = nullptr; }
 
@@ -114,12 +113,12 @@ void CookieStore::MainThreadBridge::ensureOnMainThread(Function<void(ScriptExecu
         return;
     }
 
-    downcast<WorkerGlobalScope>(*context).protectedThread()->checkedWorkerLoaderProxy()->postTaskToLoader(WTFMove(task));
+    downcast<WorkerGlobalScope>(*context).thread()->checkedWorkerLoaderProxy()->postTaskToLoader(WTF::move(task));
 }
 
 void CookieStore::MainThreadBridge::ensureOnContextThread(Function<void(CookieStore&)>&& task)
 {
-    ScriptExecutionContext::ensureOnContextThread(*m_contextIdentifier, [protectedThis = Ref { *this }, task = WTFMove(task)](auto&) {
+    ScriptExecutionContext::ensureOnContextThread(*m_contextIdentifier, [protectedThis = Ref { *this }, task = WTF::move(task)](auto&) {
         if (RefPtr cookieStore = protectedThis->m_cookieStore.get())
             task(*cookieStore);
     });
@@ -129,79 +128,49 @@ void CookieStore::MainThreadBridge::get(CookieStoreGetOptions&& options, URL&& u
 {
     ASSERT(m_cookieStore);
 
-    auto getCookies = [protectedThis = Ref { *this }, options = crossThreadCopy(WTFMove(options)), url = crossThreadCopy(WTFMove(url)), completionHandler = WTFMove(completionHandler)](ScriptExecutionContext& context) mutable {
+    auto getCookies = [protectedThis = Ref { *this }, options = crossThreadCopy(WTF::move(options)), url = crossThreadCopy(WTF::move(url)), completionHandler = WTF::move(completionHandler)](ScriptExecutionContext& context) mutable {
         Ref document = downcast<Document>(context);
         WeakPtr page = document->page();
         if (!page) {
-            protectedThis->ensureOnContextThread([completionHandler = WTFMove(completionHandler)](CookieStore& cookieStore) mutable {
+            protectedThis->ensureOnContextThread([completionHandler = WTF::move(completionHandler)](CookieStore& cookieStore) mutable {
                 completionHandler(cookieStore, Exception { ExceptionCode::SecurityError });
             });
             return;
         }
 
         Ref cookieJar = page->cookieJar();
-        auto resultHandler = [protectedThis = WTFMove(protectedThis), completionHandler = WTFMove(completionHandler)] (std::optional<Vector<Cookie>>&& cookies) mutable {
-            protectedThis->ensureOnContextThread([completionHandler = WTFMove(completionHandler), cookies = crossThreadCopy(WTFMove(cookies))](CookieStore& cookieStore) mutable {
+        auto resultHandler = [protectedThis = WTF::move(protectedThis), completionHandler = WTF::move(completionHandler)] (std::optional<Vector<Cookie>>&& cookies) mutable {
+            protectedThis->ensureOnContextThread([completionHandler = WTF::move(completionHandler), cookies = crossThreadCopy(WTF::move(cookies))](CookieStore& cookieStore) mutable {
                 if (!cookies)
                     completionHandler(cookieStore, Exception { ExceptionCode::TypeError });
                 else
-                    completionHandler(cookieStore, WTFMove(*cookies));
+                    completionHandler(cookieStore, WTF::move(*cookies));
             });
         };
 
-        cookieJar->getCookiesAsync(document, url, options, WTFMove(resultHandler));
+        cookieJar->getCookiesAsync(document, url, options, WTF::move(resultHandler));
     };
 
-    ensureOnMainThread(WTFMove(getCookies));
+    ensureOnMainThread(WTF::move(getCookies));
 }
 
-void CookieStore::MainThreadBridge::getAll(CookieStoreGetOptions&& options, URL&& url, Function<void(CookieStore&, ExceptionOr<Vector<Cookie>>&&)>&& completionHandler)
+void CookieStore::MainThreadBridge::set(Cookie&& cookie, URL&& url, Function<void(CookieStore&, std::optional<Exception>&&)>&& completionHandler)
 {
     ASSERT(m_cookieStore);
 
-    auto getAllCookies = [protectedThis = Ref { *this }, options = crossThreadCopy(WTFMove(options)), url = crossThreadCopy(WTFMove(url)), completionHandler = WTFMove(completionHandler)](ScriptExecutionContext& context) mutable {
+    auto setCookie = [this, protectedThis = Ref { *this }, cookie = crossThreadCopy(WTF::move(cookie)), url = crossThreadCopy(WTF::move(url)), completionHandler = WTF::move(completionHandler)](ScriptExecutionContext& context) mutable {
         Ref document = downcast<Document>(context);
         WeakPtr page = document->page();
         if (!page) {
-            protectedThis->ensureOnContextThread([completionHandler = WTFMove(completionHandler)](CookieStore& cookieStore) mutable {
+            ensureOnContextThread([completionHandler = WTF::move(completionHandler)](CookieStore& cookieStore) mutable {
                 completionHandler(cookieStore, Exception { ExceptionCode::SecurityError });
             });
             return;
         }
 
         Ref cookieJar = page->cookieJar();
-        auto resultHandler = [protectedThis = WTFMove(protectedThis), completionHandler = WTFMove(completionHandler)] (std::optional<Vector<Cookie>>&& cookies) mutable {
-            protectedThis->ensureOnContextThread([completionHandler = WTFMove(completionHandler), cookies = crossThreadCopy(WTFMove(cookies))](CookieStore& cookieStore) mutable {
-                if (!cookies)
-                    completionHandler(cookieStore, Exception { ExceptionCode::TypeError });
-                else
-                    completionHandler(cookieStore, WTFMove(*cookies));
-            });
-        };
-
-        cookieJar->getCookiesAsync(document, url, options, WTFMove(resultHandler));
-    };
-
-    ensureOnMainThread(WTFMove(getAllCookies));
-}
-
-void CookieStore::MainThreadBridge::set(CookieInit&& options, Cookie&& cookie, URL&& url, Function<void(CookieStore&, std::optional<Exception>&&)>&& completionHandler)
-{
-    ASSERT(m_cookieStore);
-
-    auto setCookie = [this, protectedThis = Ref { *this }, options = crossThreadCopy(WTFMove(options)), cookie = crossThreadCopy(WTFMove(cookie)), url = crossThreadCopy(WTFMove(url)), completionHandler = WTFMove(completionHandler)](ScriptExecutionContext& context) mutable {
-        Ref document = downcast<Document>(context);
-        WeakPtr page = document->page();
-        if (!page) {
-            ensureOnContextThread([completionHandler = WTFMove(completionHandler)](CookieStore& cookieStore) mutable {
-                completionHandler(cookieStore, Exception { ExceptionCode::SecurityError });
-            });
-            return;
-        }
-
-        Ref cookieJar = page->cookieJar();
-        auto resultHandler = [this, protectedThis = WTFMove(protectedThis), completionHandler = WTFMove(completionHandler)] (bool setSuccessfully) mutable {
-            ensureOnContextThread([completionHandler = WTFMove(completionHandler), setSuccessfully](CookieStore& cookieStore) mutable {
+        auto resultHandler = [this, protectedThis = WTF::move(protectedThis), completionHandler = WTF::move(completionHandler)] (bool setSuccessfully) mutable {
+            ensureOnContextThread([completionHandler = WTF::move(completionHandler), setSuccessfully](CookieStore& cookieStore) mutable {
                 if (!setSuccessfully)
                     completionHandler(cookieStore, Exception { ExceptionCode::TypeError });
                 else
@@ -210,10 +179,10 @@ void CookieStore::MainThreadBridge::set(CookieInit&& options, Cookie&& cookie, U
         };
 
         document->invalidateDOMCookieCache();
-        cookieJar->setCookieAsync(document, url, cookie, WTFMove(resultHandler));
+        cookieJar->setCookieAsync(document, url, cookie, WTF::move(resultHandler));
     };
 
-    ensureOnMainThread(WTFMove(setCookie));
+    ensureOnMainThread(WTF::move(setCookie));
 }
 
 Ref<CookieStore> CookieStore::create(ScriptExecutionContext* context)
@@ -234,6 +203,13 @@ CookieStore::~CookieStore()
     m_mainThreadBridge->detach();
 }
 
+static String normalize(const String& string)
+{
+    if (string.contains(isTabOrSpace<char16_t>))
+        return string.trim(isTabOrSpace);
+    return string;
+}
+
 static bool containsInvalidCharacters(const String& string)
 {
     // The invalid characters are specified at https://wicg.github.io/cookie-store/#set-a-cookie.
@@ -244,10 +220,25 @@ static bool containsInvalidCharacters(const String& string)
 
 void CookieStore::get(String&& name, Ref<DeferredPromise>&& promise)
 {
-    get(CookieStoreGetOptions { WTFMove(name), { } }, WTFMove(promise));
+    getShared(GetType::Get, CookieStoreGetOptions { WTF::move(name), { } }, WTF::move(promise));
 }
 
 void CookieStore::get(CookieStoreGetOptions&& options, Ref<DeferredPromise>&& promise)
+{
+    getShared(GetType::Get, WTF::move(options), WTF::move(promise));
+}
+
+void CookieStore::getAll(String&& name, Ref<DeferredPromise>&& promise)
+{
+    getShared(GetType::GetAll, CookieStoreGetOptions { WTF::move(name), { } }, WTF::move(promise));
+}
+
+void CookieStore::getAll(CookieStoreGetOptions&& options, Ref<DeferredPromise>&& promise)
+{
+    getShared(GetType::GetAll, WTF::move(options), WTF::move(promise));
+}
+
+void CookieStore::getShared(GetType getType, CookieStoreGetOptions&& options, Ref<DeferredPromise>&& promise)
 {
     RefPtr context = scriptExecutionContext();
     if (!context) {
@@ -266,7 +257,7 @@ void CookieStore::get(CookieStoreGetOptions&& options, Ref<DeferredPromise>&& pr
         return;
     }
 
-    if (options.name.isNull() && options.url.isNull()) {
+    if (getType == GetType::Get && options.name.isNull() && options.url.isNull()) {
         promise->reject(Exception { ExceptionCode::TypeError, "CookieStoreGetOptions must not be empty"_s });
         return;
     }
@@ -283,12 +274,15 @@ void CookieStore::get(CookieStoreGetOptions&& options, Ref<DeferredPromise>&& pr
             promise->reject(Exception { ExceptionCode::TypeError, "Origin must match the context's origin"_s });
             return;
         }
-        url = WTFMove(parsed);
+        url = WTF::move(parsed);
         options.url = nullString();
     }
 
-    m_promises.add(++m_nextPromiseIdentifier, WTFMove(promise));
-    auto completionHandler = [promiseIdentifier = m_nextPromiseIdentifier](CookieStore& cookieStore, ExceptionOr<Vector<Cookie>>&& result) {
+    if (!options.name.isNull())
+        options.name = normalize(options.name);
+
+    m_promises.add(++m_nextPromiseIdentifier, WTF::move(promise));
+    auto completionHandler = [promiseIdentifier = m_nextPromiseIdentifier, getType](CookieStore& cookieStore, ExceptionOr<Vector<Cookie>>&& result) {
         auto promise = cookieStore.takePromise(promiseIdentifier);
         if (!promise)
         return;
@@ -299,80 +293,27 @@ void CookieStore::get(CookieStoreGetOptions&& options, Ref<DeferredPromise>&& pr
         }
 
         auto cookies = result.releaseReturnValue();
+
+        if (getType == GetType::Get) {
         if (cookies.isEmpty()) {
             promise->resolveWithJSValue(JSC::jsNull());
             return;
         }
 
-        promise->resolve<IDLDictionary<CookieListItem>>(CookieListItem(WTFMove(cookies[0])));
-    };
-
-    m_mainThreadBridge->get(WTFMove(options), WTFMove(url), WTFMove(completionHandler));
-}
-
-void CookieStore::getAll(String&& name, Ref<DeferredPromise>&& promise)
-{
-    getAll(CookieStoreGetOptions { WTFMove(name), { } }, WTFMove(promise));
-}
-
-void CookieStore::getAll(CookieStoreGetOptions&& options, Ref<DeferredPromise>&& promise)
-{
-    RefPtr context = scriptExecutionContext();
-    if (!context) {
-        promise->reject(ExceptionCode::SecurityError);
-        return;
-    }
-
-    RefPtr origin = context->securityOrigin();
-    if (!origin) {
-        promise->reject(ExceptionCode::SecurityError);
-        return;
-    }
-
-    if (origin->isOpaque()) {
-        promise->reject(Exception { ExceptionCode::SecurityError, "The origin is opaque"_s });
-        return;
-    }
-
-    auto url = context->cookieURL();
-    if (!options.url.isNull()) {
-        auto parsed = context->completeURL(options.url);
-        if (context->isDocument() && !equalIgnoringFragmentIdentifier(parsed, url)) {
-            promise->reject(Exception { ExceptionCode::TypeError, "URL must match the document URL"_s });
-            return;
-        }
-
-        if (!origin->isSameOriginAs(SecurityOrigin::create(parsed))) {
-            promise->reject(Exception { ExceptionCode::TypeError, "Origin must match the context's origin"_s });
-            return;
-        }
-        url = WTFMove(parsed);
-        options.url = nullString();
-    }
-
-    m_promises.add(++m_nextPromiseIdentifier, WTFMove(promise));
-    auto completionHandler = [promiseIdentifier = m_nextPromiseIdentifier](CookieStore& cookieStore, ExceptionOr<Vector<Cookie>>&& result) {
-        auto promise = cookieStore.takePromise(promiseIdentifier);
-        if (!promise)
-            return;
-
-        if (result.hasException()) {
-            promise->reject(result.releaseException());
-            return;
-        }
-
-        auto cookies = result.releaseReturnValue();
-        promise->resolve<IDLSequence<IDLDictionary<CookieListItem>>>(WTF::map(WTFMove(cookies), [](Cookie&& cookie) {
-            return CookieListItem { WTFMove(cookie) };
+            promise->resolve<IDLDictionary<CookieListItem>>(CookieListItem(WTF::move(cookies[0])));
+        } else {
+            promise->resolve<IDLSequence<IDLDictionary<CookieListItem>>>(WTF::map(WTF::move(cookies), [](Cookie&& cookie) {
+                return CookieListItem { WTF::move(cookie) };
         }));
+        }
     };
 
-    m_mainThreadBridge->getAll(WTFMove(options), WTFMove(url), WTFMove(completionHandler));
+    m_mainThreadBridge->get(WTF::move(options), WTF::move(url), WTF::move(completionHandler));
 }
 
 void CookieStore::set(String&& name, String&& value, Ref<DeferredPromise>&& promise)
 {
-    set(CookieInit { WTFMove(name), WTFMove(value) }, WTFMove(promise));
+    set(CookieInit { WTF::move(name), WTF::move(value) }, WTF::move(promise));
 }
 
 void CookieStore::set(CookieInit&& options, Ref<DeferredPromise>&& promise)
@@ -394,7 +335,9 @@ void CookieStore::set(CookieInit&& options, Ref<DeferredPromise>&& promise)
         return;
     }
 
-    // The maximum attribute value size is specified at https://wicg.github.io/cookie-store/#cookie-maximum-attribute-value-size.
+    // https://cookiestore.spec.whatwg.org/#cookie-maximum-name-value-pair-size
+    static constexpr auto maximumNameValuePairSize = 4096;
+    // https://cookiestore.spec.whatwg.org/#cookie-maximum-attribute-value-size
     static constexpr auto maximumAttributeValueSize = 1024;
 
     auto url = context->cookieURL();
@@ -404,8 +347,8 @@ void CookieStore::set(CookieInit&& options, Ref<DeferredPromise>&& promise)
     Cookie cookie;
     cookie.created = WallTime::now().secondsSinceEpoch().milliseconds();
 
-    cookie.name = WTFMove(options.name);
-    cookie.value = WTFMove(options.value);
+    cookie.name = normalize(options.name);
+    cookie.value = normalize(options.value);
 
     if (containsInvalidCharacters(cookie.name)) {
         promise->reject(Exception { ExceptionCode::TypeError, "The cookie name must not contain '\u003B', '\u007F', or any C0 control character except '\u0009'."_s });
@@ -427,20 +370,35 @@ void CookieStore::set(CookieInit&& options, Ref<DeferredPromise>&& promise)
             promise->reject(Exception { ExceptionCode::TypeError, "The cookie name and value must not both be empty."_s });
             return;
         }
-    }
 
-    if (cookie.name.startsWithIgnoringASCIICase("__Host-"_s)) {
-        if (!options.domain.isNull()) {
-            promise->reject(Exception { ExceptionCode::TypeError, "If the cookie name begins with \"__Host-\", the domain must not be specified."_s });
-            return;
-        }
-
-        if (!options.path.isNull() && options.path != "/"_s)  {
-            promise->reject(Exception { ExceptionCode::TypeError, "If the cookie name begins with \"__Host-\", the path must either not be specified or be \"/\"."_s });
+        if (cookie.value.startsWithIgnoringASCIICase("__Host-"_s)
+            || cookie.value.startsWithIgnoringASCIICase("__Host-Http-"_s)
+            || cookie.value.startsWithIgnoringASCIICase("__Http-"_s)
+            || cookie.value.startsWithIgnoringASCIICase("__Secure-"_s)) {
+            promise->reject(Exception { ExceptionCode::TypeError, "If the cookie name is empty, the value must not begin with \"__Host-\", \"__Host-Http-\", \"__Http-\", or \"__Secure-\""_s });
             return;
         }
     }
 
+    if (cookie.name.startsWithIgnoringASCIICase("__Host-Http-"_s)
+        || cookie.name.startsWithIgnoringASCIICase("__Http-"_s)) {
+            promise->reject(Exception { ExceptionCode::TypeError, "The cookie name must not begin with \"__Host-Http-\" or \"__Http-\""_s });
+            return;
+        }
+
+    // FIXME: <rdar://85515842> Obtain the encoded length without allocating and encoding.
+    if (cookie.name.utf8().length() + cookie.value.utf8().length() > maximumNameValuePairSize) {
+        promise->reject(Exception { ExceptionCode::TypeError, makeString("The size of the cookie name and value must not be greater than "_s, maximumNameValuePairSize, " bytes"_s) });
+            return;
+        }
+
+    // FIXME: This should be further down.
+    if (!options.domain.isNull() && cookie.name.startsWithIgnoringASCIICase("__Host-"_s)) {
+        promise->reject(Exception { ExceptionCode::TypeError, "If the cookie name begins with \"__Host-\", the domain must not be specified."_s });
+        return;
+    }
+
+    // FIXME: The specification does not perform this initialization of domain.
     cookie.domain = options.domain.isNull() ? domain : options.domain;
     if (!cookie.domain.isNull()) {
         if (cookie.domain.startsWith('.')) {
@@ -471,22 +429,26 @@ void CookieStore::set(CookieInit&& options, Ref<DeferredPromise>&& promise)
             cookie.domain = makeString('.', cookie.domain);
     }
 
-    cookie.path = WTFMove(options.path);
-    if (!cookie.path.isNull()) {
+    cookie.path = WTF::move(options.path);
+    ASSERT(!cookie.path.isNull());
+    if (cookie.path.isEmpty())
+        cookie.path = CookieUtil::defaultPathForURL(url);
+
         if (!cookie.path.startsWith('/')) {
             promise->reject(Exception { ExceptionCode::TypeError, "The path must begin with a '/'"_s });
             return;
         }
 
-        if (!cookie.path.endsWith('/'))
-            cookie.path = makeString(cookie.path, '/');
+    if (cookie.path != "/"_s && cookie.name.startsWithIgnoringASCIICase("__Host-"_s)) {
+        promise->reject(Exception { ExceptionCode::TypeError, "If the cookie name begins with \"__Host-\", the path must be \"/\" or default to that."_s });
+        return;
+    }
 
         // FIXME: <rdar://85515842> Obtain the encoded length without allocating and encoding.
         if (cookie.path.utf8().length() > maximumAttributeValueSize) {
             promise->reject(Exception { ExceptionCode::TypeError, makeString("The size of the path must not be greater than "_s, maximumAttributeValueSize, " bytes"_s) });
             return;
         }
-    }
 
     if (options.expires) {
         // When this cookie is converted to an NSHTTPCookie, the creation and expiration
@@ -518,7 +480,7 @@ void CookieStore::set(CookieInit&& options, Ref<DeferredPromise>&& promise)
 
     cookie.secure = true;
 
-    m_promises.add(++m_nextPromiseIdentifier, WTFMove(promise));
+    m_promises.add(++m_nextPromiseIdentifier, WTF::move(promise));
     auto completionHandler = [promiseIdentifier = m_nextPromiseIdentifier](CookieStore& cookieStore, std::optional<Exception>&& result) {
         auto promise = cookieStore.takePromise(promiseIdentifier);
         if (!promise)
@@ -530,12 +492,12 @@ void CookieStore::set(CookieInit&& options, Ref<DeferredPromise>&& promise)
             promise->resolve();
     };
 
-    m_mainThreadBridge->set(WTFMove(options), WTFMove(cookie), WTFMove(url), WTFMove(completionHandler));
+    m_mainThreadBridge->set(WTF::move(cookie), WTF::move(url), WTF::move(completionHandler));
 }
 
 void CookieStore::remove(String&& name, Ref<DeferredPromise>&& promise)
 {
-    remove(CookieStoreDeleteOptions { WTFMove(name), { } }, WTFMove(promise));
+    remove(CookieStoreDeleteOptions { WTF::move(name), { } }, WTF::move(promise));
 }
 
 void CookieStore::remove(CookieStoreDeleteOptions&& options, Ref<DeferredPromise>&& promise)
@@ -558,13 +520,13 @@ void CookieStore::remove(CookieStoreDeleteOptions&& options, Ref<DeferredPromise
     }
 
     CookieInit initOptions;
-    initOptions.name = WTFMove(options.name);
+    initOptions.name = normalize(options.name);
     initOptions.value = emptyString();
-    initOptions.domain = WTFMove(options.domain);
-    initOptions.path = WTFMove(options.path);
+    initOptions.domain = WTF::move(options.domain);
+    initOptions.path = WTF::move(options.path);
     initOptions.expires = (WallTime::now() - 24_h).secondsSinceEpoch().milliseconds();
 
-    set(WTFMove(initOptions), WTFMove(promise));
+    set(WTF::move(initOptions), WTF::move(promise));
 }
 
 void CookieStore::cookiesAdded(const String& host, const Vector<Cookie>& cookies)
@@ -581,12 +543,12 @@ void CookieStore::cookiesAdded(const String& host, const Vector<Cookie>& cookies
     for (auto cookie : cookies) {
         if (cookie.expires && *cookie.expires <= cookie.created) {
             cookie.value = nullString();
-            eventInit.deleted.append(CookieListItem { WTFMove(cookie) });
+            eventInit.deleted.append(CookieListItem { WTF::move(cookie) });
         } else
-            eventInit.changed.append(CookieListItem { WTFMove(cookie) });
+            eventInit.changed.append(CookieListItem { WTF::move(cookie) });
     }
 
-    queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, CookieChangeEvent::create(eventNames().changeEvent, WTFMove(eventInit), CookieChangeEvent::IsTrusted::Yes));
+    queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, CookieChangeEvent::create(eventNames().changeEvent, WTF::move(eventInit), CookieChangeEvent::IsTrusted::Yes));
 }
 
 void CookieStore::cookiesDeleted(const String& host, const Vector<Cookie>& cookies)
@@ -602,10 +564,10 @@ void CookieStore::cookiesDeleted(const String& host, const Vector<Cookie>& cooki
     CookieChangeEventInit eventInit;
     eventInit.deleted = cookies.map([](auto cookie) {
         cookie.value = nullString();
-        return CookieListItem { WTFMove(cookie) };
+        return CookieListItem { WTF::move(cookie) };
     });
 
-    queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, CookieChangeEvent::create(eventNames().changeEvent, WTFMove(eventInit), CookieChangeEvent::IsTrusted::Yes));
+    queueTaskToDispatchEvent(*this, TaskSource::DOMManipulation, CookieChangeEvent::create(eventNames().changeEvent, WTF::move(eventInit), CookieChangeEvent::IsTrusted::Yes));
 }
 
 void CookieStore::stop()

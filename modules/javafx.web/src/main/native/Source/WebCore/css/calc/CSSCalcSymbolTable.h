@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "CSSValueKeywords.h"
+#include <WebCore/CSSValueKeywords.h>
 #include <optional>
 #include <wtf/HashMap.h>
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -1146,16 +1146,20 @@ public abstract non-sealed class Parent extends Node {
         }
     }
 
-    // PENDING_DOC_REVIEW
     /**
-     * Calculates the preferred width of this {@code Parent}. The default
-     * implementation calculates this width as the width of the area occupied
-     * by its managed children when they are positioned at their
-     * current positions at their preferred widths.
+     * Computes the preferred width for the specified height.
+     * <p>
+     * An overriding implementation should be consistent with the layout policy implemented by
+     * {@link #layoutChildren()}. If pixel snapping is used, corresponding measurement and layout
+     * calculations must use the same snapped values.
      *
-     * @param height the height that should be used if preferred width depends
-     *      on it
-     * @return the calculated preferred width
+     * @implNote The default implementation computes the horizontal span containing the parent's origin
+     *           and all managed children. It uses each child's current layout position and preferred width,
+     *           constrained by the child's minimum and maximum widths.
+     *           The {@code height} parameter is ignored.
+     * @param height the height on which to base the preferred width, or {@code -1} if no height is specified
+     * @return the computed preferred width
+     * @see <a href="layout/package-summary.html#pixel-snapping">Pixel Snapping</a>
      */
     protected double computePrefWidth(double height) {
         double minX = 0;
@@ -1171,16 +1175,20 @@ public abstract non-sealed class Parent extends Node {
         return maxX - minX;
     }
 
-    // PENDING_DOC_REVIEW
     /**
-     * Calculates the preferred height of this {@code Parent}. The default
-     * implementation calculates this height as the height of the area occupied
-     * by its managed children when they are positioned at their current
-     * positions at their preferred heights.
+     * Computes the preferred height for the specified width.
+     * <p>
+     * An overriding implementation should be consistent with the layout policy implemented by
+     * {@link #layoutChildren()}. If pixel snapping is used, corresponding measurement and layout
+     * calculations must use the same snapped values.
      *
-     * @param width the width that should be used if preferred height depends
-     *      on it
-     * @return the calculated preferred height
+     * @implNote The default implementation computes the vertical span containing the parent's origin
+     *           and all managed children. It uses each child's current layout position and preferred height,
+     *           constrained by the child's minimum and maximum heights.
+     *           The {@code width} parameter is ignored.
+     * @param width the width on which to base the preferred height, or {@code -1} if no width is specified
+     * @return the computed preferred height
+     * @see <a href="layout/package-summary.html#pixel-snapping">Pixel Snapping</a>
      */
     protected double computePrefHeight(double width) {
         double minY = 0;
@@ -1197,26 +1205,33 @@ public abstract non-sealed class Parent extends Node {
     }
 
     /**
-     * Calculates the minimum width of this {@code Parent}. The default
-     * implementation simply returns the pref width.
+     * Computes the minimum width for the specified height.
+     * <p>
+     * An overriding implementation should be consistent with the layout policy implemented by
+     * {@link #layoutChildren()}. If pixel snapping is used, corresponding measurement and layout
+     * calculations must use the same snapped values.
      *
-     * @param height the height that should be used if min width depends
-     *      on it
-     * @return the calculated min width
+     * @implNote The default implementation returns {@link #prefWidth(double) prefWidth(height)}.
+     * @param height the height on which to base the minimum width, or {@code -1} if no height is specified
+     * @return the computed minimum width
+     * @see <a href="layout/package-summary.html#pixel-snapping">Pixel Snapping</a>
      * @since JavaFX 2.1
      */
     protected double computeMinWidth(double height) {
         return prefWidth(height);
     }
 
-    // PENDING_DOC_REVIEW
     /**
-     * Calculates the min height of this {@code Parent}. The default
-     * implementation simply returns the pref height;
+     * Computes the minimum height for the specified width.
+     * <p>
+     * An overriding implementation should be consistent with the layout policy implemented by
+     * {@link #layoutChildren()}. If pixel snapping is used, corresponding measurement and layout
+     * calculations must use the same snapped values.
      *
-     * @param width the width that should be used if min height depends
-     *      on it
-     * @return the calculated min height
+     * @implNote The default implementation returns {@link #prefHeight(double) prefHeight(width)}.
+     * @param width the width on which to base the minimum height, or {@code -1} if no width is specified
+     * @return the computed minimum height
+     * @see <a href="layout/package-summary.html#pixel-snapping">Pixel Snapping</a>
      * @since JavaFX 2.1
      */
     protected double computeMinHeight(double width) {
@@ -1299,12 +1314,16 @@ public abstract non-sealed class Parent extends Node {
     }
 
     /**
-     * Invoked during the layout pass to layout the children in this
-     * {@code Parent}. By default it will only set the size of managed,
-     * resizable content to their preferred sizes and does not do any node
-     * positioning.
+     * Invoked by {@link #layout()} during a layout pass to position and resize the managed children.
      * <p>
-     * Subclasses should override this function to layout content as needed.
+     * Subclasses should override this method to implement their layout policy. When pixel snapping is used,
+     * this parent owns the snapping policy for the positions and sizes it allocates to its children.
+     * The snapped allocations made here must be consistent with the corresponding minimum-size and
+     * preferred-size calculations.
+     *
+     * @implSpec The default implementation invokes {@link Node#autosize()} on each managed,
+     *           resizable child and leaves all child positions unchanged.
+     * @see <a href="layout/package-summary.html#pixel-snapping">Pixel Snapping</a>
      */
     protected void layoutChildren() {
         for (int i=0, max=children.size(); i<max; i++) {

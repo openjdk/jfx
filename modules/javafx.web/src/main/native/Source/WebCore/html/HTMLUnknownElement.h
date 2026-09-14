@@ -29,12 +29,12 @@
 
 #pragma once
 
-#include "HTMLElement.h"
+#include <WebCore/HTMLElement.h>
 
 namespace WebCore {
 
 class HTMLUnknownElement final : public HTMLElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLUnknownElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLUnknownElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLUnknownElement);
 public:
     static Ref<HTMLUnknownElement> create(const QualifiedName& tagName, Document& document)

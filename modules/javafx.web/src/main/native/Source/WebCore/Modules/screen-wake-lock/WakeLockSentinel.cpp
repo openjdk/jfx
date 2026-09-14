@@ -38,7 +38,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WakeLockSentinel);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WakeLockSentinel);
 
 WakeLockSentinel::WakeLockSentinel(Document& document, WakeLockType type)
     : ActiveDOMObject(&document)
@@ -72,6 +72,11 @@ void WakeLockSentinel::release(WakeLockManager& manager)
 bool WakeLockSentinel::virtualHasPendingActivity() const
 {
     return m_hasReleaseEventListener && !m_wasReleased;
+}
+
+ScriptExecutionContext* WakeLockSentinel::scriptExecutionContext() const
+{
+    return ActiveDOMObject::scriptExecutionContext();
 }
 
 void WakeLockSentinel::eventListenersDidChange()

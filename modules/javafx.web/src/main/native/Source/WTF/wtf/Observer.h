@@ -25,32 +25,23 @@
 
 #pragma once
 
+#include <wtf/CheckedRef.h>
 #include <wtf/Function.h>
 #include <wtf/Noncopyable.h>
 #include <wtf/WeakPtr.h>
-
-namespace WTF {
-template<typename> class Observer;
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<typename Out, typename... In> struct IsDeprecatedWeakRefSmartPointerException<WTF::Observer<Out(In...)>> : std::true_type { };
-}
 
 namespace WTF {
 
 template<typename> class Observer;
 
 template <typename Out, typename... In>
-class Observer<Out(In...)> : public CanMakeWeakPtr<Observer<Out(In...)>> {
+class Observer<Out(In...)> final : public CanMakeWeakPtr<Observer<Out(In...)>>, public RefCounted<Observer<Out(In...)>> {
     WTF_MAKE_NONCOPYABLE(Observer);
     WTF_DEPRECATED_MAKE_FAST_ALLOCATED(Observer);
 public:
-    Observer(Function<Out(In...)>&& callback)
-        : m_callback(WTFMove(callback))
+    static Ref<Observer> create(Function<Out(In...)>&& callback)
     {
-        ASSERT(m_callback);
+        return adoptRef(*new Observer(WTF::move(callback)));
     }
 
     Out operator()(In... in) const
@@ -60,6 +51,12 @@ public:
     }
 
 private:
+    Observer(Function<Out(In...)>&& callback)
+        : m_callback(WTF::move(callback))
+    {
+        ASSERT(m_callback);
+    }
+
     Function<Out(In...)> m_callback;
 };
 

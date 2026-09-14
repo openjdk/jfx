@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "PathImpl.h"
-#include "PathSegment.h"
+#include <WebCore/PathImpl.h>
+#include <WebCore/PathSegment.h>
 #include <wtf/DataRef.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/ThreadSafeRefCounted.h>

@@ -80,7 +80,7 @@ bool RegExpObject::deleteProperty(JSCell* cell, JSGlobalObject* globalObject, Pr
     return Base::deleteProperty(cell, globalObject, propertyName, slot);
 }
 
-void RegExpObject::getOwnSpecialPropertyNames(JSObject*, JSGlobalObject* globalObject, PropertyNameArray& propertyNames, DontEnumPropertiesMode mode)
+void RegExpObject::getOwnSpecialPropertyNames(JSObject*, JSGlobalObject* globalObject, PropertyNameArrayBuilder& propertyNames, DontEnumPropertiesMode mode)
 {
     VM& vm = globalObject->vm();
     if (mode == DontEnumPropertiesMode::Include)

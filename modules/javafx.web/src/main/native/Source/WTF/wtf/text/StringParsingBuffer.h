@@ -73,9 +73,15 @@ public:
     std::span<const CharacterType> consume(size_t count) LIFETIME_BOUND
     {
         ASSERT(count <= lengthRemaining());
-        auto result = m_data;
+        auto result = m_data.first(count);
         m_data = m_data.subspan(count);
         return result;
+    }
+
+    void dropLast(size_t amountToDrop = 1)
+    {
+        ASSERT(amountToDrop <= lengthRemaining());
+        m_data = m_data.first(lengthRemaining() - amountToDrop);
     }
 
     CharacterType operator[](size_t i) const

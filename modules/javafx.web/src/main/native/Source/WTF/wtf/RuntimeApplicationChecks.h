@@ -26,8 +26,14 @@
 #pragma once
 
 #include <optional>
+#include <wtf/ExportMacros.h>
 #include <wtf/Forward.h>
+#include <wtf/Platform.h>
 #include <wtf/ProcessID.h>
+
+#if HAVE(AUDIT_TOKEN)
+#include <mach/message.h>
+#endif
 
 namespace WTF {
 

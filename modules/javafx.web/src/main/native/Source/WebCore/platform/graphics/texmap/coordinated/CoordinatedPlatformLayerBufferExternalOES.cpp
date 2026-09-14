@@ -33,11 +33,11 @@ namespace WebCore {
 
 std::unique_ptr<CoordinatedPlatformLayerBufferExternalOES> CoordinatedPlatformLayerBufferExternalOES::create(unsigned textureID, const IntSize& size, OptionSet<TextureMapperFlags> flags, std::unique_ptr<GLFence>&& fence)
 {
-    return makeUnique<CoordinatedPlatformLayerBufferExternalOES>(textureID, size, flags, WTFMove(fence));
+    return makeUnique<CoordinatedPlatformLayerBufferExternalOES>(textureID, size, flags, WTF::move(fence));
 }
 
 CoordinatedPlatformLayerBufferExternalOES::CoordinatedPlatformLayerBufferExternalOES(unsigned textureID, const IntSize& size, OptionSet<TextureMapperFlags> flags, std::unique_ptr<GLFence>&& fence)
-    : CoordinatedPlatformLayerBuffer(Type::ExternalOES, size, flags, WTFMove(fence))
+    : CoordinatedPlatformLayerBuffer(Type::ExternalOES, size, flags, WTF::move(fence))
     , m_textureID(textureID)
 {
 }

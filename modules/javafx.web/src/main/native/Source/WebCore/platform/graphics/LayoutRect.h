@@ -30,10 +30,10 @@
 
 #pragma once
 
-#include "FloatRect.h"
-#include "IntRect.h"
-#include "LayoutPoint.h"
-#include "LengthBox.h"
+#include <WebCore/BoxExtents.h>
+#include <WebCore/FloatRect.h>
+#include <WebCore/IntRect.h>
+#include <WebCore/LayoutPoint.h>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/Forward.h>
 
@@ -64,6 +64,8 @@ public:
 
     void setLocation(const LayoutPoint& location) { m_location = location; }
     void setSize(const LayoutSize& size) { m_size = size; }
+    void floorSize() { m_size.clampNegativeToZero(); }
+    void floorSize(LayoutSize& size) { m_size.clampToMinimumSize(size); }
 
     LayoutUnit x() const { return m_location.x(); }
     LayoutUnit y() const { return m_location.y(); }
@@ -104,6 +106,8 @@ public:
     }
     template<typename T, typename U> void contract(T dw, U dh) { m_size.expand(-dw, -dh); }
 
+    void shiftEdgesTo(LayoutUnit left, LayoutUnit top, LayoutUnit right, LayoutUnit bottom);
+
     void shiftXEdgeTo(LayoutUnit edge)
     {
         LayoutUnit delta = edge - x();
@@ -130,10 +134,20 @@ public:
         setHeight(std::max<LayoutUnit>(0, height() + delta));
     }
 
+    template<typename T> void shiftXEdgeTo(T edge) { shiftXEdgeTo(LayoutUnit(edge)); }
+    template<typename T> void shiftMaxXEdgeTo(T edge) { shiftMaxXEdgeTo(LayoutUnit(edge)); }
+    template<typename T> void shiftYEdgeTo(T edge) { shiftYEdgeTo(LayoutUnit(edge)); }
+    template<typename T> void shiftMaxYEdgeTo(T edge) { shiftMaxYEdgeTo(LayoutUnit(edge)); }
+
     void shiftXEdgeBy(LayoutUnit delta)
     {
         move(delta, 0);
         setWidth(std::max<LayoutUnit>(0, width() - delta));
+    }
+
+    void shiftMaxXEdgeBy(LayoutUnit delta)
+    {
+        setWidth(std::max<LayoutUnit>(0, width() + delta));
     }
 
     void shiftYEdgeBy(LayoutUnit delta)
@@ -142,10 +156,10 @@ public:
         setHeight(std::max<LayoutUnit>(0, height() - delta));
     }
 
-    template<typename T> void shiftXEdgeTo(T edge) { shiftXEdgeTo(LayoutUnit(edge)); }
-    template<typename T> void shiftMaxXEdgeTo(T edge) { shiftMaxXEdgeTo(LayoutUnit(edge)); }
-    template<typename T> void shiftYEdgeTo(T edge) { shiftYEdgeTo(LayoutUnit(edge)); }
-    template<typename T> void shiftMaxYEdgeTo(T edge) { shiftMaxYEdgeTo(LayoutUnit(edge)); }
+    void shiftMaxYEdgeBy(LayoutUnit delta)
+    {
+        setHeight(std::max<LayoutUnit>(0, height() + delta));
+    }
 
     LayoutPoint minXMinYCorner() const { return m_location; } // typically topLeft
     LayoutPoint maxXMinYCorner() const { return LayoutPoint(m_location.x() + m_size.width(), m_location.y()); } // typically topRight
@@ -207,8 +221,7 @@ public:
     friend bool operator==(const LayoutRect&, const LayoutRect&) = default;
 
 private:
-    friend struct IPC::ArgumentCoder<WebCore::LayoutRect, void>;
-    void setLocationAndSizeFromEdges(LayoutUnit left, LayoutUnit top, LayoutUnit right, LayoutUnit bottom);
+    friend struct IPC::ArgumentCoder<WebCore::LayoutRect>;
 
     LayoutPoint m_location;
     LayoutSize m_size;
@@ -235,7 +248,7 @@ inline bool LayoutRect::isInfinite() const
     return *this == LayoutRect::infiniteRect();
 }
 
-inline void LayoutRect::setLocationAndSizeFromEdges(LayoutUnit left, LayoutUnit top, LayoutUnit right, LayoutUnit bottom)
+inline void LayoutRect::shiftEdgesTo(LayoutUnit left, LayoutUnit top, LayoutUnit right, LayoutUnit bottom)
 {
     m_location = { left, top };
     m_size.setWidth(right - left);

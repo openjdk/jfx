@@ -20,7 +20,7 @@
 
 #pragma once
 
-#include "CSSSelector.h"
+#include <WebCore/CSSSelector.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/text/AtomStringHash.h>
 
@@ -34,13 +34,6 @@ using MutableCSSSelectorList = Vector<std::unique_ptr<MutableCSSSelector>>;
 class MutableCSSSelector {
     WTF_MAKE_TZONE_ALLOCATED(MutableCSSSelector);
 public:
-    enum class Combinator {
-        Child,
-        DescendantSpace,
-        DirectAdjacent,
-        IndirectAdjacent
-    };
-
     static std::unique_ptr<MutableCSSSelector> parsePseudoClassSelector(StringView, const CSSSelectorParserContext&);
     static std::unique_ptr<MutableCSSSelector> parsePseudoElementSelector(StringView, const CSSSelectorParserContext&);
     static std::unique_ptr<MutableCSSSelector> parsePagePseudoSelector(StringView);
@@ -50,44 +43,48 @@ public:
     // Recursively copy the selector chain.
     MutableCSSSelector(const CSSSelector&);
 
+    // Only copy the simple selector.
+    enum SimpleSelectorTag { SimpleSelector };
+    MutableCSSSelector(const CSSSelector&, SimpleSelectorTag);
+
     explicit MutableCSSSelector(const QualifiedName&);
 
     ~MutableCSSSelector();
 
-    std::unique_ptr<CSSSelector> releaseSelector() { return WTFMove(m_selector); }
-    const CSSSelector* selector() const { return m_selector.get(); };
-    CSSSelector* selector() { return m_selector.get(); }
+    CSSSelector releaseSelector() { return WTF::move(m_selector); }
+    const CSSSelector& selector() const { return m_selector; };
+    CSSSelector& selector() { return m_selector; }
 
-    void setValue(const AtomString& value, bool matchLowerCase = false) { m_selector->setValue(value, matchLowerCase); }
-    const AtomString& value() const { return m_selector->value(); }
+    void setValue(const AtomString& value, bool matchLowerCase = false) { m_selector.setValue(value, matchLowerCase); }
+    const AtomString& value() const { return m_selector.value(); }
 
-    void setAttribute(const QualifiedName& value, CSSSelector::AttributeMatchType type) { m_selector->setAttribute(value, type); }
+    void setAttribute(const QualifiedName& value, CSSSelector::AttributeMatchType type) { m_selector.setAttribute(value, type); }
 
-    void setArgument(const AtomString& value) { m_selector->setArgument(value); }
-    void setNth(int a, int b) { m_selector->setNth(a, b); }
-    void setMatch(CSSSelector::Match value) { m_selector->setMatch(value); }
-    void setRelation(CSSSelector::Relation value) { m_selector->setRelation(value); }
-    void setForPage() { m_selector->setForPage(); }
+    void setArgument(const AtomString& value) { m_selector.setArgument(value); }
+    void setNth(int a, int b) { m_selector.setNth(a, b); }
+    void setMatch(CSSSelector::Match value) { m_selector.setMatch(value); }
+    void setRelation(CSSSelector::Relation value) { m_selector.setRelation(value); }
+    void setForPage() { m_selector.setForPage(); }
 
-    CSSSelector::Match match() const { return m_selector->match(); }
-    CSSSelector::PseudoElement pseudoElement() const { return m_selector->pseudoElement(); }
-    const CSSSelectorList* selectorList() const { return m_selector->selectorList(); }
+    CSSSelector::Match match() const { return m_selector.match(); }
+    CSSSelector::PseudoElement pseudoElement() const { return m_selector.pseudoElement(); }
+    const CSSSelectorList* selectorList() const { return m_selector.selectorList(); }
 
-    void setPseudoElement(CSSSelector::PseudoElement type) { m_selector->setPseudoElement(type); }
-    void setPseudoClass(CSSSelector::PseudoClass type) { m_selector->setPseudoClass(type); }
+    void setPseudoElement(CSSSelector::PseudoElement type) { m_selector.setPseudoElement(type); }
+    void setPseudoClass(CSSSelector::PseudoClass type) { m_selector.setPseudoClass(type); }
 
     void adoptSelectorVector(MutableCSSSelectorList&&);
     void setArgumentList(FixedVector<AtomString>);
     void setLangList(FixedVector<PossiblyQuotedIdentifier>);
     void setSelectorList(std::unique_ptr<CSSSelectorList>);
 
-    void setImplicit() { m_selector->setImplicit(); }
+    void setImplicit() { m_selector.setImplicit(); }
 
-    CSSSelector::PseudoClass pseudoClass() const { return m_selector->pseudoClass(); }
+    CSSSelector::PseudoClass pseudoClass() const { return m_selector.pseudoClass(); }
 
     bool matchesPseudoElement() const;
 
-    bool isHostPseudoClass() const { return m_selector->isHostPseudoClass(); }
+    bool isHostPseudoClass() const { return m_selector.isHostPseudoClass(); }
 
     bool hasExplicitNestingParent() const;
     bool hasExplicitPseudoClassScope() const;
@@ -98,22 +95,19 @@ public:
     // special case, since it will be covered by this function once again.
     bool needsImplicitShadowCombinatorForMatching() const;
 
-    MutableCSSSelector* tagHistory() const { return m_tagHistory.get(); }
+    MutableCSSSelector* precedingInComplexSelector() const { return m_precedingInComplexSelector.get(); }
     MutableCSSSelector* leftmostSimpleSelector();
     const MutableCSSSelector* leftmostSimpleSelector() const;
     bool startsWithExplicitCombinator() const;
-    void setTagHistory(std::unique_ptr<MutableCSSSelector> selector) { m_tagHistory = WTFMove(selector); }
-    void clearTagHistory() { m_tagHistory.reset(); }
-    void insertTagHistory(CSSSelector::Relation before, std::unique_ptr<MutableCSSSelector>, CSSSelector::Relation after);
-    void appendTagHistory(CSSSelector::Relation, std::unique_ptr<MutableCSSSelector>);
-    void appendTagHistory(Combinator, std::unique_ptr<MutableCSSSelector>);
-    void appendTagHistoryAsRelative(std::unique_ptr<MutableCSSSelector>);
-    void prependTagSelector(const QualifiedName&, bool tagIsForNamespaceRule = false);
-    std::unique_ptr<MutableCSSSelector> releaseTagHistory();
+    void setPrecedingInComplexSelector(std::unique_ptr<MutableCSSSelector> selector) { m_precedingInComplexSelector = WTF::move(selector); }
+    void prependInComplexSelector(CSSSelector::Relation, std::unique_ptr<MutableCSSSelector>);
+    void prependInComplexSelectorAsRelative(std::unique_ptr<MutableCSSSelector>);
+    void appendTagInComplexSelector(const QualifiedName&, bool tagIsForNamespaceRule = false);
+    std::unique_ptr<MutableCSSSelector> releaseFromComplexSelector();
 
 private:
-    std::unique_ptr<CSSSelector> m_selector;
-    std::unique_ptr<MutableCSSSelector> m_tagHistory;
+    CSSSelector m_selector;
+    std::unique_ptr<MutableCSSSelector> m_precedingInComplexSelector;
 };
 
 // FIXME: WebKitUnknown is listed below as otherwise @supports does the wrong thing, but there ought

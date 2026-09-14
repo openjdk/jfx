@@ -31,14 +31,18 @@
 #include "KeyframeEffect.h"
 #include "KeyframeEffectStack.h"
 #include "StyleResolver.h"
+#include "StyleSingleAnimationRange.h"
 #include "Styleable.h"
 #include "WebAnimationUtilities.h"
 
 namespace WebCore {
 
 AnimationTimeline::AnimationTimeline(std::optional<WebAnimationTime> duration)
-    : m_duration(duration)
+#if ENABLE(THREADED_ANIMATIONS)
+    : m_acceleratedTimelineIdentifier(TimelineIdentifier::generate())
+#endif
 {
+    m_duration = duration;
 }
 
 AnimationTimeline::~AnimationTimeline() = default;
@@ -57,7 +61,7 @@ void AnimationTimeline::animationTimingDidChange(WebAnimation& animation)
         if (timeline && timeline.get() != this)
             timeline->removeAnimation(animation);
         else if (timeline.get() == this) {
-            if (RefPtr keyframeEffect = dynamicDowncast<KeyframeEffect>(animation.effect())) {
+            if (RefPtr keyframeEffect = animation.keyframeEffect()) {
                 if (auto styleable = keyframeEffect->targetStyleable())
                 styleable->animationWasAdded(animation);
             }
@@ -76,7 +80,7 @@ void AnimationTimeline::removeAnimation(WebAnimation& animation)
 {
     ASSERT(!animation.timeline() || animation.timeline() == this);
     m_animations.remove(animation);
-    if (RefPtr keyframeEffect = dynamicDowncast<KeyframeEffect>(animation.effect())) {
+    if (RefPtr keyframeEffect = animation.keyframeEffect()) {
         if (auto styleable = keyframeEffect->targetStyleable()) {
             styleable->animationWasRemoved(animation);
             if (auto* effectStack = styleable->keyframeEffectStack())
@@ -92,7 +96,7 @@ void AnimationTimeline::detachFromDocument()
 
     auto& animationsToRemove = m_animations;
     while (!animationsToRemove.isEmpty())
-        animationsToRemove.first()->remove();
+        Ref { animationsToRemove.first() }->remove();
 }
 
 void AnimationTimeline::suspendAnimations()
@@ -111,5 +115,45 @@ bool AnimationTimeline::animationsAreSuspended() const
 {
     return controller() && controller()->animationsAreSuspended();
 }
+
+Style::SingleAnimationRange AnimationTimeline::defaultRange() const
+{
+    return {
+        .start = { CSS::Keyword::Normal { } },
+        .end = { CSS::Keyword::Normal { } },
+    };
+}
+
+
+#if ENABLE(THREADED_ANIMATIONS)
+Ref<AcceleratedTimeline> AnimationTimeline::acceleratedRepresentation()
+{
+    ASSERT(canBeAccelerated());
+    if (m_acceleratedRepresentation)
+        return *m_acceleratedRepresentation;
+
+    auto acceleratedRepresentation = createAcceleratedRepresentation();
+    m_acceleratedRepresentation = acceleratedRepresentation.ptr();
+    return acceleratedRepresentation;
+}
+
+Ref<AcceleratedTimeline> AnimationTimeline::createAcceleratedRepresentation() const
+{
+    ASSERT_NOT_REACHED();
+    return AcceleratedTimeline::create(m_acceleratedTimelineIdentifier, 0_s);
+}
+
+void AnimationTimeline::runPostRenderingUpdateTasks()
+{
+    bool previousCanBeAccelerated = std::exchange(m_canBeAccelerated, computeCanBeAccelerated());
+    if (m_canBeAccelerated == previousCanBeAccelerated)
+        return;
+
+    for (const auto& animation : m_animations) {
+        if (RefPtr keyframeEffect = animation->keyframeEffect())
+            keyframeEffect->timelineAccelerationAbilityDidChange();
+    }
+}
+#endif
 
 } // namespace WebCore

@@ -28,6 +28,7 @@
 
 #if HAVE(WEBGPU_IMPLEMENTATION)
 
+#include "PlatformXR.h"
 #include "WebGPUConvertToBackingContext.h"
 #include "WebGPUDevice.h"
 #include "WebGPUTextureFormat.h"
@@ -36,8 +37,10 @@
 
 namespace WebCore::WebGPU {
 
+WTF_MAKE_TZONE_ALLOCATED_IMPL(XRProjectionLayerImpl);
+
 XRProjectionLayerImpl::XRProjectionLayerImpl(WebGPUPtr<WGPUXRProjectionLayer>&& projectionLayer, ConvertToBackingContext& convertToBackingContext)
-    : m_backing(WTFMove(projectionLayer))
+    : m_backing(WTF::move(projectionLayer))
     , m_convertToBackingContext(convertToBackingContext)
 {
 }
@@ -97,9 +100,18 @@ void XRProjectionLayerImpl::setDeltaPose(WebXRRigidTransform* pose)
 }
 
 // WebXRLayer
-void XRProjectionLayerImpl::startFrame(size_t frameIndex, MachSendRight&& colorBuffer, MachSendRight&& depthBuffer, MachSendRight&& completionSyncEvent, size_t reusableTextureIndex)
+void XRProjectionLayerImpl::startFrame(size_t frameIndex, MachSendRight&& colorBuffer, MachSendRight&& depthBuffer, MachSendRight&& completionSyncEvent, size_t reusableTextureIndex, PlatformXR::RateMapDescription&& rateMap)
 {
-    wgpuXRProjectionLayerStartFrame(m_backing.get(), frameIndex, WTFMove(colorBuffer), WTFMove(depthBuffer), WTFMove(completionSyncEvent), reusableTextureIndex);
+#if ENABLE(WEBXR)
+    wgpuXRProjectionLayerStartFrame(m_backing.get(), frameIndex, WTF::move(colorBuffer), WTF::move(depthBuffer), WTF::move(completionSyncEvent), reusableTextureIndex, rateMap.screenSize.width(), rateMap.screenSize.height(), WTF::move(rateMap.horizontalSamplesLeft), WTF::move(rateMap.horizontalSamplesRight), WTF::move(rateMap.verticalSamples));
+#else
+    UNUSED_PARAM(frameIndex);
+    UNUSED_PARAM(colorBuffer);
+    UNUSED_PARAM(depthBuffer);
+    UNUSED_PARAM(completionSyncEvent);
+    UNUSED_PARAM(reusableTextureIndex);
+    UNUSED_PARAM(rateMap);
+#endif
 }
 
 void XRProjectionLayerImpl::endFrame()

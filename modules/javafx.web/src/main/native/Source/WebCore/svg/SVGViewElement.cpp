@@ -31,7 +31,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGViewElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGViewElement);
 
 inline SVGViewElement::SVGViewElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -48,7 +48,7 @@ Ref<SVGViewElement> SVGViewElement::create(const QualifiedName& tagName, Documen
 void SVGViewElement::attributeChanged(const QualifiedName& name, const AtomString& oldValue, const AtomString& newValue, AttributeModificationReason attributeModificationReason)
 {
     SVGFitToViewBox::parseAttribute(name, newValue);
-    SVGZoomAndPan::parseAttribute(name, newValue);
+    SVGZoomAndPan::parseAttribute(*this, name, newValue);
     SVGElement::attributeChanged(name, oldValue, newValue, attributeModificationReason);
 }
 

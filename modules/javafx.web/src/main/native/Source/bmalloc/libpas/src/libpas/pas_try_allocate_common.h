@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2019-2021 Apple Inc. All rights reserved.
+ * Copyright (c) 2019-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -31,11 +31,15 @@
 #include "pas_heap_inlines.h"
 #include "pas_local_allocator_inlines.h"
 #include "pas_malloc_stack_logging.h"
+#include "pas_mmap_capability.h"
 #include "pas_primitive_heap_ref.h"
 #include "pas_probabilistic_guard_malloc_allocator.h"
 #include "pas_segregated_heap_inlines.h"
+#include "pas_stats.h"
 #include "pas_system_heap.h"
 #include "pas_utils.h"
+
+#if LIBPAS_ENABLED
 
 PAS_BEGIN_EXTERN_C;
 
@@ -166,7 +170,7 @@ pas_try_allocate_common_impl_slow(
     type = heap_ref->type;
     alignment = PAS_MAX(alignment, config.get_type_alignment(type));
 
-    if (PAS_UNLIKELY(pas_system_heap_is_enabled(config.kind))) {
+    if (PAS_UNLIKELY(pas_system_heap_should_supplant_bmalloc(config.kind))) {
         if (verbose)
             pas_log("System heap enabled, asking system heap.\n");
         result = pas_system_heap_allocate(size, alignment, allocation_mode);
@@ -216,7 +220,10 @@ pas_try_allocate_common_impl_slow(
             pas_physical_memory_transaction_begin(&transaction);
             pas_heap_lock_lock();
 
-            result = pas_large_heap_try_allocate(&heap->large_heap, size, alignment, allocation_mode, config.config_ptr, &transaction);
+            result = pas_large_heap_try_allocate_user_allocation(&heap->large_heap, size, alignment, allocation_mode, config.config_ptr, &transaction);
+
+            if (result.did_succeed)
+                PAS_RECORD_STAT_MALLOC(pas_stats_heap_type_large, size);
 
             pas_heap_lock_unlock();
         } while (!pas_physical_memory_transaction_end(&transaction));
@@ -328,5 +335,5 @@ typedef pas_allocation_result (*pas_try_allocate_common)(
 
 PAS_END_EXTERN_C;
 
+#endif /* LIBPAS_ENABLED */
 #endif /* PAS_TRY_ALLOCATE_COMMON_H */
-

@@ -34,21 +34,21 @@
 #include <WebCore/SharedBuffer.h>
 #include <WebCore/Timer.h>
 #include <wtf/CompletionHandler.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/TZoneMallocInlines.h>
 
 // This class triggers asynchronous loads independent of the networking context staying alive (i.e., auditing pingbacks).
 // The object just needs to live long enough to ensure the message was actually sent.
 // As soon as any callback is received from the ResourceHandle, this class will cancel the load and delete itself.
 
-class PingHandle final : public RefCounted<PingHandle>, private WebCore::ResourceHandleClient {
+class PingHandle final : public RefCountedAndCanMakeWeakPtr<PingHandle>, private WebCore::ResourceHandleClient {
     WTF_MAKE_TZONE_ALLOCATED_INLINE(PingHandle);
     WTF_MAKE_NONCOPYABLE(PingHandle);
 public:
     static void start(WebCore::NetworkingContext* networkingContext, const WebCore::ResourceRequest& request, bool shouldUseCredentialStorage, bool shouldFollowRedirects, CompletionHandler<void(const WebCore::ResourceError&, const WebCore::ResourceResponse&)>&& completionHandler)
     {
         Ref handle = adoptRef(*new PingHandle(request, shouldUseCredentialStorage, shouldFollowRedirects));
-        handle->start(networkingContext, [handle, completionHandler = WTFMove(completionHandler)](const WebCore::ResourceError& error, const WebCore::ResourceResponse& response) mutable {
+        handle->start(networkingContext, [handle, completionHandler = WTF::move(completionHandler)](const WebCore::ResourceError& error, const WebCore::ResourceResponse& response) mutable {
             completionHandler(error, response);
         });
     }
@@ -74,7 +74,7 @@ private:
 
     void start(WebCore::NetworkingContext* networkingContext, CompletionHandler<void(const WebCore::ResourceError&, const WebCore::ResourceResponse&)>&& completionHandler)
     {
-        m_completionHandler = WTFMove(completionHandler);
+        m_completionHandler = WTF::move(completionHandler);
         bool defersLoading = false;
         bool shouldContentSniff = false;
         m_handle = WebCore::ResourceHandle::create(networkingContext, m_currentRequest, this, defersLoading, shouldContentSniff, WebCore::ContentEncodingSniffingPolicy::Default, nullptr, false);
@@ -86,7 +86,7 @@ private:
 
     void willSendRequestAsync(WebCore::ResourceHandle*, WebCore::ResourceRequest&& request, WebCore::ResourceResponse&&, CompletionHandler<void(WebCore::ResourceRequest&&)>&& completionHandler) final
     {
-        m_currentRequest = WTFMove(request);
+        m_currentRequest = WTF::move(request);
         if (m_shouldFollowRedirects) {
             completionHandler(WebCore::ResourceRequest { m_currentRequest });
             return;

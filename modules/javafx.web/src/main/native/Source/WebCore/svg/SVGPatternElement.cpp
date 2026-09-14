@@ -42,12 +42,13 @@
 #include "SVGRenderSupport.h"
 #include "SVGStringList.h"
 #include "SVGTransformable.h"
+#include "Settings.h"
 #include <wtf/NeverDestroyed.h>
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(SVGPatternElement);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(SVGPatternElement);
 
 inline SVGPatternElement::SVGPatternElement(const QualifiedName& tagName, Document& document)
     : SVGElement(tagName, document, makeUniqueRef<PropertyRegistry>(*this))
@@ -57,8 +58,9 @@ inline SVGPatternElement::SVGPatternElement(const QualifiedName& tagName, Docume
 {
     ASSERT(hasTagName(SVGNames::patternTag));
 
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::xAttr, &SVGPatternElement::m_x>();
         PropertyRegistry::registerProperty<SVGNames::yAttr, &SVGPatternElement::m_y>();
         PropertyRegistry::registerProperty<SVGNames::widthAttr, &SVGPatternElement::m_width>();
@@ -66,7 +68,7 @@ inline SVGPatternElement::SVGPatternElement(const QualifiedName& tagName, Docume
         PropertyRegistry::registerProperty<SVGNames::patternUnitsAttr, SVGUnitTypes::SVGUnitType, &SVGPatternElement::m_patternUnits>();
         PropertyRegistry::registerProperty<SVGNames::patternContentUnitsAttr, SVGUnitTypes::SVGUnitType, &SVGPatternElement::m_patternContentUnits>();
         PropertyRegistry::registerProperty<SVGNames::patternTransformAttr, &SVGPatternElement::m_patternTransform>();
-    });
+    }
 }
 
 Ref<SVGPatternElement> SVGPatternElement::create(const QualifiedName& tagName, Document& document)
@@ -79,13 +81,13 @@ void SVGPatternElement::attributeChanged(const QualifiedName& name, const AtomSt
     auto parseError = SVGParsingError::None;
     switch (name.nodeName()) {
     case AttributeNames::patternUnitsAttr: {
-        auto propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(newValue);
+        auto propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(*this, newValue);
         if (propertyValue > 0)
             Ref { m_patternUnits }->setBaseValInternal<SVGUnitTypes::SVGUnitType>(propertyValue);
         break;
     }
     case AttributeNames::patternContentUnitsAttr: {
-        auto propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(newValue);
+        auto propertyValue = SVGPropertyTraits<SVGUnitTypes::SVGUnitType>::fromString(*this, newValue);
         if (propertyValue > 0)
             Ref { m_patternContentUnits }->setBaseValInternal<SVGUnitTypes::SVGUnitType>(propertyValue);
         break;
@@ -154,8 +156,8 @@ void SVGPatternElement::childrenChanged(const ChildChange& change)
 RenderPtr<RenderElement> SVGPatternElement::createElementRenderer(RenderStyle&& style, const RenderTreePosition&)
 {
     if (document().settings().layerBasedSVGEngineEnabled())
-    return createRenderer<RenderSVGResourcePattern>(*this, WTFMove(style));
-    return createRenderer<LegacyRenderSVGResourcePattern>(*this, WTFMove(style));
+        return createRenderer<RenderSVGResourcePattern>(*this, WTF::move(style));
+    return createRenderer<LegacyRenderSVGResourcePattern>(*this, WTF::move(style));
 }
 
 void SVGPatternElement::collectPatternAttributes(PatternAttributes& attributes) const

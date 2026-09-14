@@ -27,7 +27,6 @@
 #include "PageConfiguration.h"
 
 #include "AlternativeTextClient.h"
-#include "ApplicationCacheStorage.h"
 #include "AttachmentElementClient.h"
 #include "BackForwardClient.h"
 #include "BadgeClient.h"
@@ -39,6 +38,7 @@
 #include "CryptoClient.h"
 #include "DatabaseProvider.h"
 #include "DiagnosticLoggingClient.h"
+#include "DocumentSyncClient.h"
 #include "DragClient.h"
 #include "EditorClient.h"
 #include "Frame.h"
@@ -48,7 +48,6 @@
 #include "ModelPlayerProvider.h"
 #include "PerformanceLoggingClient.h"
 #include "PluginInfoProvider.h"
-#include "ProcessSyncClient.h"
 #include "ProgressTrackerClient.h"
 #include "RemoteFrameClient.h"
 #include "ScreenOrientationManager.h"
@@ -105,41 +104,41 @@ PageConfiguration::PageConfiguration(
 #endif
     UniqueRef<ChromeClient>&& chromeClient,
     UniqueRef<CryptoClient>&& cryptoClient,
-    UniqueRef<ProcessSyncClient>&& processSyncClient
+    UniqueRef<DocumentSyncClient>&& documentSyncClient
 #if HAVE(DIGITAL_CREDENTIALS_UI)
     , Ref<CredentialRequestCoordinatorClient>&& credentialRequestCoordinatorClient
 #endif
 )
     : identifier(identifier)
     , sessionID(sessionID)
-    , chromeClient(WTFMove(chromeClient))
+    , chromeClient(WTF::move(chromeClient))
 #if ENABLE(CONTEXT_MENUS)
-    , contextMenuClient(WTFMove(contextMenuClient))
+    , contextMenuClient(WTF::move(contextMenuClient))
 #endif
-    , editorClient(WTFMove(editorClient))
-    , socketProvider(WTFMove(socketProvider))
+    , editorClient(WTF::move(editorClient))
+    , socketProvider(WTF::move(socketProvider))
 #if ENABLE(APPLE_PAY)
-    , paymentCoordinatorClient(WTFMove(paymentCoordinatorClient))
+    , paymentCoordinatorClient(WTF::move(paymentCoordinatorClient))
 #endif
-    , webRTCProvider(WTFMove(webRTCProvider))
-    , progressTrackerClient(WTFMove(progressTrackerClient))
-    , backForwardClient(WTFMove(backForwardClient))
-    , cookieJar(WTFMove(cookieJar))
-    , mainFrameCreationParameters(WTFMove(mainFrameCreationParameters))
-    , mainFrameIdentifier(WTFMove(mainFrameIdentifier))
-    , mainFrameOpener(WTFMove(mainFrameOpener))
-    , cacheStorageProvider(WTFMove(cacheStorageProvider))
-    , userContentProvider(WTFMove(userContentProvider))
-    , broadcastChannelRegistry(WTFMove(broadcastChannelRegistry))
-    , speechRecognitionProvider(WTFMove(speechRecognitionProvider))
-    , storageProvider(WTFMove(storageProvider))
-    , modelPlayerProvider(WTFMove(modelPlayerProvider))
-    , badgeClient(WTFMove(badgeClient))
-    , historyItemClient(WTFMove(historyItemClient))
-    , cryptoClient(WTFMove(cryptoClient))
-    , processSyncClient(WTFMove(processSyncClient))
+    , webRTCProvider(WTF::move(webRTCProvider))
+    , progressTrackerClient(WTF::move(progressTrackerClient))
+    , backForwardClient(WTF::move(backForwardClient))
+    , cookieJar(WTF::move(cookieJar))
+    , mainFrameCreationParameters(WTF::move(mainFrameCreationParameters))
+    , mainFrameIdentifier(WTF::move(mainFrameIdentifier))
+    , mainFrameOpener(WTF::move(mainFrameOpener))
+    , cacheStorageProvider(WTF::move(cacheStorageProvider))
+    , userContentProvider(WTF::move(userContentProvider))
+    , broadcastChannelRegistry(WTF::move(broadcastChannelRegistry))
+    , speechRecognitionProvider(WTF::move(speechRecognitionProvider))
+    , storageProvider(WTF::move(storageProvider))
+    , modelPlayerProvider(WTF::move(modelPlayerProvider))
+    , badgeClient(WTF::move(badgeClient))
+    , historyItemClient(WTF::move(historyItemClient))
+    , cryptoClient(WTF::move(cryptoClient))
+    , documentSyncClient(WTF::move(documentSyncClient))
 #if HAVE(DIGITAL_CREDENTIALS_UI)
-    , credentialRequestCoordinatorClient(WTFMove(credentialRequestCoordinatorClient))
+    , credentialRequestCoordinatorClient(WTF::move(credentialRequestCoordinatorClient))
 #endif
 {
 }

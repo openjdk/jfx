@@ -25,10 +25,12 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(ASSEMBLER)
 
-#include "RegisterAtOffset.h"
-#include "RegisterSet.h"
+#include <JavaScriptCore/RegisterAtOffset.h>
+#include <JavaScriptCore/RegisterSet.h>
 #include <wtf/FixedVector.h>
 
 namespace JSC {
@@ -68,6 +70,11 @@ public:
 
     static const RegisterAtOffsetList& llintBaselineCalleeSaveRegisters(); // Registers and Offsets saved and used by the LLInt.
     static const RegisterAtOffsetList& dfgCalleeSaveRegisters(); // Registers and Offsets saved and used by DFG.
+#if ENABLE(WEBASSEMBLY)
+    static const RegisterAtOffsetList& wasmPinnedRegisters();
+    static const RegisterAtOffsetList& ipintCalleeSaveRegisters(); // Registers and Offsets saved and used by IPInt.
+    static const RegisterAtOffsetList& bbqCalleeSaveRegisters(); // Registers and Offsets saved and used by BBQ.
+#endif
 
 private:
     FixedVector<RegisterAtOffset> m_registers;

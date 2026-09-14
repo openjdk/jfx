@@ -25,7 +25,8 @@
 
 #pragma once
 
-#include "BytecodeIndex.h"
+#include <JavaScriptCore/BytecodeIndex.h>
+#include <JavaScriptCore/JSExportMacros.h>
 
 #include <limits.h>
 #include <wtf/HashMap.h>
@@ -145,6 +146,8 @@ public:
 #endif
     }
 
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
     // The inline depth is the depth of the inline stack, so 1 = not inlined,
     // 2 = inlined one deep, etc.
     unsigned inlineDepth() const;
@@ -172,7 +175,7 @@ public:
     // Get the inline stack. This is slow, and is intended for debugging only.
     Vector<CodeOrigin> inlineStack() const;
 
-    JS_EXPORT_PRIVATE void dump(PrintStream&) const;
+    JS_EXPORT_PRIVATE void dump(PrintStream&, bool inIonGraph = false) const;
     void dumpInContext(PrintStream&, DumpContext*) const;
 
     BytecodeIndex bytecodeIndex() const
@@ -286,12 +289,6 @@ inline bool CodeOrigin::operator==(const CodeOrigin& other) const
         && inlineCallFrame() == other.inlineCallFrame();
 }
 
-struct CodeOriginHash {
-    static unsigned hash(const CodeOrigin& key) { return key.hash(); }
-    static bool equal(const CodeOrigin& a, const CodeOrigin& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 struct CodeOriginApproximateHash {
     static unsigned hash(const CodeOrigin& key) { return key.approximateHash(); }
     static bool equal(const CodeOrigin& a, const CodeOrigin& b) { return a.isApproximatelyEqualTo(b); }
@@ -301,9 +298,6 @@ struct CodeOriginApproximateHash {
 } // namespace JSC
 
 namespace WTF {
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::CodeOrigin> : JSC::CodeOriginHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::CodeOrigin> : SimpleClassHashTraits<JSC::CodeOrigin> {

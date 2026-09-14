@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "HTMLCollection.h"
-#include "LiveNodeListInlines.h"
-#include "TreeScopeInlines.h"
+#include <WebCore/HTMLCollection.h>
+#include <WebCore/LiveNodeListInlines.h>
+#include <WebCore/TreeScopeInlines.h>
 
 namespace WebCore {
 
@@ -91,11 +91,6 @@ inline NodeListInvalidationType HTMLCollection::invalidationType() const
     return static_cast<NodeListInvalidationType>(m_invalidationType);
 }
 
-inline CollectionType HTMLCollection::type() const
-{
-    return static_cast<CollectionType>(m_collectionType);
-}
-
 inline Document& HTMLCollection::document() const
 {
     return m_ownerNode->document();
@@ -131,7 +126,7 @@ inline void HTMLCollection::setNamedItemCache(std::unique_ptr<CollectionNamedEle
     cache->didPopulate();
     {
         Locker locker { m_namedElementCacheAssignmentLock };
-        m_namedElementCache = WTFMove(cache);
+        m_namedElementCache = WTF::move(cache);
     }
     protectedDocument()->collectionCachedIdNameMap(*this);
 }

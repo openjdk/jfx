@@ -72,6 +72,7 @@ enum class RuleMatchingBehavior: uint8_t {
 
 namespace Style {
 
+class CustomFunctionRegistry;
 struct BuilderContext;
 struct CachedMatchResult;
 struct ResolvedStyle;
@@ -89,10 +90,10 @@ struct ResolutionContext {
     bool isSVGUseTreeRoot { false };
 };
 
-using KeyframesRuleMap = HashMap<AtomString, RefPtr<StyleRuleKeyframes>>;
+using KeyframesRuleMap = HashMap<AtomString, Ref<StyleRuleKeyframes>>;
 
 class Resolver : public RefCounted<Resolver>, public CanMakeSingleThreadWeakPtr<Resolver> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(Resolver);
+    WTF_MAKE_TZONE_ALLOCATED(Resolver);
 public:
     // Style resolvers are shared between shadow trees with identical styles. That's why we don't simply provide a Style::Scope.
     enum class ScopeType : bool { Document, ShadowTree };
@@ -104,7 +105,7 @@ public:
 
     ResolvedStyle styleForElement(Element&, const ResolutionContext&, RuleMatchingBehavior = RuleMatchingBehavior::MatchAllRules);
 
-    void keyframeStylesForAnimation(Element&, const RenderStyle& elementStyle, const ResolutionContext&, BlendingKeyframes&, const TimingFunction*);
+    bool keyframeStylesForAnimation(Element&, const RenderStyle& elementStyle, const ResolutionContext&, BlendingKeyframes&, const TimingFunction*) const;
 
     WEBCORE_EXPORT std::optional<ResolvedStyle> styleForPseudoElement(Element&, const PseudoElementRequest&, const ResolutionContext&);
 
@@ -117,7 +118,7 @@ public:
 
     ScopeType scopeType() const { return m_scopeType; }
 
-    void appendAuthorStyleSheets(std::span<const RefPtr<CSSStyleSheet>>);
+    void appendAuthorStyleSheets(std::span<const Ref<CSSStyleSheet>>);
 
     ScopeRuleSets& ruleSets() { return m_ruleSets; }
     const ScopeRuleSets& ruleSets() const { return m_ruleSets; }
@@ -126,8 +127,8 @@ public:
 
     void addCurrentSVGFontFaceRules();
 
-    std::unique_ptr<RenderStyle> styleForKeyframe(Element&, const RenderStyle& elementStyle, const ResolutionContext&, const StyleRuleKeyframe&, BlendingKeyframe&);
-    bool isAnimationNameValid(const String&);
+    std::unique_ptr<RenderStyle> styleForKeyframe(Element&, const RenderStyle& elementStyle, const ResolutionContext&, const StyleRuleKeyframe&, BlendingKeyframe&) const;
+    bool isAnimationNameValid(const String&) const;
 
     void setViewTransitionStyles(CSSSelector::PseudoElement, const AtomString&, Ref<MutableStyleProperties>);
 
@@ -139,8 +140,8 @@ public:
         AllButEmptyCSSRules = UAAndUserCSSRules | AuthorCSSRules,
         AllCSSRules         = AllButEmptyCSSRules | EmptyCSSRules,
     };
-    Vector<RefPtr<const StyleRule>> styleRulesForElement(const Element*, unsigned rulesToInclude = AllButEmptyCSSRules);
-    Vector<RefPtr<const StyleRule>> pseudoStyleRulesForElement(const Element*, const std::optional<Style::PseudoElementRequest>&, unsigned rulesToInclude = AllButEmptyCSSRules);
+    Vector<Ref<const StyleRule>> styleRulesForElement(const Element*, unsigned rulesToInclude = AllButEmptyCSSRules);
+    Vector<Ref<const StyleRule>> pseudoStyleRulesForElement(const Element*, const std::optional<Style::PseudoElementRequest>&, unsigned rulesToInclude = AllButEmptyCSSRules);
 
     bool hasSelectorForId(const AtomString&) const;
     bool hasSelectorForAttribute(const Element&, const AtomString&) const;
@@ -152,6 +153,9 @@ public:
     static void addUserAgentKeyframeStyle(Ref<StyleRuleKeyframes>&&);
     void addKeyframeStyle(Ref<StyleRuleKeyframes>&&);
     Vector<Ref<StyleRuleKeyframe>> keyframeRulesForName(const AtomString&, const TimingFunction*) const;
+
+    const CustomFunctionRegistry* customFunctionRegistry() const;
+    CustomFunctionRegistry& ensureCustomFunctionRegistry();
 
     RefPtr<StyleRuleViewTransition> viewTransitionRule() const;
 
@@ -176,7 +180,7 @@ private:
     class State;
 
     State initializeStateAndStyle(const Element&, const ResolutionContext&, std::unique_ptr<RenderStyle>&& initialStyle = { });
-    BuilderContext builderContext(State&);
+    BuilderContext builderContext(State&) const;
 
     void applyMatchedProperties(State&, const MatchResult&, PropertyCascade::IncludedProperties&&);
     void setGlobalStateAfterApplyingProperties(const BuilderState&);
@@ -188,8 +192,10 @@ private:
 
     KeyframesRuleMap m_keyframesRuleMap;
 
-    MQ::MediaQueryEvaluator m_mediaQueryEvaluator;
+    std::unique_ptr<Style::CustomFunctionRegistry> m_customFunctionRegistry;
+
     std::unique_ptr<RenderStyle> m_rootDefaultStyle;
+    MQ::MediaQueryEvaluator m_mediaQueryEvaluator;
 
     InspectorCSSOMWrappers m_inspectorCSSOMWrappers;
 

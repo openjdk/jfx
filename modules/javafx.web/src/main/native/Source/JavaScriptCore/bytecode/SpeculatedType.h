@@ -28,9 +28,9 @@
 
 #pragma once
 
-#include "CPU.h"
-#include "JSCJSValue.h"
-#include "TypedArrayType.h"
+#include <JavaScriptCore/CPU.h>
+#include <JavaScriptCore/JSCJSValue.h>
+#include <JavaScriptCore/TypedArrayType.h>
 #include <wtf/PrintStream.h>
 
 namespace JSC {
@@ -244,6 +244,11 @@ inline bool isFunctionSpeculation(SpeculatedType value)
 inline bool isProxyObjectSpeculation(SpeculatedType value)
 {
     return value == SpecProxyObject;
+}
+
+inline bool isSetObjectSpeculation(SpeculatedType value)
+{
+    return value == SpecSetObject;
 }
 
 inline bool isGlobalProxySpeculation(SpeculatedType value)

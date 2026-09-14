@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2019, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -389,8 +389,7 @@ HRESULT CSink::DoRenderSampleInternal(IMediaSample *pMediaSample)
     if (pSample == NULL)
         return S_FALSE;
 
-    pBuffer = pSample->m_pGstBuffer;
-    pSample->m_pGstBuffer = NULL;
+    pBuffer = pSample->TakeGstBuffer();
     if (pBuffer == NULL)
         return S_FALSE;
 

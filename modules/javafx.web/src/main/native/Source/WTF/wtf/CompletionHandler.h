@@ -52,12 +52,27 @@ public:
 
     CompletionHandler() = default;
 
-    template<typename CallableType, class = typename std::enable_if<std::is_rvalue_reference<CallableType&&>::value>::type>
+    template<typename CallableType>
+        requires (std::is_rvalue_reference_v<CallableType&&>)
     CompletionHandler(CallableType&& callable, ThreadLikeAssertion callThread = CompletionHandlerCallThread::ConstructionThread)
         : m_function(std::forward<CallableType>(callable))
-        , m_callThread(WTFMove(callThread))
+        , m_callThread(WTF::move(callThread))
     {
     }
+
+#if defined(__APPLE__)
+    // Always use C++ lambdas to create a WTF::CompletionHandler in Objective-C++.
+    // Always use Swift closures (implicitly as Objective-C blocks) to create a WTF::CompletionHandler in Swift.
+#ifndef __swift__
+    CompletionHandler(Out (^block)(In... args), ThreadLikeAssertion = CompletionHandlerCallThread::ConstructionThread) = delete;
+#else
+    CompletionHandler(Out (^block)(In... args), ThreadLikeAssertion callThread = CompletionHandlerCallThread::ConstructionThread)
+        : m_function(block)
+        , m_callThread(WTF::move(callThread))
+    {
+    }
+#endif
+#endif // defined(__APPLE__)
 
     CompletionHandler(CompletionHandler&&) = default;
     CompletionHandler& operator=(CompletionHandler&&) = default;
@@ -70,7 +85,7 @@ public:
 
     explicit operator bool() const { return !!m_function; }
 
-    Impl* leak() { return m_function.leak(); }
+    [[nodiscard]] Impl* leak() { return m_function.leak(); }
 
     Out operator()(In... in)
     {
@@ -95,10 +110,11 @@ public:
     using OutType = Out;
     using InTypes = std::tuple<In...>;
 
-    template<typename CallableType, class = typename std::enable_if<std::is_rvalue_reference<CallableType&&>::value>::type>
+    template<typename CallableType>
+        requires (std::is_rvalue_reference_v<CallableType&&>)
     CompletionHandlerWithFinalizer(CallableType&& callable, Function<void(Function<Out(In...)>&)>&& finalizer, ThreadLikeAssertion callThread = CompletionHandlerCallThread::ConstructionThread)
         : m_function(std::forward<CallableType>(callable))
-        , m_finalizer(WTFMove(finalizer))
+        , m_finalizer(WTF::move(finalizer))
         , m_callThread(callThread)
     {
     }
@@ -136,7 +152,7 @@ class CallableWrapper<CompletionHandler<Out(In...)>, Out, In...> : public Callab
     WTF_DEPRECATED_MAKE_FAST_ALLOCATED(CallableWrapper);
 public:
     explicit CallableWrapper(CompletionHandler<Out(In...)>&& completionHandler)
-        : m_completionHandler(WTFMove(completionHandler))
+        : m_completionHandler(WTF::move(completionHandler))
     {
         RELEASE_ASSERT(m_completionHandler);
     }
@@ -153,7 +169,7 @@ public:
     CompletionHandlerCallingScope() = default;
 
     CompletionHandlerCallingScope(CompletionHandler<void()>&& completionHandler)
-        : m_completionHandler(WTFMove(completionHandler))
+        : m_completionHandler(WTF::move(completionHandler))
     { }
 
     ~CompletionHandlerCallingScope()
@@ -165,7 +181,7 @@ public:
     CompletionHandlerCallingScope(CompletionHandlerCallingScope&&) = default;
     CompletionHandlerCallingScope& operator=(CompletionHandlerCallingScope&&) = default;
 
-    CompletionHandler<void()> release() { return WTFMove(m_completionHandler); }
+    CompletionHandler<void()> release() { return WTF::move(m_completionHandler); }
 
 private:
     CompletionHandler<void()> m_completionHandler;

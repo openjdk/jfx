@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2024 Igalia S.L.
+ * Copyright (C) 2007 Apple Inc. All rights reserved.
+ * Copyright (C) 2018 Sony Interactive Entertainment Inc.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,9 +26,8 @@
 
 #pragma once
 
-#include "AuthenticationChallengeBase.h"
-#include "AuthenticationClient.h"
-#include <wtf/RefPtr.h>
+#include <WebCore/AuthenticationChallengeBase.h>
+#include <WebCore/AuthenticationClient.h>
 
 namespace WebCore {
 

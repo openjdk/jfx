@@ -49,7 +49,9 @@ class StringCallback;
 
 class DataTransferItem : public RefCounted<DataTransferItem> {
 public:
-    static Ref<DataTransferItem> create(WeakPtr<DataTransferItemList>&&, const String&);
+    enum class Kind : uint8_t { String, File };
+
+    static Ref<DataTransferItem> create(WeakPtr<DataTransferItemList>&&, const String&, Kind);
     static Ref<DataTransferItem> create(WeakPtr<DataTransferItemList>&&, const String&, Ref<File>&&);
 
     ~DataTransferItem();
@@ -57,7 +59,7 @@ public:
     RefPtr<File> file() { return m_file; }
     void clearListAndPutIntoDisabledMode();
 
-    bool isFile() const { return m_file; }
+    bool isFile() const;
     String kind() const;
     String type() const;
     void getAsString(Document&, RefPtr<StringCallback>&&) const;
@@ -65,13 +67,14 @@ public:
     RefPtr<FileSystemEntry> getAsEntry(ScriptExecutionContext&) const;
 
 private:
-    DataTransferItem(WeakPtr<DataTransferItemList>&&, const String&);
+    DataTransferItem(WeakPtr<DataTransferItemList>&&, const String& type, Kind);
     DataTransferItem(WeakPtr<DataTransferItemList>&&, const String&, Ref<File>&&);
 
     bool isInDisabledMode() const { return !m_list; }
 
     WeakPtr<DataTransferItemList> m_list;
     const String m_type;
+    Kind m_kind { Kind::String };
     RefPtr<File> m_file;
 };
 

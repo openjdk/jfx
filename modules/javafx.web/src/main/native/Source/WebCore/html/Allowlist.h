@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "SecurityOriginData.h"
+#include <WebCore/SecurityOriginData.h>
 
 namespace WebCore {
 
@@ -43,13 +43,13 @@ public:
     {
     }
     explicit Allowlist(HashSet<SecurityOriginData>&& origins)
-        : m_origins(WTFMove(origins))
+        : m_origins(WTF::move(origins))
     {
     }
 
     using OriginsVariant = Variant<HashSet<SecurityOriginData>, AllowAllOrigins>;
     explicit Allowlist(OriginsVariant&& origins)
-        : m_origins(WTFMove(origins))
+        : m_origins(WTF::move(origins))
     {
     }
     const OriginsVariant& origins() const { return m_origins; }

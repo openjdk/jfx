@@ -59,7 +59,7 @@ struct GradientAttributes {
 
     void setStops(GradientColorStops&& value)
     {
-        m_stops = WTFMove(value);
+        m_stops = WTF::move(value);
     }
 
     bool hasSpreadMethod() const { return m_spreadMethodSet; }

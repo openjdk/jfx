@@ -20,7 +20,6 @@
 
 [
     JSCustomMarkFunction,
-    JSGenerateToJSObject,
     JSGenerateToNativeObject,
     Exposed=Window
 ] interface Attr : Node {
@@ -34,5 +33,5 @@
 
     readonly attribute boolean specified; // Useless; always returns true.
 
-    [EnabledByDeprecatedGlobalSetting=AttrStyleEnabled] readonly attribute CSSStyleProperties style;
+    [EnabledByDeprecatedGlobalSetting=AttrStyleEnabled] readonly attribute CSSStyleProperties? style;
 };

@@ -25,7 +25,8 @@
 
 [
     EnabledBySetting=SpeechSynthesisAPIEnabled,
-    Conditional=SPEECH_SYNTHESIS
+    Conditional=SPEECH_SYNTHESIS,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary SpeechSynthesisErrorEventInit : SpeechSynthesisEventInit {
     required SpeechSynthesisErrorCode error;
 };

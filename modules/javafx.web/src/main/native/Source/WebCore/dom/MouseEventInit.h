@@ -25,17 +25,21 @@
 
 #pragma once
 
-#include "EventTargetInlines.h"
-#include "MouseRelatedEvent.h"
+#include <WebCore/EventModifierInit.h>
+#include <WebCore/EventTargetInlines.h>
 
 namespace WebCore {
 
-struct MouseEventInit : MouseRelatedEventInit {
-    int clientX { 0 };
-    int clientY { 0 };
+struct MouseEventInit : EventModifierInit {
+    double screenX { 0 };
+    double screenY { 0 };
+    double clientX { 0 };
+    double clientY { 0 };
     int16_t button { 0 };
     unsigned short buttons { 0 };
     RefPtr<EventTarget> relatedTarget;
+    double movementX { 0 };
+    double movementY { 0 };
 };
 
 }

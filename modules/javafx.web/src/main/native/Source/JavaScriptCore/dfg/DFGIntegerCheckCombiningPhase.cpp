@@ -52,12 +52,6 @@ public:
     };
 
     struct RangeKey {
-        struct Hash {
-            static unsigned hash(const RangeKey& key) { return key.hash(); }
-            static bool equal(const RangeKey& a, const RangeKey& b) { return a == b; }
-            static constexpr bool safeToCompareToEmptyOrDeleted = false;
-        };
-
         static RangeKey addition(Edge edge)
         {
             RangeKey result;
@@ -376,7 +370,7 @@ private:
                 nodeIndex, origin, jsNumber(addend), source.useKind()));
     }
 
-    using RangeMap = UncheckedKeyHashMap<GenericHashKey<RangeKey, RangeKey::Hash>, Range>;
+    using RangeMap = UncheckedKeyHashMap<GenericHashKey<RangeKey>, Range>;
     RangeMap m_map;
 
     InsertionSet m_insertionSet;

@@ -32,7 +32,9 @@
     constructor(StaticRangeInit init);
 };
 
-dictionary StaticRangeInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary StaticRangeInit {
     required Node startContainer;
     required unsigned long startOffset;
     required Node endContainer;

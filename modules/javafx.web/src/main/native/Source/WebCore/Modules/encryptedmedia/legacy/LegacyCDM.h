@@ -27,7 +27,7 @@
 
 #if ENABLE(LEGACY_ENCRYPTED_MEDIA)
 
-#include "LegacyCDMSession.h"
+#include <WebCore/LegacyCDMSession.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/Forward.h>
 #include <wtf/Function.h>

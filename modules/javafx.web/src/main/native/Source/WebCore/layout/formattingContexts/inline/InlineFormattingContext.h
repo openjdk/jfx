@@ -25,13 +25,13 @@
 
 #pragma once
 
-#include "InlineDisplayContent.h"
 #include "InlineFormattingConstraints.h"
 #include "InlineFormattingUtils.h"
-#include "InlineLayoutState.h"
-#include "InlineQuirks.h"
 #include "IntrinsicWidthHandler.h"
-#include "LayoutIntegrationUtils.h"
+#include <WebCore/InlineDisplayContent.h>
+#include <WebCore/InlineLayoutState.h>
+#include <WebCore/InlineQuirks.h>
+#include <WebCore/LayoutIntegrationUtils.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
@@ -50,16 +50,19 @@ struct InlineLayoutResult {
     };
     Range range { Range::Full };
     bool didDiscardContent { false };
+
+    WTF_MAKE_TZONE_ALLOCATED(InlineLayoutResult);
 };
 
 // This class implements the layout logic for inline formatting context.
 // https://www.w3.org/TR/CSS22/visuren.html#inline-formatting
 class InlineFormattingContext {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(InlineFormattingContext);
+    WTF_MAKE_TZONE_ALLOCATED(InlineFormattingContext);
 public:
     InlineFormattingContext(const ElementBox& formattingContextRoot, LayoutState&, BlockLayoutState& parentBlockLayoutState);
 
-    InlineLayoutResult layout(const ConstraintsForInlineContent&, InlineDamage* = nullptr);
+    // Nullptr signals that there was no actual inline content to lay out and no lines were generated.
+    std::unique_ptr<InlineLayoutResult> layout(const ConstraintsForInlineContent&, InlineDamage* = nullptr);
 
     std::pair<LayoutUnit, LayoutUnit> minimumMaximumContentSize(InlineDamage* = nullptr);
     LayoutUnit minimumContentSize(InlineDamage* = nullptr);
@@ -82,16 +85,16 @@ public:
     const IntegrationUtils& integrationUtils() const { return m_integrationUtils; }
 
 private:
-    InlineLayoutResult lineLayout(AbstractLineBuilder&, const InlineItemList&, InlineItemRange, std::optional<PreviousLine>, const ConstraintsForInlineContent&, const InlineDamage* = nullptr);
+    UniqueRef<InlineLayoutResult> lineLayout(AbstractLineBuilder&, const InlineItemList&, InlineItemRange, std::optional<PreviousLine>, const ConstraintsForInlineContent&, const InlineDamage* = nullptr);
     void layoutFloatContentOnly(const ConstraintsForInlineContent&);
 
     void collectContentIfNeeded();
-    InlineRect createDisplayContentForInlineContent(const LineBox&, const LineLayoutResult&, const ConstraintsForInlineContent&, InlineDisplay::Content&, size_t& numberOfPreviousLContentfulLines);
-    void updateInlineLayoutStateWithLineLayoutResult(const LineLayoutResult&, const InlineRect& lineLogicalRect, const FloatingContext&);
+    InlineRect createDisplayContentForInlineContent(const LineBox&, const LineLayoutResult&, const ConstraintsForInlineContent&, InlineDisplay::Content&);
+    void updateLayoutStateWithLineLayoutResult(const LineLayoutResult&, const InlineRect& lineLogicalRect, const FloatingContext&);
     void updateBoxGeometryForPlacedFloats(const LineLayoutResult::PlacedFloatList&);
     void resetBoxGeometriesForDiscardedContent(const InlineItemRange& discardedRange, const LineLayoutResult::SuspendedFloatList& suspendedFloats);
     bool createDisplayContentForLineFromCachedContent(const ConstraintsForInlineContent&, InlineLayoutResult&);
-    void createDisplayContentForEmptyInlineContent(const ConstraintsForInlineContent&, InlineLayoutResult&);
+    bool createDisplayContentForEmptyInlineContent(const ConstraintsForInlineContent&, const InlineItemList&, InlineLayoutResult&);
     void initializeInlineLayoutState(const LayoutState&);
     void rebuildInlineItemListIfNeeded(InlineDamage*);
 

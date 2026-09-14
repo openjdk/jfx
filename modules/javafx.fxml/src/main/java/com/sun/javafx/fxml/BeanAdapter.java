@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -652,12 +652,12 @@ public class BeanAdapter extends AbstractMap<String, Object> {
     }
 
     /**
-     * Determines the type of a list item.
+     * Determines the type of a collection.
      *
-     * @param listType
+     * @param collectionType
      */
-    public static Class<?> getListItemType(Type listType) {
-        Type itemType = getGenericListItemType(listType);
+    public static Class<?> getCollectionItemType(Type collectionType) {
+        Type itemType = getGenericCollectionItemType(collectionType);
 
         if (itemType instanceof ParameterizedType) {
             itemType = ((ParameterizedType)itemType).getRawType();
@@ -682,20 +682,20 @@ public class BeanAdapter extends AbstractMap<String, Object> {
     }
 
     /**
-     * Determines the type of a list item.
+     * Determines the type of a list or set item.
      *
-     * @param listType
+     * @param collectionType
      */
-    public static Type getGenericListItemType(Type listType) {
+    public static Type getGenericCollectionItemType(Type collectionType) {
         Type itemType = null;
 
-        Type parentType = listType;
+        Type parentType = collectionType;
         while (parentType != null) {
             if (parentType instanceof ParameterizedType) {
                 ParameterizedType parameterizedType = (ParameterizedType)parentType;
                 Class<?> rawType = (Class<?>)parameterizedType.getRawType();
 
-                if (List.class.isAssignableFrom(rawType)) {
+                if (Collection.class.isAssignableFrom(rawType)) {
                     itemType = parameterizedType.getActualTypeArguments()[0];
                 }
 
@@ -712,7 +712,7 @@ public class BeanAdapter extends AbstractMap<String, Object> {
                     ParameterizedType parameterizedType = (ParameterizedType)genericInterface;
                     Class<?> interfaceType = (Class<?>)parameterizedType.getRawType();
 
-                    if (List.class.isAssignableFrom(interfaceType)) {
+                    if (Collection.class.isAssignableFrom(interfaceType)) {
                         itemType = parameterizedType.getActualTypeArguments()[0];
                         break;
                     }

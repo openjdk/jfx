@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -273,6 +273,7 @@ static inline void SetNSPasteboardItemValueForUtf(JNIEnv *env, NSPasteboardItem 
                 NSData *data = [image TIFFRepresentation];
                 [item setData:data forType: [utf isEqualToString:RAW_IMAGE_MIME] ? NSPasteboardTypeTIFF : DRAG_IMAGE_MIME];
                 //NSLog(@"                setData: %p, ForUtf: %@", data, utf);
+                [image release];
             }
         }
         else if ([utf isEqualToString:DRAG_IMAGE_OFFSET] == YES)

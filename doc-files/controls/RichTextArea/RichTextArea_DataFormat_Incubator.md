@@ -2,9 +2,9 @@
 
 Andy Goryachev
 
-Version 2
+Version 3
 
-June 16, 2026
+July 9, 2026
 
 
 
@@ -38,7 +38,7 @@ As an example, the following rich text
 is represented by the following file:
 
 ```
-{@RichText-v2-incubator}{#tabs|99.5}{ff|System}{fs|12.0}tabs:	1	2	3{!tabs|149.0,190.0,229.0}
+{@RichText-v3-Incubator}{#tabs|99.5}{ff|System}{fs|12.0}tabs:	1	2	3{!tabs|149.0,190.0,229.0}
 {0}default tabs:	1	2	3{!}
 {ff|System}{fs|12.0}{tc|669966}green{!}
 {b}{ff|System}{fs|12.0}bold {ff|System}{fs|12.0}{i}italic {ff|System}{fs|12.0}{ss}strikethrough{4} {ff|System}{fs|12.0}{u}underline{!}
@@ -59,7 +59,10 @@ There could be only one such segment and it must be the first one.
 
 Example:
 
-`{@RichText-v2-incubator}`
+`{@RichText-v3-Incubator}`
+
+Note: the versioning mechanism is likely to change, see [JDK-8386850](https://bugs.openjdk.org/browse/JDK-8386850).
+
 
 
 ### Document Properties Segment
@@ -107,19 +110,57 @@ Example:
 
 #### Character Attributes
 
-|Name    |StyleAttributeMap     |Type        |Comments                                                      |
-|:-------|:---------------------|:-----------|:-------------------------------------------------------------|
-|b       |BOLD                  |boolean     |
-|ff      |FONT_FAMILY           |String      | Note 1
-|fs      |FONT_SIZE             |double      | must be > 0 and finite
-|i       |ITALIC                |boolean     |
-|ss      |STRIKE_THROUGH        |boolean     |
-|tc      |TEXT_COLOR            |Color       | 6 hex digits `RRGGBB`.  Example: {tc&#x007c;4D804D}
-|u       |UNDERLINE             |boolean     |
+|Name    |StyleAttributeMap     |Type        |Description                                                      |
+|:-------|:---------------------|:-----------|:----------------------------------------------------------------|
+|b       |BOLD                  |boolean     |Bold typeface
+|ff      |FONT_FAMILY           |String      |Font family (Note 1)
+|fs      |FONT_SIZE             |double      |Font size (Note 2)
+|hi1     |TEXT_HIGHLIGHT_1      |boolean     |Text highlight color 1
+|hi2     |TEXT_HIGHLIGHT_2      |boolean     |Text highlight color 2
+|hi3     |TEXT_HIGHLIGHT_3      |boolean     |Text highlight color 3
+|hi4     |TEXT_HIGHLIGHT_4      |boolean     |Text highlight color 4
+|hi5     |TEXT_HIGHLIGHT_5      |boolean     |Text highlight color 5
+|i       |ITALIC                |boolean     |Italic typeface
+|ss      |STRIKE_THROUGH        |boolean     |Strike through
+|tc      |TEXT_COLOR            |Color       |Text color (Note 3)
+|u       |UNDERLINE             |boolean     |Underline
+|uw1     |WAVY_UNDERLINE_1      |boolean     |Wavy underline color 1
+|uw2     |WAVY_UNDERLINE_2      |boolean     |Wavy underline color 2
+|uw3     |WAVY_UNDERLINE_3      |boolean     |Wavy underline color 3
+
 
 Notes:
 
 1. the standard JavaFX font substitution is performed to render text when the specified font family cannot be found.
+2. must be > 0 and finite
+3. 6 hex digits `RRGGBB`.  Example: {tc&#x007c;4D804D}
+
+
+#### Embedded Images
+
+Embedded images are coded as character attributes with the tag `img`.
+The data portion of the attribute specifies the following comma-delimited fields:
+
+|Code    |Type          |Description                                                     |
+|:-------|:-------------|:---------------------------------------------------------------|
+|a       |boolean       |Keep aspect ratio
+|b       |byte[]        |Base64-encoded image data
+|h       |double        |Original image height
+|th      |double        |Target height (Note 1)
+|tw      |double        |Target width (Notes 1, 2)
+|w       |double        |Original image width
+
+Notes:
+
+1. Value of `0.0` indicates that the rendered image height or width should be computed according to the image
+   intrinsic aspect ratio.
+2. Value of `-1.0` indicates that the rendered image width should not exceed the view's wrapped text width.
+   Value of `-2.0` indicates that the rendered image width should always fit the view's wrapped text width.
+
+
+Example:
+
+`{img|w,138.0,h,102.0,tw,-1.0,th,0.0,a,true,b,iVBORw0KGgoAAA...}`
 
 
 ### Text Segment
@@ -192,9 +233,3 @@ Example:
 {0}line2{!}
 {0}line3{!}
 ```
-
-
-## Future Enhancements
-
-- embedded image attributes
-

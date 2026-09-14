@@ -32,9 +32,9 @@
 
 namespace WTF {
 
-static std::span<const LChar> latin1ContextSpan(UText* uText)
+static std::span<const Latin1Character> latin1ContextSpan(UText* uText)
 {
-    return unsafeMakeSpan(static_cast<const LChar*>(uText->context), uText->a);
+    return unsafeMakeSpan(static_cast<const Latin1Character*>(uText->context), uText->a);
 }
 
 static std::span<char16_t> chunkSpan(UText* uText)
@@ -223,7 +223,7 @@ static void uTextLatin1Close(UText* uText)
     uText->context = nullptr;
 }
 
-UText* openLatin1UTextProvider(UTextWithBuffer* utWithBuffer, std::span<const LChar> string, UErrorCode* status)
+UText* openLatin1UTextProvider(UTextWithBuffer* utWithBuffer, std::span<const Latin1Character> string, UErrorCode* status)
 {
     if (U_FAILURE(*status))
         return nullptr;
@@ -306,7 +306,7 @@ static void textLatin1ContextAwareMoveInPrimaryContext(UText* text, int64_t nati
     text->nativeIndexingLimit = text->chunkLength;
     text->chunkOffset = forward ? 0 : text->chunkLength;
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-    StringImpl::copyCharacters(chunkSpan(text), unsafeMakeSpan(static_cast<const LChar*>(text->p) + (text->chunkNativeStart - text->b), text->chunkLength));
+    StringImpl::copyCharacters(chunkSpan(text), unsafeMakeSpan(static_cast<const Latin1Character*>(text->p) + (text->chunkNativeStart - text->b), text->chunkLength));
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 }
 
@@ -389,7 +389,7 @@ static void uTextLatin1ContextAwareClose(UText* text)
     text->context = nullptr;
 }
 
-UText* openLatin1ContextAwareUTextProvider(UTextWithBuffer* utWithBuffer, std::span<const LChar> string, std::span<const char16_t> priorContext, UErrorCode* status)
+UText* openLatin1ContextAwareUTextProvider(UTextWithBuffer* utWithBuffer, std::span<const Latin1Character> string, std::span<const char16_t> priorContext, UErrorCode* status)
 {
     if (U_FAILURE(*status))
         return nullptr;

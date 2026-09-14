@@ -35,9 +35,6 @@
 #include <libxslt/extra.h>
 #include <libxslt/xsltutils.h>
 
-
-
-
 namespace WebCore {
 
 // FIXME: This code is taken from libexslt v1.1.35; should sync with newer versions.

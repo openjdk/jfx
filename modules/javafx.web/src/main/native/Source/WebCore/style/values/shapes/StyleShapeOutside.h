@@ -24,10 +24,11 @@
 
 #pragma once
 
-#include "RenderStyleConstants.h"
-#include "StyleBasicShape.h"
-#include "StyleImageWrapper.h"
-#include "StyleValueTypes.h"
+#include <WebCore/RenderStyleConstants.h>
+#include <WebCore/StyleBasicShape.h>
+#include <WebCore/StyleImageWrapper.h>
+#include <WebCore/StyleValueTypes.h>
+#include <wtf/RefPtr.h>
 
 namespace WebCore {
 namespace Style {
@@ -53,10 +54,10 @@ struct ShapeOutside {
     };
 
     ShapeOutside(CSS::Keyword::None) { }
-    ShapeOutside(Shape&& value) : m_value { Value::create(WTFMove(value)) } { }
-    ShapeOutside(ShapeBox&& value) : m_value { Value::create(WTFMove(value)) } { }
-    ShapeOutside(ShapeAndShapeBox&& value) : m_value { Value::create(WTFMove(value)) } { }
-    ShapeOutside(Image&& value) : m_value { Value::create(WTFMove(value)) } { }
+    ShapeOutside(Shape&& value) : m_value { Value::create(WTF::move(value)) } { }
+    ShapeOutside(ShapeBox&& value) : m_value { Value::create(WTF::move(value)) } { }
+    ShapeOutside(ShapeAndShapeBox&& value) : m_value { Value::create(WTF::move(value)) } { }
+    ShapeOutside(Image&& value) : m_value { Value::create(WTF::move(value)) } { }
 
     bool isNone() const { return !m_value; }
 
@@ -101,11 +102,11 @@ private:
 
         static Ref<Value> create(Kind&& value)
         {
-            return adoptRef(*new Value(WTFMove(value)));
+            return adoptRef(*new Value(WTF::move(value)));
         }
 
         explicit Value(Kind&& value)
-            : value { WTFMove(value) }
+            : value { WTF::move(value) }
         {
         }
 

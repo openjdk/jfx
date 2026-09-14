@@ -26,8 +26,8 @@
 // https://gpuweb.github.io/gpuweb/#dictdef-gpupipelinelayoutdescriptor
 
 [
-    EnabledBySetting=WebGPUEnabled
-]
-dictionary GPUPipelineLayoutDescriptor : GPUObjectDescriptorBase {
+    EnabledBySetting=WebGPUEnabled,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary GPUPipelineLayoutDescriptor : GPUObjectDescriptorBase {
     required sequence<GPUBindGroupLayout?> bindGroupLayouts;
 };

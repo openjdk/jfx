@@ -32,6 +32,7 @@
 #include "LocalFrame.h"
 #include "Page.h"
 #include "ScriptTrackingPrivacyCategory.h"
+#include "ScriptWrappableInlines.h"
 #include "SecurityOrigin.h"
 #include "StorageArea.h"
 #include "StorageType.h"
@@ -40,16 +41,16 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(Storage);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(Storage);
 
 Ref<Storage> Storage::create(LocalDOMWindow& window, Ref<StorageArea>&& storageArea)
 {
-    return adoptRef(*new Storage(window, WTFMove(storageArea)));
+    return adoptRef(*new Storage(window, WTF::move(storageArea)));
 }
 
 Storage::Storage(LocalDOMWindow& window, Ref<StorageArea>&& storageArea)
     : LocalDOMWindowProperty(&window)
-    , m_storageArea(WTFMove(storageArea))
+    , m_storageArea(WTF::move(storageArea))
 {
     ASSERT(frame());
 
@@ -87,7 +88,7 @@ String Storage::getItem(const String& key) const
 
 ExceptionOr<void> Storage::setItem(const String& key, const String& value)
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame)
         return Exception { ExceptionCode::InvalidAccessError };
 
@@ -103,7 +104,7 @@ ExceptionOr<void> Storage::setItem(const String& key, const String& value)
 
 ExceptionOr<void> Storage::removeItem(const String& key)
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame)
         return Exception { ExceptionCode::InvalidAccessError };
 
@@ -116,7 +117,7 @@ ExceptionOr<void> Storage::removeItem(const String& key)
 
 ExceptionOr<void> Storage::clear()
 {
-    auto* frame = this->frame();
+    RefPtr frame = this->frame();
     if (!frame)
         return Exception { ExceptionCode::InvalidAccessError };
 
@@ -149,7 +150,7 @@ Ref<StorageArea> Storage::protectedArea() const
 
 bool Storage::requiresScriptTrackingPrivacyProtection() const
 {
-    RefPtr document = window() ? window()->document() : nullptr;
+    RefPtr document = window() ? protectedWindow()->document() : nullptr;
     return document && document->requiresScriptTrackingPrivacyProtection(ScriptTrackingPrivacyCategory::LocalStorage);
 }
 

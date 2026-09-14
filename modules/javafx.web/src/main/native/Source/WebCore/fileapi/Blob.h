@@ -31,15 +31,15 @@
 
 #pragma once
 
-#include "ActiveDOMObject.h"
-#include "BlobPropertyBag.h"
-#include "BlobURL.h"
-#include "FileReaderLoader.h"
-#include "ScriptExecutionContext.h"
-#include "ScriptWrappable.h"
-#include "SecurityOriginData.h"
-#include "URLKeepingBlobAlive.h"
-#include "URLRegistry.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/BlobPropertyBag.h>
+#include <WebCore/BlobURL.h>
+#include <WebCore/FileReaderLoader.h>
+#include <WebCore/ScriptExecutionContext.h>
+#include <WebCore/ScriptWrappable.h>
+#include <WebCore/SecurityOriginData.h>
+#include <WebCore/URLKeepingBlobAlive.h>
+#include <WebCore/URLRegistry.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/URL.h>
 
@@ -67,7 +67,7 @@ template<typename> class ExceptionOr;
 using BlobPartVariant = Variant<RefPtr<JSC::ArrayBufferView>, RefPtr<JSC::ArrayBuffer>, RefPtr<Blob>, String>;
 
 class Blob : public ScriptWrappable, public URLRegistrable, public RefCounted<Blob>, public ActiveDOMObject {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED_EXPORT(Blob, WEBCORE_EXPORT);
+    WTF_MAKE_TZONE_ALLOCATED_EXPORT(Blob, WEBCORE_EXPORT);
 public:
     void ref() const final { RefCounted::ref(); }
     void deref() const final { RefCounted::deref(); }
@@ -81,21 +81,21 @@ public:
 
     static Ref<Blob> create(ScriptExecutionContext& context, Vector<BlobPartVariant>&& blobPartVariants, const BlobPropertyBag& propertyBag)
     {
-        Ref blob = adoptRef(*new Blob(context, WTFMove(blobPartVariants), propertyBag));
+        Ref blob = adoptRef(*new Blob(context, WTF::move(blobPartVariants), propertyBag));
         blob->suspendIfNeeded();
         return blob;
     }
 
     static Ref<Blob> create(ScriptExecutionContext* context, Vector<uint8_t>&& data, const String& contentType)
     {
-        Ref blob = adoptRef(*new Blob(context, WTFMove(data), contentType));
+        Ref blob = adoptRef(*new Blob(context, WTF::move(data), contentType));
         blob->suspendIfNeeded();
         return blob;
     }
 
     static Ref<Blob> create(ScriptExecutionContext* context, Ref<FragmentedSharedBuffer>&& buffer, const String& contentType)
     {
-        Ref blob = adoptRef(*new Blob(context, WTFMove(buffer), contentType));
+        Ref blob = adoptRef(*new Blob(context, WTF::move(buffer), contentType));
         blob->suspendIfNeeded();
         return blob;
     }

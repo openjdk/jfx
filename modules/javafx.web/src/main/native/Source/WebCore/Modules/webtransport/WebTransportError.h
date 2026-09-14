@@ -34,13 +34,18 @@ enum class WebTransportErrorSource : bool;
 
 class WebTransportError : public DOMException {
 public:
-    static Ref<WebTransportError> create(String&& message, WebTransportErrorOptions&&);
+    static Ref<WebTransportError> create(WebTransportErrorOptions&&);
+    static Ref<WebTransportError> create(String&&, WebTransportErrorOptions&&);
     WebTransportErrorSource source();
-    std::optional<unsigned> streamErrorCode();
+    std::optional<uint32_t> streamErrorCode();
 private:
     WebTransportError(String&&, WebTransportErrorOptions&&);
 
-    WebTransportErrorOptions m_options;
+    const WebTransportErrorOptions m_options;
 };
 
 }
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebTransportError)
+    static bool isType(const WebCore::DOMException& exception) { return exception.type() == WebCore::DOMException::Type::WebTransportError; }
+SPECIALIZE_TYPE_TRAITS_END()

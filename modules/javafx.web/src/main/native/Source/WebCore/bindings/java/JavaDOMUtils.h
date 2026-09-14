@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -140,7 +140,7 @@ public:
         if (JNI_TRUE == m_env->ExceptionCheck())
             return 0L;
         //paired deref() call are in dispose Java method.
-        return ptr_to_jlong(WTFMove(m_returnValue).leakRef());
+        return ptr_to_jlong(WTF::move(m_returnValue).leakRef());
     }
 };
 

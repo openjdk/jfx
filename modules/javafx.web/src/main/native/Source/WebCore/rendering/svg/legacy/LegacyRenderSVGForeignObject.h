@@ -30,7 +30,7 @@ namespace WebCore {
 class SVGForeignObjectElement;
 
 class LegacyRenderSVGForeignObject final : public RenderSVGBlock {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyRenderSVGForeignObject);
+    WTF_MAKE_TZONE_ALLOCATED(LegacyRenderSVGForeignObject);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRenderSVGForeignObject);
 public:
     LegacyRenderSVGForeignObject(SVGForeignObjectElement&, RenderStyle&&);
@@ -47,6 +47,7 @@ public:
     bool isObjectBoundingBoxValid() const { return !m_viewport.isEmpty(); }
     FloatRect strokeBoundingBox() const override { return FloatRect(FloatPoint(), m_viewport.size()); }
     FloatRect repaintRectInLocalCoordinates(RepaintRectCalculation = RepaintRectCalculation::Fast) const override { return FloatRect(FloatPoint(), m_viewport.size()); }
+    FloatRect decoratedBoundingBox() const override { return FloatRect(FloatPoint(), m_viewport.size()); }
 
     bool nodeAtFloatPoint(const HitTestRequest&, HitTestResult&, const FloatPoint& pointInParent, HitTestAction) override;
 

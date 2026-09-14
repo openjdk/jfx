@@ -42,7 +42,7 @@ class BufferImpl final : public Buffer {
 public:
     static Ref<BufferImpl> create(WebGPUPtr<WGPUBuffer>&& buffer, ConvertToBackingContext& convertToBackingContext)
     {
-        return adoptRef(*new BufferImpl(WTFMove(buffer), convertToBackingContext));
+        return adoptRef(*new BufferImpl(WTF::move(buffer), convertToBackingContext));
     }
 
     virtual ~BufferImpl();
@@ -58,6 +58,7 @@ private:
     BufferImpl& operator=(BufferImpl&&) = delete;
 
     WGPUBuffer backing() const { return m_backing.get(); }
+    bool isBufferImpl() const final { return true; }
 
     void mapAsync(MapModeFlags, Size64 offset, std::optional<Size64> sizeForMap, CompletionHandler<void(bool)>&&) final;
     void getMappedRange(Size64 offset, std::optional<Size64>, NOESCAPE const Function<void(std::span<uint8_t>)>&) final;
@@ -74,5 +75,9 @@ private:
 };
 
 } // namespace WebCore::WebGPU
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WebGPU::BufferImpl)
+    static bool isType(const WebCore::WebGPU::Buffer& buffer) { return buffer.isBufferImpl(); }
+SPECIALIZE_TYPE_TRAITS_END()
 
 #endif // HAVE(WEBGPU_IMPLEMENTATION)

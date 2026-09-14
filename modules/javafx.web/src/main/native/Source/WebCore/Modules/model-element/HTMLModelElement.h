@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,27 +26,29 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(MODEL_ELEMENT)
 
-#include "ActiveDOMObject.h"
-#include "CachedRawResource.h"
-#include "CachedRawResourceClient.h"
-#include "CachedResourceHandle.h"
-#include "EventLoop.h"
-#include "HTMLElement.h"
-#include "HTMLModelElementCamera.h"
-#include "IDLTypes.h"
-#include "LayerHostingContextIdentifier.h"
-#include "ModelPlayer.h"
-#include "ModelPlayerClient.h"
-#include "PlatformLayer.h"
-#include "PlatformLayerIdentifier.h"
-#include "SharedBuffer.h"
-#include "VisibilityChangeClient.h"
+#include <WebCore/ActiveDOMObject.h>
+#include <WebCore/CachedRawResource.h>
+#include <WebCore/CachedRawResourceClient.h>
+#include <WebCore/CachedResourceHandle.h>
+#include <WebCore/EventLoop.h>
+#include <WebCore/HTMLElement.h>
+#include <WebCore/HTMLModelElementCamera.h>
+#include <WebCore/IDLTypes.h>
+#include <WebCore/LayerHostingContextIdentifier.h>
+#include <WebCore/ModelPlayer.h>
+#include <WebCore/ModelPlayerClient.h>
+#include <WebCore/PlatformLayer.h>
+#include <WebCore/PlatformLayerIdentifier.h>
+#include <WebCore/SharedBuffer.h>
+#include <WebCore/VisibilityChangeClient.h>
 #include <wtf/UniqueRef.h>
 
-#if ENABLE(MODEL_PROCESS)
-#include "StageModeOperations.h"
+#if ENABLE(MODEL_ELEMENT_STAGE_MODE)
+#include <WebCore/StageModeOperations.h>
 #endif
 
 namespace WebCore {
@@ -54,6 +57,7 @@ class CachedResourceRequest;
 class DOMMatrixReadOnly;
 class DOMPointReadOnly;
 class Event;
+class Exception;
 class GraphicsLayer;
 class LayoutPoint;
 class LayoutSize;
@@ -62,16 +66,12 @@ class ModelPlayerProvider;
 class MouseEvent;
 
 template<typename IDLType> class DOMPromiseDeferred;
+template<typename IDLType> class DOMPromiseProxy;
 template<typename IDLType> class DOMPromiseProxyWithResolveCallback;
 template<typename> class ExceptionOr;
 
-#if ENABLE(MODEL_PROCESS)
-template<typename IDLType> class DOMPromiseProxy;
-class ModelContext;
-#endif
-
 class HTMLModelElement final : public HTMLElement, private CachedRawResourceClient, public ModelPlayerClient, public ActiveDOMObject, public VisibilityChangeClient {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLModelElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLModelElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLModelElement);
 public:
     USING_CAN_MAKE_WEAKPTR(HTMLElement);
@@ -90,6 +90,10 @@ public:
     const URL& currentSrc() const { return m_sourceURL; }
     bool complete() const { return m_dataComplete; }
 
+    void configureGraphicsLayer(GraphicsLayer&, Color backgroundColor);
+
+    std::optional<PlatformLayerIdentifier> layerID() const;
+
     // MARK: DOM Functions and Attributes
 
     using ReadyPromise = DOMPromiseProxyWithResolveCallback<IDLInterface<HTMLModelElement>>;
@@ -97,24 +101,22 @@ public:
 
     WEBCORE_EXPORT RefPtr<Model> model() const;
 
-    bool usesPlatformLayer() const;
-    PlatformLayer* platformLayer() const;
-
-    std::optional<LayerHostingContextIdentifier> layerHostingContextIdentifier() const;
-
-    std::optional<PlatformLayerIdentifier> layerID() const;
-
-#if ENABLE(MODEL_PROCESS)
-    RefPtr<ModelContext> modelContext() const;
-
+#if ENABLE(MODEL_ELEMENT_ENTITY_TRANSFORM)
     const DOMMatrixReadOnly& entityTransform() const;
     ExceptionOr<void> setEntityTransform(const DOMMatrixReadOnly&);
+#endif
 
+#if ENABLE(MODEL_ELEMENT_BOUNDING_BOX)
     const DOMPointReadOnly& boundingBoxCenter() const;
     const DOMPointReadOnly& boundingBoxExtents() const;
+#endif
 
+#if ENABLE(MODEL_ELEMENT_ENVIRONMENT_MAP)
     using EnvironmentMapPromise = DOMPromiseProxy<IDLUndefined>;
     EnvironmentMapPromise& environmentMapReady() { return m_environmentMapReadyPromise.get(); }
+
+    const URL& environmentMap() const;
+    void setEnvironmentMap(const URL&);
 #endif
 
     void enterFullscreen();
@@ -144,12 +146,19 @@ public:
     void isMuted(IsMutedPromise&&);
     void setIsMuted(bool, DOMPromiseDeferred<void>&&);
 
+#if ENABLE(MODEL_ELEMENT_IMMERSIVE)
+    bool immersive() const;
+    void requestImmersive(DOMPromiseDeferred<void>&&);
+    void ensureImmersivePresentation(CompletionHandler<void(ExceptionOr<LayerHostingContextIdentifier>)>&&);
+    void exitImmersivePresentation(CompletionHandler<void()>&&);
+#endif
+
     bool supportsDragging() const;
     bool isDraggableIgnoringAttributes() const final;
 
     bool isInteractive() const;
 
-#if ENABLE(MODEL_PROCESS)
+#if ENABLE(MODEL_ELEMENT_ANIMATIONS_CONTROL)
     double playbackRate() const { return m_playbackRate; }
     void setPlaybackRate(double);
     double duration() const;
@@ -159,8 +168,12 @@ public:
     void setPaused(bool, DOMPromiseDeferred<void>&&);
     double currentTime() const;
     void setCurrentTime(double);
-    const URL& environmentMap() const;
-    void setEnvironmentMap(const URL&);
+#endif
+
+#if ENABLE(MODEL_ELEMENT_STAGE_MODE)
+    bool canSetEntityTransform() const;
+#endif
+#if ENABLE(MODEL_ELEMENT_STAGE_MODE_INTERACTION)
     WEBCORE_EXPORT bool supportsStageModeInteraction() const;
     WEBCORE_EXPORT void beginStageModeTransform(const TransformationMatrix&);
     WEBCORE_EXPORT void updateStageModeTransform(const TransformationMatrix&);
@@ -169,8 +182,8 @@ public:
     WEBCORE_EXPORT void resetModelTransformAfterDrag();
 #endif
 
-#if PLATFORM(COCOA)
-    Vector<RetainPtr<id>> accessibilityChildren();
+#if ENABLE(MODEL_ELEMENT_ACCESSIBILITY)
+    ModelPlayerAccessibilityChildren accessibilityChildren();
 #endif
 
     void sizeMayHaveChanged();
@@ -184,8 +197,8 @@ public:
     size_t externalMemoryCost() const;
 #endif
 
+    bool isIntersectingViewport() const { return m_isIntersectingViewport; }
     void viewportIntersectionChanged(bool isIntersecting);
-    bool isIntersectingViewport() const final { return m_isIntersectingViewport; }
 
     WEBCORE_EXPORT String modelElementStateForTesting() const;
 
@@ -201,8 +214,6 @@ private:
     void reloadModelPlayer();
     void startLoadModelTimer();
     void loadModelTimerFired();
-
-    RefPtr<GraphicsLayer> graphicsLayer() const;
 
     HTMLModelElement& readyPromiseResolve();
 
@@ -233,16 +244,20 @@ private:
     void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
 
     // ModelPlayerClient overrides.
-    void didUpdateLayerHostingContextIdentifier(ModelPlayer&, LayerHostingContextIdentifier) final;
     void didFinishLoading(ModelPlayer&) final;
     void didFailLoading(ModelPlayer&, const ResourceError&) final;
-#if ENABLE(MODEL_PROCESS)
-    void didUpdateEntityTransform(ModelPlayer&, const TransformationMatrix&) final;
-    void didUpdateBoundingBox(ModelPlayer&, const FloatPoint3D&, const FloatPoint3D&) final;
-    void didFinishEnvironmentMapLoading(bool succeeded) final;
     void didUnload(ModelPlayer&) final;
+    void didUpdate(ModelPlayer&) final;
+#if ENABLE(MODEL_ELEMENT_ENTITY_TRANSFORM)
+    void didUpdateEntityTransform(ModelPlayer&, const TransformationMatrix&) final;
 #endif
-    std::optional<PlatformLayerIdentifier> modelContentsLayerID() const final;
+#if ENABLE(MODEL_ELEMENT_BOUNDING_BOX)
+    void didUpdateBoundingBox(ModelPlayer&, const FloatPoint3D&, const FloatPoint3D&) final;
+#endif
+#if ENABLE(MODEL_ELEMENT_ENVIRONMENT_MAP)
+    void didFinishEnvironmentMapLoading(ModelPlayer&, bool succeeded) final;
+#endif
+    RefPtr<GraphicsLayer> graphicsLayer() const final;
     bool isVisible() const final;
     void logWarning(ModelPlayer&, const String&) final;
 
@@ -259,24 +274,35 @@ private:
     void setAnimationIsPlaying(bool, DOMPromiseDeferred<void>&&);
 
     LayoutSize contentSize() const;
+    bool modelContainerSizeIsEmpty() const;
 
     void reportExtraMemoryCost();
 
-#if ENABLE(MODEL_PROCESS)
+#if ENABLE(MODEL_ELEMENT_ANIMATIONS_CONTROL)
     bool autoplay() const;
     void updateAutoplay();
     bool loop() const;
     void updateLoop();
+#endif
+
+#if ENABLE(MODEL_ELEMENT_ENVIRONMENT_MAP)
     void updateEnvironmentMap();
     URL selectEnvironmentMapURL() const;
     void environmentMapRequestResource();
     void environmentMapResetAndReject(Exception&&);
     void environmentMapResourceFinished();
+#endif
+
+#if ENABLE(MODEL_ELEMENT_PORTAL)
     bool hasPortal() const;
     void updateHasPortal();
+#endif
+
+#if ENABLE(MODEL_ELEMENT_STAGE_MODE)
     WebCore::StageModeOperation stageMode() const;
     void updateStageMode();
 #endif
+
     void modelResourceFinished();
     void sourceRequestResource();
     bool shouldDeferLoading() const;
@@ -301,17 +327,38 @@ private:
 
     RefPtr<ModelPlayer> m_modelPlayer;
     EventLoopTimerHandle m_loadModelTimer;
-#if ENABLE(MODEL_PROCESS)
+
+#if ENABLE(MODEL_ELEMENT_ENTITY_TRANSFORM)
     Ref<DOMMatrixReadOnly> m_entityTransform;
+#endif
+
+#if ENABLE(MODEL_ELEMENT_BOUNDING_BOX)
     Ref<DOMPointReadOnly> m_boundingBoxCenter;
     Ref<DOMPointReadOnly> m_boundingBoxExtents;
+#endif
+
+#if ENABLE(MODEL_ELEMENT_ANIMATIONS_CONTROL)
     double m_playbackRate { 1.0 };
+#endif
+
+#if ENABLE(MODEL_ELEMENT_ENVIRONMENT_MAP)
     URL m_environmentMapURL;
     SharedBufferBuilder m_environmentMapData;
     mutable std::atomic<size_t> m_environmentMapDataMemoryCost { 0 };
+
     CachedResourceHandle<CachedRawResource> m_environmentMapResource;
     UniqueRef<EnvironmentMapPromise> m_environmentMapReadyPromise;
 #endif
+
+#if ENABLE(MODEL_ELEMENT_IMMERSIVE)
+    bool m_detachedForImmersive { false };
+    void setDetachedForImmersive(bool);
+
+    Vector<CompletionHandler<void(ExceptionOr<RefPtr<ModelPlayer>>)>> m_modelPlayerCreationCallbacks;
+    void ensureModelPlayer(CompletionHandler<void(ExceptionOr<RefPtr<ModelPlayer>>)>&&);
+#endif
+
+    void triggerModelPlayerCreationCallbacksIfNeeded(ExceptionOr<RefPtr<ModelPlayer>>&&);
 };
 
 } // namespace WebCore

@@ -48,13 +48,12 @@ public:
     WEBCORE_EXPORT virtual ~UserMessageHandlerDescriptor();
 
     WEBCORE_EXPORT const AtomString& name() const;
-    WEBCORE_EXPORT DOMWrapperWorld& world();
     WEBCORE_EXPORT const DOMWrapperWorld& world() const;
 
-    virtual void didPostMessage(UserMessageHandler&, JSC::JSGlobalObject&, JSC::JSValue, Function<void(JSC::JSValue, const String&)>&&) = 0;
-
+    virtual void didPostMessage(UserMessageHandler&, JSC::JSGlobalObject&, JSC::JSValue, Function<void(JSC::JSValue, const String&)>&&) const = 0;
+    virtual JSC::JSValue didPostLegacySynchronousMessage(UserMessageHandler&, JSC::JSGlobalObject&, JSC::JSValue) const = 0;
 private:
-    AtomString m_name;
+    const AtomString m_name;
     const Ref<DOMWrapperWorld> m_world;
 };
 

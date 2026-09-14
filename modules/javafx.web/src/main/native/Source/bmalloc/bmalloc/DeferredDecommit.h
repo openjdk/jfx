@@ -25,6 +25,10 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
+#include "BPlatform.h"
+
 #if !BUSE(TZONE)
 #if !BUSE(LIBPAS)
 
@@ -46,3 +50,5 @@ struct DeferredDecommit {
 
 #endif
 #endif // !BUSE(TZONE)
+
+#endif // __cplusplus

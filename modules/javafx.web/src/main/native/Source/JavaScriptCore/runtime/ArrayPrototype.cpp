@@ -27,14 +27,14 @@
 #include "ArrayConstructor.h"
 #include "ArrayPrototypeInlines.h"
 #include "BuiltinNames.h"
-#include "CachedCall.h"
+#include "CachedCallInlines.h"
 #include "IntegrityInlines.h"
 #include "InterpreterInlines.h"
 #include "JSArrayInlines.h"
 #include "JSArrayIterator.h"
 #include "JSCBuiltins.h"
 #include "JSCInlines.h"
-#include "JSImmutableButterfly.h"
+#include "JSCellButterfly.h"
 #include "JSStringJoiner.h"
 #include "ObjectConstructor.h"
 #include "ObjectPrototypeInlines.h"
@@ -268,7 +268,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncToString, (JSGlobalObject* globalObject, 
         RETURN_IF_EXCEPTION(scope, { });
 
         // 3. If IsCallable(func) is false, then let func be the standard built-in method Object.prototype.toString (15.2.4.2).
-        auto callData = JSC::getCallData(function);
+        auto callData = JSC::getCallDataInline(function);
         if (callData.type == CallData::Type::None) [[unlikely]]
             RELEASE_AND_RETURN(scope, JSValue::encode(objectPrototypeToString(globalObject, thisObject)));
 
@@ -289,7 +289,7 @@ static JSString* toLocaleString(JSGlobalObject* globalObject, JSValue value, JSV
     JSValue toLocaleStringMethod = value.get(globalObject, vm.propertyNames->toLocaleString);
     RETURN_IF_EXCEPTION(scope, { });
 
-    auto callData = JSC::getCallData(toLocaleStringMethod);
+    auto callData = JSC::getCallDataInline(toLocaleStringMethod);
     if (callData.type == CallData::Type::None) {
         throwTypeError(globalObject, scope, "toLocaleString is not callable"_s);
         return { };
@@ -331,7 +331,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncToLocaleString, (JSGlobalObject* globalOb
 
     // 3. Let separator be the String value for the list-separator String appropriate for
     // the host environment's current locale (this is derived in an implementation-defined way).
-    const LChar comma = ',';
+    const Latin1Character comma = ',';
     JSString* separator = jsSingleCharacterString(vm, comma);
 
     // 4. Let R be the empty String.
@@ -453,7 +453,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncJoin, (JSGlobalObject* globalObject, Call
     // 3. If separator is undefined, let separator be the single-element String ",".
     JSValue separatorValue = callFrame->argument(0);
     if (separatorValue.isUndefined()) {
-        const LChar comma = ',';
+        const Latin1Character comma = ',';
 
         if (length > std::numeric_limits<unsigned>::max() || !canUseFastArrayJoin(thisObject)) [[unlikely]] {
             JSString* jsSeparator = jsSingleCharacterString(vm, comma);
@@ -873,9 +873,8 @@ static ALWAYS_INLINE std::tuple<uint64_t, IndexingType, std::span<EncodedJSValue
 static unsigned sortBucketSort(std::span<EncodedJSValue> sorted, unsigned dst, SortEntryVector& bucket, unsigned depth)
 {
     if (bucket.size() < 32 || depth > 32) {
-        std::sort(bucket.begin(), bucket.end(),
-            [](const auto& lhs, const auto& rhs) {
-                return codePointCompareLessThan(std::get<1>(lhs), std::get<1>(rhs));
+        std::ranges::sort(bucket, WTF::codePointCompareLessThan, [](const auto& element) {
+            return std::get<1>(element);
             });
         for (auto& entry : bucket)
             sorted[dst++] = JSValue::encode(std::get<0>(entry));
@@ -904,7 +903,7 @@ static ALWAYS_INLINE std::span<EncodedJSValue> sortStableSort(JSGlobalObject* gl
     VM& vm = globalObject->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
 
-    auto callData = JSC::getCallData(comparator);
+    auto callData = JSC::getCallDataInline(comparator);
     ASSERT(callData.type != CallData::Type::None);
 
     if (callData.type == CallData::Type::JS) [[likely]] {
@@ -1016,7 +1015,7 @@ static ALWAYS_INLINE void sortImpl(JSGlobalObject* globalObject, JSObject* thisO
             JSValue value = JSValue::decode(encodedValue);
             String string = value.toWTFString(globalObject);
             RETURN_IF_EXCEPTION(scope, void());
-            entries.append(std::tuple { value, WTFMove(string) });
+            entries.append(std::tuple { value, WTF::move(string) });
         }
         sortBucketSort(sorted, 0, entries, 0);
         dest = sorted;
@@ -1322,7 +1321,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncIndexOf, (JSGlobalObject* globalObject, C
     if (isJSArray(thisObject)) [[likely]] {
         JSArray* array = asArray(thisObject);
         Butterfly* butterfly = array->butterfly();
-        if (isCopyOnWrite(array->indexingMode()) && JSImmutableButterfly::isOnlyAtomStringsStructure(vm, butterfly) && searchElement.isString()) {
+        if (isCopyOnWrite(array->indexingMode()) && JSCellButterfly::isOnlyAtomStringsStructure(vm, butterfly) && searchElement.isString()) {
             auto search = asString(searchElement)->toAtomString(globalObject);
         RETURN_IF_EXCEPTION(scope, { });
 
@@ -1553,6 +1552,8 @@ static JSArray* concatAppendArray(JSGlobalObject* globalObject, VM& vm, JSArray*
         throwOutOfMemoryError(globalObject, scope);
         return { };
     }
+
+    DeferGC deferGC(vm);
     auto* butterfly = Butterfly::fromBase(memory, 0, 0);
     butterfly->setVectorLength(vectorLength);
     butterfly->setPublicLength(resultSize);
@@ -1574,71 +1575,8 @@ static JSArray* concatAppendArray(JSGlobalObject* globalObject, VM& vm, JSArray*
         copyArrayElements<ArrayFillMode::Empty, NeedsGCSafeOps::No>(buffer, firstArraySize, secondButterfly->contiguous().data(), 0, secondArraySize, secondType);
     }
 
-    Butterfly::clearOptimalVectorLengthGap(type, butterfly, vectorLength, resultSize);
+    Butterfly::clearRange(type, butterfly, resultSize, vectorLength);
     return JSArray::createWithButterfly(vm, nullptr, resultStructure, butterfly);
-}
-
-JSC_DEFINE_HOST_FUNCTION(arrayProtoPrivateFuncAppendMemcpy, (JSGlobalObject* globalObject, CallFrame* callFrame))
-{
-    ASSERT(callFrame->argumentCount() == 3);
-
-    VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-    JSArray* resultArray = jsCast<JSArray*>(callFrame->uncheckedArgument(0));
-    JSArray* otherArray = jsCast<JSArray*>(callFrame->uncheckedArgument(1));
-    JSValue startValue = callFrame->uncheckedArgument(2);
-    ASSERT(startValue.isUInt32AsAnyInt());
-    unsigned startIndex = startValue.asUInt32AsAnyInt();
-    bool success = resultArray->appendMemcpy(globalObject, vm, startIndex, otherArray);
-    EXCEPTION_ASSERT(!scope.exception() || !success);
-    if (success)
-        return JSValue::encode(jsUndefined());
-    RETURN_IF_EXCEPTION(scope, encodedJSValue());
-    scope.release();
-    moveArrayElements<ArrayFillMode::Empty>(globalObject, vm, resultArray, startIndex, otherArray, otherArray->length());
-    return JSValue::encode(jsUndefined());
-}
-
-JSC_DEFINE_HOST_FUNCTION(arrayProtoPrivateFuncFromFastFillWithUndefined, (JSGlobalObject* globalObject, CallFrame* callFrame))
-{
-    VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    JSValue constructor = callFrame->uncheckedArgument(0);
-    if (constructor != globalObject->arrayConstructor() && constructor.isObject()) [[unlikely]]
-        return JSValue::encode(jsUndefined());
-
-    JSValue arrayValue = callFrame->uncheckedArgument(1);
-    if (!isJSArray(arrayValue)) [[unlikely]]
-        return JSValue::encode(jsUndefined());
-
-    JSArray* array = tryCloneArrayFromFast<ArrayFillMode::Undefined>(globalObject, arrayValue);
-    RETURN_IF_EXCEPTION(scope, { });
-    if (array)
-        return JSValue::encode(array);
-
-        return JSValue::encode(jsUndefined());
-}
-
-JSC_DEFINE_HOST_FUNCTION(arrayProtoPrivateFuncFromFastFillWithEmpty, (JSGlobalObject* globalObject, CallFrame* callFrame))
-{
-    VM& vm = globalObject->vm();
-    auto scope = DECLARE_THROW_SCOPE(vm);
-
-    JSValue constructor = callFrame->uncheckedArgument(0);
-    if (constructor != globalObject->arrayConstructor() && constructor.isObject()) [[unlikely]]
-        return JSValue::encode(jsUndefined());
-
-    JSValue arrayValue = callFrame->uncheckedArgument(1);
-    if (!isJSArray(arrayValue)) [[unlikely]]
-        return JSValue::encode(jsUndefined());
-
-    JSArray* array = tryCloneArrayFromFast<ArrayFillMode::Empty>(globalObject, arrayValue);
-        RETURN_IF_EXCEPTION(scope, { });
-    if (array)
-        return JSValue::encode(array);
-
-    return JSValue::encode(jsUndefined());
 }
 
 JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncConcat, (JSGlobalObject* globalObject, CallFrame* callFrame))
@@ -2187,12 +2125,10 @@ static uint64_t flatIntoArray(JSGlobalObject* globalObject, JSObject* target, JS
     }
 
     for (uint64_t sourceIndex = 0; sourceIndex < sourceLength; ++sourceIndex) {
-        bool exists = source->hasProperty(globalObject, sourceIndex);
+        JSValue element = source->getIfPropertyExists(globalObject, sourceIndex);
         RETURN_IF_EXCEPTION(scope, { });
-        if (!exists)
+        if (!element)
             continue;
-        JSValue element = source->get(globalObject, sourceIndex);
-        RETURN_IF_EXCEPTION(scope, { });
 
         bool elementIsArray = isArray(globalObject, element);
         RETURN_IF_EXCEPTION(scope, { });
@@ -2239,8 +2175,9 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncFlat, (JSGlobalObject* globalObject, Call
 
     uint64_t depthNum = 1;
     if (callFrame->argumentCount()) {
-        depthNum = [&]() -> uint64_t {
             JSValue depthValue = callFrame->uncheckedArgument(0);
+        if (!depthValue.isUndefined()) {
+            depthNum = [&]() -> uint64_t {
             if (depthValue.isInt32()) [[likely]] {
                 int32_t depthInt32 = depthValue.asInt32();
                 if (depthInt32 < 0) [[unlikely]]
@@ -2256,6 +2193,7 @@ JSC_DEFINE_HOST_FUNCTION(arrayProtoFuncFlat, (JSGlobalObject* globalObject, Call
             return static_cast<uint64_t>(depthDouble);
         }();
         RETURN_IF_EXCEPTION(scope, { });
+    }
     }
 
     if (isJSArray(thisObject) && arraySpeciesWatchpointIsValid(vm, thisObject)) [[likely]] {

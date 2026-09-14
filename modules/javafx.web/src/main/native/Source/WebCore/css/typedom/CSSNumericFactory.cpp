@@ -35,18 +35,13 @@ DEFINE_ALLOCATOR_WITH_HEAP_IDENTIFIER(CSSNumericFactory);
 
 CSSNumericFactory* CSSNumericFactory::from(DOMCSSNamespace& css)
 {
-    auto* supplement = static_cast<CSSNumericFactory*>(Supplement<DOMCSSNamespace>::from(&css, supplementName()));
+    auto* supplement = downcast<CSSNumericFactory>(Supplement<DOMCSSNamespace>::from(&css, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<CSSNumericFactory>(css);
         supplement = newSupplement.get();
-        provideTo(&css, supplementName(), WTFMove(newSupplement));
+        provideTo(&css, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }
 
-ASCIILiteral CSSNumericFactory::supplementName()
-{
-    return "CSSNumericFactory"_s;
-}
-
-}
+} // namespace WebCore

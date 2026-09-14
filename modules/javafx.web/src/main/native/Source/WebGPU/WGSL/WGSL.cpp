@@ -82,14 +82,14 @@ Variant<SuccessfulCheck, FailedCheck> staticCheck(const String& wgsl, const std:
     RUN_PASS(mangleNames, shaderModule);
 
     Vector<Warning> warnings { };
-    return Variant<SuccessfulCheck, FailedCheck>(WTF::InPlaceType<SuccessfulCheck>, WTFMove(warnings), WTFMove(shaderModule));
+    return Variant<SuccessfulCheck, FailedCheck>(WTF::InPlaceType<SuccessfulCheck>, WTF::move(warnings), WTF::move(shaderModule));
 }
 
 SuccessfulCheck::SuccessfulCheck(SuccessfulCheck&&) = default;
 
 SuccessfulCheck::SuccessfulCheck(Vector<Warning>&& messages, UniqueRef<ShaderModule>&& shader)
-    : warnings(WTFMove(messages))
-    , ast(WTFMove(shader))
+    : warnings(WTF::move(messages))
+    , ast(WTF::move(shader))
 {
 }
 
@@ -112,7 +112,7 @@ inline Variant<PrepareResult, Error> prepareImpl(ShaderModule& shaderModule, con
 
         dumpASTAtEndIfNeeded(shaderModule);
 
-        return { PrepareResult { WTFMove(entryPoints), WTFMove(compilationScope) } };
+        return { PrepareResult { WTF::move(entryPoints), WTF::move(compilationScope) } };
     }();
 
     logPhaseTimes(phaseTimes);
@@ -128,7 +128,7 @@ Variant<String, Error> generate(ShaderModule& shaderModule, PrepareResult& prepa
         return { *maybeError };
     {
             PhaseTimer phaseTimer("generateMetalCode", phaseTimes);
-        result = Metal::generateMetalCode(shaderModule, prepareResult, constantValues, WTFMove(deviceState));
+        result = Metal::generateMetalCode(shaderModule, prepareResult, constantValues, WTF::move(deviceState));
         }
     logPhaseTimes(phaseTimes);
     return { result };

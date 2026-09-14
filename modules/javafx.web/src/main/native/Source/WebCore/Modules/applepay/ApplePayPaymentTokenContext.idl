@@ -28,6 +28,7 @@
     ExportMacro=WEBCORE_EXPORT,
     JSGenerateToJSObject,
     JSGenerateToNativeObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary ApplePayPaymentTokenContext {
     required DOMString merchantIdentifier;
     required DOMString externalIdentifier;

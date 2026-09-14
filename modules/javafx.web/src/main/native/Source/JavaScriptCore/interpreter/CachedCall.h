@@ -25,14 +25,16 @@
 
 #pragma once
 
-#include "ArgList.h"
-#include "CallLinkInfoBase.h"
-#include "ExceptionHelpers.h"
-#include "JSFunction.h"
-#include "Interpreter.h"
-#include "ProtoCallFrameInlines.h"
-#include "VMEntryScope.h"
-#include "VMInlines.h"
+#include <JavaScriptCore/ArgList.h>
+#include <JavaScriptCore/CallLinkInfoBase.h>
+#include <JavaScriptCore/ExceptionHelpers.h>
+#include <JavaScriptCore/Interpreter.h>
+#include <JavaScriptCore/JSFunction.h>
+#include <JavaScriptCore/JSFunctionInlines.h>
+#include <JavaScriptCore/ProtoCallFrameInlines.h>
+#include <JavaScriptCore/VMEntryScope.h>
+#include <JavaScriptCore/VMEntryScopeInlines.h>
+#include <JavaScriptCore/VMInlines.h>
 #include <wtf/ForbidHeapAllocation.h>
 #include <wtf/Scope.h>
 
@@ -42,44 +44,7 @@ class CachedCall : public CallLinkInfoBase {
         WTF_MAKE_NONCOPYABLE(CachedCall);
         WTF_FORBID_HEAP_ALLOCATION;
 public:
-        CachedCall(JSGlobalObject* globalObject, JSFunction* function, int argumentCount)
-        : CallLinkInfoBase(CallSiteType::CachedCall)
-        , m_vm(globalObject->vm())
-            , m_entryScope(m_vm, function->scope()->globalObject())
-        , m_functionExecutable(function->jsExecutable())
-        , m_scope(function->scope())
-        {
-        VM& vm = m_vm;
-            auto scope = DECLARE_THROW_SCOPE(vm);
-#if ASSERT_ENABLED
-        auto updateValidStatus = makeScopeExit([&] {
-            m_valid = !scope.exception();
-        });
-#endif
-        ASSERT(!function->isHostFunctionNonInline());
-        if (!vm.isSafeToRecurseSoft()) [[unlikely]] {
-            throwStackOverflowError(globalObject, scope);
-            return;
-        }
-
-        if (vm.disallowVMEntryCount) [[unlikely]] {
-            Interpreter::checkVMEntryPermission();
-            throwStackOverflowError(globalObject, scope);
-            return;
-        }
-
-        m_arguments.ensureCapacity(argumentCount);
-        if (m_arguments.hasOverflowed()) [[unlikely]] {
-            throwOutOfMemoryError(globalObject, scope);
-            return;
-        }
-
-        auto* newCodeBlock = m_vm.interpreter.prepareForCachedCall(*this, function);
-        if (scope.exception()) [[unlikely]]
-            return;
-        m_numParameters = newCodeBlock->numParameters();
-        m_protoCallFrame.init(newCodeBlock, function->globalObject(), function, jsUndefined(), argumentCount + 1, const_cast<EncodedJSValue*>(m_arguments.data()));
-        }
+    JS_EXPORT_PRIVATE CachedCall(JSGlobalObject*, JSFunction*, int argumentCount);
 
     ~CachedCall()
     {
@@ -122,45 +87,11 @@ public:
         m_addressForCall = nullptr;
     }
 
-    void relink()
-    {
-        VM& vm = m_vm;
-        auto scope = DECLARE_THROW_SCOPE(vm);
-        auto* codeBlock = m_vm.interpreter.prepareForCachedCall(*this, this->function());
-        RETURN_IF_EXCEPTION(scope, void());
-        m_protoCallFrame.setCodeBlock(codeBlock);
-    }
+    void relink();
 
-    template<typename... Args>
-    ALWAYS_INLINE JSValue callWithArguments(JSGlobalObject* globalObject, JSValue thisValue, Args... args)
-    {
-        VM& vm = m_vm;
-        auto scope = DECLARE_THROW_SCOPE(vm);
 
-#if CPU(ARM64) && CPU(ADDRESS64) && !ENABLE(C_LOOP)
-        ASSERT(sizeof...(args) == static_cast<size_t>(m_protoCallFrame.argumentCount()));
-        constexpr unsigned argumentCountIncludingThis = 1 + sizeof...(args);
-        if constexpr (argumentCountIncludingThis <= 4) {
-            if (m_numParameters <= argumentCountIncludingThis) [[likely]] {
-                JSValue result = m_vm.interpreter.tryCallWithArguments(*this, thisValue, args...);
-                RETURN_IF_EXCEPTION(scope, { });
-                if (result)
-                    return result;
-            }
-        }
-#endif
-
-        clearArguments();
-        setThis(thisValue);
-        (appendArgument(args), ...);
-
-        if (hasOverflowedArguments()) [[unlikely]] {
-            throwOutOfMemoryError(globalObject, scope);
-            return { };
-        }
-
-        RELEASE_AND_RETURN(scope, call());
-    }
+    template<typename... Args> requires (std::is_convertible_v<Args, JSValue> && ...)
+    JSValue callWithArguments(JSGlobalObject*, JSValue thisValue, Args...);
 
 private:
         VM& m_vm;

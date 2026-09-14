@@ -31,6 +31,7 @@
 #include "pas_enumerator.h"
 #include "pas_log.h"
 #include "pas_utils.h"
+#include "pas_zero_memory.h"
 
 PAS_BEGIN_EXTERN_C;
 

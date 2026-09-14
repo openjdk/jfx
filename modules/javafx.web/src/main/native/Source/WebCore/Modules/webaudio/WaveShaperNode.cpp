@@ -38,7 +38,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(WaveShaperNode);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(WaveShaperNode);
 
 ExceptionOr<Ref<WaveShaperNode>> WaveShaperNode::create(BaseAudioContext& context, const WaveShaperOptions& options)
 {
@@ -56,7 +56,7 @@ ExceptionOr<Ref<WaveShaperNode>> WaveShaperNode::create(BaseAudioContext& contex
         return result.releaseException();
 
     if (curve) {
-        result = node->setCurveForBindings(WTFMove(curve));
+        result = node->setCurveForBindings(WTF::move(curve));
         if (result.hasException())
             return result.releaseException();
     }
@@ -81,27 +81,22 @@ ExceptionOr<void> WaveShaperNode::setCurveForBindings(RefPtr<Float32Array>&& cur
     if (curve && curve->length() < 2)
         return Exception { ExceptionCode::InvalidStateError, "Length of curve array cannot be less than 2"_s };
 
-    if (curve) {
         // The specification states that we should maintain an internal copy of the curve so that
         // subsequent modifications of the contents of the array have no effect.
-        auto clonedCurve = Float32Array::create(curve->data(), curve->length());
-        curve = WTFMove(clonedCurve);
-    }
-
-    waveShaperProcessor()->setCurveForBindings(curve.get());
+    waveShaperProcessor()->setCurveForBindings(curve ? Vector<float>(curve->typedSpan()) : Vector<float>());
     return { };
 }
 
 RefPtr<Float32Array> WaveShaperNode::curveForBindings()
 {
     ASSERT(isMainThread());
-    RefPtr curve = waveShaperProcessor()->curveForBindings();
-    if (!curve)
+    auto& curve = waveShaperProcessor()->curveForBindings();
+    if (curve.isEmpty())
         return nullptr;
 
     // Make a clone of our internal array so that JS cannot modify our internal array
     // on the main thread while the audio thread is using it for rendering.
-    return Float32Array::create(curve->data(), curve->length());
+    return Float32Array::create(curve.span());
 }
 
 static inline WaveShaperProcessor::OverSampleType processorType(OverSampleType type)
@@ -149,8 +144,7 @@ bool WaveShaperNode::propagatesSilence() const
         return false;
 
     Locker locker { AdoptLock, waveShaperProcessor()->processLock() };
-    RefPtr curve = waveShaperProcessor()->curve();
-    return !curve || !curve->length();
+    return waveShaperProcessor()->curve().isEmpty();
 }
 
 } // namespace WebCore

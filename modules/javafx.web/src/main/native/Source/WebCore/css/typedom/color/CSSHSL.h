@@ -30,7 +30,7 @@
 namespace WebCore {
 
 class CSSHSL final : public CSSOMColorValue {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSHSL);
+    WTF_MAKE_TZONE_ALLOCATED(CSSHSL);
 public:
     static ExceptionOr<Ref<CSSHSL>> create(CSSColorAngle&& hue, CSSColorPercent&& saturation, CSSColorPercent&& lightness, CSSColorPercent&& alpha);
 
@@ -46,6 +46,8 @@ public:
 private:
     CSSHSL(RectifiedCSSColorAngle&&, RectifiedCSSColorPercent&&, RectifiedCSSColorPercent&&, RectifiedCSSColorPercent&&);
 
+    CSSStyleValueType styleValueType() const final { return CSSStyleValueType::CSSColorHSL; }
+
     RectifiedCSSColorAngle m_hue;
     RectifiedCSSColorPercent m_saturation;
     RectifiedCSSColorPercent m_lightness;
@@ -53,3 +55,7 @@ private:
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSHSL)
+    static bool isType(const WebCore::CSSStyleValue& value) { return value.styleValueType() == WebCore::CSSStyleValueType::CSSColorHSL; }
+SPECIALIZE_TYPE_TRAITS_END()

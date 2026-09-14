@@ -97,7 +97,8 @@ JSC_DEFINE_CUSTOM_GETTER(jsDOMWindow_webkit, (JSGlobalObject* lexicalGlobalObjec
     RefPtr localDOMWindow = dynamicDowncast<LocalDOMWindow>(castedThis->wrapped());
     if (!localDOMWindow)
         return JSValue::encode(jsUndefined());
-    return JSValue::encode(toJS(lexicalGlobalObject, castedThis->globalObject(), localDOMWindow->webkitNamespace()));
+    RefPtr webkitNamespace = localDOMWindow->webkitNamespace();
+    return JSValue::encode(webkitNamespace ? toJS(lexicalGlobalObject, castedThis->globalObject(), webkitNamespace.releaseNonNull()) : jsNull());
 }
 #endif
 
@@ -198,10 +199,6 @@ bool JSDOMWindow::getOwnPropertySlot(JSObject* object, JSGlobalObject* lexicalGl
 
     ASSERT(lexicalGlobalObject->vm().currentThreadIsHoldingAPILock());
 
-    // FIXME (rdar://115751655): This should be replaced with a same-origin check between the active and target document.
-    if (!is<LocalDOMWindow>(thisObject->wrapped()) && propertyName == "$vm"_s) [[unlikely]]
-        return true;
-
     // Hand off all cross-domain access to jsDOMWindowGetOwnPropertySlotRestrictedAccess.
     String errorMessage;
     if (!BindingSecurity::shouldAllowAccessToDOMWindow(*lexicalGlobalObject, thisObject->wrapped(), errorMessage))
@@ -222,7 +219,7 @@ bool JSDOMWindow::getOwnPropertySlot(JSObject* object, JSGlobalObject* lexicalGl
 
 #if ENABLE(USER_MESSAGE_HANDLERS)
     RefPtr localDOMWindow = dynamicDowncast<LocalDOMWindow>(thisObject->wrapped());
-    if (propertyName == builtinNames(lexicalGlobalObject->vm()).webkitPublicName() && localDOMWindow && localDOMWindow->shouldHaveWebKitNamespaceForWorld(thisObject->world())) {
+    if (propertyName == builtinNames(lexicalGlobalObject->vm()).webkitPublicName() && localDOMWindow && localDOMWindow->shouldHaveWebKitNamespaceForWorld(thisObject->world(), lexicalGlobalObject)) {
         slot.setCacheableCustom(thisObject, JSC::PropertyAttribute::DontDelete | JSC::PropertyAttribute::ReadOnly, jsDOMWindow_webkit);
         return true;
     }
@@ -243,11 +240,10 @@ bool JSDOMWindow::getOwnPropertySlotByIndex(JSObject* object, JSGlobalObject* le
     ASSERT(lexicalGlobalObject->vm().currentThreadIsHoldingAPILock());
     // These are also allowed cross-origin, so come before the access check.
     if (frame) {
-        // FIXME: <rdar://118263337> DOMWindow::length needs to include RemoteFrames.
         // FIXME: scopedChild/scopedChildCount and RemoteFrame need to work together well. We're using using child/childCount until then.
         if (is<LocalFrame>(frame)) {
             if (index < frame->tree().scopedChildCount()) {
-                if (auto* scopedChild = frame->tree().scopedChild(index)) {
+                if (RefPtr scopedChild = frame->tree().scopedChild(index)) {
                     slot.setValue(thisObject, enumToUnderlyingType(JSC::PropertyAttribute::ReadOnly), toJS(lexicalGlobalObject, scopedChild->window()));
                     return true;
                 }
@@ -354,7 +350,7 @@ void JSDOMWindow::analyzeHeap(JSCell* cell, HeapAnalyzer& analyzer)
 
 // https://html.spec.whatwg.org/#crossoriginproperties-(-o-)
 template <CrossOriginObject objectType>
-static void addCrossOriginPropertyNames(VM& vm, PropertyNameArray& propertyNames)
+static void addCrossOriginPropertyNames(VM& vm, PropertyNameArrayBuilder& propertyNames)
 {
     auto& builtinNames = WebCore::builtinNames(vm);
     switch (objectType) {
@@ -382,7 +378,7 @@ static void addCrossOriginPropertyNames(VM& vm, PropertyNameArray& propertyNames
 
 // https://html.spec.whatwg.org/#crossoriginownpropertykeys-(-o-)
 template <CrossOriginObject objectType>
-void addCrossOriginOwnPropertyNames(JSC::JSGlobalObject& lexicalGlobalObject, JSC::PropertyNameArray& propertyNames)
+void addCrossOriginOwnPropertyNames(JSC::JSGlobalObject& lexicalGlobalObject, JSC::PropertyNameArrayBuilder& propertyNames)
 {
     auto& vm = lexicalGlobalObject.vm();
     addCrossOriginPropertyNames<objectType>(vm, propertyNames);
@@ -395,16 +391,16 @@ void addCrossOriginOwnPropertyNames(JSC::JSGlobalObject& lexicalGlobalObject, JS
         propertyNames.add(*property);
 
 }
-template void addCrossOriginOwnPropertyNames<CrossOriginObject::Window>(JSC::JSGlobalObject&, JSC::PropertyNameArray&);
-template void addCrossOriginOwnPropertyNames<CrossOriginObject::Location>(JSC::JSGlobalObject&, JSC::PropertyNameArray&);
+template void addCrossOriginOwnPropertyNames<CrossOriginObject::Window>(JSC::JSGlobalObject&, JSC::PropertyNameArrayBuilder&);
+template void addCrossOriginOwnPropertyNames<CrossOriginObject::Location>(JSC::JSGlobalObject&, JSC::PropertyNameArrayBuilder&);
 
-static void addScopedChildrenIndexes(JSGlobalObject& lexicalGlobalObject, DOMWindow& window, PropertyNameArray& propertyNames)
+static void addScopedChildrenIndexes(JSGlobalObject& lexicalGlobalObject, DOMWindow& window, PropertyNameArrayBuilder& propertyNames)
 {
     RefPtr localDOMWindow = dynamicDowncast<LocalDOMWindow>(window);
     if (!localDOMWindow)
         return;
 
-    auto* document = localDOMWindow->document();
+    CheckedPtr document = localDOMWindow->document();
     if (!document)
         return;
 
@@ -419,7 +415,7 @@ static void addScopedChildrenIndexes(JSGlobalObject& lexicalGlobalObject, DOMWin
 }
 
 // https://html.spec.whatwg.org/#windowproxy-ownpropertykeys
-void JSDOMWindow::getOwnPropertyNames(JSObject* object, JSGlobalObject* lexicalGlobalObject, PropertyNameArray& propertyNames, DontEnumPropertiesMode mode)
+void JSDOMWindow::getOwnPropertyNames(JSObject* object, JSGlobalObject* lexicalGlobalObject, PropertyNameArrayBuilder& propertyNames, DontEnumPropertiesMode mode)
 {
     auto* thisObject = jsCast<JSDOMWindow*>(object);
 
@@ -474,7 +470,7 @@ JSValue JSDOMWindow::event(JSGlobalObject& lexicalGlobalObject) const
     Event* event = currentEvent();
     if (!event)
         return jsUndefined();
-    return toJS(&lexicalGlobalObject, const_cast<JSDOMWindow*>(this), event);
+    return toJS(&lexicalGlobalObject, const_cast<JSDOMWindow*>(this), *event);
 }
 
 // Custom functions
@@ -605,8 +601,10 @@ JSValue JSDOMWindow::queueMicrotask(JSGlobalObject& lexicalGlobalObject, CallFra
     if (!functionValue.isCallable()) [[unlikely]]
         return JSValue::decode(throwArgumentMustBeFunctionError(lexicalGlobalObject, scope, 0, "callback"_s, "Window"_s, "queueMicrotask"_s));
 
+    auto* globalObject = asObject(functionValue)->globalObject();
+
     scope.release();
-    globalObjectMethodTable()->queueMicrotaskToEventLoop(*this, JSC::QueuedTask { nullptr, this, functionValue, { }, { }, { }, { } });
+    globalObjectMethodTable()->queueMicrotaskToEventLoop(*this, JSC::QueuedTask { nullptr, JSC::InternalMicrotask::InvokeFunctionJob, 0, globalObject, functionValue });
     return jsUndefined();
 }
 

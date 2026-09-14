@@ -30,7 +30,9 @@
 
 #pragma once
 
+#include <cstddef>
 #include <type_traits>
+#include <utility>
 #include <wtf/Forward.h>
 
 // SFINAE depends on overload resolution. We indicate the overload we'd prefer
@@ -116,6 +118,32 @@ static auto HasRefPtrMemberFunctionsTest(SFINAE_OVERLOAD_DEFAULT) -> std::false_
 template<class T>
 struct HasRefPtrMemberFunctions : decltype(detail::HasRefPtrMemberFunctionsTest<T>(SFINAE_OVERLOAD)) { };
 
+// HasWeakPtrFunctions implementation
+namespace detail {
+
+template<class T>
+static auto HasWeakPtrFunctionsTest(SFINAE_OVERLOAD_PREFERRED) -> SFINAE1True<decltype(static_cast<std::remove_cv_t<T>*>(nullptr)->weakImpl(), static_cast<std::remove_cv_t<T>*>(nullptr)->weakCount())>;
+template<class>
+static auto HasWeakPtrFunctionsTest(SFINAE_OVERLOAD_DEFAULT) -> std::false_type;
+
+}
+
+template<class T>
+struct HasWeakPtrFunctions : decltype(detail::HasWeakPtrFunctionsTest<T>(SFINAE_OVERLOAD)) { };
+
+// HasThreadSafeWeakPtrFunctions implementation
+namespace detail {
+
+template<class T>
+static auto HasThreadSafeWeakPtrFunctionsTest(SFINAE_OVERLOAD_PREFERRED) -> SFINAE1True<decltype(static_cast<std::remove_cv_t<T>*>(nullptr)->weakRefCount())>;
+template<class>
+static auto HasThreadSafeWeakPtrFunctionsTest(SFINAE_OVERLOAD_DEFAULT) -> std::false_type;
+
+}
+
+template<class T>
+struct HasThreadSafeWeakPtrFunctions : decltype(detail::HasThreadSafeWeakPtrFunctionsTest<T>(SFINAE_OVERLOAD)) { };
+
 // HasCheckedPtrMemberFunctions implementation
 namespace detail {
 
@@ -195,5 +223,15 @@ constexpr std::size_t parameterCount(ReturnType(*)(Args...))
 {
     return ParameterCountImpl<Args...>::value;
 }
+
+#if defined(__has_feature)
+#if __has_feature(objc_arc)
+struct ARCEnabled : std::true_type { };
+#else
+struct ARCEnabled : std::false_type { };
+#endif
+#else
+struct ARCEnabled : std::false_type { };
+#endif
 
 } // namespace NTF

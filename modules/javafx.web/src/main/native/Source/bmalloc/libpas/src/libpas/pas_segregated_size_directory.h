@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018-2022 Apple Inc. All rights reserved.
+ * Copyright (c) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -38,6 +38,9 @@
 #include "pas_page_granule_use_count.h"
 #include "pas_segregated_directory.h"
 #include "pas_segregated_size_directory_creation_mode.h"
+#include "pas_zero_memory.h"
+
+#if LIBPAS_ENABLED
 
 PAS_BEGIN_EXTERN_C;
 
@@ -370,5 +373,5 @@ PAS_API void pas_segregated_size_directory_dump_for_spectrum(
 
 PAS_END_EXTERN_C;
 
+#endif /* LIBPAS_ENABLED */
 #endif /* PAS_SEGREGATED_SIZE_DIRECTORY_H */
-

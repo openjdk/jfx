@@ -203,7 +203,7 @@ ALWAYS_INLINE bool canUseASCIIUCADUCETComparison(char16_t character)
     return isASCII(character) && ducetLevel1Weights[character];
 }
 
-ALWAYS_INLINE bool canUseASCIIUCADUCETComparison(LChar character)
+ALWAYS_INLINE bool canUseASCIIUCADUCETComparison(Latin1Character character)
 {
     return ducetLevel1Weights[character];
 }
@@ -216,7 +216,7 @@ ALWAYS_INLINE bool followedByNonLatinCharacter(std::span<const char16_t> charact
     return false;
 }
 
-ALWAYS_INLINE bool followedByNonLatinCharacter(std::span<const LChar>, size_t)
+ALWAYS_INLINE bool followedByNonLatinCharacter(std::span<const Latin1Character>, size_t)
 {
     return false;
 }
@@ -351,7 +351,7 @@ class ListFormatInput {
     WTF_MAKE_NONCOPYABLE(ListFormatInput);
 public:
     ListFormatInput(Vector<String, 4>&& strings)
-        : m_strings(WTFMove(strings))
+        : m_strings(WTF::move(strings))
     {
         m_stringPointers.reserveInitialCapacity(m_strings.size());
         m_stringLengths.reserveInitialCapacity(m_strings.size());

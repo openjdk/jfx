@@ -60,6 +60,10 @@ public:
 
     virtual ~CDMFactoryClearKey();
 
+    // Do nothing since this is a singleton object.
+    void ref() const final { }
+    void deref() const final { }
+
     std::unique_ptr<CDMPrivate> createCDM(const String& keySystem, const String& mediaKeysHashSalt, const CDMPrivateClient&) final;
     bool supportsKeySystem(const String&) final;
 
@@ -70,12 +74,13 @@ private:
 
 class CDMPrivateClearKey final : public CDMPrivate {
     WTF_MAKE_TZONE_ALLOCATED(CDMPrivateClearKey);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(CDMPrivateClearKey);
 public:
     CDMPrivateClearKey();
     virtual ~CDMPrivateClearKey();
 
-    Vector<AtomString> supportedInitDataTypes() const final;
-    Vector<AtomString> supportedRobustnesses() const final;
+    Vector<String> supportedInitDataTypes() const final;
+    Vector<String> supportedRobustnesses() const final;
     bool supportsConfiguration(const CDMKeySystemConfiguration&) const final;
     bool supportsConfigurationWithRestrictions(const CDMKeySystemConfiguration&, const CDMRestrictions&) const final;
     bool supportsSessionTypeWithConfiguration(const CDMSessionType&, const CDMKeySystemConfiguration&) const final;
@@ -86,12 +91,14 @@ public:
     void loadAndInitialize() final;
     bool supportsServerCertificates() const final;
     bool supportsSessions() const final;
-    bool supportsInitData(const AtomString&, const SharedBuffer&) const final;
+    bool supportsInitData(const String&, const SharedBuffer&) const final;
     RefPtr<SharedBuffer> sanitizeResponse(const SharedBuffer&) const final;
     std::optional<String> sanitizeSessionId(const String&) const final;
 };
 
 class CDMInstanceClearKey final : public CDMInstanceProxy {
+    WTF_MAKE_TZONE_ALLOCATED(CDMInstanceClearKey);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(CDMInstanceClearKey);
 public:
     CDMInstanceClearKey();
     virtual ~CDMInstanceClearKey();
@@ -114,7 +121,7 @@ class CDMInstanceSessionClearKey final : public CDMInstanceSessionProxy {
 public:
     CDMInstanceSessionClearKey(CDMInstanceClearKey& parent)
         : CDMInstanceSessionProxy(parent) { }
-    void requestLicense(LicenseType, KeyGroupingStrategy, const AtomString& initDataType, Ref<SharedBuffer>&& initData, LicenseCallback&&) final;
+    void requestLicense(LicenseType, KeyGroupingStrategy, const String& initDataType, Ref<SharedBuffer>&& initData, LicenseCallback&&) final;
     void updateLicense(const String&, LicenseType, Ref<SharedBuffer>&&, LicenseUpdateCallback&&) final;
     void loadSession(LicenseType, const String&, const String&, LoadSessionCallback&&) final;
     void closeSession(const String&, CloseSessionCallback&&) final;

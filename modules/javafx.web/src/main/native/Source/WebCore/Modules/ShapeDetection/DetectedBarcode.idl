@@ -27,9 +27,9 @@
 
 [
     EnabledBySetting=ShapeDetection,
-    JSGenerateToJSObject
-]
-dictionary DetectedBarcode {
+    JSGenerateToJSObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary DetectedBarcode {
     required DOMRectReadOnly boundingBox;
     required DOMString rawValue;
     required BarcodeFormat format;

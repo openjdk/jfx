@@ -29,9 +29,9 @@
 namespace WebCore {
 namespace Style {
 
-PropertyAllowlist propertyAllowlistForPseudoId(PseudoId pseudoId)
+PropertyAllowlist propertyAllowlistForPseudoElement(PseudoElementType type)
 {
-    if (pseudoId == PseudoId::Marker)
+    if (type == PseudoElementType::Marker)
         return PropertyAllowlist::Marker;
     return PropertyAllowlist::None;
 }

@@ -50,7 +50,7 @@ CoordinatedPlatformLayerBufferHolePunch::CoordinatedPlatformLayerBufferHolePunch
 std::unique_ptr<CoordinatedPlatformLayerBufferHolePunch> CoordinatedPlatformLayerBufferHolePunch::create(const IntSize& size, GstElement* videoSink, RefPtr<GStreamerQuirksManager>&& quirksManager)
 {
     ASSERT(videoSink && quirksManager);
-    return makeUnique<CoordinatedPlatformLayerBufferHolePunch>(size, videoSink, WTFMove(quirksManager));
+    return makeUnique<CoordinatedPlatformLayerBufferHolePunch>(size, videoSink, WTF::move(quirksManager));
 }
 
 CoordinatedPlatformLayerBufferHolePunch::CoordinatedPlatformLayerBufferHolePunch(const IntSize& size, GstElement* videoSink, RefPtr<GStreamerQuirksManager>&& quirksManager)

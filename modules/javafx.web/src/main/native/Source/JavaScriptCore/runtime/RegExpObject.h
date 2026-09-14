@@ -20,10 +20,10 @@
 
 #pragma once
 
-#include "JSObject.h"
-#include "RegExp.h"
-#include "ThrowScope.h"
-#include "TypeError.h"
+#include <JavaScriptCore/JSObject.h>
+#include <JavaScriptCore/RegExp.h>
+#include <JavaScriptCore/ThrowScope.h>
+#include <JavaScriptCore/TypeError.h>
 
 namespace JSC {
 
@@ -111,6 +111,8 @@ public:
     MatchResult match(JSGlobalObject*, JSString*);
     JSValue matchGlobal(JSGlobalObject*, JSString*);
 
+    bool isSymbolReplaceFastAndNonObservable();
+
     static bool getOwnPropertySlot(JSObject*, JSGlobalObject*, PropertyName, PropertySlot&);
     static bool put(JSCell*, JSGlobalObject*, PropertyName, JSValue, PutPropertySlot&);
 
@@ -150,7 +152,7 @@ private:
     }
 
     JS_EXPORT_PRIVATE static bool deleteProperty(JSCell*, JSGlobalObject*, PropertyName, DeletePropertySlot&);
-    JS_EXPORT_PRIVATE static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArray&, DontEnumPropertiesMode);
+    JS_EXPORT_PRIVATE static void getOwnSpecialPropertyNames(JSObject*, JSGlobalObject*, PropertyNameArrayBuilder&, DontEnumPropertiesMode);
     JS_EXPORT_PRIVATE static bool defineOwnProperty(JSObject*, JSGlobalObject*, PropertyName, const PropertyDescriptor&, bool shouldThrow);
 
     MatchResult matchInline(JSGlobalObject*, JSString*);

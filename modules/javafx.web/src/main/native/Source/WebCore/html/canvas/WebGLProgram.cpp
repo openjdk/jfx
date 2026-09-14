@@ -28,6 +28,7 @@
 
 #if ENABLE(WEBGL)
 
+#include "ContextDestructionObserverInlines.h"
 #include "InspectorInstrumentation.h"
 #include "ScriptExecutionContext.h"
 #include "WebCoreOpaqueRootInlines.h"
@@ -54,11 +55,16 @@ Lock& WebGLProgram::instancesLock()
     return s_instancesLock;
 }
 
-RefPtr<WebGLProgram> WebGLProgram::create(WebGLRenderingContextBase& context)
+Ref<WebGLProgram> WebGLProgram::createLost(WebGLRenderingContextBase& context)
 {
-    auto object = context.protectedGraphicsContextGL()->createProgram();
+    return adoptRef(*new WebGLProgram { context });
+}
+
+Ref<WebGLProgram> WebGLProgram::create(WebGLRenderingContextBase& context)
+{
+    auto object = context.graphicsContextGL()->createProgram();
     if (!object)
-        return nullptr;
+        return createLost(context);
     return adoptRef(*new WebGLProgram { context, object });
 }
 
@@ -68,6 +74,16 @@ WebGLProgram::WebGLProgram(WebGLRenderingContextBase& context, PlatformGLObject 
 {
     ASSERT(scriptExecutionContext());
 
+    {
+        Locker locker { instancesLock() };
+        instances().add(this, &context);
+    }
+}
+
+WebGLProgram::WebGLProgram(WebGLRenderingContextBase& context)
+    : ContextDestructionObserver(context.scriptExecutionContext())
+{
+    ASSERT(scriptExecutionContext());
     {
         Locker locker { instancesLock() };
         instances().add(this, &context);
@@ -122,50 +138,48 @@ void WebGLProgram::increaseLinkCount()
     m_infoValid = false;
 }
 
-WebGLShader* WebGLProgram::getAttachedShader(GCGLenum type)
+RefPtr<WebGLShader> WebGLProgram::fragmentShader() const
 {
-    switch (type) {
-    case GraphicsContextGL::VERTEX_SHADER:
-        return m_vertexShader.get();
-    case GraphicsContextGL::FRAGMENT_SHADER:
-        return m_fragmentShader.get();
-    default:
-        return 0;
-    }
+    return m_fragmentShader;
 }
 
-bool WebGLProgram::attachShader(const AbstractLocker&, WebGLShader* shader)
+RefPtr<WebGLShader> WebGLProgram::vertexShader() const
 {
-    if (!shader || !shader->object())
+    return m_vertexShader;
+}
+
+bool WebGLProgram::attachShader(const AbstractLocker&, WebGLShader& shader)
+{
+    if (!shader.object())
         return false;
-    switch (shader->getType()) {
+    switch (shader.getType()) {
     case GraphicsContextGL::VERTEX_SHADER:
         if (m_vertexShader)
             return false;
-        m_vertexShader = shader;
+        m_vertexShader = &shader;
         return true;
     case GraphicsContextGL::FRAGMENT_SHADER:
         if (m_fragmentShader)
             return false;
-        m_fragmentShader = shader;
+        m_fragmentShader = &shader;
         return true;
     default:
         return false;
     }
 }
 
-bool WebGLProgram::detachShader(const AbstractLocker&, WebGLShader* shader)
+bool WebGLProgram::detachShader(const AbstractLocker&, WebGLShader& shader)
 {
-    if (!shader || !shader->object())
+    if (!shader.object())
         return false;
-    switch (shader->getType()) {
+    switch (shader.getType()) {
     case GraphicsContextGL::VERTEX_SHADER:
-        if (m_vertexShader != shader)
+        if (m_vertexShader != &shader)
             return false;
         m_vertexShader = nullptr;
         return true;
     case GraphicsContextGL::FRAGMENT_SHADER:
-        if (m_fragmentShader != shader)
+        if (m_fragmentShader != &shader)
             return false;
         m_fragmentShader = nullptr;
         return true;
@@ -193,9 +207,8 @@ void WebGLProgram::cacheInfoIfNeeded()
         return;
     GCGLint linkStatus = context->getProgrami(object(), GraphicsContextGL::LINK_STATUS);
     m_linkStatus = linkStatus;
-    if (m_linkStatus) {
+    if (m_linkStatus)
         m_requiredTransformFeedbackBufferCount = m_requiredTransformFeedbackBufferCountAfterNextLink;
-    }
     m_infoValid = true;
 }
 

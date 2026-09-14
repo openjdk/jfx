@@ -49,6 +49,7 @@ TextBreakIterator::Backing TextBreakIterator::mapModeToBackingIterator(StringVie
 TextBreakIterator::TextBreakIterator(StringView string, std::span<const char16_t> priorContext, Mode mode, ContentAnalysis contentAnalysis, const AtomString& locale)
     : m_backing(mapModeToBackingIterator(string, priorContext, mode, contentAnalysis, locale))
     , m_mode(mode)
+    , m_contentAnalysis(contentAnalysis)
     , m_locale(locale)
 {
 }

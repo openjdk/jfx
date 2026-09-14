@@ -27,7 +27,7 @@ class SVGElement;
 class SVGGraphicsElement;
 
 class RenderSVGBlock : public RenderBlockFlow {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderSVGBlock);
+    WTF_MAKE_TZONE_ALLOCATED(RenderSVGBlock);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderSVGBlock);
 public:
     inline SVGGraphicsElement& graphicsElement() const;
@@ -39,11 +39,11 @@ protected:
 
     void willBeDestroyed() override;
 
-    void computeOverflow(LayoutUnit oldClientAfterEdge, bool recomputeFloats = false) override;
+    void computeOverflow(LayoutRect contentArea, OptionSet<ComputeOverflowOptions>) override;
 
     void updateFromStyle() override;
     bool needsHasSVGTransformFlags() const override;
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) override;
 
 private:
     void element() const = delete;

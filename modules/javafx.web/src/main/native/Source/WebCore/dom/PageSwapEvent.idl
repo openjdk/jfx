@@ -34,7 +34,9 @@
     readonly attribute ViewTransition? viewTransition;
 };
 
-dictionary PageSwapEventInit : EventInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary PageSwapEventInit : EventInit {
   NavigationActivation? activation = null;
   ViewTransition? viewTransition = null;
 };

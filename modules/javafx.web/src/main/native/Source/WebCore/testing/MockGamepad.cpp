@@ -27,17 +27,20 @@
 #include "MockGamepad.h"
 
 #if ENABLE(GAMEPAD)
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-MockGamepad::MockGamepad(unsigned index, const String& gamepadID, const String& mapping, unsigned axisCount, unsigned buttonCount, bool supportsDualRumble)
+WTF_MAKE_TZONE_ALLOCATED_IMPL(MockGamepad);
+
+MockGamepad::MockGamepad(unsigned index, const String& gamepadID, const String& mapping, unsigned axisCount, unsigned buttonCount, bool supportsDualRumble, bool wasConnected)
     : PlatformGamepad(index)
 {
     m_connectTime = m_lastUpdateTime = MonotonicTime::now();
-    updateDetails(gamepadID, mapping, axisCount, buttonCount, supportsDualRumble);
+    updateDetails(gamepadID, mapping, axisCount, buttonCount, supportsDualRumble, wasConnected);
 }
 
-void MockGamepad::updateDetails(const String& gamepadID, const String& mapping, unsigned axisCount, unsigned buttonCount, bool supportsDualRumble)
+void MockGamepad::updateDetails(const String& gamepadID, const String& mapping, unsigned axisCount, unsigned buttonCount, bool supportsDualRumble, bool wasConnected)
 {
     m_id = gamepadID;
     m_mapping = mapping;
@@ -52,6 +55,7 @@ void MockGamepad::updateDetails(const String& gamepadID, const String& mapping, 
         m_supportedEffectTypes.add(GamepadHapticEffectType::DualRumble);
     else
         m_supportedEffectTypes.remove(GamepadHapticEffectType::DualRumble);
+    m_wasConnected = wasConnected;
 }
 
 bool MockGamepad::setAxisValue(unsigned index, double value)

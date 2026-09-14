@@ -26,6 +26,7 @@
 #include "config.h"
 #include "LocalFrameLoaderClient.h"
 
+#include "Frame.h"
 #include "FrameLoader.h"
 
 namespace WebCore {
@@ -51,5 +52,10 @@ void LocalFrameLoaderClient::didExceedNetworkUsageThreshold()
 {
 }
 #endif
+
+RefPtr<Frame> LocalFrameLoaderClient::provisionalParentFrame() const
+{
+    return nullptr;
+}
 
 } // namespace WebCore

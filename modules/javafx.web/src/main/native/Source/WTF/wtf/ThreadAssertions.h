@@ -26,7 +26,11 @@
 #pragma once
 
 #include <atomic>
+#include <cstdint>
 #include <utility>
+#include <wtf/Assertions.h>
+#include <wtf/ExportMacros.h>
+#include <wtf/StdLibExtras.h>
 #include <wtf/ThreadSafetyAnalysis.h>
 
 namespace WTF {
@@ -119,7 +123,7 @@ inline ThreadLikeAssertion::ThreadLikeAssertion(CurrentThreadLike)
 
 inline ThreadLikeAssertion::ThreadLikeAssertion(ThreadLikeAssertion&& other)
 {
-    *this = WTFMove(other);
+    *this = WTF::move(other);
 }
 
 inline ThreadLikeAssertion& ThreadLikeAssertion::operator=(ThreadLikeAssertion&& other)

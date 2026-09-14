@@ -34,19 +34,21 @@
 namespace WebCore {
 
 class SpeechSynthesisErrorEvent final : public SpeechSynthesisEvent {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SpeechSynthesisErrorEvent);
+    WTF_MAKE_TZONE_ALLOCATED(SpeechSynthesisErrorEvent);
 public:
 
-    static Ref<SpeechSynthesisErrorEvent> create(const AtomString& type, const SpeechSynthesisErrorEventInit&);
+    static Ref<SpeechSynthesisErrorEvent> create(const AtomString& type, SpeechSynthesisErrorEventInit&&);
 
     SpeechSynthesisErrorCode error() const { return m_error; }
 
 private:
-    SpeechSynthesisErrorEvent(const AtomString& type, const SpeechSynthesisErrorEventInit&);
+    SpeechSynthesisErrorEvent(const AtomString& type, SpeechSynthesisErrorCode, SpeechSynthesisErrorEventInit&&);
 
     SpeechSynthesisErrorCode m_error;
 };
 
 } // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_EVENT(SpeechSynthesisErrorEvent)
 
 #endif // ENABLE(SPEECH_SYNTHESIS)

@@ -20,18 +20,19 @@
 #include "config.h"
 #include "RenderSVGResourceGradient.h"
 
+#include "RenderObjectNode.h"
 #include "RenderSVGModelObjectInlines.h"
 #include "RenderSVGResourceGradientInlines.h"
 #include "RenderSVGShape.h"
-#include "SVGRenderStyle.h"
+#include "RenderStyle+GettersInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGResourceGradient);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderSVGResourceGradient);
 
 RenderSVGResourceGradient::RenderSVGResourceGradient(Type type, SVGElement& element, RenderStyle&& style)
-    : RenderSVGResourcePaintServer(type, element, WTFMove(style))
+    : RenderSVGResourcePaintServer(type, element, WTF::move(style))
 {
 }
 
@@ -39,11 +40,12 @@ RenderSVGResourceGradient::~RenderSVGResourceGradient() = default;
 
 GradientColorStops RenderSVGResourceGradient::stopsByApplyingColorFilter(const GradientColorStops& stops, const RenderStyle& style) const
 {
-    if (!style.hasAppleColorFilter())
+    if (style.appleColorFilter().isNone())
         return stops;
 
-    return stops.mapColors([&] (auto& color) {
-        return style.colorByApplyingColorFilter(color);
+    Style::ColorResolver colorResolver { style };
+    return stops.mapColors([&](auto& color) {
+        return colorResolver.colorApplyingColorFilter(color);
     });
 }
 
@@ -95,9 +97,8 @@ bool RenderSVGResourceGradient::prepareFillOperation(GraphicsContext& context, c
     if (!buildGradientIfNeeded(targetRenderer, style, userspaceTransform))
             return false;
 
-    Ref svgStyle = style.svgStyle();
-    context.setAlpha(svgStyle->fillOpacity().value.value);
-    context.setFillRule(svgStyle->fillRule());
+    context.setAlpha(style.fillOpacity().value.value);
+    context.setFillRule(style.fillRule());
     context.setFillGradient(m_gradient.copyRef().releaseNonNull(), userspaceTransform);
     return true;
 }
@@ -108,13 +109,12 @@ bool RenderSVGResourceGradient::prepareStrokeOperation(GraphicsContext& context,
     if (!buildGradientIfNeeded(targetRenderer, style, userspaceTransform))
         return false;
 
-    Ref svgStyle = style.svgStyle();
-    if (svgStyle->vectorEffect() == VectorEffect::NonScalingStroke) {
+    if (style.vectorEffect() == VectorEffect::NonScalingStroke) {
         if (CheckedPtr shape = dynamicDowncast<RenderSVGShape>(targetRenderer))
             userspaceTransform = shape->nonScalingStrokeTransform() * userspaceTransform;
             }
 
-    context.setAlpha(svgStyle->strokeOpacity().value.value);
+    context.setAlpha(style.strokeOpacity().value.value);
     SVGRenderSupport::applyStrokeStyleToContext(context, style, targetRenderer);
     context.setStrokeGradient(m_gradient.copyRef().releaseNonNull(), userspaceTransform);
     return true;

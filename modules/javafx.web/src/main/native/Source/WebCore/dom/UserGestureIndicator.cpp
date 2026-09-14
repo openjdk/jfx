@@ -26,14 +26,12 @@
 #include "config.h"
 #include "UserGestureIndicator.h"
 
-#include "Document.h"
-#include "DocumentInlines.h"
+#include "DocumentPage.h"
 #include "FrameDestructionObserverInlines.h"
 #include "LocalDOMWindow.h"
 #include "LocalFrame.h"
 #include "LocalFrameInlines.h"
 #include "Logging.h"
-#include "Page.h"
 #include "ResourceLoadObserver.h"
 #include "SecurityOrigin.h"
 #include <wtf/MainThread.h>
@@ -102,7 +100,7 @@ const Seconds& UserGestureToken::maximumIntervalForUserGestureForwardingForFetch
 
 void UserGestureToken::setMaximumIntervalForUserGestureForwardingForFetchForTesting(Seconds value)
 {
-    maxIntervalForUserGestureForwardingForFetch = WTFMove(value);
+    maxIntervalForUserGestureForwardingForFetch = WTF::move(value);
 }
 
 bool UserGestureToken::isValidForDocument(const Document& document) const
@@ -128,14 +126,14 @@ UserGestureIndicator::UserGestureIndicator(std::optional<IsProcessingUserGesture
         if (processInteractionStyle == ProcessInteractionStyle::Immediate) {
             RefPtr mainFrameDocument = document->mainFrameDocument();
             if (mainFrameDocument)
-                ResourceLoadObserver::shared().logUserInteractionWithReducedTimeResolution(*mainFrameDocument);
+                ResourceLoadObserver::singleton().logUserInteractionWithReducedTimeResolution(*mainFrameDocument);
             else
                 LOG_ONCE(SiteIsolation, "Unable to properly construct UserGestureIndicator::UserGestureIndicator() without access to the main frame document ");
         }
         if (RefPtr page = document->page())
             page->setUserDidInteractWithPage(true);
         if (RefPtr frame = document->frame(); frame && !frame->hasHadUserInteraction()) {
-            for (RefPtr<Frame> ancestor = WTFMove(frame); ancestor; ancestor = ancestor->tree().parent()) {
+            for (RefPtr<Frame> ancestor = WTF::move(frame); ancestor; ancestor = ancestor->tree().parent()) {
                 if (RefPtr localAncestor = dynamicDowncast<LocalFrame>(ancestor)) {
                     localAncestor->setHasHadUserInteraction();
                     if (RefPtr ancestorDocument = localAncestor->document())
@@ -181,6 +179,11 @@ UserGestureIndicator::~UserGestureIndicator()
     }
 
     currentToken() = m_previousToken;
+}
+
+RefPtr<UserGestureToken> UserGestureIndicator::currentUserGestureForMainThread()
+{
+    return currentToken();
 }
 
 RefPtr<UserGestureToken> UserGestureIndicator::currentUserGesture()

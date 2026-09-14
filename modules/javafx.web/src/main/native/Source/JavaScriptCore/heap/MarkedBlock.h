@@ -21,10 +21,10 @@
 
 #pragma once
 
-#include "CellAttributes.h"
-#include "DestructionMode.h"
-#include "HeapCell.h"
-#include "WeakSet.h"
+#include <JavaScriptCore/CellAttributes.h>
+#include <JavaScriptCore/DestructionMode.h>
+#include <JavaScriptCore/HeapCell.h>
+#include <JavaScriptCore/WeakSet.h>
 #include <algorithm>
 #include <type_traits>
 #include <wtf/Atomics.h>
@@ -115,7 +115,7 @@ public:
 
     class Handle {
         WTF_MAKE_NONCOPYABLE(Handle);
-        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(MarkedBlockHandle, MarkedBlockHandle);
+        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(Handle, MarkedBlockHandle);
         friend class LLIntOffsetsExtractor;
         friend class MarkedBlock;
         friend struct VerifyMarked;
@@ -220,7 +220,7 @@ public:
     private:
         Handle(Heap&, AlignedMemoryAllocator*, void*);
 
-        enum SweepDestructionMode { BlockHasNoDestructors, BlockHasDestructors, BlockHasDestructorsAndCollectorIsRunning };
+        enum SweepDestructionMode { BlockHasNoDestructors, BlockHasDestructors };
         enum ScribbleMode { DontScribble, Scribble };
         enum EmptyMode { IsEmpty, NotEmpty };
         enum NewlyAllocatedMode { HasNewlyAllocated, DoesNotHaveNewlyAllocated };

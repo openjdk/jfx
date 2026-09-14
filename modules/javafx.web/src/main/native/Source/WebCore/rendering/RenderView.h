@@ -21,11 +21,11 @@
 
 #pragma once
 
-#include "LocalFrameView.h"
-#include "Region.h"
-#include "RenderBlockFlow.h"
-#include "RenderSelection.h"
-#include "RenderWidget.h"
+#include <WebCore/LocalFrameView.h>
+#include <WebCore/Region.h>
+#include <WebCore/RenderBlockFlow.h>
+#include <WebCore/RenderSelection.h>
+#include <WebCore/RenderWidget.h>
 #include <memory>
 #include <wtf/HashSet.h>
 #include <wtf/ListHashSet.h>
@@ -45,7 +45,7 @@ class LayoutState;
 }
 
 class RenderView final : public RenderBlockFlow {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(RenderView);
+    WTF_MAKE_TZONE_ALLOCATED(RenderView);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(RenderView);
 public:
     RenderView(Document&, RenderStyle&&);
@@ -89,7 +89,7 @@ public:
 
     std::optional<RepaintRects> computeVisibleRectsInContainer(const RepaintRects&, const RenderLayerModelObject* container, VisibleRectContext) const override;
     void repaintRootContents();
-    void repaintViewRectangle(const LayoutRect&) const;
+    void repaintViewRectangle(const LayoutRect&);
     void repaintViewAndCompositedLayers();
 
     void paint(PaintInfo&, const LayoutPoint&) override;
@@ -138,6 +138,7 @@ public:
     void setIsInWindow(bool);
 
     WEBCORE_EXPORT RenderLayerCompositor& compositor();
+    WEBCORE_EXPORT CheckedRef<RenderLayerCompositor> checkedCompositor();
     WEBCORE_EXPORT bool usesCompositing() const;
 
     WEBCORE_EXPORT IntRect unscaledDocumentRect() const;
@@ -195,7 +196,7 @@ public:
         ~RepaintRegionAccumulator();
 
     private:
-        SingleThreadWeakPtr<RenderView> m_rootView;
+        SingleThreadWeakPtr<RenderView> m_view;
         bool m_wasAccumulatingRepaintRegion { false };
     };
 
@@ -222,8 +223,11 @@ public:
     void removeViewTransitionGroup(const AtomString&);
     RenderBox* viewTransitionGroupForName(const AtomString&);
 
+protected:
+    void willBeDestroyed() override;
+
 private:
-    void styleDidChange(StyleDifference, const RenderStyle* oldStyle) override;
+    void styleDidChange(Style::Difference, const RenderStyle* oldStyle) override;
 
     void mapLocalToContainer(const RenderLayerModelObject* repaintContainer, TransformState&, OptionSet<MapCoordinatesMode>, bool* wasFixed) const override;
     const RenderElement* pushMappingToContainer(const RenderLayerModelObject* ancestorToStopAt, RenderGeometryMap&) const override;
@@ -233,6 +237,9 @@ private:
     void computeColumnCountAndWidth() override;
 
     bool shouldRepaint(const LayoutRect&) const;
+
+    // Returns true if we determine that the accumulated dirty rect makes up a significant fraction of viewRect.
+    bool accumulateRepaintRect(IntRect dirtyRect, IntRect viewRect);
     void flushAccumulatedRepaintRegion() const;
 
     void layoutContent(const RenderLayoutState&);

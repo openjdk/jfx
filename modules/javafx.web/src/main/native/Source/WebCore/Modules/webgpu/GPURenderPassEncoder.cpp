@@ -36,19 +36,19 @@
 namespace WebCore {
 
 GPURenderPassEncoder::GPURenderPassEncoder(Ref<WebGPU::RenderPassEncoder>&& backing, WebGPU::Device& device)
-    : m_backing(WTFMove(backing))
+    : m_backing(WTF::move(backing))
     , m_device(&device)
 {
 }
 
 String GPURenderPassEncoder::label() const
 {
-    return m_backing->label();
+    return m_overrideLabel ? *m_overrideLabel : m_backing->label();
 }
 
 void GPURenderPassEncoder::setLabel(String&& label)
 {
-    protectedBacking()->setLabel(WTFMove(label));
+    protectedBacking()->setLabel(WTF::move(label));
 }
 
 void GPURenderPassEncoder::setPipeline(const GPURenderPipeline& renderPipeline)
@@ -93,7 +93,7 @@ void GPURenderPassEncoder::drawIndexedIndirect(const GPUBuffer& indirectBuffer, 
 void GPURenderPassEncoder::setBindGroup(GPUIndex32 index, const GPUBindGroup* bindGroup,
     std::optional<Vector<GPUBufferDynamicOffset>>&& dynamicOffsets)
 {
-    protectedBacking()->setBindGroup(index, bindGroup ? &bindGroup->backing() : nullptr, WTFMove(dynamicOffsets));
+    protectedBacking()->setBindGroup(index, bindGroup ? &bindGroup->backing() : nullptr, WTF::move(dynamicOffsets));
 }
 
 ExceptionOr<void> GPURenderPassEncoder::setBindGroup(GPUIndex32 index, const GPUBindGroup* bindGroup,
@@ -111,7 +111,7 @@ ExceptionOr<void> GPURenderPassEncoder::setBindGroup(GPUIndex32 index, const GPU
 
 void GPURenderPassEncoder::pushDebugGroup(String&& groupLabel)
 {
-    protectedBacking()->pushDebugGroup(WTFMove(groupLabel));
+    protectedBacking()->pushDebugGroup(WTF::move(groupLabel));
 }
 
 void GPURenderPassEncoder::popDebugGroup()
@@ -121,7 +121,7 @@ void GPURenderPassEncoder::popDebugGroup()
 
 void GPURenderPassEncoder::insertDebugMarker(String&& markerLabel)
 {
-    protectedBacking()->insertDebugMarker(WTFMove(markerLabel));
+    protectedBacking()->insertDebugMarker(WTF::move(markerLabel));
 }
 
 void GPURenderPassEncoder::setViewport(float x, float y,
@@ -162,14 +162,16 @@ void GPURenderPassEncoder::executeBundles(Vector<Ref<GPURenderBundle>>&& bundles
     auto result = WTF::map(bundles, [](auto& bundle) -> Ref<WebGPU::RenderBundle> {
             return bundle->backing();
     });
-    protectedBacking()->executeBundles(WTFMove(result));
+    protectedBacking()->executeBundles(WTF::move(result));
 }
 
 void GPURenderPassEncoder::end()
 {
     protectedBacking()->end();
-    if (RefPtr device = m_device.get())
+    if (RefPtr device = m_device.get()) {
+        m_overrideLabel = label();
         m_backing = device->invalidRenderPassEncoder();
+    }
 }
 
 }

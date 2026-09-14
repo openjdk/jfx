@@ -43,8 +43,11 @@
 #include "XLinkNames.h"
 #include "XMLNSNames.h"
 #include "XMLNames.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
+
+WTF_MAKE_STRUCT_TZONE_ALLOCATED_IMPL(PrewarmInformation);
 
 void ProcessWarming::initializeNames()
 {
@@ -86,7 +89,7 @@ WebCore::PrewarmInformation ProcessWarming::collectPrewarmInformation()
 
 void ProcessWarming::prewarmWithInformation(PrewarmInformation&& prewarmInfo)
 {
-    FontCache::forCurrentThread()->prewarm(WTFMove(prewarmInfo.fontCache));
+    FontCache::forCurrentThread()->prewarm(WTF::move(prewarmInfo.fontCache));
 }
 
 }

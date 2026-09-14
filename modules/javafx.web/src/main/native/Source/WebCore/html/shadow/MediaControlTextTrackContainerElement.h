@@ -34,14 +34,21 @@
 #include "HTMLDivElement.h"
 #include "IntRect.h"
 #include "MediaControllerInterface.h"
+#include "PODInterval.h"
 #include "TextTrackRepresentation.h"
 #include <wtf/LoggerHelper.h>
+#include <wtf/MediaTime.h>
 #include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
 class HTMLMediaElement;
+class TextTrack;
+class TextTrackCue;
 class VTTCue;
+
+using CueInterval = PODInterval<MediaTime, TextTrackCue*>;
+using CueList = Vector<CueInterval>;
 
 class MediaControlTextTrackContainerElement final
     : public HTMLDivElement
@@ -50,11 +57,13 @@ class MediaControlTextTrackContainerElement final
     , private LoggerHelper
 #endif
 {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(MediaControlTextTrackContainerElement);
+    WTF_MAKE_TZONE_ALLOCATED(MediaControlTextTrackContainerElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(MediaControlTextTrackContainerElement);
 public:
     static Ref<MediaControlTextTrackContainerElement> create(Document&, HTMLMediaElement&);
+    ~MediaControlTextTrackContainerElement();
 
+    void captionPreferencesChanged();
     enum class ForceUpdate : bool { No, Yes };
     void updateSizes(ForceUpdate force = ForceUpdate::No);
     void updateDisplay();
@@ -65,6 +74,9 @@ public:
 
     void enteredFullscreen();
     void exitedFullscreen();
+
+    void showCaptionDisplaySettingsPreview();
+    void hideCaptionDisplaySettingsPreview();
 
 private:
     explicit MediaControlTextTrackContainerElement(Document&, HTMLMediaElement&);
@@ -89,6 +101,9 @@ private:
     void show();
     bool isShowing() const;
 
+    CueList currentlyActiveCues() const;
+    VTTCue& ensurePreviewCue() const;
+
 #if !RELEASE_LOG_DISABLED
     const Logger& logger() const final;
     uint64_t logIdentifier() const final;
@@ -105,6 +120,10 @@ private:
     int m_fontSize { 0 };
     bool m_fontSizeIsImportant { false };
     bool m_needsToGenerateTextTrackRepresentation { false };
+    bool m_shouldShowCaptionPreviewCue { false };
+
+    mutable RefPtr<TextTrack> m_previewTrack;
+    mutable RefPtr<VTTCue> m_previewCue;
 };
 
 } // namespace WebCore

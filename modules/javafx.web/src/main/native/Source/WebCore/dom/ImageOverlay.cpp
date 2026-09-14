@@ -31,7 +31,9 @@
 #include "ContainerNodeInlines.h"
 #include "DOMTokenList.h"
 #include "DOMURL.h"
-#include "Document.h"
+#include "DocumentEventLoop.h"
+#include "DocumentPage.h"
+#include "DocumentView.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "ElementChildIteratorInlines.h"
 #include "ElementRareData.h"
@@ -39,6 +41,7 @@
 #include "EventLoop.h"
 #include "FloatRect.h"
 #include "FloatSize.h"
+#include "FrameDestructionObserverInlines.h"
 #include "GeometryUtilities.h"
 #include "HTMLBRElement.h"
 #include "HTMLDivElement.h"
@@ -48,9 +51,8 @@
 #include "ImageOverlayController.h"
 #include "MediaControlsHost.h"
 #include "NodeInlines.h"
-#include "Page.h"
 #include "RenderBoxInlines.h"
-#include "RenderElementInlines.h"
+#include "RenderElementStyleInlines.h"
 #include "RenderImage.h"
 #include "RenderText.h"
 #include "ShadowRoot.h"
@@ -237,7 +239,7 @@ static void installImageOverlayStyleSheet(ShadowRoot& shadowRoot)
     static MainThreadNeverDestroyed<const String> shadowStyle(StringImpl::createWithoutCopying(imageOverlayUserAgentStyleSheet));
     Ref style = HTMLStyleElement::create(HTMLNames::styleTag, shadowRoot.protectedDocument(), false);
     style->setTextContent(String { shadowStyle });
-    shadowRoot.appendChild(WTFMove(style));
+    shadowRoot.appendChild(WTF::move(style));
 }
 
 struct LineElements {
@@ -319,7 +321,7 @@ static Elements updateSubtree(HTMLElement& element, const TextRecognitionResult&
             Vector<Ref<HTMLElement>> lineChildren;
             for (Ref text : childrenOfType<HTMLDivElement>(childElement.get()))
                 lineChildren.append(text.get());
-            elements.lines.append({ childElement.get(), WTFMove(lineChildren), childrenOfType<HTMLBRElement>(childElement.get()).first() });
+            elements.lines.append({ childElement.get(), WTF::move(lineChildren), childrenOfType<HTMLBRElement>(childElement.get()).first() });
         }
 
         canUseExistingElements = ([&] {
@@ -403,16 +405,16 @@ static Elements updateSubtree(HTMLElement& element, const TextRecognitionResult&
                 textContainer->classList().add(imageOverlayTextClass());
                 lineContainer->appendChild(textContainer);
                 textContainer->appendChild(Text::create(document.get(), child.hasLeadingWhitespace ? makeString('\n', child.text) : String { child.text }));
-                lineElements.children.append(WTFMove(textContainer));
+                lineElements.children.append(WTF::move(textContainer));
             }
 
             if (line.hasTrailingNewline) {
                 Ref lineBreak = HTMLBRElement::create(document.get());
                 lineContainer->appendChild(lineBreak.get());
-                lineElements.lineBreak = WTFMove(lineBreak);
+                lineElements.lineBreak = WTF::move(lineBreak);
             }
 
-            elements.lines.append(WTFMove(lineElements));
+            elements.lines.append(WTF::move(lineElements));
         }
 
 #if ENABLE(DATA_DETECTION)
@@ -421,7 +423,7 @@ static Elements updateSubtree(HTMLElement& element, const TextRecognitionResult&
             auto dataDetectorContainer = DataDetection::createElementForImageOverlay(document.get(), dataDetector);
             dataDetectorContainer->classList().add(imageOverlayDataDetectorClass());
             elements.root->appendChild(dataDetectorContainer);
-            elements.dataDetectors.append(WTFMove(dataDetectorContainer));
+            elements.dataDetectors.append(WTF::move(dataDetectorContainer));
         }
 #endif // ENABLE(DATA_DETECTION)
 
@@ -430,10 +432,10 @@ static Elements updateSubtree(HTMLElement& element, const TextRecognitionResult&
             Ref blockContainer = HTMLDivElement::create(document.get());
             blockContainer->classList().add(imageOverlayBlockClass());
             auto lines = block.text.split(newlineCharacter);
-            for (auto&& textContent : WTFMove(lines)) {
+            for (auto&& textContent : WTF::move(lines)) {
                 if (blockContainer->hasChildNodes())
                     blockContainer->appendChild(HTMLBRElement::create(document.get()));
-                blockContainer->appendChild(Text::create(document.get(), WTFMove(textContent)));
+                blockContainer->appendChild(Text::create(document.get(), WTF::move(textContent)));
             }
 
             constexpr auto maxLineCountForCenterAlignedText = 2;
@@ -441,7 +443,7 @@ static Elements updateSubtree(HTMLElement& element, const TextRecognitionResult&
                 blockContainer->setInlineStyleProperty(CSSPropertyTextAlign, CSSValueStart);
 
             elements.root->appendChild(blockContainer);
-            elements.blocks.append(WTFMove(blockContainer));
+            elements.blocks.append(WTF::move(blockContainer));
         }
     }
 
@@ -609,7 +611,7 @@ void updateWithTextRecognitionResult(HTMLElement& element, const TextRecognition
 
     if (!result.dataDetectors.isEmpty()) {
         RefPtr page = document->page();
-        if (auto* overlayController = page ? page->imageOverlayControllerIfExists() : nullptr)
+        if (RefPtr overlayController = page ? page->imageOverlayControllerIfExists() : nullptr)
             overlayController->textRecognitionResultsChanged(element);
     }
 #endif // ENABLE(DATA_DETECTION)
@@ -652,7 +654,7 @@ void updateWithTextRecognitionResult(HTMLElement& element, const TextRecognition
         auto blockContainer = elements.blocks[index];
         auto bounds = fitElementToQuad(blockContainer.get(), convertToContainerCoordinates(block.normalizedQuad), ConstrainHeight::No);
         setInlineStylesForBlock(blockContainer.get(), initialScaleForFontSize, bounds.size.height());
-        return FontSizeAdjustmentState { WTFMove(blockContainer), bounds.size };
+        return FontSizeAdjustmentState { WTF::move(blockContainer), bounds.size };
     });
 
     unsigned currentIteration = 0;

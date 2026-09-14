@@ -25,6 +25,8 @@
 
 #pragma once
 
+#ifdef __cplusplus
+
 #include "BInline.h"
 #include "Mutex.h"
 #include "Sizes.h"
@@ -133,3 +135,5 @@ PerProcessData* PerProcess<T>::s_data { nullptr };
 } // namespace bmalloc
 
 #endif
+
+#endif // __cplusplus

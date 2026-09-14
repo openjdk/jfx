@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2023, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -131,8 +131,8 @@ void ResourceHandle::willSendRequest(const ResourceResponse& response)
     if (!newURL.protocolIs("https"_s) && protocolIs(newRequest.httpReferrer(), "https"_s) && context()->shouldClearReferrerOnHTTPSToHTTPRedirect())
         newRequest.clearHTTPReferrer();
 
-    client()->willSendRequestAsync(this, WTFMove(newRequest), ResourceResponse(response), [this, protectedThis = Ref(*this)] (ResourceRequest&& request) {
-        continueAfterWillSendRequest(WTFMove(request));
+    client()->willSendRequestAsync(this, WTF::move(newRequest), ResourceResponse(response), [this, protectedThis = Ref(*this)] (ResourceRequest&& request) {
+        continueAfterWillSendRequest(WTF::move(request));
     });
 }
 

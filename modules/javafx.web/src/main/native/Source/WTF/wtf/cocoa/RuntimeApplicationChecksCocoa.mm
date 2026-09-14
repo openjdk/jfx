@@ -218,7 +218,6 @@ static SDKAlignedBehaviors computeSDKAlignedBehaviors()
         disableBehavior(SDKAlignedBehavior::FullySuspendsBackgroundContentImmediately);
         disableBehavior(SDKAlignedBehavior::ApplicationStateTrackerDoesNotObserveWindow);
         disableBehavior(SDKAlignedBehavior::ThrowOnKVCInstanceVariableAccess);
-        disableBehavior(SDKAlignedBehavior::BlockOptionallyBlockableMixedContent);
         disableBehavior(SDKAlignedBehavior::LaxCookieSameSiteAttribute);
         disableBehavior(SDKAlignedBehavior::UseCFNetworkNetworkLoader);
         disableBehavior(SDKAlignedBehavior::BlocksConnectionsToAddressWithOnlyZeros);
@@ -226,8 +225,21 @@ static SDKAlignedBehaviors computeSDKAlignedBehaviors()
         disableBehavior(SDKAlignedBehavior::SupportGameControllerEventInteractionAPI);
     }
 
+    if (linkedBefore(dyld_2024_SU_C_os_versions, DYLD_IOS_VERSION_18_2, DYLD_MACOSX_VERSION_15_2))
+        disableBehavior(SDKAlignedBehavior::BlobFileAccessEnforcementAndNetworkProcessRoundTrip);
+
+    if (linkedBefore(dyld_2024_SU_E_os_versions, DYLD_IOS_VERSION_18_4, DYLD_MACOSX_VERSION_15_4)) {
+        disableBehavior(SDKAlignedBehavior::DevolvableWidgets);
+        disableBehavior(SDKAlignedBehavior::SetSelectionRangeCachesSelectionIfNotFocusedOrSelected);
+        disableBehavior(SDKAlignedBehavior::DispatchFocusEventBeforeNotifyingClient);
+        disableBehavior(SDKAlignedBehavior::BlobFileAccessEnforcement);
+    }
+
     if (linkedBefore(dyld_2024_SU_F_os_versions, DYLD_IOS_VERSION_18_5, DYLD_MACOSX_VERSION_15_5))
         disableBehavior(SDKAlignedBehavior::NavigationActionSourceFrameNonNull);
+
+    if (linkedBefore(dyld_2025_SU_B_os_versions, DYLD_IOS_VERSION_26_1, DYLD_MACOSX_VERSION_26_1))
+        disableBehavior(SDKAlignedBehavior::GetBoundingClientRectZoomed);
 
     disableAdditionalSDKAlignedBehaviors(behaviors);
 
@@ -347,6 +359,22 @@ void clearApplicationBundleIdentifierTestingOverride()
 #endif
 }
 
+#if USE(SOURCE_APPLICATION_AUDIT_DATA)
+
+static std::optional<audit_token_t> applicationAuditTokenStorage;
+
+void setApplicationAuditToken(audit_token_t token)
+{
+    applicationAuditTokenStorage = token;
+}
+
+std::optional<audit_token_t> applicationAuditToken()
+{
+    return applicationAuditTokenStorage;
+}
+
+#endif
+
 static bool applicationBundleIsEqualTo(const String& bundleIdentifierString)
 {
     return applicationBundleIdentifier() == bundleIdentifierString;
@@ -370,13 +398,52 @@ bool CocoaApplication::isAppleApplication()
     return isAppleApplication;
 }
 
+bool CocoaApplication::isDumpRenderTree()
+{
+#if PLATFORM(MAC)
+    static bool isDumpRenderTree = applicationBundleIsEqualTo("com.apple.WebKit.DumpRenderTree"_s);
+    return isDumpRenderTree;
+#else
+    static bool isDumpRenderTree = applicationBundleIsEqualTo("org.webkit.DumpRenderTree"_s);
+    return isDumpRenderTree;
+#endif
+}
+
+bool CocoaApplication::shouldOSFaultLogForAppleApplicationUsingWebKit1()
+{
+    static bool bundleIdentifierShouldLog = [] {
+        if (!isAppleApplication())
+            return false;
+
+        String bundleIdentifier = applicationBundleIdentifier();
+        if (bundleIdentifier.startsWith("com.apple.InstallerRemotePluginService."_s))
+            return false;
+        if (applicationBundleIsEqualTo("com.apple.WebKit.TestWebKitAPI"_s))
+            return false;
+        if (applicationBundleIsEqualTo("com.apple.ibtool"_s))
+            return false;
+        if (CocoaApplication::isDumpRenderTree())
+            return false;
+
+        return true;
+    }();
+
+    return bundleIdentifierShouldLog && !((rand() * 1000) % 1000);
+}
+
 #if PLATFORM(MAC)
 
 bool MacApplication::isSafari()
 {
     static bool isSafari = applicationBundleIsEqualTo("com.apple.Safari"_s)
-        || applicationBundleIsEqualTo("com.apple.SafariTechnologyPreview"_s)
+        || isSafariTechnologyPreview()
         || applicationBundleIdentifier().startsWith("com.apple.Safari."_s);
+    return isSafari;
+}
+
+bool MacApplication::isSafariTechnologyPreview()
+{
+    static bool isSafari = applicationBundleIsEqualTo("com.apple.SafariTechnologyPreview"_s);
     return isSafari;
 }
 
@@ -472,14 +539,6 @@ bool IOSApplication::isWebBookmarksD()
 {
     static bool isWebBookmarksD = applicationBundleIsEqualTo("com.apple.webbookmarksd"_s);
     return isWebBookmarksD;
-}
-
-bool IOSApplication::isDumpRenderTree()
-{
-    // We use a prefix match instead of strict equality since multiple instances of DumpRenderTree
-    // may be launched, where the bundle identifier of each instance has a unique suffix.
-    static bool isDumpRenderTree = applicationBundleIsEqualTo("org.webkit.DumpRenderTree"_s); // e.g. org.webkit.DumpRenderTree0
-    return isDumpRenderTree;
 }
 
 bool IOSApplication::isMobileStore()

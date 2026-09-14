@@ -25,13 +25,13 @@
 
 #pragma once
 
-#include "HTMLNames.h"
-#include "HTMLTablePartElement.h"
+#include <WebCore/HTMLNames.h>
+#include <WebCore/HTMLTablePartElement.h>
 
 namespace WebCore {
 
 class HTMLTableSectionElement final : public HTMLTablePartElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLTableSectionElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLTableSectionElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLTableSectionElement);
 public:
     static Ref<HTMLTableSectionElement> create(const QualifiedName&, Document&);

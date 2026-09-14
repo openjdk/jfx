@@ -27,9 +27,10 @@
 #include "FlexFormattingUtils.h"
 
 #include "FlexFormattingContext.h"
+#include "LayoutBoxInlines.h"
 #include "LayoutContext.h"
 #include "LogicalFlexItem.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 
 namespace WebCore {
 namespace Layout {
@@ -93,7 +94,7 @@ LayoutUnit FlexFormattingUtils::mainAxisGapValue(const ElementBox& flexContainer
     auto flexDirection = flexContainer.style().flexDirection();
     auto isMainAxisInlineAxis = flexDirection == FlexDirection::Row || flexDirection == FlexDirection::RowReverse;
     auto& gap = isMainAxisInlineAxis ? flexContainer.style().columnGap() : flexContainer.style().rowGap();
-    return Style::evaluateMinimum(gap, flexContainerContentBoxWidth);
+    return Style::evaluateMinimum<LayoutUnit>(gap, flexContainerContentBoxWidth, Style::ZoomNeeded { });
 }
 
 LayoutUnit FlexFormattingUtils::crossAxisGapValue(const ElementBox& flexContainer, LayoutUnit flexContainerContentBoxHeight)
@@ -102,7 +103,7 @@ LayoutUnit FlexFormattingUtils::crossAxisGapValue(const ElementBox& flexContaine
     auto flexDirection = flexContainer.style().flexDirection();
     auto isMainAxisInlineAxis = flexDirection == FlexDirection::Row || flexDirection == FlexDirection::RowReverse;
     auto& gap = isMainAxisInlineAxis ? flexContainer.style().rowGap() : flexContainer.style().columnGap();
-    return Style::evaluateMinimum(gap, flexContainerContentBoxHeight);
+    return Style::evaluateMinimum<LayoutUnit>(gap, flexContainerContentBoxHeight, Style::ZoomNeeded { });
 }
 
 // flex container  direction  flex item    main axis size

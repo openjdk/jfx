@@ -26,6 +26,7 @@
 #ifndef PAS_SMALL_LARGE_MAP_ENTRY_H
 #define PAS_SMALL_LARGE_MAP_ENTRY_H
 
+#include "pas_internal_config.h"
 #include "pas_large_map_entry.h"
 #include "pas_utils.h"
 

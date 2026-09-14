@@ -2,8 +2,8 @@
     "domain": "Audit",
     "description": "",
     "version": 4,
-    "debuggableTypes": ["itml", "javascript", "page", "service-worker", "web-page"],
-    "targetTypes": ["itml", "javascript", "page", "service-worker", "worker"],
+    "debuggableTypes": ["itml", "javascript", "service-worker", "web-page", "wasm-debugger"],
+    "targetTypes": ["itml", "javascript", "page", "service-worker", "worker", "wasm-debugger"],
     "commands": [
         {
             "name": "setup",

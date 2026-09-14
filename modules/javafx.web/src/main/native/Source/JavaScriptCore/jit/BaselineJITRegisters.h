@@ -25,10 +25,12 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(JIT)
 
-#include "GPRInfo.h"
-#include "JITOperations.h"
+#include <JavaScriptCore/GPRInfo.h>
+#include <JavaScriptCore/JITOperations.h>
 
 namespace JSC {
 
@@ -117,7 +119,8 @@ namespace ResolveScope {
     static constexpr GPRReg scopeGPR { GPRInfo::regT0 };
     static constexpr GPRReg bytecodeOffsetGPR { GPRInfo::regT3 };
     static constexpr GPRReg scratch1GPR { GPRInfo::regT5 };
-    static_assert(noOverlap(metadataGPR, scopeGPR, bytecodeOffsetGPR, scratch1GPR), "Required for call to CTI thunk");
+    static constexpr GPRReg scratch2GPR { GPRInfo::regT1 };
+    static_assert(noOverlap(metadataGPR, scopeGPR, bytecodeOffsetGPR, scratch1GPR, scratch2GPR), "Required for call to CTI thunk");
 }
 
 namespace GetFromScope {
@@ -304,8 +307,9 @@ namespace DelById {
     static constexpr GPRReg scratch1GPR { scratchRegisters[0] };
     static constexpr GPRReg scratch2GPR { scratchRegisters[1] };
     static constexpr GPRReg scratch3GPR { scratchRegisters[2] };
+    static constexpr JSValueRegs scratchJSR { JSValueRegs::withTwoAvailableRegs(scratch1GPR, scratch2GPR) };
 
-    static_assert(noOverlap(baseJSR, stubInfoGPR, scratch1GPR, scratch2GPR, scratch3GPR, GPRInfo::handlerGPR), "Required for call to slow operation");
+    static_assert(noOverlap(baseJSR, stubInfoGPR, scratchJSR, scratch3GPR, GPRInfo::handlerGPR), "Required for call to slow operation");
     static_assert(noOverlap(resultJSR.payloadGPR(), stubInfoGPR));
 }
 
@@ -320,7 +324,9 @@ namespace DelByVal {
     static constexpr GPRReg scratch1GPR { scratchRegisters[0] };
     static constexpr GPRReg scratch2GPR { scratchRegisters[1] };
     static constexpr GPRReg scratch3GPR { scratchRegisters[2] };
-    static_assert(noOverlap(baseJSR, propertyJSR, stubInfoGPR, scratch1GPR, scratch2GPR, scratch3GPR, GPRInfo::handlerGPR), "Required for call to slow operation");
+    static constexpr JSValueRegs scratchJSR { JSValueRegs::withTwoAvailableRegs(scratch1GPR, scratch2GPR) };
+
+    static_assert(noOverlap(baseJSR, propertyJSR, stubInfoGPR, scratchJSR, scratch3GPR, GPRInfo::handlerGPR), "Required for call to slow operation");
     static_assert(noOverlap(resultJSR.payloadGPR(), stubInfoGPR));
 }
 

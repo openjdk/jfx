@@ -32,6 +32,7 @@
 #include "FaceDetectorInterface.h"
 #include "FaceDetectorOptionsInterface.h"
 #include "PointerLockController.h"
+#include "ScrollableArea.h"
 #include "ScrollbarsController.h"
 #include "ScrollingCoordinator.h"
 #include "TextDetectorInterface.h"
@@ -61,7 +62,7 @@ RefPtr<GraphicsContextGL> ChromeClient::createGraphicsContextGL(const GraphicsCo
 
 RefPtr<ImageBuffer> ChromeClient::sinkIntoImageBuffer(std::unique_ptr<WebCore::SerializedImageBuffer> imageBuffer)
 {
-    return SerializedImageBuffer::sinkIntoImageBuffer(WTFMove(imageBuffer));
+    return SerializedImageBuffer::sinkIntoImageBuffer(WTF::move(imageBuffer));
 }
 
 void ChromeClient::ensureScrollbarsController(Page&, ScrollableArea& area, bool update) const
@@ -116,6 +117,21 @@ void ChromeClient::enterFullScreenForElement(Element&, HTMLMediaElementEnums::Vi
 void ChromeClient::requestPointerLock(CompletionHandler<void(PointerLockRequestResult)>&& completionHandler)
 {
     completionHandler(PointerLockRequestResult::Unsupported);
+}
+#endif
+
+#if ENABLE(IMAGE_ANALYSIS)
+void ChromeClient::requestTextRecognition(Element&, TextRecognitionOptions&&, CompletionHandler<void(RefPtr<Element>&&)>&& completion)
+{
+    if (completion)
+        completion({ });
+}
+#endif
+
+#if ENABLE(VIDEO)
+void ChromeClient::showCaptionDisplaySettings(HTMLMediaElement&, const ResolvedCaptionDisplaySettingsOptions&, CompletionHandler<void(ExceptionOr<void>)>&& completionHandler)
+{
+    completionHandler(Exception { ExceptionCode::NotSupportedError, "Caption Display Settings are not supported."_s });
 }
 #endif
 

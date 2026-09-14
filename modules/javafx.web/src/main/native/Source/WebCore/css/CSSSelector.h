@@ -21,9 +21,9 @@
 
 #pragma once
 
-#include "CSSSelectorEnums.h"
-#include "QualifiedName.h"
-#include "RenderStyleConstants.h"
+#include <WebCore/CSSSelectorEnums.h>
+#include <WebCore/QualifiedName.h>
+#include <WebCore/RenderStyleConstants.h>
 #include <wtf/EnumTraits.h>
 #include <wtf/FixedVector.h>
 #include <wtf/TZoneMalloc.h>
@@ -37,6 +37,7 @@ struct PossiblyQuotedIdentifier {
     AtomString identifier;
     bool wasQuoted { false };
 
+    bool operator==(const PossiblyQuotedIdentifier&) const = default;
     bool isNull() const { return identifier.isNull(); }
 };
 
@@ -55,9 +56,13 @@ class CSSSelector {
 public:
         CSSSelector() = default;
         CSSSelector(const CSSSelector&);
+    CSSSelector(CSSSelector&&);
+    enum MutableSelectorCopyTag { MutableSelectorCopy };
+    CSSSelector(const CSSSelector&, MutableSelectorCopyTag);
         explicit CSSSelector(const QualifiedName&, bool tagIsForNamespaceRule = false);
 
         ~CSSSelector();
+    CSSSelector& operator=(CSSSelector&&);
 
         // Re-create selector text from selector's data.
         String selectorText(StringView separator = { }, StringView rightSide = { }) const;
@@ -66,12 +71,14 @@ public:
         std::array<uint8_t, 3> computeSpecificityTuple() const;
         unsigned specificityForPage() const;
 
-        bool visitAllSimpleSelectors(auto& apply) const;
+    enum class VisitFunctionalPseudoClasses { No, Yes };
+    enum class VisitOnlySubject { No, Yes };
+    using VisitFunctor = WTF::Function<bool(const CSSSelector&)>;
+    bool visitSimpleSelectors(VisitFunctor&&, VisitFunctionalPseudoClasses = VisitFunctionalPseudoClasses::No, VisitOnlySubject = VisitOnlySubject::No) const;
 
         bool hasExplicitNestingParent() const;
     bool hasExplicitPseudoClassScope() const;
-        void resolveNestingParentSelectors(const CSSSelectorList& parent);
-        void replaceNestingParentByPseudoClassScope();
+    bool hasScope() const;
 
     using PseudoClass = CSSSelectorPseudoClass;
     using PseudoElement = CSSSelectorPseudoElement;
@@ -117,7 +124,8 @@ public:
 
     enum AttributeMatchType { CaseSensitive, CaseInsensitive };
 
-    static PseudoId pseudoId(PseudoElement);
+    // Maps from the selector pseudo-element type to the style type. Only pseudo-elements that are not element-backed have a type in style.
+    static std::optional<PseudoElementType> stylePseudoElementTypeFor(PseudoElement);
     static bool isPseudoClassEnabled(PseudoClass, const CSSSelectorParserContext&);
     static bool isPseudoElementEnabled(PseudoElement, StringView, const CSSSelectorParserContext&);
     static std::optional<PseudoElement> parsePseudoElementName(StringView, const CSSSelectorParserContext&);
@@ -130,12 +138,14 @@ public:
     static const ASCIILiteral nameForUserAgentPartLegacyAlias(StringView);
 
         // Selectors are kept in an array by CSSSelectorList.
-        // The next component of the selector is the next item in the array.
+    // The left component of the selector is the next item in the array.
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-        const CSSSelector* tagHistory() const { return m_isLastInTagHistory ? nullptr : this + 1; }
+    const CSSSelector* precedingInComplexSelector() const { return m_isFirstInComplexSelector ? nullptr : this + 1; }
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
         const CSSSelector* firstInCompound() const;
+    const CSSSelector* lastInCompound() const;
+    const CSSSelector* precedingInCompound() const;
 
         const QualifiedName& tagQName() const;
         const AtomString& tagLowercaseLocalName() const;
@@ -170,17 +180,15 @@ WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
     Relation relation() const { return static_cast<Relation>(m_relation); }
         Match match() const { return static_cast<Match>(m_match); }
 
-        bool isLastInSelectorList() const { return m_isLastInSelectorList; }
-        bool isFirstInTagHistory() const { return m_isFirstInTagHistory; }
-        bool isLastInTagHistory() const { return m_isLastInTagHistory; }
-
-    // FIXME: This should ideally be private, but StyleRule uses it.
-    void setLastInSelectorList() { m_isLastInSelectorList = true; }
-
+    bool isFirstInComplexSelector() const { return m_isFirstInComplexSelector; }
+    bool isLastInComplexSelector() const { return m_isLastInComplexSelector; }
         bool isForPage() const { return m_isForPage; }
 
     // Implicit means that this selector is not author/UA written.
     bool isImplicit() const { return m_isImplicit; }
+
+    // Relation and selector list bits are ignored.
+    bool simpleSelectorEqual(const CSSSelector&) const;
 
 #if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
     bool destructorHasBeenCalled() const { return m_destructorHasBeenCalled; }
@@ -212,10 +220,12 @@ private:
     unsigned m_relation : 4 { enumToUnderlyingType(Relation::DescendantSpace) };
     mutable unsigned m_match : 5 { enumToUnderlyingType(Match::Unknown) };
         mutable unsigned m_pseudoType : 8 { 0 }; // PseudoType.
-    // 17 bits
-        unsigned m_isLastInSelectorList : 1 { false };
-        unsigned m_isFirstInTagHistory : 1 { true };
-        unsigned m_isLastInTagHistory : 1 { true };
+    // 18 bits
+
+    // These are in logical order, which is reversed from the memory order.
+    unsigned m_isFirstInComplexSelector : 1 { true };
+    unsigned m_isLastInComplexSelector : 1 { true };
+
         unsigned m_hasRareData : 1 { false };
         unsigned m_isForPage : 1 { false };
         unsigned m_tagIsForNamespaceRule : 1 { false };
@@ -227,12 +237,13 @@ private:
 #endif
 
         CSSSelector& operator=(const CSSSelector&) = delete;
-        CSSSelector(CSSSelector&&) = delete;
 
         struct RareData : public RefCounted<RareData> {
-        WTF_DEPRECATED_MAKE_STRUCT_FAST_ALLOCATED_WITH_HEAP_IDENTIFIER(CSSSelectorRareData, RareData);
+        WTF_MAKE_STRUCT_TZONE_ALLOCATED(RareData);
             static Ref<RareData> create(AtomString);
             WEBCORE_EXPORT ~RareData();
+
+        bool equals(const RareData&) const;
 
             bool matchNth(int count);
 
@@ -264,6 +275,15 @@ private:
             RareData* rareData;
         } m_data;
 };
+
+bool complexSelectorCanMatchPseudoElement(const CSSSelector&);
+bool complexSelectorMatchesElementBackedPseudoElement(const CSSSelector&);
+
+// In the AllowNonElementBackedPseudoElements mode `.foo::before` and `.foo` compare equal.
+enum class ComplexSelectorsEqualMode : bool { Full, IgnoreNonElementBackedPseudoElements };
+bool complexSelectorsEqual(const CSSSelector&, const CSSSelector&, ComplexSelectorsEqualMode = ComplexSelectorsEqualMode::Full);
+
+void addComplexSelector(Hasher&, const CSSSelector&, ComplexSelectorsEqualMode = ComplexSelectorsEqualMode::Full);
 
 inline bool operator==(const PossiblyQuotedIdentifier& a, const AtomString& b) { return a.identifier == b; }
 
@@ -313,6 +333,8 @@ inline bool isLogicalCombinationPseudoClass(CSSSelector::PseudoClass pseudoClass
     }
 }
 
+bool isElementBackedPseudoElement(CSSSelector::PseudoElement);
+
 inline bool CSSSelector::isSiblingSelector() const
 {
     return relation() == Relation::DirectAdjacent
@@ -347,10 +369,35 @@ inline void CSSSelector::setValue(const AtomString& value, bool matchLowerCase)
         return;
     }
 
-
-
-    m_data.rareData->matchingValue = WTFMove(matchingValue);
+    m_data.rareData->matchingValue = WTF::move(matchingValue);
     m_data.rareData->serializingValue = value;
+}
+
+inline CSSSelector::CSSSelector(CSSSelector&& other)
+    : m_relation(other.m_relation)
+    , m_match(other.m_match)
+    , m_pseudoType(other.m_pseudoType)
+    , m_isFirstInComplexSelector(other.m_isFirstInComplexSelector)
+    , m_isLastInComplexSelector(other.m_isLastInComplexSelector)
+    , m_hasRareData(other.m_hasRareData)
+    , m_isForPage(other.m_isForPage)
+    , m_tagIsForNamespaceRule(other.m_tagIsForNamespaceRule)
+    , m_caseInsensitiveAttributeValueMatching(other.m_caseInsensitiveAttributeValueMatching)
+    , m_isImplicit(other.m_isImplicit)
+    , m_data(WTF::move(other.m_data))
+{
+    other.m_data.value = nullptr;
+    other.m_hasRareData = false;
+    other.m_match = enumToUnderlyingType(Match::Unknown);
+}
+
+inline CSSSelector& CSSSelector::operator=(CSSSelector&& other)
+{
+    if (this != &other) {
+        this->~CSSSelector();
+        new (this) CSSSelector(WTF::move(other));
+    }
+    return *this;
 }
 
 inline CSSSelector::~CSSSelector()
@@ -359,18 +406,12 @@ inline CSSSelector::~CSSSelector()
 #if !ASSERT_WITH_SECURITY_IMPLICATION_DISABLED
     m_destructorHasBeenCalled = true;
 #endif
-    if (m_hasRareData) {
+    if (m_hasRareData)
         m_data.rareData->deref();
-        m_data.rareData = nullptr;
-        m_hasRareData = false;
-    } else if (match() == Match::Tag) {
+    else if (match() == Match::Tag)
         m_data.tagQName->deref();
-        m_data.tagQName = nullptr;
-        m_match = enumToUnderlyingType(Match::Unknown);
-    } else if (m_data.value) {
+    else if (m_data.value)
         m_data.value->deref();
-        m_data.value = nullptr;
-    }
 }
 
 inline const QualifiedName& CSSSelector::tagQName() const

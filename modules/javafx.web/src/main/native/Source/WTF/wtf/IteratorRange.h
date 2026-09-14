@@ -26,6 +26,7 @@
 #pragma once
 
 #include <iterator>
+#include <wtf/FastMalloc.h>
 
 namespace WTF {
 
@@ -47,8 +48,8 @@ public:
     using reverse_iterator = std::reverse_iterator<Iterator>;
 
     IteratorRange(Iterator begin, Iterator end)
-        : m_begin(WTFMove(begin))
-        , m_end(WTFMove(end))
+        : m_begin(WTF::move(begin))
+        , m_end(WTF::move(end))
     {
     }
 
@@ -68,8 +69,8 @@ class SizedIteratorRange {
 public:
     SizedIteratorRange(const Container& container, Iterator begin, Iterator end)
         : m_container(container)
-        , m_begin(WTFMove(begin))
-        , m_end(WTFMove(end))
+        , m_begin(WTF::move(begin))
+        , m_end(WTF::move(end))
     {
     }
 
@@ -96,31 +97,6 @@ SizedIteratorRange<Container, Iterator> makeSizedIteratorRange(const Container& 
     return SizedIteratorRange<Container, Iterator>(container, std::forward<Iterator>(begin), std::forward<Iterator>(end));
 }
 
-template<typename Container>
-IteratorRange<typename Container::reverse_iterator> makeReversedRange(Container& container)
-{
-    return makeIteratorRange(std::rbegin(container), std::rend(container));
-}
-
-template<typename Container>
-IteratorRange<typename Container::const_reverse_iterator> makeReversedRange(const Container& container)
-{
-    return makeIteratorRange(std::crbegin(container), std::crend(container));
-}
-
-template<SizedContainer Container>
-SizedIteratorRange<Container, typename Container::reverse_iterator> makeReversedRange(Container& container)
-{
-    return makeSizedIteratorRange(container, std::rbegin(container), std::rend(container));
-}
-
-template<SizedContainer Container>
-SizedIteratorRange<Container, typename Container::const_reverse_iterator> makeReversedRange(const Container& container)
-{
-    return makeSizedIteratorRange(container, std::crbegin(container), std::crend(container));
-}
-
 } // namespace WTF
 
 using WTF::IteratorRange;
-using WTF::makeReversedRange;

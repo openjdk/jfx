@@ -37,13 +37,14 @@ public:
     TransparencyLayerContextSwitcher(GraphicsContext& destinationContext, const FloatRect& sourceImageRect, RefPtr<Filter>&&);
 
 private:
-    void beginClipAndDrawSourceImage(GraphicsContext& destinationContext, const FloatRect& repaintRect, const FloatRect& clipRect) override;
+    void beginClipAndDrawSourceImage(GraphicsContext& destinationContext, const FloatRect& repaintRect, const FloatRect& clipRect, NOESCAPE const Function<void(GraphicsContext&)>& applyAdditionalDestinationClip) override;
     void endClipAndDrawSourceImage(GraphicsContext& destinationContext, const DestinationColorSpace& colorSpace) override { endDrawSourceImage(destinationContext, colorSpace); }
 
     void beginDrawSourceImage(GraphicsContext& destinationContext, float opacity = 1.f) override;
     void endDrawSourceImage(GraphicsContext& destinationContext, const DestinationColorSpace&) override;
 
     FilterStyleVector m_filterStyles;
+    bool m_beganOuterClipLayer { false };
 };
 
 } // namespace WebCore

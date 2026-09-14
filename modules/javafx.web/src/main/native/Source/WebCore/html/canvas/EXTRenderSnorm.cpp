@@ -32,19 +32,19 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(EXTRenderSnorm);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(EXTRenderSnorm);
 
 EXTRenderSnorm::EXTRenderSnorm(WebGLRenderingContextBase& context)
     : WebGLExtension(context, WebGLExtensionName::EXTRenderSnorm)
 {
-    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_EXT_render_snorm"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::EXT_render_snorm);
 }
 
 EXTRenderSnorm::~EXTRenderSnorm() = default;
 
 bool EXTRenderSnorm::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_EXT_render_snorm"_s);
+    return context.supportsExtension(GCGLExtension::EXT_render_snorm);
 }
 
 } // namespace WebCore

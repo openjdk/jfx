@@ -26,25 +26,29 @@
 #pragma once
 
 #include "WritableStreamSink.h"
+#include <wtf/WeakPtr.h>
 
 namespace WebCore {
 
-class WebTransport;
+class WebTransportDatagramsWritable;
+class WebTransportSession;
 
 class DatagramSink : public WritableStreamSink {
 public:
-    static Ref<DatagramSink> create() { return adoptRef(*new DatagramSink()); }
+    static Ref<DatagramSink> create(WebTransportSession* session) { return adoptRef(*new DatagramSink(session)); }
     ~DatagramSink();
-    void attachTo(WebTransport&);
+
+    void attachTo(WebTransportDatagramsWritable&);
 
 private:
-    DatagramSink();
+    DatagramSink(WebTransportSession*);
 
     void write(ScriptExecutionContext&, JSC::JSValue, DOMPromiseDeferred<void>&&) final;
     void close() final { m_isClosed = true; }
-    void error(String&&) final { }
+    void abort(JSC::JSValue) final { }
 
-    ThreadSafeWeakPtr<WebTransport> m_transport;
+    ThreadSafeWeakPtr<WebTransportSession> m_session;
+    WeakPtr<WebTransportDatagramsWritable> m_datagrams;
     bool m_isClosed { false };
 };
 

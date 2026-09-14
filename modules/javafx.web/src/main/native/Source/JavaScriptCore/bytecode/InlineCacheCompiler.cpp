@@ -597,7 +597,7 @@ static bool isStateless(AccessCase::AccessType type)
 }
 #endif
 
-static bool doesJSCalls(AccessCase::AccessType type)
+bool doesJSCalls(AccessCase::AccessType type)
 {
     switch (type) {
     case AccessCase::Getter:
@@ -1204,20 +1204,6 @@ ScratchRegisterAllocator InlineCacheCompiler::makeDefaultScratchAllocator(GPRReg
     return allocator;
 }
 
-#if CPU(X86_64)
-static constexpr size_t prologueSizeInBytesDataIC = 1;
-#elif CPU(ARM64E)
-static constexpr size_t prologueSizeInBytesDataIC = 8;
-#elif CPU(ARM64)
-static constexpr size_t prologueSizeInBytesDataIC = 4;
-#elif CPU(ARM_THUMB2)
-static constexpr size_t prologueSizeInBytesDataIC = 6;
-#elif CPU(RISCV64)
-static constexpr size_t prologueSizeInBytesDataIC = 12;
-#else
-#error "unsupported architecture"
-#endif
-
 void InlineCacheCompiler::emitDataICPrologue(CCallHelpers& jit)
 {
     // Important difference from the normal emitPrologue is that DataIC handler does not change callFrameRegister.
@@ -1586,10 +1572,10 @@ MacroAssemblerCodeRef<JITThunkPtrTag> InlineCacheCompiler::generateSlowPathCode(
     case AccessType::InById:
     case AccessType::GetPrivateNameById: {
         using ArgumentTypes = FunctionTraits<decltype(operationGetByIdOptimize)>::ArgumentTypes;
-        static_assert(std::is_same_v<FunctionTraits<decltype(operationTryGetByIdOptimize)>::ArgumentTypes, ArgumentTypes>);
-        static_assert(std::is_same_v<FunctionTraits<decltype(operationGetByIdDirectOptimize)>::ArgumentTypes, ArgumentTypes>);
-        static_assert(std::is_same_v<FunctionTraits<decltype(operationInByIdOptimize)>::ArgumentTypes, ArgumentTypes>);
-        static_assert(std::is_same_v<FunctionTraits<decltype(operationGetPrivateNameByIdOptimize)>::ArgumentTypes, ArgumentTypes>);
+        static_assert(std::same_as<FunctionTraits<decltype(operationTryGetByIdOptimize)>::ArgumentTypes, ArgumentTypes>);
+        static_assert(std::same_as<FunctionTraits<decltype(operationGetByIdDirectOptimize)>::ArgumentTypes, ArgumentTypes>);
+        static_assert(std::same_as<FunctionTraits<decltype(operationInByIdOptimize)>::ArgumentTypes, ArgumentTypes>);
+        static_assert(std::same_as<FunctionTraits<decltype(operationGetPrivateNameByIdOptimize)>::ArgumentTypes, ArgumentTypes>);
         return vm.getCTIStub(getByIdSlowPathCodeGenerator);
     }
 
@@ -1599,7 +1585,7 @@ MacroAssemblerCodeRef<JITThunkPtrTag> InlineCacheCompiler::generateSlowPathCode(
     case AccessType::GetByVal:
     case AccessType::InByVal: {
         using ArgumentTypes = FunctionTraits<decltype(operationGetByValOptimize)>::ArgumentTypes;
-        static_assert(std::is_same_v<FunctionTraits<decltype(operationInByValOptimize)>::ArgumentTypes, ArgumentTypes>);
+        static_assert(std::same_as<FunctionTraits<decltype(operationInByValOptimize)>::ArgumentTypes, ArgumentTypes>);
         return vm.getCTIStub(getByValSlowPathCodeGenerator);
     }
 
@@ -1618,10 +1604,10 @@ MacroAssemblerCodeRef<JITThunkPtrTag> InlineCacheCompiler::generateSlowPathCode(
     case AccessType::CheckPrivateBrand:
     case AccessType::SetPrivateBrand: {
         using ArgumentTypes = FunctionTraits<decltype(operationGetPrivateNameOptimize)>::ArgumentTypes;
-        static_assert(std::is_same_v<FunctionTraits<decltype(operationHasPrivateBrandOptimize)>::ArgumentTypes, ArgumentTypes>);
-        static_assert(std::is_same_v<FunctionTraits<decltype(operationHasPrivateNameOptimize)>::ArgumentTypes, ArgumentTypes>);
-        static_assert(std::is_same_v<FunctionTraits<decltype(operationCheckPrivateBrandOptimize)>::ArgumentTypes, ArgumentTypes>);
-        static_assert(std::is_same_v<FunctionTraits<decltype(operationSetPrivateBrandOptimize)>::ArgumentTypes, ArgumentTypes>);
+        static_assert(std::same_as<FunctionTraits<decltype(operationHasPrivateBrandOptimize)>::ArgumentTypes, ArgumentTypes>);
+        static_assert(std::same_as<FunctionTraits<decltype(operationHasPrivateNameOptimize)>::ArgumentTypes, ArgumentTypes>);
+        static_assert(std::same_as<FunctionTraits<decltype(operationCheckPrivateBrandOptimize)>::ArgumentTypes, ArgumentTypes>);
+        static_assert(std::same_as<FunctionTraits<decltype(operationSetPrivateBrandOptimize)>::ArgumentTypes, ArgumentTypes>);
         return vm.getCTIStub(getPrivateNameSlowPathCodeGenerator);
     }
 
@@ -1632,11 +1618,11 @@ MacroAssemblerCodeRef<JITThunkPtrTag> InlineCacheCompiler::generateSlowPathCode(
     case AccessType::DefinePrivateNameById:
     case AccessType::SetPrivateNameById: {
         using ArgumentTypes = FunctionTraits<decltype(operationPutByIdStrictOptimize)>::ArgumentTypes;
-        static_assert(std::is_same_v<FunctionTraits<decltype(operationPutByIdSloppyOptimize)>::ArgumentTypes, ArgumentTypes>);
-        static_assert(std::is_same_v<FunctionTraits<decltype(operationPutByIdDirectStrictOptimize)>::ArgumentTypes, ArgumentTypes>);
-        static_assert(std::is_same_v<FunctionTraits<decltype(operationPutByIdDirectSloppyOptimize)>::ArgumentTypes, ArgumentTypes>);
-        static_assert(std::is_same_v<FunctionTraits<decltype(operationPutByIdDefinePrivateFieldStrictOptimize)>::ArgumentTypes, ArgumentTypes>);
-        static_assert(std::is_same_v<FunctionTraits<decltype(operationPutByIdSetPrivateFieldStrictOptimize)>::ArgumentTypes, ArgumentTypes>);
+        static_assert(std::same_as<FunctionTraits<decltype(operationPutByIdSloppyOptimize)>::ArgumentTypes, ArgumentTypes>);
+        static_assert(std::same_as<FunctionTraits<decltype(operationPutByIdDirectStrictOptimize)>::ArgumentTypes, ArgumentTypes>);
+        static_assert(std::same_as<FunctionTraits<decltype(operationPutByIdDirectSloppyOptimize)>::ArgumentTypes, ArgumentTypes>);
+        static_assert(std::same_as<FunctionTraits<decltype(operationPutByIdDefinePrivateFieldStrictOptimize)>::ArgumentTypes, ArgumentTypes>);
+        static_assert(std::same_as<FunctionTraits<decltype(operationPutByIdSetPrivateFieldStrictOptimize)>::ArgumentTypes, ArgumentTypes>);
         return vm.getCTIStub(putByIdSlowPathCodeGenerator);
     }
 
@@ -1647,11 +1633,11 @@ MacroAssemblerCodeRef<JITThunkPtrTag> InlineCacheCompiler::generateSlowPathCode(
     case AccessType::DefinePrivateNameByVal:
     case AccessType::SetPrivateNameByVal: {
         using ArgumentTypes = FunctionTraits<decltype(operationPutByValStrictOptimize)>::ArgumentTypes;
-        static_assert(std::is_same_v<FunctionTraits<decltype(operationPutByValSloppyOptimize)>::ArgumentTypes, ArgumentTypes>);
-        static_assert(std::is_same_v<FunctionTraits<decltype(operationDirectPutByValSloppyOptimize)>::ArgumentTypes, ArgumentTypes>);
-        static_assert(std::is_same_v<FunctionTraits<decltype(operationDirectPutByValStrictOptimize)>::ArgumentTypes, ArgumentTypes>);
-        static_assert(std::is_same_v<FunctionTraits<decltype(operationPutByValDefinePrivateFieldOptimize)>::ArgumentTypes, ArgumentTypes>);
-        static_assert(std::is_same_v<FunctionTraits<decltype(operationPutByValSetPrivateFieldOptimize)>::ArgumentTypes, ArgumentTypes>);
+        static_assert(std::same_as<FunctionTraits<decltype(operationPutByValSloppyOptimize)>::ArgumentTypes, ArgumentTypes>);
+        static_assert(std::same_as<FunctionTraits<decltype(operationDirectPutByValSloppyOptimize)>::ArgumentTypes, ArgumentTypes>);
+        static_assert(std::same_as<FunctionTraits<decltype(operationDirectPutByValStrictOptimize)>::ArgumentTypes, ArgumentTypes>);
+        static_assert(std::same_as<FunctionTraits<decltype(operationPutByValDefinePrivateFieldOptimize)>::ArgumentTypes, ArgumentTypes>);
+        static_assert(std::same_as<FunctionTraits<decltype(operationPutByValSetPrivateFieldOptimize)>::ArgumentTypes, ArgumentTypes>);
         return vm.getCTIStub(putByValSlowPathCodeGenerator);
     }
 
@@ -1661,14 +1647,14 @@ MacroAssemblerCodeRef<JITThunkPtrTag> InlineCacheCompiler::generateSlowPathCode(
     case AccessType::DeleteByIdStrict:
     case AccessType::DeleteByIdSloppy: {
         using ArgumentTypes = FunctionTraits<decltype(operationDeleteByIdStrictOptimize)>::ArgumentTypes;
-        static_assert(std::is_same_v<FunctionTraits<decltype(operationDeleteByIdSloppyOptimize)>::ArgumentTypes, ArgumentTypes>);
+        static_assert(std::same_as<FunctionTraits<decltype(operationDeleteByIdSloppyOptimize)>::ArgumentTypes, ArgumentTypes>);
         return vm.getCTIStub(delByIdSlowPathCodeGenerator);
     }
 
     case AccessType::DeleteByValStrict:
     case AccessType::DeleteByValSloppy: {
         using ArgumentTypes = FunctionTraits<decltype(operationDeleteByValStrictOptimize)>::ArgumentTypes;
-        static_assert(std::is_same_v<FunctionTraits<decltype(operationDeleteByValSloppyOptimize)>::ArgumentTypes, ArgumentTypes>);
+        static_assert(std::same_as<FunctionTraits<decltype(operationDeleteByValSloppyOptimize)>::ArgumentTypes, ArgumentTypes>);
         return vm.getCTIStub(delByValSlowPathCodeGenerator);
     }
     }
@@ -1682,16 +1668,16 @@ InlineCacheHandler::InlineCacheHandler(Ref<InlineCacheHandler>&& previous, Ref<P
     , m_callTarget(stubRoutine->code().code().template retagged<JITStubRoutinePtrTag>())
     , m_jumpTarget(CodePtr<NoPtrTag> { m_callTarget.retagged<NoPtrTag>().dataLocation<uint8_t*>() + prologueSizeInBytesDataIC }.template retagged<JITStubRoutinePtrTag>())
     , m_cacheType(cacheType)
-    , m_next(WTFMove(previous))
-    , m_stubRoutine(WTFMove(stubRoutine))
-    , m_watchpoint(WTFMove(watchpoint))
+    , m_next(WTF::move(previous))
+    , m_stubRoutine(WTF::move(stubRoutine))
+    , m_watchpoint(WTF::move(watchpoint))
 {
     disableThreadingChecks();
 }
 
 Ref<InlineCacheHandler> InlineCacheHandler::create(Ref<InlineCacheHandler>&& previous, CodeBlock* codeBlock, StructureStubInfo& stubInfo, Ref<PolymorphicAccessJITStubRoutine>&& stubRoutine, std::unique_ptr<StructureStubInfoClearingWatchpoint>&& watchpoint, unsigned callLinkInfoCount)
 {
-    auto result = adoptRef(*new (NotNull, fastMalloc(Base::allocationSize(callLinkInfoCount))) InlineCacheHandler(WTFMove(previous), WTFMove(stubRoutine), WTFMove(watchpoint), callLinkInfoCount, CacheType::Unset));
+    auto result = adoptRef(*new (NotNull, fastMalloc(Base::allocationSize(callLinkInfoCount))) InlineCacheHandler(WTF::move(previous), WTF::move(stubRoutine), WTF::move(watchpoint), callLinkInfoCount, CacheType::Unset));
     VM& vm = codeBlock->vm();
     for (auto& callLinkInfo : result->span())
         callLinkInfo.initialize(vm, codeBlock, CallLinkInfo::CallType::Call, stubInfo.codeOrigin);
@@ -1702,7 +1688,7 @@ Ref<InlineCacheHandler> InlineCacheHandler::create(Ref<InlineCacheHandler>&& pre
 Ref<InlineCacheHandler> InlineCacheHandler::createPreCompiled(Ref<InlineCacheHandler>&& previous, CodeBlock* codeBlock, StructureStubInfo& stubInfo, Ref<PolymorphicAccessJITStubRoutine>&& stubRoutine, std::unique_ptr<StructureStubInfoClearingWatchpoint>&& watchpoint, AccessCase& accessCase, CacheType cacheType)
 {
     unsigned callLinkInfoCount = JSC::doesJSCalls(accessCase.m_type) ? 1 : 0;
-    auto result = adoptRef(*new (NotNull, fastMalloc(Base::allocationSize(callLinkInfoCount))) InlineCacheHandler(WTFMove(previous), WTFMove(stubRoutine), WTFMove(watchpoint), callLinkInfoCount, cacheType));
+    auto result = adoptRef(*new (NotNull, fastMalloc(Base::allocationSize(callLinkInfoCount))) InlineCacheHandler(WTF::move(previous), WTF::move(stubRoutine), WTF::move(watchpoint), callLinkInfoCount, cacheType));
     VM& vm = codeBlock->vm();
     for (auto& callLinkInfo : result->span())
         callLinkInfo.initialize(vm, codeBlock, CallLinkInfo::CallType::Call, stubInfo.codeOrigin);
@@ -3037,7 +3023,7 @@ void InlineCacheCompiler::generateWithGuard(unsigned index, AccessCase& accessCa
         slowCases.append(jit.branchTest32(CCallHelpers::Zero, CCallHelpers::Address(scratch4GPR, StringImpl::flagsOffset()), CCallHelpers::TrustedImm32(StringImpl::flagIsAtom())));
 
         auto [slow, reallocating] = jit.storeMegamorphicProperty(vm, baseGPR, scratch4GPR, nullptr, valueRegs.payloadGPR(), scratchGPR, scratch2GPR, scratch3GPR);
-        slowCases.append(WTFMove(slow));
+        slowCases.append(WTF::move(slow));
 
         CCallHelpers::Label doneLabel = jit.label();
         allocator.restoreReusedRegistersByPopping(jit, preservedState);
@@ -4007,7 +3993,7 @@ void InlineCacheCompiler::emitDOMJITGetter(JSGlobalObject* globalObjectForDOMJIT
         usedRegisters.add(m_stubInfo.m_stubInfoGPR, IgnoreVectors);
     auto registersToSpillForCCall = RegisterSetBuilder::registersToSaveForCCall(usedRegisters);
 
-    AccessCaseSnippetParams params(m_vm, WTFMove(regs), WTFMove(gpScratch), WTFMove(fpScratch));
+    AccessCaseSnippetParams params(m_vm, WTF::move(regs), WTF::move(gpScratch), WTF::move(fpScratch));
     snippet->generator()->run(jit, params);
     allocator.restoreReusedRegistersByPopping(jit, preservedState);
     succeed();
@@ -4340,14 +4326,19 @@ void InlineCacheCompiler::emitIntrinsicGetter(IntrinsicGetterAccessCase& accessC
 
 #if USE(JSVALUE64)
         if (isResizableOrGrowableSharedTypedArrayIncludingDataView(accessCase.structure()->classInfoForCells())) {
+            // The null-vector guard above was emitted before the push, so route it
+            // directly to m_failAndIgnore to avoid the post-push restore path.
+            m_failAndIgnore.append(failAndIgnore);
+
             auto allocator = makeDefaultScratchAllocator(m_scratchGPR);
             GPRReg scratch2GPR = allocator.allocateScratchGPR();
 
             ScratchRegisterAllocator::PreservedState preservedState = allocator.preserveReusedRegistersByPushing(jit, ScratchRegisterAllocator::ExtraStackSpace::NoExtraSpace);
 
+            CCallHelpers::JumpList postPushFailAndIgnore;
             if (isDataView) {
                 auto [outOfBounds, doneCases] = jit.loadDataViewByteLength(baseGPR, valueGPR, m_scratchGPR, scratch2GPR, type);
-                failAndIgnore.append(outOfBounds);
+                postPushFailAndIgnore.append(outOfBounds);
                 doneCases.link(&jit);
             } else
             jit.loadTypedArrayByteLength(baseGPR, valueGPR, m_scratchGPR, scratch2GPR, typedArrayType(accessCase.structure()->typeInfo().type()));
@@ -4359,12 +4350,12 @@ void InlineCacheCompiler::emitIntrinsicGetter(IntrinsicGetterAccessCase& accessC
             allocator.restoreReusedRegistersByPopping(jit, preservedState);
             succeed();
 
-            if (allocator.didReuseRegisters() && !failAndIgnore.empty()) {
-                failAndIgnore.link(&jit);
+            if (allocator.didReuseRegisters() && !postPushFailAndIgnore.empty()) {
+                postPushFailAndIgnore.link(&jit);
                 allocator.restoreReusedRegistersByPopping(jit, preservedState);
                 m_failAndIgnore.append(jit.jump());
             } else
-                m_failAndIgnore.append(failAndIgnore);
+                m_failAndIgnore.append(postPushFailAndIgnore);
             return;
         }
 #endif
@@ -4782,7 +4773,7 @@ AccessGenerationResult InlineCacheCompiler::compile(const GCSafeConcurrentJSLock
             // had generated. If the case had not been generated, then we want to remove it from m_list.
             cases.append(someCase);
 
-            additionalWatchpointSets.appendVector(WTFMove(sets));
+            additionalWatchpointSets.appendVector(WTF::move(sets));
         }();
         ++srcIndex;
     }
@@ -4814,7 +4805,7 @@ AccessGenerationResult InlineCacheCompiler::compile(const GCSafeConcurrentJSLock
         for (auto& accessCase : cases)
             isMegamorphic |= JSC::isMegamorphic(accessCase->type());
 
-        auto handler = InlineCacheHandler::create(InlineCacheCompiler::generateSlowPathHandler(vm(), m_stubInfo.accessType), codeBlock, m_stubInfo, WTFMove(stub), WTFMove(watchpoint), callLinkInfoCount);
+        auto handler = InlineCacheHandler::create(InlineCacheCompiler::generateSlowPathHandler(vm(), m_stubInfo.accessType), codeBlock, m_stubInfo, WTF::move(stub), WTF::move(watchpoint), callLinkInfoCount);
         dataLogLnIf(InlineCacheCompilerInternal::verbose, "Returning: ", handler->callTarget());
 
         AccessGenerationResult::Kind resultKind;
@@ -4825,7 +4816,7 @@ AccessGenerationResult InlineCacheCompiler::compile(const GCSafeConcurrentJSLock
         else
             resultKind = AccessGenerationResult::GeneratedNewCode;
 
-        return AccessGenerationResult(resultKind, WTFMove(handler));
+        return AccessGenerationResult(resultKind, WTF::move(handler));
     };
 
     // At this point we're convinced that 'cases' contains cases that we want to JIT now and we won't change that set anymore.
@@ -4845,7 +4836,7 @@ AccessGenerationResult InlineCacheCompiler::compile(const GCSafeConcurrentJSLock
     bool hasConstantIdentifier = JSC::hasConstantIdentifier(m_stubInfo.accessType);
     if (!hasConstantIdentifier)
         allGuardedByStructureCheck = false;
-    FixedVector<Ref<AccessCase>> keys(WTFMove(cases));
+    FixedVector<Ref<AccessCase>> keys(WTF::move(cases));
     m_callLinkInfos.resize(keys.size());
     Vector<JSCell*> cellsToMark;
     for (auto& entry : keys) {
@@ -5116,8 +5107,8 @@ AccessGenerationResult InlineCacheCompiler::compile(const GCSafeConcurrentJSLock
     MacroAssemblerCodeRef<JITStubRoutinePtrTag> code = FINALIZE_CODE_FOR(codeBlock, linkBuffer, JITStubRoutinePtrTag, categoryName(m_stubInfo.accessType), "%s", toCString("Access stub for ", *codeBlock, " ", m_stubInfo.codeOrigin, " with start: ", m_stubInfo.startLocation, " with return point ", successLabel, ": ", listDump(keys)).data());
 
     CodeBlock* owner = codeBlock;
-    FixedVector<StructureID> weakStructures(WTFMove(m_weakStructures));
-    auto stub = createICJITStubRoutine(code, WTFMove(keys), WTFMove(weakStructures), vm(), owner, doesCalls, cellsToMark, WTFMove(m_callLinkInfos), codeBlockThatOwnsExceptionHandlers, callSiteIndexForExceptionHandling);
+    FixedVector<StructureID> weakStructures(WTF::move(m_weakStructures));
+    auto stub = createICJITStubRoutine(code, WTF::move(keys), WTF::move(weakStructures), vm(), owner, doesCalls, cellsToMark, WTF::move(m_callLinkInfos), codeBlockThatOwnsExceptionHandlers, callSiteIndexForExceptionHandling);
 
     {
         for (auto& condition : m_conditions)
@@ -5132,7 +5123,7 @@ AccessGenerationResult InlineCacheCompiler::compile(const GCSafeConcurrentJSLock
             ensureReferenceAndAddWatchpoint(vm(), *set, &stub.get());
     }
 
-    return finishCodeGeneration(WTFMove(stub));
+    return finishCodeGeneration(WTF::move(stub));
 }
 
 #if CPU(ADDRESS64)
@@ -6762,11 +6753,11 @@ AccessGenerationResult InlineCacheCompiler::compileHandler(const GCSafeConcurren
 
     Vector<WatchpointSet*, 8> additionalWatchpointSets;
     if (auto megamorphicCase = tryFoldToMegamorphic(codeBlock, poly.span()))
-        return compileOneAccessCaseHandler(poly, codeBlock, *megamorphicCase, WTFMove(additionalWatchpointSets));
+        return compileOneAccessCaseHandler(poly, codeBlock, *megamorphicCase, WTF::move(additionalWatchpointSets));
 
-    additionalWatchpointSets.appendVector(WTFMove(sets));
+    additionalWatchpointSets.appendVector(WTF::move(sets));
     ASSERT(m_stubInfo.useDataIC);
-    return compileOneAccessCaseHandler(poly, codeBlock, accessCase, WTFMove(additionalWatchpointSets));
+    return compileOneAccessCaseHandler(poly, codeBlock, accessCase, WTF::move(additionalWatchpointSets));
 }
 
 AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Vector<AccessCase*, 16>& poly, CodeBlock* codeBlock, AccessCase& accessCase, Vector<WatchpointSet*, 8>&& additionalWatchpointSets)
@@ -6795,7 +6786,7 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
             stub->watchpointSet().add(watchpoint.get());
         }
 
-        auto handler = InlineCacheHandler::createPreCompiled(InlineCacheCompiler::generateSlowPathHandler(vm, m_stubInfo.accessType), codeBlock, m_stubInfo, WTFMove(stub), WTFMove(watchpoint), accessCase, cacheType);
+        auto handler = InlineCacheHandler::createPreCompiled(InlineCacheCompiler::generateSlowPathHandler(vm, m_stubInfo.accessType), codeBlock, m_stubInfo, WTF::move(stub), WTF::move(watchpoint), accessCase, cacheType);
         handler->setAccessCase(Ref { accessCase });
         dataLogLnIf(InlineCacheCompilerInternal::verbose, "Returning: ", handler->callTarget());
 
@@ -6807,7 +6798,7 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
         else
             resultKind = AccessGenerationResult::GeneratedNewCode;
 
-        return AccessGenerationResult(resultKind, WTFMove(handler));
+        return AccessGenerationResult(resultKind, WTF::move(handler));
     };
 
     auto finishCodeGeneration = [&](Ref<PolymorphicAccessJITStubRoutine>&& stub, bool doesJSCalls) {
@@ -6817,7 +6808,7 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
             stub->watchpointSet().add(watchpoint.get());
         }
 
-        auto handler = InlineCacheHandler::create(InlineCacheCompiler::generateSlowPathHandler(vm, m_stubInfo.accessType), codeBlock, m_stubInfo, Ref { stub }, WTFMove(watchpoint), doesJSCalls ? 1 : 0);
+        auto handler = InlineCacheHandler::create(InlineCacheCompiler::generateSlowPathHandler(vm, m_stubInfo.accessType), codeBlock, m_stubInfo, Ref { stub }, WTF::move(watchpoint), doesJSCalls ? 1 : 0);
         ASSERT(!stub->cases().isEmpty());
         handler->setAccessCase(Ref { stub->cases().first() });
         dataLogLnIf(InlineCacheCompilerInternal::verbose, "Returning: ", handler->callTarget());
@@ -6830,7 +6821,7 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
         else
             resultKind = AccessGenerationResult::GeneratedNewCode;
 
-        return AccessGenerationResult(resultKind, WTFMove(handler));
+        return AccessGenerationResult(resultKind, WTF::move(handler));
     };
 
     // At this point we're convinced that 'cases' contains cases that we want to JIT now and we won't change that set anymore.
@@ -6873,9 +6864,9 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
                                 cacheType = CacheType::GetByIdPrototype;
                                 code = vm.getCTIStub(CommonJITThunkID::GetByIdLoadPrototypePropertyHandler).retagged<JITStubRoutinePtrTag>();
                             }
-                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
-                            connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
-                            return finishPreCompiledCodeGeneration(WTFMove(stub), cacheType);
+                            auto stub = createPreCompiledICJITStubRoutine(WTF::move(code), vm, codeBlock);
+                            connectWatchpointSets(stub.get(), WTF::move(watchedConditions), WTF::move(additionalWatchpointSets));
+                            return finishPreCompiledCodeGeneration(WTF::move(stub), cacheType);
                         }
                     }
                     break;
@@ -6886,9 +6877,9 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
                         collectConditions(accessCase, watchedConditions, checkingConditions);
                         if (checkingConditions.isEmpty()) {
                             auto code = vm.getCTIStub(CommonJITThunkID::GetByIdMissHandler).retagged<JITStubRoutinePtrTag>();
-                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
-                            connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
-                            return finishPreCompiledCodeGeneration(WTFMove(stub));
+                            auto stub = createPreCompiledICJITStubRoutine(WTF::move(code), vm, codeBlock);
+                            connectWatchpointSets(stub.get(), WTF::move(watchedConditions), WTF::move(additionalWatchpointSets));
+                            return finishPreCompiledCodeGeneration(WTF::move(stub));
                         }
                     }
                     break;
@@ -6924,9 +6915,9 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
                                     code = vm.getCTIStub(CommonJITThunkID::GetByIdCustomAccessorHandler).retagged<JITStubRoutinePtrTag>();
                             } else
                                 code = vm.getCTIStub(CommonJITThunkID::GetByIdCustomValueHandler).retagged<JITStubRoutinePtrTag>();
-                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
-                            connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
-                            return finishPreCompiledCodeGeneration(WTFMove(stub));
+                            auto stub = createPreCompiledICJITStubRoutine(WTF::move(code), vm, codeBlock);
+                            connectWatchpointSets(stub.get(), WTF::move(watchedConditions), WTF::move(additionalWatchpointSets));
+                            return finishPreCompiledCodeGeneration(WTF::move(stub));
                         }
                     }
                     break;
@@ -6943,9 +6934,9 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
                                 currStructure->startWatchingPropertyForReplacements(vm, accessCase.offset());
 
                             auto code = vm.getCTIStub(CommonJITThunkID::GetByIdGetterHandler).retagged<JITStubRoutinePtrTag>();
-                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
-                            connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
-                            return finishPreCompiledCodeGeneration(WTFMove(stub));
+                            auto stub = createPreCompiledICJITStubRoutine(WTF::move(code), vm, codeBlock);
+                            connectWatchpointSets(stub.get(), WTF::move(watchedConditions), WTF::move(additionalWatchpointSets));
+                            return finishPreCompiledCodeGeneration(WTF::move(stub));
                         }
                     }
                     break;
@@ -6954,9 +6945,9 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
                     ASSERT(!accessCase.viaGlobalProxy());
                     ASSERT(accessCase.conditionSet().isEmpty());
                     auto code = vm.getCTIStub(CommonJITThunkID::GetByIdProxyObjectLoadHandler).retagged<JITStubRoutinePtrTag>();
-                    auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
-                    connectWatchpointSets(stub.get(), { }, WTFMove(additionalWatchpointSets));
-                    return finishPreCompiledCodeGeneration(WTFMove(stub));
+                    auto stub = createPreCompiledICJITStubRoutine(WTF::move(code), vm, codeBlock);
+                    connectWatchpointSets(stub.get(), { }, WTF::move(additionalWatchpointSets));
+                    return finishPreCompiledCodeGeneration(WTF::move(stub));
                 }
                 case AccessCase::IntrinsicGetter:
                     break;
@@ -6964,9 +6955,9 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
                     ASSERT(!accessCase.viaGlobalProxy());
                     ASSERT(accessCase.conditionSet().isEmpty());
                     auto code = vm.getCTIStub(CommonJITThunkID::GetByIdModuleNamespaceLoadHandler).retagged<JITStubRoutinePtrTag>();
-                    auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
-                    connectWatchpointSets(stub.get(), { }, WTFMove(additionalWatchpointSets));
-                    return finishPreCompiledCodeGeneration(WTFMove(stub));
+                    auto stub = createPreCompiledICJITStubRoutine(WTF::move(code), vm, codeBlock);
+                    connectWatchpointSets(stub.get(), { }, WTF::move(additionalWatchpointSets));
+                    return finishPreCompiledCodeGeneration(WTF::move(stub));
                 }
                 default:
                     break;
@@ -6987,9 +6978,9 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
                     ASSERT(accessCase.conditionSet().isEmpty());
                     if (!accessCase.viaGlobalProxy()) {
                         auto code = vm.getCTIStub(CommonJITThunkID::PutByIdReplaceHandler).retagged<JITStubRoutinePtrTag>();
-                        auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
+                        auto stub = createPreCompiledICJITStubRoutine(WTF::move(code), vm, codeBlock);
                         connectWatchpointSets(stub.get(), { }, { });
-                        return finishPreCompiledCodeGeneration(WTFMove(stub), CacheType::PutByIdReplace);
+                        return finishPreCompiledCodeGeneration(WTF::move(stub), CacheType::PutByIdReplace);
                     }
                     break;
                 }
@@ -7009,9 +7000,9 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
                             code = vm.getCTIStub(CommonJITThunkID::PutByIdTransitionNewlyAllocatingHandler).retagged<JITStubRoutinePtrTag>();
                         else
                             code = vm.getCTIStub(CommonJITThunkID::PutByIdTransitionReallocatingHandler).retagged<JITStubRoutinePtrTag>();
-                        auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
-                        connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
-                        return finishPreCompiledCodeGeneration(WTFMove(stub));
+                        auto stub = createPreCompiledICJITStubRoutine(WTF::move(code), vm, codeBlock);
+                        connectWatchpointSets(stub.get(), WTF::move(watchedConditions), WTF::move(additionalWatchpointSets));
+                        return finishPreCompiledCodeGeneration(WTF::move(stub));
                     }
                     break;
                 }
@@ -7032,9 +7023,9 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
                                 code = vm.getCTIStub(CommonJITThunkID::PutByIdCustomAccessorHandler).retagged<JITStubRoutinePtrTag>();
                             else
                                 code = vm.getCTIStub(CommonJITThunkID::PutByIdCustomValueHandler).retagged<JITStubRoutinePtrTag>();
-                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
-                            connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
-                            return finishPreCompiledCodeGeneration(WTFMove(stub));
+                            auto stub = createPreCompiledICJITStubRoutine(WTF::move(code), vm, codeBlock);
+                            connectWatchpointSets(stub.get(), WTF::move(watchedConditions), WTF::move(additionalWatchpointSets));
+                            return finishPreCompiledCodeGeneration(WTF::move(stub));
                         }
                     }
                     break;
@@ -7055,9 +7046,9 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
                                 code = vm.getCTIStub(CommonJITThunkID::PutByIdStrictSetterHandler).retagged<JITStubRoutinePtrTag>();
                             else
                                 code = vm.getCTIStub(CommonJITThunkID::PutByIdSloppySetterHandler).retagged<JITStubRoutinePtrTag>();
-                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
-                            connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
-                            return finishPreCompiledCodeGeneration(WTFMove(stub));
+                            auto stub = createPreCompiledICJITStubRoutine(WTF::move(code), vm, codeBlock);
+                            connectWatchpointSets(stub.get(), WTF::move(watchedConditions), WTF::move(additionalWatchpointSets));
+                            return finishPreCompiledCodeGeneration(WTF::move(stub));
                         }
                     }
                     break;
@@ -7077,9 +7068,9 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
                     if (checkingConditions.isEmpty()) {
                         bool isHit = accessCase.m_type == AccessCase::InHit;
                         auto code = vm.getCTIStub(isHit ? CommonJITThunkID::InByIdHitHandler : CommonJITThunkID::InByIdMissHandler).retagged<JITStubRoutinePtrTag>();
-                        auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
-                        connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
-                        return finishPreCompiledCodeGeneration(WTFMove(stub), isHit ? CacheType::InByIdSelf : CacheType::Unset);
+                        auto stub = createPreCompiledICJITStubRoutine(WTF::move(code), vm, codeBlock);
+                        connectWatchpointSets(stub.get(), WTF::move(watchedConditions), WTF::move(additionalWatchpointSets));
+                        return finishPreCompiledCodeGeneration(WTF::move(stub), isHit ? CacheType::InByIdSelf : CacheType::Unset);
                     }
                     break;
                 }
@@ -7112,9 +7103,9 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
                         break;
                     }
                     auto code = vm.getCTIStub(thunkID).retagged<JITStubRoutinePtrTag>();
-                    auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
-                    connectWatchpointSets(stub.get(), { }, WTFMove(additionalWatchpointSets));
-                    return finishPreCompiledCodeGeneration(WTFMove(stub));
+                    auto stub = createPreCompiledICJITStubRoutine(WTF::move(code), vm, codeBlock);
+                    connectWatchpointSets(stub.get(), { }, WTF::move(additionalWatchpointSets));
+                    return finishPreCompiledCodeGeneration(WTF::move(stub));
                 }
                 default:
                     break;
@@ -7130,9 +7121,9 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
                     collectConditions(accessCase, watchedConditions, checkingConditions);
                     if (checkingConditions.isEmpty()) {
                         auto code = vm.getCTIStub(accessCase.m_type == AccessCase::InstanceOfHit ? CommonJITThunkID::InstanceOfHitHandler : CommonJITThunkID::InstanceOfMissHandler).retagged<JITStubRoutinePtrTag>();
-                        auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
-                        connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
-                        return finishPreCompiledCodeGeneration(WTFMove(stub));
+                        auto stub = createPreCompiledICJITStubRoutine(WTF::move(code), vm, codeBlock);
+                        connectWatchpointSets(stub.get(), WTF::move(watchedConditions), WTF::move(additionalWatchpointSets));
+                        return finishPreCompiledCodeGeneration(WTF::move(stub));
                     }
                     break;
                 }
@@ -7169,9 +7160,9 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
                                 else
                                     code = vm.getCTIStub(CommonJITThunkID::GetByValWithStringLoadPrototypePropertyHandler).retagged<JITStubRoutinePtrTag>();
                             }
-                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
-                            connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
-                            return finishPreCompiledCodeGeneration(WTFMove(stub));
+                            auto stub = createPreCompiledICJITStubRoutine(WTF::move(code), vm, codeBlock);
+                            connectWatchpointSets(stub.get(), WTF::move(watchedConditions), WTF::move(additionalWatchpointSets));
+                            return finishPreCompiledCodeGeneration(WTF::move(stub));
                         }
                     }
                     break;
@@ -7186,9 +7177,9 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
                                 code = vm.getCTIStub(CommonJITThunkID::GetByValWithSymbolMissHandler).retagged<JITStubRoutinePtrTag>();
                             else
                                 code = vm.getCTIStub(CommonJITThunkID::GetByValWithStringMissHandler).retagged<JITStubRoutinePtrTag>();
-                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
-                            connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
-                            return finishPreCompiledCodeGeneration(WTFMove(stub));
+                            auto stub = createPreCompiledICJITStubRoutine(WTF::move(code), vm, codeBlock);
+                            connectWatchpointSets(stub.get(), WTF::move(watchedConditions), WTF::move(additionalWatchpointSets));
+                            return finishPreCompiledCodeGeneration(WTF::move(stub));
                         }
                     }
                     break;
@@ -7232,9 +7223,9 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
                                 else
                                     code = vm.getCTIStub(CommonJITThunkID::GetByValWithStringCustomValueHandler).retagged<JITStubRoutinePtrTag>();
                             }
-                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
-                            connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
-                            return finishPreCompiledCodeGeneration(WTFMove(stub));
+                            auto stub = createPreCompiledICJITStubRoutine(WTF::move(code), vm, codeBlock);
+                            connectWatchpointSets(stub.get(), WTF::move(watchedConditions), WTF::move(additionalWatchpointSets));
+                            return finishPreCompiledCodeGeneration(WTF::move(stub));
                         }
                     }
                     break;
@@ -7250,9 +7241,9 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
                             if (isValidOffset(accessCase.m_offset))
                                 currStructure->startWatchingPropertyForReplacements(vm, accessCase.offset());
                             auto code = vm.getCTIStub(accessCase.uid()->isSymbol() ? CommonJITThunkID::GetByValWithSymbolGetterHandler : CommonJITThunkID::GetByValWithStringGetterHandler).retagged<JITStubRoutinePtrTag>();
-                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
-                            connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
-                            return finishPreCompiledCodeGeneration(WTFMove(stub));
+                            auto stub = createPreCompiledICJITStubRoutine(WTF::move(code), vm, codeBlock);
+                            connectWatchpointSets(stub.get(), WTF::move(watchedConditions), WTF::move(additionalWatchpointSets));
+                            return finishPreCompiledCodeGeneration(WTF::move(stub));
                         }
                     }
                     break;
@@ -7280,9 +7271,9 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
                             code = vm.getCTIStub(CommonJITThunkID::PutByValWithSymbolReplaceHandler).retagged<JITStubRoutinePtrTag>();
                         else
                             code = vm.getCTIStub(CommonJITThunkID::PutByValWithStringReplaceHandler).retagged<JITStubRoutinePtrTag>();
-                        auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
-                        connectWatchpointSets(stub.get(), { }, WTFMove(additionalWatchpointSets));
-                        return finishPreCompiledCodeGeneration(WTFMove(stub));
+                        auto stub = createPreCompiledICJITStubRoutine(WTF::move(code), vm, codeBlock);
+                        connectWatchpointSets(stub.get(), { }, WTF::move(additionalWatchpointSets));
+                        return finishPreCompiledCodeGeneration(WTF::move(stub));
                     }
                     break;
                 }
@@ -7315,9 +7306,9 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
                             else
                                 code = vm.getCTIStub(CommonJITThunkID::PutByValWithStringTransitionReallocatingHandler).retagged<JITStubRoutinePtrTag>();
                         }
-                        auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
-                        connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
-                        return finishPreCompiledCodeGeneration(WTFMove(stub));
+                        auto stub = createPreCompiledICJITStubRoutine(WTF::move(code), vm, codeBlock);
+                        connectWatchpointSets(stub.get(), WTF::move(watchedConditions), WTF::move(additionalWatchpointSets));
+                        return finishPreCompiledCodeGeneration(WTF::move(stub));
                     }
                     break;
                 }
@@ -7345,9 +7336,9 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
                                 else
                                     code = vm.getCTIStub(CommonJITThunkID::PutByValWithStringCustomValueHandler).retagged<JITStubRoutinePtrTag>();
                             }
-                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
-                            connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
-                            return finishPreCompiledCodeGeneration(WTFMove(stub));
+                            auto stub = createPreCompiledICJITStubRoutine(WTF::move(code), vm, codeBlock);
+                            connectWatchpointSets(stub.get(), WTF::move(watchedConditions), WTF::move(additionalWatchpointSets));
+                            return finishPreCompiledCodeGeneration(WTF::move(stub));
                         }
                     }
                     break;
@@ -7368,9 +7359,9 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
                                 code = vm.getCTIStub(accessCase.uid()->isSymbol() ? CommonJITThunkID::PutByValWithSymbolStrictSetterHandler : CommonJITThunkID::PutByValWithStringStrictSetterHandler).retagged<JITStubRoutinePtrTag>();
                             else
                                 code = vm.getCTIStub(accessCase.uid()->isSymbol() ? CommonJITThunkID::PutByValWithSymbolSloppySetterHandler : CommonJITThunkID::PutByValWithStringSloppySetterHandler).retagged<JITStubRoutinePtrTag>();
-                            auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
-                            connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
-                            return finishPreCompiledCodeGeneration(WTFMove(stub));
+                            auto stub = createPreCompiledICJITStubRoutine(WTF::move(code), vm, codeBlock);
+                            connectWatchpointSets(stub.get(), WTF::move(watchedConditions), WTF::move(additionalWatchpointSets));
+                            return finishPreCompiledCodeGeneration(WTF::move(stub));
                         }
                     }
                     break;
@@ -7395,9 +7386,9 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
                             code = vm.getCTIStub(accessCase.m_type == AccessCase::InHit ? CommonJITThunkID::InByValWithSymbolHitHandler : CommonJITThunkID::InByValWithSymbolMissHandler).retagged<JITStubRoutinePtrTag>();
                         else
                             code = vm.getCTIStub(accessCase.m_type == AccessCase::InHit ? CommonJITThunkID::InByValWithStringHitHandler : CommonJITThunkID::InByValWithStringMissHandler).retagged<JITStubRoutinePtrTag>();
-                        auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
-                        connectWatchpointSets(stub.get(), WTFMove(watchedConditions), WTFMove(additionalWatchpointSets));
-                        return finishPreCompiledCodeGeneration(WTFMove(stub));
+                        auto stub = createPreCompiledICJITStubRoutine(WTF::move(code), vm, codeBlock);
+                        connectWatchpointSets(stub.get(), WTF::move(watchedConditions), WTF::move(additionalWatchpointSets));
+                        return finishPreCompiledCodeGeneration(WTF::move(stub));
                     }
                     break;
                 }
@@ -7430,9 +7421,9 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
                         break;
                     }
                     auto code = vm.getCTIStub(thunkID).retagged<JITStubRoutinePtrTag>();
-                    auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
-                    connectWatchpointSets(stub.get(), { }, WTFMove(additionalWatchpointSets));
-                    return finishPreCompiledCodeGeneration(WTFMove(stub));
+                    auto stub = createPreCompiledICJITStubRoutine(WTF::move(code), vm, codeBlock);
+                    connectWatchpointSets(stub.get(), { }, WTF::move(additionalWatchpointSets));
+                    return finishPreCompiledCodeGeneration(WTF::move(stub));
                 }
                 default:
                     break;
@@ -7459,9 +7450,9 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
                         break;
                     }
                     auto code = vm.getCTIStub(thunkID).retagged<JITStubRoutinePtrTag>();
-                    auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
-                    connectWatchpointSets(stub.get(), { }, WTFMove(additionalWatchpointSets));
-                    return finishPreCompiledCodeGeneration(WTFMove(stub));
+                    auto stub = createPreCompiledICJITStubRoutine(WTF::move(code), vm, codeBlock);
+                    connectWatchpointSets(stub.get(), { }, WTF::move(additionalWatchpointSets));
+                    return finishPreCompiledCodeGeneration(WTF::move(stub));
                 }
                 default:
                     break;
@@ -7585,22 +7576,22 @@ AccessGenerationResult InlineCacheCompiler::compileOneAccessCaseHandler(const Ve
     MacroAssemblerCodeRef<JITStubRoutinePtrTag> code = FINALIZE_CODE_FOR(codeBlock, linkBuffer, JITStubRoutinePtrTag, categoryName(m_stubInfo.accessType), "%s", toCString("Access stub for ", *codeBlock, " ", m_stubInfo.codeOrigin, " with start: ", m_stubInfo.startLocation, ": ", listDump(keys)).data());
 
     if (statelessType) {
-        auto stub = createPreCompiledICJITStubRoutine(WTFMove(code), vm, codeBlock);
-        connectWatchpointSets(stub.get(), WTFMove(m_conditions), WTFMove(additionalWatchpointSets));
+        auto stub = createPreCompiledICJITStubRoutine(WTF::move(code), vm, codeBlock);
+        connectWatchpointSets(stub.get(), WTF::move(m_conditions), WTF::move(additionalWatchpointSets));
         dataLogLnIf(InlineCacheCompilerInternal::verbose, "Installing ", m_stubInfo.accessType, " / ", accessCase.m_type);
         vm.m_sharedJITStubs->setStatelessStub(statelessType.value(), Ref { stub });
-        return finishPreCompiledCodeGeneration(WTFMove(stub));
+        return finishPreCompiledCodeGeneration(WTF::move(stub));
     }
 
-    FixedVector<StructureID> weakStructures(WTFMove(m_weakStructures));
-    auto stub = createICJITStubRoutine(WTFMove(code), WTFMove(keys), WTFMove(weakStructures), vm, nullptr, doesCalls, cellsToMark, { }, nullptr, { });
-    connectWatchpointSets(stub.get(), WTFMove(m_conditions), WTFMove(additionalWatchpointSets));
+    FixedVector<StructureID> weakStructures(WTF::move(m_weakStructures));
+    auto stub = createICJITStubRoutine(WTF::move(code), WTF::move(keys), WTF::move(weakStructures), vm, nullptr, doesCalls, cellsToMark, { }, nullptr, { });
+    connectWatchpointSets(stub.get(), WTF::move(m_conditions), WTF::move(additionalWatchpointSets));
 
     dataLogLnIf(InlineCacheCompilerInternal::verbose, "Installing ", m_stubInfo.accessType, " / ", listDump(stub->cases()));
     vm.m_sharedJITStubs->add(SharedJITStubSet::Hash::Key(SharedJITStubSet::stubInfoKey(m_stubInfo), stub.ptr()));
     stub->addedToSharedJITStubSet();
 
-    return finishCodeGeneration(WTFMove(stub), JSC::doesJSCalls(accessCase.m_type));
+    return finishCodeGeneration(WTF::move(stub), JSC::doesJSCalls(accessCase.m_type));
 }
 
 MacroAssemblerCodeRef<JITStubRoutinePtrTag> InlineCacheCompiler::compileGetByDOMJITHandler(CodeBlock* codeBlock, const DOMJIT::GetterSetter* domJIT, std::optional<bool> isSymbol)
@@ -7758,13 +7749,13 @@ AccessGenerationResult PolymorphicAccess::addCases(const GCSafeConcurrentJSLocke
     if (previousCase) {
         auto previous = previousCase.releaseNonNull();
         if (previous->canReplace(accessCase.get()))
-            casesToAdd.append(WTFMove(previous));
+            casesToAdd.append(WTF::move(previous));
         else {
-            casesToAdd.append(WTFMove(previous));
-            casesToAdd.append(WTFMove(accessCase));
+            casesToAdd.append(WTF::move(previous));
+            casesToAdd.append(WTF::move(accessCase));
     }
     } else
-        casesToAdd.append(WTFMove(accessCase));
+        casesToAdd.append(WTF::move(accessCase));
 
     dataLogLnIf(InlineCacheCompilerInternal::verbose, "casesToAdd: ", listDump(casesToAdd));
 
@@ -7814,7 +7805,7 @@ AccessGenerationResult PolymorphicAccess::addCases(const GCSafeConcurrentJSLocke
     // may be replaced by the new ones. That's fine. We will sort that out when we regenerate.
     for (auto& caseToAdd : casesToAdd) {
         collectAdditionalWatchpoints(vm, caseToAdd.get());
-        m_list.append(WTFMove(caseToAdd));
+        m_list.append(WTF::move(caseToAdd));
     }
 
     dataLogLnIf(InlineCacheCompilerInternal::verbose, "After addCases: m_list: ", listDump(m_list));

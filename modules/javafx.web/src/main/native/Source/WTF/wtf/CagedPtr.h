@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2017-2021 Apple Inc. All rights reserved.
+ * Copyright (C) 2017-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,19 +32,12 @@
 
 #include <climits>
 
-#if OS(DARWIN)
-#include <mach/vm_param.h>
-#endif
-
 namespace WTF {
 
 template<Gigacage::Kind passedKind, typename T, typename PtrTraits = RawPtrTraits<T>>
 class CagedPtr {
 public:
     static constexpr Gigacage::Kind kind = passedKind;
-    static constexpr unsigned numberOfPointerBits = sizeof(T*) * CHAR_BIT;
-    static constexpr unsigned maxNumberOfAllowedPACBits = numberOfPointerBits - OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH);
-    static constexpr uintptr_t nonPACBitsMask = (1ull << (numberOfPointerBits - maxNumberOfAllowedPACBits)) - 1;
 
     CagedPtr() : CagedPtr(nullptr) { }
     CagedPtr(std::nullptr_t)
@@ -55,14 +48,14 @@ public:
         : m_ptr(ptr)
     { }
 
-    T* get() const
+    T* get() const LIFETIME_BOUND
     {
         ASSERT(m_ptr);
         T* ptr = PtrTraits::unwrap(m_ptr);
         return Gigacage::caged(kind, ptr);
     }
 
-    T* getMayBeNull() const
+    T* getMayBeNull() const LIFETIME_BOUND
     {
         T* ptr = PtrTraits::unwrap(m_ptr);
         if (!ptr)
@@ -70,16 +63,18 @@ public:
         return Gigacage::caged(kind, ptr);
     }
 
-    T* getUnsafe() const
+    T* getUnsafe() const LIFETIME_BOUND
     {
         T* ptr = PtrTraits::unwrap(m_ptr);
         return Gigacage::cagedMayBeNull(kind, ptr);
     }
 
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
     // We need the template here so that the type of U is deduced at usage time rather than class time. U should always be T.
     template<typename U = T>
-    typename std::enable_if<!std::is_same<void, U>::value, T>::type&
-    /* T& */ at(size_t index) const { return get()[index]; }
+        requires (!std::same_as<void, U>)
+    WTF_UNSAFE_BUFFER_USAGE U& at(size_t index) const { return get()[index]; }
+WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
     CagedPtr(CagedPtr& other)
         : m_ptr(other.m_ptr)

@@ -33,7 +33,7 @@ class SplitElementCommand : public SimpleEditCommand {
 public:
     static Ref<SplitElementCommand> create(Ref<Element>&& element, Ref<Node>&& splitPointChild)
     {
-        return adoptRef(*new SplitElementCommand(WTFMove(element), WTFMove(splitPointChild)));
+        return adoptRef(*new SplitElementCommand(WTF::move(element), WTF::move(splitPointChild)));
     }
 
 private:

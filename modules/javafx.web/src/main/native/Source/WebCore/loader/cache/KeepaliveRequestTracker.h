@@ -25,19 +25,27 @@
 
 #pragma once
 
-#include "CachedRawResourceClient.h"
-#include "CachedResource.h"
-#include "CachedResourceHandle.h"
+#include <WebCore/CachedRawResourceClient.h>
+#include <WebCore/CachedResource.h>
+#include <WebCore/CachedResourceHandle.h>
 #include <wtf/Forward.h>
 
 namespace WebCore {
 
-class KeepaliveRequestTracker final : public CachedRawResourceClient {
+class KeepaliveRequestTracker final : public CachedRawResourceClient, public RefCounted<KeepaliveRequestTracker> {
 public:
+    static Ref<KeepaliveRequestTracker> create();
     ~KeepaliveRequestTracker();
+
     bool tryRegisterRequest(CachedResource&);
 
+    // CachedResourceClient.
+    void ref() const final { RefCounted::ref(); }
+    void deref() const final { RefCounted::deref(); }
+
 private:
+    KeepaliveRequestTracker() = default;
+
     // CachedRawResourceClient.
     void notifyFinished(CachedResource&, const NetworkLoadMetrics&, LoadWillContinueInAnotherProcess) final;
 

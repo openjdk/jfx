@@ -25,7 +25,9 @@
 
 // https://drafts.fxtf.org/geometry/#dictdef-dommatrixinit
 
-dictionary DOMMatrixInit : DOMMatrix2DInit {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary DOMMatrixInit : DOMMatrix2DInit {
     unrestricted double m13 = 0;
     unrestricted double m14 = 0;
     unrestricted double m23 = 0;

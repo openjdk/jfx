@@ -24,17 +24,17 @@
 
 #pragma once
 
-#include "CSSBasicShape.h"
-#include "StyleCircleFunction.h"
-#include "StyleEllipseFunction.h"
-#include "StyleInsetFunction.h"
-#include "StylePathComputation.h"
-#include "StylePathFunction.h"
-#include "StylePolygonFunction.h"
-#include "StyleRectFunction.h"
-#include "StyleShapeFunction.h"
-#include "StyleWindRuleComputation.h"
-#include "StyleXywhFunction.h"
+#include <WebCore/CSSBasicShape.h>
+#include <WebCore/StyleCircleFunction.h>
+#include <WebCore/StyleEllipseFunction.h>
+#include <WebCore/StyleInsetFunction.h>
+#include <WebCore/StylePathComputation.h>
+#include <WebCore/StylePathFunction.h>
+#include <WebCore/StylePolygonFunction.h>
+#include <WebCore/StyleRectFunction.h>
+#include <WebCore/StyleShapeFunction.h>
+#include <WebCore/StyleWindRuleComputation.h>
+#include <WebCore/StyleXywhFunction.h>
 
 namespace WebCore {
 namespace Style {

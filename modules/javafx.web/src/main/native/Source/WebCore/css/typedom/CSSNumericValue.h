@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "CSSNumericType.h"
-#include "CSSStyleValue.h"
+#include <WebCore/CSSNumericType.h>
+#include <WebCore/CSSStyleValue.h>
 #include <wtf/HashMap.h>
 
 namespace WebCore {
@@ -46,7 +46,7 @@ template<typename> class ExceptionOr;
 using CSSNumberish = Variant<double, RefPtr<CSSNumericValue>>;
 
 class CSSNumericValue : public CSSStyleValue {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSNumericValue);
+    WTF_MAKE_TZONE_ALLOCATED(CSSNumericValue);
 public:
 
     ExceptionOr<Ref<CSSNumericValue>> add(FixedVector<CSSNumberish>&&);
@@ -89,7 +89,7 @@ protected:
     template<typename T> Vector<Ref<CSSNumericValue>> prependItemsOfTypeOrThis(Vector<Ref<CSSNumericValue>>&&);
 
     CSSNumericValue(CSSNumericType type = { })
-        : m_type(WTFMove(type)) { }
+        : m_type(WTF::move(type)) { }
 
     CSSNumericType m_type;
 };
@@ -97,5 +97,5 @@ protected:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSNumericValue)
-    static bool isType(const WebCore::CSSStyleValue& styleValue) { return isCSSNumericValue(styleValue.getType()); }
+    static bool isType(const WebCore::CSSStyleValue& styleValue) { return isCSSNumericValue(styleValue.styleValueType()); }
 SPECIALIZE_TYPE_TRAITS_END()

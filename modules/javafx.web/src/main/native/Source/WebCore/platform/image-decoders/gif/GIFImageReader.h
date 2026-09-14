@@ -238,7 +238,7 @@ public:
     {
     }
 
-    void setData(Ref<const WebCore::SharedBuffer>&& data) { m_data = WTFMove(data); }
+    void setData(Ref<const WebCore::SharedBuffer>&& data) { m_data = WTF::move(data); }
     // FIXME: haltAtFrame should be size_t.
     bool decode(WebCore::GIFImageDecoder::GIFQuery, unsigned haltAtFrame);
 

@@ -26,6 +26,8 @@
 #ifndef PAS_HEAP_CONFIG_UTILS_H
 #define PAS_HEAP_CONFIG_UTILS_H
 
+#include "pas_platform.h"
+
 PAS_IGNORE_WARNINGS_BEGIN("cast-align")
 
 #include "pas_basic_heap_config_root_data.h"
@@ -97,12 +99,15 @@ typedef struct {
     uint8_t marge_bitfit_min_align_shift;
     size_t marge_bitfit_page_size;
     bool pgm_enabled;
+    bool delegate_large_user_allocations;
 } pas_basic_heap_config_arguments;
 
 #define PAS_BASIC_HEAP_CONFIG_SEGREGATED_HEAP_FIELDS(name, ...) \
     .small_segregated_config = { \
         .base = { \
             .is_enabled = true, \
+            .allow_profiling = PAS_SHOULD_PROFILE_BASIC_HEAP_PAGE(pas_page_config_size_category_small), \
+            .allow_mte_tagging = PAS_SHOULD_MTE_TAG_BASIC_HEAP_PAGE(pas_page_config_size_category_small), \
             .heap_config_ptr = &name ## _heap_config, \
             .page_config_ptr = &name ## _heap_config.small_segregated_config.base, \
             .page_config_kind = pas_page_config_kind_segregated, \
@@ -172,6 +177,8 @@ typedef struct {
         .base = { \
             .is_enabled = \
                 ((pas_basic_heap_config_arguments){__VA_ARGS__}).use_medium_segregated, \
+            .allow_profiling = PAS_SHOULD_PROFILE_BASIC_HEAP_PAGE(pas_page_config_size_category_medium), \
+            .allow_mte_tagging = PAS_SHOULD_MTE_TAG_BASIC_HEAP_PAGE(pas_page_config_size_category_medium), \
             .heap_config_ptr = &name ## _heap_config, \
             .page_config_ptr = &name ## _heap_config.medium_segregated_config.base, \
             .page_config_kind = pas_page_config_kind_segregated, \
@@ -227,6 +234,8 @@ typedef struct {
         .base = { \
             .is_enabled = \
                 ((pas_basic_heap_config_arguments){__VA_ARGS__}).use_small_bitfit, \
+            .allow_profiling = PAS_SHOULD_PROFILE_BASIC_HEAP_PAGE(pas_page_config_size_category_small), \
+            .allow_mte_tagging = PAS_SHOULD_MTE_TAG_BASIC_HEAP_PAGE(pas_page_config_size_category_small), \
             .heap_config_ptr = &name ## _heap_config, \
             .page_config_ptr = &name ## _heap_config.small_bitfit_config.base, \
             .page_config_kind = pas_page_config_kind_bitfit, \
@@ -269,6 +278,8 @@ typedef struct {
         .base = { \
             .is_enabled = \
                 ((pas_basic_heap_config_arguments){__VA_ARGS__}).use_medium_bitfit, \
+            .allow_profiling = PAS_SHOULD_PROFILE_BASIC_HEAP_PAGE(pas_page_config_size_category_medium), \
+            .allow_mte_tagging = PAS_SHOULD_MTE_TAG_BASIC_HEAP_PAGE(pas_page_config_size_category_medium), \
             .heap_config_ptr = &name ## _heap_config, \
             .page_config_ptr = &name ## _heap_config.medium_bitfit_config.base, \
             .page_config_kind = pas_page_config_kind_bitfit, \
@@ -301,6 +312,8 @@ typedef struct {
         .base = { \
             .is_enabled = \
                 ((pas_basic_heap_config_arguments){__VA_ARGS__}).use_marge_bitfit, \
+            .allow_profiling = PAS_SHOULD_PROFILE_BASIC_HEAP_PAGE(pas_page_config_size_category_marge), \
+            .allow_mte_tagging = PAS_SHOULD_MTE_TAG_BASIC_HEAP_PAGE(pas_page_config_size_category_marge), \
             .heap_config_ptr = &name ## _heap_config, \
             .page_config_ptr = &name ## _heap_config.marge_bitfit_config.base, \
             .page_config_kind = pas_page_config_kind_bitfit, \
@@ -356,7 +369,8 @@ typedef struct {
             pas_heap_config_utils_for_each_shared_page_directory_remote, \
         .dump_shared_page_directory_arg = pas_shared_page_directory_by_size_dump_directory_arg, \
         PAS_HEAP_CONFIG_SPECIALIZATIONS(name ## _heap_config), \
-        .pgm_enabled = true \
+        .pgm_enabled = true, \
+        .delegate_large_user_allocations = ((pas_basic_heap_config_arguments){__VA_ARGS__}).delegate_large_user_allocations \
     })
 
 #define PAS_BASIC_HEAP_CONFIG_SEGREGATED_HEAP_DECLARATIONS(name, upcase_name) \

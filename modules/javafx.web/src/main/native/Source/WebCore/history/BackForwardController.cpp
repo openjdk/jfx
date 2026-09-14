@@ -40,7 +40,7 @@ WTF_MAKE_TZONE_ALLOCATED_IMPL(BackForwardController);
 
 BackForwardController::BackForwardController(Page& page, Ref<BackForwardClient>&& client)
     : m_page(page)
-    , m_client(WTFMove(client))
+    , m_client(WTF::move(client))
 {
 }
 
@@ -136,12 +136,12 @@ bool BackForwardController::goForward()
 
 void BackForwardController::addItem(Ref<HistoryItem>&& item)
 {
-    m_client->addItem(WTFMove(item));
+    m_client->addItem(WTF::move(item));
 }
 
 void BackForwardController::setChildItem(BackForwardFrameItemIdentifier frameItemID, Ref<HistoryItem>&& item)
 {
-    m_client->setChildItem(frameItemID, WTFMove(item));
+    m_client->setChildItem(frameItemID, WTF::move(item));
 }
 
 void BackForwardController::setCurrentItem(HistoryItem& item)
@@ -175,26 +175,9 @@ RefPtr<HistoryItem> BackForwardController::itemAtIndex(int i, std::optional<Fram
     return m_client->itemAtIndex(i, frameID.value_or(m_page->mainFrame().frameID()));
 }
 
-Vector<Ref<HistoryItem>> BackForwardController::allItems()
+Vector<Ref<HistoryItem>> BackForwardController::allItems(std::optional<FrameIdentifier> frameID)
 {
-    Vector<Ref<HistoryItem>> historyItems;
-    for (int index = -1 * static_cast<int>(backCount()); index <= static_cast<int>(forwardCount()); index++) {
-        if (RefPtr item = itemAtIndex(index))
-            historyItems.append(item.releaseNonNull());
-    }
-
-    return historyItems;
-}
-
-Vector<Ref<HistoryItem>> BackForwardController::itemsForFrame(FrameIdentifier frameID)
-{
-    Vector<Ref<HistoryItem>> historyItems;
-    for (Ref item : allItems()) {
-        if (item->frameID() == frameID)
-            historyItems.append(WTFMove(item));
-    }
-
-    return historyItems;
+    return m_client->allItems(frameID.value_or(m_page->mainFrame().frameID()));
 }
 
 void BackForwardController::close()

@@ -26,7 +26,7 @@
 #pragma once
 
 
-#include "InlineDisplayContent.h"
+#include <WebCore/InlineDisplayContent.h>
 #include <wtf/HashMap.h>
 #include <wtf/IteratorRange.h>
 #include <wtf/Vector.h>
@@ -69,7 +69,8 @@ public:
 
     InlineDisplay::Content& displayContent() { return m_displayContent; }
     const InlineDisplay::Content& displayContent() const { return m_displayContent; }
-    bool hasContent() const;
+    bool hasContentfulInFlowBox() const;
+    bool hasContentfulInlineLevelBox() const;
 
     FloatRect scrollableOverflow() const { return m_scrollableOverflow; }
     FloatRect inkOverflow() const { return m_inkOverflow; }
@@ -79,6 +80,8 @@ public:
     float firstLinePaginationOffset() const { return m_firstLinePaginationOffset.value_or(0.f); }
     float clearBeforeAfterGaps() const { return m_clearGapBeforeFirstLine + m_clearGapAfterLastLine; }
     float clearGapBeforeFirstLine() const { return m_clearGapBeforeFirstLine; }
+    bool hasBlockLevelBoxes() const { return m_hasBlockLevelBoxes; }
+    bool hasPaintedInlineLevelBoxes() const { return m_hasPaintedInlineLevelBoxes; }
 
     IteratorRange<const InlineDisplay::Box*> boxesForRect(const LayoutRect&) const;
 
@@ -86,6 +89,10 @@ public:
     size_t indexForBox(const InlineDisplay::Box&) const;
     const InlineDisplay::Box* firstBoxForLayoutBox(const Layout::Box&) const;
     std::optional<size_t> firstBoxIndexForLayoutBox(const Layout::Box&) const;
+
+    // Returns a block level box if the line is for block-in-inline.
+    const InlineDisplay::Box* blockLevelBoxForLine(const InlineDisplay::Line&) const;
+    bool isInlineBoxWrapperForBlockLevelBox(const InlineDisplay::Box&) const;
 
     template<typename Function> void traverseNonRootInlineBoxes(const Layout::Box&, Function&&);
 
@@ -107,6 +114,9 @@ private:
     void setClearGapBeforeFirstLine(float clearGapBeforeFirstLine) { m_clearGapBeforeFirstLine = clearGapBeforeFirstLine; }
     void setClearGapAfterLastLine(float clearGapAfterLastLine) { m_clearGapAfterLastLine = clearGapAfterLastLine; }
     void setFirstLinePaginationOffset(float firstLinePaginationOffset) { m_firstLinePaginationOffset = firstLinePaginationOffset; }
+    void setHasBlockLevelBoxes() { m_hasBlockLevelBoxes = true; }
+    void setHasPaintedInlineLevelBoxes() { m_hasPaintedInlineLevelBoxes = true; }
+
     const Vector<size_t>& nonRootInlineBoxIndexesForLayoutBox(const Layout::Box&) const;
 
     CheckedRef<const RenderBlockFlow> m_formattingContextRoot;
@@ -124,6 +134,8 @@ private:
     std::optional<float> m_firstLinePaginationOffset { };
 
     bool m_hasMultilinePaintOverlap { false };
+    bool m_hasBlockLevelBoxes { false };
+    bool m_hasPaintedInlineLevelBoxes { false };
 
     Vector<Vector<SVGTextFragment>> m_svgTextFragmentsForBoxes;
 };

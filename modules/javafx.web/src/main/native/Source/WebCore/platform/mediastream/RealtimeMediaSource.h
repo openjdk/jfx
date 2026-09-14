@@ -33,20 +33,22 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
 #if ENABLE(MEDIA_STREAM)
 
-#include "CaptureDevice.h"
-#include "Image.h"
-#include "MediaAccessDenialReason.h"
-#include "MediaConstraints.h"
-#include "MediaDeviceHashSalts.h"
-#include "PhotoCapabilities.h"
-#include "PhotoSettings.h"
-#include "PlatformLayer.h"
-#include "RealtimeMediaSourceCapabilities.h"
-#include "RealtimeMediaSourceFactory.h"
-#include "RealtimeMediaSourceIdentifier.h"
-#include "VideoFrameTimeMetadata.h"
+#include <WebCore/CaptureDevice.h>
+#include <WebCore/Image.h>
+#include <WebCore/MediaAccessDenialReason.h>
+#include <WebCore/MediaConstraints.h>
+#include <WebCore/MediaDeviceHashSalts.h>
+#include <WebCore/PhotoCapabilities.h>
+#include <WebCore/PhotoSettings.h>
+#include <WebCore/PlatformLayer.h>
+#include <WebCore/RealtimeMediaSourceCapabilities.h>
+#include <WebCore/RealtimeMediaSourceFactory.h>
+#include <WebCore/RealtimeMediaSourceIdentifier.h>
+#include <WebCore/VideoFrameTimeMetadata.h>
+#include <wtf/AbstractCanMakeCheckedPtr.h>
 #include <wtf/AbstractThreadSafeRefCountedAndCanMakeWeakPtr.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/CompletionHandler.h>
@@ -65,17 +67,11 @@
 #endif
 
 namespace WebCore {
-class RealtimeMediaSourceObserver;
 
 #if PLATFORM(COCOA)
 class ImageRotationSessionVT;
 #endif
 
-}
-
-namespace WTF {
-template<typename T> struct IsDeprecatedWeakRefSmartPointerException;
-template<> struct IsDeprecatedWeakRefSmartPointerException<WebCore::RealtimeMediaSourceObserver> : std::true_type { };
 }
 
 namespace WTF {
@@ -99,7 +95,7 @@ struct CaptureSourceError;
 struct CaptureSourceOrError;
 struct VideoFrameAdaptor;
 
-class RealtimeMediaSourceObserver : public CanMakeWeakPtr<RealtimeMediaSourceObserver> {
+class RealtimeMediaSourceObserver : public CanMakeWeakPtr<RealtimeMediaSourceObserver>, public AbstractCanMakeCheckedPtr {
 public:
     WEBCORE_EXPORT RealtimeMediaSourceObserver();
     WEBCORE_EXPORT virtual ~RealtimeMediaSourceObserver();
@@ -124,15 +120,9 @@ class WEBCORE_EXPORT RealtimeMediaSource : public AbstractThreadSafeRefCountedAn
 #endif
 {
 public:
-    class AudioSampleObserver {
+    class AudioSampleObserver : public AbstractCanMakeCheckedPtr {
     public:
         virtual ~AudioSampleObserver() = default;
-
-        // CheckedPtr interface
-        virtual uint32_t checkedPtrCount() const = 0;
-        virtual uint32_t checkedPtrCountWithoutThreadCheck() const = 0;
-        virtual void incrementCheckedPtrCount() const = 0;
-        virtual void decrementCheckedPtrCount() const = 0;
 
         // May be called on a background thread.
         virtual void audioSamplesAvailable(const WTF::MediaTime&, const PlatformAudioData&, const AudioStreamDescription&, size_t /*numberOfFrames*/) = 0;
@@ -247,7 +237,7 @@ public:
     struct ApplyConstraintsError {
         MediaConstraintType invalidConstraint;
         String message;
-        ApplyConstraintsError isolatedCopy() && { return { invalidConstraint, WTFMove(message).isolatedCopy() }; }
+        ApplyConstraintsError isolatedCopy() && { return { invalidConstraint, WTF::move(message).isolatedCopy() }; }
     };
     using ApplyConstraintsHandler = CompletionHandler<void(std::optional<ApplyConstraintsError>&&)>;
     virtual void applyConstraints(const MediaConstraints&, ApplyConstraintsHandler&&);
@@ -294,7 +284,9 @@ public:
     virtual void delaySamples(Seconds) { };
     virtual void setInterruptedForTesting(bool);
 
-    virtual bool setShouldApplyRotation();
+    virtual void setShouldApplyRotation();
+    bool isApplyingRotation() const;
+
     virtual void setIsInBackground(bool);
 
     std::optional<PageIdentifier> pageIdentifier() const { return m_pageIdentifier.asOptional(); }
@@ -433,7 +425,7 @@ private:
     bool m_captureDidFailed { false };
     bool m_isEnded { false };
     bool m_hasStartedProducingData { false };
-    std::atomic<bool> m_shouldApplyRotation { false };
+    std::atomic<bool> m_isApplyingRotation { false };
 
     unsigned m_videoFrameObserversWithAdaptors { 0 };
 };
@@ -441,7 +433,7 @@ private:
 struct CaptureSourceError {
     CaptureSourceError() = default;
     CaptureSourceError(String&& errorMessage, MediaAccessDenialReason denialReason, MediaConstraintType invalidConstraint = MediaConstraintType::Unknown)
-        : errorMessage(WTFMove(errorMessage))
+        : errorMessage(WTF::move(errorMessage))
         , denialReason(denialReason)
         , invalidConstraint(invalidConstraint)
     {
@@ -461,8 +453,8 @@ struct CaptureSourceError {
 
 struct CaptureSourceOrError {
     CaptureSourceOrError() = default;
-    CaptureSourceOrError(Ref<RealtimeMediaSource>&& source) : captureSource(WTFMove(source)) { }
-    explicit CaptureSourceOrError(CaptureSourceError&& error) : error(WTFMove(error)) { }
+    CaptureSourceOrError(Ref<RealtimeMediaSource>&& source) : captureSource(WTF::move(source)) { }
+    explicit CaptureSourceOrError(CaptureSourceError&& error) : error(WTF::move(error)) { }
 
     operator bool()  const { return !!captureSource; }
     Ref<RealtimeMediaSource> source() { return captureSource.releaseNonNull(); }

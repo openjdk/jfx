@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "SerializedNode.h"
+#include <WebCore/SerializedNode.h>
 
 namespace WebCore {
 

@@ -42,6 +42,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.TextAlignment;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import com.sun.jfx.incubator.scene.control.richtext.EmbeddedImageHelper;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextFormatHandlerHelper;
 import com.sun.jfx.incubator.scene.control.richtext.StyleAttributeMapHelper;
 import jfx.incubator.scene.control.richtext.TextPos;
@@ -54,6 +55,7 @@ import jfx.incubator.scene.control.richtext.model.StyledInput;
 import jfx.incubator.scene.control.richtext.model.StyledOutput;
 import jfx.incubator.scene.control.richtext.model.StyledSegment;
 import jfx.incubator.scene.control.richtext.model.TabStops;
+import test.jfx.incubator.scene.control.richtext.support.RTUtil;
 
 /**
  * Tests RichTextFormatHandler.
@@ -92,6 +94,16 @@ public class TestRichTextFormatHandler {
             nl(),
 
             s("combined", StyleAttributeMap.ITALIC, a(StyleAttributeMap.TEXT_COLOR, Color.RED), StyleAttributeMap.UNDERLINE),
+            s(" ", StyleAttributeMap.of(StyleAttributeMap.EMBEDDED_IMAGE, EmbeddedImageHelper.create(RTUtil.redPng32x32(), 32, 32, 32, 32, true))),
+            nl(),
+            s("highlight1", StyleAttributeMap.TEXT_HIGHLIGHT_1),
+            s("highlight2", StyleAttributeMap.TEXT_HIGHLIGHT_2),
+            s("highlight3", StyleAttributeMap.TEXT_HIGHLIGHT_3),
+            s("highlight4", StyleAttributeMap.TEXT_HIGHLIGHT_4),
+            s("highlight5", StyleAttributeMap.TEXT_HIGHLIGHT_5),
+            s("wavy1", StyleAttributeMap.WAVY_UNDERLINE_1),
+            s("wavy2", StyleAttributeMap.WAVY_UNDERLINE_2),
+            s("wavy3", StyleAttributeMap.WAVY_UNDERLINE_3),
             nl()
         };
         testRoundTrip(segments);
@@ -131,8 +143,8 @@ public class TestRichTextFormatHandler {
     @Test
     public void testDocumentProperties() throws IOException {
         docp(Map.of(), 0, null);
-        docp(Map.of("{}%|\"", "{}%|\""), 1, "{@RichText-v2-incubator}{#%7B%7D%25%7C\"|%7B%7D%25%7C\"}{}{!}");
-        docp(Map.of("title", ""), 1, "{@RichText-v2-incubator}{#title|}{}{!}");
+        docp(Map.of("{}%|\"", "{}%|\""), 1, TestRichTextModel.VERSION + "{#%7B%7D%25%7C\"|%7B%7D%25%7C\"}{}{!}");
+        docp(Map.of("title", ""), 1, TestRichTextModel.VERSION + "{#title|}{}{!}");
     }
 
     private void docp(Map<String,String> props, int expectedCount, String expectedSave) throws IOException {
@@ -387,8 +399,9 @@ public class TestRichTextFormatHandler {
         assertEquals(0.0, m.getDefaultTabStops());
 
         String input =
+            TestRichTextModel.VERSION +
             """
-            {#tabs|156.0|version|v2}{ff}{tc}1{!}
+            {#tabs|156.0}{ff}{tc}1{!}
             {0}2{!}
             {0}3{!}
             {!}

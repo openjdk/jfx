@@ -25,13 +25,14 @@
 
 #pragma once
 
-#include "CodeBlock.h"
-#include "Register.h"
-#include "StackAlignment.h"
+#include <JavaScriptCore/CodeBlock.h>
+#include <JavaScriptCore/Register.h>
+#include <JavaScriptCore/StackAlignment.h>
 #include <wtf/ForbidHeapAllocation.h>
+#include <wtf/Platform.h>
 
 #if ENABLE(WEBASSEMBLY)
-#include "JSWebAssemblyInstance.h"
+#include <JavaScriptCore/JSWebAssemblyInstance.h>
 #endif
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
@@ -48,11 +49,12 @@ public:
     Register calleeValue;
     Register argCountAndCodeOriginValue;
     Register thisArg;
+    JSCell* context { nullptr };
     uint32_t paddedArgCount;
     EncodedJSValue* args;
     JSGlobalObject* globalObject;
 
-    inline void init(CodeBlock*, JSGlobalObject*, JSObject*, JSValue, int, EncodedJSValue* otherArgs = nullptr);
+    inline void init(CodeBlock*, JSGlobalObject*, JSObject*, JSValue, JSCell* context, int, EncodedJSValue* otherArgs = nullptr);
 
     inline CodeBlock* codeBlock() const;
     inline void setCodeBlock(CodeBlock*);

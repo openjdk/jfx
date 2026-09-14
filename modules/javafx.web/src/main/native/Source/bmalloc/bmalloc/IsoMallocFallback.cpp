@@ -56,7 +56,7 @@ void determineMallocFallbackState()
             if (mallocFallbackState != MallocFallbackState::Undecided)
                 return;
 
-            if (Environment::get()->isSystemHeapEnabled()) {
+            if (Environment::get()->shouldBmallocAllocateThroughSystemHeap()) {
                 mallocFallbackState = MallocFallbackState::FallBackToMalloc;
                 return;
             }

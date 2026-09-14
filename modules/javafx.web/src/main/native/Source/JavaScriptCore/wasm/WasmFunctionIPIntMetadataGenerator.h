@@ -29,17 +29,19 @@
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY)
 
-#include "BytecodeConventions.h"
-#include "HandlerInfo.h"
-#include "InstructionStream.h"
-#include "MacroAssemblerCodeRef.h"
-#include "SIMDInfo.h"
-#include "WasmHandlerInfo.h"
-#include "WasmIPIntGenerator.h"
-#include "WasmIPIntTierUpCounter.h"
-#include "WasmOps.h"
+#include <JavaScriptCore/BytecodeConventions.h>
+#include <JavaScriptCore/HandlerInfo.h>
+#include <JavaScriptCore/InstructionStream.h>
+#include <JavaScriptCore/MacroAssemblerCodeRef.h>
+#include <JavaScriptCore/SIMDInfo.h>
+#include <JavaScriptCore/WasmHandlerInfo.h>
+#include <JavaScriptCore/WasmIPIntGenerator.h>
+#include <JavaScriptCore/WasmIPIntTierUpCounter.h>
+#include <JavaScriptCore/WasmOps.h>
 #include <wtf/BitVector.h>
 #include <wtf/HashMap.h>
 #include <wtf/TZoneMalloc.h>
@@ -66,10 +68,6 @@ struct JumpTableEntry;
     } while (false)
 
 class FunctionIPIntMetadataGenerator {
-    struct MetadataBufferMalloc final : public FastMalloc {
-        static constexpr ALWAYS_INLINE size_t nextCapacity(size_t capacity) { return capacity + capacity; }
-    };
-
     WTF_MAKE_TZONE_ALLOCATED(FunctionIPIntMetadataGenerator);
     WTF_MAKE_NONCOPYABLE(FunctionIPIntMetadataGenerator);
 
@@ -95,9 +93,19 @@ public:
 
     UncheckedKeyHashMap<IPIntPC, IPIntTierUpCounter::OSREntryData>& tierUpCounter() { return m_tierUpCounter; }
 
-    unsigned addSignature(const TypeDefinition&);
+    const RTT* addSignature(const TypeDefinition&);
+
+    void addCallTarget(unsigned callProfileIndex, FunctionSpaceIndex target)
+    {
+        if (callProfileIndex >= m_callTargets.size())
+            m_callTargets.insertFill(m_callTargets.size(), FunctionSpaceIndex { }, callProfileIndex - m_callTargets.size() + 1);
+        m_callTargets[callProfileIndex] = target;
+    }
 
 private:
+    struct MetadataBufferMalloc final : public FastMalloc {
+        static constexpr ALWAYS_INLINE size_t nextCapacity(size_t capacity) { return capacity + capacity; }
+    };
     using MetadataBuffer = Vector<uint8_t, 0, UnsafeVectorOverflow, 16, MetadataBufferMalloc>;
 
     inline void addBlankSpace(size_t);
@@ -112,6 +120,7 @@ private:
 
     void addLength(size_t length);
     void addLEB128ConstantInt32AndLength(uint32_t value, size_t length);
+    void addLEB128ConstantInt64AndLength(uint64_t value, size_t length);
     void addLEB128ConstantAndLengthForType(Type, uint64_t value, size_t length);
     void addLEB128V128Constant(v128_t value, size_t length);
     void addReturnData(const FunctionSignature&, const CallInformation&);
@@ -124,7 +133,7 @@ private:
     std::span<const uint8_t> m_bytecode;
     MetadataBuffer m_metadata { };
     Vector<uint8_t, 8> m_uINTBytecode { };
-    unsigned m_highestReturnStackOffset;
+    unsigned m_topOfReturnStackFPOffset;
 
     uint32_t m_bytecodeOffset { 0 };
     unsigned m_maxFrameSizeInV128 { 0 };
@@ -133,9 +142,9 @@ private:
     unsigned m_numArguments { 0 };
     unsigned m_numArgumentsOnStack { 0 };
     unsigned m_nonArgLocalOffset { 0 };
+    Vector<FunctionSpaceIndex> m_callTargets { };
     Vector<uint8_t, 16> m_argumINTBytecode { };
 
-    Vector<const TypeDefinition*> m_signatures;
     UncheckedKeyHashMap<IPIntPC, IPIntTierUpCounter::OSREntryData> m_tierUpCounter;
     Vector<UnlinkedHandlerInfo> m_exceptionHandlers;
 };

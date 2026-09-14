@@ -30,8 +30,8 @@
 
 #pragma once
 
-#include "ConsoleTypes.h"
-#include "Strong.h"
+#include <JavaScriptCore/ConsoleTypes.h>
+#include <JavaScriptCore/Strong.h>
 #include <wtf/Forward.h>
 #include <wtf/Logger.h>
 #include <wtf/Noncopyable.h>
@@ -80,7 +80,7 @@ public:
 
     void incrementCount() { ++m_repeatCount; }
 
-    const RefPtr<ScriptArguments>& arguments() const { return m_arguments; }
+    ScriptArguments* arguments() const { return m_arguments.get(); }
     unsigned argumentCount() const;
 
     bool isEqual(ConsoleMessage* msg) const;

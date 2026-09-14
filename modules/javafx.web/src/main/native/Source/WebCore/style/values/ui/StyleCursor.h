@@ -25,10 +25,10 @@
 
 #pragma once
 
-#include "IntPoint.h"
-#include "RenderStyleConstants.h"
-#include "StyleImage.h"
-#include "StyleValueTypes.h"
+#include <WebCore/IntPoint.h>
+#include <WebCore/RenderStyleConstants.h>
+#include <WebCore/StyleImage.h>
+#include <WebCore/StyleValueTypes.h>
 
 namespace WebCore {
 namespace Style {
@@ -53,7 +53,7 @@ struct Cursor {
     CursorType predefined { CursorType::Auto };
 
     Cursor(Images&& images, CursorType predefined)
-        : images { WTFMove(images) }
+        : images { WTF::move(images) }
         , predefined { predefined }
     {
     }

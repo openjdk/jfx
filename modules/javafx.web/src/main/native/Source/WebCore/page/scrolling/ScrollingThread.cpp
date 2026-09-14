@@ -26,7 +26,7 @@
 #include "config.h"
 #include "ScrollingThread.h"
 
-#if ENABLE(SCROLLING_THREAD) || ENABLE(THREADED_ANIMATION_RESOLUTION)
+#if ENABLE(SCROLLING_THREAD) || ENABLE(THREADED_ANIMATIONS)
 
 #include <mutex>
 #include <wtf/MainThread.h>
@@ -36,12 +36,7 @@ namespace WebCore {
 
 ScrollingThread& ScrollingThread::singleton()
 {
-    static LazyNeverDestroyed<ScrollingThread> scrollingThread;
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
-        scrollingThread.construct();
-    });
-
+    static NeverDestroyed<ScrollingThread> scrollingThread;
     return scrollingThread;
 }
 
@@ -57,16 +52,16 @@ bool ScrollingThread::isCurrentThread()
 
 void ScrollingThread::dispatch(Function<void ()>&& function)
 {
-    ScrollingThread::singleton().m_runLoop->dispatch(WTFMove(function));
+    ScrollingThread::singleton().m_runLoop->dispatch(WTF::move(function));
 }
 
 void ScrollingThread::dispatchBarrier(Function<void ()>&& function)
 {
-    dispatch([function = WTFMove(function)]() mutable {
-        callOnMainThread(WTFMove(function));
+    dispatch([function = WTF::move(function)]() mutable {
+        callOnMainThread(WTF::move(function));
     });
 }
 
 } // namespace WebCore
 
-#endif // ENABLE(SCROLLING_THREAD) || ENABLE(THREADED_ANIMATION_RESOLUTION)
+#endif // ENABLE(SCROLLING_THREAD) || ENABLE(THREADED_ANIMATIONS)

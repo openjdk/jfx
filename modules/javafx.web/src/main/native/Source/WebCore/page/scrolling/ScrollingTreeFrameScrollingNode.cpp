@@ -78,6 +78,9 @@ bool ScrollingTreeFrameScrollingNode::commitStateBeforeChildren(const ScrollingS
     if (state->hasChangedProperty(ScrollingStateNode::Property::LayoutViewport))
         m_layoutViewport = state->layoutViewport();
 
+    if (state->hasChangedProperty(ScrollingStateNode::Property::SizeForVisibleContent))
+        m_sizeForVisibleContent = state->sizeForVisibleContent();
+
     if (state->hasChangedProperty(ScrollingStateNode::Property::MinLayoutViewportOrigin))
         m_minLayoutViewportOrigin = state->minLayoutViewportOrigin();
 
@@ -147,6 +150,10 @@ void ScrollingTreeFrameScrollingNode::dumpProperties(TextStream& ts, OptionSet<S
     ScrollingTreeScrollingNode::dumpProperties(ts, behavior);
 
     ts.dumpProperty("layout viewport"_s, m_layoutViewport);
+
+    if (m_layoutViewport.size() != m_sizeForVisibleContent)
+        ts.dumpProperty("size for visible content"_s, m_sizeForVisibleContent);
+
     ts.dumpProperty("min layoutViewport origin"_s, m_minLayoutViewportOrigin);
     ts.dumpProperty("max layoutViewport origin"_s, m_maxLayoutViewportOrigin);
 

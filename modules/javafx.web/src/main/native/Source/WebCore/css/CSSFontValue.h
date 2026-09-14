@@ -47,7 +47,7 @@ public:
     RefPtr<CSSPrimitiveValue> width;
     RefPtr<CSSPrimitiveValue> size;
     RefPtr<CSSPrimitiveValue> lineHeight;
-    RefPtr<CSSValueList> family;
+    RefPtr<CSSValue> family;
 
 private:
     CSSFontValue()

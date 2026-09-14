@@ -9,6 +9,7 @@ list(APPEND WebCore_UNIFIED_SOURCE_LIST_FILES
 )
 
 list(APPEND WebCore_PRIVATE_FRAMEWORK_HEADERS
+    platform/adwaita/AdwaitaScrollbarPainter.h
     platform/adwaita/ScrollbarThemeAdwaita.h
     platform/adwaita/ThemeAdwaita.h
 

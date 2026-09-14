@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Apple Inc. All rights reserved.
+ * Copyright (C) 2018-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -188,14 +188,15 @@ static bool outputMismatchingBlockBoxInformationIfNeeded(TextStream& stream, con
         // Produce a RenderBox matching margin box.
         auto containingBlockWidth = layoutState.geometryForBox(FormattingContext::containingBlock(layoutBox)).contentBoxWidth();
         auto marginStart = LayoutUnit { };
+        const auto& zoomFactor = layoutBox.style().usedZoomForLength();
         auto& marginStartStyle = layoutBox.style().marginStart();
         if (marginStartStyle.isFixed() || marginStartStyle.isPercent() || marginStartStyle.isCalculated())
-            marginStart = Style::evaluate(marginStartStyle, containingBlockWidth);
+            marginStart = Style::evaluate<LayoutUnit>(marginStartStyle, containingBlockWidth, zoomFactor);
 
         auto marginEnd = LayoutUnit { };
         auto& marginEndStyle = layoutBox.style().marginEnd();
         if (marginEndStyle.isFixed() || marginEndStyle.isPercent() || marginEndStyle.isCalculated())
-            marginEnd = Style::evaluate(marginEndStyle, containingBlockWidth);
+            marginEnd = Style::evaluate<LayoutUnit>(marginEndStyle, containingBlockWidth, zoomFactor);
 
         auto marginBefore = boxGeometry.marginBefore();
         auto marginAfter = boxGeometry.marginAfter();

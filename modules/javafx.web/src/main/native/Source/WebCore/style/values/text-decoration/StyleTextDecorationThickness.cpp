@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2025 Samuel Weinig <sam@webkit.org>
+ * Copyright (C) 2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,8 +30,9 @@
 #include "AnimationUtilities.h"
 #include "CSSPrimitiveValue.h"
 #include "FontMetrics.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "StyleBuilderChecking.h"
+#include "StyleLengthWrapper+Blending.h"
 #include "StyleLengthWrapper+CSSValueConversion.h"
 
 namespace WebCore {
@@ -48,22 +50,7 @@ float TextDecorationThickness::resolve(const RenderStyle& style) const
             return style.metricsOfPrimaryFont().underlineThickness().value_or(0);
         },
         [&](const TextDecorationThicknessLength& length) {
-            return Style::evaluate(length, style.computedFontSize());
-        }
-    );
-}
-
-float TextDecorationThickness::resolve(float fontSize, const FontMetrics& metrics) const
-{
-    return WTF::switchOn(m_value,
-        [&](const CSS::Keyword::Auto&) {
-            return fontSize / textDecorationBaseFontSize;
-        },
-        [&](const CSS::Keyword::FromFont&) {
-            return metrics.underlineThickness().value_or(0);
-        },
-        [&](const TextDecorationThicknessLength& length) {
-            return Style::evaluate(length, fontSize);
+            return Style::evaluate<float>(length, style.computedFontSize(), style.usedZoomForLength());
         }
     );
 }

@@ -25,16 +25,16 @@
 
 #pragma once
 
-#include "WebGPUCommandBuffer.h"
-#include "WebGPUCommandBufferDescriptor.h"
-#include "WebGPUComputePassDescriptor.h"
-#include "WebGPUComputePassEncoder.h"
-#include "WebGPUExtent3D.h"
-#include "WebGPUImageCopyBuffer.h"
-#include "WebGPUImageCopyTexture.h"
-#include "WebGPUIntegralTypes.h"
-#include "WebGPURenderPassDescriptor.h"
-#include "WebGPURenderPassEncoder.h"
+#include <WebCore/WebGPUCommandBuffer.h>
+#include <WebCore/WebGPUCommandBufferDescriptor.h>
+#include <WebCore/WebGPUComputePassDescriptor.h>
+#include <WebCore/WebGPUComputePassEncoder.h>
+#include <WebCore/WebGPUExtent3D.h>
+#include <WebCore/WebGPUImageCopyBuffer.h>
+#include <WebCore/WebGPUImageCopyTexture.h>
+#include <WebCore/WebGPUIntegralTypes.h>
+#include <WebCore/WebGPURenderPassDescriptor.h>
+#include <WebCore/WebGPURenderPassEncoder.h>
 #include <optional>
 #include <wtf/Ref.h>
 #include <wtf/RefCountedAndCanMakeWeakPtr.h>
@@ -54,7 +54,7 @@ public:
 
     void setLabel(String&& label)
     {
-        m_label = WTFMove(label);
+        m_label = WTF::move(label);
         setLabelInternal(m_label);
     }
 
@@ -102,6 +102,8 @@ public:
         Size64 destinationOffset) = 0;
 
     virtual RefPtr<CommandBuffer> finish(const CommandBufferDescriptor&) = 0;
+    virtual bool isRemoteCommandEncoderProxy() const { return false; }
+    virtual bool isCommandEncoderImpl() const { return false; }
 
 protected:
     CommandEncoder() = default;

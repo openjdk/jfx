@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "AnimationFrameRate.h"
-#include "DisplayUpdate.h"
-#include "PlatformScreen.h"
+#include <WebCore/AnimationFrameRate.h>
+#include <WebCore/DisplayUpdate.h>
+#include <WebCore/PlatformScreen.h>
 #include <wtf/CheckedPtr.h>
 #include <wtf/HashSet.h>
 #include <wtf/Lock.h>

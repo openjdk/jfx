@@ -38,8 +38,7 @@
 #include "CSSValueList.h"
 #include "CachedFont.h"
 #include "CachedResourceLoader.h"
-#include "Document.h"
-#include "DocumentInlines.h"
+#include "DocumentSettingsValues.h"
 #include "Font.h"
 #include "FontCache.h"
 #include "FontCascadeDescription.h"
@@ -50,7 +49,6 @@
 #include "LocalFrame.h"
 #include "Logging.h"
 #include "ResourceLoadObserver.h"
-#include "Settings.h"
 #include "StyleProperties.h"
 #include "StyleResolver.h"
 #include "StyleRule.h"
@@ -75,7 +73,10 @@ CSSFontSelector::CSSFontSelector(ScriptExecutionContext& context)
     : ActiveDOMObject(&context)
     , m_context(context)
     , m_cssFontFaceSet(CSSFontFaceSet::create(this))
-    , m_fontModifiedObserver([this] { fontModified(); })
+    , m_fontModifiedObserver(CSSFontFaceSet::FontModifiedObserver::create([weakThis = WeakPtr { *this }] {
+        if (RefPtr protectedThis = weakThis.get())
+            protectedThis->fontModified();
+    }))
     , m_uniqueId(++fontSelectorId)
     , m_version(0)
 {
@@ -85,7 +86,7 @@ CSSFontSelector::CSSFontSelector(ScriptExecutionContext& context)
             m_fontFamilyNames.constructAndAppend(familyName);
     } else {
         m_fontFamilyNames.appendContainerWithMapping(familyNamesData.get(), [](auto& familyName) {
-            return familyName;
+            return AtomString { *familyName };
         });
     }
 
@@ -293,10 +294,11 @@ void CSSFontSelector::opportunisticallyStartFontDataURLLoading(const FontCascade
     if (!segmentedFontFace)
         return;
 
-    if (!m_context)
+    RefPtr context = m_context.get();
+    if (!context)
         return;
 
-    auto trustedType = m_context->settingsValues().downloadableBinaryFontTrustedTypes;
+    auto trustedType = context->settingsValues().downloadableBinaryFontTrustedTypes;
 
     for (auto& face : segmentedFontFace->constituentFaces())
         face->opportunisticallyStartFontDataURLLoading(trustedType);
@@ -376,6 +378,56 @@ RefPtr<FontFeatureValues> CSSFontSelector::lookupFontFeatureValues(const AtomStr
     return iterator->value.ptr();
 }
 
+// Fonts with appropriate Unicode coverage and OpenType features are required for good math
+// rendering. These requirements as well as the up-to-date list of known math fonts to fulfill
+// these requirements are listed on http://trac.webkit.org/wiki/MathML/Fonts.
+using MathFontList = std::array<AtomString, 19>;
+static const MathFontList& mathFontList()
+{
+    static const NeverDestroyed list = MathFontList {
+        // This font has Computer Modern style and is provided with most TeX & Linux distributions.
+        // We put it as the default because its style is familiar to TeX, Wikipedia and math people.
+        "Latin Modern Math"_s,
+        // The following fonts have Times style and are provided with most TeX & Linux distributions.
+        // We put XITS & STIX as a second option because they have very good unicode coverage.
+        // STIX Two is a complete redesign of STIX that fixes serious bugs in version one so we put it in first position.
+        // XITS is a fork of STIX with bug fixes and more Arabic/RTL features so we put it in second position.
+        "STIX Two Math"_s,
+        "XITS Math"_s,
+        "STIX Math"_s,
+        "Libertinus Math"_s,
+        "TeX Gyre Termes Math"_s,
+        // These fonts respectively have style compatible with Bookman Old and Century Schoolbook.
+        // They are provided with most TeX & Linux distributions.
+        "TeX Gyre Bonum Math"_s,
+        "TeX Gyre Schola"_s,
+        // DejaVu is pre-installed on many Linux distributions and is included in LibreOffice.
+        "DejaVu Math TeX Gyre"_s,
+        // The following fonts have Palatino style and are provided with most TeX & Linux distributions.
+        // Asana Math has some rendering issues (e.g. missing italic correction) so we put it after.
+        "TeX Gyre Pagella Math"_s,
+        "Asana Math"_s,
+        // The following fonts are proprietary and have not much been tested so we put them at the end.
+        // Cambria Math it is pre-installed on Windows 7 and higher.
+        "Cambria Math"_s,
+        "Lucida Bright Math"_s,
+        "Minion Math"_s,
+        // The following fonts do not satisfy the requirements for good mathematical rendering.
+        // These are pre-installed on Mac and iOS so we list them to provide minimal unicode-based
+        // mathematical rendering. For more explanation of fallback mechanisms and missing features see
+        // http://trac.webkit.org/wiki/MathML/Fonts#ObsoleteFontsandFallbackMechanisms.
+        // STIX fonts have best unicode coverage so we put them first.
+        "STIXGeneral"_s,
+        "STIXSizeOneSym"_s,
+        "Symbol"_s,
+        "Times New Roman"_s,
+        // Mathematical fonts generally use "serif" style. Hence we append the generic "serif" family
+        // as a fallback in order to increase our chance to find a mathematical font.
+        "serif"_s,
+    };
+    return list;
+}
+
 FontRanges CSSFontSelector::fontRangesForFamily(const FontDescription& fontDescription, const AtomString& familyName)
 {
     // If this ASSERT() fires, it usually means you forgot a document.updateStyleIfNeeded() somewhere.
@@ -397,12 +449,31 @@ FontRanges CSSFontSelector::fontRangesForFamily(const FontDescription& fontDescr
     const auto& fontPaletteValues = lookupFontPaletteValues(familyName, fontDescription);
     auto fontFeatureValues = lookupFontFeatureValues(familyName);
 
+    // Handle the generic math font family a bit differently.
+    if (familyName == m_fontFamilyNames.at(FamilyNamesIndex::MathFamily)) {
+        // First check if the user has defined a preference.
+        const auto& settings = protectedScriptExecutionContext()->settingsValues();
+        const String& preferredMathFamily = settings.fontGenericFamilies.mathFontFamily(fontDescription.script());
+        if (!preferredMathFamily.isEmpty() && familyName != preferredMathFamily) {
+            auto ranges = fontRangesForFamily(fontDescription, AtomString(preferredMathFamily));
+            if (!ranges.isNull())
+                return { WTF::move(ranges), IsGenericFontFamily::Yes };
+        }
+
+        // Otherwise, iterate through the font list to find a valid fallback.
+        for (auto& family : mathFontList()) {
+            auto ranges = fontRangesForFamily(fontDescription, family);
+            if (!ranges.isNull())
+                return { WTF::move(ranges), IsGenericFontFamily::Yes };
+        }
+    }
+
     if (resolveGenericFamilyFirst)
         resolveAndAssignGenericFamily();
     RefPtr document = dynamicDowncast<Document>(m_context.get());
     if (RefPtr face = m_cssFontFaceSet->fontFace(fontDescriptionForLookup->fontSelectionRequest(), familyForLookup)) {
         if (document && document->settings().webAPIStatisticsEnabled())
-            ResourceLoadObserver::shared().logFontLoad(*document, familyForLookup.string(), true);
+            ResourceLoadObserver::singleton().logFontLoad(*document, familyForLookup.string(), true);
         return { face->fontRanges(*fontDescriptionForLookup, fontPaletteValues, fontFeatureValues), isGenericFontFamily };
     }
 
@@ -411,8 +482,8 @@ FontRanges CSSFontSelector::fontRangesForFamily(const FontDescription& fontDescr
 
     auto font = FontCache::forCurrentThread()->fontForFamily(*fontDescriptionForLookup, familyForLookup, { { }, { }, fontPaletteValues, fontFeatureValues, 1.0 });
     if (document && document->settings().webAPIStatisticsEnabled())
-        ResourceLoadObserver::shared().logFontLoad(*document, familyForLookup.string(), !!font);
-    return { FontRanges { WTFMove(font) }, isGenericFontFamily };
+        ResourceLoadObserver::singleton().logFontLoad(*document, familyForLookup.string(), !!font);
+    return { FontRanges { WTF::move(font) }, isGenericFontFamily };
 }
 
 void CSSFontSelector::clearFonts()
@@ -443,7 +514,7 @@ RefPtr<Font> CSSFontSelector::fallbackFontAt(const FontDescription& fontDescript
     auto& pictographFontFamily = context->settingsValues().fontGenericFamilies.pictographFontFamily();
     RefPtr font = FontCache::forCurrentThread()->fontForFamily(fontDescription, pictographFontFamily);
     if (RefPtr document = dynamicDowncast<Document>(context.get()); document && document->settingsValues().webAPIStatisticsEnabled)
-        ResourceLoadObserver::shared().logFontLoad(*document, pictographFontFamily, !!font);
+        ResourceLoadObserver::singleton().logFontLoad(*document, pictographFontFamily, !!font);
 
     return font;
 }

@@ -30,6 +30,7 @@
 #include "NodeRenderStyle.h"
 #include "PseudoClassChangeInvalidation.h"
 #include "RenderElement.h"
+#include "RenderStyle+GettersInlines.h"
 #include "ShadowRoot.h"
 #include "SlotAssignment.h"
 #include "StyleResolver.h"
@@ -56,6 +57,7 @@ void ChildChangeInvalidation::invalidateForChangedElement(Element& changedElemen
             return isChild;
         case MatchElement::HasDescendant:
         case MatchElement::HasSiblingDescendant:
+        case MatchElement::HasDescendantParent:
         case MatchElement::HasNonSubject:
         case MatchElement::HasScopeBreaking:
             return true;
@@ -69,7 +71,7 @@ void ChildChangeInvalidation::invalidateForChangedElement(Element& changedElemen
 
     auto hasMatchingInvalidationSelector = [&](auto& invalidationRuleSet) {
         SelectorChecker selectorChecker(changedElement.document());
-        SelectorChecker::CheckingContext checkingContext(SelectorChecker::Mode::CollectingRulesIgnoringVirtualPseudoElements);
+        SelectorChecker::CheckingContext checkingContext(SelectorChecker::Mode::StyleInvalidation);
         checkingContext.matchesAllHasScopes = true;
 
         for (auto& selector : invalidationRuleSet.invalidationSelectors) {

@@ -29,13 +29,13 @@
 #include "LayoutContainingBlockChainIterator.h"
 #include "LayoutInitialContainingBlock.h"
 #include "LayoutShape.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 namespace Layout {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(PlacedFloats);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(PlacedFloats);
 
 PlacedFloats::Item::Item(const Box& layoutBox, Position position, const BoxGeometry& absoluteBoxGeometry, LayoutPoint localTopLeft, std::optional<size_t> line)
     : m_layoutBox(layoutBox)
@@ -47,11 +47,11 @@ PlacedFloats::Item::Item(const Box& layoutBox, Position position, const BoxGeome
 {
 }
 
-PlacedFloats::Item::Item(Position position, const BoxGeometry& absoluteBoxGeometry, LayoutPoint localTopLeft, const LayoutShape* shape)
+PlacedFloats::Item::Item(Position position, const BoxGeometry& absoluteBoxGeometry, LayoutPoint localTopLeft, RefPtr<const LayoutShape>&& shape)
     : m_position(position)
     , m_absoluteBoxGeometry(absoluteBoxGeometry)
     , m_localTopLeft(localTopLeft)
-    , m_shape(shape)
+    , m_shape(WTF::move(shape))
 {
 }
 
@@ -71,7 +71,7 @@ PlacedFloats::PlacedFloats(const ElementBox& blockFormattingContextRoot)
     ASSERT(blockFormattingContextRoot.establishesBlockFormattingContext());
 }
 
-void PlacedFloats::append(Item newFloatItem)
+void PlacedFloats::add(Item newFloatItem)
 {
     auto isStartPositioned = newFloatItem.isStartPositioned();
     m_positionTypes.add(isStartPositioned ? PositionType::Start : PositionType::End);

@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "LoaderMalloc.h"
-#include "ResourceLoadStatistics.h"
+#include <WebCore/LoaderMalloc.h>
+#include <WebCore/ResourceLoadStatistics.h>
 #include <wtf/CompletionHandler.h>
 #include <wtf/Forward.h>
 
@@ -46,8 +46,8 @@ public:
     // https://fetch.spec.whatwg.org/#request-destination-script-like
     enum class FetchDestinationIsScriptLike : bool { No, Yes };
 
-    WEBCORE_EXPORT static ResourceLoadObserver& shared();
-    WEBCORE_EXPORT static ResourceLoadObserver* sharedIfExists();
+    WEBCORE_EXPORT static ResourceLoadObserver& singleton();
+    WEBCORE_EXPORT static ResourceLoadObserver* singletonIfExists();
     WEBCORE_EXPORT static void setShared(ResourceLoadObserver&);
 
     virtual ~ResourceLoadObserver() { }

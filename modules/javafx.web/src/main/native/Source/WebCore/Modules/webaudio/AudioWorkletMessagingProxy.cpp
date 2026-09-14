@@ -35,11 +35,10 @@
 #include "AudioWorkletThread.h"
 #include "BaseAudioContext.h"
 #include "CacheStorageConnection.h"
-#include "Document.h"
-#include "DocumentInlines.h"
+#include "ContentSecurityPolicy.h"
+#include "DocumentPage.h"
+#include "DocumentSettingsValues.h"
 #include "LocalFrame.h"
-#include "Page.h"
-#include "Settings.h"
 #include "WebRTCProvider.h"
 #include "WorkletParameters.h"
 #include "WorkletPendingTasks.h"
@@ -62,7 +61,8 @@ static WorkletParameters generateWorkletParameters(AudioWorklet& worklet)
         document->referrerPolicy(),
         worklet.audioContext() ? !worklet.audioContext()->isOfflineContext() : false,
         document->advancedPrivacyProtections(),
-        document->noiseInjectionHashSalt()
+        document->noiseInjectionHashSalt(),
+        document->checkedContentSecurityPolicy()->responseHeaders()
     };
 }
 
@@ -84,7 +84,7 @@ AudioWorkletMessagingProxy::~AudioWorkletMessagingProxy()
 
 bool AudioWorkletMessagingProxy::postTaskForModeToWorkletGlobalScope(ScriptExecutionContext::Task&& task, const String& mode)
 {
-    m_workletThread->runLoop().postTaskForMode(WTFMove(task), mode);
+    m_workletThread->runLoop().postTaskForMode(WTF::move(task), mode);
     return true;
 }
 
@@ -113,12 +113,12 @@ ScriptExecutionContextIdentifier AudioWorkletMessagingProxy::loaderContextIdenti
 
 void AudioWorkletMessagingProxy::postTaskToLoader(ScriptExecutionContext::Task&& task)
 {
-    ScriptExecutionContext::postTaskTo(m_documentIdentifier, WTFMove(task));
+    ScriptExecutionContext::postTaskTo(m_documentIdentifier, WTF::move(task));
 }
 
 void AudioWorkletMessagingProxy::postTaskToAudioWorklet(Function<void(AudioWorklet&)>&& task)
 {
-    ScriptExecutionContext::postTaskTo(m_documentIdentifier, [protectedThis = Ref { *this }, task = WTFMove(task)](ScriptExecutionContext&) {
+    ScriptExecutionContext::postTaskTo(m_documentIdentifier, [protectedThis = Ref { *this }, task = WTF::move(task)](ScriptExecutionContext&) {
         if (protectedThis->m_worklet)
             task(*protectedThis->m_worklet);
     });

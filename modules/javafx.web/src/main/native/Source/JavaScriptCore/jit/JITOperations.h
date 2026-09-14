@@ -25,16 +25,17 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(JIT)
 
-#include "JITMathICForwards.h"
-#include "JITOperationValidation.h"
-#include "MegamorphicCache.h"
-#include "OperationResult.h"
-#include "ParserModes.h"
-#include "PrivateFieldPutKind.h"
-#include "UGPRPair.h"
-#include <wtf/Platform.h>
+#include <JavaScriptCore/JITMathICForwards.h>
+#include <JavaScriptCore/JITOperationValidation.h>
+#include <JavaScriptCore/MegamorphicCache.h>
+#include <JavaScriptCore/OperationResult.h>
+#include <JavaScriptCore/ParserModes.h>
+#include <JavaScriptCore/PrivateFieldPutKind.h>
+#include <JavaScriptCore/UGPRPair.h>
 #include <wtf/text/UniquedStringImpl.h>
 
 namespace JSC {

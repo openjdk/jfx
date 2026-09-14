@@ -94,7 +94,33 @@ Vector<uint8_t> AuthenticationExtensionsClientInputs::toCBOR() const
         clientInputsMap[cbor::CBORValue("largeBlob")] = cbor::CBORValue(largeBlobMap);
     }
 
-    auto clientInputs = cbor::CBORWriter::write(cbor::CBORValue(WTFMove(clientInputsMap)));
+    if (prf) {
+        cbor::CBORValue::MapValue prfMap;
+
+        if (prf->eval) {
+            cbor::CBORValue::MapValue evalMap;
+            evalMap[cbor::CBORValue("first")] = cbor::CBORValue(prf->eval->first);
+            if (prf->eval->second)
+                evalMap[cbor::CBORValue("second")] = cbor::CBORValue(*prf->eval->second);
+            prfMap[cbor::CBORValue("eval")] = cbor::CBORValue(evalMap);
+        }
+
+        if (prf->evalByCredential) {
+            cbor::CBORValue::MapValue evalByCredentialMap;
+            for (const auto& entry : *prf->evalByCredential) {
+                cbor::CBORValue::MapValue valuesMap;
+                valuesMap[cbor::CBORValue("first")] = cbor::CBORValue(entry.value.first);
+                if (entry.value.second)
+                    valuesMap[cbor::CBORValue("second")] = cbor::CBORValue(*entry.value.second);
+                evalByCredentialMap[cbor::CBORValue(entry.key)] = cbor::CBORValue(valuesMap);
+            }
+            prfMap[cbor::CBORValue("evalByCredential")] = cbor::CBORValue(evalByCredentialMap);
+        }
+
+        clientInputsMap[cbor::CBORValue("prf")] = cbor::CBORValue(prfMap);
+    }
+
+    auto clientInputs = cbor::CBORWriter::write(cbor::CBORValue(WTF::move(clientInputsMap)));
     ASSERT(clientInputs);
 
     return *clientInputs;

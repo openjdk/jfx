@@ -23,9 +23,9 @@
 
 #pragma once
 
-#include "DOMTokenList.h"
-#include "HTMLElement.h"
-#include "ScriptElement.h"
+#include <WebCore/DOMTokenList.h>
+#include <WebCore/HTMLElement.h>
+#include <WebCore/ScriptElement.h>
 
 namespace WebCore {
 
@@ -35,7 +35,7 @@ class TrustedScriptURL;
 enum class RequestPriority : uint8_t;
 
 class HTMLScriptElement final : public HTMLElement, public ScriptElement {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(HTMLScriptElement);
+    WTF_MAKE_TZONE_ALLOCATED(HTMLScriptElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(HTMLScriptElement);
 public:
     static Ref<HTMLScriptElement> create(const QualifiedName&, Document&, bool wasInsertedByParser, bool alreadyStarted = false);
@@ -64,7 +64,7 @@ public:
     using HTMLElement::ref;
     using HTMLElement::deref;
 
-    static bool supports(StringView type) { return type == "classic"_s || type == "module"_s || type == "importmap"_s; }
+    static bool supports(StringView type) { return type == "classic"_s || type == "module"_s || type == "importmap"_s || type == "speculationrules"_s; }
 
     String fetchPriorityForBindings() const;
     RequestPriority fetchPriority() const final;

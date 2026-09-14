@@ -27,9 +27,10 @@
     Conditional=WEB_AUTHN,
     JSGenerateToNativeObject,
     JSGenerateToJSObject,
+    LegacyNativeDictionaryRequiredInterfaceNullability,
 ] dictionary AuthenticatorSelectionCriteria {
-    AuthenticatorAttachment      authenticatorAttachment;
-    ResidentKeyRequirement       residentKey;
+    [PermissiveInvalidValue] AuthenticatorAttachment authenticatorAttachment;
+    [PermissiveInvalidValue] ResidentKeyRequirement  residentKey;
     boolean                      requireResidentKey = false;
     UserVerificationRequirement  userVerification = "preferred";
 };

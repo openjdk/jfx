@@ -25,6 +25,7 @@
 #include "AffineTransform.h"
 #include "Document.h"
 #include "FloatRect.h"
+#include "NodeDocument.h"
 #include "NodeInlines.h"
 #include "SVGDocumentExtensions.h"
 #include "SVGElement.h"
@@ -43,11 +44,12 @@ SVGFitToViewBox::SVGFitToViewBox(SVGElement* contextElement, SVGPropertyAccess a
     : m_viewBox(SVGAnimatedRect::create(contextElement, access))
     , m_preserveAspectRatio(SVGAnimatedPreserveAspectRatio::create(contextElement, access))
 {
-    static std::once_flag onceFlag;
-    std::call_once(onceFlag, [] {
+    static bool didRegistration = false;
+    if (!didRegistration) [[unlikely]] {
+        didRegistration = true;
         PropertyRegistry::registerProperty<SVGNames::viewBoxAttr, &SVGFitToViewBox::m_viewBox>();
         PropertyRegistry::registerProperty<SVGNames::preserveAspectRatioAttr, &SVGFitToViewBox::m_preserveAspectRatio>();
-    });
+    }
 }
 
 void SVGFitToViewBox::setViewBox(const FloatRect& viewBox)
@@ -73,7 +75,7 @@ bool SVGFitToViewBox::parseAttribute(const QualifiedName& name, const AtomString
     if (name == SVGNames::viewBoxAttr) {
         if (!value.isNull()) {
             if (auto result = parseViewBox(value)) {
-                setViewBox(WTFMove(*result));
+                setViewBox(WTF::move(*result));
                 return true;
             }
         }
@@ -96,7 +98,7 @@ std::optional<FloatRect> SVGFitToViewBox::parseViewBox(StringView value)
     });
 }
 
-std::optional<FloatRect> SVGFitToViewBox::parseViewBox(StringParsingBuffer<LChar>& buffer, bool validate)
+std::optional<FloatRect> SVGFitToViewBox::parseViewBox(StringParsingBuffer<Latin1Character>& buffer, bool validate)
 {
     return parseViewBoxGeneric(buffer, validate);
 }

@@ -42,7 +42,7 @@ enum class PropertyAllowlist : uint8_t {
 #endif
 };
 
-PropertyAllowlist propertyAllowlistForPseudoId(PseudoId);
+PropertyAllowlist propertyAllowlistForPseudoElement(PseudoElementType);
 
 bool isValidMarkerStyleProperty(CSSPropertyID);
 #if ENABLE(VIDEO)

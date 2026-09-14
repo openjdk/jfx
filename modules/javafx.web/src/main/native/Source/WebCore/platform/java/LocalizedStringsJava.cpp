@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -786,6 +786,16 @@ String formatLocalizedString(const char* format, ...)
 String validationMessageValueMissingForSwitchText()
 {
     return WEB_UI_STRING("Tap this switch", "Validation message for required switches that are not on");
+}
+
+String captionStylePreview()
+{
+    return WEB_UI_STRING_KEY("This is a preview style", "This is a preview style (Caption User Preferences)", "Caption Style Preview String");
+}
+
+String textTrackOnMenuItemText()
+{
+    return WEB_UI_STRING_KEY("On", "On (text track)", "Menu item label for the track that represents enabling closed captions.");
 }
 
 } // namespace WebCore

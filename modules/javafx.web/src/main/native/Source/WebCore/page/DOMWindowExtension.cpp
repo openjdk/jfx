@@ -30,7 +30,7 @@
 #include "Document.h"
 #include "FrameLoader.h"
 #include "LocalDOMWindow.h"
-#include "LocalFrame.h"
+#include "LocalFrameInlines.h"
 #include "LocalFrameLoaderClient.h"
 #include <wtf/Ref.h>
 
@@ -54,7 +54,8 @@ DOMWindowExtension::~DOMWindowExtension()
 
 LocalFrame* DOMWindowExtension::frame() const
 {
-    return m_window ? m_window->localFrame() : nullptr;
+    RefPtr window = m_window.get();
+    return window ? window->localFrame() : nullptr;
 }
 
 RefPtr<LocalFrame> DOMWindowExtension::protectedFrame() const

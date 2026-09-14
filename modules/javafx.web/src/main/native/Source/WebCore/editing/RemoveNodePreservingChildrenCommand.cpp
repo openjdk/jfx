@@ -27,6 +27,7 @@
 #include "RemoveNodePreservingChildrenCommand.h"
 
 #include "Editing.h"
+#include "NodeDocument.h"
 #include "NodeInlines.h"
 #include <wtf/Assertions.h>
 
@@ -34,7 +35,7 @@ namespace WebCore {
 
 RemoveNodePreservingChildrenCommand::RemoveNodePreservingChildrenCommand(Ref<Node>&& node, ShouldAssumeContentIsAlwaysEditable shouldAssumeContentIsAlwaysEditable, EditAction editingAction)
     : CompositeEditCommand(node->document(), editingAction)
-    , m_node(WTFMove(node))
+    , m_node(WTF::move(node))
     , m_shouldAssumeContentIsAlwaysEditable(shouldAssumeContentIsAlwaysEditable)
 {
 }
@@ -46,14 +47,14 @@ void RemoveNodePreservingChildrenCommand::doApply()
     if (!parent || (m_shouldAssumeContentIsAlwaysEditable == DoNotAssumeContentIsAlwaysEditable && !isEditableNode(*parent)))
         return;
 
-    for (Node* child = m_node->firstChild(); child; child = child->nextSibling())
+    for (RefPtr child = m_node->firstChild(); child; child = child->nextSibling())
         children.append(*child);
 
     size_t size = children.size();
     for (size_t i = 0; i < size; ++i) {
-        auto child = WTFMove(children[i]);
+        Ref child = WTF::move(children[i]);
         removeNode(child, m_shouldAssumeContentIsAlwaysEditable);
-        insertNodeBefore(WTFMove(child), m_node, m_shouldAssumeContentIsAlwaysEditable);
+        insertNodeBefore(WTF::move(child), m_node, m_shouldAssumeContentIsAlwaysEditable);
     }
     removeNode(m_node, m_shouldAssumeContentIsAlwaysEditable);
 }

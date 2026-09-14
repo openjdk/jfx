@@ -28,6 +28,7 @@
 
 #include <atomic>
 #include <ctime>
+#include <wtf/CanMakeWeakPtr.h>
 #include <wtf/FastMalloc.h>
 #include <wtf/Forward.h>
 #include <wtf/Function.h>
@@ -82,9 +83,9 @@ struct MemoryPressureHandlerConfiguration {
     Seconds pollInterval;
 };
 
-class MemoryPressureHandler {
+class MemoryPressureHandler : public CanMakeWeakPtr<MemoryPressureHandler> {
     WTF_DEPRECATED_MAKE_FAST_ALLOCATED(MemoryPressureHandler);
-    friend class WTF::LazyNeverDestroyed<MemoryPressureHandler>;
+    friend class WTF::NeverDestroyed<MemoryPressureHandler>;
 public:
     WTF_EXPORT_PRIVATE static MemoryPressureHandler& singleton();
 
@@ -101,13 +102,13 @@ public:
     WTF_EXPORT_PRIVATE void triggerMemoryPressureEvent(bool isCritical);
 #endif
 
-    void setMemoryKillCallback(WTF::Function<void()>&& function) { m_memoryKillCallback = WTFMove(function); }
-    void setMemoryPressureStatusChangedCallback(WTF::Function<void()>&& function) { m_memoryPressureStatusChangedCallback = WTFMove(function); }
-    void setDidExceedProcessMemoryLimitCallback(WTF::Function<void(ProcessMemoryLimit)>&& function) { m_didExceedProcessMemoryLimitCallback = WTFMove(function); }
+    void setMemoryKillCallback(WTF::Function<void()>&& function) { m_memoryKillCallback = WTF::move(function); }
+    void setMemoryPressureStatusChangedCallback(WTF::Function<void()>&& function) { m_memoryPressureStatusChangedCallback = WTF::move(function); }
+    void setDidExceedProcessMemoryLimitCallback(WTF::Function<void(ProcessMemoryLimit)>&& function) { m_didExceedProcessMemoryLimitCallback = WTF::move(function); }
 
     void setLowMemoryHandler(LowMemoryHandler&& handler)
     {
-        m_lowMemoryHandler = WTFMove(handler);
+        m_lowMemoryHandler = WTF::move(handler);
     }
 
     bool isUnderMemoryWarning() const
@@ -140,7 +141,7 @@ public:
     void setDispatchQueue(OSObjectPtr<dispatch_queue_t>&& queue)
     {
         RELEASE_ASSERT(!m_installed);
-        m_dispatchQueue = WTFMove(queue);
+        m_dispatchQueue = WTF::move(queue);
     }
 #endif
 
@@ -194,7 +195,7 @@ public:
 
     using Configuration = MemoryPressureHandlerConfiguration;
 
-    void setConfiguration(Configuration&& configuration) { m_configuration = WTFMove(configuration); }
+    void setConfiguration(Configuration&& configuration) { m_configuration = WTF::move(configuration); }
     void setConfiguration(const Configuration& configuration) { m_configuration = configuration; }
 
     WTF_EXPORT_PRIVATE void releaseMemory(Critical, Synchronous = Synchronous::No);

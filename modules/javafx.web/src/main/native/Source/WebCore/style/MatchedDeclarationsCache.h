@@ -28,6 +28,7 @@
 #include "MatchResult.h"
 #include "RenderStyle.h"
 #include "Timer.h"
+#include <wtf/CanMakeWeakPtr.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakRef.h>
 
@@ -37,7 +38,7 @@ namespace Style {
 
 class Resolver;
 
-class MatchedDeclarationsCache {
+class MatchedDeclarationsCache : public CanMakeWeakPtr<MatchedDeclarationsCache> {
     WTF_MAKE_TZONE_ALLOCATED(MatchedDeclarationsCache);
 public:
     explicit MatchedDeclarationsCache(const Resolver&);

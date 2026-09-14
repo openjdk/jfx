@@ -26,9 +26,10 @@
 #include "config.h"
 #include "FragmentDirectiveUtilities.h"
 
+#include "NodeDocument.h"
 #include "NodeRenderStyle.h"
 #include "NodeTraversal.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include <wtf/text/TextStream.h>
 
 namespace WebCore {

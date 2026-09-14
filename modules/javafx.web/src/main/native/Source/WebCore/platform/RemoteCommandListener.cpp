@@ -46,7 +46,7 @@ static RemoteCommandListener::CreationFunction& remoteCommandListenerCreationFun
 
 void RemoteCommandListener::setCreationFunction(CreationFunction&& function)
 {
-    remoteCommandListenerCreationFunction() = WTFMove(function);
+    remoteCommandListenerCreationFunction() = WTF::move(function);
 }
 
 void RemoteCommandListener::resetCreationFunction()
@@ -81,7 +81,7 @@ RemoteCommandListener::~RemoteCommandListener() = default;
 void RemoteCommandListener::scheduleSupportedCommandsUpdate()
 {
     if (!m_updateCommandsTask.isPending()) {
-        m_updateCommandsTask.scheduleTask([this] ()  {
+        m_updateCommandsTask.scheduleTask([this, protectedThis = Ref { *this }] ()  {
             updateSupportedCommands();
         });
     }

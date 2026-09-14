@@ -30,6 +30,7 @@
 
 #include "Chrome.h"
 #include "ChromeClient.h"
+#include "Frame.h"
 #include "HTMLCollection.h"
 #include "HTMLImageElement.h"
 #include "ImageOverlay.h"
@@ -119,7 +120,7 @@ void ImageAnalysisQueue::resumeProcessingSoon()
     m_resumeProcessingTimer.startOneShot(resumeProcessingDelay);
 }
 
-void ImageAnalysisQueue::enqueueAllImagesIfNeeded(Document& document, const String& sourceLanguageIdentifier, const String& targetLanguageIdentifier)
+void ImageAnalysisQueue::enqueueAllImagesIfNeeded(Frame& frame, const String& sourceLanguageIdentifier, const String& targetLanguageIdentifier)
 {
     if (!m_page)
         return;
@@ -129,23 +130,26 @@ void ImageAnalysisQueue::enqueueAllImagesIfNeeded(Document& document, const Stri
 
     m_analysisOfAllImagesOnPageHasStarted = true;
 
-    if (sourceLanguageIdentifier != m_sourceLanguageIdentifier || targetLanguageIdentifier != m_targetLanguageIdentifier)
+    if (sourceLanguageIdentifier != m_languageIdentifiers.source || targetLanguageIdentifier != m_languageIdentifiers.target)
         clear();
 
-    m_sourceLanguageIdentifier = sourceLanguageIdentifier;
-    m_targetLanguageIdentifier = targetLanguageIdentifier;
-    enqueueAllImagesRecursive(document);
+    m_languageIdentifiers.source = sourceLanguageIdentifier;
+    m_languageIdentifiers.target = targetLanguageIdentifier;
+    enqueueAllImagesRecursive(frame);
 }
 
-void ImageAnalysisQueue::enqueueAllImagesRecursive(Document& document)
+void ImageAnalysisQueue::enqueueAllImagesRecursive(Frame& frame)
 {
-    for (auto& image : descendantsOfType<HTMLImageElement>(document))
-        enqueueIfNeeded(image);
-
-    for (auto& frameOwner : descendantsOfType<HTMLFrameOwnerElement>(document)) {
-        if (RefPtr contentDocument = frameOwner.contentDocument())
-            enqueueAllImagesRecursive(*contentDocument);
+    RefPtr localFrame = dynamicDowncast<LocalFrame>(frame);
+    if (localFrame) {
+        if (RefPtr document = localFrame->document()) {
+            for (Ref image : descendantsOfType<HTMLImageElement>(*document))
+                enqueueIfNeeded(image.get());
     }
+    }
+
+    for (RefPtr nextFrame = frame.tree().firstChild(); nextFrame; nextFrame = nextFrame->tree().nextSibling())
+        enqueueAllImagesRecursive(*nextFrame);
 }
 
 void ImageAnalysisQueue::resumeProcessing()
@@ -159,14 +163,15 @@ void ImageAnalysisQueue::resumeProcessing()
             continue;
 
         m_pendingRequestCount++;
-        m_page->resetTextRecognitionResult(*element);
+        Ref page = *m_page;
+        page->resetTextRecognitionResult(*element);
 
         if (auto* image = element->cachedImage(); image && !image->errorOccurred())
             m_queuedElements.set(*element, image->url());
 
-        auto allowSnapshots = m_targetLanguageIdentifier.isEmpty() ? TextRecognitionOptions::AllowSnapshots::Yes : TextRecognitionOptions::AllowSnapshots::No;
-        m_page->chrome().client().requestTextRecognition(*element, { m_sourceLanguageIdentifier, m_targetLanguageIdentifier, allowSnapshots }, [this, page = m_page] (auto&&) {
-            if (!page || page->imageAnalysisQueueIfExists() != this)
+        auto allowSnapshots = m_languageIdentifiers.target.isEmpty() ? TextRecognitionOptions::AllowSnapshots::Yes : TextRecognitionOptions::AllowSnapshots::No;
+        page->chrome().client().requestTextRecognition(*element, { m_languageIdentifiers.source, m_languageIdentifiers.target, allowSnapshots }, [this, protectedThis = Ref { *this }, weakPage = WeakPtr { page }](auto&&) {
+            if (RefPtr page = weakPage.get(); !page || page->imageAnalysisQueueIfExists() != this)
                 return;
 
             if (m_pendingRequestCount)
@@ -182,7 +187,7 @@ void ImageAnalysisQueue::resumeProcessing()
 
 void ImageAnalysisQueue::setDidBecomeEmptyCallback(Function<void()>&& callback)
 {
-    m_imageQueueEmptyHysteresis = makeUnique<PAL::HysteresisActivity>([callback = WTFMove(callback)] (PAL::HysteresisState state) {
+    m_imageQueueEmptyHysteresis = makeUnique<PAL::HysteresisActivity>([callback = WTF::move(callback)] (PAL::HysteresisState state) {
         if (state == PAL::HysteresisState::Stopped)
             callback();
     }, 1_s);
@@ -200,8 +205,7 @@ void ImageAnalysisQueue::clear()
     m_resumeProcessingTimer.stop();
     m_queue = { };
     m_queuedElements.clear();
-    m_sourceLanguageIdentifier = { };
-    m_targetLanguageIdentifier = { };
+    m_languageIdentifiers = { };
     m_currentTaskNumber = 0;
     m_analysisOfAllImagesOnPageHasStarted = false;
     m_imageQueueEmptyHysteresis = nullptr;

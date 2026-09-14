@@ -650,7 +650,7 @@ class MachO {
 public:
     size_t addSection(std::unique_ptr<MachOSection> section)
     {
-        m_sections.append(WTFMove(section));
+        m_sections.append(WTF::move(section));
         return m_sections.size() - 1;
     }
 
@@ -842,7 +842,7 @@ public:
     size_t addSection(std::unique_ptr<ELFSection> section)
     {
         section->setIndex(m_sections.size());
-        m_sections.append(WTFMove(section));
+        m_sections.append(WTF::move(section));
         return m_sections.size() - 1;
     }
 
@@ -1109,8 +1109,8 @@ static void createSymbolsTable(Ref<CodeDescription> desc, ELF* elf, size_t textS
         ELFSymbol::BindGlobal, ELFSymbol::TypeFunction, textSectionIndex));
 
     // Symbol table should be followed by the linked string table.
-    elf->addSection(WTFMove(symtab));
-    elf->addSection(WTFMove(strtab));
+    elf->addSection(WTF::move(symtab));
+    elf->addSection(WTF::move(strtab));
 }
 #endif // OS(LINUX)
 

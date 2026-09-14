@@ -28,12 +28,11 @@
 #include "config.h"
 #include "WindowOrWorkerGlobalScopeIndexedDatabase.h"
 
-#include "DocumentInlines.h"
+#include "DocumentPage.h"
 #include "IDBConnectionProxy.h"
 #include "IDBFactory.h"
 #include "LocalDOMWindow.h"
 #include "LocalDOMWindowProperty.h"
-#include "Page.h"
 #include "Supplementable.h"
 #include "WorkerGlobalScope.h"
 #include <wtf/TZoneMallocInlines.h>
@@ -51,6 +50,7 @@ public:
 
 private:
     static ASCIILiteral supplementName() { return "DOMWindowIndexedDatabase"_s; }
+    bool isDOMWindowIndexedDatabase() const final { return true; }
 
     RefPtr<IDBFactory> m_idbFactory;
 };
@@ -63,6 +63,7 @@ public:
 
     static WorkerGlobalScopeIndexedDatabase* from(WorkerGlobalScope&);
     IDBFactory* indexedDB();
+    bool isWorkerGlobalScopeIndexedDatabase() const final { return true; }
 
 private:
     static ASCIILiteral supplementName() { return "WorkerGlobalScopeIndexedDatabase"_s; }
@@ -70,6 +71,18 @@ private:
     RefPtr<IDBFactory> m_idbFactory;
     const Ref<IDBClient::IDBConnectionProxy> m_connectionProxy;
 };
+
+} // namespace WebCore
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::DOMWindowIndexedDatabase)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isDOMWindowIndexedDatabase(); }
+SPECIALIZE_TYPE_TRAITS_END()
+
+SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::WorkerGlobalScopeIndexedDatabase)
+    static bool isType(const WebCore::SupplementBase& supplement) { return supplement.isWorkerGlobalScopeIndexedDatabase(); }
+SPECIALIZE_TYPE_TRAITS_END()
+
+namespace WebCore {
 
 // DOMWindowIndexedDatabase supplement.
 
@@ -82,11 +95,11 @@ DOMWindowIndexedDatabase::DOMWindowIndexedDatabase(LocalDOMWindow& window)
 
 DOMWindowIndexedDatabase* DOMWindowIndexedDatabase::from(LocalDOMWindow& window)
 {
-    auto* supplement = static_cast<DOMWindowIndexedDatabase*>(Supplement<LocalDOMWindow>::from(&window, supplementName()));
+    auto* supplement = downcast<DOMWindowIndexedDatabase>(Supplement<LocalDOMWindow>::from(&window, supplementName()));
     if (!supplement) {
         auto newSupplement = makeUnique<DOMWindowIndexedDatabase>(window);
         supplement = newSupplement.get();
-        provideTo(&window, supplementName(), WTFMove(newSupplement));
+        provideTo(&window, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 }
@@ -145,7 +158,7 @@ WorkerGlobalScopeIndexedDatabase* WorkerGlobalScopeIndexedDatabase::from(WorkerG
 
         auto newSupplement = makeUnique<WorkerGlobalScopeIndexedDatabase>(*connectionProxy);
         supplement = newSupplement.get();
-        provideTo(&scope, supplementName(), WTFMove(newSupplement));
+        provideTo(&scope, supplementName(), WTF::move(newSupplement));
     }
     return supplement;
 #endif /* PLATFORM(JAVA) */

@@ -165,6 +165,7 @@ xxx-large
 smaller
 larger
 -webkit-xxx-large
+//math
 
 //
 // CSS_PROP_FONT_STRETCH:
@@ -191,6 +192,7 @@ monospace
 -webkit-body
 -webkit-pictograph
 system-ui
+math
 //
 //
 // CSS_PROP_*_COLOR
@@ -370,7 +372,7 @@ bottom
 -webkit-baseline-middle
 //
 // CSS_PROP_TEXT_ALIGN:
-// The order here must match the order of the TextAlignMode enum in RenderStyleConstants.h.
+// The order here must match the order of the Style::TextAlign enum in StyleTextAlign.h.
 //
 -webkit-auto
 left
@@ -530,6 +532,8 @@ inline-flex
 contents
 grid
 inline-grid
+grid-lanes
+inline-grid-lanes
 flow-root
 flow
 -webkit-inline-flex
@@ -600,6 +604,7 @@ uppercase
 lowercase
 full-size-kana
 // full-width
+math-auto
 // none
 //
 // CSS_PROP_VISIBILITY:
@@ -929,6 +934,7 @@ attachment enable-if=ENABLE_ATTACHMENT_ELEMENT
 borderless-attachment enable-if=ENABLE_ATTACHMENT_ELEMENT
 textarea
 textfield
+-internal-auto-base
 
 //
 // CSS_PROP_BORDER_IMAGE
@@ -1568,7 +1574,6 @@ span
 // grid-template-{columns|rows}
 minmax
 subgrid
-masonry
 
 // grid-auto-flow
 auto-flow
@@ -1638,6 +1643,7 @@ sRGB
 // color() function
 a98-rgb
 display-p3
+display-p3-linear
 prophoto-rgb
 // rec2020
 // sRGB
@@ -1718,6 +1724,10 @@ standalone enable-if=ENABLE_APPLICATION_MANIFEST
 minimal-ui enable-if=ENABLE_APPLICATION_MANIFEST
 browser enable-if=ENABLE_APPLICATION_MANIFEST
 
+// text-decoration-line
+grammar-error
+spelling-error
+
 // text-decoration-thickness, text-underline-offset
 from-font
 
@@ -1763,6 +1773,10 @@ words
 selector
 font-format
 font-tech
+
+// math-depth
+auto-add
+// add
 
 // math-style
 // normal
@@ -1860,6 +1874,8 @@ most-inline-size
 flip-block
 flip-inline
 flip-start
+flip-x
+flip-y
 // position-area
 self-block-end
 self-block-end-start
@@ -1878,20 +1894,20 @@ span-self-start
 span-start
 span-top
 span-x-end
-span-x-self-end
-span-x-self-start
+span-self-x-end
+span-self-x-start
 span-x-start
 span-y-end
-span-y-self-end
-span-y-self-start
+span-self-y-end
+span-self-y-start
 span-y-start
 x-end
-x-self-end
-x-self-start
+self-x-end
+self-x-start
 x-start
 y-end
-y-self-end
-y-self-start
+self-y-end
+self-y-start
 y-start
 span-inline-start
 span-inline-end

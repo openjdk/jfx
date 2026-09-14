@@ -23,22 +23,22 @@
 #include "CDATASection.h"
 
 #include "Document.h"
-#include "DocumentInlines.h"
+#include "NodeDocument.h"
 #include "SerializedNode.h"
 #include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CDATASection);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CDATASection);
 
 inline CDATASection::CDATASection(Document& document, String&& data)
-    : Text(document, WTFMove(data), CDATA_SECTION_NODE, { })
+    : Text(document, WTF::move(data), CDATA_SECTION_NODE, { })
 {
 }
 
 Ref<CDATASection> CDATASection::create(Document& document, String&& data)
 {
-    return adoptRef(*new CDATASection(document, WTFMove(data)));
+    return adoptRef(*new CDATASection(document, WTF::move(data)));
 }
 
 String CDATASection::nodeName() const
@@ -58,7 +58,7 @@ SerializedNode CDATASection::serializeNode(CloningOperation) const
 
 Ref<Text> CDATASection::virtualCreate(String&& data)
 {
-    return create(protectedDocument(), WTFMove(data));
+    return create(protectedDocument(), WTF::move(data));
 }
 
 } // namespace WebCore

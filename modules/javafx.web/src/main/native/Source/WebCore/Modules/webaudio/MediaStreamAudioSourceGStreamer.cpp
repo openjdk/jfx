@@ -67,7 +67,7 @@ void MediaStreamAudioSource::consumeAudio(AudioBus& bus, size_t numberOfFrames)
 #endif
 
     auto sample = adoptGRef(gst_sample_new(buffer.get(), m_caps.get(), nullptr, nullptr));
-    GStreamerAudioData audioBuffer(WTFMove(sample), m_info);
+    GStreamerAudioData audioBuffer(WTF::move(sample), m_info);
     GStreamerAudioStreamDescription description(&m_info);
     audioSamplesAvailable(mediaTime, audioBuffer, description, numberOfFrames);
 }

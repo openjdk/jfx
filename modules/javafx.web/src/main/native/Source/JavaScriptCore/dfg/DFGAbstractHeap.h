@@ -294,6 +294,8 @@ public:
         return kind() == InvalidAbstractHeap && payloadImpl().isTop();
     }
 
+    static constexpr bool safeToCompareToHashTableEmptyOrDeletedValue = true;
+
     static AbstractHeapKind superKind(AbstractHeapKind kind)
     {
         switch (kind) {
@@ -388,20 +390,11 @@ private:
     int64_t m_value;
 };
 
-struct AbstractHeapHash {
-    static unsigned hash(const AbstractHeap& key) { return key.hash(); }
-    static bool equal(const AbstractHeap& a, const AbstractHeap& b) { return a == b; }
-    static constexpr bool safeToCompareToEmptyOrDeleted = true;
-};
-
 } } // namespace JSC::DFG
 
 namespace WTF {
 
 void printInternal(PrintStream&, JSC::DFG::AbstractHeapKind);
-
-template<typename T> struct DefaultHash;
-template<> struct DefaultHash<JSC::DFG::AbstractHeap> : JSC::DFG::AbstractHeapHash { };
 
 template<typename T> struct HashTraits;
 template<> struct HashTraits<JSC::DFG::AbstractHeap> : SimpleClassHashTraits<JSC::DFG::AbstractHeap> { };

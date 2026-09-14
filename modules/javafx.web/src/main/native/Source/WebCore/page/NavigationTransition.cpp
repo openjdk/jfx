@@ -31,12 +31,12 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(NavigationTransition);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(NavigationTransition);
 
 NavigationTransition::NavigationTransition(NavigationNavigationType type, Ref<NavigationHistoryEntry>&& fromEntry, Ref<DeferredPromise>&& finished)
     : m_navigationType(type)
-    , m_from(WTFMove(fromEntry))
-    , m_finished(WTFMove(finished))
+    , m_from(WTF::move(fromEntry))
+    , m_finished(WTF::move(finished))
 {
 }
 
@@ -50,14 +50,19 @@ void NavigationTransition::rejectPromise(Exception& exception, JSC::JSValue exce
     m_finished->reject(exception, RejectAsHandled::Yes, exceptionObject);
 }
 
-DOMPromise* NavigationTransition::finished()
+void NavigationTransition::rejectPromise(JSC::JSValue exceptionObject)
+{
+    m_finished->reject<IDLAny>(exceptionObject, RejectAsHandled::Yes);
+}
+
+DOMPromise& NavigationTransition::finished()
 {
     if (!m_finishedDOMPromise) {
         auto& promise = *jsCast<JSC::JSPromise*>(m_finished->promise());
         m_finishedDOMPromise = DOMPromise::create(*m_finished->globalObject(), promise);
     }
 
-    return m_finishedDOMPromise.get();
+    return *m_finishedDOMPromise;
 }
 
 } // namespace WebCore

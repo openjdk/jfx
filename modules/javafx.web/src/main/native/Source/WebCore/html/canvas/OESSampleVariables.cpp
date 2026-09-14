@@ -32,19 +32,19 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(OESSampleVariables);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(OESSampleVariables);
 
 OESSampleVariables::OESSampleVariables(WebGLRenderingContextBase& context)
     : WebGLExtension(context, WebGLExtensionName::OESSampleVariables)
 {
-    context.protectedGraphicsContextGL()->ensureExtensionEnabled("GL_OES_sample_variables"_s);
+    context.graphicsContextGL()->enableExtension(GCGLExtension::OES_sample_variables);
 }
 
 OESSampleVariables::~OESSampleVariables() = default;
 
 bool OESSampleVariables::supported(GraphicsContextGL& context)
 {
-    return context.supportsExtension("GL_OES_sample_variables"_s);
+    return context.supportsExtension(GCGLExtension::OES_sample_variables);
 }
 
 } // namespace WebCore

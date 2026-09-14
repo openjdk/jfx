@@ -33,6 +33,7 @@
 [
     ExportMacro=WEBCORE_EXPORT,
     Exposed=(Window,Worker),
+    IgnoreSubclassesWhenGeneratingToJSObject,
     TaggedWrapper,
 ] interface DOMPointReadOnly {
     constructor(optional unrestricted double x = 0, optional unrestricted double y = 0, optional unrestricted double z = 0, optional unrestricted double w = 1);

@@ -25,12 +25,12 @@
 
 #pragma once
 
-#include "IDBConnectionToClient.h"
-#include "IDBDatabaseIdentifier.h"
-#include "IDBObjectStoreIdentifier.h"
-#include "UniqueIDBDatabase.h"
-#include "UniqueIDBDatabaseConnection.h"
-#include "UniqueIDBDatabaseManager.h"
+#include <WebCore/IDBConnectionToClient.h>
+#include <WebCore/IDBDatabaseIdentifier.h>
+#include <WebCore/IDBObjectStoreIdentifier.h>
+#include <WebCore/UniqueIDBDatabase.h>
+#include <WebCore/UniqueIDBDatabaseConnection.h>
+#include <WebCore/UniqueIDBDatabaseManager.h>
 #include <pal/HysteresisActivity.h>
 #include <pal/SessionID.h>
 #include <wtf/CrossThreadTaskHandler.h>
@@ -49,8 +49,9 @@ struct IDBGetRecordData;
 
 namespace IDBServer {
 
-class IDBServer : public UniqueIDBDatabaseManager {
+class IDBServer final : public UniqueIDBDatabaseManager {
     WTF_MAKE_TZONE_ALLOCATED_EXPORT(IDBServer, WEBCORE_EXPORT);
+    WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(IDBServer);
 public:
     using SpaceRequester = Function<bool(const ClientOrigin&, uint64_t spaceRequested)>;
     WEBCORE_EXPORT IDBServer(const String& databaseDirectoryPath, SpaceRequester&&, Lock&);
@@ -108,18 +109,18 @@ public:
 
 private:
     UniqueIDBDatabase& getOrCreateUniqueIDBDatabase(const IDBDatabaseIdentifier&);
-    UniqueIDBDatabaseTransaction* idbTransaction(const IDBRequestData&) const;
+    RefPtr<UniqueIDBDatabaseTransaction> idbTransaction(const IDBRequestData&) const;
 
     void upgradeFilesIfNecessary();
     String upgradedDatabaseDirectory(const WebCore::IDBDatabaseIdentifier&);
     void removeDatabasesModifiedSinceForVersion(WallTime, const String&);
     void removeDatabasesWithOriginsForVersion(const Vector<SecurityOriginData>&, const String&);
 
-    HashMap<IDBConnectionIdentifier, RefPtr<IDBConnectionToClient>> m_connectionMap;
+    HashMap<IDBConnectionIdentifier, Ref<IDBConnectionToClient>> m_connectionMap;
     HashMap<IDBDatabaseIdentifier, std::unique_ptr<UniqueIDBDatabase>> m_uniqueIDBDatabaseMap;
 
-    HashMap<IDBDatabaseConnectionIdentifier, UniqueIDBDatabaseConnection*> m_databaseConnections;
-    HashMap<IDBResourceIdentifier, UniqueIDBDatabaseTransaction*> m_transactions;
+    HashMap<IDBDatabaseConnectionIdentifier, WeakPtr<UniqueIDBDatabaseConnection>> m_databaseConnections;
+    HashMap<IDBResourceIdentifier, WeakPtr<UniqueIDBDatabaseTransaction>> m_transactions;
 
     HashMap<uint64_t, Function<void ()>> m_deleteDatabaseCompletionHandlers;
 

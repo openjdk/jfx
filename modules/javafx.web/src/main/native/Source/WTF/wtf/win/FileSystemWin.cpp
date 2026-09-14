@@ -107,7 +107,7 @@ static String storageDirectory(DWORD pathIdentifier)
         return String();
 
     buffer.shrink(wcslen(wcharFrom(buffer.span().data())));
-    String directory = String::adopt(WTFMove(buffer));
+    String directory = String::adopt(WTF::move(buffer));
 
     directory = pathByAppendingComponent(directory, "Apple Computer\\WebKit"_s);
     if (!makeAllDirectories(directory))
@@ -159,7 +159,7 @@ static String generateTemporaryPath(const Function<bool(const String&)>& action)
     return proposedPath;
 }
 
-std::pair<String, FileHandle> openTemporaryFile(StringView, StringView suffix)
+std::pair<String, FileHandle> openTemporaryFile(StringView, StringView suffix, const String&)
 {
     // FIXME: Suffix is not supported, but OK for now since the code using it is macOS-port-only.
     ASSERT_UNUSED(suffix, suffix.isEmpty());
@@ -176,7 +176,7 @@ std::pair<String, FileHandle> openTemporaryFile(StringView, StringView suffix)
     if (!handle)
         return { String(), FileHandle() };
 
-    return { proposedPath, WTFMove(handle) };
+    return { proposedPath, WTF::move(handle) };
 }
 
 FileHandle openFile(const String& path, FileOpenMode mode, FileAccessPermission, OptionSet<FileLockMode> lockMode, bool failIfFileExists)

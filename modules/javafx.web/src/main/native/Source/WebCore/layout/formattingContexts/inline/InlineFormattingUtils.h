@@ -25,8 +25,10 @@
 
 #pragma once
 
+#include "BlockLayoutState.h"
+#include "InlineLine.h"
 #include "InlineLineBuilder.h"
-#include "InlineLineTypes.h"
+#include <WebCore/InlineLineTypes.h>
 
 namespace WebCore {
 namespace Layout {
@@ -39,13 +41,14 @@ class InlineFormattingUtils {
 public:
     InlineFormattingUtils(const InlineFormattingContext&);
 
-    InlineLayoutUnit logicalTopForNextLine(const LineLayoutResult&, const InlineRect& lineLogicalRect, const FloatingContext&) const;
+    InlineLayoutUnit logicalTopForNextLine(const LineLayoutResult&, const InlineRect& lineLogicalRect, const FloatingContext&, const BlockLayoutState::MarginState&) const;
 
     ContentHeightAndMargin inlineBlockContentHeightAndMargin(const Box&, const HorizontalConstraints&, const OverriddenVerticalValues&) const;
     ContentWidthAndMargin inlineBlockContentWidthAndMargin(const Box&, const HorizontalConstraints&, const OverriddenHorizontalValues&) const;
 
     enum class IsIntrinsicWidthMode : bool { No, Yes };
-    InlineLayoutUnit computedTextIndent(IsIntrinsicWidthMode, PreviousLineState, InlineLayoutUnit availableWidth) const;
+    enum class LineEndsWithLineBreak : bool { No, Yes };
+    InlineLayoutUnit computedTextIndent(IsIntrinsicWidthMode, IsFirstFormattedLine, std::optional<LineEndsWithLineBreak> previousLineEndsWithLineBreak, InlineLayoutUnit availableWidth) const;
 
     bool inlineLevelBoxAffectsLineBox(const InlineLevelBox&) const;
 
@@ -57,7 +60,7 @@ public:
 
     void adjustMarginStartForListMarker(const ElementBox&, LayoutUnit nestedListMarkerMarginStart, InlineLayoutUnit rootInlineBoxOffset) const;
 
-    static InlineLayoutUnit horizontalAlignmentOffset(const RenderStyle& rootStyle, InlineLayoutUnit contentLogicalRight, InlineLayoutUnit lineLogicalRight, InlineLayoutUnit hangingTrailingWidth, const Line::RunList& runs, bool isLastLine, std::optional<TextDirection> inlineBaseDirectionOverride = std::nullopt);
+    static InlineLayoutUnit horizontalAlignmentOffset(const RenderStyle& rootStyle, InlineLayoutUnit contentLogicalRight, InlineLayoutUnit lineLogicalRight, InlineLayoutUnit hangingTrailingWidth, bool isLastLineOrLineEndsWithForcedLineBreak, std::optional<TextDirection> inlineBaseDirectionOverride = std::nullopt);
 
     static InlineItemPosition leadingInlineItemPositionForNextLine(InlineItemPosition lineContentEnd, std::optional<InlineItemPosition> previousLineContentEnd, bool lineHasIntrusiveOrNewlyPlacedFloat, InlineItemPosition layoutRangeEnd);
 
@@ -69,7 +72,19 @@ public:
 
     static LineEndingTruncationPolicy lineEndingTruncationPolicy(const RenderStyle& rootStyle, size_t numberOfContentfulLines, std::optional<size_t> numberOfVisibleLinesAllowed, bool currentLineIsContentful);
 
-    bool shouldDiscardRemainingContentInBlockDirection(size_t numberOfLinesWithInlineContent) const;
+    static std::optional<LineLayoutResult::InlineContentEnding> inlineContentEnding(const Line::Result&);
+
+    bool shouldDiscardRemainingContentInBlockDirection() const;
+
+    enum class SnapDirection : uint8_t { Floor, Ceil, Round };
+    static InlineLayoutUnit snapToInt(InlineLayoutUnit, const InlineLevelBox&, SnapDirection = SnapDirection::Round);
+    static InlineLayoutUnit snapToInt(InlineLayoutUnit, const Box&, SnapDirection = SnapDirection::Round);
+
+    static InlineLayoutUnit ascent(const FontMetrics&, FontBaseline, const InlineLevelBox&);
+    static InlineLayoutUnit descent(const FontMetrics&, FontBaseline, const InlineLevelBox&);
+
+    static InlineLayoutUnit ascent(const FontMetrics&, FontBaseline, const Box&);
+    static InlineLayoutUnit descent(const FontMetrics&, FontBaseline, const Box&);
 
 private:
     InlineLayoutUnit contentLeftAfterLastLine(const ConstraintsForInFlowContent&, std::optional<InlineLayoutUnit> lastLineLogicalBottom, const FloatingContext&) const;

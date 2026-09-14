@@ -25,11 +25,11 @@
 
 #pragma once
 
-#include "ProcessIdentifier.h"
-#include "ProcessQualified.h"
-#include "ScriptBuffer.h"
-#include "ScriptExecutionContextIdentifier.h"
-#include "ServiceWorkerIdentifier.h"
+#include <WebCore/ProcessIdentifier.h>
+#include <WebCore/ProcessQualified.h>
+#include <WebCore/ScriptBuffer.h>
+#include <WebCore/ScriptExecutionContextIdentifier.h>
+#include <WebCore/ServiceWorkerIdentifier.h>
 #include <wtf/HashIterators.h>
 #include <wtf/KeyValuePair.h>
 #include <wtf/ObjectIdentifier.h>
@@ -89,7 +89,7 @@ struct ServiceWorkerScripts {
         MemoryCompactRobinHoodHashMap<WTF::URL, ScriptBuffer> isolatedImportedScripts;
         for (auto& [url, script] : importedScripts)
             isolatedImportedScripts.add(url.isolatedCopy(), script.isolatedCopy());
-        return { identifier, mainScript.isolatedCopy(), WTFMove(isolatedImportedScripts) };
+        return { identifier, mainScript.isolatedCopy(), WTF::move(isolatedImportedScripts) };
     }
 
     ServiceWorkerIdentifier identifier;

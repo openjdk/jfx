@@ -20,9 +20,9 @@
 
 #pragma once
 
-#include "BidiContext.h"
-#include "LegacyInlineFlowBox.h"
-#include "RenderBox.h"
+#include <WebCore/BidiContext.h>
+#include <WebCore/LegacyInlineFlowBox.h>
+#include <WebCore/RenderBox.h>
 #include <wtf/TZoneMalloc.h>
 #include <wtf/WeakPtr.h>
 
@@ -36,7 +36,7 @@ struct BidiStatus;
 struct GapRects;
 
 class LegacyRootInlineBox : public LegacyInlineFlowBox, public CanMakeWeakPtr<LegacyRootInlineBox>, public CanMakeCheckedPtr<LegacyRootInlineBox> {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(LegacyRootInlineBox);
+    WTF_MAKE_TZONE_ALLOCATED(LegacyRootInlineBox);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(LegacyRootInlineBox);
 public:
     explicit LegacyRootInlineBox(RenderBlockFlow&);

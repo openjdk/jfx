@@ -26,10 +26,11 @@
 
 #pragma once
 
-#include "StyleCounterStyle.h"
-#include "StyleValueTypes.h"
+#include <WebCore/StyleCounterStyle.h>
+#include <WebCore/StyleValueTypes.h>
 #include <wtf/Variant.h>
 #include <wtf/text/AtomString.h>
+#include <wtf/text/TextStream.h>
 
 namespace WebCore {
 namespace Style {
@@ -44,19 +45,24 @@ struct ListStyleType {
 
     ListStyleType(AtomString&& string)
         : m_type { Type::String }
-        , m_identifier { WTFMove(string) }
+        , m_identifier { WTF::move(string) }
     {
     }
 
     ListStyleType(CounterStyle&& counterStyle)
         : m_type { Type::CounterStyle }
-        , m_identifier { WTFMove(counterStyle.identifier.value) }
+        , m_identifier { WTF::move(counterStyle.identifier.value) }
     {
     }
 
     // <counter-style> specific constructors.
 
     ListStyleType(CSS::Keyword::Circle keyword)
+        : ListStyleType { CounterStyle { { nameString(keyword.value) } } }
+    {
+    }
+
+    ListStyleType(CSS::Keyword::Decimal keyword)
         : ListStyleType { CounterStyle { { nameString(keyword.value) } } }
     {
     }
@@ -79,6 +85,7 @@ struct ListStyleType {
 
     bool isCircle() const;
     bool isDisc() const;
+    bool isDecimal() const;
     bool isSquare() const;
 
     std::optional<CounterStyle> tryCounterStyle() const
@@ -135,6 +142,8 @@ private:
 // MARK: - Conversion
 
 template<> struct CSSValueConversion<ListStyleType> { auto operator()(BuilderState&, const CSSValue&) -> ListStyleType; };
+
+template<> struct CSSValueCreation<ListStyleType> { Ref<CSSValue> operator()(CSSValuePool&, const RenderStyle&, const ListStyleType&); };
 
 } // namespace Style
 } // namespace WebCore

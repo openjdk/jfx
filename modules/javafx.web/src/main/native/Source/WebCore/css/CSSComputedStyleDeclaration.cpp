@@ -32,10 +32,11 @@
 #include "CSSValuePool.h"
 #include "ComposedTreeAncestorIterator.h"
 #include "DeprecatedCSSOMValue.h"
+#include "NodeDocument.h"
 #include "NodeInlines.h"
 #include "RenderBox.h"
 #include "RenderBoxModelObject.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "Settings.h"
 #include "ShorthandSerializer.h"
 #include "StylePropertiesInlines.h"
@@ -45,7 +46,7 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(CSSComputedStyleDeclaration);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(CSSComputedStyleDeclaration);
 
 CSSComputedStyleDeclaration::CSSComputedStyleDeclaration(Element& element, AllowVisited allowVisited)
     : m_element(element)
@@ -169,7 +170,7 @@ CSSRule* CSSComputedStyleDeclaration::parentRule() const
         return nullptr;
 }
 
-CSSRule* CSSComputedStyleDeclaration::cssRules() const
+CSSRuleList* CSSComputedStyleDeclaration::cssRules() const
 {
     return nullptr;
 }

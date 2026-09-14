@@ -29,7 +29,7 @@
 namespace WebCore {
 
 class SVGImageElement final : public SVGGraphicsElement, public SVGURIReference {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGImageElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGImageElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGImageElement);
 public:
     static Ref<SVGImageElement> create(const QualifiedName&, Document&);
@@ -79,7 +79,7 @@ private:
     Ref<SVGAnimatedLength> m_width { SVGAnimatedLength::create(this, SVGLengthMode::Width) };
     Ref<SVGAnimatedLength> m_height { SVGAnimatedLength::create(this, SVGLengthMode::Height) };
     Ref<SVGAnimatedPreserveAspectRatio> m_preserveAspectRatio { SVGAnimatedPreserveAspectRatio::create(this) };
-    SVGImageLoader m_imageLoader;
+    const UniqueRef<SVGImageLoader> m_imageLoader;
 };
 
 } // namespace WebCore

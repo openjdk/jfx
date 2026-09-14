@@ -62,7 +62,7 @@ private:
     void createTextRenderer(Text&, const Style::TextUpdate*);
     void updateElementRenderer(Element&, const Style::ElementUpdate&);
     void updateSVGRenderer(Element&);
-    void updateRendererStyle(RenderElement&, RenderStyle&&, StyleDifference);
+    void updateRendererStyle(RenderElement&, RenderStyle&&, Style::DifferenceResult);
     void updateRenderViewStyle();
     void createRenderer(Element&, RenderStyle&&);
     void updateBeforeDescendants(Element&, const Style::ElementUpdate*);

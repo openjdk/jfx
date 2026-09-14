@@ -22,6 +22,7 @@
 
 #include "config.h"
 #include "RenderSVGForeignObject.h"
+#include "RenderObjectNode.h"
 
 #include "GraphicsContext.h"
 #include "HitTestResult.h"
@@ -40,10 +41,10 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderSVGForeignObject);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderSVGForeignObject);
 
 RenderSVGForeignObject::RenderSVGForeignObject(SVGForeignObjectElement& element, RenderStyle&& style)
-    : RenderSVGBlock(Type::SVGForeignObject, element, WTFMove(style))
+    : RenderSVGBlock(Type::SVGForeignObject, element, WTF::move(style))
 {
     ASSERT(isRenderSVGForeignObject());
 }
@@ -130,7 +131,7 @@ void RenderSVGForeignObject::updateFromStyle()
         setHasNonVisibleOverflow();
 }
 
-void RenderSVGForeignObject::applyTransform(TransformationMatrix& transform, const RenderStyle& style, const FloatRect& boundingBox, OptionSet<RenderStyle::TransformOperationOption> options) const
+void RenderSVGForeignObject::applyTransform(TransformationMatrix& transform, const RenderStyle& style, const FloatRect& boundingBox, OptionSet<Style::TransformResolverOption> options) const
 {
     applySVGTransform(transform, protectedForeignObjectElement(), style, boundingBox, std::nullopt, std::nullopt, options);
 }

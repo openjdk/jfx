@@ -53,7 +53,7 @@ void handleCalleeSaves(Code& code)
         }
     }
 
-    handleCalleeSaves(code, WTFMove(usedCalleeSaves));
+    handleCalleeSaves(code, WTF::move(usedCalleeSaves));
 }
 
 void handleCalleeSaves(Code& code, RegisterSetBuilder usedCalleeSaves)
@@ -83,7 +83,7 @@ void handleCalleeSaves(Code& code, RegisterSetBuilder usedCalleeSaves)
     ASSERT(calleeSaveRegisters.sizeOfAreaInBytes() == byteSize);
 
     code.setCalleeSaveRegisterAtOffsetList(
-        WTFMove(calleeSaveRegisters),
+        WTF::move(calleeSaveRegisters),
         code.addStackSlot(byteSize, StackSlotKind::Locked));
 }
 

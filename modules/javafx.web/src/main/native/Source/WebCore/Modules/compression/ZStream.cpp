@@ -84,8 +84,13 @@ ZStream::ZStream()
 ZStream::~ZStream()
 {
 #if !PLATFORM(JAVA) //extra lib dependency
-    if (m_isInitialized)
+    if (!m_isInitialized)
+        return;
+
+    if (m_operation == Operation::Compression)
         deflateEnd(&m_stream);
+    else
+        inflateEnd(&m_stream);
 #endif
 }
 

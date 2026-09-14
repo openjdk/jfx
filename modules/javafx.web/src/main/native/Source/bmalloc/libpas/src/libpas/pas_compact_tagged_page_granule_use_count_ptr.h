@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2020 Apple Inc. All rights reserved.
+ * Copyright (c) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -29,6 +29,8 @@
 #include "pas_compact_tagged_ptr.h"
 #include "pas_page_granule_use_count.h"
 
+#if LIBPAS_ENABLED
+
 PAS_BEGIN_EXTERN_C;
 
 PAS_DEFINE_COMPACT_TAGGED_PTR(pas_page_granule_use_count*,
@@ -36,5 +38,5 @@ PAS_DEFINE_COMPACT_TAGGED_PTR(pas_page_granule_use_count*,
 
 PAS_END_EXTERN_C;
 
+#endif /* LIBPAS_ENABLED */
 #endif /* PAS_COMPACT_TAGGED_PAGE_GRANULE_USE_COUNT_PTR_H */
-

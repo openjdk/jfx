@@ -81,16 +81,16 @@ bool isSpecialNode(const HTMLStackItem&);
 inline HTMLStackItem::HTMLStackItem(Ref<Element>&& element, AtomHTMLToken&& token)
     : m_elementName(element->elementName())
     , m_namespace(element->nodeNamespace())
-    , m_node(WTFMove(element))
-    , m_attributes(WTFMove(token.attributes()))
+    , m_node(WTF::move(element))
+    , m_attributes(WTF::move(token.attributes()))
 {
 }
 
 inline HTMLStackItem::HTMLStackItem(Ref<Element>&& element, Vector<Attribute>&& attributes)
     : m_elementName(element->elementName())
     , m_namespace(element->nodeNamespace())
-    , m_node(WTFMove(element))
-    , m_attributes(WTFMove(attributes))
+    , m_node(WTF::move(element))
+    , m_attributes(WTF::move(attributes))
 {
 }
 

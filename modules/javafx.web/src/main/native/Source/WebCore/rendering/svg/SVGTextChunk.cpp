@@ -23,11 +23,11 @@
 #include "SVGTextChunk.h"
 
 #include "RenderSVGInlineText.h"
-#include "RenderStyleInlines.h"
+#include "RenderStyle+GettersInlines.h"
 #include "SVGInlineTextBoxInlines.h"
-#include "SVGRenderStyle.h"
 #include "SVGTextContentElement.h"
 #include "SVGTextFragment.h"
+#include <ranges>
 
 namespace WebCore {
 
@@ -37,8 +37,7 @@ SVGTextChunk::SVGTextChunk(const Vector<InlineIterator::SVGTextBoxIterator>& lin
     ASSERT(limit <= lineLayoutBoxes.size());
 
     auto firstBox = lineLayoutBoxes[first];
-    const RenderStyle& style = firstBox->renderer().style();
-    const SVGRenderStyle& svgStyle = style.svgStyle();
+    auto& style = firstBox->renderer().style();
 
     if (style.writingMode().isBidiRTL())
         m_chunkStyle |= SVGTextChunk::RightToLeftText;
@@ -46,7 +45,7 @@ SVGTextChunk::SVGTextChunk(const Vector<InlineIterator::SVGTextBoxIterator>& lin
     if (style.writingMode().isVertical())
         m_chunkStyle |= SVGTextChunk::VerticalText;
 
-    switch (svgStyle.textAnchor()) {
+    switch (style.textAnchor()) {
     case TextAnchor::Start:
         break;
     case TextAnchor::Middle:
@@ -103,7 +102,7 @@ float SVGTextChunk::totalLength() const
         }
     }
 
-    for (auto& box : makeReversedRange(m_boxes)) {
+    for (auto& box : m_boxes | std::views::reverse) {
         if (box.fragments.size()) {
             lastFragment = &box.fragments.last();
             break;

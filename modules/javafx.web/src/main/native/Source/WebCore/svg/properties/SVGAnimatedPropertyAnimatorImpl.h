@@ -57,7 +57,7 @@ public:
 private:
     void animate(SVGElement& targetElement, float progress, unsigned repeatCount) final
     {
-        m_function.animate(targetElement, progress, repeatCount, m_animated->animVal()->value());
+        m_function.animate(targetElement, progress, repeatCount, m_animated->animVal().value());
     }
 };
 
@@ -145,7 +145,7 @@ public:
 private:
     void animate(SVGElement& targetElement, float progress, unsigned repeatCount) final
     {
-        m_function.animate(targetElement, progress, repeatCount, m_animated->animVal()->value());
+        m_function.animate(targetElement, progress, repeatCount, m_animated->animVal().value());
     }
 };
 
@@ -223,8 +223,8 @@ public:
 private:
     void animate(SVGElement& targetElement, float progress, unsigned repeatCount) final
     {
-        m_animated->animVal()->pathByteStreamWillChange();
-        m_function.animate(targetElement, progress, repeatCount, m_animated->animVal()->pathByteStream());
+        m_animated->animVal().pathByteStreamWillChange();
+        m_function.animate(targetElement, progress, repeatCount, m_animated->animVal().pathByteStream());
     }
 };
 
@@ -282,7 +282,7 @@ public:
 private:
     void animate(SVGElement& targetElement, float progress, unsigned repeatCount) final
     {
-        SVGPreserveAspectRatioValue& animated = m_animated->animVal()->value();
+        SVGPreserveAspectRatioValue& animated = m_animated->animVal().value();
         m_function.animate(targetElement, progress, repeatCount, animated);
     }
 };
@@ -302,7 +302,7 @@ public:
 private:
     void animate(SVGElement& targetElement, float progress, unsigned repeatCount) final
     {
-        m_function.animate(targetElement, progress, repeatCount, m_animated->animVal()->value());
+        m_function.animate(targetElement, progress, repeatCount, m_animated->animVal().value());
     }
 };
 

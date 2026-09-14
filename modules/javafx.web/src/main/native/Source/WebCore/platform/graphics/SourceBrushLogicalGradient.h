@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "Gradient.h"
+#include <WebCore/Gradient.h>
 
 namespace WebCore {
 

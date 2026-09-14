@@ -29,12 +29,8 @@
 
 #include "pas_segregated_partial_view.h"
 
-#include "pas_epoch.h"
 #include "pas_immortal_heap.h"
-#include "pas_segregated_page_inlines.h"
-#include "pas_segregated_partial_view_inlines.h"
 #include "pas_segregated_shared_page_directory.h"
-#include "pas_segregated_shared_view_inlines.h"
 #include "pas_shared_handle_or_page_boundary_inlines.h"
 
 size_t pas_segregated_partial_view_count = 0;

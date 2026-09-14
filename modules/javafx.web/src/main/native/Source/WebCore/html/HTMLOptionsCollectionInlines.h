@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2023-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "CachedHTMLCollectionInlines.h"
-#include "ElementAncestorIteratorInlines.h"
-#include "HTMLOptionsCollection.h"
+#include <WebCore/CachedHTMLCollectionInlines.h>
+#include <WebCore/ElementAncestorIteratorInlines.h>
+#include <WebCore/HTMLOptionsCollection.h>
 
 namespace WebCore {
 
@@ -43,14 +43,8 @@ inline const HTMLSelectElement& HTMLOptionsCollection::selectElement() const
 
 inline bool HTMLOptionsCollection::elementMatches(Element& element) const
 {
-    if (!element.hasTagName(HTMLNames::optionTag))
-        return false;
-
-    if (element.parentNode() == &selectElement())
-        return true;
-
-    ASSERT(element.parentNode());
-    return element.parentNode()->hasTagName(HTMLNames::optgroupTag) && element.parentNode()->parentNode() == &selectElement();
+    auto* optionElement = dynamicDowncast<HTMLOptionElement>(element);
+    return optionElement && optionElement->ownerSelectElement() == &ownerNode();
 }
 
-}
+} // namespace WebCore

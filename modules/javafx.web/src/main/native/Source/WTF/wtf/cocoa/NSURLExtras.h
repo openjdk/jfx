@@ -28,6 +28,8 @@
 
 #pragma once
 
+#ifdef __OBJC__
+
 #import <Foundation/Foundation.h>
 
 namespace WTF {
@@ -46,3 +48,5 @@ WTF_EXPORT_PRIVATE NSURL *URLWithUserTypedStringDeprecated(NSString *);
 WTF_EXPORT_PRIVATE BOOL isUserVisibleURL(NSString *);
 
 } // namespace WTF
+
+#endif // __OBJC__

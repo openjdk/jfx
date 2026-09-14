@@ -26,6 +26,7 @@
 #include "config.h"
 #include "InternalObserverDrop.h"
 
+#include "ContextDestructionObserverInlines.h"
 #include "InternalObserver.h"
 #include "Observable.h"
 #include "ScriptExecutionContext.h"

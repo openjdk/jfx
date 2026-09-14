@@ -30,7 +30,7 @@ namespace WebCore {
 class SVGComponentTransferFunctionElement;
 
 class SVGFEComponentTransferElement final : public SVGFilterPrimitiveStandardAttributes {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(SVGFEComponentTransferElement);
+    WTF_MAKE_TZONE_ALLOCATED(SVGFEComponentTransferElement);
     WTF_OVERRIDE_DELETE_FOR_CHECKED_PTR(SVGFEComponentTransferElement);
 public:
     static Ref<SVGFEComponentTransferElement> create(const QualifiedName&, Document&);

@@ -29,9 +29,9 @@
 
 #pragma once
 
-#include "FloatRoundedRect.h"
-#include "LayoutShape.h"
-#include "RenderStyleConstants.h"
+#include <WebCore/FloatRoundedRect.h>
+#include <WebCore/LayoutShape.h>
+#include <WebCore/RenderStyleConstants.h>
 
 namespace WebCore {
 

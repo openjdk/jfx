@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "ReportBody.h"
-#include "SecurityPolicyViolationEvent.h"
-#include "ViolationReportType.h"
+#include <WebCore/ReportBody.h>
+#include <WebCore/SecurityPolicyViolationEvent.h>
+#include <WebCore/ViolationReportType.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
@@ -38,7 +38,7 @@ struct CSPInfo;
 struct SecurityPolicyViolationEventInit;
 
 class CSPViolationReportBody final : public ReportBody {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSPViolationReportBody);
+    WTF_MAKE_TZONE_ALLOCATED(CSPViolationReportBody);
 public:
     using Init = SecurityPolicyViolationEventInit;
 

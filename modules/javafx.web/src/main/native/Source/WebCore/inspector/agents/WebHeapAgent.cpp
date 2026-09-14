@@ -73,7 +73,7 @@ void SendGarbageCollectionEventsTask::addGarbageCollection(GarbageCollectionData
 {
     {
         Locker locker { m_collectionsLock };
-        m_collections.append(WTFMove(collection));
+        m_collections.append(WTF::move(collection));
     }
 
     if (!m_timer.isActive())
@@ -99,7 +99,7 @@ void SendGarbageCollectionEventsTask::timerFired()
         m_collections.swap(collectionsToSend);
     }
 
-    m_agent.dispatchGarbageCollectionEventsAfterDelay(WTFMove(collectionsToSend));
+    m_agent.dispatchGarbageCollectionEventsAfterDelay(WTF::move(collectionsToSend));
 }
 
 WebHeapAgent::WebHeapAgent(WebAgentContext& context)
@@ -115,34 +115,23 @@ void WebHeapAgent::didCreateFrontendAndBackend()
 {
     InspectorHeapAgent::didCreateFrontendAndBackend();
 
-    ASSERT(m_instrumentingAgents.persistentWebHeapAgent() != this);
-    m_instrumentingAgents.setPersistentWebHeapAgent(this);
+    Ref agents = m_instrumentingAgents.get();
+    ASSERT(agents->persistentWebHeapAgent() != this);
+    agents->setPersistentWebHeapAgent(this);
 }
 
 void WebHeapAgent::willDestroyFrontendAndBackend(DisconnectReason reason)
 {
     InspectorHeapAgent::willDestroyFrontendAndBackend(reason);
 
-    ASSERT(m_instrumentingAgents.persistentWebHeapAgent() == this);
-    m_instrumentingAgents.setPersistentWebHeapAgent(nullptr);
-}
-
-Inspector::Protocol::ErrorStringOr<void> WebHeapAgent::enable()
-{
-    auto result = InspectorHeapAgent::enable();
-
-    if (auto* consoleAgent = m_instrumentingAgents.webConsoleAgent())
-        consoleAgent->setHeapAgent(this);
-
-    return result;
+    Ref agents = m_instrumentingAgents.get();
+    ASSERT(agents->persistentWebHeapAgent() == this);
+    agents->setPersistentWebHeapAgent(nullptr);
 }
 
 Inspector::Protocol::ErrorStringOr<void> WebHeapAgent::disable()
 {
     m_sendGarbageCollectionEventsTask->reset();
-
-    if (auto* consoleAgent = m_instrumentingAgents.webConsoleAgent())
-        consoleAgent->setHeapAgent(nullptr);
 
     return InspectorHeapAgent::disable();
 }
@@ -157,7 +146,7 @@ void WebHeapAgent::dispatchGarbageCollectedEvent(Inspector::Protocol::Heap::Garb
     // VM as the inspected page.
 
     GarbageCollectionData data = {type, startTime, endTime};
-    m_sendGarbageCollectionEventsTask->addGarbageCollection(WTFMove(data));
+    m_sendGarbageCollectionEventsTask->addGarbageCollection(WTF::move(data));
 }
 
 void WebHeapAgent::dispatchGarbageCollectionEventsAfterDelay(Vector<GarbageCollectionData>&& collections)

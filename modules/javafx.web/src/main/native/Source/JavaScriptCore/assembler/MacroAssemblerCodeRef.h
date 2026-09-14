@@ -25,8 +25,8 @@
 
 #pragma once
 
-#include "ExecutableMemoryHandle.h"
-#include "JSCPtrTag.h"
+#include <JavaScriptCore/ExecutableMemoryHandle.h>
+#include <JavaScriptCore/JSCPtrTag.h>
 #include <wtf/CodePtr.h>
 #include <wtf/DataLog.h>
 #include <wtf/PrintStream.h>
@@ -82,7 +82,7 @@ public:
 
     MacroAssemblerCodeRef(Ref<ExecutableMemoryHandle>&& executableMemory)
         : m_codePtr(executableMemory->start().retaggedPtr<tag>())
-        , m_executableMemory(WTFMove(executableMemory))
+        , m_executableMemory(WTF::move(executableMemory))
     {
         ASSERT(m_executableMemory->start());
         ASSERT(m_codePtr);

@@ -43,10 +43,10 @@
 
 #pragma once
 
-#include "Length.h"
 #include "RenderStyleConstants.h"
 #include "Timer.h"
-#include <wtf/CheckedPtr.h>
+#include <wtf/CheckedRef.h>
+#include <wtf/InlineWeakRef.h>
 #include <wtf/TZoneMalloc.h>
 
 namespace WebCore {
@@ -72,7 +72,6 @@ public:
     void updateMarqueePosition();
 
 private:
-
     int speed() const { return m_speed; }
     int marqueeSpeed() const;
 
@@ -84,14 +83,15 @@ private:
 
     void timerFired();
 
-    const CheckedPtr<RenderLayer> m_layer;
+    CheckedRef<RenderLayer> protectedLayer() { return m_layer.get(); }
+
+    InlineWeakRef<RenderLayer> m_layer;
     Timer m_timer;
     int m_currentLoop { 0 };
     int m_totalLoops { 0 };
     int m_start { 0 };
     int m_end { 0 };
     int m_speed { 0 };
-    Length m_height;
     MarqueeDirection m_direction { MarqueeDirection::Auto };
     bool m_reset { false };
     bool m_suspended { false };

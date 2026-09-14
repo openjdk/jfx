@@ -164,6 +164,7 @@ if (APPLE)
     set(WebKitLegacy_EXTERNAL_DEP "${WEBCORE_DIR}/mapfile-macosx")
 elseif (UNIX)
     set_target_properties(WebKitLegacy PROPERTIES LINK_FLAGS "-Xlinker -version-script=${WEBCORE_DIR}/mapfile-vers -Wl,--no-undefined")
+    set_property(TARGET WebKitLegacy APPEND PROPERTY LINK_DEPENDS "${WEBCORE_DIR}/mapfile-vers")
     set(WebKitLegacy_EXTERNAL_DEP "${WEBCORE_DIR}/mapfile-vers")
 elseif (WIN32)
     # Adds version information to jfxwebkit.dll created by Gradle build, see JDK-8166265

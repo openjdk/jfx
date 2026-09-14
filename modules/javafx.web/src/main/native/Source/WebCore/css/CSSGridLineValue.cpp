@@ -50,15 +50,15 @@ String CSSGridLineValue::customCSSText(const CSS::SerializationContext& context)
 
 CSSGridLineValue::CSSGridLineValue(RefPtr<CSSPrimitiveValue>&& spanValue, RefPtr<CSSPrimitiveValue>&& numericValue, RefPtr<CSSPrimitiveValue>&& gridLineName)
     : CSSValue(ClassType::GridLineValue)
-    , m_spanValue(WTFMove(spanValue))
-    , m_numericValue(WTFMove(numericValue))
-    , m_gridLineName(WTFMove(gridLineName))
+    , m_spanValue(WTF::move(spanValue))
+    , m_numericValue(WTF::move(numericValue))
+    , m_gridLineName(WTF::move(gridLineName))
 {
 }
 
 Ref<CSSGridLineValue> CSSGridLineValue::create(RefPtr<CSSPrimitiveValue>&& spanValue, RefPtr<CSSPrimitiveValue>&& numericValue, RefPtr<CSSPrimitiveValue>&& gridLineName)
 {
-    return adoptRef(*new CSSGridLineValue(WTFMove(spanValue), WTFMove(numericValue), WTFMove(gridLineName)));
+    return adoptRef(*new CSSGridLineValue(WTF::move(spanValue), WTF::move(numericValue), WTF::move(gridLineName)));
 }
 
 bool CSSGridLineValue::equals(const CSSGridLineValue& other) const

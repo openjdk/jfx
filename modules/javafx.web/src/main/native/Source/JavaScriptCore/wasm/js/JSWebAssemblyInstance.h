@@ -25,23 +25,29 @@
 
 #pragma once
 
+#include <wtf/Platform.h>
+
 #if ENABLE(WEBASSEMBLY)
 
-#include "CallLinkInfo.h"
-#include "JSDestructibleObject.h"
-#include "JSWebAssemblyGlobal.h"
-#include "JSWebAssemblyMemory.h"
-#include "JSWebAssemblyTable.h"
-#include "WasmCalleeGroup.h"
-#include "WasmCreationMode.h"
-#include "WasmFormat.h"
-#include "WasmGlobal.h"
-#include "WasmMemory.h"
-#include "WasmModule.h"
-#include "WasmModuleInformation.h"
-#include "WasmTable.h"
-#include "WebAssemblyFunction.h"
-#include "WriteBarrier.h"
+#include <JavaScriptCore/CallLinkInfo.h>
+#include <JavaScriptCore/JSDestructibleObject.h>
+#include <JavaScriptCore/JSWebAssemblyGlobal.h>
+#include <JavaScriptCore/JSWebAssemblyMemory.h>
+#include <JavaScriptCore/JSWebAssemblyTable.h>
+#include <JavaScriptCore/StackManager.h>
+#include <JavaScriptCore/WasmCalleeGroup.h>
+#include <JavaScriptCore/WasmCreationMode.h>
+#include <JavaScriptCore/WasmFormat.h>
+#include <JavaScriptCore/WasmGlobal.h>
+#include <JavaScriptCore/WasmInstanceAnchor.h>
+#include <JavaScriptCore/WasmMemory.h>
+#include <JavaScriptCore/WasmModule.h>
+#include <JavaScriptCore/WasmModuleInformation.h>
+#include <JavaScriptCore/WasmTable.h>
+#include <JavaScriptCore/WebAssemblyBuiltin.h>
+#include <JavaScriptCore/WebAssemblyFunction.h>
+#include <JavaScriptCore/WebAssemblyGCStructure.h>
+#include <JavaScriptCore/WriteBarrier.h>
 #include <wtf/BitVector.h>
 #include <wtf/FixedVector.h>
 #include <wtf/Ref.h>
@@ -55,11 +61,16 @@ namespace JSC {
 class JSModuleNamespaceObject;
 class JSWebAssemblyArray;
 class JSWebAssemblyModule;
-class WebAssemblyGCStructure;
 class WebAssemblyModuleRecord;
 
+namespace Wasm {
+
+class BaselineData;
+
+}
+
 // The layout of a JSWebAssemblyInstance is
-//     { struct JSWebAssemblyInstance }[ WasmOrJSImportableFunctionCallLinkInfo ][ Wasm::Table* ][ Global::Value ][ WebAssemblyGCStructure* ][ Allocator* ]
+//     { struct JSWebAssemblyInstance }[ WasmOrJSImportableFunctionCallLinkInfo ][ Wasm::Table* ][ Global::Value ][ Wasm::BaselineData* ][ WebAssemblyGCStructure* ][ Allocator* ]
 // in a compound TrailingArray-like format.
 class JSWebAssemblyInstance final : public JSNonFinalObject {
     friend class LLIntOffsetsExtractor;
@@ -93,10 +104,20 @@ public:
     JSWebAssemblyMemory* memory() const { return m_memory.get(); }
     void setMemory(VM& vm, JSWebAssemblyMemory* value)
     {
+        RELEASE_ASSERT(!m_wasmMemory);
         m_memory.set(vm, this, value);
-        memory()->memory().registerInstance(*this);
-        updateCachedMemory();
+        WTF::storeStoreFence();
+        m_wasmMemory = value->memory();
+        m_wasmMemory->registerInstance(*this);
     }
+
+    void setDummyMemory(VM& vm, JSWebAssemblyMemory* value)
+    {
+        // Do not set m_wasmMemory.
+        RELEASE_ASSERT(!m_wasmMemory);
+        m_memory.set(vm, this, value);
+    }
+
     MemoryMode memoryMode() const { return memory()->memory().mode(); }
 
     JSWebAssemblyTable* jsTable(unsigned i) { return m_tables[i].get(); }
@@ -116,7 +137,7 @@ public:
     }
 
     JSWebAssemblyModule* jsModule() const { return m_jsModule.get(); }
-    const Wasm::ModuleInformation& moduleInformation() const { return m_module->moduleInformation(); }
+    const Wasm::ModuleInformation& moduleInformation() const { return m_moduleInformation.get(); }
 
     void clearJSCallICs(VM&);
     void finalizeUnconditionally(VM&, CollectionScope);
@@ -126,12 +147,9 @@ public:
     static constexpr ptrdiff_t offsetOfVM() { return OBJECT_OFFSETOF(JSWebAssemblyInstance, m_vm); }
     static constexpr ptrdiff_t offsetOfModuleRecord() { return OBJECT_OFFSETOF(JSWebAssemblyInstance, m_moduleRecord); }
 
-
     using FunctionWrapperMap = UncheckedKeyHashMap<uint32_t, WriteBarrier<Unknown>, IntHash<uint32_t>, WTF::UnsignedWithZeroKeyHashTraits<uint32_t>>;
 
-    static constexpr ptrdiff_t offsetOfSoftStackLimit() { return OBJECT_OFFSETOF(JSWebAssemblyInstance, m_softStackLimit); }
-
-    void updateSoftStackLimit(void* softStackLimit) { m_softStackLimit = softStackLimit; }
+    static constexpr ptrdiff_t offsetOfSoftStackLimit() { return OBJECT_OFFSETOF(JSWebAssemblyInstance, m_stackMirror) + StackManager::Mirror::offsetOfSoftStackLimit(); }
 
     Wasm::Module& module() const { return m_module.get(); }
     SourceTaintedOrigin taintedness() const { return m_sourceProvider->sourceTaintedOrigin(); }
@@ -157,16 +175,17 @@ public:
 
     void elemDrop(uint32_t elementIndex);
 
-    bool memoryInit(uint32_t dstAddress, uint32_t srcAddress, uint32_t length, uint32_t dataSegmentIndex);
+    bool memoryInit(uint64_t dstAddress, uint32_t srcAddress, uint32_t length, uint32_t dataSegmentIndex);
 
     void dataDrop(uint32_t dataSegmentIndex);
 
     void* cachedMemory() const { return m_cachedMemory.getMayBeNull(); }
     size_t cachedBoundsCheckingSize() const { return m_cachedBoundsCheckingSize; }
+    size_t cachedMemorySize() const { return m_cachedMemorySize; }
 
     void updateCachedMemory()
     {
-        if (m_memory) {
+        if (m_wasmMemory) {
             // Note: In MemoryMode::BoundsChecking, mappedCapacity() == size().
             // We assert this in the constructor of MemoryHandle.
 #if CPU(ARM)
@@ -176,16 +195,25 @@ public:
             // the actual size here, but this means we cannot grow the shared
             // memory safely in case it's used by multiple threads. Once the
             // signal handler are available, m_cachedBoundsCheckingSize should
-            // be set to use memory()->mappedCapacity() like other platforms,
+            // be set to use m_wasmMemory->mappedCapacity() like other platforms,
             // and at that point growing the shared memory will be safe.
-            m_cachedBoundsCheckingSize = memory()->memory().size();
+            m_cachedBoundsCheckingSize = m_wasmMemory->size();
 #else
-            m_cachedBoundsCheckingSize = memory()->memory().mappedCapacity();
+            m_cachedBoundsCheckingSize = m_wasmMemory->mappedCapacity();
 #endif
-            m_cachedMemory = CagedPtr<Gigacage::Primitive, void>(memory()->memory().basePointer());
-            ASSERT(memory()->memory().basePointer() == cachedMemory());
+            m_cachedMemorySize = m_wasmMemory->size();
+            m_cachedMemory = CagedPtr<Gigacage::Primitive, void>(m_wasmMemory->basePointer());
+            m_cachedIsMemory64 = moduleInformation().memory.isMemory64();
+            ASSERT(m_wasmMemory->basePointer() == cachedMemory());
         }
     }
+
+    uint32_t cachedTable0Length() const { return m_cachedTable0Length; }
+    Wasm::FuncRefTable::Function* cachedTable0Buffer() const { return m_cachedTable0Buffer; }
+
+    bool cachedIsMemory64() const { return m_cachedIsMemory64; }
+
+    void updateCachedTable0();
 
     int32_t loadI32Global(unsigned i) const
     {
@@ -245,6 +273,7 @@ public:
     JSValue getFunctionWrapper(unsigned) const;
     typename FunctionWrapperMap::ValuesConstIteratorRange functionWrappers() const { return m_functionWrappers.values(); }
     void setFunctionWrapper(unsigned, JSValue);
+    void setBuiltinCalleeBits(uint32_t builtinID, CalleeBits calleeBits) { m_builtinCalleeBits[builtinID] = calleeBits; }
 
     Wasm::Global* getGlobalBinding(unsigned i)
     {
@@ -255,38 +284,109 @@ public:
         return &Wasm::Global::fromBinding(*pointer);
     }
 
-    static constexpr ptrdiff_t offsetOfGlobals() { return OBJECT_OFFSETOF(JSWebAssemblyInstance, m_globals); }
     static constexpr ptrdiff_t offsetOfCachedMemory() { return OBJECT_OFFSETOF(JSWebAssemblyInstance, m_cachedMemory); }
     static constexpr ptrdiff_t offsetOfCachedBoundsCheckingSize() { return OBJECT_OFFSETOF(JSWebAssemblyInstance, m_cachedBoundsCheckingSize); }
+    static constexpr ptrdiff_t offsetOfCachedMemorySize() { return OBJECT_OFFSETOF(JSWebAssemblyInstance, m_cachedMemorySize); }
+    static constexpr ptrdiff_t offsetOfCachedTable0Buffer() { return OBJECT_OFFSETOF(JSWebAssemblyInstance, m_cachedTable0Buffer); }
+    static constexpr ptrdiff_t offsetOfCachedTable0Length() { return OBJECT_OFFSETOF(JSWebAssemblyInstance, m_cachedTable0Length); }
     static constexpr ptrdiff_t offsetOfTemporaryCallFrame() { return OBJECT_OFFSETOF(JSWebAssemblyInstance, m_temporaryCallFrame); }
+    static constexpr ptrdiff_t offsetOfBuiltinCalleeBits() { return OBJECT_OFFSETOF(JSWebAssemblyInstance, m_builtinCalleeBits); }
+    static constexpr ptrdiff_t offsetOfCachedIsMemory64() { return OBJECT_OFFSETOF(JSWebAssemblyInstance, m_cachedIsMemory64); }
 
     // Tail accessors.
-    static constexpr size_t offsetOfTail() { return WTF::roundUpToMultipleOf<sizeof(uint64_t)>(sizeof(JSWebAssemblyInstance)); }
+    static_assert(sizeof(WasmOrJSImportableFunctionCallLinkInfo) == WTF::roundUpToMultipleOf<sizeof(uint64_t)>(sizeof(WasmOrJSImportableFunctionCallLinkInfo)), "We rely on this for the alignment to be correct");
+    static constexpr ptrdiff_t offsetOfImportFunctionInfo(unsigned index)
+    {
+        return WTF::roundUpToMultipleOf<alignof(WasmOrJSImportableFunctionCallLinkInfo)>(sizeof(JSWebAssemblyInstance)) + sizeof(WasmOrJSImportableFunctionCallLinkInfo) * index;
+    }
+
+    static ptrdiff_t offsetOfImportFunctionInfo(const Wasm::ModuleInformation&, unsigned index)
+    {
+        return offsetOfImportFunctionInfo(index);
+    }
+
+    static ptrdiff_t offsetOfTable(const Wasm::ModuleInformation& info, unsigned index)
+    {
+        return roundUpToMultipleOf<alignof(RefPtr<Wasm::Table>)>(offsetOfImportFunctionInfo(info, info.importFunctionCount())) + sizeof(RefPtr<Wasm::Table>) * index;
+    }
+
+    static ptrdiff_t offsetOfGlobal(const Wasm::ModuleInformation& info, unsigned index)
+    {
+        return roundUpToMultipleOf<alignof(Wasm::Global::Value)>(offsetOfTable(info, info.tableCount())) + sizeof(Wasm::Global::Value) * index;
+    }
+
+    static ptrdiff_t offsetOfBaselineData(const Wasm::ModuleInformation& info, unsigned index)
+    {
+        return roundUpToMultipleOf<alignof(RefPtr<Wasm::BaselineData>)>(offsetOfGlobal(info, info.globalCount())) + sizeof(RefPtr<Wasm::BaselineData>) * index;
+    }
+
+    static ptrdiff_t offsetOfGCObjectStructureID(const Wasm::ModuleInformation& info, unsigned index)
+    {
+        return roundUpToMultipleOf<alignof(WriteBarrierStructureID)>(offsetOfBaselineData(info, info.internalFunctionCount())) + sizeof(WriteBarrierStructureID) * index;
+    }
+
+    static ptrdiff_t offsetOfAllocatorForGCObject(const Wasm::ModuleInformation& info, unsigned index)
+    {
+        return roundUpToMultipleOf<alignof(Allocator)>(offsetOfGCObjectStructureID(info, info.typeCount())) + sizeof(Allocator) * index;
+    }
+
+    static size_t offsetOfTargetInstance(size_t importFunctionNum) { return offsetOfImportFunctionInfo(importFunctionNum) + OBJECT_OFFSETOF(Wasm::WasmOrJSImportableFunctionCallLinkInfo, targetInstance); }
+    static size_t offsetOfEntrypointLoadLocation(size_t importFunctionNum) { return offsetOfImportFunctionInfo(importFunctionNum) + OBJECT_OFFSETOF(Wasm::WasmOrJSImportableFunctionCallLinkInfo, entrypointLoadLocation); }
+    static size_t offsetOfBoxedCallee(size_t importFunctionNum) { return offsetOfImportFunctionInfo(importFunctionNum) + OBJECT_OFFSETOF(Wasm::WasmOrJSImportableFunctionCallLinkInfo, boxedCallee); }
+    static size_t offsetOfImportFunctionStub(size_t importFunctionNum) { return offsetOfImportFunctionInfo(importFunctionNum) + OBJECT_OFFSETOF(WasmOrJSImportableFunctionCallLinkInfo, importFunctionStub); }
+    static size_t offsetOfImportFunction(size_t importFunctionNum) { return offsetOfImportFunctionInfo(importFunctionNum) + OBJECT_OFFSETOF(WasmOrJSImportableFunctionCallLinkInfo, importFunction); }
+    static size_t offsetOfCallLinkInfo(size_t importFunctionNum) { return offsetOfImportFunctionInfo(importFunctionNum) + WasmOrJSImportableFunctionCallLinkInfo::offsetOfCallLinkInfo(); }
+
+    std::span<WasmOrJSImportableFunctionCallLinkInfo> importFunctionInfos()
+    {
+        return std::span { std::bit_cast<WasmOrJSImportableFunctionCallLinkInfo*>(std::bit_cast<uint8_t*>(this) + offsetOfImportFunctionInfo(0)), m_moduleInformation->importFunctionCount() };
+    }
+
+    std::span<RefPtr<Wasm::Table>> tables()
+    {
+        return std::span { std::bit_cast<RefPtr<Wasm::Table>*>(std::bit_cast<uint8_t*>(this) + offsetOfTable(m_moduleInformation, 0)), m_moduleInformation->tableCount() };
+    }
+
+    std::span<Wasm::Global::Value> globals()
+    {
+        return std::span { std::bit_cast<Wasm::Global::Value*>(std::bit_cast<uint8_t*>(this) + offsetOfGlobal(m_moduleInformation, 0)), m_moduleInformation->globalCount() };
+    }
+
+    std::span<RefPtr<Wasm::BaselineData>> baselineDatas()
+    {
+        return std::span { std::bit_cast<RefPtr<Wasm::BaselineData>*>(std::bit_cast<uint8_t*>(this) + offsetOfBaselineData(m_moduleInformation, 0)), m_moduleInformation->internalFunctionCount() };
+    }
+
+    std::span<WriteBarrierStructureID> gcObjectStructureIDs()
+    {
+        return std::span { std::bit_cast<WriteBarrierStructureID*>(std::bit_cast<uint8_t*>(this) + offsetOfGCObjectStructureID(m_moduleInformation, 0)), m_moduleInformation->typeCount() };
+    }
+
+    std::span<Allocator, MarkedSpace::numSizeClasses> allocators()
+    {
+        return unsafeMakeSpan<Allocator, MarkedSpace::numSizeClasses>(std::bit_cast<Allocator*>(std::bit_cast<uint8_t*>(this) + offsetOfAllocatorForGCObject(m_moduleInformation, 0)), MarkedSpace::numSizeClasses);
+    }
 
     unsigned numImportFunctions() const { return m_numImportFunctions; }
     WasmOrJSImportableFunctionCallLinkInfo* importFunctionInfo(size_t importFunctionNum)
     {
-        RELEASE_ASSERT(importFunctionNum < m_numImportFunctions);
-        return &std::bit_cast<WasmOrJSImportableFunctionCallLinkInfo*>(std::bit_cast<char*>(this) + offsetOfTail())[importFunctionNum];
+        return &importFunctionInfos()[importFunctionNum];
     }
-    static size_t offsetOfTargetInstance(size_t importFunctionNum) { return offsetOfTail() + importFunctionNum * sizeof(WasmOrJSImportableFunctionCallLinkInfo) + OBJECT_OFFSETOF(Wasm::WasmOrJSImportableFunctionCallLinkInfo, targetInstance); }
-    static size_t offsetOfEntrypointLoadLocation(size_t importFunctionNum) { return offsetOfTail() + importFunctionNum * sizeof(WasmOrJSImportableFunctionCallLinkInfo) + OBJECT_OFFSETOF(Wasm::WasmOrJSImportableFunctionCallLinkInfo, entrypointLoadLocation); }
-    static size_t offsetOfBoxedWasmCalleeLoadLocation(size_t importFunctionNum) { return offsetOfTail() + importFunctionNum * sizeof(WasmOrJSImportableFunctionCallLinkInfo) + OBJECT_OFFSETOF(Wasm::WasmOrJSImportableFunctionCallLinkInfo, boxedWasmCalleeLoadLocation); }
-    static size_t offsetOfImportFunctionStub(size_t importFunctionNum) { return offsetOfTail() + importFunctionNum * sizeof(WasmOrJSImportableFunctionCallLinkInfo) + OBJECT_OFFSETOF(WasmOrJSImportableFunctionCallLinkInfo, importFunctionStub); }
-    static size_t offsetOfImportFunction(size_t importFunctionNum) { return offsetOfTail() + importFunctionNum * sizeof(WasmOrJSImportableFunctionCallLinkInfo) + OBJECT_OFFSETOF(WasmOrJSImportableFunctionCallLinkInfo, importFunction); }
-    static size_t offsetOfCallLinkInfo(size_t importFunctionNum) { return offsetOfTail() + importFunctionNum * sizeof(WasmOrJSImportableFunctionCallLinkInfo) + WasmOrJSImportableFunctionCallLinkInfo::offsetOfCallLinkInfo(); }
     WriteBarrier<JSObject>& importFunction(unsigned importFunctionNum) { return importFunctionInfo(importFunctionNum)->importFunction; }
 
-    static_assert(sizeof(WasmOrJSImportableFunctionCallLinkInfo) == WTF::roundUpToMultipleOf<sizeof(uint64_t)>(sizeof(WasmOrJSImportableFunctionCallLinkInfo)), "We rely on this for the alignment to be correct");
-    static constexpr size_t offsetOfTablePtr(unsigned numImportFunctions, unsigned i) { return offsetOfTail() + sizeof(WasmOrJSImportableFunctionCallLinkInfo) * numImportFunctions + sizeof(Wasm::Table*) * i; }
-    static constexpr size_t offsetOfGlobalPtr(unsigned numImportFunctions, unsigned numTables, unsigned i) { return roundUpToMultipleOf<sizeof(Wasm::Global::Value)>(offsetOfTablePtr(numImportFunctions, numTables)) + sizeof(Wasm::Global::Value) * i; }
-    static constexpr size_t offsetOfGCObjectStructure(unsigned numImportFunctions, unsigned numTables, unsigned numGlobals, unsigned i) { return offsetOfGlobalPtr(numImportFunctions, numTables, numGlobals) + sizeof(WriteBarrier<WebAssemblyGCStructure>) * i; }
-    WriteBarrier<WebAssemblyGCStructure>& gcObjectStructure(unsigned numImportFunctions, unsigned numTables, unsigned numGlobals, unsigned i) { return *std::bit_cast<WriteBarrier<WebAssemblyGCStructure>*>(reinterpret_cast<char*>(this) + offsetOfGCObjectStructure(numImportFunctions, numTables, numGlobals, i)); }
-    WriteBarrier<WebAssemblyGCStructure>& gcObjectStructure(unsigned typeIndex) { return gcObjectStructure(numImportFunctions(), moduleInformation().tableCount(), moduleInformation().globalCount(), typeIndex); }
+    JSObject* getImportFunctionObject(unsigned importFunctionIndex, JSGlobalObject*);
 
-    static constexpr size_t offsetOfAllocatorForGCObject(unsigned numImportFunctions, unsigned numTables, unsigned numGlobals, unsigned numTypes, unsigned i) { return offsetOfGCObjectStructure(numImportFunctions, numTables, numGlobals, numTypes) + sizeof(Allocator) * i; }
-    Allocator& allocatorForGCObject(unsigned numImportFunctions, unsigned numTables, unsigned numGlobals, unsigned numTypes, unsigned i) { ASSERT(moduleInformation().hasGCObjectTypes()); return *std::bit_cast<Allocator*>(reinterpret_cast<char*>(this) + offsetOfAllocatorForGCObject(numImportFunctions, numTables, numGlobals, numTypes, i)); }
-    Allocator& allocatorForGCObject(unsigned sizeClassIndex) { return allocatorForGCObject(numImportFunctions(), moduleInformation().tableCount(), moduleInformation().globalCount(), moduleInformation().typeCount(), sizeClassIndex); }
+    RefPtr<Wasm::BaselineData>& baselineData(Wasm::FunctionCodeIndex index)
+    {
+        return baselineDatas()[index];
+    }
+    Wasm::BaselineData& ensureBaselineData(Wasm::FunctionCodeIndex);
+
+    WriteBarrierStructureID& gcObjectStructureID(unsigned index) { return gcObjectStructureIDs()[index]; }
+
+    WebAssemblyGCStructure* gcObjectStructure(unsigned typeIndex) { return jsCast<WebAssemblyGCStructure*>(gcObjectStructureID(typeIndex).get()); }
+
+    Allocator& allocatorForGCObject(unsigned index) { ASSERT(moduleInformation().hasGCObjectTypes()); return allocators()[index]; }
 
     const Wasm::Tag& tag(unsigned i) const { return *m_tags[i]; }
     void setTag(unsigned, Ref<const Wasm::Tag>&&);
@@ -297,10 +397,20 @@ public:
         m_temporaryCallFrame = callFrame;
     }
 
-    void* softStackLimit() const { return m_softStackLimit; }
+    void* softStackLimit() const { return m_stackMirror.softStackLimit(); }
 
-    void setFaultPC(void* pc) { m_faultPC = pc; };
+    void setFaultPC(Wasm::ExceptionType exception, void* pc)
+    {
+        m_exception = exception;
+        m_faultPC = pc;
+    }
+    Wasm::ExceptionType exception() const { return m_exception; }
     void* faultPC() const { return m_faultPC; }
+
+    void setDebugId(uint32_t id) { m_debugId = id; }
+    uint32_t debugId() const { return m_debugId; }
+
+    RefPtr<Wasm::InstanceAnchor> anchor() const { return m_anchor; }
 
 private:
     JSWebAssemblyInstance(VM&, Structure*, JSWebAssemblyModule*, WebAssemblyModuleRecord*, RefPtr<SourceProvider>&&);
@@ -315,12 +425,19 @@ private:
     WriteBarrier<WebAssemblyModuleRecord> m_moduleRecord;
     WriteBarrier<JSWebAssemblyMemory> m_memory;
     FixedVector<WriteBarrier<JSWebAssemblyTable>> m_tables;
-    void* m_softStackLimit { nullptr };
+    StackManager::Mirror m_stackMirror;
     CagedPtr<Gigacage::Primitive, void> m_cachedMemory;
     size_t m_cachedBoundsCheckingSize { 0 };
+    size_t m_cachedMemorySize { 0 };
+    Wasm::FuncRefTable::Function* m_cachedTable0Buffer { nullptr };
+    uint32_t m_cachedTable0Length { 0 };
     const Ref<Wasm::Module> m_module;
+    const Ref<const Wasm::ModuleInformation> m_moduleInformation;
+    RefPtr<Wasm::InstanceAnchor> m_anchor;
     RefPtr<SourceProvider> m_sourceProvider;
+    bool m_cachedIsMemory64 { false };
 
+    RefPtr<Wasm::Memory> m_wasmMemory;
     CallFrame* m_temporaryCallFrame { nullptr };
     Wasm::Global::Value* m_globals { nullptr };
     FunctionWrapperMap m_functionWrappers;
@@ -331,8 +448,12 @@ private:
     BitVector m_passiveElements;
     BitVector m_passiveDataSegments;
     FixedVector<RefPtr<const Wasm::Tag>> m_tags;
-    Vector<Ref<Wasm::WasmToJSCallee>> importCallees;
     void* m_faultPC { nullptr };
+    // Used by builtin trampolines to quickly fetch callee bits to store in the call frame.
+    // The actual callees are owned by builtins. Populated by WebAssemblyModuleRecord::initializeImports().
+    CalleeBits m_builtinCalleeBits[WASM_BUILTIN_COUNT];
+    Wasm::ExceptionType m_exception { Wasm::ExceptionType::Termination };
+    uint32_t m_debugId { 0 };
 };
 
 } // namespace JSC

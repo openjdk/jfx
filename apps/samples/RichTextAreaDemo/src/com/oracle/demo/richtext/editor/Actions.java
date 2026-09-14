@@ -35,6 +35,7 @@ package com.oracle.demo.richtext.editor;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.util.List;
 import java.util.Locale;
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
@@ -49,6 +50,7 @@ import javafx.scene.control.ButtonBar.ButtonData;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Dialog;
+import javafx.scene.control.Menu;
 import javafx.scene.control.MenuBar;
 import javafx.scene.input.DataFormat;
 import javafx.scene.input.KeyCombination;
@@ -62,10 +64,12 @@ import com.oracle.demo.richtext.editor.settings.EndKey;
 import com.oracle.demo.richtext.util.ExceptionDialog;
 import com.oracle.demo.richtext.util.FX;
 import com.oracle.demo.richtext.util.FxAction;
+import com.oracle.demo.richtext.util.Utils;
 import jfx.incubator.scene.control.richtext.LineNumberDecorator;
 import jfx.incubator.scene.control.richtext.RichTextArea;
 import jfx.incubator.scene.control.richtext.SelectionSegment;
 import jfx.incubator.scene.control.richtext.TextPos;
+import jfx.incubator.scene.control.richtext.model.EmbeddedImage;
 import jfx.incubator.scene.control.richtext.model.RichTextFormatHandler;
 import jfx.incubator.scene.control.richtext.model.RichTextModel;
 import jfx.incubator.scene.control.richtext.model.StyleAttribute;
@@ -286,6 +290,22 @@ public class Actions {
 
     public ContextMenu createContextMenu() {
         ContextMenu m = new ContextMenu();
+
+        // otherwise the menu won't be shown
+        FX.item(m, "Dummy");
+
+        m.setOnShowing((ev) -> {
+            populate(m);
+        });
+        return m;
+    }
+
+    private void populate(ContextMenu m) {
+        m.getItems().clear();
+
+        TextPos p = caretAtPopup();
+        EmbeddedImage im = embeddedImageAt(p);
+
         FX.item(m, "Undo", undo);
         FX.item(m, "Redo", redo);
         FX.separator(m);
@@ -297,8 +317,74 @@ public class Actions {
         FX.item(m, "Select All", selectAll);
         FX.separator(m);
         // TODO Font...
+        Menu m2 = FX.menu(m, "Highlight");
+        FX.item(m2, "Color 1", () -> toggleBooleanAttribute(StyleAttributeMap.TEXT_HIGHLIGHT_1));
+        FX.item(m2, "Color 2", () -> toggleBooleanAttribute(StyleAttributeMap.TEXT_HIGHLIGHT_2));
+        FX.item(m2, "Color 3", () -> toggleBooleanAttribute(StyleAttributeMap.TEXT_HIGHLIGHT_3));
+        FX.item(m2, "Color 4", () -> toggleBooleanAttribute(StyleAttributeMap.TEXT_HIGHLIGHT_4));
+        FX.item(m2, "Color 5", () -> toggleBooleanAttribute(StyleAttributeMap.TEXT_HIGHLIGHT_5));
+        m2 = FX.menu(m, "Wavy Underline");
+        FX.item(m2, "Color 1", () -> toggleBooleanAttribute(StyleAttributeMap.WAVY_UNDERLINE_1));
+        FX.item(m2, "Color 2", () -> toggleBooleanAttribute(StyleAttributeMap.WAVY_UNDERLINE_2));
+        FX.item(m2, "Color 3", () -> toggleBooleanAttribute(StyleAttributeMap.WAVY_UNDERLINE_3));
         FX.item(m, "Paragraph...", paragraphStyle);
-        return m;
+        if (im != null) {
+            m2 = FX.menu(m, "Image");
+            Menu m3 = FX.menu(m2, "Width");
+            FX.item(m3, "AUTO", () -> formatImage(p, im, EmbeddedImage.AUTO, im.getTargetHeight(), im.isKeepAspectRatio()));
+            FX.item(m3, "FIT_WIDTH", () -> formatImage(p, im, EmbeddedImage.FIT_WIDTH, im.getTargetHeight(), im.isKeepAspectRatio()));
+            FX.item(m3, "FIT_WIDTH_ALWAYS", () -> formatImage(p, im, EmbeddedImage.FIT_WIDTH_ALWAYS, im.getTargetHeight(), im.isKeepAspectRatio()));
+            FX.item(m3, "50", () -> formatImage(p, im, 50, im.getTargetHeight(), im.isKeepAspectRatio()));
+            FX.item(m3, "500", () -> formatImage(p, im, 500, im.getTargetHeight(), im.isKeepAspectRatio()));
+            m3 = FX.menu(m2, "Height");
+            FX.item(m3, "AUTO", () -> formatImage(p, im, im.getTargetWidth(), EmbeddedImage.AUTO, im.isKeepAspectRatio()));
+            FX.item(m3, "50", () -> formatImage(p, im, im.getTargetWidth(), 50, im.isKeepAspectRatio()));
+            FX.item(m3, "500", () -> formatImage(p, im, im.getTargetWidth(), 500, im.isKeepAspectRatio()));
+            FX.checkItem(m2, "Keep Aspect Ratio", im.isKeepAspectRatio(), (v) -> formatImage(p, im, im.getTargetWidth(), im.getTargetHeight(), !im.isKeepAspectRatio()));
+            FX.separator(m2);
+            FX.item(m2, "Fit to Width", () -> formatImage(p, im, EmbeddedImage.FIT_WIDTH, EmbeddedImage.AUTO, true));
+            FX.item(m2, "Fit to Width Always", () -> formatImage(p, im, EmbeddedImage.FIT_WIDTH_ALWAYS, EmbeddedImage.AUTO, true));
+            FX.item(m2, "Original Size", () -> formatImage(p, im, EmbeddedImage.AUTO, EmbeddedImage.AUTO, true));
+        }
+    }
+
+    private void toggleBooleanAttribute(StyleAttribute<Boolean> a) {
+        SelectionSegment sel = editor.getSelection();
+        if (sel != null) {
+            if (!sel.isCollapsed()) {
+                StyleAttributeMap attr = editor.getStyleAttributeMap(sel.getMin(), false);
+                Boolean on = attr.get(a);
+                on = (on == null) ? Boolean.TRUE : !on;
+                editor.applyStyle(sel.getMin(), sel.getMax(), StyleAttributeMap.of(a, on));
+            }
+        }
+    }
+
+    // returns caret position only if selection exists and collapsed, otherwise null
+    private TextPos caretAtPopup() {
+        SelectionSegment sel = editor.getSelection();
+        if (sel != null) {
+            if (sel.isCollapsed()) {
+                return sel.getMin();
+            }
+        }
+        return null;
+    }
+
+    private EmbeddedImage embeddedImageAt(TextPos p) {
+        if (p != null) {
+            StyleAttributeMap a = editor.getStyleAttributeMap(p, false);
+            return a.get(StyleAttributeMap.EMBEDDED_IMAGE);
+        }
+        return null;
+    }
+
+    private void formatImage(TextPos p, EmbeddedImage im, double targetWidth, double targetHeight, boolean keepAspectRatio) {
+        TextPos start = Utils.leading(p);
+        TextPos end = Utils.trailing(p);
+        EmbeddedImage updated = im.copy(targetWidth, targetHeight, keepAspectRatio);
+        StyleAttributeMap a = StyleAttributeMap.of(StyleAttributeMap.EMBEDDED_IMAGE, updated);
+        editor.applyStyle(start, end, a);
     }
 
     private ContextMenu createRulerPopupMenu() {
@@ -394,13 +480,25 @@ public class Actions {
 
         File f = ch.showOpenDialog(parentWindow());
         if (f != null) {
-            try {
-                newDocument();
-                DataFormat fmt = guessFormat(f);
-                readFile(f, fmt);
-            } catch (Exception e) {
-                new ExceptionDialog(editor, e).open();
-            }
+            doOpen(f);
+        }
+    }
+
+    public void openFile(File f) {
+        if (askToSave()) {
+            return;
+        }
+        doOpen(f);
+    }
+
+    private void doOpen(File f) {
+        try {
+            setModified(false);
+            newDocument();
+            DataFormat fmt = guessFormat(f);
+            readFile(f, fmt);
+        } catch (Exception e) {
+            new ExceptionDialog(editor, e).open();
         }
     }
 
@@ -445,6 +543,7 @@ public class Actions {
         ch.setTitle("Save File");
         ch.getExtensionFilters().addAll(
             filterRich(),
+            filterHtml(),
             filterRtf(),
             filterTxt()
         );
@@ -597,6 +696,10 @@ public class Actions {
         return new FileChooser.ExtensionFilter("Rich Text Files", "*.rich");
     }
 
+    private static FileChooser.ExtensionFilter filterHtml() {
+        return new FileChooser.ExtensionFilter("HTML Files", "*.html");
+    }
+
     private static FileChooser.ExtensionFilter filterRtf() {
         return new FileChooser.ExtensionFilter("RTF Files", "*.rtf");
     }
@@ -606,13 +709,26 @@ public class Actions {
     }
 
     private static DataFormat guessFormat(File f) {
-        String name = f.getName().toLowerCase(Locale.ENGLISH);
+        String name = f.getName().toLowerCase(Locale.ROOT);
         if (name.endsWith(".rich")) {
             return RichTextFormatHandler.DATA_FORMAT;
         } else if (name.endsWith(".rtf")) {
             return DataFormat.RTF;
+        } else if (name.endsWith(".html")) {
+            return DataFormat.HTML;
         }
         return DataFormat.PLAIN_TEXT;
+    }
+
+    public File fileToOpen(List<File> files) {
+        if (files.size() == 1) {
+            File f = files.get(0);
+            String name = f.getName().toLowerCase(Locale.ROOT);
+            if (name.endsWith(".rich")) {
+                return f;
+            }
+        }
+        return null;
     }
 
     public void quit() {

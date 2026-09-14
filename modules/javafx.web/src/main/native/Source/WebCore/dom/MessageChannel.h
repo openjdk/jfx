@@ -45,7 +45,7 @@ public:
 private:
     explicit MessageChannel(ScriptExecutionContext&);
 
-    std::pair<Ref<MessagePort>, Ref<MessagePort>> m_ports;
+    const std::pair<const Ref<MessagePort>, const Ref<MessagePort>> m_ports;
 };
 
 } // namespace WebCore

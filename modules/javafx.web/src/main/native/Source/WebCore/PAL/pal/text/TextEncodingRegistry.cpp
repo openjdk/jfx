@@ -59,7 +59,7 @@ constexpr size_t maxEncodingNameLength = 63;
 
 // Hash for all-ASCII strings that does case folding.
 struct TextEncodingNameHash {
-    static bool equal(std::span<const LChar> s1, std::span<const LChar> s2)
+    static bool equal(std::span<const Latin1Character> s1, std::span<const Latin1Character> s2)
     {
         if (s1.size() != s2.size())
                 return false;
@@ -80,7 +80,7 @@ struct TextEncodingNameHash {
     // This algorithm is the one-at-a-time hash from:
     // http://burtleburtle.net/bob/hash/hashfaq.html
     // http://burtleburtle.net/bob/hash/doobs.html
-    static unsigned hash(std::span<const LChar> s)
+    static unsigned hash(std::span<const Latin1Character> s)
     {
         unsigned h = WTF::stringHashingStartValue;
         for (char c : s) {
@@ -103,12 +103,12 @@ struct TextEncodingNameHash {
 };
 
 struct HashTranslatorTextEncodingName {
-    static unsigned hash(std::span<const LChar> literal)
+    static unsigned hash(std::span<const Latin1Character> literal)
     {
         return TextEncodingNameHash::hash(literal);
     }
 
-    static bool equal(const ASCIILiteral& a, std::span<const LChar> b)
+    static bool equal(const ASCIILiteral& a, std::span<const Latin1Character> b)
     {
         return TextEncodingNameHash::equal(a.span8(), b);
     }
@@ -143,7 +143,7 @@ static HashSet<ASCIILiteral>& nonBackslashEncodings()
     return nonBackslashEncodings;
 }
 
-static constexpr ASCIILiteral textEncodingNameBlocklist[] = { "UTF-7"_s, "BOCU-1"_s, "SCSU"_s };
+static constexpr std::array textEncodingNameBlocklist { "UTF-7"_s, "BOCU-1"_s, "SCSU"_s };
 
 static bool isUndesiredAlias(ASCIILiteral alias)
 {
@@ -178,7 +178,7 @@ static void addToTextCodecMap(ASCIILiteral name, NewTextCodecFunction&& function
 {
     ASCIILiteral atomName = textEncodingNameMap().get(name);
     ASSERT(!atomName.isNull());
-    textCodecMap().add(atomName, WTFMove(function));
+    textCodecMap().add(atomName, WTF::move(function));
 }
 
 static void pruneBlocklistedCodecs() WTF_REQUIRES_LOCK(encodingRegistryLock)
@@ -320,7 +320,7 @@ std::unique_ptr<TextCodec> newTextCodec(const TextEncoding& encoding)
     return result->value();
 }
 
-static ASCIILiteral atomCanonicalTextEncodingName(std::span<const LChar> name)
+static ASCIILiteral atomCanonicalTextEncodingName(std::span<const Latin1Character> name)
 {
     if (name.empty())
         return { };
@@ -346,7 +346,7 @@ static ASCIILiteral atomCanonicalTextEncodingName(std::span<const char16_t> char
     if (characters.size() > maxEncodingNameLength)
             return { };
 
-    std::array<LChar, maxEncodingNameLength> buffer;
+    std::array<Latin1Character, maxEncodingNameLength> buffer;
     for (size_t i = 0; i < characters.size(); ++i)
         buffer[i] = characters[i];
 

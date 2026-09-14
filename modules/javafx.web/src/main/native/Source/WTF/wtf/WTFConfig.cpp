@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020-2023 Apple Inc. All rights reserved.
+ * Copyright (C) 2020-2025 Apple Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -26,6 +26,9 @@
 #include "config.h"
 #include <wtf/WTFConfig.h>
 
+#include <cstdio>
+
+#include <wtf/FastMalloc.h>
 #include <wtf/Gigacage.h>
 #include <wtf/Lock.h>
 #include <wtf/MathExtras.h>
@@ -37,7 +40,14 @@
 #include <mach-o/getsect.h>
 #include <mach-o/ldsyms.h>
 #include <mach/vm_param.h>
+#include "unistd.h"
 #endif
+
+#if defined(__has_include)
+#if __has_include(<libproc.h>)
+#include <libproc.h>
+#endif // __has_include(<libproc.h>)
+#endif // defined(__has_include)
 
 #if PLATFORM(COCOA)
 #include <wtf/spi/cocoa/MachVMSPI.h>
@@ -49,32 +59,84 @@
 #if USE(APPLE_INTERNAL_SDK)
 #include <WebKitAdditions/WTFConfigAdditions.h>
 #endif
+#if !USE(SYSTEM_MALLOC)
+#if BUSE(LIBPAS)
+#include "bmalloc/pas_mte_config.h"
+#endif
+#endif
 
 #include <mutex>
+
+#if OS(DARWIN) && !USE(SYSTEM_MALLOC)
+
+#if BUSE(LIBPAS)
+#if HAVE(36BIT_ADDRESS) && !PAS_HAVE(36BIT_ADDRESS)
+#error HAVE(36BIT_ADDRESS) is true, but PAS_HAVE(36BIT_ADDRESS) is false. They should match.
+#elif !HAVE(36BIT_ADDRESS) && PAS_HAVE(36BIT_ADDRESS)
+#error HAVE(36BIT_ADDRESS) is false, but PAS_HAVE(36BIT_ADDRESS) is true. They should match.
+#endif
+#endif // BUSE(LIBPAS)
+
+#endif // OS(DARWIN)
 
 WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
 
 namespace WebConfig {
 
-alignas(WTF::ConfigAlignment) Slot g_config[WTF::ConfigSizeToProtect / sizeof(Slot)];
+#if COMPILER(CLANG)
+// The purpose of applying this attribute is to move the g_config away from other
+// global variables, and allow the linker to pack them in more efficiently. Without this, the
+// linker currently leaves multiple KBs of unused padding before this page though there are many
+// other variables that come afterwards that would have fit in there. Adding this attribute was
+// shown to resolve a memory regression on our small memory footprint benchmark.
+#define WTF_CONFIG_SECTION __attribute__((used, section("__DATA,__wtf_config")))
+#else
+#define WTF_CONFIG_SECTION
+#endif
+
+alignas(WTF::ConfigAlignment) WTF_CONFIG_SECTION Slot g_config[WTF::ConfigSizeToProtect / sizeof(Slot)];
 
 } // namespace WebConfig
 
 #if !USE(SYSTEM_MALLOC)
-static_assert(Gigacage::startSlotOfGigacageConfig == WebConfig::reservedSlotsForExecutableAllocator + WebConfig::additionalReservedSlots);
+static_assert(Gigacage::startSlotOfGigacageConfig == WebConfig::NumberOfReservedConfigBytes);
 #endif
 
 namespace WTF {
+
+// Works together with permanentlyFreezePages().
+void makePagesFreezable(void* base, size_t size)
+{
+    RELEASE_ASSERT(roundUpToMultipleOf(pageSize(), size) == size);
+
+#if PLATFORM(COCOA)
+    mach_vm_address_t addr = std::bit_cast<uintptr_t>(base);
+        auto flags = VM_FLAGS_FIXED | VM_FLAGS_OVERWRITE | VM_FLAGS_PERMANENT;
+
+        auto attemptVMMapping = [&] {
+        auto result = mach_vm_map(mach_task_self(), &addr, size, pageSize() - 1, flags, MEMORY_OBJECT_NULL, 0, false, VM_PROT_READ | VM_PROT_WRITE, VM_PROT_READ | VM_PROT_WRITE, VM_INHERIT_DEFAULT);
+        return result;
+    };
+
+    auto result = attemptVMMapping();
+#if PLATFORM(IOS_FAMILY_SIMULATOR)
+    if (result != KERN_SUCCESS) {
+        flags &= ~VM_FLAGS_PERMANENT; // See rdar://75747788.
+        result = attemptVMMapping();
+    }
+#endif
+    RELEASE_ASSERT(result == KERN_SUCCESS);
+#else
+    UNUSED_PARAM(base);
+    UNUSED_PARAM(size);
+#endif
+}
 
 void setPermissionsOfConfigPage()
 {
 #if PLATFORM(COCOA)
     static std::once_flag onceFlag;
     std::call_once(onceFlag, [] {
-        mach_vm_address_t addr = std::bit_cast<uintptr_t>(static_cast<void*>(WebConfig::g_config));
-        auto flags = VM_FLAGS_FIXED | VM_FLAGS_OVERWRITE | VM_FLAGS_PERMANENT;
-
-        auto attemptVMMapping = [&] {
             constexpr size_t preWTFConfigSize = Gigacage::startOffsetOfGigacageConfig + Gigacage::reservedBytesForGigacageConfig;
 
             // We may have potentially initialized some of g_config, namely the
@@ -82,20 +144,10 @@ void setPermissionsOfConfigPage()
             // preserve these config contents across the mach_vm_map.
             uint8_t preWTFConfigContents[preWTFConfigSize];
             memcpySpan(std::span<uint8_t> { preWTFConfigContents, preWTFConfigSize }, std::span<uint8_t> { std::bit_cast<uint8_t*>(&WebConfig::g_config), preWTFConfigSize });
-            auto result = mach_vm_map(mach_task_self(), &addr, ConfigSizeToProtect, pageSize() - 1, flags, MEMORY_OBJECT_NULL, 0, false, VM_PROT_READ | VM_PROT_WRITE, VM_PROT_READ | VM_PROT_WRITE, VM_INHERIT_DEFAULT);
-            if (result == KERN_SUCCESS)
-                memcpySpan(std::span<uint8_t> { std::bit_cast<uint8_t*>(&WebConfig::g_config), preWTFConfigSize }, std::span<uint8_t> { preWTFConfigContents, preWTFConfigSize });
-            return result;
-        };
 
-        auto result = attemptVMMapping();
+        makePagesFreezable(&WebConfig::g_config, ConfigSizeToProtect);
 
-        if (result != KERN_SUCCESS) {
-            flags &= ~VM_FLAGS_PERMANENT;
-            result = attemptVMMapping();
-        }
-
-        RELEASE_ASSERT(result == KERN_SUCCESS);
+        memcpySpan(std::span<uint8_t> { std::bit_cast<uint8_t*>(&WebConfig::g_config), preWTFConfigSize }, std::span<uint8_t> { preWTFConfigContents, preWTFConfigSize });
     });
 #endif // PLATFORM(COCOA)
 }
@@ -129,12 +181,11 @@ void Config::initialize()
     g_wtfConfig.highestAccessibleAddress = static_cast<uintptr_t>((1ULL << OS_CONSTANT(EFFECTIVE_ADDRESS_WIDTH)) - 1);
     SignalHandlers::initialize();
 
-    uint8_t* reservedConfigBytes = reinterpret_cast_ptr<uint8_t*>(WebConfig::g_config + WebConfig::reservedSlotsForExecutableAllocator);
+    [[maybe_unused]] uint8_t* reservedConfigBytes = reinterpret_cast_ptr<uint8_t*>(WebConfig::g_config);
 
-#if USE(APPLE_INTERNAL_SDK)
-    WTF_INITIALIZE_ADDITIONAL_CONFIG();
-#endif
-
+#if USE(LIBPAS) && defined(PAS_MTE_INITIALIZE_IN_WTF_CONFIG)
+    PAS_MTE_INITIALIZE_IN_WTF_CONFIG;
+#endif // USE(LIBPAS)
     const char* useAllocationProfilingRaw = getenv("JSC_useAllocationProfiling");
     if (useAllocationProfilingRaw) {
         auto useAllocationProfiling = unsafeSpan(useAllocationProfilingRaw);
@@ -156,7 +207,6 @@ void Config::initialize()
             }
         }
     }
-
 }
 
 void Config::finalize()
@@ -171,7 +221,6 @@ void Config::finalize()
 
 void Config::permanentlyFreeze()
 {
-    RELEASE_ASSERT(roundUpToMultipleOf(pageSize(), ConfigSizeToProtect) == ConfigSizeToProtect);
     ASSERT(!g_wtfConfig.disabledFreezingForTesting);
 
     if (!g_wtfConfig.isPermanentlyFrozen) {
@@ -180,9 +229,15 @@ void Config::permanentlyFreeze()
         g_gigacageConfig.isPermanentlyFrozen = true;
 #endif
     }
+    permanentlyFreezePages(&WebConfig::g_config, ConfigSizeToProtect, WTF::FreezePagePermission::ReadOnly);
+    RELEASE_ASSERT(g_wtfConfig.isPermanentlyFrozen);
+}
+
+void permanentlyFreezePages(void* base, size_t size, FreezePagePermission permission)
+{
+    RELEASE_ASSERT(roundUpToMultipleOf(pageSize(), size) == size);
 
     int result = 0;
-
 #if PLATFORM(COCOA)
     enum {
         DontUpdateMaximumPermission = false,
@@ -190,16 +245,17 @@ void Config::permanentlyFreeze()
     };
 
     // There's no going back now!
-    result = vm_protect(mach_task_self(), reinterpret_cast<vm_address_t>(&WebConfig::g_config), ConfigSizeToProtect, UpdateMaximumPermission, VM_PROT_READ);
+    result = vm_protect(mach_task_self(), reinterpret_cast<vm_address_t>(base), size, UpdateMaximumPermission, permission == FreezePagePermission::ReadOnly ? VM_PROT_READ : VM_PROT_NONE);
 #elif OS(LINUX)
-    result = mprotect(&WebConfig::g_config, ConfigSizeToProtect, PROT_READ);
-#elif OS(WINDOWS)
+    result = mprotect(base, size, permission == FreezePagePermission::ReadOnly ? PROT_READ : PROT_NONE);
+#else
     // FIXME: Implement equivalent for Windows, maybe with VirtualProtect.
     // Also need to fix WebKitTestRunner.
+    UNUSED_PARAM(base);
+    UNUSED_PARAM(size);
+    UNUSED_PARAM(permission);
 #endif
-
     RELEASE_ASSERT(!result);
-    RELEASE_ASSERT(g_wtfConfig.isPermanentlyFrozen);
 }
 
 void Config::disableFreezingForTesting()

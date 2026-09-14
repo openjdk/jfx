@@ -25,7 +25,7 @@
 
 #pragma once
 
-#include "VM.h"
+#include <JavaScriptCore/VM.h>
 #include <wtf/ForbidHeapAllocation.h>
 
 namespace JSC {

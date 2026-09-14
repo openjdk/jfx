@@ -35,7 +35,7 @@
 #include "DOMJITCallDOMGetterSnippet.h"
 #include "DOMJITSignature.h"
 #include "InlineCallFrame.h"
-#include "JSImmutableButterfly.h"
+#include "JSCellButterfly.h"
 
 namespace JSC { namespace DFG {
 
@@ -157,7 +157,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         case InByValMegamorphic:
         case PutByValDirect:
         case PutByVal:
-        case PutByValAlias:
+        case PutByValDirectResolved:
         case PutByValMegamorphic:
         case GetByVal:
         case GetByValMegamorphic:
@@ -240,7 +240,6 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case SameValue:
     case IsEmpty:
     case IsEmptyStorage:
-    case TypeOfIsUndefined:
     case IsUndefinedOrNull:
     case IsBoolean:
     case IsNumber:
@@ -248,8 +247,6 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case NumberIsInteger:
     case IsObject:
     case IsTypedArrayView:
-    case ToBoolean:
-    case LogicalNot:
     case CheckInBounds:
     case CheckInBoundsInt52:
     case DoubleRep:
@@ -264,8 +261,16 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case ValueToInt32:
     case GetExecutable:
     case BottomValue:
-    case TypeOf:
         def(PureValue(node));
+        return;
+
+    // These nodes are realm-dependent when MasqueradesAsUndefined is involved.
+    // Including the globalObject in the PureValue ensures nodes from different realms are not folded by CSE.
+    case TypeOfIsUndefined:
+    case ToBoolean:
+    case LogicalNot:
+    case TypeOf:
+        def(PureValue(node, graph.globalObjectFor(node->origin.semantic)));
         return;
 
     // JSCallee for Eval can change the scope field.
@@ -659,12 +664,12 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
 
     case TypeOfIsObject:
         read(MiscFields);
-        def(HeapLocation(TypeOfIsObjectLoc, MiscFields, node->child1()), LazyNode(node));
+        def(HeapLocation(TypeOfIsObjectLoc, MiscFields, node->child1(), graph.globalObjectFor(node->origin.semantic)), LazyNode(node));
         return;
 
     case TypeOfIsFunction:
         read(MiscFields);
-        def(HeapLocation(TypeOfIsFunctionLoc, MiscFields, node->child1()), LazyNode(node));
+        def(HeapLocation(TypeOfIsFunctionLoc, MiscFields, node->child1(), graph.globalObjectFor(node->origin.semantic)), LazyNode(node));
         return;
 
     case IsCallable:
@@ -782,6 +787,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
     case ConstructForwardVarargs:
     case CallDirectEval:
     case CallWasm:
+    case TailCallInlinedCallerWasm:
     case CallCustomAccessorGetter:
     case CallCustomAccessorSetter:
     case ToPrimitive:
@@ -1230,7 +1236,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
 
     case PutByValDirect:
     case PutByVal:
-    case PutByValAlias:
+    case PutByValDirectResolved:
     case PutByValMegamorphic: {
         ArrayMode mode = node->arrayMode();
         Node* base = graph.varArgChild(node, 0).node();
@@ -2047,7 +2053,7 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         read(HeapObjectCount);
         write(HeapObjectCount);
 
-        auto* array = node->castOperand<JSImmutableButterfly*>();
+        auto* array = node->castOperand<JSCellButterfly*>();
         unsigned numElements = array->length();
         def(HeapLocation(ArrayLengthLoc, Butterfly_publicLength, node),
             LazyNode(graph.freeze(jsNumber(numElements))));
@@ -2229,6 +2235,11 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         return;
 
     case StringAt:
+        // String.prototype.at returns a string when in bounds and undefined when OOB. This is
+        // unlike charAt, which always returns a string. Include arrayMode to prevent CSE across
+        // modes.
+        def(PureValue(node, node->arrayMode().asWord()));
+        return;
     case StringCharAt:
         def(PureValue(node));
         return;
@@ -2251,6 +2262,13 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
 
         if (node->isBinaryUseKind(UntypedUse)) {
             clobberTop();
+            return;
+        }
+
+        // CompareEq is realm-dependent when MasqueradesAsUndefined is involved.
+        // Including the globalObject ensures nodes from different realms are not folded by CSE.
+        if (node->op() == CompareEq) {
+            def(PureValue(node, graph.globalObjectFor(node->origin.semantic)));
             return;
         }
 
@@ -2336,7 +2354,9 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
 
     case MapIteratorNext: {
         Edge& mapIteratorEdge = node->child1();
+        AbstractHeapKind ownerHeap = (mapIteratorEdge.useKind() == MapIteratorObjectUse) ? JSMapFields : JSSetFields;
         AbstractHeapKind heap = (mapIteratorEdge.useKind() == MapIteratorObjectUse) ? JSMapIteratorFields : JSSetIteratorFields;
+        read(ownerHeap);
         read(heap);
         write(heap);
         def(HeapLocation(MapIteratorNextLoc, heap, mapIteratorEdge), LazyNode(node));
@@ -2357,7 +2377,14 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         return;
     }
 
-    case MapStorage:
+    case MapStorage: {
+        Edge& mapEdge = node->child1();
+        AbstractHeapKind heap = (mapEdge.useKind() == MapObjectUse) ? JSMapFields : JSSetFields;
+        read(heap);
+        def(HeapLocation(MapStorageLoc, heap, mapEdge, std::bit_cast<void*>(static_cast<intptr_t>(1))), LazyNode(node));
+        return;
+    }
+
     case MapStorageOrSentinel: {
         Edge& mapEdge = node->child1();
         AbstractHeapKind heap = (mapEdge.useKind() == MapObjectUse) ? JSMapFields : JSSetFields;
@@ -2504,6 +2531,18 @@ void clobberize(Graph& graph, Node* node, const ReadFunctor& read, const WriteFu
         write(TypedArrayProperties);
         return;
     }
+
+    case ResolvePromiseFirstResolving:
+    case RejectPromiseFirstResolving:
+    case FulfillPromiseFirstResolving:
+        clobberTop();
+        return;
+
+    case PromiseResolve:
+    case PromiseReject:
+    case PromiseThen:
+        clobberTop();
+        return;
 
     case LastNodeType:
         RELEASE_ASSERT_NOT_REACHED();

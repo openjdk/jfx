@@ -27,13 +27,11 @@
 
 #if ENABLE(WEBXR)
 
+#include "PlatformXR.h"
+
 namespace WebCore {
 
-enum class XREnvironmentBlendMode {
-    Opaque,
-    Additive,
-    AlphaBlend
-};
+using XREnvironmentBlendMode = PlatformXR::XREnvironmentBlendMode;
 
 } // namespace WebCore
 

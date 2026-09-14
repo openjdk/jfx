@@ -39,7 +39,7 @@
 namespace WebCore {
 
 CachedScript::CachedScript(CachedResourceRequest&& request, PAL::SessionID sessionID, const CookieJar* cookieJar, ScriptTrackingPrivacyProtectionsEnabled requiresPrivacyProtections)
-    : CachedResource(WTFMove(request), Type::Script, sessionID, cookieJar)
+    : CachedResource(WTF::move(request), request.options().destination == FetchOptionsDestination::Json ? Type::JSON : Type::Script, sessionID, cookieJar)
     , m_requiresPrivacyProtections(requiresPrivacyProtections == ScriptTrackingPrivacyProtectionsEnabled::Yes)
     , m_decoder(TextResourceDecoder::create("text/javascript"_s, request.charset()))
 {
@@ -89,7 +89,7 @@ StringView CachedScript::script(ShouldDecodeAsUTF8Only shouldDecodeAsUTF8Only)
     }
 
     if (m_decodingState == DataAndDecodedStringHaveSameBytes)
-        return { contiguousData->span() };
+        return { byteCast<Latin1Character>(contiguousData->span()) };
 
     bool shouldForceRedecoding = m_wasForceDecodedAsUTF8 != (shouldDecodeAsUTF8Only == ShouldDecodeAsUTF8Only::Yes);
     if (!m_script || shouldForceRedecoding) {
@@ -109,7 +109,7 @@ StringView CachedScript::script(ShouldDecodeAsUTF8Only shouldDecodeAsUTF8Only)
 
         {
             Locker locker { m_lock };
-            m_script = WTFMove(result);
+            m_script = WTF::move(result);
         m_decodingState = DataAndDecodedStringHaveDifferentBytes;
         m_wasForceDecodedAsUTF8 = shouldDecodeAsUTF8Only == ShouldDecodeAsUTF8Only::Yes;
         }
@@ -136,7 +136,7 @@ JSC::CodeBlockHash CachedScript::codeBlockHashConcurrently(int startOffset, int 
         Ref contiguousData = downcast<SharedBuffer>(*data);
 
         if (PAL::TextEncoding(encoding()).isByteBasedEncoding() && contiguousData->size() && charactersAreAllASCII(contiguousData->span())) {
-            StringView entireSource { contiguousData->span() };
+            StringView entireSource { byteCast<Latin1Character>(contiguousData->span()) };
             return JSC::CodeBlockHash { entireSource.substring(startOffset, endOffset - startOffset), entireSource, kind };
         }
 
@@ -154,7 +154,7 @@ JSC::CodeBlockHash CachedScript::codeBlockHashConcurrently(int startOffset, int 
         return JSC::CodeBlockHash { entireSource.substring(startOffset, endOffset - startOffset), entireSource, kind };
     }
     case DataAndDecodedStringHaveSameBytes: {
-        StringView entireSource { downcast<SharedBuffer>(*data).span() };
+        StringView entireSource { byteCast<Latin1Character>(downcast<SharedBuffer>(*data).span()) };
         return JSC::CodeBlockHash { entireSource.substring(startOffset, endOffset - startOffset), entireSource, kind };
     }
 

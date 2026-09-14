@@ -47,11 +47,15 @@
     attribute EventHandler onversionchange;
 };
 
-dictionary IDBObjectStoreParameters {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary IDBObjectStoreParameters {
     (DOMString or sequence<DOMString>)? keyPath = null;
     boolean autoIncrement = false;
 };
 
-dictionary IDBTransactionOptions {
+[
+    LegacyNativeDictionaryRequiredInterfaceNullability,
+] dictionary IDBTransactionOptions {
     IDBTransactionDurability durability = "default";
 };

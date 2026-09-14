@@ -29,11 +29,13 @@
 #include "AccessibilityObject.h"
 #include "CharacterData.h"
 #include "ContainerNodeInlines.h"
+#include "DocumentView.h"
 #include "EditingInlines.h"
 #include "ElementAncestorIteratorInlines.h"
 #include "ElementRareData.h"
 #include "EventLoop.h"
 #include "EventTargetInlines.h"
+#include "FrameDestructionObserverInlines.h"
 #include "HTMLBRElement.h"
 #include "HTMLElement.h"
 #include "HTMLInputElement.h"
@@ -47,6 +49,7 @@
 #include "NodeTraversal.h"
 #include "PseudoElement.h"
 #include "RenderBox.h"
+#include "RenderStyle+GettersInlines.h"
 #include "ScriptDisallowedScope.h"
 #include "ShadowRoot.h"
 #include "Text.h"
@@ -97,7 +100,7 @@ public:
         for (Ref element : lineageOfType<Element>(*startingElement)) {
             if (auto typeOrNullopt = typeForElement(element.get())) {
                 type = *typeOrNullopt;
-                matchingElement = WTFMove(element);
+                matchingElement = WTF::move(element);
                 break;
             }
         }
@@ -141,8 +144,8 @@ void TextManipulationController::startObservingParagraphs(ManipulationItemCallba
     if (!document)
         return;
 
-    m_callback = WTFMove(callback);
-    m_exclusionRules = WTFMove(exclusionRules);
+    m_callback = WTF::move(callback);
+    m_exclusionRules = WTF::move(exclusionRules);
 
     observeParagraphs(firstPositionInNode(document.get()), lastPositionInNode(document.get()));
     flushPendingItemsForCallback();
@@ -278,7 +281,7 @@ static bool shouldExtractValueForTextManipulation(const HTMLInputElement& input)
 static bool isAttributeForTextManipulation(const QualifiedName& nameToCheck)
 {
     using namespace HTMLNames;
-    static const QualifiedName* const attributeNames[] = {
+    static const std::array attributeNames {
         &titleAttr.get(),
         &altAttr.get(),
         &placeholderAttr.get(),
@@ -478,9 +481,9 @@ void TextManipulationController::addItemIfPossible(Vector<ManipulationUnit>&& un
     auto endPosition = positionAfterNode(units[end - 1].node.ptr());
     Vector<TextManipulationToken> tokens;
     for (; index < end; ++index)
-        tokens.appendVector(WTFMove(units[index].tokens));
+        tokens.appendVector(WTF::move(units[index].tokens));
 
-    addItem(ManipulationItemData { startPosition, endPosition, nullptr, nullQName(), WTFMove(tokens) });
+    addItem(ManipulationItemData { startPosition, endPosition, nullptr, nullQName(), WTF::move(tokens) });
 }
 
 void TextManipulationController::observeParagraphs(const Position& start, const Position& end)
@@ -533,7 +536,7 @@ void TextManipulationController::observeParagraphs(const Position& start, const 
 
             if (isEnclosingItemBoundaryElement(*currentElement)) {
                 addItemIfPossible(std::exchange(unitsInCurrentParagraph, { }));
-                enclosingItemBoundaryElements.append(*WTFMove(currentElement));
+                enclosingItemBoundaryElements.append(*WTF::move(currentElement));
             }
         }
 
@@ -554,7 +557,7 @@ void TextManipulationController::observeParagraphs(const Position& start, const 
             continue;
 
         bool currentUnitEndsWithDelimiter = currentUnit.lastTokenContainsDelimiter;
-        unitsInCurrentParagraph.append(WTFMove(currentUnit));
+        unitsInCurrentParagraph.append(WTF::move(currentUnit));
 
         if (currentUnitEndsWithDelimiter)
             addItemIfPossible(std::exchange(unitsInCurrentParagraph, { }));
@@ -605,17 +608,17 @@ void TextManipulationController::scheduleObservationUpdate()
         controller->m_didScheduleObservationUpdate = false;
 
         NodeSet nodesToObserve;
-        for (auto& text : controller->m_manipulatedNodesWithNewContent) {
-            if (!controller->m_manipulatedNodes.contains(text))
+        for (Ref text : controller->m_manipulatedNodesWithNewContent) {
+            if (!controller->m_manipulatedNodes.contains(text.get()))
                 continue;
             if (shouldIgnoreNodeInTextField(text))
                 continue;
-            controller->m_manipulatedNodes.remove(text);
+            controller->m_manipulatedNodes.remove(text.get());
             nodesToObserve.add(text);
         }
         controller->m_manipulatedNodesWithNewContent.clear();
 
-        for (auto& node : controller->m_addedOrNewlyRenderedNodes) {
+        for (Ref node : controller->m_addedOrNewlyRenderedNodes) {
             if (shouldIgnoreNodeInTextField(node))
                 continue;
             nodesToObserve.add(node);
@@ -626,7 +629,7 @@ void TextManipulationController::scheduleObservationUpdate()
             return;
 
         RefPtr<Node> commonAncestor;
-        for (auto& node : nodesToObserve) {
+        for (Ref node : nodesToObserve) {
             if (!node->isConnected())
                 continue;
 
@@ -674,7 +677,7 @@ void TextManipulationController::addItem(ManipulationItemData&& itemData)
         newID,
         itemData.tokens.map([](auto& token) { return token; })
     });
-    m_items.add(newID, WTFMove(itemData));
+    m_items.add(newID, WTF::move(itemData));
 
     if (m_pendingItemsForCallback.size() >= itemCallbackBatchingSize)
         flushPendingItemsForCallback();
@@ -750,7 +753,7 @@ TextManipulationController::ManipulationResult TextManipulationController::compl
         }
     }
 
-    return { WTFMove(failures), WTFMove(succeededIndexes) };
+    return { WTF::move(failures), WTF::move(succeededIndexes) };
 }
 
 struct TokenExchangeData {
@@ -793,10 +796,10 @@ void TextManipulationController::updateInsertions(Vector<NodeEntry>& lastTopDown
                 auto clonedNode = node->cloneNode(false);
                 if (auto* data = node->eventTargetData())
                     data->eventListenerMap.copyEventListenersNotCreatedFromMarkupToTarget(clonedNode.ptr());
-                node = WTFMove(clonedNode);
+                node = WTF::move(clonedNode);
             }
             insertions.append(NodeInsertion { lastTopDownPath.size() ? lastTopDownPath.last().second.ptr() : nullptr, node.copyRef() });
-            lastTopDownPath.append({ currentTopDownPath[i].copyRef(), WTFMove(node) });
+            lastTopDownPath.append({ currentTopDownPath[i].copyRef(), WTF::move(node) });
         }
     }
 
@@ -887,7 +890,7 @@ auto TextManipulationController::replace(const ManipulationItemData& item, const
         if (!firstContentNode)
             firstContentNode = content.node;
 
-        auto parentNode = content.node->parentNode();
+        RefPtr parentNode = content.node->parentNode();
         if (!commonAncestor)
             commonAncestor = parentNode;
         else if (!parentNode->isDescendantOf(commonAncestor.get())) {
@@ -948,7 +951,7 @@ auto TextManipulationController::replace(const ManipulationItemData& item, const
             for (RefPtr descendentNode = NodeTraversal::next(*originalNode, originalNode.get()); descendentNode; descendentNode = NodeTraversal::next(*descendentNode, originalNode.get()))
                 nodesToRemove.remove(*descendentNode);
         } else
-            replacementNode = Text::create(commonAncestor->protectedDocument(), WTFMove(replacementText));
+            replacementNode = Text::create(commonAncestor->protectedDocument(), WTF::move(replacementText));
 
         auto topDownPath = getPath(commonAncestor.get(), originalNode.get());
         updateInsertions(lastTopDownPath, topDownPath, replacementNode.get(), reusedOriginalNodes, insertions);

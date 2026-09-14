@@ -197,7 +197,7 @@ JSValue JSCustomElementRegistry::define(JSGlobalObject& lexicalGlobalObject, Cal
                 elementInterface->setFormStateRestoreCallback(formStateRestoreCallback);
         }
 
-    if (auto promise = registry.addElementDefinition(WTFMove(elementInterface)))
+    if (auto promise = registry.addElementDefinition(WTF::move(elementInterface)))
         promise->resolveWithJSValue(constructor);
 
     return jsUndefined();

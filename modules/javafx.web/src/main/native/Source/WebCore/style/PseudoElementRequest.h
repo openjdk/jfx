@@ -34,27 +34,25 @@ namespace WebCore::Style {
 
 class PseudoElementRequest {
 public:
-    PseudoElementRequest(PseudoId pseudoId, std::optional<StyleScrollbarState> scrollbarState = std::nullopt)
-        : m_identifier({ pseudoId })
+    PseudoElementRequest(PseudoElementType type, std::optional<StyleScrollbarState> scrollbarState = std::nullopt)
+        : m_identifier({ type })
         , m_scrollbarState(scrollbarState)
     {
-        ASSERT(pseudoId != PseudoId::None);
     }
 
-    PseudoElementRequest(PseudoId pseudoId, const AtomString& nameArgument)
-        : m_identifier({ pseudoId, nameArgument })
+    PseudoElementRequest(PseudoElementType type, const AtomString& nameArgument)
+        : m_identifier({ type, nameArgument })
     {
-        ASSERT(pseudoId == PseudoId::Highlight || pseudoId == PseudoId::ViewTransitionGroup || pseudoId == PseudoId::ViewTransitionImagePair || pseudoId == PseudoId::ViewTransitionOld || pseudoId == PseudoId::ViewTransitionNew);
+        ASSERT(type == PseudoElementType::Highlight || type == PseudoElementType::ViewTransitionGroup || type == PseudoElementType::ViewTransitionImagePair || type == PseudoElementType::ViewTransitionOld || type == PseudoElementType::ViewTransitionNew);
     }
 
     PseudoElementRequest(const PseudoElementIdentifier& pseudoElementIdentifier)
         : m_identifier(pseudoElementIdentifier)
     {
-        ASSERT(pseudoElementIdentifier.pseudoId != PseudoId::None);
     }
 
     const PseudoElementIdentifier& identifier() const { return m_identifier; }
-    PseudoId pseudoId() const { return m_identifier.pseudoId; }
+    PseudoElementType type() const { return m_identifier.type; }
     const AtomString& nameArgument() const { return m_identifier.nameArgument; }
     const std::optional<StyleScrollbarState>& scrollbarState() const { return m_scrollbarState; }
 

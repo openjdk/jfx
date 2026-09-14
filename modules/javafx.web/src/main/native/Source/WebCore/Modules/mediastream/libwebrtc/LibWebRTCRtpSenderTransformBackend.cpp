@@ -24,11 +24,12 @@
 
 #include "config.h"
 #include "LibWebRTCRtpSenderTransformBackend.h"
-#include <wtf/TZoneMallocInlines.h>
 
 #if ENABLE(WEB_RTC) && USE(LIBWEBRTC)
 
+#include "EventTarget.h"
 #include "LibWebRTCRtpTransformableFrame.h"
+#include <wtf/TZoneMallocInlines.h>
 
 namespace WebCore {
 
@@ -41,7 +42,7 @@ static inline LibWebRTCRtpSenderTransformBackend::MediaType mediaTypeFromSender(
 
 LibWebRTCRtpSenderTransformBackend::LibWebRTCRtpSenderTransformBackend(Ref<webrtc::RtpSenderInterface>&& rtcSender)
     : LibWebRTCRtpTransformBackend(mediaTypeFromSender(rtcSender), Side::Sender)
-    , m_rtcSender(WTFMove(rtcSender))
+    , m_rtcSender(WTF::move(rtcSender))
 {
 }
 
@@ -51,12 +52,12 @@ LibWebRTCRtpSenderTransformBackend::~LibWebRTCRtpSenderTransformBackend()
 
 void LibWebRTCRtpSenderTransformBackend::setTransformableFrameCallback(Callback&& callback)
 {
-    setInputCallback(WTFMove(callback));
+    setInputCallback(WTF::move(callback));
     if (m_isRegistered)
         return;
 
     m_isRegistered = true;
-    m_rtcSender->SetEncoderToPacketizerFrameTransformer(webrtc::scoped_refptr<webrtc::FrameTransformerInterface>(this));
+    m_rtcSender->SetFrameTransformer(webrtc::scoped_refptr<webrtc::FrameTransformerInterface>(this));
 }
 
 bool LibWebRTCRtpSenderTransformBackend::requestKeyFrame(const String& rid)

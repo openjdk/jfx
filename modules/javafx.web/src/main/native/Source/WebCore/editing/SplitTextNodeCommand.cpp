@@ -28,8 +28,9 @@
 
 #include "CompositeEditCommand.h"
 #include "Document.h"
-#include "DocumentInlines.h"
 #include "DocumentMarkerController.h"
+#include "NodeDocument.h"
+#include "NodeInlines.h"
 #include "Text.h"
 #include <wtf/Assertions.h>
 
@@ -37,7 +38,7 @@ namespace WebCore {
 
 SplitTextNodeCommand::SplitTextNodeCommand(Ref<Text>&& text, int offset)
     : SimpleEditCommand(text->document())
-    , m_text2(WTFMove(text))
+    , m_text2(WTF::move(text))
     , m_offset(offset)
 {
     // NOTE: Various callers rely on the fact that the original node becomes
@@ -62,7 +63,7 @@ void SplitTextNodeCommand::doApply()
     if (prefixText.isEmpty())
         return;
 
-    m_text1 = Text::create(document(), WTFMove(prefixText));
+    m_text1 = Text::create(document(), WTF::move(prefixText));
     ASSERT(m_text1);
     if (CheckedPtr markers = document().markersIfExists())
         markers->copyMarkers(m_text2, { 0, m_offset }, *protectedText1());
@@ -103,7 +104,7 @@ void SplitTextNodeCommand::doReapply()
 void SplitTextNodeCommand::insertText1AndTrimText2()
 {
     Ref text2 = m_text2;
-    if (text2->parentNode()->insertBefore(*m_text1, text2.copyRef()).hasException())
+    if (text2->protectedParentNode()->insertBefore(*protectedText1(), text2.copyRef()).hasException())
         return;
     text2->deleteData(0, m_offset);
 }

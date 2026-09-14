@@ -37,7 +37,7 @@ namespace WebCore {
 WTF_MAKE_TZONE_ALLOCATED_IMPL(ImageBufferContextSwitcher);
 
 ImageBufferContextSwitcher::ImageBufferContextSwitcher(GraphicsContext& destinationContext, const FloatRect& sourceImageRect, const DestinationColorSpace& colorSpace, RefPtr<Filter>&& filter, FilterResults* results)
-    : GraphicsContextSwitcher(WTFMove(filter))
+    : GraphicsContextSwitcher(WTF::move(filter))
     , m_sourceImageRect(sourceImageRect)
     , m_results(results)
 {
@@ -63,7 +63,7 @@ GraphicsContext* ImageBufferContextSwitcher::drawingContext(GraphicsContext& con
     return m_sourceImage ? &m_sourceImage->context() : &context;
 }
 
-void ImageBufferContextSwitcher::beginClipAndDrawSourceImage(GraphicsContext& destinationContext, const FloatRect& repaintRect, const FloatRect&)
+void ImageBufferContextSwitcher::beginClipAndDrawSourceImage(GraphicsContext& destinationContext, const FloatRect& repaintRect, const FloatRect&, NOESCAPE const Function<void(GraphicsContext&)>&)
 {
     if (auto* context = drawingContext(destinationContext)) {
         context->save();

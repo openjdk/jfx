@@ -26,7 +26,7 @@
 #ifndef Region_h
 #define Region_h
 
-#include "IntRect.h"
+#include <WebCore/IntRect.h>
 #include <wtf/ArgumentCoder.h>
 #include <wtf/PointerComparison.h>
 #include <wtf/TZoneMalloc.h>
@@ -108,7 +108,7 @@ public:
 
         WEBCORE_EXPORT static bool isValidShape(std::span<const int> segments, std::span<const Span> spans);
 
-        static Shape createForTesting(Vector<int, 32>&& segments, Vector<Span, 16>&& spans) { return Shape { WTFMove(segments), WTFMove(spans) }; }
+        static Shape createForTesting(Vector<int, 32>&& segments, Vector<Span, 16>&& spans) { return Shape { WTF::move(segments), WTF::move(spans) }; }
         std::pair<Vector<int, 32>, Vector<Span, 16>> dataForTesting() const { return { m_segments, m_spans }; }
     private:
         WEBCORE_EXPORT Shape(Vector<int, 32>&&, Vector<Span, 16>&&);
@@ -127,15 +127,15 @@ public:
 
         Vector<int, 32> m_segments;
         Vector<Span, 16> m_spans;
-        friend struct IPC::ArgumentCoder<WebCore::Region::Shape, void>;
+        friend struct IPC::ArgumentCoder<WebCore::Region::Shape>;
         friend bool operator==(const Shape&, const Shape&) = default;
         WEBCORE_EXPORT friend WTF::TextStream& operator<<(WTF::TextStream&, const Shape&);
     };
-    static Region createForTesting(Shape&& shape) { return Region { WTFMove(shape) }; }
+    static Region createForTesting(Shape&& shape) { return Region { WTF::move(shape) }; }
     Shape dataForTesting() const { return data(); }
 private:
-    friend struct IPC::ArgumentCoder<WebCore::Region, void>;
-    explicit Region(Shape&& shape) { setShape(WTFMove(shape)); }
+    friend struct IPC::ArgumentCoder<WebCore::Region>;
+    explicit Region(Shape&& shape) { setShape(WTF::move(shape)); }
     Shape data() const;
 
     std::unique_ptr<Shape> copyShape() const { return m_shape ? makeUnique<Shape>(*m_shape) : nullptr; }

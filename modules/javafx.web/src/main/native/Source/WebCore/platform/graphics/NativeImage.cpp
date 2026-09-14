@@ -25,89 +25,49 @@
 
 #include "config.h"
 #include "NativeImage.h"
+
 #include "FloatRect.h"
 #include "GraphicsContext.h"
 #include "ImageBuffer.h"
 #include "RenderingMode.h"
-
-#include "GraphicsContext.h"
-
 #include <wtf/TZoneMallocInlines.h>
+
 namespace WebCore {
+
 WTF_MAKE_TZONE_ALLOCATED_IMPL(NativeImage);
 
-NativeImageBackend::NativeImageBackend() = default;
-
-NativeImageBackend::~NativeImageBackend() = default;
-
-bool NativeImageBackend::isRemoteNativeImageBackendProxy() const
-{
-    return false;
-}
-
-PlatformImageNativeImageBackend::~PlatformImageNativeImageBackend() = default;
-
-const PlatformImagePtr& PlatformImageNativeImageBackend::platformImage() const
-{
-    return m_platformImage;
-}
-
-PlatformImageNativeImageBackend::PlatformImageNativeImageBackend(PlatformImagePtr platformImage)
-    : m_platformImage(WTFMove(platformImage))
-{
-}
-
-#if !USE(CG)
-RefPtr<NativeImage> NativeImage::create(PlatformImagePtr&& platformImage, RenderingResourceIdentifier identifier)
+#if !USE(CG) && !USE(SKIA)
+RefPtr<NativeImage> NativeImage::create(PlatformImagePtr&& platformImage)
 {
     if (!platformImage)
         return nullptr;
-    UniqueRef<PlatformImageNativeImageBackend> backend { *new PlatformImageNativeImageBackend(WTFMove(platformImage)) };
-    return adoptRef(*new NativeImage(WTFMove(backend), identifier));
+    return adoptRef(*new NativeImage(WTF::move(platformImage)));
 }
 
-RefPtr<NativeImage> NativeImage::createTransient(PlatformImagePtr&& image, RenderingResourceIdentifier identifier)
+RefPtr<NativeImage> NativeImage::createTransient(PlatformImagePtr&& image)
 {
-    return create(WTFMove(image), identifier);
+    return create(WTF::move(image));
 }
 #endif
 
-NativeImage::NativeImage(UniqueRef<NativeImageBackend> backend, RenderingResourceIdentifier renderingResourceIdentifier)
-    : RenderingResource(renderingResourceIdentifier)
-    , m_backend(WTFMove(backend))
+#if !USE(SKIA)
+NativeImage::NativeImage(PlatformImagePtr&& platformImage)
+    : m_platformImage(WTF::move(platformImage))
 {
-}
-
-#if PLATFORM(JAVA)
-void NativeImage::draw(GraphicsContext& context, const FloatRect& destRect, const FloatRect& srcRect, ImagePaintingOptions options)
-{
-    context.drawNativeImageInternal(*this, destRect, srcRect, options);
+    computeHeadroom();
 }
 #endif
+
+
 NativeImage::~NativeImage()
 {
-    for (auto& observer : m_observers)
-        observer.willDestroyNativeImage(renderingResourceIdentifier());
+    for (CheckedRef observer : m_observers)
+        observer->willDestroyNativeImage(*this);
 }
 
 const PlatformImagePtr& NativeImage::platformImage() const
 {
-    return m_backend->platformImage();
-}
-
-IntSize NativeImage::size() const
-{
-    return m_backend->size();
-}
-
-bool NativeImage::hasAlpha() const
-{
-    return m_backend->hasAlpha();
-}
-
-DestinationColorSpace NativeImage::colorSpace() const
-{
-    return m_backend->colorSpace();
+    return m_platformImage;
 }
 
 bool NativeImage::hasHDRContent() const
@@ -115,44 +75,17 @@ bool NativeImage::hasHDRContent() const
     return colorSpace().usesITUR_2100TF();
 }
 
-Headroom NativeImage::headroom() const
+void NativeImage::replacePlatformImage(PlatformImagePtr&& platformImage)
 {
-    return m_backend->headroom();
+    ASSERT(platformImage);
+    m_platformImage = WTF::move(platformImage);
+    computeHeadroom();
 }
 
-void NativeImage::drawWithToneMapping(GraphicsContext& context, const FloatRect& destinationRect, const FloatRect& sourceRect, ImagePaintingOptions options)
+#if !USE(CG)
+void NativeImage::computeHeadroom()
 {
-    ASSERT(hasHDRContent());
-
-    auto colorSpaceForToneMapping = [](GraphicsContext& context) {
-#if PLATFORM(IOS_FAMILY)
-        // iOS typically renders into extended range sRGB to preserve wide gamut colors, but here we want
-        // a non-dynamic but extended-range colorspace such that the contents are tone mapped to SDR range.
-        UNUSED_PARAM(context);
-        return DestinationColorSpace::DisplayP3();
-#else
-        // Otherwise, match the colorSpace of the GraphicsContext even if it is dynamic-extended-range.
-        // The BGRA8 pixel format of the intermediate ImageBuffer will force the tone-mapping.
-        return context.colorSpace();
+}
 #endif
-    };
-
-    auto imageBuffer = context.createScaledImageBuffer(destinationRect, context.scaleFactor(), colorSpaceForToneMapping(context), RenderingMode::Unaccelerated, RenderingMethod::Local);
-    if (!imageBuffer)
-        return;
-
-    imageBuffer->context().drawNativeImageInternal(*this, destinationRect, sourceRect, options);
-
-    auto sourceRectScaled = FloatRect { { }, sourceRect.size() };
-    auto scaleFactor = destinationRect.size() / sourceRect.size();
-    sourceRectScaled.scale(scaleFactor * context.scaleFactor());
-
-    context.drawImageBuffer(*imageBuffer, destinationRect, sourceRectScaled, { });
-}
-
-void NativeImage::replaceBackend(UniqueRef<NativeImageBackend> backend)
-{
-    m_backend = WTFMove(backend);
-}
 
 } // namespace WebCore

@@ -29,7 +29,7 @@
 #include <optional>
 #include <wtf/MachSendRight.h>
 #include <wtf/Ref.h>
-#include <wtf/RefCounted.h>
+#include <wtf/RefCountedAndCanMakeWeakPtr.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {
@@ -42,15 +42,15 @@ enum class TextureFormat : uint8_t;
 class DestinationColorSpace;
 class ImageBuffer;
 
-class GPUCompositorIntegration : public RefCounted<GPUCompositorIntegration> {
+class GPUCompositorIntegration : public RefCountedAndCanMakeWeakPtr<GPUCompositorIntegration> {
 public:
     static Ref<GPUCompositorIntegration> create(Ref<WebGPU::CompositorIntegration>&& backing)
     {
-        return adoptRef(*new GPUCompositorIntegration(WTFMove(backing)));
+        return adoptRef(*new GPUCompositorIntegration(WTF::move(backing)));
     }
 
 #if PLATFORM(COCOA)
-    Vector<MachSendRight> recreateRenderBuffers(int width, int height, WebCore::DestinationColorSpace&&, WebCore::AlphaPremultiplication, WebCore::WebGPU::TextureFormat, WebCore::WebGPU::Device&) const;
+    Vector<MachSendRight> recreateRenderBuffers(int width, int height, WebCore::DestinationColorSpace&&, WebCore::AlphaPremultiplication, WebCore::WebGPU::TextureFormat, unsigned bufferCount, WebCore::WebGPU::Device&) const;
 #endif
 
     void prepareForDisplay(uint32_t frameIndex, CompletionHandler<void()>&&);
@@ -63,7 +63,7 @@ public:
 
 private:
     GPUCompositorIntegration(Ref<WebGPU::CompositorIntegration>&& backing)
-        : m_backing(WTFMove(backing))
+        : m_backing(WTF::move(backing))
     {
     }
 

@@ -27,6 +27,8 @@
 
 #include "CSSNumericValue.h"
 #include "CSSTransformComponent.h"
+#include "JSDOMConvertInterface.h"
+#include "JSDOMConvertNullable.h"
 
 namespace WebCore {
 
@@ -36,7 +38,7 @@ class Document;
 template<typename> class ExceptionOr;
 
 class CSSRotate : public CSSTransformComponent {
-    WTF_MAKE_TZONE_OR_ISO_ALLOCATED(CSSRotate);
+    WTF_MAKE_TZONE_ALLOCATED(CSSRotate);
 public:
     static ExceptionOr<Ref<CSSRotate>> create(CSSNumberish, CSSNumberish, CSSNumberish, Ref<CSSNumericValue>);
     static ExceptionOr<Ref<CSSRotate>> create(Ref<CSSNumericValue>);
@@ -55,7 +57,7 @@ public:
     void serialize(StringBuilder&) const final;
     ExceptionOr<Ref<DOMMatrix>> toMatrix() final;
 
-    CSSTransformType getType() const final { return CSSTransformType::Rotate; }
+    CSSTransformType transformType() const final { return CSSTransformType::Rotate; }
 
     RefPtr<CSSValue> toCSSValue() const final;
 
@@ -71,5 +73,5 @@ private:
 } // namespace WebCore
 
 SPECIALIZE_TYPE_TRAITS_BEGIN(WebCore::CSSRotate)
-    static bool isType(const WebCore::CSSTransformComponent& transform) { return transform.getType() == WebCore::CSSTransformType::Rotate; }
+    static bool isType(const WebCore::CSSTransformComponent& transform) { return transform.transformType() == WebCore::CSSTransformType::Rotate; }
 SPECIALIZE_TYPE_TRAITS_END()

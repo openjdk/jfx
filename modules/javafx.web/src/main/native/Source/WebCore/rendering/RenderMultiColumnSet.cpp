@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2012-2023 Apple Inc.  All rights reserved.
  * Copyright (C) 2015 Google Inc.  All rights reserved.
+ * Copyright (C) 2026 Samuel Weinig <sam@webkit.org>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -43,10 +44,10 @@
 
 namespace WebCore {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(RenderMultiColumnSet);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(RenderMultiColumnSet);
 
 RenderMultiColumnSet::RenderMultiColumnSet(RenderFragmentedFlow& fragmentedFlow, RenderStyle&& style)
-    : RenderFragmentContainerSet(Type::MultiColumnSet, fragmentedFlow.document(), WTFMove(style), fragmentedFlow)
+    : RenderFragmentContainerSet(Type::MultiColumnSet, fragmentedFlow.document(), WTF::move(style), fragmentedFlow)
     , m_maxColumnHeight(RenderFragmentedFlow::maxLogicalHeight())
     , m_minSpaceShortage(RenderFragmentedFlow::maxLogicalHeight())
 {
@@ -445,7 +446,7 @@ LayoutUnit RenderMultiColumnSet::columnGap() const
     auto& parentBlockGap = parentBlock.style().columnGap();
     if (parentBlockGap.isNormal())
         return LayoutUnit(parentBlock.style().fontDescription().computedSize()); // "1em" is recommended as the normal gap setting. Matches <p> margins.
-    return Style::evaluate(parentBlockGap, parentBlock.contentBoxLogicalWidth());
+    return Style::evaluate<LayoutUnit>(parentBlockGap, parentBlock.contentBoxLogicalWidth(), Style::ZoomNeeded { });
 }
 
 unsigned RenderMultiColumnSet::columnCount() const
@@ -627,20 +628,20 @@ void RenderMultiColumnSet::paintColumnRules(PaintInfo& paintInfo, const LayoutPo
     if (paintInfo.context().paintingDisabled())
         return;
 
-    RenderMultiColumnFlow* fragmentedFlow = multiColumnFlow();
-    const RenderStyle& blockStyle = parent()->style();
-    const Color& ruleColor = blockStyle.visitedDependentColorWithColorFilter(CSSPropertyColumnRuleColor);
-    bool ruleTransparent = blockStyle.columnRuleIsTransparent();
-    BorderStyle ruleStyle = collapsedBorderStyle(blockStyle.columnRuleStyle());
-    LayoutUnit ruleThickness { Style::evaluate(blockStyle.columnRuleWidth()) };
-    LayoutUnit colGap = columnGap();
-    bool renderRule = ruleStyle > BorderStyle::Hidden && !ruleTransparent;
-    if (!renderRule)
+    auto* fragmentedFlow = multiColumnFlow();
+    auto& blockStyle = parent()->style();
+
+    auto ruleStyle = collapsedBorderStyle(blockStyle.columnRuleStyle());
+    if (!isVisibleBorderStyle(ruleStyle) || blockStyle.columnRuleColor().isKnownTransparent())
         return;
 
-    unsigned colCount = columnCount();
+    auto colCount = columnCount();
     if (colCount <= 1)
         return;
+
+    auto ruleColor = blockStyle.visitedDependentColumnRuleColorApplyingColorFilter();
+    auto ruleThickness = Style::evaluate<LayoutUnit>(blockStyle.usedColumnRuleWidth(), Style::ZoomNeeded { });
+    auto colGap = columnGap();
 
     bool antialias = BorderPainter::shouldAntialiasLines(paintInfo.context());
 
@@ -959,8 +960,10 @@ LayoutPoint RenderMultiColumnSet::columnTranslationForOffset(const LayoutUnit& o
     return translationOffset;
 }
 
-void RenderMultiColumnSet::addOverflowFromChildren()
+void RenderMultiColumnSet::addOverflowFromInFlowChildren(OptionSet<ComputeOverflowOptions> options)
 {
+    UNUSED_PARAM(options);
+
     // FIXME: Need to do much better here.
     unsigned colCount = columnCount();
     if (!colCount)
@@ -970,9 +973,11 @@ void RenderMultiColumnSet::addOverflowFromChildren()
     addLayoutOverflow(lastRect);
     if (!hasNonVisibleOverflow())
         addVisualOverflow(lastRect);
+    if (hasRenderOverflow())
+        m_overflow->addContentOverflow(lastRect);
 }
 
-VisiblePosition RenderMultiColumnSet::positionForPoint(const LayoutPoint& logicalPoint, HitTestSource source, const RenderFragmentContainer*)
+PositionWithAffinity RenderMultiColumnSet::positionForPoint(const LayoutPoint& logicalPoint, HitTestSource source, const RenderFragmentContainer*)
 {
     return multiColumnFlow()->positionForPoint(translateFragmentPointToFragmentedFlow(logicalPoint, ClampHitTestTranslationToColumns), source, this);
 }

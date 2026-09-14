@@ -10,8 +10,6 @@
 #include <cstdlib>
 #include <cstring>
 
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_BEGIN
-
 namespace fast_float {
 
 // This will compute or rather approximate w * 5**q and return a pair of 64-bit words approximating
@@ -187,7 +185,5 @@ adjusted_mantissa compute_float(int64_t q, uint64_t w)  noexcept  {
 }
 
 } // namespace fast_float
-
-WTF_ALLOW_UNSAFE_BUFFER_USAGE_END
 
 #endif

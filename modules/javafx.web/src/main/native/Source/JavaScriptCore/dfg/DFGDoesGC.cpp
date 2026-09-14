@@ -312,6 +312,7 @@ bool doesGC(Graph& graph, Node* node)
     case DirectTailCall:
     case DirectTailCallInlinedCaller:
     case CallWasm:
+    case TailCallInlinedCallerWasm:
     case CallCustomAccessorGetter:
     case CallCustomAccessorSetter:
     case ForceOSRExit:
@@ -481,6 +482,12 @@ bool doesGC(Graph& graph, Node* node)
     case ValueNegate:
     case DateSetTime:
     case StringIndexOf:
+    case ResolvePromiseFirstResolving:
+    case RejectPromiseFirstResolving:
+    case FulfillPromiseFirstResolving:
+    case PromiseResolve:
+    case PromiseReject:
+    case PromiseThen:
 #else // not ASSERT_ENABLED
     // See comment at the top for why the default for all nodes should be to
     // return true.
@@ -591,7 +598,7 @@ bool doesGC(Graph& graph, Node* node)
 
     case PutByValDirect:
     case PutByVal:
-    case PutByValAlias:
+    case PutByValDirectResolved:
     case PutByValMegamorphic:
         if (!graph.m_plan.isFTL()) {
             switch (node->arrayMode().modeForPut().type()) {
@@ -637,8 +644,6 @@ bool doesGC(Graph& graph, Node* node)
         return true;
 
     case StringFromCharCode:
-        // FIXME: Should we constant fold this case?
-        // https://bugs.webkit.org/show_bug.cgi?id=194308
         if (node->child1()->isInt32Constant() && (node->child1()->asUInt32() <= maxSingleCharacterString))
             return false;
         return true;

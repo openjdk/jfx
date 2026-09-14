@@ -25,9 +25,9 @@
 
 #pragma once
 
-#include "FillMode.h"
-#include "PlaybackDirection.h"
-#include "WebAnimationTypes.h"
+#include <WebCore/FillMode.h>
+#include <WebCore/PlaybackDirection.h>
+#include <WebCore/WebAnimationTypes.h>
 #include <wtf/text/WTFString.h>
 
 namespace WebCore {

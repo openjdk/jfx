@@ -26,6 +26,7 @@
 #include "config.h"
 #include "TransactionOperation.h"
 
+#include "IDBActiveDOMObjectInlines.h"
 #include "IDBCursor.h"
 #include "IDBDatabase.h"
 #include <JavaScriptCore/HeapInlines.h>
@@ -34,8 +35,8 @@
 namespace WebCore {
 namespace IDBClient {
 
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TransactionOperation);
-WTF_MAKE_TZONE_OR_ISO_ALLOCATED_IMPL(TransactionOperationImpl);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TransactionOperation);
+WTF_MAKE_TZONE_ALLOCATED_IMPL(TransactionOperationImpl);
 
 TransactionOperation::TransactionOperation(IDBTransaction& transaction)
     : m_transaction(transaction)
@@ -57,6 +58,19 @@ TransactionOperation::TransactionOperation(IDBTransaction& transaction, IDBReque
 
     request.setTransactionOperationID(m_operationID);
     m_idbRequest = request;
+}
+
+void TransactionOperation::transitionToComplete(const IDBResultData& data, RefPtr<TransactionOperation>&& lastRef)
+{
+    ASSERT(isMainThread());
+
+    if (canCurrentThreadAccessThreadLocalData(originThread()))
+        transitionToCompleteOnThisThread(data);
+    else {
+        m_transaction->performCallbackOnOriginThread(*this, &TransactionOperation::transitionToCompleteOnThisThread, data);
+        m_transaction->callFunctionOnOriginThread([lastRef = WTF::move(lastRef)]() {
+        });
+    }
 }
 
 } // namespace IDBClient

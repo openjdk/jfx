@@ -43,7 +43,7 @@ Ref<BitmapImage> BitmapImage::create(ImageObserver* observer, AlphaOption alphaO
 
 Ref<BitmapImage> BitmapImage::create(Ref<NativeImage>&& nativeImage)
 {
-    return adoptRef(*new BitmapImage(WTFMove(nativeImage)));
+    return adoptRef(*new BitmapImage(WTF::move(nativeImage)));
 }
 
 RefPtr<BitmapImage> BitmapImage::create(RefPtr<NativeImage>&& nativeImage)
@@ -55,7 +55,7 @@ RefPtr<BitmapImage> BitmapImage::create(RefPtr<NativeImage>&& nativeImage)
 
 RefPtr<BitmapImage> BitmapImage::create(PlatformImagePtr&& platformImage)
 {
-    return create(NativeImage::create(WTFMove(platformImage)));
+    return create(NativeImage::create(WTF::move(platformImage)));
 }
 
 BitmapImage::BitmapImage(ImageObserver* observer, AlphaOption alphaOption, GammaAndColorProfileOption gammaAndColorProfileOption)
@@ -65,7 +65,7 @@ BitmapImage::BitmapImage(ImageObserver* observer, AlphaOption alphaOption, Gamma
 }
 
 BitmapImage::BitmapImage(Ref<NativeImage>&& image)
-    : m_source(NativeImageSource::create(WTFMove(image)))
+    : m_source(NativeImageSource::create(WTF::move(image)))
 {
 }
 
@@ -98,24 +98,25 @@ ImageDrawResult BitmapImage::draw(GraphicsContext& context, const FloatRect& des
     auto subsamplingLevel =  m_source->subsamplingLevelForScaleFactor(context, scaleFactorForDrawing, options.allowImageSubsampling());
     auto shouldDecodeToHDR = m_source->hasHDRGainMap() && options.drawsHDRContent() == DrawsHDRContent::Yes && options.dynamicRangeLimit() != PlatformDynamicRangeLimit::standard() ? ShouldDecodeToHDR::Yes : ShouldDecodeToHDR::No;
 
-    auto nativeImage = m_source->currentNativeImageForDrawing(subsamplingLevel, { options.decodingMode(), shouldDecodeToHDR, sizeForDrawing });
+    auto nativeImageOrError = m_source->currentNativeImageForDrawing(subsamplingLevel, { options.decodingMode(), shouldDecodeToHDR, sizeForDrawing });
 
-    if (!nativeImage) {
+    if (!nativeImageOrError) {
         // The decoder has not returned a frame. Fill the image rectangle with a debugging color to show what has happened.
         if (options.showDebugBackground() == ShowDebugBackground::Yes) {
-            if (nativeImage.error() == DecodingStatus::Decoding)
+            if (nativeImageOrError.error() == DecodingStatus::Decoding)
             fillWithSolidColor(context, destinationRect, Color::yellow.colorWithAlphaByte(128), options.compositeOperator());
-            else if (nativeImage.error() == DecodingStatus::Invalid)
+            else if (nativeImageOrError.error() == DecodingStatus::Invalid)
                 fillWithSolidColor(context, destinationRect, Color::red.colorWithAlphaByte(128), options.compositeOperator());
         }
-        return nativeImage.error() == DecodingStatus::Decoding ? ImageDrawResult::DidRequestDecoding : ImageDrawResult::DidNothing;
+        return nativeImageOrError.error() == DecodingStatus::Decoding ? ImageDrawResult::DidRequestDecoding : ImageDrawResult::DidNothing;
     }
 
-    if (auto color = (*nativeImage)->singlePixelSolidColor())
+    Ref nativeImage = WTF::move(nativeImageOrError.value());
+    if (auto color = nativeImage->singlePixelSolidColor())
         fillWithSolidColor(context, destinationRect, *color, options.compositeOperator());
     else {
         // adjustedSourceRect is in the coordinates of the unsubsampled image, so map it to the subsampled image.
-        auto imageSize = (*nativeImage)->size();
+        auto imageSize = nativeImage->size();
         if (imageSize != sourceSize)
             adjustedSourceRect.scale(imageSize / sourceSize);
 
@@ -123,15 +124,20 @@ ImageDrawResult BitmapImage::draw(GraphicsContext& context, const FloatRect& des
         if (orientation == ImageOrientation::Orientation::FromImage)
             orientation = currentFrameOrientation();
 
-        auto headroom = options.headroom();
+#if !HAVE(SUPPORT_HDR_DISPLAY_APIS)
         if (hasHDRContentForTesting() && options.dynamicRangeLimit() != PlatformDynamicRangeLimit::standard())
-            fillWithSolidColor(context, destinationRect, Color::gold, options.compositeOperator());
+            fillWithSolidColor(context, destinationRect, Color::green, options.compositeOperator());
         else {
+#endif
+            auto headroom = options.headroom();
+
             if (headroom == Headroom::FromImage)
                 headroom = currentFrameHeadroom(shouldDecodeToHDR);
 
-            context.drawNativeImage(*nativeImage, destinationRect, adjustedSourceRect, { options, orientation, headroom });
+            context.drawNativeImage(nativeImage, destinationRect, adjustedSourceRect, { options, orientation, headroom });
+#if !HAVE(SUPPORT_HDR_DISPLAY_APIS)
         }
+#endif
     }
 
     if (auto observer = imageObserver())
@@ -171,7 +177,7 @@ void BitmapImage::drawLuminanceMaskPattern(GraphicsContext& context, const Float
     auto bufferRect = FloatRect { { }, buffer->logicalSize() };
     draw(buffer->context(), bufferRect, tileRect, { options, DecodingMode::Synchronous, ImageOrientation::Orientation::FromImage });
 
-        setImageObserver(WTFMove(observer));
+    setImageObserver(WTF::move(observer));
         buffer->convertToLuminanceMask();
 
     context.setDrawLuminanceMask(false);
