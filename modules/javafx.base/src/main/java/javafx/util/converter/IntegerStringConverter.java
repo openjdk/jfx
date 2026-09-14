@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,44 +25,28 @@
 
 package javafx.util.converter;
 
-import javafx.util.StringConverter;
+/// A `StringConverter` implementation for `Integer` (and `int`) values. Formatting is done by [Integer#toString()] for
+/// non-`null` values, and parsing with [Integer#valueOf(String)] for non-`null` non-empty strings.
+///
+/// @since JavaFX 2.1
+public class IntegerStringConverter extends BaseStringConverter<Integer> {
 
-/**
- * <p>{@link StringConverter} implementation for {@link Integer}
- * (and int primitive) values.</p>
- * @since JavaFX 2.1
- */
-public class IntegerStringConverter extends StringConverter<Integer> {
-
-    /**
-     * Creates a default {@code IntegerStringConverter}.
-     */
+    /// Creates a default `IntegerStringConverter`.
     public IntegerStringConverter() {
     }
 
-    /** {@inheritDoc} */
-    @Override public Integer fromString(String value) {
-        // If the specified value is null or zero-length, return null
-        if (value == null) {
-            return null;
-        }
-
-        value = value.trim();
-
-        if (value.length() < 1) {
-            return null;
-        }
-
-        return Integer.valueOf(value);
+    @Override
+    public Integer fromString(String value) {
+        return super.fromString(value);
     }
 
-    /** {@inheritDoc} */
-    @Override public String toString(Integer value) {
-        // If the specified value is null, return a zero-length String
-        if (value == null) {
-            return "";
-        }
+    @Override
+    Integer fromNonEmptyString(String string) {
+        return Integer.valueOf(string);
+    }
 
-        return (Integer.toString(value.intValue()));
+    @Override
+    public String toString(Integer value) {
+        return super.toString(value);
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,32 +25,30 @@
 
 package test.javafx.util.converter;
 
-import javafx.util.converter.ShortStringConverter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-/**
- */
+import javafx.util.converter.ShortStringConverter;
+
 public class ShortStringConverterTest {
-    private ShortStringConverter converter;
 
-    private final short shortValue_10 = 10;
+    private static final short SHORT_VALUE_10 = 10;
 
-    @BeforeEach public void setup() {
-        converter = new ShortStringConverter();
+    private static final ShortStringConverter CONVERTER = new ShortStringConverter();
+
+    @Test
+    void fromString_testValidStringInput() {
+        assertEquals(SHORT_VALUE_10, CONVERTER.fromString("10"));
     }
 
-    @Test public void fromString_testValidStringInput() {
-        assertEquals((Object)shortValue_10, converter.fromString("10"));
+    @Test
+    void fromString_testValidStringInputWithWhiteSpace() {
+        assertEquals(SHORT_VALUE_10, CONVERTER.fromString("     10     "));
     }
 
-    @Test public void fromString_testValidStringInputWithWhiteSpace() {
-        assertEquals((Object)shortValue_10, converter.fromString("     10     "));
-    }
-
-    @Test public void toString_testStringInput() {
-        assertEquals("10", converter.toString(shortValue_10));
+    @Test
+    void toString_testStringInput() {
+        assertEquals("10", CONVERTER.toString(SHORT_VALUE_10));
     }
 }
