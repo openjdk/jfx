@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -67,7 +67,7 @@ import java.util.Collections;
 import java.util.List;
 
 import com.sun.javafx.util.Utils;
-import com.sun.javafx.binding.ExpressionHelper;
+import com.sun.javafx.binding.OldValueCachingListenerManager;
 import com.sun.javafx.scene.NodeHelper;
 import javafx.util.StringConverter;
 
@@ -123,30 +123,42 @@ public abstract class TextInputControl extends Control {
      * Package private base implementation of Content.
      */
     abstract static class ContentBase implements Content {
-        private ExpressionHelper<String> helper;
+        private static final OldValueCachingListenerManager<String, ContentBase> LISTENER_MANAGER = new OldValueCachingListenerManager<>() {
+            @Override
+            protected Object getData(ContentBase instance) {
+                return instance.listenerData;
+            }
+
+            @Override
+            protected void setData(ContentBase instance, Object data) {
+                instance.listenerData = data;
+            }
+        };
+
+        private Object listenerData;
 
         @Override
         public void addListener(ChangeListener<? super String> changeListener) {
-            helper = ExpressionHelper.addListener(helper, this, changeListener);
+            LISTENER_MANAGER.addListener(this, changeListener);
         }
 
         @Override
         public void removeListener(ChangeListener<? super String> changeListener) {
-            helper = ExpressionHelper.removeListener(helper, changeListener);
+            LISTENER_MANAGER.removeListener(this, changeListener);
         }
 
         @Override
         public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
+            LISTENER_MANAGER.addListener(this, listener);
         }
 
         @Override
         public void removeListener(InvalidationListener listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
+            LISTENER_MANAGER.removeListener(this, listener);
         }
 
         protected final void fireValueChangedEvent() {
-            ExpressionHelper.fireValueChangedEvent(helper);
+            LISTENER_MANAGER.fireValueChanged(this, listenerData);
         }
     }
 
@@ -1400,12 +1412,24 @@ public abstract class TextInputControl extends Control {
     // If somebody changes the content directly, it will be notified and
     // send an invalidation event.
     private class TextProperty extends StringProperty {
+        private static final OldValueCachingListenerManager<String, TextProperty> TEXT_LISTENER_MANAGER = new OldValueCachingListenerManager<>() {
+            @Override
+            protected Object getData(TextProperty instance) {
+                return instance.listenerData;
+            }
+
+            @Override
+            protected void setData(TextProperty instance, Object data) {
+                instance.listenerData = data;
+            }
+        };
+
         // This is used only when the property is bound
         private ObservableValue<? extends String> observable = null;
         // Added to the observable when bound
         private InvalidationListener listener = null;
         // Used for event handling
-        private ExpressionHelper<String> helper = null;
+        private Object listenerData;
         // The developer my set the Text property to null. Although
         // the Content must be given an empty String, we must still
         // treat the value as though it were null, so that a subsequent
@@ -1464,19 +1488,19 @@ public abstract class TextInputControl extends Control {
         }
 
         @Override public void addListener(InvalidationListener listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
+            TEXT_LISTENER_MANAGER.addListener(this, listener);
         }
 
         @Override public void removeListener(InvalidationListener listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
+            TEXT_LISTENER_MANAGER.removeListener(this, listener);
         }
 
         @Override public void addListener(ChangeListener<? super String> listener) {
-            helper = ExpressionHelper.addListener(helper, this, listener);
+            TEXT_LISTENER_MANAGER.addListener(this, listener);
         }
 
         @Override public void removeListener(ChangeListener<? super String> listener) {
-            helper = ExpressionHelper.removeListener(helper, listener);
+            TEXT_LISTENER_MANAGER.removeListener(this, listener);
         }
 
         @Override public Object getBean() {
@@ -1488,7 +1512,7 @@ public abstract class TextInputControl extends Control {
         }
 
         private void fireValueChangedEvent() {
-            ExpressionHelper.fireValueChangedEvent(helper);
+            TEXT_LISTENER_MANAGER.fireValueChanged(this, listenerData);
         }
 
         private void markInvalid() {

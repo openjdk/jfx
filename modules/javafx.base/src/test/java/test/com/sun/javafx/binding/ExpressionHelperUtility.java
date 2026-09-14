@@ -47,9 +47,6 @@ import javafx.collections.SetChangeListener;
 
 public class ExpressionHelperUtility {
 
-    private static final String EXPRESSION_HELPER_SINGLE_INVALIDATION      = "com.sun.javafx.binding.ExpressionHelper$SingleInvalidation";
-    private static final String EXPRESSION_HELPER_SINGLE_CHANGE            = "com.sun.javafx.binding.ExpressionHelper$SingleChange";
-    private static final String EXPRESSION_HELPER_GENERIC                  = "com.sun.javafx.binding.ExpressionHelper$Generic";
     private static final String LIST_EXPRESSION_HELPER_SINGLE_INVALIDATION = "com.sun.javafx.binding.ListExpressionHelper$SingleInvalidation";
     private static final String LIST_EXPRESSION_HELPER_SINGLE_CHANGE       = "com.sun.javafx.binding.ListExpressionHelper$SingleChange";
     private static final String LIST_EXPRESSION_HELPER_SINGLE_LIST_CHANGE  = "com.sun.javafx.binding.ListExpressionHelper$SingleListChange";
@@ -88,13 +85,6 @@ public class ExpressionHelperUtility {
         }
 
         try {
-            final Class clazz = Class.forName(EXPRESSION_HELPER_SINGLE_INVALIDATION);
-            if (clazz.isAssignableFrom(helperClass)) {
-                return getInvalidationListenerFromSingleInvalidationClass(clazz, helper);
-            }
-        } catch (ClassNotFoundException ex) { }
-
-        try {
             final Class clazz = Class.forName(LIST_EXPRESSION_HELPER_SINGLE_INVALIDATION);
             if (clazz.isAssignableFrom(helperClass)) {
                 return getInvalidationListenerFromSingleInvalidationClass(clazz, helper);
@@ -116,13 +106,6 @@ public class ExpressionHelperUtility {
         } catch (ClassNotFoundException ex) { }
 
 
-
-        try {
-            final Class clazz = Class.forName(EXPRESSION_HELPER_GENERIC);
-            if (clazz.isAssignableFrom(helperClass)) {
-                return getInvalidationListenerFromGenericClass(clazz, helper);
-            }
-        } catch (ClassNotFoundException ex) { }
 
         try {
             final Class clazz = Class.forName(LIST_EXPRESSION_HELPER_GENERIC);
@@ -179,13 +162,6 @@ public class ExpressionHelperUtility {
         final Class helperClass = helper.getClass();
 
         try {
-            final Class clazz = Class.forName(EXPRESSION_HELPER_SINGLE_CHANGE);
-            if (clazz.isAssignableFrom(helperClass)) {
-                return getChangeListenerFromSingleChangeClass(clazz, helper);
-            }
-        } catch (ClassNotFoundException ex) { }
-
-        try {
             final Class clazz = Class.forName(LIST_EXPRESSION_HELPER_SINGLE_CHANGE);
             if (clazz.isAssignableFrom(helperClass)) {
                 return getChangeListenerFromSingleChangeClass(clazz, helper);
@@ -207,13 +183,6 @@ public class ExpressionHelperUtility {
         } catch (ClassNotFoundException ex) { }
 
 
-
-        try {
-            final Class clazz = Class.forName(EXPRESSION_HELPER_GENERIC);
-            if (clazz.isAssignableFrom(helperClass)) {
-                return getChangeListenerFromGenericClass(clazz, helper);
-            }
-        } catch (ClassNotFoundException ex) { }
 
         try {
             final Class clazz = Class.forName(LIST_EXPRESSION_HELPER_GENERIC);
