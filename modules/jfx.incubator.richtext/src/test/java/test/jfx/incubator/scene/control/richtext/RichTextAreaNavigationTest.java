@@ -222,10 +222,11 @@ public class RichTextAreaNavigationTest {
         TextPos end = control.getDocumentEnd();
         assertNotNull(end);
 
-        int count = 0;
         // this loop should exit as soon as it hits the beginning or end of the document,
-        // but let's set a limit, just in case
-        while (count < 10_000) {
+        // but let's set a limit just in case, large enough to account for text wrapping
+        int max = 10_000;
+        int count = 0;
+        while (count <= max) {
             TextPos p0 = control.getCaretPosition();
 
             if (down) {
@@ -254,6 +255,8 @@ public class RichTextAreaNavigationTest {
             assertFalse(p0.equals(p1), (down ? "down" : "up") + " p0=" + p0 + " p1=" + p1 + " params=" + p);
             count++;
         }
+
+        assertTrue(count < max, "count=" + count + " max=" + max);
         return count;
     }
 }
