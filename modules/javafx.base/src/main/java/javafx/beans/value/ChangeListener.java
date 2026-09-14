@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -32,7 +32,8 @@ package javafx.beans.value;
  * {@link ObservableValue#removeListener(ChangeListener)}
  * <p>
  * For an in-depth explanation of change events and how they differ from
- * invalidation events, see the documentation of {@code ObservableValue}.
+ * invalidation events, and for the guarantees provided by the implementations in
+ * the JavaFX library, see the documentation of {@link ObservableValue}.
  * <p>
  * The same instance of {@code ChangeListener} can be registered to listen to
  * multiple {@code ObservableValues}.
@@ -47,23 +48,15 @@ public interface ChangeListener<T> {
     /**
      * Called when the value of an {@link ObservableValue} changes.
      * <p>
-     * When this method is invoked, {@code newValue} represents the current value of the {@code observable};
-     * that is, it is equal to {@code observable.getValue()} at the time of invocation. The {@code oldValue}
-     * is the value that was reported as {@code newValue} in the previous notification delivered to the same
-     * listener.
-     * <p>
-     * If a change listener modifies the observable value in its callback, other registered change listeners
-     * that have not been notified at that point will receive the newly-modified value. This ensures that a
-     * change listener will always observe the effective change from its last-observed {@code oldValue} to
-     * the current value of the {@code observable} at the time the listener is invoked.
-     * <p>
-     * However, it is usually considered bad practice to modify the observable value from a listener callback
-     * because the order of listener registrations is often not strictly enforceable. This gives earlier
-     * listeners an order-dependent veto over the values that later listeners will observe.
+     * In general, it is considered bad practice to modify the observed value in
+     * this method.
      *
-     * @param observable the changed {@code ObservableValue}
-     * @param oldValue the last value that was observed by this listener
-     * @param newValue the current value of the {@code observable}
+     * @param observable
+     *            The {@code ObservableValue} which value changed
+     * @param oldValue
+     *            The old value
+     * @param newValue
+     *            The new value
      */
     void changed(ObservableValue<? extends T> observable, T oldValue, T newValue);
 }
