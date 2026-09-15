@@ -49,9 +49,20 @@ public abstract class ReadOnlyLongPropertyBase extends ReadOnlyLongProperty {
             protected void setData(ReadOnlyLongPropertyBase instance, Object data) {
                 instance.listenerData = data;
             }
+
+            @Override
+            protected boolean isNotifying(ReadOnlyLongPropertyBase instance) {
+                return instance.notifying;
+            }
+
+            @Override
+            protected void setNotifying(ReadOnlyLongPropertyBase instance, boolean value) {
+                instance.notifying = value;
+            }
         };
 
-    Object listenerData;
+    private Object listenerData;
+    private boolean notifying;
 
     /**
      * Creates a default {@code ReadOnlyLongPropertyBase}.

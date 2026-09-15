@@ -52,9 +52,20 @@ public abstract class ObservableValueBase<T> implements ObservableValue<T> {
         protected void setData(ObservableValueBase<?> instance, Object data) {
             instance.listenerData = data;
         }
+
+        @Override
+        protected boolean isNotifying(ObservableValueBase<?> instance) {
+            return instance.notifying;
+        }
+
+        @Override
+        protected void setNotifying(ObservableValueBase<?> instance, boolean value) {
+            instance.notifying = value;
+        }
     };
 
     private Object listenerData;
+    private boolean notifying;
 
     /**
      * Creates a default {@code ObservableValueBase}.

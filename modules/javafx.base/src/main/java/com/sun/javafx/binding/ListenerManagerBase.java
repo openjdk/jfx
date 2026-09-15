@@ -61,6 +61,24 @@ public sealed abstract class ListenerManagerBase<T, I extends ObservableValue<? 
     protected abstract void setData(I instance, Object data);
 
     /**
+     * Returns whether a notification is currently in progress for the given instance.
+     *
+     * @param instance the instance it is located in, cannot be {@code null}
+     * @return {@code true} if a notification is in progress, otherwise {@code false}
+     * @throws NullPointerException when {@code instance} is {@code null}
+     */
+    protected abstract boolean isNotifying(I instance);
+
+    /**
+     * Sets whether a notification is currently in progress for the given instance.
+     *
+     * @param instance the instance it is located in, cannot be {@code null}
+     * @param value {@code true} if a notification is in progress, otherwise {@code false}
+     * @throws NullPointerException when {@code instance} is {@code null}
+     */
+    protected abstract void setNotifying(I instance, boolean value);
+
+    /**
      * Adds an invalidation listener.
      *
      * @param instance the instance to which the listeners belong, cannot be {@code null}
@@ -213,6 +231,32 @@ public sealed abstract class ListenerManagerBase<T, I extends ObservableValue<? 
         @Override
         public int hashCode() {
             return delegate.hashCode();
+        }
+    }
+
+    final void notifyInvalidationListener(I instance, InvalidationListener listener) {
+        boolean wasNotifying = isNotifying(instance);
+
+        setNotifying(instance, true);
+
+        try {
+            ListenerListBase.callInvalidationListener(instance, listener);
+        }
+        finally {
+            setNotifying(instance, wasNotifying);
+        }
+    }
+
+    final void notifyChangeListener(I instance, ChangeListener<T> listener, T oldValue, T newValue) {
+        boolean wasNotifying = isNotifying(instance);
+
+        setNotifying(instance, true);
+
+        try {
+            ListenerListBase.callChangeListener(instance, listener, oldValue, newValue);
+        }
+        finally {
+            setNotifying(instance, wasNotifying);
         }
     }
 }

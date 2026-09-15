@@ -49,9 +49,20 @@ public abstract class ReadOnlyDoublePropertyBase extends ReadOnlyDoubleProperty 
             protected void setData(ReadOnlyDoublePropertyBase instance, Object data) {
                 instance.listenerData = data;
             }
+
+            @Override
+            protected boolean isNotifying(ReadOnlyDoublePropertyBase instance) {
+                return instance.notifying;
+            }
+
+            @Override
+            protected void setNotifying(ReadOnlyDoublePropertyBase instance, boolean value) {
+                instance.notifying = value;
+            }
         };
 
-    Object listenerData;
+    private Object listenerData;
+    private boolean notifying;
 
     /**
      * Creates a default {@code ReadOnlyDoublePropertyBase}.

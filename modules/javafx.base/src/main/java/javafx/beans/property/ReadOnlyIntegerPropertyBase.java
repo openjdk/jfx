@@ -49,9 +49,20 @@ public abstract class ReadOnlyIntegerPropertyBase extends ReadOnlyIntegerPropert
             protected void setData(ReadOnlyIntegerPropertyBase instance, Object data) {
                 instance.listenerData = data;
             }
+
+            @Override
+            protected boolean isNotifying(ReadOnlyIntegerPropertyBase instance) {
+                return instance.notifying;
+            }
+
+            @Override
+            protected void setNotifying(ReadOnlyIntegerPropertyBase instance, boolean value) {
+                instance.notifying = value;
+            }
         };
 
-    Object listenerData;
+    private Object listenerData;
+    private boolean notifying;
 
     /**
      * Creates a default {@code ReadOnlyIntegerPropertyBase}.

@@ -96,6 +96,16 @@ public final class JavaBeanStringProperty extends StringProperty implements Java
         protected void setData(JavaBeanStringProperty instance, Object data) {
             instance.listenerData = data;
         }
+
+        @Override
+        protected boolean isNotifying(JavaBeanStringProperty instance) {
+            return instance.notifying;
+        }
+
+        @Override
+        protected void setNotifying(JavaBeanStringProperty instance, boolean value) {
+            instance.notifying = value;
+        }
     };
 
     private final PropertyDescriptor<String> descriptor;
@@ -103,6 +113,7 @@ public final class JavaBeanStringProperty extends StringProperty implements Java
 
     private ObservableValue<? extends String> observable = null;
     private Object listenerData;
+    private boolean notifying;
 
     JavaBeanStringProperty(PropertyDescriptor<String> descriptor, Object bean) {
         this.descriptor = descriptor;

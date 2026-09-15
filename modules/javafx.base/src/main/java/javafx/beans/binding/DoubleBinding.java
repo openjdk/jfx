@@ -121,6 +121,16 @@ public abstract class DoubleBinding extends DoubleExpression implements
         protected void setData(DoubleBinding instance, Object data) {
             instance.listenerData = data;
         }
+
+        @Override
+        protected boolean isNotifying(DoubleBinding instance) {
+            return instance.notifying;
+        }
+
+        @Override
+        protected void setNotifying(DoubleBinding instance, boolean value) {
+            instance.notifying = value;
+        }
     };
 
     private double value;
@@ -134,6 +144,7 @@ public abstract class DoubleBinding extends DoubleExpression implements
      */
     private BindingHelperObserver observer;
     private Object listenerData;
+    private boolean notifying;
 
     /**
      * Creates a default {@code DoubleBinding}.

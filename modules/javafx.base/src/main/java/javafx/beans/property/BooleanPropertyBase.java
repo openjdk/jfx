@@ -60,6 +60,16 @@ public abstract class BooleanPropertyBase extends BooleanProperty {
         protected void setData(BooleanPropertyBase instance, Object data) {
             instance.listenerData = data;
         }
+
+        @Override
+        protected boolean isNotifying(BooleanPropertyBase instance) {
+            return instance.notifying;
+        }
+
+        @Override
+        protected void setNotifying(BooleanPropertyBase instance, boolean value) {
+            instance.notifying = value;
+        }
     };
 
     private boolean value;
@@ -67,6 +77,7 @@ public abstract class BooleanPropertyBase extends BooleanProperty {
     private InvalidationListener listener = null;
     private boolean valid = true;
     private Object listenerData;
+    private boolean notifying;
 
     /**
      * The constructor of the {@code BooleanPropertyBase}.

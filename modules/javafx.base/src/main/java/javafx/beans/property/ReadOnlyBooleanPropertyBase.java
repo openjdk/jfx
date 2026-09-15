@@ -49,9 +49,20 @@ public abstract class ReadOnlyBooleanPropertyBase extends ReadOnlyBooleanPropert
             protected void setData(ReadOnlyBooleanPropertyBase instance, Object data) {
                 instance.listenerData = data;
             }
+
+            @Override
+            protected boolean isNotifying(ReadOnlyBooleanPropertyBase instance) {
+                return instance.notifying;
+            }
+
+            @Override
+            protected void setNotifying(ReadOnlyBooleanPropertyBase instance, boolean value) {
+                instance.notifying = value;
+            }
         };
 
-    Object listenerData;
+    private Object listenerData;
+    private boolean notifying;
 
     /**
      * Creates a default {@code ReadOnlyBooleanPropertyBase}.

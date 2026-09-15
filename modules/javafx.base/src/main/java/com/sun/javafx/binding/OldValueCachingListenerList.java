@@ -53,6 +53,16 @@ public class OldValueCachingListenerList<T> extends ListenerList<T> {
     }
 
     /**
+     * Creates a new instance with one listener.
+     *
+     * @param listener a listener, cannot be {@code null}
+     * @throws NullPointerException when any parameter is {@code null}
+     */
+    public OldValueCachingListenerList(Object listener) {
+        super(listener);
+    }
+
+    /**
      * Returns the latest value stored.
      *
      * @return the latest value stored, can be {@code null}

@@ -69,6 +69,16 @@ public abstract class BooleanBinding extends BooleanExpression implements
         protected void setData(BooleanBinding instance, Object data) {
             instance.listenerData = data;
         }
+
+        @Override
+        protected boolean isNotifying(BooleanBinding instance) {
+            return instance.notifying;
+        }
+
+        @Override
+        protected void setNotifying(BooleanBinding instance, boolean value) {
+            instance.notifying = value;
+        }
     };
 
     /**
@@ -88,6 +98,7 @@ public abstract class BooleanBinding extends BooleanExpression implements
      */
     private BindingHelperObserver observer;
     private Object listenerData;
+    private boolean notifying;
 
     @Override
     public void addListener(InvalidationListener listener) {

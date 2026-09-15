@@ -96,6 +96,16 @@ public final class JavaBeanIntegerProperty extends IntegerProperty implements Ja
         protected void setData(JavaBeanIntegerProperty instance, Object data) {
             instance.listenerData = data;
         }
+
+        @Override
+        protected boolean isNotifying(JavaBeanIntegerProperty instance) {
+            return instance.notifying;
+        }
+
+        @Override
+        protected void setNotifying(JavaBeanIntegerProperty instance, boolean value) {
+            instance.notifying = value;
+        }
     };
 
     private final PropertyDescriptor<Number> descriptor;
@@ -103,6 +113,7 @@ public final class JavaBeanIntegerProperty extends IntegerProperty implements Ja
 
     private ObservableValue<? extends Number> observable = null;
     private Object listenerData;
+    private boolean notifying;
 
     JavaBeanIntegerProperty(PropertyDescriptor<Number> descriptor, Object bean) {
         this.descriptor = descriptor;

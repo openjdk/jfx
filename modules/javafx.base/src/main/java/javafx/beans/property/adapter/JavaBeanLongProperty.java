@@ -96,6 +96,16 @@ public final class JavaBeanLongProperty extends LongProperty implements JavaBean
         protected void setData(JavaBeanLongProperty instance, Object data) {
             instance.listenerData = data;
         }
+
+        @Override
+        protected boolean isNotifying(JavaBeanLongProperty instance) {
+            return instance.notifying;
+        }
+
+        @Override
+        protected void setNotifying(JavaBeanLongProperty instance, boolean value) {
+            instance.notifying = value;
+        }
     };
 
     private final PropertyDescriptor<Number> descriptor;
@@ -103,6 +113,7 @@ public final class JavaBeanLongProperty extends LongProperty implements JavaBean
 
     private ObservableValue<? extends Number> observable = null;
     private Object listenerData;
+    private boolean notifying;
 
     JavaBeanLongProperty(PropertyDescriptor<Number> descriptor, Object bean) {
         this.descriptor = descriptor;

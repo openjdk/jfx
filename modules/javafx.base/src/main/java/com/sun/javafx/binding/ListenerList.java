@@ -89,6 +89,16 @@ public class ListenerList<T> extends ListenerListBase {
     }
 
     /**
+     * Creates a new instance with one listener.
+     *
+     * @param listener a listener, cannot be {@code null}
+     * @throws NullPointerException when any parameter is {@code null}
+     */
+    public ListenerList(Object listener) {
+        super(listener);
+    }
+
+    /**
      * Notifies all listeners using the given observable value as source.
      *
      * @param observableValue an {@link ObservableValue}, cannot be {@code null}
@@ -201,7 +211,7 @@ public class ListenerList<T> extends ListenerListBase {
             if (progress == NESTED_NOTIFICATION_ABORTED) {
 
                 /*
-                 * Non-convergence detected: The listener just notified above of value X
+                 * Non-convergence detected: The listener that was just notified of value X
                  * triggered a change to Y. The nested notification loop informing earlier
                  * listeners of Y was aborted because another listener changed the value
                  * back to X.

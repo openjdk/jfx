@@ -96,6 +96,16 @@ public final class JavaBeanDoubleProperty extends DoubleProperty implements Java
         protected void setData(JavaBeanDoubleProperty instance, Object data) {
             instance.listenerData = data;
         }
+
+        @Override
+        protected boolean isNotifying(JavaBeanDoubleProperty instance) {
+            return instance.notifying;
+        }
+
+        @Override
+        protected void setNotifying(JavaBeanDoubleProperty instance, boolean value) {
+            instance.notifying = value;
+        }
     };
 
     private final PropertyDescriptor<Number> descriptor;
@@ -103,6 +113,7 @@ public final class JavaBeanDoubleProperty extends DoubleProperty implements Java
 
     private ObservableValue<? extends Number> observable = null;
     private Object listenerData;
+    private boolean notifying;
 
     JavaBeanDoubleProperty(PropertyDescriptor<Number> descriptor, Object bean) {
         this.descriptor = descriptor;

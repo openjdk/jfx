@@ -76,7 +76,7 @@ public non-sealed abstract class ListenerManager<T, I extends ObservableValue<? 
         switch (getData(instance)) {
             case null -> setData(instance, listener);
             case ListenerList<?> list -> list.add(listener);
-            case Object data -> setData(instance, new ListenerList<>(data, listener));
+            case Object data -> setData(instance, createListenerList(instance, data, listener));
         }
     }
 
@@ -102,6 +102,26 @@ public non-sealed abstract class ListenerManager<T, I extends ObservableValue<? 
         return false;
     }
 
+    /*
+     * Creates a new listener list. If a new listener was added while a notification on this instance
+     * is in progress, then this is detected and the new listener list is created locked. This ensures that
+     * if the listener that was invoked already triggers a nested change, that we correctly first notify
+     * this listener again and possibly never invoke the newly added listener (if the first listener
+     * changed the value back to the original value).
+     */
+    private ListenerList<?> createListenerList(I instance, Object existingListener, Object newListener) {
+        if (!isNotifying(instance)) {
+            return new ListenerList<>(existingListener, newListener);
+        }
+
+        ListenerList<?> list = new ListenerList<>(existingListener);
+
+        list.lock();  // will be detected in fireValueChanged and unlocked there
+        list.add(newListener);
+
+        return list;
+    }
+
     /**
      * Notifies the listeners managed in the given instance.
      *
@@ -119,7 +139,8 @@ public non-sealed abstract class ListenerManager<T, I extends ObservableValue<? 
             callMultipleListeners(instance, list, oldValue);
         }
         else if (listenerData instanceof InvalidationListener il) {
-            ListenerListBase.callInvalidationListener(instance, il);
+            notifyInvalidationListener(instance, il);
+            unlockIfDataStorageTypeBecameList(instance);
         }
         else if (listenerData instanceof ChangeListener) {
             @SuppressWarnings("unchecked")
@@ -127,8 +148,22 @@ public non-sealed abstract class ListenerManager<T, I extends ObservableValue<? 
             T newValue = instance.getValue();  // Required as an earlier listener may have changed the value, and current value is always needed
 
             if (!Objects.equals(newValue, oldValue)) {
-                ListenerListBase.callChangeListener(instance, cl, oldValue, newValue);
+                notifyChangeListener(instance, cl, oldValue, newValue);
+                unlockIfDataStorageTypeBecameList(instance);
             }
+        }
+    }
+
+    private void unlockIfDataStorageTypeBecameList(I instance) {
+
+        /*
+         * If during notification, the managed data field changed from a single listener to a list, then this
+         * list was locked upon creation, and then must be unlocked here; if this was the top level unlock, then
+         * we clean up any stale data that must occur after unlock as usual:
+         */
+
+        if (getData(instance) instanceof ListenerList<?> list && list.unlock()) {
+            updateAfterRemoval(instance, list);
         }
     }
 

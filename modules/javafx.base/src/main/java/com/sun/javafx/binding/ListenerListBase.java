@@ -203,6 +203,23 @@ public abstract class ListenerListBase {
     }
 
     /**
+     * Creates a new instance with one listener.
+     *
+     * @param listener a listener, cannot be {@code null}
+     * @throws NullPointerException when any parameter is {@code null}
+     */
+    public ListenerListBase(Object listener) {
+        Objects.requireNonNull(listener);
+
+        if (listener instanceof InvalidationListener il) {
+            INVALIDATION_LISTENERS.add(this, il);
+        }
+        else {
+            CHANGE_LISTENERS.add(this, listener);
+        }
+    }
+
+    /**
      * Returns the total number of listeners in this list. This accurately
      * reflects added and removed listeners even while the list is locked.
      *

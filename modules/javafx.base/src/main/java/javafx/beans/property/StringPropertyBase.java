@@ -60,6 +60,16 @@ public abstract class StringPropertyBase extends StringProperty {
         protected void setData(StringPropertyBase instance, Object data) {
             instance.listenerData = data;
         }
+
+        @Override
+        protected boolean isNotifying(StringPropertyBase instance) {
+            return instance.notifying;
+        }
+
+        @Override
+        protected void setNotifying(StringPropertyBase instance, boolean value) {
+            instance.notifying = value;
+        }
     };
 
     private String value;
@@ -67,6 +77,7 @@ public abstract class StringPropertyBase extends StringProperty {
     private InvalidationListener listener = null;
     private boolean valid = true;
     private Object listenerData;
+    private boolean notifying;
 
     /**
      * The constructor of the {@code StringPropertyBase}.

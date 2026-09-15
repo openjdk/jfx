@@ -71,6 +71,16 @@ public abstract class FloatBinding extends FloatExpression implements
         protected void setData(FloatBinding instance, Object data) {
             instance.listenerData = data;
         }
+
+        @Override
+        protected boolean isNotifying(FloatBinding instance) {
+            return instance.notifying;
+        }
+
+        @Override
+        protected void setNotifying(FloatBinding instance, boolean value) {
+            instance.notifying = value;
+        }
     };
 
     private float value;
@@ -84,6 +94,7 @@ public abstract class FloatBinding extends FloatExpression implements
      */
     private BindingHelperObserver observer;
     private Object listenerData;
+    private boolean notifying;
 
     /**
      * Creates a default {@code FloatBinding}.

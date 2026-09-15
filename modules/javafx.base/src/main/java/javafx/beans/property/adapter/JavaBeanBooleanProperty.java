@@ -96,6 +96,16 @@ public final class JavaBeanBooleanProperty extends BooleanProperty implements Ja
         protected void setData(JavaBeanBooleanProperty instance, Object data) {
             instance.listenerData = data;
         }
+
+        @Override
+        protected boolean isNotifying(JavaBeanBooleanProperty instance) {
+            return instance.notifying;
+        }
+
+        @Override
+        protected void setNotifying(JavaBeanBooleanProperty instance, boolean value) {
+            instance.notifying = value;
+        }
     };
 
     private final PropertyDescriptor<Boolean> descriptor;
@@ -103,6 +113,7 @@ public final class JavaBeanBooleanProperty extends BooleanProperty implements Ja
 
     private ObservableValue<? extends Boolean> observable = null;
     private Object listenerData;
+    private boolean notifying;
 
     JavaBeanBooleanProperty(PropertyDescriptor<Boolean> descriptor, Object bean) {
         this.descriptor = descriptor;

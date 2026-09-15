@@ -49,9 +49,20 @@ public abstract class ReadOnlyStringPropertyBase extends ReadOnlyStringProperty 
             protected void setData(ReadOnlyStringPropertyBase instance, Object data) {
                 instance.listenerData = data;
             }
+
+            @Override
+            protected boolean isNotifying(ReadOnlyStringPropertyBase instance) {
+                return instance.notifying;
+            }
+
+            @Override
+            protected void setNotifying(ReadOnlyStringPropertyBase instance, boolean value) {
+                instance.notifying = value;
+            }
         };
 
-    Object listenerData;
+    private Object listenerData;
+    private boolean notifying;
 
     /**
      * Creates a default {@code ReadOnlyStringPropertyBase}.

@@ -70,6 +70,16 @@ public abstract class StringBinding extends StringExpression implements
         protected void setData(StringBinding instance, Object data) {
             instance.listenerData = data;
         }
+
+        @Override
+        protected boolean isNotifying(StringBinding instance) {
+            return instance.notifying;
+        }
+
+        @Override
+        protected void setNotifying(StringBinding instance, boolean value) {
+            instance.notifying = value;
+        }
     };
 
     private String value;
@@ -83,6 +93,7 @@ public abstract class StringBinding extends StringExpression implements
      */
     private BindingHelperObserver observer;
     private Object listenerData;
+    private boolean notifying;
 
     /**
      * Creates a default {@code StringBinding}.

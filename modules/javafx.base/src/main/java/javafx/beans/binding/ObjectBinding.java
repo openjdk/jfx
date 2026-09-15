@@ -71,6 +71,16 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
         protected void setData(ObjectBinding<?> instance, Object data) {
             instance.listenerData = data;
         }
+
+        @Override
+        protected boolean isNotifying(ObjectBinding<?> instance) {
+            return instance.notifying;
+        }
+
+        @Override
+        protected void setNotifying(ObjectBinding<?> instance, boolean value) {
+            instance.notifying = value;
+        }
     };
 
     private T value;
@@ -85,6 +95,7 @@ public abstract class ObjectBinding<T> extends ObjectExpression<T> implements
      */
     private BindingHelperObserver observer;
     private Object listenerData;
+    private boolean notifying;
 
     /**
      * Creates a default {@code ObjectBinding}.

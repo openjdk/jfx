@@ -63,6 +63,16 @@ public abstract class DoublePropertyBase extends DoubleProperty {
         protected void setData(DoublePropertyBase instance, Object data) {
             instance.listenerData = data;
         }
+
+        @Override
+        protected boolean isNotifying(DoublePropertyBase instance) {
+            return instance.notifying;
+        }
+
+        @Override
+        protected void setNotifying(DoublePropertyBase instance, boolean value) {
+            instance.notifying = value;
+        }
     };
 
     private double value;
@@ -70,6 +80,7 @@ public abstract class DoublePropertyBase extends DoubleProperty {
     private InvalidationListener listener = null;
     private boolean valid = true;
     private Object listenerData;
+    private boolean notifying;
 
     /**
      * The constructor of the {@code DoublePropertyBase}.

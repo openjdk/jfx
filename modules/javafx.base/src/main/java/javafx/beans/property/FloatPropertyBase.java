@@ -63,6 +63,16 @@ public abstract class FloatPropertyBase extends FloatProperty {
         protected void setData(FloatPropertyBase instance, Object data) {
             instance.listenerData = data;
         }
+
+        @Override
+        protected boolean isNotifying(FloatPropertyBase instance) {
+            return instance.notifying;
+        }
+
+        @Override
+        protected void setNotifying(FloatPropertyBase instance, boolean value) {
+            instance.notifying = value;
+        }
     };
 
     private float value;
@@ -70,6 +80,7 @@ public abstract class FloatPropertyBase extends FloatProperty {
     private InvalidationListener listener = null;
     private boolean valid = true;
     private Object listenerData;
+    private boolean notifying;
 
     /**
      * The constructor of the {@code FloatPropertyBase}.

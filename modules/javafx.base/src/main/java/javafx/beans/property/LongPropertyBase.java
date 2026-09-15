@@ -63,6 +63,16 @@ public abstract class LongPropertyBase extends LongProperty {
         protected void setData(LongPropertyBase instance, Object data) {
             instance.listenerData = data;
         }
+
+        @Override
+        protected boolean isNotifying(LongPropertyBase instance) {
+            return instance.notifying;
+        }
+
+        @Override
+        protected void setNotifying(LongPropertyBase instance, boolean value) {
+            instance.notifying = value;
+        }
     };
 
     private long value;
@@ -70,6 +80,7 @@ public abstract class LongPropertyBase extends LongProperty {
     private InvalidationListener listener = null;
     private boolean valid = true;
     private Object listenerData;
+    private boolean notifying;
 
     /**
      * The constructor of the {@code LongPropertyBase}.

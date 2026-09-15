@@ -71,6 +71,16 @@ public abstract class LongBinding extends LongExpression implements
         protected void setData(LongBinding instance, Object data) {
             instance.listenerData = data;
         }
+
+        @Override
+        protected boolean isNotifying(LongBinding instance) {
+            return instance.notifying;
+        }
+
+        @Override
+        protected void setNotifying(LongBinding instance, boolean value) {
+            instance.notifying = value;
+        }
     };
 
     private long value;
@@ -84,6 +94,7 @@ public abstract class LongBinding extends LongExpression implements
      */
     private BindingHelperObserver observer;
     private Object listenerData;
+    private boolean notifying;
 
     /**
      * Creates a default {@code LongBinding}.

@@ -133,9 +133,20 @@ public abstract class TextInputControl extends Control {
             protected void setData(ContentBase instance, Object data) {
                 instance.listenerData = data;
             }
+
+            @Override
+            protected boolean isNotifying(ContentBase instance) {
+                return instance.notifying;
+            }
+
+            @Override
+            protected void setNotifying(ContentBase instance, boolean value) {
+                instance.notifying = value;
+            }
         };
 
         private Object listenerData;
+        private boolean notifying;
 
         @Override
         public void addListener(ChangeListener<? super String> changeListener) {
@@ -1422,6 +1433,16 @@ public abstract class TextInputControl extends Control {
             protected void setData(TextProperty instance, Object data) {
                 instance.listenerData = data;
             }
+
+            @Override
+            protected boolean isNotifying(TextProperty instance) {
+                return instance.notifying;
+            }
+
+            @Override
+            protected void setNotifying(TextProperty instance, boolean value) {
+                instance.notifying = value;
+            }
         };
 
         // This is used only when the property is bound
@@ -1430,6 +1451,7 @@ public abstract class TextInputControl extends Control {
         private InvalidationListener listener = null;
         // Used for event handling
         private Object listenerData;
+        private boolean notifying;
         // The developer my set the Text property to null. Although
         // the Content must be given an empty String, we must still
         // treat the value as though it were null, so that a subsequent

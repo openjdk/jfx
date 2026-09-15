@@ -71,6 +71,16 @@ public abstract class IntegerBinding extends IntegerExpression implements
         protected void setData(IntegerBinding instance, Object data) {
             instance.listenerData = data;
         }
+
+        @Override
+        protected boolean isNotifying(IntegerBinding instance) {
+            return instance.notifying;
+        }
+
+        @Override
+        protected void setNotifying(IntegerBinding instance, boolean value) {
+            instance.notifying = value;
+        }
     };
 
     private int value;
@@ -84,6 +94,7 @@ public abstract class IntegerBinding extends IntegerExpression implements
      */
     private BindingHelperObserver observer;
     private Object listenerData;
+    private boolean notifying;
 
     /**
      * Creates a default {@code IntegerBinding}.

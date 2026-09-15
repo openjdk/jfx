@@ -96,6 +96,16 @@ public final class JavaBeanFloatProperty extends FloatProperty implements JavaBe
         protected void setData(JavaBeanFloatProperty instance, Object data) {
             instance.listenerData = data;
         }
+
+        @Override
+        protected boolean isNotifying(JavaBeanFloatProperty instance) {
+            return instance.notifying;
+        }
+
+        @Override
+        protected void setNotifying(JavaBeanFloatProperty instance, boolean value) {
+            instance.notifying = value;
+        }
     };
 
     private final PropertyDescriptor<Number> descriptor;
@@ -103,6 +113,7 @@ public final class JavaBeanFloatProperty extends FloatProperty implements JavaBe
 
     private ObservableValue<? extends Number> observable = null;
     private Object listenerData;
+    private boolean notifying;
 
     JavaBeanFloatProperty(PropertyDescriptor<Number> descriptor, Object bean) {
         this.descriptor = descriptor;

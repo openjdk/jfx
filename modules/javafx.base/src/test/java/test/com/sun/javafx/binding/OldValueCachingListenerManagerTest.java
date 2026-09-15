@@ -39,6 +39,16 @@ public class OldValueCachingListenerManagerTest extends AbstractListenerManagerT
         protected void setData(SimpleObservableValue<String> instance, Object data) {
             instance.data = data;
         }
+
+        @Override
+        protected boolean isNotifying(SimpleObservableValue<String> instance) {
+            return instance.notifying;
+        }
+
+        @Override
+        protected void setNotifying(SimpleObservableValue<String> instance, boolean value) {
+            instance.notifying = value;
+        }
     };
 
     private final SimpleObservableValue<String> ov = new SimpleObservableValue<>(

@@ -66,12 +66,12 @@ public non-sealed abstract class OldValueCachingListenerManager<T, I extends Obs
             case null -> setData(instance, listener);
             case OldValueCachingListenerList<?> list -> list.add(listener);
             case ChangeListenerWrapper<?> wrapper -> {
-                OldValueCachingListenerList<Object> list = new OldValueCachingListenerList<>(wrapper.listener, listener);
+                OldValueCachingListenerList<Object> list = createListenerList(instance, wrapper.listener, listener);
 
                 list.putLatestValue(wrapper.latestValue);
                 setData(instance, list);
             }
-            case Object data -> setData(instance, new OldValueCachingListenerList<>(data, listener));
+            case Object data -> setData(instance, createListenerList(instance, data, listener));
         }
     }
 
@@ -92,14 +92,14 @@ public non-sealed abstract class OldValueCachingListenerManager<T, I extends Obs
                 list.add(listener);
             }
             case ChangeListenerWrapper<?> wrapper -> {
-                OldValueCachingListenerList<Object> list = new OldValueCachingListenerList<>(wrapper.listener, listener);
+                OldValueCachingListenerList<Object> list = createListenerList(instance, wrapper.listener, listener);
 
                 list.putLatestValue(wrapper.latestValue);
 
                 setData(instance, list);
             }
             case Object data -> {
-                OldValueCachingListenerList<T> list = new OldValueCachingListenerList<>(data, listener);
+                OldValueCachingListenerList<T> list = createListenerList(instance, data, listener);
 
                 list.putLatestValue(instance.getValue());
 
@@ -160,6 +160,26 @@ public non-sealed abstract class OldValueCachingListenerManager<T, I extends Obs
         return false;
     }
 
+    /*
+     * Creates a new listener list. If a new listener was added while a notification on this instance
+     * is in progress, then this is detected and the new listener list is created locked. This ensures that
+     * if the listener that was invoked already triggers a nested change, that we correctly first notify
+     * this listener again and possibly never invoke the newly added listener (if the first listener
+     * changed the value back to the original value).
+     */
+    private <U> OldValueCachingListenerList<U> createListenerList(I instance, Object existingListener, Object newListener) {
+        if (isNotifying(instance)) {
+            OldValueCachingListenerList<U> list = new OldValueCachingListenerList<>(existingListener);
+
+            list.lock();
+            list.add(newListener);
+
+            return list;
+        }
+
+        return new OldValueCachingListenerList<>(existingListener, newListener);
+    }
+
     /**
      * Notifies the listeners managed in the given instance.<p>
      *
@@ -176,13 +196,43 @@ public non-sealed abstract class OldValueCachingListenerManager<T, I extends Obs
             callMultipleListeners(instance, list);
         }
         else if (listenerData instanceof InvalidationListener il) {
-            ListenerListBase.callInvalidationListener(instance, il);
+            notifyInvalidationListener(instance, il);
+            unlockIfDataStorageTypeBecameList(instance);
         }
         else if (listenerData instanceof ChangeListenerWrapper) {
             @SuppressWarnings("unchecked")
             ChangeListenerWrapper<T> clw = (ChangeListenerWrapper<T>) listenerData;
 
             callWrappedChangeListener(instance, clw);
+            unlockIfDataStorageTypeBecameList(instance);
+        }
+    }
+
+    private void unlockIfDataStorageTypeBecameList(I instance) {
+
+        /*
+         * If during notification, the managed data field changed from a single listener to a list, then this
+         * list was locked upon creation, and then must be unlocked here; if this was the top level unlock, then
+         * we clean up any stale data that must occur after unlock as usual:
+         */
+
+        if (getData(instance) instanceof OldValueCachingListenerList<?> list && list.unlock()) {
+            @SuppressWarnings("unchecked")
+            OldValueCachingListenerList<T> typedList = (OldValueCachingListenerList<T>) list;
+
+            if (typedList.hasChangeListeners()) {
+
+                /*
+                 * The list was locked for its entire existence so far, so its change listener loop may
+                 * never have run (for example when an invalidation listener was the one that triggered
+                 * the nested change); ensure the cached latest value reflects reality before it is relied
+                 * upon again, otherwise a subsequent change may incorrectly be seen as a no-op:
+                 */
+
+                typedList.putLatestValue(instance.getValue());
+            }
+
+            updateAfterRemoval(instance, typedList);
         }
     }
 
@@ -202,7 +252,7 @@ public non-sealed abstract class OldValueCachingListenerManager<T, I extends Obs
         changeListenerWrapper.putLatestValue(newValue);
 
         if (!Objects.equals(newValue, oldValue)) {
-            ListenerListBase.callChangeListener(instance, changeListenerWrapper, oldValue, newValue);
+            notifyChangeListener(instance, changeListenerWrapper, oldValue, newValue);
         }
     }
 

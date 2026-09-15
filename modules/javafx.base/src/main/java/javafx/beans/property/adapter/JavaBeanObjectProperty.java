@@ -98,6 +98,16 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
         protected void setData(JavaBeanObjectProperty<?> instance, Object data) {
             instance.listenerData = data;
         }
+
+        @Override
+        protected boolean isNotifying(JavaBeanObjectProperty<?> instance) {
+            return instance.notifying;
+        }
+
+        @Override
+        protected void setNotifying(JavaBeanObjectProperty<?> instance, boolean value) {
+            instance.notifying = value;
+        }
     };
 
     private final PropertyDescriptor<T> descriptor;
@@ -105,6 +115,7 @@ public final class JavaBeanObjectProperty<T> extends ObjectProperty<T> implement
 
     private ObservableValue<? extends T> observable = null;
     private Object listenerData;
+    private boolean notifying;
 
     JavaBeanObjectProperty(PropertyDescriptor<T> descriptor, Object bean) {
         this.descriptor = descriptor;

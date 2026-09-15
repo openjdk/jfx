@@ -43,6 +43,7 @@ class SimpleObservableValue<T> implements ObservableValue<T> {
     T value;
     T oldValue;
     Object data;
+    boolean notifying;
 
     public SimpleObservableValue(Consumer<SimpleObservableValue<T>> fireValueChanged) {
         this.fireValueChanged = fireValueChanged;

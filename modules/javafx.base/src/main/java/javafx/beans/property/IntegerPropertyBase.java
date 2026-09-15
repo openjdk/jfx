@@ -63,6 +63,16 @@ public abstract class IntegerPropertyBase extends IntegerProperty {
         protected void setData(IntegerPropertyBase instance, Object data) {
             instance.listenerData = data;
         }
+
+        @Override
+        protected boolean isNotifying(IntegerPropertyBase instance) {
+            return instance.notifying;
+        }
+
+        @Override
+        protected void setNotifying(IntegerPropertyBase instance, boolean value) {
+            instance.notifying = value;
+        }
     };
 
     private int value;
@@ -70,6 +80,7 @@ public abstract class IntegerPropertyBase extends IntegerProperty {
     private InvalidationListener listener = null;
     private boolean valid = true;
     private Object listenerData;
+    private boolean notifying;
 
     /**
      * The constructor of the {@code IntegerPropertyBase}.

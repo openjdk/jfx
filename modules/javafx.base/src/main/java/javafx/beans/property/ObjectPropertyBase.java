@@ -62,6 +62,16 @@ public abstract class ObjectPropertyBase<T> extends ObjectProperty<T> {
         protected void setData(ObjectPropertyBase<?> instance, Object data) {
             instance.listenerData = data;
         }
+
+        @Override
+        protected boolean isNotifying(ObjectPropertyBase<?> instance) {
+            return instance.notifying;
+        }
+
+        @Override
+        protected void setNotifying(ObjectPropertyBase<?> instance, boolean value) {
+            instance.notifying = value;
+        }
     };
 
     private T value;
@@ -69,6 +79,7 @@ public abstract class ObjectPropertyBase<T> extends ObjectProperty<T> {
     private InvalidationListener listener = null;
     private boolean valid = true;
     private Object listenerData;
+    private boolean notifying;
 
     /**
      * The constructor of the {@code ObjectPropertyBase}.

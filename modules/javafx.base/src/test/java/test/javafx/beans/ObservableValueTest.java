@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
@@ -510,6 +511,386 @@ public class ObservableValueTest {
             calls,
             new int[] {10, 7, 4, 1, 0}
         );
+    }
+
+    /*
+     * Tests if the embedded ObservableValue sends sensible change events when a nested change occurs
+     * when there is initially one change listener that adds a second change listener before making
+     * the change.
+     */
+    @ParameterizedTest
+    @MethodSource("inputs")
+    <T> void shouldSendCorrectNestedEventsWithOneChangeListenerThatAddsAChangeListener(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
+        List<Change> changes = new ArrayList<>();
+        AtomicInteger newListenerCallCount = new AtomicInteger();
+        AtomicBoolean triggered = new AtomicBoolean();
+
+        /*
+         * Create one change listener, which adds a second change listener and modifies the value back
+         * to value1, but only the first time it is notified (so a further, unrelated change can
+         * later be used to verify the new listener eventually receives events normally).
+         * Verify that the new change listener is not called for the nested change.
+         */
+
+        action.addListener((_, old, current) -> {
+            changes.add(new Change("B", old, current));
+
+            if (triggered.compareAndSet(false, true)) {
+                action.addListener((_, _, _) -> newListenerCallCount.incrementAndGet());
+                valueSetter.accept(value1);
+            }
+        });
+
+        valueSetter.accept(value2);
+
+        assertConsistentChangeSequence(changes, value1, value1, Set.of(value1, value2));
+        assertEquals(0, newListenerCallCount.get());
+
+        /*
+         * A further, unrelated top level change must notify the change listener that was added during
+         * the earlier nested notification, as that notification has since concluded:
+         */
+
+        valueSetter.accept(value2);
+
+        assertConsistentChangeSequence(changes, value1, value2, Set.of(value1, value2));
+        assertEquals(1, newListenerCallCount.get());
+    }
+
+    /*
+     * Tests if the embedded ObservableValue sends sensible invalidation events when a nested change
+     * occurs when there is initially one invalidation listener that adds a second invalidation
+     * listener before making the change.
+     */
+    @ParameterizedTest
+    @MethodSource("inputs")
+    <T> void shouldSendCorrectNestedInvalidationsWithOneInvalidationListenerThatAddsAnInvalidationListener(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
+        AtomicInteger initialListenerCallCount = new AtomicInteger();
+        AtomicInteger newListenerCallCount = new AtomicInteger();
+        AtomicBoolean triggered = new AtomicBoolean();
+
+        /*
+         * Create one invalidation listener, which adds a second invalidation listener and modifies the
+         * value back to value1, but only the first time it is notified (so a further, unrelated
+         * change can later be used to verify the second listener eventually receives events normally).
+         * Verify that the second listener is not called for the nested change.
+         */
+
+        action.addListener(_ -> {
+            initialListenerCallCount.incrementAndGet();
+
+            if (triggered.compareAndSet(false, true)) {
+                action.addListener(_ -> newListenerCallCount.incrementAndGet());
+                valueSetter.accept(value1);
+            }
+        });
+
+        valueSetter.accept(value2);
+
+        assertEquals(2, initialListenerCallCount.get());  // once for value1 -> value2, and once (nested) for value2 -> value1
+        assertEquals(0, newListenerCallCount.get());
+
+        /*
+         * A further, unrelated top level change must notify the invalidation listener that was added
+         * during the earlier nested notification, as that notification has since concluded:
+         */
+
+        action.getValue();  // make property valid again so invalidation listener can fire again
+
+        valueSetter.accept(value2);
+
+        assertEquals(3, initialListenerCallCount.get());
+        assertEquals(1, newListenerCallCount.get());
+    }
+
+    /*
+     * Tests if the embedded ObservableValue sends sensible events when a nested change occurs when
+     * there is initially one invalidation listener that adds a change listener before making the change.
+     */
+    @ParameterizedTest
+    @MethodSource("inputs")
+    <T> void shouldSendCorrectNestedEventsWithOneInvalidationListenerThatAddsAChangeListener(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
+        AtomicInteger initialListenerCallCount = new AtomicInteger();
+        AtomicInteger newListenerCallCount = new AtomicInteger();
+        AtomicBoolean triggered = new AtomicBoolean();
+
+        /*
+         * Create one invalidation listener, which adds a change listener and modifies the value back
+         * to value1, but only the first time it is notified (so a further, unrelated change can
+         * later be used to verify the new listener eventually receives events normally).
+         * Verify that the new change listener is not called for the nested change.
+         */
+
+        action.addListener(_ -> {
+            initialListenerCallCount.incrementAndGet();
+
+            if (triggered.compareAndSet(false, true)) {
+                action.addListener((_, _, _) -> newListenerCallCount.incrementAndGet());
+                valueSetter.accept(value1);
+            }
+        });
+
+        valueSetter.accept(value2);
+
+        assertEquals(2, initialListenerCallCount.get());  // once for value1 -> value2, and once (nested) for value2 -> value1
+        assertEquals(0, newListenerCallCount.get());
+
+        /*
+         * A further, unrelated top level change must notify the change listener that was added during
+         * the earlier nested notification, as that notification has since concluded:
+         */
+
+        action.getValue();  // make property valid again so invalidation listener can fire again
+
+        valueSetter.accept(value2);
+
+        assertEquals(3, initialListenerCallCount.get());
+        assertEquals(1, newListenerCallCount.get());
+    }
+
+    /*
+     * Tests if the embedded ObservableValue sends sensible events when a nested change occurs when
+     * there is initially one change listener that adds an invalidation listener before making the change.
+     */
+    @ParameterizedTest
+    @MethodSource("inputs")
+    <T> void shouldSendCorrectNestedEventsWithOneChangeListenerThatAddsAnInvalidationListener(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
+        List<Change> changes = new ArrayList<>();
+        AtomicInteger newListenerCallCount = new AtomicInteger();
+        AtomicBoolean triggered = new AtomicBoolean();
+
+        /*
+         * Create one change listener, which adds an invalidation listener and modifies the value back
+         * to value1, but only the first time it is notified (so a further, unrelated change can
+         * later be used to verify the new listener eventually receives events normally).
+         * Verify that the new invalidation listener is not called for the nested change.
+         */
+
+        action.addListener((_, old, current) -> {
+            changes.add(new Change("B", old, current));
+
+            if (triggered.compareAndSet(false, true)) {
+                action.addListener(_ -> newListenerCallCount.incrementAndGet());
+                valueSetter.accept(value1);
+            }
+        });
+
+        valueSetter.accept(value2);
+
+        assertConsistentChangeSequence(changes, value1, value1, Set.of(value1, value2));
+        assertEquals(0, newListenerCallCount.get());
+
+        /*
+         * A further, unrelated top level change must notify the invalidation listener that was added
+         * during the earlier nested notification, as that notification has since concluded:
+         */
+
+        valueSetter.accept(value2);
+
+        assertConsistentChangeSequence(changes, value1, value2, Set.of(value1, value2));
+        assertEquals(1, newListenerCallCount.get());
+    }
+
+    /*
+     * Tests if the embedded ObservableValue sends sensible change events when a nested change occurs
+     * when there are two change listeners, the first of which removes the second and modifies the
+     * value back to value1. The listener storage collapses to a single listener afterward, and must
+     * continue to function correctly for further top level changes.
+     */
+    @ParameterizedTest
+    @MethodSource("inputs")
+    <T> void shouldSendCorrectNestedEventsWhenChangeListenerRemovesTheOtherChangeListener(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
+        List<Change> changes = new ArrayList<>();
+        AtomicInteger removedListenerCallCount = new AtomicInteger();
+        AtomicBoolean triggered = new AtomicBoolean();
+
+        /*
+         * Create two change listeners, the first of which removes the second and modifies the value
+         * back to value1, but only the first time it is notified (so a further, unrelated change
+         * can later be used to verify the remaining listener still receives events normally).
+         * Verify that the removed listener is not called for the nested change.
+         */
+
+        ChangeListener<? super T> second = (_, _, _) -> removedListenerCallCount.incrementAndGet();
+
+        action.addListener((_, old, current) -> {
+            changes.add(new Change("A", old, current));
+
+            if (triggered.compareAndSet(false, true)) {
+                action.removeListener(second);
+                valueSetter.accept(value1);
+            }
+        });
+        action.addListener(second);
+
+        valueSetter.accept(value2);
+
+        assertConsistentChangeSequence(changes, value1, value1, Set.of(value1, value2));
+        assertEquals(0, removedListenerCallCount.get());
+
+        /*
+         * A further, unrelated top level change must still be observed correctly, and the removed
+         * listener must remain silent, as the earlier nested notification has since concluded:
+         */
+
+        valueSetter.accept(value2);
+
+        assertConsistentChangeSequence(changes, value1, value2, Set.of(value1, value2));
+        assertEquals(0, removedListenerCallCount.get());
+    }
+
+    /*
+     * Tests if the embedded ObservableValue sends sensible invalidation events when a nested change
+     * occurs when there are two invalidation listeners, the first of which removes the second and
+     * modifies the value back to value1. The listener storage collapses to a single listener
+     * afterward, and must continue to function correctly for further top level changes.
+     */
+    @ParameterizedTest
+    @MethodSource("inputs")
+    <T> void shouldSendCorrectNestedInvalidationsWhenInvalidationListenerRemovesTheOtherInvalidationListener(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
+        AtomicInteger initialListenerCallCount = new AtomicInteger();
+        AtomicInteger removedListenerCallCount = new AtomicInteger();
+        AtomicBoolean triggered = new AtomicBoolean();
+
+        /*
+         * Create two invalidation listeners, the first of which removes the second and modifies the
+         * value back to value1, but only the first time it is notified (so a further, unrelated
+         * change can later be used to verify the remaining listener still receives events normally).
+         * Verify that the removed listener is not called for the nested change.
+         */
+
+        InvalidationListener second = _ -> removedListenerCallCount.incrementAndGet();
+
+        action.addListener(_ -> {
+            initialListenerCallCount.incrementAndGet();
+
+            if (triggered.compareAndSet(false, true)) {
+                action.getValue();  // make property valid again so invalidation listener can fire again
+                action.removeListener(second);
+                valueSetter.accept(value1);
+            }
+        });
+        action.addListener(second);
+
+        valueSetter.accept(value2);
+
+        assertEquals(2, initialListenerCallCount.get());  // once for value1 -> value2, and once (nested) for value2 -> value1
+        assertEquals(0, removedListenerCallCount.get());
+
+        /*
+         * A further, unrelated top level change must still notify the remaining invalidation listener,
+         * as the earlier nested notification has since concluded:
+         */
+
+        action.getValue();  // make property valid again so invalidation listener can fire again
+
+        valueSetter.accept(value2);
+
+        assertEquals(3, initialListenerCallCount.get());
+        assertEquals(0, removedListenerCallCount.get());
+    }
+
+    /*
+     * Tests if the embedded ObservableValue sends sensible events when a nested change occurs when
+     * there is an invalidation listener and a change listener, and the invalidation listener removes
+     * the change listener and modifies the value back to value1. The listener storage collapses to a
+     * single invalidation listener afterward, and must continue to function correctly for further
+     * top level changes.
+     */
+    @ParameterizedTest
+    @MethodSource("inputs")
+    <T> void shouldSendCorrectNestedEventsWhenInvalidationListenerRemovesTheOtherChangeListener(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
+        AtomicInteger initialListenerCallCount = new AtomicInteger();
+        AtomicInteger removedListenerCallCount = new AtomicInteger();
+        AtomicBoolean triggered = new AtomicBoolean();
+
+        /*
+         * Create an invalidation listener and a change listener, where the invalidation listener
+         * removes the change listener and modifies the value back to value1, but only the first time
+         * it is notified (so a further, unrelated change can later be used to verify the remaining
+         * listener still receives events normally).
+         * Verify that the removed change listener is not called for the nested change.
+         */
+
+        ChangeListener<? super T> changeListener = (_, _, _) -> removedListenerCallCount.incrementAndGet();
+
+        action.addListener(_ -> {
+            initialListenerCallCount.incrementAndGet();
+
+            if (triggered.compareAndSet(false, true)) {
+                action.getValue();  // make property valid again so invalidation listener can fire again
+                action.removeListener(changeListener);
+                valueSetter.accept(value1);
+            }
+        });
+        action.addListener(changeListener);
+
+        valueSetter.accept(value2);
+
+        assertEquals(2, initialListenerCallCount.get());  // once for value1 -> value2, and once (nested) for value2 -> value1
+        assertEquals(0, removedListenerCallCount.get());
+
+        /*
+         * A further, unrelated top level change must still notify the remaining invalidation listener,
+         * as the earlier nested notification has since concluded:
+         */
+
+        action.getValue();  // make property valid again so invalidation listener can fire again
+
+        valueSetter.accept(value2);
+
+        assertEquals(3, initialListenerCallCount.get());
+        assertEquals(0, removedListenerCallCount.get());
+    }
+
+    /*
+     * Tests if the embedded ObservableValue sends sensible events when a nested change occurs when
+     * there is an invalidation listener and a change listener, and the change listener removes the
+     * invalidation listener and modifies the value back to value1. The listener storage collapses to
+     * a single change listener afterward, and must continue to function correctly for further top
+     * level changes.
+     */
+    @ParameterizedTest
+    @MethodSource("inputs")
+    <T> void shouldSendCorrectNestedEventsWhenChangeListenerRemovesTheOtherInvalidationListener(Action<T> action, T value1, T value2, Consumer<T> valueSetter) {
+        List<Change> changes = new ArrayList<>();
+        AtomicInteger removedListenerCallCount = new AtomicInteger();
+        AtomicBoolean triggered = new AtomicBoolean();
+
+        /*
+         * Create an invalidation listener and a change listener, where the change listener removes
+         * the invalidation listener and modifies the value back to value1, but only the first time it
+         * is notified (so a further, unrelated change can later be used to verify the remaining
+         * listener still receives events normally).
+         * Verify that the removed invalidation listener is not called for the nested change.
+         */
+
+        InvalidationListener invalidationListener = _ -> removedListenerCallCount.incrementAndGet();
+
+        action.addListener(invalidationListener);
+        action.addListener((_, old, current) -> {
+            changes.add(new Change("B", old, current));
+
+            if (triggered.compareAndSet(false, true)) {
+                action.removeListener(invalidationListener);
+                valueSetter.accept(value1);
+            }
+        });
+
+        valueSetter.accept(value2);
+
+        assertEquals(1, removedListenerCallCount.get());  // fired once, before being removed; must not fire again
+        assertConsistentChangeSequence(changes, value1, value1, Set.of(value1, value2));
+
+        /*
+         * A further, unrelated top level change must still notify the remaining change listener,
+         * as the earlier nested notification has since concluded:
+         */
+
+        valueSetter.accept(value2);
+
+        assertEquals(1, removedListenerCallCount.get());
+        assertConsistentChangeSequence(changes, value1, value2, Set.of(value1, value2));
     }
 
     private static void assertCalls(Consumer<Integer> step, AtomicInteger calls, int... expectedCalls) {

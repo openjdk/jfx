@@ -49,9 +49,20 @@ public abstract class ReadOnlyFloatPropertyBase extends ReadOnlyFloatProperty {
             protected void setData(ReadOnlyFloatPropertyBase instance, Object data) {
                 instance.listenerData = data;
             }
+
+            @Override
+            protected boolean isNotifying(ReadOnlyFloatPropertyBase instance) {
+                return instance.notifying;
+            }
+
+            @Override
+            protected void setNotifying(ReadOnlyFloatPropertyBase instance, boolean value) {
+                instance.notifying = value;
+            }
         };
 
-    Object listenerData;
+    private Object listenerData;
+    private boolean notifying;
 
     /**
      * Creates a default {@code ReadOnlyFloatPropertyBase}.
