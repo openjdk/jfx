@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
+import javafx.geometry.Point2D;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.Label;
@@ -43,10 +44,13 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.LineTo;
 import javafx.scene.shape.MoveTo;
 import javafx.scene.shape.PathElement;
+import javafx.scene.text.HitInfo;
+import javafx.scene.text.LayoutInfo;
 import javafx.scene.text.TabStopPolicy;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import com.sun.jfx.incubator.scene.control.richtext.util.RichUtils;
+import jfx.incubator.scene.control.richtext.TextPos;
 import jfx.incubator.scene.control.richtext.model.StyleAttribute;
 import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 import jfx.incubator.scene.control.richtext.model.TabStops;
@@ -408,57 +412,62 @@ public final class TextCell extends BorderPane {
         return null;
     }
 
-    private RangeInfo getTextRange() {
+    private RangeInfo textRange() {
         if (content instanceof TextFlow f) {
-            int len = getTextLength();
-            PathElement[] pe = f.getRangeShape(0, len, true);
-            if (pe.length > 0) {
-                double sp = f.getLineSpacing();
-                return RangeInfo.of(pe, sp);
-            }
+            LayoutInfo la = f.getLayoutInfo();
+            double sp = f.getLineSpacing();
+            return RangeInfo.of(la, sp, height);
         }
-        return RangeInfo.of(width, height);
+        return RangeInfo.of(height);
     }
 
-    public boolean isInsideText(double x, double y, boolean down) {
-        y -= snappedTopInset();
-        y -= content.snappedTopInset();
-
-        RangeInfo ri = getTextRange();
-        int sz = ri.getSegmentCount();
-        for (int i = 0; i < sz; i++) {
-            if(ri.contains(i, x, y)) {
-                return true;
-            }
-        }
-        if (ri.insideY(y)) {
+    public boolean isOutsideTextRangeY(double y) {
+        if (getTextLength() == 0) {
+            // there is no text
             return true;
         }
-        return false;
+        RangeInfo ri = textRange();
+        return ri.isOutsideTextRangeY(y - snappedTopInset());
     }
 
-    public double findHitCandidate(double py, boolean down) {
-        double dy = snappedTopInset() + content.snappedTopInset();
-        double y = py - dy;
+    public double getFirstLineMidY() {
+        RangeInfo ri = textRange();
+        return snappedTopInset() + ri.getFirstLineMidY();
+    }
 
-        RangeInfo ri = getTextRange();
-        int sz = ri.getSegmentCount();
-        if (down) {
-            for (int i = 0; i < sz; i++) {
-                if (ri.getMaxY(i) >= y) {
-                    return ri.midPointY(i) + dy;
-                }
+    public double getLastLineMidY() {
+        RangeInfo ri = textRange();
+        return snappedTopInset() + ri.getLastLineMidY();
+    }
+
+    public double findHitCandidate(double cellY) {
+        double dy = snappedTopInset();
+        RangeInfo ri = textRange();
+        return ri.findHitMidpoint(cellY - dy) + dy;
+    }
+
+    public TextPos getTextPos(double cellX, double cellY) {
+        double py = cellY - y;
+        if (py < 0) {
+            return TextPos.ofLeading(index, 0);
+        } else if (py < height) {
+            if (content instanceof TextFlow f) {
+                Point2D p = new Point2D(cellX - content.getLayoutX(), py - content.getLayoutY());
+                HitInfo h = f.getHitInfo(p);
+                int ii = h.getInsertionIndex();
+                int ci = h.getCharIndex();
+                boolean leading = h.isLeading();
+                return new TextPos(index, ii, ci, leading);
+            } else {
+                return TextPos.ofLeading(index, 0);
             }
-            return ri.midPointY(0) + dy;
-        } else {
-            for (int i = sz - 1; i >= 0; i--) {
-                if (ri.getMinY(i) <= y) {
-                    return ri.midPointY(i) + dy;
-                }
-            }
-            int ix = ri.getSegmentCount() - 1;
-            return ri.midPointY(ix) + dy;
         }
+
+        int cix = 0;
+        if (content instanceof TextFlow f) {
+            cix = RichUtils.getTextLength(f);
+        }
+        return TextPos.ofLeading(index, cix);
     }
 
     public Integer lineEdge(boolean start, int caretIndex, int caretOffset) {

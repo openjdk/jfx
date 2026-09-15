@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -430,6 +430,18 @@ class GlassViewEventHandler extends View.EventHandler {
         }
     }
 
+    /**
+     * Handles a scroll-wheel event reported by the Windows or GTK toolkit.
+     * <p>
+     * The following scaling rules apply:
+     * <ul>
+     *     <li>{@code x}, {@code y}, {@code xAbs}, and {@code yAbs} are reported in platform coordinates and
+     *         must be divided by the platform scale in order to convert them into JavaFX layout coordinates.
+     *     <li>{@code deltaX} and {@code deltaY} are dimensionless wheel rotations that must not be scaled.
+     * </ul>
+     *
+     * Note: The macOS toolkit reports scroll-wheel events exclusively through {@link #handleScrollGestureEvent}.
+     */
     @Override public void handleScrollEvent(final View view, final long time,
                                             final int x, final int y, final int xAbs, final int yAbs,
                                             final double deltaX, final double deltaY, final int modifiers,
@@ -463,7 +475,7 @@ class GlassViewEventHandler extends View.EventHandler {
                         spx = spy = sx = sy = 0.0;
                     }
                     scene.sceneListener.scrollEvent(ScrollEvent.SCROLL,
-                        deltaX / pScaleX, deltaY / pScaleY, 0, 0,
+                        deltaX, deltaY, 0, 0,
                         xMultiplier, yMultiplier,
                         0, // touchCount
                         chars, lines, defaultChars, defaultLines,
@@ -856,6 +868,21 @@ class GlassViewEventHandler extends View.EventHandler {
         }
     }
 
+    /**
+     * Handles a scroll gesture reported by the Windows, macOS, or iOS toolkit.
+     * <p>
+     * The following scaling rules apply:
+     * <ul>
+     *     <li>{@code x}, {@code y}, {@code xAbs}, and {@code yAbs} are reported in platform coordinates and
+     *         must be divided by the platform scale in order to convert them into JavaFX layout coordinates.
+     *     <li>{@code dx}, {@code dy}, {@code totaldx}, and {@code totaldy} are reported in platform scroll
+     *         units. Their products with {@code multiplierX} or {@code multiplierY} represent distances in
+     *         platform coordinates, so they must also be divided by the platform scale.
+     * </ul>
+     *
+     * Note: The macOS toolkit also reports normal mouse-wheel events through this method. On macOS, the
+     * platform scale is always {@code 1.0}, so the conversion does not change their dimensionless deltas.
+     */
     @Override public void handleScrollGestureEvent(
             View view, final long time, final int type,
             final int modifiers, final boolean isDirect, final boolean isInertia, final int touchCount,
