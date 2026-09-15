@@ -1616,7 +1616,7 @@ public class RichTextArea extends Control {
      */
     public final TextPos getTextPosition(double screenX, double screenY) {
         Point2D local = vflow().getContentPane().screenToLocal(screenX, screenY);
-        return vflow().getTextPosLocal(local.getX(), local.getY());
+        return vflow().findTextPosLocal(local.getX(), local.getY());
     }
 
     /**

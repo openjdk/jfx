@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,79 +26,71 @@
 package test.javafx.scene.control;
 
 import javafx.scene.control.Tooltip;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.MethodSource;
-import org.junit.jupiter.params.provider.Arguments;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertTimeout;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import org.junit.jupiter.api.Assumptions;
 
 /**
- *
+ * Tests setting Tooltip on a Control
  */
-@Disabled
 public class ControlTooltipTest {
-    private ControlStub c;
-    private SkinStub<ControlStub> s;
-    private Tooltip t;
+    private ControlStub control;
+    private Tooltip tooltip;
 
     @BeforeEach
     public void setUp() {
-        c = new ControlStub();
-        s = new SkinStub<>(c);
-        c.setSkin(s);
-        t = new Tooltip();
+        control = new ControlStub();
+        tooltip = new Tooltip();
     }
 
-    @Test public void controlsWithNoTooltipHaveNoTooltipAsAChild() {
-        // only the skin's node should be a child
-        assertEquals(1, c.getChildrenUnmodifiable().size());
-        assertSame(s.getNode(), c.getChildrenUnmodifiable().get(0));
+    @Test
+    public void controlHasNoTooltipByDefault() {
+        assertNull(control.getTooltip());
     }
 
-    @Test public void settingTooltipOnControlResultsInTooltipBeingFirstChild() {
-        c.setTooltip(t);
-        assertEquals(2, c.getChildrenUnmodifiable().size());
-        assertSame(t, c.getChildrenUnmodifiable().get(0));
-        assertSame(s.getNode(), c.getChildrenUnmodifiable().get(1));
+    @Test
+    public void testAddingRemovingTooltipOnControl() {
+        control.setTooltip(tooltip);
+        assertSame(tooltip, control.getTooltip());
+
+        control.setTooltip(null);
+        assertNull(control.getTooltip());
     }
 
-    @Test public void settingTooltipToNullRemovesTheTooltipFromChildren() {
-        c.setTooltip(t);
-        c.setTooltip(null);
-        assertEquals(1, c.getChildrenUnmodifiable().size());
-        assertSame(s.getNode(), c.getChildrenUnmodifiable().get(0));
+    @Test
+    public void testAddingASecondTooltipOnControl() {
+        control.setTooltip(tooltip);
+        assertSame(tooltip, control.getTooltip());
+
+        Tooltip tooltip1 = new Tooltip();
+        control.setTooltip(tooltip1);
+        assertSame(tooltip1, control.getTooltip());
     }
 
-    @Test public void settingTooltipTwiceIgnoresTheSecondAdd() {
-        c.setTooltip(t);
-        c.setTooltip(t);
-        assertEquals(2, c.getChildrenUnmodifiable().size());
-        assertSame(t, c.getChildrenUnmodifiable().get(0));
-        assertSame(s.getNode(), c.getChildrenUnmodifiable().get(1));
+    @Test
+    public void testTooltipInstallAndUninstallOnControl() {
+        // Test Tooltip install
+        Tooltip.install(control, tooltip);
+        Tooltip temp = (Tooltip) control.getProperties().get("javafx.scene.control.Tooltip");
+        assertSame(tooltip, temp);
+
+        // Test Tooltip uninstall
+        Tooltip.uninstall(control, tooltip);
+        temp = (Tooltip) control.getProperties().get("javafx.scene.control.Tooltip");
+        assertNull(temp);
     }
 
-    @Test public void swappingTheTooltipForAnotherResultsInTheNewTooltipBeingAChildAndTheOldOneRemoved() {
-        c.setTooltip(t);
-        Tooltip t2 = new Tooltip();
-//        t2.setSkin(new SkinStub<Tooltip>(t2));
-        c.setTooltip(t2);
-        assertEquals(2, c.getChildrenUnmodifiable().size());
-        assertSame(t2, c.getChildrenUnmodifiable().get(0));
-        assertSame(s.getNode(), c.getChildrenUnmodifiable().get(1));
+    @Test
+    public void testTooltipInstallTwiceOnControl() {
+        Tooltip.install(control, tooltip);
+        Tooltip temp = (Tooltip) control.getProperties().get("javafx.scene.control.Tooltip");
+        assertSame(tooltip, temp);
+
+        Tooltip tooltip1 = new Tooltip();
+        Tooltip.install(control, tooltip1);
+
+        temp = (Tooltip) control.getProperties().get("javafx.scene.control.Tooltip");
+        assertSame(tooltip1, temp);
     }
 }
