@@ -447,17 +447,12 @@ final class HLSConnectionHolder extends ConnectionHolder {
         return Channels.newChannel(urlConnection.getInputStream());
     }
 
-    // Sets media file index based on sequence number and not on file name.
-    // Files names can be different beetween variable playlists.
-    // For example file_1080p_0025.m4s and file_720p_0025.m4s.
+    // Do not use EXT-X-MEDIA-SEQUENCE to align segments. Use the same relative
+    // cursor position.
     private void setAdjustedBitrateIndex(Playlist currentPlaylist, Playlist playlist) {
-        int currentSequenceNumber = currentPlaylist.getSequenceNumber();
-        int sequenceNumber = playlist.getSequenceNumber();
-
         int currentMediaFileIndex = currentPlaylist.getMediaFileIndex();
 
-        int diff = currentSequenceNumber - sequenceNumber;
-        playlist.setMediaFileIndex(currentMediaFileIndex + diff);
+        playlist.setMediaFileIndex(currentMediaFileIndex);
 
         double currentStartTime = currentPlaylist.getMediaFileStartTime(currentMediaFileIndex);
         playlist.adjustStartTime(currentStartTime);
@@ -561,7 +556,9 @@ final class HLSConnectionHolder extends ConnectionHolder {
         private final BlockingQueue<Integer> stateQueue = new LinkedBlockingQueue<>();
         private URI playlistURI = null;
         private Playlist reloadPlaylist = null;
+        private boolean reloadPlaylistChanged = true;
         private Playlist reloadAudioExtPlaylist = null;
+        private boolean reloadAudioExtPlaylistChanged = true;
         private final Object reloadLock = new Object();
         private volatile boolean stopped = false;
         private final CountDownLatch readySignal = new CountDownLatch(1);
@@ -597,12 +594,14 @@ final class HLSConnectionHolder extends ConnectionHolder {
         void setReloadPlaylist(Playlist playlist) {
             synchronized (reloadLock) {
                 reloadPlaylist = playlist;
+                reloadPlaylistChanged = true;
             }
         }
 
         void setReloadAudioExtPlaylist(Playlist playlist) {
             synchronized (reloadLock) {
                 reloadAudioExtPlaylist = playlist;
+                reloadAudioExtPlaylistChanged = true;
             }
         }
 
@@ -723,21 +722,43 @@ final class HLSConnectionHolder extends ConnectionHolder {
                 long timeout;
                 synchronized (reloadLock) {
                     timeout = TimeUnit.SECONDS.toMillis(
-                            reloadPlaylist.getTargetDuration()) / 2;
+                            reloadPlaylist.getTargetDuration());
+
+                    if (!reloadPlaylistChanged) {
+                        timeout /= 2;
+                    }
+
+                    if (reloadAudioExtPlaylist != null) {
+                        long audioTimeout = TimeUnit.SECONDS.toMillis(
+                                reloadAudioExtPlaylist.getTargetDuration());
+
+                        if (!reloadAudioExtPlaylistChanged) {
+                            audioTimeout /= 2;
+                        }
+
+                        timeout = Math.max(timeout, audioTimeout);
+                    }
                 }
                 Thread.sleep(timeout);
             } catch (InterruptedException ex) {
                 return;
             }
 
+            boolean scheduleReload = false;
             synchronized (reloadLock) {
-                reloadPlaylist.update();
+                reloadPlaylistChanged = reloadPlaylist.update();
+
                 if (reloadAudioExtPlaylist != null) {
-                    reloadAudioExtPlaylist.update();
+                    reloadAudioExtPlaylistChanged = reloadAudioExtPlaylist.update();
                 }
+
+                scheduleReload = reloadPlaylist.isLive();
             }
 
-            putState(STATE_RELOAD_PLAYLIST);
+            // Reload only if we have live list
+            if (scheduleReload) {
+                putState(STATE_RELOAD_PLAYLIST);
+            }
         }
     }
 
@@ -1308,16 +1329,38 @@ final class HLSConnectionHolder extends ConnectionHolder {
             update();
         }
 
-        void update() {
+        // Returns true if the media segment list changed. Live only.
+        // For non-live playlists, always returns true.
+        boolean update() {
+            // Get snapshot of current files to figure out if we actually
+            // got new segment.
+            List<String> oldMediaFiles = null;
+
+            if (isLive()) {
+                synchronized (lock) {
+                    oldMediaFiles = new ArrayList<>(mediaFiles);
+                }
+            }
+
             PlaylistParser parser = new PlaylistParser();
             parser.setPlaylist(this);
             parser.load(playlistURI);
 
             setLive(parser.isLivePlaylist());
+
+             if (oldMediaFiles != null) {
+                synchronized (lock) {
+                    return !oldMediaFiles.equals(mediaFiles);
+                }
+             }
+
+             return true;
         }
 
         void setMediaFileIndex(int value) {
-            mediaFileIndex = value;
+            synchronized (lock) {
+                mediaFileIndex = Math.max(-1, Math.min(value, mediaFiles.size() - 1));
+            }
         }
 
         int getMediaFileIndex() {
