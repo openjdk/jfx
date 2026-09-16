@@ -52,7 +52,7 @@ final class SWContext {
     private SoftReference<SWArgbPreTexture> imagePaintTextureRef;
 
     interface ShapeRenderer {
-        void renderShape(PiscesRenderer pr, Shape shape, BasicStroke stroke, BaseTransform tr, Rectangle clip, boolean antialiasedShape);
+        Rectangle renderShape(PiscesRenderer pr, Shape shape, BasicStroke stroke, BaseTransform tr, Rectangle clip, boolean antialiasedShape, boolean computePaintBounds);
         void dispose();
     }
 
@@ -148,7 +148,7 @@ final class SWContext {
         private final DirectRTMarlinAlphaConsumer alphaConsumer = new DirectRTMarlinAlphaConsumer();
 
         @Override
-        public void renderShape(PiscesRenderer pr, Shape shape, BasicStroke stroke, BaseTransform tr, Rectangle clip, boolean antialiasedShape) {
+        public Rectangle renderShape(PiscesRenderer pr, Shape shape, BasicStroke stroke, BaseTransform tr, Rectangle clip, boolean antialiasedShape, boolean computePaintBounds) {
             if (stroke != null && stroke.getType() != BasicStroke.TYPE_CENTERED) {
                 // JDK-8090672
                 // TODO: Optimize the combinatorial strokes for simple
@@ -177,10 +177,12 @@ final class SWContext {
                 final int w = outpix_xmax - outpix_xmin;
                 final int h = outpix_ymax - outpix_ymin;
                 if ((w <= 0) || (h <= 0)) {
-                    return;
+                    return null;
                 }
                 alphaConsumer.initConsumer(outpix_xmin, outpix_ymin, w, h, pr);
                 renderer.produceAlphas(alphaConsumer);
+
+                return computePaintBounds ? new Rectangle(outpix_xmin, outpix_ymin, w, h) : null;
             } finally {
                 if (renderer != null) {
                     renderer.dispose();
@@ -204,8 +206,8 @@ final class SWContext {
         }
     }
 
-    void renderShape(PiscesRenderer pr, Shape shape, BasicStroke stroke, BaseTransform tr, Rectangle clip, boolean antialiasedShape) {
-        this.shapeRenderer.renderShape(pr, shape, stroke, tr, clip, antialiasedShape);
+    Rectangle renderShape(PiscesRenderer pr, Shape shape, BasicStroke stroke, BaseTransform tr, Rectangle clip, boolean antialiasedShape, boolean computePaintBounds) {
+        return this.shapeRenderer.renderShape(pr, shape, stroke, tr, clip, antialiasedShape, computePaintBounds);
     }
 
     private SWRTTexture initRBBuffer(int width, int height) {

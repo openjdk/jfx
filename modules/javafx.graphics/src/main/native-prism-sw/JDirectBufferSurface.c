@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2016, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,12 +28,11 @@
 #include <PiscesUtil.h>
 #include <PiscesSysutils.h>
 #include <JNIUtil.h>
-#include <com_sun_pisces_JavaSurface.h>
+#include <com_sun_pisces_DirectBufferSurface.h>
 
 #define SURFACE_NATIVE_PTR 0
-#define SURFACE_DATA_INT 1
-#define SURFACE_DATA_OFFSET 2
-#define SURFACE_LAST SURFACE_DATA_OFFSET
+#define SURFACE_DATA_BUFFER 1
+#define SURFACE_LAST SURFACE_DATA_BUFFER
 
 static jfieldID fieldIds[SURFACE_LAST + 1];
 static jboolean fieldIdsInitialized = JNI_FALSE;
@@ -44,29 +43,27 @@ static void surface_acquire(AbstractSurface* surface, JNIEnv* env, jobject surfa
 static void surface_release(AbstractSurface* surface, JNIEnv* env,  jobject surfaceHandle);
 static void surface_cleanup(AbstractSurface* surface);
 
-typedef struct _JavaSurface {
+typedef struct _DirectBufferSurface {
     AbstractSurface super;
-    jfieldID javaArrayFieldID;
+    jfieldID bufferFieldID;
     jobject dataHandle;
-    jint* arrayData;  // original pointer from GetPrimitiveArrayCritical
-} JavaSurface;
+} DirectBufferSurface;
 
 /*
- * Class:     com_sun_pisces_JavaSurface
+ * Class:     com_sun_pisces_DirectBufferSurface
  * Method:    initialize
  * Signature: (III)V
  */
 JNIEXPORT void JNICALL
-Java_com_sun_pisces_JavaSurface_initialize
+Java_com_sun_pisces_DirectBufferSurface_initialize
   (JNIEnv *env, jobject objectHandle, jint dataType, jint width, jint height)
 {
     if (surface_initialize(env, objectHandle)
             && initializeSurfaceFieldIds(env, objectHandle))
     {
-        // NOTE: when is this freed?
-        JavaSurface* jSurface = my_malloc(JavaSurface, 1);
-        AbstractSurface* surface = &jSurface->super;
-        if (surface != NULL) {
+        DirectBufferSurface* jSurface = my_malloc(DirectBufferSurface, 1);
+        if (jSurface != NULL) {
+            AbstractSurface* surface = &jSurface->super;
             surface->super.width = width;
             surface->super.height = height;
             surface->super.scanlineStride = width;
@@ -79,15 +76,14 @@ Java_com_sun_pisces_JavaSurface_initialize
 
             switch(surface->super.imageType){
                 case TYPE_INT_ARGB_PRE:
-                    jSurface->javaArrayFieldID = fieldIds[SURFACE_DATA_INT];
+                    jSurface->bufferFieldID = fieldIds[SURFACE_DATA_BUFFER];
                     break;
                 default: //errorneous - should never happen
-                    jSurface->javaArrayFieldID = NULL;
+                    jSurface->bufferFieldID = NULL;
             }
 
             (*env)->SetLongField(env, objectHandle, fieldIds[SURFACE_NATIVE_PTR],
-                                PointerToJLong(jSurface));
-            //    JNI_registerCleanup(objectHandle, disposeNativeImpl);
+                                 PointerToJLong(jSurface));
         } else {
             JNI_ThrowNew(env, "java/lang/OutOfMemoryError",
                          "Allocation of internal renderer buffer failed.");
@@ -101,8 +97,7 @@ static jboolean
 initializeSurfaceFieldIds(JNIEnv* env, jobject objectHandle) {
     static const FieldDesc surfaceFieldDesc[] = {
                 { "nativePtr", "J" },
-                { "dataInt", "[I" },
-                { "dataOffset", "I" },
+                { "dataBuffer", "Ljava/nio/IntBuffer;" },
                 { NULL, NULL }
             };
 
@@ -127,15 +122,14 @@ initializeSurfaceFieldIds(JNIEnv* env, jobject objectHandle) {
 
 static void
 surface_acquire(AbstractSurface* abstractSurface, JNIEnv* env, jobject surfaceHandle) {
-    JavaSurface* surface = (JavaSurface*)abstractSurface;
+    DirectBufferSurface* surface = (DirectBufferSurface*)abstractSurface;
 
-    surface->dataHandle = (*env)->GetObjectField(env, surfaceHandle, surface->javaArrayFieldID);
+    surface->dataHandle = (*env)->GetObjectField(env, surfaceHandle, surface->bufferFieldID);
 
-    jint dataArrayLength = (*env)->GetArrayLength(env, surface->dataHandle);
     jint width = abstractSurface->super.width;
     jint height = abstractSurface->super.height;
 
-    if (width < 0 || height < 0 || (jlong) width * height > dataArrayLength) {
+    if (width < 0 || height < 0) {  // note: Java side already verifies these (including size), so this is a bit redundant
         // Set data to NULL indicating invalid width and height
         abstractSurface->super.data = NULL;
         surface->dataHandle = NULL;
@@ -143,31 +137,23 @@ surface_acquire(AbstractSurface* abstractSurface, JNIEnv* env, jobject surfaceHa
         return;
     }
 
-    /*
-     * The pixel data of this surface may start at a non-zero offset into the
-     * backing array (for example when the surface wraps a sliced IntBuffer).
-     */
+    void* data = (*env)->GetDirectBufferAddress(env, surface->dataHandle);
 
-    jint dataOffset = (*env)->GetIntField(env, surfaceHandle, fieldIds[SURFACE_DATA_OFFSET]);
-    jint* arrayData = (jint*)(*env)->GetPrimitiveArrayCritical(env, surface->dataHandle, NULL);
-
-    if (arrayData == NULL) {
+    if (data == NULL) {
+        abstractSurface->super.data = NULL;
         surface->dataHandle = NULL;
-        setMemErrorFlag();
+        JNI_ThrowNew(env, "java/lang/IllegalArgumentException", "Surface is not backed by a direct buffer");
         return;
     }
 
-    surface->arrayData = arrayData;  // keep original pointer for ReleasePrimitiveArrayCritical
-    abstractSurface->super.data = (void *)(arrayData + dataOffset);
+    abstractSurface->super.data = data;
 }
 
 static void
 surface_release(AbstractSurface* abstractSurface, JNIEnv* env, jobject surfaceHandle) {
-    JavaSurface* surface = (JavaSurface*)abstractSurface;
+    DirectBufferSurface* surface = (DirectBufferSurface*)abstractSurface;
 
-    if (surface->arrayData == NULL) return;
-    (*env)->ReleasePrimitiveArrayCritical(env, surface->dataHandle, surface->arrayData, 0);
-    surface->arrayData = NULL;
+    abstractSurface->super.data = NULL;
     surface->dataHandle = NULL;
 }
 

@@ -49,6 +49,7 @@
 --add-exports javafx.graphics/com.sun.prism.impl.shape=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.prism=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.prism.paint=ALL-UNNAMED
+--add-exports javafx.graphics/com.sun.prism.sw=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.scenario.animation=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.scenario.animation.shared=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.scenario.effect=ALL-UNNAMED
@@ -57,6 +58,7 @@
 --add-exports javafx.graphics/com.sun.scenario.effect.impl.prism=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.scenario.effect.light=ALL-UNNAMED
 --add-exports javafx.graphics/com.sun.scenario=ALL-UNNAMED
+--add-opens javafx.graphics/com.sun.glass.ui=ALL-UNNAMED
 --add-opens javafx.graphics/com.sun.javafx.css.parser=ALL-UNNAMED
 --add-opens javafx.graphics/com.sun.scenario.animation=ALL-UNNAMED
 --add-opens javafx.graphics/com.sun.scenario.effect.impl=ALL-UNNAMED

@@ -28,6 +28,8 @@ package com.sun.marlin;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentLinkedQueue;
+
+import com.sun.javafx.util.FXCleaner;
 import com.sun.marlin.ArrayCacheConst.CacheStats;
 import static com.sun.marlin.MarlinUtils.logInfo;
 import com.sun.marlin.stats.Histogram;
@@ -383,7 +385,7 @@ public final class RendererStats implements MarlinConst {
             allStats.add(stats);
 
             // Register a cleaning function to ensure removing dead entries:
-            MarlinUtils.getCleaner().register(parent, () -> remove(stats));
+            FXCleaner.register(parent, () -> remove(stats));
         }
 
         void remove(final RendererStats stats) {
