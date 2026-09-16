@@ -86,7 +86,7 @@ static gboolean call_runnable_in_timer
     }
     else if (context->runnable) {
         JNIEnv *env;
-        int envStatus = javaVM->GetEnv((void **)&env, JNI_VERSION_1_6);
+        int envStatus = javaVM->GetEnv((void **)&env, JNI_VERSION_1_8);
         if (envStatus == JNI_EDETACHED) {
             javaVM->AttachCurrentThread((void **)&env, NULL);
         }
@@ -100,4 +100,3 @@ static gboolean call_runnable_in_timer
     }
     return TRUE;
 }
-

@@ -35,7 +35,7 @@ JNIEnv *media_getEnv(bool *attached) {
     *attached = false;
 
     if (javavm != NULL) {
-        jint status = (*javavm)->GetEnv(javavm, (void **) &env, JNI_VERSION_1_2);
+        jint status = (*javavm)->GetEnv(javavm, (void **) &env, JNI_VERSION_1_8);
         if (status != JNI_OK) {
             (*javavm)->AttachCurrentThreadAsDaemon(javavm, (void **) &env, NULL);
             *attached = true;

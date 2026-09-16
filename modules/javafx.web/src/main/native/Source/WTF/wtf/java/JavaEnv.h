@@ -41,7 +41,7 @@ namespace WTF {
 ALWAYS_INLINE JNIEnv* JNICALL GetJavaEnv()
 {
     void* env;
-    jvm->GetEnv(&env, JNI_VERSION_1_2);
+    jvm->GetEnv(&env, JNI_VERSION_1_8);
     return (JNIEnv*)env;
 }
 
@@ -85,7 +85,7 @@ public:
     AttachThreadToJavaEnv()
     {
         if (!g_ShuttingDown) {
-            m_status = jvm->GetEnv((void **)&m_env, JNI_VERSION_1_2);
+            m_status = jvm->GetEnv((void **)&m_env, JNI_VERSION_1_8);
             if (m_status == JNI_EDETACHED) {
                 if (daemon) {
                     jvm->AttachCurrentThreadAsDaemon((void **)&m_env, nullptr);
