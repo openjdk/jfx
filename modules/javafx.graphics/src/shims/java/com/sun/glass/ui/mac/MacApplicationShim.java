@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -23,26 +23,11 @@
  * questions.
  */
 
-package com.sun.javafx.tk;
+package com.sun.glass.ui.mac;
 
-import java.util.List;
+public class MacApplicationShim {
 
-import com.sun.javafx.menu.MenuBase;
-
-
-/**
- * We use this interface to access the Glass native system menu
- */
-public interface TKSystemMenu {
-
-    /**
-     * Check whether top level global system menubar support is
-     * available on this OS.  Currently supported on Mac OSX only.
-     *
-     * @return  whether top-level global system menus are supported
-     */
-    public boolean isSupported();
-
-    public void setMenus(List<MenuBase> menus);
-    public void setCommonMenus(List<MenuBase> menus);
+    public static String[] findItemInSystemMenuBar(String title) {
+        return MacApplication.findItemInSystemMenuBar(title);
+    }
 }

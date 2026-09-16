@@ -60,12 +60,18 @@ import javafx.scene.input.KeyCodeCombination;
 class GlassSystemMenu implements TKSystemMenu {
 
     private List<MenuBase>      systemMenus = null;
+    private List<MenuBase>      commonSystemMenus = null;
+    private int                 commonSystemMenuCount = 0;
+
     private MenuBar             glassSystemMenuBar = null;
     private final Map<Menu, ListChangeListener<MenuItemBase>> menuListeners = new HashMap<>();
     private final Map<ListChangeListener<MenuItemBase>, ObservableList<MenuItemBase>> listenerItems = new HashMap<>();
     private BooleanProperty active;
 
     private InvalidationListener visibilityListener = valueModel -> {
+        if (commonSystemMenus != null) {
+            setCommonMenus(commonSystemMenus);
+        }
         if (systemMenus != null) {
             setMenus(systemMenus);
         }
@@ -75,8 +81,8 @@ class GlassSystemMenu implements TKSystemMenu {
         if (glassSystemMenuBar == null) {
             Application app = Application.GetApplication();
             glassSystemMenuBar = app.createMenuBar();
-            app.installDefaultMenus(glassSystemMenuBar);
 
+            installCommonSystemMenus();
             if (systemMenus != null) {
                 setMenus(systemMenus);
             }
@@ -106,9 +112,9 @@ class GlassSystemMenu implements TKSystemMenu {
             int existingSize = existingMenus.size();
 
             /*
-             * Leave the Apple menu in place
+             * Leave the common menus in place
              */
-            for (int index = existingSize - 1; index >= 1; index--) {
+            for (int index = existingSize - 1; index >= commonSystemMenuCount; index--) {
                 Menu menu = existingMenus.get(index);
                 clearMenu(menu);
                 glassSystemMenuBar.remove(index);
@@ -116,6 +122,50 @@ class GlassSystemMenu implements TKSystemMenu {
 
             for (MenuBase menu : menus) {
                 addMenu(null, menu);
+            }
+        }
+    }
+
+    @Override
+    public void setCommonMenus(List<MenuBase> menus) {
+        if (active != null) {
+            active.set(false);
+        }
+        active = new SimpleBooleanProperty(true);
+        removeCommonSystemMenus();
+        commonSystemMenus = menus;
+        installCommonSystemMenus();
+    }
+
+    private void removeCommonSystemMenus() {
+        if (glassSystemMenuBar != null) {
+            List<Menu> existingMenus = glassSystemMenuBar.getMenus();
+            for (int i = 0; i < commonSystemMenuCount; ++i) {
+                Menu menu = existingMenus.get(0);
+                clearMenu(menu);
+                glassSystemMenuBar.remove(0);
+            }
+        }
+        commonSystemMenuCount = 0;
+    }
+
+    private void installCommonSystemMenus() {
+        if (glassSystemMenuBar != null) {
+            if (commonSystemMenus != null && commonSystemMenus.size() > 0) {
+                for (int i = commonSystemMenus.size() - 1; i >= 0; i--) {
+                    var menu = commonSystemMenus.get(i);
+                    if (menu.isVisible()) {
+                        insertMenu(null, commonSystemMenus.get(i), 0);
+                        commonSystemMenuCount += 1;
+                    }
+                }
+            }
+
+            if (commonSystemMenuCount == 0) {
+                Application app = Application.GetApplication();
+                int count = glassSystemMenuBar.getMenus().size();
+                app.installDefaultMenus(glassSystemMenuBar);
+                commonSystemMenuCount = glassSystemMenuBar.getMenus().size() - count;
             }
         }
     }
