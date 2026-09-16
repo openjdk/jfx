@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -22,12 +22,22 @@
  * or visit www.oracle.com if you need additional information or have any
  * questions.
  */
-package com.sun.javafx.binding;
 
-public class ExpressionHelperShim {
+package test.com.sun.javafx.binding;
 
-    public static void fireValueChangedEvent(ExpressionHelper helper) {
-        helper.fireValueChangedEvent();
+import com.sun.javafx.binding.ListenerList;
+
+import javafx.beans.value.ObservableValue;
+
+public class ListenerListTest extends ListenerListTestBase<ListenerList<Object>> {
+
+    @Override
+    protected ListenerList<Object> create(Object listener1, Object listener2) {
+        return new ListenerList<>(listener1, listener2);
     }
 
+    @Override
+    protected <T> void notifyListeners(ListenerList<Object> list, ObservableValue<? extends T> property, T oldValue) {
+        list.notifyListeners(property, oldValue);
+    }
 }

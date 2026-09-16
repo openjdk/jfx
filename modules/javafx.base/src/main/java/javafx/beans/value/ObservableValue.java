@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -50,11 +50,11 @@ import javafx.util.Subscription;
  * <p>
  * An implementation of {@code ObservableValue} may support lazy evaluation,
  * which means that the value is not immediately recomputed after changes, but
- * lazily the next time the value is requested (see note 1 in "Implementation Requirements").
+ * lazily the next time the value is requested (see {@link Observable}).
  * <p>
  * An {@code ObservableValue} generates two types of events: change events and
  * invalidation events. A change event indicates that the value has changed
- * (see note 2 in "Implementation Requirements"). An
+ * (see the Implementation Note). An
  * invalidation event is generated if the current value is not valid anymore.
  * This distinction becomes important if the {@code ObservableValue} supports
  * lazy evaluation, because for a lazily evaluated value one does not know if an
@@ -79,11 +79,42 @@ import javafx.util.Subscription;
  * @param <T>
  *            The type of the wrapped value.
  *
- * @implSpec <ol>
- * <li> All bindings and properties in the JavaFX library support lazy evaluation.</li>
- * <li> All implementing classes in the JavaFX library check for a change using reference
- * equality (and not object equality, {@code Object#equals(Object)}) of the value.</li>
+ * @implNote
+ * <ol>
+ *     <li>All bindings and properties in the JavaFX library support lazy evaluation.
+ *     <li>Properties in the JavaFX library invalidate when the value they hold
+ *         changes. Object properties compare the new value by reference, so they also
+ *         invalidate when the new value is equal to the previous value but not the
+ *         same reference; primitive and {@code String} properties compare by value.
+ *         Bindings invalidate when one of their dependencies is invalidated.
  * </ol>
+ * <p>
+ * For change listeners, the implementations in the JavaFX library provide the
+ * same guarantees as for invalidation listeners (see {@link Observable}), and in
+ * addition:
+ * <ul>
+ *     <li>Change listeners are notified after invalidation listeners.
+ *     <li>A {@code ChangeListener} is notified only when the new value is not equal
+ *         to the value it last observed ({@code Object#equals(Object)}), so the
+ *         {@code oldValue} and {@code newValue} it receives are never equal. The
+ *         {@code newValue} is the current value of the {@code ObservableValue}; for
+ *         any notification after the first one delivered to a listener, the
+ *         {@code oldValue} is equal to the value that was reported as {@code newValue}
+ *         in the previous notification delivered to that listener.
+ *     <li>If a change listener modifies the value in its callback, the change
+ *         listeners that have not been notified yet observe the modified value; an
+ *         earlier listener can therefore veto a change before later listeners see it.
+ *         A veto may also restore the value to the value that was current before the
+ *         change, in which case the change listeners that have not been notified yet
+ *         are not notified at all.
+ * </ul>
+ * The collection property classes and collection binding classes in the JavaFX
+ * library do not provide all of the guarantees above. For these, a
+ * {@code ChangeListener} is also notified when the contents of the collection
+ * change, with the same reference reported as both {@code oldValue} and
+ * {@code newValue}; the reported {@code oldValue} may not be correct when a
+ * nested change occurs, and the guarantees for how nested changes are delivered
+ * and the ability of an earlier listener to veto a change are not provided.
  *
  * @see ObservableBooleanValue
  * @see ObservableDoubleValue

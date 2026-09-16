@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2013, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -29,6 +29,19 @@ import javafx.collections.ObservableSet;
 
 /**
  * An observable reference to an {@link javafx.collections.ObservableSet}.
+ * <p>
+ * The {@link ChangeListener} support of this interface differs from that of an
+ * {@link ObservableValue}. A {@code ChangeListener} registered on an
+ * {@code ObservableSetValue} is notified when the contents of the set change as
+ * well as when the set reference is replaced. When the contents change, the same
+ * set reference is reported as both {@code oldValue} and {@code newValue}, even
+ * though the value did not change.
+ *
+ * @implNote
+ * The implementations of this interface in the JavaFX library do not provide all
+ * of the guarantees described by {@link ObservableValue} for change listeners: the
+ * reported {@code oldValue} may not be correct when a nested change occurs, and the
+ * ability of an earlier listener to veto a change is not provided.
  *
  * @see javafx.collections.ObservableSet
  * @see ObservableObjectValue
