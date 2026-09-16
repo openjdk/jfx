@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, 2018, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2016, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -65,6 +65,10 @@ public class ParentHelper extends NodeHelper {
 
     public static List<String> getAllParentStylesheets(Parent parent) {
         return ((ParentHelper) getHelper(parent)).getAllParentStylesheetsImpl(parent);
+    }
+
+    public static List<String> getStylesheetsOrNull(Parent parent) {
+        return parentAccessor.getStylesheetsOrNull(parent);
     }
 
     @Override
@@ -140,6 +144,7 @@ public class ParentHelper extends NodeHelper {
         void setTraversalEngine(Parent parent, ParentTraversalEngine value);
         ParentTraversalEngine getTraversalEngine(Parent parent);
         List<String> doGetAllParentStylesheets(Parent parent);
+        List<String> getStylesheetsOrNull(Parent parent);
     }
 
 }
