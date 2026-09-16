@@ -36,7 +36,7 @@ public abstract class PlatformFactory {
     public static synchronized PlatformFactory getPlatformFactory() {
         if (instance == null) {
             try {
-                String platform = Platform.determinePlatform();
+                String platform = GlassPlatform.determinePlatform();
                 String factory = "com.sun.glass.ui." +  platform.toLowerCase(Locale.ROOT) + "."+ platform + "PlatformFactory";
                 // System.out.println("Loading Glass Factory " + factory);
                 Class c = Class.forName(factory);

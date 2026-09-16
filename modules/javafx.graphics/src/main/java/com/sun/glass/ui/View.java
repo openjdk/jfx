@@ -49,12 +49,12 @@ public abstract class View {
 
         /* By default accessibility is enabled for Mac 10.9 or greater and Windows 7 or greater. */
         try {
-            String platform = Platform.determinePlatform();
+            String platform = GlassPlatform.determinePlatform();
             String major = System.getProperty("os.version").replaceFirst("(\\d+)\\.\\d+.*", "$1");
             String minor = System.getProperty("os.version").replaceFirst("\\d+\\.(\\d+).*", "$1");
             int v = Integer.parseInt(major) * 100 + Integer.parseInt(minor);
-            return (platform.equals(Platform.MAC) && v >= 1009) ||
-                   (platform.equals(Platform.WINDOWS) && v >= 601);
+            return (platform.equals(GlassPlatform.MAC) && v >= 1009) ||
+                   (platform.equals(GlassPlatform.WINDOWS) && v >= 601);
         } catch (Exception e) {
             return false;
         }

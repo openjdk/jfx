@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -26,52 +26,44 @@ package com.sun.glass.ui;
 
 import com.sun.javafx.PlatformUtil;
 
-final class Platform {
+final class GlassPlatform {
 
     public static final String MAC = "Mac";
     public static final String WINDOWS = "Win";
     public static final String GTK = "Gtk";
     public static final String IOS = "Ios";
     public static final String HEADLESS = "Headless";
-    public static final String UNKNOWN = "unknown";
 
-    static private String type = null;
+    private static String type;
 
-    static public synchronized String determinePlatform() {
-        if (type == null) {
+    static {
+        // Provide for a runtime override, allowing EGL for example
+        String userPlatform = System.getProperty("glass.platform");
 
-            // Provide for a runtime override, allowing EGL for example
-            String userPlatform = System.getProperty("glass.platform");
-
-            if (userPlatform != null) {
-                if (userPlatform.equals("macosx"))
-                   type = MAC;
-                else if (userPlatform.equals("windows"))
-                   type = WINDOWS;
-                else if (userPlatform.equals("linux"))
-                   type = GTK;
-                else if (userPlatform.equals("gtk"))
-                   type = GTK;
-                else if (userPlatform.equals("ios"))
-                   type = IOS;
-                else if (userPlatform.equals("headless"))
-                   type = HEADLESS;
-                else
-                   type = userPlatform;
-                return type;
-            }
-
-            if (PlatformUtil.isMac()) {
-                type = MAC;
-            } else if (PlatformUtil.isWindows()) {
-                type = WINDOWS;
-            } else if (PlatformUtil.isLinux()) {
-                type = GTK;
-            } else if (PlatformUtil.isIOS()) {
-                type = IOS;
-            }
+        if (userPlatform != null) {
+            type = switch (userPlatform) {
+                case "macosx" -> MAC;
+                case "windows" -> WINDOWS;
+                case "linux" -> GTK;
+                case "gtk" -> GTK;
+                case "ios" -> IOS;
+                case "headless" -> HEADLESS;
+                default -> userPlatform;
+            };
         }
 
+        if (PlatformUtil.isMac()) {
+            type = MAC;
+        } else if (PlatformUtil.isWindows()) {
+            type = WINDOWS;
+        } else if (PlatformUtil.isLinux()) {
+            type = GTK;
+        } else if (PlatformUtil.isIOS()) {
+            type = IOS;
+        }
+    }
+
+    public static String determinePlatform() {
         return type;
     }
 }
