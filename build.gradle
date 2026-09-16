@@ -2869,64 +2869,6 @@ project(":controls") {
 //}
 // END: incubator placeholder
 
-project(":incubator.input") {
-    project.ext.buildModule = true
-    project.ext.includeSources = true
-    project.ext.moduleRuntime = true
-    project.ext.moduleName = "jfx.incubator.input"
-    project.ext.incubating = true
-
-    sourceSets {
-        main
-        shims {
-            java {
-                compileClasspath += sourceSets.main.output
-                runtimeClasspath += sourceSets.main.output
-            }
-        }
-        test {
-            java {
-                compileClasspath += sourceSets.shims.output
-                runtimeClasspath += sourceSets.shims.output
-            }
-        }
-    }
-
-    project.ext.moduleSourcePath = defaultModuleSourcePath
-    project.ext.moduleSourcePathShim = defaultModuleSourcePathShim
-
-    commonModuleSetup(project, [
-        'base',
-        'graphics',
-        'controls',
-        'incubator.input'
-    ])
-
-    def baseTestOutput = project(":base").sourceSets.test.output
-    def graphicsTestOutput = project(":graphics").sourceSets.test.output
-    def controlsTestOutput = project(":controls").sourceSets.test.output
-    dependencies {
-        testImplementation baseTestOutput
-        testImplementation graphicsTestOutput
-        testImplementation controlsTestOutput
-        implementation project(':base')
-        implementation project(':graphics')
-        implementation project(':controls')
-    }
-
-    test {
-        jvmArgs enableNativeGraphics
-        jvmArgs "-Djavafx.toolkit=test.com.sun.javafx.pgstub.StubToolkit"
-    }
-
-    def modulePath = "${project.sourceSets.main.java.getDestinationDirectory().get().getAsFile()}"
-    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.controls/build/classes/java/main"
-    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.graphics/build/classes/java/main"
-    modulePath += File.pathSeparator + "${rootProject.projectDir}/modules/javafx.base/build/classes/java/main"
-
-    addValidateSourceSets(project, sourceSets)
-}
-
 project(":incubator.richtext") {
     project.ext.buildModule = true
     project.ext.includeSources = true
@@ -2957,23 +2899,19 @@ project(":incubator.richtext") {
         'base',
         'graphics',
         'controls',
-        'incubator.input',
         'incubator.richtext'
     ])
 
     def baseTestOutput = project(":base").sourceSets.test.output
     def graphicsTestOutput = project(":graphics").sourceSets.test.output
     def controlsTestOutput = project(":controls").sourceSets.test.output
-    def inputTestOutput = project(":incubator.input").sourceSets.test.output
     dependencies {
         testImplementation baseTestOutput
         testImplementation graphicsTestOutput
         testImplementation controlsTestOutput
-        testImplementation inputTestOutput
         implementation project(':base')
         implementation project(':graphics')
         implementation project(':controls')
-        implementation project(':incubator.input')
     }
 
     test {
@@ -4174,7 +4112,6 @@ project(":systemTests") {
         // BEGIN: incubator placeholder
         //'incubator.mymod',
         // END: incubator placeholder
-        'incubator.input',
         'incubator.richtext',
         'media',
         'jsobject',
@@ -4660,7 +4597,6 @@ task javadoc(type: Javadoc, dependsOn: [createMSPfile, createOverviewFile]) {
         // BEGIN: incubator placeholder
         //project(":incubator.mymod"),
         // END: incubator placeholder
-        project(":incubator.input"),
         project(":incubator.richtext"),
         project(":media"),
         project(":swing"),

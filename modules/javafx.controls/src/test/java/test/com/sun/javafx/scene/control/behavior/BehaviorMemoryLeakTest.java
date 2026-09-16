@@ -33,9 +33,15 @@ import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactor
 import static test.com.sun.javafx.scene.control.infrastructure.ControlSkinFactory.getControlClassesWithBehavior;
 import java.lang.ref.WeakReference;
 import java.util.List;
+import javafx.scene.control.ColorPicker;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Control;
+import javafx.scene.control.DatePicker;
 import javafx.scene.control.PasswordField;
+import javafx.scene.control.TabPane;
 import javafx.scene.control.TableView;
+import javafx.scene.control.TextArea;
+import javafx.scene.control.TextField;
 import javafx.scene.control.TreeTableView;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,13 +54,13 @@ import com.sun.javafx.scene.control.behavior.BehaviorBase;
  * <p>
  * This test is parameterized on control type.
  */
-public class BehaviorMemoryLeakTest {
+public final class BehaviorMemoryLeakTest {
 
     /**
      * Create control -> create behavior -> dispose behavior -> gc
      */
     @ParameterizedTest
-    @MethodSource("data")
+    @MethodSource("parameters")
     public void testMemoryLeakDisposeBehavior(Class<Control> controlClass) {
         Control control = createControl(controlClass);
         assertNotNull(control);
@@ -67,17 +73,25 @@ public class BehaviorMemoryLeakTest {
 
     //---------------- parameterized
 
-    // Note: name property not supported before junit 4.11
-    public static List<Class<Control>> data() {
+    private static List<Class<Control>> parameters() {
         List<Class<Control>> controlClasses = getControlClassesWithBehavior();
         // FIXME as part of JDK-8241364
         // The behaviors of these controls are leaking
         // step 1: file issues (where not yet done), add informal ignore to entry
         // step 2: fix and remove from list
         List<Class<? extends Control>> leakingClasses = List.of(
-                PasswordField.class,
-                TableView.class,
-                TreeTableView.class
+            // the following use Behavior that must be installed by Skin.install()
+            TabPane.class,
+            TextField.class,
+            TextArea.class,
+            PasswordField.class,
+            ColorPicker.class,
+            DatePicker.class,
+            ComboBox.class,
+            // FIX as part of JDK-8241364
+            TableView.class,
+            // FIX as part of JDK-8241364
+            TreeTableView.class
          );
         // remove the known issues to make the test pass
         controlClasses.removeAll(leakingClasses);
