@@ -29,7 +29,9 @@
 #include <glib.h>
 #include "glass_general.h"
 #include <gdk/gdkkeysyms.h>
+#include <X11/Xlib.h>
 #include <X11/XKBlib.h>
+#include <gdk/gdkx.h>
 
 #include "scancodes.h"
 #include <map>
