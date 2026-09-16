@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2022, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -62,6 +62,8 @@ struct _HLSProgressBuffer
 
     gboolean      is_flushing;
     gboolean      is_eos;
+    gboolean      is_live_set;
+    gboolean      is_live;
 
     GstFlowReturn srcresult;
 
@@ -191,6 +193,8 @@ static void hls_progress_buffer_init(HLSProgressBuffer *element)
 
     element->is_flushing = FALSE;
     element->is_eos = FALSE;
+    element->is_live_set = FALSE;
+    element->is_live = FALSE;
 
     element->srcresult = GST_FLOW_OK;
 
@@ -507,16 +511,46 @@ static gboolean hls_progress_buffer_sink_event(GstPad *pad, GstObject *parent, G
 
             if (element->send_new_segment)
             {
+                if (!element->is_live_set)
+                {
+                    GstFormat format = GST_FORMAT_TIME;
+                    gint64 duration = GST_CLOCK_TIME_NONE;
+
+                    if (!gst_pad_peer_query_duration(element->sinkpad, format, &duration)) {
+                        element->is_live = FALSE;
+                    } else {
+                        element->is_live =
+                                (format == GST_FORMAT_TIME && duration == GST_CLOCK_TIME_NONE);
+                    }
+
+                    element->is_live_set = TRUE;
+                }
+
                 GstSegment new_segment;
-                gst_segment_init(&new_segment, GST_FORMAT_TIME);
+                if (element->is_live)
+                {
+                    // For live send byte segment in this case qtdemux
+                    // will handle pipeline start time which might not be 0.
+                    gst_segment_init(&new_segment, GST_FORMAT_BYTES);
+                    new_segment.start = 0;
+                    new_segment.stop = -1;
+                    new_segment.position = 0;
+                    new_segment.time = 0;
+                }
+                else
+                {
+                    // On demand use playlist time to sync segments.
+                    gst_segment_init(&new_segment, GST_FORMAT_TIME);
+                    new_segment.start = segment.start;
+                    new_segment.stop = -1;
+                    new_segment.position = segment.position;
+                    new_segment.time = segment.time;
+                }
+
                 new_segment.flags = segment.flags;
                 new_segment.rate = segment.rate;
-                new_segment.start = segment.start;
-                new_segment.stop = -1;
-                new_segment.position = segment.position;
-                new_segment.time = segment.time;
 
-                element->buffer_pts = segment.position;
+                element->buffer_pts = element->is_live ? GST_CLOCK_TIME_NONE : segment.position;
                 element->send_new_segment = FALSE;
 
                 event = gst_event_new_segment(&new_segment);

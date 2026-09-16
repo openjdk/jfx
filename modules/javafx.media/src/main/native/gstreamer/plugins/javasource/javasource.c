@@ -749,8 +749,18 @@ static gboolean java_source_query (GstPad *pad, GstObject *parent, GstQuery *que
 
                 g_signal_emit(element, JAVA_SOURCE_GET_CLASS(element)->signals[SIGNAL_PROPERTY], 0, HLS_PROP_GET_DURATION, 0, &duration);
                 if (duration < 0)
+                {
                     element->mode |= MODE_HLS_LIVE;
-                gst_query_set_duration(query, GST_FORMAT_TIME, ((gint64)duration*GST_SECOND)/HLS_VALUE_FLOAT_MULTIPLIER);
+                    // Use GST_CLOCK_TIME_NONE for unknown duration. Most code
+                    // uses it to check if duration is set or not.
+                    // HLS_PROP_GET_DURATION will return -1 which we should not
+                    // convert with multiplier.
+                    gst_query_set_duration(query, GST_FORMAT_TIME, GST_CLOCK_TIME_NONE);
+                }
+                else
+                {
+                    gst_query_set_duration(query, GST_FORMAT_TIME, ((gint64)duration*GST_SECOND)/HLS_VALUE_FLOAT_MULTIPLIER);
+                }
             }
             else
             {
