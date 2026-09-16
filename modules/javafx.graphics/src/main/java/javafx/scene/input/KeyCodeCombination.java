@@ -145,7 +145,7 @@ public final class KeyCodeCombination extends KeyCombination {
         sb.append(super.getDisplayText());
         final int initialLength = sb.length();
 
-        String c = getSingleChar(code);
+        String c = getStringRepresentation(code);
         if (c != null) {
             sb.append(c);
             return sb.toString();
@@ -219,7 +219,7 @@ public final class KeyCodeCombination extends KeyCombination {
     }
 
     // Returns a suitable string representation of the key code or null
-    private static String getSingleChar(KeyCode code) {
+    private static String getStringRepresentation(KeyCode code) {
         // On Mac we display these unicode symbols,
         // otherwise we default to the Text version of the char.
         if (com.sun.javafx.PlatformUtil.isMac()) {
@@ -293,6 +293,7 @@ public final class KeyCodeCombination extends KeyCombination {
             case ESCAPE: return "Esc";
             case PAGE_DOWN: return "PgDn";
             case PAGE_UP: return "PgUp";
+            case DELETE: return "Del";
         }
 
         return null;

@@ -610,7 +610,7 @@ public class KeyCombinationTest {
     private static Stream platformSpecificCombinations() {
         return Stream.of(
             Arguments.of("Backspace", "\u232B", KeyCode.BACK_SPACE),
-            Arguments.of("Delete", "\u2326", KeyCode.DELETE),
+            Arguments.of("Del", "\u2326", KeyCode.DELETE),
             Arguments.of("Esc", "\u238B", KeyCode.ESCAPE)
         );
     }
