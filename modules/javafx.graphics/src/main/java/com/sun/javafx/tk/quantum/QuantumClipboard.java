@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -245,10 +245,11 @@ final class QuantumClipboard implements TKClipboard {
         systemAssistant.flush();
     }
 
-    @Override public Object getContent(DataFormat dataFormat) {
+    @Override
+    public Object getContent(DataFormat dataFormat) {
         if (dataCache != null) {
             for (Pair<DataFormat, Object> pair : dataCache) {
-                if (pair.getKey() == dataFormat) {
+                if (pair.getKey().equals(dataFormat)) {
                     return pair.getValue();
                 }
             }
@@ -258,11 +259,11 @@ final class QuantumClipboard implements TKClipboard {
         ClipboardAssistance assistant =
                 (currentDragboard != null) ? currentDragboard : systemAssistant;
 
-        if (dataFormat == DataFormat.IMAGE) {
+        if (DataFormat.IMAGE.equals(dataFormat)) {
             return readImage();
-        } else if (dataFormat == DataFormat.URL) {
+        } else if (DataFormat.URL.equals(dataFormat)) {
             return assistant.getData(Clipboard.URI_TYPE);
-        } else if (dataFormat == DataFormat.FILES) {
+        } else if (DataFormat.FILES.equals(dataFormat)) {
             Object data = assistant.getData(Clipboard.FILE_LIST_TYPE);
             if (data == null) return Collections.emptyList();
             String[] paths = (String[]) data;
@@ -438,10 +439,11 @@ final class QuantumClipboard implements TKClipboard {
         return set;
     }
 
-    @Override public boolean hasContent(DataFormat dataFormat) {
+    @Override
+    public boolean hasContent(DataFormat dataFormat) {
         if (dataCache != null) {
             for (Pair<DataFormat, Object> pair : dataCache) {
-                if (pair.getKey() == dataFormat) {
+                if (pair.getKey().equals(dataFormat)) {
                     return true;
                 }
             }
@@ -456,17 +458,17 @@ final class QuantumClipboard implements TKClipboard {
             return false;
         }
         for (String t: stypes) {
-            if (dataFormat == DataFormat.IMAGE &&
+            if (DataFormat.IMAGE.equals(dataFormat) &&
                     t.equalsIgnoreCase(Clipboard.RAW_IMAGE_TYPE)) {
                 return true;
-            } else if (dataFormat == DataFormat.URL &&
+            } else if (DataFormat.URL.equals(dataFormat) &&
                        t.equalsIgnoreCase(Clipboard.URI_TYPE)) {
                 return true;
-            } else if (dataFormat == DataFormat.IMAGE &&
+            } else if (DataFormat.IMAGE.equals(dataFormat) &&
                        t.equalsIgnoreCase(Clipboard.HTML_TYPE) &&
                        parseIMG(assistant.getData(Clipboard.HTML_TYPE)) != null) {
                 return true;
-            } else if (dataFormat == DataFormat.FILES &&
+            } else if (DataFormat.FILES.equals(dataFormat) &&
                     t.equalsIgnoreCase(Clipboard.FILE_LIST_TYPE)) {
                 return true;
             }
@@ -528,16 +530,16 @@ final class QuantumClipboard implements TKClipboard {
             // might expect the JPG bits directly, rather than the DIB / TIFF bits.
             // So what we do is, any IMAGE type DataFormat that comes in will be stored
             // in DIB / TIFF, while specific bits will also be stored (in the future).
-            if (dataFormat == DataFormat.IMAGE) {
+            if (DataFormat.IMAGE.equals(dataFormat)) {
                 dataSet = placeImage(convertObjectToImage(data));
-            } else if (dataFormat == DataFormat.URL) {
+            } else if (DataFormat.URL.equals(dataFormat)) {
                 // TODO Weird, but this is how Glass wants it...
                 systemAssistant.setData(Clipboard.URI_TYPE, data);
                 dataSet = true;
-            } else if (dataFormat == DataFormat.RTF) {
+            } else if (DataFormat.RTF.equals(dataFormat)) {
                 systemAssistant.setData(Clipboard.RTF_TYPE, data);
                 dataSet = true;
-            } else if (dataFormat == DataFormat.FILES) {
+            } else if (DataFormat.FILES.equals(dataFormat)) {
                 // Have to convert from List<File> to String[]
                 List<File> list = (List<File>)data;
                 if (list.size() != 0) {
@@ -551,8 +553,10 @@ final class QuantumClipboard implements TKClipboard {
                 }
             } else {
                 if (data instanceof Serializable) {
-                    if ((dataFormat != DataFormat.PLAIN_TEXT && dataFormat != DataFormat.HTML) ||
-                        !(data instanceof String))
+                    if (
+                        (!(DataFormat.PLAIN_TEXT.equals(dataFormat)) && !(DataFormat.HTML.equals(dataFormat))) ||
+                        !(data instanceof String)
+                    )
                     {
                         try {
                             ByteArrayOutputStream bos = new ByteArrayOutputStream();
