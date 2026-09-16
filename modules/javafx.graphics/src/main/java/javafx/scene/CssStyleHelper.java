@@ -86,8 +86,8 @@ final class CssStyleHelper {
     }
 
     /**
-     * Creates a new {@link CssStyleHelper} for the {@link Node},
-     * or null if it does not need one due to no style matching it.
+     * Creates a new {@link CssStyleHelper} for the {@link Node}, or null if it does not need one
+     * due to no style matching it.
      *
      * @return the {@link CssStyleHelper} or null
      */
@@ -96,7 +96,6 @@ final class CssStyleHelper {
 
         Node styleableAncestor = null;
         boolean userSetFont = false;
-        boolean recreatedAncestor = false;
 
         for (int index = path.size() - 1; index > 0; index--) {
             if (!(path.get(index) instanceof Node ancestor)) {
@@ -105,8 +104,13 @@ final class CssStyleHelper {
 
             if (ancestor.cssHelperStale) {
                 ancestor.cssHelperResolvedEarly = true;
-                updateStyleHelper(ancestor, path, index, styleableAncestor, userSetFont);
-                recreatedAncestor = true;
+                boolean propertiesReset = updateStyleHelper(ancestor, path, index, styleableAncestor, userSetFont);
+
+                // Listeners running while the old helper reset properties may have changed the hierarchy.
+                // The remaining stale ancestors must not be rebuilt for an outdated path, so start over.
+                if (propertiesReset && !isPathValid(path)) {
+                    return createStyleHelper(node);
+                }
             }
 
             userSetFont = userSetFont || isUserSetFont(ancestor);
@@ -115,11 +119,8 @@ final class CssStyleHelper {
             }
         }
 
-        if (recreatedAncestor && !isPathValid(path)) {
-            return createStyleHelper(node);
-        }
-
-        return updateStyleHelper(node, path, 0, styleableAncestor, userSetFont);
+        updateStyleHelper(node, path, 0, styleableAncestor, userSetFont);
+        return node.styleHelper;
     }
 
     /**
@@ -127,19 +128,19 @@ final class CssStyleHelper {
      * <p>
      * The new helper is installed before the properties of the old helper are reset, since resetting
      * them runs listeners which must never observe this node with an outdated helper.
+     * For the same reason, the node is only marked as no longer stale once the new helper is installed.
      *
-     * @return the installed {@link CssStyleHelper} or null
+     * @return whether properties of the old helper were reset,
+     * which runs listeners that may have modified the scene graph
      */
-    private static CssStyleHelper updateStyleHelper(Node node, List<Styleable> path, int index,
-                                                    Node styleableAncestor, boolean ancestorUserSetFont) {
+    private static boolean updateStyleHelper(Node node, List<Styleable> path, int index,
+                                             Node styleableAncestor, boolean ancestorUserSetFont) {
         final CssStyleHelper currentHelper = node.styleHelper;
         final boolean userSetFont = currentHelper == null || ancestorUserSetFont || isUserSetFont(node);
 
         if (currentHelper != null) {
             setFirstStyleableAncestor(currentHelper, styleableAncestor);
         }
-
-        node.cssHelperStale = false;
 
         // The List<CacheEntry> should only contain entries for those
         // pseudo-class states that have styles. The StyleHelper's
@@ -179,7 +180,8 @@ final class CssStyleHelper {
             }
 
             updateParentTriggerStates(path, index, triggerStates);
-            return currentHelper;
+            node.cssHelperStale = false;
+            return false;
         }
 
         if (styleMap == null || styleMap.isEmpty()) {
@@ -202,14 +204,11 @@ final class CssStyleHelper {
                 // There are no styles in the StyleMap and no styles inherit,
                 // so this node does not need a StyleHelper.
                 node.styleHelper = null;
+                node.cssHelperStale = false;
 
                 // If this node had a style helper, then reset properties to their initial value
                 // since the node won't have a style helper after this call
-                if (currentHelper != null) {
-                    currentHelper.resetToInitialValues(node, styleMap);
-                }
-
-                return null;
+                return currentHelper != null && currentHelper.resetToInitialValues(node, styleMap);
             }
 
         }
@@ -225,20 +224,31 @@ final class CssStyleHelper {
 
         helper.cacheContainer = new CacheContainer(node, styleMap, path, index);
         node.styleHelper = helper;
+        node.cssHelperStale = false;
 
         // If this node had a style helper, we need to reset all properties that will be unset with the
         // new style map to their initial values. Properties that remain set with the new style map carry
         // over to the new style helper.
-        if (currentHelper != null) {
-            Map<CssMetaData, CalculatedValue> remainingProperties =
-                    currentHelper.resetToInitialValues(node, styleMap);
-
-            helper.cacheContainer.cssSetProperties.putAll(remainingProperties);
+        if (currentHelper == null) {
+            return false;
         }
 
-        return helper;
+        boolean propertiesReset = currentHelper.resetToInitialValues(node, styleMap);
+        if (currentHelper.cacheContainer != null) {
+            helper.cacheContainer.cssSetProperties.putAll(currentHelper.cacheContainer.cssSetProperties);
+        }
+
+        return propertiesReset;
     }
 
+    /**
+     * Collects a chain of {@link Styleable} nodes to the root, which we will then use later to process the CSS.
+     * This is needed because when CSS is processed, the chain could change
+     * as a result of listeners that run during CSS resolution.
+     *
+     * @param styleable the {@link Styleable}
+     * @return the {@link Styleable} chain until the root
+     */
     private static List<Styleable> createStyleableChain(Styleable styleable) {
         List<Styleable> path = new ArrayList<>();
 
@@ -495,16 +505,16 @@ final class CssStyleHelper {
      * longer be set after applying {@code newStyleMap}. Properties that remain set with {@code newStyleMap}
      * are not reset here, because the next {@link Node#applyCss()} pass will compute and apply their new values.
      *
-     * @return the properties that remain set with {@code newStyleMap}
+     * @return whether any property was reset
      */
-    private Map<CssMetaData, CalculatedValue> resetToInitialValues(Node node, StyleMap newStyleMap) {
+    private boolean resetToInitialValues(Node node, StyleMap newStyleMap) {
         if (cacheContainer == null) {
-            return Map.of();
+            return false;
         }
 
         Map<CssMetaData, CalculatedValue> cssSetProperties = cacheContainer.cssSetProperties;
         if (cssSetProperties.isEmpty()) {
-            return Map.of();
+            return false;
         }
 
         // The flag lives on the node, as this helper may already be replaced by the one we reset for.
@@ -552,7 +562,7 @@ final class CssStyleHelper {
                 }
             }
 
-            return cssSetProperties;
+            return transitionEntry != null || resetList != null;
         } finally {
             node.cssResetInProgress = false;
         }
