@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2015, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -35,6 +35,14 @@ public class RegionShim extends Region {
 
     public static double boundedSize(double min, double pref, double max) {
         return Region.boundedSize(min, pref, max);
+    }
+
+    public static double adjustWidthByMargin(Region r, double width, Insets margin) {
+        return r.adjustWidthByMargin(width, margin);
+    }
+
+    public static double adjustHeightByMargin(Region r, double height, Insets margin) {
+        return r.adjustHeightByMargin(height, margin);
     }
 
     public static void addImageListener(Region r, Image image) {
