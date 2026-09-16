@@ -1290,6 +1290,75 @@ public class TreeTableCellTest {
         assertTrue(isItemChangedCalled.get());
     }
 
+    @Test
+    void testEditStopEditIsCalledAndCancelsEdit() {
+        AtomicBoolean stopEditCalled = new AtomicBoolean();
+        AtomicBoolean cancelEditCalled = new AtomicBoolean();
+
+        TreeTableColumn<String, Object> tableColumn = new TreeTableColumn<>("column");
+        tree.setEditable(true);
+        tree.getColumns().add(tableColumn);
+
+        tableColumn.setCellFactory(_ -> new TreeTableCell<>() {
+            @Override
+            public void stopEdit() {
+                super.stopEdit();
+                stopEditCalled.set(true);
+            }
+
+            @Override
+            public void cancelEdit() {
+                super.cancelEdit();
+                cancelEditCalled.set(true);
+            }
+        });
+
+        stageLoader = new StageLoader(tree);
+
+        tree.edit(0, tableColumn);
+        assertFalse(stopEditCalled.get());
+        assertFalse(cancelEditCalled.get());
+
+        tree.edit(-1, null);
+        assertTrue(stopEditCalled.get());
+        assertTrue(cancelEditCalled.get());
+    }
+
+    @Test
+    void testUpdateItemStopEditIsCalledAndCancelsEdit() {
+        AtomicBoolean stopEditCalled = new AtomicBoolean();
+        AtomicBoolean cancelEditCalled = new AtomicBoolean();
+
+        TreeTableColumn<String, Object> tableColumn = new TreeTableColumn<>("column");
+        tree.setEditable(true);
+        tree.getColumns().add(tableColumn);
+
+        tableColumn.setCellFactory(_ -> new TreeTableCell<>() {
+            @Override
+            public void stopEdit() {
+                super.stopEdit();
+                stopEditCalled.set(true);
+            }
+
+            @Override
+            public void cancelEdit() {
+                super.cancelEdit();
+                cancelEditCalled.set(true);
+            }
+        });
+
+        stageLoader = new StageLoader(tree);
+
+        tree.edit(0, tableColumn);
+        assertFalse(stopEditCalled.get());
+        assertFalse(cancelEditCalled.get());
+
+        IndexedCell<String> cell = VirtualFlowTestUtils.getCell(tree, 0);
+        cell.updateIndex(-1);
+        assertTrue(stopEditCalled.get());
+        assertTrue(cancelEditCalled.get());
+    }
+
     public static class MisbehavingOnCancelTreeTableCell<S, T> extends TreeTableCell<S, T> {
 
         @Override

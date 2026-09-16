@@ -33,6 +33,7 @@ import javafx.scene.control.TreeTableCell;
 import javafx.scene.control.TreeTableColumn;
 import javafx.scene.control.TreeTableView;
 import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 
 /**
  */
@@ -140,22 +141,26 @@ public class TreeTableCellBehavior<S,T> extends TableCellBehaviorBase<TreeItem<S
     }
 
     @Override
-    protected void handleClicks(MouseButton button, int clickCount, boolean isAlreadySelected) {
+    protected boolean handleClicks(MouseButton button, int clickCount, boolean isAlreadySelected) {
         // handle editing, which only occurs with the primary mouse button
         TreeItem<S> treeItem = getNode().getTableRow().getTreeItem();
         if (button == MouseButton.PRIMARY) {
             if (clickCount == 1 && isAlreadySelected) {
                 edit(getNode());
+                return true;
             } else if (clickCount == 1) {
-                // cancel editing
+                // stop editing
                 edit(null);
+                return true;
             } else if (clickCount == 2 && treeItem.isLeaf()) {
                 // attempt to edit
                 edit(getNode());
+                return true;
             } else if (clickCount % 2 == 0) {
                 // try to expand/collapse branch tree item
                 treeItem.setExpanded(! treeItem.isExpanded());
             }
         }
+        return false;
     }
 }
