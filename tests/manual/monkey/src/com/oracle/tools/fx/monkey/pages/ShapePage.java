@@ -24,6 +24,7 @@
  */
 package com.oracle.tools.fx.monkey.pages;
 
+import java.util.List;
 import java.util.function.Supplier;
 import javafx.beans.binding.Bindings;
 import javafx.beans.binding.DoubleBinding;
@@ -32,7 +33,11 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.scene.Node;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.Background;
@@ -65,6 +70,7 @@ import com.oracle.tools.fx.monkey.options.EnumOption;
 import com.oracle.tools.fx.monkey.options.ObjectOption;
 import com.oracle.tools.fx.monkey.options.PaintOption;
 import com.oracle.tools.fx.monkey.util.FX;
+import com.oracle.tools.fx.monkey.util.NamedValue;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.TestPaneBase;
 
@@ -210,59 +216,6 @@ public class ShapePage extends TestPaneBase {
             return new Rectangle(0, 0, 400, 200);
         });
         op.addChoice("Text", () -> {
-            return union(
-                // curves1
-                new CubicCurve(2191.0, 7621.0, 2191.0, 7619.0, 2191.0, 7618.0, 2191.0, 7617.0),
-                new CubicCurve(2191.0, 7617.0, 2191.0, 7617.0, 2191.0, 7616.0, 2191.0, 7615.0),
-                new CubicCurve(2198.0, 7602.0, 2200.0, 7599.0, 2203.0, 7595.0, 2205.0, 7590.0),
-                new CubicCurve(2205.0, 7590.0, 2212.0, 7580.0, 2220.0, 7571.0, 2228.0, 7563.0),
-                new CubicCurve(2228.0, 7563.0, 2233.0, 7557.0, 2239.0, 7551.0, 2245.0, 7546.0),
-                new CubicCurve(2245.0, 7546.0, 2252.0, 7540.0, 2260.0, 7534.0, 2267.0, 7528.0),
-                new CubicCurve(2267.0, 7528.0, 2271.0, 7526.0, 2275.0, 7524.0, 2279.0, 7521.0),
-                new CubicCurve(2279.0, 7521.0, 2279.0, 7520.0, 2280.0, 7520.0, 2281.0, 7519.0),
-                // curves2
-                new CubicCurve(2281.0, 7519.0, 2282.0, 7518.0, 2282.0, 7517.0, 2283.0, 7516.0),
-                new CubicCurve(2283.0, 7516.0, 2284.0, 7515.0, 2284.0, 7515.0, 2285.0, 7514.0),
-                new CubicCurve(2291.0, 7496.0, 2292.0, 7495.0, 2292.0, 7494.0, 2291.0, 7493.0),
-                new CubicCurve(2291.0, 7493.0, 2290.0, 7492.0, 2290.0, 7492.0, 2289.0, 7492.0),
-                new CubicCurve(2289.0, 7492.0, 2288.0, 7491.0, 2286.0, 7492.0, 2285.0, 7492.0),
-                new CubicCurve(2262.0, 7496.0, 2260.0, 7497.0, 2259.0, 7497.0, 2257.0, 7498.0),
-                new CubicCurve(2257.0, 7498.0, 2254.0, 7498.0, 2251.0, 7499.0, 2248.0, 7501.0),
-                new CubicCurve(2248.0, 7501.0, 2247.0, 7501.0, 2245.0, 7502.0, 2244.0, 7503.0),
-                new CubicCurve(2207.0, 7523.0, 2203.0, 7525.0, 2199.0, 7528.0, 2195.0, 7530.0),
-                new CubicCurve(2195.0, 7530.0, 2191.0, 7534.0, 2186.0, 7538.0, 2182.0, 7541.0),
-                // curves3
-                new CubicCurve(2182.0, 7541.0, 2178.0, 7544.0, 2174.0, 7547.0, 2170.0, 7551.0),
-                new CubicCurve(2170.0, 7551.0, 2164.0, 7556.0, 2158.0, 7563.0, 2152.0, 7569.0),
-                new CubicCurve(2152.0, 7569.0, 2148.0, 7573.0, 2145.0, 7577.0, 2141.0, 7582.0),
-                new CubicCurve(2141.0, 7582.0, 2138.0, 7588.0, 2134.0, 7595.0, 2132.0, 7602.0),
-                new CubicCurve(2132.0, 7602.0, 2132.0, 7605.0, 2131.0, 7608.0, 2131.0, 7617.0),
-                new CubicCurve(2131.0, 7617.0, 2131.0, 7620.0, 2131.0, 7622.0, 2131.0, 7624.0),
-                new CubicCurve(2131.0, 7624.0, 2131.0, 7630.0, 2132.0, 7636.0, 2135.0, 7641.0),
-                new CubicCurve(2135.0, 7641.0, 2136.0, 7644.0, 2137.0, 7647.0, 2139.0, 7650.0),
-                new CubicCurve(2139.0, 7650.0, 2143.0, 7658.0, 2149.0, 7664.0, 2155.0, 7670.0),
-                new CubicCurve(2155.0, 7670.0, 2160.0, 7676.0, 2165.0, 7681.0, 2171.0, 7686.0),
-                // curves4
-                new CubicCurve(2171.0, 7686.0, 2174.0, 7689.0, 2177.0, 7692.0, 2180.0, 7694.0),
-                new CubicCurve(2180.0, 7694.0, 2185.0, 7698.0, 2191.0, 7702.0, 2196.0, 7706.0),
-                new CubicCurve(2196.0, 7706.0, 2199.0, 7708.0, 2203.0, 7711.0, 2207.0, 7713.0),
-                new CubicCurve(2244.0, 7734.0, 2245.0, 7734.0, 2247.0, 7735.0, 2248.0, 7736.0),
-                new CubicCurve(2248.0, 7736.0, 2251.0, 7738.0, 2254.0, 7739.0, 2257.0, 7739.0),
-                new CubicCurve(2257.0, 7739.0, 2259.0, 7739.0, 2260.0, 7739.0, 2262.0, 7740.0),
-                new CubicCurve(2285.0, 7745.0, 2286.0, 7745.0, 2288.0, 7745.0, 2289.0, 7745.0),
-                new CubicCurve(2289.0, 7745.0, 2290.0, 7745.0, 2290.0, 7744.0, 2291.0, 7743.0),
-                new CubicCurve(2291.0, 7743.0, 2292.0, 7742.0, 2292.0, 7741.0, 2291.0, 7740.0),
-                new CubicCurve(2285.0, 7722.0, 2284.0, 7721.0, 2284.0, 7721.0, 2283.0, 7720.0),
-                new CubicCurve(2283.0, 7720.0, 2282.0, 7719.0, 2282.0, 7719.0, 2281.0, 7718.0),
-                new CubicCurve(2281.0, 7718.0, 2280.0, 7717.0, 2279.0, 7716.0, 2279.0, 7716.0),
-                new CubicCurve(2279.0, 7716.0, 2275.0, 7712.0, 2271.0, 7710.0, 2267.0, 7708.0),
-                new CubicCurve(2267.0, 7708.0, 2260.0, 7702.0, 2252.0, 7697.0, 2245.0, 7691.0),
-                new CubicCurve(2245.0, 7691.0, 2239.0, 7685.0, 2233.0, 7679.0, 2228.0, 7673.0),
-                new CubicCurve(2228.0, 7673.0, 2220.0, 7665.0, 2212.0, 7656.0, 2205.0, 7646.0),
-                new CubicCurve(2205.0, 7646.0, 2203.0, 7641.0, 2200.0, 7637.0, 2198.0, 7634.0)
-            );
-        });
-        op.addChoice("Cubic Curves (*)", () -> {
             Text t = new Text("Text");
             t.setFont(Font.font("System", FontWeight.BOLD, 48));
             return t;
@@ -449,16 +402,32 @@ public class ShapePage extends TestPaneBase {
         return rv;
     }
 
+    private static Node createDashArrayOption(String name, ObservableList<Double> dashArray) {
+        ComboBox<NamedValue<List<Double>>> op = new ComboBox<>();
+        FX.name(op, name);
+        op.getItems().setAll(
+            new NamedValue("[]", List.of()),
+            new NamedValue("[2]", List.of(2.0)),
+            new NamedValue("[3, 5]", List.of(3.0, 5.0))
+        );
+        op.getSelectionModel().selectedItemProperty().addListener((s, pr, c) -> {
+            List<Double> v = c.getValue();
+            dashArray.setAll(v);
+        });
+        return op;
+    }
+
     public static void props(String prefix, OptionPane op, Props p) {
         op.option("Fill:", new PaintOption(prefix + "fill", p.fill));
         op.option(new BooleanOption(prefix + "smooth", "smooth", p.smooth));
         op.option("Stroke:", new PaintOption("stroke", p.stroke));
-        op.option("Stroke Dash Offset:", new DoubleSpinner(prefix + "strokeDashOffset", 0, 100, 0.1, p.strokeDashOffset));
-        op.option("Stroke Line Cap:", new EnumOption<>(prefix + "strokeLineCap", StrokeLineCap.class, p.strokeLineCap));
-        op.option("Stroke Line Join:", new EnumOption<>(prefix + "strokeLineJoin", StrokeLineJoin.class, p.strokeLineJoin));
-        op.option("Stroke Miter Limit:", new DoubleSpinner(prefix + "strokeMeterLimit", 0, 100, 0.1, p.strokeMiterLimit));
-        op.option("Stroke Type:", new EnumOption<>(prefix + "strokeType", StrokeType.class, p.strokeType));
-        op.option("Stroke Width:", new DoubleSpinner(prefix + "strokeWidth", 0, 100, 0.1, p.strokeWidth));
+        op.option("- Dash Array:", createDashArrayOption(prefix + "dashArray", p.dashArray));
+        op.option("- Dash Offset:", new DoubleSpinner(prefix + "strokeDashOffset", 0, 100, 0.1, p.strokeDashOffset));
+        op.option("- Line Cap:", new EnumOption<>(prefix + "strokeLineCap", StrokeLineCap.class, p.strokeLineCap));
+        op.option("- Line Join:", new EnumOption<>(prefix + "strokeLineJoin", StrokeLineJoin.class, p.strokeLineJoin));
+        op.option("- Miter Limit:", new DoubleSpinner(prefix + "strokeMeterLimit", 0, 100, 0.1, p.strokeMiterLimit));
+        op.option("- Type:", new EnumOption<>(prefix + "strokeType", StrokeType.class, p.strokeType));
+        op.option("- Width:", new DoubleSpinner(prefix + "strokeWidth", 0, 100, 0.1, p.strokeWidth));
     }
 
     private static void setProps(Shape s, Props p) {
@@ -471,9 +440,11 @@ public class ShapePage extends TestPaneBase {
         s.strokeMiterLimitProperty().bind(p.strokeMiterLimit);
         s.strokeTypeProperty().bind(p.strokeType);
         s.strokeWidthProperty().bind(p.strokeWidth);
+        p.setShape(s);
     }
 
     private static class Props {
+        public final ObservableList<Double> dashArray = FXCollections.observableArrayList();
         public final SimpleObjectProperty<Paint> fill = new SimpleObjectProperty<>();
         public final SimpleBooleanProperty smooth = new SimpleBooleanProperty(true);
         public final SimpleObjectProperty<Paint> stroke = new SimpleObjectProperty<>();
@@ -483,6 +454,7 @@ public class ShapePage extends TestPaneBase {
         public final SimpleDoubleProperty strokeMiterLimit = new SimpleDoubleProperty();
         public final SimpleObjectProperty<StrokeType> strokeType = new SimpleObjectProperty<>();
         public final SimpleDoubleProperty strokeWidth = new SimpleDoubleProperty(5);
+        private Shape shape;
 
         public Props(boolean first) {
             if (first) {
@@ -492,6 +464,19 @@ public class ShapePage extends TestPaneBase {
                 stroke.set(Color.GREEN);
                 fill.set(FX.alpha(Color.GREEN, 0.5));
             }
+
+            dashArray.addListener(new ListChangeListener<>() {
+                @Override
+                public void onChanged(Change<? extends Double> ch) {
+                    if (shape != null) {
+                        shape.getStrokeDashArray().setAll(ch.getList());
+                    }
+                }
+            });
+        }
+
+        public void setShape(Shape s) {
+            this.shape = s;
         }
     }
 }

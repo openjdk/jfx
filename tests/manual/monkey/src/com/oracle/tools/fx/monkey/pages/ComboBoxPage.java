@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022, 2024, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2022, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -28,14 +28,19 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.function.Function;
-import java.util.function.Supplier;
 import javafx.beans.property.ObjectProperty;
 import javafx.collections.ObservableList;
 import javafx.scene.AccessibleAttribute;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
+import javafx.scene.control.Control;
+import javafx.scene.control.ListCell;
+import javafx.scene.control.ListView;
 import javafx.scene.control.skin.ComboBoxListViewSkin;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.util.Callback;
 import javafx.util.StringConverter;
 import com.oracle.tools.fx.monkey.Loggers;
 import com.oracle.tools.fx.monkey.options.ObjectOption;
@@ -43,6 +48,7 @@ import com.oracle.tools.fx.monkey.sheets.ComboBoxBasePropertySheet;
 import com.oracle.tools.fx.monkey.sheets.Options;
 import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.HasSkinnable;
+import com.oracle.tools.fx.monkey.util.ImageTools;
 import com.oracle.tools.fx.monkey.util.ObjectSelector;
 import com.oracle.tools.fx.monkey.util.OptionPane;
 import com.oracle.tools.fx.monkey.util.SequenceNumber;
@@ -67,6 +73,9 @@ public class ComboBoxPage extends TestPaneBase implements HasSkinnable {
             }
         };
         control.setOnAction((ev) -> addItem());
+        control.valueProperty().addListener((_,_,v) -> {
+            IO.println("value=" + v);
+        });
 
         Button addButton = FX.button("Add Item", () -> {
             control.getItems().add(newItem(""));
@@ -78,8 +87,8 @@ public class ComboBoxPage extends TestPaneBase implements HasSkinnable {
 
         OptionPane op = new OptionPane();
         op.section("ComboBox");
-        op.option("Button Cell: TODO", null); // TODO
-        op.option("Cell Factory: TODO", null); // TODO
+        op.option("Button Cell:", createButtonCellOption("buttonCell", control.buttonCellProperty()));
+        op.option("Cell Factory:", createCellFactoryOption("cellFactory", control.cellFactoryProperty()));
         op.option("Converter:", createConverterOptions("converter", control.converterProperty()));
         op.option("Items:", createItemsOptions("items", control.getItems()));
         op.option(Utils.buttons(addButton, clearButton));
@@ -91,6 +100,24 @@ public class ComboBoxPage extends TestPaneBase implements HasSkinnable {
 
         setContent(control);
         setOptions(op);
+    }
+
+    private Node createCellFactoryOption(String name, ObjectProperty<Callback<ListView<Object>, ListCell<Object>>> p) {
+        ObjectOption<Callback<ListView<Object>, ListCell<Object>>> op = new ObjectOption<>(name, p);
+        op.addChoice("With Icon", (listView) -> new ListCellWithIcon());
+        op.addChoice("Large Blue Text", (listView) -> new LargeBlueListCell());
+        op.addChoice("<null>", null);
+        op.selectInitialValue();
+        return op;
+    }
+
+    private Node createButtonCellOption(String name, ObjectProperty<ListCell<Object>> p) {
+        ObjectOption<ListCell<Object>> op = new ObjectOption<>(name, p);
+        op.addChoiceSupplier("With Icon", () -> new ListCellWithIcon());
+        op.addChoiceSupplier("Large Blue Text", () -> new LargeBlueListCell());
+        op.addChoice("<null>", null);
+        op.selectInitialValue();
+        return op;
     }
 
     private Node createSelectionModelOptions(String name) {
@@ -133,15 +160,18 @@ public class ComboBoxPage extends TestPaneBase implements HasSkinnable {
     }
 
 
-    private Supplier<List<Object>> createItems(int count, Function<Integer, Object> gen) {
-        return () -> {
-            ArrayList<Object> rv = new ArrayList<>(count);
-            for (int i = 0; i < count; i++) {
-                Object v = gen.apply(i);
-                rv.add(v);
-            }
-            return rv;
-        };
+    private List<Object> createItems(int count, Function<Integer, Object> gen) {
+        ArrayList<Object> rv = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            Object v = gen.apply(i);
+            rv.add(v);
+        }
+        return rv;
+    }
+
+    private List<Object> addNull(List<Object> list) {
+        list.add(null);
+        return list;
     }
 
     private Node createItemsOptions(String name, ObservableList<Object> items) {
@@ -149,12 +179,13 @@ public class ComboBoxPage extends TestPaneBase implements HasSkinnable {
             items.setAll(v);
         });
         s.addChoice("<empty>", List.of());
-        s.addChoiceSupplier("1 Row", createItems(1, this::newItem));
-        s.addChoiceSupplier("10 Rows", createItems(10, this::newItem));
-        s.addChoiceSupplier("200 Rows", createItems(200, this::newItem));
-        s.addChoiceSupplier("10,000 Rows", createItems(10_000, this::newItem));
-        s.addChoiceSupplier("10 Variable Height Rows", createItems(10, this::newVariableItem));
-        s.addChoiceSupplier("200 Variable HeightRows", createItems(200, this::newVariableItem));
+        s.addChoiceSupplier("1 Row", () -> createItems(1, this::newItem));
+        s.addChoiceSupplier("10 Rows", () -> createItems(10, this::newItem));
+        s.addChoiceSupplier("10 Rows w/null", () -> addNull(createItems(10, this::newItem)));
+        s.addChoiceSupplier("200 Rows", () -> createItems(200, this::newItem));
+        s.addChoiceSupplier("10,000 Rows", () -> createItems(10_000, this::newItem));
+        s.addChoiceSupplier("10 Variable Height Rows", () -> createItems(10, this::newVariableItem));
+        s.addChoiceSupplier("200 Variable HeightRows", () -> createItems(200, this::newVariableItem));
         s.selectFirst();
         return s;
     }
@@ -166,11 +197,21 @@ public class ComboBoxPage extends TestPaneBase implements HasSkinnable {
             return new StringConverter<Object>() {
                 @Override
                 public String toString(Object x) {
+                    if (x == null) {
+                        return "◇";
+                    }
                     return "\"" + x + "\"";
                 }
 
                 @Override
                 public Object fromString(String s) {
+                    if (s == null) {
+                        return null;
+                    } else if ("◇".equals(s)) {
+                        return null;
+                    } else if (s.startsWith("\"") && s.endsWith("\"") && (s.length() > 2)) {
+                        return s.substring(1, s.length() - 1);
+                    }
                     return s;
                 }
             };
@@ -202,5 +243,32 @@ public class ComboBoxPage extends TestPaneBase implements HasSkinnable {
     @Override
     public void newSkin() {
         control.setSkin(new ComboBoxListViewSkin<>(control));
+    }
+
+    @Override
+    public Control getSkinnableControl() {
+        return control;
+    }
+
+    private static class LargeBlueListCell extends ListCell<Object> {
+        @Override
+        public void updateItem(Object item, boolean empty) {
+            super.updateItem(item, empty);
+            setStyle("-fx-font-size:150%; -fx-text-fill:blue;");
+            String text = (item == null) ? null : item.toString();
+            setText(text);
+            setGraphic(null);
+        }
+    }
+
+    private static class ListCellWithIcon extends ListCell<Object> {
+        @Override
+        public void updateItem(Object item, boolean empty) {
+            super.updateItem(item, empty);
+            String text = (item == null) ? null : item.toString();
+            Image im = ImageTools.createImage(text, 16, 16);
+            setText(text);
+            setGraphic(new ImageView(im));
+        }
     }
 }

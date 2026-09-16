@@ -25,6 +25,7 @@
 package com.oracle.tools.fx.monkey.pages;
 
 import javafx.scene.AccessibleAttribute;
+import javafx.scene.control.Control;
 import com.oracle.tools.fx.monkey.Loggers;
 import com.oracle.tools.fx.monkey.sheets.RTAPropertySheet;
 import com.oracle.tools.fx.monkey.util.HasSkinnable;
@@ -66,5 +67,10 @@ public class CodeAreaPage extends TestPaneBase implements HasSkinnable {
     @Override
     public void newSkin() {
         control.setSkin(new CodeAreaSkin(control));
+    }
+
+    @Override
+    public Control getSkinnableControl() {
+        return control;
     }
 }

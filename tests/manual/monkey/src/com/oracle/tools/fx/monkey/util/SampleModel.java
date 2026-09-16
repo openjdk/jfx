@@ -31,11 +31,26 @@ import javafx.scene.layout.Background;
 import javafx.scene.paint.Color;
 import jfx.incubator.scene.control.richtext.model.RichTextFormatHandler;
 import jfx.incubator.scene.control.richtext.model.SimpleViewOnlyStyledModel;
+import jfx.incubator.scene.control.richtext.model.StyleAttributeMap;
 
 /**
  * Sample model for the RichTextArea property sheet.
  */
 public class SampleModel extends SimpleViewOnlyStyledModel {
+    private static final StyleAttributeMap OVERLAP1 = StyleAttributeMap.builder().
+        set(StyleAttributeMap.TEXT_HIGHLIGHT_1, Boolean.TRUE).
+        setFontSize(16).
+        build();
+    private static final StyleAttributeMap OVERLAP2 = StyleAttributeMap.builder().
+        set(StyleAttributeMap.TEXT_HIGHLIGHT_1, Boolean.TRUE).
+        set(StyleAttributeMap.TEXT_HIGHLIGHT_3, Boolean.TRUE).
+        setFontSize(16).
+        build();
+    private static final StyleAttributeMap OVERLAP3 = StyleAttributeMap.builder().
+        set(StyleAttributeMap.TEXT_HIGHLIGHT_3, Boolean.TRUE).
+        setFontSize(16).
+        build();
+
     public SampleModel() {
         // Style names: see MainWindow.stylesheet()
         String BOLD = "bold";
@@ -102,6 +117,25 @@ public class SampleModel extends SimpleViewOnlyStyledModel {
         addSegment("Styled with CSS");
         addWavyUnderline(0, 6, "squiggly-css");
         highlight(12, 3, "highlight1", "highlight2");
+        nl(2);
+        addSegment("Highlighting with StyleAttributes:");
+        nl();
+        addSegment("-----");
+        addSegment("wavy1", StyleAttributeMap.of(StyleAttributeMap.WAVY_UNDERLINE_1, Boolean.TRUE));
+        addSegment("wavy1", StyleAttributeMap.of(StyleAttributeMap.WAVY_UNDERLINE_1, Boolean.TRUE));
+        addSegment("-no-break", StyleAttributeMap.of(StyleAttributeMap.WAVY_UNDERLINE_1, Boolean.TRUE));
+        addSegment("wavy2", StyleAttributeMap.of(StyleAttributeMap.WAVY_UNDERLINE_2, Boolean.TRUE));
+        addSegment("wavy3", StyleAttributeMap.of(StyleAttributeMap.WAVY_UNDERLINE_3, Boolean.TRUE));
+        addSegment(" ");
+        addSegment("high1", StyleAttributeMap.of(StyleAttributeMap.TEXT_HIGHLIGHT_1, Boolean.TRUE));
+        addSegment("high2", StyleAttributeMap.of(StyleAttributeMap.TEXT_HIGHLIGHT_2, Boolean.TRUE));
+        addSegment("high3", StyleAttributeMap.of(StyleAttributeMap.TEXT_HIGHLIGHT_3, Boolean.TRUE));
+        addSegment("high4", StyleAttributeMap.of(StyleAttributeMap.TEXT_HIGHLIGHT_4, Boolean.TRUE));
+        addSegment("high5", StyleAttributeMap.of(StyleAttributeMap.TEXT_HIGHLIGHT_5, Boolean.TRUE));
+        nl();
+        addSegment("over", OVERLAP1);
+        addSegment("lapping high", OVERLAP2);
+        addSegment("lights", OVERLAP3);
         nl(2);
         addSegment("Paragraph Node:");
         addParagraph(JumpingLabel::new);

@@ -25,131 +25,262 @@
 package com.oracle.tools.fx.monkey.tools;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Node;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Label;
+import javafx.scene.control.RadioButton;
+import javafx.scene.control.ScrollPane;
 import javafx.scene.control.SelectionMode;
+import javafx.scene.control.SplitPane;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.control.ToggleButton;
+import javafx.scene.control.ToggleGroup;
 import javafx.scene.control.ToolBar;
-import javafx.scene.control.TreeItem;
-import javafx.scene.control.TreeTableCell;
-import javafx.scene.control.TreeTableColumn;
-import javafx.scene.control.TreeTablePosition;
-import javafx.scene.control.TreeTableView;
+import javafx.scene.control.Tooltip;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.scene.input.DataFormat;
 import javafx.scene.layout.BorderPane;
-import javafx.scene.text.Text;
+import javafx.scene.paint.Color;
 import com.oracle.tools.fx.monkey.util.FX;
 import com.oracle.tools.fx.monkey.util.Utils;
+import jfx.incubator.scene.control.richtext.RichTextArea;
 
 /**
  * Clipboard Viewer
  */
 public class ClipboardViewer extends BorderPane {
-    private final TreeItem<Entry> root;
-    private final TreeTableView<Entry> control;
+
+    private enum Mode {
+        ASCII,
+        HEX,
+        IMAGE,
+        TEXT,
+    }
+
+    private final RadioButton asciiMode;
+    private final RadioButton hexMode;
+    private final RadioButton imageMode;
+    private final RadioButton textMode;
+    private final TableView<Entry> table;
+    private final Label classField;
+    private final BorderPane detailPane;
+    private final ToggleButton wrapButton;
+    private RichTextArea textView;
 
     public ClipboardViewer() {
         FX.name(this, "ClipboardPage");
 
-        root = new TreeItem<>(null);
-        control = new TreeTableView<>(root);
-        control.setColumnResizePolicy(TreeTableView.CONSTRAINED_RESIZE_POLICY_SUBSEQUENT_COLUMNS);
-        control.getSelectionModel().setCellSelectionEnabled(true);
-        control.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
-        // TODO disable column reordering
-        control.setShowRoot(false);
+        ToggleGroup toggleGroup = new ToggleGroup();
+
+        asciiMode = new RadioButton("ascii");
+        FX.name(asciiMode, "asciiMode");
+        asciiMode.setToggleGroup(toggleGroup);
+
+        hexMode = new RadioButton("hex");
+        FX.name(hexMode, "hexMode");
+        hexMode.setToggleGroup(toggleGroup);
+
+        imageMode = new RadioButton("image");
+        FX.name(imageMode, "imageMode");
+        imageMode.setToggleGroup(toggleGroup);
+
+        textMode = new RadioButton("text");
+        FX.name(textMode, "textMode");
+        textMode.setToggleGroup(toggleGroup);
+        textMode.setSelected(true);
+
+        wrapButton = new ToggleButton("W");
+        FX.name(wrapButton, "wrapButton");
+        wrapButton.setTooltip(new Tooltip("wrap text"));
+
+        table = new TableView<>();
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
+        table.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+        FX.name(table, "table");
         {
-            TreeTableColumn<Entry, String> c = new TreeTableColumn<>();
+            TableColumn<Entry, String> c = new TableColumn<>();
             c.setText("Data Format");
-            c.setMinWidth(100);
-            c.setPrefWidth(200);
-            c.setMaxWidth(300);
             c.setCellValueFactory((f) -> {
-                var t = f.getValue();
+                Entry t = f.getValue();
                 if (t != null) {
-                    var tt = t.getValue();
-                    if (tt != null) {
-                        return tt.text;
-                    }
+                    return t.name;
                 }
                 return null;
             });
-            control.getColumns().add(c);
+            table.getColumns().add(c);
         }
-        {
-            TreeTableColumn<Entry, String> c = new TreeTableColumn<>();
-            c.setText("Value");
-            c.setPrefWidth(1000);
-            c.setCellFactory((r) -> {
-                return new TreeTableCell<Entry, String>() {
-                    @Override
-                    protected void updateItem(String text, boolean empty) {
-                        super.updateItem(text, empty);
-                        Text t = new Text(text);
-                        t.setStyle("-fx-font-family:Monospace;");
-                        t.wrappingWidthProperty().bind(widthProperty());
-                        setPrefHeight(USE_COMPUTED_SIZE);
-                        setGraphic(t);
-                    }
-                };
-            });
-            // TODO text flow
-            c.setCellValueFactory((f) -> {
-                var t = f.getValue();
-                if (t != null) {
-                    var tt = t.getValue();
-                    if (tt != null) {
-                        return tt.text2;
-                    }
-                }
-                return null;
-            });
-            control.getColumns().add(c);
-        }
-        FX.setPopupMenu(control, this::createPopupMenu);
+        //FX.setPopupMenu(table, this::createPopupMenu);
 
-        Button addButton = FX.button("Reload", this::reload);
+        Button reloadButton = FX.button("Reload", this::reload);
 
-        ToolBar tp = new ToolBar(addButton);
+        ToolBar tp = new ToolBar(
+            reloadButton,
+            Utils.spacer(),
+            textMode,
+            asciiMode,
+            hexMode,
+            imageMode,
+            Utils.spacer(),
+            wrapButton
+        );
 
-        setCenter(control);
+        classField = new Label();
+        classField.setPadding(new Insets(1, 10, 0, 10));
+        classField.setAlignment(Pos.CENTER_RIGHT);
+        classField.setMaxWidth(1e20);
+
+        detailPane = new BorderPane();
+
+        SplitPane split = new SplitPane(table, detailPane);
+        split.setDividerPositions(100);
+        FX.name(split, "split");
+
+        setCenter(split);
         setTop(tp);
+        setBottom(classField);
+
+        table.getSelectionModel().selectedItemProperty().subscribe(this::showDetail);
+        table.getSelectionModel().selectFirst();
+        toggleGroup.selectedToggleProperty().subscribe(this::showDetail);
 
         reload();
     }
 
+    private void showDetail() {
+        Entry en = table.getSelectionModel().getSelectedItem();
+        Node n = getViewer(en);
+        if (detailPane.getCenter() != n) {
+            detailPane.setCenter(n);
+        }
+        classField.setText(en == null ? null : en.getType());
+    }
+
+    private RichTextArea textView() {
+        if (textView == null) {
+            textView = new RichTextArea();
+            textView.setEditable(false);
+            textView.setHighlightCurrentParagraph(true);
+            textView.wrapTextProperty().bind(wrapButton.selectedProperty());
+        }
+        return textView;
+    }
+
+    private Node getViewer(Entry en) {
+        if (en == null) {
+            return null;
+        }
+
+        Object data = en.data.get();
+        if (en.error) {
+            String trace = Utils.stackTrace((Throwable)data);
+            textView().setModel(TextViewModel.ofText(Color.RED, "Not an image", false));
+            return textView;
+        }
+
+        Mode m = getMode();
+        switch (m) {
+        case ASCII:
+            {
+                String text = asText(data);
+                textView().setModel(TextViewModel.ofText(Color.BLACK, text, true));
+            }
+            return textView;
+        case HEX:
+            {
+                byte[] b = asBytes(data);
+                if (b == null) {
+                    textView().setModel(TextViewModel.ofText(Color.RED, "Not a binary", false));
+                } else {
+                    textView().setModel(TextViewModel.ofBytes(b));
+                }
+            }
+            return textView;
+        case IMAGE:
+            {
+                Object d = en.data.get();
+                if (d instanceof Image im) {
+                    return new ScrollPane(new ImageView(im));
+                } else {
+                    textView().setModel(TextViewModel.ofText(Color.RED, "Not an image", false));
+                    return textView;
+                }
+            }
+        default:
+            {
+                String text = asText(data);
+                textView().setModel(TextViewModel.ofText(Color.BLACK, text, false));
+            }
+            return textView;
+        }
+    }
+
+    private static String asText(Object v) {
+        if (v instanceof String s) {
+            return s;
+        }
+
+        if (v instanceof byte[] b) {
+            try {
+                return new String(b, StandardCharsets.UTF_8);
+            } catch (Throwable e) {
+                return new String(b, StandardCharsets.US_ASCII);
+            }
+        }
+
+        return v.toString();
+    }
+
+    private static byte[] asBytes(Object v) {
+        if (v instanceof byte[] b) {
+            return b;
+        } else if (v instanceof ByteBuffer bb) {
+            ByteBuffer buf = bb.asReadOnlyBuffer();
+            buf.position(0);
+            byte[] b = new byte[buf.limit()];
+            buf.get(b);
+            return b;
+        } else if (v instanceof String s) {
+            return s.getBytes(StandardCharsets.UTF_8);
+        }
+        return null;
+    }
+
+    private Mode getMode() {
+        if (asciiMode.isSelected()) {
+            return Mode.ASCII;
+        } else if (hexMode.isSelected()) {
+            return Mode.HEX;
+        } else if (imageMode.isSelected()) {
+            return Mode.IMAGE;
+        }
+        return Mode.TEXT;
+    }
+
     private ContextMenu createPopupMenu() {
         ContextMenu m = new ContextMenu();
+        // TODO copy as... bytes, image, etc.?
         FX.item(m, "Copy", this::copy);
         return m;
     }
 
+    // TODO
     private void copy() {
         StringBuilder sb = null;
-        List<TreeTablePosition<Entry, ?>> sel = control.getSelectionModel().getSelectedCells();
-        for (TreeTablePosition<Entry, ?> p : sel) {
-            Entry en = p.getTreeItem().getValue();
-            if (en != null) {
-                int col = p.getColumn();
-
-                if (sb == null) {
-                    sb = new StringBuilder();
-                }
-
-                String s = (col == 0) ? en.text.get() : en.text2.get();
-                sb.append(s);
-                sb.append("\n");
-            }
-        }
-
+        List<Entry> sel = table.getSelectionModel().getSelectedItems();
         if (sb != null) {
             String text = sb.toString();
             ClipboardContent cc = new ClipboardContent();
@@ -159,7 +290,6 @@ public class ClipboardViewer extends BorderPane {
     }
 
     public void reload() {
-        Set<DataFormat> expanded = getExpandedItems();
         Clipboard c = Clipboard.getSystemClipboard();
         List<DataFormat> formats = new ArrayList<>(c.getContentTypes());
         Collections.sort(formats, new Comparator<DataFormat>() {
@@ -169,37 +299,26 @@ public class ClipboardViewer extends BorderPane {
             }
         });
 
-        ArrayList<TreeItem<Entry>> items = new ArrayList<>();
+        ArrayList<Entry> items = new ArrayList<>();
         for (DataFormat f: formats) {
-            TreeItem<Entry> item = new TreeItem<>(new Entry(f, f.toString(), null));
-            items.add(item);
-
-            Object x;
+            String name = getName(f);
+            boolean error = false;
+            Object data;
             try {
-                x = c.getContent(f);
+                data = c.getContent(f);
             } catch(Throwable e) {
-                x = "Error getting clipboard content for " + f + "\n" + e;
+                data = e;
+                error = true;
             }
-
-            String val = convert(x);
-            item.getChildren().add(new TreeItem<>(new Entry(f, null, val)));
-
-            if (expanded.contains(f)) {
-                item.setExpanded(true);
-            }
+            items.add(new Entry(f, name, data, error));
         }
 
-        root.getChildren().setAll(items);
+        table.getItems().setAll(items);
+        table.getSelectionModel().selectFirst();
     }
 
-    private Set<DataFormat> getExpandedItems() {
-        HashSet<DataFormat> rv = new HashSet<>();
-        for (TreeItem<Entry> item: root.getChildren()) {
-            if (item.isExpanded()) {
-                rv.add(item.getValue().format);
-            }
-        }
-        return rv;
+    private static String getName(DataFormat f) {
+        return f.toString();
     }
 
     private static String convert(Object x) {
@@ -216,13 +335,23 @@ public class ClipboardViewer extends BorderPane {
 
     private static class Entry {
         public final DataFormat format;
-        public final SimpleStringProperty text;
-        public final SimpleStringProperty text2;
+        public final SimpleStringProperty name;
+        public final SimpleObjectProperty<Object> data;
+        public final boolean error;
 
-        public Entry(DataFormat f, String s1, String s2) {
+        public Entry(DataFormat f, String name, Object data, boolean error) {
             this.format = f;
-            text = new SimpleStringProperty(s1);
-            text2 = new SimpleStringProperty(s2);
+            this.name = new SimpleStringProperty(name);
+            this.data = new SimpleObjectProperty<>(data);
+            this.error = error;
+        }
+
+        public String getType() {
+            if (error) {
+                return "ERROR";
+            }
+            Object d = data.get();
+            return "Content: " + ((d == null) ? "<null>" : d.getClass());
         }
     }
 }
