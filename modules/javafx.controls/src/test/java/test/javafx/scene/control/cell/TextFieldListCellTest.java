@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import javafx.collections.FXCollections;
 import javafx.scene.control.ListCell;
 import javafx.scene.control.ListView;
 import javafx.scene.control.cell.TextFieldListCell;
@@ -284,11 +285,11 @@ public class TextFieldListCellTest {
     }
 
     @Test public void test_startEdit_listViewEditableIsTrue_isNotEmpty() {
-        ListView listView = new ListView();
+        ListView listView = new ListView(FXCollections.observableArrayList("TEST"));
         listView.setEditable(true);
         TextFieldListCell<Object> cell = new TextFieldListCell<>();
         cell.updateListView(listView);
-        cell.updateItem("TEST", false);
+        cell.updateIndex(0);
 
         cell.startEdit();
         assertTrue(cell.isEditing());
@@ -296,12 +297,12 @@ public class TextFieldListCellTest {
     }
 
     @Test public void test_startEdit_listViewEditableIsTrue_cellEditableIsTrue_isNotEmpty() {
-        ListView listView = new ListView();
+        ListView listView = new ListView(FXCollections.observableArrayList("TEST"));
         listView.setEditable(true);
         TextFieldListCell<Object> cell = new TextFieldListCell<>();
         cell.setEditable(true);
         cell.updateListView(listView);
-        cell.updateItem("TEST", false);
+        cell.updateIndex(0);
 
         cell.startEdit();
         assertTrue(cell.isEditing());
@@ -310,11 +311,11 @@ public class TextFieldListCellTest {
 
     // --- cancel edit
     @Test public void test_cancelEdit() {
-        ListView listView = new ListView();
+        ListView listView = new ListView(FXCollections.observableArrayList("TEST"));
         listView.setEditable(true);
         TextFieldListCell<Object> cell = new TextFieldListCell<>();
         cell.updateListView(listView);
-        cell.updateItem("TEST", false);
+        cell.updateIndex(0);
 
         cell.startEdit();
         assertTrue(cell.isEditing());

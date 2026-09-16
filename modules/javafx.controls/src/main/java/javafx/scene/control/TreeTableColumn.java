@@ -749,15 +749,15 @@ public class TreeTableColumn<S,T> extends TableColumnBase<TreeItem<S>,T> impleme
          */
         public static final EventType<?> ANY = EDIT_ANY_EVENT;
 
-        // represents the new value input by the end user. This is NOT the value
-        // to go back into the TableView.items list - this new value represents
-        // just the input for a single cell, so it is likely that it needs to go
-        // back into a property within an item in the TableView.items list.
-        @SuppressWarnings("doclint:missing")
+        /**
+         * The new value. This is NOT the value to necessary go back into the items list.
+         */
         private final T newValue;
 
-        // The location of the edit event
-        private transient final TreeTablePosition<S,T> pos;
+        /**
+         * The location where the edit event happened.
+         */
+        private  final TreeTablePosition<S, T> pos;
 
         /**
          * Creates a new event that can be subsequently fired to the relevant listeners.

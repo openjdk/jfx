@@ -228,107 +228,210 @@ public class TableRow<T> extends IndexedCell<T> {
         updateFocus();
     }
 
+    /** {@inheritDoc} */
+    @Override public void startEdit() {
+        if (isEditing()) {
+            return;
+        }
+
+        final TableView<T> table = getTableView();
+        if (!isEditable() ||
+                (table != null && !table.isEditable())) {
+            return;
+        }
+
+        // it makes sense to get the cell into its editing state before firing
+        // the event to the TableView below, so that's what we're doing here
+        // by calling super.startEdit().
+        super.startEdit();
+
+        if (!isEditing()) {
+            return;
+        }
+
+        // Inform the TableView of the edit starting.
+        if (table != null) {
+            table.fireEvent(new TableView.EditEvent<>(table,
+                    TableView.editStartEvent(),
+                    getItem(),
+                    null));
+
+            table.requestFocus();
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void commitEdit(T newValue) {
+        if (!isEditing()) {
+            return;
+        }
+
+        final TableView<T> table = getTableView();
+        if (table != null) {
+            // Inform the TableView of the edit being ready to be committed.
+            table.fireEvent(new TableView.EditEvent<>(table,
+                    TableView.<T>editCommitEvent(),
+                    getItem(),
+                    newValue));
+        }
+
+        // update the item within this cell, so that it represents the new value
+        updateItem(newValue, false);
+
+        // inform parent classes of the commit, so that they can switch us out of the editing state
+        super.commitEdit(newValue);
+
+        if (table != null) {
+            // reset the editing item in the TableView
+            table.edit(-1, null);
+            table.requestFocus();
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override public void cancelEdit() {
+        if (!isEditing()) {
+            return;
+        }
+
+        TableView<T> table = getTableView();
+        if (table != null) {
+            table.fireEvent(new TableView.EditEvent<>(table,
+                    TableView.editCancelEvent(),
+                    getItem(),
+                    null));
+        }
+
+        super.cancelEdit();
+
+        if (table != null) {
+            // reset the editing index on the TableView
+            table.edit(-1, null);
+            table.requestFocus();
+        }
+    }
+
     private boolean isFirstRun = true;
     private void updateItem(int oldIndex) {
         TableView<T> tv = getTableView();
-        if (tv == null || tv.getItems() == null) return;
-
-        final List<T> items = tv.getItems();
+        final List<T> items = tv == null ? null : tv.getItems();
         final int itemCount = items == null ? -1 : items.size();
 
         // Compute whether the index for this cell is for a real item
-        final int newIndex = getIndex();
-        boolean valid = newIndex >= 0 && newIndex < itemCount;
-
+        int index = getIndex();
         final T oldValue = getItem();
-        final boolean isEmpty = isEmpty();
 
-        // Cause the cell to update itself
-        outer: if (valid) {
-            final T newValue = items.get(newIndex);
+        final boolean indexExceedsItemCount = index >= itemCount;
 
-            // JDK-8092593 - if the index didn't change, then avoid calling updateItem
-            // unless the item has changed.
-            if (oldIndex == newIndex) {
-                if (!isItemChanged(oldValue, newValue)) {
-                    // JDK-8096969:  we break out of the if/else code here and
-                    // proceed with the code following this, so that we may
-                    // still update references, listeners, etc as required.
-                    break outer;
-                }
-            }
-            updateItem(newValue, false);
-        } else {
+        if (indexExceedsItemCount || index < 0) {
             // JDK-8116529 We need to allow a first run to be special-cased to allow
             // for the updateItem method to be called at least once to allow for
             // the correct visual state to be set up. In particular, in JDK-8116529
             // refer to Ensemble8PopUpTree.png - in this case the arrows are being
             // shown as the new cells are instantiated with the arrows in the
             // children list, and are only hidden in updateItem.
-            if ((!isEmpty && oldValue != null) || isFirstRun) {
+            final boolean isEmpty = isEmpty();
+            if (!isEmpty || isFirstRun) {
                 updateItem(null, true);
                 isFirstRun = false;
             }
+            return;
+        }
+
+        final T newValue = items.get(index);
+
+        // JDK-8092593 - if the index didn't change, then avoid calling updateItem
+        // unless the item has changed.
+        boolean shouldUpdate = true;
+        if (oldIndex == index) {
+            if (!isItemChanged(oldValue, newValue)) {
+                shouldUpdate = false;
+            }
+        }
+        if (shouldUpdate) {
+            updateItem(newValue, false);
         }
     }
 
     private void updateSelection() {
-        /*
-         * This cell should be selected if the selection mode of the table
-         * is row-based, and if the row that this cell represents is selected.
-         *
-         * If the selection mode is not row-based, then the listener in the
-         * TableCell class might pick up the need to set a single cell to be
-         * selected.
-         */
-        if (getIndex() == -1) return;
-
-        TableView<T> table = getTableView();
-        boolean isSelected = table != null &&
-                table.getSelectionModel() != null &&
-                ! table.getSelectionModel().isCellSelectionEnabled() &&
-                table.getSelectionModel().isSelected(getIndex());
-
-        updateSelected(isSelected);
-    }
-
-    private void updateFocus() {
-        if (getIndex() == -1) return;
-
-        TableView<T> table = getTableView();
-        if (table == null) return;
-
-        TableView.TableViewSelectionModel<T> sm = table.getSelectionModel();
-        TableView.TableViewFocusModel<T> fm = table.getFocusModel();
-        if (sm == null || fm == null) return;
-
-        boolean isFocused = ! sm.isCellSelectionEnabled() && fm.isFocused(getIndex());
-        setFocused(isFocused);
-    }
-
-    private void updateEditing() {
-        if (getIndex() == -1) return;
-
-        TableView<T> table = getTableView();
-        if (table == null) return;
-
-        TableView.TableViewSelectionModel<T> sm = table.getSelectionModel();
-        if (sm == null || sm.isCellSelectionEnabled()) return;
-
-        TablePosition<T,?> editCell = table.getEditingCell();
-        if (editCell != null && editCell.getTableColumn() != null) {
+        int index = getIndex();
+        if (index == -1) {
             return;
         }
 
-        boolean rowMatch = editCell == null ? false : editCell.getRow() == getIndex();
+        TableView<T> table = getTableView();
+        if (table == null) {
+            return;
+        }
 
-        if (! isEditing() && rowMatch) {
-            startEdit();
-        } else if (isEditing() && ! rowMatch) {
-            cancelEdit();
+        TableView.TableViewSelectionModel<T> sm = table.getSelectionModel();
+        if (sm == null) {
+            if (isSelected()) {
+                updateSelected(false);
+            }
+            return;
+        }
+
+        boolean isSelected = !sm.isCellSelectionEnabled() && sm.isSelected(index);
+        if (isSelected() != isSelected) {
+            updateSelected(isSelected);
         }
     }
 
+    private void updateFocus() {
+        int index = getIndex();
+        if (index == -1) {
+            return;
+        }
+
+        TableView<T> table = getTableView();
+        if (table == null) {
+            return;
+        }
+
+        TableView.TableViewFocusModel<T> fm = table.getFocusModel();
+        if (fm == null) {
+            return;
+        }
+
+        setFocused(fm.isFocused(index));
+    }
+
+    private void updateEditing() {
+        int index = getIndex();
+        if (index == -1) {
+            return;
+        }
+
+        TableView<T> table = getTableView();
+        if (table == null) {
+            return;
+        }
+
+        TablePosition<T, ?> editingCell = table.getEditingCell();
+        if (editingCell != null && editingCell.getTableColumn() != null) {
+            return;
+        }
+
+        boolean rowMatch = editingCell != null && editingCell.getRow() == index;
+
+        if (isEditing()) {
+            if (!rowMatch) {
+                cancelEdit();
+            }
+        } else {
+            if (rowMatch) {
+                startEdit();
+            }
+        }
+    }
+
+    private boolean isInRowSelectionMode() {
+        TableView<T> tableView = getTableView();
+        if (tableView == null) return false;
+        TableView.TableViewSelectionModel<T> sm = tableView.getSelectionModel();
+        return sm != null && !sm.isCellSelectionEnabled();
+    }
 
 
     /* *************************************************************************
