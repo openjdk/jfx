@@ -70,8 +70,9 @@ public class Stylesheet {
      * Version 7: user-preference media queries
      * Version 8: viewport characteristics media queries
      * Version 9: conditional stylesheet imports
+     * Version 10: direct serialization of Number types
      */
-    final static int BINARY_CSS_VERSION = 9;
+    final static int BINARY_CSS_VERSION = 10;
 
     private final String url;
     /**
