@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.scene.CssFlags;
@@ -65,6 +66,7 @@ import javafx.stage.Stage;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -1809,6 +1811,83 @@ public class CssStyleHelperTest {
 
         assertSame(other, leaf.getParent());
         assertEquals(Color.GREEN, getBackgroundColor(leaf), "leaf must be styled for its actual ancestors");
+    }
+
+    /**
+     * A stale ancestor that is reparented while a higher stale ancestor is rebuilt
+     * must be rebuilt for its new parent, not for the outdated chain.
+     * The leaf is added during layout, so its looked-up color is resolved immediately.
+     */
+    @Test
+    void testStaleAncestorIsRebuiltForItsNewParentWhenReparentedWhileAHigherStaleAncestorIsRebuilt() {
+        scene.getStylesheets().add(toDataURL("""
+                .under-root-1 {
+                   -fx-background-color: red;
+                }
+                .under-root-2 {
+                   -my-color: green;
+                }
+                .mid {
+                   -fx-padding: 1;
+                }
+                .restyled {
+                   -fx-padding: 2;
+                }
+                .leaf {
+                   -fx-background-color: -my-color;
+                }
+                """));
+        stage.show();
+
+        StackPane leaf = new StackPane();
+        leaf.getStyleClass().add("leaf");
+
+        AtomicBoolean addLeafInMid = new AtomicBoolean();
+        AtomicReference<Background> leafBackgroundDuringLayout = new AtomicReference<>();
+
+        StackPane mid = new StackPane() {
+            @Override
+            protected void layoutChildren() {
+                super.layoutChildren();
+                if (addLeafInMid.getAndSet(false)) {
+                    // Performing layout, so the CSS of the leaf is processed immediately.
+                    getChildren().add(leaf);
+                    leafBackgroundDuringLayout.set(leaf.getBackground());
+                }
+            }
+        };
+        mid.getStyleClass().add("mid");
+
+        StackPane underRoot = new StackPane(mid);
+        underRoot.getStyleClass().add("under-root-1");
+
+        StackPane underRoot2 = new StackPane();
+        underRoot2.getStyleClass().add("under-root-2");
+
+        root.getChildren().addAll(underRoot, underRoot2);
+
+        Toolkit.getToolkit().firePulse();
+        assertEquals(Color.RED, getBackgroundColor(underRoot));
+
+        underRoot.getChildren().add(new StackPane());
+        underRoot.getStyleClass().remove("under-root-1");
+        assertEquals(CssFlags.REAPPLY, NodeShim.getCSSFlags(underRoot));
+
+        underRoot.backgroundProperty().addListener((_, _, _) -> {
+            if (mid.getParent() == underRoot) {
+                underRoot2.getChildren().add(mid);
+                mid.getStyleClass().add("restyled");
+            }
+        });
+
+        addLeafInMid.set(true);
+        mid.requestLayout();
+        mid.layout();
+
+        assertSame(underRoot2, mid.getParent());
+        Background background = leafBackgroundDuringLayout.get();
+        assertNotNull(background, "leaf must be styled for its actual ancestors");
+        assertEquals(Color.GREEN, background.getFills().getFirst().getFill());
     }
 
     private Paint getBackgroundColor(StackPane leaf) {
