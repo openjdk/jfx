@@ -434,6 +434,17 @@ public final class RichUtils {
     }
 
     /**
+     * Writes an Image to a byte array in JPG format.
+     *
+     * @param im source image
+     * @return byte array containing JPG image
+     * @throws IOException if an I/O error occurs
+     */
+    public static byte[] writeJPG(Image im) throws IOException {
+        return ImageUtils.writeImage(im, "JPG");
+    }
+
+    /**
      * Writes an Image to a byte array in PNG format.
      *
      * @param im source image
