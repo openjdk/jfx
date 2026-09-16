@@ -713,6 +713,16 @@ public abstract sealed class Node
             public MediaQueryContext getMediaQueryContext(Node node) {
                 return node.getMediaQueryContext();
             }
+
+            @Override
+            public double getRenderScaleX(Node node) {
+                return Node.getRenderScaleX(node.getScene());
+            }
+
+            @Override
+            public double getRenderScaleY(Node node) {
+                return Node.getRenderScaleY(node.getScene());
+            }
         });
     }
 
@@ -1056,6 +1066,8 @@ public abstract sealed class Node
 
                     final Parent newParent = get();
 
+                    Parent.parentChanged(Node.this, oldParent, newParent);
+
                     // Update the focus bits before calling reapplyCss(), as the focus bits can affect CSS styling.
                     updateParentsFocusWithin(oldParent, newParent);
 
@@ -1140,33 +1152,57 @@ public abstract sealed class Node
     }
 
     private void invalidatedScenes(Scene oldScene, SubScene oldSubScene) {
-        Scene newScene = sceneProperty().get();
-        boolean sceneChanged = oldScene != newScene;
-        SubScene newSubScene = subScene;
+        /*
+         * Some calls in this method invoke callbacks that can run application code. For example, updating a
+         * clip can notify a listener that moves this node to another scene. That move then calls setScenes()
+         * and enters this method again before the listener returns. The first call then continues, but the
+         * node's scene has changed.
+         *
+         * Consider removing a node from scene A. Its scene is initially null when this method starts.
+         * While updating its clip, a listener adds the node to scene B. When the listener returns,
+         * node.getScene() returns B. If we had queried the node's scene only once and stored it in a
+         * local variable, we wouldn't now that the node is now again connected to a scene. Using this
+         * stale information could lead us to, for example, release the node's NGNode peer even though
+         * it is still required.
+         *
+         * The solution is to read getScene() and getSubScene() again after calls that can run application
+         * code. Any setScenes() call made by that code has already changed the values, so the getters tell
+         * us where the node is now.
+         */
 
-        if (getClip() != null) {
-            getClip().setScenes(newScene, newSubScene);
-        }
-        if (sceneChanged) {
-            if (oldScene != null) {
+        boolean sceneChanged = oldScene != getScene();
+
+        if (oldScene != null) {
+            if (sceneChanged) {
                 oldScene.unregisterClearInitialCssStageFlag(this);
             }
 
-            if (newScene == null) {
+            oldScene.clearNodeMnemonics(this);
+        }
+
+        if (getClip() instanceof Node clip) {
+            Scene currentScene = getScene();
+            SubScene currentSubScene = getSubScene();
+            clip.setScenes(currentScene, currentSubScene);
+        }
+
+        if (sceneChanged) {
+            if (getScene() == null) {
                 completeTransitionTimers();
             } else {
                 resetInitialCssStateFlag();
             }
             updateCanReceiveFocus();
             if (isFocusTraversable()) {
-                if (newScene != null) {
-                    newScene.initializeInternalEventDispatcher();
+                if (getScene() instanceof Scene currentScene) {
+                    currentScene.initializeInternalEventDispatcher();
                 }
             }
             focusSetDirty(oldScene);
-            focusSetDirty(newScene);
+            focusSetDirty(getScene());
         }
-        scenesChanged(newScene, newSubScene, oldScene, oldSubScene);
+
+        scenesChanged(oldScene, oldSubScene);
 
         if (sceneChanged) reapplyCSS();
 
@@ -1183,12 +1219,8 @@ public abstract sealed class Node
             addToSceneDirtyList();
         }
 
-        if (newScene == null && peer != null) {
+        if (getScene() == null && peer != null) {
             peer.release();
-        }
-
-        if (oldScene != null) {
-            oldScene.clearNodeMnemonics(this);
         }
 
         if (getParent() == null || isInheritOrientationFromScene(resolvedNodeOrientation)) {
@@ -1214,7 +1246,7 @@ public abstract sealed class Node
              * If at that time the node is placed back to the scene, then the accessible is hooked
              * to Node and AT requests are processed. Otherwise the accessible is disposed.
              */
-            if (oldScene != null && oldScene != newScene && newScene == null) {
+            if (oldScene != null && getScene() == null) {
                 // Strictly speaking we need some type of accessible.thaw() at this point.
                 oldScene.addAccessible(Node.this, accessible);
             } else {
@@ -1233,10 +1265,16 @@ public abstract sealed class Node
             scene.set(newScene);
             SubScene oldSubScene = subScene;
             subScene = newSubScene;
+
+            // Note that the following call can run arbitrary application code via callbacks.
+            // After this method returns, newScene is potentially stale and we need to read the
+            // current scene again with getScene().
             invalidatedScenes(oldScene, oldSubScene);
+
             if (this instanceof SubScene) { // TODO: find better solution
+                Scene currentScene = getScene();
                 SubScene thisSubScene = (SubScene)this;
-                thisSubScene.getRoot().setScenes(newScene, thisSubScene);
+                thisSubScene.getRoot().setScenes(currentScene, thisSubScene);
             }
         }
     }
@@ -1256,9 +1294,7 @@ public abstract sealed class Node
     /**
      * Exists for Parent and LightBase
      */
-    void scenesChanged(final Scene newScene, final SubScene newSubScene,
-                       final Scene oldScene, final SubScene oldSubScene) { }
-
+    void scenesChanged(Scene oldScene, SubScene oldSubScene) {}
 
     /**
      * The id of this {@code Node}. This simple string identifier is useful for
@@ -3482,6 +3518,16 @@ public abstract sealed class Node
             return area * (camera.getViewWidth() / 2 * camera.getViewHeight() / 2);
         }
         return 0;
+    }
+
+    static double getRenderScaleX(Scene scene) {
+        Window window = scene == null ? null : scene.getWindow();
+        return window == null ? 1.0 : window.getRenderScaleX();
+    }
+
+    static double getRenderScaleY(Scene scene) {
+        Window window = scene == null ? null : scene.getWindow();
+        return window == null ? 1.0 : window.getRenderScaleY();
     }
 
     /* *************************************************************************

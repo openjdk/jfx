@@ -79,8 +79,6 @@ import com.sun.javafx.scene.shape.ShapeHelper;
 import com.sun.javafx.sg.prism.NGNode;
 import com.sun.javafx.sg.prism.NGRegion;
 import com.sun.javafx.tk.Toolkit;
-import javafx.scene.Scene;
-import javafx.stage.Window;
 import com.sun.javafx.logging.PlatformLogger;
 import com.sun.javafx.logging.PlatformLogger.Level;
 
@@ -177,6 +175,11 @@ public class Region extends Parent {
             }
 
             @Override
+            public void doLayoutContextInvalidated(Node node) {
+                ((Region) node).doLayoutContextInvalidated();
+            }
+
+            @Override
             public void doPickNodeLocal(Node node, PickRay localPickRay,
                     PickResultChooser result) {
                 ((Region) node).doPickNodeLocal(localPickRay, result);
@@ -265,8 +268,8 @@ public class Region extends Parent {
         if (margin == null || margin == Insets.EMPTY) {
             return width;
         }
-        boolean isSnapToPixel = isSnapToPixel();
-        return width - snapSpaceX(margin.getLeft(), isSnapToPixel) - snapSpaceX(margin.getRight(), isSnapToPixel);
+
+        return width - snapSpaceX(margin.getLeft()) - snapSpaceX(margin.getRight());
     }
 
     /**
@@ -290,159 +293,14 @@ public class Region extends Parent {
         if (margin == null || margin == Insets.EMPTY) {
             return height;
         }
-        boolean isSnapToPixel = isSnapToPixel();
-        return height - snapSpaceY(margin.getTop(), isSnapToPixel) - snapSpaceY(margin.getBottom(), isSnapToPixel);
-    }
 
-    static double getSnapScaleX(Node n) {
-        return _getSnapScaleXimpl(n.getScene());
-    }
-    private static double _getSnapScaleXimpl(Scene scene) {
-        if (scene == null) return 1.0;
-        Window window = scene.getWindow();
-        if (window == null) return 1.0;
-        return window.getRenderScaleX();
-    }
-
-    static double getSnapScaleY(Node n) {
-        return _getSnapScaleYimpl(n.getScene());
-    }
-    private static double _getSnapScaleYimpl(Scene scene) {
-        if (scene == null) return 1.0;
-        Window window = scene.getWindow();
-        if (window == null) return 1.0;
-        return window.getRenderScaleY();
-    }
-
-    private double getSnapScaleX() {
-        return _getSnapScaleXimpl(getScene());
-    }
-
-    private double getSnapScaleY() {
-        return _getSnapScaleYimpl(getScene());
-    }
-
-    /**
-     * If snapToPixel is true, then the value is rounded using Math.round. Otherwise,
-     * the value is simply returned. This method will surely be JIT'd under normal
-     * circumstances, however on an interpreter it would be better to inline this
-     * method. However the use of Math.round here, and Math.ceil in snapSize is
-     * not obvious, and so for code maintenance this logic is pulled out into
-     * a separate method.
-     *
-     * @param value The value that needs to be snapped
-     * @param snapToPixel Whether to snap to pixel
-     * @return value either as passed in or rounded based on snapToPixel
-     */
-    private double snapSpaceX(double value, boolean snapToPixel) {
-        return snapToPixel ? ScaledMath.round(value, getSnapScaleX()) : value;
-    }
-    private double snapSpaceY(double value, boolean snapToPixel) {
-        return snapToPixel ? ScaledMath.round(value, getSnapScaleY()) : value;
-    }
-
-    private static double snapSpace(double value, boolean snapToPixel, double snapScale) {
-        return snapToPixel ? ScaledMath.round(value, snapScale) : value;
-    }
-
-    /**
-     * If snapToPixel is true, then the value is ceil'd using Math.ceil. Otherwise,
-     * the value is simply returned.
-     *
-     * @param value The value that needs to be snapped
-     * @param snapToPixel Whether to snap to pixel
-     * @return value either as passed in or ceil'd based on snapToPixel
-     */
-    private double snapSizeX(double value, boolean snapToPixel) {
-        return snapToPixel ? ScaledMath.ceil(value, getSnapScaleX()) : value;
-    }
-    private double snapSizeY(double value, boolean snapToPixel) {
-        return snapToPixel ? ScaledMath.ceil(value, getSnapScaleY()) : value;
-    }
-
-    private static double snapSize(double value, boolean snapToPixel, double snapScale) {
-        return snapToPixel ? ScaledMath.ceil(value, snapScale) : value;
-    }
-
-    /**
-     * If snapToPixel is true, then the value is rounded using Math.round. Otherwise,
-     * the value is simply returned.
-     *
-     * @param value The value that needs to be snapped
-     * @param snapToPixel Whether to snap to pixel
-     * @return value either as passed in or rounded based on snapToPixel
-     */
-    private double snapPositionX(double value, boolean snapToPixel) {
-        return snapToPixel ? ScaledMath.round(value, getSnapScaleX()) : value;
-    }
-    private double snapPositionY(double value, boolean snapToPixel) {
-        return snapToPixel ? ScaledMath.round(value, getSnapScaleY()) : value;
-    }
-
-    private static double snapPosition(double value, boolean snapToPixel, double snapScale) {
-        return snapToPixel ? ScaledMath.round(value, snapScale) : value;
-    }
-
-    /**
-     * If snapToPixel is true, then the value is either floored (positive values) or
-     * ceiled (negative values) with a scale. When the absolute value of the given value
-     * multiplied by the current scale is less than 10^15, then this method guarantees that:
-     *
-     * <pre>snapPortionX(snapPortionX(value, snapToPixel), snapToPixel) == snapPortionX(value, snapToPixel)</pre>
-     *
-     * The limit is about 10^15 because double values will no longer be able to represent
-     * larger integers with exact precision beyond this limit.
-     *
-     * @param value The value that needs to be snapped
-     * @param snapToPixel Whether to snap to pixel
-     * @return value either as passed, or floored or ceiled with scale, based on snapToPixel
-     */
-    private double snapPortionX(double value, boolean snapToPixel) {
-        if (!snapToPixel || value == 0) return value;
-
-        double s = getSnapScaleX();
-
-        return value > 0 ? ScaledMath.floor(value, s) : ScaledMath.ceil(value, s);
-    }
-
-    /**
-     * If snapToPixel is true, then the value is either floored (positive values) or
-     * ceiled (negative values) with a scale. When the absolute value of the given value
-     * multiplied by the current scale is less than 10^15, then this method guarantees that:
-     *
-     * <pre>snapPortionY(snapPortionY(value, snapToPixel), snapToPixel) == snapPortionY(value, snapToPixel)</pre>
-     *
-     * The limit is about 10^15 because double values will no longer be able to represent
-     * larger integers with exact precision beyond this limit.
-     *
-     * @param value The value that needs to be snapped
-     * @param snapToPixel Whether to snap to pixel
-     * @return value either as passed, or floored or ceiled with scale, based on snapToPixel
-     */
-    private double snapPortionY(double value, boolean snapToPixel) {
-        if (!snapToPixel || value == 0) return value;
-
-        double s = getSnapScaleY();
-
-        return value > 0 ? ScaledMath.floor(value, s) : ScaledMath.ceil(value, s);
-    }
-
-    /**
-     * If snapToPixel is true, rounds the value to the nearest pixel. This method is used to
-     * remove floating-point drift after a calculation that involves known-aligned values.
-     * <p>
-     * This method is mathematically equivalent to {@link #snapSpace(double, boolean, double)},
-     * but has a distinct name that clearly communicates that the author knows that the value
-     * is already pixel-aligned.
-     */
-    private static double snapAligned(double value, boolean snapToPixel, double snapScale) {
-        return snapToPixel ? ScaledMath.round(value, snapScale) : value;
+        return height - snapSpaceY(margin.getTop()) - snapSpaceY(margin.getBottom());
     }
 
     double getAreaBaselineOffset(List<Node> children, Callback<Node, Insets> margins,
                                         Function<Integer, Double> positionToWidth,
                                         double areaHeight, boolean fillHeight) {
-        return getAreaBaselineOffset(children, margins, positionToWidth, areaHeight, fillHeight, isSnapToPixel());
+        return getAreaBaselineOffset(children, margins, positionToWidth, areaHeight, fillHeight, isSnappedToPixel());
     }
 
     static double getAreaBaselineOffset(List<Node> children, Callback<Node, Insets> margins,
@@ -455,7 +313,7 @@ public class Region extends Parent {
     double getAreaBaselineOffset(List<Node> children, Callback<Node, Insets> margins,
                                  Function<Integer, Double> positionToWidth,
                                  double areaHeight, final boolean fillHeight, double minComplement) {
-        return getAreaBaselineOffset(children, margins, positionToWidth, areaHeight, fillHeight, minComplement, isSnapToPixel());
+        return getAreaBaselineOffset(children, margins, positionToWidth, areaHeight, fillHeight, minComplement, isSnappedToPixel());
     }
 
     static double getAreaBaselineOffset(List<Node> children, Callback<Node, Insets> margins,
@@ -467,7 +325,7 @@ public class Region extends Parent {
     double getAreaBaselineOffset(List<Node> children, Callback<Node, Insets> margins,
                                  Function<Integer, Double> positionToWidth,
                                  double areaHeight, Function<Integer, Boolean> fillHeight, double minComplement) {
-        return getAreaBaselineOffset(children, margins, positionToWidth, areaHeight, fillHeight, minComplement, isSnapToPixel());
+        return getAreaBaselineOffset(children, margins, positionToWidth, areaHeight, fillHeight, minComplement, isSnappedToPixel());
     }
 
     /**
@@ -488,10 +346,10 @@ public class Region extends Parent {
         for (int i = 0;i < children.size(); ++i) {
             Node n = children.get(i);
             // Note: all children should be coming from the same parent so they should all have the same snapScale
-            if (snapToPixel && i == 0) snapScaleV = getSnapScaleY(n.getParent());
+            if (snapToPixel && i == 0) snapScaleV = NodeHelper.getRenderScaleY(n.getParent());
             Insets margin = margins.call(n);
-            double top = margin != null ? snapSpace(margin.getTop(), snapToPixel, snapScaleV) : 0;
-            double bottom = (margin != null ? snapSpace(margin.getBottom(), snapToPixel, snapScaleV) : 0);
+            double top = margin != null ? ScaledMath.snapSpace(margin.getTop(), snapToPixel, snapScaleV) : 0;
+            double bottom = (margin != null ? ScaledMath.snapSpace(margin.getBottom(), snapToPixel, snapScaleV) : 0);
             final double bo = n.getBaselineOffset();
             if (bo == BASELINE_OFFSET_SAME_AS_HEIGHT) {
                 double alt = -1;
@@ -643,58 +501,6 @@ public class Region extends Parent {
      * Region properties                                                       *
      *                                                                         *
      **************************************************************************/
-
-    /**
-     * Defines whether this region adjusts position, spacing, and size values of
-     * its children to pixel boundaries. This defaults to true, which is generally
-     * the expected behavior in order to have crisp user interfaces. A value of
-     * false will allow for fractional alignment, which may lead to "fuzzy"
-     * looking borders.
-     */
-    private BooleanProperty snapToPixel;
-    /**
-     * I'm using a super-lazy property pattern here, so as to only create the
-     * property object when needed for listeners or when being set from CSS,
-     * but also making sure that we only call requestParentLayout in the case
-     * that the snapToPixel value has actually changed, whether set via the setter
-     * or set via the property object.
-     */
-    private boolean _snapToPixel = true;
-    public final boolean isSnapToPixel() { return _snapToPixel; }
-    public final void setSnapToPixel(boolean value) {
-        if (snapToPixel == null) {
-            if (_snapToPixel != value) {
-                _snapToPixel = value;
-                updateSnappedInsets();
-                requestParentLayout();
-            }
-        } else {
-            snapToPixel.set(value);
-        }
-    }
-    public final BooleanProperty snapToPixelProperty() {
-        // Note: snapToPixel is virtually never set, and never listened to.
-        // Because of this, it works reasonably well as a lazy property,
-        // since this logic is just about never going to be called.
-        if (snapToPixel == null) {
-            snapToPixel = new StyleableBooleanProperty(_snapToPixel) {
-                @Override public Object getBean() { return Region.this; }
-                @Override public String getName() { return "snapToPixel"; }
-                @Override public CssMetaData<Region, Boolean> getCssMetaData() {
-                    return StyleableProperties.SNAP_TO_PIXEL;
-                }
-                @Override public void invalidated() {
-                    boolean value = get();
-                    if (_snapToPixel != value) {
-                        _snapToPixel = value;
-                        updateSnappedInsets();
-                        requestParentLayout();
-                    }
-                }
-            };
-        }
-        return snapToPixel;
-    }
 
     /**
      * The top, right, bottom, and left padding around the region's content.
@@ -979,23 +785,18 @@ public class Region extends Parent {
     private double snappedBottomInset = 0;
     private double snappedLeftInset = 0;
 
-    /**
-     * Cached snapScale values, used to determine if snapped cached insets values
-     * should be invalidated because screen scale has changed.
-     */
-    private double lastUsedSnapScaleY = 0;
-    private double lastUsedSnapScaleX = 0;
-
     /** Called to update the cached snapped insets */
     private void updateSnappedInsets() {
-        lastUsedSnapScaleX = getSnapScaleX();
-        lastUsedSnapScaleY = getSnapScaleY();
         final Insets insets = getInsets();
-        final boolean snap = isSnapToPixel();
-        snappedTopInset = snapSpaceY(insets.getTop(), snap);
-        snappedRightInset = snapSpaceX(insets.getRight(), snap);
-        snappedBottomInset = snapSpaceY(insets.getBottom(), snap);
-        snappedLeftInset = snapSpaceX(insets.getLeft(), snap);
+        final boolean snap = isSnappedToPixel();
+        snappedTopInset = snapSpaceY(insets.getTop());
+        snappedRightInset = snapSpaceX(insets.getRight());
+        snappedBottomInset = snapSpaceY(insets.getBottom());
+        snappedLeftInset = snapSpaceX(insets.getLeft());
+    }
+
+    private void doLayoutContextInvalidated() {
+        updateSnappedInsets();
     }
 
     /**
@@ -1774,31 +1575,7 @@ public class Region extends Parent {
      */
     @Deprecated(since = "9", forRemoval = true)
     protected double snapSpace(double value) {
-        return snapSpaceX(value, isSnapToPixel());
-    }
-
-    /**
-     * If this region's snapToPixel property is true, returns a value rounded
-     * to the nearest pixel in the horizontal direction, else returns the
-     * same value.
-     * @param value the space value to be snapped
-     * @return value rounded to nearest pixel
-     * @since 9
-     */
-    public double snapSpaceX(double value) {
-        return snapSpaceX(value, isSnapToPixel());
-    }
-
-    /**
-     * If this region's snapToPixel property is true, returns a value rounded
-     * to the nearest pixel in the vertical direction, else returns the
-     * same value.
-     * @param value the space value to be snapped
-     * @return value rounded to nearest pixel
-     * @since 9
-     */
-    public double snapSpaceY(double value) {
-        return snapSpaceY(value, isSnapToPixel());
+        return snapSpaceX(value);
     }
 
     /**
@@ -1813,31 +1590,7 @@ public class Region extends Parent {
      */
     @Deprecated(since = "9", forRemoval = true)
     protected double snapSize(double value) {
-        return snapSizeX(value, isSnapToPixel());
-    }
-
-    /**
-     * If this region's snapToPixel property is true, returns a value ceiled
-     * to the nearest pixel in the horizontal direction, else returns the
-     * same value.
-     * @param value the size value to be snapped
-     * @return value ceiled to nearest pixel
-     * @since 9
-     */
-    public double snapSizeX(double value) {
-        return snapSizeX(value, isSnapToPixel());
-    }
-
-    /**
-     * If this region's snapToPixel property is true, returns a value ceiled
-     * to the nearest pixel in the vertical direction, else returns the
-     * same value.
-     * @param value the size value to be snapped
-     * @return value ceiled to nearest pixel
-     * @since 9
-     */
-    public double snapSizeY(double value) {
-        return snapSizeY(value, isSnapToPixel());
+        return snapSizeX(value);
     }
 
     /**
@@ -1852,110 +1605,58 @@ public class Region extends Parent {
      */
     @Deprecated(since = "9", forRemoval = true)
     protected double snapPosition(double value) {
-        return snapPositionX(value, isSnapToPixel());
+        return snapPositionX(value);
     }
 
     /**
-     * If this region's snapToPixel property is true, returns a value rounded
-     * to the nearest pixel in the horizontal direction, else returns the
-     * same value.
-     * @param value the position value to be snapped
-     * @return value rounded to nearest pixel
-     * @since 9
-     */
-    public double snapPositionX(double value) {
-        return snapPositionX(value, isSnapToPixel());
-    }
-
-    /**
-     * If this region's snapToPixel property is true, returns a value rounded
-     * to the nearest pixel in the vertical direction, else returns the
-     * same value.
-     * @param value the position value to be snapped
-     * @return value rounded to nearest pixel
-     * @since 9
-     */
-    public double snapPositionY(double value) {
-        return snapPositionY(value, isSnapToPixel());
-    }
-
-    double snapPortionX(double value) {
-        return snapPortionX(value, isSnapToPixel());
-    }
-    double snapPortionY(double value) {
-        return snapPortionY(value, isSnapToPixel());
-    }
-
-
-    /**
-     * Utility method to get the top inset which includes padding and border
-     * inset. Then snapped to whole pixels if isSnapToPixel() is true.
+     * Utility method to get the top inset, which includes padding and border inset.
+     * The value is snapped to the pixel grid if {@link #isSnappedToPixel()} is {@code true}.
      *
      * @since JavaFX 8.0
      * @return Rounded up insets top
      */
     public final double snappedTopInset() {
-        // invalidate the cached values for snapped inset dimensions
-        // if the screen scale changed since they were last computed.
-        if (lastUsedSnapScaleY != getSnapScaleY()) {
-            updateSnappedInsets();
-        }
         return snappedTopInset;
     }
 
     /**
-     * Utility method to get the bottom inset which includes padding and border
-     * inset. Then snapped to whole pixels if isSnapToPixel() is true.
+     * Utility method to get the bottom inset, which includes padding and border inset.
+     * The value is snapped to the pixel grid if {@link #isSnappedToPixel()} is {@code true}.
      *
      * @since JavaFX 8.0
      * @return Rounded up insets bottom
      */
     public final double snappedBottomInset() {
-        // invalidate the cached values for snapped inset dimensions
-        // if the screen scale changed since they were last computed.
-        if (lastUsedSnapScaleY != getSnapScaleY()) {
-            updateSnappedInsets();
-        }
         return snappedBottomInset;
     }
 
     /**
-     * Utility method to get the left inset which includes padding and border
-     * inset. Then snapped to whole pixels if isSnapToPixel() is true.
+     * Utility method to get the left inset, which includes padding and border inset.
+     * The value is snapped to the pixel grid if {@link #isSnappedToPixel()} is {@code true}.
      *
      * @since JavaFX 8.0
      * @return Rounded up insets left
      */
     public final double snappedLeftInset() {
-        // invalidate the cached values for snapped inset dimensions
-        // if the screen scale changed since they were last computed.
-        if (lastUsedSnapScaleX != getSnapScaleX()) {
-            updateSnappedInsets();
-        }
         return snappedLeftInset;
     }
 
     /**
-     * Utility method to get the right inset which includes padding and border
-     * inset. Then snapped to whole pixels if isSnapToPixel() is true.
+     * Utility method to get the right inset which, includes padding and border inset.
+     * The value is snapped to the pixel grid if {@link #isSnappedToPixel()} is {@code true}.
      *
      * @since JavaFX 8.0
      * @return Rounded up insets right
      */
     public final double snappedRightInset() {
-        // invalidate the cached values for snapped inset dimensions
-        // if the screen scale changed since they were last computed.
-        if (lastUsedSnapScaleX != getSnapScaleX()) {
-            updateSnappedInsets();
-        }
         return snappedRightInset;
     }
 
     /**
      * Returns the minimum horizontal space required to lay out the child, including its left and right margins.
      * <p>
-     * When {@link #isSnapToPixel()} is true, the result is guaranteed to be aligned to the horizontal
-     * pixel grid. Otherwise, no pixel-alignment guarantee is made.
+     * When {@link #isSnappedToPixel()} is true, the result is guaranteed to be aligned to the horizontal pixel grid.
+     * Otherwise, no pixel-alignment guarantee is made.
      *
      * @param child the child to measure
      * @param margin the child's margin, or {@code null} for no margin
@@ -1970,7 +1671,7 @@ public class Region extends Parent {
      * For a resizable child with vertical content bias, {@code availableHeight} determines the height used to
      * compute its width.
      * <p>
-     * When {@link #isSnapToPixel()} is true, the result is guaranteed to be aligned to the horizontal pixel grid.
+     * When {@link #isSnappedToPixel()} is true, the result is guaranteed to be aligned to the horizontal pixel grid.
      * Otherwise, no pixel-alignment guarantee is made.
      *
      * @param child the child to measure
@@ -1982,33 +1683,30 @@ public class Region extends Parent {
      */
     double computeChildMinAreaWidth(Node child, double baselineComplement, Insets margin,
                                     double availableHeight, boolean fillHeight) {
-        boolean snap = isSnapToPixel();
-        double scaleX = getSnapScaleX();
-        double scaleY = getSnapScaleY();
-        double snappedLeft = margin != null ? snapSpace(margin.getLeft(), snap, scaleX) : 0;
-        double snappedRight = margin != null ? snapSpace(margin.getRight(), snap, scaleX) : 0;
+        double snappedLeft = margin != null ? snapSpaceX(margin.getLeft()) : 0;
+        double snappedRight = margin != null ? snapSpaceX(margin.getRight()) : 0;
         double alt = -1;
 
         if (availableHeight != -1 && child.isResizable() && child.getContentBias() == Orientation.VERTICAL) {
-            double snappedContentHeight = computeContentHeight(margin, availableHeight, snap, scaleY);
+            double snappedContentHeight = computeContentHeight(margin, availableHeight);
             double baseline = child.getBaselineOffset();
             if (baseline == BASELINE_OFFSET_SAME_AS_HEIGHT && baselineComplement != -1) {
                 // The outer height is a size allocation, while the complement is space.
-                double snappedComplement = snapSpace(baselineComplement, snap, scaleY);
-                snappedContentHeight = snapAligned(snappedContentHeight - snappedComplement, snap, scaleY);
+                double snappedComplement = snapSpaceY(baselineComplement);
+                snappedContentHeight = snapAlignedY(snappedContentHeight - snappedComplement);
             }
 
-            alt = computeBoundedHeight(child, fillHeight, snappedContentHeight, snap, scaleY);
+            alt = computeBoundedHeight(child, fillHeight, snappedContentHeight);
         }
 
-        double snappedChildWidth = snapSize(child.minWidth(alt), snap, scaleX);
-        return snapAligned(snappedLeft + snappedChildWidth + snappedRight, snap, scaleX);
+        double snappedChildWidth = snapSizeX(child.minWidth(alt));
+        return snapAlignedX(snappedLeft + snappedChildWidth + snappedRight);
     }
 
     /**
      * Returns the minimum vertical space required to lay out the child, including its top and bottom margins.
      * <p>
-     * When {@link #isSnapToPixel()} is true, the result is guaranteed to be aligned to the vertical pixel grid.
+     * When {@link #isSnappedToPixel()} is true, the result is guaranteed to be aligned to the vertical pixel grid.
      * Otherwise, no pixel-alignment guarantee is made.
      *
      * @param child the child to measure
@@ -2024,7 +1722,7 @@ public class Region extends Parent {
      * common-baseline alignment into account. For a resizable child with horizontal content bias,
      * {@code availableWidth} determines the width used to compute its height.
      * <p>
-     * When {@link #isSnapToPixel()} is true, the result is guaranteed to be aligned to the vertical pixel grid.
+     * When {@link #isSnappedToPixel()} is true, the result is guaranteed to be aligned to the vertical pixel grid.
      * Otherwise, no pixel-alignment guarantee is made.
      *
      * @param child the child to measure
@@ -2036,16 +1734,13 @@ public class Region extends Parent {
      */
     double computeChildMinAreaHeight(Node child, double minBaselineComplement, Insets margin,
                                      double availableWidth, boolean fillWidth) {
-        boolean snap = isSnapToPixel();
-        double scaleX = getSnapScaleX();
-        double scaleY = getSnapScaleY();
-        double snappedTop = margin != null ? snapSpace(margin.getTop(), snap, scaleY) : 0;
-        double snappedBottom = margin != null ? snapSpace(margin.getBottom(), snap, scaleY) : 0;
+        double snappedTop = margin != null ? snapSpaceY(margin.getTop()) : 0;
+        double snappedBottom = margin != null ? snapSpaceY(margin.getBottom()) : 0;
         double alt = -1;
 
         if (availableWidth != -1 && child.isResizable() && child.getContentBias() == Orientation.HORIZONTAL) {
-            double snappedContentWidth = computeContentWidth(margin, availableWidth, snap, scaleX);
-            alt = computeBoundedWidth(child, fillWidth, snappedContentWidth, snap, scaleX);
+            double snappedContentWidth = computeContentWidth(margin, availableWidth);
+            alt = computeBoundedWidth(child, fillWidth, snappedContentWidth);
         }
 
         if (minBaselineComplement != -1) {
@@ -2056,22 +1751,22 @@ public class Region extends Parent {
             // precision or over-allocate. Combine it with the extent above the baseline and snap the resulting
             // content size instead.
             if (baseline == BASELINE_OFFSET_SAME_AS_HEIGHT) {
-                double snappedChildMinHeight = snapSize(child.minHeight(alt), snap, scaleY);
-                double snappedAbove = snapAligned(snappedTop + snappedBottom + snappedChildMinHeight, snap, scaleY);
-                return snapSize(snappedAbove + minBaselineComplement, snap, scaleY);
+                double snappedChildMinHeight = snapSizeY(child.minHeight(alt));
+                double snappedAbove = snapAlignedY(snappedTop + snappedBottom + snappedChildMinHeight);
+                return snapSizeY(snappedAbove + minBaselineComplement);
             } else {
-                return snapSize(baseline + minBaselineComplement, snap, scaleY);
+                return snapSizeY(baseline + minBaselineComplement);
             }
         } else {
-            double snappedChildHeight = snapSize(child.minHeight(alt), snap, scaleY);
-            return snapAligned(snappedTop + snappedBottom + snappedChildHeight, snap, scaleY);
+            double snappedChildHeight = snapSizeY(child.minHeight(alt));
+            return snapAlignedY(snappedTop + snappedBottom + snappedChildHeight);
         }
     }
 
     /**
      * Returns the preferred horizontal space required to lay out the child, including its left and right margins.
      * <p>
-     * When {@link #isSnapToPixel()} is true, the result is guaranteed to be aligned to the horizontal pixel grid.
+     * When {@link #isSnappedToPixel()} is true, the result is guaranteed to be aligned to the horizontal pixel grid.
      * Otherwise, no pixel-alignment guarantee is made.
      *
      * @param child the child to measure
@@ -2087,7 +1782,7 @@ public class Region extends Parent {
      * For a resizable child with vertical content bias, {@code availableHeight} determines the height used
      * to compute its width.
      * <p>
-     * When {@link #isSnapToPixel()} is true, the result is guaranteed to be aligned to the horizontal pixel grid.
+     * When {@link #isSnappedToPixel()} is true, the result is guaranteed to be aligned to the horizontal pixel grid.
      * Otherwise, no pixel-alignment guarantee is made.
      *
      * @param child the child to measure
@@ -2099,34 +1794,31 @@ public class Region extends Parent {
      */
     double computeChildPrefAreaWidth(Node child, double baselineComplement, Insets margin,
                                      double availableHeight, boolean fillHeight) {
-        boolean snap = isSnapToPixel();
-        double scaleX = getSnapScaleX();
-        double scaleY = getSnapScaleY();
-        double snappedLeft = margin != null ? snapSpace(margin.getLeft(), snap, scaleX) : 0;
-        double snappedRight = margin != null ? snapSpace(margin.getRight(), snap, scaleX) : 0;
+        double snappedLeft = margin != null ? snapSpaceX(margin.getLeft()) : 0;
+        double snappedRight = margin != null ? snapSpaceX(margin.getRight()) : 0;
         double alt = -1;
 
         if (availableHeight != -1 && child.isResizable() && child.getContentBias() == Orientation.VERTICAL) { // width depends on height
-            double snappedContentHeight = computeContentHeight(margin, availableHeight, snap, scaleY);
+            double snappedContentHeight = computeContentHeight(margin, availableHeight);
             double baseline = child.getBaselineOffset();
             if (baseline == BASELINE_OFFSET_SAME_AS_HEIGHT && baselineComplement != -1) {
                 // The outer height is a size allocation, while the complement is space.
-                double snappedComplement = snapSpace(baselineComplement, snap, scaleY);
-                snappedContentHeight = snapAligned(snappedContentHeight - snappedComplement, snap, scaleY);
+                double snappedComplement = snapSpaceY(baselineComplement);
+                snappedContentHeight = snapAlignedY(snappedContentHeight - snappedComplement);
             }
 
-            alt = computeBoundedHeight(child, fillHeight, snappedContentHeight, snap, scaleY);
+            alt = computeBoundedHeight(child, fillHeight, snappedContentHeight);
         }
 
         double rawChildPrefWidth = boundedSize(child.minWidth(alt), child.prefWidth(alt), child.maxWidth(alt));
-        double snappedChildPrefWidth = snapSize(rawChildPrefWidth, snap, scaleX);
-        return snapAligned(snappedLeft + snappedRight + snappedChildPrefWidth, snap, scaleX);
+        double snappedChildPrefWidth = snapSizeX(rawChildPrefWidth);
+        return snapAlignedX(snappedLeft + snappedRight + snappedChildPrefWidth);
     }
 
     /**
      * Returns the preferred vertical space to lay out the child, including its top and bottom margins.
      * <p>
-     * When {@link #isSnapToPixel()} is true, the result is guaranteed to be aligned to the vertical pixel grid.
+     * When {@link #isSnappedToPixel()} is true, the result is guaranteed to be aligned to the vertical pixel grid.
      * Otherwise, no pixel-alignment guarantee is made.
      *
      * @param child the child to measure
@@ -2142,7 +1834,7 @@ public class Region extends Parent {
      * alignment into account. For a resizable child with horizontal content bias, {@code availableWidth}
      * determines the width used to compute its height.
      * <p>
-     * When {@link #isSnapToPixel()} is true, the result is guaranteed to be aligned to the vertical pixel grid.
+     * When {@link #isSnappedToPixel()} is true, the result is guaranteed to be aligned to the vertical pixel grid.
      * Otherwise, no pixel-alignment guarantee is made.
      *
      * @param child the child to measure
@@ -2154,16 +1846,13 @@ public class Region extends Parent {
      */
     double computeChildPrefAreaHeight(Node child, double prefBaselineComplement, Insets margin,
                                       double availableWidth, boolean fillWidth) {
-        boolean snap = isSnapToPixel();
-        double scaleX = getSnapScaleX();
-        double scaleY = getSnapScaleY();
-        double snappedTop = margin != null ? snapSpace(margin.getTop(), snap, scaleY) : 0;
-        double snappedBottom = margin != null ? snapSpace(margin.getBottom(), snap, scaleY) : 0;
+        double snappedTop = margin != null ? snapSpaceY(margin.getTop()) : 0;
+        double snappedBottom = margin != null ? snapSpaceY(margin.getBottom()) : 0;
         double alt = -1;
 
         if (availableWidth != -1 && child.isResizable() && child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
-            double contentWidth = computeContentWidth(margin, availableWidth, snap, scaleX);
-            alt = computeBoundedWidth(child, fillWidth, contentWidth, snap, scaleX);
+            double contentWidth = computeContentWidth(margin, availableWidth);
+            alt = computeBoundedWidth(child, fillWidth, contentWidth);
         }
 
         if (prefBaselineComplement != -1) {
@@ -2175,17 +1864,17 @@ public class Region extends Parent {
             // content size instead.
             if (rawBaseline == BASELINE_OFFSET_SAME_AS_HEIGHT) {
                 double rawChildPrefHeight = boundedSize(child.minHeight(alt), child.prefHeight(alt), child.maxHeight(alt));
-                double snappedChildPrefHeight = snapSize(rawChildPrefHeight, snap, scaleY);
-                double snappedHeightAboveBaseline = snapAligned(snappedTop + snappedBottom + snappedChildPrefHeight, snap, scaleY);
-                return snapSize(snappedHeightAboveBaseline + prefBaselineComplement, snap, scaleY);
+                double snappedChildPrefHeight = snapSizeY(rawChildPrefHeight);
+                double snappedHeightAboveBaseline = snapAlignedY(snappedTop + snappedBottom + snappedChildPrefHeight);
+                return snapSizeY(snappedHeightAboveBaseline + prefBaselineComplement);
             } else {
-                double snappedMargins = snapAligned(snappedTop + snappedBottom, snap, scaleY);
-                return snapSize(snappedMargins + rawBaseline + prefBaselineComplement, snap, scaleY);
+                double snappedMargins = snapAlignedY(snappedTop + snappedBottom);
+                return snapSizeY(snappedMargins + rawBaseline + prefBaselineComplement);
             }
         } else {
             double rawChildPrefHeight = boundedSize(child.minHeight(alt), child.prefHeight(alt), child.maxHeight(alt));
-            double snappedChildPrefHeight = snapSize(rawChildPrefHeight, snap, scaleY);
-            return snapAligned(snappedTop + snappedBottom + snappedChildPrefHeight, snap, scaleY);
+            double snappedChildPrefHeight = snapSizeY(rawChildPrefHeight);
+            return snapAlignedY(snappedTop + snappedBottom + snappedChildPrefHeight);
         }
     }
 
@@ -2195,7 +1884,7 @@ public class Region extends Parent {
      * to compute its width. If the child has no finite maximum width, {@link Double#MAX_VALUE} is returned
      * unchanged.
      * <p>
-     * When {@link #isSnapToPixel()} is true, every result other than the {@code Double.MAX_VALUE} sentinel
+     * When {@link #isSnappedToPixel()} is true, every result other than the {@code Double.MAX_VALUE} sentinel
      * is guaranteed to be aligned to the horizontal pixel grid. Otherwise, no pixel-alignment guarantee
      * is made.
      *
@@ -2208,23 +1897,20 @@ public class Region extends Parent {
      */
     double computeChildMaxAreaWidth(Node child, double baselineComplement, Insets margin,
                                     double availableHeight, boolean fillHeight) {
-        boolean snap = isSnapToPixel();
-        double scaleX = getSnapScaleX();
-        double scaleY = getSnapScaleY();
-        double snappedLeft = margin != null ? snapSpace(margin.getLeft(), snap, scaleX) : 0;
-        double snappedRight = margin != null ? snapSpace(margin.getRight(), snap, scaleX) : 0;
+        double snappedLeft = margin != null ? snapSpaceX(margin.getLeft()) : 0;
+        double snappedRight = margin != null ? snapSpaceX(margin.getRight()) : 0;
         double alt = -1;
 
         if (availableHeight != -1 && child.isResizable() && child.getContentBias() == Orientation.VERTICAL) { // width depends on height
-            double snappedContentHeight = computeContentHeight(margin, availableHeight, snap, scaleY);
+            double snappedContentHeight = computeContentHeight(margin, availableHeight);
             double rawBaseline = child.getBaselineOffset();
             if (rawBaseline == BASELINE_OFFSET_SAME_AS_HEIGHT && baselineComplement != -1) {
                 // The outer height is a size allocation, while the complement is space.
-                double snappedComplement = snapSpace(baselineComplement, snap, scaleY);
-                snappedContentHeight = snapAligned(snappedContentHeight - snappedComplement, snap, scaleY);
+                double snappedComplement = snapSpaceY(baselineComplement);
+                snappedContentHeight = snapAlignedY(snappedContentHeight - snappedComplement);
             }
 
-            alt = computeBoundedHeight(child, fillHeight, snappedContentHeight, snap, scaleY);
+            alt = computeBoundedHeight(child, fillHeight, snappedContentHeight);
         }
 
         double max = child.maxWidth(alt);
@@ -2232,8 +1918,8 @@ public class Region extends Parent {
             return max;
         }
 
-        double snappedChildWidth = snapSize(boundedSize(child.minWidth(alt), max, Double.MAX_VALUE), snap, scaleX);
-        return snapAligned(snappedLeft + snappedChildWidth + snappedRight, snap, scaleX);
+        double snappedChildWidth = snapSizeX(boundedSize(child.minWidth(alt), max, Double.MAX_VALUE));
+        return snapAlignedX(snappedLeft + snappedChildWidth + snappedRight);
     }
 
     /**
@@ -2242,7 +1928,7 @@ public class Region extends Parent {
      * determines the width used to compute its height. If the child has no finite maximum height,
      * {@link Double#MAX_VALUE} is returned unchanged.
      * <p>
-     * When {@link #isSnapToPixel()} is true, every result other than the {@code Double.MAX_VALUE} sentinel
+     * When {@link #isSnappedToPixel()} is true, every result other than the {@code Double.MAX_VALUE} sentinel
      * is guaranteed to be aligned to the vertical pixel grid. Otherwise, no pixel-alignment guarantee
      * is made.
      *
@@ -2255,16 +1941,13 @@ public class Region extends Parent {
      */
     double computeChildMaxAreaHeight(Node child, double maxBaselineComplement, Insets margin,
                                      double availableWidth, boolean fillWidth) {
-        boolean snap = isSnapToPixel();
-        double scaleX = getSnapScaleX();
-        double scaleY = getSnapScaleY();
-        double snappedTop = margin != null ? snapSpace(margin.getTop(), snap, scaleY) : 0;
-        double snappedBottom = margin != null ? snapSpace(margin.getBottom(), snap, scaleY) : 0;
+        double snappedTop = margin != null ? snapSpaceY(margin.getTop()) : 0;
+        double snappedBottom = margin != null ? snapSpaceY(margin.getBottom()) : 0;
         double alt = -1;
 
         if (availableWidth != -1 && child.isResizable() && child.getContentBias() == Orientation.HORIZONTAL) { // height depends on width
-            double snappedContentWidth = computeContentWidth(margin, availableWidth, snap, scaleX);
-            alt = computeBoundedWidth(child, fillWidth, snappedContentWidth, snap, scaleX);
+            double snappedContentWidth = computeContentWidth(margin, availableWidth);
+            alt = computeBoundedWidth(child, fillWidth, snappedContentWidth);
         }
 
         double max = child.maxHeight(alt);
@@ -2281,17 +1964,17 @@ public class Region extends Parent {
             // content size instead.
             if (rawBaseline == BASELINE_OFFSET_SAME_AS_HEIGHT) {
                 double rawChildMaxHeight = boundedSize(child.minHeight(alt), max, Double.MAX_VALUE);
-                double snappedChildMaxHeight = snapSize(rawChildMaxHeight, snap, scaleY);
-                double snappedHeightAboveBaseline = snapAligned(snappedTop + snappedBottom + snappedChildMaxHeight, snap, scaleY);
-                return snapSize(snappedHeightAboveBaseline + maxBaselineComplement, snap, scaleY);
+                double snappedChildMaxHeight = snapSizeY(rawChildMaxHeight);
+                double snappedHeightAboveBaseline = snapAlignedY(snappedTop + snappedBottom + snappedChildMaxHeight);
+                return snapSizeY(snappedHeightAboveBaseline + maxBaselineComplement);
             } else {
-                double snappedMargins = snapAligned(snappedTop + snappedBottom, snap, scaleY);
-                return snapSize(snappedMargins + rawBaseline + maxBaselineComplement, snap, scaleY);
+                double snappedMargins = snapAlignedY(snappedTop + snappedBottom);
+                return snapSizeY(snappedMargins + rawBaseline + maxBaselineComplement);
             }
         } else {
             // if min > max, min wins, so still need to call boundedSize()
-            double snappedChildHeight = snapSize(boundedSize(child.minHeight(alt), max, Double.MAX_VALUE), snap, scaleY);
-            return snapAligned(snappedTop + snappedBottom + snappedChildHeight, snap, scaleY);
+            double snappedChildHeight = snapSizeY(boundedSize(child.minHeight(alt), max, Double.MAX_VALUE));
+            return snapAlignedY(snappedTop + snappedBottom + snappedChildHeight);
         }
     }
 
@@ -2323,16 +2006,15 @@ public class Region extends Parent {
      * controls whether the content width or the child's preferred width is used to compute
      * the bounded width.
      */
-    private double computeBoundedWidth(Node child, boolean fill, double contentWidth,
-                                       boolean snapToPixel, double snapScale) {
+    private double computeBoundedWidth(Node child, boolean fill, double contentWidth) {
         double min = child.minWidth(-1);
         double max = child.maxWidth(-1);
 
         if (fill) {
-            return snapSize(boundedSize(min, contentWidth, max), snapToPixel, snapScale);
+            return snapSizeX(boundedSize(min, contentWidth, max));
         }
 
-        return snapSize(boundedSize(min, child.prefWidth(-1), Math.min(max, contentWidth)), snapToPixel, snapScale);
+        return snapSizeX(boundedSize(min, child.prefWidth(-1), Math.min(max, contentWidth)));
     }
 
     /*
@@ -2340,38 +2022,37 @@ public class Region extends Parent {
      * controls whether the content height or the child's preferred height is used to compute
      * the bounded height.
      */
-    private double computeBoundedHeight(Node child, boolean fill, double contentHeight,
-                                        boolean snapToPixel, double snapScale) {
+    private double computeBoundedHeight(Node child, boolean fill, double contentHeight) {
         double min = child.minHeight(-1);
         double max = child.maxHeight(-1);
 
         if (fill) {
-            return snapSize(boundedSize(min, contentHeight, max), snapToPixel, snapScale);
+            return snapSizeY(boundedSize(min, contentHeight, max));
         }
 
-        return snapSize(boundedSize(min, child.prefHeight(-1), Math.min(max, contentHeight)), snapToPixel, snapScale);
+        return snapSizeY(boundedSize(min, child.prefHeight(-1), Math.min(max, contentHeight)));
     }
 
     /*
      * Removes the given margin (if any) from a width which still includes margins
      * to create a content width.
      */
-    private double computeContentWidth(Insets margin, double width, boolean snapToPixel, double snapScale) {
-        double left = margin != null ? snapSpace(margin.getLeft(), snapToPixel, snapScale) : 0;
-        double right = margin != null ? snapSpace(margin.getRight(), snapToPixel, snapScale) : 0;
-        double snappedWidth = snapSize(width, snapToPixel, snapScale);
-        return snapAligned(snappedWidth - left - right, snapToPixel, snapScale);
+    private double computeContentWidth(Insets margin, double width) {
+        double left = margin != null ? snapSpaceX(margin.getLeft()) : 0;
+        double right = margin != null ? snapSpaceX(margin.getRight()) : 0;
+        double snappedWidth = snapSizeX(width);
+        return snapAlignedX(snappedWidth - left - right);
     }
 
     /*
      * Removes the given margin (if any) from a height which still includes margins
      * to create a content height.
      */
-    private double computeContentHeight(Insets margin, double height, boolean snapToPixel, double snapScale) {
-        double top = margin != null ? snapSpace(margin.getTop(), snapToPixel, snapScale) : 0;
-        double bottom = margin != null ? snapSpace(margin.getBottom(), snapToPixel, snapScale) : 0;
-        double snappedHeight = snapSize(height, snapToPixel, snapScale);
-        return snapAligned(snappedHeight - top - bottom, snapToPixel, snapScale);
+    private double computeContentHeight(Insets margin, double height) {
+        double top = margin != null ? snapSpaceY(margin.getTop()) : 0;
+        double bottom = margin != null ? snapSpaceY(margin.getBottom()) : 0;
+        double snappedHeight = snapSizeY(height);
+        return snapAlignedY(snappedHeight - top - bottom);
     }
 
     /* Max of children's minimum area widths */
@@ -2467,31 +2148,31 @@ public class Region extends Parent {
         double childHeight = 0;
 
         if (bias == null) {
-            childWidth = snapSize(boundedSize(
+            childWidth = ScaledMath.snapSize(boundedSize(
                     node.minWidth(-1), fillWidth ? areaWidth
                     : Math.min(areaWidth, node.prefWidth(-1)),
                     node.maxWidth(-1)), isSnapToPixel, snapScaleX);
-            childHeight = snapSize(boundedSize(
+            childHeight = ScaledMath.snapSize(boundedSize(
                     node.minHeight(-1), fillHeight ? areaHeight
                     : Math.min(areaHeight, node.prefHeight(-1)),
                     node.maxHeight(-1)), isSnapToPixel, snapScaleY);
 
         } else if (bias == Orientation.HORIZONTAL) {
-            childWidth = snapSize(boundedSize(
+            childWidth = ScaledMath.snapSize(boundedSize(
                     node.minWidth(-1), fillWidth ? areaWidth
                     : Math.min(areaWidth, node.prefWidth(-1)),
                     node.maxWidth(-1)), isSnapToPixel, snapScaleX);
-            childHeight = snapSize(boundedSize(
+            childHeight = ScaledMath.snapSize(boundedSize(
                     node.minHeight(childWidth), fillHeight ? areaHeight
                     : Math.min(areaHeight, node.prefHeight(childWidth)),
                     node.maxHeight(childWidth)), isSnapToPixel, snapScaleY);
 
         } else { // bias == VERTICAL
-            childHeight = snapSize(boundedSize(
+            childHeight = ScaledMath.snapSize(boundedSize(
                     node.minHeight(-1), fillHeight ? areaHeight
                     : Math.min(areaHeight, node.prefHeight(-1)),
                     node.maxHeight(-1)), isSnapToPixel, snapScaleY);
-            childWidth = snapSize(boundedSize(
+            childWidth = ScaledMath.snapSize(boundedSize(
                     node.minWidth(childHeight), fillWidth ? areaWidth
                     : Math.min(areaWidth, node.prefWidth(childHeight)),
                     node.maxWidth(childHeight)), isSnapToPixel, snapScaleX);
@@ -2572,7 +2253,7 @@ public class Region extends Parent {
      * will position the node so that its own baseline aligns with the passed in
      * {@code baselineOffset},  otherwise the baseline parameter is ignored.
      * <p>
-     * If {@code snapToPixel} is {@code true} for this region, then the x/y position
+     * If {@link #isSnappedToPixel()} is {@code true}, then the x/y position
      * values will be rounded to their nearest pixel boundaries.
      *
      * @param child the child being positioned within this region
@@ -2588,7 +2269,7 @@ public class Region extends Parent {
     protected void positionInArea(Node child, double areaX, double areaY, double areaWidth, double areaHeight,
                                double areaBaselineOffset, HPos halignment, VPos valignment) {
         positionInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset,
-                Insets.EMPTY, halignment, valignment, isSnapToPixel());
+                Insets.EMPTY, halignment, valignment, isSnappedToPixel());
     }
 
     /**
@@ -2603,7 +2284,7 @@ public class Region extends Parent {
      * will position the node so that its own baseline aligns with the passed in
      * {@code baselineOffset},  otherwise the baseline parameter is ignored.
      * <p>
-     * If {@code snapToPixel} is {@code true} for this region, then the x/y position
+     * If the {@code isSnapToPixel} argument is {@code true}, then the x/y position
      * values will be rounded to their nearest pixel boundaries.
      * <p>
      * If {@code margin} is non-null, then that space will be allocated around the
@@ -2625,14 +2306,14 @@ public class Region extends Parent {
     public static void positionInArea(Node child, double areaX, double areaY, double areaWidth, double areaHeight,
                                double areaBaselineOffset, Insets margin, HPos halignment, VPos valignment, boolean isSnapToPixel) {
         Insets childMargin = margin != null? margin : Insets.EMPTY;
-        double snapScaleX = isSnapToPixel ? getSnapScaleX(child) : 1.0;
-        double snapScaleY = isSnapToPixel ? getSnapScaleY(child) : 1.0;
+        double snapScaleX = isSnapToPixel ? NodeHelper.getRenderScaleX(child) : 1.0;
+        double snapScaleY = isSnapToPixel ? NodeHelper.getRenderScaleY(child) : 1.0;
 
         position(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset,
-                snapSpace(childMargin.getTop(), isSnapToPixel, snapScaleY),
-                snapSpace(childMargin.getRight(), isSnapToPixel, snapScaleX),
-                snapSpace(childMargin.getBottom(), isSnapToPixel, snapScaleY),
-                snapSpace(childMargin.getLeft(), isSnapToPixel, snapScaleX),
+                ScaledMath.snapSpace(childMargin.getTop(), isSnapToPixel, snapScaleY),
+                ScaledMath.snapSpace(childMargin.getRight(), isSnapToPixel, snapScaleX),
+                ScaledMath.snapSpace(childMargin.getBottom(), isSnapToPixel, snapScaleY),
+                ScaledMath.snapSpace(childMargin.getLeft(), isSnapToPixel, snapScaleX),
                 halignment, valignment, isSnapToPixel, snapScaleX, snapScaleY);
     }
 
@@ -2666,7 +2347,7 @@ public class Region extends Parent {
      * with the area baseline offset parameter, otherwise the baseline parameter
      * is ignored.
      * <p>
-     * If {@code snapToPixel} is {@code true} for this region, then the resulting x,y
+     * If {@link #isSnappedToPixel()} is {@code true}, then the resulting x,y
      * values will be rounded to their nearest pixel boundaries and the
      * width/height values will be ceiled to the next pixel boundary.
      *
@@ -2721,7 +2402,7 @@ public class Region extends Parent {
      * If {@code margin} is non-null, then that space will be allocated around the
      * child within the layout area.  margin may be null.
      * <p>
-     * If {@code snapToPixel} is {@code true} for this region, then the resulting x,y
+     * If {@link #isSnappedToPixel()} is {@code true}, then the resulting x,y
      * values will be rounded to their nearest pixel boundaries and the
      * width/height values will be ceiled to the next pixel boundary.
      *
@@ -2778,7 +2459,7 @@ public class Region extends Parent {
      * If {@code margin} is non-null, then that space will be allocated around the
      * child within the layout area.  margin may be null.
      * <p>
-     * If {@code snapToPixel} is {@code true} for this region, then the resulting x,y
+     * If {@link #isSnappedToPixel()} is {@code true}, then the resulting x,y
      * values will be rounded to their nearest pixel boundaries and the
      * width/height values will be ceiled to the next pixel boundary.
      *
@@ -2799,7 +2480,7 @@ public class Region extends Parent {
                                double areaBaselineOffset,
                                Insets margin, boolean fillWidth, boolean fillHeight,
                                HPos halignment, VPos valignment) {
-        layoutInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, margin, fillWidth, fillHeight, halignment, valignment, isSnapToPixel());
+        layoutInArea(child, areaX, areaY, areaWidth, areaHeight, areaBaselineOffset, margin, fillWidth, fillHeight, halignment, valignment, isSnappedToPixel());
     }
 
     /**
@@ -2836,7 +2517,7 @@ public class Region extends Parent {
      * If {@code margin} is non-null, then that space will be allocated around the
      * child within the layout area.  margin may be null.
      * <p>
-     * If {@code snapToPixel} is {@code true} for this region, then the resulting x,y
+     * If the {@code isSnapToPixel} argument is {@code true}, then the resulting x,y
      * values will be rounded to their nearest pixel boundaries and the
      * width/height values will be ceiled to the next pixel boundary.
      *
@@ -2860,34 +2541,34 @@ public class Region extends Parent {
                                Insets margin, boolean fillWidth, boolean fillHeight,
                                HPos halignment, VPos valignment, boolean isSnapToPixel) {
         Insets childMargin = margin != null ? margin : Insets.EMPTY;
-        double snapScaleX = isSnapToPixel ? getSnapScaleX(child) : 1.0;
-        double snapScaleY = isSnapToPixel ? getSnapScaleY(child) : 1.0;
+        double snapScaleX = isSnapToPixel ? NodeHelper.getRenderScaleX(child) : 1.0;
+        double snapScaleY = isSnapToPixel ? NodeHelper.getRenderScaleY(child) : 1.0;
 
-        double snappedTop = snapSpace(childMargin.getTop(), isSnapToPixel, snapScaleY);
-        double snappedBottom = snapSpace(childMargin.getBottom(), isSnapToPixel, snapScaleY);
-        double snappedLeft = snapSpace(childMargin.getLeft(), isSnapToPixel, snapScaleX);
-        double snappedRight = snapSpace(childMargin.getRight(), isSnapToPixel, snapScaleX);
+        double snappedTop = ScaledMath.snapSpace(childMargin.getTop(), isSnapToPixel, snapScaleY);
+        double snappedBottom = ScaledMath.snapSpace(childMargin.getBottom(), isSnapToPixel, snapScaleY);
+        double snappedLeft = ScaledMath.snapSpace(childMargin.getLeft(), isSnapToPixel, snapScaleX);
+        double snappedRight = ScaledMath.snapSpace(childMargin.getRight(), isSnapToPixel, snapScaleX);
 
         // Don't snap areaBaselineOffset independently, as this would lose precision.
         // Instead, we only snap the final derived spans like snappedTop and snappedBottom.
         if (valignment == VPos.BASELINE) {
             double rawBaseline = child.getBaselineOffset();
             if (rawBaseline != BASELINE_OFFSET_SAME_AS_HEIGHT) {
-                snappedTop = snapSpace(areaBaselineOffset - rawBaseline, isSnapToPixel, snapScaleY);
+                snappedTop = ScaledMath.snapSpace(areaBaselineOffset - rawBaseline, isSnapToPixel, snapScaleY);
             } else if (child.isResizable()) {
                 // Everything below the baseline is like an "inset".
                 // The Node with BASELINE_OFFSET_SAME_AS_HEIGHT cannot be resized to this area.
-                snappedBottom = snapSpace(areaHeight - areaBaselineOffset, isSnapToPixel, snapScaleY);
+                snappedBottom = ScaledMath.snapSpace(areaHeight - areaBaselineOffset, isSnapToPixel, snapScaleY);
             }
         }
 
         // We size-snap areaWidth and areaHeight to derive the resizable child's size allocation,
         // but deliberately don't use these snapped values for positioning later.
         if (child.isResizable()) {
-            double snappedAreaWidth = snapSize(areaWidth, isSnapToPixel, snapScaleX);
-            double snappedAreaHeight = snapSize(areaHeight, isSnapToPixel, snapScaleY);
-            double snappedAvailableWidth = snapAligned(snappedAreaWidth - snappedLeft - snappedRight, isSnapToPixel, snapScaleX);
-            double snappedAvailableHeight = snapAligned(snappedAreaHeight - snappedTop - snappedBottom, isSnapToPixel, snapScaleY);
+            double snappedAreaWidth = ScaledMath.snapSize(areaWidth, isSnapToPixel, snapScaleX);
+            double snappedAreaHeight = ScaledMath.snapSize(areaHeight, isSnapToPixel, snapScaleY);
+            double snappedAvailableWidth = ScaledMath.snapAligned(snappedAreaWidth - snappedLeft - snappedRight, isSnapToPixel, snapScaleX);
+            double snappedAvailableHeight = ScaledMath.snapAligned(snappedAreaHeight - snappedTop - snappedBottom, isSnapToPixel, snapScaleY);
             Vec2d size = boundedNodeSizeWithBias(child, snappedAvailableWidth, snappedAvailableHeight,
                 fillWidth, fillHeight, isSnapToPixel, snapScaleX, snapScaleY, TEMP_VEC2D);
             child.resize(size.x, size.y);
@@ -2928,8 +2609,8 @@ public class Region extends Parent {
 
         double rawX = rawAreaX + rawXOffset;
         double rawY = rawAreaY + rawYOffset;
-        double snappedX = snapPosition(rawX, isSnapToPixel, snapScaleX);
-        double snappedY = snapPosition(rawY, isSnapToPixel, snapScaleY);
+        double snappedX = ScaledMath.snapPosition(rawX, isSnapToPixel, snapScaleX);
+        double snappedY = ScaledMath.snapPosition(rawY, isSnapToPixel, snapScaleY);
 
         child.relocate(snappedX, snappedY);
     }
@@ -3842,20 +3523,6 @@ public class Region extends Parent {
             }
         };
 
-         private static final CssMetaData<Region, Boolean> SNAP_TO_PIXEL =
-             new CssMetaData<>("-fx-snap-to-pixel",
-                 BooleanConverter.getInstance(), Boolean.TRUE){
-
-            @Override public boolean isSettable(Region node) {
-                return node.snapToPixel == null ||
-                        !node.snapToPixel.isBound();
-            }
-
-            @Override public StyleableProperty<Boolean> getStyleableProperty(Region node) {
-                return (StyleableProperty<Boolean>)node.snapToPixelProperty();
-            }
-        };
-
          private static final CssMetaData<Region, Number> MIN_HEIGHT =
              new CssMetaData<>("-fx-min-height",
                  SizeConverter.getInstance(), USE_COMPUTED_SIZE){
@@ -3952,7 +3619,6 @@ public class Region extends Parent {
             styleables.add(SHAPE);
             styleables.add(SCALE_SHAPE);
             styleables.add(POSITION_SHAPE);
-            styleables.add(SNAP_TO_PIXEL);
             styleables.add(MIN_WIDTH);
             styleables.add(PREF_WIDTH);
             styleables.add(MAX_WIDTH);

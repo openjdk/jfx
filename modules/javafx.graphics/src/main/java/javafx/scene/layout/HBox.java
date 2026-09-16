@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -25,6 +25,8 @@
 
 package javafx.scene.layout;
 
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.layout.ScaledMath;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -511,10 +513,14 @@ public class HBox extends Pane {
             }
         }
 
-        double pixelSize = isSnapToPixel() ? 1 / Region.getSnapScaleX(this) : 0.0;
+        boolean snappedToPixel = isSnappedToPixel();
+        double renderScaleX = NodeHelper.getRenderScaleX(this);
+        double pixelSize = snappedToPixel ? 1 / renderScaleX : 0.0;
         double available = extraWidth; // will be negative in shrinking case
+
         outer:while (Math.abs(available) >= pixelSize && adjustingNumber > 0) {
-            double portion = snapPortionX(available / adjustingNumber); // negative in shrinking case
+            // negative in shrinking case
+            double portion = ScaledMath.snapPortion(available / adjustingNumber, snappedToPixel, renderScaleX);
 
             if (portion == 0) {
                 if (pixelSize == 0) {
@@ -560,12 +566,21 @@ public class HBox extends Pane {
     }
 
     @Override public void requestLayout() {
+        clearMeasurements();
+        super.requestLayout();
+    }
+
+    @Override protected void layoutContextInvalidated() {
+        clearMeasurements();
+        super.layoutContextInvalidated();
+    }
+
+    private void clearMeasurements() {
         biasDirty = true;
         bias = null;
         minBaselineComplement = Double.NaN;
         prefBaselineComplement = Double.NaN;
         baselineOffset = Double.NaN;
-        super.requestLayout();
     }
 
     private double getMinBaselineComplement() {

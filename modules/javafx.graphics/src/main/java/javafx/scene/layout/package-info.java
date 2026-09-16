@@ -312,10 +312,10 @@
  * <h3>Why snapped content can still look blurry</h3>
  *
  * Enabling pixel snapping on a region does not guarantee that the region or its descendants will be rendered on
- * pixel boundaries. The {@link javafx.scene.layout.Region#snapToPixelProperty() snapToPixel} property controls
- * layout calculations <em>performed by that region only</em>; it is not inherited from the parent and does not
- * affect whether children snap their contents. A region owns the position and size it allocates to a child;
- * the child owns the layout of its own descendants.
+ * pixel boundaries. The {@link javafx.scene.Parent#snapToPixelProperty() snapToPixel} property only controls the
+ * local policy of the node; {@link javafx.scene.Parent#isSnappedToPixel() isSnappedToPixel} returns its effective
+ * pixel-snapping policy, taking into account all of its ancestors. A region owns the position and size it allocates
+ * to a child; the child owns the layout of its own descendants.
  * <p>
  * For example, setting only the child's property does not repair a fractional position assigned by its parent:
  * {@snippet :
@@ -326,9 +326,8 @@
  * child.relocate(10.5, 20.5);
  * }
  *
- * In this case, even if the child snaps its descendants in its local coordinates, the entire child subtree remains
- * shifted by half a pixel. Conversely, a parent can allocate a child pixel-aligned outer bounds even when that child
- * has disabled snapping for its own layout.
+ * In this case, the child's effective snapping policy is false. Conversely, a parent can allocate a child
+ * pixel-aligned outer bounds even when that child has disabled snapping for its own layout.
  * <p>
  * Transforms are applied after the layout has been computed. For example, at render scale {@code 1.0},
  * the following translation undoes the alignment established during layout:

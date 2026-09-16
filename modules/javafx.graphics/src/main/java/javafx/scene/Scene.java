@@ -103,6 +103,7 @@ import com.sun.javafx.logging.PulseLogger;
 
 import static com.sun.javafx.logging.PulseLogger.PULSE_LOGGING_ENABLED;
 import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.stage.WindowHelper;
 import com.sun.javafx.scene.input.ClipboardHelper;
 import com.sun.javafx.scene.input.TouchPointHelper;
@@ -842,6 +843,11 @@ public class Scene implements EventTarget {
 
                 @Override protected void invalidated() {
                     final Window newWindow = get();
+                    final double oldRenderScaleX = oldWindow == null ? 1.0 : oldWindow.getRenderScaleX();
+                    final double oldRenderScaleY = oldWindow == null ? 1.0 : oldWindow.getRenderScaleY();
+                    final double newRenderScaleX = newWindow == null ? 1.0 : newWindow.getRenderScaleX();
+                    final double newRenderScaleY = newWindow == null ? 1.0 : newWindow.getRenderScaleY();
+
                     windowForSceneChanged(oldWindow, newWindow);
                     if (oldWindow != null) {
                         disposePeer();
@@ -852,6 +858,10 @@ public class Scene implements EventTarget {
                     parentEffectiveOrientationInvalidated();
 
                     oldWindow = newWindow;
+
+                    if (oldRenderScaleX != newRenderScaleX || oldRenderScaleY != newRenderScaleY) {
+                        ParentHelper.notifyLayoutContextChanged(getRoot());
+                    }
                 }
 
                 @Override

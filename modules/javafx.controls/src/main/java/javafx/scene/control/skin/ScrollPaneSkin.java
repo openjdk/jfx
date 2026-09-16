@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2010, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -687,6 +687,12 @@ public class ScrollPaneSkin extends SkinBase<ScrollPane> {
                 // appeared or disappeared.
                 ScrollPaneSkin.this.getSkinnable().requestLayout();
             }
+
+            @Override protected void layoutContextInvalidated() {
+                nodeSizeInvalid = true;
+                super.layoutContextInvalidated();
+            }
+
             @Override protected void layoutChildren() {
                 if (nodeSizeInvalid) {
                     computeScrollNodeSize(getWidth(),getHeight());

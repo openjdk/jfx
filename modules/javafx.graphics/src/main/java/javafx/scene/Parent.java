@@ -25,23 +25,12 @@
 
 package javafx.scene;
 
+import com.sun.javafx.scene.layout.ScaledMath;
 import com.sun.javafx.scene.traversal.ParentTraversalEngine;
-import javafx.beans.property.ReadOnlyBooleanProperty;
-import javafx.beans.property.ReadOnlyBooleanWrapper;
-import javafx.collections.FXCollections;
-import javafx.collections.ListChangeListener.Change;
-import javafx.collections.ObservableList;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
 import com.sun.javafx.util.TempState;
 import com.sun.javafx.util.Utils;
 import com.sun.javafx.collections.TrackableObservableList;
 import com.sun.javafx.collections.VetoableListDecorator;
-import javafx.css.PseudoClass;
-import javafx.css.Selector;
 import com.sun.javafx.css.StyleManager;
 import com.sun.javafx.geom.BaseBounds;
 import com.sun.javafx.geom.PickRay;
@@ -59,7 +48,24 @@ import com.sun.javafx.scene.LayoutFlags;
 import com.sun.javafx.scene.NodeHelper;
 import com.sun.javafx.scene.ParentHelper;
 import com.sun.javafx.stage.WindowHelper;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanProperty;
+import javafx.beans.property.ReadOnlyBooleanWrapper;
+import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener.Change;
+import javafx.collections.ObservableList;
+import javafx.css.CssMetaData;
+import javafx.css.Styleable;
+import javafx.css.StyleableBooleanProperty;
+import javafx.css.StyleableProperty;
+import javafx.css.converter.BooleanConverter;
+import javafx.css.PseudoClass;
+import javafx.css.Selector;
 import javafx.stage.Window;
 
 /**
@@ -127,6 +133,16 @@ public abstract non-sealed class Parent extends Node {
             }
 
             @Override
+            public void doNotifyLayoutContextChanged(Parent parent) {
+                Parent.notifyLayoutContextChanged(parent);
+            }
+
+            @Override
+            public void doLayoutContextInvalidated(Parent parent) {
+                parent.doLayoutContextInvalidated();
+            }
+
+            @Override
             public void doPickNodeLocal(Node node, PickRay localPickRay,
                     PickResultChooser result) {
                 ((Parent) node).doPickNodeLocal(localPickRay, result);
@@ -150,6 +166,16 @@ public abstract non-sealed class Parent extends Node {
             @Override
             public List<String> doGetAllParentStylesheets(Parent parent) {
                 return parent.doGetAllParentStylesheets();
+            }
+
+            @Override
+            public double getRenderScaleX(Parent parent) {
+                return parent.renderScaleX;
+            }
+
+            @Override
+            public double getRenderScaleY(Parent parent) {
+                return parent.renderScaleY;
             }
         });
     }
@@ -820,10 +846,8 @@ public abstract non-sealed class Parent extends Node {
     }
 
     @Override
-    void scenesChanged(final Scene newScene, final SubScene newSubScene,
-                       final Scene oldScene, final SubScene oldSubScene) {
-
-        if (oldScene != null && newScene == null) {
+    void scenesChanged(Scene oldScene, SubScene oldSubScene) {
+        if (oldScene != null && getScene() == null) {
             // JDK-8094828 - clean up CSS cache when Parent is removed from scene-graph
             StyleManager.getInstance().forget(this);
 
@@ -833,25 +857,53 @@ public abstract non-sealed class Parent extends Node {
             }
         }
 
-        for (int i=0; i<children.size(); i++) {
-            children.get(i).setScenes(newScene, newSubScene);
+        // The following three operations need to performed in exactly this order:
+        // 1. Update this node's cached scale and snapping policy.
+        boolean layoutContextChanged = updateLayoutContext();
+
+        // 2. Update this node's descendants and invalidate their measurements.
+        //    Note that child.setScenes() can invoke application code that removes children from the list.
+        //    We therefore iterate over a list snapshot, and skip children that no longer belong to this node.
+        for (Node child : children.toArray(new Node[children.size()])) {
+            if (child.getParent() == this) {
+                // A previous child's callback may have moved this node to another Scene or SubScene.
+                // Read these values again for each child so the remaining children follow this node's
+                // current Scene and SubScene.
+                Scene currentScene = getScene();
+                SubScene currentSubScene = getSubScene();
+                child.setScenes(currentScene, currentSubScene);
+            }
+        }
+
+        // 3. Invalidate this node's measurements and notify its listeners.
+        //    This must happen after all descendants have been updated, as otherwise those listeners
+        //    could invoke code that caches a size based on children that still use their old render
+        //    scales or snapping policy.
+        if (layoutContextChanged) {
+            ParentHelper.layoutContextInvalidated(this);
         }
 
         final boolean awaitingLayout = layoutFlag != LayoutFlags.CLEAN;
 
-        sceneRoot = (newSubScene != null && newSubScene.getRoot() == this) ||
-                    (newScene != null && newScene.getRoot() == this);
+        // A callback may have detached this node or made it a root in another Scene or SubScene.
+        // Derive the layout-root flags from where it is now, so subsequent layout requests are
+        // directed to the correct root.
+        Scene currentScene = getScene();
+        SubScene currentSubScene = getSubScene();
+        sceneRoot = (currentSubScene != null && currentSubScene.getRoot() == this) ||
+                    (currentScene != null && currentScene.getRoot() == this);
         layoutRoot = !isManaged() || sceneRoot;
 
+        // Preserve pending layout work when attaching to a SubScene. Marking this node alone
+        // as NEEDS_LAYOUT is insufficient: the SubScene must also know it needs layout.
+        if (awaitingLayout && currentScene != null && layoutRoot && currentSubScene != null) {
+            currentSubScene.setDirtyLayout(this);
+        }
 
-        if (awaitingLayout) {
-            // If this node is dirty and the new scene or subScene is not null
-            // then add this node to the new scene's dirty list
-            if (newScene != null && layoutRoot) {
-                if (newSubScene != null) {
-                    newSubScene.setDirtyLayout(this);
-                }
-            }
+        // Request layout for a changed layout root. Read the scene again because
+        // setDirtyLayout can itself invoke needsLayout listeners that move this node.
+        if (layoutContextChanged && getScene() != null && layoutRoot) {
+            requestLayout();
         }
     }
 
@@ -935,6 +987,337 @@ public abstract non-sealed class Parent extends Node {
      *  JavaFX. Includes both public and private API.                      *
      *                                                                     *
      **********************************************************************/
+
+    /**
+     * Specifies whether this parent adjusts position, spacing, and size values of its children to pixel
+     * boundaries. This property only controls the local preference of this node; layout calculations
+     * should use {@link #isSnappedToPixel()} to determine the effective pixel-snapping policy during
+     * layout.
+     *
+     * @defaultValue true
+     * @since 28
+     */
+    private BooleanProperty snapToPixel;
+    private boolean _snapToPixel = true;
+
+    public final boolean isSnapToPixel() {
+        return _snapToPixel;
+    }
+
+    public final void setSnapToPixel(boolean value) {
+        if (snapToPixel == null) {
+            if (_snapToPixel != value) {
+                _snapToPixel = value;
+                notifyLayoutContextChanged(this);
+            }
+        } else {
+            snapToPixel.set(value);
+        }
+    }
+
+    public final BooleanProperty snapToPixelProperty() {
+        if (snapToPixel == null) {
+            snapToPixel = new StyleableBooleanProperty(_snapToPixel) {
+                @Override
+                public Object getBean() {
+                    return Parent.this;
+                }
+
+                @Override
+                public String getName() {
+                    return "snapToPixel";
+                }
+
+                @Override
+                public CssMetaData<Parent, Boolean> getCssMetaData() {
+                    return StyleableProperties.SNAP_TO_PIXEL;
+                }
+
+                @Override
+                public void invalidated() {
+                    boolean value = get();
+                    if (_snapToPixel != value) {
+                        _snapToPixel = value;
+                        notifyLayoutContextChanged(Parent.this);
+                    }
+                }
+            };
+        }
+        return snapToPixel;
+    }
+
+    boolean snappedToPixel = true;
+
+    /**
+     * Returns whether pixel snapping is effectively enabled for this node.
+     * <p>
+     * This method takes into account the {@link #snapToPixelProperty() snapToPixel} property of this node,
+     * as well as the inherited pixel-snapping policy of its ancestors; it is only {@code true} if all
+     * ancestors are snapped to the pixel grid.
+     *
+     * @return whether pixel snapping is effectively enabled
+     * @since 28
+     */
+    public final boolean isSnappedToPixel() {
+        return snappedToPixel;
+    }
+
+    /** The render scales used by the snapping methods. */
+    private double renderScaleX = 1;
+    private double renderScaleY = 1;
+
+    /**
+     * Returns a value rounded to the nearest pixel when {@link #isSnappedToPixel()} is true; otherwise,
+     * returns the value unchanged. This method is used to create an allocation for empty space during
+     * layout, it allows snapping to slightly reduce the requested amount of empty space.
+     *
+     * @param value the horizontal value
+     * @return the nearest horizontal value on the pixel grid, or the unchanged value
+     * @since 28
+     */
+    public final double snapSpaceX(double value) {
+        return ScaledMath.snapSpace(value, snappedToPixel, renderScaleX);
+    }
+
+    /**
+     * Returns a value rounded to the nearest pixel when {@link #isSnappedToPixel()} is true; otherwise,
+     * returns the value unchanged. This method is used to create an allocation for empty space during
+     * layout, it allows snapping to slightly reduce the requested amount of empty space.
+     *
+     * @param value the vertical value
+     * @return the nearest vertical value on the pixel grid, or the unchanged value
+     * @since 28
+     */
+    public final double snapSpaceY(double value) {
+        return ScaledMath.snapSpace(value, snappedToPixel, renderScaleY);
+    }
+
+    /**
+     * Returns a value ceiled to the nearest pixel when {@link #isSnappedToPixel()} is true; otherwise,
+     * returns the value unchanged. This method is used to create a size allocation for children during
+     * layout, it ensures that snapping does not reduce the measured size allocation.
+     *
+     * @param value the horizontal value
+     * @return the next horizontal value on the pixel grid, or the unchanged value
+     * @since 28
+     */
+    public final double snapSizeX(double value) {
+        return ScaledMath.snapSize(value, snappedToPixel, renderScaleX);
+    }
+
+    /**
+     * Returns a value ceiled to the nearest pixel when {@link #isSnappedToPixel()} is true; otherwise,
+     * returns the value unchanged. This method is used to create a size allocation for children during
+     * layout, it ensures that snapping does not reduce the measured size allocation.
+     *
+     * @param value the vertical value
+     * @return the next vertical value on the pixel grid, or the unchanged value
+     * @since 28
+     */
+    public final double snapSizeY(double value) {
+        return ScaledMath.snapSize(value, snappedToPixel, renderScaleY);
+    }
+
+    /**
+     * Rounds the value to the nearest pixel when {@link #isSnappedToPixel()} is true; otherwise,
+     * returns the value unchanged. This method is used to align the horizontal position of a region
+     * to the closest value on the pixel grid.
+     *
+     * @param value the vertical value
+     * @return the nearest vertical value on the pixel grid, or the unchanged value
+     * @since 28
+     */
+    public final double snapPositionX(double value) {
+        return ScaledMath.snapPosition(value, snappedToPixel, renderScaleX);
+    }
+
+    /**
+     * Rounds the value to the nearest pixel when {@link #isSnappedToPixel()} is true; otherwise,
+     * returns the value unchanged. This method is used to align the vertical position of a region
+     * to the closest value on the pixel grid.
+     *
+     * @param value the vertical value
+     * @return the nearest vertical value on the pixel grid, or the unchanged value
+     * @since 28
+     */
+    public final double snapPositionY(double value) {
+        return ScaledMath.snapPosition(value, snappedToPixel, renderScaleY);
+    }
+
+    /**
+     * Rounds the value to the nearest pixel when {@link #isSnappedToPixel()} is true; otherwise,
+     * returns the value unchanged. This method is used to remove floating-point drift after a
+     * calculation that involves known-aligned values.
+     *
+     * @apiNote This method is mathematically equivalent to {@link #snapSpaceX(double)} and
+     *          {@link #snapPositionX(double)}, but has a distinct name that clearly communicates
+     *          that the caller knows that the value is already pixel-aligned.
+     * @param value the horizontal value
+     * @return the nearest horizontal value on the pixel grid
+     * @since 28
+     */
+    public final double snapAlignedX(double value) {
+        return ScaledMath.snapAligned(value, snappedToPixel, renderScaleX);
+    }
+
+    /**
+     * Rounds the value to the nearest pixel when {@link #isSnappedToPixel()} is true; otherwise,
+     * returns the value unchanged. This method is used to remove floating-point drift after a
+     * calculation that involves known-aligned values.
+     *
+     * @apiNote This method is mathematically equivalent to {@link #snapSpaceY(double)} and
+     *          {@link #snapPositionY(double)}, but has a distinct name that clearly communicates
+     *          that the caller knows that the value is already pixel-aligned.
+     * @param value the vertical value
+     * @return the nearest vertical value on the pixel grid
+     * @since 28
+     */
+    public final double snapAlignedY(double value) {
+        return ScaledMath.snapAligned(value, snappedToPixel, renderScaleY);
+    }
+
+    /**
+     * Called when the render scale or effective pixel snapping policy changes, which might require
+     * measurement or layout results that depend on those values to be recomputed even if none of
+     * the node's geometric properties or its size allocation has changed.
+     *
+     * @implNote The default implementation does nothing. A subclass that caches measurement
+     *           or layout results should clear those caches in an override of this method.
+     *           An overriding implementation should invoke {@code super.layoutContextInvalidated()}.
+     * @since 28
+     */
+    protected void layoutContextInvalidated() {}
+
+    static void parentChanged(Node node, Parent oldParent, Parent newParent) {
+        if (!(node instanceof Parent) && !(node instanceof SubScene)) {
+            return;
+        }
+
+        boolean oldSnappedToPixel = oldParent == null || oldParent.isSnappedToPixel();
+        boolean newSnappedToPixel = newParent == null || newParent.isSnappedToPixel();
+
+        if (oldSnappedToPixel != newSnappedToPixel) {
+            notifyLayoutContextChanged(node);
+        }
+    }
+
+    private boolean updateLayoutContext() {
+        Scene scene = getScene();
+        double newScaleX = getRenderScaleX(scene);
+        double newScaleY = getRenderScaleY(scene);
+        boolean newSnapped = isParentSnappedToPixel(this) && isSnapToPixel();
+        boolean changed = renderScaleX != newScaleX || renderScaleY != newScaleY || snappedToPixel != newSnapped;
+        snappedToPixel = newSnapped;
+        renderScaleX = newScaleX;
+        renderScaleY = newScaleY;
+        return changed;
+    }
+
+    private static boolean isParentSnappedToPixel(Node node) {
+        Parent parent = node.getParent();
+        if (parent != null) {
+            return parent.isSnappedToPixel();
+        }
+
+        SubScene subScene = node.getSubScene();
+        return subScene == null
+            || subScene.getRoot() != node
+            || isParentSnappedToPixel(subScene);
+    }
+
+    /**
+     * This method is the entry point for a recursive subtree traversal that notifies the specified
+     * node and its subtree that the layout context (render scale or snapping policy) has changed.
+     */
+    private static void notifyLayoutContextChanged(Node node) {
+        boolean changed = notifyLayoutContextChangedRecursive(node);
+
+        if (changed) {
+            if (node instanceof Parent parent) {
+                parent.requestLayout();
+            } else if (node instanceof SubScene subScene) {
+                subScene.getRoot().requestLayout();
+            }
+        }
+    }
+
+    /**
+     * Recursively notifies the specified node and its subtree to use the current render scales and
+     * snapping policy. Each node updates its cached values and, if they changed, visits its descendants
+     * before invoking {@link ParentHelper#layoutContextInvalidated(Parent)}.
+     */
+    private static boolean notifyLayoutContextChangedRecursive(Node node) {
+        boolean changed = false;
+        Parent parent = node instanceof Parent p ? p : null;
+
+        // Invalidation can invoke application code that changes the scale or snapping policy reentrantly.
+        // For example, while notifying child A of a scale change to 1.5, a listener might set the scale
+        // to 2.0. The nested notification updates A and its sibling B to 2.0. When the outer traversal
+        // resumes at B, it must retain the new 2.0 scale. Each node therefore reads the current context
+        // when visited. In our example, B already has the new value, so its subtree needs no further update.
+        if (parent != null) {
+            if (!parent.updateLayoutContext()) {
+                return false;
+            }
+
+            changed = true;
+
+            // Callbacks can also change the children list. We snapshot the children of each node before
+            // iterating over them, so that removing a child from a callback doesn't break the iteration.
+            // We detect removed children by comparing their parent node to this node; if it's not the same,
+            // the child was removed and we skip it. Children that are added during a callback get their
+            // layout context in the scenesChanged() method.
+            for (Node child : parent.children.toArray(new Node[parent.children.size()])) {
+                if (child.getParent() == parent) {
+                    notifyLayoutContextChangedRecursive(child);
+                }
+            }
+        } else if (node instanceof SubScene subScene) {
+            changed = notifyLayoutContextChangedRecursive(subScene.getRoot());
+            if (changed) {
+                subScene.setDirtyLayout(subScene.getRoot());
+            }
+        }
+
+        Node clip = node.getClip();
+        if (clip != null) {
+            changed |= notifyLayoutContextChangedRecursive(clip);
+        }
+
+        if (parent != null) {
+            ParentHelper.layoutContextInvalidated(parent);
+        }
+
+        return changed;
+    }
+
+    /**
+     * If the layout context has changed, we need to mark this node as {@link LayoutFlags#NEEDS_LAYOUT}
+     * so it recalculates its children's sizes and positions once the layout traversal reaches it.
+     * <p>
+     * For example, consider a VBox with a spacing of 0.6: the gaps snap to 1.0 at render scale 1, but to 0.5
+     * at render scale 2. Even though the size of the VBox remains exactly the same, we see that its children
+     * still need to move.
+     * <p>
+     * We set the {@code NEEDS_LAYOUT} flag locally instead of calling {@code requestLayout()} for every
+     * affected node, which would repeatedly walk the same ancestors. After the traversal, the caller
+     * makes one root {@code requestLayout()} call to schedule layout.
+     */
+    private void doLayoutContextInvalidated() {
+        // layoutContextInvalidated() can notify listeners that query this node's size.
+        // Clear the size cache first so those queries can recompute sizes instead of returning
+        // values cached before the layout context changed.
+        clearSizeCache();
+        layoutContextInvalidated();
+
+        // However, those potential size queries can refill the size cache before layoutContextInvalidated()
+        // has finished invalidating all subclass caches. For example, TilePane invalidates tileWidth
+        // before tileHeight, and a tileWidth listener that calls prefHeight(-1) can cache a result based
+        // on the old tileHeight. We need to clear any such transient results before notifying needsLayout.
+        clearSizeCache();
+        setLayoutFlag(LayoutFlags.NEEDS_LAYOUT);
+    }
+
     /**
      * Indicates that this Node and its subnodes requires a layout pass on
      * the next pulse.
@@ -2047,5 +2430,44 @@ public abstract non-sealed class Parent extends Node {
      */
     List<Node> test_getViewOrderChildren() {
         return viewOrderChildren;
+    }
+
+    private static class StyleableProperties {
+        private static final CssMetaData<Parent, Boolean> SNAP_TO_PIXEL =
+            new CssMetaData<>("-fx-snap-to-pixel", BooleanConverter.getInstance(), Boolean.TRUE) {
+                @Override
+                public boolean isSettable(Parent node) {
+                    return node.snapToPixel == null || !node.snapToPixel.isBound();
+                }
+
+                @Override
+                public StyleableProperty<Boolean> getStyleableProperty(Parent node) {
+                    return (StyleableProperty<Boolean>) node.snapToPixelProperty();
+                }
+            };
+
+        private static final List<CssMetaData<? extends Styleable, ?>> STYLEABLES;
+
+        static {
+            List<CssMetaData<? extends Styleable, ?>> styleables = new ArrayList<>(Node.getClassCssMetaData());
+            styleables.add(SNAP_TO_PIXEL);
+            STYLEABLES = Collections.unmodifiableList(styleables);
+        }
+    }
+
+    /**
+     * Gets the {@code CssMetaData} associated with this class, including that of its superclasses.
+     *
+     * @return the {@code CssMetaData} list
+     * @since 28
+     */
+    public static List<CssMetaData<? extends Styleable, ?>> getClassCssMetaData() {
+        return StyleableProperties.STYLEABLES;
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public List<CssMetaData<? extends Styleable, ?>> getCssMetaData() {
+        return getClassCssMetaData();
     }
 }

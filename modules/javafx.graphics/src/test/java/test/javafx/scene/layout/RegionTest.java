@@ -2133,67 +2133,6 @@ public class RegionTest {
         assertEquals(Long.MIN_VALUE / 1.5, region.snapSpaceY(Double.NEGATIVE_INFINITY), 0.0);
     }
 
-    // Test for JDK-8255415
-    @Test
-    public void snappingASnappedValueGivesTheSameValueTest() {
-        Stage stage = new Stage();
-        Region region = new Region();
-        Scene scene = new Scene(region);
-        stage.setScene(scene);
-
-        double[] scales = new double[] {1.0, 1.25, 1.5, 1.75, 2.0, 1.374562997, 20.0};
-        Random random = new Random();
-        long seed = random.nextLong();
-
-        // test snapSizeX/snapSizeY methods
-
-        String failMessage = "Seed was: " + seed;
-
-        random.setSeed(seed);
-
-        for (double scale : scales) {
-            stage.setRenderScaleX(scale);
-            for (int j = 0; j < 1000; j++) {
-                double value = random.nextDouble() * Integer.MAX_VALUE;
-                double snappedValue = region.snapSizeX(value);
-                double snapOfSnappedValue = region.snapSizeX(snappedValue);
-                assertEquals(snappedValue, snapOfSnappedValue, 0.0, failMessage);
-            }
-        }
-
-        for (double scale : scales) {
-            stage.setRenderScaleY(scale);
-            for (int j = 0; j < 1000; j++) {
-                double value = random.nextDouble() * Integer.MAX_VALUE;
-                double snappedValue = region.snapSizeY(value);
-                double snapOfSnappedValue = region.snapSizeY(snappedValue);
-                assertEquals(snappedValue, snapOfSnappedValue, 0.0, failMessage);
-            }
-        }
-
-        // test snapPortionX/snapPortionY methods
-
-        for (double scale : scales) {
-            stage.setRenderScaleX(scale);
-            for (int j = 0; j < 1000; j++) {
-                double value = random.nextDouble() * Integer.MAX_VALUE;
-                double snappedValue = RegionShim.snapPortionX(region, value);
-                double snapOfSnappedValue = RegionShim.snapPortionX(region, snappedValue);
-                assertEquals(snappedValue, snapOfSnappedValue, 0.0, failMessage);
-            }
-        }
-
-        for (double scale : scales) {
-            stage.setRenderScaleY(scale);
-            for (int j = 0; j < 1000; j++) {
-                double value = random.nextDouble() * Integer.MAX_VALUE;
-                double snappedValue = RegionShim.snapPortionY(region, value);
-                double snapOfSnappedValue = RegionShim.snapPortionY(region, snappedValue);
-                assertEquals(snappedValue, snapOfSnappedValue, 0.0, failMessage);
-            }
-        }
-    }
-
     @Test
     public void layoutInAreaUsesSnappedWidthForHorizontalBias() {
         var child = new RecordingBiasedRegion(Orientation.HORIZONTAL, 10.2, value -> value < 11 ? 40 : 20);

@@ -25,6 +25,8 @@
 
 package javafx.scene.layout;
 
+import com.sun.javafx.scene.NodeHelper;
+import com.sun.javafx.scene.layout.ScaledMath;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -494,10 +496,14 @@ public class VBox extends Pane {
             }
         }
 
-        double pixelSize = isSnapToPixel() ? 1 / Region.getSnapScaleY(this) : 0.0;
+        boolean snappedToPixel = isSnappedToPixel();
+        double renderScaleY = NodeHelper.getRenderScaleY(this);
+        double pixelSize = snappedToPixel ? 1 / renderScaleY : 0.0;
         double available = extraHeight; // will be negative in shrinking case
+
         outer: while (Math.abs(available) >= pixelSize && adjustingNumber > 0) {
-            double portion = snapPortionY(available / adjustingNumber); // negative in shrinking case
+            // negative in shrinking case
+            double portion = ScaledMath.snapPortion(available / adjustingNumber, snappedToPixel, renderScaleY);
 
             if (portion == 0) {
                 if (pixelSize == 0) {
