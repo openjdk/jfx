@@ -40,28 +40,28 @@ import javafx.scene.transform.Translate;
 /// Camera controls for a 3D environment.
 class CameraScene3D extends Pane {
 
-    public DoubleProperty xPan = new SimpleDoubleProperty();
-    public DoubleProperty yPan = new SimpleDoubleProperty();
-    public DoubleProperty zoom = new SimpleDoubleProperty();
-    public DoubleProperty zAngle = new SimpleDoubleProperty();
-    public DoubleProperty isometricAngle = new SimpleDoubleProperty();
+    private final DoubleProperty xPan = new SimpleDoubleProperty();
+    private final DoubleProperty yPan = new SimpleDoubleProperty();
+    final DoubleProperty zoom = new SimpleDoubleProperty();
+    private final DoubleProperty zAngle = new SimpleDoubleProperty();
+    private final DoubleProperty isometricAngle = new SimpleDoubleProperty();
 
-    public DoubleProperty panSensitivity = new SimpleDoubleProperty(1);
-    public DoubleProperty zoomSensitivity = new SimpleDoubleProperty(1);
-    public DoubleProperty zRotationSensitivity = new SimpleDoubleProperty(1);
-    public DoubleProperty isoRotationSensitivity = new SimpleDoubleProperty(1);
-    public BooleanProperty isZoomTotal = new SimpleBooleanProperty();
+    private final DoubleProperty panSensitivity = new SimpleDoubleProperty(1);
+    private final DoubleProperty zoomSensitivity = new SimpleDoubleProperty(1);
+    private final DoubleProperty zRotationSensitivity = new SimpleDoubleProperty(1);
+    private final DoubleProperty isoRotationSensitivity = new SimpleDoubleProperty(1);
+    private final BooleanProperty isZoomTotal = new SimpleBooleanProperty();
 
     protected PerspectiveCamera camera = new PerspectiveCamera(true);
 
-    public DoubleProperty farClip = new SimpleDoubleProperty(camera.getFarClip());
-    public DoubleProperty nearClip = new SimpleDoubleProperty(camera.getNearClip());
-    public DoubleProperty fieldOfView = new SimpleDoubleProperty(camera.getFieldOfView());
-    public BooleanProperty verticalFOV = new SimpleBooleanProperty(camera.isVerticalFieldOfView());
+    final DoubleProperty farClip = new SimpleDoubleProperty(camera.getFarClip());
+    private final DoubleProperty nearClip = new SimpleDoubleProperty(camera.getNearClip());
+    private final DoubleProperty fieldOfView = new SimpleDoubleProperty(camera.getFieldOfView());
+    private final BooleanProperty verticalFOV = new SimpleBooleanProperty(camera.isVerticalFieldOfView());
 
-    public Group rootGroup = new Group();
+    final Group rootGroup = new Group();
 
-    public CameraScene3D() {
+    CameraScene3D() {
         setupCamera();
         createScenes();
         setUIBindings();
