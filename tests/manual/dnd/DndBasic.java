@@ -110,14 +110,14 @@ public class DndBasic extends Application {
         return """
         Drag from a green Source to a blue Destination. The desktop applications may
         also be used as either the drag source or the drop destination.
-        The names inside each Source and Destination box show its supported actions. 
+        The names inside each Source and Destination box show its supported actions.
         An action is compatible when it appears in both boxes.
 
         %s
 
-        Hold the required modifier keys while performing the drag. 
-        A successful drop must show 'accepted MODE' in the Source and 
-        'Dropped here, proposed MODE' in the Destination, where MODE is 
+        Hold the required modifier keys while performing the drag.
+        A successful drop must show 'accepted MODE' in the Source and
+        'Dropped here, proposed MODE' in the Destination, where MODE is
         supported by both boxes. An unsupported combination must be rejected.
         """.formatted(modifiers);
     }
