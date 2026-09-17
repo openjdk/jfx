@@ -24,13 +24,18 @@
  */
 package com.oracle.test.manual.util;
 
+import java.util.Set;
+import java.util.function.Predicate;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.effect.BlurType;
@@ -90,16 +95,61 @@ public abstract class ManualTestWindow extends Application {
     private double width = 1000;
     private double height = 800;
     private int exitCode = TestRunner.CANCELLED;
+    private Predicate<OS> skipCheck;
 
+    /**
+     * Construct the test window with the specified title and instructions.
+     * @param title the title
+     * @param instructions the instructions
+     */
     public ManualTestWindow(String title, String instructions) {
         this.title = title;
         this.instructions = instructions;
     }
 
+    /**
+     * Construct the test window with the specified title, instructions, and dimensions.
+     * @param title the title
+     * @param instructions the instructions
+     * @param width the window width
+     * @param height the window height
+     */
     public ManualTestWindow(String title, String instructions, double width, double height) {
         this(title, instructions);
         this.width = width;
         this.height = height;
+    }
+
+    /**
+     * Configures the test to be skipped on the specfied platform(s).
+     * @param platforms the platforms to skip
+     * @throws IllegalArgumentException if the skip logic has already been configured
+     * @see #setRunOn
+     */
+    public void setSkipOn(OS... platforms) {
+        if (skipCheck != null) {
+            throw new IllegalArgumentException("skip has already been configured");
+        }
+        Set<OS> oss = Set.of(platforms);
+        skipCheck = (os) -> {
+            return oss.contains(os);
+        };
+    }
+
+    /**
+     * Configures the test to be allowed on the specfied platform(s), skipped on all the others.
+     * @param platforms
+     * @throws IllegalArgumentException if the skip logic has already been configured
+     * @see #setSkipOn
+     */
+    public void setRunOn(OS... platforms) {
+        if(skipCheck != null) {
+            throw new IllegalArgumentException("skip has already been configured");
+        }
+        Set<OS> oss = Set.of(platforms);
+        skipCheck = (os) -> {
+            return !oss.contains(os);
+        };
     }
 
     private Parent createContent(Stage stage) {
@@ -174,13 +224,21 @@ public abstract class ManualTestWindow extends Application {
      * @param stage the primary stage
      */
     protected void prepareStage(Stage stage) {
-        // TODO skip test on this platform?
-
-        Parent content = createContent(stage);
-        stage.setWidth(width);
-        stage.setHeight(height);
-        stage.setTitle(title);
-        stage.setScene(new Scene(content));
+        // determine if this test needs to be skipped on this platform
+        OS os = OS.current();
+        boolean skip = OS.UNKNOWN.equals(os) || ((skipCheck != null) && (skipCheck.test(os)));
+        if (skip) {
+            Alert a = new Alert(AlertType.NONE, "This test is not designed for this platform.", new ButtonType("Skip"));
+            a.setTitle("Skip");
+            a.showAndWait();
+            exit(TestRunner.SKIPPED);
+        } else {
+            Parent content = createContent(stage);
+            stage.setWidth(width);
+            stage.setHeight(height);
+            stage.setTitle(title);
+            stage.setScene(new Scene(content));
+        }
     }
 
     @Override

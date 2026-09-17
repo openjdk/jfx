@@ -24,41 +24,31 @@
  */
 package com.oracle.test.manual.util;
 
-import javafx.scene.Node;
-import javafx.scene.Scene;
-import javafx.scene.control.ContextMenu;
-import javafx.scene.control.MenuItem;
-import javafx.stage.Window;
-
 /**
- * Manual Test Utilities.
+ * The type of operating system.
  */
-public final class Utils {
+public enum OS {
+    LINUX,
+    MAC,
+    WINDOWS,
+    UNKNOWN;
 
-    private Utils() {
+    private static final OS current = init();
+
+    public static OS current() {
+        return current;
     }
 
-    /**
-     * Returns the parent window.
-     * @param x a Window, a Node, or a MenuItem
-     * @return the parent window
-     */
-    public static Window parentWindow(Object x) {
-        if (x == null) {
-            return null;
-        } else if (x instanceof Window w) {
-            return w;
-        } else if (x instanceof Node n) {
-            Scene s = n.getScene();
-            if (s != null) {
-                return s.getWindow();
-            }
-            return null;
-        } else if (x instanceof MenuItem m) {
-            ContextMenu cm = m.getParentPopup();
-            return cm == null ? null : cm.getOwnerWindow();
+    private static OS init() {
+        String os = System.getProperty("os.name");
+        if (os.startsWith("Linux")) {
+            return LINUX;
+        } else if (os.startsWith("Mac")) {
+            return MAC;
+        } else if (os.startsWith("Windows")) {
+            return WINDOWS;
         } else {
-            throw new Error("Node, Window, or MenuItem only: " + x);
+            return UNKNOWN;
         }
     }
 }

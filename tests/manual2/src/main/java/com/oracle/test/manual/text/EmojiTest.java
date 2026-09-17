@@ -31,6 +31,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import com.oracle.test.manual.util.ManualTestWindow;
+import com.oracle.test.manual.util.OS;
 
 public class EmojiTest extends ManualTestWindow {
 
@@ -55,6 +56,8 @@ public class EmojiTest extends ManualTestWindow {
             """,
             600, 500
         );
+        // alternative: use annotation?
+        setRunOn(OS.MAC);
     }
 
     @Override
