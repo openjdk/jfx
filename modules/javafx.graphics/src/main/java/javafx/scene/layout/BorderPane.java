@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011, 2025, Oracle and/or its affiliates. All rights reserved.
+ * Copyright (c) 2011, 2026, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -508,6 +508,9 @@ public class BorderPane extends Pane {
             width = width < minWidth ? minWidth : width;
         }
 
+        final boolean snapToPixel = isSnapToPixel();
+        final double snapScaleX = getSnapScaleX(this);
+        final double snapScaleY = getSnapScaleY(this);
         final double insideX = insets.getLeft();
         final double insideY = insets.getTop();
         final double insideWidth = width - insideX - insets.getRight();
@@ -523,19 +526,17 @@ public class BorderPane extends Pane {
             Insets topMargin = getNodeMargin(t);
             double adjustedWidth = adjustWidthByMargin(insideWidth, topMargin);
             double adjustedHeight = adjustHeightByMargin(insideHeight, topMargin);
-            topHeight = snapSizeY(t.prefHeight(adjustedWidth));
-            topHeight = Math.min(topHeight, adjustedHeight);
             Vec2d result = boundedNodeSizeWithBias(t, adjustedWidth,
-                   topHeight, true, true, TEMP_VEC2D);
-            topHeight = snapSizeY(result.y);
-            t.resize(snapSizeX(result.x), topHeight);
+                    adjustedHeight, true, false, snapToPixel, snapScaleX, snapScaleY, TEMP_VEC2D);
+            topHeight = result.y;
+            t.resize(result.x, topHeight);
 
             topHeight = snapSpaceY(topMargin.getBottom()) + topHeight + snapSpaceY(topMargin.getTop());
             Pos alignment = getAlignment(t);
             positionInArea(t, insideX, insideY, insideWidth, topHeight, 0/*ignore baseline*/,
                     topMargin,
                     alignment != null? alignment.getHpos() : HPos.LEFT,
-                    alignment != null? alignment.getVpos() : VPos.TOP, isSnapToPixel());
+                    alignment != null? alignment.getVpos() : VPos.TOP, snapToPixel);
         }
 
         double bottomHeight = 0;
@@ -543,12 +544,10 @@ public class BorderPane extends Pane {
             Insets bottomMargin = getNodeMargin(b);
             double adjustedWidth = adjustWidthByMargin(insideWidth, bottomMargin);
             double adjustedHeight = adjustHeightByMargin(insideHeight - topHeight, bottomMargin);
-            bottomHeight = snapSizeY(b.prefHeight(adjustedWidth));
-            bottomHeight = Math.min(bottomHeight, adjustedHeight);
             Vec2d result = boundedNodeSizeWithBias(b, adjustedWidth,
-                    bottomHeight, true, true, TEMP_VEC2D);
-            bottomHeight = snapSizeY(result.y);
-            b.resize(snapSizeX(result.x), bottomHeight);
+                    adjustedHeight, true, false, snapToPixel, snapScaleX, snapScaleY, TEMP_VEC2D);
+            bottomHeight = result.y;
+            b.resize(result.x, bottomHeight);
 
             bottomHeight = snapSpaceY(bottomMargin.getBottom()) + bottomHeight + snapSpaceY(bottomMargin.getTop());
             Pos alignment = getAlignment(b);
@@ -556,7 +555,7 @@ public class BorderPane extends Pane {
                     insideWidth, bottomHeight, 0/*ignore baseline*/,
                     bottomMargin,
                     alignment != null? alignment.getHpos() : HPos.LEFT,
-                    alignment != null? alignment.getVpos() : VPos.BOTTOM, isSnapToPixel());
+                    alignment != null? alignment.getVpos() : VPos.BOTTOM, snapToPixel);
         }
 
         double leftWidth = 0;
@@ -564,12 +563,10 @@ public class BorderPane extends Pane {
             Insets leftMargin = getNodeMargin(l);
             double adjustedWidth = adjustWidthByMargin(insideWidth, leftMargin);
             double adjustedHeight = adjustHeightByMargin(insideHeight - topHeight - bottomHeight, leftMargin); // ????
-            leftWidth = snapSizeX(l.prefWidth(adjustedHeight));
-            leftWidth = Math.min(leftWidth, adjustedWidth);
-            Vec2d result = boundedNodeSizeWithBias(l, leftWidth, adjustedHeight,
-                    true, true, TEMP_VEC2D);
-            leftWidth = snapSizeX(result.x);
-            l.resize(leftWidth, snapSizeY(result.y));
+            Vec2d result = boundedNodeSizeWithBias(l, adjustedWidth, adjustedHeight,
+                    false, true, snapToPixel, snapScaleX, snapScaleY, TEMP_VEC2D);
+            leftWidth = result.x;
+            l.resize(leftWidth, result.y);
 
             leftWidth = snapSpaceX(leftMargin.getLeft()) + leftWidth + snapSpaceX(leftMargin.getRight());
             Pos alignment = getAlignment(l);
@@ -577,7 +574,7 @@ public class BorderPane extends Pane {
                     leftWidth, insideHeight - topHeight - bottomHeight, 0/*ignore baseline*/,
                     leftMargin,
                     alignment != null? alignment.getHpos() : HPos.LEFT,
-                    alignment != null? alignment.getVpos() : VPos.TOP, isSnapToPixel());
+                    alignment != null? alignment.getVpos() : VPos.TOP, snapToPixel);
         }
 
         double rightWidth = 0;
@@ -586,12 +583,10 @@ public class BorderPane extends Pane {
             double adjustedWidth = adjustWidthByMargin(insideWidth - leftWidth, rightMargin);
             double adjustedHeight = adjustHeightByMargin(insideHeight - topHeight - bottomHeight, rightMargin);
 
-            rightWidth = snapSizeX(r.prefWidth(adjustedHeight));
-            rightWidth = Math.min(rightWidth, adjustedWidth);
-            Vec2d result = boundedNodeSizeWithBias(r, rightWidth, adjustedHeight,
-                    true, true, TEMP_VEC2D);
-            rightWidth = snapSizeX(result.x);
-            r.resize(rightWidth, snapSizeY(result.y));
+            Vec2d result = boundedNodeSizeWithBias(r, adjustedWidth, adjustedHeight,
+                    false, true, snapToPixel, snapScaleX, snapScaleY, TEMP_VEC2D);
+            rightWidth = result.x;
+            r.resize(rightWidth, result.y);
 
             rightWidth = snapSpaceX(rightMargin.getLeft()) + rightWidth + snapSpaceX(rightMargin.getRight());
             Pos alignment = getAlignment(r);
@@ -599,7 +594,7 @@ public class BorderPane extends Pane {
                     rightWidth, insideHeight - topHeight - bottomHeight, 0/*ignore baseline*/,
                     rightMargin,
                     alignment != null? alignment.getHpos() : HPos.RIGHT,
-                    alignment != null? alignment.getVpos() : VPos.TOP, isSnapToPixel());
+                    alignment != null? alignment.getVpos() : VPos.TOP, snapToPixel);
         }
 
         if (c != null && c.isManaged()) {
