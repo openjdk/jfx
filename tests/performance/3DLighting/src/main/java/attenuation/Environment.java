@@ -102,11 +102,12 @@ class Environment extends CameraScene3D {
     private final Group lightsGroup = new Group();
 
     Environment() {
-        setPrefWidth(BACKGROUND_IMAGE.getWidth());
-        setPrefHeight(BACKGROUND_IMAGE.getHeight());
+        setPrefWidth(798);
+        setPrefHeight(696);
+        boundsInLocalProperty().subscribe(bounds -> IO.println(bounds.getWidth() + "x" + bounds.getHeight()));
 
         farClip.set(1000);
-        zoom.set(-570);
+        zoom.set(-350);
 
         ambientLights.forEach(this::addLight);
         directionalLights.forEach(this::addLight);
