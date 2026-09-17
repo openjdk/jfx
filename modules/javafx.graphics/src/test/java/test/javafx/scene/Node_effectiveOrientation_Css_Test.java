@@ -44,7 +44,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 /**
  * Test :dir functional pseudo-class
  */
-@Disabled("JDK-8234152")
 public class Node_effectiveOrientation_Css_Test {
 
     private Group root;
@@ -119,8 +118,9 @@ public class Node_effectiveOrientation_Css_Test {
         assertEquals(Color.web("#ff0000"), rect.getFill());
     }
 
+    @Disabled("JDK-8234152")
     @Test
-    public void test_CompounSelector_dir_pseudoClass_on_parent_with_scene_effective_orientation_ltr() {
+    public void test_CompoundSelector_dir_pseudoClass_on_parent_with_scene_effective_orientation_ltr() {
         Stylesheet stylesheet = new CssParser().parse(
                 ".root:dir(rtl) .rect { -fx-fill: #ff0000; }" +
                 ".root:dir(ltr) .rect { -fx-fill: #00ff00; }" +
@@ -139,6 +139,8 @@ public class Node_effectiveOrientation_Css_Test {
         assertEquals(Color.web("#00ff00"), rect.getFill());
     }
 
+
+    @Disabled("JDK-8234152")
     @Test
     public void test_CompoundSelector_dir_pseudoClass_on_parent_with_scene_effective_orientation_rtl() {
         Stylesheet stylesheet = new CssParser().parse(
@@ -160,8 +162,9 @@ public class Node_effectiveOrientation_Css_Test {
         assertEquals(Color.web("#ff0000"), rect.getFill());
     }
 
+    @Disabled("JDK-8234152")
     @Test
-    public void test_CompounSelector_dir_pseudoClass_on_child_with_scene_effective_orientation_ltr() {
+    public void test_CompoundSelector_dir_pseudoClass_on_child_with_scene_effective_orientation_ltr() {
         Stylesheet stylesheet = new CssParser().parse(
                 ".root .rect:dir(rtl) { -fx-fill: #ff0000; }" +
                 ".root .rect:dir(ltr) { -fx-fill: #00ff00; }" +
@@ -180,6 +183,7 @@ public class Node_effectiveOrientation_Css_Test {
         assertEquals(Color.web("#00ff00"), rect.getFill());
     }
 
+    @Disabled("JDK-8234152")
     @Test
     public void test_CompoundSelector_dir_pseudoClass_on_child_with_scene_effective_orientation_rtl() {
         Stylesheet stylesheet = new CssParser().parse(
@@ -234,6 +238,37 @@ public class Node_effectiveOrientation_Css_Test {
         // :dir() pseudo-class functions on scene effective orientation, not node
         assertEquals(Color.web("#ff0000"), rect.getFill());
 
+    }
+
+    @Test
+    public void testChangeNodeOrientationWillReapplyCss() {
+        Group root = new Group();
+        Scene scene = new Scene(root);
+        Stage stage = new Stage();
+        stage.setScene(scene);
+        stage.show();
+
+        Stylesheet stylesheet = new CssParser().parse(
+                ".rect:dir(rtl) { -fx-fill: #ff0000; }" +
+                ".rect:dir(ltr) { -fx-fill: #00ff00; }" +
+                ".rect { -fx-fill: #0000ff; }"
+        );
+        StyleManager.getInstance().setDefaultUserAgentStylesheet(stylesheet);
+
+        Rectangle rect = new Rectangle();
+        rect.getStyleClass().add("rect");
+        root.getChildren().add(rect);
+
+        root.applyCss();
+        assertEquals(Color.web("#00ff00"), rect.getFill());
+
+        scene.setNodeOrientation(RIGHT_TO_LEFT);
+        root.applyCss();
+        assertEquals(Color.web("#ff0000"), rect.getFill());
+
+        scene.setNodeOrientation(LEFT_TO_RIGHT);
+        root.applyCss();
+        assertEquals(Color.web("#00ff00"), rect.getFill());
     }
 
 }
