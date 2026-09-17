@@ -14,7 +14,7 @@ ant -Djavafx.home=<JAVAFX>
 
 The build is wired into the main gradle build:
 
-```
+```console
 gradle manualApps
 ```
 
@@ -23,7 +23,8 @@ gradle manualApps
 
 To launch, specify the path to the JavaFX SDK lib/ folder on the command line, example:
 
-```
+```console
+cd tests/manual2
 java -p "../../build/sdk/lib" --enable-native-access=javafx.graphics --add-modules ALL-MODULE-PATH -jar dist/ManualTests.jar
 ```
 
