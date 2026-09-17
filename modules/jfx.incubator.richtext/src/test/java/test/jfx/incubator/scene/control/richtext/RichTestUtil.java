@@ -24,8 +24,11 @@
  */
 package test.jfx.incubator.scene.control.richtext;
 
+import com.sun.jfx.incubator.scene.control.richtext.CaretInfo;
 import com.sun.jfx.incubator.scene.control.richtext.RichTextAreaHelper;
+import com.sun.jfx.incubator.scene.control.richtext.VFlow;
 import jfx.incubator.scene.control.richtext.RichTextArea;
+import jfx.incubator.scene.control.richtext.RichTextAreaShim;
 import jfx.incubator.scene.control.richtext.SelectionSegment;
 import jfx.incubator.scene.control.richtext.TextPos;
 
@@ -56,5 +59,21 @@ public class RichTestUtil {
         StringBuilder sb = new StringBuilder();
         RichTextAreaHelper.getText(r, start, end, sb, Integer.MAX_VALUE);
         return sb.toString();
+    }
+
+    /**
+     * Returns the CaretInfo at the specified position, if the position is visible through the view port,
+     * otherwise this method returns null.
+     *
+     * @param r the text area
+     * @param position the text position
+     * @return the caret info or null
+     */
+    public static CaretInfo getCaretInfo(RichTextArea r, TextPos position) {
+        VFlow f = RichTextAreaShim.vflow(r);
+        if (f != null) {
+            return f.getCaretInfo(position);
+        }
+        return null;
     }
 }
