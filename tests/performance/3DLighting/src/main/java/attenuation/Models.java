@@ -101,7 +101,28 @@ final class Models {
         return shape;
     }
 
-    static MeshView createMeshView(int quadNum) {
+
+    // 4 points in a quad with 3 coordinates each
+    private static final int COORDS_PER_QUAD = 12;
+
+    // 2 triangles in a face with 6 coordinates each
+    private static final int COORDS_PER_FACE = 12;
+
+    // 1 - 4
+    // |   |
+    // 2 - 3
+    private static final float[] TEX_COORDS = {
+        0, 0,
+        0, 1,
+        1, 1,
+        1, 0
+    };
+
+    private static final float GRID_SIZE = 150f;
+    private static final float GAP_RATIO = 0.1f;
+
+    /// Creates a mesh of stacked quads from a single quad so that all quads are overdrawn.
+    static MeshView createStackedQuads(int quadNum) {
         // Points and texCoords array defining a single quad that will
         // be referenced by all pairs of triangles in the faces array
         final float[] points = {
@@ -110,12 +131,7 @@ final class Models {
              75.0f, -75.0f, 0.0f,
             -75.0f, -75.0f, 0.0f
         };
-        final float[] texCoords = {
-            0.0f, 0.0f,
-            1.0f, 0.0f,
-            1.0f, 1.0f,
-            0.0f, 1.0f
-        };
+
         // List of faces defining a single quad (pair of triangles).
         // This is replicated for the desired number of quads
         var face = List.of(
@@ -130,10 +146,136 @@ final class Models {
 
         var mesh = new TriangleMesh();
         mesh.getPoints().setAll(points);
-        mesh.getTexCoords().setAll(texCoords);
+        mesh.getTexCoords().setAll(TEX_COORDS);
         int[] array = faces.stream().mapToInt(i -> i).toArray();
         mesh.getFaces().setAll(array);
 
         return new MeshView(mesh);
+    }
+
+    /// Creates a mesh of co-planar quads in a grid from a single quad so that all quads are visible.
+    static MeshView createSpreadQuads(int quadNum) {
+        int gridCols = (int) Math.sqrt(quadNum);
+        // the larger the grid, the smaller each cell needs to be
+        float cellSize = GRID_SIZE / gridCols;
+        float gap = cellSize * GAP_RATIO;
+
+        float[] points = new float[quadNum * COORDS_PER_QUAD];
+        int[] faces = new int[quadNum * COORDS_PER_FACE];
+
+        // create the grid starting from (0, 0) and center it in front of the camera at the end
+        for (int i = 0; i < quadNum; i++) {
+            int col = i % gridCols;
+            int row = i / gridCols;
+            float centerX = col * (cellSize + gap);
+            float centerY = row * (cellSize + gap);
+
+            // 1 - 4
+            // |   |
+            // 2 - 3
+            int p = i * COORDS_PER_QUAD;
+            points[p + 0] = centerX - cellSize / 2;
+            points[p + 1] = centerY - cellSize / 2;
+            points[p + 2] = 0;
+
+            points[p + 3] = centerX - cellSize / 2;
+            points[p + 4] = centerY + cellSize / 2;
+            points[p + 5] = 0;
+
+            points[p + 6] = centerX + cellSize / 2;
+            points[p + 7] = centerY + cellSize / 2;
+            points[p + 8] = 0;
+
+            points[p + 9] = centerX + cellSize / 2;
+            points[p + 10] = centerY - cellSize / 2;
+            points[p + 11] = 0;
+
+            int f = i * COORDS_PER_FACE;
+            int pointShift = i * 4;
+            faces[f + 0] = pointShift;
+            faces[f + 1] = 0;
+
+            faces[f + 2] = pointShift + 1;
+            faces[f + 3] = 1;
+
+            faces[f + 4] = pointShift + 2;
+            faces[f + 5] = 2;
+
+            faces[f + 6] = pointShift;
+            faces[f + 7] = 0;
+
+            faces[f + 8] = pointShift + 2;
+            faces[f + 9] = 2;
+
+            faces[f + 10] = pointShift + 3;
+            faces[f + 11] = 3;
+        }
+
+        var mesh = new TriangleMesh();
+        mesh.getPoints().setAll(points);
+        mesh.getTexCoords().setAll(TEX_COORDS);
+        mesh.getFaces().setAll(faces);
+
+        var meshView = new MeshView(mesh);
+        double width = meshView.getBoundsInLocal().getWidth();
+        double height = meshView.getBoundsInLocal().getHeight();
+        meshView.setTranslateX(-width / 2 + cellSize / 2);
+        meshView.setTranslateY(-height / 2 + cellSize / 2);
+        return meshView;
+    }
+
+    ///Creates a grid of co-planar meshes from a single quad so that all meshes are visible.
+    static Group createSpreadMeshes(int meshViewNum) {
+        int gridCols = (int) Math.sqrt(meshViewNum);
+        float cellSize = GRID_SIZE / gridCols;
+        float gap = cellSize * GAP_RATIO;
+
+        // 1 - 4
+        // |   |
+        // 2 - 3
+        float[] points = new float[COORDS_PER_QUAD];
+        points[0] = -cellSize / 2;
+        points[1] = -cellSize / 2;
+        points[2] = 0;
+
+        points[3] = -cellSize / 2;
+        points[4] = cellSize / 2;
+        points[5] = 0;
+
+        points[6] = cellSize / 2;
+        points[7] = cellSize / 2;
+        points[8] = 0;
+
+        points[9] = cellSize / 2;
+        points[10] = -cellSize / 2;
+        points[11] = 0;
+
+        var face = List.of(
+            0, 0, 1, 1, 2, 2,
+            0, 0, 2, 2, 3, 3
+        );
+
+        var mesh = new TriangleMesh();
+        mesh.getPoints().setAll(points);
+        mesh.getTexCoords().setAll(TEX_COORDS);
+        mesh.getFaces().setAll(face.stream().mapToInt(i -> i).toArray());
+
+        var group = new Group();
+        for (int i = 0; i < meshViewNum; i++) {
+            var meshView = new MeshView(mesh);
+            int col = i % gridCols;
+            int row = i / gridCols;
+            float centerX = col * (cellSize + gap);
+            float centerY = row * (cellSize + gap);
+            meshView.setTranslateX(centerX);
+            meshView.setTranslateY(centerY);
+            group.getChildren().add(meshView);
+        }
+
+        double width = group.getBoundsInLocal().getWidth();
+        double height = group.getBoundsInLocal().getHeight();
+        group.setTranslateX(-width / 2 + cellSize / 2);
+        group.setTranslateY(-height / 2 + cellSize / 2);
+        return group;
     }
 }

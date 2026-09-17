@@ -174,7 +174,7 @@ final class Controls {
         return createSliderControl(slider);
     }
 
-    private static HBox createSliderControl(Slider slider) {
+    static HBox createSliderControl(Slider slider) {
         return new HBox(slider, createTextField(slider));
     }
 

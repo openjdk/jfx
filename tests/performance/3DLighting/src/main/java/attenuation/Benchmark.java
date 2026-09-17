@@ -27,12 +27,14 @@ package attenuation;
 
 import javafx.animation.Animation;
 import javafx.animation.AnimationTimer;
+import javafx.animation.ParallelTransition;
+import javafx.animation.PauseTransition;
 import javafx.animation.TranslateTransition;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
+import javafx.scene.Group;
 import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
@@ -41,26 +43,16 @@ import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.scene.text.TextBoundsType;
 import javafx.util.Duration;
-import javafx.util.converter.NumberStringConverter;
 
 /// Responsible for performance measurements.
 final class Benchmark {
 
     private final Environment environment;
     private final FPSCounter fpsCouner = new FPSCounter();
-    private final TranslateTransition animation = createAnimation();
+    private Animation animation = new PauseTransition();
 
     Benchmark(Environment environment) {
         this.environment = environment;
-    }
-
-    private TranslateTransition createAnimation() {
-        var anim = new TranslateTransition(Duration.seconds(2));
-        anim.setAutoReverse(true);
-        anim.setCycleCount(Animation.INDEFINITE);
-        anim.setFromZ(150);
-        anim.setToZ(0);
-        return anim;
     }
 
     Button createStopButton() {
@@ -91,43 +83,98 @@ final class Benchmark {
     }
 
     HBox createSphereControls() {
-        var subdivisionSlider = new Slider(10, 1000, 60);
-        subdivisionSlider.setMajorTickUnit(50);
-        setupSlider(subdivisionSlider);
-
-        var subdivisionLabel = new Label();
-        subdivisionLabel.textProperty().bindBidirectional(subdivisionSlider.valueProperty(), new NumberStringConverter("#"));
+        var subdivisionSlider = createSlider();
+        HBox sliderControl = Controls.createSliderControl(subdivisionSlider);
 
         var sphere = new Button("Sphere");
         sphere.setOnAction(_ -> switchTo(Models.createSphere((int) subdivisionSlider.getValue())));
 
-        return new HBox(sphere, subdivisionSlider, subdivisionLabel);
+        return new HBox(sphere, sliderControl);
     }
 
-    HBox createMeshControls() {
-        var quadSlider = new Slider(100, 5000, 1000);
-        quadSlider.setMajorTickUnit(100);
-        setupSlider(quadSlider);
+    HBox createStackedQuadsControls() {
+        var quadSlider = createSlider();
+        HBox sliderControl = Controls.createSliderControl(quadSlider);
 
-        var quadLabel = new Label();
-        quadLabel.textProperty().bindBidirectional(quadSlider.valueProperty(), new NumberStringConverter("#"));
+        var mesh = new Button("Stacked\nQuads");
+        mesh.setOnAction(_ -> switchTo(Models.createStackedQuads((int) quadSlider.getValue())));
 
-        var mesh = new Button("Mesh");
-        mesh.setOnAction(_ -> switchTo(Models.createMeshView((int) quadSlider.getValue())));
-
-        return new HBox(mesh, quadSlider, quadLabel);
+        return new HBox(mesh, sliderControl);
     }
 
-    private void setupSlider(Slider slider) {
+    HBox createSpreadQuadsControls() {
+        var quadSlider = createSlider();
+        HBox sliderControl = Controls.createSliderControl(quadSlider);
+
+        var mesh = new Button("Spread\nQuads");
+        mesh.setOnAction(_ -> switchTo(Models.createSpreadQuads((int) quadSlider.getValue())));
+
+        return new HBox(mesh, sliderControl);
+    }
+
+    HBox createStackedMeshesControls() {
+        var meshSlider = createSlider();
+        HBox sliderControl = Controls.createSliderControl(meshSlider);
+
+        var mesh = new Button("Stacked\nMeshes");
+        mesh.setOnAction(_ -> {
+            var group = new Group();
+            for (int i = 0; i < meshSlider.getValue(); i++) {
+                var meshView = Models.createStackedQuads(1);
+                group.getChildren().add(meshView);
+            }
+            switchTo(group);
+        });
+
+        return new HBox(mesh, sliderControl);
+    }
+
+    HBox createSpreadMeshesControls() {
+        var meshSlider = createSlider();
+        HBox sliderControl = Controls.createSliderControl(meshSlider);
+
+        var mesh = new Button("Spread\nMeshes");
+        mesh.setOnAction(_ -> switchTo(Models.createSpreadMeshes((int) meshSlider.getValue())));
+
+        return new HBox(mesh, sliderControl);
+    }
+
+    HBox createSpreadMeshesAnimControls() {
+        var meshSlider = createSlider();
+        HBox sliderControl = Controls.createSliderControl(meshSlider);
+
+        var mesh = new Button("Spread\nMeshes▶");
+        mesh.setOnAction(_ -> {
+            var meshesAnim = new ParallelTransition();
+            Group spreadMeshes = Models.createSpreadMeshes((int) meshSlider.getValue());
+            spreadMeshes.getChildren().forEach(meshView -> {
+                TranslateTransition animation = createAnimation(meshView);
+                animation.setRate(Math.random() * 2);
+                meshesAnim.getChildren().add(animation);
+            });
+            switchTo(spreadMeshes, meshesAnim);
+        });
+
+        return new HBox(mesh, sliderControl);
+    }
+
+    private static Slider createSlider() {
+        var slider = new Slider(0, 5000, 1000);
+        slider.setMajorTickUnit(100);
         slider.setMinorTickCount(0);
         slider.setShowTickLabels(true);
         slider.setShowTickMarks(true);
         slider.setSnapToTicks(true);
+        return slider;
     }
 
     private void switchTo(Node node) {
+        switchTo(node, createAnimation(node));
+    }
+
+    private void switchTo(Node node, Animation anim) {
         stopMeasurement();
-        animation.setNode(node);
+        animation = anim;
         environment.switchTo(node);
     }
 
@@ -140,6 +187,14 @@ final class Benchmark {
         fpsCouner.stop();
         fpsCouner.reset();
         animation.stop();
+    }
+
+    private static TranslateTransition createAnimation(Node node) {
+        var anim = new TranslateTransition(Duration.seconds(1), node);
+        anim.setAutoReverse(true);
+        anim.setCycleCount(Animation.INDEFINITE);
+        anim.setToZ(10);
+        return anim;
     }
 
     private final class FPSCounter extends AnimationTimer {

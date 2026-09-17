@@ -73,9 +73,14 @@ public class LightingApplication extends Application {
         var stopButton = benchmark.createStopButton();
 
         Node sphereControls = benchmark.createSphereControls();
-        Node meshControls = benchmark.createMeshControls();
+        Node stackedQuadsControls = benchmark.createStackedQuadsControls();
+        Node spreadQuadsControls = benchmark.createSpreadQuadsControls();
+        Node stackedMeshesControls = benchmark.createStackedMeshesControls();
+        Node spreadMeshesControls = benchmark.createSpreadMeshesControls();
+        Node spreadMeshesAnimControls = benchmark.createSpreadMeshesAnimControls();
 
-        var titlePane = new TitledPane("Performance", new VBox(sphereControls, meshControls));
+        var titlePane = new TitledPane("Performance", new VBox(sphereControls, stackedQuadsControls,
+                spreadQuadsControls, stackedMeshesControls, spreadMeshesControls, spreadMeshesAnimControls));
         titlePane.setGraphic(new HBox(5, playButton, stopButton));
         titlePane.setContentDisplay(ContentDisplay.RIGHT);
         titlePane.setExpanded(false);
